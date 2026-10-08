@@ -167,7 +167,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     vi.restoreAllMocks()
     vi.clearAllMocks()
     ;(modelSyncScheduler as any).isInitialized = false
-    ;(modelSyncScheduler as any).currentProgress = null
+    ;(modelSyncScheduler as any).execution.currentProgress = null
 
     mocks.hasAlarmsAPI.mockReturnValue(true)
     mocks.onAlarm.mockReturnValue(undefined)
@@ -1249,7 +1249,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     })
 
     const executeSpy = vi
-      .spyOn(modelSyncScheduler, "executeSync")
+      .spyOn((modelSyncScheduler as any).execution, "executeSync")
       .mockResolvedValue({ items: [], statistics: { total: 2 } } as any)
 
     await expect(modelSyncScheduler.executeFailedOnly()).resolves.toEqual({

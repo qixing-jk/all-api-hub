@@ -9,6 +9,7 @@ import {
 import type { ProbeItemState } from "~/components/dialogs/VerifyApiDialog/types"
 import { useVerificationDialogState } from "~/components/dialogs/VerifyApiDialog/useVerificationDialogState"
 import { Heading5 } from "~/components/ui"
+import { useVerificationRunLifecycle } from "~/hooks/useVerificationRunLifecycle"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,
@@ -27,7 +28,6 @@ import {
   API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
-  getApiVerificationProbeDefinitions,
   runApiVerificationProbe,
   type ApiVerificationApiType,
   type ApiVerificationMode,
@@ -137,7 +137,15 @@ export function useProfileVerification({
 }: VerifyApiCredentialProfileDialogProps) {
   const { t } = useTranslation(["aiApiVerification", "apiCredentialProfiles"])
 
-  const [isRunning, setIsRunning] = useState(false)
+  const {
+    isRunning,
+    isStopped,
+    runSuite,
+    runProbe: runProbeTask,
+    runSequentialProbes,
+    stopProbe: abortProbe,
+    stopAll: stopRun,
+  } = useVerificationRunLifecycle()
   const [apiType, setApiType] = useState<ApiVerificationApiType>(
     profile?.apiType ?? API_TYPES.OPENAI_COMPATIBLE,
   )
@@ -152,12 +160,6 @@ export function useProfileVerification({
   const apiTypeRef = useRef(apiType)
   const pendingHistoryContextKeyRef = useRef<string | null>(null)
   const lastLoadedHistoryContextKeyRef = useRef<string | null>(null)
-  /** Set by Stop so an in-flight probe settles as interrupted, not as a result. */
-  const shouldStopRef = useRef(false)
-  const suiteAbortControllerRef = useRef<AbortController | null>(null)
-  const probeAbortControllersRef = useRef(
-    new Map<ApiVerificationProbeId, AbortController>(),
-  )
   const trimmedModelId = modelId.trim()
   const historyTarget = useMemo(() => {
     if (!profile) return null
@@ -432,7 +434,7 @@ export function useProfileVerification({
 
       // A provider may settle an aborted request with a real response, so the
       // stop flag decides the outcome, not the resolved value.
-      if (abortSignal?.aborted || shouldStopRef.current) {
+      if (isStopped(abortSignal)) {
         tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
         return settleProbeAsStopped(probeId, executedMode)
       }
@@ -479,7 +481,7 @@ export function useProfileVerification({
       }
       return result
     } catch (error) {
-      if (isAbortError(error, abortSignal) || shouldStopRef.current) {
+      if (isAbortError(error, abortSignal) || isStopped()) {
         tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
         return settleProbeAsStopped(probeId, executedMode)
       }
@@ -537,159 +539,142 @@ export function useProfileVerification({
   }
 
   const runSingleProbe = async (probeId: ApiVerificationProbeId) => {
-    shouldStopRef.current = false
-    const abortController = new AbortController()
-    probeAbortControllersRef.current.set(probeId, abortController)
     setActiveProbeId(probeId)
     try {
-      await runProbe(probeId, undefined, true, abortController.signal)
+      await runProbeTask(probeId, (signal) =>
+        runProbe(probeId, undefined, true, signal),
+      )
     } finally {
-      if (probeAbortControllersRef.current.get(probeId) === abortController) {
-        probeAbortControllersRef.current.delete(probeId)
-      }
       setActiveProbeId(null)
     }
   }
 
   const stopProbe = (probeId: ApiVerificationProbeId) => {
-    shouldStopRef.current = true
-    probeAbortControllersRef.current.get(probeId)?.abort()
-  }
-
-  const stopRun = () => {
-    shouldStopRef.current = true
-    suiteAbortControllerRef.current?.abort()
-    probeAbortControllersRef.current.forEach((controller) => controller.abort())
+    abortProbe(probeId, { interruptRun: true })
   }
 
   const runAll = async () => {
     if (!profile) return
-    const tracker = startProductAnalyticsAction({
-      ...analyticsContext,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunApiCredentialProbeSuite,
-    })
-    const results: ApiVerificationProbeResult[] = []
-    shouldStopRef.current = false
-    const abortController = new AbortController()
-    suiteAbortControllerRef.current = abortController
-    setIsRunning(true)
-    setPersistedSummary(null)
+    return runSuite(async (signal) => {
+      const tracker = startProductAnalyticsAction({
+        ...analyticsContext,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunApiCredentialProbeSuite,
+      })
+      const results: ApiVerificationProbeResult[] = []
+      setPersistedSummary(null)
 
-    try {
-      replaceProbes(buildProbeState(apiType))
-      const ordered = getApiVerificationProbeDefinitions(apiType)
-      let modelIdForSuite = modelId.trim()
+      try {
+        replaceProbes(buildProbeState(apiType))
+        let modelIdForSuite = modelId.trim()
 
-      for (const probe of ordered) {
-        // Stopping must stop the queue too, so no probe starts after the abort.
-        if (shouldStopRef.current || abortController.signal.aborted) break
-
-        if (probe.id === API_VERIFICATION_PROBE_IDS.Models) {
-          const result = await runProbe(
-            API_VERIFICATION_PROBE_IDS.Models,
-            undefined,
-            false,
-            abortController.signal,
-          )
-          if (result) results.push(result)
-          if (!modelIdForSuite && result) {
-            const modelsOutput = extractModelsProbeOutput(result)
-            const suggested =
-              modelsOutput?.suggestedModelId ??
-              modelsOutput?.modelIdsPreview?.[0]
-            if (suggested) {
-              modelIdForSuite = suggested
-              setModelId((current) => {
-                if (current.trim()) return current
-                preserveCurrentProbeStateForModel(suggested, apiType)
-                return suggested
-              })
+        await runSequentialProbes(
+          apiType,
+          async (probe) => {
+            if (probe.id === API_VERIFICATION_PROBE_IDS.Models) {
+              const result = await runProbe(
+                API_VERIFICATION_PROBE_IDS.Models,
+                undefined,
+                false,
+                signal,
+              )
+              if (result) results.push(result)
+              if (!modelIdForSuite && result) {
+                const modelsOutput = extractModelsProbeOutput(result)
+                const suggested =
+                  modelsOutput?.suggestedModelId ??
+                  modelsOutput?.modelIdsPreview?.[0]
+                if (suggested) {
+                  modelIdForSuite = suggested
+                  setModelId((current) => {
+                    if (current.trim()) return current
+                    preserveCurrentProbeStateForModel(suggested, apiType)
+                    return suggested
+                  })
+                }
+              }
+              return
             }
-          }
-          continue
+
+            if (probe.requiresModelId && !modelIdForSuite) return
+            const result = await runProbe(
+              probe.id,
+              modelIdForSuite,
+              false,
+              signal,
+            )
+            if (result) results.push(result)
+          },
+          signal,
+        )
+
+        // Both the interrupted and the completed report describe the same run, so
+        // derive its shape once before either outcome is chosen.
+        const successCount = results.filter(
+          (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Pass,
+        ).length
+        const failureCount = results.filter(
+          (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
+        ).length
+        const insights = {
+          itemCount: results.length,
+          successCount,
+          failureCount,
         }
 
-        if (probe.requiresModelId && !modelIdForSuite) continue
-        const result = await runProbe(
-          probe.id,
-          modelIdForSuite,
-          false,
-          abortController.signal,
-        )
-        if (result) results.push(result)
-      }
+        if (isStopped(signal)) {
+          // Report the interruption as its own outcome instead of letting the
+          // partial results look like a completed suite.
+          replaceProbes(withUnfinishedProbesStopped(probesRef.current))
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, { insights })
+          return
+        }
 
-      // Both the interrupted and the completed report describe the same run, so
-      // derive its shape once before either outcome is chosen.
-      const successCount = results.filter(
-        (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Pass,
-      ).length
-      const failureCount = results.filter(
-        (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
-      ).length
-      const insights = {
-        itemCount: results.length,
-        successCount,
-        failureCount,
-      }
+        if (results.length === 0) {
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+          return
+        }
 
-      if (shouldStopRef.current || abortController.signal.aborted) {
-        // Report the interruption as its own outcome instead of letting the
-        // partial results look like a completed suite.
-        replaceProbes(withUnfinishedProbesStopped(probesRef.current))
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, { insights })
-        return
-      }
+        const hasFailedProbe = failureCount > 0
+        if (hasFailedProbe) {
+          const errorCategory = results
+            .filter(
+              (result) =>
+                result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
+            )
+            .map((result) =>
+              resolveProductAnalyticsErrorCategoryFromProbeResult(result),
+            )
+            .find(
+              (category) =>
+                category !== PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            )
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+            errorCategory:
+              errorCategory ?? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            insights,
+          })
+          return
+        }
 
-      if (results.length === 0) {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
-        return
-      }
+        if (successCount === 0) {
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, { insights })
+          return
+        }
 
-      const hasFailedProbe = failureCount > 0
-      if (hasFailedProbe) {
-        const errorCategory = results
-          .filter(
-            (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
-          )
-          .map((result) =>
-            resolveProductAnalyticsErrorCategoryFromProbeResult(result),
-          )
-          .find(
-            (category) =>
-              category !== PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-          )
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory:
-            errorCategory ?? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-          insights,
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, { insights })
+      } catch (error) {
+        logger.error("Probe suite failed", {
+          message: toSanitizedErrorSummary(error, [
+            profile.apiKey,
+            ...Object.values(profile.requestHeaders ?? {}),
+            profile.baseUrl,
+          ]),
         })
-        return
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
+        })
       }
-
-      if (successCount === 0) {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, { insights })
-        return
-      }
-
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, { insights })
-    } catch (error) {
-      logger.error("Probe suite failed", {
-        message: toSanitizedErrorSummary(error, [
-          profile.apiKey,
-          ...Object.values(profile.requestHeaders ?? {}),
-          profile.baseUrl,
-        ]),
-      })
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
-      })
-    } finally {
-      if (suiteAbortControllerRef.current === abortController) {
-        suiteAbortControllerRef.current = null
-      }
-      setIsRunning(false)
-    }
+    })
   }
 
   return {

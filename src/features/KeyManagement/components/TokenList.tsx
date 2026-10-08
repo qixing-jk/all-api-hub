@@ -1,138 +1,41 @@
 import { ChevronDown, ChevronUp, Library, SendToBack } from "lucide-react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import {
-  DeeplinkExportDialog,
-  type DeeplinkExportRequest,
-  type DeeplinkExportTarget,
-} from "~/components/DeeplinkExportDialog"
+import { DeeplinkExportDialog } from "~/components/DeeplinkExportDialog"
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import { Badge, Button, Card, Checkbox, Spinner } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useBatchTokenActions } from "~/features/KeyManagement/hooks/useBatchTokenActions"
-import { isBatchSelectableEntry } from "~/features/KeyManagement/runtimeKeyExportEligibility"
 import { cn } from "~/lib/utils"
 import {
   ACCOUNT_RUNTIME_KEY_SOURCES,
-  buildAccountKeyResourceRuntimeKeyFromFacts,
-  getAccountRuntimeKeyExportId,
   getAccountRuntimeKeyLocator,
   isServiceCredentialRuntimeKey,
-  type AccountRuntimeKey,
-  type AccountRuntimeKeyLocator,
 } from "~/services/accounts/accountRuntimeKeys"
-import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
-import {
-  ACCOUNT_KEY_RESOURCE_STATUSES,
-  type AccountKeyResourceFacts,
-  type AccountKeyResourceRef,
-  type ResourceFailure,
-} from "~/services/apiAdapters/contracts/accountKeyResource"
-import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import type { DisplaySiteData } from "~/types"
-import type {
-  ApiCredentialProfile,
-  ApiCredentialProfileLink,
-} from "~/types/apiCredentialProfiles"
 import {
   MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES,
   MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS,
   type ManagedSiteBatchImportIntent,
 } from "~/types/managedSiteTokenBatchExport"
 
-import {
-  KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
-  type KeyManagementAssociationTargetResultState,
-} from "../constants"
 import { useTokenCredentialAssociations } from "../hooks/useTokenCredentialAssociations"
 import { KEY_MANAGEMENT_TEST_IDS } from "../testIds"
-import {
-  KEY_MANAGEMENT_DISPLAY_ROW_KINDS,
-  type KeyManagementDisplayRow,
-  type KeyManagementEntry,
-  type NativeKeyManagementRow,
-} from "../types"
+import { type KeyManagementEntry, type NativeKeyManagementRow } from "../types"
 import { AccountKeyResourceList } from "./AccountKeyResource/AccountKeyResourceList"
 import { BatchSelectionControl } from "./BatchSelectionControl"
 import { KeyAccountGroups } from "./KeyAccountGroups"
 import { ManagedSiteTokenBatchExportDialog } from "./ManagedSiteTokenBatchExportDialog"
 import { ServiceCredentialCard } from "./ServiceCredentialCard"
 import { TokenEmptyState } from "./TokenEmptyState"
+import type { TokenListProps } from "./TokenList.types"
+import { useTokenListInventoryViewModel } from "./useTokenListInventoryViewModel"
 
 const MANUAL_MANAGED_SITE_BATCH_IMPORT_INTENT = {
   source: MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES.MANUAL_SELECTION,
   verification: MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE,
 } satisfies ManagedSiteBatchImportIntent
-
-interface GuidedManagedSiteImportTarget {
-  accountId?: string
-  tokenId?: string
-  request: string
-}
-
-interface TokenListProps {
-  isLoading: boolean
-  entries: KeyManagementEntry[]
-  filteredEntries: KeyManagementEntry[]
-  handleAddToken: () => void
-  canCreateTokens?: boolean
-  onAddAccount?: () => void
-  onRequestAccountSelection?: () => void
-  selectedAccount: string
-  displayData: DisplaySiteData[]
-  currentAccountLoadError?: string | null
-  nativeInventoryLoadError?: string | null
-  currentAccountUnsupportedKeyManagement?: boolean
-  onRetryCurrentAccount?: () => void
-  managedSiteTokenStatuses?: Record<
-    string,
-    {
-      isChecking: boolean
-      result?: ManagedSiteTokenChannelStatus
-    }
-  >
-  onManagedSiteImportSuccess?: (
-    runtimeKey: AccountRuntimeKey,
-  ) => void | Promise<void>
-  onManagedSiteVerificationRetry?: (
-    runtimeKey: AccountRuntimeKey,
-    managedSiteStatus: ManagedSiteTokenChannelStatus,
-  ) => void | Promise<void>
-  allAccountsFilterAccountIds?: string[]
-  onCopyServiceCredential?: (account: DisplaySiteData) => Promise<void>
-  onRotateServiceCredential?: (account: DisplaySiteData) => Promise<void>
-  guidedManagedSiteImport?: GuidedManagedSiteImportTarget
-  nativeRows?: readonly NativeKeyManagementRow[]
-  nativeUnfilteredRows?: readonly NativeKeyManagementRow[]
-  nativeLoading?: boolean
-  nativeDetail?: AccountKeyResourceFacts | null
-  nativeDetailLoading?: boolean
-  nativeDetailFailure?: ResourceFailure | null
-  onCloseNativeDetail?: () => void
-  nativeDetailsFromRows?: boolean
-  onOpenNativeDetail?: (ref: AccountKeyResourceRef) => void
-  onEditNativeKey?: (ref: AccountKeyResourceRef) => void
-  onDeleteNativeKey?: (ref: AccountKeyResourceRef) => void
-  credentialProfileLinks?: readonly ApiCredentialProfileLink[]
-  getCredentialProfileForLocator?: (
-    locator: AccountRuntimeKeyLocator,
-  ) => ApiCredentialProfile | undefined
-  canManageCredentialAssociations?: boolean
-  /** Whether at least one saved API credential can be selected for association. */
-  canAssociateExistingCredential?: boolean
-  onAssociateAssociation?: (
-    locator: AccountRuntimeKeyLocator,
-    displayLabel?: string,
-    targetSecret?: string,
-  ) => void
-  onUnlinkAssociation?: (associationId: string) => void | Promise<void>
-  associationTarget?: ApiCredentialProfileLink | null
-  onAssociationTargetStatusChange?: (
-    status: KeyManagementAssociationTargetResultState,
-  ) => void
-}
 
 /**
  * Skeleton placeholder shown while tokens list is loading.
@@ -196,107 +99,37 @@ export function TokenList(props: TokenListProps) {
   } = props
   const { t } = useTranslation(["keyManagement", "settings"])
   const { managedSiteType } = useUserPreferencesContext()
-  const guidedManagedSiteImportAccountId = guidedManagedSiteImport?.accountId
-  const guidedManagedSiteImportTokenId = guidedManagedSiteImport?.tokenId
-  const [deeplinkExportContext, setDeeplinkExportContext] = useState<{
-    target: DeeplinkExportTarget
-    runtimeKey: AccountRuntimeKey
-    account: DisplaySiteData
-  } | null>(null)
-  const accountById = useMemo(() => {
-    return new Map(displayData.map((account) => [account.id, account]))
-  }, [displayData])
-  const nativeEntriesByRowKey = useMemo(
-    () =>
-      new Map(
-        nativeUnfilteredRows.flatMap((row) => {
-          const account = accountById.get(row.accountId)
-          if (!account) return []
-          const profile = getCredentialProfileForLocator?.({
-            source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource,
-            ref: row.facts.ref,
-          })
-          const runtimeKey = buildAccountKeyResourceRuntimeKeyFromFacts(
-            account,
-            row.facts,
-            profile?.apiKey ?? "",
-          )
-          return [
-            [
-              row.rowKey,
-              {
-                id: runtimeKey.id,
-                runtimeKey,
-                uiState: {},
-              } satisfies KeyManagementEntry,
-            ] as const,
-          ]
-        }),
-      ),
-    [nativeUnfilteredRows, accountById, getCredentialProfileForLocator],
-  )
-  const actionEntries = useMemo(
-    () => [...entries, ...nativeEntriesByRowKey.values()],
-    [entries, nativeEntriesByRowKey],
-  )
-  const filteredActionEntries = useMemo(
-    () => [
-      ...filteredEntries,
-      ...nativeRows.flatMap((row) => {
-        const entry = nativeEntriesByRowKey.get(row.rowKey)
-        return entry ? [entry] : []
-      }),
-    ],
-    [filteredEntries, nativeRows, nativeEntriesByRowKey],
-  )
-  const currentDeeplinkExportRequest = useMemo(() => {
-    if (!deeplinkExportContext) return null
-    const account = accountById.get(deeplinkExportContext.account.id)
-    const entry = actionEntries.find(
-      (candidate) =>
-        candidate.runtimeKey.id === deeplinkExportContext.runtimeKey.id,
-    )
-    return account && entry && isBatchSelectableEntry(entry)
-      ? ({
-          target: deeplinkExportContext.target,
-          source: createAccountRuntimeKeyExportSource(
-            account,
-            entry.runtimeKey,
-            { preferCurrentSecret: true },
-          ),
-        } satisfies DeeplinkExportRequest)
-      : null
-  }, [accountById, actionEntries, deeplinkExportContext])
-  const isCurrentDeeplinkExportAvailable = currentDeeplinkExportRequest !== null
-  useEffect(() => {
-    if (deeplinkExportContext && !isCurrentDeeplinkExportAvailable)
-      setDeeplinkExportContext(null)
-  }, [deeplinkExportContext, isCurrentDeeplinkExportAvailable])
+  const {
+    actionEntries,
+    filteredActionEntries,
+    currentDeeplinkExportRequest,
+    displayRows,
+    filteredDisplayRows,
+    guidedManagedSiteImportEntryId,
+    isAllAccountsMode,
+    isReloading,
+    collapsedAccountIds,
+    groupedRows,
+    collapseAll,
+    expandAll,
+    toggleGroup,
+    handleCloseDeeplinkExport,
+    getNativeRowContext,
+    openDeeplinkExport,
+  } = useTokenListInventoryViewModel({
+    entries,
+    filteredEntries,
+    nativeRows,
+    nativeUnfilteredRows,
+    displayData,
+    selectedAccount,
+    allAccountsFilterAccountIds,
+    guidedManagedSiteImport,
+    getCredentialProfileForLocator,
+    isLoading,
+    nativeLoading,
+  })
 
-  const displayRows = useMemo<readonly KeyManagementDisplayRow[]>(
-    () => [
-      ...entries.map(
-        (entry): KeyManagementDisplayRow => ({
-          kind: KEY_MANAGEMENT_DISPLAY_ROW_KINDS.RuntimeKey,
-          entry,
-        }),
-      ),
-      ...nativeUnfilteredRows,
-    ],
-    [entries, nativeUnfilteredRows],
-  )
-  const filteredDisplayRows = useMemo<readonly KeyManagementDisplayRow[]>(
-    () => [
-      ...filteredEntries.map(
-        (entry): KeyManagementDisplayRow => ({
-          kind: KEY_MANAGEMENT_DISPLAY_ROW_KINDS.RuntimeKey,
-          entry,
-        }),
-      ),
-      ...nativeRows,
-    ],
-    [filteredEntries, nativeRows],
-  )
   const {
     getAssociationPresentation,
     getNativeNavigationProps,
@@ -314,154 +147,6 @@ export function TokenList(props: TokenListProps) {
     onUnlinkAssociation,
   })
   const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
-  const guidedManagedSiteImportEntryId = useMemo(() => {
-    if (!guidedManagedSiteImportAccountId) return null
-
-    const targetEntry = filteredActionEntries.find((entry) => {
-      const runtimeKey = entry.runtimeKey
-      return (
-        runtimeKey.accountId === guidedManagedSiteImportAccountId &&
-        (!guidedManagedSiteImportTokenId ||
-          getAccountRuntimeKeyExportId(runtimeKey) ===
-            guidedManagedSiteImportTokenId)
-      )
-    })
-
-    return targetEntry?.id ?? null
-  }, [
-    filteredActionEntries,
-    guidedManagedSiteImportAccountId,
-    guidedManagedSiteImportTokenId,
-  ])
-
-  const isAllAccountsMode =
-    selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
-  const isReloading = (isLoading || nativeLoading) && displayRows.length > 0
-  const [collapsedAccountIds, setCollapsedAccountIds] = useState<Set<string>>(
-    () =>
-      selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
-        ? new Set(displayData.map((account) => account.id))
-        : new Set(),
-  )
-  const hasInitializedCollapseRef = useRef(isAllAccountsMode)
-
-  useEffect(() => {
-    if (!isAllAccountsMode) {
-      hasInitializedCollapseRef.current = false
-      setCollapsedAccountIds(new Set())
-      return
-    }
-
-    if (hasInitializedCollapseRef.current) return
-    hasInitializedCollapseRef.current = true
-    setCollapsedAccountIds(new Set(displayData.map((account) => account.id)))
-  }, [displayData, isAllAccountsMode])
-
-  useEffect(() => {
-    if (!isAllAccountsMode) return
-    if (allAccountsFilterAccountIds.length === 0) return
-
-    // When the user filters via AccountSummaryBar, ensure matching groups are
-    // expanded so the tokens are immediately visible.
-    setCollapsedAccountIds((prev) => {
-      const next = new Set(prev)
-      let didChange = false
-
-      for (const accountId of allAccountsFilterAccountIds) {
-        if (!next.has(accountId)) continue
-        next.delete(accountId)
-        didChange = true
-      }
-
-      if (!didChange) return prev
-      return next
-    })
-  }, [allAccountsFilterAccountIds, isAllAccountsMode])
-
-  useEffect(() => {
-    if (!isAllAccountsMode || !guidedManagedSiteImportAccountId) return
-
-    setCollapsedAccountIds((prev) => {
-      if (!prev.has(guidedManagedSiteImportAccountId)) return prev
-
-      const next = new Set(prev)
-      next.delete(guidedManagedSiteImportAccountId)
-      return next
-    })
-  }, [guidedManagedSiteImportAccountId, isAllAccountsMode])
-
-  const groupedRows = useMemo(() => {
-    if (!isAllAccountsMode) return null
-
-    const totalNativeRowsByAccountId = new Map<
-      string,
-      NativeKeyManagementRow[]
-    >()
-    for (const row of nativeUnfilteredRows) {
-      const list = totalNativeRowsByAccountId.get(row.accountId) ?? []
-      list.push(row)
-      totalNativeRowsByAccountId.set(row.accountId, list)
-    }
-
-    const filteredRowsByAccountId = new Map<string, KeyManagementDisplayRow[]>()
-    for (const row of filteredDisplayRows) {
-      const accountId =
-        row.kind === KEY_MANAGEMENT_DISPLAY_ROW_KINDS.RuntimeKey
-          ? row.entry.runtimeKey.accountId
-          : row.accountId
-      const list = filteredRowsByAccountId.get(accountId) ?? []
-      list.push(row)
-      filteredRowsByAccountId.set(accountId, list)
-    }
-
-    const totalEntriesByAccountId = new Map<string, KeyManagementEntry[]>()
-    for (const entry of entries) {
-      const list = totalEntriesByAccountId.get(entry.runtimeKey.accountId) ?? []
-      list.push(entry)
-      totalEntriesByAccountId.set(entry.runtimeKey.accountId, list)
-    }
-
-    return displayData
-      .filter((account) => filteredRowsByAccountId.has(account.id))
-      .map((account) => {
-        const total = totalEntriesByAccountId.get(account.id) ?? []
-        const totalNativeRows = totalNativeRowsByAccountId.get(account.id) ?? []
-        const filteredAccountRows =
-          filteredRowsByAccountId.get(account.id) ?? []
-        const filteredAccountEntries = filteredAccountRows.flatMap((row) =>
-          row.kind === KEY_MANAGEMENT_DISPLAY_ROW_KINDS.RuntimeKey
-            ? [row.entry]
-            : [],
-        )
-        const filteredNativeRows = filteredAccountRows.filter(
-          (row): row is NativeKeyManagementRow =>
-            row.kind === KEY_MANAGEMENT_DISPLAY_ROW_KINDS.AccountKeyResource,
-        )
-        const totalEnabledNativeRows = totalNativeRows.filter(
-          (row) => row.facts.status === ACCOUNT_KEY_RESOURCE_STATUSES.Enabled,
-        ).length
-        return {
-          account,
-          filteredEntries: filteredAccountEntries,
-          nativeRows: filteredNativeRows,
-          totalCount: Math.max(
-            total.length + totalNativeRows.length,
-            filteredAccountRows.length,
-          ),
-          enabledCount:
-            total.filter((entry) => entry.runtimeKey.status === "active")
-              .length + totalEnabledNativeRows,
-          showingCount: filteredAccountRows.length,
-        }
-      })
-  }, [
-    displayData,
-    filteredDisplayRows,
-    isAllAccountsMode,
-    nativeUnfilteredRows,
-    entries,
-  ])
-
   const {
     batchExportOpen,
     batchExportItems,
@@ -488,34 +173,6 @@ export function TokenList(props: TokenListProps) {
     filteredActionEntries,
     onManagedSiteImportSuccess,
   })
-
-  const collapseAll = useCallback(() => {
-    if (!groupedRows) return
-    setCollapsedAccountIds(
-      new Set(groupedRows.map((group) => group.account.id)),
-    )
-  }, [groupedRows, setCollapsedAccountIds])
-
-  const expandAll = useCallback(
-    () => setCollapsedAccountIds(new Set()),
-    [setCollapsedAccountIds],
-  )
-
-  const toggleGroup = (accountId: string) => {
-    setCollapsedAccountIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(accountId)) {
-        next.delete(accountId)
-      } else {
-        next.add(accountId)
-      }
-      return next
-    })
-  }
-
-  const handleCloseDeeplinkExport = () => {
-    setDeeplinkExportContext(null)
-  }
 
   if ((isLoading || nativeLoading) && displayRows.length === 0) {
     return <LoadingSkeleton />
@@ -585,17 +242,13 @@ export function TokenList(props: TokenListProps) {
       }
       getNavigationTarget={getNativeNavigationProps}
       getActions={(row) => {
-        const entry = nativeEntriesByRowKey.get(row.rowKey)
-        const account = accountById.get(row.accountId)
-        if (!entry || !account) return {}
+        const context = getNativeRowContext(row)
+        if (!context) return {}
+        const { entry, account } = context
         return {
           ...getSelectionProps(entry.id),
           onOpenDeeplinkExport: (target) =>
-            setDeeplinkExportContext({
-              target,
-              runtimeKey: entry.runtimeKey,
-              account,
-            }),
+            openDeeplinkExport(target, entry.runtimeKey, account),
           managedSiteStatus:
             managedSiteTokenStatuses?.[entry.runtimeKey.id]?.result,
           isManagedSiteStatusChecking:
@@ -750,7 +403,7 @@ export function TokenList(props: TokenListProps) {
             <KeyAccountGroups
               groups={groupedRows}
               hasNavigationTarget={Boolean(
-                associationTarget || guidedManagedSiteImportAccountId,
+                associationTarget || guidedManagedSiteImport?.accountId,
               )}
               renderGroup={(group) => {
                 const { account } = group

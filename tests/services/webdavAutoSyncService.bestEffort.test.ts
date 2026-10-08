@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { BACKUP_VERSION } from "~/constants/importExport"
 import { ACCOUNT_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { createDefaultTagStore } from "~/services/tags/tagStoreUtils"
+import * as cloudSyncTransaction from "~/services/webdav/cloudSyncTransaction"
 import { webdavAutoSyncService } from "~/services/webdav/webdavAutoSyncService"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
@@ -84,6 +85,7 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
   })
 
   afterEach(() => {
+    vi.restoreAllMocks()
     ;(globalThis as any).browser = originalBrowser
   })
 
@@ -324,7 +326,7 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
   it("schedules and executes best-effort uploads through the dedicated alarm", async () => {
     const service = createService() as any
     const uploadSpy = vi
-      .spyOn(service, "uploadLocalSnapshotToWebdav")
+      .spyOn(cloudSyncTransaction, "uploadLocalCloudSyncSnapshot")
       .mockResolvedValue(undefined)
 
     await service.scheduleBestEffortUpload("account_storage_changed")
@@ -342,7 +344,6 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
   })
 
   it("uploads selected local data while preserving unselected remote preferences", async () => {
-    const service = createService() as any
     mockGetPreferences.mockResolvedValue({
       ...basePreferences,
       webdav: {
@@ -373,7 +374,7 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
       }),
     )
 
-    await service.uploadLocalSnapshotToWebdav()
+    await cloudSyncTransaction.uploadLocalCloudSyncSnapshot()
 
     expect(mockUploadBackup).toHaveBeenCalledTimes(1)
     expect(
@@ -389,7 +390,6 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
   })
 
   it("uses one settings snapshot for the remote read and write", async () => {
-    const service = createService() as any
     const initialPreferences = {
       ...basePreferences,
       webdav: {
@@ -420,7 +420,7 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
       }),
     )
 
-    await service.uploadLocalSnapshotToWebdav()
+    await cloudSyncTransaction.uploadLocalCloudSyncSnapshot()
 
     const expectedConfig = {
       url: "https://snapshot.example.test/webdav",
@@ -443,14 +443,22 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
       .spyOn(service, "scheduleBestEffortUpload")
       .mockResolvedValue(undefined)
     const uploadSpy = vi
-      .spyOn(service, "uploadLocalSnapshotToWebdav")
+      .spyOn(cloudSyncTransaction, "uploadLocalCloudSyncSnapshot")
       .mockResolvedValue(undefined)
 
-    service.isSyncing = true
+    let finish!: () => void
+    vi.spyOn(service, "syncWithWebdav").mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finish = resolve
+      }),
+    )
+    const activeRun = service.syncNow()
     await service.performBestEffortUpload()
 
     expect(scheduleSpy).toHaveBeenCalledWith("sync_in_progress")
     expect(uploadSpy).not.toHaveBeenCalled()
+    finish()
+    await activeRun
   })
 
   it("updates sync state and notifies the frontend for successful and failed best-effort uploads", async () => {
@@ -459,9 +467,10 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
       .spyOn(service, "notifyFrontend")
       .mockImplementation(() => {})
 
-    vi.spyOn(service, "uploadLocalSnapshotToWebdav").mockResolvedValueOnce(
-      undefined,
-    )
+    vi.spyOn(
+      cloudSyncTransaction,
+      "uploadLocalCloudSyncSnapshot",
+    ).mockResolvedValueOnce(undefined)
 
     await service.performBestEffortUpload()
 
@@ -476,9 +485,10 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
     })
 
     notifySpy.mockClear()
-    vi.spyOn(service, "uploadLocalSnapshotToWebdav").mockRejectedValueOnce(
-      new Error("best-effort failed"),
-    )
+    vi.spyOn(
+      cloudSyncTransaction,
+      "uploadLocalCloudSyncSnapshot",
+    ).mockRejectedValueOnce(new Error("best-effort failed"))
 
     await service.performBestEffortUpload()
 

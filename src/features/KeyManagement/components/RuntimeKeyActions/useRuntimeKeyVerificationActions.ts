@@ -37,6 +37,8 @@ interface UseRuntimeKeyVerificationActionsParams {
   account: DisplaySiteData
   enabled: boolean
   runtimeKey: AccountRuntimeKey
+  /** Pre-resolved profile uses its original identity and an immutable opening snapshot. */
+  credentialProfile?: ApiCredentialProfile
 }
 
 /** Builds the temporary credential profile consumed by verification dialogs. */
@@ -72,6 +74,7 @@ export function useRuntimeKeyVerificationActions({
   account,
   enabled,
   runtimeKey,
+  credentialProfile,
 }: UseRuntimeKeyVerificationActionsParams) {
   const { t } = useTranslation("keyManagement")
   const verificationAllowedRef = useRef(false)
@@ -87,8 +90,10 @@ export function useRuntimeKeyVerificationActions({
     const verificationGeneration = Symbol("runtimeKey-verification-generation")
     verificationGenerationRef.current = verificationGeneration
     verificationAllowedRef.current = enabled
-    setVerifyingProfile(null)
-    setCliVerifyingProfile(null)
+    if (!credentialProfile) {
+      setVerifyingProfile(null)
+      setCliVerifyingProfile(null)
+    }
 
     return () => {
       if (verificationGenerationRef.current === verificationGeneration) {
@@ -110,6 +115,7 @@ export function useRuntimeKeyVerificationActions({
     runtimeKey.accountId,
     runtimeKey.id,
     runtimeKey.secret,
+    credentialProfile,
   ])
 
   const isRequestCurrent = (
@@ -129,6 +135,10 @@ export function useRuntimeKeyVerificationActions({
     logMessage,
     setProfile,
   }: VerificationAction) => {
+    if (credentialProfile) {
+      setProfile(credentialProfile)
+      return
+    }
     const verificationGeneration = verificationGenerationRef.current
     const verificationEpoch = ++epochRef.current
     const tracker = startProductAnalyticsAction({

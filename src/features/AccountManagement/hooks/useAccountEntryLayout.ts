@@ -34,11 +34,13 @@ export function useAccountEntryLayout({
   bookmarks,
   detectedAccount,
   matchedTabTiers,
+  snapshot,
 }: {
   displayData: DisplaySiteData[]
   bookmarks: SiteBookmark[]
   detectedAccount: SiteAccount | null
   matchedTabTiers: OpenTabMatchTiers
+  snapshot?: { orderedIds: string[]; pinnedIds: string[] }
 }) {
   const {
     currencyType,
@@ -48,8 +50,23 @@ export function useAccountEntryLayout({
     updateSortConfig,
     sortingPriorityConfig,
   } = useUserPreferencesContext()
-  const [orderedAccountIds, setOrderedAccountIds] = useState<string[]>([])
-  const [pinnedAccountIds, setPinnedAccountIds] = useState<string[]>([])
+  const [orderedAccountIds, setOrderedAccountIds] = useState<string[]>(
+    snapshot?.orderedIds ?? [],
+  )
+  const [pinnedAccountIds, setPinnedAccountIds] = useState<string[]>(
+    snapshot?.pinnedIds ?? [],
+  )
+  const [appliedSnapshot, setAppliedSnapshot] = useState(snapshot)
+  // Reconcile before children commit: account facts and their persisted layout
+  // must appear together, while optimistic edits survive unrelated renders.
+  if (snapshot !== appliedSnapshot) {
+    setAppliedSnapshot(snapshot)
+    if (snapshot) {
+      setOrderedAccountIds(snapshot.orderedIds)
+      setPinnedAccountIds(snapshot.pinnedIds)
+    }
+  }
+
   const [selectedSortField, setSortField] =
     useState<ActiveSortField>(initialSortField)
   const sortField =
@@ -329,13 +346,6 @@ export function useAccountEntryLayout({
     orderedAccountIds,
   ])
 
-  const syncEntryLayout = useCallback(
-    (layout: { pinnedIds?: string[]; orderedIds?: string[] }) => {
-      if (layout.pinnedIds) setPinnedAccountIds(layout.pinnedIds)
-      if (layout.orderedIds) setOrderedAccountIds(layout.orderedIds)
-    },
-    [],
-  )
   return {
     orderedAccountIds,
     pinnedAccountIds,
@@ -351,6 +361,5 @@ export function useAccountEntryLayout({
     pinAccount,
     unpinAccount,
     togglePinAccount,
-    syncEntryLayout,
   }
 }

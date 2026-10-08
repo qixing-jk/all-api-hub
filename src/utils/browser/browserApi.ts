@@ -9,6 +9,7 @@ import {
   type RuntimeActionId,
 } from "~/constants/runtimeActions"
 import { isNotEmptyArray } from "~/utils"
+import { runBrowserAsyncApi } from "~/utils/browser/browserAsyncApi"
 import { getDeviceTypeInfo } from "~/utils/browser/device"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -19,33 +20,6 @@ export { getLocalStorage } from "~/utils/browser/extensionStorage"
  * Unified logger scoped to cross-browser WebExtension API helpers.
  */
 const logger = createLogger("BrowserApi")
-
-/**
- * Native Chrome still has callback-only APIs below some Promise-support
- * milestones. Keep Firefox/native browser Promise calls separate, and consume
- * runtime.lastError inside the Chrome callback while it is available.
- */
-function runBrowserAsyncApi<T>(
-  promiseCall: () => Promise<T>,
-  callbackCall: (callback: (value: T) => void) => Promise<T> | void,
-): Promise<T> {
-  const nativeChrome = (globalThis as any).chrome
-  if (!nativeChrome || browser !== nativeChrome) {
-    return promiseCall()
-  }
-
-  return new Promise<T>((resolve, reject) => {
-    const pending = callbackCall((value) => {
-      const error = nativeChrome.runtime?.lastError
-      if (error) {
-        reject(new Error(error.message))
-      } else {
-        resolve(value)
-      }
-    })
-    pending?.then(resolve, reject)
-  })
-}
 
 // 确保 browser 全局对象可用
 if (typeof (globalThis as any).browser === "undefined") {
@@ -1373,112 +1347,6 @@ export async function setUninstallUrl(url: string): Promise<boolean> {
  */
 export async function openRuntimeOptionsPage(): Promise<void> {
   await browser.runtime.openOptionsPage()
-}
-
-export type RuntimeUpdateCheckStatus =
-  | "throttled"
-  | "no_update"
-  | "update_available"
-
-export type RuntimeUpdateCheckResult = {
-  status: RuntimeUpdateCheckStatus
-  version?: string
-}
-
-type RuntimeRequestUpdateCheck = (
-  callback?: (
-    status: RuntimeUpdateCheckStatus,
-    details?: { version?: string },
-  ) => void,
-) => Promise<RuntimeUpdateCheckResult | RuntimeUpdateCheckStatus> | void
-
-/**
- * Ask the host browser to check its extension store for an update.
- *
- * Chrome exposes `runtime.requestUpdateCheck` for manually checking the
- * browser-managed update channel. It can only find versions already published
- * by the store and may return `throttled` when called too often.
- *
- * Sources:
- * - https://developer.chrome.com/docs/extensions/reference/api/runtime#method-requestUpdateCheck
- * - https://developer.chrome.com/docs/extensions/develop/concepts/extensions-update-lifecycle
- */
-export async function requestRuntimeUpdateCheck(): Promise<RuntimeUpdateCheckResult | null> {
-  const requestUpdateCheck =
-    ((globalThis as any).browser?.runtime?.requestUpdateCheck as
-      | RuntimeRequestUpdateCheck
-      | undefined) ??
-    ((globalThis as any).chrome?.runtime?.requestUpdateCheck as
-      | RuntimeRequestUpdateCheck
-      | undefined)
-
-  if (typeof requestUpdateCheck !== "function") {
-    return null
-  }
-
-  return await new Promise<RuntimeUpdateCheckResult>((resolve, reject) => {
-    let settled = false
-
-    // Browser implementations differ here: older Chromium builds report via
-    // callback while newer WebExtension-style APIs may also return a promise.
-    // `settled` keeps a hybrid implementation from resolving twice.
-    const finish = (result: RuntimeUpdateCheckResult) => {
-      if (settled) return
-      settled = true
-      resolve(result)
-    }
-
-    try {
-      const maybePromise = requestUpdateCheck(
-        (status: RuntimeUpdateCheckStatus, details?: { version?: string }) => {
-          const error =
-            (globalThis as any).browser?.runtime?.lastError ??
-            (globalThis as any).chrome?.runtime?.lastError
-          if (error) {
-            if (!settled) {
-              settled = true
-              reject(new Error(error.message))
-            }
-            return
-          }
-          finish({
-            status,
-            version: details?.version,
-          })
-        },
-      )
-
-      if (
-        maybePromise &&
-        typeof (maybePromise as Promise<unknown>).then === "function"
-      ) {
-        ;(
-          maybePromise as Promise<
-            RuntimeUpdateCheckResult | RuntimeUpdateCheckStatus
-          >
-        )
-          .then((result) => {
-            if (typeof result === "string") {
-              finish({ status: result })
-              return
-            }
-
-            finish(result)
-          })
-          .catch((error) => {
-            if (!settled) {
-              settled = true
-              reject(error)
-            }
-          })
-      }
-    } catch (error) {
-      if (!settled) {
-        settled = true
-        reject(error)
-      }
-    }
-  })
 }
 
 /**

@@ -43,6 +43,24 @@ belongs to one saved account. Scope does not imply support for upstream read
 acknowledgement.
 _Avoid_: site type, announcement format
 
+**Announcement Workspace**:
+The user-facing scope of announcement records, source status, read-state filters,
+and check/read commands. Search narrows the displayed list; it does not redefine
+which accounts a manual check touches.
+_Avoid_: announcement cache, polling task
+
+**Announcement Identity Ledger**:
+Durable first-seen, last-seen, and read facts for an announcement identity. These
+facts survive eviction of the cached announcement content, so rediscovery does
+not make a known announcement new again.
+_Avoid_: announcement content cache
+
+**Check-in Status Workspace**:
+The accepted check-in status snapshot together with the saved-account evidence
+and display facts needed to interpret it. Latest-result acceptance and pending
+load completion are separate facts; execution commands do not own their rules.
+_Avoid_: check-in run, scheduler
+
 **Provider Model Catalog**:
 A model catalog whose membership and facts apply to an upstream provider as a whole rather than to one saved account.
 _Avoid_: account-available models, account model catalog
@@ -79,6 +97,20 @@ The follow-up to an already saved account that may obtain an Account Runtime Key
 wait for required key input or one-time-secret acknowledgement, and continue to
 managed-site configuration.
 _Avoid_: account save, Sub2API group selection
+
+**Account Draft**:
+Editable account facts and explicit user choices before persistence. Credentials
+and discovered check-in facts belong to the account identity they were obtained
+for; changing that identity may invalidate the evidence without changing the
+user's Automatic Check-in Intent.
+_Avoid_: saved account, detected account
+
+**Managed Site Batch Import Session**:
+A batch of Account Runtime Keys selected for import into one managed-site target,
+together with its preview, user edits and cumulative execution results. Retrying
+failed entries retains the successful results; changing the target invalidates
+the previous target's preview and pending feedback.
+_Avoid_: account save, single import attempt
 
 **Channel Verification Protocol**:
 The inference protocol used to verify models for a Managed Upstream Resource.

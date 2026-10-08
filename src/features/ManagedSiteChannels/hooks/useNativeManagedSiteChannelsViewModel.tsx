@@ -8,6 +8,7 @@ import { type ChannelFilterTarget } from "~/features/ManagedSiteChannels/compone
 import { useManagedResourceListController } from "~/features/ManagedSiteChannels/controllers/useManagedResourceListController"
 import { useManagedResourceMigrationController } from "~/features/ManagedSiteChannels/controllers/useManagedResourceMigrationController"
 import { useManagedResourceMutationController } from "~/features/ManagedSiteChannels/controllers/useManagedResourceMutationController"
+import { useManagedResourceEditorPresentation } from "~/features/ManagedSiteChannels/hooks/useManagedResourceEditorPresentation"
 import { useManagedSiteChannelModelSync } from "~/features/ManagedSiteChannels/hooks/useManagedSiteChannelModelSync"
 import type { ManagedSiteChannelsRouteProps } from "~/features/ManagedSiteChannels/managedSiteChannelsRouteContracts"
 import type {
@@ -23,7 +24,6 @@ import {
 } from "~/features/ManagedSiteChannels/presentation/managedResourceDetailPresentation"
 import { presentManagedResourceFailure } from "~/features/ManagedSiteChannels/presentation/managedResourceFailurePresentation"
 import {
-  getManagedResourceFieldPolicy,
   MANAGED_RESOURCE_EDITOR_MODES,
   type ManagedResourceEditorMode,
 } from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
@@ -36,7 +36,6 @@ import {
 import { createManagedSiteChannelsLabels } from "~/features/ManagedSiteChannels/presentation/managedSiteChannelsLabels"
 import { useManagedSiteChannelPageExperience } from "~/features/ManagedSiteChannels/presentation/useManagedSiteChannelPageExperience"
 import { useManagedResourceInteraction } from "~/features/ManagedSiteChannels/providers/useManagedResourceInteraction"
-import { getEditedResourceFieldIssues } from "~/features/ResourceEditor/resourceEditorValidation"
 import { recordGatewayGuidanceCompletion } from "~/features/UnifiedApiGuidance/recordGatewayGuidanceCompletion"
 import toast from "~/lib/notify"
 import type { ManagedResourceProductPolicy } from "~/services/accountSiteDefinitions/contracts"
@@ -44,11 +43,8 @@ import { getManagedSiteTypeValues } from "~/services/accountSiteDefinitions/regi
 import {
   MANAGED_RESOURCE_CREATE_SEED_KINDS,
   MANAGED_RESOURCE_FAILURE_CODES,
-  ManagedResourceError,
-  type EditableResourceProjection,
   type ManagedResourceRegistration,
   type ResourceFailure,
-  type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/channelMigrationCapabilityRegistry"
 import { getManagedSiteTargetOptions } from "~/services/managedSites/channelMigrationTargets"
@@ -288,9 +284,6 @@ export function useNativeManagedSiteChannelsViewModel({
   const [filterTarget, setFilterTarget] = useState<ChannelFilterTarget | null>(
     null,
   )
-  const [editorValues, setEditorValues] = useState<EditableResourceProjection>(
-    {},
-  )
   const analytics = useMemo(() => {
     const managedSiteType = resolveProductAnalyticsManagedSiteType(siteType)
     return managedSiteType
@@ -360,45 +353,23 @@ export function useNativeManagedSiteChannelsViewModel({
     },
     analytics,
   })
-  useEffect(() => {
-    setEditorValues(mutation.editor?.initialValues ?? {})
-  }, [mutation.editor])
-  const editorSecretLoader = mutation.editor?.loadSecret
-  const editorOptionLoader = mutation.editor?.loadOptions
-  const loadEditorSecret = useCallback(
-    async (fieldId: string, options?: ResourceOperationOptions) => {
-      if (!editorSecretLoader) {
-        throw new ManagedResourceError({
-          code: MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
-        })
-      }
-      return await runRead(
-        () => editorSecretLoader(fieldId, options),
-        t("channelDialog:title.edit"),
-        options?.signal,
-      )
-    },
-    [editorSecretLoader, runRead, t],
-  )
-  const loadEditorOptions = useCallback(
-    async (
-      fieldId: string,
-      values: EditableResourceProjection,
-      options?: ResourceOperationOptions,
-    ) => {
-      if (!editorOptionLoader) {
-        throw new ManagedResourceError({
-          code: MANAGED_RESOURCE_FAILURE_CODES.PermissionDenied,
-        })
-      }
-      return await runRead(
-        () => editorOptionLoader(fieldId, values, options),
-        t("channelDialog:title.edit"),
-        options?.signal,
-      )
-    },
-    [editorOptionLoader, runRead, t],
-  )
+  const {
+    editorValues,
+    setEditorValues,
+    editorPolicy,
+    editorValidation,
+    editorFieldIssues,
+    loadEditorSecret,
+    loadEditorOptions,
+    editorPageFailure,
+    handleSubmitEditor,
+  } = useManagedResourceEditorPresentation({
+    siteType,
+    primaryKind: policy.primaryKind,
+    mutation,
+    runRead,
+    t,
+  })
   const targets = useMemo(
     () =>
       getManagedSiteTargetOptions(preferences, {
@@ -425,35 +396,6 @@ export function useNativeManagedSiteChannelsViewModel({
     analytics,
     executeMigration,
   })
-  const editorPolicy =
-    mutation.editor && mutation.editorMode
-      ? getManagedResourceFieldPolicy(
-          siteType,
-          policy.primaryKind,
-          mutation.editorMode,
-        )
-      : undefined
-  const editorValidation = mutation.editor?.validate(editorValues) ?? null
-  const initialEditorValidation = useMemo(
-    () => mutation.editor?.validate(mutation.editor.initialValues) ?? null,
-    [mutation.editor],
-  )
-  const liveEditorValidation =
-    mutation.editorFailure?.code ===
-    MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed
-      ? editorValidation
-      : null
-  const editorFieldIssues = liveEditorValidation
-    ? liveEditorValidation.valid
-      ? []
-      : liveEditorValidation.issues
-    : mutation.editorFailure?.fieldIssues ??
-      getEditedResourceFieldIssues(
-        editorValidation,
-        editorValues,
-        mutation.editor?.initialValues ?? {},
-        initialEditorValidation,
-      )
   const columns = useMemo(
     () => createManagedResourceColumns(t, siteType, policy, columnVisibility),
     [columnVisibility, policy, siteType, t],
@@ -559,58 +501,6 @@ export function useNativeManagedSiteChannelsViewModel({
     }
   }, [mutation.deleteState, t])
 
-  const notifiedEditorFeedback = useRef<typeof mutation.editorFeedback>(null)
-  useEffect(() => {
-    const feedback = mutation.editorFeedback
-    if (feedback === notifiedEditorFeedback.current) return
-    notifiedEditorFeedback.current = feedback
-    if (
-      !feedback ||
-      (feedback.kind !== "save-failed" && feedback.kind !== "save-uncertain")
-    )
-      return
-    const failure = feedback.failure
-    if (
-      failure.code === MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed &&
-      failure.fieldIssues?.length
-    )
-      return
-    const fallbackMessage =
-      feedback.kind === "save-uncertain"
-        ? t("managedSiteChannels:alerts.partialMutation.description")
-        : failure.code === MANAGED_RESOURCE_FAILURE_CODES.ResourceChanged
-          ? t("managedSiteChannels:alerts.resourceChanged.description")
-          : t("managedSiteChannels:alerts.editorSaveError.description")
-    toast.error(
-      presentManagedResourceFailure(failure, {
-        category: "",
-        message: fallbackMessage,
-      }).message,
-    )
-  }, [mutation.editorFeedback, t])
-  const editorPageFailure = (() => {
-    if (mutation.opening?.status === "failure") return null
-    switch (mutation.editorFeedback?.kind) {
-      case "open-failed":
-        return presentManagedResourceFailure(mutation.editorFeedback.failure, {
-          category: t("managedSiteChannels:alerts.editorLoadError.title"),
-          message: t("managedSiteChannels:alerts.editorLoadError.description"),
-        })
-      case "save-failed":
-      case "save-uncertain":
-        return null
-      case "saved-refresh-failed":
-        return {
-          category: t("managedSiteChannels:alerts.savedRefreshError.title"),
-          message: t(
-            "managedSiteChannels:alerts.savedRefreshError.description",
-          ),
-          variant: "warning" as const,
-        }
-      default:
-        return null
-    }
-  })()
   const detailPageFailure =
     mutation.detailFailure && mutation.opening?.status !== "failure"
       ? presentManagedResourceFailure(mutation.detailFailure, {
@@ -875,12 +765,6 @@ export function useNativeManagedSiteChannelsViewModel({
       ) === true,
   })
 
-  const handleSubmitEditor = () => {
-    void mutation.submit(editorValues).catch(() => {
-      mutation.closeEditor()
-      toast.error(t("managedSiteChannels:alerts.partialMutation.description"))
-    })
-  }
   const migrationLabels = createMigrationLabels(
     t,
     migrationRowKeys.length,

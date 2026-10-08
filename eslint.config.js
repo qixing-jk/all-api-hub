@@ -102,7 +102,7 @@ const dynamicImportAllowlist = [
     imports: ["./devDiscoveryFixtures"],
   },
   {
-    file: "src/features/AutoCheckin/hooks/useAutoCheckinViewModel.tsx",
+    file: "src/features/AutoCheckin/hooks/useAutoCheckinStatusWorkspace.ts",
     imports: ["~/services/checkin/autoCheckin/devDiscoveryFixtures"],
   },
   // UI code splitting: lazy pages, sections, dialogs, and locale data.
@@ -131,7 +131,7 @@ const dynamicImportAllowlist = [
     ],
   },
   {
-    file: "src/features/BasicSettings/BasicSettings.tsx",
+    file: "src/features/BasicSettings/settingsTabRegistry.ts",
     imports: ["./components/tabs/"],
   },
   {
@@ -179,7 +179,7 @@ const dynamicImportAllowlist = [
     imports: ["~/services/apiAdapters/registry"],
   },
   {
-    file: "src/services/managedSites/providers/newApiSession.ts",
+    file: "src/services/managedSites/providers/newApiChannelKeyRead.ts",
     imports: ["~/utils/browser/tempWindowFetch"],
   },
   {
@@ -286,8 +286,8 @@ const siteTypeImportOwners = [
   "src/services/modelList/accountSources/sub2apiEstimates.ts", // Provider-owned catalog estimate.
   "src/services/productAnalytics/contracts.ts", // Fixed event schema.
   "src/services/productAnalytics/siteEcosystem.ts", // Fixed event schema projection.
-  "src/services/siteAnnouncements/storage.ts", // Unknown cached identity fallback.
-  "src/services/siteDetection/autoDetectService.ts", // Unknown identity fallback.
+  "src/services/siteAnnouncements/announcementProjection.ts", // Unknown cached identity fallback.
+  "src/services/siteDetection/autoDetectSources.ts", // Unknown identity fallback belongs to source result assembly.
 ]
 
 export default defineConfig([

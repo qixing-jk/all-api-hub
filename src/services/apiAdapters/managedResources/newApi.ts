@@ -42,7 +42,7 @@ import {
   buildNewApiUpdatePayload,
   hasNewApiAdvancedValues,
 } from "~/services/managedSites/providers/newApiChannelPayload"
-import { NewApiChannelKeyRequirementError } from "~/services/managedSites/providers/newApiSession"
+import { NewApiChannelKeyRequirementError } from "~/services/managedSites/providers/newApiSessionContracts"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"

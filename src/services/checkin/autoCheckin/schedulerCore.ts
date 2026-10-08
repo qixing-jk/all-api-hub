@@ -1,4 +1,3 @@
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
@@ -12,11 +11,8 @@ import {
 } from "~/services/protectionBypass/contracts"
 import { type DisplaySiteData } from "~/types"
 import {
-  AUTO_CHECKIN_RUN_TYPE,
   AUTO_CHECKIN_SCHEDULE_MODE,
   type AutoCheckinPreferences,
-  type AutoCheckinRunResult,
-  type AutoCheckinRunSummary,
 } from "~/types/autoCheckin"
 import {
   TEMP_WINDOW_REQUEST_SOURCES,
@@ -28,7 +24,6 @@ import {
   getAlarm,
   hasAlarmsAPI,
   onAlarm,
-  sendRuntimeMessage,
 } from "~/utils/browser/browserApi"
 import { formatLocalDayKey } from "~/utils/core/dayKey"
 import { t } from "~/utils/i18n/core"
@@ -36,74 +31,17 @@ import { t } from "~/utils/i18n/core"
 import {
   computeNextDailyTriggerPlan,
   computeNextRetryTriggerTime,
-  isMinutesWithinWindow,
-  parseTimeToMinutes,
   type AutoCheckinDailyTriggerPlan,
 } from "./dailyPlanning"
+import { DailyTriggerWorkflow } from "./dailyTriggerWorkflow"
 import { logger } from "./diagnostics"
 import { createAutomaticCheckinExecution } from "./executionIntent"
 import { pruneExhaustedPending } from "./retryQueue"
-import { AutoCheckinRunEngine } from "./runEngine"
-import { recalculateSummaryFromResults } from "./runResults"
+import { retryAccount, verifyAccountStatus } from "./runAccountActions"
+import { runCheckins } from "./runCheckins"
+import type { AutoCheckinRetryScheduling } from "./runContracts"
+import { runRetryCheckins } from "./runRetryCheckins"
 import { autoCheckinStorage } from "./storage"
-
-/**
- * Reason codes describing why the UI-open pre-trigger is not eligible to run.
- *
- * These are intentionally stable, UI-safe strings so developers can diagnose issues
- * without relying on log scraping.
- */
-type AutoCheckinUiOpenPretriggerIneligibleReason =
-  | "alarms_api_unavailable"
-  | "global_disabled"
-  | "pretrigger_disabled"
-  | "already_ran_today"
-  | "daily_run_in_flight"
-  | "invalid_time_window"
-  | "outside_time_window"
-  | "daily_alarm_missing"
-  | "daily_alarm_not_today"
-
-interface AutoCheckinUiOpenPretriggerDebugInfo {
-  nowIso: string
-  today: string
-  windowStart: string
-  windowEnd: string
-  windowStartMinutes: number | null
-  windowEndMinutes: number | null
-  nowMinutes: number
-  isWithinWindow: boolean | null
-  lastDailyRunDay: string | null
-  dailyRunInFlightDay: string | null
-  dailyAlarmScheduledTime: number | null
-  scheduledTargetDay: string | null
-  storedTargetDay: string | null
-  targetDay: string | null
-}
-
-interface AutoCheckinUiOpenPretriggerResult {
-  /**
-   * True only when the daily run was actually executed as a result of this call.
-   * In `dryRun` mode, this will always be false.
-   */
-  started: boolean
-  /**
-   * True when the current state would allow the UI-open pre-trigger to run.
-   * Useful for diagnostics; `started` may still be false when `dryRun` is true.
-   */
-  eligible: boolean
-  /**
-   * Present only when `eligible` is false.
-   */
-  ineligibleReason?: AutoCheckinUiOpenPretriggerIneligibleReason
-  /**
-   * Included only when `debug` is true.
-   */
-  debug?: AutoCheckinUiOpenPretriggerDebugInfo
-  summary?: AutoCheckinRunSummary
-  lastRunResult?: AutoCheckinRunResult
-  pendingRetry?: boolean
-}
 
 /**
  * Scheduler service for Auto Check-in
@@ -113,34 +51,37 @@ interface AutoCheckinUiOpenPretriggerResult {
  * - A separate *retry* alarm retries only the accounts that failed in today's normal run.
  */
 class AutoCheckinScheduler {
-  private readonly runEngine = new AutoCheckinRunEngine({
+  private readonly retryScheduling: AutoCheckinRetryScheduling = {
     clearRetryAlarm: (maxAttempts) => this.clearRetryAlarm(maxAttempts),
     clearRetryAlarmAndState: () => this.clearRetryAlarmAndState(),
     scheduleRetryAlarm: (config) => this.scheduleRetryAlarm(config),
-  })
+  }
 
   /** Executes an authorized batch while this owner retains alarm and in-flight state. */
-  runCheckins(options: Parameters<AutoCheckinRunEngine["runCheckins"]>[0]) {
-    return this.runEngine.runCheckins(options)
+  runCheckins(options: Parameters<typeof runCheckins>[0]) {
+    return runCheckins(options)
   }
 
   /** Runs the current same-day retry queue. */
   private runRetryCheckins(
-    ...args: Parameters<AutoCheckinRunEngine["runRetryCheckins"]>
+    source: TempWindowRequestSource,
+    execution: ProtectionBypassExecution,
   ) {
-    return this.runEngine.runRetryCheckins(...args)
+    return runRetryCheckins(source, execution, this.retryScheduling)
   }
 
   /** Executes one authorized account retry and reconciles its persisted outcome. */
-  retryAccount(...args: Parameters<AutoCheckinRunEngine["retryAccount"]>) {
-    return this.runEngine.retryAccount(...args)
+  retryAccount(
+    accountId: string,
+    source: TempWindowRequestSource,
+    execution: ProtectionBypassExecution,
+  ) {
+    return retryAccount(accountId, source, execution, this.retryScheduling)
   }
 
   /** Reads and reconciles selected-method status without mutation. */
-  verifyAccountStatus(
-    ...args: Parameters<AutoCheckinRunEngine["verifyAccountStatus"]>
-  ) {
-    return this.runEngine.verifyAccountStatus(...args)
+  verifyAccountStatus(accountId: string) {
+    return verifyAccountStatus(accountId, this.retryScheduling)
   }
 
   /**
@@ -166,16 +107,11 @@ class AutoCheckinScheduler {
 
   private isInitialized = false
 
-  /**
-   * In-flight guard to prevent duplicate daily runs for the same local day.
-   *
-   * This specifically protects against:
-   * - multiple UI surfaces opening and triggering a pre-run simultaneously
-   * - the daily alarm firing while a UI-triggered daily run is executing
-   */
-  private dailyRunInFlightDay: string | null = null
-
-  private dailyRunInFlightPromise: Promise<void> | null = null
+  private readonly dailyTrigger = new DailyTriggerWorkflow({
+    dailyAlarmName: AutoCheckinScheduler.DAILY_ALARM_NAME,
+    runCheckins: (options) => this.runCheckins(options),
+    scheduleNextRun: () => this.scheduleNextRun(),
+  })
 
   private async syncDailyScheduleStatus(
     scheduledTime: Date,
@@ -730,261 +666,18 @@ class AutoCheckinScheduler {
    * - the next daily run for the next day window
    * - any required retry alarm (without overriding the daily schedule)
    */
-  private async handleDailyAlarm(
-    alarm: browser.alarms.Alarm,
-    tempWindowRequestSource: TempWindowRequestSource,
-    protectionBypassExecution: ProtectionBypassExecution,
+  /** Routes scheduled triggers through the shared daily admission owner. */
+  private handleDailyAlarm(
+    ...args: Parameters<DailyTriggerWorkflow["handleDailyAlarm"]>
   ) {
-    const now = new Date()
-    const today = formatLocalDayKey(now)
-
-    if (this.dailyRunInFlightDay === today && this.dailyRunInFlightPromise) {
-      logger.warn("Daily run already in-flight; ignoring trigger")
-      return
-    }
-
-    const runPromise = (async () => {
-      const currentStatus = await autoCheckinStorage.getStatus()
-      const targetDay =
-        currentStatus?.dailyAlarmTargetDay ??
-        (alarm.scheduledTime != null
-          ? formatLocalDayKey(new Date(alarm.scheduledTime))
-          : undefined)
-
-      // Stale-alarm guard: never execute a normal run for a past day.
-      if (targetDay && targetDay !== today) {
-        logger.warn("Ignoring stale daily alarm", {
-          targetDay,
-          today,
-        })
-        await this.scheduleNextRun()
-        return
-      }
-
-      logger.info("Daily alarm triggered; starting check-in execution")
-      try {
-        await this.runCheckins({
-          runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
-          tempWindowRequestSource,
-          protectionBypassExecution,
-        })
-      } catch (error) {
-        logger.error("Error during daily check-in execution", error)
-      } finally {
-        await this.scheduleNextRun()
-      }
-    })()
-
-    this.dailyRunInFlightDay = today
-    this.dailyRunInFlightPromise = runPromise
-
-    try {
-      await runPromise
-    } finally {
-      if (this.dailyRunInFlightPromise === runPromise) {
-        this.dailyRunInFlightDay = null
-        this.dailyRunInFlightPromise = null
-      }
-    }
+    return this.dailyTrigger.handleDailyAlarm(...args)
   }
 
-  /**
-   * Pre-trigger today's scheduled daily run early when an extension UI opens.
-   *
-   * This method is intentionally scoped to the existing daily alarm path and
-   * does not change retry behavior or provider semantics.
-   */
-  async pretriggerDailyOnUiOpen(params: {
-    requestId?: string
-    tempWindowRequestSource?: TempWindowRequestSource
-    protectionBypassExecution: ProtectionBypassExecution
-    /**
-     * When true, evaluates eligibility but does not execute the daily run.
-     * Intended for UI diagnostics so users can understand why a pre-trigger did
-     * or did not start without waiting for the next scheduled time.
-     */
-    dryRun?: boolean
-    /**
-     * When true, includes structured debug details describing the eligibility
-     * decision inputs (window, alarm schedule, stored target day, etc.).
-     */
-    debug?: boolean
-  }): Promise<AutoCheckinUiOpenPretriggerResult> {
-    const now = new Date()
-    const today = formatLocalDayKey(now)
-
-    const debug: AutoCheckinUiOpenPretriggerDebugInfo | undefined =
-      params?.debug === true
-        ? {
-            nowIso: now.toISOString(),
-            today,
-            windowStart: "",
-            windowEnd: "",
-            windowStartMinutes: null,
-            windowEndMinutes: null,
-            nowMinutes: now.getHours() * 60 + now.getMinutes(),
-            isWithinWindow: null,
-            lastDailyRunDay: null,
-            dailyRunInFlightDay: this.dailyRunInFlightDay ?? null,
-            dailyAlarmScheduledTime: null,
-            scheduledTargetDay: null,
-            storedTargetDay: null,
-            targetDay: null,
-          }
-        : undefined
-
-    const returnIneligible = (
-      ineligibleReason: AutoCheckinUiOpenPretriggerIneligibleReason,
-    ) => {
-      return {
-        started: false,
-        eligible: false,
-        ineligibleReason,
-        debug,
-      }
-    }
-
-    if (!hasAlarmsAPI()) {
-      return returnIneligible("alarms_api_unavailable")
-    }
-
-    const prefs = await userPreferences.getPreferences()
-    const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
-
-    if (!config.globalEnabled || !config.pretriggerDailyOnUiOpen) {
-      if (debug) {
-        debug.windowStart = config.windowStart
-        debug.windowEnd = config.windowEnd
-      }
-      return returnIneligible(
-        !config.globalEnabled ? "global_disabled" : "pretrigger_disabled",
-      )
-    }
-
-    const currentStatus = await autoCheckinStorage.getStatus()
-
-    if (debug) {
-      debug.windowStart = config.windowStart
-      debug.windowEnd = config.windowEnd
-      debug.lastDailyRunDay = currentStatus?.lastDailyRunDay ?? null
-    }
-
-    if (this.dailyRunInFlightDay === today && this.dailyRunInFlightPromise) {
-      return returnIneligible("daily_run_in_flight")
-    }
-
-    /**
-     * Duplicate-run guard: never allow a second daily run on the same local day,
-     * even if the daily alarm schedule/state is inconsistent.
-     */
-    if (currentStatus?.lastDailyRunDay === today) {
-      return returnIneligible("already_ran_today")
-    }
-
-    const windowStartMinutes = parseTimeToMinutes(config.windowStart)
-    const windowEndMinutes = parseTimeToMinutes(config.windowEnd)
-    const nowMinutes = now.getHours() * 60 + now.getMinutes()
-
-    if (debug) {
-      debug.windowStartMinutes = windowStartMinutes
-      debug.windowEndMinutes = windowEndMinutes
-      debug.nowMinutes = nowMinutes
-    }
-
-    if (windowStartMinutes == null || windowEndMinutes == null) {
-      return returnIneligible("invalid_time_window")
-    }
-
-    const isWithinWindow = isMinutesWithinWindow(
-      nowMinutes,
-      windowStartMinutes,
-      windowEndMinutes,
-    )
-
-    if (debug) {
-      debug.isWithinWindow = isWithinWindow
-    }
-
-    if (!isWithinWindow) {
-      return returnIneligible("outside_time_window")
-    }
-
-    const dailyAlarm = await getAlarm(AutoCheckinScheduler.DAILY_ALARM_NAME)
-
-    if (debug) {
-      debug.dailyAlarmScheduledTime = dailyAlarm?.scheduledTime ?? null
-    }
-
-    if (!dailyAlarm?.scheduledTime) {
-      return returnIneligible("daily_alarm_missing")
-    }
-
-    const scheduledTargetDay = formatLocalDayKey(
-      new Date(dailyAlarm.scheduledTime),
-    )
-    const targetDay = currentStatus?.dailyAlarmTargetDay ?? scheduledTargetDay
-
-    if (targetDay !== today) {
-      if (debug) {
-        debug.scheduledTargetDay = scheduledTargetDay
-        debug.storedTargetDay = currentStatus?.dailyAlarmTargetDay ?? null
-        debug.targetDay = targetDay
-      }
-      return returnIneligible("daily_alarm_not_today")
-    }
-
-    if (debug) {
-      debug.scheduledTargetDay = scheduledTargetDay
-      debug.storedTargetDay = currentStatus?.dailyAlarmTargetDay ?? null
-      debug.targetDay = targetDay
-    }
-
-    if (params?.dryRun) {
-      return {
-        started: false,
-        eligible: true,
-        debug,
-      }
-    }
-
-    if (params?.requestId) {
-      try {
-        await sendRuntimeMessage(
-          {
-            action: RuntimeActionIds.AutoCheckinPretriggerStarted,
-            requestId: params.requestId,
-          },
-          { maxAttempts: 1 },
-        )
-      } catch {
-        // Ignore if no UI is listening (popup closed, no receivers, etc.).
-      }
-    }
-
-    await this.handleDailyAlarm(
-      {
-        name: AutoCheckinScheduler.DAILY_ALARM_NAME,
-        scheduledTime: dailyAlarm.scheduledTime,
-      } as browser.alarms.Alarm,
-      params.tempWindowRequestSource ?? TEMP_WINDOW_REQUEST_SOURCES.Background,
-      params.protectionBypassExecution,
-    )
-
-    const updatedStatus = await autoCheckinStorage.getStatus()
-    const summary =
-      updatedStatus?.summary ??
-      (updatedStatus?.perAccount
-        ? recalculateSummaryFromResults(updatedStatus.perAccount)
-        : undefined)
-
-    return {
-      started: true,
-      eligible: true,
-      debug,
-      summary,
-      lastRunResult: updatedStatus?.lastRunResult,
-      pendingRetry: updatedStatus?.pendingRetry,
-    }
+  /** Routes UI-open diagnostics and triggers through the same daily owner. */
+  pretriggerDailyOnUiOpen(
+    ...args: Parameters<DailyTriggerWorkflow["pretriggerDailyOnUiOpen"]>
+  ) {
+    return this.dailyTrigger.pretriggerDailyOnUiOpen(...args)
   }
 
   /**

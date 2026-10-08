@@ -47,6 +47,49 @@ function countIdentityMarkers(
 }
 
 describe("siteAnnouncementStorage", () => {
+  it.each(["mark-read", "remove-sites"] as const)(
+    "captures requested targets before a queued %s mutation",
+    async (operation) => {
+      const seeded = []
+      for (const suffix of ["requested", "other"]) {
+        const site = {
+          siteKey: `site:new-api:https://${suffix}.invalid`,
+          siteName: suffix,
+          siteType: "new-api" as const,
+          baseUrl: `https://${suffix}.invalid`,
+          accountId: suffix,
+          sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
+          status: SITE_ANNOUNCEMENT_STATUS.Success,
+        }
+        const [record] = await siteAnnouncementStorage.upsertDiscoveredRecords({
+          site,
+          records: [
+            { ...site, title: suffix, content: "Body", fingerprint: suffix },
+          ],
+        })
+        if (!record) throw new Error("Missing seeded announcement")
+        seeded.push(record)
+      }
+      const requested = atIndex(seeded, 0)
+      const other = atIndex(seeded, 1)
+      const ids = [operation === "mark-read" ? requested.id : requested.siteKey]
+      const pending =
+        operation === "mark-read"
+          ? siteAnnouncementStorage.markRecordsRead(ids)
+          : siteAnnouncementStorage.removeSites(ids)
+      ids[0] = operation === "mark-read" ? other.id : other.siteKey
+      await pending
+      const store = await siteAnnouncementStorage.getStore()
+      if (operation === "mark-read") {
+        expect(store.sites[requested.siteKey]?.records[0]?.read).toBe(true)
+        expect(store.sites[other.siteKey]?.records[0]?.read).toBe(false)
+      } else {
+        expect(store.sites[requested.siteKey]).toBeUndefined()
+        expect(store.sites[other.siteKey]).toBeDefined()
+      }
+    },
+  )
+
   it.each([undefined, 1500])(
     "updates a known unread message from upstream read evidence %s",
     async (readAt) => {

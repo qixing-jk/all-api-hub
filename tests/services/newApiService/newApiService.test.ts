@@ -93,10 +93,10 @@ vi.mock("~/services/preferences/userPreferences", () => ({
 }))
 
 vi.mock(
-  "~/services/managedSites/providers/newApiSession",
+  "~/services/managedSites/providers/newApiChannelKeyRead",
   async (importOriginal) => {
     const actual =
-      (await importOriginal()) as typeof import("~/services/managedSites/providers/newApiSession")
+      (await importOriginal()) as typeof import("~/services/managedSites/providers/newApiChannelKeyRead")
 
     return {
       ...actual,
@@ -928,7 +928,9 @@ describe("newApiService", () => {
       const {
         NEW_API_CHANNEL_KEY_ERROR_KINDS,
         NewApiChannelKeyRequirementError,
-      } = await import("~/services/managedSites/providers/newApiSession")
+      } = await import(
+        "~/services/managedSites/providers/newApiSessionContracts"
+      )
       const config = {
         baseUrl: "https://new-api.example.com",
         adminToken: "admin-token",

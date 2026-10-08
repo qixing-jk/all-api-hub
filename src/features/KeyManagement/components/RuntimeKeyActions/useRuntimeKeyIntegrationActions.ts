@@ -4,11 +4,12 @@ import { useTranslation } from "react-i18next"
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { collectAccountRuntimeKeySecrets } from "~/services/accounts/accountRuntimeKeys"
 import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { collectAccountRuntimeKeySecrets } from "~/services/accounts/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import { resolveAccountRuntimeKeyExternalApiBaseUrl } from "~/services/accounts/utils/credentialExport"
 import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountTokenProfileName"
+import { createProfileCredentialExportData } from "~/services/apiCredentialProfiles/credentialExport"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import type { KelivoProviderExportInput } from "~/services/integrations/kelivo"
 import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
@@ -25,6 +26,8 @@ import {
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { DisplaySiteData } from "~/types"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/feedback/operationFeedback"
 
@@ -47,6 +50,8 @@ interface UseRuntimeKeyIntegrationActionsParams {
     runtimeKey: AccountRuntimeKey,
   ) => void | Promise<void>
   runtimeKey: AccountRuntimeKey
+  /** Already resolved service credential; retain profile export identity and dialog snapshots. */
+  credentialProfile?: ApiCredentialProfile
 }
 
 /** Owns third-party export and managed-site import state for one runtime key. */
@@ -57,6 +62,7 @@ export function useRuntimeKeyIntegrationActions({
   managedSiteStatus,
   onManagedSiteImportSuccess,
   runtimeKey,
+  credentialProfile,
 }: UseRuntimeKeyIntegrationActionsParams) {
   const { t } = useTranslation(["keyManagement", "settings"])
   const { managedSiteType, claudeCodeRouterBaseUrl, claudeCodeRouterApiKey } =
@@ -64,6 +70,10 @@ export function useRuntimeKeyIntegrationActions({
   const { markGatewayGuidanceOnboardingCompleted } = useFeatureGuidanceContext()
   const { openWithAccount } = useChannelDialog()
 
+  const [claudeCodeRouterProfile, setClaudeCodeRouterProfile] =
+    useState<ApiCredentialProfile | null>(null)
+  const [kiloCodeProfile, setKiloCodeProfile] =
+    useState<ApiCredentialProfile | null>(null)
   const [isClaudeCodeRouterOpen, setIsClaudeCodeRouterOpen] = useState(false)
 
   const [isCursorPlusDialogOpen, setIsCursorPlusDialogOpen] = useState(false)
@@ -84,16 +94,18 @@ export function useRuntimeKeyIntegrationActions({
     }
 
     setIsClaudeCodeRouterOpen(false)
+    setClaudeCodeRouterProfile(null)
 
     setIsCursorPlusDialogOpen(false)
     setIsKiloCodeDialogOpen(false)
+    setKiloCodeProfile(null)
     setKelivoExportInput(null)
     setIsManagedSiteImportHighlighted(false)
   }, [enabled])
 
   useLayoutEffect(() => {
     kelivoExportEpochRef.current += 1
-    setKelivoExportInput(null)
+    if (!credentialProfile) setKelivoExportInput(null)
 
     return () => {
       kelivoExportEpochRef.current += 1
@@ -113,6 +125,7 @@ export function useRuntimeKeyIntegrationActions({
     runtimeKey.id,
     runtimeKey.secret,
     runtimeKey.label,
+    credentialProfile,
   ])
 
   useEffect(() => {
@@ -145,8 +158,9 @@ export function useRuntimeKeyIntegrationActions({
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.ImportManagedSiteSingleToken,
-      surfaceId:
-        PRODUCT_ANALYTICS_SURFACE_IDS.AccountTokenThirdPartyExportDialog,
+      surfaceId: credentialProfile
+        ? PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions
+        : PRODUCT_ANALYTICS_SURFACE_IDS.AccountTokenThirdPartyExportDialog,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
 
@@ -187,9 +201,14 @@ export function useRuntimeKeyIntegrationActions({
         return
       }
 
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      })
+      tracker.complete(
+        PRODUCT_ANALYTICS_RESULTS.Skipped,
+        credentialProfile
+          ? undefined
+          : {
+              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            },
+      )
     } catch (error) {
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
@@ -197,11 +216,12 @@ export function useRuntimeKeyIntegrationActions({
       showResultToast({
         success: false,
         message: t("messages:errors.operation.failed", {
-          error:
-            toSanitizedErrorSummary(
-              error,
-              collectAccountRuntimeKeySecrets([runtimeKey]),
-            ) || t("messages:errors.unknown"),
+          error: credentialProfile
+            ? getErrorMessage(error, t("messages:errors.unknown"))
+            : toSanitizedErrorSummary(
+                error,
+                collectAccountRuntimeKeySecrets([runtimeKey]),
+              ) || t("messages:errors.unknown"),
         }),
       })
     }
@@ -215,20 +235,31 @@ export function useRuntimeKeyIntegrationActions({
       })
       return
     }
+    setClaudeCodeRouterProfile(credentialProfile ?? null)
     setIsClaudeCodeRouterOpen(true)
   }
 
   const handleUseInCherry = async () => {
     const exportEpoch = kelivoExportEpochRef.current
     const tracker = startProductAnalyticsAction({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportAccountTokenToCherryStudio,
-      surfaceId:
-        PRODUCT_ANALYTICS_SURFACE_IDS.AccountTokenThirdPartyExportDialog,
+      featureId: credentialProfile
+        ? PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles
+        : PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: credentialProfile
+        ? PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialProfileToCherryStudio
+        : PRODUCT_ANALYTICS_ACTION_IDS.ExportAccountTokenToCherryStudio,
+      surfaceId: credentialProfile
+        ? PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions
+        : PRODUCT_ANALYTICS_SURFACE_IDS.AccountTokenThirdPartyExportDialog,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
 
     try {
+      if (credentialProfile) {
+        OpenInCherryStudio(createProfileCredentialExportData(credentialProfile))
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        return
+      }
       const resolvedKey = await resolveDisplayAccountRuntimeKeySecret(
         account,
         runtimeKey,
@@ -258,17 +289,22 @@ export function useRuntimeKeyIntegrationActions({
       showResultToast({
         success: false,
         message: t("messages:errors.operation.failed", {
-          error:
-            toSanitizedErrorSummary(
-              error,
-              collectAccountRuntimeKeySecrets([runtimeKey]),
-            ) || t("messages:errors.unknown"),
+          error: credentialProfile
+            ? getErrorMessage(error, t("messages:errors.unknown"))
+            : toSanitizedErrorSummary(
+                error,
+                collectAccountRuntimeKeySecrets([runtimeKey]),
+              ) || t("messages:errors.unknown"),
         }),
       })
     }
   }
 
   const handleOpenKelivoExportDialog = async () => {
+    if (credentialProfile) {
+      setKelivoExportInput(credentialProfile)
+      return
+    }
     const exportEpoch = ++kelivoExportEpochRef.current
     try {
       const resolvedKey = await resolveDisplayAccountRuntimeKeySecret(
@@ -302,11 +338,12 @@ export function useRuntimeKeyIntegrationActions({
       showResultToast({
         success: false,
         message: t("messages:errors.operation.failed", {
-          error:
-            toSanitizedErrorSummary(
-              error,
-              collectAccountRuntimeKeySecrets([runtimeKey]),
-            ) || t("messages:errors.unknown"),
+          error: credentialProfile
+            ? getErrorMessage(error, t("messages:errors.unknown"))
+            : toSanitizedErrorSummary(
+                error,
+                collectAccountRuntimeKeySecrets([runtimeKey]),
+              ) || t("messages:errors.unknown"),
         }),
       })
     }
@@ -317,8 +354,12 @@ export function useRuntimeKeyIntegrationActions({
       claudeCodeRouter: {
         apiKey: claudeCodeRouterApiKey,
         baseUrl: claudeCodeRouterBaseUrl,
-        close: () => setIsClaudeCodeRouterOpen(false),
+        close: () => {
+          setIsClaudeCodeRouterOpen(false)
+          setClaudeCodeRouterProfile(null)
+        },
         isOpen: isClaudeCodeRouterOpen,
+        profile: claudeCodeRouterProfile,
       },
 
       cursorPlus: {
@@ -328,10 +369,24 @@ export function useRuntimeKeyIntegrationActions({
       kelivo: {
         close: () => setKelivoExportInput(null),
         input: kelivoExportInput,
+        analyticsContext: credentialProfile
+          ? {
+              featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+              actionId:
+                PRODUCT_ANALYTICS_ACTION_IDS.CopyServiceCredentialKelivoImportCode,
+              surfaceId:
+                PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
+              entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+            }
+          : RUNTIME_KEY_KELIVO_EXPORT_ANALYTICS_CONTEXT,
       },
       kiloCode: {
-        close: () => setIsKiloCodeDialogOpen(false),
+        close: () => {
+          setIsKiloCodeDialogOpen(false)
+          setKiloCodeProfile(null)
+        },
         isOpen: isKiloCodeDialogOpen,
+        profile: kiloCodeProfile,
       },
     },
     exportActions: {
@@ -340,7 +395,10 @@ export function useRuntimeKeyIntegrationActions({
 
       openCursorPlus: () => setIsCursorPlusDialogOpen(true),
       openKelivo: handleOpenKelivoExportDialog,
-      openKiloCode: () => setIsKiloCodeDialogOpen(true),
+      openKiloCode: () => {
+        setKiloCodeProfile(credentialProfile ?? null)
+        setIsKiloCodeDialogOpen(true)
+      },
     },
     managedSiteImport: {
       buttonRef: managedSiteImportButtonRef,

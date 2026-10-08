@@ -3,6 +3,10 @@ import { fakeBrowser } from "wxt/testing/fake-browser"
 
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 
+vi.mock("~/utils/browser/runtimeUpdateCheck", () => ({
+  requestRuntimeUpdateCheck: requestRuntimeUpdateCheckMock,
+}))
+
 const {
   createAlarmMock,
   getAlarmMock,
@@ -72,7 +76,6 @@ vi.mock("~/utils/browser/browserApi", () => ({
   getRuntimeId: getRuntimeIdMock,
   hasAlarmsAPI: hasAlarmsApiMock,
   onAlarm: onAlarmMock,
-  requestRuntimeUpdateCheck: requestRuntimeUpdateCheckMock,
 }))
 
 describe("releaseUpdateService", () => {

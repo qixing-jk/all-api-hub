@@ -1,6 +1,6 @@
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { fetchNewApiResourceKeyWithSession } from "~/services/managedSites/providers/newApiChannelSecrets"
-import { NewApiChannelKeyRequirementError } from "~/services/managedSites/providers/newApiSession"
+import { NewApiChannelKeyRequirementError } from "~/services/managedSites/providers/newApiSessionContracts"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
 import {
   PROTECTION_BYPASS_SURFACES,

@@ -1,5 +1,5 @@
 import { Cpu, KeyRound, RefreshCw, TrendingDown } from "lucide-react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { VerifyApiDialog } from "~/components/dialogs/VerifyApiDialog"
@@ -20,36 +20,17 @@ import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfil
 import { PersonalizedCatalogFallbackNotice } from "~/features/ModelList/components/PersonalizedCatalogFallbackNotice"
 import { useModelListVerificationResults } from "~/features/ModelList/hooks/useModelListVerificationResults"
 import { useModelListVerificationWorkflow } from "~/features/ModelList/hooks/useModelListVerificationWorkflow"
-import {
-  ALL_ACCOUNTS_SOURCE_VALUE,
-  MODEL_MANAGEMENT_SOURCE_KINDS,
-  resolveModelManagementSource,
-} from "~/features/ModelList/modelManagementSources"
-import {
-  canEnableModelPriceComparison,
-  enableModelPriceComparison,
-} from "~/features/ModelList/priceComparisonActivation"
+import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
 import { PricingScenarioNavigation } from "~/features/ModelList/pricingScenarioNavigation"
-import {
-  canCreateAccountKeyResources,
-  canListAccountRuntimeKeys,
-} from "~/services/accounts/keyProductCapabilities"
 import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
-import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import {
-  openKeysPage,
-  pushWithinOptionsPage,
-  replaceWithinOptionsPage,
-} from "~/utils/navigation"
+import { openKeysPage, pushWithinOptionsPage } from "~/utils/navigation"
 
-import { sortModelListAccounts } from "./accountOrdering"
-import { isProviderCatalogFallback } from "./catalogFallback"
 import { AccountSelector } from "./components/AccountSelector"
 import { AccountSummaryBar } from "./components/AccountSummaryBar"
 import { BatchVerifyModelsDialog } from "./components/BatchVerifyModelsDialog"
@@ -60,8 +41,8 @@ import ModelKeyDialog from "./components/ModelKeyDialog"
 import { PricingDiagnostics } from "./components/PricingDiagnostics"
 import { ProviderTabs } from "./components/ProviderTabs"
 import { StatusIndicator } from "./components/StatusIndicator"
-import { MODEL_LIST_GROUP_SELECTION_SCOPES } from "./groupSelectionScopes"
 import { useModelListData } from "./hooks/useModelListData"
+import { useModelListSourcePresentation } from "./hooks/useModelListSourcePresentation"
 import { isModelListPriceSortMode, MODEL_LIST_SORT_MODES } from "./sortModes"
 import { MODEL_LIST_TEST_IDS } from "./testIds"
 
@@ -83,8 +64,8 @@ export default function ModelList(props: {
   ])
   const [isSourceSelectorOpen, setIsSourceSelectorOpen] = useState(false)
   const sourceSelectorTriggerRef = useRef<HTMLButtonElement>(null)
+  const modelListData = useModelListData(routeParams)
   const {
-    accounts,
     profiles,
     isSourceLoading,
     selectedSource,
@@ -92,7 +73,6 @@ export default function ModelList(props: {
     sourceCapabilities,
 
     selectedSourceValue,
-    setSelectedSourceValue,
     searchTerm,
     setSearchTerm,
     setSelectedProvider,
@@ -124,19 +104,15 @@ export default function ModelList(props: {
     setSelectedVerificationResults,
 
     // Data state
-    pricingData,
-    pricingContexts,
     isLoading,
     dataFormatError,
     unsupportedSource,
     loadErrorMessage,
     accountFallback,
     personalizedCatalogFallback,
-    isFallbackCatalogActive,
     isProviderCatalogFallbackActive,
 
     filteredModels,
-    accountSummaryCountsByAccountId,
     vendorCatalog,
     unclassifiedVendorCount,
     effectiveSelectedVendor,
@@ -153,183 +129,36 @@ export default function ModelList(props: {
 
     // Operations
     loadPricingData,
-    accountQueryStates,
     allAccountsFilterAccountIds,
-    setAllAccountsFilterAccountIds,
-  } = useModelListData(routeParams)
-
-  const hasAnySources = accounts.length > 0 || profiles.length > 0
+  } = modelListData
 
   useEffect(() => {
     if (!shouldRepairSelectedVendor) return
     setSelectedProvider(MODEL_VENDOR_FILTER_VALUES.All)
   }, [setSelectedProvider, shouldRepairSelectedVendor])
 
-  const sortedAccounts = useMemo(
-    () =>
-      sortModelListAccounts({
-        accounts,
-        accountQueryStates,
-        accountSummaryCountsByAccountId,
-      }),
-    [accountQueryStates, accountSummaryCountsByAccountId, accounts],
-  )
-
-  const handleSelectedSourceValueChange = useCallback(
-    (sourceValue: string) => {
-      setSelectedSourceValue(sourceValue)
-
-      const source = resolveModelManagementSource({
-        value: sourceValue,
-        accounts,
-        profiles,
-      })
-      const searchParams =
-        source?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
-          ? { accountId: source.account.id }
-          : source?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
-            ? { profileId: source.profile.id }
-            : source?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
-              ? { accountId: ALL_ACCOUNTS_SOURCE_VALUE }
-              : undefined
-
-      replaceWithinOptionsPage(`#${MENU_ITEM_IDS.MODELS}`, searchParams)
-    },
-    [accounts, profiles, setSelectedSourceValue],
-  )
-
-  const handleGroupClick = (group: string) => {
-    setSelectedGroups([group])
-  }
-
-  const isAllAccountsScope =
-    selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
-  const canStartUnselectedPriceComparison =
-    !selectedSource && accounts.length > 0
-  const shouldShowPriceComparisonAction =
-    canStartUnselectedPriceComparison ||
-    canEnableModelPriceComparison({
-      selectedSource,
-      sourceCapabilities,
-      isAllAccountsSource: isAllAccountsScope,
-      sortMode,
-      selectedBillingMode,
-      selectedGroups,
-      showRealPrice,
-    })
-  const handleEnablePriceComparison = useCallback(() => {
-    enableModelPriceComparison({
-      isAllAccountsSource: isAllAccountsScope,
-      setSelectedSourceValue: handleSelectedSourceValueChange,
-      setSortMode,
-      setSelectedBillingMode,
-      setSelectedGroups,
-      setShowRealPrice,
-      searchTerm,
-      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage,
-    })
-  }, [
+  const {
+    sortedAccounts,
     handleSelectedSourceValueChange,
+    handleGroupClick,
     isAllAccountsScope,
-    searchTerm,
-    setSelectedBillingMode,
-    setSelectedGroups,
-    setShowRealPrice,
-    setSortMode,
-  ])
-  const modelDisplayGroupSelectionScope = isAllAccountsScope
-    ? MODEL_LIST_GROUP_SELECTION_SCOPES.ALL_ACCOUNTS
-    : MODEL_LIST_GROUP_SELECTION_SCOPES.SINGLE_SOURCE
-  const isModelGroupSelectionInteractive = !isAllAccountsScope
-
-  const handleAccountSummaryClick = (accountId: string) => {
-    setAllAccountsFilterAccountIds((currentAccountIds) =>
-      currentAccountIds.includes(accountId)
-        ? currentAccountIds.filter((id) => id !== accountId)
-        : [...currentAccountIds, accountId],
-    )
-    void trackProductAnalyticsActionStarted({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.SelectModelListFilterScope,
-      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    })
-  }
-
-  const hasModelData =
-    selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
-      ? pricingContexts && pricingContexts.length > 0
-      : !!pricingData
-  const shouldShowRefreshAction = Boolean(selectedSource && hasModelData)
-  const shouldShowHeaderActions =
-    shouldShowRefreshAction || shouldShowPriceComparisonAction
-  const isRuntimeKeyOnlyFallbackCatalog =
-    isFallbackCatalogActive &&
-    !!currentAccount &&
-    canListAccountRuntimeKeys(currentAccount) &&
-    !canCreateAccountKeyResources(currentAccount)
-  const hasInferenceRouteFallback = Boolean(
-    pricingData?.model_list_source?.inferenceRouteFallback ||
-      pricingContexts.some(
-        ({ pricing }) => pricing.model_list_source?.inferenceRouteFallback,
-      ),
-  )
-  const showCatalogOnlyNotice =
-    isFallbackCatalogActive && !sourceCapabilities.supportsPricing
-  const shouldShowSourceSetupEmptyState = !hasAnySources
-  const shouldShowSourceSelectionEmptyState =
-    !shouldShowSourceSetupEmptyState && !selectedSource
-
-  const providerCatalogFallbackAccounts = useMemo(
-    () =>
-      Array.from(
-        new Map(
-          pricingContexts
-            .filter(({ pricing }) => isProviderCatalogFallback(pricing))
-            .map(({ account }) => [account.id, account]),
-        ).values(),
-      ),
-    [pricingContexts],
-  )
-
-  const accountSummaryItems = useMemo(() => {
-    const stateByAccountId = new Map(
-      (accountQueryStates ?? []).map((state) => [state.account.id, state]),
-    )
-
-    return accounts.flatMap((account) => {
-      const state = stateByAccountId.get(account.id)
-      if (!state) {
-        return []
-      }
-      const count = accountSummaryCountsByAccountId.get(state.account.id)
-      if (
-        count === undefined &&
-        !state.isLoading &&
-        !state.errorType &&
-        !allAccountsFilterAccountIds.includes(account.id)
-      ) {
-        return []
-      }
-
-      return [
-        {
-          accountId: state.account.id,
-          name: state.account.name,
-          count: count ?? 0,
-          hasData: state.hasData,
-          isLoading: state.isLoading,
-          errorType: state.errorType,
-          errorMessage: state.errorMessage,
-        },
-      ]
-    })
-  }, [
-    accountQueryStates,
-    accountSummaryCountsByAccountId,
-    accounts,
-    allAccountsFilterAccountIds,
-  ])
+    shouldShowPriceComparisonAction,
+    handleEnablePriceComparison,
+    modelDisplayGroupSelectionScope,
+    isModelGroupSelectionInteractive,
+    handleAccountSummaryClick,
+    hasModelData,
+    shouldShowRefreshAction,
+    shouldShowHeaderActions,
+    isRuntimeKeyOnlyFallbackCatalog,
+    hasInferenceRouteFallback,
+    showCatalogOnlyNotice,
+    shouldShowSourceSetupEmptyState,
+    shouldShowSourceSelectionEmptyState,
+    providerCatalogFallbackAccounts,
+    accountSummaryItems,
+    totalModels,
+  } = useModelListSourcePresentation(modelListData)
 
   const {
     displayedModels,
@@ -391,17 +220,6 @@ export default function ModelList(props: {
 
     setIsSourceSelectorOpen(true)
   }, [])
-
-  const totalModels = useMemo(() => {
-    if (selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS) {
-      return pricingContexts.reduce((count, context) => {
-        const models = context.pricing?.data
-        return count + (Array.isArray(models) ? models.length : 0)
-      }, 0)
-    }
-
-    return Array.isArray(pricingData?.data) ? pricingData.data.length : 0
-  }, [pricingContexts, pricingData, selectedSource?.kind])
 
   const renderModelDisplay = () => (
     <ModelDisplay

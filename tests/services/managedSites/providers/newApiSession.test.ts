@@ -4,21 +4,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE } from "~/services/apiService/newApi/dashboardAuth"
 import { API_ERROR_CODES, type ApiError } from "~/services/apiTransport/errors"
+import { fetchNewApiChannelKey } from "~/services/managedSites/providers/newApiChannelKeyRead"
 import {
   clearNewApiManagedSessionState,
   ensureNewApiManagedSession,
-  fetchNewApiChannelKey,
+  getNewApiChannelKeyReadContext,
   hasNewApiAuthenticatedBrowserSession,
-  hasNewApiLoginAssistCredentials,
   isNewApiVerifiedSessionActive,
+  submitNewApiLoginTwoFactorCode,
+  submitNewApiSecureVerificationCode,
+} from "~/services/managedSites/providers/newApiSession"
+import {
+  hasNewApiLoginAssistCredentials,
   NEW_API_CHANNEL_KEY_ERROR_KINDS,
   NEW_API_MANAGED_SESSION_STATUSES,
   NEW_API_SECURITY_PROOF_SCOPES,
   NEW_API_VERIFIED_SESSION_WINDOW_MS,
-  submitNewApiLoginTwoFactorCode,
-  submitNewApiSecureVerificationCode,
   type NewApiChannelKeyRequirementError,
-} from "~/services/managedSites/providers/newApiSession"
+} from "~/services/managedSites/providers/newApiSessionContracts"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { server } from "~~/tests/msw/server"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
@@ -141,6 +144,19 @@ const createDashboardAuthBundle = (
 })
 
 describe("newApiSession", () => {
+  it.each(["需要验证码", "需要安全验证"])(
+    "classifies a message-only Chinese verification requirement: %s",
+    (message) => {
+      const failure = getNewApiChannelKeyReadContext(
+        BASE_CONFIG.baseUrl,
+      ).resolveFailure(new Error(message), "")
+      expect(failure).toMatchObject({
+        name: "NewApiChannelKeyRequirementError",
+        kind: NEW_API_CHANNEL_KEY_ERROR_KINDS.SECURE_VERIFICATION_REQUIRED,
+      })
+    },
+  )
+
   it.each([
     {},
     [null],
@@ -239,6 +255,95 @@ describe("newApiSession", () => {
     ])
     expect(calls).toBe(2)
   })
+  it("reuses verification for equivalent origins and the same channel", async () => {
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let entered!: () => void
+    const started = new Promise<void>((resolve) => {
+      entered = resolve
+    })
+    let calls = 0
+    server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () =>
+        jsonData({ enabled: true }),
+      ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, () =>
+        jsonData({ enabled: false }),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/verify`, async () => {
+        calls++
+        entered()
+        await gate
+        return jsonData({ verified: true })
+      }),
+    )
+    const first = submitNewApiSecureVerificationCode(
+      { ...BASE_CONFIG, channelId: 17 },
+      "111111",
+    )
+    await started
+    const second = submitNewApiSecureVerificationCode(
+      { ...BASE_CONFIG, baseUrl: `${BASE_CONFIG.baseUrl}/`, channelId: 17 },
+      "222222",
+    )
+    release()
+    const results = await Promise.all([first, second])
+    expect(results.map((result) => result.status)).toEqual([
+      "verified",
+      "verified",
+    ])
+    expect(calls).toBe(1)
+  })
+
+  it("continues a queued different-channel verification after the first rejects", async () => {
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let entered!: () => void
+    const started = new Promise<void>((resolve) => {
+      entered = resolve
+    })
+    let calls = 0
+    server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () =>
+        jsonData({ enabled: true }),
+      ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, () =>
+        jsonData({ enabled: false }),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/verify`, async () => {
+        calls++
+        if (calls === 1) {
+          entered()
+          await gate
+          return HttpResponse.json(
+            { success: false, message: "verification rejected" },
+            { status: 500 },
+          )
+        }
+        return jsonData({ verified: true })
+      }),
+    )
+    const first = submitNewApiSecureVerificationCode(
+      { ...BASE_CONFIG, channelId: 17 },
+      "111111",
+    )
+    const rejected = expect(first).rejects.toThrow("verification rejected")
+    await started
+    const second = submitNewApiSecureVerificationCode(
+      { ...BASE_CONFIG, channelId: 18 },
+      "222222",
+    )
+    expect(calls).toBe(1)
+    release()
+    await rejected
+    await expect(second).resolves.toMatchObject({ status: "verified" })
+    expect(calls).toBe(2)
+  })
+
   it("returns manual passkey guidance for a unified login without TOTP", async () => {
     const verify = vi.fn()
     server.use(

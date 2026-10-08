@@ -6,13 +6,22 @@ import {
   type AccountCheckInFilterValue,
 } from "./checkInFilter"
 
-export type AccountDisabledFilterValue = "enabled" | "disabled"
+export const ACCOUNT_LIST_ALL_FILTER_VALUE = "all"
+export const ACCOUNT_DISABLED_FILTER_VALUES = {
+  Enabled: "enabled",
+  Disabled: "disabled",
+} as const
+export const ACCOUNT_REFRESH_FILTER_VALUES = {
+  NeverSynced: "never-synced",
+  Healthy: "healthy",
+  Warning: "warning",
+  Error: "error",
+  Unknown: "unknown",
+} as const
+export type AccountDisabledFilterValue =
+  (typeof ACCOUNT_DISABLED_FILTER_VALUES)[keyof typeof ACCOUNT_DISABLED_FILTER_VALUES]
 export type AccountRefreshFilterValue =
-  | "never-synced"
-  | "healthy"
-  | "warning"
-  | "error"
-  | "unknown"
+  (typeof ACCOUNT_REFRESH_FILTER_VALUES)[keyof typeof ACCOUNT_REFRESH_FILTER_VALUES]
 
 export interface AccountListFilterState {
   disabledFilter: AccountDisabledFilterValue | null
@@ -35,7 +44,13 @@ interface AccountListFilterAggregation {
 }
 
 export const ACCOUNT_REFRESH_FILTER_OPTION_ORDER: AccountRefreshFilterValue[] =
-  ["never-synced", "healthy", "warning", "error", "unknown"]
+  [
+    ACCOUNT_REFRESH_FILTER_VALUES.NeverSynced,
+    ACCOUNT_REFRESH_FILTER_VALUES.Healthy,
+    ACCOUNT_REFRESH_FILTER_VALUES.Warning,
+    ACCOUNT_REFRESH_FILTER_VALUES.Error,
+    ACCOUNT_REFRESH_FILTER_VALUES.Unknown,
+  ]
 
 const ACCOUNT_REFRESH_FILTER_OPTION_VALUE_SET =
   new Set<AccountRefreshFilterValue>(ACCOUNT_REFRESH_FILTER_OPTION_ORDER)
@@ -64,19 +79,19 @@ function getAccountRefreshFilterValue(
     account.last_sync_time > 0
 
   if (!hasSynced) {
-    return "never-synced"
+    return ACCOUNT_REFRESH_FILTER_VALUES.NeverSynced
   }
 
   switch (account.health.status) {
-    case "healthy":
-      return "healthy"
-    case "warning":
-      return "warning"
-    case "error":
-      return "error"
-    case "unknown":
+    case ACCOUNT_REFRESH_FILTER_VALUES.Healthy:
+      return ACCOUNT_REFRESH_FILTER_VALUES.Healthy
+    case ACCOUNT_REFRESH_FILTER_VALUES.Warning:
+      return ACCOUNT_REFRESH_FILTER_VALUES.Warning
+    case ACCOUNT_REFRESH_FILTER_VALUES.Error:
+      return ACCOUNT_REFRESH_FILTER_VALUES.Error
+    case ACCOUNT_REFRESH_FILTER_VALUES.Unknown:
     default:
-      return "unknown"
+      return ACCOUNT_REFRESH_FILTER_VALUES.Unknown
   }
 }
 
@@ -107,7 +122,7 @@ export function aggregateAccountListFilters(
     const matchesDisabled =
       filters.disabledFilter === null
         ? true
-        : filters.disabledFilter === "disabled"
+        : filters.disabledFilter === ACCOUNT_DISABLED_FILTER_VALUES.Disabled
           ? account.disabled === true
           : account.disabled !== true
     const matchesSiteType =

@@ -9,22 +9,17 @@ import {
   buildLatencyHistogramOption,
   buildLatencyTrendOption,
   buildPieOption,
-  getAccountTotalsRows,
-  getModelTotalsRows,
-  getSlowModelRows,
-  getSlowTokenRows,
-  resolveFusedDailyByModelForTokens,
-  resolveFusedDailyForTokens,
-  resolveFusedHourlyForTokens,
-  resolveLatencyAggregateForSelection,
-  resolveLatencyDailyForTokens,
-  topNWithOther,
 } from "~/features/UsageAnalytics/charts/echartsOptions"
 import type { useUsageAnalyticsFilters } from "~/features/UsageAnalytics/hooks/useUsageAnalyticsFilters"
 import type {
   UsageAnalyticsBreakdownChartKey,
   UsageAnalyticsChartDisplayType,
 } from "~/features/UsageAnalytics/types"
+import {
+  resolveLatencyAggregateForSelection,
+  resolveUsageSelection,
+  topNWithOther,
+} from "~/features/UsageAnalytics/usageSelection"
 import type { CurrencyType, SiteAccount } from "~/types"
 import { parseDayKey } from "~/utils/core/dayKey"
 
@@ -99,39 +94,26 @@ export function useUsageAnalyticsCharts({
     [],
   )
 
-  const fusedDailyForTokens = useMemo(() => {
-    if (!exportPreview) return {}
-    return resolveFusedDailyForTokens(exportPreview, selectedTokenIds)
-  }, [exportPreview, selectedTokenIds])
-
-  const fusedHourlyForTokens = useMemo(() => {
-    if (!exportPreview) return {}
-    return resolveFusedHourlyForTokens(exportPreview, selectedTokenIds)
-  }, [exportPreview, selectedTokenIds])
-
-  const fusedDailyByModelForTokens = useMemo(() => {
-    if (!exportPreview) return {}
-    return resolveFusedDailyByModelForTokens(exportPreview, selectedTokenIds)
-  }, [exportPreview, selectedTokenIds])
-
-  const modelTotalsRows = useMemo(() => {
-    if (!exportPreview) return []
-    return getModelTotalsRows({
-      exportData: exportPreview,
-      tokenIds: selectedTokenIds,
-      topN: 12,
-      otherLabel: t("charts.other"),
-    })
-  }, [exportPreview, selectedTokenIds, t])
-
-  const accountTotalsFullRows = useMemo(() => {
-    if (!exportPreview) return []
-    return getAccountTotalsRows({
-      exportData: exportPreview,
-      tokenIds: selectedTokenIds,
-      accountLabels,
-    })
-  }, [accountLabels, exportPreview, selectedTokenIds])
+  const {
+    fusedDailyForTokens,
+    fusedHourlyForTokens,
+    fusedDailyByModelForTokens,
+    modelTotalsRows,
+    accountTotalsFullRows,
+    slowModelRows,
+    slowTokenRows,
+    latencyDailyForTokens,
+  } = useMemo(
+    () =>
+      resolveUsageSelection({
+        exportData: exportPreview,
+        tokenIds: selectedTokenIds,
+        accountLabels,
+        otherLabel: t("charts.other"),
+        unknownLabel: t("filters.unknownToken"),
+      }),
+    [exportPreview, selectedTokenIds, accountLabels, t],
+  )
 
   const accountTotalsRows = useMemo(() => {
     return topNWithOther(
@@ -143,27 +125,6 @@ export function useUsageAnalyticsCharts({
       t("charts.other"),
     )
   }, [accountTotalsFullRows, t])
-
-  const slowModelRows = useMemo(() => {
-    if (!exportPreview) return []
-    return getSlowModelRows({
-      exportData: exportPreview,
-      tokenIds: selectedTokenIds,
-      topN: 12,
-      otherLabel: t("charts.other"),
-    })
-  }, [exportPreview, selectedTokenIds, t])
-
-  const slowTokenRows = useMemo(() => {
-    if (!exportPreview) return []
-    return getSlowTokenRows({
-      exportData: exportPreview,
-      tokenIds: selectedTokenIds,
-      topN: 12,
-      otherLabel: t("charts.other"),
-      unknownLabel: t("filters.unknownToken"),
-    })
-  }, [exportPreview, selectedTokenIds, t])
 
   const selectionTotals = useMemo(() => {
     return Object.values(fusedDailyForTokens).reduce(
@@ -222,11 +183,6 @@ export function useUsageAnalyticsCharts({
       modelName: focusModelName,
     })
   }, [exportPreview, focusModelName, selectedTokenIds])
-
-  const latencyDailyForTokens = useMemo(() => {
-    if (!exportPreview) return {}
-    return resolveLatencyDailyForTokens(exportPreview, selectedTokenIds)
-  }, [exportPreview, selectedTokenIds])
 
   const dailyLegendLabels = useMemo(() => {
     return {

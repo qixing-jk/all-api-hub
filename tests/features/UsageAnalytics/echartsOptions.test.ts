@@ -7,6 +7,8 @@ import {
   buildLatencyHistogramOption,
   buildLatencyTrendOption,
   buildPieOption,
+} from "~/features/UsageAnalytics/charts/echartsOptions"
+import {
   getAccountTotalsRows,
   getModelTotalsRows,
   getSlowModelRows,
@@ -17,7 +19,7 @@ import {
   resolveLatencyAggregateForSelection,
   resolveLatencyDailyForTokens,
   topNWithOther,
-} from "~/features/UsageAnalytics/charts/echartsOptions"
+} from "~/features/UsageAnalytics/usageSelection"
 import { computeUsageHistoryExport } from "~/services/history/usageHistory/analytics"
 import {
   createEmptyUsageHistoryAccountStore,

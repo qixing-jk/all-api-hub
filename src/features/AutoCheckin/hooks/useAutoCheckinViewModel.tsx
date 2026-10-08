@@ -2,14 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { useAutoCheckinStatusWorkspace } from "~/features/AutoCheckin/hooks/useAutoCheckinStatusWorkspace"
 import { useRegisterDevPanelSection } from "~/features/DevPanel"
 import toast from "~/lib/notify"
-import { loginProviderEvidence } from "~/services/accountLogin/providerEvidence"
-import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
-import { refreshAutoCheckinAccountSnapshots } from "~/services/checkin/autoCheckin/accountSnapshot"
-import { isAutomaticCheckInConfiguredForAccount } from "~/services/checkin/autoCheckin/inspection"
 import {
   sendAutoCheckinMessage,
   type AutoCheckinBasicResponse,
@@ -29,18 +25,13 @@ import {
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
-import {
-  siteTypeObservations,
-  type SiteTypeMismatchMap,
-} from "~/services/siteDetection/siteTypeObservations"
-import type { DisplaySiteData, SiteAccount } from "~/types"
+import type { DisplaySiteData } from "~/types"
 import {
   AUTO_CHECKIN_RUN_RESULT,
   CHECKIN_RESULT_STATUS,
   type AutoCheckinRunSummary,
   type AutoCheckinStatus,
 } from "~/types/autoCheckin"
-import { onRuntimeMessage } from "~/utils/browser/browserApi"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { isDevelopmentMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
@@ -137,41 +128,6 @@ const getRetryAnalyticsResult = (
   return PRODUCT_ANALYTICS_RESULTS.Success
 }
 
-/**
- * Loads the saved accounts and the setup state derived from them, for empty-state
- * guidance and for the site-type advice the results table names.
- */
-async function loadAutoCheckinAccountSetup(): Promise<{
-  state: "ready" | "no_accounts" | "no_detection_accounts" | null
-  accounts: SiteAccount[]
-}> {
-  try {
-    const accounts = await accountQueries.getAllAccounts()
-    const enabledAccounts = accounts.filter(
-      (account) => account.disabled !== true,
-    )
-
-    if (enabledAccounts.length === 0) {
-      return { state: "no_accounts", accounts }
-    }
-
-    const state = enabledAccounts.some((account) =>
-      isAutomaticCheckInConfiguredForAccount({
-        config: account.checkIn,
-        siteType: account.site_type,
-        siteUrl: account.site_url,
-        accountDisabled: account.disabled,
-      }),
-    )
-      ? "ready"
-      : "no_detection_accounts"
-
-    return { state, accounts }
-  } catch (error) {
-    logger.warn("Failed to load accounts for auto check-in empty state", error)
-    return { state: null, accounts: [] }
-  }
-}
 /** Own the feature state and user-command lifecycle consumed by the view. */
 export function useAutoCheckinViewModel(props: {
   routeParams?: Record<string, string>
@@ -184,21 +140,16 @@ export function useAutoCheckinViewModel(props: {
   const routeParams = props.routeParams
   const QUICK_RUN_PARAM = "runNow" as const
   const QUICK_RUN_VALUE = "true" as const
-  const [status, setStatus] = useState<AutoCheckinStatus | null>(null)
-  const [siteTypeMismatches, setSiteTypeMismatches] =
-    useState<SiteTypeMismatchMap>({})
-  /**
-   * Each account's own USD-to-CNY rate, so a reported reward can be shown in
-   * the display currency. Accounts missing here are ones this page could not
-   * load; their reward stays hidden rather than converted with a guessed rate.
-   */
-  const [exchangeRateByAccountId, setExchangeRateByAccountId] = useState<
-    Record<string, number>
-  >({})
-  const [accountSetupState, setAccountSetupState] = useState<
-    "ready" | "no_accounts" | "no_detection_accounts" | null
-  >(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const {
+    status,
+    siteTypeMismatches,
+    exchangeRateByAccountId,
+    accountSetupState,
+    isLoading,
+    accountInfoById,
+    loadStatus,
+    resolveAutoCheckinAccount,
+  } = useAutoCheckinStatusWorkspace(autoCheckinEnabled)
   const [isRunning, setIsRunning] = useState(false)
   const [isManualRefreshing, setIsManualRefreshing] = useState(false)
   const [retryingAccountId, setRetryingAccountId] = useState<string | null>(
@@ -207,13 +158,6 @@ export function useAutoCheckinViewModel(props: {
   const [verifyingAccountId, setVerifyingAccountId] = useState<string | null>(
     null,
   )
-  const [accountInfoById, setAccountInfoById] = useState<
-    Record<string, DisplaySiteData>
-  >({})
-  const activeStatusLoadCountRef = useRef(0)
-  const latestStatusLoadIdRef = useRef(0)
-  const attemptedAccountInfoIdsRef = useRef<Set<string>>(new Set())
-
   // Dev-only: diagnostics and simulation state for the UI-open pre-trigger flow.
   // These controls are shown only in development mode.
   const [uiOpenPretriggerDiagnostics, setUiOpenPretriggerDiagnostics] =
@@ -235,88 +179,6 @@ export function useAutoCheckinViewModel(props: {
   const quickRunTriggeredRef = useRef(false)
   const manualCheckinInFlightRef = useRef(false)
 
-  const loadStatus = useCallback(async () => {
-    const loadId = latestStatusLoadIdRef.current + 1
-    latestStatusLoadIdRef.current = loadId
-    activeStatusLoadCountRef.current += 1
-
-    try {
-      setIsLoading(true)
-      const [response, accountSetup, providerEvidence] = await Promise.all([
-        sendAutoCheckinMessage(AutoCheckinMessageTypes.GetStatus),
-        loadAutoCheckinAccountSetup(),
-        loginProviderEvidence.readAll(),
-      ])
-      // Read through the account, so an observation a later site-type edit
-      // retired is not named on a result row.
-      const siteTypeMismatches = await siteTypeObservations.readForAccounts(
-        accountSetup.accounts.map((account) => ({
-          id: account.id,
-          siteType: account.site_type,
-        })),
-      )
-
-      let displayStatus = response.success ? response.data : null
-      if (import.meta.env.DEV && response.success) {
-        const { appendDevCheckInFixtureSnapshots } = await import(
-          "~/services/checkin/autoCheckin/devDiscoveryFixtures"
-        )
-        const snapshots = await appendDevCheckInFixtureSnapshots(
-          displayStatus?.accountsSnapshot ?? [],
-          accountSetup.accounts,
-        )
-        if (snapshots.length)
-          displayStatus = { ...displayStatus, accountsSnapshot: snapshots }
-      }
-
-      if (loadId === latestStatusLoadIdRef.current) {
-        setAccountSetupState(accountSetup.state)
-        setSiteTypeMismatches(siteTypeMismatches)
-        setExchangeRateByAccountId(
-          Object.fromEntries(
-            accountSetup.accounts.map((account) => [
-              account.id,
-              account.exchange_rate,
-            ]),
-          ),
-        )
-
-        if (response.success) {
-          setStatus(
-            displayStatus
-              ? {
-                  ...displayStatus,
-                  accountsSnapshot: refreshAutoCheckinAccountSnapshots(
-                    displayStatus.accountsSnapshot ?? [],
-                    accountSetup.accounts,
-                    providerEvidence,
-                    autoCheckinEnabled,
-                  ),
-                }
-              : displayStatus,
-          )
-        }
-      }
-
-      if (response.success) {
-        return response.data as AutoCheckinStatus
-      }
-    } catch (error) {
-      logger.error("Failed to load status", error)
-    } finally {
-      activeStatusLoadCountRef.current -= 1
-      if (activeStatusLoadCountRef.current === 0) {
-        setIsLoading(false)
-      }
-    }
-
-    return null
-  }, [autoCheckinEnabled])
-
-  useEffect(() => {
-    void loadStatus()
-  }, [loadStatus])
-
   // Dev-only alarm/pretrigger controls moved into the floating dev panel.
   const { section: autoCheckinDevSection, isDebugPending } =
     useAutoCheckinDevSection({
@@ -326,14 +188,6 @@ export function useAutoCheckinViewModel(props: {
       onShowUiOpenPretriggerCompletion: setUiOpenPretriggerCompletion,
     })
   useRegisterDevPanelSection(autoCheckinDevSection)
-
-  useEffect(() => {
-    return onRuntimeMessage((message) => {
-      if (message?.action === RuntimeActionIds.AutoCheckinRunCompleted) {
-        void loadStatus()
-      }
-    })
-  }, [loadStatus])
 
   const handleRunNow = useCallback(async () => {
     if (manualCheckinInFlightRef.current) return
@@ -602,89 +456,6 @@ export function useAutoCheckinViewModel(props: {
       setVerifyingAccountId(null)
     }
   }
-
-  const resolveAutoCheckinAccount = useCallback(
-    async (
-      accountId: string,
-      options?: { includeDisabled?: boolean },
-    ): Promise<DisplaySiteData> => {
-      const response = await sendAutoCheckinMessage(
-        AutoCheckinMessageTypes.GetAccountInfo,
-        {
-          accountId,
-          ...(typeof options?.includeDisabled !== "undefined"
-            ? { includeDisabled: options.includeDisabled }
-            : {}),
-        },
-      )
-
-      if (!response.success) {
-        throw new Error(response.error || "Unknown error")
-      }
-
-      const displayData = response.data as DisplaySiteData | undefined
-      if (!displayData) {
-        throw new Error("Account info not found")
-      }
-
-      setAccountInfoById((prev) =>
-        prev[accountId] === displayData
-          ? prev
-          : {
-              ...prev,
-              [accountId]: displayData,
-            },
-      )
-      return displayData
-    },
-    [],
-  )
-
-  useEffect(() => {
-    const missingAccountIds = accountResultIds.filter(
-      (accountId) =>
-        !accountInfoById[accountId] &&
-        !attemptedAccountInfoIdsRef.current.has(accountId),
-    )
-
-    if (!missingAccountIds.length) {
-      return
-    }
-
-    let cancelled = false
-    // A failed display lookup must not be retried on every status update.
-    // Explicit account actions still perform their own fresh lookup.
-    for (const accountId of missingAccountIds) {
-      attemptedAccountInfoIdsRef.current.add(accountId)
-    }
-
-    void Promise.allSettled(
-      missingAccountIds.map((accountId) =>
-        resolveAutoCheckinAccount(accountId, { includeDisabled: true }),
-      ),
-    ).then((results) => {
-      if (cancelled) return
-
-      const loadedAccounts = results.flatMap((result) =>
-        result.status === "fulfilled" ? [result.value] : [],
-      )
-
-      if (!loadedAccounts.length) {
-        return
-      }
-
-      setAccountInfoById((prev) => ({
-        ...prev,
-        ...Object.fromEntries(
-          loadedAccounts.map((account) => [account.id, account]),
-        ),
-      }))
-    })
-
-    return () => {
-      cancelled = true
-    }
-  }, [accountInfoById, accountResultIds, resolveAutoCheckinAccount])
 
   const {
     isOpeningFailedManualSignIns,

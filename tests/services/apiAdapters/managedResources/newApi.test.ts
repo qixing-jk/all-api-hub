@@ -29,7 +29,7 @@ import {
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
   MANAGED_SITE_MUTATION_OUTCOMES,
 } from "~/services/managedSites/mutations"
-import { NewApiChannelKeyRequirementError } from "~/services/managedSites/providers/newApiSession"
+import { NewApiChannelKeyRequirementError } from "~/services/managedSites/providers/newApiSessionContracts"
 import { CHANNEL_STATUS } from "~/types/newApi"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"

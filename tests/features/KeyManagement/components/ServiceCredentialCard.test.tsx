@@ -12,7 +12,11 @@ import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
   type ManagedSiteTokenChannelStatus,
 } from "~/services/managedSites/tokenChannelStatus"
-import { PRODUCT_ANALYTICS_ACTION_IDS } from "~/services/productAnalytics/contracts"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
@@ -25,6 +29,7 @@ import {
 } from "~~/tests/test-utils/render"
 
 const {
+  mockStartProductAnalyticsAction,
   mockCCSwitchDialog,
   mockAiToolboxDialog,
   mockClaudeCodeRouterDialog,
@@ -40,6 +45,7 @@ const {
   mockVerifyApiDialog,
   mockVerifyCliDialog,
 } = vi.hoisted(() => ({
+  mockStartProductAnalyticsAction: vi.fn(() => ({ complete: vi.fn() })),
   mockCCSwitchDialog: vi.fn(),
   mockAiToolboxDialog: vi.fn(),
   mockClaudeCodeRouterDialog: vi.fn(),
@@ -153,6 +159,10 @@ vi.mock("~/contexts/FeatureGuidanceContext", () => ({
     markGatewayGuidanceOnboardingCompleted:
       mockUserPreferences.markGatewayGuidanceOnboardingCompleted,
   }),
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: mockStartProductAnalyticsAction,
 }))
 
 vi.mock("~/services/integrations/cherryStudio", () => ({
@@ -663,6 +673,15 @@ describe("ServiceCredentialCard", () => {
     it("opens Cherry Studio with the service URL and key", async () => {
       const { user } = renderExportCredential()
       await selectExportAction(user, "keyManagement:actions.useInCherry")
+      expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
+        expect.objectContaining({
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+          actionId:
+            PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialProfileToCherryStudio,
+          surfaceId:
+            PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
+        }),
+      )
       expect(mockOpenInCherryStudio).toHaveBeenCalledWith(
         expect.objectContaining({
           baseUrl: "https://sharedchat.example.invalid",
@@ -797,6 +816,35 @@ describe("ServiceCredentialCard", () => {
           routerApiKey: "ccr-management-key",
           routerBaseUrl: "https://router.example.invalid",
         }),
+      )
+    })
+
+    it("reports a skipped import when the managed-site dialog does not open", async () => {
+      mockOpenWithAccount.mockResolvedValueOnce({ opened: false })
+      const { user } = renderExportCredential()
+      await selectExportAction(
+        user,
+        "keyManagement:actions.importToManagedSite",
+      )
+      const tracker = mockStartProductAnalyticsAction.mock.results.at(-1)?.value
+      expect(tracker.complete).toHaveBeenCalledWith("skipped", undefined)
+    })
+
+    it("reports an import failure without leaving the action unresolved", async () => {
+      mockOpenWithAccount.mockRejectedValueOnce(new Error("connection failed"))
+      const { user } = renderExportCredential()
+      await selectExportAction(
+        user,
+        "keyManagement:actions.importToManagedSite",
+      )
+      expect(mockShowResultToast).toHaveBeenCalledWith({
+        success: false,
+        message: "messages:errors.operation.failed",
+      })
+      const tracker = mockStartProductAnalyticsAction.mock.results.at(-1)?.value
+      expect(tracker.complete).toHaveBeenCalledWith(
+        "failure",
+        expect.objectContaining({ errorCategory: "unknown" }),
       )
     })
 
@@ -984,6 +1032,62 @@ describe("ServiceCredentialCard", () => {
     expect(mockShowResultToast).toHaveBeenCalledWith({
       success: false,
       message: "messages:claudeCodeRouter.configMissing",
+    })
+  })
+
+  it("keeps opened verification and Kelivo snapshots across rotation, then uses the new credential when reopened", async () => {
+    const user = userEvent.setup()
+    const account = buildDisplaySiteData({
+      id: "rotation-account",
+      name: "Rotation",
+      baseUrl: "https://fallback.example.invalid/v1",
+    })
+    const credential = {
+      kind: "singleton_service_key" as const,
+      service: "codex",
+      label: "Service key",
+      key: "before-rotation",
+      isAuthenticated: true,
+      baseUrl: "",
+    }
+    const onCopy = vi.fn().mockResolvedValue(undefined)
+    const { rerender } = render(
+      <ServiceCredentialCard
+        account={account}
+        credential={credential}
+        onCopy={onCopy}
+      />,
+      { withThemeProvider: false, withUserPreferencesProvider: false },
+    )
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:actions.verifyApi" }),
+    )
+    await selectExportAction(user, "keyManagement:actions.copyKelivoImportCode")
+    rerender(
+      <ServiceCredentialCard
+        account={account}
+        credential={{ ...credential, key: "after-rotation" }}
+        onCopy={onCopy}
+      />,
+    )
+    expect(mockVerifyApiDialog.mock.lastCall?.[0]).toMatchObject({
+      isOpen: true,
+      profile: { apiKey: "before-rotation", baseUrl: account.baseUrl },
+    })
+    expect(mockKelivoExportDialog.mock.lastCall?.[0]).toMatchObject({
+      initialValue: { apiKey: "before-rotation", baseUrl: account.baseUrl },
+      analyticsContext: {
+        actionId:
+          PRODUCT_ANALYTICS_ACTION_IDS.CopyServiceCredentialKelivoImportCode,
+      },
+    })
+    act(() => mockVerifyApiDialog.mock.lastCall?.[0].onClose())
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:actions.verifyApi" }),
+    )
+    expect(mockVerifyApiDialog.mock.lastCall?.[0]).toMatchObject({
+      isOpen: true,
+      profile: { apiKey: "after-rotation", baseUrl: account.baseUrl },
     })
   })
 })

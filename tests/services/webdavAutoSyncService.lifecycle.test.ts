@@ -107,13 +107,7 @@ function createService() {
  * Resets mutable singleton state between lifecycle tests.
  */
 function resetServiceState(service: any) {
-  service.removeAlarmListener = null
-  service.isInitialized = false
-  service.isSyncing = false
-  service.isScheduled = false
-  service.lastSyncTime = 0
-  service.lastSyncStatus = "idle"
-  service.lastSyncError = null
+  Object.assign(service, createService())
 }
 
 describe("webdavAutoSyncService lifecycle", () => {
@@ -311,12 +305,15 @@ describe("webdavAutoSyncService lifecycle", () => {
   it("returns busy, success, and failure states from syncNow", async () => {
     const service = createService()
 
-    ;(service as any).isSyncing = true
+    const deferred = createDeferred<void>()
+    vi.spyOn(service, "syncWithWebdav").mockReturnValueOnce(deferred.promise)
+    const activeRun = service.syncNow()
     await expect(service.syncNow()).resolves.toEqual({
       success: false,
       message: "同步正在进行中，请稍后再试",
     })
-    ;(service as any).isSyncing = false
+    deferred.resolve()
+    await activeRun
     vi.spyOn(service, "syncWithWebdav").mockResolvedValueOnce(undefined)
     await expect(service.syncNow()).resolves.toEqual({
       success: true,

@@ -1,24 +1,12 @@
-import type { TFunction } from "i18next"
-import { isPlainObject } from "lodash-es"
 import { Pin, PinOff } from "lucide-react"
 import type React from "react"
-import { useEffect, useRef, useState } from "react"
+import { useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
-import {
-  getInviteLinkFailureAnalyticsCategory,
-  getInviteLinkFailureMessage,
-  getPrimaryInviteLinkFailureReason,
-} from "~/features/AccountManagement/inviteLinkCopyFeedback"
-import {
-  INVITE_LINK_COPY_RESULTS,
-  runInviteLinkCopyWorkflow,
-} from "~/features/AccountManagement/inviteLinkCopyWorkflow"
-import { translateAutoCheckinMessageKey } from "~/features/AutoCheckin/utils/autoCheckin"
 import { useCheckInRedetection } from "~/features/CheckIn/useCheckInRedetection"
 import { useCheckInFeedback } from "~/features/CheckInFeedback/useCheckInFeedback"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
@@ -29,7 +17,6 @@ import {
   supportsRecoverableAccountRuntimeKeySecrets,
 } from "~/services/accounts/keyProductCapabilities"
 import {
-  canFetchDisplayAccountInviteLink,
   fetchDisplayAccountRuntimeKeys,
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
@@ -37,8 +24,6 @@ import {
   getStaticAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
-import { isAutomaticCheckInConfiguredForAccount } from "~/services/checkin/autoCheckin/inspection"
-import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/runtimeConfig"
 import {
   getManagedSiteType,
@@ -47,7 +32,6 @@ import {
 import {
   resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,
-  type ProductAnalyticsActionContext,
 } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -55,20 +39,12 @@ import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
-  PRODUCT_ANALYTICS_STATUS_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_STATES,
-  type ProductAnalyticsResult,
-  type ProductAnalyticsStatusKind,
 } from "~/services/productAnalytics/contracts"
-import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
-import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
-import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { buildAccountShareSnapshotPayload } from "~/services/sharing/shareSnapshots"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { DisplaySiteData } from "~/types"
-import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
-import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { sanitizeOriginUrl } from "~/utils/core/url"
@@ -83,64 +59,9 @@ import {
   addRedactionSecrets,
   addRuntimeKeyRedactionSecrets,
 } from "./accountActionSecrets"
+import { useAccountInviteLinkCopy } from "./useAccountInviteLinkCopy"
+import { useAccountQuickCheckin } from "./useAccountQuickCheckin"
 import { useLocateManagedSiteChannel } from "./useLocateManagedSiteChannel"
-
-/**
- * Derives a user-facing toast message from the latest auto check-in result for one account.
- */
-function resolveAutoCheckinResultMessage(params: {
-  t: TFunction
-  result: {
-    rawMessage?: unknown
-    messageKey?: unknown
-    messageParams?: unknown
-    message?: unknown
-  } | null
-  status?: string
-}): string {
-  if (
-    typeof params.result?.rawMessage === "string" &&
-    params.result.rawMessage.trim().length > 0
-  ) {
-    return params.result.rawMessage
-  }
-
-  if (
-    typeof params.result?.messageKey === "string" &&
-    params.result.messageKey.trim().length > 0
-  ) {
-    const messageParams: Record<string, unknown> = isPlainObject(
-      params.result.messageParams,
-    )
-      ? (params.result.messageParams as Record<string, unknown>)
-      : {}
-
-    return translateAutoCheckinMessageKey(
-      params.t,
-      params.result.messageKey,
-      messageParams,
-    )
-  }
-
-  if (
-    typeof params.result?.message === "string" &&
-    params.result.message.trim().length > 0
-  ) {
-    return params.result.message
-  }
-
-  if (params.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED) {
-    return params.t("autoCheckin:providerFallback.alreadyCheckedToday")
-  }
-  if (params.status === CHECKIN_RESULT_STATUS.SUCCESS) {
-    return params.t("autoCheckin:providerFallback.checkinSuccessful")
-  }
-  if (params.status === CHECKIN_RESULT_STATUS.FAILED) {
-    return params.t("autoCheckin:providerFallback.checkinFailed")
-  }
-
-  return params.t("autoCheckin:providerFallback.unknownError")
-}
 
 export interface ActionButtonsProps {
   site: DisplaySiteData
@@ -158,56 +79,6 @@ const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
 const rowActionsSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions
 
-const quickCheckinAnalyticsContext: ProductAnalyticsActionContext = {
-  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
-  actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunQuickCheckin,
-  surfaceId: rowActionsSurface,
-  entrypoint: optionsEntrypoint,
-}
-
-const getQuickCheckinAnalyticsResult = (
-  status: string | undefined,
-): ProductAnalyticsResult => {
-  if (status === CHECKIN_RESULT_STATUS.FAILED) {
-    return PRODUCT_ANALYTICS_RESULTS.Failure
-  }
-
-  if (status === CHECKIN_RESULT_STATUS.SKIPPED) {
-    return PRODUCT_ANALYTICS_RESULTS.Skipped
-  }
-
-  return PRODUCT_ANALYTICS_RESULTS.Success
-}
-
-const getQuickCheckinAnalyticsStatusKind = (
-  status: string | undefined,
-): ProductAnalyticsStatusKind => {
-  if (status === CHECKIN_RESULT_STATUS.FAILED) {
-    return PRODUCT_ANALYTICS_STATUS_KINDS.Error
-  }
-
-  if (status === CHECKIN_RESULT_STATUS.SKIPPED) {
-    return PRODUCT_ANALYTICS_STATUS_KINDS.Warning
-  }
-
-  return PRODUCT_ANALYTICS_STATUS_KINDS.Healthy
-}
-
-const getQuickCheckinFailureAnalyticsCategory = (result: {
-  messageKey?: unknown
-}) => {
-  if (result.messageKey === "autoCheckin:providerFallback.checkinFailed") {
-    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation
-  }
-
-  if (
-    result.messageKey === "autoCheckin:providerFallback.endpointNotSupported"
-  ) {
-    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported
-  }
-
-  return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
-}
 /** Own the feature state and user-command lifecycle consumed by the view. */
 export function useAccountRowActions({
   site,
@@ -219,7 +90,6 @@ export function useAccountRowActions({
     "shareSnapshots",
     "messages",
     "common",
-    "autoCheckin",
   ])
   const { currencyType, showTodayCashflow, preferences } =
     useUserPreferencesContext()
@@ -245,17 +115,19 @@ export function useAccountRowActions({
   const [isCheckingTokens, setIsCheckingTokens] = useState(false)
   const [isRefreshMenuPending, setIsRefreshMenuPending] = useState(false)
   const [isMoreActionsOpen, setIsMoreActionsOpen] = useState(false)
-  const [isCopyingInviteLink, setIsCopyingInviteLink] = useState(false)
-  const [manualInviteLinkPayload, setManualInviteLinkPayload] = useState<
-    string | null
-  >(null)
-  const inviteLinkAbortControllerRef = useRef<AbortController | null>(null)
   const moreActionsTriggerRef = useRef<HTMLButtonElement | null>(null)
-  const quickCheckinInFlightRef = useRef(false)
   const disableToggleInFlightRef = useRef(false)
   const suppressMoreActionsFocusRestoreRef = useRef(false)
-  const isMountedRef = useRef(true)
 
+  const { isQuickCheckinEligible, handleQuickCheckin } =
+    useAccountQuickCheckin(site)
+  const {
+    canCopyInviteLink,
+    isCopyingInviteLink,
+    manualInviteLinkPayload,
+    setManualInviteLinkPayload,
+    handleCopyInviteLink,
+  } = useAccountInviteLinkCopy(site)
   const isAccountDisabled = site.disabled === true
   const supportsSmartCopyKey = supportsRecoverableAccountRuntimeKeySecrets(
     site.siteType,
@@ -266,13 +138,6 @@ export function useAccountRowActions({
   const primaryKeyActionLabel = canSmartCopyKey
     ? t("actions.copyKey")
     : t("actions.keyList")
-  const canCopyInviteLink = canFetchDisplayAccountInviteLink(site)
-  const isQuickCheckinEligible = isAutomaticCheckInConfiguredForAccount({
-    config: site.checkIn,
-    siteType: site.siteType,
-    siteUrl: site.baseUrl,
-    accountDisabled: site.disabled,
-  })
   const canLocateManagedSiteChannel = hasValidManagedSiteConfig(preferences)
   const isManagedSiteChannelLookupSupported = preferences
     ? supportsManagedSiteBaseUrlChannelLookup(getManagedSiteType(preferences))
@@ -281,14 +146,6 @@ export function useAccountRowActions({
   const isPinned = isAccountPinned(site.id)
   const pinLabel = isPinned ? t("actions.unpin") : t("actions.pin")
   const PinToggleIcon = isPinned ? PinOff : Pin
-
-  useEffect(() => {
-    isMountedRef.current = true
-    return () => {
-      isMountedRef.current = false
-      inviteLinkAbortControllerRef.current?.abort()
-    }
-  }, [])
 
   const handleTogglePin = async (e?: React.MouseEvent) => {
     e?.stopPropagation()
@@ -575,218 +432,6 @@ export function useAccountRowActions({
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
-    }
-  }
-
-  const handleCopyInviteLink = async () => {
-    if (isCopyingInviteLink || inviteLinkAbortControllerRef.current) return
-
-    const controller = new AbortController()
-    inviteLinkAbortControllerRef.current = controller
-    setIsCopyingInviteLink(true)
-    const toastId = toast.loading(t("actions.copyingInviteLink"))
-    const tracker = startProductAnalyticsAction({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountInviteLink,
-      surfaceId: rowActionsSurface,
-      entrypoint: optionsEntrypoint,
-    })
-
-    try {
-      const result = await runInviteLinkCopyWorkflow({
-        accounts: [site],
-        format: "raw",
-        signal: controller.signal,
-      })
-
-      if (result.result === INVITE_LINK_COPY_RESULTS.Success) {
-        toast.success(t("actions.inviteLinkCopied"))
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-          insights: {
-            itemCount: result.itemCount,
-            successCount: result.successCount,
-            failureCount: result.failureCount,
-          },
-        })
-        return
-      }
-
-      if (result.result === INVITE_LINK_COPY_RESULTS.ClipboardFailure) {
-        setManualInviteLinkPayload(result.payload ?? null)
-        toast.error(t("actions.copyInviteLinkClipboardFailed"))
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
-          insights: {
-            itemCount: result.itemCount,
-            successCount: result.successCount,
-            failureCount: result.failureCount,
-          },
-        })
-        return
-      }
-
-      if (result.result === INVITE_LINK_COPY_RESULTS.Cancelled) {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
-        return
-      }
-
-      if (result.result === INVITE_LINK_COPY_RESULTS.Unsupported) {
-        toast.error(t("actions.copyInviteLinkUnsupported"))
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
-        })
-        return
-      }
-
-      const failureReason = getPrimaryInviteLinkFailureReason(
-        result.failureReasonCounts,
-      )
-      toast.error(
-        t("actions.copyInviteLinkFailedWithReason", {
-          reason: getInviteLinkFailureMessage(t, failureReason),
-        }),
-      )
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: getInviteLinkFailureAnalyticsCategory(failureReason),
-      })
-    } catch (error) {
-      toast.error(t("actions.copyInviteLinkFailed"))
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
-      })
-    } finally {
-      toast.dismiss(toastId)
-      if (inviteLinkAbortControllerRef.current === controller) {
-        inviteLinkAbortControllerRef.current = null
-        if (isMountedRef.current) setIsCopyingInviteLink(false)
-      }
-    }
-  }
-
-  /**
-   * Trigger a manual auto check-in run scoped to this account only.
-   * Uses the shared background scheduler so provider/persistence behavior stays consistent.
-   */
-  const handleQuickCheckin = async () => {
-    if (quickCheckinInFlightRef.current) return
-    quickCheckinInFlightRef.current = true
-    const tracker = startProductAnalyticsAction(quickCheckinAnalyticsContext)
-
-    if (isAccountDisabled) {
-      toast.error(t("autoCheckin:messages.error.accountDisabled"))
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
-      quickCheckinInFlightRef.current = false
-      return
-    }
-
-    let toastId: string | undefined
-    try {
-      toastId = toast.loading(t("autoCheckin:messages.loading.running"))
-
-      const tempWindowRequestSource = getCurrentTempWindowRequestSource()
-      const response = await withProtectionBypassUserCommand(
-        PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
-        tempWindowRequestSource,
-        (protectionBypassExecution) =>
-          sendAutoCheckinMessage(AutoCheckinMessageTypes.RunNow, {
-            accountIds: [site.id],
-            protectionBypassExecution,
-          }),
-      )
-
-      if (toastId) toast.dismiss(toastId)
-
-      if (!response?.success) {
-        toast.error(
-          t("autoCheckin:messages.error.runFailed", {
-            error: response?.error ?? "",
-          }),
-        )
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory:
-            resolveProductAnalyticsErrorCategoryFromError(response),
-        })
-        return
-      }
-
-      const statusResponse = await sendAutoCheckinMessage(
-        AutoCheckinMessageTypes.GetStatus,
-      )
-
-      const result =
-        statusResponse?.success && statusResponse?.data?.perAccount
-          ? statusResponse.data.perAccount[site.id]
-          : null
-
-      if (!result) {
-        toast.error(
-          t("autoCheckin:messages.error.runFailed", {
-            error: statusResponse?.success ? "" : statusResponse?.error ?? "",
-          }),
-        )
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-          insights: {
-            statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
-          },
-        })
-        void loadAccountData()
-        return
-      }
-
-      const status = result.status
-
-      const displayMessage = resolveAutoCheckinResultMessage({
-        t,
-        result,
-        status,
-      })
-
-      const toastMessage = `${site.name}: ${displayMessage}`
-
-      if (
-        status === CHECKIN_RESULT_STATUS.SUCCESS ||
-        status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED
-      ) {
-        toast.success(toastMessage)
-      } else if (
-        status === CHECKIN_RESULT_STATUS.FAILED ||
-        status === CHECKIN_RESULT_STATUS.SKIPPED
-      ) {
-        toast.error(toastMessage)
-      } else {
-        toast.success(t("autoCheckin:messages.success.runCompleted"))
-      }
-
-      const analyticsResult = getQuickCheckinAnalyticsResult(status)
-      const quickCheckinInsights = {
-        statusKind: getQuickCheckinAnalyticsStatusKind(status),
-      }
-      if (analyticsResult === PRODUCT_ANALYTICS_RESULTS.Failure) {
-        tracker.complete(analyticsResult, {
-          errorCategory: result
-            ? getQuickCheckinFailureAnalyticsCategory(result)
-            : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-          insights: quickCheckinInsights,
-        })
-      } else {
-        tracker.complete(analyticsResult, {
-          insights: quickCheckinInsights,
-        })
-      }
-      void loadAccountData()
-    } catch (error) {
-      if (toastId) toast.dismiss(toastId)
-      toast.error(
-        t("autoCheckin:messages.error.runFailed", {
-          error: getErrorMessage(error),
-        }),
-      )
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
-      })
-    } finally {
-      quickCheckinInFlightRef.current = false
     }
   }
 
