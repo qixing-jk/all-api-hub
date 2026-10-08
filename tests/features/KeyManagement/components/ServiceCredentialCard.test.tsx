@@ -676,8 +676,10 @@ describe("ServiceCredentialCard", () => {
       expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
         expect.objectContaining({
           featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
-          actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialProfileToCherryStudio,
-          surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
+          actionId:
+            PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialProfileToCherryStudio,
+          surfaceId:
+            PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
         }),
       )
       expect(mockOpenInCherryStudio).toHaveBeenCalledWith(
@@ -814,6 +816,35 @@ describe("ServiceCredentialCard", () => {
           routerApiKey: "ccr-management-key",
           routerBaseUrl: "https://router.example.invalid",
         }),
+      )
+    })
+
+    it("reports a skipped import when the managed-site dialog does not open", async () => {
+      mockOpenWithAccount.mockResolvedValueOnce({ opened: false })
+      const { user } = renderExportCredential()
+      await selectExportAction(
+        user,
+        "keyManagement:actions.importToManagedSite",
+      )
+      const tracker = mockStartProductAnalyticsAction.mock.results.at(-1)?.value
+      expect(tracker.complete).toHaveBeenCalledWith("skipped", undefined)
+    })
+
+    it("reports an import failure without leaving the action unresolved", async () => {
+      mockOpenWithAccount.mockRejectedValueOnce(new Error("connection failed"))
+      const { user } = renderExportCredential()
+      await selectExportAction(
+        user,
+        "keyManagement:actions.importToManagedSite",
+      )
+      expect(mockShowResultToast).toHaveBeenCalledWith({
+        success: false,
+        message: "messages:errors.operation.failed",
+      })
+      const tracker = mockStartProductAnalyticsAction.mock.results.at(-1)?.value
+      expect(tracker.complete).toHaveBeenCalledWith(
+        "failure",
+        expect.objectContaining({ errorCategory: "unknown" }),
       )
     })
 
