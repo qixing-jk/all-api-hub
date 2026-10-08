@@ -6,11 +6,11 @@ import { Badge } from "~/components/ui"
 import {
   formatGroupLabelFromRatios,
   resolveKnownGroupRatio,
-} from "~/features/ModelList/groupLabels"
+} from "~/features/ModelList/groups/groupLabels"
 import {
   MODEL_LIST_GROUP_SELECTION_SCOPES,
   type ModelListGroupSelectionScope,
-} from "~/features/ModelList/groupSelectionScopes"
+} from "~/features/ModelList/groups/groupSelectionScopes"
 import {
   isModelPriceUnavailable,
   MODEL_PRICE_PRECISION_KINDS,

@@ -14,7 +14,7 @@ import zhCnCommon from "~/locales/zh-CN/common.json"
 import zhCnManagedSiteChannels from "~/locales/zh-CN/managedSiteChannels.json"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
-import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHubMigration"
+import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHub/migration"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,

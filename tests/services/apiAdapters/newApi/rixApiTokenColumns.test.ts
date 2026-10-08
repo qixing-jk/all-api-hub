@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keyResourceEditor"
-import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keyVariant"
+import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keys/keyResourceEditor"
+import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
 import {
   clearRixApiDialectChoicesForTests,
   recordRixApiMajorVersion,

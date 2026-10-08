@@ -6,7 +6,7 @@ import {
   NativeResourceEditorLoadingSkeleton,
   useNativeResourceEditorLoadingVisibility,
 } from "~/features/ResourceEditor"
-import type { NativeResourceEditorOpeningState } from "~/features/ResourceEditor/nativeResourceEditorOpeningState"
+import type { NativeResourceEditorOpeningState } from "~/features/ResourceEditor/opening/nativeResourceEditorOpeningState"
 import type { ResourceFailure } from "~/services/apiAdapters/contracts/managedResourceNative"
 
 import { ChannelEditorShell } from "./ChannelEditorShell"

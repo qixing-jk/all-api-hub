@@ -42,19 +42,15 @@ const mockRenameTag = vi.fn(async (tagId: string, name: string) => ({
 }))
 const mockDeleteTag = vi.fn(async (_tagId: string) => ({ updatedAccounts: 0 }))
 
-vi.mock(
-  "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
-  () => ({
-    subscribeToApiCredentialProfilesChanges: () => () => {},
-    apiCredentialProfilesStorage: {
-      listProfiles: () => mockListProfiles(),
-      createProfile: (input: any) => mockCreateProfile(input),
-      updateProfile: (id: string, updates: any) =>
-        mockUpdateProfile(id, updates),
-      deleteProfile: (id: string) => mockDeleteProfile(id),
-    },
-  }),
-)
+vi.mock("~/services/apiCredentialProfiles/storage/profiles", () => ({
+  subscribeToApiCredentialProfilesChanges: () => () => {},
+  apiCredentialProfilesStorage: {
+    listProfiles: () => mockListProfiles(),
+    createProfile: (input: any) => mockCreateProfile(input),
+    updateProfile: (id: string, updates: any) => mockUpdateProfile(id, updates),
+    deleteProfile: (id: string) => mockDeleteProfile(id),
+  },
+}))
 
 vi.mock("~/services/tags/tagStorage", () => ({
   tagStorage: {

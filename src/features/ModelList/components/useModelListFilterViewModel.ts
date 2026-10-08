@@ -2,27 +2,31 @@ import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
-  MODEL_LIST_BILLING_MODES,
-  type ModelListBillingMode,
-} from "~/features/ModelList/billingModes"
-import { formatGroupLabelFromRatios } from "~/features/ModelList/groupLabels"
+  ALL_ACCOUNTS_SOURCE_VALUE,
+  MODEL_MANAGEMENT_SOURCE_KINDS,
+} from "~/features/ModelList/catalog/modelManagementSources"
 import {
   MODEL_CAPABILITY_FILTER_LABEL_TRANSLATORS,
   MODEL_CAPABILITY_FILTER_VALUES,
   type ModelCapabilitySelectionValue,
-} from "~/features/ModelList/modelCapabilityFilters"
-import {
-  ALL_ACCOUNTS_SOURCE_VALUE,
-  MODEL_MANAGEMENT_SOURCE_KINDS,
-} from "~/features/ModelList/modelManagementSources"
+} from "~/features/ModelList/filtering/modelCapabilityFilters"
 import {
   MODEL_LIST_SORT_MODES,
   type ModelListSortMode,
-} from "~/features/ModelList/sortModes"
+} from "~/features/ModelList/filtering/sortModes"
+import { formatGroupLabelFromRatios } from "~/features/ModelList/groups/groupLabels"
+import {
+  MODEL_LIST_BILLING_MODES,
+  type ModelListBillingMode,
+} from "~/features/ModelList/pricing/billingModes"
+import {
+  canEnableModelPriceComparison,
+  enableModelPriceComparison,
+} from "~/features/ModelList/pricing/priceComparisonActivation"
 import {
   DEFAULT_MODEL_LIST_VERIFICATION_RESULT_FILTERS,
   type ModelListVerificationResultFilter,
-} from "~/features/ModelList/verificationResultFilters"
+} from "~/features/ModelList/verification/verificationResultFilters"
 import toast from "~/lib/notify"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
@@ -36,10 +40,6 @@ import {
   type ProductAnalyticsModeId,
 } from "~/services/productAnalytics/contracts"
 
-import {
-  canEnableModelPriceComparison,
-  enableModelPriceComparison,
-} from "../priceComparisonActivation"
 import type { ControlPanelProps } from "./ControlPanel.types"
 
 type ModelFilterInputs = Pick<

@@ -7,8 +7,8 @@ import { PricingScenarioControls } from "~/features/ModelList/components/Pricing
 import {
   DEFAULT_MODEL_PRICE_COMPARISON_PRESET_ID,
   DEFAULT_MODEL_PRICE_COMPARISON_WEIGHTS,
-} from "~/features/ModelList/priceComparison"
-import { createDefaultPricingScenario } from "~/features/ModelList/pricingScenario"
+} from "~/features/ModelList/pricing/priceComparison"
+import { createDefaultPricingScenario } from "~/features/ModelList/pricing/pricingScenario"
 import {
   PRICING_PURPOSES,
   PRICING_RESPONSE_FORMATS,

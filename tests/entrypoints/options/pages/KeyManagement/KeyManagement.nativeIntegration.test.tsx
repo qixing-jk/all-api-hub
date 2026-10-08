@@ -19,8 +19,8 @@ import {
   AccountKeyResourceError,
   type AccountKeyResourceFacts,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keyResourceEditor"
-import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keyVariant"
+import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keys/keyResourceEditor"
+import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
 import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_MODES,
@@ -95,11 +95,11 @@ vi.mock("~/lib/notify", () => ({
 }))
 
 vi.mock(
-  "~/services/apiCredentialProfiles/accountTokenImport",
+  "~/services/apiCredentialProfiles/accountImport/accountTokenImport",
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import("~/services/apiCredentialProfiles/accountTokenImport")
+        typeof import("~/services/apiCredentialProfiles/accountImport/accountTokenImport")
       >()
 
     return {

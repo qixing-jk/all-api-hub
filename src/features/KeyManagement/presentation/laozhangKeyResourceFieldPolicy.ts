@@ -1,12 +1,12 @@
 import type { TFunction } from "i18next"
 
-import type { ResourceFieldPresentation } from "~/features/ResourceEditor/resourceFieldPolicy"
+import type { ResourceFieldPresentation } from "~/features/ResourceEditor/model/resourceFieldPolicy"
 import {
   LAOZHANG_BILLING_TYPES as billing,
   LAOZHANG_KEY_FIELD_IDS as field,
   LAOZHANG_AUTO_GROUP,
   LAOZHANG_RETRY_BILLING_MODES as retryBilling,
-} from "~/services/apiAdapters/newApi/laozhangKeyResourceFields"
+} from "~/services/apiAdapters/newApi/keys/laozhangKeyResourceFields"
 
 /** Ordinary-account LaoZhang controls, rendered by the shared native editor. */
 export const laozhangDeploymentFields = (

@@ -11,7 +11,7 @@ import {
   resolveLoginProviderOwners,
 } from "~/services/accountLogin/providerClaims"
 import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
-import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/inspection"
+import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { inspectSelectedCheckInCompatibility } from "~/services/checkin/autoCheckin/methods"
 import type { SiteAccount } from "~/types"
 import {

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { ManagedResourceModelSyncBatchOptions } from "~/services/apiAdapters/contracts/managedResourceModelSync"
-import { createOctopusModelSyncCapability } from "~/services/apiAdapters/managedResources/octopusModelSync"
+import { createOctopusModelSyncCapability } from "~/services/apiAdapters/managedResources/octopus/modelSync"
 import { ApiError } from "~/services/apiTransport/errors"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
@@ -48,11 +48,11 @@ vi.mock("~/services/apiService/octopus/models", async (original) => ({
 }))
 
 vi.mock(
-  "~/services/apiAdapters/managedResources/octopusOperations",
+  "~/services/apiAdapters/managedResources/octopus/operations",
   async (original) => {
     const actual =
       await original<
-        typeof import("~/services/apiAdapters/managedResources/octopusOperations")
+        typeof import("~/services/apiAdapters/managedResources/octopus/operations")
       >()
     const octopusManagedResourceModels = {
       ...actual.octopusManagedResourceModels,

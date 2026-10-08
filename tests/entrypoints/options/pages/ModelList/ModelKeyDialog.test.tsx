@@ -139,7 +139,7 @@ vi.mock("~/services/productAnalytics/actions", () => ({
     trackProductAnalyticsActionStartedMock(...args),
 }))
 
-vi.mock("~/services/apiCredentialProfiles/apiCredentialProfileLinks", () => ({
+vi.mock("~/services/apiCredentialProfiles/links", () => ({
   apiCredentialProfileLinks: {
     capture: async (input: { profile: unknown }) => {
       captureApiCredentialProfileMock(input)

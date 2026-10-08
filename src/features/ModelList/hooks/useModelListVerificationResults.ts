@@ -1,12 +1,12 @@
 import { useCallback, useMemo } from "react"
 
+import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/catalog/modelManagementSources"
+import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/filtering/sortModes"
 import type { useModelListData } from "~/features/ModelList/hooks/useModelListData"
-import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
-import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
 import {
   applyVerificationResultView,
   type ModelListVerificationResultFilter,
-} from "~/features/ModelList/verificationResultFilters"
+} from "~/features/ModelList/verification/verificationResultFilters"
 import type { ApiVerificationHistoryTarget } from "~/services/verification/verificationResultHistory/types"
 import { useVerificationResultHistorySummaries } from "~/services/verification/verificationResultHistory/useVerificationResultHistorySummaries"
 import {

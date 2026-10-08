@@ -2,7 +2,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import ModelRedirectSettings from "~/features/BasicSettings/components/tabs/ManagedSite/ModelRedirectSettings"
+import ModelRedirectSettings from "~/features/BasicSettings/components/tabs/ManagedSite/modelSync/ModelRedirectSettings"
 import toast from "~/lib/notify"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import {

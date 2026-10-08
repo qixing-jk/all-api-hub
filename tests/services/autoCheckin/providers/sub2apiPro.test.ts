@@ -21,7 +21,7 @@ import {
   XIAOBAI_CODE_STATUS_OUTCOMES,
 } from "~/services/apiService/sub2api/xiaobaiCodeCheckIn"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
-import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery"
+import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery/discovery"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import { sub2apiProProvider } from "~/services/checkin/autoCheckin/providers/sub2apiPro"

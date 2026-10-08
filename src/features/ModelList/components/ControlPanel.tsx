@@ -22,10 +22,14 @@ import {
   Switch,
 } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
-import { MODEL_LIST_GROUP_SEMANTICS } from "~/features/ModelList/modelManagementSources"
-import { isModelListPriceSortMode } from "~/features/ModelList/sortModes"
+import { MODEL_LIST_GROUP_SEMANTICS } from "~/features/ModelList/catalog/modelManagementSources"
+import { isModelListPriceSortMode } from "~/features/ModelList/filtering/sortModes"
+import {
+  DEFAULT_MODEL_PRICE_COMPARISON_PRESET_ID,
+  DEFAULT_MODEL_PRICE_COMPARISON_WEIGHTS,
+} from "~/features/ModelList/pricing/priceComparison"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
-import { DEFAULT_MODEL_LIST_VERIFICATION_RESULT_FILTERS } from "~/features/ModelList/verificationResultFilters"
+import { DEFAULT_MODEL_LIST_VERIFICATION_RESULT_FILTERS } from "~/features/ModelList/verification/verificationResultFilters"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -33,10 +37,6 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 
-import {
-  DEFAULT_MODEL_PRICE_COMPARISON_PRESET_ID,
-  DEFAULT_MODEL_PRICE_COMPARISON_WEIGHTS,
-} from "../priceComparison"
 import type { ControlPanelProps } from "./ControlPanel.types"
 import { PriceComparisonControls } from "./PriceComparisonControls"
 import { PricingScenarioControls } from "./PricingScenarioControls"

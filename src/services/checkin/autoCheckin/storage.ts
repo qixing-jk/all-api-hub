@@ -1,5 +1,6 @@
 import { Storage } from "@plasmohq/storage"
 
+import { isRetryableCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
 import { STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
@@ -14,8 +15,6 @@ import {
 } from "~/types/autoCheckin"
 import { createLogger } from "~/utils/core/logger"
 import { isPlainObject } from "~/utils/core/object"
-
-import { isRetryableCheckinResult } from "./resultPolicy"
 
 const logger = createLogger("AutoCheckinStorage")
 

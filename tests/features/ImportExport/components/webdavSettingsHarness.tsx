@@ -158,12 +158,9 @@ vi.mock("~/services/managedSites/channelConfigStorage", () => ({
   channelConfigStorage: mockChannelConfigStorage,
 }))
 
-vi.mock(
-  "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
-  () => ({
-    apiCredentialProfilesStorage: mockApiCredentialProfilesStorage,
-  }),
-)
+vi.mock("~/services/apiCredentialProfiles/storage/profiles", () => ({
+  apiCredentialProfilesStorage: mockApiCredentialProfilesStorage,
+}))
 
 vi.mock("~/services/webdav/webdavBackupEncryption", () => ({
   decryptWebdavBackupEnvelope: mockDecryptWebdavBackupEnvelope,

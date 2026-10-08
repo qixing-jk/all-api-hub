@@ -22,14 +22,14 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
 })
 
 vi.mock(
-  "~/features/BasicSettings/components/tabs/ManagedSite/managedSiteModelSyncSettings",
+  "~/features/BasicSettings/components/tabs/ManagedSite/modelSync/managedSiteModelSyncSettings",
   () => ({
     default: () => <div data-testid="managed-site-model-sync-settings" />,
   }),
 )
 
 vi.mock(
-  "~/features/BasicSettings/components/tabs/ManagedSite/ModelRedirectSettings",
+  "~/features/BasicSettings/components/tabs/ManagedSite/modelSync/ModelRedirectSettings",
   () => ({
     default: () => <div data-testid="model-redirect-settings" />,
   }),

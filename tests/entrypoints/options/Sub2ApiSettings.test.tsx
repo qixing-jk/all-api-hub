@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import Sub2ApiSettings from "~/features/BasicSettings/components/tabs/ManagedSite/Sub2ApiSettings"
+import Sub2ApiSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/Sub2ApiSettings"
 import { validateSub2ApiManagedSiteConfig } from "~/services/managedSites/providers/sub2api"
 import { createTab } from "~/utils/browser/tabs"
 import { testI18n } from "~~/tests/test-utils/i18n"

@@ -2,21 +2,21 @@ import { describe, expect, it, vi } from "vitest"
 
 import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
-import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groupContext"
-import { useFilteredModels } from "~/features/ModelList/hooks/useFilteredModels"
-import {
-  getModelCapabilityBadges,
-  matchesModelCapabilityFilters,
-  MODEL_CAPABILITY_FILTER_VALUES,
-} from "~/features/ModelList/modelCapabilityFilters"
 import {
   createAccountSource,
   createAllAccountsSource,
   createProfileSource,
-} from "~/features/ModelList/modelManagementSources"
-import type { ModelPriceComparisonWeights } from "~/features/ModelList/priceComparison"
-import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
+} from "~/features/ModelList/catalog/modelManagementSources"
+import {
+  getModelCapabilityBadges,
+  matchesModelCapabilityFilters,
+  MODEL_CAPABILITY_FILTER_VALUES,
+} from "~/features/ModelList/filtering/modelCapabilityFilters"
+import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/filtering/sortModes"
+import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groups/groupContext"
+import { useFilteredModels } from "~/features/ModelList/hooks/useFilteredModels"
+import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/pricing/billingModes"
+import type { ModelPriceComparisonWeights } from "~/features/ModelList/pricing/priceComparison"
 import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import {
   createAccountRuntimeKeyModelListSourceIdentity,

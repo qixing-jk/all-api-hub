@@ -14,7 +14,7 @@ import {
   normalizeResourceList,
   readResourceList,
   readResourceString,
-} from "~/features/ResourceEditor/resourceEditorProjection"
+} from "~/features/ResourceEditor/model/resourceEditorProjection"
 import type {
   EditableResourceProjection,
   ResourceFieldDescriptor,

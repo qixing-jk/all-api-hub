@@ -3,9 +3,14 @@ import { useCallback, useEffect, useMemo, useRef } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  getModelDataErrorCategory,
+  getPricingModelCount,
+  trackModelDataLoadCompletion,
+} from "~/features/ModelList/catalog/modelDataDiagnostics"
+import {
   MODEL_MANAGEMENT_SOURCE_KINDS,
   type ModelManagementSource,
-} from "~/features/ModelList/modelManagementSources"
+} from "~/features/ModelList/catalog/modelManagementSources"
 import toast from "~/lib/notify"
 import { loadProfileModelCatalog } from "~/services/modelCatalog/loader"
 import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
@@ -17,11 +22,6 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 
-import {
-  getModelDataErrorCategory,
-  getPricingModelCount,
-  trackModelDataLoadCompletion,
-} from "../modelDataDiagnostics"
 import { createProfileCatalogQueryKey } from "./modelDataQueryPolicy"
 import type { UseModelDataReturn } from "./modelDataTypes"
 

@@ -18,7 +18,7 @@ import {
   MODEL_CAPABILITY_FILTER_LABEL_KEYS,
   MODEL_CAPABILITY_FILTER_VALUES,
   type ModelCapabilitySelectionValue,
-} from "~/features/ModelList/modelCapabilityFilters"
+} from "~/features/ModelList/filtering/modelCapabilityFilters"
 import { cn } from "~/lib/utils"
 import type { ModelMetadata } from "~/services/models/modelMetadata/types"
 

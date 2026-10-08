@@ -5,8 +5,8 @@ import { I18nextProvider } from "react-i18next"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/catalog/modelManagementSources"
 import { StatusIndicator } from "~/features/ModelList/components/StatusIndicator"
-import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 const { openSiteSupportRequestPageMock } = vi.hoisted(() => ({

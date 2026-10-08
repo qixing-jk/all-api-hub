@@ -12,7 +12,7 @@ import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountMa
 import toast from "~/lib/notify"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
-import type { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery"
+import type { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery/discovery"
 import {
   PROTECTION_BYPASS_EXECUTION_VERSION,
   PROTECTION_BYPASS_USER_COMMANDS,
@@ -109,16 +109,19 @@ vi.mock("~/services/accounts/accountAutoDetection", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/checkin/autoCheckin/discovery", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/services/checkin/autoCheckin/discovery")
-    >()
-  return {
-    ...actual,
-    discoverCheckInMethods: mockDiscoverCheckInMethods,
-  }
-})
+vi.mock(
+  "~/services/checkin/autoCheckin/discovery/discovery",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/checkin/autoCheckin/discovery/discovery")
+      >()
+    return {
+      ...actual,
+      discoverCheckInMethods: mockDiscoverCheckInMethods,
+    }
+  },
+)
 
 vi.mock("~/services/siteDetection/siteTypeObservations", () => ({
   siteTypeObservations: {
@@ -1747,8 +1750,8 @@ describe("useAccountDialog re-detect preservation", () => {
     >("~/services/accounts/accountAutoDetection")
     mockAutoDetectAccount.mockImplementationOnce(autoDetectAccount)
     const { discoverCheckInMethods } = await vi.importActual<
-      typeof import("~/services/checkin/autoCheckin/discovery")
-    >("~/services/checkin/autoCheckin/discovery")
+      typeof import("~/services/checkin/autoCheckin/discovery/discovery")
+    >("~/services/checkin/autoCheckin/discovery/discovery")
     mockDiscoverCheckInMethods.mockImplementation(discoverCheckInMethods)
     onTestFinished(() => {
       mockDiscoverCheckInMethods.mockReset()

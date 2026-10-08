@@ -2,11 +2,11 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { StatusIndicator } from "~/features/ModelList/components/StatusIndicator"
 import {
   createAccountSource,
   createProfileSource,
-} from "~/features/ModelList/modelManagementSources"
+} from "~/features/ModelList/catalog/modelManagementSources"
+import { StatusIndicator } from "~/features/ModelList/components/StatusIndicator"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"

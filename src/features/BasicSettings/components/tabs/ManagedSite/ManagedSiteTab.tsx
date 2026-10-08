@@ -5,6 +5,8 @@ import { OPTIONS_MENU_ITEM_ICONS } from "~/components/icons/optionsPageIcons"
 import { Button, Notice } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import ManagedSiteModelSyncSettings from "~/features/BasicSettings/components/tabs/ManagedSite/modelSync/managedSiteModelSyncSettings"
+import ModelRedirectSettings from "~/features/BasicSettings/components/tabs/ManagedSite/modelSync/ModelRedirectSettings"
 import {
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
   KEY_MANAGEMENT_ROUTE_PARAMS,
@@ -21,10 +23,8 @@ import {
 } from "~/services/managedSites/utils/managedSite"
 import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
-import ManagedSiteModelSyncSettings from "./managedSiteModelSyncSettings"
 import ManagedSiteSelector from "./ManagedSiteSelector"
 import { ManagedSiteSettingsPanel } from "./ManagedSiteSettingsPanel"
-import ModelRedirectSettings from "./ModelRedirectSettings"
 
 const gatewayActionClassName = "max-w-full"
 const AccountKeysIcon = OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.KEYS]

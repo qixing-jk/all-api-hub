@@ -7,7 +7,7 @@ import enCommon from "~/locales/en/common.json" with { type: "json" }
 import zhFeedback from "~/locales/zh-CN/accountDialog.json" with { type: "json" }
 import zhCheckin from "~/locales/zh-CN/autoCheckin.json" with { type: "json" }
 import zhCommon from "~/locales/zh-CN/common.json" with { type: "json" }
-import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"

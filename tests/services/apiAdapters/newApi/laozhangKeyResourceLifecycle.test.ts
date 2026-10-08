@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { createNewApiAccountKeyResources } from "~/services/apiAdapters/newApi/accountKeyResource"
+import { createNewApiAccountKeyResources } from "~/services/apiAdapters/newApi/keys/accountKeyResource"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 

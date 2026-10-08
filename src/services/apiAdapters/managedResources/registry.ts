@@ -1,17 +1,16 @@
 import type { ManagedSiteType } from "~/constants/siteType"
 import type { ManagedResourceKind } from "~/services/accountSiteDefinitions/contracts"
 import type { ManagedResourceRegistration } from "~/services/apiAdapters/contracts/managedResourceNative"
-
-import { axonHubManagedResourceRegistration } from "./axonHub"
-import { claudeCodeHubManagedResourceRegistration } from "./claudeCodeHub"
-import { cliProxyApiManagedResourceRegistration } from "./cliProxyApi"
-import { doneHubManagedResourceRegistration } from "./doneHub"
-import { gptLoadManagedResourceRegistration } from "./gptLoad"
-import { newApiManagedResourceRegistration } from "./newApi"
-import { octopusManagedResourceRegistration } from "./octopus"
-import { omniRouteManagedResourceRegistration } from "./omniroute"
-import { sub2ApiManagedResourceRegistration } from "./sub2api"
-import { veloeraManagedResourceRegistration } from "./veloera"
+import { axonHubManagedResourceRegistration } from "~/services/apiAdapters/managedResources/axonHub"
+import { claudeCodeHubManagedResourceRegistration } from "~/services/apiAdapters/managedResources/claudeCodeHub"
+import { cliProxyApiManagedResourceRegistration } from "~/services/apiAdapters/managedResources/cliProxyApi"
+import { doneHubManagedResourceRegistration } from "~/services/apiAdapters/managedResources/doneHub"
+import { gptLoadManagedResourceRegistration } from "~/services/apiAdapters/managedResources/gptLoad"
+import { newApiManagedResourceRegistration } from "~/services/apiAdapters/managedResources/newApi"
+import { octopusManagedResourceRegistration } from "~/services/apiAdapters/managedResources/octopus"
+import { omniRouteManagedResourceRegistration } from "~/services/apiAdapters/managedResources/omniRoute"
+import { sub2ApiManagedResourceRegistration } from "~/services/apiAdapters/managedResources/sub2api"
+import { veloeraManagedResourceRegistration } from "~/services/apiAdapters/managedResources/veloera"
 
 /** Native registrations, also used to verify completeness against product declarations. */
 export const managedResourceRegistrations: readonly ManagedResourceRegistration[] =

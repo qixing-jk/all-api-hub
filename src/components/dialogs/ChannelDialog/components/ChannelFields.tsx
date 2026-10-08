@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
-import { ResourceFieldLabel } from "~/features/ResourceEditor/ResourceFieldLabel"
+import { ResourceFieldLabel } from "~/features/ResourceEditor/components/ResourceFieldLabel"
 
 export type ChannelCommonFieldsOption = {
   value: string

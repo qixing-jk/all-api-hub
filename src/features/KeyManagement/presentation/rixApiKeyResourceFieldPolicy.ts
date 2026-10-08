@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next"
 
-import type { ResourceFieldPresentation } from "~/features/ResourceEditor/resourceFieldPolicy"
+import type { ResourceFieldPresentation } from "~/features/ResourceEditor/model/resourceFieldPolicy"
 
 /**
  * Presentation rules for the fields Rix API 6.x owns next to the New API

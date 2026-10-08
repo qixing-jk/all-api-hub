@@ -14,7 +14,7 @@ import {
   markTempWindowOpenRouterManagementKeyDispatched,
 } from "~/services/browsingContext/tempPage/openrouterManagementKeyAction"
 import { handleCloseTempWindow } from "~/services/browsingContext/tempPage/runtime"
-import { setupAutoCheckinMessagingListeners } from "~/services/checkin/autoCheckin/schedulerMessaging"
+import { setupAutoCheckinMessagingListeners } from "~/services/checkin/autoCheckin/scheduling/schedulerMessaging"
 import { setupExternalCheckInMessagingListeners } from "~/services/checkin/externalCheckInService"
 import {
   handleDailyBalanceHistoryMessage,

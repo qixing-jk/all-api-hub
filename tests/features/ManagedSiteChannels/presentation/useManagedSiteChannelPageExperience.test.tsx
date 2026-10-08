@@ -19,12 +19,9 @@ vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
 vi.mock("~/services/accounts/accountStorage/accountPresentation", () => ({
   accountPresentation: { convertToDisplayData: mocks.convertToDisplayData },
 }))
-vi.mock(
-  "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
-  () => ({
-    apiCredentialProfilesStorage: { listProfiles: mocks.listProfiles },
-  }),
-)
+vi.mock("~/services/apiCredentialProfiles/storage/profiles", () => ({
+  apiCredentialProfilesStorage: { listProfiles: mocks.listProfiles },
+}))
 vi.mock("~/utils/navigation/optionsPage", async (importActual) => ({
   ...(await importActual()),
   pushWithinOptionsPage: mocks.pushWithinOptionsPage,

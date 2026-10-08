@@ -11,7 +11,7 @@ import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import { ACCOUNT_BOOTSTRAP_ROUTE_KINDS } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { resolveFreeModelRoutes } from "~/services/apiAdapters/freemodel/routes"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import { captureProfileFromAccountToken } from "~/services/apiCredentialProfiles/accountTokenImport"
+import { captureProfileFromAccountToken } from "~/services/apiCredentialProfiles/accountImport/accountTokenImport"
 import {
   createKey,
   deleteKey,
@@ -29,7 +29,7 @@ import {
 } from "../../apiAdapters/checkInFixtures"
 
 const { captureMock } = vi.hoisted(() => ({ captureMock: vi.fn() }))
-vi.mock("~/services/apiCredentialProfiles/apiCredentialProfileLinks", () => ({
+vi.mock("~/services/apiCredentialProfiles/links", () => ({
   apiCredentialProfileLinks: {
     capture: (...args: unknown[]) => captureMock(...args),
   },

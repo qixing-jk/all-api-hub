@@ -4,21 +4,22 @@ import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { Badge, Card, CardContent, IconButton } from "~/components/ui"
+import type {
+  ModelManagementItemSource,
+  ModelManagementSourceCapabilities,
+} from "~/features/ModelList/catalog/modelManagementSources"
+import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/catalog/modelManagementSources"
+import { formatModelListSourceLabel } from "~/features/ModelList/catalog/sourceLabels"
 import {
   MODEL_GROUP_ACCESS_STATES,
   type ActiveModelGroupContext,
   type ModelGroupContext,
-} from "~/features/ModelList/groupContext"
+} from "~/features/ModelList/groups/groupContext"
+import { formatGroupLabelFromRatios } from "~/features/ModelList/groups/groupLabels"
 import {
   MODEL_LIST_GROUP_SELECTION_SCOPES,
   type ModelListGroupSelectionScope,
-} from "~/features/ModelList/groupSelectionScopes"
-import type {
-  ModelManagementItemSource,
-  ModelManagementSourceCapabilities,
-} from "~/features/ModelList/modelManagementSources"
-import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
-import { formatModelListSourceLabel } from "~/features/ModelList/sourceLabels"
+} from "~/features/ModelList/groups/groupSelectionScopes"
 import toast from "~/lib/notify"
 import { cn } from "~/lib/utils"
 import type { ModelListSourceIdentity } from "~/services/modelCatalog/sourceIdentity"
@@ -48,7 +49,6 @@ import { isProdBuild } from "~/utils/core/environment"
 import { createLogger } from "~/utils/core/logger"
 import { tryParseUrl } from "~/utils/core/urlParsing"
 
-import { formatGroupLabelFromRatios } from "../../groupLabels"
 import { ModelCapabilityBadges } from "./ModelCapabilityBadges"
 import { ModelItemDescription } from "./ModelItemDescription"
 import { ModelItemDetails } from "./ModelItemDetails"

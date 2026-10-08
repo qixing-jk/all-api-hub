@@ -8,7 +8,7 @@ import {
   CURRENT_CONFIG_VERSION,
   migrateAccountsConfig,
 } from "~/services/accounts/migrations/accountDataMigration"
-import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configCodec"
+import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configuration/configCodec"
 import {
   ACCOUNT_USAGE_SUMMARY_SCOPES,
   AuthTypeEnum,

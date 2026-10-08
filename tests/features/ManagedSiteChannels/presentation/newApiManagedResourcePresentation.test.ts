@@ -25,7 +25,7 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: { getPreferences: mocks.getPreferences },
 }))
 
-vi.mock("~/services/apiAdapters/managedResources/newApiOperations", () => ({
+vi.mock("~/services/apiAdapters/managedResources/newApi/operations", () => ({
   newApiChannelOperations: {
     list: mocks.list,
   },

@@ -2,7 +2,7 @@ import userEvent from "@testing-library/user-event"
 import { useState, type ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import AxonHubSettings from "~/features/BasicSettings/components/tabs/ManagedSite/AxonHubSettings"
+import AxonHubSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/AxonHubSettings"
 import toast from "~/lib/notify"
 import { signIn } from "~/services/apiService/axonHub/authSession"
 import type { PreferenceWriteResult } from "~/services/preferences/preferencesStore"

@@ -5,17 +5,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
+import {
+  createAccountSource,
+  createProfileSource,
+} from "~/features/ModelList/catalog/modelManagementSources"
 import { ModelDisplay } from "~/features/ModelList/components/ModelDisplay"
 import {
   createModelGroupResolver,
   MODEL_GROUP_ACCESS_STATES,
   resolveActiveModelGroupContext,
-} from "~/features/ModelList/groupContext"
-import type { CalculatedModelItem } from "~/features/ModelList/modelListItems"
-import {
-  createAccountSource,
-  createProfileSource,
-} from "~/features/ModelList/modelManagementSources"
+} from "~/features/ModelList/groups/groupContext"
+import type { CalculatedModelItem } from "~/features/ModelList/presentation/modelListItems"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
 import {
   CALCULATED_PRICE_KINDS,

@@ -95,9 +95,12 @@ describe("setupRuntimeMessageListeners routing", () => {
     }))
 
     // runtimeMessages imports these modules; provide minimal stubs to avoid heavy side effects.
-    vi.doMock("~/services/checkin/autoCheckin/schedulerMessaging", () => ({
-      setupAutoCheckinMessagingListeners: vi.fn(),
-    }))
+    vi.doMock(
+      "~/services/checkin/autoCheckin/scheduling/schedulerMessaging",
+      () => ({
+        setupAutoCheckinMessagingListeners: vi.fn(),
+      }),
+    )
     vi.doMock("~/services/accounts/autoRefreshService", () => ({
       setupAutoRefreshMessagingListeners: vi.fn(),
     }))
@@ -193,7 +196,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doUnmock("~/services/models/modelSync")
     vi.doUnmock("~/services/preferences/runtimePreferencesService")
     vi.doUnmock("~/services/productAnnouncements/service")
-    vi.doUnmock("~/services/checkin/autoCheckin/schedulerMessaging")
+    vi.doUnmock("~/services/checkin/autoCheckin/scheduling/schedulerMessaging")
     vi.doUnmock("~/services/accounts/autoRefreshService")
     vi.doUnmock("~/services/managedSites/channelConfigHandlers")
     vi.doUnmock("~/services/checkin/externalCheckInService")

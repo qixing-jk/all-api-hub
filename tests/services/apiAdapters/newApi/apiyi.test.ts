@@ -6,13 +6,13 @@ import { SITE_TYPES } from "~/constants/siteType"
 import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"
 import { completeAutoDetectedAccount } from "~/services/accounts/autoDetectCompletion/completion"
 import { getAccountKeyProductCapabilities } from "~/services/accounts/keyProductCapabilities"
-import { normalizeApiYiModelPricingResponse } from "~/services/apiAdapters/newApi/apiyiModelPricing"
+import { normalizeApiYiModelPricingResponse } from "~/services/apiAdapters/newApi/pricing/apiyiModelPricing"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   fetchAccountAvailableModels,
   fetchUserGroups,
 } from "~/services/apiService/newApiFamily/variants/apiyi"
-import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { PRICING_PURPOSES } from "~/services/modelPricing/pricingConstants"
 import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
 import { AuthTypeEnum } from "~/types"

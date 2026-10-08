@@ -8,7 +8,7 @@ import {
   getOpenRouterKeyResourceFieldPolicy,
   OPENROUTER_KEY_EDITOR_SECTION_ORDER,
 } from "~/features/KeyManagement/presentation/openRouterKeyResourceFieldPolicy"
-import { resolveResourceFieldPolicy } from "~/features/ResourceEditor/resourceFieldPolicy"
+import { resolveResourceFieldPolicy } from "~/features/ResourceEditor/model/resourceFieldPolicy"
 import type { ResourceFieldDescriptor } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   OPENROUTER_KEY_FIELD_IDS,

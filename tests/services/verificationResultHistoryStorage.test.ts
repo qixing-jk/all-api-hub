@@ -5,7 +5,7 @@ import { browser } from "wxt/browser"
 import { Storage } from "@plasmohq/storage"
 
 import { accountConfigStore } from "~/services/accounts/accountStorage/accountConfigStore"
-import * as profileConfigReader from "~/services/apiCredentialProfiles/profileConfigReader"
+import * as profileConfigReader from "~/services/apiCredentialProfiles/storage/configReader"
 import { API_VERIFICATION_HISTORY_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"

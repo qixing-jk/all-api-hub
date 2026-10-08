@@ -11,7 +11,7 @@ import {
   isTempWindowFallbackReminderCode,
 } from "~/features/AccountManagement/utils/tempWindowFallbackReminder"
 import { isAutoCheckinSkipReasonActionable } from "~/features/AutoCheckin/utils/skipCategories"
-import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
+import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import type { SiteTypeMismatchMap } from "~/services/siteDetection/siteTypeObservations"
 import { SiteHealthStatus, type DisplaySiteData } from "~/types"
 import {

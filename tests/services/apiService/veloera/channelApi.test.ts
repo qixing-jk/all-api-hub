@@ -16,7 +16,7 @@ import {
   updateChannelModels,
 } from "~/services/apiService/veloera"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
-import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/inspection"
+import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"

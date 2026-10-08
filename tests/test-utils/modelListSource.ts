@@ -1,7 +1,7 @@
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
-import type { ModelListItem } from "~/features/ModelList/modelListItems"
-import { createAccountSource } from "~/features/ModelList/modelManagementSources"
-import { prepareModelListSource } from "~/features/ModelList/sourcePreparation"
+import { createAccountSource } from "~/features/ModelList/catalog/modelManagementSources"
+import { prepareModelListSource } from "~/features/ModelList/catalog/sourcePreparation"
+import type { ModelListItem } from "~/features/ModelList/presentation/modelListItems"
 import {
   MODEL_CATALOG_SCOPES,
   MODEL_LIST_SOURCE_KINDS,

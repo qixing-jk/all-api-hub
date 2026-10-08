@@ -24,7 +24,7 @@ vi.mock(
 vi.mock("~/services/managedSites/channelMigration", () => ({
   executeManagedSiteMigration: mocks.executeMigration,
 }))
-vi.mock("~/services/apiAdapters/managedResources/newApiMigration", () => ({
+vi.mock("~/services/apiAdapters/managedResources/newApi/migration", () => ({
   resolveNewApiMigrationCredential: mocks.resolveCredential,
 }))
 vi.mock(

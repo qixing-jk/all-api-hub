@@ -1493,7 +1493,7 @@ describe("typed runtime messaging setup", () => {
     }))
 
     const scheduler = await import(
-      "~/services/checkin/autoCheckin/schedulerMessaging"
+      "~/services/checkin/autoCheckin/scheduling/schedulerMessaging"
     )
 
     scheduler.setupAutoCheckinMessagingListeners()
@@ -1551,10 +1551,10 @@ describe("typed runtime messaging setup", () => {
     }))
 
     const scheduler = await import(
-      "~/services/checkin/autoCheckin/schedulerMessaging"
+      "~/services/checkin/autoCheckin/scheduling/schedulerMessaging"
     )
     const { autoCheckinScheduler } = await import(
-      "~/services/checkin/autoCheckin/schedulerCore"
+      "~/services/checkin/autoCheckin/scheduling/schedulerCore"
     )
     vi.spyOn(autoCheckinScheduler, "runCheckins").mockImplementation(
       runCheckins,
@@ -2073,7 +2073,7 @@ describe("typed runtime messaging setup", () => {
       PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
     )
     const scheduler = await import(
-      "~/services/checkin/autoCheckin/schedulerMessaging"
+      "~/services/checkin/autoCheckin/scheduling/schedulerMessaging"
     )
     scheduler.setupAutoCheckinMessagingListeners()
 
@@ -2133,10 +2133,10 @@ describe("typed runtime messaging setup", () => {
     }))
 
     const scheduler = await import(
-      "~/services/checkin/autoCheckin/schedulerMessaging"
+      "~/services/checkin/autoCheckin/scheduling/schedulerMessaging"
     )
     const { autoCheckinScheduler } = await import(
-      "~/services/checkin/autoCheckin/schedulerCore"
+      "~/services/checkin/autoCheckin/scheduling/schedulerCore"
     )
     vi.spyOn(autoCheckinScheduler, "runCheckins").mockRejectedValue(
       new Error("run failed"),

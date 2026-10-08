@@ -18,7 +18,7 @@ import {
   NativeResourceEditorLoadingSkeleton,
   useNativeResourceEditorLoadingVisibility,
 } from "~/features/ResourceEditor"
-import type { NativeResourceEditorOpeningState } from "~/features/ResourceEditor/nativeResourceEditorOpeningState"
+import type { NativeResourceEditorOpeningState } from "~/features/ResourceEditor/opening/nativeResourceEditorOpeningState"
 import type {
   EditableResourceProjection,
   ResourceFailure,

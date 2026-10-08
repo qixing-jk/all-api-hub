@@ -1,7 +1,7 @@
 import { Storage } from "@plasmohq/storage"
 
 import { accountConfigStore } from "~/services/accounts/accountStorage/accountConfigStore"
-import { listApiCredentialProfileIdsOrThrow } from "~/services/apiCredentialProfiles/profileConfigReader"
+import { listApiCredentialProfileIdsOrThrow } from "~/services/apiCredentialProfiles/storage/configReader"
 import {
   API_VERIFICATION_HISTORY_STORAGE_KEYS,
   STORAGE_LOCKS,

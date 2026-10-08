@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { type ResourceEditorControlledOptionState } from "~/features/ResourceEditor/useLoadedResourceOptions"
+import { type ResourceEditorControlledOptionState } from "~/features/ResourceEditor/options/useLoadedResourceOptions"
 import type {
   EditableResourceProjection,
   ResourceFieldDescriptor,

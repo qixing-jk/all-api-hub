@@ -48,11 +48,11 @@ import {
 
 // The profile store below is an in-memory fixture; retention reads the same owners.
 vi.mock(
-  "~/services/apiCredentialProfiles/profileConfigReader",
+  "~/services/apiCredentialProfiles/storage/configReader",
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import("~/services/apiCredentialProfiles/profileConfigReader")
+        typeof import("~/services/apiCredentialProfiles/storage/configReader")
       >()
     return {
       ...actual,
@@ -261,22 +261,19 @@ const seedExportableProfile = () => {
   ]
 }
 
-vi.mock(
-  "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
-  () => ({
-    subscribeToApiCredentialProfilesChanges: () => () => {},
-    apiCredentialProfilesStorage: {
-      listProfiles: () => mockListProfiles(),
-      listLinks: () => mockListProfileLinks(),
-      createProfile: (input: any) => mockCreateProfile(input),
-      updateProfile: (id: string, updates: Partial<ApiCredentialProfile>) =>
-        mockUpdateProfile(id, updates),
-      deleteProfile: (id: string) => mockDeleteProfile(id),
-    },
-  }),
-)
+vi.mock("~/services/apiCredentialProfiles/storage/profiles", () => ({
+  subscribeToApiCredentialProfilesChanges: () => () => {},
+  apiCredentialProfilesStorage: {
+    listProfiles: () => mockListProfiles(),
+    listLinks: () => mockListProfileLinks(),
+    createProfile: (input: any) => mockCreateProfile(input),
+    updateProfile: (id: string, updates: Partial<ApiCredentialProfile>) =>
+      mockUpdateProfile(id, updates),
+    deleteProfile: (id: string) => mockDeleteProfile(id),
+  },
+}))
 
-vi.mock("~/services/apiCredentialProfiles/apiCredentialProfileLinks", () => ({
+vi.mock("~/services/apiCredentialProfiles/links", () => ({
   apiCredentialProfileLinks: {
     list: () => mockListProfileLinks(),
     relink: mockRelinkProfileLink,

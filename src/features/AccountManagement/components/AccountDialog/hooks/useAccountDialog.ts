@@ -23,7 +23,7 @@ import {
   parseManualQuotaFromUsd,
 } from "~/services/accounts/accountFormValidation"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
-import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
+import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

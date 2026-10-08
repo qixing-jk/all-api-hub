@@ -7,12 +7,16 @@ import type {
   ManagedSiteQueriesCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import {
+  doneHubChannelOperations,
+  doneHubManagedResourceModels,
+} from "~/services/apiAdapters/managedResources/doneHub/operations"
+import {
   toManagedResourceMatchCandidate,
   toManagedResourceMatchList,
   toNativeNumericMatchCandidates,
-} from "~/services/apiAdapters/managedResources/matchingInputs"
-import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/resourceIds"
-import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keyVariant"
+} from "~/services/apiAdapters/managedResources/shared/matchingInputs"
+import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/shared/resourceIds"
+import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
 import {
   fetchSiteUserGroups,
   searchChannel,
@@ -23,10 +27,6 @@ import {
 } from "~/services/managedSites/providers/doneHubService"
 import type { DoneHubConfig } from "~/types/doneHubConfig"
 
-import {
-  doneHubChannelOperations,
-  doneHubManagedResourceModels,
-} from "../managedResources/doneHubOperations"
 import { createManagedSiteConfigCapability } from "./config"
 import { toManagedSiteApiServiceRequest } from "./request"
 

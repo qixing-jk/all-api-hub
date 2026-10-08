@@ -9,7 +9,7 @@ import {
   refreshAccountData,
   resolveApiTokenKey,
 } from "~/services/apiService/wong"
-import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/inspection"
+import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 
 import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"

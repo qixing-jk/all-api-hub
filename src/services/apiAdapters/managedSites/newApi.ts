@@ -8,11 +8,15 @@ import type {
   ManagedSiteQueriesCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import {
+  newApiChannelOperations,
+  newApiManagedResourceModels,
+} from "~/services/apiAdapters/managedResources/newApi/operations"
+import {
   toManagedResourceMatchCandidate,
   toManagedResourceMatchList,
   toNativeNumericMatchCandidates,
-} from "~/services/apiAdapters/managedResources/matchingInputs"
-import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/resourceIds"
+} from "~/services/apiAdapters/managedResources/shared/matchingInputs"
+import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/shared/resourceIds"
 import {
   fetchAccountAvailableModels,
   fetchSiteUserGroups,
@@ -23,10 +27,6 @@ import {
 } from "~/services/managedSites/providers/newApi"
 import type { NewApiConfig } from "~/types/newApiConfig"
 
-import {
-  newApiChannelOperations,
-  newApiManagedResourceModels,
-} from "../managedResources/newApiOperations"
 import { createManagedSiteConfigCapability } from "./config"
 import { newApiSecretVerification } from "./newApiSecretVerification"
 import { toManagedSiteApiServiceRequest } from "./request"

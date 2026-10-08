@@ -6,7 +6,7 @@ import {
   fetchSupportCheckIn,
   refreshAccountData,
 } from "~/services/apiService/newApiFamily/variants/anyrouter"
-import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/inspection"
+import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/discovery/inspection"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_FEATURES,

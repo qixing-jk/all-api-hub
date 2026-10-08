@@ -9,8 +9,8 @@ import {
   keyLastUsedDisplayFacts,
 } from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import type { AccountKeyResourceFacts } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { projectTokenCreatedAt } from "~/services/apiAdapters/newApi/tokenCreatedAt"
-import { projectNewApiTokenModelAccess } from "~/services/apiAdapters/newApi/tokenModelAccess"
+import { projectTokenCreatedAt } from "~/services/apiAdapters/newApi/keys/tokenCreatedAt"
+import { projectNewApiTokenModelAccess } from "~/services/apiAdapters/newApi/keys/tokenModelAccess"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { maskSecretForDisplay } from "~/utils/core/formatters"
 

@@ -6,8 +6,8 @@ import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDial
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { createUnattributedAccountCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
 import type { AccountKeyResourceEditor } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keyResourceEditor"
-import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keyVariant"
+import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keys/keyResourceEditor"
+import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
 import { AuthTypeEnum } from "~/types"
 import { buildNewApiKeyCreationResult } from "~~/tests/test-utils/accountKeyFixtures"
 import {

@@ -20,7 +20,7 @@ import {
   updateVoApiV2Key,
 } from "~/services/apiService/voapiV2/keys"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
-import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/inspection"
+import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,

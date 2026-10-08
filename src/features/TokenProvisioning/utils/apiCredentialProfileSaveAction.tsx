@@ -16,8 +16,8 @@ import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils
 import {
   captureProfileFromAccountToken,
   type ApiCredentialProfileLinkedBy,
-} from "~/services/apiCredentialProfiles/accountTokenImport"
-import { API_CREDENTIAL_PROFILE_CAPTURE_STATUSES } from "~/services/apiCredentialProfiles/apiCredentialProfileLinkContracts"
+} from "~/services/apiCredentialProfiles/accountImport/accountTokenImport"
+import { API_CREDENTIAL_PROFILE_CAPTURE_STATUSES } from "~/services/apiCredentialProfiles/links/contracts"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { DisplaySiteData } from "~/types"
 import { API_CREDENTIAL_PROFILE_LINK_SOURCES } from "~/types/apiCredentialProfiles"

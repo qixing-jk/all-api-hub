@@ -15,8 +15,8 @@ import {
   ACCOUNT_RUNTIME_KEY_SECRET_SOURCES,
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
-import { captureProfileFromAccountToken } from "~/services/apiCredentialProfiles/accountTokenImport"
-import { API_CREDENTIAL_PROFILE_CAPTURE_STATUSES } from "~/services/apiCredentialProfiles/apiCredentialProfileLinkContracts"
+import { captureProfileFromAccountToken } from "~/services/apiCredentialProfiles/accountImport/accountTokenImport"
+import { API_CREDENTIAL_PROFILE_CAPTURE_STATUSES } from "~/services/apiCredentialProfiles/links/contracts"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

@@ -16,14 +16,14 @@ import { PricingConditionDetails } from "~/features/ModelList/components/Pricing
 import {
   buildPricingDiagnostics,
   summarizePricingDiagnostics,
-} from "~/features/ModelList/pricingDiagnostics"
+} from "~/features/ModelList/pricing/pricingDiagnostics"
 import {
   groupPricingDiagnosticRows,
   matchesPricingDiagnosticSearch,
   PRICING_DIAGNOSTIC_GROUPINGS,
   type PricingDiagnosticGrouping,
   type PricingDiagnosticRow,
-} from "~/features/ModelList/pricingDiagnosticView"
+} from "~/features/ModelList/pricing/pricingDiagnosticView"
 import { isDevelopmentMode } from "~/utils/core/environment"
 
 const DIAGNOSTIC_FILTERS = { ISSUES: "issues", ALL: "all" } as const

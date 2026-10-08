@@ -5,7 +5,7 @@ import {
   buildAccountKeyResourceRuntimeKey,
   isAccountRuntimeKeyCompatibleWithModel,
 } from "~/services/accounts/accountRuntimeKeys"
-import { projectNewApiTokenModelAccess } from "~/services/apiAdapters/newApi/tokenModelAccess"
+import { projectNewApiTokenModelAccess } from "~/services/apiAdapters/newApi/keys/tokenModelAccess"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { AuthTypeEnum } from "~/types"
 import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"

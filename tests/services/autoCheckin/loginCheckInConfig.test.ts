@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { resolveAccountSiteDefaultAuthType } from "~/services/accounts/accountSiteProfile"
-import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configCodec"
+import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configuration/configCodec"
 import {
   mergeRefreshedCheckInStatus,
   mergeUserOwnedCheckInDraft,

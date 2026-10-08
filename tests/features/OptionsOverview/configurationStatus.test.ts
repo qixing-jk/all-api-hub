@@ -9,7 +9,7 @@ import {
   resolveUsageAnalyticsConfigurationStatus,
   summarizeConfigurationStatuses,
 } from "~/features/OptionsOverview/configurationStatus"
-import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import type { SiteAccount } from "~/types"
 

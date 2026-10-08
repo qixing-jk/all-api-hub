@@ -29,7 +29,7 @@ vi.mock(
   accountAutoDetectionModuleMocks.openRouterManagementKeyActionClient,
 )
 vi.mock(
-  "~/services/apiAdapters/newApi/accountBootstrap",
+  "~/services/apiAdapters/newApi/account/accountBootstrap",
   accountAutoDetectionModuleMocks.newApiAccountBootstrap,
 )
 vi.mock(
@@ -45,7 +45,7 @@ vi.mock(
   accountAutoDetectionModuleMocks.sharedChat,
 )
 vi.mock(
-  "~/services/checkin/autoCheckin/discovery",
+  "~/services/checkin/autoCheckin/discovery/discovery",
   accountAutoDetectionModuleMocks.checkInDiscovery,
 )
 

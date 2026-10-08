@@ -47,7 +47,7 @@ vi.mock("~/services/managedSites/runtimeConfig", async (original) => ({
 vi.mock("~/services/apiAdapters/managedResources/registry", () => ({
   getManagedResourceRegistration: () => doneHubManagedResourceRegistration,
 }))
-vi.mock("~/services/apiAdapters/managedResources/doneHubOperations", () => ({
+vi.mock("~/services/apiAdapters/managedResources/doneHub/operations", () => ({
   doneHubChannelOperations: { list: mocks.list, delete: mocks.remove },
   doneHubManagedResourceModels: {},
 }))

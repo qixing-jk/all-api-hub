@@ -10,8 +10,12 @@ import {
   toManagedResourceMatchCandidate,
   toManagedResourceMatchList,
   toNativeNumericMatchCandidates,
-} from "~/services/apiAdapters/managedResources/matchingInputs"
-import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/resourceIds"
+} from "~/services/apiAdapters/managedResources/shared/matchingInputs"
+import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/shared/resourceIds"
+import {
+  veloeraChannelOperations,
+  veloeraManagedResourceModels,
+} from "~/services/apiAdapters/managedResources/veloera/operations"
 import {
   fetchAccountAvailableModels,
   fetchSiteUserGroups,
@@ -24,10 +28,6 @@ import {
 } from "~/services/managedSites/providers/veloera"
 import type { VeloeraConfig } from "~/types/veloeraConfig"
 
-import {
-  veloeraChannelOperations,
-  veloeraManagedResourceModels,
-} from "../managedResources/veloeraOperations"
 import { createManagedSiteConfigCapability } from "./config"
 import { toManagedSiteApiServiceRequest } from "./request"
 

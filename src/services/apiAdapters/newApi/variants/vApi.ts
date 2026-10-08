@@ -1,6 +1,6 @@
+import { normalizeVApiModelPricingResponse } from "~/services/apiAdapters/newApi/pricing/modelPricingDto"
 import * as vApi from "~/services/apiService/newApiFamily/variants/vApi"
 
-import { normalizeVApiModelPricingResponse } from "../modelPricingDto"
 import { compatibleTokenInventoryOverrides } from "../variantOperations/key"
 import {
   bindModelPricing,

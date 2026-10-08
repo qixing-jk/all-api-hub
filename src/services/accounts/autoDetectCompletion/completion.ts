@@ -24,8 +24,8 @@ import type {
 import {
   createCompatibilityCheckInConfig,
   getNewAccountAutomaticExecutionDefault,
-} from "~/services/checkin/autoCheckin/compatibilityConfig"
-import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery"
+} from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
+import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery/discovery"
 import { mergeCheckInDiscoveryResults } from "~/services/checkin/autoCheckin/domain"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import type { AutoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers/registry"

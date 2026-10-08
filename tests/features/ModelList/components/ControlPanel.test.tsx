@@ -3,22 +3,22 @@ import userEvent from "@testing-library/user-event"
 import type React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
-import { ControlPanel } from "~/features/ModelList/components/ControlPanel"
-import {
-  MODEL_CAPABILITY_FILTER_VALUES,
-  type ModelCapabilitySelectionValue,
-} from "~/features/ModelList/modelCapabilityFilters"
 import {
   ALL_ACCOUNTS_SOURCE_VALUE,
   MODEL_MANAGEMENT_SOURCE_KINDS,
   type ModelManagementSourceCapabilities,
-} from "~/features/ModelList/modelManagementSources"
-import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
+} from "~/features/ModelList/catalog/modelManagementSources"
+import { ControlPanel } from "~/features/ModelList/components/ControlPanel"
+import {
+  MODEL_CAPABILITY_FILTER_VALUES,
+  type ModelCapabilitySelectionValue,
+} from "~/features/ModelList/filtering/modelCapabilityFilters"
+import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/filtering/sortModes"
+import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/pricing/billingModes"
 import {
   DEFAULT_MODEL_LIST_VERIFICATION_RESULT_FILTERS,
   MODEL_LIST_VERIFICATION_RESULT_FILTERS,
-} from "~/features/ModelList/verificationResultFilters"
+} from "~/features/ModelList/verification/verificationResultFilters"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_MODE_IDS,

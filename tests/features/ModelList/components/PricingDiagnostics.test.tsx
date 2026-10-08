@@ -2,8 +2,8 @@ import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, expect, it, vi } from "vitest"
 
+import { createProfileSource } from "~/features/ModelList/catalog/modelManagementSources"
 import { PricingDiagnostics } from "~/features/ModelList/components/PricingDiagnostics"
-import { createProfileSource } from "~/features/ModelList/modelManagementSources"
 import {
   PRICE_RATE_UNITS,
   PRICING_GROUP_MULTIPLIERS,

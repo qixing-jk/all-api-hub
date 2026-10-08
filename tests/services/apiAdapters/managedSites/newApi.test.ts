@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { newApiManagedResourceModels } from "~/services/apiAdapters/managedResources/newApiOperations"
+import { newApiManagedResourceModels } from "~/services/apiAdapters/managedResources/newApi/operations"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import type { CreateChannelPayload } from "~/types/newApi"
@@ -168,7 +168,7 @@ describe("newApi managed-site channel capability", () => {
       arrange: arrangeRestMutation(channelManagement.createChannel, { id: 17 }),
       invoke: async () => {
         const { newApiChannelOperations } = await import(
-          "~/services/apiAdapters/managedResources/newApiOperations"
+          "~/services/apiAdapters/managedResources/newApi/operations"
         )
         return await newApiChannelOperations.create(config, createPayload)
       },
@@ -190,7 +190,7 @@ describe("newApi managed-site channel capability", () => {
       }),
       invoke: async () => {
         const { newApiChannelOperations } = await import(
-          "~/services/apiAdapters/managedResources/newApiOperations"
+          "~/services/apiAdapters/managedResources/newApi/operations"
         )
         return await newApiChannelOperations.update(config, updatePayload)
       },
@@ -210,7 +210,7 @@ describe("newApi managed-site channel capability", () => {
       arrange: arrangeRestMutation(channelManagement.manageChannelKey, null),
       invoke: async () => {
         const { newApiChannelOperations } = await import(
-          "~/services/apiAdapters/managedResources/newApiOperations"
+          "~/services/apiAdapters/managedResources/newApi/operations"
         )
         return await newApiChannelOperations.deleteKey(config, 7, 1)
       },
@@ -230,7 +230,7 @@ describe("newApi managed-site channel capability", () => {
       arrange: arrangeRestMutation(channelManagement.deleteChannel, null),
       invoke: async () => {
         const { newApiChannelOperations } = await import(
-          "~/services/apiAdapters/managedResources/newApiOperations"
+          "~/services/apiAdapters/managedResources/newApi/operations"
         )
         return await newApiChannelOperations.delete(config, 7)
       },
@@ -300,7 +300,7 @@ describe("newApi managed-site channel capability", () => {
       throw responseError
     })
     const { newApiChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/newApiOperations"
+      "~/services/apiAdapters/managedResources/newApi/operations"
     )
 
     await expect(
@@ -316,7 +316,7 @@ describe("newApi managed-site channel capability", () => {
       return rejectionResponse
     })
     const { newApiChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/newApiOperations"
+      "~/services/apiAdapters/managedResources/newApi/operations"
     )
 
     await expect(
@@ -337,7 +337,7 @@ describe("newApi managed-site channel capability", () => {
       return { success: true, data: { id: 17 }, message: "created" }
     })
     const { newApiChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/newApiOperations"
+      "~/services/apiAdapters/managedResources/newApi/operations"
     )
     const payload = {
       mode: "single",
@@ -373,7 +373,7 @@ describe("newApi managed-site channel capability", () => {
       return { success: false, message: "key action rejected", data: null }
     })
     const { newApiChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/newApiOperations"
+      "~/services/apiAdapters/managedResources/newApi/operations"
     )
     const result = await newApiChannelOperations.update(
       config,
@@ -415,7 +415,7 @@ describe("newApi managed-site channel capability", () => {
         }
       })
       const { newApiChannelOperations } = await import(
-        "~/services/apiAdapters/managedResources/newApiOperations"
+        "~/services/apiAdapters/managedResources/newApi/operations"
       )
       const result = await newApiChannelOperations.update(
         config,
@@ -454,7 +454,7 @@ describe("newApi managed-site channel capability", () => {
       return { success: true, data: null }
     })
     const { newApiChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/newApiOperations"
+      "~/services/apiAdapters/managedResources/newApi/operations"
     )
     const result = await newApiChannelOperations.update(
       config,
@@ -497,7 +497,7 @@ describe("newApi managed-site channel capability", () => {
       },
     )
     const { newApiChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/newApiOperations"
+      "~/services/apiAdapters/managedResources/newApi/operations"
     )
 
     await expect(
@@ -536,7 +536,7 @@ describe("newApi managed-site channel capability", () => {
       },
     )
     const { newApiChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/newApiOperations"
+      "~/services/apiAdapters/managedResources/newApi/operations"
     )
 
     await expect(
@@ -572,7 +572,7 @@ describe("newApi managed-site channel capability", () => {
       },
     )
     const { newApiChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/newApiOperations"
+      "~/services/apiAdapters/managedResources/newApi/operations"
     )
 
     await expect(
@@ -603,7 +603,7 @@ describe("newApi managed-site channel capability", () => {
       },
     )
     const { newApiChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/newApiOperations"
+      "~/services/apiAdapters/managedResources/newApi/operations"
     )
 
     await expect(
@@ -631,7 +631,7 @@ describe("newApi managed-site channel capability", () => {
 
   it("delegates channel operations to direct New API family helpers", async () => {
     const { newApiChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/newApiOperations"
+      "~/services/apiAdapters/managedResources/newApi/operations"
     )
     const request = {
       baseUrl: config.baseUrl,
@@ -796,7 +796,7 @@ describe("newApi managed-site channel capability", () => {
 
   it("propagates channel operation signals to the API transport request", async () => {
     const { newApiChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/newApiOperations"
+      "~/services/apiAdapters/managedResources/newApi/operations"
     )
     const signal = new AbortController().signal
 

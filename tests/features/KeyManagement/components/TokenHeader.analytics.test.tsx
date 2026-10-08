@@ -182,7 +182,7 @@ vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
     resolveDisplayAccountRuntimeKeySecretMock(...args),
 }))
 
-vi.mock("~/services/apiCredentialProfiles/apiCredentialProfileLinks", () => ({
+vi.mock("~/services/apiCredentialProfiles/links", () => ({
   apiCredentialProfileLinks: {
     capture: async ({ profile }: { profile: unknown }) => ({
       status: "captured",

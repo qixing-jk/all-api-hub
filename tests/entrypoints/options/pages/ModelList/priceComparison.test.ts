@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   calculateWeightedTokenPrice,
   MODEL_PRICE_COMPARISON_PRESETS,
-} from "~/features/ModelList/priceComparison"
+} from "~/features/ModelList/pricing/priceComparison"
 
 describe("model price comparison", () => {
   it("defines the confirmed first-release workload presets and leaves unsupported meters unmodeled", () => {

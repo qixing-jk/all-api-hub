@@ -168,7 +168,7 @@ vi.mock("~/services/apiService/octopus/models", () => ({
   fetchAvailableModels: vi.fn(),
 }))
 
-vi.mock("~/services/apiAdapters/managedResources/octopusModelSync", () => ({
+vi.mock("~/services/apiAdapters/managedResources/octopus/modelSync", () => ({
   createOctopusModelSyncCapability: mocks.createOctopusModelSyncCapability,
 }))
 

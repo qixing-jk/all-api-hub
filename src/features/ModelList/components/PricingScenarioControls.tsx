@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
-import type { ModelPricingScenarioSettings } from "~/features/ModelList/pricingScenario"
+import type { ModelPricingScenarioSettings } from "~/features/ModelList/pricing/pricingScenario"
 import {
   PRICING_SCENARIO_EXTRA_FIELDS,
   PRICING_SCENARIO_SELECTION_AXES,
@@ -19,9 +19,9 @@ import {
   PRICING_TIME_FIELD_ID,
   UNSPECIFIED_PRICING_OPTION,
   type PricingConditionTarget,
-} from "~/features/ModelList/pricingScenarioFields"
-import { usePricingScenarioNavigation } from "~/features/ModelList/pricingScenarioNavigation"
-import { pricingScenarioOptions } from "~/features/ModelList/pricingScenarioOptions"
+} from "~/features/ModelList/pricing/pricingScenarioFields"
+import { usePricingScenarioNavigation } from "~/features/ModelList/pricing/pricingScenarioNavigation"
+import { pricingScenarioOptions } from "~/features/ModelList/pricing/pricingScenarioOptions"
 import {
   PRICING_CONDITION_KINDS,
   PRICING_METERS,

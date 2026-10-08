@@ -7,7 +7,7 @@ import {
 import {
   getSelectedCheckInStatus,
   inspectAccountCheckIn,
-} from "~/services/checkin/autoCheckin/inspection"
+} from "~/services/checkin/autoCheckin/discovery/inspection"
 import type { DisplaySiteData } from "~/types"
 import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 

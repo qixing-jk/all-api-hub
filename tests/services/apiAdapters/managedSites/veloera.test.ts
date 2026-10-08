@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { veloeraManagedResourceModels } from "~/services/apiAdapters/managedResources/veloeraOperations"
+import { veloeraManagedResourceModels } from "~/services/apiAdapters/managedResources/veloera/operations"
 import { veloeraManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/veloera"
 import { ApiError } from "~/services/apiTransport/errors"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
@@ -210,7 +210,7 @@ describe("Veloera managed-site channel capability", () => {
       arrange: arrangeRestMutation(veloeraApi.createChannel, { id: 17 }),
       invoke: async () => {
         const { veloeraChannelOperations } = await import(
-          "~/services/apiAdapters/managedResources/veloeraOperations"
+          "~/services/apiAdapters/managedResources/veloera/operations"
         )
         return await veloeraChannelOperations.create(config, createPayload)
       },
@@ -230,7 +230,7 @@ describe("Veloera managed-site channel capability", () => {
       arrange: arrangeRestMutation(veloeraApi.updateChannel, { id: 7 }),
       invoke: async () => {
         const { veloeraChannelOperations } = await import(
-          "~/services/apiAdapters/managedResources/veloeraOperations"
+          "~/services/apiAdapters/managedResources/veloera/operations"
         )
         return await veloeraChannelOperations.update(config, updatePayload)
       },
@@ -250,7 +250,7 @@ describe("Veloera managed-site channel capability", () => {
       arrange: arrangeRestMutation(veloeraApi.deleteChannel, null),
       invoke: async () => {
         const { veloeraChannelOperations } = await import(
-          "~/services/apiAdapters/managedResources/veloeraOperations"
+          "~/services/apiAdapters/managedResources/veloera/operations"
         )
         return await veloeraChannelOperations.delete(config, 7)
       },
@@ -370,7 +370,7 @@ describe("Veloera managed-site channel capability", () => {
       throw responseError
     })
     const { veloeraChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/veloeraOperations"
+      "~/services/apiAdapters/managedResources/veloera/operations"
     )
 
     await expect(
@@ -394,7 +394,7 @@ describe("Veloera managed-site channel capability", () => {
       return rejectionResponse
     })
     const { veloeraChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/veloeraOperations"
+      "~/services/apiAdapters/managedResources/veloera/operations"
     )
 
     await expect(
@@ -410,7 +410,7 @@ describe("Veloera managed-site channel capability", () => {
 
   it("delegates channel operations to direct Veloera helpers", async () => {
     const { veloeraChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/veloeraOperations"
+      "~/services/apiAdapters/managedResources/veloera/operations"
     )
     const request = {
       baseUrl: config.baseUrl,
@@ -494,7 +494,7 @@ describe("Veloera managed-site channel capability", () => {
 
   it("exposes native detail and draft-model reads with request cancellation", async () => {
     const { veloeraChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/veloeraOperations"
+      "~/services/apiAdapters/managedResources/veloera/operations"
     )
     const detailSignal = new AbortController().signal
     const draftSignal = new AbortController().signal

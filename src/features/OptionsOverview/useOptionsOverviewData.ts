@@ -6,7 +6,7 @@ import { accountPresentation } from "~/services/accounts/accountStorage/accountP
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountStatistics } from "~/services/accounts/accountStorage/accountStatistics"
 import { createEmptyAccountTodayStatsCoverage } from "~/services/accounts/accountTodayStats"
-import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { featureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"

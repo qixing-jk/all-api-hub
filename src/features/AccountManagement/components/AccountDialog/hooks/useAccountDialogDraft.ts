@@ -11,7 +11,7 @@ import { usesAccountCredentialIdentity } from "~/services/accounts/accountDedupe
 import {
   createCompatibilityCheckInConfig,
   resolveNewAccountAutomaticExecutionEnabled,
-} from "~/services/checkin/autoCheckin/compatibilityConfig"
+} from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { invalidateCheckInDiscovery } from "~/services/checkin/autoCheckin/state"
 import { type AuthTypeEnum, type CheckInConfig } from "~/types"
 

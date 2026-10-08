@@ -5,12 +5,12 @@ import { expect, it, vi } from "vitest"
 import { ModelPriceQuote } from "~/features/ModelList/components/ModelItem/ModelPriceQuote"
 import { PriceComparisonControls } from "~/features/ModelList/components/PriceComparisonControls"
 import { PricingScenarioControls } from "~/features/ModelList/components/PricingScenarioControls"
-import type { ModelPriceComparisonWeights } from "~/features/ModelList/priceComparison"
+import type { ModelPriceComparisonWeights } from "~/features/ModelList/pricing/priceComparison"
 import {
   createDefaultPricingScenario,
   resolvePricingScenario,
-} from "~/features/ModelList/pricingScenario"
-import { PricingScenarioNavigation } from "~/features/ModelList/pricingScenarioNavigation"
+} from "~/features/ModelList/pricing/pricingScenario"
+import { PricingScenarioNavigation } from "~/features/ModelList/pricing/pricingScenarioNavigation"
 import {
   PRICE_RATE_UNITS,
   PRICING_CONDITION_KINDS,

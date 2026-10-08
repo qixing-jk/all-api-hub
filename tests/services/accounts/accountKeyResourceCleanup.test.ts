@@ -2,14 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { buildAccountKeyResourceLinkedCleanupInput } from "~/services/accounts/accountKeyResourceCleanup"
-import { resolveAssociatedProfileSecret } from "~/services/apiCredentialProfiles/accountRuntimeKeyRecovery"
+import { resolveAssociatedProfileSecret } from "~/services/apiCredentialProfiles/accountImport/accountRuntimeKeyRecovery"
 
-vi.mock("~/services/apiCredentialProfiles/accountRuntimeKeyRecovery", () => ({
-  ASSOCIATED_PROFILE_SECRET_RESOLUTION_STATUSES: {
-    Resolved: "resolved",
-  },
-  resolveAssociatedProfileSecret: vi.fn(),
-}))
+vi.mock(
+  "~/services/apiCredentialProfiles/accountImport/accountRuntimeKeyRecovery",
+  () => ({
+    ASSOCIATED_PROFILE_SECRET_RESOLUTION_STATUSES: {
+      Resolved: "resolved",
+    },
+    resolveAssociatedProfileSecret: vi.fn(),
+  }),
+)
 
 const account = {
   id: "account-1",

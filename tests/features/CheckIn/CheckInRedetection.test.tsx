@@ -20,7 +20,7 @@ import toast from "~/lib/notify"
 import accountDialogLocale from "~/locales/en/accountDialog.json"
 import commonLocale from "~/locales/en/common.json"
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
-import { redetectSavedAccountCheckIn } from "~/services/checkin/autoCheckin/accountDiscovery"
+import { redetectSavedAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/accountDiscovery"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import {
   buildCheckInConfig,
@@ -34,7 +34,7 @@ const testI18n = await createResourceTestI18n({
 const render = (ui: ReactElement) =>
   rtlRender(<I18nextProvider i18n={testI18n}>{ui}</I18nextProvider>)
 
-vi.mock("~/services/checkin/autoCheckin/accountDiscovery", () => ({
+vi.mock("~/services/checkin/autoCheckin/discovery/accountDiscovery", () => ({
   redetectSavedAccountCheckIn: vi.fn(),
 }))
 vi.mock("~/services/accounts/accountStorage/accountCheckInState", () => ({

@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next"
 import { useCallback } from "react"
 
-import { NATIVE_RESOURCE_EDITOR_LOADING_REVEALS } from "~/features/ResourceEditor/nativeResourceEditorOpeningState"
+import { NATIVE_RESOURCE_EDITOR_LOADING_REVEALS } from "~/features/ResourceEditor/opening/nativeResourceEditorOpeningState"
 import toast from "~/lib/notify"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,

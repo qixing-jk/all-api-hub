@@ -14,7 +14,7 @@ import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   ASSOCIATED_PROFILE_SECRET_RESOLUTION_STATUSES,
   resolveAssociatedProfileSecret,
-} from "~/services/apiCredentialProfiles/accountRuntimeKeyRecovery"
+} from "~/services/apiCredentialProfiles/accountImport/accountRuntimeKeyRecovery"
 import type { DisplaySiteData } from "~/types"
 
 /** Resolve both the plaintext and matching gateway before source deletion. */

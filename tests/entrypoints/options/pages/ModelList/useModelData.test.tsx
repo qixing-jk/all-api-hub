@@ -5,13 +5,13 @@ import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { useModelData } from "~/features/ModelList/hooks/useModelData"
 import {
   createAccountSource,
   createAllAccountsSource,
   createProfileSource,
   type ModelManagementSource,
-} from "~/features/ModelList/modelManagementSources"
+} from "~/features/ModelList/catalog/modelManagementSources"
+import { useModelData } from "~/features/ModelList/hooks/useModelData"
 import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"

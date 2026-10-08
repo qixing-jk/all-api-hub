@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { doneHubManagedResourceModels } from "~/services/apiAdapters/managedResources/doneHubOperations"
-import { newApiManagedResourceModels } from "~/services/apiAdapters/managedResources/newApiOperations"
+import { doneHubManagedResourceModels } from "~/services/apiAdapters/managedResources/doneHub/operations"
+import { newApiManagedResourceModels } from "~/services/apiAdapters/managedResources/newApi/operations"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/runtimeConfig"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { applyModelMappingToChannel } from "~/services/models/modelRedirect/mappingMutation"

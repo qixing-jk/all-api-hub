@@ -11,7 +11,7 @@ import {
 import {
   clearSiteRouteFactsCacheForTests,
   resolveNewApiAccountRoutePath,
-} from "~/services/apiAdapters/newApi/accountRoutes"
+} from "~/services/apiAdapters/newApi/account/accountRoutes"
 import { AuthTypeEnum } from "~/types"
 
 const {

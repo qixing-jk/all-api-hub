@@ -3,7 +3,7 @@ import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import VeloeraSettings from "~/features/BasicSettings/components/tabs/ManagedSite/VeloeraSettings"
+import VeloeraSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/VeloeraSettings"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { testI18n } from "~~/tests/test-utils/i18n"
 

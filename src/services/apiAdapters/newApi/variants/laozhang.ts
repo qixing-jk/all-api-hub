@@ -1,4 +1,7 @@
 import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
+import { laoZhangAccountAnnouncements } from "~/services/apiAdapters/newApi/announcements/accountAnnouncements"
+import { withLaozhangKeySettings } from "~/services/apiAdapters/newApi/keys/laozhangKeyResourceEditor"
+import { readLaozhangPreservedTokenFields } from "~/services/apiAdapters/newApi/keys/laozhangPreservedTokenFields"
 import * as accountBootstrap from "~/services/apiService/newApiFamily/default/accountBootstrap"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import * as apiyi from "~/services/apiService/newApiFamily/variants/apiyi"
@@ -10,9 +13,6 @@ import {
   InviteLinkError,
 } from "~/services/inviteLinks/errors"
 
-import { laoZhangAccountAnnouncements } from "../accountAnnouncements"
-import { withLaozhangKeySettings } from "../laozhangKeyResourceEditor"
-import { readLaozhangPreservedTokenFields } from "../laozhangPreservedTokenFields"
 import { createLogQueryVariant } from "../variantOperations/data"
 import { apiyiPricing } from "../variantOperations/pricing"
 import type { NewApiVariantRegistration } from "../variantRegistration"

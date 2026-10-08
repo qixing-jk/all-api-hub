@@ -7,7 +7,7 @@ import {
 import {
   createCompatibilityCheckInConfig,
   getNewAccountAutomaticExecutionDefault,
-} from "~/services/checkin/autoCheckin/compatibilityConfig"
+} from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import type { SiteTypeMismatch } from "~/services/siteDetection/siteTypeMismatch"
 import {
   AuthTypeEnum,

@@ -3,11 +3,11 @@ import { useTranslation } from "react-i18next"
 import {
   getPricingConditionTargets,
   usePricingScenarioNavigation,
-} from "~/features/ModelList/pricingScenarioNavigation"
+} from "~/features/ModelList/pricing/pricingScenarioNavigation"
 import {
   pricingMeterLabels,
   pricingScenarioOptions,
-} from "~/features/ModelList/pricingScenarioOptions"
+} from "~/features/ModelList/pricing/pricingScenarioOptions"
 import {
   PRICING_ISSUE_CODES,
   PRICING_SELECTION_AXES,

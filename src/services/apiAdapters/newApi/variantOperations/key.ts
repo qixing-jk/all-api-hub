@@ -1,12 +1,11 @@
 import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/definition"
 import type { AccountKeyDefaultCreationPolicy } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { createNewApiKeyGroupBehavior } from "~/services/apiAdapters/newApi/keys/keyGroupBehavior"
+import type { NewApiKeyEditCommand } from "~/services/apiAdapters/newApi/keys/keyResourceEditor"
 import * as defaultTransport from "~/services/apiService/newApiFamily/default/keyManagement"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import * as oneHub from "~/services/apiService/newApiFamily/variants/oneHub"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-
-import { createNewApiKeyGroupBehavior } from "../keyGroupBehavior"
-import type { NewApiKeyEditCommand } from "../keyResourceEditor"
 
 export type NewApiFamilyTokenTransport =
   typeof defaultTransport.defaultKeyManagementImplementation & {

@@ -6,14 +6,14 @@ import { ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes } from "~/features/Key
 import { getNativeKeyResourceEditorPresentation } from "~/features/KeyManagement/presentation/nativeKeyResourceFieldPolicy"
 import keyManagement from "~/locales/en/keyManagement.json"
 import type { EditableResourceProjection } from "~/services/apiAdapters/contracts/resourceNative"
-import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keyResourceEditor"
-import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keyVariant"
+import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keys/keyResourceEditor"
+import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
 import {
   LAOZHANG_BILLING_TYPES as billing,
   LAOZHANG_AUTO_GROUP,
   LAOZHANG_KEY_FIELD_IDS as laoZhangFields,
   LAOZHANG_RETRY_BILLING_MODES as retryBilling,
-} from "~/services/apiAdapters/newApi/laozhangKeyResourceFields"
+} from "~/services/apiAdapters/newApi/keys/laozhangKeyResourceFields"
 import { defaultKeyManagementImplementation } from "~/services/apiService/newApiFamily/default/keyManagement"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { AuthTypeEnum } from "~/types"

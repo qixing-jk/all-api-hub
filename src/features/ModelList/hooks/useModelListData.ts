@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 
 import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles"
-import { isProviderCatalogFallback } from "~/features/ModelList/catalogFallback"
+import { isProviderCatalogFallback } from "~/features/ModelList/catalog/catalogFallback"
 import {
   ALL_ACCOUNTS_SOURCE_VALUE,
   deriveAllAccountsModelListCapabilities,
@@ -15,16 +15,16 @@ import {
   toCatalogOnlyCapabilities,
   toProfileSourceValue,
   type ModelManagementSource,
-} from "~/features/ModelList/modelManagementSources"
+} from "~/features/ModelList/catalog/modelManagementSources"
 import {
   isModelListPriceSortMode,
   MODEL_LIST_SORT_MODES,
-} from "~/features/ModelList/sortModes"
+} from "~/features/ModelList/filtering/sortModes"
 import {
   repairAllAccountGroupExclusions,
   repairSelectedGroups,
-} from "~/features/ModelList/groupSelectionState"
-import { resolvePricingScenario } from "~/features/ModelList/pricingScenario"
+} from "~/features/ModelList/groups/groupSelectionState"
+import { resolvePricingScenario } from "~/features/ModelList/pricing/pricingScenario"
 import { useAccountData } from "~/hooks/useAccountData"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import type { ModelMetadata } from "~/services/models/modelMetadata/types"

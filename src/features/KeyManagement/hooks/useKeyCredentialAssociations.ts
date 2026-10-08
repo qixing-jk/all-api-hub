@@ -6,7 +6,7 @@ import {
   isAccountRuntimeKeyLocatorEqual,
   type AccountRuntimeKeyLocator,
 } from "~/services/accounts/accountRuntimeKeys"
-import { apiCredentialProfileLinks } from "~/services/apiCredentialProfiles/apiCredentialProfileLinks"
+import { apiCredentialProfileLinks } from "~/services/apiCredentialProfiles/links"
 import type {
   ApiCredentialProfile,
   ApiCredentialProfileLink,

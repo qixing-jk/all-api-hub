@@ -1,0 +1,178 @@
+import { describe, expect, it } from "vitest"
+
+import { SITE_TYPES } from "~/constants/siteType"
+import {
+  createAccountSource,
+  createAllAccountsSource,
+  createProfileSource,
+  deriveAllAccountsModelListCapabilities,
+  deriveModelListSourceCapabilities,
+  MODEL_LIST_GROUP_SEMANTICS,
+} from "~/features/ModelList/catalog/modelManagementSources"
+import { createProviderCatalogModelListSourceIdentity } from "~/services/modelCatalog/sourceIdentity"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
+import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import { buildModelListAccountFixture } from "~~/tests/test-utils/modelListSource"
+
+const PROFILE_FIXTURE: ApiCredentialProfile = {
+  id: "profile-1",
+  name: "Example Profile",
+  apiType: API_TYPES.OPENAI_COMPATIBLE,
+  baseUrl: "https://profile.example.invalid",
+  apiKey: "example-key",
+  tagIds: [],
+  notes: "",
+  createdAt: 1,
+  updatedAt: 1,
+}
+
+describe("modelManagementSources group semantics", () => {
+  it("marks account and aggregate sources as account-or-runtime-key scoped", () => {
+    expect(
+      createAccountSource(buildModelListAccountFixture(SITE_TYPES.NEW_API)),
+    ).toHaveProperty(
+      "groupSemantics",
+      MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
+    )
+    expect(createAllAccountsSource()).toHaveProperty(
+      "groupSemantics",
+      MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
+    )
+  })
+
+  it("marks credential profile sources as not applicable", () => {
+    expect(createProfileSource(PROFILE_FIXTURE)).toHaveProperty(
+      "groupSemantics",
+      MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+    )
+  })
+
+  it("preserves stable group semantics when response capabilities downgrade", () => {
+    const source = createAccountSource(
+      buildModelListAccountFixture(SITE_TYPES.NEW_API),
+    )
+    const downgradedSource = {
+      ...source,
+      capabilities: deriveModelListSourceCapabilities({
+        capabilities: source.capabilities,
+        modelListSource: { supportsPricing: false },
+      }),
+    }
+
+    expect(downgradedSource.capabilities.supportsPricing).toBe(false)
+    expect(downgradedSource.groupSemantics).toBe(
+      MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
+    )
+  })
+
+  it("applies provider-neutral source action policy as a capability downgrade", () => {
+    const source = createAccountSource(
+      buildModelListAccountFixture(SITE_TYPES.OPENROUTER),
+    )
+
+    expect(
+      deriveModelListSourceCapabilities({
+        capabilities: source.capabilities,
+        modelListSource: {
+          supportsPricing: true,
+          actionPolicy: {
+            supportsGroupFiltering: false,
+            supportsAccountSummary: false,
+            supportsTokenCompatibility: false,
+            supportsCredentialVerification: false,
+            supportsBatchCredentialVerification: false,
+            supportsCliVerification: false,
+          },
+        },
+      }),
+    ).toMatchObject({
+      supportsPricing: true,
+      supportsGroupFiltering: false,
+      supportsAccountSummary: false,
+      supportsTokenCompatibility: false,
+      supportsCredentialVerification: false,
+      supportsBatchCredentialVerification: false,
+      supportsCliVerification: false,
+    })
+  })
+
+  it("projects all-accounts capabilities from loaded source policies", () => {
+    const baseCapabilities = createAllAccountsSource().capabilities
+    const providerCatalogPolicy = {
+      supportsPricing: true,
+      actionPolicy: {
+        supportsGroupFiltering: false,
+        supportsAccountSummary: false,
+        supportsTokenCompatibility: false,
+        supportsCredentialVerification: false,
+        supportsBatchCredentialVerification: false,
+        supportsCliVerification: false,
+      },
+    }
+
+    expect(
+      deriveAllAccountsModelListCapabilities({
+        capabilities: baseCapabilities,
+        modelListSources: [providerCatalogPolicy],
+      }),
+    ).toMatchObject({
+      supportsPricing: true,
+      supportsGroupFiltering: false,
+      supportsAccountSummary: false,
+      supportsCredentialVerification: false,
+      supportsBatchCredentialVerification: false,
+      supportsCliVerification: false,
+    })
+
+    // Aggregate sources never enable direct credential or CLI verification.
+    expect(
+      deriveAllAccountsModelListCapabilities({
+        capabilities: baseCapabilities,
+        modelListSources: [providerCatalogPolicy, {}],
+      }),
+    ).toMatchObject({
+      supportsPricing: true,
+      supportsGroupFiltering: true,
+      supportsAccountSummary: true,
+      supportsCredentialVerification: false,
+      supportsBatchCredentialVerification: true,
+      supportsCliVerification: false,
+    })
+  })
+
+  it("falls back to the provider source id when its display name is blank", () => {
+    expect(
+      createProviderCatalogModelListSourceIdentity({
+        sourceId: "example-provider-public",
+        provider: SITE_TYPES.OPENROUTER,
+        providerName: "   ",
+      }),
+    ).toMatchObject({
+      providerName: "example-provider-public",
+    })
+  })
+
+  it.each([SITE_TYPES.AIHUBMIX, SITE_TYPES.SHAREDCHAT])(
+    "marks %s groups as not applicable before a response loads",
+    (siteType) => {
+      expect(
+        createAccountSource(buildModelListAccountFixture(siteType)),
+      ).toHaveProperty(
+        "groupSemantics",
+        MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+      )
+    },
+  )
+
+  it.each([SITE_TYPES.SUB2API, SITE_TYPES.VO_API_V2])(
+    "keeps %s account-or-runtime-key semantics before a model-list response loads",
+    (siteType) => {
+      expect(
+        createAccountSource(buildModelListAccountFixture(siteType)),
+      ).toHaveProperty(
+        "groupSemantics",
+        MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
+      )
+    },
+  )
+})

@@ -1,20 +1,19 @@
-import { type ModelListBillingMode } from "~/features/ModelList/billingModes"
-import {
-  type ModelCapabilityMetadataCoverage,
-  type ModelCapabilitySelectionValue,
-} from "~/features/ModelList/modelCapabilityFilters"
 import {
   type ModelManagementSource,
   type ModelManagementSourceCapabilities,
-} from "~/features/ModelList/modelManagementSources"
-import type { ModelPricingScenarioSettings } from "~/features/ModelList/pricingScenario"
-import { type ModelListSortMode } from "~/features/ModelList/sortModes"
-import { type ModelListVerificationResultFilter } from "~/features/ModelList/verificationResultFilters"
-
+} from "~/features/ModelList/catalog/modelManagementSources"
+import {
+  type ModelCapabilityMetadataCoverage,
+  type ModelCapabilitySelectionValue,
+} from "~/features/ModelList/filtering/modelCapabilityFilters"
+import { type ModelListSortMode } from "~/features/ModelList/filtering/sortModes"
+import { type ModelListBillingMode } from "~/features/ModelList/pricing/billingModes"
 import {
   type ModelPriceComparisonPresetId,
   type ModelPriceComparisonWeights,
-} from "../priceComparison"
+} from "~/features/ModelList/pricing/priceComparison"
+import type { ModelPricingScenarioSettings } from "~/features/ModelList/pricing/pricingScenario"
+import { type ModelListVerificationResultFilter } from "~/features/ModelList/verification/verificationResultFilters"
 
 export interface ControlPanelProps {
   showUnavailableModels?: boolean

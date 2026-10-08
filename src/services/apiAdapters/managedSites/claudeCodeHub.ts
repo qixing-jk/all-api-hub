@@ -9,9 +9,9 @@ import type {
 import {
   toManagedResourceMatchCandidate,
   toNativeNumericMatchCandidates,
-} from "~/services/apiAdapters/managedResources/matchingInputs"
-import { createChannelVerificationProtocolResolver } from "~/services/apiAdapters/managedResources/modelInputs"
-import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/resourceIds"
+} from "~/services/apiAdapters/managedResources/shared/matchingInputs"
+import { createChannelVerificationProtocolResolver } from "~/services/apiAdapters/managedResources/shared/modelInputs"
+import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/shared/resourceIds"
 import { searchProviders } from "~/services/apiService/claudeCodeHub"
 import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
 import {

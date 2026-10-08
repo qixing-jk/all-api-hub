@@ -12,7 +12,7 @@ import {
   type AccountBootstrapRouteTarget,
   type UserInfo,
 } from "~/services/apiAdapters/contracts/accountBootstrap"
-import { createNewApiAccountBootstrap } from "~/services/apiAdapters/newApi/accountBootstrap"
+import { createNewApiAccountBootstrap } from "~/services/apiAdapters/newApi/account/accountBootstrap"
 import { sub2ApiAccountBootstrap } from "~/services/apiAdapters/sub2api/accountBootstrap"
 import { voApiV2AccountBootstrap } from "~/services/apiAdapters/voapiV2/accountBootstrap"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"

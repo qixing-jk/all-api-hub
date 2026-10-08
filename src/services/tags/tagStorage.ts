@@ -4,7 +4,7 @@ import {
   canonicalizeAccountStorageConfig,
   normalizeAccountStorageConfigForWrite,
 } from "~/services/accounts/accountDefaults"
-import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
 import {
   ACCOUNT_STORAGE_KEYS,
   STORAGE_LOCKS,

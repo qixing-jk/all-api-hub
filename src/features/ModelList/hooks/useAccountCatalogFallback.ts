@@ -2,9 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  getModelDataErrorCategory,
+  getPricingModelCount,
+  trackModelDataLoadCompletion,
+} from "~/features/ModelList/catalog/modelDataDiagnostics"
+import { MODEL_LIST_QUERY_SCOPE_VALUES } from "~/features/ModelList/catalog/modelDataStates"
+import {
   MODEL_MANAGEMENT_SOURCE_KINDS,
   type ModelManagementSource,
-} from "~/features/ModelList/modelManagementSources"
+} from "~/features/ModelList/catalog/modelManagementSources"
 import toast from "~/lib/notify"
 import { type AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import {
@@ -35,12 +41,6 @@ import {
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 
-import {
-  getModelDataErrorCategory,
-  getPricingModelCount,
-  trackModelDataLoadCompletion,
-} from "../modelDataDiagnostics"
-import { MODEL_LIST_QUERY_SCOPE_VALUES } from "../modelDataStates"
 import {
   MODEL_LIST_FALLBACK_STATUS_SCOPES,
   type AccountFallbackControls,

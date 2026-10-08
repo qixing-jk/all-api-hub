@@ -7,7 +7,7 @@ import type {
   ManagedSiteChannelDraftsCapability,
   ManagedSiteConfigCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { createChannelVerificationProtocolResolver } from "~/services/apiAdapters/managedResources/modelInputs"
+import { createChannelVerificationProtocolResolver } from "~/services/apiAdapters/managedResources/shared/modelInputs"
 import {
   getAxonHubChannelSecretKey,
   listAxonHubChannelPage,

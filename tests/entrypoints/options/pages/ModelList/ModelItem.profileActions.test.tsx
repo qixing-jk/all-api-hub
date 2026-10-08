@@ -2,18 +2,18 @@ import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import ModelItem from "~/features/ModelList/components/ModelItem"
-import {
-  MODEL_GROUP_ACCESS_STATES,
-  type ActiveModelGroupContext,
-  type ModelGroupContext,
-} from "~/features/ModelList/groupContext"
 import {
   createAccountSource,
   createProfileSource,
   deriveModelListSourceCapabilities,
   toCatalogOnlyCapabilities,
-} from "~/features/ModelList/modelManagementSources"
+} from "~/features/ModelList/catalog/modelManagementSources"
+import ModelItem from "~/features/ModelList/components/ModelItem"
+import {
+  MODEL_GROUP_ACCESS_STATES,
+  type ActiveModelGroupContext,
+  type ModelGroupContext,
+} from "~/features/ModelList/groups/groupContext"
 import {
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,

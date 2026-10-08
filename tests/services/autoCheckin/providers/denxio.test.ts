@@ -20,7 +20,7 @@ import {
   XIAOBAI_CODE_STATUS_OUTCOMES,
 } from "~/services/apiService/sub2api/xiaobaiCodeCheckIn"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
-import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery"
+import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery/discovery"
 import { denxioProvider } from "~/services/checkin/autoCheckin/providers/denxio"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"

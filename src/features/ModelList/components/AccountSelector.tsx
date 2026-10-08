@@ -3,12 +3,12 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Heading3, SearchableSelect } from "~/components/ui"
-import type { AccountGroupOption } from "~/features/ModelList/modelListItems"
 import {
   ALL_ACCOUNTS_SOURCE_VALUE,
   toAccountSourceValue,
   toProfileSourceValue,
-} from "~/features/ModelList/modelManagementSources"
+} from "~/features/ModelList/catalog/modelManagementSources"
+import type { AccountGroupOption } from "~/features/ModelList/presentation/modelListItems"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {

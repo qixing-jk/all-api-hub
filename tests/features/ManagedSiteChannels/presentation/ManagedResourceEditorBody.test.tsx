@@ -23,7 +23,7 @@ import {
   MANAGED_RESOURCE_EDITOR_MODES,
 } from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
 import { ManagedSiteChannelDetailView } from "~/features/ManagedSiteChannels/presentation/ManagedSiteChannelDetailView"
-import { defineResourceEditorFieldPolicy } from "~/features/ResourceEditor/resourceFieldPolicy"
+import { defineResourceEditorFieldPolicy } from "~/features/ResourceEditor/model/resourceFieldPolicy"
 import enChannelDialog from "~/locales/en/channelDialog.json"
 import enCommon from "~/locales/en/common.json"
 import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"

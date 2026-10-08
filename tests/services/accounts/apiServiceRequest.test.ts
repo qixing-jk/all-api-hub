@@ -17,7 +17,7 @@ import {
 import { ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import { resolveAssociatedProfileSecret } from "~/services/apiCredentialProfiles/accountRuntimeKeyRecovery"
+import { resolveAssociatedProfileSecret } from "~/services/apiCredentialProfiles/accountImport/accountRuntimeKeyRecovery"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"
 import { AuthTypeEnum } from "~/types"
@@ -28,11 +28,11 @@ vi.mock("~/services/apiAdapters/registry", () => ({
 }))
 
 vi.mock(
-  "~/services/apiCredentialProfiles/accountRuntimeKeyRecovery",
+  "~/services/apiCredentialProfiles/accountImport/accountRuntimeKeyRecovery",
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import("~/services/apiCredentialProfiles/accountRuntimeKeyRecovery")
+        typeof import("~/services/apiCredentialProfiles/accountImport/accountRuntimeKeyRecovery")
       >()
 
     return {

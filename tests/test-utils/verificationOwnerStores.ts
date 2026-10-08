@@ -1,7 +1,7 @@
 import { vi } from "vitest"
 
 import { accountConfigStore } from "~/services/accounts/accountStorage/accountConfigStore"
-import * as profileConfigReader from "~/services/apiCredentialProfiles/profileConfigReader"
+import * as profileConfigReader from "~/services/apiCredentialProfiles/storage/configReader"
 
 /**
  * Declares that a suite does not model the persisted account and profile stores.

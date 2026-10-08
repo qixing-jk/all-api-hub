@@ -63,14 +63,11 @@ vi.mock("~/services/aiApi/anthropic", () => ({
   fetchAnthropicModelIds: vi.fn(),
 }))
 
-vi.mock(
-  "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
-  () => ({
-    apiCredentialProfilesStorage: {
-      createProfile: vi.fn(),
-    },
-  }),
-)
+vi.mock("~/services/apiCredentialProfiles/storage/profiles", () => ({
+  apiCredentialProfilesStorage: {
+    createProfile: vi.fn(),
+  },
+}))
 
 vi.mock("~/services/tags/tagStorage", () => ({
   tagStorage: {
@@ -843,7 +840,7 @@ describe("webAiApiCheck background handlers", () => {
     vi.resetModules()
 
     const { apiCredentialProfilesStorage } = await import(
-      "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+      "~/services/apiCredentialProfiles/storage/profiles"
     )
 
     vi.mocked(apiCredentialProfilesStorage.createProfile).mockResolvedValue({
@@ -895,7 +892,7 @@ describe("webAiApiCheck background handlers", () => {
     vi.resetModules()
 
     const { apiCredentialProfilesStorage } = await import(
-      "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+      "~/services/apiCredentialProfiles/storage/profiles"
     )
 
     vi.mocked(apiCredentialProfilesStorage.createProfile).mockResolvedValue({
@@ -987,7 +984,7 @@ describe("webAiApiCheck background handlers", () => {
     vi.resetModules()
 
     const { apiCredentialProfilesStorage } = await import(
-      "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+      "~/services/apiCredentialProfiles/storage/profiles"
     )
 
     vi.mocked(apiCredentialProfilesStorage.createProfile).mockRejectedValue(

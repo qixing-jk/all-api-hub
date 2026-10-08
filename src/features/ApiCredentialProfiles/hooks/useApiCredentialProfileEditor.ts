@@ -12,7 +12,7 @@ import {
   coerceApiCredentialTelemetryJsonPathMap,
   isSupportedApiCredentialTelemetryEndpoint,
   type ApiCredentialTelemetryJsonPathField,
-} from "~/services/apiCredentialProfiles/telemetryConfig"
+} from "~/services/apiCredentialProfiles/telemetry/config"
 import { normalizeHeaderOverrides } from "~/services/apiTransport/headerOverrides"
 import {
   OPTIONAL_PERMISSION_IDS,

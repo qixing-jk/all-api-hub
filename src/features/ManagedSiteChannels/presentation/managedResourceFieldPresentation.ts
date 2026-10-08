@@ -6,7 +6,7 @@ import {
   type ResourceEditorFieldPolicy,
   type ResourceFieldPresentation,
   type ResourceFieldTextResolver,
-} from "~/features/ResourceEditor/resourceFieldPolicy"
+} from "~/features/ResourceEditor/model/resourceFieldPolicy"
 import { type ManagedResourceKind } from "~/services/accountSiteDefinitions/contracts"
 import {
   MANAGED_RESOURCE_FIELD_TYPES,

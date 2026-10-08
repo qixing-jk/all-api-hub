@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react"
 import {
   apiCredentialProfilesStorage,
   subscribeToApiCredentialProfilesChanges,
-} from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+} from "~/services/apiCredentialProfiles/storage/profiles"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import type {
   ApiCredentialProfile,

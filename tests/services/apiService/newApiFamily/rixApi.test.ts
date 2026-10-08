@@ -40,7 +40,7 @@ vi.mock("~/services/apiService/newApiFamily/default/accountDataUtils", () => ({
   getTodayTimestampRange: mockGetTodayTimestampRange,
 }))
 
-vi.mock("~/services/checkin/autoCheckin/refresh", () => ({
+vi.mock("~/services/checkin/autoCheckin/scheduling/refresh", () => ({
   refreshSelectedStatus: mockRefreshSelectedStatus,
 }))
 

@@ -9,16 +9,16 @@ import {
 } from "~/constants/checkIn"
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
-import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import {
   discoverCheckInMethods,
   setCheckInSelection,
-} from "~/services/checkin/autoCheckin/discovery"
+} from "~/services/checkin/autoCheckin/discovery/discovery"
 import {
   getSelectedCheckInStatus,
   isAutomaticCheckInConfiguredForAccount,
   resolveSelectedCheckInMethod,
-} from "~/services/checkin/autoCheckin/inspection"
+} from "~/services/checkin/autoCheckin/discovery/inspection"
 import {
   executeSelectedCheckIn,
   inspectSelectedCheckInCompatibility,
@@ -28,7 +28,7 @@ import {
   createAutoCheckinMethodRegistry,
   getLegacyAutoCheckinMethodIds,
 } from "~/services/checkin/autoCheckin/providers/registry"
-import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/refresh"
+import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/scheduling/refresh"
 import {
   markCheckInMethodExecuted,
   mergeCompatibilityCheckInStatus,

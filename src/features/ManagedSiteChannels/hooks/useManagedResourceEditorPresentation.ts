@@ -6,7 +6,7 @@ import { type useManagedResourceMutationController } from "~/features/ManagedSit
 import { presentManagedResourceFailure } from "~/features/ManagedSiteChannels/presentation/managedResourceFailurePresentation"
 import { getManagedResourceFieldPolicy } from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
 import { type useManagedResourceInteraction } from "~/features/ManagedSiteChannels/providers/useManagedResourceInteraction"
-import { getEditedResourceFieldIssues } from "~/features/ResourceEditor/resourceEditorValidation"
+import { getEditedResourceFieldIssues } from "~/features/ResourceEditor/model/resourceEditorValidation"
 import toast from "~/lib/notify"
 import type { ManagedResourceProductPolicy } from "~/services/accountSiteDefinitions/contracts"
 import {

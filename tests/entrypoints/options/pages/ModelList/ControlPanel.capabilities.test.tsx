@@ -2,17 +2,17 @@ import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
+import { createProfileSource } from "~/features/ModelList/catalog/modelManagementSources"
 import { ControlPanel } from "~/features/ModelList/components/ControlPanel"
-import { createProfileSource } from "~/features/ModelList/modelManagementSources"
+import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/filtering/sortModes"
+import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/pricing/billingModes"
 import {
   DEFAULT_MODEL_PRICE_COMPARISON_PRESET_ID,
   MODEL_PRICE_COMPARISON_PRESET_IDS,
   MODEL_PRICE_COMPARISON_PRESETS,
   type ModelPriceComparisonPresetId,
   type ModelPriceComparisonWeights,
-} from "~/features/ModelList/priceComparison"
-import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
+} from "~/features/ModelList/pricing/priceComparison"
 import toast from "~/lib/notify"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

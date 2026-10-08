@@ -130,7 +130,7 @@ vi.mock(
 const mockApiCredentialProfilesExport = vi.fn()
 const mockApiCredentialProfilesImport = vi.fn()
 vi.mock(
-  import("~/services/apiCredentialProfiles/apiCredentialProfilesStorage"),
+  import("~/services/apiCredentialProfiles/storage/profiles"),
   async (importOriginal) => {
     const actual = await importOriginal()
     Object.assign(actual.apiCredentialProfilesStorage, {

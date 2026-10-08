@@ -12,7 +12,7 @@ import {
 } from "~/services/accounts/autoDetectCompletion/completion"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
-import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { inspectCheckInMethods } from "~/services/checkin/autoCheckin/domain"
 import { createAutoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers/registry"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
@@ -45,17 +45,20 @@ vi.mock("~/services/apiTransport/request", async (importOriginal) => ({
   fetchApiData: fetchCheckInStatusMock,
 }))
 
-vi.mock("~/services/checkin/autoCheckin/discovery", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/services/checkin/autoCheckin/discovery")
-    >()
-  discoverCheckInMethodsMock.mockImplementation(actual.discoverCheckInMethods)
-  return {
-    ...actual,
-    discoverCheckInMethods: discoverCheckInMethodsMock,
-  }
-})
+vi.mock(
+  "~/services/checkin/autoCheckin/discovery/discovery",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/checkin/autoCheckin/discovery/discovery")
+      >()
+    discoverCheckInMethodsMock.mockImplementation(actual.discoverCheckInMethods)
+    return {
+      ...actual,
+      discoverCheckInMethods: discoverCheckInMethodsMock,
+    }
+  },
+)
 
 const currentTabFetchContext = (origin: string) => ({
   kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,

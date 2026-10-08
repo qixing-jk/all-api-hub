@@ -3,8 +3,8 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelList from "~/entrypoints/options/pages/ModelList"
-import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
-import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
+import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/filtering/sortModes"
+import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/pricing/billingModes"
 import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 

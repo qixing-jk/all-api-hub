@@ -5,16 +5,16 @@ import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  ALL_ACCOUNTS_SOURCE_VALUE,
+  MODEL_MANAGEMENT_SOURCE_KINDS,
+} from "~/features/ModelList/catalog/modelManagementSources"
+import {
   MODEL_GROUP_ACCESS_STATES,
   type ActiveModelGroupContext,
   type ModelGroupContext,
-} from "~/features/ModelList/groupContext"
+} from "~/features/ModelList/groups/groupContext"
 import ModelList from "~/features/ModelList/ModelList"
-import type { CalculatedModelItem } from "~/features/ModelList/modelListItems"
-import {
-  ALL_ACCOUNTS_SOURCE_VALUE,
-  MODEL_MANAGEMENT_SOURCE_KINDS,
-} from "~/features/ModelList/modelManagementSources"
+import type { CalculatedModelItem } from "~/features/ModelList/presentation/modelListItems"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
 import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"

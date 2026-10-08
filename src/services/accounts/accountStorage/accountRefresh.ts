@@ -5,7 +5,7 @@ import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefau
 import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accountSiteProfile"
 import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import { discoverSavedAccountCheckIn } from "~/services/checkin/autoCheckin/postSaveDiscovery"
+import { discoverSavedAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/postSaveDiscovery"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import { maybeCaptureDailyBalanceSnapshot } from "~/services/history/dailyBalanceHistory/capture"
 import { userPreferences } from "~/services/preferences/userPreferences"

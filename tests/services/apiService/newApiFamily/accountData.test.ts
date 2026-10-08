@@ -11,7 +11,7 @@ import {
 } from "~/services/apiService/newApiFamily/default/accountData"
 import { fetchTodayUsage as fetchDoneHubTodayUsage } from "~/services/apiService/newApiFamily/variants/doneHub"
 import { ApiError } from "~/services/apiTransport/errors"
-import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/inspection"
+import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,

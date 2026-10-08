@@ -1,7 +1,7 @@
 /** Local API credential fixtures for the dev panel; no endpoint is contacted. */
 import { Storage } from "@plasmohq/storage"
 
-import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
 import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
