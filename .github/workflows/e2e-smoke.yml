@@ -191,6 +191,28 @@ jobs:
         run: >
           pnpm run e2e:${{ matrix.e2e_type }}
           ${{ matrix.shard && format('--shard={0}/{1}', matrix.shard, env.AAH_E2E_SHARD_TOTAL) || '' }}
+          ${{ matrix.e2e_type == 'default' && '--grep-invert="major pages with"' || '' }}
+
+      # Keep timing and virtualization assertions free of competing contexts,
+      # as in the browser compatibility workflow. Run the complete file once.
+      - name: Run isolated performance E2E
+        if: ${{ !cancelled() && matrix.e2e_type == 'default' && matrix.shard == 2 }}
+        timeout-minutes: 8
+        env:
+          AAH_E2E_BUILD_VARIANT: default
+          AAH_SKIP_E2E_BUILD: "1"
+          AAH_E2E_SMOKE_ONLY: "1"
+          AAH_E2E_WORKERS: "1"
+          PLAYWRIGHT_HTML_OUTPUT_DIR: playwright-report/performance
+        run: pnpm exec playwright test e2e/multiAccountPerformance.spec.ts --project=chromium --output=test-results/performance --reporter=list,github,html
+
+      - name: Upload performance measurements
+        if: ${{ !cancelled() && matrix.e2e_type == 'default' && matrix.shard == 2 }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-performance-${{ matrix.name }}-${{ github.run_attempt }}
+          path: playwright-report/performance/
+          retention-days: 7
 
       - name: Upload Playwright artifacts (failure)
         if: failure()
