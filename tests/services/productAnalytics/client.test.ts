@@ -48,7 +48,7 @@ vi.mock("~/services/productAnalytics/preferences", () => ({
   productAnalyticsPreferences: preferenceMocks,
 }))
 
-vi.mock("~/utils/browser/browserApi", () => ({
+vi.mock("~/utils/browser/runtime", () => ({
   getExtensionVersion: getExtensionVersionMock,
 }))
 

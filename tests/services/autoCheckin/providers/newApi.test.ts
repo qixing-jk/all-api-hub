@@ -13,7 +13,7 @@ import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/con
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
-import { isAllowedIncognitoAccess } from "~/utils/browser/browserApi"
+import { isAllowedIncognitoAccess } from "~/utils/browser/runtime"
 import {
   tempWindowTriggerCheckinPageAction,
   tempWindowTurnstileFetch,
@@ -52,9 +52,9 @@ vi.mock("~/utils/browser/tempWindowFetch", () => ({
   tempWindowTurnstileFetch: vi.fn(),
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+vi.mock("~/utils/browser/runtime", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/utils/browser/runtime")>()
   return { ...actual, isAllowedIncognitoAccess: vi.fn() }
 })
 

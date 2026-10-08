@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import AxonHubSettings from "~/features/BasicSettings/components/tabs/ManagedSite/AxonHubSettings"
 import toast from "~/lib/notify"
-import { signIn } from "~/services/apiService/axonHub"
+import { signIn } from "~/services/apiService/axonHub/authSession"
 import type { PreferenceWriteResult } from "~/services/preferences/preferencesStore"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -39,7 +39,7 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/apiService/axonHub", () => ({
+vi.mock("~/services/apiService/axonHub/authSession", () => ({
   signIn: vi.fn(),
 }))
 

@@ -4,7 +4,8 @@ import { useTranslation } from "react-i18next"
 
 import { ActionGroup, Alert, Button } from "~/components/ui"
 import { ConfirmDialog } from "~/components/ui/Dialog/ConfirmDialog"
-import { createTab, reloadRuntime } from "~/utils/browser/browserApi"
+import { reloadRuntime } from "~/utils/browser/runtime"
+import { createTab } from "~/utils/browser/tabs"
 import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 
 export interface AutoDetectSlowHintAlertProps {

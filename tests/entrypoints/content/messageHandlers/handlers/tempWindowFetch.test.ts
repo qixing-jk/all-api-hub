@@ -16,8 +16,8 @@ const { logger, mockLogCloudflareGuard, mockSendRuntimeMessage } = vi.hoisted(
   }),
 )
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/utils/browser/browserApi")>()),
+vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()),
   sendRuntimeMessage: mockSendRuntimeMessage,
 }))
 

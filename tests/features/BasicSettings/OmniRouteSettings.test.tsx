@@ -6,7 +6,7 @@ import { OMNIROUTE_ACCESS_TOKEN_PREFIX } from "~/constants/omniroute"
 import OmniRouteSettings from "~/features/BasicSettings/components/tabs/ManagedSite/OmniRouteSettings"
 import toast from "~/lib/notify"
 import { userPreferences } from "~/services/preferences/userPreferences"
-import * as browserApi from "~/utils/browser/browserApi"
+import * as browserApi from "~/utils/browser/tabs"
 import { server } from "~~/tests/msw/server"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 

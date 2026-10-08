@@ -54,9 +54,9 @@ vi.mock("~/services/permissions/permissionManager", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+vi.mock("~/utils/browser/bookmarks", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/utils/browser/bookmarks")>()
   return {
     ...actual,
     getBrowserBookmarkTree: (...args: unknown[]) =>

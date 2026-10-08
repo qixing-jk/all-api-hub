@@ -35,9 +35,9 @@ vi.mock("~/utils/browser/cookieHelper", () => ({
   setupWebRequestInterceptor: mockSetupWebRequestInterceptor,
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+vi.mock("~/utils/browser/permissions", async (importOriginal) => {
   const actual =
-    (await importOriginal()) as typeof import("~/utils/browser/browserApi")
+    (await importOriginal()) as typeof import("~/utils/browser/permissions")
 
   return {
     ...actual,

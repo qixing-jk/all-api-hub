@@ -8,7 +8,7 @@ import {
   PRESET_PROBES,
 } from "~/utils/browser/devApiExplorer"
 
-vi.mock("~/utils/browser/browserApi", () => ({
+vi.mock("~/utils/browser/runtimeMessages", () => ({
   sendRuntimeMessage: vi.fn(),
 }))
 
@@ -82,7 +82,9 @@ describe("devApiExplorer", () => {
     })
 
     it("invokes background API via sendRuntimeMessage", async () => {
-      const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+      const { sendRuntimeMessage } = await import(
+        "~/utils/browser/runtimeMessages"
+      )
       vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
         success: true,
         data: { os: "win" },
@@ -100,7 +102,9 @@ describe("devApiExplorer", () => {
     })
 
     it("handles background execution error from runtime message failure", async () => {
-      const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+      const { sendRuntimeMessage } = await import(
+        "~/utils/browser/runtimeMessages"
+      )
       vi.mocked(sendRuntimeMessage).mockRejectedValueOnce(
         new Error("Connection failed"),
       )

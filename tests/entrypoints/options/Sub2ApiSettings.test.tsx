@@ -7,7 +7,7 @@ import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import Sub2ApiSettings from "~/features/BasicSettings/components/tabs/ManagedSite/Sub2ApiSettings"
 import { validateSub2ApiManagedSiteConfig } from "~/services/managedSites/providers/sub2api"
-import { createTab } from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
@@ -16,8 +16,8 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
 vi.mock("~/services/managedSites/providers/sub2api", () => ({
   validateSub2ApiManagedSiteConfig: vi.fn(),
 }))
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/utils/browser/browserApi")>()),
+vi.mock("~/utils/browser/tabs", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/tabs")>()),
   createTab: vi.fn(),
 }))
 vi.mock("~/lib/notify", () => ({

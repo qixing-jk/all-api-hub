@@ -9,7 +9,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import toast from "~/lib/notify"
-import { signIn } from "~/services/apiService/axonHub"
+import { signIn } from "~/services/apiService/axonHub/authSession"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { getErrorMessage } from "~/utils/core/error"
 

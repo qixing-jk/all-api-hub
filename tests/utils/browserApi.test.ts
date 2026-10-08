@@ -11,77 +11,96 @@ import {
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   addActionClickListener,
-  checkPermissionViaMessage,
-  classifyRecoverableWindowCreationFailure,
-  clearAlarm,
-  clearNotification,
-  containsPermissions,
-  createAlarm,
-  createContextMenu,
-  createNotification,
-  createWindow,
-  focusTab,
   getActionApi,
-  getActiveOrAllTabs,
-  getActiveTab,
-  getActiveTabs,
+  setActionPopup,
+} from "~/utils/browser/action"
+import {
+  clearAlarm,
+  createAlarm,
   getAlarm,
-  getAllCookieStores,
-  getAllTabs,
+  hasAlarmsAPI,
+  onAlarm,
+} from "~/utils/browser/alarms"
+import { getBrowserBookmarkTree } from "~/utils/browser/bookmarks"
+import {
+  createContextMenu,
+  hasContextMenusAPI,
+  onContextMenuClicked,
+  removeContextMenu,
+} from "~/utils/browser/contextMenus"
+import { getAllCookieStores, hasCookieStoresAPI } from "~/utils/browser/cookies"
+import {
+  clearNotification,
+  createNotification,
+  hasNotificationsAPI,
+  onNotificationClicked,
+} from "~/utils/browser/notifications"
+import {
+  checkPermissionViaMessage,
+  containsPermissions,
+  onPermissionsAdded,
+  onPermissionsRemoved,
+  PERMISSION_OPERATION_FAILURE_REASONS,
+  removePermissionsDetailed,
+  requestPermissionsDetailed,
+} from "~/utils/browser/permissions"
+import {
   getBrowserApiCapabilities,
-  getBrowserBookmarkTree,
   getBrowserI18nMessage,
   getExtensionURL,
   getExtensionVersion,
   getManagementSelf,
   getManifest,
   getRuntimeId,
+  isAllowedIncognitoAccess,
+  onInstalled,
+  onStartup,
+  onSuspend,
+  openRuntimeOptionsPage,
+  reloadRuntime,
+  setUninstallUrl,
+} from "~/utils/browser/runtime"
+import {
+  isMessageReceiverUnavailableError,
+  onRuntimeMessage,
+  sendRuntimeActionMessage,
+  sendTabMessageWithRetry,
+} from "~/utils/browser/runtimeMessages"
+import { requestRuntimeUpdateCheck } from "~/utils/browser/runtimeUpdateCheck"
+import {
+  NATIVE_SIDE_PANEL_ACTION_CLICK_RESULTS,
+  setNativeSidePanelActionClick,
+} from "~/utils/browser/sidePanel"
+import {
   getSessionStorageValues,
-  getTab,
-  getWindow,
-  hasAlarmsAPI,
-  hasContextMenusAPI,
-  hasCookieStoresAPI,
-  hasNotificationsAPI,
   hasSessionStorageArea,
   hasStorageChangedListener,
-  isAllowedIncognitoAccess,
-  isMessageReceiverUnavailableError,
-  NATIVE_SIDE_PANEL_ACTION_CLICK_RESULTS,
-  onAlarm,
-  onContextMenuClicked,
-  onInstalled,
-  onNotificationClicked,
-  onPermissionsAdded,
-  onPermissionsRemoved,
-  onRuntimeMessage,
-  onStartup,
   onStorageChanged,
-  onSuspend,
+  removeSessionStorageValues,
+  setSessionStorageValues,
+} from "~/utils/browser/storage"
+import {
+  focusTab,
+  getActiveOrAllTabs,
+  getActiveTab,
+  getActiveTabs,
+  getAllTabs,
+  getTab,
   onTabActivated,
   onTabRemoved,
   onTabUpdated,
-  onWindowRemoved,
-  openRuntimeOptionsPage,
-  PERMISSION_OPERATION_FAILURE_REASONS,
-  reloadRuntime,
   reloadTab,
-  removeContextMenu,
-  removePermissionsDetailed,
-  removeSessionStorageValues,
   removeTab,
+} from "~/utils/browser/tabs"
+import {
+  classifyRecoverableWindowCreationFailure,
+  createWindow,
+  getWindow,
+  onWindowRemoved,
   removeWindow,
-  requestPermissionsDetailed,
-  sendRuntimeActionMessage,
-  sendTabMessageWithRetry,
-  setActionPopup,
-  setNativeSidePanelActionClick,
-  setSessionStorageValues,
-  setUninstallUrl,
   updateWindow,
   WINDOW_CREATION_FAILURE_REASONS,
-} from "~/utils/browser/browserApi"
-import { requestRuntimeUpdateCheck } from "~/utils/browser/runtimeUpdateCheck"
+} from "~/utils/browser/windows"
 
 const { loggerMock } = vi.hoisted(() => ({
   loggerMock: {
@@ -1084,7 +1103,7 @@ describe("browserApi getSidePanelSupport", () => {
     }
     ;(globalThis as any).chrome = {}
 
-    const { getSidePanelSupport } = await import("~/utils/browser/browserApi")
+    const { getSidePanelSupport } = await import("~/utils/browser/sidePanel")
     expect(getSidePanelSupport()).toEqual({
       supported: true,
       kind: "firefox-sidebar-action",
@@ -1099,7 +1118,7 @@ describe("browserApi getSidePanelSupport", () => {
       },
     }
 
-    const { getSidePanelSupport } = await import("~/utils/browser/browserApi")
+    const { getSidePanelSupport } = await import("~/utils/browser/sidePanel")
     expect(getSidePanelSupport()).toEqual({
       supported: true,
       kind: "chromium-side-panel",
@@ -1121,7 +1140,7 @@ describe("browserApi getSidePanelSupport", () => {
       },
     }
 
-    const { getSidePanelSupport } = await import("~/utils/browser/browserApi")
+    const { getSidePanelSupport } = await import("~/utils/browser/sidePanel")
     const result = getSidePanelSupport()
 
     expect(result.supported).toBe(false)
@@ -1154,7 +1173,7 @@ describe("browserApi getSidePanelSupport", () => {
     }
     ;(globalThis as any).chrome = {}
 
-    const { getSidePanelSupport } = await import("~/utils/browser/browserApi")
+    const { getSidePanelSupport } = await import("~/utils/browser/sidePanel")
     const result = getSidePanelSupport()
 
     expect(result.supported).toBe(false)
@@ -1175,7 +1194,7 @@ describe("browserApi getSidePanelSupport", () => {
     ;(globalThis as any).browser = { sidebarAction: { open } }
     ;(globalThis as any).chrome = {}
     const { getSidePanelSupport, openSidePanel } = await import(
-      "~/utils/browser/browserApi"
+      "~/utils/browser/sidePanel"
     )
     await expect(openSidePanel()).rejects.toThrow("user gesture expired")
     expect(getSidePanelSupport().supported).toBe(true)
@@ -1188,7 +1207,7 @@ describe("browserApi getSidePanelSupport", () => {
     ;(globalThis as any).chrome = {}
 
     const { getSidePanelSupport, openSidePanel } = await import(
-      "~/utils/browser/browserApi"
+      "~/utils/browser/sidePanel"
     )
     const result = getSidePanelSupport()
 
@@ -1210,7 +1229,7 @@ describe("browserApi getSidePanelSupport", () => {
     }
     ;(globalThis as any).chrome = {}
 
-    const { getSidePanelSupport } = await import("~/utils/browser/browserApi")
+    const { getSidePanelSupport } = await import("~/utils/browser/sidePanel")
 
     expect(getSidePanelSupport()).toEqual({
       supported: true,
@@ -1241,7 +1260,7 @@ describe("browserApi getSidePanelSupport", () => {
       },
     }
 
-    const { getSidePanelSupport } = await import("~/utils/browser/browserApi")
+    const { getSidePanelSupport } = await import("~/utils/browser/sidePanel")
     const result = getSidePanelSupport()
 
     expect(result.supported).toBe(false)
@@ -1268,7 +1287,7 @@ describe("browserApi getSidePanelSupport", () => {
       },
     }
 
-    const { openSidePanel } = await import("~/utils/browser/browserApi")
+    const { openSidePanel } = await import("~/utils/browser/sidePanel")
 
     await openSidePanel({ id: 7, windowId: 9 } as browser.tabs.Tab)
 
@@ -1290,7 +1309,7 @@ describe("browserApi getSidePanelSupport", () => {
       },
     }
 
-    const { openSidePanel } = await import("~/utils/browser/browserApi")
+    const { openSidePanel } = await import("~/utils/browser/sidePanel")
 
     await openSidePanel({ id: 7 } as browser.tabs.Tab)
 
@@ -1315,7 +1334,7 @@ describe("browserApi getSidePanelSupport", () => {
       },
     }
 
-    const { openSidePanel } = await import("~/utils/browser/browserApi")
+    const { openSidePanel } = await import("~/utils/browser/sidePanel")
 
     await expect(openSidePanel()).resolves.toBeUndefined()
 
@@ -1337,7 +1356,7 @@ describe("browserApi getSidePanelSupport", () => {
     }
 
     const { openSidePanel, getSidePanelSupport } = await import(
-      "~/utils/browser/browserApi"
+      "~/utils/browser/sidePanel"
     )
 
     await expect(openSidePanel()).rejects.toThrow(
@@ -1354,7 +1373,7 @@ describe("browserApi getSidePanelSupport", () => {
     ;(globalThis as any).browser = {}
     ;(globalThis as any).chrome = { sidePanel: { open } }
     const { openSidePanel, getSidePanelSupport } = await import(
-      "~/utils/browser/browserApi"
+      "~/utils/browser/sidePanel"
     )
     await expect(
       openSidePanel({ windowId: 9 } as browser.tabs.Tab),
@@ -1372,7 +1391,7 @@ describe("browserApi getSidePanelSupport", () => {
     }
     ;(globalThis as any).chrome = {}
 
-    const { openSidePanel } = await import("~/utils/browser/browserApi")
+    const { openSidePanel } = await import("~/utils/browser/sidePanel")
 
     await expect(openSidePanel()).resolves.toBeUndefined()
     expect(open).toHaveBeenCalledTimes(1)

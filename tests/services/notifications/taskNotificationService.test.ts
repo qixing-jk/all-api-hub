@@ -54,7 +54,7 @@ vi.mock("~/services/permissions/permissionManager", () => ({
   hasPermission: hasPermissionMock,
 }))
 
-vi.mock("~/utils/browser/browserApi", () => ({
+vi.mock("~/utils/browser/notifications", () => ({
   clearNotification: clearNotificationMock,
   createNotification: createNotificationMock,
   hasNotificationsAPI: hasNotificationsAPIMock,

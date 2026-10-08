@@ -14,7 +14,7 @@ import {
   type EnsureNewApiManagedSessionResult,
 } from "~/services/managedSites/providers/newApiSessionContracts"
 import type { NewApiConfig } from "~/types/newApiConfig"
-import { createTab } from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 

@@ -23,9 +23,9 @@ vi.mock("react-i18next", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+vi.mock("~/utils/browser/runtime", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/utils/browser/runtime")>()
   return {
     ...actual,
     getExtensionVersion: vi.fn(() => "0.0.0"),
@@ -54,7 +54,7 @@ vi.mock("~/contexts/ReleaseUpdateStatusContext", () => ({
 
 describe("VersionBadge", () => {
   it("renders current version and links to changelog", async () => {
-    const { getExtensionVersion } = await import("~/utils/browser/browserApi")
+    const { getExtensionVersion } = await import("~/utils/browser/runtime")
     const { getDocsChangelogUrl } = await import("~/utils/navigation/docsLinks")
 
     vi.mocked(getExtensionVersion).mockReturnValue("1.2.3")
@@ -74,7 +74,7 @@ describe("VersionBadge", () => {
   })
 
   it("renders nothing when version is missing", async () => {
-    const { getExtensionVersion } = await import("~/utils/browser/browserApi")
+    const { getExtensionVersion } = await import("~/utils/browser/runtime")
 
     vi.mocked(getExtensionVersion).mockReturnValue("")
 
@@ -84,7 +84,7 @@ describe("VersionBadge", () => {
   })
 
   it("links to the latest release and shows a marker when an update is available", async () => {
-    const { getExtensionVersion } = await import("~/utils/browser/browserApi")
+    const { getExtensionVersion } = await import("~/utils/browser/runtime")
     const { useReleaseUpdateStatus } = await import(
       "~/contexts/ReleaseUpdateStatusContext"
     )
@@ -125,7 +125,7 @@ describe("VersionBadge", () => {
   })
 
   it("does not show an update marker for store builds while the store rollout is pending", async () => {
-    const { getExtensionVersion } = await import("~/utils/browser/browserApi")
+    const { getExtensionVersion } = await import("~/utils/browser/runtime")
     const { getDocsChangelogUrl } = await import("~/utils/navigation/docsLinks")
     const { useReleaseUpdateStatus } = await import(
       "~/contexts/ReleaseUpdateStatusContext"
@@ -176,7 +176,7 @@ describe("VersionBadge", () => {
   })
 
   it("uses the translated aria label while keeping the visible version compact", async () => {
-    const { getExtensionVersion } = await import("~/utils/browser/browserApi")
+    const { getExtensionVersion } = await import("~/utils/browser/runtime")
     const { getDocsChangelogUrl } = await import("~/utils/navigation/docsLinks")
     const { useReleaseUpdateStatus } = await import(
       "~/contexts/ReleaseUpdateStatusContext"

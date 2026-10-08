@@ -4,18 +4,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { AXON_HUB_CHANNEL_STATUS } from "~/constants/axonHub"
 import {
   __resetCachesForTesting,
-  AxonHubRequestError,
+  signIn,
+} from "~/services/apiService/axonHub/authSession"
+import { hasCompleteAxonHubAdvancedDetail } from "~/services/apiService/axonHub/channelProjection"
+import {
   createAxonHubChannel,
   deleteAxonHubChannel,
   getAxonHubChannel,
   getAxonHubChannelSecretKey,
-  graphqlRequest,
-  hasCompleteAxonHubAdvancedDetail,
   listAxonHubChannelPage,
-  signIn,
   updateAxonHubChannel,
   updateAxonHubChannelStatus,
-} from "~/services/apiService/axonHub"
+} from "~/services/apiService/axonHub/channels"
+import { graphqlRequest } from "~/services/apiService/axonHub/graphqlClient"
+import { AxonHubRequestError } from "~/services/apiService/axonHub/graphqlProtocol"
 import type { AxonHubChannel, AxonHubCreateChannelInput } from "~/types/axonHub"
 import { server } from "~~/tests/msw/server"
 

@@ -22,8 +22,8 @@ vi.mock("~/services/popupInterruptionHint", async (original) => ({
   getPopupInterruptionHint: mocks.getHint,
 }))
 vi.mock("~/utils/browser", () => ({ isExtensionPopup: () => mocks.inPopup }))
-vi.mock("~/utils/browser/browserApi", async (original) => ({
-  ...(await original<typeof import("~/utils/browser/browserApi")>()),
+vi.mock("~/utils/browser/sidePanel", async (original) => ({
+  ...(await original<typeof import("~/utils/browser/sidePanel")>()),
   getSidePanelSupport: () => ({ supported: mocks.supported }),
 }))
 vi.mock("~/utils/navigation/sidepanel", async (original) => ({

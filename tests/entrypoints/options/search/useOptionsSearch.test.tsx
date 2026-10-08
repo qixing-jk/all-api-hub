@@ -6,7 +6,7 @@ import {
   useOptionsSearch,
   useOptionsSearchContext,
 } from "~/features/OptionsSearch/useOptionsSearch"
-import * as browserApi from "~/utils/browser/browserApi"
+import * as browserApi from "~/utils/browser/sidePanel"
 import { renderHook } from "~~/tests/test-utils/render"
 
 const context: OptionsSearchContext = {

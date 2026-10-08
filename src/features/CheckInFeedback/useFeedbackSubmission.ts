@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 
-import { createTab } from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
 
 /** Owns sharing feedback and manual-copy recovery for one mounted report session. */
 export function useFeedbackSubmission(

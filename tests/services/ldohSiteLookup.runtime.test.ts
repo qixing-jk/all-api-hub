@@ -14,7 +14,7 @@ vi.mock("~/services/runtimeMessaging/extensionMessaging", () => ({
   }),
 }))
 
-vi.mock("~/utils/browser/browserApi", () => ({
+vi.mock("~/utils/browser/runtimeMessages", () => ({
   isMessageReceiverUnavailableError: isReceiverUnavailableMock,
 }))
 

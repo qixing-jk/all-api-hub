@@ -24,8 +24,8 @@ const mocks = vi.hoisted(() => ({
 vi.mock("~/lib/notify", () => ({
   default: { success: vi.fn(), error: mocks.error },
 }))
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/utils/browser/browserApi")>()),
+vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()),
   sendRuntimeActionMessage: mocks.send,
 }))
 vi.mock("~/services/logging/logHistory", () => ({

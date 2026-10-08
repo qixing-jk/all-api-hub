@@ -14,17 +14,15 @@ import {
 } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import { AuthTypeEnum } from "~/types"
+import { getExtensionURL } from "~/utils/browser/runtime"
+import { getSidePanelSupport, openSidePanel } from "~/utils/browser/sidePanel"
 import {
-  createTab,
-  getActiveTab,
-  getExtensionURL,
   getSessionStorageValues,
-  getSidePanelSupport,
   onStorageChanged,
-  openSidePanel,
   removeSessionStorageValues,
   setSessionStorageValues,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/storage"
+import { createTab, getActiveTab } from "~/utils/browser/tabs"
 import { isRecord } from "~/utils/core/object"
 import { isHttpUrl } from "~/utils/core/urlParsing"
 

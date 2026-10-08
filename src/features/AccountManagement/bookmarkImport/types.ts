@@ -1,6 +1,6 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import type { AuthTypeEnum } from "~/types"
-import type { BrowserBookmarkTreeNode } from "~/utils/browser/browserApi"
+import type { BrowserBookmarkTreeNode } from "~/utils/browser/bookmarks"
 
 export type BookmarkAccountImportCandidateStatus = "ready" | "duplicate"
 

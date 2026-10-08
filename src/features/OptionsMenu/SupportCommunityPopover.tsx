@@ -22,7 +22,7 @@ import { SPONSOR_RECOMMENDATION_SURFACES } from "~/features/AccountManagement/sp
 import { SponsorBrandIcon } from "~/features/AccountManagement/sponsors/SponsorBrandIcon"
 import { useSponsorRecommendations } from "~/features/AccountManagement/sponsors/useSponsorRecommendations"
 import { cn } from "~/lib/utils"
-import { createTab } from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
 import wechatGroupImage from "~~/resources/wechat_group.png"
 
 export type SupportCommunitySection = "sponsors" | "community"

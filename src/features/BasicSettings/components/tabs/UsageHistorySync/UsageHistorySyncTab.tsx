@@ -19,7 +19,7 @@ import type {
   UsageHistoryScheduleMode,
   UsageHistoryStore,
 } from "~/types/usageHistory"
-import { hasAlarmsAPI } from "~/utils/browser/browserApi"
+import { hasAlarmsAPI } from "~/utils/browser/alarms"
 import { getErrorMessage } from "~/utils/core/error"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"

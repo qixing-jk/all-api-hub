@@ -6,7 +6,7 @@ import { channelConfigStorage } from "~/services/managedSites/channelConfigStora
 import { getRuntimeMessageFailureMessage } from "~/services/runtimeMessaging/result"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import type { ManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"
-import { isMessageReceiverUnavailableError } from "~/utils/browser/browserApi"
+import { isMessageReceiverUnavailableError } from "~/utils/browser/runtimeMessages"
 import { createLogger } from "~/utils/core/logger"
 
 /**

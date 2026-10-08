@@ -36,7 +36,7 @@ import {
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import type { SiteAccount } from "~/types"
-import { getBrowserBookmarkTree } from "~/utils/browser/browserApi"
+import { getBrowserBookmarkTree } from "~/utils/browser/bookmarks"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 
 import { useBookmarkScopeSelection } from "./useBookmarkScopeSelection"

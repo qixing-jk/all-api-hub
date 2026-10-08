@@ -6,7 +6,7 @@ import { UPDATE_LOG_DIALOG_TEST_IDS } from "~/components/dialogs/UpdateLogDialog
 import type { PreferenceWriteResult } from "~/services/preferences/preferencesStore"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { starPromotionState } from "~/services/starPromotion/state"
-import * as browserApi from "~/utils/browser/browserApi"
+import * as browserApi from "~/utils/browser/tabs"
 import * as docsLinks from "~/utils/navigation/docsLinks"
 import { buildUserPreferences } from "~~/tests/test-utils/factories"
 import {

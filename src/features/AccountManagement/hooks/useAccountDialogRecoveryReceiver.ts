@@ -9,7 +9,7 @@ import {
 import type { AccountDialogRecoveryState } from "~/features/AccountManagement/components/AccountDialog/models"
 import toast from "~/lib/notify"
 import { isExtensionSidePanel } from "~/utils/browser"
-import { getActiveTab } from "~/utils/browser/browserApi"
+import { getActiveTab } from "~/utils/browser/tabs"
 
 /** Receives popup handoffs without replacing another unfinished account form. */
 export function useAccountDialogRecoveryReceiver({

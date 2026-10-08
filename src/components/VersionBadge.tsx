@@ -5,7 +5,7 @@ import { Badge } from "~/components/ui"
 import { useReleaseUpdateStatus } from "~/contexts/ReleaseUpdateStatusContext"
 import { cn } from "~/lib/utils"
 import { hasAvailableReleaseUpdate } from "~/services/updates/presentation"
-import { getExtensionVersion } from "~/utils/browser/browserApi"
+import { getExtensionVersion } from "~/utils/browser/runtime"
 import { getDocsChangelogUrl } from "~/utils/navigation/docsLinks"
 
 export type VersionBadgeProps = {

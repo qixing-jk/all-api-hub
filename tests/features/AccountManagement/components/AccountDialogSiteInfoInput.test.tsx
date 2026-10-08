@@ -13,8 +13,8 @@ import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const { mockGetAllTabs } = vi.hoisted(() => ({ mockGetAllTabs: vi.fn() }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/utils/browser/browserApi")>()),
+vi.mock("~/utils/browser/tabs", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/tabs")>()),
   getAllTabs: mockGetAllTabs,
 }))
 

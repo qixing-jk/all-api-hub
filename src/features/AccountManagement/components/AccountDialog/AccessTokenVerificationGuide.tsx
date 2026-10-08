@@ -15,7 +15,7 @@ import {
   type AccountSiteAccessTokenVerificationGuide,
   type AccountSiteManualAddGuideAnchor,
 } from "~/services/accountSiteDefinitions"
-import { createTab } from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
 import { joinUrl } from "~/utils/core/url"
 import { isHttpUrl } from "~/utils/core/urlParsing"
 

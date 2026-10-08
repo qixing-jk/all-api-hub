@@ -3,9 +3,11 @@ import { expect, it, vi } from "vitest"
 import { Storage } from "@plasmohq/storage"
 
 import { AccountKeyRepairProgressStore } from "~/services/accounts/accountKeyAutoProvisioning/repairProgressStore"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 
-vi.mock("~/utils/browser/browserApi", () => ({ sendRuntimeMessage: vi.fn() }))
+vi.mock("~/utils/browser/runtimeMessages", () => ({
+  sendRuntimeMessage: vi.fn(),
+}))
 
 it("does not persist or notify a skipped update", async () => {
   const storage = new Storage({ area: "local" })

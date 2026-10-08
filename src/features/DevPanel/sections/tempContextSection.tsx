@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import toast from "~/lib/notify"
-import { reloadRuntime, sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { reloadRuntime } from "~/utils/browser/runtime"
+import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 

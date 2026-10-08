@@ -16,7 +16,7 @@ import {
 } from "~/features/DevPanel/fixtureApiCredentials"
 import { debugQueuePopupInterruptionHint } from "~/services/popupInterruptionHint"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
-import { getExtensionVersion } from "~/utils/browser/browserApi"
+import { getExtensionVersion } from "~/utils/browser/runtime"
 import { openPermissionsOnboardingPage } from "~/utils/navigation"
 import {
   buildDevIdentity,
@@ -59,9 +59,9 @@ vi.mock("~/components/dialogs/UpdateLogDialog", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+vi.mock("~/utils/browser/runtime", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/utils/browser/runtime")>()
 
   return {
     ...actual,

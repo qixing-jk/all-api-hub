@@ -47,7 +47,7 @@ vi.mock("~/services/browsingContext/tempPage/runtime", () => ({
   },
 }))
 
-vi.mock("~/utils/browser/browserApi", () => ({
+vi.mock("~/utils/browser/runtimeMessages", () => ({
   sendTabMessageWithRetry: mocks.sendTabMessage,
 }))
 

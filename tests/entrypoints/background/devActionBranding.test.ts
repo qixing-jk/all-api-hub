@@ -16,9 +16,9 @@ const { getManifestMock, getDevIdentityMock, loggerDebugMock } = vi.hoisted(
   }),
 )
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+vi.mock("~/utils/browser/runtime", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/utils/browser/runtime")>()
 
   return {
     ...actual,

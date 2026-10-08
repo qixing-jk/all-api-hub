@@ -13,7 +13,7 @@ import {
   getActiveTabs,
   onTabActivated,
   onTabUpdated,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/tabs"
 import { createLogger } from "~/utils/core/logger"
 import { tryParseOrigin } from "~/utils/core/urlParsing"
 

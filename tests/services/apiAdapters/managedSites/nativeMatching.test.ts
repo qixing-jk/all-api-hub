@@ -9,7 +9,7 @@ import { veloeraManagedSiteCapabilities } from "~/services/apiAdapters/managedSi
 import {
   getAxonHubChannelSecretKey,
   listAxonHubChannelPage,
-} from "~/services/apiService/axonHub"
+} from "~/services/apiService/axonHub/channels"
 import {
   getUnmaskedProviderKey,
   searchProviders,
@@ -32,8 +32,10 @@ import {
   matchingResourceRef,
 } from "~~/tests/test-utils/managedResourceMatching"
 
-vi.mock("~/services/apiService/axonHub", async (original) => ({
-  ...(await original<typeof import("~/services/apiService/axonHub")>()),
+vi.mock("~/services/apiService/axonHub/channels", async (original) => ({
+  ...(await original<
+    typeof import("~/services/apiService/axonHub/channels")
+  >()),
   listAxonHubChannelPage: vi.fn(),
   getAxonHubChannelSecretKey: vi.fn(),
 }))

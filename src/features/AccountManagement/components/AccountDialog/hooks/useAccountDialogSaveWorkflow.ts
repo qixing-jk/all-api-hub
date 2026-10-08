@@ -33,7 +33,7 @@ import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import {
   isMessageReceiverUnavailableError,
   sendRuntimeMessage,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/runtimeMessages"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"

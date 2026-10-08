@@ -13,7 +13,7 @@ import {
 } from "~/services/verification/verificationResultHistory"
 import type { Tag } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
-import { onRuntimeMessage } from "~/utils/browser/browserApi"
+import { onRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { openModelsPage } from "~/utils/navigation"
 
 import { useApiCredentialProfileCommands } from "./useApiCredentialProfileCommands"

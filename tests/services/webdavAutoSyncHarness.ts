@@ -48,7 +48,7 @@ const mockCreateAlarm = vi.fn()
 const mockClearAlarm = vi.fn()
 const mockOnAlarm = vi.fn()
 
-vi.mock(import("~/utils/browser/browserApi"), async (importOriginal) => {
+vi.mock(import("~/utils/browser/alarms"), async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,

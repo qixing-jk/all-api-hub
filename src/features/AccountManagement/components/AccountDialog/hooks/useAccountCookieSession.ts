@@ -30,7 +30,7 @@ import {
 import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnosticsError"
 import { trackOptionalPermissionRequestResult } from "~/services/productAnalytics/permissions"
 import { AuthTypeEnum } from "~/types"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 

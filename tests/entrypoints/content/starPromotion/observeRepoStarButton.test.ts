@@ -9,7 +9,7 @@ const { sendRuntimeActionMessageMock } = vi.hoisted(() => ({
   sendRuntimeActionMessageMock: vi.fn(),
 }))
 
-vi.mock("~/utils/browser/browserApi", () => ({
+vi.mock("~/utils/browser/runtimeMessages", () => ({
   sendRuntimeActionMessage: sendRuntimeActionMessageMock,
 }))
 

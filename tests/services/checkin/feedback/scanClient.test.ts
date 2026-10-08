@@ -5,7 +5,7 @@ import { collectCheckInFeedbackClues } from "~/services/checkin/feedback/scan"
 import { collectFeedbackCluesInBrowser } from "~/services/checkin/feedback/scanClient"
 import { FEEDBACK_SCAN_SESSION_TIMEOUT_MS } from "~/services/checkin/feedback/scanTypes"
 import { AuthTypeEnum } from "~/types"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { executeProtectionBypassTask } from "~/utils/browser/tempWindowFetch"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
@@ -13,7 +13,7 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 vi.mock("~/utils/browser/tempWindowFetch", () => ({
   executeProtectionBypassTask: vi.fn(),
 }))
-vi.mock("~/utils/browser/browserApi", () => ({
+vi.mock("~/utils/browser/runtimeMessages", () => ({
   sendRuntimeMessage: vi.fn().mockResolvedValue({ success: true }),
 }))
 vi.mock("~/utils/browser/tempWindowRequestSource", () => ({

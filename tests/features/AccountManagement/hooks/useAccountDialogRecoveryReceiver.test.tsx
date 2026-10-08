@@ -4,7 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
 import { useAccountDialogRecoveryReceiver } from "~/features/AccountManagement/hooks/useAccountDialogRecoveryReceiver"
 import toast from "~/lib/notify"
-import { getActiveTab } from "~/utils/browser/browserApi"
+import { getActiveTab } from "~/utils/browser/tabs"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
@@ -27,8 +27,8 @@ vi.mock("~/utils/browser", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/utils/browser")>()),
   isExtensionSidePanel: () => true,
 }))
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/utils/browser/browserApi")>()),
+vi.mock("~/utils/browser/tabs", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/tabs")>()),
   getActiveTab: vi.fn(async () => ({ id: 11, windowId: 7 })),
 }))
 

@@ -12,7 +12,7 @@ import {
 
 const { getRuntimeIdMock } = vi.hoisted(() => ({ getRuntimeIdMock: vi.fn() }))
 
-vi.mock("~/utils/browser/browserApi", () => ({
+vi.mock("~/utils/browser/runtime", () => ({
   getRuntimeId: (...args: unknown[]) => getRuntimeIdMock(...args),
 }))
 

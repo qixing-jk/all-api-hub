@@ -2,13 +2,13 @@ import { Fingerprint } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 
 import toast from "~/lib/notify"
+import { getDevIdentity } from "~/utils/browser/extensionIdentity"
 import {
   getExtensionURL,
   getExtensionVersion,
   getManagementSelf,
   getRuntimeId,
-} from "~/utils/browser/browserApi"
-import { getDevIdentity } from "~/utils/browser/extensionIdentity"
+} from "~/utils/browser/runtime"
 import { formatDevInstanceLabel } from "~/utils/core/devBranding"
 import { getRuntimeMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"

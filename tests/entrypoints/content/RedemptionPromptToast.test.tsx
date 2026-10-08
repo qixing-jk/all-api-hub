@@ -100,7 +100,7 @@ vi.mock("~/components/ui", async () => ({
   ),
 }))
 
-vi.mock("~/utils/browser/browserApi", () => ({
+vi.mock("~/utils/browser/runtimeMessages", () => ({
   sendRuntimeMessage: (...args: unknown[]) => sendRuntimeMessageMock(...args),
 }))
 

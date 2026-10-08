@@ -2,7 +2,7 @@ import type { TFunction } from "i18next"
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
-import { getSidePanelSupport } from "~/utils/browser/browserApi"
+import { getSidePanelSupport } from "~/utils/browser/sidePanel"
 
 import { OPTIONS_SEARCH_REGISTRY, resolveSyntheticPageTitle } from "./registry"
 import type {
