@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountData } from "~/features/AccountManagement/data/useAccountData"
+import { useServiceCredentialLifecycle } from "~/features/KeyManagement/inventory/serviceCredentials/useServiceCredentialLifecycle"
 import { useKeyManagement } from "~/features/KeyManagement/inventory/useKeyManagement"
 import toast from "~/lib/notify"
 import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
@@ -359,6 +360,109 @@ describe("useKeyManagement singleton credentials and selection", () => {
     })
     expect(result.current.entries).toHaveLength(1)
     expect(result.current.currentAccountLoadError).toBeNull()
+  })
+
+  it("keeps a missing service capability as a load error without dispatching", async () => {
+    const accounts = [native]
+    const { result } = renderHook(
+      () => useServiceCredentialLifecycle(accounts, native.id),
+      { wrapper },
+    )
+    await waitFor(() =>
+      expect(result.current.serviceCredentials[native.id]?.status).toBe(
+        "error",
+      ),
+    )
+    expect(fetchCredential).not.toHaveBeenCalled()
+  })
+
+  it("reuses supplied protection and records a failed refresh without secret telemetry", async () => {
+    const { result } = renderSelected()
+    await waitFor(() => expect(result.current.entries).toHaveLength(1))
+    const execution = atIndex(fetchCredential.mock.calls, 0)[0]
+      .protectionBypassExecution
+    fetchCredential.mockRejectedValueOnce(new Error("private-service-secret"))
+    await act(async () => {
+      await result.current.refreshServiceCredentials(account.id, {
+        protectionBypassExecution: execution,
+      })
+    })
+    expect(fetchCredential).toHaveBeenLastCalledWith(
+      expect.objectContaining({ protectionBypassExecution: execution }),
+    )
+    expect(complete).toHaveBeenLastCalledWith(
+      "failure",
+      expect.objectContaining({
+        errorCategory: expect.any(String),
+        insights: {
+          mode: "single",
+          itemCount: 1,
+          successCount: 0,
+          failureCount: 1,
+        },
+      }),
+    )
+    expect(JSON.stringify(complete.mock.calls)).not.toContain(
+      "private-service-secret",
+    )
+  })
+
+  it("ignores refresh requests for accounts outside the current selection", async () => {
+    const { result } = renderSelected()
+    await waitFor(() => expect(result.current.entries).toHaveLength(1))
+    await act(async () => result.current.refreshServiceCredentials("missing"))
+    expect(fetchCredential).toHaveBeenCalledTimes(1)
+    expect(complete).not.toHaveBeenCalled()
+  })
+
+  it.each([{ ...credential(), isAuthenticated: false }, credential("")])(
+    "rejects copying an unavailable credential: %j",
+    async (unavailable) => {
+      fetchCredential.mockResolvedValueOnce(unavailable)
+      const { result } = renderSelected()
+      await waitFor(() => expect(result.current.isLoading).toBe(false))
+      await act(async () => result.current.copyServiceCredential(account))
+      expect(navigator.clipboard.writeText).not.toHaveBeenCalled()
+      expect(toast.error).toHaveBeenCalledWith(
+        "keyManagement:messages.copyFailed",
+      )
+    },
+  )
+
+  it("rejects unsupported rotation while retaining the readable credential", async () => {
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      account: { serviceCredential: { fetch: fetchCredential } },
+    } as never)
+    const { result } = renderSelected()
+    await waitFor(() => expect(result.current.entries).toHaveLength(1))
+    await act(async () => result.current.rotateServiceCredential(account))
+    expect(rotateCredential).not.toHaveBeenCalled()
+    expect(toast.error).toHaveBeenCalledWith(
+      "keyManagement:serviceCredential.rotateUnsupported",
+    )
+    expect(atIndex(result.current.entries, 0).runtimeKey.secret).toBe(
+      "private-service-secret",
+    )
+  })
+
+  it("cancels a queued rotation before dispatch when navigation changes", async () => {
+    const pending = deferred<AccountServiceCredential>()
+    fetchCredential.mockReturnValueOnce(pending.promise)
+    const { result } = renderHook(() => useKeyManagement(), { wrapper })
+    act(() => result.current.setSelectedAccount(account.id))
+    await waitFor(() => expect(fetchCredential).toHaveBeenCalledTimes(1))
+    let rotation!: Promise<void>
+    act(() => {
+      rotation = result.current.rotateServiceCredential(account)
+    })
+    act(() => result.current.setSelectedAccount(native.id))
+    await act(async () => {
+      pending.resolve(credential())
+      await rotation
+    })
+    expect(rotateCredential).not.toHaveBeenCalled()
+    expect(result.current.serviceCredentials).toEqual({})
+    expect(toast.success).not.toHaveBeenCalled()
   })
 
   it("copies and rotates a loaded singleton without creating a resource", async () => {
