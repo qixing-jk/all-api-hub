@@ -43,7 +43,7 @@ import { openModelsPage } from "~/utils/navigation"
 import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 const logger = createLogger("KeyManagement")
-/** Ignore in-place URL sync from a page still mounted for its exit animation. */
+/** Maps association lookup state to its localized status message. */
 const getAssociationTargetStatusMessage = (
   state: KeyManagementAssociationTargetState,
   t: TFunction,
