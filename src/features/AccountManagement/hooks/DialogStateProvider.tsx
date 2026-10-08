@@ -14,6 +14,10 @@ import type { AccountDialogRecoveryState } from "~/features/AccountManagement/co
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { useAccountDialogRecoveryReceiver } from "~/features/AccountManagement/hooks/useAccountDialogRecoveryReceiver"
 import {
+  DialogStateContext,
+  type DialogOptions,
+} from "~/features/AccountManagement/hooks/useDialogStateContext"
+import {
   ACCOUNT_MANAGEMENT_ROUTE_ACTIONS,
   ACCOUNT_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/AccountManagement/routeParams"
@@ -25,8 +29,6 @@ import {
 import type { AddAccountPrefill } from "~/features/AccountManagement/sponsors/types"
 import type { DisplaySiteData } from "~/types"
 import { isExtensionOptions, isExtensionSidePanel } from "~/utils/browser"
-
-import { DialogStateContext, type DialogOptions } from "./useDialogStateContext"
 
 interface DialogState {
   isOpen: boolean

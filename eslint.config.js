@@ -102,7 +102,7 @@ const dynamicImportAllowlist = [
     imports: ["~/services/checkin/autoCheckin/discovery/devDiscoveryFixtures"],
   },
   {
-    file: "src/features/AutoCheckin/hooks/useAutoCheckinStatusWorkspace.ts",
+    file: "src/features/AutoCheckin/workspace/useAutoCheckinStatusWorkspace.ts",
     imports: ["~/services/checkin/autoCheckin/discovery/devDiscoveryFixtures"],
   },
   // UI code splitting: lazy pages, sections, dialogs, and locale data.
@@ -119,8 +119,10 @@ const dynamicImportAllowlist = [
     imports: ["./components/", "~/features/"],
   },
   {
-    file: "src/features/AccountManagement/components/AccountList/loadAccountListDndRuntime.ts",
-    imports: ["./AccountListDndRuntime"],
+    file: "src/features/AccountManagement/components/AccountList/ordering/loadAccountListDndRuntime.ts",
+    imports: [
+      "~/features/AccountManagement/components/AccountList/ordering/AccountListDndRuntime",
+    ],
   },
   {
     file: "src/features/AccountManagement/components/CopyKeyDialog/RuntimeKeyActionControls.tsx",
