@@ -1,5 +1,4 @@
 import { ChevronDown, Inbox, Info, Plus, SlidersHorizontal } from "lucide-react"
-import { useId, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -13,34 +12,13 @@ import {
   EmptyState,
 } from "~/components/ui"
 import { DATA_TYPE_CREATED_AT } from "~/constants"
-import { ACCOUNT_SITE_TITLE_RULES } from "~/constants/siteType"
-import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { NewcomerSponsorRecommendationsSection } from "~/features/AccountManagement/components/NewcomerSponsorRecommendationsSection"
-import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
-import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
-import { useAccountSearch } from "~/features/AccountManagement/hooks/useAccountSearch"
 import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementSelectionCheckboxTestId,
 } from "~/features/AccountManagement/testIds"
-import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
 import { cn } from "~/lib/utils"
-import { getAccountSortGroup } from "~/services/preferences/utils/sortingPriority"
-import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
-import {
-  PRODUCT_ANALYTICS_ACTION_IDS,
-  PRODUCT_ANALYTICS_ENTRYPOINTS,
-  PRODUCT_ANALYTICS_FEATURE_IDS,
-  PRODUCT_ANALYTICS_SURFACE_IDS,
-} from "~/services/productAnalytics/contracts"
-import type { DisplaySiteData } from "~/types"
-import {
-  calculateTotalBalanceForSites,
-  calculateTotalConsumption,
-  calculateTotalIncomeForSites,
-} from "~/utils/core/formatters"
 import { formatMoneyFixed } from "~/utils/core/money"
-import { getHealthStatusDisplay } from "~/utils/healthStatus"
 
 import CopyKeyDialog from "../CopyKeyDialog"
 import DelAccountDialog from "../DelAccountDialog"
@@ -48,29 +26,13 @@ import { InviteLinkManualCopyDialog } from "../InviteLinkManualCopyDialog"
 import { AccountBulkToolbar } from "./AccountBulkToolbar"
 import AccountFilterBar from "./AccountFilterBar"
 import { NonSortableAccountListItem } from "./AccountListBaseItem"
-import {
-  ACCOUNT_REFRESH_FILTER_OPTION_ORDER,
-  aggregateAccountListFilters,
-  isAccountRefreshFilterValue,
-  type AccountDisabledFilterValue,
-  type AccountListFilterState,
-  type AccountRefreshFilterValue,
-} from "./accountListFilters"
+import { ACCOUNT_LIST_ALL_FILTER_VALUE } from "./accountListFilters"
 import { AccountListHeader } from "./AccountListHeader"
 import { AccountListInitialLoadingState } from "./AccountListLoadingState"
-import {
-  groupAccountListResults,
-  type AccountListDisplayItem,
-  type AccountListResultItem,
-} from "./accountListOrdering"
+import { type AccountListDisplayItem } from "./accountListOrdering"
 import AccountSearchInput from "./AccountSearchInput"
-import {
-  ACCOUNT_CHECK_IN_FILTER_OPTION_ORDER,
-  type AccountCheckInFilterValue,
-} from "./checkInFilter"
 import { FilteredTodayMetric } from "./FilteredTodayMetric"
-import { useAccountListBulkActions } from "./useAccountListBulkActions"
-import { useAccountListReordering } from "./useAccountListReordering"
+import { useAccountListViewModel } from "./useAccountListViewModel"
 import { VirtualizedAccountList } from "./VirtualizedAccountList"
 
 interface AccountListProps {
@@ -92,336 +54,17 @@ export default function AccountList({
   virtualScrollParent,
 }: AccountListProps) {
   const { t } = useTranslation(["account", "common"])
-  const { showTodayCashflow } = useUserPreferencesContext()
-  const {
-    displayData,
-    isInitialLoad,
-    clearSortConfig,
-    sortField,
-    sortOrder,
-    tags,
-    tagCountsById,
-    detectedAccount,
-    getAccountContextBoost,
-  } = useAccountDataContext()
-  const { handleAddAccountClick } = useAddAccountHandler()
-  const { handleDeleteAccount } = useAccountActionsContext()
-  const [deleteDialogAccount, setDeleteDialogAccount] =
-    useState<DisplaySiteData | null>(null)
-  const [copyKeyDialogAccount, setCopyKeyDialogAccount] =
-    useState<DisplaySiteData | null>(null)
-  const [isBulkMode, setIsBulkMode] = useState(false)
-  const [filtersOpen, setFiltersOpen] = useState(false)
-  const filterPanelId = useId()
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
-  const [siteTypeFilter, setSiteTypeFilter] = useState<string | null>(null)
-  const [refreshStatusFilter, setRefreshStatusFilter] =
-    useState<AccountRefreshFilterValue | null>(null)
-  const [checkInFilter, setCheckInFilter] =
-    useState<AccountCheckInFilterValue | null>(null)
-  const [disabledFilter, setDisabledFilter] =
-    useState<AccountDisabledFilterValue | null>(null)
-
-  const { query, setQuery, clearSearch, searchResults, inSearchMode } =
-    useAccountSearch(displayData, initialSearchQuery)
-
-  const {
-    accountsInDisplayOrder,
-    pinnedAccountIdSet,
-    isReorderMode,
-    isReorderSaving,
-    dndLoadState,
-    dndRuntime,
-    dragDisabled,
-    shouldRenderSortableList,
-    resolvedReorderDisabledReason,
-    onDragEnd,
-    handleReorderModeEnter,
-    handleReorderModeExit,
-    handleListSort,
-    resetReorderMode,
-  } = useAccountListReordering({
-    inSearchMode,
-    isBulkMode,
+  const model = useAccountListViewModel({
+    initialSearchQuery,
+    onAddAccount,
     reorderUnavailableReason,
   })
 
-  const handleDeleteWithDialog = (site: DisplaySiteData) => {
-    setDeleteDialogAccount(site)
-  }
-
-  const handleCopyKeyWithDialog = (site: DisplaySiteData) => {
-    setCopyKeyDialogAccount(site)
-  }
-
-  const baseResults = useMemo<AccountListResultItem[]>(() => {
-    if (inSearchMode) {
-      return searchResults.map((result) => ({
-        account: result.account,
-        highlights: result.highlights,
-      }))
-    }
-
-    return accountsInDisplayOrder.map((account) => ({
-      account,
-      highlights: undefined,
-    }))
-  }, [accountsInDisplayOrder, inSearchMode, searchResults])
-
-  const filterState = useMemo<AccountListFilterState>(
-    () => ({
-      disabledFilter,
-      siteTypeFilter,
-      refreshStatusFilter,
-      checkInFilter,
-      selectedTagIds,
-    }),
-    [
-      checkInFilter,
-      disabledFilter,
-      refreshStatusFilter,
-      siteTypeFilter,
-      selectedTagIds,
-    ],
-  )
-
-  const filterAggregation = useMemo(
-    () => aggregateAccountListFilters(baseResults, filterState),
-    [baseResults, filterState],
-  )
-  const displayedResults = filterAggregation.displayedResults
-  const groupedDisplayItems = useMemo(
-    () =>
-      groupAccountListResults(
-        displayedResults,
-        pinnedAccountIdSet,
-        inSearchMode || isReorderMode ? undefined : getAccountContextBoost,
-      ),
-    [
-      displayedResults,
-      pinnedAccountIdSet,
-      getAccountContextBoost,
-      inSearchMode,
-      isReorderMode,
-    ],
-  )
-
-  const tagFilterOptions = useMemo(() => {
-    if (tags.length === 0) {
-      return []
-    }
-
-    return tags.map((tag) => ({
-      value: tag.id,
-      label: tag.name,
-      count: tagCountsById[tag.id] ?? 0,
-    }))
-  }, [tags, tagCountsById])
-
-  const siteTypeFilterOptions = useMemo(() => {
-    const availableSiteTypes = Array.from(
-      new Set(displayData.map((account) => account.siteType)),
-    )
-    const knownSiteTypes = ACCOUNT_SITE_TITLE_RULES.map(
-      (rule) => rule.name,
-    ).filter((siteType) => availableSiteTypes.includes(siteType))
-    const extraSiteTypes = availableSiteTypes
-      .filter((siteType) => !knownSiteTypes.includes(siteType))
-      .sort((a, b) => a.localeCompare(b))
-
-    return [
-      {
-        value: "all",
-        label: t("filter.siteType.all"),
-        count: Array.from(filterAggregation.siteTypeCounts.values()).reduce(
-          (sum, count) => sum + count,
-          0,
-        ),
-      },
-      ...[...knownSiteTypes, ...extraSiteTypes].map((siteType) => ({
-        value: siteType,
-        label: siteType,
-        count: filterAggregation.siteTypeCounts.get(siteType) ?? 0,
-      })),
-    ]
-  }, [displayData, filterAggregation.siteTypeCounts, t])
-
-  const refreshFilterOptions = useMemo(() => {
-    return [
-      {
-        value: "all",
-        label: t("filter.refresh.all"),
-        count: Array.from(filterAggregation.refreshCounts.values()).reduce(
-          (sum, count) => sum + count,
-          0,
-        ),
-      },
-      ...ACCOUNT_REFRESH_FILTER_OPTION_ORDER.map((refreshStatus) => ({
-        value: refreshStatus,
-        label:
-          refreshStatus === "never-synced"
-            ? t("account:filter.refresh.neverSynced")
-            : getHealthStatusDisplay(refreshStatus, t).text,
-        count: filterAggregation.refreshCounts.get(refreshStatus) ?? 0,
-      })),
-    ]
-  }, [filterAggregation.refreshCounts, t])
-
-  const checkInFilterOptions = useMemo(() => {
-    const getCheckInFilterLabel = (
-      checkInStatus: AccountCheckInFilterValue,
-    ) => {
-      switch (checkInStatus) {
-        case "checked-in":
-          return t("filter.checkIn.checked-in")
-        case "not-checked-in":
-          return t("filter.checkIn.not-checked-in")
-        case "outdated":
-          return t("filter.checkIn.outdated")
-        case "status-unavailable":
-          return t("filter.checkIn.status-unavailable")
-        case "unsupported":
-        default:
-          return t("filter.checkIn.unsupported")
-      }
-    }
-
-    return [
-      {
-        value: "all",
-        label: t("filter.checkIn.all"),
-        count: Array.from(filterAggregation.checkInCounts.values()).reduce(
-          (sum, count) => sum + count,
-          0,
-        ),
-      },
-      ...ACCOUNT_CHECK_IN_FILTER_OPTION_ORDER.map((checkInStatus) => ({
-        value: checkInStatus,
-        label: getCheckInFilterLabel(checkInStatus),
-        count: filterAggregation.checkInCounts.get(checkInStatus) ?? 0,
-      })),
-    ]
-  }, [filterAggregation.checkInCounts, t])
-
-  const disabledFilterOptions = useMemo(() => {
-    return [
-      {
-        value: "all",
-        label: t("filter.disabled.all"),
-        count: filterAggregation.disabledCounts.total,
-      },
-      {
-        value: "enabled",
-        label: t("common:status.enabled"),
-        count: filterAggregation.disabledCounts.enabled,
-      },
-      {
-        value: "disabled",
-        label: t("common:status.disabled"),
-        count: filterAggregation.disabledCounts.disabled,
-      },
-    ]
-  }, [filterAggregation.disabledCounts, t])
-
-  const filteredSites = useMemo(
-    () => displayedResults.map((item) => item.account),
-    [displayedResults],
-  )
-  const {
-    selectedAccountIds,
-    selectedIdSet,
-    selectedAccounts,
-    visibleAccountIdSet,
-    hiddenSelectedCount,
-    bulkDeletePreviewAccounts,
-    isBulkBusy,
-    isBulkDeleting,
-    isBulkDisabling,
-    isBulkCopyingInviteLinks,
-    manualInviteLinkPayload,
-    isBulkDeleteConfirmOpen,
-    setManualInviteLinkPayload,
-    setIsBulkDeleteConfirmOpen,
-    handleBulkModeEnter,
-    handleBulkModeExit,
-    handleToggleAccountSelection,
-    handleSelectVisibleAccounts,
-    handleClearVisibleSelection,
-    handleClearAllSelection,
-    handleBulkDisable,
-    handleBulkCopyInviteLinks,
-    handleBulkCopySiteUrls,
-    handleBulkDelete,
-  } = useAccountListBulkActions({
-    displayData,
-    filteredSites,
-    groupedDisplayItems,
-    setIsBulkMode,
-    onEnterBulkMode: resetReorderMode,
-  })
-
-  const filteredBalance = useMemo(
-    () => calculateTotalBalanceForSites(filteredSites),
-    [filteredSites],
-  )
-
-  const filteredConsumption = useMemo(
-    () => calculateTotalConsumption(filteredSites),
-    [filteredSites],
-  )
-  const filteredIncome = useMemo(
-    () => calculateTotalIncomeForSites(filteredSites),
-    [filteredSites],
-  )
-
-  const hasAccounts = displayData.length > 0
-  const showFilteredSummary =
-    inSearchMode ||
-    selectedTagIds.length > 0 ||
-    checkInFilter !== null ||
-    siteTypeFilter !== null ||
-    refreshStatusFilter !== null ||
-    disabledFilter !== null
-  const showGroupReorderHint =
-    isReorderMode &&
-    new Set(
-      filteredSites.map((account) =>
-        getAccountSortGroup(account, pinnedAccountIdSet),
-      ),
-    ).size > 1
-  const handleLabel = t("account:list.dragHandle")
-  const sortedIds = useMemo(
-    () => groupedDisplayItems.map((item) => item.result.account.id),
-    [groupedDisplayItems],
-  )
-
-  const accountListAnalyticsBaseContext = {
-    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
-    surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
-    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-  }
-
-  const handleEmptyStateAddAccountClick = () => {
-    void trackProductAnalyticsActionStarted({
-      ...accountListAnalyticsBaseContext,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateAccountDialog,
-    })
-    const addAccount = onAddAccount ?? handleAddAccountClick
-    addAccount()
-  }
-
-  const activeStatusFilterCount = [
-    disabledFilter,
-    siteTypeFilter,
-    refreshStatusFilter,
-    checkInFilter,
-  ].filter(Boolean).length
-
-  if (isInitialLoad) {
+  if (model.status.isInitialLoad) {
     return <AccountListInitialLoadingState />
   }
 
-  if (!hasAccounts) {
+  if (!model.status.hasAccounts) {
     return (
       <Card
         aria-label={t("account:emptyState")}
@@ -449,7 +92,7 @@ export default function AccountList({
               className="w-full shrink-0 sm:w-auto"
               data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton}
               leftIcon={<Plus className="h-4 w-4" />}
-              onClick={handleEmptyStateAddAccountClick}
+              onClick={model.handleEmptyStateAddAccountClick}
               size="sm"
             >
               {t("account:addFirstAccount")}
@@ -463,19 +106,22 @@ export default function AccountList({
 
   const renderAccountListItem = (item: AccountListDisplayItem) => {
     const result = item.result
-    const selectionControl = isBulkMode ? (
+    const selectionControl = model.bulk.isBulkMode ? (
       <Checkbox
         data-testid={getAccountManagementSelectionCheckboxTestId(
           result.account.id,
         )}
-        checked={selectedIdSet.has(result.account.id)}
+        checked={model.bulk.selectedIdSet.has(result.account.id)}
         onCheckedChange={(checked) =>
-          handleToggleAccountSelection(result.account.id, Boolean(checked))
+          model.bulk.handleToggleAccountSelection(
+            result.account.id,
+            Boolean(checked),
+          )
         }
         aria-label={t("account:bulk.selectAccount", {
           accountName: result.account.name,
         })}
-        disabled={isBulkBusy}
+        disabled={model.bulk.isBulkBusy}
       />
     ) : undefined
     const rowClassName = cn(
@@ -488,31 +134,35 @@ export default function AccountList({
         "bg-surface-subtle hover:bg-muted/80 dark:bg-secondary/45 dark:hover:bg-secondary/55",
       item.group === "disabled" &&
         "bg-surface-subtle/50 opacity-40 hover:opacity-80 focus-within:opacity-80 dark:bg-overlay/10",
-      isBulkMode &&
-        selectedIdSet.has(result.account.id) &&
+      model.bulk.isBulkMode &&
+        model.bulk.selectedIdSet.has(result.account.id) &&
         "bg-primary-soft opacity-100 hover:bg-primary-soft-hover focus-within:bg-primary-soft-hover",
-      detectedAccount?.id === result.account.id &&
+      model.display.detectedAccount?.id === result.account.id &&
         "border-l-4 border-l-primary bg-primary-soft",
     )
     const rowProps = {
       site: result.account,
-      showCreatedAt: sortField === DATA_TYPE_CREATED_AT,
-      showContextBoost: !inSearchMode && !isReorderMode,
+      showCreatedAt: model.display.sortField === DATA_TYPE_CREATED_AT,
+      showContextBoost:
+        !model.filters.inSearchMode && !model.reordering.isReorderMode,
       className: rowClassName,
       highlights: result.highlights,
-      onDeleteWithDialog: handleDeleteWithDialog,
-      onCopyKey: handleCopyKeyWithDialog,
-      handleLabel,
+      onDeleteWithDialog: model.dialogs.handleDeleteWithDialog,
+      onCopyKey: model.dialogs.handleCopyKeyWithDialog,
+      handleLabel: model.display.handleLabel,
       selectionControl,
     }
-    if (shouldRenderSortableList && dndRuntime !== null) {
-      const { SortableAccountListItem } = dndRuntime
+    if (
+      model.reordering.shouldRenderSortableList &&
+      model.reordering.dndRuntime !== null
+    ) {
+      const { SortableAccountListItem } = model.reordering.dndRuntime
 
       return (
         <SortableAccountListItem
           key={result.account.id}
           {...rowProps}
-          isDragDisabled={dragDisabled}
+          isDragDisabled={model.reordering.dragDisabled}
           showHandle
         />
       )
@@ -530,10 +180,10 @@ export default function AccountList({
 
   const renderUnvirtualizedList = () => (
     <CardList dividers={false} className="space-y-0">
-      {groupedDisplayItems.map(renderAccountListItem)}
+      {model.display.groupedDisplayItems.map(renderAccountListItem)}
     </CardList>
   )
-  const DndWrapper = dndRuntime?.AccountListDndWrapper
+  const DndWrapper = model.reordering.dndRuntime?.AccountListDndWrapper
 
   return (
     <Card
@@ -548,10 +198,10 @@ export default function AccountList({
             <div className="gap-y-density-2 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 [@container(min-width:40rem)]:grid-cols-1 [@container(min-width:68rem)]:grid-cols-[minmax(15rem,1fr)_minmax(0,2fr)]">
               <div className="min-w-0">
                 <AccountSearchInput
-                  disabled={isReorderMode}
-                  value={query}
-                  onChange={setQuery}
-                  onClear={clearSearch}
+                  disabled={model.reordering.isReorderMode}
+                  value={model.filters.query}
+                  onChange={model.filters.setQuery}
+                  onClear={model.filters.clearSearch}
                 />
               </div>
 
@@ -560,100 +210,95 @@ export default function AccountList({
                 variant="outline"
                 size="sm"
                 className="gap-y-density-1-5 min-h-(--density-control-lg) shrink-0 gap-x-1.5 px-2.5 text-xs shadow-none [@container(min-width:40rem)]:hidden"
-                aria-expanded={filtersOpen}
-                aria-controls={filterPanelId}
-                onClick={() => setFiltersOpen((previous) => !previous)}
+                aria-expanded={model.filters.filtersOpen}
+                aria-controls={model.filters.filterPanelId}
+                onClick={model.filters.togglePanel}
               >
                 <SlidersHorizontal aria-hidden="true" className="size-3.5" />
                 {t("account:filter.toggle")}
-                {activeStatusFilterCount > 0 && (
+                {model.filters.activeStatusFilterCount > 0 && (
                   <span className="bg-primary-soft text-primary-soft-foreground rounded px-1">
-                    {activeStatusFilterCount}
+                    {model.filters.activeStatusFilterCount}
                   </span>
                 )}
                 <ChevronDown
                   aria-hidden="true"
-                  className={cn("size-3", filtersOpen && "rotate-180")}
+                  className={cn(
+                    "size-3",
+                    model.filters.filtersOpen && "rotate-180",
+                  )}
                 />
               </Button>
               <div
-                id={filterPanelId}
+                id={model.filters.filterPanelId}
                 className={cn(
                   "col-span-full min-w-0 [@container(min-width:40rem)]:block [@container(min-width:68rem)]:col-span-1",
-                  !filtersOpen && "hidden",
+                  !model.filters.filtersOpen && "hidden",
                 )}
               >
                 <AccountFilterBar
-                  disabledValue={disabledFilter ?? "all"}
-                  siteTypeValue={siteTypeFilter ?? "all"}
-                  refreshValue={refreshStatusFilter ?? "all"}
-                  checkInValue={checkInFilter ?? "all"}
-                  disabledOptions={disabledFilterOptions}
-                  siteTypeOptions={siteTypeFilterOptions}
-                  refreshOptions={refreshFilterOptions}
-                  checkInOptions={checkInFilterOptions}
-                  onDisabledChange={(value) =>
-                    setDisabledFilter(
-                      value === "enabled" || value === "disabled"
-                        ? value
-                        : null,
-                    )
+                  disabledValue={
+                    model.filters.disabledFilter ??
+                    ACCOUNT_LIST_ALL_FILTER_VALUE
                   }
-                  onSiteTypeChange={(value) =>
-                    setSiteTypeFilter(value === "all" ? null : value)
+                  siteTypeValue={
+                    model.filters.siteTypeFilter ??
+                    ACCOUNT_LIST_ALL_FILTER_VALUE
                   }
-                  onRefreshChange={(value) =>
-                    setRefreshStatusFilter(
-                      value === "all"
-                        ? null
-                        : isAccountRefreshFilterValue(value)
-                          ? value
-                          : null,
-                    )
+                  refreshValue={
+                    model.filters.refreshStatusFilter ??
+                    ACCOUNT_LIST_ALL_FILTER_VALUE
                   }
-                  onCheckInChange={(value) =>
-                    setCheckInFilter(
-                      value === "all"
-                        ? null
-                        : (value as AccountCheckInFilterValue),
-                    )
+                  checkInValue={
+                    model.filters.checkInFilter ?? ACCOUNT_LIST_ALL_FILTER_VALUE
                   }
+                  disabledOptions={model.filters.disabledFilterOptions}
+                  siteTypeOptions={model.filters.siteTypeFilterOptions}
+                  refreshOptions={model.filters.refreshFilterOptions}
+                  checkInOptions={model.filters.checkInFilterOptions}
+                  onDisabledChange={model.filters.onDisabledChange}
+                  onSiteTypeChange={model.filters.onSiteTypeChange}
+                  onRefreshChange={model.filters.onRefreshChange}
+                  onCheckInChange={model.filters.onCheckInChange}
                 />
               </div>
             </div>
-            {tagFilterOptions.length > 0 && (
+            {model.filters.tagFilterOptions.length > 0 && (
               <CompactTagFilter
-                options={tagFilterOptions}
-                value={selectedTagIds}
-                onChange={setSelectedTagIds}
+                options={model.filters.tagFilterOptions}
+                value={model.filters.selectedTagIds}
+                onChange={model.filters.setSelectedTagIds}
                 allLabel={t("account:filter.tagsAllLabel")}
               />
             )}
-            {showFilteredSummary && (
+            {model.totals.showFilteredSummary && (
               <div className="text-muted-foreground dark:text-secondary-foreground gap-y-density-3 flex flex-wrap items-center gap-x-3 text-xs">
                 <span>
                   {t("account:filter.summary", {
-                    count: filteredSites.length,
+                    count: model.display.filteredSiteCount,
                   })}
                 </span>
                 <div className="gap-y-density-3 flex flex-wrap gap-x-3">
                   <span>
                     {t("account:filteredTotals.balance")}: USD{" "}
-                    {formatMoneyFixed(filteredBalance.USD)} / CNY{" "}
-                    {formatMoneyFixed(filteredBalance.CNY)}
+                    {formatMoneyFixed(model.totals.filteredBalance.USD)} / CNY{" "}
+                    {formatMoneyFixed(model.totals.filteredBalance.CNY)}
                   </span>
-                  {showTodayCashflow && (
+                  {model.display.showTodayCashflow && (
                     <>
                       <span>
                         {t("account:filteredTotals.consumption")}:{" "}
                         <FilteredTodayMetric
-                          total={filteredConsumption}
+                          total={model.totals.filteredConsumption}
                           t={t}
                         />
                       </span>
                       <span>
                         {t("account:filteredTotals.income")}:{" "}
-                        <FilteredTodayMetric total={filteredIncome} t={t} />
+                        <FilteredTodayMetric
+                          total={model.totals.filteredIncome}
+                          t={t}
+                        />
                       </span>
                     </>
                   )}
@@ -664,45 +309,45 @@ export default function AccountList({
         </div>
 
         <AccountListHeader
-          displayedResultCount={displayedResults.length}
-          inSearchMode={inSearchMode}
-          isBulkBusy={isBulkBusy}
-          isBulkMode={isBulkMode}
-          isReorderLoading={
-            isReorderMode && (dndLoadState === "loading" || isReorderSaving)
-          }
-          isReorderMode={isReorderMode}
-          onBulkModeEnter={handleBulkModeEnter}
-          onClearSort={clearSortConfig}
-          onReorderModeEnter={handleReorderModeEnter}
-          onReorderModeExit={handleReorderModeExit}
-          onSort={handleListSort}
-          reorderDisabledReason={resolvedReorderDisabledReason}
-          showTodayCashflow={showTodayCashflow}
-          sortField={sortField}
-          sortOrder={sortOrder}
+          displayedResultCount={model.display.displayedResultCount}
+          inSearchMode={model.filters.inSearchMode}
+          isBulkBusy={model.bulk.isBulkBusy}
+          isBulkMode={model.bulk.isBulkMode}
+          isReorderLoading={model.reordering.isReorderLoading}
+          isReorderMode={model.reordering.isReorderMode}
+          onBulkModeEnter={model.bulk.handleBulkModeEnter}
+          onClearSort={model.reordering.clearSortConfig}
+          onReorderModeEnter={model.reordering.handleReorderModeEnter}
+          onReorderModeExit={model.reordering.handleReorderModeExit}
+          onSort={model.reordering.handleListSort}
+          reorderDisabledReason={model.reordering.resolvedReorderDisabledReason}
+          showTodayCashflow={model.display.showTodayCashflow}
+          sortField={model.display.sortField}
+          sortOrder={model.display.sortOrder}
         />
 
-        {isBulkMode && (
+        {model.bulk.isBulkMode && (
           <AccountBulkToolbar
-            selectedAccounts={selectedAccounts}
-            visibleAccountIds={visibleAccountIdSet}
-            isBusy={isBulkBusy}
-            isDisabling={isBulkDisabling}
-            isCopying={isBulkCopyingInviteLinks}
-            onSelectVisible={handleSelectVisibleAccounts}
-            onClearVisible={handleClearVisibleSelection}
-            onClearAll={handleClearAllSelection}
-            onDeselect={(id) => handleToggleAccountSelection(id, false)}
-            onDisable={() => void handleBulkDisable()}
-            onCopy={() => void handleBulkCopyInviteLinks()}
-            onCopySiteUrls={() => void handleBulkCopySiteUrls()}
-            onDelete={() => setIsBulkDeleteConfirmOpen(true)}
-            onExit={handleBulkModeExit}
+            selectedAccounts={model.bulk.selectedAccounts}
+            visibleAccountIds={model.bulk.visibleAccountIdSet}
+            isBusy={model.bulk.isBulkBusy}
+            isDisabling={model.bulk.isBulkDisabling}
+            isCopying={model.bulk.isBulkCopyingInviteLinks}
+            onSelectVisible={model.bulk.handleSelectVisibleAccounts}
+            onClearVisible={model.bulk.handleClearVisibleSelection}
+            onClearAll={model.bulk.handleClearAllSelection}
+            onDeselect={(id) =>
+              model.bulk.handleToggleAccountSelection(id, false)
+            }
+            onDisable={() => void model.bulk.handleBulkDisable()}
+            onCopy={() => void model.bulk.handleBulkCopyInviteLinks()}
+            onCopySiteUrls={() => void model.bulk.handleBulkCopySiteUrls()}
+            onDelete={() => model.bulk.setIsBulkDeleteConfirmOpen(true)}
+            onExit={model.bulk.handleBulkModeExit}
           />
         )}
 
-        {showGroupReorderHint ? (
+        {model.reordering.showGroupReorderHint ? (
           <div
             className="border-primary-soft-border bg-primary-soft text-primary-soft-foreground gap-y-density-2 py-density-1-5 flex items-center gap-x-2 border-b px-3 text-xs leading-5"
             role="note"
@@ -716,24 +361,30 @@ export default function AccountList({
         ) : null}
 
         {/* Account List or No Results */}
-        {showFilteredSummary && displayedResults.length === 0 ? (
+        {model.totals.showFilteredSummary &&
+        model.display.displayedResultCount === 0 ? (
           <EmptyState
             icon={<Inbox className="h-12 w-12" />}
             title={t("account:search.noResults")}
           />
-        ) : shouldRenderSortableList && DndWrapper ? (
+        ) : model.reordering.shouldRenderSortableList && DndWrapper ? (
           <DndWrapper
-            sortedIds={sortedIds}
-            onDragEnd={(event) => onDragEnd(event, groupedDisplayItems)}
+            sortedIds={model.display.sortedIds}
+            onDragEnd={(event) =>
+              model.reordering.onDragEnd(
+                event,
+                model.display.groupedDisplayItems,
+              )
+            }
           >
             {renderUnvirtualizedList()}
           </DndWrapper>
-        ) : isReorderMode ? (
+        ) : model.reordering.isReorderMode ? (
           renderUnvirtualizedList()
         ) : (
           <VirtualizedAccountList
             getItemKey={(item) => item.result.account.id}
-            items={groupedDisplayItems}
+            items={model.display.groupedDisplayItems}
             renderItem={renderAccountListItem}
             scrollParent={virtualScrollParent}
           />
@@ -742,48 +393,48 @@ export default function AccountList({
 
       {/* Dialogs */}
       <DelAccountDialog
-        isOpen={deleteDialogAccount !== null}
-        onClose={() => setDeleteDialogAccount(null)}
-        account={deleteDialogAccount}
+        isOpen={model.dialogs.deleteDialogAccount !== null}
+        onClose={() => model.dialogs.setDeleteDialogAccount(null)}
+        account={model.dialogs.deleteDialogAccount}
         onDeleted={() => {
-          handleDeleteAccount(deleteDialogAccount!)
-          setDeleteDialogAccount(null)
+          model.dialogs.handleDeleteAccount(model.dialogs.deleteDialogAccount!)
+          model.dialogs.setDeleteDialogAccount(null)
         }}
       />
 
       <CopyKeyDialog
-        isOpen={copyKeyDialogAccount !== null}
-        onClose={() => setCopyKeyDialogAccount(null)}
-        account={copyKeyDialogAccount}
+        isOpen={model.dialogs.copyKeyDialogAccount !== null}
+        onClose={() => model.dialogs.setCopyKeyDialogAccount(null)}
+        account={model.dialogs.copyKeyDialogAccount}
       />
 
       <InviteLinkManualCopyDialog
-        payload={manualInviteLinkPayload}
-        onClose={() => setManualInviteLinkPayload(null)}
+        payload={model.bulk.manualInviteLinkPayload}
+        onClose={() => model.bulk.setManualInviteLinkPayload(null)}
       />
 
       <ConfirmDialog
         intent="destructive"
-        isOpen={isBulkDeleteConfirmOpen}
+        isOpen={model.bulk.isBulkDeleteConfirmOpen}
         onClose={() => {
-          if (!isBulkDeleting) {
-            setIsBulkDeleteConfirmOpen(false)
+          if (!model.bulk.isBulkDeleting) {
+            model.bulk.setIsBulkDeleteConfirmOpen(false)
           }
         }}
         title={t("account:bulk.deleteConfirmTitle")}
         warningTitle={t("account:bulk.deleteConfirmWarningTitle")}
         description={t("account:bulk.deleteConfirmDescription", {
-          count: selectedAccountIds.length,
+          count: model.bulk.selectedAccountIds.length,
         })}
         cancelLabel={t("common:actions.cancel")}
         confirmLabel={t("account:bulk.deleteConfirmAction")}
         workingLabel={t("account:bulk.deleting", {
-          count: selectedAccountIds.length,
+          count: model.bulk.selectedAccountIds.length,
         })}
         onConfirm={() => {
-          void handleBulkDelete()
+          void model.bulk.handleBulkDelete()
         }}
-        isWorking={isBulkDeleting}
+        isWorking={model.bulk.isBulkDeleting}
         size="md"
         details={
           <div className="space-y-density-3 text-sm">
@@ -791,23 +442,24 @@ export default function AccountList({
               {t("account:bulk.deletePreviewTitle")}
             </div>
             <div className="text-muted-foreground dark:text-secondary-foreground space-y-density-1">
-              {bulkDeletePreviewAccounts.map((account) => (
+              {model.bulk.bulkDeletePreviewAccounts.map((account) => (
                 <div key={account.id}>{account.name}</div>
               ))}
             </div>
-            {selectedAccountIds.length > bulkDeletePreviewAccounts.length ? (
+            {model.bulk.selectedAccountIds.length >
+            model.bulk.bulkDeletePreviewAccounts.length ? (
               <div className="text-muted-foreground text-xs">
                 {t("account:bulk.deletePreviewRemainder", {
                   count:
-                    selectedAccountIds.length -
-                    bulkDeletePreviewAccounts.length,
+                    model.bulk.selectedAccountIds.length -
+                    model.bulk.bulkDeletePreviewAccounts.length,
                 })}
               </div>
             ) : null}
-            {hiddenSelectedCount > 0 ? (
+            {model.bulk.hiddenSelectedCount > 0 ? (
               <div className="text-warning-text text-xs">
                 {t("account:bulk.deleteHiddenSelectedHint", {
-                  count: hiddenSelectedCount,
+                  count: model.bulk.hiddenSelectedCount,
                 })}
               </div>
             ) : null}

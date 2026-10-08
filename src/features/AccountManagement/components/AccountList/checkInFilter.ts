@@ -13,20 +13,23 @@ import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 
 import { isCheckInStatusDetectedToday } from "./checkInStatus"
 
+export const ACCOUNT_CHECK_IN_FILTER_VALUES = {
+  CheckedIn: "checked-in",
+  NotCheckedIn: "not-checked-in",
+  Outdated: "outdated",
+  StatusUnavailable: "status-unavailable",
+  Unsupported: "unsupported",
+} as const
 export type AccountCheckInFilterValue =
-  | "checked-in"
-  | "not-checked-in"
-  | "outdated"
-  | "status-unavailable"
-  | "unsupported"
+  (typeof ACCOUNT_CHECK_IN_FILTER_VALUES)[keyof typeof ACCOUNT_CHECK_IN_FILTER_VALUES]
 
 export const ACCOUNT_CHECK_IN_FILTER_OPTION_ORDER: AccountCheckInFilterValue[] =
   [
-    "checked-in",
-    "not-checked-in",
-    "outdated",
-    "status-unavailable",
-    "unsupported",
+    ACCOUNT_CHECK_IN_FILTER_VALUES.CheckedIn,
+    ACCOUNT_CHECK_IN_FILTER_VALUES.NotCheckedIn,
+    ACCOUNT_CHECK_IN_FILTER_VALUES.Outdated,
+    ACCOUNT_CHECK_IN_FILTER_VALUES.StatusUnavailable,
+    ACCOUNT_CHECK_IN_FILTER_VALUES.Unsupported,
   ]
 
 /** Returns whether the selected method status was observed for the current day. */
@@ -87,7 +90,7 @@ export function getAccountCheckInFilterValue(
     account.checkIn.customCheckIn?.isCheckedInToday === true
 
   if (siteStatusOutdated) {
-    return "outdated"
+    return ACCOUNT_CHECK_IN_FILTER_VALUES.Outdated
   }
 
   if (!siteStatusKnown) {
@@ -98,16 +101,18 @@ export function getAccountCheckInFilterValue(
     }).selectionState
 
     if (selectionState.status === CHECK_IN_SELECTION_STATUSES.Selected) {
-      return "status-unavailable"
+      return ACCOUNT_CHECK_IN_FILTER_VALUES.StatusUnavailable
     }
 
     if (!hasCustomCheckIn) {
-      return "unsupported"
+      return ACCOUNT_CHECK_IN_FILTER_VALUES.Unsupported
     }
   }
 
   const siteFlowChecked = !siteStatusKnown || siteCheckedInToday === true
   const customFlowChecked = !hasCustomCheckIn || customCheckedIn
 
-  return siteFlowChecked && customFlowChecked ? "checked-in" : "not-checked-in"
+  return siteFlowChecked && customFlowChecked
+    ? ACCOUNT_CHECK_IN_FILTER_VALUES.CheckedIn
+    : ACCOUNT_CHECK_IN_FILTER_VALUES.NotCheckedIn
 }

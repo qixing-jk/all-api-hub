@@ -13,11 +13,7 @@ import {
   type PreviewLoadOrigin,
 } from "~/constants/previewLoadOrigin"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
-import {
-  NEW_API_MANAGED_VERIFICATION_CLOSE_MODES,
-  useNewApiManagedVerification,
-} from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
+import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import toast from "~/lib/notify"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
@@ -82,6 +78,7 @@ import {
   reconcileManagedSiteTokenBatchExportPreview,
   shouldConfirmManagedSiteTokenBatchExport,
 } from "./managedSiteTokenBatchExportSession"
+import { verifyManagedSiteTokenBatchTargets } from "./managedSiteTokenBatchVerification"
 
 export interface ManagedSiteTokenBatchExportDialogProps {
   isOpen: boolean
@@ -570,104 +567,27 @@ export function useManagedSiteTokenBatchExportDialog({
       verificationTargets.length > 0
         ? verificationTargets
         : [{ item: requestedItem, candidate: requestedCandidate }]
-    const failureMessages: string[] = []
-
-    setExecutionError(null)
-
-    const verifyTargetsFromIndex = async (startIndex: number) => {
-      for (let index = startIndex; index < targets.length; index += 1) {
-        if (!isActive()) return
-
-        const target = targets[index]
-        if (!target) return
-        const { item, candidate } = target
-        const resourceRef = candidate.ref
-        let resolvedChannelKey = ""
-        let shouldContinueAfterDeferredLoad = false
-        let loadCompleted = false
-
-        setVerifyingItemId(item.id)
-
-        const handleLoaded = async () => {
-          if (!isActive()) return
-
-          loadCompleted = true
-          if (resolvedChannelKey) {
-            mergeResolvedChannelKeyForItem(
-              item.id,
-              resourceRef,
-              resolvedChannelKey,
-            )
-            applyResolvedChannelKeyForItem(item, candidate, resolvedChannelKey)
-          }
-          setExecutionError(null)
-          if (shouldContinueAfterDeferredLoad && isActive()) {
-            await verifyTargetsFromIndex(index + 1)
-          }
-        }
-
-        try {
-          const loadedImmediately = await loadNewApiChannelKeyWithVerification({
-            resourceRef,
-            command: PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
-            label: candidate.name,
-            requestKind: "channel",
-            config: {
-              baseUrl: newApiBaseUrl,
-              userId: newApiUserId,
-              username: newApiUsername,
-              password: newApiPassword,
-              totpSecret: newApiTotpSecret,
-            },
-            setKey: (key) => {
-              if (!isActive()) return
-              resolvedChannelKey = key
-            },
-            onLoaded: handleLoaded,
-            openVerification: (request) => {
-              if (!isActive()) return
-              verification.openNewApiManagedVerification({
-                ...request,
-                closeMode:
-                  NEW_API_MANAGED_VERIFICATION_CLOSE_MODES.CLOSE_AFTER_VERIFICATION,
-              })
-            },
-          })
-
-          if (!isActive()) return
-          if (!loadedImmediately) {
-            if (!loadCompleted) {
-              shouldContinueAfterDeferredLoad = true
-              setVerifyingItemId(null)
-              return
-            }
-          }
-        } catch (error) {
-          if (!isActive()) return
-          failureMessages.push(getErrorMessage(error))
-        }
-      }
-
-      if (!isActive()) return
-      setVerifyingItemId(null)
-      if (failureMessages.length > 0) {
-        setExecutionError({
-          kind: "verification",
-          message: failureMessages.join("; "),
-        })
-      }
-    }
-
-    try {
-      await verifyTargetsFromIndex(0)
-    } catch (error) {
-      if (!isActive()) return
-      setVerifyingItemId(null)
-      setExecutionError({
-        kind: "verification",
-        message: getErrorMessage(error),
-      })
-    }
+    await verifyManagedSiteTokenBatchTargets({
+      targets,
+      config: {
+        baseUrl: newApiBaseUrl,
+        userId: newApiUserId,
+        username: newApiUsername,
+        password: newApiPassword,
+        totpSecret: newApiTotpSecret,
+      },
+      isActive,
+      openVerification: verification.openNewApiManagedVerification,
+      onProgress: setVerifyingItemId,
+      onResolved: ({ item, candidate }, key) => {
+        mergeResolvedChannelKeyForItem(item.id, candidate.ref, key)
+        applyResolvedChannelKeyForItem(item, candidate, key)
+      },
+      onFailure: (message) =>
+        setExecutionError(
+          message === null ? null : { kind: "verification", message },
+        ),
+    })
   }
 
   const handleToggleAll = () => {

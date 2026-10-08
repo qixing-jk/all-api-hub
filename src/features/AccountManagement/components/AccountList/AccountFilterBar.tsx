@@ -11,6 +11,8 @@ import {
 } from "~/components/ui"
 import { cn } from "~/lib/utils"
 
+import { ACCOUNT_LIST_ALL_FILTER_VALUE } from "./accountListFilters"
+
 export interface AccountFilterSelectOption {
   value: string
   label: string
@@ -71,7 +73,7 @@ export default function AccountFilterBar({
           size="sm"
           className={cn(
             "border-border hover:bg-surface-subtle gap-y-density-1-5 min-h-(--density-control-lg) w-full min-w-0 gap-x-1.5 rounded-md bg-transparent px-2 shadow-none data-[size=sm]:min-h-(--density-control-lg) [&_[data-slot='select-value']]:min-w-0 [&_[data-slot='select-value']]:flex-1 [&_[data-slot='select-value']]:overflow-hidden [&_[data-slot='select-value']>div]:min-w-0 [@container(min-width:40rem)]:data-[size=sm]:min-h-(--density-control)",
-            value !== "all" &&
+            value !== ACCOUNT_LIST_ALL_FILTER_VALUE &&
               "border-primary-soft-border bg-primary-soft text-primary-soft-foreground",
           )}
           title={selectedLabel}
