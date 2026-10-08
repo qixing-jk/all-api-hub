@@ -92,6 +92,12 @@ regardless of whether the key comes from an API token resource or an account
 service credential.
 _Avoid_: API token, token row
 
+**Account Service Credential**:
+An upstream-owned singleton inference credential for a saved account. Obtaining
+or rotating it is distinct from managing that account's native API token
+resources; it may provide an Account Runtime Key without native token CRUD.
+_Avoid_: API Credential Profile, API token resource
+
 **API Credential Profile**:
 A saved inference credential and its connection, verification and usage facts,
 which can be used independently of a saved account. An association with an
@@ -116,6 +122,13 @@ The follow-up to an already saved account that may obtain an Account Runtime Key
 wait for required key input or one-time-secret acknowledgement, and continue to
 managed-site configuration.
 _Avoid_: account save, Sub2API group selection
+
+**Account Detection Attempt**:
+An admitted discovery or onboarding attempt for an Account Draft. Its results may
+become obsolete when the draft changes, while its pending preparation, discovery,
+and cleanup still belong to that attempt. Accepting initial onboarding
+normalization does not accept later user changes.
+_Avoid_: detected account, saved account, detection result
 
 **Account Draft**:
 Editable account facts and explicit user choices before persistence. Credentials

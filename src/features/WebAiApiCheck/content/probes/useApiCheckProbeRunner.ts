@@ -1,6 +1,16 @@
 import type { TFunction } from "i18next"
 import { useCallback, useMemo, useRef, useState } from "react"
 
+import type { ApiCheckOpenModalDetail } from "~/features/WebAiApiCheck/content/events"
+import {
+  buildApiCheckAnalyticsInsights,
+  contentApiCheckAnalyticsScope,
+  getProbeAnalyticsResult,
+} from "~/features/WebAiApiCheck/content/modal/apiCheckModalAnalytics"
+import type {
+  ApiCheckValidationError,
+  ProbeItemState,
+} from "~/features/WebAiApiCheck/content/modal/apiCheckModalTypes"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,
@@ -28,17 +38,6 @@ import {
   WebAiApiCheckMessageTypes,
 } from "~/services/verification/webAiApiCheck/messaging"
 import { safeRandomUUID } from "~/utils/core/identifier"
-
-import type { ApiCheckOpenModalDetail } from "../events"
-import {
-  buildApiCheckAnalyticsInsights,
-  contentApiCheckAnalyticsScope,
-  getProbeAnalyticsResult,
-} from "./apiCheckModalAnalytics"
-import type {
-  ApiCheckValidationError,
-  ProbeItemState,
-} from "./apiCheckModalTypes"
 
 type ApiCheckProbeResultWithAnalyticsCategory = ApiVerificationProbeResult & {
   analyticsErrorCategory?: ProductAnalyticsErrorCategory

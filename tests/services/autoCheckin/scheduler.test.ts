@@ -35,6 +35,7 @@ import {
   inspectSelectedCheckInCompatibility,
 } from "~/services/checkin/autoCheckin/methods"
 import { NON_REPEAT_SAFE_CHECKIN_METHOD_IDS } from "~/services/checkin/autoCheckin/providers/registry"
+import { autoCheckinAlarmSchedule } from "~/services/checkin/autoCheckin/scheduling/alarmSchedule"
 import {
   calculateDeterministicCatchUpTrigger,
   calculateDeterministicTriggerForDay,
@@ -1547,7 +1548,7 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
 
     storedStatus = freshStatus
 
-    await (autoCheckinScheduler as any).syncDailyScheduleStatus(
+    await (autoCheckinAlarmSchedule as any).syncDailyScheduleStatus(
       scheduledTime,
       targetDay,
     )
@@ -1571,7 +1572,7 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
       nextScheduledAt: scheduledTime.toISOString(),
     }
 
-    await (autoCheckinScheduler as any).syncDailyScheduleStatus(
+    await (autoCheckinAlarmSchedule as any).syncDailyScheduleStatus(
       scheduledTime,
       targetDay,
     )
@@ -1587,7 +1588,7 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
       nextScheduledAt: "2024-01-03T08:30:00.000Z",
     }
 
-    await (autoCheckinScheduler as any).scheduleDailyAlarm({
+    await (autoCheckinAlarmSchedule as any).scheduleDailyAlarm({
       ...(DEFAULT_PREFERENCES as any).autoCheckin,
       windowStart: "invalid",
       windowEnd: "invalid",
@@ -3674,7 +3675,7 @@ describe("autoCheckinScheduler retry scheduling", () => {
     storedStatus = null
 
     await expect(
-      (autoCheckinScheduler as any).clearRetryAlarmAndState(),
+      (autoCheckinAlarmSchedule as any).clearRetryAlarmAndState(),
     ).resolves.toBeUndefined()
 
     expect(mockedBrowserApi.clearAlarm).toHaveBeenCalledWith("autoCheckinRetry")
@@ -3685,7 +3686,7 @@ describe("autoCheckinScheduler retry scheduling", () => {
     storedStatus = null
 
     await expect(
-      (autoCheckinScheduler as any).clearDailyScheduleStatus(),
+      (autoCheckinAlarmSchedule as any).clearDailyScheduleStatus(),
     ).resolves.toBeUndefined()
 
     expect(storedStatus).toBeNull()
@@ -3705,7 +3706,7 @@ describe("autoCheckinScheduler retry scheduling", () => {
       pendingRetry: true,
     }
 
-    await (autoCheckinScheduler as any).clearRetryAlarmAndState()
+    await (autoCheckinAlarmSchedule as any).clearRetryAlarmAndState()
 
     expect(storedStatus.lastRunResult).toBe("partial")
     expect(storedStatus.perAccount).toEqual({
@@ -3725,7 +3726,7 @@ describe("autoCheckinScheduler retry scheduling", () => {
       pendingRetry: true,
     }
 
-    await (autoCheckinScheduler as any).clearRetryAlarm()
+    await (autoCheckinAlarmSchedule as any).clearRetryAlarm()
 
     expect(mockedBrowserApi.clearAlarm).toHaveBeenCalledWith("autoCheckinRetry")
     expect(storedStatus.pendingRetry).toBe(false)
@@ -3758,7 +3759,7 @@ describe("autoCheckinScheduler retry scheduling", () => {
       scheduledTime: scheduledTime.getTime(),
     }
 
-    await (autoCheckinScheduler as any).scheduleRetryAlarm(
+    await (autoCheckinAlarmSchedule as any).scheduleRetryAlarm(
       {
         ...(DEFAULT_PREFERENCES as any).autoCheckin,
         retryStrategy: {
@@ -3818,7 +3819,7 @@ describe("autoCheckinScheduler retry scheduling", () => {
   ])("does not rewrite status when $name", async ({ status, maxAttempts }) => {
     storedStatus = status
 
-    await (autoCheckinScheduler as any).syncRetryScheduleStatus({
+    await (autoCheckinAlarmSchedule as any).syncRetryScheduleStatus({
       scheduledIso: "2024-01-01T09:45:00.000Z",
       day: "2024-01-01",
       maxAttempts,
@@ -3840,7 +3841,7 @@ describe("autoCheckinScheduler retry scheduling", () => {
       pendingRetry: true,
     }
 
-    await (autoCheckinScheduler as any).scheduleRetryAlarm({
+    await (autoCheckinAlarmSchedule as any).scheduleRetryAlarm({
       ...(DEFAULT_PREFERENCES as any).autoCheckin,
       retryStrategy: {
         enabled: true,
@@ -3879,7 +3880,7 @@ describe("autoCheckinScheduler retry scheduling", () => {
       scheduledTime: new Date(2024, 0, 1, 23, 30, 0).getTime(),
     }
 
-    await (autoCheckinScheduler as any).scheduleRetryAlarm(
+    await (autoCheckinAlarmSchedule as any).scheduleRetryAlarm(
       {
         ...(DEFAULT_PREFERENCES as any).autoCheckin,
         retryStrategy: {
@@ -3924,7 +3925,7 @@ describe("autoCheckinScheduler retry scheduling", () => {
       retryAlarmTargetDay: "2024-01-01",
     } as any
 
-    await (autoCheckinScheduler as any).scheduleRetryAlarm(
+    await (autoCheckinAlarmSchedule as any).scheduleRetryAlarm(
       {
         ...(DEFAULT_PREFERENCES as any).autoCheckin,
         retryStrategy: {
@@ -3975,7 +3976,7 @@ describe("autoCheckinScheduler retry scheduling", () => {
       pendingRetry: true,
     } as any
 
-    await (autoCheckinScheduler as any).scheduleRetryAlarm({
+    await (autoCheckinAlarmSchedule as any).scheduleRetryAlarm({
       ...(DEFAULT_PREFERENCES as any).autoCheckin,
       retryStrategy: {
         enabled: true,
@@ -4381,7 +4382,7 @@ describe("autoCheckinScheduler retry scheduling", () => {
       pendingRetry: true,
     } as any
 
-    await (autoCheckinScheduler as any).scheduleRetryAlarm({
+    await (autoCheckinAlarmSchedule as any).scheduleRetryAlarm({
       ...(DEFAULT_PREFERENCES as any).autoCheckin,
       retryStrategy: {
         enabled: true,
@@ -6329,7 +6330,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       result: null,
     })
     vi.spyOn(
-      autoCheckinScheduler as any,
+      autoCheckinAlarmSchedule as any,
       "scheduleRetryAlarm",
     ).mockResolvedValueOnce(undefined)
 
@@ -6400,7 +6401,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
     } as any
 
     const scheduleRetrySpy = vi
-      .spyOn(autoCheckinScheduler as any, "scheduleRetryAlarm")
+      .spyOn(autoCheckinAlarmSchedule as any, "scheduleRetryAlarm")
       .mockResolvedValue(undefined)
 
     const result = await retryAccountForTest("disabled-1")
@@ -6485,7 +6486,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
     }
     resolveProviderForTest.mockReturnValue(provider)
     const scheduleRetrySpy = vi
-      .spyOn(autoCheckinScheduler as any, "scheduleRetryAlarm")
+      .spyOn(autoCheckinAlarmSchedule as any, "scheduleRetryAlarm")
       .mockResolvedValue(undefined)
 
     const result = await retryAccountForTest(
@@ -6586,7 +6587,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
     resolveProviderForTest.mockReturnValue(provider)
 
     vi.spyOn(
-      autoCheckinScheduler as any,
+      autoCheckinAlarmSchedule as any,
       "scheduleRetryAlarm",
     ).mockRejectedValueOnce(new Error("retry reschedule failed"))
 
@@ -6691,7 +6692,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
     }
     resolveProviderForTest.mockReturnValue(provider)
     const scheduleRetrySpy = vi
-      .spyOn(autoCheckinScheduler as any, "scheduleRetryAlarm")
+      .spyOn(autoCheckinAlarmSchedule as any, "scheduleRetryAlarm")
       .mockResolvedValue(undefined)
 
     const result = await retryAccountForTest("retry-1")
@@ -6781,7 +6782,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
     }
     resolveProviderForTest.mockReturnValue(provider)
     const scheduleRetrySpy = vi
-      .spyOn(autoCheckinScheduler as any, "scheduleRetryAlarm")
+      .spyOn(autoCheckinAlarmSchedule as any, "scheduleRetryAlarm")
       .mockResolvedValue(undefined)
 
     const result = await retryAccountForTest("retry-1")
@@ -6878,7 +6879,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
     }
     resolveProviderForTest.mockReturnValue(provider)
     const scheduleRetrySpy = vi
-      .spyOn(autoCheckinScheduler as any, "scheduleRetryAlarm")
+      .spyOn(autoCheckinAlarmSchedule as any, "scheduleRetryAlarm")
       .mockResolvedValue(undefined)
 
     const result = await retryAccountForTest("adhoc-1")
@@ -7545,7 +7546,7 @@ describe("autoCheckinScheduler daily alarm helpers", () => {
       .spyOn(autoCheckinScheduler as any, "runRetryCheckins")
       .mockRejectedValueOnce(new Error("retry exploded"))
     const scheduleRetrySpy = vi
-      .spyOn(autoCheckinScheduler as any, "scheduleRetryAlarm")
+      .spyOn(autoCheckinAlarmSchedule as any, "scheduleRetryAlarm")
       .mockResolvedValueOnce(undefined)
 
     await expect(
@@ -7624,7 +7625,7 @@ describe("autoCheckinScheduler daily alarm helpers", () => {
     })
 
     const scheduled = await (
-      autoCheckinScheduler as any
+      autoCheckinAlarmSchedule as any
     ).createDailyAlarmForToday(tomorrow.getTime())
 
     expect(mockedBrowserApi.createAlarm).toHaveBeenNthCalledWith(
@@ -7652,7 +7653,7 @@ describe("autoCheckinScheduler daily alarm helpers", () => {
     vi.setSystemTime(now)
 
     await expect(
-      (autoCheckinScheduler as any).createDailyAlarmForToday(now.getTime()),
+      (autoCheckinAlarmSchedule as any).createDailyAlarmForToday(now.getTime()),
     ).rejects.toThrow("Cannot schedule daily alarm for today")
 
     vi.useRealTimers()
@@ -7999,7 +8000,7 @@ describe("autoCheckinScheduler private helpers", () => {
     const triggerTime = new Date("2026-01-23T08:30:00")
 
     expect(
-      (autoCheckinScheduler as any).isExistingDailyAlarmReusable(
+      (autoCheckinAlarmSchedule as any).isExistingDailyAlarmReusable(
         {
           scheduleMode: "random",
         },
@@ -8009,7 +8010,7 @@ describe("autoCheckinScheduler private helpers", () => {
     ).toBe(false)
 
     expect(
-      (autoCheckinScheduler as any).isExistingDailyAlarmReusable(
+      (autoCheckinAlarmSchedule as any).isExistingDailyAlarmReusable(
         {
           scheduleMode: "random",
         },
@@ -8022,7 +8023,7 @@ describe("autoCheckinScheduler private helpers", () => {
     ).toBe(true)
 
     expect(
-      (autoCheckinScheduler as any).isExistingDailyAlarmReusable(
+      (autoCheckinAlarmSchedule as any).isExistingDailyAlarmReusable(
         {
           scheduleMode: "deterministic",
         },

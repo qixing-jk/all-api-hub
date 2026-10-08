@@ -2,13 +2,13 @@ import { act, screen, waitFor } from "@testing-library/react"
 import type userEvent from "@testing-library/user-event"
 import { beforeEach, expect, vi } from "vitest"
 
-import { ApiCheckModalHost } from "~/entrypoints/content/webAiApiCheck/components/ApiCheckModalHost"
 import {
   API_CHECK_MODAL_HOST_READY_EVENT,
   dispatchOpenApiCheckModal,
   type ApiCheckOpenModalDetail,
-} from "~/entrypoints/content/webAiApiCheck/events"
-import { WEB_AI_API_CHECK_TEST_IDS } from "~/entrypoints/content/webAiApiCheck/testIds"
+} from "~/features/WebAiApiCheck/content/events"
+import { ApiCheckModalHost } from "~/features/WebAiApiCheck/content/modal/ApiCheckModalHost"
+import { WEB_AI_API_CHECK_TEST_IDS } from "~/features/WebAiApiCheck/content/testIds"
 import toast from "~/lib/notify/content"
 import {
   sendWebAiApiCheckMessage,

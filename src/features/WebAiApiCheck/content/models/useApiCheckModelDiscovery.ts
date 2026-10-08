@@ -1,6 +1,8 @@
 import type { TFunction } from "i18next"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
+import { contentApiCheckAnalyticsScope } from "~/features/WebAiApiCheck/content/modal/apiCheckModalAnalytics"
+import type { ApiCheckValidationError } from "~/features/WebAiApiCheck/content/modal/apiCheckModalTypes"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,
@@ -21,9 +23,6 @@ import {
   WebAiApiCheckMessageTypes,
 } from "~/services/verification/webAiApiCheck/messaging"
 import { isTestMode } from "~/utils/core/environment"
-
-import { contentApiCheckAnalyticsScope } from "./apiCheckModalAnalytics"
-import type { ApiCheckValidationError } from "./apiCheckModalTypes"
 
 // Preserve the real debounce in dev/prod to avoid bursty background requests
 // while typing, but skip the wall-clock delay in Vitest.

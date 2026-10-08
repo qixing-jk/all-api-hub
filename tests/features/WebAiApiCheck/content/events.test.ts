@@ -14,7 +14,7 @@ describe("webAiApiCheck events", () => {
       API_CHECK_OPEN_MODAL_EVENT,
       dispatchApiCheckModalClosed,
       dispatchOpenApiCheckModal,
-    } = await import("~/entrypoints/content/webAiApiCheck/events")
+    } = await import("~/features/WebAiApiCheck/content/events")
 
     const openListener = vi.fn()
     const closedListener = vi.fn()
@@ -58,7 +58,7 @@ describe("webAiApiCheck events", () => {
 
   it("dispatches optional extraction metadata with open modal events", async () => {
     const { API_CHECK_OPEN_MODAL_EVENT, dispatchOpenApiCheckModal } =
-      await import("~/entrypoints/content/webAiApiCheck/events")
+      await import("~/features/WebAiApiCheck/content/events")
 
     const listener = vi.fn()
     window.addEventListener(API_CHECK_OPEN_MODAL_EVENT, listener)
@@ -96,7 +96,7 @@ describe("webAiApiCheck events", () => {
 
   it("resolves host-ready waiters immediately after the host has been marked ready", async () => {
     const { dispatchApiCheckModalHostReady, waitForApiCheckModalHostReady } =
-      await import("~/entrypoints/content/webAiApiCheck/events")
+      await import("~/features/WebAiApiCheck/content/events")
 
     dispatchApiCheckModalHostReady()
 
@@ -110,7 +110,7 @@ describe("webAiApiCheck events", () => {
       API_CHECK_MODAL_HOST_READY_EVENT,
       dispatchApiCheckModalHostReady,
       waitForApiCheckModalHostReady,
-    } = await import("~/entrypoints/content/webAiApiCheck/events")
+    } = await import("~/features/WebAiApiCheck/content/events")
 
     const removeListenerSpy = vi.spyOn(window, "removeEventListener")
     const firstWait = waitForApiCheckModalHostReady({ timeoutMs: 5_000 })
@@ -125,9 +125,7 @@ describe("webAiApiCheck events", () => {
 
     vi.resetModules()
 
-    const freshModule = await import(
-      "~/entrypoints/content/webAiApiCheck/events"
-    )
+    const freshModule = await import("~/features/WebAiApiCheck/content/events")
     const secondWait = freshModule.waitForApiCheckModalHostReady({
       timeoutMs: 10,
     })

@@ -1,4 +1,11 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import {
+  API_CHECK_MODAL_CLOSED_EVENT,
+  dispatchOpenApiCheckModal,
+  waitForApiCheckModalHostReady,
+  type ApiCheckModalClosedDetail,
+  type ApiCheckOpenModalDetail,
+} from "~/features/WebAiApiCheck/content/events"
 import { extractApiCheckCredentialsFromText } from "~/services/verification/webAiApiCheck/extractCredentials"
 import {
   sendWebAiApiCheckMessage,
@@ -17,13 +24,6 @@ import {
 import { isEventFromAllApiHubContentUi } from "../shared/contentUi"
 import { isLikelyCopyActionTarget } from "../shared/copyActionTarget"
 import { ensureRedemptionToastUi } from "../shared/uiRoot"
-import {
-  API_CHECK_MODAL_CLOSED_EVENT,
-  dispatchOpenApiCheckModal,
-  waitForApiCheckModalHostReady,
-  type ApiCheckModalClosedDetail,
-  type ApiCheckOpenModalDetail,
-} from "./events"
 import { showApiCheckConfirmToast } from "./utils/apiCheckToasts"
 
 /**

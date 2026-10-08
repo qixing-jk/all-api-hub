@@ -8,7 +8,7 @@ const logger = createLogger("ApiCheckToasts")
 
 let apiCheckToastModulesPromise: Promise<{
   createElement: typeof import("react").createElement
-  ApiCheckConfirmToast: typeof import("~/entrypoints/content/webAiApiCheck/components/ApiCheckConfirmToast").ApiCheckConfirmToast
+  ApiCheckConfirmToast: typeof import("~/features/WebAiApiCheck/content/notifications/ApiCheckConfirmToast").ApiCheckConfirmToast
 }> | null = null
 
 /**
@@ -19,7 +19,7 @@ async function loadApiCheckToastModules() {
     apiCheckToastModulesPromise = Promise.all([
       import("react"),
       import(
-        "~/entrypoints/content/webAiApiCheck/components/ApiCheckConfirmToast"
+        "~/features/WebAiApiCheck/content/notifications/ApiCheckConfirmToast"
       ),
     ]).then(([reactModule, confirmToastModule]) => ({
       createElement: reactModule.createElement,

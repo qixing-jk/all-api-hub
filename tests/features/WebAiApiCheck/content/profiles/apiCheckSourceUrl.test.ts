@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { normalizeApiCheckSourceUrl } from "~/entrypoints/content/webAiApiCheck/utils/apiCheckSourceUrl"
+import { normalizeApiCheckSourceUrl } from "~/features/WebAiApiCheck/content/profiles/apiCheckSourceUrl"
 
 describe("normalizeApiCheckSourceUrl", () => {
   it("keeps a trimmed full HTTP(S) URL including path, query, and hash", () => {

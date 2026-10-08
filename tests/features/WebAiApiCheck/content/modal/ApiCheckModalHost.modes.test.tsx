@@ -4,8 +4,8 @@ import { act, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
-import { dispatchOpenApiCheckModal } from "~/entrypoints/content/webAiApiCheck/events"
-import { getWebAiApiCheckProbeTestId } from "~/entrypoints/content/webAiApiCheck/testIds"
+import { dispatchOpenApiCheckModal } from "~/features/WebAiApiCheck/content/events"
+import { getWebAiApiCheckProbeTestId } from "~/features/WebAiApiCheck/content/testIds"
 import {
   sendWebAiApiCheckMessage,
   WebAiApiCheckMessageTypes,

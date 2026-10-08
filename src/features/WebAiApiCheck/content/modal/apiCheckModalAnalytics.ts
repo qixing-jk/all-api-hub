@@ -1,3 +1,4 @@
+import type { ApiCheckOpenModalDetail } from "~/features/WebAiApiCheck/content/events"
 import type { ProductAnalyticsActionInsights } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -13,8 +14,6 @@ import {
   type ApiVerificationApiType,
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
-
-import type { ApiCheckOpenModalDetail } from "../events"
 
 export const contentApiCheckAnalyticsScope = {
   featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,

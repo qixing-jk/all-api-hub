@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react"
 
+import { contentApiCheckAnalyticsScope } from "~/features/WebAiApiCheck/content/modal/apiCheckModalAnalytics"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -14,8 +15,6 @@ import {
   sendWebAiApiCheckMessage,
   WebAiApiCheckMessageTypes,
 } from "~/services/verification/webAiApiCheck/messaging"
-
-import { contentApiCheckAnalyticsScope } from "./apiCheckModalAnalytics"
 
 type UseApiCheckBaseUrlHistoryOptions = {
   apiType: ApiVerificationApiType

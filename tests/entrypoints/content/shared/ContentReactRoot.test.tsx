@@ -62,14 +62,11 @@ vi.mock("~/utils/core/logger", () => ({
   }),
 }))
 
-vi.mock(
-  "~/entrypoints/content/webAiApiCheck/components/ApiCheckModalHost",
-  () => ({
-    ApiCheckModalHost: () => (
-      <input aria-label="API credential" data-testid="api-check-modal-host" />
-    ),
-  }),
-)
+vi.mock("~/features/WebAiApiCheck/content/modal/ApiCheckModalHost", () => ({
+  ApiCheckModalHost: () => (
+    <input aria-label="API credential" data-testid="api-check-modal-host" />
+  ),
+}))
 
 vi.mock(
   "~/entrypoints/content/redemptionAssist/components/RedemptionToaster",

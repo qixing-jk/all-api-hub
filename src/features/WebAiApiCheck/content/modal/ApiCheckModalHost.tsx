@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next"
 
-import { ApiCheckModal } from "./ApiCheckModal"
-import { useApiCheckModalViewModel } from "./useApiCheckModalViewModel"
+import { ApiCheckModal } from "~/features/WebAiApiCheck/content/modal/ApiCheckModal"
+import { useApiCheckModalViewModel } from "~/features/WebAiApiCheck/content/modal/useApiCheckModalViewModel"
 
 /**
  * Always-mounted modal host rendered inside the content-script Shadow DOM root.

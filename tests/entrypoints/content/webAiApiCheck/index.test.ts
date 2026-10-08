@@ -4,13 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { ensureRedemptionToastUi } from "~/entrypoints/content/shared/uiRoot"
 import { setupWebAiApiCheckContent } from "~/entrypoints/content/webAiApiCheck"
+import { showApiCheckConfirmToast } from "~/entrypoints/content/webAiApiCheck/utils/apiCheckToasts"
 import {
   API_CHECK_MODAL_CLOSE_REASONS,
   API_CHECK_MODAL_CLOSED_EVENT,
   dispatchOpenApiCheckModal,
   waitForApiCheckModalHostReady,
-} from "~/entrypoints/content/webAiApiCheck/events"
-import { showApiCheckConfirmToast } from "~/entrypoints/content/webAiApiCheck/utils/apiCheckToasts"
+} from "~/features/WebAiApiCheck/content/events"
 import { extractApiCheckCredentialsFromText } from "~/services/verification/webAiApiCheck/extractCredentials"
 import {
   sendWebAiApiCheckMessage,
@@ -77,20 +77,17 @@ vi.mock("~/utils/core/logger", () => ({
   createLogger: vi.fn(() => logger),
 }))
 
-vi.mock(
-  "~/entrypoints/content/webAiApiCheck/events",
-  async (importOriginal) => {
-    const actual =
-      await importOriginal<
-        typeof import("~/entrypoints/content/webAiApiCheck/events")
-      >()
-    return {
-      ...actual,
-      dispatchOpenApiCheckModal: vi.fn(),
-      waitForApiCheckModalHostReady: vi.fn().mockResolvedValue(undefined),
-    }
-  },
-)
+vi.mock("~/features/WebAiApiCheck/content/events", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/features/WebAiApiCheck/content/events")
+    >()
+  return {
+    ...actual,
+    dispatchOpenApiCheckModal: vi.fn(),
+    waitForApiCheckModalHostReady: vi.fn().mockResolvedValue(undefined),
+  }
+})
 
 /**
  * Creates a clipboard event for tests.

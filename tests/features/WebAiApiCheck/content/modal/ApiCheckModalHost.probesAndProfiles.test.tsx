@@ -12,16 +12,16 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { parseDateInputValue } from "~/entrypoints/content/webAiApiCheck/components/useApiCheckModalViewModel"
 import {
   API_CHECK_MODAL_CLOSE_REASONS,
   API_CHECK_MODAL_CLOSED_EVENT,
   dispatchOpenApiCheckModal,
-} from "~/entrypoints/content/webAiApiCheck/events"
+} from "~/features/WebAiApiCheck/content/events"
+import { parseDateInputValue } from "~/features/WebAiApiCheck/content/profiles/useApiCheckProfileSaveWorkflow"
 import {
   getWebAiApiCheckProbeTestId,
   WEB_AI_API_CHECK_TEST_IDS,
-} from "~/entrypoints/content/webAiApiCheck/testIds"
+} from "~/features/WebAiApiCheck/content/testIds"
 import toast from "~/lib/notify/content"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

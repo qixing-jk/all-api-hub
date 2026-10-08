@@ -24,6 +24,14 @@ import {
   CollapsibleTrigger,
 } from "~/components/ui/collapsible"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
+import { ApiCheckBaseUrlHistoryPicker } from "~/features/WebAiApiCheck/content/history/ApiCheckBaseUrlHistoryPicker"
+import { ApiCheckCandidateButtons } from "~/features/WebAiApiCheck/content/modal/ApiCheckCandidateButtons"
+import type {
+  ApiCheckModalActions,
+  ApiCheckModalViewModel,
+} from "~/features/WebAiApiCheck/content/modal/apiCheckModalTypes"
+import { ApiCheckProbeList } from "~/features/WebAiApiCheck/content/probes/ApiCheckProbeList"
+import { WEB_AI_API_CHECK_TEST_IDS } from "~/features/WebAiApiCheck/content/testIds"
 import { cn } from "~/lib/utils"
 import {
   API_VERIFICATION_MODES,
@@ -31,15 +39,6 @@ import {
   type ApiVerificationMode,
 } from "~/services/verification/aiApiVerification"
 import { getApiVerificationModeLabel } from "~/services/verification/aiApiVerification/i18n"
-
-import { WEB_AI_API_CHECK_TEST_IDS } from "../testIds"
-import { ApiCheckBaseUrlHistoryPicker } from "./ApiCheckBaseUrlHistoryPicker"
-import { ApiCheckCandidateButtons } from "./ApiCheckCandidateButtons"
-import { ApiCheckProbeList } from "./ApiCheckProbeList"
-import type {
-  ApiCheckModalActions,
-  ApiCheckModalViewModel,
-} from "./useApiCheckModalViewModel"
 
 interface ApiCheckModalProps {
   t: TFunction<["webAiApiCheck", "common", "aiApiVerification"]>

@@ -4,7 +4,7 @@ import { screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it } from "vitest"
 
-import { WEB_AI_API_CHECK_TEST_IDS } from "~/entrypoints/content/webAiApiCheck/testIds"
+import { WEB_AI_API_CHECK_TEST_IDS } from "~/features/WebAiApiCheck/content/testIds"
 import { PRODUCT_ANALYTICS_RESULTS } from "~/services/productAnalytics/contracts"
 
 import { completeProductAnalyticsActionMock } from "./apiCheckModalHostMocks"

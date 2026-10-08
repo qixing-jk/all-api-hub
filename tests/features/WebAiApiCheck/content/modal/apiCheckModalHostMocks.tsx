@@ -20,8 +20,8 @@ const {
 }))
 
 export {
-  startProductAnalyticsActionMock,
   completeProductAnalyticsActionMock,
+  startProductAnalyticsActionMock,
   updateWebAiApiCheckMock,
   upsertVerificationHistorySummaryMock,
 }

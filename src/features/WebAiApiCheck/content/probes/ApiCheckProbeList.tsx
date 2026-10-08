@@ -2,14 +2,13 @@ import type { TFunction } from "i18next"
 
 import { Button, BUTTON_LOADING_BEHAVIORS } from "~/components/ui"
 import { ProbeStatusBadge } from "~/features/Verification/api/ProbeStatusBadge"
+import type { ProbeItemState } from "~/features/WebAiApiCheck/content/modal/apiCheckModalTypes"
+import { getWebAiApiCheckProbeTestId } from "~/features/WebAiApiCheck/content/testIds"
 import type { ApiVerificationProbeId } from "~/services/verification/aiApiVerification"
 import {
   getApiVerificationProbeLabel,
   translateApiVerificationSummary,
 } from "~/services/verification/aiApiVerification/i18n"
-
-import { getWebAiApiCheckProbeTestId } from "../testIds"
-import type { ProbeItemState } from "./apiCheckModalTypes"
 
 type ApiCheckProbeListProps = {
   t: TFunction<["webAiApiCheck", "common", "aiApiVerification"]>

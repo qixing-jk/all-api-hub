@@ -3,8 +3,8 @@ import type React from "react"
 import "~/styles/content.css"
 
 import { THEME_MODE } from "~/constants/theme"
-import { ApiCheckModalHost } from "~/entrypoints/content/webAiApiCheck/components/ApiCheckModalHost"
 import { useContentAppearance } from "~/features/Appearance/useContentAppearance"
+import { ApiCheckModalHost } from "~/features/WebAiApiCheck/content/modal/ApiCheckModalHost"
 import { getAppearanceScopeAttributes } from "~/utils/ui/themePreferences"
 
 import { RedemptionToaster } from "../redemptionAssist/components/RedemptionToaster"

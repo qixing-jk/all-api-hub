@@ -7,11 +7,11 @@ import { describe, expect, it, vi } from "vitest"
 import {
   dispatchOpenApiCheckModal,
   type ApiCheckOpenModalDetail,
-} from "~/entrypoints/content/webAiApiCheck/events"
+} from "~/features/WebAiApiCheck/content/events"
 import {
   getWebAiApiCheckProbeTestId,
   WEB_AI_API_CHECK_TEST_IDS,
-} from "~/entrypoints/content/webAiApiCheck/testIds"
+} from "~/features/WebAiApiCheck/content/testIds"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,

@@ -1,9 +1,8 @@
 import type { TFunction } from "i18next"
 
+import { WEB_AI_API_CHECK_TEST_IDS } from "~/features/WebAiApiCheck/content/testIds"
 import { cn } from "~/lib/utils"
 import type { ApiCheckCandidate } from "~/services/verification/webAiApiCheck/credentialExtraction/candidateContract"
-
-import { WEB_AI_API_CHECK_TEST_IDS } from "../testIds"
 
 type ApiCheckCandidateButtonsProps = {
   t: TFunction<["webAiApiCheck", "common", "aiApiVerification"]>

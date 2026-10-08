@@ -9,7 +9,10 @@ import { useTranslation } from "react-i18next"
 
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { isAccountSiteType, type AccountSiteType } from "~/constants/siteType"
-import { startAccountDialogAnalyticsAction } from "~/features/AccountManagement/components/AccountDialog/analytics"
+import {
+  AccountDetectionAttempts,
+  type AccountDetectionAttempt,
+} from "~/features/AccountManagement/components/AccountDialog/detection/accountDetectionAttempts"
 import {
   type OpenRouterOnboardingStart,
   type useOpenRouterAccountOnboarding,
@@ -27,16 +30,10 @@ import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/iden
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
 import {
-  completePopupCriticalFlow,
-  POPUP_CRITICAL_FLOWS,
-  startPopupCriticalFlow,
-} from "~/services/popupInterruptionHint"
-import {
   resolveProductAnalyticsErrorCategoryFromError,
   type ProductAnalyticsActionInsights,
 } from "~/services/productAnalytics/actions"
 import {
-  PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
@@ -49,7 +46,6 @@ import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagn
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
-import { isExtensionPopup } from "~/utils/browser"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { createLogger } from "~/utils/core/logger"
 
@@ -106,16 +102,13 @@ export function useAccountAutoDetection({
   const [detectionError, setDetectionError] = useState<AutoDetectError | null>(
     null,
   )
-  // Hold admission until analytics, popup lifecycle, and provider work fully unwind.
-  const autoDetectInvocationLeaseRef = useRef<symbol | null>(null)
-  // Resets invalidate earlier results even when the next draft reuses the URL.
-  const autoDetectRunGenerationRef = useRef(0)
+  const [attempts] = useState(() => new AccountDetectionAttempts())
   const detectSlowHintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   )
   const invalidate = useCallback(() => {
-    autoDetectRunGenerationRef.current += 1
-  }, [])
+    attempts.invalidate()
+  }, [attempts])
   useLayoutEffect(() => {
     invalidate()
   }, [isOpen, mode, accountId, invalidate])
@@ -192,16 +185,12 @@ export function useAccountAutoDetection({
       abandonForOtherAutoDetect: abandonOpenRouterOnboardingForOtherAutoDetect,
     } = onboarding
     const runAdmittedAutoDetectInvocation = async (
-      runGeneration: number,
+      attempt: AccountDetectionAttempt,
       startOpenRouterOnboarding?: OpenRouterOnboardingStart,
     ) => {
       const requestedUrl = url.trim()
-      let admittedGeneration = runGeneration
-      const isCurrentAutoDetectRun = () =>
-        autoDetectRunGenerationRef.current === admittedGeneration
-      const analyticsAction = startAccountDialogAnalyticsAction(
-        PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect,
-      )
+      const isCurrentAutoDetectRun = attempt.isCurrent
+      const analyticsAction = attempt.beginDetection()
       const checkInDiscoveryTrigger =
         mode === DIALOG_MODES.EDIT || isDetected
           ? "redetect"
@@ -306,11 +295,229 @@ export function useAccountAutoDetection({
       setDetectionError(null)
       form.beforeDetect()
 
-      const shouldTrackPopupInterruption = isExtensionPopup()
-      if (shouldTrackPopupInterruption) {
-        try {
-          await startPopupCriticalFlow(POPUP_CRITICAL_FLOWS.AccountAutoDetect)
-        } catch (error) {
+      await attempt.withPopup(
+        async () => {
+          try {
+            if (!isCurrentAutoDetectRun()) {
+              analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
+                insights: createAutoDetectAnalyticsInsights(),
+              })
+              return
+            }
+            if (startOpenRouterOnboarding) {
+              let onboardingError: unknown
+              let shouldShowDetectionError = false
+              const outcome = await withProtectionBypassUserCommand(
+                PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
+                getCurrentTempWindowRequestSource(),
+                (protectionBypassExecution) =>
+                  startOpenRouterOnboarding({
+                    protectionBypassExecution,
+                    onStarted: () => {
+                      if (!isCurrentAutoDetectRun()) return
+                      form.onOpenRouterStarted()
+                      // The admitted provider workflow owns its initial site/URL
+                      // normalization; subsequent user changes still invalidate it.
+                      attempt.acceptNormalization()
+                    },
+                    onCredentialCreated: (credential) => {
+                      form.onOpenRouterCredentialCreated(
+                        credential,
+                        requestedUrl,
+                      )
+                    },
+                    onManualFallback: (failure) => {
+                      onboardingError = failure.error
+                      shouldShowDetectionError = failure.showDetectionError
+                      if (failure.showDetectionError) {
+                        setDetectionError(
+                          failure.error
+                            ? analyzeAutoDetectError(failure.error)
+                            : {
+                                type: AutoDetectErrorType.UNKNOWN,
+                                message: failure.message ?? "",
+                              },
+                        )
+                      }
+                      form.enterManual()
+                    },
+                    onDetected: async (resultData) => {
+                      await form.applyDetected(
+                        resultData,
+                        isCurrentAutoDetectRun,
+                      )
+                    },
+                  }),
+              )
+
+              if (outcome.status === "cancelled_before_dispatch") {
+                analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
+                  insights: createAutoDetectAnalyticsInsights(outcome, false),
+                })
+                return
+              }
+              if (outcome.status === "ignored") {
+                analyticsAction.complete(
+                  outcome.success
+                    ? PRODUCT_ANALYTICS_RESULTS.Success
+                    : PRODUCT_ANALYTICS_RESULTS.Failure,
+                  {
+                    insights: createAutoDetectAnalyticsInsights(outcome, false),
+                  },
+                )
+                return
+              }
+              if (outcome.status === "completed") {
+                analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+                  insights: createAutoDetectAnalyticsInsights(outcome, false),
+                })
+                return
+              }
+
+              analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+                ...(shouldShowDetectionError && onboardingError
+                  ? {
+                      diagnostics: {
+                        failure: buildActionFailureDiagnostics({
+                          error: onboardingError,
+                          errorCategory: getAutoDetectAnalyticsErrorCategory(
+                            analyzeAutoDetectError(onboardingError).type,
+                            onboardingError,
+                          ),
+                          stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+                        }),
+                      },
+                    }
+                  : {}),
+                insights: createAutoDetectAnalyticsInsights(outcome, true),
+              })
+              return
+            }
+
+            const result = await withProtectionBypassUserCommand(
+              PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
+              getCurrentTempWindowRequestSource(),
+              (protectionBypassExecution) =>
+                autoDetectAccount(
+                  requestedUrl,
+                  authType,
+                  protectionBypassExecution,
+                  cookieAuthSessionCookie.trim() || undefined,
+                  ...(userId.trim() &&
+                  (mode === DIALOG_MODES.EDIT ||
+                    accessToken.trim() ||
+                    cookieAuthSessionCookie.trim() ||
+                    sub2apiRefreshToken.trim())
+                    ? [
+                        {
+                          existingAccount: {
+                            url: credentialScope?.url || requestedUrl,
+                            siteType: credentialScope?.siteType ?? siteType,
+                            userId: userId.trim(),
+                            accessToken,
+                          },
+                        },
+                      ]
+                    : []),
+                ),
+            )
+            if (!isCurrentAutoDetectRun()) {
+              analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
+                insights: createAutoDetectAnalyticsInsights(result, false),
+              })
+              return
+            }
+            if (!result.success) {
+              form.applyRecovery(
+                result.recoveryData,
+                result.autoDetectContext?.siteType,
+              )
+              if (
+                result.detailedError?.type ===
+                AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED
+              ) {
+                setAuthType(AuthTypeEnum.AccessToken)
+              }
+              form.enterManual()
+              setDetectionError(result.detailedError || null)
+              analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+                diagnostics: {
+                  failure: {
+                    ...buildActionFailureDiagnostics({
+                      errorCategory: getAutoDetectAnalyticsErrorCategory(
+                        result.detailedError?.type,
+                      ),
+                      stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+                      reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+                    }),
+                    ...(result.autoDetectFailureReason
+                      ? {
+                          accountAutoDetectFailureReason:
+                            result.autoDetectFailureReason,
+                        }
+                      : {}),
+                  },
+                },
+                insights: {
+                  ...createAutoDetectAnalyticsInsights(result, true),
+                  ...(result.autoDetectFailureReason
+                    ? {
+                        accountAutoDetectFailureReason:
+                          result.autoDetectFailureReason,
+                      }
+                    : {}),
+                },
+              })
+              return
+            }
+
+            const resultData = result.data
+            if (resultData) {
+              const applied = await form.applyDetected(
+                resultData,
+                isCurrentAutoDetectRun,
+              )
+              if (!applied) {
+                analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
+                  insights: createAutoDetectAnalyticsInsights(result, false),
+                })
+                return
+              }
+              analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+                insights: createAutoDetectAnalyticsInsights(result, false),
+              })
+            }
+          } catch (error) {
+            if (!isCurrentAutoDetectRun()) {
+              analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
+                insights: createAutoDetectAnalyticsInsights(undefined, false),
+              })
+              return
+            }
+            logger.error("Auto-detect failed", {
+              error,
+              url: url.trim(),
+              authType,
+            })
+            const detectionError = analyzeAutoDetectError(error)
+            setDetectionError(detectionError)
+            form.enterManual()
+            analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+              diagnostics: {
+                failure: buildActionFailureDiagnostics({
+                  error,
+                  errorCategory: getAutoDetectAnalyticsErrorCategory(
+                    detectionError.type,
+                    error,
+                  ),
+                  stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+                }),
+              },
+              insights: createAutoDetectAnalyticsInsights(undefined, true),
+            })
+          }
+        },
+        async (error) => {
           if (!isCurrentAutoDetectRun()) {
             analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
               insights: createAutoDetectAnalyticsInsights(),
@@ -337,254 +544,26 @@ export function useAccountAutoDetection({
           setIsDetecting(false)
           if (startOpenRouterOnboarding) return
           throw error
-        }
-      }
-
-      try {
-        if (!isCurrentAutoDetectRun()) {
-          analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
-            insights: createAutoDetectAnalyticsInsights(),
-          })
-          return
-        }
-        if (startOpenRouterOnboarding) {
-          let onboardingError: unknown
-          let shouldShowDetectionError = false
-          const outcome = await withProtectionBypassUserCommand(
-            PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
-            getCurrentTempWindowRequestSource(),
-            (protectionBypassExecution) =>
-              startOpenRouterOnboarding({
-                protectionBypassExecution,
-                onStarted: () => {
-                  if (!isCurrentAutoDetectRun()) return
-                  form.onOpenRouterStarted()
-                  // The admitted provider workflow owns its initial site/URL
-                  // normalization; subsequent user changes still invalidate it.
-                  admittedGeneration = autoDetectRunGenerationRef.current
-                },
-                onCredentialCreated: (credential) => {
-                  form.onOpenRouterCredentialCreated(credential, requestedUrl)
-                },
-                onManualFallback: (failure) => {
-                  onboardingError = failure.error
-                  shouldShowDetectionError = failure.showDetectionError
-                  if (failure.showDetectionError) {
-                    setDetectionError(
-                      failure.error
-                        ? analyzeAutoDetectError(failure.error)
-                        : {
-                            type: AutoDetectErrorType.UNKNOWN,
-                            message: failure.message ?? "",
-                          },
-                    )
-                  }
-                  form.enterManual()
-                },
-                onDetected: async (resultData) => {
-                  await form.applyDetected(resultData, isCurrentAutoDetectRun)
-                },
-              }),
-          )
-
-          if (outcome.status === "cancelled_before_dispatch") {
-            analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
-              insights: createAutoDetectAnalyticsInsights(outcome, false),
-            })
-            return
-          }
-          if (outcome.status === "ignored") {
-            analyticsAction.complete(
-              outcome.success
-                ? PRODUCT_ANALYTICS_RESULTS.Success
-                : PRODUCT_ANALYTICS_RESULTS.Failure,
-              { insights: createAutoDetectAnalyticsInsights(outcome, false) },
-            )
-            return
-          }
-          if (outcome.status === "completed") {
-            analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-              insights: createAutoDetectAnalyticsInsights(outcome, false),
-            })
-            return
-          }
-
-          analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-            ...(shouldShowDetectionError && onboardingError
-              ? {
-                  diagnostics: {
-                    failure: buildActionFailureDiagnostics({
-                      error: onboardingError,
-                      errorCategory: getAutoDetectAnalyticsErrorCategory(
-                        analyzeAutoDetectError(onboardingError).type,
-                        onboardingError,
-                      ),
-                      stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
-                    }),
-                  },
-                }
-              : {}),
-            insights: createAutoDetectAnalyticsInsights(outcome, true),
-          })
-          return
-        }
-
-        const result = await withProtectionBypassUserCommand(
-          PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
-          getCurrentTempWindowRequestSource(),
-          (protectionBypassExecution) =>
-            autoDetectAccount(
-              requestedUrl,
-              authType,
-              protectionBypassExecution,
-              cookieAuthSessionCookie.trim() || undefined,
-              ...(userId.trim() &&
-              (mode === DIALOG_MODES.EDIT ||
-                accessToken.trim() ||
-                cookieAuthSessionCookie.trim() ||
-                sub2apiRefreshToken.trim())
-                ? [
-                    {
-                      existingAccount: {
-                        url: credentialScope?.url || requestedUrl,
-                        siteType: credentialScope?.siteType ?? siteType,
-                        userId: userId.trim(),
-                        accessToken,
-                      },
-                    },
-                  ]
-                : []),
-            ),
-        )
-        if (!isCurrentAutoDetectRun()) {
-          analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
-            insights: createAutoDetectAnalyticsInsights(result, false),
-          })
-          return
-        }
-        if (!result.success) {
-          form.applyRecovery(
-            result.recoveryData,
-            result.autoDetectContext?.siteType,
-          )
-          if (
-            result.detailedError?.type ===
-            AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED
-          ) {
-            setAuthType(AuthTypeEnum.AccessToken)
-          }
-          form.enterManual()
-          setDetectionError(result.detailedError || null)
-          analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-            diagnostics: {
-              failure: {
-                ...buildActionFailureDiagnostics({
-                  errorCategory: getAutoDetectAnalyticsErrorCategory(
-                    result.detailedError?.type,
-                  ),
-                  stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
-                  reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
-                }),
-                ...(result.autoDetectFailureReason
-                  ? {
-                      accountAutoDetectFailureReason:
-                        result.autoDetectFailureReason,
-                    }
-                  : {}),
-              },
-            },
-            insights: {
-              ...createAutoDetectAnalyticsInsights(result, true),
-              ...(result.autoDetectFailureReason
-                ? {
-                    accountAutoDetectFailureReason:
-                      result.autoDetectFailureReason,
-                  }
-                : {}),
-            },
-          })
-          return
-        }
-
-        const resultData = result.data
-        if (resultData) {
-          const applied = await form.applyDetected(
-            resultData,
-            isCurrentAutoDetectRun,
-          )
-          if (!applied) {
-            analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
-              insights: createAutoDetectAnalyticsInsights(result, false),
-            })
-            return
-          }
-          analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-            insights: createAutoDetectAnalyticsInsights(result, false),
-          })
-        }
-      } catch (error) {
-        if (!isCurrentAutoDetectRun()) {
-          analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
-            insights: createAutoDetectAnalyticsInsights(undefined, false),
-          })
-          return
-        }
-        logger.error("Auto-detect failed", { error, url: url.trim(), authType })
-        const detectionError = analyzeAutoDetectError(error)
-        setDetectionError(detectionError)
-        form.enterManual()
-        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          diagnostics: {
-            failure: buildActionFailureDiagnostics({
-              error,
-              errorCategory: getAutoDetectAnalyticsErrorCategory(
-                detectionError.type,
-                error,
-              ),
-              stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
-            }),
-          },
-          insights: createAutoDetectAnalyticsInsights(undefined, true),
-        })
-      } finally {
-        if (shouldTrackPopupInterruption) {
-          await completePopupCriticalFlow(
-            POPUP_CRITICAL_FLOWS.AccountAutoDetect,
-          )
-        }
-        setIsDetecting(false)
-      }
+        },
+        () => setIsDetecting(false),
+      )
     }
 
-    const runAutoDetectInvocation = async (runGeneration: number) => {
+    const runAutoDetectInvocation = async (
+      attempt: AccountDetectionAttempt,
+    ) => {
       if (!isCanonicalOpenRouterUrl(url.trim())) {
-        return runAdmittedAutoDetectInvocation(runGeneration)
+        return runAdmittedAutoDetectInvocation(attempt)
       }
       const admission = tryPrepareOpenRouterOnboardingStart()
       if (!admission) return
       return admission.preparation.run(async (start) => {
         if (admission.clearCreatedCredential) setAccessToken("")
-        await runAdmittedAutoDetectInvocation(runGeneration, start)
+        await runAdmittedAutoDetectInvocation(attempt, start)
       })
     }
 
-    const execute = async () => {
-      if (autoDetectInvocationLeaseRef.current) return
-
-      const lease = Symbol("account-auto-detect-invocation")
-      const runGeneration = autoDetectRunGenerationRef.current + 1
-      autoDetectRunGenerationRef.current = runGeneration
-      autoDetectInvocationLeaseRef.current = lease
-      try {
-        await runAutoDetectInvocation(runGeneration)
-      } finally {
-        if (autoDetectInvocationLeaseRef.current === lease) {
-          autoDetectInvocationLeaseRef.current = null
-        }
-      }
-    }
-
-    await execute()
+    await attempts.run(runAutoDetectInvocation)
   }
 
   return {
