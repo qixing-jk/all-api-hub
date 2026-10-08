@@ -16,7 +16,7 @@ const { getStateMock, trackPromptShownMock, unwatchMock, watchStateMock } =
     watchStateMock: vi.fn(),
   }))
 
-vi.mock("~/services/productAnalytics/starPromotion", () => ({
+vi.mock("~/services/productAnalytics/facts/starPromotion", () => ({
   trackStarPromotionPromptShown: trackPromptShownMock,
 }))
 

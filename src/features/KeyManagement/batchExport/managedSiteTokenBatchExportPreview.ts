@@ -1,6 +1,6 @@
 import type { ManagedSiteType } from "~/constants/siteType"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
-import { applyVerifiedManagedSiteChannelKey } from "~/services/managedSites/verifiedChannelKeyAssessment"
+import { applyVerifiedManagedSiteChannelKey } from "~/services/managedSites/matching/verifiedChannelKeyAssessment"
 import type {
   ManagedSiteTokenBatchExportMatchedChannel,
   ManagedSiteTokenBatchExportPreview,

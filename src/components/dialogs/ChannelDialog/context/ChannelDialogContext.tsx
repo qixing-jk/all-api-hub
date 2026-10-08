@@ -10,7 +10,7 @@ import React, {
 import type { ChannelDialogOpeningState } from "~/components/dialogs/ChannelDialog/components/ChannelDialogOpening"
 import type { ManagedSiteType } from "~/constants/siteType"
 import { toSafeManagedResourceFailure } from "~/features/ManagedSiteChannels/utils/managedResource"
-import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
+import type { AccountKeyCreationResult } from "~/services/accounts/keys/accountKeyCreation"
 import type { ManagedResourceKind } from "~/services/accountSiteDefinitions/contracts"
 import type { ResourceEditor } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ManagedSiteChannelAssessmentSignals } from "~/services/managedSites/channelAssessmentSignals"

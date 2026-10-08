@@ -14,7 +14,7 @@ import {
   type RawBackupData,
 } from "~/services/importExport/backupContracts"
 import { importBackupFeatureGuidance } from "~/services/importExport/preferencesImport"
-import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
+import { channelConfigStorage } from "~/services/managedSites/configuration/channelConfigStorage"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
 import type { SiteAccount } from "~/types"

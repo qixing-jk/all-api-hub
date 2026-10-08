@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { useManagedResourceInteraction } from "~/features/ManagedSiteChannels/workspace/useManagedResourceInteraction"
-import type { executeManagedSiteMigration } from "~/services/managedSites/channelMigration"
+import type { executeManagedSiteMigration } from "~/services/managedSites/migration/channelMigration"
 import type { ManagedSiteMigrationCanonicalPreview } from "~/types/managedSiteMigrationCapability"
 
 const mocks = vi.hoisted(() => ({
@@ -21,7 +21,7 @@ vi.mock(
     useNewApiNativeSecretVerification: mocks.useVerification,
   }),
 )
-vi.mock("~/services/managedSites/channelMigration", () => ({
+vi.mock("~/services/managedSites/migration/channelMigration", () => ({
   executeManagedSiteMigration: mocks.executeMigration,
 }))
 vi.mock("~/services/apiAdapters/managedResources/newApi/migration", () => ({

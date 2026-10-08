@@ -5,7 +5,7 @@ import { accountCheckInState } from "~/services/accounts/accountStorage/accountC
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
-import { createEmptyAccountStats } from "~/services/accounts/accountTodayStats"
+import { createEmptyAccountStats } from "~/services/accounts/metrics/accountTodayStats"
 import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
 import {
   buildEstimatedTodayIncomeMoneyTotals,

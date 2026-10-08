@@ -7,7 +7,7 @@ import {
   getKeyProvisioningPreviewProfile,
   prepareKeyProvisioningPreview,
 } from "~/features/DevPanel/keyProvisioningPreview"
-import { OPENROUTER_KEY_FIELD_IDS } from "~/services/apiAdapters/openrouter/keyResourceFields"
+import { OPENROUTER_KEY_FIELD_IDS } from "~/services/apiAdapters/openrouter/keys/keyResourceFields"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 
 describe("key provisioning preview plans", () => {

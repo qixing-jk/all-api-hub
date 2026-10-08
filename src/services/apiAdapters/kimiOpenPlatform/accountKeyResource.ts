@@ -1,7 +1,7 @@
 import type { AccountSiteType } from "~/constants/siteType"
-import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/accountKeyNames"
-import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
-import { UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS } from "~/services/accounts/runtimeKeyModelAccess"
+import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/keys/accountKeyNames"
+import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
+import { UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS } from "~/services/accounts/keys/runtimeKeyModelAccess"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyResources/failure"
 import {

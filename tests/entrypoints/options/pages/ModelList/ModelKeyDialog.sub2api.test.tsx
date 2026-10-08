@@ -28,12 +28,15 @@ vi.mock(
     fetchDisplayAccountRuntimeKeys: mocks.inventory,
   }),
 )
-vi.mock("~/services/accounts/accountKeyCreation", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("~/services/accounts/accountKeyCreation")
-  >()),
-  prepareDefaultAccountKeyCreation: mocks.prepare,
-}))
+vi.mock(
+  "~/services/accounts/keys/accountKeyCreation",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/accounts/keys/accountKeyCreation")
+    >()),
+    prepareDefaultAccountKeyCreation: mocks.prepare,
+  }),
+)
 vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
   default: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div>Native group editor</div> : null,

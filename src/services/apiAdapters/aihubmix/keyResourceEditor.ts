@@ -1,5 +1,5 @@
 import { QUOTA_PER_USD } from "~/constants/money"
-import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/accountKeyNames"
+import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/keys/accountKeyNames"
 import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/definition"
 import { fetchAccountAvailableModels } from "~/services/apiAdapters/aihubmix/catalog"
 import type { AccountKeyCreationIntent } from "~/services/apiAdapters/contracts/accountKeyResource"

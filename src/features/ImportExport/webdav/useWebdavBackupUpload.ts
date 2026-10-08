@@ -16,8 +16,8 @@ import { accountDataTransfer } from "~/services/accounts/accountStorage/accountD
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
 import { featureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
 import { type BackupFullV2 } from "~/services/importExport/backupContracts"
-import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
-import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
+import { channelConfigStorage } from "~/services/managedSites/configuration/channelConfigStorage"
+import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/configuration/legacyChannelConfigMigration"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -29,16 +29,16 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
 } from "~/services/productAnalytics/contracts"
-import { buildWebDavSyncDiagnostics } from "~/services/productAnalytics/webDavSync"
+import { buildWebDavSyncDiagnostics } from "~/services/productAnalytics/facts/webDavSync"
 import { tagStorage } from "~/services/tags/tagStorage"
+import { parseWebdavBackupJson } from "~/services/webdav/backup/webdavBackupValidation"
 import {
   createCloudSyncBackup,
   downloadCloudSyncBackup,
   uploadCloudSyncBackup,
 } from "~/services/webdav/cloudSyncService"
 import { isGithubGistWritableMissingError } from "~/services/webdav/githubGistService"
-import { parseWebdavBackupJson } from "~/services/webdav/webdavBackupValidation"
-import { mergeWebdavBackupPayloadBySelection } from "~/services/webdav/webdavSelectiveSync"
+import { mergeWebdavBackupPayloadBySelection } from "~/services/webdav/sync/webdavSelectiveSync"
 import {
   downloadBackup,
   isWebdavFileNotFoundError,

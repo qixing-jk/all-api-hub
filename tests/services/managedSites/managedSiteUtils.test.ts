@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
-import { getManagedSiteTargetOptions } from "~/services/managedSites/channelMigrationTargets"
+import { getManagedSiteTargetOptions } from "~/services/managedSites/migration/channelMigrationTargets"
 import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteContext,

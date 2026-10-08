@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { useRuntimeKeyIntegrationActions } from "~/features/KeyManagement/components/RuntimeKeyActions/useRuntimeKeyIntegrationActions"
-import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"

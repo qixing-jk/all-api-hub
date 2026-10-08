@@ -6,7 +6,7 @@ import {
   MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
   type ManagedSiteChannelMatchInspection,
-} from "~/services/managedSites/channelMatch"
+} from "~/services/managedSites/matching/channelMatch"
 import {
   buildManagedResourceMatchCandidate,
   matchingResourceRef,

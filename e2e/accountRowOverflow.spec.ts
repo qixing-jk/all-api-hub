@@ -3,7 +3,7 @@ import {
   getAccountManagementListItemTestId,
   ACCOUNT_MANAGEMENT_TEST_IDS as ids,
 } from "~/features/AccountManagement/testIds"
-import { createDefaultAccountStorageConfig } from "~/services/accounts/accountDefaults"
+import { createDefaultAccountStorageConfig } from "~/services/accounts/editing/accountDefaults"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { SiteHealthStatus } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"

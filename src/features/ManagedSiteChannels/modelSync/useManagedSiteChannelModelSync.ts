@@ -19,7 +19,7 @@ import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
-import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/managedSite"
+import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/facts/managedSite"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
 import {
   PROTECTION_BYPASS_SURFACES,

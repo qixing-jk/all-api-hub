@@ -11,7 +11,7 @@ import {
 import {
   createDefaultAccountStorageConfig,
   normalizeAccountStorageConfigForWrite,
-} from "~/services/accounts/accountDefaults"
+} from "~/services/accounts/editing/accountDefaults"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"

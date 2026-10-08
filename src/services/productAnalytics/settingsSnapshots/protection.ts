@@ -13,15 +13,15 @@ import {
   type TempWindowFallbackPreferences,
 } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
+  SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTY_FEATURES,
+  type SettingsSnapshotAutomaticFeatureBypassProperty,
+} from "~/services/productAnalytics/configuration/settingsSnapshot"
+import {
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_SETTING_IDS,
   type ProductAnalyticsEntrypoint,
   type ProductAnalyticsModeId,
 } from "~/services/productAnalytics/contracts"
-import {
-  SETTINGS_SNAPSHOT_AUTOMATIC_FEATURE_BYPASS_PROPERTY_FEATURES,
-  type SettingsSnapshotAutomaticFeatureBypassProperty,
-} from "~/services/productAnalytics/settingsSnapshot"
 
 import { type SettingChangedPayload } from "./values"
 import type { SettingsSnapshotProjection } from "./values"

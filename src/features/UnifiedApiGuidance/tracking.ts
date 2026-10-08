@@ -7,8 +7,8 @@ import {
   PRODUCT_ANALYTICS_TARGET_KINDS,
   type PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
-import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/managedSite"
+import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/facts/managedSite"
+import { trackProductAnalyticsEvent } from "~/services/productAnalytics/runtime/dispatch"
 
 import type { UnifiedApiGuidanceAction, UnifiedApiGuidanceModel } from "./model"
 

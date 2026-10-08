@@ -21,7 +21,7 @@ import {
   useAccountDataContext,
 } from "~/features/AccountManagement/data/AccountDataContext"
 import type { AccountManagementSnapshot } from "~/services/accounts/accountStorage/accountReadModels"
-import { createEmptyAccountStats } from "~/services/accounts/accountTodayStats"
+import { createEmptyAccountStats } from "~/services/accounts/metrics/accountTodayStats"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { mergeCompatibilityCheckInStatus } from "~/services/checkin/autoCheckin/state"

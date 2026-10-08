@@ -5,13 +5,13 @@ import {
 import {
   getSub2ApiAuthPersistenceStatus,
   SUB2API_AUTH_PERSISTENCE_STATUSES,
-} from "~/services/apiService/sub2api/authSession"
+} from "~/services/apiService/sub2api/auth/authSession"
 import {
   DENXIO_DAILY_CHECK_IN_ERROR_CODES,
   DENXIO_DAILY_CHECK_IN_RESULT_KINDS,
   fetchDenxioDailyCheckInStatus,
   performDenxioDailyCheckIn,
-} from "~/services/apiService/sub2api/denxioCheckIn"
+} from "~/services/apiService/sub2api/checkin/denxioCheckIn"
 import { getSafeErrorMessage } from "~/services/apiService/sub2api/redaction"
 import { ApiError } from "~/services/apiTransport/errors"
 import {

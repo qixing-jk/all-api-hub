@@ -5,7 +5,7 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { WEB_AI_API_CHECK_TARGET_IDS } from "~/features/BasicSettings/components/tabs/WebAiApiCheck/searchTargets"
 import { NEW_API_OWNED_SESSION_ACTIONS } from "~/services/managedSites/newApiOwnedSession/contracts"
-import { ProductAnalyticsMessageTypes } from "~/services/productAnalytics/messaging"
+import { ProductAnalyticsMessageTypes } from "~/services/productAnalytics/runtime/messaging"
 import { RedemptionAssistMessageTypes } from "~/services/redemption/redemptionAssistMessaging"
 
 type RuntimeMessageListener = (
@@ -151,11 +151,11 @@ vi.mock("~/services/checkin/autoCheckin/scheduling/schedulerMessaging", () => ({
   setupAutoCheckinMessagingListeners: mocks.setupAutoCheckinMessagingListeners,
 }))
 
-vi.mock("~/services/accounts/autoRefreshService", () => ({
+vi.mock("~/services/accounts/refresh/autoRefreshService", () => ({
   setupAutoRefreshMessagingListeners: mocks.setupAutoRefreshMessagingListeners,
 }))
 
-vi.mock("~/services/managedSites/channelConfigHandlers", () => ({
+vi.mock("~/services/managedSites/configuration/channelConfigHandlers", () => ({
   setupChannelConfigMessagingListeners:
     mocks.setupChannelConfigMessagingListeners,
 }))
@@ -181,7 +181,7 @@ vi.mock("~/services/history/dailyBalanceHistory/scheduler", () => ({
     mocks.setupDailyBalanceHistoryMessagingListeners,
 }))
 
-vi.mock("~/services/webdav/webdavAutoSyncMessageHandlers", () => ({
+vi.mock("~/services/webdav/autoSync/webdavAutoSyncMessageHandlers", () => ({
   setupWebdavAutoSyncMessagingListeners:
     mocks.setupWebdavAutoSyncMessagingListeners,
 }))
@@ -220,7 +220,7 @@ vi.mock("~/services/accounts/accountKeyAutoProvisioning", () => ({
     mocks.setupAccountKeyRepairMessagingListeners,
 }))
 
-vi.mock("~/services/productAnalytics/runtime", () => ({
+vi.mock("~/services/productAnalytics/runtime/runtime", () => ({
   setupProductAnalyticsMessagingListeners:
     mocks.setupProductAnalyticsMessagingListeners,
 }))
@@ -231,7 +231,7 @@ vi.mock("~/services/starPromotion/state", () => ({
   },
 }))
 
-vi.mock("~/services/productAnalytics/starPromotion", () => ({
+vi.mock("~/services/productAnalytics/facts/starPromotion", () => ({
   trackStarPromotionAction: mocks.trackStarPromotionAction,
 }))
 

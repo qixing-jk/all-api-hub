@@ -12,7 +12,7 @@ import {
   prepareDefaultAccountKeyCreation,
   type AccountKeyCreationPlan,
   type AccountKeyCreationResult,
-} from "~/services/accounts/accountKeyCreation"
+} from "~/services/accounts/keys/accountKeyCreation"
 import {
   AccountKeyResourceError,
   type AccountKeyProvisioningRequirement,

@@ -39,8 +39,8 @@ async function importMessagingModule(path: string) {
   })
 
   switch (path) {
-    case "~/services/productAnalytics/messaging":
-      await import("~/services/productAnalytics/messaging")
+    case "~/services/productAnalytics/runtime/messaging":
+      await import("~/services/productAnalytics/runtime/messaging")
       break
     case "~/services/redemption/redemptionAssistMessaging":
       await import("~/services/redemption/redemptionAssistMessaging")
@@ -62,7 +62,7 @@ describe("privacy-sensitive messaging loggers", () => {
   })
 
   it.each([
-    "~/services/productAnalytics/messaging",
+    "~/services/productAnalytics/runtime/messaging",
     "~/services/redemption/redemptionAssistMessaging",
     "~/services/verification/webAiApiCheck/messaging",
   ])("stringifies messages and drops payload details for %s", async (path) => {

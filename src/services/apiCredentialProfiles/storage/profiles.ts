@@ -3,7 +3,7 @@ import { Storage } from "@plasmohq/storage"
 import {
   getAccountRuntimeKeyLocatorIdentity,
   type AccountRuntimeKeyLocator,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   planApiCredentialProfileCapture,
   planApiCredentialProfileLink,

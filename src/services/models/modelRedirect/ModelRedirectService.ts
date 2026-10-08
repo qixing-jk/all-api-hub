@@ -5,15 +5,15 @@
  */
 
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
+import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/configuration/runtimeConfig"
+import {
+  hasValidManagedSiteConfig,
+  resolveCurrentManagedSiteRuntimeConfig,
+} from "~/services/managedSites/configuration/runtimeConfig"
 import {
   assertManagedResourceRefForSite,
   getManagedResourceRefKey,
 } from "~/services/managedSites/managedResourceIdentity"
-import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
-import {
-  hasValidManagedSiteConfig,
-  resolveCurrentManagedSiteRuntimeConfig,
-} from "~/services/managedSites/runtimeConfig"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 import type {

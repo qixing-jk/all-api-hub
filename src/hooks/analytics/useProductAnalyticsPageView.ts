@@ -5,7 +5,7 @@ import {
   type ProductAnalyticsEntrypoint,
   type ProductAnalyticsPageId,
 } from "~/services/productAnalytics/contracts"
-import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
+import { trackProductAnalyticsEvent } from "~/services/productAnalytics/runtime/dispatch"
 import { isDevBuild } from "~/utils/core/environment"
 
 interface UseProductAnalyticsPageViewParams {

@@ -5,7 +5,7 @@ import { RuntimeMessageTypes } from "~/constants/runtimeActions"
 import KeyManagement from "~/entrypoints/options/pages/KeyManagement"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { AccountKeyRepairMessageTypes } from "~/services/accounts/accountKeyAutoProvisioning/messaging"
-import { ACCOUNT_KEY_RECONCILIATION_OUTCOMES } from "~/services/accounts/accountKeyInventoryReconciliation"
+import { ACCOUNT_KEY_RECONCILIATION_OUTCOMES } from "~/services/accounts/keys/accountKeyInventoryReconciliation"
 import { ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,

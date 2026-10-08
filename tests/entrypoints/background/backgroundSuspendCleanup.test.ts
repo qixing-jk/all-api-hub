@@ -148,7 +148,7 @@ describe("background onSuspend temp-context cleanup", () => {
       applyActionClickBehavior: applyActionClickBehaviorMock,
       setupActionClickBehaviorListener: setupActionClickBehaviorListenerMock,
     }))
-    vi.doMock("~/services/productAnalytics/runtime", () => ({
+    vi.doMock("~/services/productAnalytics/runtime/runtime", () => ({
       setupProductAnalyticsAccountChangeListener: vi.fn(),
       setupProductAnalyticsPreferencesChangeListener: vi.fn(),
       triggerStartupSettingsSnapshot: triggerStartupSettingsSnapshotMock,
@@ -235,7 +235,7 @@ describe("background onSuspend temp-context cleanup", () => {
     vi.doUnmock("~/entrypoints/background/devActionBranding")
     vi.doUnmock("~/entrypoints/background/servicesInit")
     vi.doUnmock("~/entrypoints/background/actionClickBehavior")
-    vi.doUnmock("~/services/productAnalytics/runtime")
+    vi.doUnmock("~/services/productAnalytics/runtime/runtime")
     vi.doUnmock("~/services/preferences/userPreferences")
     vi.doUnmock("~/services/tags/tagStorage")
     vi.doUnmock("~/services/accounts/accountStorage/accountQueries")

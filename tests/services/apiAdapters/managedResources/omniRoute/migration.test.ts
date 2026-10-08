@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import { omniRouteManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/omniRoute/migration"
-import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/channelMigrationCapabilityRegistry"
+import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/migration/channelMigrationCapabilityRegistry"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES } from "~/types/managedSiteMigration"
 import {
   MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES,

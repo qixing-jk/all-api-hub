@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next"
 
-import { ACCOUNT_RUNTIME_KEY_STATUSES } from "~/services/accounts/accountRuntimeKeys"
+import { ACCOUNT_RUNTIME_KEY_STATUSES } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   ACCOUNT_KEY_RESOURCE_STATUSES,
   type AccountKeyResourceFacts,

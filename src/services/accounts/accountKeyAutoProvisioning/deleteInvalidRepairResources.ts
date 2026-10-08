@@ -1,6 +1,6 @@
-import { buildAccountKeyResourceLinkedCleanupInput } from "~/services/accounts/accountKeyResourceCleanup"
-import { buildAccountKeyResourceRuntimeKeyId } from "~/services/accounts/accountRuntimeKeys"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { buildAccountKeyResourceLinkedCleanupInput } from "~/services/accounts/keys/accountKeyResourceCleanup"
+import { buildAccountKeyResourceRuntimeKeyId } from "~/services/accounts/keys/accountRuntimeKeys"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,

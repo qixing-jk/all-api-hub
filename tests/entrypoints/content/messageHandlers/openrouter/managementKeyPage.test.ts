@@ -9,7 +9,7 @@ import {
   OPENROUTER_MANAGEMENT_KEYS_PATH,
   performOpenRouterManagementKeyPageAction,
 } from "~/entrypoints/content/messageHandlers/openrouter/managementKeyPage"
-import { OPENROUTER_MANAGEMENT_KEY_SECRET_MAX_LENGTH } from "~/services/apiAdapters/openrouter/managementKeySecret"
+import { OPENROUTER_MANAGEMENT_KEY_SECRET_MAX_LENGTH } from "~/services/apiAdapters/openrouter/keys/managementKeySecret"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 function pageEnvironment(pathname = OPENROUTER_MANAGEMENT_KEYS_PATH) {

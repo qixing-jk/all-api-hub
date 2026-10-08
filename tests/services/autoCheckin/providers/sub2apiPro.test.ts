@@ -8,18 +8,18 @@ import {
 } from "~/constants/checkIn"
 import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import { SUB2API_AUTH_PERSISTENCE_STATUSES } from "~/services/apiService/sub2api/authSession"
-import { fetchDenxioDailyCheckInStatus } from "~/services/apiService/sub2api/denxioCheckIn"
-import { fetchGeniusProgrammerDailyCheckInStatus } from "~/services/apiService/sub2api/geniusProgrammerCheckIn"
+import { SUB2API_AUTH_PERSISTENCE_STATUSES } from "~/services/apiService/sub2api/auth/authSession"
+import { fetchDenxioDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/denxioCheckIn"
+import { fetchGeniusProgrammerDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/geniusProgrammerCheckIn"
 import {
   fetchSub2ApiProDailyCheckInStatus,
   performSub2ApiProDailyCheckIn,
-} from "~/services/apiService/sub2api/proCheckInExecution"
-import { fetchToolcodeDailyCheckInStatus } from "~/services/apiService/sub2api/toolcodeCheckIn"
+} from "~/services/apiService/sub2api/checkin/proCheckInExecution"
+import { fetchToolcodeDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/toolcodeCheckIn"
 import {
   probeXiaobaiCodeCheckInStatus,
   XIAOBAI_CODE_STATUS_OUTCOMES,
-} from "~/services/apiService/sub2api/xiaobaiCodeCheckIn"
+} from "~/services/apiService/sub2api/checkin/xiaobaiCodeCheckIn"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery/discovery"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
@@ -38,11 +38,11 @@ import { createAutoCheckinMutationLifecycle } from "~~/tests/test-utils/autoChec
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 vi.mock(
-  "~/services/apiService/sub2api/proCheckInExecution",
+  "~/services/apiService/sub2api/checkin/proCheckInExecution",
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import("~/services/apiService/sub2api/proCheckInExecution")
+        typeof import("~/services/apiService/sub2api/checkin/proCheckInExecution")
       >()
     return {
       ...actual,
@@ -53,20 +53,20 @@ vi.mock(
 )
 
 vi.mock(
-  "~/services/apiService/sub2api/xiaobaiCodeCheckIn",
+  "~/services/apiService/sub2api/checkin/xiaobaiCodeCheckIn",
   async (importOriginal) => ({
     ...(await importOriginal<
-      typeof import("~/services/apiService/sub2api/xiaobaiCodeCheckIn")
+      typeof import("~/services/apiService/sub2api/checkin/xiaobaiCodeCheckIn")
     >()),
     probeXiaobaiCodeCheckInStatus: vi.fn(),
   }),
 )
 vi.mock(
-  "~/services/apiService/sub2api/denxioCheckIn",
+  "~/services/apiService/sub2api/checkin/denxioCheckIn",
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import("~/services/apiService/sub2api/denxioCheckIn")
+        typeof import("~/services/apiService/sub2api/checkin/denxioCheckIn")
       >()
     return {
       ...actual,
@@ -76,10 +76,10 @@ vi.mock(
 )
 
 vi.mock(
-  "~/services/apiService/sub2api/geniusProgrammerCheckIn",
+  "~/services/apiService/sub2api/checkin/geniusProgrammerCheckIn",
   async (importOriginal) => ({
     ...(await importOriginal<
-      typeof import("~/services/apiService/sub2api/geniusProgrammerCheckIn")
+      typeof import("~/services/apiService/sub2api/checkin/geniusProgrammerCheckIn")
     >()),
     fetchGeniusProgrammerDailyCheckInStatus: vi.fn(),
   }),
@@ -88,10 +88,10 @@ vi.mock(
 const METHOD_ID = AUTO_CHECKIN_METHOD_IDS.Sub2ApiProDailyCheckIn
 
 vi.mock(
-  "~/services/apiService/sub2api/toolcodeCheckIn",
+  "~/services/apiService/sub2api/checkin/toolcodeCheckIn",
   async (importOriginal) => ({
     ...(await importOriginal<
-      typeof import("~/services/apiService/sub2api/toolcodeCheckIn")
+      typeof import("~/services/apiService/sub2api/checkin/toolcodeCheckIn")
     >()),
     fetchToolcodeDailyCheckInStatus: vi.fn(),
   }),

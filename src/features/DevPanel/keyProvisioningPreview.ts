@@ -1,10 +1,10 @@
 import { CHECK_IN_SELECTION_MODES } from "~/constants/checkIn"
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
-import { prepareDefaultAccountKeyCreationInSession } from "~/services/accounts/accountKeyCreation"
+import { prepareDefaultAccountKeyCreationInSession } from "~/services/accounts/keys/accountKeyCreation"
 import {
   createAccountKeyProvisioningPlanner,
   type AccountKeyProvisioningPlan,
-} from "~/services/accounts/accountKeyProvisioning"
+} from "~/services/accounts/keys/accountKeyProvisioning"
 import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"

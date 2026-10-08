@@ -7,12 +7,12 @@ import {
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
   KEY_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/KeyManagement/constants"
-import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
-import { MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS } from "~/services/managedSites/channelMatch"
+import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
+import { MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS } from "~/services/managedSites/matching/channelMatch"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
-} from "~/services/managedSites/tokenChannelStatus"
+} from "~/services/managedSites/matching/tokenChannelStatus"
 import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 import { createAccount } from "~~/tests/utils/keyManagementFactories"

@@ -150,20 +150,20 @@ vi.mock(
 )
 
 vi.mock(
-  "~/services/managedSites/tokenBatchImportPreview",
+  "~/services/managedSites/batchImport/tokenBatchImportPreview",
   async (importOriginal) => ({
     ...(await importOriginal<
-      typeof import("~/services/managedSites/tokenBatchImportPreview")
+      typeof import("~/services/managedSites/batchImport/tokenBatchImportPreview")
     >()),
     prepareManagedSiteTokenBatchExportPreview: mockPreparePreview,
   }),
 )
 
 vi.mock(
-  "~/services/managedSites/tokenBatchImportExecution",
+  "~/services/managedSites/batchImport/tokenBatchImportExecution",
   async (importOriginal) => ({
     ...(await importOriginal<
-      typeof import("~/services/managedSites/tokenBatchImportExecution")
+      typeof import("~/services/managedSites/batchImport/tokenBatchImportExecution")
     >()),
     executeManagedSiteTokenBatchExport: mockExecuteBatchExport,
   }),

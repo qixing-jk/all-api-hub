@@ -36,7 +36,7 @@ vi.mock("~/entrypoints/content/shared/uiRoot", () => ({
   ensureRedemptionToastUi: ensureRedemptionToastUiMock,
 }))
 
-vi.mock("~/services/productAnalytics/shieldBypassSummary", () => ({
+vi.mock("~/services/productAnalytics/facts/shieldBypassSummary", () => ({
   recordShieldBypassPromptShown: recordPromptShownMock,
 }))
 

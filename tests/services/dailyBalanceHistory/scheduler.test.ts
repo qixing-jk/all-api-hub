@@ -98,7 +98,7 @@ vi.mock("~/services/accounts/accountStorage/accountRefresh", () => ({
     refreshAllAccounts: mockRefreshAllAccounts,
   },
 }))
-vi.mock("~/services/accounts/accountTodayStatsResolver", () => ({
+vi.mock("~/services/accounts/metrics/accountTodayStatsResolver", () => ({
   resolveAccountTodayStatsAvailability: (...args: unknown[]) =>
     mockResolveAccountTodayStatsAvailability(...args),
 }))

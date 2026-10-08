@@ -1,4 +1,4 @@
-import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
+import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/configuration/runtimeConfig"
 
 export const collectManagedConfigSecrets = (
   managedConfig: ManagedSiteRuntimeConfigValue,

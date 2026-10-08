@@ -45,7 +45,7 @@ import {
   type ProductAnalyticsErrorCategory,
   type ProductAnalyticsSiteType,
 } from "~/services/productAnalytics/contracts"
-import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnosticsError"
+import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnostics/diagnosticsError"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"

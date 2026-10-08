@@ -27,7 +27,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
+import { trackProductAnalyticsEvent } from "~/services/productAnalytics/runtime/dispatch"
 
 import {
   getProductTourTargetSelector,

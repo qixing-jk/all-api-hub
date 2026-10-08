@@ -9,16 +9,16 @@ import {
 } from "~/constants/siteType"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import toast from "~/lib/notify"
-import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import type { AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
-} from "~/services/managedSites/channelMatch"
+} from "~/services/managedSites/matching/channelMatch"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
   type ManagedSiteTokenChannelAssessment,
-} from "~/services/managedSites/tokenChannelStatus"
+} from "~/services/managedSites/matching/tokenChannelStatus"
 import * as managedSiteSupport from "~/services/managedSites/utils/managedSite"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"

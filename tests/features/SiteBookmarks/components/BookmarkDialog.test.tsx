@@ -69,7 +69,7 @@ vi.mock("~/utils/browser/tabs", async (importOriginal) => {
   return { ...actual, getActiveTab: getActiveTabMock }
 })
 
-vi.mock("~/services/accounts/siteName", () => ({
+vi.mock("~/services/accounts/identity/siteName", () => ({
   getSiteName: getSiteNameMock,
 }))
 

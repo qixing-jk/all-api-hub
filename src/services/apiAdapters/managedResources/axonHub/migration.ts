@@ -23,12 +23,12 @@ import {
   resolveManagedSiteMigrationType,
 } from "~/services/apiAdapters/managedResources/migration/migrationTypeRoutes"
 import { hasCompleteAxonHubAdvancedDetail } from "~/services/apiService/axonHub/channelProjection"
+import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/configuration/runtimeConfig"
 import {
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationDiagnostic,
 } from "~/services/managedSites/mutations"
-import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type { AxonHubChannel } from "~/types/axonHub"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES } from "~/types/managedSiteMigration"

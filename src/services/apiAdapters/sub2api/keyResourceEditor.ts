@@ -1,4 +1,4 @@
-import { getDefaultAccountKeyName } from "~/services/accounts/accountKeyNames"
+import { getDefaultAccountKeyName } from "~/services/accounts/keys/accountKeyNames"
 import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/definition"
 import { resolveKeyCreationGroupIntent } from "~/services/apiAdapters/accountKeyResources/groupCreationIntent"
 import type { AccountKeyCreationIntent } from "~/services/apiAdapters/contracts/accountKeyResource"
@@ -6,7 +6,7 @@ import {
   RESOURCE_FIELD_TYPES,
   type ResourceFieldIssue,
 } from "~/services/apiAdapters/contracts/resourceNative"
-import { fetchSub2ApiGroupDescriptors } from "~/services/apiService/sub2api/groups"
+import { fetchSub2ApiGroupDescriptors } from "~/services/apiService/sub2api/account/groups"
 import type {
   Sub2ApiCreateKeyPayload,
   Sub2ApiNativeKey,

@@ -4,7 +4,7 @@ import type {
   ProductAnalyticsEntrypoint,
   ProductAnalyticsSurfaceId,
 } from "~/services/productAnalytics/contracts"
-import { trackStarPromotionPromptShown } from "~/services/productAnalytics/starPromotion"
+import { trackStarPromotionPromptShown } from "~/services/productAnalytics/facts/starPromotion"
 import { STAR_PROMOTION_STATUSES } from "~/services/starPromotion/contracts"
 import { starPromotionState } from "~/services/starPromotion/state"
 

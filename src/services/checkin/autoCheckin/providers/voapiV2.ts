@@ -5,8 +5,8 @@ import {
   CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
-import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
+import { AccountUpdateUserTimestampMode } from "~/services/accounts/editing/accountDefaults"
 import {
   fetchVoApiV2CheckInStats,
   submitVoApiV2CheckIn,

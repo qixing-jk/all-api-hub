@@ -14,8 +14,8 @@ import {
   type AccountKeyResourceRouteTransition,
 } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceController"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
-import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
-import { canListAccountKeyResources } from "~/services/accounts/keyProductCapabilities"
+import type { AccountKeyCreationResult } from "~/services/accounts/keys/accountKeyCreation"
+import { canListAccountKeyResources } from "~/services/accounts/keys/keyProductCapabilities"
 import type { AccountKeyCreationIntent } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { createUserCommandProtectionBypassExecution } from "~/services/protectionBypass/client"
 import {

@@ -7,9 +7,9 @@ import type { Sub2ApiPricingCatalogs } from "~/services/apiAdapters/sub2api/stat
 import {
   fetchSub2ApiAvailableGroups,
   fetchSub2ApiGroupRates,
-} from "~/services/apiService/sub2api/groups"
+} from "~/services/apiService/sub2api/account/groups"
 import { fetchSub2ApiKeys } from "~/services/apiService/sub2api/keys"
-import { fetchSub2ApiPricingCatalogs } from "~/services/apiService/sub2api/pricingCatalog"
+import { fetchSub2ApiPricingCatalogs } from "~/services/apiService/sub2api/models/pricingCatalog"
 import type { Sub2ApiNativeKey } from "~/services/apiService/sub2api/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 

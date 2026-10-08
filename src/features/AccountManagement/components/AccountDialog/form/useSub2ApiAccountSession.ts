@@ -21,14 +21,14 @@ import {
   resolveAccountBrowserSession,
   type ResolveAccountBrowserSessionOptions,
 } from "~/services/accountBrowserSession"
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import { normalizeSub2ApiAuth } from "~/services/apiAdapters/sub2api/authSession"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
-import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnosticsError"
+import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnostics/diagnosticsError"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"

@@ -111,11 +111,11 @@ vi.mock("~/services/apiAdapters/registry", () => ({
 
 const inventoryFixtures = new Map<string, any[]>()
 vi.mock(
-  "~/services/accounts/accountKeyResourceInventory",
+  "~/services/accounts/keys/accountKeyResourceInventory",
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import("~/services/accounts/accountKeyResourceInventory")
+        typeof import("~/services/accounts/keys/accountKeyResourceInventory")
       >()
     const { buildNewApiKeyFacts } = await import(
       "~~/tests/test-utils/accountKeyFixtures"
@@ -160,7 +160,7 @@ vi.mock(
         typeof import("~/services/accounts/utils/apiServiceRequest")
       >()
     const { formatAccountRuntimeKeySecretForSite } = await import(
-      "~/services/accounts/accountRuntimeKeys"
+      "~/services/accounts/keys/accountRuntimeKeys"
     )
     return {
       ...actual,

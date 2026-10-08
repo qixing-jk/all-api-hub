@@ -122,12 +122,15 @@ vi.mock("~/services/apiAdapters/registry", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/services/apiAdapters/registry")>()),
   getManagedSiteCapabilities: getManagedSiteCapabilitiesMock,
 }))
-vi.mock("~/services/managedSites/runtimeConfig", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("~/services/managedSites/runtimeConfig")
-  >()),
-  hasValidManagedSiteConfig: hasValidManagedSiteConfigMock,
-}))
+vi.mock(
+  "~/services/managedSites/configuration/runtimeConfig",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/managedSites/configuration/runtimeConfig")
+    >()),
+    hasValidManagedSiteConfig: hasValidManagedSiteConfigMock,
+  }),
+)
 
 vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
   const actual =

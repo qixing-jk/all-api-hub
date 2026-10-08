@@ -21,7 +21,7 @@ import {
   KILO_CODE_ACCOUNT_MODEL_STATUSES,
   type useKiloCodeAccountModelDiscovery,
 } from "~/features/KiloCodeExport/useKiloCodeAccountModelDiscovery"
-import { getAccountRuntimeKeyExportId } from "~/services/accounts/accountRuntimeKeys"
+import { getAccountRuntimeKeyExportId } from "~/services/accounts/keys/accountRuntimeKeys"
 import { KILO_CODE_PROVIDER_PROTOCOLS } from "~/services/integrations/kiloCodeExport"
 import type { DisplaySiteData } from "~/types"
 

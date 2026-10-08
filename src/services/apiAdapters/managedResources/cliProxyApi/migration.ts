@@ -14,7 +14,7 @@ import {
   resolveManagedSiteMigrationType,
 } from "~/services/apiAdapters/managedResources/migration/migrationTypeRoutes"
 import type { CliProxyApiResource } from "~/services/apiService/cliProxyApi"
-import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
+import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/configuration/runtimeConfig"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES as blockers } from "~/types/managedSiteMigration"
 import {

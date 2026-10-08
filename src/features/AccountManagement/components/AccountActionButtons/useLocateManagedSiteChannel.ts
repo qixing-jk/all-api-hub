@@ -1,24 +1,24 @@
 import { useTranslation } from "react-i18next"
 
 import toast from "~/lib/notify"
-import { isAccountKeyResourceRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { isAccountKeyResourceRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   fetchDisplayAccountRuntimeKeys,
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { MANAGED_RESOURCE_SECRET_VERIFICATION_KINDS } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
-import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
+import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/configuration/channelDraftSource"
+import { getCurrentManagedSiteType } from "~/services/managedSites/configuration/runtimeConfig"
 import {
   getManagedSiteChannelExactMatch,
   getRecoverableManagedSiteChannelCandidate,
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
-} from "~/services/managedSites/channelMatch"
+} from "~/services/managedSites/matching/channelMatch"
 import {
   createManagedSiteChannelMatchRequestCache,
   resolveManagedSiteChannelMatch,
-} from "~/services/managedSites/channelMatchResolver"
-import { getCurrentManagedSiteType } from "~/services/managedSites/runtimeConfig"
+} from "~/services/managedSites/matching/channelMatchResolver"
 import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
 import { collectManagedConfigSecrets } from "~/services/managedSites/utils/resourceSecrets"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"

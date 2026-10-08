@@ -24,7 +24,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/contracts"
-import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
+import { trackProductAnalyticsEvent } from "~/services/productAnalytics/runtime/dispatch"
 import { PRODUCT_ANNOUNCEMENT_SEVERITIES } from "~/services/productAnnouncements/constants"
 import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 

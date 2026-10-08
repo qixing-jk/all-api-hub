@@ -26,22 +26,28 @@ const { recordSponsorSummaryMock, trackProductAnalyticsEventMock } = vi.hoisted(
   }),
 )
 
-vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/services/productAnalytics/dispatch")
-    >()
+vi.mock(
+  "~/services/productAnalytics/runtime/dispatch",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/productAnalytics/runtime/dispatch")
+      >()
 
-  return {
-    ...actual,
-    trackProductAnalyticsEvent: (...args: unknown[]) =>
-      trackProductAnalyticsEventMock(...args),
-  }
-})
+    return {
+      ...actual,
+      trackProductAnalyticsEvent: (...args: unknown[]) =>
+        trackProductAnalyticsEventMock(...args),
+    }
+  },
+)
 
-vi.mock("~/services/productAnalytics/sponsorRecommendationsSummary", () => ({
-  recordSponsorRecommendationsSummary: recordSponsorSummaryMock,
-}))
+vi.mock(
+  "~/services/productAnalytics/facts/sponsorRecommendationsSummary",
+  () => ({
+    recordSponsorRecommendationsSummary: recordSponsorSummaryMock,
+  }),
+)
 
 const onContinueAddAccount = vi.fn()
 const onOpenBookmarkManager = vi.fn()

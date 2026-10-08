@@ -1,10 +1,10 @@
+import { removeEntryIdsFromLayout } from "~/services/accounts/accountEntryLayoutPolicy"
 import {
   AccountUpdateUserTimestampMode,
   applySiteAccountUpdates,
   createPersistedSiteAccount,
   type AccountUpdateOptions,
-} from "~/services/accounts/accountDefaults"
-import { removeEntryIdsFromLayout } from "~/services/accounts/accountEntryLayoutPolicy"
+} from "~/services/accounts/editing/accountDefaults"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import type { AccountWriteGuard } from "~/services/core/accountWriteGuard"
 import { verificationResultHistoryStorage } from "~/services/verification/verificationResultHistory"

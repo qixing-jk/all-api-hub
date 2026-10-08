@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock(
-  "~/services/apiAdapters/openrouter/managementKeyPageContract",
+  "~/services/apiAdapters/openrouter/keys/managementKeyPageContract",
   () => mocks.pageContract,
 )
 

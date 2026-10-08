@@ -13,7 +13,7 @@ import {
   probeXiaobaiCodeCheckInStatus,
   XIAOBAI_CODE_DAILY_CHECK_IN_RESULT_KINDS,
   XIAOBAI_CODE_STATUS_OUTCOMES,
-} from "~/services/apiService/sub2api/xiaobaiCodeCheckIn"
+} from "~/services/apiService/sub2api/checkin/xiaobaiCodeCheckIn"
 import { ApiError } from "~/services/apiTransport/errors"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
@@ -27,11 +27,11 @@ import { createAutoCheckinMutationLifecycle } from "~~/tests/test-utils/autoChec
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 vi.mock(
-  "~/services/apiService/sub2api/xiaobaiCodeCheckIn",
+  "~/services/apiService/sub2api/checkin/xiaobaiCodeCheckIn",
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import("~/services/apiService/sub2api/xiaobaiCodeCheckIn")
+        typeof import("~/services/apiService/sub2api/checkin/xiaobaiCodeCheckIn")
       >()
     return {
       ...actual,

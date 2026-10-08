@@ -5,12 +5,12 @@ import type {
   AccountLoginCapability,
   AccountLoginTarget,
 } from "~/services/apiAdapters/contracts/accountLogin"
+import { fetchSub2ApiPublicSettings } from "~/services/apiService/sub2api/account/publicSettings"
 import {
   discoverSub2ApiOAuthMethods,
   isSub2ApiOAuthProvider,
   normalizeSub2ApiLoginIdentity,
 } from "~/services/apiService/sub2api/oauth/protocol"
-import { fetchSub2ApiPublicSettings } from "~/services/apiService/sub2api/publicSettings"
 import { createBrowserOAuthContext } from "~/services/browserOAuth/browserOAuth"
 import { AuthTypeEnum } from "~/types/auth"
 

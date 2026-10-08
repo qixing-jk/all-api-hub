@@ -20,8 +20,8 @@ import {
 import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
 import { KiloCodeExportDialog } from "~/features/KiloCodeExport/KiloCodeExportDialog"
 import { ManagedSiteImportButton } from "~/features/ManagedSiteWidgets/ManagedSiteImportButton"
-import { getAccountRuntimeKeyExportId } from "~/services/accounts/accountRuntimeKeys"
-import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { getAccountRuntimeKeyExportId } from "~/services/accounts/keys/accountRuntimeKeys"
+import type { AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
 import type { DisplaySiteData } from "~/types"
 

@@ -19,9 +19,9 @@ import {
 import {
   buildWebDavSyncDiagnostics,
   getWebdavSyncStrategyMode,
-} from "~/services/productAnalytics/webDavSync"
+} from "~/services/productAnalytics/facts/webDavSync"
 import { WebdavAutoSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
-import { sendWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncMessaging"
+import { sendWebdavAutoSyncMessage } from "~/services/webdav/autoSync/webdavAutoSyncMessaging"
 import {
   CLOUD_SYNC_PROVIDERS,
   WEBDAV_SYNC_STRATEGIES,

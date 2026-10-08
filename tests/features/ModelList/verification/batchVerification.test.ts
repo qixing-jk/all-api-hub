@@ -18,7 +18,7 @@ import {
   buildAccountKeyResourceRuntimeKey,
   buildAccountRuntimeKeyAccount,
   buildServiceCredentialRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { MODEL_LIST_SOURCE_IDENTITY_KINDS } from "~/services/modelCatalog/sourceIdentity"
 import type { ModelPricing } from "~/services/modelList/pricingModel"

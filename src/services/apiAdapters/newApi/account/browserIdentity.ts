@@ -3,7 +3,7 @@ import {
   compatibleStoredUserHint,
   resolveNewApiStoredUserHint,
 } from "~/services/accountBrowserSession/newApiStoredUserHint"
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import {
   ACCOUNT_SITE_ADAPTER_FAMILIES,
   getAccountSiteDefinition,

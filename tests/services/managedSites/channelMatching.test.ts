@@ -7,7 +7,7 @@ import {
   MANAGED_SITE_CHANNEL_MATCH_REASONS,
   MANAGED_SITE_CHANNEL_MODEL_SIMILARITY_THRESHOLD,
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
-} from "~/services/managedSites/channelMatch"
+} from "~/services/managedSites/matching/channelMatch"
 import {
   findBestManagedSiteChannelMatch,
   findManagedSiteChannelsByBaseUrl,

@@ -6,7 +6,7 @@ import {
   fetchGeniusProgrammerDailyCheckInStatus,
   GENIUS_PROGRAMMER_DAILY_CHECK_IN_RESULT_KINDS,
   performGeniusProgrammerDailyCheckIn,
-} from "~/services/apiService/sub2api/geniusProgrammerCheckIn"
+} from "~/services/apiService/sub2api/checkin/geniusProgrammerCheckIn"
 import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import type { SiteAccount } from "~/types"

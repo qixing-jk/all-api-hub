@@ -70,7 +70,7 @@ vi.mock("~/services/apiAdapters/registry", () => ({
     },
   }),
 }))
-vi.mock("~/services/managedSites/runtimeConfig", () => ({
+vi.mock("~/services/managedSites/configuration/runtimeConfig", () => ({
   getCurrentManagedSiteType: async () => "new-api",
 }))
 vi.mock("~/services/apiAdapters/managedResources/registry", () => ({

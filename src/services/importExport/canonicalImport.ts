@@ -21,7 +21,7 @@ import {
 } from "~/services/importExport/backupContracts"
 import { importV2ApiCredentialProfiles } from "~/services/importExport/credentialProfileImport"
 import { importV2Preferences } from "~/services/importExport/preferencesImport"
-import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
+import { channelConfigStorage } from "~/services/managedSites/configuration/channelConfigStorage"
 import type { ApiCredentialProfilesConfig } from "~/types/apiCredentialProfiles"
 
 /**

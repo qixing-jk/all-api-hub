@@ -85,16 +85,19 @@ vi.mock("~/services/permissions/permissionManager", () => {
   }
 })
 
-vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/services/productAnalytics/dispatch")
-    >()
-  return {
-    ...actual,
-    trackProductAnalyticsEvent: analyticsMocks.trackProductAnalyticsEvent,
-  }
-})
+vi.mock(
+  "~/services/productAnalytics/runtime/dispatch",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/productAnalytics/runtime/dispatch")
+      >()
+    return {
+      ...actual,
+      trackProductAnalyticsEvent: analyticsMocks.trackProductAnalyticsEvent,
+    }
+  },
+)
 
 vi.mock("~/utils/navigation/feedbackPages", () => ({
   openLanguageRequestPage: navigationMocks.openLanguageRequestPage,

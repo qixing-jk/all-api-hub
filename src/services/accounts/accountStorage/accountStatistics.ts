@@ -1,8 +1,8 @@
 import {
   collectAccountMetricContributors,
   createEmptyAccountStats,
-} from "~/services/accounts/accountTodayStats"
-import { resolveAccountTodayStatsAvailability } from "~/services/accounts/accountTodayStatsResolver"
+} from "~/services/accounts/metrics/accountTodayStats"
+import { resolveAccountTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStatsResolver"
 import type {
   AccountStats,
   AccountTodayStatsAvailability,

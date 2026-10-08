@@ -22,7 +22,7 @@ import { SITE_BOOKMARKS_TEST_IDS } from "~/features/SiteBookmarks/testIds"
 import {
   createDefaultAccountStorageConfig,
   normalizeAccountStorageConfigForWrite,
-} from "~/services/accounts/accountDefaults"
+} from "~/services/accounts/editing/accountDefaults"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { AccountStorageConfig, SiteAccount } from "~/types"
 import {

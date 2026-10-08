@@ -10,7 +10,7 @@ import type {
 } from "~/features/KeyManagement/resources/workflows/accountKeyResourceControllerTypes"
 import { mergeEditorValuesForScopeChange } from "~/features/KeyManagement/resources/workflows/accountKeyResourceWorkflowSupport"
 import { useAccountKeyResourceEditorOptionsWorkflow } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceEditorOptionsWorkflow"
-import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+import type { CreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import { type AccountKeyResourceEditor } from "~/services/apiAdapters/contracts/accountKeyResource"
 
 /** Owns editor state and its authoritative asynchronous projections. */

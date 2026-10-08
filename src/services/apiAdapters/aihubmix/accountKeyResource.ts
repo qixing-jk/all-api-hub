@@ -3,7 +3,7 @@ import { AIHUBMIX_API_ORIGIN, SITE_TYPES } from "~/constants/siteType"
 import {
   createAccountKeyResourceCreatedRuntimeSecret,
   createUnattributedAccountCreatedRuntimeSecret,
-} from "~/services/accounts/createdRuntimeSecret"
+} from "~/services/accounts/keys/createdRuntimeSecret"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
   keyExpiryDisplayFact,

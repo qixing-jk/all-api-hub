@@ -11,7 +11,7 @@ import {
   type AccountDialogDraft,
 } from "~/features/AccountManagement/components/AccountDialog/models"
 import { resolveDefaultAccountAuthType } from "~/features/AccountManagement/utils/accountAuthType"
-import { usesAccountCredentialIdentity } from "~/services/accounts/accountDedupe"
+import { usesAccountCredentialIdentity } from "~/services/accounts/identity/accountDedupe"
 import {
   createCompatibilityCheckInConfig,
   resolveNewAccountAutomaticExecutionEnabled,

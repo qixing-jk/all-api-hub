@@ -2,13 +2,13 @@ import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  createManagedSiteChannelMatchRequestCache,
-  resolveManagedSiteChannelMatch,
-} from "~/services/managedSites/channelMatchResolver"
-import {
   createManagedChannelResourceRef,
   getManagedResourceRefKey,
 } from "~/services/managedSites/managedResourceIdentity"
+import {
+  createManagedSiteChannelMatchRequestCache,
+  resolveManagedSiteChannelMatch,
+} from "~/services/managedSites/matching/channelMatchResolver"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"

@@ -1,0 +1,443 @@
+import { Storage } from "@plasmohq/storage"
+
+import { MANAGED_SITE_TYPES } from "~/constants/siteType"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
+import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
+import {
+  isManagedResourceRefFor,
+  type ManagedResourceRef,
+} from "~/services/apiAdapters/contracts/managedResourceNative"
+import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
+import { runAbortableTask } from "~/services/apiTransport/abortableTask"
+import {
+  CHANNEL_CONFIG_STORAGE_KEYS,
+  STORAGE_LOCKS,
+} from "~/services/core/storageKeys"
+import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
+import { channelConfigStorage } from "~/services/managedSites/configuration/channelConfigStorage"
+import {
+  hasManagedSiteRuntimeConfigInputForType,
+  resolveManagedSiteRuntimeConfigForType,
+  type ManagedSiteRuntimeConfig,
+} from "~/services/managedSites/configuration/runtimeConfig"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
+import { userPreferences } from "~/services/preferences/userPreferences"
+import {
+  createManagedUpstreamResourceRef,
+  normalizeManagedUpstreamResourceScopeKey,
+  type ManagedUpstreamResourceRef,
+} from "~/types/managedUpstreamResource"
+import { createLogger } from "~/utils/core/logger"
+
+const logger = createLogger("LegacyChannelConfigMigration")
+const LEGACY_CHANNEL_INVENTORY_TIMEOUT_MS = 30_000
+const INITIAL_RETRY_DELAY_MS = 5 * 60_000
+const MAX_RETRY_DELAY_MS = 6 * 60 * 60_000
+
+type LegacyChannelConfigMigrationRetryState = {
+  attempt: number
+  retryAfter: number
+}
+
+type ManagedSiteInventoryTargets = {
+  targets: ManagedSiteRuntimeConfig[]
+  hasIncompleteConfig: boolean
+}
+
+/** Resolves complete deployment configs while detecting partial user input. */
+function resolveInventoryTargets(
+  preferences: UserPreferences,
+): ManagedSiteInventoryTargets {
+  const targets: ManagedSiteRuntimeConfig[] = []
+  let hasIncompleteConfig = false
+
+  for (const siteType of MANAGED_SITE_TYPES) {
+    const target = resolveManagedSiteRuntimeConfigForType(preferences, siteType)
+    if (target) {
+      targets.push(target)
+    } else if (hasManagedSiteRuntimeConfigInputForType(preferences, siteType)) {
+      hasIncompleteConfig = true
+    }
+  }
+
+  return { targets, hasIncompleteConfig }
+}
+
+/** Builds a deterministic identity for the deployment set being enumerated. */
+function getInventoryTargetFingerprint(
+  targets: ManagedSiteRuntimeConfig[],
+): string {
+  return targets
+    .map(
+      (target) =>
+        `${target.siteType}:${normalizeManagedUpstreamResourceScopeKey(target.config.baseUrl)}`,
+    )
+    .sort()
+    .join("\n")
+}
+
+export const LEGACY_CHANNEL_CONFIG_MIGRATION_STATUSES = {
+  NotNeeded: "not-needed",
+  Completed: "completed",
+  Deferred: "deferred",
+} as const
+
+export type LegacyChannelConfigMigrationStatus =
+  (typeof LEGACY_CHANNEL_CONFIG_MIGRATION_STATUSES)[keyof typeof LEGACY_CHANNEL_CONFIG_MIGRATION_STATUSES]
+
+export const LEGACY_CHANNEL_CONFIG_MIGRATION_DEFERRED_REASONS = {
+  NoConfiguredSites: "no-configured-sites",
+  InventoryFailed: "inventory-failed",
+  StorageFailed: "storage-failed",
+  BackoffActive: "backoff-active",
+  UnresolvedIdentities: "unresolved-identities",
+} as const
+
+export type LegacyChannelConfigMigrationDeferredReason =
+  (typeof LEGACY_CHANNEL_CONFIG_MIGRATION_DEFERRED_REASONS)[keyof typeof LEGACY_CHANNEL_CONFIG_MIGRATION_DEFERRED_REASONS]
+
+export type LegacyChannelConfigMigrationOutcome =
+  | { status: typeof LEGACY_CHANNEL_CONFIG_MIGRATION_STATUSES.NotNeeded }
+  | {
+      status: typeof LEGACY_CHANNEL_CONFIG_MIGRATION_STATUSES.Completed
+      migrated: number
+      ambiguous: number
+      unmatched: number
+    }
+  | {
+      status: typeof LEGACY_CHANNEL_CONFIG_MIGRATION_STATUSES.Deferred
+      reason: LegacyChannelConfigMigrationDeferredReason
+    }
+
+/**
+ * Discovers every configured deployment before resolving legacy numeric ids.
+ * A shared promise deduplicates callers within one extension context.
+ */
+class LegacyChannelConfigMigration {
+  private readonly storage = new Storage({ area: "local" })
+  private initializationPromise: Promise<LegacyChannelConfigMigrationOutcome> | null =
+    null
+
+  async initialize(options?: {
+    bypassBackoff?: boolean
+  }): Promise<LegacyChannelConfigMigrationOutcome> {
+    const bypassBackoff = options?.bypassBackoff ?? false
+    const outcome = await this.start(bypassBackoff)
+    if (
+      bypassBackoff &&
+      outcome.status === LEGACY_CHANNEL_CONFIG_MIGRATION_STATUSES.Deferred &&
+      outcome.reason ===
+        LEGACY_CHANNEL_CONFIG_MIGRATION_DEFERRED_REASONS.BackoffActive
+    ) {
+      // The shared run may have been started by a background caller without
+      // bypass. Retry after it settles so this explicit action honors bypass.
+      return await this.start(true)
+    }
+    return outcome
+  }
+
+  private start(
+    bypassBackoff: boolean,
+  ): Promise<LegacyChannelConfigMigrationOutcome> {
+    if (!this.initializationPromise) {
+      const runPromise = this.run(bypassBackoff)
+      this.initializationPromise = runPromise
+      void runPromise.then(
+        () => this.clearInitializationPromise(runPromise),
+        () => this.clearInitializationPromise(runPromise),
+      )
+    }
+    return this.initializationPromise
+  }
+
+  private clearInitializationPromise(
+    runPromise: Promise<LegacyChannelConfigMigrationOutcome>,
+  ): void {
+    if (this.initializationPromise === runPromise) {
+      this.initializationPromise = null
+    }
+  }
+
+  private async readRetryState(): Promise<LegacyChannelConfigMigrationRetryState | null> {
+    const raw = await this.storage.get(
+      CHANNEL_CONFIG_STORAGE_KEYS.LEGACY_MIGRATION_STATE,
+    )
+    if (!raw || typeof raw !== "object") return null
+
+    const candidate = raw as Partial<LegacyChannelConfigMigrationRetryState>
+    return Number.isInteger(candidate.attempt) &&
+      Number(candidate.attempt) >= 1 &&
+      Number.isFinite(candidate.retryAfter) &&
+      Number(candidate.retryAfter) > 0
+      ? {
+          attempt: Number(candidate.attempt),
+          retryAfter: Number(candidate.retryAfter),
+        }
+      : null
+  }
+
+  private async defer(
+    reason: Exclude<
+      LegacyChannelConfigMigrationDeferredReason,
+      typeof LEGACY_CHANNEL_CONFIG_MIGRATION_DEFERRED_REASONS.BackoffActive
+    >,
+  ): Promise<LegacyChannelConfigMigrationOutcome> {
+    try {
+      const previous = await this.readRetryState()
+      const attempt = Math.min((previous?.attempt ?? 0) + 1, 16)
+      const retryDelay = Math.min(
+        INITIAL_RETRY_DELAY_MS * 2 ** (attempt - 1),
+        MAX_RETRY_DELAY_MS,
+      )
+      await this.storage.set(
+        CHANNEL_CONFIG_STORAGE_KEYS.LEGACY_MIGRATION_STATE,
+        {
+          attempt,
+          retryAfter: Date.now() + retryDelay,
+        } satisfies LegacyChannelConfigMigrationRetryState,
+      )
+    } catch (error) {
+      logger.warn("Failed to persist legacy channel migration backoff", error)
+    }
+    return {
+      status: LEGACY_CHANNEL_CONFIG_MIGRATION_STATUSES.Deferred,
+      reason,
+    }
+  }
+
+  private async clearRetryState(): Promise<void> {
+    try {
+      await this.storage.remove(
+        CHANNEL_CONFIG_STORAGE_KEYS.LEGACY_MIGRATION_STATE,
+      )
+    } catch (error) {
+      logger.warn("Failed to clear legacy channel migration backoff", error)
+    }
+  }
+
+  private async run(
+    bypassBackoff: boolean,
+  ): Promise<LegacyChannelConfigMigrationOutcome> {
+    try {
+      return await withExtensionStorageWriteLock(
+        STORAGE_LOCKS.LEGACY_CHANNEL_CONFIG_MIGRATION,
+        async () => await this.runExclusive(bypassBackoff),
+      )
+    } catch (error) {
+      logger.warn("Legacy numeric channel config migration deferred", error)
+      return await this.defer(
+        LEGACY_CHANNEL_CONFIG_MIGRATION_DEFERRED_REASONS.StorageFailed,
+      )
+    }
+  }
+
+  private async runExclusive(
+    bypassBackoff: boolean,
+  ): Promise<LegacyChannelConfigMigrationOutcome> {
+    try {
+      if (!(await channelConfigStorage.hasLegacyNumericConfigs())) {
+        await this.clearRetryState()
+        return { status: LEGACY_CHANNEL_CONFIG_MIGRATION_STATUSES.NotNeeded }
+      }
+
+      const retryState = await this.readRetryState()
+      if (!bypassBackoff && retryState && retryState.retryAfter > Date.now()) {
+        return {
+          status: LEGACY_CHANNEL_CONFIG_MIGRATION_STATUSES.Deferred,
+          reason:
+            LEGACY_CHANNEL_CONFIG_MIGRATION_DEFERRED_REASONS.BackoffActive,
+        }
+      }
+
+      const preferences = await userPreferences.getPreferencesStrict()
+      const inventoryTargets = resolveInventoryTargets(preferences)
+      const { targets } = inventoryTargets
+
+      if (inventoryTargets.hasIncompleteConfig) {
+        return await this.defer(
+          LEGACY_CHANNEL_CONFIG_MIGRATION_DEFERRED_REASONS.InventoryFailed,
+        )
+      }
+
+      if (targets.length === 0) {
+        return await this.defer(
+          LEGACY_CHANNEL_CONFIG_MIGRATION_DEFERRED_REASONS.NoConfiguredSites,
+        )
+      }
+
+      const inventoryResults = await Promise.allSettled(
+        targets.map(async (target) => {
+          // Sites without historical numeric identities must not block migration.
+          const legacyNumericIdentity = getAccountSiteDefinition(
+            target.siteType,
+          )?.managedResource?.legacyNumericChannelConfig
+          if (legacyNumericIdentity === false) return []
+          if (legacyNumericIdentity !== true)
+            throw new Error(
+              "Legacy numeric channel identity metadata is unavailable",
+            )
+          const refs = await runAbortableTask(
+            async (signal) => {
+              const registration = getManagedResourceRegistration(
+                target.siteType,
+                MANAGED_RESOURCE_KINDS.Channel,
+              )
+              if (!registration)
+                throw new Error(
+                  "Native managed-resource inventory is unavailable",
+                )
+              const workspace = await registration.open({ signal })
+              const refs: ManagedResourceRef[] = []
+              const seenIds = new Set<string>()
+              const seenCursors = new Set<string>()
+              let cursor: string | undefined
+              let expectedTotal = 0
+              do {
+                const page = await workspace.list(
+                  { cursor, limit: 100 },
+                  { signal },
+                )
+                expectedTotal = Math.max(expectedTotal, page.total ?? 0)
+                for (const item of page.items) {
+                  if (
+                    !isManagedResourceRefFor(item.ref, {
+                      siteType: target.siteType,
+                      kind: registration.kind,
+                      scopeKey: normalizeManagedUpstreamResourceScopeKey(
+                        target.config.baseUrl,
+                      ),
+                    }) ||
+                    seenIds.has(item.ref.resourceId)
+                  ) {
+                    throw new Error(
+                      "Managed-resource inventory identity mismatch",
+                    )
+                  }
+                  seenIds.add(item.ref.resourceId)
+                  refs.push(item.ref)
+                }
+                cursor = page.nextCursor
+                if (cursor && seenCursors.has(cursor))
+                  throw new Error("Managed-resource inventory cursor repeated")
+                if (cursor) seenCursors.add(cursor)
+              } while (cursor)
+              if (refs.length < expectedTotal)
+                throw new Error("Managed-resource inventory is incomplete")
+              return refs
+            },
+            { timeoutMs: LEGACY_CHANNEL_INVENTORY_TIMEOUT_MS },
+          )
+
+          return refs.flatMap((ref) => {
+            const channelId = Number(ref.resourceId)
+            if (
+              !/^[1-9]\d*$/.test(ref.resourceId) ||
+              !Number.isSafeInteger(channelId)
+            ) {
+              throw new Error("Invalid numeric channel identity")
+            }
+            return [
+              {
+                channelId,
+                resourceRef: createManagedUpstreamResourceRef({
+                  managedSiteType: target.siteType,
+                  scopeKey: ref.scopeKey,
+                  resourceId: ref.resourceId,
+                }),
+              },
+            ]
+          })
+        }),
+      )
+
+      const failedCount = inventoryResults.filter(
+        (result) => result.status === "rejected",
+      ).length
+      if (failedCount > 0) {
+        logger.warn("Legacy channel config inventory is incomplete", {
+          configuredSiteCount: targets.length,
+          failedSiteCount: failedCount,
+        })
+        return await this.defer(
+          LEGACY_CHANNEL_CONFIG_MIGRATION_DEFERRED_REASONS.InventoryFailed,
+        )
+      }
+
+      const currentPreferences = await userPreferences.getPreferencesStrict()
+      const currentInventoryTargets =
+        resolveInventoryTargets(currentPreferences)
+      if (
+        currentInventoryTargets.hasIncompleteConfig ||
+        getInventoryTargetFingerprint(currentInventoryTargets.targets) !==
+          getInventoryTargetFingerprint(targets)
+      ) {
+        logger.warn("Managed-site configuration changed during migration")
+        return await this.defer(
+          LEGACY_CHANNEL_CONFIG_MIGRATION_DEFERRED_REASONS.InventoryFailed,
+        )
+      }
+
+      const candidates = inventoryResults.flatMap((result) =>
+        result.status === "fulfilled" ? result.value : [],
+      )
+      const migrated =
+        await channelConfigStorage.migrateLegacyNumericConfigs(candidates)
+      if (migrated.ambiguous > 0 || migrated.unmatched > 0) {
+        logger.warn(
+          "Legacy numeric channel configs remain unresolved",
+          migrated,
+        )
+        return await this.defer(
+          LEGACY_CHANNEL_CONFIG_MIGRATION_DEFERRED_REASONS.UnresolvedIdentities,
+        )
+      }
+      await this.clearRetryState()
+      logger.info("Legacy numeric channel config migration completed", migrated)
+      return {
+        status: LEGACY_CHANNEL_CONFIG_MIGRATION_STATUSES.Completed,
+        ...migrated,
+      }
+    } catch (error) {
+      logger.warn("Legacy numeric channel config migration deferred", error)
+      return await this.defer(
+        LEGACY_CHANNEL_CONFIG_MIGRATION_DEFERRED_REASONS.StorageFailed,
+      )
+    }
+  }
+}
+
+/** Typed failure returned to scoped-only consumers when migration must retry. */
+export class LegacyChannelConfigMigrationDeferredError extends Error {
+  constructor(readonly reason: LegacyChannelConfigMigrationDeferredReason) {
+    super(`Legacy channel config migration deferred: ${reason}`)
+    this.name = "LegacyChannelConfigMigrationDeferredError"
+  }
+}
+
+/** Ensures legacy numeric data is resolved before a scoped-only consumer runs. */
+export async function ensureLegacyChannelConfigMigrationReady(options?: {
+  bypassBackoff?: boolean
+  resourceRefs?: readonly ManagedUpstreamResourceRef[]
+}): Promise<void> {
+  const selection = options?.resourceRefs
+  if (
+    selection &&
+    !(await channelConfigStorage.hasPendingLegacyConfigsForResources(selection))
+  )
+    return
+  const outcome = await legacyChannelConfigMigration.initialize(options)
+  if (outcome.status === LEGACY_CHANNEL_CONFIG_MIGRATION_STATUSES.Deferred) {
+    // A partial migration can finish the selected resources while unrelated
+    // identities remain unresolved. Never guess ownership of those leftovers.
+    if (
+      selection &&
+      !(await channelConfigStorage.hasPendingLegacyConfigsForResources(
+        selection,
+      ))
+    )
+      return
+    throw new LegacyChannelConfigMigrationDeferredError(outcome.reason)
+  }
+}
+
+export const legacyChannelConfigMigration = new LegacyChannelConfigMigration()

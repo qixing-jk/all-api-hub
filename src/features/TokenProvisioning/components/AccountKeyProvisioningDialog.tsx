@@ -10,12 +10,12 @@ import {
 import { useNativeResourceEditorLoadingVisibility } from "~/features/ResourceEditor"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import toast from "~/lib/notify"
-import { accountKeySourceSignature } from "~/services/accounts/accountKeyCreation"
+import { accountKeySourceSignature } from "~/services/accounts/keys/accountKeyCreation"
 import {
   prepareAccountKeyProvisioning,
   type AccountKeyProvisioningPlan,
-} from "~/services/accounts/accountKeyProvisioning"
-import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+} from "~/services/accounts/keys/accountKeyProvisioning"
+import type { CreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import {
   AccountKeyResourceError,
   type EditableResourceProjection,

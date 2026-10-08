@@ -4,15 +4,15 @@ import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSessio
 import {
   SUB2API_AUTH_PERSISTENCE_STATUSES,
   type Sub2ApiAuthSessionRequest,
-} from "~/services/apiService/sub2api/authSession"
+} from "~/services/apiService/sub2api/auth/authSession"
 import {
   recoverSub2ApiBrowserAuth as resyncSub2ApiAuthToken,
   Sub2ApiAuthIdentityMismatchError,
-} from "~/services/apiService/sub2api/browserAuth"
+} from "~/services/apiService/sub2api/auth/browserAuth"
 import {
   fetchSub2ApiProDailyCheckInStatus,
   performSub2ApiProDailyCheckIn,
-} from "~/services/apiService/sub2api/proCheckInExecution"
+} from "~/services/apiService/sub2api/checkin/proCheckInExecution"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type { ApiTransportResponse } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
@@ -28,17 +28,20 @@ vi.mock("~/services/apiTransport/request", async (importOriginal) => ({
   fetchApiResponse: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/sub2api/browserAuth", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/services/apiService/sub2api/browserAuth")
-    >()
-  return {
-    ...actual,
-    findSub2ApiBrowserAuth: vi.fn(),
-    recoverSub2ApiBrowserAuth: vi.fn(),
-  }
-})
+vi.mock(
+  "~/services/apiService/sub2api/auth/browserAuth",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/apiService/sub2api/auth/browserAuth")
+      >()
+    return {
+      ...actual,
+      findSub2ApiBrowserAuth: vi.fn(),
+      recoverSub2ApiBrowserAuth: vi.fn(),
+    }
+  },
+)
 
 const response = (
   status: number,

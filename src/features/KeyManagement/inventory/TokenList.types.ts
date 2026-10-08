@@ -6,13 +6,13 @@ import {
 import {
   type AccountRuntimeKey,
   type AccountRuntimeKeyLocator,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   type AccountKeyResourceFacts,
   type AccountKeyResourceRef,
   type ResourceFailure,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
-import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
+import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/matching/tokenChannelStatus"
 import type { DisplaySiteData } from "~/types"
 import type {
   ApiCredentialProfile,

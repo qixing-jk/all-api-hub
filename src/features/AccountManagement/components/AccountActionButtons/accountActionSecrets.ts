@@ -1,4 +1,4 @@
-import { collectAccountRuntimeKeySecrets } from "~/services/accounts/accountRuntimeKeys"
+import { collectAccountRuntimeKeySecrets } from "~/services/accounts/keys/accountRuntimeKeys"
 
 export const addRedactionSecrets = (
   secretsToRedact: Set<string>,

@@ -14,7 +14,7 @@ import {
   requestPermissionDetailed,
 } from "~/services/permissions/permissionManager"
 import { userPreferences } from "~/services/preferences/userPreferences"
-import { trackOptionalPermissionRequestResult } from "~/services/productAnalytics/permissions"
+import { trackOptionalPermissionRequestResult } from "~/services/productAnalytics/facts/permissions"
 import { DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES } from "~/types/siteAnnouncements"
 import {
   DEFAULT_TASK_NOTIFICATION_PREFERENCES,

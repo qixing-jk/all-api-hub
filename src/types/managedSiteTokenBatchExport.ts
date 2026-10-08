@@ -1,10 +1,10 @@
 import type { ManagedSiteType } from "~/constants/siteType"
-import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
-import type { ManagedSiteTokenBatchImportTargetSummary } from "~/services/managedSites/tokenBatchImportTarget"
+import type { AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
+import type { ManagedSiteTokenBatchImportTargetSummary } from "~/services/managedSites/batchImport/tokenBatchImportTarget"
 import type {
   ManagedSiteAssessmentChannel,
   ManagedSiteVerifiedKeyAssessment,
-} from "~/services/managedSites/verifiedChannelKeyAssessment"
+} from "~/services/managedSites/matching/verifiedChannelKeyAssessment"
 import type { DisplaySiteData } from "~/types"
 import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
 

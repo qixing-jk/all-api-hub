@@ -2,11 +2,11 @@ import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { AI_ROUTER_ORIGINS } from "~/constants/deploymentApiOrigins"
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { AGENT_ROUTER_ORIGINS } from "~/services/accountLogin/providers/agentrouter/config"
-import { createAiRouterCheckInStatusEndpoint } from "~/services/apiService/sub2api/aiRouterCheckInProtocol"
+import { createAiRouterCheckInStatusEndpoint } from "~/services/apiService/sub2api/checkin/aiRouterCheckInProtocol"
 import {
   createToolcodeCheckInStatusEndpoint,
   resolveToolcodeCheckInTimezone,
-} from "~/services/apiService/sub2api/toolcodeCheckInProtocol"
+} from "~/services/apiService/sub2api/checkin/toolcodeCheckInProtocol"
 import type { CheckInMethodId, PersistedCheckInMethodId } from "~/types/checkIn"
 
 import type { AutoCheckinProvider } from "./contracts"

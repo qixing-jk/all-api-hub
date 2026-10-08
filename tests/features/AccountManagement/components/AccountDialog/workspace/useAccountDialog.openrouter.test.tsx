@@ -82,27 +82,35 @@ vi.mock("~/services/accounts/accountAutoDetection", () => ({
   autoDetectAccount: mockGenericAutoDetectAccount,
 }))
 
-vi.mock("~/services/accounts/accountCreation", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/services/accounts/accountCreation")>()
-  return {
-    ...actual,
-    validateAndSaveAccount: (
-      ...args: Parameters<typeof actual.validateAndSaveAccount>
-    ) => {
-      if (mockValidateAndSaveAccount.getMockImplementation()) {
-        return mockValidateAndSaveAccount(...args)
-      }
+vi.mock(
+  "~/services/accounts/editing/accountCreation",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/accounts/editing/accountCreation")
+      >()
+    return {
+      ...actual,
+      validateAndSaveAccount: (
+        ...args: Parameters<typeof actual.validateAndSaveAccount>
+      ) => {
+        if (mockValidateAndSaveAccount.getMockImplementation()) {
+          return mockValidateAndSaveAccount(...args)
+        }
 
-      return actual.validateAndSaveAccount(...args)
-    },
-  }
-})
+        return actual.validateAndSaveAccount(...args)
+      },
+    }
+  },
+)
 
-vi.mock("~/services/apiAdapters/openrouter/accountProvisioning", () => ({
-  onboardOpenRouterAccount: mockAutoDetectAccount,
-  cancelOpenRouterAccountProvisioning: mockCancelAccountAutoDetect,
-}))
+vi.mock(
+  "~/services/apiAdapters/openrouter/account/accountProvisioning",
+  () => ({
+    onboardOpenRouterAccount: mockAutoDetectAccount,
+    cancelOpenRouterAccountProvisioning: mockCancelAccountAutoDetect,
+  }),
+)
 
 vi.mock("~/services/popupInterruptionHint", async (importOriginal) => {
   const actual =

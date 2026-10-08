@@ -25,7 +25,7 @@ import {
   triggerStartupShieldBypassDailySummary,
   triggerStartupSiteEcosystemSnapshot,
   triggerStartupSponsorRecommendationsDailySummary,
-} from "~/services/productAnalytics/runtime"
+} from "~/services/productAnalytics/runtime/runtime"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { uninstallSurveyService } from "~/services/uninstallSurvey/uninstallSurvey"
 import { shouldAutoOpenChangelogForUpdate } from "~/services/updates/changelogIndex"

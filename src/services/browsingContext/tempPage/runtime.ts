@@ -8,7 +8,7 @@ import {
 } from "~/services/browsingContext/internalTabsBackground"
 import { resolveTempContextOpenMode } from "~/services/browsingContext/tempPage/tempContextModeResolver"
 import { tempPageTaskScheduler } from "~/services/browsingContext/tempPage/tempPageTaskScheduler"
-import { recordShieldBypassFocusObservation } from "~/services/productAnalytics/shieldBypassSummary"
+import { recordShieldBypassFocusObservation } from "~/services/productAnalytics/facts/shieldBypassSummary"
 import { PROTECTION_BYPASS_DECISION_RESULTS } from "~/services/protectionBypass/contracts"
 import { type ProtectionBypassPolicyDecision } from "~/services/protectionBypass/policy"
 import {

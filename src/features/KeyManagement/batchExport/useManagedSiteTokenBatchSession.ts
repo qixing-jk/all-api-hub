@@ -24,12 +24,12 @@ import {
   reconcileManagedSiteTokenBatchExportPreview,
 } from "~/features/KeyManagement/batchExport/managedSiteTokenBatchExportSession"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
-import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import {
   MANAGED_SITE_TOKEN_BATCH_IMPORT_TARGET_CHANGED_ERROR_CODE,
   ManagedSiteTokenBatchImportTargetChangedError,
-} from "~/services/managedSites/tokenBatchImportExecution"
-import { prepareManagedSiteTokenBatchExportPreview } from "~/services/managedSites/tokenBatchImportPreview"
+} from "~/services/managedSites/batchImport/tokenBatchImportExecution"
+import { prepareManagedSiteTokenBatchExportPreview } from "~/services/managedSites/batchImport/tokenBatchImportPreview"
+import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import {
   createAutomaticProtectionBypassExecution,
   withProtectionBypassUserCommand,

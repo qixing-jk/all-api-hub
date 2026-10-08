@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/accountKeyNames"
+import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/keys/accountKeyNames"
 import {
   createGrsaiKeyEditor,
   GRSAI_KEY_FIELD_IDS as field,

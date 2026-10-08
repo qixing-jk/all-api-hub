@@ -26,7 +26,7 @@ vi.mock("@plasmohq/storage", () => ({
 vi.mock("~/services/apiAdapters/registry", () => ({
   getManagedSiteCapabilities: () => ({ config: { get: mocks.config } }),
 }))
-vi.mock("~/services/managedSites/runtimeConfig", () => ({
+vi.mock("~/services/managedSites/configuration/runtimeConfig", () => ({
   getCurrentManagedSiteType: async () => "new-api",
 }))
 vi.mock("~/services/managedSites/linkedChannelCleanup", () => ({

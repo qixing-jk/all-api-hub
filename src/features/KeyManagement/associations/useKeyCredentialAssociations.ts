@@ -6,7 +6,7 @@ import toast from "~/lib/notify"
 import {
   isAccountRuntimeKeyLocatorEqual,
   type AccountRuntimeKeyLocator,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import { apiCredentialProfileLinks } from "~/services/apiCredentialProfiles/links"
 import type {
   ApiCredentialProfile,

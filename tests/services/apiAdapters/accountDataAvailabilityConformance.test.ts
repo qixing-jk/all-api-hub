@@ -9,7 +9,7 @@ import {
   type AccountSiteType,
 } from "~/constants/siteType"
 import type { AccountData } from "~/services/accounts/accountDataModel"
-import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
+import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
 import type { SiteBackendFamily } from "~/services/apiAdapters/contracts/siteTypeCapabilities"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"

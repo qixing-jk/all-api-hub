@@ -4,8 +4,8 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   NEW_API_RESOURCE_VALIDATION_TIMEOUT_MS,
   validateNewApiSessionReadResource,
-} from "~/services/managedSites/providers/newApiProtectionBypassResource"
-import { validateOctopusApiFetchResource } from "~/services/managedSites/providers/octopusProtectionBypassResource"
+} from "~/services/managedSites/providers/newApi/newApiProtectionBypassResource"
+import { validateOctopusApiFetchResource } from "~/services/managedSites/providers/octopus/octopusProtectionBypassResource"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_EXECUTION_KINDS,
@@ -29,7 +29,7 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   },
 }))
 
-vi.mock("~/services/managedSites/runtimeConfig", () => ({
+vi.mock("~/services/managedSites/configuration/runtimeConfig", () => ({
   resolveManagedSiteRuntimeConfigForType: mocks.resolveForType,
   resolveCurrentManagedSiteRuntimeConfig: mocks.resolveCurrent,
 }))

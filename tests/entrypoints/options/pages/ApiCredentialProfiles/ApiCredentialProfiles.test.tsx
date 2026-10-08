@@ -13,7 +13,7 @@ import {
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
   KEY_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/KeyManagement/constants"
-import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/accountRuntimeKeys"
+import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   createEmptyFeatureGuidanceState,
   type FeatureGuidanceState,

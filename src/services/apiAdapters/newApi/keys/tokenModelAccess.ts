@@ -1,4 +1,4 @@
-import type { AccountRuntimeKeyModelAccess } from "~/services/accounts/runtimeKeyModelAccess"
+import type { AccountRuntimeKeyModelAccess } from "~/services/accounts/keys/runtimeKeyModelAccess"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 
 /** Translate the remaining token protocol fields before runtime consumers see them. */

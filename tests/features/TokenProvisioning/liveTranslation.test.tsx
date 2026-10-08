@@ -39,7 +39,7 @@ vi.mock(
     fetchDisplayAccountRuntimeKeys: mocks.keys,
   }),
 )
-vi.mock("~/services/accounts/accountKeyResourceInventory", () => ({
+vi.mock("~/services/accounts/keys/accountKeyResourceInventory", () => ({
   fetchDisplayAccountKeyResourceInventory: async () => ({
     scope: { displayName: "Account" },
     items: (await mocks.keys()).map((key: any) => ({
@@ -53,12 +53,15 @@ vi.mock("~/services/accounts/accountKeyResourceInventory", () => ({
     })),
   }),
 }))
-vi.mock("~/services/accounts/accountKeyCreation", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("~/services/accounts/accountKeyCreation")
-  >()),
-  prepareDefaultAccountKeyCreation: mocks.resolution,
-}))
+vi.mock(
+  "~/services/accounts/keys/accountKeyCreation",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/accounts/keys/accountKeyCreation")
+    >()),
+    prepareDefaultAccountKeyCreation: mocks.resolution,
+  }),
+)
 
 const i18n = await createResourceTestI18n({
   en: {

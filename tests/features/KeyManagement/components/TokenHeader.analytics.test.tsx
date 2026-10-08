@@ -11,11 +11,11 @@ import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import {
   ACCOUNT_RUNTIME_KEY_SOURCES,
   buildAccountKeyResourceRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
-} from "~/services/managedSites/tokenChannelStatus"
+} from "~/services/managedSites/matching/tokenChannelStatus"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,

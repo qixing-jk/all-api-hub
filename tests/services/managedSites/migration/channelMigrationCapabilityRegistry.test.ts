@@ -1,0 +1,88 @@
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+import { SITE_TYPES } from "~/constants/siteType"
+import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/migration/channelMigrationCapabilityRegistry"
+
+const { resolveManagedUpstreamResourceFeatureCapabilitiesMock } = vi.hoisted(
+  () => ({
+    resolveManagedUpstreamResourceFeatureCapabilitiesMock: vi.fn(),
+  }),
+)
+
+describe("managed site migration capability registry", () => {
+  beforeEach(() => {
+    resolveManagedUpstreamResourceFeatureCapabilitiesMock.mockReset()
+  })
+
+  it("resolves New API without falling back to the legacy feature gate", () => {
+    expect(
+      resolveManagedSiteMigrationCapability(SITE_TYPES.NEW_API),
+    ).toMatchObject({
+      source: {
+        prepare: expect.any(Function),
+        resolveCredential: expect.any(Function),
+      },
+      target: {
+        prepare: expect.any(Function),
+        create: expect.any(Function),
+      },
+    })
+    expect(
+      resolveManagedUpstreamResourceFeatureCapabilitiesMock,
+    ).not.toHaveBeenCalled()
+  })
+
+  it("resolves AxonHub without falling back to the legacy feature gate", () => {
+    expect(
+      resolveManagedSiteMigrationCapability(SITE_TYPES.AXON_HUB),
+    ).toMatchObject({
+      source: {
+        prepare: expect.any(Function),
+        resolveCredential: expect.any(Function),
+      },
+      target: {
+        prepare: expect.any(Function),
+        create: expect.any(Function),
+      },
+    })
+    expect(
+      resolveManagedUpstreamResourceFeatureCapabilitiesMock,
+    ).not.toHaveBeenCalled()
+  })
+
+  it("resolves Veloera without falling back to the legacy feature gate", () => {
+    expect(
+      resolveManagedSiteMigrationCapability(SITE_TYPES.VELOERA),
+    ).toMatchObject({
+      source: {
+        prepare: expect.any(Function),
+        resolveCredential: expect.any(Function),
+      },
+      target: {
+        prepare: expect.any(Function),
+        create: expect.any(Function),
+      },
+    })
+    expect(
+      resolveManagedUpstreamResourceFeatureCapabilitiesMock,
+    ).not.toHaveBeenCalled()
+  })
+
+  it("resolves DoneHub without falling back to the legacy feature gate", () => {
+    expect(
+      resolveManagedSiteMigrationCapability(SITE_TYPES.DONE_HUB),
+    ).toMatchObject({
+      source: {
+        prepare: expect.any(Function),
+        resolveCredential: expect.any(Function),
+      },
+      target: {
+        prepare: expect.any(Function),
+        create: expect.any(Function),
+      },
+    })
+    expect(
+      resolveManagedUpstreamResourceFeatureCapabilitiesMock,
+    ).not.toHaveBeenCalled()
+  })
+})

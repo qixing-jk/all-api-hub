@@ -1,12 +1,9 @@
 import { userPreferences } from "~/services/preferences/userPreferences"
-import type { WebDAVConfig } from "~/types/webdav"
-import { t } from "~/utils/i18n/core"
-
 import {
   decryptWebdavBackupEnvelope,
   encryptWebdavBackupContent,
   tryParseEncryptedWebdavBackupEnvelope,
-} from "./webdavBackupEncryption"
+} from "~/services/webdav/backup/webdavBackupEncryption"
 import {
   BACKUP_FOLDER_NAME,
   buildAuthHeader,
@@ -15,7 +12,9 @@ import {
   ensureBackupDirectory,
   PROGRAM_NAME,
   WebdavHttpError,
-} from "./webdavBackupTransport"
+} from "~/services/webdav/backup/webdavBackupTransport"
+import type { WebDAVConfig } from "~/types/webdav"
+import { t } from "~/utils/i18n/core"
 
 /**
  * Jianguoyun/Nutstore returns this DAV exception inside a 409 XML payload when

@@ -8,8 +8,8 @@ import type { ManagedSiteChannelAssessmentSignals } from "~/services/managedSite
 import {
   MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
-} from "~/services/managedSites/channelMatch"
-import type { ManagedSiteTokenChannelAssessment } from "~/services/managedSites/tokenChannelStatus"
+} from "~/services/managedSites/matching/channelMatch"
+import type { ManagedSiteTokenChannelAssessment } from "~/services/managedSites/matching/tokenChannelStatus"
 
 export type { ManagedSiteType } from "~/constants/siteType"
 export type { ManagedSiteChannelAssessmentSignals } from "~/services/managedSites/channelAssessmentSignals"

@@ -63,10 +63,14 @@ const {
   mockGetCurrentTempWindowRequestSource: vi.fn(),
 }))
 
-vi.mock("~/services/apiAdapters/openrouter/accountProvisioning", () => ({
-  onboardOpenRouterAccount: mockOnboardOpenRouterAccount,
-  cancelOpenRouterAccountProvisioning: mockCancelOpenRouterAccountProvisioning,
-}))
+vi.mock(
+  "~/services/apiAdapters/openrouter/account/accountProvisioning",
+  () => ({
+    onboardOpenRouterAccount: mockOnboardOpenRouterAccount,
+    cancelOpenRouterAccountProvisioning:
+      mockCancelOpenRouterAccountProvisioning,
+  }),
+)
 
 vi.mock("~/utils/core/identifier", async (importOriginal) => {
   const actual =

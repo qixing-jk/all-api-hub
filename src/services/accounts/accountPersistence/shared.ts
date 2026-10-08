@@ -1,11 +1,11 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accountSiteProfile"
+import { normalizeAccountSiteProfileUrlForStorage } from "~/services/accounts/accountSiteProfile/urls"
 import {
   parseManualQuotaFromUsd,
   resolveExchangeRate,
-} from "~/services/accounts/accountFormValidation"
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
-import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accountSiteProfile"
-import { normalizeAccountSiteProfileUrlForStorage } from "~/services/accounts/accountSiteProfile/urls"
+} from "~/services/accounts/editing/accountFormValidation"
+import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import type { AccountDataCapability } from "~/services/apiAdapters/contracts/accountData"
 import type { AccountPersistenceIdentityInput } from "~/services/apiAdapters/contracts/accountPersistence"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"

@@ -25,7 +25,7 @@ import {
   type ProductAnalyticsResult,
   type ProductAnalyticsSourceKind,
 } from "~/services/productAnalytics/contracts"
-import { buildModelListDiagnostics } from "~/services/productAnalytics/modelListDiagnostics"
+import { buildModelListDiagnostics } from "~/services/productAnalytics/diagnostics/modelListDiagnostics"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 

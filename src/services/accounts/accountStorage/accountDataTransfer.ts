@@ -1,11 +1,11 @@
 import {
-  normalizeAccountStorageConfigForWrite,
-  normalizeSiteAccount,
-} from "~/services/accounts/accountDefaults"
-import {
   buildEntryIdSets,
   filterKnownUniqueEntryIds,
 } from "~/services/accounts/accountEntryLayoutPolicy"
+import {
+  normalizeAccountStorageConfigForWrite,
+  normalizeSiteAccount,
+} from "~/services/accounts/editing/accountDefaults"
 import { migrateAccountsConfig } from "~/services/accounts/migrations/accountDataMigration"
 import type { AccountStorageConfig, SiteAccount, SiteBookmark } from "~/types"
 import { createLogger } from "~/utils/core/logger"

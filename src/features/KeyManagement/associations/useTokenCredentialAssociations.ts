@@ -23,7 +23,7 @@ import {
 import {
   getAccountRuntimeKeyLocatorIdentity,
   type AccountRuntimeKeyLocator,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import type { ApiCredentialProfileLink } from "~/types/apiCredentialProfiles"
 import { openApiCredentialProfilesPage } from "~/utils/navigation"
 

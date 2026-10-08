@@ -8,11 +8,11 @@ import {
   ensureNewApiManagedSession,
   submitNewApiLoginTwoFactorCode,
   submitNewApiSecureVerificationCode,
-} from "~/services/managedSites/providers/newApiSession"
+} from "~/services/managedSites/providers/newApi/newApiSession"
 import {
   NEW_API_MANAGED_SESSION_STATUSES,
   type EnsureNewApiManagedSessionResult,
-} from "~/services/managedSites/providers/newApiSessionContracts"
+} from "~/services/managedSites/providers/newApi/newApiSessionContracts"
 import type { NewApiConfig } from "~/types/newApiConfig"
 import { createTab } from "~/utils/browser/tabs"
 import { createLogger } from "~/utils/core/logger"

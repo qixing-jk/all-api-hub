@@ -1,5 +1,5 @@
 import { isAccountSiteType } from "~/constants/siteType"
-import { buildAccountKeyResourceRuntimeKeyId } from "~/services/accounts/accountRuntimeKeys"
+import { buildAccountKeyResourceRuntimeKeyId } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   AccountKeyResourceError,

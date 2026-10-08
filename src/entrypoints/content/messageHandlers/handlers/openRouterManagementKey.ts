@@ -8,7 +8,7 @@ import { performOpenRouterManagementKeyPageAction } from "~/entrypoints/content/
 import type {
   TempWindowOpenRouterManagementKeyActionParams,
   TempWindowOpenRouterManagementKeyActionResult,
-} from "~/services/apiAdapters/openrouter/managementKeyPageContract"
+} from "~/services/apiAdapters/openrouter/keys/managementKeyPageContract"
 import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 
 /** Normalizes an internal page exception without exposing its message. */

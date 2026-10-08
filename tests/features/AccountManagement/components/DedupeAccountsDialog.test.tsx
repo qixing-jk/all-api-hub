@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import DedupeAccountsDialog from "~/features/AccountManagement/components/DedupeAccountsDialog"
-import { scanDuplicateAccounts } from "~/services/accounts/accountDedupe"
+import { scanDuplicateAccounts } from "~/services/accounts/identity/accountDedupe"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

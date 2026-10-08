@@ -1,6 +1,6 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { isAccountSiteType, type AccountSiteType } from "~/constants/siteType"
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import {
   createAccountDetectionDiagnostics,
   type AccountDetectionDiagnostics,

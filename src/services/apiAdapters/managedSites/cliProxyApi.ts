@@ -11,7 +11,7 @@ import {
   sharePendingConfigRead,
   type ScheduledReadOptions,
 } from "~/services/apiTransport/requestScheduling"
-import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
+import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/configuration/runtimeConfig"
 import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import type { CliProxyApiConfig } from "~/types/cliProxyApiConfig"

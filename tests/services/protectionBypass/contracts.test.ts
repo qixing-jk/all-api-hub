@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { OPENROUTER_MANAGEMENT_KEY_LABEL_MAX_LENGTH } from "~/services/apiAdapters/openrouter/managementKeyPageContract"
+import { OPENROUTER_MANAGEMENT_KEY_LABEL_MAX_LENGTH } from "~/services/apiAdapters/openrouter/keys/managementKeyPageContract"
 import {
   getTempContextTaskMetadata,
   isAutoRefreshProtectionBypassExecution,

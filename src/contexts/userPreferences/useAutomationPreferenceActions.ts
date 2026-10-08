@@ -3,7 +3,7 @@ import { useCallback } from "react"
 import {
   AutoRefreshMessageTypes,
   sendAutoRefreshMessage,
-} from "~/services/accounts/autoRefreshMessaging"
+} from "~/services/accounts/refresh/autoRefreshMessaging"
 import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
 import { sendBalanceHistoryMessage } from "~/services/history/dailyBalanceHistory/messaging"
 import { sendModelSyncMessage } from "~/services/models/modelSync/messaging"

@@ -1,4 +1,4 @@
-import type { AccountRuntimeKeyLocator } from "~/services/accounts/accountRuntimeKeys"
+import type { AccountRuntimeKeyLocator } from "~/services/accounts/keys/accountRuntimeKeys"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import type { HealthStatus } from "~/types"
 

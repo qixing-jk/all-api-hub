@@ -42,7 +42,7 @@ import {
   createSub2ApiManagedAccountMutation,
   deleteSub2ApiManagedAccountMutation,
   updateSub2ApiManagedAccountMutation,
-} from "~/services/managedSites/providers/sub2apiMutations"
+} from "~/services/managedSites/providers/sub2api/sub2apiMutations"
 import type { Sub2ApiAdminApiKeyAccount } from "~/types/sub2apiManagedSite"
 
 const sub2ApiNativeDefinition = {

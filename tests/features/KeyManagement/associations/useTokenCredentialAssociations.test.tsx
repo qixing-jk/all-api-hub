@@ -10,7 +10,7 @@ import type {
   NativeKeyManagementRow,
 } from "~/features/KeyManagement/types"
 import { KEY_MANAGEMENT_DISPLAY_ROW_KINDS } from "~/features/KeyManagement/types"
-import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/accountRuntimeKeys"
+import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   API_CREDENTIAL_PROFILE_LINK_SOURCES,
   API_CREDENTIAL_PROFILE_LINK_STATES,

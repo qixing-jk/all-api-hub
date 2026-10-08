@@ -15,11 +15,11 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock(
-  "~/services/managedSites/providers/newApiProtectionBypassResource",
+  "~/services/managedSites/providers/newApi/newApiProtectionBypassResource",
   () => ({ validateNewApiSessionReadResource: mocks.validateNewApi }),
 )
 vi.mock(
-  "~/services/managedSites/providers/octopusProtectionBypassResource",
+  "~/services/managedSites/providers/octopus/octopusProtectionBypassResource",
   () => ({ validateOctopusApiFetchResource: mocks.validateOctopus }),
 )
 

@@ -19,7 +19,7 @@ import {
   PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
   trackOptionalPermissionRequestResult,
   trackOptionalPermissionResult,
-} from "~/services/productAnalytics/permissions"
+} from "~/services/productAnalytics/facts/permissions"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/feedback/operationFeedback"
 

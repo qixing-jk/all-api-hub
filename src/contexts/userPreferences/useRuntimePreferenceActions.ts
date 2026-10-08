@@ -3,7 +3,7 @@ import { useCallback } from "react"
 import {
   AutoRefreshMessageTypes,
   sendAutoRefreshMessage,
-} from "~/services/accounts/autoRefreshMessaging"
+} from "~/services/accounts/refresh/autoRefreshMessaging"
 import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
 import { sendBalanceHistoryMessage } from "~/services/history/dailyBalanceHistory/messaging"
 import { sendModelSyncMessage } from "~/services/models/modelSync/messaging"
@@ -25,7 +25,7 @@ import {
   WebdavAutoSyncMessageTypes,
 } from "~/services/runtimeMessaging/messageTypes"
 import { sendSiteAnnouncementsMessage } from "~/services/siteAnnouncements/messaging"
-import { sendWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncMessaging"
+import { sendWebdavAutoSyncMessage } from "~/services/webdav/autoSync/webdavAutoSyncMessaging"
 import {
   DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
   normalizeSiteAnnouncementPreferences,

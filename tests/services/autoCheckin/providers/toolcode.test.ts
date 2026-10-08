@@ -11,7 +11,7 @@ import {
   fetchToolcodeDailyCheckInStatus,
   performToolcodeDailyCheckIn,
   TOOLCODE_DAILY_CHECK_IN_RESULT_KINDS,
-} from "~/services/apiService/sub2api/toolcodeCheckIn"
+} from "~/services/apiService/sub2api/checkin/toolcodeCheckIn"
 import { ApiError } from "~/services/apiTransport/errors"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
@@ -25,11 +25,11 @@ import { createAutoCheckinMutationLifecycle } from "~~/tests/test-utils/autoChec
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 vi.mock(
-  "~/services/apiService/sub2api/toolcodeCheckIn",
+  "~/services/apiService/sub2api/checkin/toolcodeCheckIn",
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import("~/services/apiService/sub2api/toolcodeCheckIn")
+        typeof import("~/services/apiService/sub2api/checkin/toolcodeCheckIn")
       >()
     return {
       ...actual,

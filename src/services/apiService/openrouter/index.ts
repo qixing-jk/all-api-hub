@@ -5,7 +5,7 @@ import type {
   RefreshAccountResult,
 } from "~/services/accounts/accountDataModel"
 import { determineHealthStatus } from "~/services/accounts/accountHealth"
-import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
+import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
 import { OPENROUTER_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
 import { ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"

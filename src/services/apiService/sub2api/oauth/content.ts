@@ -4,17 +4,17 @@ import {
   readIdentityStorageString,
 } from "~/services/accountBrowserSession/localIdentityState"
 import {
+  clearSub2ApiBrowserSession,
+  readSub2ApiBrowserToken,
+  SUB2API_AUTH_STORAGE_KEYS,
+} from "~/services/apiService/sub2api/auth/browserSession"
+import {
   BrowserOAuthRequestError,
   fetchBrowserOAuthRequest,
   runBrowserOAuthContentAction,
 } from "~/services/browserOAuth/contentRequest"
 import { isRecord } from "~/utils/core/object"
 
-import {
-  clearSub2ApiBrowserSession,
-  readSub2ApiBrowserToken,
-  SUB2API_AUTH_STORAGE_KEYS,
-} from "../browserSession"
 import {
   SUB2API_AUTH_ME_ENDPOINT,
   SUB2API_PUBLIC_SETTINGS_ENDPOINT,

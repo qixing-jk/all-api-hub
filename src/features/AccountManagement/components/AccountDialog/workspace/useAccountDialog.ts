@@ -43,7 +43,7 @@ import { useAccountDuplicateConfirmation } from "~/features/AccountManagement/co
 import {
   isValidAccount,
   parseManualQuotaFromUsd,
-} from "~/services/accounts/accountFormValidation"
+} from "~/services/accounts/editing/accountFormValidation"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"

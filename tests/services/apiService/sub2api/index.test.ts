@@ -16,27 +16,27 @@ import {
   fetchUserInfo,
   getOrCreateAccessToken,
   refreshAccountData,
-} from "~/services/apiService/sub2api/accountData"
+} from "~/services/apiService/sub2api/account/accountData"
 import {
   fetchSub2ApiAnnouncements,
   markSub2ApiAnnouncementRead,
-} from "~/services/apiService/sub2api/announcements"
-import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/authSession"
+} from "~/services/apiService/sub2api/account/announcements"
+import { fetchInviteLink } from "~/services/apiService/sub2api/account/inviteLink"
+import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/auth/authSession"
 import {
   recoverSub2ApiBrowserAuth as resyncSub2ApiAuthToken,
   SUB2API_SESSION_BINDING_MISMATCH_CODE,
   Sub2ApiAuthIdentityMismatchError,
-} from "~/services/apiService/sub2api/browserAuth"
-import { fetchInviteLink } from "~/services/apiService/sub2api/inviteLink"
+} from "~/services/apiService/sub2api/auth/browserAuth"
 import { deleteApiToken } from "~/services/apiService/sub2api/keys"
+import { fetchSub2ApiPricingCatalogs } from "~/services/apiService/sub2api/models/pricingCatalog"
+import { fetchSub2ApiRuntimeModels } from "~/services/apiService/sub2api/models/runtimeModels"
 import {
   convertUsdBalanceToQuota,
   extractSub2ApiKeyItems,
   parseSub2ApiEnvelope,
   parseSub2ApiUserIdentity,
 } from "~/services/apiService/sub2api/parsing"
-import { fetchSub2ApiPricingCatalogs } from "~/services/apiService/sub2api/pricingCatalog"
-import { fetchSub2ApiRuntimeModels } from "~/services/apiService/sub2api/runtimeModels"
 import type {
   Sub2ApiAnnouncementListData,
   Sub2ApiEnvelope,
@@ -98,16 +98,19 @@ vi.mock("~/constants/deploymentApiOrigins", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/apiService/sub2api/browserAuth", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/services/apiService/sub2api/browserAuth")
-    >()
-  return {
-    ...actual,
-    recoverSub2ApiBrowserAuth: vi.fn().mockResolvedValue(null),
-  }
-})
+vi.mock(
+  "~/services/apiService/sub2api/auth/browserAuth",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/apiService/sub2api/auth/browserAuth")
+      >()
+    return {
+      ...actual,
+      recoverSub2ApiBrowserAuth: vi.fn().mockResolvedValue(null),
+    }
+  },
+)
 
 describe("apiService sub2api parsing", () => {
   it("convertUsdBalanceToQuota rounds using conversion factor", () => {

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { getManagedSiteRuntimeConfigFingerprint } from "~/services/managedSites/runtimeConfig"
+import { getManagedSiteRuntimeConfigFingerprint } from "~/services/managedSites/configuration/runtimeConfig"
 import { modelSyncScheduler } from "~/services/models/modelSync/scheduler"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import {
@@ -52,7 +52,7 @@ vi.mock(
 )
 
 vi.mock(
-  "~/services/managedSites/legacyChannelConfigMigration",
+  "~/services/managedSites/configuration/legacyChannelConfigMigration",
   () => ({
     ensureLegacyChannelConfigMigrationReady: vi
       .fn()
@@ -118,7 +118,7 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   },
 }))
 
-vi.mock("~/services/managedSites/channelConfigStorage", () => ({
+vi.mock("~/services/managedSites/configuration/channelConfigStorage", () => ({
   channelConfigStorage: {
     getConfigsForScope: mocks.getConfigsForScope,
   },

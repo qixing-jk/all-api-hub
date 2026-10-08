@@ -3,10 +3,6 @@ import { logger } from "~/services/checkin/autoCheckin/diagnostics"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
-  buildAutoCheckinDiagnostics,
-  trackAutoCheckinRunAnalytics,
-} from "~/services/productAnalytics/autoCheckin"
-import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
@@ -16,6 +12,10 @@ import {
   type PRODUCT_ANALYTICS_MODE_IDS,
   type ProductAnalyticsResult,
 } from "~/services/productAnalytics/contracts"
+import {
+  buildAutoCheckinDiagnostics,
+  trackAutoCheckinRunAnalytics,
+} from "~/services/productAnalytics/facts/autoCheckin"
 import { type SiteAccount } from "~/types"
 import {
   type AutoCheckinAccountSnapshot,

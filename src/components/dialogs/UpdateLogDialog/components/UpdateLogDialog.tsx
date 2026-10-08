@@ -14,7 +14,7 @@ import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { trackStarPromotionAction } from "~/services/productAnalytics/starPromotion"
+import { trackStarPromotionAction } from "~/services/productAnalytics/facts/starPromotion"
 import { starPromotionState } from "~/services/starPromotion/state"
 import { createTab } from "~/utils/browser/tabs"
 import { getErrorMessage } from "~/utils/core/error"

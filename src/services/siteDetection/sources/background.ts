@@ -1,7 +1,7 @@
 import { AUTO_DETECT_STRATEGIES } from "~/constants/autoDetect"
 import { type AccountSiteType } from "~/constants/siteType"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession"
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import { type AccountDetectionDiagnostics } from "~/services/accountSiteOnboarding/diagnostics"
 import { normalizeContentSessionTransientAuth } from "~/services/accountSiteOnboarding/transientAuth"
 import { summarizeApiServiceFetchContext } from "~/services/apiTransport/type"

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { prepareAccountKeyProvisioning } from "~/services/accounts/accountKeyProvisioning"
-import { canCreateAccountKeyResources } from "~/services/accounts/keyProductCapabilities"
+import { prepareAccountKeyProvisioning } from "~/services/accounts/keys/accountKeyProvisioning"
+import { canCreateAccountKeyResources } from "~/services/accounts/keys/keyProductCapabilities"
 import { AuthTypeEnum } from "~/types"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 

@@ -1,4 +1,4 @@
-import type { DuplicateAccountGroup } from "~/services/accounts/accountDedupe"
+import type { DuplicateAccountGroup } from "~/services/accounts/identity/accountDedupe"
 
 export type DedupeAccountsKeepChangeInput = {
   groupId: string

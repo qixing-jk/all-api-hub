@@ -3,7 +3,7 @@ import { vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import CopyKeyDialog from "~/features/AccountManagement/components/CopyKeyDialog"
-import * as accountKeyCreation from "~/services/accounts/accountKeyCreation"
+import * as accountKeyCreation from "~/services/accounts/keys/accountKeyCreation"
 import { AuthTypeEnum } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { render, screen } from "~~/tests/test-utils/render"

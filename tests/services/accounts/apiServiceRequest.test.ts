@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
-import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
+import { accountSub2ApiAuthSession } from "~/services/accounts/accountSiteProfile/sub2apiAuthSession"
+import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   ACCOUNT_RUNTIME_KEY_SECRET_SOURCES,
   canFetchDisplayAccountInviteLink,
@@ -42,7 +42,7 @@ vi.mock(
   },
 )
 
-vi.mock("~/services/accounts/sub2apiAuthSession", () => ({
+vi.mock("~/services/accounts/accountSiteProfile/sub2apiAuthSession", () => ({
   accountSub2ApiAuthSession: {
     getLatestAuth: vi.fn(),
     persistAuthUpdate: vi.fn(),

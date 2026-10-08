@@ -37,13 +37,16 @@ vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
 vi.mock("~/services/accounts/accountStorage/accountReadModels", () => ({
   accountReadModels: { getDisplayDataById: mocks.getDisplay },
 }))
-vi.mock("~/services/accounts/accountKeyCreation", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("~/services/accounts/accountKeyCreation")
-  >()),
-  ensureAccountKey: mocks.ensureKey,
-  resolveCreatedAccountRuntimeKey: mocks.resolveKey,
-}))
+vi.mock(
+  "~/services/accounts/keys/accountKeyCreation",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/accounts/keys/accountKeyCreation")
+    >()),
+    ensureAccountKey: mocks.ensureKey,
+    resolveCreatedAccountRuntimeKey: mocks.resolveKey,
+  }),
+)
 
 function deferred<T>() {
   let resolve!: (value: T) => void

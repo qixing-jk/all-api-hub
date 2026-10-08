@@ -41,13 +41,13 @@ import {
   normalizeDoneHubChannel,
 } from "~/services/apiService/doneHub"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/configuration/runtimeConfig"
 import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
 import {
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationResult,
 } from "~/services/managedSites/mutations"
 import { buildChannelPayload } from "~/services/managedSites/providers/doneHubService"
-import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type {

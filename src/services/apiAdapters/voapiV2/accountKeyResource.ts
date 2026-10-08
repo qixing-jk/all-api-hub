@@ -2,7 +2,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   getDefaultAccountKeyName,
   isAutomaticAccountKeyName,
-} from "~/services/accounts/accountKeyNames"
+} from "~/services/accounts/keys/accountKeyNames"
 import type { AccountKeyResourcePage } from "~/services/apiAdapters/accountKeyResources/definition"
 import { keyExpiryDisplayFact } from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"

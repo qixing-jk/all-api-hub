@@ -16,7 +16,7 @@ import { type useSub2ApiAccountSession } from "~/features/AccountManagement/comp
 import { type AccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
 import { type useAccountDuplicateConfirmation } from "~/features/AccountManagement/components/AccountDialog/saving/useAccountDuplicateConfirmation"
 import { isAccountAuthType } from "~/features/AccountManagement/utils/accountAuthType"
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import { invalidateCheckInDiscovery } from "~/services/checkin/autoCheckin/state"
 import { AuthTypeEnum } from "~/types"
 

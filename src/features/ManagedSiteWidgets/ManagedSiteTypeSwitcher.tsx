@@ -12,7 +12,7 @@ import {
 import { MANAGED_SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { cn } from "~/lib/utils"
-import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
+import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/configuration/runtimeConfig"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 

@@ -40,12 +40,15 @@ vi.mock("~/services/apiService/sub2api/keys", async (importOriginal) => ({
   fetchSub2ApiKey: mockFetchSub2ApiKey,
   updateSub2ApiKey: mockUpdateSub2ApiKey,
 }))
-vi.mock("~/services/apiService/sub2api/groups", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("~/services/apiService/sub2api/groups")
-  >()),
-  fetchSub2ApiGroupDescriptors: mockFetchSub2ApiGroupDescriptors,
-}))
+vi.mock(
+  "~/services/apiService/sub2api/account/groups",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/account/groups")
+    >()),
+    fetchSub2ApiGroupDescriptors: mockFetchSub2ApiGroupDescriptors,
+  }),
+)
 
 const request = {
   baseUrl: "https://api.example.invalid",

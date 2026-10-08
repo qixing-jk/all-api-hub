@@ -15,7 +15,7 @@ import {
   type ManagedSiteChannelKeyAssessment,
   type ManagedSiteChannelMatchResult,
   type ManagedSiteChannelModelsAssessment,
-} from "~/services/managedSites/channelMatch"
+} from "~/services/managedSites/matching/channelMatch"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { normalizeOpenAiFamilyBaseUrl } from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
 import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"

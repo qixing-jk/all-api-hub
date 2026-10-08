@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { RepairAccountCoverageList } from "~/features/KeyManagement/repair/RepairAccountCoverageList"
 import enKeyManagement from "~/locales/en/keyManagement.json"
-import { ACCOUNT_KEY_RECONCILIATION_OUTCOMES } from "~/services/accounts/accountKeyInventoryReconciliation"
+import { ACCOUNT_KEY_RECONCILIATION_OUTCOMES } from "~/services/accounts/keys/accountKeyInventoryReconciliation"
 import {
   ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS,
   ACCOUNT_KEY_REQUIREMENT_PROVISIONING_REASONS,

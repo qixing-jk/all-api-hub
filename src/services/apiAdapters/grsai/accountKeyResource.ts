@@ -1,5 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
-import { UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS } from "~/services/accounts/runtimeKeyModelAccess"
+import { UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS } from "~/services/accounts/keys/runtimeKeyModelAccess"
 import { keyExpiryDisplayFact } from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import {

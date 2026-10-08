@@ -1,5 +1,5 @@
-import { normalizeSiteAccount } from "~/services/accounts/accountDefaults"
-import { resolveAccountTodayStatsAvailability } from "~/services/accounts/accountTodayStatsResolver"
+import { normalizeSiteAccount } from "~/services/accounts/editing/accountDefaults"
+import { resolveAccountTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStatsResolver"
 import {
   collectDuplicateAccountNameKeys,
   resolveAccountDisplayName,

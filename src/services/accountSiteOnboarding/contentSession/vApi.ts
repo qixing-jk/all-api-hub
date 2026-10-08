@@ -3,7 +3,7 @@ import {
   resolveNewApiStoredUserHint,
   vApiStoredUserHint,
 } from "~/services/accountBrowserSession/newApiStoredUserHint"
-import { resolveStoredAccountUserIdentity } from "~/services/accounts/accountIdentity"
+import { resolveStoredAccountUserIdentity } from "~/services/accounts/identity/accountIdentity"
 
 import type { ContentSessionExtractor } from "../contracts"
 

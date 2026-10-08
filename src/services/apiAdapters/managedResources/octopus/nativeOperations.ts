@@ -28,12 +28,12 @@ import {
   usesChannelProtocolPaths,
 } from "~/services/apiService/octopus/channels"
 import { fetchRemoteModels } from "~/services/apiService/octopus/models"
+import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/configuration/runtimeConfig"
 import {
   MANAGED_SITE_MUTATION_OUTCOMES as outcomes,
   type ManagedSiteMutationResult,
 } from "~/services/managedSites/mutations"
 import { buildOctopusBaseUrl } from "~/services/managedSites/providers/octopus"
-import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { normalizeManagedUpstreamResourceScopeKey } from "~/types/managedUpstreamResource"

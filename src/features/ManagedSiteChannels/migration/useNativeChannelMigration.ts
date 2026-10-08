@@ -9,8 +9,8 @@ import type {
 } from "~/features/ManagedSiteChannels/presentation/contracts"
 import { trackNativeChannelActionStarted } from "~/features/ManagedSiteChannels/presentation/nativeChannelActionAnalytics"
 import { type useManagedResourceListController } from "~/features/ManagedSiteChannels/table/useManagedResourceListController"
-import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/channelMigrationCapabilityRegistry"
-import { getManagedSiteTargetOptions } from "~/services/managedSites/channelMigrationTargets"
+import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/migration/channelMigrationCapabilityRegistry"
+import { getManagedSiteTargetOptions } from "~/services/managedSites/migration/channelMigrationTargets"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

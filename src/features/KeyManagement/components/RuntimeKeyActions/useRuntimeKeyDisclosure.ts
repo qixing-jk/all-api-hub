@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import toast from "~/lib/notify"
-import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import type { AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {

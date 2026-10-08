@@ -19,7 +19,7 @@ import {
   ACCOUNT_RUNTIME_KEY_SOURCES,
   getAccountRuntimeKeyLocatorAccountId,
   type AccountRuntimeKeyLocator,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import type { ApiCredentialProfileLink } from "~/types/apiCredentialProfiles"
 import { replaceWithinOptionsPage } from "~/utils/navigation/optionsPage"
 

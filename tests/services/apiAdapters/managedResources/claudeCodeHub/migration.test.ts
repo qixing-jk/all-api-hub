@@ -14,7 +14,7 @@ import {
 import { claudeCodeHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/claudeCodeHub/migration"
 import * as claudeCodeHubNativeOperations from "~/services/apiAdapters/managedResources/claudeCodeHub/nativeOperations"
 import * as claudeCodeHubNativeRuntime from "~/services/apiAdapters/managedResources/claudeCodeHub/nativeRuntime"
-import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/channelMigrationCapabilityRegistry"
+import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/migration/channelMigrationCapabilityRegistry"
 import {
   MANAGED_SITE_MUTATION_COMPLETIONS,
   MANAGED_SITE_MUTATION_EFFECT_KINDS,

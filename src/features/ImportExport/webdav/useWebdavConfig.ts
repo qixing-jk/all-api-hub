@@ -25,8 +25,8 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
 import { WebdavAutoSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
+import { sendWebdavAutoSyncMessage } from "~/services/webdav/autoSync/webdavAutoSyncMessaging"
 import { testCloudSyncConnection } from "~/services/webdav/cloudSyncService"
-import { sendWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncMessaging"
 import type { DeepPartial } from "~/types/utils"
 import {
   CLOUD_SYNC_PROVIDERS,

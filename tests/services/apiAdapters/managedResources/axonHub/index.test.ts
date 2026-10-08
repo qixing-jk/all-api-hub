@@ -96,7 +96,7 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: { getPreferences: mocks.getPreferences },
 }))
 
-vi.mock("~/services/managedSites/runtimeConfig", () => ({
+vi.mock("~/services/managedSites/configuration/runtimeConfig", () => ({
   resolveManagedSiteRuntimeConfigForType: mocks.resolveRuntimeConfig,
 }))
 

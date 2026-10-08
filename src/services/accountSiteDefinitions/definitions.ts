@@ -48,7 +48,7 @@ import {
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
   ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES,
 } from "~/services/accounts/accountSiteProfile/contracts"
-import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
+import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,

@@ -34,7 +34,7 @@ import {
   isServiceCredentialRuntimeKey,
   type AccountRuntimeKey,
   type ServiceCredentialRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
 import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountImport/accountTokenProfileName"

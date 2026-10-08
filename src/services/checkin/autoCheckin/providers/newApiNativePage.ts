@@ -1,4 +1,4 @@
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import {
   fetchCheckedInTodayStatus,
   getProviderErrorMessage,

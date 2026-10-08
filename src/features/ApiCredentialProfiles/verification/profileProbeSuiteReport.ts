@@ -3,7 +3,7 @@ import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
-import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
+import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/facts/verification"
 import {
   API_VERIFICATION_PROBE_STATUSES,
   type ApiVerificationProbeResult,

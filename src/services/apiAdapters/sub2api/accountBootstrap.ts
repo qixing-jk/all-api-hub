@@ -5,8 +5,8 @@ import {
   fetchSupportCheckIn,
   fetchUserInfo,
   getOrCreateAccessToken,
-} from "~/services/apiService/sub2api/accountData"
-import { fetchSub2ApiPublicSettings } from "~/services/apiService/sub2api/publicSettings"
+} from "~/services/apiService/sub2api/account/accountData"
+import { fetchSub2ApiPublicSettings } from "~/services/apiService/sub2api/account/publicSettings"
 import { getSafeErrorMessage } from "~/services/apiService/sub2api/redaction"
 import { createLogger } from "~/utils/core/logger"
 

@@ -1,4 +1,4 @@
-import { isAccountTodayMetricAvailable } from "~/services/accounts/accountTodayStats"
+import { isAccountTodayMetricAvailable } from "~/services/accounts/metrics/accountTodayStats"
 import type { AccountMetricCoverage } from "~/types"
 
 interface UsagePercentShareOptions {

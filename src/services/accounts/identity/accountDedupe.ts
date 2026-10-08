@@ -1,0 +1,344 @@
+import { normalizeAccountSiteProfileUrlForDuplicateCheck } from "~/services/accounts/accountSiteProfile/urls"
+import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import type { SiteAccount } from "~/types"
+import { getRegistrableDomain } from "~/utils/core/domain"
+
+export type AccountDedupeKeepStrategy =
+  | "keepPinned"
+  | "keepEnabled"
+  | "keepMostRecentlyUpdated"
+
+const ACCOUNT_DEDUPE_REASONS = {
+  SameOriginUser: "same_origin_user",
+  SameCredential: "same_credential",
+} as const
+
+type DuplicateAccountKeyBase = {
+  id: string
+  origin: string
+}
+
+type SameOriginUserDuplicateAccountKey = DuplicateAccountKeyBase & {
+  reason: typeof ACCOUNT_DEDUPE_REASONS.SameOriginUser
+  userId: string
+}
+
+type SameCredentialDuplicateAccountKey = DuplicateAccountKeyBase & {
+  reason: typeof ACCOUNT_DEDUPE_REASONS.SameCredential
+  siteType: SiteAccount["site_type"]
+}
+
+export type DuplicateAccountKey =
+  | SameOriginUserDuplicateAccountKey
+  | SameCredentialDuplicateAccountKey
+
+type DuplicateAccountKeyMetadata =
+  | Omit<SameOriginUserDuplicateAccountKey, "id">
+  | Omit<SameCredentialDuplicateAccountKey, "id">
+
+export type DuplicateAccountGroup = {
+  key: DuplicateAccountKey
+  accounts: SiteAccount[]
+  keepAccountId: string
+  deleteAccountIds: string[]
+}
+
+type DuplicateAccountsScanResult = {
+  groups: DuplicateAccountGroup[]
+  suspectedGroups: SuspectedDuplicateAccountGroup[]
+  unscannable: SiteAccount[]
+}
+
+export type SuspectedDuplicateAccountGroup = {
+  id: string
+  userId: string
+  accounts: SiteAccount[]
+  siteName?: string
+  rootDomain?: string
+}
+
+/** Finds cross-origin hints without turning them into deletion recommendations. */
+function findSuspectedDuplicates(
+  accounts: SiteAccount[],
+): SuspectedDuplicateAccountGroup[] {
+  const buckets = new Map<string, SuspectedDuplicateAccountGroup>()
+  const origins = new Map<string, string>()
+  for (const account of accounts) {
+    // Credential-owned providers do not identify users by their editable ID.
+    if (usesAccountCredentialIdentity(account.site_type)) continue
+    const userId = normalizeAccountIdentity(account.account_info?.id)
+    const origin = normalizeAccountSiteProfileUrlForDuplicateCheck({
+      url: account.site_url,
+      siteType: account.site_type,
+    })
+    if (userId === null || !origin) continue
+    origins.set(account.id, origin)
+    const siteName = account.site_name.trim().replace(/\s+/g, " ").toLowerCase()
+    const rootDomain = getRegistrableDomain(new URL(origin).hostname)
+    for (const [signal, value] of [
+      ["siteName", siteName],
+      ["rootDomain", rootDomain],
+    ] as const) {
+      if (!value) continue
+      const key = JSON.stringify([userId, signal, value])
+      const bucket = buckets.get(key)
+      if (bucket) bucket.accounts.push(account)
+      else
+        buckets.set(key, {
+          id: key,
+          userId,
+          accounts: [account],
+          [signal]: value,
+        })
+    }
+  }
+  const groups = new Map<string, SuspectedDuplicateAccountGroup>()
+  for (const bucket of buckets.values()) {
+    if (
+      new Set(bucket.accounts.map((account) => origins.get(account.id))).size <
+      2
+    )
+      continue
+    const id = JSON.stringify(
+      bucket.accounts.map((account) => account.id).sort(),
+    )
+    const existing = groups.get(id)
+    if (existing) {
+      if (bucket.siteName) existing.siteName = bucket.siteName
+      if (bucket.rootDomain) existing.rootDomain = bucket.rootDomain
+    } else groups.set(id, { ...bucket, id })
+  }
+  return [...groups.values()].sort((a, b) => a.id.localeCompare(b.id))
+}
+
+type AccountScoreInput = {
+  account: SiteAccount
+  pinnedIds: ReadonlySet<string>
+}
+
+/** Returns whether an account participates as enabled. */
+function isEnabled(account: Pick<SiteAccount, "disabled">): boolean {
+  return account.disabled !== true
+}
+
+/** Returns whether an account is pinned locally. */
+function isPinned({ account, pinnedIds }: AccountScoreInput): boolean {
+  return pinnedIds.has(account.id)
+}
+
+/** Compares numeric ranking values in descending order. */
+function compareNumberDesc(a: number, b: number): number {
+  return b - a
+}
+
+/** Compares boolean ranking values with true first. */
+function compareBooleanDesc(a: boolean, b: boolean): number {
+  return Number(b) - Number(a)
+}
+
+/** Compares deterministic string tie-breakers in ascending order. */
+function compareStringAsc(a: string, b: string): number {
+  return a.localeCompare(b)
+}
+
+/** Normalizes unknown timestamps for deterministic ranking. */
+function getComparableTimestamp(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0
+}
+
+/** Builds the account ordering used to select a record to keep. */
+function buildKeepComparator(
+  strategy: AccountDedupeKeepStrategy,
+  pinnedIds: ReadonlySet<string>,
+) {
+  return (a: SiteAccount, b: SiteAccount) => {
+    const aPinned = isPinned({ account: a, pinnedIds })
+    const bPinned = isPinned({ account: b, pinnedIds })
+    const aEnabled = isEnabled(a)
+    const bEnabled = isEnabled(b)
+    const aUpdatedAt = getComparableTimestamp(a.updated_at)
+    const bUpdatedAt = getComparableTimestamp(b.updated_at)
+    const aCreatedAt = getComparableTimestamp(a.created_at)
+    const bCreatedAt = getComparableTimestamp(b.created_at)
+
+    const compareBy = (...comparators: Array<() => number>) => {
+      for (const comparator of comparators) {
+        const result = comparator()
+        if (result !== 0) return result
+      }
+      return 0
+    }
+
+    const tieBreakers = () =>
+      compareBy(
+        () => compareNumberDesc(aCreatedAt, bCreatedAt),
+        () => compareStringAsc(a.id, b.id),
+      )
+
+    if (strategy === "keepPinned") {
+      return compareBy(
+        () => compareBooleanDesc(aPinned, bPinned),
+        () => compareBooleanDesc(aEnabled, bEnabled),
+        () => compareNumberDesc(aUpdatedAt, bUpdatedAt),
+        tieBreakers,
+      )
+    }
+
+    if (strategy === "keepEnabled") {
+      return compareBy(
+        () => compareBooleanDesc(aEnabled, bEnabled),
+        () => compareBooleanDesc(aPinned, bPinned),
+        () => compareNumberDesc(aUpdatedAt, bUpdatedAt),
+        tieBreakers,
+      )
+    }
+
+    return compareBy(
+      () => compareNumberDesc(aUpdatedAt, bUpdatedAt),
+      () => compareBooleanDesc(aEnabled, bEnabled),
+      () => compareBooleanDesc(aPinned, bPinned),
+      tieBreakers,
+    )
+  }
+}
+
+/** Whether the provider owns account identity through an exact credential. */
+export function usesAccountCredentialIdentity(
+  siteType: SiteAccount["site_type"],
+): boolean {
+  return Boolean(
+    getSiteTypeCapabilities(siteType).account?.persistence?.getCredentialKey,
+  )
+}
+
+/** Returns the provider's private comparison key; never included in scan results. */
+function getOwnedCredentialKey(account: SiteAccount): string | undefined {
+  return getSiteTypeCapabilities(
+    account.site_type,
+  ).account?.persistence?.getCredentialKey?.(account.account_info.access_token)
+}
+
+/** Finds an exact local-credential duplicate without exposing account data. */
+export function findExactCredentialDuplicateAccountId(input: {
+  accounts: SiteAccount[]
+  siteType: SiteAccount["site_type"]
+  accessToken: string
+  excludeAccountId?: string
+}): string | undefined {
+  const candidate = getSiteTypeCapabilities(
+    input.siteType,
+  ).account?.persistence?.getCredentialKey?.(input.accessToken)
+  if (!candidate) return undefined
+
+  return input.accounts
+    .filter(
+      (account) =>
+        account.id !== input.excludeAccountId &&
+        account.site_type === input.siteType &&
+        getOwnedCredentialKey(account) === candidate,
+    )
+    .map((account) => account.id)
+    .sort((a, b) => a.localeCompare(b))[0]
+}
+
+/**
+ * Scans accounts for duplicate groups while retaining the original records for
+ * the caller-owned preview and deletion flow.
+ */
+export function scanDuplicateAccounts(input: {
+  accounts: SiteAccount[]
+  pinnedAccountIds?: string[]
+  strategy: AccountDedupeKeepStrategy
+}): DuplicateAccountsScanResult {
+  const pinnedIds = new Set(input.pinnedAccountIds ?? [])
+  const unscannable: SiteAccount[] = []
+  const groupsByKey = new Map<
+    string,
+    { key: DuplicateAccountKeyMetadata; accounts: SiteAccount[] }
+  >()
+
+  for (const account of input.accounts) {
+    const origin = normalizeAccountSiteProfileUrlForDuplicateCheck({
+      url: account.site_url,
+      siteType: account.site_type,
+    })
+    if (!origin) {
+      unscannable.push(account)
+      continue
+    }
+
+    const ownedCredential = getOwnedCredentialKey(account)
+    if (usesAccountCredentialIdentity(account.site_type) && !ownedCredential) {
+      unscannable.push(account)
+      continue
+    }
+
+    const userId = normalizeAccountIdentity(account.account_info?.id)
+    if (!ownedCredential && userId === null) {
+      unscannable.push(account)
+      continue
+    }
+
+    const key: DuplicateAccountKeyMetadata = ownedCredential
+      ? {
+          origin,
+          siteType: account.site_type,
+          reason: ACCOUNT_DEDUPE_REASONS.SameCredential,
+        }
+      : {
+          origin,
+          reason: ACCOUNT_DEDUPE_REASONS.SameOriginUser,
+          userId: userId!,
+        }
+    const keyString = ownedCredential
+      ? `${origin}::${account.site_type}::credential::${ownedCredential}`
+      : `${origin}::user::${userId}`
+    const existing = groupsByKey.get(keyString)
+    if (existing) {
+      existing.accounts.push(account)
+    } else {
+      groupsByKey.set(keyString, { key, accounts: [account] })
+    }
+  }
+
+  const comparator = buildKeepComparator(input.strategy, pinnedIds)
+  const groups = Array.from(groupsByKey.values())
+    .filter((group) => group.accounts.length > 1)
+    .flatMap((group) => {
+      const sorted = [...group.accounts].sort(comparator)
+      const [keepAccount] = sorted
+      if (!keepAccount) return []
+      const accountIds = group.accounts.map((account) => account.id)
+      const keyId = JSON.stringify([...accountIds].sort(compareStringAsc))
+      return [
+        {
+          key: { ...group.key, id: keyId },
+          accounts: group.accounts,
+          keepAccountId: keepAccount.id,
+          deleteAccountIds: accountIds.filter((id) => id !== keepAccount.id),
+        },
+      ]
+    })
+    .sort((a, b) => {
+      const originCompare = a.key.origin.localeCompare(b.key.origin)
+      if (originCompare !== 0) return originCompare
+      const aIdentity =
+        a.key.reason === ACCOUNT_DEDUPE_REASONS.SameCredential
+          ? a.key.siteType
+          : a.key.userId
+      const bIdentity =
+        b.key.reason === ACCOUNT_DEDUPE_REASONS.SameCredential
+          ? b.key.siteType
+          : b.key.userId
+      return `${a.key.reason}:${aIdentity}:${a.key.id}`.localeCompare(
+        `${b.key.reason}:${bIdentity}:${b.key.id}`,
+      )
+    })
+
+  return {
+    groups,
+    suspectedGroups: findSuspectedDuplicates(input.accounts),
+    unscannable,
+  }
+}

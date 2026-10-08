@@ -1,7 +1,7 @@
 import {
   getDefaultAccountKeyName,
   isAutomaticAccountKeyName,
-} from "~/services/accounts/accountKeyNames"
+} from "~/services/accounts/keys/accountKeyNames"
 import {
   mapAccountKeyResourceUncertainFailure,
   mapAccountKeyResourceFailure as mapFailure,

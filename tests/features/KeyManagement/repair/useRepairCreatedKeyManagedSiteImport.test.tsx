@@ -10,8 +10,8 @@ import { AccountKeyRepairMessageTypes } from "~/services/accounts/accountKeyAuto
 import {
   ACCOUNT_KEY_RECONCILIATION_INVENTORY_STATUSES,
   ACCOUNT_KEY_RECONCILIATION_OUTCOMES,
-} from "~/services/accounts/accountKeyInventoryReconciliation"
-import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountKeyInventoryReconciliation"
+import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS,
   type AccountKeyResourceRef,
@@ -41,25 +41,28 @@ const mocks = vi.hoisted(() => ({
   sendAccountKeyRepairMessage: vi.fn(),
 }))
 
-vi.mock("~/services/managedSites/runtimeConfig", () => ({
+vi.mock("~/services/managedSites/configuration/runtimeConfig", () => ({
   getCurrentManagedSiteRuntimeConfig: mocks.getCurrentManagedSiteRuntimeConfig,
 }))
 
-vi.mock("~/services/managedSites/tokenBatchImportTarget", () => ({
+vi.mock("~/services/managedSites/batchImport/tokenBatchImportTarget", () => ({
   createManagedSiteTokenBatchImportTarget:
     mocks.createManagedSiteTokenBatchImportTarget,
 }))
 
-vi.mock("~/services/managedSites/repairCreatedKeyBatchImport", async () => {
-  const actual = await vi.importActual<
-    typeof import("~/services/managedSites/repairCreatedKeyBatchImport")
-  >("~/services/managedSites/repairCreatedKeyBatchImport")
-  return {
-    ...actual,
-    resolveRepairCreatedKeyBatchImportCandidate:
-      mocks.resolveRepairCreatedKeyBatchImportCandidate,
-  }
-})
+vi.mock(
+  "~/services/managedSites/batchImport/repairCreatedKeyBatchImport",
+  async () => {
+    const actual = await vi.importActual<
+      typeof import("~/services/managedSites/batchImport/repairCreatedKeyBatchImport")
+    >("~/services/managedSites/batchImport/repairCreatedKeyBatchImport")
+    return {
+      ...actual,
+      resolveRepairCreatedKeyBatchImportCandidate:
+        mocks.resolveRepairCreatedKeyBatchImportCandidate,
+    }
+  },
+)
 
 vi.mock(
   "~/services/accounts/accountKeyAutoProvisioning/messaging",

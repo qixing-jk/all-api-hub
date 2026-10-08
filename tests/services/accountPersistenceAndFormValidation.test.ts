@@ -2,18 +2,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
+import { AccountUpdateUserTimestampMode } from "~/services/accounts/editing/accountDefaults"
 import {
   isValidAccount,
   isValidExchangeRate,
   parseManualQuotaFromUsd,
-} from "~/services/accounts/accountFormValidation"
-import { validateAndUpdateAccount } from "~/services/accounts/accountUpdate"
+} from "~/services/accounts/editing/accountFormValidation"
+import { validateAndUpdateAccount } from "~/services/accounts/editing/accountUpdate"
 import {
   extractDomainPrefix,
   getSiteName,
-} from "~/services/accounts/siteName"
-import { openRouterAccountPersistence } from "~/services/apiAdapters/openrouter/accountPersistence"
+} from "~/services/accounts/identity/siteName"
+import { openRouterAccountPersistence } from "~/services/apiAdapters/openrouter/account/accountPersistence"
 import { AuthTypeEnum } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 

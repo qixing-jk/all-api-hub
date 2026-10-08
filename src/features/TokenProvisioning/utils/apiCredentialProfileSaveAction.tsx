@@ -7,11 +7,11 @@ import {
   getAccountRuntimeKeyLocator,
   type AccountRuntimeKey,
   type AccountRuntimeKeyLocator,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   getCreatedRuntimeSecretLocator,
   type CreatedRuntimeSecret,
-} from "~/services/accounts/createdRuntimeSecret"
+} from "~/services/accounts/keys/createdRuntimeSecret"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import {
   captureProfileFromAccountToken,

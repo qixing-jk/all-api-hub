@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { useRuntimeKeyDisclosure } from "~/features/KeyManagement/components/RuntimeKeyActions/useRuntimeKeyDisclosure"
-import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { createAccount } from "~~/tests/utils/keyManagementFactories"

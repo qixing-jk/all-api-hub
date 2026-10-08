@@ -9,7 +9,7 @@ import {
 } from "vitest"
 
 import { userPreferences } from "~/services/preferences/userPreferences"
-import { parseWebdavBackupJson } from "~/services/webdav/webdavBackupValidation"
+import { parseWebdavBackupJson } from "~/services/webdav/backup/webdavBackupValidation"
 import {
   downloadBackup,
   downloadBackupRaw,
@@ -37,7 +37,7 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   },
 }))
 
-vi.mock("~/services/webdav/webdavBackupEncryption", () => ({
+vi.mock("~/services/webdav/backup/webdavBackupEncryption", () => ({
   decryptWebdavBackupEnvelope: mockDecryptWebdavBackupEnvelope,
   encryptWebdavBackupContent: mockEncryptWebdavBackupContent,
   tryParseEncryptedWebdavBackupEnvelope:

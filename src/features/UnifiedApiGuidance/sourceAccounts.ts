@@ -1,4 +1,4 @@
-import { canResolveAccountRuntimeKeySecret } from "~/services/accounts/keyProductCapabilities"
+import { canResolveAccountRuntimeKeySecret } from "~/services/accounts/keys/keyProductCapabilities"
 import type { DisplaySiteData } from "~/types"
 
 /**

@@ -1,5 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
-import type { AccountKeyInventoryReconciliationResult } from "~/services/accounts/accountKeyInventoryReconciliation"
+import type { AccountKeyInventoryReconciliationResult } from "~/services/accounts/keys/accountKeyInventoryReconciliation"
 import type {
   AccountKeyResourceRef,
   ResourceFailure,

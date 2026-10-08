@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AIHUBMIX_API_ORIGIN, SITE_TYPES } from "~/constants/siteType"
-import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/accountKeyNames"
+import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/keys/accountKeyNames"
 import { aihubmixAccountKeyResources } from "~/services/apiAdapters/aihubmix/accountKeyResource"
 import type { AIHubMixKey } from "~/services/apiService/aihubmix/keyTypes"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"

@@ -45,11 +45,11 @@ vi.mock("~/services/productAnalytics/actions", () => ({
 }))
 
 vi.mock(
-  "~/services/productAnalytics/shieldBypassSummary",
+  "~/services/productAnalytics/facts/shieldBypassSummary",
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import("~/services/productAnalytics/shieldBypassSummary")
+        typeof import("~/services/productAnalytics/facts/shieldBypassSummary")
       >()
 
     return {

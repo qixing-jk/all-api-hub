@@ -22,7 +22,7 @@ import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_MODES,
   OPENROUTER_KEY_LIMIT_RESETS,
-} from "~/services/apiAdapters/openrouter/keyResourceFields"
+} from "~/services/apiAdapters/openrouter/keys/keyResourceFields"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_MODE_IDS,

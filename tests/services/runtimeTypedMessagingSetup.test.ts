@@ -750,15 +750,15 @@ describe("typed runtime messaging setup", () => {
   it("routes WebDAV auto-sync typed listeners through runtime resolvers", async () => {
     const onWebdavAutoSyncMessage: OnMessageMock = vi.fn(() => vi.fn())
 
-    vi.doMock("~/services/webdav/webdavAutoSyncMessaging", () => ({
+    vi.doMock("~/services/webdav/autoSync/webdavAutoSyncMessaging", () => ({
       onWebdavAutoSyncMessage,
     }))
 
     const service_webdavAutoSyncService = await import(
-      "~/services/webdav/webdavAutoSyncService"
+      "~/services/webdav/autoSync/webdavAutoSyncService"
     )
     const service_webdavAutoSyncMessageHandlers = await import(
-      "~/services/webdav/webdavAutoSyncMessageHandlers"
+      "~/services/webdav/autoSync/webdavAutoSyncMessageHandlers"
     )
     vi.spyOn(
       service_webdavAutoSyncService.webdavAutoSyncService,
@@ -1022,7 +1022,7 @@ describe("typed runtime messaging setup", () => {
     vi.doMock("~/services/accounts/accountStorage/accountRefresh", () => ({
       accountRefresh: { refreshAllAccounts },
     }))
-    vi.doMock("~/services/accounts/accountTodayStatsResolver", () => ({
+    vi.doMock("~/services/accounts/metrics/accountTodayStatsResolver", () => ({
       resolveAccountTodayStatsAvailability: vi.fn(),
     }))
     vi.doMock("~/services/preferences/userPreferences", async () => {
@@ -1996,7 +1996,7 @@ describe("typed runtime messaging setup", () => {
     vi.doMock("~/services/productAnalytics/actions", () => ({
       trackProductAnalyticsActionCompleted: vi.fn(),
     }))
-    vi.doMock("~/services/productAnalytics/autoCheckin", () => ({
+    vi.doMock("~/services/productAnalytics/facts/autoCheckin", () => ({
       buildAutoCheckinDiagnostics: vi.fn(() => ({})),
       trackAutoCheckinConfigSnapshot: vi.fn(),
       trackAutoCheckinRunAnalytics: vi.fn(),

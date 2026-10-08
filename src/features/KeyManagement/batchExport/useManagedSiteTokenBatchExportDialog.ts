@@ -9,9 +9,9 @@ import { verifyManagedSiteTokenBatchTargets } from "~/features/KeyManagement/bat
 import { useManagedSiteTokenBatchSession } from "~/features/KeyManagement/batchExport/useManagedSiteTokenBatchSession"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import toast from "~/lib/notify"
-import { getManagedSiteRuntimeConfigFingerprint } from "~/services/managedSites/runtimeConfig"
-import { executeManagedSiteTokenBatchExport } from "~/services/managedSites/tokenBatchImportExecution"
-import { DEFAULT_MANAGED_SITE_TOKEN_BATCH_IMPORT_INTENT } from "~/services/managedSites/tokenBatchImportPreview"
+import { executeManagedSiteTokenBatchExport } from "~/services/managedSites/batchImport/tokenBatchImportExecution"
+import { DEFAULT_MANAGED_SITE_TOKEN_BATCH_IMPORT_INTENT } from "~/services/managedSites/batchImport/tokenBatchImportPreview"
+import { getManagedSiteRuntimeConfigFingerprint } from "~/services/managedSites/configuration/runtimeConfig"
 import {
   trackProductAnalyticsActionCompleted,
   trackProductAnalyticsActionStarted,

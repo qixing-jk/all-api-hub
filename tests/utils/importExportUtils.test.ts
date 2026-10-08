@@ -20,11 +20,11 @@ import {
   type BackupV2,
   type RawBackupData,
 } from "~/services/importExport/backupContracts"
-import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
+import { channelConfigStorage } from "~/services/managedSites/configuration/channelConfigStorage"
 import {
   ensureLegacyChannelConfigMigrationReady,
   LegacyChannelConfigMigrationDeferredError,
-} from "~/services/managedSites/legacyChannelConfigMigration"
+} from "~/services/managedSites/configuration/legacyChannelConfigMigration"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
@@ -33,20 +33,23 @@ import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
 import { channelConfigSnapshot } from "~~/tests/test-utils/channelConfigSnapshot"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
-vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => {
-  class LegacyChannelConfigMigrationDeferredError extends Error {
-    constructor(readonly reason: string) {
-      super(`Legacy channel config migration deferred: ${reason}`)
+vi.mock(
+  "~/services/managedSites/configuration/legacyChannelConfigMigration",
+  () => {
+    class LegacyChannelConfigMigrationDeferredError extends Error {
+      constructor(readonly reason: string) {
+        super(`Legacy channel config migration deferred: ${reason}`)
+      }
     }
-  }
 
-  return {
-    ensureLegacyChannelConfigMigrationReady: vi
-      .fn()
-      .mockResolvedValue(undefined),
-    LegacyChannelConfigMigrationDeferredError,
-  }
-})
+    return {
+      ensureLegacyChannelConfigMigrationReady: vi
+        .fn()
+        .mockResolvedValue(undefined),
+      LegacyChannelConfigMigrationDeferredError,
+    }
+  },
+)
 
 vi.mock("~/services/accounts/accountStorage/accountDataTransfer", () => ({
   accountDataTransfer: {
@@ -63,7 +66,7 @@ vi.mock("~/services/preferences/userPreferences", () => ({
 }))
 
 vi.mock(
-  import("~/services/managedSites/channelConfigStorage"),
+  import("~/services/managedSites/configuration/channelConfigStorage"),
   async (importOriginal) => {
     const actual = await importOriginal()
     return {

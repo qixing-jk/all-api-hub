@@ -1,7 +1,7 @@
 import {
   fetchSub2ApiAnnouncements,
   markSub2ApiAnnouncementRead,
-} from "~/services/apiService/sub2api/announcements"
+} from "~/services/apiService/sub2api/account/announcements"
 import type { Sub2ApiAnnouncementData } from "~/services/apiService/sub2api/type"
 import { parseAnnouncementTimestamp } from "~/services/siteAnnouncements/timestamp"
 import type { SiteAnnouncement } from "~/types/siteAnnouncements"

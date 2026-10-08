@@ -30,10 +30,13 @@ vi.mock(
   },
 )
 
-vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
-  ensureLegacyChannelConfigMigrationReady: (...args: unknown[]) =>
-    mocks.ensureMigration(...args),
-}))
+vi.mock(
+  "~/services/managedSites/configuration/legacyChannelConfigMigration",
+  () => ({
+    ensureLegacyChannelConfigMigrationReady: (...args: unknown[]) =>
+      mocks.ensureMigration(...args),
+  }),
+)
 
 const mocks = vi.hoisted(() => ({
   ensureMigration: vi.fn(),
@@ -88,7 +91,7 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   },
 }))
 
-vi.mock("~/services/managedSites/channelConfigStorage", () => ({
+vi.mock("~/services/managedSites/configuration/channelConfigStorage", () => ({
   channelConfigStorage: {
     getConfigsForScope: mocks.channelConfigGetConfigsForScope,
   },

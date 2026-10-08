@@ -14,11 +14,11 @@ import {
 import {
   buildAccountKeyResourceRuntimeKey,
   buildServiceCredentialRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   createAccountKeyResourceCreatedRuntimeSecret,
   createUnattributedAccountCreatedRuntimeSecret,
-} from "~/services/accounts/createdRuntimeSecret"
+} from "~/services/accounts/keys/createdRuntimeSecret"
 import { API_CREDENTIAL_PROFILE_CAPTURE_STATUSES } from "~/services/apiCredentialProfiles/links/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum } from "~/types"

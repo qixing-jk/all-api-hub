@@ -8,7 +8,7 @@ import {
   isAccountKeyResourceRuntimeKey,
   isAccountRuntimeKeyCompatibleWithModel,
   type AccountRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   MODEL_LIST_SOURCE_IDENTITY_KINDS,
   type ModelListSourceIdentity,

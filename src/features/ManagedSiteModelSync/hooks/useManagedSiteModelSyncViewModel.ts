@@ -9,15 +9,15 @@ import {
 import { getModelSyncHistoryItemKey } from "~/features/ManagedSiteModelSync/executionIdentity"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import {
+  getManagedSiteRuntimeConfigFingerprint,
+  hasValidManagedSiteConfig,
+  resolveManagedSiteRuntimeConfigForType,
+} from "~/services/managedSites/configuration/runtimeConfig"
+import {
   getManagedResourceRefKey,
   isManagedResourceRefForSite,
   parseManagedResourceRef,
 } from "~/services/managedSites/managedResourceIdentity"
-import {
-  getManagedSiteRuntimeConfigFingerprint,
-  hasValidManagedSiteConfig,
-  resolveManagedSiteRuntimeConfigForType,
-} from "~/services/managedSites/runtimeConfig"
 import { supportsManagedSiteModelSync } from "~/services/managedSites/utils/managedSite"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

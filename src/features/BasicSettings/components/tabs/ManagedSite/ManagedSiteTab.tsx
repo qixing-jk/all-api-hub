@@ -15,8 +15,8 @@ import { GatewayGuidanceDescription } from "~/features/UnifiedApiGuidance/Gatewa
 import { runGatewayGuidanceAction } from "~/features/UnifiedApiGuidance/runGatewayGuidanceAction"
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
-import { canResolveAccountRuntimeKeySecret } from "~/services/accounts/keyProductCapabilities"
-import { hasValidManagedSiteConfig } from "~/services/managedSites/runtimeConfig"
+import { canResolveAccountRuntimeKeySecret } from "~/services/accounts/keys/keyProductCapabilities"
+import { hasValidManagedSiteConfig } from "~/services/managedSites/configuration/runtimeConfig"
 import {
   getManagedSiteUnsupportedModelSyncMessage,
   supportsManagedSiteModelSync,

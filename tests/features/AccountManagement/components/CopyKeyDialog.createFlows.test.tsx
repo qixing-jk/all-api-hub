@@ -5,8 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import CopyKeyDialog from "~/features/AccountManagement/components/CopyKeyDialog"
 import { useCopyKeyDialog } from "~/features/AccountManagement/components/CopyKeyDialog/hooks/useCopyKeyDialog"
-import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
-import { createUnattributedAccountCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+import type { AccountKeyCreationResult } from "~/services/accounts/keys/accountKeyCreation"
+import { createUnattributedAccountCreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { buildNewApiKeyCreationResult } from "~~/tests/test-utils/accountKeyFixtures"
 import {

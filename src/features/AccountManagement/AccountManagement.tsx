@@ -50,7 +50,6 @@ import {
 } from "~/features/UnifiedApiGuidance"
 import toast from "~/lib/notify"
 import { GATEWAY_GUIDANCE_SURFACES } from "~/services/featureGuidance/featureGuidanceState"
-import { buildAccountRefreshDiagnostics } from "~/services/productAnalytics/accountRefresh"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -65,7 +64,8 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/contracts"
-import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
+import { buildAccountRefreshDiagnostics } from "~/services/productAnalytics/facts/accountRefresh"
+import { trackProductAnalyticsEvent } from "~/services/productAnalytics/runtime/dispatch"
 import type { DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { getExternalCheckInOpenOptions } from "~/utils/core/shortcutKeys"

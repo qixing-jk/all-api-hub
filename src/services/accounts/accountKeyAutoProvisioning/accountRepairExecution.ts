@@ -3,7 +3,7 @@ import {
   ACCOUNT_KEY_RECONCILIATION_OUTCOMES,
   reconcileAccountKeyInventory,
   type AccountKeyInventoryReconciliationResult,
-} from "~/services/accounts/accountKeyInventoryReconciliation"
+} from "~/services/accounts/keys/accountKeyInventoryReconciliation"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { SiteAccount } from "~/types"

@@ -6,9 +6,9 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   executeManagedSiteMigration,
   prepareManagedSiteMigrationPreview,
-} from "~/services/managedSites/channelMigration"
-import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/channelMigrationCapabilityRegistry"
-import { toMigrationWarningCodes } from "~/services/managedSites/channelMigrationWarnings"
+} from "~/services/managedSites/migration/channelMigration"
+import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/migration/channelMigrationCapabilityRegistry"
+import { toMigrationWarningCodes } from "~/services/managedSites/migration/channelMigrationWarnings"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES as blockers,

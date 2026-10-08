@@ -1,7 +1,7 @@
 import {
   createManagedSiteChannelMatchRequestCache,
   type ManagedSiteChannelMatchRequestCache,
-} from "~/services/managedSites/channelMatchResolver"
+} from "~/services/managedSites/matching/channelMatchResolver"
 
 export interface ManagedSiteDefaultChannelGroupsCache {
   resolvedGroups?: Promise<string[]>

@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from "vitest"
 
 import { AssociateApiCredentialProfileDialog } from "~/features/KeyManagement/associations/AssociateApiCredentialProfileDialog"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
-import type { AccountRuntimeKeyLocator } from "~/services/accounts/accountRuntimeKeys"
-import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/accountRuntimeKeys"
+import type { AccountRuntimeKeyLocator } from "~/services/accounts/keys/accountRuntimeKeys"
+import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/keys/accountRuntimeKeys"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 

@@ -24,7 +24,7 @@ const {
   mockTryParseEncryptedWebdavBackupEnvelope: vi.fn(),
 }))
 
-vi.mock("~/services/webdav/webdavBackupEncryption", () => ({
+vi.mock("~/services/webdav/backup/webdavBackupEncryption", () => ({
   decryptWebdavBackupEnvelope: mockDecryptWebdavBackupEnvelope,
   encryptWebdavBackupContent: mockEncryptWebdavBackupContent,
   tryParseEncryptedWebdavBackupEnvelope:

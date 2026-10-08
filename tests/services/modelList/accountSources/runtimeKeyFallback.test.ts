@@ -4,7 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   ACCOUNT_RUNTIME_KEY_SOURCES,
   buildServiceCredentialRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import { MODEL_PRICING_RUNTIME_KEY_FALLBACKS } from "~/services/apiAdapters/contracts/modelPricing"
 import { sub2ApiModelCatalog } from "~/services/apiAdapters/sub2api/modelCatalog"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
@@ -68,13 +68,16 @@ vi.mock(
   },
 )
 
-vi.mock("~/services/apiService/sub2api/groups", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("~/services/apiService/sub2api/groups")
-  >()),
-  fetchSub2ApiAvailableGroups: fetchSub2ApiAvailableGroupsMock,
-  fetchSub2ApiGroupRates: fetchSub2ApiGroupRatesMock,
-}))
+vi.mock(
+  "~/services/apiService/sub2api/account/groups",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/account/groups")
+    >()),
+    fetchSub2ApiAvailableGroups: fetchSub2ApiAvailableGroupsMock,
+    fetchSub2ApiGroupRates: fetchSub2ApiGroupRatesMock,
+  }),
+)
 vi.mock("~/services/apiService/sub2api/keys", async (importOriginal) => ({
   ...(await importOriginal<
     typeof import("~/services/apiService/sub2api/keys")
@@ -82,10 +85,10 @@ vi.mock("~/services/apiService/sub2api/keys", async (importOriginal) => ({
   fetchSub2ApiKeys: fetchSub2ApiKeysMock,
 }))
 vi.mock(
-  "~/services/apiService/sub2api/pricingCatalog",
+  "~/services/apiService/sub2api/models/pricingCatalog",
   async (importOriginal) => ({
     ...(await importOriginal<
-      typeof import("~/services/apiService/sub2api/pricingCatalog")
+      typeof import("~/services/apiService/sub2api/models/pricingCatalog")
     >()),
     fetchSub2ApiPricingCatalogs: fetchSub2ApiPricingCatalogsMock,
   }),

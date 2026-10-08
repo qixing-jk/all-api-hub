@@ -14,7 +14,7 @@ vi.mock("~/utils/browser/tabs", async (importOriginal) => ({
   onTabActivated: vi.fn(() => vi.fn()),
   onTabUpdated: vi.fn(() => vi.fn()),
 }))
-vi.mock("~/services/accounts/siteName", () => ({ getSiteName }))
+vi.mock("~/services/accounts/identity/siteName", () => ({ getSiteName }))
 
 describe("account current tab lifecycle", () => {
   beforeEach(() => {

@@ -9,8 +9,8 @@ import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
 import {
   buildAccountKeyResourceRuntimeKeyFromFacts,
   type AccountRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
-import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keyProductCapabilities"
+} from "~/services/accounts/keys/accountRuntimeKeys"
+import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keys/keyProductCapabilities"
 import type { CredentialExportSource } from "~/services/integrations/credentialExport"
 import { PRODUCT_ANALYTICS_SURFACE_IDS } from "~/services/productAnalytics/contracts"
 import type { DisplaySiteData } from "~/types"

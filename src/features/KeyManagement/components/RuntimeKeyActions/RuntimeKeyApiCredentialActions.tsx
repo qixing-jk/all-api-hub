@@ -9,8 +9,8 @@ import {
 import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import toast from "~/lib/notify"
-import { getAccountRuntimeKeyLocator } from "~/services/accounts/accountRuntimeKeys"
-import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { getAccountRuntimeKeyLocator } from "~/services/accounts/keys/accountRuntimeKeys"
+import type { AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   ACCOUNT_RUNTIME_KEY_SECRET_SOURCES,
   resolveDisplayAccountRuntimeKeySecret,

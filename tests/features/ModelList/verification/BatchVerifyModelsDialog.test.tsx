@@ -20,7 +20,7 @@ import { BatchVerifyModelsDialog } from "~/features/ModelList/verification/Batch
 import {
   buildAccountRuntimeKeyAccount,
   buildServiceCredentialRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,

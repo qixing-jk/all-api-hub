@@ -10,7 +10,7 @@ import {
   probeXiaobaiCodeCheckInStatus,
   XIAOBAI_CODE_DAILY_CHECK_IN_RESULT_KINDS,
   XIAOBAI_CODE_STATUS_OUTCOMES,
-} from "~/services/apiService/sub2api/xiaobaiCodeCheckIn"
+} from "~/services/apiService/sub2api/checkin/xiaobaiCodeCheckIn"
 import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import type { SiteAccount } from "~/types"

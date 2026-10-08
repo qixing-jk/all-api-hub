@@ -27,8 +27,8 @@ import {
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
-import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnosticsError"
-import { trackOptionalPermissionRequestResult } from "~/services/productAnalytics/permissions"
+import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnostics/diagnosticsError"
+import { trackOptionalPermissionRequestResult } from "~/services/productAnalytics/facts/permissions"
 import { AuthTypeEnum } from "~/types"
 import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { getErrorMessage } from "~/utils/core/error"

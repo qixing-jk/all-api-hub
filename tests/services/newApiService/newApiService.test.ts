@@ -3,8 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { decodeNewApiResponseError } from "~/services/apiService/newApiFamily/responseError"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
-import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
-import { MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS } from "~/services/managedSites/channelMatch"
+import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/configuration/channelDraftSource"
+import { MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS } from "~/services/managedSites/matching/channelMatch"
 import type { DisplaySiteData } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import type { CreateChannelPayload } from "~/types/newApi"
@@ -93,10 +93,10 @@ vi.mock("~/services/preferences/userPreferences", () => ({
 }))
 
 vi.mock(
-  "~/services/managedSites/providers/newApiChannelKeyRead",
+  "~/services/managedSites/providers/newApi/newApiChannelKeyRead",
   async (importOriginal) => {
     const actual =
-      (await importOriginal()) as typeof import("~/services/managedSites/providers/newApiChannelKeyRead")
+      (await importOriginal()) as typeof import("~/services/managedSites/providers/newApi/newApiChannelKeyRead")
 
     return {
       ...actual,
@@ -664,7 +664,7 @@ describe("newApiService", () => {
   describe("getNewApiLoginAssistConfig", () => {
     it("should return login-assist fields and default blank optional values", async () => {
       const { getNewApiLoginAssistConfig } = await import(
-        "~/services/managedSites/providers/newApiChannelSecrets"
+        "~/services/managedSites/providers/newApi/newApiChannelSecrets"
       )
 
       mockGetPreferences.mockResolvedValueOnce(
@@ -687,7 +687,7 @@ describe("newApiService", () => {
 
     it("should return null when the configured base URL is missing", async () => {
       const { getNewApiLoginAssistConfig } = await import(
-        "~/services/managedSites/providers/newApiChannelSecrets"
+        "~/services/managedSites/providers/newApi/newApiChannelSecrets"
       )
 
       mockGetPreferences.mockResolvedValueOnce(
@@ -708,7 +708,7 @@ describe("newApiService", () => {
 
     it("should return null when reading login-assist config fails", async () => {
       const { getNewApiLoginAssistConfig } = await import(
-        "~/services/managedSites/providers/newApiChannelSecrets"
+        "~/services/managedSites/providers/newApi/newApiChannelSecrets"
       )
 
       mockGetPreferences.mockRejectedValueOnce(new Error("Storage error"))
@@ -724,7 +724,7 @@ describe("newApiService", () => {
   describe("fetchChannelSecretKey", () => {
     it("should reuse login-assist credentials when the managed site shares the configured origin", async () => {
       const { fetchChannelSecretKey } = await import(
-        "~/services/managedSites/providers/newApiChannelSecrets"
+        "~/services/managedSites/providers/newApi/newApiChannelSecrets"
       )
       const config = {
         baseUrl: "https://new-api.example.com/api/v1",
@@ -768,7 +768,7 @@ describe("newApiService", () => {
 
     it("should avoid reusing login-assist credentials when the managed site origin differs", async () => {
       const { fetchChannelSecretKey } = await import(
-        "~/services/managedSites/providers/newApiChannelSecrets"
+        "~/services/managedSites/providers/newApi/newApiChannelSecrets"
       )
       const config = {
         baseUrl: "https://other.example.com/api/v1",
@@ -807,7 +807,7 @@ describe("newApiService", () => {
 
     it("does not reuse login-assist credentials when both configured URLs are blank", async () => {
       const { fetchChannelSecretKey } = await import(
-        "~/services/managedSites/providers/newApiChannelSecrets"
+        "~/services/managedSites/providers/newApi/newApiChannelSecrets"
       )
       mockGetPreferences.mockResolvedValueOnce(
         createMockUserPreferencesWithNewApi({
@@ -846,7 +846,7 @@ describe("newApiService", () => {
   describe("hydrateComparableChannelKeys", () => {
     it("should preserve visible New API candidate keys without fetching", async () => {
       const { hydrateComparableChannelKeys } = await import(
-        "~/services/managedSites/providers/newApiChannelSecrets"
+        "~/services/managedSites/providers/newApi/newApiChannelSecrets"
       )
       const config = {
         baseUrl: "https://new-api.example.com",
@@ -880,7 +880,7 @@ describe("newApiService", () => {
 
     it("should hydrate hidden New API candidate keys for comparison", async () => {
       const { hydrateComparableChannelKeys } = await import(
-        "~/services/managedSites/providers/newApiChannelSecrets"
+        "~/services/managedSites/providers/newApi/newApiChannelSecrets"
       )
       const config = {
         baseUrl: "https://new-api.example.com",
@@ -920,16 +920,16 @@ describe("newApiService", () => {
 
     it("should map New API verification requirements during hydration", async () => {
       const { hydrateComparableChannelKeys } = await import(
-        "~/services/managedSites/providers/newApiChannelSecrets"
+        "~/services/managedSites/providers/newApi/newApiChannelSecrets"
       )
       const { MatchResolutionUnresolvedError } = await import(
-        "~/services/managedSites/channelMatch"
+        "~/services/managedSites/matching/channelMatch"
       )
       const {
         NEW_API_CHANNEL_KEY_ERROR_KINDS,
         NewApiChannelKeyRequirementError,
       } = await import(
-        "~/services/managedSites/providers/newApiSessionContracts"
+        "~/services/managedSites/providers/newApi/newApiSessionContracts"
       )
       const config = {
         baseUrl: "https://new-api.example.com",
@@ -961,10 +961,10 @@ describe("newApiService", () => {
 
     it("should map unexpected New API hydration failures to unresolved key resolution", async () => {
       const { hydrateComparableChannelKeys } = await import(
-        "~/services/managedSites/providers/newApiChannelSecrets"
+        "~/services/managedSites/providers/newApi/newApiChannelSecrets"
       )
       const { MatchResolutionUnresolvedError } = await import(
-        "~/services/managedSites/channelMatch"
+        "~/services/managedSites/matching/channelMatch"
       )
       const config = {
         baseUrl: "https://new-api.example.com",
@@ -994,7 +994,7 @@ describe("newApiService", () => {
 
     it("preserves cancellation and stops reading the remaining hidden keys", async () => {
       const { hydrateComparableChannelKeys } = await import(
-        "~/services/managedSites/providers/newApiChannelSecrets"
+        "~/services/managedSites/providers/newApi/newApiChannelSecrets"
       )
       const controller = new AbortController()
       const failure = new DOMException("Cancelled", "AbortError")

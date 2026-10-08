@@ -10,7 +10,7 @@ import {
   AI_ROUTER_STATUS_OUTCOMES,
   performAiRouterDailyCheckIn,
   probeAiRouterDailyCheckInStatus,
-} from "~/services/apiService/sub2api/aiRouterCheckIn"
+} from "~/services/apiService/sub2api/checkin/aiRouterCheckIn"
 import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import type { SiteAccount } from "~/types"

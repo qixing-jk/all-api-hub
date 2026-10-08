@@ -1,4 +1,4 @@
-import { buildAccountKeyResourceRuntimeKeyId } from "~/services/accounts/accountRuntimeKeys"
+import { buildAccountKeyResourceRuntimeKeyId } from "~/services/accounts/keys/accountRuntimeKeys"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import { isAccountKeyResourceRef } from "~/services/apiAdapters/accountKeyResources/ref"
 import type { AccountKeyResourceRef } from "~/services/apiAdapters/contracts/accountKeyResource"

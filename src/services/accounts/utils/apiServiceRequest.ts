@@ -1,6 +1,11 @@
 import { resolveDeploymentApiOrigin } from "~/constants/deploymentApiOrigins"
 import type { AccountSiteType } from "~/constants/siteType"
 import {
+  getAccountSiteProductProfile,
+  shouldDecorateAccountApiRequestWithAuthSession,
+} from "~/services/accounts/accountSiteProfile"
+import { accountSub2ApiAuthSession } from "~/services/accounts/accountSiteProfile/sub2apiAuthSession"
+import {
   ACCOUNT_RUNTIME_KEY_STATUSES,
   buildAccountKeyResourceRuntimeKeyFromFacts,
   buildAccountRuntimeKeyAccount,
@@ -11,12 +16,7 @@ import {
   isAccountKeyResourceRuntimeKey,
   isServiceCredentialRuntimeKey,
   type AccountRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
-import {
-  getAccountSiteProductProfile,
-  shouldDecorateAccountApiRequestWithAuthSession,
-} from "~/services/accounts/accountSiteProfile"
-import { accountSub2ApiAuthSession } from "~/services/accounts/sub2apiAuthSession"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import {
   ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
@@ -37,7 +37,7 @@ import {
   ASSOCIATED_PROFILE_SECRET_RESOLUTION_STATUSES,
   resolveAssociatedProfileSecret,
 } from "~/services/apiCredentialProfiles/accountImport/accountRuntimeKeyRecovery"
-import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/authSession"
+import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/auth/authSession"
 import {
   createDeferredAbortDeadline,
   runAbortableTask,

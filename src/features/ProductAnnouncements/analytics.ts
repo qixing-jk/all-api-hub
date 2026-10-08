@@ -10,7 +10,7 @@ import {
   type ProductAnalyticsEntrypoint,
   type ProductAnalyticsSurfaceId,
 } from "~/services/productAnalytics/contracts"
-import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
+import { trackProductAnalyticsEvent } from "~/services/productAnalytics/runtime/dispatch"
 import type { ProductAnnouncement } from "~/services/productAnnouncements/types"
 
 import type { ProductAnnouncementButtonSurface } from "./ProductAnnouncementButton"

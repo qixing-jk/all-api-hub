@@ -5,18 +5,18 @@ import {
   ClaudeCodeHubProviderTypeOptions,
 } from "~/constants/claudeCodeHub"
 import { SITE_TYPES } from "~/constants/siteType"
-import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
+import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/configuration/channelDraftSource"
+import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/configuration/runtimeConfig"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
-} from "~/services/managedSites/channelMatch"
+} from "~/services/managedSites/matching/channelMatch"
 import {
   checkValidClaudeCodeHubConfig,
   fetchChannelSecretKey,
   hydrateComparableChannelKeys,
   prepareChannelFormData,
 } from "~/services/managedSites/providers/claudeCodeHub"
-import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 
 const mockFetchManagedSiteImportModels = vi.fn()

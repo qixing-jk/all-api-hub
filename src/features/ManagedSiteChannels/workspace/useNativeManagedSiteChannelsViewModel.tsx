@@ -45,11 +45,11 @@ import {
   type ManagedResourceRegistration,
   type ResourceFailure,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/configuration/runtimeConfig"
 import {
   getManagedResourceRefKey,
   toManagedUpstreamResourceRef,
 } from "~/services/managedSites/managedResourceIdentity"
-import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import {
   getManagedSiteLabel,
   getManagedSiteUnsupportedModelSyncMessage,

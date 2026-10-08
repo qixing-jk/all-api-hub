@@ -3,7 +3,7 @@ import type {
   ApiCredentialProfileAssociatedKeyStateByProfileId,
 } from "~/features/ApiCredentialProfiles/contracts"
 import { API_CREDENTIAL_PROFILE_ASSOCIATION_STATUSES } from "~/features/ApiCredentialProfiles/contracts"
-import { getAccountRuntimeKeyLocatorAccountId } from "~/services/accounts/accountRuntimeKeys"
+import { getAccountRuntimeKeyLocatorAccountId } from "~/services/accounts/keys/accountRuntimeKeys"
 import type { ApiCredentialProfileLink } from "~/types/apiCredentialProfiles"
 import { API_CREDENTIAL_PROFILE_LINK_STATES } from "~/types/apiCredentialProfiles"
 

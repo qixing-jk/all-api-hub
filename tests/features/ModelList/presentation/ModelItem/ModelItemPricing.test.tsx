@@ -9,7 +9,7 @@ import { PriceView } from "~/features/ModelList/presentation/ModelItem/ModelItem
 import { ModelItemPricing } from "~/features/ModelList/presentation/ModelItem/ModelItemPricing"
 import { DEFAULT_MODEL_PRICE_COMPARISON_WEIGHTS } from "~/features/ModelList/pricing/priceComparison"
 import { createKimiOpenPlatformProviderModelCatalog } from "~/services/apiAdapters/kimiOpenPlatform/providerModelCatalog"
-import { normalizeOpenRouterPricingPlan } from "~/services/apiAdapters/openrouter/pricingPlan"
+import { normalizeOpenRouterPricingPlan } from "~/services/apiAdapters/openrouter/models/pricingPlan"
 import * as kimiService from "~/services/apiService/kimiOpenPlatform"
 import {
   MODEL_PRICE_PRECISION_KINDS,

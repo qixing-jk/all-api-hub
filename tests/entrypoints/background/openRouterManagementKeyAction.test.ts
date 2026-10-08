@@ -8,7 +8,7 @@ import {
   OPENROUTER_MANAGEMENT_KEY_TRANSPORT_TIMEOUT_MS,
 } from "~/constants/openRouterBootstrap"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { OPENROUTER_MANAGEMENT_KEY_SECRET_MAX_LENGTH } from "~/services/apiAdapters/openrouter/managementKeySecret"
+import { OPENROUTER_MANAGEMENT_KEY_SECRET_MAX_LENGTH } from "~/services/apiAdapters/openrouter/keys/managementKeySecret"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const originalBrowser = (globalThis as any).browser

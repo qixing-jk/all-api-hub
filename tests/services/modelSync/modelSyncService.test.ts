@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { DoneHubChannelType } from "~/constants/doneHub"
 import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
-import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
+import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/configuration/runtimeConfig"
 import {
   applyChannelModelFilters,
   matchesProbeFilterRule as evaluateProbeFilterRule,

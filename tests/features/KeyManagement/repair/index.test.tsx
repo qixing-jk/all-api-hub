@@ -8,8 +8,8 @@ import { RepairMissingKeysDialog } from "~/features/KeyManagement/repair"
 import { useRepairCreatedKeyManagedSiteImport } from "~/features/KeyManagement/repair/useRepairCreatedKeyManagedSiteImport"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { AccountKeyRepairMessageTypes } from "~/services/accounts/accountKeyAutoProvisioning/messaging"
-import { ACCOUNT_KEY_RECONCILIATION_OUTCOMES } from "~/services/accounts/accountKeyInventoryReconciliation"
-import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { ACCOUNT_KEY_RECONCILIATION_OUTCOMES } from "~/services/accounts/keys/accountKeyInventoryReconciliation"
+import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import { ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { DisplaySiteData } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
@@ -187,37 +187,43 @@ vi.mock(
   }),
 )
 
-vi.mock("~/services/managedSites/repairCreatedKeyBatchImport", async () => {
-  const actual = await vi.importActual<
-    typeof import("~/services/managedSites/repairCreatedKeyBatchImport")
-  >("~/services/managedSites/repairCreatedKeyBatchImport")
-  return {
-    ...actual,
-    resolveRepairCreatedKeyBatchImportCandidate:
-      mockResolveRepairCreatedKeyBatchImportCandidate,
-  }
-})
+vi.mock(
+  "~/services/managedSites/batchImport/repairCreatedKeyBatchImport",
+  async () => {
+    const actual = await vi.importActual<
+      typeof import("~/services/managedSites/batchImport/repairCreatedKeyBatchImport")
+    >("~/services/managedSites/batchImport/repairCreatedKeyBatchImport")
+    return {
+      ...actual,
+      resolveRepairCreatedKeyBatchImportCandidate:
+        mockResolveRepairCreatedKeyBatchImportCandidate,
+    }
+  },
+)
 
-vi.mock("~/services/managedSites/runtimeConfig", async () => {
+vi.mock("~/services/managedSites/configuration/runtimeConfig", async () => {
   const actual = await vi.importActual<
-    typeof import("~/services/managedSites/runtimeConfig")
-  >("~/services/managedSites/runtimeConfig")
+    typeof import("~/services/managedSites/configuration/runtimeConfig")
+  >("~/services/managedSites/configuration/runtimeConfig")
   return {
     ...actual,
     getCurrentManagedSiteRuntimeConfig: mockGetCurrentManagedSiteRuntimeConfig,
   }
 })
 
-vi.mock("~/services/managedSites/tokenBatchImportTarget", async () => {
-  const actual = await vi.importActual<
-    typeof import("~/services/managedSites/tokenBatchImportTarget")
-  >("~/services/managedSites/tokenBatchImportTarget")
-  return {
-    ...actual,
-    createManagedSiteTokenBatchImportTarget:
-      mockCreateManagedSiteTokenBatchImportTarget,
-  }
-})
+vi.mock(
+  "~/services/managedSites/batchImport/tokenBatchImportTarget",
+  async () => {
+    const actual = await vi.importActual<
+      typeof import("~/services/managedSites/batchImport/tokenBatchImportTarget")
+    >("~/services/managedSites/batchImport/tokenBatchImportTarget")
+    return {
+      ...actual,
+      createManagedSiteTokenBatchImportTarget:
+        mockCreateManagedSiteTokenBatchImportTarget,
+    }
+  },
+)
 
 vi.mock(
   "~/services/accounts/accountKeyAutoProvisioning/messaging",

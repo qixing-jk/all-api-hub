@@ -13,7 +13,7 @@ import {
   AI_ROUTER_STATUS_OUTCOMES,
   performAiRouterDailyCheckIn,
   probeAiRouterDailyCheckInStatus,
-} from "~/services/apiService/sub2api/aiRouterCheckIn"
+} from "~/services/apiService/sub2api/checkin/aiRouterCheckIn"
 import { ApiError } from "~/services/apiTransport/errors"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
@@ -27,11 +27,11 @@ import { createAutoCheckinMutationLifecycle } from "~~/tests/test-utils/autoChec
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 vi.mock(
-  "~/services/apiService/sub2api/aiRouterCheckIn",
+  "~/services/apiService/sub2api/checkin/aiRouterCheckIn",
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import("~/services/apiService/sub2api/aiRouterCheckIn")
+        typeof import("~/services/apiService/sub2api/checkin/aiRouterCheckIn")
       >()
     return {
       ...actual,

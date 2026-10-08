@@ -10,14 +10,14 @@ import { useManagedResourceListController } from "~/features/ManagedSiteChannels
 import { recordGatewayGuidanceCompletion } from "~/features/UnifiedApiGuidance/recordGatewayGuidanceCompletion"
 import type { ManagedResourceProductPolicy } from "~/services/accountSiteDefinitions/contracts"
 import { type ManagedResourceRegistration } from "~/services/apiAdapters/contracts/managedResourceNative"
-import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/configRegistration"
+import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/configuration/configRegistration"
 import {
   getManagedResourceRefKey,
   isManagedResourceRefForSite,
   parseManagedResourceRef,
 } from "~/services/managedSites/managedResourceIdentity"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
-import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/managedSite"
+import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/facts/managedSite"
 
 type NativeChannelWorkspaceOptions = ManagedSiteChannelsRouteProps & {
   config: ManagedSiteRuntimeConfigValue | null

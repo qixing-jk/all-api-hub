@@ -96,7 +96,7 @@ vi.mock(
       "~~/tests/test-utils/accountKeyFixtures"
     )
     const { buildServiceCredentialRuntimeKey } = await import(
-      "~/services/accounts/accountRuntimeKeys"
+      "~/services/accounts/keys/accountRuntimeKeys"
     )
 
     return {

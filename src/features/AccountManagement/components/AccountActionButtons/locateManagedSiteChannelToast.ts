@@ -1,10 +1,10 @@
 import type { TFunction } from "i18next"
 
+import { areManagedResourceRefsEqual } from "~/services/managedSites/managedResourceIdentity"
 import {
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
   type ManagedSiteChannelMatchInspection,
-} from "~/services/managedSites/channelMatch"
-import { areManagedResourceRefsEqual } from "~/services/managedSites/managedResourceIdentity"
+} from "~/services/managedSites/matching/channelMatch"
 
 /**
  * Resolves the user-facing toast message for the best managed-site channel locate hint.

@@ -9,7 +9,7 @@ const { fetchSub2ApiAnnouncementsMock, markSub2ApiAnnouncementReadMock } =
     markSub2ApiAnnouncementReadMock: vi.fn(),
   }))
 
-vi.mock("~/services/apiService/sub2api/announcements", () => ({
+vi.mock("~/services/apiService/sub2api/account/announcements", () => ({
   fetchSub2ApiAnnouncements: fetchSub2ApiAnnouncementsMock,
   markSub2ApiAnnouncementRead: markSub2ApiAnnouncementReadMock,
 }))
