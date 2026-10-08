@@ -126,7 +126,7 @@ vi.mock(
     prepareDefaultAccountKeyCreation: prepareCreationMock,
   }),
 )
-vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
+vi.mock("~/features/TokenProvisioning/creation/AddTokenDialog", () => ({
   default: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div>Native key editor</div> : null,
 }))

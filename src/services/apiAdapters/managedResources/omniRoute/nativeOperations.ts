@@ -18,7 +18,7 @@ import {
 import {
   omniRouteChannelEffect,
   runOmniRouteMutation,
-} from "~/services/apiAdapters/managedSites/omnirouteMutation"
+} from "~/services/apiAdapters/managedSites/omniroute/omnirouteMutation"
 import {
   createOmniRouteConnection,
   createOmniRouteProviderNode,

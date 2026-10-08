@@ -121,11 +121,11 @@ vi.mock("~/features/AccountManagement/components/AccountList", () => ({
   default: () => <div>AccountList</div>,
 }))
 
-vi.mock("~/features/SiteBookmarks/components/BookmarksList", () => ({
+vi.mock("~/features/SiteBookmarks/list/BookmarksList", () => ({
   default: () => <div>BookmarksList</div>,
 }))
 
-vi.mock("~/features/SiteBookmarks/components/BookmarkDialog", () => ({
+vi.mock("~/features/SiteBookmarks/editor/BookmarkDialog", () => ({
   default: ({
     isOpen,
     prefill,

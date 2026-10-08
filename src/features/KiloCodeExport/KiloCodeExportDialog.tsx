@@ -33,7 +33,7 @@ import {
   KILO_CODE_ACCOUNT_MODEL_STATUSES,
   useKiloCodeAccountModelDiscovery,
 } from "~/features/KiloCodeExport/useKiloCodeAccountModelDiscovery"
-import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
+import AddTokenDialog from "~/features/TokenProvisioning/creation/AddTokenDialog"
 import { getAccountRuntimeKeyExportId } from "~/services/accounts/keys/accountRuntimeKeys"
 import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
 import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"

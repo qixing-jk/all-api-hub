@@ -19,6 +19,8 @@ The main workflow directories are:
 | Usage analytics | `data`, `filtering`, `charts`, `export`, `workspace` |
 | Balance history | `data`, `filtering`, `reporting`, `workspace` |
 | Managed site model sync | `data`, `commands`, `results`, `status`, `filters`, `workspace` |
+| Site bookmarks | `list`, `editor` |
+| Token provisioning | `creation`, `secretDelivery` |
 | Import and export | `backup`, `webdav`, `cloudSync` |
 | Options overview | `attention`, `automation`, `configuration`, `usage`, `actions`, `permissions`, `workspace` |
 

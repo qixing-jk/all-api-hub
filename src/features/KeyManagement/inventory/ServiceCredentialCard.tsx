@@ -48,7 +48,7 @@ import { ManagedSiteStatusDisclosure } from "~/features/KeyManagement/managedSit
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { formatKey } from "~/features/KeyManagement/utils"
 import { ManagedSiteImportButton } from "~/features/ManagedSiteWidgets/ManagedSiteImportButton"
-import { saveAccountRuntimeKeysToApiCredentialProfiles } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
+import { saveAccountRuntimeKeysToApiCredentialProfiles } from "~/features/TokenProvisioning/secretDelivery/apiCredentialProfileSaveAction"
 import { cn } from "~/lib/utils"
 import { buildServiceCredentialRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"

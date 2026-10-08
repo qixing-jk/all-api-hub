@@ -24,7 +24,7 @@ import { useRepairCreatedKeyManagedSiteImport } from "~/features/KeyManagement/r
 import { useRepairMissingKeysJob } from "~/features/KeyManagement/repair/useRepairMissingKeysJob"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import ManagedSiteTypeSwitcher from "~/features/ManagedSiteWidgets/ManagedSiteTypeSwitcher"
-import { AccountKeyProvisioningDialog } from "~/features/TokenProvisioning/components/AccountKeyProvisioningDialog"
+import { AccountKeyProvisioningDialog } from "~/features/TokenProvisioning/creation/AccountKeyProvisioningDialog"
 import { canCreateAccountKeyResources } from "~/services/accounts/keys/keyProductCapabilities"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import type { DisplaySiteData } from "~/types"

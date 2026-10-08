@@ -21,7 +21,7 @@ import {
 import {
   gptLoadChannelEffect,
   runGptLoadMutation,
-} from "~/services/apiAdapters/managedSites/gptLoadMutation"
+} from "~/services/apiAdapters/managedSites/gptLoad/gptLoadMutation"
 import {
   createGptLoadGroup,
   deleteGptLoadGroup,

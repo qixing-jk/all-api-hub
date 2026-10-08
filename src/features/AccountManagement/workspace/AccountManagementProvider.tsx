@@ -5,7 +5,7 @@ import { TempWindowFallbackReminderGate } from "~/features/AccountManagement/com
 import { AccountDataProvider } from "~/features/AccountManagement/data/AccountDataContext"
 import { DialogStateProvider } from "~/features/AccountManagement/dialogs/DialogStateProvider"
 import { LdohSiteLookupProvider } from "~/features/LdohSiteLookup/hooks/LdohSiteLookupContext"
-import { BookmarkDialogStateProvider } from "~/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
+import { BookmarkDialogStateProvider } from "~/features/SiteBookmarks/editor/BookmarkDialogStateContext"
 
 export const AccountManagementProvider = ({
   children,

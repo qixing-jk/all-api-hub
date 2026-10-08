@@ -35,7 +35,7 @@ const { manualResult, manualProps } = vi.hoisted(() => ({
   manualResult: { current: null as AccountKeyCreationResult | null },
   manualProps: vi.fn(),
 }))
-vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
+vi.mock("~/features/TokenProvisioning/creation/AddTokenDialog", () => ({
   default: (props: any) => {
     manualProps(props)
     return props.isOpen ? (

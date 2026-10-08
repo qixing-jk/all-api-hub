@@ -17,7 +17,7 @@ import {
 import {
   octopusChannelEffect,
   runOctopusMutation,
-} from "~/services/apiAdapters/managedSites/octopusMutation"
+} from "~/services/apiAdapters/managedSites/octopus/octopusMutation"
 import {
   createChannel,
   deleteChannel,

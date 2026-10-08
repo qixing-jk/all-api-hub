@@ -28,7 +28,7 @@ vi.mock(
   }),
 )
 vi.mock(
-  "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction",
+  "~/features/TokenProvisioning/secretDelivery/apiCredentialProfileSaveAction",
   () => ({ buildOneTimeApiKeyProfileSaveAction: realSave }),
 )
 

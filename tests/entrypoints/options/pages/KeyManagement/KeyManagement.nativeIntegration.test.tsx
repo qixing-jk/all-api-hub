@@ -174,11 +174,11 @@ vi.mock(
 )
 
 vi.mock(
-  "~/features/TokenProvisioning/components/AddTokenDialog",
+  "~/features/TokenProvisioning/creation/AddTokenDialog",
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import("~/features/TokenProvisioning/components/AddTokenDialog")
+        typeof import("~/features/TokenProvisioning/creation/AddTokenDialog")
       >()
     const React = await import("react")
     return {
@@ -214,11 +214,11 @@ vi.mock(
 )
 
 vi.mock(
-  "~/features/TokenProvisioning/components/OneTimeSecretDialog",
+  "~/features/TokenProvisioning/secretDelivery/OneTimeSecretDialog",
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import("~/features/TokenProvisioning/components/OneTimeSecretDialog")
+        typeof import("~/features/TokenProvisioning/secretDelivery/OneTimeSecretDialog")
       >()
     const React = await import("react")
 

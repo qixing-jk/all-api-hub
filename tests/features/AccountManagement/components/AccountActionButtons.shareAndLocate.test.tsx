@@ -8,7 +8,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
 import { useLocateManagedSiteChannel } from "~/features/AccountManagement/components/AccountActionButtons/useLocateManagedSiteChannel"
 import { buildServiceCredentialRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
-import { newApiSecretVerification } from "~/services/apiAdapters/managedSites/newApiSecretVerification"
+import { newApiSecretVerification } from "~/services/apiAdapters/managedSites/newApi/newApiSecretVerification"
 import type { UserPreferences } from "~/services/preferences/preferencesSchema"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

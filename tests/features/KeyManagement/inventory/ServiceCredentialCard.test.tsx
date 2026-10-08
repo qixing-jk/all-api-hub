@@ -178,7 +178,7 @@ vi.mock("~/utils/navigation", () => ({
 }))
 
 vi.mock(
-  "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction",
+  "~/features/TokenProvisioning/secretDelivery/apiCredentialProfileSaveAction",
   () => ({
     saveAccountRuntimeKeysToApiCredentialProfiles: (...args: unknown[]) =>
       mockSaveApiCredentialProfiles(...args),

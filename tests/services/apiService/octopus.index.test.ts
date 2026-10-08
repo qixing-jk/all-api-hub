@@ -4,7 +4,7 @@ import { octopusManagedSiteCapabilities } from "~/services/apiAdapters/managedSi
 import {
   octopusChannelEffect,
   runOctopusMutation,
-} from "~/services/apiAdapters/managedSites/octopusMutation"
+} from "~/services/apiAdapters/managedSites/octopus/octopusMutation"
 import {
   OCTOPUS_AUTH_MODES,
   OCTOPUS_COOKIE_API_VERSIONS,
