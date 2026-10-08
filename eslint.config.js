@@ -125,8 +125,6 @@ const dynamicImportAllowlist = [
   {
     file: "src/features/AccountManagement/components/CopyKeyDialog/RuntimeKeyActionControls.tsx",
     imports: [
-      "~/components/KiloCodeExportDialog",
-      "~/features/ApiCredentialProfiles/components/KiloCodeProfileExportDialog",
       "~/features/KiloCodeExport/KiloCodeExportDialog",
       "~/features/ApiCredentialProfiles/export/KiloCodeProfileExportDialog",
       "~/services/integrations/cherryStudio",
@@ -219,15 +217,6 @@ function restrictedImports(...patterns) {
 // Concrete site identities belong to these explicit owners. Shared business
 // code should consume metadata/capabilities; type imports stay unrestricted.
 const siteTypeImportOwners = [
-  // Account-dialog owners retain these paths until the next directory-move slice.
-  "src/features/AccountManagement/components/AccountDialog/AccessTokenVerificationGuide.tsx",
-  "src/features/AccountManagement/components/AccountDialog/AccountForm.tsx",
-  "src/features/AccountManagement/components/AccountDialog/autoDetectDraft.ts",
-  "src/features/AccountManagement/components/AccountDialog/hooks/useOpenRouterAccountOnboarding.ts",
-  "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog.ts",
-  "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialogIdentityChanges.ts",
-  "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialogDetection.ts",
-  "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialogInitialization.ts",
   "src/services/accountSiteDefinitions/**", // Site metadata and identifiers.
   "src/services/apiAdapters/**", // Capability registration and provider protocols.
   "src/services/apiService/**", // Provider transports and legacy dispatch.
