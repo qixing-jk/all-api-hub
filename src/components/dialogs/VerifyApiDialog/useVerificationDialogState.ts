@@ -105,9 +105,9 @@ export function useVerificationDialogState(
           await verificationResultHistoryStorage.upsertLatestSummary(
             nextSummary,
           )
-      } catch {
+      } catch (error) {
         // History is optional; a storage failure must not replace live probe results.
-        logger.error("Failed to persist verification history")
+        logger.error("Failed to persist verification history", { error })
         return null
       }
       if (loadTokenRef.current !== requestToken) {
