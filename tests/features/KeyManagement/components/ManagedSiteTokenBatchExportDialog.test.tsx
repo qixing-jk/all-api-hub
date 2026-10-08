@@ -115,11 +115,13 @@ const {
 vi.mock("~/utils/navigation", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/utils/navigation")>()
 
-  return {
-    ...actual,
-    openSettingsTab: mockOpenSettingsTab,
-    pushWithinOptionsPage: mockPushWithinOptionsPage,
-  }
+  return { ...actual, openSettingsTab: mockOpenSettingsTab }
+})
+vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/navigation/optionsPage")>()
+
+  return { ...actual, pushWithinOptionsPage: mockPushWithinOptionsPage }
 })
 
 vi.mock(
@@ -147,13 +149,25 @@ vi.mock(
   },
 )
 
-vi.mock("~/services/managedSites/tokenBatchExport", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("~/services/managedSites/tokenBatchExport")
-  >()),
-  prepareManagedSiteTokenBatchExportPreview: mockPreparePreview,
-  executeManagedSiteTokenBatchExport: mockExecuteBatchExport,
-}))
+vi.mock(
+  "~/services/managedSites/tokenBatchImportPreview",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/managedSites/tokenBatchImportPreview")
+    >()),
+    prepareManagedSiteTokenBatchExportPreview: mockPreparePreview,
+  }),
+)
+
+vi.mock(
+  "~/services/managedSites/tokenBatchImportExecution",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/managedSites/tokenBatchImportExecution")
+    >()),
+    executeManagedSiteTokenBatchExport: mockExecuteBatchExport,
+  }),
+)
 
 vi.mock(
   "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification",

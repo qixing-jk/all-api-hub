@@ -12,7 +12,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { replaceWithinOptionsPage } from "~/utils/navigation"
+import { replaceWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 import { sortModelListAccounts } from "../accountOrdering"
 import { isProviderCatalogFallback } from "../catalogFallback"

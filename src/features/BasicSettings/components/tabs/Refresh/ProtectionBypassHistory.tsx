@@ -13,7 +13,7 @@ import {
 } from "~/components/ui/dialog"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { PROTECTION_BYPASS_HISTORY_LIMIT } from "~/services/protectionBypass/historyStorage"
-import { replaceWithinOptionsPage } from "~/utils/navigation"
+import { replaceWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 import ProtectionBypassHistoryDialog from "./ProtectionBypassHistoryDialog"
 import { SHIELD_SETTINGS_TARGET_IDS } from "./searchTargets"

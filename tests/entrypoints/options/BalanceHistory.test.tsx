@@ -31,7 +31,8 @@ import {
   getDayKeyFromUnixSeconds,
   subtractDaysFromDayKey,
 } from "~/utils/core/dayKey"
-import { openSettingsTab, pushWithinOptionsPage } from "~/utils/navigation"
+import { openSettingsTab } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 import {
   fireEvent,
   render,
@@ -132,11 +133,11 @@ vi.mock("~/utils/browser/browserApi", async () => {
 
 vi.mock("~/utils/navigation", async () => {
   const actual = await vi.importActual<any>("~/utils/navigation")
-  return {
-    ...actual,
-    openSettingsTab: vi.fn(),
-    pushWithinOptionsPage: vi.fn(),
-  }
+  return { ...actual, openSettingsTab: vi.fn() }
+})
+vi.mock("~/utils/navigation/optionsPage", async () => {
+  const actual = await vi.importActual<any>("~/utils/navigation/optionsPage")
+  return { ...actual, pushWithinOptionsPage: vi.fn() }
 })
 
 describe("BalanceHistory options page", () => {

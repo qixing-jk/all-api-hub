@@ -29,7 +29,8 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { openKeysPage, pushWithinOptionsPage } from "~/utils/navigation"
+import { openKeysPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 import { AccountSelector } from "./components/AccountSelector"
 import { AccountSummaryBar } from "./components/AccountSummaryBar"

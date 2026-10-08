@@ -65,11 +65,9 @@ import { getRawExtensionApi } from "~/utils/browser/devApiExplorer"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
-import {
-  openBugReportPage,
-  openOrFocusOptionsMenuItem,
-  openProtectionBypassHistory,
-} from "~/utils/navigation"
+import { openProtectionBypassHistory } from "~/utils/navigation"
+import { openBugReportPage } from "~/utils/navigation/feedbackPages"
+import { openOrFocusOptionsMenuItem } from "~/utils/navigation/optionsPage"
 
 import { trackCookieInterceptorUrl } from "./cookieInterceptor"
 import { protectionBypassCoordinator } from "./protectionBypassCoordinator"

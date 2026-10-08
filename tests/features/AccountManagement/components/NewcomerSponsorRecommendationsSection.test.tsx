@@ -52,6 +52,14 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
     ...actual,
     openApiCredentialProfilesPage: mockOpenApiCredentialProfilesPage,
     openFullBookmarkManagerPage: mockOpenFullBookmarkManagerPage,
+  }
+})
+vi.mock("~/utils/navigation/feedbackPages", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/navigation/feedbackPages")>()
+
+  return {
+    ...actual,
     openSiteSupportRequestPage: mockOpenSiteSupportRequestPage,
   }
 })

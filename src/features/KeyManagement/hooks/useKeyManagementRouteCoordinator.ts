@@ -21,7 +21,7 @@ import {
   type AccountRuntimeKeyLocator,
 } from "~/services/accounts/accountRuntimeKeys"
 import type { ApiCredentialProfileLink } from "~/types/apiCredentialProfiles"
-import { replaceWithinOptionsPage } from "~/utils/navigation"
+import { replaceWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 /** Apply key deep-link transitions only while the keys page is active. */
 function replaceActiveKeysRoute(params?: Record<string, string | undefined>) {

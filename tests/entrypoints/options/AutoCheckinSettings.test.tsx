@@ -62,8 +62,9 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/navigation", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/navigation/optionsPage")>()
 
   return {
     ...actual,

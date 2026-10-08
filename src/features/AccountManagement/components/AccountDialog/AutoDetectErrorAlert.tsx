@@ -24,10 +24,8 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
 import { createTab } from "~/utils/browser/browserApi"
-import {
-  openApiCredentialProfilesPage,
-  openSiteSupportRequestPage,
-} from "~/utils/navigation"
+import { openApiCredentialProfilesPage } from "~/utils/navigation"
+import { openSiteSupportRequestPage } from "~/utils/navigation/feedbackPages"
 
 import {
   AccessTokenVerificationGuide,

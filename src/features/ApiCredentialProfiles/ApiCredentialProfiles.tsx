@@ -49,11 +49,11 @@ import {
   API_CREDENTIAL_PROFILE_LINK_SOURCES,
   type ApiCredentialProfileLink,
 } from "~/types/apiCredentialProfiles"
+import { openSettingsTab } from "~/utils/navigation"
 import {
-  openSettingsTab,
   pushWithinOptionsPage,
   replaceWithinOptionsPage,
-} from "~/utils/navigation"
+} from "~/utils/navigation/optionsPage"
 
 import { ApiCredentialProfilesListView } from "./components/ApiCredentialProfilesListView"
 import {

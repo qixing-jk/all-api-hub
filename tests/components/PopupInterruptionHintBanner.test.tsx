@@ -26,10 +26,16 @@ vi.mock("~/utils/browser/browserApi", async (original) => ({
   ...(await original<typeof import("~/utils/browser/browserApi")>()),
   getSidePanelSupport: () => ({ supported: mocks.supported }),
 }))
-vi.mock("~/utils/navigation", async (original) => ({
-  ...(await original<typeof import("~/utils/navigation")>()),
+vi.mock("~/utils/navigation/sidepanel", async (original) => ({
+  ...(await original<typeof import("~/utils/navigation/sidepanel")>()),
   openSidePanelWithFallback: mocks.openSidePanel,
+}))
+vi.mock("~/utils/navigation/optionsPage", async (original) => ({
+  ...(await original<typeof import("~/utils/navigation/optionsPage")>()),
   openOrFocusOptionsMenuItem: mocks.openOptions,
+}))
+vi.mock("~/utils/navigation/popup", async (original) => ({
+  ...(await original<typeof import("~/utils/navigation/popup")>()),
   closeIfPopup: mocks.closePopup,
 }))
 vi.mock("~/contexts/UserPreferencesContext", async (original) => ({

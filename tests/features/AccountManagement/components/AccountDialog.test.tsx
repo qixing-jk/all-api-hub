@@ -415,6 +415,8 @@ vi.mock(
 vi.mock("~/utils/navigation", () => ({
   openFullBookmarkManagerPage: mockOpenFullBookmarkManagerPage,
   openApiCredentialProfilesPage: mockOpenApiCredentialProfilesPage,
+}))
+vi.mock("~/utils/navigation/feedbackPages", () => ({
   openSiteSupportRequestPage: mockOpenSiteSupportRequestPage,
 }))
 

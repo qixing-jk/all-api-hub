@@ -37,14 +37,10 @@ import type {
 import {
   API_TYPES,
   API_VERIFICATION_MODES,
-  API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
   runApiVerificationProbe,
 } from "~/services/verification/aiApiVerification"
-import {
-  buildSafeProbeFailureDiagnostics,
-  toSanitizedErrorSummary,
-} from "~/services/verification/aiApiVerification/utils"
+import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import {
   createAccountModelVerificationHistoryTarget,
   verificationResultHistoryStorage,
@@ -53,13 +49,10 @@ import { createLogger } from "~/utils/core/logger"
 
 import {
   filterVerificationRedactions as filterRedactions,
-  isVerificationAbortError as isAbortError,
+  isVerificationAbortError,
 } from "../verificationDialogUtils"
-import {
-  buildProbeState,
-  withStoppedProbe,
-  withUnfinishedProbesStopped,
-} from "./probeState"
+import { executeDialogProbe } from "./probeExecution"
+import { buildProbeState, withUnfinishedProbesStopped } from "./probeState"
 import type { VerifyApiDialogProps } from "./types"
 import { useVerificationDialogState } from "./useVerificationDialogState"
 
@@ -236,107 +229,56 @@ export function useVerifyApiDialogViewModel({
     if (!selectedRuntimeKey || !selectedRuntimeKeyIsCompatible) return null
     let resolvedRuntimeKey = selectedRuntimeKey
     let executedMode: ApiVerificationMode | undefined
-
-    const pendingProbes = probesRef.current.map((probe) =>
-      probe.definition.id === probeId
-        ? { ...probe, isRunning: true, attempts: probe.attempts + 1 }
-        : probe,
-    )
-    replaceProbes(pendingProbes)
-
-    try {
-      resolvedRuntimeKey = await resolveDisplayAccountRuntimeKeySecret(
-        account,
-        selectedRuntimeKey,
-        { abortSignal },
-      )
-      if (isStopped(abortSignal)) {
-        replaceProbes(withStoppedProbe(probesRef.current, probeId))
-        return null
-      }
-      executedMode = verificationMode
-      const result = await runApiVerificationProbe({
-        baseUrl: resolvedRuntimeKey.baseUrl,
-        apiKey: resolvedRuntimeKey.secret,
-        apiType,
-        mode: executedMode,
-        modelId: modelId.trim() || undefined,
-        fallbackModelId: resolvedRuntimeKey.modelAccess.suggestedModelIds[0],
-        probeId,
-        abortSignal,
-      })
-
-      if (isStopped(abortSignal)) {
-        replaceProbes(
-          withStoppedProbe(probesRef.current, probeId, executedMode),
+    const { result } = await executeDialogProbe({
+      probeId,
+      mode: verificationMode,
+      signal: abortSignal,
+      isStopped: () => isStopped(abortSignal),
+      isAbortFailure: (error) => isVerificationAbortError(error, abortSignal),
+      stoppedMode: () => executedMode,
+      readProbes: () => probesRef.current,
+      replaceProbes,
+      execute: async () => {
+        resolvedRuntimeKey = await resolveDisplayAccountRuntimeKeySecret(
+          account,
+          selectedRuntimeKey,
+          { abortSignal },
         )
-        return null
-      }
-
-      const nextProbes = probesRef.current.map((probe) =>
-        probe.definition.id === probeId
-          ? { ...probe, isRunning: false, result }
-          : probe,
-      )
-      replaceProbes(nextProbes)
-      await persistCurrentResults(
-        apiType,
-        nextProbes,
-        modelId.trim() || tokenModelHint || initialModelId?.trim(),
-      )
-      return result
-    } catch (error) {
-      if (isAbortError(error, abortSignal) || isStopped()) {
-        replaceProbes(
-          withStoppedProbe(probesRef.current, probeId, executedMode),
-        )
-        return null
-      }
-
-      const sanitizedMessage = toSanitizedErrorSummary(
-        error,
-        filterRedactions([
-          account.token,
-          account.cookieAuthSessionCookie,
-          ...collectAccountRuntimeKeySecrets([
-            selectedRuntimeKey,
-            resolvedRuntimeKey,
+        if (isStopped(abortSignal))
+          throw new DOMException("Aborted", "AbortError")
+        executedMode = verificationMode
+        return runApiVerificationProbe({
+          baseUrl: resolvedRuntimeKey.baseUrl,
+          apiKey: resolvedRuntimeKey.secret,
+          apiType,
+          mode: executedMode,
+          modelId: modelId.trim() || undefined,
+          fallbackModelId: resolvedRuntimeKey.modelAccess.suggestedModelIds[0],
+          probeId,
+          abortSignal,
+        })
+      },
+      acceptResult: (nextProbes) =>
+        persistCurrentResults(
+          apiType,
+          nextProbes,
+          modelId.trim() || tokenModelHint || initialModelId?.trim(),
+        ),
+      failure: {
+        secrets: () =>
+          filterRedactions([
+            account.token,
+            account.cookieAuthSessionCookie,
+            ...collectAccountRuntimeKeySecrets([
+              selectedRuntimeKey,
+              resolvedRuntimeKey,
+            ]),
           ]),
-        ]),
-      )
-      logger.error("Probe failed", {
-        probeId,
-        message: sanitizedMessage,
-      })
-
-      const fallback: ApiVerificationProbeResult = {
-        id: probeId,
-        mode:
-          probeId === API_VERIFICATION_PROBE_IDS.Models
-            ? undefined
-            : verificationMode,
-        status: API_VERIFICATION_PROBE_STATUSES.Fail,
-        latencyMs: 0,
         summary: t("verifyDialog.errors.unexpected"),
-        ...buildSafeProbeFailureDiagnostics(error, sanitizedMessage),
-      }
-      const nextProbes = probesRef.current.map((probe) => {
-        if (probe.definition.id !== probeId) return probe
-        return {
-          ...probe,
-          isRunning: false,
-          // Surface a generic message to avoid leaking provider error details.
-          result: fallback,
-        }
-      })
-      replaceProbes(nextProbes)
-      await persistCurrentResults(
-        apiType,
-        nextProbes,
-        modelId.trim() || tokenModelHint || initialModelId?.trim(),
-      )
-      return fallback
-    }
+        report: (message) => logger.error("Probe failed", { probeId, message }),
+      },
+    })
+    return result
   }
 
   const clearHistory = async () => {

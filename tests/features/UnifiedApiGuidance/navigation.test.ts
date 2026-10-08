@@ -9,9 +9,11 @@ import {
   buildGuidedAccountKeyImportTarget,
   openGatewayGuidanceOverview,
 } from "~/features/UnifiedApiGuidance/navigation"
-import { pushWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
-vi.mock("~/utils/navigation", () => ({ pushWithinOptionsPage: vi.fn() }))
+vi.mock("~/utils/navigation/optionsPage", () => ({
+  pushWithinOptionsPage: vi.fn(),
+}))
 
 it("opens the whole overview guide as a preview", () => {
   openGatewayGuidanceOverview()

@@ -925,7 +925,7 @@ describe("AutoCheckin account actions", () => {
   it("shows an error when manual sign-in page opening fails and restores the button state", async () => {
     const user = userEvent.setup()
     const browserApi = await import("~/utils/browser/browserApi")
-    const navigation = await import("~/utils/navigation")
+    const navigation = await import("~/utils/navigation/sitePages")
 
     let rejectOpen: ((reason?: unknown) => void) | undefined
     vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
@@ -1012,7 +1012,7 @@ describe("AutoCheckin account actions", () => {
   it("opens the provider site from the row action", async () => {
     const user = userEvent.setup()
     const browserApi = await import("~/utils/browser/browserApi")
-    const navigation = await import("~/utils/navigation")
+    const navigation = await import("~/utils/navigation/sitePages")
     const openResolvers = new Map<string, () => void>()
 
     const sendRuntimeMessageSpy = vi
@@ -1198,7 +1198,7 @@ describe("AutoCheckin account actions", () => {
   it("shows an error when site opening fails and restores the button state", async () => {
     const user = userEvent.setup()
     const browserApi = await import("~/utils/browser/browserApi")
-    const navigation = await import("~/utils/navigation")
+    const navigation = await import("~/utils/navigation/sitePages")
 
     let rejectOpen: ((reason?: unknown) => void) | undefined
     vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
@@ -1633,7 +1633,7 @@ describe("AutoCheckin account actions", () => {
   it("reports a bulk-open failure when every failed account lookup fails", async () => {
     const user = userEvent.setup()
     const browserApi = await import("~/utils/browser/browserApi")
-    const navigation = await import("~/utils/navigation")
+    const navigation = await import("~/utils/navigation/sitePages")
     const sendRuntimeMessageSpy = vi
       .spyOn(browserApi, "sendRuntimeMessage")
       .mockImplementation(async (message: any, data?: any) => {

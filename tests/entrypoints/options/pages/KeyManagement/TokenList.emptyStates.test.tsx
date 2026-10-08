@@ -26,8 +26,9 @@ const { openSiteSupportRequestPageMock } = vi.hoisted(() => ({
   openSiteSupportRequestPageMock: vi.fn(),
 }))
 
-vi.mock("~/utils/navigation", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+vi.mock("~/utils/navigation/feedbackPages", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/navigation/feedbackPages")>()
 
   return {
     ...actual,

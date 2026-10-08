@@ -3,7 +3,7 @@ import { useCallback } from "react"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { ManagedSiteChannelsRoute } from "~/features/ManagedSiteChannels"
-import { navigateWithinOptionsPage } from "~/utils/navigation"
+import { navigateWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 type ManagedSiteChannelsPageProps = {
   refreshKey?: number

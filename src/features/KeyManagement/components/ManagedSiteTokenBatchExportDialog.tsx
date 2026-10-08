@@ -8,7 +8,7 @@ import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import { MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS } from "~/types/managedSiteTokenBatchExport"
-import { pushWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 import { ManagedSiteTokenBatchExportFooter } from "./ManagedSiteTokenBatchExportDialog/ManagedSiteTokenBatchExportFooter"
 import { ManagedSiteTokenBatchExportPreviewList } from "./ManagedSiteTokenBatchExportDialog/ManagedSiteTokenBatchExportPreviewList"

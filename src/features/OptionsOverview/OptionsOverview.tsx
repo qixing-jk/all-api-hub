@@ -24,7 +24,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
 import { PRODUCT_ANNOUNCEMENT_SEVERITIES } from "~/services/productAnnouncements/constants"
-import { pushWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 import { OptionsOverviewGrid } from "./components/OptionsOverviewGrid"
 import { OPTIONS_OVERVIEW_TEST_IDS } from "./testIds"

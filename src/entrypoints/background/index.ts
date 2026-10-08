@@ -39,7 +39,7 @@ import {
 } from "~/utils/browser/browserApi"
 import { isTestMode } from "~/utils/core/environment"
 import { createLogger, setLogHistoryWriter } from "~/utils/core/logger"
-import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
+import { openOrFocusOptionsMenuItem } from "~/utils/navigation/optionsPage"
 
 import {
   applyActionClickBehavior,

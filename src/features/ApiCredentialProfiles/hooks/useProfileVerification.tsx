@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { executeDialogProbe } from "~/components/dialogs/VerifyApiDialog/probeExecution"
 import {
   buildProbeState,
-  withStoppedProbe,
   withUnfinishedProbesStopped,
 } from "~/components/dialogs/VerifyApiDialog/probeState"
 import type { ProbeItemState } from "~/components/dialogs/VerifyApiDialog/types"
@@ -35,11 +35,7 @@ import {
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
 import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVerification/i18n"
-import {
-  buildSafeProbeFailureDiagnostics,
-  isAbortError,
-  toSanitizedErrorSummary,
-} from "~/services/verification/aiApiVerification/utils"
+import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import {
   createProfileModelVerificationHistoryTarget,
   createProfileVerificationHistoryTarget,
@@ -386,15 +382,6 @@ export function useProfileVerification({
     ],
   )
 
-  /** Settles a stopped probe without claiming it produced a verification result. */
-  const settleProbeAsStopped = (
-    probeId: ApiVerificationProbeId,
-    executedMode: ApiVerificationMode,
-  ): null => {
-    replaceProbes(withStoppedProbe(probesRef.current, probeId, executedMode))
-    return null
-  }
-
   const runProbe = async (
     probeId: ApiVerificationProbeId,
     modelIdOverride?: string,
@@ -402,127 +389,77 @@ export function useProfileVerification({
     abortSignal?: AbortSignal,
   ): Promise<ApiVerificationProbeResult | null> => {
     if (!profile) return null
-
     const tracker = trackAnalytics
       ? startProductAnalyticsAction({
           ...analyticsContext,
           actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunApiCredentialProbe,
         })
       : null
-
-    const pendingProbes = probesRef.current.map((probe) =>
-      probe.definition.id === probeId
-        ? { ...probe, isRunning: true, attempts: probe.attempts + 1 }
-        : probe,
-    )
-    replaceProbes(pendingProbes)
-
-    const executedMode = verificationMode
-
-    try {
-      const modelForProbe = (modelIdOverride ?? modelId).trim()
-      const result = await runApiVerificationProbe({
-        baseUrl: profile.baseUrl,
-        apiKey: profile.apiKey,
-        requestHeaders: profile.requestHeaders,
-        apiType,
-        mode: executedMode,
-        modelId: modelForProbe || undefined,
-        probeId,
-        abortSignal,
-      })
-
-      // A provider may settle an aborted request with a real response, so the
-      // stop flag decides the outcome, not the resolved value.
-      if (isStopped(abortSignal)) {
-        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
-        return settleProbeAsStopped(probeId, executedMode)
-      }
-
-      const nextProbes = probesRef.current.map((probe) =>
-        probe.definition.id === probeId
-          ? { ...probe, isRunning: false, result }
-          : probe,
-      )
-      replaceProbes(nextProbes)
-
-      const modelsOutput = extractModelsProbeOutput(result)
-      if (modelsOutput) {
-        if (Array.isArray(modelsOutput.modelIdsPreview)) {
-          setModelOptions((current) =>
-            current.length > 0 ? current : modelsOutput.modelIdsPreview!,
-          )
+    const { result, error } = await executeDialogProbe({
+      probeId,
+      mode: verificationMode,
+      signal: abortSignal,
+      isStopped: () => isStopped(abortSignal),
+      readProbes: () => probesRef.current,
+      replaceProbes,
+      execute: () =>
+        runApiVerificationProbe({
+          baseUrl: profile.baseUrl,
+          apiKey: profile.apiKey,
+          requestHeaders: profile.requestHeaders,
+          apiType,
+          mode: verificationMode,
+          modelId: (modelIdOverride ?? modelId).trim() || undefined,
+          probeId,
+          abortSignal,
+        }),
+      acceptResult: async (nextProbes, probeResult) => {
+        const modelsOutput = extractModelsProbeOutput(probeResult)
+        if (modelsOutput) {
+          if (Array.isArray(modelsOutput.modelIdsPreview)) {
+            setModelOptions((current) =>
+              current.length > 0 ? current : modelsOutput.modelIdsPreview!,
+            )
+          }
+          const suggested =
+            modelsOutput.suggestedModelId ?? modelsOutput.modelIdsPreview?.[0]
+          if (suggested) {
+            setModelId((current) => {
+              if (current.trim()) return current
+              preserveCurrentProbeStateForModel(suggested, apiType)
+              return suggested
+            })
+          }
         }
-
-        const suggested =
-          modelsOutput.suggestedModelId ?? modelsOutput.modelIdsPreview?.[0]
-        if (suggested) {
-          // Avoid overriding user input while the probe is in-flight.
-          setModelId((current) => {
-            if (current.trim()) return current
-            preserveCurrentProbeStateForModel(suggested, apiType)
-            return suggested
-          })
-        }
-      }
-
-      await persistProbeResults(nextProbes, modelIdOverride)
-      if (result.status === API_VERIFICATION_PROBE_STATUSES.Pass) {
-        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success)
-      } else if (
-        result.status === API_VERIFICATION_PROBE_STATUSES.Unsupported
-      ) {
-        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
-      } else {
-        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory:
-            resolveProductAnalyticsErrorCategoryFromProbeResult(result),
-        })
-      }
-      return result
-    } catch (error) {
-      if (isAbortError(error, abortSignal) || isStopped()) {
-        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
-        return settleProbeAsStopped(probeId, executedMode)
-      }
-
-      const sanitizedMessage = toSanitizedErrorSummary(error, [
-        profile.apiKey,
-        ...Object.values(profile.requestHeaders ?? {}),
-        profile.baseUrl,
-      ])
-      logger.error("Probe failed", {
-        probeId,
-        message: sanitizedMessage,
-      })
-
-      const fallback: ApiVerificationProbeResult = {
-        id: probeId,
-        mode:
-          probeId === API_VERIFICATION_PROBE_IDS.Models
-            ? undefined
-            : verificationMode,
-        status: API_VERIFICATION_PROBE_STATUSES.Fail,
-        latencyMs: 0,
+        await persistProbeResults(nextProbes, modelIdOverride)
+      },
+      failure: {
+        secrets: () => [
+          profile.apiKey,
+          ...Object.values(profile.requestHeaders ?? {}),
+          profile.baseUrl,
+        ],
         summary: t("aiApiVerification:verifyDialog.errors.unexpected"),
-        ...buildSafeProbeFailureDiagnostics(error, sanitizedMessage),
-      }
-
-      const nextProbes = probesRef.current.map((probe) => {
-        if (probe.definition.id !== probeId) return probe
-        return {
-          ...probe,
-          isRunning: false,
-          result: fallback,
-        }
-      })
-      replaceProbes(nextProbes)
-      await persistProbeResults(nextProbes, modelIdOverride)
+        report: (message) => logger.error("Probe failed", { probeId, message }),
+      },
+    })
+    if (!result) {
+      tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
+    } else if (error !== undefined) {
       tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
       })
-      return fallback
+    } else if (result.status === API_VERIFICATION_PROBE_STATUSES.Pass) {
+      tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+    } else if (result.status === API_VERIFICATION_PROBE_STATUSES.Unsupported) {
+      tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+    } else {
+      tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory:
+          resolveProductAnalyticsErrorCategoryFromProbeResult(result),
+      })
     }
+    return result
   }
 
   const clearHistory = async () => {

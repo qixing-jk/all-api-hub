@@ -12,7 +12,8 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import type { AutoCheckinRunSummary } from "~/types/autoCheckin"
-import { openAutoCheckinPage, pushWithinOptionsPage } from "~/utils/navigation"
+import { openAutoCheckinPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 interface AutoCheckinPretriggerCompletionDialogProps {
   isOpen: boolean

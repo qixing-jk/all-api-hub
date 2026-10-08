@@ -13,42 +13,50 @@ import {
   openSidePanel as openSidePanelApi,
 } from "~/utils/browser/browserApi"
 import {
-  navigateWithinOptionsPage,
-  openAccountBaseUrl,
   openAccountManagerWithSearch,
   openApiCredentialProfilesPage,
   openAutoCheckinPage,
-  openBugReportPage,
-  openCheckInAndRedeem,
-  openCheckInPage,
-  openCheckInPages,
-  openCommunityPage,
-  openCustomCheckInPage,
-  openFeatureRequestPage,
   openFullAccountManagerPage,
   openFullBookmarkManagerPage,
   openKeysPage,
-  openLanguageRequestPage,
   openManagedSiteChannelsPage,
   openManagedSiteModelSyncForChannel,
   openModelsPage,
-  openMultiplePages,
   openOptionsPage,
-  openOrFocusOptionsPage,
   openPermissionsOnboardingPage,
   openProtectionBypassHistory,
-  openRedeemPage,
   openSettingsPage,
   openSettingsTab,
   openSettingsTabInNewTab,
-  openSidePanelPage,
-  openSidePanelWithFallback,
-  openSiteSupportRequestPage,
-  openUsagePage,
-  pushWithinOptionsPage,
-  replaceWithinOptionsPage,
 } from "~/utils/navigation"
 import { getSiteSupportRequestUrl } from "~/utils/navigation/feedbackLinks"
+import {
+  openBugReportPage,
+  openCommunityPage,
+  openFeatureRequestPage,
+  openLanguageRequestPage,
+  openSiteSupportRequestPage,
+} from "~/utils/navigation/feedbackPages"
+import {
+  navigateWithinOptionsPage,
+  openOrFocusOptionsPage,
+  pushWithinOptionsPage,
+  replaceWithinOptionsPage,
+} from "~/utils/navigation/optionsPage"
+import { openMultiplePages } from "~/utils/navigation/popup"
+import {
+  openSidePanelPage,
+  openSidePanelWithFallback,
+} from "~/utils/navigation/sidepanel"
+import {
+  openAccountBaseUrl,
+  openCheckInAndRedeem,
+  openCheckInPage,
+  openCheckInPages,
+  openCustomCheckInPage,
+  openRedeemPage,
+  openUsagePage,
+} from "~/utils/navigation/sitePages"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
 
@@ -371,6 +379,7 @@ describe("navigation utilities", () => {
 
   it("openOrFocusOptionsPage should reuse an existing matching tab and append refresh markers", async () => {
     const querySpy = vi.spyOn(browser.tabs, "query").mockResolvedValue([
+      { id: 4, url: "not-a-valid-url" } as browser.tabs.Tab,
       {
         id: 5,
         url: `${OPTIONS_PAGE_URL}?runNow=true#autoCheckin`,

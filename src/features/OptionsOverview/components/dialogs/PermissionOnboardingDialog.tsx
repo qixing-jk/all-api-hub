@@ -33,8 +33,8 @@ import { trackStarPromotionAction } from "~/services/productAnalytics/starPromot
 import { starPromotionState } from "~/services/starPromotion/state"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/feedback/operationFeedback"
-import { openLanguageRequestPage } from "~/utils/navigation"
 import { getDocsGetStartedUrl } from "~/utils/navigation/docsLinks"
+import { openLanguageRequestPage } from "~/utils/navigation/feedbackPages"
 
 /**
  * Unified logger scoped to the optional-permissions onboarding dialog.

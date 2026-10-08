@@ -13,8 +13,11 @@ import {
   OPTIONAL_PERMISSION_IDS,
   requestPermissionDetailed,
 } from "~/services/permissions/permissionManager"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { trackOptionalPermissionRequestResult } from "~/services/productAnalytics/permissions"
+import { DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES } from "~/types/siteAnnouncements"
 import {
+  DEFAULT_TASK_NOTIFICATION_PREFERENCES,
   TASK_NOTIFICATION_CHANNELS,
   type TaskNotificationChannel,
   type TaskNotificationChannelPreferences,
@@ -26,6 +29,7 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
+import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
 
 const logger = createLogger("TaskNotificationSettings")
 
@@ -401,7 +405,74 @@ export function useTaskNotificationSettingsViewModel() {
     channels[TASK_NOTIFICATION_CHANNELS.Webhook].enabled &&
     Boolean(webhook.draft.url.trim()) &&
     !isAnyChannelTesting
+  const canResetEnablement =
+    taskNotifications.enabled !== DEFAULT_TASK_NOTIFICATION_PREFERENCES.enabled
+  const canResetChannels =
+    !isAnyChannelTesting &&
+    (!matchesDefaultSettings(
+      channels,
+      DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+    ) ||
+      [telegram, feishu, dingtalk, wecom, ntfy, webhook].some(
+        (field) => field.isDirty,
+      ))
+  const canResetEvents =
+    !matchesDefaultSettings(
+      taskNotifications.tasks,
+      DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
+    ) ||
+    siteAnnouncementNotifications.notificationEnabled !==
+      DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.notificationEnabled
+  const resetEnablement = () =>
+    updateTaskNotifications({
+      enabled: DEFAULT_TASK_NOTIFICATION_PREFERENCES.enabled,
+    })
+  const resetChannels = async () => {
+    const result = await updateTaskNotifications({
+      channels: DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+    })
+    if (result.ok) {
+      const defaults = DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels
+      telegram.setDraft({
+        botToken: defaults.telegram.botToken,
+        chatId: defaults.telegram.chatId,
+      })
+      feishu.setDraft({ webhookKey: defaults.feishu.webhookKey })
+      dingtalk.setDraft({
+        webhookKey: defaults.dingtalk.webhookKey,
+        secret: defaults.dingtalk.secret,
+      })
+      wecom.setDraft({ webhookKey: defaults.wecom.webhookKey })
+      ntfy.setDraft({
+        topicUrl: defaults.ntfy.topicUrl,
+        accessToken: defaults.ntfy.accessToken,
+      })
+      webhook.setDraft({ url: defaults.webhook.url })
+    }
+    return result
+  }
+
+  const resetEvents = async () => {
+    const result = await userPreferences.savePreferencesWithResult({
+      taskNotifications: {
+        tasks: DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
+      },
+      siteAnnouncementNotifications: {
+        notificationEnabled:
+          DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.notificationEnabled,
+      },
+    })
+    if (result.ok) await loadPreferences()
+    return result
+  }
+
   return {
+    canResetEnablement,
+    canResetChannels,
+    canResetEvents,
+    resetEnablement,
+    resetChannels,
+    resetEvents,
     siteAnnouncementNotifications,
     taskNotifications,
     updateTaskNotifications,
@@ -439,3 +510,7 @@ export function useTaskNotificationSettingsViewModel() {
     canSendWebhookTest,
   }
 }
+
+export type TaskNotificationSettingsViewModel = ReturnType<
+  typeof useTaskNotificationSettingsViewModel
+>

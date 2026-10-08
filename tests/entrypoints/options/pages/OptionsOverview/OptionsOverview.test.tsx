@@ -105,13 +105,11 @@ vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/navigation", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/navigation/optionsPage")>()
 
-  return {
-    ...actual,
-    pushWithinOptionsPage: pushWithinOptionsPageMock,
-  }
+  return { ...actual, pushWithinOptionsPage: pushWithinOptionsPageMock }
 })
 
 vi.mock("~/components/icons/WorkflowTransitionIcon", () => ({

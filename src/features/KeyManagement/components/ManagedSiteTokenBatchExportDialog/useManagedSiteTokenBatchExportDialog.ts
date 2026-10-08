@@ -6,10 +6,8 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import toast from "~/lib/notify"
 import { getManagedSiteRuntimeConfigFingerprint } from "~/services/managedSites/runtimeConfig"
-import {
-  DEFAULT_MANAGED_SITE_TOKEN_BATCH_IMPORT_INTENT,
-  executeManagedSiteTokenBatchExport,
-} from "~/services/managedSites/tokenBatchExport"
+import { executeManagedSiteTokenBatchExport } from "~/services/managedSites/tokenBatchImportExecution"
+import { DEFAULT_MANAGED_SITE_TOKEN_BATCH_IMPORT_INTENT } from "~/services/managedSites/tokenBatchImportPreview"
 import {
   trackProductAnalyticsActionCompleted,
   trackProductAnalyticsActionStarted,

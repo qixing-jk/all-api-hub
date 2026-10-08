@@ -48,12 +48,8 @@ import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { sanitizeOriginUrl } from "~/utils/core/url"
-import {
-  openKeysPage,
-  openModelsPage,
-  openRedeemPage,
-  openUsagePage,
-} from "~/utils/navigation"
+import { openKeysPage, openModelsPage } from "~/utils/navigation"
+import { openRedeemPage, openUsagePage } from "~/utils/navigation/sitePages"
 
 import {
   addRedactionSecrets,

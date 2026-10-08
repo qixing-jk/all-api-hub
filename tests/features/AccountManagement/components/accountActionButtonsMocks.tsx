@@ -187,6 +187,8 @@ vi.mock("~/utils/navigation", () => ({
   openKeysPage: openKeysPageMock,
   openManagedSiteChannelsPage: openManagedSiteChannelsPageMock,
   openModelsPage: openModelsPageMock,
+}))
+vi.mock("~/utils/navigation/sitePages", () => ({
   openRedeemPage: vi.fn(),
   openUsagePage: vi.fn(),
 }))

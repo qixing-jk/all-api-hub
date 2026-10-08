@@ -7,7 +7,7 @@ import {
   STAR_PROMOTION_INITIAL_THRESHOLD,
   type StarPromotionState,
 } from "~/services/starPromotion/contracts"
-import { navigateWithinOptionsPage } from "~/utils/navigation"
+import { navigateWithinOptionsPage } from "~/utils/navigation/optionsPage"
 import { render } from "~~/tests/test-utils/render"
 
 const {
@@ -36,13 +36,11 @@ vi.mock("~/services/starPromotion/state", () => ({
   },
 }))
 
-vi.mock("~/utils/navigation", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/navigation/optionsPage")>()
 
-  return {
-    ...actual,
-    navigateWithinOptionsPage: navigateWithinOptionsPageMock,
-  }
+  return { ...actual, navigateWithinOptionsPage: navigateWithinOptionsPageMock }
 })
 
 const activeState: StarPromotionState = {

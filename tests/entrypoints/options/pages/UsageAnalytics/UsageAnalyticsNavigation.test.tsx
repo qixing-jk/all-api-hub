@@ -11,7 +11,8 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { openSettingsTab, pushWithinOptionsPage } from "~/utils/navigation"
+import { openSettingsTab } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const { trackProductAnalyticsActionStartedMock } = vi.hoisted(() => ({
@@ -48,11 +49,13 @@ vi.mock("~/utils/navigation", async () => {
     await vi.importActual<typeof import("~/utils/navigation")>(
       "~/utils/navigation",
     )
-  return {
-    ...actual,
-    openSettingsTab: vi.fn(),
-    pushWithinOptionsPage: vi.fn(),
-  }
+  return { ...actual, openSettingsTab: vi.fn() }
+})
+vi.mock("~/utils/navigation/optionsPage", async () => {
+  const actual = await vi.importActual<
+    typeof import("~/utils/navigation/optionsPage")
+  >("~/utils/navigation/optionsPage")
+  return { ...actual, pushWithinOptionsPage: vi.fn() }
 })
 
 vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {

@@ -10,15 +10,13 @@ import {
   OPTIONS_SEARCH_HIGHLIGHT_PARAM,
 } from "~/features/OptionsSearch/navigation"
 import type { OptionsSearchItem } from "~/features/OptionsSearch/types"
-import { replaceWithinOptionsPage } from "~/utils/navigation"
+import { replaceWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
-vi.mock("~/utils/navigation", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/navigation/optionsPage")>()
 
-  return {
-    ...actual,
-    replaceWithinOptionsPage: vi.fn(),
-  }
+  return { ...actual, replaceWithinOptionsPage: vi.fn() }
 })
 
 describe("options search navigation helpers", () => {

@@ -8,7 +8,7 @@ import toast from "~/lib/notify"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { navigateWithinOptionsPage } from "~/utils/navigation"
+import { navigateWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 import type { DevPanelSection } from "../types"
 

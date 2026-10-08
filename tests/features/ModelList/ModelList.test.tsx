@@ -35,11 +35,13 @@ vi.mock("~/features/ModelList/hooks/useModelListData", () => ({
 vi.mock("~/utils/navigation", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/utils/navigation")>()
 
-  return {
-    ...actual,
-    openKeysPage: openKeysPageMock,
-    replaceWithinOptionsPage: replaceWithinOptionsPageMock,
-  }
+  return { ...actual, openKeysPage: openKeysPageMock }
+})
+vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/navigation/optionsPage")>()
+
+  return { ...actual, replaceWithinOptionsPage: replaceWithinOptionsPageMock }
 })
 
 vi.mock(

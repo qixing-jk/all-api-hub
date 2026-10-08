@@ -16,8 +16,8 @@ import { getManagedResourceRefKey } from "~/services/managedSites/managedResourc
 import {
   MANAGED_SITE_TOKEN_BATCH_IMPORT_TARGET_CHANGED_ERROR_CODE,
   ManagedSiteTokenBatchImportTargetChangedError,
-  prepareManagedSiteTokenBatchExportPreview,
-} from "~/services/managedSites/tokenBatchExport"
+} from "~/services/managedSites/tokenBatchImportExecution"
+import { prepareManagedSiteTokenBatchExportPreview } from "~/services/managedSites/tokenBatchImportPreview"
 import {
   createAutomaticProtectionBypassExecution,
   withProtectionBypassUserCommand,

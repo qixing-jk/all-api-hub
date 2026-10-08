@@ -3,20 +3,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DEV_MENU_ITEM_IDS } from "~/constants/devOptionsMenuIds"
 import { useDevPagesSection } from "~/features/DevPanel/sections/miscSections"
-import { navigateWithinOptionsPage } from "~/utils/navigation"
+import { navigateWithinOptionsPage } from "~/utils/navigation/optionsPage"
 import { renderDevPanelSection } from "~~/tests/test-utils/devPanelSection"
 
 const { navigateWithinOptionsPageMock } = vi.hoisted(() => ({
   navigateWithinOptionsPageMock: vi.fn(),
 }))
 
-vi.mock("~/utils/navigation", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/navigation/optionsPage")>()
 
-  return {
-    ...actual,
-    navigateWithinOptionsPage: navigateWithinOptionsPageMock,
-  }
+  return { ...actual, navigateWithinOptionsPage: navigateWithinOptionsPageMock }
 })
 
 describe("dev pages section", () => {

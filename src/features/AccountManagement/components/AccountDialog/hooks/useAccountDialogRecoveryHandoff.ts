@@ -10,7 +10,7 @@ import {
 } from "~/features/AccountManagement/accountDialogRecovery"
 import type { AccessTokenContinuationAction } from "~/features/AccountManagement/components/AccountDialog/AccessTokenVerificationGuide"
 import type { AccountDialogRecoveryState } from "~/features/AccountManagement/components/AccountDialog/models"
-import { closeIfPopup } from "~/utils/navigation"
+import { closeIfPopup } from "~/utils/navigation/popup"
 
 /** Keeps a popup form ready before the user invokes the native sidebar API. */
 export function useAccountDialogRecoveryHandoff({

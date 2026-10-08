@@ -14,7 +14,7 @@ import {
 } from "~/services/starPromotion/contracts"
 import { starPromotionState } from "~/services/starPromotion/state"
 import { getErrorMessage } from "~/utils/core/error"
-import { navigateWithinOptionsPage } from "~/utils/navigation"
+import { navigateWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 import type { DevPanelInfoRow, DevPanelSection } from "../types"
 

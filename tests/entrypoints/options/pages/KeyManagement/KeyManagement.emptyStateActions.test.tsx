@@ -63,13 +63,21 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/navigation", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/navigation/optionsPage")>()
 
   return {
     ...actual,
     pushWithinOptionsPage: pushWithinOptionsPageMock,
     replaceWithinOptionsPage: replaceWithinOptionsPageMock,
+  }
+})
+vi.mock("~/utils/navigation", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+
+  return {
+    ...actual,
     openModelsPage: openModelsPageMock,
     openSettingsTab: openSettingsTabMock,
   }

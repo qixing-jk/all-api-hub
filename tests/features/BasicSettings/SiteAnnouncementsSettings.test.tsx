@@ -41,7 +41,7 @@ vi.mock("~/utils/feedback/preferenceFeedback", () => ({
   showUpdateToast: (...args: unknown[]) => showUpdateToastMock(...args),
 }))
 
-vi.mock("~/utils/navigation", () => ({
+vi.mock("~/utils/navigation/optionsPage", () => ({
   openOrFocusOptionsMenuItem: (...args: unknown[]) =>
     openOrFocusOptionsMenuItemMock(...args),
 }))

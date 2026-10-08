@@ -40,11 +40,13 @@ vi.mock("~/utils/browser", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/navigation", () => ({
+vi.mock("~/utils/navigation/sidepanel", () => ({
   openSidePanelWithFallback: openSidePanelPageMock,
-  openOrFocusOptionsMenuItem: openOptionsMock,
-  closeIfPopup: vi.fn(),
 }))
+vi.mock("~/utils/navigation/optionsPage", () => ({
+  openOrFocusOptionsMenuItem: openOptionsMock,
+}))
+vi.mock("~/utils/navigation/popup", () => ({ closeIfPopup: vi.fn() }))
 
 vi.mock(
   "~/features/AccountManagement/sponsors/pendingAddAccountIntent",

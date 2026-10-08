@@ -133,9 +133,12 @@ vi.mock("~/components/DeeplinkExportDialog", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/managedSites/tokenBatchExport", () => ({
+vi.mock("~/services/managedSites/tokenBatchImportExecution", () => ({
   executeManagedSiteTokenBatchExport: (...args: unknown[]) =>
     mockExecuteManagedSiteTokenBatchExport(...args),
+}))
+
+vi.mock("~/services/managedSites/tokenBatchImportPreview", () => ({
   prepareManagedSiteTokenBatchExportPreview: (...args: unknown[]) =>
     mockPrepareManagedSiteTokenBatchExportPreview(...args),
 }))

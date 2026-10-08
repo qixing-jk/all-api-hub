@@ -201,7 +201,7 @@ describe("background onInstalled changelog opening", () => {
         isTestMode: isTestModeMock,
       }
     })
-    vi.doMock("~/utils/navigation", () => ({
+    vi.doMock("~/utils/navigation/optionsPage", () => ({
       openOrFocusOptionsMenuItem: openOrFocusOptionsMenuItemMock,
     }))
   })
@@ -229,7 +229,7 @@ describe("background onInstalled changelog opening", () => {
     vi.doUnmock("~/services/permissions/permissionManager")
     vi.doUnmock("~/services/permissions/optionalPermissionState")
     vi.doUnmock("~/utils/core/environment")
-    vi.doUnmock("~/utils/navigation")
+    vi.doUnmock("~/utils/navigation/optionsPage")
 
     vi.resetModules()
     vi.restoreAllMocks()

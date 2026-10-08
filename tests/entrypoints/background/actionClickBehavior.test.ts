@@ -76,10 +76,10 @@ describe("background applyActionClickBehavior", () => {
       })),
     }))
 
-    vi.doMock("~/utils/navigation", () => ({
+    vi.doMock("~/utils/navigation/sidepanel", () => ({
       openSidePanelWithFallback,
-      openOptionsPage,
     }))
+    vi.doMock("~/utils/navigation", () => ({ openOptionsPage }))
 
     vi.doMock("~/services/productAnalytics/actions", () => ({
       startProductAnalyticsAction,
@@ -90,6 +90,7 @@ describe("background applyActionClickBehavior", () => {
     vi.doUnmock("~/utils/browser/browserApi")
     vi.doUnmock("~/services/preferences/userPreferences")
     vi.doUnmock("~/utils/core/logger")
+    vi.doUnmock("~/utils/navigation/sidepanel")
     vi.doUnmock("~/utils/navigation")
     vi.doUnmock("~/services/productAnalytics/actions")
     vi.resetModules()

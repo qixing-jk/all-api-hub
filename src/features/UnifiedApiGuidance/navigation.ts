@@ -3,7 +3,7 @@ import {
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
   KEY_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/KeyManagement/constants"
-import { pushWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 import {
   UNIFIED_API_GUIDANCE_ACTION_KINDS,

@@ -5,9 +5,9 @@ import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   AccountKeyResourceError,
   type AccountKeyResourceFacts,
+  type AccountKeyScope,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { collectAccountKeyResourceInventory } from "~/services/apiAdapters/nativeResources/accountKeyResourceInventory"
-import { mapSettledWithConcurrency } from "~/services/apiAdapters/nativeResources/concurrency"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { type ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { DisplaySiteData } from "~/types"
@@ -25,14 +25,13 @@ import type {
   OpenResourceSession,
 } from "./accountKeyResourceControllerTypes"
 import {
-  ALL_ACCOUNT_CONCURRENCY,
   awaitAbortable,
   boundariesMatch,
-  groupAccountsByOrigin,
   isAborted,
   readScopeInventory,
   toFailure,
 } from "./accountKeyResourceWorkflowSupport"
+import { readAllAccountKeyResourceInventories } from "./readAllAccountKeyResourceInventories"
 import type { AccountKeyResourceEditorStateOwner } from "./useAccountKeyResourceEditorState"
 import type { AccountKeyResourceInventoryStateOwner } from "./useAccountKeyResourceInventoryState"
 import type { AccountKeyResourceRequestLifecycle } from "./useAccountKeyResourceRequestLifecycle"
@@ -242,12 +241,28 @@ export function useAccountKeyResourceInventoryWorkflow({
           const settledAccounts = new Set(retainedAccountIds)
           const acceptAccountResult = (
             account: DisplaySiteData,
-            result: PromiseSettledResult<AccountKeyResourceFacts[]>,
+            result: PromiseSettledResult<{
+              rows: AccountKeyResourceFacts[]
+              scope: AccountKeyScope | null
+            }>,
           ) => {
             if (current !== requests.version() || controller.signal.aborted)
               return
             if (result.status === "fulfilled") {
-              rowsByAccount.set(account.id, result.value)
+              if (result.value.scope) {
+                const scope = result.value.scope
+                rememberResourceScopes(
+                  { accountId: account.id, siteType: account.siteType },
+                  [scope],
+                )
+                acceptFreshRead({
+                  accountId: account.id,
+                  siteType: account.siteType,
+                  scopeKey: scope.scopeKey,
+                  routeKey: scope.routeKey,
+                })
+              }
+              rowsByAccount.set(account.id, result.value.rows)
               replaceAcceptedRows(
                 activeAccounts.flatMap(
                   (candidate) => rowsByAccount.get(candidate.id) ?? [],
@@ -270,66 +285,15 @@ export function useAccountKeyResourceInventoryWorkflow({
                 .map((candidate) => candidate.id),
             )
           }
-          const loadAccount = async (account: DisplaySiteData) => {
-            const session = await openSession(
-              account,
-              controller.signal,
-              options.protectionBypassExecution,
-            )
-            if (!session) return [] as AccountKeyResourceFacts[]
-            const scope = await awaitAbortable(
-              session.resolveDefaultScope({ signal: controller.signal }),
-              controller.signal,
-            )
-            const collection = await awaitAbortable(
-              session.openCollection(scope.scopeKey, {
-                signal: controller.signal,
-              }),
-              controller.signal,
-            )
-            const rows = await collectAccountKeyResourceInventory(collection, {
-              search: search.trim(),
-              signal: controller.signal,
-            })
-            if (current === requests.version() && !controller.signal.aborted) {
-              rememberResourceScopes(
-                { accountId: account.id, siteType: account.siteType },
-                [scope],
-              )
-              acceptFreshRead({
-                accountId: account.id,
-                siteType: account.siteType,
-                scopeKey: scope.scopeKey,
-                routeKey: scope.routeKey,
-              })
-            }
-            return rows
-          }
-          const originGroups = groupAccountsByOrigin(loadingAccounts)
-          const settledGroups = await mapSettledWithConcurrency(
-            originGroups,
-            ALL_ACCOUNT_CONCURRENCY,
-            async (group) => {
-              for (const account of group) {
-                const [result] = await Promise.allSettled([
-                  loadAccount(account),
-                ])
-                acceptAccountResult(account, result)
-              }
-            },
-          )
-          if (current !== requests.version()) return false
-          settledGroups.forEach((groupResult, groupIndex) => {
-            if (groupResult.status === "fulfilled") return
-            const group = originGroups[groupIndex]
-            if (!group) return
-            group.forEach((account) =>
-              acceptAccountResult(account, {
-                status: "rejected",
-                reason: groupResult.reason,
-              }),
-            )
+          await readAllAccountKeyResourceInventories({
+            accounts: loadingAccounts,
+            search: search.trim(),
+            signal: controller.signal,
+            openSession: (account, signal) =>
+              openSession(account, signal, options.protectionBypassExecution),
+            onSettled: acceptAccountResult,
           })
+          if (current !== requests.version()) return false
           return true
         }
 
