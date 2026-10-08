@@ -47,7 +47,7 @@ vi.mock("~/services/apiService/aihubmix", () => ({
   fetchAccountData: mockAihubmixFetchAccountData,
 }))
 
-vi.mock("~/services/apiService/voapiV2", () => ({
+vi.mock("~/services/apiService/voapiV2/accountData", () => ({
   fetchVoApiV2AccountData: mockVoApiV2FetchAccountData,
 }))
 

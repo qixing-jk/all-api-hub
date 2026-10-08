@@ -5,7 +5,7 @@ import type { AccountBootstrapCapability } from "~/services/apiAdapters/contract
 import {
   fetchSupportCheckIn,
   fetchVoApiV2UserInfo,
-} from "~/services/apiService/voapiV2"
+} from "~/services/apiService/voapiV2/accountData"
 import { VOAPI_V2_SYSTEM_NAME } from "~/services/apiService/voapiV2/type"
 
 export const voApiV2AccountBootstrap: AccountBootstrapCapability = {

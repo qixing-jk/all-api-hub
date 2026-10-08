@@ -4,16 +4,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ApiServiceAccountRequest } from "~/services/accounts/accountDataModel"
 import {
-  deleteVoApiV2Token,
-  fetchAllVoApiV2RawKeys,
-  fetchInviteLink,
   fetchSupportCheckIn,
   fetchVoApiV2AccountData,
-  fetchVoApiV2KeyGroupDescriptors,
   refreshAccountData,
+} from "~/services/apiService/voapiV2/accountData"
+import { submitVoApiV2CheckIn } from "~/services/apiService/voapiV2/checkIn"
+import { fetchInviteLink } from "~/services/apiService/voapiV2/inviteLink"
+import { fetchVoApiV2KeyGroupDescriptors } from "~/services/apiService/voapiV2/keyGroups"
+import {
+  deleteVoApiV2Token,
+  fetchAllVoApiV2RawKeys,
   renameVoApiV2Key,
-  submitVoApiV2CheckIn,
-} from "~/services/apiService/voapiV2"
+} from "~/services/apiService/voapiV2/keys"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/inspection"
 import { INVITE_LINK_FAILURE_REASONS } from "~/services/inviteLinks/errors"

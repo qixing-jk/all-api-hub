@@ -3,12 +3,12 @@ import {
   isManagedResourceRefFor,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { createCliProxyApiResource } from "~/services/apiAdapters/managedResources/cliProxyApiNativeMutation"
 import {
   cliProxyApiKeys,
   cliProxyApiScope,
-  createCliProxyApiResource,
   getCliProxyApiResource,
-} from "~/services/apiAdapters/managedResources/cliProxyApi"
+} from "~/services/apiAdapters/managedResources/cliProxyApiNativeRuntime"
 import {
   isManagedSiteMigrationSourceType,
   resolveManagedSiteMigrationType,

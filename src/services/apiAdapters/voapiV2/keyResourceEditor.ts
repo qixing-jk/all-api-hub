@@ -6,7 +6,7 @@ import {
   RESOURCE_FIELD_TYPES,
   type ResourceFieldIssue,
 } from "~/services/apiAdapters/contracts/resourceNative"
-import { fetchVoApiV2KeyGroupDescriptors } from "~/services/apiService/voapiV2"
+import { fetchVoApiV2KeyGroupDescriptors } from "~/services/apiService/voapiV2/keyGroups"
 import type {
   VoApiV2Key,
   VoApiV2KeyWrite,

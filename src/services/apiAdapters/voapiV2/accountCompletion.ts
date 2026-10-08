@@ -2,7 +2,7 @@ import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
 import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import type { AccountCompletionCapability } from "~/services/apiAdapters/contracts/accountCompletion"
 import { voApiV2AccountBootstrap } from "~/services/apiAdapters/voapiV2/accountBootstrap"
-import { fetchVoApiV2UserInfo } from "~/services/apiService/voapiV2"
+import { fetchVoApiV2UserInfo } from "~/services/apiService/voapiV2/accountData"
 import { AuthTypeEnum } from "~/types"
 
 export const voApiV2AccountCompletion: AccountCompletionCapability = {
