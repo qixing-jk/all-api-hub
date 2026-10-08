@@ -449,11 +449,10 @@ export function useSiteAnnouncementsWorkspace({
   }
 
   const toggleExpanded = (record: SiteAnnouncementRecord) => {
-    let isExpanding = false
+    const isExpanding = !expandedIds.has(record.id)
     setExpandedIds((prev) => {
       const next = new Set(prev)
-      isExpanding = !next.has(record.id)
-      if (isExpanding) {
+      if (!next.has(record.id)) {
         next.add(record.id)
       } else {
         next.delete(record.id)

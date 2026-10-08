@@ -288,6 +288,12 @@ describe("apiCredentialProfileLinks", () => {
     expect(firstLink.state).toBe("active")
     expect(secondLink.state).toBe("needs-confirmation")
 
+    const unrelatedLink = await apiCredentialProfileLinks.link({
+      profileId: firstProfile.id,
+      locator: { ...locator, tokenId: 999 },
+      linkedBy: "user",
+    })
+
     const relinked = await apiCredentialProfileLinks.relink({
       id: secondLink.id,
       profileId: secondProfile.id,
@@ -296,6 +302,9 @@ describe("apiCredentialProfileLinks", () => {
     })
 
     expect(relinked.state).toBe("active")
+    await expect(
+      apiCredentialProfileLinks.getById(unrelatedLink.id),
+    ).resolves.toEqual(unrelatedLink)
     await expect(
       apiCredentialProfileLinks.getById(firstLink.id),
     ).resolves.toBeNull()
@@ -308,7 +317,9 @@ describe("apiCredentialProfileLinks", () => {
     await expect(apiCredentialProfileLinks.unlink(relinked.id)).resolves.toBe(
       true,
     )
-    await expect(apiCredentialProfileLinks.list()).resolves.toEqual([])
+    await expect(apiCredentialProfileLinks.list()).resolves.toEqual([
+      unrelatedLink,
+    ])
     await expect(apiCredentialProfilesStorage.getConfig()).resolves.toEqual(
       expect.objectContaining({
         linkTombstones: expect.arrayContaining([
@@ -316,6 +327,16 @@ describe("apiCredentialProfileLinks", () => {
           expect.objectContaining({ id: relinked.id }),
         ]),
       }),
+    )
+  })
+
+  it("keeps the profile store unchanged when unlinking a missing association", async () => {
+    const before = await apiCredentialProfilesStorage.getConfig()
+    await expect(
+      apiCredentialProfileLinks.unlink("missing-link-id"),
+    ).resolves.toBe(false)
+    await expect(apiCredentialProfilesStorage.getConfig()).resolves.toEqual(
+      before,
     )
   })
 

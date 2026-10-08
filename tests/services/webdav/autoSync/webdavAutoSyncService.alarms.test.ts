@@ -142,6 +142,22 @@ describe("WebdavAutoSyncService scheduling (alarms)", () => {
     expect(service.getStatus().isRunning).toBe(true)
   })
 
+  it("clears best-effort uploads while keeping download-only periodic sync", async () => {
+    const service = createService()
+    mockGetPreferences.mockResolvedValue({
+      ...basePreferences,
+      webdav: { ...basePreferences.webdav, syncStrategy: "download_only" },
+    })
+    await service.setupAutoSync()
+    expect(mockClearAlarm).toHaveBeenCalledWith(
+      "webdavAutoSyncBestEffortUpload",
+    )
+    expect(mockCreateAlarm).toHaveBeenCalledWith(
+      "webdavAutoSync",
+      expect.objectContaining({ periodInMinutes: 60 }),
+    )
+  })
+
   it.each([
     { githubGist: { token: "token", gistId: "" } },
     { githubGist: { token: "", gistId: "gist-1" } },

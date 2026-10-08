@@ -28,7 +28,10 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 const storageData = new Map<string, any>()
 
 const { mockOnChannelConfigMessage, mockSafeRandomUUID } = vi.hoisted(() => ({
-  mockOnChannelConfigMessage: vi.fn(() => vi.fn()),
+  mockOnChannelConfigMessage: vi.fn(
+    (_type: string, _handler: (message: { data: unknown }) => unknown) =>
+      vi.fn(),
+  ),
   mockSafeRandomUUID: vi.fn(() => "generated-filter-id"),
 }))
 
@@ -1338,7 +1341,7 @@ describe("channelConfigStorage", () => {
     ).resolves.toEqual({ success: false, error: "resourceRef is invalid" })
   })
 
-  it("registers typed channel-config listeners once", () => {
+  it("registers typed channel-config listeners once and routes their data to storage", async () => {
     setupChannelConfigMessagingListeners()
     setupChannelConfigMessagingListeners()
 
@@ -1353,5 +1356,17 @@ describe("channelConfigStorage", () => {
       ChannelConfigMessageTypes.UpsertFilters,
       expect.any(Function),
     )
+    const resourceRef = createRef("listener-scope")
+    const get = mockOnChannelConfigMessage.mock
+      .calls[0]?.[1] as unknown as (message: { data: unknown }) => Promise<any>
+    const upsert = mockOnChannelConfigMessage.mock
+      .calls[1]?.[1] as unknown as (message: { data: unknown }) => Promise<any>
+    await expect(
+      upsert({ data: { resourceRef, filters: [], channelId: 9 } }),
+    ).resolves.toEqual({ success: true, data: [] })
+    await expect(get({ data: { resourceRef } })).resolves.toMatchObject({
+      success: true,
+      data: { resourceRef, channelId: 9, modelFilterSettings: { rules: [] } },
+    })
   })
 })
