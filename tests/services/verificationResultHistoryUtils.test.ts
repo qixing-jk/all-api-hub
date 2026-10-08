@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
@@ -10,9 +10,25 @@ import {
   serializeVerificationHistoryTarget,
   toPersistedProbeSummary,
 } from "~/services/verification/verificationResultHistory"
+import {
+  cloneConfig,
+  createDefaultConfig,
+} from "~/services/verification/verificationResultHistory/codec"
 import { isApiVerificationApiType } from "~/services/verification/verificationResultHistory/utils"
 
 describe("verificationResultHistory utils", () => {
+  it("detaches persisted history when structuredClone is unavailable", () => {
+    const original = createDefaultConfig()
+    vi.stubGlobal("structuredClone", undefined)
+    try {
+      const detached = cloneConfig(original)
+      detached.lastUpdated = 123
+      expect(detached.summaries).not.toBe(original.summaries)
+      expect(original.lastUpdated).not.toBe(123)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
   it("sanitizes persisted probe summaries with truncation and primitive params only", () => {
     const summary = toPersistedProbeSummary({
       id: "models",

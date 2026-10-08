@@ -6,10 +6,10 @@ import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/configuration/runtimeConfig"
 import {
   applyChannelModelFilters,
-  ChannelModelSelection,
   matchesProbeFilterRule as evaluateProbeFilterRule,
   type ProbeFilterContext,
 } from "~/services/models/modelSync/channelModelFilterEvaluator"
+import { ChannelModelSelection } from "~/services/models/modelSync/channelModelSelection"
 import { ModelSyncService } from "~/services/models/modelSync/modelSyncService"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import type { ChannelResourceConfigMap } from "~/types/channelConfig"
@@ -403,6 +403,48 @@ describe("ChannelModelSelection - allowed model filtering", async () => {
 })
 
 describe("ChannelModelSelection - attempt lifetime", () => {
+  it("aborts an unfinished probe at the fallback deadline", async () => {
+    vi.useFakeTimers()
+    vi.stubGlobal("AbortSignal", { timeout: undefined })
+    try {
+      let markStarted!: () => void
+      const started = new Promise<void>((resolve) => {
+        markStarted = resolve
+      })
+      let signal!: AbortSignal
+      runApiVerificationProbeMock.mockImplementationOnce(({ abortSignal }) => {
+        signal = abortSignal
+        return new Promise((_resolve, reject) => {
+          abortSignal.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            { once: true },
+          )
+          markStarted()
+        })
+      })
+      const selection = new ChannelModelSelection(
+        makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
+        undefined,
+        undefined,
+        [makeProbeRule()],
+      )
+      const result = selection.select(
+        makeChannel({ id: 79, credential: "sk-channel", models: [] }),
+        ["model-a"],
+      )
+      await started
+      expect(signal.aborted).toBe(false)
+      await vi.advanceTimersByTimeAsync(30_000)
+      await expect(result).resolves.toEqual([])
+      expect(signal.aborted).toBe(true)
+      expect(vi.getTimerCount()).toBe(0)
+    } finally {
+      vi.unstubAllGlobals()
+      vi.useRealTimers()
+    }
+  })
+
   it("shares secret and probe evidence across scopes but refreshes it for each attempt", async () => {
     const selection = new ChannelModelSelection(
       makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),

@@ -77,12 +77,9 @@ export async function executeDialogProbe({
     return isCurrent() ? result : null
   }
 
+  let result: ApiVerificationProbeResult
   try {
-    const result = await execute()
-    if (!isCurrent()) return { result: null }
-    // An aborted request can still resolve successfully; acceptance follows intent.
-    if (isStopped()) return settleStopped()
-    return { result: await accept(result) }
+    result = await execute()
   } catch (error) {
     if (!isCurrent()) return { result: null }
     if (isAbortFailure(error) || isStopped()) return settleStopped()
@@ -99,4 +96,9 @@ export async function executeDialogProbe({
     }
     return { result: await accept(result), error }
   }
+  // Acceptance errors belong to the caller, not API failure classification.
+  if (!isCurrent()) return { result: null }
+  // An aborted request can still resolve successfully; acceptance follows intent.
+  if (isStopped()) return settleStopped()
+  return { result: await accept(result) }
 }

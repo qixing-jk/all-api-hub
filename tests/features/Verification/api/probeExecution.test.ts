@@ -34,6 +34,32 @@ function createExecution() {
 }
 
 describe("dialog probe execution", () => {
+  it("does not classify result acceptance failure as a failed API request", async () => {
+    const { options, acceptResult, report } = createExecution()
+    const persistenceError = new Error("History storage unavailable")
+    acceptResult.mockRejectedValue(persistenceError)
+    const passed: ApiVerificationProbeResult = {
+      id: options.probeId,
+      status: "pass",
+      latencyMs: 1,
+      summary: "Models found",
+    }
+
+    await expect(
+      executeDialogProbe({
+        ...options,
+        execute: async () => passed,
+      }),
+    ).rejects.toBe(persistenceError)
+
+    expect(acceptResult).toHaveBeenCalledOnce()
+    expect(report).not.toHaveBeenCalled()
+    expect(options.readProbes()[0]).toMatchObject({
+      isRunning: false,
+      result: passed,
+    })
+  })
+
   it("preserves the caller's abort classification for upstream failure objects", async () => {
     const { options, acceptResult } = createExecution()
     const upstreamFailure = { code: "ABORT_ERR" }

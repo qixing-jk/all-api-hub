@@ -12,9 +12,12 @@ import { submitVoApiV2CheckIn } from "~/services/apiService/voapiV2/checkIn"
 import { fetchInviteLink } from "~/services/apiService/voapiV2/inviteLink"
 import { fetchVoApiV2KeyGroupDescriptors } from "~/services/apiService/voapiV2/keyGroups"
 import {
+  createVoApiV2Key,
   deleteVoApiV2Token,
   fetchAllVoApiV2RawKeys,
   renameVoApiV2Key,
+  resolveVoApiV2KeySecretById,
+  updateVoApiV2Key,
 } from "~/services/apiService/voapiV2/keys"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/discovery/inspection"
@@ -445,6 +448,24 @@ describe("apiService VoAPI v2", () => {
     ).toMatchObject({ today: "checked", evidence: { observedAt: 123 } })
   })
 
+  it("returns failure health when a non-authentication account request fails", async () => {
+    server.use(
+      http.get("https://example.invalid/api/user/info", () =>
+        HttpResponse.json({ message: "unavailable" }, { status: 500 }),
+      ),
+      http.get("https://example.invalid/api/dash/statistics", () =>
+        HttpResponse.json({ code: 0, data: { d: { requests: 1 } } }),
+      ),
+      http.get("https://example.invalid/api/check_in/stats", () =>
+        HttpResponse.json({ code: 0, data: {} }),
+      ),
+    )
+    const result = await refreshAccountData(createVoApiV2Request())
+    expect(result.success).toBe(false)
+    expect(result.healthStatus).toBeDefined()
+    expect(mockResyncVoApiV2AuthToken).not.toHaveBeenCalled()
+  })
+
   it("refreshes account data and maps expired dashboard JWT failures", async () => {
     server.use(
       http.get("https://example.invalid/api/user/info", () =>
@@ -690,6 +711,122 @@ describe("apiService VoAPI v2", () => {
       }
     },
   )
+
+  it("reads legacy key arrays without pagination metadata", async () => {
+    server.use(
+      http.get("https://example.invalid/api/keys", () =>
+        HttpResponse.json({ code: 0, data: [{ id: 11, groups: [2] }] }),
+      ),
+    )
+    await expect(
+      fetchAllVoApiV2RawKeys(createVoApiV2Request()),
+    ).resolves.toMatchObject([{ id: 11 }])
+  })
+
+  it("looks up rename targets across full legacy pages", async () => {
+    const pages: number[] = []
+    const write = vi.fn()
+    server.use(
+      http.get("https://example.invalid/api/keys", ({ request }) => {
+        const page = Number(new URL(request.url).searchParams.get("page"))
+        pages.push(page)
+        return HttpResponse.json({
+          code: 0,
+          data:
+            page === 1
+              ? Array.from({ length: 100 }, (_, index) => ({
+                  id: index + 1,
+                  groups: [2],
+                  name: "Other",
+                }))
+              : [{ id: 101, groups: [2], name: "Original" }],
+        })
+      }),
+      http.put("https://example.invalid/api/keys/101", async ({ request }) => {
+        write(await request.json())
+        return HttpResponse.json({ code: 0, data: null })
+      }),
+    )
+    await expect(
+      renameVoApiV2Key(createVoApiV2Request(), 101, "Renamed"),
+    ).resolves.toBe(true)
+    expect(pages).toEqual([1, 2])
+    expect(write).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Renamed", groups: [2] }),
+    )
+  })
+
+  it("rejects a missing rename target before writing", async () => {
+    const write = vi.fn()
+    server.use(
+      http.get("https://example.invalid/api/keys", () =>
+        HttpResponse.json({ code: 0, data: [] }),
+      ),
+      http.put("https://example.invalid/api/keys/99", write),
+    )
+    await expect(
+      renameVoApiV2Key(createVoApiV2Request(), 99, "Renamed"),
+    ).rejects.toThrow("token not found")
+    expect(write).not.toHaveBeenCalled()
+  })
+
+  it.each([{ value: "full-token" }, { value: { token: "full-token" } }])(
+    "reveals native key secrets from supported response shapes: $value",
+    async ({ value }) => {
+      server.use(
+        http.post("https://example.invalid/api/keys/11/token", () =>
+          HttpResponse.json({ code: 0, data: value }),
+        ),
+      )
+      await expect(
+        resolveVoApiV2KeySecretById(createVoApiV2Request(), 11),
+      ).resolves.toBe("full-token")
+    },
+  )
+
+  it("rejects a successful reveal without a token", async () => {
+    server.use(
+      http.post("https://example.invalid/api/keys/11/token", () =>
+        HttpResponse.json({ code: 0, data: { token: 42 } }),
+      ),
+    )
+    await expect(
+      resolveVoApiV2KeySecretById(createVoApiV2Request(), 11),
+    ).rejects.toThrow("missing token")
+  })
+
+  it("writes native create and update payloads without expecting a secret response", async () => {
+    const create = vi.fn()
+    const update = vi.fn()
+    server.use(
+      http.post("https://example.invalid/api/keys", async ({ request }) => {
+        create(await request.json())
+        return HttpResponse.json({ code: 0, data: null })
+      }),
+      http.put("https://example.invalid/api/keys/11", async ({ request }) => {
+        update(await request.json())
+        return HttpResponse.json({ code: 0, data: null })
+      }),
+    )
+    const payload = {
+      name: "New key",
+      groups: [2],
+      amount: "7",
+      enable: true,
+      expireTime: -1,
+      boundlessAmount: false,
+      used: "0",
+      note: "preserve",
+    }
+    await expect(
+      createVoApiV2Key(createVoApiV2Request(), payload),
+    ).resolves.toBeUndefined()
+    await expect(
+      updateVoApiV2Key(createVoApiV2Request(), 11, payload),
+    ).resolves.toBeUndefined()
+    expect(create).toHaveBeenCalledWith({ ...payload, genCount: 1 })
+    expect(update).toHaveBeenCalledWith({ ...payload, id: 11 })
+  })
 
   it("fetches every page of the native VoAPI v2 key inventory", async () => {
     const requestedPages: number[] = []

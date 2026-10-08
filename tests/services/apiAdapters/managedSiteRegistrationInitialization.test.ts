@@ -4,6 +4,18 @@ import { MANAGED_SITE_TYPES } from "~/constants/siteType"
 
 const providerEntries = [
   {
+    name: "CLIProxyAPI",
+    load: () => import("~/services/apiAdapters/managedSites/cliProxyApi"),
+  },
+  {
+    name: "GPT-Load",
+    load: () => import("~/services/apiAdapters/managedSites/gptLoad"),
+  },
+  {
+    name: "OmniRoute",
+    load: () => import("~/services/apiAdapters/managedSites/omniroute"),
+  },
+  {
     name: "AxonHub",
     load: () => import("~/services/apiAdapters/managedSites/axonHub"),
   },

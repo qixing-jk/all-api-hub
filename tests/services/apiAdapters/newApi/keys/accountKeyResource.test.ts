@@ -1352,6 +1352,28 @@ describe("New API account key resources", () => {
   })
 
   it("reports an unavailable runtime key when the exact ref no longer exists", async () => {
+    mockFetchTokenById.mockResolvedValueOnce(undefined)
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+    await expect(
+      session.runtimeKey!.resolve({
+        accountId: "account-1",
+        siteType: SITE_TYPES.NEW_API,
+        scopeKey: "account",
+        resourceId: "9",
+      }),
+    ).resolves.toMatchObject({
+      kind: ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS.Unavailable,
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.NotFound },
+    })
+    expect(mockResolveApiTokenKey).not.toHaveBeenCalled()
+  })
+
+  it("reports an unavailable runtime key when the detail request returns404", async () => {
     mockFetchTokenById.mockRejectedValueOnce({ status: 404 })
 
     const capability = createNewApiAccountKeyResources(SITE_TYPES.NEW_API)
@@ -1855,6 +1877,68 @@ describe("New API account key resources", () => {
       },
     })
     expect(mockDeleteApiToken).toHaveBeenCalledTimes(2)
+  })
+
+  it.each(["false", "business", "confirmation-failure"])(
+    "contains create outcome %s without replaying the write",
+    async (outcome) => {
+      mockFetchAccountTokens.mockResolvedValue([])
+      if (outcome === "false") mockCreateApiToken.mockResolvedValueOnce(false)
+      else if (outcome === "business")
+        mockCreateApiToken.mockImplementationOnce(async (mutationRequest) => {
+          mutationRequest.observer?.onDispatch()
+          mutationRequest.observer?.onResponse()
+          throw new ApiError(
+            "Create rejected",
+            undefined,
+            "/api/token",
+            API_ERROR_CODES.BUSINESS_ERROR,
+          )
+        })
+      else {
+        mockCreateApiToken.mockResolvedValueOnce(true)
+        mockFetchAccountTokens
+          .mockResolvedValueOnce([])
+          .mockRejectedValueOnce(new Error("confirmation unavailable"))
+      }
+      const session = await createNewApiAccountKeyResources(
+        SITE_TYPES.NEW_API,
+      ).open({
+        account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+        request,
+      })
+      const editor = await session.openCreateEditor("account")
+      await expect(
+        editor.submit({ ...editor.initialValues, name: "Created" }),
+      ).rejects.toMatchObject({
+        failure: {
+          code:
+            outcome === "confirmation-failure"
+              ? ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain
+              : ACCOUNT_KEY_RESOURCE_FAILURE_CODES.UpstreamRejected,
+        },
+      })
+      expect(mockCreateApiToken).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it("acknowledges unchanged editor values without dispatching an update", async () => {
+    mockFetchAccountTokens.mockResolvedValue([token({ id: 9 })])
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+    const collection = await session.openCollection("account")
+    const editor = await collection.openEditEditor({
+      accountId: "account-1",
+      siteType: SITE_TYPES.NEW_API,
+      scopeKey: "account",
+      resourceId: "9",
+    })
+    await editor.submit(editor.initialValues)
+    expect(mockUpdateApiToken).not.toHaveBeenCalled()
   })
 
   it("opens the native create editor", async () => {

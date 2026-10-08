@@ -27,10 +27,8 @@ import {
 } from "~/types/managedSiteModelSync"
 import { createLogger } from "~/utils/core/logger"
 
-import {
-  ChannelModelSelection,
-  ProbeFilterUnavailableError,
-} from "./channelModelFilterEvaluator"
+import { ProbeFilterUnavailableError } from "./channelModelFilterEvaluator"
+import { ChannelModelSelection } from "./channelModelSelection"
 import { runWithChannelProcessingTimeout } from "./channelProcessingTimeout"
 import { RateLimiter } from "./rateLimiter"
 import {
