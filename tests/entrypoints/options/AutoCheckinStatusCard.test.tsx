@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import StatusCard from "~/features/AutoCheckin/components/StatusCard"
+import StatusCard from "~/features/AutoCheckin/workspace/StatusCard"
 import type {
   AutoCheckinPreferences,
   AutoCheckinStatus,

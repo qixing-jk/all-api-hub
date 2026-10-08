@@ -35,15 +35,18 @@ const displayData = accounts.map((account) =>
   }),
 )
 
-vi.mock("~/features/AccountManagement/hooks/AccountManagementProvider", () => ({
-  AccountManagementProvider: ({ children }: { children: ReactNode }) => (
-    <>{children}</>
-  ),
-}))
-vi.mock("~/features/AccountManagement/hooks/useDialogStateContext", () => ({
+vi.mock(
+  "~/features/AccountManagement/workspace/AccountManagementProvider",
+  () => ({
+    AccountManagementProvider: ({ children }: { children: ReactNode }) => (
+      <>{children}</>
+    ),
+  }),
+)
+vi.mock("~/features/AccountManagement/dialogs/useDialogStateContext", () => ({
   useDialogStateContext: () => ({ openAddAccount: vi.fn(), openEditAccount }),
 }))
-vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
+vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
   useAccountDataContext: () => ({
     accounts,
     displayData,
@@ -54,7 +57,7 @@ vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
     isRefreshingDisabledAccounts: false,
   }),
 }))
-vi.mock("~/features/AccountManagement/hooks/AccountActionsContext", () => ({
+vi.mock("~/features/AccountManagement/actions/AccountActionsContext", () => ({
   useAccountActionsContext: () => ({}),
 }))
 vi.mock("~/features/AccountManagement/components/AccountList", () => ({

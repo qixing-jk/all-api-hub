@@ -16,7 +16,7 @@ const { openSidePanelPageMock, openOptionsMock, runtime } = vi.hoisted(() => ({
   runtime: { inPopup: true, supported: true },
 }))
 
-vi.mock("~/features/AccountManagement/hooks/useDialogStateContext", () => ({
+vi.mock("~/features/AccountManagement/dialogs/useDialogStateContext", () => ({
   useDialogStateContext: () => ({
     openAddAccount: openAddAccountMock,
   }),

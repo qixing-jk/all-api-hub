@@ -3,7 +3,7 @@ import { isPlainObject } from "lodash-es"
 import { useRef } from "react"
 import { useTranslation } from "react-i18next"
 
-import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import { translateAutoCheckinMessageKey } from "~/features/AutoCheckin/utils/autoCheckin"
 import toast from "~/lib/notify"
 import { isAutomaticCheckInConfiguredForAccount } from "~/services/checkin/autoCheckin/discovery/inspection"

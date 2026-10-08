@@ -1,0 +1,1166 @@
+import userEvent from "@testing-library/user-event"
+import type { ReactNode } from "react"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
+import { SITE_TYPES } from "~/constants/siteType"
+import SiteInfo from "~/features/AccountManagement/components/AccountList/rows/SiteInfo"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
+import { mergeCompatibilityCheckInStatus } from "~/services/checkin/autoCheckin/state"
+import type { CheckInConfig, DisplaySiteData } from "~/types"
+import {
+  AuthTypeEnum,
+  SiteHealthStatus,
+  TEMP_WINDOW_HEALTH_STATUS_CODES,
+} from "~/types"
+import type { CheckInMethodStatus } from "~/types/checkIn"
+import { formatLocaleDateTime } from "~/utils/core/formatters"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
+
+const createDeferred = <T,>() => {
+  let resolve!: (value: T) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise
+    reject = rejectPromise
+  })
+
+  return { promise, reject, resolve }
+}
+
+const createCheckIn = (input?: {
+  checked?: boolean
+  observedAt?: number
+  customCheckIn?: CheckInConfig["customCheckIn"]
+  supported?: boolean
+}) => {
+  const config = createCompatibilityCheckInConfig({
+    siteType: SITE_TYPES.NEW_API,
+    supported: input?.supported ?? typeof input?.checked === "boolean",
+    automaticExecutionEnabled: true,
+    customCheckIn: input?.customCheckIn,
+  })
+
+  return typeof input?.checked === "boolean"
+    ? mergeCompatibilityCheckInStatus({
+        config,
+        methodId: AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+        isCheckedInToday: input.checked,
+        observedAt: input.observedAt ?? Date.now(),
+      })
+    : config
+}
+
+vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/contexts/UserPreferencesContext")>()
+  return {
+    ...actual,
+    UserPreferencesProvider: ({ children }: { children: ReactNode }) =>
+      children,
+    useUserPreferencesContext: () => ({
+      themeMode: "system",
+      updateThemeMode: vi.fn().mockResolvedValue(true),
+    }),
+  }
+})
+
+const {
+  accountActionsScenario,
+  accountDataScenario,
+  toastErrorMock,
+  toastSuccessMock,
+  mockOpenAccountBaseUrl,
+  mockHandleRefreshAccount,
+  mockHandleMarkCustomCheckInAsCheckedIn,
+  mockOpenCheckInAndRedeem,
+  mockOpenCheckInPage,
+  mockOpenCustomCheckInPage,
+  mockOpenSettingsTab,
+  mockOpenProtectionBypassHistory,
+  createTabMock,
+  getLdohSearchUrlForAccountUrlMock,
+} = vi.hoisted(() => ({
+  accountActionsScenario: {
+    refreshingAccountId: null as string | null,
+  },
+  accountDataScenario: {
+    detectedSiteAccounts: [] as Array<{ id: string }>,
+    getAccountContextBoost: vi.fn<
+      () => "current-site" | "active-tab" | "open-tabs" | undefined
+    >(() => undefined),
+    isPinFeatureEnabled: false,
+    isAccountPinned: vi.fn(() => false),
+    togglePinAccount: vi.fn(),
+  },
+  toastErrorMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
+  mockOpenAccountBaseUrl: vi.fn(),
+  mockHandleRefreshAccount: vi.fn(),
+  mockHandleMarkCustomCheckInAsCheckedIn: vi.fn(),
+  mockOpenCheckInAndRedeem: vi.fn(),
+  mockOpenCheckInPage: vi.fn(),
+  mockOpenCustomCheckInPage: vi.fn(),
+  mockOpenSettingsTab: vi.fn().mockResolvedValue(undefined),
+  mockOpenProtectionBypassHistory: vi.fn().mockResolvedValue(undefined),
+  createTabMock: vi.fn(),
+  getLdohSearchUrlForAccountUrlMock: vi.fn<
+    (accountBaseUrl: string) => string | null
+  >(() => null),
+}))
+
+vi.mock("~/lib/notify", () => ({
+  default: {
+    error: toastErrorMock,
+    success: toastSuccessMock,
+  },
+}))
+
+vi.mock("~/components/Tooltip", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/components/Tooltip")>()
+
+  return {
+    ...actual,
+    default: ({
+      children,
+      content,
+      anchorAsChild,
+    }: {
+      children: ReactNode
+      content: ReactNode
+      anchorAsChild?: boolean
+    }) =>
+      anchorAsChild ? (
+        <actual.default content={content} anchorAsChild>
+          {children as React.ReactElement}
+        </actual.default>
+      ) : (
+        <div
+          role={typeof content === "string" ? "img" : undefined}
+          aria-label={typeof content === "string" ? content : undefined}
+          data-tooltip-content={typeof content === "string" ? content : ""}
+        >
+          {children}
+          {typeof content === "string" ? null : content}
+        </div>
+      ),
+  }
+})
+
+vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
+  useAccountDataContext: () => ({
+    detectedAccount: null,
+    detectedSiteAccounts: accountDataScenario.detectedSiteAccounts,
+    getAccountContextBoost: accountDataScenario.getAccountContextBoost,
+    isAccountPinned: accountDataScenario.isAccountPinned,
+    togglePinAccount: accountDataScenario.togglePinAccount,
+    isPinFeatureEnabled: accountDataScenario.isPinFeatureEnabled,
+  }),
+}))
+
+vi.mock("~/features/AccountManagement/actions/AccountActionsContext", () => ({
+  useAccountActionsContext: () => ({
+    handleRefreshAccount: mockHandleRefreshAccount,
+    refreshingAccountId: accountActionsScenario.refreshingAccountId,
+    handleMarkCustomCheckInAsCheckedIn: mockHandleMarkCustomCheckInAsCheckedIn,
+  }),
+}))
+
+vi.mock("~/features/LdohSiteLookup/hooks/LdohSiteLookupContext", () => ({
+  useLdohSiteLookupContext: () => ({
+    getLdohSearchUrlForAccountUrl: getLdohSearchUrlForAccountUrlMock,
+  }),
+}))
+
+vi.mock("~/utils/browser/tabs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/tabs")>()
+  return { ...actual, createTab: createTabMock }
+})
+
+vi.mock("~/utils/navigation/sitePages", () => ({
+  openAccountBaseUrl: mockOpenAccountBaseUrl,
+  openCheckInAndRedeem: mockOpenCheckInAndRedeem,
+  openCheckInPage: mockOpenCheckInPage,
+  openCustomCheckInPage: mockOpenCustomCheckInPage,
+}))
+vi.mock("~/utils/navigation", () => ({
+  openSettingsTab: mockOpenSettingsTab,
+  openProtectionBypassHistory: mockOpenProtectionBypassHistory,
+}))
+
+const buildSite = (overrides: Partial<DisplaySiteData> = {}) =>
+  buildDisplaySiteData({
+    id: "acc-1",
+    disabled: false,
+    name: "Site",
+    username: "user",
+    baseUrl: "https://example.com",
+    siteType: SITE_TYPES.NEW_API,
+    token: "token",
+    userId: "1",
+    authType: AuthTypeEnum.AccessToken,
+    balance: { USD: 0, CNY: 0 },
+    todayConsumption: { USD: 0, CNY: 0 },
+    todayIncome: { USD: 0, CNY: 0 },
+    todayTokens: { upload: 0, download: 0 },
+    health: { status: SiteHealthStatus.Healthy },
+    checkIn: createCheckIn({ supported: false }),
+    ...overrides,
+  })
+
+describe("SiteInfo", () => {
+  it("offers a refresh for a stale migrated check-in", async () => {
+    const user = userEvent.setup()
+    const checkIn = createCheckIn({ checked: true, observedAt: 1 })
+    checkIn.methodKnowledge.methods[
+      AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+    ]!.status = {
+      outcome: "known",
+      availability: "enabled",
+      today: "checked",
+      evidence: { source: "legacy_migration", legacyObservedAt: 1 },
+    }
+    render(<SiteInfo site={buildSite({ checkIn })} />)
+    await user.click(
+      screen.getByRole("button", {
+        name: "account:list.site.checkInStatusOutdated",
+      }),
+    )
+    expect(mockHandleRefreshAccount).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "acc-1" }),
+      true,
+    )
+  })
+
+  it.each(["site", "custom"] as const)(
+    "allows retry after %s check-in navigation fails",
+    async (source) => {
+      const user = userEvent.setup()
+      const navigation =
+        source === "site" ? mockOpenCheckInPage : mockOpenCheckInAndRedeem
+      navigation.mockRejectedValueOnce(new Error("navigation failed"))
+      render(
+        <SiteInfo
+          site={buildSite({
+            checkIn: createCheckIn({
+              checked: false,
+              customCheckIn: {
+                url: "https://example.com/checkin",
+                isCheckedInToday: false,
+              },
+            }),
+          })}
+        />,
+      )
+      const button = screen.getByTestId(
+        source === "site"
+          ? ACCOUNT_MANAGEMENT_TEST_IDS.siteCheckInStatusButton
+          : ACCOUNT_MANAGEMENT_TEST_IDS.customCheckInStatusButton,
+      )
+      await user.click(button)
+      await waitFor(() => expect(navigation).toHaveBeenCalledTimes(1))
+      expect(button).toBeEnabled()
+      await user.click(button)
+      await waitFor(() => expect(navigation).toHaveBeenCalledTimes(2))
+    },
+  )
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    accountDataScenario.detectedSiteAccounts = []
+    accountDataScenario.getAccountContextBoost.mockReturnValue(undefined)
+    accountDataScenario.isPinFeatureEnabled = false
+    accountDataScenario.isAccountPinned.mockReset()
+    accountDataScenario.isAccountPinned.mockReturnValue(false)
+    accountDataScenario.togglePinAccount.mockReset()
+    accountActionsScenario.refreshingAccountId = null
+    getLdohSearchUrlForAccountUrlMock.mockReturnValue(null)
+    mockHandleRefreshAccount.mockReset()
+    mockHandleRefreshAccount.mockResolvedValue(undefined)
+  })
+
+  it("shows an accessible open-tab boost hint and hides it outside sorted browsing", () => {
+    accountDataScenario.getAccountContextBoost.mockReturnValue("open-tabs")
+    const site = buildDisplaySiteData({ id: "open" })
+    const { rerender } = render(<SiteInfo site={site} />)
+    const badge = screen.getByText("account:list.site.openTabsBoost")
+    expect(badge).toHaveAttribute("tabindex", "0")
+    expect(badge).toHaveAccessibleDescription(
+      "account:list.site.openTabsBoostHint",
+    )
+    rerender(<SiteInfo site={site} showContextBoost={false} />)
+    expect(
+      screen.queryByText("account:list.site.openTabsBoost"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("shares the related-page badge with accounts matched by the viewed tab", () => {
+    accountDataScenario.getAccountContextBoost.mockReturnValue("active-tab")
+    render(<SiteInfo site={buildDisplaySiteData({ id: "viewed" })} />)
+
+    expect(
+      screen.getByText("account:list.site.openTabsBoost"),
+    ).toHaveAccessibleDescription("account:list.site.openTabsBoostHint")
+    expect(
+      screen.queryByText("account:list.site.currentSite"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows only the current-site hint when it is the winning boost", () => {
+    accountDataScenario.getAccountContextBoost.mockReturnValue("current-site")
+    render(<SiteInfo site={buildDisplaySiteData()} />)
+    expect(
+      screen.getByText("account:list.site.currentSite"),
+    ).toHaveAccessibleDescription("account:list.site.currentSiteBoostHint")
+    expect(
+      screen.queryByText("account:list.site.openTabsBoost"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows a disabled badge and still opens the site URL", async () => {
+    const user = userEvent.setup()
+
+    render(<SiteInfo site={buildSite({ disabled: true })} />)
+
+    expect(
+      await screen.findByText("account:list.site.disabled"),
+    ).toBeInTheDocument()
+
+    const siteLinkButton = await screen.findByRole("button", { name: "Site" })
+
+    // Regression: The link button must be able to shrink/truncate so it doesn't overlap the row action buttons.
+    expect(siteLinkButton).toHaveClass("flex-1")
+    expect(siteLinkButton).toHaveClass("shrink")
+    expect(siteLinkButton).not.toHaveClass("w-full")
+
+    await user.click(siteLinkButton)
+    expect(mockOpenAccountBaseUrl).toHaveBeenCalledTimes(1)
+    expect(mockOpenAccountBaseUrl).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: "https://example.com" }),
+    )
+  })
+
+  it("renders an external link indicator and open-site tooltip description on the site button", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <SiteInfo
+        site={buildSite({
+          name: "My Provider",
+          baseUrl: "https://provider.example.com",
+        })}
+      />,
+    )
+
+    const siteLinkButton = await screen.findByRole("button", {
+      name: "My Provider",
+    })
+    expect(siteLinkButton).toHaveAccessibleDescription(
+      "account:actions.openSite: My Provider (https://provider.example.com)",
+    )
+
+    const icon = siteLinkButton.querySelector("svg")
+    expect(icon).toBeInTheDocument()
+    expect(icon).toHaveAttribute("aria-hidden", "true")
+
+    await user.click(siteLinkButton)
+    expect(mockOpenAccountBaseUrl).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: "https://provider.example.com" }),
+    )
+  })
+
+  it("falls back to only the URL in the open-site tooltip description when name matches URL", async () => {
+    render(
+      <SiteInfo
+        site={buildSite({
+          name: "https://provider.example.com",
+          baseUrl: "https://provider.example.com",
+        })}
+      />,
+    )
+
+    const siteLinkButton = await screen.findByRole("button", {
+      name: "https://provider.example.com",
+    })
+    expect(siteLinkButton).toHaveAccessibleDescription(
+      "account:actions.openSite: https://provider.example.com",
+    )
+  })
+
+  it("shows the raw site type in the account row", () => {
+    render(<SiteInfo site={buildSite({ siteType: SITE_TYPES.SUB2API })} />)
+
+    const siteTypeBadge = screen.getByText(SITE_TYPES.SUB2API)
+
+    expect(siteTypeBadge).toBeVisible()
+    expect(siteTypeBadge.parentElement).toHaveAttribute(
+      "data-tooltip-content",
+      `account:list.site.siteType: ${SITE_TYPES.SUB2API}`,
+    )
+  })
+
+  it("renders plain tags without search highlights", () => {
+    render(<SiteInfo site={buildSite({ tags: ["team", "backup"] })} />)
+
+    const tags = screen.getByTitle("team, backup")
+
+    expect(tags).toHaveTextContent("team, backup")
+    expect(tags.querySelector("mark")).toBeNull()
+  })
+
+  it("renders the neutral health indicator for an unknown health status", () => {
+    render(
+      <SiteInfo
+        site={buildSite({
+          health: { status: "unexpected-status" as SiteHealthStatus },
+        })}
+      />,
+    )
+
+    const healthButton = screen.getByRole("button", {
+      name: "account:list.site.refreshHealthStatus",
+    })
+
+    expect(healthButton.querySelector('[aria-hidden="true"]')).toHaveClass(
+      "bg-neutral-indicator",
+    )
+  })
+
+  it("renders a formatted created-time row", () => {
+    const createdAt = new Date(2026, 0, 2, 3, 4, 5).getTime()
+    const expected = formatLocaleDateTime(
+      createdAt,
+      "common:labels.notAvailable",
+    )
+
+    render(
+      <SiteInfo site={buildSite({ created_at: createdAt })} showCreatedAt />,
+    )
+
+    expect(
+      screen.getByText(`account:list.header.createdAt: ${expected}`),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByTitle(`account:list.header.createdAt: ${expected}`),
+    ).toBeInTheDocument()
+  })
+
+  it("falls back when created time is unavailable", () => {
+    render(<SiteInfo site={buildSite({ created_at: 0 })} showCreatedAt />)
+
+    expect(
+      screen.getByText(
+        "account:list.header.createdAt: common:labels.notAvailable",
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it("hides created time when created-time sorting is not active", () => {
+    render(<SiteInfo site={buildSite({ created_at: 123 })} />)
+
+    expect(
+      screen.queryByText(/account:list.header.createdAt:/),
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows a warning check-in indicator when the last check-in status detection is not today", async () => {
+    const user = userEvent.setup()
+    const dateNowSpy = vi
+      .spyOn(Date, "now")
+      .mockReturnValue(new Date(2026, 0, 2, 10, 0, 0).getTime())
+
+    try {
+      mockHandleRefreshAccount.mockClear()
+
+      render(
+        <SiteInfo
+          site={buildSite({
+            checkIn: createCheckIn({
+              checked: true,
+              observedAt: new Date(2026, 0, 1, 12, 0, 0).getTime(),
+            }),
+          })}
+        />,
+      )
+
+      const staleStatusButton = await screen.findByRole("button", {
+        name: "account:list.site.checkInStatusOutdated",
+      })
+      expect(staleStatusButton).toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", {
+          name: "account:list.site.checkedInToday",
+        }),
+      ).not.toBeInTheDocument()
+
+      await user.click(staleStatusButton)
+
+      expect(mockHandleRefreshAccount).toHaveBeenCalledTimes(1)
+      expect(mockHandleRefreshAccount).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "acc-1" }),
+        true,
+      )
+    } finally {
+      dateNowSpy.mockRestore()
+    }
+  })
+
+  it.each<{
+    scenario: string
+    supported: boolean
+    status?: CheckInMethodStatus
+  }>([
+    { scenario: "unsupported site", supported: false },
+    { scenario: "selection without a status readback", supported: true },
+    {
+      scenario: "permission-denied status readback",
+      supported: true,
+      status: {
+        outcome: "unknown",
+        reason: "permission_denied",
+        attemptedAt: Date.now(),
+      },
+    },
+    {
+      scenario: "disabled check-in without today's status",
+      supported: true,
+      status: {
+        outcome: "known",
+        availability: "disabled",
+        evidence: { source: "probe", observedAt: Date.now() },
+      },
+    },
+    {
+      scenario: "disabled check-in with a not-checked status",
+      supported: true,
+      status: {
+        outcome: "known",
+        availability: "disabled",
+        today: "not_checked",
+        evidence: { source: "probe", observedAt: Date.now() },
+      },
+    },
+    {
+      scenario: "disabled check-in with an outdated status",
+      supported: true,
+      status: {
+        outcome: "known",
+        availability: "disabled",
+        today: "checked",
+        evidence: { source: "probe", observedAt: 1 },
+      },
+    },
+  ])(
+    "hides site check-in indicators for $scenario",
+    ({ supported, status }) => {
+      const checkIn = createCheckIn({ supported })
+      if (status) {
+        checkIn.methodKnowledge.methods[
+          AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+        ]!.status = status
+      }
+      render(
+        <SiteInfo
+          site={buildSite({
+            checkIn,
+          })}
+        />,
+      )
+
+      expect(
+        screen.queryAllByRole("img", {
+          name: /account:list\.site\.(checkIn|checkedInToday|notCheckedInToday)/,
+        }),
+      ).toHaveLength(0)
+      expect(
+        screen.queryAllByRole("button", {
+          name: /account:list\.site\.(checkIn|checkedInToday|notCheckedInToday)/,
+        }),
+      ).toHaveLength(0)
+    },
+  )
+
+  it("keeps custom check-in visible when the selected site method has no status", () => {
+    render(
+      <SiteInfo
+        site={buildSite({
+          checkIn: createCheckIn({
+            supported: true,
+            customCheckIn: {
+              url: "https://example.com/checkin",
+              isCheckedInToday: false,
+            },
+          }),
+        })}
+      />,
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: "account:list.site.notCheckedInToday",
+      }),
+    ).toBeVisible()
+    expect(
+      screen
+        .getByRole("button", {
+          name: "account:list.site.notCheckedInToday",
+        })
+        .querySelector("svg"),
+    ).toHaveClass("text-neutral-indicator")
+    expect(
+      screen.queryByRole("img", { name: /account:list.site.checkInStatus/ }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows the normal check-in indicator when status was detected today", async () => {
+    const dateNowSpy = vi
+      .spyOn(Date, "now")
+      .mockReturnValue(new Date(2026, 0, 2, 10, 0, 0).getTime())
+
+    try {
+      render(
+        <SiteInfo
+          site={buildSite({
+            checkIn: createCheckIn({
+              checked: false,
+              observedAt: new Date(2026, 0, 2, 9, 0, 0).getTime(),
+            }),
+          })}
+        />,
+      )
+
+      expect(
+        await screen.findByRole("button", {
+          name: "account:list.site.notCheckedInToday",
+        }),
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", {
+          name: "account:list.site.checkInStatusOutdated",
+        }),
+      ).not.toBeInTheDocument()
+    } finally {
+      dateNowSpy.mockRestore()
+    }
+  })
+
+  it("keeps provider and custom check-in actions independently actionable", async () => {
+    const user = userEvent.setup()
+    const dateNowSpy = vi
+      .spyOn(Date, "now")
+      .mockReturnValue(new Date(2026, 0, 2, 10, 0, 0).getTime())
+
+    try {
+      render(
+        <SiteInfo
+          site={buildSite({
+            checkIn: createCheckIn({
+              checked: true,
+              observedAt: new Date(2026, 0, 2, 9, 0, 0).getTime(),
+              customCheckIn: {
+                url: "https://check-in.example.invalid",
+                isCheckedInToday: true,
+                openRedeemWithCheckIn: false,
+              },
+            }),
+          })}
+        />,
+      )
+
+      const siteCheckInAction = await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.siteCheckInStatusButton,
+      )
+      const customCheckInAction = await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.customCheckInStatusButton,
+      )
+
+      await user.click(siteCheckInAction)
+      expect(mockOpenCheckInPage).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "acc-1" }),
+      )
+      expect(mockHandleMarkCustomCheckInAsCheckedIn).not.toHaveBeenCalled()
+
+      await user.click(customCheckInAction)
+      expect(mockHandleMarkCustomCheckInAsCheckedIn).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "acc-1" }),
+      )
+      expect(mockOpenCustomCheckInPage).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "acc-1" }),
+      )
+    } finally {
+      dateNowSpy.mockRestore()
+    }
+  })
+
+  it("hides View on LDOH when no match is available", async () => {
+    getLdohSearchUrlForAccountUrlMock.mockReturnValue(null)
+
+    render(<SiteInfo site={buildSite({ id: "acc-ldoh-1" })} />)
+
+    expect(screen.queryByRole("button", { name: /viewOnLdoh/ })).toBeNull()
+  })
+
+  it("shows View on LDOH when match is available", async () => {
+    const user = userEvent.setup()
+    createTabMock.mockClear()
+
+    const ldohUrl = "https://ldoh.105117.xyz/?q=example.com"
+    getLdohSearchUrlForAccountUrlMock.mockReturnValue(ldohUrl)
+
+    render(<SiteInfo site={buildSite({ id: "acc-ldoh-2" })} />)
+
+    const ldohButton = await screen.findByRole("button", {
+      name: /viewOnLdoh/,
+    })
+    await user.click(ldohButton)
+
+    expect(createTabMock).toHaveBeenCalledWith(ldohUrl, true)
+  })
+
+  it("opens the related settings tab from the health reason tooltip while preserving return history", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <SiteInfo
+        site={buildSite({
+          health: {
+            status: SiteHealthStatus.Warning,
+            code: TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED,
+            reason: "Permission required",
+          },
+        })}
+      />,
+    )
+
+    await user.hover(
+      screen.getByRole("button", {
+        name: "account:list.site.refreshHealthStatus",
+      }),
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Permission required",
+      }),
+    )
+
+    expect(mockOpenSettingsTab).toHaveBeenCalledWith("permissions", {
+      preserveHistory: true,
+    })
+  })
+
+  it("opens the shield settings anchor from the disabled temp-window health reason", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <SiteInfo
+        site={buildSite({
+          health: {
+            status: SiteHealthStatus.Warning,
+            code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
+            reason: "Temp window fallback disabled",
+          },
+        })}
+      />,
+    )
+
+    await user.hover(
+      screen.getByRole("button", {
+        name: "account:list.site.refreshHealthStatus",
+      }),
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Temp window fallback disabled",
+      }),
+    )
+
+    expect(mockOpenSettingsTab).toHaveBeenCalledWith("refresh", {
+      anchor: "shield-settings",
+      preserveHistory: true,
+    })
+  })
+
+  it.each(Object.values(TEMP_WINDOW_HEALTH_STATUS_CODES))(
+    "opens history from the %s health warning without refreshing the account",
+    async (code) => {
+      const user = userEvent.setup()
+      render(
+        <SiteInfo
+          site={buildSite({
+            health: {
+              status: SiteHealthStatus.Warning,
+              code,
+              reason: "Temporary browser context could not be used",
+            },
+          })}
+        />,
+      )
+
+      await user.click(
+        screen.getByRole("button", { name: "shieldBypass:history.open" }),
+      )
+
+      expect(mockOpenProtectionBypassHistory).toHaveBeenCalledTimes(1)
+      expect(mockHandleRefreshAccount).not.toHaveBeenCalled()
+      expect(mockOpenSettingsTab).not.toHaveBeenCalled()
+    },
+  )
+
+  it("does not suggest shield history for an unrelated health warning", () => {
+    render(
+      <SiteInfo
+        site={buildSite({
+          health: { status: SiteHealthStatus.Warning, reason: "HTTP 500" },
+        })}
+      />,
+    )
+
+    expect(
+      screen.queryByRole("button", { name: "shieldBypass:history.open" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows a toast when opening the related settings tab fails", async () => {
+    const user = userEvent.setup()
+    mockOpenSettingsTab.mockRejectedValueOnce(new Error("settings page failed"))
+
+    render(
+      <SiteInfo
+        site={buildSite({
+          health: {
+            status: SiteHealthStatus.Warning,
+            code: TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED,
+            reason: "Permission required",
+          },
+        })}
+      />,
+    )
+
+    await user.hover(
+      screen.getByRole("button", {
+        name: "account:list.site.refreshHealthStatus",
+      }),
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Permission required",
+      }),
+    )
+
+    await vi.waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith("settings page failed")
+    })
+  })
+
+  it("renders current-site metadata, highlighted fragments, and supports unpinning", async () => {
+    const user = userEvent.setup()
+
+    accountDataScenario.detectedSiteAccounts = [{ id: "acc-current" }]
+    accountDataScenario.isPinFeatureEnabled = true
+    accountDataScenario.isAccountPinned.mockReturnValue(true)
+    accountDataScenario.togglePinAccount.mockResolvedValue(true)
+
+    render(
+      <SiteInfo
+        site={buildSite({
+          id: "acc-current",
+          name: "Example Site",
+          username: "alice",
+          notes: "Remember this account",
+          tags: ["vip", "ops"],
+          checkIn: createCheckIn({
+            supported: false,
+            customCheckIn: {
+              url: "https://example.com/checkin",
+              redeemUrl: "https://example.com/redeem",
+            },
+          }),
+        })}
+        highlights={{
+          name: [
+            { text: "Example", highlighted: true },
+            { text: " Site", highlighted: false },
+          ],
+          username: [{ text: "alice", highlighted: true }],
+          baseUrl: [{ text: "https://example.com", highlighted: true }],
+          customCheckInUrl: [
+            { text: "https://example.com/checkin", highlighted: true },
+          ],
+          customRedeemUrl: [
+            { text: "https://example.com/redeem", highlighted: true },
+          ],
+          tags: [{ text: "vip, ops", highlighted: true }],
+        }}
+      />,
+    )
+
+    expect(
+      await screen.findByText("account:list.site.currentSite"),
+    ).toBeInTheDocument()
+    expect(screen.getByTitle("Remember this account")).toBeInTheDocument()
+    expect(screen.getByTitle("vip, ops")).toBeInTheDocument()
+    expect(screen.getByTitle("https://example.com")).toBeInTheDocument()
+    expect(screen.getByTitle("https://example.com/checkin")).toBeInTheDocument()
+    expect(screen.getByTitle("https://example.com/redeem")).toBeInTheDocument()
+    expect(document.querySelectorAll("mark")).toHaveLength(6)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:actions.unpin" }),
+    )
+
+    expect(accountDataScenario.togglePinAccount).toHaveBeenCalledWith(
+      "acc-current",
+    )
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      "messages:toast.success.accountUnpinned",
+    )
+  })
+
+  it("opens the site check-in page when the provider reports a successful check-in today", async () => {
+    const user = userEvent.setup()
+    const dateNowSpy = vi
+      .spyOn(Date, "now")
+      .mockReturnValue(new Date(2026, 0, 2, 10, 0, 0).getTime())
+
+    try {
+      render(
+        <SiteInfo
+          site={buildSite({
+            checkIn: createCheckIn({
+              checked: true,
+              observedAt: new Date(2026, 0, 2, 8, 0, 0).getTime(),
+            }),
+          })}
+        />,
+      )
+
+      await user.click(
+        await screen.findByRole("button", {
+          name: "account:list.site.checkedInToday",
+        }),
+      )
+
+      expect(mockOpenCheckInPage).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "acc-1" }),
+      )
+    } finally {
+      dateNowSpy.mockRestore()
+    }
+  })
+
+  it("opens the combined redeem flow for custom check-ins by default", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <SiteInfo
+        site={buildSite({
+          checkIn: createCheckIn({
+            supported: false,
+            customCheckIn: {
+              url: "https://example.com/checkin",
+              isCheckedInToday: true,
+            },
+          }),
+        })}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "account:list.site.checkedInToday",
+      }),
+    )
+
+    expect(mockHandleMarkCustomCheckInAsCheckedIn).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "acc-1" }),
+    )
+    expect(mockOpenCheckInAndRedeem).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "acc-1" }),
+    )
+    expect(mockOpenCustomCheckInPage).not.toHaveBeenCalled()
+  })
+
+  it("opens only the custom check-in page when redeem pairing is disabled", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <SiteInfo
+        site={buildSite({
+          checkIn: createCheckIn({
+            supported: false,
+            customCheckIn: {
+              url: "https://example.com/checkin",
+              isCheckedInToday: false,
+              openRedeemWithCheckIn: false,
+            },
+          }),
+        })}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "account:list.site.notCheckedInToday",
+      }),
+    )
+
+    expect(mockHandleMarkCustomCheckInAsCheckedIn).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "acc-1" }),
+    )
+    expect(mockOpenCustomCheckInPage).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "acc-1" }),
+    )
+    expect(mockOpenCheckInAndRedeem).not.toHaveBeenCalled()
+  })
+
+  it("suppresses check-in actions and health refresh when the account is disabled", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <SiteInfo
+        site={buildSite({
+          disabled: true,
+          checkIn: createCheckIn({
+            checked: true,
+            observedAt: new Date(2026, 0, 2, 8, 0, 0).getTime(),
+            customCheckIn: {
+              url: "https://example.com/checkin",
+              isCheckedInToday: true,
+            },
+          }),
+        })}
+      />,
+    )
+
+    expect(
+      screen.queryByRole("button", {
+        name: "account:list.site.checkedInToday",
+      }),
+    ).not.toBeInTheDocument()
+
+    const healthButton = screen.getByRole("button", {
+      name: "account:list.site.refreshHealthStatus",
+    })
+    expect(healthButton).toHaveClass("cursor-not-allowed")
+
+    await user.click(healthButton)
+
+    expect(mockHandleRefreshAccount).not.toHaveBeenCalled()
+  })
+
+  it("marks only stale check-in refresh busy and restores both refresh controls after rejection", async () => {
+    const user = userEvent.setup()
+    const deferredRefresh = createDeferred<void>()
+    mockHandleRefreshAccount.mockReturnValueOnce(deferredRefresh.promise)
+
+    render(
+      <SiteInfo
+        site={buildSite({
+          checkIn: createCheckIn({ checked: true, observedAt: 1 }),
+        })}
+      />,
+    )
+
+    const staleCheckInButton = screen.getByRole("button", {
+      name: "account:list.site.checkInStatusOutdated",
+    })
+    const healthButton = screen.getByRole("button", {
+      name: "account:list.site.refreshHealthStatus",
+    })
+
+    await user.click(staleCheckInButton)
+
+    expect(staleCheckInButton).toHaveAttribute("aria-busy", "true")
+    expect(staleCheckInButton).toBeDisabled()
+    expect(healthButton).toBeDisabled()
+    expect(healthButton).not.toHaveAttribute("aria-busy")
+
+    await user.click(staleCheckInButton)
+    await user.click(healthButton)
+    expect(mockHandleRefreshAccount).toHaveBeenCalledTimes(1)
+
+    deferredRefresh.reject(new Error("refresh failed"))
+
+    await waitFor(() => {
+      expect(staleCheckInButton).toBeEnabled()
+    })
+    expect(staleCheckInButton).not.toHaveAttribute("aria-busy")
+    expect(healthButton).toBeEnabled()
+  })
+
+  it("marks only health refresh busy and restores both refresh controls after rejection", async () => {
+    const user = userEvent.setup()
+    const deferredRefresh = createDeferred<void>()
+    mockHandleRefreshAccount.mockReturnValueOnce(deferredRefresh.promise)
+
+    render(
+      <SiteInfo
+        site={buildSite({
+          checkIn: createCheckIn({ checked: true, observedAt: 1 }),
+        })}
+      />,
+    )
+
+    const staleCheckInButton = screen.getByRole("button", {
+      name: "account:list.site.checkInStatusOutdated",
+    })
+    const healthButton = screen.getByRole("button", {
+      name: "account:list.site.refreshHealthStatus",
+    })
+
+    await user.click(healthButton)
+
+    expect(healthButton).toHaveAttribute("aria-busy", "true")
+    expect(healthButton).toBeDisabled()
+    expect(staleCheckInButton).toBeDisabled()
+    expect(staleCheckInButton).not.toHaveAttribute("aria-busy")
+
+    await user.click(healthButton)
+    await user.click(staleCheckInButton)
+    expect(mockHandleRefreshAccount).toHaveBeenCalledTimes(1)
+
+    deferredRefresh.reject(new Error("refresh failed"))
+
+    await waitFor(() => {
+      expect(healthButton).toBeEnabled()
+    })
+    expect(healthButton).not.toHaveAttribute("aria-busy")
+    expect(staleCheckInButton).toBeEnabled()
+  })
+
+  it("does not re-trigger health refresh while the current row is already refreshing", async () => {
+    const user = userEvent.setup()
+
+    accountActionsScenario.refreshingAccountId = "acc-refreshing"
+
+    render(
+      <SiteInfo
+        site={buildSite({
+          id: "acc-refreshing",
+          checkIn: createCheckIn({ checked: true, observedAt: 1 }),
+        })}
+      />,
+    )
+
+    const healthButton = screen.getByRole("button", {
+      name: "account:list.site.refreshHealthStatus",
+    })
+
+    expect(healthButton).toHaveClass("animate-pulse")
+    expect(healthButton).toBeDisabled()
+    expect(healthButton).not.toHaveAttribute("aria-busy")
+    const staleCheckInButton = screen.getByRole("button", {
+      name: "account:list.site.checkInStatusOutdated",
+    })
+    expect(staleCheckInButton).toBeDisabled()
+    expect(staleCheckInButton).not.toHaveAttribute("aria-busy")
+    await user.click(healthButton)
+
+    expect(mockHandleRefreshAccount).not.toHaveBeenCalled()
+  })
+})

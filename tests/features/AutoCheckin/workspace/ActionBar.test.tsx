@@ -1,0 +1,140 @@
+import { fireEvent, screen } from "@testing-library/react"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+import ActionBar from "~/features/AutoCheckin/workspace/ActionBar"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/contracts"
+import { render } from "~~/tests/test-utils/render"
+
+const { trackStartedMock } = vi.hoisted(() => ({
+  trackStartedMock: vi.fn(),
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  trackProductAnalyticsActionStarted: trackStartedMock,
+}))
+
+describe("AutoCheckin ActionBar", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    trackStartedMock.mockResolvedValue(undefined)
+  })
+
+  it("does not attach automatic analytics metadata to explicit-tracked toolbar actions", () => {
+    render(
+      <ActionBar
+        isRunning={false}
+        canOpenFailedManualSignIns
+        onRunNow={vi.fn()}
+        onRefresh={vi.fn()}
+        onOpenFailedManualSignIns={vi.fn()}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "autoCheckin:execution.runNow" }),
+    )
+    fireEvent.click(
+      screen.getByRole("button", { name: "autoCheckin:execution.refresh" }),
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "autoCheckin:execution.actions.openFailedManual",
+      }),
+    )
+
+    expect(trackStartedMock).not.toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAutoCheckinStatus,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinActionBar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(trackStartedMock).not.toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenFailedAutoCheckinManualSignIns,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinActionBar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(trackStartedMock).not.toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunAutoCheckinNow,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinActionBar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+  })
+
+  it("does not track disabled toolbar actions", () => {
+    render(
+      <ActionBar
+        isRunning
+        canOpenFailedManualSignIns
+        onRunNow={vi.fn()}
+        onRefresh={vi.fn()}
+        onOpenFailedManualSignIns={vi.fn()}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "autoCheckin:messages.loading.running",
+      }),
+    )
+
+    expect(trackStartedMock).not.toHaveBeenCalled()
+    expect(
+      screen.getByRole("button", {
+        name: "autoCheckin:messages.loading.running",
+      }),
+    ).toHaveAttribute("aria-busy", "true")
+    expect(
+      screen.getByRole("button", { name: "autoCheckin:execution.refresh" }),
+    ).not.toHaveAttribute("aria-busy")
+  })
+
+  it("locks the toolbar while a dev panel debug action is pending", () => {
+    render(
+      <ActionBar
+        isRunning={false}
+        isDebugActionPending
+        canOpenFailedManualSignIns
+        onRunNow={vi.fn()}
+        onRefresh={vi.fn()}
+        onOpenFailedManualSignIns={vi.fn()}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    const runNowButton = screen.getByRole("button", {
+      name: "autoCheckin:execution.runNow",
+    })
+    expect(runNowButton).toBeDisabled()
+    // Debug work must not claim the run-now spinner, only its availability.
+    expect(runNowButton).not.toHaveAttribute("aria-busy")
+    expect(
+      screen.getByRole("button", { name: "autoCheckin:execution.refresh" }),
+    ).toBeDisabled()
+    expect(
+      screen.getByRole("button", {
+        name: "autoCheckin:execution.actions.openFailedManual",
+      }),
+    ).toBeDisabled()
+  })
+})

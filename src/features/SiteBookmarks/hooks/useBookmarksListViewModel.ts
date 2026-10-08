@@ -2,7 +2,7 @@ import { arrayMove } from "@dnd-kit/sortable"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import { useBookmarkDialogContext } from "~/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
 import toast from "~/lib/notify"
 import { bookmarkRepository } from "~/services/accounts/accountStorage/bookmarkRepository"

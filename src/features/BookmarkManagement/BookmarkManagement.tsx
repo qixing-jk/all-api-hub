@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next"
 import { PageHeader } from "~/components/PageHeader"
 import { Button } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
-import { AccountDataProvider } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { AccountDataProvider } from "~/features/AccountManagement/data/AccountDataContext"
 import BookmarksList from "~/features/SiteBookmarks/components/BookmarksList"
 import {
   BookmarkDialogStateProvider,

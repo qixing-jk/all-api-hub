@@ -1,0 +1,81 @@
+import { useSortable } from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+import { GripVertical } from "lucide-react"
+
+import { IconButton } from "~/components/ui"
+import {
+  AccountListItemRowLayout,
+  type AccountListHandleItemProps,
+} from "~/features/AccountManagement/components/AccountList/rows/AccountListBaseItem"
+
+/**
+ * Sortable wrapper around AccountListItem that adds drag handle controls and DnDKit bindings.
+ */
+function SortableAccountListItem({
+  site,
+  highlights,
+  onCopyKey,
+  onDeleteWithDialog,
+  showContextBoost,
+  showCreatedAt,
+  isDragDisabled,
+  handleLabel,
+  showHandle,
+  className,
+  selectionControl,
+}: AccountListHandleItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: site.id,
+    disabled: isDragDisabled,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={isDragging ? "relative z-10" : undefined}
+    >
+      <AccountListItemRowLayout
+        site={site}
+        highlights={highlights}
+        onDeleteWithDialog={onDeleteWithDialog}
+        onCopyKey={onCopyKey}
+        showCreatedAt={showCreatedAt}
+        showContextBoost={showContextBoost}
+        className={className}
+        selectionControl={selectionControl}
+        handle={
+          showHandle ? (
+            <IconButton
+              ref={setActivatorNodeRef}
+              variant="ghost"
+              size="xs"
+              aria-label={handleLabel}
+              disabled={isDragDisabled}
+              className="text-faint-foreground hover:text-secondary-foreground shrink-0 focus-visible:ring-2 focus-visible:ring-offset-2"
+              {...listeners}
+              {...attributes}
+            >
+              <GripVertical className="h-4 w-4" />
+            </IconButton>
+          ) : null
+        }
+      />
+    </div>
+  )
+}
+
+export default SortableAccountListItem

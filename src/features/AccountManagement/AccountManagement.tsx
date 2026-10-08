@@ -22,20 +22,20 @@ import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { useAccountActionsContext } from "~/features/AccountManagement/actions/AccountActionsContext"
 import BookmarkAccountImportDevPreview from "~/features/AccountManagement/bookmarkImport/BookmarkAccountImportDevPreview"
 import AccountList from "~/features/AccountManagement/components/AccountList"
 import BookmarkAccountImportDialog from "~/features/AccountManagement/components/BookmarkAccountImportDialog"
 import DedupeAccountsDialog from "~/features/AccountManagement/components/DedupeAccountsDialog"
 import DelAccountDialog from "~/features/AccountManagement/components/DelAccountDialog"
-import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
-import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
-import { AccountManagementProvider } from "~/features/AccountManagement/hooks/AccountManagementProvider"
-import { useDialogStateContext } from "~/features/AccountManagement/hooks/useDialogStateContext"
+import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
+import { useDialogStateContext } from "~/features/AccountManagement/dialogs/useDialogStateContext"
 import {
   ACCOUNT_MANAGEMENT_ROUTE_ACTIONS,
   ACCOUNT_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/AccountManagement/routeParams"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import { AccountManagementProvider } from "~/features/AccountManagement/workspace/AccountManagementProvider"
 import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/workspace/useApiCredentialProfiles"
 import {
   buildUnifiedApiGuidanceModel,

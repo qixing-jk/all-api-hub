@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { TempWindowFallbackReminderDialog } from "~/features/AccountManagement/components/TempWindowFallbackReminderDialog"
-import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import {
   getTempWindowFallbackIssue,
   isTempWindowFallbackReminderCode,

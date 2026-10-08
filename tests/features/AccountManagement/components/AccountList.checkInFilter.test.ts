@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
-import { getAccountCheckInFilterValue } from "~/features/AccountManagement/components/AccountList/checkInFilter"
+import { getAccountCheckInFilterValue } from "~/features/AccountManagement/components/AccountList/filtering/checkInFilter"
 import type { CheckInConfig } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"

@@ -30,13 +30,13 @@ let displayDataMock: any[] = []
 const handleOpenExternalCheckInsMock = vi.fn()
 const trackProductAnalyticsActionStartedMock = vi.hoisted(() => vi.fn())
 
-vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
+vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
   useAccountDataContext: () => ({
     displayData: displayDataMock,
   }),
 }))
 
-vi.mock("~/features/AccountManagement/hooks/AccountActionsContext", () => ({
+vi.mock("~/features/AccountManagement/actions/AccountActionsContext", () => ({
   useAccountActionsContext: () => ({
     handleOpenExternalCheckIns: handleOpenExternalCheckInsMock,
   }),

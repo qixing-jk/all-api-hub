@@ -6,7 +6,7 @@ import Tooltip from "~/components/Tooltip"
 import { BodySmall, Caption } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { SUMMARY_ANIMATION_DURATION } from "~/entrypoints/popup/summaryConfig"
-import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import {
   calculateTotalBalance,

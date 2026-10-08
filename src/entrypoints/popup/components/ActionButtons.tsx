@@ -12,8 +12,8 @@ import Tooltip from "~/components/Tooltip"
 import { Button, IconButton } from "~/components/ui"
 import { COLORS } from "~/constants/designTokens"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
-import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
-import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { useAccountActionsContext } from "~/features/AccountManagement/actions/AccountActionsContext"
+import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,

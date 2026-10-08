@@ -1,0 +1,251 @@
+import type { TFunction } from "i18next"
+import type { ReactNode } from "react"
+
+import { OverviewActionCenter } from "~/features/OptionsOverview/actions/OverviewActionCenter"
+import { OverviewAttentionList } from "~/features/OptionsOverview/attention/OverviewAttentionList"
+import { OverviewAutomationPanel } from "~/features/OptionsOverview/automation/OverviewAutomationPanel"
+import { OverviewStatusSummary } from "~/features/OptionsOverview/configuration/OverviewStatusCard"
+import { OPTIONS_OVERVIEW_WIDGET_IDS } from "~/features/OptionsOverview/ids"
+import { OPTIONS_OVERVIEW_TEST_IDS } from "~/features/OptionsOverview/testIds"
+import type {
+  OptionsOverviewNavigationIntent,
+  OptionsOverviewNavigationTarget,
+  OptionsOverviewViewModel,
+  OptionsOverviewWidgetId,
+  OptionsOverviewWidgetLayoutItem,
+} from "~/features/OptionsOverview/types"
+import { OverviewUsageSnapshot } from "~/features/OptionsOverview/usage/OverviewUsageSnapshot"
+import { getOverviewSectionTitle } from "~/features/OptionsOverview/workspace/gridText"
+import { OVERVIEW_WIDGET_LAYOUT } from "~/features/OptionsOverview/workspace/layout"
+import {
+  trackUnifiedApiGuidanceAction,
+  UNIFIED_API_GUIDANCE_STATUSES,
+  UNIFIED_API_GUIDANCE_STEP_STATES,
+  UNIFIED_API_GUIDANCE_SURFACES,
+  UnifiedApiGuidanceCard,
+  UnifiedApiGuidanceUnavailableCard,
+  withGuidedAccountKeyImportTarget,
+  type UnifiedApiGuidanceAction,
+} from "~/features/UnifiedApiGuidance"
+import { GatewayGuidanceDiscovery } from "~/features/UnifiedApiGuidance/components/GatewayGuidanceDiscovery"
+import { GATEWAY_GUIDANCE_OVERVIEW_ID } from "~/features/UnifiedApiGuidance/navigation"
+import { runGatewayGuidanceAction } from "~/features/UnifiedApiGuidance/runGatewayGuidanceAction"
+import { PRODUCT_ANALYTICS_SURFACE_IDS } from "~/services/productAnalytics/contracts"
+
+interface OptionsOverviewGridProps {
+  viewModel: OptionsOverviewViewModel
+  gatewayGuidancePresentation: {
+    expanded: boolean
+    started: boolean
+    toggle: () => void
+  }
+  t: TFunction
+  onNavigate: (intent: OptionsOverviewNavigationIntent) => void
+  onNavigateWithoutTracking: (target: OptionsOverviewNavigationTarget) => void
+  isLoading: boolean
+  onRetry: () => void
+}
+
+const columnSpanClass: Record<
+  OptionsOverviewWidgetLayoutItem["columnSpan"],
+  string
+> = {
+  1: "flex h-full min-h-0 flex-col xl:col-span-1",
+  2: "flex h-full min-h-0 flex-col xl:col-span-2",
+  3: "flex h-full min-h-0 flex-col xl:col-span-3",
+}
+
+/**
+ * Owns the static overview widget layout and keeps the page shell thin.
+ */
+export function OptionsOverviewGrid({
+  viewModel,
+  gatewayGuidancePresentation,
+  t,
+  onNavigate,
+  onNavigateWithoutTracking,
+  isLoading,
+  onRetry,
+}: OptionsOverviewGridProps) {
+  return (
+    <div className="gap-y-density-6 grid grid-cols-1 items-stretch gap-x-6 xl:grid-cols-3">
+      {OVERVIEW_WIDGET_LAYOUT.filter(
+        (item) =>
+          item.id !== OPTIONS_OVERVIEW_WIDGET_IDS.unifiedApiGuidance ||
+          viewModel.unifiedApiGuidance?.status !==
+            UNIFIED_API_GUIDANCE_STATUSES.HasGatewayChannels ||
+          gatewayGuidancePresentation.expanded,
+      ).map((item) => (
+        <section key={item.id} className={columnSpanClass[item.columnSpan]}>
+          {item.id === OPTIONS_OVERVIEW_WIDGET_IDS.statusSummary ||
+          item.id === OPTIONS_OVERVIEW_WIDGET_IDS.unifiedApiGuidance ? null : (
+            <h3 className="dark:text-secondary-foreground text-muted-foreground mb-density-3 text-xs font-semibold uppercase">
+              {getOverviewSectionTitle(item.id, t)}
+            </h3>
+          )}
+          {renderWidget(
+            item.id,
+            viewModel,
+            t,
+            onNavigate,
+            onNavigateWithoutTracking,
+            isLoading,
+            onRetry,
+            gatewayGuidancePresentation,
+          )}
+        </section>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * Dispatches each static layout slot to its matching overview widget.
+ */
+function renderWidget(
+  id: OptionsOverviewWidgetId,
+  viewModel: OptionsOverviewViewModel,
+  t: TFunction,
+  onNavigate: (intent: OptionsOverviewNavigationIntent) => void,
+  onNavigateWithoutTracking: (target: OptionsOverviewNavigationTarget) => void,
+  isLoading: boolean,
+  onRetry: () => void,
+  gatewayGuidancePresentation: OptionsOverviewGridProps["gatewayGuidancePresentation"],
+) {
+  const navigateFromWidget = (target: OptionsOverviewNavigationTarget) => {
+    onNavigate({ target, sourceWidgetId: id })
+  }
+  switch (id) {
+    case OPTIONS_OVERVIEW_WIDGET_IDS.statusSummary:
+      return (
+        <OverviewStatusSummary
+          items={viewModel.statusCards}
+          t={t}
+          onNavigate={navigateFromWidget}
+          data-testid={OPTIONS_OVERVIEW_TEST_IDS.statusSummary}
+        />
+      )
+    case OPTIONS_OVERVIEW_WIDGET_IDS.unifiedApiGuidance: {
+      const guidanceModel = viewModel.unifiedApiGuidance
+      if (!guidanceModel) {
+        return (
+          <div
+            className="flex min-h-0 flex-1 flex-col"
+            data-testid={OPTIONS_OVERVIEW_TEST_IDS.unifiedApiGuidance}
+          >
+            <UnifiedApiGuidanceUnavailableCard
+              isRetrying={isLoading}
+              onRetry={onRetry}
+            />
+          </div>
+        )
+      }
+
+      const handleUnifiedApiGuidanceAction = (
+        action: UnifiedApiGuidanceAction,
+      ) => {
+        const navigationAction = withGuidedAccountKeyImportTarget(
+          action,
+          viewModel.gatewayGuidanceImportAccountId,
+        )
+
+        void trackUnifiedApiGuidanceAction({
+          model: guidanceModel,
+          action: navigationAction,
+          surfaceId:
+            PRODUCT_ANALYTICS_SURFACE_IDS.OptionsOverviewUnifiedApiGuidance,
+        })
+        void runGatewayGuidanceAction(() =>
+          onNavigateWithoutTracking(navigationAction.target),
+        )
+      }
+
+      return (
+        <div
+          className="flex min-h-0 flex-1 flex-col"
+          data-testid={OPTIONS_OVERVIEW_TEST_IDS.unifiedApiGuidance}
+          id={GATEWAY_GUIDANCE_OVERVIEW_ID}
+          tabIndex={-1}
+        >
+          {gatewayGuidancePresentation.expanded ? (
+            <UnifiedApiGuidanceCard
+              model={guidanceModel}
+              surface={UNIFIED_API_GUIDANCE_SURFACES.OptionsOverview}
+              onAction={handleUnifiedApiGuidanceAction}
+              onCollapse={gatewayGuidancePresentation.toggle}
+            />
+          ) : (
+            <GatewayGuidanceDiscovery
+              started={gatewayGuidancePresentation.started}
+              completedSteps={
+                guidanceModel.steps.filter(
+                  (step) =>
+                    step.state === UNIFIED_API_GUIDANCE_STEP_STATES.Completed,
+                ).length
+              }
+              totalSteps={guidanceModel.steps.length}
+              onExpand={gatewayGuidancePresentation.toggle}
+            />
+          )}
+        </div>
+      )
+    }
+    case OPTIONS_OVERVIEW_WIDGET_IDS.needsAttention:
+      return (
+        <WidgetBody testId={OPTIONS_OVERVIEW_TEST_IDS.needsAttention}>
+          <OverviewAttentionList
+            items={viewModel.attentionItems}
+            t={t}
+            onNavigate={navigateFromWidget}
+          />
+        </WidgetBody>
+      )
+    case OPTIONS_OVERVIEW_WIDGET_IDS.automationOverview:
+      return (
+        <WidgetBody testId={OPTIONS_OVERVIEW_TEST_IDS.automationOverview}>
+          <OverviewAutomationPanel
+            overview={viewModel.automationOverview}
+            t={t}
+            onNavigate={navigateFromWidget}
+          />
+        </WidgetBody>
+      )
+    case OPTIONS_OVERVIEW_WIDGET_IDS.recentUsage:
+      return (
+        <WidgetBody testId={OPTIONS_OVERVIEW_TEST_IDS.recentUsage}>
+          <OverviewUsageSnapshot
+            snapshot={viewModel.usageSnapshot}
+            t={t}
+            onNavigate={navigateFromWidget}
+          />
+        </WidgetBody>
+      )
+    case OPTIONS_OVERVIEW_WIDGET_IDS.actionCenter:
+      return (
+        <WidgetBody testId={OPTIONS_OVERVIEW_TEST_IDS.actionCenter}>
+          <OverviewActionCenter
+            items={viewModel.configurationOverviewItems}
+            t={t}
+            onNavigate={navigateFromWidget}
+          />
+        </WidgetBody>
+      )
+  }
+}
+
+/**
+ * Provides the shared flex wrapper for overview widgets that need stretchable bodies.
+ */
+function WidgetBody({
+  testId,
+  children,
+}: {
+  testId: string
+  children: ReactNode
+}) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col" data-testid={testId}>
+      {children}
+    </div>
+  )
+}

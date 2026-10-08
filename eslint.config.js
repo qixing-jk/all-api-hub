@@ -102,10 +102,6 @@ const dynamicImportAllowlist = [
     imports: ["~/services/checkin/autoCheckin/discovery/devDiscoveryFixtures"],
   },
   {
-    file: "src/features/AutoCheckin/hooks/useAutoCheckinStatusWorkspace.ts",
-    imports: ["~/services/checkin/autoCheckin/discovery/devDiscoveryFixtures"],
-  },
-  {
     file: "src/features/AutoCheckin/workspace/useAutoCheckinStatusWorkspace.ts",
     imports: ["~/services/checkin/autoCheckin/discovery/devDiscoveryFixtures"],
   },
@@ -121,10 +117,6 @@ const dynamicImportAllowlist = [
   {
     file: "src/entrypoints/popup/viewRegistry.tsx",
     imports: ["./components/", "~/features/"],
-  },
-  {
-    file: "src/features/AccountManagement/components/AccountList/loadAccountListDndRuntime.ts",
-    imports: ["./AccountListDndRuntime"],
   },
   {
     file: "src/features/AccountManagement/components/AccountList/ordering/loadAccountListDndRuntime.ts",

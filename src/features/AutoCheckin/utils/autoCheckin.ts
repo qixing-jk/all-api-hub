@@ -1,6 +1,10 @@
 import type { TFunction } from "i18next"
 
 import {
+  AUTO_CHECKIN_SKIP_CATEGORIES,
+  isAutoCheckinSkipReasonActionable,
+} from "~/features/AutoCheckin/results/skipCategories"
+import {
   AUTO_CHECKIN_SKIP_CATEGORY,
   getCheckinSkipReasonCategory,
   type AutoCheckinSkipCategory,
@@ -14,11 +18,6 @@ import {
   type CheckinAccountResult,
   type CheckinResultStatus,
 } from "~/types/autoCheckin"
-
-import {
-  AUTO_CHECKIN_SKIP_CATEGORIES,
-  isAutoCheckinSkipReasonActionable,
-} from "./skipCategories"
 
 /**
  * Statuses whose results can carry a persisted reason code and therefore take

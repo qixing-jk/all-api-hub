@@ -11,7 +11,7 @@ import {
 } from "~/constants"
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import AccountList from "~/features/AccountManagement/components/AccountList"
-import * as accountListDndRuntimeLoader from "~/features/AccountManagement/components/AccountList/loadAccountListDndRuntime"
+import * as accountListDndRuntimeLoader from "~/features/AccountManagement/components/AccountList/ordering/loadAccountListDndRuntime"
 import * as inviteLinkCopyWorkflow from "~/features/AccountManagement/inviteLinkCopyWorkflow"
 import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
@@ -355,7 +355,7 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => mockUseUserPreferencesContext(),
 }))
 
-vi.mock("~/features/AccountManagement/hooks/AccountActionsContext", () => ({
+vi.mock("~/features/AccountManagement/actions/AccountActionsContext", () => ({
   useAccountActionsContext: () => ({
     handleDeleteAccount: handleDeleteAccountMock,
     handleDeleteAccounts: handleDeleteAccountsMock,
@@ -363,7 +363,7 @@ vi.mock("~/features/AccountManagement/hooks/AccountActionsContext", () => ({
   }),
 }))
 
-vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
+vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
   useAccountDataContext: () => mockUseAccountDataContext(),
 }))
 
@@ -406,7 +406,7 @@ vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
 }))
 
 vi.mock(
-  "~/features/AccountManagement/components/AccountList/AccountListItem",
+  "~/features/AccountManagement/components/AccountList/rows/AccountListItem",
   () => ({
     default: ({ site, onDeleteWithDialog, onCopyKey }: any) => (
       <>
@@ -453,7 +453,7 @@ vi.mock(
 )
 
 vi.mock(
-  "~/features/AccountManagement/components/AccountList/AccountFilterBar",
+  "~/features/AccountManagement/components/AccountList/filtering/AccountFilterBar",
   () => ({
     default: ({
       disabledOptions,

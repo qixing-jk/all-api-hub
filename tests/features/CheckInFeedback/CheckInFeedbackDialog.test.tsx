@@ -14,9 +14,9 @@ import {
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { AccountCheckInSection } from "~/features/AccountManagement/components/AccountDialog/checkin/AccountCheckInSection"
-import AccountSnapshotTableRow from "~/features/AutoCheckin/components/AccountSnapshotTableRow"
-import ResultsTableRow from "~/features/AutoCheckin/components/ResultsTableRow"
-import ResultsTableRowActions from "~/features/AutoCheckin/components/ResultsTableRowActions"
+import AccountSnapshotTableRow from "~/features/AutoCheckin/readiness/AccountSnapshotTableRow"
+import ResultsTableRow from "~/features/AutoCheckin/results/ResultsTableRow"
+import ResultsTableRowActions from "~/features/AutoCheckin/results/ResultsTableRowActions"
 import CheckInFeedbackDialog from "~/features/CheckInFeedback/CheckInFeedbackDialog"
 import accountDialogLocale from "~/locales/en/accountDialog.json"
 import autoCheckinLocale from "~/locales/en/autoCheckin.json"

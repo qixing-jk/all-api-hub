@@ -31,10 +31,10 @@ vi.mock("~/utils/core/environment", async (original) => ({
   ...(await original<typeof import("~/utils/core/environment")>()),
   isDevelopmentMode: () => development.value,
 }))
-vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
+vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
   useAccountDataContext: () => ({ accounts: [], loadAccountData }),
 }))
-vi.mock("~/features/AccountManagement/hooks/useDialogStateContext", () => ({
+vi.mock("~/features/AccountManagement/dialogs/useDialogStateContext", () => ({
   useDialogStateContext: () => ({ openAddAccount }),
 }))
 vi.mock("~/services/permissions/permissionManager", async (original) => ({

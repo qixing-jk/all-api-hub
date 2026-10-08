@@ -33,23 +33,23 @@ vi.mock("~/utils/core/url", async (importOriginal) => ({
   navigateToAnchor: vi.fn(),
 }))
 
-vi.mock("~/features/ImportExport/hooks/useImportExport", () => ({
+vi.mock("~/features/ImportExport/backup/useImportExport", () => ({
   useImportExport: () => mockedUseImportExport(),
 }))
 
-vi.mock("~/features/ImportExport/components/ExportSection", () => ({
+vi.mock("~/features/ImportExport/backup/ExportSection", () => ({
   default: () => <section id="export-section">export section</section>,
 }))
 
-vi.mock("~/features/ImportExport/components/ImportSection", () => ({
+vi.mock("~/features/ImportExport/backup/ImportSection", () => ({
   default: () => <section id="import-section">import section</section>,
 }))
 
-vi.mock("~/features/ImportExport/components/WebDAVSettings", () => ({
+vi.mock("~/features/ImportExport/webdav/WebDAVSettings", () => ({
   default: () => <section id="webdav-url">webdav section</section>,
 }))
 
-vi.mock("~/features/ImportExport/components/WebDAVAutoSyncSettings", () => ({
+vi.mock("~/features/ImportExport/cloudSync/WebDAVAutoSyncSettings", () => ({
   default: () => <section id="webdav-auto-sync">webdav auto sync</section>,
 }))
 

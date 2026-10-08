@@ -3,7 +3,7 @@ import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import ResultsTable from "~/features/AutoCheckin/components/ResultsTable"
+import ResultsTable from "~/features/AutoCheckin/results/ResultsTable"
 import enAutoCheckinMessages from "~/locales/en/autoCheckin.json"
 import {
   AUTO_CHECKIN_SKIP_REASON,

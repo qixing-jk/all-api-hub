@@ -64,7 +64,7 @@ const getScenarioQueries = (scenarioId: string) =>
 
 const readyViewModel = optionsOverviewDataState.viewModel
 
-vi.mock("~/features/OptionsOverview/useOptionsOverviewData", () => ({
+vi.mock("~/features/OptionsOverview/workspace/useOptionsOverviewData", () => ({
   useOptionsOverviewData: () => optionsOverviewDataState,
 }))
 

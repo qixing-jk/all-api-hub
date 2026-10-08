@@ -18,7 +18,7 @@ import {
   buildApiCredentialGatewayGuidanceModel,
 } from "~/features/ApiCredentialProfiles/ApiCredentialProfiles"
 import type { OptionsOverviewUnifiedApiGuidanceDiagnostics } from "~/features/OptionsOverview/types"
-import { useOptionsOverviewData } from "~/features/OptionsOverview/useOptionsOverviewData"
+import { useOptionsOverviewData } from "~/features/OptionsOverview/workspace/useOptionsOverviewData"
 import {
   createEmptyFeatureGuidanceState,
   type FeatureGuidanceState,

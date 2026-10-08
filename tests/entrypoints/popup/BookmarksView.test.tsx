@@ -40,11 +40,14 @@ vi.mock("~/components/PopupInterruptionHintBanner", () => ({
   default: () => <div>PopupInterruptionHintBanner</div>,
 }))
 
-vi.mock("~/features/AccountManagement/hooks/AccountManagementProvider", () => ({
-  AccountManagementProvider: ({ children }: { children: ReactNode }) => (
-    <>{children}</>
-  ),
-}))
+vi.mock(
+  "~/features/AccountManagement/workspace/AccountManagementProvider",
+  () => ({
+    AccountManagementProvider: ({ children }: { children: ReactNode }) => (
+      <>{children}</>
+    ),
+  }),
+)
 
 vi.mock("~/utils/browser", () => ({
   isExtensionPopup: isExtensionPopupMock,

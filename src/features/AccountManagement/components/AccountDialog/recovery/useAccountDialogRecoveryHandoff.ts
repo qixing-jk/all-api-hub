@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import type { AccessTokenContinuationAction } from "~/features/AccountManagement/components/AccountDialog/form/AccessTokenVerificationGuide"
+import type { AccountDialogRecoveryState } from "~/features/AccountManagement/components/AccountDialog/models"
 import {
   canUseAccountDialogRecoverySidePanel,
   discardAccountDialogRecovery,
   openAccountDialogRecovery,
   prepareAccountDialogRecovery,
   type PreparedAccountDialogRecovery,
-} from "~/features/AccountManagement/accountDialogRecovery"
-import type { AccessTokenContinuationAction } from "~/features/AccountManagement/components/AccountDialog/form/AccessTokenVerificationGuide"
-import type { AccountDialogRecoveryState } from "~/features/AccountManagement/components/AccountDialog/models"
+} from "~/features/AccountManagement/dialogs/accountDialogRecovery"
 import { closeIfPopup } from "~/utils/navigation/popup"
 
 /** Keeps a popup form ready before the user invokes the native sidebar API. */

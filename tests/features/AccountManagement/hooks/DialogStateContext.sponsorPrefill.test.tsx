@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
-import { DialogStateProvider } from "~/features/AccountManagement/hooks/DialogStateProvider"
-import { useDialogStateContext } from "~/features/AccountManagement/hooks/useDialogStateContext"
+import { DialogStateProvider } from "~/features/AccountManagement/dialogs/DialogStateProvider"
+import { useDialogStateContext } from "~/features/AccountManagement/dialogs/useDialogStateContext"
 import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
 import { render, screen } from "~~/tests/test-utils/render"
 
@@ -44,7 +44,7 @@ const {
   watchPendingSponsorAddAccountPrefillMock: vi.fn(),
 }))
 
-vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
+vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
   useAccountDataContext: () => ({
     loadAccountData: loadAccountDataMock,
   }),

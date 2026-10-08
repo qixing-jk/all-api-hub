@@ -4,6 +4,10 @@ import { useTranslation } from "react-i18next"
 
 import { PageHeader } from "~/components/PageHeader"
 import { Heading3 } from "~/components/ui"
+import ExportSection from "~/features/ImportExport/backup/ExportSection"
+import ImportSection from "~/features/ImportExport/backup/ImportSection"
+import { useImportExport } from "~/features/ImportExport/backup/useImportExport"
+import CloudSyncSettings from "~/features/ImportExport/cloudSync/CloudSyncSettings"
 import {
   clearHighlightSearchParam,
   highlightSearchTarget,
@@ -11,11 +15,6 @@ import {
   OPTIONS_SEARCH_HIGHLIGHT_PARAM,
 } from "~/features/OptionsSearch/navigation"
 import { navigateToAnchor } from "~/utils/core/url"
-
-import CloudSyncSettings from "./components/CloudSyncSettings"
-import ExportSection from "./components/ExportSection"
-import ImportSection from "./components/ImportSection"
-import { useImportExport } from "./hooks/useImportExport"
 
 /**
  * Import/Export page combining local migration and cloud sync.

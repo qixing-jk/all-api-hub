@@ -1,0 +1,51 @@
+import { Cloud } from "lucide-react"
+import { useState } from "react"
+import { useTranslation } from "react-i18next"
+
+import { BodySmall, Heading3 } from "~/components/ui"
+import { CloudSyncSaveProvider } from "~/features/ImportExport/cloudSync/useCloudSyncSaveQueue"
+import WebDAVAutoSyncSettings from "~/features/ImportExport/cloudSync/WebDAVAutoSyncSettings"
+import WebDAVSettings from "~/features/ImportExport/webdav/WebDAVSettings"
+import type { CloudSyncProvider } from "~/types/webdav"
+
+/** Composes provider configuration and automatic sync around one provider draft. */
+export default function CloudSyncSettings() {
+  const { t } = useTranslation("importExport")
+  const [providerPreview, setProviderPreview] = useState<CloudSyncProvider>()
+  const [gistEncryptionPasswordError, setGistEncryptionPasswordError] =
+    useState<string>()
+
+  return (
+    <section
+      id="cloud-sync"
+      className="border-border space-y-density-4 pt-density-6 border-t"
+    >
+      <div className="space-y-density-1">
+        <Heading3
+          as="h2"
+          className="gap-y-density-2 m-0 flex items-center gap-x-2 text-xl"
+        >
+          <Cloud
+            className="text-theme-600 dark:text-theme-400 size-5 shrink-0"
+            aria-hidden="true"
+          />
+          {t("webdav.title")}
+        </Heading3>
+        <BodySmall className="m-0">{t("webdav.configDesc")}</BodySmall>
+      </div>
+      <CloudSyncSaveProvider>
+        <div className="space-y-density-6">
+          <WebDAVSettings
+            onProviderDraftChange={setProviderPreview}
+            gistEncryptionPasswordError={gistEncryptionPasswordError}
+            onGistEncryptionPasswordErrorChange={setGistEncryptionPasswordError}
+          />
+          <WebDAVAutoSyncSettings
+            providerPreview={providerPreview}
+            onGistEncryptionPasswordErrorChange={setGistEncryptionPasswordError}
+          />
+        </div>
+      </CloudSyncSaveProvider>
+    </section>
+  )
+}

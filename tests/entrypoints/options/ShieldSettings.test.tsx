@@ -11,13 +11,13 @@ import {
   getShieldDevTriggerPreset,
   SHIELD_DEV_TRIGGER_PRESET_IDS,
 } from "~/features/BasicSettings/components/tabs/Refresh/automaticFeatureSettings"
-import { getShieldDevTriggerPresetLabel } from "~/features/BasicSettings/components/tabs/Refresh/ProtectionBypassDevTrigger"
+import { getShieldDevTriggerPresetLabel } from "~/features/BasicSettings/components/tabs/Refresh/protectionBypass/ProtectionBypassDevTrigger"
 import {
   executeShieldDevTrigger,
   parseShieldDevTriggerDelay,
-} from "~/features/BasicSettings/components/tabs/Refresh/protectionBypassDevTriggerRuntime"
+} from "~/features/BasicSettings/components/tabs/Refresh/protectionBypass/protectionBypassDevTriggerRuntime"
+import ShieldSettings from "~/features/BasicSettings/components/tabs/Refresh/protectionBypass/ShieldSettings"
 import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/searchTargets"
-import ShieldSettings from "~/features/BasicSettings/components/tabs/Refresh/ShieldSettings"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import {
   PROTECTION_BYPASS_AUTOMATIC_FEATURES,

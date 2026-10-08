@@ -70,7 +70,7 @@ vi.mock("~/utils/browser/sidePanel", async (importOriginal) => {
   }
 })
 
-vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
+vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
   useAccountDataContext: () => ({
     isRefreshing: false,
     handleRefresh: vi.fn().mockResolvedValue({ success: 0, failed: 0 }),

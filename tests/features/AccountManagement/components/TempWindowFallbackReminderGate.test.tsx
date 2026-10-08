@@ -49,7 +49,7 @@ vi.mock("~/utils/browser/tempWindowFetch", () => ({
     getTempWindowFallbackBlockStatusMock(...args),
 }))
 
-vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
+vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
   useAccountDataContext: () => ({
     displayData: accountDataState.displayData,
   }),

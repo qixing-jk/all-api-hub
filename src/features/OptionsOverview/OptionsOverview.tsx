@@ -5,7 +5,9 @@ import { useTranslation } from "react-i18next"
 import { PageHeader } from "~/components/PageHeader"
 import { Alert, Button, Spinner } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { PermissionOnboardingDialog } from "~/features/OptionsOverview/components/dialogs/PermissionOnboardingDialog"
+import { PermissionOnboardingDialog } from "~/features/OptionsOverview/permissions/PermissionOnboardingDialog"
+import { OptionsOverviewGrid } from "~/features/OptionsOverview/workspace/OptionsOverviewGrid"
+import { useOptionsOverviewData } from "~/features/OptionsOverview/workspace/useOptionsOverviewData"
 import { requestProductAnnouncementPopoverOpen } from "~/features/ProductAnnouncements/events"
 import { useProductAnnouncements } from "~/features/ProductAnnouncements/hooks/useProductAnnouncements"
 import { ProductAnnouncementBanner } from "~/features/ProductAnnouncements/ProductAnnouncementBanner"
@@ -26,10 +28,8 @@ import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch
 import { PRODUCT_ANNOUNCEMENT_SEVERITIES } from "~/services/productAnnouncements/constants"
 import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
-import { OptionsOverviewGrid } from "./components/OptionsOverviewGrid"
 import { OPTIONS_OVERVIEW_TEST_IDS } from "./testIds"
 import type { OptionsOverviewNavigationIntent } from "./types"
-import { useOptionsOverviewData } from "./useOptionsOverviewData"
 
 const overviewWidgetSurfaceIds = {
   statusSummary: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsOverviewStatusSummary,
