@@ -74,11 +74,9 @@ export async function executeDialogProbe({
     return result
   }
 
+  let result: ApiVerificationProbeResult
   try {
-    const result = await execute()
-    // An aborted request can still resolve successfully; acceptance follows intent.
-    if (isStopped()) return settleStopped()
-    return { result: await accept(result) }
+    result = await execute()
   } catch (error) {
     if (isAbortFailure(error) || isStopped()) return settleStopped()
 
@@ -94,4 +92,8 @@ export async function executeDialogProbe({
     }
     return { result: await accept(result), error }
   }
+  // Acceptance errors belong to the caller, not API failure classification.
+  // An aborted request can still resolve successfully; acceptance follows intent.
+  if (isStopped()) return settleStopped()
+  return { result: await accept(result) }
 }

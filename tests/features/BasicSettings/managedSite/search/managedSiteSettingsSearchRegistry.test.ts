@@ -23,6 +23,13 @@ const context: OptionsSearchContext = {
 }
 
 describe("managed-site settings ownership", () => {
+  it("falls back to the established default for an unrecognized stored selection", () => {
+    expect(
+      resolveManagedSiteSettingsPanelId(
+        "retired-provider" as typeof SITE_TYPES.NEW_API,
+      ),
+    ).toBe("newApi")
+  })
   it("selects exactly one settings owner for every managed site type", () => {
     const modules = Object.values(managedSiteSettingsSearchModules)
     expect(modules.map((module) => module.siteType).sort()).toEqual(

@@ -113,8 +113,9 @@ _Avoid_: model catalog, verified model
 
 **Temporary Browsing Context**:
 An extension-owned browsing context used to perform an authorized task against
-a site. Multiple tasks may share a context, while private and regular browsing
-remain separate. Finishing one task does not imply that other tasks have finished.
+a site. Multiple tasks may share a context during normal release, while private
+and regular browsing remain separate. A forced release may retire a shared
+context before other tasks finish.
 _Avoid_: user tab, saved account session
 
 **Account Post-save Workflow**:

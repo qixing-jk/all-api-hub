@@ -398,6 +398,104 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
     vi.useRealTimers()
   })
 
+  it("reuses the configured deterministic minute before its scheduled time", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 7, 0, 0))
+    const preserved = new Date(2024, 0, 1, 8, 30, 15)
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...DEFAULT_PREFERENCES.autoCheckin,
+        globalEnabled: true,
+        scheduleMode: "deterministic",
+        deterministicTime: "08:30",
+      },
+    })
+    schedulerTestState.alarmStore.autoCheckinDaily = {
+      name: "autoCheckinDaily",
+      scheduledTime: preserved.getTime(),
+    }
+    await autoCheckinScheduler.scheduleNextRun({ preserveExisting: true })
+    expect(mockedBrowserApi.createAlarm).not.toHaveBeenCalled()
+    expect(mockedBrowserApi.clearAlarm).not.toHaveBeenCalledWith(
+      "autoCheckinDaily",
+    )
+    expect(schedulerTestState.storedStatus.nextDailyScheduledAt).toBe(
+      preserved.toISOString(),
+    )
+    vi.useRealTimers()
+  })
+
+  it("rejects a daily alarm when the browser still schedules tomorrow after correction", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 23, 59, 0))
+    mockedBrowserApi.getAlarm.mockResolvedValue({
+      name: "autoCheckinDaily",
+      scheduledTime: new Date(2024, 0, 2).getTime(),
+    })
+    await expect(
+      autoCheckinAlarmSchedule.scheduleDailyAlarmForToday(
+        new Date(2024, 0, 1, 23, 59, 30).getTime(),
+      ),
+    ).rejects.toThrow("Failed to schedule daily alarm for today")
+    expect(mockedBrowserApi.createAlarm).toHaveBeenCalledTimes(2)
+    expect(mockedBrowserApi.createAlarm).toHaveBeenLastCalledWith(
+      "autoCheckinDaily",
+      { when: new Date(2024, 0, 1, 23, 59, 59, 999).getTime() },
+    )
+    expect(
+      schedulerTestState.storedStatus?.nextDailyScheduledAt,
+    ).toBeUndefined()
+    vi.useRealTimers()
+  })
+
+  it("keeps the retry ledger recoverable when the browser rejects alarm creation", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
+    const dailyTime = new Date(2024, 0, 2, 8, 30)
+    schedulerTestState.alarmStore.autoCheckinDaily = {
+      name: "autoCheckinDaily",
+      scheduledTime: dailyTime.getTime(),
+    }
+    schedulerTestState.storedStatus = {
+      lastRunAt: new Date(2024, 0, 1, 8, 50).toISOString(),
+      lastDailyRunDay: "2024-01-01",
+      pendingRetry: true,
+      retryState: {
+        day: "2024-01-01",
+        pendingAccountIds: ["a"],
+        attemptsByAccount: { a: 1 },
+      },
+    }
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...DEFAULT_PREFERENCES.autoCheckin,
+        globalEnabled: true,
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+    mockedBrowserApi.createAlarm.mockRejectedValueOnce(
+      new Error("browser unavailable"),
+    )
+    await expect(
+      autoCheckinScheduler.scheduleNextRun({ preserveExisting: true }),
+    ).resolves.toBeUndefined()
+    expect(mockedBrowserApi.createAlarm).toHaveBeenCalledWith(
+      "autoCheckinRetry",
+      { when: new Date(2024, 0, 1, 9, 20).getTime() },
+    )
+    expect(schedulerTestState.storedStatus.nextRetryScheduledAt).toBeUndefined()
+    expect(schedulerTestState.storedStatus.retryState).toEqual({
+      day: "2024-01-01",
+      pendingAccountIds: ["a"],
+      attemptsByAccount: { a: 1 },
+    })
+    vi.useRealTimers()
+  })
+
   it("merges daily schedule updates into the latest status snapshot", async () => {
     const freshStatus = {
       lastRunAt: "2024-01-02T00:00:00.000Z",

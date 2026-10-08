@@ -1461,6 +1461,146 @@ describe("importFromBackupObject", () => {
     )
   })
 
+  it("stops planned canonical imports when preferences cannot be persisted", async () => {
+    mockUserPreferencesImport.mockResolvedValue(preferenceWriteFailure())
+    await expect(
+      importFromBackupObject(
+        {
+          version: BACKUP_VERSION,
+          timestamp: Date.now(),
+          preferences: { themeMode: "dark" },
+          channelConfigs: channelConfigSnapshot([]),
+          apiCredentialProfiles: { version: 2, profiles: [] },
+        },
+        {
+          plan: {
+            accounts: "skip",
+            preferences: "replace",
+            channelConfigs: "replace",
+            apiCredentialProfiles: "replace",
+          },
+        },
+      ),
+    ).rejects.toThrow("importExport:import.importOperationFailed")
+    expect(mockChannelConfigImport).not.toHaveBeenCalled()
+    expect(mockApiCredentialProfilesImportConfig).not.toHaveBeenCalled()
+  })
+
+  it("replaces profile-only backups without a tag store", async () => {
+    const profiles = { version: 2, profiles: [] }
+    await importFromBackupObject(
+      {
+        version: BACKUP_VERSION,
+        timestamp: Date.now(),
+        apiCredentialProfiles: profiles,
+      },
+      {
+        plan: {
+          accounts: "skip",
+          preferences: "skip",
+          channelConfigs: "skip",
+          apiCredentialProfiles: "replace",
+        },
+      },
+    )
+    expect(mockApiCredentialProfilesImportConfig).toHaveBeenCalledWith(profiles)
+    expect(mockApiCredentialProfilesMergeConfig).not.toHaveBeenCalled()
+  })
+
+  it("keeps local entries, adds remote entries and replaces older matching entries during a merge", async () => {
+    const local = { id: "retained-local", updated_at: 10 }
+    const incoming = { id: "new-remote", updated_at: 20 }
+    const oldMatching = { id: "matching", updated_at: 10 }
+    const newerMatching = { id: "matching", updated_at: 20 }
+    mockAccountStorageExportData.mockResolvedValue({
+      accounts: [local, oldMatching],
+      bookmarks: [],
+      pinnedAccountIds: [],
+      orderedAccountIds: [],
+      deletedEntryRecords: {},
+    })
+    mockTagStoreExport.mockResolvedValue({ version: 1, tagsById: {} })
+    mockMergeTagStoresForSync.mockReturnValueOnce({
+      tagStore: { version: 1, tagsById: {} },
+      localAccounts: [local, oldMatching],
+      remoteAccounts: [incoming, newerMatching],
+      localBookmarks: [],
+      remoteBookmarks: [],
+      localTaggables: [],
+      remoteTaggables: [],
+    })
+    await importFromBackupObject(
+      {
+        version: BACKUP_VERSION,
+        timestamp: Date.now(),
+        accounts: { accounts: [incoming, newerMatching], last_updated: 20 },
+      },
+      {
+        plan: {
+          accounts: "merge",
+          preferences: "skip",
+          channelConfigs: "skip",
+          apiCredentialProfiles: "skip",
+        },
+      },
+    )
+    expect(mockAccountStorageImportData).toHaveBeenCalledWith(
+      expect.objectContaining({ accounts: [local, newerMatching, incoming] }),
+    )
+  })
+
+  it("imports the legacy tag store before accounts", async () => {
+    const tagStore = { version: 1, tagsById: {} }
+    await importFromBackupObject({
+      version: "1.0",
+      timestamp: Date.now(),
+      accounts: [{ id: "legacy-tagged" }],
+      tagStore,
+    })
+    expect(mockTagStoreImport).toHaveBeenCalledWith(tagStore)
+    expect(mockAccountStorageImportData).toHaveBeenCalledWith({
+      accounts: [{ id: "legacy-tagged" }],
+    })
+    expect(mockTagStoreImport.mock.invocationCallOrder[0]).toBeLessThan(
+      mockAccountStorageImportData.mock.invocationCallOrder[0]!,
+    )
+  })
+
+  it("preserves WebDAV configuration when importing legacy preferences", async () => {
+    const preferences = { themeMode: "dark" }
+    await importFromBackupObject(
+      { version: "1.0", timestamp: Date.now(), preferences },
+      { preserveWebdav: true },
+    )
+    expect(mockUserPreferencesImport).toHaveBeenCalledWith(preferences, {
+      preserveWebdav: true,
+    })
+  })
+
+  it("rejects an entirely skipped legacy backup without writing", async () => {
+    await expect(
+      importFromBackupObject(
+        {
+          version: "1.0",
+          timestamp: Date.now(),
+          accounts: [{ id: "skipped" }],
+          preferences: { themeMode: "dark" },
+        },
+        {
+          plan: {
+            accounts: "skip",
+            preferences: "skip",
+            channelConfigs: "skip",
+            apiCredentialProfiles: "skip",
+          },
+        },
+      ),
+    ).rejects.toThrow("importExport:import.noImportableData")
+    expect(mockAccountStorageImportData).not.toHaveBeenCalled()
+    expect(mockUserPreferencesImport).not.toHaveBeenCalled()
+    expect(mockTagStoreImport).not.toHaveBeenCalled()
+  })
+
   it("preserves webdav config when preserveWebdav option is provided", async () => {
     const backup: BackupPreferencesPartialV2 = {
       version: BACKUP_VERSION,

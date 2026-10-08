@@ -329,7 +329,7 @@ describe("SiteAnnouncementsPage", () => {
       }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole("heading", {
+      await screen.findByRole("heading", {
         level: 2,
         name: "Full maintenance window",
       }),
