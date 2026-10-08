@@ -52,10 +52,7 @@ import {
   runApiVerificationProbe,
 } from "~/services/verification/aiApiVerification"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
-import {
-  createAccountModelVerificationHistoryTarget,
-  verificationResultHistoryStorage,
-} from "~/services/verification/verificationResultHistory"
+import { createAccountModelVerificationHistoryTarget } from "~/services/verification/verificationResultHistory"
 import { createLogger } from "~/utils/core/logger"
 
 /**
@@ -98,6 +95,8 @@ export function useVerifyApiDialogViewModel({
   const {
     isRunning,
     isStopped,
+    isCurrent,
+    captureContext,
     runSuite,
     runProbe: runProbeTask,
     runSequentialProbes,
@@ -131,6 +130,7 @@ export function useVerifyApiDialogViewModel({
     setPersistedSummary: applyPersistedSummary,
     persistedSummaryRef,
     persistCurrentResults,
+    clearVerificationHistory,
     loadVerificationHistory,
   } = useVerificationDialogState(historyTarget)
 
@@ -191,9 +191,11 @@ export function useVerifyApiDialogViewModel({
   } as const
 
   const loadRuntimeKeys = async () => {
+    const isCurrentContext = captureContext()
     setIsLoadingRuntimeKeys(true)
     try {
       const runtimeKeys = await fetchDisplayAccountRuntimeKeys(account)
+      if (!isCurrentContext()) return
 
       const sorted = sortAccountRuntimeKeysActiveFirst(runtimeKeys)
 
@@ -210,6 +212,7 @@ export function useVerifyApiDialogViewModel({
         : findDefaultSelectableAccountRuntimeKey(sorted)
       setSelectedRuntimeKeyId(defaultRuntimeKey ? defaultRuntimeKey.id : "")
     } catch (error) {
+      if (!isCurrentContext()) return
       logger.error("Failed to load runtime keys", {
         message: toSanitizedErrorSummary(
           error,
@@ -219,7 +222,7 @@ export function useVerifyApiDialogViewModel({
       setAccountRuntimeKeys([])
       setSelectedRuntimeKeyId("")
     } finally {
-      setIsLoadingRuntimeKeys(false)
+      if (isCurrentContext()) setIsLoadingRuntimeKeys(false)
     }
   }
 
@@ -236,6 +239,7 @@ export function useVerifyApiDialogViewModel({
       mode: verificationMode,
       signal: abortSignal,
       isStopped: () => isStopped(abortSignal),
+      isCurrent: () => isCurrent(abortSignal),
       isAbortFailure: (error) => isVerificationAbortError(error, abortSignal),
       stoppedMode: () => executedMode,
       readProbes: () => probesRef.current,
@@ -285,9 +289,7 @@ export function useVerifyApiDialogViewModel({
 
   const clearHistory = async () => {
     if (!historyTarget) return
-    await verificationResultHistoryStorage.clearTarget(historyTarget)
-    applyPersistedSummary(null)
-    replaceProbes(buildProbeState(apiType))
+    await clearVerificationHistory(apiType)
   }
 
   // The suite can always run the models probe without a model id.
@@ -325,7 +327,8 @@ export function useVerifyApiDialogViewModel({
           signal,
         )
         if (isStopped(signal)) {
-          replaceProbes(withUnfinishedProbesStopped(probesRef.current))
+          if (isCurrent(signal))
+            replaceProbes(withUnfinishedProbesStopped(probesRef.current))
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
             insights: {
               successCount,
@@ -375,11 +378,11 @@ export function useVerifyApiDialogViewModel({
   }
 
   useEffect(() => {
+    reset()
     if (!isOpen) return
 
     let cancelled = false
     const trimmedModelId = initialModelId?.trim() ?? ""
-    reset()
     setAccountRuntimeKeys([])
     setSelectedRuntimeKeyId("")
     setModelId(trimmedModelId)
@@ -413,6 +416,7 @@ export function useVerifyApiDialogViewModel({
 
     return () => {
       cancelled = true
+      reset()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account.id, historyTarget, initialModelId, isOpen])

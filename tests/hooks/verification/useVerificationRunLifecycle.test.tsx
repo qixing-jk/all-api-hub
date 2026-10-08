@@ -13,6 +13,55 @@ function deferred() {
 }
 
 describe("verification run lifecycle", () => {
+  it("does not let a reset suite completion clear its replacement", async () => {
+    const older = deferred()
+    const newer = deferred()
+    const { result } = renderHook(() => useVerificationRunLifecycle())
+    let first!: Promise<void>
+    let second!: Promise<void>
+    act(() => {
+      first = result.current.runSuite(() => older.promise)
+    })
+    act(() => {
+      result.current.reset()
+      second = result.current.runSuite(() => newer.promise)
+    })
+    await act(async () => {
+      older.resolve()
+      await first
+    })
+    expect(result.current.isRunning).toBe(true)
+    await act(async () => {
+      newer.resolve()
+      await second
+    })
+    expect(result.current.isRunning).toBe(false)
+  })
+
+  it("cancels suites and individual probes on unmount", async () => {
+    const pending = deferred()
+    const { result, unmount } = renderHook(() => useVerificationRunLifecycle())
+    const signals: AbortSignal[] = []
+    let suite!: Promise<void>
+    let probe!: Promise<void>
+    act(() => {
+      suite = result.current.runSuite((signal) => {
+        signals.push(signal)
+        return pending.promise
+      })
+      probe = result.current.runProbe("models", (signal) => {
+        signals.push(signal)
+        return pending.promise
+      })
+    })
+    unmount()
+    expect(signals.every((signal) => signal.aborted)).toBe(true)
+    await act(async () => {
+      pending.resolve()
+      await Promise.all([suite, probe])
+    })
+  })
+
   it("stops a sequential suite before another probe starts, even when the first resolves", async () => {
     const pending = deferred()
     const started: string[] = []

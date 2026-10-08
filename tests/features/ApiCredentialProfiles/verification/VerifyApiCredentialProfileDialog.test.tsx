@@ -1,3 +1,4 @@
+import { renderHook } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 import { I18nextProvider } from "react-i18next"
@@ -7,6 +8,10 @@ import {
   API_CREDENTIAL_PROFILES_TEST_IDS,
   getApiCredentialProfileVerifyProbeTestId,
 } from "~/features/ApiCredentialProfiles/testIds"
+import {
+  useProfileVerification,
+  type VerifyApiCredentialProfileDialogProps,
+} from "~/features/ApiCredentialProfiles/verification/useProfileVerification"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/verification/VerifyApiCredentialProfileDialog"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -16,6 +21,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import type { ApiVerificationProbeResult } from "~/services/verification/aiApiVerification"
 import {
   API_TYPES,
   API_VERIFICATION_PROBE_STATUSES,
@@ -251,6 +257,186 @@ describe("VerifyApiCredentialProfileDialog", () => {
     mockFetchAnthropicModelIds.mockResolvedValue([])
     mockFetchGoogleModelIds.mockResolvedValue([])
     await verificationResultHistoryStorage.clearAllData()
+  })
+
+  const sessionProfile = {
+    id: "session-a",
+    name: "Session A",
+    apiType: API_TYPES.OPENAI_COMPATIBLE,
+    baseUrl: "https://example.invalid",
+    apiKey: "synthetic-key",
+    tagIds: [],
+    notes: "",
+    createdAt: 1,
+    updatedAt: 1,
+  }
+  const sessionProps: VerifyApiCredentialProfileDialogProps = {
+    isOpen: true,
+    profile: sessionProfile,
+    onClose: vi.fn(),
+    initialModelId: "model",
+  }
+  const acceptedProbe: ApiVerificationProbeResult = {
+    id: "text-generation",
+    status: "pass",
+    latencyMs: 1,
+    summary: "Accepted",
+  }
+
+  it.each([
+    { transition: "target", outcome: "response" },
+    { transition: "target", outcome: "rejection" },
+    { transition: "reopen", outcome: "response" },
+    { transition: "reopen", outcome: "rejection" },
+  ])(
+    "ignores an obsolete $outcome after $transition without clearing the new active probe",
+    async ({ transition, outcome }) => {
+      const older = createDeferred<ApiVerificationProbeResult>()
+      const newer = createDeferred<ApiVerificationProbeResult>()
+      mockRunApiVerificationProbe
+        .mockReturnValueOnce(older.promise)
+        .mockReturnValueOnce(newer.promise)
+      const { result, rerender } = renderHook(useProfileVerification, {
+        initialProps: sessionProps,
+      })
+      await waitFor(() => expect(result.current.isFetchingModels).toBe(false))
+      let oldRun!: Promise<void>
+      let newRun!: Promise<void>
+      act(() => {
+        oldRun = result.current.runSingleProbe("text-generation")
+      })
+      const nextProps =
+        transition === "target"
+          ? { ...sessionProps, profile: { ...sessionProfile, id: "session-b" } }
+          : sessionProps
+      if (transition === "reopen") rerender({ ...sessionProps, isOpen: false })
+      rerender(nextProps)
+      await waitFor(() => expect(result.current.isFetchingModels).toBe(false))
+      act(() => {
+        newRun = result.current.runSingleProbe("text-generation")
+      })
+      await act(async () => {
+        if (outcome === "response") older.resolve(acceptedProbe)
+        else older.reject(new DOMException("Aborted", "AbortError"))
+        await oldRun
+      })
+      expect(result.current.activeProbeId).toBe("text-generation")
+      expect(
+        result.current.probes.find(
+          (probe) => probe.definition.id === "text-generation",
+        ),
+      ).toMatchObject({ isRunning: true, result: null })
+      expect(
+        await verificationResultHistoryStorage.getLatestSummary(
+          requireHistoryTarget(
+            createProfileModelVerificationHistoryTarget("session-a", "model"),
+          ),
+        ),
+      ).toBeNull()
+      await act(async () => {
+        newer.resolve(acceptedProbe)
+        await newRun
+      })
+      expect(result.current.activeProbeId).toBeNull()
+    },
+  )
+
+  it("keeps a new target busy while an old target's committed history save finishes", async () => {
+    const firstSave = createDeferred<void>()
+    const secondSave = createDeferred<void>()
+    const originalSave =
+      verificationResultHistoryStorage.upsertLatestSummary.bind(
+        verificationResultHistoryStorage,
+      )
+    vi.spyOn(verificationResultHistoryStorage, "upsertLatestSummary")
+      .mockImplementationOnce(async (summary) => {
+        await firstSave.promise
+        return originalSave(summary)
+      })
+      .mockImplementationOnce(async (summary) => {
+        await secondSave.promise
+        return originalSave(summary)
+      })
+    mockRunApiVerificationProbe.mockResolvedValue(acceptedProbe)
+    const { result, rerender } = renderHook(useProfileVerification, {
+      initialProps: sessionProps,
+    })
+    await waitFor(() => expect(result.current.isFetchingModels).toBe(false))
+    let oldRun!: Promise<void>
+    let newRun!: Promise<void>
+    act(() => {
+      oldRun = result.current.runSingleProbe("text-generation")
+    })
+    await waitFor(() => expect(result.current.isPersisting).toBe(true))
+    rerender({
+      ...sessionProps,
+      profile: { ...sessionProfile, id: "session-b" },
+    })
+    await waitFor(() => expect(result.current.isFetchingModels).toBe(false))
+    act(() => {
+      newRun = result.current.runSingleProbe("text-generation")
+    })
+    await waitFor(() =>
+      expect(
+        verificationResultHistoryStorage.upsertLatestSummary,
+      ).toHaveBeenCalledTimes(2),
+    )
+    await act(async () => {
+      firstSave.resolve()
+      await oldRun
+    })
+    expect(result.current.isPersisting).toBe(true)
+    expect(result.current.activeProbeId).toBe("text-generation")
+    expect(result.current.persistedSummary).toBeNull()
+    expect(
+      await verificationResultHistoryStorage.getLatestSummary(
+        requireHistoryTarget(
+          createProfileModelVerificationHistoryTarget("session-a", "model"),
+        ),
+      ),
+    ).not.toBeNull()
+    await act(async () => {
+      secondSave.resolve()
+      await newRun
+    })
+    expect(result.current.isPersisting).toBe(false)
+  })
+
+  it("does not clear a new target's running rows when an old clear request finishes", async () => {
+    const clearing = createDeferred<boolean>()
+    const probe = createDeferred<ApiVerificationProbeResult>()
+    vi.spyOn(
+      verificationResultHistoryStorage,
+      "clearTarget",
+    ).mockImplementationOnce(() => clearing.promise)
+    mockRunApiVerificationProbe.mockReturnValueOnce(probe.promise)
+    const { result, rerender } = renderHook(useProfileVerification, {
+      initialProps: sessionProps,
+    })
+    await waitFor(() => expect(result.current.isFetchingModels).toBe(false))
+    const oldClear = result.current.clearHistory()
+    rerender({
+      ...sessionProps,
+      profile: { ...sessionProfile, id: "session-b" },
+    })
+    await waitFor(() => expect(result.current.isFetchingModels).toBe(false))
+    let running!: Promise<void>
+    act(() => {
+      running = result.current.runSingleProbe("text-generation")
+    })
+    await act(async () => {
+      clearing.resolve(true)
+      await oldClear
+    })
+    expect(
+      result.current.probes.find(
+        (row) => row.definition.id === "text-generation",
+      )?.isRunning,
+    ).toBe(true)
+    await act(async () => {
+      probe.resolve(acceptedProbe)
+      await running
+    })
   })
 
   it.each(["pass", "fail"] as const)(

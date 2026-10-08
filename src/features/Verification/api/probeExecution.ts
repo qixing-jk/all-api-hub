@@ -18,6 +18,7 @@ type ProbeExecution = {
   mode: ApiVerificationMode
   signal?: AbortSignal
   isStopped: () => boolean
+  isCurrent: () => boolean
   isAbortFailure?: (error: unknown) => boolean
   readProbes: () => ProbeItemState[]
   replaceProbes: (probes: ProbeItemState[]) => void
@@ -40,6 +41,7 @@ export async function executeDialogProbe({
   mode,
   signal,
   isStopped,
+  isCurrent,
   isAbortFailure = (error) => isAbortError(error, signal),
   readProbes,
   replaceProbes,
@@ -51,6 +53,7 @@ export async function executeDialogProbe({
   result: ApiVerificationProbeResult | null
   error?: unknown
 }> {
+  if (!isCurrent()) return { result: null }
   replaceProbes(
     readProbes().map((probe) =>
       probe.definition.id === probeId
@@ -71,15 +74,17 @@ export async function executeDialogProbe({
     )
     replaceProbes(probes)
     await acceptResult(probes, result)
-    return result
+    return isCurrent() ? result : null
   }
 
   try {
     const result = await execute()
+    if (!isCurrent()) return { result: null }
     // An aborted request can still resolve successfully; acceptance follows intent.
     if (isStopped()) return settleStopped()
     return { result: await accept(result) }
   } catch (error) {
+    if (!isCurrent()) return { result: null }
     if (isAbortFailure(error) || isStopped()) return settleStopped()
 
     const sanitizedMessage = toSanitizedErrorSummary(error, failure.secrets())

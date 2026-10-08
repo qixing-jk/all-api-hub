@@ -111,6 +111,20 @@ runs; a completed predecessor cannot replace a newer run's state. Background
 cancellation tracks the current task instance independently of the UI session.
 _Avoid_: API Credential Profile, probe result, background message
 
+**Verification Run Session**:
+Probe and suite tasks admitted for one saved-account or API Credential Profile
+verification workspace. Stopping a current task may publish a stopped state;
+invalidating its workspace prevents it from publishing further state or starting
+history writes. A history write already admitted retains its original target.
+_Avoid_: API Verification Probe Session, persisted verification summary
+
+**Usage History Sync Commit**:
+Acceptance of collected usage logs into the latest persisted account history.
+Deduplication, aggregation, cursor advancement and the current retention policy
+are applied together under the history write lock. A completed fetch does not
+establish that its logs were committed successfully.
+_Avoid_: log fetch, usage history snapshot, sync schedule
+
 **Model Selection Attempt**:
 One attempt to select a Managed Upstream Resource's models through the allow-list,
 global rules and resource rules. Probe and credential evidence is shared within

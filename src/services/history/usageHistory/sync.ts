@@ -18,15 +18,7 @@ import {
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
 
-import {
-  USAGE_HISTORY_LIMITS,
-  USAGE_HISTORY_UNSUPPORTED_COOLDOWN_MS,
-} from "./constants"
-import {
-  computeRetentionCutoffDayKey,
-  ingestConsumeLogItems,
-  pruneUsageHistoryAccountStore,
-} from "./core"
+import { USAGE_HISTORY_LIMITS } from "./constants"
 import { usageHistoryStorage } from "./storage"
 
 export const USAGE_HISTORY_SYNC_TRIGGERS = {
@@ -210,66 +202,60 @@ export async function syncUsageHistoryForAccount(params: {
     nowUnixSeconds - retentionDays * 24 * 60 * 60,
   )
 
-  const accountStore = await usageHistoryStorage.getAccountStore(accountId)
-
-  // Due check: unsupported cooldown.
-  if (
-    !force &&
-    typeof accountStore.status.unsupportedUntil === "number" &&
-    accountStore.status.unsupportedUntil > nowMs
-  ) {
-    return {
-      accountId,
-      status: "skipped",
-      ingestedCount: 0,
-      pagesFetched: 0,
-      itemsFetched: 0,
-      partial: false,
-    }
-  }
-
-  // Due check: sync interval.
-  const syncIntervalMinutesRaw = Number(config.syncIntervalMinutes)
-  const intervalMs =
-    (Number.isFinite(syncIntervalMinutesRaw)
-      ? Math.max(1, Math.trunc(syncIntervalMinutesRaw))
-      : 1) *
-    60 *
-    1000
-  if (
-    !force &&
-    typeof accountStore.status.lastSyncAt === "number" &&
-    nowMs - accountStore.status.lastSyncAt < intervalMs
-  ) {
-    return {
-      accountId,
-      status: "skipped",
-      ingestedCount: 0,
-      pagesFetched: 0,
-      itemsFetched: 0,
-      partial: false,
-    }
-  }
-
-  // Determine fetch range based on cursor and retention.
-  const startTimestamp = Math.max(
-    accountStore.cursor.lastSeenCreatedAt,
-    retentionStartTimestamp,
-  )
-  const endTimestamp = nowUnixSeconds
-  const cutoffDayKey = computeRetentionCutoffDayKey(
-    retentionDays,
-    nowUnixSeconds,
-    timeZone,
-  )
-
-  // Fetch and ingest pages until limits are reached.
-  let pagesFetched = 0
-  let itemsFetched = 0
-  let ingestedCount = 0
-  let partial = false
-
   try {
+    const accountStore = await usageHistoryStorage.getSyncState(accountId)
+
+    // Due check: unsupported cooldown.
+    if (
+      !force &&
+      typeof accountStore.status.unsupportedUntil === "number" &&
+      accountStore.status.unsupportedUntil > nowMs
+    ) {
+      return {
+        accountId,
+        status: "skipped",
+        ingestedCount: 0,
+        pagesFetched: 0,
+        itemsFetched: 0,
+        partial: false,
+      }
+    }
+
+    // Due check: sync interval.
+    const syncIntervalMinutesRaw = Number(config.syncIntervalMinutes)
+    const intervalMs =
+      (Number.isFinite(syncIntervalMinutesRaw)
+        ? Math.max(1, Math.trunc(syncIntervalMinutesRaw))
+        : 1) *
+      60 *
+      1000
+    if (
+      !force &&
+      typeof accountStore.status.lastSyncAt === "number" &&
+      nowMs - accountStore.status.lastSyncAt < intervalMs
+    ) {
+      return {
+        accountId,
+        status: "skipped",
+        ingestedCount: 0,
+        pagesFetched: 0,
+        itemsFetched: 0,
+        partial: false,
+      }
+    }
+
+    // Determine fetch range based on cursor and retention.
+    const startTimestamp = Math.max(
+      accountStore.cursor.lastSeenCreatedAt,
+      retentionStartTimestamp,
+    )
+    const endTimestamp = nowUnixSeconds
+    // Collection is bounded and remains outside the storage write lock.
+    let pagesFetched = 0
+    let itemsFetched = 0
+    let partial = false
+    const collectedItems: LogItem[] = []
+
     const firstPage = await fetchConsumeLogPage({
       request: apiRequest,
       page: 1,
@@ -278,19 +264,6 @@ export async function syncUsageHistoryForAccount(params: {
     })
 
     const totalPages = resolveTotalPages(firstPage)
-    const startCursor = {
-      ...accountStore.cursor,
-      fingerprintsAtLastSeenCreatedAt: [
-        ...accountStore.cursor.fingerprintsAtLastSeenCreatedAt,
-      ],
-    }
-    let cursorCandidate = {
-      ...startCursor,
-      fingerprintsAtLastSeenCreatedAt: [
-        ...startCursor.fingerprintsAtLastSeenCreatedAt,
-      ],
-    }
-
     const processPageItems = (items: LogItem[]) => {
       if (itemsFetched >= USAGE_HISTORY_LIMITS.maxItems) {
         partial = true
@@ -302,16 +275,7 @@ export async function syncUsageHistoryForAccount(params: {
         remaining < items.length ? items.slice(0, remaining) : items
       itemsFetched += sliced.length
 
-      const ingestResult = ingestConsumeLogItems({
-        accountStore,
-        items: sliced,
-        startCursor,
-        cursorCandidate,
-        timeZone,
-      })
-
-      cursorCandidate = ingestResult.cursorCandidate
-      ingestedCount += ingestResult.ingestedCount
+      collectedItems.push(...sliced)
 
       if (sliced.length < items.length) {
         partial = true
@@ -344,22 +308,13 @@ export async function syncUsageHistoryForAccount(params: {
       }
     }
 
-    accountStore.cursor = cursorCandidate
-    pruneUsageHistoryAccountStore(accountStore, cutoffDayKey)
-
-    accountStore.status = {
-      ...accountStore.status,
-      state: "success",
-      lastSyncAt: nowMs,
-      lastSuccessAt: nowMs,
-      lastWarning: partial
-        ? `Reached safety limits (maxPages=${USAGE_HISTORY_LIMITS.maxPages}, maxItems=${USAGE_HISTORY_LIMITS.maxItems}); history may be incomplete for this run.`
-        : undefined,
-      lastError: undefined,
-      unsupportedUntil: undefined,
-    }
-
-    await usageHistoryStorage.updateAccountStore(accountId, () => accountStore)
+    const { ingestedCount } = await usageHistoryStorage.commitSync(accountId, {
+      items: collectedItems,
+      nowMs,
+      partial,
+      retentionDays,
+      timeZone,
+    })
 
     return {
       accountId,
@@ -373,21 +328,16 @@ export async function syncUsageHistoryForAccount(params: {
     const isUnsupported = isUnsupportedLogEndpointError(error)
     const message = getErrorMessage(error)
 
-    await usageHistoryStorage.updateAccountStore(accountId, (store) => {
-      const next = store
-      next.status = {
-        ...next.status,
-        state: isUnsupported ? "unsupported" : "error",
-        lastSyncAt: nowMs,
-        lastWarning: undefined,
-        lastError: message,
-        unsupportedUntil: isUnsupported
-          ? nowMs + USAGE_HISTORY_UNSUPPORTED_COOLDOWN_MS
-          : next.status.unsupportedUntil,
-      }
-
-      return next
-    })
+    try {
+      await usageHistoryStorage.recordSyncFailure(accountId, {
+        nowMs,
+        unsupported: isUnsupported,
+        message,
+      })
+    } catch {
+      // The original operation has already failed. A second storage failure
+      // must not reject the batch or recursively attempt another status write.
+    }
 
     return {
       accountId,

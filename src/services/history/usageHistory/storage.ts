@@ -3,6 +3,11 @@ import { Storage } from "@plasmohq/storage"
 import { STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
+  LogType,
+  type LogItem,
+} from "~/services/history/usageHistory/usageLogModel"
+import { userPreferences } from "~/services/preferences/userPreferences"
+import {
   USAGE_HISTORY_STORE_SCHEMA_VERSION,
   type UsageHistoryAccountStore,
   type UsageHistoryAggregate,
@@ -10,16 +15,21 @@ import {
   type UsageHistoryLatencyAggregate,
   type UsageHistoryStore,
 } from "~/types/usageHistory"
-import { parseDayKey } from "~/utils/core/dayKey"
+import { getDayKeyFromUnixSeconds, parseDayKey } from "~/utils/core/dayKey"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { isPlainObject } from "~/utils/core/object"
 
-import { USAGE_HISTORY_STORAGE_KEYS } from "./constants"
+import {
+  USAGE_HISTORY_LIMITS,
+  USAGE_HISTORY_STORAGE_KEYS,
+  USAGE_HISTORY_UNSUPPORTED_COOLDOWN_MS,
+} from "./constants"
 import {
   computeRetentionCutoffDayKey,
   createEmptyUsageHistoryAccountStore,
   createEmptyUsageHistoryLatencyAggregate,
+  ingestConsumeLogItems,
   pruneUsageHistoryAccountStore,
 } from "./core"
 
@@ -534,6 +544,7 @@ class UsageHistoryStorage {
 
   private async readStore(): Promise<{
     ok: boolean
+    error?: unknown
     store: UsageHistoryStore
   }> {
     try {
@@ -548,7 +559,7 @@ class UsageHistoryStorage {
       return { ok: true, store: createEmptyStore() }
     } catch (error) {
       logger.error("Failed to load store", error)
-      return { ok: false, store: createEmptyStore() }
+      return { ok: false, error, store: createEmptyStore() }
     }
   }
 
@@ -556,37 +567,41 @@ class UsageHistoryStorage {
     return (await this.readStore()).store
   }
 
-  async setStore(store: UsageHistoryStore): Promise<boolean> {
-    try {
-      await this.storage.set(USAGE_HISTORY_STORAGE_KEYS.STORE, store)
-      return true
-    } catch (error) {
-      logger.error("Failed to persist store", error)
-      return false
-    }
+  private async setStore(store: UsageHistoryStore): Promise<void> {
+    await this.storage.set(USAGE_HISTORY_STORAGE_KEYS.STORE, store)
   }
 
-  /**
-   * Update the store under an exclusive write lock to avoid cross-context
-   * read-modify-write races.
-   */
-  async updateStore(
-    updater: (store: UsageHistoryStore) => UsageHistoryStore | void,
-  ): Promise<UsageHistoryStore> {
+  /** Returns a mutation receipt only after the locked store write succeeds. */
+  private async mutateStore<TResult>(
+    mutation: (
+      store: UsageHistoryStore,
+    ) =>
+      | { store: UsageHistoryStore; result: TResult }
+      | Promise<{ store: UsageHistoryStore; result: TResult }>,
+  ): Promise<TResult> {
     return withExtensionStorageWriteLock(
       STORAGE_LOCKS.USAGE_HISTORY,
       async () => {
         const read = await this.readStore()
-        if (!read.ok) {
-          return read.store
-        }
-
-        const current = read.store
-        const updated = updater(current) ?? current
-        await this.setStore(updated)
-        return updated
+        if (!read.ok)
+          throw read.error ?? new Error("Failed to load usage history")
+        const changed = await mutation(read.store)
+        await this.setStore(changed.store)
+        return changed.result
       },
     )
+  }
+
+  /** Updates the latest store under its exclusive write lock. */
+  async updateStore(
+    updater: (
+      store: UsageHistoryStore,
+    ) => UsageHistoryStore | void | Promise<UsageHistoryStore | void>,
+  ): Promise<UsageHistoryStore> {
+    return this.mutateStore(async (current) => {
+      const store = (await updater(current)) ?? current
+      return { store, result: store }
+    })
   }
 
   async getAccountStore(accountId: string): Promise<UsageHistoryAccountStore> {
@@ -608,6 +623,103 @@ class UsageHistoryStorage {
     })
 
     return updated.accounts[accountId] ?? createEmptyUsageHistoryAccountStore()
+  }
+
+  /** Strict admission read: collection cannot proceed from an unreadable cursor. */
+  async getSyncState(
+    accountId: string,
+  ): Promise<Pick<UsageHistoryAccountStore, "cursor" | "status">> {
+    const read = await this.readStore()
+    if (!read.ok) throw read.error ?? new Error("Failed to load usage history")
+    const account =
+      read.store.accounts[accountId] ?? createEmptyUsageHistoryAccountStore()
+    return { cursor: account.cursor, status: account.status }
+  }
+
+  /** Commits collected logs against the latest cursor and retention policy under one write lock. */
+  async commitSync(
+    accountId: string,
+    params: {
+      items: LogItem[]
+      nowMs: number
+      partial: boolean
+      retentionDays: number
+      timeZone?: string
+    },
+  ): Promise<{ ingestedCount: number }> {
+    return this.mutateStore(async (store) => {
+      const account =
+        store.accounts[accountId] ?? createEmptyUsageHistoryAccountStore()
+      // Batch settings are a collection snapshot. A settings change that completed
+      // while requests were pending owns the retention applied by this commit.
+      const preferences = await userPreferences.getPreferencesStrict()
+      const retentionDays =
+        preferences.usageHistory?.retentionDays ?? params.retentionDays
+      const cutoffDayKey = computeRetentionCutoffDayKey(
+        retentionDays,
+        Math.floor(Date.now() / 1000),
+        params.timeZone,
+      )
+      const items = params.items.filter(
+        (item) =>
+          item.type === LogType.Consume &&
+          !(item.created_at < account.cursor.lastSeenCreatedAt) &&
+          getDayKeyFromUnixSeconds(item.created_at, params.timeZone) >=
+            cutoffDayKey,
+      )
+      const startCursor = {
+        ...account.cursor,
+        fingerprintsAtLastSeenCreatedAt: [
+          ...account.cursor.fingerprintsAtLastSeenCreatedAt,
+        ],
+      }
+      const result = ingestConsumeLogItems({
+        accountStore: account,
+        items,
+        startCursor,
+        cursorCandidate: {
+          ...startCursor,
+          fingerprintsAtLastSeenCreatedAt: [
+            ...startCursor.fingerprintsAtLastSeenCreatedAt,
+          ],
+        },
+        timeZone: params.timeZone,
+      })
+      account.cursor = result.cursorCandidate
+      pruneUsageHistoryAccountStore(account, cutoffDayKey)
+      account.status = {
+        ...account.status,
+        state: "success",
+        lastSyncAt: params.nowMs,
+        lastSuccessAt: params.nowMs,
+        lastWarning: params.partial
+          ? `Reached safety limits (maxPages=${USAGE_HISTORY_LIMITS.maxPages}, maxItems=${USAGE_HISTORY_LIMITS.maxItems}); history may be incomplete for this run.`
+          : undefined,
+        lastError: undefined,
+        unsupportedUntil: undefined,
+      }
+      store.accounts[accountId] = account
+      return { store, result: { ingestedCount: result.ingestedCount } }
+    })
+  }
+
+  /** Records one failed attempt; callers may report it even if this write also fails. */
+  async recordSyncFailure(
+    accountId: string,
+    params: { nowMs: number; unsupported: boolean; message: string },
+  ): Promise<void> {
+    await this.updateAccountStore(accountId, (account) => {
+      account.status = {
+        ...account.status,
+        state: params.unsupported ? "unsupported" : "error",
+        lastSyncAt: params.nowMs,
+        lastWarning: undefined,
+        lastError: params.message,
+        unsupportedUntil: params.unsupported
+          ? params.nowMs + USAGE_HISTORY_UNSUPPORTED_COOLDOWN_MS
+          : account.status.unsupportedUntil,
+      }
+    })
   }
 
   /**
