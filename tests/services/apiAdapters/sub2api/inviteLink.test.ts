@@ -7,7 +7,7 @@ const { fetchInviteLinkMock } = vi.hoisted(() => ({
   fetchInviteLinkMock: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/sub2api", () => ({
+vi.mock("~/services/apiService/sub2api/inviteLink", () => ({
   fetchInviteLink: fetchInviteLinkMock,
 }))
 

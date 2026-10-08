@@ -30,14 +30,21 @@ const {
   mockUpdateSub2ApiKey: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/sub2api", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/services/apiService/sub2api")>()),
+vi.mock("~/services/apiService/sub2api/keys", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/apiService/sub2api/keys")
+  >()),
   createSub2ApiKey: mockCreateSub2ApiKey,
   deleteApiToken: mockDeleteApiToken,
   fetchSub2ApiKeys: mockFetchSub2ApiKeys,
-  fetchSub2ApiGroupDescriptors: mockFetchSub2ApiGroupDescriptors,
   fetchSub2ApiKey: mockFetchSub2ApiKey,
   updateSub2ApiKey: mockUpdateSub2ApiKey,
+}))
+vi.mock("~/services/apiService/sub2api/groups", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/apiService/sub2api/groups")
+  >()),
+  fetchSub2ApiGroupDescriptors: mockFetchSub2ApiGroupDescriptors,
 }))
 
 const request = {

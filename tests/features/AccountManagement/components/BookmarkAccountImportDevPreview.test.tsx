@@ -34,7 +34,7 @@ vi.mock("~/utils/core/environment", async (original) => ({
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   useAccountDataContext: () => ({ accounts: [], loadAccountData }),
 }))
-vi.mock("~/features/AccountManagement/hooks/DialogStateContext", () => ({
+vi.mock("~/features/AccountManagement/hooks/useDialogStateContext", () => ({
   useDialogStateContext: () => ({ openAddAccount }),
 }))
 vi.mock("~/services/permissions/permissionManager", async (original) => ({

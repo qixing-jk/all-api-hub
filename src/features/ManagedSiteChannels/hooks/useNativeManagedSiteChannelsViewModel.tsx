@@ -1,12 +1,10 @@
 import type { TFunction } from "i18next"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import type { ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { type ChannelFilterTarget } from "~/features/ManagedSiteChannels/components/ChannelFilterDialog"
-import { useManagedResourceListController } from "~/features/ManagedSiteChannels/controllers/useManagedResourceListController"
-import { useManagedResourceMigrationController } from "~/features/ManagedSiteChannels/controllers/useManagedResourceMigrationController"
 import { useManagedResourceMutationController } from "~/features/ManagedSiteChannels/controllers/useManagedResourceMutationController"
 import { useManagedResourceEditorPresentation } from "~/features/ManagedSiteChannels/hooks/useManagedResourceEditorPresentation"
 import { useManagedSiteChannelModelSync } from "~/features/ManagedSiteChannels/hooks/useManagedSiteChannelModelSync"
@@ -15,12 +13,10 @@ import type {
   ManagedChannelsCallbacks,
   ManagedChannelsCapabilities,
   ManagedChannelsPresentationState,
-  ManagedSiteMigrationLabels,
 } from "~/features/ManagedSiteChannels/presentation/contracts"
 import {
   buildManagedResourceDetailFields,
   createManagedResourceDetailLabels,
-  createManagedResourceDisplayFieldIds,
 } from "~/features/ManagedSiteChannels/presentation/managedResourceDetailPresentation"
 import { presentManagedResourceFailure } from "~/features/ManagedSiteChannels/presentation/managedResourceFailurePresentation"
 import {
@@ -28,12 +24,12 @@ import {
   type ManagedResourceEditorMode,
 } from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
 import { presentManagedResourceRow } from "~/features/ManagedSiteChannels/presentation/managedResourcePresentation"
-import {
-  createManagedResourceColumns,
-  getDefaultManagedResourceSorting,
-  getManagedResourcePresentationSemantics,
-} from "~/features/ManagedSiteChannels/presentation/managedResourceTablePolicy"
+import { createManagedResourceColumns } from "~/features/ManagedSiteChannels/presentation/managedResourceTablePolicy"
 import { createManagedSiteChannelsLabels } from "~/features/ManagedSiteChannels/presentation/managedSiteChannelsLabels"
+import {
+  nativeChannelActionAnalyticsContext,
+  trackNativeChannelActionStarted,
+} from "~/features/ManagedSiteChannels/presentation/nativeChannelActionAnalytics"
 import { useManagedSiteChannelPageExperience } from "~/features/ManagedSiteChannels/presentation/useManagedSiteChannelPageExperience"
 import { useManagedResourceInteraction } from "~/features/ManagedSiteChannels/providers/useManagedResourceInteraction"
 import { recordGatewayGuidanceCompletion } from "~/features/UnifiedApiGuidance/recordGatewayGuidanceCompletion"
@@ -46,12 +42,8 @@ import {
   type ManagedResourceRegistration,
   type ResourceFailure,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/channelMigrationCapabilityRegistry"
-import { getManagedSiteTargetOptions } from "~/services/managedSites/channelMigrationTargets"
 import {
   getManagedResourceRefKey,
-  isManagedResourceRefForSite,
-  parseManagedResourceRef,
   toManagedUpstreamResourceRef,
 } from "~/services/managedSites/managedResourceIdentity"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
@@ -60,17 +52,11 @@ import {
   getManagedSiteUnsupportedModelSyncMessage,
   supportsManagedSiteModelSync,
 } from "~/services/managedSites/utils/managedSite"
-import {
-  startProductAnalyticsAction,
-  trackProductAnalyticsActionStarted,
-} from "~/services/productAnalytics/actions"
+import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
-  PRODUCT_ANALYTICS_ENTRYPOINTS,
-  PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/managedSite"
 import { normalizeManagedUpstreamResourceScopeKey } from "~/types/managedUpstreamResource"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import {
@@ -78,23 +64,9 @@ import {
   openSettingsTab,
 } from "~/utils/navigation"
 
-const nativeChannelActionAnalyticsContext = (
-  actionId: (typeof PRODUCT_ANALYTICS_ACTION_IDS)[keyof typeof PRODUCT_ANALYTICS_ACTION_IDS],
-  surfaceId: (typeof PRODUCT_ANALYTICS_SURFACE_IDS)[keyof typeof PRODUCT_ANALYTICS_SURFACE_IDS],
-) => ({
-  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
-  actionId,
-  surfaceId,
-  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-})
-
-const trackNativeChannelActionStarted = (
-  actionId: (typeof PRODUCT_ANALYTICS_ACTION_IDS)[keyof typeof PRODUCT_ANALYTICS_ACTION_IDS],
-  surfaceId: (typeof PRODUCT_ANALYTICS_SURFACE_IDS)[keyof typeof PRODUCT_ANALYTICS_SURFACE_IDS],
-) =>
-  void trackProductAnalyticsActionStarted(
-    nativeChannelActionAnalyticsContext(actionId, surfaceId),
-  )
+import { useNativeChannelDeletionFeedback } from "./useNativeChannelDeletionFeedback"
+import { useNativeChannelMigration } from "./useNativeChannelMigration"
+import { useNativeChannelWorkspace } from "./useNativeChannelWorkspace"
 
 const getFailureMessage = (
   t: TFunction,
@@ -147,65 +119,6 @@ const getFailureMessage = (
   return presentManagedResourceFailure(failure, fallback)
 }
 
-const createMigrationLabels = (
-  t: TFunction,
-  selectedCount: number,
-  preview: ReturnType<typeof useManagedResourceMigrationController>["preview"],
-): ManagedSiteMigrationLabels => ({
-  title: t("managedSiteChannels:migration.title"),
-  beta: t("managedSiteChannels:migration.betaBadge"),
-  description: t("managedSiteChannels:migration.description", {
-    selectedCount,
-  }),
-  targetLabel: t("managedSiteChannels:migration.target.label"),
-  targetPlaceholder: t("managedSiteChannels:migration.target.placeholder"),
-  sourceLabel: t("managedSiteChannels:migration.target.sourceLabel"),
-  destinationLabel: t("managedSiteChannels:migration.target.destinationLabel"),
-  unselectedTarget: t("managedSiteChannels:migration.target.unselected"),
-  refreshPreview: t("managedSiteChannels:migration.actions.refreshPreview"),
-  loadingPreview: t("managedSiteChannels:migration.preview.loading"),
-  generalWarningsTitle: t(
-    "managedSiteChannels:migration.generalWarnings.title",
-  ),
-  generalWarningsSummary: t(
-    "managedSiteChannels:migration.generalWarnings.compactSummary",
-  ),
-  limitsLabel: t("managedSiteChannels:migration.preview.badges.limitsLabel"),
-  warningsLabel: t(
-    "managedSiteChannels:migration.preview.badges.warningsLabel",
-  ),
-  ready: t("managedSiteChannels:migration.preview.status.ready"),
-  blocked: t("managedSiteChannels:migration.preview.status.blocked"),
-  fieldLabel: t("managedSiteChannels:migration.preview.compare.fieldLabel"),
-  resultsTitle: t("managedSiteChannels:migration.results.title"),
-  close: t("managedSiteChannels:migration.actions.close"),
-  cancel: t("managedSiteChannels:migration.actions.cancel"),
-  start: t("managedSiteChannels:migration.actions.start"),
-  running: t("managedSiteChannels:migration.actions.running"),
-  footerSummary: t("managedSiteChannels:migration.preview.summary", {
-    ready: preview?.readyCount ?? 0,
-    blocked: preview?.blockedCount ?? 0,
-    total: preview?.totalCount ?? selectedCount,
-  }),
-  confirmationTitle: t("managedSiteChannels:migration.confirm.title"),
-  confirmationDescription: t(
-    "managedSiteChannels:migration.confirm.description",
-    {
-      ready: preview?.readyCount ?? 0,
-      total: preview?.totalCount ?? selectedCount,
-    },
-  ),
-  confirmationWarningTitle: t(
-    "managedSiteChannels:migration.confirm.warningTitle",
-  ),
-  confirmationConfirm: t("managedSiteChannels:migration.confirm.confirm"),
-  missingValue: t("common:labels.notAvailable"),
-  refreshRequired: t("managedSiteChannels:migration.results.refreshRequired"),
-  refreshRequiredAction: t(
-    "managedSiteChannels:migration.actions.refreshChannels",
-  ),
-})
-
 /** Composes native controllers with workspace state and presentation commands. */
 export function useNativeManagedSiteChannelsViewModel({
   siteType,
@@ -234,16 +147,6 @@ export function useNativeManagedSiteChannelsViewModel({
       siteType,
       newApiConfig: preferences.newApi,
     })
-  const latestRouteParams = useRef(routeParams)
-  useEffect(() => {
-    latestRouteParams.current = routeParams
-  }, [routeParams])
-  const onUnsupportedSearch = useCallback(() => {
-    onReplaceRouteQuery({
-      ...latestRouteParams.current,
-      search: undefined,
-    })
-  }, [onReplaceRouteQuery])
   const onMutationSuccess = useCallback(
     (mode: ManagedResourceEditorMode) => {
       toast.success(
@@ -254,85 +157,40 @@ export function useNativeManagedSiteChannelsViewModel({
     },
     [t],
   )
-  const routedResourceRef = parseManagedResourceRef(routeParams.resourceRef)
-  const routeResourceMatches =
-    !routeParams.resourceRef ||
-    Boolean(
-      routedResourceRef &&
-        config &&
-        isManagedResourceRefForSite(routedResourceRef, { siteType, config }),
-    )
-  const routedResourceKey = routedResourceRef
-    ? getManagedResourceRefKey(routedResourceRef)
-    : null
-  const channelIdFilterValue = routeParams.resourceRef
-    ? routedResourceRef?.resourceId ?? "—"
-    : routeParams.channelId?.trim() ?? ""
-  const routeIdentityKey = routeParams.resourceRef ?? channelIdFilterValue
-  const routeSearch = channelIdFilterValue ? "" : routeParams.search ?? ""
-  const [searchValue, setSearchValue] = useState(routeSearch)
-  const [sorting, setSorting] = useState(() =>
-    getDefaultManagedResourceSorting(siteType),
-  )
-  const [columnVisibility, setColumnVisibility] = useState<
-    Record<string, boolean>
-  >({})
-  const [pageSize, setPageSize] = useState(10)
-  const [migrationMode, setMigrationMode] = useState(false)
-  const [migrationRowKeys, setMigrationRowKeys] = useState<string[]>([])
-  const [isMigrationOpen, setIsMigrationOpen] = useState(false)
   const [filterTarget, setFilterTarget] = useState<ChannelFilterTarget | null>(
     null,
   )
-  const analytics = useMemo(() => {
-    const managedSiteType = resolveProductAnalyticsManagedSiteType(siteType)
-    return managedSiteType
-      ? { managedSiteType, startAction: startProductAnalyticsAction }
-      : undefined
-  }, [siteType])
-
-  useEffect(
-    () => setSearchValue(routeSearch),
-    [routeSearch, channelIdFilterValue],
-  )
-  useEffect(
-    () => setSorting(getDefaultManagedResourceSorting(siteType)),
-    [siteType],
-  )
-  const presentationSemantics =
-    getManagedResourcePresentationSemantics(siteType)
-  const displayFieldIds = useMemo(
-    () => createManagedResourceDisplayFieldIds(policy),
-    [policy],
-  )
-  const list = useManagedResourceListController({
-    registration,
-    scopeKey: config?.baseUrl ?? `${siteType}:configuration-missing`,
-    search: searchValue,
-    refreshKey,
-    pageSize,
-    onUnsupportedSearch,
-    onResourcesAccepted: (itemCount) => {
-      if (itemCount > 0) recordGatewayGuidanceCompletion()
-    },
-    fieldIds: displayFieldIds,
-    semantics: presentationSemantics,
+  const {
+    list,
     analytics,
+    searchValue,
+    setSearchValue,
+    sorting,
+    setSorting,
+    columnVisibility,
+    setColumnVisibility,
+    pageSize,
+    setPageSize,
+    presentationSemantics,
+    channelIdFilterValue,
+    routeResourceMatches,
+    routedResourceKey,
+  } = useNativeChannelWorkspace({
+    siteType,
+    refreshKey,
+    routeParams,
+    onReplaceRouteQuery,
+    policy,
+    registration,
+    config,
   })
-  const previousRouteIdentity = useRef(routeIdentityKey)
-  const { setPageIndex, setSelectedRowKeys, setStatusFilter } = list
-  useEffect(() => {
-    if (previousRouteIdentity.current === routeIdentityKey) return
-    previousRouteIdentity.current = routeIdentityKey
-    setPageIndex(0)
-    setSelectedRowKeys({})
-    setStatusFilter([])
-  }, [routeIdentityKey, setPageIndex, setSelectedRowKeys, setStatusFilter])
+
   const { syncingResourceKeys, syncChannels } = useManagedSiteChannelModelSync({
     siteType,
     scopeKey: normalizeManagedUpstreamResourceScopeKey(config?.baseUrl ?? ""),
     onModelsChanged: list.reconcile,
   })
+
   const readEditor = useCallback(
     <T,>(read: () => Promise<T>, signal?: AbortSignal) =>
       runRead(read, t("channelDialog:fields.key.label"), signal),
@@ -370,32 +228,24 @@ export function useNativeManagedSiteChannelsViewModel({
     runRead,
     t,
   })
-  const targets = useMemo(
-    () =>
-      getManagedSiteTargetOptions(preferences, {
-        excludeSiteTypes: [siteType],
-      }).map((target) => ({
-        value: target.siteType,
-        label: getManagedSiteLabel(t, target.siteType),
-      })),
-    [preferences, siteType, t],
-  )
-  const migration = useManagedResourceMigrationController({
-    isOpen: isMigrationOpen,
-    sourceSiteType: siteType,
-    scopeIdentity: config?.baseUrl ?? `${siteType}:configuration-missing`,
-    selectedRowKeys: migrationRowKeys,
+  const {
+    migrationMode,
+    migration,
+    isMigrationOpen,
+    migrationLabels,
+    canMigrate,
+    commands: migrationCommands,
     targets,
-    resolveRef: list.resolveRef,
-    resolveDisplayName: (rowKey) =>
-      list.allRows.find((row) => row.rowKey === rowKey)?.name,
-    refresh: list.refreshSilently,
-    onClose: () => setIsMigrationOpen(false),
-    t,
-    getSiteLabel: (targetSiteType) => getManagedSiteLabel(t, targetSiteType),
-    analytics,
+  } = useNativeChannelMigration({
+    siteType,
+    config,
+    preferences,
+    list,
     executeMigration,
+    analytics,
+    t,
   })
+
   const columns = useMemo(
     () => createManagedResourceColumns(t, siteType, policy, columnVisibility),
     [columnVisibility, policy, siteType, t],
@@ -428,9 +278,6 @@ export function useNativeManagedSiteChannelsViewModel({
       }),
     [t],
   )
-  const canMigrate =
-    resolveManagedSiteMigrationCapability(siteType)?.source !== undefined &&
-    targets.length > 0
   const { resolveRef } = list
   const nativeRows = useMemo(
     () =>
@@ -481,25 +328,12 @@ export function useNativeManagedSiteChannelsViewModel({
     () => new Map(nativeRows.map((row) => [row.rowKey, row])),
     [nativeRows],
   )
-  const confirmedDeleteLabels = useRef(new Map<string, string>())
-  const notifiedDeleteResults = useRef<
-    typeof mutation.deleteState.results | null
-  >(null)
-  useEffect(() => {
-    const { results, isExecuting } = mutation.deleteState
-    if (isExecuting || results === notifiedDeleteResults.current) return
-    notifiedDeleteResults.current = results
-    if (
-      results.length > 0 &&
-      results.every(({ status }) => status === "success")
-    ) {
-      toast.success(
-        t("managedSiteChannels:toasts.channelsDeleted", {
-          count: results.length,
-        }),
-      )
-    }
-  }, [mutation.deleteState, t])
+  const deletionFeedback = useNativeChannelDeletionFeedback(
+    mutation,
+    rowsByKey,
+    t,
+  )
+  const { confirmedDeleteLabels } = deletionFeedback
 
   const detailPageFailure =
     mutation.detailFailure && mutation.opening?.status !== "failure"
@@ -572,6 +406,8 @@ export function useNativeManagedSiteChannelsViewModel({
     hasMigrationTargets: targets.length > 0,
   }
   const callbacks: ManagedChannelsCallbacks = {
+    ...migrationCommands,
+
     onRefresh: () => {
       if (list.isLoading) list.cancelCollection()
       else if (mutation.deleteState.requiresFreshRead)
@@ -608,29 +444,6 @@ export function useNativeManagedSiteChannelsViewModel({
     },
     onSelectedRowKeysChange: list.setSelectedRowKeys,
     onCreate: () => void mutation.openCreate(),
-    onToggleMigrationMode: () => {
-      trackNativeChannelActionStarted(
-        PRODUCT_ANALYTICS_ACTION_IDS.ToggleManagedSiteChannelMigrationMode,
-        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
-      )
-      setMigrationMode((current) => !current)
-    },
-    onMigrateSelected: (rowKeys) => {
-      trackNativeChannelActionStarted(
-        PRODUCT_ANALYTICS_ACTION_IDS.OpenSelectedManagedSiteChannelMigration,
-        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
-      )
-      setMigrationRowKeys(rowKeys)
-      setIsMigrationOpen(true)
-    },
-    onMigrateFiltered: (rowKeys) => {
-      trackNativeChannelActionStarted(
-        PRODUCT_ANALYTICS_ACTION_IDS.OpenFilteredManagedSiteChannelMigration,
-        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
-      )
-      setMigrationRowKeys(rowKeys)
-      setIsMigrationOpen(true)
-    },
     onEdit: (rowKey) => void mutation.openEdit(rowKey),
     onView: (rowKey) => {
       trackNativeChannelActionStarted(
@@ -638,14 +451,6 @@ export function useNativeManagedSiteChannelsViewModel({
         PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
       )
       void mutation.openDetail(rowKey)
-    },
-    onMigrate: (rowKey) => {
-      trackNativeChannelActionStarted(
-        PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelMigration,
-        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
-      )
-      setMigrationRowKeys([rowKey])
-      setIsMigrationOpen(true)
     },
     onDelete: mutation.openDelete,
     onSync: async (rowKey) => {
@@ -715,15 +520,7 @@ export function useNativeManagedSiteChannelsViewModel({
         ),
       )
     },
-    onDeleteConfirm: () => {
-      confirmedDeleteLabels.current = new Map(
-        mutation.deleteState.rowKeys.flatMap((rowKey) => {
-          const row = rowsByKey.get(rowKey)
-          return row ? [[rowKey, row.name] as const] : []
-        }),
-      )
-      void mutation.confirmDelete()
-    },
+    onDeleteConfirm: deletionFeedback.confirmDelete,
     onDeleteCancel: mutation.cancelDelete,
   }
 
@@ -764,12 +561,6 @@ export function useNativeManagedSiteChannelsViewModel({
         MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
       ) === true,
   })
-
-  const migrationLabels = createMigrationLabels(
-    t,
-    migrationRowKeys.length,
-    migration.preview,
-  )
   return {
     verificationDialog,
     isMigrationOpen,

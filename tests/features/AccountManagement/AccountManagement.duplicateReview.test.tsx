@@ -40,7 +40,7 @@ vi.mock("~/features/AccountManagement/hooks/AccountManagementProvider", () => ({
     <>{children}</>
   ),
 }))
-vi.mock("~/features/AccountManagement/hooks/DialogStateContext", () => ({
+vi.mock("~/features/AccountManagement/hooks/useDialogStateContext", () => ({
   useDialogStateContext: () => ({ openAddAccount: vi.fn(), openEditAccount }),
 }))
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({

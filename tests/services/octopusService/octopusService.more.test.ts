@@ -60,16 +60,18 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   },
 }))
 
-vi.mock("~/services/apiService/octopus", () => ({
+vi.mock("~/services/apiService/octopus/channels", () => ({
   listChannels: mockListChannels,
   searchChannels: mockSearchChannels,
   createChannel: mockCreateChannelApi,
   updateChannel: mockUpdateChannelApi,
   deleteChannel: mockDeleteChannelApi,
+  usesChannelProtocolPaths: mockUsesChannelProtocolPaths,
+}))
+vi.mock("~/services/apiService/octopus/models", () => ({
   fetchGroups: mockFetchGroups,
   fetchAvailableModels: mockFetchOctopusAvailableModels,
   fetchRemoteModels: vi.fn(),
-  usesChannelProtocolPaths: mockUsesChannelProtocolPaths,
 }))
 
 vi.mock("~/services/managedSites/utils/fetchManagedSiteImportModels", () => ({

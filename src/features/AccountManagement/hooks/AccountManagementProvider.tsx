@@ -6,7 +6,7 @@ import { BookmarkDialogStateProvider } from "~/features/SiteBookmarks/hooks/Book
 
 import { AccountActionsProvider } from "./AccountActionsContext"
 import { AccountDataProvider } from "./AccountDataContext"
-import { DialogStateProvider } from "./DialogStateContext"
+import { DialogStateProvider } from "./DialogStateProvider"
 
 export const AccountManagementProvider = ({
   children,

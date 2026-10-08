@@ -68,13 +68,28 @@ vi.mock(
   },
 )
 
-vi.mock("~/services/apiService/sub2api", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/services/apiService/sub2api")>()),
+vi.mock("~/services/apiService/sub2api/groups", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/apiService/sub2api/groups")
+  >()),
   fetchSub2ApiAvailableGroups: fetchSub2ApiAvailableGroupsMock,
   fetchSub2ApiGroupRates: fetchSub2ApiGroupRatesMock,
-  fetchSub2ApiKeys: fetchSub2ApiKeysMock,
-  fetchSub2ApiPricingCatalogs: fetchSub2ApiPricingCatalogsMock,
 }))
+vi.mock("~/services/apiService/sub2api/keys", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/apiService/sub2api/keys")
+  >()),
+  fetchSub2ApiKeys: fetchSub2ApiKeysMock,
+}))
+vi.mock(
+  "~/services/apiService/sub2api/pricingCatalog",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/pricingCatalog")
+    >()),
+    fetchSub2ApiPricingCatalogs: fetchSub2ApiPricingCatalogsMock,
+  }),
+)
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,

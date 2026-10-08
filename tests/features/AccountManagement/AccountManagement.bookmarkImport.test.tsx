@@ -56,7 +56,7 @@ function MockAccountDialog({
   ) : null
 }
 
-vi.mock("~/features/AccountManagement/hooks/DialogStateContext", () => ({
+vi.mock("~/features/AccountManagement/hooks/useDialogStateContext", () => ({
   useDialogStateContext: () => {
     const context = useContext(DialogStateTestContext)
     if (!context) {

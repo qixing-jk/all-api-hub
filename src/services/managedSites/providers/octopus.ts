@@ -4,7 +4,7 @@
 import { DEFAULT_OCTOPUS_CHANNEL_FIELDS } from "~/constants/octopus"
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { usesChannelProtocolPaths } from "~/services/apiService/octopus"
+import { usesChannelProtocolPaths } from "~/services/apiService/octopus/channels"
 import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
 import { type UserPreferences } from "~/services/preferences/preferencesSchema"

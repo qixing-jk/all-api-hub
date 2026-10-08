@@ -7,7 +7,7 @@ const { fetchSub2ApiRuntimeModelsMock } = vi.hoisted(() => ({
   fetchSub2ApiRuntimeModelsMock: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/sub2api", () => ({
+vi.mock("~/services/apiService/sub2api/runtimeModels", () => ({
   fetchSub2ApiRuntimeModels: fetchSub2ApiRuntimeModelsMock,
 }))
 

@@ -6,7 +6,6 @@ import {
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/services/accountSiteDefinitions/identifiers"
-import { fetchSub2ApiProDailyCheckInStatus } from "~/services/apiService/sub2api"
 import { SUB2API_AUTH_PERSISTENCE_STATUSES } from "~/services/apiService/sub2api/authSession"
 import {
   DENXIO_DAILY_CHECK_IN_ERROR_CODES,
@@ -14,6 +13,7 @@ import {
   performDenxioDailyCheckIn,
 } from "~/services/apiService/sub2api/denxioCheckIn"
 import { fetchGeniusProgrammerDailyCheckInStatus } from "~/services/apiService/sub2api/geniusProgrammerCheckIn"
+import { fetchSub2ApiProDailyCheckInStatus } from "~/services/apiService/sub2api/proCheckInExecution"
 import { fetchToolcodeDailyCheckInStatus } from "~/services/apiService/sub2api/toolcodeCheckIn"
 import {
   probeXiaobaiCodeCheckInStatus,
@@ -54,10 +54,15 @@ vi.mock(
     probeXiaobaiCodeCheckInStatus: vi.fn(),
   }),
 )
-vi.mock("~/services/apiService/sub2api", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/services/apiService/sub2api")>()),
-  fetchSub2ApiProDailyCheckInStatus: vi.fn(),
-}))
+vi.mock(
+  "~/services/apiService/sub2api/proCheckInExecution",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/proCheckInExecution")
+    >()),
+    fetchSub2ApiProDailyCheckInStatus: vi.fn(),
+  }),
+)
 
 vi.mock(
   "~/services/apiService/sub2api/geniusProgrammerCheckIn",

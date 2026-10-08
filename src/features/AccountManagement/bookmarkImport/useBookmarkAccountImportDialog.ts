@@ -13,7 +13,7 @@ import type {
   BookmarkAccountImportScanSummary,
 } from "~/features/AccountManagement/bookmarkImport/types"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
-import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
+import { useDialogStateContext } from "~/features/AccountManagement/hooks/useDialogStateContext"
 import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
 import {
   ensurePermissionsDetailed,

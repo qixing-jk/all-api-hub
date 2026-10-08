@@ -65,13 +65,22 @@ vi.mock(
   }),
 )
 
-vi.mock("~/services/apiService/sub2api", async (importOriginal) => ({
-  ...(await importOriginal()),
-  fetchSub2ApiPublicSettings: mockSub2ApiFetchPublicSettings,
-  fetchSupportCheckIn: mockSub2ApiFetchSupportCheckIn,
-  fetchUserInfo: mockSub2ApiFetchUserInfo,
-  getOrCreateAccessToken: mockSub2ApiGetOrCreateAccessToken,
-}))
+vi.mock(
+  "~/services/apiService/sub2api/publicSettings",
+  async (importOriginal) => ({
+    ...(await importOriginal()),
+    fetchSub2ApiPublicSettings: mockSub2ApiFetchPublicSettings,
+  }),
+)
+vi.mock(
+  "~/services/apiService/sub2api/accountData",
+  async (importOriginal) => ({
+    ...(await importOriginal()),
+    fetchSupportCheckIn: mockSub2ApiFetchSupportCheckIn,
+    fetchUserInfo: mockSub2ApiFetchUserInfo,
+    getOrCreateAccessToken: mockSub2ApiGetOrCreateAccessToken,
+  }),
+)
 
 vi.mock("~/services/apiService/aihubmix", () => ({
   fetchSupportCheckIn: mockAihubmixFetchSupportCheckIn,

@@ -8,13 +8,13 @@ import {
 } from "~/constants/checkIn"
 import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
-import {
-  fetchSub2ApiProDailyCheckInStatus,
-  performSub2ApiProDailyCheckIn,
-} from "~/services/apiService/sub2api"
 import { SUB2API_AUTH_PERSISTENCE_STATUSES } from "~/services/apiService/sub2api/authSession"
 import { fetchDenxioDailyCheckInStatus } from "~/services/apiService/sub2api/denxioCheckIn"
 import { fetchGeniusProgrammerDailyCheckInStatus } from "~/services/apiService/sub2api/geniusProgrammerCheckIn"
+import {
+  fetchSub2ApiProDailyCheckInStatus,
+  performSub2ApiProDailyCheckIn,
+} from "~/services/apiService/sub2api/proCheckInExecution"
 import { fetchToolcodeDailyCheckInStatus } from "~/services/apiService/sub2api/toolcodeCheckIn"
 import {
   probeXiaobaiCodeCheckInStatus,
@@ -37,15 +37,20 @@ import { userCommandExecution } from "~~/tests/services/protectionBypass/fixture
 import { createAutoCheckinMutationLifecycle } from "~~/tests/test-utils/autoCheckin"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
-vi.mock("~/services/apiService/sub2api", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/services/apiService/sub2api")>()
-  return {
-    ...actual,
-    fetchSub2ApiProDailyCheckInStatus: vi.fn(),
-    performSub2ApiProDailyCheckIn: vi.fn(),
-  }
-})
+vi.mock(
+  "~/services/apiService/sub2api/proCheckInExecution",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/apiService/sub2api/proCheckInExecution")
+      >()
+    return {
+      ...actual,
+      fetchSub2ApiProDailyCheckInStatus: vi.fn(),
+      performSub2ApiProDailyCheckIn: vi.fn(),
+    }
+  },
+)
 
 vi.mock(
   "~/services/apiService/sub2api/xiaobaiCodeCheckIn",

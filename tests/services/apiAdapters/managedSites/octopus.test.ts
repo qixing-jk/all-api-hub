@@ -62,10 +62,6 @@ const userPreferences = vi.hoisted(() => ({
   getPreferences: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/octopus", () => ({
-  ...octopusApi,
-}))
-
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences,
 }))
@@ -83,6 +79,9 @@ describe("Octopus managed-site channel capability", () => {
       octopus: config,
     })
   })
+
+  vi.mock("~/services/apiService/octopus/channels", () => ({ ...octopusApi }))
+  vi.mock("~/services/apiService/octopus/models", () => ({ ...octopusApi }))
 
   const channel: OctopusChannel = {
     id: 7,

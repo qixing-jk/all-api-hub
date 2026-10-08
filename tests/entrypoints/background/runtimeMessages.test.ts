@@ -130,7 +130,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doMock("~/services/history/usageHistory/scheduler", () => ({
       setupUsageHistoryMessagingListeners: vi.fn(),
     }))
-    vi.doMock("~/services/webdav/webdavAutoSyncService", () => ({
+    vi.doMock("~/services/webdav/webdavAutoSyncMessageHandlers", () => ({
       setupWebdavAutoSyncMessagingListeners: vi.fn(),
     }))
     vi.doMock("~/services/history/dailyBalanceHistory/scheduler", () => ({
@@ -207,6 +207,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doUnmock("~/services/logging/logHistory")
     vi.doUnmock("~/services/history/usageHistory/scheduler")
     vi.doUnmock("~/services/webdav/webdavAutoSyncService")
+    vi.doUnmock("~/services/webdav/webdavAutoSyncMessageHandlers")
     vi.doUnmock("~/services/history/dailyBalanceHistory/scheduler")
     vi.doUnmock("~/services/integrations/ldohSiteLookup/background")
     vi.doUnmock("~/services/notifications/taskNotificationService")

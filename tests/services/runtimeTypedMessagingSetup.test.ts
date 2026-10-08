@@ -754,17 +754,27 @@ describe("typed runtime messaging setup", () => {
       onWebdavAutoSyncMessage,
     }))
 
-    const service = await import("~/services/webdav/webdavAutoSyncService")
-    vi.spyOn(service.webdavAutoSyncService, "setupAutoSync").mockResolvedValue(
-      undefined,
+    const service_webdavAutoSyncService = await import(
+      "~/services/webdav/webdavAutoSyncService"
     )
-    vi.spyOn(service.webdavAutoSyncService, "syncNow")
+    const service_webdavAutoSyncMessageHandlers = await import(
+      "~/services/webdav/webdavAutoSyncMessageHandlers"
+    )
+    vi.spyOn(
+      service_webdavAutoSyncService.webdavAutoSyncService,
+      "setupAutoSync",
+    ).mockResolvedValue(undefined)
+    vi.spyOn(service_webdavAutoSyncService.webdavAutoSyncService, "syncNow")
       .mockResolvedValueOnce({ success: true, message: "synced" })
       .mockResolvedValueOnce({ success: false, message: "sync failed" })
-    vi.spyOn(service.webdavAutoSyncService, "stopAutoSync").mockResolvedValue(
-      undefined,
+    vi.spyOn(
+      service_webdavAutoSyncService.webdavAutoSyncService,
+      "stopAutoSync",
+    ).mockResolvedValue(undefined)
+    vi.spyOn(
+      service_webdavAutoSyncService.webdavAutoSyncService,
+      "updateSettings",
     )
-    vi.spyOn(service.webdavAutoSyncService, "updateSettings")
       .mockResolvedValueOnce({
         ok: true,
         savedPreferences: { lastUpdated: 3 } as any,
@@ -777,7 +787,7 @@ describe("typed runtime messaging setup", () => {
           actualLastUpdated: 9,
         },
       })
-    vi.spyOn(service.webdavAutoSyncService, "getStatus")
+    vi.spyOn(service_webdavAutoSyncService.webdavAutoSyncService, "getStatus")
       .mockReturnValueOnce({
         isRunning: true,
         isInitialized: true,
@@ -790,8 +800,8 @@ describe("typed runtime messaging setup", () => {
         throw new Error("status failed")
       })
 
-    service.setupWebdavAutoSyncMessagingListeners()
-    service.setupWebdavAutoSyncMessagingListeners()
+    service_webdavAutoSyncMessageHandlers.setupWebdavAutoSyncMessagingListeners()
+    service_webdavAutoSyncMessageHandlers.setupWebdavAutoSyncMessagingListeners()
 
     expect(onWebdavAutoSyncMessage).toHaveBeenCalledTimes(5)
     await expect(

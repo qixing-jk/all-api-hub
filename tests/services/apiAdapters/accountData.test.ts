@@ -35,10 +35,13 @@ vi.mock("~/services/apiService/newApiFamily/variants/doneHub", () => ({
   refreshAccountData: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/sub2api", async (importOriginal) => ({
-  ...(await importOriginal()),
-  fetchAccountData: mockSub2ApiFetchAccountData,
-}))
+vi.mock(
+  "~/services/apiService/sub2api/accountData",
+  async (importOriginal) => ({
+    ...(await importOriginal()),
+    fetchAccountData: mockSub2ApiFetchAccountData,
+  }),
+)
 
 vi.mock("~/services/apiService/aihubmix", () => ({
   fetchAccountData: mockAihubmixFetchAccountData,

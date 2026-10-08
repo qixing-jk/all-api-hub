@@ -1,4 +1,4 @@
-import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
+import { useDialogStateContext } from "~/features/AccountManagement/hooks/useDialogStateContext"
 import { SPONSOR_RECOMMENDATION_SURFACES } from "~/features/AccountManagement/sponsors/constants"
 import { SponsorRecommendationsSection } from "~/features/AccountManagement/sponsors/SponsorRecommendationsSection"
 import { useSponsorRecommendations } from "~/features/AccountManagement/sponsors/useSponsorRecommendations"

@@ -2,10 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
 import {
-  fetchSub2ApiProDailyCheckInStatus,
-  performSub2ApiProDailyCheckIn,
-} from "~/services/apiService/sub2api"
-import {
   SUB2API_AUTH_PERSISTENCE_STATUSES,
   type Sub2ApiAuthSessionRequest,
 } from "~/services/apiService/sub2api/authSession"
@@ -13,6 +9,10 @@ import {
   recoverSub2ApiBrowserAuth as resyncSub2ApiAuthToken,
   Sub2ApiAuthIdentityMismatchError,
 } from "~/services/apiService/sub2api/browserAuth"
+import {
+  fetchSub2ApiProDailyCheckInStatus,
+  performSub2ApiProDailyCheckIn,
+} from "~/services/apiService/sub2api/proCheckInExecution"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type { ApiTransportResponse } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"

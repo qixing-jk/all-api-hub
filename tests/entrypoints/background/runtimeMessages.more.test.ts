@@ -181,7 +181,7 @@ vi.mock("~/services/history/dailyBalanceHistory/scheduler", () => ({
     mocks.setupDailyBalanceHistoryMessagingListeners,
 }))
 
-vi.mock("~/services/webdav/webdavAutoSyncService", () => ({
+vi.mock("~/services/webdav/webdavAutoSyncMessageHandlers", () => ({
   setupWebdavAutoSyncMessagingListeners:
     mocks.setupWebdavAutoSyncMessagingListeners,
 }))

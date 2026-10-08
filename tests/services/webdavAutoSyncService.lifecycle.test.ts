@@ -7,8 +7,8 @@ import {
   resolveWebdavAutoSyncStopMessage,
   resolveWebdavAutoSyncSyncNowMessage,
   resolveWebdavAutoSyncUpdateSettingsMessage,
-  webdavAutoSyncService,
-} from "~/services/webdav/webdavAutoSyncService"
+} from "~/services/webdav/webdavAutoSyncMessageHandlers"
+import { webdavAutoSyncService } from "~/services/webdav/webdavAutoSyncService"
 
 const mocks = vi.hoisted(() => ({
   clearAlarm: vi.fn(),
@@ -183,6 +183,10 @@ describe("webdavAutoSyncService lifecycle", () => {
     const performSpy = vi
       .spyOn(service as any, "performBackgroundSync")
       .mockResolvedValue(undefined)
+    const uploadDeferred = createDeferred<void>()
+    const uploadSpy = vi
+      .spyOn((service as any).accountChangeUpload, "performBestEffortUpload")
+      .mockReturnValue(uploadDeferred.promise)
 
     await service.initialize()
     await service.initialize()
@@ -196,6 +200,18 @@ describe("webdavAutoSyncService lifecycle", () => {
 
     await alarmHandler?.({ name: "webdavAutoSync" })
     expect(performSpy).toHaveBeenCalledTimes(1)
+
+    let uploadCompleted = false
+    const pendingUpload = alarmHandler?.({
+      name: "webdavAutoSyncBestEffortUpload",
+    })?.then(() => {
+      uploadCompleted = true
+    })
+    expect(uploadSpy).toHaveBeenCalledOnce()
+    expect(uploadCompleted).toBe(false)
+    uploadDeferred.resolve()
+    await pendingUpload
+    expect(uploadCompleted).toBe(true)
 
     service.destroy()
     expect(removeListener).toHaveBeenCalledTimes(1)
@@ -468,6 +484,22 @@ describe("webdavAutoSyncService lifecycle", () => {
       success: false,
       error: "handler exploded",
     })
+    syncNowSpy.mockRejectedValueOnce(new Error("sync handler failed"))
+    await expect(resolveWebdavAutoSyncSyncNowMessage()).resolves.toEqual({
+      success: false,
+      error: "sync handler failed",
+    })
+    stopSpy.mockRejectedValueOnce(new Error("stop handler failed"))
+    await expect(resolveWebdavAutoSyncStopMessage()).resolves.toEqual({
+      success: false,
+      error: "stop handler failed",
+    })
+    updateSpy.mockRejectedValueOnce(new Error("update handler failed"))
+    await expect(
+      resolveWebdavAutoSyncUpdateSettingsMessage({
+        settings: { autoSync: false },
+      }),
+    ).resolves.toEqual({ success: false, error: "update handler failed" })
   })
 
   it("stops auto-sync alarms and clears the scheduled flag when an alarm was active", async () => {

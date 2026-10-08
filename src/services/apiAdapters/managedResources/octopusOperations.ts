@@ -3,7 +3,7 @@ import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/con
 import type { ManagedSiteChannelRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { createChannelVerificationProtocolResolver } from "~/services/apiAdapters/managedResources/modelInputs"
 import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/resourceIds"
-import { updateChannel as updateOctopusChannel } from "~/services/apiService/octopus"
+import { updateChannel as updateOctopusChannel } from "~/services/apiService/octopus/channels"
 import { API_TYPES } from "~/services/verification/aiApiVerification/types"
 import { OctopusOutboundType } from "~/types/octopus"
 import type { OctopusConfig } from "~/types/octopusConfig"

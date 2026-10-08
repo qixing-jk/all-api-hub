@@ -49,7 +49,7 @@ import { classifyAllApiHubRepoPageUrl } from "~/services/starPromotion/repoPage"
 import { starPromotionState } from "~/services/starPromotion/state"
 import { setupReleaseUpdateMessagingListeners } from "~/services/updates/releaseUpdateService"
 import { setupWebAiApiCheckMessagingListeners } from "~/services/verification/webAiApiCheck/background"
-import { setupWebdavAutoSyncMessagingListeners } from "~/services/webdav/webdavAutoSyncService"
+import { setupWebdavAutoSyncMessagingListeners } from "~/services/webdav/webdavAutoSyncMessageHandlers"
 import {
   getCookieHeaderForUrlResult,
   hasCookieReadPermissionForUrl,

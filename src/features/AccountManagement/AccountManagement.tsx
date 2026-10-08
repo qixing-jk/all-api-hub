@@ -30,7 +30,7 @@ import DelAccountDialog from "~/features/AccountManagement/components/DelAccount
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { AccountManagementProvider } from "~/features/AccountManagement/hooks/AccountManagementProvider"
-import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
+import { useDialogStateContext } from "~/features/AccountManagement/hooks/useDialogStateContext"
 import {
   ACCOUNT_MANAGEMENT_ROUTE_ACTIONS,
   ACCOUNT_MANAGEMENT_ROUTE_PARAMS,

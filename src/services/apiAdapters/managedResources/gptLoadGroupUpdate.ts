@@ -17,7 +17,7 @@ import { type GptLoadConfig } from "~/types/gptLoadConfig"
 import type {
   GptLoadGroupDetail,
   GptLoadNativeResourceOperations,
-} from "./gptLoad"
+} from "./gptLoadNativeContracts"
 
 /** Owns ordered group settings, credential replacement and model updates. */
 export function createGptLoadGroupUpdate(

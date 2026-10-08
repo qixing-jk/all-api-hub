@@ -8,11 +8,11 @@ import type {
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { createOctopusModelSyncCapability } from "~/services/apiAdapters/managedResources/octopusModelSync"
 import { octopusManagedResourceModels } from "~/services/apiAdapters/managedResources/octopusOperations"
+import { searchChannels } from "~/services/apiService/octopus/channels"
 import {
   fetchGroups,
   fetchAvailableModels as fetchOctopusAvailableModels,
-  searchChannels,
-} from "~/services/apiService/octopus"
+} from "~/services/apiService/octopus/models"
 import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
 import {
   checkValidOctopusConfig,

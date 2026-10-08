@@ -15,10 +15,8 @@ import {
   MANAGED_RESOURCE_CREATE_SEED_KINDS,
   type EditableResourceProjection,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import {
-  openGptLoadNativeResourceOperations,
-  type GptLoadGroupEditorCommand,
-} from "~/services/apiAdapters/managedResources/gptLoad"
+import { type GptLoadGroupEditorCommand } from "~/services/apiAdapters/managedResources/gptLoadNativeContracts"
+import { openGptLoadNativeResourceOperations } from "~/services/apiAdapters/managedResources/gptLoadNativeOperations"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
 import { server } from "~~/tests/msw/server"
@@ -111,6 +109,36 @@ describe("gpt-load native workspace", () => {
     await expect(
       openGptLoadNativeResourceOperations({ signal: controller.signal }),
     ).rejects.toMatchObject({ name: "AbortError" })
+  })
+
+  it("contains preferences storage failures at the registered workspace boundary", async () => {
+    mocks.getPreferences.mockRejectedValueOnce(new Error("storage unavailable"))
+    await expect(registration().open()).rejects.toMatchObject({
+      failure: { code: "unexpected" },
+    })
+  })
+
+  it("maps pre-dispatch cancellation at the registered workspace boundary", async () => {
+    const controller = new AbortController()
+    controller.abort()
+    await expect(
+      registration().open({ signal: controller.signal }),
+    ).rejects.toMatchObject({ failure: { code: "aborted" } })
+  })
+
+  it("maps upstream HTTP failures without requiring a provider code", async () => {
+    server.use(
+      http.get(`${BASE_URL}/api/modern/groups`, () =>
+        HttpResponse.json(
+          { message: "temporarily unavailable" },
+          { status: 500 },
+        ),
+      ),
+    )
+    const workspace = await registration().open()
+    await expect(workspace.list()).rejects.toMatchObject({
+      failure: { code: "unavailable" },
+    })
   })
 
   it("filters secret-free inventory by endpoint, name and model", async () => {
@@ -243,6 +271,23 @@ describe("gpt-load native workspace", () => {
         [fields.BaseUrl]: "http://user:pass@bad.invalid",
       }),
     ).toMatchObject({ valid: false })
+    for (const baseUrl of [
+      "ftp://bad",
+      "invalid URL",
+      "http://user:pass@bad.invalid",
+    ]) {
+      expect(
+        await editor.validate({
+          ...editor.initialValues,
+          [fields.BaseUrl]: baseUrl,
+        }),
+      ).toMatchObject({
+        valid: false,
+        issues: expect.arrayContaining([
+          expect.objectContaining({ fieldId: fields.BaseUrl }),
+        ]),
+      })
+    }
     expect(
       await editor.loadOptions!(fields.Models, editor.initialValues),
     ).toMatchObject([{ value: "gpt-new" }])

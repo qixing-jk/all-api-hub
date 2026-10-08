@@ -32,7 +32,7 @@ const {
   })),
 }))
 
-vi.mock("~/features/AccountManagement/hooks/DialogStateContext", () => ({
+vi.mock("~/features/AccountManagement/hooks/useDialogStateContext", () => ({
   useDialogStateContext: () => ({
     openAddAccount: mockOpenAddAccount,
   }),

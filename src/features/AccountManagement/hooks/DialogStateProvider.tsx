@@ -1,7 +1,5 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -28,12 +26,7 @@ import type { AddAccountPrefill } from "~/features/AccountManagement/sponsors/ty
 import type { DisplaySiteData } from "~/types"
 import { isExtensionOptions, isExtensionSidePanel } from "~/utils/browser"
 
-interface DialogOptions {
-  mode: DialogMode
-  account?: DisplaySiteData | null
-  prefill?: AddAccountPrefill | null
-  recoveryState?: AccountDialogRecoveryState | null
-}
+import { DialogStateContext, type DialogOptions } from "./useDialogStateContext"
 
 interface DialogState {
   isOpen: boolean
@@ -42,24 +35,6 @@ interface DialogState {
   prefill: AddAccountPrefill | null
   recoveryState?: AccountDialogRecoveryState | null
 }
-
-interface DialogStateContextType {
-  openAccountDialog: (options: DialogOptions) => Promise<any>
-  // For backward compatibility
-  isAddAccountOpen: boolean
-  isEditAccountOpen: boolean
-  editingAccount: DisplaySiteData | null
-  openAddAccount: (
-    prefillOrEvent?: AddAccountPrefill | MouseEvent | null,
-  ) => void
-  closeAddAccount: () => void
-  openEditAccount: (account: DisplaySiteData) => void
-  closeEditAccount: () => void
-}
-
-const DialogStateContext = createContext<DialogStateContextType | undefined>(
-  undefined,
-)
 
 export const DialogStateProvider = ({
   children,
@@ -239,14 +214,4 @@ export const DialogStateProvider = ({
       )}
     </DialogStateContext.Provider>
   )
-}
-
-export const useDialogStateContext = () => {
-  const context = useContext(DialogStateContext)
-  if (!context) {
-    throw new Error(
-      "useDialogStateContext 必须在 DialogStateProvider 中使用，并且必须提供所有必需的函数",
-    )
-  }
-  return context
 }
