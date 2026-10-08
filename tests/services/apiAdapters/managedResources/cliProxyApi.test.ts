@@ -184,9 +184,11 @@ describe("CLIProxyAPI native managed resources", () => {
   })
 
   it.each(
-    [undefined, { kind: "clear" }, { kind: "replace", value: " " }].map(
-      (key) => ({ key }),
-    ),
+    [
+      undefined,
+      { kind: "clear" as const },
+      { kind: "replace" as const, value: " " },
+    ].map((key) => ({ key })),
   )(
     "rejects scalar providers without a replacement key: $key",
     async ({ key }) => {
@@ -197,7 +199,7 @@ describe("CLIProxyAPI native managed resources", () => {
           type: "gemini-api-key",
           name: "Provider",
           baseURL: "https://upstream.example",
-          key,
+          ...(key ? { key } : {}),
         }),
       ).toMatchObject({
         valid: false,
