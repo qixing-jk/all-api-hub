@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import AxonHubSettings from "~/features/BasicSettings/components/tabs/ManagedSite/AxonHubSettings"
 import toast from "~/lib/notify"
 import { signIn } from "~/services/apiService/axonHub"
-import type { PreferenceWriteResult } from "~/services/preferences/userPreferences"
+import type { PreferenceWriteResult } from "~/services/preferences/preferencesStore"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 

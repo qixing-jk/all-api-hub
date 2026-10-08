@@ -5,10 +5,8 @@ import { Storage } from "@plasmohq/storage"
 import { BACKUP_VERSION } from "~/constants/importExport"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { CURRENT_PREFERENCES_VERSION } from "~/services/preferences/migrations/preferencesMigration"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { webdavAutoSyncService } from "~/services/webdav/webdavAutoSyncService"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
@@ -464,8 +462,8 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
 
   it("aborts download-only before any writes when remote credentials are malformed", async () => {
     const { parseWebdavBackupJson } = await vi.importActual<
-      typeof import("~/services/webdav/webdavService")
-    >("~/services/webdav/webdavService")
+      typeof import("~/services/webdav/webdavBackupValidation")
+    >("~/services/webdav/webdavBackupValidation")
     mockParseWebdavBackupJson.mockImplementation(parseWebdavBackupJson)
     mockGetPreferences.mockResolvedValue({
       webdav: {

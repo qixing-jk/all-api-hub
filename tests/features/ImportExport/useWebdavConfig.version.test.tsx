@@ -2,7 +2,7 @@ import { act, renderHook } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 import { useWebdavConfig } from "~/features/ImportExport/hooks/useWebdavConfig"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 
 const context = vi.hoisted(() => ({
   preferences: {} as typeof DEFAULT_PREFERENCES,

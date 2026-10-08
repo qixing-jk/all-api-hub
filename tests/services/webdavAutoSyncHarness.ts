@@ -174,10 +174,13 @@ const mockParseWebdavBackupJson = vi.fn()
 vi.mock("~/services/webdav/webdavService", () => ({
   testWebdavConnection: (...args: any[]) => mockTestConnection(...args),
   downloadBackup: (...args: any[]) => mockDownloadBackup(...args),
-  parseWebdavBackupJson: (...args: any[]) => mockParseWebdavBackupJson(...args),
   isWebdavFileNotFoundError: (error: any) =>
     error?.code === "WEBDAV_FILE_NOT_FOUND",
   uploadBackup: (...args: any[]) => mockUploadBackup(...args),
+}))
+
+vi.mock("~/services/webdav/webdavBackupValidation", () => ({
+  parseWebdavBackupJson: (...args: any[]) => mockParseWebdavBackupJson(...args),
 }))
 
 export {

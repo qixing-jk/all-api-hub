@@ -7,7 +7,7 @@ import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { WEBDAV_TARGET_IDS } from "~/features/ImportExport/searchTargets"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { PROTECTION_BYPASS_AUTOMATIC_FEATURES } from "~/services/protectionBypass/contracts"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {

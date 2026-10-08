@@ -3,10 +3,8 @@ import { describe, expect, it } from "vitest"
 import { Storage } from "@plasmohq/storage"
 
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 
 describe("userPreferences autoFillCurrentSiteUrlOnAccountAdd", () => {
   it("treats missing autoFillCurrentSiteUrlOnAccountAdd as enabled without saving back", async () => {

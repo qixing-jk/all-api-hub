@@ -20,11 +20,9 @@ import {
   setupAutoRefreshMessagingListeners,
 } from "~/services/accounts/autoRefreshService"
 import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler"
-import type { UserPreferences } from "~/services/preferences/userPreferences"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import type { UserPreferences } from "~/services/preferences/preferencesSchema"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import {

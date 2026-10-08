@@ -9,10 +9,8 @@ import {
 } from "~/features/ImportExport/searchTargets"
 import { buildConfigurationOverviewItems } from "~/features/OptionsOverview/configurationOverviewItems"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
-import {
-  DEFAULT_PREFERENCES,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 import type { SiteAccount } from "~/types"
 import { CLOUD_SYNC_PROVIDERS } from "~/types/webdav"
 

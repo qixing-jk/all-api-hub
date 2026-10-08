@@ -6,7 +6,7 @@ import {
   LDOH_ORIGIN,
   LDOH_SITES_ENDPOINT,
 } from "~/services/integrations/ldohSiteLookup/constants"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { server } from "~~/tests/msw/server"
 import { buildTempWindowPrefs } from "~~/tests/test-utils/factories"
 

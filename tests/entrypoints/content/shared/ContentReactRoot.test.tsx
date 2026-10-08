@@ -11,7 +11,7 @@ import {
   THEME_RADIUS,
 } from "~/constants/theme"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
-import type { UserPreferences } from "~/services/preferences/userPreferences"
+import type { UserPreferences } from "~/services/preferences/preferencesSchema"
 import { EMPTY_DEV_IDENTITY } from "~/utils/core/devIdentity"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import {

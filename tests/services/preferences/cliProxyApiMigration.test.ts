@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { migratePreferences } from "~/services/preferences/migrations/preferencesMigration"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 
 describe("CLIProxyAPI preferences migration", () => {
   it("keeps a configured user's URL and key usable without re-entry", () => {

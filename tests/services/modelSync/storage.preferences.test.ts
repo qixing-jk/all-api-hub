@@ -7,6 +7,22 @@ import type {
 } from "~/types/channelModelFilters"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
+vi.mock(
+  "~/services/preferences/preferencesDefaults",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/preferences/preferencesDefaults")
+      >()
+    return {
+      ...actual,
+      DEFAULT_PREFERENCES: {
+        managedSiteModelSync: defaultManagedSiteModelSync,
+      },
+    }
+  },
+)
+
 const { mockUserPreferences, storageMocks, defaultManagedSiteModelSync } =
   vi.hoisted(() => ({
     mockUserPreferences: {
@@ -48,9 +64,6 @@ vi.mock("@plasmohq/storage", () => {
 })
 
 vi.mock("~/services/preferences/userPreferences", () => ({
-  DEFAULT_PREFERENCES: {
-    managedSiteModelSync: defaultManagedSiteModelSync,
-  },
   userPreferences: mockUserPreferences,
 }))
 

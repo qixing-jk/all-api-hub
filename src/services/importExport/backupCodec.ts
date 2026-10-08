@@ -15,7 +15,7 @@ import {
   type ParsedBackupSummary,
   type RawBackupData,
 } from "~/services/importExport/backupContracts"
-import { coerceChannelConfigSnapshot } from "~/services/managedSites/channelConfigStorage"
+import { coerceChannelConfigSnapshot } from "~/services/managedSites/channelConfigSnapshot"
 import type { AccountStorageConfig, SiteAccount, TagStore } from "~/types"
 import type { ApiCredentialProfilesConfig } from "~/types/apiCredentialProfiles"
 import type { ChannelConfigSnapshot } from "~/types/channelConfig"

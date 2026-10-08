@@ -9,11 +9,11 @@ import {
 } from "vitest"
 
 import { userPreferences } from "~/services/preferences/userPreferences"
+import { parseWebdavBackupJson } from "~/services/webdav/webdavBackupValidation"
 import {
   downloadBackup,
   downloadBackupRaw,
   isWebdavFileNotFoundError,
-  parseWebdavBackupJson,
   testWebdavConnection,
   uploadBackup,
   WEBDAV_FILE_NOT_FOUND_ERROR_CODE,

@@ -26,12 +26,10 @@ import {
   DEFAULT_REDEMPTION_ASSIST_PREFERENCES,
   DEFAULT_WEB_AI_API_CHECK_PREFERENCES,
 } from "~/services/preferences/contentScriptFeatureDefaults"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-  type PreferenceWriteResult,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
+import { type PreferenceWriteResult } from "~/services/preferences/preferencesStore"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/services/preferences/utils/sortingPriority"
 import { DEFAULT_AXON_HUB_CONFIG } from "~/types/axonHubConfig"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"

@@ -9,10 +9,8 @@ import {
   UNIFIED_API_GUIDANCE_ACTION_KINDS,
   UNIFIED_API_GUIDANCE_STATUSES,
 } from "~/features/UnifiedApiGuidance"
-import {
-  DEFAULT_PREFERENCES,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,

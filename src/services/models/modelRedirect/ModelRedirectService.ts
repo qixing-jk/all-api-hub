@@ -4,38 +4,18 @@
  * Based on gpt-api-sync logic with enhancements for weighted channel selection
  */
 
-import type {
-  ManagedModelMappingPolicy,
-  ManagedResourceModelsCapability,
-} from "~/services/apiAdapters/contracts/managedResourceModels"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import {
   assertManagedResourceRefForSite,
   getManagedResourceRefKey,
 } from "~/services/managedSites/managedResourceIdentity"
-import {
-  consumeManagedSiteMutationResult,
-  type ManagedSiteMutationResult,
-} from "~/services/managedSites/mutations"
-import type {
-  ManagedSiteRuntimeConfig,
-  ManagedSiteRuntimeConfigValue,
-} from "~/services/managedSites/runtimeConfig"
+import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import {
   hasValidManagedSiteConfig,
   resolveCurrentManagedSiteRuntimeConfig,
 } from "~/services/managedSites/runtimeConfig"
-import {
-  collectManagedConfigSecrets,
-  collectManagedResourceSecrets,
-  mergeManagedResourceSecretCollections,
-} from "~/services/managedSites/utils/resourceSecrets"
 import { modelMetadataService } from "~/services/models/modelMetadata"
-import { extractCoreModelIdentity } from "~/services/models/modelMetadata/modelIdentityIndex"
-import {
-  removeDateSuffix,
-  toModelTokenKey,
-} from "~/services/models/utils/modelName"
+import { type UserPreferences } from "~/services/preferences/userPreferences"
 import type {
   ManagedModelChannel,
   ManagedModelMappingPreview,
@@ -47,132 +27,22 @@ import {
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
-import {
-  userPreferences,
-  type UserPreferences,
-} from "../../preferences/userPreferences"
+import { userPreferences } from "../../preferences/userPreferences"
 import { resolveManagedSiteModelRedirectCapabilities } from "./capabilities"
-import { extractActualModel, renameModel } from "./modelNormalization"
+import {
+  applyModelMappingToChannel,
+  consumeModelRedirectMutationResult,
+  DirectModelRedirectMappingWriter,
+  type ModelRedirectChannelCapabilities,
+  type ModelRedirectMappingWriter,
+} from "./mappingMutation"
+import { generateModelMappingForChannel } from "./modelMatching"
 import { isEmptyModelMapping } from "./utils"
 
 /**
  * Unified logger scoped to model redirect generation and application.
  */
 const logger = createLogger("ModelRedirect")
-
-type ModelRedirectMappingWriter = {
-  readonly knownSecrets: readonly string[]
-  readonly knownSecretsComplete: boolean
-  updateChannelModelMapping(
-    channel: ManagedModelChannel,
-    modelMapping: Record<string, string>,
-  ): Promise<ManagedSiteMutationResult<unknown>>
-  reconcileChannel?(channel: ManagedModelChannel): Promise<void>
-}
-
-type ModelRedirectChannelCapabilities = Pick<
-  ManagedResourceModelsCapability<ManagedSiteRuntimeConfigValue>,
-  "list" | "updateModelMapping"
-> & {
-  list: NonNullable<
-    ManagedResourceModelsCapability<ManagedSiteRuntimeConfigValue>["list"]
-  >
-  updateModelMapping: NonNullable<
-    ManagedResourceModelsCapability<ManagedSiteRuntimeConfigValue>["updateModelMapping"]
-  >
-}
-
-const appendMissingValues = (
-  baseValues: readonly string[],
-  valuesToAppend: readonly string[],
-): string[] => {
-  const seen = new Set<string>()
-  const result: string[] = []
-
-  for (const value of [...baseValues, ...valuesToAppend]) {
-    const normalizedValue = value.trim()
-    if (normalizedValue && !seen.has(normalizedValue)) {
-      seen.add(normalizedValue)
-      result.push(normalizedValue)
-    }
-  }
-
-  return result
-}
-
-const consumeModelRedirectMutationResult = async (
-  result: unknown,
-  reconcile: () => Promise<void>,
-  knownSecrets: readonly string[],
-  knownSecretsComplete: boolean,
-) =>
-  consumeManagedSiteMutationResult(result, {
-    idempotent: true,
-    retryableRejection: false,
-    knownSecrets,
-    knownSecretsComplete,
-    reconcile,
-    rejectedFallbackMessage: "Model mapping update was rejected",
-    ambiguousFallbackMessage: "Model mapping update requires reconciliation",
-    createError: (message) => new Error(message),
-  })
-
-class DirectModelRedirectMappingWriter implements ModelRedirectMappingWriter {
-  private mutationKnownSecrets: readonly string[]
-  private mutationKnownSecretsComplete = true
-
-  constructor(
-    private readonly runtimeConfig: ManagedSiteRuntimeConfig,
-    private readonly channels: ModelRedirectChannelCapabilities,
-  ) {
-    this.mutationKnownSecrets = Object.freeze(
-      collectManagedConfigSecrets(runtimeConfig.config),
-    )
-  }
-
-  get knownSecrets(): readonly string[] {
-    return this.mutationKnownSecrets
-  }
-
-  get knownSecretsComplete(): boolean {
-    return this.mutationKnownSecretsComplete
-  }
-
-  async updateChannelModelMapping(
-    channel: ManagedModelChannel,
-    modelMapping: Record<string, string>,
-  ): Promise<ManagedSiteMutationResult<unknown>> {
-    assertManagedResourceRefForSite(channel.ref, this.runtimeConfig)
-    const configSecrets = {
-      knownSecrets: collectManagedConfigSecrets(this.runtimeConfig.config),
-      complete: true,
-    }
-    const channelSecrets = collectManagedResourceSecrets(channel)
-    const secrets = mergeManagedResourceSecretCollections(
-      configSecrets,
-      channelSecrets,
-    )
-    this.mutationKnownSecrets = Object.freeze(secrets.knownSecrets)
-    // Model inventory projections do not establish a complete provider-secret set.
-    // Updates may load additional hidden credentials; do not display their raw diagnostics.
-    this.mutationKnownSecretsComplete = false
-    return await this.channels.updateModelMapping(
-      this.runtimeConfig.config,
-      channel.ref,
-      appendMissingValues(channel.models, Object.keys(modelMapping)),
-      modelMapping,
-    )
-  }
-
-  async reconcileChannel(): Promise<void> {
-    await this.channels.list(this.runtimeConfig.config)
-  }
-}
-
-const hasDateSuffix = (rawModelId: string): boolean => {
-  const coreIdentity = extractCoreModelIdentity(rawModelId)
-  return removeDateSuffix(coreIdentity) !== coreIdentity
-}
 
 interface ModelRedirectChannelResult {
   resourceRef: ManagedResourceRef
@@ -198,80 +68,6 @@ interface ModelRedirectBulkClearResult {
  * Core algorithm for generating model redirect mappings
  */
 export class ModelRedirectService {
-  private static areModelMappingsEqual(
-    left: Record<string, unknown>,
-    right: Record<string, unknown>,
-  ): boolean {
-    const leftKeys = Object.keys(left)
-    const rightKeys = Object.keys(right)
-    if (leftKeys.length !== rightKeys.length) return false
-
-    for (const key of leftKeys) {
-      if (left[key] !== right[key]) return false
-    }
-
-    return true
-  }
-
-  private static pruneModelMappingMissingTargets(
-    existingMapping: Record<string, unknown>,
-    availableModels: ReadonlySet<string>,
-    options?: {
-      modelMappingPolicy?: ManagedModelMappingPolicy
-    },
-  ): { prunedMapping: Record<string, unknown>; removedCount: number } {
-    let removedCount = 0
-    const prunedMapping: Record<string, unknown> = {}
-
-    const policy = options?.modelMappingPolicy
-    const normalizeTargetForAvailability = (targetModel: string): string => {
-      const trimmed = targetModel.trim()
-      return policy?.normalizeTargetForAvailability?.(trimmed) ?? trimmed
-    }
-
-    const resolvesToAvailableModel = (startModel: string): boolean => {
-      let current = startModel
-      const visited = new Set<string>([current])
-
-      while (true) {
-        if (availableModels.has(current)) return true
-
-        const nextRaw = existingMapping[current]
-        if (typeof nextRaw !== "string") return false
-
-        const next = normalizeTargetForAvailability(nextRaw)
-        if (!next) return false
-
-        if (visited.has(next)) return false
-        visited.add(next)
-        current = next
-      }
-    }
-
-    for (const [sourceModel, targetModel] of Object.entries(existingMapping)) {
-      if (typeof targetModel !== "string") {
-        prunedMapping[sourceModel] = targetModel
-        continue
-      }
-
-      const normalizedTarget = normalizeTargetForAvailability(targetModel)
-      const isAvailable =
-        Boolean(normalizedTarget) &&
-        (availableModels.has(normalizedTarget) ||
-          (policy?.supportsChaining &&
-            resolvesToAvailableModel(normalizedTarget)))
-
-      if (!isAvailable) {
-        removedCount += 1
-        continue
-      }
-
-      prunedMapping[sourceModel] = targetModel
-    }
-
-    return { prunedMapping, removedCount }
-  }
-
   /**
    * Resolve the direct managed-site channel capability for redirect operations.
    * When `prefs` is provided, avoids an extra storage read.
@@ -340,105 +136,6 @@ export class ModelRedirectService {
     channels: ModelRedirectChannelCapabilities,
   ): ModelRedirectMappingWriter {
     return new DirectModelRedirectMappingWriter(runtimeConfig, channels)
-  }
-
-  /**
-   * Apply model mapping to a channel with incremental merge
-   * Merges new mapping with existing mapping (new keys override old keys)
-   * @param channel Target channel's model-task input.
-   * @param newMapping Mapping of standard model -> upstream model.
-   * @param service Model mapping writer used to update channel.
-   */
-  static async applyModelMappingToChannel(
-    channel: ManagedModelChannel,
-    newMapping: Record<string, string>,
-    service: ModelRedirectMappingWriter,
-    options?: {
-      availableModels?: string[]
-      pruneMissingTargets?: boolean
-      modelMappingPolicy?: ManagedModelMappingPolicy
-    },
-  ): Promise<{ updated: boolean; prunedCount: number }> {
-    const hasNewMapping = Object.keys(newMapping).length > 0
-    const shouldPrune =
-      Boolean(options?.pruneMissingTargets) &&
-      Array.isArray(options?.availableModels)
-
-    if (!hasNewMapping && !shouldPrune) {
-      return { updated: false, prunedCount: 0 }
-    }
-
-    // Parse the provider's existing redirect mapping.
-    let existingMapping: Record<string, unknown> = {}
-    let canPruneExisting = true
-
-    const rawExisting = channel.modelMapping
-    if (rawExisting) {
-      try {
-        const parsed = JSON.parse(rawExisting) as unknown
-        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-          throw new Error("existing model_mapping is not an object")
-        }
-        existingMapping = parsed as Record<string, unknown>
-      } catch (parseError) {
-        canPruneExisting = false
-        logger.warn("Failed to parse existing model_mapping for channel", {
-          resourceRef: channel.ref,
-          error: parseError,
-        })
-      }
-    }
-
-    let prunedCount = 0
-    let baseMapping: Record<string, unknown> = existingMapping
-
-    if (shouldPrune && canPruneExisting) {
-      const availableModelsSet = new Set(
-        options?.availableModels?.map((model) => model.trim()).filter(Boolean),
-      )
-      const { prunedMapping, removedCount } =
-        ModelRedirectService.pruneModelMappingMissingTargets(
-          existingMapping,
-          availableModelsSet,
-          { modelMappingPolicy: options?.modelMappingPolicy },
-        )
-      baseMapping = prunedMapping
-      prunedCount = removedCount
-    }
-
-    // Merge mappings: new mapping overrides existing keys
-    const mergedMapping: Record<string, unknown> = {
-      ...baseMapping,
-      ...newMapping,
-    }
-
-    if (canPruneExisting) {
-      const hasMeaningfulChange = !ModelRedirectService.areModelMappingsEqual(
-        mergedMapping,
-        existingMapping,
-      )
-
-      if (!hasMeaningfulChange) {
-        return { updated: false, prunedCount }
-      }
-    } else if (!hasNewMapping) {
-      // Best-effort safety: if the existing mapping is invalid and we're not
-      // applying any new mapping, skip any destructive action (including prune).
-      return { updated: false, prunedCount: 0 }
-    }
-
-    const mutationResult = await service.updateChannelModelMapping(
-      channel,
-      mergedMapping as Record<string, string>,
-    )
-    await consumeModelRedirectMutationResult(
-      mutationResult,
-      () => service.reconcileChannel?.(channel) ?? Promise.resolve(),
-      service.knownSecrets ?? [],
-      service.knownSecretsComplete,
-    )
-
-    return { updated: true, prunedCount }
   }
 
   /**
@@ -516,14 +213,13 @@ export class ModelRedirectService {
         }
 
         try {
-          const newMapping =
-            ModelRedirectService.generateModelMappingForChannel(
-              standardModels,
-              channel.models,
-            )
+          const newMapping = generateModelMappingForChannel(
+            standardModels,
+            channel.models,
+          )
 
           // Use unified method for incremental merge and apply
-          await ModelRedirectService.applyModelMappingToChannel(
+          await applyModelMappingToChannel(
             channel,
             newMapping,
             modelMappingWriter,
@@ -753,123 +449,5 @@ export class ModelRedirectService {
         message,
       }
     }
-  }
-
-  /**
-   * Build an order-insensitive token key by:
-   * - Lowercasing
-   * - Stripping date suffixes
-   * - Treating dots and hyphens/underscores as the same separator
-   * - Comparing as an unordered token set to align variants like
-   *   "claude-4.5-sonnet" and "claude-sonnet-4-5".
-   */
-  static toVersionAgnosticKey = (modelName: string): string | null => {
-    return toModelTokenKey(modelName)
-  }
-
-  /**
-   * Generate model mapping for a single channel
-   * Returns an object of standardModel -> actualModel mappings
-   * Uses multi-stage extraction pipeline with deduplication
-   * @param standardModels List of canonical standard model ids.
-   * @param actualModels Models exposed by the channel (raw).
-   * @returns Mapping of standard model id to best-matching actual model.
-   */
-  static generateModelMappingForChannel(
-    standardModels: string[],
-    actualModels: string[],
-  ): Record<string, string> {
-    const mapping: Record<string, string> = {}
-    const usedActualModels = new Set<string>()
-    const actualModelSet = new Set<string>()
-
-    const normalizedActualMap = new Map<string, string[]>()
-    const versionKeyToActualMap = new Map<string, string[]>()
-
-    // traverse actual models to build lookup maps
-    for (const rawActual of actualModels) {
-      const actualModel = rawActual.trim()
-      if (!actualModel) continue
-      actualModelSet.add(actualModel)
-
-      // A dated model is only compatible with the same exact raw identity.
-      // Keep it in the exact-match set, but never expose a date-stripped alias.
-      if (hasDateSuffix(actualModel)) continue
-
-      // Normalize actual model name
-      const normalizedModelName = renameModel(actualModel, false)?.trim()
-      if (!normalizedModelName) continue
-
-      // Build normalized map for deduplication
-      if (!normalizedActualMap.has(normalizedModelName)) {
-        normalizedActualMap.set(normalizedModelName, [])
-      }
-      normalizedActualMap.get(normalizedModelName)!.push(actualModel)
-
-      // Build version-agnostic map for fuzzy matching
-      const versionKey =
-        ModelRedirectService.toVersionAgnosticKey(normalizedModelName)
-      if (versionKey) {
-        if (!versionKeyToActualMap.has(versionKey)) {
-          versionKeyToActualMap.set(versionKey, [])
-        }
-        versionKeyToActualMap.get(versionKey)!.push(actualModel)
-      }
-    }
-
-    // Match standard models to actual models
-    for (const rawStandard of standardModels) {
-      const standardModel = rawStandard.trim()
-      if (!standardModel) continue
-
-      // Skip if already mapped or exact match
-      if (actualModelSet.has(standardModel)) {
-        continue
-      }
-      if (hasDateSuffix(standardModel)) {
-        continue
-      }
-      if (mapping[standardModel]) {
-        continue
-      }
-
-      // normalize standard model name
-      const normalizedStandardModelName = renameModel(
-        standardModel,
-        false,
-      )?.trim()
-      if (!normalizedStandardModelName) continue
-
-      // Find candidates from both normalized and version-agnostic maps
-      const candidates = normalizedActualMap.get(normalizedStandardModelName)
-      const versionKey = ModelRedirectService.toVersionAgnosticKey(
-        normalizedStandardModelName,
-      )
-      const versionCandidates =
-        versionKey && versionKeyToActualMap.get(versionKey)
-      const standardCandidateKey = toModelTokenKey(
-        extractActualModel(standardModel),
-      )
-      if (!standardCandidateKey) continue
-
-      // Filter out already used actual models
-      const availableCandidate = [
-        ...(candidates ?? []),
-        ...(versionCandidates ?? []),
-      ].find((candidate) => {
-        if (usedActualModels.has(candidate)) return false
-
-        const candidateKey = toModelTokenKey(extractActualModel(candidate))
-        return Boolean(candidateKey && standardCandidateKey === candidateKey)
-      })
-
-      // Map the standard model to the first available candidate
-      if (availableCandidate) {
-        mapping[standardModel] = availableCandidate
-        usedActualModels.add(availableCandidate)
-      }
-    }
-
-    return mapping
   }
 }

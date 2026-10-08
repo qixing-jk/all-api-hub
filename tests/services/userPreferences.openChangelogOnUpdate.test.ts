@@ -4,10 +4,8 @@ import { Storage } from "@plasmohq/storage"
 
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { CURRENT_PREFERENCES_VERSION } from "~/services/preferences/migrations/preferencesMigration"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 
 /**
  * Validates that openChangelogOnUpdate is:

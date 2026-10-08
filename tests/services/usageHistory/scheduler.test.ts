@@ -9,10 +9,8 @@ import {
 } from "~/services/history/usageHistory/scheduler"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { syncUsageHistoryForAccount } from "~/services/history/usageHistory/sync"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   TASK_NOTIFICATION_STATUSES,
   TASK_NOTIFICATION_TASKS,

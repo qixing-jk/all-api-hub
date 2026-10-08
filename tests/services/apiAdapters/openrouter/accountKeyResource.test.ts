@@ -1,10 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import {
-  createOpenRouterKeyEditorProjection,
-  openRouterAccountKeyResources,
-} from "~/services/apiAdapters/openrouter/accountKeyResource"
+import { openRouterAccountKeyResources } from "~/services/apiAdapters/openrouter/accountKeyResource"
+import { createOpenRouterKeyEditorProjection } from "~/services/apiAdapters/openrouter/keyEditorSession"
 import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_MODES,
@@ -947,12 +945,11 @@ describe("openRouterAccountKeyResources", () => {
     })
     const editor = await session.openCreateEditor("workspace-default-id")
 
-    await expect(
-      editor.loadOptions?.(
-        OPENROUTER_KEY_FIELD_IDS.Creator,
-        editor.initialValues,
-      ),
-    ).resolves.toHaveLength(100)
+    const originalOptions = await editor.loadOptions?.(
+      OPENROUTER_KEY_FIELD_IDS.Creator,
+      editor.initialValues,
+    )
+    expect(originalOptions).toHaveLength(100)
     const selectedOptions = await editor.loadOptions?.(
       OPENROUTER_KEY_FIELD_IDS.Creator,
       {
@@ -973,6 +970,23 @@ describe("openRouterAccountKeyResources", () => {
       expect.anything(),
       "workspace-selected-id",
       { offset: 0, limit: 100 },
+    )
+    createOpenRouterKey.mockResolvedValueOnce({
+      key: key({ workspace_id: "workspace-selected-id" }),
+      plaintextKey: "sk-or-created",
+    })
+    await editor.submit({
+      ...editor.initialValues,
+      [OPENROUTER_KEY_FIELD_IDS.Workspace]: "workspace-selected-id",
+      [OPENROUTER_KEY_FIELD_IDS.Creator]: atIndex(originalOptions ?? [], 0)
+        .value,
+    })
+    expect(createOpenRouterKey).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        workspaceId: "workspace-selected-id",
+        creatorUserId: null,
+      }),
     )
   })
 

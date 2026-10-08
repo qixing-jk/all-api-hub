@@ -6,7 +6,7 @@ import toast from "~/lib/notify"
 import {
   PREFERENCE_WRITE_FAILURE_TYPES,
   type PreferenceWriteResult,
-} from "~/services/preferences/userPreferences"
+} from "~/services/preferences/preferencesStore"
 import { buildUserPreferences } from "~~/tests/test-utils/factories"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"

@@ -179,10 +179,13 @@ vi.mock("~/services/webdav/webdavSelectiveSync", () => ({
 vi.mock("~/services/webdav/webdavService", () => ({
   downloadBackup: mockDownloadBackup,
   downloadBackupRaw: mockDownloadBackupRaw,
-  parseWebdavBackupJson: mockParseWebdavBackupJson,
   isWebdavFileNotFoundError: mockIsWebdavFileNotFoundError,
   testWebdavConnection: mockTestWebdavConnection,
   uploadBackup: mockUploadBackup,
+}))
+
+vi.mock("~/services/webdav/webdavBackupValidation", () => ({
+  parseWebdavBackupJson: mockParseWebdavBackupJson,
 }))
 
 vi.mock("~/services/webdav/cloudSyncService", () => ({

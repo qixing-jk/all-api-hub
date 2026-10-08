@@ -5,6 +5,8 @@ import { doneHubManagedResourceModels } from "~/services/apiAdapters/managedReso
 import { newApiManagedResourceModels } from "~/services/apiAdapters/managedResources/newApiOperations"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/runtimeConfig"
 import { modelMetadataService } from "~/services/models/modelMetadata"
+import { applyModelMappingToChannel } from "~/services/models/modelRedirect/mappingMutation"
+import * as modelMatching from "~/services/models/modelRedirect/modelMatching"
 import { ModelRedirectService } from "~/services/models/modelRedirect/ModelRedirectService"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { DEFAULT_MODEL_REDIRECT_PREFERENCES } from "~/types/managedSiteModelRedirect"
@@ -72,7 +74,7 @@ const mockedUserPreferences = userPreferences as unknown as {
 const mockedMetadataInitialize =
   modelMetadataService.initialize as unknown as ReturnType<typeof vi.fn>
 
-describe("ModelRedirectService.applyModelMappingToChannel", () => {
+describe("applyModelMappingToChannel", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -83,7 +85,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
       updateChannelModelMapping: vi.fn(),
     } as any
 
-    await ModelRedirectService.applyModelMappingToChannel(channel, {}, service)
+    await applyModelMappingToChannel(channel, {}, service)
 
     expect(service.updateChannelModelMapping).not.toHaveBeenCalled()
   })
@@ -104,11 +106,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
       "deepseek-r1": "actual",
     }
 
-    await ModelRedirectService.applyModelMappingToChannel(
-      channel,
-      newMapping,
-      service,
-    )
+    await applyModelMappingToChannel(channel, newMapping, service)
 
     expect(service.updateChannelModelMapping).toHaveBeenCalledWith(channel, {
       "gpt-4o": "new",
@@ -132,16 +130,53 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
       "gpt-4o": "new",
     }
 
-    await ModelRedirectService.applyModelMappingToChannel(
-      channel,
-      newMapping,
-      service,
-    )
+    await applyModelMappingToChannel(channel, newMapping, service)
 
     expect(service.updateChannelModelMapping).toHaveBeenCalledWith(
       channel,
       newMapping,
     )
+  })
+
+  it.each(["null", "[]", "17"])(
+    "does not prune a malformed mapping object (%s)",
+    async (modelMapping) => {
+      const channel = { ref: modelResourceRef(1), modelMapping } as any
+      const service = { updateChannelModelMapping: vi.fn() } as any
+      await expect(
+        applyModelMappingToChannel(channel, {}, service, {
+          pruneMissingTargets: true,
+          availableModels: ["available"],
+        }),
+      ).resolves.toEqual({ updated: false, prunedCount: 0 })
+      expect(service.updateChannelModelMapping).not.toHaveBeenCalled()
+    },
+  )
+
+  it("preserves opaque provider metadata while pruning unavailable mapping targets", async () => {
+    const channel = {
+      ref: modelResourceRef(1),
+      modelMapping: JSON.stringify({
+        opaque: 7,
+        removed: "missing",
+        keep: "available",
+      }),
+    } as any
+    const service = {
+      updateChannelModelMapping: vi
+        .fn()
+        .mockResolvedValue(succeededMappingResult),
+    } as any
+    await expect(
+      applyModelMappingToChannel(channel, {}, service, {
+        pruneMissingTargets: true,
+        availableModels: ["available"],
+      }),
+    ).resolves.toEqual({ updated: true, prunedCount: 1 })
+    expect(service.updateChannelModelMapping).toHaveBeenCalledWith(channel, {
+      opaque: 7,
+      keep: "available",
+    })
   })
 
   it("should prune entries whose targets are missing from available models", async () => {
@@ -155,15 +190,10 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
         .mockResolvedValue(succeededMappingResult),
     } as any
 
-    const result = await ModelRedirectService.applyModelMappingToChannel(
-      channel,
-      {},
-      service,
-      {
-        pruneMissingTargets: true,
-        availableModels: ["ok"],
-      },
-    )
+    const result = await applyModelMappingToChannel(channel, {}, service, {
+      pruneMissingTargets: true,
+      availableModels: ["ok"],
+    })
 
     expect(result).toEqual({ updated: true, prunedCount: 1 })
     expect(service.updateChannelModelMapping).toHaveBeenCalledWith(channel, {
@@ -182,15 +212,10 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
         .mockResolvedValue(succeededMappingResult),
     } as any
 
-    const result = await ModelRedirectService.applyModelMappingToChannel(
-      channel,
-      {},
-      service,
-      {
-        pruneMissingTargets: true,
-        availableModels: ["ok"],
-      },
-    )
+    const result = await applyModelMappingToChannel(channel, {}, service, {
+      pruneMissingTargets: true,
+      availableModels: ["ok"],
+    })
 
     expect(result).toEqual({ updated: false, prunedCount: 0 })
     expect(service.updateChannelModelMapping).not.toHaveBeenCalled()
@@ -208,16 +233,11 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
         .mockResolvedValue(succeededMappingResult),
     } as any
 
-    const result = await ModelRedirectService.applyModelMappingToChannel(
-      channel,
-      {},
-      service,
-      {
-        pruneMissingTargets: true,
-        availableModels: ["gpt-4o-2024-05-13"],
-        modelMappingPolicy: newApiManagedResourceModels.modelMappingPolicy,
-      },
-    )
+    const result = await applyModelMappingToChannel(channel, {}, service, {
+      pruneMissingTargets: true,
+      availableModels: ["gpt-4o-2024-05-13"],
+      modelMappingPolicy: newApiManagedResourceModels.modelMappingPolicy,
+    })
 
     expect(result).toEqual({ updated: false, prunedCount: 0 })
     expect(service.updateChannelModelMapping).not.toHaveBeenCalled()
@@ -234,16 +254,11 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
         .mockResolvedValue(succeededMappingResult),
     } as any
 
-    const result = await ModelRedirectService.applyModelMappingToChannel(
-      channel,
-      {},
-      service,
-      {
-        pruneMissingTargets: true,
-        availableModels: ["ok"],
-        modelMappingPolicy: newApiManagedResourceModels.modelMappingPolicy,
-      },
-    )
+    const result = await applyModelMappingToChannel(channel, {}, service, {
+      pruneMissingTargets: true,
+      availableModels: ["ok"],
+      modelMappingPolicy: newApiManagedResourceModels.modelMappingPolicy,
+    })
 
     expect(result).toEqual({ updated: true, prunedCount: 2 })
     expect(service.updateChannelModelMapping).toHaveBeenCalledWith(channel, {})
@@ -260,16 +275,11 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
         .mockResolvedValue(succeededMappingResult),
     } as any
 
-    const result = await ModelRedirectService.applyModelMappingToChannel(
-      channel,
-      {},
-      service,
-      {
-        pruneMissingTargets: true,
-        availableModels: ["gpt-4o"],
-        modelMappingPolicy: doneHubManagedResourceModels.modelMappingPolicy,
-      },
-    )
+    const result = await applyModelMappingToChannel(channel, {}, service, {
+      pruneMissingTargets: true,
+      availableModels: ["gpt-4o"],
+      modelMappingPolicy: doneHubManagedResourceModels.modelMappingPolicy,
+    })
 
     expect(result).toEqual({ updated: false, prunedCount: 0 })
     expect(service.updateChannelModelMapping).not.toHaveBeenCalled()
@@ -290,7 +300,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
       "gpt-4o": "new",
     }
 
-    const result = await ModelRedirectService.applyModelMappingToChannel(
+    const result = await applyModelMappingToChannel(
       channel,
       newMapping,
       service,
@@ -318,15 +328,10 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
         .mockResolvedValue(succeededMappingResult),
     } as any
 
-    const result = await ModelRedirectService.applyModelMappingToChannel(
-      channel,
-      {},
-      service,
-      {
-        pruneMissingTargets: true,
-        availableModels: ["something-else"],
-      },
-    )
+    const result = await applyModelMappingToChannel(channel, {}, service, {
+      pruneMissingTargets: true,
+      availableModels: ["something-else"],
+    })
 
     expect(result).toEqual({ updated: true, prunedCount: 1 })
     expect(service.updateChannelModelMapping).toHaveBeenCalledWith(channel, {})
@@ -362,7 +367,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
       } as any
 
       await expect(
-        ModelRedirectService.applyModelMappingToChannel(
+        applyModelMappingToChannel(
           channel,
           { "gpt-4o": "vendor/gpt-4o" },
           service,
@@ -381,7 +386,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
     } as any
 
     await expect(
-      ModelRedirectService.applyModelMappingToChannel(
+      applyModelMappingToChannel(
         channel,
         { "gpt-4o": "vendor/gpt-4o" },
         service,
@@ -483,10 +488,7 @@ describe("ModelRedirectService.applyModelRedirect", () => {
 
     listChannelsMock.mockResolvedValue({ items: channels })
 
-    const mappingSpy = vi.spyOn(
-      ModelRedirectService,
-      "generateModelMappingForChannel",
-    )
+    const mappingSpy = vi.spyOn(modelMatching, "generateModelMappingForChannel")
     mappingSpy.mockReturnValue({ "gpt-4o": "openai/gpt-4o" })
 
     const result = await ModelRedirectService.applyModelRedirect()
@@ -528,10 +530,9 @@ describe("ModelRedirectService.applyModelRedirect", () => {
         modelMapping: "{}",
       }
       listChannelsMock.mockResolvedValue({ items: [channel] })
-      vi.spyOn(
-        ModelRedirectService,
-        "generateModelMappingForChannel",
-      ).mockReturnValue({ "gpt-4o": "vendor/gpt-4o" })
+      vi.spyOn(modelMatching, "generateModelMappingForChannel").mockReturnValue(
+        { "gpt-4o": "vendor/gpt-4o" },
+      )
       updateChannelModelMappingMock.mockResolvedValue(
         outcome === "partial"
           ? {
@@ -593,10 +594,9 @@ describe("ModelRedirectService.applyModelRedirect", () => {
         },
       ],
     })
-    vi.spyOn(
-      ModelRedirectService,
-      "generateModelMappingForChannel",
-    ).mockReturnValue({ "gpt-4o": "vendor/gpt-4o" })
+    vi.spyOn(modelMatching, "generateModelMappingForChannel").mockReturnValue({
+      "gpt-4o": "vendor/gpt-4o",
+    })
     updateChannelModelMappingMock.mockImplementation(async (config) => {
       config.adminToken = ""
       return {
@@ -655,10 +655,9 @@ describe("ModelRedirectService.applyModelRedirect", () => {
           },
         ],
       })
-      vi.spyOn(
-        ModelRedirectService,
-        "generateModelMappingForChannel",
-      ).mockReturnValue({ "gpt-4o": "vendor/gpt-4o" })
+      vi.spyOn(modelMatching, "generateModelMappingForChannel").mockReturnValue(
+        { "gpt-4o": "vendor/gpt-4o" },
+      )
       updateChannelModelMappingMock.mockResolvedValue({
         outcome,
         diagnostic: {
@@ -703,10 +702,10 @@ describe("ModelRedirectService.applyModelRedirect", () => {
         },
       ],
     })
-    vi.spyOn(
-      ModelRedirectService,
-      "generateModelMappingForChannel",
-    ).mockReturnValue({ " alpha ": "vendor/alpha", gamma: "vendor/gamma" })
+    vi.spyOn(modelMatching, "generateModelMappingForChannel").mockReturnValue({
+      " alpha ": "vendor/alpha",
+      gamma: "vendor/gamma",
+    })
 
     await ModelRedirectService.applyModelRedirect()
 
@@ -786,10 +785,7 @@ describe("ModelRedirectService.applyModelRedirect", () => {
 
     listChannelsMock.mockResolvedValue({ items: channels })
 
-    const mappingSpy = vi.spyOn(
-      ModelRedirectService,
-      "generateModelMappingForChannel",
-    )
+    const mappingSpy = vi.spyOn(modelMatching, "generateModelMappingForChannel")
     mappingSpy.mockReturnValue({ "gpt-4o": "openai/gpt-4o" })
 
     updateChannelModelMappingMock.mockRejectedValue(new Error("update failed"))

@@ -11,7 +11,7 @@ import {
   USAGE_HISTORY_STORAGE_KEYS,
 } from "~/services/history/usageHistory/constants"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import {
   AutoCheckinMessageTypes,
   BalanceHistoryMessageTypes,

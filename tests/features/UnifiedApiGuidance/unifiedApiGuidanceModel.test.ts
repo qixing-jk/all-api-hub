@@ -18,10 +18,8 @@ import {
   createEmptyFeatureGuidanceState,
   type FeatureGuidanceState,
 } from "~/services/featureGuidance/featureGuidanceState"
-import {
-  DEFAULT_PREFERENCES,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 
 const basePreferences: UserPreferences = {
   ...DEFAULT_PREFERENCES,

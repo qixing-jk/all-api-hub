@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import OctopusSettings from "~/features/BasicSettings/components/tabs/ManagedSite/OctopusSettings"
 import toast from "~/lib/notify"
 import { validateOctopusConfig } from "~/services/apiService/octopus"
-import type { PreferenceWriteResult } from "~/services/preferences/userPreferences"
+import type { PreferenceWriteResult } from "~/services/preferences/preferencesStore"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 

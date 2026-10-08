@@ -6,10 +6,8 @@ import {
   PreferencesMessageTypes,
   sendPreferencesMessage,
 } from "~/services/preferences/messaging"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { RedemptionAssistMessageTypes } from "~/services/redemption/redemptionAssistMessaging"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"

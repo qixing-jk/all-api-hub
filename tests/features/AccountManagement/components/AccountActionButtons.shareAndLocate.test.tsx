@@ -9,7 +9,7 @@ import AccountActionButtons from "~/features/AccountManagement/components/Accoun
 import { useLocateManagedSiteChannel } from "~/features/AccountManagement/components/AccountActionButtons/useLocateManagedSiteChannel"
 import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { newApiSecretVerification } from "~/services/apiAdapters/managedSites/newApiSecretVerification"
-import type { UserPreferences } from "~/services/preferences/userPreferences"
+import type { UserPreferences } from "~/services/preferences/preferencesSchema"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,

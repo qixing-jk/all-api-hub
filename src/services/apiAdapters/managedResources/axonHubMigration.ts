@@ -14,10 +14,12 @@ import {
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import {
   AxonHubNativeError,
-  getAxonHubCredentialCandidates,
-  isRegularAxonHubChannelType,
   openAxonHubNativeResourceOperations,
 } from "~/services/apiAdapters/managedResources/axonHub"
+import {
+  getAxonHubCredentialCandidates,
+  isRegularAxonHubChannelType,
+} from "~/services/apiAdapters/managedResources/axonHubEditorProjection"
 import {
   isManagedSiteMigrationSourceType,
   resolveManagedSiteMigrationType,

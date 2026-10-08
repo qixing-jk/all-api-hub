@@ -1,7 +1,8 @@
 import type { ManagedSiteType } from "~/constants/siteType"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
-import { ModelRedirectService } from "~/services/models/modelRedirect"
+import { applyModelMappingToChannel } from "~/services/models/modelRedirect/mappingMutation"
+import { generateModelMappingForChannel } from "~/services/models/modelRedirect/modelMatching"
 import type { ManagedModelChannel } from "~/types/managedResourceModels"
 import type { ModelRedirectPreferences } from "~/types/managedSiteModelRedirect"
 import { ALL_PRESET_STANDARD_MODELS } from "~/types/managedSiteModelRedirect"
@@ -62,11 +63,10 @@ export function createModelSyncRedirectUpdater({
               oldModelsSet.size !== newModelsSet.size ||
               Array.from(oldModelsSet).some((model) => !newModelsSet.has(model))
 
-            const newMapping =
-              ModelRedirectService.generateModelMappingForChannel(
-                standardModels,
-                actualModels,
-              )
+            const newMapping = generateModelMappingForChannel(
+              standardModels,
+              actualModels,
+            )
 
             // Use unified method for incremental merge and apply
             const shouldPruneMissingTargetsOnSync =
@@ -74,21 +74,20 @@ export function createModelSyncRedirectUpdater({
               modelsChanged &&
               newModelsSet.size > 0
 
-            const { prunedCount, updated } =
-              await ModelRedirectService.applyModelMappingToChannel(
-                channel,
-                newMapping,
-                service,
-                shouldPruneMissingTargetsOnSync
-                  ? {
-                      pruneMissingTargets: true,
-                      availableModels: actualModels,
-                      modelMappingPolicy:
-                        getSiteTypeCapabilities(siteType).managedSites?.models
-                          ?.modelMappingPolicy,
-                    }
-                  : undefined,
-              )
+            const { prunedCount, updated } = await applyModelMappingToChannel(
+              channel,
+              newMapping,
+              service,
+              shouldPruneMissingTargetsOnSync
+                ? {
+                    pruneMissingTargets: true,
+                    availableModels: actualModels,
+                    modelMappingPolicy:
+                      getSiteTypeCapabilities(siteType).managedSites?.models
+                        ?.modelMappingPolicy,
+                  }
+                : undefined,
+            )
             mappingSuccessCount++
             logger.info("Applied model redirects to channel", {
               resourceRef: channel.ref,

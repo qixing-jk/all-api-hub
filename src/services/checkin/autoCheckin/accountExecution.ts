@@ -11,10 +11,8 @@ import { prepareAutomaticCheckIn } from "~/services/checkin/autoCheckin/automati
 import { resolveSelectedCheckInMethod } from "~/services/checkin/autoCheckin/inspection"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { resolveProviderErrorResult } from "~/services/checkin/autoCheckin/providers/shared"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { type ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { type SiteAccount } from "~/types"
 import {

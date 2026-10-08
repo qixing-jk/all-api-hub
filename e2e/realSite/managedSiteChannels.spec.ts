@@ -1,7 +1,7 @@
 import type { BrowserContext, Page } from "@playwright/test"
 
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
-import type { UserPreferences } from "~/services/preferences/userPreferences"
+import type { UserPreferences } from "~/services/preferences/preferencesSchema"
 import { test } from "~~/e2e/fixtures/extensionTest"
 import {
   buildManagedSiteE2ePrefix,

@@ -229,6 +229,7 @@ const siteTypeImportOwners = [
   "src/services/managedSites/runtimeConfig.ts", // Decode provider configuration unions.
   "src/services/managedSites/configRegistration.ts", // Own provider configuration selection and validation.
   "src/services/preferences/userPreferences.ts", // Stored provider configuration selection.
+  "src/services/preferences/preferencesDefaults.ts", // Default provider identity.
   "src/services/accounts/accountStorage/sub2ApiAuthPersistence.ts", // Check identity before credential writes.
   "src/services/accounts/migrations/sub2apiAuthMigration.ts", // Historical authentication format.
   "src/services/models/modelSync/channelModelFilterEvaluator.ts", // Provider credential redaction.
@@ -251,7 +252,8 @@ const siteTypeImportOwners = [
   "src/features/AccountManagement/bookmarkImport/BookmarkAccountImportDevPreview.tsx", // Development fixtures for account import recovery.
   "src/features/AccountManagement/components/AccountDialog/autoDetectDraft.ts", // Unknown draft identity.
   "src/features/AccountManagement/components/AccountDialog/models.ts", // Initial draft identity.
-  "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog.ts", // Default identity and explicit provider onboarding results.
+  "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog.ts", // Initial identity and explicit provider onboarding results.
+  "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialogIdentityChanges.ts", // Normalize user-selected identity.
   "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialogDetection.ts", // Explicit provider onboarding results.
   "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialogInitialization.ts", // Initial identity and legacy provider hydration.
   "src/features/AccountManagement/sponsors/catalogActions.ts", // Sponsor identity prefill.

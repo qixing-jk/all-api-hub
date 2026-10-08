@@ -12,10 +12,8 @@ import {
 import { readBackupFeatureGuidance } from "~/services/importExport/backupCodec"
 import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
 import { CURRENT_PREFERENCES_VERSION } from "~/services/preferences/migrations/preferencesMigration"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { createWebdavImportPayloadBySelection } from "~/services/webdav/webdavImportProjection"
 import {
   buildWebdavImportPayloadBySelection,

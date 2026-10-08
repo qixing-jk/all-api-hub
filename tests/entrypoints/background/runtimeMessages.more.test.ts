@@ -149,7 +149,7 @@ vi.mock("~/services/accounts/autoRefreshService", () => ({
   setupAutoRefreshMessagingListeners: mocks.setupAutoRefreshMessagingListeners,
 }))
 
-vi.mock("~/services/managedSites/channelConfigStorage", () => ({
+vi.mock("~/services/managedSites/channelConfigHandlers", () => ({
   setupChannelConfigMessagingListeners:
     mocks.setupChannelConfigMessagingListeners,
 }))

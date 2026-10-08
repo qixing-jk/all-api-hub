@@ -15,11 +15,9 @@ import Logging from "~/features/BasicSettings/components/tabs/General/LoggingSet
 import ManagedSite from "~/features/BasicSettings/components/tabs/ManagedSite/ManagedSiteSelector"
 import Refresh from "~/features/BasicSettings/components/tabs/Refresh/RefreshSettings"
 import WebAi from "~/features/BasicSettings/components/tabs/WebAiApiCheck/WebAiApiCheckSettings"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 const cases: {

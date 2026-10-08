@@ -1,4 +1,5 @@
 import { isPlainObject } from "~/utils/core/object"
+import { t } from "~/utils/i18n/core"
 
 /** Reject malformed sections before backup normalization can replace them with empty data. */
 function validateSections(container: Record<string, unknown>) {
@@ -72,7 +73,7 @@ function validateSections(container: Record<string, unknown>) {
 }
 
 /** Validate recognized root and legacy sections before normalization can discard corruption. */
-export function validateWebdavBackupData(
+function validateWebdavBackupData(
   root: Record<string, unknown>,
   options?: { requireBackupShape?: boolean },
 ) {
@@ -114,5 +115,31 @@ export function validateWebdavBackupData(
     !Array.isArray(root.data)
   ) {
     validateSections(root.data as Record<string, unknown>)
+  }
+}
+
+/**
+ * Parse a downloaded WebDAV backup payload and convert malformed JSON into a
+ * stable user-facing backup error instead of exposing engine-specific parser text.
+ */
+export function parseWebdavBackupJson<T = unknown>(
+  content: string,
+  options?: { requireBackupShape?: boolean },
+): T {
+  try {
+    if (typeof content !== "string" || content.trim() === "") {
+      throw new Error("empty backup")
+    }
+
+    const parsed = JSON.parse(content) as unknown
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("backup root is not an object")
+    }
+
+    validateWebdavBackupData(parsed as Record<string, unknown>, options)
+
+    return parsed as T
+  } catch {
+    throw new Error(t("messages:webdav.invalidBackupJson"))
   }
 }

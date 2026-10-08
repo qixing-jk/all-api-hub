@@ -4,6 +4,8 @@ import type {
   ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/resourceNative"
 
+import { createEditorSubmissionLifecycle } from "./editorSubmissionLifecycle"
+
 export type { NativeResourceMutationResult } from "~/services/apiAdapters/contracts/resourceNative"
 
 type NativeResourceRef = { resourceId: string }
@@ -220,42 +222,30 @@ export function createNativeEditorSubmitGate<
   shouldCloseAfterError?(error: unknown): boolean
   closedError?(): Error
 }) {
-  let closed = false
-  let inflight: Promise<TResult> | undefined
-
-  const submit = (
-    values: TValues,
-    operationOptions?: ResourceOperationOptions,
-  ) => {
-    if (inflight !== undefined) return inflight
-    if (closed) {
-      return Promise.reject(
+  return createEditorSubmissionLifecycle<
+    TValues,
+    ResourceOperationOptions,
+    TResult
+  >({
+    onClosed: () =>
+      Promise.reject(
         options.closedError?.() ??
           new Error("Native resource editor is closed"),
-      )
-    }
-
-    const run = (async () => {
+      ),
+    execute: async (values, operationOptions, close) => {
       try {
         options.validate(values)
         const command = options.buildCommand(values)
         const result = snapshotNativeResourceMutation<TMutationValue, TFailure>(
           await options.mutate(command, operationOptions),
         )
-        if (result.certainty !== "not-applied") closed = true
+        if (result.certainty !== "not-applied") close()
         return options.resolve(result)
       } catch (error) {
         const normalizedError = options.normalizeError?.(error) ?? error
-        if (options.shouldCloseAfterError?.(normalizedError)) closed = true
+        if (options.shouldCloseAfterError?.(normalizedError)) close()
         throw normalizedError
       }
-    })()
-    const tracked = run.finally(() => {
-      if (inflight === tracked) inflight = undefined
-    })
-    inflight = tracked
-    return tracked
-  }
-
-  return { submit }
+    },
+  })
 }

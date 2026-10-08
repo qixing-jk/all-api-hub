@@ -9,7 +9,7 @@ import zhCheckin from "~/locales/zh-CN/autoCheckin.json" with { type: "json" }
 import zhCommon from "~/locales/zh-CN/common.json" with { type: "json" }
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
 import { STORAGE_LOCKS } from "~/services/core/storageKeys"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   createStoredAccount,

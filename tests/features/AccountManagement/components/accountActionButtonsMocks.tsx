@@ -1,6 +1,6 @@
 import { vi } from "vitest"
 
-import type { UserPreferences } from "~/services/preferences/userPreferences"
+import type { UserPreferences } from "~/services/preferences/preferencesSchema"
 
 /**
  * Shared mock declarations for the AccountActionButtons tests. Every split

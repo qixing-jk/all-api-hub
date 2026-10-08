@@ -15,10 +15,8 @@ import {
 } from "~/services/accounts/createdRuntimeSecret"
 import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,

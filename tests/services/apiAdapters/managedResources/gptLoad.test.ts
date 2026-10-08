@@ -351,6 +351,39 @@ describe("gpt-load native workspace", () => {
       ).toMatchObject({ valid: false })
     }
   })
+  it("does not dispatch group edits after cancellation", async () => {
+    const write = vi.fn(() => envelope({}))
+    server.use(
+      http.get(`${BASE_URL}/api/groups/1/settings`, () => envelope(groupRow())),
+      http.get(`${BASE_URL}/api/groups/1/models`, () =>
+        envelope({ items: [] }),
+      ),
+      http.get(`${BASE_URL}/api/groups/1/credentials`, () =>
+        envelope({ items: [] }),
+      ),
+      http.put(`${BASE_URL}/api/groups/1/settings`, write),
+    )
+    const ops = await openGptLoadNativeResourceOperations()
+    const detail = await ops.get(1)
+    const controller = new AbortController()
+    controller.abort()
+    await expect(
+      ops.update(
+        detail,
+        {
+          name: "Changed",
+          channelId: detail.group.channelId,
+          baseUrl: detail.group.baseUrl,
+          models: [],
+          priceMultiplier: "1",
+          weight: null,
+        },
+        { signal: controller.signal },
+      ),
+    ).rejects.toMatchObject({ name: "AbortError" })
+    expect(write).not.toHaveBeenCalled()
+  })
+
   it("returns refreshed facts after sequenced edits", async () => {
     let name = "Primary"
     const writes: string[] = []

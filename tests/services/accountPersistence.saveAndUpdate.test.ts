@@ -10,10 +10,8 @@ import { validateAndUpdateAccount } from "~/services/accounts/accountUpdate"
 import { openRouterAccountPersistence } from "~/services/apiAdapters/openrouter/accountPersistence"
 import { OpenRouterManagementKeyRequiredError } from "~/services/apiService/openrouter/errors"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,

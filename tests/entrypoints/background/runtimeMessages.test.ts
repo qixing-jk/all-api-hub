@@ -101,7 +101,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doMock("~/services/accounts/autoRefreshService", () => ({
       setupAutoRefreshMessagingListeners: vi.fn(),
     }))
-    vi.doMock("~/services/managedSites/channelConfigStorage", () => ({
+    vi.doMock("~/services/managedSites/channelConfigHandlers", () => ({
       setupChannelConfigMessagingListeners: vi.fn(),
     }))
     vi.doMock("~/services/checkin/externalCheckInService", () => ({
@@ -182,7 +182,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doUnmock("~/services/productAnnouncements/service")
     vi.doUnmock("~/services/checkin/autoCheckin/schedulerMessaging")
     vi.doUnmock("~/services/accounts/autoRefreshService")
-    vi.doUnmock("~/services/managedSites/channelConfigStorage")
+    vi.doUnmock("~/services/managedSites/channelConfigHandlers")
     vi.doUnmock("~/services/checkin/externalCheckInService")
     vi.doUnmock("~/services/redemption/redemptionAssist")
     vi.doUnmock("~/services/productAnalytics/runtime")

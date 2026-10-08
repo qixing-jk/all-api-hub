@@ -63,10 +63,8 @@ import {
 } from "~/services/checkin/autoCheckin/schedulerMessaging"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -115,6 +113,35 @@ import {
 import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
+
+vi.mock(
+  "~/services/preferences/preferencesDefaults",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/preferences/preferencesDefaults")
+      >()
+    return {
+      ...actual,
+      DEFAULT_PREFERENCES: {
+        autoCheckin: {
+          globalEnabled: true,
+          pretriggerDailyOnUiOpen: true,
+          notifyUiOnCompletion: true,
+          windowStart: "08:00",
+          windowEnd: "10:00",
+          scheduleMode: "random",
+          deterministicTime: "08:00",
+          retryStrategy: {
+            enabled: false,
+            intervalMinutes: 30,
+            maxAttemptsPerDay: 3,
+          },
+        },
+      },
+    }
+  },
+)
 
 const manualExecution = (
   surface: ProtectionBypassSurface = TEMP_WINDOW_REQUEST_SOURCES.Options,
@@ -247,22 +274,6 @@ vi.mock("~/services/checkin/autoCheckin/recordSiteTypeObservation", () => ({
 }))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
-  DEFAULT_PREFERENCES: {
-    autoCheckin: {
-      globalEnabled: true,
-      pretriggerDailyOnUiOpen: true,
-      notifyUiOnCompletion: true,
-      windowStart: "08:00",
-      windowEnd: "10:00",
-      scheduleMode: "random",
-      deterministicTime: "08:00",
-      retryStrategy: {
-        enabled: false,
-        intervalMinutes: 30,
-        maxAttemptsPerDay: 3,
-      },
-    },
-  },
   userPreferences: {
     getPreferences: vi.fn(),
     savePreferences: vi.fn(),

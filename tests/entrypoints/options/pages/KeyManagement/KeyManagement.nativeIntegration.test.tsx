@@ -27,7 +27,7 @@ import {
   OPENROUTER_KEY_LIMIT_RESETS,
 } from "~/services/apiAdapters/openrouter/keyResourceFields"
 import * as capabilityRegistry from "~/services/apiAdapters/registry"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
