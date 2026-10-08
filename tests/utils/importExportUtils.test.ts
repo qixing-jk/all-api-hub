@@ -1504,11 +1504,13 @@ describe("importFromBackupObject", () => {
     expect(mockApiCredentialProfilesMergeConfig).not.toHaveBeenCalled()
   })
 
-  it("keeps local entries and adds new remote entries during a merge", async () => {
+  it("keeps local entries, adds remote entries and replaces older matching entries during a merge", async () => {
     const local = { id: "retained-local", updated_at: 10 }
     const incoming = { id: "new-remote", updated_at: 20 }
+    const oldMatching = { id: "matching", updated_at: 10 }
+    const newerMatching = { id: "matching", updated_at: 20 }
     mockAccountStorageExportData.mockResolvedValue({
-      accounts: [local],
+      accounts: [local, oldMatching],
       bookmarks: [],
       pinnedAccountIds: [],
       orderedAccountIds: [],
@@ -1517,8 +1519,8 @@ describe("importFromBackupObject", () => {
     mockTagStoreExport.mockResolvedValue({ version: 1, tagsById: {} })
     mockMergeTagStoresForSync.mockReturnValueOnce({
       tagStore: { version: 1, tagsById: {} },
-      localAccounts: [local],
-      remoteAccounts: [incoming],
+      localAccounts: [local, oldMatching],
+      remoteAccounts: [incoming, newerMatching],
       localBookmarks: [],
       remoteBookmarks: [],
       localTaggables: [],
@@ -1528,7 +1530,7 @@ describe("importFromBackupObject", () => {
       {
         version: BACKUP_VERSION,
         timestamp: Date.now(),
-        accounts: { accounts: [incoming], last_updated: 20 },
+        accounts: { accounts: [incoming, newerMatching], last_updated: 20 },
       },
       {
         plan: {
@@ -1540,7 +1542,7 @@ describe("importFromBackupObject", () => {
       },
     )
     expect(mockAccountStorageImportData).toHaveBeenCalledWith(
-      expect.objectContaining({ accounts: [local, incoming] }),
+      expect.objectContaining({ accounts: [local, newerMatching, incoming] }),
     )
   })
 
