@@ -1,291 +1,22 @@
-import { BACKUP_VERSION } from "~/constants/importExport"
 import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
-import { coerceApiCredentialProfilesConfig } from "~/services/apiCredentialProfiles/profileConfigCodec"
 import { mergeFeatureGuidanceStates } from "~/services/featureGuidance/featureGuidanceState"
-import { normalizeBackupForMerge } from "~/services/importExport/backupCodec"
 import type {
   BackupFullV2,
   RawBackupData,
 } from "~/services/importExport/backupContracts"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
-import {
-  userPreferences,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
-import {
-  buildWebdavSharedPreferences,
-  restoreWebdavLocalOnlyPreferences,
-} from "~/services/preferences/webdavSharedPreferences"
-import { migrateAccountTagsData } from "~/services/tags/migrations/accountTagsDataMigration"
+import { userPreferences } from "~/services/preferences/userPreferences"
+import { buildWebdavSharedPreferences } from "~/services/preferences/webdavSharedPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
+import { readWebdavBackupFacts } from "~/services/webdav/webdavBackupFacts"
 import {
-  createDefaultTagStore,
-  mergeTagStoresAndRemapAccounts,
-  sanitizeTagStore,
-} from "~/services/tags/tagStoreUtils"
-import {
-  DELETED_ENTRY_KIND,
-  DELETED_ENTRY_KINDS,
-  type AccountStorageConfig,
-  type DeletedEntryKind,
-  type DeletedEntryRecord,
-  type SiteAccount,
-  type SiteBookmark,
-  type TagStore,
-} from "~/types"
-import type { ApiCredentialProfilesConfig } from "~/types/apiCredentialProfiles"
-import type { ChannelConfigSnapshot } from "~/types/channelConfig"
+  projectWebdavEntries,
+  readWebdavBackupAccountsSection,
+} from "~/services/webdav/webdavEntryProjection"
+import { createWebdavImportPayloadBySelection } from "~/services/webdav/webdavImportProjection"
 import { type WebDAVSyncDataSelection } from "~/types/webdav"
-
-type WebdavImportLocalState = {
-  accountsConfig: AccountStorageConfig
-  tagStore: TagStore
-  preferences: UserPreferences
-  channelConfigs: ChannelConfigSnapshot
-  apiCredentialProfiles: ApiCredentialProfilesConfig
-}
-
-/**
- * Type guard for checking if a value is a non-null object (Record).
- */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object"
-}
-
-/**
- * Reads a section from the backup, checking both root and legacy `data` nesting for compatibility.
- */
-function readBackupSection(raw: unknown, key: string): unknown {
-  if (!isRecord(raw)) return undefined
-  if (Object.prototype.hasOwnProperty.call(raw, key)) {
-    return raw[key]
-  }
-
-  const legacyData = isRecord(raw.data) ? raw.data : null
-  if (legacyData && Object.prototype.hasOwnProperty.call(legacyData, key)) {
-    return legacyData[key]
-  }
-
-  return undefined
-}
-
-/**
- * Normalizes a raw input into a list of unique, non-empty string IDs.
- */
-function normalizeWebdavStringIdList(raw: unknown): string[] {
-  if (!Array.isArray(raw)) return []
-  const ids: string[] = []
-  const seen = new Set<string>()
-
-  for (const item of raw) {
-    if (typeof item !== "string") continue
-    if (!item) continue
-    if (seen.has(item)) continue
-    seen.add(item)
-    ids.push(item)
-  }
-
-  return ids
-}
-
-/**
- * Filters a list of IDs to only include those present in the allowList, ensuring uniqueness and order.
- */
-function filterWebdavIdList(ids: string[], allowList: Set<string>): string[] {
-  const filtered: string[] = []
-  const seen = new Set<string>()
-
-  for (const id of ids) {
-    if (!allowList.has(id)) continue
-    if (seen.has(id)) continue
-    seen.add(id)
-    filtered.push(id)
-  }
-
-  return filtered
-}
-
-/**
- * Extracts string IDs from a list of entries, ignoring invalid entries and duplicates.
- */
-function collectWebdavEntryIds(entries: unknown): string[] {
-  if (!Array.isArray(entries)) return []
-
-  return entries
-    .map((entry: any) => entry?.id)
-    .filter((id: unknown): id is string => typeof id === "string")
-}
-
-/**
- * Normalizes the ordered list of entry IDs for WebDAV selective sync:
- */
-export function normalizeWebdavOrderedEntryIds(input: {
-  baseOrderedIds: unknown
-  entryIdSet: Set<string>
-  accounts: Array<{ id: string; created_at?: number }>
-  bookmarks: Array<{ id: string; created_at?: number }>
-}): string[] {
-  const rawIds = Array.isArray(input.baseOrderedIds) ? input.baseOrderedIds : []
-
-  const ordered: string[] = []
-  const seen = new Set<string>()
-
-  for (const id of rawIds) {
-    if (typeof id !== "string") continue
-    if (!input.entryIdSet.has(id)) continue
-    if (seen.has(id)) continue
-    seen.add(id)
-    ordered.push(id)
-  }
-
-  const entries = [
-    ...input.accounts.map((account) => ({
-      id: account.id,
-      createdAt: account.created_at || 0,
-    })),
-    ...input.bookmarks.map((bookmark) => ({
-      id: bookmark.id,
-      createdAt: bookmark.created_at || 0,
-    })),
-  ].sort((a, b) => {
-    if (a.createdAt !== b.createdAt) {
-      return a.createdAt - b.createdAt
-    }
-    return a.id.localeCompare(b.id)
-  })
-
-  for (const entry of entries) {
-    if (!input.entryIdSet.has(entry.id)) continue
-    if (seen.has(entry.id)) continue
-    seen.add(entry.id)
-    ordered.push(entry.id)
-  }
-
-  const remaining = Array.from(input.entryIdSet)
-    .filter((id) => !seen.has(id))
-    .sort((a, b) => a.localeCompare(b))
-
-  ordered.push(...remaining)
-
-  return ordered
-}
-
-type WebdavBackupPresence = {
-  hasAccounts: boolean
-  hasAccountsList: boolean
-  hasBookmarksList: boolean
-  hasPreferences: boolean
-  hasFeatureGuidance: boolean
-  hasApiCredentialProfiles: boolean
-  hasTagStore: boolean
-  hasChannelConfigs: boolean
-  hasPinnedAccountIds: boolean
-  hasOrderedAccountIds: boolean
-}
-
-type WebdavBackupEntry = { id: string; created_at?: number }
-
-type WebdavBackupAccountsSection = {
-  accounts: WebdavBackupEntry[]
-  bookmarks: WebdavBackupEntry[]
-  pinnedAccountIds: string[]
-  orderedAccountIds: string[]
-  deletedEntryRecords: AccountStorageConfig["deletedEntryRecords"]
-  lastUpdated: number
-}
-
-const isDeletedEntryKind = (kind: unknown): kind is DeletedEntryKind =>
-  DELETED_ENTRY_KINDS.includes(kind as DeletedEntryKind)
-
-/**
- * Normalizes deletion markers from WebDAV backup payloads.
- */
-function normalizeWebdavDeletedEntryRecords(
-  raw: unknown,
-): NonNullable<AccountStorageConfig["deletedEntryRecords"]> {
-  if (!raw || typeof raw !== "object") return {}
-
-  const records: NonNullable<AccountStorageConfig["deletedEntryRecords"]> = {}
-
-  for (const [id, value] of Object.entries(raw)) {
-    if (!id || !value || typeof value !== "object") continue
-
-    const candidate = value as Partial<DeletedEntryRecord>
-    const kind = candidate.kind
-    const deletedAt = Number(candidate.deletedAt)
-    const entryUpdatedAt = Number(candidate.entryUpdatedAt)
-
-    if (!isDeletedEntryKind(kind)) continue
-    if (!Number.isFinite(deletedAt) || deletedAt <= 0) continue
-
-    records[id] = {
-      kind,
-      deletedAt,
-      entryUpdatedAt: Number.isFinite(entryUpdatedAt) ? entryUpdatedAt : 0,
-    }
-  }
-
-  return records
-}
-
-/**
- * Keeps only deletion markers for the selected account/bookmark domains.
- */
-function filterWebdavDeletedEntryRecordsBySelection(input: {
-  records: AccountStorageConfig["deletedEntryRecords"]
-  includeAccounts: boolean
-  includeBookmarks: boolean
-}) {
-  const filtered: NonNullable<AccountStorageConfig["deletedEntryRecords"]> = {}
-  const includeKind = (kind: DeletedEntryKind) =>
-    (kind === DELETED_ENTRY_KIND.ACCOUNT && input.includeAccounts) ||
-    (kind === DELETED_ENTRY_KIND.BOOKMARK && input.includeBookmarks)
-
-  for (const [id, record] of Object.entries(input.records || {})) {
-    if (!includeKind(record.kind)) continue
-    filtered[id] = record
-  }
-
-  return filtered
-}
-
-/**
- * Merges local and remote deletion markers, keeping the newest marker per id.
- */
-function mergeWebdavDeletedEntryRecords(input: {
-  localRecords: AccountStorageConfig["deletedEntryRecords"]
-  remoteRecords: AccountStorageConfig["deletedEntryRecords"]
-  includeLocalAccounts: boolean
-  includeLocalBookmarks: boolean
-  includeRemoteAccounts: boolean
-  includeRemoteBookmarks: boolean
-}) {
-  const records: NonNullable<AccountStorageConfig["deletedEntryRecords"]> = {}
-
-  for (const selected of [
-    filterWebdavDeletedEntryRecordsBySelection({
-      records: input.remoteRecords,
-      includeAccounts: input.includeRemoteAccounts,
-      includeBookmarks: input.includeRemoteBookmarks,
-    }),
-    filterWebdavDeletedEntryRecordsBySelection({
-      records: input.localRecords,
-      includeAccounts: input.includeLocalAccounts,
-      includeBookmarks: input.includeLocalBookmarks,
-    }),
-  ]) {
-    for (const [id, record] of Object.entries(selected)) {
-      const current = records[id]
-      if (!current || record.deletedAt > current.deletedAt) {
-        records[id] = record
-      }
-    }
-  }
-
-  return records
-}
 
 /**
  * Creates the common root payload shape shared by all WebDAV backup writers.
@@ -299,92 +30,6 @@ function createBaseWebdavPayload(backup: BackupFullV2): RawBackupData {
 }
 
 /**
- * Reads the local accounts/bookmarks section from a canonical backup.
- */
-function readWebdavBackupAccountsSection(
-  backup: BackupFullV2,
-): WebdavBackupAccountsSection {
-  const rawAccountsConfig = backup.accounts as any
-
-  return {
-    accounts: Array.isArray(rawAccountsConfig?.accounts)
-      ? rawAccountsConfig.accounts
-      : [],
-    bookmarks: Array.isArray(rawAccountsConfig?.bookmarks)
-      ? rawAccountsConfig.bookmarks
-      : [],
-    pinnedAccountIds: normalizeWebdavStringIdList(
-      rawAccountsConfig?.pinnedAccountIds,
-    ),
-    orderedAccountIds: normalizeWebdavStringIdList(
-      rawAccountsConfig?.orderedAccountIds,
-    ),
-    deletedEntryRecords: normalizeWebdavDeletedEntryRecords(
-      rawAccountsConfig?.deletedEntryRecords,
-    ),
-    lastUpdated:
-      typeof rawAccountsConfig?.last_updated === "number"
-        ? rawAccountsConfig.last_updated
-        : backup.timestamp,
-  }
-}
-
-/**
- * Builds a combined entry-id set for the selected accounts and bookmarks.
- */
-function createWebdavEntryIdSet(input: {
-  accounts: WebdavBackupEntry[]
-  bookmarks: WebdavBackupEntry[]
-}): Set<string> {
-  return new Set<string>([
-    ...collectWebdavEntryIds(input.accounts),
-    ...collectWebdavEntryIds(input.bookmarks),
-  ])
-}
-
-/**
- * Merges two ID lists while giving the prioritized list precedence for the
- * selected entries and preserving the fallback list for everything else.
- */
-function mergePrioritizedWebdavIdList(input: {
-  prioritizedIds: string[]
-  preservedIds: string[]
-  prioritizedEntryIds: Set<string>
-  entryIdSet: Set<string>
-}): string[] {
-  return filterWebdavIdList(
-    [
-      ...input.prioritizedIds.filter((id) => input.prioritizedEntryIds.has(id)),
-      ...input.preservedIds.filter((id) => !input.prioritizedEntryIds.has(id)),
-    ],
-    input.entryIdSet,
-  )
-}
-
-/**
- * Merges ordered IDs using the same precedence rules as `mergePrioritizedWebdavIdList`
- * and then re-normalizes the final order against the selected entries.
- */
-function mergePrioritizedWebdavOrderedIdList(input: {
-  prioritizedIds: string[]
-  preservedIds: string[]
-  prioritizedEntryIds: Set<string>
-  entryIdSet: Set<string>
-  accounts: WebdavBackupEntry[]
-  bookmarks: WebdavBackupEntry[]
-}): string[] {
-  return normalizeWebdavOrderedEntryIds({
-    baseOrderedIds: [
-      ...input.prioritizedIds.filter((id) => input.prioritizedEntryIds.has(id)),
-      ...input.preservedIds.filter((id) => !input.prioritizedEntryIds.has(id)),
-    ],
-    entryIdSet: input.entryIdSet,
-    accounts: input.accounts,
-    bookmarks: input.bookmarks,
-  })
-}
-
-/**
  * Returns whether the selection requires tag-store data to participate in sync.
  */
 function shouldIncludeWebdavTagStore(
@@ -393,34 +38,6 @@ function shouldIncludeWebdavTagStore(
   return (
     selection.accounts || selection.bookmarks || selection.apiCredentialProfiles
   )
-}
-
-/**
- * Builds the serialized accounts section while preserving optional account/bookmark subsections.
- */
-function buildWebdavAccountsSection(input: {
-  shouldInclude: boolean
-  includeAccounts: boolean
-  includeBookmarks: boolean
-  accounts: WebdavBackupEntry[]
-  bookmarks: WebdavBackupEntry[]
-  pinnedAccountIds: string[]
-  orderedAccountIds: string[]
-  deletedEntryRecords: AccountStorageConfig["deletedEntryRecords"]
-  lastUpdated: number
-}): Record<string, unknown> | undefined {
-  if (!input.shouldInclude) {
-    return undefined
-  }
-
-  return {
-    ...(input.includeAccounts ? { accounts: input.accounts } : {}),
-    ...(input.includeBookmarks ? { bookmarks: input.bookmarks } : {}),
-    pinnedAccountIds: input.pinnedAccountIds,
-    orderedAccountIds: input.orderedAccountIds,
-    deletedEntryRecords: input.deletedEntryRecords || {},
-    last_updated: input.lastUpdated,
-  }
 }
 
 /**
@@ -470,127 +87,6 @@ function resolveWebdavTagStoreUploadSection(input: {
 }
 
 /**
- * Detects presence of backup sections from the raw JSON shape.
- *
- * This is used to distinguish "missing" (not provided) from "empty" (provided but empty),
- * which is important to prevent accidental wipes during selective sync.
- */
-export function detectWebdavBackupPresence(raw: unknown): WebdavBackupPresence {
-  if (!isRecord(raw)) {
-    return {
-      hasAccounts: false,
-      hasAccountsList: false,
-      hasBookmarksList: false,
-      hasPreferences: false,
-      hasFeatureGuidance: false,
-      hasApiCredentialProfiles: false,
-      hasTagStore: false,
-      hasChannelConfigs: false,
-      hasPinnedAccountIds: false,
-      hasOrderedAccountIds: false,
-    }
-  }
-
-  const root = raw
-  const legacyData = isRecord(root.data) ? root.data : null
-
-  const accountsField = root.accounts
-  const accountsConfig = isRecord(accountsField) ? accountsField : null
-
-  const hasAccountsRoot = Object.prototype.hasOwnProperty.call(root, "accounts")
-  const hasAccountsList =
-    Array.isArray(accountsField) ||
-    (accountsConfig
-      ? Object.prototype.hasOwnProperty.call(accountsConfig, "accounts") &&
-        Array.isArray(accountsConfig.accounts)
-      : false) ||
-    (legacyData
-      ? Object.prototype.hasOwnProperty.call(legacyData, "accounts") &&
-        Array.isArray(legacyData.accounts)
-      : false)
-
-  const hasBookmarksList =
-    (accountsConfig
-      ? Object.prototype.hasOwnProperty.call(accountsConfig, "bookmarks") &&
-        Array.isArray(accountsConfig.bookmarks)
-      : false) ||
-    (legacyData
-      ? Object.prototype.hasOwnProperty.call(legacyData, "bookmarks") &&
-        Array.isArray(legacyData.bookmarks)
-      : false)
-
-  const hasPinnedAccountIds =
-    (accountsConfig
-      ? Object.prototype.hasOwnProperty.call(
-          accountsConfig,
-          "pinnedAccountIds",
-        ) && Array.isArray(accountsConfig.pinnedAccountIds)
-      : false) ||
-    (legacyData
-      ? Object.prototype.hasOwnProperty.call(legacyData, "pinnedAccountIds") &&
-        Array.isArray(legacyData.pinnedAccountIds)
-      : false)
-
-  const hasOrderedAccountIds =
-    (accountsConfig
-      ? Object.prototype.hasOwnProperty.call(
-          accountsConfig,
-          "orderedAccountIds",
-        ) && Array.isArray(accountsConfig.orderedAccountIds)
-      : false) ||
-    (legacyData
-      ? Object.prototype.hasOwnProperty.call(legacyData, "orderedAccountIds") &&
-        Array.isArray(legacyData.orderedAccountIds)
-      : false)
-
-  const hasPreferences =
-    Object.prototype.hasOwnProperty.call(root, "preferences") ||
-    (legacyData
-      ? Object.prototype.hasOwnProperty.call(legacyData, "preferences")
-      : false)
-
-  const hasFeatureGuidance =
-    Object.prototype.hasOwnProperty.call(root, "featureGuidance") ||
-    (legacyData
-      ? Object.prototype.hasOwnProperty.call(legacyData, "featureGuidance")
-      : false)
-
-  const hasApiCredentialProfiles =
-    Object.prototype.hasOwnProperty.call(root, "apiCredentialProfiles") ||
-    (legacyData
-      ? Object.prototype.hasOwnProperty.call(
-          legacyData,
-          "apiCredentialProfiles",
-        )
-      : false)
-
-  const hasTagStore =
-    Object.prototype.hasOwnProperty.call(root, "tagStore") ||
-    (legacyData
-      ? Object.prototype.hasOwnProperty.call(legacyData, "tagStore")
-      : false)
-
-  const hasChannelConfigs =
-    Object.prototype.hasOwnProperty.call(root, "channelConfigs") ||
-    (legacyData
-      ? Object.prototype.hasOwnProperty.call(legacyData, "channelConfigs")
-      : false)
-
-  return {
-    hasAccounts: hasAccountsRoot || hasAccountsList || hasBookmarksList,
-    hasAccountsList,
-    hasBookmarksList,
-    hasPreferences,
-    hasFeatureGuidance,
-    hasApiCredentialProfiles,
-    hasTagStore,
-    hasChannelConfigs,
-    hasPinnedAccountIds,
-    hasOrderedAccountIds,
-  }
-}
-
-/**
  * Build the final WebDAV upload payload.
  *
  * WebDAV uploads replace the entire remote file, so when only part of the
@@ -613,120 +109,62 @@ export function mergeWebdavBackupPayloadBySelection(input: {
     })
   }
 
-  const remotePresence = detectWebdavBackupPresence(remoteBackup)
-  const normalizedRemote = normalizeBackupForMerge(
-    remoteBackup,
-    backup.preferences,
-  )
-  const remotePreferences = readBackupSection(remoteBackup, "preferences")
-  const remoteFeatureGuidance = readBackupSection(
-    remoteBackup,
-    "featureGuidance",
-  )
-  const remoteApiCredentialProfiles = readBackupSection(
-    remoteBackup,
-    "apiCredentialProfiles",
-  )
-  const remoteTagStore = readBackupSection(remoteBackup, "tagStore")
-
+  const {
+    presence: remotePresence,
+    normalized: normalizedRemote,
+    rawSections,
+  } = readWebdavBackupFacts(remoteBackup, backup.preferences)
+  const {
+    preferences: remotePreferences,
+    featureGuidance: remoteFeatureGuidance,
+    apiCredentialProfiles: remoteApiCredentialProfiles,
+    tagStore: remoteTagStore,
+  } = rawSections
   const localAccountsSection = readWebdavBackupAccountsSection(backup)
-  const incomingAccounts = localAccountsSection.accounts
-  const incomingBookmarks = localAccountsSection.bookmarks
-
-  const accounts = selection.accounts
-    ? incomingAccounts
-    : remotePresence.hasAccountsList
-      ? normalizedRemote.accounts
-      : []
-
-  const bookmarks = selection.bookmarks
-    ? incomingBookmarks
-    : remotePresence.hasBookmarksList
-      ? normalizedRemote.bookmarks
-      : []
-
-  const entryIdSet = createWebdavEntryIdSet({ accounts, bookmarks })
-
-  const selectedEntryIdSet = createWebdavEntryIdSet({
-    accounts: selection.accounts ? incomingAccounts : [],
-    bookmarks: selection.bookmarks ? incomingBookmarks : [],
-  })
-
-  const incomingPinnedAccountIds = localAccountsSection.pinnedAccountIds
-  const incomingOrderedAccountIds = localAccountsSection.orderedAccountIds
-  const incomingDeletedEntryRecords = localAccountsSection.deletedEntryRecords
-  const remotePinnedAccountIds = remotePresence.hasPinnedAccountIds
-    ? normalizeWebdavStringIdList(normalizedRemote.pinnedAccountIds)
-    : []
-  const remoteOrderedAccountIds = remotePresence.hasOrderedAccountIds
-    ? normalizeWebdavStringIdList(normalizedRemote.orderedAccountIds)
-    : []
-  const remoteDeletedEntryRecords = normalizedRemote.deletedEntryRecords || {}
-
   const shouldMergeAccountsSection = selection.accounts || selection.bookmarks
-  const deletedEntryRecords = shouldMergeAccountsSection
-    ? mergeWebdavDeletedEntryRecords({
-        localRecords: incomingDeletedEntryRecords,
-        remoteRecords: remoteDeletedEntryRecords,
-        includeLocalAccounts: selection.accounts,
-        includeLocalBookmarks: selection.bookmarks,
-        includeRemoteAccounts: remotePresence.hasAccountsList,
-        includeRemoteBookmarks: remotePresence.hasBookmarksList,
-      })
-    : filterWebdavDeletedEntryRecordsBySelection({
-        records: remoteDeletedEntryRecords,
-        includeAccounts: remotePresence.hasAccountsList,
-        includeBookmarks: remotePresence.hasBookmarksList,
-      })
-  const pinnedAccountIds = shouldMergeAccountsSection
-    ? mergePrioritizedWebdavIdList({
-        prioritizedIds: incomingPinnedAccountIds,
-        preservedIds: remotePinnedAccountIds,
-        prioritizedEntryIds: selectedEntryIdSet,
-        entryIdSet,
-      })
-    : filterWebdavIdList(remotePinnedAccountIds, entryIdSet)
-
-  const orderedAccountIds = shouldMergeAccountsSection
-    ? mergePrioritizedWebdavOrderedIdList({
-        prioritizedIds: incomingOrderedAccountIds,
-        preservedIds: remoteOrderedAccountIds,
-        prioritizedEntryIds: selectedEntryIdSet,
-        entryIdSet,
-        accounts,
-        bookmarks,
-      })
-    : normalizeWebdavOrderedEntryIds({
-        baseOrderedIds: remoteOrderedAccountIds,
-        entryIdSet,
-        accounts,
-        bookmarks,
-      })
-
-  const shouldIncludeAccounts =
-    shouldMergeAccountsSection ||
-    remotePresence.hasAccounts ||
-    remotePresence.hasAccountsList ||
-    remotePresence.hasBookmarksList
-
   const payload: RawBackupData = createBaseWebdavPayload(backup)
-  const accountsSection = buildWebdavAccountsSection({
-    shouldInclude: shouldIncludeAccounts,
-    includeAccounts: selection.accounts || remotePresence.hasAccountsList,
-    includeBookmarks: selection.bookmarks || remotePresence.hasBookmarksList,
-    accounts,
-    bookmarks,
-    pinnedAccountIds,
-    orderedAccountIds,
-    deletedEntryRecords,
+  const accountsSection = projectWebdavEntries({
+    prioritized: localAccountsSection,
+    preserved: {
+      accounts: remotePresence.hasAccountsList ? normalizedRemote.accounts : [],
+      bookmarks: remotePresence.hasBookmarksList
+        ? normalizedRemote.bookmarks
+        : [],
+      pinnedAccountIds: remotePresence.hasPinnedAccountIds
+        ? normalizedRemote.pinnedAccountIds
+        : [],
+      orderedAccountIds: remotePresence.hasOrderedAccountIds
+        ? normalizedRemote.orderedAccountIds
+        : [],
+    },
+    domains: selection,
+    metadata: {
+      usePrioritizedPinned: shouldMergeAccountsSection,
+      usePrioritizedOrder: shouldMergeAccountsSection,
+      completeOrder: true,
+    },
+    tombstones: {
+      localRecords: localAccountsSection.deletedEntryRecords,
+      remoteRecords: normalizedRemote.deletedEntryRecords || {},
+      includeLocalAccounts: selection.accounts,
+      includeLocalBookmarks: selection.bookmarks,
+      includeRemoteAccounts: remotePresence.hasAccountsList,
+      includeRemoteBookmarks: remotePresence.hasBookmarksList,
+    },
+    include: {
+      section:
+        shouldMergeAccountsSection ||
+        remotePresence.hasAccounts ||
+        remotePresence.hasAccountsList ||
+        remotePresence.hasBookmarksList,
+      accounts: selection.accounts || remotePresence.hasAccountsList,
+      bookmarks: selection.bookmarks || remotePresence.hasBookmarksList,
+    },
     lastUpdated: shouldMergeAccountsSection
       ? localAccountsSection.lastUpdated
       : normalizedRemote.accountsTimestamp || backup.timestamp,
   })
-
-  if (accountsSection) {
-    payload.accounts = accountsSection as any
-  }
+  if (accountsSection) payload.accounts = accountsSection as any
 
   const preferences = resolveWebdavUploadSection({
     selected: selection.preferences,
@@ -766,213 +204,6 @@ export function mergeWebdavBackupPayloadBySelection(input: {
   })
   if (tagStore !== undefined) {
     payload.tagStore = tagStore as any
-  }
-
-  return payload
-}
-
-/**
- * Build the import payload for a selective WebDAV restore.
- *
- * The returned payload is safe to hand to `importFromBackupObject()`:
- * - Selected remote accounts/bookmarks keep their tag references valid.
- * - Existing local tag-backed entities (notably API credential profiles) keep
- *   their tags because the remote tag store is merged with the local store.
- * - Incoming remote API credential profiles are remapped to the merged tag ids.
- */
-export function createWebdavImportPayloadBySelection(input: {
-  rawBackup: RawBackupData
-  selection: WebDAVSyncDataSelection
-  localState: WebdavImportLocalState
-}): RawBackupData {
-  const { rawBackup, selection, localState } = input
-
-  const presence = detectWebdavBackupPresence(rawBackup)
-  const normalizedRemote = normalizeBackupForMerge(
-    rawBackup,
-    localState.preferences,
-  )
-
-  const remoteTimestamp =
-    typeof rawBackup?.timestamp === "number"
-      ? rawBackup.timestamp
-      : Number(rawBackup?.timestamp)
-  const timestamp = Number.isFinite(remoteTimestamp)
-    ? remoteTimestamp
-    : Date.now()
-
-  const importAccountsFromRemote =
-    selection.accounts && presence.hasAccountsList
-  const importBookmarksFromRemote =
-    selection.bookmarks && presence.hasBookmarksList
-  const shouldImportAccounts =
-    importAccountsFromRemote || importBookmarksFromRemote
-
-  const importPreferencesFromRemote =
-    selection.preferences && presence.hasPreferences
-
-  const remoteApiCredentialProfiles = coerceApiCredentialProfilesConfig(
-    normalizedRemote.apiCredentialProfiles,
-  )
-  const localApiCredentialProfiles = coerceApiCredentialProfilesConfig(
-    localState.apiCredentialProfiles,
-  )
-
-  const importApiCredentialProfilesFromRemote =
-    selection.apiCredentialProfiles &&
-    presence.hasApiCredentialProfiles &&
-    remoteApiCredentialProfiles.profiles.length > 0
-
-  const localTagStore = sanitizeTagStore(
-    localState.tagStore ?? createDefaultTagStore(),
-  )
-  const remoteTagStore = sanitizeTagStore(
-    normalizedRemote.tagStore ?? createDefaultTagStore(),
-  )
-
-  const migratedLocal = migrateAccountTagsData({
-    accounts: localState.accountsConfig.accounts,
-    tagStore: localTagStore,
-  })
-  const migratedRemote = migrateAccountTagsData({
-    accounts: normalizedRemote.accounts as SiteAccount[],
-    tagStore: remoteTagStore,
-  })
-
-  const mergedTagData =
-    shouldImportAccounts || importApiCredentialProfilesFromRemote
-      ? mergeTagStoresAndRemapAccounts({
-          localTagStore: migratedLocal.tagStore,
-          remoteTagStore: migratedRemote.tagStore,
-          localAccounts: migratedLocal.accounts,
-          remoteAccounts: migratedRemote.accounts,
-          localBookmarks: (localState.accountsConfig.bookmarks || []) as
-            | SiteBookmark[]
-            | undefined,
-          remoteBookmarks: normalizedRemote.bookmarks as SiteBookmark[],
-          localTaggables: localApiCredentialProfiles.profiles,
-          remoteTaggables: importApiCredentialProfilesFromRemote
-            ? remoteApiCredentialProfiles.profiles
-            : [],
-        })
-      : null
-
-  const localAccounts = mergedTagData
-    ? mergedTagData.localAccounts
-    : migratedLocal.accounts
-  const remoteAccounts = mergedTagData
-    ? mergedTagData.remoteAccounts
-    : migratedRemote.accounts
-  const localBookmarks = mergedTagData
-    ? mergedTagData.localBookmarks
-    : ((localState.accountsConfig.bookmarks || []) as SiteBookmark[])
-  const remoteBookmarks = mergedTagData
-    ? mergedTagData.remoteBookmarks
-    : (normalizedRemote.bookmarks as SiteBookmark[])
-
-  const payload: RawBackupData = {
-    version: BACKUP_VERSION,
-    timestamp,
-    channelConfigs:
-      normalizedRemote.channelConfigs || localState.channelConfigs,
-  }
-
-  if (shouldImportAccounts) {
-    const accountsToImport = importAccountsFromRemote
-      ? remoteAccounts
-      : localAccounts
-
-    const bookmarksToImport = importBookmarksFromRemote
-      ? remoteBookmarks
-      : localBookmarks
-
-    const entryIdSet = new Set<string>([
-      ...collectWebdavEntryIds(accountsToImport),
-      ...collectWebdavEntryIds(bookmarksToImport),
-    ])
-
-    const selectedEntryIdSet = createWebdavEntryIdSet({
-      accounts: importAccountsFromRemote ? accountsToImport : [],
-      bookmarks: importBookmarksFromRemote ? bookmarksToImport : [],
-    })
-
-    const localPinned = normalizeWebdavStringIdList(
-      localState.accountsConfig.pinnedAccountIds,
-    )
-    const localOrdered = normalizeWebdavStringIdList(
-      localState.accountsConfig.orderedAccountIds,
-    )
-
-    const remotePinned = presence.hasPinnedAccountIds
-      ? normalizeWebdavStringIdList(normalizedRemote.pinnedAccountIds)
-      : []
-    const remoteOrdered = presence.hasOrderedAccountIds
-      ? normalizeWebdavStringIdList(normalizedRemote.orderedAccountIds)
-      : []
-
-    const pinnedAccountIds = presence.hasPinnedAccountIds
-      ? mergePrioritizedWebdavIdList({
-          prioritizedIds: remotePinned,
-          preservedIds: localPinned,
-          prioritizedEntryIds: selectedEntryIdSet,
-          entryIdSet,
-        })
-      : filterWebdavIdList(localPinned, entryIdSet)
-
-    const orderedAccountIds = presence.hasOrderedAccountIds
-      ? mergePrioritizedWebdavOrderedIdList({
-          prioritizedIds: remoteOrdered,
-          preservedIds: localOrdered,
-          prioritizedEntryIds: selectedEntryIdSet,
-          entryIdSet,
-          accounts: accountsToImport,
-          bookmarks: bookmarksToImport,
-        })
-      : normalizeWebdavOrderedEntryIds({
-          baseOrderedIds: localOrdered,
-          entryIdSet,
-          accounts: accountsToImport,
-          bookmarks: bookmarksToImport,
-        })
-
-    payload.accounts = {
-      accounts: accountsToImport,
-      bookmarks: bookmarksToImport,
-      pinnedAccountIds,
-      orderedAccountIds,
-      deletedEntryRecords: mergeWebdavDeletedEntryRecords({
-        localRecords: localState.accountsConfig.deletedEntryRecords,
-        remoteRecords: normalizedRemote.deletedEntryRecords,
-        includeLocalAccounts: importAccountsFromRemote,
-        includeLocalBookmarks: importBookmarksFromRemote,
-        includeRemoteAccounts: importAccountsFromRemote,
-        includeRemoteBookmarks: importBookmarksFromRemote,
-      }),
-      last_updated: Date.now(),
-    }
-  }
-
-  if (shouldImportAccounts || importApiCredentialProfilesFromRemote) {
-    payload.tagStore = mergedTagData?.tagStore ?? localTagStore
-  }
-
-  if (importPreferencesFromRemote) {
-    payload.preferences = restoreWebdavLocalOnlyPreferences(
-      (normalizedRemote.preferences ||
-        localState.preferences) as UserPreferences,
-      localState.preferences,
-    )
-    if (normalizedRemote.featureGuidance) {
-      payload.featureGuidance = normalizedRemote.featureGuidance
-    }
-  }
-
-  if (importApiCredentialProfilesFromRemote) {
-    payload.apiCredentialProfiles = {
-      ...remoteApiCredentialProfiles,
-      profiles:
-        mergedTagData?.remoteTaggables ?? remoteApiCredentialProfiles.profiles,
-    }
   }
 
   return payload
@@ -1023,43 +254,32 @@ export function filterWebdavBackupPayloadBySelection(input: {
   const { backup, selection } = input
 
   const localAccountsSection = readWebdavBackupAccountsSection(backup)
-  const accounts = selection.accounts ? localAccountsSection.accounts : []
-  const bookmarks = selection.bookmarks ? localAccountsSection.bookmarks : []
-
-  const entryIdSet = createWebdavEntryIdSet({ accounts, bookmarks })
-
-  const pinnedAccountIds = filterWebdavIdList(
-    localAccountsSection.pinnedAccountIds,
-    entryIdSet,
-  )
-  const orderedAccountIds = filterWebdavIdList(
-    localAccountsSection.orderedAccountIds,
-    entryIdSet,
-  )
-  const deletedEntryRecords = filterWebdavDeletedEntryRecordsBySelection({
-    records: localAccountsSection.deletedEntryRecords,
-    includeAccounts: selection.accounts,
-    includeBookmarks: selection.bookmarks,
-  })
-
-  const shouldIncludeAccounts = selection.accounts || selection.bookmarks
-
   const payload: RawBackupData = createBaseWebdavPayload(backup)
-  const accountsSection = buildWebdavAccountsSection({
-    shouldInclude: shouldIncludeAccounts,
-    includeAccounts: selection.accounts,
-    includeBookmarks: selection.bookmarks,
-    accounts,
-    bookmarks,
-    pinnedAccountIds,
-    orderedAccountIds,
-    deletedEntryRecords,
+  const accountsSection = projectWebdavEntries({
+    prioritized: localAccountsSection,
+    preserved: { accounts: [], bookmarks: [] },
+    domains: selection,
+    metadata: {
+      usePrioritizedPinned: true,
+      usePrioritizedOrder: true,
+      completeOrder: false,
+    },
+    tombstones: {
+      localRecords: localAccountsSection.deletedEntryRecords,
+      remoteRecords: {},
+      includeLocalAccounts: selection.accounts,
+      includeLocalBookmarks: selection.bookmarks,
+      includeRemoteAccounts: false,
+      includeRemoteBookmarks: false,
+    },
+    include: {
+      section: selection.accounts || selection.bookmarks,
+      accounts: selection.accounts,
+      bookmarks: selection.bookmarks,
+    },
     lastUpdated: localAccountsSection.lastUpdated,
   })
-
-  if (accountsSection) {
-    payload.accounts = accountsSection as any
-  }
+  if (accountsSection) payload.accounts = accountsSection as any
 
   if (selection.preferences) {
     payload.preferences = buildWebdavSharedPreferences(backup.preferences)

@@ -16,9 +16,9 @@ import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "~/services/preferences/userPreferences"
+import { createWebdavImportPayloadBySelection } from "~/services/webdav/webdavImportProjection"
 import {
   buildWebdavImportPayloadBySelection,
-  createWebdavImportPayloadBySelection,
   filterWebdavBackupPayloadBySelection,
   mergeWebdavBackupPayloadBySelection,
 } from "~/services/webdav/webdavSelectiveSync"

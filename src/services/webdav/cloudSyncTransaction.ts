@@ -8,6 +8,7 @@ import {
 import { type BackupFullV2 } from "~/services/importExport/backupContracts"
 import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
 import { tagStorage } from "~/services/tags/tagStorage"
+import { normalizeWebdavOrderedEntryIds } from "~/services/webdav/webdavEntryProjection"
 import {
   type AccountStorageConfig,
   type SiteAccount,
@@ -37,10 +38,7 @@ import {
   uploadCloudSyncBackup,
   type CloudSyncRemote,
 } from "./cloudSyncService"
-import {
-  mergeWebdavBackupPayloadBySelection,
-  normalizeWebdavOrderedEntryIds,
-} from "./webdavSelectiveSync"
+import { mergeWebdavBackupPayloadBySelection } from "./webdavSelectiveSync"
 import {
   isWebdavFileNotFoundError,
   parseWebdavBackupJson,

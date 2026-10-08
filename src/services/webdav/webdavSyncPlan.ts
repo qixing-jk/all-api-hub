@@ -14,6 +14,8 @@ import {
   createDefaultTagStore,
   sanitizeTagStore,
 } from "~/services/tags/tagStoreUtils"
+import { detectWebdavBackupPresence } from "~/services/webdav/webdavBackupFacts"
+import { normalizeWebdavOrderedEntryIds } from "~/services/webdav/webdavEntryProjection"
 import {
   type AccountStorageConfig,
   type SiteAccount,
@@ -33,10 +35,6 @@ import { WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
 import { createLogger } from "~/utils/core/logger"
 
 import { type UserPreferences } from "../preferences/userPreferences"
-import {
-  detectWebdavBackupPresence,
-  normalizeWebdavOrderedEntryIds,
-} from "./webdavSelectiveSync"
 import { mergeWebdavSyncData } from "./webdavSyncMerge"
 
 const logger = createLogger("WebdavAutoSync")

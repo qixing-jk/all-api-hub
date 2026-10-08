@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { normalizeWebdavOrderedEntryIds } from "~/services/webdav/webdavSelectiveSync"
+import { normalizeWebdavOrderedEntryIds } from "~/services/webdav/webdavEntryProjection"
 
 describe("normalizeWebdavOrderedEntryIds", () => {
   it("filters invalid ids, de-dupes, and appends missing entries stably", () => {
