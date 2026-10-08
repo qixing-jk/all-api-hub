@@ -36,6 +36,9 @@ vi.mock("~/services/managedSites/providers/newApiSession", () => ({
       this.name = "NewApiChannelKeyRequirementError"
     }
   },
+}))
+
+vi.mock("~/services/managedSites/providers/newApiChannelKeyRead", () => ({
   fetchNewApiChannelKey: (...args: unknown[]) =>
     fetchNewApiChannelKeyMock(...args),
 }))

@@ -1,11 +1,9 @@
 import type { TFunction } from "i18next"
-import { RefreshCw } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
   Alert,
-  ConfirmDialog,
   Notice,
   NoticeActionButton,
   SearchableSelect,
@@ -20,16 +18,11 @@ import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDial
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
 import { useApiCredentialProfileLinks } from "~/hooks/useApiCredentialProfileLinks"
-import toast from "~/lib/notify"
 import {
   AccountKeyRepairMessageTypes,
   sendAccountKeyRepairMessage,
 } from "~/services/accounts/accountKeyAutoProvisioning/messaging"
-import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/accountRuntimeKeys"
-import {
-  canCreateAccountKeyResources,
-  supportsRecoverableAccountRuntimeKeySecrets,
-} from "~/services/accounts/keyProductCapabilities"
+import { canCreateAccountKeyResources } from "~/services/accounts/keyProductCapabilities"
 import { ACCOUNT_KEY_RESOURCE_FAILURE_CODES } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/runtimeConfig"
@@ -51,6 +44,7 @@ import {
   pushWithinOptionsPage,
 } from "~/utils/navigation"
 
+import { AccountKeyResourceDeleteDialog } from "./components/AccountKeyResource/AccountKeyResourceDeleteDialog"
 import { AccountKeyResourceEditorDialog } from "./components/AccountKeyResource/AccountKeyResourceEditorDialog"
 import { AccountKeyScopeSelector } from "./components/AccountKeyResource/AccountKeyScopeSelector"
 import { AccountSelectorPanel } from "./components/AccountSelectorPanel"
@@ -58,10 +52,7 @@ import { AccountSummaryBar } from "./components/AccountSummaryBar"
 import { AssociateApiCredentialProfileDialog } from "./components/AssociateApiCredentialProfileDialog"
 import { Footer } from "./components/Footer"
 import { Header } from "./components/Header"
-import {
-  LinkedChannelCleanupOption,
-  LinkedChannelCleanupPending,
-} from "./components/LinkedChannelCleanup"
+import { LinkedChannelCleanupPending } from "./components/LinkedChannelCleanup"
 import { RepairMissingKeysDialog } from "./components/RepairMissingKeysDialog"
 import { TokenList } from "./components/TokenList"
 import { TokenSearchBar } from "./components/TokenSearchBar"
@@ -128,21 +119,6 @@ const getAssociationTargetStatusMessage = (
   }
 }
 
-const nativeDeleteFailureMessage = (code: string | undefined, t: TFunction) => {
-  switch (code) {
-    case ACCOUNT_KEY_RESOURCE_FAILURE_CODES.AuthenticationFailed:
-      return t("keyManagement:native.delete.feedback.authenticationFailed")
-    case ACCOUNT_KEY_RESOURCE_FAILURE_CODES.PermissionDenied:
-      return t("keyManagement:native.delete.feedback.permissionDenied")
-    case ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable:
-      return t("keyManagement:native.delete.feedback.unavailable")
-    case ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain:
-      return t("keyManagement:native.delete.feedback.uncertain")
-    default:
-      return t("keyManagement:native.delete.feedback.error")
-  }
-}
-
 /**
  * Key management page rendering header, filters, token list, and dialogs.
  * @param props Component props optionally carrying routing context.
@@ -162,8 +138,6 @@ export default function KeyManagement(props: {
   const [isAddTokenOpen, setIsAddTokenOpen] = useState(false)
   const [repairStartOnOpen, setRepairStartOnOpen] = useState(false)
   const [isAccountSelectorOpen, setIsAccountSelectorOpen] = useState(false)
-  const [nativeCleanupLinkedChannels, setNativeCleanupLinkedChannels] =
-    useState(false)
   const accountSelectorTriggerRef = useRef<HTMLButtonElement>(null)
   const verification = useNewApiManagedVerification()
   const {
@@ -468,39 +442,6 @@ export default function KeyManagement(props: {
       ].join(":"),
     }
   }, [routeGuidedImport, routeGuidedImportAccountId, routeGuidedImportTokenId])
-  const nativeDeleteFacts = nativeKeys.deleteState.ref
-    ? nativeKeys.allRows.find(
-        (facts) =>
-          facts.ref.accountId === nativeKeys.deleteState.ref?.accountId &&
-          facts.ref.scopeKey === nativeKeys.deleteState.ref?.scopeKey &&
-          facts.ref.resourceId === nativeKeys.deleteState.ref?.resourceId,
-      )
-    : null
-  const deleteAccount = useMemo(
-    () =>
-      nativeKeys.deleteState.ref
-        ? displayData.find(
-            (a) => a.id === nativeKeys.deleteState.ref?.accountId,
-          )
-        : null,
-    [displayData, nativeKeys.deleteState.ref],
-  )
-  const canResolveDeleteKeySecret = useMemo(() => {
-    if (!nativeKeys.deleteState.ref || !deleteAccount) return false
-    if (supportsRecoverableAccountRuntimeKeySecrets(deleteAccount.siteType)) {
-      return true
-    }
-    const profile = getProfileForLocator({
-      source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource,
-      ref: nativeDeleteFacts?.ref ?? nativeKeys.deleteState.ref,
-    })
-    return Boolean(profile?.apiKey?.trim())
-  }, [
-    deleteAccount,
-    getProfileForLocator,
-    nativeDeleteFacts?.ref,
-    nativeKeys.deleteState.ref,
-  ])
   const nativeOneTimeSaveAction = nativeKeys.createdSecret
     ? buildOneTimeApiKeyProfileSaveAction({
         result: nativeKeys.createdSecret,
@@ -509,33 +450,6 @@ export default function KeyManagement(props: {
         source: "KeyManagementNativeResource",
       })
     : undefined
-  const nativeDeleteIsUncertain =
-    nativeKeys.deleteState.failure?.code ===
-    ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain
-  const handleConfirmDeleteNativeKey = useCallback(async () => {
-    if (nativeDeleteIsUncertain) {
-      await nativeKeys.refresh()
-      return
-    }
-    const keyName = nativeDeleteFacts?.displayName
-    const success = await nativeKeys.confirmDelete(
-      canResolveDeleteKeySecret && nativeCleanupLinkedChannels,
-    )
-    if (success) {
-      toast.success(
-        keyName
-          ? t("keyManagement:messages.keyDeleted", { name: keyName })
-          : t("keyManagement:messages.keyDeletedSimple"),
-      )
-    }
-  }, [
-    canResolveDeleteKeySecret,
-    nativeCleanupLinkedChannels,
-    nativeDeleteFacts?.displayName,
-    nativeDeleteIsUncertain,
-    nativeKeys,
-    t,
-  ])
   const isAssociationTargetInventoryLoading =
     isLoading || isNativeInventoryLoading
   const associationRouteState: KeyManagementAssociationTargetState | null =
@@ -873,52 +787,10 @@ export default function KeyManagement(props: {
         focusWorkflowId={nativeKeys.focusWorkflowId ?? undefined}
       />
 
-      <ConfirmDialog
-        intent={nativeDeleteIsUncertain ? "warning" : "destructive"}
-        icon={nativeDeleteIsUncertain ? RefreshCw : undefined}
-        isOpen={nativeKeys.deleteState.isOpen}
-        onClose={nativeKeys.cancelDelete}
-        title={t("keyManagement:native.delete.title")}
-        description={t("keyManagement:native.delete.description", {
-          name: nativeDeleteFacts?.displayName ?? "",
-        })}
-        cancelLabel={t("common:actions.cancel")}
-        confirmLabel={
-          nativeDeleteIsUncertain
-            ? t("keyManagement:native.delete.refresh")
-            : t("keyManagement:native.delete.confirm")
-        }
-        workingLabel={
-          nativeDeleteIsUncertain
-            ? t("common:status.refreshing")
-            : t("common:status.deleting")
-        }
-        confirmButtonTestId={KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton}
-        isWorking={nativeKeys.deleteState.isExecuting}
-        onConfirm={() => void handleConfirmDeleteNativeKey()}
-        details={
-          <>
-            {canResolveDeleteKeySecret ? (
-              <LinkedChannelCleanupOption
-                checked={nativeCleanupLinkedChannels}
-                onCheckedChange={setNativeCleanupLinkedChannels}
-                disabled={nativeKeys.deleteState.isExecuting}
-              />
-            ) : null}
-            {nativeKeys.deleteState.failure ? (
-              <Alert
-                variant="warning"
-                role="alert"
-                title={nativeDeleteFailureMessage(
-                  nativeKeys.deleteState.failure.code,
-                  t,
-                )}
-              >
-                {nativeKeys.deleteState.failure.message}
-              </Alert>
-            ) : undefined}
-          </>
-        }
+      <AccountKeyResourceDeleteDialog
+        nativeKeys={nativeKeys}
+        accounts={displayData}
+        getProfileForLocator={getProfileForLocator}
       />
 
       <OneTimeSecretDialog

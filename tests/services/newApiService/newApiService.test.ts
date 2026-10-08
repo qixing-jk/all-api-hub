@@ -93,10 +93,10 @@ vi.mock("~/services/preferences/userPreferences", () => ({
 }))
 
 vi.mock(
-  "~/services/managedSites/providers/newApiSession",
+  "~/services/managedSites/providers/newApiChannelKeyRead",
   async (importOriginal) => {
     const actual =
-      (await importOriginal()) as typeof import("~/services/managedSites/providers/newApiSession")
+      (await importOriginal()) as typeof import("~/services/managedSites/providers/newApiChannelKeyRead")
 
     return {
       ...actual,

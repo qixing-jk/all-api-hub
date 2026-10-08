@@ -444,6 +444,35 @@ function createEmptyStats() {
 }
 
 describe("AccountDataContext initial statistics", () => {
+  it("publishes the loaded account snapshot with its persisted ordering and pins", async () => {
+    mockGetAllAccounts.mockResolvedValue([{ id: "acc-1" }, { id: "acc-2" }])
+    mockGetOrderedList.mockResolvedValue(["acc-2", "acc-1"])
+    mockGetPinnedList.mockResolvedValue(["acc-2"])
+    const visibleLayouts: Array<{ ordered: string[]; pinned: string[] }> = []
+
+    render(
+      <I18nextProvider i18n={testI18n}>
+        <AccountDataProvider>
+          <ContextProbe
+            onChange={(ctx) => {
+              if (ctx.displayData.length === 2) {
+                visibleLayouts.push({
+                  ordered: ctx.orderedAccountIds,
+                  pinned: ctx.pinnedAccountIds,
+                })
+              }
+            }}
+          />
+        </AccountDataProvider>
+      </I18nextProvider>,
+    )
+
+    await waitFor(() => expect(visibleLayouts.length).toBeGreaterThan(0))
+    for (const layout of visibleLayouts) {
+      expect(layout).toEqual({ ordered: ["acc-2", "acc-1"], pinned: ["acc-2"] })
+    }
+  })
+
   it("reads a batch of updated accounts once instead of loading the full envelope per account", async () => {
     const accounts = Array.from({ length: 100 }, (_, index) => ({
       id: `account-${index}`,

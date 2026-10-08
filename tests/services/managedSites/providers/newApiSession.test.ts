@@ -4,10 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE } from "~/services/apiService/newApi/dashboardAuth"
 import { API_ERROR_CODES, type ApiError } from "~/services/apiTransport/errors"
+import { fetchNewApiChannelKey } from "~/services/managedSites/providers/newApiChannelKeyRead"
 import {
   clearNewApiManagedSessionState,
   ensureNewApiManagedSession,
-  fetchNewApiChannelKey,
   hasNewApiAuthenticatedBrowserSession,
   hasNewApiLoginAssistCredentials,
   isNewApiVerifiedSessionActive,

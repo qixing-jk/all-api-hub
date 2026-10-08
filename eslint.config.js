@@ -179,7 +179,7 @@ const dynamicImportAllowlist = [
     imports: ["~/services/apiAdapters/registry"],
   },
   {
-    file: "src/services/managedSites/providers/newApiSession.ts",
+    file: "src/services/managedSites/providers/newApiChannelKeyRead.ts",
     imports: ["~/utils/browser/tempWindowFetch"],
   },
   {

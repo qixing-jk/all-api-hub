@@ -16,14 +16,9 @@ import {
   refreshNewApiOwnedSession,
   touchNewApiOwnedSession,
 } from "~/services/managedSites/newApiOwnedSession/client"
-import {
-  NEW_API_SESSION_READ_ACTIONS,
-  type ProtectionBypassExecution,
-} from "~/services/protectionBypass/contracts"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import { AuthTypeEnum } from "~/types"
 import type { NewApiConfig } from "~/types/newApiConfig"
-import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 import { isRecord } from "~/utils/core/object"
 import { trimToNull } from "~/utils/core/string"
@@ -162,7 +157,7 @@ interface NewApiSessionState {
     expiresAt: number
     channelId?: number
   }
-  channelKeyReadPromise?: Promise<unknown>
+  channelKeyReadQueue?: { pending?: Promise<unknown> }
   loginPromise?: Promise<EnsureNewApiLoginResult>
   refreshPromise?: Promise<NewApiDashboardRefreshResult>
   methodsPromise?: Promise<NewApiVerificationMethods | null>
@@ -277,15 +272,6 @@ const createManagedSessionRequest = (
   return signal ? { ...request, abortSignal: signal } : request
 }
 
-const throwIfNewApiSessionReadAborted = (signal?: AbortSignal) => {
-  if (signal?.aborted) {
-    throw (
-      signal.reason ??
-      new DOMException("The operation was aborted", "AbortError")
-    )
-  }
-}
-
 const isUnauthorizedError = (error: unknown) =>
   error instanceof ApiError &&
   (error.statusCode === 401 || error.code === API_ERROR_CODES.HTTP_401)
@@ -297,13 +283,6 @@ const isSecureVerificationError = (error: unknown) =>
   (error instanceof ApiError &&
     (error.statusCode === 403 || error.code === API_ERROR_CODES.HTTP_403)) ||
   (error instanceof Error && looksLikeVerificationRequirement(error.message))
-
-// New API deployments signal browser-session verification with either an
-// explicit 403 or a non-JSON verification page returned to the API client.
-const isNewApiSessionReadFallbackError = (error: ApiError) =>
-  error.statusCode === 403 ||
-  error.code === API_ERROR_CODES.HTTP_403 ||
-  error.code === API_ERROR_CODES.CONTENT_TYPE_MISMATCH
 
 const sanitizeNewApiSessionError = (error: unknown, secrets: string[] = []) => {
   return toSanitizedErrorSummary(error, secrets)
@@ -1355,211 +1334,64 @@ export async function submitNewApiSecureVerificationCode(
   }
 }
 
-type NewApiChannelKeyParams = {
-  baseUrl: string
-  userId?: number | string
-  channelId: number
-  username?: string
-  password?: string
-  totpSecret?: string
-  protectionBypassExecution?: ProtectionBypassExecution
-  signal?: AbortSignal
-}
-
-/** Serializes proof issuance and consumption within an origin, including failed reads. */
-export async function fetchNewApiChannelKey(
-  params: NewApiChannelKeyParams,
-): Promise<string> {
-  const state = getSessionState(params.baseUrl)
-  const previous = state.channelKeyReadPromise
-  const pending = (async () => {
-    await previous?.catch(() => undefined)
-    try {
-      return await readNewApiChannelKey(params)
-    } catch (error) {
-      if (error instanceof NewApiChannelKeyRequirementError)
-        error.channelId = params.channelId
-      throw error
-    }
-  })()
-  state.channelKeyReadPromise = pending
-  try {
-    return await runAbortableTask(() => pending, { signals: [params.signal] })
-  } finally {
-    if (state.channelKeyReadPromise === pending) {
-      // Keep the queue locked until the underlying operation settles, even if
-      // its caller stops waiting after cancellation.
-      void pending
-        .finally(() => {
-          if (state.channelKeyReadPromise === pending)
-            state.channelKeyReadPromise = undefined
-        })
-        .catch(() => undefined)
-    }
-  }
-}
-
-/** Acquires verification and consumes the proof for one queued channel-key read. */
-async function readNewApiChannelKey(
-  params: NewApiChannelKeyParams,
-): Promise<string> {
-  throwIfNewApiSessionReadAborted(params.signal)
-  await runAbortableTask(
-    async () =>
-      await ensureNewApiChannelKeyAccess({
-        baseUrl: params.baseUrl,
-        channelId: params.channelId,
-        userId: params.userId?.toString() ?? "",
-        username: params.username?.trim() ?? "",
-        password: params.password ?? "",
-        totpSecret: params.totpSecret?.trim() ?? "",
-      }),
-    { signals: [params.signal] },
-  )
-  throwIfNewApiSessionReadAborted(params.signal)
-
-  let consumedProofToken = ""
-  try {
-    const endpoint = `/api/channel/${params.channelId}/key`
-    const sessionRequest = createManagedSessionRequest(
-      params.baseUrl,
-      params.userId,
-      params.signal,
-    )
-    const usesDashboardAuth =
-      sessionRequest.auth.authType === AuthTypeEnum.AccessToken
-    const securityProof = usesDashboardAuth
-      ? getActiveSecurityProof(params.baseUrl)
-      : undefined
-    // Current upstream binds proofs to a channel and consumes them at most once.
-    // Clear before sending: a failed or aborted response may already have consumed it.
-    // https://github.com/QuantumNous/new-api/blob/main/service/security_verification.go
-    if (securityProof?.channelId) {
-      consumedProofToken = securityProof.token
-      clearVerifiedState(params.baseUrl)
-      if (securityProof.channelId !== params.channelId) {
-        throw new NewApiChannelKeyRequirementError(
+/**
+ * Provide the session-owned operations needed by one protected channel-key read.
+ * The read module owns queue ordering and transport recovery; this owner keeps
+ * login, proof invalidation and transient credentials together.
+ */
+export function getNewApiChannelKeyReadContext(baseUrl: string) {
+  const state = getSessionState(baseUrl)
+  const queue = (state.channelKeyReadQueue ??= {})
+  return {
+    queue,
+    ensureAccess: (
+      config: Omit<
+        Parameters<typeof ensureNewApiChannelKeyAccess>[0],
+        "baseUrl"
+      >,
+    ) => ensureNewApiChannelKeyAccess({ ...config, baseUrl }),
+    prepareRequest(userId?: number | string, signal?: AbortSignal) {
+      const request = createManagedSessionRequest(baseUrl, userId, signal)
+      const usesDashboardAuth =
+        request.auth.authType === AuthTypeEnum.AccessToken
+      const securityProof = usesDashboardAuth
+        ? getActiveSecurityProof(baseUrl)
+        : undefined
+      // Consume channel-scoped proof before transport: even a failed/aborted read
+      // may have consumed it upstream. Legacy Cookie verification remains cached.
+      if (securityProof?.channelId) clearVerifiedState(baseUrl)
+      return { request, usesDashboardAuth, securityProof }
+    },
+    async recordSuccess(usedScopedProof: boolean, signal?: AbortSignal) {
+      if (!usedScopedProof) markVerified(baseUrl)
+      await runAbortableTask(
+        () =>
+          touchNewApiOwnedSession(
+            baseUrl,
+            getActiveDashboardAuth(baseUrl)?.sessionId,
+          ),
+        { signals: [signal] },
+      )
+    },
+    resolveFailure(rawError: unknown, consumedProofToken: string) {
+      const error = sanitizeNewApiErrorForOrigin(rawError, baseUrl, [
+        consumedProofToken,
+      ])
+      if (isUnauthorizedError(error)) {
+        clearLoggedInState(baseUrl)
+        return new NewApiChannelKeyRequirementError(
+          NEW_API_CHANNEL_KEY_ERROR_KINDS.LOGIN_REQUIRED,
+        )
+      }
+      if (isSecureVerificationError(error)) {
+        clearVerifiedState(baseUrl)
+        markLoggedIn(baseUrl)
+        return new NewApiChannelKeyRequirementError(
           NEW_API_CHANNEL_KEY_ERROR_KINDS.SECURE_VERIFICATION_REQUIRED,
         )
       }
-    }
-    let response: { key?: string } | string
-    try {
-      response = await newApiFamilyRequests.data<{ key?: string } | string>(
-        sessionRequest,
-        {
-          endpoint,
-          options: {
-            method: "POST",
-            body: JSON.stringify({}),
-            ...(securityProof
-              ? {
-                  // Modern New API channel-key routes validate this scoped proof
-                  // separately from the dashboard Bearer.
-                  // https://github.com/QuantumNous/new-api/commit/31d70fca393ff2e09bbae012af2e3ccefdd389a1
-                  headers: { "X-Security-Proof": securityProof.token },
-                }
-              : {}),
-          },
-        },
-      )
-    } catch (error) {
-      const protectionBypassExecution = params.protectionBypassExecution
-      if (
-        // The protected NewApiSessionRead envelope is intentionally closed and
-        // Cookie-only; never copy a transient dashboard Bearer into it.
-        usesDashboardAuth ||
-        !protectionBypassExecution ||
-        !(error instanceof ApiError) ||
-        error.code === API_ERROR_CODES.BUSINESS_ERROR ||
-        !isNewApiSessionReadFallbackError(error)
-      ) {
-        throw error
-      }
-
-      const origin = new URL(params.baseUrl).origin
-      throwIfNewApiSessionReadAborted(params.signal)
-      const { tempWindowNewApiSessionRead } = await import(
-        "~/utils/browser/tempWindowFetch"
-      )
-      const fallback = await runAbortableTask(
-        async () =>
-          await tempWindowNewApiSessionRead({
-            origin,
-            action: NEW_API_SESSION_READ_ACTIONS.ChannelKey,
-            channelId: params.channelId,
-            userId: params.userId?.toString().trim() ?? "",
-            requestId: safeRandomUUID(
-              `new-api-channel-key-${params.channelId}`,
-            ),
-            protectionBypassExecution,
-          }),
-        { signals: [params.signal] },
-      )
-      throwIfNewApiSessionReadAborted(params.signal)
-      if (!fallback.success) {
-        throw new ApiError(
-          fallback.error || "New API session read failed",
-          fallback.status,
-          endpoint,
-          fallback.code,
-        )
-      }
-      const body = fallback.data as
-        | { success?: boolean; message?: string; data?: unknown }
-        | undefined
-      if (!body?.success) {
-        throw new ApiError(
-          body?.message || t("messages:errors.api.invalidResponseFormat"),
-          fallback.status,
-          endpoint,
-          API_ERROR_CODES.BUSINESS_ERROR,
-        )
-      }
-      response = body.data as { key?: string } | string
-    }
-
-    throwIfNewApiSessionReadAborted(params.signal)
-
-    const key =
-      typeof response === "string" ? response.trim() : response?.key?.trim()
-
-    if (!key) {
-      throw new Error("new_api_channel_key_missing")
-    }
-
-    if (!securityProof?.channelId) markVerified(params.baseUrl)
-    await runAbortableTask(
-      async () =>
-        await touchNewApiOwnedSession(
-          params.baseUrl,
-          getActiveDashboardAuth(params.baseUrl)?.sessionId,
-        ),
-      { signals: [params.signal] },
-    )
-    throwIfNewApiSessionReadAborted(params.signal)
-    return key
-  } catch (rawError) {
-    throwIfNewApiSessionReadAborted(params.signal)
-    const error = sanitizeNewApiErrorForOrigin(rawError, params.baseUrl, [
-      consumedProofToken,
-    ])
-    if (isUnauthorizedError(error)) {
-      clearLoggedInState(params.baseUrl)
-      throw new NewApiChannelKeyRequirementError(
-        NEW_API_CHANNEL_KEY_ERROR_KINDS.LOGIN_REQUIRED,
-      )
-    }
-
-    if (isSecureVerificationError(error)) {
-      clearVerifiedState(params.baseUrl)
-      markLoggedIn(params.baseUrl)
-      throw new NewApiChannelKeyRequirementError(
-        NEW_API_CHANNEL_KEY_ERROR_KINDS.SECURE_VERIFICATION_REQUIRED,
-      )
-    }
-
-    throw error
+      return error
+    },
   }
 }
 

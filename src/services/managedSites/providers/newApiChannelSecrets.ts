@@ -9,16 +9,14 @@ import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
-import {
-  fetchNewApiChannelKey,
-  NewApiChannelKeyRequirementError,
-} from "~/services/managedSites/providers/newApiSession"
+import { NewApiChannelKeyRequirementError } from "~/services/managedSites/providers/newApiSession"
 import type { NewApiConfig } from "~/types/newApiConfig"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 import { userPreferences } from "../../preferences/userPreferences"
+import { fetchNewApiChannelKey } from "./newApiChannelKeyRead"
 
 const logger = createLogger("NewApiChannelSecrets")
 
