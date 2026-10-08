@@ -201,6 +201,14 @@ Whether an account currently has a selected usable method and the saved account
 data and credentials required to execute it.
 _Avoid_: enabled, supported, latest status
 
+**Check-in Mutation Admission**:
+The decision immediately before an initial or authentication-recovered check-in
+POST that the current account identity, execution intent, selected method,
+provider readiness and global execution switch still permit that mutation.
+Account reloading and the presentation of rejection remain with the calling
+workflow; admission does not establish an execution outcome.
+_Avoid_: check-in readiness, check-in execution outcome
+
 **Check-in Execution Outcome**:
 What happened in one attempt: succeeded, failed, or was not executed.
 _Avoid_: readiness, reason

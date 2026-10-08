@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import toast from "~/lib/notify"
@@ -32,6 +32,9 @@ const balanceHistorySurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBalanceHistoryPage
 /** Load snapshots and own explicit refresh/prune feedback without hiding existing content. */
 export function useBalanceHistoryData(selectedAccountIds: string[]) {
+  const mountedRef = useRef(false)
+  const loadGenerationRef = useRef(0)
+  const loadingToastIdsRef = useRef(new Set<string>())
   const { t } = useTranslation("balanceHistory")
   const [accounts, setAccounts] = useState<SiteAccount[]>([])
   const [tagStore, setTagStore] = useState<TagStore | null>(null)
@@ -39,6 +42,9 @@ export function useBalanceHistoryData(selectedAccountIds: string[]) {
   const [isLoading, setIsLoading] = useState(true)
 
   const loadData = useCallback(async () => {
+    if (!mountedRef.current) return
+    const generation = ++loadGenerationRef.current
+    const isCurrent = () => generation === loadGenerationRef.current
     try {
       setIsLoading(true)
       const [nextAccounts, nextStore, nextTagStore] = await Promise.all([
@@ -46,21 +52,32 @@ export function useBalanceHistoryData(selectedAccountIds: string[]) {
         dailyBalanceHistoryStorage.getStore(),
         tagStorage.getTagStore(),
       ])
-      setAccounts(nextAccounts)
-      setStore(nextStore)
-      setTagStore(nextTagStore)
+      if (isCurrent()) {
+        setAccounts(nextAccounts)
+        setStore(nextStore)
+        setTagStore(nextTagStore)
+      }
     } catch (error) {
-      logger.error("Failed to load data", error)
+      if (isCurrent()) logger.error("Failed to load data", error)
     } finally {
-      setIsLoading(false)
+      if (isCurrent()) setIsLoading(false)
     }
   }, [])
 
   useEffect(() => {
+    mountedRef.current = true
     void loadData()
+    const loadingToastIds = loadingToastIdsRef.current
+    return () => {
+      mountedRef.current = false
+      loadGenerationRef.current += 1
+      for (const id of loadingToastIds) toast.dismiss(id)
+      loadingToastIds.clear()
+    }
   }, [loadData])
 
   const handleRefreshNow = useCallback(async () => {
+    if (!mountedRef.current) return
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BalanceHistory,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshBalanceHistorySnapshots,
@@ -70,6 +87,7 @@ export function useBalanceHistoryData(selectedAccountIds: string[]) {
     let toastId: string | undefined
     try {
       toastId = toast.loading(t("messages.loading.refreshing"))
+      loadingToastIdsRef.current.add(toastId)
       await withProtectionBypassUserCommand(
         PROTECTION_BYPASS_USER_COMMANDS.RefreshAllAccounts,
         PROTECTION_BYPASS_SURFACES.Options,
@@ -88,23 +106,30 @@ export function useBalanceHistoryData(selectedAccountIds: string[]) {
             throw new Error(response?.error || "Unknown error")
           }
 
-          toast.success(t("messages.success.refreshCompleted"), { id: toastId })
+          if (mountedRef.current)
+            toast.success(t("messages.success.refreshCompleted"), {
+              id: toastId,
+            })
           await loadData()
         },
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
-      toast.error(
-        t("messages.error.refreshFailed", { error: getErrorMessage(error) }),
-        { id: toastId },
-      )
+      if (mountedRef.current)
+        toast.error(
+          t("messages.error.refreshFailed", { error: getErrorMessage(error) }),
+          { id: toastId },
+        )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
+    } finally {
+      if (toastId) loadingToastIdsRef.current.delete(toastId)
     }
   }, [loadData, selectedAccountIds, t])
 
   const handlePruneNow = useCallback(async () => {
+    if (!mountedRef.current) return
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BalanceHistory,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.PruneBalanceHistorySnapshots,
@@ -114,6 +139,7 @@ export function useBalanceHistoryData(selectedAccountIds: string[]) {
     let toastId: string | undefined
     try {
       toastId = toast.loading(t("messages.loading.pruning"))
+      loadingToastIdsRef.current.add(toastId)
       const response = await sendBalanceHistoryMessage(
         BalanceHistoryMessageTypes.Prune,
       )
@@ -122,17 +148,21 @@ export function useBalanceHistoryData(selectedAccountIds: string[]) {
         throw new Error(response?.error || "Unknown error")
       }
 
-      toast.success(t("messages.success.pruneCompleted"), { id: toastId })
+      if (mountedRef.current)
+        toast.success(t("messages.success.pruneCompleted"), { id: toastId })
       await loadData()
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
-      toast.error(
-        t("messages.error.pruneFailed", { error: getErrorMessage(error) }),
-        { id: toastId },
-      )
+      if (mountedRef.current)
+        toast.error(
+          t("messages.error.pruneFailed", { error: getErrorMessage(error) }),
+          { id: toastId },
+        )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
+    } finally {
+      if (toastId) loadingToastIdsRef.current.delete(toastId)
     }
   }, [loadData, t])
 
