@@ -1,7 +1,9 @@
+import { act, renderHook } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import BookmarksList from "~/features/SiteBookmarks/components/BookmarksList"
+import { useBookmarksListViewModel } from "~/features/SiteBookmarks/hooks/useBookmarksListViewModel"
 import { SITE_BOOKMARKS_TEST_IDS } from "~/features/SiteBookmarks/testIds"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -194,12 +196,12 @@ beforeEach(() => {
   handleBookmarkReorderMock.mockReset()
   loadAccountDataMock.mockReset()
 
-  mockCreateTab.mockClear()
+  mockCreateTab.mockReset().mockResolvedValue(undefined)
   mockCloseIfPopup.mockClear()
   mockDeleteBookmark.mockClear()
   toastSuccessMock.mockClear()
   toastErrorMock.mockClear()
-  clipboardWriteTextMock.mockClear()
+  clipboardWriteTextMock.mockReset().mockResolvedValue(undefined)
   openAddBookmarkMock.mockClear()
   openEditBookmarkMock.mockClear()
   startProductAnalyticsActionMock.mockReset()
@@ -219,6 +221,85 @@ beforeEach(() => {
 })
 
 describe("BookmarksList", () => {
+  const createBookmark = (id: string, name: string): SiteBookmark => ({
+    id,
+    name,
+    url: `https://${id}.example.com`,
+    tagIds: [],
+    notes: "",
+    created_at: 0,
+    updated_at: 0,
+  })
+
+  it("keeps pinned ordering, reorders known rows and ignores invalid drag targets", () => {
+    bookmarksMock = [
+      createBookmark("b1", "Docs"),
+      createBookmark("b2", "Console"),
+      createBookmark("b3", "Admin"),
+    ]
+    pinnedAccountIdsMock = ["b1", "missing"]
+    orderedAccountIdsMock = ["b1", "b2", "missing"]
+    const { result } = renderHook(() => useBookmarksListViewModel())
+    expect(result.current.sortedIds).toEqual(["b1", "b2", "b3"])
+    act(() => result.current.reorder("b3", "b2"))
+    expect(handleBookmarkReorderMock).toHaveBeenCalledExactlyOnceWith([
+      "b1",
+      "b3",
+      "b2",
+    ])
+    act(() => {
+      result.current.reorder("b1", undefined)
+      result.current.reorder("b1", "b1")
+      result.current.reorder("missing", "b1")
+      result.current.reorder("b1", "missing")
+    })
+    expect(handleBookmarkReorderMock).toHaveBeenCalledOnce()
+  })
+
+  it("normalizes full-width search and clears filtering before allowing reorder", () => {
+    bookmarksMock = [
+      createBookmark("b1", "Docs"),
+      createBookmark("b2", "Console"),
+    ]
+    const { result } = renderHook(() => useBookmarksListViewModel("ＤＯＣＳ"))
+    expect(result.current.displayedResults.map((item) => item.id)).toEqual([
+      "b1",
+    ])
+    act(() => result.current.reorder("b1", "b2"))
+    expect(handleBookmarkReorderMock).not.toHaveBeenCalled()
+    act(() => result.current.clearSearch())
+    expect(result.current.query).toBe("")
+    expect(result.current.displayedResults).toHaveLength(2)
+    expect(result.current.dragDisabled).toBe(false)
+  })
+
+  it("reports open, clipboard and pin failures without a false success", async () => {
+    const bookmark = createBookmark("b1", "Docs")
+    bookmarksMock = [bookmark]
+    mockCreateTab.mockRejectedValueOnce(new Error("Tab unavailable"))
+    clipboardWriteTextMock.mockRejectedValueOnce(
+      new Error("Clipboard unavailable"),
+    )
+    togglePinAccountMock.mockResolvedValueOnce(false)
+    const { result } = renderHook(() => useBookmarksListViewModel())
+    await act(async () => {
+      await result.current.handleOpenBookmark(bookmark)
+      await result.current.handleCopyUrl(bookmark)
+      await result.current.handleTogglePin(bookmark)
+    })
+    expect(mockCloseIfPopup).not.toHaveBeenCalled()
+    expect(toastErrorMock).toHaveBeenCalledTimes(3)
+    expect(toastSuccessMock).not.toHaveBeenCalled()
+    pinnedAccountIdsMock = [bookmark.id]
+    togglePinAccountMock.mockResolvedValueOnce(true)
+    await act(async () => {
+      await result.current.handleTogglePin(bookmark)
+    })
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      "messages:toast.success.bookmarkUnpinned",
+    )
+  })
+
   it("renders empty state and opens add bookmark dialog", async () => {
     render(<BookmarksList />)
 

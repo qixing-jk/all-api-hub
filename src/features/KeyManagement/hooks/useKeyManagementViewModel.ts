@@ -44,7 +44,7 @@ import { useKeyManagementRouteCoordinator } from "./useKeyManagementRouteCoordin
 import { useManagedSiteKeyStatuses } from "./useManagedSiteKeyStatuses"
 
 const logger = createLogger("KeyManagement")
-/** Ignore in-place URL sync from a page still mounted for its exit animation. */
+/** Maps association lookup state to its localized status message. */
 const getAssociationTargetStatusMessage = (
   state: KeyManagementAssociationTargetState,
   t: TFunction,

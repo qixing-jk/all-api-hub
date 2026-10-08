@@ -30,6 +30,51 @@ function createDeferred<T>() {
 }
 
 describe("useVerificationDialogState", () => {
+  it("retains live results when history persistence fails and allows a later save", async () => {
+    const target = requireHistoryTarget(
+      createProfileVerificationHistoryTarget("profile-write-failure"),
+    )
+    const upsert = vi
+      .spyOn(verificationResultHistoryStorage, "upsertLatestSummary")
+      .mockRejectedValueOnce(new Error("Storage unavailable"))
+      .mockImplementation(async (summary) => summary)
+    const { result } = renderHook(() => useVerificationDialogState(target))
+    const probes: ProbeItemState[] = [
+      {
+        definition: { id: "models", requiresModelId: false },
+        isRunning: false,
+        attempts: 1,
+        result: {
+          id: "models",
+          status: "pass",
+          latencyMs: 1,
+          summary: "Models found",
+        },
+      },
+    ]
+    act(() => result.current.setProbes(probes))
+    await act(async () => {
+      await expect(
+        result.current.persistCurrentResults(
+          API_TYPES.OPENAI_COMPATIBLE,
+          probes,
+        ),
+      ).resolves.toBeNull()
+    })
+    expect(result.current.probes).toEqual(probes)
+    expect(result.current.persistedSummary).toBeNull()
+    await act(async () => {
+      await result.current.persistCurrentResults(
+        API_TYPES.OPENAI_COMPATIBLE,
+        probes,
+      )
+    })
+    expect(upsert).toHaveBeenCalledTimes(2)
+    expect(result.current.persistedSummary?.probes).toEqual([
+      expect.objectContaining({ status: "pass" }),
+    ])
+  })
+
   afterEach(() => {
     vi.restoreAllMocks()
   })
