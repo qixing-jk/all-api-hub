@@ -118,7 +118,7 @@ const {
   trackProductAnalyticsActionStartedMock: vi.fn(),
 }))
 
-vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
+vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
   useAccountDataContext: () => ({
     isRefreshing: accountDataScenario.isRefreshing,
     handleRefresh: handleRefreshMock,

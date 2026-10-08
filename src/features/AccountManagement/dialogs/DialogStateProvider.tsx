@@ -1,0 +1,219 @@
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react"
+
+import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
+import AccountDialog from "~/features/AccountManagement/components/AccountDialog"
+import type { AccountDialogRecoveryState } from "~/features/AccountManagement/components/AccountDialog/models"
+import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
+import { useAccountDialogRecoveryReceiver } from "~/features/AccountManagement/dialogs/useAccountDialogRecoveryReceiver"
+import {
+  DialogStateContext,
+  type DialogOptions,
+} from "~/features/AccountManagement/dialogs/useDialogStateContext"
+import {
+  ACCOUNT_MANAGEMENT_ROUTE_ACTIONS,
+  ACCOUNT_MANAGEMENT_ROUTE_PARAMS,
+} from "~/features/AccountManagement/routeParams"
+import {
+  getAndClearPendingSponsorAddAccountPrefill,
+  isAddAccountPrefill,
+  watchPendingSponsorAddAccountPrefill,
+} from "~/features/AccountManagement/sponsors/pendingAddAccountIntent"
+import type { AddAccountPrefill } from "~/features/AccountManagement/sponsors/types"
+import type { DisplaySiteData } from "~/types"
+import { isExtensionOptions, isExtensionSidePanel } from "~/utils/browser"
+
+interface DialogState {
+  isOpen: boolean
+  mode: DialogMode
+  account: DisplaySiteData | null
+  prefill: AddAccountPrefill | null
+  recoveryState?: AccountDialogRecoveryState | null
+}
+
+export const DialogStateProvider = ({
+  children,
+  onOpenBookmarkImport,
+  initialRecoveryId,
+}: {
+  children: ReactNode
+  onOpenBookmarkImport?: () => void
+  initialRecoveryId?: string
+}) => {
+  const { loadAccountData, displayData, isInitialLoad } =
+    useAccountDataContext()
+  const [dialogState, setDialogState] = useState<DialogState>({
+    isOpen: false,
+    mode: DIALOG_MODES.ADD,
+    account: null,
+    prefill: null,
+  })
+
+  const promiseRef = useRef<{
+    resolve: (value: any) => void
+    reject: (reason?: any) => void
+  } | null>(null)
+
+  const openAccountDialog = useCallback((options: DialogOptions) => {
+    return new Promise((resolve, reject) => {
+      setDialogState({
+        isOpen: true,
+        mode: options.mode,
+        account: options.account || null,
+        prefill: options.prefill ?? null,
+        recoveryState: options.recoveryState ?? null,
+      })
+      promiseRef.current = { resolve, reject }
+    })
+  }, [])
+
+  const receiveRecovery = useCallback(
+    (recoveryState: AccountDialogRecoveryState) => {
+      if (dialogState.isOpen) return "busy" as const
+      const account = recoveryState.accountId
+        ? displayData?.find(
+            (candidate) => candidate.id === recoveryState.accountId,
+          )
+        : undefined
+      if (recoveryState.accountId && !account) return "unavailable" as const
+      void openAccountDialog({
+        mode: account ? DIALOG_MODES.EDIT : DIALOG_MODES.ADD,
+        account,
+        recoveryState,
+      })
+      return "accepted" as const
+    },
+    [dialogState.isOpen, displayData, openAccountDialog],
+  )
+
+  useAccountDialogRecoveryReceiver({
+    enabled: !isInitialLoad,
+    initialRecoveryId,
+    onReceive: receiveRecovery,
+  })
+
+  const handleClose = () => {
+    setDialogState((prev) => ({ ...prev, isOpen: false }))
+    loadAccountData()
+  }
+
+  const handleOpenBookmarkImport = useCallback(() => {
+    setDialogState((prev) => ({ ...prev, isOpen: false }))
+    onOpenBookmarkImport?.()
+  }, [onOpenBookmarkImport])
+
+  const handleSuccess = (data: any) => {
+    promiseRef.current?.resolve(data)
+    handleClose()
+  }
+
+  const handleError = (error: Error) => {
+    promiseRef.current?.reject(error)
+    handleClose()
+  }
+
+  // For backward compatibility
+  const isAddAccountOpen =
+    dialogState.isOpen && dialogState.mode === DIALOG_MODES.ADD
+  const isEditAccountOpen =
+    dialogState.isOpen && dialogState.mode === DIALOG_MODES.EDIT
+  const editingAccount = dialogState.account
+
+  const openAddAccount = useCallback(
+    (prefillOrEvent?: AddAccountPrefill | MouseEvent | null) => {
+      const prefill =
+        prefillOrEvent && isAddAccountPrefill(prefillOrEvent)
+          ? prefillOrEvent
+          : null
+
+      openAccountDialog({ mode: DIALOG_MODES.ADD, prefill })
+    },
+    [openAccountDialog],
+  )
+
+  useEffect(() => {
+    const optionsAddAccount =
+      isExtensionOptions() &&
+      new URLSearchParams(window.location.search).get(
+        ACCOUNT_MANAGEMENT_ROUTE_PARAMS.Action,
+      ) === ACCOUNT_MANAGEMENT_ROUTE_ACTIONS.Add
+    if (!isExtensionSidePanel() && !optionsAddAccount) return
+
+    let cancelled = false
+
+    const consumePendingPrefill = () => {
+      void getAndClearPendingSponsorAddAccountPrefill().then((prefill) => {
+        if (cancelled || !prefill) return
+
+        openAccountDialog({ mode: DIALOG_MODES.ADD, prefill })
+      })
+    }
+
+    consumePendingPrefill()
+    const stopWatchingPendingPrefill = watchPendingSponsorAddAccountPrefill(
+      consumePendingPrefill,
+    )
+
+    return () => {
+      cancelled = true
+      stopWatchingPendingPrefill()
+    }
+  }, [openAccountDialog])
+
+  const closeAddAccount = useCallback(handleClose, [loadAccountData])
+  const openEditAccount = useCallback(
+    (account: DisplaySiteData) =>
+      openAccountDialog({ mode: DIALOG_MODES.EDIT, account }),
+    [openAccountDialog],
+  )
+  const closeEditAccount = useCallback(handleClose, [loadAccountData])
+
+  const value = useMemo(
+    () => ({
+      openAccountDialog,
+      isAddAccountOpen,
+      isEditAccountOpen,
+      editingAccount,
+      openAddAccount,
+      closeAddAccount,
+      openEditAccount,
+      closeEditAccount,
+    }),
+    [
+      openAccountDialog,
+      isAddAccountOpen,
+      isEditAccountOpen,
+      editingAccount,
+      openAddAccount,
+      closeAddAccount,
+      openEditAccount,
+      closeEditAccount,
+    ],
+  )
+
+  return (
+    <DialogStateContext.Provider value={value}>
+      {children}
+      {dialogState.isOpen && (
+        <AccountDialog
+          isOpen={dialogState.isOpen}
+          onClose={handleClose}
+          mode={dialogState.mode}
+          account={dialogState.account}
+          prefill={dialogState.prefill}
+          recoveryState={dialogState.recoveryState}
+          onSuccess={handleSuccess}
+          onError={handleError}
+          onOpenBookmarkImport={handleOpenBookmarkImport}
+        />
+      )}
+    </DialogStateContext.Provider>
+  )
+}

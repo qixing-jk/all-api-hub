@@ -10,15 +10,14 @@ import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import DelAccountDialog from "~/features/AccountManagement/components/DelAccountDialog"
 import { AutoCheckinPretriggerCompletionDialog } from "~/features/AutoCheckin/pretrigger/AutoCheckinPretriggerCompletionDialog"
 import { AutoCheckinRiskHint } from "~/features/AutoCheckin/pretrigger/AutoCheckinRiskHint"
-
-import AccountSnapshotTable from "./components/AccountSnapshotTable"
-import ActionBar from "./components/ActionBar"
-import AutoCheckinDataWorkspace from "./components/AutoCheckinDataWorkspace"
-import EmptyResults from "./components/EmptyResults"
-import LoadingSkeleton from "./components/LoadingSkeleton"
-import ResultsTable from "./components/ResultsTable"
-import StatusCard from "./components/StatusCard"
-import { useAutoCheckinViewModel } from "./hooks/useAutoCheckinViewModel"
+import AccountSnapshotTable from "~/features/AutoCheckin/readiness/AccountSnapshotTable"
+import EmptyResults from "~/features/AutoCheckin/results/EmptyResults"
+import ResultsTable from "~/features/AutoCheckin/results/ResultsTable"
+import ActionBar from "~/features/AutoCheckin/workspace/ActionBar"
+import AutoCheckinDataWorkspace from "~/features/AutoCheckin/workspace/AutoCheckinDataWorkspace"
+import LoadingSkeleton from "~/features/AutoCheckin/workspace/LoadingSkeleton"
+import StatusCard from "~/features/AutoCheckin/workspace/StatusCard"
+import { useAutoCheckinViewModel } from "~/features/AutoCheckin/workspace/useAutoCheckinViewModel"
 
 /** Render the feature through its state and command owner. */
 export default function AutoCheckin(props: {

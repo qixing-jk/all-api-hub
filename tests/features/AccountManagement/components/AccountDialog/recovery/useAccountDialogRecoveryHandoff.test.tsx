@@ -2,19 +2,19 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import {
-  canUseAccountDialogRecoverySidePanel,
-  discardAccountDialogRecovery,
-  openAccountDialogRecovery,
-  prepareAccountDialogRecovery,
-  type PreparedAccountDialogRecovery,
-} from "~/features/AccountManagement/accountDialogRecovery"
 import { AccessTokenVerificationGuide } from "~/features/AccountManagement/components/AccountDialog/form/AccessTokenVerificationGuide"
 import {
   createEmptyAccountDialogDraft,
   type AccountDialogRecoveryState,
 } from "~/features/AccountManagement/components/AccountDialog/models"
 import { useAccountDialogRecoveryHandoff } from "~/features/AccountManagement/components/AccountDialog/recovery/useAccountDialogRecoveryHandoff"
+import {
+  canUseAccountDialogRecoverySidePanel,
+  discardAccountDialogRecovery,
+  openAccountDialogRecovery,
+  prepareAccountDialogRecovery,
+  type PreparedAccountDialogRecovery,
+} from "~/features/AccountManagement/dialogs/accountDialogRecovery"
 import { closeIfPopup } from "~/utils/navigation/popup"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { testI18n } from "~~/tests/test-utils/i18n"
@@ -26,7 +26,7 @@ import {
   waitFor,
 } from "~~/tests/test-utils/render"
 
-vi.mock("~/features/AccountManagement/accountDialogRecovery", () => ({
+vi.mock("~/features/AccountManagement/dialogs/accountDialogRecovery", () => ({
   canUseAccountDialogRecoverySidePanel: vi.fn(),
   discardAccountDialogRecovery: vi.fn(),
   openAccountDialogRecovery: vi.fn(),

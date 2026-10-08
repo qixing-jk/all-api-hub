@@ -29,7 +29,7 @@ vi.mock("~/features/BasicSettings/components/shared/LoadingSkeleton", () => ({
 }))
 
 vi.mock(
-  "~/features/OptionsOverview/components/dialogs/PermissionOnboardingDialog",
+  "~/features/OptionsOverview/permissions/PermissionOnboardingDialog",
   () => ({
     PermissionOnboardingDialog: () => null,
   }),

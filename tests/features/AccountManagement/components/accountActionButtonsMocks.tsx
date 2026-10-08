@@ -157,7 +157,7 @@ vi.mock("~/services/protectionBypass/client", async (importOriginal) => {
   }
 })
 
-vi.mock("~/features/AccountManagement/hooks/AccountActionsContext", () => ({
+vi.mock("~/features/AccountManagement/actions/AccountActionsContext", () => ({
   useAccountActionsContext: () => ({
     refreshingAccountId: accountActionsContextValue.refreshingAccountId,
     handleRefreshAccount: mockHandleRefreshAccount,
@@ -165,11 +165,11 @@ vi.mock("~/features/AccountManagement/hooks/AccountActionsContext", () => ({
   }),
 }))
 
-vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
+vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
   useAccountDataContext: () => accountDataContextValue,
 }))
 
-vi.mock("~/features/AccountManagement/hooks/useDialogStateContext", () => ({
+vi.mock("~/features/AccountManagement/dialogs/useDialogStateContext", () => ({
   useDialogStateContext: () => ({
     openEditAccount: vi.fn(),
   }),

@@ -12,8 +12,8 @@ import type {
   BookmarkAccountImportRunResult,
   BookmarkAccountImportScanSummary,
 } from "~/features/AccountManagement/bookmarkImport/types"
-import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
-import { useDialogStateContext } from "~/features/AccountManagement/hooks/useDialogStateContext"
+import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
+import { useDialogStateContext } from "~/features/AccountManagement/dialogs/useDialogStateContext"
 import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
 import {
   ensurePermissionsDetailed,

@@ -9,7 +9,6 @@ import {
   ACCOUNT_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/AccountManagement/routeParams"
 import { WEBDAV_AUTO_SYNC_TARGET_IDS } from "~/features/ImportExport/searchTargets"
-import { OverviewUsageSnapshot } from "~/features/OptionsOverview/components/OverviewUsageSnapshot"
 import OptionsOverview, {
   getPermissionsOnboardingReasonFromUrl,
 } from "~/features/OptionsOverview/OptionsOverview"
@@ -18,6 +17,7 @@ import type {
   OptionsOverviewUsageSnapshot,
   OptionsOverviewViewModel,
 } from "~/features/OptionsOverview/types"
+import { OverviewUsageSnapshot } from "~/features/OptionsOverview/usage/OverviewUsageSnapshot"
 import {
   UNIFIED_API_GUIDANCE_ACTION_KINDS,
   UNIFIED_API_GUIDANCE_SOURCE_KINDS,
@@ -54,7 +54,7 @@ const {
   useProductAnnouncementsMock: vi.fn(),
 }))
 
-vi.mock("~/features/OptionsOverview/useOptionsOverviewData", () => ({
+vi.mock("~/features/OptionsOverview/workspace/useOptionsOverviewData", () => ({
   useOptionsOverviewData: useOptionsOverviewDataMock,
 }))
 
@@ -123,7 +123,7 @@ vi.mock("~/components/icons/WorkflowTransitionIcon", () => ({
 }))
 
 vi.mock(
-  "~/features/OptionsOverview/components/dialogs/PermissionOnboardingDialog",
+  "~/features/OptionsOverview/permissions/PermissionOnboardingDialog",
   () => ({
     PermissionOnboardingDialog: ({
       open,

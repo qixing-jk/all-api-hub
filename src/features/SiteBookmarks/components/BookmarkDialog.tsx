@@ -12,7 +12,7 @@ import {
 } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
-import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import toast from "~/lib/notify"
 import { bookmarkRepository } from "~/services/accounts/accountStorage/bookmarkRepository"
 import { getSiteName } from "~/services/accounts/siteName"

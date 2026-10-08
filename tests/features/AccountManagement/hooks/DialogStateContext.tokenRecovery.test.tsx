@@ -2,14 +2,14 @@ import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
 import {
   openAccountDialogRecovery,
   prepareAccountDialogRecovery,
   receiveAccountDialogRecovery,
-} from "~/features/AccountManagement/accountDialogRecovery"
-import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
-import { DialogStateProvider } from "~/features/AccountManagement/hooks/DialogStateProvider"
-import { useDialogStateContext } from "~/features/AccountManagement/hooks/useDialogStateContext"
+} from "~/features/AccountManagement/dialogs/accountDialogRecovery"
+import { DialogStateProvider } from "~/features/AccountManagement/dialogs/DialogStateProvider"
+import { useDialogStateContext } from "~/features/AccountManagement/dialogs/useDialogStateContext"
 import toast from "~/lib/notify"
 import type { DisplaySiteData } from "~/types"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
@@ -61,7 +61,7 @@ vi.mock("~/utils/browser/storage", async (importOriginal) => ({
     }
   }),
 }))
-vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
+vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
   useAccountDataContext: () => ({
     loadAccountData: vi.fn(),
     displayData: accountData.displayData,

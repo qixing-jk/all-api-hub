@@ -6,7 +6,7 @@ import PopupInterruptionHintBanner from "~/components/PopupInterruptionHintBanne
 import { SelectViewportResizeProvider } from "~/components/ui/select"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { AccountManagementProvider } from "~/features/AccountManagement/hooks/AccountManagementProvider"
+import { AccountManagementProvider } from "~/features/AccountManagement/workspace/AccountManagementProvider"
 import { DevPanel, DevPanelProvider } from "~/features/DevPanel"
 import { useProductAnalyticsPageView } from "~/hooks/analytics/useProductAnalyticsPageView"
 import { cn } from "~/lib/utils"

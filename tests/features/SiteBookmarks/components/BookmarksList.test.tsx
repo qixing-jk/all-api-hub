@@ -116,7 +116,7 @@ vi.mock("@dnd-kit/sortable", () => ({
   }),
 }))
 
-vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
+vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
   useAccountDataContext: () => ({
     bookmarks: bookmarksMock,
     pinnedAccountIds: pinnedAccountIdsMock,

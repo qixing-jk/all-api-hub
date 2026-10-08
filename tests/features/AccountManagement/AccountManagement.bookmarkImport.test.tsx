@@ -56,7 +56,7 @@ function MockAccountDialog({
   ) : null
 }
 
-vi.mock("~/features/AccountManagement/hooks/useDialogStateContext", () => ({
+vi.mock("~/features/AccountManagement/dialogs/useDialogStateContext", () => ({
   useDialogStateContext: () => {
     const context = useContext(DialogStateTestContext)
     if (!context) {
@@ -67,7 +67,7 @@ vi.mock("~/features/AccountManagement/hooks/useDialogStateContext", () => ({
 }))
 
 vi.mock(
-  "~/features/AccountManagement/hooks/AccountManagementProvider",
+  "~/features/AccountManagement/workspace/AccountManagementProvider",
   () => ({
     AccountManagementProvider: ({
       children,
@@ -100,7 +100,7 @@ vi.mock(
   }),
 )
 
-vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
+vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
   useAccountDataContext: () => ({
     ...accountDataContextState.current,
     handleRefresh: handleRefreshMock,
@@ -108,7 +108,7 @@ vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   }),
 }))
 
-vi.mock("~/features/AccountManagement/hooks/AccountActionsContext", () => ({
+vi.mock("~/features/AccountManagement/actions/AccountActionsContext", () => ({
   useAccountActionsContext: () => ({
     handleOpenExternalCheckIns: handleOpenExternalCheckInsMock,
   }),

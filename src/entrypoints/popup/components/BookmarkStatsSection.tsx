@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import { BodySmall, Caption } from "~/components/ui"
 import { RELATIVE_TIME_REFRESH_INTERVAL_MS } from "~/entrypoints/popup/summaryConfig"
-import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 
 import { AnimatedStatValue } from "./AnimatedStatValue"
 

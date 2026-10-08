@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { Badge, Button, ConfirmDialog, Modal } from "~/components/ui"
 import { ActionGroup } from "~/components/ui/ActionGroup"
+import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import toast from "~/lib/notify"
 import {
@@ -24,7 +25,6 @@ import type { SiteAccount } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
-import { useAccountDataContext } from "../../hooks/AccountDataContext"
 import { DedupeAccountsConfirmDetails } from "./DedupeAccountsConfirmDetails"
 import { DedupeAccountsDialogBody } from "./DedupeAccountsDialogBody"
 import { SuspectedDuplicatesList } from "./SuspectedDuplicatesList"

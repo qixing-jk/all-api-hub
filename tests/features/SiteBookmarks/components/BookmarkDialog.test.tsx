@@ -73,7 +73,7 @@ vi.mock("~/services/accounts/siteName", () => ({
   getSiteName: getSiteNameMock,
 }))
 
-vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
+vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
   useAccountDataContext: () => ({
     tags: [],
     createTag: vi.fn(),

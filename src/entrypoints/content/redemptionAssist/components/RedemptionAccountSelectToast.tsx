@@ -3,8 +3,8 @@ import { useTranslation } from "react-i18next"
 
 import { ActionGroup, Button } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
-import AccountSearchInput from "~/features/AccountManagement/components/AccountList/AccountSearchInput"
-import { useAccountSearch } from "~/features/AccountManagement/hooks/useAccountSearch"
+import AccountSearchInput from "~/features/AccountManagement/components/AccountList/filtering/AccountSearchInput"
+import { useAccountSearch } from "~/features/AccountManagement/components/AccountList/filtering/useAccountSearch"
 import { cn } from "~/lib/utils"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

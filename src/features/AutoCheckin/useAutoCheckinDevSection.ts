@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { presentUiOpenPretriggerCompletion } from "~/features/AutoCheckin/pretrigger/pretriggerFeedback"
 import type { DevPanelSection } from "~/features/DevPanel/types"
 import toast from "~/lib/notify"
 import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
@@ -19,7 +20,6 @@ import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 
 import { AUTO_CHECKIN_DEBUG_ACTIONS } from "./actionState"
-import { presentUiOpenPretriggerCompletion } from "./utils/pretriggerFeedback"
 
 interface AutoCheckinDevSectionOptions {
   /** Reloads the page snapshot after actions that mutate background state. */

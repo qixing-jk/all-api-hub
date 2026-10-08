@@ -9,7 +9,7 @@ import {
   WorkflowTransitionButton,
 } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import CloudSyncSettings from "~/features/ImportExport/components/CloudSyncSettings"
+import CloudSyncSettings from "~/features/ImportExport/cloudSync/CloudSyncSettings"
 import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 /**

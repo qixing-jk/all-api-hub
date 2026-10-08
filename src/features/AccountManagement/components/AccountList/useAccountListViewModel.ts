@@ -3,9 +3,34 @@ import { useTranslation } from "react-i18next"
 
 import { ACCOUNT_SITE_TITLE_RULES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
-import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
-import { useAccountSearch } from "~/features/AccountManagement/hooks/useAccountSearch"
+import { useAccountActionsContext } from "~/features/AccountManagement/actions/AccountActionsContext"
+import { useAccountListBulkActions } from "~/features/AccountManagement/components/AccountList/bulk/useAccountListBulkActions"
+import {
+  ACCOUNT_DISABLED_FILTER_VALUES,
+  ACCOUNT_LIST_ALL_FILTER_VALUE,
+  ACCOUNT_REFRESH_FILTER_OPTION_ORDER,
+  ACCOUNT_REFRESH_FILTER_VALUES,
+  aggregateAccountListFilters,
+  isAccountRefreshFilterValue,
+  type AccountDisabledFilterValue,
+  type AccountListFilterState,
+  type AccountRefreshFilterValue,
+} from "~/features/AccountManagement/components/AccountList/filtering/accountListFilters"
+import {
+  ACCOUNT_CHECK_IN_FILTER_OPTION_ORDER,
+  ACCOUNT_CHECK_IN_FILTER_VALUES,
+  type AccountCheckInFilterValue,
+} from "~/features/AccountManagement/components/AccountList/filtering/checkInFilter"
+import { useAccountSearch } from "~/features/AccountManagement/components/AccountList/filtering/useAccountSearch"
+import {
+  groupAccountListResults,
+  type AccountListResultItem,
+} from "~/features/AccountManagement/components/AccountList/ordering/accountListOrdering"
+import {
+  DND_LOAD_STATES,
+  useAccountListReordering,
+} from "~/features/AccountManagement/components/AccountList/ordering/useAccountListReordering"
+import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import { useAddAccountHandler } from "~/features/AccountManagement/opening/useAddAccountHandler"
 import { getAccountSortGroup } from "~/services/preferences/utils/sortingPriority"
 import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
@@ -22,32 +47,6 @@ import {
   calculateTotalIncomeForSites,
 } from "~/utils/core/formatters"
 import { getHealthStatusDisplay } from "~/utils/healthStatus"
-
-import {
-  ACCOUNT_DISABLED_FILTER_VALUES,
-  ACCOUNT_LIST_ALL_FILTER_VALUE,
-  ACCOUNT_REFRESH_FILTER_OPTION_ORDER,
-  ACCOUNT_REFRESH_FILTER_VALUES,
-  aggregateAccountListFilters,
-  isAccountRefreshFilterValue,
-  type AccountDisabledFilterValue,
-  type AccountListFilterState,
-  type AccountRefreshFilterValue,
-} from "./accountListFilters"
-import {
-  groupAccountListResults,
-  type AccountListResultItem,
-} from "./accountListOrdering"
-import {
-  ACCOUNT_CHECK_IN_FILTER_OPTION_ORDER,
-  ACCOUNT_CHECK_IN_FILTER_VALUES,
-  type AccountCheckInFilterValue,
-} from "./checkInFilter"
-import { useAccountListBulkActions } from "./useAccountListBulkActions"
-import {
-  DND_LOAD_STATES,
-  useAccountListReordering,
-} from "./useAccountListReordering"
 
 export interface AccountListViewModelOptions {
   initialSearchQuery?: string

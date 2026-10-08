@@ -4,9 +4,9 @@ import { useTranslation } from "react-i18next"
 
 import { FormField, Spinner, Switch, Textarea } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
-import ResultStatusBadge from "~/features/AutoCheckin/components/ResultStatusBadge"
+import ResultStatusBadge from "~/features/AutoCheckin/results/ResultStatusBadge"
+import { formatTimestamp } from "~/features/AutoCheckin/table/tableUtils"
 import { getAutoCheckinResultMessage } from "~/features/AutoCheckin/utils/autoCheckin"
-import { formatTimestamp } from "~/features/AutoCheckin/utils/tableUtils"
 import type { AuthConfig } from "~/services/apiTransport/type"
 import {
   buildCheckInFeedbackDetails,

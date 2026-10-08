@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { presentUiOpenPretriggerCompletion } from "~/features/AutoCheckin/utils/pretriggerFeedback"
+import { presentUiOpenPretriggerCompletion } from "~/features/AutoCheckin/pretrigger/pretriggerFeedback"
 import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import {
