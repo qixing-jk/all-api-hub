@@ -8,7 +8,7 @@ import {
   type ResourceFieldIssue,
   type ResourceValidationResult,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import type { NativeResourceEditorDefinition } from "~/services/apiAdapters/managedResources/factory"
+import type { NativeResourceEditorDefinition } from "~/services/apiAdapters/managedResources/editor"
 import { readNewApiSettings } from "~/services/managedSites/providers/newApi/newApiChannelSettings"
 import type { NewApiChannel } from "~/types/newApi"
 import type {

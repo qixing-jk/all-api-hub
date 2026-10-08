@@ -12,16 +12,20 @@ import {
   type ManagedResourceRegistration,
   type ManagedResourceWorkspace,
   type ResourceDisplayFacts,
-  type ResourceEditor,
   type ResourceFailure,
-  type ResourceFieldDescriptor,
-  type ResourceFieldOption,
   type ResourceListQuery,
   type ResourceOperationOptions,
   type ResourceValidationResult,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
+import {
+  createManagedResourceEditor,
+  type NativeResourceEditorDefinition,
+} from "~/services/apiAdapters/managedResources/editor"
+import {
+  mapOperationFailure,
+  toManagedError,
+} from "~/services/apiAdapters/managedResources/failures"
 import { scalarKeyCleanup } from "~/services/apiAdapters/managedResources/shared/keyCleanup"
-import { createEditorSubmissionLifecycle } from "~/services/apiAdapters/nativeResources/editorSubmissionLifecycle"
 import {
   assertNativeResourceFacts,
   createNativeResourceRefBoundary,
@@ -38,22 +42,6 @@ export type NativeResourcePage<TItem> = {
   items: readonly TItem[]
   total?: number
   nextCursor?: string
-}
-
-export type NativeResourceEditorDefinition<TCommand> = {
-  fields: readonly ResourceFieldDescriptor[]
-  initialValues: EditableResourceProjection
-  validate(values: EditableResourceProjection): ResourceValidationResult
-  buildCommand(values: EditableResourceProjection): TCommand
-  loadSecret?: (
-    fieldId: string,
-    options?: ResourceOperationOptions,
-  ) => Promise<string>
-  loadOptions?: (
-    fieldId: string,
-    values: EditableResourceProjection,
-    options?: ResourceOperationOptions,
-  ) => Promise<readonly ResourceFieldOption[]>
 }
 
 export type NativeResourceCreateSeedBinding = {
@@ -165,44 +153,6 @@ const unexpectedDefinitionOutput = () =>
     code: MANAGED_RESOURCE_FAILURE_CODES.Unexpected,
   })
 
-const toManagedError = (
-  error: unknown,
-  mapFailure: (error: unknown) => ResourceFailure,
-) => {
-  if (error instanceof ManagedResourceError) return error
-
-  let failure: ResourceFailure
-  try {
-    failure = mapFailure(error)
-  } catch {
-    throw error
-  }
-
-  return new ManagedResourceError(failure)
-}
-
-const mapOperationFailure = async <T>(
-  operation: () => T | Promise<T>,
-  mapFailure: (error: unknown) => ResourceFailure,
-): Promise<T> => {
-  try {
-    return await operation()
-  } catch (error) {
-    throw toManagedError(error, mapFailure)
-  }
-}
-
-/** Validates untrusted native-definition output before public projection. */
-function assertDefinitionMutationResult<T>(
-  result: unknown,
-  options: { idempotent: boolean },
-): asserts result is ManagedSiteMutationResult<T> {
-  assertManagedSiteMutationResult<T, ManagedSiteMutationConfirmedEffect>(
-    result,
-    options,
-  )
-}
-
 const uncertainMutationResult = <T>(
   raw?: unknown,
 ): ManagedSiteMutationResult<T> => ({
@@ -211,11 +161,6 @@ const uncertainMutationResult = <T>(
     message: MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
     ...(raw === undefined ? {} : { raw }),
   },
-})
-
-const rejectedPublicInput = <T>(): ManagedSiteMutationResult<T> => ({
-  outcome: MANAGED_SITE_MUTATION_OUTCOMES.Rejected,
-  diagnostic: { message: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed },
 })
 
 /** Creates a public managed-resource registration from a correlated native Adapter definition. */
@@ -410,135 +355,6 @@ export function defineNativeResourceKind<
           return projectMutationFacts(detail, expectedRef)
         }
 
-        const createEditor = <TCommand>(
-          editorDefinition: NativeResourceEditorDefinition<TCommand>,
-          mutate: (
-            command: TCommand,
-            options?: ResourceOperationOptions,
-          ) => Promise<ManagedSiteMutationResult<TDetail>>,
-          projectResult: (detail: TDetail) => ResourceDisplayFacts,
-          mutationOptions: { idempotent: boolean },
-        ): ResourceEditor => {
-          const closeForTerminalFailure = (
-            error: ManagedResourceError,
-            close: () => void,
-          ) => {
-            if (
-              error.failure.code === MANAGED_RESOURCE_FAILURE_CODES.NotFound ||
-              error.failure.code ===
-                MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain
-            ) {
-              close()
-            }
-          }
-
-          const validate = (values: EditableResourceProjection) => {
-            try {
-              return editorDefinition.validate(values)
-            } catch (error) {
-              throw toManagedError(error, mapFailure)
-            }
-          }
-
-          const { submit } = createEditorSubmissionLifecycle<
-            EditableResourceProjection,
-            ResourceOperationOptions,
-            ManagedSiteMutationResult<ResourceDisplayFacts>
-          >({
-            onClosed: () =>
-              Promise.resolve(rejectedPublicInput<ResourceDisplayFacts>()),
-            execute: async (values, submitOptions, close) => {
-              const validation = validate(values)
-              if (!validation.valid)
-                return rejectedPublicInput<ResourceDisplayFacts>()
-              let command: TCommand
-              try {
-                command = editorDefinition.buildCommand(values)
-              } catch (error) {
-                const managedError = toManagedError(error, mapFailure)
-                closeForTerminalFailure(managedError, close)
-                throw managedError
-              }
-
-              let candidate: unknown
-              try {
-                candidate = await mutate(command, submitOptions)
-              } catch (error) {
-                if (error instanceof ManagedResourceError) {
-                  closeForTerminalFailure(error, close)
-                } else {
-                  close()
-                }
-                throw error
-              }
-
-              try {
-                assertDefinitionMutationResult<TDetail>(
-                  candidate,
-                  mutationOptions,
-                )
-              } catch (error) {
-                close()
-                throw error
-              }
-              const result = candidate
-              if (result.outcome !== MANAGED_SITE_MUTATION_OUTCOMES.Rejected) {
-                close()
-              }
-
-              switch (result.outcome) {
-                case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded:
-                  return { ...result, data: projectResult(result.data) }
-                case MANAGED_SITE_MUTATION_OUTCOMES.Partial:
-                  if (result.data === undefined) {
-                    // No provider detail crosses the public boundary in this
-                    // branch, so the checked envelope is already public-safe.
-                    return result as ManagedSiteMutationResult<ResourceDisplayFacts>
-                  }
-                  return { ...result, data: projectResult(result.data) }
-                case MANAGED_SITE_MUTATION_OUTCOMES.Rejected:
-                case MANAGED_SITE_MUTATION_OUTCOMES.Uncertain:
-                  return result
-              }
-            },
-          })
-
-          const loadSecretCallback = editorDefinition.loadSecret
-          const loadOptionsCallback = editorDefinition.loadOptions
-          return {
-            fields: editorDefinition.fields,
-            initialValues: editorDefinition.initialValues,
-            validate,
-            ...(loadSecretCallback
-              ? {
-                  loadSecret: (
-                    fieldId: string,
-                    operationOptions?: ResourceOperationOptions,
-                  ) =>
-                    mapOperationFailure(
-                      () => loadSecretCallback(fieldId, operationOptions),
-                      mapFailure,
-                    ),
-                }
-              : {}),
-            ...(loadOptionsCallback
-              ? {
-                  loadOptions: (
-                    fieldId: string,
-                    values: EditableResourceProjection,
-                    operationOptions?: ResourceOperationOptions,
-                  ) =>
-                    mapOperationFailure(
-                      () =>
-                        loadOptionsCallback(fieldId, values, operationOptions),
-                      mapFailure,
-                    ),
-                }
-              : {}),
-            submit,
-          }
-        }
-
         const capabilities: ManagedResourceWorkspace["capabilities"] = {
           canSearch: definition.capabilities?.canSearch ?? false,
           canCreate: definition.capabilities?.canCreate ?? true,
@@ -674,7 +490,7 @@ export function defineNativeResourceKind<
                       ? { signal: editorOptions.signal }
                       : undefined,
                   )
-                  return createEditor(
+                  return createManagedResourceEditor(
                     seedProjection
                       ? {
                           ...editorDefinition,
@@ -715,6 +531,7 @@ export function defineNativeResourceKind<
                     },
                     projectCreatedDetail,
                     { idempotent: false },
+                    mapFailure,
                   )
                 }, mapFailure),
           openEditEditor: (ref, editorOptions) =>
@@ -736,7 +553,7 @@ export function defineNativeResourceKind<
                       ? { signal: editorOptions.signal }
                       : undefined,
                   )
-                  return createEditor(
+                  return createManagedResourceEditor(
                     editorDefinition,
                     async (command, submitOptions) => {
                       let latestDetail: TDetail
@@ -761,6 +578,7 @@ export function defineNativeResourceKind<
                         ? projectCreatedDetail(updatedDetail)
                         : projectDetailAtRef(updatedDetail, canonicalRef),
                     { idempotent: true },
+                    mapFailure,
                   )
                 }, mapFailure),
           delete: (ref, deleteOptions) =>
@@ -779,7 +597,10 @@ export function defineNativeResourceKind<
                     locator,
                     deleteOptions,
                   )
-                  assertDefinitionMutationResult<void>(candidate, {
+                  assertManagedSiteMutationResult<
+                    void,
+                    ManagedSiteMutationConfirmedEffect
+                  >(candidate, {
                     idempotent: true,
                   })
                   const result = candidate

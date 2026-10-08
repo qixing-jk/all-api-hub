@@ -30,7 +30,7 @@ import {
   type ClaudeCodeHubNativeResourceOperations,
   type ClaudeCodeHubNativeUpdateCommand,
 } from "~/services/apiAdapters/managedResources/claudeCodeHub/nativeContracts"
-import { type NativeResourceEditorDefinition } from "~/services/apiAdapters/managedResources/factory"
+import type { NativeResourceEditorDefinition } from "~/services/apiAdapters/managedResources/editor"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import type {
   ClaudeCodeHubProviderCreatePayload,

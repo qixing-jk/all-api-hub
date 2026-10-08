@@ -1,17 +1,13 @@
 import {
   NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE,
   NEW_API_DASHBOARD_AUTH_REFRESH_PATH,
-  parseNewApiDashboardAuthBundleResponse,
 } from "~/services/apiService/newApi/dashboardAuth"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import {
-  captureNewApiOwnedSession,
-  cleanupNewApiOwnedSession,
-  refreshNewApiOwnedSession,
-} from "~/services/managedSites/newApiOwnedSession/client"
+import { cleanupNewApiOwnedSession } from "~/services/managedSites/newApiOwnedSession/client"
+import { createNewApiDashboardAuthAcceptance } from "~/services/managedSites/providers/newApi/newApiDashboardAuthAcceptance"
 import {
   hasNewApiLoginAssistCredentials,
   NEW_API_SECURITY_PROOF_SCOPES,
@@ -167,13 +163,8 @@ export function createNewApiSessionProtocol(
     return error
   }
 
-  const applyDashboardAuthBundleResponse = (baseUrl: string, body: unknown) => {
-    const parsed = parseNewApiDashboardAuthBundleResponse(body)
-    if (parsed.kind === "valid") {
-      sessionRuntime.storeDashboardAuth(baseUrl, parsed.bundle)
-    }
-    return parsed.kind
-  }
+  const acceptDashboardAuth =
+    createNewApiDashboardAuthAcceptance(sessionRuntime)
 
   const parseDashboardRefreshBody = (body: string): unknown | undefined => {
     try {
@@ -205,18 +196,6 @@ export function createNewApiSessionProtocol(
     })
     return error
   }
-
-  const toOwnedSessionBundle = (
-    baseUrl: string,
-    dashboardAuth: NonNullable<
-      ReturnType<NewApiTransientSessionRuntime["getActiveDashboardAuth"]>
-    >,
-  ) => ({
-    baseUrl,
-    sessionId: dashboardAuth.sessionId,
-    accessToken: dashboardAuth.token,
-    accessExpiresAt: dashboardAuth.expiresAt,
-  })
 
   /**
    * Refreshes only the modern dashboard session. The request rotates auth state,
@@ -265,14 +244,8 @@ export function createNewApiSessionProtocol(
 
     const body = parseDashboardRefreshBody(response.body)
     if (body === undefined) return "unavailable"
-    const parsedKind = applyDashboardAuthBundleResponse(baseUrl, body)
+    const parsedKind = await acceptDashboardAuth(baseUrl, body, "refresh")
     if (parsedKind === "valid") {
-      const dashboardAuth = sessionRuntime.getActiveDashboardAuth(baseUrl)
-      if (dashboardAuth) {
-        await refreshNewApiOwnedSession(
-          toOwnedSessionBundle(baseUrl, dashboardAuth),
-        )
-      }
       return "refreshed"
     }
     if (parsedKind === "malformed") {
@@ -458,22 +431,13 @@ export function createNewApiSessionProtocol(
       )
     }
 
-    const authBundleKind = applyDashboardAuthBundleResponse(
+    const authBundleKind = await acceptDashboardAuth(
       config.baseUrl,
       response,
+      "login",
     )
     if (authBundleKind === "malformed") {
       throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
-    }
-    if (authBundleKind === "valid") {
-      const dashboardAuth = sessionRuntime.getActiveDashboardAuth(
-        config.baseUrl,
-      )
-      if (dashboardAuth) {
-        await captureNewApiOwnedSession(
-          toOwnedSessionBundle(config.baseUrl, dashboardAuth),
-        )
-      }
     }
 
     const responseData = isRecord(response.data)
@@ -690,22 +654,13 @@ export function createNewApiSessionProtocol(
       )
     }
 
-    const authBundleKind = applyDashboardAuthBundleResponse(
+    const authBundleKind = await acceptDashboardAuth(
       config.baseUrl,
       response,
+      "login",
     )
     if (authBundleKind === "malformed") {
       throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
-    }
-    if (authBundleKind === "valid") {
-      const dashboardAuth = sessionRuntime.getActiveDashboardAuth(
-        config.baseUrl,
-      )
-      if (dashboardAuth) {
-        await captureNewApiOwnedSession(
-          toOwnedSessionBundle(config.baseUrl, dashboardAuth),
-        )
-      }
     }
 
     if (authBundleKind === "unrelated") {
