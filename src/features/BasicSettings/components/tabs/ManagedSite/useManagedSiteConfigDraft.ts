@@ -1,7 +1,7 @@
 import type { PreferenceSaveOptions } from "~/contexts/userPreferences/preferenceContextTypes"
 import { createPreferenceDraftReset } from "~/features/BasicSettings/components/shared/createPreferenceDraftReset"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
-import type { PreferenceWriteResult } from "~/services/preferences/userPreferences"
+import type { PreferenceWriteResult } from "~/services/preferences/preferencesStore"
 import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
 
 import {

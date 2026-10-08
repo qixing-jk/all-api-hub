@@ -2,10 +2,8 @@ import { accountQueries } from "~/services/accounts/accountStorage/accountQuerie
 import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
 import { prepareAutomaticCheckIn } from "~/services/checkin/autoCheckin/automaticDiscovery"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { PRODUCT_ANALYTICS_MODE_IDS } from "~/services/productAnalytics/contracts"
 import { type ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { type SiteAccount } from "~/types"

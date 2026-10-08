@@ -8,10 +8,8 @@ import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   ACCOUNT_KEY_AUTO_PROVISION_MODES,
   type AccountKeyAutoProvisionMode,

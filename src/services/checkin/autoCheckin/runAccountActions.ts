@@ -14,10 +14,8 @@ import {
   CHECK_IN_STATUS_REFRESH_OUTCOMES,
   refreshSelectedStatus,
 } from "~/services/checkin/autoCheckin/refresh"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { type ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import {
   AUTO_CHECKIN_SKIP_REASON,

@@ -19,15 +19,15 @@ import {
 import { SITE_TYPES } from "~/constants/siteType"
 import { DEFAULT_THEME_MODE } from "~/constants/theme"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import {
-  DEFAULT_PREFERENCES,
   TOOLBAR_ACTION_CLICK_BEHAVIORS,
-  userPreferences,
-  type PreferenceWriteResult,
-  type TempWindowFallbackPreferences,
   type TempWindowFallbackReminderPreferences,
   type UserPreferences,
-} from "~/services/preferences/userPreferences"
+} from "~/services/preferences/preferencesSchema"
+import { type PreferenceWriteResult } from "~/services/preferences/preferencesStore"
+import { type TempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/services/preferences/utils/sortingPriority"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import { DEFAULT_AXON_HUB_CONFIG } from "~/types/axonHubConfig"

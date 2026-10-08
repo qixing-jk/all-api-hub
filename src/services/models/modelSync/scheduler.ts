@@ -5,6 +5,7 @@ import {
 import { resolveCurrentManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import { getManagedSiteContext } from "~/services/managedSites/utils/managedSite"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -43,10 +44,7 @@ import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
 import { sanitizeChannelFiltersForStorage } from "../../managedSites/channelModelFilterRules"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "../../preferences/userPreferences"
+import { userPreferences } from "../../preferences/userPreferences"
 import { normalizeChannelProcessingTimeout } from "./channelProcessingTimeout"
 import { ModelSyncExecution } from "./execution"
 import {

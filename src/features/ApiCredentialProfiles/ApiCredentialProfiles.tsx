@@ -38,7 +38,7 @@ import {
   GATEWAY_GUIDANCE_SURFACES,
   type FeatureGuidanceState,
 } from "~/services/featureGuidance/featureGuidanceState"
-import type { UserPreferences } from "~/services/preferences/userPreferences"
+import type { UserPreferences } from "~/services/preferences/preferencesSchema"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,

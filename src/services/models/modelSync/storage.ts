@@ -1,6 +1,7 @@
 import { Storage } from "@plasmohq/storage"
 
 import { isManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import type {
   ExecutionHistoryItemResult,
   ExecutionHistoryResult,
@@ -10,10 +11,7 @@ import type {
 import { createLogger } from "~/utils/core/logger"
 
 import { sanitizeChannelFiltersForStorage } from "../../managedSites/channelModelFilterRules"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "../../preferences/userPreferences"
+import { userPreferences } from "../../preferences/userPreferences"
 
 const logger = createLogger("ManagedSiteModelSyncStorage")
 

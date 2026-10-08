@@ -7,7 +7,7 @@ import { createPreferenceDraftReset } from "~/features/BasicSettings/components/
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { runPreferenceUpdateWithToast } from "~/utils/feedback/preferenceFeedback"
 
 /**

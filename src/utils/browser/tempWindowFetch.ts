@@ -16,7 +16,7 @@ import {
   COOKIE_INTERCEPTOR_PERMISSIONS,
   hasCookieInterceptorPermissions,
 } from "~/services/permissions/permissionManager"
-import type { TempWindowFallbackPreferences } from "~/services/preferences/userPreferences"
+import type { TempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
   PROTECTION_BYPASS_AUTOMATIC_FEATURES,
   TEMP_CONTEXT_TASK_KINDS,

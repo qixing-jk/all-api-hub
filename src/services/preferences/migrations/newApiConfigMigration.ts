@@ -3,10 +3,9 @@
  * Converts flat new-api fields to nested object structure
  */
 
+import type { UserPreferences } from "~/services/preferences/preferencesSchema"
 import { DEFAULT_NEW_API_CONFIG } from "~/types/newApiConfig"
 import { createLogger } from "~/utils/core/logger"
-
-import type { UserPreferences } from "../userPreferences"
 
 const logger = createLogger("NewApiConfigMigration")
 

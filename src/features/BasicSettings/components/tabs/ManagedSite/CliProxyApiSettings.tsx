@@ -11,7 +11,7 @@ import {
   CliProxyApiError,
   listAllCliProxyApiProviders,
 } from "~/services/apiService/cliProxyApi"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { showResultToast } from "~/utils/feedback/operationFeedback"
 
 import { MANAGED_SITE_CONFIG_TEXT_POLICIES } from "./managedSiteConfigFields"

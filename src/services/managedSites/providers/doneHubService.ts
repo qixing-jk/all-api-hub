@@ -3,10 +3,8 @@ import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSiteChannelDraft"
 import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { fetchSiteUserGroups } from "~/services/apiService/doneHub"
 import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
-import {
-  userPreferences,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { AuthTypeEnum } from "~/types"
 import type { DoneHubCreateChannelPayload } from "~/types/doneHub"
 import type { DoneHubConfig } from "~/types/doneHubConfig"

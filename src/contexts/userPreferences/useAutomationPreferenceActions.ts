@@ -7,10 +7,8 @@ import {
 import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
 import { sendBalanceHistoryMessage } from "~/services/history/dailyBalanceHistory/messaging"
 import { sendModelSyncMessage } from "~/services/models/modelSync/messaging"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   AutoCheckinMessageTypes,
   BalanceHistoryMessageTypes,

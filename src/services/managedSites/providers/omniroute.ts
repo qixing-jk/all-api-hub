@@ -14,10 +14,8 @@ import {
   readOmniRouteScopeShortfall,
 } from "~/services/apiService/omniroute"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
-import {
-  userPreferences,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   API_TYPES,
   type ApiVerificationApiType,

@@ -28,10 +28,8 @@ import {
 import { getAccountSiteProductProfile } from "~/services/accounts/accountSiteProfile"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { SiteHealthStatus, type SiteAccount } from "~/types"
 import type { AccountSaveResponse } from "~/types/serviceResponse"
 import { getErrorMessage } from "~/utils/core/error"

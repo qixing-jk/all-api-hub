@@ -14,7 +14,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/utils/adminUserId"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { createTab } from "~/utils/browser/browserApi"
 import { joinUrl } from "~/utils/core/url"
 

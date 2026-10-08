@@ -1,5 +1,5 @@
 import { type FeatureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
-import type { UserPreferences } from "~/services/preferences/userPreferences"
+import type { UserPreferences } from "~/services/preferences/preferencesSchema"
 import type { AccountStorageConfig, TagStore } from "~/types"
 import type { ApiCredentialProfilesConfig } from "~/types/apiCredentialProfiles"
 import type { ChannelConfigSnapshot } from "~/types/channelConfig"

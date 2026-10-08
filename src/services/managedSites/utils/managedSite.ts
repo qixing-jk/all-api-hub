@@ -8,7 +8,7 @@ import type {
 } from "~/services/accountSiteDefinitions/contracts"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import type { UserPreferences } from "~/services/preferences/userPreferences"
+import type { UserPreferences } from "~/services/preferences/preferencesSchema"
 
 /**
  * Returns the i18n key for the managed site label shown in UI.

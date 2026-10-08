@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 import { Card, CardItem, CardList, Switch } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 
 /**

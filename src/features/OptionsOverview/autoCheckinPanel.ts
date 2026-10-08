@@ -1,5 +1,5 @@
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import type { UserPreferences } from "~/services/preferences/userPreferences"
+import type { UserPreferences } from "~/services/preferences/preferencesSchema"
 import {
   AUTO_CHECKIN_RUN_RESULT,
   type AutoCheckinStatus,

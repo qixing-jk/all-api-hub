@@ -1,4 +1,4 @@
-import type { TempWindowFallbackPreferences } from "~/services/preferences/userPreferences"
+import type { TempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
 
 import { PROTECTION_BYPASS_DECISION_RESULTS } from "./contracts"
 import type {

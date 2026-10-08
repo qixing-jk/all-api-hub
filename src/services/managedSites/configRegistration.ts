@@ -1,5 +1,5 @@
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
-import type { UserPreferences } from "~/services/preferences/userPreferences"
+import type { UserPreferences } from "~/services/preferences/preferencesSchema"
 import {
   DEFAULT_AXON_HUB_CONFIG,
   type AxonHubConfig,

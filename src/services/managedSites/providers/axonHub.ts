@@ -2,10 +2,8 @@ import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import * as axonHubApi from "~/services/apiService/axonHub"
 import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
-import {
-  userPreferences,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import type {
   ManagedSiteChannelDraft,
   ManagedSiteChannelDraftSource,

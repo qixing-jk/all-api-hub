@@ -22,7 +22,7 @@ import {
   type NewApiManagedVerificationStep,
   type OpenNewApiManagedVerificationParams,
 } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
-import { PREFERENCE_WRITE_FAILURE_TYPES } from "~/services/preferences/userPreferences"
+import { PREFERENCE_WRITE_FAILURE_TYPES } from "~/services/preferences/preferencesStore"
 import { getErrorMessage } from "~/utils/core/error"
 import { openSettingsTabInNewTab } from "~/utils/navigation"
 

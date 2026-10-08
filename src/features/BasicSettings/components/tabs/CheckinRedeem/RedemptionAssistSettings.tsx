@@ -14,7 +14,7 @@ import { PreferenceSettingSection as SettingSection } from "~/features/BasicSett
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { useSingleFlightActions } from "~/hooks/useSingleFlightActions"
 import toast from "~/lib/notify"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { getPreferenceWriteFailureMessage } from "~/utils/feedback/preferenceFeedback"

@@ -7,7 +7,7 @@ import { useChannelFilterEditor } from "~/hooks/useChannelFilterEditor"
 import { useDeferredPreferenceField } from "~/hooks/useDeferredPreferenceField"
 import toast from "~/lib/notify"
 import { normalizeChannelFilters } from "~/services/managedSites/channelModelFilterRules"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

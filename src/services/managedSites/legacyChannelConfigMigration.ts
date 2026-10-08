@@ -20,10 +20,8 @@ import {
   resolveManagedSiteRuntimeConfigForType,
   type ManagedSiteRuntimeConfig,
 } from "~/services/managedSites/runtimeConfig"
-import {
-  userPreferences,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   createManagedUpstreamResourceRef,
   normalizeManagedUpstreamResourceScopeKey,

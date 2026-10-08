@@ -7,10 +7,8 @@ import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapte
 import { usesChannelProtocolPaths } from "~/services/apiService/octopus"
 import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
-import {
-  userPreferences,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import type {
   ManagedSiteChannelDraft,
   ManagedSiteChannelDraftSource,

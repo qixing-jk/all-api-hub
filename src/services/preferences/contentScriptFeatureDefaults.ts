@@ -1,7 +1,7 @@
 import type {
   RedemptionAssistPreferences,
   WebAiApiCheckPreferences,
-} from "./userPreferences"
+} from "~/services/preferences/preferencesSchema"
 
 export type ContentFeaturePreferenceSource = {
   redemptionAssist?: {

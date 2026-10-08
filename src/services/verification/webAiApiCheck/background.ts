@@ -2,11 +2,9 @@ import { fetchAnthropicModelIds } from "~/services/aiApi/anthropic"
 import { fetchGoogleModelIds } from "~/services/aiApi/google"
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { resolveProductAnalyticsErrorCategoryFromError } from "~/services/productAnalytics/actions"
 import { PRODUCT_ANALYTICS_ERROR_CATEGORIES } from "~/services/productAnalytics/contracts"
 import { tagStorage } from "~/services/tags/tagStorage"

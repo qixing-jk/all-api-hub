@@ -1,4 +1,4 @@
-import type { UserPreferences } from "~/services/preferences/userPreferences"
+import type { UserPreferences } from "~/services/preferences/preferencesSchema"
 import { defineExtensionMessaging } from "~/services/runtimeMessaging/extensionMessaging"
 import { createRuntimeMessagingLogger } from "~/services/runtimeMessaging/logger"
 import { WebdavAutoSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"

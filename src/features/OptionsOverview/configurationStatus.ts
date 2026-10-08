@@ -2,7 +2,7 @@ import type { ManagedSiteType } from "~/constants/siteType"
 import { isAutomaticCheckInConfiguredForAccount } from "~/services/checkin/autoCheckin/inspection"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { supportsManagedSiteModelSync } from "~/services/managedSites/utils/managedSite"
-import type { UserPreferences } from "~/services/preferences/userPreferences"
+import type { UserPreferences } from "~/services/preferences/preferencesSchema"
 import type { SiteAccount } from "~/types"
 
 import { OPTIONS_OVERVIEW_CONFIGURATION_STATUSES as CONFIGURATION_STATUSES } from "./ids"

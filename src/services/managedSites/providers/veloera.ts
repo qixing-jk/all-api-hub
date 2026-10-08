@@ -3,6 +3,7 @@ import { VeloeraChannelType } from "~/constants/veloera"
 import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { fetchSiteUserGroups } from "~/services/apiService/newApiFamily/default/keyManagement"
 import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 import { AuthTypeEnum } from "~/types"
 import type {
   ManagedSiteChannelDraft,
@@ -13,10 +14,7 @@ import type { VeloeraCreateChannelPayload } from "~/types/veloera"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"
 
-import {
-  userPreferences,
-  type UserPreferences,
-} from "../../preferences/userPreferences"
+import { userPreferences } from "../../preferences/userPreferences"
 import { isManagedSiteAdminUserId } from "../utils/adminUserId"
 import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
 

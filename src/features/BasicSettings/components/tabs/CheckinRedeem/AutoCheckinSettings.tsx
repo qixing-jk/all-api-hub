@@ -11,7 +11,7 @@ import {
   WorkflowTransitionButton,
 } from "~/components/ui"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { AUTO_CHECKIN_SCHEDULE_MODE } from "~/types/autoCheckin"
 
 import { AUTO_CHECKIN_TARGET_IDS } from "./searchTargets"

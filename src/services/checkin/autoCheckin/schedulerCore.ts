@@ -1,10 +1,8 @@
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   type ProtectionBypassExecution,

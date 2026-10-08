@@ -3,7 +3,7 @@ import type {
   ManagedSiteLabelKey,
   ManagedSiteMessagesKey,
 } from "~/services/accountSiteDefinitions/contracts"
-import type { UserPreferences } from "~/services/preferences/userPreferences"
+import type { UserPreferences } from "~/services/preferences/preferencesSchema"
 
 import { resolveManagedSiteMigrationCapability } from "./channelMigrationCapabilityRegistry"
 import {

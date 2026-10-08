@@ -7,6 +7,7 @@ import {
 } from "~/services/featureGuidance/featureGuidanceState"
 import { type BackupFullV2 } from "~/services/importExport/backupContracts"
 import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
+import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { normalizeWebdavOrderedEntryIds } from "~/services/webdav/webdavEntryProjection"
 import {
@@ -27,10 +28,7 @@ import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
 import { channelConfigStorage } from "../managedSites/channelConfigStorage"
-import {
-  userPreferences,
-  type UserPreferences,
-} from "../preferences/userPreferences"
+import { userPreferences } from "../preferences/userPreferences"
 import {
   downloadCloudSyncBackup,
   getCloudSyncProvider,
