@@ -253,9 +253,9 @@ describe("OpenRouter Management Key page contract", () => {
 
   it("is the shared contract imported by background and content consumers", () => {
     const consumerPaths = [
-      "../../../../src/services/browsingContext/tempPage/openrouterManagementKeyAction.ts",
-      "../../../../src/entrypoints/content/messageHandlers/handlers/openRouterManagementKey.ts",
-      "../../../../src/entrypoints/content/messageHandlers/openrouter/managementKeyPage.ts",
+      "../../../../../src/services/browsingContext/tempPage/openrouterManagementKeyAction.ts",
+      "../../../../../src/entrypoints/content/messageHandlers/handlers/openRouterManagementKey.ts",
+      "../../../../../src/entrypoints/content/messageHandlers/openrouter/managementKeyPage.ts",
     ]
 
     for (const consumerPath of consumerPaths) {
@@ -265,7 +265,7 @@ describe("OpenRouter Management Key page contract", () => {
       )
       expect(source).not.toContain('from "~/types/tempWindowFetch"')
       expect(source).toContain(
-        'from "~/services/apiAdapters/openrouter/managementKeyPageContract"',
+        'from "~/services/apiAdapters/openrouter/keys/managementKeyPageContract"',
       )
     }
   })

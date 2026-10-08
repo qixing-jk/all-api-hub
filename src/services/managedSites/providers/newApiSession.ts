@@ -16,13 +16,15 @@ import {
   type NewApiVerificationMethods,
 } from "~/services/managedSites/providers/newApiSessionContracts"
 import { createNewApiSessionProtocol } from "~/services/managedSites/providers/newApiSessionProtocol"
+import {
+  generateNewApiTotpCode,
+  hasNewApiTotpSecret,
+} from "~/services/managedSites/providers/newApiTotp"
+import { NewApiTransientSessionRuntime } from "~/services/managedSites/providers/newApiTransientSessionRuntime"
 import { toSanitizedErrorSummary as sanitizeNewApiSessionError } from "~/services/verification/aiApiVerification/utils"
 import { AuthTypeEnum } from "~/types"
 import type { NewApiConfig } from "~/types/newApiConfig"
 import { createLogger } from "~/utils/core/logger"
-
-import { generateNewApiTotpCode, hasNewApiTotpSecret } from "./newApiTotp"
-import { NewApiTransientSessionRuntime } from "./newApiTransientSessionRuntime"
 
 const logger = createLogger("NewApiManagedSession")
 

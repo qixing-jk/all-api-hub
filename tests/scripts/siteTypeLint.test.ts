@@ -55,8 +55,8 @@ describe("site type import whitelist", () => {
   it.each([
     "src/services/apiAdapters/registry.ts",
     "src/services/siteDetection/detectSiteType.ts",
-    "src/services/accounts/accountDefaults.ts",
-    "src/services/managedSites/configRegistration.ts",
+    "src/services/accounts/editing/accountDefaults.ts",
+    "src/services/managedSites/configuration/configRegistration.ts",
     "tests/features/example.test.ts",
   ])("allows explicit owners and test fixtures: %s", async (file) => {
     expect(await check(siteImport, file)).toEqual([])

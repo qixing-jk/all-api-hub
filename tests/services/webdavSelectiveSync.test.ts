@@ -24,9 +24,14 @@ import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import { API_CREDENTIAL_PROFILES_CONFIG_VERSION } from "~/types/apiCredentialProfiles"
 import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
 
-vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
-  ensureLegacyChannelConfigMigrationReady: vi.fn().mockResolvedValue(undefined),
-}))
+vi.mock(
+  "~/services/managedSites/legacyChannelConfigMigration",
+  () => ({
+    ensureLegacyChannelConfigMigrationReady: vi
+      .fn()
+      .mockResolvedValue(undefined),
+  }),
+)
 
 const ensureLegacyChannelConfigMigrationReadyMock =
   ensureLegacyChannelConfigMigrationReady as unknown as ReturnType<typeof vi.fn>

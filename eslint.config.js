@@ -177,15 +177,15 @@ const dynamicImportAllowlist = [
     imports: ["~/services/checkin/autoCheckin/providers"],
   },
   {
-    file: "src/services/managedSites/providers/newApiProtectionBypassResource.ts",
+    file: "src/services/managedSites/providers/newApi/newApiProtectionBypassResource.ts",
     imports: ["~/services/apiAdapters/registry"],
   },
   {
-    file: "src/services/managedSites/providers/newApiChannelKeyRead.ts",
+    file: "src/services/managedSites/providers/newApi/newApiChannelKeyRead.ts",
     imports: ["~/utils/browser/tempWindowFetch"],
   },
   {
-    file: "src/services/productAnalytics/client.ts",
+    file: "src/services/productAnalytics/runtime/client.ts",
     imports: ["posthog-js/dist/module.no-external"],
   },
   {
@@ -228,8 +228,8 @@ const siteTypeImportOwners = [
   "src/services/accountSiteOnboarding/contentSession/**", // Provider session validation.
   "src/services/checkin/autoCheckin/providers/**", // Provider check-in implementations.
   "src/services/managedSites/providers/**", // Provider-specific managed-site workflows.
-  "src/services/managedSites/runtimeConfig.ts", // Decode provider configuration unions.
-  "src/services/managedSites/configRegistration.ts", // Own provider configuration selection and validation.
+  "src/services/managedSites/configuration/runtimeConfig.ts", // Decode provider configuration unions.
+  "src/services/managedSites/configuration/configRegistration.ts", // Own provider configuration selection and validation.
   "src/services/preferences/userPreferences.ts", // Stored provider configuration selection.
   "src/services/preferences/preferencesDefaults.ts", // Default provider identity.
   "src/services/accounts/accountStorage/sub2ApiAuthPersistence.ts", // Check identity before credential writes.
@@ -276,20 +276,20 @@ const siteTypeImportOwners = [
   "src/features/ManagedSiteChannels/presentation/sites/**", // Provider field and table presentation definitions.
   "src/features/UnifiedApiGuidance/UnifiedApiGuidanceDevPreview.tsx", // Development fixture.
   "src/services/accountSiteOnboarding/metadata.ts", // Unknown-site metadata fallback.
-  "src/services/accounts/accountDefaults.ts", // Default account identity.
+  "src/services/accounts/editing/accountDefaults.ts", // Default account identity.
   "src/services/accounts/accountPersistence/request.ts", // Shared save input normalization.
-  "src/services/accounts/accountFormValidation.ts", // Unknown account identity validation.
+  "src/services/accounts/editing/accountFormValidation.ts", // Unknown account identity validation.
   "src/services/accounts/accountSiteProfile/contentSessionHint.ts", // Unknown session identity validation.
   "src/services/accounts/accountSiteProfile/profiles.ts", // Default profile.
   "src/services/accounts/accountStorage/accountRefresh.ts", // Unknown identity detection recovery.
   "src/services/accounts/autoDetect/recovery.ts", // Unknown detection recovery.
-  "src/services/accounts/siteName.ts", // Unknown site display name.
+  "src/services/accounts/identity/siteName.ts", // Unknown site display name.
   "src/services/accounts/utils/siteRouteResolver.ts", // Unknown route fallback.
-  "src/services/managedSites/channelMigrationCapabilityRegistry.ts", // Migration capability dispatch.
+  "src/services/managedSites/migration/channelMigrationCapabilityRegistry.ts", // Migration capability dispatch.
   "src/services/managedSites/utils/managedSite.ts", // Synthetic account identity for managed-site compatibility.
   "src/services/modelList/accountSources/sub2apiEstimates.ts", // Provider-owned catalog estimate.
   "src/services/productAnalytics/contracts.ts", // Fixed event schema.
-  "src/services/productAnalytics/siteEcosystem.ts", // Fixed event schema projection.
+  "src/services/productAnalytics/facts/siteEcosystem.ts", // Fixed event schema projection.
   "src/services/siteAnnouncements/announcementProjection.ts", // Unknown cached identity fallback.
   "src/services/siteDetection/sources/resultAssembly.ts", // Detection source owns unknown identity handling.
   "src/services/siteDetection/sources/currentTab.ts", // Detection source owns unknown identity handling.

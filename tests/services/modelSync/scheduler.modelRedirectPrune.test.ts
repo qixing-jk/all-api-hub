@@ -32,9 +32,14 @@ vi.mock(
   },
 )
 
-vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
-  ensureLegacyChannelConfigMigrationReady: vi.fn().mockResolvedValue(undefined),
-}))
+vi.mock(
+  "~/services/managedSites/legacyChannelConfigMigration",
+  () => ({
+    ensureLegacyChannelConfigMigrationReady: vi
+      .fn()
+      .mockResolvedValue(undefined),
+  }),
+)
 
 vi.mock(
   "~/services/models/modelRedirect/modelMatching",
