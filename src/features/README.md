@@ -16,6 +16,9 @@ The main workflow directories are:
 | Model list | `catalog`, `filtering`, `groups`, `pricing`, `verification`, `keySelection`, `presentation` |
 | Managed site channels | `editor`, `detail`, `table`, `filters`, `migration`, `deletion`, `modelSync`, `verification`, `workspace` |
 | Automatic check-in | `results`, `readiness`, `table`, `pretrigger`, `workspace` |
+| Usage analytics | `data`, `filtering`, `charts`, `export`, `workspace` |
+| Balance history | `data`, `filtering`, `reporting`, `workspace` |
+| Managed site model sync | `data`, `commands`, `results`, `status`, `filters`, `workspace` |
 | Import and export | `backup`, `webdav`, `cloudSync` |
 | Options overview | `attention`, `automation`, `configuration`, `usage`, `actions`, `permissions`, `workspace` |
 

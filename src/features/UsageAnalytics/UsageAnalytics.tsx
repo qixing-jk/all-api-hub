@@ -9,7 +9,8 @@ import { Button, Card, WorkflowTransitionButton } from "~/components/ui"
 import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
-import { useUsageAnalyticsViewModel } from "~/features/UsageAnalytics/hooks/useUsageAnalyticsViewModel"
+import UsageAnalyticsFiltersCard from "~/features/UsageAnalytics/filtering/UsageAnalyticsFiltersCard"
+import { useUsageAnalyticsViewModel } from "~/features/UsageAnalytics/workspace/useUsageAnalyticsViewModel"
 import { formatPriceCompact } from "~/services/models/utils/modelPricing"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -19,7 +20,6 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { formatTokenCount } from "~/utils/core/formatters"
 
-import UsageAnalyticsFiltersCard from "./components/UsageAnalyticsFiltersCard"
 import { USAGE_ANALYTICS_TEST_IDS } from "./testIds"
 
 /**

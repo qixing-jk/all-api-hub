@@ -11,7 +11,7 @@ const ICON_SIZES = {
 }
 const CHART_SOURCES = new Set([
   "src/components/charts/chartTypography.ts",
-  "src/features/BalanceHistory/echartsOptions.ts",
+  "src/features/BalanceHistory/reporting/echartsOptions.ts",
   "src/features/UsageAnalytics/charts/echartsOptions.ts",
 ])
 const RELATIVE_SIZE =

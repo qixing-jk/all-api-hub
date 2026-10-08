@@ -21,14 +21,11 @@ vi.mock("~/services/verification/verificationResultHistory", () => ({
   getVerificationSummaryLatencyMs: vi.fn(() => null),
 }))
 
-vi.mock(
-  "~/services/verification/verificationResultHistory/useVerificationResultHistorySummaries",
-  () => ({
-    useVerificationResultHistorySummaries: vi.fn(() => ({
-      summariesByKey: {},
-    })),
-  }),
-)
+vi.mock("~/hooks/verification/useVerificationResultHistorySummaries", () => ({
+  useVerificationResultHistorySummaries: vi.fn(() => ({
+    summariesByKey: {},
+  })),
+}))
 
 vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => {
   const actual =
