@@ -11,11 +11,9 @@ import {
 import type { AddAccountPrefill } from "~/features/AccountManagement/sponsors/types"
 import { isDesktopDevice, isExtensionPopup, isFirefox } from "~/utils/browser"
 import { getSidePanelSupport } from "~/utils/browser/browserApi"
-import {
-  closeIfPopup,
-  openOrFocusOptionsMenuItem,
-  openSidePanelWithFallback,
-} from "~/utils/navigation"
+import { openOrFocusOptionsMenuItem } from "~/utils/navigation/optionsPage"
+import { closeIfPopup } from "~/utils/navigation/popup"
+import { openSidePanelWithFallback } from "~/utils/navigation/sidepanel"
 
 /**
  * Hook that returns a click handler for launching the Add Account dialog.

@@ -40,7 +40,7 @@ import {
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
-import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
+import { openOrFocusOptionsMenuItem } from "~/utils/navigation/optionsPage"
 
 const logger = createLogger("TaskNotificationService")
 

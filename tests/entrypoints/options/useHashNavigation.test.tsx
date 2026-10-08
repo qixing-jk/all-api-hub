@@ -6,10 +6,11 @@ import { useHashNavigation } from "~/entrypoints/options/hooks/useHashNavigation
 import {
   pushWithinOptionsPage,
   replaceWithinOptionsPage,
-} from "~/utils/navigation"
+} from "~/utils/navigation/optionsPage"
 
-vi.mock("~/utils/navigation", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/navigation/optionsPage")>()
 
   return {
     ...actual,

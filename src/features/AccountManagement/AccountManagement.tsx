@@ -69,7 +69,7 @@ import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch
 import type { DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { getExternalCheckInOpenOptions } from "~/utils/core/shortcutKeys"
-import { pushWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 const logger = createLogger("AccountManagementPage")
 const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options

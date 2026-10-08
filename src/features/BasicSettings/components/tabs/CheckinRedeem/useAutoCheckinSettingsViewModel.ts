@@ -19,7 +19,7 @@ import {
 } from "~/types/autoCheckin"
 import { createLogger } from "~/utils/core/logger"
 import { getPreferenceWriteFailureMessage } from "~/utils/feedback/preferenceFeedback"
-import { pushWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
 
 /**

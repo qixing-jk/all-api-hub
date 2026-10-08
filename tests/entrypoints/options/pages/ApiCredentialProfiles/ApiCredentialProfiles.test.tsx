@@ -370,11 +370,13 @@ vi.mock("~/contexts/FeatureGuidanceContext", () => ({
 vi.mock("~/utils/navigation", () => ({
   openModelsPage: (...args: unknown[]) => mockOpenModelsPage(...args),
   openSettingsTab: (...args: unknown[]) => mockOpenSettingsTab(...args),
+  openKeysPage: (...args: unknown[]) => mockOpenKeysPage(...args),
+}))
+vi.mock("~/utils/navigation/optionsPage", () => ({
   pushWithinOptionsPage: (...args: unknown[]) =>
     pushWithinOptionsPageMock(...args),
   replaceWithinOptionsPage: (...args: unknown[]) =>
     replaceWithinOptionsPageMock(...args),
-  openKeysPage: (...args: unknown[]) => mockOpenKeysPage(...args),
 }))
 
 vi.mock("~/services/aiApi/openaiCompatible", () => ({

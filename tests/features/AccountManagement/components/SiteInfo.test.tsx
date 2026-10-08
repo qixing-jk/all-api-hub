@@ -183,11 +183,13 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/navigation", () => ({
+vi.mock("~/utils/navigation/sitePages", () => ({
   openAccountBaseUrl: mockOpenAccountBaseUrl,
   openCheckInAndRedeem: mockOpenCheckInAndRedeem,
   openCheckInPage: mockOpenCheckInPage,
   openCustomCheckInPage: mockOpenCustomCheckInPage,
+}))
+vi.mock("~/utils/navigation", () => ({
   openSettingsTab: mockOpenSettingsTab,
   openProtectionBypassHistory: mockOpenProtectionBypassHistory,
 }))

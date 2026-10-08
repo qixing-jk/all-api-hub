@@ -17,7 +17,8 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { openSettingsTab, pushWithinOptionsPage } from "~/utils/navigation"
+import { openSettingsTab } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 import { SiteAnnouncementsList } from "./components/SiteAnnouncementsList"
 import { SiteAnnouncementsOverviewCard } from "./components/SiteAnnouncementsOverviewCard"

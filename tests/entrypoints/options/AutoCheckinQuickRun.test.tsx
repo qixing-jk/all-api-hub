@@ -81,13 +81,11 @@ vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
   },
 }))
 
-vi.mock("~/utils/navigation", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/navigation/optionsPage")>()
 
-  return {
-    ...actual,
-    pushWithinOptionsPage: pushWithinOptionsPageMock,
-  }
+  return { ...actual, pushWithinOptionsPage: pushWithinOptionsPageMock }
 })
 
 vi.mock("~/services/checkin/autoCheckin/messaging", async (importOriginal) => {
@@ -328,7 +326,7 @@ describe("AutoCheckin quick run", () => {
   })
 
   it("captures the popup source when routeParams.runNow triggers a run", async () => {
-    const navigation = await import("~/utils/navigation")
+    const navigation = await import("~/utils/navigation/optionsPage")
     const navigateWithinOptionsPageSpy = vi
       .spyOn(navigation, "navigateWithinOptionsPage")
       .mockImplementation(vi.fn() as any)

@@ -109,9 +109,13 @@ vi.mock("~/entrypoints/background/cookieInterceptor", () => ({
   trackCookieInterceptorUrl: mocks.trackCookieInterceptorUrl,
 }))
 
-vi.mock("~/utils/navigation", () => ({
+vi.mock("~/utils/navigation/optionsPage", () => ({
   openOrFocusOptionsMenuItem: mocks.openOrFocusOptionsMenuItem,
+}))
+vi.mock("~/utils/navigation", () => ({
   openProtectionBypassHistory: mocks.openProtectionBypassHistory,
+}))
+vi.mock("~/utils/navigation/feedbackPages", () => ({
   openBugReportPage: mocks.openBugReportPage,
 }))
 

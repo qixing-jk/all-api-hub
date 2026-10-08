@@ -283,14 +283,18 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   return { ...actual, sendRuntimeActionMessage: sendRuntimeActionMessageMock }
 })
 
-vi.mock("~/utils/navigation", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/navigation/optionsPage")>()
   return {
     ...actual,
     replaceWithinOptionsPage: replaceWithinOptionsPageMock,
     pushWithinOptionsPage: vi.fn(),
-    openModelsPage: vi.fn(),
   }
+})
+vi.mock("~/utils/navigation", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+  return { ...actual, openModelsPage: vi.fn() }
 })
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {

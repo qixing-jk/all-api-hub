@@ -24,7 +24,7 @@ import type { PartialWithNested } from "~/types/utils"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { getPreferenceWriteFailureMessage } from "~/utils/feedback/preferenceFeedback"
-import { pushWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
 
 import { useChannelUpstreamModelOptions } from "./useChannelUpstreamModelOptions"

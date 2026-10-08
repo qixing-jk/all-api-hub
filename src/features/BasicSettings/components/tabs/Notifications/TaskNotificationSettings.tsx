@@ -1,43 +1,22 @@
 import type { TFunction } from "i18next"
 import { Bell } from "lucide-react"
-import { type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
-import {
-  ActionGroup,
-  Badge,
-  BodySmall,
-  Button,
-  Card,
-  CardItem,
-  CardList,
-  FormField,
-  Input,
-  Label,
-  Link,
-  Separator,
-  Switch,
-} from "~/components/ui"
+import { Card, CardItem, CardList, Switch } from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { useTaskNotificationSettingsViewModel } from "~/features/BasicSettings/hooks/useTaskNotificationSettingsViewModel"
-import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
-import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
-import { userPreferences } from "~/services/preferences/userPreferences"
-import { DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES } from "~/types/siteAnnouncements"
 import {
-  DEFAULT_TASK_NOTIFICATION_PREFERENCES,
-  TASK_NOTIFICATION_CHANNELS,
   TASK_NOTIFICATION_TASKS,
   type TaskNotificationTask,
 } from "~/types/taskNotifications"
-import {
-  getDocsTaskNotificationsDingtalkUrl,
-  getDocsTaskNotificationsFeishuUrl,
-  getDocsTaskNotificationsNtfyUrl,
-  getDocsTaskNotificationsWecomUrl,
-} from "~/utils/navigation/docsLinks"
-import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
+
+import { NotificationBrowserChannel } from "./NotificationBrowserChannel"
+import { NotificationNtfyChannel } from "./NotificationNtfyChannel"
+import { NotificationSettingItem } from "./NotificationSettingItem"
+import { NotificationTelegramChannel } from "./NotificationTelegramChannel"
+import { NotificationWebhookChannel } from "./NotificationWebhookChannel"
+import { NotificationWebhookChannels } from "./NotificationWebhookChannels"
 
 const TASK_NOTIFICATION_ITEMS: Array<{
   task: TaskNotificationTask
@@ -48,108 +27,6 @@ const TASK_NOTIFICATION_ITEMS: Array<{
   { task: TASK_NOTIFICATION_TASKS.UsageHistorySync },
   { task: TASK_NOTIFICATION_TASKS.BalanceHistoryCapture },
 ]
-
-interface NotificationSettingItemProps {
-  id: string
-  title?: string
-  description?: string
-  actions?: ReactNode
-  children?: ReactNode
-}
-
-/**
- * Renders a notification setting row with a stable action bar and optional full-width details.
- */
-function NotificationSettingItem({
-  id,
-  title,
-  description,
-  actions,
-  children,
-}: NotificationSettingItemProps) {
-  return (
-    <CardItem id={id} className="items-stretch sm:items-stretch">
-      <div className="space-y-density-4 w-full">
-        <div
-          data-slot="notification-setting-content"
-          className="gap-y-density-3 flex flex-col gap-x-3 has-[>[data-slot=notification-setting-actions]>[data-slot=switch]]:flex-row has-[>[data-slot=notification-setting-actions]>[data-slot=switch]]:items-center has-[>[data-slot=notification-setting-actions]>[data-slot=switch]]:justify-between [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-center [@container(min-width:42rem)]:justify-between"
-        >
-          <div className="space-y-density-1 min-w-0 flex-1">
-            {title && (
-              <Label className="text-base font-semibold tracking-tight">
-                {title}
-              </Label>
-            )}
-            {description && (
-              <BodySmall className="text-muted-foreground font-normal">
-                {description}
-              </BodySmall>
-            )}
-          </div>
-          {actions && (
-            <ActionGroup
-              data-slot="notification-setting-actions"
-              className="gap-y-density-3 w-full gap-x-3 has-[>[data-slot=switch]]:w-auto has-[>[data-slot=switch]]:shrink-0 [@container(min-width:42rem)]:w-auto [@container(min-width:42rem)]:shrink-0"
-            >
-              {actions}
-            </ActionGroup>
-          )}
-        </div>
-        {children && (
-          <div className="dark:bg-secondary/20 dark:border-border border-border-subtle bg-surface-subtle/30 py-density-4 rounded-lg border px-4">
-            {children}
-          </div>
-        )}
-      </div>
-    </CardItem>
-  )
-}
-
-interface NotificationChannelActionsProps {
-  checked: boolean
-  disabled: boolean
-  loading: boolean
-  testDisabled: boolean
-  testLabel: string
-  testButtonTestId?: string
-  onToggle: (enabled: boolean) => void
-  onTest: () => void
-}
-
-/**
- * Groups the channel test action and enable switch in a single horizontal control area.
- */
-function NotificationChannelActions({
-  checked,
-  disabled,
-  loading,
-  testDisabled,
-  testLabel,
-  testButtonTestId,
-  onToggle,
-  onTest,
-}: NotificationChannelActionsProps) {
-  const { t: commonT } = useTranslation("common")
-
-  return (
-    <div className="gap-y-density-4 flex items-center gap-x-4">
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        className="min-h-(--density-control-sm) shadow-none"
-        loading={loading}
-        disabled={testDisabled}
-        data-testid={testButtonTestId}
-        onClick={onTest}
-      >
-        {loading ? commonT("status.testing") : testLabel}
-      </Button>
-      <Separator orientation="vertical" className="h-4" />
-      <Switch checked={checked} disabled={disabled} onChange={onToggle} />
-    </div>
-  )
-}
 
 /**
  * Resolves the localized label for a task notification option.
@@ -194,63 +71,29 @@ function getTaskDescription(
  * General settings section for background scheduled-task system notifications.
  */
 export default function TaskNotificationSettings() {
-  const { i18n, t } = useTranslation(["settings", "common"])
+  const { t } = useTranslation(["settings", "common"])
+  const model = useTaskNotificationSettingsViewModel()
   const {
     siteAnnouncementNotifications,
     taskNotifications,
-    updateTaskNotifications,
-    loadPreferences,
-    permissionGranted,
-    isRequestingPermission,
-    testingChannel,
-    channels,
-    telegram,
-    feishu,
-    dingtalk,
-    wecom,
-    ntfy,
-    webhook,
+    canResetEnablement,
+    canResetChannels,
+    canResetEvents,
+    resetEnablement,
+    resetChannels,
+    resetEvents,
     handleGlobalToggle,
-    handleBrowserChannelToggle,
-    handleTelegramChannelToggle,
-    handleFeishuChannelToggle,
-    handleDingtalkChannelToggle,
-    handleWecomChannelToggle,
-    handleNtfyChannelToggle,
-    handleWebhookChannelToggle,
     handleTaskToggle,
     handleSiteAnnouncementToggle,
-    handleRequestPermission,
-    handleSendTest,
-    statusText,
-    isAnyChannelTesting,
-    canSendBrowserTest,
-    canSendTelegramTest,
-    canSendFeishuTest,
-    canSendDingtalkTest,
-    canSendWecomTest,
-    canSendNtfyTest,
-    canSendWebhookTest,
-  } = useTaskNotificationSettingsViewModel()
-  const feishuDocsUrl = getDocsTaskNotificationsFeishuUrl(i18n.language)
-  const dingtalkDocsUrl = getDocsTaskNotificationsDingtalkUrl(i18n.language)
-  const wecomDocsUrl = getDocsTaskNotificationsWecomUrl(i18n.language)
-  const ntfyDocsUrl = getDocsTaskNotificationsNtfyUrl(i18n.language)
+  } = model
 
   return (
     <div className="space-y-density-6">
       <SettingSection
         id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS}
         resetRequiresConfirmation={false}
-        resetDisabled={
-          taskNotifications.enabled ===
-          DEFAULT_TASK_NOTIFICATION_PREFERENCES.enabled
-        }
-        onReset={() =>
-          updateTaskNotifications({
-            enabled: DEFAULT_TASK_NOTIFICATION_PREFERENCES.enabled,
-          })
-        }
+        resetDisabled={!canResetEnablement}
+        onReset={resetEnablement}
         title={t("taskNotifications.groups.setup.title")}
         description={t("taskNotifications.groups.setup.description")}
       >
@@ -276,579 +119,18 @@ export default function TaskNotificationSettings() {
         id={SETTINGS_ANCHORS.TASK_NOTIFICATION_CHANNELS}
         resetRequiresConfirmation
         resetDescription={t("messages.resetConnectionConfirmDesc")}
-        resetDisabled={
-          isAnyChannelTesting ||
-          (matchesDefaultSettings(
-            channels,
-            DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
-          ) &&
-            ![telegram, feishu, dingtalk, wecom, ntfy, webhook].some(
-              (field) => field.isDirty,
-            ))
-        }
-        onReset={async () => {
-          const result = await updateTaskNotifications({
-            channels: DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
-          })
-          if (result.ok) {
-            const defaults = DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels
-            telegram.setDraft({
-              botToken: defaults.telegram.botToken,
-              chatId: defaults.telegram.chatId,
-            })
-            feishu.setDraft({ webhookKey: defaults.feishu.webhookKey })
-            dingtalk.setDraft({
-              webhookKey: defaults.dingtalk.webhookKey,
-              secret: defaults.dingtalk.secret,
-            })
-            wecom.setDraft({ webhookKey: defaults.wecom.webhookKey })
-            ntfy.setDraft({
-              topicUrl: defaults.ntfy.topicUrl,
-              accessToken: defaults.ntfy.accessToken,
-            })
-            webhook.setDraft({ url: defaults.webhook.url })
-          }
-          return result
-        }}
+        resetDisabled={!canResetChannels}
+        onReset={resetChannels}
         title={t("taskNotifications.groups.channels.title")}
         description={t("taskNotifications.groups.channels.description")}
       >
         <Card padding="none">
           <CardList>
-            <NotificationSettingItem
-              id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_PERMISSION}
-              title={t("taskNotifications.permission.title")}
-              description={t("taskNotifications.permission.description")}
-              actions={
-                <div className="gap-y-density-3 flex items-center gap-x-3">
-                  {!permissionGranted && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="min-h-(--density-control-sm) shadow-none"
-                      loading={isRequestingPermission}
-                      data-testid={
-                        BASIC_SETTINGS_TEST_IDS.taskNotificationsPermissionGrantButton
-                      }
-                      onClick={() => void handleRequestPermission()}
-                    >
-                      {isRequestingPermission
-                        ? t("common:status.applying")
-                        : t("taskNotifications.permission.request")}
-                    </Button>
-                  )}
-                  {permissionGranted !== null && (
-                    <>
-                      {!permissionGranted && (
-                        <div className="bg-secondary h-4 w-px" />
-                      )}
-                      <Badge
-                        variant={permissionGranted ? "success" : "secondary"}
-                      >
-                        {statusText}
-                      </Badge>
-                    </>
-                  )}
-                </div>
-              }
-            />
-
-            <NotificationSettingItem
-              id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_BROWSER}
-              title={t("taskNotifications.channels.browser.title")}
-              description={t("taskNotifications.channels.browser.description")}
-              actions={
-                <NotificationChannelActions
-                  checked={channels[TASK_NOTIFICATION_CHANNELS.Browser].enabled}
-                  disabled={!taskNotifications.enabled}
-                  loading={
-                    testingChannel === TASK_NOTIFICATION_CHANNELS.Browser
-                  }
-                  testDisabled={!canSendBrowserTest}
-                  testLabel={t("taskNotifications.test.action")}
-                  testButtonTestId={
-                    BASIC_SETTINGS_TEST_IDS.taskNotificationsBrowserTestButton
-                  }
-                  onToggle={(enabled) =>
-                    void handleBrowserChannelToggle(enabled)
-                  }
-                  onTest={() =>
-                    void handleSendTest(TASK_NOTIFICATION_CHANNELS.Browser)
-                  }
-                />
-              }
-            />
-
-            <NotificationSettingItem
-              id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_TELEGRAM}
-              title={t("taskNotifications.channels.telegram.title")}
-              description={t("taskNotifications.channels.telegram.description")}
-              actions={
-                <NotificationChannelActions
-                  checked={
-                    channels[TASK_NOTIFICATION_CHANNELS.Telegram].enabled
-                  }
-                  disabled={!taskNotifications.enabled}
-                  loading={
-                    testingChannel === TASK_NOTIFICATION_CHANNELS.Telegram
-                  }
-                  testDisabled={!canSendTelegramTest}
-                  testLabel={t("taskNotifications.test.action")}
-                  onToggle={(enabled) =>
-                    void handleTelegramChannelToggle(enabled)
-                  }
-                  onTest={() =>
-                    void handleSendTest(TASK_NOTIFICATION_CHANNELS.Telegram)
-                  }
-                />
-              }
-            >
-              <div className="gap-y-density-3 grid gap-x-3 sm:grid-cols-2">
-                <FormField
-                  label={t("taskNotifications.channels.telegram.botToken")}
-                  htmlFor={
-                    SETTINGS_ANCHORS.TASK_NOTIFICATIONS_TELEGRAM_BOT_TOKEN
-                  }
-                >
-                  <Input
-                    id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_TELEGRAM_BOT_TOKEN}
-                    type="password"
-                    revealable
-                    revealLabels={{
-                      show: t("keyManagement:actions.showKey"),
-                      hide: t("keyManagement:actions.hideKey"),
-                    }}
-                    value={telegram.draft.botToken}
-                    disabled={
-                      !taskNotifications.enabled ||
-                      !channels[TASK_NOTIFICATION_CHANNELS.Telegram].enabled ||
-                      telegram.isCommitting
-                    }
-                    placeholder={t(
-                      "taskNotifications.channels.telegram.botTokenPlaceholder",
-                    )}
-                    onChange={(event) =>
-                      telegram.setDraft((draft) => ({
-                        ...draft,
-                        botToken: event.target.value,
-                      }))
-                    }
-                    onBlur={() => void telegram.commit()}
-                    onKeyDown={blurInputOnEnter}
-                  />
-                </FormField>
-                <FormField
-                  label={t("taskNotifications.channels.telegram.chatId")}
-                  htmlFor={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_TELEGRAM_CHAT_ID}
-                >
-                  <Input
-                    id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_TELEGRAM_CHAT_ID}
-                    value={telegram.draft.chatId}
-                    disabled={
-                      !taskNotifications.enabled ||
-                      !channels[TASK_NOTIFICATION_CHANNELS.Telegram].enabled ||
-                      telegram.isCommitting
-                    }
-                    placeholder={t(
-                      "taskNotifications.channels.telegram.chatIdPlaceholder",
-                    )}
-                    onChange={(event) =>
-                      telegram.setDraft((draft) => ({
-                        ...draft,
-                        chatId: event.target.value,
-                      }))
-                    }
-                    onBlur={() => void telegram.commit()}
-                    onKeyDown={blurInputOnEnter}
-                  />
-                </FormField>
-              </div>
-            </NotificationSettingItem>
-
-            <NotificationSettingItem
-              id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_FEISHU}
-              title={t("taskNotifications.channels.feishu.title")}
-              description={t("taskNotifications.channels.feishu.description")}
-              actions={
-                <NotificationChannelActions
-                  checked={channels[TASK_NOTIFICATION_CHANNELS.Feishu].enabled}
-                  disabled={!taskNotifications.enabled}
-                  loading={testingChannel === TASK_NOTIFICATION_CHANNELS.Feishu}
-                  testDisabled={!canSendFeishuTest}
-                  testLabel={t("taskNotifications.test.action")}
-                  onToggle={(enabled) =>
-                    void handleFeishuChannelToggle(enabled)
-                  }
-                  onTest={() =>
-                    void handleSendTest(TASK_NOTIFICATION_CHANNELS.Feishu)
-                  }
-                />
-              }
-            >
-              <FormField
-                label={t("taskNotifications.channels.feishu.webhookKey")}
-                htmlFor={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_FEISHU_WEBHOOK_KEY}
-              >
-                <Input
-                  id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_FEISHU_WEBHOOK_KEY}
-                  type="password"
-                  revealable
-                  revealLabels={{
-                    show: t("keyManagement:actions.showKey"),
-                    hide: t("keyManagement:actions.hideKey"),
-                  }}
-                  value={feishu.draft.webhookKey}
-                  disabled={
-                    !taskNotifications.enabled ||
-                    !channels[TASK_NOTIFICATION_CHANNELS.Feishu].enabled ||
-                    feishu.isCommitting
-                  }
-                  placeholder={t(
-                    "taskNotifications.channels.feishu.webhookKeyPlaceholder",
-                  )}
-                  onChange={(event) =>
-                    feishu.setDraft((draft) => ({
-                      ...draft,
-                      webhookKey: event.target.value,
-                    }))
-                  }
-                  onBlur={() => void feishu.commit()}
-                  onKeyDown={blurInputOnEnter}
-                />
-                <p className="text-muted-foreground text-xs">
-                  {t("taskNotifications.channels.feishu.webhookKeyDescription")}{" "}
-                  <Link
-                    href={feishuDocsUrl}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="text-xs"
-                  >
-                    {t("taskNotifications.channels.feishu.docsLink")}
-                  </Link>
-                </p>
-              </FormField>
-            </NotificationSettingItem>
-
-            <NotificationSettingItem
-              id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_DINGTALK}
-              title={t("taskNotifications.channels.dingtalk.title")}
-              description={t("taskNotifications.channels.dingtalk.description")}
-              actions={
-                <NotificationChannelActions
-                  checked={
-                    channels[TASK_NOTIFICATION_CHANNELS.Dingtalk].enabled
-                  }
-                  disabled={!taskNotifications.enabled}
-                  loading={
-                    testingChannel === TASK_NOTIFICATION_CHANNELS.Dingtalk
-                  }
-                  testDisabled={!canSendDingtalkTest}
-                  testLabel={t("taskNotifications.test.action")}
-                  onToggle={(enabled) =>
-                    void handleDingtalkChannelToggle(enabled)
-                  }
-                  onTest={() =>
-                    void handleSendTest(TASK_NOTIFICATION_CHANNELS.Dingtalk)
-                  }
-                />
-              }
-            >
-              <div className="space-y-density-3">
-                <div className="gap-y-density-3 grid gap-x-3 [@container(min-width:42rem)]:grid-cols-2">
-                  <FormField
-                    label={t("taskNotifications.channels.dingtalk.webhookKey")}
-                    htmlFor={
-                      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_DINGTALK_WEBHOOK_KEY
-                    }
-                  >
-                    <Input
-                      id={
-                        SETTINGS_ANCHORS.TASK_NOTIFICATIONS_DINGTALK_WEBHOOK_KEY
-                      }
-                      type="password"
-                      revealable
-                      revealLabels={{
-                        show: t("keyManagement:actions.showKey"),
-                        hide: t("keyManagement:actions.hideKey"),
-                      }}
-                      value={dingtalk.draft.webhookKey}
-                      disabled={
-                        !taskNotifications.enabled ||
-                        !channels[TASK_NOTIFICATION_CHANNELS.Dingtalk]
-                          .enabled ||
-                        dingtalk.isCommitting
-                      }
-                      placeholder={t(
-                        "taskNotifications.channels.dingtalk.webhookKeyPlaceholder",
-                      )}
-                      onChange={(event) =>
-                        dingtalk.setDraft((draft) => ({
-                          ...draft,
-                          webhookKey: event.target.value,
-                        }))
-                      }
-                      onBlur={() => void dingtalk.commit()}
-                      onKeyDown={blurInputOnEnter}
-                    />
-                  </FormField>
-                  <FormField
-                    label={t("taskNotifications.channels.dingtalk.secret")}
-                    htmlFor={
-                      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_DINGTALK_SECRET
-                    }
-                  >
-                    <Input
-                      id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_DINGTALK_SECRET}
-                      type="password"
-                      revealable
-                      revealLabels={{
-                        show: t("keyManagement:actions.showKey"),
-                        hide: t("keyManagement:actions.hideKey"),
-                      }}
-                      value={dingtalk.draft.secret}
-                      disabled={
-                        !taskNotifications.enabled ||
-                        !channels[TASK_NOTIFICATION_CHANNELS.Dingtalk]
-                          .enabled ||
-                        dingtalk.isCommitting
-                      }
-                      placeholder={t(
-                        "taskNotifications.channels.dingtalk.secretPlaceholder",
-                      )}
-                      onChange={(event) =>
-                        dingtalk.setDraft((draft) => ({
-                          ...draft,
-                          secret: event.target.value,
-                        }))
-                      }
-                      onBlur={() => void dingtalk.commit()}
-                      onKeyDown={blurInputOnEnter}
-                    />
-                  </FormField>
-                </div>
-                <p className="text-muted-foreground text-xs leading-relaxed">
-                  {t(
-                    "taskNotifications.channels.dingtalk.webhookKeyDescription",
-                  )}{" "}
-                  <Link
-                    href={dingtalkDocsUrl}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="text-xs"
-                  >
-                    {t("taskNotifications.channels.dingtalk.docsLink")}
-                  </Link>
-                </p>
-              </div>
-            </NotificationSettingItem>
-
-            <NotificationSettingItem
-              id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WECOM}
-              title={t("taskNotifications.channels.wecom.title")}
-              description={t("taskNotifications.channels.wecom.description")}
-              actions={
-                <NotificationChannelActions
-                  checked={channels[TASK_NOTIFICATION_CHANNELS.Wecom].enabled}
-                  disabled={!taskNotifications.enabled}
-                  loading={testingChannel === TASK_NOTIFICATION_CHANNELS.Wecom}
-                  testDisabled={!canSendWecomTest}
-                  testLabel={t("taskNotifications.test.action")}
-                  onToggle={(enabled) => void handleWecomChannelToggle(enabled)}
-                  onTest={() =>
-                    void handleSendTest(TASK_NOTIFICATION_CHANNELS.Wecom)
-                  }
-                />
-              }
-            >
-              <FormField
-                label={t("taskNotifications.channels.wecom.webhookKey")}
-                htmlFor={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_WECOM_WEBHOOK_KEY}
-              >
-                <Input
-                  id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_WECOM_WEBHOOK_KEY}
-                  type="password"
-                  revealable
-                  revealLabels={{
-                    show: t("keyManagement:actions.showKey"),
-                    hide: t("keyManagement:actions.hideKey"),
-                  }}
-                  value={wecom.draft.webhookKey}
-                  disabled={
-                    !taskNotifications.enabled ||
-                    !channels[TASK_NOTIFICATION_CHANNELS.Wecom].enabled ||
-                    wecom.isCommitting
-                  }
-                  placeholder={t(
-                    "taskNotifications.channels.wecom.webhookKeyPlaceholder",
-                  )}
-                  onChange={(event) =>
-                    wecom.setDraft((draft) => ({
-                      ...draft,
-                      webhookKey: event.target.value,
-                    }))
-                  }
-                  onBlur={() => void wecom.commit()}
-                  onKeyDown={blurInputOnEnter}
-                />
-                <p className="text-muted-foreground text-xs">
-                  {t("taskNotifications.channels.wecom.webhookKeyDescription")}{" "}
-                  <Link
-                    href={wecomDocsUrl}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="text-xs"
-                  >
-                    {t("taskNotifications.channels.wecom.docsLink")}
-                  </Link>
-                </p>
-              </FormField>
-            </NotificationSettingItem>
-
-            <NotificationSettingItem
-              id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_NTFY}
-              title={t("taskNotifications.channels.ntfy.title")}
-              description={t("taskNotifications.channels.ntfy.description")}
-              actions={
-                <NotificationChannelActions
-                  checked={channels[TASK_NOTIFICATION_CHANNELS.Ntfy].enabled}
-                  disabled={!taskNotifications.enabled}
-                  loading={testingChannel === TASK_NOTIFICATION_CHANNELS.Ntfy}
-                  testDisabled={!canSendNtfyTest}
-                  testLabel={t("taskNotifications.test.action")}
-                  onToggle={(enabled) => void handleNtfyChannelToggle(enabled)}
-                  onTest={() =>
-                    void handleSendTest(TASK_NOTIFICATION_CHANNELS.Ntfy)
-                  }
-                />
-              }
-            >
-              <div className="space-y-density-3">
-                <div className="gap-y-density-3 grid gap-x-3 [@container(min-width:42rem)]:grid-cols-2">
-                  <FormField
-                    label={t("taskNotifications.channels.ntfy.topicUrl")}
-                    htmlFor={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_NTFY_TOPIC_URL}
-                  >
-                    <Input
-                      id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_NTFY_TOPIC_URL}
-                      value={ntfy.draft.topicUrl}
-                      disabled={
-                        !taskNotifications.enabled ||
-                        !channels[TASK_NOTIFICATION_CHANNELS.Ntfy].enabled ||
-                        ntfy.isCommitting
-                      }
-                      placeholder={t(
-                        "taskNotifications.channels.ntfy.topicUrlPlaceholder",
-                      )}
-                      onChange={(event) =>
-                        ntfy.setDraft((draft) => ({
-                          ...draft,
-                          topicUrl: event.target.value,
-                        }))
-                      }
-                      onBlur={() => void ntfy.commit()}
-                      onKeyDown={blurInputOnEnter}
-                    />
-                  </FormField>
-                  <FormField
-                    label={t("taskNotifications.channels.ntfy.accessToken")}
-                    htmlFor={
-                      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_NTFY_ACCESS_TOKEN
-                    }
-                  >
-                    <Input
-                      id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_NTFY_ACCESS_TOKEN}
-                      type="password"
-                      revealable
-                      revealLabels={{
-                        show: t("keyManagement:actions.showKey"),
-                        hide: t("keyManagement:actions.hideKey"),
-                      }}
-                      value={ntfy.draft.accessToken}
-                      disabled={
-                        !taskNotifications.enabled ||
-                        !channels[TASK_NOTIFICATION_CHANNELS.Ntfy].enabled ||
-                        ntfy.isCommitting
-                      }
-                      placeholder={t(
-                        "taskNotifications.channels.ntfy.accessTokenPlaceholder",
-                      )}
-                      onChange={(event) =>
-                        ntfy.setDraft((draft) => ({
-                          ...draft,
-                          accessToken: event.target.value,
-                        }))
-                      }
-                      onBlur={() => void ntfy.commit()}
-                      onKeyDown={blurInputOnEnter}
-                    />
-                  </FormField>
-                </div>
-                <p className="text-muted-foreground text-xs leading-relaxed">
-                  {t("taskNotifications.channels.ntfy.topicUrlDescription")}{" "}
-                  <Link
-                    href={ntfyDocsUrl}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="text-xs"
-                  >
-                    {t("taskNotifications.channels.ntfy.docsLink")}
-                  </Link>
-                </p>
-              </div>
-            </NotificationSettingItem>
-
-            <NotificationSettingItem
-              id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK}
-              title={t("taskNotifications.channels.webhook.title")}
-              description={t("taskNotifications.channels.webhook.description")}
-              actions={
-                <NotificationChannelActions
-                  checked={channels[TASK_NOTIFICATION_CHANNELS.Webhook].enabled}
-                  disabled={!taskNotifications.enabled}
-                  loading={
-                    testingChannel === TASK_NOTIFICATION_CHANNELS.Webhook
-                  }
-                  testDisabled={!canSendWebhookTest}
-                  testLabel={t("taskNotifications.test.action")}
-                  onToggle={(enabled) =>
-                    void handleWebhookChannelToggle(enabled)
-                  }
-                  onTest={() =>
-                    void handleSendTest(TASK_NOTIFICATION_CHANNELS.Webhook)
-                  }
-                />
-              }
-            >
-              <FormField
-                label={t("taskNotifications.channels.webhook.url")}
-                htmlFor={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_WEBHOOK_URL}
-              >
-                <Input
-                  id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_WEBHOOK_URL}
-                  value={webhook.draft.url}
-                  disabled={
-                    !taskNotifications.enabled ||
-                    !channels[TASK_NOTIFICATION_CHANNELS.Webhook].enabled ||
-                    webhook.isCommitting
-                  }
-                  placeholder={t(
-                    "taskNotifications.channels.webhook.urlPlaceholder",
-                  )}
-                  onChange={(event) =>
-                    webhook.setDraft((draft) => ({
-                      ...draft,
-                      url: event.target.value,
-                    }))
-                  }
-                  onBlur={() => void webhook.commit()}
-                  onKeyDown={blurInputOnEnter}
-                />
-                <p className="text-muted-foreground text-xs">
-                  {t("taskNotifications.channels.webhook.urlDescription")}
-                </p>
-              </FormField>
-            </NotificationSettingItem>
+            <NotificationBrowserChannel model={model} />
+            <NotificationTelegramChannel model={model} />
+            <NotificationWebhookChannels model={model} />
+            <NotificationNtfyChannel model={model} />
+            <NotificationWebhookChannel model={model} />
           </CardList>
         </Card>
       </SettingSection>
@@ -856,27 +138,8 @@ export default function TaskNotificationSettings() {
       <SettingSection
         id={SETTINGS_ANCHORS.TASK_NOTIFICATION_EVENTS}
         resetRequiresConfirmation={false}
-        resetDisabled={
-          matchesDefaultSettings(
-            taskNotifications.tasks,
-            DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
-          ) &&
-          siteAnnouncementNotifications.notificationEnabled ===
-            DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.notificationEnabled
-        }
-        onReset={async () => {
-          const result = await userPreferences.savePreferencesWithResult({
-            taskNotifications: {
-              tasks: DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
-            },
-            siteAnnouncementNotifications: {
-              notificationEnabled:
-                DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.notificationEnabled,
-            },
-          })
-          if (result.ok) await loadPreferences()
-          return result
-        }}
+        resetDisabled={!canResetEvents}
+        onReset={resetEvents}
         title={t("taskNotifications.groups.tasks.title")}
         description={t("taskNotifications.groups.tasks.description")}
       >

@@ -2,166 +2,24 @@ import {
   BASIC_SETTINGS_TAB_IDS,
   type BasicSettingsTabId,
 } from "~/constants/basicSettingsTabs"
-import {
-  MENU_ITEM_IDS,
-  type OptionsMenuItemId,
-} from "~/constants/optionsMenuIds"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
-import {
-  resolveAccountSiteRouteUrl,
-  SITE_ROUTE_KINDS,
-} from "~/services/accounts/utils/siteRouteResolver"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
-import type { DisplaySiteData } from "~/types"
-import { isExtensionPopup } from "~/utils/browser"
 import {
-  openSidePanel as _openSidePanel,
   createTab as createTabApi,
-  createWindow,
-  focusTab,
-  getExtensionURL,
-  getSidePanelSupport,
-  hasWindowsAPI,
   openRuntimeOptionsPage,
-  queryTabs as queryTabsApi,
-  updateTab as updateTabApi,
 } from "~/utils/browser/browserApi"
 import { OPTIONS_PAGE_URL } from "~/utils/browser/extensionPageUrls"
-import { getErrorMessage } from "~/utils/core/error"
-import { createLogger } from "~/utils/core/logger"
 import {
-  getFeedbackDestinationUrls,
-  getSiteSupportRequestUrl,
-  type SiteSupportRequestContext,
-} from "~/utils/navigation/feedbackLinks"
-
-/**
- * Unified logger scoped to navigation helpers and options-page routing.
- */
-const logger = createLogger("Navigation")
-
-/**
- * Closes the current window when running inside the extension popup.
- * Safe to call in other contexts; it no-ops when not in popup.
- */
-export function closeIfPopup() {
-  if (isExtensionPopup()) {
-    window.close()
-  }
-}
-
-/**
- * Opens/focuses the options page for a specific menu item id.
- * Prefer this helper over passing ad-hoc hash strings.
- */
-export const openOrFocusOptionsMenuItem = (
-  menuItemId: OptionsMenuItemId,
-  searchParams?: Record<string, string | undefined>,
-) => {
-  return openOrFocusOptionsPage(`#${menuItemId}`, searchParams)
-}
-
-/**
- * Detects whether the current page is the extension options page.
- * @returns True if the current location matches OPTIONS_PAGE_URL.
- */
-const isOnOptionsPage = () => {
-  if (typeof window === "undefined") {
-    return false
-  }
-
-  try {
-    const currentUrl = new URL(window.location.href)
-    const optionsUrl = new URL(OPTIONS_PAGE_URL)
-    return (
-      currentUrl.origin === optionsUrl.origin &&
-      currentUrl.pathname === optionsUrl.pathname
-    )
-  } catch (error) {
-    logger.warn("Failed to detect options page", error)
-    return false
-  }
-}
-
-/**
- * Builds a serialized search string from the provided params.
- * @param params Query key-value pairs where undefined values are ignored.
- * @returns A query string starting with ? or an empty string when no params.
- */
-const buildSearchString = (params?: Record<string, string | undefined>) => {
-  if (!params) {
-    return ""
-  }
-
-  const searchParams = new URLSearchParams()
-  Object.entries(params).forEach(([key, value]) => {
-    if (typeof value === "undefined") {
-      return
-    }
-    searchParams.set(key, value)
-  })
-
-  const query = searchParams.toString()
-  return query ? `?${query}` : ""
-}
-
-/**
- * Updates the hash/search of the current options page without full reload.
- * Dispatches a hashchange event when URL remains unchanged to notify listeners.
- * @param hash Target hash (including #).
- * @param searchParams Optional query params to set.
- * @param options Optional navigation behavior overrides.
- * @param options.historyMode Choose whether the in-page navigation replaces the
- * current history entry or pushes a new one that the browser back button can revisit.
- */
-export const navigateWithinOptionsPage = (
-  hash: string,
-  searchParams?: Record<string, string | undefined>,
-  options?: {
-    historyMode?: "replace" | "push"
-  },
-) => {
-  if (typeof window === "undefined") {
-    return
-  }
-
-  const currentUrl = new URL(window.location.href)
-  const nextUrl = new URL(window.location.href)
-
-  nextUrl.search = buildSearchString(searchParams)
-
-  nextUrl.hash = hash
-
-  if (nextUrl.href === currentUrl.href) {
-    window.dispatchEvent(new Event("hashchange"))
-    return
-  }
-
-  const historyMethod =
-    options?.historyMode === "push" ? "pushState" : "replaceState"
-  window.history[historyMethod](null, "", nextUrl.toString())
-  window.dispatchEvent(new Event("hashchange"))
-}
-
-/**
- * Replaces the current options-page history entry while updating hash/search.
- * Use this for URL normalization or in-place state sync that should not create
- * an extra browser back entry.
- */
-export const replaceWithinOptionsPage = (
-  hash: string,
-  searchParams?: Record<string, string | undefined>,
-) => navigateWithinOptionsPage(hash, searchParams, { historyMode: "replace" })
-
-/**
- * Pushes a new options-page history entry while updating hash/search.
- * Use this for user-initiated transitions that leave the current workflow and
- * should be reversible via the browser back button.
- */
-export const pushWithinOptionsPage = (
-  hash: string,
-  searchParams?: Record<string, string | undefined>,
-) => navigateWithinOptionsPage(hash, searchParams, { historyMode: "push" })
+  buildSearchString,
+  isOnOptionsPage,
+  openOrFocusOptionsMenuItem,
+  openOrFocusOptionsPage,
+  openTargetedOptionsPage,
+  pushWithinOptionsPage,
+  replaceWithinOptionsPage,
+} from "~/utils/navigation/optionsPage"
+import { closeIfPopup, withPopupClose } from "~/utils/navigation/popup"
 
 /**
  * Normalized hash used by account manager navigations to keep routing consistent.
@@ -195,102 +53,6 @@ const getManagedSiteChannelsHash = () =>
  */
 const getManagedSiteModelSyncHash = () =>
   `#${MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC}`
-
-/**
- * Creates and activates a new browser tab with the given URL.
- * @param url Target URL to open.
- */
-const createActiveTab = async (url: string): Promise<void> => {
-  await createTabApi(url, true)
-}
-
-/**
- * Updates an existing tab with new properties.
- * @param tabId Target tab ID.
- * @param updateInfo Fields to update on the tab.
- */
-const updateTab = async (
-  tabId: number,
-  updateInfo: browser.tabs._UpdateUpdateProperties,
-): Promise<void> => {
-  await updateTabApi(tabId, updateInfo)
-}
-
-/**
- * Brings a tab's window to the foreground.
- * @param tab Browser tab to focus.
- */
-const focusWindow = async (tab: browser.tabs.Tab) => {
-  await focusTab(tab)
-}
-
-/**
- * Queries tabs with error handling and executes a callback with results.
- * @param queryInfo Tab query filter.
- */
-const queryTabs = async (
-  queryInfo: browser.tabs._QueryQueryInfo,
-): Promise<browser.tabs.Tab[]> => {
-  try {
-    return (await queryTabsApi(queryInfo)) || []
-  } catch (error) {
-    logger.warn("Failed to query tabs", error)
-    return []
-  }
-}
-
-export const openOrFocusOptionsPage = async (
-  hash: string,
-  searchParams?: Record<string, string | undefined>,
-): Promise<void> => {
-  const searchString = buildSearchString(searchParams)
-  const baseUrl = `${OPTIONS_PAGE_URL}${searchString}${hash}`
-  const tabs = await queryTabs({})
-
-  const optionsPageTab = tabs.find((tab) => {
-    if (!tab.url) return false
-    try {
-      const tabUrl = new URL(tab.url)
-      const normalizedUrl = `${tabUrl.origin}${tabUrl.pathname}${tabUrl.search}${tabUrl.hash}`
-      return normalizedUrl === baseUrl
-    } catch {
-      return false
-    }
-  })
-
-  let urlWithHash: string
-
-  if (optionsPageTab) {
-    const url = new URL(baseUrl)
-    url.searchParams.set("refresh", "true")
-    url.searchParams.set("t", Date.now().toString())
-    urlWithHash = url.href
-  } else {
-    urlWithHash = baseUrl
-  }
-
-  if (optionsPageTab?.id) {
-    await updateTab(optionsPageTab.id, { active: true, url: urlWithHash })
-    await focusWindow(optionsPageTab)
-    return
-  }
-
-  await createActiveTab(urlWithHash)
-}
-/**
- * Wraps a function to auto-close the popup after execution when applicable.
- * @param fn Function to run before optional popup close.
- * @returns Wrapped function that preserves original return value.
- */
-const withPopupClose = <T extends any[], R>(
-  fn: (...args: T) => Promise<R> | R,
-) => {
-  return async (...args: T) => {
-    const result = await fn(...args)
-    closeIfPopup()
-    return result
-  }
-}
 
 interface BookmarkCreationNavigationParams {
   name: string
@@ -535,44 +297,7 @@ const _openSettingsTabInNewTab = async (
     return
   }
 
-  await createActiveTab(url)
-}
-
-/**
- * Opens the repository bug report template in a new browser tab.
- */
-const _openBugReportPage = async () => {
-  await createActiveTab(getFeedbackDestinationUrls().bugReport)
-}
-
-/**
- * Opens the repository feature-request template in a new browser tab.
- */
-const _openFeatureRequestPage = async () => {
-  await createActiveTab(getFeedbackDestinationUrls().featureRequest)
-}
-
-/**
- * Opens the repository language-request template in a new browser tab.
- */
-const _openLanguageRequestPage = async () => {
-  await createActiveTab(getFeedbackDestinationUrls().languageRequest)
-}
-
-/**
- * Opens the site-support request issue form in a new browser tab.
- */
-const _openSiteSupportRequestPage = async (
-  context?: SiteSupportRequestContext,
-) => {
-  await createActiveTab(getSiteSupportRequestUrl(context))
-}
-
-/**
- * Opens the docs community hub in a new browser tab.
- */
-const _openCommunityPage = async (language?: string) => {
-  await createActiveTab(getFeedbackDestinationUrls(language).community)
+  await createTabApi(url, true)
 }
 
 /**
@@ -605,22 +330,6 @@ const _openApiCredentialProfilesPage = (
   }
 
   return openOrFocusOptionsPage(targetHash, searchParams)
-}
-
-const openTargetedOptionsPage = async (params: {
-  targetHash: string
-  inPageSearchParams?: Record<string, string | undefined>
-  newTabSearchParams?: Record<string, string | undefined>
-}) => {
-  if (isOnOptionsPage()) {
-    pushWithinOptionsPage(params.targetHash, params.inPageSearchParams)
-    return
-  }
-
-  const baseUrl = getExtensionURL("options.html")
-  await createActiveTab(
-    `${baseUrl}${buildSearchString(params.newTabSearchParams)}${params.targetHash}`,
-  )
 }
 
 /**
@@ -692,144 +401,6 @@ const _openModelsPage = async (target?: ModelManagementNavigationTarget) => {
   })
 }
 
-/**
- * Opens the stored account's base URL in a new browser tab.
- * This remains available even when the account is disabled so users can still reach the provider site.
- * @param account Account metadata containing the base URL to open.
- */
-const _openAccountBaseUrl = async (
-  account: Pick<DisplaySiteData, "baseUrl">,
-) => {
-  await createActiveTab(account.baseUrl)
-}
-
-/**
- * Opens the provider usage log endpoint derived from account metadata.
- * @param account Account definition containing base URL and site type.
- */
-const _openUsagePage = async (account: DisplaySiteData) => {
-  const logUrl = await resolveAccountSiteRouteUrl(
-    account,
-    SITE_ROUTE_KINDS.Usage,
-  )
-  if (logUrl) await createActiveTab(logUrl)
-}
-
-/**
- * Resolves the default check-in URL for a given account.
- * @param account Account metadata used to resolve the check-in URL.
- */
-const getCheckInPageUrl = (account: DisplaySiteData) =>
-  resolveAccountSiteRouteUrl(account, SITE_ROUTE_KINDS.CheckIn)
-
-/**
- * Best-effort URL opener for grouped navigation flows.
- *
- * When `openInNewWindow` is enabled and the Windows API is available, the first
- * URL is opened in a dedicated browser window and later URLs reuse that window
- * as tabs. Failures are logged and counted so callers can report partial
- * completion without aborting the remaining URLs.
- */
-const openUrlsBestEffort = async (
-  urls: string[],
-  options?: { openInNewWindow?: boolean },
-): Promise<{ openedCount: number; failedCount: number }> => {
-  let openedCount = 0
-  let targetWindowId: number | null = null
-
-  for (const url of urls) {
-    try {
-      if (options?.openInNewWindow && hasWindowsAPI()) {
-        if (targetWindowId == null) {
-          const createdWindow = await createWindow({ url, focused: true })
-          if (createdWindow?.id != null) {
-            targetWindowId = createdWindow.id
-            openedCount += 1
-            continue
-          }
-        } else {
-          try {
-            const tab = await createTabApi(url, true, {
-              windowId: targetWindowId,
-            })
-            if (tab?.id != null) {
-              openedCount += 1
-              continue
-            }
-          } catch (error) {
-            logger.debug("Failed to reuse grouped navigation window", {
-              url,
-              targetWindowId,
-              error,
-            })
-          }
-
-          const recreatedWindow = await createWindow({ url, focused: true })
-          if (recreatedWindow?.id != null) {
-            targetWindowId = recreatedWindow.id
-            openedCount += 1
-            continue
-          }
-        }
-      }
-
-      const tab = await createTabApi(url, true)
-      if (tab?.id != null) {
-        openedCount += 1
-        continue
-      }
-
-      logger.warn("Browser did not return a tab while opening URL", { url })
-    } catch (error) {
-      logger.warn("Failed to open URL during grouped navigation", {
-        url,
-        error: getErrorMessage(error),
-      })
-    }
-  }
-
-  return {
-    openedCount,
-    failedCount: Math.max(0, urls.length - openedCount),
-  }
-}
-
-/**
- * Opens the default check-in page for a given account.
- * @param account Account metadata used to resolve the check-in URL.
- */
-const _openCheckInPage = async (account: DisplaySiteData) => {
-  const checkInUrl = await getCheckInPageUrl(account)
-  if (checkInUrl) await createActiveTab(checkInUrl)
-}
-
-/**
- * Opens the account's custom check-in URL when present, otherwise falls back to
- * the default site-specific path so manual overrides keep working.
- * @param account Account metadata that may contain a custom check-in URL.
- */
-const _openCustomCheckInPage = async (account: DisplaySiteData) => {
-  const customCheckInUrl = await resolveAccountSiteRouteUrl(
-    account,
-    SITE_ROUTE_KINDS.CheckIn,
-    account.checkIn?.customCheckIn?.url,
-  )
-  if (customCheckInUrl) await createActiveTab(customCheckInUrl)
-}
-
-/**
- * Opens the redeem flow, honoring custom URLs when available.
- * @param account Account metadata that can optionally override redeem path.
- */
-const _openRedeemPage = async (account: DisplaySiteData) => {
-  const redeemUrl = await resolveAccountSiteRouteUrl(
-    account,
-    SITE_ROUTE_KINDS.Redeem,
-    account.checkIn?.customCheckIn?.redeemUrl,
-  )
-  if (redeemUrl) await createActiveTab(redeemUrl)
-}
-
 // 导出带自动关闭的版本
 /**
  * Launch the account manager root view, auto-closing the popup when invoked
@@ -879,6 +450,7 @@ export const openPermissionsOnboardingPage = withPopupClose(
  * dispatching the navigation request.
  */
 export const openSettingsTab = withPopupClose(_openSettingsTab)
+
 export const openSettingsTabInNewTab = async (
   tabId: BasicSettingsTabId,
   options?: OpenSettingsTabInNewTabOptions,
@@ -902,65 +474,6 @@ export const openAutoCheckinPage = withPopupClose(
 )
 
 /**
- * Opens the side panel when available, otherwise continuing in Options.
- * Account workflows can supply a fallback that preserves their creation intent.
- * When invoked from a toolbar action click, callers can forward the clicked tab
- * so Chromium receives the sidePanel.open request before user-gesture context is
- * lost to async tab lookup.
- */
-export const openSidePanelWithFallback = async (
-  targetTab?: browser.tabs.Tab | null,
-  openFallback: () => Promise<void> = () =>
-    openOrFocusOptionsMenuItem(MENU_ITEM_IDS.ACCOUNT),
-): Promise<"sidepanel" | "options"> => {
-  if (getSidePanelSupport().supported) {
-    try {
-      await _openSidePanel(targetTab)
-      return "sidepanel"
-    } catch (error) {
-      logger.warn(
-        `Failed to open side panel, continuing in Options:\n${getErrorMessage(error)}`,
-      )
-    }
-  }
-  await openFallback()
-  return "options"
-}
-
-/**
- * Open the extension side panel (if supported) and close the popup afterward to
- * avoid overlapping surfaces.
- */
-export const openSidePanelPage = withPopupClose(openSidePanelWithFallback)
-
-/**
- * Open the bug-report issue template and close the popup afterward when needed.
- */
-export const openBugReportPage = withPopupClose(_openBugReportPage)
-
-/**
- * Open the feature-request issue template and close the popup afterward when needed.
- */
-export const openFeatureRequestPage = withPopupClose(_openFeatureRequestPage)
-
-/**
- * Open the language-request issue template and close the popup afterward when needed.
- */
-export const openLanguageRequestPage = withPopupClose(_openLanguageRequestPage)
-
-/**
- * Open the site-support issue template and close the popup afterward when needed.
- */
-export const openSiteSupportRequestPage = withPopupClose(
-  _openSiteSupportRequestPage,
-)
-
-/**
- * Open the docs community hub and close the popup afterward when needed.
- */
-export const openCommunityPage = withPopupClose(_openCommunityPage)
-
-/**
  * Open the API credential profiles page and close the popup afterward when applicable.
  */
 export const openApiCredentialProfilesPage = withPopupClose(
@@ -981,11 +494,6 @@ export const openKeysPage = withPopupClose(_openKeysPage)
 export const openModelsPage = withPopupClose(_openModelsPage)
 
 /**
- * Open the stored account's base URL in a new tab and auto-close the popup when triggered from popup.html.
- */
-export const openAccountBaseUrl = withPopupClose(_openAccountBaseUrl)
-
-/**
  * Open Managed Site channel management and close the popup afterwards.
  */
 export const openManagedSiteChannelsPage = withPopupClose(
@@ -999,74 +507,3 @@ export const openManagedSiteModelSyncForChannel = withPopupClose(
   (resourceRef: ManagedResourceRef) =>
     _openManagedSiteModelSyncPage({ resourceRef, tab: "manual" }),
 )
-
-/**
- * Open the provider's usage log page and auto-close the popup when triggered
- * from compact contexts.
- */
-export const openUsagePage = withPopupClose(_openUsagePage)
-
-/**
- * Open the default check-in page for the provided account and shut down the
- * popup shell once the navigation has been requested.
- */
-export const openCheckInPage = withPopupClose(_openCheckInPage)
-
-/**
- * Open multiple accounts' default check-in pages, optionally grouping them into
- * a dedicated window when requested by the triggering interaction.
- * @param accounts Accounts whose default check-in pages should be opened.
- * @param options Bulk open options derived from the user's interaction.
- * @param options.openInNewWindow When true, open the first page in a new
- * dedicated window and reuse that window for the remaining pages when
- * supported by the browser.
- */
-export const openCheckInPages = async (
-  accounts: DisplaySiteData[],
-  options?: { openInNewWindow?: boolean },
-) => {
-  const urls = await Promise.all(accounts.map(getCheckInPageUrl))
-  const availableUrls = urls.filter((url): url is string => url !== null)
-  const result = await openUrlsBestEffort(availableUrls, options)
-  closeIfPopup()
-  return {
-    ...result,
-    failedCount: result.failedCount + urls.length - availableUrls.length,
-  }
-}
-
-/**
- * Open the account's custom check-in location when defined (falling back to
- * default) and close the popup to avoid redundant windows.
- */
-export const openCustomCheckInPage = withPopupClose(_openCustomCheckInPage)
-
-/**
- * Open the redeem page (custom or default path) and close the popup afterwards
- * so the user focuses on the newly opened tab.
- */
-export const openRedeemPage = withPopupClose(_openRedeemPage)
-
-/**
- * Execute multiple navigation operations concurrently and close the popup once
- * every action has completed.
- * @param operations List of async/sync navigation callbacks to run together.
- */
-export const openMultiplePages = async (
-  operations: (() => Promise<void> | void)[],
-) => {
-  await Promise.all(operations.map((op) => op()))
-  closeIfPopup()
-}
-
-/**
- * Open both redeem and check-in pages in parallel for the given account,
- * leveraging {@link openMultiplePages} to minimize popup churn.
- * @param account Target account.
- */
-export const openCheckInAndRedeem = async (account: DisplaySiteData) => {
-  await openMultiplePages([
-    () => _openRedeemPage(account),
-    () => _openCustomCheckInPage(account),
-  ])
-}

@@ -27,7 +27,7 @@ import {
   openAccountBaseUrl,
   openCheckInPage,
   openCheckInPages,
-} from "~/utils/navigation"
+} from "~/utils/navigation/sitePages"
 
 /**
  * Unified logger scoped to the Auto Check-in options page.

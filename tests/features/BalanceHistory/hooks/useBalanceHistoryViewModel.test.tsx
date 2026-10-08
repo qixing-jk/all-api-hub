@@ -9,7 +9,7 @@ import { useBalanceHistoryReporting } from "~/features/BalanceHistory/hooks/useB
 import { useBalanceHistoryViewModel } from "~/features/BalanceHistory/hooks/useBalanceHistoryViewModel"
 import type { SiteAccount, TagStore } from "~/types"
 import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
-import { pushWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 import { act, renderHook } from "~~/tests/test-utils/render"
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
@@ -26,7 +26,7 @@ vi.mock("~/features/BalanceHistory/hooks/useBalanceHistoryReporting", () => ({
   useBalanceHistoryReporting: vi.fn(),
 }))
 
-vi.mock("~/utils/navigation", () => ({
+vi.mock("~/utils/navigation/optionsPage", () => ({
   pushWithinOptionsPage: vi.fn(),
 }))
 

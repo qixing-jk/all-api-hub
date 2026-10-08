@@ -22,7 +22,7 @@ import {
   SITE_ANNOUNCEMENT_POLLING_INTERVAL_MINUTES_RANGE,
 } from "~/types/siteAnnouncements"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
-import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
+import { openOrFocusOptionsMenuItem } from "~/utils/navigation/optionsPage"
 
 /**
  * Normalizes user-entered announcement polling minutes to the supported range.

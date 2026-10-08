@@ -20,7 +20,7 @@ import type { DisplaySiteData } from "~/types"
 import { createTab } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { openAccountBaseUrl } from "~/utils/navigation"
+import { openAccountBaseUrl } from "~/utils/navigation/sitePages"
 
 interface SiteInfoProps {
   site: DisplaySiteData

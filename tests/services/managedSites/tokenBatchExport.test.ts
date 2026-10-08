@@ -267,10 +267,12 @@ const executeSingleNativeBatchImport = async (
   managedSite = buildAxonHubImportService(),
 ) => {
   configureManagedSiteCapabilities(managedSite)
-  const {
-    prepareManagedSiteTokenBatchExportPreview,
-    executeManagedSiteTokenBatchExport,
-  } = await import("~/services/managedSites/tokenBatchExport")
+  const { prepareManagedSiteTokenBatchExportPreview } = await import(
+    "~/services/managedSites/tokenBatchImportPreview"
+  )
+  const { executeManagedSiteTokenBatchExport } = await import(
+    "~/services/managedSites/tokenBatchImportExecution"
+  )
   const input = buildAccountTokenInput()
   const preview = await prepareManagedSiteTokenBatchExportPreview({
     items: [input],
@@ -330,7 +332,7 @@ describe("managed-site token batch export", () => {
     mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
 
     const { prepareManagedSiteTokenBatchExportPreview } = await import(
-      "~/services/managedSites/tokenBatchExport"
+      "~/services/managedSites/tokenBatchImportPreview"
     )
 
     const preview = await prepareManagedSiteTokenBatchExportPreview({
@@ -352,10 +354,12 @@ describe("managed-site token batch export", () => {
     mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
     mockGetManagedSiteCapabilitiesForType.mockReturnValue(managedSite)
 
-    const {
-      prepareManagedSiteTokenBatchExportPreview,
-      executeManagedSiteTokenBatchExport,
-    } = await import("~/services/managedSites/tokenBatchExport")
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/tokenBatchImportPreview"
+    )
+    const { executeManagedSiteTokenBatchExport } = await import(
+      "~/services/managedSites/tokenBatchImportExecution"
+    )
 
     const account = buildDisplaySiteData({
       id: "account-1",
@@ -512,7 +516,7 @@ describe("managed-site token batch export", () => {
     mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
 
     const { prepareManagedSiteTokenBatchExportPreview } = await import(
-      "~/services/managedSites/tokenBatchExport"
+      "~/services/managedSites/tokenBatchImportPreview"
     )
 
     const input = buildAccountTokenInput()
@@ -543,7 +547,7 @@ describe("managed-site token batch export", () => {
     mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
 
     const { prepareManagedSiteTokenBatchExportPreview } = await import(
-      "~/services/managedSites/tokenBatchExport"
+      "~/services/managedSites/tokenBatchImportPreview"
     )
 
     const account = buildDisplaySiteData({
@@ -598,7 +602,7 @@ describe("managed-site token batch export", () => {
     const managedSite = buildService()
     configureManagedSiteCapabilities(managedSite)
     const { prepareManagedSiteTokenBatchExportPreview } = await import(
-      "~/services/managedSites/tokenBatchExport"
+      "~/services/managedSites/tokenBatchImportPreview"
     )
     const account = buildDisplaySiteData({
       siteType: SITE_TYPES.OPENROUTER,
@@ -650,7 +654,7 @@ describe("managed-site token batch export", () => {
     mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
 
     const { prepareManagedSiteTokenBatchExportPreview } = await import(
-      "~/services/managedSites/tokenBatchExport"
+      "~/services/managedSites/tokenBatchImportPreview"
     )
 
     const account = buildDisplaySiteData({
@@ -680,7 +684,7 @@ describe("managed-site token batch export", () => {
     mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
 
     const { prepareManagedSiteTokenBatchExportPreview } = await import(
-      "~/services/managedSites/tokenBatchExport"
+      "~/services/managedSites/tokenBatchImportPreview"
     )
 
     const account = buildDisplaySiteData({
@@ -719,7 +723,7 @@ describe("managed-site token batch export", () => {
     mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
 
     const { prepareManagedSiteTokenBatchExportPreview } = await import(
-      "~/services/managedSites/tokenBatchExport"
+      "~/services/managedSites/tokenBatchImportPreview"
     )
 
     const account = buildDisplaySiteData({
@@ -769,10 +773,12 @@ describe("managed-site token batch export", () => {
     mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
     mockGetManagedSiteCapabilitiesForType.mockReturnValue(managedSite)
 
-    const {
-      prepareManagedSiteTokenBatchExportPreview,
-      executeManagedSiteTokenBatchExport,
-    } = await import("~/services/managedSites/tokenBatchExport")
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/tokenBatchImportPreview"
+    )
+    const { executeManagedSiteTokenBatchExport } = await import(
+      "~/services/managedSites/tokenBatchImportExecution"
+    )
 
     const preview = await prepareManagedSiteTokenBatchExportPreview({
       items: [buildAccountTokenInput()],
@@ -825,10 +831,12 @@ describe("managed-site token batch export", () => {
       })
       mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
       mockGetManagedSiteCapabilitiesForType.mockReturnValue(managedSite)
-      const {
-        prepareManagedSiteTokenBatchExportPreview,
-        executeManagedSiteTokenBatchExport,
-      } = await import("~/services/managedSites/tokenBatchExport")
+      const { prepareManagedSiteTokenBatchExportPreview } = await import(
+        "~/services/managedSites/tokenBatchImportPreview"
+      )
+      const { executeManagedSiteTokenBatchExport } = await import(
+        "~/services/managedSites/tokenBatchImportExecution"
+      )
       const preview = await prepareManagedSiteTokenBatchExportPreview({
         items: [buildAccountTokenInput()],
       })
@@ -881,10 +889,12 @@ describe("managed-site token batch export", () => {
     mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
     mockGetManagedSiteCapabilitiesForType.mockReturnValue(managedSite)
 
-    const {
-      prepareManagedSiteTokenBatchExportPreview,
-      executeManagedSiteTokenBatchExport,
-    } = await import("~/services/managedSites/tokenBatchExport")
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/tokenBatchImportPreview"
+    )
+    const { executeManagedSiteTokenBatchExport } = await import(
+      "~/services/managedSites/tokenBatchImportExecution"
+    )
 
     const preview = await prepareManagedSiteTokenBatchExportPreview({
       items: [
@@ -970,10 +980,12 @@ describe("managed-site token batch export", () => {
     })
     configureManagedSiteCapabilities(managedSite)
 
-    const {
-      prepareManagedSiteTokenBatchExportPreview,
-      executeManagedSiteTokenBatchExport,
-    } = await import("~/services/managedSites/tokenBatchExport")
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/tokenBatchImportPreview"
+    )
+    const { executeManagedSiteTokenBatchExport } = await import(
+      "~/services/managedSites/tokenBatchImportExecution"
+    )
     const preview = await prepareManagedSiteTokenBatchExportPreview({
       items: [
         buildAccountTokenInput(),
@@ -1010,10 +1022,12 @@ describe("managed-site token batch export", () => {
     mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
     mockGetManagedSiteCapabilitiesForType.mockReturnValue(managedSite)
 
-    const {
-      prepareManagedSiteTokenBatchExportPreview,
-      executeManagedSiteTokenBatchExport,
-    } = await import("~/services/managedSites/tokenBatchExport")
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/tokenBatchImportPreview"
+    )
+    const { executeManagedSiteTokenBatchExport } = await import(
+      "~/services/managedSites/tokenBatchImportExecution"
+    )
     const preview = await prepareManagedSiteTokenBatchExportPreview({
       items: [buildAccountTokenInput()],
     })
@@ -1053,10 +1067,12 @@ describe("managed-site token batch export", () => {
     mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
     mockGetManagedSiteCapabilitiesForType.mockReturnValue(managedSite)
 
-    const {
-      prepareManagedSiteTokenBatchExportPreview,
-      executeManagedSiteTokenBatchExport,
-    } = await import("~/services/managedSites/tokenBatchExport")
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/tokenBatchImportPreview"
+    )
+    const { executeManagedSiteTokenBatchExport } = await import(
+      "~/services/managedSites/tokenBatchImportExecution"
+    )
     const inputs = Array.from({ length: 6 }, (_, index) => {
       const accountId = `account-${index + 1}`
       return buildAccountTokenInput(
@@ -1100,10 +1116,12 @@ describe("managed-site token batch export", () => {
     mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
     mockGetManagedSiteCapabilitiesForType.mockReturnValue(managedSite)
 
-    const {
-      prepareManagedSiteTokenBatchExportPreview,
-      executeManagedSiteTokenBatchExport,
-    } = await import("~/services/managedSites/tokenBatchExport")
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/tokenBatchImportPreview"
+    )
+    const { executeManagedSiteTokenBatchExport } = await import(
+      "~/services/managedSites/tokenBatchImportExecution"
+    )
     const preview = await prepareManagedSiteTokenBatchExportPreview({
       items: [
         buildAccountTokenInput(),
@@ -1155,7 +1173,7 @@ describe("managed-site token batch export", () => {
     )
 
     const { prepareManagedSiteTokenBatchExportPreview } = await import(
-      "~/services/managedSites/tokenBatchExport"
+      "~/services/managedSites/tokenBatchImportPreview"
     )
 
     const preview = await prepareManagedSiteTokenBatchExportPreview({
@@ -1223,7 +1241,7 @@ describe("managed-site token batch export", () => {
       mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
 
       const { prepareManagedSiteTokenBatchExportPreview } = await import(
-        "~/services/managedSites/tokenBatchExport"
+        "~/services/managedSites/tokenBatchImportPreview"
       )
       const preview = await prepareManagedSiteTokenBatchExportPreview({
         items: [
@@ -1275,7 +1293,7 @@ describe("managed-site token batch export", () => {
     mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
 
     const { prepareManagedSiteTokenBatchExportPreview } = await import(
-      "~/services/managedSites/tokenBatchExport"
+      "~/services/managedSites/tokenBatchImportPreview"
     )
 
     const preview = await prepareManagedSiteTokenBatchExportPreview({
@@ -1333,7 +1351,7 @@ describe("managed-site token batch export", () => {
     mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
 
     const { prepareManagedSiteTokenBatchExportPreview } = await import(
-      "~/services/managedSites/tokenBatchExport"
+      "~/services/managedSites/tokenBatchImportPreview"
     )
     const preview = await prepareManagedSiteTokenBatchExportPreview({
       items: [buildAccountTokenInput()],
@@ -1356,7 +1374,7 @@ describe("managed-site token batch export", () => {
     mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
 
     const { prepareManagedSiteTokenBatchExportPreview } = await import(
-      "~/services/managedSites/tokenBatchExport"
+      "~/services/managedSites/tokenBatchImportPreview"
     )
 
     const preview = await prepareManagedSiteTokenBatchExportPreview({
@@ -1412,7 +1430,7 @@ describe("managed-site token batch export", () => {
       mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
 
       const { prepareManagedSiteTokenBatchExportPreview } = await import(
-        "~/services/managedSites/tokenBatchExport"
+        "~/services/managedSites/tokenBatchImportPreview"
       )
       const preview = await prepareManagedSiteTokenBatchExportPreview({
         items: [buildAccountTokenInput()],
@@ -1560,7 +1578,7 @@ describe("managed-site token batch export", () => {
       mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
 
       const { prepareManagedSiteTokenBatchExportPreview } = await import(
-        "~/services/managedSites/tokenBatchExport"
+        "~/services/managedSites/tokenBatchImportPreview"
       )
 
       const preview = await prepareManagedSiteTokenBatchExportPreview({
@@ -1658,7 +1676,7 @@ describe("managed-site token batch export", () => {
       mockResolveManagedSiteChannelMatch.mockResolvedValue(resolution)
 
       const { prepareManagedSiteTokenBatchExportPreview } = await import(
-        "~/services/managedSites/tokenBatchExport"
+        "~/services/managedSites/tokenBatchImportPreview"
       )
 
       const preview = await prepareManagedSiteTokenBatchExportPreview({
@@ -1709,7 +1727,7 @@ describe("managed-site token batch export", () => {
       mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
 
       const { prepareManagedSiteTokenBatchExportPreview } = await import(
-        "~/services/managedSites/tokenBatchExport"
+        "~/services/managedSites/tokenBatchImportPreview"
       )
 
       const preview = await prepareManagedSiteTokenBatchExportPreview({
@@ -1780,7 +1798,7 @@ describe("managed-site token batch export", () => {
     )
 
     const { prepareManagedSiteTokenBatchExportPreview } = await import(
-      "~/services/managedSites/tokenBatchExport"
+      "~/services/managedSites/tokenBatchImportPreview"
     )
 
     const preview = await prepareManagedSiteTokenBatchExportPreview({
@@ -1824,7 +1842,7 @@ describe("managed-site token batch export", () => {
       mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
 
       const { prepareManagedSiteTokenBatchExportPreview } = await import(
-        "~/services/managedSites/tokenBatchExport"
+        "~/services/managedSites/tokenBatchImportPreview"
       )
 
       const preview = await prepareManagedSiteTokenBatchExportPreview({
@@ -1913,7 +1931,7 @@ describe("managed-site token batch export", () => {
       })
 
       const { prepareManagedSiteTokenBatchExportPreview } = await import(
-        "~/services/managedSites/tokenBatchExport"
+        "~/services/managedSites/tokenBatchImportPreview"
       )
 
       const preview = await prepareManagedSiteTokenBatchExportPreview({
@@ -1961,7 +1979,7 @@ describe("managed-site token batch export", () => {
     )
 
     const { prepareManagedSiteTokenBatchExportPreview } = await import(
-      "~/services/managedSites/tokenBatchExport"
+      "~/services/managedSites/tokenBatchImportPreview"
     )
 
     const preview = await prepareManagedSiteTokenBatchExportPreview({
@@ -1985,7 +2003,7 @@ describe("managed-site token batch export", () => {
     mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
 
     const { prepareManagedSiteTokenBatchExportPreview } = await import(
-      "~/services/managedSites/tokenBatchExport"
+      "~/services/managedSites/tokenBatchImportPreview"
     )
 
     const preview = await prepareManagedSiteTokenBatchExportPreview({
@@ -2027,7 +2045,7 @@ describe("managed-site token batch export", () => {
     mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
 
     const { prepareManagedSiteTokenBatchExportPreview } = await import(
-      "~/services/managedSites/tokenBatchExport"
+      "~/services/managedSites/tokenBatchImportPreview"
     )
     const preview = await prepareManagedSiteTokenBatchExportPreview({
       items: [buildAccountTokenInput()],
@@ -2066,7 +2084,7 @@ describe("managed-site token batch export", () => {
     mockGetManagedSiteCapabilities.mockReturnValue(managedSite)
 
     const { prepareManagedSiteTokenBatchExportPreview } = await import(
-      "~/services/managedSites/tokenBatchExport"
+      "~/services/managedSites/tokenBatchImportPreview"
     )
     const preview = await prepareManagedSiteTokenBatchExportPreview({
       items: [buildAccountTokenInput()],
@@ -2103,7 +2121,7 @@ describe("managed-site token batch export", () => {
     )
 
     const { prepareManagedSiteTokenBatchExportPreview } = await import(
-      "~/services/managedSites/tokenBatchExport"
+      "~/services/managedSites/tokenBatchImportPreview"
     )
     const preview = await prepareManagedSiteTokenBatchExportPreview({
       items: [buildAccountTokenInput()],
@@ -2145,7 +2163,7 @@ describe("managed-site token batch export", () => {
     )
 
     const { prepareManagedSiteTokenBatchExportPreview } = await import(
-      "~/services/managedSites/tokenBatchExport"
+      "~/services/managedSites/tokenBatchImportPreview"
     )
     const preview = await prepareManagedSiteTokenBatchExportPreview({
       items: [buildAccountTokenInput()],
@@ -2169,7 +2187,7 @@ describe("managed-site token batch export", () => {
       configureManagedSiteCapabilities(managedSite)
 
       const { prepareManagedSiteTokenBatchExportPreview } = await import(
-        "~/services/managedSites/tokenBatchExport"
+        "~/services/managedSites/tokenBatchImportPreview"
       )
 
       const preview = await prepareManagedSiteTokenBatchExportPreview({
@@ -2210,7 +2228,7 @@ describe("managed-site token batch export", () => {
     configureManagedSiteCapabilities(managedSite)
 
     const { prepareManagedSiteTokenBatchExportPreview } = await import(
-      "~/services/managedSites/tokenBatchExport"
+      "~/services/managedSites/tokenBatchImportPreview"
     )
     const account = buildDisplaySiteData()
     const preview = await prepareManagedSiteTokenBatchExportPreview({
@@ -2243,7 +2261,7 @@ describe("managed-site token batch export", () => {
     configureManagedSiteCapabilities(managedSite)
 
     const { prepareManagedSiteTokenBatchExportPreview } = await import(
-      "~/services/managedSites/tokenBatchExport"
+      "~/services/managedSites/tokenBatchImportPreview"
     )
     const preview = await prepareManagedSiteTokenBatchExportPreview({
       intent: repairTrustedNewIntent,
@@ -2281,10 +2299,12 @@ describe("managed-site token batch export", () => {
     async (intent) => {
       const managedSite = buildService()
       configureManagedSiteCapabilities(managedSite)
-      const {
-        prepareManagedSiteTokenBatchExportPreview,
-        executeManagedSiteTokenBatchExport,
-      } = await import("~/services/managedSites/tokenBatchExport")
+      const { prepareManagedSiteTokenBatchExportPreview } = await import(
+        "~/services/managedSites/tokenBatchImportPreview"
+      )
+      const { executeManagedSiteTokenBatchExport } = await import(
+        "~/services/managedSites/tokenBatchImportExecution"
+      )
       const preview = await prepareManagedSiteTokenBatchExportPreview({
         items: [buildAccountTokenInput()],
         intent,
@@ -2312,10 +2332,12 @@ describe("managed-site token batch export", () => {
   it("returns execution items and counts only for selected attempted rows", async () => {
     const managedSite = buildService()
     configureManagedSiteCapabilities(managedSite)
-    const {
-      prepareManagedSiteTokenBatchExportPreview,
-      executeManagedSiteTokenBatchExport,
-    } = await import("~/services/managedSites/tokenBatchExport")
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/tokenBatchImportPreview"
+    )
+    const { executeManagedSiteTokenBatchExport } = await import(
+      "~/services/managedSites/tokenBatchImportExecution"
+    )
     const preview = await prepareManagedSiteTokenBatchExportPreview({
       items: [
         buildAccountTokenInput(),
@@ -2372,10 +2394,12 @@ describe("managed-site token batch export", () => {
     })
     const managedSite = buildService({ submit })
     configureManagedSiteCapabilities(managedSite)
-    const {
-      prepareManagedSiteTokenBatchExportPreview,
-      executeManagedSiteTokenBatchExport,
-    } = await import("~/services/managedSites/tokenBatchExport")
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/tokenBatchImportPreview"
+    )
+    const { executeManagedSiteTokenBatchExport } = await import(
+      "~/services/managedSites/tokenBatchImportExecution"
+    )
     const account = buildDisplaySiteData()
     const preview = await prepareManagedSiteTokenBatchExportPreview({
       intent: repairTrustedNewIntent,
@@ -2426,10 +2450,12 @@ describe("managed-site token batch export", () => {
         }),
       })
       configureManagedSiteCapabilities(managedSite)
-      const {
-        prepareManagedSiteTokenBatchExportPreview,
-        executeManagedSiteTokenBatchExport,
-      } = await import("~/services/managedSites/tokenBatchExport")
+      const { prepareManagedSiteTokenBatchExportPreview } = await import(
+        "~/services/managedSites/tokenBatchImportPreview"
+      )
+      const { executeManagedSiteTokenBatchExport } = await import(
+        "~/services/managedSites/tokenBatchImportExecution"
+      )
       const preview = await prepareManagedSiteTokenBatchExportPreview({
         items: [buildAccountTokenInput()],
       })
@@ -2451,10 +2477,12 @@ describe("managed-site token batch export", () => {
     const managedSite = buildService()
     configureManagedSiteCapabilities(managedSite)
 
-    const {
-      prepareManagedSiteTokenBatchExportPreview,
-      executeManagedSiteTokenBatchExport,
-    } = await import("~/services/managedSites/tokenBatchExport")
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/tokenBatchImportPreview"
+    )
+    const { executeManagedSiteTokenBatchExport } = await import(
+      "~/services/managedSites/tokenBatchImportExecution"
+    )
 
     const preview = await prepareManagedSiteTokenBatchExportPreview({
       items: [

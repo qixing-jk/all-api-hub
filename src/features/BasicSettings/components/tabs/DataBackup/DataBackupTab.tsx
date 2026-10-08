@@ -10,7 +10,7 @@ import {
 } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import CloudSyncSettings from "~/features/ImportExport/components/CloudSyncSettings"
-import { pushWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 /**
  * Basic Settings tab for data backup/import/export and cloud sync settings.

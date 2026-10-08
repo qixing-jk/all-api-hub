@@ -204,7 +204,7 @@ describe("background onSuspend temp-context cleanup", () => {
         warn: loggerWarnMock,
       })),
     }))
-    vi.doMock("~/utils/navigation", () => ({
+    vi.doMock("~/utils/navigation/optionsPage", () => ({
       openOrFocusOptionsMenuItem: vi.fn(),
     }))
   })
@@ -232,7 +232,7 @@ describe("background onSuspend temp-context cleanup", () => {
     vi.doUnmock("~/services/permissions/optionalPermissionState")
     vi.doUnmock("~/services/updates/changelogOnUpdateState")
     vi.doUnmock("~/utils/core/logger")
-    vi.doUnmock("~/utils/navigation")
+    vi.doUnmock("~/utils/navigation/optionsPage")
 
     vi.resetModules()
     vi.restoreAllMocks()

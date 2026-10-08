@@ -1,5 +1,5 @@
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { replaceWithinOptionsPage } from "~/utils/navigation"
+import { replaceWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 import type { OptionsSearchItem } from "./types"
 

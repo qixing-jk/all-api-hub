@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import ModelList from "~/entrypoints/options/pages/ModelList"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
-import { pushWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const mockUseModelListData = vi.fn()
@@ -30,13 +30,11 @@ vi.mock(
   }),
 )
 
-vi.mock("~/utils/navigation", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/navigation/optionsPage")>()
 
-  return {
-    ...actual,
-    pushWithinOptionsPage: vi.fn(),
-  }
+  return { ...actual, pushWithinOptionsPage: vi.fn() }
 })
 
 vi.mock("~/features/ModelList/components/AccountSelector", () => {

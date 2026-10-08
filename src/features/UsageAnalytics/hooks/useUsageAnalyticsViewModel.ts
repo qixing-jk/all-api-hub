@@ -4,7 +4,7 @@ import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import { pushWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 import { useUsageAnalyticsCharts } from "./useUsageAnalyticsCharts"
 import { useUsageAnalyticsData } from "./useUsageAnalyticsData"

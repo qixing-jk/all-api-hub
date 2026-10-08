@@ -6,7 +6,7 @@ import { isDevUnlocked } from "~/utils/core/devMode"
 import {
   pushWithinOptionsPage,
   replaceWithinOptionsPage,
-} from "~/utils/navigation"
+} from "~/utils/navigation/optionsPage"
 
 import { menuItems } from "../constants"
 

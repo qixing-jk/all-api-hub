@@ -1,0 +1,367 @@
+import { arrayMove } from "@dnd-kit/sortable"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { useTranslation } from "react-i18next"
+
+import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { useBookmarkDialogContext } from "~/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
+import toast from "~/lib/notify"
+import { bookmarkRepository } from "~/services/accounts/accountStorage/bookmarkRepository"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/contracts"
+import type { SiteBookmark } from "~/types"
+import { createTab } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
+import { closeIfPopup } from "~/utils/navigation/popup"
+
+/**
+ * Normalize a string for tolerant bookmark searching (case-insensitive, whitespace-normalized).
+ *
+ * Note: URL-specific normalization (protocol/query/fragment stripping) is handled separately by
+ * `normalizeUrlForSearch` so punctuation in notes/tags doesn't truncate other fields.
+ */
+function normalizeForSearch(value: string): string {
+  if (!value) return ""
+
+  let normalized = value.toLowerCase().trim()
+
+  normalized = normalized.replace(/[\uff01-\uff5e]/g, (ch) =>
+    String.fromCharCode(ch.charCodeAt(0) - 0xfee0),
+  )
+  normalized = normalized.replace(/\s+/g, " ").trim()
+
+  return normalized
+}
+
+/**
+ * Normalize a URL for bookmark searching by stripping URL noise.
+ */
+function normalizeUrlForSearch(value: string): string {
+  if (!value) return ""
+
+  let normalized = normalizeForSearch(value)
+  normalized = normalized.replace(/^https?:\/\//, "")
+  normalized = normalized.replace(/\/+$/, "")
+  normalized = normalized.replace(/[?#].*$/, "")
+  return normalized
+}
+
+/**
+ * Normalize a single user-provided search token so URL-like tokens match URL-normalized haystacks.
+ */
+function normalizeSearchToken(token: string): string {
+  const normalized = normalizeForSearch(token)
+  if (!normalized) return ""
+
+  const probablyUrl =
+    normalized.includes("://") ||
+    normalized.includes("/") ||
+    normalized.includes(".") ||
+    ((normalized.includes("?") || normalized.includes("#")) &&
+      (normalized.includes(".") || normalized.includes("/")))
+
+  return probablyUrl ? normalizeUrlForSearch(token) : normalized
+}
+
+/** Owns bookmark list projections, ordering, and row-operation lifecycles. */
+export function useBookmarksListViewModel(initialSearchQuery?: string) {
+  const { t } = useTranslation(["bookmark", "messages", "common"])
+  const { openAddBookmark, openEditBookmark } = useBookmarkDialogContext()
+  const {
+    bookmarks,
+    pinnedAccountIds,
+    orderedAccountIds,
+    tags,
+    tagStore,
+    isInitialLoad,
+    isAccountPinned,
+    togglePinAccount,
+    handleBookmarkReorder,
+    loadAccountData,
+  } = useAccountDataContext()
+
+  const [deleteTarget, setDeleteTarget] = useState<SiteBookmark | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
+
+  const normalizedInitialQuery = initialSearchQuery ?? ""
+  const [query, setQuery] = useState(() => normalizedInitialQuery)
+  const [debouncedQuery, setDebouncedQuery] = useState(
+    () => normalizedInitialQuery,
+  )
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query)
+    }, 150)
+    return () => clearTimeout(timer)
+  }, [query])
+
+  const clearSearch = useCallback(() => {
+    setQuery("")
+    setDebouncedQuery("")
+  }, [])
+
+  const resolvedBookmarks = useMemo(() => {
+    return bookmarks.map((bookmark) => {
+      const resolvedNames = (bookmark.tagIds || [])
+        .map((id) => tagStore.tagsById[id]?.name)
+        .filter((name): name is string => Boolean(name))
+
+      return {
+        ...bookmark,
+        tagIds: bookmark.tagIds || [],
+        tags: resolvedNames,
+      }
+    })
+  }, [bookmarks, tagStore.tagsById])
+
+  const orderedBookmarks = useMemo(() => {
+    const byId = new Map<string, (typeof resolvedBookmarks)[number]>()
+    for (const bookmark of resolvedBookmarks) {
+      byId.set(bookmark.id, bookmark)
+    }
+
+    const pinnedIds = (pinnedAccountIds || []).filter((id) => byId.has(id))
+    const pinnedSet = new Set(pinnedIds)
+
+    const pinned = pinnedIds
+      .map((id) => byId.get(id))
+      .filter((item): item is (typeof resolvedBookmarks)[number] =>
+        Boolean(item),
+      )
+
+    const orderedNonPinnedIds = (orderedAccountIds || []).filter(
+      (id) => byId.has(id) && !pinnedSet.has(id),
+    )
+
+    const orderedNonPinned = orderedNonPinnedIds
+      .map((id) => byId.get(id))
+      .filter((item): item is (typeof resolvedBookmarks)[number] =>
+        Boolean(item),
+      )
+
+    const orderedNonPinnedSet = new Set(orderedNonPinnedIds)
+
+    const remaining = resolvedBookmarks
+      .filter((bookmark) => !pinnedSet.has(bookmark.id))
+      .filter((bookmark) => !orderedNonPinnedSet.has(bookmark.id))
+      .sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+      )
+
+    return [...pinned, ...orderedNonPinned, ...remaining]
+  }, [orderedAccountIds, pinnedAccountIds, resolvedBookmarks])
+
+  const inSearchMode = debouncedQuery.trim().length > 0
+  const dragDisabled = inSearchMode || selectedTagIds.length > 0
+
+  const searchResults = useMemo(() => {
+    const q = debouncedQuery.trim()
+    if (!q) return []
+
+    const tokens = q
+      .split(/\s+/)
+      .map((token) => normalizeSearchToken(token))
+      .filter(Boolean)
+    if (tokens.length === 0) return []
+
+    return orderedBookmarks.filter((bookmark) => {
+      const haystackParts = [
+        normalizeForSearch(bookmark.name),
+        normalizeUrlForSearch(bookmark.url),
+        normalizeForSearch(bookmark.notes || ""),
+        ...(bookmark.tags || []).map((tag) => normalizeForSearch(tag)),
+      ].filter(Boolean)
+
+      const haystack = haystackParts.join(" ")
+
+      return tokens.every((token) => haystack.includes(token))
+    })
+  }, [debouncedQuery, orderedBookmarks])
+
+  const baseResults = useMemo(
+    () => (inSearchMode ? searchResults : orderedBookmarks),
+    [inSearchMode, orderedBookmarks, searchResults],
+  )
+
+  const displayedResults = useMemo(() => {
+    if (selectedTagIds.length === 0) {
+      return baseResults
+    }
+
+    return baseResults.filter((bookmark) => {
+      const ids = bookmark.tagIds || []
+      return selectedTagIds.some((tagId) => ids.includes(tagId))
+    })
+  }, [baseResults, selectedTagIds])
+
+  const tagCountsById = useMemo(() => {
+    const counts: Record<string, number> = {}
+
+    for (const bookmark of resolvedBookmarks) {
+      const ids = bookmark.tagIds || []
+      for (const id of ids) {
+        if (!id) continue
+        counts[id] = (counts[id] ?? 0) + 1
+      }
+    }
+
+    return counts
+  }, [resolvedBookmarks])
+
+  const tagFilterOptions = useMemo(() => {
+    if (tags.length === 0) {
+      return []
+    }
+
+    return tags.map((tag) => ({
+      value: tag.id,
+      label: tag.name,
+      count: tagCountsById[tag.id] ?? 0,
+    }))
+  }, [tagCountsById, tags])
+
+  const sortedIds = useMemo(
+    () => baseResults.map((bookmark) => bookmark.id),
+    [baseResults],
+  )
+
+  const reorder = (activeId: string, overId: string | undefined) => {
+    if (dragDisabled) return
+    if (!overId || activeId === overId) return
+
+    const oldIndex = sortedIds.indexOf(activeId)
+    const newIndex = sortedIds.indexOf(overId)
+    if (oldIndex === -1 || newIndex === -1) return
+
+    const newOrder = arrayMove(sortedIds, oldIndex, newIndex)
+    void handleBookmarkReorder(newOrder)
+  }
+
+  const handleOpenBookmark = async (bookmark: SiteBookmark) => {
+    try {
+      await createTab(bookmark.url, true)
+      closeIfPopup()
+    } catch (error) {
+      toast.error(
+        t("messages:toast.error.operationFailed", {
+          error: getErrorMessage(error),
+        }),
+      )
+    }
+  }
+
+  const handleCopyUrl = async (bookmark: SiteBookmark) => {
+    try {
+      await navigator.clipboard.writeText(bookmark.url)
+      toast.success(
+        t("messages:toast.success.bookmarkUrlCopied", {
+          name: bookmark.name,
+        }),
+      )
+    } catch (error) {
+      toast.error(
+        t("messages:toast.error.operationFailed", {
+          error: getErrorMessage(error),
+        }),
+      )
+    }
+  }
+
+  const handleTogglePin = async (bookmark: SiteBookmark) => {
+    const wasPinned = isAccountPinned(bookmark.id)
+    const success = await togglePinAccount(bookmark.id)
+    if (!success) {
+      toast.error(t("messages:toast.error.saveFailed"))
+      return
+    }
+
+    toast.success(
+      wasPinned
+        ? t("messages:toast.success.bookmarkUnpinned", {
+            name: bookmark.name,
+          })
+        : t("messages:toast.success.bookmarkPinned", {
+            name: bookmark.name,
+          }),
+    )
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return
+    const target = deleteTarget
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteBookmark,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+
+    setIsDeleting(true)
+    try {
+      const success = await bookmarkRepository.deleteBookmark(target.id)
+      if (!success) {
+        throw new Error(t("messages:toast.error.saveFailed"))
+      }
+      setDeleteTarget(null)
+      toast.success(
+        t("messages:toast.success.bookmarkDeleted", { name: target.name }),
+      )
+      await loadAccountData()
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+    } catch (error) {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
+      toast.error(
+        t("messages:toast.error.operationFailed", {
+          error: getErrorMessage(error),
+        }),
+      )
+    } finally {
+      setIsDeleting(false)
+      setDeleteTarget(null)
+    }
+  }
+
+  const requestDelete = (bookmark: SiteBookmark) => {
+    if (!isDeleting) setDeleteTarget(bookmark)
+  }
+  const cancelDelete = () => {
+    if (!isDeleting) setDeleteTarget(null)
+  }
+
+  return {
+    resolvedBookmarks,
+    isInitialLoad,
+    openAddBookmark,
+    displayedResults,
+    isAccountPinned,
+    handleOpenBookmark,
+    handleCopyUrl,
+    openEditBookmark,
+    isDeleting,
+    deleteTarget,
+    requestDelete,
+    cancelDelete,
+    handleTogglePin,
+    dragDisabled,
+    query,
+    setQuery,
+    clearSearch,
+    tagFilterOptions,
+    selectedTagIds,
+    setSelectedTagIds,
+    sortedIds,
+    handleConfirmDelete,
+    reorder,
+  }
+}

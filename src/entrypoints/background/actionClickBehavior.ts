@@ -22,7 +22,8 @@ import {
 } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { openOptionsPage, openSidePanelWithFallback } from "~/utils/navigation"
+import { openOptionsPage } from "~/utils/navigation"
+import { openSidePanelWithFallback } from "~/utils/navigation/sidepanel"
 
 /**
  * Unified logger scoped to toolbar action click behavior wiring.

@@ -26,7 +26,8 @@ import {
 } from "~/services/protectionBypass/contracts"
 import { ACCOUNT_KEY_REPAIR_JOB_STATES } from "~/types/accountKeyAutoProvisioning"
 import { createLogger } from "~/utils/core/logger"
-import { openModelsPage, pushWithinOptionsPage } from "~/utils/navigation"
+import { openModelsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 import {
   KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,

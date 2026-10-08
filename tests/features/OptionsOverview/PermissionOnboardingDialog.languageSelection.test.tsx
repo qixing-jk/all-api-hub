@@ -96,7 +96,7 @@ vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/navigation", () => ({
+vi.mock("~/utils/navigation/feedbackPages", () => ({
   openLanguageRequestPage: navigationMocks.openLanguageRequestPage,
 }))
 

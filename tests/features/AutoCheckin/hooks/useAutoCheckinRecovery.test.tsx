@@ -20,7 +20,7 @@ import {
   openAccountBaseUrl,
   openCheckInPage,
   openCheckInPages,
-} from "~/utils/navigation"
+} from "~/utils/navigation/sitePages"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 
 vi.mock("~/lib/notify", () => ({
@@ -47,7 +47,7 @@ vi.mock("~/services/productAnalytics/actions", () => ({
   trackProductAnalyticsActionCompleted: vi.fn(),
 }))
 
-vi.mock("~/utils/navigation", () => ({
+vi.mock("~/utils/navigation/sitePages", () => ({
   openAccountBaseUrl: vi.fn(),
   openCheckInPage: vi.fn(),
   openCheckInPages: vi.fn(),

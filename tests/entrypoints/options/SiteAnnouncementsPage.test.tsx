@@ -70,8 +70,8 @@ vi.mock("~/utils/feedback/operationFeedback", () => ({
   showResultToast: vi.fn(),
 }))
 
-vi.mock("~/utils/navigation", () => ({
-  openSettingsTab: vi.fn(),
+vi.mock("~/utils/navigation", () => ({ openSettingsTab: vi.fn() }))
+vi.mock("~/utils/navigation/optionsPage", () => ({
   pushWithinOptionsPage: pushWithinOptionsPageMock,
 }))
 

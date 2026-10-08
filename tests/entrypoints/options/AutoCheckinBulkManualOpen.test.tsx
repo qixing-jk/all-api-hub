@@ -82,7 +82,7 @@ describe("AutoCheckin bulk manual open", () => {
 
   it("opens all failed accounts even when table filters hide some results", async () => {
     const user = userEvent.setup()
-    const navigation = await import("~/utils/navigation")
+    const navigation = await import("~/utils/navigation/sitePages")
     const sendAutoCheckinMessageSpy = vi
       .mocked(sendAutoCheckinMessage)
       .mockImplementation(async (type: string, data?: any) => {
@@ -191,7 +191,7 @@ describe("AutoCheckin bulk manual open", () => {
 
   it("keeps opening remaining failed accounts when one manual page fails", async () => {
     const user = userEvent.setup()
-    const navigation = await import("~/utils/navigation")
+    const navigation = await import("~/utils/navigation/sitePages")
 
     vi.mocked(sendAutoCheckinMessage).mockImplementation(
       async (type: string, data?: any) => {
@@ -267,7 +267,7 @@ describe("AutoCheckin bulk manual open", () => {
   })
 
   it("opens failed manual sign-ins in a new window when shift-clicked", async () => {
-    const navigation = await import("~/utils/navigation")
+    const navigation = await import("~/utils/navigation/sitePages")
 
     vi.mocked(sendAutoCheckinMessage).mockImplementation(
       async (type: string, data?: any) => {

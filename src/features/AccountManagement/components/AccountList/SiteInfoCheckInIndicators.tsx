@@ -34,7 +34,7 @@ import {
   openCheckInAndRedeem,
   openCheckInPage,
   openCustomCheckInPage,
-} from "~/utils/navigation"
+} from "~/utils/navigation/sitePages"
 
 const logger = createLogger("AccountList.SiteInfo")
 

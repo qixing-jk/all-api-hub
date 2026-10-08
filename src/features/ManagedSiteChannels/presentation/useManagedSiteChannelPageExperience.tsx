@@ -32,7 +32,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { createTab } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
-import { pushWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 const logger = createLogger("ManagedSiteChannelPageExperience")
 

@@ -39,7 +39,7 @@ import { createLogger } from "~/utils/core/logger"
 import {
   navigateWithinOptionsPage,
   pushWithinOptionsPage,
-} from "~/utils/navigation"
+} from "~/utils/navigation/optionsPage"
 
 import { useAutoCheckinDevSection } from "../useAutoCheckinDevSection"
 import { getAutoCheckinResultMessage } from "../utils/autoCheckin"

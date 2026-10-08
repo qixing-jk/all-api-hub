@@ -25,8 +25,8 @@ import {
 import { resolveAccountSitePricingUrl } from "~/services/accounts/accountSiteProfile/urls"
 import type { DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
-import { openSiteSupportRequestPage } from "~/utils/navigation"
 import { SITE_SUPPORT_ERROR_TYPES } from "~/utils/navigation/feedbackLinks"
+import { openSiteSupportRequestPage } from "~/utils/navigation/feedbackPages"
 
 const logger = createLogger("ModelListStatusIndicator")
 

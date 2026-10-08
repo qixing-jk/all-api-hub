@@ -25,7 +25,7 @@ vi.mock(
     apiCredentialProfilesStorage: { listProfiles: mocks.listProfiles },
   }),
 )
-vi.mock("~/utils/navigation", async (importActual) => ({
+vi.mock("~/utils/navigation/optionsPage", async (importActual) => ({
   ...(await importActual()),
   pushWithinOptionsPage: mocks.pushWithinOptionsPage,
 }))

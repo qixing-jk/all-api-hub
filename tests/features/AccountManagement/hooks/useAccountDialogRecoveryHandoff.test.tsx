@@ -15,7 +15,7 @@ import {
   createEmptyAccountDialogDraft,
   type AccountDialogRecoveryState,
 } from "~/features/AccountManagement/components/AccountDialog/models"
-import { closeIfPopup } from "~/utils/navigation"
+import { closeIfPopup } from "~/utils/navigation/popup"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import {
@@ -32,8 +32,8 @@ vi.mock("~/features/AccountManagement/accountDialogRecovery", () => ({
   openAccountDialogRecovery: vi.fn(),
   prepareAccountDialogRecovery: vi.fn(),
 }))
-vi.mock("~/utils/navigation", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/utils/navigation")>()),
+vi.mock("~/utils/navigation/popup", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/navigation/popup")>()),
   closeIfPopup: vi.fn(),
 }))
 

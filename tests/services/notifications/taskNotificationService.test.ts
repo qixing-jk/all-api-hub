@@ -61,7 +61,7 @@ vi.mock("~/utils/browser/browserApi", () => ({
   onNotificationClicked: onNotificationClickedMock,
 }))
 
-vi.mock("~/utils/navigation", () => ({
+vi.mock("~/utils/navigation/optionsPage", () => ({
   openOrFocusOptionsMenuItem: openOrFocusOptionsMenuItemMock,
 }))
 

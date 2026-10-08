@@ -88,13 +88,11 @@ vi.mock("~/components/icons/optionsPageIcons", () => {
   }
 })
 
-vi.mock("~/utils/navigation", async (importOriginal) => {
-  const actual = (await importOriginal()) as typeof import("~/utils/navigation")
+vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => {
+  const actual =
+    (await importOriginal()) as typeof import("~/utils/navigation/optionsPage")
 
-  return {
-    ...actual,
-    pushWithinOptionsPage: mockedPushWithinOptionsPage,
-  }
+  return { ...actual, pushWithinOptionsPage: mockedPushWithinOptionsPage }
 })
 
 vi.mock(

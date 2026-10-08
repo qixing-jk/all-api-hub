@@ -41,7 +41,7 @@ import {
   openFeatureRequestPage,
   openLanguageRequestPage,
   openSiteSupportRequestPage,
-} from "~/utils/navigation"
+} from "~/utils/navigation/feedbackPages"
 
 type FeedbackMenuItemLabelKey =
   | "feedback.bugReport"

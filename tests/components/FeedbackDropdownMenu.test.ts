@@ -7,10 +7,11 @@ import {
   openFeatureRequestPage,
   openLanguageRequestPage,
   openSiteSupportRequestPage,
-} from "~/utils/navigation"
+} from "~/utils/navigation/feedbackPages"
 
-vi.mock("~/utils/navigation", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+vi.mock("~/utils/navigation/feedbackPages", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/navigation/feedbackPages")>()
   return {
     ...actual,
     openBugReportPage: vi.fn(),

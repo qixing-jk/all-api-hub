@@ -26,7 +26,8 @@ import {
   type AutoCheckinRunSummary,
 } from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
-import { openAutoCheckinPage, pushWithinOptionsPage } from "~/utils/navigation"
+import { openAutoCheckinPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -57,11 +58,11 @@ vi.mock("~/lib/notify", () => ({
 
 vi.mock("~/utils/navigation", async () => {
   const actual = await vi.importActual<any>("~/utils/navigation")
-  return {
-    ...actual,
-    openAutoCheckinPage: vi.fn(),
-    pushWithinOptionsPage: vi.fn(),
-  }
+  return { ...actual, openAutoCheckinPage: vi.fn() }
+})
+vi.mock("~/utils/navigation/optionsPage", async () => {
+  const actual = await vi.importActual<any>("~/utils/navigation/optionsPage")
+  return { ...actual, pushWithinOptionsPage: vi.fn() }
 })
 
 vi.mock("~/services/productAnalytics/actions", () => ({

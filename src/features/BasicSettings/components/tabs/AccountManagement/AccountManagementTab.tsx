@@ -8,7 +8,7 @@ import {
   WorkflowTransitionButton,
 } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { pushWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 import AutoFillCurrentSiteUrlOnAccountAddSettings from "./AutoFillCurrentSiteUrlOnAccountAddSettings"
 import AutoProvisionKeyOnAccountAddSettings from "./AutoProvisionKeyOnAccountAddSettings"

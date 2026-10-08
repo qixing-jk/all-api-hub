@@ -72,12 +72,10 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/navigation", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/navigation")>()
-  return {
-    ...actual,
-    closeIfPopup: mockCloseIfPopup,
-  }
+vi.mock("~/utils/navigation/popup", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/navigation/popup")>()
+  return { ...actual, closeIfPopup: mockCloseIfPopup }
 })
 
 vi.mock("~/lib/notify", () => ({

@@ -15,7 +15,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
-import { pushWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -76,13 +76,11 @@ vi.mock("~/services/productAnalytics/actions", () => ({
   startProductAnalyticsAction: mockStartProductAnalyticsAction,
 }))
 
-vi.mock("~/utils/navigation", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/navigation/optionsPage")>()
 
-  return {
-    ...actual,
-    pushWithinOptionsPage: vi.fn(),
-  }
+  return { ...actual, pushWithinOptionsPage: vi.fn() }
 })
 
 vi.mock("~/utils/core/identifier", () => ({

@@ -33,8 +33,8 @@ import {
   openFullAccountManagerPage,
   openFullBookmarkManagerPage,
   openSettingsPage,
-  openSidePanelPage,
 } from "~/utils/navigation"
+import { openSidePanelPage } from "~/utils/navigation/sidepanel"
 
 import { getPopupOpenFullPageButtonTestId } from "../testIds"
 import type { PopupViewType } from "./PopupViewSwitchTabs"

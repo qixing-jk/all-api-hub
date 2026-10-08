@@ -25,8 +25,8 @@ import {
   openFullAccountManagerPage,
   openFullBookmarkManagerPage,
   openSettingsPage,
-  openSidePanelPage,
 } from "~/utils/navigation"
+import { openSidePanelPage } from "~/utils/navigation/sidepanel"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const createDeferred = <T,>() => {
@@ -104,8 +104,8 @@ vi.mock("~/utils/navigation", () => ({
   openFullBookmarkManagerPage: vi.fn(),
   openPermissionsOnboardingPage: vi.fn(),
   openSettingsPage: vi.fn(),
-  openSidePanelPage: vi.fn(),
 }))
+vi.mock("~/utils/navigation/sidepanel", () => ({ openSidePanelPage: vi.fn() }))
 
 const {
   accountDataScenario,

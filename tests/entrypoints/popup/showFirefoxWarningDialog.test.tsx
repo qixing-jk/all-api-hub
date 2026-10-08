@@ -11,7 +11,7 @@ const { openSidePanelPage, getSidePanelSupport } = vi.hoisted(() => ({
   getSidePanelSupport: vi.fn(() => ({ supported: true })),
 }))
 
-vi.mock("~/utils/navigation", () => ({ openSidePanelPage }))
+vi.mock("~/utils/navigation/sidepanel", () => ({ openSidePanelPage }))
 vi.mock("~/utils/browser/browserApi", () => ({ getSidePanelSupport }))
 
 describe("showFirefoxWarningDialog", () => {

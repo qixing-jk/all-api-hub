@@ -1,7 +1,7 @@
 import { createRoot } from "react-dom/client"
 
 import { getSidePanelSupport } from "~/utils/browser/browserApi"
-import { openSidePanelPage } from "~/utils/navigation"
+import { openSidePanelPage } from "~/utils/navigation/sidepanel"
 
 import FirefoxAddAccountWarningDialog from "./index"
 

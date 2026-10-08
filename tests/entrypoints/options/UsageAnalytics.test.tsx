@@ -5,7 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import UsageAnalytics from "~/entrypoints/options/pages/UsageAnalytics"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
-import { openSettingsTab, pushWithinOptionsPage } from "~/utils/navigation"
+import { openSettingsTab } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const { useThemeMock, useUserPreferencesContextMock } = vi.hoisted(() => ({
@@ -29,11 +30,11 @@ vi.mock("~/services/history/usageHistory/storage", () => ({
 
 vi.mock("~/utils/navigation", async () => {
   const actual = await vi.importActual<any>("~/utils/navigation")
-  return {
-    ...actual,
-    openSettingsTab: vi.fn(),
-    pushWithinOptionsPage: vi.fn(),
-  }
+  return { ...actual, openSettingsTab: vi.fn() }
+})
+vi.mock("~/utils/navigation/optionsPage", async () => {
+  const actual = await vi.importActual<any>("~/utils/navigation/optionsPage")
+  return { ...actual, pushWithinOptionsPage: vi.fn() }
 })
 
 vi.mock("~/contexts/ThemeContext", async (importOriginal) => {

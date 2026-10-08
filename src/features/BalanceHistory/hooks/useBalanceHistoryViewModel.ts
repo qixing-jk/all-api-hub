@@ -23,7 +23,7 @@ import {
 } from "~/utils/core/dayKey"
 import { getCurrencySymbol } from "~/utils/core/formatters"
 import { formatMoneyFixed } from "~/utils/core/money"
-import { pushWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 import {
   BALANCE_HISTORY_BREAKDOWN_CHART_TYPES,
