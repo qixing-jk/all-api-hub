@@ -6,10 +6,13 @@ import { PageHeader } from "~/components/PageHeader"
 import { EmptyState } from "~/components/ui"
 import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
-import LoadingSkeleton from "~/features/ManagedSiteModelSync/components/LoadingSkeleton"
-import OverviewCard from "~/features/ManagedSiteModelSync/components/OverviewCard"
-import ProgressCard from "~/features/ManagedSiteModelSync/components/ProgressCard"
-import StatisticsCard from "~/features/ManagedSiteModelSync/components/StatisticsCard"
+import OverviewCard from "~/features/ManagedSiteModelSync/status/OverviewCard"
+import ProgressCard from "~/features/ManagedSiteModelSync/status/ProgressCard"
+import StatisticsCard from "~/features/ManagedSiteModelSync/status/StatisticsCard"
+import LoadingSkeleton from "~/features/ManagedSiteModelSync/workspace/LoadingSkeleton"
+import { ManagedSiteModelSyncTabs } from "~/features/ManagedSiteModelSync/workspace/ManagedSiteModelSyncTabs"
+import { actionBarAnalyticsScope } from "~/features/ManagedSiteModelSync/workspace/modelSyncAnalytics"
+import { useManagedSiteModelSyncViewModel } from "~/features/ManagedSiteModelSync/workspace/useManagedSiteModelSyncViewModel"
 import ManagedSiteConfigRequiredState from "~/features/ManagedSiteWidgets/ManagedSiteConfigRequiredState"
 import ManagedSiteTypeSwitcher from "~/features/ManagedSiteWidgets/ManagedSiteTypeSwitcher"
 import {
@@ -20,10 +23,7 @@ import {
 import { PRODUCT_ANALYTICS_ACTION_IDS } from "~/services/productAnalytics/contracts"
 import { openSettingsTab } from "~/utils/navigation"
 
-import { ManagedSiteModelSyncTabs } from "./components/ManagedSiteModelSyncTabs"
 import type { ManagedSiteModelSyncProps } from "./contracts"
-import { useManagedSiteModelSyncViewModel } from "./hooks/useManagedSiteModelSyncViewModel"
-import { actionBarAnalyticsScope } from "./modelSyncAnalytics"
 
 /** Render status and workspaces for the selected managed-site target. */
 export default function ManagedSiteModelSync(props: ManagedSiteModelSyncProps) {

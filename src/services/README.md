@@ -27,6 +27,12 @@ OpenRouter capability definition and the cloud-sync provider services. Import
 helpers from their concrete owners; do not introduce forwarding barrels just to
 give each new directory an index.
 
+Model vendor definitions and attribution exceptions live in
+`models/modelVendorCatalog.ts`; `models/modelVendor.ts` owns matching and result
+aggregation. Analytics privacy filtering lives in `productAnalytics/configuration/privacy`: its
+`index.ts` implements sanitization, `eventSchema.ts` owns event fields, and
+`propertyPolicy.ts` owns scalar, enum, and sensitive-field validation.
+
 Shared adapter contracts remain in `apiAdapters/contracts`, and cross-feature
 product contracts remain in `src/types`. These deliberately collect the shared
 interfaces consumed by different implementations. Technical utility namespaces

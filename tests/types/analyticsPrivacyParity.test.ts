@@ -1,6 +1,6 @@
 import { describe, expectTypeOf, it } from "vitest"
 
-import type { ProductAnalyticsEventAllowedKeys } from "~/services/productAnalytics/configuration/privacy"
+import type { ProductAnalyticsEventAllowedKeys } from "~/services/productAnalytics/configuration/privacy/eventSchema"
 import type {
   ProductAnalyticsEventName,
   ProductAnalyticsEventPayloadMap,

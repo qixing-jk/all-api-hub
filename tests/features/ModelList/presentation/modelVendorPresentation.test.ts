@@ -5,7 +5,7 @@ import type {
   ModelVendorCatalogEntry,
   ResolvedModelVendor,
 } from "~/services/models/modelMetadata/types"
-import type { KnownModelVendorId } from "~/services/models/modelVendor"
+import type { KnownModelVendorId } from "~/services/models/modelVendorCatalog"
 
 const resolvedKnownVendor = (knownId: string): ResolvedModelVendor => ({
   state: "resolved",

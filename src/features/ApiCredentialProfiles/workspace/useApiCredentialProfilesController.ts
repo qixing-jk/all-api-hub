@@ -6,13 +6,13 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useApiCredentialProfileExportSession } from "~/features/ApiCredentialProfiles/export/useApiCredentialProfileExportSession"
 import { useApiCredentialProfileCommands } from "~/features/ApiCredentialProfiles/workspace/useApiCredentialProfileCommands"
 import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/workspace/useApiCredentialProfiles"
+import { useLatestProfileVerificationSummaries } from "~/hooks/verification/useVerificationResultHistorySummaries"
 import toast from "~/lib/notify"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import { tagStorage } from "~/services/tags/tagStorage"
 import {
   createProfileVerificationHistoryTarget,
   serializeVerificationHistoryTarget,
-  useLatestProfileVerificationSummaries,
 } from "~/services/verification/verificationResultHistory"
 import type { Tag } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"

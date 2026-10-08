@@ -12,10 +12,12 @@ import {
 } from "~/components/ui"
 import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
-import { BalanceHistoryBreakdown } from "~/features/BalanceHistory/components/BalanceHistoryBreakdown"
-import { BalanceHistoryFilters } from "~/features/BalanceHistory/components/BalanceHistoryFilters"
-import { BalanceHistoryOverview } from "~/features/BalanceHistory/components/BalanceHistoryOverview"
-import { BalanceHistoryTrend } from "~/features/BalanceHistory/components/BalanceHistoryTrend"
+import { BalanceHistoryFilters } from "~/features/BalanceHistory/filtering/BalanceHistoryFilters"
+import BalanceHistoryAccountSummaryTable from "~/features/BalanceHistory/reporting/BalanceHistoryAccountSummaryTable"
+import { BalanceHistoryBreakdown } from "~/features/BalanceHistory/reporting/BalanceHistoryBreakdown"
+import { BalanceHistoryOverview } from "~/features/BalanceHistory/reporting/BalanceHistoryOverview"
+import { BalanceHistoryTrend } from "~/features/BalanceHistory/reporting/BalanceHistoryTrend"
+import { useBalanceHistoryViewModel } from "~/features/BalanceHistory/workspace/useBalanceHistoryViewModel"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -23,8 +25,6 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 
-import BalanceHistoryAccountSummaryTable from "./components/BalanceHistoryAccountSummaryTable"
-import { useBalanceHistoryViewModel } from "./hooks/useBalanceHistoryViewModel"
 import { BALANCE_HISTORY_TEST_IDS } from "./testIds"
 
 const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options

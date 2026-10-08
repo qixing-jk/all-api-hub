@@ -5,7 +5,7 @@ import {
   getModelTotalsRows,
   getSlowTokenRows,
   resolveLatencyAggregateForSelection,
-} from "~/features/UsageAnalytics/usageSelection"
+} from "~/features/UsageAnalytics/filtering/usageSelection"
 import { computeUsageHistoryExport } from "~/services/history/usageHistory/analytics"
 import {
   createEmptyUsageHistoryAccountStore,

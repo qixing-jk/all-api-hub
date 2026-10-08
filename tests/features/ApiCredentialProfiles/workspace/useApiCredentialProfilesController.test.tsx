@@ -107,16 +107,9 @@ vi.mock("~/services/tags/tagStorage", () => ({
   },
 }))
 
-vi.mock("~/services/verification/verificationResultHistory", async () => {
-  const actual = await vi.importActual<
-    typeof import("~/services/verification/verificationResultHistory")
-  >("~/services/verification/verificationResultHistory")
-
-  return {
-    ...actual,
-    useLatestProfileVerificationSummaries: () => ({ summariesByKey: {} }),
-  }
-})
+vi.mock("~/hooks/verification/useVerificationResultHistorySummaries", () => ({
+  useLatestProfileVerificationSummaries: () => ({ summariesByKey: {} }),
+}))
 
 vi.mock("~/utils/browser/runtimeMessages", async () => {
   const actual = await vi.importActual<

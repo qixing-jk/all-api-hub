@@ -7,8 +7,8 @@ import {
   applyVerificationResultView,
   type ModelListVerificationResultFilter,
 } from "~/features/ModelList/verification/verificationResultFilters"
+import { useVerificationResultHistorySummaries } from "~/hooks/verification/useVerificationResultHistorySummaries"
 import type { ApiVerificationHistoryTarget } from "~/services/verification/verificationResultHistory/types"
-import { useVerificationResultHistorySummaries } from "~/services/verification/verificationResultHistory/useVerificationResultHistorySummaries"
 import {
   createAccountModelVerificationHistoryTarget,
   createProfileModelVerificationHistoryTarget,
