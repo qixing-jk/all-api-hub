@@ -1,8 +1,21 @@
+import { globSync, readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 
 import { findTypographyViolations } from "~~/scripts/utils/typography.mjs"
 
 describe("typography guard", () => {
+  it("accepts the vendor artwork at its current source location", () => {
+    const files = globSync("src/features/ModelList/**/ModelVendorMark.tsx")
+    expect(files).toHaveLength(1)
+    const file = files[0]!
+    expect(
+      findTypographyViolations(
+        file.replaceAll("\\", "/"),
+        readFileSync(file, "utf8"),
+      ),
+    ).toEqual([])
+  })
+
   it("accepts shared DOM font-size assignments while rejecting fixed sizing", () => {
     expect(
       findTypographyViolations(
