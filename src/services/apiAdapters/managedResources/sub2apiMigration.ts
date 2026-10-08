@@ -16,10 +16,8 @@ import {
   isManagedSiteMigrationSourceType,
   resolveManagedSiteMigrationType,
 } from "~/services/apiAdapters/managedResources/migrationTypeRoutes"
-import {
-  openSub2ApiNativeResourceOperations,
-  sub2ApiManagedResourceRegistration,
-} from "~/services/apiAdapters/managedResources/sub2api"
+import { sub2ApiManagedResourceRegistration } from "~/services/apiAdapters/managedResources/sub2api"
+import { openSub2ApiNativeResourceOperations } from "~/services/apiAdapters/managedResources/sub2apiNativeOperations"
 import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
 import {
   parseSub2ApiResourceId,

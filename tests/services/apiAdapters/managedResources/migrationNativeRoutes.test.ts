@@ -6,8 +6,8 @@ import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/ma
 import { claudeCodeHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/claudeCodeHubMigration"
 import { doneHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/doneHubMigration"
 import { newApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/newApiMigration"
-import * as octopusNative from "~/services/apiAdapters/managedResources/octopus"
 import { octopusManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/octopusMigration"
+import * as octopusNative from "~/services/apiAdapters/managedResources/octopusNativeOperations"
 import { sub2ApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/sub2apiMigration"
 import { veloeraManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/veloeraMigration"
 import type {
