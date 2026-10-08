@@ -12,7 +12,7 @@ import type {
 } from "~/services/accounts/keys/accountKeyCreation"
 import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
-import { KILO_CODE_EXPORT_TARGETS } from "~/services/integrations/kiloCodeExport"
+import { KILO_CODE_EXPORT_TARGETS } from "~/services/integrations/kiloCode/kiloCodeExport"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -130,7 +130,7 @@ vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
 const mockFetchOpenAICompatibleModelIds = vi.fn()
 const mockBuildKiloCodeExportOutput = vi.fn()
 
-vi.mock("~/services/integrations/kiloCodeExportPolicy", () => ({
+vi.mock("~/services/integrations/kiloCode/kiloCodeExportPolicy", () => ({
   buildKiloCodeExportOutput: (...args: unknown[]) =>
     mockBuildKiloCodeExportOutput(...args),
 }))

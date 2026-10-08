@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { aihubmixAccountKeyResources } from "~/services/apiAdapters/aihubmix/accountKeyResource"
+import { aihubmixAccountKeyResources } from "~/services/apiAdapters/aihubmix/keys/accountKeyResource"
 import {
   getInventorySecretAvailability,
   INVENTORY_SECRET_AVAILABILITIES,

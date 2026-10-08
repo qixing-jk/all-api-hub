@@ -14,8 +14,8 @@ import {
   KILO_CODE_EXPORT_FILENAMES,
   KILO_CODE_EXPORT_TARGETS,
   type KiloCodeExportTarget,
-} from "~/services/integrations/kiloCodeExport"
-import { getKiloCodeExportAnalyticsTarget } from "~/services/integrations/kiloCodeExportAnalytics"
+} from "~/services/integrations/kiloCode/kiloCodeExport"
+import { getKiloCodeExportAnalyticsTarget } from "~/services/integrations/kiloCode/kiloCodeExportAnalytics"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

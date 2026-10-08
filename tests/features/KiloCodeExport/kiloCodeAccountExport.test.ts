@@ -7,11 +7,11 @@ import {
 import {
   KILO_CODE_EXPORT_TARGETS,
   type KiloCodeV7ProviderSelection,
-} from "~/services/integrations/kiloCodeExport"
+} from "~/services/integrations/kiloCode/kiloCodeExport"
 
 const buildKiloCodeExportOutputMock = vi.hoisted(() => vi.fn())
 
-vi.mock("~/services/integrations/kiloCodeExportPolicy", () => ({
+vi.mock("~/services/integrations/kiloCode/kiloCodeExportPolicy", () => ({
   buildKiloCodeExportOutput: (...args: unknown[]) =>
     buildKiloCodeExportOutputMock(...args),
 }))

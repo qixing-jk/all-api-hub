@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_SITE_TYPES, SITE_TYPES } from "~/constants/siteType"
 import { getSiteName } from "~/services/accounts/identity/siteName"
-import { aihubmixAccountBootstrap } from "~/services/apiAdapters/aihubmix/accountBootstrap"
+import { aihubmixAccountBootstrap } from "~/services/apiAdapters/aihubmix/account/accountBootstrap"
 import { createNewApiAccountBootstrap } from "~/services/apiAdapters/newApi/account/accountBootstrap"
 import { createNewApiAccountCompletion } from "~/services/apiAdapters/newApi/account/accountCompletion"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import { sub2ApiAccountBootstrap } from "~/services/apiAdapters/sub2api/accountBootstrap"
+import { sub2ApiAccountBootstrap } from "~/services/apiAdapters/sub2api/account/accountBootstrap"
 import { voApiV2AccountBootstrap } from "~/services/apiAdapters/voapiV2/accountBootstrap"
 import { AuthTypeEnum } from "~/types"
 

@@ -4,7 +4,7 @@ import { Alert } from "~/components/ui"
 import {
   KILO_CODE_EXPORT_TARGETS,
   type KiloCodeExportTarget,
-} from "~/services/integrations/kiloCodeExport"
+} from "~/services/integrations/kiloCode/kiloCodeExport"
 
 interface KiloCodeExportGuidanceProps {
   target: KiloCodeExportTarget

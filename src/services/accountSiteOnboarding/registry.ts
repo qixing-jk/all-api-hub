@@ -3,7 +3,7 @@ import {
   getAccountSiteDomainRuleMetadata,
   getAccountSiteTitleRuleMetadata,
 } from "~/services/accountSiteOnboarding/metadata"
-import { aihubmixBrowserIdentity } from "~/services/apiAdapters/aihubmix/browserIdentity"
+import { aihubmixBrowserIdentity } from "~/services/apiAdapters/aihubmix/account/browserIdentity"
 import type {
   AccountBrowserIdentityCapability,
   AccountBrowserIdentityContext,
@@ -13,9 +13,9 @@ import { kimiOpenPlatformBrowserIdentity } from "~/services/apiAdapters/kimiOpen
 import { newApiBrowserIdentity } from "~/services/apiAdapters/newApi/account/browserIdentity"
 import { openRouterAccountDetectionPrivacy } from "~/services/apiAdapters/openrouter/account/accountDetection"
 import { openRouterBrowserIdentity } from "~/services/apiAdapters/openrouter/account/browserIdentity"
-import { rightCodeBrowserIdentity } from "~/services/apiAdapters/rightcode/browserIdentity"
+import { rightCodeBrowserIdentity } from "~/services/apiAdapters/rightcode/account/browserIdentity"
 import { sharedChatBrowserIdentity } from "~/services/apiAdapters/sharedchat/browserIdentity"
-import { sub2ApiBrowserIdentity } from "~/services/apiAdapters/sub2api/browserIdentity"
+import { sub2ApiBrowserIdentity } from "~/services/apiAdapters/sub2api/auth/browserIdentity"
 import { voApiV2BrowserIdentity } from "~/services/apiAdapters/voapiV2/browserIdentity"
 
 import { apiyiContentSessionExtractor } from "./contentSession/apiyi"

@@ -4,7 +4,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { handleGetUserFromLocalStorage } from "~/entrypoints/content/messageHandlers/handlers/storage"
 import { setupAccountBrowserIdentityRateLimitMessaging } from "~/services/accountBrowserSession/identityRateLimit"
-import { sub2ApiBrowserIdentity } from "~/services/apiAdapters/sub2api/browserIdentity"
+import { sub2ApiBrowserIdentity } from "~/services/apiAdapters/sub2api/auth/browserIdentity"
 import { ACCOUNT_BROWSER_IDENTITY_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 

@@ -1,13 +1,13 @@
 import { ACCOUNT_SITE_ADAPTER_FAMILIES, SITE_TYPES } from "~/constants/siteType"
+import { aihubmixAccountBootstrap } from "~/services/apiAdapters/aihubmix/account/accountBootstrap"
+import { aihubmixAccountCompletion } from "~/services/apiAdapters/aihubmix/account/accountCompletion"
+import { aihubmixAccountData } from "~/services/apiAdapters/aihubmix/account/accountData"
+import { aihubmixAccountRefresh } from "~/services/apiAdapters/aihubmix/account/accountRefresh"
+import { aihubmixInviteLink } from "~/services/apiAdapters/aihubmix/account/inviteLink"
+import { aihubmixAccountKeyResources } from "~/services/apiAdapters/aihubmix/keys/accountKeyResource"
+import { aihubmixModelPricing } from "~/services/apiAdapters/aihubmix/models/modelPricing"
 
 import type { SiteTypeCapabilities } from "../contracts/siteTypeCapabilities"
-import { aihubmixAccountBootstrap } from "./accountBootstrap"
-import { aihubmixAccountCompletion } from "./accountCompletion"
-import { aihubmixAccountData } from "./accountData"
-import { aihubmixAccountKeyResources } from "./accountKeyResource"
-import { aihubmixAccountRefresh } from "./accountRefresh"
-import { aihubmixInviteLink } from "./inviteLink"
-import { aihubmixModelPricing } from "./modelPricing"
 
 export const aihubmixCapabilities: SiteTypeCapabilities = {
   siteType: SITE_TYPES.AIHUBMIX,

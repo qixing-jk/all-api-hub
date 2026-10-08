@@ -11,10 +11,10 @@ import type {
   KiloCodeRuntimeKeyExportInput,
   KiloCodeV7ProviderSelection,
   PreparedKiloCodeV7Catalog,
-} from "~/services/integrations/kiloCodeExport"
-import { KILO_CODE_PROVIDER_PROTOCOLS } from "~/services/integrations/kiloCodeExport"
-import { prepareKiloCodeV7Catalog } from "~/services/integrations/kiloCodeV7Catalog"
-import { reconcileKiloCodeV7DefaultSelection } from "~/services/integrations/kiloCodeV7Selection"
+} from "~/services/integrations/kiloCode/kiloCodeExport"
+import { KILO_CODE_PROVIDER_PROTOCOLS } from "~/services/integrations/kiloCode/kiloCodeExport"
+import { prepareKiloCodeV7Catalog } from "~/services/integrations/kiloCode/kiloCodeV7Catalog"
+import { reconcileKiloCodeV7DefaultSelection } from "~/services/integrations/kiloCode/kiloCodeV7Selection"
 import { coerceBaseUrlToPathSuffix } from "~/utils/core/url"
 
 export const KILO_CODE_MODEL_STATUSES = PROVIDER_MODEL_DISCOVERY_STATUSES

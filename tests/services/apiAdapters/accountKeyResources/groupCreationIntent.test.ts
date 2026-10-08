@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import type { AccountKeyCreationIntent } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keyResourceEditor"
+import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keys/keyResourceEditor"
 import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
 import { AuthTypeEnum } from "~/types"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"

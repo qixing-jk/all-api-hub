@@ -4,7 +4,7 @@ import {
   KILO_CODE_EXPORT_TARGET_OPTIONS,
   KILO_CODE_EXPORT_TARGETS,
   type KiloCodeExportTarget,
-} from "~/services/integrations/kiloCodeExport"
+} from "~/services/integrations/kiloCode/kiloCodeExport"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 import { screen, within } from "./render"

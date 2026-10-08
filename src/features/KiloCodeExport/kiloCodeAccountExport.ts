@@ -4,12 +4,12 @@ import type {
   KiloCodeLegacySelection,
   KiloCodeRuntimeKeyExportInput,
   KiloCodeV7ProviderSelection,
-} from "~/services/integrations/kiloCodeExport"
-import { KILO_CODE_EXPORT_TARGETS } from "~/services/integrations/kiloCodeExport"
+} from "~/services/integrations/kiloCode/kiloCodeExport"
+import { KILO_CODE_EXPORT_TARGETS } from "~/services/integrations/kiloCode/kiloCodeExport"
 import {
   buildKiloCodeExportOutput,
   type KiloCodeExportOutput,
-} from "~/services/integrations/kiloCodeExportPolicy"
+} from "~/services/integrations/kiloCode/kiloCodeExportPolicy"
 
 export interface KiloCodeAccountExportSelection {
   selectionId: string

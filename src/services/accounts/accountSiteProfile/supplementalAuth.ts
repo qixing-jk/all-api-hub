@@ -1,5 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
-import { normalizeSub2ApiAuth } from "~/services/apiAdapters/sub2api/authSession"
+import { normalizeSub2ApiAuth } from "~/services/apiAdapters/sub2api/auth/authSession"
 import type { Sub2ApiAuthConfig } from "~/types"
 
 import { ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS } from "./contracts"

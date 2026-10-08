@@ -1,0 +1,399 @@
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
+import { SITE_TYPES } from "~/constants/siteType"
+import { aihubmixAccountCompletion } from "~/services/apiAdapters/aihubmix/account/accountCompletion"
+import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
+import { AuthTypeEnum } from "~/types"
+import {
+  createAccountCompletionHelpersMock,
+  createCheckInConfig,
+} from "~~/tests/services/apiAdapters/checkInFixtures"
+
+const {
+  mockLoadBootstrapFacts,
+  mockFetchSupportCheckIn,
+  mockFetchUserInfo,
+  mockGetOrCreateAccessToken,
+} = vi.hoisted(() => ({
+  mockLoadBootstrapFacts: vi.fn(),
+  mockFetchSupportCheckIn: vi.fn(),
+  mockFetchUserInfo: vi.fn(),
+  mockGetOrCreateAccessToken: vi.fn(),
+}))
+
+vi.mock("~/services/apiAdapters/aihubmix/account/accountBootstrap", () => ({
+  aihubmixAccountBootstrap: {
+    fetchCheckInSupport: mockFetchSupportCheckIn,
+    loadBootstrapFacts: mockLoadBootstrapFacts,
+    fetchUserInfo: mockFetchUserInfo,
+    getOrCreateAccessToken: mockGetOrCreateAccessToken,
+    resolveRoutePath: vi.fn(),
+  },
+}))
+
+const currentTabFetchContext = {
+  kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+  tabId: 123,
+  origin: "https://aihubmix.com",
+}
+
+const {
+  helpers,
+  createCompletionError,
+  createInitialCheckInConfig,
+  handleCheckInSupportFetchFailure,
+} = createAccountCompletionHelpersMock(SITE_TYPES.AIHUBMIX, {
+  automaticExecutionEnabled: false,
+})
+
+describe("aihubmixAccountCompletion", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockFetchSupportCheckIn.mockImplementation(
+      async (_request, facts) => facts?.checkInSupported,
+    )
+  })
+
+  it("uses detected access-token data and probes status with Cookie auth", async () => {
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "AIHubMix",
+      checkInSupported: false,
+    })
+
+    const result = await aihubmixAccountCompletion.complete(
+      {
+        url: "https://aihubmix.com",
+        requestedAuthType: AuthTypeEnum.AccessToken,
+        detected: {
+          userId: "11",
+          user: {
+            id: 11,
+            username: "  aihubmix-user  ",
+          },
+          siteType: SITE_TYPES.AIHUBMIX,
+          accessToken: "  detected-console-token  ",
+        },
+        context: {
+          fetchContext: currentTabFetchContext,
+        },
+      },
+      helpers,
+    )
+
+    expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
+    expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
+      baseUrl: "https://aihubmix.com",
+      fetchContext: currentTabFetchContext,
+      auth: {
+        authType: AuthTypeEnum.Cookie,
+      },
+    })
+    expect(createInitialCheckInConfig).toHaveBeenCalledWith({
+      supported: false,
+    })
+    expect(result).toEqual({
+      username: "aihubmix-user",
+      siteName: "AIHubMix",
+      accessToken: "detected-console-token",
+      userId: "11",
+      exchangeRate: DEFAULT_USD_TO_CNY_RATE,
+      authType: AuthTypeEnum.AccessToken,
+      checkIn: {
+        ...createCheckInConfig(SITE_TYPES.AIHUBMIX, {
+          matched: false,
+          automaticExecutionEnabled: false,
+        }),
+        customCheckIn: {
+          url: "",
+          redeemUrl: "",
+          openRedeemWithCheckIn: true,
+          isCheckedInToday: false,
+        },
+      },
+    })
+  })
+
+  it("falls back to getOrCreateAccessToken when detected token data is absent", async () => {
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "  generated-aihubmix-user  ",
+      access_token: "  generated-aihubmix-token  ",
+    })
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "AIHubMix",
+    })
+    mockFetchSupportCheckIn.mockResolvedValueOnce(true)
+
+    const result = await aihubmixAccountCompletion.complete(
+      {
+        url: "https://aihubmix.com",
+        requestedAuthType: AuthTypeEnum.AccessToken,
+        detected: {
+          userId: "12",
+          siteType: SITE_TYPES.AIHUBMIX,
+        },
+        context: {},
+      },
+      helpers,
+    )
+
+    expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
+      baseUrl: "https://aihubmix.com",
+      auth: {
+        authType: AuthTypeEnum.Cookie,
+        userId: "12",
+      },
+    })
+    expect(mockLoadBootstrapFacts).toHaveBeenCalledWith({
+      baseUrl: "https://aihubmix.com",
+      auth: {
+        authType: AuthTypeEnum.Cookie,
+      },
+    })
+    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith(
+      {
+        baseUrl: "https://aihubmix.com",
+        auth: {
+          authType: AuthTypeEnum.None,
+        },
+      },
+      { displayName: "AIHubMix" },
+    )
+    expect(result).toMatchObject({
+      username: "generated-aihubmix-user",
+      accessToken: "generated-aihubmix-token",
+      userId: "12",
+      exchangeRate: DEFAULT_USD_TO_CNY_RATE,
+      authType: AuthTypeEnum.AccessToken,
+      checkIn: expect.objectContaining({
+        automaticExecutionEnabled: false,
+      }),
+    })
+  })
+
+  it("classifies missing detected username and token as missing access token", async () => {
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "AIHubMix",
+      checkInSupported: false,
+    })
+
+    await expect(
+      aihubmixAccountCompletion.complete(
+        {
+          url: "https://aihubmix.com",
+          requestedAuthType: AuthTypeEnum.AccessToken,
+          detected: {
+            userId: "13",
+            user: {
+              id: 13,
+              username: "  ",
+            },
+            siteType: SITE_TYPES.AIHUBMIX,
+            accessToken: "  ",
+          },
+          context: {},
+        },
+        helpers,
+      ),
+    ).rejects.toMatchObject({
+      reason: AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing,
+    })
+
+    expect(createCompletionError).toHaveBeenCalledWith(
+      AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing,
+      expect.any(Error),
+    )
+  })
+
+  it("classifies generated token fetch failures", async () => {
+    const tokenError = new Error("token unavailable")
+    mockGetOrCreateAccessToken.mockRejectedValueOnce(tokenError)
+
+    await expect(
+      aihubmixAccountCompletion.complete(
+        {
+          url: "https://aihubmix.com",
+          requestedAuthType: AuthTypeEnum.AccessToken,
+          detected: {
+            userId: "14",
+            siteType: SITE_TYPES.AIHUBMIX,
+          },
+          context: {},
+        },
+        helpers,
+      ),
+    ).rejects.toMatchObject({
+      reason: AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+      cause: tokenError,
+    })
+
+    expect(createCompletionError).toHaveBeenCalledWith(
+      AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+      tokenError,
+    )
+    expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
+  })
+
+  it("classifies site status fetch failures", async () => {
+    const siteStatusError = new Error("site status unavailable")
+    mockLoadBootstrapFacts.mockRejectedValueOnce(siteStatusError)
+
+    await expect(
+      aihubmixAccountCompletion.complete(
+        {
+          url: "https://aihubmix.com",
+          requestedAuthType: AuthTypeEnum.AccessToken,
+          detected: {
+            userId: "15",
+            user: {
+              id: 15,
+              username: "aihubmix-user",
+            },
+            siteType: SITE_TYPES.AIHUBMIX,
+            accessToken: "detected-token",
+          },
+          context: {},
+        },
+        helpers,
+      ),
+    ).rejects.toMatchObject({
+      reason: AUTO_DETECT_FAILURE_REASONS.SiteStatusFetchFailed,
+      cause: siteStatusError,
+    })
+
+    expect(createCompletionError).toHaveBeenCalledWith(
+      AUTO_DETECT_FAILURE_REASONS.SiteStatusFetchFailed,
+      siteStatusError,
+    )
+    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
+  })
+
+  it("falls back to disabled check-in detection when support probing fails", async () => {
+    const supportError = new Error("support probe unavailable")
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "AIHubMix",
+    })
+    mockFetchSupportCheckIn.mockRejectedValueOnce(supportError)
+
+    const result = await aihubmixAccountCompletion.complete(
+      {
+        url: "https://aihubmix.com",
+        requestedAuthType: AuthTypeEnum.AccessToken,
+        detected: {
+          userId: "16",
+          user: {
+            id: 16,
+            username: "aihubmix-user",
+          },
+          siteType: SITE_TYPES.AIHUBMIX,
+          accessToken: "detected-token",
+        },
+        context: {},
+      },
+      helpers,
+    )
+
+    expect(handleCheckInSupportFetchFailure).toHaveBeenCalledWith(supportError)
+    expect(createInitialCheckInConfig).toHaveBeenCalledWith({
+      supported: false,
+    })
+    expect(result.checkIn.selection).not.toHaveProperty("methodId")
+  })
+
+  it("classifies missing generated access token when username is present", async () => {
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "aihubmix-user",
+      access_token: "  ",
+    })
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "AIHubMix",
+      checkInSupported: false,
+    })
+
+    await expect(
+      aihubmixAccountCompletion.complete(
+        {
+          url: "https://aihubmix.com",
+          requestedAuthType: AuthTypeEnum.AccessToken,
+          detected: {
+            userId: "17",
+            siteType: SITE_TYPES.AIHUBMIX,
+          },
+          context: {},
+        },
+        helpers,
+      ),
+    ).rejects.toMatchObject({
+      reason: AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing,
+    })
+
+    expect(createCompletionError).toHaveBeenCalledWith(
+      AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing,
+      expect.any(Error),
+    )
+  })
+
+  it("classifies invalid generated token payloads as missing access token", async () => {
+    mockGetOrCreateAccessToken.mockResolvedValueOnce(null)
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "AIHubMix",
+      checkInSupported: false,
+    })
+
+    await expect(
+      aihubmixAccountCompletion.complete(
+        {
+          url: "https://aihubmix.com",
+          requestedAuthType: AuthTypeEnum.AccessToken,
+          detected: {
+            userId: "18",
+            siteType: SITE_TYPES.AIHUBMIX,
+          },
+          context: {},
+        },
+        helpers,
+      ),
+    ).rejects.toMatchObject({
+      reason: AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing,
+    })
+
+    expect(createCompletionError).toHaveBeenCalledWith(
+      AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing,
+      expect.any(Error),
+    )
+  })
+
+  it("classifies missing generated username when access token is present", async () => {
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "  ",
+      access_token: "generated-aihubmix-token",
+    })
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "AIHubMix",
+      checkInSupported: false,
+    })
+
+    await expect(
+      aihubmixAccountCompletion.complete(
+        {
+          url: "https://aihubmix.com",
+          requestedAuthType: AuthTypeEnum.AccessToken,
+          detected: {
+            userId: "19",
+            siteType: SITE_TYPES.AIHUBMIX,
+          },
+          context: {},
+        },
+        helpers,
+      ),
+    ).rejects.toMatchObject({
+      reason: AUTO_DETECT_FAILURE_REASONS.UsernameMissing,
+    })
+
+    expect(createCompletionError).toHaveBeenCalledWith(
+      AUTO_DETECT_FAILURE_REASONS.UsernameMissing,
+      expect.any(Error),
+    )
+  })
+})

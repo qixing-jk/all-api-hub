@@ -5,7 +5,7 @@ import {
 import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/keys/accountKeyNames"
 import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/definition"
-import { createAIHubMixKeyEditor } from "~/services/apiAdapters/aihubmix/keyResourceEditor"
+import { createAIHubMixKeyEditor } from "~/services/apiAdapters/aihubmix/keys/keyResourceEditor"
 import {
   AccountKeyResourceError,
   type AccountKeyProvisioningRequirement,
@@ -23,8 +23,8 @@ import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyV
 import { createOpenRouterKeyEditorProjection } from "~/services/apiAdapters/openrouter/keys/keyEditorSession"
 import { OPENROUTER_KEY_FIELD_IDS } from "~/services/apiAdapters/openrouter/keys/keyResourceFields"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import { createRightCodeKeyEditor } from "~/services/apiAdapters/rightcode/keyResourceEditor"
-import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keyResourceEditor"
+import { createRightCodeKeyEditor } from "~/services/apiAdapters/rightcode/keys/keyResourceEditor"
+import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keys/keyResourceEditor"
 import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
 import { AuthTypeEnum, type DisplaySiteData } from "~/types"
 import type { AccountKeyAutoProvisionMode } from "~/types/accountKeyAutoProvisioning"

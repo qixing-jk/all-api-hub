@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { aihubmixModelPricing } from "~/services/apiAdapters/aihubmix/modelPricing"
+import { aihubmixModelPricing } from "~/services/apiAdapters/aihubmix/models/modelPricing"
 import { createNewApiModelPricing } from "~/services/apiAdapters/newApi/pricing/modelPricing"
 import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
@@ -24,7 +24,7 @@ vi.mock("~/services/apiService/newApiFamily/default/modelPricing", () => ({
   },
 }))
 
-vi.mock("~/services/apiAdapters/aihubmix/catalog", () => ({
+vi.mock("~/services/apiAdapters/aihubmix/models/catalog", () => ({
   fetchModelPricing: mockAihubmixFetchModelPricing,
   invalidateAIHubMixPublicCatalogs: vi.fn(),
 }))
