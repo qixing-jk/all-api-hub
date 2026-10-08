@@ -138,6 +138,47 @@ describe("applyModelMappingToChannel", () => {
     )
   })
 
+  it.each(["null", "[]", "17"])(
+    "does not prune a malformed mapping object (%s)",
+    async (modelMapping) => {
+      const channel = { ref: modelResourceRef(1), modelMapping } as any
+      const service = { updateChannelModelMapping: vi.fn() } as any
+      await expect(
+        applyModelMappingToChannel(channel, {}, service, {
+          pruneMissingTargets: true,
+          availableModels: ["available"],
+        }),
+      ).resolves.toEqual({ updated: false, prunedCount: 0 })
+      expect(service.updateChannelModelMapping).not.toHaveBeenCalled()
+    },
+  )
+
+  it("preserves opaque provider metadata while pruning unavailable mapping targets", async () => {
+    const channel = {
+      ref: modelResourceRef(1),
+      modelMapping: JSON.stringify({
+        opaque: 7,
+        removed: "missing",
+        keep: "available",
+      }),
+    } as any
+    const service = {
+      updateChannelModelMapping: vi
+        .fn()
+        .mockResolvedValue(succeededMappingResult),
+    } as any
+    await expect(
+      applyModelMappingToChannel(channel, {}, service, {
+        pruneMissingTargets: true,
+        availableModels: ["available"],
+      }),
+    ).resolves.toEqual({ updated: true, prunedCount: 1 })
+    expect(service.updateChannelModelMapping).toHaveBeenCalledWith(channel, {
+      opaque: 7,
+      keep: "available",
+    })
+  })
+
   it("should prune entries whose targets are missing from available models", async () => {
     const channel = {
       ref: modelResourceRef(1),

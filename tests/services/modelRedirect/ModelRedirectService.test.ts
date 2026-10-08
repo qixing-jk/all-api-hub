@@ -70,6 +70,12 @@ describe("generateModelMappingForChannel", () => {
     })
   })
 
+  it("maps duplicate standard model inputs once", () => {
+    expect(
+      generateModelMappingForChannel(["gpt-4o", "gpt-4o"], ["provider/gpt-4o"]),
+    ).toEqual({ "gpt-4o": "provider/gpt-4o" })
+  })
+
   it("should skip standard models already present in actual models", () => {
     const standardModels = ["gpt-4o", "gpt-4o-mini"]
     const actualModels = ["gpt-4o", "openai/gpt-4o-mini"]
