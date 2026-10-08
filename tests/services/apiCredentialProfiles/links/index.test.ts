@@ -330,15 +330,31 @@ describe("apiCredentialProfileLinks", () => {
     )
   })
 
-  it("keeps the profile store unchanged when unlinking a missing association", async () => {
-    const before = await apiCredentialProfilesStorage.getConfig()
-    await expect(
-      apiCredentialProfileLinks.unlink("missing-link-id"),
-    ).resolves.toBe(false)
-    await expect(apiCredentialProfilesStorage.getConfig()).resolves.toEqual(
-      before,
-    )
-  })
+  it.each(["empty", "persisted"] as const)(
+    "keeps %s profile storage unchanged when unlinking a missing association",
+    async (initialState) => {
+      if (initialState === "persisted") {
+        await apiCredentialProfilesStorage.createProfile({
+          name: "Existing profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://api.example.invalid",
+          apiKey: "sk-example-secret",
+        })
+      }
+
+      const before = structuredClone(storageData)
+      let now = Date.now()
+      const clock = vi.spyOn(Date, "now").mockImplementation(() => ++now)
+      try {
+        await expect(
+          apiCredentialProfileLinks.unlink("missing-link-id"),
+        ).resolves.toBe(false)
+        expect(storageData).toEqual(before)
+      } finally {
+        clock.mockRestore()
+      }
+    },
+  )
 
   it("preserves links for metadata edits, downgrades protocol or key edits, and cascades profile deletion", async () => {
     const locator = {
