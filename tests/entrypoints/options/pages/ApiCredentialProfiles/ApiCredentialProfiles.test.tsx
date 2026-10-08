@@ -1307,6 +1307,79 @@ describe("ApiCredentialProfiles page", () => {
     ).toBeInTheDocument()
   })
 
+  it.each(["rejected", "not-deleted"])(
+    "preserves a profile and reports a failed deletion (%s)",
+    async (failure) => {
+      const user = userEvent.setup()
+      store = [
+        {
+          id: "p-1",
+          name: "Keep profile",
+          apiType: API_TYPES.OPENAI,
+          baseUrl: "https://example.com",
+          apiKey: "sk-test",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      ]
+      if (failure === "rejected")
+        mockDeleteProfile.mockRejectedValueOnce(new Error("storage rejected"))
+      else mockDeleteProfile.mockResolvedValueOnce(false)
+      render(<ApiCredentialProfiles />)
+      await screen.findByText("Keep profile")
+      await user.click(
+        screen.getByRole("button", { name: "common:actions.delete" }),
+      )
+      const dialog = await screen.findByRole("dialog")
+      await user.click(
+        within(dialog).getByRole("button", { name: "common:actions.delete" }),
+      )
+      await waitFor(() =>
+        expect(mockToastError).toHaveBeenCalledWith(
+          "apiCredentialProfiles:messages.deleteFailed",
+        ),
+      )
+      expect(store.map(({ id }) => id)).toEqual(["p-1"])
+      if (failure === "rejected")
+        expect(
+          within(dialog).getByRole("button", { name: "common:actions.delete" }),
+        ).toBeEnabled()
+    },
+  )
+
+  it("cancels profile deletion without a storage write", async () => {
+    const user = userEvent.setup()
+    store = [
+      {
+        id: "p-1",
+        name: "Keep profile",
+        apiType: API_TYPES.OPENAI,
+        baseUrl: "https://example.com",
+        apiKey: "sk-test",
+        tagIds: [],
+        notes: "",
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ]
+    render(<ApiCredentialProfiles />)
+    await screen.findByText("Keep profile")
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.delete" }),
+    )
+    const dialog = await screen.findByRole("dialog")
+    await user.click(
+      within(dialog).getByRole("button", { name: "common:actions.cancel" }),
+    )
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    )
+    expect(mockDeleteProfile).not.toHaveBeenCalled()
+    expect(store.map(({ id }) => id)).toEqual(["p-1"])
+  })
+
   it("filters profiles by search and apiType", async () => {
     const user = userEvent.setup()
 

@@ -3360,6 +3360,74 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     })
   })
 
+  it("keeps a targeted account when a full snapshot arrives during its balance read", async () => {
+    mockUserPreferencesContext.current = {
+      ...mockUserPreferencesContext.current,
+      preferences: {
+        balanceHistory: { estimatedTodayIncome: { enabled: true } },
+      },
+    }
+    mockResetExpiredCheckIns.mockResolvedValue(undefined)
+    mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
+    mockGetAllAccounts.mockResolvedValue([{ id: "a", disabled: false }])
+    mockGetAllBookmarks.mockResolvedValue([])
+    mockGetOrderedList.mockResolvedValue(["a"])
+    mockGetPinnedList.mockResolvedValue([])
+    mockGetAccountStats.mockResolvedValue(createEmptyStats())
+    mockConvertToDisplayData.mockImplementation((input: any) => {
+      const rows = (Array.isArray(input) ? input : [input]).map(
+        (account: any) => ({ id: account.id, name: account.id }),
+      )
+      return Array.isArray(input) ? rows : rows[0]
+    })
+    mockGetDailyBalanceHistoryStore.mockResolvedValue({
+      schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+      snapshotsByAccountId: {},
+    })
+    mockGetAccountById.mockResolvedValue({ id: "b", disabled: false })
+    const getContext = await renderAccountDataProvider()
+    await waitFor(() =>
+      expect(getContext().displayData.map((row) => row.id)).toEqual(["a"]),
+    )
+    const balanceRead = createDeferred<any>()
+    mockGetDailyBalanceHistoryStore.mockReturnValueOnce(balanceRead.promise)
+    const listener = (globalThis as any)
+      .__accountDataContextRuntimeListener as (message: any) => void
+    await act(async () => {
+      listener({
+        action: RuntimeActionIds.AccountRefreshCompleted,
+        updatedAccountIds: ["b"],
+      })
+    })
+    await waitFor(() =>
+      expect(mockGetDailyBalanceHistoryStore).toHaveBeenCalledTimes(2),
+    )
+    await act(async () => {
+      await getContext().loadAccountData()
+    })
+    await act(async () => {
+      balanceRead.resolve({
+        schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+        snapshotsByAccountId: {},
+      })
+      await balanceRead.promise
+    })
+    await waitFor(() =>
+      expect(getContext().displayData.map((row) => row.id)).toEqual(["a", "b"]),
+    )
+  })
+
+  it("ignores refresh notifications with no account id list", async () => {
+    await renderAccountDataProvider()
+    const listener = (globalThis as any)
+      .__accountDataContextRuntimeListener as (message: any) => void
+    mockGetAccountById.mockClear()
+    await act(async () => {
+      listener({ action: RuntimeActionIds.AccountRefreshCompleted })
+    })
+    expect(mockGetAccountById).not.toHaveBeenCalled()
+  })
+
   it("falls back to loadAccountData() when a targeted reload fails", async () => {
     mockResetExpiredCheckIns.mockResolvedValue(undefined)
     mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
