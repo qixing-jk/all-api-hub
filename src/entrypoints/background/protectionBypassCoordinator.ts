@@ -6,8 +6,8 @@ import {
 import { type AuthorizeTempContextAtAcquire } from "~/services/browsingContext/tempPage/contracts"
 import { executeAuthorizedTempContextTask } from "~/services/browsingContext/tempPage/taskDispatch"
 import { hasCookieInterceptorPermissions } from "~/services/permissions/permissionManager"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import {
-  DEFAULT_PREFERENCES,
   userPreferences,
   type TempWindowFallbackPreferences,
 } from "~/services/preferences/userPreferences"

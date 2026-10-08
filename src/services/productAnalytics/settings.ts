@@ -5,9 +5,9 @@ import {
   TEMP_CONTEXT_PREFERENCE_MODES,
   type TempContextPreferenceMode,
 } from "~/constants/tempContextMode"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { normalizeTempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
 import {
-  DEFAULT_PREFERENCES,
   TOOLBAR_ACTION_CLICK_BEHAVIORS,
   type RedemptionAssistPreferences,
   type TempWindowFallbackPreferences,
