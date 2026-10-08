@@ -1,3 +1,4 @@
+import { globSync } from "node:fs"
 import { ESLint, Linter } from "eslint"
 import tseslint from "typescript-eslint"
 import { describe, expect, it } from "vitest"
@@ -24,6 +25,20 @@ async function check(code: string, file = page) {
 const siteImport = 'import { SITE_TYPES } from "~/constants/siteType"'
 
 describe("site type import whitelist", () => {
+  it("keeps the current Kilo Code dialog behind account capabilities", async () => {
+    const files = globSync([
+      "src/components/KiloCodeExportDialog.tsx",
+      "src/features/KiloCodeExport/**/KiloCodeExportDialog.tsx",
+    ])
+    expect(files).toHaveLength(1)
+    const messages = await check(
+      'import { getApiService } from "~/services/apiService"',
+      atIndex(files, 0).replaceAll("\\", "/"),
+    )
+    expect(messages).toHaveLength(1)
+    expect(atIndex(messages, 0).ruleId).toBe("no-restricted-imports")
+  })
+
   it.each([
     siteImport,
     'import { SITE_TYPES as types } from "~/constants/siteType"',
