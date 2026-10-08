@@ -3,8 +3,8 @@ import { CircleAlert, CircleCheck, RefreshCw } from "lucide-react"
 import { useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
 
-import ManagedSiteChannelLinkButton from "~/components/ManagedSiteChannelLinkButton"
 import { Badge, Button, Card } from "~/components/ui"
+import ManagedSiteChannelLinkButton from "~/components/ManagedSiteChannelLinkButton"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ExecutionHistoryItemResult } from "~/types/managedSiteModelSync"
 
@@ -142,7 +142,7 @@ export default function ResultsTable({
               return (
                 <tr
                   key={resourceKey}
-                  className="group hover:bg-surface-subtle dark:hover:bg-card"
+                  className="hover:bg-surface-subtle dark:hover:bg-card group"
                 >
                   <td className="py-density-3 px-4">
                     <label className="inline-flex size-(--density-control-xs) cursor-pointer items-center justify-center rounded-xs has-[:disabled]:cursor-not-allowed">

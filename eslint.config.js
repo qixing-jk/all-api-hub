@@ -125,8 +125,8 @@ const dynamicImportAllowlist = [
   {
     file: "src/features/AccountManagement/components/CopyKeyDialog/RuntimeKeyActionControls.tsx",
     imports: [
-      "~/components/KiloCodeExportDialog",
-      "~/features/ApiCredentialProfiles/components/",
+      "~/features/KiloCodeExport/KiloCodeExportDialog",
+      "~/features/ApiCredentialProfiles/export/KiloCodeProfileExportDialog",
       "~/services/integrations/cherryStudio",
     ],
   },
@@ -237,12 +237,12 @@ const siteTypeImportOwners = [
   "src/services/siteAnnouncements/devFixtures.ts", // Development fixtures for named providers.
   "src/features/DevPanel/keyProvisioningPreview.ts", // Development-only native provider editor fixtures.
   "src/components/icons/ManagedSiteIcon.tsx", // Provider branding.
-  "src/features/AccountManagement/components/AccountDialog/AccessTokenVerificationGuide.tsx", // Provider authentication instructions.
-  "src/features/AccountManagement/components/AccountDialog/AccountForm.tsx", // OpenRouter management-key onboarding UI.
-  "src/features/AccountManagement/components/AccountDialog/hooks/useOpenRouterAccountOnboarding.ts", // Provider-owned onboarding lifecycle.
+  "src/features/AccountManagement/components/AccountDialog/form/AccessTokenVerificationGuide.tsx", // Provider authentication instructions.
+  "src/features/AccountManagement/components/AccountDialog/form/AccountForm.tsx", // OpenRouter management-key onboarding UI.
+  "src/features/AccountManagement/components/AccountDialog/form/useOpenRouterAccountOnboarding.ts", // Provider-owned onboarding lifecycle.
   "src/features/BasicSettings/components/tabs/ManagedSite/search/CliProxyApi.search.ts", // CLIProxyAPI settings search.
   "src/features/BasicSettings/components/tabs/ManagedSite/search/ManagedSite*.search.ts", // Search entries for provider-specific settings.
-  "src/features/ManagedSiteChannels/presentation/managedResourceMigrationPresentation.ts", // Provider-specific migration labels.
+  "src/features/ManagedSiteChannels/migration/managedResourceMigrationPresentation.ts", // Provider-specific migration labels.
   "src/features/ModelList/aihubmixModelList.ts", // Provider catalog presentation.
   "src/constants/siteType.ts", // Public compatibility re-export.
   "src/contexts/UserPreferencesContext.tsx", // Default managed-site selection.
@@ -250,12 +250,12 @@ const siteTypeImportOwners = [
   "src/features/AccountManagement/bookmarkImport/candidates.ts", // Unknown detection result.
   "src/features/AccountManagement/bookmarkImport/importAccounts.ts", // Unknown imported account identity.
   "src/features/AccountManagement/bookmarkImport/BookmarkAccountImportDevPreview.tsx", // Development fixtures for account import recovery.
-  "src/features/AccountManagement/components/AccountDialog/autoDetectDraft.ts", // Unknown draft identity.
+  "src/features/AccountManagement/components/AccountDialog/detection/autoDetectDraft.ts", // Unknown draft identity.
   "src/features/AccountManagement/components/AccountDialog/models.ts", // Initial draft identity.
-  "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog.ts", // Initial identity and explicit provider onboarding results.
-  "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialogIdentityChanges.ts", // Normalize user-selected identity.
-  "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialogDetection.ts", // Explicit provider onboarding results.
-  "src/features/AccountManagement/components/AccountDialog/hooks/useAccountDialogInitialization.ts", // Initial identity and legacy provider hydration.
+  "src/features/AccountManagement/components/AccountDialog/workspace/useAccountDialog.ts", // Initial identity and explicit provider onboarding results.
+  "src/features/AccountManagement/components/AccountDialog/form/useAccountDialogIdentityChanges.ts", // Normalize user-selected identity.
+  "src/features/AccountManagement/components/AccountDialog/detection/useAccountDialogDetection.ts", // Explicit provider onboarding results.
+  "src/features/AccountManagement/components/AccountDialog/form/useAccountDialogInitialization.ts", // Initial identity and legacy provider hydration.
   "src/features/AccountManagement/sponsors/catalogActions.ts", // Sponsor identity prefill.
   "src/features/AccountManagement/sponsors/pendingAddAccountIntent.ts", // Sponsor intent validation.
   "src/features/ApiCredentialProfiles/utils/exportShims.ts", // Synthetic account identity for export compatibility.
@@ -485,7 +485,7 @@ export default defineConfig([
       "src/features/ModelList/**/*.{js,cjs,mjs,jsx,ts,tsx}",
       "src/components/dialogs/VerifyApiDialog/**/*.{js,cjs,mjs,jsx,ts,tsx}",
       "src/components/dialogs/VerifyCliSupportDialog/**/*.{js,cjs,mjs,jsx,ts,tsx}",
-      "src/components/KiloCodeExportDialog.{js,cjs,mjs,jsx,ts,tsx}",
+      "src/features/KiloCodeExport/KiloCodeExportDialog.{js,cjs,mjs,jsx,ts,tsx}",
       "src/services/accounts/**/*.{js,cjs,mjs,jsx,ts,tsx}",
     ],
     rules: {

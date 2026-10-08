@@ -2,12 +2,12 @@ import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
+import { ManagedSiteMigrationDialogView } from "~/features/ManagedSiteChannels/presentation/ManagedSiteMigrationDialogView"
 import type {
   ManagedSiteMigrationCallbacks,
   ManagedSiteMigrationComparison,
   ManagedSiteMigrationLabels,
 } from "~/features/ManagedSiteChannels/presentation/contracts"
-import { ManagedSiteMigrationDialogView } from "~/features/ManagedSiteChannels/presentation/ManagedSiteMigrationDialogView"
 import { MANAGED_SITE_CHANNELS_TEST_IDS } from "~/features/ManagedSiteChannels/testIds"
 
 const labels: ManagedSiteMigrationLabels = {

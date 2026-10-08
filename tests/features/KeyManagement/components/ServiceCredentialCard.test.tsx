@@ -676,8 +676,10 @@ describe("ServiceCredentialCard", () => {
       expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
         expect.objectContaining({
           featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
-          actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialProfileToCherryStudio,
-          surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
+          actionId:
+            PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialProfileToCherryStudio,
+          surfaceId:
+            PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
         }),
       )
       expect(mockOpenInCherryStudio).toHaveBeenCalledWith(

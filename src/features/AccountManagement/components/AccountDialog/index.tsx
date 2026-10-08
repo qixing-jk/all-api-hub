@@ -11,6 +11,19 @@ import { useTranslation } from "react-i18next"
 import { Alert } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
+import AutoDetectErrorAlert from "~/features/AccountManagement/components/AccountDialog/AutoDetectErrorAlert"
+import AutoDetectSlowHintAlert from "~/features/AccountManagement/components/AccountDialog/AutoDetectSlowHintAlert"
+import { useLoginProviderEvidence } from "~/features/AccountManagement/components/AccountDialog/hooks/useLoginProviderEvidence"
+import AccountForm, {
+  type AccountFormHandle,
+} from "~/features/AccountManagement/components/AccountDialog/AccountForm"
+import SiteInfoInput from "~/features/AccountManagement/components/AccountDialog/SiteInfoInput"
+import { getAccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
+import { AihubmixDefaultKeyPromptDialog } from "~/features/AccountManagement/components/AccountDialog/AihubmixDefaultKeyPromptDialog"
+import { ManagedSiteConfigPromptDialog } from "~/features/AccountManagement/components/AccountDialog/ManagedSiteConfigPromptDialog"
+import { useAccountDialogRecoveryHandoff } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialogRecoveryHandoff"
+import { DuplicateAccountWarningDialog } from "~/features/AccountManagement/components/AccountDialog/DuplicateAccountWarningDialog"
+import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/useDialogStateContext"
 import { SPONSOR_RECOMMENDATION_SURFACES } from "~/features/AccountManagement/sponsors/constants"
@@ -34,24 +47,13 @@ import {
   openFullBookmarkManagerPage,
 } from "~/utils/navigation"
 
-import AccountForm, { type AccountFormHandle } from "./AccountForm"
 import ActionButtons from "./ActionButtons"
-import { AihubmixDefaultKeyPromptDialog } from "./AihubmixDefaultKeyPromptDialog"
-import AutoDetectErrorAlert from "./AutoDetectErrorAlert"
-import AutoDetectSlowHintAlert from "./AutoDetectSlowHintAlert"
 import DialogHeader from "./DialogHeader"
-import { DuplicateAccountWarningDialog } from "./DuplicateAccountWarningDialog"
-import { useAccountDialog } from "./hooks/useAccountDialog"
-import { useAccountDialogRecoveryHandoff } from "./hooks/useAccountDialogRecoveryHandoff"
-import { useLoginProviderEvidence } from "./hooks/useLoginProviderEvidence"
 import InfoPanel from "./InfoPanel"
-import { ManagedSiteConfigPromptDialog } from "./ManagedSiteConfigPromptDialog"
 import {
   ACCOUNT_DIALOG_PHASES,
   type AccountDialogRecoveryState,
 } from "./models"
-import SiteInfoInput from "./SiteInfoInput"
-import { getAccountDialogSitePolicy } from "./sitePolicy"
 
 const logger = createLogger("AccountDialog")
 
