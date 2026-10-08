@@ -528,6 +528,46 @@ describe("autoDetectSmart", () => {
     )
   })
 
+  it.each(["invalid-session", "worker-rejection"])(
+    "recovers background session %s through the API without accepting invalid identity",
+    async (kind) => {
+      mockIsExtensionBackground.mockReturnValue(true)
+      mockExecuteProtectionBypassTask.mockImplementation(
+        async (_request, _sender, respond) => {
+          if (kind === "worker-rejection")
+            throw new Error("Session worker unavailable")
+          respond({
+            success: true,
+            data: {
+              userId: " ",
+              user: { id: " ", username: "invalid-session" },
+            },
+          })
+        },
+      )
+      const diagnostics = createAccountDetectionDiagnostics({
+        requestId: "fallback-session",
+      })
+      const record = vi.spyOn(diagnostics, "record")
+      const result = await autoDetectSmartProduction(
+        "https://example.invalid",
+        testExecution,
+        diagnostics,
+      )
+      expect(result).toMatchObject({
+        success: true,
+        data: { userId: "1", user: { username: "tester" } },
+      })
+      expect(mockFetchUserInfo).toHaveBeenCalledOnce()
+      expect(record).toHaveBeenCalledWith(
+        kind === "worker-rejection" ? "source_fallback" : "session_invalid",
+        expect.objectContaining({
+          reason: kind === "worker-rejection" ? "exception" : "user_id_missing",
+        }),
+      )
+    },
+  )
+
   it.each([
     { incognito: false, cookieStoreId: undefined },
     { incognito: true, cookieStoreId: undefined },

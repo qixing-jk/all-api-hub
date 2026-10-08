@@ -261,10 +261,12 @@ describe("defineAccountKeyResourceCapability", () => {
         },
       })
     const session = await openSession(createDefinition({ listScopeInventory }))
-    await expect(session.listScopeInventory()).rejects.toMatchObject({
+    const inventory = session.listScopeInventory
+    if (!inventory) throw new Error("Expected native scope inventory")
+    await expect(inventory()).rejects.toMatchObject({
       failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected },
     })
-    await expect(session.listScopeInventory()).resolves.toMatchObject({
+    await expect(inventory()).resolves.toMatchObject({
       partialFailure: { upstreamCode: "UPSTREAM_OFFLINE" },
       scopes: [SCOPE],
     })
