@@ -246,6 +246,29 @@ describe("apiService sub2api key management service", () => {
     })
   })
 
+  it("reads a legacy array response as one complete inventory page", async () => {
+    fetchApiMock.mockResolvedValueOnce({
+      code: 0,
+      message: "ok",
+      data: [
+        {
+          id: 1,
+          key: "legacy-key",
+          name: "Legacy key",
+          status: "active",
+          group: { id: 1, name: "default" },
+        },
+      ],
+    })
+    await expect(fetchSub2ApiKeys(createRequest())).resolves.toEqual([
+      expect.objectContaining({ id: 1, group_name: "default" }),
+    ])
+    expect(fetchApiMock).toHaveBeenCalledTimes(1)
+    expect(fetchApiMock.mock.calls[0]?.[1]?.endpoint).toBe(
+      "/api/v1/keys?page=1&page_size=1000",
+    )
+  })
+
   it("fetches every key inventory page for group coverage", async () => {
     fetchApiMock
       .mockResolvedValueOnce({

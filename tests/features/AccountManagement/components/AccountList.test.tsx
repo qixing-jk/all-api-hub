@@ -408,18 +408,39 @@ vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
 vi.mock(
   "~/features/AccountManagement/components/AccountList/rows/AccountListItem",
   () => ({
-    default: ({ site }: any) => (
-      <div data-testid={TEST_IDS.accountRow}>{site.name}</div>
+    default: ({ site, onDeleteWithDialog, onCopyKey }: any) => (
+      <>
+        <div data-testid={TEST_IDS.accountRow}>{site.name}</div>
+        <button
+          aria-label={`Delete ${site.name}`}
+          onClick={() => onDeleteWithDialog(site)}
+        >
+          Delete account
+        </button>
+        <button
+          aria-label={`Copy key ${site.name}`}
+          onClick={() => onCopyKey(site)}
+        >
+          Copy key
+        </button>
+      </>
     ),
   }),
 )
 
 vi.mock("~/features/AccountManagement/components/CopyKeyDialog", () => ({
-  default: () => null,
+  default: ({ isOpen, onClose }: any) =>
+    isOpen ? <button onClick={onClose}>Close key dialog</button> : null,
 }))
 
 vi.mock("~/features/AccountManagement/components/DelAccountDialog", () => ({
-  default: () => null,
+  default: ({ isOpen, onClose, onDeleted }: any) =>
+    isOpen ? (
+      <div role="dialog" aria-label="Delete account">
+        <button onClick={onClose}>Cancel account deletion</button>
+        <button onClick={onDeleted}>Complete account deletion</button>
+      </div>
+    ) : null,
 }))
 
 vi.mock(
@@ -807,6 +828,40 @@ describe("AccountList", () => {
         getAccountManagementSortButtonTestId(DATA_TYPE_CREATED_AT),
       ),
     ).toBeInTheDocument()
+  })
+
+  it("closes account dialogs and dispatches deletion only after confirmation", async () => {
+    const user = userEvent.setup()
+    render(<AccountList />)
+    await user.click(
+      screen.getByRole("button", { name: "Delete Enabled Alpha" }),
+    )
+    await user.click(
+      screen.getByRole("button", { name: "Cancel account deletion" }),
+    )
+    expect(handleDeleteAccountMock).not.toHaveBeenCalled()
+    expect(
+      screen.queryByRole("dialog", { name: "Delete account" }),
+    ).not.toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", { name: "Delete Enabled Alpha" }),
+    )
+    await user.click(
+      screen.getByRole("button", { name: "Complete account deletion" }),
+    )
+    expect(handleDeleteAccountMock).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "enabled-alpha" }),
+    )
+    expect(
+      screen.queryByRole("dialog", { name: "Delete account" }),
+    ).not.toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", { name: "Copy key Enabled Alpha" }),
+    )
+    await user.click(screen.getByRole("button", { name: "Close key dialog" }))
+    expect(
+      screen.queryByRole("button", { name: "Close key dialog" }),
+    ).not.toBeInTheDocument()
   })
 
   it("renders current and related accounts before unrelated pins", () => {
@@ -2567,6 +2622,23 @@ describe("AccountList", () => {
       expect.objectContaining({ id: "enabled-alpha" }),
       expect.objectContaining({ id: "enabled-gamma" }),
     ])
+  })
+
+  it("cancels bulk deletion without dispatching a mutation", async () => {
+    const user = userEvent.setup()
+    render(<AccountList />)
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.manage" }),
+    )
+    await user.click(atIndex(screen.getAllByRole("checkbox"), 0))
+    await user.click(await getBulkAction(user, "deleteSelected"))
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.cancel" }),
+    )
+    expect(handleDeleteAccountsMock).not.toHaveBeenCalled()
+    expect(
+      screen.queryByText("account:bulk.deleteConfirmTitle"),
+    ).not.toBeInTheDocument()
   })
 
   it("keeps remaining selection when bulk delete only partially succeeds", async () => {
