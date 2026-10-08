@@ -1465,6 +1465,7 @@ describe("siteAnnouncementScheduler", () => {
     })
 
     setupSiteAnnouncementsMessagingListeners()
+    setupSiteAnnouncementsMessagingListeners()
 
     expect([...siteAnnouncementsMessageHandlers.keys()]).toEqual([
       SiteAnnouncementsMessageTypes.GetStatus,
@@ -1477,6 +1478,15 @@ describe("siteAnnouncementScheduler", () => {
       SiteAnnouncementsMessageTypes.DebugClearFixtures,
     ])
     expect(onSiteAnnouncementsMessageMock).toHaveBeenCalledTimes(8)
+
+    await expect(
+      siteAnnouncementsMessageHandlers.get(
+        SiteAnnouncementsMessageTypes.MarkRead,
+      )?.({ data: { recordId: "missing-record" } }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Failed to mark announcement as read",
+    })
 
     await expect(
       siteAnnouncementsMessageHandlers.get(
@@ -1571,6 +1581,18 @@ describe("siteAnnouncementScheduler", () => {
       success: false,
       error: "boom",
     })
+  })
+
+  it("returns a failure response when cached status cannot be read", async () => {
+    const statusSpy = vi
+      .spyOn(siteAnnouncementStorage, "getStatus")
+      .mockRejectedValue(new Error("status storage failed"))
+
+    await expect(resolveSiteAnnouncementsGetStatusMessage()).resolves.toEqual({
+      success: false,
+      error: "status storage failed",
+    })
+    statusSpy.mockRestore()
   })
 
   it("converts thrown site announcement resolver errors into failure responses", async () => {
