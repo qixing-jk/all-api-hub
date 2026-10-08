@@ -18,22 +18,18 @@ import {
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { startAccountDialogAnalyticsAction } from "~/features/AccountManagement/components/AccountDialog/analytics"
 import { useAccountCheckInRedetection } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountCheckInRedetection"
-import { getAccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
-import { isAccountAuthType } from "~/features/AccountManagement/utils/accountAuthType"
 import {
   isValidAccount,
   parseManualQuotaFromUsd,
 } from "~/services/accounts/accountFormValidation"
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
-import { invalidateCheckInDiscovery } from "~/services/checkin/autoCheckin/state"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
-import { AuthTypeEnum, type CheckInConfig, type DisplaySiteData } from "~/types"
+import { type CheckInConfig, type DisplaySiteData } from "~/types"
 import type { CheckInMethodSelection } from "~/types/checkIn"
 import { createLogger } from "~/utils/core/logger"
 import { openSettingsTab } from "~/utils/navigation"
@@ -42,7 +38,6 @@ import {
   ACCOUNT_DIALOG_FORM_SOURCES,
   ACCOUNT_DIALOG_PHASES,
   getInitialFlowState,
-  type AccountDialogDraft,
   type AccountDialogFormSource,
   type AccountDialogPhase,
   type AccountDialogRecoveryState,
@@ -53,6 +48,7 @@ import { useAccountCookieSession } from "./useAccountCookieSession"
 import { useAccountCurrentTab } from "./useAccountCurrentTab"
 import { useAccountDialogDetection } from "./useAccountDialogDetection"
 import { useAccountDialogDraft } from "./useAccountDialogDraft"
+import { useAccountDialogIdentityChanges } from "./useAccountDialogIdentityChanges"
 import { useAccountDialogInitialization } from "./useAccountDialogInitialization"
 import { useAccountDialogSaveWorkflow } from "./useAccountDialogSaveWorkflow"
 import { useAccountDuplicateConfirmation } from "./useAccountDuplicateConfirmation"
@@ -117,9 +113,9 @@ export function useAccountDialog({
   const {
     invalidate: invalidateAutoDetection,
     reset: resetAutoDetection,
-    clearVerificationError,
     requireAccessTokenVerification,
   } = autoDetection
+  const draftModel = useAccountDialogDraft({ mode, url })
   const {
     draft,
     setDraft,
@@ -135,10 +131,8 @@ export function useAccountDialog({
     setExcludeFromTotalBalance,
     setExcludeFromTodayIncome,
     setCheckIn,
-    changeSiteTypeDraft,
-    setAuthTypeDraft,
     applyAuthDefaultForUrl,
-  } = useAccountDialogDraft({ mode, url })
+  } = draftModel
   const checkInSelectionChangedRef = useRef(false)
   const checkInDiscoveryBaseSelectionRef =
     useRef<CheckInMethodSelection | null>(null)
@@ -329,58 +323,6 @@ export function useAccountDialog({
     invalidate: invalidateSub2ApiSession,
     reset: resetSub2ApiSession,
   } = sub2ApiSession
-  const setDialogUrl = useCallback(
-    (value: string) => {
-      invalidateDuplicateConfirmation()
-      invalidateCookieSession()
-      invalidateSub2ApiSession()
-      notifyCurrentTabUrlChanged(value)
-      invalidateAutoDetection()
-      if (value !== selectedSiteUrlRef.current) {
-        clearVerificationError()
-      }
-      resetCheckInRedetection()
-      notifyOpenRouterUrlChange(value)
-      if (selectedSiteUrlRef.current.trim() !== value.trim()) {
-        setDraft((prev) => ({
-          ...prev,
-          checkIn: invalidateCheckInDiscovery(prev.checkIn),
-        }))
-      }
-      selectedSiteUrlRef.current = value
-      setUrl(value)
-    },
-    [
-      invalidateDuplicateConfirmation,
-      invalidateCookieSession,
-      clearVerificationError,
-      invalidateAutoDetection,
-      notifyCurrentTabUrlChanged,
-      invalidateSub2ApiSession,
-      notifyOpenRouterUrlChange,
-      resetCheckInRedetection,
-      setDraft,
-    ],
-  )
-  const setAccessToken = useCallback(
-    (value: string) => {
-      invalidateSub2ApiSession()
-      updateAccessToken(value)
-      notifyOpenRouterCredentialChange(value)
-    },
-    [
-      invalidateSub2ApiSession,
-      notifyOpenRouterCredentialChange,
-      updateAccessToken,
-    ],
-  )
-  const setUserId = useCallback(
-    (value: string) => {
-      invalidateDuplicateConfirmation(value.trim() === userId.trim())
-      updateDraft((prev) => ({ ...prev, userId: value }))
-    },
-    [invalidateDuplicateConfirmation, userId, updateDraft],
-  )
   const setCheckInSelectionDraft = useCallback(
     (value: CheckInConfig) => {
       checkInSelectionChangedRef.current = true
@@ -407,80 +349,30 @@ export function useAccountDialog({
     },
     [setCheckIn, siteType, url],
   )
-  const setSiteType = useCallback(
-    (value: string) => {
-      const nextSiteType = isAccountSiteType(value) ? value : SITE_TYPES.UNKNOWN
-      invalidateDuplicateConfirmation(
-        nextSiteType === selectedSiteTypeRef.current,
-      )
-      invalidateCookieSession()
-      invalidateSub2ApiSession()
-      resetCheckInRedetection()
-      if (nextSiteType !== selectedSiteTypeRef.current) {
-        clearVerificationError()
-      }
-      const nextPolicy = getAccountDialogSitePolicy(nextSiteType)
-      selectedSiteTypeRef.current = nextSiteType
-      const { clearCreatedCredential } =
-        notifyOpenRouterSiteChange(nextSiteType)
-      if (clearCreatedCredential) updateAccessToken("")
-      changeSiteTypeDraft(nextSiteType)
-      if (nextPolicy.canonicalSiteUrl) {
-        setDialogUrl(nextPolicy.canonicalSiteUrl)
-      }
-    },
-    [
-      invalidateDuplicateConfirmation,
-      invalidateCookieSession,
-      clearVerificationError,
-      invalidateSub2ApiSession,
-      setDialogUrl,
-      notifyOpenRouterSiteChange,
+  const {
+    setDialogUrl,
+    setAccessToken,
+    setUserId,
+    setSiteType,
+    setAuthType,
+    setCookieAuthSessionCookie,
+    setDraftPartial,
+  } = useAccountDialogIdentityChanges({
+    draftModel,
+    selectedSiteUrlRef,
+    selectedSiteTypeRef,
+    setUrl,
+    updateAccessToken,
+    sessions: {
+      duplicate: duplicateConfirmation,
+      cookie: cookieSession,
+      sub2api: sub2ApiSession,
+      detection: autoDetection,
+      openRouter: openRouterOnboarding,
+      currentTab,
       resetCheckInRedetection,
-      updateAccessToken,
-      changeSiteTypeDraft,
-    ],
-  )
-  const setAuthType = useCallback(
-    (value: AuthTypeEnum) => {
-      if (!isAccountAuthType(value)) return
-      invalidateDuplicateConfirmation(true)
-      invalidateCookieSession()
-      invalidateSub2ApiSession()
-
-      if (value !== AuthTypeEnum.AccessToken) {
-        clearVerificationError()
-      }
-      setAuthTypeDraft(value)
     },
-    [
-      invalidateDuplicateConfirmation,
-      invalidateCookieSession,
-      clearVerificationError,
-      invalidateSub2ApiSession,
-      setAuthTypeDraft,
-    ],
-  )
-  const setCookieAuthSessionCookie = useCallback(
-    (value: string) => {
-      invalidateDuplicateConfirmation(true)
-      invalidateCookieSession()
-      updateDraft((prev) => ({ ...prev, cookieAuthSessionCookie: value }))
-    },
-    [invalidateDuplicateConfirmation, invalidateCookieSession, updateDraft],
-  )
-  const setDraftPartial = useCallback(
-    (value: Partial<AccountDialogDraft>) => {
-      const changesIdentity =
-        (value.userId !== undefined &&
-          normalizeAccountIdentity(value.userId) !==
-            normalizeAccountIdentity(userId)) ||
-        (value.siteType !== undefined && value.siteType !== siteType)
-      invalidateDuplicateConfirmation(!changesIdentity)
-      updateDraft((prev) => ({ ...prev, ...value }))
-    },
-    [invalidateDuplicateConfirmation, siteType, userId, updateDraft],
-  )
+  })
   const enterForm = useCallback((source: AccountDialogFormSource) => {
     setPhase(ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM)
     setFormSource(source)
@@ -536,6 +428,7 @@ export function useAccountDialog({
     sessions: {
       invalidateAutoDetection,
       resetCurrentTab,
+      notifyCurrentTabUrlChanged,
       invalidateDuplicateConfirmation,
       resetOpenRouterOnboardingSession,
       resetSub2ApiSession,
@@ -543,7 +436,6 @@ export function useAccountDialog({
       resetCheckInRedetection,
       resetCookieSession,
       clearPostSaveWorkflowState,
-      notifyCurrentTabUrlChanged,
       requireAccessTokenVerification,
       checkCurrentTab,
     },

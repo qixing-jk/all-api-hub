@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { getManagedSiteRuntimeConfigFingerprint } from "~/services/managedSites/runtimeConfig"
 import { modelSyncScheduler } from "~/services/models/modelSync/scheduler"
-import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -26,6 +26,30 @@ import { automaticExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
+
+vi.mock(
+  "~/services/preferences/preferencesDefaults",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/preferences/preferencesDefaults")
+      >()
+    return {
+      ...actual,
+      DEFAULT_PREFERENCES: {
+        managedSiteModelSync: {
+          enabled: true,
+          interval: 60_000,
+          concurrency: 1,
+          maxRetries: 1,
+          rateLimit: { requestsPerMinute: 10, burst: 2 },
+          allowedModels: [],
+          globalChannelModelFilters: [],
+        },
+      },
+    }
+  },
+)
 
 vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
   ensureLegacyChannelConfigMigrationReady: vi.fn().mockResolvedValue(undefined),
@@ -80,17 +104,6 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
 })
 
 vi.mock("~/services/preferences/userPreferences", () => ({
-  DEFAULT_PREFERENCES: {
-    managedSiteModelSync: {
-      enabled: true,
-      interval: 60_000,
-      concurrency: 1,
-      maxRetries: 1,
-      rateLimit: { requestsPerMinute: 10, burst: 2 },
-      allowedModels: [],
-      globalChannelModelFilters: [],
-    },
-  },
   userPreferences: {
     getPreferences: mocks.getPreferences,
     savePreferences: mocks.savePreferences,
@@ -129,11 +142,11 @@ vi.mock("~/services/models/modelSync/modelCollection", () => ({
   collectModelsFromExecution: mocks.collectModelsFromExecution,
 }))
 
-vi.mock("~/services/models/modelRedirect", () => ({
-  ModelRedirectService: {
-    generateModelMappingForChannel: mocks.generateModelMappingForChannel,
-    applyModelMappingToChannel: mocks.applyModelMappingToChannel,
-  },
+vi.mock("~/services/models/modelRedirect/modelMatching", () => ({
+  generateModelMappingForChannel: mocks.generateModelMappingForChannel,
+}))
+vi.mock("~/services/models/modelRedirect/mappingMutation", () => ({
+  applyModelMappingToChannel: mocks.applyModelMappingToChannel,
 }))
 
 vi.mock("~/services/notifications/taskNotificationService", () => ({

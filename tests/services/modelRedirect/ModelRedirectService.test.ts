@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { generateModelMappingForChannel } from "~/services/models/modelRedirect/modelMatching"
 import { extractActualModel } from "~/services/models/modelRedirect/modelNormalization"
-import { ModelRedirectService } from "~/services/models/modelRedirect/ModelRedirectService"
 
 const MOCKED_METADATA = vi.hoisted(() => {
   const mockMetadataMap = new Map<
@@ -43,7 +43,7 @@ vi.mock("~/services/models/modelMetadata", () => ({
   },
 }))
 
-describe("ModelRedirectService.generateModelMappingForChannel", () => {
+describe("generateModelMappingForChannel", () => {
   beforeEach(() => {
     MOCKED_METADATA.findStandardModelNameMock.mockClear()
     MOCKED_METADATA.findStandardModelNameMock.mockImplementation(
@@ -61,10 +61,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
       "anthropic/claude-3-5-sonnet-20241022",
     ]
 
-    const mapping = ModelRedirectService.generateModelMappingForChannel(
-      standardModels,
-      actualModels,
-    )
+    const mapping = generateModelMappingForChannel(standardModels, actualModels)
 
     expect(mapping).toEqual({
       "gpt-4o": "openai/gpt-4o:free",
@@ -77,10 +74,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
     const standardModels = ["gpt-4o", "gpt-4o-mini"]
     const actualModels = ["gpt-4o", "openai/gpt-4o-mini"]
 
-    const mapping = ModelRedirectService.generateModelMappingForChannel(
-      standardModels,
-      actualModels,
-    )
+    const mapping = generateModelMappingForChannel(standardModels, actualModels)
 
     expect(mapping).toEqual({
       "gpt-4o-mini": "openai/gpt-4o-mini",
@@ -91,10 +85,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
     const standardModels = ["gpt-4o", "GPT-4o"]
     const actualModels = ["openai/gpt-4o"]
 
-    const mapping = ModelRedirectService.generateModelMappingForChannel(
-      standardModels,
-      actualModels,
-    )
+    const mapping = generateModelMappingForChannel(standardModels, actualModels)
 
     expect(Object.keys(mapping)).toHaveLength(1)
     expect(mapping["gpt-4o"]).toBe("openai/gpt-4o")
@@ -104,10 +95,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
     const standardModels = ["gpt-4o", "claude-3-5-sonnet"]
     const actualModels = ["moonshot-v1"]
 
-    const mapping = ModelRedirectService.generateModelMappingForChannel(
-      standardModels,
-      actualModels,
-    )
+    const mapping = generateModelMappingForChannel(standardModels, actualModels)
 
     expect(mapping).toEqual({})
   })
@@ -119,10 +107,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
     "preserves %s dated model identities before normalization",
     (_format, standardModel, actualModel) => {
       expect(
-        ModelRedirectService.generateModelMappingForChannel(
-          [standardModel],
-          [actualModel],
-        ),
+        generateModelMappingForChannel([standardModel], [actualModel]),
       ).toEqual({})
     },
   )
@@ -136,10 +121,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
     "does not redirect exact or one-sided dated identities (%s, %s)",
     (standardModel, actualModel) => {
       expect(
-        ModelRedirectService.generateModelMappingForChannel(
-          [standardModel],
-          [actualModel],
-        ),
+        generateModelMappingForChannel([standardModel], [actualModel]),
       ).toEqual({})
     },
   )
@@ -153,10 +135,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
     "preserves decorated %s dated identities before normalization",
     (_scenario, standardModel, actualModel) => {
       expect(
-        ModelRedirectService.generateModelMappingForChannel(
-          [standardModel],
-          [actualModel],
-        ),
+        generateModelMappingForChannel([standardModel], [actualModel]),
       ).toEqual({})
     },
   )
@@ -167,9 +146,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
   ])(
     "keeps an identical decorated dated raw model as an exact match",
     (model) => {
-      expect(
-        ModelRedirectService.generateModelMappingForChannel([model], [model]),
-      ).toEqual({})
+      expect(generateModelMappingForChannel([model], [model])).toEqual({})
     },
   )
 
@@ -177,16 +154,13 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
     const standardModels = ["claude-sonnet-4-5"]
     const actualModels = ["claude-4.5-sonnet"]
 
-    const mapping = ModelRedirectService.generateModelMappingForChannel(
-      standardModels,
-      actualModels,
-    )
+    const mapping = generateModelMappingForChannel(standardModels, actualModels)
 
     expect(mapping["claude-sonnet-4-5"]).toEqual("claude-4.5-sonnet")
   })
 
   it("does not map across minor versions (Claude 4.5 -> 4.6)", () => {
-    const mapping = ModelRedirectService.generateModelMappingForChannel(
+    const mapping = generateModelMappingForChannel(
       ["claude-4.5-sonnet"],
       ["claude-sonnet-4-6-20260101"],
     )
@@ -195,7 +169,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
   })
 
   it("does not alias dated candidates even when one version token matches", () => {
-    const mapping = ModelRedirectService.generateModelMappingForChannel(
+    const mapping = generateModelMappingForChannel(
       ["claude-4.5-sonnet"],
       ["claude-sonnet-4-6-20260101", "claude-sonnet-4-5-20250929"],
     )
@@ -204,7 +178,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
   })
 
   it("does not map across versions (OpenAI)", () => {
-    const mapping = ModelRedirectService.generateModelMappingForChannel(
+    const mapping = generateModelMappingForChannel(
       ["gpt-4o-mini"],
       ["gpt-4.1-mini"],
     )
@@ -213,7 +187,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
   })
 
   it("does not map across versions (Google)", () => {
-    const mapping = ModelRedirectService.generateModelMappingForChannel(
+    const mapping = generateModelMappingForChannel(
       ["gemini-2.5-pro"],
       ["gemini-3-pro"],
     )
@@ -222,7 +196,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
   })
 
   it("maps separator-only alias format for the same version (Google)", () => {
-    const mapping = ModelRedirectService.generateModelMappingForChannel(
+    const mapping = generateModelMappingForChannel(
       ["gemini-2.5-pro"],
       ["gemini-2-5-pro"],
     )
@@ -236,7 +210,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
       vendorName: "Example",
     })
 
-    const mapping = ModelRedirectService.generateModelMappingForChannel(
+    const mapping = generateModelMappingForChannel(
       ["model-a-1"],
       ["model-a-2", "model-1-a"],
     )
@@ -259,7 +233,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
       },
     )
 
-    const mapping = ModelRedirectService.generateModelMappingForChannel(
+    const mapping = generateModelMappingForChannel(
       ["claude-4.5-sonnet"],
       ["claude-3-5-sonnet-20241022"],
     )
@@ -279,7 +253,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
       },
     )
 
-    const mapping = ModelRedirectService.generateModelMappingForChannel(
+    const mapping = generateModelMappingForChannel(
       ["gemini-2.5-pro"],
       ["gemini-3-pro"],
     )
@@ -302,7 +276,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
       },
     )
 
-    const mapping = ModelRedirectService.generateModelMappingForChannel(
+    const mapping = generateModelMappingForChannel(
       ["claude-4.5-sonnet"],
       ["claude-sonnet-4-6-20260101"],
     )
@@ -322,7 +296,7 @@ describe("ModelRedirectService.generateModelMappingForChannel", () => {
       },
     )
 
-    const mapping = ModelRedirectService.generateModelMappingForChannel(
+    const mapping = generateModelMappingForChannel(
       ["gpt-4o-mini"],
       ["gpt-4.1-mini"],
     )

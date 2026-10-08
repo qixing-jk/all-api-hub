@@ -92,6 +92,25 @@ regardless of whether the key comes from an API token resource or an account
 service credential.
 _Avoid_: API token, token row
 
+**API Credential Profile**:
+A saved inference credential and its connection, verification and usage facts,
+which can be used independently of a saved account. An association with an
+Account Runtime Key does not make the profile the owner of that upstream key.
+_Avoid_: saved account, upstream key resource
+
+**Model Redirect Mapping**:
+A mapping from a requested model identity to an upstream model identity for a
+Managed Upstream Resource. Matching candidate identities and accepting a mapping
+change are separate facts; a changed mapping does not establish that inference
+verification succeeded.
+_Avoid_: model catalog, verified model
+
+**Temporary Browsing Context**:
+An extension-owned browsing context used to perform an authorized task against
+a site. Multiple tasks may share a context, while private and regular browsing
+remain separate. Finishing one task does not imply that other tasks have finished.
+_Avoid_: user tab, saved account session
+
 **Account Post-save Workflow**:
 The follow-up to an already saved account that may obtain an Account Runtime Key,
 wait for required key input or one-time-secret acknowledgement, and continue to

@@ -6,16 +6,44 @@ import {
   getModelSyncNextRun,
   modelSyncScheduler,
 } from "~/services/models/modelSync/scheduler"
-import {
-  DEFAULT_PREFERENCES,
-  userPreferences,
-} from "~/services/preferences/userPreferences"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   clearAlarm,
   createAlarm,
   getAlarm,
   hasAlarmsAPI,
 } from "~/utils/browser/browserApi"
+
+vi.mock(
+  "~/services/preferences/preferencesDefaults",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/preferences/preferencesDefaults")
+      >()
+    return {
+      ...actual,
+      DEFAULT_PREFERENCES: {
+        managedSiteType: "new-api",
+        newApi: {
+          baseUrl: "",
+          adminToken: "",
+          userId: "",
+        },
+        managedSiteModelSync: {
+          enabled: true,
+          interval: 60_000,
+          concurrency: 1,
+          maxRetries: 1,
+          rateLimit: { requestsPerMinute: 10, burst: 2 },
+          allowedModels: [],
+          globalChannelModelFilters: [],
+        },
+      },
+    }
+  },
+)
 
 const {
   ensureLegacyChannelConfigMigrationReadyMock,
@@ -37,23 +65,6 @@ vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
 }))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
-  DEFAULT_PREFERENCES: {
-    managedSiteType: "new-api",
-    newApi: {
-      baseUrl: "",
-      adminToken: "",
-      userId: "",
-    },
-    managedSiteModelSync: {
-      enabled: true,
-      interval: 60_000,
-      concurrency: 1,
-      maxRetries: 1,
-      rateLimit: { requestsPerMinute: 10, burst: 2 },
-      allowedModels: [],
-      globalChannelModelFilters: [],
-    },
-  },
   userPreferences: {
     getPreferences: vi.fn(),
     savePreferences: vi.fn(),

@@ -1,10 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import {
-  createOpenRouterKeyEditorProjection,
-  openRouterAccountKeyResources,
-} from "~/services/apiAdapters/openrouter/accountKeyResource"
+import { openRouterAccountKeyResources } from "~/services/apiAdapters/openrouter/accountKeyResource"
+import { createOpenRouterKeyEditorProjection } from "~/services/apiAdapters/openrouter/keyEditorSession"
 import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_MODES,

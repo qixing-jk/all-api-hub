@@ -23,6 +23,22 @@ import {
   tempWindowTurnstileFetch,
 } from "~/utils/browser/tempWindowFetch"
 
+vi.mock(
+  "~/services/preferences/preferencesDefaults",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/preferences/preferencesDefaults")
+      >()
+    return {
+      ...actual,
+      DEFAULT_PREFERENCES: {
+        tempWindowFallback: mocks.defaultTempWindowFallback,
+      },
+    }
+  },
+)
+
 const { DEFAULT_TEMP_WINDOW_SIZE } = await vi.hoisted(
   () => import("~/services/preferences/tempWindowFallbackPreferences"),
 )
@@ -119,9 +135,6 @@ vi.mock("~/services/permissions/permissionManager", () => ({
 }))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
-  DEFAULT_PREFERENCES: {
-    tempWindowFallback: mocks.defaultTempWindowFallback,
-  },
   userPreferences: {
     getPreferences: mocks.getPreferencesMock,
   },

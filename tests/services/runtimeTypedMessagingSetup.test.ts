@@ -5,6 +5,7 @@ import {
   CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_DETECTION_OUTCOMES,
 } from "~/constants/checkIn"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import {
   INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
@@ -1021,10 +1022,8 @@ describe("typed runtime messaging setup", () => {
       return {
         ...actual,
         userPreferences: {
-          getPreferences: vi.fn().mockResolvedValue(actual.DEFAULT_PREFERENCES),
-          getPreferencesStrict: vi
-            .fn()
-            .mockResolvedValue(actual.DEFAULT_PREFERENCES),
+          getPreferences: vi.fn().mockResolvedValue(DEFAULT_PREFERENCES),
+          getPreferencesStrict: vi.fn().mockResolvedValue(DEFAULT_PREFERENCES),
           savePreferences: vi.fn(),
         },
       }
@@ -1395,10 +1394,8 @@ describe("typed runtime messaging setup", () => {
       return {
         ...actual,
         userPreferences: {
-          getPreferences: vi.fn().mockResolvedValue(actual.DEFAULT_PREFERENCES),
-          getPreferencesStrict: vi
-            .fn()
-            .mockResolvedValue(actual.DEFAULT_PREFERENCES),
+          getPreferences: vi.fn().mockResolvedValue(DEFAULT_PREFERENCES),
+          getPreferencesStrict: vi.fn().mockResolvedValue(DEFAULT_PREFERENCES),
         },
       }
     })
@@ -1895,9 +1892,9 @@ describe("typed runtime messaging setup", () => {
         typeof import("~/services/preferences/userPreferences")
       >("~/services/preferences/userPreferences")
       const preferences = {
-        ...actual.DEFAULT_PREFERENCES,
+        ...DEFAULT_PREFERENCES,
         autoCheckin: {
-          ...actual.DEFAULT_PREFERENCES.autoCheckin,
+          ...DEFAULT_PREFERENCES.autoCheckin,
           globalEnabled: true,
           notifyUiOnCompletion: false,
           retryStrategy: {

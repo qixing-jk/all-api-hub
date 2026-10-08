@@ -44,6 +44,10 @@ import {
   removeCompositeTab,
 } from "./compositeWindow"
 import {
+  createTempContextPool,
+  type DestroyContextOptions,
+} from "./contextPool"
+import {
   TEMP_CONTEXT_TYPES,
   type AuthorizeTempContextAtAcquire,
   type TempContext,
@@ -59,9 +63,20 @@ import {
 } from "./failures"
 import { openFallbackAwareTempContext } from "./openingAdapter"
 
-const TEMP_CONTEXT_IDLE_TIMEOUT = 5000
-
-const QUIET_WINDOW_IDLE_TIMEOUT = 3000
+const contextPool = createTempContextPool({
+  cleanup: cleanupContext,
+  isAlive: isContextAlive,
+})
+const {
+  withOriginLock,
+  destroyOriginPool,
+  releaseTempContext,
+  getReusableContext,
+  registerContext,
+  attachRequestToContext,
+  destroyContext,
+  clearStaleTempRequestMappings,
+} = contextPool
 
 /** Runs one complete temp-page handler operation under its origin key. */
 async function runTempPageHandler(
@@ -72,19 +87,6 @@ async function runTempPageHandler(
   const originKey = buildTempContextOriginKey(normalizeOrigin(url), options)
   await tempPageTaskScheduler.run(originKey, task)
 }
-
-const tempRequestContextMap = new Map<string, TempContext>()
-
-const tempContextById = new Map<number, TempContext>()
-
-const tempContextByTabId = new Map<number, TempContext>()
-
-const tempContextsByOrigin = new Map<string, TempContext[]>()
-
-const originLocks = new Map<string, Promise<void>>()
-
-// 正在销毁上下文池的 origin，用于防止获取/复用与销毁操作并发冲突
-const destroyingOrigins = new Set<string>()
 
 /**
  * Remove a known temp-window handle through the typed browser adapter that
@@ -151,8 +153,8 @@ export function setupTempWindowListeners() {
  * replacing it.
  */
 export async function cleanupTempContextsOnSuspend() {
-  const trackedContexts = Array.from(tempContextById.values())
-  const initialTrackedRequestCount = tempRequestContextMap.size
+  const trackedContexts = contextPool.contexts
+  const initialTrackedRequestCount = contextPool.requestCount
 
   if (trackedContexts.length === 0) {
     const clearedRequestMappings = clearStaleTempRequestMappings()
@@ -181,12 +183,7 @@ export async function cleanupTempContextsOnSuspend() {
     Array.from(contextsByOrigin.entries()).map(async ([origin, pool]) => {
       try {
         await withOriginLock(origin, async () => {
-          destroyingOrigins.add(origin)
-          try {
-            await destroyOriginPool(origin, pool, "runtimeSuspend")
-          } finally {
-            destroyingOrigins.delete(origin)
-          }
+          await destroyOriginPool(origin, pool, "runtimeSuspend")
         })
         return { origin, poolSize: pool.length, ok: true }
       } catch (error) {
@@ -206,8 +203,8 @@ export async function cleanupTempContextsOnSuspend() {
     trackedRequestCount: initialTrackedRequestCount,
     cleanedOriginCount: results.filter((result) => result.ok).length,
     failedOriginCount: results.filter((result) => !result.ok).length,
-    remainingContextCount: tempContextById.size,
-    remainingRequestCount: tempRequestContextMap.size,
+    remainingContextCount: contextPool.contextCount,
+    remainingRequestCount: contextPool.requestCount,
     clearedRequestMappings,
   })
 }
@@ -222,7 +219,7 @@ function handleTempWindowRemoved(windowId: number) {
     windowId,
   })
 
-  const context = tempContextById.get(windowId)
+  const context = contextPool.getById(windowId)
   if (context && context.type === TEMP_CONTEXT_TYPES.Window) {
     withOriginLock(context.origin, () =>
       destroyContext(context, {
@@ -244,7 +241,7 @@ function handleTempTabRemoved(tabId: number) {
     tabId,
   })
 
-  const context = tempContextByTabId.get(tabId)
+  const context = contextPool.getByTabId(tabId)
   if (context && context.type === TEMP_CONTEXT_TYPES.Tab) {
     withOriginLock(context.origin, () =>
       destroyContext(context, {
@@ -268,12 +265,10 @@ export async function handleCloseTempWindow(
     const { requestId } = request
     logTempWindow(RuntimeActionIds.CloseTempWindow, {
       requestId,
-      hasRequestContext: requestId
-        ? tempRequestContextMap.has(requestId)
-        : false,
+      hasRequestContext: requestId ? contextPool.hasRequest(requestId) : false,
     })
 
-    if (requestId && tempRequestContextMap.has(requestId)) {
+    if (requestId && contextPool.hasRequest(requestId)) {
       await releaseTempContext(requestId, {
         forceClose: true,
         reason: "manualClose",
@@ -296,65 +291,6 @@ export async function handleCloseTempWindow(
     })
     sendResponse({ success: false, error: getErrorMessage(error) })
   }
-}
-
-/**
- * 为相同 origin 串行执行异步任务，避免并发读写同一上下文池导致竞态。
- */
-async function withOriginLock<T>(
-  origin: string,
-  task: () => Promise<T>,
-): Promise<T> {
-  const previous = originLocks.get(origin) ?? Promise.resolve()
-  let release: () => void
-  const pending = new Promise<void>((resolve) => {
-    release = resolve
-  })
-  originLocks.set(origin, pending)
-  await previous.catch(() => {})
-
-  try {
-    return await task()
-  } finally {
-    release!()
-    if (originLocks.get(origin) === pending) {
-      originLocks.delete(origin)
-    }
-  }
-}
-
-/**
- * 销毁指定 origin 的所有上下文（窗口/标签页），用于池整体回收。
- */
-async function destroyOriginPool(
-  origin: string,
-  pool?: TempContext[],
-  reason?: string,
-) {
-  const contexts = pool ?? tempContextsByOrigin.get(origin)
-  if (!contexts || contexts.length === 0) {
-    return
-  }
-
-  logTempWindow("destroyOriginPool", {
-    origin,
-    poolSize: contexts.length,
-    reason: reason ?? null,
-  })
-
-  await Promise.all(
-    contexts.map((ctx) =>
-      destroyContext(ctx, { reason: reason ?? "destroyOriginPool" }).catch(
-        (error) => {
-          logger.error("Failed to destroy context from pool", {
-            contextId: ctx.id,
-            tabId: ctx.tabId,
-            error,
-          })
-        },
-      ),
-    ),
-  )
 }
 
 /**
@@ -383,7 +319,7 @@ async function acquireTempContext(
     const context = await withOriginLock(origin, async () => {
       // If this origin's pool is in the middle of being destroyed, do not
       // attempt to reuse or create a new context for it.
-      if (destroyingOrigins.has(origin)) {
+      if (contextPool.isDestroying(origin)) {
         throw new Error("Temp context pool is being destroyed for this origin")
       }
 
@@ -460,15 +396,13 @@ async function acquireTempContext(
         // It's possible that during async operations the context or its pool was
         // marked for destruction. Perform a final validity check before using it.
         if (
-          destroyingOrigins.has(origin) ||
-          !tempContextById.has(acquiredContext.id)
+          contextPool.isDestroying(origin) ||
+          !contextPool.hasContext(acquiredContext.id)
         ) {
           throw new Error("Acquired temp context is no longer valid")
         }
 
         attachRequestToContext(requestId, acquiredContext)
-        acquiredContext.lastUsed = Date.now()
-        clearContextReleaseTimer(acquiredContext)
         logTempWindow("acquireTempContextSuccess", {
           requestId,
           origin,
@@ -521,155 +455,6 @@ async function acquireTempContext(
     }
     throw error
   }
-}
-
-/** Releases a request-owned context using the caller-selected timing policy. */
-async function releaseTempContext(
-  requestId: string,
-  options: TempContextReleaseOptions = {},
-) {
-  if (options.forceClose) {
-    await executeTempContextRelease(requestId, options)
-    return
-  }
-
-  logTempWindow("releaseTempContextScheduled", {
-    requestId,
-    forceClose: false,
-    reason: options.reason ?? null,
-  })
-  // 延迟释放，提高并发时的复用率
-  setTimeout(() => {
-    void executeTempContextRelease(requestId, options).catch((error) => {
-      logger.error("Delayed temp context release failed", error)
-    })
-  }, 2000)
-}
-
-/** Executes the shared release operation after its timing policy is chosen. */
-async function executeTempContextRelease(
-  requestId: string,
-  options: TempContextReleaseOptions,
-): Promise<void> {
-  const context = tempRequestContextMap.get(requestId)
-  tempRequestContextMap.delete(requestId)
-
-  if (!context) {
-    logTempWindow("releaseTempContextNoContext", {
-      requestId,
-      forceClose: Boolean(options.forceClose),
-      reason: options.reason ?? null,
-    })
-    return
-  }
-
-  await withOriginLock(context.origin, async () => {
-    context.activeRequestIds.delete(requestId)
-
-    if (!isTrackedContext(context)) {
-      logTempWindow("releaseTempContextAlreadyDestroyed", {
-        requestId,
-        origin: context.origin,
-        contextId: context.id,
-        tabId: context.tabId,
-        type: context.type,
-        reason: options.reason ?? null,
-      })
-      return
-    }
-
-    if (options.forceClose) {
-      logTempWindow("releaseTempContextForceClose", {
-        requestId,
-        origin: context.origin,
-        contextId: context.id,
-        tabId: context.tabId,
-        type: context.type,
-        reason: options.reason ?? null,
-      })
-      destroyingOrigins.add(context.origin)
-      try {
-        await destroyContext(context, {
-          reason: options.reason ?? "forceClose",
-        })
-      } finally {
-        destroyingOrigins.delete(context.origin)
-      }
-      return
-    }
-
-    if (hasActiveRequests(context)) {
-      logTempWindow("releaseTempContextStillInUse", {
-        requestId,
-        origin: context.origin,
-        contextId: context.id,
-        tabId: context.tabId,
-        type: context.type,
-        reason: options.reason ?? null,
-        activeRequestCount: context.activeRequestIds.size,
-      })
-      return
-    }
-
-    context.lastUsed = Date.now()
-
-    const pool = tempContextsByOrigin.get(context.origin)
-    if (pool && pool.every(isContextIdle)) {
-      logTempWindow("releaseTempContextDestroyOriginPool", {
-        requestId,
-        origin: context.origin,
-        poolSize: pool.length,
-      })
-      // Mark this origin as destroying while we tear down the pool. Any
-      // concurrent acquire attempts for this origin will be rejected by
-      // acquireTempContext until destruction finishes.
-      destroyingOrigins.add(context.origin)
-      try {
-        await destroyOriginPool(context.origin, pool, "originPoolIdle")
-      } finally {
-        destroyingOrigins.delete(context.origin)
-      }
-    } else {
-      logTempWindow("releaseTempContextScheduleIdleCleanup", {
-        requestId,
-        origin: context.origin,
-        contextId: context.id,
-        tabId: context.tabId,
-        type: context.type,
-        idleTimeoutMs: TEMP_CONTEXT_IDLE_TIMEOUT,
-      })
-      scheduleContextCleanup(context)
-    }
-  })
-}
-
-/**
- * 从指定 origin 的上下文池中获取一个仍然存活的上下文：
- * - 不根据 activeRequestIds 过滤，依赖 withOriginLock 保证同一 origin 串行
- * - 对已失效的上下文进行销毁并从池中移除。
- */
-async function getReusableContext(origin: string) {
-  const pool = tempContextsByOrigin.get(origin)
-  if (!pool || pool.length === 0) {
-    return null
-  }
-
-  // 注意：这里不检查 context.activeRequestIds。
-  // 同一 origin 的并发通过 withOriginLock 串行化：
-  // - 后续请求会排队进入 acquireTempContext
-  // - 然后复用同一个上下文，而不是因为已有持有者就额外创建新的窗口/标签页
-  for (const context of pool) {
-    if (await isContextAlive(context)) {
-      return context
-    }
-
-    await destroyContext(context, {
-      skipBrowserRemoval: true,
-      reason: "contextNotAlive",
-    })
-  }
-
-  return null
 }
 
 /**
@@ -867,164 +652,22 @@ export const tempWindowBackgroundRuntime = {
 }
 
 /**
- * 将新创建的上下文注册到各种索引映射与 origin 池中。
+ * 检查上下文对应的标签页是否仍然存在，用于过滤已失效的上下文。
  */
-function registerContext(origin: string, context: TempContext) {
-  tempContextById.set(context.id, context)
-  tempContextByTabId.set(context.tabId, context)
-
-  const pool = tempContextsByOrigin.get(origin) ?? []
-  pool.push(context)
-  tempContextsByOrigin.set(origin, pool)
-}
-
-/**
- * Attach a request to the tracked temp context and move the ownership record if
- * the request was previously bound elsewhere.
- */
-function attachRequestToContext(requestId: string, context: TempContext) {
-  const previousContext = tempRequestContextMap.get(requestId)
-  if (previousContext && previousContext !== context) {
-    previousContext.activeRequestIds.delete(requestId)
-  }
-
-  tempRequestContextMap.set(requestId, context)
-  context.activeRequestIds.add(requestId)
-}
-
-/**
- * Returns whether the temp context is still held by any active request.
- */
-function hasActiveRequests(context: TempContext) {
-  return context.activeRequestIds.size > 0
-}
-
-/**
- * Returns whether the temp context has no remaining active request holders.
- */
-function isContextIdle(context: TempContext) {
-  return !hasActiveRequests(context)
-}
-
-/**
- * Clears any pending idle-release timer attached to the temp context.
- */
-function clearContextReleaseTimer(context: TempContext) {
-  if (context.releaseTimer) {
-    clearTimeout(context.releaseTimer)
-    context.releaseTimer = undefined
+async function isContextAlive(context: TempContext) {
+  try {
+    await getTab(context.tabId)
+    return true
+  } catch {
+    return false
   }
 }
 
-/**
- * Checks whether the exact temp-context object is still the one tracked by id.
- */
-function isTrackedContext(context: TempContext) {
-  return tempContextById.get(context.id) === context
-}
-
-/**
- * 为上下文安排空闲销毁定时器，长时间未使用的窗口/标签页会被自动关闭。
- */
-function scheduleContextCleanup(context: TempContext) {
-  clearContextReleaseTimer(context)
-
-  const idleTimeoutMs =
-    context.type === TEMP_CONTEXT_TYPES.Window
-      ? QUIET_WINDOW_IDLE_TIMEOUT
-      : TEMP_CONTEXT_IDLE_TIMEOUT
-
-  logTempWindow("scheduleContextCleanup", {
-    origin: context.origin,
-    contextId: context.id,
-    tabId: context.tabId,
-    type: context.type,
-    idleTimeoutMs,
-  })
-
-  context.releaseTimer = setTimeout(() => {
-    context.releaseTimer = undefined
-    withOriginLock(context.origin, async () => {
-      if (!isTrackedContext(context)) {
-        return
-      }
-
-      if (!isContextIdle(context)) {
-        logTempWindow("idleContextCleanupSkippedActiveContext", {
-          origin: context.origin,
-          contextId: context.id,
-          tabId: context.tabId,
-          type: context.type,
-          activeRequestCount: context.activeRequestIds.size,
-        })
-        return
-      }
-
-      logTempWindow("idleContextCleanupTriggered", {
-        origin: context.origin,
-        contextId: context.id,
-        tabId: context.tabId,
-        type: context.type,
-      })
-      await destroyContext(context, { reason: "idleTimeout" })
-    }).catch((error) => {
-      logger.error("Failed to destroy idle temp context", error)
-    })
-  }, idleTimeoutMs)
-}
-
-/**
- * 销毁单个上下文：
- * - 从各种索引与池中移除
- * - 可选地关闭对应的窗口/标签页。
- */
-type DestroyContextOptions = {
-  skipBrowserRemoval?: boolean
-  reason?: string
-}
-
-/** Finalizes one tracked context before running best-effort external cleanup. */
-async function destroyContext(
+/** Performs best-effort external cleanup after pool ownership has been retired. */
+async function cleanupContext(
   context: TempContext,
-  options: DestroyContextOptions = {},
+  options: DestroyContextOptions,
 ) {
-  if (!isTrackedContext(context)) {
-    return
-  }
-
-  logTempWindow("destroyContext", {
-    origin: context.origin,
-    contextId: context.id,
-    tabId: context.tabId,
-    type: context.type,
-    mode: context.mode,
-    ownerWindowId: context.ownerWindowId ?? null,
-    skipBrowserRemoval: Boolean(options.skipBrowserRemoval),
-    reason: options.reason ?? null,
-  })
-
-  clearContextReleaseTimer(context)
-
-  tempContextById.delete(context.id)
-  tempContextByTabId.delete(context.tabId)
-
-  const pool = tempContextsByOrigin.get(context.origin)
-  if (pool) {
-    const remaining = pool.filter((item) => item !== context)
-    if (remaining.length === 0) {
-      tempContextsByOrigin.delete(context.origin)
-    } else {
-      tempContextsByOrigin.set(context.origin, remaining)
-    }
-  }
-
-  for (const [requestId, ctx] of tempRequestContextMap.entries()) {
-    if (ctx === context) {
-      tempRequestContextMap.delete(requestId)
-    }
-  }
-  context.activeRequestIds.clear()
-
   await removeInstalledDownloadBlockRules(
     context.downloadBlockRuleId,
     context.firefoxDownloadBlockTabId,
@@ -1040,35 +683,5 @@ async function destroyContext(
       // The handle is already gone, so nothing else will retry this close.
       void scheduleTempPageReclaimRetry()
     }
-  }
-}
-
-/**
- * Remove request-to-context entries that still point at contexts already
- * destroyed from the active in-memory pool.
- */
-function clearStaleTempRequestMappings() {
-  let cleared = 0
-
-  for (const [requestId, context] of tempRequestContextMap.entries()) {
-    if (!isTrackedContext(context)) {
-      tempRequestContextMap.delete(requestId)
-      context.activeRequestIds.delete(requestId)
-      cleared += 1
-    }
-  }
-
-  return cleared
-}
-
-/**
- * 检查上下文对应的标签页是否仍然存在，用于过滤已失效的上下文。
- */
-async function isContextAlive(context: TempContext) {
-  try {
-    await getTab(context.tabId)
-    return true
-  } catch {
-    return false
   }
 }

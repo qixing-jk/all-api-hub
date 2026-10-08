@@ -19,24 +19,15 @@ import { accountPresentation } from "~/services/accounts/accountStorage/accountP
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
 import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
-import { fetchDisplayAccountRuntimeKeys } from "~/services/accounts/utils/apiServiceRequest"
 import type { DisplaySiteData, SiteAccount } from "~/types"
-import {
-  ACCOUNT_KEY_AUTO_PROVISION_MODES,
-  type AccountKeyAutoProvisionMode,
-} from "~/types/accountKeyAutoProvisioning"
 import type { AccountSaveResponse } from "~/types/serviceResponse"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
-const logger = createLogger("AccountPostSaveWorkflow")
-interface AihubmixPostSaveKeyPromptState {
-  isOpen: boolean
-  accountId: string | null
-  accountName: string
-  isCreating: boolean
-}
+import { AccountPostSaveSession } from "./accountPostSaveSession"
+import { useAccountPostSaveProvisioning } from "./useAccountPostSaveProvisioning"
 
+const logger = createLogger("AccountPostSaveWorkflow")
 /** Owns key input, response-only secrets and every continuation after account save. */
 export function useAccountPostSaveWorkflow({
   onSuccess,
@@ -55,13 +46,6 @@ export function useAccountPostSaveWorkflow({
     useState<DisplaySiteData | null>(null)
   const [postSaveKeyInputSessionId, setPostSaveKeyInputDialogSessionId] =
     useState<number | null>(null)
-  const [aihubmixPostSaveKeyPrompt, setAihubmixPostSaveKeyPrompt] =
-    useState<AihubmixPostSaveKeyPromptState>({
-      isOpen: false,
-      accountId: null,
-      accountName: "",
-      isCreating: false,
-    })
   const newAccountRef = useRef<DisplaySiteData | string | null>(null)
   const targetAccountRef = useRef<DisplaySiteData | string | null>(null)
   const pendingPostSaveChannelRef = useRef<{
@@ -69,242 +53,64 @@ export function useAccountPostSaveWorkflow({
     runtimeKey?: AccountRuntimeKey | null
     createdSecret?: CreatedRuntimeSecret
   } | null>(null)
-  const pendingAccountKeyProvisioningSuccessRef = useRef<string | null>(null)
-  const [postSaveKeyProvisioning, setPostSaveKeyProvisioning] = useState<{
-    account: DisplaySiteData
-    mode: AccountKeyAutoProvisionMode
-  } | null>(null)
-  const postSaveAutoConfigRunRef = useRef(0)
-  const postSaveCreationAbort = useRef<AbortController | null>(null)
-  const postSaveKeyProvisioningRunRef = useRef(0)
-  const nextPostSaveKeyInputDialogSessionIdRef = useRef(0)
-  const activePostSaveKeyInputDialogSessionIdRef = useRef<number | null>(null)
+  const [session] = useState(() => new AccountPostSaveSession())
   const {
     openWithAccount: openChannelDialog,
     openWithCredentials: openChannelDialogWithCredentials,
     openDefaultTokenQuickCreateDialogForAccount,
   } = useChannelDialog()
 
-  const invalidatePostSaveAutoConfigRun = useCallback(() => {
-    postSaveAutoConfigRunRef.current += 1
-  }, [])
-
   const openPostSaveKeyInputDialogSession = useCallback(() => {
-    const nextSessionId = nextPostSaveKeyInputDialogSessionIdRef.current + 1
-    nextPostSaveKeyInputDialogSessionIdRef.current = nextSessionId
-    activePostSaveKeyInputDialogSessionIdRef.current = nextSessionId
+    const nextSessionId = session.openKeyInput()
     setPostSaveKeyInputDialogSessionId(nextSessionId)
     return nextSessionId
-  }, [])
+  }, [session])
 
   const invalidatePostSaveKeyInputDialogSession = useCallback(() => {
-    activePostSaveKeyInputDialogSessionIdRef.current = null
+    session.invalidateKeyInput()
     setPostSaveKeyInputDialogSessionId(null)
-  }, [])
+  }, [session])
 
+  const {
+    state: { postSaveKeyProvisioning, aihubmixPostSaveKeyPrompt },
+    clear: clearProvisioning,
+    completePendingAccountKeyProvisioningSuccess,
+    beginProvisioning,
+    openDefaultKeyPrompt,
+    handlePostSaveKeyProvisioningClose,
+    handleAihubmixPostSaveKeyPromptCancel,
+    handleAihubmixPostSaveKeyPromptConfirm,
+  } = useAccountPostSaveProvisioning({
+    session,
+    onSuccess,
+    onCreatedSecret: setPostSaveOneTimeSecret,
+    openDefaultTokenQuickCreateDialogForAccount,
+  })
   const clearPostSaveWorkflowState = useCallback(() => {
     newAccountRef.current = null
     targetAccountRef.current = null
     setIsAutoConfiguring(false)
-    postSaveCreationAbort.current?.abort()
-    postSaveCreationAbort.current = null
-    invalidatePostSaveAutoConfigRun()
-    invalidatePostSaveKeyInputDialogSession()
-    postSaveKeyProvisioningRunRef.current += 1
+    session.clear()
+    setPostSaveKeyInputDialogSessionId(null)
     setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
     setPostSaveOneTimeSecret(null)
     setPostSaveKeyInputAccount(null)
-    setPostSaveKeyProvisioning(null)
-    setAihubmixPostSaveKeyPrompt({
-      isOpen: false,
-      accountId: null,
-      accountName: "",
-      isCreating: false,
-    })
-    pendingAccountKeyProvisioningSuccessRef.current = null
+    clearProvisioning()
     pendingPostSaveChannelRef.current = null
-  }, [invalidatePostSaveAutoConfigRun, invalidatePostSaveKeyInputDialogSession])
-
-  const completePendingAccountKeyProvisioningSuccess = useCallback(() => {
-    const savedAccountId = pendingAccountKeyProvisioningSuccessRef.current
-    pendingAccountKeyProvisioningSuccessRef.current = null
-    if (savedAccountId) {
-      onSuccess?.(savedAccountId)
-    }
-  }, [onSuccess])
-
-  const handlePostSaveKeyProvisioningClose = useCallback(() => {
-    setPostSaveKeyProvisioning(null)
-    completePendingAccountKeyProvisioningSuccess()
-  }, [completePendingAccountKeyProvisioningSuccess])
-
-  const openAihubmixPostSaveKeyPrompt = useCallback(
-    (params: { accountId: string; accountName: string }) => {
-      postSaveKeyProvisioningRunRef.current += 1
-      pendingAccountKeyProvisioningSuccessRef.current = params.accountId
-      setAihubmixPostSaveKeyPrompt({
-        isOpen: true,
-        accountId: params.accountId,
-        accountName: params.accountName,
-        isCreating: false,
-      })
-    },
-    [],
-  )
-
-  const handleAihubmixNormalSaveForegroundKeyFlow = useCallback(
-    async (params: { accountId: string; accountName: string }) => {
-      const runId = postSaveKeyProvisioningRunRef.current
-      const isCurrentRun = () => postSaveKeyProvisioningRunRef.current === runId
-      const savedAccountId = params.accountId.trim()
-      if (!savedAccountId) return
-
-      const openPrompt = () => {
-        if (!isCurrentRun()) return
-
-        openAihubmixPostSaveKeyPrompt({
-          accountId: savedAccountId,
-          accountName: params.accountName,
-        })
-      }
-
-      try {
-        const savedAccount = await accountQueries.getAccountById(savedAccountId)
-        if (!isCurrentRun()) return
-
-        if (!savedAccount) {
-          openPrompt()
-          return
-        }
-
-        const displaySiteData =
-          (await accountReadModels.getDisplayDataById(savedAccountId)) ??
-          accountPresentation.convertToDisplayData(savedAccount)
-        if (!isCurrentRun()) return
-
-        const inventory = await fetchDisplayAccountRuntimeKeys(displaySiteData)
-        if (!isCurrentRun()) return
-
-        if (inventory.length) {
-          onSuccess?.(savedAccountId)
-          return
-        }
-
-        openPrompt()
-      } catch {
-        openPrompt()
-      }
-    },
-    [onSuccess, openAihubmixPostSaveKeyPrompt],
-  )
-
-  const handleAihubmixPostSaveKeyPromptCancel = useCallback(() => {
-    postSaveKeyProvisioningRunRef.current += 1
-    setAihubmixPostSaveKeyPrompt({
-      isOpen: false,
-      accountId: null,
-      accountName: "",
-      isCreating: false,
-    })
-    completePendingAccountKeyProvisioningSuccess()
-    toast.info(t("messages:aihubmix.oneTimeKeyPromptCancelled"))
-  }, [completePendingAccountKeyProvisioningSuccess, t])
-
-  const handleAihubmixPostSaveKeyPromptConfirm = useCallback(async () => {
-    const accountId = aihubmixPostSaveKeyPrompt.accountId
-    if (!accountId) return
-
-    const runId = postSaveKeyProvisioningRunRef.current + 1
-    postSaveKeyProvisioningRunRef.current = runId
-    const isCurrentRun = () => postSaveKeyProvisioningRunRef.current === runId
-
-    setAihubmixPostSaveKeyPrompt((prev) => ({
-      ...prev,
-      isCreating: true,
-    }))
-
-    try {
-      const savedAccount = await accountQueries.getAccountById(accountId)
-      if (!isCurrentRun()) return
-      if (!savedAccount) {
-        toast.error(t("messages:toast.error.findAccountDetailsFailed"))
-        setAihubmixPostSaveKeyPrompt({
-          isOpen: false,
-          accountId: null,
-          accountName: "",
-          isCreating: false,
-        })
-        completePendingAccountKeyProvisioningSuccess()
-        return
-      }
-
-      if (!isCurrentRun()) return
-
-      postSaveCreationAbort.current?.abort()
-      const controller = new AbortController()
-      postSaveCreationAbort.current = controller
-      const ensureResult = await ensureAccountKey(
-        accountPresentation.convertToDisplayData(savedAccount),
-        { allowOneTimeSecret: true, signal: controller.signal },
-      )
-      if (!isCurrentRun()) return
-
-      if (
-        ensureResult.kind === "created" &&
-        ensureResult.creation.createdSecret
-      ) {
-        setAihubmixPostSaveKeyPrompt({
-          isOpen: false,
-          accountId: null,
-          accountName: "",
-          isCreating: false,
-        })
-        setPostSaveOneTimeSecret(ensureResult.creation.createdSecret)
-        return
-      }
-
-      toast.error(t("messages:aihubmix.oneTimeKeyUnavailableAfterCreate"))
-      setAihubmixPostSaveKeyPrompt({
-        isOpen: false,
-        accountId: null,
-        accountName: "",
-        isCreating: false,
-      })
-      completePendingAccountKeyProvisioningSuccess()
-    } catch (error) {
-      if (!isCurrentRun()) return
-
-      toast.error(t("messages:aihubmix.oneTimeKeyUnavailableAfterCreate"))
-      setAihubmixPostSaveKeyPrompt({
-        isOpen: false,
-        accountId: null,
-        accountName: "",
-        isCreating: false,
-      })
-      completePendingAccountKeyProvisioningSuccess()
-      logger.error("AIHubMix post-save one-time key creation failed", {
-        accountId,
-        error: getErrorMessage(error),
-      })
-    }
-  }, [
-    aihubmixPostSaveKeyPrompt.accountId,
-    completePendingAccountKeyProvisioningSuccess,
-    t,
-  ])
+  }, [session, clearProvisioning])
 
   const openPostSaveManagedSiteDialog = useCallback(
     async (
       displaySiteData: DisplaySiteData,
       runtimeKey: AccountRuntimeKey | null,
-      runId = postSaveAutoConfigRunRef.current,
+      runId = session.autoConfigRun,
       targetAccount = targetAccountRef.current,
       createdSecret?: CreatedRuntimeSecret,
     ) => {
-      if (postSaveAutoConfigRunRef.current !== runId) {
+      if (!session.acceptsAutoConfig(runId)) {
         return
       }
-      const isCurrentRun = () => postSaveAutoConfigRunRef.current === runId
+      const isCurrentRun = () => session.acceptsAutoConfig(runId)
 
       setAccountPostSaveWorkflowStep(
         ACCOUNT_POST_SAVE_WORKFLOW_STEPS.OpeningManagedSiteDialog,
@@ -361,11 +167,17 @@ export function useAccountPostSaveWorkflow({
         })
       }
     },
-    [onSuccess, openChannelDialog, openChannelDialogWithCredentials, t],
+    [
+      onSuccess,
+      openChannelDialog,
+      openChannelDialogWithCredentials,
+      t,
+      session,
+    ],
   )
 
   const handlePostSaveOneTimeSecretClose = useCallback(async () => {
-    const runId = postSaveAutoConfigRunRef.current
+    const runId = session.autoConfigRun
     setPostSaveOneTimeSecret(null)
     const pending = pendingPostSaveChannelRef.current
     pendingPostSaveChannelRef.current = null
@@ -385,14 +197,12 @@ export function useAccountPostSaveWorkflow({
   }, [
     completePendingAccountKeyProvisioningSuccess,
     openPostSaveManagedSiteDialog,
+    session,
   ])
 
   const handlePostSaveKeyInputTokenDialogCloseForSession = useCallback(
     (sessionId: number | null) => {
-      if (
-        sessionId === null ||
-        activePostSaveKeyInputDialogSessionIdRef.current !== sessionId
-      ) {
+      if (!session.acceptsKeyInput(sessionId)) {
         return
       }
 
@@ -401,29 +211,24 @@ export function useAccountPostSaveWorkflow({
       setPostSaveKeyInputAccount(null)
       setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
     },
-    [invalidatePostSaveKeyInputDialogSession],
+    [invalidatePostSaveKeyInputDialogSession, session],
   )
 
   const handlePostSaveKeyInputTokenDialogClose = useCallback(() => {
-    handlePostSaveKeyInputTokenDialogCloseForSession(
-      activePostSaveKeyInputDialogSessionIdRef.current,
-    )
-  }, [handlePostSaveKeyInputTokenDialogCloseForSession])
+    handlePostSaveKeyInputTokenDialogCloseForSession(session.keyInputSession)
+  }, [handlePostSaveKeyInputTokenDialogCloseForSession, session])
 
   const handlePostSaveKeyInputTokenCreatedForSession = useCallback(
     async (
       sessionId: number | null,
       createdToken: AccountKeyCreationResult,
     ) => {
-      if (
-        sessionId === null ||
-        activePostSaveKeyInputDialogSessionIdRef.current !== sessionId
-      ) {
+      if (!session.acceptsKeyInput(sessionId)) {
         return
       }
 
       invalidatePostSaveKeyInputDialogSession()
-      const runId = postSaveAutoConfigRunRef.current
+      const runId = session.autoConfigRun
       const pending = pendingPostSaveChannelRef.current
       setPostSaveKeyInputAccount(null)
 
@@ -454,7 +259,7 @@ export function useAccountPostSaveWorkflow({
           pending.displaySiteData,
           createdToken,
         )
-        if (postSaveAutoConfigRunRef.current !== runId) return
+        if (!session.acceptsAutoConfig(runId)) return
         if (!runtimeKey) {
           setAccountPostSaveWorkflowStep(
             ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
@@ -468,7 +273,7 @@ export function useAccountPostSaveWorkflow({
           runId,
         )
       } catch (error) {
-        if (postSaveAutoConfigRunRef.current !== runId) {
+        if (!session.acceptsAutoConfig(runId)) {
           return
         }
         setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed)
@@ -483,17 +288,22 @@ export function useAccountPostSaveWorkflow({
         })
       }
     },
-    [invalidatePostSaveKeyInputDialogSession, openPostSaveManagedSiteDialog, t],
+    [
+      invalidatePostSaveKeyInputDialogSession,
+      openPostSaveManagedSiteDialog,
+      t,
+      session,
+    ],
   )
 
   const handlePostSaveKeyInputTokenCreated = useCallback(
     async (createdToken: AccountKeyCreationResult) => {
       await handlePostSaveKeyInputTokenCreatedForSession(
-        activePostSaveKeyInputDialogSessionIdRef.current,
+        session.keyInputSession,
         createdToken,
       )
     },
-    [handlePostSaveKeyInputTokenCreatedForSession],
+    [handlePostSaveKeyInputTokenCreatedForSession, session],
   )
 
   const getPostSaveKeyInputDialogHandlers = useCallback(
@@ -523,9 +333,8 @@ export function useAccountPostSaveWorkflow({
     saveAccount: () => Promise<AccountSaveResponse | null>
     ensureManagedSiteAutoConfigReady: () => Promise<boolean>
   }) => {
-    const runId = postSaveAutoConfigRunRef.current + 1
-    postSaveAutoConfigRunRef.current = runId
-    const isCurrentRun = () => postSaveAutoConfigRunRef.current === runId
+    const runId = session.beginAutoConfig()
+    const isCurrentRun = () => session.acceptsAutoConfig(runId)
 
     try {
       const isManagedSiteReady = await ensureManagedSiteAutoConfigReady()
@@ -657,12 +466,10 @@ export function useAccountPostSaveWorkflow({
       setAccountPostSaveWorkflowStep(
         ACCOUNT_POST_SAVE_WORKFLOW_STEPS.CheckingToken,
       )
-      postSaveCreationAbort.current?.abort()
-      const controller = new AbortController()
-      postSaveCreationAbort.current = controller
+      const signal = session.beginCreation()
       const ensureResult = await ensureAccountKey(
         accountPresentation.convertToDisplayData(savedSiteAccount),
-        { allowOneTimeSecret: true, signal: controller.signal },
+        { allowOneTimeSecret: true, signal },
       )
       if (!isCurrentRun()) {
         return
@@ -717,55 +524,11 @@ export function useAccountPostSaveWorkflow({
     }
   }
 
-  const beginProvisioning = async (params: {
-    accountId: string
-    accountName: string
-    mode: AccountKeyAutoProvisionMode
-    confirmOneTimeKey: boolean
-  }) => {
-    if (
-      params.confirmOneTimeKey &&
-      params.mode === ACCOUNT_KEY_AUTO_PROVISION_MODES.Default
-    ) {
-      await handleAihubmixNormalSaveForegroundKeyFlow(params)
-      return
-    }
-    pendingAccountKeyProvisioningSuccessRef.current = params.accountId
-    const runId = postSaveKeyProvisioningRunRef.current
-    try {
-      const display = await accountReadModels.getDisplayDataById(
-        params.accountId,
-      )
-      const stored = display
-        ? null
-        : await accountQueries.getAccountById(params.accountId)
-      if (runId !== postSaveKeyProvisioningRunRef.current) return
-      const owner =
-        display ??
-        (stored ? accountPresentation.convertToDisplayData(stored) : null)
-      if (owner)
-        setPostSaveKeyProvisioning({ account: owner, mode: params.mode })
-      else completePendingAccountKeyProvisioningSuccess()
-    } catch {
-      if (runId === postSaveKeyProvisioningRunRef.current)
-        completePendingAccountKeyProvisioningSuccess()
-    }
-  }
-  const openDefaultKeyPrompt = async (accountId: string) => {
-    const generation = postSaveKeyProvisioningRunRef.current
-    const display = await accountReadModels.getDisplayDataById(accountId)
-    if (generation === postSaveKeyProvisioningRunRef.current && display) {
-      await openDefaultTokenQuickCreateDialogForAccount(display)
-    }
-  }
   useEffect(
     () => () => {
-      postSaveAutoConfigRunRef.current += 1
-      postSaveKeyProvisioningRunRef.current += 1
-      activePostSaveKeyInputDialogSessionIdRef.current = null
-      postSaveCreationAbort.current?.abort()
+      session.clear()
     },
-    [],
+    [session],
   )
 
   return {

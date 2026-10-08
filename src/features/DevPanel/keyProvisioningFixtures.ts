@@ -20,7 +20,7 @@ import { createGrsaiKeyEditor } from "~/services/apiAdapters/grsai/keyResourceEd
 import { createKimiKeyEditor } from "~/services/apiAdapters/kimiOpenPlatform/accountKeyResource"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keyResourceEditor"
 import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keyVariant"
-import { createOpenRouterKeyEditorProjection } from "~/services/apiAdapters/openrouter/accountKeyResource"
+import { createOpenRouterKeyEditorProjection } from "~/services/apiAdapters/openrouter/keyEditorSession"
 import { OPENROUTER_KEY_FIELD_IDS } from "~/services/apiAdapters/openrouter/keyResourceFields"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { createRightCodeKeyEditor } from "~/services/apiAdapters/rightcode/keyResourceEditor"
