@@ -1,7 +1,7 @@
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
-import FirefoxAddAccountWarningDialog from "~/entrypoints/popup/components/FirefoxAddAccountWarningDialog"
+import FirefoxAddAccountWarningDialog from "~/features/AccountManagement/opening/FirefoxAddAccountWarningDialog"
 import { render, screen } from "~~/tests/test-utils/render"
 
 describe("Firefox add-account continuation", () => {

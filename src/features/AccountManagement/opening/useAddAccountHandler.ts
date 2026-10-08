@@ -1,8 +1,8 @@
 import type { MouseEvent } from "react"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { showFirefoxWarningDialog } from "~/entrypoints/popup/components/FirefoxAddAccountWarningDialog/showFirefoxWarningDialog"
 import { useDialogStateContext } from "~/features/AccountManagement/dialogs/useDialogStateContext"
+import { showFirefoxWarningDialog } from "~/features/AccountManagement/opening/FirefoxAddAccountWarningDialog/showFirefoxWarningDialog"
 import { ACCOUNT_MANAGEMENT_ROUTE_ACTIONS } from "~/features/AccountManagement/routeParams"
 import {
   isSponsorAddAccountPrefill,

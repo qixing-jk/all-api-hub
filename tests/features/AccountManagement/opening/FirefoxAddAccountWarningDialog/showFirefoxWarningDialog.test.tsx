@@ -2,7 +2,7 @@ import { act, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { showFirefoxWarningDialog } from "~/entrypoints/popup/components/FirefoxAddAccountWarningDialog/showFirefoxWarningDialog"
+import { showFirefoxWarningDialog } from "~/features/AccountManagement/opening/FirefoxAddAccountWarningDialog/showFirefoxWarningDialog"
 
 import "~~/tests/test-utils/i18n"
 

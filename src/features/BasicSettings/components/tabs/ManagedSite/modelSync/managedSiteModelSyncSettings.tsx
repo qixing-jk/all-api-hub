@@ -14,7 +14,7 @@ import {
 } from "~/components/ui"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { MANAGED_SITE_MODEL_SYNC_CHANNEL_PROCESSING_TIMEOUT_TARGET_ID } from "~/features/BasicSettings/components/tabs/ManagedSite/modelSync/managedSiteModelSyncTargetIds"
-import { useManagedSiteModelSyncSettingsViewModel } from "~/features/BasicSettings/hooks/useManagedSiteModelSyncSettingsViewModel"
+import { useManagedSiteModelSyncSettingsViewModel } from "~/features/BasicSettings/components/tabs/ManagedSite/modelSync/useManagedSiteModelSyncSettingsViewModel"
 import ChannelFiltersEditor from "~/features/ManagedSiteModelSync/filters/ChannelFiltersEditor"
 
 /** Model-sync settings view. */
