@@ -3,7 +3,7 @@ import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import CliProxyApiSettings from "~/features/BasicSettings/components/tabs/ManagedSite/CliProxyApiSettings"
+import CliProxyApiSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/CliProxyApiSettings"
 import {
   CliProxyApiError,
   listAllCliProxyApiProviders,

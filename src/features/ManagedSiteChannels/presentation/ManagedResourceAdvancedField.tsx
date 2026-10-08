@@ -9,12 +9,12 @@ import {
   ComboboxItem,
   ComboboxList,
 } from "~/components/ui/combobox"
+import { ResourceFieldLabel } from "~/features/ResourceEditor/components/ResourceFieldLabel"
+import { ResourceJsonField } from "~/features/ResourceEditor/components/ResourceJsonField"
 import {
   readResourceList,
   readResourceString,
-} from "~/features/ResourceEditor/resourceEditorProjection"
-import { ResourceFieldLabel } from "~/features/ResourceEditor/ResourceFieldLabel"
-import { ResourceJsonField } from "~/features/ResourceEditor/ResourceJsonField"
+} from "~/features/ResourceEditor/model/resourceEditorProjection"
 import type {
   EditableResourceProjection,
   ResourceFieldValue,

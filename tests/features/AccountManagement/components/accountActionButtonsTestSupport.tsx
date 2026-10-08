@@ -3,7 +3,7 @@ import { afterEach, beforeEach, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
-import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import type { UserPreferences } from "~/services/preferences/preferencesSchema"
 import { PRODUCT_ANALYTICS_ERROR_CATEGORIES } from "~/services/productAnalytics/contracts"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"

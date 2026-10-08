@@ -12,7 +12,7 @@ import {
   type AccountDialogSitePolicy,
 } from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
 import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"
-import { resolveNewAccountAutomaticExecutionEnabled } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { resolveNewAccountAutomaticExecutionEnabled } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { mergeUserOwnedCheckInDraft } from "~/services/checkin/autoCheckin/state"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 import type { AccountAutoDetectResponse } from "~/types/serviceResponse"

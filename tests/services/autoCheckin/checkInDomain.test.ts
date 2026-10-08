@@ -4,7 +4,7 @@ import {
   AUTO_CHECKIN_METHOD_IDS,
   AUTOMATIC_CHECK_IN_DISCOVERY_COOLDOWN_MS,
 } from "~/constants/checkIn"
-import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configCodec"
+import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configuration/configCodec"
 import {
   inspectCheckInMethods,
   mergeCheckInDiscoveryResults,

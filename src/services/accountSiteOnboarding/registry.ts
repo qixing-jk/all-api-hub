@@ -10,7 +10,7 @@ import type {
 } from "~/services/apiAdapters/contracts/accountBrowserIdentity"
 import { freeModelBrowserIdentity } from "~/services/apiAdapters/freemodel/browserIdentity"
 import { kimiOpenPlatformBrowserIdentity } from "~/services/apiAdapters/kimiOpenPlatform/browserIdentity"
-import { newApiBrowserIdentity } from "~/services/apiAdapters/newApi/browserIdentity"
+import { newApiBrowserIdentity } from "~/services/apiAdapters/newApi/account/browserIdentity"
 import { openRouterAccountDetectionPrivacy } from "~/services/apiAdapters/openrouter/accountDetection"
 import { openRouterBrowserIdentity } from "~/services/apiAdapters/openrouter/browserIdentity"
 import { rightCodeBrowserIdentity } from "~/services/apiAdapters/rightcode/browserIdentity"

@@ -68,14 +68,11 @@ vi.mock("~/services/managedSites/channelConfigStorage", () => ({
   },
 }))
 
-vi.mock(
-  "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
-  () => ({
-    apiCredentialProfilesStorage: {
-      exportConfig: vi.fn(),
-    },
-  }),
-)
+vi.mock("~/services/apiCredentialProfiles/storage/profiles", () => ({
+  apiCredentialProfilesStorage: {
+    exportConfig: vi.fn(),
+  },
+}))
 
 function render(ui: ReactNode) {
   return rtlRender(<I18nextProvider i18n={testI18n}>{ui}</I18nextProvider>)

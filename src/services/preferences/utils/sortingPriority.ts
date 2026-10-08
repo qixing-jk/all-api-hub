@@ -18,7 +18,7 @@ import {
   isAccountTodayMetricComplete,
 } from "~/services/accounts/accountTodayStats"
 import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
-import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/inspection"
+import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/discovery/inspection"
 import type {
   AccountTodayMetricAvailability,
   ActiveSortField,

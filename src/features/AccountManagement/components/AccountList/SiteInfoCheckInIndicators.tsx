@@ -26,7 +26,7 @@ import {
 import {
   getSelectedCheckInStatus,
   inspectAccountCheckIn,
-} from "~/services/checkin/autoCheckin/inspection"
+} from "~/services/checkin/autoCheckin/discovery/inspection"
 import type { DisplaySiteData } from "~/types"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"

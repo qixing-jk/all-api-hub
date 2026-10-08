@@ -6,6 +6,7 @@ import {
   type AccountSiteBackendFamily,
   type AccountSiteType,
 } from "~/services/accountSiteDefinitions"
+import { agentRouterAccountLogin } from "~/services/apiAdapters/newApi/account/agentRouterAccountLogin"
 import type { ManagedSiteRuntimeConfigValueForType } from "~/services/managedSites/runtimeConfig"
 
 import { aihubmixCapabilities } from "./aihubmix"
@@ -32,7 +33,6 @@ import { omniRouteManagedSiteCapabilities } from "./managedSites/omniroute"
 import { sub2ApiManagedSiteCapabilities } from "./managedSites/sub2api"
 import { veloeraManagedSiteCapabilities } from "./managedSites/veloera"
 import { createNewApiCapabilities } from "./newApi"
-import { agentRouterAccountLogin } from "./newApi/agentRouterAccountLogin"
 import { openRouterCapabilities } from "./openrouter"
 import { rightCodeCapabilities } from "./rightcode"
 import { sharedChatCapabilities } from "./sharedchat"

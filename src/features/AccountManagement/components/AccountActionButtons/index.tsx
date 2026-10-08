@@ -29,7 +29,7 @@ import {
 import { CHECK_IN_DISCOVERY_DECISION_OUTCOMES } from "~/constants/checkIn"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
-import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
+import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

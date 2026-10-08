@@ -1,4 +1,4 @@
-import type { CredentialListPatch } from "~/services/apiAdapters/managedResources/credentialListEditor"
+import type { CredentialListPatch } from "~/services/apiAdapters/managedResources/shared/credentialListEditor"
 
 import type { NewApiFamilyChannelCommand } from "./newApiFamilyChannelEditor"
 

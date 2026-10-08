@@ -9,8 +9,32 @@ import {
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { loginProviderEvidence } from "~/services/accountLogin/providerEvidence"
-import { prepareAutomaticCheckIn } from "~/services/checkin/autoCheckin/automaticDiscovery"
-import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
+import { prepareAutomaticCheckIn } from "~/services/checkin/autoCheckin/discovery/automaticDiscovery"
+import {
+  getSelectedCheckInStatus,
+  inspectAccountCheckIn,
+} from "~/services/checkin/autoCheckin/discovery/inspection"
+import {
+  canAutomaticallyRetryCheckinResult,
+  isRetryableCheckinResult,
+} from "~/services/checkin/autoCheckin/execution/resultPolicy"
+import { accountCheckinRunWorkflow } from "~/services/checkin/autoCheckin/execution/runAccountWorkflow"
+import {
+  mapRunSummaryToProductAnalyticsResult,
+  notifyScheduledRunResult,
+  notifyUiRunCompleted,
+} from "~/services/checkin/autoCheckin/execution/runPresentation"
+import {
+  buildAccountSnapshot,
+  recalculateSummaryFromResults,
+  updateSnapshotWithResult,
+} from "~/services/checkin/autoCheckin/execution/runResults"
+import {
+  executeSelectedCheckIn,
+  inspectSelectedCheckInCompatibility,
+} from "~/services/checkin/autoCheckin/methods"
+import { NON_REPEAT_SAFE_CHECKIN_METHOD_IDS } from "~/services/checkin/autoCheckin/providers/registry"
 import {
   calculateDeterministicCatchUpTrigger,
   calculateDeterministicTriggerForDay,
@@ -19,36 +43,12 @@ import {
   computeNextRetryTriggerTime,
   isMinutesWithinWindow,
   parseTimeToMinutes,
-} from "~/services/checkin/autoCheckin/dailyPlanning"
-import {
-  getSelectedCheckInStatus,
-  inspectAccountCheckIn,
-} from "~/services/checkin/autoCheckin/inspection"
-import {
-  executeSelectedCheckIn,
-  inspectSelectedCheckInCompatibility,
-} from "~/services/checkin/autoCheckin/methods"
-import { NON_REPEAT_SAFE_CHECKIN_METHOD_IDS } from "~/services/checkin/autoCheckin/providers/registry"
+} from "~/services/checkin/autoCheckin/scheduling/dailyPlanning"
 import {
   CHECK_IN_STATUS_REFRESH_OUTCOMES,
   refreshSelectedStatus,
-} from "~/services/checkin/autoCheckin/refresh"
-import {
-  canAutomaticallyRetryCheckinResult,
-  isRetryableCheckinResult,
-} from "~/services/checkin/autoCheckin/resultPolicy"
-import { accountCheckinRunWorkflow } from "~/services/checkin/autoCheckin/runAccountWorkflow"
-import {
-  mapRunSummaryToProductAnalyticsResult,
-  notifyScheduledRunResult,
-  notifyUiRunCompleted,
-} from "~/services/checkin/autoCheckin/runPresentation"
-import {
-  buildAccountSnapshot,
-  recalculateSummaryFromResults,
-  updateSnapshotWithResult,
-} from "~/services/checkin/autoCheckin/runResults"
-import { autoCheckinScheduler } from "~/services/checkin/autoCheckin/schedulerCore"
+} from "~/services/checkin/autoCheckin/scheduling/refresh"
+import { autoCheckinScheduler } from "~/services/checkin/autoCheckin/scheduling/schedulerCore"
 import {
   getAutoCheckinAccountInfo,
   getAutoCheckinStatus,
@@ -60,7 +60,7 @@ import {
   triggerAutoCheckinDailyAlarmNow,
   triggerAutoCheckinRetryAlarmNow,
   updateAutoCheckinSettings,
-} from "~/services/checkin/autoCheckin/schedulerMessaging"
+} from "~/services/checkin/autoCheckin/scheduling/schedulerMessaging"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
@@ -270,10 +270,13 @@ vi.mock("~/services/starPromotion/state", () => ({
  * The scheduler asks this module to record which type a failed site resolves to;
  * tests answer locally instead of probing a site.
  */
-vi.mock("~/services/checkin/autoCheckin/recordSiteTypeObservation", () => ({
-  recordSiteTypeObservationForResult:
-    siteTypeObservationMocks.recordSiteTypeObservationForResult,
-}))
+vi.mock(
+  "~/services/checkin/autoCheckin/discovery/recordSiteTypeObservation",
+  () => ({
+    recordSiteTypeObservationForResult:
+      siteTypeObservationMocks.recordSiteTypeObservationForResult,
+  }),
+)
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {
@@ -312,23 +315,26 @@ vi.mock("~/services/accounts/accountStorage/accountPresentation", () => ({
   },
 }))
 
-vi.mock("~/services/checkin/autoCheckin/refresh", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/services/checkin/autoCheckin/refresh")
-    >()
-  return {
-    ...actual,
-    refreshSelectedStatus: vi.fn(),
-  }
-})
+vi.mock(
+  "~/services/checkin/autoCheckin/scheduling/refresh",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/checkin/autoCheckin/scheduling/refresh")
+      >()
+    return {
+      ...actual,
+      refreshSelectedStatus: vi.fn(),
+    }
+  },
+)
 
 vi.mock("~/services/checkin/autoCheckin/methods", () => ({
   executeSelectedCheckIn: vi.fn(),
   inspectSelectedCheckInCompatibility: vi.fn(),
 }))
 
-vi.mock("~/services/checkin/autoCheckin/automaticDiscovery", () => ({
+vi.mock("~/services/checkin/autoCheckin/discovery/automaticDiscovery", () => ({
   prepareAutomaticCheckIn: vi.fn(),
 }))
 
@@ -339,16 +345,19 @@ vi.mock("~/services/accountLogin/providerEvidence", () => ({
   },
 }))
 
-vi.mock("~/services/checkin/autoCheckin/inspection", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/services/checkin/autoCheckin/inspection")
-    >()
-  return {
-    ...actual,
-    getSelectedCheckInStatus: vi.fn(() => undefined),
-  }
-})
+vi.mock(
+  "~/services/checkin/autoCheckin/discovery/inspection",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/checkin/autoCheckin/discovery/inspection")
+      >()
+    return {
+      ...actual,
+      getSelectedCheckInStatus: vi.fn(() => undefined),
+    }
+  },
+)
 
 vi.mock("~/services/checkin/autoCheckin/storage", () => ({
   autoCheckinStorage: {

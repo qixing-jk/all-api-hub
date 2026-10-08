@@ -10,16 +10,13 @@ const { listLinks, subscribeToChanges } = vi.hoisted(() => ({
   subscribeToChanges: vi.fn(),
 }))
 
-vi.mock("~/services/apiCredentialProfiles/apiCredentialProfileLinks", () => ({
+vi.mock("~/services/apiCredentialProfiles/links", () => ({
   apiCredentialProfileLinks: { list: listLinks },
 }))
 
-vi.mock(
-  "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
-  () => ({
-    subscribeToApiCredentialProfilesChanges: subscribeToChanges,
-  }),
-)
+vi.mock("~/services/apiCredentialProfiles/storage/profiles", () => ({
+  subscribeToApiCredentialProfilesChanges: subscribeToChanges,
+}))
 
 const link = { id: "association-example" } as ApiCredentialProfileLink
 

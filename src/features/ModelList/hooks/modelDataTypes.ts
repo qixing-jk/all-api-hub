@@ -1,11 +1,10 @@
-import { type ModelManagementSource } from "~/features/ModelList/modelManagementSources"
+import { type ModelListAccountErrorType } from "~/features/ModelList/catalog/modelDataStates"
+import { type ModelManagementSource } from "~/features/ModelList/catalog/modelManagementSources"
 import { type AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import type { AccountPricingContext } from "~/services/modelCatalog/loader"
 import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import { type ModelCatalogFailureCategory } from "~/services/modelList/pricingModel"
 import type { DisplaySiteData } from "~/types"
-
-import { type ModelListAccountErrorType } from "../modelDataStates"
 
 export interface UseModelDataProps {
   selectedSource: ModelManagementSource | null

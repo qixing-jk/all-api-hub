@@ -12,7 +12,7 @@ import {
   reloadCurrentTab,
 } from "~/services/accounts/utils/autoDetectUtils"
 import { getBestEffortLoginUrl } from "~/services/accounts/utils/siteRouteResolver"
-import { clearSiteRouteFactsCacheForTests } from "~/services/apiAdapters/newApi/accountRoutes"
+import { clearSiteRouteFactsCacheForTests } from "~/services/apiAdapters/newApi/account/accountRoutes"
 import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 
 const { tMock } = vi.hoisted(() => ({

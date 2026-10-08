@@ -1,12 +1,11 @@
 import { useCallback, useRef } from "react"
 
+import { type AccountBatchVerifyModelItem } from "~/features/ModelList/verification/batchVerificationState"
 import { type AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import {
   fetchDisplayAccountRuntimeKeys,
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
-
-import { type AccountBatchVerifyModelItem } from "../batchVerificationState"
 
 /** Own runtime-key promises for one batch verification session. */
 export function useBatchVerificationRuntimeKeys() {

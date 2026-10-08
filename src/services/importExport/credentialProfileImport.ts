@@ -1,5 +1,5 @@
-import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
-import { coerceApiCredentialProfilesConfig } from "~/services/apiCredentialProfiles/profileConfigCodec"
+import { coerceApiCredentialProfilesConfig } from "~/services/apiCredentialProfiles/storage/configCodec"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
 import {
   IMPORT_SECTION_STRATEGIES,
   type BackupFullV2,

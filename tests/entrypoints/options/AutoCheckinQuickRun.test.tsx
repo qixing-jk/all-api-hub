@@ -9,7 +9,7 @@ import AutoCheckin from "~/entrypoints/options/pages/AutoCheckin"
 import { DevPanel } from "~/features/DevPanel/DevPanel"
 import { DevPanelProvider } from "~/features/DevPanel/DevPanelSectionsContext"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
-import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,

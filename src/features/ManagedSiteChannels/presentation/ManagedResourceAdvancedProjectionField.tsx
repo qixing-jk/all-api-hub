@@ -4,8 +4,8 @@ import { useId } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button, Input } from "~/components/ui"
-import { readResourceList } from "~/features/ResourceEditor/resourceEditorProjection"
-import { ResourceFieldLabel } from "~/features/ResourceEditor/ResourceFieldLabel"
+import { ResourceFieldLabel } from "~/features/ResourceEditor/components/ResourceFieldLabel"
+import { readResourceList } from "~/features/ResourceEditor/model/resourceEditorProjection"
 import type {
   EditableResourceProjection,
   ResourceFieldDescriptor,

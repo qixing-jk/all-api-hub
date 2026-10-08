@@ -13,8 +13,8 @@ import type {
   EditableResourceProjection,
   ResourceFieldIssue,
 } from "~/services/apiAdapters/contracts/resourceNative"
-import { withNewApiAdvancedEditor } from "~/services/apiAdapters/managedResources/newApiAdvancedEditor"
-import { createNewApiEditEditor } from "~/services/apiAdapters/managedResources/newApiEditor"
+import { withNewApiAdvancedEditor } from "~/services/apiAdapters/managedResources/newApi/advancedEditor"
+import { createNewApiEditEditor } from "~/services/apiAdapters/managedResources/newApi/editor"
 import type { NewApiChannel } from "~/types/newApi"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"

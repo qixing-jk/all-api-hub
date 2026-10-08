@@ -7,11 +7,11 @@ import { Badge } from "~/components/ui"
 import {
   MODEL_GROUP_ACCESS_STATES,
   type ModelGroupContext,
-} from "~/features/ModelList/groupContext"
+} from "~/features/ModelList/groups/groupContext"
 import {
   formatGroupLabel,
   resolveKnownGroupRatio,
-} from "~/features/ModelList/groupLabels"
+} from "~/features/ModelList/groups/groupLabels"
 import type { ModelPricing } from "~/services/modelList/pricingModel"
 import { CALCULATED_PRICE_KINDS } from "~/services/modelPricing/pricingConstants"
 import {

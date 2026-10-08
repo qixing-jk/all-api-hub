@@ -318,7 +318,7 @@ vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/apiCredentialProfiles/apiCredentialProfileLinks", () => ({
+vi.mock("~/services/apiCredentialProfiles/links", () => ({
   apiCredentialProfileLinks: {
     list: async () => [],
     capture: async (input: { profile: unknown }) => {

@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { FormField, Input, SearchableSelect } from "~/components/ui"
 import { type useApiCredentialProfileEditor } from "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfileEditor"
-import { API_CREDENTIAL_TELEMETRY_JSON_PATH_FIELDS } from "~/services/apiCredentialProfiles/telemetryConfig"
+import { API_CREDENTIAL_TELEMETRY_JSON_PATH_FIELDS } from "~/services/apiCredentialProfiles/telemetry/config"
 import type { ApiCredentialTelemetryCapabilityMode } from "~/types/apiCredentialProfiles"
 import { API_CREDENTIAL_TELEMETRY_MODES } from "~/types/apiCredentialProfiles"
 

@@ -1,5 +1,5 @@
 import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
-import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
 import { mergeFeatureGuidanceStates } from "~/services/featureGuidance/featureGuidanceState"
 import type {
   BackupFullV2,

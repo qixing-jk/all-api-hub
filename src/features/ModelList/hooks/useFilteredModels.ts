@@ -1,40 +1,39 @@
 import { useCallback, useMemo } from "react"
 
-import { summarizeModelListGroupAccess } from "~/features/ModelList/groupAccessSummary"
-import { deriveGroupAvailability } from "~/features/ModelList/groupAvailability"
+import {
+  MODEL_MANAGEMENT_SOURCE_KINDS,
+  type ModelManagementSource,
+} from "~/features/ModelList/catalog/modelManagementSources"
+import { projectModelListMetadata } from "~/features/ModelList/catalog/modelMetadataProjection"
+import { prepareModelListSources } from "~/features/ModelList/catalog/sourcePreparation"
 import {
   createModelMetadataIndex,
   hasFilterableModelCapabilityMetadata,
   type ModelCapabilitySelectionValue,
-} from "~/features/ModelList/modelCapabilityFilters"
+} from "~/features/ModelList/filtering/modelCapabilityFilters"
 import {
   createModelListFilterPipeline,
   projectModelListVendorFilter,
-} from "~/features/ModelList/modelFiltering"
+} from "~/features/ModelList/filtering/modelFiltering"
+import { type ModelListSortMode } from "~/features/ModelList/filtering/sortModes"
+import { summarizeModelListGroupAccess } from "~/features/ModelList/groups/groupAccessSummary"
+import { deriveGroupAvailability } from "~/features/ModelList/groups/groupAvailability"
 import {
   getModelListSourceIdentityKey,
   type ModelListItem,
-} from "~/features/ModelList/modelListItems"
-import {
-  MODEL_MANAGEMENT_SOURCE_KINDS,
-  type ModelManagementSource,
-} from "~/features/ModelList/modelManagementSources"
-import { projectModelListMetadata } from "~/features/ModelList/modelMetadataProjection"
+} from "~/features/ModelList/presentation/modelListItems"
+import { type ModelListBillingMode } from "~/features/ModelList/pricing/billingModes"
+import { type ModelPriceComparisonWeights } from "~/features/ModelList/pricing/priceComparison"
 import {
   calculateModelListPrices,
   rankModelListPrices,
-} from "~/features/ModelList/priceEvaluation"
-import { type ModelListSortMode } from "~/features/ModelList/sortModes"
-import { prepareModelListSources } from "~/features/ModelList/sourcePreparation"
+} from "~/features/ModelList/pricing/priceEvaluation"
 import { normalizeGroupNames } from "~/services/modelCatalog/groupFacts"
 import type { AccountPricingContext } from "~/services/modelCatalog/loader"
 import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import type { PricingScenario } from "~/services/modelPricing/pricingPlan"
 import type { ModelMetadata } from "~/services/models/modelMetadata/types"
 import { type ModelVendorFilterValue } from "~/services/models/modelVendor"
-
-import { type ModelListBillingMode } from "../billingModes"
-import { type ModelPriceComparisonWeights } from "../priceComparison"
 
 const EMPTY_EXCLUDED_GROUPS: Record<string, string[]> = {}
 const EMPTY_ACCOUNT_IDS: string[] = []

@@ -3,9 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Tabs } from "~/components/ui"
 import ModelList from "~/entrypoints/options/pages/ModelList"
-import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
-import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groupContext"
-import type { CalculatedModelItem } from "~/features/ModelList/modelListItems"
 import {
   createAccountSource,
   createAllAccountsSource,
@@ -13,9 +10,12 @@ import {
   deriveModelListSourceCapabilities,
   EMPTY_MODEL_MANAGEMENT_CAPABILITIES,
   MODEL_LIST_GROUP_SEMANTICS,
-} from "~/features/ModelList/modelManagementSources"
-import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
-import { DEFAULT_MODEL_LIST_VERIFICATION_RESULT_FILTERS } from "~/features/ModelList/verificationResultFilters"
+} from "~/features/ModelList/catalog/modelManagementSources"
+import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/filtering/sortModes"
+import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groups/groupContext"
+import type { CalculatedModelItem } from "~/features/ModelList/presentation/modelListItems"
+import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/pricing/billingModes"
+import { DEFAULT_MODEL_LIST_VERIFICATION_RESULT_FILTERS } from "~/features/ModelList/verification/verificationResultFilters"
 import { CALCULATED_PRICE_KINDS } from "~/services/modelPricing/pricingConstants"
 import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
 import {

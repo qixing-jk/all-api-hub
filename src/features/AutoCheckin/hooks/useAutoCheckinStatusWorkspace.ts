@@ -4,7 +4,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { loginProviderEvidence } from "~/services/accountLogin/providerEvidence"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { refreshAutoCheckinAccountSnapshots } from "~/services/checkin/autoCheckin/accountSnapshot"
-import { isAutomaticCheckInConfiguredForAccount } from "~/services/checkin/autoCheckin/inspection"
+import { isAutomaticCheckInConfiguredForAccount } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import {
@@ -100,7 +100,7 @@ export function useAutoCheckinStatusWorkspace(autoCheckinEnabled: boolean) {
       let displayStatus = response.success ? response.data : null
       if (import.meta.env.DEV && response.success) {
         const { appendDevCheckInFixtureSnapshots } = await import(
-          "~/services/checkin/autoCheckin/devDiscoveryFixtures"
+          "~/services/checkin/autoCheckin/discovery/devDiscoveryFixtures"
         )
         const snapshots = await appendDevCheckInFixtureSnapshots(
           displayStatus?.accountsSnapshot ?? [],

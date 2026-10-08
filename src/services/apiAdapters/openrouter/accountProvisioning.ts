@@ -9,7 +9,7 @@ import {
 import { SITE_TYPES } from "~/constants/siteType"
 import { OPENROUTER_DISPLAY_NAME } from "~/services/accountSiteDefinitions/identifiers"
 import { validateManagementKey } from "~/services/apiService/openrouter"
-import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"

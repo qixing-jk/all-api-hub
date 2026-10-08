@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { aihubmixModelPricing } from "~/services/apiAdapters/aihubmix/modelPricing"
-import { createNewApiModelPricing } from "~/services/apiAdapters/newApi/modelPricing"
+import { createNewApiModelPricing } from "~/services/apiAdapters/newApi/pricing/modelPricing"
 import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import { MODEL_VENDOR_EVIDENCE_KINDS } from "~/services/models/modelDescriptor"
 import { AuthTypeEnum } from "~/types"

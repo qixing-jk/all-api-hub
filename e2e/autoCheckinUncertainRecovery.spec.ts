@@ -3,7 +3,7 @@ import type { Page, Worker } from "@playwright/test"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
-import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import {
   AUTO_CHECKIN_SCHEDULE_MODE,

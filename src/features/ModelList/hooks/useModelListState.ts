@@ -1,33 +1,32 @@
 import { useState } from "react"
 
+import type { ModelCapabilitySelectionValue } from "~/features/ModelList/filtering/modelCapabilityFilters"
+import {
+  MODEL_LIST_SORT_MODES,
+  type ModelListSortMode,
+} from "~/features/ModelList/filtering/sortModes"
+import {
+  MODEL_LIST_BILLING_MODES,
+  type ModelListBillingMode,
+} from "~/features/ModelList/pricing/billingModes"
 import {
   DEFAULT_MODEL_PRICE_COMPARISON_PRESET_ID,
   DEFAULT_MODEL_PRICE_COMPARISON_WEIGHTS,
   type ModelPriceComparisonPresetId,
   type ModelPriceComparisonWeights,
-} from "~/features/ModelList/priceComparison"
+} from "~/features/ModelList/pricing/priceComparison"
 import {
   createDefaultPricingScenario,
   type ModelPricingScenarioSettings,
-} from "~/features/ModelList/pricingScenario"
-import {
-  MODEL_LIST_SORT_MODES,
-  type ModelListSortMode,
-} from "~/features/ModelList/sortModes"
+} from "~/features/ModelList/pricing/pricingScenario"
 import {
   DEFAULT_MODEL_LIST_VERIFICATION_RESULT_FILTERS,
   type ModelListVerificationResultFilter,
-} from "~/features/ModelList/verificationResultFilters"
+} from "~/features/ModelList/verification/verificationResultFilters"
 import {
   MODEL_VENDOR_FILTER_VALUES,
   type ModelVendorFilterValue,
 } from "~/services/models/modelVendor"
-
-import {
-  MODEL_LIST_BILLING_MODES,
-  type ModelListBillingMode,
-} from "../billingModes"
-import type { ModelCapabilitySelectionValue } from "../modelCapabilityFilters"
 
 /**
  * Manages view state for the model list page.

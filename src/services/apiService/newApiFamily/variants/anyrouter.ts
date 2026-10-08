@@ -12,7 +12,7 @@ import {
 } from "~/services/apiService/newApiFamily/default/accountData"
 import { getTodayTimestampRange } from "~/services/apiService/newApiFamily/default/accountDataUtils"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/refresh"
+import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/scheduling/refresh"
 import { SiteHealthStatus, type CheckInConfig } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"

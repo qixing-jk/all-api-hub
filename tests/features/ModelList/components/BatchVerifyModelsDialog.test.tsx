@@ -4,19 +4,19 @@ import type React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import {
-  MODEL_LIST_BATCH_VERIFY_CONCURRENCY,
-  MODEL_LIST_BATCH_VERIFY_PERSIST_FLUSH_SIZE,
-} from "~/features/ModelList/batchVerification"
-import {
-  deriveBatchVerifyRowStatus,
-  getBatchVerifyFailureLogIds,
-} from "~/features/ModelList/batchVerificationState"
 import { BatchVerifyModelsDialog } from "~/features/ModelList/components/BatchVerifyModelsDialog"
 import {
   getBatchVerifyModelCheckboxTestId,
   getBatchVerifyRowTestId,
 } from "~/features/ModelList/testIds"
+import {
+  MODEL_LIST_BATCH_VERIFY_CONCURRENCY,
+  MODEL_LIST_BATCH_VERIFY_PERSIST_FLUSH_SIZE,
+} from "~/features/ModelList/verification/batchVerification"
+import {
+  deriveBatchVerifyRowStatus,
+  getBatchVerifyFailureLogIds,
+} from "~/features/ModelList/verification/batchVerificationState"
 import {
   buildAccountRuntimeKeyAccount,
   buildServiceCredentialRuntimeKey,

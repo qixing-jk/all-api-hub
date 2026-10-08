@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 
-import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
+import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/catalog/modelManagementSources"
 
 import type { UseModelDataProps, UseModelDataReturn } from "./modelDataTypes"
 import { useAllAccountsModelData } from "./useAllAccountsModelData"

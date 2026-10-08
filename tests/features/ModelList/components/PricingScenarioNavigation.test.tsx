@@ -6,7 +6,7 @@ import {
   getPricingConditionTargets,
   PricingScenarioNavigation,
   usePricingScenarioNavigation,
-} from "~/features/ModelList/pricingScenarioNavigation"
+} from "~/features/ModelList/pricing/pricingScenarioNavigation"
 import { PRICING_RANGE_AXES } from "~/services/modelPricing/pricingConstants"
 
 afterEach(() => vi.useRealTimers())

@@ -1,0 +1,1946 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
+import { SITE_TYPES } from "~/constants/siteType"
+import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/accountRuntimeKeys"
+import {
+  API_CREDENTIAL_PROFILE_CAPTURE_STATUSES,
+  API_CREDENTIAL_PROFILE_LINK_RESOLUTION_STATUSES,
+} from "~/services/apiCredentialProfiles/links/contracts"
+import {
+  coerceApiCredentialProfilesConfig,
+  mergeApiCredentialProfilesConfigs,
+} from "~/services/apiCredentialProfiles/storage/configCodec"
+import {
+  apiCredentialProfilesStorage,
+  subscribeToApiCredentialProfilesChanges,
+} from "~/services/apiCredentialProfiles/storage/profiles"
+import { isSupportedApiCredentialTelemetryEndpoint } from "~/services/apiCredentialProfiles/telemetry/config"
+import { API_CREDENTIAL_PROFILES_STORAGE_KEYS } from "~/services/core/storageKeys"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
+import { SiteHealthStatus } from "~/types"
+import {
+  API_CREDENTIAL_PROFILE_LINK_SOURCES,
+  API_CREDENTIAL_PROFILE_LINK_STATES,
+  API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+} from "~/types/apiCredentialProfiles"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
+
+const storageData = new Map<string, any>()
+
+vi.mock("@plasmohq/storage", () => {
+  class Storage {
+    async set(key: string, value: any) {
+      storageData.set(key, value)
+    }
+
+    async get(key: string) {
+      return storageData.get(key)
+    }
+
+    async remove(key: string) {
+      storageData.delete(key)
+    }
+  }
+
+  return { Storage }
+})
+
+describe("apiCredentialProfilesStorage additional flows", () => {
+  it("stores the protocol root and leaves provider-owned path versions alone", () => {
+    const stored = coerceApiCredentialProfilesConfig({
+      version: 5,
+      profiles: [
+        {
+          id: "legacy",
+          name: "Legacy",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://old.example/api",
+          apiKey: "sk-old",
+        },
+        {
+          id: "versioned",
+          name: "Versioned",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://old.example/api/v1",
+          apiKey: "sk-versioned",
+        },
+      ],
+    })
+    expect(stored.version).toBe(API_CREDENTIAL_PROFILES_CONFIG_VERSION)
+    expect(stored.profiles[0]?.baseUrl).toBe("https://old.example/api")
+    // The version each consumer appends is derived, never stored: keeping one
+    // shape is what lets Claude Code and the OpenAI SDK share a profile.
+    expect(stored.profiles[1]?.baseUrl).toBe("https://old.example/api")
+
+    const current = coerceApiCredentialProfilesConfig({
+      version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+      profiles: [
+        {
+          id: "ark",
+          name: "Ark",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://ark.example/api/v3",
+          apiKey: "sk-ark",
+        },
+      ],
+    })
+    expect(current.profiles[0]?.baseUrl).toBe("https://ark.example/api/v3")
+  })
+
+  const originalBrowser = (globalThis as any).browser
+  let addListenerMock: ReturnType<typeof vi.fn>
+  let removeListenerMock: ReturnType<typeof vi.fn>
+
+  beforeEach(async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-03-30T00:00:00.000Z"))
+    storageData.clear()
+    await apiCredentialProfilesStorage.clearAllData()
+
+    addListenerMock = vi.fn()
+    removeListenerMock = vi.fn()
+    ;(globalThis as any).browser = {
+      storage: {
+        onChanged: {
+          addListener: addListenerMock,
+          removeListener: removeListenerMock,
+        },
+      },
+    }
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    ;(globalThis as any).browser = originalBrowser
+  })
+
+  it("falls back to JSON cloning when structuredClone is unavailable during writes", async () => {
+    const originalStructuredClone = globalThis.structuredClone
+    ;(globalThis as any).structuredClone = undefined
+
+    try {
+      await apiCredentialProfilesStorage.importConfig({
+        profiles: [
+          {
+            id: "fallback-clone",
+            name: "Fallback Clone",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://clone.example.com/v1/models",
+            apiKey: "sk-clone",
+            tagIds: ["tag-a"],
+            notes: "persisted",
+          },
+        ],
+      })
+
+      const created = await apiCredentialProfilesStorage.createProfile({
+        name: "New Profile",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://new.example.com/v1/models",
+        apiKey: "sk-new",
+      })
+
+      expect(created.id).toBeTruthy()
+      await expect(
+        apiCredentialProfilesStorage.listProfiles(),
+      ).resolves.toEqual([
+        expect.objectContaining({ id: "fallback-clone" }),
+        expect.objectContaining({ name: "New Profile" }),
+      ])
+    } finally {
+      ;(globalThis as any).structuredClone = originalStructuredClone
+    }
+  })
+
+  it("coerces imported configs by dropping invalid rows and normalizing names", () => {
+    const coerced = coerceApiCredentialProfilesConfig(
+      {
+        profiles: [
+          {
+            id: "row-1",
+            apiType: "unsupported",
+            baseUrl: "example.com/v1/models",
+            apiKey: " sk-1 ",
+            name: " ",
+            tagIds: [" t1 ", "t1", ""],
+            notes: " note ",
+            expiresAt: "1796083200000",
+            createdAt: 100,
+            updatedAt: 200,
+          },
+          {
+            id: "invalid-empty",
+            apiType: API_TYPES.OPENAI,
+            baseUrl: "",
+            apiKey: "  ",
+            name: "Invalid",
+          },
+        ],
+      },
+      { now: 12345 },
+    )
+
+    expect(coerced.profiles).toEqual([
+      expect.objectContaining({
+        id: "row-1",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://example.com",
+        apiKey: "sk-1",
+        name: "https://example.com",
+        tagIds: ["t1"],
+        notes: "note",
+        expiresAt: 1796083200000,
+        createdAt: 100,
+        updatedAt: 200,
+      }),
+    ])
+    expect(coerced.lastUpdated).toBe(12345)
+  })
+
+  describe("sourceUrl", () => {
+    it("persists a trimmed HTTP(S) source URL on create", async () => {
+      const created = await apiCredentialProfilesStorage.createProfile({
+        name: "Shared key",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://shared.example.com/v1",
+        apiKey: "sk-shared",
+        sourceUrl: "  https://forum.example.com/t/123?p=2  ",
+      })
+
+      expect(created.sourceUrl).toBe("https://forum.example.com/t/123?p=2")
+      await expect(
+        apiCredentialProfilesStorage.getProfileById(created.id),
+      ).resolves.toEqual(
+        expect.objectContaining({
+          sourceUrl: "https://forum.example.com/t/123?p=2",
+        }),
+      )
+    })
+
+    it("does not store empty, malformed, or non-HTTP(S) source URLs", async () => {
+      const created = await apiCredentialProfilesStorage.createProfile({
+        name: "No source",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://nosource.example.com/v1",
+        apiKey: "sk-nosource",
+        sourceUrl: "ftp://forum.example.com/t/1",
+      })
+
+      expect(created).toEqual(
+        expect.not.objectContaining({ sourceUrl: expect.anything() }),
+      )
+
+      const empty = await apiCredentialProfilesStorage.createProfile({
+        name: "Empty source",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://empty.example.com/v1",
+        apiKey: "sk-empty",
+        sourceUrl: "   ",
+      })
+      expect(empty).toEqual(
+        expect.not.objectContaining({ sourceUrl: expect.anything() }),
+      )
+
+      const malformed = await apiCredentialProfilesStorage.createProfile({
+        name: "Malformed source",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://malformed.example.com/v1",
+        apiKey: "sk-malformed",
+        sourceUrl: "not a url",
+      })
+      expect(malformed).toEqual(
+        expect.not.objectContaining({ sourceUrl: expect.anything() }),
+      )
+    })
+
+    it("updates and clears the source URL through updateProfile", async () => {
+      const profile = await apiCredentialProfilesStorage.createProfile({
+        name: "Updatable source",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: "https://updatable.example.com/v1",
+        apiKey: "sk-updatable",
+        sourceUrl: "https://a.example.com/post",
+      })
+
+      const updated = await apiCredentialProfilesStorage.updateProfile(
+        profile.id,
+        { sourceUrl: "https://b.example.com/new-post" },
+      )
+      expect(updated.sourceUrl).toBe("https://b.example.com/new-post")
+
+      const preservedOnInvalid =
+        await apiCredentialProfilesStorage.updateProfile(profile.id, {
+          sourceUrl: "invalid-url",
+        })
+      expect(preservedOnInvalid.sourceUrl).toBe(
+        "https://b.example.com/new-post",
+      )
+
+      const cleared = await apiCredentialProfilesStorage.updateProfile(
+        profile.id,
+        { sourceUrl: "  " },
+      )
+      expect(cleared).toEqual(
+        expect.not.objectContaining({ sourceUrl: expect.anything() }),
+      )
+    })
+
+    it("coerces stored source URLs on read, dropping invalid values", () => {
+      const coerced = coerceApiCredentialProfilesConfig({
+        profiles: [
+          {
+            id: "row-source",
+            name: "Source row",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-source",
+            sourceUrl: "  https://forum.example.com/t/9?b=1  ",
+          },
+          {
+            id: "row-invalid-source",
+            name: "Invalid source row",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://invalid.example.com",
+            apiKey: "sk-invalid-source",
+            sourceUrl: "javascript:alert(1)",
+          },
+        ],
+      })
+
+      expect(coerced.profiles[0]).toEqual(
+        expect.objectContaining({
+          sourceUrl: "https://forum.example.com/t/9?b=1",
+        }),
+      )
+      expect(coerced.profiles[1]).toEqual(
+        expect.not.objectContaining({ sourceUrl: expect.anything() }),
+      )
+    })
+
+    it("keeps an existing source URL when a duplicate re-save has none, and prefers a new one when present", async () => {
+      const seen = await apiCredentialProfilesStorage.importConfig({
+        profiles: [
+          {
+            id: "original",
+            name: "Original",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://original.example.com",
+            apiKey: "sk-dupe",
+            notes: "",
+            createdAt: 1,
+            updatedAt: 10,
+          },
+          {
+            id: "with-source",
+            name: "With source",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://source.example.com",
+            apiKey: "sk-keep-source",
+            notes: "",
+            createdAt: 1,
+            updatedAt: 10,
+            sourceUrl: "https://forum.example.com/a",
+          },
+        ],
+      })
+
+      expect(seen.profiles).toHaveLength(2)
+
+      // Duplicate re-save without a source must not wipe the recorded one.
+      const mergedWithoutSource =
+        await apiCredentialProfilesStorage.mergeConfig({
+          profiles: [
+            {
+              name: "Re-save",
+              apiType: API_TYPES.OPENAI_COMPATIBLE,
+              baseUrl: "https://source.example.com",
+              apiKey: "sk-keep-source",
+              notes: "",
+              updatedAt: 20,
+            },
+          ],
+        })
+      const kept = mergedWithoutSource.profiles.find(
+        (profile) => profile.apiKey === "sk-keep-source",
+      )
+      expect(kept?.sourceUrl).toBe("https://forum.example.com/a")
+
+      // Duplicate re-save from a newer page adopts the newer source.
+      const mergedWithNewSource =
+        await apiCredentialProfilesStorage.mergeConfig({
+          profiles: [
+            {
+              name: "Re-save new page",
+              apiType: API_TYPES.OPENAI_COMPATIBLE,
+              baseUrl: "https://source.example.com",
+              apiKey: "sk-keep-source",
+              notes: "",
+              updatedAt: 30,
+              sourceUrl: "https://forum.example.com/b?tab=new",
+            },
+          ],
+        })
+      const updated = mergedWithNewSource.profiles.find(
+        (profile) => profile.apiKey === "sk-keep-source",
+      )
+      expect(updated?.sourceUrl).toBe("https://forum.example.com/b?tab=new")
+    })
+
+    it("merges a supplied source URL into an existing profile via createProfileWithCreationStatus", async () => {
+      const initial =
+        await apiCredentialProfilesStorage.createProfileWithCreationStatus({
+          name: "Initial Profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://merge-create.example.com/v1",
+          apiKey: "sk-merge-create",
+          sourceUrl: "https://forum.example.com/initial",
+        })
+      expect(initial.isNew).toBe(true)
+      expect(initial.profile.sourceUrl).toBe(
+        "https://forum.example.com/initial",
+      )
+
+      // Re-save without sourceUrl preserves the existing source URL
+      const resavedWithoutSource =
+        await apiCredentialProfilesStorage.createProfileWithCreationStatus({
+          name: "Resaved Profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://merge-create.example.com/v1",
+          apiKey: "sk-merge-create",
+        })
+      expect(resavedWithoutSource.isNew).toBe(false)
+      expect(resavedWithoutSource.profile.sourceUrl).toBe(
+        "https://forum.example.com/initial",
+      )
+
+      // Re-save with a new valid sourceUrl updates the profile
+      const resavedWithNewSource =
+        await apiCredentialProfilesStorage.createProfileWithCreationStatus({
+          name: "Updated Source Profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://merge-create.example.com/v1",
+          apiKey: "sk-merge-create",
+          sourceUrl: "https://forum.example.com/updated",
+        })
+      expect(resavedWithNewSource.isNew).toBe(false)
+      expect(resavedWithNewSource.profile.sourceUrl).toBe(
+        "https://forum.example.com/updated",
+      )
+
+      const stored = await apiCredentialProfilesStorage.getProfileById(
+        initial.profile.id,
+      )
+      expect(stored?.sourceUrl).toBe("https://forum.example.com/updated")
+    })
+
+    it("merges a supplied source URL into an existing profile via captureProfile even when already linked", async () => {
+      const locator = {
+        source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
+        accountId: "acc-1",
+        siteType: SITE_TYPES.NEW_API,
+        tokenId: 1,
+      } as const
+
+      const firstCapture = await apiCredentialProfilesStorage.captureProfile({
+        profile: {
+          name: "Capture Initial",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://capture-merge.example.com/v1",
+          apiKey: "sk-capture-merge",
+          sourceUrl: "https://forum.example.com/capture-initial",
+        },
+        locator,
+        linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.CreationResponse,
+      })
+      expect(firstCapture.status).toBe(
+        API_CREDENTIAL_PROFILE_CAPTURE_STATUSES.Captured,
+      )
+      expect(firstCapture.profile.sourceUrl).toBe(
+        "https://forum.example.com/capture-initial",
+      )
+
+      // Re-capture same pair with a new source URL
+      const secondCapture = await apiCredentialProfilesStorage.captureProfile({
+        profile: {
+          name: "Capture Updated",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://capture-merge.example.com/v1",
+          apiKey: "sk-capture-merge",
+          sourceUrl: "https://forum.example.com/capture-updated",
+        },
+        locator,
+        linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.CreationResponse,
+      })
+      expect(secondCapture.status).toBe(
+        API_CREDENTIAL_PROFILE_CAPTURE_STATUSES.Captured,
+      )
+      expect(secondCapture.profile.sourceUrl).toBe(
+        "https://forum.example.com/capture-updated",
+      )
+
+      const stored = await apiCredentialProfilesStorage.getProfileById(
+        firstCapture.profile.id,
+      )
+      expect(stored?.sourceUrl).toBe(
+        "https://forum.example.com/capture-updated",
+      )
+    })
+  })
+
+  it("coerces malformed rows with generated ids, fallback timestamps, and trimmed notes", () => {
+    const coerced = coerceApiCredentialProfilesConfig(
+      {
+        version: "bad",
+        lastUpdated: 0,
+        profiles: [
+          null,
+          {
+            id: "   ",
+            apiType: API_TYPES.ANTHROPIC,
+            baseUrl: "https://anthropic.example.com/v1/messages",
+            apiKey: " sk-anthropic ",
+            name: 42,
+            notes: null,
+            expiresAt: "not-a-date",
+            createdAt: "bad",
+            updatedAt: "bad",
+            tagIds: [" team-a ", 7, "team-a", "team-b"],
+          },
+        ],
+      },
+      { now: 54321 },
+    )
+
+    expect(coerced.version).toBe(API_CREDENTIAL_PROFILES_CONFIG_VERSION)
+    expect(coerced.lastUpdated).toBe(54321)
+    expect(coerced.profiles).toEqual([
+      expect.objectContaining({
+        id: expect.any(String),
+        apiType: API_TYPES.ANTHROPIC,
+        baseUrl: "https://anthropic.example.com",
+        apiKey: "sk-anthropic",
+        name: "https://anthropic.example.com",
+        notes: "",
+        createdAt: 54321,
+        updatedAt: 54321,
+        tagIds: ["team-a", "team-b"],
+      }),
+    ])
+    expect(coerced.profiles[0]).toEqual(
+      expect.not.objectContaining({
+        expiresAt: expect.anything(),
+      }),
+    )
+  })
+
+  it("merges incoming configs using identity de-dupe and refreshes lastUpdated", () => {
+    const merged = mergeApiCredentialProfilesConfigs({
+      now: 67890,
+      local: {
+        version: 1,
+        lastUpdated: 1,
+        profiles: [
+          {
+            id: "local-1",
+            name: "Local",
+            apiType: API_TYPES.OPENAI,
+            baseUrl: "https://example.com/v1",
+            apiKey: "sk-1",
+            tagIds: ["local"],
+            notes: "",
+            createdAt: 1,
+            updatedAt: 10,
+          },
+        ],
+      },
+      incoming: {
+        version: 1,
+        lastUpdated: 2,
+        profiles: [
+          {
+            id: "incoming-1",
+            name: "Incoming",
+            apiType: API_TYPES.OPENAI,
+            baseUrl: "https://example.com",
+            apiKey: "sk-1",
+            tagIds: ["remote"],
+            notes: "",
+            createdAt: 2,
+            updatedAt: 20,
+          },
+          {
+            id: "incoming-2",
+            name: "Other",
+            apiType: API_TYPES.GOOGLE,
+            baseUrl: "https://generativelanguage.googleapis.com/v1beta/models",
+            apiKey: "AIza-1",
+            tagIds: [],
+            notes: "",
+            createdAt: 3,
+            updatedAt: 30,
+          },
+        ],
+      },
+    })
+
+    expect(merged.lastUpdated).toBe(67890)
+    expect(merged.profiles).toHaveLength(2)
+    expect(
+      merged.profiles.find((profile) => profile.id === "incoming-1"),
+    ).toEqual(
+      expect.objectContaining({
+        tagIds: ["remote", "local"],
+      }),
+    )
+  })
+
+  it("rejects future incoming config versions before merge or persistence", async () => {
+    const persisted = {
+      version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+      profiles: [],
+      links: [],
+      linkTombstones: [],
+      lastUpdated: 1,
+    }
+    storageData.set(
+      API_CREDENTIAL_PROFILES_STORAGE_KEYS.API_CREDENTIAL_PROFILES,
+      persisted,
+    )
+    const futureConfig = {
+      version: API_CREDENTIAL_PROFILES_CONFIG_VERSION + 1,
+      profiles: [],
+      futureField: { preserve: true },
+      lastUpdated: 2,
+    }
+
+    expect(() =>
+      mergeApiCredentialProfilesConfigs({
+        local: persisted,
+        incoming: futureConfig,
+        now: 3,
+      }),
+    ).toThrow("Unsupported API credential profiles config version")
+    await expect(
+      apiCredentialProfilesStorage.mergeConfig(futureConfig),
+    ).rejects.toThrow("Unsupported API credential profiles config version")
+    expect(
+      storageData.get(
+        API_CREDENTIAL_PROFILES_STORAGE_KEYS.API_CREDENTIAL_PROFILES,
+      ),
+    ).toEqual(persisted)
+  })
+
+  it("coerces telemetry config and snapshot fields for backup compatibility", () => {
+    const coerced = coerceApiCredentialProfilesConfig(
+      {
+        version: 5,
+        lastUpdated: 1000,
+        profiles: [
+          {
+            id: "profile-1",
+            name: "Profile",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-1",
+            telemetryConfig: {
+              mode: "customReadOnlyEndpoint",
+              customEndpoint: {
+                endpoint: "/usage",
+                jsonPaths: {
+                  balanceUsd: "data.balance",
+                  todayRequests: "data.today.requests",
+                },
+              },
+            },
+            telemetrySnapshot: {
+              health: { status: SiteHealthStatus.Healthy },
+              lastSyncTime: 1000,
+              lastSuccessTime: 1000,
+              balanceUsd: "12.5",
+              // These transient v6-development fields were never released and
+              // must not be resurrected by the published v5 migration.
+              balance: { amount: 999, currency: "USD" },
+              quota: { windows: [{ type: "weekly", remaining: 999 }] },
+              todayTokens: { upload: "100", download: 50 },
+              models: { count: 2, preview: ["gpt-4o", "", 1] },
+              attempts: [
+                {
+                  source: "newApiTokenUsage",
+                  endpoint: "/api/usage/token/",
+                  status: "success",
+                  message: "ok",
+                },
+              ],
+            },
+          },
+        ],
+      },
+      { now: 12345 },
+    )
+
+    expect(coerced.profiles[0]).toEqual(
+      expect.objectContaining({
+        telemetryConfig: {
+          mode: "customReadOnlyEndpoint",
+          customEndpoint: {
+            endpoint: "/usage",
+            jsonPaths: {
+              balanceUsd: "data.balance",
+              todayRequests: "data.today.requests",
+            },
+          },
+        },
+        telemetrySnapshot: expect.objectContaining({
+          lastSyncTime: 1000,
+          facts: {
+            balances: [
+              {
+                amount: 12.5,
+                unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+                semantics: "legacy",
+              },
+            ],
+            usage: {
+              todayTokens: {
+                upload: 100,
+                download: 50,
+                unit: { kind: "count", code: "tokens" },
+              },
+            },
+            models: { count: 2, preview: ["gpt-4o", ""] },
+          },
+          attempts: [
+            {
+              source: "newApiTokenUsage",
+              endpoint: "/api/usage/token/",
+              status: "success",
+              message: "ok",
+            },
+          ],
+        }),
+      }),
+    )
+  })
+
+  it("normalizes valid custom telemetry endpoint details with shared helpers", () => {
+    const coerced = coerceApiCredentialProfilesConfig(
+      {
+        profiles: [
+          {
+            id: "profile-custom-normalized",
+            name: "Normalized Custom",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com/v1/models",
+            apiKey: "sk-custom",
+            telemetryConfig: {
+              mode: "customReadOnlyEndpoint",
+              customEndpoint: {
+                endpoint: " https://example.com/usage?cursor=1 ",
+                bearerToken: " dedicated-telemetry-token ",
+                jsonPaths: {
+                  balanceUsd: " data. balance ",
+                },
+              },
+            },
+          },
+        ],
+      },
+      { now: 12345 },
+    )
+
+    expect(coerced.profiles[0]).toEqual(
+      expect.objectContaining({
+        baseUrl: "https://example.com",
+        telemetryConfig: {
+          mode: "customReadOnlyEndpoint",
+          customEndpoint: {
+            endpoint: "https://example.com/usage?cursor=1",
+            bearerToken: "dedicated-telemetry-token",
+            jsonPaths: {
+              balanceUsd: "data.balance",
+            },
+          },
+        },
+      }),
+    )
+  })
+
+  it("drops persisted quota windows with impossible remaining percentages", () => {
+    const coerced = coerceApiCredentialProfilesConfig(
+      {
+        profiles: [
+          {
+            id: "profile-invalid-quota",
+            name: "Invalid quota",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-invalid-quota",
+            telemetrySnapshot: {
+              health: { status: SiteHealthStatus.Healthy },
+              lastSyncTime: 1000,
+              facts: {
+                quota: {
+                  windows: [
+                    {
+                      type: "weekly",
+                      unit: { kind: "percent" },
+                      remainingPercent: 101,
+                    },
+                  ],
+                },
+              },
+              attempts: [],
+            },
+          },
+        ],
+      },
+      { now: 12345 },
+    )
+
+    expect(
+      atIndex(coerced.profiles, 0).telemetrySnapshot?.facts?.quota,
+    ).toBeUndefined()
+  })
+
+  it("keeps cross-origin HTTP(S) custom telemetry endpoint details", () => {
+    const coerced = coerceApiCredentialProfilesConfig(
+      {
+        profiles: [
+          {
+            id: "profile-custom-cross-origin",
+            name: "Cross Origin Custom",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-custom",
+            telemetryConfig: {
+              mode: "customReadOnlyEndpoint",
+              customEndpoint: {
+                endpoint: "https://telemetry.example.com/usage",
+                jsonPaths: {
+                  balanceUsd: "data.balance",
+                },
+              },
+            },
+          },
+        ],
+      },
+      { now: 12345 },
+    )
+
+    expect(coerced.profiles[0]).toEqual(
+      expect.objectContaining({
+        telemetryConfig: {
+          mode: "customReadOnlyEndpoint",
+          customEndpoint: {
+            endpoint: "https://telemetry.example.com/usage",
+            jsonPaths: {
+              balanceUsd: "data.balance",
+            },
+          },
+        },
+      }),
+    )
+  })
+
+  it("drops incomplete custom telemetry endpoint details while keeping the selected mode", () => {
+    const coerced = coerceApiCredentialProfilesConfig(
+      {
+        profiles: [
+          {
+            id: "profile-custom-incomplete",
+            name: "Incomplete Custom",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-custom",
+            telemetryConfig: {
+              mode: "customReadOnlyEndpoint",
+              customEndpoint: {
+                endpoint: "   ",
+                jsonPaths: {
+                  balanceUsd: "   ",
+                },
+              },
+            },
+          },
+        ],
+      },
+      { now: 12345 },
+    )
+
+    expect(coerced.profiles[0]).toEqual(
+      expect.objectContaining({
+        telemetryConfig: {
+          mode: "customReadOnlyEndpoint",
+        },
+      }),
+    )
+  })
+
+  it("rejects non-HTTP(S) custom telemetry endpoints", () => {
+    expect(
+      isSupportedApiCredentialTelemetryEndpoint(
+        "https://example.com/root",
+        "ftp://telemetry.example.com/usage/read-only",
+      ),
+    ).toBe(false)
+  })
+
+  it("rejects protocol-relative custom telemetry endpoints", () => {
+    expect(
+      isSupportedApiCredentialTelemetryEndpoint(
+        "https://example.com/root",
+        "//telemetry.example.com/usage/read-only",
+      ),
+    ).toBe(false)
+  })
+
+  it("merges telemetry snapshots by newest successful query without changing identity winner", () => {
+    const merged = mergeApiCredentialProfilesConfigs({
+      now: 67890,
+      local: {
+        version: 2,
+        lastUpdated: 1,
+        profiles: [
+          {
+            id: "local-1",
+            name: "Local",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-1",
+            tagIds: ["local"],
+            notes: "",
+            createdAt: 1,
+            updatedAt: 10,
+            telemetryConfig: { mode: "auto" },
+            telemetrySnapshot: {
+              health: { status: SiteHealthStatus.Healthy },
+              lastSyncTime: 5000,
+              lastSuccessTime: 5000,
+              balanceUsd: 1,
+              attempts: [],
+            },
+          },
+        ],
+      },
+      incoming: {
+        version: 2,
+        lastUpdated: 2,
+        profiles: [
+          {
+            id: "incoming-1",
+            name: "Incoming",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-1",
+            tagIds: ["remote"],
+            notes: "",
+            createdAt: 2,
+            updatedAt: 20,
+            telemetryConfig: { mode: "newApiTokenUsage" },
+            telemetrySnapshot: {
+              health: { status: SiteHealthStatus.Healthy },
+              lastSyncTime: 9000,
+              lastSuccessTime: 9000,
+              balanceUsd: 9,
+              attempts: [],
+            },
+          },
+        ],
+      },
+    })
+
+    expect(merged.profiles).toHaveLength(1)
+    expect(merged.profiles[0]).toEqual(
+      expect.objectContaining({
+        id: "incoming-1",
+        telemetryConfig: { mode: "newApiTokenUsage" },
+        telemetrySnapshot: expect.objectContaining({
+          facts: expect.objectContaining({
+            balances: [expect.objectContaining({ amount: 9 })],
+          }),
+        }),
+      }),
+    )
+  })
+
+  it("keeps legacy OpenAI billing totals as money during v6 migration", () => {
+    const merged = mergeApiCredentialProfilesConfigs({
+      now: 67890,
+      local: {
+        version: 5,
+        lastUpdated: 1,
+        profiles: [
+          {
+            id: "legacy-openai-billing",
+            name: "Legacy OpenAI billing",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.invalid",
+            apiKey: "sk-legacy-openai-billing",
+            tagIds: [],
+            notes: "",
+            createdAt: 1,
+            updatedAt: 1,
+            telemetryConfig: { mode: "openaiBilling" },
+            telemetrySnapshot: {
+              health: { status: SiteHealthStatus.Healthy },
+              lastSyncTime: 5000,
+              lastSuccessTime: 5000,
+              source: "openaiBilling",
+              totalUsedUsd: 12.5,
+              attempts: [],
+            },
+          },
+        ],
+      },
+      incoming: { version: 5, lastUpdated: 2, profiles: [] },
+    })
+
+    expect(
+      atIndex(merged.profiles, 0).telemetrySnapshot?.facts?.usage?.totalUsed,
+    ).toEqual({
+      value: 12.5,
+      unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+    })
+  })
+
+  it("clears a stale telemetry snapshot when a duplicate selects a different config", () => {
+    const merged = mergeApiCredentialProfilesConfigs({
+      now: 67890,
+      local: {
+        version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+        lastUpdated: 1,
+        profiles: [
+          {
+            id: "local-1",
+            name: "Local",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-1",
+            tagIds: [],
+            notes: "",
+            createdAt: 1,
+            updatedAt: 10,
+            telemetryConfig: {
+              mode: "customReadOnlyEndpoint",
+              customEndpoint: {
+                endpoint: "/usage",
+                bearerToken: "old-token",
+                jsonPaths: { balanceUsd: "balance" },
+              },
+            },
+            telemetrySnapshot: {
+              health: { status: SiteHealthStatus.Healthy },
+              lastSyncTime: 5000,
+              lastSuccessTime: 5000,
+              balanceUsd: 1,
+              attempts: [],
+            },
+          },
+        ],
+      },
+      incoming: {
+        version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+        lastUpdated: 2,
+        profiles: [
+          {
+            id: "incoming-1",
+            name: "Incoming",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-1",
+            tagIds: [],
+            notes: "",
+            createdAt: 2,
+            updatedAt: 20,
+            telemetryConfig: {
+              mode: "customReadOnlyEndpoint",
+              customEndpoint: {
+                endpoint: "/usage",
+                bearerToken: "new-token",
+                jsonPaths: { balanceUsd: "balance" },
+              },
+            },
+          },
+        ],
+      },
+    })
+
+    expect(merged.profiles[0]).toEqual(
+      expect.objectContaining({
+        id: "incoming-1",
+        telemetryConfig: expect.objectContaining({
+          customEndpoint: expect.objectContaining({ bearerToken: "new-token" }),
+        }),
+      }),
+    )
+    expect(merged.profiles[0]).toEqual(
+      expect.not.objectContaining({
+        telemetrySnapshot: expect.anything(),
+      }),
+    )
+  })
+
+  it("keeps only the snapshot belonging to the selected duplicate config", () => {
+    const createProfile = (
+      id: string,
+      updatedAt: number,
+      bearerToken: string,
+      balanceUsd: number,
+      lastSyncTime: number,
+    ) => ({
+      id,
+      name: id,
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://example.com",
+      apiKey: "sk-1",
+      tagIds: [],
+      notes: "",
+      createdAt: updatedAt,
+      updatedAt,
+      telemetryConfig: {
+        mode: "customReadOnlyEndpoint" as const,
+        customEndpoint: {
+          endpoint: "/usage",
+          bearerToken,
+          jsonPaths: { balanceUsd: "balance" },
+        },
+      },
+      telemetrySnapshot: {
+        health: { status: SiteHealthStatus.Healthy },
+        lastSyncTime,
+        lastSuccessTime: lastSyncTime,
+        balanceUsd,
+        attempts: [],
+      },
+    })
+    const merged = mergeApiCredentialProfilesConfigs({
+      now: 67890,
+      local: {
+        version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+        lastUpdated: 1,
+        profiles: [createProfile("local-1", 10, "old-token", 1, 9000)],
+      },
+      incoming: {
+        version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+        lastUpdated: 2,
+        profiles: [createProfile("incoming-1", 20, "new-token", 2, 1000)],
+      },
+    })
+
+    expect(merged.profiles[0]).toEqual(
+      expect.objectContaining({
+        id: "incoming-1",
+        telemetrySnapshot: expect.objectContaining({
+          facts: expect.objectContaining({
+            balances: [expect.objectContaining({ amount: 2 })],
+          }),
+        }),
+      }),
+    )
+  })
+
+  it("keeps an older explicit config and its snapshot over a newer automatic duplicate", () => {
+    const olderSnapshot = {
+      health: { status: SiteHealthStatus.Healthy },
+      lastSyncTime: 9000,
+      lastSuccessTime: 9000,
+      balanceUsd: 3,
+      attempts: [],
+    }
+    const merged = mergeApiCredentialProfilesConfigs({
+      now: 67890,
+      local: {
+        version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+        lastUpdated: 1,
+        profiles: [
+          {
+            id: "older-explicit",
+            name: "Older explicit",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-1",
+            tagIds: [],
+            notes: "",
+            createdAt: 1,
+            updatedAt: 10,
+            telemetryConfig: { mode: "newApiTokenUsage" },
+            telemetrySnapshot: olderSnapshot,
+          },
+        ],
+      },
+      incoming: {
+        version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+        lastUpdated: 2,
+        profiles: [
+          {
+            id: "newer-auto",
+            name: "Newer automatic",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-1",
+            tagIds: [],
+            notes: "",
+            createdAt: 2,
+            updatedAt: 20,
+            telemetryConfig: { mode: "auto" },
+            telemetrySnapshot: {
+              ...olderSnapshot,
+              balanceUsd: 9,
+              lastSyncTime: 10000,
+              lastSuccessTime: 10000,
+            },
+          },
+        ],
+      },
+    })
+
+    expect(merged.profiles[0]).toEqual(
+      expect.objectContaining({
+        id: "newer-auto",
+        telemetryConfig: { mode: "newApiTokenUsage" },
+        telemetrySnapshot: expect.objectContaining({
+          facts: expect.objectContaining({
+            balances: [expect.objectContaining({ amount: 3 })],
+          }),
+        }),
+      }),
+    )
+  })
+
+  it("rejects invalid telemetry snapshots instead of storing raw data", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Telemetry",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://telemetry.example.com",
+      apiKey: "sk-telemetry",
+    })
+
+    await expect(
+      apiCredentialProfilesStorage.updateTelemetrySnapshot(profile.id, {
+        attempts: [],
+        health: { status: SiteHealthStatus.Healthy },
+        lastSyncTime: Number.NaN,
+      }),
+    ).rejects.toThrow("Invalid telemetry snapshot.")
+
+    await expect(
+      apiCredentialProfilesStorage.getProfileById(profile.id),
+    ).resolves.toEqual(
+      expect.not.objectContaining({
+        telemetrySnapshot: expect.anything(),
+      }),
+    )
+  })
+
+  it("imports and merges configs through the storage service", async () => {
+    const imported = await apiCredentialProfilesStorage.importConfig({
+      profiles: [
+        {
+          id: "imported-1",
+          name: "Imported",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://example.com/v1/models",
+          apiKey: "sk-1",
+          tagIds: ["t1"],
+          notes: "first",
+        },
+      ],
+    })
+
+    expect(imported.profiles).toHaveLength(1)
+    expect(
+      await apiCredentialProfilesStorage.getProfileById("imported-1"),
+    ).toEqual(
+      expect.objectContaining({
+        id: "imported-1",
+        baseUrl: "https://example.com",
+      }),
+    )
+
+    const merged = await apiCredentialProfilesStorage.mergeConfig({
+      profiles: [
+        {
+          id: "merged-1",
+          name: "Merged",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://example.com",
+          apiKey: "sk-1",
+          tagIds: ["t2"],
+          notes: "second",
+          updatedAt: Date.now() + 1,
+        },
+      ],
+    })
+
+    expect(merged.profiles).toHaveLength(1)
+    expect(merged.profiles[0]?.tagIds).toEqual(["t2", "t1"])
+  })
+
+  it("returns the existing profile instead of creating a duplicate identity", async () => {
+    const existing = await apiCredentialProfilesStorage.createProfile({
+      name: "Original",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://example.com/v1/models",
+      apiKey: " sk-duplicate ",
+      tagIds: ["t1"],
+      notes: "primary",
+    })
+
+    const duplicate = await apiCredentialProfilesStorage.createProfile({
+      name: "Duplicate",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://example.com",
+      apiKey: "sk-duplicate",
+      tagIds: ["t2"],
+      notes: "secondary",
+    })
+
+    expect(duplicate).toEqual(existing)
+    await expect(apiCredentialProfilesStorage.listProfiles()).resolves.toEqual([
+      existing,
+    ])
+  })
+
+  it("returns the newer identity winner when an update collides with an existing profile", async () => {
+    await apiCredentialProfilesStorage.importConfig({
+      profiles: [
+        {
+          id: "older",
+          name: "Older Profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://older.example.com",
+          apiKey: "sk-old",
+          tagIds: ["legacy"],
+          notes: "old notes",
+          createdAt: 1000,
+          updatedAt: 1000,
+        },
+        {
+          id: "winner",
+          name: "Winner Profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://shared.example.com",
+          apiKey: "sk-shared",
+          tagIds: ["remote"],
+          notes: "keep me",
+          createdAt: 3000,
+          updatedAt: 5000,
+        },
+      ],
+    })
+
+    vi.setSystemTime(new Date("1970-01-01T00:00:02.000Z"))
+
+    const updated = await apiCredentialProfilesStorage.updateProfile("older", {
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://shared.example.com/v1/models",
+      apiKey: "sk-shared",
+      tagIds: ["local", "remote"],
+      notes: "updated locally",
+    })
+
+    expect(updated).toEqual(
+      expect.objectContaining({
+        id: "winner",
+        name: "Winner Profile",
+        tagIds: ["remote", "local"],
+        createdAt: 1000,
+        updatedAt: 5000,
+      }),
+    )
+
+    await expect(apiCredentialProfilesStorage.listProfiles()).resolves.toEqual([
+      expect.objectContaining({
+        id: "winner",
+        tagIds: ["remote", "local"],
+      }),
+    ])
+  })
+
+  it("sorts profiles by name when updatedAt timestamps are equal", async () => {
+    await apiCredentialProfilesStorage.importConfig({
+      profiles: [
+        {
+          id: "beta",
+          name: "Beta",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://beta.example.com",
+          apiKey: "sk-beta",
+          createdAt: 1,
+          updatedAt: 10,
+        },
+        {
+          id: "alpha",
+          name: "Alpha",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://alpha.example.com",
+          apiKey: "sk-alpha",
+          createdAt: 2,
+          updatedAt: 10,
+        },
+      ],
+    })
+
+    const profiles = await apiCredentialProfilesStorage.listProfiles()
+
+    expect(profiles.map((profile) => profile.id)).toEqual(["alpha", "beta"])
+  })
+
+  it("sorts profiles by newest updatedAt before falling back to name order", async () => {
+    await apiCredentialProfilesStorage.importConfig({
+      profiles: [
+        {
+          id: "older",
+          name: "Zulu",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://older.example.com",
+          apiKey: "sk-older",
+          createdAt: 1,
+          updatedAt: 10,
+        },
+        {
+          id: "newer",
+          name: "Alpha",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://newer.example.com",
+          apiKey: "sk-newer",
+          createdAt: 2,
+          updatedAt: 20,
+        },
+      ],
+    })
+
+    const profiles = await apiCredentialProfilesStorage.listProfiles()
+
+    expect(profiles.map((profile) => profile.id)).toEqual(["newer", "older"])
+  })
+
+  it("preserves an absolute HTTP(S) telemetry endpoint when the profile base URL changes", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Custom telemetry profile",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://old.example.com/v1/models",
+      apiKey: "sk-old",
+      telemetryConfig: {
+        mode: "customReadOnlyEndpoint",
+        customEndpoint: {
+          endpoint: "https://old.example.com/usage/read-only",
+          jsonPaths: {
+            balanceUsd: "data.balance",
+          },
+        },
+      },
+    })
+
+    const updated = await apiCredentialProfilesStorage.updateProfile(
+      profile.id,
+      {
+        baseUrl: "https://new.example.com/v1/models",
+      },
+    )
+
+    expect(updated.telemetryConfig).toEqual({
+      mode: "customReadOnlyEndpoint",
+      customEndpoint: {
+        endpoint: "https://old.example.com/usage/read-only",
+        jsonPaths: {
+          balanceUsd: "data.balance",
+        },
+      },
+    })
+    await expect(
+      apiCredentialProfilesStorage.getProfileById(profile.id),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        telemetryConfig: {
+          mode: "customReadOnlyEndpoint",
+          customEndpoint: {
+            endpoint: "https://old.example.com/usage/read-only",
+            jsonPaths: {
+              balanceUsd: "data.balance",
+            },
+          },
+        },
+      }),
+    )
+  })
+
+  it("clears stale telemetry when the dedicated bearer token changes", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Custom telemetry credentials",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://telemetry-credentials.example.com",
+      apiKey: "sk-runtime",
+      telemetryConfig: {
+        mode: "customReadOnlyEndpoint",
+        customEndpoint: {
+          endpoint: "/usage",
+          bearerToken: "old-telemetry-token",
+          jsonPaths: {
+            balanceUsd: "balance",
+          },
+        },
+      },
+    })
+    await apiCredentialProfilesStorage.updateTelemetrySnapshot(profile.id, {
+      health: { status: SiteHealthStatus.Healthy },
+      lastSyncTime: 1000,
+      lastSuccessTime: 1000,
+      facts: {
+        balances: [
+          {
+            amount: 8,
+            unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+            semantics: "cash",
+          },
+        ],
+      },
+      attempts: [],
+    })
+
+    const updated = await apiCredentialProfilesStorage.updateProfile(
+      profile.id,
+      {
+        telemetryConfig: {
+          mode: "customReadOnlyEndpoint",
+          customEndpoint: {
+            endpoint: "/usage",
+            bearerToken: "new-telemetry-token",
+            jsonPaths: {
+              balanceUsd: "balance",
+            },
+          },
+        },
+      },
+    )
+
+    expect(updated.telemetryConfig).toEqual({
+      mode: "customReadOnlyEndpoint",
+      customEndpoint: {
+        endpoint: "/usage",
+        bearerToken: "new-telemetry-token",
+        jsonPaths: {
+          balanceUsd: "balance",
+        },
+      },
+    })
+    expect(updated).toEqual(
+      expect.not.objectContaining({
+        telemetrySnapshot: expect.anything(),
+      }),
+    )
+  })
+
+  it("clears stale telemetry when the dedicated bearer token is removed", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Custom telemetry credentials",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://example.com",
+      apiKey: "sk-runtime",
+      telemetryConfig: {
+        mode: "customReadOnlyEndpoint",
+        customEndpoint: {
+          endpoint: "/usage",
+          bearerToken: "old-token",
+          jsonPaths: { balanceUsd: "balance" },
+        },
+      },
+    })
+    await apiCredentialProfilesStorage.updateTelemetrySnapshot(profile.id, {
+      health: { status: SiteHealthStatus.Healthy },
+      lastSyncTime: 1000,
+      lastSuccessTime: 1000,
+      facts: {
+        balances: [
+          {
+            amount: 8,
+            unit: { kind: "money", currency: "USD", decimalPlaces: 2 },
+            semantics: "cash",
+          },
+        ],
+      },
+      attempts: [],
+    })
+
+    const updated = await apiCredentialProfilesStorage.updateProfile(
+      profile.id,
+      {
+        telemetryConfig: {
+          mode: "customReadOnlyEndpoint",
+          customEndpoint: {
+            endpoint: "/usage",
+            jsonPaths: { balanceUsd: "balance" },
+          },
+        },
+      },
+    )
+
+    expect(updated).toEqual(
+      expect.not.objectContaining({
+        telemetrySnapshot: expect.anything(),
+      }),
+    )
+  })
+
+  it("updates and clears profile expiration without changing createdAt", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Expiring profile",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://expiring.example.com",
+      apiKey: "sk-expiring",
+      expiresAt: new Date(2026, 5, 30).getTime(),
+    })
+
+    vi.setSystemTime(new Date("2026-04-01T00:00:00.000Z"))
+
+    const updated = await apiCredentialProfilesStorage.updateProfile(
+      profile.id,
+      {
+        expiresAt: new Date(2026, 6, 31).getTime(),
+      },
+    )
+
+    expect(updated).toEqual(
+      expect.objectContaining({
+        createdAt: profile.createdAt,
+        expiresAt: new Date(2026, 6, 31).getTime(),
+        updatedAt: Date.now(),
+      }),
+    )
+
+    const cleared = await apiCredentialProfilesStorage.updateProfile(
+      profile.id,
+      {
+        expiresAt: null,
+      },
+    )
+
+    expect(cleared).toEqual(
+      expect.not.objectContaining({
+        expiresAt: expect.anything(),
+      }),
+    )
+  })
+
+  it("validates update operations and removes tag ids from matching profiles only", async () => {
+    const first = await apiCredentialProfilesStorage.createProfile({
+      name: "Profile A",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://a.example.com",
+      apiKey: "sk-a",
+      tagIds: ["t1", "t2"],
+    })
+    const second = await apiCredentialProfilesStorage.createProfile({
+      name: "Profile B",
+      apiType: API_TYPES.GOOGLE,
+      baseUrl: "https://generativelanguage.googleapis.com/v1beta/models",
+      apiKey: "AIza-b",
+      tagIds: ["t2", "t3"],
+    })
+
+    await expect(
+      apiCredentialProfilesStorage.updateProfile("missing", { name: "Next" }),
+    ).rejects.toThrow("Profile not found.")
+    await expect(
+      apiCredentialProfilesStorage.updateProfile(first.id, { name: "   " }),
+    ).rejects.toThrow("Profile name cannot be empty.")
+    await expect(
+      apiCredentialProfilesStorage.updateProfile(first.id, { apiKey: "   " }),
+    ).rejects.toThrow("API key cannot be empty.")
+    await expect(
+      apiCredentialProfilesStorage.updateProfile(first.id, {
+        baseUrl: "   ",
+      }),
+    ).rejects.toThrow("Base URL is invalid.")
+
+    expect(
+      await apiCredentialProfilesStorage.removeTagIdFromAllProfiles(""),
+    ).toEqual({ updatedProfiles: 0 })
+    expect(
+      await apiCredentialProfilesStorage.removeTagIdFromAllProfiles("missing"),
+    ).toEqual({ updatedProfiles: 0 })
+    expect(
+      await apiCredentialProfilesStorage.removeTagIdFromAllProfiles("t2"),
+    ).toEqual({ updatedProfiles: 2 })
+
+    const profiles = await apiCredentialProfilesStorage.listProfiles()
+    expect(profiles.find((profile) => profile.id === first.id)?.tagIds).toEqual(
+      ["t1"],
+    )
+    expect(
+      profiles.find((profile) => profile.id === second.id)?.tagIds,
+    ).toEqual(["t3"])
+  })
+
+  it("returns false when deleting a missing profile id", async () => {
+    await expect(
+      apiCredentialProfilesStorage.deleteProfile("missing"),
+    ).resolves.toBe(false)
+  })
+
+  it("returns null when looking up a missing profile id", async () => {
+    await expect(
+      apiCredentialProfilesStorage.getProfileById("missing"),
+    ).resolves.toBeNull()
+  })
+
+  it("validates captured profiles and supports capture without a locator", async () => {
+    const capture = (overrides: Record<string, unknown>) =>
+      apiCredentialProfilesStorage.captureProfile({
+        profile: {
+          name: "Captured profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://capture.example.invalid/v1",
+          apiKey: "sk-capture",
+          ...overrides,
+        },
+        linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.CreationResponse,
+      })
+
+    await expect(capture({ name: " " })).rejects.toThrow(
+      "Profile name cannot be empty.",
+    )
+    await expect(capture({ apiKey: " " })).rejects.toThrow(
+      "API key cannot be empty.",
+    )
+    await expect(capture({ baseUrl: "not a URL" })).rejects.toThrow(
+      "Base URL is invalid.",
+    )
+    await expect(
+      apiCredentialProfilesStorage.captureProfile({
+        profile: {
+          name: "Invalid locator",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://capture.example.invalid/v1",
+          apiKey: "sk-invalid-locator",
+        },
+        locator: { source: "unknown" } as never,
+        linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.CreationResponse,
+      }),
+    ).rejects.toThrow("Account runtime key locator is invalid.")
+
+    const result = await capture({})
+    expect(result.status).toBe(
+      API_CREDENTIAL_PROFILE_CAPTURE_STATUSES.CapturedUnlinked,
+    )
+    await expect(
+      apiCredentialProfilesStorage.getProfileById(result.profile.id),
+    ).resolves.toEqual(result.profile)
+  })
+
+  it("resolves exact links and fails closed for conflicting locators", async () => {
+    const locator = {
+      source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
+      accountId: "account-example",
+      siteType: SITE_TYPES.NEW_API,
+      tokenId: 7,
+    } as const
+    await expect(
+      apiCredentialProfilesStorage.resolveLink(locator),
+    ).resolves.toEqual({
+      status: API_CREDENTIAL_PROFILE_LINK_RESOLUTION_STATUSES.NotFound,
+    })
+
+    const first = await apiCredentialProfilesStorage.createProfile({
+      name: "First linked profile",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://first-linked.example.invalid/v1",
+      apiKey: "sk-first-linked",
+    })
+    const second = await apiCredentialProfilesStorage.createProfile({
+      name: "Second linked profile",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://second-linked.example.invalid/v1",
+      apiKey: "sk-second-linked",
+    })
+    const firstLink = await apiCredentialProfilesStorage.linkProfile({
+      profileId: first.id,
+      locator,
+      linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.User,
+    })
+
+    await expect(
+      apiCredentialProfilesStorage.resolveLink(locator),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        status: API_CREDENTIAL_PROFILE_LINK_RESOLUTION_STATUSES.Resolved,
+        link: firstLink,
+        profile: first,
+      }),
+    )
+    await expect(
+      apiCredentialProfilesStorage.linkProfile({
+        profileId: "missing-profile",
+        locator,
+        linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.User,
+      }),
+    ).rejects.toThrow("Profile not found.")
+    await expect(
+      apiCredentialProfilesStorage.linkProfile({
+        profileId: first.id,
+        locator: { source: "unknown" } as never,
+        linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.User,
+      }),
+    ).rejects.toThrow("Account runtime key locator is invalid.")
+    await expect(
+      apiCredentialProfilesStorage.linkProfile({
+        profileId: first.id,
+        locator,
+        linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.User,
+      }),
+    ).resolves.toEqual(firstLink)
+
+    const secondLink = await apiCredentialProfilesStorage.linkProfile({
+      profileId: second.id,
+      locator,
+      linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.User,
+    })
+    expect(secondLink.state).toBe(
+      API_CREDENTIAL_PROFILE_LINK_STATES.NeedsConfirmation,
+    )
+    const ambiguous = await apiCredentialProfilesStorage.resolveLink(locator)
+    expect(ambiguous).toEqual(
+      expect.objectContaining({
+        status: API_CREDENTIAL_PROFILE_LINK_RESOLUTION_STATUSES.Ambiguous,
+        links: expect.arrayContaining([
+          expect.objectContaining({ id: firstLink.id }),
+          expect.objectContaining({ id: secondLink.id }),
+        ]),
+      }),
+    )
+
+    const relinked = await apiCredentialProfilesStorage.relinkProfile({
+      id: firstLink.id,
+      profileId: second.id,
+      locator,
+      linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.User,
+    })
+    expect(relinked).toEqual(
+      expect.objectContaining({
+        id: firstLink.id,
+        profileId: second.id,
+        state: API_CREDENTIAL_PROFILE_LINK_STATES.Active,
+      }),
+    )
+    await expect(
+      apiCredentialProfilesStorage.resolveLink(locator),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        status: API_CREDENTIAL_PROFILE_LINK_RESOLUTION_STATUSES.Resolved,
+      }),
+    )
+    await expect(apiCredentialProfilesStorage.listLinks()).resolves.toEqual([
+      relinked,
+    ])
+    expect(
+      storageData.get(
+        API_CREDENTIAL_PROFILES_STORAGE_KEYS.API_CREDENTIAL_PROFILES,
+      ).linkTombstones,
+    ).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: secondLink.id })]),
+    )
+  })
+
+  it("rejects invalid relink targets without changing stored links", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Relink profile",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://relink.example.invalid/v1",
+      apiKey: "sk-relink",
+    })
+    const locator = {
+      source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountToken,
+      accountId: "account-example",
+      siteType: SITE_TYPES.NEW_API,
+      tokenId: 9,
+    } as const
+    const link = await apiCredentialProfilesStorage.linkProfile({
+      profileId: profile.id,
+      locator,
+      linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.User,
+    })
+
+    await expect(
+      apiCredentialProfilesStorage.relinkProfile({
+        id: "missing-link",
+        profileId: profile.id,
+        locator,
+        linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.User,
+      }),
+    ).rejects.toThrow("Credential profile link not found.")
+    await expect(
+      apiCredentialProfilesStorage.relinkProfile({
+        id: link.id,
+        profileId: "missing-profile",
+        locator,
+        linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.User,
+      }),
+    ).rejects.toThrow("Profile not found.")
+    await expect(
+      apiCredentialProfilesStorage.relinkProfile({
+        id: link.id,
+        profileId: profile.id,
+        locator: { source: "unknown" } as never,
+        linkedBy: API_CREDENTIAL_PROFILE_LINK_SOURCES.User,
+      }),
+    ).rejects.toThrow("Account runtime key locator is invalid.")
+    await expect(apiCredentialProfilesStorage.listLinks()).resolves.toEqual([
+      link,
+    ])
+  })
+
+  it("falls back to an empty default config when the storage read fails", async () => {
+    const getSpy = vi
+      .spyOn((apiCredentialProfilesStorage as any).storage, "get")
+      .mockRejectedValueOnce(new Error("storage unavailable"))
+
+    const config = await apiCredentialProfilesStorage.getConfig()
+
+    expect(config).toEqual({
+      version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+      profiles: [],
+      links: [],
+      linkTombstones: [],
+      lastUpdated: Date.now(),
+    })
+
+    getSpy.mockRestore()
+  })
+
+  it("subscribes only to local storage changes affecting the profile key", () => {
+    const callback = vi.fn()
+    const unsubscribe = subscribeToApiCredentialProfilesChanges(callback)
+
+    expect(addListenerMock).toHaveBeenCalledTimes(1)
+    const listener = addListenerMock.mock.calls[0]?.[0]
+    expect(listener).toBeTypeOf("function")
+
+    listener?.({}, "sync")
+    expect(callback).not.toHaveBeenCalled()
+
+    listener?.(
+      {
+        unrelated: {
+          oldValue: null,
+          newValue: {},
+        },
+      },
+      "local",
+    )
+    expect(callback).not.toHaveBeenCalled()
+
+    listener?.(
+      {
+        [API_CREDENTIAL_PROFILES_STORAGE_KEYS.API_CREDENTIAL_PROFILES]: {
+          oldValue: null,
+          newValue: {},
+        },
+      },
+      "local",
+    )
+    expect(callback).toHaveBeenCalledTimes(1)
+
+    unsubscribe()
+    expect(removeListenerMock).toHaveBeenCalledWith(listener)
+  })
+})

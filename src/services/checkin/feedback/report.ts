@@ -1,7 +1,7 @@
 import { REPO_URL } from "~/constants/about"
 import type { AccountSiteType } from "~/constants/siteType"
 import type { AuthConfig } from "~/services/apiTransport/type"
-import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
+import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { AuthTypeEnum } from "~/types"
 import {
   AUTO_CHECKIN_SKIP_REASONS,

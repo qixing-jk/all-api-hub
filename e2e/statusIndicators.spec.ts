@@ -5,7 +5,7 @@ import {
   getAccountManagementListItemTestId,
   ACCOUNT_MANAGEMENT_TEST_IDS as ids,
 } from "~/features/AccountManagement/testIds"
-import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { mergeCompatibilityCheckInStatus } from "~/services/checkin/autoCheckin/state"
 import { SiteHealthStatus } from "~/types"
 import { THEME_COLORS, THEME_PRESETS } from "~/types/theme"

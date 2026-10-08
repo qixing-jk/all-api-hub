@@ -23,18 +23,15 @@ const {
   updateTelemetrySnapshot: vi.fn(),
 }))
 
-vi.mock(
-  "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
-  () => ({
-    apiCredentialProfilesStorage: {
-      createProfile,
-      createProfileWithCreationStatus,
-      deleteProfile,
-      listProfiles,
-      updateTelemetrySnapshot,
-    },
-  }),
-)
+vi.mock("~/services/apiCredentialProfiles/storage/profiles", () => ({
+  apiCredentialProfilesStorage: {
+    createProfile,
+    createProfileWithCreationStatus,
+    deleteProfile,
+    listProfiles,
+    updateTelemetrySnapshot,
+  },
+}))
 
 const storage = new Map<string, unknown>()
 let storageSetShouldThrow = false

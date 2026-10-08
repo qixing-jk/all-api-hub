@@ -36,7 +36,7 @@ import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   ASSOCIATED_PROFILE_SECRET_RESOLUTION_STATUSES,
   resolveAssociatedProfileSecret,
-} from "~/services/apiCredentialProfiles/accountRuntimeKeyRecovery"
+} from "~/services/apiCredentialProfiles/accountImport/accountRuntimeKeyRecovery"
 import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/authSession"
 import {
   createDeferredAbortDeadline,

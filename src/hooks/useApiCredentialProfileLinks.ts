@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import { apiCredentialProfileLinks } from "~/services/apiCredentialProfiles/apiCredentialProfileLinks"
-import { subscribeToApiCredentialProfilesChanges } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { apiCredentialProfileLinks } from "~/services/apiCredentialProfiles/links"
+import { subscribeToApiCredentialProfilesChanges } from "~/services/apiCredentialProfiles/storage/profiles"
 import type { ApiCredentialProfileLink } from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/core/logger"
 

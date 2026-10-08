@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { createNewApiModelPricing } from "~/services/apiAdapters/newApi/modelPricing"
+import { createNewApiModelPricing } from "~/services/apiAdapters/newApi/pricing/modelPricing"
 import {
   fetchRixApiModelPricing,
   normalizeRixApiModelPricingResponse,
-} from "~/services/apiAdapters/newApi/rixApiModelPricing"
+} from "~/services/apiAdapters/newApi/pricing/rixApiModelPricing"
 import { clearRixApiDialectChoicesForTests } from "~/services/apiService/newApiFamily/variants/rixApiDialects"
 import { ApiError } from "~/services/apiTransport/errors"
 import { extractDataFromApiResponseBody } from "~/services/apiTransport/response"

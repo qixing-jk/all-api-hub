@@ -42,7 +42,7 @@ import { cn } from "~/lib/utils"
 import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
 import type { AccountServiceCredential } from "~/services/apiAdapters/contracts/serviceCredential"
-import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountTokenProfileName"
+import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountImport/accountTokenProfileName"
 import { createProfileCredentialExportSource } from "~/services/apiCredentialProfiles/credentialExport"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,

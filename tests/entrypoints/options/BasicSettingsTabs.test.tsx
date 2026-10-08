@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import CheckinRedeemTab from "~/features/BasicSettings/components/tabs/CheckinRedeem/CheckinRedeemTab"
-import NewApiSettings from "~/features/BasicSettings/components/tabs/ManagedSite/NewApiSettings"
+import NewApiSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/NewApiSettings"
 import WebAiApiCheckTab from "~/features/BasicSettings/components/tabs/WebAiApiCheck/WebAiApiCheckTab"
 import { SITE_ROUTE_KINDS } from "~/services/accounts/utils/siteRouteResolver"
 import {

@@ -37,7 +37,7 @@ import {
 } from "~/services/accounts/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
-import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountTokenProfileName"
+import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountImport/accountTokenProfileName"
 import {
   createProfileCredentialExportData,
   createProfileCredentialExportSource,

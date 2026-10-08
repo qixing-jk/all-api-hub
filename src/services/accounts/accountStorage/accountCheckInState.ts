@@ -9,8 +9,8 @@ import {
   type AccountUpdateOptions,
 } from "~/services/accounts/accountDefaults"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import { shouldAutomaticallyDiscoverAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { setCheckInSelection } from "~/services/checkin/autoCheckin/domain"
-import { shouldAutomaticallyDiscoverAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import {
   getAutoCheckinCandidateMethodIds,
   isCheckInMethodId,

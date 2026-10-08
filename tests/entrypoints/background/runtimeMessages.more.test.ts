@@ -147,7 +147,7 @@ vi.mock("~/services/updates/releaseUpdateService", () => ({
     mocks.setupReleaseUpdateMessagingListeners,
 }))
 
-vi.mock("~/services/checkin/autoCheckin/schedulerMessaging", () => ({
+vi.mock("~/services/checkin/autoCheckin/scheduling/schedulerMessaging", () => ({
   setupAutoCheckinMessagingListeners: mocks.setupAutoCheckinMessagingListeners,
 }))
 

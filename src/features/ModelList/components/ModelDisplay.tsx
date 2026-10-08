@@ -5,21 +5,21 @@ import { useTranslation } from "react-i18next"
 import { Virtuoso } from "react-virtuoso"
 
 import { Badge, EmptyState } from "~/components/ui"
-import { resolveAccountExchangeRate } from "~/features/ModelList/accountExchangeRate"
-import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
-import {
-  MODEL_LIST_GROUP_SELECTION_SCOPES,
-  type ModelListGroupSelectionScope,
-} from "~/features/ModelList/groupSelectionScopes"
-import {
-  getModelItemKey,
-  type CalculatedModelItem,
-} from "~/features/ModelList/modelListItems"
 import type {
   ModelManagementItemSource,
   ModelManagementSourceCapabilities,
-} from "~/features/ModelList/modelManagementSources"
-import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
+} from "~/features/ModelList/catalog/modelManagementSources"
+import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/catalog/modelManagementSources"
+import {
+  MODEL_LIST_GROUP_SELECTION_SCOPES,
+  type ModelListGroupSelectionScope,
+} from "~/features/ModelList/groups/groupSelectionScopes"
+import {
+  getModelItemKey,
+  type CalculatedModelItem,
+} from "~/features/ModelList/presentation/modelListItems"
+import { resolveAccountExchangeRate } from "~/features/ModelList/pricing/accountExchangeRate"
+import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/pricing/billingModes"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
 import { cn } from "~/lib/utils"
 import { QUOTE_UNITS } from "~/services/modelPricing/pricingConstants"

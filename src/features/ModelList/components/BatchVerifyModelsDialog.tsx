@@ -17,16 +17,22 @@ import {
   SearchableSelect,
 } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
-import {
-  MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES,
-  type BatchVerifyApiTypeMode,
-  type BatchVerifyModelItem,
-} from "~/features/ModelList/batchVerification"
-import { formatModelListSourceLabel } from "~/features/ModelList/sourceLabels"
+import { formatModelListSourceLabel } from "~/features/ModelList/catalog/sourceLabels"
 import {
   getBatchVerifyModelCheckboxTestId,
   getBatchVerifyRowTestId,
 } from "~/features/ModelList/testIds"
+import {
+  MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES,
+  type BatchVerifyApiTypeMode,
+  type BatchVerifyModelItem,
+} from "~/features/ModelList/verification/batchVerification"
+import {
+  BATCH_VERIFY_ROW_STATUSES,
+  BATCH_VERIFY_ROW_SUMMARIES,
+  type BatchVerifyRow,
+  type BatchVerifyRowStatus,
+} from "~/features/ModelList/verification/batchVerificationState"
 import { cn } from "~/lib/utils"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -47,12 +53,6 @@ import {
   getApiVerificationProbeLabel,
 } from "~/services/verification/aiApiVerification/i18n"
 
-import {
-  BATCH_VERIFY_ROW_STATUSES,
-  BATCH_VERIFY_ROW_SUMMARIES,
-  type BatchVerifyRow,
-  type BatchVerifyRowStatus,
-} from "../batchVerificationState"
 import { useBatchVerifyModels } from "../hooks/useBatchVerifyModels"
 
 /** Resolve a failed probe row to localized, stable user-facing feedback. */

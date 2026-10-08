@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { octopusManagedResourceModels } from "~/services/apiAdapters/managedResources/octopusOperations"
+import { octopusManagedResourceModels } from "~/services/apiAdapters/managedResources/octopus/operations"
 import { octopusManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/octopus"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import type { OctopusChannel } from "~/types/octopus"

@@ -8,7 +8,7 @@ import {
   WEBDAV_TARGET_IDS,
 } from "~/features/ImportExport/searchTargets"
 import { buildConfigurationOverviewItems } from "~/features/OptionsOverview/configurationOverviewItems"
-import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 import type { SiteAccount } from "~/types"

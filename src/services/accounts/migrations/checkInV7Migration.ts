@@ -6,7 +6,7 @@ import {
   CHECK_IN_METHOD_TODAY_STATUSES,
   CHECK_IN_SELECTION_MODES,
 } from "~/constants/checkIn"
-import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configCodec"
+import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configuration/configCodec"
 import type { SiteAccount } from "~/types"
 import type { CheckInConfig, CheckInMethodId } from "~/types/checkIn"
 

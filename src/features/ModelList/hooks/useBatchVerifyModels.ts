@@ -4,7 +4,18 @@ import {
   MODEL_LIST_BATCH_VERIFY_CONCURRENCY,
   type BatchVerifyApiTypeMode,
   type BatchVerifyModelItem,
-} from "~/features/ModelList/batchVerification"
+} from "~/features/ModelList/verification/batchVerification"
+import {
+  BATCH_VERIFY_ROW_STATUSES,
+  BATCH_VERIFY_ROW_SUMMARIES,
+  buildRows,
+  DEFAULT_SELECTED_PROBE_IDS,
+  getDefaultApiTypeMode,
+  isCompletedStatus,
+  type BatchVerifyRow,
+  type BatchVerifyRowStatus,
+} from "~/features/ModelList/verification/batchVerificationState"
+import { executeBatchModelVerification } from "~/features/ModelList/verification/executeBatchModelVerification"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -21,17 +32,6 @@ import {
   type ApiVerificationProbeId,
 } from "~/services/verification/aiApiVerification"
 
-import {
-  BATCH_VERIFY_ROW_STATUSES,
-  BATCH_VERIFY_ROW_SUMMARIES,
-  buildRows,
-  DEFAULT_SELECTED_PROBE_IDS,
-  getDefaultApiTypeMode,
-  isCompletedStatus,
-  type BatchVerifyRow,
-  type BatchVerifyRowStatus,
-} from "../batchVerificationState"
-import { executeBatchModelVerification } from "../executeBatchModelVerification"
 import { useBatchVerificationHistory } from "./useBatchVerificationHistory"
 import { useBatchVerificationRuntimeKeys } from "./useBatchVerificationRuntimeKeys"
 

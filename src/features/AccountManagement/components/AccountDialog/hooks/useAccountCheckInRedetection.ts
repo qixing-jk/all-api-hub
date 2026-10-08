@@ -10,7 +10,7 @@ import type {
   AccountCheckInRedetectionFeedback,
   AccountDialogDraft,
 } from "~/features/AccountManagement/components/AccountDialog/models"
-import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
+import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
 import { mergeUserOwnedCheckInDraft } from "~/services/checkin/autoCheckin/state"
 import type { ProductAnalyticsActionInsights } from "~/services/productAnalytics/actions"

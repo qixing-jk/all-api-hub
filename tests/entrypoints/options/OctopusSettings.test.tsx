@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import OctopusSettings from "~/features/BasicSettings/components/tabs/ManagedSite/OctopusSettings"
+import OctopusSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/OctopusSettings"
 import toast from "~/lib/notify"
 import { validateOctopusConfig } from "~/services/apiService/octopus/channels"
 import type { PreferenceWriteResult } from "~/services/preferences/preferencesStore"

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { BACKUP_VERSION } from "~/constants/importExport"
 import { importFromBackupObject } from "~/features/ImportExport/utils"
 import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
-import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
 import {
   createEmptyFeatureGuidanceState,
   featureGuidanceState,
@@ -95,7 +95,7 @@ vi.mock("~/services/tags/tagStorage", () => ({
 }))
 
 vi.mock(
-  import("~/services/apiCredentialProfiles/apiCredentialProfilesStorage"),
+  import("~/services/apiCredentialProfiles/storage/profiles"),
   async (importOriginal) => {
     const actual = await importOriginal()
     return {
@@ -110,7 +110,7 @@ vi.mock(
 )
 
 vi.mock(
-  import("~/services/apiCredentialProfiles/profileConfigCodec"),
+  import("~/services/apiCredentialProfiles/storage/configCodec"),
   async (importOriginal) => {
     const actual = await importOriginal()
     return {

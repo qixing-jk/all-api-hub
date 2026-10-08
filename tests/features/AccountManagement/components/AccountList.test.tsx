@@ -19,7 +19,7 @@ import {
   getAccountManagementSortButtonTestId,
 } from "~/features/AccountManagement/testIds"
 import enAccount from "~/locales/en/account.json"
-import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { mergeCompatibilityCheckInStatus } from "~/services/checkin/autoCheckin/state"
 import {
   INVITE_LINK_FAILURE_REASONS,

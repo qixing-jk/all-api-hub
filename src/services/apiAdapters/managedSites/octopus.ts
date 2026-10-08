@@ -6,8 +6,8 @@ import type {
   ManagedSiteConfigCapability,
   ManagedSiteQueriesCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { createOctopusModelSyncCapability } from "~/services/apiAdapters/managedResources/octopusModelSync"
-import { octopusManagedResourceModels } from "~/services/apiAdapters/managedResources/octopusOperations"
+import { createOctopusModelSyncCapability } from "~/services/apiAdapters/managedResources/octopus/modelSync"
+import { octopusManagedResourceModels } from "~/services/apiAdapters/managedResources/octopus/operations"
 import { searchChannels } from "~/services/apiService/octopus/channels"
 import {
   fetchGroups,

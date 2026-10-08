@@ -3,7 +3,7 @@ import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import ClaudeCodeHubSettings from "~/features/BasicSettings/components/tabs/ManagedSite/ClaudeCodeHubSettings"
+import ClaudeCodeHubSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/ClaudeCodeHubSettings"
 import { validateClaudeCodeHubConfig } from "~/services/apiService/claudeCodeHub"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"

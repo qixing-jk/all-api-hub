@@ -1,10 +1,10 @@
 import { useCallback, useRef } from "react"
 
+import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/catalog/modelManagementSources"
 import {
   MODEL_LIST_BATCH_VERIFY_PERSIST_FLUSH_SIZE,
   type BatchVerifyModelItem,
-} from "~/features/ModelList/batchVerification"
-import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
+} from "~/features/ModelList/verification/batchVerification"
 import {
   type ApiVerificationApiType,
   type ApiVerificationProbeResult,

@@ -12,7 +12,7 @@ import {
   getManagedResourceFieldPolicy,
   MANAGED_RESOURCE_EDITOR_MODES,
 } from "~/features/ManagedSiteChannels/presentation/managedResourceFieldPolicy"
-import { getEditedResourceFieldIssues } from "~/features/ResourceEditor/resourceEditorValidation"
+import { getEditedResourceFieldIssues } from "~/features/ResourceEditor/model/resourceEditorValidation"
 import type { ManagedResourceKind } from "~/services/accountSiteDefinitions/contracts"
 import {
   MANAGED_RESOURCE_FAILURE_CODES,

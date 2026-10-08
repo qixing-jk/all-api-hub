@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { useOptionsOverviewData } from "~/features/OptionsOverview/useOptionsOverviewData"
-import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { featureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
@@ -54,14 +54,11 @@ vi.mock("~/services/accounts/accountStorage/accountPresentation", () => ({
   },
 }))
 
-vi.mock(
-  "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
-  () => ({
-    apiCredentialProfilesStorage: {
-      listProfiles: vi.fn(),
-    },
-  }),
-)
+vi.mock("~/services/apiCredentialProfiles/storage/profiles", () => ({
+  apiCredentialProfilesStorage: {
+    listProfiles: vi.fn(),
+  },
+}))
 
 vi.mock("~/services/checkin/autoCheckin/storage", () => ({
   autoCheckinStorage: {

@@ -6,7 +6,7 @@ import { COLORS } from "~/constants/designTokens"
 import {
   getModelVendorPresentation,
   type ModelVendorPresentationInput,
-} from "~/features/ModelList/modelVendorPresentation"
+} from "~/features/ModelList/presentation/modelVendorPresentation"
 import { cn } from "~/lib/utils"
 
 interface ModelVendorMarkProps {

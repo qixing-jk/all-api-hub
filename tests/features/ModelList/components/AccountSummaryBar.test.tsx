@@ -2,8 +2,8 @@ import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
+import { MODEL_LIST_ACCOUNT_ERROR_TYPES } from "~/features/ModelList/catalog/modelDataStates"
 import { AccountSummaryBar } from "~/features/ModelList/components/AccountSummaryBar"
-import { MODEL_LIST_ACCOUNT_ERROR_TYPES } from "~/features/ModelList/modelDataStates"
 
 vi.mock("react-i18next", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-i18next")>()

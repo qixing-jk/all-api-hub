@@ -19,7 +19,7 @@ import {
   type AutoDetectError,
 } from "~/services/accounts/utils/autoDetectUtils"
 import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
-import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
+import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
 import {
   completePopupCriticalFlow,

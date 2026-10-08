@@ -24,7 +24,7 @@ import {
 import {
   managedSiteSearchControls,
   managedSiteSearchSections,
-} from "~/features/BasicSettings/components/tabs/ManagedSite/ManagedSite.search"
+} from "~/features/BasicSettings/components/tabs/ManagedSite/search/ManagedSite.search"
 import {
   notificationsSearchControls,
   notificationsSearchSections,

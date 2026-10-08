@@ -1,0 +1,94 @@
+import { SITE_TYPES } from "~/constants/siteType"
+import { defineManagedSiteSettingsSearch } from "~/features/BasicSettings/components/tabs/ManagedSite/search/defineManagedSiteSettingsSearch"
+import {
+  buildControlDefinition,
+  buildSectionDefinition,
+  DEFAULT_BREADCRUMBS,
+} from "~/features/OptionsSearch/registryHelpers"
+import type { OptionsSearchItemDefinition } from "~/features/OptionsSearch/types"
+
+const sections: OptionsSearchItemDefinition[] = [
+  buildSectionDefinition(
+    "section:claude-code-hub",
+    "managedSite",
+    "claude-code-hub",
+    "settings:claudeCodeHub.title",
+    346,
+    {
+      keywords: ["claude-code-hub", "claude code hub"],
+    },
+  ),
+]
+
+const controls: OptionsSearchItemDefinition[] = [
+  buildControlDefinition(
+    "control:claude-code-hub-base-url",
+    "managedSite",
+    "claude-code-hub-base-url",
+    "settings:claudeCodeHub.fields.baseUrlLabel",
+    676,
+    {
+      descriptionKey: "settings:claudeCodeHub.fields.baseUrlDesc",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.managedSite",
+        "settings:claudeCodeHub.title",
+      ],
+      keywords: ["claude-code-hub", "claude code hub", "base url"],
+    },
+  ),
+  buildControlDefinition(
+    "control:claude-code-hub-admin-token",
+    "managedSite",
+    "claude-code-hub-admin-token",
+    "settings:claudeCodeHub.fields.adminTokenLabel",
+    677,
+    {
+      descriptionKey: "settings:claudeCodeHub.fields.adminTokenDesc",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.managedSite",
+        "settings:claudeCodeHub.title",
+      ],
+      keywords: ["claude-code-hub", "claude code hub", "token"],
+    },
+  ),
+  buildControlDefinition(
+    "control:claude-code-hub-validate-config",
+    "managedSite",
+    "claude-code-hub-validate-config",
+    "settings:claudeCodeHub.validation.title",
+    678,
+    {
+      descriptionKey: "settings:claudeCodeHub.validation.description",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.managedSite",
+        "settings:claudeCodeHub.title",
+      ],
+      keywords: ["claude-code-hub", "claude code hub", "validate"],
+    },
+  ),
+  buildControlDefinition(
+    "control:claude-code-hub-unsupported-note",
+    "managedSite",
+    "claude-code-hub-unsupported-note",
+    "settings:claudeCodeHub.unsupported.title",
+    679,
+    {
+      descriptionKey: "settings:claudeCodeHub.unsupported.description",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.managedSite",
+        "settings:claudeCodeHub.title",
+      ],
+      keywords: ["claude-code-hub", "claude code hub", "unsupported"],
+    },
+  ),
+]
+
+export const claudeCodeHubSettingsSearch = defineManagedSiteSettingsSearch(
+  SITE_TYPES.CLAUDE_CODE_HUB,
+  sections,
+  controls,
+)

@@ -10,7 +10,7 @@ import type {
   ManagedSiteConfigCapability,
   ManagedSiteQueriesCapability,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { requireOpaqueManagedResourceChannelId } from "~/services/apiAdapters/managedResources/resourceIds"
+import { requireOpaqueManagedResourceChannelId } from "~/services/apiAdapters/managedResources/shared/resourceIds"
 import {
   listAllGptLoadGroups,
   listGptLoadModelIds,

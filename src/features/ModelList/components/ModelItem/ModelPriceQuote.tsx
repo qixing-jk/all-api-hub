@@ -7,12 +7,12 @@ import {
   getPricingConditionTarget,
   getPricingConditionTargets,
   usePricingScenarioNavigation,
-} from "~/features/ModelList/pricingScenarioNavigation"
+} from "~/features/ModelList/pricing/pricingScenarioNavigation"
 import {
   pricingMeterLabels,
   pricingRangeLabel,
   pricingScenarioOptions,
-} from "~/features/ModelList/pricingScenarioOptions"
+} from "~/features/ModelList/pricing/pricingScenarioOptions"
 import {
   PRICE_RATE_UNITS,
   PRICING_CONDITION_KINDS,

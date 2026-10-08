@@ -1,4 +1,4 @@
-import { coerceApiCredentialProfilesConfig } from "~/services/apiCredentialProfiles/profileConfigCodec"
+import { coerceApiCredentialProfilesConfig } from "~/services/apiCredentialProfiles/storage/configCodec"
 import {
   importV2AccountsWithMerge,
   importV2AccountsWithReplace,

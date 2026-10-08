@@ -15,13 +15,13 @@ import {
   WorkflowTransitionButton,
 } from "~/components/ui"
 import {
+  MODEL_MANAGEMENT_SOURCE_KINDS,
+  type ModelManagementSource,
+} from "~/features/ModelList/catalog/modelManagementSources"
+import {
   MODEL_LIST_FALLBACK_STATUS_SCOPES,
   type AccountFallbackControls,
 } from "~/features/ModelList/hooks/modelDataTypes"
-import {
-  MODEL_MANAGEMENT_SOURCE_KINDS,
-  type ModelManagementSource,
-} from "~/features/ModelList/modelManagementSources"
 import { resolveAccountSitePricingUrl } from "~/services/accounts/accountSiteProfile/urls"
 import type { DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"

@@ -7,7 +7,7 @@ import {
   type AccountDialogRecoveryState,
 } from "~/features/AccountManagement/components/AccountDialog/models"
 import { ACCOUNT_MANAGEMENT_ROUTE_PARAMS } from "~/features/AccountManagement/routeParams"
-import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configCodec"
+import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configuration/configCodec"
 import {
   ACCOUNT_DIALOG_RECOVERY_STORAGE_KEYS,
   STORAGE_LOCKS,

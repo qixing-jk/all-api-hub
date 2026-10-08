@@ -1,6 +1,10 @@
 import { type QueryClient } from "@tanstack/react-query"
 
-import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
+import {
+  MODEL_LIST_QUERY_KEYS,
+  MODEL_LIST_QUERY_SCOPE_VALUES,
+} from "~/features/ModelList/catalog/modelDataStates"
+import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/catalog/modelManagementSources"
 import type { ProviderModelCatalogCapability } from "~/services/apiAdapters/contracts/providerModelCatalog"
 import {
   createProviderModelCatalogCacheKey,
@@ -14,11 +18,6 @@ import {
 } from "~/services/modelList/pricingModel"
 import { modelPricingCache } from "~/services/models/modelPricingCache"
 import type { DisplaySiteData } from "~/types"
-
-import {
-  MODEL_LIST_QUERY_KEYS,
-  MODEL_LIST_QUERY_SCOPE_VALUES,
-} from "../modelDataStates"
 
 export const shouldRetryModelPricingQuery = (
   failureCount: number,

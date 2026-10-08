@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next"
 import {
   pricingRangeLabel,
   pricingScenarioOptions,
-} from "~/features/ModelList/pricingScenarioOptions"
+} from "~/features/ModelList/pricing/pricingScenarioOptions"
 import {
   PRICE_RATE_UNITS,
   PRICING_CONDITION_KINDS,

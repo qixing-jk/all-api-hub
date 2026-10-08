@@ -22,7 +22,7 @@ import { runGatewayGuidanceAction } from "~/features/UnifiedApiGuidance/runGatew
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { canResolveAccountRuntimeKeySecret } from "~/services/accounts/keyProductCapabilities"
-import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
 import { buildManagedSiteChannelConsoleUrl } from "~/services/managedSites/managedSiteConsoleRoutes"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

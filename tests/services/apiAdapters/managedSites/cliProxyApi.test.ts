@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { cliProxyApiRef } from "~/services/apiAdapters/managedResources/cliProxyApiNativeRuntime"
+import { cliProxyApiRef } from "~/services/apiAdapters/managedResources/cliProxyApi/nativeRuntime"
 import { cliProxyApiCapabilities } from "~/services/apiAdapters/managedSites/cliProxyApi"
 import type { CliProxyApiResource } from "~/services/apiService/cliProxyApi"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
@@ -22,10 +22,10 @@ vi.mock("~/services/managedSites/runtimeConfig", () => ({
   getManagedSiteRuntimeConfigForType: mocks.runtime,
 }))
 vi.mock(
-  "~/services/apiAdapters/managedResources/cliProxyApiNativeRuntime",
+  "~/services/apiAdapters/managedResources/cliProxyApi/nativeRuntime",
   async (importOriginal) => ({
     ...(await importOriginal<
-      typeof import("~/services/apiAdapters/managedResources/cliProxyApiNativeRuntime")
+      typeof import("~/services/apiAdapters/managedResources/cliProxyApi/nativeRuntime")
     >()),
     getCliProxyApiResource: mocks.resource,
   }),

@@ -3,7 +3,7 @@ import React, { type ComponentProps } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ModelItemDetails } from "~/features/ModelList/components/ModelItem/ModelItemDetails"
-import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groupContext"
+import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groups/groupContext"
 import {
   MODEL_PRICE_PRECISION_KINDS,
   MODEL_PRICE_SOURCE_KINDS,

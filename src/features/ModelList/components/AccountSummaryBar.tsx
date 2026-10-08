@@ -6,7 +6,7 @@ import { Badge, Card, CardContent } from "~/components/ui"
 import {
   MODEL_LIST_ACCOUNT_ERROR_TYPES,
   type ModelListAccountErrorType,
-} from "~/features/ModelList/modelDataStates"
+} from "~/features/ModelList/catalog/modelDataStates"
 import { cn } from "~/lib/utils"
 
 interface AccountSummaryItem {

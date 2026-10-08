@@ -3,7 +3,7 @@ import type { InputHTMLAttributes, ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import ManagedSiteModelSyncSettings from "~/features/BasicSettings/components/tabs/ManagedSite/managedSiteModelSyncSettings"
+import ManagedSiteModelSyncSettings from "~/features/BasicSettings/components/tabs/ManagedSite/modelSync/managedSiteModelSyncSettings"
 import toast from "~/lib/notify"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { sendModelSyncMessage } from "~/services/models/modelSync/messaging"

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { doneHubManagedResourceModels } from "~/services/apiAdapters/managedResources/doneHubOperations"
+import { doneHubManagedResourceModels } from "~/services/apiAdapters/managedResources/doneHub/operations"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import {
@@ -38,7 +38,7 @@ vi.mock("~/services/apiService/doneHub", () => ({
   ...doneHubApi,
 }))
 
-vi.mock("~/services/apiAdapters/newApi/keyVariant", () => ({
+vi.mock("~/services/apiAdapters/newApi/keys/keyVariant", () => ({
   resolveNewApiKeyVariant: () => ({ transport: doneHubTokenTransport }),
 }))
 
@@ -100,7 +100,7 @@ describe("DoneHub managed-site channel capability", () => {
       arrange: arrangeRestMutation(doneHubApi.createChannel, { id: 17 }),
       invoke: async () => {
         const { doneHubChannelOperations } = await import(
-          "~/services/apiAdapters/managedResources/doneHubOperations"
+          "~/services/apiAdapters/managedResources/doneHub/operations"
         )
         return await doneHubChannelOperations.create(config, createPayload)
       },
@@ -120,7 +120,7 @@ describe("DoneHub managed-site channel capability", () => {
       arrange: arrangeRestMutation(doneHubApi.updateChannel, { id: 7 }),
       invoke: async () => {
         const { doneHubChannelOperations } = await import(
-          "~/services/apiAdapters/managedResources/doneHubOperations"
+          "~/services/apiAdapters/managedResources/doneHub/operations"
         )
         return await doneHubChannelOperations.update(config, updatePayload)
       },
@@ -140,7 +140,7 @@ describe("DoneHub managed-site channel capability", () => {
       arrange: arrangeRestMutation(doneHubApi.deleteChannel, null),
       invoke: async () => {
         const { doneHubChannelOperations } = await import(
-          "~/services/apiAdapters/managedResources/doneHubOperations"
+          "~/services/apiAdapters/managedResources/doneHub/operations"
         )
         return await doneHubChannelOperations.delete(config, 7)
       },
@@ -223,7 +223,7 @@ describe("DoneHub managed-site channel capability", () => {
       throw responseError
     })
     const { doneHubChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/doneHubOperations"
+      "~/services/apiAdapters/managedResources/doneHub/operations"
     )
 
     await expect(
@@ -239,7 +239,7 @@ describe("DoneHub managed-site channel capability", () => {
       return rejectionResponse
     })
     const { doneHubChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/doneHubOperations"
+      "~/services/apiAdapters/managedResources/doneHub/operations"
     )
 
     await expect(
@@ -372,7 +372,7 @@ describe("DoneHub managed-site channel capability", () => {
       },
     )
     const { doneHubChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/doneHubOperations"
+      "~/services/apiAdapters/managedResources/doneHub/operations"
     )
     const request = {
       baseUrl: config.baseUrl,
@@ -597,7 +597,7 @@ describe("DoneHub managed-site channel capability", () => {
 
   it("fetches and hydrates DoneHub secret keys for masked comparable channels", async () => {
     const { doneHubChannelOperations } = await import(
-      "~/services/apiAdapters/managedResources/doneHubOperations"
+      "~/services/apiAdapters/managedResources/doneHub/operations"
     )
     const request = {
       baseUrl: config.baseUrl,

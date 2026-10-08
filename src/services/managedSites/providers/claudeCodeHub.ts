@@ -1,6 +1,6 @@
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { requireNumericManagedResourceId } from "~/services/apiAdapters/managedResources/resourceIds"
+import { requireNumericManagedResourceId } from "~/services/apiAdapters/managedResources/shared/resourceIds"
 import * as claudeCodeHubApi from "~/services/apiService/claudeCodeHub"
 import type { ScheduledReadOptions } from "~/services/apiTransport/requestScheduling"
 import {

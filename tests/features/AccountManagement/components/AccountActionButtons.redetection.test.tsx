@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from "vitest"
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
-import { redetectSavedAccountCheckIn } from "~/services/checkin/autoCheckin/accountDiscovery"
+import { redetectSavedAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/accountDiscovery"
 import {
   buildCheckInConfig,
   buildDisplaySiteData,
@@ -21,7 +21,7 @@ import {
 } from "./accountActionButtonsMocks"
 import { setupAccountActionButtonsTest } from "./accountActionButtonsTestSupport"
 
-vi.mock("~/services/checkin/autoCheckin/accountDiscovery", () => ({
+vi.mock("~/services/checkin/autoCheckin/discovery/accountDiscovery", () => ({
   redetectSavedAccountCheckIn: vi.fn(),
 }))
 

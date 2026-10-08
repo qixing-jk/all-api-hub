@@ -22,8 +22,8 @@ import {
 } from "~/features/AccountManagement/hooks/AccountDataContext"
 import type { AccountManagementSnapshot } from "~/services/accounts/accountStorage/accountReadModels"
 import { createEmptyAccountStats } from "~/services/accounts/accountTodayStats"
-import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
-import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/inspection"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
+import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { mergeCompatibilityCheckInStatus } from "~/services/checkin/autoCheckin/state"
 import type {
   ProtectionBypassSurface,

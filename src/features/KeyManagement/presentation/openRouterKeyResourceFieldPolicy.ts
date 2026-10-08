@@ -7,7 +7,7 @@ import {
 import {
   defineResourceEditorFieldPolicy,
   type ResourceEditorFieldPolicy,
-} from "~/features/ResourceEditor/resourceFieldPolicy"
+} from "~/features/ResourceEditor/model/resourceFieldPolicy"
 import type { EditableResourceProjection } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   OPENROUTER_KEY_FIELD_IDS,

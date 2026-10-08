@@ -5,7 +5,7 @@ import {
   getPrimaryAllowanceSignal,
 } from "~/features/ApiCredentialProfiles/utils/apiCredentialAllowance"
 import { DEV_ALLOWANCE_FIXTURES } from "~/features/DevPanel/fixtureAllowanceTelemetry"
-import { coerceTelemetrySnapshot } from "~/services/apiCredentialProfiles/telemetrySnapshotCodec"
+import { coerceTelemetrySnapshot } from "~/services/apiCredentialProfiles/telemetry/snapshotCodec"
 
 const NOW = Date.UTC(2026, 5, 1, 12, 0, 0)
 

@@ -7,7 +7,7 @@ import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSessio
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { refreshAccountData as refreshVoApiV2AccountData } from "~/services/apiService/voapiV2/accountData"
-import * as postSaveDiscovery from "~/services/checkin/autoCheckin/postSaveDiscovery"
+import * as postSaveDiscovery from "~/services/checkin/autoCheckin/discovery/postSaveDiscovery"
 import { AccountWriteRejectedError } from "~/services/core/accountWriteGuard"
 import {
   ACCOUNT_STORAGE_KEYS,

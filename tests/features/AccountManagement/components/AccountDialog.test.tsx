@@ -18,7 +18,7 @@ import toast from "~/lib/notify"
 import enAccountDialog from "~/locales/en/accountDialog.json"
 import { ACCOUNT_POST_SAVE_WORKFLOW_STEPS } from "~/services/accounts/accountPostSaveWorkflow"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
-import { API_CREDENTIAL_PROFILE_CAPTURE_STATUSES } from "~/services/apiCredentialProfiles/apiCredentialProfileLinkContracts"
+import { API_CREDENTIAL_PROFILE_CAPTURE_STATUSES } from "~/services/apiCredentialProfiles/links/contracts"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { AuthTypeEnum } from "~/types"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
@@ -311,29 +311,26 @@ vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
   ),
 }))
 
-vi.mock(
-  "~/services/apiCredentialProfiles/apiCredentialProfileLinks",
-  async (importOriginal) => {
-    const actual =
-      await importOriginal<
-        typeof import("~/services/apiCredentialProfiles/apiCredentialProfileLinks")
-      >()
+vi.mock("~/services/apiCredentialProfiles/links", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/apiCredentialProfiles/links")
+    >()
 
-    return {
-      ...actual,
-      apiCredentialProfileLinks: {
-        ...actual.apiCredentialProfileLinks,
-        capture: async (input: { profile: unknown }) => {
-          mockCaptureApiCredentialProfile(input)
-          return {
-            status: API_CREDENTIAL_PROFILE_CAPTURE_STATUSES.Captured,
-            profile: await mockCreateApiCredentialProfile(input.profile),
-          }
-        },
+  return {
+    ...actual,
+    apiCredentialProfileLinks: {
+      ...actual.apiCredentialProfileLinks,
+      capture: async (input: { profile: unknown }) => {
+        mockCaptureApiCredentialProfile(input)
+        return {
+          status: API_CREDENTIAL_PROFILE_CAPTURE_STATUSES.Captured,
+          profile: await mockCreateApiCredentialProfile(input.profile),
+        }
       },
-    }
-  },
-)
+    },
+  }
+})
 
 vi.mock("~/lib/notify", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/lib/notify")>()

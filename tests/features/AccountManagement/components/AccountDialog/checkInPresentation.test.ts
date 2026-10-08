@@ -17,9 +17,9 @@ import {
   getCheckInRedetectionFeedbackPresentation,
   getCheckInSelectionPresentation,
 } from "~/features/AccountManagement/components/AccountDialog/checkInPresentation"
-import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
+import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { mergeCheckInDiscoveryResults } from "~/services/checkin/autoCheckin/domain"
-import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/inspection"
 import type { CheckInAccountState } from "~/types/checkIn"
 
 const t = ((key: string, options?: Record<string, unknown>) =>

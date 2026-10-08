@@ -1,7 +1,7 @@
 import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import type { AccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
 import { createPersistedSiteAccount } from "~/services/accounts/accountDefaults"
-import { discoverAccountCheckInMethods } from "~/services/checkin/autoCheckin/accountDiscovery"
+import { discoverAccountCheckInMethods } from "~/services/checkin/autoCheckin/discovery/accountDiscovery"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
 import {
   PROTECTION_BYPASS_USER_COMMANDS,

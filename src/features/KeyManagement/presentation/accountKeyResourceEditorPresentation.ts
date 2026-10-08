@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next"
 
-import type { ResourceEditorFieldPolicy } from "~/features/ResourceEditor/resourceFieldPolicy"
+import type { ResourceEditorFieldPolicy } from "~/features/ResourceEditor/model/resourceFieldPolicy"
 import type {
   EditableResourceProjection,
   ResourceFailure,

@@ -4,7 +4,7 @@ import type { ManagedSiteChannelSecretReadOptions } from "~/services/apiAdapters
 import {
   requireManagedResourceChannelId,
   requireNumericManagedResourceId,
-} from "~/services/apiAdapters/managedResources/resourceIds"
+} from "~/services/apiAdapters/managedResources/shared/resourceIds"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,

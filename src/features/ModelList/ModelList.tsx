@@ -17,15 +17,15 @@ import {
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
-import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
+import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/catalog/modelManagementSources"
 import { PersonalizedCatalogFallbackNotice } from "~/features/ModelList/components/PersonalizedCatalogFallbackNotice"
 import {
   isModelListPriceSortMode,
   MODEL_LIST_SORT_MODES,
-} from "~/features/ModelList/sortModes"
+} from "~/features/ModelList/filtering/sortModes"
 import { useModelListVerificationResults } from "~/features/ModelList/hooks/useModelListVerificationResults"
 import { useModelListVerificationWorkflow } from "~/features/ModelList/hooks/useModelListVerificationWorkflow"
-import { PricingScenarioNavigation } from "~/features/ModelList/pricingScenarioNavigation"
+import { PricingScenarioNavigation } from "~/features/ModelList/pricing/pricingScenarioNavigation"
 import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

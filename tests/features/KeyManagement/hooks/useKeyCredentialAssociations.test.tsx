@@ -28,7 +28,7 @@ vi.mock("~/lib/notify", () => ({
   },
 }))
 
-vi.mock("~/services/apiCredentialProfiles/apiCredentialProfileLinks", () => ({
+vi.mock("~/services/apiCredentialProfiles/links", () => ({
   apiCredentialProfileLinks: {
     link: linkMock,
     relink: relinkMock,

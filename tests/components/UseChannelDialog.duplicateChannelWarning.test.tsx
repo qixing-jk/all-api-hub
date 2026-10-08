@@ -20,7 +20,7 @@ import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contra
 import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { MANAGED_RESOURCE_CREATE_SEED_KINDS } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { createNewApiCreateEditor } from "~/services/apiAdapters/managedResources/newApiEditor"
+import { createNewApiCreateEditor } from "~/services/apiAdapters/managedResources/newApi/editor"
 import * as nativeResourceRegistry from "~/services/apiAdapters/managedResources/registry"
 import * as managedSiteRegistry from "~/services/apiAdapters/registry"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"

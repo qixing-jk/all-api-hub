@@ -1,7 +1,8 @@
 import {
   createNewApiKeyGroupBehavior,
   NEW_API_KEY_GROUP_MODES,
-} from "../keyGroupBehavior"
+} from "~/services/apiAdapters/newApi/keys/keyGroupBehavior"
+
 import { oneApiTokenInventoryOverrides } from "../variantOperations/key"
 import type { NewApiVariantRegistration } from "../variantRegistration"
 

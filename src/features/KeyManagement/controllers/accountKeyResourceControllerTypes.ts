@@ -1,4 +1,4 @@
-import { type NativeResourceEditorOpeningState } from "~/features/ResourceEditor/nativeResourceEditorOpeningState"
+import { type NativeResourceEditorOpeningState } from "~/features/ResourceEditor/opening/nativeResourceEditorOpeningState"
 import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
 import { type DisplayAccountApiSnapshot } from "~/services/accounts/utils/apiServiceRequest"
 import {

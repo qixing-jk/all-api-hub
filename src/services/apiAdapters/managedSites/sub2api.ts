@@ -8,8 +8,8 @@ import type {
 import {
   toManagedResourceMatchCandidate,
   toNativeNumericMatchCandidates,
-} from "~/services/apiAdapters/managedResources/matchingInputs"
-import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/resourceIds"
+} from "~/services/apiAdapters/managedResources/shared/matchingInputs"
+import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/shared/resourceIds"
 import { sharePendingConfigRead } from "~/services/apiTransport/requestScheduling"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,

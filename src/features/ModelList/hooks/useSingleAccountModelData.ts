@@ -3,9 +3,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  getModelDataErrorCategory,
+  getPersonalizedCatalogFallbackMessage,
+  getPricingModelCount,
+  trackModelDataLoadCompletion,
+} from "~/features/ModelList/catalog/modelDataDiagnostics"
+import {
   MODEL_MANAGEMENT_SOURCE_KINDS,
   type ModelManagementSource,
-} from "~/features/ModelList/modelManagementSources"
+} from "~/features/ModelList/catalog/modelManagementSources"
 import toast from "~/lib/notify"
 import { MODEL_LIST_DATA_ERROR_CODES } from "~/services/modelCatalog/errors"
 import type { AccountPricingContext } from "~/services/modelCatalog/loader"
@@ -30,12 +36,6 @@ import {
 } from "~/services/productAnalytics/contracts"
 import type { DisplaySiteData } from "~/types"
 
-import {
-  getModelDataErrorCategory,
-  getPersonalizedCatalogFallbackMessage,
-  getPricingModelCount,
-  trackModelDataLoadCompletion,
-} from "../modelDataDiagnostics"
 import {
   createModelPricingQueryKey,
   invalidateProviderModelCatalogCaches,

@@ -6,7 +6,7 @@ import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import SiteInfo from "~/features/AccountManagement/components/AccountList/SiteInfo"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
-import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { mergeCompatibilityCheckInStatus } from "~/services/checkin/autoCheckin/state"
 import type { CheckInConfig, DisplaySiteData } from "~/types"
 import {

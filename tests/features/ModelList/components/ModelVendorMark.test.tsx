@@ -3,7 +3,7 @@ import React from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import { ModelVendorMark } from "~/features/ModelList/components/ModelVendorMark"
-import type { ModelVendorPresentationInput } from "~/features/ModelList/modelVendorPresentation"
+import type { ModelVendorPresentationInput } from "~/features/ModelList/presentation/modelVendorPresentation"
 
 vi.mock("lucide-react", async (importOriginal) => {
   const actual = await importOriginal<typeof import("lucide-react")>()

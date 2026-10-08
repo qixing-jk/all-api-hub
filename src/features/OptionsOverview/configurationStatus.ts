@@ -1,5 +1,5 @@
 import type { ManagedSiteType } from "~/constants/siteType"
-import { isAutomaticCheckInConfiguredForAccount } from "~/services/checkin/autoCheckin/inspection"
+import { isAutomaticCheckInConfiguredForAccount } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { supportsManagedSiteModelSync } from "~/services/managedSites/utils/managedSite"
 import type { UserPreferences } from "~/services/preferences/preferencesSchema"

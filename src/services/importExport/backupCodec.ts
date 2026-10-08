@@ -3,7 +3,7 @@ import { migrateAccountConfig } from "~/services/accounts/migrations/accountData
 import {
   assertSupportedApiCredentialProfilesConfigVersion,
   coerceApiCredentialProfilesConfig,
-} from "~/services/apiCredentialProfiles/profileConfigCodec"
+} from "~/services/apiCredentialProfiles/storage/configCodec"
 import {
   mergeFeatureGuidanceStates,
   type FeatureGuidanceState,

@@ -4,8 +4,8 @@ import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import {
   createAccountSource,
   createProfileSource,
-} from "~/features/ModelList/modelManagementSources"
-import { formatModelListSourceLabel } from "~/features/ModelList/sourceLabels"
+} from "~/features/ModelList/catalog/modelManagementSources"
+import { formatModelListSourceLabel } from "~/features/ModelList/catalog/sourceLabels"
 import {
   createAccountModelListSourceIdentity,
   createAccountRuntimeKeyModelListSourceIdentity,

@@ -3,19 +3,19 @@ import {
   SITE_TYPES,
   type AccountSiteType,
 } from "~/constants/siteType"
-import { createNewApiAccountLogin } from "~/services/apiAdapters/newApi/accountLogin"
+import { createNewApiAccountBootstrap } from "~/services/apiAdapters/newApi/account/accountBootstrap"
+import { createNewApiAccountCompletion } from "~/services/apiAdapters/newApi/account/accountCompletion"
+import { createNewApiAccountData } from "~/services/apiAdapters/newApi/account/accountData"
+import { createNewApiAccountLogin } from "~/services/apiAdapters/newApi/account/accountLogin"
+import { createNewApiAccountRefresh } from "~/services/apiAdapters/newApi/account/accountRefresh"
+import { createNewApiInviteLink } from "~/services/apiAdapters/newApi/account/inviteLink"
+import { createNewApiRedemption } from "~/services/apiAdapters/newApi/account/redemption"
+import { createNewApiSiteNotice } from "~/services/apiAdapters/newApi/announcements/siteNotice"
+import { newApiSiteStructuredAnnouncements } from "~/services/apiAdapters/newApi/announcements/siteStructuredAnnouncements"
+import { createNewApiAccountKeyResources } from "~/services/apiAdapters/newApi/keys/accountKeyResource"
+import { createNewApiModelPricing } from "~/services/apiAdapters/newApi/pricing/modelPricing"
 
 import type { SiteTypeCapabilities } from "../contracts/siteTypeCapabilities"
-import { createNewApiAccountBootstrap } from "./accountBootstrap"
-import { createNewApiAccountCompletion } from "./accountCompletion"
-import { createNewApiAccountData } from "./accountData"
-import { createNewApiAccountKeyResources } from "./accountKeyResource"
-import { createNewApiAccountRefresh } from "./accountRefresh"
-import { createNewApiInviteLink } from "./inviteLink"
-import { createNewApiModelPricing } from "./modelPricing"
-import { createNewApiRedemption } from "./redemption"
-import { createNewApiSiteNotice } from "./siteNotice"
-import { newApiSiteStructuredAnnouncements } from "./siteStructuredAnnouncements"
 import { getNewApiVariantRegistration } from "./variantRegistration"
 
 export const createNewApiCapabilities = (
@@ -43,4 +43,4 @@ export const createNewApiCapabilities = (
   },
 })
 
-export { createNewApiAccountKeyResources } from "./accountKeyResource"
+export { createNewApiAccountKeyResources } from "~/services/apiAdapters/newApi/keys/accountKeyResource"

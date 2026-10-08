@@ -17,8 +17,8 @@ import {
   type VoApiV2UserInfo,
 } from "~/services/apiService/voapiV2/type"
 import { type ApiServiceRequest } from "~/services/apiTransport/type"
-import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configCodec"
-import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/refresh"
+import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configuration/configCodec"
+import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/scheduling/refresh"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,

@@ -18,7 +18,7 @@ import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/comp
 import { getAccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/sitePolicy"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import enAccountDialog from "~/locales/en/accountDialog.json"
-import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/compatibilityConfig"
+import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { mergeCheckInDiscoveryResults } from "~/services/checkin/autoCheckin/domain"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 import { testI18n } from "~~/tests/test-utils/i18n"

@@ -1,15 +1,15 @@
 import { useMemo, useState } from "react"
 
 import {
-  createBatchVerifyModelItems,
-  type BatchVerifyModelItem,
-} from "~/features/ModelList/batchVerification"
-import type { useModelListData } from "~/features/ModelList/hooks/useModelListData"
-import type { CalculatedModelItem } from "~/features/ModelList/modelListItems"
-import {
   MODEL_MANAGEMENT_SOURCE_KINDS,
   type ModelManagementItemSource,
-} from "~/features/ModelList/modelManagementSources"
+} from "~/features/ModelList/catalog/modelManagementSources"
+import type { useModelListData } from "~/features/ModelList/hooks/useModelListData"
+import type { CalculatedModelItem } from "~/features/ModelList/presentation/modelListItems"
+import {
+  createBatchVerifyModelItems,
+  type BatchVerifyModelItem,
+} from "~/features/ModelList/verification/batchVerification"
 import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 

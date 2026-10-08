@@ -18,13 +18,14 @@ import {
 } from "~/services/apiService/sub2api/authSession"
 import { ApiError } from "~/services/apiTransport/errors"
 import {
+  inspectAccountCheckIn,
+  resolveSelectedCheckInMethod,
+} from "~/services/checkin/autoCheckin/discovery/inspection"
+import {
   AUTO_CHECKIN_ERROR_CATEGORIES,
   classifyAutoCheckinError,
 } from "~/services/checkin/autoCheckin/errors"
-import {
-  inspectAccountCheckIn,
-  resolveSelectedCheckInMethod,
-} from "~/services/checkin/autoCheckin/inspection"
+import { canAutomaticallyRetryCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import type {
   AutoCheckinMutationLifecycle,
@@ -38,7 +39,6 @@ import {
 } from "~/services/checkin/autoCheckin/providers/registry"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderResult } from "~/services/checkin/autoCheckin/providers/types"
-import { canAutomaticallyRetryCheckinResult } from "~/services/checkin/autoCheckin/resultPolicy"
 import {
   isPersistableInitialCheckInDetection,
   replaceCheckInMethodDetection,

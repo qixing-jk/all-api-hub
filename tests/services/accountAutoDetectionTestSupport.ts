@@ -18,7 +18,7 @@ export const accountAutoDetectionMocks = {
   mockOpenRouterPageAction: vi.fn(),
   mockDiscoverCheckInMethods:
     vi.fn<
-      typeof import("~/services/checkin/autoCheckin/discovery").discoverCheckInMethods
+      typeof import("~/services/checkin/autoCheckin/discovery/discovery").discoverCheckInMethods
     >(),
   loggerMock: {
     debug: vi.fn(),

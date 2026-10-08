@@ -1,21 +1,20 @@
 import type { ComponentType } from "react"
 
 import type { ManagedSiteType } from "~/constants/siteType"
-
-import AxonHubSettings from "./AxonHubSettings"
-import ClaudeCodeHubSettings from "./ClaudeCodeHubSettings"
-import CliProxyApiSettings from "./CliProxyApiSettings"
-import DoneHubSettings from "./DoneHubSettings"
-import GptLoadSettings from "./GptLoadSettings"
+import AxonHubSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/AxonHubSettings"
+import ClaudeCodeHubSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/ClaudeCodeHubSettings"
+import CliProxyApiSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/CliProxyApiSettings"
+import DoneHubSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/DoneHubSettings"
+import GptLoadSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/GptLoadSettings"
+import NewApiSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/NewApiSettings"
+import OctopusSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/OctopusSettings"
+import OmniRouteSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/OmniRouteSettings"
+import Sub2ApiSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/Sub2ApiSettings"
+import VeloeraSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/VeloeraSettings"
 import {
   resolveManagedSiteSettingsPanelId,
   type ManagedSiteSettingsPanelId,
-} from "./managedSiteSettingsSearchRegistry"
-import NewApiSettings from "./NewApiSettings"
-import OctopusSettings from "./OctopusSettings"
-import OmniRouteSettings from "./OmniRouteSettings"
-import Sub2ApiSettings from "./Sub2ApiSettings"
-import VeloeraSettings from "./VeloeraSettings"
+} from "~/features/BasicSettings/components/tabs/ManagedSite/search/managedSiteSettingsSearchRegistry"
 
 const panels = {
   newApi: NewApiSettings,

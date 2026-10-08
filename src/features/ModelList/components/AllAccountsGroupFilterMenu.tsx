@@ -8,8 +8,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover"
-import { formatGroupLabel } from "~/features/ModelList/groupLabels"
-import type { AccountGroupOption } from "~/features/ModelList/modelListItems"
+import { formatGroupLabel } from "~/features/ModelList/groups/groupLabels"
+import type { AccountGroupOption } from "~/features/ModelList/presentation/modelListItems"
 import { cn } from "~/lib/utils"
 import type { DisplaySiteData } from "~/types"
 

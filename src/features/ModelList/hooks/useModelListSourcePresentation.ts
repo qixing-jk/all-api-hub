@@ -1,6 +1,18 @@
 import { useCallback, useMemo } from "react"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { isProviderCatalogFallback } from "~/features/ModelList/catalog/catalogFallback"
+import {
+  ALL_ACCOUNTS_SOURCE_VALUE,
+  MODEL_MANAGEMENT_SOURCE_KINDS,
+  resolveModelManagementSource,
+} from "~/features/ModelList/catalog/modelManagementSources"
+import { sortModelListAccounts } from "~/features/ModelList/filtering/accountOrdering"
+import { MODEL_LIST_GROUP_SELECTION_SCOPES } from "~/features/ModelList/groups/groupSelectionScopes"
+import {
+  canEnableModelPriceComparison,
+  enableModelPriceComparison,
+} from "~/features/ModelList/pricing/priceComparisonActivation"
 import {
   canCreateAccountKeyResources,
   canListAccountRuntimeKeys,
@@ -14,18 +26,6 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { replaceWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
-import { sortModelListAccounts } from "../accountOrdering"
-import { isProviderCatalogFallback } from "../catalogFallback"
-import { MODEL_LIST_GROUP_SELECTION_SCOPES } from "../groupSelectionScopes"
-import {
-  ALL_ACCOUNTS_SOURCE_VALUE,
-  MODEL_MANAGEMENT_SOURCE_KINDS,
-  resolveModelManagementSource,
-} from "../modelManagementSources"
-import {
-  canEnableModelPriceComparison,
-  enableModelPriceComparison,
-} from "../priceComparisonActivation"
 import type { useModelListData } from "./useModelListData"
 
 type SourcePresentationInput = Pick<

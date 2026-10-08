@@ -11,7 +11,7 @@ import {
   type ModelPriceComparisonPresetId,
   type ModelPriceComparisonWeightKey,
   type ModelPriceComparisonWeights,
-} from "~/features/ModelList/priceComparison"
+} from "~/features/ModelList/pricing/priceComparison"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

@@ -2,14 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
-import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHubMigration"
-import { claudeCodeHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/claudeCodeHubMigration"
-import { doneHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/doneHubMigration"
-import { newApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/newApiMigration"
-import { octopusManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/octopusMigration"
-import * as octopusNative from "~/services/apiAdapters/managedResources/octopusNativeOperations"
-import { sub2ApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/sub2apiMigration"
-import { veloeraManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/veloeraMigration"
+import { axonHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/axonHub/migration"
+import { claudeCodeHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/claudeCodeHub/migration"
+import { doneHubManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/doneHub/migration"
+import { newApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/newApi/migration"
+import { octopusManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/octopus/migration"
+import * as octopusNative from "~/services/apiAdapters/managedResources/octopus/nativeOperations"
+import { sub2ApiManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/sub2api/migration"
+import { veloeraManagedSiteMigrationCapability } from "~/services/apiAdapters/managedResources/veloera/migration"
 import type {
   ManagedSiteMigrationCapability,
   ManagedSiteMigrationSource,

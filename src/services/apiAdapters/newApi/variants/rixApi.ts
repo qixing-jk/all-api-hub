@@ -1,4 +1,8 @@
 import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
+import {
+  fetchRixApiModelPricing,
+  normalizeRixApiModelPricingResponse,
+} from "~/services/apiAdapters/newApi/pricing/rixApiModelPricing"
 import * as rixApi from "~/services/apiService/newApiFamily/variants/rixApi"
 import {
   readRixApiMajorVersion,
@@ -8,10 +12,6 @@ import {
 import * as rixApiTokens from "~/services/apiService/newApiFamily/variants/rixApiTokens"
 import { ApiError } from "~/services/apiTransport/errors"
 
-import {
-  fetchRixApiModelPricing,
-  normalizeRixApiModelPricingResponse,
-} from "../rixApiModelPricing"
 import {
   createSafeCredentialError,
   type CredentialFailure,

@@ -20,7 +20,7 @@ import {
   type ResourceOperationOptions,
   type ResourceValidationResult,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import { scalarKeyCleanup } from "~/services/apiAdapters/managedResources/keyCleanup"
+import { scalarKeyCleanup } from "~/services/apiAdapters/managedResources/shared/keyCleanup"
 import { createEditorSubmissionLifecycle } from "~/services/apiAdapters/nativeResources/editorSubmissionLifecycle"
 import {
   assertNativeResourceFacts,

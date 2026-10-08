@@ -12,7 +12,7 @@ import {
 } from "~/features/KeyManagement/constants"
 import { isAccountKeyResourceRouteTransitionAcknowledged } from "~/features/KeyManagement/controllers/accountKeyResourceWorkflowSupport"
 import { useAccountKeyResourceController } from "~/features/KeyManagement/controllers/useAccountKeyResourceController"
-import { NATIVE_RESOURCE_EDITOR_LOADING_REVEALS } from "~/features/ResourceEditor/nativeResourceEditorOpeningState"
+import { NATIVE_RESOURCE_EDITOR_LOADING_REVEALS } from "~/features/ResourceEditor/opening/nativeResourceEditorOpeningState"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   AccountKeyResourceError,

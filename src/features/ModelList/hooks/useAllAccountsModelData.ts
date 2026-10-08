@@ -2,6 +2,19 @@ import { useQueries, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useMemo, useRef } from "react"
 import { useTranslation } from "react-i18next"
 
+import {
+  getAggregateModelDataFailureDiagnostics,
+  getFirstModelDataDisplayErrorReason,
+  getModelDataDisplayErrorReason,
+  getPersonalizedCatalogFallbackMessage,
+  getPricingModelCount,
+  trackModelDataLoadCompletion,
+} from "~/features/ModelList/catalog/modelDataDiagnostics"
+import {
+  MODEL_LIST_ACCOUNT_ERROR_TYPES,
+  MODEL_LIST_QUERY_SCOPE_VALUES,
+  type ModelListAccountErrorType,
+} from "~/features/ModelList/catalog/modelDataStates"
 import { MODEL_LIST_DATA_ERROR_CODES } from "~/services/modelCatalog/errors"
 import type { AccountPricingContext } from "~/services/modelCatalog/loader"
 import {
@@ -22,19 +35,6 @@ import {
 } from "~/services/productAnalytics/contracts"
 import type { DisplaySiteData } from "~/types"
 
-import {
-  getAggregateModelDataFailureDiagnostics,
-  getFirstModelDataDisplayErrorReason,
-  getModelDataDisplayErrorReason,
-  getPersonalizedCatalogFallbackMessage,
-  getPricingModelCount,
-  trackModelDataLoadCompletion,
-} from "../modelDataDiagnostics"
-import {
-  MODEL_LIST_ACCOUNT_ERROR_TYPES,
-  MODEL_LIST_QUERY_SCOPE_VALUES,
-  type ModelListAccountErrorType,
-} from "../modelDataStates"
 import {
   createAllAccountsModelLoadTargetQueryKey,
   invalidateProviderModelCatalogCaches,

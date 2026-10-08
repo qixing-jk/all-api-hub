@@ -1,9 +1,9 @@
-import * as accountBootstrap from "~/services/apiService/newApiFamily/default/accountBootstrap"
-
 import {
   createNewApiKeyGroupBehavior,
   NEW_API_KEY_GROUP_MODES,
-} from "../keyGroupBehavior"
+} from "~/services/apiAdapters/newApi/keys/keyGroupBehavior"
+import * as accountBootstrap from "~/services/apiService/newApiFamily/default/accountBootstrap"
+
 import {
   type CredentialPayload,
   type TrimString,

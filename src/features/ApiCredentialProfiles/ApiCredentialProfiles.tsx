@@ -33,7 +33,7 @@ import {
 import { useAccountData } from "~/hooks/useAccountData"
 import { useApiCredentialProfileLinks } from "~/hooks/useApiCredentialProfileLinks"
 import toast from "~/lib/notify"
-import { apiCredentialProfileLinks } from "~/services/apiCredentialProfiles/apiCredentialProfileLinks"
+import { apiCredentialProfileLinks } from "~/services/apiCredentialProfiles/links"
 import {
   GATEWAY_GUIDANCE_SURFACES,
   type FeatureGuidanceState,
