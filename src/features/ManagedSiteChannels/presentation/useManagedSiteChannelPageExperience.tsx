@@ -30,7 +30,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { createTab } from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
 import { createLogger } from "~/utils/core/logger"
 import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 

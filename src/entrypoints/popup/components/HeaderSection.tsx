@@ -26,7 +26,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { isExtensionSidePanel } from "~/utils/browser"
-import { getSidePanelSupport } from "~/utils/browser/browserApi"
+import { getSidePanelSupport } from "~/utils/browser/sidePanel"
 import { createLogger } from "~/utils/core/logger"
 import {
   openApiCredentialProfilesPage,

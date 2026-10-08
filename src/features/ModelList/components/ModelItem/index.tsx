@@ -43,7 +43,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
-import { createTab } from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
 import { isProdBuild } from "~/utils/core/environment"
 import { createLogger } from "~/utils/core/logger"
 import { tryParseUrl } from "~/utils/core/urlParsing"

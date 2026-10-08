@@ -18,7 +18,7 @@ import {
   onTabActivated,
   onTabRemoved,
   onTabUpdated,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/tabs"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("AccountDataContext")

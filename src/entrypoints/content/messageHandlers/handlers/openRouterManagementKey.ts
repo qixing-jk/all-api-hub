@@ -9,7 +9,7 @@ import type {
   TempWindowOpenRouterManagementKeyActionParams,
   TempWindowOpenRouterManagementKeyActionResult,
 } from "~/services/apiAdapters/openrouter/managementKeyPageContract"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 
 /** Normalizes an internal page exception without exposing its message. */
 function failedCreateResult(

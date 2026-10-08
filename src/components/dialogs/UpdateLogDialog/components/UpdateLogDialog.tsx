@@ -16,7 +16,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { trackStarPromotionAction } from "~/services/productAnalytics/starPromotion"
 import { starPromotionState } from "~/services/starPromotion/state"
-import { createTab } from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"

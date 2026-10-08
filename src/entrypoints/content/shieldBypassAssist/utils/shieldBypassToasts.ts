@@ -4,7 +4,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { ensureRedemptionToastUi } from "~/entrypoints/content/shared/uiRoot"
 import toast from "~/lib/notify/content"
 import { recordShieldBypassPromptShown } from "~/services/productAnalytics/shieldBypassSummary"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { createLogger } from "~/utils/core/logger"
 
 import { ShieldBypassPromptToast } from "../components/ShieldBypassPromptToast"

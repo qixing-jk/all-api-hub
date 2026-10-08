@@ -11,7 +11,7 @@ import {
   TOOLBAR_ACTION_CLICK_BEHAVIORS,
   type ToolbarActionClickBehavior,
 } from "~/services/preferences/preferencesSchema"
-import { getSidePanelSupport } from "~/utils/browser/browserApi"
+import { getSidePanelSupport } from "~/utils/browser/sidePanel"
 import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 

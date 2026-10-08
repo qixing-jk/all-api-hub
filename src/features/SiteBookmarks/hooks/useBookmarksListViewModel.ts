@@ -16,7 +16,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import type { SiteBookmark } from "~/types"
-import { createTab } from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
 import { getErrorMessage } from "~/utils/core/error"
 import { closeIfPopup } from "~/utils/navigation/popup"
 

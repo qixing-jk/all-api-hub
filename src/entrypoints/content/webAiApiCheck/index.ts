@@ -4,10 +4,8 @@ import {
   sendWebAiApiCheckMessage,
   WebAiApiCheckMessageTypes,
 } from "~/services/verification/webAiApiCheck/messaging"
-import {
-  checkPermissionViaMessage,
-  onRuntimeMessage,
-} from "~/utils/browser/browserApi"
+import { checkPermissionViaMessage } from "~/utils/browser/permissions"
+import { onRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { createLogger } from "~/utils/core/logger"
 import { isHttpUrl } from "~/utils/core/urlParsing"
 

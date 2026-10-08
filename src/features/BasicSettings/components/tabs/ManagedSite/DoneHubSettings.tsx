@@ -15,7 +15,7 @@ import { PreferenceSettingSection as SettingSection } from "~/features/BasicSett
 import { blurInputOnEnter } from "~/hooks/useDeferredPreferenceField"
 import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/utils/adminUserId"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
-import { createTab } from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
 import { joinUrl } from "~/utils/core/url"
 
 import { MANAGED_SITE_CONFIG_TEXT_POLICIES } from "./managedSiteConfigFields"

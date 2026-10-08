@@ -26,7 +26,7 @@ import {
   handleCompleteSub2ApiOAuth,
   handlePrepareSub2ApiOAuth,
 } from "~/services/apiService/sub2api/oauth/content"
-import { onRuntimeMessage } from "~/utils/browser/browserApi"
+import { onRuntimeMessage } from "~/utils/browser/runtimeMessages"
 
 /**
  * Registers content-script message handlers for fetching storage data,

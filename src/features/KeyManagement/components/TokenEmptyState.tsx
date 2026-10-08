@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import { EmptyState } from "~/components/ui"
 import type { DisplaySiteData } from "~/types"
-import { createTab } from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
 import { createLogger } from "~/utils/core/logger"
 import { SITE_SUPPORT_ERROR_TYPES } from "~/utils/navigation/feedbackLinks"
 import { openSiteSupportRequestPage } from "~/utils/navigation/feedbackPages"

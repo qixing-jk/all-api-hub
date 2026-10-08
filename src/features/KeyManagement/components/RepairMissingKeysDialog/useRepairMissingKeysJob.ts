@@ -28,7 +28,7 @@ import {
 import type { DisplaySiteData } from "~/types"
 import type { AccountKeyRepairProgress } from "~/types/accountKeyAutoProvisioning"
 import { ACCOUNT_KEY_REPAIR_JOB_STATES } from "~/types/accountKeyAutoProvisioning"
-import { onRuntimeMessage } from "~/utils/browser/browserApi"
+import { onRuntimeMessage } from "~/utils/browser/runtimeMessages"
 
 import { hasRepairAttentionOutcomes } from "./repairMissingKeysDialogHelpers"
 

@@ -25,7 +25,7 @@ import {
   RELEASE_UPDATE_REASONS,
   type ReleaseUpdateReason,
 } from "~/services/updates/releaseUpdateStatus"
-import { reloadRuntime } from "~/utils/browser/browserApi"
+import { reloadRuntime } from "~/utils/browser/runtime"
 
 /**
  * Format the last release-check timestamp for a localized status line.

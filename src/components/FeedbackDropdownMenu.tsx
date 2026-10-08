@@ -34,7 +34,7 @@ import {
 import { trackStarPromotionAction } from "~/services/productAnalytics/starPromotion"
 import { starPromotionState } from "~/services/starPromotion/state"
 import { isExtensionPopup, isExtensionSidePanel } from "~/utils/browser"
-import { createTab } from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
 import {
   openBugReportPage,
   openCommunityPage,

@@ -14,7 +14,7 @@ import {
 } from "~/services/productAnalytics/starPromotion"
 import { STAR_PROMOTION_STATUSES } from "~/services/starPromotion/contracts"
 import { starPromotionState } from "~/services/starPromotion/state"
-import { createTab } from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
 
 import {
   StarPromotionCardView,

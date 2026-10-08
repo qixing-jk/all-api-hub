@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { Button } from "~/components/ui"
 import type { AccountSiteManualAddGuideAnchor } from "~/services/accountSiteDefinitions"
-import { createTab } from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
 import { getDocsManualAddGuideUrl } from "~/utils/navigation/docsLinks"
 
 interface ManualAddGuideButtonProps {

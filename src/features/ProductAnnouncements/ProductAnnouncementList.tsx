@@ -6,7 +6,7 @@ import { Badge, Button } from "~/components/ui"
 import { cn } from "~/lib/utils"
 import { PRODUCT_ANNOUNCEMENT_CTA_KINDS } from "~/services/productAnnouncements/constants"
 import type { ProductAnnouncement } from "~/services/productAnnouncements/types"
-import { getExtensionURL } from "~/utils/browser/browserApi"
+import { getExtensionURL } from "~/utils/browser/runtime"
 
 import {
   getProductAnnouncementSeverityLabel,

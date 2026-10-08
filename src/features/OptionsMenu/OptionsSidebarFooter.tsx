@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 import { REPO_URL } from "~/constants/about"
 import { useIsStarred } from "~/features/StarPromotion/useStarPromotionActive"
 import { cn } from "~/lib/utils"
-import { createTab } from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
 import { getDocsHomepageUrl } from "~/utils/navigation/docsLinks"
 
 import { SupportCommunityPopover } from "./SupportCommunityPopover"

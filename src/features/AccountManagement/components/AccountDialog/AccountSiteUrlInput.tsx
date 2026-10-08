@@ -18,7 +18,7 @@ import {
   InputGroupInput,
 } from "~/components/ui/input-group"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
-import { getAllTabs } from "~/utils/browser/browserApi"
+import { getAllTabs } from "~/utils/browser/tabs"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 

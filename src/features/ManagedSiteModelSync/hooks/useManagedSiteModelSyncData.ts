@@ -17,7 +17,7 @@ import type {
   ExecutionHistoryResult,
   ExecutionProgress,
 } from "~/types/managedSiteModelSync"
-import { onRuntimeMessage } from "~/utils/browser/browserApi"
+import { onRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { createLogger } from "~/utils/core/logger"
 
 import type { SyncRequestToken } from "../contracts"

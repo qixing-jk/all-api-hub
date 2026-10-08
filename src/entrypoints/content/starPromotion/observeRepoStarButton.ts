@@ -4,7 +4,7 @@ import {
   ALL_API_HUB_REPO_PAGE_KINDS,
   classifyAllApiHubRepoPageUrl,
 } from "~/services/starPromotion/repoPage"
-import { sendRuntimeActionMessage } from "~/utils/browser/browserApi"
+import { sendRuntimeActionMessage } from "~/utils/browser/runtimeMessages"
 import { createLogger } from "~/utils/core/logger"
 
 /**

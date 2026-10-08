@@ -13,7 +13,7 @@ import {
 } from "~/services/siteDetection/siteTypeObservations"
 import type { DisplaySiteData, SiteAccount } from "~/types"
 import { type AutoCheckinStatus } from "~/types/autoCheckin"
-import { onRuntimeMessage } from "~/utils/browser/browserApi"
+import { onRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("AutoCheckinStatusWorkspace")

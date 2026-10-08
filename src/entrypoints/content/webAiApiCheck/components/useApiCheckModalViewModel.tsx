@@ -33,7 +33,7 @@ import {
   WebAiApiCheckMessageTypes,
 } from "~/services/verification/webAiApiCheck/messaging"
 import type { Tag } from "~/types"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { createLogger } from "~/utils/core/logger"
 
 import {

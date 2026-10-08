@@ -1,4 +1,4 @@
-import { getExtensionVersion } from "~/utils/browser/browserApi"
+import { getExtensionVersion } from "~/utils/browser/runtime"
 import { detectBrowserFamily } from "~/utils/browser/userAgent"
 import { createLogger } from "~/utils/core/logger"
 

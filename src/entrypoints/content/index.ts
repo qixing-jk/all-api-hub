@@ -11,7 +11,8 @@ import {
   type ContentFeaturePreferences,
   type ContentFeaturePreferenceSource,
 } from "~/services/preferences/contentScriptFeatureDefaults"
-import { getRuntimeId, onStorageChanged } from "~/utils/browser/browserApi"
+import { getRuntimeId } from "~/utils/browser/runtime"
+import { onStorageChanged } from "~/utils/browser/storage"
 import { createLogger } from "~/utils/core/logger"
 import { ensureContentI18nReady } from "~/utils/i18n/content"
 

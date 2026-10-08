@@ -6,7 +6,7 @@ import { Button } from "~/components/ui"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import type { AccountSiteManualAddGuideAnchor } from "~/services/accountSiteDefinitions"
 import { LDOH_ORIGIN } from "~/services/integrations/ldohSiteLookup/constants"
-import { createTab } from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
 
 import { ManualAddGuideButton } from "./ManualAddGuideButton"
 import {

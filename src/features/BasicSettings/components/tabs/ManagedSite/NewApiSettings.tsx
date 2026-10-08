@@ -23,7 +23,7 @@ import {
 } from "~/services/accounts/utils/siteRouteResolver"
 import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/utils/adminUserId"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
-import { createTab } from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
 
 import { MANAGED_SITE_CONFIG_TEXT_POLICIES } from "./managedSiteConfigFields"
 import { useManagedSiteConfigDraft } from "./useManagedSiteConfigDraft"
