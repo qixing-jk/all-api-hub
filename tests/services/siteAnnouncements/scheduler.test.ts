@@ -1596,6 +1596,17 @@ describe("siteAnnouncementScheduler", () => {
   })
 
   it("converts thrown site announcement resolver errors into failure responses", async () => {
+    const markReadSpy = vi
+      .spyOn(siteAnnouncementStorage, "markRead")
+      .mockRejectedValueOnce(new Error("mark read storage failed"))
+    await expect(
+      resolveSiteAnnouncementsMarkReadMessage({ recordId: "missing-record" }),
+    ).resolves.toEqual({
+      success: false,
+      error: "mark read storage failed",
+    })
+    markReadSpy.mockRestore()
+
     vi.spyOn(siteAnnouncementScheduler, "runManualCheck").mockRejectedValueOnce(
       new Error("check failed"),
     )
