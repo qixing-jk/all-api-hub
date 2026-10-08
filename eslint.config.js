@@ -496,6 +496,7 @@ export default defineConfig([
       "src/features/ModelList/**/*.{js,cjs,mjs,jsx,ts,tsx}",
       "src/components/dialogs/VerifyApiDialog/**/*.{js,cjs,mjs,jsx,ts,tsx}",
       "src/components/dialogs/VerifyCliSupportDialog/**/*.{js,cjs,mjs,jsx,ts,tsx}",
+      "src/components/KiloCodeExportDialog.{js,cjs,mjs,jsx,ts,tsx}",
       "src/features/KiloCodeExport/KiloCodeExportDialog.{js,cjs,mjs,jsx,ts,tsx}",
       "src/services/accounts/**/*.{js,cjs,mjs,jsx,ts,tsx}",
     ],
