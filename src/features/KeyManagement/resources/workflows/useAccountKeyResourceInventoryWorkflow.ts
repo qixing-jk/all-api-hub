@@ -15,7 +15,6 @@ import type {
 } from "~/features/KeyManagement/resources/workflows/accountKeyResourceControllerTypes"
 import {
   awaitAbortable,
-  boundariesMatch,
   isAborted,
   readScopeInventory,
   toFailure,
@@ -93,16 +92,14 @@ export function useAccountKeyResourceInventoryWorkflow({
     acceptRehydration,
   } = editorState
   const {
-    acceptedRowsRef,
-    sessionRef,
-    collectionRef,
-    activeResourceBoundaryRef,
-    selectedScopeRef,
+    readAcceptedRows,
+    readNativeOwner,
+    acceptInventory,
+    beginInventoryLoad,
+    acceptScopeInventory,
+    isNativeOwnerCurrent,
     setIsScopeInventoryLoading,
-    setScopes,
-    setSelectedScope,
     setLoadingResourceBoundary,
-    setResourceScopes,
     setFailures,
     setScopeInventoryFailure,
     setNotice,
@@ -163,17 +160,10 @@ export function useAccountKeyResourceInventoryWorkflow({
       } else {
         clearDialogs()
       }
-      setScopes([])
-      setSelectedScope(null)
-      setLoadingResourceBoundary(null)
-      if (!options.preserveRows || mode === controllerModes.Idle) {
-        setResourceScopes(new Map())
-        replaceAcceptedRows([])
-      }
-      setFailures({})
-      setScopeInventoryFailure(null)
-      setNotice(null)
-      setIsLoading(mode !== controllerModes.Idle)
+      beginInventoryLoad({
+        preserveRows: options.preserveRows ?? false,
+        idle: mode === controllerModes.Idle,
+      })
 
       if (mode === controllerModes.Idle) {
         setSettledAccountIds([])
@@ -232,7 +222,7 @@ export function useAccountKeyResourceInventoryWorkflow({
             readonly AccountKeyResourceFacts[]
           >()
           if (options.preserveRows) {
-            for (const row of acceptedRowsRef.current) {
+            for (const row of readAcceptedRows()) {
               const rows = rowsByAccount.get(row.ref.accountId) ?? []
               rowsByAccount.set(row.ref.accountId, [...rows, row])
             }
@@ -431,17 +421,17 @@ export function useAccountKeyResourceInventoryWorkflow({
           )
         }
         if (current !== requests.version()) return false
-        sessionRef.current = session
-        collectionRef.current = collection
-        activeResourceBoundaryRef.current = activeBoundary
+        acceptInventory({
+          session,
+          collection,
+          boundary: activeBoundary,
+          scopes: availableScopes,
+          selectedScope: scope,
+          scopeFailure: scopeInventory.partialFailure ?? null,
+          rows,
+        })
         acceptRehydration(rehydratedEditor, activeBoundary)
         acceptFreshRead(activeBoundary)
-        setLoadingResourceBoundary(null)
-        setScopes(availableScopes)
-        setSelectedScope(scope)
-        setScopeInventoryFailure(scopeInventory.partialFailure ?? null)
-        rememberResourceScopes(activeBoundary, availableScopes)
-        replaceAcceptedRows(rows)
         acceptProgress(true)
         setSettledAccountIds([account.id])
         return true
@@ -488,31 +478,26 @@ export function useAccountKeyResourceInventoryWorkflow({
       clearDeferredContextReload,
       setDetail,
       setDeleteState,
-      setScopes,
-      setSelectedScope,
       setLoadingResourceBoundary,
-      setResourceScopes,
       setFailures,
-      setScopeInventoryFailure,
       setNotice,
       setIsLoading,
       setSettledAccountIds,
       setProgress,
       accountsRef,
-      acceptedRowsRef,
+      readAcceptedRows,
       routeRef,
       expectTransition,
       replaceRouteRef,
       creationIntentRef,
-      sessionRef,
-      collectionRef,
-      activeResourceBoundaryRef,
+      acceptInventory,
+      beginInventoryLoad,
     ],
   )
 
   const retryScopeInventory = useCallback(async () => {
-    const session = sessionRef.current
-    const boundary = activeResourceBoundaryRef.current
+    const session = readNativeOwner().session
+    const boundary = readNativeOwner().boundary
     const refreshInventory =
       session?.refreshScopeInventory ?? session?.listScopeInventory
     if (
@@ -532,9 +517,7 @@ export function useAccountKeyResourceInventoryWorkflow({
     const isCurrentRequest = () =>
       !controller.signal.aborted &&
       requests.version() === currentGeneration &&
-      sessionRef.current === session &&
-      activeResourceBoundaryRef.current !== null &&
-      boundariesMatch(activeResourceBoundaryRef.current, boundary)
+      isNativeOwnerCurrent({ session, boundary })
 
     try {
       const inventory = await awaitAbortable(
@@ -547,25 +530,7 @@ export function useAccountKeyResourceInventoryWorkflow({
         return false
       }
 
-      const currentScope = selectedScopeRef.current
-      const nextSelectedScope = currentScope
-        ? inventory.scopes.find(
-            (scope) => scope.scopeKey === currentScope.scopeKey,
-          ) ?? currentScope
-        : inventory.scopes.find((scope) => scope.isDefault) ??
-          inventory.scopes[0] ??
-          null
-      const nextScopes =
-        nextSelectedScope &&
-        !inventory.scopes.some(
-          (scope) => scope.scopeKey === nextSelectedScope.scopeKey,
-        )
-          ? [nextSelectedScope, ...inventory.scopes]
-          : inventory.scopes
-      rememberResourceScopes(boundary, nextScopes)
-      setScopes(nextScopes)
-      setSelectedScope(nextSelectedScope)
-      setScopeInventoryFailure(null)
+      acceptScopeInventory(boundary, inventory.scopes)
       return true
     } catch (error) {
       const failure = toFailure(error)
@@ -581,15 +546,12 @@ export function useAccountKeyResourceInventoryWorkflow({
     }
   }, [
     mode,
-    rememberResourceScopes,
-    sessionRef,
-    activeResourceBoundaryRef,
+    acceptScopeInventory,
+    isNativeOwnerCurrent,
+    readNativeOwner,
     requests,
     setIsScopeInventoryLoading,
     setScopeInventoryFailure,
-    selectedScopeRef,
-    setScopes,
-    setSelectedScope,
   ])
   return { load, retryScopeInventory }
 }

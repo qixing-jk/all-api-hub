@@ -30,6 +30,7 @@ import {
   normalizeGoogleFamilyBaseUrl,
   normalizeOpenAiFamilyBaseUrl,
 } from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
+import { createApiCheckProbeRunRegistry } from "~/services/verification/webAiApiCheck/probeRunRegistry"
 import { createLogger } from "~/utils/core/logger"
 import { isHttpUrl } from "~/utils/core/urlParsing"
 import { isUrlAllowedByRegexList } from "~/utils/core/urlWhitelist"
@@ -65,7 +66,7 @@ import type {
  */
 const logger = createLogger("WebAiApiCheck")
 
-const activeProbeAbortControllers = new Map<string, AbortController>()
+const probeRuns = createApiCheckProbeRunRegistry()
 
 /**
  * Read Web AI API Check preferences with safe defaults.
@@ -448,20 +449,17 @@ export async function resolveWebAiApiCheckRunProbeMessage(
     }
 
     try {
-      const abortController = runId ? new AbortController() : undefined
-      if (runId && abortController) {
-        activeProbeAbortControllers.set(runId, abortController)
-      }
-
-      const result = await runApiVerificationProbe({
-        baseUrl: normalizedBaseUrl,
-        apiKey,
-        apiType,
-        modelId: modelId?.trim() || undefined,
-        probeId: probeId as ApiVerificationProbeId,
-        mode,
-        abortSignal: abortController?.signal,
-      })
+      const result = await probeRuns.run(runId, (signal) =>
+        runApiVerificationProbe({
+          baseUrl: normalizedBaseUrl,
+          apiKey,
+          apiType,
+          modelId: modelId?.trim() || undefined,
+          probeId: probeId as ApiVerificationProbeId,
+          mode,
+          abortSignal: signal,
+        }),
+      )
 
       return { success: true, result }
     } catch (error) {
@@ -490,10 +488,6 @@ export async function resolveWebAiApiCheckRunProbeMessage(
       }
 
       return { success: true, result }
-    } finally {
-      if (runId) {
-        activeProbeAbortControllers.delete(runId)
-      }
     }
   } catch (error) {
     logger.error("ApiCheck message handling failed", {
@@ -515,14 +509,7 @@ export async function resolveWebAiApiCheckCancelRunProbeMessage(
       return { success: true, cancelled: false }
     }
 
-    const abortController = activeProbeAbortControllers.get(runId)
-    if (!abortController) {
-      return { success: true, cancelled: false }
-    }
-
-    abortController.abort()
-    activeProbeAbortControllers.delete(runId)
-    return { success: true, cancelled: true }
+    return { success: true, cancelled: probeRuns.cancel(runId) }
   } catch (error) {
     logger.error("ApiCheck cancel message handling failed", {
       message: toSanitizedErrorSummary(error, []),

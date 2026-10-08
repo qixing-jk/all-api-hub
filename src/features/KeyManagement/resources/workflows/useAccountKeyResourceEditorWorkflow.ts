@@ -23,7 +23,6 @@ import {
   completeKeyMutationAnalytics,
   isAborted,
   keyManagementAnalyticsContext,
-  refIdentity,
   resolveCreateDestinationBoundary,
   toFailure,
   USER_KEY_MANAGEMENT_EXECUTION,
@@ -98,12 +97,11 @@ export function useAccountKeyResourceEditorWorkflow({
   } = routing
 
   const {
-    activeResourceBoundaryRef,
-    sessionRef,
-    collectionRef,
-    acceptedRowsRef,
+    readNativeOwner,
+    acceptActionContext,
+    adoptCreationSession,
+    acceptEditedResource,
     scopes,
-    replaceAcceptedRows,
   } = inventoryState
   const {
     readEditor,
@@ -129,7 +127,7 @@ export function useAccountKeyResourceEditorWorkflow({
       const boundary =
         editorMode === editorModes.Edit && mode === controllerModes.All && ref
           ? boundaryFromResourceRef(ref)
-          : activeResourceBoundaryRef.current
+          : readNativeOwner().boundary
       if (
         mode === controllerModes.Idle ||
         (editorMode === editorModes.Create &&
@@ -145,8 +143,8 @@ export function useAccountKeyResourceEditorWorkflow({
               : !isCurrentResourceRef(ref))))
       )
         return
-      const session = sessionRef.current
-      const collection = collectionRef.current
+      const session = readNativeOwner().session
+      const collection = readNativeOwner().collection
       if (
         (editorMode === editorModes.Create && !session) ||
         (editorMode === editorModes.Edit &&
@@ -175,9 +173,7 @@ export function useAccountKeyResourceEditorWorkflow({
               code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
             })
           }
-          sessionRef.current = actionContext.session
-          collectionRef.current = actionContext.collection
-          activeResourceBoundaryRef.current = actionContext.boundary
+          acceptActionContext(actionContext)
           nativeEditor = await awaitAbortable(
             actionContext.collection.openEditEditor(ref!, {
               signal: controller.signal,
@@ -200,7 +196,7 @@ export function useAccountKeyResourceEditorWorkflow({
               code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
             })
           }
-          sessionRef.current = creationSession
+          adoptCreationSession(creationSession)
           nativeEditor = await awaitAbortable(
             creationSession.openCreateEditor(
               boundary.scopeKey,
@@ -215,10 +211,7 @@ export function useAccountKeyResourceEditorWorkflow({
         if (
           current !== requests.version() ||
           !isOpeningCurrent(attemptId) ||
-          !boundariesMatch(
-            activeResourceBoundaryRef.current ?? boundary,
-            boundary,
-          )
+          !boundariesMatch(readNativeOwner().boundary ?? boundary, boundary)
         )
           return
         acceptOpening(attemptId, nativeEditor, boundary, editorMode)
@@ -248,12 +241,12 @@ export function useAccountKeyResourceEditorWorkflow({
       mode,
       openSession,
       resolveResourceActionContext,
+      acceptActionContext,
+      adoptCreationSession,
       transitionEditorOpening,
-      activeResourceBoundaryRef,
+      readNativeOwner,
       createdSecretRef,
       requests,
-      sessionRef,
-      collectionRef,
       accountsRef,
       creationIntentRef,
     ],
@@ -301,7 +294,7 @@ export function useAccountKeyResourceEditorWorkflow({
       const submission = captureSubmission()
       const nativeEditor = submission.nativeEditor
       const currentEditorState = submission.state
-      const activeBoundary = activeResourceBoundaryRef.current
+      const activeBoundary = readNativeOwner().boundary
       const editorBoundary = submission.boundary
       if (
         mode === controllerModes.Idle ||
@@ -401,13 +394,7 @@ export function useAccountKeyResourceEditorWorkflow({
                 }
               : intendedBoundary
           if (submitMode === editorModes.Edit && returnedFacts) {
-            replaceAcceptedRows(
-              acceptedRowsRef.current.map((facts) =>
-                refIdentity(facts.ref) === refIdentity(returnedFacts.ref)
-                  ? returnedFacts
-                  : facts,
-              ),
-            )
+            acceptEditedResource(returnedFacts)
           }
           if (result.createdSecret) {
             transitionCreatedSecret(result.createdSecret)
@@ -500,18 +487,17 @@ export function useAccountKeyResourceEditorWorkflow({
       isFreshReadRequiredForBoundary,
       mode,
       mutationAnalyticsMode,
-      replaceAcceptedRows,
       refreshAfterMutation,
+      acceptEditedResource,
       requireFreshRead,
       scopes,
       t,
       transitionCreatedSecret,
       transitionEditor,
-      activeResourceBoundaryRef,
+      readNativeOwner,
       createdSecretRef,
       requests,
       accountsRef,
-      acceptedRowsRef,
       onCreatedRef,
       nextTransitionId,
       captureSubmission,

@@ -628,6 +628,57 @@ describe("webAiApiCheck background handlers", () => {
     expect(secondCancelResponse).toEqual({ success: true, cancelled: false })
   })
 
+  it("keeps a replacement run cancellable after an older run with the same id finishes", async () => {
+    vi.resetModules()
+    const first = createDeferred<ApiVerificationProbeResult>()
+    const second = createDeferred<ApiVerificationProbeResult>()
+    const signals: (AbortSignal | undefined)[] = []
+    const { runApiVerificationProbe } = await import(
+      "~/services/verification/aiApiVerification"
+    )
+    vi.mocked(runApiVerificationProbe)
+      .mockImplementationOnce(async ({ abortSignal }) => {
+        signals.push(abortSignal)
+        return first.promise
+      })
+      .mockImplementationOnce(async ({ abortSignal }) => {
+        signals.push(abortSignal)
+        return second.promise
+      })
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const request = {
+      runId: "replacement-probe",
+      apiType: "openai-compatible" as const,
+      baseUrl: "https://proxy.example.com",
+      apiKey: "sk-test-secret-fixture",
+      probeId: "text-generation" as const,
+    }
+    const firstRun = background.resolveWebAiApiCheckRunProbeMessage(request)
+    const secondRun = background.resolveWebAiApiCheckRunProbeMessage(request)
+    await vi.waitFor(() => expect(signals).toHaveLength(2))
+    const result: ApiVerificationProbeResult = {
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 0,
+      summary: "ok",
+      input: { apiType: request.apiType, baseUrl: request.baseUrl },
+    }
+    first.resolve(result)
+    await firstRun
+    const cancellation =
+      await background.resolveWebAiApiCheckCancelRunProbeMessage({
+        runId: request.runId,
+      })
+    // Settle both requests even if the assertion fails, avoiding a hanging mock.
+    second.resolve(result)
+    await secondRun
+    expect(cancellation).toEqual({ success: true, cancelled: true })
+    expect(signals[0]?.aborted).toBe(false)
+    expect(signals[1]?.aborted).toBe(true)
+  })
+
   it("cancelRunProbe rejects malformed run ids without throwing", async () => {
     vi.resetModules()
 

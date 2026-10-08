@@ -104,6 +104,20 @@ which can be used independently of a saved account. An association with an
 Account Runtime Key does not make the profile the owner of that upstream key.
 _Avoid_: saved account, upstream key resource
 
+**API Verification Probe Session**:
+An in-page verification workspace's probe runs, batch cancellation and accepted
+results for a credential context. Resetting the workspace invalidates its pending
+runs; a completed predecessor cannot replace a newer run's state. Background
+cancellation tracks the current task instance independently of the UI session.
+_Avoid_: API Credential Profile, probe result, background message
+
+**Model Selection Attempt**:
+One attempt to select a Managed Upstream Resource's models through the allow-list,
+global rules and resource rules. Probe and credential evidence is shared within
+that attempt and refreshed for the next attempt. Selection does not imply that a
+model update was written successfully.
+_Avoid_: model sync run, channel update, permanent model cache
+
 **Model Redirect Mapping**:
 A mapping from a requested model identity to an upstream model identity for a
 Managed Upstream Resource. Matching candidate identities and accepting a mapping

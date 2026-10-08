@@ -6,6 +6,7 @@ import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/configuration/runtimeConfig"
 import {
   applyChannelModelFilters,
+  ChannelModelSelection,
   matchesProbeFilterRule as evaluateProbeFilterRule,
   type ProbeFilterContext,
 } from "~/services/models/modelSync/channelModelFilterEvaluator"
@@ -352,25 +353,24 @@ beforeEach(async () => {
   })
 })
 
-describe("ModelSyncService - allowed model filtering", () => {
+describe("ChannelModelSelection - allowed model filtering", async () => {
   const createService = (allowed?: string[]) =>
-    new ModelSyncService(
+    new ChannelModelSelection(
       makeNewApiRuntimeConfig({
         baseUrl: "https://example.com",
         adminToken: "dummy-token",
         userId: "1",
       }),
-      undefined,
       allowed,
     )
 
-  const callFilter = (service: ModelSyncService, models: string[]) =>
-    (service as any).filterAllowedModels(models) as string[]
+  const callFilter = (selection: ChannelModelSelection, models: string[]) =>
+    selection.select(makeChannel({ id: 1 }), models)
 
-  it("returns trimmed unique models when no allow-list exists", () => {
+  it("returns trimmed unique models when no allow-list exists", async () => {
     const service = createService()
 
-    const result = callFilter(service, [
+    const result = await callFilter(service, [
       "  gpt-4o  ",
       "gpt-4o",
       "claude-3",
@@ -380,10 +380,10 @@ describe("ModelSyncService - allowed model filtering", () => {
     expect(result).toEqual(["gpt-4o", "claude-3"])
   })
 
-  it("filters models using the configured allow-list", () => {
+  it("filters models using the configured allow-list", async () => {
     const service = createService(["gpt-4o", "claude-3"])
 
-    const result = callFilter(service, [
+    const result = await callFilter(service, [
       " gpt-4o  ",
       "gpt-4o-mini",
       "claude-3",
@@ -393,13 +393,80 @@ describe("ModelSyncService - allowed model filtering", () => {
     expect(result).toEqual(["gpt-4o", "claude-3"])
   })
 
-  it("deduplicates after filtering", () => {
+  it("deduplicates after filtering", async () => {
     const service = createService(["gpt-4o"])
 
-    const result = callFilter(service, ["gpt-4o", " gpt-4o  ", "gpt-4o"])
+    const result = await callFilter(service, ["gpt-4o", " gpt-4o  ", "gpt-4o"])
 
     expect(result).toEqual(["gpt-4o"])
   })
+})
+
+describe("ChannelModelSelection - attempt lifetime", () => {
+  it("shares secret and probe evidence across scopes but refreshes it for each attempt", async () => {
+    const selection = new ChannelModelSelection(
+      makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
+      undefined,
+      makeChannelConfigs(
+        { 79: [makeProbeRule({ id: "channel-duplicate" })] },
+        "https://example.com",
+      ),
+      [makeProbeRule({ id: "global-duplicate" })],
+    )
+    const channel = makeChannel({ id: 79, credential: "", models: [] })
+    await expect(
+      selection.select(channel, ["model-a", "model-b"]),
+    ).resolves.toEqual(["model-a", "model-b"])
+    expect(fetchChannelSecretKeyMock).toHaveBeenCalledTimes(1)
+    expect(runApiVerificationProbeMock).toHaveBeenCalledTimes(2)
+
+    fetchChannelSecretKeyMock.mockResolvedValueOnce("sk-replacement")
+    runApiVerificationProbeMock.mockResolvedValue({
+      id: "text-generation",
+      status: "fail",
+      latencyMs: 1,
+      summary: "failed",
+    })
+    await expect(
+      selection.select(channel, ["model-a", "model-b"]),
+    ).resolves.toEqual([])
+    expect(fetchChannelSecretKeyMock).toHaveBeenCalledTimes(2)
+    expect(runApiVerificationProbeMock).toHaveBeenCalledTimes(4)
+    expect(runApiVerificationProbeMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ apiKey: "sk-replacement" }),
+    )
+  })
+
+  it.each(["success", "failure"] as const)(
+    "releases the fallback probe deadline after %s",
+    async (outcome) => {
+      vi.useFakeTimers()
+      vi.stubGlobal("AbortSignal", { timeout: undefined })
+      try {
+        const selection = new ChannelModelSelection(
+          makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
+          undefined,
+          undefined,
+          [makeProbeRule()],
+        )
+        if (outcome === "failure")
+          fetchChannelSecretKeyMock.mockRejectedValueOnce(
+            new Error("hidden key unavailable"),
+          )
+        const result = selection.select(
+          makeChannel({ id: 79, credential: "", models: [] }),
+          ["model-a"],
+        )
+        if (outcome === "success")
+          await expect(result).resolves.toEqual(["model-a"])
+        else await expect(result).rejects.toThrow()
+        expect(vi.getTimerCount()).toBe(0)
+      } finally {
+        vi.unstubAllGlobals()
+        vi.useRealTimers()
+      }
+    },
+  )
 })
 
 describe("ModelSyncService - siteType routing", () => {
