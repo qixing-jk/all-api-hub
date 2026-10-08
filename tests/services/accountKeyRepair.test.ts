@@ -1097,11 +1097,16 @@ describe("accountKeyRepair", () => {
     )
     await accountKeyRepairRunner.start()
     await vi.waitFor(() => expect(mocks.openKeyResources).toHaveBeenCalled())
+    const runCompletion = Reflect.get(
+      accountKeyRepairRunner,
+      "currentRun",
+    ) as Promise<void>
     await expect(accountKeyRepairRunner.cancel()).resolves.toMatchObject({
       success: true,
       data: { state: ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled },
     })
     releaseInspect()
+    await runCompletion
     await vi.waitFor(async () => {
       const progress = await accountKeyRepairRunner.getProgress()
       expect(progress.state).toBe(ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled)
@@ -1133,8 +1138,13 @@ describe("accountKeyRepair", () => {
       await vi.waitFor(() =>
         expect(mocks.openKeyResources).toHaveBeenCalledOnce(),
       )
+      const runCompletion = Reflect.get(
+        accountKeyRepairRunner,
+        "currentRun",
+      ) as Promise<void>
       await accountKeyRepairRunner.cancel()
       releaseOpen()
+      await runCompletion
 
       await vi.waitFor(async () => {
         const progress = await accountKeyRepairRunner.getProgress()
