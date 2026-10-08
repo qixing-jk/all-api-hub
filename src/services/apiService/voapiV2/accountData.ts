@@ -191,17 +191,11 @@ export async function refreshAccountData(
     }
   } catch (error) {
     if (isVoApiV2AuthExpiredError(error)) {
-      const resynced = request.tempWindowRequestSource
-        ? await resyncVoApiV2AuthToken(
-            request.baseUrl,
-            request.tempWindowRequestSource,
-            request.protectionBypassExecution,
-          )
-        : await resyncVoApiV2AuthToken(
-            request.baseUrl,
-            undefined,
-            request.protectionBypassExecution,
-          )
+      const resynced = await resyncVoApiV2AuthToken(
+        request.baseUrl,
+        request.tempWindowRequestSource || undefined,
+        request.protectionBypassExecution,
+      )
       if (resynced) {
         const resyncedRequest: ApiServiceAccountRequest = {
           ...request,
