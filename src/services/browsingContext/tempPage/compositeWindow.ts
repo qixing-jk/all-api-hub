@@ -1,14 +1,12 @@
+import { createTab, queryTabs, removeTab } from "~/utils/browser/tabs"
 import {
-  createTab,
   createWindow,
   getWindow,
   hasWindowsAPI,
-  queryTabs,
-  removeTab,
   removeWindow,
   updateWindow,
   WINDOW_CREATION_FAILURE_REASONS,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/windows"
 import { getErrorMessage } from "~/utils/core/error"
 
 import { resolveTempWindowSize } from "./browserAdapter"

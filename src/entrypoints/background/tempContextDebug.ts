@@ -7,7 +7,8 @@ import {
   readInternalTabBrowserSession,
 } from "~/services/browsingContext/internalTabsBackground"
 import { tempWindowBackgroundRuntime } from "~/services/browsingContext/tempPage/runtime"
-import { createTab, createWindow, queryTabs } from "~/utils/browser/browserApi"
+import { createTab, queryTabs } from "~/utils/browser/tabs"
+import { createWindow } from "~/utils/browser/windows"
 import { isDevelopmentMode, isTestMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"

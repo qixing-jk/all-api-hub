@@ -1,12 +1,7 @@
-import {
-  createAlarm,
-  getAlarm,
-  getAllTabs,
-  getAllWindows,
-  hasWindowsAPI,
-  removeTab,
-} from "~/utils/browser/browserApi"
+import { createAlarm, getAlarm } from "~/utils/browser/alarms"
 import { removeTabOwningWindow } from "~/utils/browser/ownedTabRemoval"
+import { getAllTabs, removeTab } from "~/utils/browser/tabs"
+import { getAllWindows, hasWindowsAPI } from "~/utils/browser/windows"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 

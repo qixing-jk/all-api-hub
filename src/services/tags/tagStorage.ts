@@ -13,7 +13,7 @@ import {
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import { ensureAccountTagsStorageMigrated } from "~/services/tags/migrations/accountTagsStorageMigration"
 import type { AccountStorageConfig, SiteAccount, Tag, TagStore } from "~/types"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { createLogger } from "~/utils/core/logger"
 
 import {

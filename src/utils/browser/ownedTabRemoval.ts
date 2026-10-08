@@ -1,4 +1,5 @@
-import { queryTabs, removeTab, removeWindow } from "~/utils/browser/browserApi"
+import { queryTabs, removeTab } from "~/utils/browser/tabs"
+import { removeWindow } from "~/utils/browser/windows"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 

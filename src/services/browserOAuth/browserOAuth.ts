@@ -1,18 +1,22 @@
 import { BROWSER_OAUTH_STATUS } from "~/constants/browserOAuth"
 import { createKeyedTaskQueue } from "~/services/core/keyedTaskQueue"
 import {
-  createWindow,
-  getTab,
   isMessageReceiverUnavailableError,
+  sendTabMessageWithRetry,
+} from "~/utils/browser/runtimeMessages"
+import {
+  getTab,
   onTabRemoved,
   onTabUpdated,
-  onWindowRemoved,
   queryTabs,
   removeTab,
-  removeWindow,
-  sendTabMessageWithRetry,
   updateTab,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/tabs"
+import {
+  createWindow,
+  onWindowRemoved,
+  removeWindow,
+} from "~/utils/browser/windows"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 

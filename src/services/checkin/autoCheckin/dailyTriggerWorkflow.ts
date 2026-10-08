@@ -11,11 +11,8 @@ import {
   TEMP_WINDOW_REQUEST_SOURCES,
   type TempWindowRequestSource,
 } from "~/types/tempWindowFetch"
-import {
-  getAlarm,
-  hasAlarmsAPI,
-  sendRuntimeMessage,
-} from "~/utils/browser/browserApi"
+import { getAlarm, hasAlarmsAPI } from "~/utils/browser/alarms"
+import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { formatLocalDayKey } from "~/utils/core/dayKey"
 
 import { isMinutesWithinWindow, parseTimeToMinutes } from "./dailyPlanning"

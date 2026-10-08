@@ -12,13 +12,13 @@ import {
 } from "~/services/productAnalytics/contracts"
 import {
   createContextMenu,
-  getBrowserI18nMessage,
   hasContextMenusAPI,
   onContextMenuClicked,
   removeContextMenu,
-  sendTabMessageWithRetry,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/contextMenus"
 import { getDevIdentity } from "~/utils/browser/extensionIdentity"
+import { getBrowserI18nMessage } from "~/utils/browser/runtime"
+import { sendTabMessageWithRetry } from "~/utils/browser/runtimeMessages"
 import { formatDevInstancePrefix } from "~/utils/core/devBranding"
 import { createLogger } from "~/utils/core/logger"
 

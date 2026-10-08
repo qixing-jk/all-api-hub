@@ -1,3 +1,4 @@
+import { getRuntimeId } from "~/utils/browser/runtime"
 import {
   EMPTY_DEV_IDENTITY,
   getDevBadgeText,
@@ -8,8 +9,6 @@ import {
   type DevIdentity,
 } from "~/utils/core/devIdentity"
 import { isDevelopmentMode } from "~/utils/core/environment"
-
-import { getRuntimeId } from "./browserApi"
 
 declare global {
   /**

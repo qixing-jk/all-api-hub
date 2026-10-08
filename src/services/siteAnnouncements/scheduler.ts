@@ -17,7 +17,7 @@ import {
   getAlarm,
   hasAlarmsAPI,
   onAlarm,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/alarms"
 import { createLogger } from "~/utils/core/logger"
 
 import { SITE_ANNOUNCEMENTS_ALARM_NAME } from "./constants"

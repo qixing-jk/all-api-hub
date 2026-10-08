@@ -12,9 +12,9 @@ import {
   type TempContextTask,
 } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
-import { sendTabMessageWithRetry } from "~/utils/browser/browserApi"
 import { removeTempWindowCookieRule } from "~/utils/browser/dnrCookieInjector"
 import { normalizeRequestInitForMessage } from "~/utils/browser/requestInitMessage"
+import { sendTabMessageWithRetry } from "~/utils/browser/runtimeMessages"
 
 import type { AuthorizeTempContextAtAcquire } from "./contracts"
 import { tempWindowBackgroundRuntime } from "./runtime"

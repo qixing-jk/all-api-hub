@@ -11,7 +11,7 @@ import { createChannelVerificationProtocolResolver } from "~/services/apiAdapter
 import {
   getAxonHubChannelSecretKey,
   listAxonHubChannelPage,
-} from "~/services/apiService/axonHub"
+} from "~/services/apiService/axonHub/channels"
 import { sharePendingConfigRead } from "~/services/apiTransport/requestScheduling"
 import {
   assertManagedResourceRefForSite,

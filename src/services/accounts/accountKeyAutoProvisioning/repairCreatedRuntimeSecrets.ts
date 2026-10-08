@@ -6,7 +6,7 @@ import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/core/stor
 import {
   getSessionStorageValues,
   setSessionStorageValues,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/storage"
 import { createLogger } from "~/utils/core/logger"
 
 const CACHE_VERSION = 1 as const

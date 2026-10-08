@@ -4,15 +4,15 @@ import {
   STORAGE_LOCKS,
 } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
+import { getLocalStorage } from "~/utils/browser/extensionStorage"
+import { onRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import {
-  getLocalStorage,
   getSessionStorageValues,
   hasSessionStorageArea,
-  onRuntimeMessage,
   removeLocalStorage,
   setLocalStorage,
   setSessionStorageValues,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/storage"
 import { isRecord } from "~/utils/core/object"
 import { tryParseOrigin } from "~/utils/core/urlParsing"
 

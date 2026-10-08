@@ -25,7 +25,7 @@ import {
   hasWindowsAPI,
   WINDOW_CREATION_FAILURE_REASONS,
   type WindowCreationFailureReason,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/windows"
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
 

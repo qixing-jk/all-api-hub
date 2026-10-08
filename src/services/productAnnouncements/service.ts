@@ -13,12 +13,8 @@ import type { RawProductAnnouncementFeed } from "~/services/productAnnouncements
 import { ProductAnnouncementsMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { createRuntimeMessageFailure } from "~/services/runtimeMessaging/result"
 import type { RuntimeMessageResponse } from "~/services/runtimeMessaging/result"
-import {
-  createAlarm,
-  getAlarm,
-  getExtensionVersion,
-  onAlarm,
-} from "~/utils/browser/browserApi"
+import { createAlarm, getAlarm, onAlarm } from "~/utils/browser/alarms"
+import { getExtensionVersion } from "~/utils/browser/runtime"
 import { isDevelopmentMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"

@@ -3,15 +3,15 @@ import { ACCOUNT_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { type AccountStorageConfig, type SiteAccount } from "~/types"
 import { isSameStringSet } from "~/utils"
 import {
-  onPermissionsAdded,
-  onPermissionsRemoved,
-  onStorageChanged,
-} from "~/utils/browser/browserApi"
-import {
   checkCookieInterceptorRequirement,
   registerWebRequestInterceptor,
   setupWebRequestInterceptor,
 } from "~/utils/browser/cookieHelper"
+import {
+  onPermissionsAdded,
+  onPermissionsRemoved,
+} from "~/utils/browser/permissions"
+import { onStorageChanged } from "~/utils/browser/storage"
 import { createLogger } from "~/utils/core/logger"
 
 /**

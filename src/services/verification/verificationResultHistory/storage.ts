@@ -16,7 +16,7 @@ import {
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
 } from "~/services/verification/aiApiVerification"
-import { onStorageChanged } from "~/utils/browser/browserApi"
+import { onStorageChanged } from "~/utils/browser/storage"
 import { createLogger } from "~/utils/core/logger"
 
 import {

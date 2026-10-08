@@ -3,11 +3,8 @@ import {
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
 import type { DisplaySiteData } from "~/types"
-import {
-  createTab as createTabApi,
-  createWindow,
-  hasWindowsAPI,
-} from "~/utils/browser/browserApi"
+import { createTab as createTabApi } from "~/utils/browser/tabs"
+import { createWindow, hasWindowsAPI } from "~/utils/browser/windows"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import {

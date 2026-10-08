@@ -1,12 +1,11 @@
 import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
+import { createTab, queryTabs } from "~/utils/browser/tabs"
 import {
-  createTab,
   createWindow,
-  queryTabs,
   removeWindow,
   updateWindow,
   WINDOW_CREATION_FAILURE_REASONS,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/windows"
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
 

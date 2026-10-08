@@ -1,9 +1,6 @@
 import { INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY } from "~/services/core/storageKeys"
-import {
-  getLocalStorage,
-  removeLocalStorage,
-  setLocalStorage,
-} from "~/utils/browser/browserApi"
+import { getLocalStorage } from "~/utils/browser/extensionStorage"
+import { removeLocalStorage, setLocalStorage } from "~/utils/browser/storage"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 import { isRecord } from "~/utils/core/object"

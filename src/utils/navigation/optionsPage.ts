@@ -1,12 +1,12 @@
 import type { OptionsMenuItemId } from "~/constants/optionsMenuIds"
+import { OPTIONS_PAGE_URL } from "~/utils/browser/extensionPageUrls"
+import { getExtensionURL } from "~/utils/browser/runtime"
 import {
   createTab as createTabApi,
   focusTab,
-  getExtensionURL,
   queryTabs as queryTabsApi,
   updateTab as updateTabApi,
-} from "~/utils/browser/browserApi"
-import { OPTIONS_PAGE_URL } from "~/utils/browser/extensionPageUrls"
+} from "~/utils/browser/tabs"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("Navigation")

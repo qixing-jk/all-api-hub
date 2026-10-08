@@ -1,7 +1,7 @@
 import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { hasCookieInterceptorPermissions } from "~/services/permissions/permissionManager"
-import { containsPermissions } from "~/utils/browser/browserApi"
 import { mergeCookieHeaders } from "~/utils/browser/cookieString"
+import { containsPermissions } from "~/utils/browser/permissions"
 import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"

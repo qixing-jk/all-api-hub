@@ -5,11 +5,9 @@ import {
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
-import {
-  createTab as createTabApi,
-  openRuntimeOptionsPage,
-} from "~/utils/browser/browserApi"
 import { OPTIONS_PAGE_URL } from "~/utils/browser/extensionPageUrls"
+import { openRuntimeOptionsPage } from "~/utils/browser/runtime"
+import { createTab as createTabApi } from "~/utils/browser/tabs"
 import {
   buildSearchString,
   isOnOptionsPage,

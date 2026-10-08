@@ -11,7 +11,7 @@ import {
   TURNSTILE_PRE_TRIGGER_KINDS,
   type CheckinPageActionTriggerResult,
 } from "~/types/turnstile"
-import { sendTabMessageWithRetry } from "~/utils/browser/browserApi"
+import { sendTabMessageWithRetry } from "~/utils/browser/runtimeMessages"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { sanitizeUrlForLog } from "~/utils/core/sanitizeUrlForLog"

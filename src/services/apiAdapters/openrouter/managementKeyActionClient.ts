@@ -4,7 +4,7 @@ import {
   type ProtectionBypassExecution,
   type TempContextTask,
 } from "~/services/protectionBypass/contracts"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { executeProtectionBypassTask } from "~/utils/browser/tempWindowFetch"
 
 import type {

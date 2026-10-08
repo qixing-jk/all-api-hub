@@ -9,11 +9,9 @@ import { normalizeContentSessionTransientAuth } from "~/services/accountSiteOnbo
 import { normalizeSub2ApiAuth } from "~/services/apiAdapters/sub2api/authSession"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { normalizeKimiOpenPlatformAuth } from "~/services/kimiOpenPlatform/auth"
-import {
-  getAllTabs,
-  getBrowserApiCapabilities,
-  sendTabMessageWithRetry,
-} from "~/utils/browser/browserApi"
+import { getBrowserApiCapabilities } from "~/utils/browser/runtime"
+import { sendTabMessageWithRetry } from "~/utils/browser/runtimeMessages"
+import { getAllTabs } from "~/utils/browser/tabs"
 import { executeProtectionBypassTask } from "~/utils/browser/tempWindowFetch"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"

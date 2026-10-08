@@ -38,7 +38,7 @@ import {
   getAlarm,
   hasAlarmsAPI,
   onAlarm,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/alarms"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"

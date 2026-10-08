@@ -1,4 +1,4 @@
-import { createTab as createTabApi } from "~/utils/browser/browserApi"
+import { createTab as createTabApi } from "~/utils/browser/tabs"
 import {
   getFeedbackDestinationUrls,
   getSiteSupportRequestUrl,

@@ -3,7 +3,7 @@ import type { ApiTransportRemoteLifecycleObserver } from "~/types/tempWindowFetc
 import {
   onRuntimeMessage,
   sendRuntimeMessage,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/runtimeMessages"
 
 interface RemoteFetchLifecycleResult {
   transportLifecycle?: unknown

@@ -22,7 +22,7 @@ import {
   getAlarm,
   hasAlarmsAPI,
   onAlarm,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/alarms"
 import { formatLocalDayKey } from "~/utils/core/dayKey"
 import { t } from "~/utils/i18n/core"
 

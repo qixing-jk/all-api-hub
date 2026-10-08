@@ -11,7 +11,7 @@ import { getTaskNotificationId } from "~/types/taskNotifications"
 import {
   createNotification,
   hasNotificationsAPI,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/notifications"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("TaskNotificationService")

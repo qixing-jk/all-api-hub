@@ -12,19 +12,19 @@ import { recordShieldBypassFocusObservation } from "~/services/productAnalytics/
 import { PROTECTION_BYPASS_DECISION_RESULTS } from "~/services/protectionBypass/contracts"
 import { type ProtectionBypassPolicyDecision } from "~/services/protectionBypass/policy"
 import {
-  getTab,
-  onTabRemoved,
-  onWindowRemoved,
-  removeTab,
-  updateTab,
-} from "~/utils/browser/browserApi"
-import {
   createBrowserFocusObservation,
   readBrowserFocusState,
 } from "~/utils/browser/browserFocus"
 import { applyTempWindowDownloadBlockRule } from "~/utils/browser/dnrCookieInjector"
 import { applyFirefoxTempWindowDownloadBlockRule } from "~/utils/browser/firefoxTempWindowDownloadBlocker"
 import { removeTabOwningWindow } from "~/utils/browser/ownedTabRemoval"
+import {
+  getTab,
+  onTabRemoved,
+  removeTab,
+  updateTab,
+} from "~/utils/browser/tabs"
+import { onWindowRemoved } from "~/utils/browser/windows"
 import { getErrorMessage } from "~/utils/core/error"
 import { sanitizeUrlForLog } from "~/utils/core/sanitizeUrlForLog"
 import { t } from "~/utils/i18n/core"

@@ -34,7 +34,7 @@ import type { ProtectionBypassExecution } from "~/services/protectionBypass/cont
 import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
 import { type AuthTypeEnum } from "~/types"
 import type { AccountAutoDetectResponse } from "~/types/serviceResponse"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"

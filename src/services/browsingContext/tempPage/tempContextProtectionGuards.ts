@@ -1,5 +1,5 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { sendTabMessageWithRetry } from "~/utils/browser/browserApi"
+import { sendTabMessageWithRetry } from "~/utils/browser/runtimeMessages"
 
 type GuardCheckMessageResponse = {
   success: boolean

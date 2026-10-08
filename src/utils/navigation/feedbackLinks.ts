@@ -1,5 +1,5 @@
 import type { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
-import { getExtensionVersion } from "~/utils/browser/browserApi"
+import { getExtensionVersion } from "~/utils/browser/runtime"
 import { getDocsCommunityUrl } from "~/utils/navigation/docsLinks"
 import { getRepository } from "~/utils/navigation/packageMeta"
 

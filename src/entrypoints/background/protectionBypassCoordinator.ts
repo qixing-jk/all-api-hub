@@ -45,8 +45,8 @@ import {
   TEMP_WINDOW_CHECKIN_PAGE_ACTION_REASONS,
   TEMP_WINDOW_TURNSTILE_STATUSES,
 } from "~/types/tempWindowFetch"
-import { hasWindowsAPI } from "~/utils/browser/browserApi"
 import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
+import { hasWindowsAPI } from "~/utils/browser/windows"
 import { t } from "~/utils/i18n/core"
 
 import {

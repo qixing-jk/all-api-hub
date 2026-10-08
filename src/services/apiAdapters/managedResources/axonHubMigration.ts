@@ -24,7 +24,7 @@ import {
   isManagedSiteMigrationSourceType,
   resolveManagedSiteMigrationType,
 } from "~/services/apiAdapters/managedResources/migrationTypeRoutes"
-import { hasCompleteAxonHubAdvancedDetail } from "~/services/apiService/axonHub"
+import { hasCompleteAxonHubAdvancedDetail } from "~/services/apiService/axonHub/channelProjection"
 import {
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
   MANAGED_SITE_MUTATION_OUTCOMES,

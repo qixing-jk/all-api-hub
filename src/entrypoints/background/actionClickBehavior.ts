@@ -13,13 +13,12 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { addActionClickListener, setActionPopup } from "~/utils/browser/action"
 import {
-  addActionClickListener,
   getSidePanelSupport,
   NATIVE_SIDE_PANEL_ACTION_CLICK_RESULTS,
-  setActionPopup,
   setNativeSidePanelActionClick,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/sidePanel"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { openOptionsPage } from "~/utils/navigation"

@@ -1,5 +1,6 @@
-import { getActionApi, getManifest } from "~/utils/browser/browserApi"
+import { getActionApi } from "~/utils/browser/action"
 import { getDevIdentity } from "~/utils/browser/extensionIdentity"
+import { getManifest } from "~/utils/browser/runtime"
 import { formatDevActionTitle } from "~/utils/core/devBranding"
 import { isDevelopmentMode } from "~/utils/core/environment"
 import { createLogger } from "~/utils/core/logger"
