@@ -487,56 +487,61 @@ describe("AxonHub native managed-resource Adapter", () => {
     ).toBe(true)
   })
 
-  it("owns the managed-channel import seed projection at the registration seam", async () => {
-    const workspace = await axonHubManagedResourceRegistration.open()
-    const editor = await workspace.openCreateEditor({
-      seed: {
-        kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
-        name: "Imported channel",
-        channelType: "openai",
-        credential: "credential-placeholder",
-        baseUrl: "https://upstream.example.invalid",
-        enabled: true,
-        models: [" model-a ", "model-a", "model-b"],
-        notes: "",
-      },
-    })
+  it.each([true, false])(
+    "preserves enabled=%s in the managed-channel import seed",
+    async (enabled) => {
+      const workspace = await axonHubManagedResourceRegistration.open()
+      const editor = await workspace.openCreateEditor({
+        seed: {
+          kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+          name: "Imported channel",
+          channelType: "openai",
+          credential: "credential-placeholder",
+          baseUrl: "https://upstream.example.invalid",
+          enabled,
+          models: [" model-a ", "model-a", "model-b"],
+          notes: "",
+        },
+      })
 
-    expect(axonHubManagedResourceRegistration.createSeedKinds).toContain(
-      MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
-    )
-    expect(editor.initialValues).toMatchObject({
-      name: "Imported channel",
-      type: "openai",
-      baseURL: "https://upstream.example.invalid",
-      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
-      key: {
-        kind: "secret-list",
-        entries: [
-          {
-            id: "new",
-            fields: {},
-            secret: { kind: "replace", value: "credential-placeholder" },
-          },
-        ],
-      },
-      supportedModels: ["model-a", "model-a", "model-b"],
-      manualModels: ["model-a", "model-a", "model-b"],
-      defaultTestModel: "model-a",
-      orderingWeight: 0,
-    })
-    const values = {
-      ...editor.initialValues,
-      supportedModels: ["model-a", "model-b"],
-      manualModels: ["model-a", "model-b"],
-    }
-    expect(await editor.submit(values)).toMatchObject({
-      outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
-    })
-    expect(
-      mocks.createChannel.mock.calls.at(-1)?.[1].credentials.apiKeys,
-    ).toEqual(["credential-placeholder"])
-  })
+      expect(axonHubManagedResourceRegistration.createSeedKinds).toContain(
+        MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+      )
+      expect(editor.initialValues).toMatchObject({
+        name: "Imported channel",
+        type: "openai",
+        baseURL: "https://upstream.example.invalid",
+        status: enabled
+          ? AXON_HUB_CHANNEL_STATUS.ENABLED
+          : AXON_HUB_CHANNEL_STATUS.DISABLED,
+        key: {
+          kind: "secret-list",
+          entries: [
+            {
+              id: "new",
+              fields: {},
+              secret: { kind: "replace", value: "credential-placeholder" },
+            },
+          ],
+        },
+        supportedModels: ["model-a", "model-a", "model-b"],
+        manualModels: ["model-a", "model-a", "model-b"],
+        defaultTestModel: "model-a",
+        orderingWeight: 0,
+      })
+      const values = {
+        ...editor.initialValues,
+        supportedModels: ["model-a", "model-b"],
+        manualModels: ["model-a", "model-b"],
+      }
+      expect(await editor.submit(values)).toMatchObject({
+        outcome: MANAGED_SITE_MUTATION_OUTCOMES.Succeeded,
+      })
+      expect(
+        mocks.createChannel.mock.calls.at(-1)?.[1].credentials.apiKeys,
+      ).toEqual(["credential-placeholder"])
+    },
+  )
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -1237,6 +1242,29 @@ describe("AxonHub native managed-resource Adapter", () => {
     ])
   })
 
+  it("blocks scalar replacement of multiple masked credentials without exposing their values", async () => {
+    const detail = buildDetailChannel({
+      credentials: { apiKeys: ["sk-****first", "sk-****second"] },
+      settings: undefined,
+      defaultTestModel: undefined,
+    })
+    mocks.getChannel.mockResolvedValue(detail)
+    const workspace = await openWorkspace()
+    const editor = await workspace.openEditEditor(refFor(detail))
+    expect(
+      editor.fields.find((field) => field.fieldId === "key"),
+    ).toMatchObject({ secretState: "masked", canReplace: false })
+    expect(JSON.stringify(editor.initialValues)).not.toContain("sk-****")
+    expect(editor.initialValues.defaultTestModel).toBe("")
+    expect(
+      await editor.validate({
+        ...editor.initialValues,
+        key: { kind: "replace", value: "replacement" },
+      }),
+    ).toMatchObject({ valid: false })
+    expect(mocks.updateChannel).not.toHaveBeenCalled()
+  })
+
   it("omits unchanged unavailable permission-hidden and masked credentials", async () => {
     const credentialShapes: Array<{
       credentials: AxonHubChannel["credentials"]
@@ -1861,6 +1889,14 @@ describe("AxonHub native managed-resource Adapter", () => {
         { fieldId: "orderingWeight", code: "invalid_value" },
       ]),
     })
+    expect(editor.validate({ ...validBase, orderingWeight: "" })).toMatchObject(
+      {
+        valid: false,
+        issues: expect.arrayContaining([
+          { fieldId: "orderingWeight", code: "invalid_value" },
+        ]),
+      },
+    )
     expect(editor.validate({ ...validBase, orderingWeight: 101 })).toEqual({
       valid: false,
       issues: expect.arrayContaining([
