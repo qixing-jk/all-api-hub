@@ -1,13 +1,13 @@
 import { ACCOUNT_SITE_ADAPTER_FAMILIES, SITE_TYPES } from "~/constants/siteType"
+import { rightCodeAccountBootstrap } from "~/services/apiAdapters/rightcode/account/accountBootstrap"
+import { rightCodeAccountCompletion } from "~/services/apiAdapters/rightcode/account/accountCompletion"
+import { rightCodeAccountData } from "~/services/apiAdapters/rightcode/account/accountData"
+import { rightCodeAccountRefresh } from "~/services/apiAdapters/rightcode/account/accountRefresh"
+import { rightCodeInviteLink } from "~/services/apiAdapters/rightcode/account/inviteLink"
+import { rightCodeAccountKeyResources } from "~/services/apiAdapters/rightcode/keys/accountKeyResource"
+import { rightCodeModelPricing } from "~/services/apiAdapters/rightcode/models/modelPricing"
 
 import type { SiteTypeCapabilities } from "../contracts/siteTypeCapabilities"
-import { rightCodeAccountBootstrap } from "./accountBootstrap"
-import { rightCodeAccountCompletion } from "./accountCompletion"
-import { rightCodeAccountData } from "./accountData"
-import { rightCodeAccountKeyResources } from "./accountKeyResource"
-import { rightCodeAccountRefresh } from "./accountRefresh"
-import { rightCodeInviteLink } from "./inviteLink"
-import { rightCodeModelPricing } from "./modelPricing"
 
 export const rightCodeCapabilities: SiteTypeCapabilities = {
   siteType: SITE_TYPES.RIGHT_CODE,

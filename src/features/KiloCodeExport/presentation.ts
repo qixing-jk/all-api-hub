@@ -2,7 +2,7 @@ import {
   getAccountRuntimeKeyExportId,
   type AccountRuntimeKey,
 } from "~/services/accounts/keys/accountRuntimeKeys"
-import { KILO_CODE_PROVIDER_PROTOCOLS } from "~/services/integrations/kiloCodeExport"
+import { KILO_CODE_PROVIDER_PROTOCOLS } from "~/services/integrations/kiloCode/kiloCodeExport"
 import type { DisplaySiteData } from "~/types"
 
 export const KILO_CODE_INVENTORY_STATUSES = {

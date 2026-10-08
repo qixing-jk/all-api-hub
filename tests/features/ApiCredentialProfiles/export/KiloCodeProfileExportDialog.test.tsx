@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { KiloCodeProfileExportDialog } from "~/features/ApiCredentialProfiles/export/KiloCodeProfileExportDialog"
 import { KILO_CODE_EXPORT_TEST_IDS } from "~/features/KiloCodeExport/kiloCodeExportTestIds"
-import { KILO_CODE_EXPORT_TARGETS } from "~/services/integrations/kiloCodeExport"
+import { KILO_CODE_EXPORT_TARGETS } from "~/services/integrations/kiloCode/kiloCodeExport"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -32,7 +32,7 @@ vi.mock("~/services/aiApi/openaiCompatible", () => ({
     mockFetchOpenAICompatibleModelIds(...args),
 }))
 
-vi.mock("~/services/integrations/kiloCodeExportPolicy", () => ({
+vi.mock("~/services/integrations/kiloCode/kiloCodeExportPolicy", () => ({
   buildKiloCodeExportOutput: (...args: any[]) =>
     mockBuildKiloCodeExportOutput(...args),
 }))

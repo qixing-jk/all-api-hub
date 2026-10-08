@@ -34,9 +34,9 @@ import {
   type KiloCodeLegacySelection,
   type KiloCodeProviderProtocol,
   type KiloCodeRuntimeKeyExportInput,
-} from "~/services/integrations/kiloCodeExport"
-import { getKiloCodeExportAnalyticsTarget } from "~/services/integrations/kiloCodeExportAnalytics"
-import { buildKiloCodeExportOutput } from "~/services/integrations/kiloCodeExportPolicy"
+} from "~/services/integrations/kiloCode/kiloCodeExport"
+import { getKiloCodeExportAnalyticsTarget } from "~/services/integrations/kiloCode/kiloCodeExportAnalytics"
+import { buildKiloCodeExportOutput } from "~/services/integrations/kiloCode/kiloCodeExportPolicy"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

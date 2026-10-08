@@ -6,7 +6,7 @@ import {
   type AccountDetectionDiagnostics,
 } from "~/services/accountSiteOnboarding/diagnostics"
 import { normalizeContentSessionTransientAuth } from "~/services/accountSiteOnboarding/transientAuth"
-import { normalizeSub2ApiAuth } from "~/services/apiAdapters/sub2api/authSession"
+import { normalizeSub2ApiAuth } from "~/services/apiAdapters/sub2api/auth/authSession"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { normalizeKimiOpenPlatformAuth } from "~/services/kimiOpenPlatform/auth"
 import { getBrowserApiCapabilities } from "~/utils/browser/runtime"

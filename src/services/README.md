@@ -9,10 +9,14 @@ Large services group related implementations by responsibility:
 | --- | --- |
 | Accounts | `keys`, `identity`, `metrics`, `editing`, `refresh`; existing detection, persistence, storage and post-save owners remain separate |
 | Managed sites | `configuration`, `migration`, `matching`, `batchImport`, `providers` |
-| OpenRouter adapter | `account`, `keys`, `models` |
+| OpenRouter, AIHubMix and RightCode adapters | `account`, `keys`, `models` |
+| Sub2API adapter | `auth`, `account`, `keys`, `models` |
 | Sub2API API implementation | `auth`, `checkin`, `account`, `models` |
 | WebDAV and cloud sync | `autoSync`, `backup`, `sync`, `transport` |
 | Product analytics | `facts`, `diagnostics`, `runtime`, `configuration`; event contracts and action entrypoints stay at the root |
+
+Kilo Code catalog, selection, export policy and serialization live together in
+`integrations/kiloCode`; integrations implemented by one file can stay at the root.
 
 Managed-site provider implementations with several helper modules have a provider
 directory, such as `providers/newApi`. Their `index.ts` contains the actual service

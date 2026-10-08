@@ -41,7 +41,7 @@ import {
   KILO_CODE_EXPORT_TARGET_OPTIONS,
   KILO_CODE_EXPORT_TARGETS,
   type KiloCodeExportTarget,
-} from "~/services/integrations/kiloCodeExport"
+} from "~/services/integrations/kiloCode/kiloCodeExport"
 import type { DisplaySiteData, SiteAccount } from "~/types"
 
 interface KiloCodeExportDialogProps {

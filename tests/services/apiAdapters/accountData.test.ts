@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import type { AccountData } from "~/services/accounts/accountDataModel"
-import { aihubmixAccountData } from "~/services/apiAdapters/aihubmix/accountData"
+import { aihubmixAccountData } from "~/services/apiAdapters/aihubmix/account/accountData"
 import { createNewApiAccountData } from "~/services/apiAdapters/newApi/account/accountData"
-import { sub2ApiAccountData } from "~/services/apiAdapters/sub2api/accountData"
+import { sub2ApiAccountData } from "~/services/apiAdapters/sub2api/account/accountData"
 import { voApiV2AccountData } from "~/services/apiAdapters/voapiV2/accountData"
 import { AuthTypeEnum } from "~/types"
 

@@ -33,11 +33,11 @@ vi.mock(
   accountAutoDetectionModuleMocks.newApiAccountBootstrap,
 )
 vi.mock(
-  "~/services/apiAdapters/sub2api/accountBootstrap",
+  "~/services/apiAdapters/sub2api/account/accountBootstrap",
   accountAutoDetectionModuleMocks.sub2ApiAccountBootstrap,
 )
 vi.mock(
-  "~/services/apiAdapters/aihubmix/accountBootstrap",
+  "~/services/apiAdapters/aihubmix/account/accountBootstrap",
   accountAutoDetectionModuleMocks.aihubmixAccountBootstrap,
 )
 vi.mock(

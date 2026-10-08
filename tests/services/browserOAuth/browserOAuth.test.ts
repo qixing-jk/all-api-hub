@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { BROWSER_OAUTH_STATUS } from "~/constants/browserOAuth"
-import { createSub2ApiOAuthFlow } from "~/services/apiAdapters/sub2api/browserOAuth"
+import { createSub2ApiOAuthFlow } from "~/services/apiAdapters/sub2api/auth/browserOAuth"
 import { buildSub2ApiOAuthStartUrl } from "~/services/apiService/sub2api/oauth/protocol"
 import {
   createBrowserOAuthContext,

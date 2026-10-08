@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { createAIHubMixKeyEditor } from "~/services/apiAdapters/aihubmix/keyResourceEditor"
+import { createAIHubMixKeyEditor } from "~/services/apiAdapters/aihubmix/keys/keyResourceEditor"
 import type { EditableResourceProjection } from "~/services/apiAdapters/contracts/resourceNative"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keys/keyResourceEditor"
 import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
-import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keyResourceEditor"
+import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keys/keyResourceEditor"
 import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
 import { defaultKeyManagementImplementation } from "~/services/apiService/newApiFamily/default/keyManagement"
 import { AuthTypeEnum } from "~/types"

@@ -6,7 +6,7 @@ import {
   buildServiceCredentialRuntimeKey,
 } from "~/services/accounts/keys/accountRuntimeKeys"
 import { MODEL_PRICING_RUNTIME_KEY_FALLBACKS } from "~/services/apiAdapters/contracts/modelPricing"
-import { sub2ApiModelCatalog } from "~/services/apiAdapters/sub2api/modelCatalog"
+import { sub2ApiModelCatalog } from "~/services/apiAdapters/sub2api/models/modelCatalog"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import {

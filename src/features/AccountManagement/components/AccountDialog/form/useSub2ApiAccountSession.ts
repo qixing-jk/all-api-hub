@@ -22,7 +22,7 @@ import {
   type ResolveAccountBrowserSessionOptions,
 } from "~/services/accountBrowserSession"
 import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
-import { normalizeSub2ApiAuth } from "~/services/apiAdapters/sub2api/authSession"
+import { normalizeSub2ApiAuth } from "~/services/apiAdapters/sub2api/auth/authSession"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,

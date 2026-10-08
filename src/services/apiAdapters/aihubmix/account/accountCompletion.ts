@@ -1,0 +1,114 @@
+import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
+import { aihubmixAccountBootstrap } from "~/services/apiAdapters/aihubmix/account/accountBootstrap"
+import type { AccountCompletionCapability } from "~/services/apiAdapters/contracts/accountCompletion"
+import { AuthTypeEnum } from "~/types"
+
+const getDetectedTokenInfo = (
+  detected: Parameters<AccountCompletionCapability["complete"]>[0]["detected"],
+  trimString: (value: unknown) => string,
+) =>
+  typeof detected.accessToken === "string"
+    ? {
+        username: trimString(detected.user?.username),
+        access_token: trimString(detected.accessToken),
+      }
+    : null
+
+export const aihubmixAccountCompletion: AccountCompletionCapability = {
+  async complete(request, helpers) {
+    const { url, detected, context } = request
+
+    let tokenInfo: unknown = getDetectedTokenInfo(detected, helpers.trimString)
+    if (!tokenInfo) {
+      try {
+        tokenInfo = await aihubmixAccountBootstrap.getOrCreateAccessToken(
+          helpers.createServiceRequest({
+            baseUrl: url,
+            context,
+            auth: {
+              authType: AuthTypeEnum.Cookie,
+              userId: detected.userId,
+            },
+          }),
+        )
+      } catch (error) {
+        throw helpers.createCompletionError(
+          AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+          error,
+        )
+      }
+    }
+
+    const tokenData =
+      tokenInfo && typeof tokenInfo === "object"
+        ? (tokenInfo as { username?: unknown; access_token?: unknown })
+        : {}
+    const username = helpers.trimString(tokenData.username)
+    const accessToken = helpers.trimString(tokenData.access_token)
+    helpers.captureRecoveryData({
+      ...(username ? { username } : {}),
+      ...(accessToken ? { accessToken } : {}),
+      authType: AuthTypeEnum.AccessToken,
+    })
+
+    let bootstrapFacts = null
+    try {
+      bootstrapFacts = await aihubmixAccountBootstrap.loadBootstrapFacts(
+        helpers.createServiceRequest({
+          baseUrl: url,
+          context,
+          auth: {
+            authType: AuthTypeEnum.Cookie,
+          },
+        }),
+      )
+    } catch (error) {
+      throw helpers.createCompletionError(
+        AUTO_DETECT_FAILURE_REASONS.SiteStatusFetchFailed,
+        error,
+      )
+    }
+
+    const exchangeRate =
+      bootstrapFacts?.defaultExchangeRate ?? DEFAULT_USD_TO_CNY_RATE
+    helpers.captureRecoveryData({ exchangeRate })
+
+    const checkSupport = await aihubmixAccountBootstrap
+      .fetchCheckInSupport(
+        helpers.createServiceRequest({
+          baseUrl: url,
+          context,
+          auth: {
+            authType: AuthTypeEnum.None,
+          },
+        }),
+        bootstrapFacts,
+      )
+      .catch(helpers.handleCheckInSupportFetchFailure)
+
+    if (!username || !accessToken) {
+      throw helpers.createCompletionError(
+        !accessToken
+          ? AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing
+          : AUTO_DETECT_FAILURE_REASONS.UsernameMissing,
+        new Error(!accessToken ? "access token missing" : "username missing"),
+      )
+    }
+
+    const siteName = await helpers.fetchSiteName(bootstrapFacts)
+    helpers.captureRecoveryData({ siteName })
+
+    return {
+      username,
+      siteName,
+      accessToken,
+      userId: detected.userId.toString(),
+      exchangeRate,
+      authType: AuthTypeEnum.AccessToken,
+      checkIn: helpers.createInitialCheckInConfig({
+        supported: checkSupport ?? false,
+      }),
+    }
+  },
+}
