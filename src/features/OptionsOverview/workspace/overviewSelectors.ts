@@ -6,10 +6,8 @@ import { buildConfigurationOverviewItems } from "~/features/OptionsOverview/conf
 import { buildStatusCards } from "~/features/OptionsOverview/configuration/statusCards"
 import type { OptionsOverviewViewModel } from "~/features/OptionsOverview/types"
 import { buildUsageSnapshot } from "~/features/OptionsOverview/usage/usageSnapshot"
-import {
-  buildUnifiedApiGuidanceModel,
-  getGatewayGuidanceImportableAccounts,
-} from "~/features/UnifiedApiGuidance"
+import { buildUnifiedApiGuidanceModel } from "~/features/UnifiedApiGuidance/model"
+import { getGatewayGuidanceImportableAccounts } from "~/features/UnifiedApiGuidance/sourceAccounts"
 import type { FeatureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/configuration/runtimeConfig"
 import type { UserPreferences } from "~/services/preferences/preferencesSchema"

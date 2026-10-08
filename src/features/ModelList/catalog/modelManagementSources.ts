@@ -1,8 +1,8 @@
 import {
   ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS,
-  getAccountSiteModelListProfile,
   type AccountSiteModelListGroupSemantics,
-} from "~/services/accounts/accountSiteProfile"
+} from "~/services/accounts/accountSiteProfile/contracts"
+import { getAccountSiteModelListProfile } from "~/services/accounts/accountSiteProfile/modelList"
 import type { ModelListSourceInfo } from "~/services/modelList/pricingModel"
 import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"

@@ -21,7 +21,7 @@ import {
   MANAGED_SITE_MUTATION_COMPLETIONS,
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
   MANAGED_SITE_MUTATION_OUTCOMES,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/contracts"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 

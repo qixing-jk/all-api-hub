@@ -1,7 +1,7 @@
 import {
   isAccountSiteProfileUrl,
   normalizeAccountSiteProfileUrlForOriginKey,
-} from "~/services/accounts/accountSiteProfile"
+} from "~/services/accounts/accountSiteProfile/urls"
 import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import type { SiteAccount } from "~/types"
 import { createLogger } from "~/utils/core/logger"

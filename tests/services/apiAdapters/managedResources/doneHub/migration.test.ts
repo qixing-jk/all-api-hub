@@ -8,7 +8,7 @@ import { doneHubManagedSiteMigrationCapability } from "~/services/apiAdapters/ma
 import {
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
   MANAGED_SITE_MUTATION_OUTCOMES,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/contracts"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES } from "~/types/managedSiteMigration"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
 

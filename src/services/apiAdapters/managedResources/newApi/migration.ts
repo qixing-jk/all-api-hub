@@ -20,7 +20,7 @@ import {
   throwIfNewApiResourceOperationAborted,
 } from "~/services/apiAdapters/managedResources/newApi/resourceUtils"
 import { credentialFingerprint } from "~/services/apiAdapters/managedResources/shared/credentialListEditor"
-import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
+import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations/contracts"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES } from "~/types/managedSiteMigration"
 import {
   MANAGED_SITE_MIGRATION_EXECUTION_FAILURE_CODES,

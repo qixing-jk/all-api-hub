@@ -28,7 +28,7 @@ import {
   MANAGED_SITE_MUTATION_COMPLETIONS,
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
   MANAGED_SITE_MUTATION_OUTCOMES,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/contracts"
 import { NewApiChannelKeyRequirementError } from "~/services/managedSites/providers/newApi/newApiSessionContracts"
 import { CHANNEL_STATUS } from "~/types/newApi"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"

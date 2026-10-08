@@ -3,7 +3,7 @@ import {
   MANAGED_SITE_MUTATION_COMPLETIONS,
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationResult,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/contracts"
 
 const createAttributionTails = new Map<string, Promise<void>>()
 

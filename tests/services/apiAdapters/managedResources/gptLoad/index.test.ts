@@ -18,7 +18,7 @@ import {
 import { type GptLoadGroupEditorCommand } from "~/services/apiAdapters/managedResources/gptLoad/nativeContracts"
 import { openGptLoadNativeResourceOperations } from "~/services/apiAdapters/managedResources/gptLoad/nativeOperations"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
-import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
+import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations/contracts"
 import { server } from "~~/tests/msw/server"
 
 const mocks = vi.hoisted(() => ({ getPreferences: vi.fn() }))

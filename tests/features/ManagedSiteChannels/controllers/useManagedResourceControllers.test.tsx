@@ -21,7 +21,7 @@ import {
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationConfirmedEffect,
   type ManagedSiteMutationResult,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/contracts"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,

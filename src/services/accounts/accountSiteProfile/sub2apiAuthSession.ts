@@ -1,4 +1,4 @@
-import { normalizeAccountSiteProfileUrlForOriginKey } from "~/services/accounts/accountSiteProfile"
+import { normalizeAccountSiteProfileUrlForOriginKey } from "~/services/accounts/accountSiteProfile/urls"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { sub2ApiAuthPersistence } from "~/services/accounts/accountStorage/sub2ApiAuthPersistence"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/editing/accountDefaults"

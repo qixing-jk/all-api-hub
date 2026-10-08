@@ -7,10 +7,6 @@ import {
   type ManagedResourceEditorMode,
 } from "~/features/ManagedSiteChannels/editor/managedResourceFieldPolicy"
 import {
-  canAcceptMutationEffectsLocally,
-  projectManagedResourceMutationFailure,
-} from "~/features/ManagedSiteChannels/editor/managedResourceMutationPolicy"
-import {
   ACTIVE_MUTATION_SESSIONS,
   MANAGED_RESOURCE_EDITOR_FEEDBACK_KINDS,
   MANAGED_RESOURCE_SESSION_PHASES,
@@ -19,6 +15,7 @@ import {
   type ManagedResourceMutationOptions,
   type ManagedResourceSessionPhase,
 } from "~/features/ManagedSiteChannels/editor/managedResourceMutationTypes"
+import { acceptManagedResourceSubmission } from "~/features/ManagedSiteChannels/editor/managedResourceSubmission"
 import { type ManagedResourceRowData } from "~/features/ManagedSiteChannels/presentation/managedResourcePresentation"
 import {
   EMPTY_MANAGED_RESOURCE_CAPABILITIES,
@@ -38,11 +35,6 @@ import {
   type ResourceFailure,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
-import {
-  assertManagedSiteMutationResult,
-  MANAGED_SITE_MUTATION_OUTCOMES,
-  type ManagedSiteMutationConfirmedEffect,
-} from "~/services/managedSites/mutations"
 import { collectManagedResourceSecrets } from "~/services/managedSites/utils/resourceSecrets"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -472,125 +464,40 @@ export function useManagedResourceMutationController({
       const secretCollection = collectManagedResourceSecrets(values)
       const submitEditor = () =>
         editor.submit(values, { signal: controller.signal })
-      const promise = (
+      const promise = acceptManagedResourceSubmission(
         readEditor
           ? readEditor(submitEditor, controller.signal)
-          : submitEditor()
-      )
-        .then(async (mutationResult) => {
-          if (current !== generation.current) return undefined
-          assertManagedSiteMutationResult<
-            ResourceDisplayFacts,
-            ManagedSiteMutationConfirmedEffect
-          >(mutationResult, {
-            idempotent: submittedMode !== MANAGED_RESOURCE_EDITOR_MODES.Create,
-          })
-          switch (mutationResult.outcome) {
-            case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded: {
-              onMutationConfirmed?.(submittedMode)
-              let mutationAccepted = false
-              try {
-                mutationAccepted =
-                  mutationResult.data !== undefined &&
-                  canAcceptMutationEffectsLocally(
-                    submittedMode,
-                    mutationResult.data.ref,
-                    mutationResult.confirmedEffects,
-                  ) &&
-                  (acceptMutationResult?.(submittedMode, mutationResult.data) ??
-                    false)
-              } catch {
-                mutationAccepted = false
-              }
-              const refreshAccepted =
-                mutationAccepted || (await requestFreshRead())
-              if (current !== generation.current) return undefined
-              closesEditor = true
-              setEditor(null)
-              setEditorMode(null)
-              setEditorFeedback(
-                refreshAccepted
-                  ? null
-                  : {
-                      kind: MANAGED_RESOURCE_EDITOR_FEEDBACK_KINDS.SavedRefreshFailed,
-                    },
-              )
-              if (!refreshAccepted) requireFreshRead()
-              analyticsCompletion?.complete(
-                refreshAccepted
-                  ? PRODUCT_ANALYTICS_RESULTS.Success
-                  : PRODUCT_ANALYTICS_RESULTS.Failure,
-                refreshAccepted
-                  ? undefined
-                  : {
-                      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-                    },
-              )
-              if (refreshAccepted) onMutationSuccess?.(submittedMode)
-              return refreshAccepted ? mutationResult.data : undefined
-            }
-            case MANAGED_SITE_MUTATION_OUTCOMES.Rejected:
-              setEditorFeedback({
-                kind: MANAGED_RESOURCE_EDITOR_FEEDBACK_KINDS.SaveFailed,
-                failure: projectManagedResourceMutationFailure(
-                  mutationResult,
-                  secretCollection,
-                  MANAGED_RESOURCE_FAILURE_CODES.UpstreamRejected,
-                ),
-              })
-              analyticsCompletion?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-                errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-              })
-              return undefined
-            case MANAGED_SITE_MUTATION_OUTCOMES.Partial:
-            case MANAGED_SITE_MUTATION_OUTCOMES.Uncertain: {
-              closesEditor = true
-              setEditor(null)
-              setEditorMode(null)
-              setEditorFeedback({
-                kind: MANAGED_RESOURCE_EDITOR_FEEDBACK_KINDS.SaveUncertain,
-                failure: projectManagedResourceMutationFailure(
-                  mutationResult,
-                  secretCollection,
-                  MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
-                ),
-              })
-              const refreshAccepted = await requestFreshRead()
-              if (current !== generation.current) return undefined
-              if (!refreshAccepted) requireFreshRead()
-              analyticsCompletion?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-                errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-              })
-              return undefined
-            }
-          }
-        })
-        .catch((error: unknown) => {
-          if (current !== generation.current) return undefined
-          // Public managed errors include authoritative-read failures before update dispatch.
-          if (!(error instanceof ManagedResourceError)) throw error
-          setEditorFeedback({
-            kind: MANAGED_RESOURCE_EDITOR_FEEDBACK_KINDS.SaveFailed,
-            failure: toSafeManagedResourceFailure(error),
-          })
-          analyticsCompletion?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-          })
-          return undefined
-        })
-        .finally(() => {
-          if (current === generation.current) {
-            setIsSaving(false)
-            submitPromise.current = undefined
-            if (activeSubmitAnalytics.current === analyticsCompletion)
-              activeSubmitAnalytics.current = undefined
-            endMutationSession(ACTIVE_MUTATION_SESSIONS.Submit)
-            if (sessionPhase.current === MANAGED_RESOURCE_SESSION_PHASES.Submit)
-              sessionPhase.current = closesEditor
-                ? MANAGED_RESOURCE_SESSION_PHASES.Idle
-                : MANAGED_RESOURCE_SESSION_PHASES.EditorOpen
-          }
-        })
+          : submitEditor(),
+        {
+          submittedMode,
+          isCurrent: () => current === generation.current,
+          closeEditor: () => {
+            closesEditor = true
+            setEditor(null)
+            setEditorMode(null)
+          },
+          setEditorFeedback,
+          requestFreshRead,
+          requireFreshRead,
+          acceptMutationResult,
+          onMutationConfirmed,
+          onMutationSuccess,
+          analyticsCompletion,
+          secretCollection,
+        },
+      ).finally(() => {
+        if (current === generation.current) {
+          setIsSaving(false)
+          submitPromise.current = undefined
+          if (activeSubmitAnalytics.current === analyticsCompletion)
+            activeSubmitAnalytics.current = undefined
+          endMutationSession(ACTIVE_MUTATION_SESSIONS.Submit)
+          if (sessionPhase.current === MANAGED_RESOURCE_SESSION_PHASES.Submit)
+            sessionPhase.current = closesEditor
+              ? MANAGED_RESOURCE_SESSION_PHASES.Idle
+              : MANAGED_RESOURCE_SESSION_PHASES.EditorOpen
+        }
+      })
       submitPromise.current = promise
       return promise
     },

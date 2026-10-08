@@ -10,10 +10,12 @@ import { getCurrentManagedSiteRuntimeConfig } from "~/services/managedSites/conf
 import {
   assertManagedSiteMutationResult,
   MANAGED_SITE_MUTATION_OUTCOMES,
+  type ManagedSiteMutationResult,
+} from "~/services/managedSites/mutations/contracts"
+import {
   toPrivateManagedSiteMutationOutput,
   toPrivateManagedSiteThrownErrorMessage,
-  type ManagedSiteMutationResult,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/disclosure"
 import { collectManagedResourceSecrets } from "~/services/managedSites/utils/resourceSecrets"
 import {
   isExecutableManagedSiteTokenBatchExportPreviewItem,

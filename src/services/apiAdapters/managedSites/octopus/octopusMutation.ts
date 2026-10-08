@@ -1,8 +1,6 @@
 import { OctopusMutationApiError } from "~/services/apiService/octopus/responseProtocol"
-import {
-  createManagedSiteMutationSequence,
-  type ManagedSiteMutationConfirmedEffect,
-} from "~/services/managedSites/mutations"
+import { type ManagedSiteMutationConfirmedEffect } from "~/services/managedSites/mutations/contracts"
+import { createManagedSiteMutationSequence } from "~/services/managedSites/mutations/execution"
 import type { OctopusApiResponse } from "~/types/octopus"
 import { getErrorMessage } from "~/utils/core/error"
 

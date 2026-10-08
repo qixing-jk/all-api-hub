@@ -32,7 +32,7 @@ import {
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationConfirmedEffect,
   type ManagedSiteMutationResult,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/contracts"
 
 export type NativeResourcePage<TItem> = {
   items: readonly TItem[]

@@ -1,6 +1,6 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession"
-import { normalizeAccountSiteProfileUrlForOriginKey } from "~/services/accounts/accountSiteProfile"
+import { normalizeAccountSiteProfileUrlForOriginKey } from "~/services/accounts/accountSiteProfile/urls"
 import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import { fetchSub2ApiAuthIdentity } from "~/services/apiService/sub2api/auth/authIdentity"
 import {

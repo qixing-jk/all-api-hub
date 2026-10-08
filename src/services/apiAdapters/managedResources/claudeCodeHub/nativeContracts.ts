@@ -2,7 +2,7 @@ import {
   type ResourceListQuery,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import { type ManagedSiteMutationResult } from "~/services/managedSites/mutations"
+import { type ManagedSiteMutationResult } from "~/services/managedSites/mutations/contracts"
 import type {
   ClaudeCodeHubProviderCreatePayload,
   ClaudeCodeHubProviderDisplay,

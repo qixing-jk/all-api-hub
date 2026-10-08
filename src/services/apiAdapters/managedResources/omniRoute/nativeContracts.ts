@@ -5,7 +5,7 @@ import {
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { type OmniRouteConnectionUpdatePayload } from "~/services/apiService/omniroute"
 import { type OmniRouteSanitizedConnection } from "~/services/apiService/omniroute/redaction"
-import { type ManagedSiteMutationResult } from "~/services/managedSites/mutations"
+import { type ManagedSiteMutationResult } from "~/services/managedSites/mutations/contracts"
 import { type OmniRouteConfig } from "~/types/omnirouteConfig"
 
 /**

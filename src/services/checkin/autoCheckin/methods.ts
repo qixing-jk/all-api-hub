@@ -10,7 +10,7 @@ import {
   CHECK_IN_PROVIDER_READINESS_REASONS,
   CHECK_IN_SELECTION_MODES,
 } from "~/constants/checkIn"
-import { normalizeAccountSiteProfileUrlForOriginKey } from "~/services/accounts/accountSiteProfile"
+import { normalizeAccountSiteProfileUrlForOriginKey } from "~/services/accounts/accountSiteProfile/urls"
 import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import {
   getSub2ApiAuthPersistenceStatus,

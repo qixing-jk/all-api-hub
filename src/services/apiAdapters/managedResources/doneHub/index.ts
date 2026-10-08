@@ -46,7 +46,7 @@ import { createManagedChannelResourceRef } from "~/services/managedSites/managed
 import {
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationResult,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/contracts"
 import { buildChannelPayload } from "~/services/managedSites/providers/doneHubService"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { userPreferences } from "~/services/preferences/userPreferences"

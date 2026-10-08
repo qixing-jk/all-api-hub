@@ -1,5 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
-import { normalizeAccountSiteProfileUrlForOriginKey } from "~/services/accounts/accountSiteProfile"
+import { normalizeAccountSiteProfileUrlForOriginKey } from "~/services/accounts/accountSiteProfile/urls"
 import {
   AccountUpdateUserTimestampMode,
   applySiteAccountUpdates,

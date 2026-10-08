@@ -19,7 +19,7 @@ import {
   MANAGED_SITE_MUTATION_COMPLETIONS,
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
   MANAGED_SITE_MUTATION_OUTCOMES,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/contracts"
 import type { ClaudeCodeHubProviderDisplay } from "~/types/claudeCodeHub"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES } from "~/types/managedSiteMigration"
 import {

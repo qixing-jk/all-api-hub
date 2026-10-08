@@ -2,10 +2,8 @@ import { Storage } from "@plasmohq/storage"
 
 import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
 import { normalizeOptionalAccountAuthType } from "~/features/AccountManagement/utils/accountAuthType"
-import {
-  normalizeAccountSiteProfileUrlForStorage,
-  resolveAccountSiteDefaultAuthType,
-} from "~/services/accounts/accountSiteProfile"
+import { resolveAccountSiteDefaultAuthType } from "~/services/accounts/accountSiteProfile/auth"
+import { normalizeAccountSiteProfileUrlForStorage } from "~/services/accounts/accountSiteProfile/urls"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { createLogger } from "~/utils/core/logger"
 import { isRecord } from "~/utils/core/object"

@@ -36,7 +36,7 @@ import {
 import {
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationResult,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/contracts"
 import { fetchOmniRouteChannelSecretKey } from "~/services/managedSites/providers/omniroute"
 
 /** Opens the scope-bound OmniRoute operations shared by UI and migration. */

@@ -8,7 +8,7 @@ import AccountManagement from "~/features/AccountManagement/AccountManagement"
 import {
   UNIFIED_API_GUIDANCE_ACTION_KINDS,
   UNIFIED_API_GUIDANCE_STATUSES,
-} from "~/features/UnifiedApiGuidance"
+} from "~/features/UnifiedApiGuidance/model"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 import {

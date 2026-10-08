@@ -5,7 +5,7 @@ import {
   runOmniRouteMutation,
 } from "~/services/apiAdapters/managedSites/omniroute/omnirouteMutation"
 import { OmniRouteApiError } from "~/services/apiService/omniroute/request"
-import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
+import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations/contracts"
 
 describe("OmniRoute mutation evidence", () => {
   it("propagates failures without transport evidence", async () => {

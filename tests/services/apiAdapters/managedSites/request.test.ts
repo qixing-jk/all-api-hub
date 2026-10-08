@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { ApiError } from "~/services/apiTransport/errors"
-import { createManagedSiteMutationSequence } from "~/services/managedSites/mutations"
+import { createManagedSiteMutationSequence } from "~/services/managedSites/mutations/execution"
 
 const config = {
   baseUrl: "https://managed.example.invalid",

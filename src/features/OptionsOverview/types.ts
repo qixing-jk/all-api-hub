@@ -1,5 +1,5 @@
 import type { OptionsMenuItemId } from "~/constants/optionsMenuIds"
-import type { UnifiedApiGuidanceModel } from "~/features/UnifiedApiGuidance"
+import type { UnifiedApiGuidanceModel } from "~/features/UnifiedApiGuidance/model"
 import type { AccountMetricCoverage } from "~/types"
 
 import type {

@@ -10,7 +10,7 @@ import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/manage
 import {
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
   type ManagedSiteMutationConfirmedEffect,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/contracts"
 
 const ref: ManagedResourceRef = {
   siteType: SITE_TYPES.NEW_API,

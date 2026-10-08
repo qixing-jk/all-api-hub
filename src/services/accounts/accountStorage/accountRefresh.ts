@@ -1,7 +1,7 @@
 import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import type { RefreshAccountResult } from "~/services/accounts/accountDataModel"
-import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accountSiteProfile"
+import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accountSiteProfile/supplementalAuth"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/editing/accountDefaults"
 import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"

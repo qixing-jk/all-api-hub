@@ -28,7 +28,7 @@ import {
 import {
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationResult,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/contracts"
 import type {
   ClaudeCodeHubProviderCreatePayload,
   ClaudeCodeHubProviderDisplay,

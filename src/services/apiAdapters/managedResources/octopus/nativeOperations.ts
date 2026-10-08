@@ -32,7 +32,7 @@ import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/
 import {
   MANAGED_SITE_MUTATION_OUTCOMES as outcomes,
   type ManagedSiteMutationResult,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/contracts"
 import { buildOctopusBaseUrl } from "~/services/managedSites/providers/octopus"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { userPreferences } from "~/services/preferences/userPreferences"

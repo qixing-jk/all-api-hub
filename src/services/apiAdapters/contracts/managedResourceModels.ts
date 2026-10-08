@@ -1,5 +1,5 @@
 import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/configuration/runtimeConfig"
-import type { ManagedSiteVoidMutationResult } from "~/services/managedSites/mutations"
+import type { ManagedSiteVoidMutationResult } from "~/services/managedSites/mutations/contracts"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import type { ManagedModelChannelListData } from "~/types/managedResourceModels"

@@ -13,7 +13,7 @@ import {
   UNIFIED_API_GUIDANCE_ACTION_KINDS,
   UNIFIED_API_GUIDANCE_SOURCE_KINDS,
   UNIFIED_API_GUIDANCE_STATUSES,
-} from "~/features/UnifiedApiGuidance"
+} from "~/features/UnifiedApiGuidance/model"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { createEmptyUsageHistoryAccountStore } from "~/services/history/usageHistory/core"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"

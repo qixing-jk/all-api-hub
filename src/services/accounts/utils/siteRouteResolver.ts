@@ -3,10 +3,8 @@ import {
   SITE_TYPES,
   type AccountSiteType,
 } from "~/constants/siteType"
-import {
-  findAccountSiteProfileForHostname,
-  getAccountSiteProductProfile,
-} from "~/services/accounts/accountSiteProfile"
+import { getAccountSiteProductProfile } from "~/services/accounts/accountSiteProfile"
+import { findAccountSiteProfileForHostname } from "~/services/accounts/accountSiteProfile/urls"
 import { resolveStaticAccountRoutePath } from "~/services/apiAdapters/accountRoutes"
 import {
   ACCOUNT_BOOTSTRAP_ROUTE_KINDS,

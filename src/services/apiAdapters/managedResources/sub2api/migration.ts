@@ -18,7 +18,7 @@ import {
 } from "~/services/apiAdapters/managedResources/migration/migrationTypeRoutes"
 import { sub2ApiManagedResourceRegistration } from "~/services/apiAdapters/managedResources/sub2api"
 import { openSub2ApiNativeResourceOperations } from "~/services/apiAdapters/managedResources/sub2api/nativeOperations"
-import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
+import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations/contracts"
 import {
   parseSub2ApiResourceId,
   SUB2API_STEP_UP_ADMIN_KEY_FORBIDDEN_CODE,

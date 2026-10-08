@@ -1,10 +1,10 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import type { AccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
+import { getAccountSiteProductProfile } from "~/services/accounts/accountSiteProfile"
 import {
   ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING,
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
-  getAccountSiteProductProfile,
-} from "~/services/accounts/accountSiteProfile"
+} from "~/services/accounts/accountSiteProfile/contracts"
 import type { AccountSiteDefinitionOnboardingMetadata } from "~/services/accountSiteDefinitions/contracts"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"

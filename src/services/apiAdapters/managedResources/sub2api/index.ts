@@ -29,7 +29,7 @@ import {
   mapFailure,
   openConfig,
 } from "~/services/apiAdapters/managedResources/sub2api/nativeRuntime"
-import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
+import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations/contracts"
 import {
   getSub2ApiApiKeyAccount,
   InvalidSub2ApiResourceIdError,

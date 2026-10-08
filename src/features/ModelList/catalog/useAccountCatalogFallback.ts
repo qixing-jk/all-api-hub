@@ -16,10 +16,8 @@ import {
   type ModelManagementSource,
 } from "~/features/ModelList/catalog/modelManagementSources"
 import toast from "~/lib/notify"
-import {
-  ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
-  getAccountSiteModelListProfile,
-} from "~/services/accounts/accountSiteProfile"
+import { ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES } from "~/services/accounts/accountSiteProfile/contracts"
+import { getAccountSiteModelListProfile } from "~/services/accounts/accountSiteProfile/modelList"
 import { type AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import { canListAccountRuntimeKeys } from "~/services/accounts/keys/keyProductCapabilities"
 import { fetchDisplayAccountRuntimeKeys } from "~/services/accounts/utils/apiServiceRequest"

@@ -16,7 +16,7 @@ import {
   ManagedResourceError,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
-import type { ManagedSiteMutationResult } from "~/services/managedSites/mutations"
+import type { ManagedSiteMutationResult } from "~/services/managedSites/mutations/contracts"
 import { type ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
 
 interface NativeManagedChannelImportEditor {

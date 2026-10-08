@@ -2,14 +2,16 @@ import { describe, expect, it } from "vitest"
 
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
-  createManagedSiteMutationSequence,
   MANAGED_SITE_MUTATION_COMPLETIONS,
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
   MANAGED_SITE_MUTATION_OUTCOMES,
+  type ManagedSiteMutationConfirmedEffect,
+} from "~/services/managedSites/mutations/contracts"
+import {
+  createManagedSiteMutationSequence,
   runManagedSiteMutationStep,
   toManagedSiteMutationDiagnostic,
-  type ManagedSiteMutationConfirmedEffect,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/execution"
 
 const firstEffect: ManagedSiteMutationConfirmedEffect = {
   kind: MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,

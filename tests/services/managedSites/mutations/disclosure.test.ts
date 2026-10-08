@@ -2,9 +2,16 @@ import { describe, expect, expectTypeOf, it } from "vitest"
 
 import {
   MANAGED_SITE_MUTATION_COMPLETIONS,
-  MANAGED_SITE_MUTATION_CONTROLLED_CATEGORIES,
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
   MANAGED_SITE_MUTATION_OUTCOMES,
+  type ManagedSiteMutationConfirmedEffect,
+  type ManagedSiteMutationPartial,
+  type ManagedSiteMutationRejected,
+  type ManagedSiteMutationResult,
+  type ManagedSiteMutationSucceeded,
+} from "~/services/managedSites/mutations/contracts"
+import {
+  MANAGED_SITE_MUTATION_CONTROLLED_CATEGORIES,
   parseManagedSiteExternalMutationSummary,
   parseManagedSitePersistedMutationState,
   parsePrivateManagedSiteMutationOutput,
@@ -13,14 +20,9 @@ import {
   toPrivateManagedSiteMutationOutput,
   toPrivateManagedSiteThrownErrorMessage,
   type ManagedSiteExternalMutationSummary,
-  type ManagedSiteMutationConfirmedEffect,
-  type ManagedSiteMutationPartial,
-  type ManagedSiteMutationRejected,
-  type ManagedSiteMutationResult,
-  type ManagedSiteMutationSucceeded,
   type ManagedSitePersistedMutationState,
   type ManagedSitePrivateMutationOutput,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/disclosure"
 
 const effect: ManagedSiteMutationConfirmedEffect = {
   kind: MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceUpdated,

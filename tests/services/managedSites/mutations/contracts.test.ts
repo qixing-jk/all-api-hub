@@ -6,7 +6,7 @@ import {
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationConfirmedEffect,
   type ManagedSiteMutationResult,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/contracts"
 
 const effect: ManagedSiteMutationConfirmedEffect = {
   kind: MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceUpdated,

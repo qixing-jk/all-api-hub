@@ -1,9 +1,7 @@
 import { resolveDeploymentApiOrigin } from "~/constants/deploymentApiOrigins"
 import type { AccountSiteType } from "~/constants/siteType"
-import {
-  getAccountSiteProductProfile,
-  shouldDecorateAccountApiRequestWithAuthSession,
-} from "~/services/accounts/accountSiteProfile"
+import { getAccountSiteProductProfile } from "~/services/accounts/accountSiteProfile"
+import { shouldDecorateAccountApiRequestWithAuthSession } from "~/services/accounts/accountSiteProfile/authSession"
 import { accountSub2ApiAuthSession } from "~/services/accounts/accountSiteProfile/sub2apiAuthSession"
 import {
   ACCOUNT_RUNTIME_KEY_STATUSES,

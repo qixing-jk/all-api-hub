@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  getManagedSiteMutationRetryDecision,
   MANAGED_SITE_MUTATION_COMPLETIONS,
   MANAGED_SITE_MUTATION_OUTCOMES,
-  MANAGED_SITE_MUTATION_RETRY_DECISIONS,
   type ManagedSiteMutationResult,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/contracts"
+import {
+  getManagedSiteMutationRetryDecision,
+  MANAGED_SITE_MUTATION_RETRY_DECISIONS,
+} from "~/services/managedSites/mutations/retryPolicy"
 
 const diagnostic = { message: "Mutation did not complete." }
 

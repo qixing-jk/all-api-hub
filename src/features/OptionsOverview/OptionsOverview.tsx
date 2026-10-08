@@ -12,7 +12,7 @@ import { requestProductAnnouncementPopoverOpen } from "~/features/ProductAnnounc
 import { useProductAnnouncements } from "~/features/ProductAnnouncements/hooks/useProductAnnouncements"
 import { ProductAnnouncementBanner } from "~/features/ProductAnnouncements/ProductAnnouncementBanner"
 import { ProductTourInvitation } from "~/features/ProductTour"
-import { UNIFIED_API_GUIDANCE_STATUSES } from "~/features/UnifiedApiGuidance"
+import { UNIFIED_API_GUIDANCE_STATUSES } from "~/features/UnifiedApiGuidance/model"
 import { useGatewayGuidancePresentation } from "~/features/UnifiedApiGuidance/useGatewayGuidancePresentation"
 import { setLastSeenOptionalPermissions } from "~/services/permissions/optionalPermissionState"
 import {
