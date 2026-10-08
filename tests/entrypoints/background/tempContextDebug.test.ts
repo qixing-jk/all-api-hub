@@ -37,11 +37,14 @@ const {
 
 // Fixture windows and tabs are asserted through these seams: the fake browser
 // does not model a window that is created together with its first tab.
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/utils/browser/browserApi")>()),
+vi.mock("~/utils/browser/tabs", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/tabs")>()),
   createTab: createTabMock,
-  createWindow: createWindowMock,
   queryTabs: queryTabsMock,
+}))
+vi.mock("~/utils/browser/windows", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/windows")>()),
+  createWindow: createWindowMock,
 }))
 
 const envFlags = vi.hoisted(() => ({ dev: true, test: true }))

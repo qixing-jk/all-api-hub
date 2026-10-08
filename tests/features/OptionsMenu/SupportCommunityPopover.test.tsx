@@ -2,7 +2,7 @@ import { fireEvent, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SupportCommunityPopover } from "~/features/OptionsMenu/SupportCommunityPopover"
-import { createTab } from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const { useSponsorRecommendationsMock } = vi.hoisted(() => ({
@@ -16,13 +16,9 @@ vi.mock(
   }),
 )
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
-  return {
-    ...actual,
-    createTab: vi.fn().mockResolvedValue(undefined),
-  }
+vi.mock("~/utils/browser/tabs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/tabs")>()
+  return { ...actual, createTab: vi.fn().mockResolvedValue(undefined) }
 })
 
 const renderPopover = (

@@ -174,13 +174,9 @@ vi.mock("~/features/LdohSiteLookup/hooks/LdohSiteLookupContext", () => ({
   }),
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
-  return {
-    ...actual,
-    createTab: createTabMock,
-  }
+vi.mock("~/utils/browser/tabs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/tabs")>()
+  return { ...actual, createTab: createTabMock }
 })
 
 vi.mock("~/utils/navigation/sitePages", () => ({

@@ -5,7 +5,7 @@ import ActionClickBehaviorSettings from "~/features/BasicSettings/components/tab
 import {
   getSidePanelSupport,
   type SidePanelSupport,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/sidePanel"
 import { showResultToast } from "~/utils/feedback/operationFeedback"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -19,13 +19,10 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+vi.mock("~/utils/browser/sidePanel", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
-  return {
-    ...actual,
-    getSidePanelSupport: vi.fn(),
-  }
+    await importOriginal<typeof import("~/utils/browser/sidePanel")>()
+  return { ...actual, getSidePanelSupport: vi.fn() }
 })
 
 vi.mock("~/utils/feedback/operationFeedback", () => ({

@@ -96,15 +96,22 @@ describe("OpenRouter Management Key background action", () => {
       },
       windows: { get: vi.fn(), update: vi.fn().mockResolvedValue(undefined) },
     }
-    vi.doMock("~/utils/browser/browserApi", async (importOriginal) => {
+    vi.doMock("~/utils/browser/tabs", async (importOriginal) => {
       const actual =
-        await importOriginal<typeof import("~/utils/browser/browserApi")>()
+        await importOriginal<typeof import("~/utils/browser/tabs")>()
       return {
         ...actual,
         createTab: createTabMock,
+        onTabRemoved: vi.fn(() => () => {}),
+      }
+    })
+    vi.doMock("~/utils/browser/windows", async (importOriginal) => {
+      const actual =
+        await importOriginal<typeof import("~/utils/browser/windows")>()
+      return {
+        ...actual,
         createWindow: vi.fn(),
         hasWindowsAPI: vi.fn(() => true),
-        onTabRemoved: vi.fn(() => () => {}),
         onWindowRemoved: vi.fn(() => () => {}),
       }
     })

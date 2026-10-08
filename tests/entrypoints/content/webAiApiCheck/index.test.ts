@@ -16,7 +16,7 @@ import {
   sendWebAiApiCheckMessage,
   WebAiApiCheckMessageTypes,
 } from "~/services/verification/webAiApiCheck/messaging"
-import { checkPermissionViaMessage } from "~/utils/browser/browserApi"
+import { checkPermissionViaMessage } from "~/utils/browser/permissions"
 import { encodeUnpaddedBase64 } from "~~/tests/test-utils/encoding"
 import {
   buildApiCheckClipboardText,
@@ -33,13 +33,10 @@ const { logger } = vi.hoisted(() => ({
   },
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+vi.mock("~/utils/browser/permissions", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
-  return {
-    ...actual,
-    checkPermissionViaMessage: vi.fn(),
-  }
+    await importOriginal<typeof import("~/utils/browser/permissions")>()
+  return { ...actual, checkPermissionViaMessage: vi.fn() }
 })
 
 vi.mock("~/services/verification/webAiApiCheck/messaging", () => ({

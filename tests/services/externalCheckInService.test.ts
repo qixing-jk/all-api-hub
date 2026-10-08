@@ -6,11 +6,8 @@ import {
   openExternalCheckInsAndMark,
   setupExternalCheckInMessagingListeners,
 } from "~/services/checkin/externalCheckInService"
-import {
-  createTab,
-  createWindow,
-  hasWindowsAPI,
-} from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
+import { createWindow, hasWindowsAPI } from "~/utils/browser/windows"
 import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 
 const { mockOnExternalCheckInMessage } = vi.hoisted(() => ({
@@ -29,15 +26,14 @@ vi.mock("~/services/accounts/accountStorage/accountCheckInState", () => ({
   },
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+vi.mock("~/utils/browser/tabs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/tabs")>()
+  return { ...actual, createTab: vi.fn() }
+})
+vi.mock("~/utils/browser/windows", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
-  return {
-    ...actual,
-    createTab: vi.fn(),
-    createWindow: vi.fn(),
-    hasWindowsAPI: vi.fn(),
-  }
+    await importOriginal<typeof import("~/utils/browser/windows")>()
+  return { ...actual, createWindow: vi.fn(), hasWindowsAPI: vi.fn() }
 })
 
 vi.mock("~/services/accounts/utils/siteRouteResolver", () => ({

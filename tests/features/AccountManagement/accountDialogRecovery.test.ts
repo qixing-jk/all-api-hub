@@ -13,10 +13,8 @@ import {
   type AccountDialogRecoveryState,
 } from "~/features/AccountManagement/components/AccountDialog/models"
 import { ACCOUNT_DIALOG_RECOVERY_STORAGE_KEYS } from "~/services/core/storageKeys"
-import {
-  getActiveTab,
-  setSessionStorageValues,
-} from "~/utils/browser/browserApi"
+import { setSessionStorageValues } from "~/utils/browser/storage"
+import { getActiveTab } from "~/utils/browser/tabs"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
@@ -36,12 +34,18 @@ const {
   readSessionValues: vi.fn(),
 }))
 
-vi.mock("~/utils/browser/browserApi", () => ({
+vi.mock("~/utils/browser/tabs", () => ({
   getActiveTab: vi.fn(async () => activeTab),
+  createTab,
+}))
+vi.mock("~/utils/browser/runtime", () => ({
   getExtensionURL: (path: string) => `chrome-extension://test/${path}`,
+}))
+vi.mock("~/utils/browser/sidePanel", () => ({
   getSidePanelSupport: () => ({ supported: supportsSidePanel() }),
   openSidePanel,
-  createTab,
+}))
+vi.mock("~/utils/browser/storage", () => ({
   getSessionStorageValues: readSessionValues,
   setSessionStorageValues: vi.fn(async (values: Record<string, unknown>) => {
     for (const [key, value] of Object.entries(values)) {

@@ -54,16 +54,19 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+vi.mock("~/utils/browser/tabs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/tabs")>()
   return {
     ...actual,
     getActiveTabs: mockGetActiveTabs,
     onTabActivated: onTabActivatedMock,
     onTabUpdated: onTabUpdatedMock,
-    sendRuntimeMessage: vi.fn(),
   }
+})
+vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()
+  return { ...actual, sendRuntimeMessage: vi.fn() }
 })
 
 describe("useAccountDialog sponsor prefill", () => {

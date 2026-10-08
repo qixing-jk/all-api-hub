@@ -237,20 +237,36 @@ describe("tempWindowPool window fallback", () => {
       },
     }
 
-    vi.doMock("~/utils/browser/browserApi", async (importOriginal) => {
+    vi.doMock("~/utils/browser/tabs", async (importOriginal) => {
       const actual =
-        await importOriginal<typeof import("~/utils/browser/browserApi")>()
+        await importOriginal<typeof import("~/utils/browser/tabs")>()
 
       return {
         ...actual,
         createTab: createTabMock,
+        onTabRemoved: onTabRemovedMock,
+        removeTab: removeTabMock,
+      }
+    })
+    vi.doMock("~/utils/browser/windows", async (importOriginal) => {
+      const actual =
+        await importOriginal<typeof import("~/utils/browser/windows")>()
+
+      return {
+        ...actual,
         createWindow: createWindowMock,
         hasWindowsAPI: hasWindowsApiMock,
-        isAllowedIncognitoAccess: isAllowedIncognitoAccessMock,
-        onTabRemoved: onTabRemovedMock,
         onWindowRemoved: onWindowRemovedMock,
-        removeTab: removeTabMock,
         removeWindow: removeWindowMock,
+      }
+    })
+    vi.doMock("~/utils/browser/runtime", async (importOriginal) => {
+      const actual =
+        await importOriginal<typeof import("~/utils/browser/runtime")>()
+
+      return {
+        ...actual,
+        isAllowedIncognitoAccess: isAllowedIncognitoAccessMock,
       }
     })
     vi.doMock("~/utils/browser/browserFocus", async (importOriginal) => {
@@ -332,7 +348,20 @@ describe("tempWindowPool window fallback", () => {
     vi.doUnmock("~/utils/browser/dnrCookieInjector")
     vi.doUnmock("~/utils/browser/firefoxTempWindowDownloadBlocker")
     vi.doUnmock("~/utils/browser/protectionBypass")
-    vi.doUnmock("~/utils/browser/browserApi")
+    vi.doUnmock("~/utils/browser/extensionStorage")
+    vi.doUnmock("~/utils/browser/tabs")
+    vi.doUnmock("~/utils/browser/windows")
+    vi.doUnmock("~/utils/browser/runtimeMessages")
+    vi.doUnmock("~/utils/browser/runtime")
+    vi.doUnmock("~/utils/browser/bookmarks")
+    vi.doUnmock("~/utils/browser/storage")
+    vi.doUnmock("~/utils/browser/sidePanel")
+    vi.doUnmock("~/utils/browser/alarms")
+    vi.doUnmock("~/utils/browser/notifications")
+    vi.doUnmock("~/utils/browser/contextMenus")
+    vi.doUnmock("~/utils/browser/cookies")
+    vi.doUnmock("~/utils/browser/action")
+    vi.doUnmock("~/utils/browser/permissions")
     vi.doUnmock("~/utils/browser/browserFocus")
     vi.doUnmock("~/services/siteDetection/detectSiteType")
     vi.doUnmock("~/services/preferences/userPreferences")

@@ -87,8 +87,10 @@ vi.mock("~/services/managedSites/newApiOwnedSession/background", () => ({
   },
 }))
 
-vi.mock("~/utils/browser/browserApi", () => ({
+vi.mock("~/utils/browser/permissions", () => ({
   containsPermissions: mocks.containsPermissions,
+}))
+vi.mock("~/utils/browser/runtimeMessages", () => ({
   onRuntimeMessage: mocks.onRuntimeMessage,
 }))
 
@@ -189,7 +191,7 @@ vi.mock("~/services/notifications/taskNotificationService", () => ({
     mocks.setupTaskNotificationMessagingListeners,
 }))
 
-vi.mock("~/services/siteAnnouncements/scheduler", () => ({
+vi.mock("~/services/siteAnnouncements/runtimeMessages", () => ({
   setupSiteAnnouncementsMessagingListeners:
     mocks.setupSiteAnnouncementsMessagingListeners,
 }))

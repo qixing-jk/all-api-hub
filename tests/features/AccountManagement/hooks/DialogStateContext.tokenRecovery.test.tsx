@@ -31,11 +31,17 @@ vi.mock("~/utils/browser", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/utils/browser")>()),
   isExtensionSidePanel: isSidePanel,
 }))
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/utils/browser/browserApi")>()),
+vi.mock("~/utils/browser/tabs", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/tabs")>()),
   getActiveTab: vi.fn(async () => ({ id: 11, windowId: 7 })),
+}))
+vi.mock("~/utils/browser/sidePanel", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/sidePanel")>()),
   getSidePanelSupport: () => ({ supported: true }),
   openSidePanel: vi.fn(async () => {}),
+}))
+vi.mock("~/utils/browser/storage", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/storage")>()),
   getSessionStorageValues: vi.fn(async (key: string) => ({
     [key]: structuredClone(values.get(key)),
   })),

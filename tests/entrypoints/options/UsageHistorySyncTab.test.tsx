@@ -9,7 +9,7 @@ import { sendUsageHistoryMessage } from "~/services/history/usageHistory/messagi
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { UsageHistoryMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { DEFAULT_USAGE_HISTORY_PREFERENCES } from "~/types/usageHistory"
-import { hasAlarmsAPI } from "~/utils/browser/browserApi"
+import { hasAlarmsAPI } from "~/utils/browser/alarms"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import {
   fireEvent,
@@ -46,13 +46,9 @@ vi.mock("~/services/history/usageHistory/storage", () => ({
   usageHistoryStorage: { getStore: vi.fn() },
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
-  return {
-    ...actual,
-    hasAlarmsAPI: vi.fn(() => true),
-  }
+vi.mock("~/utils/browser/alarms", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/alarms")>()
+  return { ...actual, hasAlarmsAPI: vi.fn(() => true) }
 })
 
 vi.mock("~/services/history/usageHistory/messaging", () => ({

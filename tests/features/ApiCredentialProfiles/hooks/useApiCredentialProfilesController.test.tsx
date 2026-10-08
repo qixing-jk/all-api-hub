@@ -118,15 +118,12 @@ vi.mock("~/services/verification/verificationResultHistory", async () => {
   }
 })
 
-vi.mock("~/utils/browser/browserApi", async () => {
+vi.mock("~/utils/browser/runtimeMessages", async () => {
   const actual = await vi.importActual<
-    typeof import("~/utils/browser/browserApi")
-  >("~/utils/browser/browserApi")
+    typeof import("~/utils/browser/runtimeMessages")
+  >("~/utils/browser/runtimeMessages")
 
-  return {
-    ...actual,
-    onRuntimeMessage: () => () => {},
-  }
+  return { ...actual, onRuntimeMessage: () => () => {} }
 })
 
 vi.mock("~/utils/navigation", () => ({

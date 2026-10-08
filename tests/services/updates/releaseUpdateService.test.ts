@@ -66,16 +66,18 @@ vi.mock("~/services/core/storageWriteLock", () => ({
   withExtensionStorageWriteLock: withExtensionStorageWriteLockMock,
 }))
 
-vi.mock("~/utils/browser/browserApi", () => ({
+vi.mock("~/utils/browser/alarms", () => ({
   createAlarm: createAlarmMock,
   getAlarm: getAlarmMock,
+  hasAlarmsAPI: hasAlarmsApiMock,
+  onAlarm: onAlarmMock,
+}))
+vi.mock("~/utils/browser/runtime", () => ({
   getExtensionVersion: getExtensionVersionMock,
   getExtensionURL: getExtensionUrlMock,
   getManagementSelf: getManagementSelfMock,
   getManifest: getManifestMock,
   getRuntimeId: getRuntimeIdMock,
-  hasAlarmsAPI: hasAlarmsApiMock,
-  onAlarm: onAlarmMock,
 }))
 
 describe("releaseUpdateService", () => {

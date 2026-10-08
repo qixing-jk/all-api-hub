@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
 import { openFallbackAwareTempContext } from "~/services/browsingContext/tempPage/openingAdapter"
-import * as browserApi from "~/utils/browser/browserApi"
+import * as browserApi_tabs from "~/utils/browser/tabs"
+import * as browserApi_windows from "~/utils/browser/windows"
 
 vi.mock("~/services/browsingContext/tempPage/browserAdapter", () => ({
   resolveTempWindowSize: vi.fn().mockResolvedValue({ width: 800, height: 600 }),
@@ -18,12 +19,14 @@ vi.mock("~/services/browsingContext/tempPage/compositeWindow", () => ({
 describe("openingAdapter", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
-    vi.spyOn(browserApi, "hasWindowsAPI").mockReturnValue(true)
+    vi.spyOn(browserApi_windows, "hasWindowsAPI").mockReturnValue(true)
   })
 
   describe("openFallbackAwareTempContext", () => {
     it("opens a plain tab when requestedMode is Tab", async () => {
-      vi.spyOn(browserApi, "createTab").mockResolvedValue({ id: 10 } as any)
+      vi.spyOn(browserApi_tabs, "createTab").mockResolvedValue({
+        id: 10,
+      } as any)
 
       const result = await openFallbackAwareTempContext({
         url: "https://example.com",
@@ -42,7 +45,7 @@ describe("openingAdapter", () => {
     })
 
     it("throws if plain tab creation fails", async () => {
-      vi.spyOn(browserApi, "createTab").mockResolvedValue(null as any)
+      vi.spyOn(browserApi_tabs, "createTab").mockResolvedValue(null as any)
 
       await expect(
         openFallbackAwareTempContext({
@@ -74,10 +77,14 @@ describe("openingAdapter", () => {
     })
 
     it("opens a popup window when requestedMode is Window", async () => {
-      vi.spyOn(browserApi, "createWindow").mockResolvedValue({ id: 77 } as any)
-      vi.spyOn(browserApi, "queryTabs").mockResolvedValue([{ id: 88 }] as any)
+      vi.spyOn(browserApi_windows, "createWindow").mockResolvedValue({
+        id: 77,
+      } as any)
+      vi.spyOn(browserApi_tabs, "queryTabs").mockResolvedValue([
+        { id: 88 },
+      ] as any)
       const updateWindowSpy = vi
-        .spyOn(browserApi, "updateWindow")
+        .spyOn(browserApi_windows, "updateWindow")
         .mockResolvedValue({} as any)
 
       const result = await openFallbackAwareTempContext({
@@ -99,9 +106,13 @@ describe("openingAdapter", () => {
     })
 
     it("handles updateWindow minimize failure gracefully", async () => {
-      vi.spyOn(browserApi, "createWindow").mockResolvedValue({ id: 78 } as any)
-      vi.spyOn(browserApi, "queryTabs").mockResolvedValue([{ id: 89 }] as any)
-      vi.spyOn(browserApi, "updateWindow").mockRejectedValue(
+      vi.spyOn(browserApi_windows, "createWindow").mockResolvedValue({
+        id: 78,
+      } as any)
+      vi.spyOn(browserApi_tabs, "queryTabs").mockResolvedValue([
+        { id: 89 },
+      ] as any)
+      vi.spyOn(browserApi_windows, "updateWindow").mockRejectedValue(
         new Error("Cannot minimize"),
       )
 
@@ -118,10 +129,12 @@ describe("openingAdapter", () => {
     })
 
     it("rolls back to plain tab on recoverable error when allowWindowRollback is true", async () => {
-      vi.spyOn(browserApi, "createWindow").mockRejectedValue(
+      vi.spyOn(browserApi_windows, "createWindow").mockRejectedValue(
         new Error("window creation blocked"),
       )
-      vi.spyOn(browserApi, "createTab").mockResolvedValue({ id: 123 } as any)
+      vi.spyOn(browserApi_tabs, "createTab").mockResolvedValue({
+        id: 123,
+      } as any)
 
       const result = await openFallbackAwareTempContext({
         url: "https://example.com",
@@ -140,7 +153,7 @@ describe("openingAdapter", () => {
     })
 
     it("throws unsupported temp context error on recoverable error when allowWindowRollback is false", async () => {
-      vi.spyOn(browserApi, "createWindow").mockRejectedValue(
+      vi.spyOn(browserApi_windows, "createWindow").mockRejectedValue(
         new Error("window creation blocked"),
       )
 
@@ -159,7 +172,7 @@ describe("openingAdapter", () => {
 
     it("rethrows unrecoverable error when window creation fails with unexpected error", async () => {
       const err = new Error("catastrophic failure")
-      vi.spyOn(browserApi, "createWindow").mockRejectedValue(err)
+      vi.spyOn(browserApi_windows, "createWindow").mockRejectedValue(err)
 
       await expect(
         openFallbackAwareTempContext({
@@ -173,10 +186,12 @@ describe("openingAdapter", () => {
     })
 
     it("cleans up popup window and throws if tab query returns empty, handling removeWindow error", async () => {
-      vi.spyOn(browserApi, "createWindow").mockResolvedValue({ id: 79 } as any)
-      vi.spyOn(browserApi, "queryTabs").mockResolvedValue([])
+      vi.spyOn(browserApi_windows, "createWindow").mockResolvedValue({
+        id: 79,
+      } as any)
+      vi.spyOn(browserApi_tabs, "queryTabs").mockResolvedValue([])
       const removeWindowSpy = vi
-        .spyOn(browserApi, "removeWindow")
+        .spyOn(browserApi_windows, "removeWindow")
         .mockRejectedValue(new Error("removeWindow cleanup failed"))
 
       await expect(
@@ -193,7 +208,7 @@ describe("openingAdapter", () => {
     })
 
     it("throws if popupWindow is created without an id", async () => {
-      vi.spyOn(browserApi, "createWindow").mockResolvedValue({} as any)
+      vi.spyOn(browserApi_windows, "createWindow").mockResolvedValue({} as any)
 
       await expect(
         openFallbackAwareTempContext({

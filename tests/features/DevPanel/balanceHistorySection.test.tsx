@@ -10,14 +10,11 @@ const { sendRuntimeMessageMock } = vi.hoisted(() => ({
   sendRuntimeMessageMock: vi.fn(),
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()
 
-  return {
-    ...actual,
-    sendRuntimeMessage: sendRuntimeMessageMock,
-  }
+  return { ...actual, sendRuntimeMessage: sendRuntimeMessageMock }
 })
 
 vi.mock("~/lib/notify", () => {

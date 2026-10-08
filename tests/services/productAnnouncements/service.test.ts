@@ -60,17 +60,24 @@ vi.mock("~~/public/product-announcements.json", () => ({
   },
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+vi.mock("~/utils/browser/alarms", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/alarms")>()
 
   return {
     ...actual,
     createAlarm: browserApiMocks.createAlarm,
     getAlarm: browserApiMocks.getAlarm,
+    onAlarm: browserApiMocks.onAlarm,
+  }
+})
+vi.mock("~/utils/browser/runtime", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/runtime")>()
+
+  return {
+    ...actual,
     getExtensionVersion: browserApiMocks.getExtensionVersion,
     getManifest: browserApiMocks.getManifest,
-    onAlarm: browserApiMocks.onAlarm,
   }
 })
 

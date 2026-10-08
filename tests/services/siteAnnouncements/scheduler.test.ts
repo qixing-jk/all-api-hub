@@ -13,8 +13,8 @@ import {
   resolveSiteAnnouncementsMarkReadMessage,
   resolveSiteAnnouncementsUpdatePreferencesMessage,
   setupSiteAnnouncementsMessagingListeners,
-  siteAnnouncementScheduler,
-} from "~/services/siteAnnouncements/scheduler"
+} from "~/services/siteAnnouncements/runtimeMessages"
+import { siteAnnouncementScheduler } from "~/services/siteAnnouncements/scheduler"
 import { getAnnouncementSourceHandlers } from "~/services/siteAnnouncements/sourceHandlers"
 import { siteAnnouncementStorage } from "~/services/siteAnnouncements/storage"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
@@ -63,8 +63,8 @@ const {
   >(),
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/utils/browser/browserApi")>()),
+vi.mock("~/utils/browser/alarms", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/alarms")>()),
   clearAlarm: clearAlarmMock,
   createAlarm: createAlarmMock,
   getAlarm: getAlarmMock,
@@ -186,7 +186,6 @@ describe("siteAnnouncementScheduler", () => {
     const storage = new Storage({ area: "local" })
     await storage.remove(STORAGE_KEYS.SITE_ANNOUNCEMENTS_STORE)
     ;(siteAnnouncementScheduler as any).isInitialized = false
-    ;(siteAnnouncementScheduler as any).isRunning = false
     hasAlarmsAPIMock.mockReturnValue(true)
     getAlarmMock.mockResolvedValue(undefined)
     getPreferencesMock.mockResolvedValue({
@@ -955,14 +954,28 @@ describe("siteAnnouncementScheduler", () => {
   })
 
   it("returns null immediately when a check is already in progress", async () => {
-    ;(siteAnnouncementScheduler as any).isRunning = true
-
-    const response = await resolveSiteAnnouncementsCheckNowMessage({})
-
-    expect(response).toEqual({
-      success: true,
-      data: null,
-    })
+    let finishFetch!: (accounts: never[]) => void
+    getEnabledAccountsMock.mockReturnValueOnce(
+      new Promise<never[]>((resolve) => {
+        finishFetch = resolve
+      }),
+    )
+    const firstCheck = resolveSiteAnnouncementsCheckNowMessage({})
+    await vi.waitFor(() =>
+      expect(getEnabledAccountsMock).toHaveBeenCalledOnce(),
+    )
+    try {
+      await expect(
+        resolveSiteAnnouncementsCheckNowMessage({}),
+      ).resolves.toEqual({ success: true, data: null })
+      expect(getEnabledAccountsMock).toHaveBeenCalledOnce()
+    } finally {
+      finishFetch([])
+      await firstCheck
+    }
+    await expect(
+      resolveSiteAnnouncementsCheckNowMessage({}),
+    ).resolves.toMatchObject({ success: true, data: { checked: 0 } })
   })
 
   it("stores provider title and content without deriving a persisted summary", async () => {

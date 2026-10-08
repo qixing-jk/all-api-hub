@@ -117,13 +117,10 @@ vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: mocks.getSiteTypeCapabilities,
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
-  return {
-    ...actual,
-    sendRuntimeMessage: mocks.sendRuntimeMessage,
-  }
+    await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()
+  return { ...actual, sendRuntimeMessage: mocks.sendRuntimeMessage }
 })
 
 vi.mock("~/utils/core/identifier", async (importOriginal) => {

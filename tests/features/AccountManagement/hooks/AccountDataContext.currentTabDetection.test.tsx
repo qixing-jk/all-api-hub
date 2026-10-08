@@ -10,7 +10,7 @@ import {
 } from "~/features/AccountManagement/hooks/AccountDataContext"
 import type { AccountManagementSnapshot } from "~/services/accounts/accountStorage/accountReadModels"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
-import { getActiveTabs } from "~/utils/browser/browserApi"
+import { getActiveTabs } from "~/utils/browser/tabs"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
@@ -114,14 +114,12 @@ vi.mock("~/services/search/accountSearch", () => ({
   searchAccountSearchIndex: vi.fn(() => []),
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+vi.mock("~/utils/browser/tabs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/tabs")>()
   return {
     ...actual,
     getActiveTabs: vi.fn(async () => activeTabs),
     getAllTabs: vi.fn(async () => []),
-    onRuntimeMessage: vi.fn(() => () => {}),
     onTabActivated: vi.fn(() => () => {}),
     onTabRemoved: vi.fn(() => () => {}),
     onTabUpdated: vi.fn((listener: any) => {
@@ -133,6 +131,11 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
       }
     }),
   }
+})
+vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()
+  return { ...actual, onRuntimeMessage: vi.fn(() => () => {}) }
 })
 
 /**

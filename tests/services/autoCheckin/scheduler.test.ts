@@ -100,10 +100,12 @@ import {
   createAlarm,
   getAlarm,
   hasAlarmsAPI,
-  isMessageReceiverUnavailableError,
   onAlarm,
+} from "~/utils/browser/alarms"
+import {
+  isMessageReceiverUnavailableError,
   sendRuntimeMessage,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/runtimeMessages"
 import { formatLocalDayKey } from "~/utils/core/dayKey"
 import { getErrorMessage } from "~/utils/core/error"
 import {
@@ -355,17 +357,23 @@ vi.mock("~/services/checkin/autoCheckin/storage", () => ({
   },
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+vi.mock("~/utils/browser/alarms", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/alarms")>()
   return {
     ...actual,
     clearAlarm: vi.fn(),
     createAlarm: vi.fn(),
     getAlarm: vi.fn(),
     hasAlarmsAPI: vi.fn(),
-    isMessageReceiverUnavailableError: vi.fn(),
     onAlarm: vi.fn(),
+  }
+})
+vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()
+  return {
+    ...actual,
+    isMessageReceiverUnavailableError: vi.fn(),
     sendRuntimeMessage: vi.fn(),
   }
 })

@@ -129,13 +129,10 @@ vi.mock("~/services/managedSites/runtimeConfig", async (importOriginal) => ({
   hasValidManagedSiteConfig: hasValidManagedSiteConfigMock,
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
-  return {
-    ...actual,
-    sendRuntimeMessage: sendRuntimeMessageMock,
-  }
+    await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()
+  return { ...actual, sendRuntimeMessage: sendRuntimeMessageMock }
 })
 
 vi.mock("~/services/checkin/autoCheckin/messaging", async (importOriginal) => {

@@ -64,13 +64,9 @@ vi.mock("~/lib/notify", () => ({
   },
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
-  return {
-    ...actual,
-    getActiveTab: getActiveTabMock,
-  }
+vi.mock("~/utils/browser/tabs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/tabs")>()
+  return { ...actual, getActiveTab: getActiveTabMock }
 })
 
 vi.mock("~/services/accounts/siteName", () => ({

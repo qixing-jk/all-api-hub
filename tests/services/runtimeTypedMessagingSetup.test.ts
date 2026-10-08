@@ -113,9 +113,9 @@ describe("typed runtime messaging setup", () => {
           : key,
       ),
     }))
-    vi.doMock("~/utils/browser/browserApi", async (importOriginal) => {
+    vi.doMock("~/utils/browser/alarms", async (importOriginal) => {
       const actual =
-        await importOriginal<typeof import("~/utils/browser/browserApi")>()
+        await importOriginal<typeof import("~/utils/browser/alarms")>()
       return {
         ...actual,
         clearAlarm: vi.fn(),
@@ -221,9 +221,9 @@ describe("typed runtime messaging setup", () => {
           : key,
       ),
     }))
-    vi.doMock("~/utils/browser/browserApi", async (importOriginal) => {
+    vi.doMock("~/utils/browser/alarms", async (importOriginal) => {
       const actual =
-        await importOriginal<typeof import("~/utils/browser/browserApi")>()
+        await importOriginal<typeof import("~/utils/browser/alarms")>()
       return {
         ...actual,
         clearAlarm: vi.fn(),
@@ -434,9 +434,9 @@ describe("typed runtime messaging setup", () => {
       DEFAULT_PREFERENCES: { managedSiteModelSync: {} },
       userPreferences: { getPreferences: vi.fn(), savePreferences: vi.fn() },
     }))
-    vi.doMock("~/utils/browser/browserApi", async (importOriginal) => {
+    vi.doMock("~/utils/browser/alarms", async (importOriginal) => {
       const actual =
-        await importOriginal<typeof import("~/utils/browser/browserApi")>()
+        await importOriginal<typeof import("~/utils/browser/alarms")>()
       return {
         ...actual,
         clearAlarm: vi.fn(),
@@ -1994,18 +1994,26 @@ describe("typed runtime messaging setup", () => {
     vi.doMock("~/services/notifications/taskNotificationService", () => ({
       notifyTaskResult: vi.fn(),
     }))
-    vi.doMock("~/utils/browser/browserApi", async () => {
+    vi.doMock("~/utils/browser/alarms", async () => {
       const actual = await vi.importActual<
-        typeof import("~/utils/browser/browserApi")
-      >("~/utils/browser/browserApi")
+        typeof import("~/utils/browser/alarms")
+      >("~/utils/browser/alarms")
       return {
         ...actual,
         clearAlarm: vi.fn(),
         createAlarm: vi.fn(),
         getAlarm: vi.fn().mockResolvedValue(undefined),
         hasAlarmsAPI: vi.fn().mockReturnValue(true),
-        isMessageReceiverUnavailableError: vi.fn().mockReturnValue(false),
         onAlarm: vi.fn(),
+      }
+    })
+    vi.doMock("~/utils/browser/runtimeMessages", async () => {
+      const actual = await vi.importActual<
+        typeof import("~/utils/browser/runtimeMessages")
+      >("~/utils/browser/runtimeMessages")
+      return {
+        ...actual,
+        isMessageReceiverUnavailableError: vi.fn().mockReturnValue(false),
         sendRuntimeMessage: vi.fn().mockResolvedValue(undefined),
       }
     })

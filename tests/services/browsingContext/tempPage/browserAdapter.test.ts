@@ -12,11 +12,12 @@ import {
 } from "~/services/browsingContext/tempPage/browserAdapter"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { AuthTypeEnum } from "~/types"
-import * as browserApi from "~/utils/browser/browserApi"
 import * as cookieHelper from "~/utils/browser/cookieHelper"
 import * as dnrCookieInjector from "~/utils/browser/dnrCookieInjector"
 import * as firefoxBlocker from "~/utils/browser/firefoxTempWindowDownloadBlocker"
 import * as protectionBypass from "~/utils/browser/protectionBypass"
+import * as browserApi_runtimeMessages from "~/utils/browser/runtimeMessages"
+import * as browserApi_tabs from "~/utils/browser/tabs"
 
 vi.mock(
   "~/services/browsingContext/tempPage/tempContextProtectionGuards",
@@ -106,7 +107,7 @@ describe("browserAdapter", () => {
 
   describe("getTempContextTabSnapshot", () => {
     it("returns tab url and status when getTab succeeds", async () => {
-      vi.spyOn(browserApi, "getTab").mockResolvedValue({
+      vi.spyOn(browserApi_tabs, "getTab").mockResolvedValue({
         id: 1,
         url: "https://example.com/page",
         status: "complete",
@@ -120,7 +121,9 @@ describe("browserAdapter", () => {
     })
 
     it("returns null when getTab throws", async () => {
-      vi.spyOn(browserApi, "getTab").mockRejectedValue(new Error("Tab closed"))
+      vi.spyOn(browserApi_tabs, "getTab").mockRejectedValue(
+        new Error("Tab closed"),
+      )
 
       const snapshot = await getTempContextTabSnapshot(999)
       expect(snapshot).toBeNull()
@@ -129,12 +132,12 @@ describe("browserAdapter", () => {
 
   describe("navigateTempContextToPage", () => {
     it("returns immediately if current tab already at destination and complete", async () => {
-      vi.spyOn(browserApi, "getTab").mockResolvedValue({
+      vi.spyOn(browserApi_tabs, "getTab").mockResolvedValue({
         id: 10,
         url: "https://example.com/dest",
         status: "complete",
       } as any)
-      const updateTabSpy = vi.spyOn(browserApi, "updateTab")
+      const updateTabSpy = vi.spyOn(browserApi_tabs, "updateTab")
 
       const context: any = { tabId: 10, currentUrl: "https://example.com/dest" }
       await navigateTempContextToPage(context, "https://example.com/dest", {
@@ -214,7 +217,7 @@ describe("browserAdapter", () => {
   describe("showShieldBypassUiInTab", () => {
     it("sends message to content script successfully", async () => {
       const sendTabMessageSpy = vi
-        .spyOn(browserApi, "sendTabMessageWithRetry")
+        .spyOn(browserApi_runtimeMessages, "sendTabMessageWithRetry")
         .mockResolvedValue({} as any)
 
       await showShieldBypassUiInTab({
@@ -236,7 +239,7 @@ describe("browserAdapter", () => {
 
   describe("waitForTabComplete", () => {
     it("resolves when tab completes and guards pass", async () => {
-      vi.spyOn(browserApi, "getTab").mockResolvedValue({
+      vi.spyOn(browserApi_tabs, "getTab").mockResolvedValue({
         id: 7,
         status: "complete",
       } as any)
@@ -263,7 +266,7 @@ describe("browserAdapter", () => {
     })
 
     it("rejects when getTab throws", async () => {
-      vi.spyOn(browserApi, "getTab").mockRejectedValue(
+      vi.spyOn(browserApi_tabs, "getTab").mockRejectedValue(
         new Error("Tab destroyed"),
       )
 

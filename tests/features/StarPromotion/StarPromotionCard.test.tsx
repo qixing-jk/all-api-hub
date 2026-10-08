@@ -32,14 +32,10 @@ vi.mock("~/services/starPromotion/state", () => ({
   },
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+vi.mock("~/utils/browser/tabs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/tabs")>()
 
-  return {
-    ...actual,
-    createTab: createTabMock,
-  }
+  return { ...actual, createTab: createTabMock }
 })
 
 const RENDER_OPTIONS = {

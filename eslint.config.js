@@ -394,12 +394,12 @@ export default defineConfig([
         {
           name: "browser",
           message:
-            "Do not access the global WebExtension API directly in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
+            "Do not access the global WebExtension API directly in app code. Add a guarded wrapper in the appropriate `~/utils/browser/**` adapter.",
         },
         {
           name: "chrome",
           message:
-            "Do not access the global Chrome extension API directly in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
+            "Do not access the global Chrome extension API directly in app code. Add a guarded wrapper in the appropriate `~/utils/browser/**` adapter.",
         },
       ],
       "no-restricted-syntax": [
@@ -407,25 +407,25 @@ export default defineConfig([
         {
           selector: "MemberExpression[object.name=/^(browser|chrome)$/]",
           message:
-            "Do not access global WebExtension APIs directly in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
+            "Do not access global WebExtension APIs directly in app code. Add a guarded wrapper in the appropriate `~/utils/browser/**` adapter.",
         },
         {
           selector:
             "MemberExpression[object.type='TSAsExpression'][object.expression.name=/^(browser|chrome)$/]",
           message:
-            "Do not access casted global WebExtension APIs directly in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
+            "Do not access casted global WebExtension APIs directly in app code. Add a guarded wrapper in the appropriate `~/utils/browser/**` adapter.",
         },
         {
           selector:
             "MemberExpression[object.name=/^(globalThis|window)$/][property.name=/^(browser|chrome)$/]:not(MemberExpression[object.name=/^(globalThis|window)$/][property.name=/^(browser|chrome)$/] MemberExpression)",
           message:
-            "Do not access global WebExtension APIs through `globalThis` or `window` in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
+            "Do not access global WebExtension APIs through `globalThis` or `window` in app code. Add a guarded wrapper in the appropriate `~/utils/browser/**` adapter.",
         },
         {
           selector:
             "MemberExpression[object.type='TSAsExpression'][object.expression.name=/^(globalThis|window)$/][property.name=/^(browser|chrome)$/]:not(MemberExpression[object.type='TSAsExpression'][object.expression.name=/^(globalThis|window)$/][property.name=/^(browser|chrome)$/] MemberExpression)",
           message:
-            "Do not access casted global WebExtension APIs through `globalThis` or `window` in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
+            "Do not access casted global WebExtension APIs through `globalThis` or `window` in app code. Add a guarded wrapper in the appropriate `~/utils/browser/**` adapter.",
         },
       ],
     },

@@ -43,13 +43,10 @@ const {
   ),
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
-  return {
-    ...actual,
-    sendRuntimeActionMessage: sendRuntimeActionMessageMock,
-  }
+    await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()
+  return { ...actual, sendRuntimeActionMessage: sendRuntimeActionMessageMock }
 })
 
 vi.mock("~/features/KeyManagement/hooks/useKeyManagement", () => ({

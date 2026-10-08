@@ -31,7 +31,9 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/apiService/axonHub", () => ({ signIn: mockSignIn }))
+vi.mock("~/services/apiService/axonHub/authSession", () => ({
+  signIn: mockSignIn,
+}))
 
 vi.mock("~/services/managedSites/utils/fetchManagedSiteImportModels", () => ({
   fetchManagedSiteImportModels: mockFetchManagedSiteImportModels,

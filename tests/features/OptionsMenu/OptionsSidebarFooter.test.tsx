@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { REPO_URL } from "~/constants/about"
 import { OptionsSidebarFooter } from "~/features/OptionsMenu/OptionsSidebarFooter"
-import { createTab } from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 const { useIsStarredMock } = vi.hoisted(() => ({
@@ -15,13 +15,9 @@ vi.mock("~/features/StarPromotion/useStarPromotionActive", () => ({
   useIsStarred: () => useIsStarredMock(),
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
-  return {
-    ...actual,
-    createTab: vi.fn().mockResolvedValue(undefined),
-  }
+vi.mock("~/utils/browser/tabs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/tabs")>()
+  return { ...actual, createTab: vi.fn().mockResolvedValue(undefined) }
 })
 
 vi.mock("~/features/OptionsMenu/SupportCommunityPopover", () => ({

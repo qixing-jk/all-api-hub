@@ -7,7 +7,8 @@ import {
   removeCompositeTab,
   TEMP_CONTEXT_INITIAL_URL,
 } from "~/services/browsingContext/tempPage/compositeWindow"
-import * as browserApi from "~/utils/browser/browserApi"
+import * as browserApi_tabs from "~/utils/browser/tabs"
+import * as browserApi_windows from "~/utils/browser/windows"
 
 vi.mock("~/services/browsingContext/tempPage/browserAdapter", () => ({
   resolveTempWindowSize: vi.fn().mockResolvedValue({ width: 800, height: 600 }),
@@ -16,7 +17,7 @@ vi.mock("~/services/browsingContext/tempPage/browserAdapter", () => ({
 describe("compositeWindow", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
-    vi.spyOn(browserApi, "hasWindowsAPI").mockReturnValue(true)
+    vi.spyOn(browserApi_windows, "hasWindowsAPI").mockReturnValue(true)
   })
 
   describe("hasLiveCompositeWindow", () => {
@@ -25,10 +26,16 @@ describe("compositeWindow", () => {
     })
 
     it("returns true when remembered window exists", async () => {
-      vi.spyOn(browserApi, "createWindow").mockResolvedValue({ id: 100 } as any)
-      vi.spyOn(browserApi, "updateWindow").mockResolvedValue({} as any)
-      vi.spyOn(browserApi, "queryTabs").mockResolvedValue([{ id: 10 }] as any)
-      vi.spyOn(browserApi, "getWindow").mockResolvedValue({ id: 100 } as any)
+      vi.spyOn(browserApi_windows, "createWindow").mockResolvedValue({
+        id: 100,
+      } as any)
+      vi.spyOn(browserApi_windows, "updateWindow").mockResolvedValue({} as any)
+      vi.spyOn(browserApi_tabs, "queryTabs").mockResolvedValue([
+        { id: 10 },
+      ] as any)
+      vi.spyOn(browserApi_windows, "getWindow").mockResolvedValue({
+        id: 100,
+      } as any)
 
       await openTabInCompositeWindow({
         origin: "https://example.com",
@@ -39,9 +46,13 @@ describe("compositeWindow", () => {
     })
 
     it("returns false and forgets window when getWindow throws", async () => {
-      vi.spyOn(browserApi, "createWindow").mockResolvedValue({ id: 101 } as any)
-      vi.spyOn(browserApi, "updateWindow").mockResolvedValue({} as any)
-      vi.spyOn(browserApi, "queryTabs").mockResolvedValue([{ id: 11 }] as any)
+      vi.spyOn(browserApi_windows, "createWindow").mockResolvedValue({
+        id: 101,
+      } as any)
+      vi.spyOn(browserApi_windows, "updateWindow").mockResolvedValue({} as any)
+      vi.spyOn(browserApi_tabs, "queryTabs").mockResolvedValue([
+        { id: 11 },
+      ] as any)
 
       await openTabInCompositeWindow({
         origin: "https://example.com",
@@ -49,7 +60,7 @@ describe("compositeWindow", () => {
       })
 
       const getWindowSpy = vi
-        .spyOn(browserApi, "getWindow")
+        .spyOn(browserApi_windows, "getWindow")
         .mockRejectedValue(new Error("Window not found"))
       expect(await hasLiveCompositeWindow()).toBe(false)
       // Second check should immediately return false without getWindow
@@ -61,7 +72,7 @@ describe("compositeWindow", () => {
 
   describe("openTabInCompositeWindow", () => {
     it("throws recoverable error when windows API is unavailable", async () => {
-      vi.spyOn(browserApi, "hasWindowsAPI").mockReturnValue(false)
+      vi.spyOn(browserApi_windows, "hasWindowsAPI").mockReturnValue(false)
 
       await expect(
         openTabInCompositeWindow({
@@ -71,19 +82,20 @@ describe("compositeWindow", () => {
       ).rejects.toMatchObject({
         name: "RecoverableWindowCreationError",
         reason:
-          browserApi.WINDOW_CREATION_FAILURE_REASONS.WINDOWS_API_UNAVAILABLE,
+          browserApi_windows.WINDOW_CREATION_FAILURE_REASONS
+            .WINDOWS_API_UNAVAILABLE,
       })
     })
 
     it("creates a new window, minimizes it, and retrieves active tab", async () => {
       const createWindowSpy = vi
-        .spyOn(browserApi, "createWindow")
+        .spyOn(browserApi_windows, "createWindow")
         .mockResolvedValue({ id: 200 } as any)
       const updateWindowSpy = vi
-        .spyOn(browserApi, "updateWindow")
+        .spyOn(browserApi_windows, "updateWindow")
         .mockResolvedValue({} as any)
       const queryTabsSpy = vi
-        .spyOn(browserApi, "queryTabs")
+        .spyOn(browserApi_tabs, "queryTabs")
         .mockResolvedValue([{ id: 20 }] as any)
 
       const result = await openTabInCompositeWindow({
@@ -106,11 +118,15 @@ describe("compositeWindow", () => {
     })
 
     it("suppresses minimize when requested and handles minimize failure", async () => {
-      vi.spyOn(browserApi, "createWindow").mockResolvedValue({ id: 201 } as any)
+      vi.spyOn(browserApi_windows, "createWindow").mockResolvedValue({
+        id: 201,
+      } as any)
       const updateWindowSpy = vi
-        .spyOn(browserApi, "updateWindow")
+        .spyOn(browserApi_windows, "updateWindow")
         .mockRejectedValue(new Error("Cannot minimize"))
-      vi.spyOn(browserApi, "queryTabs").mockResolvedValue([{ id: 21 }] as any)
+      vi.spyOn(browserApi_tabs, "queryTabs").mockResolvedValue([
+        { id: 21 },
+      ] as any)
 
       // Suppress minimize
       const result1 = await openTabInCompositeWindow({
@@ -123,8 +139,12 @@ describe("compositeWindow", () => {
 
       // Forget and recreate with minimize failure
       forgetCompositeWindow(201)
-      vi.spyOn(browserApi, "createWindow").mockResolvedValue({ id: 202 } as any)
-      vi.spyOn(browserApi, "queryTabs").mockResolvedValue([{ id: 22 }] as any)
+      vi.spyOn(browserApi_windows, "createWindow").mockResolvedValue({
+        id: 202,
+      } as any)
+      vi.spyOn(browserApi_tabs, "queryTabs").mockResolvedValue([
+        { id: 22 },
+      ] as any)
 
       const result2 = await openTabInCompositeWindow({
         origin: "https://example.com",
@@ -136,18 +156,24 @@ describe("compositeWindow", () => {
     })
 
     it("reuses existing live composite window and creates tab in it", async () => {
-      vi.spyOn(browserApi, "createWindow").mockResolvedValue({ id: 300 } as any)
-      vi.spyOn(browserApi, "updateWindow").mockResolvedValue({} as any)
-      vi.spyOn(browserApi, "queryTabs").mockResolvedValue([{ id: 30 }] as any)
+      vi.spyOn(browserApi_windows, "createWindow").mockResolvedValue({
+        id: 300,
+      } as any)
+      vi.spyOn(browserApi_windows, "updateWindow").mockResolvedValue({} as any)
+      vi.spyOn(browserApi_tabs, "queryTabs").mockResolvedValue([
+        { id: 30 },
+      ] as any)
 
       await openTabInCompositeWindow({
         origin: "https://example.com",
         requestId: "req-7",
       })
 
-      vi.spyOn(browserApi, "getWindow").mockResolvedValue({ id: 300 } as any)
+      vi.spyOn(browserApi_windows, "getWindow").mockResolvedValue({
+        id: 300,
+      } as any)
       const createTabSpy = vi
-        .spyOn(browserApi, "createTab")
+        .spyOn(browserApi_tabs, "createTab")
         .mockResolvedValue({ id: 31 } as any)
 
       const second = await openTabInCompositeWindow({
@@ -166,11 +192,11 @@ describe("compositeWindow", () => {
     })
 
     it("recreates composite window if existing window throws during reuse", async () => {
-      vi.spyOn(browserApi, "createWindow").mockResolvedValueOnce({
+      vi.spyOn(browserApi_windows, "createWindow").mockResolvedValueOnce({
         id: 400,
       } as any)
-      vi.spyOn(browserApi, "updateWindow").mockResolvedValue({} as any)
-      vi.spyOn(browserApi, "queryTabs").mockResolvedValueOnce([
+      vi.spyOn(browserApi_windows, "updateWindow").mockResolvedValue({} as any)
+      vi.spyOn(browserApi_tabs, "queryTabs").mockResolvedValueOnce([
         { id: 40 },
       ] as any)
 
@@ -180,11 +206,13 @@ describe("compositeWindow", () => {
       })
 
       // First reuse fails because getWindow throws
-      vi.spyOn(browserApi, "getWindow").mockRejectedValue(new Error("Gone"))
-      vi.spyOn(browserApi, "createWindow").mockResolvedValueOnce({
+      vi.spyOn(browserApi_windows, "getWindow").mockRejectedValue(
+        new Error("Gone"),
+      )
+      vi.spyOn(browserApi_windows, "createWindow").mockResolvedValueOnce({
         id: 401,
       } as any)
-      vi.spyOn(browserApi, "queryTabs").mockResolvedValueOnce([
+      vi.spyOn(browserApi_tabs, "queryTabs").mockResolvedValueOnce([
         { id: 41 },
       ] as any)
 
@@ -196,11 +224,11 @@ describe("compositeWindow", () => {
     })
 
     it("throws if tab creation inside confirmed existing composite window fails", async () => {
-      vi.spyOn(browserApi, "createWindow").mockResolvedValueOnce({
+      vi.spyOn(browserApi_windows, "createWindow").mockResolvedValueOnce({
         id: 500,
       } as any)
-      vi.spyOn(browserApi, "updateWindow").mockResolvedValue({} as any)
-      vi.spyOn(browserApi, "queryTabs").mockResolvedValueOnce([
+      vi.spyOn(browserApi_windows, "updateWindow").mockResolvedValue({} as any)
+      vi.spyOn(browserApi_tabs, "queryTabs").mockResolvedValueOnce([
         { id: 50 },
       ] as any)
 
@@ -209,8 +237,10 @@ describe("compositeWindow", () => {
         requestId: "req-11",
       })
 
-      vi.spyOn(browserApi, "getWindow").mockResolvedValue({ id: 500 } as any)
-      vi.spyOn(browserApi, "createTab").mockResolvedValue(null as any)
+      vi.spyOn(browserApi_windows, "getWindow").mockResolvedValue({
+        id: 500,
+      } as any)
+      vi.spyOn(browserApi_tabs, "createTab").mockResolvedValue(null as any)
 
       await expect(
         openTabInCompositeWindow({
@@ -223,11 +253,13 @@ describe("compositeWindow", () => {
     })
 
     it("cleans up created window and throws if queryTabs returns no active tab", async () => {
-      vi.spyOn(browserApi, "createWindow").mockResolvedValue({ id: 600 } as any)
-      vi.spyOn(browserApi, "updateWindow").mockResolvedValue({} as any)
-      vi.spyOn(browserApi, "queryTabs").mockResolvedValue([])
+      vi.spyOn(browserApi_windows, "createWindow").mockResolvedValue({
+        id: 600,
+      } as any)
+      vi.spyOn(browserApi_windows, "updateWindow").mockResolvedValue({} as any)
+      vi.spyOn(browserApi_tabs, "queryTabs").mockResolvedValue([])
       const removeWindowSpy = vi
-        .spyOn(browserApi, "removeWindow")
+        .spyOn(browserApi_windows, "removeWindow")
         .mockResolvedValue(undefined as any)
 
       await expect(
@@ -243,7 +275,7 @@ describe("compositeWindow", () => {
     })
 
     it("handles failure when createWindow returns window without id", async () => {
-      vi.spyOn(browserApi, "createWindow").mockResolvedValue({} as any)
+      vi.spyOn(browserApi_windows, "createWindow").mockResolvedValue({} as any)
 
       await expect(
         openTabInCompositeWindow({
@@ -256,10 +288,12 @@ describe("compositeWindow", () => {
     })
 
     it("logs warning when window cleanup fails after tab query error", async () => {
-      vi.spyOn(browserApi, "createWindow").mockResolvedValue({ id: 601 } as any)
-      vi.spyOn(browserApi, "updateWindow").mockResolvedValue({} as any)
-      vi.spyOn(browserApi, "queryTabs").mockResolvedValue([])
-      vi.spyOn(browserApi, "removeWindow").mockRejectedValue(
+      vi.spyOn(browserApi_windows, "createWindow").mockResolvedValue({
+        id: 601,
+      } as any)
+      vi.spyOn(browserApi_windows, "updateWindow").mockResolvedValue({} as any)
+      vi.spyOn(browserApi_tabs, "queryTabs").mockResolvedValue([])
+      vi.spyOn(browserApi_windows, "removeWindow").mockRejectedValue(
         new Error("cleanup failed"),
       )
 
@@ -274,7 +308,7 @@ describe("compositeWindow", () => {
     })
 
     it("classifies window creation error from browser and cleans up if needed", async () => {
-      vi.spyOn(browserApi, "createWindow").mockRejectedValue(
+      vi.spyOn(browserApi_windows, "createWindow").mockRejectedValue(
         new Error("Cannot create window"),
       )
 
@@ -289,14 +323,14 @@ describe("compositeWindow", () => {
 
   describe("removeCompositeTab", () => {
     it("removes only the tab when other tabs remain in the composite window", async () => {
-      vi.spyOn(browserApi, "queryTabs").mockResolvedValue([
+      vi.spyOn(browserApi_tabs, "queryTabs").mockResolvedValue([
         { id: 10 },
         { id: 20 },
       ] as any)
       const removeTabSpy = vi
-        .spyOn(browserApi, "removeTab")
+        .spyOn(browserApi_tabs, "removeTab")
         .mockResolvedValue(undefined as any)
-      const removeWindowSpy = vi.spyOn(browserApi, "removeWindow")
+      const removeWindowSpy = vi.spyOn(browserApi_windows, "removeWindow")
 
       await removeCompositeTab(700, 10)
 
@@ -305,9 +339,13 @@ describe("compositeWindow", () => {
     })
 
     it("removes the entire window when the target tab is the only tab", async () => {
-      vi.spyOn(browserApi, "createWindow").mockResolvedValue({ id: 800 } as any)
-      vi.spyOn(browserApi, "updateWindow").mockResolvedValue({} as any)
-      vi.spyOn(browserApi, "queryTabs").mockResolvedValue([{ id: 10 }] as any)
+      vi.spyOn(browserApi_windows, "createWindow").mockResolvedValue({
+        id: 800,
+      } as any)
+      vi.spyOn(browserApi_windows, "updateWindow").mockResolvedValue({} as any)
+      vi.spyOn(browserApi_tabs, "queryTabs").mockResolvedValue([
+        { id: 10 },
+      ] as any)
 
       await openTabInCompositeWindow({
         origin: "https://example.com",
@@ -315,7 +353,7 @@ describe("compositeWindow", () => {
       })
 
       const removeWindowSpy = vi
-        .spyOn(browserApi, "removeWindow")
+        .spyOn(browserApi_windows, "removeWindow")
         .mockResolvedValue(undefined as any)
 
       await removeCompositeTab(800, 10)
@@ -325,11 +363,11 @@ describe("compositeWindow", () => {
     })
 
     it("falls back to removeTab if queryTabs fails", async () => {
-      vi.spyOn(browserApi, "queryTabs").mockRejectedValue(
+      vi.spyOn(browserApi_tabs, "queryTabs").mockRejectedValue(
         new Error("query failed"),
       )
       const removeTabSpy = vi
-        .spyOn(browserApi, "removeTab")
+        .spyOn(browserApi_tabs, "removeTab")
         .mockResolvedValue(undefined as any)
 
       await removeCompositeTab(801, 10)
@@ -338,12 +376,14 @@ describe("compositeWindow", () => {
     })
 
     it("falls back to removeTab if removeWindow fails", async () => {
-      vi.spyOn(browserApi, "queryTabs").mockResolvedValue([{ id: 10 }] as any)
-      vi.spyOn(browserApi, "removeWindow").mockRejectedValue(
+      vi.spyOn(browserApi_tabs, "queryTabs").mockResolvedValue([
+        { id: 10 },
+      ] as any)
+      vi.spyOn(browserApi_windows, "removeWindow").mockRejectedValue(
         new Error("remove failed"),
       )
       const removeTabSpy = vi
-        .spyOn(browserApi, "removeTab")
+        .spyOn(browserApi_tabs, "removeTab")
         .mockResolvedValue(undefined as any)
 
       await removeCompositeTab(802, 10)
@@ -354,9 +394,13 @@ describe("compositeWindow", () => {
 
   describe("forgetCompositeWindow", () => {
     it("clears remembered window ID when matching", async () => {
-      vi.spyOn(browserApi, "createWindow").mockResolvedValue({ id: 900 } as any)
-      vi.spyOn(browserApi, "updateWindow").mockResolvedValue({} as any)
-      vi.spyOn(browserApi, "queryTabs").mockResolvedValue([{ id: 90 }] as any)
+      vi.spyOn(browserApi_windows, "createWindow").mockResolvedValue({
+        id: 900,
+      } as any)
+      vi.spyOn(browserApi_windows, "updateWindow").mockResolvedValue({} as any)
+      vi.spyOn(browserApi_tabs, "queryTabs").mockResolvedValue([
+        { id: 90 },
+      ] as any)
 
       await openTabInCompositeWindow({
         origin: "https://example.com",
@@ -368,10 +412,16 @@ describe("compositeWindow", () => {
     })
 
     it("does nothing when non-matching window ID is passed", async () => {
-      vi.spyOn(browserApi, "createWindow").mockResolvedValue({ id: 901 } as any)
-      vi.spyOn(browserApi, "updateWindow").mockResolvedValue({} as any)
-      vi.spyOn(browserApi, "queryTabs").mockResolvedValue([{ id: 91 }] as any)
-      vi.spyOn(browserApi, "getWindow").mockResolvedValue({ id: 901 } as any)
+      vi.spyOn(browserApi_windows, "createWindow").mockResolvedValue({
+        id: 901,
+      } as any)
+      vi.spyOn(browserApi_windows, "updateWindow").mockResolvedValue({} as any)
+      vi.spyOn(browserApi_tabs, "queryTabs").mockResolvedValue([
+        { id: 91 },
+      ] as any)
+      vi.spyOn(browserApi_windows, "getWindow").mockResolvedValue({
+        id: 901,
+      } as any)
 
       await openTabInCompositeWindow({
         origin: "https://example.com",

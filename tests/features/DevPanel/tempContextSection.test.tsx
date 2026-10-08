@@ -22,9 +22,12 @@ const { reloadRuntimeMock, sendRuntimeMessageMock, toastMock } = vi.hoisted(
 
 // Only the two calls this section makes are replaced: the rest of the adapter
 // stays real, because the render harness reads other exports from it.
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/utils/browser/browserApi")>()),
+vi.mock("~/utils/browser/runtime", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/runtime")>()),
   reloadRuntime: reloadRuntimeMock,
+}))
+vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()),
   sendRuntimeMessage: sendRuntimeMessageMock,
 }))
 
