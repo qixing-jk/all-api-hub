@@ -1016,6 +1016,23 @@ describe("managed-site token batch export", () => {
     ])
     expect(JSON.stringify(result)).not.toContain(providerMessage)
     expect(JSON.stringify(result)).not.toContain(hiddenSecret)
+    submit.mockClear()
+    mockOpenNativeManagedChannelImportSession.mockRejectedValueOnce(
+      new Error(providerMessage),
+    )
+    const unavailableSession = await executeManagedSiteTokenBatchExport({
+      preview,
+      selectedItemIds: preview.items.map((item) => item.id),
+    })
+    expect(unavailableSession.failedCount).toBe(2)
+    expect(
+      unavailableSession.items.every(
+        (item) => item.error === "Failed to create channel",
+      ),
+    ).toBe(true)
+    expect(JSON.stringify(unavailableSession)).not.toContain(hiddenSecret)
+    expect(JSON.stringify(unavailableSession)).not.toContain(providerMessage)
+    expect(submit).not.toHaveBeenCalled()
   })
 
   it("reconciles before rejecting a malformed create result without replay", async () => {
@@ -2384,6 +2401,19 @@ describe("managed-site token batch export", () => {
         result: "created",
       }),
     ])
+    mockOpenNativeManagedChannelImportSession.mockClear()
+    managedSite.submit.mockClear()
+    const unselected = await executeManagedSiteTokenBatchExport({
+      preview,
+      selectedItemIds: [],
+    })
+    expect(unselected).toMatchObject({
+      totalSelected: 0,
+      attemptedCount: 0,
+      items: [],
+    })
+    expect(mockOpenNativeManagedChannelImportSession).not.toHaveBeenCalled()
+    expect(managedSite.submit).not.toHaveBeenCalled()
   })
 
   it("uses four workers and one native submission per selected key", async () => {
