@@ -8,7 +8,7 @@ import {
   LOG_LEVELS,
   type LogHistoryEntry,
 } from "~/types/logging"
-import { onStorageChanged } from "~/utils/browser/browserApi"
+import { onStorageChanged } from "~/utils/browser/storage"
 import { sanitizeLogDetails } from "~/utils/core/logger"
 import { sanitizeSensitiveErrorText } from "~/utils/core/sanitizeSensitiveErrorText"
 

@@ -2,7 +2,7 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import {
   openSidePanel as _openSidePanel,
   getSidePanelSupport,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/sidePanel"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation/optionsPage"

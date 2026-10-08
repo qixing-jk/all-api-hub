@@ -36,7 +36,7 @@ import {
 import {
   clearNotification,
   onNotificationClicked,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/notifications"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"

@@ -8,7 +8,7 @@ import { flushSponsorRecommendationsDailySummary } from "~/services/productAnaly
 import {
   hasStorageChangedListener,
   onStorageChanged,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/storage"
 import { isDevBuild } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"

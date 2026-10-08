@@ -13,7 +13,7 @@ import {
   ACCOUNT_KEY_REPAIR_OUTCOMES,
   ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
 } from "~/types/accountKeyAutoProvisioning"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("AccountKeyRepair")

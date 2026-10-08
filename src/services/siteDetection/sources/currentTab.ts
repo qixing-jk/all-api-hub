@@ -14,7 +14,7 @@ import {
   summarizeApiServiceFetchContext,
 } from "~/services/apiTransport/type"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
-import { isMessageReceiverUnavailableError } from "~/utils/browser/browserApi"
+import { isMessageReceiverUnavailableError } from "~/utils/browser/runtimeMessages"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"

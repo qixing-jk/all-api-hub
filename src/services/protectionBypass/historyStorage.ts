@@ -10,7 +10,7 @@ import { OPENROUTER_MANAGEMENT_KEYS_ORIGIN } from "~/services/apiAdapters/openro
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
-import { onStorageChanged } from "~/utils/browser/browserApi"
+import { onStorageChanged } from "~/utils/browser/storage"
 import { safeRandomUUID } from "~/utils/core/identifier"
 
 import {

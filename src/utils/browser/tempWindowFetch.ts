@@ -43,13 +43,13 @@ import {
   type TempWindowTurnstileFetch,
   type TempWindowTurnstileFetchParams,
 } from "~/types/tempWindowFetch"
-import {
-  isMessageReceiverUnavailableError,
-  sendRuntimeMessage,
-} from "~/utils/browser/browserApi"
 import { isExtensionBackground } from "~/utils/browser/index"
 import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
 import { normalizeRequestInitForMessage } from "~/utils/browser/requestInitMessage"
+import {
+  isMessageReceiverUnavailableError,
+  sendRuntimeMessage,
+} from "~/utils/browser/runtimeMessages"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 import { isHttpUrl } from "~/utils/core/urlParsing"

@@ -31,18 +31,20 @@ import {
   type AxonHubNativeChannelPatch,
 } from "~/services/apiAdapters/managedResources/axonHubEditorProjection"
 import { defineNativeResourceKind } from "~/services/apiAdapters/managedResources/factory"
+import { signIn } from "~/services/apiService/axonHub/authSession"
 import {
-  AxonHubRequestError,
   createAxonHubChannel,
   deleteAxonHubChannel,
   getAxonHubChannel,
   listAxonHubChannelPage,
-  signIn,
   updateAxonHubChannel,
   updateAxonHubChannelStatus,
   type AxonHubChannelPage,
+} from "~/services/apiService/axonHub/channels"
+import {
+  AxonHubRequestError,
   type AxonHubRequestFailureKind,
-} from "~/services/apiService/axonHub"
+} from "~/services/apiService/axonHub/graphqlProtocol"
 import {
   createManagedSiteMutationSequence,
   MANAGED_SITE_MUTATION_EFFECT_KINDS,

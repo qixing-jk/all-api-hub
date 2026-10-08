@@ -8,7 +8,7 @@ import type {
   BrowserIdentityObservation,
   BrowserIdentityRead,
 } from "~/services/apiAdapters/contracts/accountBrowserIdentity"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { isRecord } from "~/utils/core/object"
 import { tryParseOrigin } from "~/utils/core/urlParsing"
 

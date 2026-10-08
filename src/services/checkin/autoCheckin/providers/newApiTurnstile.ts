@@ -28,7 +28,7 @@ import type {
   TempWindowRequestSource,
   TempWindowTurnstileFetch,
 } from "~/types/tempWindowFetch"
-import { isAllowedIncognitoAccess } from "~/utils/browser/browserApi"
+import { isAllowedIncognitoAccess } from "~/utils/browser/runtime"
 import { tempWindowTurnstileFetch } from "~/utils/browser/tempWindowFetch"
 import { joinUrl } from "~/utils/core/url"
 

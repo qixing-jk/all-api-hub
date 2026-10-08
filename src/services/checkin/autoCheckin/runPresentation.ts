@@ -29,7 +29,7 @@ import {
 import {
   isMessageReceiverUnavailableError,
   sendRuntimeMessage,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/runtimeMessages"
 import { getErrorMessage } from "~/utils/core/error"
 
 import { logger } from "./diagnostics"

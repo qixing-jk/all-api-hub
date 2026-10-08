@@ -12,11 +12,8 @@ import {
   type ExternalCheckInOpenResult,
 } from "~/services/checkin/externalCheckInMessaging"
 import { createRuntimeMessageFailure } from "~/services/runtimeMessaging/result"
-import {
-  createTab,
-  createWindow,
-  hasWindowsAPI,
-} from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
+import { createWindow, hasWindowsAPI } from "~/utils/browser/windows"
 import { getErrorMessage } from "~/utils/core/error"
 
 /**

@@ -1,5 +1,5 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { sendRuntimeActionMessage } from "~/utils/browser/browserApi"
+import { sendRuntimeActionMessage } from "~/utils/browser/runtimeMessages"
 
 /** Clear through the background owner so queued logs cannot restore old history. */
 export async function clearLogHistoryFromBackground(): Promise<void> {

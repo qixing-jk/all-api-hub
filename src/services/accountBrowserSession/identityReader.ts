@@ -2,7 +2,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import type { AccountSiteType } from "~/constants/siteType"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { PAGE_CONTEXT } from "~/services/browsingContext/pageContext"
-import { sendTabMessageWithRetry } from "~/utils/browser/browserApi"
+import { sendTabMessageWithRetry } from "~/utils/browser/runtimeMessages"
 
 /** Returns only an identity that the active top-level page verified with its server. */
 export async function readAccountBrowserIdentityFromTab(input: {

@@ -1,10 +1,7 @@
 import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
-import {
-  getLocalStorage,
-  removeLocalStorage,
-  setLocalStorage,
-} from "~/utils/browser/browserApi"
+import { getLocalStorage } from "~/utils/browser/extensionStorage"
+import { removeLocalStorage, setLocalStorage } from "~/utils/browser/storage"
 import { isDevelopmentMode, isTestMode } from "~/utils/core/environment"
 import { createLogger } from "~/utils/core/logger"
 

@@ -8,7 +8,7 @@ import {
 import {
   isMessageReceiverUnavailableError,
   type SendMessageRetryOptions,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/runtimeMessages"
 
 /**
  * Typed runtime message types for the LDOH site lookup feature.

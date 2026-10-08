@@ -1,13 +1,11 @@
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import { AuthTypeEnum } from "~/types"
+import { clearAlarm, createAlarm, onAlarm } from "~/utils/browser/alarms"
 import {
-  clearAlarm,
-  createAlarm,
   getSessionStorageValues,
   hasSessionStorageArea,
-  onAlarm,
   setSessionStorageValues,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/storage"
 import { createLogger } from "~/utils/core/logger"
 
 import {

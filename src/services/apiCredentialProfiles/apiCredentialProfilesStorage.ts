@@ -59,7 +59,7 @@ import {
   API_CREDENTIAL_PROFILE_LINK_STATES,
   API_CREDENTIAL_PROFILES_CONFIG_VERSION,
 } from "~/types/apiCredentialProfiles"
-import { onStorageChanged } from "~/utils/browser/browserApi"
+import { onStorageChanged } from "~/utils/browser/storage"
 import { createLogger } from "~/utils/core/logger"
 
 /**

@@ -9,11 +9,6 @@ import {
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { AuthTypeEnum } from "~/types"
 import {
-  getTab,
-  sendTabMessageWithRetry,
-  updateTab,
-} from "~/utils/browser/browserApi"
-import {
   addAuthMethodHeader,
   AUTH_MODE,
   COOKIE_SESSION_OVERRIDE_HEADER_NAME,
@@ -26,6 +21,8 @@ import {
 } from "~/utils/browser/dnrCookieInjector"
 import { removeFirefoxTempWindowDownloadBlockRule } from "~/utils/browser/firefoxTempWindowDownloadBlocker"
 import { isProtectionBypassFirefoxEnv } from "~/utils/browser/protectionBypass"
+import { sendTabMessageWithRetry } from "~/utils/browser/runtimeMessages"
+import { getTab, updateTab } from "~/utils/browser/tabs"
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
 

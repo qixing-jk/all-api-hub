@@ -9,10 +9,8 @@ import {
   type TempContextTask,
 } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
-import {
-  isAllowedIncognitoAccess,
-  sendTabMessageWithRetry,
-} from "~/utils/browser/browserApi"
+import { isAllowedIncognitoAccess } from "~/utils/browser/runtime"
+import { sendTabMessageWithRetry } from "~/utils/browser/runtimeMessages"
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
 

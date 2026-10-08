@@ -13,12 +13,10 @@ import {
   type TempWindowTurnstileFetch,
   type TempWindowTurnstileMeta,
 } from "~/types/tempWindowFetch"
-import {
-  isAllowedIncognitoAccess,
-  sendTabMessageWithRetry,
-} from "~/utils/browser/browserApi"
 import { removeTempWindowCookieRule } from "~/utils/browser/dnrCookieInjector"
 import { normalizeRequestInitForMessage } from "~/utils/browser/requestInitMessage"
+import { isAllowedIncognitoAccess } from "~/utils/browser/runtime"
+import { sendTabMessageWithRetry } from "~/utils/browser/runtimeMessages"
 import { resolveAuthTypeEnum } from "~/utils/core/authType"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { sanitizeUrlForLog } from "~/utils/core/sanitizeUrlForLog"

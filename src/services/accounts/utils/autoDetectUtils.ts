@@ -23,7 +23,7 @@ import {
 } from "~/constants/autoDetect"
 import { type AccountSiteType } from "~/constants/siteType"
 import { resolveAccountSiteLoginUrl } from "~/services/accounts/utils/siteRouteResolver"
-import { createTab, queryTabs, reloadTab } from "~/utils/browser/browserApi"
+import { createTab, queryTabs, reloadTab } from "~/utils/browser/tabs"
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
 import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"

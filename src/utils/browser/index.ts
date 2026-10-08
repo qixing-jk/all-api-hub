@@ -3,7 +3,7 @@ import {
   POPUP_PAGE_PATH,
   SIDEPANEL_PAGE_PATH,
 } from "~/constants/extensionPages"
-import { getExtensionURL } from "~/utils/browser/browserApi"
+import { getExtensionURL } from "~/utils/browser/runtime"
 
 import { getDeviceTypeInfo, isDesktopDevice } from "./device"
 

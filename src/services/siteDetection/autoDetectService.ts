@@ -16,10 +16,8 @@ import {
   summarizeApiServiceFetchContext,
 } from "~/services/apiTransport/type"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
-import {
-  getActiveOrAllTabs,
-  getBrowserApiCapabilities,
-} from "~/utils/browser/browserApi"
+import { getBrowserApiCapabilities } from "~/utils/browser/runtime"
+import { getActiveOrAllTabs } from "~/utils/browser/tabs"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"

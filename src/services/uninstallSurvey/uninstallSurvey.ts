@@ -4,10 +4,7 @@ import { DOCS_BASE_URL } from "~/constants/about"
 import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import { productAnalyticsPreferences } from "~/services/productAnalytics/preferences"
-import {
-  getExtensionVersion,
-  setUninstallUrl,
-} from "~/utils/browser/browserApi"
+import { getExtensionVersion, setUninstallUrl } from "~/utils/browser/runtime"
 import { isDevBuild, isTestMode } from "~/utils/core/environment"
 import { createLogger } from "~/utils/core/logger"
 import i18n from "~/utils/i18n/core"

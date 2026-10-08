@@ -18,11 +18,13 @@ import {
   createAlarm,
   getAlarm,
   hasAlarmsAPI,
-  isMessageReceiverUnavailableError,
   onAlarm,
-  onStorageChanged,
+} from "~/utils/browser/alarms"
+import {
+  isMessageReceiverUnavailableError,
   sendRuntimeMessage,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/runtimeMessages"
+import { onStorageChanged } from "~/utils/browser/storage"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"

@@ -1,12 +1,12 @@
 import {
   containsPermissions,
-  getManifest,
   onPermissionsAdded,
   onPermissionsRemoved,
   removePermissionsDetailed,
   requestPermissionsDetailed,
   type PermissionOperationResult,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/permissions"
+import { getManifest } from "~/utils/browser/runtime"
 
 export const OPTIONAL_PERMISSION_IDS = {
   Cookies: "cookies",

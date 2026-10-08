@@ -7,7 +7,7 @@ import {
   isInternalTabOwned,
   rotateInternalTabBrowserSession,
 } from "~/services/browsingContext/internalTabsBackground"
-import { getAlarm, onAlarm } from "~/utils/browser/browserApi"
+import { getAlarm, onAlarm } from "~/utils/browser/alarms"
 
 /** One reclamation run of this worker, kept for the dev reproduction panel. */
 export type TempPageReclamationRun = {

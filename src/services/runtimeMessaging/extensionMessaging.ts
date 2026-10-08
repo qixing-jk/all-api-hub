@@ -10,7 +10,7 @@ import {
   onRuntimeMessage,
   sendRuntimeMessage,
   sendTabMessageWithRetry,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/runtimeMessages"
 
 export type { Logger } from "@webext-core/messaging"
 

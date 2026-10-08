@@ -5,7 +5,7 @@ import {
 import {
   isMessageReceiverUnavailableError,
   type SendMessageRetryOptions,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/runtimeMessages"
 
 import {
   ReleaseUpdateMessageTypes,

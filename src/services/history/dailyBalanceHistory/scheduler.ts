@@ -34,7 +34,7 @@ import {
   getAlarm,
   hasAlarmsAPI,
   onAlarm,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/alarms"
 import {
   getDayKeyFromUnixSeconds,
   subtractDaysFromDayKey,

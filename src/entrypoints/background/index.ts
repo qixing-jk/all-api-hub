@@ -36,7 +36,7 @@ import {
   onInstalled,
   onStartup,
   onSuspend,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/runtime"
 import { isTestMode } from "~/utils/core/environment"
 import { createLogger, setLogHistoryWriter } from "~/utils/core/logger"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation/optionsPage"

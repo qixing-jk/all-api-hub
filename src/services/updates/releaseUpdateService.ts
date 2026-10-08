@@ -7,13 +7,15 @@ import { createRuntimeMessageFailure } from "~/services/runtimeMessaging/result"
 import {
   createAlarm,
   getAlarm,
+  hasAlarmsAPI,
+  onAlarm,
+} from "~/utils/browser/alarms"
+import {
   getExtensionURL,
   getExtensionVersion,
   getManagementSelf,
   getRuntimeId,
-  hasAlarmsAPI,
-  onAlarm,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/runtime"
 import { requestRuntimeUpdateCheck } from "~/utils/browser/runtimeUpdateCheck"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"

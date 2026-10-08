@@ -16,7 +16,7 @@ import {
 } from "~/services/apiAdapters/openrouter/managementKeyPageContract"
 import { normalizeOpenRouterManagementKeySecret } from "~/services/apiAdapters/openrouter/managementKeySecret"
 import { PROTECTION_BYPASS_DENIED_REASONS } from "~/services/protectionBypass/contracts"
-import { sendTabMessageWithRetry } from "~/utils/browser/browserApi"
+import { sendTabMessageWithRetry } from "~/utils/browser/runtimeMessages"
 
 import type { AuthorizeTempContextAtAcquire } from "./contracts"
 import { tempWindowBackgroundRuntime } from "./runtime"

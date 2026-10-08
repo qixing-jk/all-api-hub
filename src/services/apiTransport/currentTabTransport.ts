@@ -16,11 +16,11 @@ import {
   API_TRANSPORT_FETCH_CONTEXT_KINDS,
 } from "~/services/apiTransport/type"
 import type { TempWindowResponseType } from "~/types/tempWindowFetch"
+import { normalizeRequestInitForMessage } from "~/utils/browser/requestInitMessage"
 import {
   isMessageReceiverUnavailableError,
   sendTabMessageWithRetry,
-} from "~/utils/browser/browserApi"
-import { normalizeRequestInitForMessage } from "~/utils/browser/requestInitMessage"
+} from "~/utils/browser/runtimeMessages"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"

@@ -43,7 +43,7 @@ import {
   type ExecutionResult,
   type ScopedExecutionProgress,
 } from "~/types/managedSiteModelSync"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
