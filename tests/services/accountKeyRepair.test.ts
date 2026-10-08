@@ -1094,11 +1094,16 @@ describe("accountKeyRepair", () => {
     )
     await accountKeyRepairRunner.start()
     await vi.waitFor(() => expect(mocks.openKeyResources).toHaveBeenCalled())
+    const runCompletion = Reflect.get(
+      accountKeyRepairRunner,
+      "currentRun",
+    ) as Promise<void>
     await expect(accountKeyRepairRunner.cancel()).resolves.toMatchObject({
       success: true,
       data: { state: ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled },
     })
     releaseInspect()
+    await runCompletion
     await vi.waitFor(async () => {
       const progress = await accountKeyRepairRunner.getProgress()
       expect(progress.state).toBe(ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled)
@@ -1106,36 +1111,46 @@ describe("accountKeyRepair", () => {
     })
   })
 
-  it("does not reconcile when cancellation lands while opening native resources", async () => {
-    const account = buildRepairAccount("cancelled-open", SITE_TYPES.NEW_API)
-    let releaseOpen!: () => void
-    const openGate = new Promise<void>((resolve) => {
-      releaseOpen = resolve
-    })
-    const inspect = vi.fn()
-    mocks.getAllAccounts.mockResolvedValue([account])
-    mocks.openKeyResources.mockImplementationOnce(async () => {
-      await openGate
-      return createSession({ inspect, provision: vi.fn() })
-    })
+  it.each(["resolve", "reject"])(
+    "does not reconcile or report failure when cancellation lands before native resource opening settles by %s",
+    async (settlement) => {
+      const account = buildRepairAccount("cancelled-open", SITE_TYPES.NEW_API)
+      let releaseOpen!: () => void
+      const openGate = new Promise<void>((resolve) => {
+        releaseOpen = resolve
+      })
+      const inspect = vi.fn()
+      mocks.getAllAccounts.mockResolvedValue([account])
+      mocks.openKeyResources.mockImplementationOnce(async () => {
+        await openGate
+        if (settlement === "reject")
+          throw new Error("Opening failed after cancellation")
+        return createSession({ inspect, provision: vi.fn() })
+      })
 
-    const { accountKeyRepairRunner } = await import(
-      "~/services/accounts/accountKeyAutoProvisioning/repair"
-    )
-    await accountKeyRepairRunner.start()
-    await vi.waitFor(() =>
-      expect(mocks.openKeyResources).toHaveBeenCalledOnce(),
-    )
-    await accountKeyRepairRunner.cancel()
-    releaseOpen()
+      const { accountKeyRepairRunner } = await import(
+        "~/services/accounts/accountKeyAutoProvisioning/repair"
+      )
+      await accountKeyRepairRunner.start()
+      await vi.waitFor(() =>
+        expect(mocks.openKeyResources).toHaveBeenCalledOnce(),
+      )
+      const runCompletion = Reflect.get(
+        accountKeyRepairRunner,
+        "currentRun",
+      ) as Promise<void>
+      await accountKeyRepairRunner.cancel()
+      releaseOpen()
+      await runCompletion
 
-    await vi.waitFor(async () => {
-      const progress = await accountKeyRepairRunner.getProgress()
-      expect(progress.state).toBe(ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled)
-      expect(progress.results).toEqual([])
-    })
-    expect(inspect).not.toHaveBeenCalled()
-  })
+      await vi.waitFor(async () => {
+        const progress = await accountKeyRepairRunner.getProgress()
+        expect(progress.state).toBe(ACCOUNT_KEY_REPAIR_JOB_STATES.Cancelled)
+        expect(progress.results).toEqual([])
+      })
+      expect(inspect).not.toHaveBeenCalled()
+    },
+  )
 
   it("rolls back failed persistence and recovers the serialized storage queue", async () => {
     mocks.rejectNextStorageSet()

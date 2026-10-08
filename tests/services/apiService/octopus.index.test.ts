@@ -25,6 +25,7 @@ import {
   fetchGroups,
   fetchRemoteModels,
 } from "~/services/apiService/octopus/models"
+import { createOctopusRequestHeaders } from "~/services/apiService/octopus/requestContext"
 import { OctopusMutationApiError } from "~/services/apiService/octopus/responseProtocol"
 import { getManagedSiteChannelExactMatch } from "~/services/managedSites/matching/channelMatch"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/matching/channelMatchResolver"
@@ -3073,6 +3074,35 @@ describe("Octopus API service", () => {
     })
     const authSignal = atIndex(mockGetValidSession.mock.calls, 0)[1]?.signal
     expect(authSignal).toBe(fetchSignal)
+  })
+
+  it("applies explicit request headers over generated authentication headers", () => {
+    const headers = createOctopusRequestHeaders(
+      {
+        mode: OCTOPUS_AUTH_MODES.Bearer,
+        token: "session-token",
+        expireAt: 1_700_000_900_000,
+      },
+      { Authorization: "Bearer caller-token", "X-Request-ID": "request-7" },
+    )
+    expect(headers.get("Authorization")).toBe("Bearer caller-token")
+    expect(headers.get("X-Request-ID")).toBe("request-7")
+  })
+
+  it("surfaces plain text HTTP failures from the upstream", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response("proxy unavailable", {
+          status: 503,
+          statusText: "Service Unavailable",
+          headers: { "Content-Type": "text/plain" },
+        }),
+      ),
+    )
+    await expect(listChannels(config)).rejects.toThrow(
+      "HTTP 503 Service Unavailable: proxy unavailable",
+    )
   })
 
   it("surfaces raw JSON bodies when an error response cannot be parsed", async () => {
