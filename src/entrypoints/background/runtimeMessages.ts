@@ -54,11 +54,11 @@ import {
   getCookieHeaderForUrlResult,
   hasCookieReadPermissionForUrl,
 } from "~/utils/browser/cookieHelper"
-import { getAllCookieStores, hasCookieStoresAPI } from "~/utils/browser/browserApi"
+import { getAllCookieStores, hasCookieStoresAPI } from "~/utils/browser/cookies"
 import { extractSessionCookieHeader } from "~/utils/browser/cookieString"
 import { getRawExtensionApi } from "~/utils/browser/devApiExplorer"
-import { containsPermissions } from "~/utils/browser/browserApi"
-import { onRuntimeMessage } from "~/utils/browser/browserApi"
+import { containsPermissions } from "~/utils/browser/permissions"
+import { onRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"

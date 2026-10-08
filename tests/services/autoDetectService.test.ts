@@ -487,6 +487,9 @@ describe("autoDetectSmart", () => {
   })
 
   it("reads the logged-in site tab when Options is active and temporary detection cannot read a user ID", async () => {
+    mockGetAccountSiteType.mockImplementation(async (_url, execution) =>
+      execution === testExecution ? SITE_TYPES.NEW_API : SITE_TYPES.UNKNOWN,
+    )
     mockGetActiveOrAllTabs.mockResolvedValue([
       { id: 10, active: true, url: "chrome-extension://test/options.html" },
     ])
@@ -526,7 +529,51 @@ describe("autoDetectSmart", () => {
     expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
     expect(mockGetAccountSiteType).toHaveBeenCalledTimes(1)
+    expect(mockGetAccountSiteType).toHaveBeenCalledWith(
+      "https://example.invalid",
+      testExecution,
+    )
   })
+
+  it.each(["invalid-session", "worker-rejection"])(
+    "recovers background session %s through the API without accepting invalid identity",
+    async (kind) => {
+      mockIsExtensionBackground.mockReturnValue(true)
+      mockExecuteProtectionBypassTask.mockImplementation(
+        async (_request, _sender, respond) => {
+          if (kind === "worker-rejection")
+            throw new Error("Session worker unavailable")
+          respond({
+            success: true,
+            data: {
+              userId: " ",
+              user: { id: " ", username: "invalid-session" },
+            },
+          })
+        },
+      )
+      const diagnostics = createAccountDetectionDiagnostics({
+        requestId: "fallback-session",
+      })
+      const record = vi.spyOn(diagnostics, "record")
+      const result = await autoDetectSmartProduction(
+        "https://example.invalid",
+        testExecution,
+        diagnostics,
+      )
+      expect(result).toMatchObject({
+        success: true,
+        data: { userId: "1", user: { username: "tester" } },
+      })
+      expect(mockFetchUserInfo).toHaveBeenCalledOnce()
+      expect(record).toHaveBeenCalledWith(
+        kind === "worker-rejection" ? "source_fallback" : "session_invalid",
+        expect.objectContaining({
+          reason: kind === "worker-rejection" ? "exception" : "user_id_missing",
+        }),
+      )
+    },
+  )
 
   it.each([
     { incognito: false, cookieStoreId: undefined },
@@ -596,6 +643,7 @@ describe("autoDetectSmart", () => {
       expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
       expect(mockGetAccountSiteType).toHaveBeenCalledWith(
         "https://example.invalid",
+        testExecution,
       )
     },
   )
