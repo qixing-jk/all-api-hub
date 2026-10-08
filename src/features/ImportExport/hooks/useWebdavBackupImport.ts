@@ -1,6 +1,18 @@
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import {
+  getImportExportErrorMessage,
+  importFromBackupObject,
+} from "~/features/ImportExport/utils"
+import type { WebdavConfigState } from "~/features/ImportExport/hooks/useWebdavConfig"
+import {
+  getWebdavAnalyticsErrorCategory,
+  getWebdavAnalyticsFailureStage,
+  PersistWebdavConfigError,
+  webDavAnalyticsContext,
+} from "~/features/ImportExport/components/webDavAnalytics"
+import { getPersistWebdavConfigErrorMessage } from "~/features/ImportExport/components/webdavPreferenceFeedback"
 import toast from "~/lib/notify"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
@@ -28,16 +40,6 @@ import { CLOUD_SYNC_PROVIDERS } from "~/types/webdav"
 import { createLogger } from "~/utils/core/logger"
 import { applyPreferenceLanguage } from "~/utils/i18n/applyPreferenceLanguage"
 import { changePageLanguage } from "~/utils/i18n/pageLanguage"
-
-import {
-  getWebdavAnalyticsErrorCategory,
-  getWebdavAnalyticsFailureStage,
-  PersistWebdavConfigError,
-  webDavAnalyticsContext,
-} from "../components/webDavAnalytics"
-import { getPersistWebdavConfigErrorMessage } from "../components/webdavPreferenceFeedback"
-import { getImportExportErrorMessage, importFromBackupObject } from "../utils"
-import type { WebdavConfigState } from "./useWebdavConfig"
 
 const logger = createLogger("WebDAVSettings")
 /** Own download/import and optional password recovery without mixing upload state. */

@@ -3,16 +3,15 @@ import { BarChart3 } from "lucide-react"
 
 import Tooltip from "~/components/Tooltip"
 import { Card, WorkflowTransitionButton } from "~/components/ui"
+import type { OptionsOverviewUsageSnapshot } from "~/features/OptionsOverview/types"
+import { getUsagePercentShare } from "~/features/OptionsOverview/components/usageSnapshotMath"
+import { OverviewMetricTile } from "~/features/OptionsOverview/components/OverviewMetricTile"
 import type { AccountMetricCoverage } from "~/types"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import {
   formatTokenCount,
   getTodayMetricPresentation,
 } from "~/utils/core/formatters"
-
-import type { OptionsOverviewUsageSnapshot } from "../types"
-import { OverviewMetricTile } from "./OverviewMetricTile"
-import { getUsagePercentShare } from "./usageSnapshotMath"
 
 interface OverviewUsageSnapshotProps {
   snapshot: OptionsOverviewUsageSnapshot

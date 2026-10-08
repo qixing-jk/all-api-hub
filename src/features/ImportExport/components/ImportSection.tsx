@@ -18,6 +18,9 @@ import {
   Textarea,
 } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
+import type { ManualImportPlan } from "~/features/ImportExport/hooks/useImportExport"
+import { IMPORT_EXPORT_TARGET_IDS } from "~/features/ImportExport/searchTargets"
+import { IMPORT_EXPORT_TEST_IDS } from "~/features/ImportExport/testIds"
 import {
   IMPORT_SECTION_KEYS,
   IMPORT_SECTION_STRATEGIES,
@@ -27,10 +30,6 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-
-import type { ManualImportPlan } from "../hooks/useImportExport"
-import { IMPORT_EXPORT_TARGET_IDS } from "../searchTargets"
-import { IMPORT_EXPORT_TEST_IDS } from "../testIds"
 
 interface ImportSectionProps {
   importData: string

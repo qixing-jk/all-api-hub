@@ -10,10 +10,19 @@ The main workflow directories are:
 | Feature | Workflow directories |
 | --- | --- |
 | Account dialog | `detection`, `form`, `checkin`, `saving`, `postSave`, `recovery`, `workspace` |
+| Account list | `rows`, `filtering`, `bulk`, `ordering`; the list entrypoint composes these workflows |
 | API credential profiles | `editor`, `list`, `allowance`, `associations`, `export`, `verification`, `workspace` |
 | Key management | `resources`, `inventory`, `associations`, `managedSite`, `batchExport`, `repair`, `workspace` |
 | Model list | `catalog`, `filtering`, `groups`, `pricing`, `verification`, `keySelection`, `presentation` |
 | Managed site channels | `editor`, `detail`, `table`, `filters`, `migration`, `deletion`, `modelSync`, `verification`, `workspace` |
+| Automatic check-in | `results`, `readiness`, `table`, `pretrigger`, `workspace` |
+| Import and export | `backup`, `webdav`, `cloudSync` |
+| Options overview | `attention`, `automation`, `configuration`, `usage`, `actions`, `permissions`, `workspace` |
+
+Account management's data and action providers live with `data` and `actions`;
+dialog state and recovery live in `dialogs`; entrypoint composition lives in
+`workspace`. The refresh settings tab keeps its protection bypass settings and
+history in `protectionBypass`.
 
 `CredentialExport` owns common export actions and the export dialogs used across
 account and credential surfaces. `KiloCodeExport` owns Kilo Code's account export

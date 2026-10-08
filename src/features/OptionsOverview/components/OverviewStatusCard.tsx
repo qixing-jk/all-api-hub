@@ -3,12 +3,11 @@ import type { TFunction } from "i18next"
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import Tooltip from "~/components/Tooltip"
 import { Button, Card } from "~/components/ui"
+import { getStatusCardLabel } from "~/features/OptionsOverview/components/statusCardText"
+import type { OptionsOverviewStatusCard } from "~/features/OptionsOverview/types"
+import { OVERVIEW_SEVERITY_INDICATOR_CLASSES } from "~/features/OptionsOverview/components/overviewPresentation"
 import { cn } from "~/lib/utils"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
-
-import type { OptionsOverviewStatusCard } from "../types"
-import { OVERVIEW_SEVERITY_INDICATOR_CLASSES } from "./overviewPresentation"
-import { getStatusCardLabel } from "./statusCardText"
 
 interface OverviewStatusSummaryProps {
   items: OptionsOverviewStatusCard[]

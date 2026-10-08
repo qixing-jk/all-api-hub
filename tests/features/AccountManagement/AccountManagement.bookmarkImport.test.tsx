@@ -66,36 +66,39 @@ vi.mock("~/features/AccountManagement/hooks/useDialogStateContext", () => ({
   },
 }))
 
-vi.mock("~/features/AccountManagement/hooks/AccountManagementProvider", () => ({
-  AccountManagementProvider: ({
-    children,
-    onOpenBookmarkImport,
-  }: {
-    children: ReactNode
-    onOpenBookmarkImport?: () => void
-  }) => {
-    const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false)
-    return (
-      <DialogStateTestContext.Provider
-        value={{
-          openAddAccount: () => {
-            setIsAccountDialogOpen(true)
-            openAddAccountMock()
-          },
-        }}
-      >
-        {children}
-        <MockAccountDialog
-          isOpen={isAccountDialogOpen}
-          onOpenBookmarkImport={() => {
-            setIsAccountDialogOpen(false)
-            onOpenBookmarkImport?.()
+vi.mock(
+  "~/features/AccountManagement/hooks/AccountManagementProvider",
+  () => ({
+    AccountManagementProvider: ({
+      children,
+      onOpenBookmarkImport,
+    }: {
+      children: ReactNode
+      onOpenBookmarkImport?: () => void
+    }) => {
+      const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false)
+      return (
+        <DialogStateTestContext.Provider
+          value={{
+            openAddAccount: () => {
+              setIsAccountDialogOpen(true)
+              openAddAccountMock()
+            },
           }}
-        />
-      </DialogStateTestContext.Provider>
-    )
-  },
-}))
+        >
+          {children}
+          <MockAccountDialog
+            isOpen={isAccountDialogOpen}
+            onOpenBookmarkImport={() => {
+              setIsAccountDialogOpen(false)
+              onOpenBookmarkImport?.()
+            }}
+          />
+        </DialogStateTestContext.Provider>
+      )
+    },
+  }),
+)
 
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   useAccountDataContext: () => ({
