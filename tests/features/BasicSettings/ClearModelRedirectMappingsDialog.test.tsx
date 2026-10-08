@@ -77,6 +77,75 @@ describe("ClearModelRedirectMappingsDialog", () => {
     clear.mockResolvedValue(cleared)
   })
 
+  it.each(["rejection", "failure"])(
+    "blocks clearing when preview loading reports %s",
+    async (kind) => {
+      if (kind === "rejection")
+        list.mockRejectedValueOnce(new Error("Preview unavailable"))
+      else
+        list.mockResolvedValueOnce({
+          success: false,
+          channels: [],
+          errors: ["Preview unavailable"],
+          message: "",
+        })
+      const onClose = vi.fn()
+      render(
+        <ClearModelRedirectMappingsDialog isOpen onClose={onClose} />,
+        options,
+      )
+      await screen.findByText("modelRedirect:bulkClear.status.loadFailed")
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", {
+            name: "modelRedirect:bulkClear.actions.continue",
+          }),
+        ).toBeDisabled(),
+      )
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("checkbox", { name: "Alpha (#1)" }),
+        ).not.toBeInTheDocument(),
+      )
+      expect(clear).not.toHaveBeenCalled()
+      await userEvent.click(
+        screen.getByRole("button", {
+          name: "modelRedirect:bulkClear.actions.close",
+        }),
+      )
+      expect(onClose).toHaveBeenCalledOnce()
+    },
+  )
+
+  it.each(["rejection", "failure"])(
+    "retains the selected preview after a clearing %s",
+    async (kind) => {
+      if (kind === "rejection")
+        clear.mockRejectedValueOnce(new Error("Clear unavailable"))
+      else
+        clear.mockResolvedValueOnce({
+          ...cleared,
+          success: false,
+          clearedChannels: 0,
+          failedChannels: 2,
+          errors: ["Clear unavailable"],
+        })
+      const onClose = vi.fn()
+      render(
+        <ClearModelRedirectMappingsDialog isOpen onClose={onClose} />,
+        options,
+      )
+      await screen.findByRole("checkbox", { name: "Alpha (#1)" })
+      await confirmSelection()
+      expect(await screen.findByText("Clear unavailable")).toBeInTheDocument()
+      expect(onClose).not.toHaveBeenCalled()
+      expect(screen.getByRole("checkbox", { name: "Alpha (#1)" })).toBeChecked()
+      clear.mockResolvedValueOnce(cleared)
+      await confirmSelection()
+      await waitFor(() => expect(onClose).toHaveBeenCalledOnce())
+    },
+  )
+
   it("keeps selection across search and distinguishes equal resource ids from different sites", async () => {
     const onClose = vi.fn()
     render(
@@ -155,28 +224,35 @@ describe("ClearModelRedirectMappingsDialog", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("does not close or notify the reopened dialog when an earlier clearing finishes", async () => {
-    const pending = createDeferred<typeof cleared>()
-    clear.mockReturnValueOnce(pending.promise)
-    const onClose = vi.fn()
-    const { rerender } = render(
-      <ClearModelRedirectMappingsDialog isOpen onClose={onClose} />,
-      options,
-    )
-    await screen.findByRole("checkbox", { name: "Alpha (#1)" })
-    await confirmSelection()
-    rerender(
-      <ClearModelRedirectMappingsDialog isOpen={false} onClose={onClose} />,
-    )
-    rerender(<ClearModelRedirectMappingsDialog isOpen onClose={onClose} />)
-    await screen.findByRole("checkbox", { name: "Alpha (#1)" })
-    await act(async () => pending.resolve(cleared))
-    expect(onClose).not.toHaveBeenCalled()
-    expect(success).not.toHaveBeenCalled()
-    expect(
-      screen.getByRole("button", {
-        name: "modelRedirect:bulkClear.actions.continue",
-      }),
-    ).toBeEnabled()
-  })
+  it.each(["resolve", "reject"])(
+    "does not close or notify the reopened dialog when an earlier clearing settles by %s",
+    async (settlement) => {
+      const pending = createDeferred<typeof cleared>()
+      clear.mockReturnValueOnce(pending.promise)
+      const onClose = vi.fn()
+      const { rerender } = render(
+        <ClearModelRedirectMappingsDialog isOpen onClose={onClose} />,
+        options,
+      )
+      await screen.findByRole("checkbox", { name: "Alpha (#1)" })
+      await confirmSelection()
+      rerender(
+        <ClearModelRedirectMappingsDialog isOpen={false} onClose={onClose} />,
+      )
+      rerender(<ClearModelRedirectMappingsDialog isOpen onClose={onClose} />)
+      await screen.findByRole("checkbox", { name: "Alpha (#1)" })
+      await act(async () => {
+        if (settlement === "resolve") pending.resolve(cleared)
+        else pending.reject(new Error("Old session unavailable"))
+      })
+      expect(onClose).not.toHaveBeenCalled()
+      expect(success).not.toHaveBeenCalled()
+      expect(error).not.toHaveBeenCalled()
+      expect(
+        screen.getByRole("button", {
+          name: "modelRedirect:bulkClear.actions.continue",
+        }),
+      ).toBeEnabled()
+    },
+  )
 })

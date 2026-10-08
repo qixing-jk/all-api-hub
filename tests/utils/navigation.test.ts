@@ -399,6 +399,7 @@ describe("navigation utilities", () => {
 
   it("openOrFocusOptionsPage should reuse an existing matching tab and append refresh markers", async () => {
     const querySpy = vi.spyOn(browser.tabs, "query").mockResolvedValue([
+      { id: 4, url: "not-a-valid-url" } as browser.tabs.Tab,
       {
         id: 5,
         url: `${OPTIONS_PAGE_URL}?runNow=true#autoCheckin`,
