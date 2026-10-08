@@ -1,16 +1,20 @@
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 import { type PreferenceWriteFailure } from "~/services/preferences/preferencesStore"
+import { WebdavAccountChangeUpload } from "~/services/webdav/webdavAccountChangeUpload"
+import { WEBDAV_AUTO_SYNC_ALARMS } from "~/services/webdav/webdavAutoSyncAlarms"
+import {
+  clampWebdavSyncIntervalMinutes,
+  isCloudSyncConfigured,
+} from "~/services/webdav/webdavAutoSyncPolicy"
 import {
   TASK_NOTIFICATION_STATUSES,
   TASK_NOTIFICATION_TASKS,
 } from "~/types/taskNotifications"
 import {
-  CLOUD_SYNC_PROVIDERS,
   isWebdavSyncDataSelectionEmpty,
   resolveWebdavSyncDataSelection,
   WEBDAV_SYNC_STRATEGIES,
-  type CloudSyncProvider,
   type WebDAVSettings,
 } from "~/types/webdav"
 import {
@@ -24,30 +28,12 @@ import {
   isMessageReceiverUnavailableError,
   sendRuntimeMessage,
 } from "~/utils/browser/runtimeMessages"
-import { onStorageChanged } from "~/utils/browser/storage"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { t } from "~/utils/i18n/core"
 
-import { ACCOUNT_STORAGE_KEYS } from "../core/storageKeys"
 import { userPreferences } from "../preferences/userPreferences"
-import { WebdavAutoSyncMessageTypes } from "../runtimeMessaging/messageTypes"
-import {
-  createRuntimeMessageFailure,
-  type RuntimeMessageResponse,
-} from "../runtimeMessaging/result"
 import { getCloudSyncProvider } from "./cloudSyncService"
-import {
-  executeCloudSyncTransaction,
-  uploadLocalCloudSyncSnapshot,
-} from "./cloudSyncTransaction"
-import {
-  onWebdavAutoSyncMessage,
-  type WebdavAutoSyncMutationResponse,
-  type WebdavAutoSyncStatusResponse,
-  type WebdavAutoSyncSyncNowResponse,
-  type WebdavAutoSyncUpdateSettingsRequest,
-} from "./webdavAutoSyncMessaging"
+import { executeCloudSyncTransaction } from "./cloudSyncTransaction"
 import { applyWebdavSyncResult } from "./webdavSyncApply"
 import { WebdavSyncRunLifecycle } from "./webdavSyncRunLifecycle"
 
@@ -64,41 +50,6 @@ type UpdateWebdavAutoSyncSettingsResult =
     }
 
 /**
- * Convert the persisted WebDAV sync interval (seconds) to a safe alarms cadence (minutes).
- *
- * Notes:
- * - `browser.alarms` operates in minutes and generally requires >= 1 minute.
- * - The options UI constrains WebDAV interval to [60..86400] seconds in 60s steps, but we still clamp defensively.
- */
-function clampWebdavSyncIntervalMinutes(
-  value: unknown,
-  provider: CloudSyncProvider = CLOUD_SYNC_PROVIDERS.WEBDAV,
-): number {
-  const seconds = Number(value)
-  const safeSeconds = Number.isFinite(seconds) ? seconds : 3600
-  const minutes = Math.trunc(safeSeconds / 60)
-  const minimumMinutes = provider === CLOUD_SYNC_PROVIDERS.GITHUB_GIST ? 5 : 1
-  return Math.min(24 * 60, Math.max(minimumMinutes, minutes))
-}
-
-/** Check the active provider's minimum credentials for scheduled sync. */
-function isCloudSyncConfigured(settings: WebDAVSettings): boolean {
-  if (getCloudSyncProvider(settings) === CLOUD_SYNC_PROVIDERS.GITHUB_GIST) {
-    return Boolean(
-      settings.githubGist?.token?.trim() &&
-        settings.githubGist?.gistId?.trim() &&
-        settings.backupEncryptionPassword?.trim(),
-    )
-  }
-
-  return Boolean(
-    settings.url?.trim() &&
-      settings.username?.trim() &&
-      settings.password?.trim(),
-  )
-}
-
-/**
  * Manages WebDAV auto-sync in the background.
  * Responsibilities:
  * - Reads WebDAV preferences to decide if/when to sync.
@@ -107,17 +58,17 @@ function isCloudSyncConfigured(settings: WebDAVSettings): boolean {
  * - Notifies frontends about sync status/results.
  */
 class WebdavAutoSyncService {
-  static readonly ALARM_NAME = "webdavAutoSync"
-  static readonly BEST_EFFORT_UPLOAD_ALARM_NAME =
-    "webdavAutoSyncBestEffortUpload"
-  private static readonly BEST_EFFORT_UPLOAD_DELAY_MINUTES = 1
-
   private removeAlarmListener: (() => void) | null = null
   private removeStorageChangeListener: (() => void) | null = null
   private isInitialized = false
   private readonly syncRuns = new WebdavSyncRunLifecycle()
   private isScheduled = false
   private suppressAccountStorageChangeHandling = false
+  private readonly accountChangeUpload = new WebdavAccountChangeUpload({
+    syncRuns: this.syncRuns,
+    isAccountChangeSuppressed: () => this.suppressAccountStorageChangeHandling,
+    notifyFrontend: (type, data) => this.notifyFrontend(type, data),
+  })
 
   /**
    * Initialize auto-sync (idempotent).
@@ -134,19 +85,18 @@ class WebdavAutoSyncService {
     try {
       // Register alarm listener early. In MV3 service workers, timers are unreliable; alarms are the stable scheduler.
       this.removeAlarmListener = onAlarm(async (alarm) => {
-        if (alarm.name === WebdavAutoSyncService.ALARM_NAME) {
+        if (alarm.name === WEBDAV_AUTO_SYNC_ALARMS.Periodic) {
           // Await to keep the MV3 service worker alive for the duration of the sync.
           await this.performBackgroundSync()
           return
         }
 
-        if (
-          alarm.name === WebdavAutoSyncService.BEST_EFFORT_UPLOAD_ALARM_NAME
-        ) {
-          await this.performBestEffortUpload()
+        if (alarm.name === WEBDAV_AUTO_SYNC_ALARMS.BestEffortUpload) {
+          await this.accountChangeUpload.performBestEffortUpload()
         }
       })
-      this.removeStorageChangeListener = this.subscribeToAccountStorageChanges()
+      this.removeStorageChangeListener =
+        this.accountChangeUpload.subscribeToAccountStorageChanges()
 
       await this.setupAutoSync()
       this.isInitialized = true
@@ -169,8 +119,8 @@ class WebdavAutoSyncService {
       const preferences = await userPreferences.getPreferences()
 
       if (!preferences.webdav.autoSync) {
-        await clearAlarm(WebdavAutoSyncService.ALARM_NAME)
-        await clearAlarm(WebdavAutoSyncService.BEST_EFFORT_UPLOAD_ALARM_NAME)
+        await clearAlarm(WEBDAV_AUTO_SYNC_ALARMS.Periodic)
+        await clearAlarm(WEBDAV_AUTO_SYNC_ALARMS.BestEffortUpload)
         this.isScheduled = false
         logger.info("自动同步已关闭")
         return
@@ -180,8 +130,8 @@ class WebdavAutoSyncService {
 
       // 检查当前同步服务配置是否完整；缺失凭据时跳过自动同步。
       if (!isCloudSyncConfigured(preferences.webdav)) {
-        await clearAlarm(WebdavAutoSyncService.ALARM_NAME)
-        await clearAlarm(WebdavAutoSyncService.BEST_EFFORT_UPLOAD_ALARM_NAME)
+        await clearAlarm(WEBDAV_AUTO_SYNC_ALARMS.Periodic)
+        await clearAlarm(WEBDAV_AUTO_SYNC_ALARMS.BestEffortUpload)
         this.isScheduled = false
         logger.warn("云端同步配置不完整，无法启动自动同步", { provider })
         return
@@ -192,8 +142,8 @@ class WebdavAutoSyncService {
       )
 
       if (isWebdavSyncDataSelectionEmpty(syncDataSelection)) {
-        await clearAlarm(WebdavAutoSyncService.ALARM_NAME)
-        await clearAlarm(WebdavAutoSyncService.BEST_EFFORT_UPLOAD_ALARM_NAME)
+        await clearAlarm(WEBDAV_AUTO_SYNC_ALARMS.Periodic)
+        await clearAlarm(WEBDAV_AUTO_SYNC_ALARMS.BestEffortUpload)
         this.isScheduled = false
         logger.warn(
           "WebDAV sync selection is empty; auto-sync remains unscheduled",
@@ -202,8 +152,8 @@ class WebdavAutoSyncService {
       }
 
       if (!hasAlarmsAPI()) {
-        await clearAlarm(WebdavAutoSyncService.ALARM_NAME)
-        await clearAlarm(WebdavAutoSyncService.BEST_EFFORT_UPLOAD_ALARM_NAME)
+        await clearAlarm(WEBDAV_AUTO_SYNC_ALARMS.Periodic)
+        await clearAlarm(WEBDAV_AUTO_SYNC_ALARMS.BestEffortUpload)
         this.isScheduled = false
         logger.warn("Alarms API not supported; WebDAV auto-sync is disabled")
         return
@@ -214,7 +164,7 @@ class WebdavAutoSyncService {
           WEBDAV_SYNC_STRATEGIES.DOWNLOAD_ONLY ||
         (!syncDataSelection.accounts && !syncDataSelection.bookmarks)
       ) {
-        await clearAlarm(WebdavAutoSyncService.BEST_EFFORT_UPLOAD_ALARM_NAME)
+        await clearAlarm(WEBDAV_AUTO_SYNC_ALARMS.BestEffortUpload)
       }
 
       const intervalMinutes = clampWebdavSyncIntervalMinutes(
@@ -223,7 +173,7 @@ class WebdavAutoSyncService {
       )
 
       // Preserve a matching alarm when possible so background restarts do not shift the schedule.
-      const existingAlarm = await getAlarm(WebdavAutoSyncService.ALARM_NAME)
+      const existingAlarm = await getAlarm(WEBDAV_AUTO_SYNC_ALARMS.Periodic)
       if (
         existingAlarm &&
         existingAlarm.periodInMinutes != null &&
@@ -239,15 +189,15 @@ class WebdavAutoSyncService {
         return
       }
 
-      await clearAlarm(WebdavAutoSyncService.ALARM_NAME)
-      await createAlarm(WebdavAutoSyncService.ALARM_NAME, {
+      await clearAlarm(WEBDAV_AUTO_SYNC_ALARMS.Periodic)
+      await createAlarm(WEBDAV_AUTO_SYNC_ALARMS.Periodic, {
         // Match previous setInterval semantics: first run happens after the full interval.
         delayInMinutes: intervalMinutes,
         periodInMinutes: intervalMinutes,
       })
 
       this.isScheduled = Boolean(
-        await getAlarm(WebdavAutoSyncService.ALARM_NAME),
+        await getAlarm(WEBDAV_AUTO_SYNC_ALARMS.Periodic),
       )
 
       logger.info("自动同步已启动", {
@@ -272,7 +222,7 @@ class WebdavAutoSyncService {
         logger.info("开始执行后台同步")
         await this.syncWithWebdav()
         // Strategy-aware sync supersedes the queued snapshot upload.
-        await clearAlarm(WebdavAutoSyncService.BEST_EFFORT_UPLOAD_ALARM_NAME)
+        await clearAlarm(WEBDAV_AUTO_SYNC_ALARMS.BestEffortUpload)
       },
       {
         success: async () => {
@@ -297,148 +247,6 @@ class WebdavAutoSyncService {
       },
     )
     if (outcome.kind === "busy") logger.debug("同步正在进行中，跳过本次执行")
-  }
-
-  private subscribeToAccountStorageChanges(): () => void {
-    const listener = (
-      changes: Record<string, browser.storage.StorageChange>,
-      areaName: string,
-    ) => {
-      if (areaName !== "local") return
-      const accountChange = changes[ACCOUNT_STORAGE_KEYS.ACCOUNTS]
-      if (!accountChange) return
-      if (this.suppressAccountStorageChangeHandling) {
-        logger.debug("忽略 WebDAV 本地回写触发的账号存储变更")
-        return
-      }
-      if (!this.hasDeletedSharedEntries(accountChange)) {
-        return
-      }
-
-      void this.handleSharedAccountStorageChanged()
-    }
-
-    return onStorageChanged(listener)
-  }
-
-  private hasDeletedSharedEntries(change: browser.storage.StorageChange) {
-    const oldAccountsConfig =
-      change.oldValue && typeof change.oldValue === "object"
-        ? (change.oldValue as {
-            accounts?: Array<{ id?: string }>
-            bookmarks?: Array<{ id?: string }>
-          })
-        : {}
-    const newAccountsConfig =
-      change.newValue && typeof change.newValue === "object"
-        ? (change.newValue as {
-            accounts?: Array<{ id?: string }>
-            bookmarks?: Array<{ id?: string }>
-          })
-        : {}
-
-    const collectIds = (entries: Array<{ id?: string }> | undefined) =>
-      new Set(
-        (entries || [])
-          .map((entry) => entry?.id)
-          .filter(
-            (id): id is string => typeof id === "string" && id.length > 0,
-          ),
-      )
-
-    const oldIds = collectIds([
-      ...(oldAccountsConfig.accounts || []),
-      ...(oldAccountsConfig.bookmarks || []),
-    ])
-    const newIds = collectIds([
-      ...(newAccountsConfig.accounts || []),
-      ...(newAccountsConfig.bookmarks || []),
-    ])
-
-    for (const id of oldIds) {
-      if (!newIds.has(id)) {
-        return true
-      }
-    }
-
-    return false
-  }
-
-  private async handleSharedAccountStorageChanged() {
-    try {
-      if (!(await this.shouldScheduleBestEffortUploadForAccounts())) {
-        return
-      }
-
-      await this.scheduleBestEffortUpload("account_storage_changed")
-    } catch (error) {
-      logger.warn("Failed to schedule best-effort WebDAV upload", error)
-    }
-  }
-
-  private async shouldScheduleBestEffortUploadForAccounts() {
-    if (!hasAlarmsAPI()) {
-      return false
-    }
-
-    const preferences = await userPreferences.getPreferences()
-    if (!preferences.webdav.autoSync) {
-      return false
-    }
-
-    if (!isCloudSyncConfigured(preferences.webdav)) {
-      return false
-    }
-
-    if (
-      preferences.webdav.syncStrategy === WEBDAV_SYNC_STRATEGIES.DOWNLOAD_ONLY
-    ) {
-      return false
-    }
-
-    const syncDataSelection = resolveWebdavSyncDataSelection(
-      preferences.webdav.syncData,
-    )
-
-    return syncDataSelection.accounts || syncDataSelection.bookmarks
-  }
-
-  private async scheduleBestEffortUpload(reason: string) {
-    await clearAlarm(WebdavAutoSyncService.BEST_EFFORT_UPLOAD_ALARM_NAME)
-    await createAlarm(WebdavAutoSyncService.BEST_EFFORT_UPLOAD_ALARM_NAME, {
-      // MV3 service workers cannot rely on short-lived timers. A one-shot alarm is slower
-      // than `setTimeout`, but it survives worker suspension and still gives us an
-      // upload-first opportunity before the next regular merge run.
-      delayInMinutes: WebdavAutoSyncService.BEST_EFFORT_UPLOAD_DELAY_MINUTES,
-    })
-
-    logger.info("已调度尽力而为的 WebDAV 主动上传", {
-      reason,
-      delayInMinutes: WebdavAutoSyncService.BEST_EFFORT_UPLOAD_DELAY_MINUTES,
-    })
-  }
-
-  private async performBestEffortUpload() {
-    const outcome = await this.syncRuns.run(
-      async () => {
-        logger.info("开始执行尽力而为的 WebDAV 主动上传")
-        await uploadLocalCloudSyncSnapshot()
-      },
-      {
-        success: () =>
-          this.notifyFrontend("sync_completed", {
-            timestamp: this.syncRuns.getStatus().lastSyncTime,
-          }),
-        failure: (error) => {
-          logger.warn("尽力而为的 WebDAV 主动上传失败", error)
-          this.notifyFrontend("sync_error", { error: getErrorMessage(error) })
-        },
-      },
-    )
-    if (outcome.kind === "busy") {
-      logger.debug("常规同步正在进行中，延后尽力而为上传")
-      await this.scheduleBestEffortUpload("sync_in_progress")
-    }
   }
 
   /** Execute one sync with local-write notification suppression owned by the scheduler. */
@@ -468,7 +276,7 @@ class WebdavAutoSyncService {
       async () => {
         logger.info("执行立即同步")
         await this.syncWithWebdav()
-        await clearAlarm(WebdavAutoSyncService.BEST_EFFORT_UPLOAD_ALARM_NAME)
+        await clearAlarm(WEBDAV_AUTO_SYNC_ALARMS.BestEffortUpload)
       },
       {
         success: () => {
@@ -492,8 +300,8 @@ class WebdavAutoSyncService {
    * Clears the scheduled alarm; idempotent.
    */
   async stopAutoSync() {
-    const cleared = await clearAlarm(WebdavAutoSyncService.ALARM_NAME)
-    await clearAlarm(WebdavAutoSyncService.BEST_EFFORT_UPLOAD_ALARM_NAME)
+    const cleared = await clearAlarm(WEBDAV_AUTO_SYNC_ALARMS.Periodic)
+    await clearAlarm(WEBDAV_AUTO_SYNC_ALARMS.BestEffortUpload)
     this.isScheduled = false
 
     if (cleared) {
@@ -606,123 +414,3 @@ class WebdavAutoSyncService {
 
 // 创建单例实例
 export const webdavAutoSyncService = new WebdavAutoSyncService()
-
-let webdavAutoSyncMessagingCleanup: (() => void)[] | null = null
-
-/**
- * Register typed background listeners for WebDAV auto-sync messages.
- */
-export function setupWebdavAutoSyncMessagingListeners() {
-  if (webdavAutoSyncMessagingCleanup) {
-    return
-  }
-
-  webdavAutoSyncMessagingCleanup = [
-    onWebdavAutoSyncMessage(WebdavAutoSyncMessageTypes.Setup, () =>
-      resolveWebdavAutoSyncSetupMessage(),
-    ),
-    onWebdavAutoSyncMessage(WebdavAutoSyncMessageTypes.SyncNow, () =>
-      resolveWebdavAutoSyncSyncNowMessage(),
-    ),
-    onWebdavAutoSyncMessage(WebdavAutoSyncMessageTypes.Stop, () =>
-      resolveWebdavAutoSyncStopMessage(),
-    ),
-    onWebdavAutoSyncMessage(
-      WebdavAutoSyncMessageTypes.UpdateSettings,
-      ({ data }) => resolveWebdavAutoSyncUpdateSettingsMessage(data),
-    ),
-    onWebdavAutoSyncMessage(WebdavAutoSyncMessageTypes.GetStatus, () =>
-      resolveWebdavAutoSyncGetStatusMessage(),
-    ),
-  ]
-}
-
-/**
- * Resolve a typed request to reapply the WebDAV auto-sync schedule.
- */
-export async function resolveWebdavAutoSyncSetupMessage(): Promise<
-  RuntimeMessageResponse<undefined>
-> {
-  try {
-    await webdavAutoSyncService.setupAutoSync()
-    return { success: true, data: undefined }
-  } catch (error) {
-    logger.error("处理消息失败", error)
-    return createRuntimeMessageFailure(getErrorMessage(error))
-  }
-}
-
-/**
- * Resolve a typed request to run WebDAV auto-sync immediately.
- */
-export async function resolveWebdavAutoSyncSyncNowMessage(): Promise<WebdavAutoSyncSyncNowResponse> {
-  try {
-    const result = await webdavAutoSyncService.syncNow()
-    return result.success
-      ? { success: true, data: { message: result.message } }
-      : { success: false, error: result.message ?? "" }
-  } catch (error) {
-    logger.error("处理消息失败", error)
-    return { success: false, error: getErrorMessage(error) }
-  }
-}
-
-/**
- * Resolve a typed request to stop WebDAV auto-sync scheduling.
- */
-export async function resolveWebdavAutoSyncStopMessage(): Promise<
-  RuntimeMessageResponse<undefined>
-> {
-  try {
-    await webdavAutoSyncService.stopAutoSync()
-    return { success: true, data: undefined }
-  } catch (error) {
-    logger.error("处理消息失败", error)
-    return createRuntimeMessageFailure(getErrorMessage(error))
-  }
-}
-
-/**
- * Resolve a typed request to persist and apply WebDAV auto-sync settings.
- */
-export async function resolveWebdavAutoSyncUpdateSettingsMessage(
-  request: WebdavAutoSyncUpdateSettingsRequest,
-): Promise<WebdavAutoSyncMutationResponse> {
-  try {
-    const result = await webdavAutoSyncService.updateSettings(
-      request.settings,
-      typeof request.expectedLastUpdated === "number"
-        ? {
-            expectedLastUpdated: request.expectedLastUpdated,
-          }
-        : undefined,
-    )
-    return result.ok
-      ? {
-          success: true,
-          data: result.savedPreferences,
-        }
-      : {
-          success: false,
-          error:
-            result.reason.type === "stale"
-              ? t("settings:messages.preferencesChangedExternally")
-              : t("settings:messages.saveSettingsFailed"),
-        }
-  } catch (error) {
-    logger.error("处理消息失败", error)
-    return createRuntimeMessageFailure(getErrorMessage(error))
-  }
-}
-
-/**
- * Resolve a typed request for WebDAV auto-sync runtime status.
- */
-export async function resolveWebdavAutoSyncGetStatusMessage(): Promise<WebdavAutoSyncStatusResponse> {
-  try {
-    return { success: true, data: webdavAutoSyncService.getStatus() }
-  } catch (error) {
-    logger.error("处理消息失败", error)
-    return createRuntimeMessageFailure(getErrorMessage(error))
-  }
-}

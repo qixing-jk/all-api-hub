@@ -114,7 +114,7 @@ vi.mock("~/features/AccountManagement/hooks/AccountManagementProvider", () => ({
   ),
 }))
 
-vi.mock("~/features/AccountManagement/hooks/DialogStateContext", () => ({
+vi.mock("~/features/AccountManagement/hooks/useDialogStateContext", () => ({
   useDialogStateContext: () => ({
     openAddAccount: openAddAccountMock,
   }),

@@ -10,11 +10,11 @@ import {
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import {
-  GptLoadNativeError,
-  openGptLoadNativeResourceOperations,
   type GptLoadGroupDetail,
   type GptLoadGroupEditorCommand,
-} from "~/services/apiAdapters/managedResources/gptLoad"
+} from "~/services/apiAdapters/managedResources/gptLoadNativeContracts"
+import { openGptLoadNativeResourceOperations } from "~/services/apiAdapters/managedResources/gptLoadNativeOperations"
+import { GptLoadNativeError } from "~/services/apiAdapters/managedResources/gptLoadNativeRuntime"
 import {
   isManagedSiteMigrationSourceType,
   resolveManagedSiteMigrationType,

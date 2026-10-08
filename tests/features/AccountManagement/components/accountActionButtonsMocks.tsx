@@ -169,7 +169,7 @@ vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   useAccountDataContext: () => accountDataContextValue,
 }))
 
-vi.mock("~/features/AccountManagement/hooks/DialogStateContext", () => ({
+vi.mock("~/features/AccountManagement/hooks/useDialogStateContext", () => ({
   useDialogStateContext: () => ({
     openEditAccount: vi.fn(),
   }),

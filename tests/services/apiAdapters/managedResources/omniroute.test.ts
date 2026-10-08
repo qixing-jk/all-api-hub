@@ -24,11 +24,9 @@ import {
   MANAGED_RESOURCE_STATUSES,
   ManagedResourceError,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import {
-  omniRouteManagedResourceRegistration,
-  OmniRouteNativeError,
-  openOmniRouteNativeResourceOperations,
-} from "~/services/apiAdapters/managedResources/omniroute"
+import { omniRouteManagedResourceRegistration } from "~/services/apiAdapters/managedResources/omniroute"
+import { openOmniRouteNativeResourceOperations } from "~/services/apiAdapters/managedResources/omniRouteNativeOperations"
+import { OmniRouteNativeError } from "~/services/apiAdapters/managedResources/omniRouteNativeRuntime"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
 import { server } from "~~/tests/msw/server"

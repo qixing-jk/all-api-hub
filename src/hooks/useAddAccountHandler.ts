@@ -2,7 +2,7 @@ import type { MouseEvent } from "react"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { showFirefoxWarningDialog } from "~/entrypoints/popup/components/FirefoxAddAccountWarningDialog/showFirefoxWarningDialog"
-import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
+import { useDialogStateContext } from "~/features/AccountManagement/hooks/useDialogStateContext"
 import { ACCOUNT_MANAGEMENT_ROUTE_ACTIONS } from "~/features/AccountManagement/routeParams"
 import {
   isSponsorAddAccountPrefill,

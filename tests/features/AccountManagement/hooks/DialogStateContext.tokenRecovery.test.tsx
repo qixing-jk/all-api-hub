@@ -8,10 +8,8 @@ import {
   receiveAccountDialogRecovery,
 } from "~/features/AccountManagement/accountDialogRecovery"
 import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
-import {
-  DialogStateProvider,
-  useDialogStateContext,
-} from "~/features/AccountManagement/hooks/DialogStateContext"
+import { DialogStateProvider } from "~/features/AccountManagement/hooks/DialogStateProvider"
+import { useDialogStateContext } from "~/features/AccountManagement/hooks/useDialogStateContext"
 import toast from "~/lib/notify"
 import type { DisplaySiteData } from "~/types"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"

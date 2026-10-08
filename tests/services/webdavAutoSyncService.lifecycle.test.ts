@@ -7,8 +7,8 @@ import {
   resolveWebdavAutoSyncStopMessage,
   resolveWebdavAutoSyncSyncNowMessage,
   resolveWebdavAutoSyncUpdateSettingsMessage,
-  webdavAutoSyncService,
-} from "~/services/webdav/webdavAutoSyncService"
+} from "~/services/webdav/webdavAutoSyncMessageHandlers"
+import { webdavAutoSyncService } from "~/services/webdav/webdavAutoSyncService"
 
 const mocks = vi.hoisted(() => ({
   clearAlarm: vi.fn(),

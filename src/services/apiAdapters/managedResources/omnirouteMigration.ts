@@ -12,10 +12,8 @@ import {
   isManagedSiteMigrationSourceType,
   resolveManagedSiteMigrationType,
 } from "~/services/apiAdapters/managedResources/migrationTypeRoutes"
-import {
-  OmniRouteNativeError,
-  openOmniRouteNativeResourceOperations,
-} from "~/services/apiAdapters/managedResources/omniroute"
+import { openOmniRouteNativeResourceOperations } from "~/services/apiAdapters/managedResources/omniRouteNativeOperations"
+import { OmniRouteNativeError } from "~/services/apiAdapters/managedResources/omniRouteNativeRuntime"
 import type { OmniRouteSanitizedConnection } from "~/services/apiService/omniroute/redaction"
 import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"

@@ -15,10 +15,8 @@ import {
   MANAGED_RESOURCE_CREATE_SEED_KINDS,
   type EditableResourceProjection,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import {
-  openGptLoadNativeResourceOperations,
-  type GptLoadGroupEditorCommand,
-} from "~/services/apiAdapters/managedResources/gptLoad"
+import { type GptLoadGroupEditorCommand } from "~/services/apiAdapters/managedResources/gptLoadNativeContracts"
+import { openGptLoadNativeResourceOperations } from "~/services/apiAdapters/managedResources/gptLoadNativeOperations"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
 import { server } from "~~/tests/msw/server"

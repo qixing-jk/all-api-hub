@@ -93,7 +93,7 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
     const service = createService() as any
 
     expect(
-      service.hasDeletedSharedEntries({
+      service.accountChangeUpload.hasDeletedSharedEntries({
         oldValue: {
           accounts: [{ id: "account-a" }, { id: "account-b" }],
           bookmarks: [{ id: "bookmark-a" }],
@@ -106,7 +106,7 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
     ).toBe(true)
 
     expect(
-      service.hasDeletedSharedEntries({
+      service.accountChangeUpload.hasDeletedSharedEntries({
         oldValue: {
           accounts: [{ id: "account-a" }],
           bookmarks: [{ id: "bookmark-a" }, { id: "bookmark-b" }],
@@ -119,21 +119,21 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
     ).toBe(true)
 
     expect(
-      service.hasDeletedSharedEntries({
+      service.accountChangeUpload.hasDeletedSharedEntries({
         oldValue: { accounts: [{ id: "account-a" }] },
         newValue: { accounts: [{ id: "account-a" }, { id: "account-b" }] },
       }),
     ).toBe(false)
 
     expect(
-      service.hasDeletedSharedEntries({
+      service.accountChangeUpload.hasDeletedSharedEntries({
         oldValue: null,
         newValue: { accounts: [{ id: "account-a" }] },
       }),
     ).toBe(false)
 
     expect(
-      service.hasDeletedSharedEntries({
+      service.accountChangeUpload.hasDeletedSharedEntries({
         oldValue: { accounts: [{ foo: "missing-id" }, { id: "" }] },
         newValue: { accounts: [{ foo: "missing-id" }, { id: "" }] },
       }),
@@ -143,10 +143,11 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
   it("subscribes to local storage deletion changes and supports unsubscribe", async () => {
     const service = createService() as any
     const handleSpy = vi
-      .spyOn(service, "handleSharedAccountStorageChanged")
+      .spyOn(service.accountChangeUpload, "handleSharedAccountStorageChanged")
       .mockResolvedValue(undefined)
 
-    const unsubscribe = service.subscribeToAccountStorageChanges()
+    const unsubscribe =
+      service.accountChangeUpload.subscribeToAccountStorageChanges()
 
     expect(addListenerMock).toHaveBeenCalledTimes(1)
     const listener = addListenerMock.mock.calls[0]?.[0]
@@ -212,9 +213,10 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
   it("suppresses deletion-triggered handling while applyLocalSyncResult writes local data", async () => {
     const service = createService() as any
     const handleSpy = vi
-      .spyOn(service, "handleSharedAccountStorageChanged")
+      .spyOn(service.accountChangeUpload, "handleSharedAccountStorageChanged")
       .mockResolvedValue(undefined)
-    const unsubscribe = service.subscribeToAccountStorageChanges()
+    const unsubscribe =
+      service.accountChangeUpload.subscribeToAccountStorageChanges()
     const listener = addListenerMock.mock.calls[0]?.[0]
     const accountDeferred = createDeferred<{ migratedCount: number }>()
 
@@ -289,7 +291,7 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
 
     mockHasAlarmsAPI.mockReturnValue(false)
     await expect(
-      service.shouldScheduleBestEffortUploadForAccounts(),
+      service.accountChangeUpload.shouldScheduleBestEffortUploadForAccounts(),
     ).resolves.toBe(false)
 
     mockHasAlarmsAPI.mockReturnValue(true)
@@ -300,7 +302,7 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
       },
     })
     await expect(
-      service.shouldScheduleBestEffortUploadForAccounts(),
+      service.accountChangeUpload.shouldScheduleBestEffortUploadForAccounts(),
     ).resolves.toBe(false)
 
     mockGetPreferences.mockResolvedValueOnce({
@@ -315,11 +317,11 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
       },
     })
     await expect(
-      service.shouldScheduleBestEffortUploadForAccounts(),
+      service.accountChangeUpload.shouldScheduleBestEffortUploadForAccounts(),
     ).resolves.toBe(false)
 
     await expect(
-      service.shouldScheduleBestEffortUploadForAccounts(),
+      service.accountChangeUpload.shouldScheduleBestEffortUploadForAccounts(),
     ).resolves.toBe(true)
   })
 
@@ -329,7 +331,9 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
       .spyOn(cloudSyncTransaction, "uploadLocalCloudSyncSnapshot")
       .mockResolvedValue(undefined)
 
-    await service.scheduleBestEffortUpload("account_storage_changed")
+    await service.accountChangeUpload.scheduleBestEffortUpload(
+      "account_storage_changed",
+    )
 
     expect(mockClearAlarm).toHaveBeenCalledWith(
       "webdavAutoSyncBestEffortUpload",
@@ -339,7 +343,7 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
       { delayInMinutes: 1 },
     )
 
-    await service.performBestEffortUpload()
+    await service.accountChangeUpload.performBestEffortUpload()
     expect(uploadSpy).toHaveBeenCalledTimes(1)
   })
 
@@ -440,7 +444,7 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
   it("reschedules when a best-effort upload collides with an in-flight sync", async () => {
     const service = createService() as any
     const scheduleSpy = vi
-      .spyOn(service, "scheduleBestEffortUpload")
+      .spyOn(service.accountChangeUpload, "scheduleBestEffortUpload")
       .mockResolvedValue(undefined)
     const uploadSpy = vi
       .spyOn(cloudSyncTransaction, "uploadLocalCloudSyncSnapshot")
@@ -453,7 +457,7 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
       }),
     )
     const activeRun = service.syncNow()
-    await service.performBestEffortUpload()
+    await service.accountChangeUpload.performBestEffortUpload()
 
     expect(scheduleSpy).toHaveBeenCalledWith("sync_in_progress")
     expect(uploadSpy).not.toHaveBeenCalled()
@@ -472,7 +476,7 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
       "uploadLocalCloudSyncSnapshot",
     ).mockResolvedValueOnce(undefined)
 
-    await service.performBestEffortUpload()
+    await service.accountChangeUpload.performBestEffortUpload()
 
     expect(service.getStatus()).toMatchObject({
       isSyncing: false,
@@ -490,7 +494,7 @@ describe("WebdavAutoSyncService best-effort upload helpers", () => {
       "uploadLocalCloudSyncSnapshot",
     ).mockRejectedValueOnce(new Error("best-effort failed"))
 
-    await service.performBestEffortUpload()
+    await service.accountChangeUpload.performBestEffortUpload()
 
     expect(service.getStatus().lastSyncStatus).toBe("error")
     expect(service.getStatus().lastSyncError).toContain("best-effort failed")
