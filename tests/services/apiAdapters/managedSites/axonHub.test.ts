@@ -73,10 +73,6 @@ vi.mock("~/services/managedSites/providers/axonHub", () => ({
   ...axonHubProvider,
 }))
 
-vi.mock("~/services/apiService/axonHub", () => ({
-  ...axonHubApi,
-}))
-
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences,
 }))

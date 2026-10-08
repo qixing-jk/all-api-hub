@@ -19,7 +19,7 @@ import {
   type ProductAnalyticsFeatureId,
 } from "~/services/productAnalytics/contracts"
 import { isExtensionSidePanel } from "~/utils/browser"
-import { getSidePanelSupport } from "~/utils/browser/browserApi"
+import { getSidePanelSupport } from "~/utils/browser/sidePanel"
 import {
   openApiCredentialProfilesPage,
   openFullAccountManagerPage,
@@ -78,13 +78,10 @@ vi.mock("~/utils/browser", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+vi.mock("~/utils/browser/sidePanel", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
-  return {
-    ...actual,
-    getSidePanelSupport: vi.fn(),
-  }
+    await importOriginal<typeof import("~/utils/browser/sidePanel")>()
+  return { ...actual, getSidePanelSupport: vi.fn() }
 })
 
 vi.mock("~/contexts/ReleaseUpdateStatusContext", () => ({

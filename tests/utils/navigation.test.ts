@@ -3,15 +3,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { resolveAccountSiteRouteUrl } from "~/services/accounts/utils/siteRouteResolver"
 import { isExtensionPopup } from "~/utils/browser"
 import {
-  createTab as createTabApi,
-  createWindow,
-  focusTab as focusTabApi,
   getExtensionURL,
-  getSidePanelSupport,
-  hasWindowsAPI,
   openRuntimeOptionsPage as openRuntimeOptionsPageApi,
+} from "~/utils/browser/runtime"
+import {
+  getSidePanelSupport,
   openSidePanel as openSidePanelApi,
-} from "~/utils/browser/browserApi"
+} from "~/utils/browser/sidePanel"
+import {
+  createTab as createTabApi,
+  focusTab as focusTabApi,
+} from "~/utils/browser/tabs"
+import { createWindow, hasWindowsAPI } from "~/utils/browser/windows"
 import {
   openAccountManagerWithSearch,
   openApiCredentialProfilesPage,
@@ -70,25 +73,42 @@ vi.mock("~/utils/browser/extensionPageUrls", () => ({
   OPTIONS_PAGE_URL: "http://localhost:3000/options.html",
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+vi.mock("~/utils/browser/tabs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/tabs")>()
   const createTab = vi.fn()
-  const createWindow = vi.fn()
+
   const focusTab = vi.fn()
-  const getExtensionURL = vi.fn((path: string) => `ext://${path}`)
+
+  return { ...actual, createTab, focusTab }
+})
+vi.mock("~/utils/browser/windows", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/windows")>()
+
+  const createWindow = vi.fn()
+
   const hasWindowsAPI = vi.fn(() => false)
+
+  return { ...actual, createWindow, hasWindowsAPI }
+})
+vi.mock("~/utils/browser/runtime", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/runtime")>()
+
+  const getExtensionURL = vi.fn((path: string) => `ext://${path}`)
+
   const openRuntimeOptionsPage = vi.fn()
+
+  return { ...actual, getExtensionURL, openRuntimeOptionsPage }
+})
+vi.mock("~/utils/browser/sidePanel", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/sidePanel")>()
+
   const openSidePanel = vi.fn()
 
   return {
     ...actual,
-    createTab,
-    createWindow,
-    focusTab,
-    getExtensionURL,
-    hasWindowsAPI,
-    openRuntimeOptionsPage,
     openSidePanel,
     getSidePanelSupport: vi.fn(() => ({ supported: true })),
   }

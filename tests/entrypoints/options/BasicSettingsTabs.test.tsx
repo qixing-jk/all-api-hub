@@ -27,13 +27,9 @@ const {
   showUpdateToastMock: vi.fn(),
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
-  return {
-    ...actual,
-    createTab: createTabMock,
-  }
+vi.mock("~/utils/browser/tabs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/tabs")>()
+  return { ...actual, createTab: createTabMock }
 })
 
 vi.mock("~/services/accounts/utils/siteRouteResolver", () => ({

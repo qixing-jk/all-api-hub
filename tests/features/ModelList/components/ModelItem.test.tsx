@@ -24,7 +24,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { createTab } from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
 import { createLegacyAccountTokenSourceIdentity } from "~~/tests/test-utils/legacyModelListSourceIdentity"
 
 const { loggerWarnSpy } = vi.hoisted(() => ({
@@ -42,9 +42,7 @@ vi.mock("~/lib/notify", () => ({
   },
 }))
 
-vi.mock("~/utils/browser/browserApi", () => ({
-  createTab: vi.fn(),
-}))
+vi.mock("~/utils/browser/tabs", () => ({ createTab: vi.fn() }))
 
 vi.mock("~/utils/core/logger", () => ({
   createLogger: () => ({

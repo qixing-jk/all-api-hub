@@ -53,14 +53,11 @@ vi.mock("~/hooks/useApiCredentialProfileLinks", () => ({
   useApiCredentialProfileLinks: () => useApiCredentialProfileLinksMock(),
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()
 
-  return {
-    ...actual,
-    sendRuntimeActionMessage: sendRuntimeActionMessageMock,
-  }
+  return { ...actual, sendRuntimeActionMessage: sendRuntimeActionMessageMock }
 })
 
 vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => {

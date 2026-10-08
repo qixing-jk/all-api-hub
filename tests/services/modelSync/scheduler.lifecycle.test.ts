@@ -89,9 +89,8 @@ vi.mock("~/utils/core/error", () => ({
     error instanceof Error ? error.message : String(error),
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+vi.mock("~/utils/browser/alarms", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/alarms")>()
   return {
     ...actual,
     clearAlarm: mocks.clearAlarm,
@@ -99,8 +98,12 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
     getAlarm: mocks.getAlarm,
     hasAlarmsAPI: mocks.hasAlarmsAPI,
     onAlarm: mocks.onAlarm,
-    sendRuntimeMessage: mocks.sendRuntimeMessage,
   }
+})
+vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()
+  return { ...actual, sendRuntimeMessage: mocks.sendRuntimeMessage }
 })
 
 vi.mock("~/services/preferences/userPreferences", () => ({

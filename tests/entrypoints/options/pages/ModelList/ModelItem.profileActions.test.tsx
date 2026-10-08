@@ -46,14 +46,10 @@ const EMPTY_ACTIVE_GROUP_CONTEXT: ActiveModelGroupContext = {
   actionGroups: [],
 }
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+vi.mock("~/utils/browser/tabs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/tabs")>()
 
-  return {
-    ...actual,
-    createTab: mockCreateTab,
-  }
+  return { ...actual, createTab: mockCreateTab }
 })
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {

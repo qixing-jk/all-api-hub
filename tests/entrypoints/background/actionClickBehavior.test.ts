@@ -9,7 +9,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { NATIVE_SIDE_PANEL_ACTION_CLICK_RESULTS } from "~/utils/browser/browserApi"
+import { NATIVE_SIDE_PANEL_ACTION_CLICK_RESULTS } from "~/utils/browser/sidePanel"
 
 describe("background applyActionClickBehavior", () => {
   let addActionClickListener: ReturnType<typeof vi.fn>
@@ -45,11 +45,13 @@ describe("background applyActionClickBehavior", () => {
 
     vi.resetModules()
 
-    vi.doMock("~/utils/browser/browserApi", () => ({
+    vi.doMock("~/utils/browser/action", () => ({
       addActionClickListener,
+      setActionPopup,
+    }))
+    vi.doMock("~/utils/browser/sidePanel", () => ({
       getSidePanelSupport,
       NATIVE_SIDE_PANEL_ACTION_CLICK_RESULTS,
-      setActionPopup,
       setNativeSidePanelActionClick,
     }))
 
@@ -87,7 +89,20 @@ describe("background applyActionClickBehavior", () => {
   })
 
   afterEach(() => {
-    vi.doUnmock("~/utils/browser/browserApi")
+    vi.doUnmock("~/utils/browser/extensionStorage")
+    vi.doUnmock("~/utils/browser/tabs")
+    vi.doUnmock("~/utils/browser/windows")
+    vi.doUnmock("~/utils/browser/runtimeMessages")
+    vi.doUnmock("~/utils/browser/runtime")
+    vi.doUnmock("~/utils/browser/bookmarks")
+    vi.doUnmock("~/utils/browser/storage")
+    vi.doUnmock("~/utils/browser/sidePanel")
+    vi.doUnmock("~/utils/browser/alarms")
+    vi.doUnmock("~/utils/browser/notifications")
+    vi.doUnmock("~/utils/browser/contextMenus")
+    vi.doUnmock("~/utils/browser/cookies")
+    vi.doUnmock("~/utils/browser/action")
+    vi.doUnmock("~/utils/browser/permissions")
     vi.doUnmock("~/services/preferences/userPreferences")
     vi.doUnmock("~/utils/core/logger")
     vi.doUnmock("~/utils/navigation/sidepanel")

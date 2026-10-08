@@ -307,18 +307,24 @@ vi.mock("~/services/protectionBypass/client", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+vi.mock("~/utils/browser/tabs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/tabs")>()
   return {
     ...actual,
     getActiveTabs: mockGetActiveTabs,
     getAllTabs: mockGetAllTabs,
-    sendTabMessageWithRetry: mockSendTabMessage,
-    onRuntimeMessage: mockOnRuntimeMessage,
     onTabActivated: mockOnTabActivated,
     onTabRemoved: mockOnTabRemoved,
     onTabUpdated: mockOnTabUpdated,
+  }
+})
+vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()
+  return {
+    ...actual,
+    sendTabMessageWithRetry: mockSendTabMessage,
+    onRuntimeMessage: mockOnRuntimeMessage,
   }
 })
 

@@ -61,9 +61,9 @@ describe("setupRuntimeMessageListeners routing", () => {
       handleTempContextDebugMessage,
     }))
 
-    vi.doMock("~/utils/browser/browserApi", async (importOriginal) => {
+    vi.doMock("~/utils/browser/runtimeMessages", async (importOriginal) => {
       const actual =
-        await importOriginal<typeof import("~/utils/browser/browserApi")>()
+        await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()
       return {
         ...actual,
         onRuntimeMessage: vi.fn((listener: RuntimeMessageListener) => {
@@ -143,7 +143,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doMock("~/services/notifications/taskNotificationService", () => ({
       setupTaskNotificationMessagingListeners: vi.fn(),
     }))
-    vi.doMock("~/services/siteAnnouncements/scheduler", () => ({
+    vi.doMock("~/services/siteAnnouncements/runtimeMessages", () => ({
       setupSiteAnnouncementsMessagingListeners: vi.fn(),
     }))
 
@@ -175,7 +175,20 @@ describe("setupRuntimeMessageListeners routing", () => {
   })
 
   afterAll(() => {
-    vi.doUnmock("~/utils/browser/browserApi")
+    vi.doUnmock("~/utils/browser/extensionStorage")
+    vi.doUnmock("~/utils/browser/tabs")
+    vi.doUnmock("~/utils/browser/windows")
+    vi.doUnmock("~/utils/browser/runtimeMessages")
+    vi.doUnmock("~/utils/browser/runtime")
+    vi.doUnmock("~/utils/browser/bookmarks")
+    vi.doUnmock("~/utils/browser/storage")
+    vi.doUnmock("~/utils/browser/sidePanel")
+    vi.doUnmock("~/utils/browser/alarms")
+    vi.doUnmock("~/utils/browser/notifications")
+    vi.doUnmock("~/utils/browser/contextMenus")
+    vi.doUnmock("~/utils/browser/cookies")
+    vi.doUnmock("~/utils/browser/action")
+    vi.doUnmock("~/utils/browser/permissions")
     vi.doUnmock("~/utils/browser/cookieHelper")
     vi.doUnmock("~/services/models/modelSync")
     vi.doUnmock("~/services/preferences/runtimePreferencesService")
@@ -198,6 +211,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doUnmock("~/services/integrations/ldohSiteLookup/background")
     vi.doUnmock("~/services/notifications/taskNotificationService")
     vi.doUnmock("~/services/siteAnnouncements/scheduler")
+    vi.doUnmock("~/services/siteAnnouncements/runtimeMessages")
     vi.resetModules()
     vi.restoreAllMocks()
   })

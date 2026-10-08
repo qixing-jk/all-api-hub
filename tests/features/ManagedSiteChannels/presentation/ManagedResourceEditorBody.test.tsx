@@ -67,9 +67,13 @@ vi.mock("~/services/managedSites/runtimeConfig", () => ({
   resolveManagedSiteRuntimeConfigForType: adapterMocks.resolveRuntimeConfig,
 }))
 
-vi.mock("~/services/apiService/axonHub", () => ({
+vi.mock("~/services/apiService/axonHub/graphqlProtocol", () => ({
   AxonHubRequestError: class AxonHubRequestError extends Error {},
+}))
+vi.mock("~/services/apiService/axonHub/authSession", () => ({
   signIn: adapterMocks.signIn,
+}))
+vi.mock("~/services/apiService/axonHub/channels", () => ({
   listAxonHubChannelPage: adapterMocks.listPage,
   getAxonHubChannel: adapterMocks.getChannel,
   createAxonHubChannel: adapterMocks.createChannel,

@@ -138,16 +138,19 @@ vi.mock("~/services/siteDetection/siteTypeMismatch", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+vi.mock("~/utils/browser/tabs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/tabs")>()
   return {
     ...actual,
     getActiveTabs: vi.fn(async () => []),
     onTabActivated: vi.fn(() => () => {}),
     onTabUpdated: vi.fn(() => () => {}),
-    sendRuntimeMessage: vi.fn(),
   }
+})
+vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()
+  return { ...actual, sendRuntimeMessage: vi.fn() }
 })
 
 describe("useAccountDialog re-detect preservation", () => {
@@ -1992,7 +1995,9 @@ describe("useAccountDialog re-detect preservation", () => {
     expect(result.current.state.isDetected).toBe(false)
     expect(result.current.state.isDetecting).toBe(false)
 
-    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    const { sendRuntimeMessage } = await import(
+      "~/utils/browser/runtimeMessages"
+    )
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: true,
       data: "session=manual-cookie",
@@ -2378,7 +2383,9 @@ describe("useAccountDialog re-detect preservation", () => {
   it.each(["url", "close", "cookie"] as const)(
     "ignores automatic cookie completion after changing %s",
     async (change) => {
-      const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+      const { sendRuntimeMessage } = await import(
+        "~/utils/browser/runtimeMessages"
+      )
       let resolveCookie!: (response: { success: boolean; data: string }) => void
       vi.mocked(sendRuntimeMessage).mockReturnValueOnce(
         new Promise((resolve) => {
@@ -2442,7 +2449,9 @@ describe("useAccountDialog re-detect preservation", () => {
   )
 
   it("auto-imports cookie auth headers after a successful cookie-based auto-detect", async () => {
-    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    const { sendRuntimeMessage } = await import(
+      "~/utils/browser/runtimeMessages"
+    )
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: true,
       data: " session=abc123 ",
@@ -2530,7 +2539,9 @@ describe("useAccountDialog re-detect preservation", () => {
   })
 
   it("shows backend cookie import errors and toggles manual form visibility", async () => {
-    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    const { sendRuntimeMessage } = await import(
+      "~/utils/browser/runtimeMessages"
+    )
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: false,
       error: "blocked by browser",
@@ -2572,7 +2583,9 @@ describe("useAccountDialog re-detect preservation", () => {
   })
 
   it("switches AIHubMix auto-detect results to access-token mode and skips cookie import", async () => {
-    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    const { sendRuntimeMessage } = await import(
+      "~/utils/browser/runtimeMessages"
+    )
     mockAutoDetectAccount.mockResolvedValueOnce({
       success: true,
       message: "ok",
@@ -2619,7 +2632,9 @@ describe("useAccountDialog re-detect preservation", () => {
   })
 
   it("keeps detection successful but shows the permission warning when cookie auto-import is denied", async () => {
-    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    const { sendRuntimeMessage } = await import(
+      "~/utils/browser/runtimeMessages"
+    )
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: false,
       errorCode: COOKIE_IMPORT_FAILURE_REASONS.PermissionDenied,

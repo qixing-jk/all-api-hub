@@ -79,12 +79,16 @@ describe("background onInstalled changelog opening", () => {
     ;(globalThis as any).defineBackground = (factory: () => unknown) =>
       factory()
 
-    vi.doMock("~/utils/browser/browserApi", async (importOriginal) => {
+    vi.doMock("~/utils/browser/tabs", async (importOriginal) => {
       const actual =
-        await importOriginal<typeof import("~/utils/browser/browserApi")>()
+        await importOriginal<typeof import("~/utils/browser/tabs")>()
+      return { ...actual, createTab: createTabMock }
+    })
+    vi.doMock("~/utils/browser/runtime", async (importOriginal) => {
+      const actual =
+        await importOriginal<typeof import("~/utils/browser/runtime")>()
       return {
         ...actual,
-        createTab: createTabMock,
         getExtensionVersion: vi.fn(
           (fallback = "0.0.0") => getManifestMock().version?.trim() || fallback,
         ),
@@ -209,7 +213,20 @@ describe("background onInstalled changelog opening", () => {
   afterEach(() => {
     delete (globalThis as any).defineBackground
 
-    vi.doUnmock("~/utils/browser/browserApi")
+    vi.doUnmock("~/utils/browser/extensionStorage")
+    vi.doUnmock("~/utils/browser/tabs")
+    vi.doUnmock("~/utils/browser/windows")
+    vi.doUnmock("~/utils/browser/runtimeMessages")
+    vi.doUnmock("~/utils/browser/runtime")
+    vi.doUnmock("~/utils/browser/bookmarks")
+    vi.doUnmock("~/utils/browser/storage")
+    vi.doUnmock("~/utils/browser/sidePanel")
+    vi.doUnmock("~/utils/browser/alarms")
+    vi.doUnmock("~/utils/browser/notifications")
+    vi.doUnmock("~/utils/browser/contextMenus")
+    vi.doUnmock("~/utils/browser/cookies")
+    vi.doUnmock("~/utils/browser/action")
+    vi.doUnmock("~/utils/browser/permissions")
     vi.doUnmock("~/utils/navigation/docsLinks")
     vi.doUnmock("~/services/updates/changelogOnUpdateState")
     vi.doUnmock("~/services/updates/changelogIndex")

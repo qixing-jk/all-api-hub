@@ -51,9 +51,11 @@ vi.mock("~/utils/browser", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/browser/browserApi", () => ({
-  getAllTabs: mockGetAllTabs,
+vi.mock("~/utils/browser/tabs", () => ({ getAllTabs: mockGetAllTabs }))
+vi.mock("~/utils/browser/runtime", () => ({
   getBrowserApiCapabilities: mockGetBrowserApiCapabilities,
+}))
+vi.mock("~/utils/browser/runtimeMessages", () => ({
   sendRuntimeMessage: mockSendRuntimeMessage,
   sendTabMessageWithRetry: mockSendTabMessage,
 }))

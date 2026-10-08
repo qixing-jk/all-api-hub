@@ -71,14 +71,21 @@ vi.mock("~/services/siteDetection/detectSiteType", () => ({
   getAccountSiteType: mockGetAccountSiteType,
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+vi.mock("~/utils/browser/tabs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/tabs")>()
 
   return {
     ...actual,
     getActiveOrAllTabs: mockGetActiveOrAllTabs,
     getActiveTabs: mockGetActiveTabs,
+  }
+})
+vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()
+
+  return {
+    ...actual,
     isMessageReceiverUnavailableError: mockIsMessageReceiverUnavailableError,
     sendRuntimeMessage: mockSendRuntimeMessage,
   }

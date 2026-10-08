@@ -56,15 +56,17 @@ vi.mock("~/services/productAnalytics/actions", () => ({
     mockTrackProductAnalyticsActionCompleted(...args),
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+vi.mock("~/utils/browser/permissions", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/utils/browser/permissions")>()
 
-  return {
-    ...actual,
-    checkPermissionViaMessage: mockCheckPermissionViaMessage,
-    sendRuntimeMessage: mockSendRuntimeMessage,
-  }
+  return { ...actual, checkPermissionViaMessage: mockCheckPermissionViaMessage }
+})
+vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()
+
+  return { ...actual, sendRuntimeMessage: mockSendRuntimeMessage }
 })
 
 vi.mock("~/services/redemption/redemptionAssistMessaging", () => ({

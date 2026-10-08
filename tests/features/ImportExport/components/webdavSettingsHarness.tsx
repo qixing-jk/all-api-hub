@@ -195,8 +195,6 @@ vi.mock("~/services/webdav/cloudSyncService", () => ({
   uploadCloudSyncBackup: mockUploadCloudSyncBackup,
 }))
 
-vi.mock("~/utils/browser/browserApi", () => ({}))
-
 vi.mock("~/services/webdav/webdavAutoSyncMessaging", () => ({
   sendWebdavAutoSyncMessage: mockSendWebdavAutoSyncMessage,
 }))

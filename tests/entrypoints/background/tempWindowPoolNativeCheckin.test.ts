@@ -100,15 +100,22 @@ describe("tempWindowPool native check-in page action", () => {
       },
     }
 
-    vi.doMock("~/utils/browser/browserApi", async (importOriginal) => {
+    vi.doMock("~/utils/browser/tabs", async (importOriginal) => {
       const actual =
-        await importOriginal<typeof import("~/utils/browser/browserApi")>()
+        await importOriginal<typeof import("~/utils/browser/tabs")>()
       return {
         ...actual,
         createTab: createTabMock,
+        onTabRemoved: onTabRemovedMock,
+      }
+    })
+    vi.doMock("~/utils/browser/windows", async (importOriginal) => {
+      const actual =
+        await importOriginal<typeof import("~/utils/browser/windows")>()
+      return {
+        ...actual,
         createWindow: createWindowMock,
         hasWindowsAPI: hasWindowsApiMock,
-        onTabRemoved: onTabRemovedMock,
         onWindowRemoved: onWindowRemovedMock,
       }
     })

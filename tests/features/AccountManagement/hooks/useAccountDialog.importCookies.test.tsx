@@ -20,8 +20,8 @@ import {
 import { AuthTypeEnum } from "~/types"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
-type OnTabActivated = typeof import("~/utils/browser/browserApi").onTabActivated
-type OnTabUpdated = typeof import("~/utils/browser/browserApi").onTabUpdated
+type OnTabActivated = typeof import("~/utils/browser/tabs").onTabActivated
+type OnTabUpdated = typeof import("~/utils/browser/tabs").onTabUpdated
 
 const { mockOpenWithAccount, mockOpenDefaultTokenQuickCreateDialogForAccount } =
   vi.hoisted(() => ({
@@ -96,17 +96,20 @@ vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+vi.mock("~/utils/browser/tabs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/tabs")>()
   return {
     ...actual,
     getActiveTabs: vi.fn(async () => []),
     getAllTabs: vi.fn(async () => []),
     onTabActivated: mockOnTabActivated,
     onTabUpdated: mockOnTabUpdated,
-    sendRuntimeMessage: vi.fn(),
   }
+})
+vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()
+  return { ...actual, sendRuntimeMessage: vi.fn() }
 })
 
 vi.mock("~/services/permissions/permissionManager", () => ({
@@ -141,7 +144,7 @@ describe("useAccountDialog cookie import feedback", () => {
     mockOnOptionalPermissionsChanged.mockReturnValue(vi.fn())
     mockOnTabActivated.mockReturnValue(vi.fn())
     mockOnTabUpdated.mockReturnValue(vi.fn())
-    const { getActiveTabs } = await import("~/utils/browser/browserApi")
+    const { getActiveTabs } = await import("~/utils/browser/tabs")
     vi.mocked(getActiveTabs).mockImplementation(async () => {
       const query = (globalThis as any).browser?.tabs?.query
       if (typeof query !== "function") {
@@ -167,7 +170,9 @@ describe("useAccountDialog cookie import feedback", () => {
   })
 
   it("leaves automatic detection free to continue when cookie reading rejects", async () => {
-    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    const { sendRuntimeMessage } = await import(
+      "~/utils/browser/runtimeMessages"
+    )
     vi.mocked(sendRuntimeMessage).mockRejectedValueOnce(
       new Error("cookie read failed"),
     )
@@ -217,7 +222,9 @@ describe("useAccountDialog cookie import feedback", () => {
   })
 
   it("requires a URL before dispatching a manual cookie import", async () => {
-    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    const { sendRuntimeMessage } = await import(
+      "~/utils/browser/runtimeMessages"
+    )
     const { result } = renderHook(() =>
       useAccountDialog({
         mode: DIALOG_MODES.ADD,
@@ -245,7 +252,9 @@ describe("useAccountDialog cookie import feedback", () => {
   ])(
     "reports empty or unreadable cookie results without replacing the draft: %j",
     async (response) => {
-      const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+      const { sendRuntimeMessage } = await import(
+        "~/utils/browser/runtimeMessages"
+      )
       vi.mocked(sendRuntimeMessage).mockResolvedValueOnce(response)
       const { result } = renderHook(() =>
         useAccountDialog({
@@ -282,7 +291,9 @@ describe("useAccountDialog cookie import feedback", () => {
     "cookie",
     "url-round-trip",
   ] as const)("ignores a cookie import after changing %s", async (change) => {
-    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    const { sendRuntimeMessage } = await import(
+      "~/utils/browser/runtimeMessages"
+    )
     let resolveImport!: (response: { success: boolean; data: string }) => void
     const pending = new Promise<{ success: boolean; data: string }>(
       (resolve) => {
@@ -328,7 +339,9 @@ describe("useAccountDialog cookie import feedback", () => {
   })
 
   it("keeps the newer cookie import loading when the older request completes", async () => {
-    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    const { sendRuntimeMessage } = await import(
+      "~/utils/browser/runtimeMessages"
+    )
     let resolveOld!: (response: { success: boolean; data: string }) => void
     let resolveNew!: (response: { success: boolean; data: string }) => void
     vi.mocked(sendRuntimeMessage)
@@ -379,7 +392,9 @@ describe("useAccountDialog cookie import feedback", () => {
   })
 
   it("does not report a cookie import failure after the dialog closes", async () => {
-    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    const { sendRuntimeMessage } = await import(
+      "~/utils/browser/runtimeMessages"
+    )
     let rejectImport!: (error: unknown) => void
     vi.mocked(sendRuntimeMessage).mockReturnValueOnce(
       new Promise((_, reject) => {
@@ -453,7 +468,9 @@ describe("useAccountDialog cookie import feedback", () => {
 
   it("shows the empty-cookie message when no cookies are available", async () => {
     vi.mocked(toast.error).mockClear()
-    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    const { sendRuntimeMessage } = await import(
+      "~/utils/browser/runtimeMessages"
+    )
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: false,
       errorCode: COOKIE_IMPORT_FAILURE_REASONS.NoCookiesFound,
@@ -488,7 +505,9 @@ describe("useAccountDialog cookie import feedback", () => {
 
   it("sends the current incognito tab context when importing cookies manually", async () => {
     vi.mocked(toast.success).mockClear()
-    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    const { sendRuntimeMessage } = await import(
+      "~/utils/browser/runtimeMessages"
+    )
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: true,
       data: "session=incognito",
@@ -539,7 +558,9 @@ describe("useAccountDialog cookie import feedback", () => {
   })
 
   it("trims and sends the current tab cookie store when importing from a matching origin", async () => {
-    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    const { sendRuntimeMessage } = await import(
+      "~/utils/browser/runtimeMessages"
+    )
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: true,
       data: "session=container",
@@ -590,7 +611,9 @@ describe("useAccountDialog cookie import feedback", () => {
   })
 
   it("skips current-tab context when importing cookies for a different origin", async () => {
-    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    const { sendRuntimeMessage } = await import(
+      "~/utils/browser/runtimeMessages"
+    )
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: true,
       data: "session=other",
@@ -634,7 +657,9 @@ describe("useAccountDialog cookie import feedback", () => {
   })
 
   it("sends matching current-tab context without a source tab id when the tab id is unavailable", async () => {
-    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    const { sendRuntimeMessage } = await import(
+      "~/utils/browser/runtimeMessages"
+    )
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: true,
       data: "session=no-tab-id",
@@ -683,7 +708,9 @@ describe("useAccountDialog cookie import feedback", () => {
 
   it("drops stale current-tab import context when current-tab queries fail", async () => {
     vi.mocked(toast.success).mockClear()
-    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    const { sendRuntimeMessage } = await import(
+      "~/utils/browser/runtimeMessages"
+    )
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: true,
       data: "session=regular",
@@ -745,7 +772,9 @@ describe("useAccountDialog cookie import feedback", () => {
 
   it("shows a standard permission-denied error toast when cookie access is denied", async () => {
     vi.mocked(toast.error).mockClear()
-    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    const { sendRuntimeMessage } = await import(
+      "~/utils/browser/runtimeMessages"
+    )
     const onClose = vi.fn()
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: false,
@@ -790,7 +819,9 @@ describe("useAccountDialog cookie import feedback", () => {
 
   it("clears the permission warning when a later import fails for a non-permission reason", async () => {
     vi.mocked(toast.error).mockClear()
-    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    const { sendRuntimeMessage } = await import(
+      "~/utils/browser/runtimeMessages"
+    )
     vi.mocked(sendRuntimeMessage)
       .mockResolvedValueOnce({
         success: false,
@@ -837,7 +868,9 @@ describe("useAccountDialog cookie import feedback", () => {
 
   it("shows a generic import failure toast when the response has an error without an error code", async () => {
     vi.mocked(toast.error).mockClear()
-    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    const { sendRuntimeMessage } = await import(
+      "~/utils/browser/runtimeMessages"
+    )
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: false,
       error: "storage backend failed",

@@ -48,14 +48,6 @@ const {
   pushWithinOptionsPageMock: vi.fn(),
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
-  return {
-    ...actual,
-  }
-})
-
 vi.mock("~/services/siteAnnouncements/messaging", () => ({
   sendSiteAnnouncementsMessage: sendSiteAnnouncementsMessageMock,
 }))

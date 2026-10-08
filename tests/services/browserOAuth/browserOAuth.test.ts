@@ -41,9 +41,11 @@ const browserApi = vi.hoisted(() => ({
 }))
 const hasCookieReadPermissionForUrl = vi.hoisted(() => vi.fn())
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+vi.mock("~/utils/browser/tabs", () => browserApi)
+vi.mock("~/utils/browser/windows", () => browserApi)
+vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()
   return {
     ...browserApi,
     isMessageReceiverUnavailableError: actual.isMessageReceiverUnavailableError,
@@ -273,8 +275,8 @@ describe("browser OAuth context", () => {
   it("waits for an unavailable content receiver before preparing OAuth", async () => {
     vi.useFakeTimers()
     const actual = await vi.importActual<
-      typeof import("~/utils/browser/browserApi")
-    >("~/utils/browser/browserApi")
+      typeof import("~/utils/browser/runtimeMessages")
+    >("~/utils/browser/runtimeMessages")
     const sendMessage = vi
       .fn()
       .mockRejectedValueOnce(
@@ -301,8 +303,8 @@ describe("browser OAuth context", () => {
 
   it("does not replay preparation after a dispatched message loses its response", async () => {
     const actual = await vi.importActual<
-      typeof import("~/utils/browser/browserApi")
-    >("~/utils/browser/browserApi")
+      typeof import("~/utils/browser/runtimeMessages")
+    >("~/utils/browser/runtimeMessages")
     const sendMessage = vi
       .fn()
       .mockRejectedValueOnce(

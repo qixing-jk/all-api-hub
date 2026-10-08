@@ -26,17 +26,19 @@ vi.mock("~/services/apiTransport/request", () => ({
   fetchApiResponse: vi.fn(),
 }))
 
-vi.mock("~/utils/browser/browserApi", () => ({
+vi.mock("~/utils/browser/alarms", () => ({
   clearAlarm: mocks.clearAlarm,
   createAlarm: mocks.createAlarm,
-  getSessionStorageValues: mocks.getSessionStorageValues,
-  hasSessionStorageArea: mocks.hasSessionStorageArea,
   onAlarm: vi.fn(
     (listener: (alarm: { name: string }) => void | Promise<void>) => {
       mocks.alarmListener = listener
       return () => {}
     },
   ),
+}))
+vi.mock("~/utils/browser/storage", () => ({
+  getSessionStorageValues: mocks.getSessionStorageValues,
+  hasSessionStorageArea: mocks.hasSessionStorageArea,
   setSessionStorageValues: mocks.setSessionStorageValues,
 }))
 

@@ -54,14 +54,11 @@ vi.mock("~/utils/browser/tempWindowRequestSource", () => ({
   getCurrentTempWindowRequestSource: getCurrentTempWindowRequestSourceMock,
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()
 
-  return {
-    ...actual,
-    onRuntimeMessage: onRuntimeMessageMock,
-  }
+  return { ...actual, onRuntimeMessage: onRuntimeMessageMock }
 })
 
 /**

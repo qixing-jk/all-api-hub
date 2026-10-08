@@ -48,9 +48,8 @@ async function resolveWebdavAutoSyncTestMessage(request: any) {
   }
 }
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+vi.mock("~/utils/browser/alarms", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/alarms")>()
 
   return {
     ...actual,
@@ -58,8 +57,16 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
     createAlarm: mocks.createAlarm,
     getAlarm: mocks.getAlarm,
     hasAlarmsAPI: mocks.hasAlarmsAPI,
-    isMessageReceiverUnavailableError: mocks.isMessageReceiverUnavailableError,
     onAlarm: mocks.onAlarm,
+  }
+})
+vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()
+
+  return {
+    ...actual,
+    isMessageReceiverUnavailableError: mocks.isMessageReceiverUnavailableError,
     sendRuntimeMessage: mocks.sendRuntimeMessage,
   }
 })

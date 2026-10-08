@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import BalanceHistorySettings from "~/features/BasicSettings/components/tabs/BalanceHistory/BalanceHistorySettings"
 import toast from "~/lib/notify"
-import { hasAlarmsAPI } from "~/utils/browser/browserApi"
+import { hasAlarmsAPI } from "~/utils/browser/alarms"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 vi.mock("~/contexts/UserPreferencesContext", async () => {
@@ -18,13 +18,9 @@ vi.mock("~/contexts/UserPreferencesContext", async () => {
   }
 })
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
-  return {
-    ...actual,
-    hasAlarmsAPI: vi.fn(() => true),
-  }
+vi.mock("~/utils/browser/alarms", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/alarms")>()
+  return { ...actual, hasAlarmsAPI: vi.fn(() => true) }
 })
 
 vi.mock("~/lib/notify", () => {

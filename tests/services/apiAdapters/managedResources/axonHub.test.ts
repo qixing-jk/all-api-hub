@@ -100,15 +100,21 @@ vi.mock("~/services/managedSites/runtimeConfig", () => ({
   resolveManagedSiteRuntimeConfigForType: mocks.resolveRuntimeConfig,
 }))
 
-vi.mock("~/services/apiService/axonHub", () => ({
+vi.mock("~/services/apiService/axonHub/graphqlProtocol", () => ({
   AxonHubRequestError: mocks.RequestError,
+}))
+vi.mock("~/services/apiService/axonHub/authSession", () => ({
   signIn: mocks.signIn,
+}))
+vi.mock("~/services/apiService/axonHub/channels", () => ({
   listAxonHubChannelPage: mocks.listPage,
   getAxonHubChannel: mocks.getChannel,
   createAxonHubChannel: mocks.createChannel,
   updateAxonHubChannel: mocks.updateChannel,
   updateAxonHubChannelStatus: mocks.updateStatus,
   deleteAxonHubChannel: mocks.deleteChannel,
+}))
+vi.mock("~/services/apiService/axonHub/channelProjection", () => ({
   hasCompleteAxonHubAdvancedDetail: mocks.hasCompleteAdvancedDetail,
 }))
 

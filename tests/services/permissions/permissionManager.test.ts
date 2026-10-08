@@ -32,17 +32,8 @@ const {
   unsubscribeRemovedMock: vi.fn(),
 }))
 
-vi.mock("~/utils/browser/browserApi", () => ({
+vi.mock("~/utils/browser/permissions", () => ({
   containsPermissions: containsPermissionsMock,
-  getManifest: vi.fn(() => ({
-    optional_permissions: [
-      "cookies",
-      "webRequest",
-      "clipboardRead",
-      "notifications",
-      "bookmarks",
-    ],
-  })),
   onPermissionsAdded: vi.fn((callback: (permissions: any) => void) => {
     permissionsAddedCallbacks.push(callback)
     return unsubscribeAddedMock
@@ -53,6 +44,17 @@ vi.mock("~/utils/browser/browserApi", () => ({
   }),
   removePermissionsDetailed: removePermissionsDetailedMock,
   requestPermissionsDetailed: requestPermissionsDetailedMock,
+}))
+vi.mock("~/utils/browser/runtime", () => ({
+  getManifest: vi.fn(() => ({
+    optional_permissions: [
+      "cookies",
+      "webRequest",
+      "clipboardRead",
+      "notifications",
+      "bookmarks",
+    ],
+  })),
 }))
 
 describe("permissionManager", () => {

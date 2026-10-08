@@ -94,10 +94,8 @@ describe("site type import whitelist", () => {
       ),
     ).toHaveLength(1)
     expect(
-      await check("browser.tabs.query({})", "src/utils/browser/browserApi.ts"),
+      await check("browser.tabs.query({})", "src/utils/browser/tabs.ts"),
     ).toEqual([])
-    expect(
-      await check(siteImport, "src/utils/browser/browserApi.ts"),
-    ).toHaveLength(1)
+    expect(await check(siteImport, "src/utils/browser/tabs.ts")).toHaveLength(1)
   })
 })

@@ -65,13 +65,9 @@ vi.mock("~/services/accounts/accountStorage/bookmarkRepository", () => ({
   },
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
-  return {
-    ...actual,
-    createTab: mockCreateTab,
-  }
+vi.mock("~/utils/browser/tabs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/tabs")>()
+  return { ...actual, createTab: mockCreateTab }
 })
 
 vi.mock("~/utils/navigation/popup", async (importOriginal) => {

@@ -4,14 +4,11 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import AutoDetectSlowHintAlert from "~/features/AccountManagement/components/AccountDialog/AutoDetectSlowHintAlert"
 import { fireEvent, render, screen, within } from "~~/tests/test-utils/render"
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+vi.mock("~/utils/browser/runtime", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+    await importOriginal<typeof import("~/utils/browser/runtime")>()
 
-  return {
-    ...actual,
-    reloadRuntime: vi.fn(),
-  }
+  return { ...actual, reloadRuntime: vi.fn() }
 })
 
 vi.mock("~/utils/navigation/docsLinks", () => ({
@@ -48,7 +45,7 @@ describe("AutoDetectSlowHintAlert", () => {
 
   it("offers a confirmed extension reload recovery action for slow Cookie permission detection", async () => {
     const user = userEvent.setup()
-    const { reloadRuntime } = await import("~/utils/browser/browserApi")
+    const { reloadRuntime } = await import("~/utils/browser/runtime")
 
     render(<AutoDetectSlowHintAlert />)
 
@@ -87,7 +84,7 @@ describe("AutoDetectSlowHintAlert", () => {
   })
 
   it("does not reload the extension when the recovery action is cancelled", async () => {
-    const { reloadRuntime } = await import("~/utils/browser/browserApi")
+    const { reloadRuntime } = await import("~/utils/browser/runtime")
 
     render(<AutoDetectSlowHintAlert />)
 

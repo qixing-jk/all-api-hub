@@ -23,16 +23,19 @@ vi.mock("~/components/dialogs/ChannelDialog", () => ({
   }),
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+vi.mock("~/utils/browser/tabs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/tabs")>()
   return {
     ...actual,
     getActiveTabs: vi.fn(async () => []),
     onTabActivated: vi.fn(() => () => {}),
     onTabUpdated: vi.fn(() => () => {}),
-    sendRuntimeMessage: vi.fn(),
   }
+})
+vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()
+  return { ...actual, sendRuntimeMessage: vi.fn() }
 })
 
 describe("useAccountDialog manual balance", () => {
