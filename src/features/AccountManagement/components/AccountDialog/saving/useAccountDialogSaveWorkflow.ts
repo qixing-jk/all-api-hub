@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { startAccountDialogAnalyticsAction } from "~/features/AccountManagement/components/AccountDialog/analytics"
+import type { createAccountCredentialEvidence } from "~/features/AccountManagement/components/AccountDialog/form/accountCredentialEvidence"
 import {
   getAccountDialogSitePolicy,
   shouldDeferAccountSaveSuccessForAccountDialogSite,
@@ -118,10 +119,7 @@ type SaveWorkflowInput = {
   >
   checkInSelectionChangedRef: RefObject<boolean>
   checkInDiscoveryBaseSelectionRef: RefObject<CheckInMethodSelection | null>
-  loadedKimiAuthRef: RefObject<
-    | { accessToken: string; refreshToken?: string; organizationId?: string }
-    | undefined
-  >
+  credentialEvidence: ReturnType<typeof createAccountCredentialEvidence>
   onPostSaveAccountRefresh?: (accountIds: string[]) => Promise<void>
 }
 /** Own persistence, protected refresh and successful-save follow-up ordering. */
@@ -138,7 +136,7 @@ export function useAccountDialogSaveWorkflow({
   postSaveWorkflow,
   checkInSelectionChangedRef,
   checkInDiscoveryBaseSelectionRef,
-  loadedKimiAuthRef,
+  credentialEvidence,
   onPostSaveAccountRefresh,
 }: SaveWorkflowInput) {
   const { t } = useTranslation(["accountDialog", "settings", "messages"])
@@ -269,7 +267,7 @@ export function useAccountDialogSaveWorkflow({
                   ? { kimiOpenPlatformAuth: draft.kimiOpenPlatformAuth }
                   : {}),
                 selectionChanged: checkInSelectionChangedRef.current,
-                loadedKimiAuth: loadedKimiAuthRef.current,
+                loadedKimiAuth: credentialEvidence.read().loadedKimiAuth,
                 ...(checkInDiscoveryBaseSelectionRef.current
                   ? {
                       discoveryBaseSelection:

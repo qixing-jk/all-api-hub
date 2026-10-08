@@ -1,9 +1,12 @@
+import { renderHook } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { VerifyCliSupportDialog } from "~/features/Verification/cli"
+import { useCliSupportVerification } from "~/features/Verification/cli/hooks/useCliSupportVerification"
+import type { VerifyCliSupportDialogProps } from "~/features/Verification/cli/types"
 import { buildServiceCredentialRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import type { AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
@@ -15,6 +18,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import type { CliSupportResult } from "~/services/verification/cliSupportVerification"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
@@ -162,6 +166,135 @@ describe("VerifyCliSupportDialog", () => {
     mockStartProductAnalyticsAction.mockReturnValue({
       complete: mockCompleteProductAnalyticsAction,
     })
+  })
+
+  const profileFixture = {
+    id: "profile-session",
+    name: "Profile",
+    apiType: "openai-compatible" as const,
+    baseUrl: "https://example.com",
+    apiKey: "profile-secret",
+    tagIds: [],
+    notes: "",
+    createdAt: 1,
+    updatedAt: 1,
+  }
+  const supportedResult: CliSupportResult = {
+    id: "claude",
+    probeId: "tool-calling",
+    status: "pass",
+    latencyMs: 1,
+    summary: "New result",
+  }
+
+  it.each([
+    { transition: "source change", settlement: "response" },
+    { transition: "source change", settlement: "rejection" },
+    { transition: "reopen", settlement: "response" },
+    { transition: "reopen", settlement: "rejection" },
+  ])(
+    "keeps the new tool run intact after an old $settlement following $transition",
+    async ({ transition, settlement }) => {
+      const oldRequest = createDeferred<CliSupportResult>()
+      const newRequest = createDeferred<CliSupportResult>()
+      mockRunCliSupportTool
+        .mockReturnValueOnce(oldRequest.promise)
+        .mockReturnValueOnce(newRequest.promise)
+      let props: VerifyCliSupportDialogProps = {
+        isOpen: true,
+        onClose: vi.fn(),
+        profile: profileFixture,
+        initialModelId: "model",
+      }
+      const { result, rerender } = renderHook(
+        (nextProps) => useCliSupportVerification(nextProps),
+        { initialProps: props },
+      )
+      act(() => result.current.runSingleToolCheck("claude"))
+      await waitFor(() =>
+        expect(mockRunCliSupportTool).toHaveBeenCalledTimes(1),
+      )
+      if (transition === "reopen") {
+        rerender({ ...props, isOpen: false })
+      } else {
+        props = {
+          ...props,
+          profile: { ...profileFixture, id: "new-source", apiKey: "new-key" },
+        }
+      }
+      rerender(props)
+      act(() => result.current.runSingleToolCheck("claude"))
+      await waitFor(() =>
+        expect(mockRunCliSupportTool).toHaveBeenCalledTimes(2),
+      )
+      expect(
+        mockRunCliSupportTool.mock.calls[0]?.[0]?.abortSignal?.aborted,
+      ).toBe(true)
+      expect(
+        mockRunCliSupportTool.mock.calls[1]?.[0]?.abortSignal?.aborted,
+      ).toBe(false)
+      await act(async () => {
+        if (settlement === "rejection")
+          oldRequest.reject(new DOMException("Aborted", "AbortError"))
+        else oldRequest.resolve({ ...supportedResult, summary: "Old result" })
+        await oldRequest.promise.catch(() => undefined)
+      })
+      expect(
+        result.current.tools.find((tool) => tool.toolId === "claude"),
+      ).toMatchObject({ isRunning: true, result: null })
+      await act(async () => {
+        newRequest.resolve(supportedResult)
+        await newRequest.promise
+      })
+      expect(
+        result.current.tools.find((tool) => tool.toolId === "claude")?.result
+          ?.summary,
+      ).toBe("New result")
+    },
+  )
+
+  it("does not let an obsolete batch completion clear a new batch", async () => {
+    const oldRequest = createDeferred<CliSupportResult>()
+    const newRequest = createDeferred<CliSupportResult>()
+    mockRunCliSupportTool
+      .mockReturnValueOnce(oldRequest.promise)
+      .mockReturnValueOnce(newRequest.promise)
+    const props: VerifyCliSupportDialogProps = {
+      isOpen: true,
+      onClose: vi.fn(),
+      profile: profileFixture,
+      initialModelId: "model",
+    }
+    const { result, rerender } = renderHook(
+      (nextProps) => useCliSupportVerification(nextProps),
+      { initialProps: props },
+    )
+    let oldBatch!: Promise<void>
+    let newBatch!: Promise<void>
+    act(() => {
+      oldBatch = result.current.runAll()
+    })
+    await waitFor(() => expect(mockRunCliSupportTool).toHaveBeenCalledTimes(1))
+    rerender({ ...props, isOpen: false })
+    rerender(props)
+    act(() => {
+      newBatch = result.current.runAll()
+    })
+    await waitFor(() => expect(mockRunCliSupportTool).toHaveBeenCalledTimes(2))
+    await act(async () => {
+      oldRequest.resolve(supportedResult)
+      await oldBatch
+    })
+    expect(result.current.isRunning).toBe(true)
+    expect(
+      result.current.tools.find((tool) => tool.toolId === "claude")?.isRunning,
+    ).toBe(true)
+    act(() => result.current.stopRun())
+    await act(async () => {
+      newRequest.resolve(supportedResult)
+      await newBatch
+    })
+    expect(result.current.isRunning).toBe(false)
   })
 
   it("locks the selected mode during CLI verification and labels each recorded result", async () => {

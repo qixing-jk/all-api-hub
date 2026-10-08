@@ -49,10 +49,8 @@ vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
   accountQueries: { getAllAccountsOrThrow: mockGetAllAccountsOrThrow },
 }))
 vi.mock("~/services/accounts/accountStorage/accountMutations", () => ({
-  accountMutations: { updateAccount: mockUpdateAccount },
-}))
-vi.mock("~/services/accounts/accountStorage/accountCheckInState", () => ({
-  accountCheckInState: {
+  accountMutations: {
+    updateAccount: mockUpdateAccount,
     updateAccountWithCheckInDraft: mockUpdateAccountWithCheckInDraft,
     updateAccountCheckInDraft: mockUpdateAccountCheckInDraft,
   },

@@ -15,6 +15,7 @@ import {
 } from "~/features/AccountManagement/components/AccountDialog/detection/autoDetectDraft"
 import { type useAccountAutoDetection } from "~/features/AccountManagement/components/AccountDialog/detection/useAccountAutoDetection"
 import { type useAccountCurrentTab } from "~/features/AccountManagement/components/AccountDialog/detection/useAccountCurrentTab"
+import type { createAccountCredentialEvidence } from "~/features/AccountManagement/components/AccountDialog/form/accountCredentialEvidence"
 import {
   getAccountDialogSitePolicy,
   shouldAutoImportCookieAuthForAccountDialogSite,
@@ -44,14 +45,10 @@ type DetectionInput = {
     isDetected: boolean
   }
   evidence: {
-    accountCredentialScopeRef: RefObject<{
-      url: string
-      siteType: AccountSiteType
-    } | null>
+    credentialEvidence: ReturnType<typeof createAccountCredentialEvidence>
     automaticExecutionPreferenceChangedRef: RefObject<boolean>
     checkInDiscoveryBaseSelectionRef: RefObject<CheckInMethodSelection | null>
     selectedSiteTypeRef: RefObject<AccountSiteType>
-    hasAccountAccessTokenRef: RefObject<boolean>
     hasExplicitAuthTypeRef: RefObject<boolean>
   }
   form: {
@@ -106,11 +103,10 @@ export function useAccountDialogDetection({
   const { mode, url, draft, formSource, isDetected } = context
   const { siteType, checkIn, authType, cookieAuthSessionCookie } = draft
   const {
-    accountCredentialScopeRef,
+    credentialEvidence,
     automaticExecutionPreferenceChangedRef,
     checkInDiscoveryBaseSelectionRef,
     selectedSiteTypeRef,
-    hasAccountAccessTokenRef,
     hasExplicitAuthTypeRef,
   } = evidence
   const {
@@ -145,10 +141,10 @@ export function useAccountDialogDetection({
     const nextSiteType = isAccountSiteType(resultData.siteType)
       ? resultData.siteType
       : siteType
-    accountCredentialScopeRef.current = {
+    credentialEvidence.rememberScope({
       url: url.trim(),
       siteType: nextSiteType,
-    }
+    })
     const policy = getAccountDialogSitePolicy(nextSiteType)
 
     if (
@@ -208,11 +204,14 @@ export function useAccountDialogDetection({
     }
 
     if (!recoveryData) return
-    if (!hasAccountAccessTokenRef.current && recoveryData.accessToken?.trim()) {
-      accountCredentialScopeRef.current = {
+    if (
+      !credentialEvidence.read().hasAccessToken &&
+      recoveryData.accessToken?.trim()
+    ) {
+      credentialEvidence.rememberScope({
         url: url.trim(),
         siteType: recovery.recoveredSiteType ?? recovery.nextSiteType,
-      }
+      })
     }
 
     if (
@@ -240,7 +239,7 @@ export function useAccountDialogDetection({
       mode,
       isDetected,
       draft,
-      credentialScope: accountCredentialScopeRef.current,
+      credentialScope: credentialEvidence.read().scope,
       form: {
         applyDetected: applyAutoDetectedData,
         applyRecovery: applyAutoDetectRecoveryData,

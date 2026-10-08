@@ -151,6 +151,19 @@ for; changing that identity may invalidate the evidence without changing the
 user's Automatic Check-in Intent.
 _Avoid_: saved account, detected account
 
+**Account Credential Evidence**:
+The source scope of an Account Draft's credential and the original authentication
+facts loaded for editing. Observing a credential does not reassign its source
+scope; replacing or clearing it explicitly does. Loaded authentication facts
+allow a save to preserve credentials rotated after the editor opened.
+_Avoid_: saved credential, authentication session, check-in selection
+
+**CLI Verification Session**:
+Tool checks and batches admitted for one account or API Credential Profile source.
+Changing or reopening that source invalidates pending checks; older checks cannot
+publish results or clear a newer batch's running state.
+_Avoid_: CLI configuration export, API Verification Probe Session
+
 **Managed Site Batch Import Session**:
 A batch of Account Runtime Keys selected for import into one managed-site target,
 together with its preview, user edits and cumulative execution results. Retrying

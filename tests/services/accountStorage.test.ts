@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession"
-import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
+import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/editing/accountDefaults"
 import { refreshAccountData as refreshVoApiV2AccountData } from "~/services/apiService/voapiV2/accountData"
 import * as postSaveDiscovery from "~/services/checkin/autoCheckin/discovery/postSaveDiscovery"
@@ -257,7 +257,7 @@ describe("accountStorage core behaviors", () => {
         },
       })
       seedStorage([account])
-      const saved = await accountCheckInState.updateAccountWithCheckInDraft(
+      const saved = await accountMutations.updateAccountWithCheckInDraft(
         account.id,
         {
           notes: "edited note",
@@ -1324,7 +1324,7 @@ describe("accountStorage core behaviors", () => {
     seedStorage([createAccount({ id: "guarded", site_name: "Before" })])
     const observed: Array<{ id: string; siteName: string }> = []
 
-    const updated = await accountCheckInState.updateAccountWithCheckInDraft(
+    const updated = await accountMutations.updateAccountWithCheckInDraft(
       "guarded",
       { site_name: "After" },
       createCanonicalCheckIn(),
@@ -1350,7 +1350,7 @@ describe("accountStorage core behaviors", () => {
     seedStorage([createAccount({ id: "guarded", site_name: "Before" })])
 
     await expect(
-      accountCheckInState.updateAccountWithCheckInDraft(
+      accountMutations.updateAccountWithCheckInDraft(
         "guarded",
         { site_name: "After" },
         createCanonicalCheckIn(),
@@ -3926,7 +3926,7 @@ describe("accountStorage core behaviors", () => {
         },
       })
       seedStorage([account])
-      await accountCheckInState.updateAccountWithCheckInDraft(
+      await accountMutations.updateAccountWithCheckInDraft(
         account.id,
         updates,
         account.checkIn,

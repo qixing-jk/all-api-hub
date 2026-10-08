@@ -20,7 +20,6 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
-import { accountCheckInState } from "./accountCheckInState"
 import { accountMutations } from "./accountMutations"
 import { accountQueries } from "./accountQueries"
 
@@ -206,7 +205,7 @@ class AccountRefresh {
         }
       }
 
-      const didPersist = await accountCheckInState.updateAccountFromRefresh(
+      const didPersist = await accountMutations.updateAccountFromRefresh(
         id,
         updateData,
         refreshedCheckIn,
