@@ -12,7 +12,9 @@ import {
   type ApiVerificationHistorySummary,
   type ApiVerificationHistoryTarget,
 } from "~/services/verification/verificationResultHistory"
+import { createLogger } from "~/utils/core/logger"
 
+const logger = createLogger("VerificationDialogState")
 type LoadVerificationHistoryParams = {
   apiType: ApiVerificationApiType
   isCancelled?: () => boolean
@@ -98,8 +100,17 @@ export function useVerificationDialogState(
       })
       if (!nextSummary) return null
 
-      const persisted =
-        await verificationResultHistoryStorage.upsertLatestSummary(nextSummary)
+      let persisted: ApiVerificationHistorySummary
+      try {
+        persisted =
+          await verificationResultHistoryStorage.upsertLatestSummary(
+            nextSummary,
+          )
+      } catch (error) {
+        // History is optional; a storage failure must not replace live probe results.
+        logger.error("Failed to persist verification history", { error })
+        return null
+      }
       if (loadTokenRef.current !== requestToken) {
         return persisted
       }
