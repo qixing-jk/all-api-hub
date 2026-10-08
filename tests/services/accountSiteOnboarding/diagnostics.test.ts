@@ -7,7 +7,7 @@ const { log, send } = vi.hoisted(() => ({ log: vi.fn(), send: vi.fn() }))
 vi.mock("~/utils/core/logger", () => ({
   createLogger: () => ({ debug: log, info: log }),
 }))
-vi.mock("~/utils/browser/browserApi", () => ({ sendRuntimeMessage: send }))
+vi.mock("~/utils/browser/runtimeMessages", () => ({ sendRuntimeMessage: send }))
 
 describe("account detection diagnostics", () => {
   beforeEach(() => {

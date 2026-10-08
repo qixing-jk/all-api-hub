@@ -8,11 +8,11 @@ import {
   touchNewApiOwnedSession,
 } from "~/services/managedSites/newApiOwnedSession/client"
 import { NEW_API_OWNED_SESSION_ACTIONS } from "~/services/managedSites/newApiOwnedSession/contracts"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 
 const loggerWarnMock = vi.hoisted(() => vi.fn())
 
-vi.mock("~/utils/browser/browserApi", () => ({
+vi.mock("~/utils/browser/runtimeMessages", () => ({
   sendRuntimeMessage: vi.fn(),
 }))
 

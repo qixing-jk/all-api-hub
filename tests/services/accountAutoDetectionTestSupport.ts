@@ -47,7 +47,9 @@ export const accountAutoDetectionModuleMocks = {
         : accountAutoDetectionMocks.otherLoggerMock,
   }),
   browserApi: async (importOriginal: ImportOriginal) => ({
-    ...(await importOriginal<typeof import("~/utils/browser/browserApi")>()),
+    ...(await importOriginal<
+      typeof import("~/utils/browser/runtimeMessages")
+    >()),
     sendRuntimeMessage: accountAutoDetectionMocks.mockSendRuntimeMessage,
   }),
   openRouterManagementKeyActionClient: () => ({

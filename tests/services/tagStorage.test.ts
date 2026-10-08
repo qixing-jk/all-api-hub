@@ -6,7 +6,7 @@ import { API_CREDENTIAL_PROFILES_STORAGE_KEYS } from "~/services/core/storageKey
 import { tagStorage } from "~/services/tags/tagStorage"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import type { AccountStorageConfig } from "~/types"
-import * as browserApi from "~/utils/browser/browserApi"
+import * as browserApi from "~/utils/browser/runtimeMessages"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const storageData = new Map<string, any>()

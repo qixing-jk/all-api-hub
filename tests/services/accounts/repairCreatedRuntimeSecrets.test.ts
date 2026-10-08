@@ -26,7 +26,7 @@ const mocks = vi.hoisted(() => {
   }
 })
 
-vi.mock("~/utils/browser/browserApi", () => ({
+vi.mock("~/utils/browser/storage", () => ({
   getSessionStorageValues: mocks.getSessionStorageValues,
   setSessionStorageValues: mocks.setSessionStorageValues,
 }))

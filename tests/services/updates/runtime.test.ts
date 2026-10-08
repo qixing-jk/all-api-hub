@@ -13,7 +13,7 @@ vi.mock("~/services/updates/messaging", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/browser/browserApi", () => ({
+vi.mock("~/utils/browser/runtimeMessages", () => ({
   isMessageReceiverUnavailableError: (error: unknown) =>
     error instanceof Error &&
     error.message.includes("Receiving end does not exist"),

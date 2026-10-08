@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { productAnalyticsPreferences } from "~/services/productAnalytics/preferences"
 import { uninstallSurveyService } from "~/services/uninstallSurvey/uninstallSurvey"
-import { setUninstallUrl } from "~/utils/browser/browserApi"
+import { setUninstallUrl } from "~/utils/browser/runtime"
 import { isDevBuild, isTestMode } from "~/utils/core/environment"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
@@ -37,7 +37,7 @@ vi.mock("@plasmohq/storage", () => ({
   },
 }))
 
-vi.mock("~/utils/browser/browserApi", () => ({
+vi.mock("~/utils/browser/runtime", () => ({
   getExtensionVersion: vi.fn(() => "1.2.3"),
   setUninstallUrl: vi.fn(async () => true),
 }))

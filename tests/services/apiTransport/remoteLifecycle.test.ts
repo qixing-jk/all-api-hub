@@ -18,7 +18,7 @@ const mocks = vi.hoisted(() => ({
   sendRuntimeMessage: vi.fn(),
 }))
 
-vi.mock("~/utils/browser/browserApi", () => ({
+vi.mock("~/utils/browser/runtimeMessages", () => ({
   onRuntimeMessage: mocks.onRuntimeMessage,
   sendRuntimeMessage: mocks.sendRuntimeMessage,
 }))

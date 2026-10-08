@@ -25,7 +25,7 @@ vi.mock(
 )
 vi.mock("~/utils/core/logger", accountAutoDetectionModuleMocks.logger)
 vi.mock(
-  "~/utils/browser/browserApi",
+  "~/utils/browser/runtimeMessages",
   accountAutoDetectionModuleMocks.browserApi,
 )
 vi.mock(

@@ -89,7 +89,7 @@ const testExecution = {
   surface: PROTECTION_BYPASS_SURFACES.Background,
 } as const
 
-vi.mock("~/utils/browser/browserApi", () => ({
+vi.mock("~/utils/browser/runtimeMessages", () => ({
   onRuntimeMessage: mocks.onRuntimeMessageMock,
   sendRuntimeMessage: mocks.sendRuntimeMessageMock,
 }))
