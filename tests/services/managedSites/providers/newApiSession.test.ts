@@ -8,17 +8,20 @@ import { fetchNewApiChannelKey } from "~/services/managedSites/providers/newApiC
 import {
   clearNewApiManagedSessionState,
   ensureNewApiManagedSession,
+  getNewApiChannelKeyReadContext,
   hasNewApiAuthenticatedBrowserSession,
-  hasNewApiLoginAssistCredentials,
   isNewApiVerifiedSessionActive,
+  submitNewApiLoginTwoFactorCode,
+  submitNewApiSecureVerificationCode,
+} from "~/services/managedSites/providers/newApiSession"
+import {
+  hasNewApiLoginAssistCredentials,
   NEW_API_CHANNEL_KEY_ERROR_KINDS,
   NEW_API_MANAGED_SESSION_STATUSES,
   NEW_API_SECURITY_PROOF_SCOPES,
   NEW_API_VERIFIED_SESSION_WINDOW_MS,
-  submitNewApiLoginTwoFactorCode,
-  submitNewApiSecureVerificationCode,
   type NewApiChannelKeyRequirementError,
-} from "~/services/managedSites/providers/newApiSession"
+} from "~/services/managedSites/providers/newApiSessionContracts"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { server } from "~~/tests/msw/server"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
@@ -141,6 +144,19 @@ const createDashboardAuthBundle = (
 })
 
 describe("newApiSession", () => {
+  it.each(["需要验证码", "需要安全验证"])(
+    "classifies a message-only Chinese verification requirement: %s",
+    (message) => {
+      const failure = getNewApiChannelKeyReadContext(
+        BASE_CONFIG.baseUrl,
+      ).resolveFailure(new Error(message), "")
+      expect(failure).toMatchObject({
+        name: "NewApiChannelKeyRequirementError",
+        kind: NEW_API_CHANNEL_KEY_ERROR_KINDS.SECURE_VERIFICATION_REQUIRED,
+      })
+    },
+  )
+
   it.each([
     {},
     [null],

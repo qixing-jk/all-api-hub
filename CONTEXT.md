@@ -43,6 +43,24 @@ belongs to one saved account. Scope does not imply support for upstream read
 acknowledgement.
 _Avoid_: site type, announcement format
 
+**Announcement Workspace**:
+The user-facing scope of announcement records, source status, read-state filters,
+and check/read commands. Search narrows the displayed list; it does not redefine
+which accounts a manual check touches.
+_Avoid_: announcement cache, polling task
+
+**Announcement Identity Ledger**:
+Durable first-seen, last-seen, and read facts for an announcement identity. These
+facts survive eviction of the cached announcement content, so rediscovery does
+not make a known announcement new again.
+_Avoid_: announcement content cache
+
+**Check-in Status Workspace**:
+The accepted check-in status snapshot together with the saved-account evidence
+and display facts needed to interpret it. Latest-result acceptance and pending
+load completion are separate facts; execution commands do not own their rules.
+_Avoid_: check-in run, scheduler
+
 **Provider Model Catalog**:
 A model catalog whose membership and facts apply to an upstream provider as a whole rather than to one saved account.
 _Avoid_: account-available models, account model catalog

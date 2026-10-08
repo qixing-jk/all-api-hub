@@ -25,6 +25,7 @@ import {
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import { RESOURCE_FIELD_TYPES } from "~/services/apiAdapters/contracts/resourceNative"
 import type { NativeResourceMutationResult } from "~/services/apiAdapters/nativeResources/factory"
+import { createOpenRouterKeyPagination } from "~/services/apiAdapters/openrouter/keyPagination"
 import {
   createOpenRouterKey,
   deleteOpenRouterKey,
@@ -59,9 +60,6 @@ import {
 
 const PAGE_SIZE = 100
 const MAX_PAGES = 100
-const MAX_ACTIVE_CURSORS = 32
-const MAX_KEY_RESULTS = PAGE_SIZE * MAX_PAGES
-const CURSOR_PREFIX = "or-key:"
 const CURRENT_CREATOR_OPTION_VALUE = "creator-current"
 
 // OpenRouter's Management API uses a Management Key for `/keys` and workspace
@@ -75,21 +73,7 @@ type OpenRouterKeyResourceConfig = {
   readonly managementKey: string
   readonly defaultWorkspace: OpenRouterWorkspace
   readonly workspaceNames: Map<string, string>
-  readonly issuedCursors: Map<string, OpenRouterKeyCursorState>
-  cursorSequence: number
-}
-
-type OpenRouterKeyCursorChain = {
-  readonly scopeKey: string
-  readonly seenHashes: Set<string>
-}
-
-type OpenRouterKeyCursorState = {
-  /** Next provider offset, advanced by each batch's actual returned length. */
-  readonly offset: number
-  readonly bufferedKeys: readonly OpenRouterKeyInfo[]
-  readonly providerExhausted: boolean
-  readonly chain: OpenRouterKeyCursorChain
+  readonly pagination: ReturnType<typeof createOpenRouterKeyPagination>
 }
 
 type OpenRouterKeyDetail = {
@@ -140,50 +124,6 @@ const isNonBlankString = (value: unknown): value is string =>
 
 const getWorkspaceDisplayName = (workspace: OpenRouterWorkspace): string =>
   workspace.name.trim() || workspace.slug
-
-const toCursor = (sequence: number, offset: number): string =>
-  `${CURSOR_PREFIX}${sequence}:${offset}`
-
-const openCursorChain = (
-  config: OpenRouterKeyResourceConfig,
-  scopeKey: string,
-  cursor: string | undefined,
-): OpenRouterKeyCursorState => {
-  if (!cursor) {
-    return {
-      offset: 0,
-      bufferedKeys: [],
-      providerExhausted: false,
-      chain: { scopeKey, seenHashes: new Set() },
-    }
-  }
-  if (!/^or-key:\d+:\d+$/.test(cursor)) throw new Error("invalid_cursor")
-  const issued = config.issuedCursors.get(cursor)
-  if (!issued) throw new Error("repeated_cursor")
-  if (issued.chain.scopeKey !== scopeKey) throw new Error("invalid_cursor")
-  config.issuedCursors.delete(cursor)
-  if (issued.offset >= MAX_KEY_RESULTS && issued.bufferedKeys.length === 0) {
-    throw new Error("key_pagination_limit")
-  }
-  return issued
-}
-
-const issueCursor = (
-  config: OpenRouterKeyResourceConfig,
-  state: OpenRouterKeyCursorState,
-): string => {
-  if (!Number.isInteger(state.offset) || state.offset <= 0) {
-    throw new Error("non_progress_offset")
-  }
-  const cursor = toCursor(++config.cursorSequence, state.offset)
-  config.issuedCursors.set(cursor, state)
-  while (config.issuedCursors.size > MAX_ACTIVE_CURSORS) {
-    const oldest = config.issuedCursors.keys().next().value
-    if (oldest === undefined) break
-    config.issuedCursors.delete(oldest)
-  }
-  return cursor
-}
 
 const workspaceScope = (
   workspace: OpenRouterWorkspace,
@@ -947,8 +887,7 @@ export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
         // `/workspaces/default`; never guess a replacement from workspace inventory.
         defaultWorkspace,
         workspaceNames: new Map(),
-        issuedCursors: new Map(),
-        cursorSequence: 0,
+        pagination: createOpenRouterKeyPagination(),
       }
       config.workspaceNames.set(
         config.defaultWorkspace.id,
@@ -970,74 +909,28 @@ export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
       query,
       options,
     ): Promise<AccountKeyResourcePage<OpenRouterKeyDetail>> => {
-      const requestedLimit = query?.limit ?? PAGE_SIZE
-      if (
-        !Number.isInteger(requestedLimit) ||
-        requestedLimit <= 0 ||
-        requestedLimit > PAGE_SIZE
+      const page = await config.pagination.list(
+        {
+          scopeKey: scope.scopeKey,
+          limit: query?.limit,
+          cursor: query?.cursor,
+        },
+        (offset) =>
+          read(
+            config,
+            () =>
+              fetchOpenRouterKeys(requestWithOptions(config, options), {
+                workspaceId: scope.scopeKey,
+                includeDisabled: true,
+                offset,
+              }),
+            [scope.scopeKey],
+          ),
       )
-        throw new Error("invalid_limit")
-      const cursorState = openCursorChain(config, scope.scopeKey, query?.cursor)
-      const availableKeys = [...cursorState.bufferedKeys]
-      let nextProviderOffset = cursorState.offset
-      let providerExhausted = cursorState.providerExhausted
-      let providerPages = 0
-      // `/keys` exposes `offset` without a usable provider page size or total.
-      // Drain by actual batch length before applying the capability's local page.
-      while (!providerExhausted) {
-        if (
-          providerPages >= MAX_PAGES ||
-          nextProviderOffset >= MAX_KEY_RESULTS
-        ) {
-          throw new Error("key_pagination_limit")
-        }
-        const providerPage = await read(
-          config,
-          () =>
-            fetchOpenRouterKeys(requestWithOptions(config, options), {
-              workspaceId: scope.scopeKey,
-              includeDisabled: true,
-              offset: nextProviderOffset,
-            }),
-          [scope.scopeKey],
-        )
-        if (providerPage.length === 0) {
-          providerExhausted = true
-          break
-        }
-        if (providerPage.length > MAX_KEY_RESULTS - nextProviderOffset) {
-          throw new Error("key_pagination_limit")
-        }
-        const pageHashes = new Set<string>()
-        for (const key of providerPage) {
-          assertKeyScope(key, scope)
-          if (
-            pageHashes.has(key.hash) ||
-            cursorState.chain.seenHashes.has(key.hash)
-          ) {
-            throw new Error("duplicate_hash")
-          }
-          pageHashes.add(key.hash)
-        }
-        for (const hash of pageHashes) cursorState.chain.seenHashes.add(hash)
-        availableKeys.push(...providerPage)
-        nextProviderOffset += providerPage.length
-        providerPages += 1
-        if (availableKeys.length > requestedLimit) break
+      return {
+        items: page.keys.map((key) => toDetail(config, key, scope)),
+        ...(page.nextCursor ? { nextCursor: page.nextCursor } : {}),
       }
-      const itemKeys = availableKeys.slice(0, requestedLimit)
-      const bufferedKeys = availableKeys.slice(itemKeys.length)
-      const items = itemKeys.map((key) => toDetail(config, key, scope))
-      const nextCursor =
-        bufferedKeys.length > 0 && items.length > 0
-          ? issueCursor(config, {
-              offset: nextProviderOffset,
-              bufferedKeys,
-              providerExhausted,
-              chain: cursorState.chain,
-            })
-          : undefined
-      return { items, ...(nextCursor ? { nextCursor } : {}) }
     },
     get: (config, scope, hash, options) =>
       read(

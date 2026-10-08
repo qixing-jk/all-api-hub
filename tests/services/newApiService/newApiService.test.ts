@@ -928,7 +928,9 @@ describe("newApiService", () => {
       const {
         NEW_API_CHANNEL_KEY_ERROR_KINDS,
         NewApiChannelKeyRequirementError,
-      } = await import("~/services/managedSites/providers/newApiSession")
+      } = await import(
+        "~/services/managedSites/providers/newApiSessionContracts"
+      )
       const config = {
         baseUrl: "https://new-api.example.com",
         adminToken: "admin-token",

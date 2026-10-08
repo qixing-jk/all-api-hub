@@ -26,7 +26,7 @@ vi.mock("~/services/protectionBypass/client", () => ({
   withProtectionBypassUserCommand: withProtectionBypassUserCommandMock,
 }))
 
-vi.mock("~/services/managedSites/providers/newApiSession", () => ({
+vi.mock("~/services/managedSites/providers/newApiSessionContracts", () => ({
   NewApiChannelKeyRequirementError: class NewApiChannelKeyRequirementError extends Error {
     constructor(
       public kind: string,
@@ -92,7 +92,7 @@ describe("loadNewApiChannelKeyWithVerification", () => {
 
   it("opens verification from the requirement result returned by the provider layer", async () => {
     const { NewApiChannelKeyRequirementError } = await import(
-      "~/services/managedSites/providers/newApiSession"
+      "~/services/managedSites/providers/newApiSessionContracts"
     )
     fetchNewApiChannelKeyMock.mockRejectedValue(
       new NewApiChannelKeyRequirementError("login-required", {
@@ -165,7 +165,7 @@ describe("loadNewApiChannelKeyWithVerification", () => {
 
   it("creates fresh verification intent when delayed onVerified work resumes", async () => {
     const { NewApiChannelKeyRequirementError } = await import(
-      "~/services/managedSites/providers/newApiSession"
+      "~/services/managedSites/providers/newApiSessionContracts"
     )
     fetchNewApiChannelKeyMock
       .mockRejectedValueOnce(

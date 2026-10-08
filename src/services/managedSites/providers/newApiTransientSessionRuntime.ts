@@ -1,30 +1,12 @@
 import type { NewApiDashboardAuthBundle } from "~/services/apiService/newApi/dashboardAuth"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
-import type { NewApiVerificationMethods } from "./newApiSession"
-
-export type NewApiDashboardRefreshResult = "refreshed" | "unavailable"
-
-export type EnsureNewApiLoginResult =
-  | {
-      status: "logged-in"
-      methods: NewApiVerificationMethods
-    }
-  | {
-      status: "login-2fa-required"
-    }
-  | {
-      status: "credentials-missing"
-    }
-  | {
-      status: "passkey-manual-required"
-      methods: NewApiVerificationMethods
-    }
-
-export interface VerifyNewApiSessionResult {
-  methods: NewApiVerificationMethods
-  verifiedUntil?: number
-}
+import type {
+  EnsureNewApiLoginResult,
+  NewApiDashboardRefreshResult,
+  NewApiVerificationMethods,
+  VerifyNewApiSessionResult,
+} from "./newApiSessionContracts"
 
 interface NewApiSessionState {
   hasLoggedInSession: boolean

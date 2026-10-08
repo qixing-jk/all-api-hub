@@ -10,7 +10,7 @@ import {
 } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import toast from "~/lib/notify"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
-import { NEW_API_MANAGED_SESSION_STATUSES } from "~/services/managedSites/providers/newApiSession"
+import { NEW_API_MANAGED_SESSION_STATUSES } from "~/services/managedSites/providers/newApiSessionContracts"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"

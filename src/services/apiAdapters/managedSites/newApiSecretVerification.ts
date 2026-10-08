@@ -1,11 +1,9 @@
 import { SITE_TYPES } from "~/constants/siteType"
-import { MANAGED_RESOURCE_SECRET_VERIFICATION_KINDS } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type { ManagedResourceSecretVerificationCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
+import { MANAGED_RESOURCE_SECRET_VERIFICATION_KINDS } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import { getNewApiLoginAssistConfig } from "~/services/managedSites/providers/newApiChannelSecrets"
-import {
-  hasNewApiAuthenticatedBrowserSession,
-  hasNewApiLoginAssistCredentials,
-} from "~/services/managedSites/providers/newApiSession"
+import { hasNewApiAuthenticatedBrowserSession } from "~/services/managedSites/providers/newApiSession"
+import { hasNewApiLoginAssistCredentials } from "~/services/managedSites/providers/newApiSessionContracts"
 import { hasNewApiTotpSecret } from "~/services/managedSites/providers/newApiTotp"
 import type { NewApiConfig } from "~/types/newApiConfig"
 

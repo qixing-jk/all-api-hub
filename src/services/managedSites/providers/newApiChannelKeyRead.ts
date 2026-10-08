@@ -2,17 +2,17 @@ import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request
 import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import {
+  NEW_API_CHANNEL_KEY_ERROR_KINDS,
+  NewApiChannelKeyRequirementError,
+} from "~/services/managedSites/providers/newApiSessionContracts"
+import {
   NEW_API_SESSION_READ_ACTIONS,
   type ProtectionBypassExecution,
 } from "~/services/protectionBypass/contracts"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { t } from "~/utils/i18n/core"
 
-import {
-  getNewApiChannelKeyReadContext,
-  NEW_API_CHANNEL_KEY_ERROR_KINDS,
-  NewApiChannelKeyRequirementError,
-} from "./newApiSession"
+import { getNewApiChannelKeyReadContext } from "./newApiSession"
 
 const throwIfNewApiSessionReadAborted = (signal?: AbortSignal) => {
   if (signal?.aborted) {

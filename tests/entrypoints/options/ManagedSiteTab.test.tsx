@@ -9,7 +9,7 @@ import {
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
   KEY_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/KeyManagement/constants"
-import { NEW_API_MANAGED_SESSION_STATUSES } from "~/services/managedSites/providers/newApiSession"
+import { NEW_API_MANAGED_SESSION_STATUSES } from "~/services/managedSites/providers/newApiSessionContracts"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import {
   act,

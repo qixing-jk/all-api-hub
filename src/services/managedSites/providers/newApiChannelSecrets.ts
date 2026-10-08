@@ -9,7 +9,7 @@ import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
-import { NewApiChannelKeyRequirementError } from "~/services/managedSites/providers/newApiSession"
+import { NewApiChannelKeyRequirementError } from "~/services/managedSites/providers/newApiSessionContracts"
 import type { NewApiConfig } from "~/types/newApiConfig"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
