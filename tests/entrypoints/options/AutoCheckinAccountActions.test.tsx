@@ -137,7 +137,9 @@ vi.mock("~/services/checkin/autoCheckin/messaging", async (importOriginal) => {
       type: string,
       data?: Record<string, unknown>,
     ) => {
-      const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+      const { sendRuntimeMessage } = await import(
+        "~/utils/browser/runtimeMessages"
+      )
       return sendRuntimeMessage(type, data)
     },
   }
@@ -178,7 +180,7 @@ describe("AutoCheckin account actions", () => {
   })
 
   it("shows an empty setup when the scheduler has no persisted status", async () => {
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
     vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
       async (message: any) => {
         if (message === AutoCheckinMessageTypes.GetStatus)
@@ -202,7 +204,7 @@ describe("AutoCheckin account actions", () => {
     "reports a %s manual refresh without discarding existing results",
     async (failure) => {
       const user = userEvent.setup()
-      const browserApi = await import("~/utils/browser/browserApi")
+      const browserApi = await import("~/utils/browser/runtimeMessages")
       let statusCalls = 0
       vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
         async (message: any) => {
@@ -249,7 +251,7 @@ describe("AutoCheckin account actions", () => {
 
   it("reports a rejected manual run and restores its action", async () => {
     const user = userEvent.setup()
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
     vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
       async (message: any) => {
         if (message === AutoCheckinMessageTypes.GetStatus)
@@ -296,7 +298,7 @@ describe("AutoCheckin account actions", () => {
     "tracks retry outcome %j and restores the retry action",
     async (response, expectedResult) => {
       const user = userEvent.setup()
-      const browserApi = await import("~/utils/browser/browserApi")
+      const browserApi = await import("~/utils/browser/runtimeMessages")
       vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
         async (message: any) => {
           if (message === AutoCheckinMessageTypes.GetStatus)
@@ -336,7 +338,7 @@ describe("AutoCheckin account actions", () => {
 
   it("reports a thrown retry request and restores its action", async () => {
     const user = userEvent.setup()
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
     vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
       async (message: any) => {
         if (message === AutoCheckinMessageTypes.GetStatus)
@@ -381,7 +383,7 @@ describe("AutoCheckin account actions", () => {
     "does not repeatedly fail account-info reads for a %s account when another account is retried",
     async (unavailableAccount) => {
       const user = userEvent.setup()
-      const browserApi = await import("~/utils/browser/browserApi")
+      const browserApi = await import("~/utils/browser/runtimeMessages")
       const rejectedReads = vi.fn()
       const accountReads = vi.fn()
       let statusCalls = 0
@@ -457,7 +459,7 @@ describe("AutoCheckin account actions", () => {
 
   it("opens auto check-in settings from the title shortcut", async () => {
     const user = userEvent.setup()
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
 
     vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
       async (message: any) => {
@@ -490,7 +492,7 @@ describe("AutoCheckin account actions", () => {
       TEMP_WINDOW_REQUEST_SOURCES.Popup,
     )
     const user = userEvent.setup()
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
 
     let statusCalls = 0
     const sendRuntimeMessageSpy = vi
@@ -585,7 +587,7 @@ describe("AutoCheckin account actions", () => {
   })
 
   it("shows a retry failure toast and restores the retry button after the request settles", async () => {
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
 
     let resolveRetry:
       | ((value: { success: boolean; error?: string }) => void)
@@ -684,7 +686,7 @@ describe("AutoCheckin account actions", () => {
     "shows an error toast when retry settles with %s result",
     async (resultStatus) => {
       const user = userEvent.setup()
-      const browserApi = await import("~/utils/browser/browserApi")
+      const browserApi = await import("~/utils/browser/runtimeMessages")
 
       vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
         async (message: unknown) => {
@@ -739,7 +741,7 @@ describe("AutoCheckin account actions", () => {
 
   it("keeps verification successful when the follow-up account refresh fails", async () => {
     const user = userEvent.setup()
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
     const sendRuntimeMessageSpy = vi
       .spyOn(browserApi, "sendRuntimeMessage")
       .mockImplementation(async (message: any) => {
@@ -799,7 +801,7 @@ describe("AutoCheckin account actions", () => {
 
   it("reports a verification response failure with its actionable detail", async () => {
     const user = userEvent.setup()
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
     vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
       async (message: any) => {
         if (message === AutoCheckinMessageTypes.GetStatus) {
@@ -839,7 +841,7 @@ describe("AutoCheckin account actions", () => {
 
   it("falls back to localized verification copy when response detail is blank", async () => {
     const user = userEvent.setup()
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
     vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
       async (message: any) => {
         if (message === AutoCheckinMessageTypes.GetStatus) {
@@ -881,7 +883,7 @@ describe("AutoCheckin account actions", () => {
 
   it("reports a thrown verification request with the localized fallback", async () => {
     const user = userEvent.setup()
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
     vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
       async (message: any) => {
         if (message === AutoCheckinMessageTypes.GetStatus) {
@@ -924,7 +926,7 @@ describe("AutoCheckin account actions", () => {
 
   it("shows an error when manual sign-in page opening fails and restores the button state", async () => {
     const user = userEvent.setup()
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
     const navigation = await import("~/utils/navigation/sitePages")
 
     let rejectOpen: ((reason?: unknown) => void) | undefined
@@ -1011,7 +1013,7 @@ describe("AutoCheckin account actions", () => {
 
   it("opens the provider site from the row action", async () => {
     const user = userEvent.setup()
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
     const navigation = await import("~/utils/navigation/sitePages")
     const openResolvers = new Map<string, () => void>()
 
@@ -1197,7 +1199,7 @@ describe("AutoCheckin account actions", () => {
 
   it("shows an error when site opening fails and restores the button state", async () => {
     const user = userEvent.setup()
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
     const navigation = await import("~/utils/navigation/sitePages")
 
     let rejectOpen: ((reason?: unknown) => void) | undefined
@@ -1292,7 +1294,7 @@ describe("AutoCheckin account actions", () => {
 
   it("disables a failed account, converts it to a disabled skip, and reloads the page data", async () => {
     const user = userEvent.setup()
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
 
     let statusCalls = 0
     setAccountDisabledMock.mockResolvedValueOnce(true)
@@ -1387,7 +1389,7 @@ describe("AutoCheckin account actions", () => {
 
   it("shows a generic error when disabling a failed account does not persist", async () => {
     const user = userEvent.setup()
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
 
     setAccountDisabledMock.mockResolvedValueOnce(false)
 
@@ -1457,7 +1459,7 @@ describe("AutoCheckin account actions", () => {
 
   it("deletes a failed account from the row action and reloads status after confirmation", async () => {
     const user = userEvent.setup()
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
 
     let statusCalls = 0
     deleteAccountMock.mockResolvedValueOnce(true)
@@ -1555,7 +1557,7 @@ describe("AutoCheckin account actions", () => {
 
   it("keeps the delete dialog open when the failed-account deletion request fails", async () => {
     const user = userEvent.setup()
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
 
     let statusCalls = 0
     deleteAccountMock.mockRejectedValueOnce(new Error("delete blocked"))
@@ -1632,7 +1634,7 @@ describe("AutoCheckin account actions", () => {
 
   it("reports a bulk-open failure when every failed account lookup fails", async () => {
     const user = userEvent.setup()
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
     const navigation = await import("~/utils/navigation/sitePages")
     const sendRuntimeMessageSpy = vi
       .spyOn(browserApi, "sendRuntimeMessage")
@@ -1696,7 +1698,7 @@ describe("AutoCheckin account actions", () => {
 
   it("filters already-checked results independently and combines multi-select with translated message search", async () => {
     const user = userEvent.setup()
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
 
     vi.spyOn(browserApi, "sendRuntimeMessage").mockResolvedValue({
       success: true,
@@ -1798,7 +1800,7 @@ describe("AutoCheckin account actions", () => {
   })
 
   it("defaults to the visible account-readiness view when no execution history exists", async () => {
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
 
     vi.spyOn(browserApi, "sendRuntimeMessage").mockResolvedValue({
       success: true,
@@ -1833,7 +1835,7 @@ describe("AutoCheckin account actions", () => {
 
   it("keeps account readiness discoverable beside existing execution results", async () => {
     const user = userEvent.setup()
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
 
     vi.spyOn(browserApi, "sendRuntimeMessage").mockResolvedValue({
       success: true,
@@ -1902,7 +1904,7 @@ describe("AutoCheckin account actions", () => {
 
   it("keeps existing results rendered while a manual refresh is loading", async () => {
     const user = userEvent.setup()
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
     const { siteTypeObservations } = await import(
       "~/services/siteDetection/siteTypeObservations"
     )

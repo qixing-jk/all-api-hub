@@ -26,7 +26,7 @@ import {
   ACCOUNT_KEY_REPAIR_JOB_STATES,
   ACCOUNT_KEY_REPAIR_PROGRESS_SCHEMA_VERSION,
 } from "~/types/accountKeyAutoProvisioning"
-import { onRuntimeMessage } from "~/utils/browser/browserApi"
+import { onRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
@@ -47,8 +47,8 @@ vi.mock("~/services/productAnalytics/actions", () => ({
   trackProductAnalyticsActionStarted: vi.fn(),
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/utils/browser/browserApi")>()),
+vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()),
   onRuntimeMessage: vi.fn(() => vi.fn()),
 }))
 

@@ -7,8 +7,8 @@ import {
 } from "~/services/browsingContext/tempPage/checkinFeedbackScan"
 import { tempWindowBackgroundRuntime } from "~/services/browsingContext/tempPage/runtime"
 import { FEEDBACK_SCAN_SESSION_TIMEOUT_MS } from "~/services/checkin/feedback/scanTypes"
-import { sendTabMessageWithRetry } from "~/utils/browser/browserApi"
 import { removeTempWindowCookieRule } from "~/utils/browser/dnrCookieInjector"
+import { sendTabMessageWithRetry } from "~/utils/browser/runtimeMessages"
 
 afterEach(() => vi.useRealTimers())
 
@@ -19,7 +19,7 @@ vi.mock("~/services/browsingContext/tempPage/runtime", () => ({
     prepareFetchOptions: vi.fn(),
   },
 }))
-vi.mock("~/utils/browser/browserApi", () => ({
+vi.mock("~/utils/browser/runtimeMessages", () => ({
   sendTabMessageWithRetry: vi.fn(),
 }))
 vi.mock("~/utils/browser/dnrCookieInjector", () => ({

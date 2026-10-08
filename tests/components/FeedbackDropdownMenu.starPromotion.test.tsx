@@ -26,8 +26,8 @@ vi.mock("~/utils/browser", () => ({
   isExtensionSidePanel: () => false,
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/utils/browser/browserApi")>()),
+vi.mock("~/utils/browser/tabs", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/tabs")>()),
   createTab: mocks.createTab,
 }))
 

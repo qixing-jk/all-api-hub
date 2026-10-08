@@ -63,7 +63,7 @@ vi.mock("~/services/managedSites/providers/newApiSession", async () => {
   }
 })
 
-vi.mock("~/utils/browser/browserApi", () => ({
+vi.mock("~/utils/browser/tabs", () => ({
   createTab: (...args: unknown[]) => createTabMock(...args),
 }))
 

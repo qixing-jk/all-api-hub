@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { TokenEmptyState } from "~/features/KeyManagement/components/TokenEmptyState"
 import { TokenList } from "~/features/KeyManagement/components/TokenList"
-import { createTab } from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
 import { nativeRowFromSeed } from "~~/tests/test-utils/keyManagement/TokenListHarness"
 import { render, screen } from "~~/tests/test-utils/render"
 import {
@@ -17,8 +17,8 @@ vi.mock("~/contexts/FeatureGuidanceContext", () => ({
   }),
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/utils/browser/browserApi")>()),
+vi.mock("~/utils/browser/tabs", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/tabs")>()),
   createTab: vi.fn().mockResolvedValue(undefined),
 }))
 

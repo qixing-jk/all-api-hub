@@ -97,7 +97,9 @@ vi.mock("~/services/checkin/autoCheckin/messaging", async (importOriginal) => {
       type: string,
       data?: Record<string, unknown>,
     ) => {
-      const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+      const { sendRuntimeMessage } = await import(
+        "~/utils/browser/runtimeMessages"
+      )
       return sendRuntimeMessage(type, data)
     },
   }
@@ -174,7 +176,7 @@ describe("AutoCheckinUiOpenPretrigger", () => {
           pretriggerDailyOnUiOpen: true,
         },
       })
-      const browserApi = await import("~/utils/browser/browserApi")
+      const browserApi = await import("~/utils/browser/runtimeMessages")
       vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
         async (message: any, data?: any) => {
           if (message !== AutoCheckinMessageTypes.PretriggerDailyOnUiOpen)
@@ -240,7 +242,7 @@ describe("AutoCheckinUiOpenPretrigger", () => {
       },
     })
 
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
     const sendRuntimeMessageSpy = vi.spyOn(browserApi, "sendRuntimeMessage")
 
     sendRuntimeMessageSpy.mockImplementation(
@@ -355,7 +357,7 @@ describe("AutoCheckinUiOpenPretrigger", () => {
       },
     })
 
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
     vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
       async (message: any, data?: any) => {
         if (message === AutoCheckinMessageTypes.PretriggerDailyOnUiOpen) {
@@ -417,7 +419,7 @@ describe("AutoCheckinUiOpenPretrigger", () => {
       },
     })
 
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
     vi.spyOn(browserApi, "sendRuntimeMessage").mockResolvedValue({
       success: false,
       started: false,
@@ -449,7 +451,7 @@ describe("AutoCheckinUiOpenPretrigger", () => {
       },
     })
 
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
     vi.spyOn(browserApi, "sendRuntimeMessage").mockResolvedValue({
       success: true,
       started: true,
@@ -486,7 +488,7 @@ describe("AutoCheckinUiOpenPretrigger", () => {
       },
     })
 
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
     vi.spyOn(browserApi, "sendRuntimeMessage").mockResolvedValue({
       success: true,
       started: true,

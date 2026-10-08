@@ -29,7 +29,7 @@ vi.mock("~/utils/navigation/optionsPage", async (importActual) => ({
   ...(await importActual()),
   pushWithinOptionsPage: mocks.pushWithinOptionsPage,
 }))
-vi.mock("~/utils/browser/browserApi", async (importActual) => ({
+vi.mock("~/utils/browser/tabs", async (importActual) => ({
   ...(await importActual()),
   createTab: mocks.createTab,
 }))

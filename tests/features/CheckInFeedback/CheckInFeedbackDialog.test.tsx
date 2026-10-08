@@ -26,7 +26,7 @@ import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { collectFeedbackCluesInBrowser } from "~/services/checkin/feedback/scanClient"
 import type { CheckinAccountResult } from "~/types/autoCheckin"
 import type { CheckInConfig } from "~/types/checkIn"
-import { createTab } from "~/utils/browser/browserApi"
+import { createTab } from "~/utils/browser/tabs"
 import { openAccountManagerWithSearch } from "~/utils/navigation"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
@@ -45,8 +45,8 @@ vi.mock("~/services/checkin/feedback/scanClient", async (original) => ({
   >()),
   collectFeedbackCluesInBrowser: vi.fn(),
 }))
-vi.mock("~/utils/browser/browserApi", async (original) => ({
-  ...(await original<typeof import("~/utils/browser/browserApi")>()),
+vi.mock("~/utils/browser/tabs", async (original) => ({
+  ...(await original<typeof import("~/utils/browser/tabs")>()),
   createTab: vi.fn(),
 }))
 

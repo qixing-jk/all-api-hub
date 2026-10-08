@@ -43,8 +43,8 @@ vi.mock("~/services/permissions/permissionManager", async (original) => ({
   >()),
   ensurePermissionsDetailed: requestPermissions,
 }))
-vi.mock("~/utils/browser/browserApi", async (original) => ({
-  ...(await original<typeof import("~/utils/browser/browserApi")>()),
+vi.mock("~/utils/browser/bookmarks", async (original) => ({
+  ...(await original<typeof import("~/utils/browser/bookmarks")>()),
   getBrowserBookmarkTree: readBookmarks,
 }))
 vi.mock("~/features/AccountManagement/bookmarkImport/importAccounts", () => ({

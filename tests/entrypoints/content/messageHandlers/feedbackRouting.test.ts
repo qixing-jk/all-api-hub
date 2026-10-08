@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
   completeNewApi: vi.fn(),
   clearNewApi: vi.fn(),
 }))
-vi.mock("~/utils/browser/browserApi", () => ({
+vi.mock("~/utils/browser/runtimeMessages", () => ({
   onRuntimeMessage: mocks.register,
 }))
 vi.mock("~/entrypoints/content/messageHandlers/handlers", () => ({}))

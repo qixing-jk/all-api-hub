@@ -41,7 +41,7 @@ import {
   WebAiApiCheckMessageTypes,
 } from "~/services/verification/webAiApiCheck/messaging"
 import type { ApiCheckRunProbeResponse } from "~/services/verification/webAiApiCheck/types"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 

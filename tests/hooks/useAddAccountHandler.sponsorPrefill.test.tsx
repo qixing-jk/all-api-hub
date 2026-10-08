@@ -62,8 +62,8 @@ vi.mock(
   }),
 )
 
-vi.mock("~/utils/browser/browserApi", async (original) => ({
-  ...(await original<typeof import("~/utils/browser/browserApi")>()),
+vi.mock("~/utils/browser/sidePanel", async (original) => ({
+  ...(await original<typeof import("~/utils/browser/sidePanel")>()),
   getSidePanelSupport: () => ({ supported: runtime.supported }),
 }))
 

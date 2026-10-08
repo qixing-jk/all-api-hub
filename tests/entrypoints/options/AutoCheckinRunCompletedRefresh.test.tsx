@@ -52,7 +52,7 @@ afterEach(() => {
 
 describe("AutoCheckin status view refresh", () => {
   it("reloads status when autoCheckin:runCompleted is received", async () => {
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
 
     const sendAutoCheckinMessageSpy = vi
       .mocked(sendAutoCheckinMessage)
@@ -99,7 +99,7 @@ describe("AutoCheckin status view refresh", () => {
 
   it("keeps overlapping loads locked, clears manual attribution independently, and ignores stale status", async () => {
     const user = userEvent.setup()
-    const browserApi = await import("~/utils/browser/browserApi")
+    const browserApi = await import("~/utils/browser/runtimeMessages")
     const manualStatus =
       createDeferred<ReturnType<typeof createStatusResponse>>()
     const staleRuntimeStatus =
