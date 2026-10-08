@@ -10,7 +10,7 @@ import {
   Input,
   Modal,
 } from "~/components/ui"
-import { useClearModelRedirectMappingsSession } from "~/features/BasicSettings/hooks/useClearModelRedirectMappingsSession"
+import { useClearModelRedirectMappingsSession } from "~/features/BasicSettings/components/tabs/ManagedSite/modelSync/useClearModelRedirectMappingsSession"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 

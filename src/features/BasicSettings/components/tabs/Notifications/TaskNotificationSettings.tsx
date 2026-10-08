@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next"
 import { Card, CardItem, CardList, Switch } from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
-import { useTaskNotificationSettingsViewModel } from "~/features/BasicSettings/hooks/useTaskNotificationSettingsViewModel"
+import { useTaskNotificationSettingsViewModel } from "~/features/BasicSettings/components/tabs/Notifications/useTaskNotificationSettingsViewModel"
 import {
   TASK_NOTIFICATION_TASKS,
   type TaskNotificationTask,

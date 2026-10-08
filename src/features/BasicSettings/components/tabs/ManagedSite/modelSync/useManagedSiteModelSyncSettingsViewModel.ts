@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { useChannelUpstreamModelOptions } from "~/features/BasicSettings/components/tabs/ManagedSite/modelSync/useChannelUpstreamModelOptions"
 import { useChannelFilterEditor } from "~/features/ManagedSiteModelSync/filters/useChannelFilterEditor"
 import { useDeferredPreferenceField } from "~/hooks/preferences/useDeferredPreferenceField"
 import toast from "~/lib/notify"
@@ -26,8 +27,6 @@ import { createLogger } from "~/utils/core/logger"
 import { getPreferenceWriteFailureMessage } from "~/utils/feedback/preferenceFeedback"
 import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
-
-import { useChannelUpstreamModelOptions } from "./useChannelUpstreamModelOptions"
 
 type UserManagedSiteModelSyncConfig = NonNullable<
   typeof DEFAULT_PREFERENCES.managedSiteModelSync

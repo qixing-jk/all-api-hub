@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next"
 
 import { FormField, Input, Link } from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
-import type { TaskNotificationSettingsViewModel } from "~/features/BasicSettings/hooks/useTaskNotificationSettingsViewModel"
+import type { TaskNotificationSettingsViewModel } from "~/features/BasicSettings/components/tabs/Notifications/useTaskNotificationSettingsViewModel"
 import { blurInputOnEnter } from "~/hooks/preferences/useDeferredPreferenceField"
 import { TASK_NOTIFICATION_CHANNELS } from "~/types/taskNotifications"
 import {

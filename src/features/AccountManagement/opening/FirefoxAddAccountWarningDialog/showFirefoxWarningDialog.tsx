@@ -1,9 +1,8 @@
 import { createRoot } from "react-dom/client"
 
+import FirefoxAddAccountWarningDialog from "~/features/AccountManagement/opening/FirefoxAddAccountWarningDialog"
 import { getSidePanelSupport } from "~/utils/browser/sidePanel"
 import { openSidePanelPage } from "~/utils/navigation/sidepanel"
-
-import FirefoxAddAccountWarningDialog from "./index"
 
 /**
  * Shows a Firefox-specific warning dialog that warns users about

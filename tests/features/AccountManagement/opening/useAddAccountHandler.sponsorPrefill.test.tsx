@@ -23,7 +23,7 @@ vi.mock("~/features/AccountManagement/dialogs/useDialogStateContext", () => ({
 }))
 
 vi.mock(
-  "~/entrypoints/popup/components/FirefoxAddAccountWarningDialog/showFirefoxWarningDialog",
+  "~/features/AccountManagement/opening/FirefoxAddAccountWarningDialog/showFirefoxWarningDialog",
   () => ({
     showFirefoxWarningDialog: showFirefoxWarningDialogMock,
   }),

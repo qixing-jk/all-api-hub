@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next"
 
 import { Badge, Button } from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
-import type { TaskNotificationSettingsViewModel } from "~/features/BasicSettings/hooks/useTaskNotificationSettingsViewModel"
+import type { TaskNotificationSettingsViewModel } from "~/features/BasicSettings/components/tabs/Notifications/useTaskNotificationSettingsViewModel"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { TASK_NOTIFICATION_CHANNELS } from "~/types/taskNotifications"
 

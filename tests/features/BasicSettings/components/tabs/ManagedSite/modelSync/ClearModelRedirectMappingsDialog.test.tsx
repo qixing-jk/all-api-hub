@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { ClearModelRedirectMappingsDialog } from "~/features/BasicSettings/components/dialogs/ClearModelRedirectMappingsDialog"
+import { ClearModelRedirectMappingsDialog } from "~/features/BasicSettings/components/tabs/ManagedSite/modelSync/ClearModelRedirectMappingsDialog"
 import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
 import type { ManagedModelMappingPreview } from "~/types/managedResourceModels"
 import { createDeferred } from "~~/tests/test-utils/deferred"
