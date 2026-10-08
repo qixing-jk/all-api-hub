@@ -2144,9 +2144,6 @@ describe("VerifyApiCredentialProfileDialog", () => {
     ).not.toBeInTheDocument()
     expect(loggerErrorMock).toHaveBeenCalledWith(
       "Failed to persist verification history",
-      {
-        error: expect.any(Error),
-      },
     )
   })
 })

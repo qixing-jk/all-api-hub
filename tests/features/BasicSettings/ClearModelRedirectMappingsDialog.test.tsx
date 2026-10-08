@@ -67,6 +67,16 @@ async function confirmSelection() {
 }
 
 describe("ClearModelRedirectMappingsDialog", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    list.mockResolvedValue({
+      success: true,
+      channels: [alpha, beta],
+      errors: [],
+    })
+    clear.mockResolvedValue(cleared)
+  })
+
   it.each(["rejection", "failure"])(
     "blocks clearing when preview loading reports %s",
     async (kind) => {
@@ -135,16 +145,6 @@ describe("ClearModelRedirectMappingsDialog", () => {
       await waitFor(() => expect(onClose).toHaveBeenCalledOnce())
     },
   )
-
-  beforeEach(() => {
-    vi.clearAllMocks()
-    list.mockResolvedValue({
-      success: true,
-      channels: [alpha, beta],
-      errors: [],
-    })
-    clear.mockResolvedValue(cleared)
-  })
 
   it("keeps selection across search and distinguishes equal resource ids from different sites", async () => {
     const onClose = vi.fn()
