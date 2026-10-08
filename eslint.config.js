@@ -98,10 +98,6 @@ const newApiAdapterLegacyApiServiceImportPattern = {
 const dynamicImportAllowlist = [
   // Development-only discovery fixtures stay outside production detection and UI loading.
   {
-    file: "src/services/checkin/autoCheckin/accountDiscovery.ts",
-    imports: ["./devDiscoveryFixtures"],
-  },
-  {
     file: "src/services/checkin/autoCheckin/discovery/accountDiscovery.ts",
     imports: ["~/services/checkin/autoCheckin/discovery/devDiscoveryFixtures"],
   },
@@ -173,10 +169,6 @@ const dynamicImportAllowlist = [
   {
     file: "src/services/accountLogin/index.ts",
     imports: ["~/services/apiAdapters/registry"],
-  },
-  {
-    file: "src/services/checkin/autoCheckin/refresh.ts",
-    imports: ["~/services/checkin/autoCheckin/providers"],
   },
   {
     file: "src/services/checkin/autoCheckin/scheduling/refresh.ts",
