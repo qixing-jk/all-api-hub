@@ -10,9 +10,9 @@ import type {
   ManagedChannelsLabels,
   ManagedChannelsPresentationState,
 } from "~/features/ManagedSiteChannels/presentation/contracts"
+import { ManagedSiteChannelsView } from "~/features/ManagedSiteChannels/presentation/ManagedSiteChannelsView"
 import { compareManagedSiteChannelStatusValues } from "~/features/ManagedSiteChannels/presentation/useManagedSiteChannelsTable"
 import { MANAGED_SITE_CHANNELS_TEST_IDS } from "~/features/ManagedSiteChannels/testIds"
-import { ManagedSiteChannelsView } from "~/features/ManagedSiteChannels/presentation/ManagedSiteChannelsView"
 import { openSettingsTab } from "~/utils/navigation"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
@@ -282,7 +282,7 @@ describe("ManagedSiteChannelsView", () => {
     const source = readFileSync(
       resolve(
         process.cwd(),
-        "src/features/ManagedSiteChannels/workspace/ManagedSiteChannelsView.tsx",
+        "src/features/ManagedSiteChannels/presentation/ManagedSiteChannelsView.tsx",
       ),
       "utf8",
     )
