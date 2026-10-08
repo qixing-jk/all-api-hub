@@ -1,6 +1,6 @@
 import { expect, it, vi } from "vitest"
 
-import { DailyTriggerWorkflow } from "~/services/checkin/autoCheckin/dailyTriggerWorkflow"
+import { DailyTriggerWorkflow } from "~/services/checkin/autoCheckin/scheduling/dailyTriggerWorkflow"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { automaticExecution } from "~~/tests/services/protectionBypass/fixtures"

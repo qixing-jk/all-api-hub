@@ -103,10 +103,7 @@ const dynamicImportAllowlist = [
   },
   {
     file: "src/features/AutoCheckin/hooks/useAutoCheckinStatusWorkspace.ts",
-    imports: [
-      "~/services/checkin/autoCheckin/devDiscoveryFixtures",
-      "~/services/checkin/autoCheckin/discovery/devDiscoveryFixtures",
-    ],
+    imports: ["~/services/checkin/autoCheckin/discovery/devDiscoveryFixtures"],
   },
   // UI code splitting: lazy pages, sections, dialogs, and locale data.
   {
@@ -220,20 +217,6 @@ function restrictedImports(...patterns) {
 // Concrete site identities belong to these explicit owners. Shared business
 // code should consume metadata/capabilities; type imports stay unrestricted.
 const siteTypeImportOwners = [
-  // Provider owners before the following directory-move PR relocates them.
-  "src/features/BasicSettings/components/tabs/ManagedSite/GptLoadSettings.tsx",
-  "src/features/BasicSettings/components/tabs/ManagedSite/DoneHubSettings.tsx",
-  "src/features/BasicSettings/components/tabs/ManagedSite/ClaudeCodeHubSettings.tsx",
-  "src/features/BasicSettings/components/tabs/ManagedSite/CliProxyApiSettings.tsx",
-  "src/features/BasicSettings/components/tabs/ManagedSite/AxonHubSettings.tsx",
-  "src/features/BasicSettings/components/tabs/ManagedSite/CliProxyApi.search.ts",
-  "src/features/BasicSettings/components/tabs/ManagedSite/ManagedSite*.search.ts",
-  "src/features/BasicSettings/components/tabs/ManagedSite/NewApiSettings.tsx",
-  "src/features/BasicSettings/components/tabs/ManagedSite/OctopusSettings.tsx",
-  "src/features/BasicSettings/components/tabs/ManagedSite/OmniRouteSettings.tsx",
-  "src/features/BasicSettings/components/tabs/ManagedSite/Sub2ApiSettings.tsx",
-  "src/features/BasicSettings/components/tabs/ManagedSite/VeloeraSettings.tsx",
-  "src/features/BasicSettings/components/tabs/ManagedSite/ModelRedirectSettings.tsx",
   "src/services/accountSiteDefinitions/**", // Site metadata and identifiers.
   "src/services/apiAdapters/**", // Capability registration and provider protocols.
   "src/services/apiService/**", // Provider transports and legacy dispatch.
