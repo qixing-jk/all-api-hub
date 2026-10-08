@@ -1,5 +1,5 @@
 import { QUOTA_PER_USD } from "~/constants/money"
-import { getDefaultAccountKeyName } from "~/services/accounts/accountKeyNames"
+import { getDefaultAccountKeyName } from "~/services/accounts/keys/accountKeyNames"
 import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/definition"
 import type { AccountKeyCreationIntent } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {

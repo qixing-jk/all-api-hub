@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_SITE_TYPES, SITE_TYPES } from "~/constants/siteType"
-import { getSiteName } from "~/services/accounts/siteName"
+import { getSiteName } from "~/services/accounts/identity/siteName"
 import { aihubmixAccountBootstrap } from "~/services/apiAdapters/aihubmix/accountBootstrap"
 import { createNewApiAccountBootstrap } from "~/services/apiAdapters/newApi/account/accountBootstrap"
 import { createNewApiAccountCompletion } from "~/services/apiAdapters/newApi/account/accountCompletion"

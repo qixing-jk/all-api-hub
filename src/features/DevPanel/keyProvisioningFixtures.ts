@@ -2,8 +2,8 @@ import {
   ACCOUNT_SITE_ADAPTER_FAMILIES,
   type AccountSiteType,
 } from "~/constants/siteType"
-import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/accountKeyNames"
-import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/keys/accountKeyNames"
+import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/definition"
 import { createAIHubMixKeyEditor } from "~/services/apiAdapters/aihubmix/keyResourceEditor"
 import {
@@ -20,8 +20,8 @@ import { createGrsaiKeyEditor } from "~/services/apiAdapters/grsai/keyResourceEd
 import { createKimiKeyEditor } from "~/services/apiAdapters/kimiOpenPlatform/accountKeyResource"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keys/keyResourceEditor"
 import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
-import { createOpenRouterKeyEditorProjection } from "~/services/apiAdapters/openrouter/keyEditorSession"
-import { OPENROUTER_KEY_FIELD_IDS } from "~/services/apiAdapters/openrouter/keyResourceFields"
+import { createOpenRouterKeyEditorProjection } from "~/services/apiAdapters/openrouter/keys/keyEditorSession"
+import { OPENROUTER_KEY_FIELD_IDS } from "~/services/apiAdapters/openrouter/keys/keyResourceFields"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { createRightCodeKeyEditor } from "~/services/apiAdapters/rightcode/keyResourceEditor"
 import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keyResourceEditor"

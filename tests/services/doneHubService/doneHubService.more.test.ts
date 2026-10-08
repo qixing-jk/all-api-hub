@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
+import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/configuration/channelDraftSource"
 import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import {
   buildDisplaySiteData,

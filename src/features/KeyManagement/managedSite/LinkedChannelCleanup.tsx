@@ -6,12 +6,12 @@ import { Storage } from "@plasmohq/storage"
 import { Alert, Button, Checkbox, Label } from "~/components/ui"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import { LINKED_CHANNEL_CLEANUP_STORAGE_KEY } from "~/services/core/storageKeys"
+import { getCurrentManagedSiteType } from "~/services/managedSites/configuration/runtimeConfig"
 import {
   getPendingLinkedChannelCleanupTasks,
   runLinkedChannelCleanup,
   type LinkedChannelCleanupTask,
 } from "~/services/managedSites/linkedChannelCleanup"
-import { getCurrentManagedSiteType } from "~/services/managedSites/runtimeConfig"
 
 /** Explicitly limits linked deletion to the currently configured managed site. */
 export function LinkedChannelCleanupOption({

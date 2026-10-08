@@ -5,11 +5,11 @@ import {
   type ResourceFailure,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { type Sub2ApiNativeConfig } from "~/services/apiAdapters/managedResources/sub2api/nativeContracts"
+import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/configuration/runtimeConfig"
 import {
   SUB2API_STEP_UP_ADMIN_KEY_FORBIDDEN_CODE,
   Sub2ApiAdminApiError,
 } from "~/services/managedSites/providers/sub2api"
-import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { normalizeManagedUpstreamResourceScopeKey } from "~/types/managedUpstreamResource"
 

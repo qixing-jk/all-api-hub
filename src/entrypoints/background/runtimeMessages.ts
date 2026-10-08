@@ -4,7 +4,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { WEB_AI_API_CHECK_TARGET_IDS } from "~/features/BasicSettings/components/tabs/WebAiApiCheck/searchTargets"
 import { setupAccountBrowserIdentityRateLimitMessaging } from "~/services/accountBrowserSession/identityRateLimit"
 import { setupAccountKeyRepairMessagingListeners } from "~/services/accounts/accountKeyAutoProvisioning"
-import { setupAutoRefreshMessagingListeners } from "~/services/accounts/autoRefreshService"
+import { setupAutoRefreshMessagingListeners } from "~/services/accounts/refresh/autoRefreshService"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { getInternalTabIds } from "~/services/browsingContext/internalTabsBackground"
 import { PAGE_CONTEXT } from "~/services/browsingContext/pageContext"
@@ -26,7 +26,7 @@ import {
   appendLogHistory,
   clearLogHistory,
 } from "~/services/logging/logHistory"
-import { setupChannelConfigMessagingListeners } from "~/services/managedSites/channelConfigHandlers"
+import { setupChannelConfigMessagingListeners } from "~/services/managedSites/configuration/channelConfigHandlers"
 import { parseNewApiOwnedSessionRequest } from "~/services/managedSites/newApiOwnedSession/contracts"
 import { setupManagedSiteModelSyncMessagingListeners } from "~/services/models/modelSync"
 import { setupTaskNotificationMessagingListeners } from "~/services/notifications/taskNotificationService"
@@ -36,8 +36,8 @@ import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { setupProductAnalyticsMessagingListeners } from "~/services/productAnalytics/runtime"
-import { trackStarPromotionAction } from "~/services/productAnalytics/starPromotion"
+import { trackStarPromotionAction } from "~/services/productAnalytics/facts/starPromotion"
+import { setupProductAnalyticsMessagingListeners } from "~/services/productAnalytics/runtime/runtime"
 import { setupProductAnnouncementMessagingListeners } from "~/services/productAnnouncements/service"
 import {
   isProtectionBypassExecution,
@@ -49,7 +49,7 @@ import { classifyAllApiHubRepoPageUrl } from "~/services/starPromotion/repoPage"
 import { starPromotionState } from "~/services/starPromotion/state"
 import { setupReleaseUpdateMessagingListeners } from "~/services/updates/releaseUpdateService"
 import { setupWebAiApiCheckMessagingListeners } from "~/services/verification/webAiApiCheck/background"
-import { setupWebdavAutoSyncMessagingListeners } from "~/services/webdav/webdavAutoSyncMessageHandlers"
+import { setupWebdavAutoSyncMessagingListeners } from "~/services/webdav/autoSync/webdavAutoSyncMessageHandlers"
 import {
   getCookieHeaderForUrlResult,
   hasCookieReadPermissionForUrl,

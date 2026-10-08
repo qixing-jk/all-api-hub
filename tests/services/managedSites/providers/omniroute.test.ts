@@ -377,7 +377,7 @@ describe("OmniRoute site registration facts", () => {
 
   it("keeps the runtime config principal stable for the repair receipt", async () => {
     const { getManagedSiteRuntimePrincipal } = await import(
-      "~/services/managedSites/runtimeConfig"
+      "~/services/managedSites/configuration/runtimeConfig"
     )
     expect(
       getManagedSiteRuntimePrincipal({

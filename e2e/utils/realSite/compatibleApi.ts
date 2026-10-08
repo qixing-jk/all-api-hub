@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test"
 
-import { generateNewApiTotpCode } from "~/services/managedSites/providers/newApiTotp"
+import { generateNewApiTotpCode } from "~/services/managedSites/providers/newApi/newApiTotp"
 
 import {
   createLocatorFactory,

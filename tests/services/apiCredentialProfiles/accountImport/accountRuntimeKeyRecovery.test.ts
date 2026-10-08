@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   ACCOUNT_RUNTIME_KEY_SOURCES,
   type AccountRuntimeKeyLocator,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   ASSOCIATED_PROFILE_SECRET_RESOLUTION_STATUSES,
   resolveAssociatedProfileSecret,

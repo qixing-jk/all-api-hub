@@ -17,7 +17,7 @@ import {
 } from "~/services/importExport/backupContracts"
 import { importV2Backup } from "~/services/importExport/canonicalImport"
 import { importV1Backup } from "~/services/importExport/legacyImport"
-import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
+import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/configuration/legacyChannelConfigMigration"
 
 /**
  * Import a backup object into local storage in a version-aware way.

@@ -28,8 +28,8 @@ import {
 import {
   PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS,
   trackOptionalPermissionRequestResult,
-} from "~/services/productAnalytics/permissions"
-import { trackStarPromotionAction } from "~/services/productAnalytics/starPromotion"
+} from "~/services/productAnalytics/facts/permissions"
+import { trackStarPromotionAction } from "~/services/productAnalytics/facts/starPromotion"
 import { starPromotionState } from "~/services/starPromotion/state"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/feedback/operationFeedback"

@@ -1,9 +1,9 @@
+import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
   buildAccountKeyResourceRuntimeKeyId,
   buildTargetScopedAccountKeyResourceId,
-} from "~/services/accounts/accountRuntimeKeys"
-import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
-import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   getInventorySecretAvailability,
   INVENTORY_SECRET_AVAILABILITIES,

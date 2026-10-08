@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { getAccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/form/sitePolicy"
-import { isValidAccount } from "~/services/accounts/accountFormValidation"
+import { isValidAccount } from "~/services/accounts/editing/accountFormValidation"
 import * as definitions from "~/services/accountSiteDefinitions/registry"
 import { AuthTypeEnum } from "~/types"
 

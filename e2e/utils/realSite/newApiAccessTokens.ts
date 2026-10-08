@@ -4,7 +4,7 @@ import {
   type APIResponse,
 } from "@playwright/test"
 
-import { generateNewApiTotpCode } from "~/services/managedSites/providers/newApiTotp"
+import { generateNewApiTotpCode } from "~/services/managedSites/providers/newApi/newApiTotp"
 import {
   extractCompatibleApiPayload,
   type CompatibleApiRealSiteConfig,

@@ -3,7 +3,7 @@ import * as React from "react"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { ensureRedemptionToastUi } from "~/entrypoints/content/shared/uiRoot"
 import toast from "~/lib/notify/content"
-import { recordShieldBypassPromptShown } from "~/services/productAnalytics/shieldBypassSummary"
+import { recordShieldBypassPromptShown } from "~/services/productAnalytics/facts/shieldBypassSummary"
 import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { createLogger } from "~/utils/core/logger"
 

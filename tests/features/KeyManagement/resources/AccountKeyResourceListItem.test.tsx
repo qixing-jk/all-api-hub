@@ -8,7 +8,7 @@ import { useAccountKeySecretDisclosure } from "~/features/KeyManagement/resource
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
 import toast from "~/lib/notify"
-import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/accountRuntimeKeys"
+import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/keys/accountRuntimeKeys"
 import { server } from "~~/tests/msw/server"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 import { createAccount } from "~~/tests/utils/keyManagementFactories"

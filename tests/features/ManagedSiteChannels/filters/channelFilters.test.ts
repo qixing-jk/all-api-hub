@@ -4,7 +4,7 @@ import {
   fetchChannelFilters,
   saveChannelFilters,
 } from "~/features/ManagedSiteChannels/filters/channelFilters"
-import { ChannelConfigMessageTypes } from "~/services/managedSites/channelConfigMessaging"
+import { ChannelConfigMessageTypes } from "~/services/managedSites/configuration/channelConfigMessaging"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import { createManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"
 
@@ -21,11 +21,11 @@ const {
 }))
 
 vi.mock(
-  "~/services/managedSites/channelConfigMessaging",
+  "~/services/managedSites/configuration/channelConfigMessaging",
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import("~/services/managedSites/channelConfigMessaging")
+        typeof import("~/services/managedSites/configuration/channelConfigMessaging")
       >()
     return {
       ...actual,
@@ -34,7 +34,7 @@ vi.mock(
   },
 )
 
-vi.mock("~/services/managedSites/channelConfigStorage", () => ({
+vi.mock("~/services/managedSites/configuration/channelConfigStorage", () => ({
   channelConfigStorage: {
     getConfig: mockGetConfig,
     upsertFilters: mockUpsertFilters,

@@ -4,15 +4,15 @@ import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSessio
 import {
   SUB2API_AUTH_PERSISTENCE_STATUSES,
   type Sub2ApiAuthSessionRequest,
-} from "~/services/apiService/sub2api/authSession"
-import { recoverSub2ApiBrowserAuth as resyncSub2ApiAuthToken } from "~/services/apiService/sub2api/browserAuth"
+} from "~/services/apiService/sub2api/auth/authSession"
+import { recoverSub2ApiBrowserAuth as resyncSub2ApiAuthToken } from "~/services/apiService/sub2api/auth/browserAuth"
 import {
   DENXIO_DAILY_CHECK_IN_BEGIN_ENDPOINT,
   DENXIO_DAILY_CHECK_IN_CLAIM_ENDPOINT,
   DENXIO_DAILY_CHECK_IN_STATUS_ENDPOINT,
   fetchDenxioDailyCheckInStatus,
   performDenxioDailyCheckIn,
-} from "~/services/apiService/sub2api/denxioCheckIn"
+} from "~/services/apiService/sub2api/checkin/denxioCheckIn"
 import {
   fetchApiResponse,
   notifyApiTransportObserver,
@@ -32,16 +32,19 @@ vi.mock("~/services/apiTransport/request", async (importOriginal) => ({
   notifyApiTransportObserver: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/sub2api/browserAuth", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/services/apiService/sub2api/browserAuth")
-    >()
-  return {
-    ...actual,
-    recoverSub2ApiBrowserAuth: vi.fn(),
-  }
-})
+vi.mock(
+  "~/services/apiService/sub2api/auth/browserAuth",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/apiService/sub2api/auth/browserAuth")
+      >()
+    return {
+      ...actual,
+      recoverSub2ApiBrowserAuth: vi.fn(),
+    }
+  },
+)
 
 const response = (
   status: number,

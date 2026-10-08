@@ -59,10 +59,13 @@ const {
   modelSyncServiceConstructorMock: vi.fn(),
 }))
 
-vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
-  ensureLegacyChannelConfigMigrationReady:
-    ensureLegacyChannelConfigMigrationReadyMock,
-}))
+vi.mock(
+  "~/services/managedSites/configuration/legacyChannelConfigMigration",
+  () => ({
+    ensureLegacyChannelConfigMigrationReady:
+      ensureLegacyChannelConfigMigrationReadyMock,
+  }),
+)
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {
@@ -97,7 +100,7 @@ vi.mock("~/services/models/modelSync/modelSyncService", () => ({
   }),
 }))
 
-vi.mock("~/services/managedSites/channelConfigStorage", () => ({
+vi.mock("~/services/managedSites/configuration/channelConfigStorage", () => ({
   channelConfigStorage: {
     getConfigsForScope: getConfigsForScopeMock,
   },

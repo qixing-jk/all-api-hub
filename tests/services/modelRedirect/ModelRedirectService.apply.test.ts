@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { doneHubManagedResourceModels } from "~/services/apiAdapters/managedResources/doneHub/operations"
 import { newApiManagedResourceModels } from "~/services/apiAdapters/managedResources/newApi/operations"
-import { hasValidManagedSiteConfig } from "~/services/managedSites/runtimeConfig"
+import { hasValidManagedSiteConfig } from "~/services/managedSites/configuration/runtimeConfig"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { applyModelMappingToChannel } from "~/services/models/modelRedirect/mappingMutation"
 import * as modelMatching from "~/services/models/modelRedirect/modelMatching"
@@ -51,12 +51,15 @@ vi.mock("~/services/apiAdapters/registry", () => ({
     getSiteTypeCapabilitiesMock(...args),
 }))
 
-vi.mock("~/services/managedSites/runtimeConfig", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("~/services/managedSites/runtimeConfig")
-  >()),
-  hasValidManagedSiteConfig: vi.fn(),
-}))
+vi.mock(
+  "~/services/managedSites/configuration/runtimeConfig",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/managedSites/configuration/runtimeConfig")
+    >()),
+    hasValidManagedSiteConfig: vi.fn(),
+  }),
+)
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {

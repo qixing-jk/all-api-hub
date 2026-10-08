@@ -14,11 +14,11 @@ import {
   type RawBackupData,
 } from "~/services/importExport/backupContracts"
 import { importFromBackupObject as importFromBackupObjectService } from "~/services/importExport/importExportService"
-import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
+import { channelConfigStorage } from "~/services/managedSites/configuration/channelConfigStorage"
 import {
   ensureLegacyChannelConfigMigrationReady,
   LegacyChannelConfigMigrationDeferredError,
-} from "~/services/managedSites/legacyChannelConfigMigration"
+} from "~/services/managedSites/configuration/legacyChannelConfigMigration"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { formatUtcDayKey } from "~/utils/core/dayKey"

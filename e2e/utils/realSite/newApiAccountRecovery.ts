@@ -1,6 +1,6 @@
 import type { Locator, Page } from "@playwright/test"
 
-import { generateNewApiTotpCode } from "~/services/managedSites/providers/newApiTotp"
+import { generateNewApiTotpCode } from "~/services/managedSites/providers/newApi/newApiTotp"
 import { expect } from "~~/e2e/fixtures/extensionTest"
 import type { ExtensionPageGuardOptions } from "~~/e2e/utils/commonUserFlows"
 import type { AccountAddDialog } from "~~/e2e/utils/realSite/accountAdd"

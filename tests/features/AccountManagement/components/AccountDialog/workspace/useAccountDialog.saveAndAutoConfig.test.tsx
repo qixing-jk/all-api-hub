@@ -7,12 +7,12 @@ import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/workspace/useAccountDialog"
 import toast from "~/lib/notify"
-import type { EnsureAccountKeyResult } from "~/services/accounts/accountKeyCreation"
 import { ACCOUNT_POST_SAVE_WORKFLOW_STEPS } from "~/services/accounts/accountPostSaveWorkflow"
+import type { EnsureAccountKeyResult } from "~/services/accounts/keys/accountKeyCreation"
 import {
   createAccountKeyResourceCreatedRuntimeSecret,
   createUnattributedAccountCreatedRuntimeSecret,
-} from "~/services/accounts/createdRuntimeSecret"
+} from "~/services/accounts/keys/createdRuntimeSecret"
 import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
@@ -115,11 +115,11 @@ vi.mock("~/components/dialogs/ChannelDialog", () => ({
   }),
 }))
 
-vi.mock("~/services/accounts/accountCreation", () => ({
+vi.mock("~/services/accounts/editing/accountCreation", () => ({
   validateAndSaveAccount: mockValidateAndSaveAccount,
 }))
 
-vi.mock("~/services/accounts/accountUpdate", () => ({
+vi.mock("~/services/accounts/editing/accountUpdate", () => ({
   validateAndUpdateAccount: mockValidateAndUpdateAccount,
 }))
 
@@ -132,12 +132,15 @@ vi.mock(
     fetchDisplayAccountRuntimeKeys: mockFetchRuntimeKeys,
   }),
 )
-vi.mock("~/services/accounts/accountKeyCreation", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("~/services/accounts/accountKeyCreation")
-  >()),
-  ensureAccountKey: mockEnsureAccountKey,
-}))
+vi.mock(
+  "~/services/accounts/keys/accountKeyCreation",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/accounts/keys/accountKeyCreation")
+    >()),
+    ensureAccountKey: mockEnsureAccountKey,
+  }),
+)
 
 function nativeEnsureResult(
   account: DisplaySiteData,

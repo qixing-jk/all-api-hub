@@ -10,12 +10,12 @@ import {
   CHECK_IN_PROVIDER_READINESS_REASONS,
   CHECK_IN_SELECTION_MODES,
 } from "~/constants/checkIn"
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { normalizeAccountSiteProfileUrlForOriginKey } from "~/services/accounts/accountSiteProfile"
+import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import {
   getSub2ApiAuthPersistenceStatus,
   SUB2API_AUTH_PERSISTENCE_STATUSES,
-} from "~/services/apiService/sub2api/authSession"
+} from "~/services/apiService/sub2api/auth/authSession"
 import { ApiError } from "~/services/apiTransport/errors"
 import {
   inspectAccountCheckIn,

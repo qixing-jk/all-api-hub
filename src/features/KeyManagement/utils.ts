@@ -5,7 +5,7 @@ import {
   isAccountRuntimeKeyLocatorEqual,
   type AccountRuntimeKey,
   type AccountRuntimeKeyLocator,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import type { AccountKeyResourceRef } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { DisplaySiteData } from "~/types"
 import { maskSecretForDisplay } from "~/utils/core/formatters"

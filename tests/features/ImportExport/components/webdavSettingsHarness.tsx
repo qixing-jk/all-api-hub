@@ -23,20 +23,23 @@ import {
   setupMockPreferencePersistence,
 } from "~~/tests/test-utils/mockPreferencePersistence"
 
-vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => {
-  class LegacyChannelConfigMigrationDeferredError extends Error {
-    constructor(readonly reason: string) {
-      super(`Legacy channel config migration deferred: ${reason}`)
+vi.mock(
+  "~/services/managedSites/configuration/legacyChannelConfigMigration",
+  () => {
+    class LegacyChannelConfigMigrationDeferredError extends Error {
+      constructor(readonly reason: string) {
+        super(`Legacy channel config migration deferred: ${reason}`)
+      }
     }
-  }
 
-  return {
-    ensureLegacyChannelConfigMigrationReady: vi
-      .fn()
-      .mockResolvedValue(undefined),
-    LegacyChannelConfigMigrationDeferredError,
-  }
-})
+    return {
+      ensureLegacyChannelConfigMigrationReady: vi
+        .fn()
+        .mockResolvedValue(undefined),
+      LegacyChannelConfigMigrationDeferredError,
+    }
+  },
+)
 
 const createStalePreferenceWriteResult = (
   expectedLastUpdated: number,
@@ -154,7 +157,7 @@ vi.mock("~/services/tags/tagStorage", () => ({
   tagStorage: mockTagStorage,
 }))
 
-vi.mock("~/services/managedSites/channelConfigStorage", () => ({
+vi.mock("~/services/managedSites/configuration/channelConfigStorage", () => ({
   channelConfigStorage: mockChannelConfigStorage,
 }))
 
@@ -162,13 +165,13 @@ vi.mock("~/services/apiCredentialProfiles/storage/profiles", () => ({
   apiCredentialProfilesStorage: mockApiCredentialProfilesStorage,
 }))
 
-vi.mock("~/services/webdav/webdavBackupEncryption", () => ({
+vi.mock("~/services/webdav/backup/webdavBackupEncryption", () => ({
   decryptWebdavBackupEnvelope: mockDecryptWebdavBackupEnvelope,
   tryParseEncryptedWebdavBackupEnvelope:
     mockTryParseEncryptedWebdavBackupEnvelope,
 }))
 
-vi.mock("~/services/webdav/webdavSelectiveSync", () => ({
+vi.mock("~/services/webdav/sync/webdavSelectiveSync", () => ({
   buildWebdavImportPayloadBySelection: mockBuildWebdavImportPayloadBySelection,
   mergeWebdavBackupPayloadBySelection: mockMergeWebdavBackupPayloadBySelection,
 }))
@@ -181,7 +184,7 @@ vi.mock("~/services/webdav/webdavService", () => ({
   uploadBackup: mockUploadBackup,
 }))
 
-vi.mock("~/services/webdav/webdavBackupValidation", () => ({
+vi.mock("~/services/webdav/backup/webdavBackupValidation", () => ({
   parseWebdavBackupJson: mockParseWebdavBackupJson,
 }))
 
@@ -192,7 +195,7 @@ vi.mock("~/services/webdav/cloudSyncService", () => ({
   uploadCloudSyncBackup: mockUploadCloudSyncBackup,
 }))
 
-vi.mock("~/services/webdav/webdavAutoSyncMessaging", () => ({
+vi.mock("~/services/webdav/autoSync/webdavAutoSyncMessaging", () => ({
   sendWebdavAutoSyncMessage: mockSendWebdavAutoSyncMessage,
 }))
 

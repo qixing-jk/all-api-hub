@@ -1,6 +1,6 @@
 import type { AccountSiteType } from "~/constants/siteType"
-import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
-import type { AccountRuntimeKeyModelAccess } from "~/services/accounts/runtimeKeyModelAccess"
+import type { CreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
+import type { AccountRuntimeKeyModelAccess } from "~/services/accounts/keys/runtimeKeyModelAccess"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
 import type { InventorySecretAvailability } from "./inventorySecret"

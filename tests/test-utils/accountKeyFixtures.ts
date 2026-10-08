@@ -1,9 +1,9 @@
 import { QUOTA_PER_USD } from "~/constants/money"
-import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
+import type { AccountKeyCreationResult } from "~/services/accounts/keys/accountKeyCreation"
 import {
   buildAccountKeyResourceRuntimeKey,
   buildAccountKeyResourceRuntimeKeyId,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   keyExpiryDisplayFact,
   keyLastUsedDisplayFacts,

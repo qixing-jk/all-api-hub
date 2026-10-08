@@ -5,7 +5,7 @@ import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
 import { SITE_TYPES } from "~/constants/siteType"
 import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"
 import { completeAutoDetectedAccount } from "~/services/accounts/autoDetectCompletion/completion"
-import { getAccountKeyProductCapabilities } from "~/services/accounts/keyProductCapabilities"
+import { getAccountKeyProductCapabilities } from "~/services/accounts/keys/keyProductCapabilities"
 import { normalizeApiYiModelPricingResponse } from "~/services/apiAdapters/newApi/pricing/apiyiModelPricing"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {

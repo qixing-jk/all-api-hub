@@ -1,4 +1,4 @@
-import { getDefaultAccountKeyName } from "~/services/accounts/accountKeyNames"
+import { getDefaultAccountKeyName } from "~/services/accounts/keys/accountKeyNames"
 import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/definition"
 import { resolveKeyCreationGroupIntent } from "~/services/apiAdapters/accountKeyResources/groupCreationIntent"
 import type { AccountKeyCreationIntent } from "~/services/apiAdapters/contracts/accountKeyResource"

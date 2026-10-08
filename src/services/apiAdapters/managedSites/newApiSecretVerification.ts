@@ -1,10 +1,10 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ManagedResourceSecretVerificationCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import { MANAGED_RESOURCE_SECRET_VERIFICATION_KINDS } from "~/services/apiAdapters/contracts/managedResourceMatching"
-import { getNewApiLoginAssistConfig } from "~/services/managedSites/providers/newApiChannelSecrets"
-import { hasNewApiAuthenticatedBrowserSession } from "~/services/managedSites/providers/newApiSession"
-import { hasNewApiLoginAssistCredentials } from "~/services/managedSites/providers/newApiSessionContracts"
-import { hasNewApiTotpSecret } from "~/services/managedSites/providers/newApiTotp"
+import { getNewApiLoginAssistConfig } from "~/services/managedSites/providers/newApi/newApiChannelSecrets"
+import { hasNewApiAuthenticatedBrowserSession } from "~/services/managedSites/providers/newApi/newApiSession"
+import { hasNewApiLoginAssistCredentials } from "~/services/managedSites/providers/newApi/newApiSessionContracts"
+import { hasNewApiTotpSecret } from "~/services/managedSites/providers/newApi/newApiTotp"
 import type { NewApiConfig } from "~/types/newApiConfig"
 
 /** New API owns session readiness; React owns interactive verification execution. */

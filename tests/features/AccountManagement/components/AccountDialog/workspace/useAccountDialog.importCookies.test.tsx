@@ -85,16 +85,19 @@ vi.mock("~/services/productAnalytics/actions", () => ({
   })),
 }))
 
-vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/services/productAnalytics/dispatch")
-    >()
-  return {
-    ...actual,
-    trackProductAnalyticsEvent: mockTrackProductAnalyticsEvent,
-  }
-})
+vi.mock(
+  "~/services/productAnalytics/runtime/dispatch",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/productAnalytics/runtime/dispatch")
+      >()
+    return {
+      ...actual,
+      trackProductAnalyticsEvent: mockTrackProductAnalyticsEvent,
+    }
+  },
+)
 
 vi.mock("~/utils/browser/tabs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/utils/browser/tabs")>()

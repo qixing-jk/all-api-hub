@@ -6,13 +6,13 @@ import { describe, expect, it, vi } from "vitest"
 import { AccountKeyProvisioningDialog } from "~/features/TokenProvisioning/components/AccountKeyProvisioningDialog"
 import common from "~/locales/en/common.json"
 import keyManagement from "~/locales/en/keyManagement.json"
-import type { AccountKeyProvisioningEntry } from "~/services/accounts/accountKeyProvisioning"
+import type { AccountKeyProvisioningEntry } from "~/services/accounts/keys/accountKeyProvisioning"
 import { RESOURCE_FIELD_TYPES } from "~/services/apiAdapters/contracts/resourceNative"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 
 const { prepare } = vi.hoisted(() => ({ prepare: vi.fn() }))
-vi.mock("~/services/accounts/accountKeyProvisioning", () => ({
+vi.mock("~/services/accounts/keys/accountKeyProvisioning", () => ({
   prepareAccountKeyProvisioning: prepare,
 }))
 const i18n = await createResourceTestI18n({ en: { common, keyManagement } })

@@ -7,7 +7,7 @@ import {
   type AccountSiteType,
 } from "~/services/accountSiteDefinitions"
 import { agentRouterAccountLogin } from "~/services/apiAdapters/newApi/account/agentRouterAccountLogin"
-import type { ManagedSiteRuntimeConfigValueForType } from "~/services/managedSites/runtimeConfig"
+import type { ManagedSiteRuntimeConfigValueForType } from "~/services/managedSites/configuration/runtimeConfig"
 
 import { aihubmixCapabilities } from "./aihubmix"
 import type {

@@ -1,5 +1,5 @@
 import type { DeeplinkExportTarget } from "~/features/CredentialExport/DeeplinkExportDialog"
-import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import type { AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import type { CredentialExportSource } from "~/services/integrations/credentialExport"
 import type { DisplaySiteData } from "~/types"
 import { maskSecretForDisplay } from "~/utils/core/formatters"

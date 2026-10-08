@@ -13,7 +13,7 @@ import type { ResourceFieldDescriptor } from "~/services/apiAdapters/contracts/a
 import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_MODES,
-} from "~/services/apiAdapters/openrouter/keyResourceFields"
+} from "~/services/apiAdapters/openrouter/keys/keyResourceFields"
 
 const fields = OPENROUTER_KEY_FIELD_IDS
 

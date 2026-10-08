@@ -25,12 +25,12 @@ import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
 import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
-import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
+import type { AccountKeyCreationResult } from "~/services/accounts/keys/accountKeyCreation"
 import {
   getDefaultAccountKeyName,
   getPreferredAccountKeyGroup,
-} from "~/services/accounts/accountKeyNames"
-import { type AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountKeyNames"
+import { type AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import { normalizeGroupNames } from "~/services/modelCatalog/groupFacts"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"

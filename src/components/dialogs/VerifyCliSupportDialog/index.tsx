@@ -23,7 +23,7 @@ import {
   SearchableSelect,
 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
-import { isSelectableAccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { isSelectableAccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   getCliSupportToolLabel,
   translateCliSupportSummary,

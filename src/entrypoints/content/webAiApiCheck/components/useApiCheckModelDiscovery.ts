@@ -11,7 +11,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
 } from "~/services/productAnalytics/contracts"
-import { buildModelListDiagnostics } from "~/services/productAnalytics/modelListDiagnostics"
+import { buildModelListDiagnostics } from "~/services/productAnalytics/diagnostics/modelListDiagnostics"
 import {
   API_TYPES,
   type ApiVerificationApiType,

@@ -12,7 +12,7 @@ const context = vi.hoisted(() => ({
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => context,
 }))
-vi.mock("~/services/webdav/webdavAutoSyncMessaging", () => ({
+vi.mock("~/services/webdav/autoSync/webdavAutoSyncMessaging", () => ({
   sendWebdavAutoSyncMessage: vi.fn().mockResolvedValue({ success: true }),
 }))
 

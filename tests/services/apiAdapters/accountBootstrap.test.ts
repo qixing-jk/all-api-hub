@@ -66,14 +66,14 @@ vi.mock(
 )
 
 vi.mock(
-  "~/services/apiService/sub2api/publicSettings",
+  "~/services/apiService/sub2api/account/publicSettings",
   async (importOriginal) => ({
     ...(await importOriginal()),
     fetchSub2ApiPublicSettings: mockSub2ApiFetchPublicSettings,
   }),
 )
 vi.mock(
-  "~/services/apiService/sub2api/accountData",
+  "~/services/apiService/sub2api/account/accountData",
   async (importOriginal) => ({
     ...(await importOriginal()),
     fetchSupportCheckIn: mockSub2ApiFetchSupportCheckIn,

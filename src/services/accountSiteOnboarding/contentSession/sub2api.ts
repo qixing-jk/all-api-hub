@@ -1,5 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
-import { SUB2API_AUTH_STORAGE_KEYS } from "~/services/apiService/sub2api/browserSession"
+import { SUB2API_AUTH_STORAGE_KEYS } from "~/services/apiService/sub2api/auth/browserSession"
 import { parseSub2ApiUserIdentity } from "~/services/apiService/sub2api/parsing"
 
 import type { ContentSessionExtractor } from "../contracts"

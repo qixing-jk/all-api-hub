@@ -8,7 +8,7 @@ import {
   defineResourceEditorFieldPolicy,
   type ResourceFieldPresentation,
 } from "~/features/ResourceEditor/model/resourceFieldPolicy"
-import { getDefaultAccountKeyName } from "~/services/accounts/accountKeyNames"
+import { getDefaultAccountKeyName } from "~/services/accounts/keys/accountKeyNames"
 import type { ResourceFieldDescriptor } from "~/services/apiAdapters/contracts/resourceNative"
 
 import type { AccountKeyResourceEditorPresentation as EditorPresentation } from "./accountKeyResourceEditorPresentation"

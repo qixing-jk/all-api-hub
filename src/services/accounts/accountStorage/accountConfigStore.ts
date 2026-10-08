@@ -4,7 +4,7 @@ import {
   canonicalizeAccountStorageConfig,
   createDefaultAccountStorageConfig,
   normalizeAccountStorageConfigForWrite,
-} from "~/services/accounts/accountDefaults"
+} from "~/services/accounts/editing/accountDefaults"
 import type { AccountWriteGuard } from "~/services/core/accountWriteGuard"
 import {
   ACCOUNT_STORAGE_KEYS,

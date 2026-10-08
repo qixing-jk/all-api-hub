@@ -14,11 +14,11 @@ import {
   getCreatedAccountRuntimeKey,
   getCreatedAccountRuntimeKeyId,
   type AccountKeyCreationResult,
-} from "~/services/accounts/accountKeyCreation"
+} from "~/services/accounts/keys/accountKeyCreation"
 import {
   appendOrReplaceAccountRuntimeKey,
   getAccountRuntimeKeyExportId,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import { fetchDisplayAccountRuntimeKeys } from "~/services/accounts/utils/apiServiceRequest"
 import type { DisplaySiteData, SiteAccount } from "~/types"
 

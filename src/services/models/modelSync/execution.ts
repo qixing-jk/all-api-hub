@@ -5,17 +5,18 @@ import type {
 } from "~/services/apiAdapters/contracts/managedResourceModelSync"
 import { type ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/legacyChannelConfigMigration"
+import { channelConfigStorage } from "~/services/managedSites/configuration/channelConfigStorage"
+import { ensureLegacyChannelConfigMigrationReady } from "~/services/managedSites/configuration/legacyChannelConfigMigration"
+import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/configuration/runtimeConfig"
+import {
+  getManagedSiteRuntimeConfigFingerprint,
+  resolveCurrentManagedSiteRuntimeConfig,
+} from "~/services/managedSites/configuration/runtimeConfig"
 import {
   assertManagedResourceRefForSite,
   getManagedResourceRefKey,
   toManagedUpstreamResourceRef,
 } from "~/services/managedSites/managedResourceIdentity"
-import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
-import {
-  getManagedSiteRuntimeConfigFingerprint,
-  resolveCurrentManagedSiteRuntimeConfig,
-} from "~/services/managedSites/runtimeConfig"
 import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteContext,
@@ -47,7 +48,6 @@ import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
-import { channelConfigStorage } from "../../managedSites/channelConfigStorage"
 import { sanitizeChannelFiltersForStorage } from "../../managedSites/channelModelFilterRules"
 import { userPreferences } from "../../preferences/userPreferences"
 import { normalizeChannelProcessingTimeout } from "./channelProcessingTimeout"

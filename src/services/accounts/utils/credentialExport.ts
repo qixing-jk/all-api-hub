@@ -1,5 +1,5 @@
-import { type AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import { resolveAccountSiteAddresses } from "~/services/accounts/accountSiteProfile/addresses"
+import { type AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   formatOptionalSkPrefixSiteTokenAuthKey,
   hasUsableApiTokenKey,

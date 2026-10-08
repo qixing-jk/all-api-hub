@@ -1,7 +1,7 @@
 import { resolveDeploymentApiOrigin } from "~/constants/deploymentApiOrigins"
 import { SITE_TYPES } from "~/constants/siteType"
 import { readIdentityJwtExpiry } from "~/services/accountBrowserSession/localIdentityState"
-import { readSub2ApiBrowserToken } from "~/services/apiService/sub2api/browserSession"
+import { readSub2ApiBrowserToken } from "~/services/apiService/sub2api/auth/browserSession"
 import { SUB2API_AUTH_ME_ENDPOINT } from "~/services/apiService/sub2api/type"
 import { isRecord } from "~/utils/core/object"
 

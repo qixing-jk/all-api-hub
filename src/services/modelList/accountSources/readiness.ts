@@ -4,7 +4,7 @@ import {
   type AccountSiteModelListDisplayCapabilitySource,
   type AccountSiteModelListStatusScope,
 } from "~/services/accounts/accountSiteProfile"
-import { canListAccountRuntimeKeys } from "~/services/accounts/keyProductCapabilities"
+import { canListAccountRuntimeKeys } from "~/services/accounts/keys/keyProductCapabilities"
 import {
   getInventorySecretAvailability,
   INVENTORY_SECRET_AVAILABILITIES,

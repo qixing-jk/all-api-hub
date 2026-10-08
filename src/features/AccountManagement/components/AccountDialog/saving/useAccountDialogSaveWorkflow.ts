@@ -15,15 +15,15 @@ import { type AccountDialogDraft } from "~/features/AccountManagement/components
 import { type useAccountPostSaveWorkflow } from "~/features/AccountManagement/components/AccountDialog/postSave/useAccountPostSaveWorkflow"
 import { type useAccountDuplicateConfirmation } from "~/features/AccountManagement/components/AccountDialog/saving/useAccountDuplicateConfirmation"
 import toast from "~/lib/notify"
-import { validateAndSaveAccount } from "~/services/accounts/accountCreation"
 import { ACCOUNT_SAVE_FEEDBACK_LEVELS } from "~/services/accounts/accountPersistence/constants"
 import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
-import { validateAndUpdateAccount } from "~/services/accounts/accountUpdate"
+import { validateAndSaveAccount } from "~/services/accounts/editing/accountCreation"
+import { validateAndUpdateAccount } from "~/services/accounts/editing/accountUpdate"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
-import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnosticsError"
+import { buildActionFailureDiagnostics } from "~/services/productAnalytics/diagnostics/diagnosticsError"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
 import {
   PROTECTION_BYPASS_USER_COMMANDS,

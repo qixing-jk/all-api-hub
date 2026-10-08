@@ -1,6 +1,6 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import type { AccountSiteType } from "~/constants/siteType"
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import { getAccountBrowserIdentityCapability } from "~/services/accountSiteOnboarding/registry"
 import type {
   AccountBrowserIdentityCapability,

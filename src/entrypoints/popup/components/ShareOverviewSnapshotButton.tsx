@@ -9,7 +9,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
 import toast from "~/lib/notify"
-import { isAccountTodayMetricComplete } from "~/services/accounts/accountTodayStats"
+import { isAccountTodayMetricComplete } from "~/services/accounts/metrics/accountTodayStats"
 import { resolveProductAnalyticsActionContext } from "~/services/productAnalytics/actionConfig"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {

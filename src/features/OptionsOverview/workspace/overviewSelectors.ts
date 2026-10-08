@@ -11,7 +11,7 @@ import {
   getGatewayGuidanceImportableAccounts,
 } from "~/features/UnifiedApiGuidance"
 import type { FeatureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
-import { hasValidManagedSiteConfig } from "~/services/managedSites/runtimeConfig"
+import { hasValidManagedSiteConfig } from "~/services/managedSites/configuration/runtimeConfig"
 import type { UserPreferences } from "~/services/preferences/preferencesSchema"
 import type { SiteTypeMismatchMap } from "~/services/siteDetection/siteTypeObservations"
 import {

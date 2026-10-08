@@ -4,15 +4,15 @@ import { type useUserPreferencesContext } from "~/contexts/UserPreferencesContex
 import { type useManagedSiteKeyStatuses } from "~/features/KeyManagement/managedSite/useManagedSiteKeyStatuses"
 import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
 import { type useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
-import { type AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { type AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import { MANAGED_RESOURCE_SECRET_VERIFICATION_KINDS } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
-import { getRecoverableManagedSiteChannelCandidate } from "~/services/managedSites/channelMatch"
+import { getRecoverableManagedSiteChannelCandidate } from "~/services/managedSites/matching/channelMatch"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
   type ManagedSiteTokenChannelStatus,
-} from "~/services/managedSites/tokenChannelStatus"
+} from "~/services/managedSites/matching/tokenChannelStatus"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
 import {
   PROTECTION_BYPASS_SURFACES,

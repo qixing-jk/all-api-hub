@@ -13,7 +13,7 @@ import {
 import {
   recordShieldBypassTempWindowFetchResult,
   recordShieldBypassTempWindowTurnstileFetchResult,
-} from "~/services/productAnalytics/shieldBypassSummary"
+} from "~/services/productAnalytics/facts/shieldBypassSummary"
 import {
   type AuthorizedTempContextOutcome,
   type PROTECTION_BYPASS_DECISION_RESULTS,

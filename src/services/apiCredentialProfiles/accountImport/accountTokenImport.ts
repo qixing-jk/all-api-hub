@@ -1,5 +1,5 @@
-import type { AccountRuntimeKeyLocator } from "~/services/accounts/accountRuntimeKeys"
 import { resolveAccountSiteAddresses } from "~/services/accounts/accountSiteProfile/addresses"
+import type { AccountRuntimeKeyLocator } from "~/services/accounts/keys/accountRuntimeKeys"
 import { buildApiCredentialProfileName } from "~/services/apiCredentialProfiles/accountImport/accountTokenProfileName"
 import {
   apiCredentialProfileLinks,

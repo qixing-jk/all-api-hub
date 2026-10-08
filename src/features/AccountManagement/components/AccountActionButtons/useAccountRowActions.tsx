@@ -11,11 +11,11 @@ import { useCheckInRedetection } from "~/features/CheckIn/useCheckInRedetection"
 import { useCheckInFeedback } from "~/features/CheckInFeedback/useCheckInFeedback"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
 import toast from "~/lib/notify"
-import { isAccountTodayMetricComplete } from "~/services/accounts/accountTodayStats"
 import {
   canResolveAccountRuntimeKeySecret,
   supportsRecoverableAccountRuntimeKeySecrets,
-} from "~/services/accounts/keyProductCapabilities"
+} from "~/services/accounts/keys/keyProductCapabilities"
+import { isAccountTodayMetricComplete } from "~/services/accounts/metrics/accountTodayStats"
 import {
   fetchDisplayAccountRuntimeKeys,
   resolveDisplayAccountRuntimeKeySecret,
@@ -24,7 +24,7 @@ import {
   getStaticAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
-import { hasValidManagedSiteConfig } from "~/services/managedSites/runtimeConfig"
+import { hasValidManagedSiteConfig } from "~/services/managedSites/configuration/runtimeConfig"
 import {
   getManagedSiteType,
   supportsManagedSiteBaseUrlChannelLookup,

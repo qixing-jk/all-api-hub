@@ -2,7 +2,7 @@ import type {
   ManagedSiteChannelKeyMatchReasonValue,
   ManagedSiteChannelMatchInspection,
   ManagedSiteChannelModelsMatchReasonValue,
-} from "~/services/managedSites/channelMatch"
+} from "~/services/managedSites/matching/channelMatch"
 
 export interface ManagedSiteChannelAssessmentSignalChannel {
   name: string

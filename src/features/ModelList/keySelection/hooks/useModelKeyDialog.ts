@@ -15,18 +15,18 @@ import {
   getCreatedAccountRuntimeKeyId,
   prepareDefaultAccountKeyCreation,
   type AccountKeyCreationResult,
-} from "~/services/accounts/accountKeyCreation"
-import { getDefaultAccountKeyName } from "~/services/accounts/accountKeyNames"
+} from "~/services/accounts/keys/accountKeyCreation"
+import { getDefaultAccountKeyName } from "~/services/accounts/keys/accountKeyNames"
 import {
   appendOrReplaceAccountRuntimeKey,
   isAccountRuntimeKeyCompatibleWithModel,
   type AccountRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
-import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+} from "~/services/accounts/keys/accountRuntimeKeys"
+import type { CreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import {
   canCreateAccountKeyResources,
   canListAccountRuntimeKeys,
-} from "~/services/accounts/keyProductCapabilities"
+} from "~/services/accounts/keys/keyProductCapabilities"
 import {
   fetchDisplayAccountRuntimeKeys,
   resolveDisplayAccountRuntimeKeySecret,

@@ -1,7 +1,7 @@
 import {
   AccountUpdateUserTimestampMode,
   applySiteAccountUpdates,
-} from "~/services/accounts/accountDefaults"
+} from "~/services/accounts/editing/accountDefaults"
 import { resolveKimiOpenPlatformDeployment } from "~/services/kimiOpenPlatform/deployments"
 import type { KimiOpenPlatformAuthConfig, SiteAccount } from "~/types"
 

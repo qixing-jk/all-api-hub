@@ -76,7 +76,7 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/webdav/webdavAutoSyncMessaging", () => ({
+vi.mock("~/services/webdav/autoSync/webdavAutoSyncMessaging", () => ({
   sendWebdavAutoSyncMessage: mockSendWebdavAutoSyncMessage,
 }))
 

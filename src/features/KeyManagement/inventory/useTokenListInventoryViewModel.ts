@@ -18,7 +18,7 @@ import {
   buildAccountKeyResourceRuntimeKeyFromFacts,
   getAccountRuntimeKeyExportId,
   type AccountRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
 import { ACCOUNT_KEY_RESOURCE_STATUSES } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { DisplaySiteData } from "~/types"

@@ -6,7 +6,7 @@ import {
   fetchToolcodeDailyCheckInStatus,
   performToolcodeDailyCheckIn,
   TOOLCODE_DAILY_CHECK_IN_RESULT_KINDS,
-} from "~/services/apiService/sub2api/toolcodeCheckIn"
+} from "~/services/apiService/sub2api/checkin/toolcodeCheckIn"
 import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import type { SiteAccount } from "~/types"

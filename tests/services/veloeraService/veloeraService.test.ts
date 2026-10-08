@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
-import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
+import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/configuration/channelDraftSource"
 import type { DisplaySiteData } from "~/types"
 import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"

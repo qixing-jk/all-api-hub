@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
 import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
-import { createEmptyAccountStats } from "~/services/accounts/accountTodayStats"
+import { createEmptyAccountStats } from "~/services/accounts/metrics/accountTodayStats"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import type {

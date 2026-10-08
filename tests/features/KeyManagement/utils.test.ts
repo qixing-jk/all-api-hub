@@ -12,7 +12,7 @@ import {
   ACCOUNT_RUNTIME_KEY_SOURCES,
   ACCOUNT_RUNTIME_KEY_STATUSES,
   buildAccountKeyResourceRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
 vi.mock("~/utils/i18n/core", async (original) => ({

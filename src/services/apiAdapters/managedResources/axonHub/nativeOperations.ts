@@ -34,11 +34,11 @@ import {
   updateAxonHubChannel,
   updateAxonHubChannelStatus,
 } from "~/services/apiService/axonHub/channels"
+import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/configuration/runtimeConfig"
 import {
   createManagedSiteMutationSequence,
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
 } from "~/services/managedSites/mutations"
-import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type { AxonHubChannel } from "~/types/axonHub"
 import type { AxonHubConfig } from "~/types/axonHubConfig"

@@ -16,7 +16,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsResult,
 } from "~/services/productAnalytics/contracts"
-import { buildManagedSiteModelSyncDiagnostics } from "~/services/productAnalytics/managedSiteModelSync"
+import { buildManagedSiteModelSyncDiagnostics } from "~/services/productAnalytics/facts/managedSiteModelSync"
 import type { ExecutionResult } from "~/types/managedSiteModelSync"
 
 export const hasModelSyncFailures = (execution: ExecutionResult) =>

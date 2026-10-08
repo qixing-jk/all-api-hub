@@ -27,8 +27,8 @@ import {
 } from "~/services/apiService/octopus/models"
 import { createOctopusRequestHeaders } from "~/services/apiService/octopus/requestContext"
 import { OctopusMutationApiError } from "~/services/apiService/octopus/responseProtocol"
-import { getManagedSiteChannelExactMatch } from "~/services/managedSites/channelMatch"
-import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
+import { getManagedSiteChannelExactMatch } from "~/services/managedSites/matching/channelMatch"
+import { resolveManagedSiteChannelMatch } from "~/services/managedSites/matching/channelMatchResolver"
 import {
   createAutomaticProtectionBypassExecution,
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,

@@ -12,7 +12,7 @@ import {
   API_CREDENTIAL_PROFILE_ASSOCIATION_STATUSES,
 } from "~/features/ApiCredentialProfiles/contracts"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
-import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/accountRuntimeKeys"
+import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/keys/accountRuntimeKeys"
 import { ACCOUNT_DISPLAY_NAME_SEPARATOR } from "~/services/accounts/utils/accountDisplayName"
 import { API_CREDENTIAL_PROFILE_LINK_STATES } from "~/types/apiCredentialProfiles"
 

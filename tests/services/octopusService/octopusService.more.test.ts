@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/channelDraftSource"
-import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
+import { buildManagedSiteChannelDraftSource } from "~/services/managedSites/configuration/channelDraftSource"
+import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/configuration/runtimeConfig"
 import {
   OctopusAutoGroupType,
   OctopusOutboundType,

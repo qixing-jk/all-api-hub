@@ -18,7 +18,7 @@ vi.mock("~/services/apiService/cliProxyApi", async (importOriginal) => ({
   >()),
   listAllCliProxyApiProviders: mocks.list,
 }))
-vi.mock("~/services/managedSites/runtimeConfig", () => ({
+vi.mock("~/services/managedSites/configuration/runtimeConfig", () => ({
   getManagedSiteRuntimeConfigForType: mocks.runtime,
 }))
 vi.mock(

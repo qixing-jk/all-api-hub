@@ -3,7 +3,7 @@ import {
   ACCOUNT_RUNTIME_KEY_SOURCES,
   getAccountRuntimeKeyLocatorIdentity,
   type AccountRuntimeKeyLocator,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import type {
   ApiCredentialProfileLink,
   ApiCredentialProfileLinkSource,

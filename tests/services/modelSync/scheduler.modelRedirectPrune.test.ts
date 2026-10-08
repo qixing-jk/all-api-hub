@@ -33,7 +33,7 @@ vi.mock(
 )
 
 vi.mock(
-  "~/services/managedSites/legacyChannelConfigMigration",
+  "~/services/managedSites/configuration/legacyChannelConfigMigration",
   () => ({
     ensureLegacyChannelConfigMigrationReady: vi
       .fn()
@@ -82,7 +82,7 @@ const {
   mockSaveLastExecution: vi.fn(),
 }))
 
-vi.mock("~/services/managedSites/channelConfigStorage", () => ({
+vi.mock("~/services/managedSites/configuration/channelConfigStorage", () => ({
   channelConfigStorage: {
     getConfigsForScope: mockGetChannelConfigsForScope,
   },

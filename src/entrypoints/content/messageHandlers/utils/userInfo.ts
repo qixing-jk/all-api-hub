@@ -1,4 +1,4 @@
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 

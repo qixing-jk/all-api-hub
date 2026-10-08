@@ -6,9 +6,9 @@ import {
 import { CHECK_IN_DISCOVERY_DECISION_OUTCOMES } from "~/constants/checkIn"
 import type { AccountSiteType } from "~/constants/siteType"
 import { setLoginProviderSelection } from "~/services/accountLogin/providerClaims"
-import { createPersistedSiteAccount } from "~/services/accounts/accountDefaults"
 import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"
-import { getSiteName } from "~/services/accounts/siteName"
+import { createPersistedSiteAccount } from "~/services/accounts/editing/accountDefaults"
+import { getSiteName } from "~/services/accounts/identity/siteName"
 import type { AccountBootstrapFacts } from "~/services/apiAdapters/contracts/accountBootstrap"
 import type {
   AccountCompletionAdapterResult,

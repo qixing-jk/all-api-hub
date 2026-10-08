@@ -9,7 +9,7 @@ import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/ut
 import {
   getSub2ApiAuthPersistenceStatus,
   SUB2API_AUTH_PERSISTENCE_STATUSES,
-} from "~/services/apiService/sub2api/authSession"
+} from "~/services/apiService/sub2api/auth/authSession"
 import { convertUsdBalanceToQuota } from "~/services/apiService/sub2api/parsing"
 import { ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"

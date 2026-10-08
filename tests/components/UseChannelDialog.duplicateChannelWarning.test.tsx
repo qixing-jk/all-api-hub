@@ -9,13 +9,13 @@ import {
   NEW_API_MANAGED_RESOURCE_FIELD_IDS,
 } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
-import * as accountKeyCreation from "~/services/accounts/accountKeyCreation"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import * as accountKeyCreation from "~/services/accounts/keys/accountKeyCreation"
 import {
   buildAccountKeyResourceRuntimeKey,
   buildServiceCredentialRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
-import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
-import { createUnattributedAccountCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+} from "~/services/accounts/keys/accountRuntimeKeys"
+import { createUnattributedAccountCreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { MANAGED_RESOURCE_CREATE_SEED_KINDS } from "~/services/apiAdapters/contracts/managedResourceNative"
@@ -27,14 +27,14 @@ import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
-} from "~/services/managedSites/channelMatch"
-import { resolveDefaultChannelGroups } from "~/services/managedSites/providers/defaultChannelGroups"
+} from "~/services/managedSites/matching/channelMatch"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
   type ManagedSiteTokenChannelAssessment,
   type ManagedSiteTokenChannelStatus,
-} from "~/services/managedSites/tokenChannelStatus"
+} from "~/services/managedSites/matching/tokenChannelStatus"
+import { resolveDefaultChannelGroups } from "~/services/managedSites/providers/defaultChannelGroups"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
   AuthTypeEnum,
@@ -286,7 +286,7 @@ vi.mock(
       "~~/tests/test-utils/accountKeyFixtures"
     )
     const { formatAccountRuntimeKeySecretForSite } = await import(
-      "~/services/accounts/accountRuntimeKeys"
+      "~/services/accounts/keys/accountRuntimeKeys"
     )
     return {
       ...actual,

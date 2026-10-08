@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { tempWindowOpenRouterManagementKeyAction } from "~/services/apiAdapters/openrouter/managementKeyActionClient"
+import { tempWindowOpenRouterManagementKeyAction } from "~/services/apiAdapters/openrouter/keys/managementKeyActionClient"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_FEATURES,

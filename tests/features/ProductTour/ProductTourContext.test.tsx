@@ -63,7 +63,7 @@ vi.mock("~/hooks/useMediaQuery", () => ({
   useMediaQuery: () => false,
 }))
 
-vi.mock("~/services/productAnalytics/dispatch", () => ({
+vi.mock("~/services/productAnalytics/runtime/dispatch", () => ({
   trackProductAnalyticsEvent: (...args: unknown[]) => mocks.track(...args),
 }))
 

@@ -2,7 +2,7 @@ import type { TFunction } from "i18next"
 import { useId } from "react"
 
 import { Badge, Button } from "~/components/ui"
-import type { SuspectedDuplicateAccountGroup } from "~/services/accounts/accountDedupe"
+import type { SuspectedDuplicateAccountGroup } from "~/services/accounts/identity/accountDedupe"
 
 import { formatTimestamp } from "./utils"
 

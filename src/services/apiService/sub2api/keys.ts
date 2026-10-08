@@ -1,7 +1,7 @@
 import {
   fetchSub2ApiData,
   fetchSub2ApiDataWithRequest,
-} from "~/services/apiService/sub2api/dashboardRequest"
+} from "~/services/apiService/sub2api/account/dashboardRequest"
 import {
   extractSub2ApiKeyItems,
   parseSub2ApiNativeKey,

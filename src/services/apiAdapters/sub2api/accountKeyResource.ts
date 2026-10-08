@@ -2,7 +2,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   getDefaultAccountKeyName,
   isAutomaticAccountKeyName,
-} from "~/services/accounts/accountKeyNames"
+} from "~/services/accounts/keys/accountKeyNames"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import type { AccountKeyResourcePage } from "~/services/apiAdapters/accountKeyResources/definition"
 import { keyExpiryDisplayFact } from "~/services/apiAdapters/accountKeyResources/displayFacts"
@@ -38,7 +38,7 @@ import {
   isApiBusinessError,
   runNativeResourceMutation,
 } from "~/services/apiAdapters/nativeResources/mutation"
-import { fetchSub2ApiGroupDescriptors } from "~/services/apiService/sub2api/groups"
+import { fetchSub2ApiGroupDescriptors } from "~/services/apiService/sub2api/account/groups"
 import {
   createSub2ApiKey,
   deleteApiToken,

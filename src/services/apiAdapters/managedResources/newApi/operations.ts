@@ -46,7 +46,7 @@ import {
 import {
   fetchChannelSecretKey,
   hydrateComparableChannelKeys,
-} from "~/services/managedSites/providers/newApiChannelSecrets"
+} from "~/services/managedSites/providers/newApi/newApiChannelSecrets"
 import { API_TYPES } from "~/services/verification/aiApiVerification/types"
 import {
   CHANNEL_STATUS,

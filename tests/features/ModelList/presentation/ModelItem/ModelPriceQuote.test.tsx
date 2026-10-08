@@ -3,7 +3,7 @@ import { expect, it, vi } from "vitest"
 import { ModelPriceQuote } from "~/features/ModelList/presentation/ModelItem/ModelPriceQuote"
 import { PricingScenarioNavigation } from "~/features/ModelList/pricing/pricingScenarioNavigation"
 import { buildAIHubMixWebsitePricingPlan } from "~/services/apiAdapters/aihubmix/websitePricing"
-import { normalizeOpenRouterPricingPlan } from "~/services/apiAdapters/openrouter/pricingPlan"
+import { normalizeOpenRouterPricingPlan } from "~/services/apiAdapters/openrouter/models/pricingPlan"
 import {
   PRICE_RATE_UNITS,
   PRICING_CONDITION_KINDS,

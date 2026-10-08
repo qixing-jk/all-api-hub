@@ -5,13 +5,13 @@ import {
   AUTOMATIC_CHECK_IN_DISCOVERY_COOLDOWN_MS,
 } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
-import {
-  createDefaultAccountStorageConfig,
-  createPersistedSiteAccount,
-} from "~/services/accounts/accountDefaults"
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { accountConfigStore } from "~/services/accounts/accountStorage/accountConfigStore"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import {
+  createDefaultAccountStorageConfig,
+  createPersistedSiteAccount,
+} from "~/services/accounts/editing/accountDefaults"
 import { prepareAutomaticCheckIn } from "~/services/checkin/autoCheckin/discovery/automaticDiscovery"
 import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery/discovery"
 import type { AutoCheckinProviderReadContext } from "~/services/checkin/autoCheckin/providers/contracts"

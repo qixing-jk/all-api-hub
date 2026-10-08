@@ -7,8 +7,8 @@ import {
   AccountUpdateUserTimestampMode,
   applySiteAccountUpdates,
   type AccountUpdateOptions,
-} from "~/services/accounts/accountDefaults"
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+} from "~/services/accounts/editing/accountDefaults"
+import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import { shouldAutomaticallyDiscoverAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { setCheckInSelection } from "~/services/checkin/autoCheckin/domain"
 import {

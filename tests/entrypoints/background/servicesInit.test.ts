@@ -32,11 +32,14 @@ const {
   initBackgroundI18nMock: vi.fn(),
 }))
 
-vi.mock("~/services/managedSites/legacyChannelConfigMigration", () => ({
-  legacyChannelConfigMigration: {
-    initialize: legacyChannelConfigMigrationInitMock,
-  },
-}))
+vi.mock(
+  "~/services/managedSites/configuration/legacyChannelConfigMigration",
+  () => ({
+    legacyChannelConfigMigration: {
+      initialize: legacyChannelConfigMigrationInitMock,
+    },
+  }),
+)
 
 vi.mock("~/services/managedSites/newApiOwnedSession/background", () => ({
   newApiOwnedSessionLifecycle: { initialize: newApiOwnedSessionInitMock },
@@ -46,7 +49,7 @@ vi.mock("~/services/history/usageHistory/scheduler", () => ({
   usageHistoryScheduler: { initialize: usageInitMock },
 }))
 
-vi.mock("~/services/webdav/webdavAutoSyncService", () => ({
+vi.mock("~/services/webdav/autoSync/webdavAutoSyncService", () => ({
   webdavAutoSyncService: { initialize: webdavInitMock },
 }))
 
@@ -66,7 +69,7 @@ vi.mock("~/services/models/modelMetadata", () => ({
   modelMetadataService: { initialize: modelMetadataInitMock },
 }))
 
-vi.mock("~/services/accounts/autoRefreshService", () => ({
+vi.mock("~/services/accounts/refresh/autoRefreshService", () => ({
   autoRefreshService: { initialize: autoRefreshInitMock },
 }))
 

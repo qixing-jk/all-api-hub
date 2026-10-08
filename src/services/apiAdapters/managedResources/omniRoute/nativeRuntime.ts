@@ -7,8 +7,8 @@ import {
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { type OmniRouteNativeConfig } from "~/services/apiAdapters/managedResources/omniRoute/nativeContracts"
 import { OmniRouteApiError } from "~/services/apiService/omniroute"
+import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/configuration/runtimeConfig"
 import { toOmniRouteDisclosureError } from "~/services/managedSites/providers/omniroute"
-import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { normalizeManagedUpstreamResourceScopeKey } from "~/types/managedUpstreamResource"
 import {

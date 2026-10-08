@@ -24,8 +24,8 @@ import {
   type ProductAnalyticsSponsorSupportStatus,
   type ProductAnalyticsSurfaceId,
 } from "~/services/productAnalytics/contracts"
-import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
-import { recordSponsorRecommendationsSummary } from "~/services/productAnalytics/sponsorRecommendationsSummary"
+import { recordSponsorRecommendationsSummary } from "~/services/productAnalytics/facts/sponsorRecommendationsSummary"
+import { trackProductAnalyticsEvent } from "~/services/productAnalytics/runtime/dispatch"
 
 export const SPONSOR_RECOMMENDATION_ACTION_KINDS = {
   ApiCredentialProfilesFallback:

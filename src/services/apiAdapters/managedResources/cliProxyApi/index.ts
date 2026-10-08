@@ -27,8 +27,8 @@ import {
   listAllCliProxyApiProviders,
   type CliProxyApiResource,
 } from "~/services/apiService/cliProxyApi"
+import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/configuration/runtimeConfig"
 import type { ManagedSiteMutationResult } from "~/services/managedSites/mutations"
-import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 
 export const cliProxyApiManagedResourceRegistration = defineNativeResourceKind({
   updateChangesIdentity: true,

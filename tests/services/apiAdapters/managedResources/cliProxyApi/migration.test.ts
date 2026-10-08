@@ -6,7 +6,7 @@ import type { CliProxyApiResource } from "~/services/apiService/cliProxyApi"
 import {
   planMigrationCredentials,
   resolveMigrationCredentials,
-} from "~/services/managedSites/channelMigrationCredentials"
+} from "~/services/managedSites/migration/channelMigrationCredentials"
 import type {
   ManagedSiteMigrationSelection,
   ManagedSiteMigrationSource,
@@ -36,10 +36,15 @@ vi.mock(
     createCliProxyApiResource: mocks.create,
   }),
 )
-vi.mock("~/services/managedSites/runtimeConfig", async (original) => ({
-  ...(await original<typeof import("~/services/managedSites/runtimeConfig")>()),
-  getManagedSiteRuntimeConfigForType: mocks.config,
-}))
+vi.mock(
+  "~/services/managedSites/configuration/runtimeConfig",
+  async (original) => ({
+    ...(await original<
+      typeof import("~/services/managedSites/configuration/runtimeConfig")
+    >()),
+    getManagedSiteRuntimeConfigForType: mocks.config,
+  }),
+)
 const selection: ManagedSiteMigrationSelection = {
   selectionId: "provider",
   displayName: "Example",

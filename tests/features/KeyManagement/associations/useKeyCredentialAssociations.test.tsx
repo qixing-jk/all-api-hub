@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { useKeyCredentialAssociations } from "~/features/KeyManagement/associations/useKeyCredentialAssociations"
-import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/accountRuntimeKeys"
+import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/keys/accountRuntimeKeys"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
   API_CREDENTIAL_PROFILE_LINK_SOURCES,

@@ -13,7 +13,7 @@ import { Modal } from "~/components/ui/Dialog/Modal"
 import { SITE_TYPES } from "~/constants/siteType"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
-import { createUnattributedAccountCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+import { createUnattributedAccountCreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 
 const RESULT = {
   displayName: "Example key",

@@ -5,7 +5,7 @@ import {
   PRODUCT_ANALYTICS_SETTING_IDS,
   type ProductAnalyticsEntrypoint,
 } from "~/services/productAnalytics/contracts"
-import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/managedSite"
+import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/facts/managedSite"
 import { deepOverride } from "~/utils"
 
 import {

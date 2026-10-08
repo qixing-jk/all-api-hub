@@ -13,7 +13,7 @@ import { PRODUCT_ANALYTICS_PROTECTION_BYPASS_DENIAL_CLASSIFICATION } from "~/ser
 import {
   recordProtectionBypassDecision,
   type ProtectionBypassDecisionSummary,
-} from "~/services/productAnalytics/shieldBypassSummary"
+} from "~/services/productAnalytics/facts/shieldBypassSummary"
 import {
   getTempContextTaskMetadata,
   isProtectionBypassExecution,

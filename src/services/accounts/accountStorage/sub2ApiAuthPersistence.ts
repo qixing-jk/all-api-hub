@@ -1,16 +1,16 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import { normalizeAccountSiteProfileUrlForOriginKey } from "~/services/accounts/accountSiteProfile"
 import {
   AccountUpdateUserTimestampMode,
   applySiteAccountUpdates,
   type AccountUpdateOptions,
-} from "~/services/accounts/accountDefaults"
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
-import { normalizeAccountSiteProfileUrlForOriginKey } from "~/services/accounts/accountSiteProfile"
+} from "~/services/accounts/editing/accountDefaults"
+import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import {
   SUB2API_AUTH_PERSISTENCE_STATUSES,
   type Sub2ApiAuthPersistenceResult,
   type Sub2ApiPersistAuthUpdate,
-} from "~/services/apiService/sub2api/authSession"
+} from "~/services/apiService/sub2api/auth/authSession"
 import type { SiteAccount } from "~/types"
 import type { DeepPartial } from "~/types/utils"
 import { getErrorMessage } from "~/utils/core/error"

@@ -32,30 +32,36 @@ vi.mock("~/services/uninstallSurvey/uninstallSurvey", () => ({
   },
 }))
 
-vi.mock("~/services/productAnalytics/preferences", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/services/productAnalytics/preferences")
-    >()
-  return {
-    ...actual,
-    productAnalyticsPreferences: {
-      ...actual.productAnalyticsPreferences,
-      ...preferenceMocks,
-    },
-  }
-})
+vi.mock(
+  "~/services/productAnalytics/configuration/preferences",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/productAnalytics/configuration/preferences")
+      >()
+    return {
+      ...actual,
+      productAnalyticsPreferences: {
+        ...actual.productAnalyticsPreferences,
+        ...preferenceMocks,
+      },
+    }
+  },
+)
 
-vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/services/productAnalytics/dispatch")
-    >()
-  return {
-    ...actual,
-    trackProductAnalyticsEvent: trackMock,
-  }
-})
+vi.mock(
+  "~/services/productAnalytics/runtime/dispatch",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/productAnalytics/runtime/dispatch")
+      >()
+    return {
+      ...actual,
+      trackProductAnalyticsEvent: trackMock,
+    }
+  },
+)
 
 vi.mock("~/services/productAnalytics/actions", () => ({
   trackProductAnalyticsActionStarted: trackActionStartedMock,

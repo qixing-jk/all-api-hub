@@ -16,12 +16,12 @@ import {
   type ModelManagementSource,
 } from "~/features/ModelList/catalog/modelManagementSources"
 import toast from "~/lib/notify"
-import { type AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
 import {
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
   getAccountSiteModelListProfile,
 } from "~/services/accounts/accountSiteProfile"
-import { canListAccountRuntimeKeys } from "~/services/accounts/keyProductCapabilities"
+import { type AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
+import { canListAccountRuntimeKeys } from "~/services/accounts/keys/keyProductCapabilities"
 import { fetchDisplayAccountRuntimeKeys } from "~/services/accounts/utils/apiServiceRequest"
 import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { MODEL_LIST_DATA_ERROR_CODES } from "~/services/modelCatalog/errors"

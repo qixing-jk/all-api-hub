@@ -1,6 +1,6 @@
 import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
 import { compatibleStoredUserHint } from "~/services/accountBrowserSession/newApiStoredUserHint"
-import { resolveStoredAccountUserIdentity } from "~/services/accounts/accountIdentity"
+import { resolveStoredAccountUserIdentity } from "~/services/accounts/identity/accountIdentity"
 
 import type { ContentSessionExtractor } from "../contracts"
 

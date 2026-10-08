@@ -1,7 +1,7 @@
 import type {
   TempWindowOpenRouterManagementKeyActionParams,
   TempWindowOpenRouterManagementKeyActionResult,
-} from "~/services/apiAdapters/openrouter/managementKeyPageContract"
+} from "~/services/apiAdapters/openrouter/keys/managementKeyPageContract"
 import {
   cancelTempWindowOpenRouterManagementKeyAction,
   handleTempWindowOpenRouterManagementKeyAction as handleProductionAction,

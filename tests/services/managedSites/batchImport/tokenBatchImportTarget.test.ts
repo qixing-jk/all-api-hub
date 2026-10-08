@@ -1,0 +1,295 @@
+import { describe, expect, it } from "vitest"
+
+import { MANAGED_SITE_TYPES, SITE_TYPES } from "~/constants/siteType"
+import {
+  createManagedSiteTokenBatchImportTarget,
+  type ManagedSiteTokenBatchImportTarget,
+} from "~/services/managedSites/batchImport/tokenBatchImportTarget"
+import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/configuration/runtimeConfig"
+
+const runtimeConfigs: ManagedSiteRuntimeConfig[] = [
+  {
+    siteType: SITE_TYPES.NEW_API,
+    config: {
+      baseUrl: "https://new-api.example.invalid/",
+      adminToken: "new-api-admin-token",
+      userId: "101202603140001",
+    },
+  },
+  {
+    siteType: SITE_TYPES.VELOERA,
+    config: {
+      baseUrl: "https://veloera.example.invalid/",
+      adminToken: "veloera-admin-token",
+      userId: "102202603140002",
+    },
+  },
+  {
+    siteType: SITE_TYPES.DONE_HUB,
+    config: {
+      baseUrl: "https://done-hub.example.invalid/",
+      adminToken: "done-hub-admin-token",
+      userId: "103202603140003",
+    },
+  },
+  {
+    siteType: SITE_TYPES.OCTOPUS,
+    config: {
+      baseUrl: "https://octopus.example.invalid/",
+      username: "octopus-admin",
+      password: "octopus-password",
+    },
+  },
+  {
+    siteType: SITE_TYPES.AXON_HUB,
+    config: {
+      baseUrl: "https://axonhub.example.invalid/",
+      email: "admin@axonhub.example.invalid",
+      password: "axonhub-password",
+    },
+  },
+  {
+    siteType: SITE_TYPES.CLAUDE_CODE_HUB,
+    config: {
+      baseUrl: "https://claude-code-hub.example.invalid/",
+      adminToken: "claude-code-hub-admin-token",
+    },
+  },
+  {
+    siteType: SITE_TYPES.SUB2API,
+    config: {
+      baseUrl: "https://sub2api.example.invalid/",
+      adminToken: "sub2api-admin-token",
+    },
+  },
+  {
+    siteType: SITE_TYPES.CLI_PROXY_API,
+    config: {
+      baseUrl: "http://cliproxy.example.invalid/",
+      adminToken: "cliproxy-management-key",
+    },
+  },
+  {
+    siteType: SITE_TYPES.OMNIROUTE,
+    config: {
+      baseUrl: "http://omniroute.example.invalid:20128/",
+      token: "oma_live_placeholder",
+    },
+  },
+  {
+    siteType: SITE_TYPES.GPT_LOAD,
+    config: {
+      baseUrl: "http://gpt-load.example.invalid:3001/",
+      managementKey: "gpt-load-management-key-placeholder",
+    },
+  },
+]
+
+const getTarget = async (runtimeConfig: ManagedSiteRuntimeConfig) =>
+  await createManagedSiteTokenBatchImportTarget(runtimeConfig)
+
+const getRawTargetValues = (
+  runtimeConfig: ManagedSiteRuntimeConfig,
+): string[] => {
+  switch (runtimeConfig.siteType) {
+    case SITE_TYPES.OCTOPUS:
+      return [
+        runtimeConfig.config.baseUrl,
+        runtimeConfig.config.username,
+        runtimeConfig.config.password,
+      ]
+    case SITE_TYPES.AXON_HUB:
+      return [
+        runtimeConfig.config.baseUrl,
+        runtimeConfig.config.email,
+        runtimeConfig.config.password,
+      ]
+    case SITE_TYPES.CLAUDE_CODE_HUB:
+    case SITE_TYPES.CLI_PROXY_API:
+    case SITE_TYPES.SUB2API:
+      return [
+        runtimeConfig.config.baseUrl,
+        "admin",
+        runtimeConfig.config.adminToken,
+      ]
+    case SITE_TYPES.OMNIROUTE:
+      return [runtimeConfig.config.baseUrl, "admin", runtimeConfig.config.token]
+    case SITE_TYPES.GPT_LOAD:
+      return [
+        runtimeConfig.config.baseUrl,
+        "admin",
+        runtimeConfig.config.managementKey,
+      ]
+    default:
+      return [
+        runtimeConfig.config.baseUrl,
+        runtimeConfig.config.userId,
+        runtimeConfig.config.adminToken,
+      ]
+  }
+}
+
+const changeCompatibleIdentity = (
+  runtimeConfig: ManagedSiteRuntimeConfig,
+): ManagedSiteRuntimeConfig | null => {
+  switch (runtimeConfig.siteType) {
+    case SITE_TYPES.OCTOPUS:
+      return {
+        ...runtimeConfig,
+        config: {
+          ...runtimeConfig.config,
+          username: "different-octopus-admin",
+        },
+      }
+    case SITE_TYPES.AXON_HUB:
+      return {
+        ...runtimeConfig,
+        config: {
+          ...runtimeConfig.config,
+          email: "different-admin@axonhub.example.invalid",
+        },
+      }
+    case SITE_TYPES.CLAUDE_CODE_HUB:
+    case SITE_TYPES.SUB2API:
+    case SITE_TYPES.CLI_PROXY_API:
+    case SITE_TYPES.OMNIROUTE:
+    case SITE_TYPES.GPT_LOAD:
+      return null
+    default:
+      return {
+        ...runtimeConfig,
+        config: { ...runtimeConfig.config, userId: "999202603149999" },
+      } as ManagedSiteRuntimeConfig
+  }
+}
+
+describe("managed-site token batch import target", () => {
+  it("covers every managed-site runtime config shape with one captured snapshot", async () => {
+    const targets = await Promise.all(runtimeConfigs.map(getTarget))
+
+    const coveredSiteTypes = runtimeConfigs.map(({ siteType }) => siteType)
+    expect(coveredSiteTypes).toHaveLength(MANAGED_SITE_TYPES.length)
+    expect(new Set(coveredSiteTypes)).toEqual(new Set(MANAGED_SITE_TYPES))
+    targets.forEach((target, index) => {
+      const runtimeConfig = runtimeConfigs[index]!
+      expect(target.managedSite.siteType).toBe(runtimeConfig.siteType)
+      expect(target.config).toBe(runtimeConfig.config)
+      expect(target.targetSummary).toEqual({
+        siteType: runtimeConfig.siteType,
+        baseUrl: runtimeConfig.config.baseUrl.replace(/\/+$/, ""),
+      })
+      expect(target.targetFingerprint).toMatch(/^[a-f0-9]{64}$/)
+    })
+  })
+
+  it("preserves the stored repair-receipt fingerprint without exposing an admin-shaped summary", async () => {
+    const target = await getTarget(runtimeConfigs[0]!)
+
+    expect(target.targetFingerprint).toBe(
+      "bb8f5b1b4bb93fe30f45d29f61905188562845d8fb9be2d4a5b6d38845ab71b0",
+    )
+    expect(target.targetSummary).toEqual({
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://new-api.example.invalid",
+    })
+  })
+
+  it("gives equivalent normalized base URLs the same fingerprint", async () => {
+    const base: ManagedSiteRuntimeConfig = {
+      siteType: SITE_TYPES.NEW_API,
+      config: {
+        baseUrl: "https://target.example.invalid/api/v1/models?probe=true",
+        adminToken: "secret-one",
+        userId: "501",
+      },
+    }
+    const equivalent: ManagedSiteRuntimeConfig = {
+      siteType: SITE_TYPES.NEW_API,
+      config: {
+        ...base.config,
+        baseUrl: "https://target.example.invalid/api/",
+      },
+    }
+
+    await expect(getTarget(base)).resolves.toMatchObject({
+      targetFingerprint: (await getTarget(equivalent)).targetFingerprint,
+    })
+  })
+
+  it("changes the fingerprint when site type or normalized URL changes", async () => {
+    const base: ManagedSiteRuntimeConfig = {
+      siteType: SITE_TYPES.NEW_API,
+      config: {
+        baseUrl: "https://target.example.invalid/api",
+        adminToken: "secret-one",
+        userId: "501",
+      },
+    }
+    const baseFingerprint = (await getTarget(base)).targetFingerprint
+
+    const changedTargets: ManagedSiteRuntimeConfig[] = [
+      {
+        siteType: SITE_TYPES.DONE_HUB,
+        config: { ...base.config },
+      },
+      {
+        siteType: SITE_TYPES.NEW_API,
+        config: {
+          ...base.config,
+          baseUrl: "https://other-target.example.invalid/api",
+        },
+      },
+    ]
+
+    for (const changedTarget of changedTargets) {
+      expect((await getTarget(changedTarget)).targetFingerprint).not.toBe(
+        baseFingerprint,
+      )
+    }
+  })
+
+  it.each(runtimeConfigs.filter(changeCompatibleIdentity))(
+    "changes the fingerprint with the configurable compatible identity for $siteType",
+    async (runtimeConfig) => {
+      const changedRuntimeConfig = changeCompatibleIdentity(runtimeConfig)!
+
+      expect(
+        (await getTarget(changedRuntimeConfig)).targetFingerprint,
+      ).not.toBe((await getTarget(runtimeConfig)).targetFingerprint)
+    },
+  )
+
+  it.each(runtimeConfigs)(
+    "does not include credentials in the identity for $siteType",
+    async (runtimeConfig) => {
+      const changedConfig = { ...runtimeConfig.config }
+      if ("adminToken" in changedConfig) {
+        changedConfig.adminToken = "replacement-admin-token"
+      }
+      if ("password" in changedConfig) {
+        changedConfig.password = "replacement-password"
+      }
+
+      const changedTarget = await getTarget({
+        siteType: runtimeConfig.siteType,
+        config: changedConfig,
+      } as ManagedSiteRuntimeConfig)
+
+      expect(changedTarget.targetFingerprint).toBe(
+        (await getTarget(runtimeConfig)).targetFingerprint,
+      )
+    },
+  )
+
+  it.each(runtimeConfigs)(
+    "keeps raw target identity and credentials out of the $siteType fingerprint",
+    async (runtimeConfig) => {
+      const target: ManagedSiteTokenBatchImportTarget =
+        await getTarget(runtimeConfig)
+
+      for (const rawValue of getRawTargetValues(runtimeConfig)) {
+        expect(target.targetFingerprint).not.toContain(rawValue)
+      }
+    },
+  )
+})

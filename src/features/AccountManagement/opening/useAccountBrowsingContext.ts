@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react"
 
 import { isAccountRelatedTab } from "~/features/AccountManagement/utils/accountOpenTabMatch"
 import { readAccountBrowserIdentityFromTab } from "~/services/accountBrowserSession/identityReader"
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
-import { findAccountsBySiteIdentity } from "~/services/accounts/accountMatching"
 import { resolveAccountSiteContentSessionHintForOrigin } from "~/services/accounts/accountSiteProfile"
 import { isSameAccountSiteOrigin } from "~/services/accounts/accountSiteProfile/urls"
+import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
+import { findAccountsBySiteIdentity } from "~/services/accounts/identity/accountMatching"
 import { excludeInternalTabs } from "~/services/browsingContext/internalTabs"
 import {
   OPEN_TAB_MATCH_TIER,

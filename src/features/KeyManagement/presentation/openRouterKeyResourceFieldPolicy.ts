@@ -13,7 +13,7 @@ import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_MODES,
   OPENROUTER_KEY_LIMIT_RESETS,
-} from "~/services/apiAdapters/openrouter/keyResourceFields"
+} from "~/services/apiAdapters/openrouter/keys/keyResourceFields"
 
 import type { AccountKeyResourceEditorPresentation } from "./accountKeyResourceEditorPresentation"
 

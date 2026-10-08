@@ -7,11 +7,11 @@ import { ActionGroup } from "~/components/ui/ActionGroup"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import toast from "~/lib/notify"
+import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import {
   scanDuplicateAccounts,
   type AccountDedupeKeepStrategy,
-} from "~/services/accounts/accountDedupe"
-import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
+} from "~/services/accounts/identity/accountDedupe"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

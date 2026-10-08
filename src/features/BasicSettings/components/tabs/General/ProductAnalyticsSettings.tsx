@@ -6,6 +6,7 @@ import { Card, CardItem, CardList, Switch } from "~/components/ui"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
 import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
+import { productAnalyticsPreferences } from "~/services/productAnalytics/configuration/preferences"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -14,8 +15,7 @@ import {
   PRODUCT_ANALYTICS_SETTING_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
-import { productAnalyticsPreferences } from "~/services/productAnalytics/preferences"
+import { trackProductAnalyticsEvent } from "~/services/productAnalytics/runtime/dispatch"
 import { uninstallSurveyService } from "~/services/uninstallSurvey/uninstallSurvey"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 

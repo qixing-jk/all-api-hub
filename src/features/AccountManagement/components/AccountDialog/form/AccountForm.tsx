@@ -48,7 +48,7 @@ import {
   getAccountManagementSiteTypeOptionTestId,
 } from "~/features/AccountManagement/testIds"
 import type { LoginProviderClaimConflict } from "~/services/accountLogin/providerClaims"
-import { isValidExchangeRate } from "~/services/accounts/accountFormValidation"
+import { isValidExchangeRate } from "~/services/accounts/editing/accountFormValidation"
 import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 

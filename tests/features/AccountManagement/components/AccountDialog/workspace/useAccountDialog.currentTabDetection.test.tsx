@@ -74,18 +74,23 @@ vi.mock("~/services/accounts/accountAutoDetection", () => ({
   autoDetectAccount: mockAutoDetectAccount,
 }))
 
-vi.mock("~/services/accounts/siteName", () => ({
+vi.mock("~/services/accounts/identity/siteName", () => ({
   getSiteName: mockGetSiteName,
 }))
 
-vi.mock("~/services/accounts/accountCreation", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/services/accounts/accountCreation")>()
-  return {
-    ...actual,
-    validateAndSaveAccount: mockValidateAndSaveAccount,
-  }
-})
+vi.mock(
+  "~/services/accounts/editing/accountCreation",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/accounts/editing/accountCreation")
+      >()
+    return {
+      ...actual,
+      validateAndSaveAccount: mockValidateAndSaveAccount,
+    }
+  },
+)
 
 vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
   accountQueries: { getAllAccountsOrThrow: mockGetAllAccountsOrThrow },

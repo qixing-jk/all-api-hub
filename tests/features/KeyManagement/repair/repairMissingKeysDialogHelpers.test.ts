@@ -26,7 +26,7 @@ import {
   ACCOUNT_KEY_RECONCILIATION_INVALID_REASONS,
   ACCOUNT_KEY_RECONCILIATION_INVENTORY_ISSUES,
   ACCOUNT_KEY_RECONCILIATION_OUTCOMES,
-} from "~/services/accounts/accountKeyInventoryReconciliation"
+} from "~/services/accounts/keys/accountKeyInventoryReconciliation"
 import {
   ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS,
   ACCOUNT_KEY_REQUIREMENT_PROVISIONING_REASONS,

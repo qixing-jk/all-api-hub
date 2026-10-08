@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { SITE_TYPES } from "~/constants/siteType"
-import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
-import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { buildServiceCredentialRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
+import type { AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -71,8 +71,8 @@ vi.mock(
       >()
     const fixtures = await import("~~/tests/test-utils/accountKeyFixtures")
     const runtimeKeyHelpers = await vi.importActual<
-      typeof import("~/services/accounts/accountRuntimeKeys")
-    >("~/services/accounts/accountRuntimeKeys")
+      typeof import("~/services/accounts/keys/accountRuntimeKeys")
+    >("~/services/accounts/keys/accountRuntimeKeys")
 
     return {
       ...actual,

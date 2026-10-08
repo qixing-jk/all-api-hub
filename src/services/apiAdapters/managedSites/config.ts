@@ -3,7 +3,7 @@ import type { ManagedSiteConfigCapability } from "~/services/apiAdapters/contrac
 import {
   getManagedSiteRuntimeConfigForType,
   type ManagedSiteRuntimeConfigValueForType,
-} from "~/services/managedSites/runtimeConfig"
+} from "~/services/managedSites/configuration/runtimeConfig"
 
 /**
  * Builds the managed-site config capability for a concrete runtime config type.

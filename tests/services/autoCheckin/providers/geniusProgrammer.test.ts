@@ -12,7 +12,7 @@ import {
   fetchGeniusProgrammerDailyCheckInStatus,
   GENIUS_PROGRAMMER_DAILY_CHECK_IN_RESULT_KINDS,
   performGeniusProgrammerDailyCheckIn,
-} from "~/services/apiService/sub2api/geniusProgrammerCheckIn"
+} from "~/services/apiService/sub2api/checkin/geniusProgrammerCheckIn"
 import { ApiError } from "~/services/apiTransport/errors"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
@@ -26,11 +26,11 @@ import { createAutoCheckinMutationLifecycle } from "~~/tests/test-utils/autoChec
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 vi.mock(
-  "~/services/apiService/sub2api/geniusProgrammerCheckIn",
+  "~/services/apiService/sub2api/checkin/geniusProgrammerCheckIn",
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import("~/services/apiService/sub2api/geniusProgrammerCheckIn")
+        typeof import("~/services/apiService/sub2api/checkin/geniusProgrammerCheckIn")
       >()
     return {
       ...actual,

@@ -2,7 +2,7 @@ import { act, renderHook } from "@testing-library/react"
 import { beforeEach, expect, it, vi } from "vitest"
 
 import { useRuntimeKeyIntegrationActions } from "~/features/KeyManagement/components/RuntimeKeyActions/useRuntimeKeyIntegrationActions"
-import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { buildServiceCredentialRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
 const mocks = vi.hoisted(() => ({ resolve: vi.fn(), feedback: vi.fn() }))

@@ -33,7 +33,7 @@ vi.mock(
   accountAutoDetectionModuleMocks.browserApi,
 )
 vi.mock(
-  "~/services/apiAdapters/openrouter/managementKeyActionClient",
+  "~/services/apiAdapters/openrouter/keys/managementKeyActionClient",
   accountAutoDetectionModuleMocks.openRouterManagementKeyActionClient,
 )
 vi.mock(

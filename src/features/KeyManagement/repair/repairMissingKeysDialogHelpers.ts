@@ -5,8 +5,8 @@ import {
   ACCOUNT_KEY_RECONCILIATION_INVENTORY_ISSUES,
   ACCOUNT_KEY_RECONCILIATION_OUTCOMES,
   type AccountKeyReconciliationInventoryIssue,
-} from "~/services/accounts/accountKeyInventoryReconciliation"
-import { buildAccountKeyResourceRuntimeKeyId } from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountKeyInventoryReconciliation"
+import { buildAccountKeyResourceRuntimeKeyId } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   type ResourceFailure,

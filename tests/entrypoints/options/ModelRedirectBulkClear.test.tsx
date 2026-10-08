@@ -8,7 +8,7 @@ import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import {
   hasValidManagedSiteConfig,
   resolveCurrentManagedSiteRuntimeConfig,
-} from "~/services/managedSites/runtimeConfig"
+} from "~/services/managedSites/configuration/runtimeConfig"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { supportsManagedSiteModelRedirect } from "~/services/models/modelRedirect/capabilities"
 import { testI18n } from "~~/tests/test-utils/i18n"
@@ -34,20 +34,23 @@ vi.mock("~/services/apiAdapters/registry", async (importOriginal) => ({
     },
   })),
 }))
-vi.mock("~/services/managedSites/runtimeConfig", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("~/services/managedSites/runtimeConfig")
-  >()),
-  hasValidManagedSiteConfig: vi.fn(),
-  resolveCurrentManagedSiteRuntimeConfig: vi.fn(() => ({
-    siteType: "new-api",
-    config: {
-      baseUrl: "https://example.com",
-      adminToken: "token",
-      userId: "1",
-    },
-  })),
-}))
+vi.mock(
+  "~/services/managedSites/configuration/runtimeConfig",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/managedSites/configuration/runtimeConfig")
+    >()),
+    hasValidManagedSiteConfig: vi.fn(),
+    resolveCurrentManagedSiteRuntimeConfig: vi.fn(() => ({
+      siteType: "new-api",
+      config: {
+        baseUrl: "https://example.com",
+        adminToken: "token",
+        userId: "1",
+      },
+    })),
+  }),
+)
 
 vi.mock("~/services/models/modelRedirect", () => ({
   ModelRedirectService: {
@@ -142,8 +145,8 @@ describe("Model redirect bulk clear flow", () => {
   it("discovers models from the default New API configuration in legacy preferences", async () => {
     const user = userEvent.setup()
     const runtimeConfig = await vi.importActual<
-      typeof import("~/services/managedSites/runtimeConfig")
-    >("~/services/managedSites/runtimeConfig")
+      typeof import("~/services/managedSites/configuration/runtimeConfig")
+    >("~/services/managedSites/configuration/runtimeConfig")
     const redirectCapabilities = await vi.importActual<
       typeof import("~/services/models/modelRedirect/capabilities")
     >("~/services/models/modelRedirect/capabilities")

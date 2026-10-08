@@ -15,7 +15,7 @@ import {
   createDefaultAccountStorageConfig,
   normalizeAccountStorageConfigForWrite,
   normalizeSiteAccount,
-} from "~/services/accounts/accountDefaults"
+} from "~/services/accounts/editing/accountDefaults"
 import { CURRENT_CONFIG_VERSION } from "~/services/accounts/migrations/accountDataMigration"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import {

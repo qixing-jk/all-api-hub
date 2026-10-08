@@ -85,7 +85,7 @@ vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
   return { ...actual, sendRuntimeMessage: sendRuntimeMessageMock }
 })
 
-vi.mock("~/services/accounts/autoRefreshMessaging", () => ({
+vi.mock("~/services/accounts/refresh/autoRefreshMessaging", () => ({
   AutoRefreshMessageTypes: {
     UpdateSettings: "autoRefresh:updateSettings",
   },
@@ -125,11 +125,11 @@ vi.mock("~/services/siteAnnouncements/messaging", () => ({
     typedMessageMocks.sendSiteAnnouncementsMessageMock,
 }))
 
-vi.mock("~/services/webdav/webdavAutoSyncMessaging", () => ({
+vi.mock("~/services/webdav/autoSync/webdavAutoSyncMessaging", () => ({
   sendWebdavAutoSyncMessage: typedMessageMocks.sendWebdavAutoSyncMessageMock,
 }))
 
-vi.mock("~/services/productAnalytics/settings", () => ({
+vi.mock("~/services/productAnalytics/configuration/settings", () => ({
   trackSettingsSnapshotEvents: (...args: unknown[]) =>
     trackSettingsSnapshotEventsMock(...args),
 }))

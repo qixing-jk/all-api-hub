@@ -7,8 +7,8 @@ import {
   KEY_MANAGEMENT_TEST_IDS,
 } from "~/features/KeyManagement/testIds"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
-import { ACCOUNT_KEY_RECONCILIATION_OUTCOMES } from "~/services/accounts/accountKeyInventoryReconciliation"
-import { buildAccountKeyResourceRuntimeKeyId } from "~/services/accounts/accountRuntimeKeys"
+import { ACCOUNT_KEY_RECONCILIATION_OUTCOMES } from "~/services/accounts/keys/accountKeyInventoryReconciliation"
+import { buildAccountKeyResourceRuntimeKeyId } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS,
   type AccountKeyResourceRef,

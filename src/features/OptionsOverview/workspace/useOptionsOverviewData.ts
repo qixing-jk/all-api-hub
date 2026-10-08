@@ -7,7 +7,7 @@ import { buildOptionsOverviewViewModel } from "~/features/OptionsOverview/worksp
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountStatistics } from "~/services/accounts/accountStorage/accountStatistics"
-import { createEmptyAccountTodayStatsCoverage } from "~/services/accounts/accountTodayStats"
+import { createEmptyAccountTodayStatsCoverage } from "~/services/accounts/metrics/accountTodayStats"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { featureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"

@@ -20,6 +20,7 @@ import {
   TEMP_CONTEXT_MODES,
   TEMP_CONTEXT_PREFERENCE_MODES,
 } from "~/constants/tempContextMode"
+import type { SettingsSnapshotAutomaticFeatureBypassProperty } from "~/services/productAnalytics/configuration/settingsSnapshot"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
   PROTECTION_BYPASS_DECISION_RESULTS,
@@ -45,8 +46,6 @@ import {
   BROWSER_FOCUS_STATES,
   BROWSER_FOCUS_TRANSITIONS,
 } from "~/utils/browser/browserFocus"
-
-import type { SettingsSnapshotAutomaticFeatureBypassProperty } from "./settingsSnapshot"
 
 type SettingsSnapshotAutomaticFeatureBypassPayload = Partial<
   Record<SettingsSnapshotAutomaticFeatureBypassProperty, boolean>

@@ -25,7 +25,7 @@ import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/manage
 import {
   executeManagedSiteMigration,
   prepareManagedSiteMigrationPreview,
-} from "~/services/managedSites/channelMigration"
+} from "~/services/managedSites/migration/channelMigration"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
@@ -34,7 +34,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsSurfaceId,
 } from "~/services/productAnalytics/contracts"
-import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/managedSite"
+import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/facts/managedSite"
 import type {
   ManagedSiteMigrationCanonicalExecutionResult,
   ManagedSiteMigrationCanonicalPreview,

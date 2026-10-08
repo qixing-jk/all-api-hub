@@ -7,19 +7,19 @@ import {
   CHANNEL_DIALOG_ADVISORY_WARNING_KINDS,
 } from "~/components/dialogs/ChannelDialog/utils/advisoryWarning"
 import toast from "~/lib/notify"
+import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
 import {
   ensureAccountKey,
   getCreatedAccountRuntimeKey,
   resolveCreatedAccountRuntimeKey,
   type AccountKeyCreationResult,
-} from "~/services/accounts/accountKeyCreation"
+} from "~/services/accounts/keys/accountKeyCreation"
 import {
   collectAccountRuntimeKeySecrets,
   type AccountRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
-import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
-import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
-import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   fetchDisplayAccountRuntimeKeys,
   resolveDisplayAccountRuntimeKeySecret,
@@ -32,20 +32,20 @@ import { toManagedSiteChannelAssessmentSignals } from "~/services/managedSites/c
 import {
   buildManagedSiteChannelDraftSource,
   buildManagedSiteCredentialDraftSource,
-} from "~/services/managedSites/channelDraftSource"
-import {
-  getManagedSiteChannelExactMatch,
-  MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
-} from "~/services/managedSites/channelMatch"
-import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
+} from "~/services/managedSites/configuration/channelDraftSource"
 import {
   getCurrentManagedSiteType,
   type ManagedSiteRuntimeConfigValue,
-} from "~/services/managedSites/runtimeConfig"
+} from "~/services/managedSites/configuration/runtimeConfig"
+import {
+  getManagedSiteChannelExactMatch,
+  MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
+} from "~/services/managedSites/matching/channelMatch"
+import { resolveManagedSiteChannelMatch } from "~/services/managedSites/matching/channelMatchResolver"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
   type ManagedSiteTokenChannelStatus,
-} from "~/services/managedSites/tokenChannelStatus"
+} from "~/services/managedSites/matching/tokenChannelStatus"
 import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteMessagesKeyFromSiteType,

@@ -11,8 +11,8 @@ import {
   type KeyResourceCredentialAssociation,
 } from "~/features/KeyManagement/inventory/KeyResourceCard"
 import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
-import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
-import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
+import type { AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
+import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/matching/tokenChannelStatus"
 import type { DisplaySiteData } from "~/types"
 
 import { KEY_MANAGEMENT_TEST_IDS } from "../../testIds"

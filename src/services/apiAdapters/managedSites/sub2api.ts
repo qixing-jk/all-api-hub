@@ -11,11 +11,12 @@ import {
 } from "~/services/apiAdapters/managedResources/shared/matchingInputs"
 import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/shared/resourceIds"
 import { sharePendingConfigRead } from "~/services/apiTransport/requestScheduling"
+import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/configuration/runtimeConfig"
+import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
-} from "~/services/managedSites/channelMatch"
-import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
+} from "~/services/managedSites/matching/channelMatch"
 import {
   listSub2ApiApiKeyAccounts,
   prepareChannelFormData,
@@ -23,7 +24,6 @@ import {
   SUB2API_STEP_UP_ADMIN_KEY_FORBIDDEN_CODE,
   Sub2ApiAdminApiError,
 } from "~/services/managedSites/providers/sub2api"
-import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type { Sub2ApiManagedSiteConfig } from "~/types/sub2apiManagedSiteConfig"

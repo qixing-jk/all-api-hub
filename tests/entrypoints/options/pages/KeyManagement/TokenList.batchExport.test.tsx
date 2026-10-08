@@ -5,7 +5,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { KEY_MANAGEMENT_LOAD_STATUSES } from "~/features/KeyManagement/types"
-import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { buildServiceCredentialRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -138,12 +138,15 @@ vi.mock(
   },
 )
 
-vi.mock("~/services/managedSites/tokenBatchImportExecution", () => ({
-  executeManagedSiteTokenBatchExport: (...args: unknown[]) =>
-    mockExecuteManagedSiteTokenBatchExport(...args),
-}))
+vi.mock(
+  "~/services/managedSites/batchImport/tokenBatchImportExecution",
+  () => ({
+    executeManagedSiteTokenBatchExport: (...args: unknown[]) =>
+      mockExecuteManagedSiteTokenBatchExport(...args),
+  }),
+)
 
-vi.mock("~/services/managedSites/tokenBatchImportPreview", () => ({
+vi.mock("~/services/managedSites/batchImport/tokenBatchImportPreview", () => ({
   prepareManagedSiteTokenBatchExportPreview: (...args: unknown[]) =>
     mockPrepareManagedSiteTokenBatchExportPreview(...args),
 }))

@@ -8,7 +8,7 @@ import {
   isManagedSiteMigrationSourceType,
   resolveManagedSiteMigrationType,
 } from "~/services/apiAdapters/managedResources/migration/migrationTypeRoutes"
-import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/channelMigrationCapabilityRegistry"
+import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/migration/channelMigrationCapabilityRegistry"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES } from "~/types/managedSiteMigration"
 import type { ManagedSiteMigrationSelection } from "~/types/managedSiteMigrationCapability"
 import { server } from "~~/tests/msw/server"

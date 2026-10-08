@@ -13,7 +13,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   type ProductAnalyticsErrorCategory,
 } from "~/services/productAnalytics/contracts"
-import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
+import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/facts/verification"
 import {
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,

@@ -7,7 +7,7 @@ import {
   buildAccountKeyResourceRuntimeKey,
   buildServiceCredentialRuntimeKey,
   type AccountRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import { buildUserPreferences } from "~~/tests/test-utils/factories"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { matchingResourceRef } from "~~/tests/test-utils/managedResourceMatching"
@@ -39,13 +39,16 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
 vi.mock("~/services/managedSites/utils/managedSite", () => ({
   supportsManagedSiteBaseUrlChannelLookup: () => supported,
 }))
-vi.mock("~/services/managedSites/tokenChannelStatus", async (original) => ({
-  ...(await original<
-    typeof import("~/services/managedSites/tokenChannelStatus")
-  >()),
-  getManagedSiteTokenChannelStatus: check,
-  resolveManagedSiteTokenChannelStatusWithVerifiedKey: verifyKey,
-}))
+vi.mock(
+  "~/services/managedSites/matching/tokenChannelStatus",
+  async (original) => ({
+    ...(await original<
+      typeof import("~/services/managedSites/matching/tokenChannelStatus")
+    >()),
+    getManagedSiteTokenChannelStatus: check,
+    resolveManagedSiteTokenChannelStatusWithVerifiedKey: verifyKey,
+  }),
+)
 vi.mock("~/services/accounts/utils/apiServiceRequest", async (original) => ({
   ...(await original<
     typeof import("~/services/accounts/utils/apiServiceRequest")

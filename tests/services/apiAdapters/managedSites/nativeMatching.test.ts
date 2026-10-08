@@ -15,7 +15,7 @@ import {
   searchProviders,
 } from "~/services/apiService/claudeCodeHub"
 import { listAllChannels } from "~/services/apiService/veloera"
-import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
+import { resolveManagedSiteChannelMatch } from "~/services/managedSites/matching/channelMatchResolver"
 import {
   listSub2ApiApiKeyAccounts,
   revealSub2ApiApiKey,

@@ -1,7 +1,7 @@
 import { vi } from "vitest"
 
 vi.mock(
-  "~/services/managedSites/legacyChannelConfigMigration",
+  "~/services/managedSites/configuration/legacyChannelConfigMigration",
   () => ({
     ensureLegacyChannelConfigMigrationReady: vi
       .fn()
@@ -118,7 +118,7 @@ const mockChannelConfigExport = vi.fn()
 const mockChannelConfigImport = vi.fn()
 const mockChannelConfigMerge = vi.fn()
 vi.mock(
-  import("~/services/managedSites/channelConfigStorage"),
+  import("~/services/managedSites/configuration/channelConfigStorage"),
   async (importOriginal) => {
     const actual = await importOriginal()
     return {
@@ -184,7 +184,7 @@ vi.mock("~/services/webdav/webdavService", () => ({
   uploadBackup: (...args: any[]) => mockUploadBackup(...args),
 }))
 
-vi.mock("~/services/webdav/webdavBackupValidation", () => ({
+vi.mock("~/services/webdav/backup/webdavBackupValidation", () => ({
   parseWebdavBackupJson: (...args: any[]) => mockParseWebdavBackupJson(...args),
 }))
 

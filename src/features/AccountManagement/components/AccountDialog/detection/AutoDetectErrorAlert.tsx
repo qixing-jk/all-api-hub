@@ -27,7 +27,7 @@ import {
   PRODUCT_ANALYTICS_TARGET_KINDS,
   PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS,
 } from "~/services/productAnalytics/contracts"
-import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
+import { trackProductAnalyticsEvent } from "~/services/productAnalytics/runtime/dispatch"
 import { createTab } from "~/utils/browser/tabs"
 import { openApiCredentialProfilesPage } from "~/utils/navigation"
 import { openSiteSupportRequestPage } from "~/utils/navigation/feedbackPages"

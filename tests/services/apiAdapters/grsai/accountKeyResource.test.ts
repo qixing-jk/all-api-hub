@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { prepareAccountKeyProvisioning } from "~/services/accounts/accountKeyProvisioning"
+import { prepareAccountKeyProvisioning } from "~/services/accounts/keys/accountKeyProvisioning"
 import { grsaiAccountKeyResources } from "~/services/apiAdapters/grsai/accountKeyResource"
 import type { GrsaiApiKey } from "~/services/apiService/grsai/type"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"

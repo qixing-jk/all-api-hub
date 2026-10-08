@@ -1,10 +1,10 @@
 import { describe, expectTypeOf, it } from "vitest"
 
+import type { ProductAnalyticsEventAllowedKeys } from "~/services/productAnalytics/configuration/privacy"
 import type {
   ProductAnalyticsEventName,
   ProductAnalyticsEventPayloadMap,
 } from "~/services/productAnalytics/contracts"
-import type { ProductAnalyticsEventAllowedKeys } from "~/services/productAnalytics/privacy"
 
 /**
  * Payload keys that are missing from the privacy allow-list, per event.

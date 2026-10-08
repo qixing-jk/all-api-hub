@@ -38,16 +38,19 @@ const { loggerDebugSpy, loggerWarnSpy } = vi.hoisted(() => ({
   loggerWarnSpy: vi.fn(),
 }))
 
-vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/services/productAnalytics/dispatch")
-    >()
-  return {
-    ...actual,
-    trackProductAnalyticsEvent: trackMock,
-  }
-})
+vi.mock(
+  "~/services/productAnalytics/runtime/dispatch",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/productAnalytics/runtime/dispatch")
+      >()
+    return {
+      ...actual,
+      trackProductAnalyticsEvent: trackMock,
+    }
+  },
+)
 
 vi.mock("~/utils/core/logger", () => ({
   createLogger: () => ({

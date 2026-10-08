@@ -4,7 +4,7 @@ import type {
   AccountKeyResourceEditorMode,
 } from "~/features/KeyManagement/constants"
 import { type NativeResourceEditorOpeningState } from "~/features/ResourceEditor/opening/nativeResourceEditorOpeningState"
-import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
+import type { AccountKeyCreationResult } from "~/services/accounts/keys/accountKeyCreation"
 import { type DisplayAccountApiSnapshot } from "~/services/accounts/utils/apiServiceRequest"
 import {
   type AccountKeyCreationIntent,

@@ -1,4 +1,4 @@
-import { isAccountTodayMetricComplete } from "~/services/accounts/accountTodayStats"
+import { isAccountTodayMetricComplete } from "~/services/accounts/metrics/accountTodayStats"
 import type { AccountTodayStatsAvailability } from "~/types"
 import type {
   BalanceHistoryPreferences,

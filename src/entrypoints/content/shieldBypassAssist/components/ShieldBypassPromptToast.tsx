@@ -21,7 +21,7 @@ import {
 import {
   recordShieldBypassPromptDismissed,
   recordShieldBypassSettingsVisited,
-} from "~/services/productAnalytics/shieldBypassSummary"
+} from "~/services/productAnalytics/facts/shieldBypassSummary"
 
 const MAX_TITLE_CORRECTIONS = 2
 

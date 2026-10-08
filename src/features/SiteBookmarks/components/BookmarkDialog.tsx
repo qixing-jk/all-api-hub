@@ -15,7 +15,7 @@ import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import toast from "~/lib/notify"
 import { bookmarkRepository } from "~/services/accounts/accountStorage/bookmarkRepository"
-import { getSiteName } from "~/services/accounts/siteName"
+import { getSiteName } from "~/services/accounts/identity/siteName"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

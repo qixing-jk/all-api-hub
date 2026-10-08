@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest"
 import { WEBDAV_TARGET_IDS } from "~/features/ImportExport/searchTargets"
 import WebDAVSettings from "~/features/ImportExport/webdav/WebDAVSettings"
 import toast from "~/lib/notify"
-import { LegacyChannelConfigMigrationDeferredError } from "~/services/managedSites/legacyChannelConfigMigration"
+import { LegacyChannelConfigMigrationDeferredError } from "~/services/managedSites/configuration/legacyChannelConfigMigration"
 import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FAILURE_STAGES,

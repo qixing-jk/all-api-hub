@@ -16,8 +16,8 @@ import {
   ACCOUNT_RUNTIME_KEY_STATUSES,
   buildAccountKeyResourceRuntimeKeyFromFacts,
   hasUsableAccountRuntimeKeySecret,
-} from "~/services/accounts/accountRuntimeKeys"
-import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keyProductCapabilities"
+} from "~/services/accounts/keys/accountRuntimeKeys"
+import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keys/keyProductCapabilities"
 import {
   ACCOUNT_KEY_RESOURCE_STATUSES,
   type AccountKeyResourceFacts,

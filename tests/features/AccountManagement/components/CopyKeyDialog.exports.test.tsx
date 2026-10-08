@@ -1,5 +1,5 @@
-import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
-import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+import type { AccountKeyCreationResult } from "~/services/accounts/keys/accountKeyCreation"
+import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import { buildNewApiKeyCreationResult } from "~~/tests/test-utils/accountKeyFixtures"
 
 import "./copyKeyDialogMocks"

@@ -16,13 +16,13 @@ import type {
   NativeKeyManagementRow,
   NativeKeyManagementRowAction,
 } from "~/features/KeyManagement/types"
-import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/accountRuntimeKeys"
-import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keyProductCapabilities"
+import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/keys/accountRuntimeKeys"
+import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keys/keyProductCapabilities"
 import type {
   AccountKeyResourceFacts,
   ResourceFailure,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
-import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
+import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/matching/tokenChannelStatus"
 import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 

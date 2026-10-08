@@ -18,14 +18,14 @@ import {
   type BatchVerifyRowStatus,
 } from "~/features/ModelList/verification/batchVerificationState"
 import type { AccountBatchVerifyModelItem } from "~/features/ModelList/verification/batchVerificationState"
-import { collectAccountRuntimeKeySecrets } from "~/services/accounts/accountRuntimeKeys"
-import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { collectAccountRuntimeKeySecrets } from "~/services/accounts/keys/accountRuntimeKeys"
+import type { AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import { resolveProductAnalyticsErrorCategoryFromError } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   type ProductAnalyticsErrorCategory,
 } from "~/services/productAnalytics/contracts"
-import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
+import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/facts/verification"
 import {
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,

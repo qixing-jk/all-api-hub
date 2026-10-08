@@ -1,5 +1,5 @@
-import { validateNewApiSessionReadResource } from "~/services/managedSites/providers/newApiProtectionBypassResource"
-import { validateOctopusApiFetchResource } from "~/services/managedSites/providers/octopusProtectionBypassResource"
+import { validateNewApiSessionReadResource } from "~/services/managedSites/providers/newApi/newApiProtectionBypassResource"
+import { validateOctopusApiFetchResource } from "~/services/managedSites/providers/octopus/octopusProtectionBypassResource"
 import {
   TEMP_CONTEXT_TASK_KINDS,
   type ResolvedProtectionBypassExecution,

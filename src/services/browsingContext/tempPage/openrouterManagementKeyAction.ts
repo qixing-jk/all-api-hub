@@ -13,8 +13,8 @@ import {
   type TempWindowOpenRouterManagementKeyActionParams,
   type TempWindowOpenRouterManagementKeyActionResult,
   type TempWindowOpenRouterManagementKeyCancelResult,
-} from "~/services/apiAdapters/openrouter/managementKeyPageContract"
-import { normalizeOpenRouterManagementKeySecret } from "~/services/apiAdapters/openrouter/managementKeySecret"
+} from "~/services/apiAdapters/openrouter/keys/managementKeyPageContract"
+import { normalizeOpenRouterManagementKeySecret } from "~/services/apiAdapters/openrouter/keys/managementKeySecret"
 import { PROTECTION_BYPASS_DENIED_REASONS } from "~/services/protectionBypass/contracts"
 import { sendTabMessageWithRetry } from "~/utils/browser/runtimeMessages"
 

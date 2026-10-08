@@ -25,9 +25,9 @@ import {
   AccountKeyRepairMessageTypes,
   sendAccountKeyRepairMessage,
 } from "~/services/accounts/accountKeyAutoProvisioning/messaging"
-import { canCreateAccountKeyResources } from "~/services/accounts/keyProductCapabilities"
+import { canCreateAccountKeyResources } from "~/services/accounts/keys/keyProductCapabilities"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import { hasValidManagedSiteConfig } from "~/services/managedSites/runtimeConfig"
+import { hasValidManagedSiteConfig } from "~/services/managedSites/configuration/runtimeConfig"
 import {
   MODEL_LIST_ACCOUNT_SOURCE_ROUTES,
   resolveModelListAccountSourceReadiness,

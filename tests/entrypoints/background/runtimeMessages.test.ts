@@ -13,7 +13,7 @@ import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { PreferencesMessageTypes } from "~/services/preferences/messaging"
-import { ProductAnalyticsMessageTypes } from "~/services/productAnalytics/messaging"
+import { ProductAnalyticsMessageTypes } from "~/services/productAnalytics/runtime/messaging"
 
 type RuntimeMessageListener = (
   request: any,
@@ -101,19 +101,22 @@ describe("setupRuntimeMessageListeners routing", () => {
         setupAutoCheckinMessagingListeners: vi.fn(),
       }),
     )
-    vi.doMock("~/services/accounts/autoRefreshService", () => ({
+    vi.doMock("~/services/accounts/refresh/autoRefreshService", () => ({
       setupAutoRefreshMessagingListeners: vi.fn(),
     }))
-    vi.doMock("~/services/managedSites/channelConfigHandlers", () => ({
-      setupChannelConfigMessagingListeners: vi.fn(),
-    }))
+    vi.doMock(
+      "~/services/managedSites/configuration/channelConfigHandlers",
+      () => ({
+        setupChannelConfigMessagingListeners: vi.fn(),
+      }),
+    )
     vi.doMock("~/services/checkin/externalCheckInService", () => ({
       setupExternalCheckInMessagingListeners: vi.fn(),
     }))
     vi.doMock("~/services/redemption/redemptionAssist", () => ({
       setupRedemptionAssistMessagingListeners,
     }))
-    vi.doMock("~/services/productAnalytics/runtime", () => ({
+    vi.doMock("~/services/productAnalytics/runtime/runtime", () => ({
       setupProductAnalyticsMessagingListeners,
     }))
     vi.doMock("~/entrypoints/background/protectionBypassCoordinator", () => ({
@@ -133,9 +136,12 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doMock("~/services/history/usageHistory/scheduler", () => ({
       setupUsageHistoryMessagingListeners: vi.fn(),
     }))
-    vi.doMock("~/services/webdav/webdavAutoSyncMessageHandlers", () => ({
-      setupWebdavAutoSyncMessagingListeners: vi.fn(),
-    }))
+    vi.doMock(
+      "~/services/webdav/autoSync/webdavAutoSyncMessageHandlers",
+      () => ({
+        setupWebdavAutoSyncMessagingListeners: vi.fn(),
+      }),
+    )
     vi.doMock("~/services/history/dailyBalanceHistory/scheduler", () => ({
       setupDailyBalanceHistoryMessagingListeners: vi.fn(),
       handleDailyBalanceHistoryMessage: vi.fn(),
@@ -197,11 +203,11 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doUnmock("~/services/preferences/runtimePreferencesService")
     vi.doUnmock("~/services/productAnnouncements/service")
     vi.doUnmock("~/services/checkin/autoCheckin/scheduling/schedulerMessaging")
-    vi.doUnmock("~/services/accounts/autoRefreshService")
-    vi.doUnmock("~/services/managedSites/channelConfigHandlers")
+    vi.doUnmock("~/services/accounts/refresh/autoRefreshService")
+    vi.doUnmock("~/services/managedSites/configuration/channelConfigHandlers")
     vi.doUnmock("~/services/checkin/externalCheckInService")
     vi.doUnmock("~/services/redemption/redemptionAssist")
-    vi.doUnmock("~/services/productAnalytics/runtime")
+    vi.doUnmock("~/services/productAnalytics/runtime/runtime")
     vi.doUnmock("~/entrypoints/background/protectionBypassCoordinator")
     vi.doUnmock(
       "~/services/browsingContext/tempPage/openrouterManagementKeyAction",
@@ -209,8 +215,8 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doUnmock("~/entrypoints/background/tempContextDebug")
     vi.doUnmock("~/services/logging/logHistory")
     vi.doUnmock("~/services/history/usageHistory/scheduler")
-    vi.doUnmock("~/services/webdav/webdavAutoSyncService")
-    vi.doUnmock("~/services/webdav/webdavAutoSyncMessageHandlers")
+    vi.doUnmock("~/services/webdav/autoSync/webdavAutoSyncService")
+    vi.doUnmock("~/services/webdav/autoSync/webdavAutoSyncMessageHandlers")
     vi.doUnmock("~/services/history/dailyBalanceHistory/scheduler")
     vi.doUnmock("~/services/integrations/ldohSiteLookup/background")
     vi.doUnmock("~/services/notifications/taskNotificationService")

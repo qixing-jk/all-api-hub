@@ -40,10 +40,15 @@ vi.mock("~/services/preferences/userPreferences", () => ({
 vi.mock("~/services/apiAdapters/registry", () => ({
   getManagedSiteCapabilities: () => ({ config: { get: async () => config } }),
 }))
-vi.mock("~/services/managedSites/runtimeConfig", async (original) => ({
-  ...(await original<typeof import("~/services/managedSites/runtimeConfig")>()),
-  getCurrentManagedSiteType: async () => "done-hub",
-}))
+vi.mock(
+  "~/services/managedSites/configuration/runtimeConfig",
+  async (original) => ({
+    ...(await original<
+      typeof import("~/services/managedSites/configuration/runtimeConfig")
+    >()),
+    getCurrentManagedSiteType: async () => "done-hub",
+  }),
+)
 vi.mock("~/services/apiAdapters/managedResources/registry", () => ({
   getManagedResourceRegistration: () => doneHubManagedResourceRegistration,
 }))

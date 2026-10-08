@@ -3,12 +3,12 @@ import {
   ACCOUNT_SITE_ADAPTER_FAMILIES,
   type AccountSiteType,
 } from "~/constants/siteType"
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
   AutoDetectCompletionError,
   type DetectedAccountIdentity,
 } from "~/services/accounts/autoDetectCompletion/types"
+import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 
 export interface AccountAutoDetectExistingAccount {

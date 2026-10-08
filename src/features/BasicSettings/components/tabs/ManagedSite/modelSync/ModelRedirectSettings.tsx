@@ -19,7 +19,7 @@ import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import {
   hasValidManagedSiteConfig,
   resolveCurrentManagedSiteRuntimeConfig,
-} from "~/services/managedSites/runtimeConfig"
+} from "~/services/managedSites/configuration/runtimeConfig"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { supportsManagedSiteModelRedirect } from "~/services/models/modelRedirect/capabilities"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"

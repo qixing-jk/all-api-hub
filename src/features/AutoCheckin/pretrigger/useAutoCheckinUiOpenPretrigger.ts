@@ -9,7 +9,6 @@ import {
   trackProductAnalyticsActionCompleted,
   trackProductAnalyticsActionStarted,
 } from "~/services/productAnalytics/actions"
-import { trackAutoCheckinConfigSnapshot } from "~/services/productAnalytics/autoCheckin"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -17,6 +16,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { trackAutoCheckinConfigSnapshot } from "~/services/productAnalytics/facts/autoCheckin"
 import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
 import {
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,

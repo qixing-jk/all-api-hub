@@ -1,5 +1,5 @@
 import { type AccountSiteType } from "~/constants/siteType"
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import { type AccountDetectionDiagnostics } from "~/services/accountSiteOnboarding/diagnostics"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { summarizeApiServiceFetchContext } from "~/services/apiTransport/type"

@@ -1,4 +1,9 @@
 import type { OpenRouterBootstrapAttemptOutcome } from "~/constants/openRouterBootstrap"
+import {
+  resolveProductAnalyticsCategoryFromFailureReason,
+  resolveProductAnalyticsFailureReasonFromLocalMessage,
+} from "~/services/productAnalytics/diagnostics/errorPatternDiagnostics"
+import { trackProductAnalyticsEvent } from "~/services/productAnalytics/runtime/dispatch"
 import { createLogger } from "~/utils/core/logger"
 
 import { API_ERROR_CODES } from "../apiTransport/errors"
@@ -34,11 +39,6 @@ import {
   type ProductAnalyticsTargetState,
   type ProductAnalyticsTelemetrySource,
 } from "./contracts"
-import { trackProductAnalyticsEvent } from "./dispatch"
-import {
-  resolveProductAnalyticsCategoryFromFailureReason,
-  resolveProductAnalyticsFailureReasonFromLocalMessage,
-} from "./errorPatternDiagnostics"
 
 export {
   resolveProductAnalyticsActionContext,

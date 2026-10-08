@@ -97,18 +97,21 @@ vi.mock("~/services/productAnnouncements/messaging", () => ({
     sendMessageMock(...args),
 }))
 
-vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/services/productAnalytics/dispatch")
-    >()
+vi.mock(
+  "~/services/productAnalytics/runtime/dispatch",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/productAnalytics/runtime/dispatch")
+      >()
 
-  return {
-    ...actual,
-    trackProductAnalyticsEvent: (...args: unknown[]) =>
-      trackProductAnalyticsEventMock(...args),
-  }
-})
+    return {
+      ...actual,
+      trackProductAnalyticsEvent: (...args: unknown[]) =>
+        trackProductAnalyticsEventMock(...args),
+    }
+  },
+)
 
 describe("ProductAnnouncementBanner", () => {
   beforeEach(() => {

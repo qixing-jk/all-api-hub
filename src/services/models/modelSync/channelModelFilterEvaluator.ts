@@ -1,11 +1,11 @@
 import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import { isSafeChannelModelFilterRegex } from "~/services/managedSites/channelModelFilterRules"
+import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/configuration/runtimeConfig"
 import {
   assertManagedResourceRefForSite,
   getManagedResourceRefKey,
 } from "~/services/managedSites/managedResourceIdentity"
-import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { collectManagedConfigSecrets } from "~/services/managedSites/utils/resourceSecrets"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"

@@ -17,8 +17,8 @@ import {
 import {
   cancelOpenRouterAccountProvisioning,
   onboardOpenRouterAccount,
-} from "~/services/apiAdapters/openrouter/accountProvisioning"
-import type { TempWindowOpenRouterManagementKeyCancelResult } from "~/services/apiAdapters/openrouter/managementKeyPageContract"
+} from "~/services/apiAdapters/openrouter/account/accountProvisioning"
+import type { TempWindowOpenRouterManagementKeyCancelResult } from "~/services/apiAdapters/openrouter/keys/managementKeyPageContract"
 import type {
   OpenRouterAccountOnboardingResult,
   OpenRouterProvisioningMetadata,

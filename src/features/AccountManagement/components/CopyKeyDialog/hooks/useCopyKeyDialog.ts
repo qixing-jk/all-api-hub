@@ -17,20 +17,20 @@ import {
   getCreatedAccountRuntimeKey,
   getCreatedAccountRuntimeKeyId,
   type AccountKeyCreationResult,
-} from "~/services/accounts/accountKeyCreation"
-import { fetchDisplayAccountKeyResourceInventory } from "~/services/accounts/accountKeyResourceInventory"
+} from "~/services/accounts/keys/accountKeyCreation"
+import { fetchDisplayAccountKeyResourceInventory } from "~/services/accounts/keys/accountKeyResourceInventory"
 import {
   buildAccountKeyResourceRuntimeKeyFromFacts,
   type AccountRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
-import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+} from "~/services/accounts/keys/accountRuntimeKeys"
+import type { CreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import {
   canCreateAccountKeyResources,
   canListAccountKeyResources,
   canListAccountRuntimeKeys,
   supportsAccountKeyCreation,
   supportsRecoverableAccountRuntimeKeySecrets,
-} from "~/services/accounts/keyProductCapabilities"
+} from "~/services/accounts/keys/keyProductCapabilities"
 import {
   fetchDisplayAccountRuntimeKeys,
   resolveDisplayAccountRuntimeKeySecret,

@@ -25,7 +25,7 @@ import {
   ACCOUNT_RUNTIME_KEY_SOURCES,
   getAccountRuntimeKeyLocator,
   isServiceCredentialRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import type { DisplaySiteData } from "~/types"
 import {

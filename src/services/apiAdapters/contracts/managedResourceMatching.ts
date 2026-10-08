@@ -2,7 +2,7 @@ import type { TFunction } from "i18next"
 
 import type { ManagedSiteType } from "~/constants/siteType"
 import type { ScheduledReadOptions } from "~/services/apiTransport/requestScheduling"
-import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
+import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/configuration/runtimeConfig"
 import type {
   ManagedResourceMatchCandidate,
   ManagedResourceMatchList,

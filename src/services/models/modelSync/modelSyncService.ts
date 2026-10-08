@@ -3,6 +3,7 @@ import { union } from "lodash-es"
 import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { type ManagedSiteRuntimeConfig } from "~/services/managedSites/configuration/runtimeConfig"
 import {
   assertManagedResourceRefForSite,
   toManagedUpstreamResourceRef,
@@ -13,7 +14,6 @@ import {
   type ManagedSiteMutationResult,
   type ManagedSiteMutationRetryDecision,
 } from "~/services/managedSites/mutations"
-import { type ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import { collectManagedConfigSecrets } from "~/services/managedSites/utils/resourceSecrets"
 import { runModelSyncBatch } from "~/services/models/modelSync/runModelSyncBatch"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"

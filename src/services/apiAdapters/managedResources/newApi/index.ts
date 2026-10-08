@@ -41,6 +41,7 @@ import {
   ApiError,
   isTempWindowUnsupportedErrorCode,
 } from "~/services/apiTransport/errors"
+import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/configuration/runtimeConfig"
 import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
 import {
   MANAGED_SITE_MUTATION_COMPLETIONS,
@@ -53,9 +54,8 @@ import {
   buildNewApiAdvancedPayload,
   buildNewApiUpdatePayload,
   hasNewApiAdvancedValues,
-} from "~/services/managedSites/providers/newApiChannelPayload"
-import { NewApiChannelKeyRequirementError } from "~/services/managedSites/providers/newApiSessionContracts"
-import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
+} from "~/services/managedSites/providers/newApi/newApiChannelPayload"
+import { NewApiChannelKeyRequirementError } from "~/services/managedSites/providers/newApi/newApiSessionContracts"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
 import {

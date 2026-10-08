@@ -1,6 +1,6 @@
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import type { OptionsOverviewUsageSnapshot } from "~/features/OptionsOverview/types"
-import { isAccountTodayMetricAvailable } from "~/services/accounts/accountTodayStats"
+import { isAccountTodayMetricAvailable } from "~/services/accounts/metrics/accountTodayStats"
 import type { AccountStats } from "~/types"
 import type { UsageHistoryStore } from "~/types/usageHistory"
 

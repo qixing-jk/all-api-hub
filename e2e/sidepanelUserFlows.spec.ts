@@ -16,7 +16,7 @@ import { SITE_BOOKMARKS_TEST_IDS } from "~/features/SiteBookmarks/testIds"
 import {
   createDefaultAccountStorageConfig,
   normalizeAccountStorageConfigForWrite,
-} from "~/services/accounts/accountDefaults"
+} from "~/services/accounts/editing/accountDefaults"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { AuthTypeEnum } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"

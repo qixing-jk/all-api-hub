@@ -1,5 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
-import { createLegacyTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
+import { createLegacyTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
 import { AuthTypeEnum } from "~/types"
 
 import {

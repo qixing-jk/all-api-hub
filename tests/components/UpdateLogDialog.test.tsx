@@ -44,7 +44,7 @@ vi.mock("~/features/StarPromotion/useStarPromotionActive", () => ({
   useStarPromotionPromptImpression: promptImpressionMock,
 }))
 
-vi.mock("~/services/productAnalytics/starPromotion", () => ({
+vi.mock("~/services/productAnalytics/facts/starPromotion", () => ({
   trackStarPromotionAction: trackStarPromotionActionMock,
 }))
 

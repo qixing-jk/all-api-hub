@@ -1,7 +1,7 @@
 import { Storage } from "@plasmohq/storage"
 
 import { RuntimeMessageTypes } from "~/constants/runtimeActions"
-import { ACCOUNT_KEY_RECONCILIATION_OUTCOMES } from "~/services/accounts/accountKeyInventoryReconciliation"
+import { ACCOUNT_KEY_RECONCILIATION_OUTCOMES } from "~/services/accounts/keys/accountKeyInventoryReconciliation"
 import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/core/storageKeys"
 import type {
   AccountKeyRepairAccountResult,

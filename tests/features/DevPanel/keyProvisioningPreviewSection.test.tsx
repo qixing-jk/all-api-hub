@@ -19,10 +19,10 @@ const { nativePrepare, realSave } = vi.hoisted(() => ({
   realSave: vi.fn(),
 }))
 vi.mock(
-  "~/services/accounts/accountKeyProvisioning",
+  "~/services/accounts/keys/accountKeyProvisioning",
   async (importOriginal) => ({
     ...(await importOriginal<
-      typeof import("~/services/accounts/accountKeyProvisioning")
+      typeof import("~/services/accounts/keys/accountKeyProvisioning")
     >()),
     prepareAccountKeyProvisioning: nativePrepare,
   }),

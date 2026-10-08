@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { sub2ApiBrowserIdentity } from "~/services/apiAdapters/sub2api/browserIdentity"
-import * as sub2ApiBrowserSession from "~/services/apiService/sub2api/browserSession"
+import * as sub2ApiBrowserSession from "~/services/apiService/sub2api/auth/browserSession"
 
 describe("sub2ApiBrowserIdentity", () => {
   beforeEach(() => {

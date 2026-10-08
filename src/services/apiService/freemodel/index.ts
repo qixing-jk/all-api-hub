@@ -3,7 +3,7 @@ import type {
   AccountData,
   ApiServiceAccountRequest,
 } from "~/services/accounts/accountDataModel"
-import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
+import { createUnsupportedTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
 import { FREEMODEL_WEB_ORIGIN } from "~/services/accountSiteDefinitions/identifiers"
 import type { UserInfo } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"

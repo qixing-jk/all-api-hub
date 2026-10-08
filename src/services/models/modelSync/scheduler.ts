@@ -2,7 +2,7 @@ import {
   isManagedResourceRef,
   type ManagedResourceRef,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import { resolveCurrentManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
+import { resolveCurrentManagedSiteRuntimeConfig } from "~/services/managedSites/configuration/runtimeConfig"
 import { getManagedSiteContext } from "~/services/managedSites/utils/managedSite"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
@@ -17,7 +17,7 @@ import {
   type ProductAnalyticsErrorCategory,
   type ProductAnalyticsManagedSiteType,
 } from "~/services/productAnalytics/contracts"
-import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/managedSite"
+import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/facts/managedSite"
 import {
   INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
   isManualModelSyncProtectionBypassExecution,

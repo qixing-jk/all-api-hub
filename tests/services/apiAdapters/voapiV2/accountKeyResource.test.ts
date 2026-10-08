@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { prepareDefaultAccountKeyCreation } from "~/services/accounts/accountKeyCreation"
+import { prepareDefaultAccountKeyCreation } from "~/services/accounts/keys/accountKeyCreation"
 import {
   ACCOUNT_KEY_PROVISIONING_COVERAGE,
   ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS,

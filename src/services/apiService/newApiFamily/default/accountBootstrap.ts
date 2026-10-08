@@ -3,7 +3,7 @@ import {
   isAccountLoginProvider,
   type AccountLoginProvider,
 } from "~/constants/accountLogin"
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
+import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import type {
   AccessTokenInfo,
   UserInfo,

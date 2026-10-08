@@ -13,7 +13,6 @@ import { useAccountDataContext } from "~/features/AccountManagement/data/Account
 import HeaderThemeSwitcher from "~/features/Appearance/HeaderThemeSwitcher"
 import { ProductAnnouncementButton } from "~/features/ProductAnnouncements/ProductAnnouncementButton"
 import toast from "~/lib/notify"
-import { buildAccountRefreshDiagnostics } from "~/services/productAnalytics/accountRefresh"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -25,6 +24,7 @@ import {
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { buildAccountRefreshDiagnostics } from "~/services/productAnalytics/facts/accountRefresh"
 import { isExtensionSidePanel } from "~/utils/browser"
 import { getSidePanelSupport } from "~/utils/browser/sidePanel"
 import { createLogger } from "~/utils/core/logger"

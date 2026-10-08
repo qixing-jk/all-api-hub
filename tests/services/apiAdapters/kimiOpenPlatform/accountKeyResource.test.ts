@@ -4,8 +4,8 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   ensureAccountKey,
   prepareDefaultAccountKeyCreation,
-} from "~/services/accounts/accountKeyCreation"
-import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/accountKeyNames"
+} from "~/services/accounts/keys/accountKeyCreation"
+import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/keys/accountKeyNames"
 import { createKimiOpenPlatformKeyResources } from "~/services/apiAdapters/kimiOpenPlatform/accountKeyResource"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"

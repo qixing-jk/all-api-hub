@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
-import { productAnalyticsPreferences } from "~/services/productAnalytics/preferences"
+import { productAnalyticsPreferences } from "~/services/productAnalytics/configuration/preferences"
 import { uninstallSurveyService } from "~/services/uninstallSurvey/uninstallSurvey"
 import { setUninstallUrl } from "~/utils/browser/runtime"
 import { isDevBuild, isTestMode } from "~/utils/core/environment"
@@ -42,7 +42,7 @@ vi.mock("~/utils/browser/runtime", () => ({
   setUninstallUrl: vi.fn(async () => true),
 }))
 
-vi.mock("~/services/productAnalytics/preferences", () => ({
+vi.mock("~/services/productAnalytics/configuration/preferences", () => ({
   productAnalyticsPreferences: {
     getAnonymousIdIfEnabled: vi.fn(async () => "analytics-abc"),
   },

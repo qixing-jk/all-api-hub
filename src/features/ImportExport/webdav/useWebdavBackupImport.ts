@@ -26,15 +26,15 @@ import {
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { buildWebDavSyncDiagnostics } from "~/services/productAnalytics/webDavSync"
-import { downloadCloudSyncBackup } from "~/services/webdav/cloudSyncService"
+import { buildWebDavSyncDiagnostics } from "~/services/productAnalytics/facts/webDavSync"
 import {
   decryptWebdavBackupEnvelope,
   tryParseEncryptedWebdavBackupEnvelope,
   type EncryptedWebdavBackupEnvelopeV1,
-} from "~/services/webdav/webdavBackupEncryption"
-import { parseWebdavBackupJson } from "~/services/webdav/webdavBackupValidation"
-import { buildWebdavImportPayloadBySelection } from "~/services/webdav/webdavSelectiveSync"
+} from "~/services/webdav/backup/webdavBackupEncryption"
+import { parseWebdavBackupJson } from "~/services/webdav/backup/webdavBackupValidation"
+import { downloadCloudSyncBackup } from "~/services/webdav/cloudSyncService"
+import { buildWebdavImportPayloadBySelection } from "~/services/webdav/sync/webdavSelectiveSync"
 import { downloadBackupRaw } from "~/services/webdav/webdavService"
 import { CLOUD_SYNC_PROVIDERS } from "~/types/webdav"
 import { createLogger } from "~/utils/core/logger"

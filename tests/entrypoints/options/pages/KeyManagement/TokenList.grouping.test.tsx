@@ -15,7 +15,7 @@ import {
   KEY_MANAGEMENT_TEST_IDS,
 } from "~/features/KeyManagement/testIds"
 import { KEY_MANAGEMENT_LOAD_STATUSES } from "~/features/KeyManagement/types"
-import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/accountRuntimeKeys"
+import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   API_CREDENTIAL_PROFILE_LINK_SOURCES,
   API_CREDENTIAL_PROFILE_LINK_STATES,

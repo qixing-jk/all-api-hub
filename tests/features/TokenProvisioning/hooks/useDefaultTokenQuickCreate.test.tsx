@@ -11,12 +11,15 @@ import {
 } from "~~/tests/test-utils/factories"
 
 const { prepare } = vi.hoisted(() => ({ prepare: vi.fn() }))
-vi.mock("~/services/accounts/accountKeyCreation", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("~/services/accounts/accountKeyCreation")
-  >()),
-  prepareDefaultAccountKeyCreation: prepare,
-}))
+vi.mock(
+  "~/services/accounts/keys/accountKeyCreation",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/accounts/keys/accountKeyCreation")
+    >()),
+    prepareDefaultAccountKeyCreation: prepare,
+  }),
+)
 const account = buildDisplaySiteData({ siteType: "sub2api" })
 const created = buildNewApiKeyCreationResult(account, buildNewApiToken())
 const requirements = ["first", "second"].map((key) => ({

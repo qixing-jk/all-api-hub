@@ -19,7 +19,7 @@ import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import {
   ACCOUNT_RUNTIME_KEY_SOURCES,
   type AccountRuntimeKeyLocator,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
 type AssociateApiCredentialProfileDialogProps = {

@@ -7,7 +7,7 @@ import {
   type KeyManagementEntry,
 } from "~/features/KeyManagement/types"
 import { saveAccountRuntimeKeysToApiCredentialProfiles } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
-import { type AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { type AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

@@ -1,7 +1,7 @@
 import {
   isAccountRuntimeKeyLocatorEqual,
   type AccountRuntimeKeyLocator,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   API_CREDENTIAL_PROFILE_LINK_STATES,
   type ApiCredentialProfile,

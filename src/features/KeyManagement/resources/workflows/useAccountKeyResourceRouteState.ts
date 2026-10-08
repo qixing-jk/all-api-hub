@@ -11,7 +11,7 @@ import {
   accountContextsMatch,
   captureAccountContext,
 } from "~/features/KeyManagement/resources/workflows/accountKeyResourceWorkflowSupport"
-import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+import type { CreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 
 let nextAccountKeyResourceControllerInstanceId = 0
 /** Owns route observations, controller transition identity and one-time secret retention. */

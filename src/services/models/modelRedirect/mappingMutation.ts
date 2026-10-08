@@ -2,15 +2,15 @@ import type {
   ManagedModelMappingPolicy,
   ManagedResourceModelsCapability,
 } from "~/services/apiAdapters/contracts/managedResourceModels"
+import type {
+  ManagedSiteRuntimeConfig,
+  ManagedSiteRuntimeConfigValue,
+} from "~/services/managedSites/configuration/runtimeConfig"
 import { assertManagedResourceRefForSite } from "~/services/managedSites/managedResourceIdentity"
 import {
   consumeManagedSiteMutationResult,
   type ManagedSiteMutationResult,
 } from "~/services/managedSites/mutations"
-import type {
-  ManagedSiteRuntimeConfig,
-  ManagedSiteRuntimeConfigValue,
-} from "~/services/managedSites/runtimeConfig"
 import {
   collectManagedConfigSecrets,
   collectManagedResourceSecrets,

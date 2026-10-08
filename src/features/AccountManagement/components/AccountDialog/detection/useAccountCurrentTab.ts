@@ -8,7 +8,7 @@ import {
 
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { type ResolveAccountBrowserSessionOptions } from "~/services/accountBrowserSession"
-import { getSiteName } from "~/services/accounts/siteName"
+import { getSiteName } from "~/services/accounts/identity/siteName"
 import {
   getActiveTabs,
   onTabActivated,

@@ -9,7 +9,7 @@ import {
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
   KEY_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/KeyManagement/constants"
-import { NEW_API_MANAGED_SESSION_STATUSES } from "~/services/managedSites/providers/newApiSessionContracts"
+import { NEW_API_MANAGED_SESSION_STATUSES } from "~/services/managedSites/providers/newApi/newApiSessionContracts"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import {
   act,
@@ -41,7 +41,7 @@ vi.mock("~/services/accounts/accountStorage/accountPresentation", () => ({
   accountPresentation: { convertToDisplayData: mockedConvertToDisplayData },
 }))
 
-vi.mock("~/services/accounts/keyProductCapabilities", () => ({
+vi.mock("~/services/accounts/keys/keyProductCapabilities", () => ({
   canResolveAccountRuntimeKeySecret: (account: { id?: string }) =>
     account.id === "account-1",
 }))
@@ -96,10 +96,10 @@ vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => {
 })
 
 vi.mock(
-  "~/services/managedSites/providers/newApiSession",
+  "~/services/managedSites/providers/newApi/newApiSession",
   async (importOriginal) => {
     const actual =
-      (await importOriginal()) as typeof import("~/services/managedSites/providers/newApiSession")
+      (await importOriginal()) as typeof import("~/services/managedSites/providers/newApi/newApiSession")
 
     return {
       ...actual,

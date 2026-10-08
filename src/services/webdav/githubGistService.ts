@@ -1,19 +1,18 @@
 import {
-  CLOUD_SYNC_ERROR_CODES,
-  type GitHubGistSettings,
-} from "~/types/cloudSync"
-import type { WebDAVSettings } from "~/types/webdav"
-
+  decryptWebdavBackupEnvelope,
+  encryptWebdavBackupContent,
+  tryParseEncryptedWebdavBackupEnvelope,
+} from "~/services/webdav/backup/webdavBackupEncryption"
 import {
   GitHubGistError,
   readGithubGistRawFile,
   requestGithubGistJson,
-} from "./githubGistHttp"
+} from "~/services/webdav/transport/githubGistHttp"
 import {
-  decryptWebdavBackupEnvelope,
-  encryptWebdavBackupContent,
-  tryParseEncryptedWebdavBackupEnvelope,
-} from "./webdavBackupEncryption"
+  CLOUD_SYNC_ERROR_CODES,
+  type GitHubGistSettings,
+} from "~/types/cloudSync"
+import type { WebDAVSettings } from "~/types/webdav"
 
 /**
  * GitHub REST Gists API contract: create/update requests use `public: false`

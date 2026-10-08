@@ -9,7 +9,7 @@ import { KILO_CODE_EXPORT_TEST_IDS } from "~/features/KiloCodeExport/kiloCodeExp
 import type {
   AccountKeyCreationResult,
   EnsureAccountKeyResult,
-} from "~/services/accounts/accountKeyCreation"
+} from "~/services/accounts/keys/accountKeyCreation"
 import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { KILO_CODE_EXPORT_TARGETS } from "~/services/integrations/kiloCodeExport"
@@ -153,12 +153,15 @@ vi.mock("~/services/apiAdapters/registry", () => ({
     mockgetSiteTypeCapabilities(...args),
 }))
 
-vi.mock("~/services/accounts/accountKeyCreation", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("~/services/accounts/accountKeyCreation")
-  >()),
-  ensureAccountKey: (...args: unknown[]) => mockEnsureAccountKey(...args),
-}))
+vi.mock(
+  "~/services/accounts/keys/accountKeyCreation",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/accounts/keys/accountKeyCreation")
+    >()),
+    ensureAccountKey: (...args: unknown[]) => mockEnsureAccountKey(...args),
+  }),
+)
 
 const createDisplayAccount = (
   overrides: Partial<DisplaySiteData>,

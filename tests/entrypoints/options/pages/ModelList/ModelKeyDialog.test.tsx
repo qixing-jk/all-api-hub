@@ -5,11 +5,11 @@ import { SITE_TYPES } from "~/constants/siteType"
 import ModelKeyDialog from "~/features/ModelList/keySelection"
 import { useModelKeyDialog } from "~/features/ModelList/keySelection/hooks/useModelKeyDialog"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
-import type { AccountKeyCreationResult } from "~/services/accounts/accountKeyCreation"
+import type { AccountKeyCreationResult } from "~/services/accounts/keys/accountKeyCreation"
 import {
   createAccountKeyResourceCreatedRuntimeSecret,
   createUnattributedAccountCreatedRuntimeSecret,
-} from "~/services/accounts/createdRuntimeSecret"
+} from "~/services/accounts/keys/createdRuntimeSecret"
 import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -82,7 +82,7 @@ vi.mock(
         const inventory = await fetchAccountTokensMock(account)
         if (account.siteType === SITE_TYPES.SHAREDCHAT) {
           const { buildServiceCredentialRuntimeKey } = await import(
-            "~/services/accounts/accountRuntimeKeys"
+            "~/services/accounts/keys/accountRuntimeKeys"
           )
           return [buildServiceCredentialRuntimeKey(account, inventory)]
         }
@@ -117,12 +117,15 @@ vi.mock("~/services/apiAdapters/registry", () => ({
           },
   }),
 }))
-vi.mock("~/services/accounts/accountKeyCreation", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("~/services/accounts/accountKeyCreation")
-  >()),
-  prepareDefaultAccountKeyCreation: prepareCreationMock,
-}))
+vi.mock(
+  "~/services/accounts/keys/accountKeyCreation",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/accounts/keys/accountKeyCreation")
+    >()),
+    prepareDefaultAccountKeyCreation: prepareCreationMock,
+  }),
+)
 vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
   default: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div>Native key editor</div> : null,

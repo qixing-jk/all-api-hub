@@ -6,7 +6,7 @@ import { IMPORT_EXPORT_TEST_IDS } from "~/features/ImportExport/testIds"
 import {
   createDefaultAccountStorageConfig,
   normalizeAccountStorageConfigForWrite,
-} from "~/services/accounts/accountDefaults"
+} from "~/services/accounts/editing/accountDefaults"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { AccountStorageConfig } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"

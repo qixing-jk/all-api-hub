@@ -78,7 +78,7 @@ import {
   PRODUCT_ANALYTICS_SETTING_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import { trackProductAnalyticsEvent } from "~/services/productAnalytics/dispatch"
+import { trackProductAnalyticsEvent } from "~/services/productAnalytics/runtime/dispatch"
 import {
   INVALID_PROTECTION_BYPASS_EXECUTION_ERROR,
   PROTECTION_BYPASS_AUTOMATIC_TRIGGERS,
@@ -395,16 +395,19 @@ vi.mock("~/services/productAnalytics/actions", () => ({
   trackProductAnalyticsActionCompleted: vi.fn(),
 }))
 
-vi.mock("~/services/productAnalytics/dispatch", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/services/productAnalytics/dispatch")
-    >()
-  return {
-    ...actual,
-    trackProductAnalyticsEvent: vi.fn(),
-  }
-})
+vi.mock(
+  "~/services/productAnalytics/runtime/dispatch",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/productAnalytics/runtime/dispatch")
+      >()
+    return {
+      ...actual,
+      trackProductAnalyticsEvent: vi.fn(),
+    }
+  },
+)
 
 const mockedUserPreferences = userPreferences as unknown as {
   getPreferences: ReturnType<typeof vi.fn>

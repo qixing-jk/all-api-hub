@@ -1,4 +1,4 @@
-import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import type { AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
 import type { ModelDescriptor } from "~/services/models/modelDescriptor"

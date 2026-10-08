@@ -10,7 +10,7 @@ import {
   resetInvalidOptionValue,
   toFailure,
 } from "~/features/KeyManagement/resources/workflows/accountKeyResourceWorkflowSupport"
-import type { CreatedRuntimeSecret } from "~/services/accounts/createdRuntimeSecret"
+import type { CreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import {
   type AccountKeyResourceEditor,
   type EditableResourceProjection,

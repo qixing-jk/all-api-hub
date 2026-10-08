@@ -1,7 +1,7 @@
 import { useCallback, useRef } from "react"
 
 import { type AccountBatchVerifyModelItem } from "~/features/ModelList/verification/batchVerificationState"
-import { type AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { type AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   fetchDisplayAccountRuntimeKeys,
   resolveDisplayAccountRuntimeKeySecret,

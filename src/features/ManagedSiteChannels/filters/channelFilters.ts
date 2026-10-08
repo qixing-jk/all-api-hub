@@ -1,8 +1,8 @@
 import {
   ChannelConfigMessageTypes,
   sendChannelConfigMessage,
-} from "~/services/managedSites/channelConfigMessaging"
-import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
+} from "~/services/managedSites/configuration/channelConfigMessaging"
+import { channelConfigStorage } from "~/services/managedSites/configuration/channelConfigStorage"
 import { getRuntimeMessageFailureMessage } from "~/services/runtimeMessaging/result"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import type { ManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"

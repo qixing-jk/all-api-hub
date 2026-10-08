@@ -2,7 +2,7 @@ import { once } from "node:events"
 import { createServer } from "node:http"
 import { expect, it, vi } from "vitest"
 
-import { generateNewApiTotpCode } from "~/services/managedSites/providers/newApiTotp"
+import { generateNewApiTotpCode } from "~/services/managedSites/providers/newApi/newApiTotp"
 import {
   E2E_ACCESS_TOKEN_NAME,
   revokeStaleE2eAccessTokens,

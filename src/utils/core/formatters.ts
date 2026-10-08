@@ -6,7 +6,7 @@ import {
   collectAccountMetricContributors,
   isAccountTodayMetricAvailable,
   isAccountTodayMetricLegacyUnclassified,
-} from "~/services/accounts/accountTodayStats"
+} from "~/services/accounts/metrics/accountTodayStats"
 import type {
   AccountMetricCoverage,
   AccountTodayMetricAvailability,

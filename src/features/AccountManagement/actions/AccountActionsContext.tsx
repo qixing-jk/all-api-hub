@@ -14,7 +14,6 @@ import toast from "~/lib/notify"
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
-import { buildAccountRefreshDiagnostics } from "~/services/productAnalytics/accountRefresh"
 import {
   startProductAnalyticsAction,
   type ProductAnalyticsActionContext,
@@ -29,6 +28,7 @@ import {
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { buildAccountRefreshDiagnostics } from "~/services/productAnalytics/facts/accountRefresh"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import type { DisplaySiteData } from "~/types"

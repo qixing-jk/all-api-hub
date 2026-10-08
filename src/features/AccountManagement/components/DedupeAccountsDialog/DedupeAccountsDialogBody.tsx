@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
-import type { AccountDedupeKeepStrategy } from "~/services/accounts/accountDedupe"
+import type { AccountDedupeKeepStrategy } from "~/services/accounts/identity/accountDedupe"
 
 import { DedupeAccountsGroupsList } from "./DedupeAccountsGroupsList"
 import type {

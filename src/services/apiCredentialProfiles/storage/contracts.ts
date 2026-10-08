@@ -1,4 +1,4 @@
-import { type AccountRuntimeKeyLocator } from "~/services/accounts/accountRuntimeKeys"
+import { type AccountRuntimeKeyLocator } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   type API_CREDENTIAL_PROFILE_LINK_RESOLUTION_STATUSES,
   type ApiCredentialProfileCaptureStatus,

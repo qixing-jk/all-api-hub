@@ -1,17 +1,17 @@
 import toast from "~/lib/notify"
 import { ensureAllGroupKeysForAccount } from "~/services/accounts/accountKeyAutoProvisioning/ensureAllGroupKeys"
-import { ensureAccountKey } from "~/services/accounts/accountKeyCreation"
+import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
+import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { ensureAccountKey } from "~/services/accounts/keys/accountKeyCreation"
 import {
   ACCOUNT_KEY_RECONCILIATION_INVENTORY_STATUSES,
   ACCOUNT_KEY_RECONCILIATION_OUTCOMES,
   type AccountKeyInventoryReconciliationResult,
-} from "~/services/accounts/accountKeyInventoryReconciliation"
-import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
-import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+} from "~/services/accounts/keys/accountKeyInventoryReconciliation"
 import {
   canRunAccountDefaultTokenAutomation,
   createStoredAccountKeyProductContext,
-} from "~/services/accounts/keyProductCapabilities"
+} from "~/services/accounts/keys/keyProductCapabilities"
 import {
   ACCOUNT_USER_FEATURE_IDS,
   resolveAccountUserFeatureAvailability,

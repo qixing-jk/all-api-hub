@@ -1,7 +1,7 @@
 import {
   getAccountRuntimeKeyLocatorIdentity,
   type AccountRuntimeKeyLocator,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import { API_CREDENTIAL_PROFILE_CAPTURE_STATUSES } from "~/services/apiCredentialProfiles/links/contracts"
 import {
   addProfileLinkTombstones,

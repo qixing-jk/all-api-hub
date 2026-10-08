@@ -9,7 +9,7 @@ import {
   ManagedResourceError,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { octopusManagedSiteMigrationCapability as capability } from "~/services/apiAdapters/managedResources/octopus/migration"
-import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/channelMigrationCapabilityRegistry"
+import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/migration/channelMigrationCapabilityRegistry"
 import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES as blockers } from "~/types/managedSiteMigration"
 import type {

@@ -7,8 +7,8 @@ import type {
   RefreshAccountResult,
 } from "~/services/accounts/accountDataModel"
 import { determineHealthStatus } from "~/services/accounts/accountHealth"
-import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { resolveAccountSiteUserIdentity } from "~/services/accounts/accountSiteProfile"
+import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import type {
   AccessTokenInfo,
   UserInfo,

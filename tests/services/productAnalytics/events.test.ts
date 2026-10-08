@@ -22,8 +22,8 @@ import {
 import {
   registerProductAnalyticsBackgroundHandler,
   trackProductAnalyticsEvent,
-} from "~/services/productAnalytics/dispatch"
-import { ProductAnalyticsMessageTypes } from "~/services/productAnalytics/messaging"
+} from "~/services/productAnalytics/runtime/dispatch"
+import { ProductAnalyticsMessageTypes } from "~/services/productAnalytics/runtime/messaging"
 import { setLoggingPreferences } from "~/utils/core/logger"
 
 const {
@@ -41,12 +41,15 @@ vi.mock("~/utils/browser", async (importOriginal) => ({
   isExtensionBackground: isExtensionBackgroundMock,
 }))
 
-vi.mock("~/services/productAnalytics/messaging", async (importOriginal) => ({
-  ...(await importOriginal<
-    typeof import("~/services/productAnalytics/messaging")
-  >()),
-  sendProductAnalyticsMessage: sendProductAnalyticsMessageMock,
-}))
+vi.mock(
+  "~/services/productAnalytics/runtime/messaging",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/productAnalytics/runtime/messaging")
+    >()),
+    sendProductAnalyticsMessage: sendProductAnalyticsMessageMock,
+  }),
+)
 
 let cleanupBackgroundHandler: (() => void) | undefined
 

@@ -16,7 +16,7 @@ import {
 import {
   isAccountTodayMetricAvailable,
   isAccountTodayMetricComplete,
-} from "~/services/accounts/accountTodayStats"
+} from "~/services/accounts/metrics/accountTodayStats"
 import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
 import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/discovery/inspection"
 import type {

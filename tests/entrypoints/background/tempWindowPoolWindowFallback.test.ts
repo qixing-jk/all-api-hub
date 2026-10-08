@@ -51,7 +51,7 @@ vi.mock("~/services/productAnalytics/actions", () => ({
     trackProductAnalyticsActionCompletedMock,
 }))
 
-vi.mock("~/services/productAnalytics/shieldBypassSummary", () => ({
+vi.mock("~/services/productAnalytics/facts/shieldBypassSummary", () => ({
   recordShieldBypassTempWindowFetchResult: recordTempWindowFetchResultMock,
   recordShieldBypassTempWindowTurnstileFetchResult:
     recordTempWindowTurnstileFetchResultMock,

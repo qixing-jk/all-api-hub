@@ -2,7 +2,7 @@ import type { TFunction } from "i18next"
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { getManagedSiteTargetOptions } from "~/services/managedSites/channelMigrationTargets"
+import { getManagedSiteTargetOptions } from "~/services/managedSites/migration/channelMigrationTargets"
 import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteContext,

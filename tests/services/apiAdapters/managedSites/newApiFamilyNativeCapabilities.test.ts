@@ -44,10 +44,10 @@ vi.mock("~/services/apiService/veloera", async (original) => ({
   ...apis.veloera,
 }))
 vi.mock(
-  "~/services/managedSites/providers/newApiChannelSecrets",
+  "~/services/managedSites/providers/newApi/newApiChannelSecrets",
   async (original) => ({
     ...(await original<
-      typeof import("~/services/managedSites/providers/newApiChannelSecrets")
+      typeof import("~/services/managedSites/providers/newApi/newApiChannelSecrets")
     >()),
     ...apis.newApiSecrets,
   }),

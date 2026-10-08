@@ -8,20 +8,20 @@ import {
 } from "react"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
-import type { AccountRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import type { AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { REQUEST_SCHEDULING_PRIORITIES } from "~/services/apiTransport/requestScheduling"
 import { hashProviderCatalogValue } from "~/services/integrations/providerCatalogExport"
-import { createManagedSiteOperationContext } from "~/services/managedSites/operationContext"
-import { getManagedSiteRuntimeConfigFingerprint } from "~/services/managedSites/runtimeConfig"
+import { getManagedSiteRuntimeConfigFingerprint } from "~/services/managedSites/configuration/runtimeConfig"
 import {
   getManagedSiteTokenChannelStatus,
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
   resolveManagedSiteTokenChannelStatusWithVerifiedKey,
   type ManagedSiteTokenChannelStatus,
-} from "~/services/managedSites/tokenChannelStatus"
+} from "~/services/managedSites/matching/tokenChannelStatus"
+import { createManagedSiteOperationContext } from "~/services/managedSites/operationContext"
 import { supportsManagedSiteBaseUrlChannelLookup } from "~/services/managedSites/utils/managedSite"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {

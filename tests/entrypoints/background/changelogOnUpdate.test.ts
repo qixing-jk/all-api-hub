@@ -160,7 +160,7 @@ describe("background onInstalled changelog opening", () => {
       applyActionClickBehavior: applyActionClickBehaviorMock,
       setupActionClickBehaviorListener: setupActionClickBehaviorListenerMock,
     }))
-    vi.doMock("~/services/productAnalytics/runtime", () => ({
+    vi.doMock("~/services/productAnalytics/runtime/runtime", () => ({
       setupProductAnalyticsAccountChangeListener: vi.fn(),
       setupProductAnalyticsPreferencesChangeListener: vi.fn(),
       triggerStartupSettingsSnapshot: vi.fn(),
@@ -238,7 +238,7 @@ describe("background onInstalled changelog opening", () => {
     vi.doUnmock("~/entrypoints/background/devActionBranding")
     vi.doUnmock("~/entrypoints/background/servicesInit")
     vi.doUnmock("~/entrypoints/background/actionClickBehavior")
-    vi.doUnmock("~/services/productAnalytics/runtime")
+    vi.doUnmock("~/services/productAnalytics/runtime/runtime")
     vi.doUnmock("~/services/tags/tagStorage")
     vi.doUnmock("~/services/accounts/accountStorage/accountQueries")
     vi.doUnmock("~/services/accounts/accountStorage/accountDataTransfer")

@@ -5,7 +5,7 @@ import {
   OPENROUTER_MANAGEMENT_KEY_LABEL_MAX_LENGTH,
   type TempWindowOpenRouterManagementKeyActionParams,
   type TempWindowOpenRouterManagementKeyActionResult,
-} from "~/services/apiAdapters/openrouter/managementKeyPageContract"
+} from "~/services/apiAdapters/openrouter/keys/managementKeyPageContract"
 import type {
   CheckInFeedbackClues,
   CheckInFeedbackScanInput,

@@ -17,7 +17,7 @@ import {
 import {
   canCreateAccountKeyResources,
   canListAccountRuntimeKeys,
-} from "~/services/accounts/keyProductCapabilities"
+} from "~/services/accounts/keys/keyProductCapabilities"
 import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

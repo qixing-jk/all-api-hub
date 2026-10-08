@@ -1,5 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
-import { resolveStoredAccountUserIdentity } from "~/services/accounts/accountIdentity"
+import { resolveStoredAccountUserIdentity } from "~/services/accounts/identity/accountIdentity"
 import {
   NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE,
   NEW_API_DASHBOARD_AUTH_REFRESH_PATH,

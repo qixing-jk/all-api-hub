@@ -7,8 +7,8 @@ import {
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { type GptLoadNativeConfig } from "~/services/apiAdapters/managedResources/gptLoad/nativeContracts"
 import { GptLoadApiError } from "~/services/apiService/gptLoad"
+import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/configuration/runtimeConfig"
 import { toGptLoadDisclosureError } from "~/services/managedSites/providers/gptLoad"
-import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   normalizeGptLoadBaseUrl,

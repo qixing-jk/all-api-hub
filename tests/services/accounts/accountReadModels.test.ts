@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { createDefaultAccountStorageConfig } from "~/services/accounts/accountDefaults"
 import { accountConfigStore } from "~/services/accounts/accountStorage/accountConfigStore"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
@@ -8,6 +7,7 @@ import {
   type AccountManagementSnapshot,
   type AccountOverviewSnapshot,
 } from "~/services/accounts/accountStorage/accountReadModels"
+import { createDefaultAccountStorageConfig } from "~/services/accounts/editing/accountDefaults"
 import type { SiteAccount, SiteBookmark } from "~/types"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 

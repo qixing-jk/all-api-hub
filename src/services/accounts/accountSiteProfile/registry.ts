@@ -1,5 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
-import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/accountTodayStats"
+import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
 import { getAccountSiteProductProfileOverride } from "~/services/accountSiteDefinitions"
 import type { AuthTypeEnum } from "~/types"
 

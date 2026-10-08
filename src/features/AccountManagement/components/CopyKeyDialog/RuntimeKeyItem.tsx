@@ -7,7 +7,7 @@ import type { DeeplinkExportTarget } from "~/features/CredentialExport/DeeplinkE
 import {
   ACCOUNT_RUNTIME_KEY_STATUSES,
   type AccountRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import type { CredentialExportSource } from "~/services/integrations/credentialExport"
 import type { DisplaySiteData } from "~/types"
 

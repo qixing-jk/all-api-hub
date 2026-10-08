@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
-import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/authSession"
 import {
   fetchSub2ApiGroupDescriptors,
   fetchSub2ApiGroupRates,
-} from "~/services/apiService/sub2api/groups"
+} from "~/services/apiService/sub2api/account/groups"
+import type { Sub2ApiAuthSessionRequest } from "~/services/apiService/sub2api/auth/authSession"
 import {
   createSub2ApiKey,
   fetchSub2ApiKey,
@@ -37,10 +37,10 @@ vi.mock("~/services/apiTransport/request", async (importOriginal) => ({
 }))
 
 vi.mock(
-  "~/services/apiService/sub2api/browserAuth",
+  "~/services/apiService/sub2api/auth/browserAuth",
   async (importOriginal) => ({
     ...(await importOriginal<
-      typeof import("~/services/apiService/sub2api/browserAuth")
+      typeof import("~/services/apiService/sub2api/auth/browserAuth")
     >()),
     findSub2ApiBrowserAuth: vi.fn(),
     recoverSub2ApiBrowserAuth: (...args: any[]) =>
@@ -612,7 +612,7 @@ describe("apiService sub2api key management service", () => {
       })
       vi.resetModules()
       const otherContext = separateContexts
-        ? (await import("~/services/apiService/sub2api/groups"))
+        ? (await import("~/services/apiService/sub2api/account/groups"))
             .fetchSub2ApiGroupDescriptors
         : fetchSub2ApiGroupDescriptors
       const [firstGroups, secondGroups] = await Promise.all([

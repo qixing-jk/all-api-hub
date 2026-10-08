@@ -10,7 +10,7 @@ import { KeyInventoryList } from "~/features/AccountManagement/components/CopyKe
 import { QuickKeyResourceCard } from "~/features/AccountManagement/components/CopyKeyDialog/QuickKeyResourceCard"
 import { RuntimeKeyActionControls } from "~/features/AccountManagement/components/CopyKeyDialog/RuntimeKeyActionControls"
 import type { KeyResourceCardPresentation } from "~/features/KeyManagement/presentation/keyResourceCard"
-import { buildServiceCredentialRuntimeKey } from "~/services/accounts/accountRuntimeKeys"
+import { buildServiceCredentialRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import { PRODUCT_ANALYTICS_ACTION_IDS } from "~/services/productAnalytics/contracts"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 

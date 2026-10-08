@@ -20,7 +20,7 @@ vi.mock("react-i18next", () => ({
         : key,
   }),
 }))
-vi.mock("~/services/accounts/accountKeyProvisioning", () => ({
+vi.mock("~/services/accounts/keys/accountKeyProvisioning", () => ({
   prepareAccountKeyProvisioning: prepare,
 }))
 vi.mock(

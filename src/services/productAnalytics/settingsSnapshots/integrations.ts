@@ -4,7 +4,7 @@ import {
   PRODUCT_ANALYTICS_SETTING_IDS,
   type ProductAnalyticsEntrypoint,
 } from "~/services/productAnalytics/contracts"
-import { getWebdavSyncStrategyMode } from "~/services/productAnalytics/webDavSync"
+import { getWebdavSyncStrategyMode } from "~/services/productAnalytics/facts/webDavSync"
 import { normalizeSiteAnnouncementPreferences } from "~/types/siteAnnouncements"
 import {
   normalizeTaskNotificationPreferences,

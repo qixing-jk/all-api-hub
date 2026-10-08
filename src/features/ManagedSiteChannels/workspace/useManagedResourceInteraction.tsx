@@ -6,7 +6,7 @@ import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerificat
 import { MANAGED_RESOURCE_SECRET_VERIFICATION_KINDS } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import { resolveNewApiMigrationCredential } from "~/services/apiAdapters/managedResources/newApi/migration"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
-import { executeManagedSiteMigration } from "~/services/managedSites/channelMigration"
+import { executeManagedSiteMigration } from "~/services/managedSites/migration/channelMigration"
 import type { NewApiConfig } from "~/types/newApiConfig"
 
 type Options = {

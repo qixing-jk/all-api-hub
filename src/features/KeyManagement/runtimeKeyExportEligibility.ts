@@ -1,5 +1,5 @@
-import { hasUsableAccountRuntimeKeySecret } from "~/services/accounts/accountRuntimeKeys"
-import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keyProductCapabilities"
+import { hasUsableAccountRuntimeKeySecret } from "~/services/accounts/keys/accountRuntimeKeys"
+import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keys/keyProductCapabilities"
 
 import type { KeyManagementEntry } from "./types"
 

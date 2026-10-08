@@ -21,7 +21,7 @@ import { buildGuidedAccountKeyImportTarget } from "~/features/UnifiedApiGuidance
 import { runGatewayGuidanceAction } from "~/features/UnifiedApiGuidance/runGatewayGuidanceAction"
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
-import { canResolveAccountRuntimeKeySecret } from "~/services/accounts/keyProductCapabilities"
+import { canResolveAccountRuntimeKeySecret } from "~/services/accounts/keys/keyProductCapabilities"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
 import { buildManagedSiteChannelConsoleUrl } from "~/services/managedSites/managedSiteConsoleRoutes"
 import {

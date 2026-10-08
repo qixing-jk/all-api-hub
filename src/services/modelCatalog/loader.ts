@@ -2,7 +2,7 @@ import {
   ACCOUNT_RUNTIME_KEY_STATUSES,
   isSelectableAccountRuntimeKey,
   type AccountRuntimeKey,
-} from "~/services/accounts/accountRuntimeKeys"
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import { fetchDisplayAccountRuntimeKeys } from "~/services/accounts/utils/apiServiceRequest"
 import type { ModelPricingCapability } from "~/services/apiAdapters/contracts/modelPricing"
 import type { ProviderModelCatalogCapability } from "~/services/apiAdapters/contracts/providerModelCatalog"

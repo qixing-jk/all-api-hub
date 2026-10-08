@@ -2,13 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
-import {
-  createDefaultAccountStorageConfig,
-  createPersistedSiteAccount,
-} from "~/services/accounts/accountDefaults"
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { accountConfigStore } from "~/services/accounts/accountStorage/accountConfigStore"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import {
+  createDefaultAccountStorageConfig,
+  createPersistedSiteAccount,
+} from "~/services/accounts/editing/accountDefaults"
 import { redetectSavedAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/accountDiscovery"
 import { discoverSavedAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/postSaveDiscovery"
 import { ACCOUNT_STORAGE_KEYS } from "~/services/core/storageKeys"

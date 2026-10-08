@@ -3,7 +3,7 @@ import { Storage } from "@plasmohq/storage"
 import {
   canonicalizeAccountStorageConfig,
   normalizeAccountStorageConfigForWrite,
-} from "~/services/accounts/accountDefaults"
+} from "~/services/accounts/editing/accountDefaults"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
 import {
   ACCOUNT_STORAGE_KEYS,

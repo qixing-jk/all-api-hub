@@ -1,7 +1,7 @@
 import type { ManagedSiteType } from "~/constants/siteType"
 import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
+import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/configuration/runtimeConfig"
 
 type ManagedSiteModelRedirectCapabilities = Pick<
   ManagedResourceModelsCapability<ManagedSiteRuntimeConfigValue>,

@@ -1,5 +1,5 @@
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
-import { getManagedSiteConfigRegistration } from "~/services/managedSites/configRegistration"
+import { getManagedSiteConfigRegistration } from "~/services/managedSites/configuration/configRegistration"
 import {
   createDefaultSortingPriorityConfig,
   DEFAULT_SORTING_PRIORITY_CONFIG,
