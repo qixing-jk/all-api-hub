@@ -4,8 +4,8 @@ import { ChangelogOnUpdateUiOpenHandler } from "~/components/ChangelogOnUpdateUi
 import {
   UpdateLogDialogContainer,
   UpdateLogDialogProvider,
-} from "~/components/dialogs/UpdateLogDialog"
-import { UPDATE_LOG_DIALOG_TEST_IDS } from "~/components/dialogs/UpdateLogDialog/testIds"
+} from "~/features/UpdateLog"
+import { UPDATE_LOG_DIALOG_TEST_IDS } from "~/features/UpdateLog/testIds"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"

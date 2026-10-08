@@ -1,6 +1,5 @@
 import type { Locator, Page } from "@playwright/test"
 
-import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import {
@@ -9,6 +8,7 @@ import {
   type ManagedSiteType,
 } from "~/constants/siteType"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import { CHANNEL_DIALOG_TEST_IDS } from "~/features/ManagedSiteChannels/editor/ChannelDialog/testIds"
 import {
   getManagedSiteChannelRowActionsButtonTestId,
   getManagedSiteChannelRowEditActionTestId,

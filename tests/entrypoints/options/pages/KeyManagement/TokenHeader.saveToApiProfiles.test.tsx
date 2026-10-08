@@ -98,7 +98,7 @@ vi.mock("~/utils/core/logger", async () => {
   }
 })
 
-vi.mock("~/components/dialogs/ChannelDialog", () => {
+vi.mock("~/features/ManagedSiteChannels/editor/ChannelDialog", () => {
   return {
     ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
     useChannelDialog: () => ({

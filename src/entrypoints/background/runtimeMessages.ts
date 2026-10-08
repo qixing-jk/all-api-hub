@@ -30,7 +30,7 @@ import { setupChannelConfigMessagingListeners } from "~/services/managedSites/co
 import { parseNewApiOwnedSessionRequest } from "~/services/managedSites/newApiOwnedSession/contracts"
 import { setupManagedSiteModelSyncMessagingListeners } from "~/services/models/modelSync"
 import { setupTaskNotificationMessagingListeners } from "~/services/notifications/taskNotificationService"
-import { setupPreferencesMessagingListeners } from "~/services/preferences/runtimePreferencesService"
+import { setupPreferencesMessagingListeners } from "~/services/preferences/runtime/runtimePreferencesService"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,

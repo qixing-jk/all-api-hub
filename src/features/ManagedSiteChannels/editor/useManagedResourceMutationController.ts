@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
-import { type ChannelDialogOpeningState } from "~/components/dialogs/ChannelDialog/components/ChannelDialogOpening"
 import { useManagedResourceDeletionSession } from "~/features/ManagedSiteChannels/deletion/useManagedResourceDeletionSession"
+import { type ChannelDialogOpeningState } from "~/features/ManagedSiteChannels/editor/ChannelDialog/components/ChannelDialogOpening"
 import {
   MANAGED_RESOURCE_EDITOR_MODES,
   type ManagedResourceEditorMode,

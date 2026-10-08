@@ -5,7 +5,6 @@ import { useState } from "react"
 import { I18nextProvider } from "react-i18next"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import {
   AXON_HUB_CHANNEL_FIELD_IDS,
   AXON_HUB_CHANNEL_TYPE,
@@ -16,6 +15,7 @@ import {
   SUB2API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
 } from "~/constants/sub2api"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { CHANNEL_DIALOG_TEST_IDS } from "~/features/ManagedSiteChannels/editor/ChannelDialog/testIds"
 import { MANAGED_RESOURCE_CHANNEL_FIELD_ROLES } from "~/features/ManagedSiteChannels/editor/managedResourceFieldPolicy"
 import { ManagedSiteChannelsRoute } from "~/features/ManagedSiteChannels/ManagedSiteChannelsRoute"
 import type { ManagedChannelsRowViewModel } from "~/features/ManagedSiteChannels/presentation/contracts"

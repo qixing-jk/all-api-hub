@@ -28,7 +28,7 @@ vi.mock("~/features/CredentialExport/CursorPlusExportDialog", () => ({
   CursorPlusExportDialog: () => <div data-testid="cursor-plus-dialog" />,
 }))
 
-vi.mock("~/components/dialogs/VerifyCliSupportDialog", () => ({
+vi.mock("~/features/Verification/cli", () => ({
   VerifyCliSupportDialog: () => <div data-testid="verify-cli-dialog" />,
 }))
 

@@ -23,14 +23,11 @@ vi.mock("react-i18next", async (importOriginal) => {
   }
 })
 
-vi.mock(
-  "~/components/dialogs/VerifyApiDialog/VerificationHistorySummary",
-  () => ({
-    VerificationHistorySummary: () => (
-      <div data-testid="verification-history-summary" />
-    ),
-  }),
-)
+vi.mock("~/features/Verification/api/VerificationHistorySummary", () => ({
+  VerificationHistorySummary: () => (
+    <div data-testid="verification-history-summary" />
+  ),
+}))
 
 vi.mock("@lobehub/icons/es/Anthropic/components/Mono", () => ({
   default: ({

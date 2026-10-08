@@ -14,7 +14,7 @@ const { mockOpenWithAccount, mockOpenDefaultTokenQuickCreateDialogForAccount } =
     mockOpenDefaultTokenQuickCreateDialogForAccount: vi.fn(),
   }))
 
-vi.mock("~/components/dialogs/ChannelDialog", () => ({
+vi.mock("~/features/ManagedSiteChannels/editor/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
   useChannelDialog: () => ({
     openWithAccount: mockOpenWithAccount,

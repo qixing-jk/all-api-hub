@@ -1,11 +1,11 @@
 import type { BrowserContext, Route } from "@playwright/test"
 
-import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { ChannelType } from "~/constants/newApi"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
+import { CHANNEL_DIALOG_TEST_IDS } from "~/features/ManagedSiteChannels/editor/ChannelDialog/testIds"
 import {
   getManagedSiteChannelRowFiltersActionTestId,
   getManagedSiteChannelRowSyncActionTestId,

@@ -2,8 +2,6 @@ import { Cpu, KeyRound, RefreshCw, TrendingDown } from "lucide-react"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { VerifyApiDialog } from "~/components/dialogs/VerifyApiDialog"
-import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { PageHeader } from "~/components/PageHeader"
 import Tooltip from "~/components/Tooltip"
 import {
@@ -38,6 +36,8 @@ import { PricingScenarioNavigation } from "~/features/ModelList/pricing/pricingS
 import { BatchVerifyModelsDialog } from "~/features/ModelList/verification/BatchVerifyModelsDialog"
 import { useModelListVerificationResults } from "~/features/ModelList/verification/useModelListVerificationResults"
 import { useModelListVerificationWorkflow } from "~/features/ModelList/verification/useModelListVerificationWorkflow"
+import { VerifyApiDialog } from "~/features/Verification/api"
+import { VerifyCliSupportDialog } from "~/features/Verification/cli"
 import { MODEL_VENDOR_FILTER_VALUES } from "~/services/models/modelVendor"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

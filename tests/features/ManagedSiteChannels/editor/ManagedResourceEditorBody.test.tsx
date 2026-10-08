@@ -4,8 +4,6 @@ import type { TFunction } from "i18next"
 import { StrictMode, useState } from "react"
 import { describe, expect, it, vi } from "vitest"
 
-import { ChannelEditorShell } from "~/components/dialogs/ChannelDialog/components/ChannelEditorShell"
-import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import {
   AXON_HUB_CHANNEL_FIELD_IDS,
   AXON_HUB_CHANNEL_STATUS,
@@ -17,6 +15,8 @@ import {
 } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ManagedSiteChannelDetailView } from "~/features/ManagedSiteChannels/detail/ManagedSiteChannelDetailView"
+import { ChannelEditorShell } from "~/features/ManagedSiteChannels/editor/ChannelDialog/components/ChannelEditorShell"
+import { CHANNEL_DIALOG_TEST_IDS } from "~/features/ManagedSiteChannels/editor/ChannelDialog/testIds"
 import { ManagedResourceEditorBody } from "~/features/ManagedSiteChannels/editor/ManagedResourceEditorBody"
 import {
   getManagedResourceFieldPolicy,

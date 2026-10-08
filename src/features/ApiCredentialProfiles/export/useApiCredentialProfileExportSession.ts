@@ -1,7 +1,6 @@
 import { useCallback, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
@@ -9,6 +8,7 @@ import {
   type ApiCredentialProfileExportAction,
 } from "~/features/ApiCredentialProfiles/contracts"
 import type { DeeplinkExportTarget } from "~/features/CredentialExport/DeeplinkExportDialog"
+import { useChannelDialog } from "~/features/ManagedSiteChannels/editor/ChannelDialog"
 import { createProfileCredentialExportData } from "~/services/apiCredentialProfiles/credentialExport"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"

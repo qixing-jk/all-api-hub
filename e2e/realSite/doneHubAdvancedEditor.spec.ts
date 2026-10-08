@@ -1,10 +1,10 @@
 import { isDeepStrictEqual } from "node:util"
 
-import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import { DoneHubChannelType } from "~/constants/doneHub"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
+import { CHANNEL_DIALOG_TEST_IDS } from "~/features/ManagedSiteChannels/editor/ChannelDialog/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import { openManagedSiteChannelRowActions } from "~~/e2e/scenarios/managedSiteChannels"
 import {

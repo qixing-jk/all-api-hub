@@ -131,7 +131,7 @@ describe("background onSuspend temp-context cleanup", () => {
     vi.doMock("~/entrypoints/background/runtimeMessages", () => ({
       setupRuntimeMessageListeners: vi.fn(),
     }))
-    vi.doMock("~/entrypoints/background/contextMenus", () => ({
+    vi.doMock("~/services/preferences/runtime/contextMenus", () => ({
       setupContextMenus: vi.fn(),
     }))
     vi.doMock("~/entrypoints/background/cookieInterceptor", () => ({
@@ -144,7 +144,7 @@ describe("background onSuspend temp-context cleanup", () => {
     vi.doMock("~/entrypoints/background/servicesInit", () => ({
       initializeServices: initializeServicesMock,
     }))
-    vi.doMock("~/entrypoints/background/actionClickBehavior", () => ({
+    vi.doMock("~/services/preferences/runtime/actionClickBehavior", () => ({
       applyActionClickBehavior: applyActionClickBehaviorMock,
       setupActionClickBehaviorListener: setupActionClickBehaviorListenerMock,
     }))
@@ -230,11 +230,11 @@ describe("background onSuspend temp-context cleanup", () => {
     vi.doUnmock("~/services/browsingContext/tempPage/runtime")
     vi.doUnmock("~/entrypoints/background/tempContextReclamation")
     vi.doUnmock("~/entrypoints/background/runtimeMessages")
-    vi.doUnmock("~/entrypoints/background/contextMenus")
+    vi.doUnmock("~/services/preferences/runtime/contextMenus")
     vi.doUnmock("~/entrypoints/background/cookieInterceptor")
     vi.doUnmock("~/entrypoints/background/devActionBranding")
     vi.doUnmock("~/entrypoints/background/servicesInit")
-    vi.doUnmock("~/entrypoints/background/actionClickBehavior")
+    vi.doUnmock("~/services/preferences/runtime/actionClickBehavior")
     vi.doUnmock("~/services/productAnalytics/runtime/runtime")
     vi.doUnmock("~/services/preferences/userPreferences")
     vi.doUnmock("~/services/tags/tagStorage")

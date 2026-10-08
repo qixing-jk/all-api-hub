@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { executeDialogProbe } from "~/components/dialogs/VerifyApiDialog/probeExecution"
-import {
-  buildProbeState,
-  withUnfinishedProbesStopped,
-} from "~/components/dialogs/VerifyApiDialog/probeState"
-import type { ProbeItemState } from "~/components/dialogs/VerifyApiDialog/types"
 import { Heading5 } from "~/components/ui"
 import { resolveProfileProbeSuiteReport } from "~/features/ApiCredentialProfiles/verification/profileProbeSuiteReport"
 import { useProfileModelDiscovery } from "~/features/ApiCredentialProfiles/verification/useProfileModelDiscovery"
 import { useProfileVerificationHistory } from "~/features/ApiCredentialProfiles/verification/useProfileVerificationHistory"
+import { executeDialogProbe } from "~/features/Verification/api/probeExecution"
+import {
+  buildProbeState,
+  withUnfinishedProbesStopped,
+} from "~/features/Verification/api/probeState"
+import type { ProbeItemState } from "~/features/Verification/api/types"
 import { useVerificationRunLifecycle } from "~/hooks/verification/useVerificationRunLifecycle"
 import {
   resolveProductAnalyticsErrorCategoryFromError,

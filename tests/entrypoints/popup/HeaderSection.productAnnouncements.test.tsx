@@ -34,11 +34,8 @@ vi.mock("~/contexts/ReleaseUpdateStatusContext", () => ({
   }),
 }))
 
-vi.mock("~/components/dialogs/UpdateLogDialog", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/components/dialogs/UpdateLogDialog")
-    >()
+vi.mock("~/features/UpdateLog", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/features/UpdateLog")>()
 
   return {
     ...actual,

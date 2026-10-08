@@ -6,8 +6,8 @@ import {
   type SetStateAction,
 } from "react"
 
-import { buildProbeState } from "~/components/dialogs/VerifyApiDialog/probeState"
-import { useVerificationDialogState } from "~/components/dialogs/VerifyApiDialog/useVerificationDialogState"
+import { buildProbeState } from "~/features/Verification/api/probeState"
+import { useVerificationDialogState } from "~/features/Verification/api/useVerificationDialogState"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import {
   createProfileModelVerificationHistoryTarget,

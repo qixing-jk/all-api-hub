@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import type { ManagedSiteType } from "~/constants/siteType"
 import { AccountPostSaveSession } from "~/features/AccountManagement/components/AccountDialog/postSave/accountPostSaveSession"
 import { useAccountPostSaveProvisioning } from "~/features/AccountManagement/components/AccountDialog/postSave/useAccountPostSaveProvisioning"
+import { useChannelDialog } from "~/features/ManagedSiteChannels/editor/ChannelDialog"
 import toast from "~/lib/notify"
 import {
   ACCOUNT_POST_SAVE_WORKFLOW_STEPS,

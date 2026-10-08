@@ -280,7 +280,7 @@ vi.mock("~/features/ModelList/presentation/ModelDisplay", () => ({
   ),
 }))
 
-vi.mock("~/components/dialogs/VerifyApiDialog", () => ({
+vi.mock("~/features/Verification/api", () => ({
   VerifyApiDialog: ({ account, initialModelId, onClose }: any) => (
     <div>
       <div>
@@ -293,7 +293,7 @@ vi.mock("~/components/dialogs/VerifyApiDialog", () => ({
   ),
 }))
 
-vi.mock("~/components/dialogs/VerifyCliSupportDialog", () => ({
+vi.mock("~/features/Verification/cli", () => ({
   VerifyCliSupportDialog: ({
     account,
     profile,

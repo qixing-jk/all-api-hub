@@ -34,14 +34,9 @@ import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { fireEvent, render, screen, within } from "~~/tests/test-utils/render"
 
-vi.mock(
-  "~/components/dialogs/VerifyApiDialog/VerificationHistorySummary",
-  () => ({
-    VerificationHistorySummary: () => (
-      <div data-testid="verification-summary" />
-    ),
-  }),
-)
+vi.mock("~/features/Verification/api/VerificationHistorySummary", () => ({
+  VerificationHistorySummary: () => <div data-testid="verification-summary" />,
+}))
 
 vi.mock("~/components/icons/CCSwitchIcon", () => ({
   CCSwitchIcon: () => <span data-testid="cc-switch-icon" />,

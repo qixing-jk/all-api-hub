@@ -88,11 +88,11 @@ vi.mock("~/features/ModelList/presentation/ModelDisplay", () => ({
   ModelDisplay: () => <div>Model Display</div>,
 }))
 
-vi.mock("~/components/dialogs/VerifyApiDialog", () => ({
+vi.mock("~/features/Verification/api", () => ({
   VerifyApiDialog: () => null,
 }))
 
-vi.mock("~/components/dialogs/VerifyCliSupportDialog", () => ({
+vi.mock("~/features/Verification/cli", () => ({
   VerifyCliSupportDialog: () => null,
 }))
 

@@ -50,7 +50,7 @@ vi.mock("~/contexts/FeatureGuidanceContext", () => ({
   }),
 }))
 
-vi.mock("~/components/dialogs/ChannelDialog", () => ({
+vi.mock("~/features/ManagedSiteChannels/editor/ChannelDialog", () => ({
   useChannelDialog: () => ({ openWithAccount: openWithAccountMock }),
 }))
 

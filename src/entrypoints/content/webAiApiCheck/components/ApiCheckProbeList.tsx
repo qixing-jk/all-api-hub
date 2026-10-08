@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next"
 
-import { ProbeStatusBadge } from "~/components/dialogs/VerifyApiDialog/ProbeStatusBadge"
 import { Button, BUTTON_LOADING_BEHAVIORS } from "~/components/ui"
+import { ProbeStatusBadge } from "~/features/Verification/api/ProbeStatusBadge"
 import type { ApiVerificationProbeId } from "~/services/verification/aiApiVerification"
 import {
   getApiVerificationProbeLabel,

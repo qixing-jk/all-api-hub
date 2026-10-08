@@ -1,7 +1,7 @@
 import { FileText, Languages, Sparkles, TriangleAlert } from "lucide-react"
 import { useCallback, useMemo, useState } from "react"
 
-import { useUpdateLogDialogContext } from "~/components/dialogs/UpdateLogDialog"
+import { useUpdateLogDialogContext } from "~/features/UpdateLog"
 import toast from "~/lib/notify"
 import { debugQueuePopupInterruptionHint } from "~/services/popupInterruptionHint"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"

@@ -1,5 +1,5 @@
-import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import { SITE_TYPES } from "~/constants/siteType"
+import { CHANNEL_DIALOG_TEST_IDS } from "~/features/ManagedSiteChannels/editor/ChannelDialog/testIds"
 import {
   getManagedSiteChannelRowEditActionTestId,
   getManagedSiteChannelRowSelectTestId,

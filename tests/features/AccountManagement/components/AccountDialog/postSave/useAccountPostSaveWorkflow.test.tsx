@@ -23,7 +23,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }))
-vi.mock("~/components/dialogs/ChannelDialog", () => ({
+vi.mock("~/features/ManagedSiteChannels/editor/ChannelDialog", () => ({
   useChannelDialog: () => ({
     openWithAccount: mocks.openChannel,
     openWithCredentials: vi.fn(),

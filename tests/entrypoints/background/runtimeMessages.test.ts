@@ -86,9 +86,12 @@ describe("setupRuntimeMessageListeners routing", () => {
       setupManagedSiteModelSyncMessagingListeners,
     }))
 
-    vi.doMock("~/services/preferences/runtimePreferencesService", () => ({
-      setupPreferencesMessagingListeners,
-    }))
+    vi.doMock(
+      "~/services/preferences/runtime/runtimePreferencesService",
+      () => ({
+        setupPreferencesMessagingListeners,
+      }),
+    )
 
     vi.doMock("~/services/productAnnouncements/service", () => ({
       setupProductAnnouncementMessagingListeners,
@@ -200,7 +203,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doUnmock("~/utils/browser/permissions")
     vi.doUnmock("~/utils/browser/cookieHelper")
     vi.doUnmock("~/services/models/modelSync")
-    vi.doUnmock("~/services/preferences/runtimePreferencesService")
+    vi.doUnmock("~/services/preferences/runtime/runtimePreferencesService")
     vi.doUnmock("~/services/productAnnouncements/service")
     vi.doUnmock("~/services/checkin/autoCheckin/scheduling/schedulerMessaging")
     vi.doUnmock("~/services/accounts/refresh/autoRefreshService")

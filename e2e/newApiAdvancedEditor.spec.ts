@@ -1,6 +1,6 @@
 import type { Locator } from "@playwright/test"
 
-import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
+import { CHANNEL_DIALOG_TEST_IDS } from "~/features/ManagedSiteChannels/editor/ChannelDialog/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import { openInterceptedNewApiManagedSiteChannels } from "~~/e2e/fixtures/managedSiteChannelsIntercepted"
 import { openManagedSiteChannelRowActions } from "~~/e2e/scenarios/managedSiteChannels"

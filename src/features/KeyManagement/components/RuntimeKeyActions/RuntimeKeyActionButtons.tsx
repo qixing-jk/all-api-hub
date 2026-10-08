@@ -1,7 +1,6 @@
 import { Copy, Pencil, Terminal, Trash2, Wrench } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { IconButton } from "~/components/ui"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/verification/VerifyApiCredentialProfileDialog"
 import type { DeeplinkExportTarget } from "~/features/CredentialExport/DeeplinkExportDialog"
@@ -11,6 +10,7 @@ import {
   type KeyResourceCredentialAssociation,
 } from "~/features/KeyManagement/inventory/KeyResourceCard"
 import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
+import { VerifyCliSupportDialog } from "~/features/Verification/cli"
 import type { AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/matching/tokenChannelStatus"
 import type { DisplaySiteData } from "~/types"
