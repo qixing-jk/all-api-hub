@@ -45,6 +45,7 @@ import { createDeferred } from "~~/tests/test-utils/deferred"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { modelResourceRef } from "~~/tests/test-utils/managedModelResource"
+import { render as renderWithProviders } from "~~/tests/test-utils/render"
 
 const {
   mockSendRuntimeMessage,
@@ -124,7 +125,10 @@ vi.mock("~/services/models/modelSync/messaging", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/protectionBypass/client", () => ({
+vi.mock("~/services/protectionBypass/client", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/protectionBypass/client")
+  >()),
   withProtectionBypassUserCommand: mockWithProtectionBypassUserCommand,
 }))
 
@@ -311,7 +315,10 @@ describe("ManagedSiteModelSync page", () => {
       .mockRejectedValueOnce(new Error("storage unavailable"))
       .mockReturnValueOnce(retry.promise)
     try {
-      render(<ManagedSiteModelSync />)
+      renderWithProviders(<ManagedSiteModelSync />, {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      })
       const alert = await screen.findByRole("alert")
       expect(alert).toHaveTextContent(
         "managedSiteModelSync:execution.exclusions.loadFailed",
