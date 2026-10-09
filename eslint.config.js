@@ -160,7 +160,10 @@ const dynamicImportAllowlist = [
   },
   {
     file: "src/entrypoints/content/webAiApiCheck/utils/apiCheckToasts.ts",
-    imports: ["~/entrypoints/content/webAiApiCheck/components/", "react"],
+    imports: [
+      "~/features/WebAiApiCheck/content/notifications/ApiCheckConfirmToast",
+      "react",
+    ],
   },
   // Background and service boundaries keep heavy provider graphs off the
   // startup path or break module cycles.

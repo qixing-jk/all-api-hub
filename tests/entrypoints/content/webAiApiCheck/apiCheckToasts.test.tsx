@@ -3,7 +3,7 @@ import React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import type { ApiCheckConfirmToastAction } from "~/entrypoints/content/webAiApiCheck/components/ApiCheckConfirmToast"
+import type { ApiCheckConfirmToastAction } from "~/features/WebAiApiCheck/content/notifications/ApiCheckConfirmToast"
 
 type ApiCheckConfirmToastProps = {
   onAction: (action: ApiCheckConfirmToastAction) => void
@@ -52,7 +52,7 @@ vi.mock("~/utils/core/logger", () => ({
 }))
 
 vi.mock(
-  "~/entrypoints/content/webAiApiCheck/components/ApiCheckConfirmToast",
+  "~/features/WebAiApiCheck/content/notifications/ApiCheckConfirmToast",
   () => ({
     ApiCheckConfirmToast: (props: ApiCheckConfirmToastProps) =>
       React.createElement("mock-api-check-confirm-toast", props as any),

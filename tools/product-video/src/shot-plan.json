@@ -30,7 +30,7 @@
     "motionEnd": 120,
     "feature": "自动签到执行结果",
     "action": "三个适配账号逐一确认完成，一个不支持账号保留未执行",
-    "source": "features/AutoCheckin/components; locales/zh-CN/autoCheckin.json"
+    "source": "features/AutoCheckin/results; locales/zh-CN/autoCheckin.json"
   },
   {
     "id": "PriceScene",
@@ -41,7 +41,7 @@
     "motionEnd": 98,
     "feature": "模型价格比较",
     "action": "同模型报价依次显现，突出本次比较最低",
-    "source": "features/ModelList/components/PriceComparisonControls.tsx; components/ModelItem/ModelPriceQuote.tsx"
+    "source": "features/ModelList/pricing/PriceComparisonControls.tsx; features/ModelList/presentation/ModelItem/ModelPriceQuote.tsx"
   },
   {
     "id": "AccountsList",
@@ -52,7 +52,7 @@
     "motionEnd": 78,
     "feature": "账号管理",
     "action": "四个账号卡片收拢，统一按余额展示",
-    "source": "features/AccountManagement/components/AccountList; AccountListItem/BalanceDisplay.tsx"
+    "source": "features/AccountManagement/components/AccountList; features/AccountManagement/components/AccountList/rows/BalanceDisplay.tsx"
   },
   {
     "id": "AccountsSummary",
@@ -74,7 +74,7 @@
     "motionEnd": 88,
     "feature": "添加账号",
     "action": "已登录演示站点的识别结果填入表单，等待确认添加",
-    "source": "features/AccountManagement/components/AccountDialog/hooks/useAccountDialog.ts; AccountForm.tsx"
+    "source": "features/AccountManagement/components/AccountDialog/workspace/useAccountDialog.ts; features/AccountManagement/components/AccountDialog/form/AccountForm.tsx"
   },
   {
     "id": "AnnouncementsScene",
@@ -107,7 +107,7 @@
     "motionEnd": 84,
     "feature": "网关渠道管理",
     "action": "已配置网关的真实渠道行展开连接与路由配置",
-    "source": "features/ManagedSiteChannels; services/apiAdapters/managedResources/newApiFamilyChannelFields.ts"
+    "source": "features/ManagedSiteChannels; services/apiAdapters/managedResources/newApiFamily/channelFields.ts"
   },
   {
     "id": "CredentialsScene",
@@ -118,6 +118,6 @@
     "motionEnd": 83,
     "feature": "API 凭据与配置导出",
     "action": "Base URL 与遮罩 Key 聚合，默认模型和 Kilo 导出入口展开",
-    "source": "features/ApiCredentialProfiles; components/dialogs/KiloCodeProfileExportDialog.tsx"
+    "source": "features/ApiCredentialProfiles; features/ApiCredentialProfiles/export/KiloCodeProfileExportDialog.tsx"
   }
 ]

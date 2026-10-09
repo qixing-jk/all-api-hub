@@ -706,6 +706,112 @@ describe("New API native managed resource", () => {
     expect(mocks.update).not.toHaveBeenCalled()
   })
 
+  it("rejects disclosed keys that no longer match the non-secret inventory before writing", async () => {
+    mocks.get.mockResolvedValue({
+      ...channel,
+      channel_info: {
+        ...channel.channel_info,
+        is_multi_key: true,
+        multi_key_size: 2,
+      },
+    })
+    mocks.fetchSecretKey.mockResolvedValue("only-one-key")
+    const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor(
+      atIndex((await workspace.list()).items, 0).ref,
+    )
+    await expect(
+      editor.loadSecret!(NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key + ":0"),
+    ).rejects.toMatchObject({ failure: { code: "resource_changed" } })
+    await expect(
+      editor.submit({
+        ...editor.initialValues,
+        [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key]: {
+          kind: "secret-list",
+          entries: [
+            {
+              id: "0",
+              secret: { kind: "replace", value: "replacement" },
+              fields: {},
+            },
+            { id: "1", secret: { kind: "unchanged" }, fields: {} },
+          ],
+        },
+      }),
+    ).rejects.toMatchObject({ failure: { code: "resource_changed" } })
+    expect(mocks.update).not.toHaveBeenCalled()
+  })
+
+  it.each([false, true])(
+    "accepts single-key readback without multi-key metadata after reducing the inventory (change mode: %s)",
+    async (changeMode) => {
+      mocks.get.mockResolvedValue({
+        ...channel,
+        channel_info: {
+          ...channel.channel_info,
+          is_multi_key: true,
+          multi_key_size: 2,
+        },
+      })
+      const workspace = await newApiManagedResourceRegistration.open()
+      const editor = await workspace.openEditEditor(
+        atIndex((await workspace.list()).items, 0).ref,
+      )
+      mocks.update.mockImplementationOnce(async () => {
+        mocks.get.mockResolvedValue({ ...channel, channel_info: undefined })
+        return {
+          outcome: "succeeded",
+          data: { id: channel.id },
+          confirmedEffects: [
+            {
+              kind: "resource-updated",
+              resourceKind: "channel",
+              resourceId: channel.id,
+            },
+          ],
+        }
+      })
+      await expect(
+        editor.submit({
+          ...editor.initialValues,
+          ...(changeMode ? { multiKeyMode: "polling" } : {}),
+          [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key]: {
+            kind: "secret-list",
+            entries: [
+              {
+                id: "0",
+                secret: { kind: "replace", value: "replacement" },
+                fields: {},
+              },
+            ],
+          },
+        }),
+      ).resolves.toMatchObject({ outcome: "succeeded" })
+      expect(mocks.update).toHaveBeenCalledTimes(1)
+      expect(mocks.fetchSecretKey).not.toHaveBeenCalled()
+    },
+  )
+
+  it("preserves an uncertain update result without retrying the write", async () => {
+    const uncertain = {
+      outcome: "uncertain",
+      diagnostic: {
+        code: "mutation_state_uncertain",
+        message: "Write outcome could not be confirmed",
+      },
+    }
+    mocks.update.mockResolvedValueOnce(uncertain)
+    const workspace = await newApiManagedResourceRegistration.open()
+    const editor = await workspace.openEditEditor(
+      atIndex((await workspace.list()).items, 0).ref,
+    )
+    await expect(
+      editor.submit({ ...editor.initialValues, name: "Renamed" }),
+    ).resolves.toMatchObject(uncertain)
+    expect(mocks.update).toHaveBeenCalledTimes(1)
+    expect(mocks.fetchSecretKey).not.toHaveBeenCalled()
+  })
+
   it.each(["single", "reordered", "interleaved", "duplicate-added"])(
     "rejects invalid multi-key changes before dispatch: %s",
     async (scenario) => {

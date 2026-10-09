@@ -1,11 +1,11 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
 import { scheduleTempPageReclaimRetry } from "~/services/browsingContext/internalTabReclamation"
+import { unregisterInternalTab } from "~/services/browsingContext/internalTabsBackground"
+import { createTempContextInstance } from "~/services/browsingContext/tempPage/contextCreation"
 import {
-  INTERNAL_TAB_WINDOW_SCOPES,
-  registerInternalTab,
-  unregisterInternalTab,
-} from "~/services/browsingContext/internalTabsBackground"
+  getTempContextHandle,
+  removeTempWindowHandle,
+} from "~/services/browsingContext/tempPage/contextRemoval"
 import { resolveTempContextOpenMode } from "~/services/browsingContext/tempPage/tempContextModeResolver"
 import { tempPageTaskScheduler } from "~/services/browsingContext/tempPage/tempPageTaskScheduler"
 import { recordShieldBypassFocusObservation } from "~/services/productAnalytics/facts/shieldBypassSummary"
@@ -15,15 +15,7 @@ import {
   createBrowserFocusObservation,
   readBrowserFocusState,
 } from "~/utils/browser/browserFocus"
-import { applyTempWindowDownloadBlockRule } from "~/utils/browser/dnrCookieInjector"
-import { applyFirefoxTempWindowDownloadBlockRule } from "~/utils/browser/firefoxTempWindowDownloadBlocker"
-import { removeTabOwningWindow } from "~/utils/browser/ownedTabRemoval"
-import {
-  getTab,
-  onTabRemoved,
-  removeTab,
-  updateTab,
-} from "~/utils/browser/tabs"
+import { getTab, onTabRemoved } from "~/utils/browser/tabs"
 import { onWindowRemoved } from "~/utils/browser/windows"
 import { getErrorMessage } from "~/utils/core/error"
 import { sanitizeUrlForLog } from "~/utils/core/sanitizeUrlForLog"
@@ -35,13 +27,10 @@ import {
   prepareTempContextFetchOptions,
   removeInstalledDownloadBlockRules,
   resolveTempContextPreferenceMode,
-  showShieldBypassUiInTab,
-  waitForTabComplete,
 } from "./browserAdapter"
 import {
   forgetCompositeWindow,
   hasLiveCompositeWindow,
-  removeCompositeTab,
 } from "./compositeWindow"
 import {
   createTempContextPool,
@@ -51,17 +40,13 @@ import {
   TEMP_CONTEXT_TYPES,
   type AuthorizeTempContextAtAcquire,
   type TempContext,
-  type TempContextOpenMode,
-  type TempContextOpenResult,
   type TempContextReleaseOptions,
-  type TempWindowHandle,
 } from "./contracts"
 import { logger, logTempWindow, normalizeOrigin } from "./diagnostics"
 import {
   createProtectionBypassDecisionError,
   reportAuthorizedTempContextOutcome,
 } from "./failures"
-import { openFallbackAwareTempContext } from "./openingAdapter"
 
 const contextPool = createTempContextPool({
   cleanup: cleanupContext,
@@ -86,51 +71,6 @@ async function runTempPageHandler(
 ): Promise<void> {
   const originKey = buildTempContextOriginKey(normalizeOrigin(url), options)
   await tempPageTaskScheduler.run(originKey, task)
-}
-
-/**
- * Remove a known temp-window handle through the typed browser adapter that
- * matches the handle owner.
- */
-async function removeTempWindowHandle(handle: TempWindowHandle) {
-  switch (handle.kind) {
-    case TEMP_CONTEXT_MODES.Window:
-      // A window-owned popup that cannot be closed still loses its tab, so the
-      // leftover is never left to the next reclamation sweep by default.
-      await removeTabOwningWindow(handle.tabId, handle.windowId)
-      return
-    case TEMP_CONTEXT_MODES.Composite:
-      await removeCompositeTab(handle.windowId, handle.tabId)
-      return
-    case TEMP_CONTEXT_MODES.Tab:
-      await removeTab(handle.tabId)
-  }
-}
-
-type TempContextHandleSource = TempContext | TempContextOpenResult
-
-/**
- * Builds the browser-removal handle for a registered or partially opened temp context.
- */
-function getTempContextHandle(
-  source: TempContextHandleSource,
-): TempWindowHandle {
-  switch (source.mode) {
-    case TEMP_CONTEXT_MODES.Window:
-      return {
-        kind: TEMP_CONTEXT_MODES.Window,
-        windowId: source.ownerWindowId,
-        tabId: source.tabId,
-      }
-    case TEMP_CONTEXT_MODES.Composite:
-      return {
-        kind: TEMP_CONTEXT_MODES.Composite,
-        windowId: source.ownerWindowId,
-        tabId: source.tabId,
-      }
-    case TEMP_CONTEXT_MODES.Tab:
-      return { kind: TEMP_CONTEXT_MODES.Tab, tabId: source.tabId }
-  }
 }
 
 /**
@@ -453,141 +393,6 @@ async function acquireTempContext(
         kind: PROTECTION_BYPASS_DECISION_RESULTS.Unavailable,
       })
     }
-    throw error
-  }
-}
-
-/**
- * Creates a ready-to-use temp context, including load/guard readiness checks.
- */
-async function createTempContextInstance(
-  url: string,
-  origin: string,
-  requestId: string,
-  requestedMode: TempContextOpenMode,
-  suppressMinimize = false,
-  options: { incognito?: boolean; signal?: AbortSignal } = {},
-): Promise<TempContext> {
-  let opened: TempContextOpenResult | undefined
-  let downloadBlockRuleId: number | null = null
-  let firefoxDownloadBlockTabId: number | null = null
-  const useIncognito = Boolean(options.incognito)
-  // Incognito/private temp contexts must stay window-backed so storage/session
-  // isolation does not silently collapse back into the regular profile.
-  const allowWindowRollback =
-    !useIncognito && requestedMode !== TEMP_CONTEXT_MODES.Tab
-
-  try {
-    opened = await openFallbackAwareTempContext({
-      url,
-      origin,
-      requestId,
-      requestedMode,
-      allowWindowRollback,
-      suppressMinimize,
-      incognito: useIncognito,
-    })
-    ;[downloadBlockRuleId, firefoxDownloadBlockTabId] = await Promise.all([
-      applyTempWindowDownloadBlockRule(opened.tabId),
-      applyFirefoxTempWindowDownloadBlockRule(opened.tabId),
-    ])
-    if (downloadBlockRuleId == null && firefoxDownloadBlockTabId == null) {
-      logger.warn(
-        "No temp-window download block rule could be installed before navigation",
-        { requestId, origin, tabId: opened.tabId },
-      )
-    }
-    if (
-      !(await registerInternalTab(opened.tabId, {
-        // A window-backed temp context owns its window; composite and plain tab
-        // contexts only borrow one, so reclamation must never close that window.
-        windowScope:
-          opened.mode === TEMP_CONTEXT_MODES.Window
-            ? INTERNAL_TAB_WINDOW_SCOPES.Owned
-            : INTERNAL_TAB_WINDOW_SCOPES.Shared,
-        createdAt: Date.now(),
-      }))
-    ) {
-      throw new Error("Unable to persist internal tab ownership")
-    }
-    // The worker may stop while navigation or readiness is pending, before a
-    // request receives this context and arms its delayed-close retry.
-    await scheduleTempPageReclaimRetry()
-    await updateTab(opened.tabId, { url })
-
-    logTempWindow("createTempContextInstance", {
-      requestId,
-      origin,
-      contextId: opened.id,
-      tabId: opened.tabId,
-      type: opened.type,
-      mode: opened.mode,
-      ownerWindowId: opened.ownerWindowId ?? null,
-      downloadBlockRuleInstalled: downloadBlockRuleId != null,
-      firefoxDownloadBlockRuleInstalled: firefoxDownloadBlockTabId != null,
-      requestedMode,
-      url: sanitizeUrlForLog(url),
-    })
-
-    // Best-effort: annotate the temporary window/tab so users understand why it opened.
-    void showShieldBypassUiInTab({ tabId: opened.tabId, origin, requestId })
-
-    await waitForTabComplete(opened.tabId, {
-      requestId,
-      origin,
-      signal: options.signal,
-    })
-    const readyTab = await getTempContextTabSnapshot(opened.tabId)
-
-    logTempWindow("createTempContextInstanceReady", {
-      requestId,
-      origin,
-      contextId: opened.id,
-      tabId: opened.tabId,
-      type: opened.type,
-      mode: opened.mode,
-      ownerWindowId: opened.ownerWindowId ?? null,
-      requestedMode,
-    })
-
-    return {
-      ...opened,
-      origin,
-      currentUrl: readyTab?.url ?? url,
-      activeRequestIds: new Set<string>(),
-      lastUsed: Date.now(),
-      ...(downloadBlockRuleId != null ? { downloadBlockRuleId } : {}),
-      ...(firefoxDownloadBlockTabId != null
-        ? { firefoxDownloadBlockTabId }
-        : {}),
-    }
-  } catch (error) {
-    logTempWindow("createTempContextInstanceError", {
-      requestId,
-      origin,
-      contextId: opened?.id ?? null,
-      tabId: opened?.tabId ?? null,
-      type: opened?.type ?? TEMP_CONTEXT_TYPES.Window,
-      mode: opened?.mode ?? TEMP_CONTEXT_MODES.Window,
-      ownerWindowId: opened?.ownerWindowId ?? null,
-      error: getErrorMessage(error),
-      requestedMode,
-    })
-    if (opened) {
-      try {
-        await removeTempWindowHandle(getTempContextHandle(opened))
-      } catch (cleanupError) {
-        logger.warn(
-          "Failed to cleanup temp context after creation error",
-          cleanupError,
-        )
-        void scheduleTempPageReclaimRetry()
-      }
-    }
-    await removeInstalledDownloadBlockRules(
-      downloadBlockRuleId,
-      firefoxDownloadBlockTabId,
-    )
     throw error
   }
 }
