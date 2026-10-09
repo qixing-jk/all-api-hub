@@ -1,29 +1,24 @@
-import {
-  Heart,
-  MessageCircle,
-  MessagesSquare,
-  QrCode,
-  Send,
-  Users,
-  X,
-  type LucideIcon,
-} from "lucide-react"
+import { Heart, Users, X } from "lucide-react"
 import { useState, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
-import { ImageLightbox } from "~/components/ui/ImageLightbox"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover"
-import { REPO_URL } from "~/constants/about"
 import { SPONSOR_RECOMMENDATION_SURFACES } from "~/features/AccountManagement/sponsors/constants"
 import { SponsorBrandIcon } from "~/features/AccountManagement/sponsors/SponsorBrandIcon"
 import { useSponsorRecommendations } from "~/features/AccountManagement/sponsors/useSponsorRecommendations"
 import { cn } from "~/lib/utils"
 import { createTab } from "~/utils/browser/tabs"
-import wechatGroupImage from "~~/resources/wechat_group.png"
+import { getDocsCommunityUrl } from "~/utils/navigation/docsLinks"
+
+import { CommunityChannelIcon } from "./CommunityChannelIcon"
+import type { CommunityChannel, CommunityQrCode } from "./communityResources"
+import { CommunityWechatPreview } from "./CommunityWechatPreview"
+import { useCommunityResources } from "./useCommunityResources"
+import { useCommunityWechatImage } from "./useCommunityWechatImage"
 
 export type SupportCommunitySection = "sponsors" | "community"
 
@@ -34,40 +29,12 @@ export interface SupportCommunityPopoverProps {
   children: ReactNode
 }
 
-interface CommunityChannel {
-  id: string
-  Icon: LucideIcon
-  /** Proper-noun label shown as-is; omitted when the label is translated. */
-  label?: string
-  /** Direct invite link; omitted when an image preview lightbox is used instead. */
-  url?: string
+/** Proper names stay local; WeChat and discussions use their translated labels. */
+const COMMUNITY_LABELS: Partial<Record<CommunityChannel["id"], string>> = {
+  telegram: "Telegram",
+  discord: "Discord",
+  qq: "QQ",
 }
-
-/**
- * Community hub destinations. WeChat ships as a QR code and opens an image lightbox preview.
- */
-const COMMUNITY_CHANNELS: readonly CommunityChannel[] = [
-  {
-    id: "telegram",
-    Icon: Send,
-    label: "Telegram",
-    url: "https://t.me/qixing_chat",
-  },
-  {
-    id: "discord",
-    Icon: MessagesSquare,
-    label: "Discord",
-    url: "https://discord.gg/RmFXZ577ZQ",
-  },
-  {
-    id: "qq",
-    Icon: MessageCircle,
-    label: "QQ",
-    url: "https://qm.qq.com/q/ebSCy31Phe",
-  },
-  { id: "wechat", Icon: QrCode },
-  { id: "discussions", Icon: Users, url: `${REPO_URL}/discussions` },
-] as const
 
 /**
  * Popover displaying sponsors or community channels directly adjacent to the
@@ -79,10 +46,19 @@ export function SupportCommunityPopover({
   align = "start",
   children,
 }: SupportCommunityPopoverProps) {
-  const { t } = useTranslation(["ui", "common"])
+  const { t, i18n } = useTranslation(["ui", "common"])
   const [open, setOpen] = useState(false)
-  const [isWechatLightboxOpen, setIsWechatLightboxOpen] = useState(false)
+  const [wechatQrCode, setWechatQrCode] = useState<CommunityQrCode | null>(null)
   const isSponsors = section === "sponsors"
+  const community = useCommunityResources(!isSponsors, open)
+  const availableWechatQrCode = community.channels?.find(
+    (channel) => channel.id === "wechat",
+  )?.qrCode
+  const wechatImage = useCommunityWechatImage(
+    isSponsors
+      ? undefined
+      : wechatQrCode ?? (open ? availableWechatQrCode : undefined),
+  )
 
   const { items } = useSponsorRecommendations({
     surface: SPONSOR_RECOMMENDATION_SURFACES.Newcomer,
@@ -99,6 +75,10 @@ export function SupportCommunityPopover({
     : t("ui:feedback.community")
 
   const wechatLabel = t("ui:feedback.wechat")
+  const openCommunityPage = () => {
+    setWechatQrCode(null)
+    openLink(getDocsCommunityUrl(i18n.language))
+  }
 
   return (
     <>
@@ -158,10 +138,21 @@ export function SupportCommunityPopover({
             </div>
           ) : (
             <div className="space-y-0.5">
-              {COMMUNITY_CHANNELS.map(({ id, Icon, label, url }) => {
+              {community.status === "loading" && (
+                <p role="status" className="text-muted-foreground p-2 text-xs">
+                  {t("common:status.loading")}
+                </p>
+              )}
+              {community.status === "error" && (
+                <p role="status" className="text-muted-foreground p-2 text-xs">
+                  {t("ui:feedback.communityUnavailable")}
+                </p>
+              )}
+              {community.channels?.map((channel) => {
+                const { id } = channel
                 const isWechat = id === "wechat"
                 const channelLabel =
-                  label ??
+                  COMMUNITY_LABELS[id] ??
                   (isWechat ? wechatLabel : t("ui:feedback.discussion"))
 
                 return (
@@ -171,32 +162,37 @@ export function SupportCommunityPopover({
                     data-testid={`support-popover-channel-${id}`}
                     className="hover:bg-muted/60 flex w-full cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left transition-colors"
                     onClick={() => {
-                      if (isWechat) {
+                      if (channel.id === "wechat") {
                         setOpen(false)
-                        setIsWechatLightboxOpen(true)
-                      } else if (url) {
-                        openLink(url)
+                        setWechatQrCode(channel.qrCode)
+                      } else {
+                        openLink(channel.url)
                       }
                     }}
                   >
-                    <Icon className="text-muted-foreground size-3.5 shrink-0" />
+                    <CommunityChannelIcon channel={id} />
                     <span className="text-foreground truncate text-xs font-medium">
                       {channelLabel}
                     </span>
                   </button>
                 )
               })}
+              <button
+                type="button"
+                onClick={openCommunityPage}
+                className="text-link mt-2 w-full border-t px-2.5 pt-2 text-left text-xs hover:underline"
+              >
+                {t("ui:feedback.openCommunityPage")}
+              </button>
             </div>
           )}
         </PopoverContent>
       </Popover>
-      {section === "community" && (
-        <ImageLightbox
-          isOpen={isWechatLightboxOpen}
-          onClose={() => setIsWechatLightboxOpen(false)}
-          src={wechatGroupImage}
-          alt={wechatLabel}
-          title={wechatLabel}
+      {section === "community" && wechatQrCode && (
+        <CommunityWechatPreview
+          image={wechatImage}
+          onClose={() => setWechatQrCode(null)}
+          onOpenCommunityPage={openCommunityPage}
         />
       )}
     </>

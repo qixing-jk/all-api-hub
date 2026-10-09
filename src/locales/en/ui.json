@@ -496,16 +496,20 @@
     "bugReport": "Report a bug",
     "clickAnywhereToClose": "Click anywhere to close",
     "community": "Community groups",
+    "communityUnavailable": "Community links could not be loaded. Open the community page for current invitations.",
     "discussion": "Start a discussion",
     "featureRequest": "Request a feature",
     "languageRequest": "Request a new language",
+    "openCommunityPage": "Open community page",
     "siteSupportRequest": "Request site support",
     "sponsor": "Sponsor",
     "sponsorTitle": "View sponsors and support",
     "starOnGithub": "Star on GitHub",
     "trigger": "Feedback",
     "triggerTooltip": "Open feedback shortcuts",
-    "wechat": "WeChat group"
+    "wechat": "WeChat group",
+    "wechatHelp": "Group invite expired or group full? Scan the personal QR code in the image to add the contact and ask for an invitation, or visit the community page.",
+    "wechatUnavailable": "The QR code could not be loaded."
   },
   "modelListInput": {
     "actions": {

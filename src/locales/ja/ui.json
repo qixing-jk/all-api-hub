@@ -489,16 +489,20 @@
     "bugReport": "不具合を報告",
     "clickAnywhereToClose": "何もない場所をクリックして閉じる",
     "community": "コミュニティグループ",
+    "communityUnavailable": "コミュニティリンクを読み込めませんでした。最新の招待方法はコミュニティページをご確認ください。",
     "discussion": "ディスカッションを開始",
     "featureRequest": "機能要望を送る",
     "languageRequest": "新しい言語をリクエスト",
+    "openCommunityPage": "コミュニティページを開く",
     "siteSupportRequest": "サイト対応を依頼",
     "sponsor": "スポンサー",
     "sponsorTitle": "スポンサーと支援を確認",
     "starOnGithub": "GitHub で Star を付ける",
     "trigger": "フィードバック",
     "triggerTooltip": "フィードバックショートカットを開く",
-    "wechat": "WeChat グループ"
+    "wechat": "WeChat グループ",
+    "wechatHelp": "グループ招待の期限切れや満員の場合は、画像内の個人 QR コードから友だち追加して招待を依頼するか、コミュニティページをご確認ください。",
+    "wechatUnavailable": "QR コードを読み込めませんでした。"
   },
   "modelListInput": {
     "actions": {

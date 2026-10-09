@@ -507,16 +507,20 @@
     "bugReport": "Relatar um bug",
     "clickAnywhereToClose": "Clique em qualquer lugar para fechar",
     "community": "Grupos da comunidade",
+    "communityUnavailable": "Não foi possível carregar os links da comunidade. Abra a página da comunidade para ver os convites atuais.",
     "discussion": "Iniciar uma discussão",
     "featureRequest": "Solicitar um recurso",
     "languageRequest": "Solicitar um novo idioma",
+    "openCommunityPage": "Abrir página da comunidade",
     "siteSupportRequest": "Solicitar suporte do site",
     "sponsor": "Patrocinar",
     "sponsorTitle": "Ver patrocinadores e apoio",
     "starOnGithub": "Dar uma estrela no GitHub",
     "trigger": "Feedback",
     "triggerTooltip": "Abrir atalhos de feedback",
-    "wechat": "Grupo do WeChat"
+    "wechat": "Grupo do WeChat",
+    "wechatHelp": "O convite expirou ou o grupo está cheio? Escaneie o código QR pessoal na imagem para adicionar o contato e pedir um convite, ou visite a página da comunidade.",
+    "wechatUnavailable": "Não foi possível carregar o código QR."
   },
   "modelListInput": {
     "actions": {

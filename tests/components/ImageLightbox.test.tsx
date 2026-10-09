@@ -5,6 +5,25 @@ import { ImageLightbox } from "~/components/ui/ImageLightbox"
 import { render, screen } from "~~/tests/test-utils/render"
 
 describe("ImageLightbox", () => {
+  it("keeps the preview open when clicking its selectable text", () => {
+    const handleClose = vi.fn()
+    render(
+      <ImageLightbox
+        isOpen={true}
+        onClose={handleClose}
+        src="/test.png"
+        alt="Test Image"
+        footer={<p>Community help</p>}
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+
+    fireEvent.click(screen.getByText("Community help"))
+    fireEvent.click(screen.getByText("ui:feedback.clickAnywhereToClose"))
+    expect(handleClose).not.toHaveBeenCalled()
+    expect(screen.getByRole("dialog")).toBeVisible()
+  })
+
   it("renders nothing when closed", () => {
     render(
       <ImageLightbox

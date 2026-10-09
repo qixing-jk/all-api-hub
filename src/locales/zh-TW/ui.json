@@ -489,16 +489,20 @@
     "bugReport": "反饋問題",
     "clickAnywhereToClose": "點擊空白處關閉",
     "community": "社羣交流群",
+    "communityUnavailable": "社群連結載入失敗，請開啟線上社群頁查看最新邀請方式。",
     "discussion": "參與討論",
     "featureRequest": "提出功能建議",
     "languageRequest": "請求支援新語言",
+    "openCommunityPage": "開啟線上社群頁",
     "siteSupportRequest": "反饋未適配站點",
     "sponsor": "贊助支持",
     "sponsorTitle": "查看贊助商與贊助支持",
     "starOnGithub": "去 GitHub 點個 Star",
     "trigger": "反饋",
     "triggerTooltip": "開啟反饋快捷入口",
-    "wechat": "微信群"
+    "wechat": "微信群",
+    "wechatHelp": "群組 QR Code 失效或群組已滿？可掃描圖中的個人 QR Code 加好友，請對方邀請入群，也可查看線上社群頁。",
+    "wechatUnavailable": "QR Code 載入失敗。"
   },
   "modelListInput": {
     "actions": {
