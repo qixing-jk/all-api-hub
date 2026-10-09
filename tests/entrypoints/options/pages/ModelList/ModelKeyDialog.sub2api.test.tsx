@@ -37,7 +37,7 @@ vi.mock(
     prepareDefaultAccountKeyCreation: mocks.prepare,
   }),
 )
-vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
+vi.mock("~/features/TokenProvisioning/creation/AddTokenDialog", () => ({
   default: ({ isOpen }: { isOpen: boolean }) =>
     isOpen ? <div>Native group editor</div> : null,
 }))

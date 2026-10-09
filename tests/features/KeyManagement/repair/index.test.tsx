@@ -65,7 +65,7 @@ let mockProgress: AccountKeyRepairProgress
 let mockIsStarting = false
 
 vi.mock(
-  "~/features/TokenProvisioning/components/AccountKeyProvisioningDialog",
+  "~/features/TokenProvisioning/creation/AccountKeyProvisioningDialog",
   () => ({
     AccountKeyProvisioningDialog: ({
       account,

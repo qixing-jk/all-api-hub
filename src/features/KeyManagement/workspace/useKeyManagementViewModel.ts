@@ -20,7 +20,7 @@ import { useKeyManagementManagedSiteActions } from "~/features/KeyManagement/man
 import { useManagedSiteKeyStatuses } from "~/features/KeyManagement/managedSite/useManagedSiteKeyStatuses"
 import { useKeyManagementRouteCoordinator } from "~/features/KeyManagement/workspace/useKeyManagementRouteCoordinator"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
-import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
+import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/secretDelivery/apiCredentialProfileSaveAction"
 import {
   AccountKeyRepairMessageTypes,
   sendAccountKeyRepairMessage,

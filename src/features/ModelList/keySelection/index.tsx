@@ -22,9 +22,9 @@ import {
   type ModelKeyDialogCreateResult,
 } from "~/features/ModelList/keySelection/hooks/useModelKeyDialog"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
-import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
-import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
-import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/utils/apiCredentialProfileSaveAction"
+import AddTokenDialog from "~/features/TokenProvisioning/creation/AddTokenDialog"
+import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/secretDelivery/apiCredentialProfileSaveAction"
+import { OneTimeSecretDialog } from "~/features/TokenProvisioning/secretDelivery/OneTimeSecretDialog"
 import type { AccountKeyCreationResult } from "~/services/accounts/keys/accountKeyCreation"
 import {
   getDefaultAccountKeyName,

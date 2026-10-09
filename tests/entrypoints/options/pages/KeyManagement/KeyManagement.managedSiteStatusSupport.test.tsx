@@ -140,7 +140,7 @@ vi.mock("~/features/KeyManagement/workspace/Footer", () => ({
   Footer: () => <div data-testid="footer" />,
 }))
 
-vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
+vi.mock("~/features/TokenProvisioning/creation/AddTokenDialog", () => ({
   default: () => null,
 }))
 

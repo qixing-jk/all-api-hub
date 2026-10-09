@@ -15,7 +15,7 @@ import {
 import {
   claudeCodeHubChannelEffect,
   runClaudeCodeHubMutation,
-} from "~/services/apiAdapters/managedSites/claudeCodeHubMutation"
+} from "~/services/apiAdapters/managedSites/claudeCodeHub/claudeCodeHubMutation"
 import {
   createProviderV1,
   deleteProviderV1,

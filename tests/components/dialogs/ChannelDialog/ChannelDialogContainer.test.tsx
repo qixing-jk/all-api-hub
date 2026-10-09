@@ -32,7 +32,7 @@ vi.mock(
   }),
 )
 
-vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
+vi.mock("~/features/TokenProvisioning/creation/AddTokenDialog", () => ({
   default: (props: {
     isOpen: boolean
     createPrefill?: Record<string, unknown>

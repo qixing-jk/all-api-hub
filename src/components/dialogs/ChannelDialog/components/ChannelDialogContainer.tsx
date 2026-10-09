@@ -2,7 +2,7 @@ import { useChannelDialogContext } from "~/components/dialogs/ChannelDialog/cont
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { ManagedResourceCreateDialog } from "~/features/ManagedSiteChannels/editor/ManagedResourceCreateDialog"
 import { useManagedResourceInteraction } from "~/features/ManagedSiteChannels/workspace/useManagedResourceInteraction"
-import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
+import AddTokenDialog from "~/features/TokenProvisioning/creation/AddTokenDialog"
 
 import { ChannelDialogOpening } from "./ChannelDialogOpening"
 

@@ -238,7 +238,7 @@ vi.mock("~/features/KeyManagement/inventory/AccountSummaryBar", () => ({
   },
 }))
 
-vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
+vi.mock("~/features/TokenProvisioning/creation/AddTokenDialog", () => ({
   default: (props: any) => {
     addTokenDialogPropsSpy(props)
     return null

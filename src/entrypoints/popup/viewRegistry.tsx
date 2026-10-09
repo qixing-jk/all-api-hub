@@ -12,7 +12,7 @@ import AccountList from "~/features/AccountManagement/components/AccountList"
 import { useAddAccountHandler } from "~/features/AccountManagement/opening/useAddAccountHandler"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import type { ApiCredentialProfilesPopupViewHandle } from "~/features/ApiCredentialProfiles/list/ApiCredentialProfilesPopupView"
-import { useBookmarkDialogContext } from "~/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
+import { useBookmarkDialogContext } from "~/features/SiteBookmarks/editor/BookmarkDialogStateContext"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
@@ -26,7 +26,7 @@ import ShareOverviewSnapshotButton from "./components/ShareOverviewSnapshotButto
 import { POPUP_TEST_IDS } from "./testIds"
 
 const loadBookmarksList = () =>
-  import("~/features/SiteBookmarks/components/BookmarksList")
+  import("~/features/SiteBookmarks/list/BookmarksList")
 const loadApiCredentialProfilesPopupView = () =>
   import("~/features/ApiCredentialProfiles/list/ApiCredentialProfilesPopupView")
 

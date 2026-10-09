@@ -1,0 +1,214 @@
+import { Ellipsis, Link, Pencil, Pin, PinOff, Trash2 } from "lucide-react"
+import type { MouseEvent } from "react"
+import { useTranslation } from "react-i18next"
+
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
+import {
+  Badge,
+  BodySmall,
+  Button,
+  Caption,
+  CardItem,
+  IconButton,
+} from "~/components/ui"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu"
+import { useDevice } from "~/contexts/DeviceContext"
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
+import { AccountActionMenuItem } from "~/features/AccountManagement/components/AccountActionButtons/AccountActionMenuItem"
+import {
+  getSiteBookmarkListItemTestId,
+  SITE_BOOKMARKS_TEST_IDS,
+} from "~/features/SiteBookmarks/testIds"
+import { cn } from "~/lib/utils"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/contracts"
+import type { SiteBookmark } from "~/types"
+
+export interface BookmarkListItemProps {
+  bookmark: SiteBookmark & { tags?: string[] }
+  isPinned: boolean
+  onOpen: () => void
+  onCopyUrl: () => void
+  onEdit: () => void
+  onDelete: () => void
+  onTogglePin: () => void
+}
+
+/**
+ * Renders a single bookmark row with actions (open/copy/edit/delete + pin/unpin).
+ * The bookmark name and URL are clickable, matching the account list behavior.
+ */
+export default function BookmarkListItem({
+  bookmark,
+  isPinned,
+  onOpen,
+  onCopyUrl,
+  onEdit,
+  onDelete,
+  onTogglePin,
+}: BookmarkListItemProps) {
+  const { t } = useTranslation(["bookmark", "common"])
+  const { isTouchDevice } = useDevice()
+
+  const revealButtonsClass = isTouchDevice
+    ? ""
+    : "opacity-0 pointer-events-none group-hover:opacity-100 group-focus-within:opacity-100 group-hover:pointer-events-auto group-focus-within:pointer-events-auto"
+
+  const pinLabel = isPinned
+    ? t("bookmark:actions.unpin")
+    : t("bookmark:actions.pin")
+  const PinToggleIcon = isPinned ? PinOff : Pin
+  const rowActionsSurface =
+    PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementRowActions
+
+  const handleOpenClick = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation()
+    onOpen()
+  }
+
+  return (
+    <ProductAnalyticsScope
+      entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
+      featureId={PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement}
+      surfaceId={rowActionsSurface}
+    >
+      <CardItem
+        padding="none"
+        className={cn("group touch-manipulation transition-all")}
+        data-testid={getSiteBookmarkListItemTestId(bookmark.id)}
+      >
+        <div className="gap-density-2 py-density-2-5 sm:py-density-3 flex w-full min-w-0 items-center px-3 sm:px-4">
+          <div className="min-w-0 flex-1 overflow-x-hidden">
+            <div className="gap-density-2 flex min-w-0 items-center">
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="h-auto min-h-0 min-w-0 shrink justify-start p-0 text-left"
+                title={bookmark.name}
+                onClick={handleOpenClick}
+                analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.OpenBookmark}
+              >
+                <BodySmall weight="medium" className="truncate">
+                  {bookmark.name}
+                </BodySmall>
+              </Button>
+              {isPinned && (
+                <Pin className="text-muted-foreground dark:text-secondary-foreground h-3.5 w-3.5 shrink-0" />
+              )}
+            </div>
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              className="h-auto min-h-0 w-full min-w-0 justify-start p-0 text-left"
+              title={bookmark.url}
+              onClick={handleOpenClick}
+              analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.OpenBookmark}
+            >
+              <Caption className="truncate">{bookmark.url}</Caption>
+            </Button>
+            {bookmark.tags && bookmark.tags.length > 0 && (
+              <div className="gap-density-1 mt-density-1 flex flex-wrap">
+                {bookmark.tags.slice(0, 6).map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-3xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div
+            className={`shrink-0 transition-opacity duration-200 ${revealButtonsClass}`}
+          >
+            <div className="gap-density-2 grid grid-cols-2 justify-end sm:grid-cols-4">
+              <IconButton
+                onClick={onOpen}
+                variant="ghost"
+                size="sm"
+                aria-label={t("bookmark:actions.open")}
+                title={t("bookmark:actions.open")}
+                data-testid={SITE_BOOKMARKS_TEST_IDS.rowOpenButton}
+                analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.OpenBookmark}
+              >
+                <WorkflowTransitionIcon className="h-4 w-4" />
+              </IconButton>
+
+              <IconButton
+                onClick={onCopyUrl}
+                variant="ghost"
+                size="sm"
+                aria-label={t("bookmark:actions.copyUrl")}
+                title={t("bookmark:actions.copyUrl")}
+                data-testid={SITE_BOOKMARKS_TEST_IDS.rowCopyUrlButton}
+                analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.CopyBookmarkUrl}
+              >
+                <Link className="h-4 w-4" />
+              </IconButton>
+
+              <IconButton
+                onClick={onEdit}
+                variant="ghost"
+                size="sm"
+                aria-label={t("common:actions.edit")}
+                title={t("common:actions.edit")}
+                data-testid={SITE_BOOKMARKS_TEST_IDS.rowEditButton}
+                analyticsAction={
+                  PRODUCT_ANALYTICS_ACTION_IDS.OpenEditBookmarkDialog
+                }
+              >
+                <Pencil className="h-4 w-4" />
+              </IconButton>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <IconButton
+                    variant="ghost"
+                    size="sm"
+                    aria-label={t("common:actions.more")}
+                    data-testid={SITE_BOOKMARKS_TEST_IDS.rowMoreActionsButton}
+                  >
+                    <Ellipsis className="h-4 w-4" />
+                  </IconButton>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent
+                  align="end"
+                  className="border-border bg-card py-density-1 z-50 rounded-lg border shadow-lg focus:outline-none"
+                >
+                  <AccountActionMenuItem
+                    onClick={() => onTogglePin()}
+                    icon={PinToggleIcon}
+                    label={pinLabel}
+                    analyticsAction={
+                      PRODUCT_ANALYTICS_ACTION_IDS.ToggleBookmarkPin
+                    }
+                    testId={SITE_BOOKMARKS_TEST_IDS.rowPinToggleMenuItem}
+                  />
+                  <DropdownMenuSeparator className="bg-secondary my-density-1" />
+                  <AccountActionMenuItem
+                    onClick={() => onDelete()}
+                    icon={Trash2}
+                    label={t("common:actions.delete")}
+                    isDestructive={true}
+                    testId={SITE_BOOKMARKS_TEST_IDS.rowDeleteMenuItem}
+                  />
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </div>
+      </CardItem>
+    </ProductAnalyticsScope>
+  )
+}

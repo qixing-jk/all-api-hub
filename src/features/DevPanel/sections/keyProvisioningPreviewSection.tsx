@@ -12,7 +12,7 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { ACCOUNT_SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { getAccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/form/sitePolicy"
 import { AihubmixDefaultKeyPromptDialog } from "~/features/AccountManagement/components/AccountDialog/postSave/AihubmixDefaultKeyPromptDialog"
-import { AccountKeyProvisioningDialog } from "~/features/TokenProvisioning/components/AccountKeyProvisioningDialog"
+import { AccountKeyProvisioningDialog } from "~/features/TokenProvisioning/creation/AccountKeyProvisioningDialog"
 import type { DisplaySiteData } from "~/types"
 import type { AccountKeyAutoProvisionMode } from "~/types/accountKeyAutoProvisioning"
 

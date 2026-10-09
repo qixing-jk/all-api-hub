@@ -17,7 +17,7 @@ import {
 } from "~/features/KeyManagement/resources/AccountKeyResourceEditorDialog"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { NATIVE_RESOURCE_EDITOR_LOADING_REVEALS } from "~/features/ResourceEditor/opening/nativeResourceEditorOpeningState"
-import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
+import { OneTimeSecretDialog } from "~/features/TokenProvisioning/secretDelivery/OneTimeSecretDialog"
 import zhKeyManagement from "~/locales/zh-CN/keyManagement.json"
 import { RESOURCE_FIELD_OPTION_LOAD_TRIGGERS } from "~/services/apiAdapters/contracts/resourceNative"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keys/keyResourceEditor"

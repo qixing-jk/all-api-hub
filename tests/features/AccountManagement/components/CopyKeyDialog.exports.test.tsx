@@ -66,7 +66,7 @@ async function renderExpandedDetails() {
 const { manualCreation } = vi.hoisted(() => ({
   manualCreation: { current: null as AccountKeyCreationResult | null },
 }))
-vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
+vi.mock("~/features/TokenProvisioning/creation/AddTokenDialog", () => ({
   default: ({
     isOpen,
     onSuccess,

@@ -19,6 +19,8 @@ The main workflow directories are:
 | Usage analytics | `data`, `filtering`, `charts`, `export`, `workspace` |
 | Balance history | `data`, `filtering`, `reporting`, `workspace` |
 | Managed site model sync | `data`, `commands`, `results`, `status`, `filters`, `workspace` |
+| Site bookmarks | `list`, `editor` |
+| Token provisioning | `creation`, `secretDelivery` |
 | Import and export | `backup`, `webdav`, `cloudSync` |
 | Options overview | `attention`, `automation`, `configuration`, `usage`, `actions`, `permissions`, `workspace` |
 
@@ -32,6 +34,11 @@ account and credential surfaces. `KiloCodeExport` owns Kilo Code's account expor
 workflow and its shared model-selection UI. `ManagedSiteWidgets` owns reusable
 managed-site configuration, assessment, link, and import UI. Automatic check-in UI
 opening and completion belong to `AutoCheckin/pretrigger`.
+
+`Verification/api` and `Verification/cli` own the shared product verification
+dialogs; `UpdateLog` owns release history UI. The reusable channel-creation dialog
+lives under `ManagedSiteChannels/editor/ChannelDialog`, alongside the channel
+editor workflows that it opens.
 
 Keep generic UI primitives in `src/components/ui`, branding in
 `src/components/icons`, and application-wide layout widgets in `src/components`.

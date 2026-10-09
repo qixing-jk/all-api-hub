@@ -22,7 +22,7 @@ vi.mock("~/features/AccountManagement/opening/useAddAccountHandler", () => ({
   }),
 }))
 
-vi.mock("~/features/SiteBookmarks/hooks/BookmarkDialogStateContext", () => ({
+vi.mock("~/features/SiteBookmarks/editor/BookmarkDialogStateContext", () => ({
   useBookmarkDialogContext: () => ({
     openAddBookmark: openAddBookmarkMock,
   }),
@@ -43,7 +43,7 @@ vi.mock("~/entrypoints/popup/components/ShareOverviewSnapshotButton", () => ({
   default: () => <button>ShareOverviewSnapshotButton</button>,
 }))
 
-vi.mock("~/features/SiteBookmarks/components/BookmarksList", () => ({
+vi.mock("~/features/SiteBookmarks/list/BookmarksList", () => ({
   default: () => <div>BookmarksList</div>,
 }))
 

@@ -2,7 +2,7 @@ import { vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { newApiSecretVerification } from "~/services/apiAdapters/managedSites/newApiSecretVerification"
+import { newApiSecretVerification } from "~/services/apiAdapters/managedSites/newApi/newApiSecretVerification"
 
 type CapabilityOverrides = Partial<
   Pick<ManagedSiteCapabilities, "siteType">

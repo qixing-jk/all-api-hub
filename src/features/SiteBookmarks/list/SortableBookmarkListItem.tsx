@@ -1,0 +1,95 @@
+import { useSortable } from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+import { GripVertical } from "lucide-react"
+
+import { IconButton } from "~/components/ui"
+import BookmarkListItem from "~/features/SiteBookmarks/list/BookmarkListItem"
+import { cn } from "~/lib/utils"
+import type { SiteBookmark } from "~/types"
+
+interface SortableBookmarkListItemProps {
+  bookmark: SiteBookmark & { tags?: string[] }
+  isPinned: boolean
+  onOpen: () => void
+  onCopyUrl: () => void
+  onEdit: () => void
+  onDelete: () => void
+  onTogglePin: () => void
+  isDragDisabled: boolean
+  handleLabel: string
+  showHandle: boolean
+  className?: string
+}
+
+/**
+ * Sortable wrapper around BookmarkListItem that adds drag handle controls and DnDKit bindings.
+ */
+export default function SortableBookmarkListItem({
+  bookmark,
+  isPinned,
+  onOpen,
+  onCopyUrl,
+  onEdit,
+  onDelete,
+  onTogglePin,
+  isDragDisabled,
+  handleLabel,
+  showHandle,
+  className,
+}: SortableBookmarkListItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: bookmark.id,
+    disabled: isDragDisabled,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={isDragging ? "relative z-10" : undefined}
+    >
+      <div className={cn("gap-density-2 flex items-center", className)}>
+        {showHandle && (
+          <div className="pl-2 sm:pl-3">
+            <IconButton
+              ref={setActivatorNodeRef}
+              variant="ghost"
+              size="xs"
+              aria-label={handleLabel}
+              disabled={isDragDisabled}
+              className="text-faint-foreground hover:text-secondary-foreground shrink-0 focus-visible:ring-2 focus-visible:ring-offset-2"
+              {...listeners}
+              {...attributes}
+            >
+              <GripVertical className="h-4 w-4" />
+            </IconButton>
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <BookmarkListItem
+            bookmark={bookmark}
+            isPinned={isPinned}
+            onOpen={onOpen}
+            onCopyUrl={onCopyUrl}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onTogglePin={onTogglePin}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}

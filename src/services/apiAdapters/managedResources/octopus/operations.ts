@@ -6,7 +6,7 @@ import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedR
 import {
   octopusChannelEffect,
   runOctopusMutation,
-} from "~/services/apiAdapters/managedSites/octopusMutation"
+} from "~/services/apiAdapters/managedSites/octopus/octopusMutation"
 import { updateChannel as updateOctopusChannel } from "~/services/apiService/octopus/channels"
 import { API_TYPES } from "~/services/verification/aiApiVerification/types"
 import { OctopusOutboundType } from "~/types/octopus"

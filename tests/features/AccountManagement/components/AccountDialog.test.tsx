@@ -269,7 +269,7 @@ function resetMockState() {
 }
 
 vi.mock(
-  "~/features/TokenProvisioning/components/AccountKeyProvisioningDialog",
+  "~/features/TokenProvisioning/creation/AccountKeyProvisioningDialog",
   () => ({
     AccountKeyProvisioningDialog: ({
       account,
@@ -287,7 +287,7 @@ vi.mock(
   }),
 )
 
-vi.mock("~/features/TokenProvisioning/components/AddTokenDialog", () => ({
+vi.mock("~/features/TokenProvisioning/creation/AddTokenDialog", () => ({
   default: (props: {
     isOpen: boolean
     preSelectedAccountId?: string

@@ -6,11 +6,11 @@ import { PageHeader } from "~/components/PageHeader"
 import { Button } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { AccountDataProvider } from "~/features/AccountManagement/data/AccountDataContext"
-import BookmarksList from "~/features/SiteBookmarks/components/BookmarksList"
 import {
   BookmarkDialogStateProvider,
   useBookmarkDialogContext,
-} from "~/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
+} from "~/features/SiteBookmarks/editor/BookmarkDialogStateContext"
+import BookmarksList from "~/features/SiteBookmarks/list/BookmarksList"
 import { SITE_BOOKMARKS_TEST_IDS } from "~/features/SiteBookmarks/testIds"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

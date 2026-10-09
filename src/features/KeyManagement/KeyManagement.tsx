@@ -23,8 +23,8 @@ import { Footer } from "~/features/KeyManagement/workspace/Footer"
 import { Header } from "~/features/KeyManagement/workspace/Header"
 import { useKeyManagementViewModel } from "~/features/KeyManagement/workspace/useKeyManagementViewModel"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
-import AddTokenDialog from "~/features/TokenProvisioning/components/AddTokenDialog"
-import { OneTimeSecretDialog } from "~/features/TokenProvisioning/components/OneTimeSecretDialog"
+import AddTokenDialog from "~/features/TokenProvisioning/creation/AddTokenDialog"
+import { OneTimeSecretDialog } from "~/features/TokenProvisioning/secretDelivery/OneTimeSecretDialog"
 import { ACCOUNT_KEY_RESOURCE_FAILURE_CODES } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   openApiCredentialProfilesPage,
