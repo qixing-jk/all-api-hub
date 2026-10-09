@@ -21,7 +21,7 @@ import { claudeCodeHubManagedResourceRegistration } from "~/services/apiAdapters
 import { ClaudeCodeHubNativeError } from "~/services/apiAdapters/managedResources/claudeCodeHub/nativeRuntime"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { ClaudeCodeHubApiError } from "~/services/apiService/claudeCodeHub"
-import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
+import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations/contracts"
 import type { ClaudeCodeHubProviderDisplay } from "~/types/claudeCodeHub"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 

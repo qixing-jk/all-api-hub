@@ -21,7 +21,7 @@ import {
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationConfirmedEffect,
   type ManagedSiteMutationResult,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/contracts"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -1354,6 +1354,45 @@ describe("useManagedResourceListController", () => {
 })
 
 describe("useManagedResourceMutationController", () => {
+  it("falls back to an authoritative read when local mutation acceptance throws", async () => {
+    const saved = createManagedResourceFacts("saved")
+    const editor = createManagedResourceEditor({
+      submit: vi.fn(async () =>
+        succeededFacts(
+          saved,
+          MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated,
+        ),
+      ),
+    })
+    const workspace = createManagedResourceWorkspace({
+      openCreateEditor: vi.fn(async () => editor),
+    })
+    const refresh = vi.fn(async () => true)
+    const acceptMutationResult = vi.fn(() => {
+      throw new Error("local projection unavailable")
+    })
+    const onMutationSuccess = vi.fn()
+    const { result } = renderHook(() =>
+      useManagedResourceMutationController({
+        workspace,
+        refresh,
+        acceptMutationResult,
+        onMutationSuccess,
+      }),
+    )
+    await act(async () => result.current.openCreate())
+    await act(async () => {
+      await expect(result.current.submit({ name: "saved" })).resolves.toBe(
+        saved,
+      )
+    })
+    expect(acceptMutationResult).toHaveBeenCalledTimes(1)
+    expect(refresh).toHaveBeenCalledTimes(1)
+    expect(editor.submit).toHaveBeenCalledTimes(1)
+    expect(result.current.editor).toBeNull()
+    expect(onMutationSuccess).toHaveBeenCalledWith("create")
+  })
+
   it("keeps a succeeded editor visible until the accepted refresh completes", async () => {
     const refresh = deferred<boolean>()
     const saved = createManagedResourceFacts("saved")

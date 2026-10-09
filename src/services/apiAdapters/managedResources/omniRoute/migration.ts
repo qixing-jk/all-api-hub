@@ -15,7 +15,7 @@ import {
 import { openOmniRouteNativeResourceOperations } from "~/services/apiAdapters/managedResources/omniRoute/nativeOperations"
 import { OmniRouteNativeError } from "~/services/apiAdapters/managedResources/omniRoute/nativeRuntime"
 import type { OmniRouteSanitizedConnection } from "~/services/apiService/omniroute/redaction"
-import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
+import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations/contracts"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES } from "~/types/managedSiteMigration"
 import {

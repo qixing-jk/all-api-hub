@@ -25,7 +25,7 @@ import { LINKED_CHANNEL_CLEANUP_STORAGE_KEY } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import { getCurrentManagedSiteType } from "~/services/managedSites/configuration/runtimeConfig"
 import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
-import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
+import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations/contracts"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import {
   getManagedSiteChannelKeyComparisonMode,

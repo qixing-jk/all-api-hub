@@ -7,10 +7,8 @@ import type {
   ManagedSiteRuntimeConfigValue,
 } from "~/services/managedSites/configuration/runtimeConfig"
 import { assertManagedResourceRefForSite } from "~/services/managedSites/managedResourceIdentity"
-import {
-  consumeManagedSiteMutationResult,
-  type ManagedSiteMutationResult,
-} from "~/services/managedSites/mutations"
+import { consumeManagedSiteMutationResult } from "~/services/managedSites/mutations/consumption"
+import { type ManagedSiteMutationResult } from "~/services/managedSites/mutations/contracts"
 import {
   collectManagedConfigSecrets,
   collectManagedResourceSecrets,

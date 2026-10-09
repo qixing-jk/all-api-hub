@@ -22,10 +22,12 @@ import {
   getManagedResourceFieldPolicy,
 } from "~/features/ManagedSiteChannels/editor/managedResourceFieldPolicy"
 import {
-  mapManagedResourceMigrationExecutionResult,
-  mapManagedResourceMigrationPreview,
   projectManagedResourceMigrationExecutionResult,
   projectManagedResourceMigrationPreview,
+} from "~/features/ManagedSiteChannels/migration/managedResourceMigrationData"
+import {
+  mapManagedResourceMigrationExecutionResult,
+  mapManagedResourceMigrationPreview,
 } from "~/features/ManagedSiteChannels/migration/managedResourceMigrationPresentation"
 import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
 import es419ManagedSiteChannels from "~/locales/es-419/managedSiteChannels.json"

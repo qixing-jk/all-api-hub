@@ -1,14 +1,16 @@
 import { describe, expect, it, vi } from "vitest"
 
+import { consumeManagedSiteMutationResult } from "~/services/managedSites/mutations/consumption"
 import {
-  consumeManagedSiteMutationResult,
   MANAGED_SITE_MUTATION_COMPLETIONS,
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
   MANAGED_SITE_MUTATION_OUTCOMES,
-  MANAGED_SITE_MUTATION_RETRY_DECISIONS,
   type ManagedSiteMutationConfirmedEffect,
+} from "~/services/managedSites/mutations/contracts"
+import {
+  MANAGED_SITE_MUTATION_RETRY_DECISIONS,
   type ManagedSiteMutationRetryDecision,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/retryPolicy"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const effect: ManagedSiteMutationConfirmedEffect = {

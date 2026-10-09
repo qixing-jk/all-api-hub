@@ -38,16 +38,18 @@ import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testId
 import { AccountManagementProvider } from "~/features/AccountManagement/workspace/AccountManagementProvider"
 import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/workspace/useApiCredentialProfiles"
 import {
-  buildUnifiedApiGuidanceModel,
   GatewayGuidanceDismissDialog,
-  getGatewayGuidanceImportableAccounts,
-  UNIFIED_API_GUIDANCE_ACTION_KINDS,
-  UNIFIED_API_GUIDANCE_SURFACES,
   UnifiedApiGuidanceCard,
-  useGatewayGuidanceDismissal,
-  withGuidedAccountKeyImportTarget,
-  type UnifiedApiGuidanceAction,
 } from "~/features/UnifiedApiGuidance"
+import { UNIFIED_API_GUIDANCE_SURFACES } from "~/features/UnifiedApiGuidance/i18n"
+import {
+  buildUnifiedApiGuidanceModel,
+  UNIFIED_API_GUIDANCE_ACTION_KINDS,
+  type UnifiedApiGuidanceAction,
+} from "~/features/UnifiedApiGuidance/model"
+import { withGuidedAccountKeyImportTarget } from "~/features/UnifiedApiGuidance/navigation"
+import { getGatewayGuidanceImportableAccounts } from "~/features/UnifiedApiGuidance/sourceAccounts"
+import { useGatewayGuidanceDismissal } from "~/features/UnifiedApiGuidance/useGatewayGuidanceDismissal"
 import toast from "~/lib/notify"
 import { GATEWAY_GUIDANCE_SURFACES } from "~/services/featureGuidance/featureGuidanceState"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"

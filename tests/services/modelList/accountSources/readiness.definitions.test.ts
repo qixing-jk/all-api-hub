@@ -4,7 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
-} from "~/services/accounts/accountSiteProfile"
+} from "~/services/accounts/accountSiteProfile/contracts"
 import { getAccountSiteTypeValues } from "~/services/accountSiteDefinitions"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {

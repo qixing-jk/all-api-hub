@@ -26,7 +26,7 @@ import {
 import {
   assertManagedSiteMutationResult,
   MANAGED_SITE_MUTATION_OUTCOMES,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/contracts"
 
 type SaveFeedback =
   | { kind: "failed"; fieldIssues?: readonly ResourceFieldIssue[] }

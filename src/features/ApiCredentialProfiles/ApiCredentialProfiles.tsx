@@ -20,21 +20,21 @@ import {
   KEY_MANAGEMENT_GUIDED_IMPORT_TARGETS,
   KEY_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/KeyManagement/constants"
-import {
-  buildUnifiedApiGuidanceModel,
-  GatewayGuidanceDismissDialog,
-  UNIFIED_API_GUIDANCE_ACTION_KINDS,
-  UNIFIED_API_GUIDANCE_STATUSES,
-  useGatewayGuidanceDismissal,
-  type UnifiedApiGuidanceAction,
-  type UnifiedApiGuidanceModel,
-  type UnifiedApiGuidanceStatus,
-} from "~/features/UnifiedApiGuidance"
+import { GatewayGuidanceDismissDialog } from "~/features/UnifiedApiGuidance"
 import {
   GuidanceCardActionButton,
   GuidanceCardLayout,
   GuidanceCardNote,
 } from "~/features/UnifiedApiGuidance/components/GuidanceCardLayout"
+import {
+  buildUnifiedApiGuidanceModel,
+  UNIFIED_API_GUIDANCE_ACTION_KINDS,
+  UNIFIED_API_GUIDANCE_STATUSES,
+  type UnifiedApiGuidanceAction,
+  type UnifiedApiGuidanceModel,
+  type UnifiedApiGuidanceStatus,
+} from "~/features/UnifiedApiGuidance/model"
+import { useGatewayGuidanceDismissal } from "~/features/UnifiedApiGuidance/useGatewayGuidanceDismissal"
 import toast from "~/lib/notify"
 import { apiCredentialProfileLinks } from "~/services/apiCredentialProfiles/links"
 import {

@@ -17,11 +17,11 @@ import { listChannels } from "~/services/apiService/octopus/channels"
 import { fetchRemoteModels } from "~/services/apiService/octopus/models"
 import { ApiError } from "~/services/apiTransport/errors"
 import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
+import { consumeManagedSiteMutationResult } from "~/services/managedSites/mutations/consumption"
 import {
-  consumeManagedSiteMutationResult,
   MANAGED_SITE_MUTATION_RETRY_DECISIONS,
   type ManagedSiteMutationRetryDecision,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/retryPolicy"
 import { collectManagedConfigSecrets } from "~/services/managedSites/utils/resourceSecrets"
 import {
   applyChannelModelFilters,

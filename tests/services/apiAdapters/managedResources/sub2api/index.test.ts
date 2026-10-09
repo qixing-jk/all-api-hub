@@ -20,7 +20,7 @@ import {
 } from "~/services/apiAdapters/managedResources/channelImport"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { sub2ApiManagedResourceRegistration } from "~/services/apiAdapters/managedResources/sub2api"
-import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
+import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations/contracts"
 import {
   SUB2API_STEP_UP_ADMIN_KEY_FORBIDDEN_CODE,
   Sub2ApiAdminApiError,

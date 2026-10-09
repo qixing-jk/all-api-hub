@@ -17,19 +17,21 @@ import type {
 import { OverviewUsageSnapshot } from "~/features/OptionsOverview/usage/OverviewUsageSnapshot"
 import { getOverviewSectionTitle } from "~/features/OptionsOverview/workspace/gridText"
 import { OVERVIEW_WIDGET_LAYOUT } from "~/features/OptionsOverview/workspace/layout"
+import { UnifiedApiGuidanceCard } from "~/features/UnifiedApiGuidance"
+import { GatewayGuidanceDiscovery } from "~/features/UnifiedApiGuidance/components/GatewayGuidanceDiscovery"
+import { UNIFIED_API_GUIDANCE_SURFACES } from "~/features/UnifiedApiGuidance/i18n"
 import {
-  trackUnifiedApiGuidanceAction,
   UNIFIED_API_GUIDANCE_STATUSES,
   UNIFIED_API_GUIDANCE_STEP_STATES,
-  UNIFIED_API_GUIDANCE_SURFACES,
-  UnifiedApiGuidanceCard,
-  UnifiedApiGuidanceUnavailableCard,
-  withGuidedAccountKeyImportTarget,
   type UnifiedApiGuidanceAction,
-} from "~/features/UnifiedApiGuidance"
-import { GatewayGuidanceDiscovery } from "~/features/UnifiedApiGuidance/components/GatewayGuidanceDiscovery"
-import { GATEWAY_GUIDANCE_OVERVIEW_ID } from "~/features/UnifiedApiGuidance/navigation"
+} from "~/features/UnifiedApiGuidance/model"
+import {
+  GATEWAY_GUIDANCE_OVERVIEW_ID,
+  withGuidedAccountKeyImportTarget,
+} from "~/features/UnifiedApiGuidance/navigation"
 import { runGatewayGuidanceAction } from "~/features/UnifiedApiGuidance/runGatewayGuidanceAction"
+import { trackUnifiedApiGuidanceAction } from "~/features/UnifiedApiGuidance/tracking"
+import { UnifiedApiGuidanceUnavailableCard } from "~/features/UnifiedApiGuidance/UnifiedApiGuidanceCard"
 import { PRODUCT_ANALYTICS_SURFACE_IDS } from "~/services/productAnalytics/contracts"
 
 interface OptionsOverviewGridProps {

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 
 import { isAccountRelatedTab } from "~/features/AccountManagement/utils/accountOpenTabMatch"
 import { readAccountBrowserIdentityFromTab } from "~/services/accountBrowserSession/identityReader"
-import { resolveAccountSiteContentSessionHintForOrigin } from "~/services/accounts/accountSiteProfile"
+import { resolveAccountSiteContentSessionHintForOrigin } from "~/services/accounts/accountSiteProfile/contentSessionHint"
 import { isSameAccountSiteOrigin } from "~/services/accounts/accountSiteProfile/urls"
 import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import { findAccountsBySiteIdentity } from "~/services/accounts/identity/accountMatching"

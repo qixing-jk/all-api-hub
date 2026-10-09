@@ -3,7 +3,7 @@ import { expect, it } from "vitest"
 import type {
   ManagedSiteMutationConfirmedEffect,
   ManagedSiteMutationResult,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/contracts"
 
 export const CHANNEL_MUTATION_SCENARIOS = {
   Succeeded: "succeeded",

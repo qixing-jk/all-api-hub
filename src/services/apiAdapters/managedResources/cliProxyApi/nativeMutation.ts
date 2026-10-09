@@ -19,7 +19,7 @@ import {
   type CliProxyApiResource,
 } from "~/services/apiService/cliProxyApi"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
-import type { ManagedSiteMutationResult } from "~/services/managedSites/mutations"
+import type { ManagedSiteMutationResult } from "~/services/managedSites/mutations/contracts"
 import type { CliProxyApiConfig } from "~/types/cliProxyApiConfig"
 
 /** Compare persisted editable values while accepting omitted empty/default fields. */

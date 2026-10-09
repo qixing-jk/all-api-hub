@@ -25,7 +25,7 @@ import {
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationResult,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/contracts"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 type TestConfig = { scope: string }

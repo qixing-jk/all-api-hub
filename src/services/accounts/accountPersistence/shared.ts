@@ -1,5 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
-import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accountSiteProfile"
+import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accountSiteProfile/supplementalAuth"
 import { normalizeAccountSiteProfileUrlForStorage } from "~/services/accounts/accountSiteProfile/urls"
 import {
   parseManualQuotaFromUsd,

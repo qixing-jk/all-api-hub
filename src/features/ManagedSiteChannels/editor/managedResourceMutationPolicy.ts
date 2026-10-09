@@ -9,10 +9,10 @@ import {
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import {
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
-  toPrivateManagedSiteMutationOutput,
   type ManagedSiteMutationConfirmedEffect,
   type ManagedSiteMutationResult,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/contracts"
+import { toPrivateManagedSiteMutationOutput } from "~/services/managedSites/mutations/disclosure"
 import type { collectManagedResourceSecrets } from "~/services/managedSites/utils/resourceSecrets"
 
 const resourceFailureCodes = new Set<string>(

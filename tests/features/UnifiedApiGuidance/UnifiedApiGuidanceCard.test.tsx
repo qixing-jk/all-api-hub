@@ -2,16 +2,18 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { UnifiedApiGuidanceCard } from "~/features/UnifiedApiGuidance"
+import {
+  UNIFIED_API_GUIDANCE_SURFACES,
+  type UnifiedApiGuidanceSurface,
+} from "~/features/UnifiedApiGuidance/i18n"
 import {
   buildUnifiedApiGuidanceModel,
   UNIFIED_API_GUIDANCE_ACTION_KINDS,
-  UNIFIED_API_GUIDANCE_SURFACES,
-  UNIFIED_API_GUIDANCE_TEST_IDS,
-  UnifiedApiGuidanceCard,
-  UnifiedApiGuidanceUnavailableCard,
   type UnifiedApiGuidanceAction,
-  type UnifiedApiGuidanceSurface,
-} from "~/features/UnifiedApiGuidance"
+} from "~/features/UnifiedApiGuidance/model"
+import { UNIFIED_API_GUIDANCE_TEST_IDS } from "~/features/UnifiedApiGuidance/testIds"
+import { UnifiedApiGuidanceUnavailableCard } from "~/features/UnifiedApiGuidance/UnifiedApiGuidanceCard"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 import { render, screen } from "~~/tests/test-utils/render"

@@ -1,9 +1,9 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import {
-  getAccountSiteModelListProfile,
   type AccountSiteModelListDisplayCapabilitySource,
   type AccountSiteModelListStatusScope,
-} from "~/services/accounts/accountSiteProfile"
+} from "~/services/accounts/accountSiteProfile/contracts"
+import { getAccountSiteModelListProfile } from "~/services/accounts/accountSiteProfile/modelList"
 import { canListAccountRuntimeKeys } from "~/services/accounts/keys/keyProductCapabilities"
 import {
   getInventorySecretAvailability,

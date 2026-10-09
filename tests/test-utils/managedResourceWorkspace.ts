@@ -12,7 +12,7 @@ import {
   MANAGED_SITE_MUTATION_EFFECT_KINDS,
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationConfirmedEffect,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/contracts"
 
 export const EXAMPLE_MANAGED_RESOURCE_REF: ManagedResourceRef = {
   siteType: SITE_TYPES.AXON_HUB,

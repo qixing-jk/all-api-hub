@@ -11,10 +11,8 @@ import {
   mapRequestFailure,
 } from "~/services/apiAdapters/managedResources/axonHub/nativeRuntime"
 import { AxonHubRequestError } from "~/services/apiService/axonHub/graphqlProtocol"
-import {
-  type ManagedSiteMutationConfirmedEffect,
-  type ManagedSiteMutationSequence,
-} from "~/services/managedSites/mutations"
+import { type ManagedSiteMutationConfirmedEffect } from "~/services/managedSites/mutations/contracts"
+import { type ManagedSiteMutationSequence } from "~/services/managedSites/mutations/execution"
 import type {
   AxonHubChannel,
   AxonHubChannelMutationReceipt,

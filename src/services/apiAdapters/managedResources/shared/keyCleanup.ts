@@ -4,7 +4,7 @@ import {
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { NativeResourceEditorDefinition } from "~/services/apiAdapters/managedResources/factory"
-import type { ManagedSiteMutationResult } from "~/services/managedSites/mutations"
+import type { ManagedSiteMutationResult } from "~/services/managedSites/mutations/contracts"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 
 /** Scalar native editors preserve their remaining fields through their own command builder. */

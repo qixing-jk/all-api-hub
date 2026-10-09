@@ -1,9 +1,9 @@
 import { GptLoadApiError } from "~/services/apiService/gptLoad"
+import { type ManagedSiteMutationConfirmedEffect } from "~/services/managedSites/mutations/contracts"
 import {
   createManagedSiteMutationSequence,
-  type ManagedSiteMutationConfirmedEffect,
   type ManagedSiteMutationStepAttempt,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/execution"
 import { getErrorMessage } from "~/utils/core/error"
 
 export const gptLoadChannelEffect = (

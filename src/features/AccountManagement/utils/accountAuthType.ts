@@ -1,4 +1,4 @@
-import { resolveAccountSiteDefaultAuthType } from "~/services/accounts/accountSiteProfile"
+import { resolveAccountSiteDefaultAuthType } from "~/services/accounts/accountSiteProfile/auth"
 import { AuthTypeEnum } from "~/types"
 
 const AUTH_TYPE_VALUES = new Set<string>(Object.values(AuthTypeEnum))

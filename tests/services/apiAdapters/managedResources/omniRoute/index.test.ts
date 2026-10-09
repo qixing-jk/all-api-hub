@@ -28,7 +28,7 @@ import { omniRouteManagedResourceRegistration } from "~/services/apiAdapters/man
 import { openOmniRouteNativeResourceOperations } from "~/services/apiAdapters/managedResources/omniRoute/nativeOperations"
 import { OmniRouteNativeError } from "~/services/apiAdapters/managedResources/omniRoute/nativeRuntime"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
-import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations"
+import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations/contracts"
 import { server } from "~~/tests/msw/server"
 
 const mocks = vi.hoisted(() => ({ getPreferences: vi.fn() }))

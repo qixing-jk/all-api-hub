@@ -1,5 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
-import { resolveAccountSiteUserIdentity } from "~/services/accounts/accountSiteProfile"
+import { resolveAccountSiteUserIdentity } from "~/services/accounts/accountSiteProfile/identity"
 import type { AccountIdentity } from "~/types"
 
 type StoredAccountUserIdentity = {

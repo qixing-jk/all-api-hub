@@ -9,7 +9,7 @@ import { type AxonHubChannelPage } from "~/services/apiService/axonHub/channels"
 import {
   type ManagedSiteMutationDiagnostic,
   type ManagedSiteMutationResult,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/contracts"
 import type { AxonHubChannel, AxonHubCreateChannelInput } from "~/types/axonHub"
 
 export type AxonHubNativeFailure = {

@@ -10,7 +10,7 @@ import {
   type ResourceOperationOptions,
   type ResourceValidationResult,
 } from "~/services/apiAdapters/contracts/resourceNative"
-import type { ManagedSiteMutationResult } from "~/services/managedSites/mutations"
+import type { ManagedSiteMutationResult } from "~/services/managedSites/mutations/contracts"
 
 export {
   RESOURCE_DISPLAY_FACT_KINDS as MANAGED_RESOURCE_DISPLAY_FACT_KINDS,

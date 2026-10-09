@@ -41,7 +41,7 @@ import {
 } from "~/services/apiTransport/errors"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/configuration/runtimeConfig"
 import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
-import { type ManagedSiteMutationResult } from "~/services/managedSites/mutations"
+import { type ManagedSiteMutationResult } from "~/services/managedSites/mutations/contracts"
 import { NewApiChannelKeyRequirementError } from "~/services/managedSites/providers/newApi/newApiSessionContracts"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"

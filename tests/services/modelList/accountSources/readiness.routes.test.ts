@@ -4,7 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
-} from "~/services/accounts/accountSiteProfile"
+} from "~/services/accounts/accountSiteProfile/contracts"
 
 const { getAccountSiteModelListProfileMock, getSiteTypeCapabilitiesMock } =
   vi.hoisted(() => ({
@@ -12,18 +12,21 @@ const { getAccountSiteModelListProfileMock, getSiteTypeCapabilitiesMock } =
     getSiteTypeCapabilitiesMock: vi.fn(),
   }))
 
-vi.mock("~/services/accounts/accountSiteProfile", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/services/accounts/accountSiteProfile")
-    >()
+vi.mock(
+  "~/services/accounts/accountSiteProfile/modelList",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/accounts/accountSiteProfile/modelList")
+      >()
 
-  return {
-    ...actual,
-    getAccountSiteModelListProfile: (...args: unknown[]) =>
-      getAccountSiteModelListProfileMock(...args),
-  }
-})
+    return {
+      ...actual,
+      getAccountSiteModelListProfile: (...args: unknown[]) =>
+        getAccountSiteModelListProfileMock(...args),
+    }
+  },
+)
 
 vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: getSiteTypeCapabilitiesMock,

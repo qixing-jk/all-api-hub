@@ -2,28 +2,32 @@ import { describe, expect, it } from "vitest"
 
 import * as accountSiteProfileApi from "~/services/accounts/accountSiteProfile"
 import {
+  getAccountSiteProductProfile,
+  isAccountAuthTypeAllowed,
+} from "~/services/accounts/accountSiteProfile"
+import { resolveAccountSiteDefaultAuthType } from "~/services/accounts/accountSiteProfile/auth"
+import { shouldDecorateAccountApiRequestWithAuthSession } from "~/services/accounts/accountSiteProfile/authSession"
+import { resolveAccountSiteContentSessionHintForOrigin } from "~/services/accounts/accountSiteProfile/contentSessionHint"
+import {
   ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING,
   ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES,
   ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS,
   ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES,
   ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS,
   ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES,
+} from "~/services/accounts/accountSiteProfile/contracts"
+import { resolveAccountSiteUserIdentity } from "~/services/accounts/accountSiteProfile/identity"
+import { getAccountSiteModelListProfile } from "~/services/accounts/accountSiteProfile/modelList"
+import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accountSiteProfile/supplementalAuth"
+import {
   findAccountSiteProfileForHostname,
-  getAccountSiteModelListProfile,
-  getAccountSiteProductProfile,
-  isAccountAuthTypeAllowed,
   isAccountSiteProfileUrl,
   normalizeAccountSiteProfileUrlForDuplicateCheck,
   normalizeAccountSiteProfileUrlForManagedChannel,
   normalizeAccountSiteProfileUrlForOriginKey,
   normalizeAccountSiteProfileUrlForStorage,
-  normalizeAccountSiteSupplementalAuth,
-  resolveAccountSiteContentSessionHintForOrigin,
-  resolveAccountSiteDefaultAuthType,
-  resolveAccountSiteUserIdentity,
-  shouldDecorateAccountApiRequestWithAuthSession,
-} from "~/services/accounts/accountSiteProfile"
-import { resolveAccountSitePricingUrl } from "~/services/accounts/accountSiteProfile/urls"
+  resolveAccountSitePricingUrl,
+} from "~/services/accounts/accountSiteProfile/urls"
 import {
   AIHUBMIX_API_ORIGIN,
   AIHUBMIX_WEB_ORIGIN,

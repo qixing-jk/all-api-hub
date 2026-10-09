@@ -5,7 +5,7 @@ import {
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ResourceSecretListEntry } from "~/services/apiAdapters/contracts/resourceNative"
 import { type GptLoadSanitizedGroup } from "~/services/apiService/gptLoad/redaction"
-import { type ManagedSiteMutationResult } from "~/services/managedSites/mutations"
+import { type ManagedSiteMutationResult } from "~/services/managedSites/mutations/contracts"
 import type { GptLoadCredential } from "~/types/gptLoad"
 import { type GptLoadConfig } from "~/types/gptLoadConfig"
 

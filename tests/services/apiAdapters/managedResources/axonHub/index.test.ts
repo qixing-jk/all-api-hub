@@ -44,7 +44,7 @@ import {
   MANAGED_SITE_MUTATION_OUTCOMES,
   type ManagedSiteMutationOutcome,
   type ManagedSiteMutationResult,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/contracts"
 import type {
   AxonHubChannel,
   AxonHubCreateChannelInput,
@@ -118,28 +118,33 @@ vi.mock("~/services/apiService/axonHub/channelProjection", () => ({
   hasCompleteAxonHubAdvancedDetail: mocks.hasCompleteAdvancedDetail,
 }))
 
-vi.mock("~/services/managedSites/mutations", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/services/managedSites/mutations")>()
+vi.mock(
+  "~/services/managedSites/mutations/execution",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/managedSites/mutations/execution")
+      >()
 
-  return {
-    ...actual,
-    createManagedSiteMutationSequence: (
-      ...args: Parameters<typeof actual.createManagedSiteMutationSequence>
-    ) => {
-      const sequence = actual.createManagedSiteMutationSequence(...args)
-      const sequenceIndex = mocks.mutationSequenceStepCounts.push(0) - 1
-      return {
-        ...sequence,
-        beginStep() {
-          mocks.mutationSequenceStepCounts[sequenceIndex] =
-            atIndex(mocks.mutationSequenceStepCounts, sequenceIndex) + 1
-          return sequence.beginStep()
-        },
-      }
-    },
-  }
-})
+    return {
+      ...actual,
+      createManagedSiteMutationSequence: (
+        ...args: Parameters<typeof actual.createManagedSiteMutationSequence>
+      ) => {
+        const sequence = actual.createManagedSiteMutationSequence(...args)
+        const sequenceIndex = mocks.mutationSequenceStepCounts.push(0) - 1
+        return {
+          ...sequence,
+          beginStep() {
+            mocks.mutationSequenceStepCounts[sequenceIndex] =
+              atIndex(mocks.mutationSequenceStepCounts, sequenceIndex) + 1
+            return sequence.beginStep()
+          },
+        }
+      },
+    }
+  },
+)
 
 const config = {
   baseUrl: "https://api.example.invalid/",

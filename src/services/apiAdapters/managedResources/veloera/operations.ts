@@ -33,13 +33,13 @@ import type {
   ApiResponse,
   ApiServiceRequest,
 } from "~/services/apiTransport/type"
+import { type ManagedSiteMutationConfirmedEffect } from "~/services/managedSites/mutations/contracts"
 import {
   createManagedSiteChannelEffect,
   createManagedSiteMutationSequence,
   finishManagedSiteMutationStep,
-  type ManagedSiteMutationConfirmedEffect,
   type ManagedSiteMutationSequence,
-} from "~/services/managedSites/mutations"
+} from "~/services/managedSites/mutations/execution"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { API_TYPES } from "~/services/verification/aiApiVerification/types"
 import type {

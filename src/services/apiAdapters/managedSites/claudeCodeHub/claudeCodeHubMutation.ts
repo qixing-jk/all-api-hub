@@ -1,8 +1,6 @@
 import { ClaudeCodeHubApiError } from "~/services/apiService/claudeCodeHub"
-import {
-  createManagedSiteMutationSequence,
-  type ManagedSiteMutationConfirmedEffect,
-} from "~/services/managedSites/mutations"
+import { type ManagedSiteMutationConfirmedEffect } from "~/services/managedSites/mutations/contracts"
+import { createManagedSiteMutationSequence } from "~/services/managedSites/mutations/execution"
 import { getErrorMessage } from "~/utils/core/error"
 
 export const claudeCodeHubChannelEffect = (
