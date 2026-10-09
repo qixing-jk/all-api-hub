@@ -8,7 +8,10 @@ import toast from "~/lib/notify"
 import type { AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
-import { maskSecretForDisplay } from "~/utils/core/formatters"
+import {
+  maskSecretForDisplay,
+  normalizeSecretMaskForDisplay,
+} from "~/utils/core/formatters"
 
 /** Shared disclosure for native inventory and explicitly linked local secrets. */
 export function useAccountKeySecretDisclosure({
@@ -54,14 +57,17 @@ export function useAccountKeySecretDisclosure({
     associatedProfileWithSecret?.id,
     associatedProfileWithSecret?.apiKey,
   ])
+  const maskedDisplay = maskedLabel
+    ? normalizeSecretMaskForDisplay(maskedLabel)
+    : undefined
   const secret = recoverable
-    ? disclosure.secret ?? maskedLabel
+    ? disclosure.secret ?? maskedDisplay
     : associatedProfileWithSecret
       ? isSecretVisible
         ? associatedProfileWithSecret.apiKey
-        : maskedLabel ??
+        : maskedDisplay ??
           maskSecretForDisplay(associatedProfileWithSecret.apiKey)
-      : maskedLabel
+      : maskedDisplay
   const copyAssociatedSecret = async () => {
     if (!associatedProfileWithSecret) return
     try {

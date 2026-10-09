@@ -86,7 +86,7 @@ describe("AccountKeyResourceListItem", () => {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
     })
-    expect(screen.getByText("masked")).toBeVisible()
+    expect(screen.getByText("••••••")).toBeVisible()
     await user.click(
       screen.getByRole("button", { name: "keyManagement:actions.showKey" }),
     )
@@ -95,7 +95,7 @@ describe("AccountKeyResourceListItem", () => {
       screen.getByRole("button", { name: "keyManagement:actions.hideKey" }),
     )
     expect(screen.queryByText("sk-recoverable-example")).not.toBeInTheDocument()
-    expect(screen.getByText("masked")).toBeVisible()
+    expect(screen.getByText("••••••")).toBeVisible()
   })
 
   it("renders a native key with only detail, edit, and delete actions", async () => {
@@ -117,7 +117,7 @@ describe("AccountKeyResourceListItem", () => {
     expect(
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeKeyRow),
     ).toBeVisible()
-    expect(screen.getByText("sk-or-v1-••••example")).toBeVisible()
+    expect(screen.getByText("sk-o••••••mple")).toBeVisible()
     expect(screen.getByText("Example account")).toBeVisible()
     expect(screen.getByText("Example workspace")).toBeVisible()
     expect(screen.getByText(/-USD\s*2/)).toBeVisible()
@@ -273,7 +273,7 @@ describe("AccountKeyResourceListItem", () => {
       { withUserPreferencesProvider: true, withThemeProvider: false },
     )
 
-    expect(await screen.findByText(row.facts.maskedLabel!)).toBeVisible()
+    expect(await screen.findByText("sk-o••••••mple")).toBeVisible()
     const showButton = await screen.findByRole("button", {
       name: "keyManagement:actions.showKey",
     })
@@ -384,7 +384,7 @@ describe("AccountKeyResourceListItem", () => {
     )
 
     expect(screen.queryByText(nextProfile.apiKey)).not.toBeInTheDocument()
-    expect(screen.getByText(row.facts.maskedLabel!)).toBeVisible()
+    expect(screen.getByText("sk-o••••••mple")).toBeVisible()
     expect(
       screen.getByRole("button", { name: "keyManagement:actions.showKey" }),
     ).toBeVisible()

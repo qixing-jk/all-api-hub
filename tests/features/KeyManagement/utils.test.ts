@@ -137,16 +137,14 @@ describe("KeyManagement utils", () => {
     })
 
     it("fully masks short hidden keys", () => {
-      expect(formatKey("short-key", "account-a:2", new Set())).toBe("******")
+      expect(formatKey("short-key", "account-a:2", new Set())).toBe("••••••")
     })
 
     it("preserves the start and end of long hidden keys", () => {
       const key = "sk-1234567890abcdefghijklmnop"
 
       expect(formatKey(key, "account-a:3", new Set())).toBe(
-        `${key.substring(0, 8)}${"*".repeat(16)}${key.substring(
-          key.length - 4,
-        )}`,
+        `${key.substring(0, 4)}••••••${key.substring(key.length - 4)}`,
       )
     })
   })

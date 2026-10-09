@@ -55,13 +55,21 @@ export const formatTokenCount = (count: number): string => {
   return count.toString()
 }
 
+/** Shared display marker; protocol detection and log redaction keep their own rules. */
+export const SECRET_MASK = "••••••"
+
 /** Masks a secret consistently while retaining enough context to identify it. */
 export const maskSecretForDisplay = (secret: string): string => {
-  if (secret.length <= 12) return "******"
+  if (secret.length <= 12) return SECRET_MASK
 
-  return `${secret.substring(0, 8)}${"*".repeat(16)}${secret.substring(
-    secret.length - 4,
-  )}`
+  return `${secret.slice(0, 4)}${SECRET_MASK}${secret.slice(-4)}`
+}
+
+/** Normalize only a display copy of an already masked value; never infer missing characters. */
+export const normalizeSecretMaskForDisplay = (masked: string): string => {
+  const fragments = masked.split(/(?:[*•●]+|\.{3,}|…)/)
+  if (fragments.length < 2) return SECRET_MASK
+  return `${fragments[0]?.slice(0, 4) ?? ""}${SECRET_MASK}${fragments.at(-1)?.slice(-4) ?? ""}`
 }
 
 export function normalizeToMs(input: number | string | Date): number | null

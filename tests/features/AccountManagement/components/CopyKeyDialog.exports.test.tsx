@@ -375,7 +375,7 @@ describe("CopyKeyDialog exports and service credentials", () => {
     expect(
       screen.getByRole("button", { name: "common:actions.export" }),
     ).toBeInTheDocument()
-    expect(screen.getByText("sk-servi****************cret")).toBeInTheDocument()
+    expect(screen.getByText("sk-s••••••cret")).toBeInTheDocument()
     expect(
       screen.queryByText("sk-service-credential-secret"),
     ).not.toBeInTheDocument()
