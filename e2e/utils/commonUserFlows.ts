@@ -194,6 +194,7 @@ export async function stubLlmMetadataIndex(context: BrowserContext) {
     }),
   )
   await stubSponsorRemoteCatalog(context)
+  await stubCommunityRemoteCatalog(context)
 }
 
 /**
@@ -207,6 +208,14 @@ export async function stubSponsorRemoteCatalog(context: BrowserContext) {
       contentType: "application/json",
       body: JSON.stringify(E2E_SPONSOR_CATALOG_PAYLOAD),
     }),
+  )
+}
+
+/** Keeps community preloading independent of remote availability in unrelated E2E flows. */
+export async function stubCommunityRemoteCatalog(context: BrowserContext) {
+  await context.route(
+    "https://raw.githubusercontent.com/qixing-jk/all-api-hub/main/public/community-resources.v1.json",
+    (route) => route.fulfill({ json: { schemaVersion: 1, channels: [] } }),
   )
 }
 

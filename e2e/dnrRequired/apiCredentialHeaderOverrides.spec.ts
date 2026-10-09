@@ -9,6 +9,7 @@ import {
   getApiCredentialProfileVerifyProbeTestId,
 } from "~/features/ApiCredentialProfiles/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
+import { getCdpHeader } from "~~/e2e/utils/cdpHeaders"
 import {
   createStoredApiCredentialProfile,
   forceExtensionLanguage,
@@ -112,11 +113,10 @@ test("sends credential-specific UA headers without changing concurrent ordinary 
       session.on(
         "Network.requestWillBeSentExtraInfo",
         ({ requestId, headers }) => {
-          const actualHeaders = new Headers(headers as Record<string, string>)
           cdpRequests.set(requestId, {
             ...cdpRequests.get(requestId),
-            ua: actualHeaders.get("user-agent") ?? undefined,
-            key: actualHeaders.get("authorization") ?? undefined,
+            ua: getCdpHeader(headers, "user-agent"),
+            key: getCdpHeader(headers, "authorization"),
           })
         },
       )

@@ -451,7 +451,12 @@ function createEmptyStats() {
 
 describe("AccountDataContext initial statistics", () => {
   it("publishes the loaded account snapshot with its persisted ordering and pins", async () => {
-    mockGetAllAccounts.mockResolvedValue([{ id: "acc-1" }, { id: "acc-2" }])
+    let completeAccountRead!: () => void
+    mockGetAllAccounts.mockReturnValue(
+      new Promise((resolve) => {
+        completeAccountRead = () => resolve([{ id: "acc-1" }, { id: "acc-2" }])
+      }),
+    )
     mockGetOrderedList.mockResolvedValue(["acc-2", "acc-1"])
     mockGetPinnedList.mockResolvedValue(["acc-2"])
     const visibleLayouts: Array<{ ordered: string[]; pinned: string[] }> = []
@@ -473,7 +478,9 @@ describe("AccountDataContext initial statistics", () => {
       </I18nextProvider>,
     )
 
-    await waitFor(() => expect(visibleLayouts.length).toBeGreaterThan(0))
+    expect(visibleLayouts).toHaveLength(0)
+    await act(async () => completeAccountRead())
+    expect(visibleLayouts.length).toBeGreaterThan(0)
     for (const layout of visibleLayouts) {
       expect(layout).toEqual({ ordered: ["acc-2", "acc-1"], pinned: ["acc-2"] })
     }

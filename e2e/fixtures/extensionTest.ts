@@ -3,7 +3,10 @@ import os from "node:os"
 import path from "node:path"
 import { test as base, expect as baseExpect, chromium } from "@playwright/test"
 
-import { stubSponsorRemoteCatalog } from "~~/e2e/utils/commonUserFlows"
+import {
+  stubCommunityRemoteCatalog,
+  stubSponsorRemoteCatalog,
+} from "~~/e2e/utils/commonUserFlows"
 import { getE2eExtensionDirName } from "~~/e2e/utils/e2eBuildVariants"
 import {
   assertBuiltExtensionExists,
@@ -105,6 +108,7 @@ export const test = base.extend<ExtensionFixtures>({
         waitForReady: async (candidateContext) => {
           await Promise.all([
             stubSponsorRemoteCatalog(candidateContext),
+            stubCommunityRemoteCatalog(candidateContext),
             getExtensionServiceWorker(candidateContext, {
               timeoutMs: extensionServiceWorkerTimeoutMs,
             }),
