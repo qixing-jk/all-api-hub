@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "channels": [
+    { "id": "telegram", "url": "https://t.me/qixing_chat" },
+    { "id": "discord", "url": "https://discord.gg/RmFXZ577ZQ" },
+    { "id": "qq", "url": "https://qm.qq.com/q/ebSCy31Phe" },
+    {
+      "id": "wechat",
+      "qrCode": {
+        "url": "https://raw.githubusercontent.com/qixing-jk/all-api-hub/main/resources/wechat_group.png",
+        "expiresAt": "2026-10-15T00:00:00+08:00"
+      }
+    },
+    {
+      "id": "discussions",
+      "url": "https://github.com/qixing-jk/all-api-hub/discussions"
+    }
+  ]
+}

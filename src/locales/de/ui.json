@@ -496,16 +496,20 @@
     "bugReport": "Einen Fehler melden",
     "clickAnywhereToClose": "Zum Schließen ins Leere klicken",
     "community": "Community-Gruppen",
+    "communityUnavailable": "Die Community-Links konnten nicht geladen werden. Aktuelle Einladungen finden Sie auf der Community-Seite.",
     "discussion": "Starten Sie eine Diskussion",
     "featureRequest": "Fordern Sie eine Funktion an",
     "languageRequest": "Fordern Sie eine neue Sprache an",
+    "openCommunityPage": "Community-Seite öffnen",
     "siteSupportRequest": "Website-Unterstützung anfordern",
     "sponsor": "Sponsoren",
     "sponsorTitle": "Sponsoren und Unterstützung ansehen",
     "starOnGithub": "Stern auf GitHub vergeben",
     "trigger": "Feedback",
     "triggerTooltip": "Feedback-Verknüpfungen öffnen",
-    "wechat": "WeChat-Gruppe"
+    "wechat": "WeChat-Gruppe",
+    "wechatHelp": "Gruppeneinladung abgelaufen oder Gruppe voll? Scannen Sie den persönlichen QR-Code im Bild, um den Kontakt hinzuzufügen und um eine Einladung zu bitten, oder besuchen Sie die Community-Seite.",
+    "wechatUnavailable": "Der QR-Code konnte nicht geladen werden."
   },
   "modelListInput": {
     "actions": {

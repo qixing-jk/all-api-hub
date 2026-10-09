@@ -489,16 +489,20 @@
     "bugReport": "Báo cáo lỗi",
     "clickAnywhereToClose": "Nhấp vào bất kỳ đâu để đóng",
     "community": "Nhóm cộng đồng",
+    "communityUnavailable": "Không thể tải liên kết cộng đồng. Mở trang cộng đồng để xem lời mời mới nhất.",
     "discussion": "Tham gia thảo luận",
     "featureRequest": "Đề xuất tính năng",
     "languageRequest": "Yêu cầu ngôn ngữ mới",
+    "openCommunityPage": "Mở trang cộng đồng",
     "siteSupportRequest": "Phản hồi trang web chưa được hỗ trợ",
     "sponsor": "Tài trợ",
     "sponsorTitle": "Xem nhà tài trợ và hỗ trợ",
     "starOnGithub": "Gắn sao trên GitHub",
     "trigger": "Phản hồi",
     "triggerTooltip": "Mở lối tắt phản hồi",
-    "wechat": "Nhóm WeChat"
+    "wechat": "Nhóm WeChat",
+    "wechatHelp": "Lời mời vào nhóm đã hết hạn hoặc nhóm đã đầy? Quét mã QR cá nhân trong ảnh để kết bạn và nhờ mời vào nhóm, hoặc truy cập trang cộng đồng.",
+    "wechatUnavailable": "Không thể tải mã QR."
   },
   "modelListInput": {
     "actions": {

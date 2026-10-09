@@ -109,6 +109,8 @@ export const STORAGE_LOCKS = {
    * recommendation catalog cache.
    */
   SPONSOR_CATALOG: "all-api-hub:sponsor-catalog",
+  /** Serializes acceptance of community catalog and image responses in Cache Storage. */
+  COMMUNITY_RESOURCES: "all-api-hub:community-resources",
   /**
    * Exclusive lock used for read-modify-write sequences touching the GitHub
    * star promotion state store.

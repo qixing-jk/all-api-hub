@@ -1,5 +1,6 @@
 import { X } from "lucide-react"
 import { Dialog as DialogPrimitive } from "radix-ui"
+import { useState, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Z_INDEX } from "~/constants/designTokens"
@@ -8,9 +9,30 @@ import { cn } from "~/lib/utils"
 export interface ImageLightboxProps {
   isOpen: boolean
   onClose: () => void
-  src: string
+  src?: string
   alt: string
   title?: string
+  fallback?: ReactNode
+  footer?: ReactNode
+}
+
+/** Keeps image failure local to one mounted source and permits a useful recovery view. */
+function LightboxImage({
+  src,
+  alt,
+  fallback,
+}: Pick<ImageLightboxProps, "src" | "alt" | "fallback">) {
+  const [failed, setFailed] = useState(false)
+  if (!src || (failed && fallback)) return fallback
+  return (
+    <img
+      src={src}
+      alt={alt}
+      onError={() => setFailed(true)}
+      referrerPolicy="no-referrer"
+      className="max-h-[70vh] w-auto max-w-full rounded-xl object-contain select-none"
+    />
+  )
 }
 
 /**
@@ -25,6 +47,8 @@ export function ImageLightbox({
   src,
   alt,
   title,
+  fallback,
+  footer,
 }: ImageLightboxProps) {
   const { t } = useTranslation(["ui", "common"])
 
@@ -48,7 +72,7 @@ export function ImageLightbox({
           data-testid="image-lightbox-content"
           onClick={onClose}
           className={cn(
-            "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 flex cursor-zoom-out flex-col items-center justify-center p-4 duration-200 outline-none select-none",
+            "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 flex cursor-zoom-out flex-col items-center justify-center p-4 duration-200 outline-none",
             Z_INDEX.modal,
           )}
         >
@@ -59,7 +83,7 @@ export function ImageLightbox({
             {alt}
           </DialogPrimitive.Description>
           <div
-            className="border-border bg-card relative max-h-[85vh] max-w-2xl overflow-hidden rounded-2xl border p-2 shadow-2xl transition-transform"
+            className="border-border bg-card relative max-h-[85vh] max-w-2xl cursor-auto overflow-auto rounded-2xl border p-2 shadow-2xl transition-transform select-text"
             onClick={(event) => event.stopPropagation()}
           >
             <button
@@ -71,13 +95,13 @@ export function ImageLightbox({
             >
               <X className="size-4" />
             </button>
-            <img
-              src={src}
-              alt={alt}
-              className="max-h-[80vh] w-auto max-w-full rounded-xl object-contain select-none"
-            />
+            <LightboxImage key={src} src={src} alt={alt} fallback={fallback} />
+            {footer}
           </div>
-          <p className="text-muted-foreground pointer-events-none mt-3 text-xs select-none">
+          <p
+            className="text-muted-foreground mt-3 cursor-auto text-xs select-text"
+            onClick={(event) => event.stopPropagation()}
+          >
             {t("ui:feedback.clickAnywhereToClose")}
           </p>
         </DialogPrimitive.Content>

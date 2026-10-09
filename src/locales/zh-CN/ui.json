@@ -485,16 +485,20 @@
     "bugReport": "反馈问题",
     "clickAnywhereToClose": "点击空白处关闭",
     "community": "社区交流群",
+    "communityUnavailable": "社区链接加载失败，请打开在线社区页查看最新邀请方式。",
     "discussion": "参与讨论",
     "featureRequest": "提出功能建议",
     "languageRequest": "请求支持新语言",
+    "openCommunityPage": "打开在线社区页",
     "siteSupportRequest": "反馈未适配站点",
     "sponsor": "赞助支持",
     "sponsorTitle": "查看赞助商与赞助支持",
     "starOnGithub": "去 GitHub 点个 Star",
     "trigger": "反馈",
     "triggerTooltip": "打开反馈快捷入口",
-    "wechat": "微信群"
+    "wechat": "微信群",
+    "wechatHelp": "群码失效或群已满？可扫描图中的个人二维码加好友，请对方邀请入群，也可查看在线社区页。",
+    "wechatUnavailable": "二维码加载失败。"
   },
   "modelListInput": {
     "actions": {
