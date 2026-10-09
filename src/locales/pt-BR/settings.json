@@ -362,8 +362,8 @@
       "baseUrlDesc": "Inicie magpie web (porta padrão 3430). Insira a URL Web, não a URL de inferência na porta 3425.",
       "baseUrlLabel": "URL de administração Web",
       "baseUrlPlaceholder": "http://localhost:3430",
-      "hideWebKey": "Hide management key",
-      "showWebKey": "Show management key",
+      "hideWebKey": "Ocultar chave de administração",
+      "showWebKey": "Mostrar chave de administração",
       "webKeyDesc": "Use MAGPIE_WEB_KEY ou o valor k do link de inicialização. Uma MAGPIE_WEB_KEY fixa continua válida após reiniciar; caso contrário, atualize este campo. Chaves de API de inferência não permitem administrar.",
       "webKeyLabel": "Chave de administração Web",
       "webKeyPlaceholder": "Insira a chave de administração Web"
@@ -373,11 +373,11 @@
       "description": "Use a chave acima para verificar a conexão e o acesso à lista de provedores.",
       "failed": "Não foi possível conectar ao Magpie. Verifique o endereço Web e se o servidor está em execução.",
       "invalidCredential": "A chave Web foi rejeitada. Verifique MAGPIE_WEB_KEY ou use a chave de inicialização atual.",
-      "missingFields": "Enter the gateway address and management key first",
-      "success": "Connection verified",
-      "title": "Check connection",
-      "validate": "Check connection",
-      "validating": "Checking…"
+      "missingFields": "Informe primeiro o endereço do gateway e a chave de administração",
+      "success": "Conexão verificada",
+      "title": "Verificar conexão",
+      "validate": "Verificar conexão",
+      "validating": "Verificando…"
     }
   },
   "managedSite": {

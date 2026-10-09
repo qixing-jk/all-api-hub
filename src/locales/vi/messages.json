@@ -131,7 +131,7 @@
   },
   "magpie": {
     "configMissing": "Trước tiên hãy cấu hình địa chỉ Magpie Web và khóa quản trị Web trong cài đặt.",
-    "noChannelsToSync": "No channels to sync"
+    "noChannelsToSync": "Không có kênh nào để đồng bộ"
   },
   "managedSite": {
     "unsupportedModelSync": "Phiên bản hiện tại không hỗ trợ đồng bộ mô hình trạm quản lý {{siteName}}"

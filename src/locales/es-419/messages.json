@@ -135,7 +135,7 @@
   },
   "magpie": {
     "configMissing": "Primero configura la dirección de Magpie Web y la clave de administración Web en la configuración.",
-    "noChannelsToSync": "No channels to sync"
+    "noChannelsToSync": "No hay canales para sincronizar"
   },
   "managedSite": {
     "unsupportedModelSync": "{{siteName}} no admite la sincronización de modelos de sitios administrados en esta versión"

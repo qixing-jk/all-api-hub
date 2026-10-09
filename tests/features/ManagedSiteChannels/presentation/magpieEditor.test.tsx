@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useState } from "react"
-import { expect, it } from "vitest"
+import { expect, it, vi } from "vitest"
 
 import { ManagedResourceEditorBody } from "~/features/ManagedSiteChannels/editor/ManagedResourceEditorBody"
 import { getManagedResourceFieldPolicy } from "~/features/ManagedSiteChannels/editor/managedResourceFieldPolicy"
@@ -11,6 +11,9 @@ import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
 import enUi from "~/locales/en/ui.json"
 import { magpieEditor } from "~/services/apiAdapters/managedResources/magpie/editorProjection"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
+
+// Exercise form interactions without the floating tooltip layout work in jsdom.
+vi.mock("react-tooltip", () => ({ Tooltip: () => null }))
 
 it("switches API types with one address visible and retains each draft without copying URLs", async () => {
   const user = userEvent.setup()
@@ -80,8 +83,7 @@ it("switches API types with one address visible and retains each draft without c
   ).toBeTruthy()
 })
 
-it("selects discovered models, adds custom models, and edits headers as rows", async () => {
-  const user = userEvent.setup()
+async function renderExistingEditor() {
   const i18n = await createResourceTestI18n({
     en: {
       channelDialog: enChannelDialog,
@@ -119,11 +121,17 @@ it("selects discovered models, adds custom models, and edits headers as rows", a
     )
   }
   render(<Harness />)
+  return () => editor.buildCommand(current)
+}
+
+it("selects discovered models, adds custom models, and edits headers as rows", async () => {
+  const user = userEvent.setup()
+  const command = await renderExistingEditor()
   const models = screen.getByRole("combobox", { name: "Available Models" })
   await user.click(models)
   await user.click(await screen.findByRole("option", { name: "model-b" }))
   await user.type(models, "custom-model{Enter}")
-  expect(editor.buildCommand(current).fields.models).toEqual([
+  expect(command().fields.models).toEqual([
     "model-a",
     "model-b",
     "custom-model",
@@ -140,25 +148,24 @@ it("selects discovered models, adds custom models, and edits headers as rows", a
     headers.getByRole("textbox", { name: "Custom headers: row 1 value" }),
     "team",
   )
-  expect(editor.buildCommand(current).fields.headers).toEqual({
+  expect(command().fields.headers).toEqual({
     "X-Tenant": "team",
   })
-  await user.type(
-    screen.getByLabelText("Models URL", { exact: true }),
-    "https://relay.test/custom/models",
-  )
-  await user.type(
-    screen.getByLabelText("Model catalog", { exact: true }),
-    "openai, anthropic",
-  )
-  await user.type(
-    screen.getByLabelText("Balance URL", { exact: true }),
-    "https://relay.test/balance",
-  )
-  await user.type(
-    screen.getByLabelText("Balance expression", { exact: true }),
-    "data.balance / 500000",
-  )
+})
+
+it("edits advanced settings and restores unset numeric limits", async () => {
+  const user = userEvent.setup()
+  const command = await renderExistingEditor()
+  await user.click(screen.getByRole("button", { name: "Advanced" }))
+  for (const [label, value] of [
+    ["Models URL", "https://relay.test/custom/models"],
+    ["Model catalog", "openai, anthropic"],
+    ["Balance URL", "https://relay.test/balance"],
+    ["Balance expression", "data.balance / 500000"],
+  ] as const) {
+    await user.click(screen.getByLabelText(label, { exact: true }))
+    await user.paste(value)
+  }
   await user.type(
     screen.getByRole("spinbutton", { name: "Concurrent requests per key" }),
     "3",
@@ -171,7 +178,7 @@ it("selects discovered models, adds custom models, and edits headers as rows", a
     screen.getByRole("spinbutton", { name: "Price multiplier" }),
     "0.8",
   )
-  expect(editor.buildCommand(current).fields).toMatchObject({
+  expect(command().fields).toMatchObject({
     modelsURL: "https://relay.test/custom/models",
     catalog: "openai, anthropic",
     balanceURL: "https://relay.test/balance",
@@ -187,9 +194,7 @@ it("selects discovered models, adds custom models, and edits headers as rows", a
     screen.getByRole("spinbutton", { name: "Requests per minute per key" }),
   )
   await user.clear(screen.getByRole("spinbutton", { name: "Price multiplier" }))
-  expect(editor.buildCommand(current).fields).not.toHaveProperty(
-    "maxConcurrency",
-  )
-  expect(editor.buildCommand(current).fields).not.toHaveProperty("maxRPM")
-  expect(editor.buildCommand(current).fields).not.toHaveProperty("priceRate")
+  expect(command().fields).not.toHaveProperty("maxConcurrency")
+  expect(command().fields).not.toHaveProperty("maxRPM")
+  expect(command().fields).not.toHaveProperty("priceRate")
 })

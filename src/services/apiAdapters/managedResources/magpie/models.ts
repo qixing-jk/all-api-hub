@@ -41,7 +41,9 @@ export const magpieModels: ManagedResourceModelsCapability<MagpieConfig> = {
   list: async (config, options) => {
     await options?.beforeRequest?.()
     const items = (await listMagpieProviders(config, options))
-      .filter((item) => !item.account)
+      // Magpie's chosen field contains explicit picks; an empty list delegates
+      // membership to its native catalog (yetone/magpie internal/gui/providers.go).
+      .filter((item) => !item.account && Boolean(item.chosen?.length))
       .map((provider) => {
         const type =
           MAGPIE_ENDPOINT_FIELDS.find((field) => provider[field]) ?? "chat"
@@ -55,11 +57,7 @@ export const magpieModels: ManagedResourceModelsCapability<MagpieConfig> = {
           name: provider.name,
           type,
           baseUrl: provider[type] ?? "",
-          models: provider.chosen?.length
-            ? provider.chosen
-            : (provider.models ?? [])
-                .filter((model) => model.on)
-                .map((model) => model.id),
+          models: provider.chosen ?? [],
           disabled: provider.off,
           modelMapping: "",
         }
@@ -97,7 +95,7 @@ export const magpieModels: ManagedResourceModelsCapability<MagpieConfig> = {
     const result = await updateMagpieResource(
       config,
       provider,
-      { fields: { models: [...new Set(models)] } },
+      { fields: { models: [...new Set(models)] }, requireExplicitModels: true },
       options,
     )
     return result.outcome === "succeeded" || result.outcome === "partial"

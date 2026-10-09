@@ -182,6 +182,7 @@ describe("ManagedSiteTypeSwitcher", () => {
       "settings:managedSite.newApi",
       "settings:managedSite.sub2api",
       "settings:managedSite.gptLoad",
+      "settings:managedSite.magpie",
       "settings:managedSite.axonHub",
       "settings:managedSite.claudeCodeHub",
       "settings:managedSite.octopus",

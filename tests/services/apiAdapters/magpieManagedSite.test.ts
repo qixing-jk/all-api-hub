@@ -88,6 +88,25 @@ describe("Magpie provider import", () => {
     },
   )
 
+  it("leaves providers with automatic catalogs under native model management", async () => {
+    vi.mocked(listMagpieProviders).mockResolvedValue([
+      {
+        id: "automatic",
+        name: "Automatic",
+        chat: "https://relay.test/v1",
+        responses: "",
+        anthropic: "",
+        key: { set: true, masked: "sk-***", optional: false },
+        chosen: [],
+        models: [{ id: "m1", on: true }],
+        off: false,
+      },
+    ])
+    const service = new ModelSyncService({ siteType: "magpie", config })
+    expect(await service.listChannels()).toEqual({ items: [], total: 0 })
+    expect(saveMagpieProvider).not.toHaveBeenCalled()
+  })
+
   it("runs model sync without requiring an unrelated model-alias capability", async () => {
     const provider = {
       id: "relay",
@@ -128,6 +147,43 @@ describe("Magpie provider import", () => {
       service.updateChannelModelMapping(channel, { alias: "m1" }),
     ).rejects.toThrow(/mapping.*not implemented/)
   })
+
+  it.each([false, true])(
+    "refuses a sync write after the provider returns to its automatic catalog (between reads=%s)",
+    async (betweenReads) => {
+      const provider = {
+        id: "relay",
+        name: "Relay",
+        chat: "https://relay.test/v1",
+        responses: "",
+        anthropic: "",
+        key: { set: true, masked: "sk-***", optional: false },
+        chosen: [],
+        models: [{ id: "m1", on: true }],
+        off: false,
+      }
+      vi.mocked(listMagpieProviders).mockResolvedValue([provider])
+      if (betweenReads)
+        vi.mocked(listMagpieProviders).mockResolvedValueOnce([
+          { ...provider, chosen: ["m1"] },
+        ])
+      await expect(
+        capability.models!.updateModels!(
+          config,
+          {
+            siteType: "magpie",
+            kind: "channel",
+            scopeKey: config.baseUrl,
+            resourceId: "relay",
+          },
+          ["m1", "m2"],
+        ),
+      ).rejects.toMatchObject({
+        failure: { code: "resource_changed" },
+      })
+      expect(saveMagpieProvider).not.toHaveBeenCalled()
+    },
+  )
 
   it.each([
     [

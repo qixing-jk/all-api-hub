@@ -154,12 +154,15 @@ export async function createMagpieResource(
 export async function updateMagpieResource(
   config: MagpieConfig,
   detail: MagpieProvider,
-  command: MagpieProviderCommand,
+  command: MagpieProviderCommand & { requireExplicitModels?: boolean },
   options?: MagpieRequestOptions,
 ) {
   const current = requireMagpieApiProvider(
     await getMagpieProvider(config, detail.id, options),
   )
+  // Recheck immediately before saving: native edits can restore an automatic catalog.
+  if (command.requireExplicitModels && !current.chosen?.length)
+    throw new ManagedResourceError({ code: "resource_changed" })
   if (
     command.primaryKeyRef &&
     current.keyList?.find((key) => key.active)?.id !== command.primaryKeyRef

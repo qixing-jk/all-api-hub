@@ -11,6 +11,10 @@ import type {
 } from "~/services/apiAdapters/contracts/resourceNative"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
+// Floating tooltip layout is exercised by Tooltip tests and browser scenarios.
+// Keep the real anchors and accessibility wiring without jsdom positioning work.
+vi.mock("react-tooltip", () => ({ Tooltip: () => null }))
+
 const t = ((key: string, options?: { number?: number }) =>
   ({
     "ui:secretList.row": `API Key ${options?.number}`,
