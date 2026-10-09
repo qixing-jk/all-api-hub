@@ -1,4 +1,4 @@
-import { beforeEach, expect, vi } from "vitest"
+import { afterEach, beforeEach, expect, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { loginProviderEvidence } from "~/services/accountLogin/providerEvidence"
@@ -557,6 +557,10 @@ beforeEach(() => {
     return true
   })
 })
+afterEach(() => {
+  vi.useRealTimers()
+})
+
 export const schedulerTestState: {
   storedStatus: any
   alarmStore: Record<string, any>
