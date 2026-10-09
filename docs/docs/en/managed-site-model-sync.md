@@ -32,13 +32,21 @@ After the configuration is complete, select **"Model List Sync"** on the setting
 
 ### 1. Manually Execute Tasks
 On the "Model Sync" page, you can:
-- **Execute All**: Scans all enabled channels and triggers synchronization.
-- **Execute Selected**: Select specific channels in the table for partial updates.
+- **Run All**: Syncs channels on the current managed site and skips channels marked to skip. Clicking this button manually also respects skip settings.
+- **Run Selected**: Syncs every checked channel, including channels set to skip. This also applies when you select all, and does not change your saved skip settings.
 - **Retry Failed Items Only**: Quickly repair channels that failed due to the last network fluctuation.
+
+If a channel cannot provide a model list, or you want to keep its current models, enable "Skip auto-sync and Run All" in Execution History or Manual Execution. Changes save immediately, with an in-progress indicator and a success or failure message. Auto-sync and Run All will no longer fetch or update its models. Execution history records the channel and the reason it was skipped. Skipped channels are counted separately from executed, successful, and failed channels.
+
+The same switch is also available in the channel rule editor, in both visual and JSON modes. Changes in the dialog are saved together with the rules; Cancel discards them.
+
+The skip setting applies only to this channel on the current managed site. Other sites are unaffected, and the setting is included in channel configuration backups. To sync once, use Run Selected or the row's Sync button without turning off the skip setting.
+
+The Skipped filter in Execution History shows channels skipped in that run. "Show channels set to skip" in Manual Execution shows the current settings. Changing a switch does not change past results. Progress, completion messages, and automatic task notifications show skipped counts. If all channels are skipped, the message explicitly says that all were skipped and no models were fetched or updated; every channel remains in the results. Retry Failed Only does not run skipped channels.
 
 ### 2. View Execution Results
 The sync table displays the following key fields:
-- **Status**: Success, failure, or in progress.
+- **Status**: Success, failure, or skipped, with a reason for skipped channels.
 - **Old Model List**: Models the channel already had before synchronization.
 - **New Model List**: Models obtained from the upstream interface in real-time.
 - **Error Message**: If it fails, the specific error code (such as 401, 429, 500) and reason will be displayed.

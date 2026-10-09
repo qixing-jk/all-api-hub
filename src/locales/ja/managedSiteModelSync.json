@@ -19,15 +19,29 @@
     "errors": {
       "channelTimeout_other": "チャネルの処理が {{count}} 秒を超えました"
     },
+    "exclusions": {
+      "autoSave": "変更はすぐに保存されます",
+      "description": "スキップを設定したチャネルは、自動同期でも手動で「すべて実行」をクリックした場合でもスキップされます。一度だけ同期するには、設定を変えずに「選択分を実行」または行内の「同期」を使ってください。",
+      "excludedLabel": "スキップ設定済み",
+      "loadFailed": "スキップ設定を読み込めませんでした。再試行してください。",
+      "savedExcluded": "保存しました。自動同期と「すべて実行」では、このチャネルをスキップします。",
+      "savedIncluded": "保存しました。このチャネルは自動同期と「すべて実行」の対象になります。",
+      "saveFailed": "スキップ設定を保存できませんでした。再試行してください。",
+      "showOnly": "スキップ設定済みのチャネルを表示",
+      "skippedReason": "実行開始時にスキップが設定されていたため、モデルの取得・更新は行いませんでした。",
+      "title": "自動同期と「すべて実行」をスキップ",
+      "toggle": "自動同期と「すべて実行」で {{name}} をスキップ"
+    },
     "filters": {
       "all": "すべて",
       "failed": "失敗",
       "searchPlaceholder": "チャネル名、ID、またはエラーメッセージで検索...",
+      "skipped": "スキップ",
       "success": "成功"
     },
     "lastExecution": "前回実行",
     "manual": {
-      "description": "以下のチャネルを選択して一回限りの同期を実行します。選択内容は保存されません。",
+      "description": "「選択分を実行」は、スキップ設定済みのチャネルも含めて選択したすべてを同期します。全選択した場合も同じです。スキップスイッチの変更はすぐに保存されます。",
       "empty": {
         "description": "一覧を再読み込みするか、フィルターを調整してチャネルを探してください。",
         "title": "利用可能なチャネルがありません"
@@ -48,7 +62,8 @@
       "never": "未実行"
     },
     "progress": {
-      "running": "同期中... {{completed}}/{{total}}"
+      "running": "同期中... {{completed}}/{{total}}",
+      "skipped": "スキップ：{{skipped}}"
     },
     "statistics": {
       "duration": "所要時間",
@@ -56,13 +71,15 @@
       "failed": "失敗",
       "nextRun": "次回予定実行",
       "notScheduled": "未スケジュール",
+      "skipped": "スキップ",
       "startTime": "開始時刻",
       "success": "成功",
-      "total": "チャネル総数"
+      "total": "実行したチャネル"
     },
     "status": {
       "failed": "失敗",
       "running": "実行中...",
+      "skipped": "スキップ",
       "success": "成功"
     },
     "table": {
@@ -95,6 +112,14 @@
       "noSelection": "少なくとも 1 つのチャネルを選択してください",
       "syncFailed": "同期に失敗しました: {{error}}"
     },
+    "info": {
+      "allSkipped": "すべてのチャネルをスキップしました（{{skipped}} 件）。モデルの取得・更新は行っていません。「スキップ」で詳細を確認できます。"
+    },
+    "notification": {
+      "allSkippedBody": "設定に従い、すべてのチャネルをスキップしました。モデルの取得・更新は行っていません。",
+      "allSkippedTitle": "モデル同期：すべてスキップ"
+    },
+    "skippedSummary": "スキップ：{{skipped}}。",
     "success": {
       "settingsSaved": "設定を正常に保存しました",
       "syncCompleted": "同期完了: {{success}}/{{total}} 成功"

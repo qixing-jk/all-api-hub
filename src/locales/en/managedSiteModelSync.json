@@ -20,15 +20,29 @@
       "channelTimeout_one": "Channel processing exceeded {{count}} second",
       "channelTimeout_other": "Channel processing exceeded {{count}} seconds"
     },
+    "exclusions": {
+      "autoSave": "Changes save immediately",
+      "description": "Channels marked to skip are skipped during auto-sync and when you click Run All. To sync them once, use Run Selected or the row's Sync button without changing this setting.",
+      "excludedLabel": "Set to skip",
+      "loadFailed": "Could not load skip settings. Please retry.",
+      "savedExcluded": "Saved: auto-sync and Run All will skip this channel.",
+      "savedIncluded": "Saved: this channel will take part in auto-sync and Run All.",
+      "saveFailed": "Could not save the skip setting. Please retry.",
+      "showOnly": "Show channels set to skip",
+      "skippedReason": "This channel was set to skip when the run started. No models were fetched or updated.",
+      "title": "Skip auto-sync and Run All",
+      "toggle": "Skip {{name}} during auto-sync and Run All"
+    },
     "filters": {
       "all": "All",
       "failed": "Failed",
       "searchPlaceholder": "Search by channel name, ID, or error message...",
+      "skipped": "Skipped",
       "success": "Success"
     },
     "lastExecution": "Last Execution",
     "manual": {
-      "description": "Choose channels below to trigger a one-off sync. Selections are not saved.",
+      "description": "Run Selected syncs every checked channel, including those set to skip, even when you select all. Skip switches save immediately.",
       "empty": {
         "description": "Refresh the list or adjust your filters to find channels.",
         "title": "No channels available"
@@ -51,7 +65,8 @@
       "never": "Never"
     },
     "progress": {
-      "running": "Syncing... {{completed}}/{{total}}"
+      "running": "Syncing... {{completed}}/{{total}}",
+      "skipped": "Skipped: {{skipped}}"
     },
     "statistics": {
       "duration": "Duration",
@@ -59,13 +74,15 @@
       "failed": "Failed",
       "nextRun": "Next Scheduled Run",
       "notScheduled": "Not scheduled",
+      "skipped": "Skipped",
       "startTime": "Start Time",
       "success": "Successful",
-      "total": "Total Channels"
+      "total": "Executed Channels"
     },
     "status": {
       "failed": "Failed",
       "running": "Running...",
+      "skipped": "Skipped",
       "success": "Success"
     },
     "table": {
@@ -98,6 +115,14 @@
       "noSelection": "Please select at least one channel",
       "syncFailed": "Sync failed: {{error}}"
     },
+    "info": {
+      "allSkipped": "All channels skipped ({{skipped}}). No models were fetched or updated. Open Skipped for details."
+    },
+    "notification": {
+      "allSkippedBody": "All channels were skipped according to your settings. No models were fetched or updated.",
+      "allSkippedTitle": "Model sync: all channels skipped"
+    },
+    "skippedSummary": "Skipped: {{skipped}}.",
     "success": {
       "settingsSaved": "Settings saved successfully",
       "syncCompleted": "Sync completed: {{success}}/{{total}} succeeded"

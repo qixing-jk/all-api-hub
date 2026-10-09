@@ -5,6 +5,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useManagedSiteModelSyncCommands } from "~/features/ManagedSiteModelSync/commands/useManagedSiteModelSyncCommands"
 import type { ManagedSiteModelSyncProps } from "~/features/ManagedSiteModelSync/contracts"
 import { useManagedSiteModelSyncData } from "~/features/ManagedSiteModelSync/data/useManagedSiteModelSyncData"
+import { useModelSyncExclusions } from "~/features/ManagedSiteModelSync/exclusions/useModelSyncExclusions"
 import { getModelSyncHistoryItemKey } from "~/features/ManagedSiteModelSync/results/executionIdentity"
 import {
   MODEL_SYNC_FILTER_STATUSES,
@@ -79,6 +80,10 @@ export function useManagedSiteModelSyncViewModel({
       ),
     [selectedTarget],
   )
+  const exclusions = useModelSyncExclusions(
+    isModelSyncUnsupported ? null : selectedTarget,
+    managedSiteConfigFingerprint,
+  )
   const routedResourceRef = useMemo(
     () => parseManagedResourceRef(routeParams?.resourceRef),
     [routeParams?.resourceRef],
@@ -99,6 +104,7 @@ export function useManagedSiteModelSyncViewModel({
   )
 
   const [selectedTab, setSelectedTab] = useState<number>(TAB_INDEX.history)
+  const [manualExcludedOnly, setManualExcludedOnly] = useState(false)
   const data = useManagedSiteModelSyncData({
     isConfigMissing,
     isModelSyncUnsupported,
@@ -150,6 +156,7 @@ export function useManagedSiteModelSyncViewModel({
     hasInitializedTab.current = false
     setHistorySelectedKeys(new Set())
     setManualSelectedKeys(new Set())
+    setManualExcludedOnly(false)
   }, [isConfigMissing, isModelSyncUnsupported, managedSiteConfigFingerprint])
   const [manualSearchKeyword, setManualSearchKeyword] = useState("")
   useEffect(() => {
@@ -292,6 +299,7 @@ export function useManagedSiteModelSyncViewModel({
     ? filterExecutionItems(lastExecution.items, filterStatus, searchKeyword)
     : undefined
 
+  const { isExcluded } = exclusions
   const manualItems: ExecutionItemResult[] = useMemo(() => {
     const keyword = manualSearchKeyword.toLowerCase().trim()
     const source = keyword
@@ -302,14 +310,20 @@ export function useManagedSiteModelSyncViewModel({
         )
       : channels
 
-    return source.map((channel) => ({
-      resourceRef: channel.ref,
-      channelName: channel.name,
-      ok: true,
-      attempts: 0,
-      finishedAt: 0,
-    }))
-  }, [channels, manualSearchKeyword])
+    return source
+      .filter((channel) => !manualExcludedOnly || isExcluded(channel.ref))
+      .map((channel) => ({
+        resourceRef: channel.ref,
+        channelName: channel.name,
+        ok: true,
+        attempts: 0,
+        finishedAt: 0,
+      }))
+  }, [channels, manualSearchKeyword, manualExcludedOnly, isExcluded])
+
+  const manualExcludedCount = channels.filter((channel) =>
+    isExcluded(channel.ref),
+  ).length
 
   const handleTabChange = (index: number) => {
     setSelectedTab(index)
@@ -474,11 +488,16 @@ export function useManagedSiteModelSyncViewModel({
   }
 
   const isAnySyncPending =
+    exclusions.hasPendingSave ||
     activeAction !== null ||
     runningResourceKey !== null ||
     (progress?.isRunning ?? false)
 
   return {
+    exclusions,
+    manualExcludedOnly,
+    setManualExcludedOnly,
+    manualExcludedCount,
     selectedTab,
     handleTabChange,
     historyTabLabel,

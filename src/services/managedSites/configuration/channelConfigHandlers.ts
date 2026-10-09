@@ -77,7 +77,10 @@ export async function resolveChannelConfigUpsertFiltersMessage(
     await channelConfigStorage.upsertFilters(
       request.resourceRef,
       normalizedFilters,
-      request.channelId,
+      {
+        channelId: request.channelId,
+        modelSyncExcluded: request.modelSyncExcluded,
+      },
     )
     return { success: true, data: normalizedFilters }
   } catch (error) {

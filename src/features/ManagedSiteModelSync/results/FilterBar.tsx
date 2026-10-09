@@ -1,4 +1,4 @@
-import { CircleCheck, CircleX, List, Search } from "lucide-react"
+import { CircleCheck, CircleMinus, CircleX, List, Search } from "lucide-react"
 import { type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -9,6 +9,7 @@ export const MODEL_SYNC_FILTER_STATUSES = {
   All: "all",
   Success: "success",
   Failed: "failed",
+  Skipped: "skipped",
 } as const
 
 export type FilterStatus =
@@ -76,13 +77,13 @@ export default function FilterBar({
 
   return (
     <div className="gap-y-density-3 flex flex-wrap gap-x-3">
-      <div className="gap-y-density-2 flex gap-x-2">
+      <div className="gap-y-density-2 flex flex-wrap gap-x-2">
         {renderFilterButton(
           MODEL_SYNC_FILTER_STATUSES.All,
           t("execution.filters.all"),
           "bg-primary text-primary-foreground",
           <List className="h-4 w-4" />,
-          statistics.total,
+          statistics.total + (statistics.skippedCount ?? 0),
         )}
         {renderFilterButton(
           MODEL_SYNC_FILTER_STATUSES.Success,
@@ -97,6 +98,13 @@ export default function FilterBar({
           "bg-destructive text-destructive-foreground",
           <CircleX className="h-4 w-4" />,
           statistics.failureCount,
+        )}
+        {renderFilterButton(
+          MODEL_SYNC_FILTER_STATUSES.Skipped,
+          t("execution.filters.skipped"),
+          "bg-secondary text-secondary-foreground",
+          <CircleMinus className="h-4 w-4" />,
+          statistics.skippedCount ?? 0,
         )}
       </div>
       <div className="relative flex-1 md:max-w-xs">

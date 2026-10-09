@@ -21,15 +21,29 @@
       "channelTimeout_many": "El procesamiento del canal superó {{count}} segundos",
       "channelTimeout_other": "El procesamiento del canal superó {{count}} segundos"
     },
+    "exclusions": {
+      "autoSave": "Los cambios se guardan al instante",
+      "description": "Los canales marcados para omitir se omiten en la sincronización automática y al hacer clic en Ejecutar todo. Para sincronizarlos una vez sin cambiar este ajuste, usa Ejecutar seleccionados o Sincronizar en la fila.",
+      "excludedLabel": "Configurado para omitir",
+      "loadFailed": "No se pudieron cargar los ajustes de omisión. Vuelve a intentarlo.",
+      "savedExcluded": "Guardado: la sincronización automática y Ejecutar todo omitirán este canal.",
+      "savedIncluded": "Guardado: este canal participará en la sincronización automática y en Ejecutar todo.",
+      "saveFailed": "No se pudo guardar el ajuste de omisión. Vuelve a intentarlo.",
+      "showOnly": "Mostrar canales configurados para omitir",
+      "skippedReason": "Este canal estaba configurado para omitirse al iniciar la ejecución. No se consultaron ni actualizaron modelos.",
+      "title": "Omitir en sincronización automática y Ejecutar todo",
+      "toggle": "Omitir {{name}} en sincronización automática y Ejecutar todo"
+    },
     "filters": {
       "all": "Todos",
       "failed": "Fallidos",
       "searchPlaceholder": "Busca por nombre de canal, ID o mensaje de error...",
+      "skipped": "Omitidos",
       "success": "Correctos"
     },
     "lastExecution": "Última ejecución",
     "manual": {
-      "description": "Elige canales abajo para activar una sincronización puntual. Las selecciones no se guardan.",
+      "description": "Ejecutar seleccionados sincroniza todos los canales marcados, incluidos los configurados para omitir, incluso si seleccionas todos. Los interruptores de omisión se guardan al instante.",
       "empty": {
         "description": "Actualiza la lista o ajusta tus filtros para encontrar canales.",
         "title": "No hay canales disponibles"
@@ -54,7 +68,8 @@
       "never": "Nunca"
     },
     "progress": {
-      "running": "Sincronizando... {{completed}}/{{total}}"
+      "running": "Sincronizando... {{completed}}/{{total}}",
+      "skipped": "Omitidos: {{skipped}}"
     },
     "statistics": {
       "duration": "Duración",
@@ -62,13 +77,15 @@
       "failed": "Fallidos",
       "nextRun": "Próxima ejecución programada",
       "notScheduled": "No programada",
+      "skipped": "Omitidos",
       "startTime": "Hora de inicio",
       "success": "Correctos",
-      "total": "Canales totales"
+      "total": "Canales ejecutados"
     },
     "status": {
       "failed": "Falló",
       "running": "Ejecutándose...",
+      "skipped": "Omitidos",
       "success": "Correcto"
     },
     "table": {
@@ -101,6 +118,14 @@
       "noSelection": "Selecciona al menos un canal",
       "syncFailed": "Falló la sincronización: {{error}}"
     },
+    "info": {
+      "allSkipped": "Se omitieron todos los canales ({{skipped}}). No se consultaron ni actualizaron modelos. Abre Omitidos para ver los detalles."
+    },
+    "notification": {
+      "allSkippedBody": "Se omitieron todos los canales según tus ajustes. No se consultaron ni actualizaron modelos.",
+      "allSkippedTitle": "Sincronización de modelos: todos los canales omitidos"
+    },
+    "skippedSummary": "Omitidos: {{skipped}}.",
     "success": {
       "settingsSaved": "La configuración se guardó correctamente",
       "syncCompleted": "Sincronización completada: {{success}}/{{total}} correctos"

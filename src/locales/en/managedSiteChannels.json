@@ -425,6 +425,7 @@
       "validationProbeIds": "Select at least one verification probe for each probe rule.",
       "validationRegex": "Invalid regex pattern: {{error}}"
     },
+    "modelSyncExclusionHelp": "After saving, auto-sync and Run All will skip this channel. Run Selected and the row's Sync button can still sync it once. Cancel discards changes in this dialog.",
     "placeholders": {
       "description": "Optional notes about this rule",
       "name": "e.g. Allow GPT-4",

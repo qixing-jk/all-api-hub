@@ -425,6 +425,7 @@
       "validationProbeIds": "Selecciona al menos una prueba de verificación para cada regla de prueba.",
       "validationRegex": "Patrón regex inválido: {{error}}"
     },
+    "modelSyncExclusionHelp": "Al guardar, la sincronización automática y Ejecutar todo omitirán este canal. Ejecutar seleccionados y Sincronizar en la fila permiten sincronizarlo una vez. Cancelar descarta los cambios de este diálogo.",
     "placeholders": {
       "description": "Notas opcionales sobre esta regla",
       "name": "p. ej., Permitir GPT-4",

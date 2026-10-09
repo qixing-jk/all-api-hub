@@ -53,6 +53,7 @@ import {
   importExportSearchControls,
   importExportSearchSections,
 } from "~/features/ImportExport/ImportExport.search"
+import { modelSyncSearchSections } from "~/features/ManagedSiteModelSync/ManagedSiteModelSync.search"
 import { getMenuItemLabel } from "~/features/OptionsMenu/getMenuItemLabel"
 import { productTourSearchSections } from "~/features/ProductTour/ProductTour.search"
 
@@ -60,6 +61,7 @@ import { PAGE_DEFINITIONS, TAB_DEFINITIONS } from "./registryPages"
 
 export const OPTIONS_SEARCH_REGISTRY = [
   ...PAGE_DEFINITIONS,
+  ...modelSyncSearchSections,
   ...TAB_DEFINITIONS,
   ...generalSearchSections,
   ...siteAnnouncementsSearchSections,

@@ -20,15 +20,29 @@
       "channelTimeout_one": "Die Kanalverarbeitung hat das Zeitlimit von {{count}} Sekunde überschritten.",
       "channelTimeout_other": "Die Kanalverarbeitung hat das Zeitlimit von {{count}} Sekunden überschritten."
     },
+    "exclusions": {
+      "autoSave": "Änderungen werden sofort gespeichert",
+      "description": "Zum Überspringen markierte Kanäle werden bei der automatischen Synchronisierung und bei „Alle ausführen“ übersprungen. Mit „Ausgewählte ausführen“ oder „Synchronisieren“ in der Zeile können Sie sie einmalig synchronisieren, ohne diese Einstellung zu ändern.",
+      "excludedLabel": "Zum Überspringen markiert",
+      "loadFailed": "Die Einstellungen zum Überspringen konnten nicht geladen werden. Bitte erneut versuchen.",
+      "savedExcluded": "Gespeichert: Die automatische Synchronisierung und „Alle ausführen“ überspringen diesen Kanal.",
+      "savedIncluded": "Gespeichert: Dieser Kanal nimmt an der automatischen Synchronisierung und „Alle ausführen“ teil.",
+      "saveFailed": "Die Einstellung zum Überspringen konnte nicht gespeichert werden. Bitte erneut versuchen.",
+      "showOnly": "Zum Überspringen markierte Kanäle anzeigen",
+      "skippedReason": "Dieser Kanal war zu Beginn des Durchlaufs zum Überspringen markiert. Es wurden keine Modelle abgerufen oder aktualisiert.",
+      "title": "Automatische Synchronisierung und „Alle ausführen“ überspringen",
+      "toggle": "{{name}} bei automatischer Synchronisierung und „Alle ausführen“ überspringen"
+    },
     "filters": {
       "all": "Alle",
       "failed": "Fehlgeschlagen",
       "searchPlaceholder": "Suche nach Kanalname, ID oder Fehlermeldung...",
+      "skipped": "Übersprungen",
       "success": "Erfolg"
     },
     "lastExecution": "Letzte Ausführung",
     "manual": {
-      "description": "Wählen Sie unten die Kanäle aus, um eine einmalige Synchronisierung auszulösen. Auswahlen werden nicht gespeichert.",
+      "description": "„Ausgewählte ausführen“ synchronisiert alle ausgewählten Kanäle, auch zum Überspringen markierte – selbst wenn Sie alle auswählen. Änderungen an den Schaltern werden sofort gespeichert.",
       "empty": {
         "description": "Aktualisieren Sie die Liste oder passen Sie Ihre Filter an, um Kanäle zu finden.",
         "title": "Keine Kanäle verfügbar"
@@ -51,7 +65,8 @@
       "never": "Nie"
     },
     "progress": {
-      "running": "Synchronisierung... {{completed}}/{{total}}"
+      "running": "Synchronisierung... {{completed}}/{{total}}",
+      "skipped": "Übersprungen: {{skipped}}"
     },
     "statistics": {
       "duration": "Dauer",
@@ -59,13 +74,15 @@
       "failed": "Fehlgeschlagen",
       "nextRun": "Nächster geplanter Lauf",
       "notScheduled": "Nicht geplant",
+      "skipped": "Übersprungen",
       "startTime": "Startzeit",
       "success": "Erfolgreich",
-      "total": "Gesamtzahl der Kanäle"
+      "total": "Ausgeführte Kanäle"
     },
     "status": {
       "failed": "Fehlgeschlagen",
       "running": "Läuft...",
+      "skipped": "Übersprungen",
       "success": "Erfolg"
     },
     "table": {
@@ -98,6 +115,14 @@
       "noSelection": "Bitte wählen Sie mindestens einen Kanal aus",
       "syncFailed": "Synchronisierung fehlgeschlagen: {{error}}"
     },
+    "info": {
+      "allSkipped": "Alle Kanäle übersprungen ({{skipped}}). Es wurden keine Modelle abgerufen oder aktualisiert. Details finden Sie unter „Übersprungen“."
+    },
+    "notification": {
+      "allSkippedBody": "Alle Kanäle wurden gemäß Ihren Einstellungen übersprungen. Es wurden keine Modelle abgerufen oder aktualisiert.",
+      "allSkippedTitle": "Modellsynchronisierung: alle Kanäle übersprungen"
+    },
+    "skippedSummary": "Übersprungen: {{skipped}}.",
     "success": {
       "settingsSaved": "Einstellungen erfolgreich gespeichert",
       "syncCompleted": "Synchronisierung abgeschlossen: {{success}}/{{total}} erfolgreich"

@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { ActionGroup, Modal } from "~/components/ui"
 import { Button } from "~/components/ui/button"
+import { Switch } from "~/components/ui/Switch"
 import {
-  fetchChannelFilters,
+  fetchChannelFilterSettings,
   saveChannelFilters,
   type ChannelFilterStorageIdentity,
 } from "~/features/ManagedSiteChannels/filters/channelFilters"
@@ -83,45 +84,51 @@ export default function ChannelFilterDialog({
     showVisual,
     showJson,
   } = useChannelFilterEditor("channel-filter")
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [modelSyncExcluded, setModelSyncExcluded] = useState(false)
+  const [loadedModelSyncExcluded, setLoadedModelSyncExcluded] = useState(false)
+  const sessionRef = useRef(0)
+  const onCloseRef = useRef(onClose)
+  const exclusionId = useId()
 
-  const resetState = useCallback(() => {
-    resetEditor([], "")
-    setIsLoading(false)
-    setIsSaving(false)
-  }, [resetEditor])
-
-  const loadFilters = useCallback(async () => {
-    if (!channel) return
-    setIsLoading(true)
-    try {
-      const loadedFilters = await fetchChannelFilters(
-        getChannelFilterStorageIdentity(channel),
-      )
-      setFilters(loadedFilters)
-      try {
-        setJsonText(JSON.stringify(loadedFilters, null, 2))
-      } catch {
-        setJsonText("")
-      }
-    } catch (error) {
-      toast.error(
-        t("filters.messages.loadFailed", { error: getErrorMessage(error) }),
-      )
-      onClose()
-    } finally {
-      setIsLoading(false)
-    }
-  }, [channel, onClose, setFilters, setJsonText, t])
+  // Parent presentation updates may replace callbacks without starting a new edit.
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   useEffect(() => {
+    const session = ++sessionRef.current
+    resetEditor([], "")
+    setModelSyncExcluded(false)
+    setLoadedModelSyncExcluded(false)
+    setIsSaving(false)
+    setIsLoading(Boolean(open && channel))
     if (open && channel) {
-      void loadFilters()
-    } else {
-      resetState()
+      void (async () => {
+        try {
+          const settings = await fetchChannelFilterSettings(
+            getChannelFilterStorageIdentity(channel),
+          )
+          if (session !== sessionRef.current) return
+          resetEditor(settings.filters)
+          setModelSyncExcluded(settings.modelSyncExcluded)
+          setLoadedModelSyncExcluded(settings.modelSyncExcluded)
+        } catch (error) {
+          if (session !== sessionRef.current) return
+          toast.error(
+            t("filters.messages.loadFailed", { error: getErrorMessage(error) }),
+          )
+          onCloseRef.current()
+        } finally {
+          if (session === sessionRef.current) setIsLoading(false)
+        }
+      })()
     }
-  }, [channel, loadFilters, open, resetState])
+    return () => {
+      sessionRef.current = session + 1
+    }
+  }, [channel, open, resetEditor, t])
 
   if (!channel) {
     return null
@@ -134,6 +141,8 @@ export default function ChannelFilterDialog({
   )
 
   const handleSave = async () => {
+    if (isLoading || isSaving || !open) return
+    const session = sessionRef.current
     const editorMode =
       viewMode === "json"
         ? PRODUCT_ANALYTICS_EDITOR_MODES.Json
@@ -195,25 +204,22 @@ export default function ChannelFilterDialog({
       await saveChannelFilters(
         getChannelFilterStorageIdentity(channel),
         payload,
+        modelSyncExcluded === loadedModelSyncExcluded
+          ? {}
+          : { modelSyncExcluded },
       )
-      setFilters(payload)
-      try {
-        setJsonText(JSON.stringify(payload, null, 2))
-      } catch {
-        // ignore serialization errors
-      }
-      toast.success(t("filters.messages.saved"))
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
         insights: {
           editorMode,
           itemCount: payload.length,
         },
       })
+      if (session !== sessionRef.current) return
+      setFilters(payload)
+      setJsonText(JSON.stringify(payload, null, 2))
+      toast.success(t("filters.messages.saved"))
       onClose()
     } catch (error) {
-      toast.error(
-        t("filters.messages.saveFailed", { error: getErrorMessage(error) }),
-      )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: {
@@ -222,15 +228,25 @@ export default function ChannelFilterDialog({
           itemCount: rulesToSave.length,
         },
       })
+      if (session === sessionRef.current) {
+        toast.error(
+          t("filters.messages.saveFailed", { error: getErrorMessage(error) }),
+        )
+      }
     } finally {
-      setIsSaving(false)
+      if (session === sessionRef.current) setIsSaving(false)
     }
   }
 
   return (
     <Modal
       isOpen={open}
-      onClose={onClose}
+      onClose={() => {
+        if (!isSaving) onClose()
+      }}
+      showCloseButton={!isSaving}
+      closeOnEsc={!isSaving}
+      closeOnBackdropClick={!isSaving}
       size="lg"
       panelClassName="max-h-[85vh]"
       header={
@@ -254,6 +270,7 @@ export default function ChannelFilterDialog({
           <Button
             onClick={handleSave}
             loading={isSaving}
+            disabled={isLoading || isSaving}
             data-testid={
               MANAGED_SITE_CHANNELS_TEST_IDS.channelFiltersSaveButton
             }
@@ -263,26 +280,54 @@ export default function ChannelFilterDialog({
         </ActionGroup>
       }
     >
-      <ChannelFiltersEditor
-        filters={filters}
-        viewMode={viewMode}
-        jsonText={jsonText}
-        isLoading={isLoading}
-        probeRulesSupported={probeRulesSupported}
-        probeRulesUnsupportedMessage={t("filters.hints.unsupportedChannelType")}
-        onAddFilter={handleAddFilter}
-        onMoveFilter={handleMoveFilter}
-        onRemoveFilter={handleRemoveFilter}
-        onFieldChange={handleFieldChange}
-        onClickViewVisual={showVisual}
-        onClickViewJson={showJson}
-        onChangeJsonText={setJsonText}
-        testIds={{
-          viewJsonButton:
-            MANAGED_SITE_CHANNELS_TEST_IDS.channelFiltersViewJsonButton,
-          jsonEditor: MANAGED_SITE_CHANNELS_TEST_IDS.channelFiltersJsonEditor,
-        }}
-      />
+      <fieldset
+        disabled={isLoading || isSaving}
+        aria-busy={isLoading || isSaving}
+        className="space-y-density-4 min-w-0"
+      >
+        <div className="gap-y-density-2 flex items-start justify-between gap-x-4">
+          <div className="space-y-density-1">
+            <label htmlFor={exclusionId} className="text-sm font-medium">
+              {t("managedSiteModelSync:execution.exclusions.title")}
+            </label>
+            <p
+              id={`${exclusionId}-help`}
+              className="text-muted-foreground text-sm"
+            >
+              {t("filters.modelSyncExclusionHelp")}
+            </p>
+          </div>
+          <Switch
+            id={exclusionId}
+            aria-describedby={`${exclusionId}-help`}
+            checked={modelSyncExcluded}
+            onChange={setModelSyncExcluded}
+            disabled={isLoading || isSaving}
+          />
+        </div>
+        <ChannelFiltersEditor
+          filters={filters}
+          viewMode={viewMode}
+          jsonText={jsonText}
+          isLoading={isLoading}
+          probeRulesSupported={probeRulesSupported}
+          probeRulesUnsupportedMessage={t(
+            "filters.hints.unsupportedChannelType",
+          )}
+          onAddFilter={handleAddFilter}
+          onMoveFilter={handleMoveFilter}
+          onRemoveFilter={handleRemoveFilter}
+          onFieldChange={handleFieldChange}
+          onClickViewVisual={showVisual}
+          onClickViewJson={showJson}
+          onChangeJsonText={setJsonText}
+          testIds={{
+            viewJsonButton:
+              MANAGED_SITE_CHANNELS_TEST_IDS.channelFiltersViewJsonButton,
+            jsonEditor: MANAGED_SITE_CHANNELS_TEST_IDS.channelFiltersJsonEditor,
+          }}
+        />
+      </fieldset>
     </Modal>
   )
 }
