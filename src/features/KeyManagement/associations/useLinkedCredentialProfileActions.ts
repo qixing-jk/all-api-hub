@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { useChannelDialog } from "~/features/ManagedSiteChannels/editor/ChannelDialog"
 import {
   createProfileCredentialExportData,
   createProfileCredentialExportSource,

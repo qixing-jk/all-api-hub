@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { ChannelEditorShell } from "~/components/dialogs/ChannelDialog/components/ChannelEditorShell"
-import type { ChannelDialogAdvisoryWarning } from "~/components/dialogs/ChannelDialog/context/ChannelDialogContext"
-import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import { Alert } from "~/components/ui"
 import type { ManagedSiteType } from "~/constants/siteType"
+import { ChannelEditorShell } from "~/features/ManagedSiteChannels/editor/ChannelDialog/components/ChannelEditorShell"
+import type { ChannelDialogAdvisoryWarning } from "~/features/ManagedSiteChannels/editor/ChannelDialog/context/ChannelDialogContext"
+import { CHANNEL_DIALOG_TEST_IDS } from "~/features/ManagedSiteChannels/editor/ChannelDialog/testIds"
 import { ManagedResourceEditorBody } from "~/features/ManagedSiteChannels/editor/ManagedResourceEditorBody"
 import {
   getManagedResourceFieldPolicy,

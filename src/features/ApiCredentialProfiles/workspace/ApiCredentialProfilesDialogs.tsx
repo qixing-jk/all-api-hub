@@ -1,12 +1,12 @@
 import { useTranslation } from "react-i18next"
 
-import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { ConfirmDialog } from "~/components/ui"
 import { ApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/editor/ApiCredentialProfileDialog"
 import { ApiCredentialProfileExportDialogs } from "~/features/ApiCredentialProfiles/export/ApiCredentialProfileExportDialogs"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/verification/VerifyApiCredentialProfileDialog"
 import type { ApiCredentialProfilesController } from "~/features/ApiCredentialProfiles/workspace/useApiCredentialProfilesController"
+import { VerifyCliSupportDialog } from "~/features/Verification/cli"
 import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVerification/i18n"
 
 interface ApiCredentialProfilesDialogsProps {

@@ -2,8 +2,8 @@ import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { useUpdateLogDialogContext } from "~/components/dialogs/UpdateLogDialog"
 import HeaderSection from "~/entrypoints/popup/components/HeaderSection"
+import { useUpdateLogDialogContext } from "~/features/UpdateLog"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -58,11 +58,8 @@ vi.mock("~/assets/icon.png", () => ({
   default: "icon.png",
 }))
 
-vi.mock("~/components/dialogs/UpdateLogDialog", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/components/dialogs/UpdateLogDialog")
-    >()
+vi.mock("~/features/UpdateLog", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/features/UpdateLog")>()
 
   return {
     ...actual,

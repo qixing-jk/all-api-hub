@@ -12,7 +12,6 @@ import {
 import { useEffect, useId, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { VerificationHistorySummary } from "~/components/dialogs/VerifyApiDialog/VerificationHistorySummary"
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import {
   Badge,
@@ -46,6 +45,7 @@ import {
   getApiCredentialProfileRowTargetId,
   getApiCredentialProfileRowTestId,
 } from "~/features/ApiCredentialProfiles/testIds"
+import { VerificationHistorySummary } from "~/features/Verification/api/VerificationHistorySummary"
 import { cn } from "~/lib/utils"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

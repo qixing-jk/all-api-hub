@@ -1,13 +1,5 @@
 import { useTranslation } from "react-i18next"
 
-import { buildProbeState } from "~/components/dialogs/VerifyApiDialog/probeState"
-import { ProbeStatusBadge } from "~/components/dialogs/VerifyApiDialog/ProbeStatusBadge"
-import {
-  formatLatency,
-  safeJsonStringify,
-} from "~/components/dialogs/VerifyApiDialog/utils"
-import { VerificationHistorySummary } from "~/components/dialogs/VerifyApiDialog/VerificationHistorySummary"
-import { VerificationModeSelect } from "~/components/dialogs/VerifyApiDialog/VerificationMode"
 import {
   ActionGroup,
   Alert,
@@ -26,6 +18,14 @@ import {
   useProfileVerification,
   type VerifyApiCredentialProfileDialogProps,
 } from "~/features/ApiCredentialProfiles/verification/useProfileVerification"
+import { buildProbeState } from "~/features/Verification/api/probeState"
+import { ProbeStatusBadge } from "~/features/Verification/api/ProbeStatusBadge"
+import {
+  formatLatency,
+  safeJsonStringify,
+} from "~/features/Verification/api/utils"
+import { VerificationHistorySummary } from "~/features/Verification/api/VerificationHistorySummary"
+import { VerificationModeSelect } from "~/features/Verification/api/VerificationMode"
 import {
   API_TYPES,
   API_VERIFICATION_PROBE_STATUSES,

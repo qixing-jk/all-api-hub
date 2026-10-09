@@ -1,0 +1,70 @@
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { ChannelDialogOpening } from "~/features/ManagedSiteChannels/editor/ChannelDialog/components/ChannelDialogOpening"
+import { useChannelDialogContext } from "~/features/ManagedSiteChannels/editor/ChannelDialog/context/ChannelDialogContext"
+import { ManagedResourceCreateDialog } from "~/features/ManagedSiteChannels/editor/ManagedResourceCreateDialog"
+import { useManagedResourceInteraction } from "~/features/ManagedSiteChannels/workspace/useManagedResourceInteraction"
+import AddTokenDialog from "~/features/TokenProvisioning/creation/AddTokenDialog"
+
+/**
+ * Global ChannelDialog container that can be triggered from anywhere
+ */
+export function ChannelDialogContainer() {
+  const { preferences, managedSiteType } = useUserPreferencesContext()
+  const {
+    state,
+    opening,
+    retryNativePreparation,
+    defaultTokenQuickCreateDialog,
+    closeDialog,
+    completeNativeDialogClose,
+    closeDefaultTokenQuickCreateDialog,
+    handleSuccess,
+    handleDefaultTokenQuickCreateSuccess,
+  } = useChannelDialogContext()
+
+  const nativeCreate = state.nativeCreate
+  const { runRead, verificationDialog } = useManagedResourceInteraction({
+    siteType: nativeCreate?.siteType ?? managedSiteType,
+    newApiConfig: preferences.newApi,
+  })
+
+  return (
+    <>
+      {opening && opening.status !== "idle" && (
+        <ChannelDialogOpening
+          opening={opening}
+          onClose={closeDialog}
+          onRetry={retryNativePreparation}
+        />
+      )}
+      {nativeCreate ? (
+        <ManagedResourceCreateDialog
+          key={nativeCreate.sessionId}
+          isOpen={state.isOpen}
+          siteType={nativeCreate.siteType}
+          kind={nativeCreate.kind}
+          editor={nativeCreate.editor}
+          showModelPrefillWarning={nativeCreate.showModelPrefillWarning}
+          advisoryWarning={nativeCreate.advisoryWarning}
+          runRead={runRead}
+          onClose={closeDialog}
+          onCloseComplete={() =>
+            completeNativeDialogClose(nativeCreate.sessionId)
+          }
+          onSuccess={handleSuccess}
+        />
+      ) : null}
+      {verificationDialog}
+      {defaultTokenQuickCreateDialog.account ? (
+        <AddTokenDialog
+          isOpen={defaultTokenQuickCreateDialog.isOpen}
+          onClose={closeDefaultTokenQuickCreateDialog}
+          availableAccounts={[defaultTokenQuickCreateDialog.account]}
+          preSelectedAccountId={defaultTokenQuickCreateDialog.account.id}
+          prefillNotice={defaultTokenQuickCreateDialog.notice}
+          onSuccess={handleDefaultTokenQuickCreateSuccess}
+        />
+      ) : null}
+    </>
+  )
+}

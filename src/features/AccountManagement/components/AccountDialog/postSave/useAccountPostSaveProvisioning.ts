@@ -1,8 +1,8 @@
 import { useCallback, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { type useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { type AccountPostSaveSession } from "~/features/AccountManagement/components/AccountDialog/postSave/accountPostSaveSession"
+import { type useChannelDialog } from "~/features/ManagedSiteChannels/editor/ChannelDialog"
 import toast from "~/lib/notify"
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"

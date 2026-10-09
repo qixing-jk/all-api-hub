@@ -94,7 +94,7 @@ vi.mock("~/utils/browser/runtimeMessages", () => ({
   onRuntimeMessage: mocks.onRuntimeMessage,
 }))
 
-vi.mock("~/entrypoints/background/actionClickBehavior", () => ({
+vi.mock("~/services/preferences/runtime/actionClickBehavior", () => ({
   applyActionClickBehavior: mocks.applyActionClickBehavior,
 }))
 
@@ -103,7 +103,7 @@ vi.mock("~/utils/browser/cookieHelper", () => ({
   hasCookieReadPermissionForUrl: mocks.hasCookieReadPermissionForUrl,
 }))
 
-vi.mock("~/entrypoints/background/contextMenus", () => ({
+vi.mock("~/services/preferences/runtime/contextMenus", () => ({
   setupContextMenus: mocks.setupContextMenus,
 }))
 
@@ -201,7 +201,7 @@ vi.mock("~/services/productAnnouncements/service", () => ({
     mocks.setupProductAnnouncementMessagingListeners,
 }))
 
-vi.mock("~/services/preferences/runtimePreferencesService", () => ({
+vi.mock("~/services/preferences/runtime/runtimePreferencesService", () => ({
   setupPreferencesMessagingListeners: mocks.setupPreferencesMessagingListeners,
 }))
 

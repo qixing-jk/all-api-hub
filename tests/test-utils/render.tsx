@@ -7,12 +7,12 @@ import {
 import type { ReactElement, ReactNode } from "react"
 import { I18nextProvider } from "react-i18next"
 
-import { ChannelDialogProvider } from "~/components/dialogs/ChannelDialog"
 import { DeviceProvider } from "~/contexts/DeviceContext"
 import { FeatureGuidanceProvider } from "~/contexts/FeatureGuidanceContext"
 import { ReleaseUpdateStatusProvider } from "~/contexts/ReleaseUpdateStatusContext"
 import { ThemeProvider } from "~/contexts/ThemeContext"
 import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"
+import { ChannelDialogProvider } from "~/features/ManagedSiteChannels/editor/ChannelDialog"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 interface AppProvidersProps {

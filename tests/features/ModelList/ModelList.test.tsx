@@ -182,7 +182,7 @@ vi.mock("~/features/ModelList/presentation/ModelDisplay", () => ({
   ),
 }))
 
-vi.mock("~/components/dialogs/VerifyApiDialog", () => ({
+vi.mock("~/features/Verification/api", () => ({
   VerifyApiDialog: ({
     initialModelId,
     modelEnableGroups,
@@ -202,7 +202,7 @@ vi.mock("~/components/dialogs/VerifyApiDialog", () => ({
   ),
 }))
 
-vi.mock("~/components/dialogs/VerifyCliSupportDialog", () => ({
+vi.mock("~/features/Verification/cli", () => ({
   VerifyCliSupportDialog: () => <div data-testid="verify-cli-dialog" />,
 }))
 

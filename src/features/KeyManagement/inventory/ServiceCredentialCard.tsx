@@ -2,7 +2,6 @@ import { Copy, KeyRound, RefreshCw, Terminal, Wrench } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import {
   Badge,
   Button,
@@ -49,6 +48,7 @@ import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { formatKey } from "~/features/KeyManagement/utils"
 import { ManagedSiteImportButton } from "~/features/ManagedSiteWidgets/ManagedSiteImportButton"
 import { saveAccountRuntimeKeysToApiCredentialProfiles } from "~/features/TokenProvisioning/secretDelivery/apiCredentialProfileSaveAction"
+import { VerifyCliSupportDialog } from "~/features/Verification/cli"
 import { cn } from "~/lib/utils"
 import { buildServiceCredentialRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"

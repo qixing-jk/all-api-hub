@@ -14,7 +14,7 @@ let mockClaudeCodeRouterBaseUrl: string | undefined =
   "https://router.example.com"
 let mockClaudeCodeRouterApiKey: string | undefined = "router-api-key"
 
-vi.mock("~/components/dialogs/ChannelDialog", () => ({
+vi.mock("~/features/ManagedSiteChannels/editor/ChannelDialog", () => ({
   useChannelDialog: () => ({
     openWithCredentials: mockOpenWithCredentials,
   }),

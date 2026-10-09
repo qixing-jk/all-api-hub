@@ -2,7 +2,6 @@ import { act } from "@testing-library/react"
 import { useState } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { useUpdateLogDialogContext } from "~/components/dialogs/UpdateLogDialog"
 import { RootErrorBoundary } from "~/components/RootErrorBoundary"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { DevPanel } from "~/features/DevPanel/DevPanel"
@@ -14,6 +13,7 @@ import {
   addDevFixtureApiCredentials,
   countDevFixtureApiCredentials,
 } from "~/features/DevPanel/fixtureApiCredentials"
+import { useUpdateLogDialogContext } from "~/features/UpdateLog"
 import { debugQueuePopupInterruptionHint } from "~/services/popupInterruptionHint"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import { getExtensionVersion } from "~/utils/browser/runtime"
@@ -47,11 +47,8 @@ vi.mock("~/lib/notify", () => ({
   },
 }))
 
-vi.mock("~/components/dialogs/UpdateLogDialog", async (importOriginal) => {
-  const actual =
-    await importOriginal<
-      typeof import("~/components/dialogs/UpdateLogDialog")
-    >()
+vi.mock("~/features/UpdateLog", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/features/UpdateLog")>()
 
   return {
     ...actual,

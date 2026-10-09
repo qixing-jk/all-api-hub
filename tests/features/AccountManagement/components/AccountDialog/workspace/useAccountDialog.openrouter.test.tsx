@@ -127,7 +127,7 @@ vi.mock("~/utils/browser", async (importOriginal) => {
   return { ...actual, isExtensionPopup: mockIsExtensionPopup }
 })
 
-vi.mock("~/components/dialogs/ChannelDialog", () => ({
+vi.mock("~/features/ManagedSiteChannels/editor/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
   useChannelDialog: () => ({
     openWithAccount: vi.fn(),

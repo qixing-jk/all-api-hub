@@ -1,13 +1,13 @@
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { UpdateLogDialogProvider } from "~/components/dialogs/UpdateLogDialog"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import * as userPreferencesContext from "~/contexts/UserPreferencesContext"
 import AutoCheckin from "~/entrypoints/options/pages/AutoCheckin"
 import { DevPanel } from "~/features/DevPanel/DevPanel"
 import { DevPanelProvider } from "~/features/DevPanel/DevPanelSectionsContext"
+import { UpdateLogDialogProvider } from "~/features/UpdateLog"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import {

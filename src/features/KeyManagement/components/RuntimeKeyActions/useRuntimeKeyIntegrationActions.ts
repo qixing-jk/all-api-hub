@@ -1,9 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { useChannelDialog } from "~/features/ManagedSiteChannels/editor/ChannelDialog"
 import type { AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import { collectAccountRuntimeKeySecrets } from "~/services/accounts/keys/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"

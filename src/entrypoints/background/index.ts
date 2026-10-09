@@ -17,6 +17,11 @@ import {
   OPTIONAL_PERMISSIONS,
 } from "~/services/permissions/permissionManager"
 import { TOOLBAR_ACTION_CLICK_BEHAVIORS } from "~/services/preferences/preferencesSchema"
+import {
+  applyActionClickBehavior,
+  setupActionClickBehaviorListener,
+} from "~/services/preferences/runtime/actionClickBehavior"
+import { setupContextMenus } from "~/services/preferences/runtime/contextMenus"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   setupProductAnalyticsAccountChangeListener,
@@ -41,11 +46,6 @@ import { isTestMode } from "~/utils/core/environment"
 import { createLogger, setLogHistoryWriter } from "~/utils/core/logger"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation/optionsPage"
 
-import {
-  applyActionClickBehavior,
-  setupActionClickBehaviorListener,
-} from "./actionClickBehavior"
-import { setupContextMenus } from "./contextMenus"
 import {
   initializeCookieInterceptors,
   setupCookieInterceptorListeners,

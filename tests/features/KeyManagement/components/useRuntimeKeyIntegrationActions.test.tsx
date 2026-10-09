@@ -20,7 +20,7 @@ vi.mock("~/contexts/FeatureGuidanceContext", () => ({
     markGatewayGuidanceOnboardingCompleted: vi.fn(),
   }),
 }))
-vi.mock("~/components/dialogs/ChannelDialog", () => ({
+vi.mock("~/features/ManagedSiteChannels/editor/ChannelDialog", () => ({
   useChannelDialog: () => ({ openWithAccount: vi.fn() }),
 }))
 vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({

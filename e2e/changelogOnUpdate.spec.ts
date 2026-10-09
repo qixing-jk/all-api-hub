@@ -1,7 +1,7 @@
 import type { BrowserContext, Page } from "@playwright/test"
 
-import { UPDATE_LOG_DIALOG_TEST_IDS } from "~/components/dialogs/UpdateLogDialog/testIds"
 import { OPTIONS_PAGE_PATH, POPUP_PAGE_PATH } from "~/constants/extensionPages"
+import { UPDATE_LOG_DIALOG_TEST_IDS } from "~/features/UpdateLog/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { CURRENT_PREFERENCES_VERSION } from "~/services/preferences/migrations/preferencesMigration"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"

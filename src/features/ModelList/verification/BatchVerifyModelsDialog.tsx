@@ -4,8 +4,6 @@ import { forwardRef, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Virtuoso } from "react-virtuoso"
 
-import { formatLatency } from "~/components/dialogs/VerifyApiDialog/utils"
-import { VerificationModeSelect } from "~/components/dialogs/VerifyApiDialog/VerificationMode"
 import {
   ActionGroup,
   Alert,
@@ -34,6 +32,8 @@ import {
   type BatchVerifyRowStatus,
 } from "~/features/ModelList/verification/batchVerificationState"
 import { useBatchVerifyModels } from "~/features/ModelList/verification/useBatchVerifyModels"
+import { formatLatency } from "~/features/Verification/api/utils"
+import { VerificationModeSelect } from "~/features/Verification/api/VerificationMode"
 import { cn } from "~/lib/utils"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,

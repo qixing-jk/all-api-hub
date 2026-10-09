@@ -10,7 +10,7 @@ import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 import { RuntimeKeyHeaderHarness as RuntimeKeyHeader } from "~~/tests/test-utils/keyManagement/RuntimeKeyHeaderHarness"
 import { render, screen } from "~~/tests/test-utils/render"
 
-vi.mock("~/components/dialogs/ChannelDialog", () => {
+vi.mock("~/features/ManagedSiteChannels/editor/ChannelDialog", () => {
   return {
     ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
     useChannelDialog: () => ({

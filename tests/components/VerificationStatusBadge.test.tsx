@@ -2,8 +2,8 @@ import { render, screen } from "@testing-library/react"
 import React from "react"
 import { describe, expect, it, vi } from "vitest"
 
-import { ProbeStatusBadge } from "~/components/dialogs/VerifyApiDialog/ProbeStatusBadge"
-import { VerificationStatusBadge } from "~/components/dialogs/VerifyApiDialog/VerificationStatusBadge"
+import { ProbeStatusBadge } from "~/features/Verification/api/ProbeStatusBadge"
+import { VerificationStatusBadge } from "~/features/Verification/api/VerificationStatusBadge"
 
 vi.mock("react-i18next", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-i18next")>()

@@ -9,7 +9,6 @@ import {
 } from "react"
 import { useTranslation } from "react-i18next"
 
-import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { IconButton } from "~/components/ui"
 import { useFeatureGuidanceContext } from "~/contexts/FeatureGuidanceContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -27,6 +26,7 @@ import {
 } from "~/features/CredentialExport/ExportActionsMenu"
 import { KelivoExportDialog } from "~/features/CredentialExport/KelivoExportDialog"
 import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
+import { useChannelDialog } from "~/features/ManagedSiteChannels/editor/ChannelDialog"
 import { ManagedSiteImportButton } from "~/features/ManagedSiteWidgets/ManagedSiteImportButton"
 import {
   collectAccountRuntimeKeySecrets,

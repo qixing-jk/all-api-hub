@@ -1,8 +1,8 @@
 import { useRef, useState } from "react"
 import { describe, expect, it, vi } from "vitest"
 
-import type { ProbeItemState } from "~/components/dialogs/VerifyApiDialog/types"
 import { useProfileModelDiscovery } from "~/features/ApiCredentialProfiles/verification/useProfileModelDiscovery"
+import type { ProbeItemState } from "~/features/Verification/api/types"
 import { fetchApiCredentialModelIds } from "~/services/apiCredentialProfiles/modelCatalog"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"

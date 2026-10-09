@@ -2,7 +2,7 @@ import type { Dispatch, RefObject, SetStateAction } from "react"
 import { useCallback, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import type { ProbeItemState } from "~/components/dialogs/VerifyApiDialog/types"
+import type { ProbeItemState } from "~/features/Verification/api/types"
 import {
   fetchApiCredentialModelIds,
   normalizeApiCredentialModelIds,

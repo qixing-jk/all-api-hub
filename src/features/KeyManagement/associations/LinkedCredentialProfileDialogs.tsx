@@ -1,4 +1,3 @@
-import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { KiloCodeProfileExportDialog } from "~/features/ApiCredentialProfiles/export/KiloCodeProfileExportDialog"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/verification/VerifyApiCredentialProfileDialog"
 import { ClaudeCodeRouterImportDialog } from "~/features/CredentialExport/ClaudeCodeRouterImportDialog"
@@ -10,6 +9,7 @@ import {
 } from "~/features/CredentialExport/DeeplinkExportDialog"
 import { KelivoExportDialog } from "~/features/CredentialExport/KelivoExportDialog"
 import { type LinkedCredentialProfileActionsController } from "~/features/KeyManagement/associations/useLinkedCredentialProfileActions"
+import { VerifyCliSupportDialog } from "~/features/Verification/cli"
 import { PRODUCT_ANALYTICS_ACTION_IDS } from "~/services/productAnalytics/contracts"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 

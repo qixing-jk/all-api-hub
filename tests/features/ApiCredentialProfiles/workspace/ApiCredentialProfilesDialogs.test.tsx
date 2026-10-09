@@ -62,7 +62,7 @@ vi.mock("~/features/CredentialExport/ClaudeCodeRouterImportDialog", () => ({
 vi.mock("~/components/CliProxyApiExportDialog", () => ({
   CliProxyApiExportDialog: () => null,
 }))
-vi.mock("~/components/dialogs/VerifyCliSupportDialog", () => ({
+vi.mock("~/features/Verification/cli", () => ({
   VerifyCliSupportDialog: () => null,
 }))
 vi.mock(

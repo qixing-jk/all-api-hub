@@ -138,17 +138,22 @@ vi.mock(
   }),
 )
 
-vi.mock("~/components/dialogs/ChannelDialog", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/components/dialogs/ChannelDialog")>()
+vi.mock(
+  "~/features/ManagedSiteChannels/editor/ChannelDialog",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/features/ManagedSiteChannels/editor/ChannelDialog")
+      >()
 
-  return {
-    ...actual,
-    useChannelDialog: () => ({
-      openWithAccount: (...args: unknown[]) => mockOpenWithAccount(...args),
-    }),
-  }
-})
+    return {
+      ...actual,
+      useChannelDialog: () => ({
+        openWithAccount: (...args: unknown[]) => mockOpenWithAccount(...args),
+      }),
+    }
+  },
+)
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => mockUserPreferences,
@@ -195,7 +200,7 @@ vi.mock(
   }),
 )
 
-vi.mock("~/components/dialogs/VerifyCliSupportDialog", () => ({
+vi.mock("~/features/Verification/cli", () => ({
   VerifyCliSupportDialog: (props: unknown) => {
     mockVerifyCliDialog(props)
     return null

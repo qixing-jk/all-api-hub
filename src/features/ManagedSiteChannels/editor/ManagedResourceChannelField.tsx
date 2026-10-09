@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next"
 import type { ReactNode } from "react"
 
+import { Button } from "~/components/ui"
 import {
   ChannelBaseUrlField,
   ChannelModelsField,
@@ -8,8 +9,7 @@ import {
   ChannelSecretField,
   ChannelStatusField,
   ChannelTypeField,
-} from "~/components/dialogs/ChannelDialog/components/ChannelFields"
-import { Button } from "~/components/ui"
+} from "~/features/ManagedSiteChannels/editor/ChannelDialog/components/ChannelFields"
 import {
   getManagedResourceFieldOptionLabel,
   MANAGED_RESOURCE_CHANNEL_FIELD_ROLES,

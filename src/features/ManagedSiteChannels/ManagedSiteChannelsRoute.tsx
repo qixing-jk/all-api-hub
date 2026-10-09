@@ -1,8 +1,5 @@
 import { useTranslation } from "react-i18next"
 
-import { ChannelDialogOpening } from "~/components/dialogs/ChannelDialog/components/ChannelDialogOpening"
-import { ChannelEditorShell } from "~/components/dialogs/ChannelDialog/components/ChannelEditorShell"
-import { CHANNEL_DIALOG_TEST_IDS } from "~/components/dialogs/ChannelDialog/testIds"
 import {
   Alert,
   AlertDescription,
@@ -12,6 +9,9 @@ import {
 } from "~/components/ui"
 import type { ManagedSiteType } from "~/constants/siteType"
 import { ManagedSiteChannelDetailView } from "~/features/ManagedSiteChannels/detail/ManagedSiteChannelDetailView"
+import { ChannelDialogOpening } from "~/features/ManagedSiteChannels/editor/ChannelDialog/components/ChannelDialogOpening"
+import { ChannelEditorShell } from "~/features/ManagedSiteChannels/editor/ChannelDialog/components/ChannelEditorShell"
+import { CHANNEL_DIALOG_TEST_IDS } from "~/features/ManagedSiteChannels/editor/ChannelDialog/testIds"
 import { ManagedResourceEditorBody } from "~/features/ManagedSiteChannels/editor/ManagedResourceEditorBody"
 import { MANAGED_RESOURCE_EDITOR_MODES } from "~/features/ManagedSiteChannels/editor/managedResourceFieldPolicy"
 import ChannelFilterDialog from "~/features/ManagedSiteChannels/filters/ChannelFilterDialog"
