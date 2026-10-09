@@ -305,11 +305,19 @@ type NativePreferenceSiteType =
   | typeof SITE_TYPES.AXON_HUB
   | typeof SITE_TYPES.CLAUDE_CODE_HUB
   | typeof SITE_TYPES.SUB2API
+  | typeof SITE_TYPES.MAGPIE
 
 const getNativePreferenceOverrides = (
   siteType: NativePreferenceSiteType,
 ): Partial<ReturnType<typeof buildUserPreferences>> => {
   switch (siteType) {
+    case SITE_TYPES.MAGPIE:
+      return {
+        magpie: {
+          baseUrl: "https://console.example.invalid",
+          webKey: "example-credential",
+        },
+      }
     case SITE_TYPES.OCTOPUS:
       return {
         octopus: {
@@ -443,6 +451,7 @@ describe("ManagedSiteChannelsRoute", () => {
     SITE_TYPES.AXON_HUB,
     SITE_TYPES.CLAUDE_CODE_HUB,
     SITE_TYPES.SUB2API,
+    SITE_TYPES.MAGPIE,
   ])(
     "focuses the stable resource identity for %s despite an unrelated search",
     (siteType) => {
@@ -471,7 +480,10 @@ describe("ManagedSiteChannelsRoute", () => {
           },
         },
       }))
-      const resourceId = siteType === SITE_TYPES.AXON_HUB ? "native/42+=" : "42"
+      const resourceId =
+        siteType === SITE_TYPES.AXON_HUB || siteType === SITE_TYPES.MAGPIE
+          ? "native/42+="
+          : "42"
       installNativeControllers({
         list: {
           allRows: rows,
@@ -498,6 +510,9 @@ describe("ManagedSiteChannelsRoute", () => {
       expect(screen.getByText("Example 42")).toBeVisible()
       expect(screen.queryByText("Example 142")).not.toBeInTheDocument()
       expect(
+        screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.searchInput),
+      ).toHaveValue(resourceId)
+      expect(
         screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.paginationSummary),
       ).toHaveAttribute("data-total", "1")
       expect(useListController).toHaveBeenLastCalledWith(
@@ -506,56 +521,62 @@ describe("ManagedSiteChannelsRoute", () => {
     },
   )
 
-  it("matches a resource deep link by its full reference and resets selection on a scope change", () => {
-    const ref = {
-      siteType: SITE_TYPES.AXON_HUB,
-      kind: "channel" as const,
-      scopeKey: "https://console.example.invalid",
-      resourceId: "opaque:42",
-    }
-    const foreignRef = { ...ref, scopeKey: "https://other.example.invalid" }
-    const rows = ["Current", "Other"].map((name) => ({
-      ...nativeRow,
-      rowKey: name,
-      testToken: name,
-      name,
-      searchText: name,
-    }))
-    const setSelectedRowKeys = vi.fn()
-    installNativeControllers({
-      list: {
-        rows,
-        allRows: rows,
-        totalRows: 2,
-        setSelectedRowKeys,
-        resolveRef: (rowKey: string) =>
-          rowKey === "Current" ? ref : foreignRef,
-      },
-    })
-    configureNativePreferences(SITE_TYPES.AXON_HUB)
-    const onReplaceRouteQuery = vi.fn()
-    const { rerender } = render(
-      <ManagedSiteChannelsRoute
-        siteType={SITE_TYPES.AXON_HUB}
-        routeParams={{ resourceRef: JSON.stringify(ref) }}
-        onReplaceRouteQuery={onReplaceRouteQuery}
-      />,
-    )
+  it.each([SITE_TYPES.AXON_HUB, SITE_TYPES.MAGPIE])(
+    "matches a %s resource deep link by its full reference and resets selection on a scope change",
+    (siteType) => {
+      const ref = {
+        siteType,
+        kind: "channel" as const,
+        scopeKey: "https://console.example.invalid",
+        resourceId: "opaque:42",
+      }
+      const foreignRef = { ...ref, scopeKey: "https://other.example.invalid" }
+      const rows = ["Current", "Other"].map((name) => ({
+        ...nativeRow,
+        rowKey: name,
+        testToken: name,
+        name,
+        searchText: name,
+      }))
+      const setSelectedRowKeys = vi.fn()
+      installNativeControllers({
+        list: {
+          rows,
+          allRows: rows,
+          totalRows: 2,
+          setSelectedRowKeys,
+          resolveRef: (rowKey: string) =>
+            rowKey === "Current" ? ref : foreignRef,
+        },
+      })
+      configureNativePreferences(siteType)
+      const onReplaceRouteQuery = vi.fn()
+      const { rerender } = render(
+        <ManagedSiteChannelsRoute
+          siteType={siteType}
+          routeParams={{ resourceRef: JSON.stringify(ref) }}
+          onReplaceRouteQuery={onReplaceRouteQuery}
+        />,
+      )
 
-    expect(screen.getByText("Current")).toBeVisible()
-    expect(screen.queryByText("Other")).not.toBeInTheDocument()
+      expect(screen.getByText("Current")).toBeVisible()
+      expect(screen.queryByText("Other")).not.toBeInTheDocument()
+      expect(
+        screen.getByTestId(MANAGED_SITE_CHANNELS_TEST_IDS.searchInput),
+      ).toHaveValue(ref.resourceId)
 
-    rerender(
-      <ManagedSiteChannelsRoute
-        siteType={SITE_TYPES.AXON_HUB}
-        routeParams={{ resourceRef: JSON.stringify(foreignRef) }}
-        onReplaceRouteQuery={onReplaceRouteQuery}
-      />,
-    )
-    expect(screen.queryByText("Current")).not.toBeInTheDocument()
-    expect(screen.queryByText("Other")).not.toBeInTheDocument()
-    expect(setSelectedRowKeys).toHaveBeenCalledWith({})
-  })
+      rerender(
+        <ManagedSiteChannelsRoute
+          siteType={siteType}
+          routeParams={{ resourceRef: JSON.stringify(foreignRef) }}
+          onReplaceRouteQuery={onReplaceRouteQuery}
+        />,
+      )
+      expect(screen.queryByText("Current")).not.toBeInTheDocument()
+      expect(screen.queryByText("Other")).not.toBeInTheDocument()
+      expect(setSelectedRowKeys).toHaveBeenCalledWith({})
+    },
+  )
 
   it("routes the production Veloera definition through native controllers", () => {
     installNativeControllers()
