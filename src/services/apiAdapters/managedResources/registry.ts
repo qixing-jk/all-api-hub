@@ -6,6 +6,7 @@ import { claudeCodeHubManagedResourceRegistration } from "~/services/apiAdapters
 import { cliProxyApiManagedResourceRegistration } from "~/services/apiAdapters/managedResources/cliProxyApi"
 import { doneHubManagedResourceRegistration } from "~/services/apiAdapters/managedResources/doneHub"
 import { gptLoadManagedResourceRegistration } from "~/services/apiAdapters/managedResources/gptLoad"
+import { magpieManagedResourceRegistration } from "~/services/apiAdapters/managedResources/magpie"
 import { newApiManagedResourceRegistration } from "~/services/apiAdapters/managedResources/newApi"
 import { octopusManagedResourceRegistration } from "~/services/apiAdapters/managedResources/octopus"
 import { omniRouteManagedResourceRegistration } from "~/services/apiAdapters/managedResources/omniRoute"
@@ -25,6 +26,7 @@ export const managedResourceRegistrations: readonly ManagedResourceRegistration[
     veloeraManagedResourceRegistration,
     omniRouteManagedResourceRegistration,
     gptLoadManagedResourceRegistration,
+    magpieManagedResourceRegistration,
   ]
 
 const managedResourceKey = (

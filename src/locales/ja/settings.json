@@ -356,6 +356,30 @@
     "minLevelDesc": "選択したレベル未満のログは出力も保存もされません。",
     "title": "ログ"
   },
+  "magpie": {
+    "description": "セルフホストした Magpie Web サーバーのプロバイダーを管理します。",
+    "fields": {
+      "baseUrlDesc": "magpie web（既定ポート 3430）を起動し、Web URL を入力してください。ポート 3425 の推論 URL とは異なります。",
+      "baseUrlLabel": "Web 管理 URL",
+      "baseUrlPlaceholder": "http://localhost:3430",
+      "hideWebKey": "管理キーを非表示",
+      "showWebKey": "管理キーを表示",
+      "webKeyDesc": "MAGPIE_WEB_KEY または起動リンクの k 値を使います。固定の MAGPIE_WEB_KEY は再起動後も使えます。それ以外は再起動後に更新してください。推論 API キーは管理には使えません。",
+      "webKeyLabel": "Web 管理キー",
+      "webKeyPlaceholder": "Web 管理キーを入力"
+    },
+    "title": "Magpie",
+    "validation": {
+      "description": "上記のキーで接続を確認し、プロバイダー一覧を取得できるか検証します。",
+      "failed": "Magpie に接続できません。Web URL とサーバーの起動状態を確認してください。",
+      "invalidCredential": "Web キーが拒否されました。MAGPIE_WEB_KEY または最新の起動キーを確認してください。",
+      "missingFields": "先にゲートウェイアドレスと管理キーを入力してください",
+      "success": "接続を確認しました",
+      "title": "接続を確認",
+      "validate": "接続を確認",
+      "validating": "確認中…"
+    }
+  },
   "managedSite": {
     "axonHub": "AxonHub",
     "claudeCodeHub": "Claude Code Hub",
@@ -380,6 +404,7 @@
       }
     },
     "gptLoad": "gpt-load",
+    "magpie": "Magpie",
     "newApi": "New API",
     "octopus": "Octopus",
     "omniroute": "OmniRoute",

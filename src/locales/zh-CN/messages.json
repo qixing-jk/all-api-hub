@@ -129,6 +129,10 @@
     "missingCredentials": "需要提供商名称和完整 API 密钥。",
     "unsupportedApiType": "此 API 协议暂时无法导出到 Kelivo。"
   },
+  "magpie": {
+    "configMissing": "请先在设置中配置 Magpie Web 地址和 Web 管理密钥。",
+    "noChannelsToSync": "没有可同步的渠道"
+  },
   "managedSite": {
     "unsupportedModelSync": "当前版本不支持 {{siteName}} 管理站点模型同步"
   },

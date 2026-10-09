@@ -24,6 +24,7 @@ import { type ClaudeCodeHubConfig } from "~/types/claudeCodeHubConfig"
 import { type BalanceHistoryPreferences } from "~/types/dailyBalanceHistory"
 import { type GptLoadConfig } from "~/types/gptLoadConfig"
 import type { LogLevel } from "~/types/logging"
+import type { MagpieConfig } from "~/types/magpieConfig"
 import type { ModelRedirectPreferences } from "~/types/managedSiteModelRedirect"
 import { type OmniRouteConfig } from "~/types/omnirouteConfig"
 import { type SiteAnnouncementPreferences } from "~/types/siteAnnouncements"
@@ -341,6 +342,11 @@ export interface UserPreferencesContextType {
     updates: Partial<GptLoadConfig>,
     options?: PreferenceSaveOptions,
   ) => PreferenceWritePromise
+  updateMagpieConfig: (
+    updates: Partial<MagpieConfig>,
+    options?: PreferenceSaveOptions,
+  ) => PreferenceWritePromise
+  resetMagpieConfig: () => PreferenceWritePromise
   resetGptLoadConfig: () => PreferenceWritePromise
   resetOmniRouteConfig: () => PreferenceWritePromise
   resetNewApiModelSyncConfig: () => PreferenceWritePromise

@@ -10,6 +10,7 @@ import {
   ICON_SIZE_CLASSNAME,
   type IconSize,
 } from "~/components/icons/iconSizes"
+import { MagpieIcon } from "~/components/icons/MagpieIcon"
 import { OctopusIcon } from "~/components/icons/OctopusIcon"
 import { OmniRouteIcon } from "~/components/icons/OmniRouteIcon"
 import { Sub2ApiIcon } from "~/components/icons/Sub2ApiIcon"
@@ -29,6 +30,9 @@ export function ManagedSiteIcon({
   siteType,
   size = "sm",
 }: ManagedSiteIconProps) {
+  if (siteType === SITE_TYPES.MAGPIE) {
+    return <MagpieIcon size={size} />
+  }
   if (siteType === SITE_TYPES.OCTOPUS) {
     return <OctopusIcon size={size} />
   }

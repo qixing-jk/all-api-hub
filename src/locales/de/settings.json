@@ -356,6 +356,30 @@
     "minLevelDesc": "Protokolle unter der gewählten Stufe werden weder ausgegeben noch gespeichert.",
     "title": "Protokollierung"
   },
+  "magpie": {
+    "description": "Anbieter auf Ihrem selbst gehosteten Magpie-Webserver verwalten.",
+    "fields": {
+      "baseUrlDesc": "Starten Sie magpie web (Standardport 3430). Geben Sie die Web-URL ein, nicht die Inferenz-URL auf Port 3425.",
+      "baseUrlLabel": "Web-Verwaltungs-URL",
+      "baseUrlPlaceholder": "http://localhost:3430",
+      "hideWebKey": "Hide management key",
+      "showWebKey": "Show management key",
+      "webKeyDesc": "Verwenden Sie MAGPIE_WEB_KEY oder den k-Wert im Startlink. Ein fester MAGPIE_WEB_KEY bleibt nach Neustarts gültig; andernfalls aktualisieren Sie diesen Wert nach einem Neustart. Inferenz-API-Schlüssel erlauben keine Verwaltung.",
+      "webKeyLabel": "Web-Verwaltungsschlüssel",
+      "webKeyPlaceholder": "Web-Verwaltungsschlüssel eingeben"
+    },
+    "title": "Magpie",
+    "validation": {
+      "description": "Mit dem obigen Schlüssel die Verbindung und den Zugriff auf die Anbieterliste prüfen.",
+      "failed": "Keine Verbindung zu Magpie. Prüfen Sie die Web-Adresse und ob der Server läuft.",
+      "invalidCredential": "Der Web-Schlüssel wurde abgelehnt. Prüfen Sie MAGPIE_WEB_KEY oder den aktuellen Startschlüssel.",
+      "missingFields": "Enter the gateway address and management key first",
+      "success": "Connection verified",
+      "title": "Check connection",
+      "validate": "Check connection",
+      "validating": "Checking…"
+    }
+  },
   "managedSite": {
     "axonHub": "AxonHub",
     "claudeCodeHub": "Claude Code Hub",
@@ -380,6 +404,7 @@
       }
     },
     "gptLoad": "gpt-load",
+    "magpie": "Magpie",
     "newApi": "New API",
     "octopus": "Octopus",
     "omniroute": "OmniRoute",

@@ -8,6 +8,7 @@ import {
 } from "~/services/accountSiteDefinitions"
 import { claudeCodeHubManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/claudeCodeHub"
 import { gptLoadManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/gptLoad"
+import { magpieManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/magpie"
 import { newApiManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/newApi"
 import { octopusManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/octopus"
 import { omniRouteManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/omniroute"
@@ -49,6 +50,7 @@ const managedSitesBySiteType = {
   [SITE_TYPES.CLAUDE_CODE_HUB]: claudeCodeHubManagedSiteCapabilities,
   [SITE_TYPES.SUB2API]: sub2ApiManagedSiteCapabilities,
   [SITE_TYPES.OMNIROUTE]: omniRouteManagedSiteCapabilities,
+  [SITE_TYPES.MAGPIE]: magpieManagedSiteCapabilities,
   [SITE_TYPES.GPT_LOAD]: gptLoadManagedSiteCapabilities,
 } satisfies Record<ManagedSiteType, ManagedSiteCapabilities>
 

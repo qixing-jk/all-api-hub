@@ -49,6 +49,7 @@ const expectedManagedSiteTypes = [
   SITE_TYPES.CLI_PROXY_API,
   SITE_TYPES.OMNIROUTE,
   SITE_TYPES.GPT_LOAD,
+  SITE_TYPES.MAGPIE,
 ] as const
 
 describe("managed-site mutation conformance", () => {

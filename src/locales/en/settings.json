@@ -356,6 +356,30 @@
     "minLevelDesc": "Logs below the selected level are neither emitted nor saved.",
     "title": "Logging"
   },
+  "magpie": {
+    "description": "Manage providers on your self-hosted Magpie Web server.",
+    "fields": {
+      "baseUrlDesc": "Start magpie web (default port 3430). Enter its Web URL, not the inference URL on port 3425.",
+      "baseUrlLabel": "Web management URL",
+      "baseUrlPlaceholder": "http://localhost:3430",
+      "hideWebKey": "Hide management key",
+      "showWebKey": "Show management key",
+      "webKeyDesc": "Use MAGPIE_WEB_KEY or the k value in the startup link. A fixed MAGPIE_WEB_KEY survives restarts; otherwise update this field after restarting. Inference API keys cannot manage Magpie.",
+      "webKeyLabel": "Web management key",
+      "webKeyPlaceholder": "Enter the Web management key"
+    },
+    "title": "Magpie",
+    "validation": {
+      "description": "Use the key above to check connectivity and access to the provider inventory.",
+      "failed": "Unable to connect to Magpie. Check the Web address and that the server is running.",
+      "invalidCredential": "The Web key was rejected. Check MAGPIE_WEB_KEY or copy the current startup key.",
+      "missingFields": "Enter the gateway address and management key first",
+      "success": "Connection verified",
+      "title": "Check connection",
+      "validate": "Check connection",
+      "validating": "Checking…"
+    }
+  },
   "managedSite": {
     "axonHub": "AxonHub",
     "claudeCodeHub": "Claude Code Hub",
@@ -380,6 +404,7 @@
       }
     },
     "gptLoad": "gpt-load",
+    "magpie": "Magpie",
     "newApi": "New API",
     "octopus": "Octopus",
     "omniroute": "OmniRoute",

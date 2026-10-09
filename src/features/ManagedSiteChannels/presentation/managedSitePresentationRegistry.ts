@@ -5,6 +5,7 @@ import { claudeCodeHubPresentation } from "./sites/claudeCodeHub"
 import { cliProxyApiPresentation } from "./sites/cliProxyApi"
 import { doneHubPresentation } from "./sites/doneHub"
 import { gptLoadPresentation } from "./sites/gptLoad"
+import { magpiePresentation } from "./sites/magpie"
 import { newApiPresentation } from "./sites/newApi"
 import { octopusPresentation } from "./sites/octopus"
 import { omniRoutePresentation } from "./sites/omniRoute"
@@ -22,6 +23,7 @@ export const managedSitePresentationDefinitions: readonly ManagedSitePresentatio
     sub2ApiPresentation,
     omniRoutePresentation,
     gptLoadPresentation,
+    magpiePresentation,
     claudeCodeHubPresentation,
     octopusPresentation,
   ]

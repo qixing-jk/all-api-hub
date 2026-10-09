@@ -647,6 +647,7 @@
     "hide": "Ẩn khóa",
     "keepPlaceholder": "Để trống để giữ khóa đã lưu",
     "loadFailed": "Không thể tải khóa này. Vui lòng thử lại.",
+    "maskedOnly": "Chỉ có giá trị đã che của khóa đã lưu này.",
     "newPlaceholder": "Nhập khóa API",
     "newState": "Mới, chưa lưu",
     "previousDisableReason": "Lý do vô hiệu hóa trước đó: {{reason}}",

@@ -131,6 +131,10 @@
     "missingCredentials": "Ein Anbietername und ein vollständiger API-Schlüssel sind erforderlich.",
     "unsupportedApiType": "Dieses API-Protokoll kann nicht nach Kelivo exportiert werden."
   },
+  "magpie": {
+    "configMissing": "Konfigurieren Sie zuerst die Magpie-Web-Adresse und den Web-Verwaltungsschlüssel.",
+    "noChannelsToSync": "No channels to sync"
+  },
   "managedSite": {
     "unsupportedModelSync": "{{siteName}} unterstützt in dieser Version keine Modellsynchronisierung für verwaltete Websites"
   },

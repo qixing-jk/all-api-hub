@@ -81,10 +81,14 @@ export function useResourceSelectFieldState<TSection extends string>({
             presentation.optionSourceFieldIds?.flatMap((fieldId) =>
               readResourceList(values, fieldId),
             ) ?? []
-          const optionValues = normalizeResourceList([
-            ...options.map((option) => option.value),
-            ...sourceValues,
-          ])
+          // Native option IDs include meaningful empty strings (for example
+          // Magpie's smart routing). Normalize user lists, not descriptor IDs.
+          const optionValues = [
+            ...new Set([
+              ...options.map((option) => option.value),
+              ...normalizeResourceList(sourceValues),
+            ]),
+          ]
           return [[descriptor.fieldId, optionValues] as const]
         }),
       ),

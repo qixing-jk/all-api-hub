@@ -36,6 +36,7 @@ export const SITE_TYPES = {
   OPENROUTER: "openrouter",
   OMNIROUTE: "omniroute",
   GPT_LOAD: "gpt-load",
+  MAGPIE: "magpie",
   KIMI: "kimi",
   KIMI_GLOBAL: "kimi-global",
   GRSAI: "grsai",

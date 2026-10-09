@@ -209,6 +209,62 @@
         "help": "A manual load-balancing weight. Higher values draw proportionally more traffic; leave empty to use the gateway default.",
         "label": "Weight"
       },
+      "magpieAnthropic": {
+        "help": "Verwenden Sie die Anthropic-API-Stammadresse (ANTHROPIC_BASE_URL) ohne /v1/messages.",
+        "label": "Anthropic-URL"
+      },
+      "magpieBalancePath": {
+        "help": "Betrag aus der Antwort, z. B. data.balance oder data.total / 500000. Leer: Magpie-Standard. Bei Voreinstellungen schreibgeschützt.",
+        "label": "Guthabenausdruck"
+      },
+      "magpieBalanceURL": {
+        "help": "Optionale Guthaben-API für Magpie. Unterstützt {key} in der URL. Gespeicherte Guthaben-Tokens bleiben erhalten. Bei Voreinstellungen schreibgeschützt.",
+        "label": "Guthaben-URL"
+      },
+      "magpieCatalog": {
+        "help": "Kommagetrennte Anbieter-IDs von models.dev für Modellnamen und Denkstufen; der erste Treffer gilt. Bei Voreinstellungen schreibgeschützt.",
+        "label": "Modellkatalog"
+      },
+      "magpieChat": {
+        "help": "Die Chat-Completions-Basis-URL muss /v1 enthalten; hängen Sie /chat/completions nicht an.",
+        "label": "Chat-Completions-URL",
+        "required": "Geben Sie die Adresse für den gewählten API-Typ ein."
+      },
+      "magpieGemini": {
+        "help": "Die Gemini-Basis-URL muss /v1beta enthalten, ohne Modellnamen oder generateContent-Pfad.",
+        "label": "Gemini-URL"
+      },
+      "magpieHeaders": {
+        "help": "Header-Namen und Werte zeilenweise hinzufügen oder zu JSON wechseln. Diese Header werden an den vorgelagerten Anbieter gesendet.",
+        "label": "Eigene Header"
+      },
+      "magpieMaxConcurrency": {
+        "help": "0–1000 Anfragen je Schlüssel/Konto. Leer: Magpie-Standard; 0: unbegrenzt.",
+        "label": "Gleichzeitige Anfragen pro Schlüssel"
+      },
+      "magpieMaxRPM": {
+        "help": "0–10000 Anfragen je Schlüssel/Konto und Minute. Leer oder 0: unbegrenzt.",
+        "label": "Anfragen pro Minute und Schlüssel"
+      },
+      "magpieModels": {
+        "help": "Erkannte Modelle auswählen oder eine Modell-ID eingeben und mit Enter hinzufügen. Modelle nach Eingabe der Verbindungsdaten abrufen. Eine leere Auswahl verwendet den automatischen Modellkatalog von MAGPIE."
+      },
+      "magpieModelsURL": {
+        "help": "Optionale vollständige URL, abgefragt mit aktuellem Schlüssel und Headern. Leer: Protokolladressen verwenden. Bei Voreinstellungen schreibgeschützt.",
+        "label": "Modelllisten-URL"
+      },
+      "magpiePriceRate": {
+        "help": "Faktor zum Listenpreis, z. B. 0.8. Bereich 0–1000, bis zu 3 Nachkommastellen. Leer oder 0: Listenpreis.",
+        "label": "Preismultiplikator"
+      },
+      "magpieProxy": {
+        "help": "Leer lassen für den globalen Proxy; direct umgeht ihn.",
+        "label": "Proxy"
+      },
+      "magpieResponses": {
+        "help": "Die Responses-Basis-URL endet meist auf /v1; hängen Sie /responses nicht an.",
+        "label": "Responses-URL"
+      },
       "manualModels": {
         "label": "Manuelle Modelle"
       },
@@ -464,6 +520,32 @@
     "headerDescription": "Kanäle im selbst gehosteten KI-Gateway verwalten und API-Quellen über einen gemeinsamen Endpunkt nutzen.",
     "openChannelConsole": "Öffnen Sie die Gateway-Kanalverwaltung",
     "unconfiguredValueDescription": "Nach der Konfiguration können Sie verstreute Kontoschlüssel und API-Schlüssel als Gateway-Kanäle importieren und diese dann direkt in All API Hub anzeigen und verwalten."
+  },
+  "magpieKeys": {
+    "anyProtocol": "Alle Protokolle",
+    "enabled": "Aktiviert",
+    "help": "Einen Schlüssel hinzufügen oder mehrere durch Zeilenumbrüche, Kommas oder Leerzeichen getrennte Schlüssel einfügen. Nur der gespeicherte Hauptschlüssel kann angezeigt werden. Zusätzliche Schlüssel durch Hinzufügen des neuen und Entfernen des alten ersetzen. Änderungen werden beim Speichern angewendet.",
+    "invalid": "Neue Schlüssel, Protokolle und Gewichte (0–1000) prüfen. Mindestens einen Schlüssel aktiviert lassen.",
+    "name": "Schlüsselname",
+    "order": "Der Reihe nach (Ausweichbetrieb)",
+    "pace": "Restkontingent pro Stunde",
+    "primary": "Primär",
+    "primaryKey": "Primärer API-Schlüssel",
+    "protocol": "Protokoll",
+    "rotate": "Reihum",
+    "routing": "Schlüsselverteilung",
+    "smart": "Intelligent (automatischer Ausweichbetrieb)",
+    "title": "Schlüsselpool",
+    "usage": "Geringste Nutzung zuerst",
+    "weighted": "Gewichtet",
+    "weightHelp": "0 oder 1: Standardgewicht; 2–1000: Anteil bei gewichteter Verteilung."
+  },
+  "magpieProtocols": {
+    "checkOther": "Eine Adresse eines anderen konfigurierten Typs ist ungültig. Wechseln Sie zu diesem Typ, um sie zu prüfen.",
+    "configured": "Konfiguriert",
+    "help": "Wählen Sie einen Typ, um seine Adresse zu bearbeiten. Für mehrere Protokolle richten Sie jeden Typ einzeln ein; alle Adressen bleiben erhalten.",
+    "type": "API-Typ",
+    "unmanaged": "In Magpie verwaltet"
   },
   "migration": {
     "actions": {

@@ -43,9 +43,6 @@ type ModelSyncChannelListCapability = ManagedResourceModelsCapability & {
 type ModelSyncChannelCapabilities = ManagedResourceModelsCapability & {
   fetchModels: NonNullable<ManagedResourceModelsCapability["fetchModels"]>
   updateModels: NonNullable<ManagedResourceModelsCapability["updateModels"]>
-  updateModelMapping: NonNullable<
-    ManagedResourceModelsCapability["updateModelMapping"]
-  >
 }
 
 /**
@@ -182,11 +179,7 @@ export class ModelSyncService {
     const channels = getSiteTypeCapabilities(this.managedSiteConfig.siteType)
       .managedSites?.models
 
-    if (
-      !channels?.fetchModels ||
-      !channels.updateModels ||
-      !channels.updateModelMapping
-    ) {
+    if (!channels?.fetchModels || !channels.updateModels) {
       throw new Error(
         `managed-site model sync is not implemented for ${this.managedSiteConfig.siteType}`,
       )
@@ -316,14 +309,20 @@ export class ModelSyncService {
         collectManagedConfigSecrets(this.managedSiteConfig.config),
       )
 
-      const result =
-        await this.getModelSyncChannelCapabilities().updateModelMapping(
-          this.managedSiteConfig.config,
-          channel.ref,
-          updateModels,
-          modelMapping,
-          this.createChannelRequestOptions(abortSignal),
+      const updateModelMapping =
+        this.getModelSyncChannelCapabilities().updateModelMapping
+      if (!updateModelMapping) {
+        throw new Error(
+          `managed-site model mapping is not implemented for ${this.managedSiteConfig.siteType}`,
         )
+      }
+      const result = await updateModelMapping(
+        this.managedSiteConfig.config,
+        channel.ref,
+        updateModels,
+        modelMapping,
+        this.createChannelRequestOptions(abortSignal),
+      )
       await consumeModelSyncMutationResult(result, {
         knownSecrets,
         knownSecretsComplete: true,

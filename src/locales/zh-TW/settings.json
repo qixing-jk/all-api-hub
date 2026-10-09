@@ -356,6 +356,30 @@
     "minLevelDesc": "低於所選層級的日誌不會輸出或儲存。",
     "title": "日誌"
   },
+  "magpie": {
+    "description": "管理自架 Magpie Web 服務中的供應商。",
+    "fields": {
+      "baseUrlDesc": "先啟動 magpie web（預設連接埠 3430），填寫 Web 位址，而非連接埠 3425 的推論位址。",
+      "baseUrlLabel": "Web 管理位址",
+      "baseUrlPlaceholder": "http://localhost:3430",
+      "hideWebKey": "隱藏管理金鑰",
+      "showWebKey": "顯示管理金鑰",
+      "webKeyDesc": "使用 MAGPIE_WEB_KEY 或啟動連結中的 k 參數。固定的 MAGPIE_WEB_KEY 可跨重啟使用；否則重啟後需更新此處。推論 API Key 無法用於管理。",
+      "webKeyLabel": "Web 管理金鑰",
+      "webKeyPlaceholder": "輸入 Web 管理金鑰"
+    },
+    "title": "Magpie",
+    "validation": {
+      "description": "使用上方密鑰驗證連線，並確認能夠讀取供應商清單。",
+      "failed": "無法連線至 Magpie，請檢查 Web 位址及服務是否已啟動。",
+      "invalidCredential": "Web 管理金鑰遭拒，請檢查 MAGPIE_WEB_KEY 或使用最新啟動連結中的金鑰。",
+      "missingFields": "請先填寫閘道位址與管理金鑰",
+      "success": "連線驗證成功",
+      "title": "測試連線",
+      "validate": "測試連線",
+      "validating": "檢測中…"
+    }
+  },
   "managedSite": {
     "axonHub": "AxonHub",
     "claudeCodeHub": "Claude Code Hub",
@@ -380,6 +404,7 @@
       }
     },
     "gptLoad": "gpt-load",
+    "magpie": "Magpie",
     "newApi": "New API",
     "octopus": "Octopus",
     "omniroute": "OmniRoute",

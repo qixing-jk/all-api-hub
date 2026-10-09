@@ -136,6 +136,97 @@ export function NativeResourceChoiceField<TSection extends string>({
           ? tokenRegistry.nullToken
           : undefined
         : tokenRegistry.tokenByResourceValue.get(selectedValue)
+    const selectionDisabled =
+      fieldDisabled ||
+      controlledOptionUnavailable ||
+      (presentation.optionSourceFieldIds !== undefined &&
+        optionValues.length === 0)
+    const changeSelection = (nextUiValue: string) => {
+      const selection = resolveSelectValue(descriptor.fieldId, nextUiValue)
+      if (selection.active) onValueChange(descriptor.fieldId, selection.value)
+    }
+    const optionFeedback = (
+      <>
+        <ResourceAutomaticOptionFeedback
+          t={t}
+          label={label}
+          disabled={disabled}
+          state={isManualOptionLoader ? undefined : optionState}
+          emptyMessage={controlledOptionState?.emptyMessage}
+          optionCount={optionValues.length}
+          announceControlledEmpty
+          onRetry={() =>
+            controlledOptionState
+              ? onRetryControlledOptions?.(descriptor.fieldId)
+              : retry(descriptor.fieldId)
+          }
+        />
+        {optionControl && <div className="mt-density-2">{optionControl}</div>}
+      </>
+    )
+    if (
+      presentation.renderer === RESOURCE_FIELD_TYPES.Select &&
+      presentation.selectLayout === "cards"
+    ) {
+      return (
+        <div className="@container">
+          <ResourceFieldLabel required={descriptor.required}>
+            {label}
+          </ResourceFieldLabel>
+          <div
+            id={id}
+            role="radiogroup"
+            aria-label={label}
+            aria-describedby={describedBy}
+            aria-invalid={Boolean(errorMessage)}
+            className="grid grid-cols-2 gap-2 @min-[34rem]:grid-cols-4"
+          >
+            {selectOptions.map((option) => {
+              const optionLabel =
+                option.displayLabel ??
+                getResourceFieldOptionLabel(
+                  presentation,
+                  option.resourceValue ?? "",
+                  t,
+                )
+              const badge = presentation.resolveOptionBadge?.(
+                t,
+                option.resourceValue ?? "",
+                values,
+              )
+              return (
+                <label
+                  key={option.uiValue}
+                  className="border-border bg-background text-foreground has-checked:border-primary has-checked:bg-accent has-checked:text-accent-foreground has-focus-visible:ring-ring flex min-h-14 min-w-0 cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium has-focus-visible:ring-2 has-disabled:cursor-not-allowed has-disabled:opacity-50"
+                >
+                  <input
+                    type="radio"
+                    name={id}
+                    value={option.uiValue}
+                    checked={selectedUiValue === option.uiValue}
+                    disabled={selectionDisabled}
+                    aria-label={optionLabel}
+                    className="accent-primary size-3.5 shrink-0"
+                    onChange={() => changeSelection(option.uiValue)}
+                  />
+                  <span className="min-w-0">
+                    <span className="block break-words">{optionLabel}</span>
+                    {badge && (
+                      <span className="text-muted-foreground mt-1 text-xs font-normal">
+                        {badge}
+                      </span>
+                    )}
+                  </span>
+                </label>
+              )
+            })}
+          </div>
+          {optionFeedback}
+          {help}
+          {error}
+        </div>
+      )
+    }
     return (
       <div key={descriptor.fieldId}>
         <ResourceFieldLabel htmlFor={id} required={descriptor.required}>
@@ -143,20 +234,8 @@ export function NativeResourceChoiceField<TSection extends string>({
         </ResourceFieldLabel>
         <Select
           value={selectedUiValue ?? ""}
-          onValueChange={(nextUiValue) => {
-            const selection = resolveSelectValue(
-              descriptor.fieldId,
-              nextUiValue,
-            )
-            if (!selection.active) return
-            onValueChange(descriptor.fieldId, selection.value)
-          }}
-          disabled={
-            fieldDisabled ||
-            controlledOptionUnavailable ||
-            (presentation.optionSourceFieldIds !== undefined &&
-              optionValues.length === 0)
-          }
+          onValueChange={changeSelection}
+          disabled={selectionDisabled}
           required={descriptor.required}
         >
           <SelectTrigger
@@ -186,21 +265,7 @@ export function NativeResourceChoiceField<TSection extends string>({
             ))}
           </SelectContent>
         </Select>
-        <ResourceAutomaticOptionFeedback
-          t={t}
-          label={label}
-          disabled={disabled}
-          state={isManualOptionLoader ? undefined : optionState}
-          emptyMessage={controlledOptionState?.emptyMessage}
-          optionCount={optionValues.length}
-          announceControlledEmpty
-          onRetry={() =>
-            controlledOptionState
-              ? onRetryControlledOptions?.(descriptor.fieldId)
-              : retry(descriptor.fieldId)
-          }
-        />
-        {optionControl && <div className="mt-density-2">{optionControl}</div>}
+        {optionFeedback}
         {help}
         {error}
       </div>

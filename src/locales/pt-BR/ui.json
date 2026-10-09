@@ -669,6 +669,7 @@
     "hide": "Ocultar chave",
     "keepPlaceholder": "Deixe em branco para manter a chave salva",
     "loadFailed": "Não foi possível carregar esta chave. Tente novamente.",
+    "maskedOnly": "Apenas o valor mascarado desta chave salva está disponível.",
     "newPlaceholder": "Insira a chave de API",
     "newState": "Nova, ainda não salva",
     "previousDisableReason": "Motivo da desativação anterior: {{reason}}",

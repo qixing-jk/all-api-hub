@@ -209,6 +209,62 @@
         "help": "手動ロードバランスの重み。大きいほど割り当てられるトラフィックが増えます。空欄ならゲートウェイの既定値を使います。",
         "label": "重み"
       },
+      "magpieAnthropic": {
+        "help": "Anthropic API のルート URL（ANTHROPIC_BASE_URL）を入力し、/v1/messages は付けないでください。",
+        "label": "Anthropic URL"
+      },
+      "magpieBalancePath": {
+        "help": "応答内の金額（例：data.balance、data.total / 500000）。空欄では Magpie の既定値を使用します。プリセットでは読み取り専用です。",
+        "label": "残高の式"
+      },
+      "magpieBalanceURL": {
+        "help": "Magpie が使う残高 API（任意）。URL 内の {key} に対応します。保存済みの残高用トークンは維持されます。プリセットでは読み取り専用です。",
+        "label": "残高 URL"
+      },
+      "magpieCatalog": {
+        "help": "モデル名と推論レベルに使う models.dev のプロバイダー ID をカンマ区切りで指定します。最初の一致を優先。プリセットでは読み取り専用です。",
+        "label": "モデルカタログ"
+      },
+      "magpieChat": {
+        "help": "Chat Completions のベース URL には /v1 を含め、/chat/completions は付けないでください。",
+        "label": "Chat Completions URL",
+        "required": "選択した API タイプのアドレスを入力してください。"
+      },
+      "magpieGemini": {
+        "help": "Gemini のベース URL には /v1beta を含め、モデル名や generateContent のパスは付けないでください。",
+        "label": "Gemini URL"
+      },
+      "magpieHeaders": {
+        "help": "ヘッダー名と値を行ごとに追加するか、JSON 編集に切り替えます。これらのヘッダーは上流プロバイダーに送信されます。",
+        "label": "カスタムヘッダー"
+      },
+      "magpieMaxConcurrency": {
+        "help": "キーまたはアカウントごとに 0～1000。空欄は Magpie の既定値、0 は無制限です。",
+        "label": "キーごとの同時リクエスト数"
+      },
+      "magpieMaxRPM": {
+        "help": "キーまたはアカウントごとに 0～10000。空欄または 0 は無制限です。",
+        "label": "キーごとの毎分リクエスト数"
+      },
+      "magpieModels": {
+        "help": "検出されたモデルを選択するか、モデルIDを入力して Enter で追加します。接続情報の入力後にモデルを取得できます。選択を空にすると MAGPIE の自動モデルカタログを使用します。"
+      },
+      "magpieModelsURL": {
+        "help": "現在のキーとヘッダーで取得する完全な URL（任意）。空欄ではプロトコルの URL を使用します。プリセットでは読み取り専用です。",
+        "label": "モデル一覧 URL"
+      },
+      "magpiePriceRate": {
+        "help": "表示価格に対する倍率（例：0.8）。0～1000、小数点以下 3 桁まで。空欄または 0 は表示価格を使用します。",
+        "label": "価格倍率"
+      },
+      "magpieProxy": {
+        "help": "空欄はグローバルプロキシを使います。direct は直接接続します。",
+        "label": "プロキシ"
+      },
+      "magpieResponses": {
+        "help": "Responses のベース URL は通常 /v1 で終わります。/responses は付けないでください。",
+        "label": "Responses URL"
+      },
       "manualModels": {
         "label": "手動モデル"
       },
@@ -464,6 +520,32 @@
     "headerDescription": "自前の AI ゲートウェイのチャネルを管理し、複数の API 接続先を一つの窓口にまとめます。",
     "openChannelConsole": "ゲートウェイのチャネル管理を開く",
     "unconfiguredValueDescription": "設定後は、分散しているアカウントキーや API キーをゲートウェイチャネルとして取り込み、All API Hub で直接確認・管理できます。"
+  },
+  "magpieKeys": {
+    "anyProtocol": "すべてのプロトコル",
+    "enabled": "有効",
+    "help": "キーを追加するか、改行・カンマ・空白で区切った複数のキーを貼り付けます。保存済みキーは主キーのみ表示できます。追加キーの交換は新しいキーを追加してから古いキーを削除してください。変更は保存後に反映されます。",
+    "invalid": "新しいキー、プロトコル、重み（0～1000）を確認し、有効なキーを1つ以上残してください。",
+    "name": "キー名",
+    "order": "順番（フェイルオーバー）",
+    "pace": "時間あたりの残り枠",
+    "primary": "プライマリ",
+    "primaryKey": "プライマリ API キー",
+    "protocol": "プロトコル",
+    "rotate": "ラウンドロビン",
+    "routing": "キールーティング",
+    "smart": "スマート（自動フェイルオーバー）",
+    "title": "キープール",
+    "usage": "使用量が少ない順",
+    "weighted": "重み付き",
+    "weightHelp": "0 または 1 は既定の重み。2～1000 は重み付きルーティングでの配分を変更します。"
+  },
+  "magpieProtocols": {
+    "checkOther": "別の設定済みタイプのアドレスが無効です。そのタイプに切り替えて確認してください。",
+    "configured": "設定済み",
+    "help": "タイプを選んで対応するアドレスを編集します。複数のプロトコルを使う場合は順に設定してください。各タイプのアドレスは個別に保持されます。",
+    "type": "API タイプ",
+    "unmanaged": "Magpie で管理"
   },
   "migration": {
     "actions": {

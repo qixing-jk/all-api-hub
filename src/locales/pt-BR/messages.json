@@ -133,6 +133,10 @@
     "missingCredentials": "É necessário informar o nome do provedor e uma chave de API completa.",
     "unsupportedApiType": "Este protocolo de API não pode ser exportado para o Kelivo."
   },
+  "magpie": {
+    "configMissing": "Configure primeiro o endereço Magpie Web e a chave de administração Web nas configurações.",
+    "noChannelsToSync": "No channels to sync"
+  },
   "managedSite": {
     "unsupportedModelSync": "{{siteName}} não oferece suporte à sincronização de modelos de sites gerenciados nesta versão"
   },

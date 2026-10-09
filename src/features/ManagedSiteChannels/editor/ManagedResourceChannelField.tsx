@@ -307,6 +307,7 @@ export function ManagedResourceChannelField({
   return (
     <ChannelSecretField
       t={t}
+      label={presentation.resolveLabel(t)}
       value={inputValue}
       onChange={(value) => onSecretInput(fieldId, value)}
       disabled={disabled || !descriptor.canReplace}

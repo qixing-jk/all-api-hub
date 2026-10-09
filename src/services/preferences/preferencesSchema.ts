@@ -19,6 +19,7 @@ import { type DoneHubConfig } from "~/types/doneHubConfig"
 import { type GptLoadConfig } from "~/types/gptLoadConfig"
 import type { LegacyCliProxyApiConfig } from "~/types/legacyCliProxyApiConfig"
 import { type LoggingPreferences } from "~/types/logging"
+import type { MagpieConfig } from "~/types/magpieConfig"
 import { type ModelRedirectPreferences } from "~/types/managedSiteModelRedirect"
 import { type NewApiConfig } from "~/types/newApiConfig"
 import { type OctopusConfig } from "~/types/octopusConfig"
@@ -270,6 +271,7 @@ export interface UserPreferences {
 
   // OmniRoute 管理站点配置（Base URL + 作用域访问令牌）
   omniroute?: OmniRouteConfig
+  magpie?: MagpieConfig
 
   // gpt-load 管理站点配置（Base URL + 管理密钥）
   gptLoad?: GptLoadConfig

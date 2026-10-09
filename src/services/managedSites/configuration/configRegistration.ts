@@ -23,6 +23,11 @@ import {
   normalizeGptLoadBaseUrl,
   type GptLoadConfig,
 } from "~/types/gptLoadConfig"
+import {
+  DEFAULT_MAGPIE_CONFIG,
+  normalizeMagpieBaseUrl,
+  type MagpieConfig,
+} from "~/types/magpieConfig"
 import type { NewApiConfig } from "~/types/newApiConfig"
 import {
   DEFAULT_OCTOPUS_CONFIG,
@@ -40,6 +45,7 @@ import {
 import type { VeloeraConfig } from "~/types/veloeraConfig"
 
 export type ManagedSiteRuntimeConfig =
+  | { siteType: typeof SITE_TYPES.MAGPIE; config: MagpieConfig }
   | { siteType: typeof SITE_TYPES.CLI_PROXY_API; config: CliProxyApiConfig }
   | { siteType: typeof SITE_TYPES.NEW_API; config: NewApiConfig }
   | { siteType: typeof SITE_TYPES.DONE_HUB; config: DoneHubConfig }
@@ -113,6 +119,24 @@ const accessTokenRules = {
 // All consumers share the same complete registration; new managed types must
 // declare their configuration behavior here before the type check can pass.
 const registrations = {
+  [SITE_TYPES.MAGPIE]: defineConfig<MagpieConfig>({
+    read: (prefs) => prefs.magpie,
+    defaultConfig: DEFAULT_MAGPIE_CONFIG,
+    required: ["baseUrl", "webKey"],
+    validate: (config) => {
+      try {
+        normalizeMagpieBaseUrl(config.baseUrl)
+        return true
+      } catch {
+        return false
+      }
+    },
+    normalize: (config) => ({
+      ...config,
+      baseUrl: normalizeMagpieBaseUrl(config.baseUrl),
+      webKey: config.webKey.trim(),
+    }),
+  }),
   [SITE_TYPES.NEW_API]: defineConfig<NewApiConfig>({
     read: (prefs) => prefs.newApi,
     ...accessTokenRules,

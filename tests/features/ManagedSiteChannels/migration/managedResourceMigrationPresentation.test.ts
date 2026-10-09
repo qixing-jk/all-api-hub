@@ -36,6 +36,7 @@ import viManagedSiteChannels from "~/locales/vi/managedSiteChannels.json"
 import zhCnManagedSiteChannels from "~/locales/zh-CN/managedSiteChannels.json"
 import zhTwManagedSiteChannels from "~/locales/zh-TW/managedSiteChannels.json"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
+import { resolveManagedSiteMigrationCapability } from "~/services/managedSites/migration/channelMigrationCapabilityRegistry"
 import {
   MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES,
   MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES,
@@ -232,10 +233,16 @@ const typeVocabularyCases = [
 ] as const
 
 describe("managedResourceMigrationPresentation", () => {
-  it("covers every registered Managed Site Type's native vocabulary", () => {
+  it("covers every migration-capable Managed Site Type's native vocabulary", () => {
     expect(typeVocabularyCases.map(([siteType]) => siteType).sort()).toEqual(
-      [...MANAGED_SITE_TYPES].sort(),
+      MANAGED_SITE_TYPES.filter(
+        (siteType) => resolveManagedSiteMigrationCapability(siteType) !== null,
+      ).sort(),
     )
+  })
+
+  it("does not advertise Magpie migration without a portable native projection", () => {
+    expect(resolveManagedSiteMigrationCapability(SITE_TYPES.MAGPIE)).toBeNull()
   })
 
   it.each(typeVocabularyCases)(
