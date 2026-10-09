@@ -34,6 +34,8 @@ describe("execution/statusVerification", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     vi.clearAllMocks()
+    vi.useFakeTimers({ toFake: ["Date"] })
+    vi.setSystemTime(new Date(2026, 9, 6, 12, 0, 0))
   })
   const verificationAccount = {
     id: "verify-account",

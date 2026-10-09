@@ -264,6 +264,7 @@ describe("autoCheckinScheduler run-completed notifications", () => {
       expect.objectContaining({
         action: RuntimeActionIds.AutoCheckinRunCompleted,
       }),
+      expect.anything(),
     )
 
     vi.useRealTimers()
