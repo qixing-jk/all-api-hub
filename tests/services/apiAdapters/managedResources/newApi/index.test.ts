@@ -742,51 +742,55 @@ describe("New API native managed resource", () => {
     expect(mocks.update).not.toHaveBeenCalled()
   })
 
-  it("accepts single-key readback without multi-key metadata after reducing the inventory", async () => {
-    mocks.get.mockResolvedValue({
-      ...channel,
-      channel_info: {
-        ...channel.channel_info,
-        is_multi_key: true,
-        multi_key_size: 2,
-      },
-    })
-    const workspace = await newApiManagedResourceRegistration.open()
-    const editor = await workspace.openEditEditor(
-      atIndex((await workspace.list()).items, 0).ref,
-    )
-    mocks.update.mockImplementationOnce(async () => {
-      mocks.get.mockResolvedValue({ ...channel, channel_info: undefined })
-      return {
-        outcome: "succeeded",
-        data: { id: channel.id },
-        confirmedEffects: [
-          {
-            kind: "resource-updated",
-            resourceKind: "channel",
-            resourceId: channel.id,
-          },
-        ],
-      }
-    })
-    await expect(
-      editor.submit({
-        ...editor.initialValues,
-        [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key]: {
-          kind: "secret-list",
-          entries: [
+  it.each([false, true])(
+    "accepts single-key readback without multi-key metadata after reducing the inventory (change mode: %s)",
+    async (changeMode) => {
+      mocks.get.mockResolvedValue({
+        ...channel,
+        channel_info: {
+          ...channel.channel_info,
+          is_multi_key: true,
+          multi_key_size: 2,
+        },
+      })
+      const workspace = await newApiManagedResourceRegistration.open()
+      const editor = await workspace.openEditEditor(
+        atIndex((await workspace.list()).items, 0).ref,
+      )
+      mocks.update.mockImplementationOnce(async () => {
+        mocks.get.mockResolvedValue({ ...channel, channel_info: undefined })
+        return {
+          outcome: "succeeded",
+          data: { id: channel.id },
+          confirmedEffects: [
             {
-              id: "0",
-              secret: { kind: "replace", value: "replacement" },
-              fields: {},
+              kind: "resource-updated",
+              resourceKind: "channel",
+              resourceId: channel.id,
             },
           ],
-        },
-      }),
-    ).resolves.toMatchObject({ outcome: "succeeded" })
-    expect(mocks.update).toHaveBeenCalledTimes(1)
-    expect(mocks.fetchSecretKey).not.toHaveBeenCalled()
-  })
+        }
+      })
+      await expect(
+        editor.submit({
+          ...editor.initialValues,
+          ...(changeMode ? { multiKeyMode: "polling" } : {}),
+          [NEW_API_MANAGED_RESOURCE_FIELD_IDS.Key]: {
+            kind: "secret-list",
+            entries: [
+              {
+                id: "0",
+                secret: { kind: "replace", value: "replacement" },
+                fields: {},
+              },
+            ],
+          },
+        }),
+      ).resolves.toMatchObject({ outcome: "succeeded" })
+      expect(mocks.update).toHaveBeenCalledTimes(1)
+      expect(mocks.fetchSecretKey).not.toHaveBeenCalled()
+    },
+  )
 
   it("preserves an uncertain update result without retrying the write", async () => {
     const uncertain = {
