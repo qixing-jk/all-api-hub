@@ -125,6 +125,77 @@ const snapshotOf = (
 })
 
 describe("channelConfigStorage", () => {
+  it.each(["invalid reference", "non-boolean setting"])(
+    "rejects an exclusion with %s without changing stored configuration",
+    async (invalidInput) => {
+      const ref = createRef("https://a.example.invalid")
+      const existing = createConfig({ scopeKey: ref.scopeKey, ruleId: "keep" })
+      const snapshot = snapshotOf(existing)
+      await channelConfigStorage.importConfigs(snapshot)
+      const write = vi.spyOn(Storage.prototype, "set")
+
+      await expect(
+        channelConfigStorage.setModelSyncExcluded(
+          invalidInput === "invalid reference"
+            ? { ...ref, resourceId: "" }
+            : ref,
+          invalidInput === "non-boolean setting"
+            ? ("true" as unknown as boolean)
+            : true,
+        ),
+      ).rejects.toThrow("Model sync exclusion is invalid")
+
+      expect(write).not.toHaveBeenCalled()
+      expect(await channelConfigStorage.exportConfigs()).toEqual(snapshot)
+    },
+  )
+
+  it("restores exclusion-only backups without treating their empty rules as configured", async () => {
+    const ref = createRef("https://a.example.invalid")
+    await channelConfigStorage.setModelSyncExcluded(ref, true)
+    const snapshot = await channelConfigStorage.exportConfigs()
+    await channelConfigStorage.importConfigs(snapshotOf())
+
+    await channelConfigStorage.importConfigs(snapshot)
+
+    expect(await channelConfigStorage.getConfig(ref)).toMatchObject({
+      modelSyncExcluded: true,
+      modelFilterSettings: { configured: false, rules: [] },
+    })
+  })
+
+  it.each(["invalid marker", "unconfigured rules"])(
+    "rejects a backup with %s without replacing existing settings",
+    async (invalidInput) => {
+      const existing = createConfig({ scopeKey: "https://a.example.invalid" })
+      const snapshot = snapshotOf(existing)
+      await channelConfigStorage.importConfigs(snapshot)
+      const incoming = createConfig({
+        scopeKey: existing.resourceRef.scopeKey,
+        ruleId:
+          invalidInput === "unconfigured rules" ? "unexpected" : undefined,
+      })
+      const invalidSnapshot = snapshotOf({
+        ...incoming,
+        modelFilterSettings: {
+          ...incoming.modelFilterSettings,
+          configured:
+            invalidInput === "invalid marker"
+              ? (true as unknown as false)
+              : false,
+        },
+      })
+      const write = vi.spyOn(Storage.prototype, "set")
+
+      await expect(
+        channelConfigStorage.importConfigs(invalidSnapshot),
+      ).rejects.toThrow("Channel config snapshot is invalid")
+
+      expect(write).not.toHaveBeenCalled()
+      expect(await channelConfigStorage.exportConfigs()).toEqual(snapshot)
+    },
+  )
+
   it("saves filters and sync participation in one scoped write", async () => {
     const ref = createRef("https://a.example.invalid", "opaque/id")
     const rules = createConfig({ scopeKey: ref.scopeKey, ruleId: "keep" })

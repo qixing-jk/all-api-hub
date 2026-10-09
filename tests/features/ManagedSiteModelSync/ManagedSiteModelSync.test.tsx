@@ -294,6 +294,49 @@ const resultsTableAnalyticsContext = (actionId: string) => ({
 })
 
 describe("ManagedSiteModelSync page", () => {
+  it("recovers saved skip settings through the load-error retry action", async () => {
+    const user = userEvent.setup()
+    const ref = pageRef(101)
+    await channelConfigStorage.setModelSyncExcluded(
+      toManagedUpstreamResourceRef(ref),
+      true,
+    )
+    const saved = await channelConfigStorage.getConfigsForScope({
+      managedSiteType: ref.siteType,
+      scopeKey: ref.scopeKey,
+    })
+    const retry = createDeferred<typeof saved>()
+    const read = vi
+      .spyOn(channelConfigStorage, "getConfigsForScope")
+      .mockRejectedValueOnce(new Error("storage unavailable"))
+      .mockReturnValueOnce(retry.promise)
+    try {
+      render(<ManagedSiteModelSync />)
+      const alert = await screen.findByRole("alert")
+      expect(alert).toHaveTextContent(
+        "managedSiteModelSync:execution.exclusions.loadFailed",
+      )
+      const row = (await screen.findByText("Alpha#101")).closest("tr")!
+      const toggle = within(row).getByRole("switch")
+      expect(toggle).toBeDisabled()
+      await user.click(
+        within(alert).getByRole("button", { name: "common:actions.retry" }),
+      )
+      expect(toggle).toBeDisabled()
+      await act(async () => retry.resolve(saved))
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      expect(toggle).toBeEnabled()
+      expect(toggle).toBeChecked()
+      expect(
+        screen.getByRole("button", {
+          name: "managedSiteModelSync:execution.actions.runAll",
+        }),
+      ).toBeEnabled()
+    } finally {
+      read.mockRestore()
+    }
+  })
+
   it("shows all-skipped completion as visible history with no failed-only retry", async () => {
     const user = userEvent.setup()
     const fallback = mockSendRuntimeMessage.getMockImplementation()!
