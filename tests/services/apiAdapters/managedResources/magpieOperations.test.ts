@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ManagedResourceError } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { magpieManagedResourceRegistration } from "~/services/apiAdapters/managedResources/magpie"
 import {
   createMagpieResource,
@@ -7,9 +8,11 @@ import {
   updateMagpieResource,
 } from "~/services/apiAdapters/managedResources/magpie/mutations"
 import { magpieNativeEditor } from "~/services/apiAdapters/managedResources/magpie/nativeEditor"
+import { magpieFailure } from "~/services/apiAdapters/managedResources/magpie/nativeRuntime"
 import { magpieKeyFingerprint } from "~/services/apiService/magpie/keyIdentity"
 import * as providers from "~/services/apiService/magpie/providers"
 import { MagpieApiError } from "~/services/apiService/magpie/request"
+import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/configuration/runtimeConfig"
 
 const config = { baseUrl: "http://magpie.test:3430", webKey: "test-web-key" }
 vi.mock("~/services/apiService/magpie/providers", async (importOriginal) => ({
@@ -50,6 +53,154 @@ beforeEach(() => {
 })
 
 describe("Magpie native mutation outcomes", () => {
+  it("confirms each added key setting and removal from native readback", async () => {
+    const ref = await magpieKeyFingerprint("sk-new")
+    let current = fixture({
+      keyList: [
+        { id: "primary", active: true, on: true, masked: "***" },
+        { id: "old", active: false, on: true, masked: "***" },
+      ],
+    })
+    vi.mocked(providers.listMagpieProviders).mockResolvedValue([current])
+    vi.mocked(providers.mutateMagpieProviderKey).mockImplementation(
+      async (_config, action, payload) => {
+        const keys =
+          action === "add"
+            ? [
+                ...current.keyList!,
+                {
+                  id: ref,
+                  active: false,
+                  on: true,
+                  masked: "***",
+                  name: payload.name,
+                  protocol: payload.protocol,
+                },
+              ]
+            : action === "remove"
+              ? current.keyList!.filter((key) => key.id !== payload.ref)
+              : current.keyList!.map((key) =>
+                  key.id !== payload.ref
+                    ? key
+                    : {
+                        ...key,
+                        ...(action === "protocol"
+                          ? { protocol: payload.protocol }
+                          : {}),
+                        ...(action === "weight"
+                          ? { weight: payload.weight }
+                          : {}),
+                        ...(action === "off" ? { on: false } : {}),
+                      },
+                )
+        current = { ...current, keyList: keys }
+        return [current]
+      },
+    )
+    const result = await updateMagpieResource(config, current, {
+      fields: {},
+      keyPool: {
+        add: [
+          {
+            key: "sk-new",
+            name: "New",
+            protocol: "chat",
+            weight: 4,
+            on: false,
+          },
+        ],
+        update: [{ ref: "primary", protocol: "responses" }],
+        remove: ["old"],
+      },
+    })
+    expect(result.outcome).toBe("succeeded")
+    expect(current.keyList).toEqual([
+      expect.objectContaining({
+        id: "primary",
+        protocol: "responses",
+        on: true,
+      }),
+      expect.objectContaining({
+        id: ref,
+        name: "New",
+        protocol: "chat",
+        weight: 4,
+        on: false,
+      }),
+    ])
+    expect(providers.mutateMagpieProviderKey).toHaveBeenCalledTimes(5)
+    expect(providers.saveMagpieProvider).not.toHaveBeenCalled()
+  })
+  it.each([
+    [
+      new ManagedResourceError({ code: "resource_changed" }),
+      "resource_changed",
+    ],
+    [new DOMException("cancelled", "AbortError"), "aborted"],
+    [new MagpieApiError("auth", 401, false, true), "authentication_failed"],
+    [new MagpieApiError("forbidden", 403, true, true), "permission_denied"],
+    [new MagpieApiError("gone", 404, true, true), "not_found"],
+    [new MagpieApiError("offline", 503, true, false), "unavailable"],
+    [new Error("opaque internal error"), "unexpected"],
+  ])("maps native failures to recovery actions (%s)", (error, code) => {
+    expect(magpieFailure(error)).toMatchObject({ code })
+    if (!(error instanceof MagpieApiError))
+      expect(magpieFailure(error)).not.toHaveProperty("message")
+  })
+
+  it("requires configuration before opening the native workspace", async () => {
+    vi.mocked(getManagedSiteRuntimeConfigForType).mockResolvedValueOnce(null)
+    await expect(
+      magpieManagedResourceRegistration.open(),
+    ).rejects.toMatchObject({ failure: { code: "configuration_required" } })
+  })
+
+  it("refuses saved pool edits during creation and duplicate primary replacement before writes", async () => {
+    await expect(
+      createMagpieResource(config, {
+        fields: {},
+        keyPool: {
+          add: [],
+          update: [{ ref: "saved", name: "No" }],
+          remove: [],
+        },
+      }),
+    ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+    const duplicate = await magpieKeyFingerprint("sk-already-saved")
+    vi.mocked(providers.listMagpieProviders).mockResolvedValue([
+      fixture({
+        keyList: [{ id: duplicate, active: false, on: true, masked: "***" }],
+      }),
+    ])
+    await expect(
+      updateMagpieResource(config, fixture(), {
+        fields: { key: "sk-already-saved" },
+      }),
+    ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+    expect(providers.saveMagpieProvider).not.toHaveBeenCalled()
+  })
+
+  it("uses preset-owned discovery settings instead of editable catalog overrides", async () => {
+    const detail = fixture({
+      preset: "openai",
+      modelsURL: "https://native.test/models",
+      catalog: "native",
+    })
+    const editor = magpieNativeEditor(config, detail)
+    vi.mocked(providers.readMagpieProviderKey).mockResolvedValue("sk-primary")
+    vi.mocked(providers.discoverMagpieModels).mockResolvedValue(["m1"])
+    expect(
+      await editor.loadOptions!("supportedModels", editor.initialValues),
+    ).toBeDefined()
+    expect(providers.discoverMagpieModels).toHaveBeenCalledWith(
+      config,
+      expect.objectContaining({
+        modelsURL: detail.modelsURL,
+        catalog: "native",
+      }),
+      undefined,
+    )
+  })
   it("reveals only the matching primary pool key and rejects a changed primary", async () => {
     const ref = await magpieKeyFingerprint("sk-primary")
     const editor = magpieNativeEditor(

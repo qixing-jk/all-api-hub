@@ -76,26 +76,34 @@ const createContextValue = (overrides: Record<string, unknown> = {}) => ({
 })
 
 describe("ManagedSiteTypeSwitcher", () => {
-  it("shows the OmniRoute brand for the selected configured gateway", async () => {
-    mockedUseUserPreferencesContext.mockReturnValue(
-      createContextValue({
-        managedSiteType: SITE_TYPES.OMNIROUTE,
-        preferences: {
-          ...createPreferences(SITE_TYPES.OMNIROUTE),
-          omniroute: { baseUrl: "https://gateway.invalid", token: "oma_test" },
-        },
-      }),
-    )
-    render(
-      <>
-        <ManagedSiteTypeSwitcher configuredOnly />
-        <ManagedSiteIcon siteType={SITE_TYPES.OMNIROUTE} />
-      </>,
-    )
-    expect(
-      await screen.findByRole("img", { name: "OmniRoute logo" }),
-    ).toBeVisible()
-  })
+  it.each([
+    [SITE_TYPES.OMNIROUTE, "OmniRoute logo"],
+    [SITE_TYPES.MAGPIE, "MAGPIE logo"],
+  ] as const)(
+    "shows the %s brand for the selected configured gateway",
+    async (siteType, logo) => {
+      mockedUseUserPreferencesContext.mockReturnValue(
+        createContextValue({
+          managedSiteType: siteType,
+          preferences: {
+            ...createPreferences(siteType),
+            omniroute: {
+              baseUrl: "https://gateway.invalid",
+              token: "oma_test",
+            },
+            magpie: { baseUrl: "https://magpie.invalid", webKey: "web-key" },
+          },
+        }),
+      )
+      render(
+        <>
+          <ManagedSiteTypeSwitcher configuredOnly />
+          <ManagedSiteIcon siteType={siteType} />
+        </>,
+      )
+      expect(await screen.findByRole("img", { name: logo })).toBeVisible()
+    },
+  )
   beforeEach(() => {
     mockedUseUserPreferencesContext.mockReset()
     showUpdateToastMock.mockReset()

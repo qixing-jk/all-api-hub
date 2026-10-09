@@ -39,6 +39,95 @@ const provider: MagpieProvider = {
 }
 
 describe("Magpie key pool editing", () => {
+  it.each<Record<string, string>>([
+    { protocol: "invalid" },
+    { weight: "1001" },
+    { on: "yes" },
+  ])("rejects invalid key metadata (%j)", (fields) => {
+    const editor = magpieEditor(provider)
+    const pool = editor.initialValues.keyPool as ResourceSecretListValue
+    expect(
+      editor.validate({
+        ...editor.initialValues,
+        keyPool: {
+          ...pool,
+          entries: pool.entries.map((row) => ({
+            ...row,
+            fields: { ...row.fields, ...fields },
+          })),
+        },
+      }).valid,
+    ).toBe(false)
+  })
+  it("updates protocol and weight independently and enables new weighted keys before disabling them", async () => {
+    const ref = await magpieKeyFingerprint("sk-new")
+    const operations = await prepareMagpieKeyPool(provider, {
+      add: [
+        { key: "sk-new", name: "New", protocol: "chat", weight: 4, on: false },
+      ],
+      update: [{ ref: "secondary", protocol: "chat" }],
+      remove: [],
+    })
+    expect(operations.map((op) => [op.action, op.ref])).toEqual([
+      ["add", ref],
+      ["weight", ref],
+      ["protocol", "secondary"],
+      ["off", ref],
+    ])
+    const editor = magpieEditor(provider)
+    const pool = editor.initialValues.keyPool as ResourceSecretListValue
+    const entries = pool.entries.map((row) =>
+      row.id === "secondary"
+        ? { ...row, fields: { ...row.fields, protocol: "chat", weight: "7" } }
+        : row,
+    )
+    expect(
+      editor.buildCommand({
+        ...editor.initialValues,
+        keyPool: { ...pool, entries },
+      }).keyPool?.update,
+    ).toEqual([{ ref: "secondary", protocol: "chat", weight: 7 }])
+  })
+
+  it.each([
+    null,
+    { kind: "secret-list", entries: [null] },
+    {
+      kind: "secret-list",
+      entries: [
+        {
+          id: "new",
+          secret: { kind: "replace", value: "one two" },
+          fields: {},
+        },
+      ],
+    },
+  ])("rejects malformed or ambiguous key-pool input (%j)", (keyPool) => {
+    const editor = magpieEditor(provider)
+    expect(
+      editor.validate({ ...editor.initialValues, keyPool } as any).valid,
+    ).toBe(false)
+  })
+
+  it("refuses to both remove and replace the primary key in one submission", () => {
+    const editor = magpieEditor(provider)
+    const pool = editor.initialValues.keyPool as ResourceSecretListValue
+    expect(
+      editor.validate({
+        ...editor.initialValues,
+        key: { kind: "replace", value: "sk-replaced" },
+        keyPool: {
+          ...pool,
+          entries: [
+            {
+              ...pool.entries[1]!,
+              fields: { ...pool.entries[1]!.fields, on: "true" },
+            },
+          ],
+        },
+      }).valid,
+    ).toBe(false)
+  })
   it("offers reveal only for the primary fingerprint without allowing a mask to be submitted", () => {
     const field = magpieEditor(provider).fields.find(
       (field) => field.fieldId === "keyPool",

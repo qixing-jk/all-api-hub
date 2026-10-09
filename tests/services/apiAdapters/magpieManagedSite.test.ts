@@ -8,6 +8,8 @@ import {
   readMagpieProviderKey,
   saveMagpieProvider,
 } from "~/services/apiService/magpie/providers"
+import { MagpieApiError } from "~/services/apiService/magpie/request"
+import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/configuration/runtimeConfig"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/matching/channelMatchResolver"
 import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
 import { ModelSyncService } from "~/services/models/modelSync/modelSyncService"
@@ -23,6 +25,9 @@ vi.mock("~/services/apiService/magpie/providers", async (importOriginal) => ({
 vi.mock("~/services/managedSites/utils/fetchManagedSiteImportModels", () => ({
   fetchManagedSiteImportModels: vi.fn(),
 }))
+vi.mock("~/services/managedSites/configuration/runtimeConfig", () => ({
+  getManagedSiteRuntimeConfigForType: vi.fn(),
+}))
 const config = { baseUrl: "http://magpie.test:3430", webKey: "test-web-key" }
 const capability: ManagedSiteCapabilities<MagpieConfig> =
   magpieManagedSiteCapabilities
@@ -30,6 +35,98 @@ const capability: ManagedSiteCapabilities<MagpieConfig> =
 beforeEach(() => vi.clearAllMocks())
 
 describe("Magpie provider import", () => {
+  it("retains an uncertain model-save outcome without replaying the write", async () => {
+    vi.mocked(listMagpieProviders).mockResolvedValue([
+      {
+        id: "relay",
+        name: "Relay",
+        chat: "https://relay.test",
+        responses: "",
+        anthropic: "",
+        key: { set: true, masked: "***", optional: false },
+        chosen: ["m1"],
+        models: [],
+        off: false,
+      },
+    ])
+    vi.mocked(saveMagpieProvider).mockRejectedValueOnce(
+      new MagpieApiError("lost response", 200, true, false),
+    )
+    expect(
+      await capability.models!.updateModels!(
+        config,
+        {
+          siteType: "magpie",
+          kind: "channel",
+          scopeKey: config.baseUrl,
+          resourceId: "relay",
+        },
+        ["m2"],
+      ),
+    ).toMatchObject({ outcome: "uncertain" })
+    expect(saveMagpieProvider).toHaveBeenCalledTimes(1)
+  })
+  it("validates only the configured Web deployment and reports auth failure", async () => {
+    vi.mocked(getManagedSiteRuntimeConfigForType).mockResolvedValueOnce(null)
+    expect(await capability.config.checkValid()).toBe(false)
+    expect(listMagpieProviders).not.toHaveBeenCalled()
+    vi.mocked(getManagedSiteRuntimeConfigForType).mockResolvedValue({
+      siteType: "magpie",
+      config,
+    })
+    vi.mocked(listMagpieProviders)
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(new MagpieApiError("auth", 401, false, true))
+    expect(await capability.config.checkValid()).toBe(true)
+    expect(await capability.config.checkValid()).toBe(false)
+  })
+
+  it("rejects foreign resource locators before key or model reads", async () => {
+    const ref = {
+      siteType: "magpie" as const,
+      kind: "channel" as const,
+      scopeKey: "https://foreign.test",
+      resourceId: "relay",
+    }
+    await expect(
+      capability.matching!.fetchSecretKey!(config, ref),
+    ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+    await expect(
+      capability.models!.fetchModels!(config, ref),
+    ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+    expect(readMagpieProviderKey).not.toHaveBeenCalled()
+    expect(listMagpieProviders).not.toHaveBeenCalled()
+  })
+
+  it("discovers draft models using the selected protocol and rejects unknown types", async () => {
+    expect(capability.models!.resolveVerificationProtocol!("gemini")).toBe(
+      "google",
+    )
+    expect(
+      capability.models!.resolveVerificationProtocol!("unsupported"),
+    ).toBeNull()
+    vi.mocked(discoverMagpieModels).mockResolvedValue(["m1"])
+    expect(
+      await capability.models!.fetchDraftModels!(config, {
+        channelType: "anthropic",
+        baseUrl: "https://claude.test",
+        credential: "sk-test",
+      }),
+    ).toEqual(["m1"])
+    expect(discoverMagpieModels).toHaveBeenCalledWith(
+      config,
+      { anthropic: "https://claude.test", key: "sk-test" },
+      undefined,
+    )
+    await expect(
+      capability.models!.fetchDraftModels!(config, {
+        channelType: "unknown",
+        baseUrl: "https://claude.test",
+        credential: "sk-test",
+      }),
+    ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+    expect(discoverMagpieModels).toHaveBeenCalledTimes(1)
+  })
   it.each([
     ["chat", "https://relay.test/proxy/v1", "https://relay.test/proxy"],
     [

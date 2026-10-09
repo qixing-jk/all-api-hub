@@ -70,9 +70,9 @@ export function magpieDisplayFacts(
               channelType:
                 MAGPIE_ENDPOINT_FIELDS.find((field) => provider[field]) ??
                 "chat",
-              canSyncModels: !provider.off,
-              canOpenModelSync: true,
-              canConfigureModelFilters: true,
+              canSyncModels: !provider.off && Boolean(provider.chosen?.length),
+              canOpenModelSync: Boolean(provider.chosen?.length),
+              canConfigureModelFilters: Boolean(provider.chosen?.length),
             },
           }
         : {}),

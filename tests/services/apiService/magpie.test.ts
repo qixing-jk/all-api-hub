@@ -2,8 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   deleteMagpieProvider,
+  discoverMagpieModels,
   listMagpieProviders,
+  mutateMagpieProviderKey,
+  readMagpieProviderKey,
   saveMagpieProvider,
+  setMagpieProviderEnabled,
 } from "~/services/apiService/magpie/providers"
 import { MagpieApiError } from "~/services/apiService/magpie/request"
 
@@ -35,6 +39,114 @@ beforeEach(() => {
 })
 
 describe("Magpie management transport", () => {
+  it.each([true, false])(
+    "toggles only the requested provider (enabled=%s)",
+    async (enabled) => {
+      fetchMock
+        .mockResolvedValueOnce(json({}))
+        .mockResolvedValueOnce(json({ providers: [provider] }))
+      expect(await setMagpieProviderEnabled(config, "relay", enabled)).toEqual([
+        provider,
+      ])
+      expect(fetchMock.mock.calls[1]).toEqual([
+        `http://localhost:3430/magpie/api/provider/${enabled ? "on" : "off"}`,
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ id: "relay" }),
+        }),
+      ])
+    },
+  )
+
+  it("addresses one pool key by its fingerprint", async () => {
+    fetchMock
+      .mockResolvedValueOnce(json({}))
+      .mockResolvedValueOnce(json({ providers: [provider] }))
+    const payload = { id: "relay", ref: "fingerprint", name: "Backup" }
+    expect(await mutateMagpieProviderKey(config, "rename", payload)).toEqual([
+      provider,
+    ])
+    expect(fetchMock.mock.calls[1]).toEqual([
+      "http://localhost:3430/magpie/api/keys/rename",
+      expect.objectContaining({ body: JSON.stringify(payload) }),
+    ])
+  })
+
+  it("reveals the explicitly requested key and discovers unique model IDs without refresh writes", async () => {
+    fetchMock
+      .mockResolvedValueOnce(json({}))
+      .mockResolvedValueOnce(json({ key: "sk-revealed" }))
+    expect(await readMagpieProviderKey(config, "relay")).toBe("sk-revealed")
+    expect(fetchMock.mock.calls[1]![0]).toBe(
+      "http://localhost:3430/magpie/api/provider/key",
+    )
+    fetchMock
+      .mockResolvedValueOnce(json({}))
+      .mockResolvedValueOnce(
+        json({ models: [{ id: "m1" }, { id: "m1" }, { id: "m2" }] }),
+      )
+    expect(
+      await discoverMagpieModels(config, {
+        chat: provider.chat,
+        key: "sk-revealed",
+      }),
+    ).toEqual(["m1", "m2"])
+    expect(fetchMock.mock.calls[3]![0]).toBe(
+      "http://localhost:3430/magpie/api/provider/list",
+    )
+    expect(fetchMock).toHaveBeenCalledTimes(4)
+  })
+
+  it.each([null, {}, { key: 5 }])(
+    "rejects an invalid key response (%j)",
+    async (response) => {
+      fetchMock
+        .mockResolvedValueOnce(json({}))
+        .mockResolvedValueOnce(json(response))
+      await expect(
+        readMagpieProviderKey(config, "relay"),
+      ).rejects.toMatchObject({
+        dispatched: true,
+        confirmedNonApplication: false,
+      })
+    },
+  )
+
+  it.each([
+    null,
+    {},
+    { models: {} },
+    { models: [null] },
+    { models: [{ id: 2 }] },
+  ])("rejects malformed discovery data (%j)", async (response) => {
+    fetchMock
+      .mockResolvedValueOnce(json({}))
+      .mockResolvedValueOnce(json(response))
+    await expect(discoverMagpieModels(config, {})).rejects.toBeInstanceOf(
+      MagpieApiError,
+    )
+  })
+
+  it("rejects an empty management key before making a request", async () => {
+    await expect(
+      listMagpieProviders({ ...config, webKey: "  " }),
+    ).rejects.toMatchObject({ status: 401, dispatched: false })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("keeps an invalid JSON write response uncertain without retrying", async () => {
+    fetchMock
+      .mockResolvedValueOnce(json({}))
+      .mockResolvedValueOnce(new Response("not-json"))
+    await expect(
+      saveMagpieProvider(config, { id: "relay" }),
+    ).rejects.toMatchObject({
+      status: 200,
+      dispatched: true,
+      confirmedNonApplication: false,
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
   it.each([
     { chosen: "not-an-array" },
     { models: [{ name: "missing-id" }] },

@@ -170,6 +170,7 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
       resetSub2ApiManagedSiteConfig: vi.fn(),
       resetOmniRouteConfig: vi.fn(),
       resetGptLoadConfig: vi.fn(),
+      resetMagpieConfig: vi.fn(),
       resetNewApiModelSyncConfig: vi.fn(),
       resetCliProxyApiConfig: vi.fn(),
       resetClaudeCodeRouterConfig: vi.fn(),
@@ -266,6 +267,45 @@ const renderProvider = async (
 }
 
 describe("UserPreferencesContext", () => {
+  it("reloads a Magpie reset only after its credential write succeeds", async () => {
+    const context = await renderProvider()
+    await act(async () => {
+      expect(
+        (
+          await context.updateMagpieConfig({
+            baseUrl: "https://magpie.test",
+            webKey: "test-key",
+          })
+        ).ok,
+      ).toBe(true)
+    })
+    mockedUserPreferences.resetMagpieConfig.mockResolvedValue(
+      preferenceWriteFailure,
+    )
+    await act(async () => {
+      expectFailedWrite(await context.resetMagpieConfig())
+    })
+    expect(preferencePersistence.getPersistedPreferences().magpie?.webKey).toBe(
+      "test-key",
+    )
+    mockedUserPreferences.resetMagpieConfig.mockImplementation(async () => {
+      const preferences = deepOverride(
+        preferencePersistence.getPersistedPreferences(),
+        { magpie: DEFAULT_PREFERENCES.magpie },
+      )
+      preferencePersistence.setPersistedPreferences(preferences)
+      return { ok: true, preferences }
+    })
+    await act(async () => {
+      expect((await context.resetMagpieConfig()).ok).toBe(true)
+    })
+    expect(preferencePersistence.getPersistedPreferences().magpie).toEqual(
+      DEFAULT_PREFERENCES.magpie,
+    )
+    expect(latestContext?.preferences?.magpie).toEqual(
+      DEFAULT_PREFERENCES.magpie,
+    )
+  })
   it("persists gpt-load fields and reloads reset state only after a successful write", async () => {
     const context = await renderProvider()
     await act(async () => {

@@ -9,7 +9,10 @@ export interface DevExtensionConnection {
   close(): Promise<void>
 }
 
-/** Resolve the CDP URL at call time (honors `--isolate`). */
+/**
+ * Resolve the CDP URL at call time (honors `--isolate`).
+ * @returns The configured browser debugging endpoint.
+ */
 export function defaultCdpUrl(): string
 export function connectExtensionById(options: {
   cdpUrl?: string

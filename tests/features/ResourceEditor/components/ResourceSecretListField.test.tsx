@@ -142,6 +142,22 @@ const row = (number: number) =>
   within(screen.getByRole("group", { name: `API Key ${number}` }))
 
 describe("ResourceSecretListField", () => {
+  it("describes and toggles status directly from a collapsed list row", async () => {
+    const user = userEvent.setup()
+    const change = vi.fn()
+    render(<Harness list compact described onChange={change} />)
+    const enabled = row(1).getByRole("switch", { name: "Enabled" })
+    expect(enabled).toHaveAccessibleDescription(
+      "Enabled: Saved after submission",
+    )
+    await user.click(enabled)
+    expect(enabled).not.toBeChecked()
+    expect(change.mock.lastCall![0].entries[0].fields).toMatchObject({
+      enabled: "false",
+      proxy: "http://first.example",
+    })
+    expect(row(1).getByLabelText("Proxy")).not.toBeVisible()
+  })
   it("browses a key list with inline status and edits only one row while retaining drafts", async () => {
     const user = userEvent.setup()
     const load = vi.fn()

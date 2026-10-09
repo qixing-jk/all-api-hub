@@ -30,6 +30,65 @@ const original: MagpieProvider = {
 }
 
 describe("Magpie native provider editing", () => {
+  it.each([
+    ["modelsURL", "not a URL"],
+    ["baseAPI", "unsupported"],
+    ["chat", "ftp://relay.test"],
+    ["chat", "https://user:pass@relay.test/#fragment"],
+    ["headers", "{broken"],
+    ["status", "unknown"],
+    ["supportedModels", "m1"],
+    ["supportedModels", [1]],
+  ])("rejects invalid %s input before command construction", (field, value) => {
+    const editor = magpieEditor(original)
+    const values = { ...editor.initialValues, [field]: value } as any
+    expect(editor.validate(values)).toMatchObject({ valid: false })
+    expect(() => editor.buildCommand(values)).toThrow()
+  })
+
+  it("binds a primary replacement to its fingerprint and records an explicit status change", () => {
+    const editor = magpieEditor({
+      ...original,
+      keyList: [{ id: "primary", active: true, on: true, masked: "***" }],
+    })
+    expect(
+      editor.buildCommand({
+        ...editor.initialValues,
+        status: "disabled",
+        key: { kind: "replace", value: " sk-new " },
+      }),
+    ).toMatchObject({
+      fields: { key: "sk-new" },
+      primaryKeyRef: "primary",
+      enabled: false,
+    })
+  })
+  it("does not offer model-sync actions for a native automatic catalog", () => {
+    const facts = magpieDisplayFacts(
+      {
+        ...original,
+        chat: "",
+        responses: "",
+        anthropic: "",
+        chosen: [],
+        models: null,
+      },
+      {
+        siteType: "magpie",
+        kind: "channel",
+        scopeKey: "web",
+        resourceId: original.id,
+      },
+    )
+    expect(
+      facts.fields.find((field) => field.fieldId === "supportedModels"),
+    ).toMatchObject({ value: [] })
+    expect(facts.actions.channel).toMatchObject({
+      canSyncModels: false,
+      canOpenModelSync: false,
+      canConfigureModelFilters: false,
+    })
+  })
   it("restores the native API selection and changes it without clearing other protocols", () => {
     const editor = magpieEditor({ ...original, baseAPI: "responses" })
     expect(editor.initialValues.baseAPI).toBe("responses")

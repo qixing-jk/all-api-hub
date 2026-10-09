@@ -9,7 +9,9 @@ import enChannelDialog from "~/locales/en/channelDialog.json"
 import enCommon from "~/locales/en/common.json"
 import enManagedSiteChannels from "~/locales/en/managedSiteChannels.json"
 import enUi from "~/locales/en/ui.json"
+import type { ResourceFieldIssue } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { magpieEditor } from "~/services/apiAdapters/managedResources/magpie/editorProjection"
+import type { MagpieProvider } from "~/services/apiService/magpie/providers"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 
 // Exercise form interactions without the floating tooltip layout work in jsdom.
@@ -63,6 +65,11 @@ it("switches API types with one address visible and retains each draft without c
     "placeholder",
     "https://generativelanguage.googleapis.com/v1beta",
   )
+  await user.click(within(types).getByRole("radio", { name: "Responses" }))
+  expect(screen.getByLabelText("Responses URL")).toHaveAttribute(
+    "placeholder",
+    "https://api.example.com/v1",
+  )
   await user.click(within(types).getByRole("radio", { name: "OpenAI" }))
   expect(screen.getByLabelText("Chat Completions URL")).toHaveValue(
     "https://relay.test/v1",
@@ -83,7 +90,10 @@ it("switches API types with one address visible and retains each draft without c
   ).toBeTruthy()
 })
 
-async function renderExistingEditor() {
+async function renderExistingEditor(
+  overrides: Partial<MagpieProvider> = {},
+  fieldIssues: ResourceFieldIssue[] = [],
+) {
   const i18n = await createResourceTestI18n({
     en: {
       channelDialog: enChannelDialog,
@@ -102,6 +112,7 @@ async function renderExistingEditor() {
     off: false,
     chosen: ["model-a"],
     models: [{ id: "model-a" }, { id: "model-b" }],
+    ...overrides,
   })
   let current = editor.initialValues
   function Harness() {
@@ -111,6 +122,7 @@ async function renderExistingEditor() {
       <ManagedResourceEditorBody
         t={i18n.getFixedT("en")}
         mode="edit"
+        fieldIssues={fieldIssues}
         descriptors={editor.fields}
         policy={getManagedResourceFieldPolicy("magpie", "channel", "edit")!}
         values={values}
@@ -123,6 +135,108 @@ async function renderExistingEditor() {
   render(<Harness />)
   return () => editor.buildCommand(current)
 }
+
+it.each(["chat", "responses", "anthropic", "gemini"] as const)(
+  "explains a missing %s address beside the visible control",
+  async (protocol) => {
+    const user = userEvent.setup()
+    await renderExistingEditor({ baseAPI: protocol, [protocol]: "" }, [
+      { fieldId: protocol, code: "required" },
+    ])
+    await user.click(
+      screen.getByRole("radio", {
+        name: {
+          chat: "OpenAI",
+          responses: "Responses",
+          anthropic: "Anthropic",
+          gemini: "Gemini",
+        }[protocol],
+      }),
+    )
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      enManagedSiteChannels.editor.fields.magpieChat.required,
+    )
+  },
+)
+
+it("identifies a native-managed protocol and gives actionable pool validation feedback", async () => {
+  await renderExistingEditor(
+    { baseAPI: "decide", decide: "https://native.test" },
+    [
+      { fieldId: "keyPool", code: "invalid_value" },
+      { fieldId: "baseAPI", code: "inconsistent_value" },
+    ],
+  )
+  expect(screen.getByText("Managed in Magpie")).toBeVisible()
+  expect(
+    screen.getByText(enManagedSiteChannels.magpieKeys.invalid),
+  ).toBeVisible()
+  expect(
+    screen.getByText(enManagedSiteChannels.magpieProtocols.checkOther),
+  ).toBeVisible()
+})
+
+it("edits saved key status, protocol and weight while retaining neighboring keys", async () => {
+  const user = userEvent.setup()
+  const command = await renderExistingEditor({
+    keyList: [
+      {
+        id: "main",
+        active: true,
+        on: true,
+        masked: "sk-***main",
+        name: "Main",
+      },
+      {
+        id: "backup",
+        active: false,
+        on: false,
+        masked: "sk-***back",
+        name: "Backup",
+        protocol: "future",
+      },
+    ],
+  })
+  const backup = within(screen.getByRole("group", { name: "API Key 2" }))
+  expect(backup.getByText(/Disabled/)).toBeVisible()
+  await user.click(backup.getByRole("switch", { name: "Enabled" }))
+  await user.click(backup.getByRole("button", { name: "Expand API Key 2" }))
+  await user.click(backup.getByRole("combobox", { name: "Protocol" }))
+  expect(screen.getByRole("option", { name: "future" })).toBeVisible()
+  expect(screen.getByRole("option", { name: "Responses" })).toBeVisible()
+  expect(screen.getByRole("option", { name: "Chat Completions" })).toBeVisible()
+  expect(screen.getByRole("option", { name: "Any protocol" })).toBeVisible()
+  await user.click(screen.getByRole("option", { name: "Anthropic" }))
+  await user.clear(backup.getByRole("spinbutton", { name: "Weight" }))
+  await user.type(backup.getByRole("spinbutton", { name: "Weight" }), "5")
+  expect(command().keyPool).toEqual({
+    add: [],
+    remove: [],
+    update: [{ ref: "backup", on: true, protocol: "anthropic", weight: 5 }],
+  })
+})
+
+it("adds a new key row and offers all routing policies", async () => {
+  const user = userEvent.setup()
+  const command = await renderExistingEditor()
+  await user.click(screen.getByRole("button", { name: "Add key" }))
+  const row = within(screen.getByRole("group", { name: "API Key 1" }))
+  await user.click(row.getByLabelText("API Key 1"))
+  await user.paste("sk-new")
+  await user.click(screen.getByRole("combobox", { name: "Key routing" }))
+  for (const name of [
+    "In order (failover)",
+    "Round robin",
+    "Least used first",
+    "Remaining allowance per hour",
+  ])
+    expect(screen.getByRole("option", { name })).toBeVisible()
+  await user.click(screen.getByRole("option", { name: "Weighted" }))
+  expect(command()).toMatchObject({
+    fields: { routing: "weight" },
+    keyPool: { add: [{ key: "sk-new", on: true }] },
+  })
+})
 
 it("selects discovered models, adds custom models, and edits headers as rows", async () => {
   const user = userEvent.setup()
