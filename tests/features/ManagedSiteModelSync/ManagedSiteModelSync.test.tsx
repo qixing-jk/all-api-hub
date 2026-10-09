@@ -1022,7 +1022,7 @@ describe("ManagedSiteModelSync page", () => {
       name: "managedSiteModelSync:execution.actions.runSelected (1)",
     })
     const lockedManualRefresh = screen.getByRole("button", {
-      name: "managedSiteModelSync:execution.actions.refresh",
+      name: "managedSiteModelSync:execution.manual.refresh",
     })
     for (const lockedManualButton of [
       lockedManualRunSelected,
@@ -1042,7 +1042,7 @@ describe("ManagedSiteModelSync page", () => {
     manualDeferred.reject(new Error("manual row sync failed"))
     expect(
       await screen.findByRole("button", {
-        name: "managedSiteModelSync:execution.actions.refresh",
+        name: "managedSiteModelSync:execution.manual.refresh",
       }),
     ).toBeEnabled()
   })
@@ -2678,7 +2678,10 @@ describe("ManagedSiteModelSync page", () => {
       const refreshButton = () =>
         screen
           .getAllByRole("button", {
-            name: "managedSiteModelSync:execution.actions.refresh",
+            name:
+              tab === "manual"
+                ? "managedSiteModelSync:execution.manual.refresh"
+                : "managedSiteModelSync:execution.actions.refresh",
           })
           .at(-1)!
       await user.click(refreshButton())
@@ -3319,7 +3322,7 @@ describe("ManagedSiteModelSync page", () => {
       ).length
     fireEvent.click(
       screen.getByRole("button", {
-        name: "managedSiteModelSync:execution.actions.refresh",
+        name: "managedSiteModelSync:execution.manual.refresh",
       }),
     )
     await waitFor(() => {
@@ -3341,7 +3344,7 @@ describe("ManagedSiteModelSync page", () => {
 
     expect(
       screen.getByRole("button", {
-        name: "managedSiteModelSync:execution.actions.refresh",
+        name: "managedSiteModelSync:execution.manual.refresh",
       }),
     ).not.toHaveAttribute("data-analytics-action")
 
@@ -3615,7 +3618,7 @@ describe("ManagedSiteModelSync page", () => {
     expect(pendingButton).toBeDisabled()
     expect(pendingButton).toHaveAttribute("aria-busy", "true")
     const refreshButton = screen.getByRole("button", {
-      name: "managedSiteModelSync:execution.actions.refresh",
+      name: "managedSiteModelSync:execution.manual.refresh",
     })
     expect(refreshButton).toBeDisabled()
     expect(refreshButton).not.toHaveAttribute("aria-busy")
@@ -3653,7 +3656,7 @@ describe("ManagedSiteModelSync page", () => {
     render(<ManagedSiteModelSync routeParams={{ tab: "manual" }} />)
 
     const automaticallyLockedRefresh = await screen.findByRole("button", {
-      name: "managedSiteModelSync:execution.actions.refresh",
+      name: "managedSiteModelSync:execution.manual.refresh",
     })
     expect(automaticallyLockedRefresh).toBeDisabled()
     expect(automaticallyLockedRefresh).not.toHaveAttribute("aria-busy")
@@ -3669,7 +3672,7 @@ describe("ManagedSiteModelSync page", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "managedSiteModelSync:execution.actions.refresh",
+        name: "managedSiteModelSync:execution.manual.refresh",
       }),
     )
 
@@ -3694,7 +3697,7 @@ describe("ManagedSiteModelSync page", () => {
 
     manualRefresh.reject(new Error("refresh failed"))
     const restoredRefresh = await screen.findByRole("button", {
-      name: "managedSiteModelSync:execution.actions.refresh",
+      name: "managedSiteModelSync:execution.manual.refresh",
     })
     expect(restoredRefresh).toBeEnabled()
 

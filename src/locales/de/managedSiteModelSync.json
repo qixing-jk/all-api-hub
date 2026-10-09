@@ -22,13 +22,13 @@
     },
     "exclusions": {
       "autoSave": "Änderungen werden sofort gespeichert",
-      "description": "Zum Überspringen markierte Kanäle werden bei der automatischen Synchronisierung und bei „Alle ausführen“ übersprungen. Mit „Ausgewählte ausführen“ oder „Synchronisieren“ in der Zeile können Sie sie einmalig synchronisieren, ohne diese Einstellung zu ändern.",
+      "description": "Zum Überspringen markierte Kanäle werden bei der automatischen Synchronisierung und „Alle ausführen“ ausgelassen. Nutzen Sie „Ausgewählte ausführen“ oder „Synchronisieren“ in der Zeile für eine einmalige Synchronisierung.",
       "excludedLabel": "Zum Überspringen markiert",
       "loadFailed": "Die Einstellungen zum Überspringen konnten nicht geladen werden. Bitte erneut versuchen.",
       "savedExcluded": "Gespeichert: Die automatische Synchronisierung und „Alle ausführen“ überspringen diesen Kanal.",
       "savedIncluded": "Gespeichert: Dieser Kanal nimmt an der automatischen Synchronisierung und „Alle ausführen“ teil.",
       "saveFailed": "Die Einstellung zum Überspringen konnte nicht gespeichert werden. Bitte erneut versuchen.",
-      "showOnly": "Zum Überspringen markierte Kanäle anzeigen",
+      "showOnly": "Nur übersprungene Kanäle",
       "skippedReason": "Dieser Kanal war zu Beginn des Durchlaufs zum Überspringen markiert. Es wurden keine Modelle abgerufen oder aktualisiert.",
       "title": "Automatische Synchronisierung und „Alle ausführen“ überspringen",
       "toggle": "{{name}} bei automatischer Synchronisierung und „Alle ausführen“ überspringen"
@@ -42,12 +42,12 @@
     },
     "lastExecution": "Letzte Ausführung",
     "manual": {
-      "description": "„Ausgewählte ausführen“ synchronisiert alle ausgewählten Kanäle, auch zum Überspringen markierte – selbst wenn Sie alle auswählen. Änderungen an den Schaltern werden sofort gespeichert.",
       "empty": {
         "description": "Aktualisieren Sie die Liste oder passen Sie Ihre Filter an, um Kanäle zu finden.",
         "title": "Keine Kanäle verfügbar"
       },
       "loading": "Lade Kanäle...",
+      "refresh": "Kanäle aktualisieren",
       "reload": "Kanäle neu laden",
       "searchPlaceholder": "Kanäle nach Name oder ID suchen..."
     },
