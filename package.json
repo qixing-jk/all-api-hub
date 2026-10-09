@@ -76,6 +76,8 @@
     "e2e:cdp:rix": "node scripts/test-rix-api-e2e-live.mjs",
     "e2e:cdp:omniroute": "node scripts/test-omniroute-e2e-live.mjs",
     "e2e:cdp:gpt-load": "node scripts/test-gpt-load-e2e-live.mjs",
+    "e2e:cdp:magpie": "node scripts/test-magpie-e2e-live.mjs",
+    "e2e:magpie:disposable": "node scripts/with-magpie-test-backend.mjs",
     "e2e:cdp:kimi": "node scripts/test-kimi-e2e-live.mjs",
     "e2e:cdp:grsai": "node scripts/test-grsai-e2e-live.mjs",
     "e2e:cdp:laozhang": "node scripts/test-laozhang-e2e-live.mjs",

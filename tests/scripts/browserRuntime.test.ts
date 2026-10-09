@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   assertDevBrowserProfile,
   ensureDevExtensionReady,
+  findInstalledDevExtension,
 } from "~~/scripts/cdp/browser-runtime.mjs"
 
 afterEach(() => vi.unstubAllEnvs())
@@ -22,6 +23,26 @@ const browserWith = (send: ReturnType<typeof vi.fn>, evaluate = vi.fn()) =>
   }) as never
 
 describe("CDP browser ownership and extension readiness", () => {
+  it("discovers the exact enabled path without reloading or enabling it", async () => {
+    const extensionDir = path.resolve("extension-fixture")
+    const send = vi.fn()
+    const evaluate = vi
+      .fn()
+      .mockResolvedValue([
+        { id: "right", path: extensionDir, state: "ENABLED" },
+      ])
+    await expect(
+      findInstalledDevExtension(browserWith(send, evaluate), extensionDir),
+    ).resolves.toBe("right")
+    expect(send).not.toHaveBeenCalled()
+    evaluate.mockResolvedValue([
+      { id: "right", path: extensionDir, state: "DISABLED" },
+    ])
+    await expect(
+      findInstalledDevExtension(browserWith(send, evaluate), extensionDir),
+    ).rejects.toThrow("not enabled")
+    expect(evaluate).toHaveBeenCalledTimes(2)
+  })
   it("verifies an already installed extension when CDP loading requires pipe transport", async () => {
     const extensionDir = path.resolve("extension-fixture")
     const send = vi
@@ -41,15 +62,13 @@ describe("CDP browser ownership and extension readiness", () => {
 
   it("rejects a foreign installation on the compatibility path", async () => {
     const send = vi.fn().mockRejectedValue(new Error("Method not available"))
-    const evaluate = vi
-      .fn()
-      .mockResolvedValue([
-        {
-          id: "other",
-          path: path.resolve("other-extension"),
-          state: "ENABLED",
-        },
-      ])
+    const evaluate = vi.fn().mockResolvedValue([
+      {
+        id: "other",
+        path: path.resolve("other-extension"),
+        state: "ENABLED",
+      },
+    ])
     await expect(
       ensureDevExtensionReady(
         browserWith(send, evaluate),

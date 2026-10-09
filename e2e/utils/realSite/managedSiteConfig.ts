@@ -7,6 +7,7 @@ type ManagedSiteEnvKey =
   | `AAH_E2E_${string}_BASE_URL`
   | `AAH_E2E_${string}_ADMIN_TOKEN`
   | `AAH_E2E_${string}_MANAGEMENT_KEY`
+  | `AAH_E2E_${string}_WEB_KEY`
   | `AAH_E2E_${string}_ADMIN_USER_ID`
   | `AAH_E2E_${string}_USERNAME`
   | `AAH_E2E_${string}_PASSWORD`
@@ -222,6 +223,23 @@ export function getManagedSiteRealSiteSkipReason(params: {
   missingEnvKeys: string[]
 }) {
   return `Missing real-site ${params.label} managed-site E2E env: ${params.missingEnvKeys.join(", ")}`
+}
+
+/** Magpie's Web key establishes a management Cookie; inference keys do not. */
+export function resolveMagpieManagedSiteConfig(): ManagedSiteConfigResolution<
+  typeof SITE_TYPES.MAGPIE
+> {
+  const baseUrlKey = "AAH_E2E_MAGPIE_BASE_URL" as const
+  const webKeyKey = "AAH_E2E_MAGPIE_WEB_KEY" as const
+  const baseUrl = readEnv(baseUrlKey)
+  const webKey = readEnv(webKeyKey)
+  return {
+    config: baseUrl && webKey ? { baseUrl, webKey } : null,
+    missingEnvKeys: [
+      ...(!baseUrl ? [baseUrlKey] : []),
+      ...(!webKey ? [webKeyKey] : []),
+    ],
+  }
 }
 
 /** gpt-load uses the root AUTH_KEY, independently of downstream access keys. */

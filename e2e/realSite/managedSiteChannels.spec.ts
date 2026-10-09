@@ -1,13 +1,10 @@
-import type { BrowserContext, Page } from "@playwright/test"
-
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import type { UserPreferences } from "~/services/preferences/preferencesSchema"
 import { test } from "~~/e2e/fixtures/extensionTest"
 import {
   buildManagedSiteE2ePrefix,
-  getManagedSiteStatusSourceAccountType,
   runManagedSiteChannelsCrudScenario,
-  runManagedSiteTokenChannelStatusScenario,
+  runManagedSiteCredentialImportScenario,
 } from "~~/e2e/scenarios/managedSiteChannels"
 import { runNewApiAdvancedChannelScenario } from "~~/e2e/scenarios/newApiAdvancedChannel"
 import { runNewApiMultiKeyRealSiteScenario } from "~~/e2e/scenarios/newApiMultiKeyRealSite"
@@ -18,11 +15,7 @@ import {
   stubLlmMetadataIndex,
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
-import { runCompatibleRealSiteAccountSaveFlow } from "~~/e2e/utils/realSite/compatibleAccountSaveFlow"
-import {
-  buildRealSiteRunId,
-  buildRealSiteTestTokenName,
-} from "~~/e2e/utils/realSite/keyManagement"
+import { buildRealSiteRunId } from "~~/e2e/utils/realSite/keyManagement"
 import {
   getManagedSiteRealSiteSkipReason,
   resolveAxonHubManagedSiteConfig,
@@ -34,19 +27,8 @@ import {
   resolveSub2ApiManagedSiteConfig,
   resolveVeloeraManagedSiteConfig,
 } from "~~/e2e/utils/realSite/managedSiteConfig"
-import {
-  loginToRealNewApiSite,
-  resolveNewApiRealSiteConfig,
-} from "~~/e2e/utils/realSite/newApi"
-import { createNewApiAccountRecovery } from "~~/e2e/utils/realSite/newApiAccountRecovery"
 import { readEnv } from "~~/e2e/utils/realSite/shared"
-import {
-  getSub2ApiRealSiteSkipReason,
-  resolveSub2ApiRealSiteConfig,
-} from "~~/e2e/utils/realSite/sub2api"
-import { runSub2ApiRealSiteAccountSaveFlow } from "~~/e2e/utils/realSite/sub2apiAccountSaveFlow"
-
-type ServiceWorker = Awaited<ReturnType<typeof getServiceWorker>>
+import { resolveRealSiteUpstream } from "~~/scripts/utils/real-site-upstream.mjs"
 
 // Authenticated channel details must not enter diagnostic artifacts.
 test.use({ trace: "off", video: "off", screenshot: "off" })
@@ -125,7 +107,7 @@ if (selectedManagedSiteTarget && selectedManagedSiteTargets.length === 0) {
 }
 
 test.describe.configure({
-  mode: selectedManagedSiteTarget ? "parallel" : "serial",
+  mode: "parallel",
 })
 
 test.describe("real-site E2E: managed-site channel management", () => {
@@ -136,10 +118,7 @@ test.describe("real-site E2E: managed-site channel management", () => {
 
   for (const target of selectedManagedSiteTargets) {
     const managedSite = target.resolveConfig()
-    const tokenStatusTestName =
-      target.siteType === SITE_TYPES.OCTOPUS
-        ? "Octopus imports a source key, fetches models and recognizes the saved channel"
-        : `${target.label} covers token channel status when supported`
+    const credentialImportTestName = `${target.label} imports standalone credentials and detects duplicates`
 
     if (target.siteType === SITE_TYPES.NEW_API) {
       test("New API persists multi-key edits and cleans temporary channels", async ({
@@ -216,7 +195,7 @@ test.describe("real-site E2E: managed-site channel management", () => {
         async () => {},
       )
       test.skip(
-        tokenStatusTestName,
+        credentialImportTestName,
         { annotation: { type: "skip", description: skipReason } },
         async () => {},
       )
@@ -272,9 +251,6 @@ test.describe("real-site E2E: managed-site channel management", () => {
         label: target.label.replace(/\s+/g, ""),
         runId,
       })
-      const cleanupPrefix = buildManagedSiteE2ePrefix({
-        label: target.label.replace(/\s+/g, ""),
-      })
 
       await seedUserPreferences(serviceWorker, {
         managedSiteType: target.siteType,
@@ -290,7 +266,6 @@ test.describe("real-site E2E: managed-site channel management", () => {
         siteType: target.siteType,
         label: target.label,
         runPrefix,
-        cleanupPrefix,
       })
     })
 
@@ -323,195 +298,38 @@ test.describe("real-site E2E: managed-site channel management", () => {
     })
 
     test(
-      tokenStatusTestName,
+      credentialImportTestName,
       async ({ context, extensionId, page }, testInfo) => {
         test.setTimeout(180_000)
+        const upstream = resolveRealSiteUpstream()
         test.skip(
-          !getManagedSiteStatusSourceAccountType(target.siteType),
-          `${target.label} token channel status is not covered by this real-site E2E`,
+          !upstream.config,
+          `Shared inference credentials missing: ${upstream.missingEnvKeys.join(", ")}`,
         )
-
-        const serviceWorker = await getServiceWorker(context)
-        const config = managedSite.config
-        const runId = buildRealSiteRunId()
+        if (!upstream.config) return
         const runPrefix = buildManagedSiteE2ePrefix({
-          label: target.label.replace(/\s+/g, ""),
-          runId,
-        })
-        const tokenName = buildRealSiteTestTokenName({
-          label: "channel",
-          runId,
+          label: `${target.label.replace(/\s+/g, "")} Import`,
+          runId: buildRealSiteRunId(),
         })
         await testInfo.attach("temporary-resources", {
-          body: JSON.stringify({ channelPrefix: runPrefix, tokenName }),
+          body: JSON.stringify({ channelPrefix: runPrefix }),
           contentType: "application/json",
         })
-        const sourceAccountResult =
-          await test.step(`${target.label}: prepare source account`, async () =>
-            await maybePrepareStatusSourceAccount({
-              context,
-              extensionId,
-              page,
-              serviceWorker,
-              managedSiteType: target.siteType,
-              managedSiteLabel: target.label,
-              managedPreferenceKey: target.preferenceKey,
-              managedConfig: config,
-            }))
-
-        await seedUserPreferences(serviceWorker, {
+        await seedUserPreferences(await getServiceWorker(context), {
           managedSiteType: target.siteType,
-          [target.preferenceKey]: config,
-          autoFillCurrentSiteUrlOnAccountAdd: false,
-          autoProvisionKeyOnAccountAdd: false,
+          [target.preferenceKey]: managedSite.config,
+          autoCheckin: { globalEnabled: false, pretriggerDailyOnUiOpen: false },
           openChangelogOnUpdate: false,
         })
-
-        if (!sourceAccountResult.sourceAccount) {
-          test.skip(
-            true,
-            sourceAccountResult.skipReason ??
-              `${target.label} source account E2E env is missing`,
-          )
-          throw new Error("Skipped test continued without a source account")
-        }
-
-        const sourceAccount = sourceAccountResult.sourceAccount
-
-        try {
-          const statusResult =
-            await test.step(`${target.label}: token channel status`, async () =>
-              await runManagedSiteTokenChannelStatusScenario({
-                page,
-                extensionId,
-                siteType: target.siteType,
-                label: target.label,
-                runPrefix,
-                cleanupPrefix: runPrefix,
-                sourceAccount,
-                tokenName,
-                sourceAccountSkipReason: sourceAccountResult.skipReason,
-              }))
-
-          if (statusResult.skipped) {
-            throw new Error(statusResult.reason)
-          }
-        } finally {
-          await sourceAccount.cleanup()
-        }
+        await runManagedSiteCredentialImportScenario({
+          page,
+          extensionId,
+          siteType: target.siteType,
+          label: target.label,
+          runPrefix,
+          upstream: upstream.config,
+        })
       },
     )
   }
 })
-
-async function maybePrepareStatusSourceAccount(params: {
-  context: BrowserContext
-  extensionId: string
-  page: Page
-  serviceWorker: ServiceWorker
-  managedSiteType: ManagedSiteType
-  managedSiteLabel: string
-  managedPreferenceKey: string
-  managedConfig: unknown
-}): Promise<{
-  sourceAccount: Awaited<
-    ReturnType<typeof runCompatibleRealSiteAccountSaveFlow>
-  > | null
-  skipReason?: string
-}> {
-  const sourceAccountType = getManagedSiteStatusSourceAccountType(
-    params.managedSiteType,
-  )
-  if (!sourceAccountType) {
-    return {
-      sourceAccount: null,
-      skipReason: `${params.managedSiteLabel} token channel status is not covered by this real-site E2E`,
-    }
-  }
-
-  await seedUserPreferences(params.serviceWorker, {
-    managedSiteType: params.managedSiteType,
-    [params.managedPreferenceKey]: params.managedConfig,
-    autoFillCurrentSiteUrlOnAccountAdd: false,
-    autoProvisionKeyOnAccountAdd: false,
-    openChangelogOnUpdate: false,
-  })
-
-  const sitePage = await params.context.newPage()
-  try {
-    const sourceAccountResult =
-      sourceAccountType === SITE_TYPES.SUB2API
-        ? await prepareSub2ApiStatusSourceAccount({ ...params, sitePage })
-        : await prepareNewApiStatusSourceAccount({ ...params, sitePage })
-
-    if (!sourceAccountResult.sourceAccount) return sourceAccountResult
-
-    return { sourceAccount: sourceAccountResult.sourceAccount }
-  } finally {
-    if (!sitePage.isClosed()) {
-      await sitePage.close()
-    }
-  }
-}
-
-type StatusSourceAccountParams = Parameters<
-  typeof maybePrepareStatusSourceAccount
->[0] & { sitePage: Page }
-
-async function prepareNewApiStatusSourceAccount(
-  params: StatusSourceAccountParams,
-) {
-  const realSite = resolveNewApiRealSiteConfig()
-  if (!realSite.config) {
-    return {
-      sourceAccount: null,
-      skipReason: "New API source account E2E env is missing",
-    }
-  }
-
-  const recovery = createNewApiAccountRecovery({
-    page: params.page,
-    config: realSite.config,
-  })
-
-  return {
-    sourceAccount: await runCompatibleRealSiteAccountSaveFlow({
-      page: params.page,
-      extensionId: params.extensionId,
-      serviceWorker: params.serviceWorker,
-      sitePage: params.sitePage,
-      config: realSite.config,
-      siteType: SITE_TYPES.NEW_API,
-      prepareDetectedDialog: recovery.prepareDetectedDialog,
-      extensionPageGuardOptions: {
-        ...recovery.extensionPageGuardOptions,
-        ignoreConsoleErrorPatterns: [
-          /Failed to load resource: .*status of (401|429|500)/u,
-        ],
-      },
-      login: loginToRealNewApiSite,
-    }),
-  }
-}
-
-async function prepareSub2ApiStatusSourceAccount(
-  params: StatusSourceAccountParams,
-) {
-  const realSite = resolveSub2ApiRealSiteConfig()
-  if (!realSite.config) {
-    return {
-      sourceAccount: null,
-      skipReason: getSub2ApiRealSiteSkipReason(realSite.missingEnvKeys),
-    }
-  }
-
-  return {
-    sourceAccount: await runSub2ApiRealSiteAccountSaveFlow({
-      page: params.page,
-      extensionId: params.extensionId,
-      serviceWorker: params.serviceWorker,
-      sitePage: params.sitePage,
-      config: realSite.config,
-    }),
-  }
-}

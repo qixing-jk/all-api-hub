@@ -5,11 +5,6 @@ const REAL_SITE_E2E_CATEGORIES = {
   webdav: "webdav",
 }
 
-const REAL_SITE_E2E_RESOURCE_GROUPS = {
-  newApiAccount: "new-api-account",
-  sub2ApiAccount: "sub2api-account",
-}
-
 const REAL_SITE_E2E_MATRIX = [
   {
     id: "new-api-account",
@@ -17,7 +12,6 @@ const REAL_SITE_E2E_MATRIX = [
     label: "Account / New API",
     env_prefix: "NEW_API",
     kind: "account",
-    resource_group: REAL_SITE_E2E_RESOURCE_GROUPS.newApiAccount,
     spec: "e2e/realSite/newApiAccountAdd.spec.ts",
   },
   {
@@ -50,7 +44,6 @@ const REAL_SITE_E2E_MATRIX = [
     label: "Account / Sub2API",
     env_prefix: "SUB2API",
     kind: "account",
-    resource_group: REAL_SITE_E2E_RESOURCE_GROUPS.sub2ApiAccount,
     spec: "e2e/realSite/sub2apiAccountAdd.spec.ts",
   },
   {
@@ -60,7 +53,6 @@ const REAL_SITE_E2E_MATRIX = [
     env_prefix: "NEW_API",
     kind: "managed-site",
     managed_site_target: "new-api",
-    resource_group: REAL_SITE_E2E_RESOURCE_GROUPS.newApiAccount,
     spec: "e2e/realSite/managedSiteChannels.spec.ts",
   },
   {
@@ -70,7 +62,6 @@ const REAL_SITE_E2E_MATRIX = [
     env_prefix: "VELOERA",
     kind: "managed-site",
     managed_site_target: "Veloera",
-    resource_group: REAL_SITE_E2E_RESOURCE_GROUPS.newApiAccount,
     spec: "e2e/realSite/managedSiteChannels.spec.ts",
   },
   {
@@ -80,7 +71,6 @@ const REAL_SITE_E2E_MATRIX = [
     env_prefix: "DONE_HUB",
     kind: "managed-site",
     managed_site_target: "done-hub",
-    resource_group: REAL_SITE_E2E_RESOURCE_GROUPS.newApiAccount,
     spec: "e2e/realSite/managedSiteChannels.spec.ts",
   },
   {
@@ -90,7 +80,6 @@ const REAL_SITE_E2E_MATRIX = [
     env_prefix: "OCTOPUS",
     kind: "managed-site",
     managed_site_target: "octopus",
-    resource_group: REAL_SITE_E2E_RESOURCE_GROUPS.newApiAccount,
     spec: "e2e/realSite/managedSiteChannels.spec.ts",
   },
   {
@@ -100,7 +89,6 @@ const REAL_SITE_E2E_MATRIX = [
     env_prefix: "AXON_HUB",
     kind: "managed-site",
     managed_site_target: "axonhub",
-    resource_group: REAL_SITE_E2E_RESOURCE_GROUPS.newApiAccount,
     spec: "e2e/realSite/managedSiteChannels.spec.ts",
   },
   {
@@ -110,7 +98,6 @@ const REAL_SITE_E2E_MATRIX = [
     env_prefix: "CLAUDE_CODE_HUB",
     kind: "managed-site",
     managed_site_target: "claude-code-hub",
-    resource_group: REAL_SITE_E2E_RESOURCE_GROUPS.newApiAccount,
     spec: "e2e/realSite/managedSiteChannels.spec.ts",
   },
   {
@@ -120,7 +107,6 @@ const REAL_SITE_E2E_MATRIX = [
     env_prefix: "SUB2API",
     kind: "managed-site",
     managed_site_target: "sub2api",
-    resource_group: REAL_SITE_E2E_RESOURCE_GROUPS.sub2ApiAccount,
     spec: "e2e/realSite/managedSiteChannels.spec.ts",
   },
   {
@@ -130,9 +116,6 @@ const REAL_SITE_E2E_MATRIX = [
     env_prefix: "OMNIROUTE",
     kind: "managed-site",
     managed_site_target: "omniroute",
-    // The token-import status scenario reads a New API account as its source, so
-    // this target shares that account with the other New API-family sites.
-    resource_group: REAL_SITE_E2E_RESOURCE_GROUPS.newApiAccount,
     spec: "e2e/realSite/managedSiteChannels.spec.ts",
   },
   {
@@ -152,6 +135,15 @@ const REAL_SITE_E2E_MATRIX = [
     kind: "managed-site",
     managed_site_target: "gpt-load",
     spec: "e2e/realSite/gptLoadGroups.spec.ts",
+  },
+  {
+    id: "magpie-managed-site",
+    category: REAL_SITE_E2E_CATEGORIES.managedSite,
+    label: "Managed Site / Magpie Providers",
+    env_prefix: "MAGPIE",
+    kind: "managed-site",
+    managed_site_target: "magpie",
+    spec: "e2e/realSite/magpieProviders.spec.ts",
   },
   {
     id: "nutstore-webdav",
@@ -255,18 +247,26 @@ export function filterRealSiteE2eMatrix(category = "all", target = "all") {
   return [targetEntry]
 }
 
-export function partitionRealSiteE2eMatrix(entries) {
-  return {
-    parallel: entries.filter((entry) => !entry.resource_group),
-    newApi: entries.filter(
-      (entry) =>
-        entry.resource_group === REAL_SITE_E2E_RESOURCE_GROUPS.newApiAccount,
-    ),
-    sub2api: entries.filter(
-      (entry) =>
-        entry.resource_group === REAL_SITE_E2E_RESOURCE_GROUPS.sub2ApiAccount,
-    ),
+/** Share one bounded Playwright worker pool for independent managed targets. */
+export function buildRealSiteE2eRuns(entries) {
+  const runs = []
+  let managedRun
+  for (const entry of entries) {
+    if (entry.kind !== "managed-site") {
+      runs.push({ ...entry, specs: [entry.spec] })
+      continue
+    }
+    if (!managedRun) {
+      managedRun = { ...entry, specs: [entry.spec] }
+      runs.push(managedRun)
+    } else {
+      managedRun.label = "Managed Site / All configured gateways"
+      delete managedRun.managed_site_target
+      if (!managedRun.specs.includes(entry.spec))
+        managedRun.specs.push(entry.spec)
+    }
   }
+  return runs
 }
 
 function throwUnknownTarget(target) {

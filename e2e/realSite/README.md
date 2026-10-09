@@ -16,6 +16,7 @@ Confirmed source-available targets in this suite:
 - Veloera: Go server source, web source, Docker/deployment files.
 - Sub2API: dedicated auth model and real-site helper.
 - gpt-load: Go control plane, embedded web UI, runnable source build and Docker deployment.
+- Magpie: Go CLI, embedded management web server and provider management APIs.
 
 Provider compatibility checks:
 
@@ -35,6 +36,30 @@ Account auto-detection and existing-account feature checks are separate
 scenario helpers. Real-site specs compose them by saving an account from a live
 site, passing the returned account fixture into reusable usage scenarios, then
 cleaning up through the fixture owner.
+
+Managed-gateway import tests use the credential library directly. Configure one
+reusable OpenAI-compatible inference source in the primary worktree's `.env.local`:
+
+```env
+AAH_E2E_UPSTREAM_BASE_URL=https://inference.example.com/v1
+AAH_E2E_UPSTREAM_API_KEY=replace-with-inference-api-key
+```
+
+The URL preserves any reverse-proxy prefix. Both the extension and gateway
+backend must be able to reach it for backend model discovery; Magpie model sync
+requires at least one visible model. These are inference credentials, separate
+from each target gateway's management credentials. A New API or Sub2API source
+account, source login, and token creation are unnecessary. Missing source values
+skip only the real credential import/model tests, not management CRUD. Duplicate
+checks respect the target's capabilities: masked keys or differing model sets
+can produce a review/verification warning instead of a confirmed duplicate.
+
+CI runs targets in a single parallel matrix. The local managed-site category
+uses one Playwright process and its bounded worker pool (four workers by default,
+overridable with `--workers` or `AAH_E2E_WORKERS`), building the extension once.
+Each test uses its own browser profile and cleans only its own resource names/IDs.
+Account detection/login/token lifecycle tests still use their own account
+credentials and retain their account-specific scheduling.
 
 Managed-site coverage includes New API, AxonHub, and Octopus multi-key persistence in
 `managedSiteChannels.spec.ts`, so the existing managed-site matrix runs it.
@@ -115,6 +140,123 @@ only the disposable process you started and remove its run-owned `e2e-data`
 directory if no longer needed. The spec itself verifies group cleanup.
 Hosted forks still need deployment-specific checks. The dedicated
 `pnpm e2e:cdp:gpt-load` runner separately tests the live development browser.
+
+## Magpie managed gateway
+
+`magpie-managed-site` runs `magpieProviders.spec.ts`. The four scenarios share
+their UI and native-readback implementation with `pnpm e2e:cdp:magpie` under
+`scripts/suites/magpie/`. Required deployment configuration:
+
+```env
+AAH_E2E_MAGPIE_BASE_URL=http://127.0.0.1:3430
+AAH_E2E_MAGPIE_WEB_KEY=replace-with-MAGPIE_WEB_KEY
+```
+
+For an existing VPS deployment, put the first two values in the primary
+worktree's `.env.local` (or this checkout's `.env.local`); the commented template
+is in [`.env.example`](../../.env.example). Use the externally reachable web
+management URL, including any reverse-proxy prefix; do not append API/inference
+paths or the `?k=...` login query. Copy the Web key from the server's `MAGPIE_WEB_KEY`
+or the `k` parameter of its management login link. When the server generates
+the key at startup, update this value after a restart; a configured fixed key
+avoids that change. Existing VPS deployments do not need `AAH_E2E_MAGPIE_BINARY`
+or the disposable-backend wrapper.
+
+Model sync uses the shared `AAH_E2E_UPSTREAM_BASE_URL` and
+`AAH_E2E_UPSTREAM_API_KEY` above. A VPS needs no extra fixture service: use an
+existing inference API. Without these values, management and all four protocol
+import projection checks still run; only real model sync is skipped. A gateway
+running directly on this machine can use an automatically started authenticated
+local model-list fixture. The disposable-backend wrapper always uses that fixture.
+
+Use the management web address and its Web key. The inference address (normally
+port 3425) and provider API keys cannot authenticate management. Reverse-proxy
+prefixes in the management URL are preserved. Native preflight uses a separate
+Cookie jar, so it cannot accidentally authenticate the extension before the UI
+connection test. Real management responses are never mocked.
+
+Coverage:
+
+- Web key validation, rejection with an already valid Cookie, and recovery.
+- UI create/read/edit/delete; independent Chat, Responses, Anthropic and Gemini
+  URLs and saved API type; model and balance lookup settings, concurrency, RPM,
+  price multiplier, explicit clearing, and preservation of concurrent native settings.
+- Multi-key bulk paste/deduplication, per-key names/protocols/weights/status,
+  routing, primary reveal/replacement/promotion, masked-only extra keys,
+  cancellation, all-disabled rejection and preservation of concurrently added keys.
+  Desktop and narrow layouts check overflow and API-type label wrapping.
+- Credential-library UI creation and import projection for all four protocols
+  with synthetic keys and proxy URLs, exact duplicate warning/cancel, and
+  credential deletion. These checks do not claim callable inference for all protocols.
+- Real OpenAI-compatible credential import and single-channel background model
+  sync. The test observes the backend's actual model-list response and checks
+  the saved model set through independent native readback; it assumes no fixed
+  model names. The local fallback fixture returns two deterministic model IDs
+  and serves no inference.
+
+Each run owns UUID names and observed IDs. Cleanup recovers a lost create response
+by exact name, never deletes baseline IDs or another run's resources, and fails
+the test if deletion/readback fails. CDP restores only its preference fields,
+credential records, model-sync history, language and management Cookies, retaining
+unrelated changes. It closes only its own page and detaches from the browser.
+Use an idle, dedicated test deployment/profile: changing the selected managed
+gateway and native enable/delete operations can affect active client selections.
+Automatic screenshots, traces and videos are disabled. Explicit management and
+key-pool screenshots capture only this run's synthetic provider forms; real-site
+attaches them to test results, and CDP saves them with `--evidence-dir=path`.
+These checks cover gateway management and key routing, not paid inference,
+OAuth subscriptions or routing groups.
+
+Run against a configured deployment (test configuration uses the shared env loader):
+
+```bash
+pnpm exec playwright test e2e/realSite/magpieProviders.spec.ts --project=chromium
+pnpm e2e:cdp:magpie
+pnpm browser:cdp:isolate -- --prod
+pnpm e2e:cdp:magpie -- --suite=all --write --isolate
+```
+
+The CDP default is a read-only protocol probe; UI mutations require `--write`
+and an isolated browser profile. It verifies the installed extension's exact
+path without reloading it. Use `--extension-dir=.output/chrome-mv3-dev` to select
+a running dev build; the default is `.output/chrome-mv3`. `--env-file=path` is
+supported; pass credentials through environment files, not command-line flags.
+
+### Disposable pinned backend
+
+The verified backend is [yetone/magpie](https://github.com/yetone/magpie) CLI
+`0.1.1126`, source revision `ea6f8f89f83143e39b139582e75a1dda1fcff4cf`.
+Use the official release's Windows CLI executable. Its verified SHA256 is
+`d00d43152e981046a60d706cead35f6600c9f413c3e71405a5ed67a2f677e135`.
+The wrapper verifies this checksum before execution, creates a new home plus
+XDG config/data/cache directories, sets `DO_NOT_TRACK=1`, and starts
+`web --addr 127.0.0.1:<free-port> --no-open` with a random fixed Web key.
+Isolating XDG directories alone does not isolate Magpie's saved CLI accounts.
+
+Set the binary path in your shell or shared `.env.local`, then use PowerShell:
+
+```powershell
+$env:AAH_E2E_MAGPIE_BINARY = 'C:\tools\magpie-cli.exe'
+# Native read-only probe:
+pnpm e2e:magpie:disposable -- node scripts/test-magpie-e2e-live.mjs
+# Fresh browser extension + real server; the Playwright build project checks/rebuilds output:
+pnpm e2e:magpie:disposable -- node node_modules/@playwright/test/cli.js test e2e/realSite/magpieProviders.spec.ts --project=chromium
+# Current worktree's already launched isolated CDP browser:
+pnpm e2e:magpie:disposable -- node scripts/test-magpie-e2e-live.mjs --suite=all --write --isolate
+```
+
+Other platforms must provide their release binary's independently verified
+`AAH_E2E_MAGPIE_BINARY_SHA256`; the Windows checksum is never reused for them.
+The wrapper seeds a sentinel provider before starting the tests, verifies it is
+unchanged and all test-created providers are gone afterward, then stops only
+its child server and deletes only its generated temporary directory. This
+teardown also runs when the command fails. No production accounts are copied.
+
+CI uses the same independent matrix target and the
+`AAH_E2E_MAGPIE_BASE_URL` / `AAH_E2E_MAGPIE_WEB_KEY` secrets, plus the shared
+inference URL/key for model sync. Missing credentials are reported explicitly. This wiring does not
+provision a remote deployment or publish secrets; a local passing run does not
+establish that the remote workflow ran.
 
 Run one real-site category locally:
 
@@ -297,8 +439,8 @@ AAH_E2E_VELOERA_ADMIN_TOKEN=replace-with-admin-access-token
 AAH_E2E_VELOERA_ADMIN_USER_ID=1
 ```
 
-Veloera channel CRUD/search and key channel-status assertions are covered by the
-managed-site channel E2E, using a New API source account for the latter.
+Veloera channel CRUD/search and standalone credential import/duplicate checks
+are covered by the managed-site channel E2E with the shared inference URL/key.
 
 ## Managed-Site Channel Matrix
 
@@ -347,20 +489,20 @@ AAH_E2E_MANAGED_SITE_TARGET=new-api pnpm exec playwright test e2e/realSite/manag
 AAH_E2E_MANAGED_SITE_TARGET=done-hub pnpm exec playwright test e2e/realSite/managedSiteChannels.spec.ts --project=chromium
 ```
 
-Managed-only site types use a New API source account for key channel-status
-checks when New API account env is available. Without that source account, the
-spec still covers channel CRUD/search for the managed target and annotates the
-status check as skipped.
+Managed-site import tests use `AAH_E2E_UPSTREAM_BASE_URL` and
+`AAH_E2E_UPSTREAM_API_KEY` directly through the credential library. They never
+log into a source account or create/revoke its API keys. Missing shared
+credentials skip the import scenario while management CRUD/search remains active.
 
-Channel-status scenarios explicitly add a custom test model through the editor.
-They verify persisted channel identity and key matching without requiring a
-particular source-account group, a nonempty upstream catalog, or a callable model.
-For targets that compare model sets, a confirmed key match may display
-`Needs confirmation` when the custom model differs from the source catalog.
+Import scenarios add a custom model where the editor supports one, then check
+persisted channel identity and duplicate detection. For targets that compare
+model sets or mask keys, the second import must show a candidate-review or
+verification warning. It is cancelled without creating another channel.
 Octopus model-discovery steps separately check the request protocol, successful
 response, and usable editor controls; an empty model list is valid. The custom
 model must remain saved after reopening the channel and refreshing discovery.
-Controlled browser tests cover both empty and populated catalogs.
+Controlled browser tests continue to cover account key-row status badges and
+both empty and populated catalogs.
 
 ```env
 AAH_E2E_OCTOPUS_BASE_URL=https://octopus.example.com
