@@ -15,6 +15,7 @@ import {
 import { CORNERS } from "~/constants/designTokens"
 import ActionBar from "~/features/ManagedSiteModelSync/commands/ActionBar"
 import { MANAGED_SITE_MODEL_SYNC_ACTIONS } from "~/features/ManagedSiteModelSync/commands/actionState"
+import { MODEL_SYNC_EXCLUSIONS_TARGET_ID } from "~/features/ManagedSiteModelSync/exclusions/targetIds"
 import EmptyResults from "~/features/ManagedSiteModelSync/results/EmptyResults"
 import FilterBar from "~/features/ManagedSiteModelSync/results/FilterBar"
 import ResultsTable from "~/features/ManagedSiteModelSync/results/ResultsTable"
@@ -38,6 +39,10 @@ export function ManagedSiteModelSyncTabs({
     "common",
   ])
   const {
+    exclusions,
+    manualExcludedOnly,
+    setManualExcludedOnly,
+    manualExcludedCount,
     selectedTab,
     handleTabChange,
     historyTabLabel,
@@ -109,6 +114,20 @@ export function ManagedSiteModelSyncTabs({
           {t("execution.table.resourceUnavailable")}
         </Alert>
       )}
+      <p
+        id={MODEL_SYNC_EXCLUSIONS_TARGET_ID}
+        className="text-muted-foreground mb-density-4 text-sm"
+      >
+        {t("execution.exclusions.description")}
+      </p>
+      {exclusions.error && (
+        <Alert variant="warning" role="alert" className="mb-density-4">
+          {exclusions.error}
+          <Button variant="ghost" onClick={() => void exclusions.reload()}>
+            {t("common:actions.retry")}
+          </Button>
+        </Alert>
+      )}
       <TabsContent value={TAB_VALUE.history}>
         <div className="space-y-density-4">
           <ActionBar
@@ -147,12 +166,25 @@ export function ManagedSiteModelSyncTabs({
               isRunning={isAnySyncPending}
               runningResourceKey={runningResourceKey}
               canUseResource={canUseResource}
+              exclusions={exclusions}
             />
           )}
         </div>
       </TabsContent>
       <TabsContent value={TAB_VALUE.manual}>
         <div className="space-y-density-4">
+          <Button
+            variant={manualExcludedOnly ? "secondary" : "ghost"}
+            aria-pressed={manualExcludedOnly}
+            disabled={
+              exclusions.isLoading ||
+              Boolean(exclusions.error) ||
+              isChannelsLoading
+            }
+            onClick={() => setManualExcludedOnly(!manualExcludedOnly)}
+          >
+            {t("execution.exclusions.showOnly")} ({manualExcludedCount})
+          </Button>
           <div className="gap-y-density-4 flex flex-col gap-x-4 md:flex-row md:items-center md:justify-between">
             <p className="text-muted-foreground text-sm">
               {t("execution.manual.description")}
@@ -219,6 +251,7 @@ export function ManagedSiteModelSyncTabs({
               isRunning={isAnySyncPending}
               runningResourceKey={runningResourceKey}
               canUseResource={canUseResource}
+              exclusions={exclusions}
               visibleColumns={{
                 status: false,
                 message: false,
@@ -228,11 +261,19 @@ export function ManagedSiteModelSyncTabs({
             />
           ) : (
             <EmptyState
-              title={t("execution.manual.empty.title")}
+              title={t(
+                manualExcludedOnly && !channelsError
+                  ? "execution.empty.noResults"
+                  : "execution.manual.empty.title",
+              )}
               description={
                 channelsError
                   ? channelsError
-                  : (t("execution.manual.empty.description") as string)
+                  : t(
+                      manualExcludedOnly
+                        ? "execution.empty.noResultsDesc"
+                        : "execution.manual.empty.description",
+                    )
               }
               icon={<Search className="h-12 w-12" />}
               action={{

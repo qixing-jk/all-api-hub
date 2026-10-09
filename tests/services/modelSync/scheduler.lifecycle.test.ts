@@ -538,6 +538,90 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     )
   })
 
+  it("reports all-skipped scheduled runs without a failure or successful-sync count", async () => {
+    let alarmHandler: ((alarm: { name: string }) => Promise<void>) | undefined
+    mocks.onAlarm.mockImplementation((handler) => {
+      alarmHandler = handler
+    })
+    vi.spyOn(modelSyncScheduler, "setupAlarm").mockResolvedValue(undefined)
+    vi.spyOn(modelSyncScheduler, "executeSync").mockResolvedValue({
+      items: [
+        {
+          resourceRef: modelResourceRef(1),
+          channelName: "Excluded",
+          ok: false,
+          skipReason: "excluded",
+          attempts: 0,
+          finishedAt: 1,
+        },
+      ],
+      statistics: {
+        total: 0,
+        successCount: 0,
+        failureCount: 0,
+        skippedCount: 1,
+        startedAt: 1,
+        endedAt: 1,
+        durationMs: 0,
+      },
+    })
+    await modelSyncScheduler.initialize()
+    await alarmHandler?.({ name: "managedSiteModelSync" })
+    expect(mocks.notifyTaskResult).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "success",
+        counts: { total: 1, success: 0, failed: 0, skipped: 1 },
+        title: "managedSiteModelSync:messages.notification.allSkippedTitle",
+        message: "managedSiteModelSync:messages.notification.allSkippedBody",
+      }),
+    )
+    expect(mocks.completeProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+      expect.objectContaining({
+        insights: expect.objectContaining({
+          itemCount: 1,
+          skippedCount: 1,
+          successCount: 0,
+          failureCount: 0,
+        }),
+      }),
+    )
+  })
+
+  it.each([
+    { success: 2, failed: 0, status: "success" },
+    { success: 1, failed: 1, status: "partial_success" },
+    { success: 0, failed: 2, status: "failure" },
+  ])(
+    "keeps skipped channels separate in $status scheduled notifications",
+    async ({ success, failed, status }) => {
+      let alarmHandler: ((alarm: { name: string }) => Promise<void>) | undefined
+      mocks.onAlarm.mockImplementation((handler) => {
+        alarmHandler = handler
+      })
+      vi.spyOn(modelSyncScheduler, "setupAlarm").mockResolvedValue(undefined)
+      vi.spyOn(modelSyncScheduler, "executeSync").mockResolvedValue({
+        items: [],
+        statistics: {
+          total: success + failed,
+          successCount: success,
+          failureCount: failed,
+          skippedCount: 3,
+          startedAt: 1,
+          endedAt: 2,
+          durationMs: 1,
+        },
+      })
+      await modelSyncScheduler.initialize()
+      await alarmHandler?.({ name: "managedSiteModelSync" })
+      expect(mocks.notifyTaskResult).toHaveBeenCalledWith({
+        task: "managedSiteModelSync",
+        status,
+        counts: { total: 5, success, failed, skipped: 3 },
+      })
+    },
+  )
+
   it("notifies scheduled sync success counts after the alarm handler runs", async () => {
     let alarmHandler: ((alarm: { name: string }) => Promise<void>) | undefined
     mocks.onAlarm.mockImplementation((handler) => {
@@ -1088,7 +1172,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
       expect.objectContaining({ baseUrl: "https://octopus.example.com" }),
       execution,
     )
-    expect(mocks.prepareOctopusBatch).toHaveBeenCalledWith([selectedRef])
+    expect(mocks.prepareOctopusBatch).toHaveBeenCalledWith([selectedRef], [])
     expect(mocks.runOctopusBatch).toHaveBeenCalledWith(
       expect.objectContaining({
         concurrency: 2,
@@ -1166,7 +1250,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
         surface: PROTECTION_BYPASS_SURFACES.Background,
       }),
     )
-    expect(mocks.prepareOctopusBatch).toHaveBeenCalledWith(undefined)
+    expect(mocks.prepareOctopusBatch).toHaveBeenCalledWith(undefined, [])
     expect(mocks.runOctopusBatch).toHaveBeenCalledWith(
       expect.not.objectContaining({
         protectionBypassExecution: expect.anything(),

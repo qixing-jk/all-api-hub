@@ -4,11 +4,15 @@ import type { ManagedUpstreamResourceRef } from "./managedUpstreamResource"
 export interface ChannelModelFilterSettings {
   rules: ChannelModelFilterRule[]
   updatedAt: number
+  /** Exclusion-only entries have not chosen filters; absence preserves older configured entries. */
+  configured?: false
 }
 
 export interface ChannelResourceConfig {
   resourceRef: ManagedUpstreamResourceRef
   channelId?: number
+  /** Skip automatic/full model sync; explicit resource selections may still run. */
+  modelSyncExcluded?: boolean
   modelFilterSettings: ChannelModelFilterSettings
   createdAt: number
   updatedAt: number

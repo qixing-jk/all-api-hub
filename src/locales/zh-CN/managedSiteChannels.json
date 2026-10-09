@@ -425,6 +425,7 @@
       "validationProbeIds": "请为每个探测规则至少选择一个验证探测。",
       "validationRegex": "无效的正则表达式：{{error}}"
     },
+    "modelSyncExclusionHelp": "保存后，自动同步和手动点击“执行全部”都会跳过此渠道。“执行所选”和“同步此渠道”仍可临时同步它。点击“取消”会放弃本次修改。",
     "placeholders": {
       "description": "可选备注",
       "name": "如：仅允许 GPT-4",

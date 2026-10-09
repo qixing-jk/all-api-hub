@@ -161,6 +161,9 @@ function sanitizeModelFilterSettings(
     : fallbackTimestamp
   return {
     rules,
+    ...(rawSettings?.configured === false && rules.length === 0
+      ? { configured: false as const }
+      : {}),
     updatedAt: Math.max(
       explicitUpdatedAt,
       ...rules.map((rule) => rule.updatedAt),
@@ -210,6 +213,9 @@ export function sanitizeResourceConfig(
   return {
     resourceRef,
     ...(channelId !== null ? { channelId } : {}),
+    ...(typeof payload.modelSyncExcluded === "boolean"
+      ? { modelSyncExcluded: payload.modelSyncExcluded }
+      : {}),
     modelFilterSettings,
     createdAt,
     updatedAt,
@@ -280,6 +286,8 @@ function coerceSnapshotResourceConfig(
   const settings = payload.modelFilterSettings
   if (
     !normalizeResourceRef(payload.resourceRef) ||
+    (payload.modelSyncExcluded !== undefined &&
+      typeof payload.modelSyncExcluded !== "boolean") ||
     (payload.channelId !== undefined &&
       (typeof payload.channelId !== "number" ||
         toValidChannelId(payload.channelId) === null)) ||
@@ -290,6 +298,8 @@ function coerceSnapshotResourceConfig(
     !isPositiveTimestamp(settings.updatedAt) ||
     settings.updatedAt > payload.updatedAt ||
     !Array.isArray(settings.rules) ||
+    (settings.configured !== undefined &&
+      (settings.configured !== false || settings.rules.length > 0)) ||
     settings.rules.some(
       (rule) =>
         !isCanonicalChannelModelFilterRule(rule) ||

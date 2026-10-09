@@ -160,7 +160,11 @@ class ChannelConfigStorage {
         if (!oldConfig) return false
         const current = scoped[getManagedUpstreamResourceRefKey(ref)]
         // Match migration's precedence: equally recent scoped settings win.
-        return !current || oldConfig.updatedAt > current.updatedAt
+        return (
+          !current ||
+          current.modelFilterSettings.configured === false ||
+          oldConfig.updatedAt > current.modelFilterSettings.updatedAt
+        )
       })
     })
   }
@@ -233,11 +237,22 @@ class ChannelConfigStorage {
         }
         const resourceKey = getManagedUpstreamResourceRefKey(resourceRef)
         const existing = resourceConfigs[resourceKey]
-        if (!existing || legacyConfig.updatedAt > existing.updatedAt) {
+        if (
+          !existing ||
+          existing.modelFilterSettings.configured === false ||
+          legacyConfig.updatedAt > existing.modelFilterSettings.updatedAt
+        ) {
           resourceConfigs[resourceKey] = {
             ...legacyConfig,
+            ...(existing?.modelSyncExcluded !== undefined
+              ? { modelSyncExcluded: existing.modelSyncExcluded }
+              : {}),
             resourceRef,
             channelId,
+            updatedAt: Math.max(
+              legacyConfig.updatedAt,
+              existing?.updatedAt ?? 0,
+            ),
             createdAt: existing
               ? Math.min(existing.createdAt, legacyConfig.createdAt)
               : legacyConfig.createdAt,
@@ -328,6 +343,32 @@ class ChannelConfigStorage {
     )
   }
 
+  /** Changes only model-sync participation, preserving concurrent filter edits. */
+  async setModelSyncExcluded(
+    resourceRef: ManagedUpstreamResourceRef,
+    excluded: boolean,
+  ): Promise<void> {
+    const normalizedRef = normalizeResourceRef(resourceRef)
+    if (!normalizedRef || typeof excluded !== "boolean") {
+      throw new Error("Model sync exclusion is invalid")
+    }
+    await this.withStorageWriteLock(async () => {
+      const configs = await this.getAllConfigs()
+      const existing = configs[getManagedUpstreamResourceRefKey(normalizedRef)]
+      const current =
+        existing ?? createDefaultChannelResourceConfig(normalizedRef)
+      await this.saveSanitizedConfig({
+        ...current,
+        modelSyncExcluded: excluded,
+        // Creating participation settings must not supersede unmigrated filters.
+        modelFilterSettings: existing?.modelFilterSettings ?? {
+          ...current.modelFilterSettings,
+          configured: false,
+        },
+      })
+    })
+  }
+
   /** Exports the complete resource-scoped configuration snapshot. */
   async exportConfigs(): Promise<ChannelConfigSnapshot> {
     return {
@@ -406,13 +447,20 @@ class ChannelConfigStorage {
     })
   }
 
-  /** Replaces model filter rules for one resource identity. */
+  /** Replaces model filters atomically, preserving sync participation unless supplied. */
   async upsertFilters(
     resourceRef: ManagedUpstreamResourceRef,
     rules: ChannelModelFilterRule[],
-    channelIdInput?: number,
+    options: { channelId?: number; modelSyncExcluded?: boolean } = {},
   ): Promise<void> {
-    const channelId = toValidChannelId(channelIdInput)
+    const { modelSyncExcluded } = options
+    if (
+      modelSyncExcluded !== undefined &&
+      typeof modelSyncExcluded !== "boolean"
+    ) {
+      throw new Error("Model sync exclusion is invalid")
+    }
+    const channelId = toValidChannelId(options.channelId)
     const normalizedRef = normalizeResourceRef(resourceRef)
     if (!normalizedRef) {
       throw new Error("resourceRef is invalid")
@@ -425,8 +473,8 @@ class ChannelConfigStorage {
         ...current,
         resourceRef: normalizedRef,
         ...(channelId !== null ? { channelId } : {}),
+        ...(modelSyncExcluded !== undefined ? { modelSyncExcluded } : {}),
         modelFilterSettings: {
-          ...current.modelFilterSettings,
           rules,
           updatedAt: timestamp,
         },

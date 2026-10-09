@@ -35,7 +35,10 @@ import {
   type ProtectionBypassExecution,
 } from "~/services/protectionBypass/contracts"
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
-import type { ExecutionResult } from "~/types/managedSiteModelSync"
+import {
+  getModelSyncItemStatus,
+  type ExecutionResult,
+} from "~/types/managedSiteModelSync"
 
 type CommandsInput = {
   data: ReturnType<typeof useManagedSiteModelSyncData>
@@ -110,13 +113,20 @@ export function useManagedSiteModelSyncCommands({
    * Shows a toast notification based on the execution result, highlighting any failures and providing a retry action if needed.
    */
   function notifySyncCompletion(execution: ExecutionResult) {
+    const skipped = execution.statistics.skippedCount ?? 0
+    if (skipped > 0 && execution.statistics.total === 0) {
+      toast.info(t("messages.info.allSkipped", { skipped }))
+      return
+    }
+    const skipSummary =
+      skipped > 0 ? ` ${t("messages.skippedSummary", { skipped })}` : ""
     if (hasModelSyncFailures(execution)) {
       toast.warning(
         t("messages.warning.syncCompletedWithFailures", {
           success: execution.statistics.successCount,
           total: execution.statistics.total,
           failed: execution.statistics.failureCount,
-        }),
+        }) + skipSummary,
         {
           action: {
             label: t("execution.actions.retryFailed"),
@@ -124,7 +134,7 @@ export function useManagedSiteModelSyncCommands({
             onClick: () =>
               handleRetryFailed(
                 execution.items
-                  .filter((item) => !item.ok)
+                  .filter((item) => getModelSyncItemStatus(item) === "failed")
                   .map((item) => item.resourceRef),
               ),
           },
@@ -137,13 +147,15 @@ export function useManagedSiteModelSyncCommands({
       t("messages.success.syncCompleted", {
         success: execution.statistics.successCount,
         total: execution.statistics.total,
-      }),
+      }) + skipSummary,
     )
   }
 
   const retryableFailedRefs =
     lastExecution?.items.flatMap((item) =>
-      !item.ok && item.resourceRef && canUseResource(item.resourceRef)
+      getModelSyncItemStatus(item) === "failed" &&
+      item.resourceRef &&
+      canUseResource(item.resourceRef)
         ? [item.resourceRef]
         : [],
     ) ?? []
@@ -418,16 +430,27 @@ export function useManagedSiteModelSyncCommands({
               getModelSyncHistoryItemKey(item) === resourceKey ? newItem : item,
             )
 
-            const successCount = updatedItems.filter((item) => item.ok).length
-            const failureCount = updatedItems.length - successCount
+            const successCount = updatedItems.filter(
+              (item) => getModelSyncItemStatus(item) === "success",
+            ).length
+            const failureCount = updatedItems.filter(
+              (item) => getModelSyncItemStatus(item) === "failed",
+            ).length
+            const skippedCount =
+              updatedItems.length - successCount - failureCount
 
             return {
               ...prev,
               items: updatedItems,
               statistics: {
                 ...prev.statistics,
+                total: successCount + failureCount,
                 successCount,
                 failureCount,
+                ...(prev.statistics.skippedCount !== undefined ||
+                skippedCount > 0
+                  ? { skippedCount }
+                  : {}),
               },
             }
           })

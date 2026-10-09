@@ -125,6 +125,178 @@ const snapshotOf = (
 })
 
 describe("channelConfigStorage", () => {
+  it("saves filters and sync participation in one scoped write", async () => {
+    const ref = createRef("https://a.example.invalid", "opaque/id")
+    const rules = createConfig({ scopeKey: ref.scopeKey, ruleId: "keep" })
+      .modelFilterSettings.rules
+    const set = vi.spyOn(Storage.prototype, "set")
+
+    await channelConfigStorage.upsertFilters(ref, rules, {
+      modelSyncExcluded: true,
+    })
+
+    expect(set).toHaveBeenCalledTimes(1)
+    expect(await channelConfigStorage.getConfig(ref)).toMatchObject({
+      modelSyncExcluded: true,
+      modelFilterSettings: { rules },
+    })
+    await channelConfigStorage.upsertFilters(ref, [], {
+      modelSyncExcluded: false,
+    })
+    expect(await channelConfigStorage.getConfig(ref)).toMatchObject({
+      modelSyncExcluded: false,
+      modelFilterSettings: { rules: [] },
+    })
+  })
+
+  it("keeps explicit empty filters authoritative over pending legacy rules", async () => {
+    const ref = createRef("https://a.example.invalid", 9)
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, {
+      9: createConfig({ scopeKey: ref.scopeKey, ruleId: "legacy" }),
+    })
+    await channelConfigStorage.setModelSyncExcluded(ref, true)
+    await channelConfigStorage.upsertFilters(ref, [])
+    expect(
+      await channelConfigStorage.hasPendingLegacyConfigsForResources([ref]),
+    ).toBe(false)
+    await channelConfigStorage.migrateLegacyNumericConfigs([
+      { channelId: 9, resourceRef: ref },
+    ])
+    expect(await channelConfigStorage.getConfig(ref)).toMatchObject({
+      modelSyncExcluded: true,
+      modelFilterSettings: { rules: [] },
+    })
+  })
+
+  it("rejects an invalid exclusion without partially saving rules", async () => {
+    const ref = createRef("https://a.example.invalid")
+    const existing = createConfig({
+      scopeKey: ref.scopeKey,
+      ruleId: "existing",
+    })
+    await channelConfigStorage.importConfigs(snapshotOf(existing))
+    await expect(
+      channelConfigStorage.upsertFilters(ref, [], {
+        modelSyncExcluded: "yes" as unknown as boolean,
+      }),
+    ).rejects.toThrow("Model sync exclusion is invalid")
+    expect(await channelConfigStorage.getConfig(ref)).toEqual(existing)
+  })
+
+  it("carries exclusion changes through the runtime filter save boundary", async () => {
+    const resourceRef = createRef("https://a.example.invalid")
+    await expect(
+      resolveChannelConfigUpsertFiltersMessage({
+        resourceRef,
+        filters: [],
+        modelSyncExcluded: true,
+      }),
+    ).resolves.toMatchObject({ success: true })
+    expect(
+      (await channelConfigStorage.getConfig(resourceRef)).modelSyncExcluded,
+    ).toBe(true)
+    await expect(
+      resolveChannelConfigUpsertFiltersMessage({
+        resourceRef,
+        filters: [],
+        modelSyncExcluded: "yes" as unknown as boolean,
+      }),
+    ).resolves.toMatchObject({ success: false })
+    expect(
+      (await channelConfigStorage.getConfig(resourceRef)).modelSyncExcluded,
+    ).toBe(true)
+  })
+
+  it("persists scoped sync exclusions across filter edits and backup restore", async () => {
+    const ref = createRef("https://a.example.invalid", "opaque/id")
+    const rules = createConfig({ scopeKey: ref.scopeKey, ruleId: "keep" })
+      .modelFilterSettings.rules
+    await Promise.all([
+      channelConfigStorage.setModelSyncExcluded(ref, true),
+      channelConfigStorage.upsertFilters(ref, rules),
+    ])
+    const saved = await channelConfigStorage.exportConfigs()
+    await channelConfigStorage.importConfigs({ schemaVersion: 1, configs: {} })
+    await channelConfigStorage.importConfigs(saved)
+    expect(await channelConfigStorage.getConfig(ref)).toMatchObject({
+      modelSyncExcluded: true,
+      modelFilterSettings: { rules },
+    })
+    expect(
+      (
+        await channelConfigStorage.getConfig(
+          createRef("https://b.example.invalid", "opaque/id"),
+        )
+      ).modelSyncExcluded,
+    ).not.toBe(true)
+    await channelConfigStorage.setModelSyncExcluded(ref, false)
+    expect(await channelConfigStorage.getConfig(ref)).toMatchObject({
+      modelSyncExcluded: false,
+      modelFilterSettings: { rules },
+    })
+  })
+
+  it("does not mask pending legacy filters when saving a sync exclusion", async () => {
+    const ref = createRef("https://a.example.invalid", 9)
+    const legacy = createConfig({
+      scopeKey: ref.scopeKey,
+      ruleId: "legacy",
+      updatedAt: 200,
+    })
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, { 9: legacy })
+    await channelConfigStorage.setModelSyncExcluded(ref, true)
+    expect(
+      await channelConfigStorage.hasPendingLegacyConfigsForResources([ref]),
+    ).toBe(true)
+    await channelConfigStorage.migrateLegacyNumericConfigs([
+      { channelId: 9, resourceRef: ref },
+    ])
+    expect(await channelConfigStorage.getConfig(ref)).toMatchObject({
+      modelSyncExcluded: true,
+      modelFilterSettings: legacy.modelFilterSettings,
+    })
+  })
+
+  it("migrates legacy rules with no timestamps into an exclusion-only config", async () => {
+    const ref = createRef("https://a.example.invalid", 9)
+    storageData.set(CHANNEL_CONFIG_STORAGE_KEYS.CHANNEL_CONFIGS, {
+      9: {
+        filters: [
+          { name: "Legacy", pattern: "gpt", action: "include", enabled: true },
+        ],
+      },
+    })
+    await channelConfigStorage.setModelSyncExcluded(ref, true)
+    expect(
+      await channelConfigStorage.hasPendingLegacyConfigsForResources([ref]),
+    ).toBe(true)
+    await channelConfigStorage.migrateLegacyNumericConfigs([
+      { channelId: 9, resourceRef: ref },
+    ])
+    const config = await channelConfigStorage.getConfig(ref)
+    expect(config.modelSyncExcluded).toBe(true)
+    expect(config.modelFilterSettings.rules).toEqual([
+      expect.objectContaining({ name: "Legacy", pattern: "gpt" }),
+    ])
+    await channelConfigStorage.upsertFilters(ref, [])
+    expect(
+      (await channelConfigStorage.getConfig(ref)).modelFilterSettings
+        .configured,
+    ).not.toBe(false)
+  })
+
+  it("rejects malformed exclusions in imported snapshots", () => {
+    const config = createConfig({ scopeKey: "https://a.example.invalid" })
+    expect(
+      coerceChannelConfigSnapshot(
+        snapshotOf({
+          ...config,
+          modelSyncExcluded: "true",
+        } as unknown as ChannelResourceConfig),
+      ),
+    ).toBeNull()
+  })
+
   beforeEach(() => {
     storageData.clear()
     vi.restoreAllMocks()
@@ -143,7 +315,7 @@ describe("channelConfigStorage", () => {
         scopeKey: siteARef.scopeKey,
         ruleId: "site-a",
       }).modelFilterSettings.rules,
-      9,
+      { channelId: 9 },
     )
     await channelConfigStorage.upsertFilters(
       siteBRef,
@@ -151,7 +323,7 @@ describe("channelConfigStorage", () => {
         scopeKey: siteBRef.scopeKey,
         ruleId: "site-b",
       }).modelFilterSettings.rules,
-      9,
+      { channelId: 9 },
     )
 
     await expect(
@@ -193,12 +365,12 @@ describe("channelConfigStorage", () => {
       channelConfigStorage.upsertFilters(
         siteA.resourceRef,
         siteA.modelFilterSettings.rules,
-        siteA.channelId,
+        { channelId: siteA.channelId },
       ),
       channelConfigStorage.upsertFilters(
         siteB.resourceRef,
         siteB.modelFilterSettings.rules,
-        siteB.channelId,
+        { channelId: siteB.channelId },
       ),
     ])
 
@@ -233,7 +405,7 @@ describe("channelConfigStorage", () => {
       channelConfigStorage.upsertFilters(
         local.resourceRef,
         local.modelFilterSettings.rules,
-        local.channelId,
+        { channelId: local.channelId },
       ),
     ])
 

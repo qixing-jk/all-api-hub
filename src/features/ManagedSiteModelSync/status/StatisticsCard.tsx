@@ -23,7 +23,7 @@ export default function StatisticsCard(props: StatisticsCardProps) {
         <h4 className="text-foreground mb-density-4 text-lg font-semibold">
           {t("execution.lastExecution")}
         </h4>
-        <div className="gap-y-density-4 grid grid-cols-2 gap-x-4 md:grid-cols-4">
+        <div className="gap-y-density-4 grid grid-cols-2 gap-x-4 md:grid-cols-5">
           <div>
             <p className="text-muted-foreground text-sm">
               {t("execution.statistics.total")}
@@ -46,6 +46,14 @@ export default function StatisticsCard(props: StatisticsCardProps) {
             </p>
             <p className="text-destructive-text text-2xl font-bold">
               {statistics.failureCount}
+            </p>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-sm">
+              {t("execution.statistics.skipped")}
+            </p>
+            <p className="text-muted-foreground text-2xl font-bold">
+              {statistics.skippedCount ?? 0}
             </p>
           </div>
           <div>

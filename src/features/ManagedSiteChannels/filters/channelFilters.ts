@@ -19,8 +19,13 @@ export type ChannelFilterStorageIdentity = {
   resourceRef: ManagedUpstreamResourceRef
 }
 
+type ChannelFilterSettings = {
+  filters: ChannelModelFilterRule[]
+  modelSyncExcluded: boolean
+}
+
 /**
- * Load channel filter rules for the given channel.
+ * Load rules and sync participation from the same channel configuration.
  *
  * 1. Prefer the background runtime handler (`channelConfig:get`) so the
  *    authoritative storage inside the extension context is used.
@@ -28,9 +33,9 @@ export type ChannelFilterStorageIdentity = {
  *    the runtime call fails—fall back to reading `channelConfigStorage`
  *    locally so editing is still possible.
  */
-export async function fetchChannelFilters(
+export async function fetchChannelFilterSettings(
   identity: ChannelFilterStorageIdentity,
-): Promise<ChannelModelFilterRule[]> {
+): Promise<ChannelFilterSettings> {
   let response: Awaited<ReturnType<typeof sendChannelConfigMessage>>
   const request = identity
 
@@ -49,11 +54,17 @@ export async function fetchChannelFilters(
       error: runtimeError,
     })
     const config = await channelConfigStorage.getConfig(request.resourceRef)
-    return config.modelFilterSettings?.rules ?? []
+    return {
+      filters: config.modelFilterSettings?.rules ?? [],
+      modelSyncExcluded: config.modelSyncExcluded === true,
+    }
   }
 
   if (response.success) {
-    return response.data?.modelFilterSettings?.rules ?? []
+    return {
+      filters: response.data?.modelFilterSettings?.rules ?? [],
+      modelSyncExcluded: response.data?.modelSyncExcluded === true,
+    }
   }
 
   throw new Error(
@@ -62,7 +73,7 @@ export async function fetchChannelFilters(
 }
 
 /**
- * Persist channel filter rules for the given channel.
+ * Persist rules and any explicit sync participation change in one transaction.
  *
  * Tries to update via runtime messaging first so the background copy stays in
  * sync. If messaging is unavailable, we optimistically persist through the
@@ -71,6 +82,7 @@ export async function fetchChannelFilters(
 export async function saveChannelFilters(
   identity: ChannelFilterStorageIdentity,
   filters: ChannelModelFilterRule[],
+  options: { modelSyncExcluded?: boolean } = {},
 ): Promise<void> {
   let response: Awaited<ReturnType<typeof sendChannelConfigMessage>>
   const request = identity
@@ -78,7 +90,7 @@ export async function saveChannelFilters(
   try {
     response = await sendChannelConfigMessage(
       ChannelConfigMessageTypes.UpsertFilters,
-      { ...request, filters },
+      { ...request, filters, ...options },
     )
   } catch (runtimeError) {
     if (!isMessageReceiverUnavailableError(runtimeError)) {
@@ -90,11 +102,10 @@ export async function saveChannelFilters(
       resourceRef: request.resourceRef,
       error: runtimeError,
     })
-    await channelConfigStorage.upsertFilters(
-      request.resourceRef,
-      filters,
-      request.channelId,
-    )
+    await channelConfigStorage.upsertFilters(request.resourceRef, filters, {
+      channelId: request.channelId,
+      ...options,
+    })
     return
   }
 

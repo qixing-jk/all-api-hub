@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
-  fetchChannelFilters,
+  fetchChannelFilterSettings,
   saveChannelFilters,
 } from "~/features/ManagedSiteChannels/filters/channelFilters"
 import { ChannelConfigMessageTypes } from "~/services/managedSites/configuration/channelConfigMessaging"
@@ -67,6 +67,67 @@ const sampleResourceRef = createManagedUpstreamResourceRef({
 })
 
 describe("channelFilters", () => {
+  it.each(["runtime", "local"])(
+    "loads exclusion and rules together through %s",
+    async (source) => {
+      const config = {
+        modelFilterSettings: { rules: sampleRules },
+        modelSyncExcluded: true,
+      }
+      if (source === "runtime") {
+        mockSendChannelConfigMessage.mockResolvedValue({
+          success: true,
+          data: config,
+        })
+      } else {
+        mockSendChannelConfigMessage.mockRejectedValue(
+          new Error("Receiving end does not exist"),
+        )
+        mockGetConfig.mockResolvedValue(config)
+      }
+      expect(
+        await fetchChannelFilterSettings({ resourceRef: sampleResourceRef }),
+      ).toEqual({ filters: sampleRules, modelSyncExcluded: true })
+    },
+  )
+
+  it.each([true, false])(
+    "sends an explicit exclusion change (%s) with the rules",
+    async (modelSyncExcluded) => {
+      mockSendChannelConfigMessage.mockResolvedValue({ success: true })
+      await saveChannelFilters(
+        { resourceRef: sampleResourceRef },
+        sampleRules,
+        { modelSyncExcluded },
+      )
+      expect(mockSendChannelConfigMessage).toHaveBeenCalledWith(
+        ChannelConfigMessageTypes.UpsertFilters,
+        {
+          resourceRef: sampleResourceRef,
+          filters: sampleRules,
+          modelSyncExcluded,
+        },
+      )
+    },
+  )
+
+  it("preserves the combined mutation in the local fallback", async () => {
+    mockSendChannelConfigMessage.mockRejectedValue(
+      new Error("Receiving end does not exist"),
+    )
+    mockUpsertFilters.mockResolvedValue(undefined)
+    await saveChannelFilters(
+      { resourceRef: sampleResourceRef, channelId: 9 },
+      sampleRules,
+      { modelSyncExcluded: false },
+    )
+    expect(mockUpsertFilters).toHaveBeenCalledWith(
+      sampleResourceRef,
+      sampleRules,
+      { channelId: 9, modelSyncExcluded: false },
+    )
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -82,8 +143,11 @@ describe("channelFilters", () => {
     })
 
     await expect(
-      fetchChannelFilters({ channelId: 9, resourceRef: sampleResourceRef }),
-    ).resolves.toEqual(sampleRules)
+      fetchChannelFilterSettings({
+        channelId: 9,
+        resourceRef: sampleResourceRef,
+      }),
+    ).resolves.toEqual({ filters: sampleRules, modelSyncExcluded: false })
 
     expect(mockSendChannelConfigMessage).toHaveBeenCalledWith(
       ChannelConfigMessageTypes.Get,
@@ -103,11 +167,11 @@ describe("channelFilters", () => {
     })
 
     await expect(
-      fetchChannelFilters({
+      fetchChannelFilterSettings({
         channelId: 9,
         resourceRef: sampleResourceRef,
       }),
-    ).resolves.toEqual(sampleRules)
+    ).resolves.toEqual({ filters: sampleRules, modelSyncExcluded: false })
 
     expect(mockSendChannelConfigMessage).toHaveBeenCalledWith(
       ChannelConfigMessageTypes.Get,
@@ -126,7 +190,10 @@ describe("channelFilters", () => {
     })
 
     await expect(
-      fetchChannelFilters({ channelId: 11, resourceRef: sampleResourceRef }),
+      fetchChannelFilterSettings({
+        channelId: 11,
+        resourceRef: sampleResourceRef,
+      }),
     ).rejects.toThrow("runtime unavailable")
 
     expect(mockGetConfig).not.toHaveBeenCalled()
@@ -144,8 +211,11 @@ describe("channelFilters", () => {
     })
 
     await expect(
-      fetchChannelFilters({ channelId: 11, resourceRef: sampleResourceRef }),
-    ).resolves.toEqual(sampleRules)
+      fetchChannelFilterSettings({
+        channelId: 11,
+        resourceRef: sampleResourceRef,
+      }),
+    ).resolves.toEqual({ filters: sampleRules, modelSyncExcluded: false })
 
     expect(mockGetConfig).toHaveBeenCalledWith(sampleResourceRef)
     expect(mockWarn).toHaveBeenCalledTimes(1)
@@ -162,11 +232,11 @@ describe("channelFilters", () => {
     })
 
     await expect(
-      fetchChannelFilters({
+      fetchChannelFilterSettings({
         channelId: 11,
         resourceRef: sampleResourceRef,
       }),
-    ).resolves.toEqual(sampleRules)
+    ).resolves.toEqual({ filters: sampleRules, modelSyncExcluded: false })
 
     expect(mockGetConfig).toHaveBeenCalledWith(sampleResourceRef)
     expect(mockWarn).toHaveBeenCalledTimes(1)
@@ -233,7 +303,7 @@ describe("channelFilters", () => {
     expect(mockUpsertFilters).toHaveBeenCalledWith(
       sampleResourceRef,
       sampleRules,
-      19,
+      { channelId: 19 },
     )
     expect(mockWarn).toHaveBeenCalledTimes(1)
   })
@@ -257,7 +327,7 @@ describe("channelFilters", () => {
     expect(mockUpsertFilters).toHaveBeenCalledWith(
       sampleResourceRef,
       sampleRules,
-      19,
+      { channelId: 19 },
     )
     expect(mockWarn).toHaveBeenCalledTimes(1)
   })
@@ -295,7 +365,7 @@ describe("channelFilters", () => {
     expect(mockUpsertFilters).toHaveBeenCalledWith(
       sampleResourceRef,
       sampleRules,
-      21,
+      { channelId: 21 },
     )
   })
 })

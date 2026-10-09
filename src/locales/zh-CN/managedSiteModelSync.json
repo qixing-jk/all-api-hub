@@ -19,15 +19,29 @@
     "errors": {
       "channelTimeout": "单个渠道处理超过 {{count}} 秒"
     },
+    "exclusions": {
+      "autoSave": "修改后立即保存",
+      "description": "开启跳过后，自动同步和手动点击“执行全部”都会跳过这些渠道。如需临时同步，可点击“执行所选”或“同步此渠道”，无需关闭跳过设置。",
+      "excludedLabel": "已设置跳过",
+      "loadFailed": "无法读取跳过设置，请重试。",
+      "savedExcluded": "已保存：自动同步和“执行全部”将跳过该渠道。",
+      "savedIncluded": "已保存：该渠道会参与自动同步和“执行全部”。",
+      "saveFailed": "跳过设置保存失败，请重试。",
+      "showOnly": "仅看设置为跳过的渠道",
+      "skippedReason": "执行时已为此渠道开启跳过设置，本次未获取或更新模型。",
+      "title": "跳过自动同步和“执行全部”",
+      "toggle": "在自动同步和“执行全部”时跳过 {{name}}"
+    },
     "filters": {
       "all": "全部",
       "failed": "失败",
       "searchPlaceholder": "按渠道名称、ID 或错误信息搜索...",
+      "skipped": "已跳过",
       "success": "成功"
     },
     "lastExecution": "上一次执行",
     "manual": {
-      "description": "选择下方渠道即可立即执行一次同步，选择不会被保存。",
+      "description": "“执行所选”会同步所有勾选的渠道，包括已设置跳过的渠道；全选后也一样。跳过开关修改后立即保存。",
       "empty": {
         "description": "请刷新列表或调整筛选条件后再试。",
         "title": "暂无可用渠道"
@@ -48,7 +62,8 @@
       "never": "从未"
     },
     "progress": {
-      "running": "同步进行中... {{completed}}/{{total}}"
+      "running": "同步进行中... {{completed}}/{{total}}",
+      "skipped": "已跳过：{{skipped}}"
     },
     "statistics": {
       "duration": "耗时",
@@ -56,13 +71,15 @@
       "failed": "失败数量",
       "nextRun": "下次计划时间",
       "notScheduled": "未计划",
+      "skipped": "已跳过",
       "startTime": "开始时间",
       "success": "成功数量",
-      "total": "渠道总数"
+      "total": "已执行渠道"
     },
     "status": {
       "failed": "失败",
       "running": "执行中...",
+      "skipped": "已跳过",
       "success": "成功"
     },
     "table": {
@@ -95,6 +112,14 @@
       "noSelection": "请至少选择一个渠道",
       "syncFailed": "同步失败：{{error}}"
     },
+    "info": {
+      "allSkipped": "本次全部跳过（{{skipped}} 个渠道），未获取或更新模型。可在“已跳过”中查看详情。"
+    },
+    "notification": {
+      "allSkippedBody": "已按设置跳过所有渠道，本次未获取或更新模型。",
+      "allSkippedTitle": "模型同步：全部跳过"
+    },
+    "skippedSummary": "已跳过：{{skipped}}。",
     "success": {
       "settingsSaved": "设置保存成功",
       "syncCompleted": "同步完成：{{success}}/{{total}} 成功"

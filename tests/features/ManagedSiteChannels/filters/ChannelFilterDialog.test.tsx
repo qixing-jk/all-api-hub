@@ -1,9 +1,10 @@
+import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ChannelFilterDialog from "~/features/ManagedSiteChannels/filters/ChannelFilterDialog"
 import {
-  fetchChannelFilters,
+  fetchChannelFilterSettings,
   saveChannelFilters,
 } from "~/features/ManagedSiteChannels/filters/channelFilters"
 import toast from "~/lib/notify"
@@ -18,15 +19,22 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { createManagedUpstreamResourceRef } from "~/types/managedUpstreamResource"
-import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+import { createDeferred } from "~~/tests/test-utils/deferred"
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "~~/tests/test-utils/render"
 
 const {
-  mockFetchChannelFilters,
+  mockFetchChannelFilterSettings,
   mockSaveChannelFilters,
   mockStartProductAnalyticsAction,
   mockCompleteProductAnalyticsAction,
 } = vi.hoisted(() => ({
-  mockFetchChannelFilters: vi.fn(),
+  mockFetchChannelFilterSettings: vi.fn(),
   mockSaveChannelFilters: vi.fn(),
   mockStartProductAnalyticsAction: vi.fn(),
   mockCompleteProductAnalyticsAction: vi.fn(),
@@ -40,7 +48,7 @@ vi.mock("~/lib/notify", () => ({
 }))
 
 vi.mock("~/features/ManagedSiteChannels/filters/channelFilters", () => ({
-  fetchChannelFilters: mockFetchChannelFilters,
+  fetchChannelFilterSettings: mockFetchChannelFilterSettings,
   saveChannelFilters: mockSaveChannelFilters,
 }))
 
@@ -198,9 +206,8 @@ vi.mock("~/features/ManagedSiteModelSync/filters/ChannelFiltersEditor", () => ({
   ),
 }))
 
-const mockedFetchChannelFilters = fetchChannelFilters as unknown as ReturnType<
-  typeof vi.fn
->
+const mockedFetchChannelFilterSettings =
+  fetchChannelFilterSettings as unknown as ReturnType<typeof vi.fn>
 const mockedSaveChannelFilters = saveChannelFilters as unknown as ReturnType<
   typeof vi.fn
 >
@@ -222,10 +229,238 @@ const sampleStorageIdentity = {
 }
 
 describe("ChannelFilterDialog", () => {
+  it("keeps the draft when its parent rerenders with a new close callback", async () => {
+    const user = userEvent.setup()
+    const { rerender } = render(
+      <ChannelFilterDialog channel={sampleChannel} open onClose={vi.fn()} />,
+    )
+    const toggle = await screen.findByRole("switch")
+    await waitFor(() => expect(toggle).toBeEnabled())
+    await user.click(toggle)
+    rerender(
+      <ChannelFilterDialog channel={sampleChannel} open onClose={vi.fn()} />,
+    )
+    await waitFor(() => expect(toggle).toBeEnabled())
+    expect(toggle).toBeChecked()
+    expect(mockedFetchChannelFilterSettings).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not overwrite participation when an exclusion draft returns to its loaded value", async () => {
+    const user = userEvent.setup()
+    mockedFetchChannelFilterSettings.mockResolvedValue({
+      filters: [],
+      modelSyncExcluded: true,
+    })
+    render(
+      <ChannelFilterDialog channel={sampleChannel} open onClose={vi.fn()} />,
+    )
+    const toggle = await screen.findByRole("switch")
+    await waitFor(() => expect(toggle).toBeChecked())
+    await user.click(toggle)
+    expect(toggle).not.toBeChecked()
+    await user.click(toggle)
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:filters.actions.save",
+      }),
+    )
+    expect(mockedSaveChannelFilters).toHaveBeenCalledWith(
+      sampleStorageIdentity,
+      [],
+      {},
+    )
+  })
+
+  it("retains the draft after a failed save and retries re-enabling automatic sync", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    const saving = createDeferred<void>()
+    mockedFetchChannelFilterSettings.mockResolvedValue({
+      filters: [],
+      modelSyncExcluded: true,
+    })
+    mockedSaveChannelFilters.mockReturnValueOnce(saving.promise)
+    render(
+      <ChannelFilterDialog channel={sampleChannel} open onClose={onClose} />,
+    )
+    const toggle = await screen.findByRole("switch")
+    await waitFor(() => expect(toggle).toBeChecked())
+    await user.click(toggle)
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:filters.actions.save",
+      }),
+    )
+    expect(toggle).toBeDisabled()
+    expect(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:filters.actions.cancel",
+      }),
+    ).toBeDisabled()
+    await act(async () => saving.reject(new Error("write failed")))
+    expect(onClose).not.toHaveBeenCalled()
+    expect(toggle).not.toBeChecked()
+    expect(toggle).toBeEnabled()
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:filters.actions.save",
+      }),
+    )
+    expect(mockedSaveChannelFilters).toHaveBeenLastCalledWith(
+      sampleStorageIdentity,
+      [],
+      { modelSyncExcluded: false },
+    )
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(["resolve", "reject"] as const)(
+    "ignores a stale load that completes with %s after changing channels",
+    async (outcome) => {
+      const oldLoad = createDeferred<{
+        filters: []
+        modelSyncExcluded: boolean
+      }>()
+      mockedFetchChannelFilterSettings.mockReturnValueOnce(oldLoad.promise)
+      const onClose = vi.fn()
+      const { rerender } = render(
+        <ChannelFilterDialog channel={sampleChannel} open onClose={onClose} />,
+      )
+      await screen.findByRole("switch")
+      const nextChannel = {
+        ...sampleChannel,
+        name: "Beta",
+        resourceRef: { ...sampleResourceRef, resourceId: "other" },
+      }
+      rerender(
+        <ChannelFilterDialog channel={nextChannel} open onClose={onClose} />,
+      )
+      await waitFor(() => expect(screen.getByRole("switch")).toBeEnabled())
+      await act(async () => {
+        if (outcome === "resolve")
+          oldLoad.resolve({ filters: [], modelSyncExcluded: true })
+        else oldLoad.reject(new Error("old load failed"))
+      })
+      expect(screen.getByRole("switch")).not.toBeChecked()
+      expect(onClose).not.toHaveBeenCalled()
+      expect(toast.error).not.toHaveBeenCalled()
+    },
+  )
+
+  it("does not close the next channel editor when a previous save completes", async () => {
+    const user = userEvent.setup()
+    const saving = createDeferred<void>()
+    mockedSaveChannelFilters.mockReturnValueOnce(saving.promise)
+    const onClose = vi.fn()
+    const { rerender } = render(
+      <ChannelFilterDialog channel={sampleChannel} open onClose={onClose} />,
+    )
+    const toggle = await screen.findByRole("switch")
+    await waitFor(() => expect(toggle).toBeEnabled())
+    await user.click(toggle)
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:filters.actions.save",
+      }),
+    )
+    const nextChannel = {
+      ...sampleChannel,
+      name: "Beta",
+      resourceRef: { ...sampleResourceRef, resourceId: "other" },
+    }
+    rerender(
+      <ChannelFilterDialog channel={nextChannel} open onClose={onClose} />,
+    )
+    await waitFor(() => expect(screen.getByRole("switch")).toBeEnabled())
+    await act(async () => saving.resolve())
+    expect(onClose).not.toHaveBeenCalled()
+    expect(screen.getByRole("switch")).not.toBeChecked()
+    expect(toast.success).not.toHaveBeenCalled()
+  })
+
+  it("offers a draft exclusion in both editor modes and saves it with filters", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    render(
+      <ChannelFilterDialog channel={sampleChannel} open onClose={onClose} />,
+    )
+    const toggle = await screen.findByRole("switch", {
+      name: "managedSiteModelSync:execution.exclusions.title",
+    })
+    await waitFor(() => expect(toggle).toBeEnabled())
+    await user.click(toggle)
+    expect(toggle).toBeChecked()
+    expect(mockedSaveChannelFilters).not.toHaveBeenCalled()
+    await user.click(screen.getByRole("button", { name: "view-json" }))
+    expect(toggle).toBeVisible()
+    expect(toggle).toBeChecked()
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:filters.actions.save",
+      }),
+    )
+    await waitFor(() =>
+      expect(mockedSaveChannelFilters).toHaveBeenCalledWith(
+        sampleStorageIdentity,
+        [],
+        { modelSyncExcluded: true },
+      ),
+    )
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it("discards an exclusion draft on cancel and reloads it on reopen", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    const { rerender } = render(
+      <ChannelFilterDialog channel={sampleChannel} open onClose={onClose} />,
+    )
+    const toggle = await screen.findByRole("switch")
+    await waitFor(() => expect(toggle).toBeEnabled())
+    toggle.focus()
+    await user.keyboard(" ")
+    expect(toggle).toBeChecked()
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:filters.actions.cancel",
+      }),
+    )
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(mockedSaveChannelFilters).not.toHaveBeenCalled()
+    rerender(
+      <ChannelFilterDialog
+        channel={sampleChannel}
+        open={false}
+        onClose={onClose}
+      />,
+    )
+    rerender(
+      <ChannelFilterDialog channel={sampleChannel} open onClose={onClose} />,
+    )
+    await waitFor(() => expect(screen.getByRole("switch")).toBeEnabled())
+    expect(screen.getByRole("switch")).not.toBeChecked()
+  })
+
+  it("blocks save and exclusion edits until settings finish loading", async () => {
+    mockedFetchChannelFilterSettings.mockReturnValue(new Promise(() => {}))
+    render(
+      <ChannelFilterDialog channel={sampleChannel} open onClose={vi.fn()} />,
+    )
+    expect(
+      await screen.findByRole("button", {
+        name: "managedSiteChannels:filters.actions.save",
+      }),
+    ).toBeDisabled()
+    expect(screen.getByRole("switch")).toBeDisabled()
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000)
-    mockedFetchChannelFilters.mockResolvedValue([])
+    mockedFetchChannelFilterSettings.mockResolvedValue({
+      filters: [],
+      modelSyncExcluded: false,
+    })
     mockedSaveChannelFilters.mockResolvedValue(undefined)
     mockStartProductAnalyticsAction.mockReturnValue({
       complete: mockCompleteProductAnalyticsAction,
@@ -233,19 +468,22 @@ describe("ChannelFilterDialog", () => {
   })
 
   it("loads existing filters when opened", async () => {
-    mockedFetchChannelFilters.mockResolvedValue([
-      {
-        id: "rule-1",
-        name: "Allow GPT",
-        description: "keep chat models",
-        pattern: "gpt",
-        isRegex: false,
-        action: "include",
-        enabled: true,
-        createdAt: 100,
-        updatedAt: 200,
-      },
-    ])
+    mockedFetchChannelFilterSettings.mockResolvedValue({
+      modelSyncExcluded: false,
+      filters: [
+        {
+          id: "rule-1",
+          name: "Allow GPT",
+          description: "keep chat models",
+          pattern: "gpt",
+          isRegex: false,
+          action: "include",
+          enabled: true,
+          createdAt: 100,
+          updatedAt: 200,
+        },
+      ],
+    })
 
     render(
       <ChannelFilterDialog
@@ -256,7 +494,7 @@ describe("ChannelFilterDialog", () => {
     )
 
     await waitFor(() => {
-      expect(mockedFetchChannelFilters).toHaveBeenCalledWith(
+      expect(mockedFetchChannelFilterSettings).toHaveBeenCalledWith(
         sampleStorageIdentity,
       )
     })
@@ -304,7 +542,7 @@ describe("ChannelFilterDialog", () => {
     )
 
     await waitFor(() => {
-      expect(mockedFetchChannelFilters).toHaveBeenCalledWith({
+      expect(mockedFetchChannelFilterSettings).toHaveBeenCalledWith({
         resourceRef: sampleResourceRef,
       })
     })
@@ -337,13 +575,14 @@ describe("ChannelFilterDialog", () => {
             pattern: "gpt",
           }),
         ],
+        {},
       )
     })
   })
 
   it("shows an error toast and closes when filters fail to load", async () => {
     const onClose = vi.fn()
-    mockedFetchChannelFilters.mockRejectedValue(new Error("load failed"))
+    mockedFetchChannelFilterSettings.mockRejectedValue(new Error("load failed"))
 
     render(
       <ChannelFilterDialog
@@ -378,7 +617,7 @@ describe("ChannelFilterDialog", () => {
         "managedSiteChannels:filters.messages.loadFailed",
       )
     })
-    expect(mockedFetchChannelFilters).not.toHaveBeenCalled()
+    expect(mockedFetchChannelFilterSettings).not.toHaveBeenCalled()
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
@@ -484,6 +723,7 @@ describe("ChannelFilterDialog", () => {
             updatedAt: 1_700_000_000_000,
           },
         ],
+        {},
       )
     })
 
@@ -545,6 +785,7 @@ describe("ChannelFilterDialog", () => {
             probeIds: ["text-generation"],
           }),
         ],
+        {},
       )
     })
 
@@ -664,30 +905,33 @@ describe("ChannelFilterDialog", () => {
 
   it("preserves user-defined visual rule order when saving", async () => {
     const onClose = vi.fn()
-    mockedFetchChannelFilters.mockResolvedValue([
-      {
-        id: "rule-1",
-        name: "First",
-        description: "",
-        pattern: "first",
-        isRegex: false,
-        action: "include",
-        enabled: true,
-        createdAt: 100,
-        updatedAt: 200,
-      },
-      {
-        id: "rule-2",
-        name: "Second",
-        description: "",
-        pattern: "second",
-        isRegex: false,
-        action: "exclude",
-        enabled: true,
-        createdAt: 101,
-        updatedAt: 201,
-      },
-    ])
+    mockedFetchChannelFilterSettings.mockResolvedValue({
+      modelSyncExcluded: false,
+      filters: [
+        {
+          id: "rule-1",
+          name: "First",
+          description: "",
+          pattern: "first",
+          isRegex: false,
+          action: "include",
+          enabled: true,
+          createdAt: 100,
+          updatedAt: 200,
+        },
+        {
+          id: "rule-2",
+          name: "Second",
+          description: "",
+          pattern: "second",
+          isRegex: false,
+          action: "exclude",
+          enabled: true,
+          createdAt: 101,
+          updatedAt: 201,
+        },
+      ],
+    })
 
     render(
       <ChannelFilterDialog
@@ -723,6 +967,7 @@ describe("ChannelFilterDialog", () => {
             pattern: "first",
           }),
         ],
+        {},
       )
     })
 

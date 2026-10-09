@@ -44,9 +44,13 @@ const getModelSyncExecutionAnalyticsCompletionOptions = (
     ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown }
     : {}),
   insights: {
-    itemCount: execution.statistics.total,
+    itemCount:
+      execution.statistics.total + (execution.statistics.skippedCount ?? 0),
     successCount: execution.statistics.successCount,
     failureCount: execution.statistics.failureCount,
+    ...(execution.statistics.skippedCount
+      ? { skippedCount: execution.statistics.skippedCount }
+      : {}),
   },
 })
 

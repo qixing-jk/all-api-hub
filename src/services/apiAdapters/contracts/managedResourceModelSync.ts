@@ -17,8 +17,14 @@ export type ManagedResourceModelSyncBatchOptions = BatchExecutionOptions & {
 /** The provider retains its native inventory; shared scheduling sees selection facts only. */
 export interface ManagedResourceModelSyncWorkflow {
   listChannels(): Promise<ManagedModelChannelSummaryListData>
-  prepareBatch(resourceRefs?: readonly ManagedResourceRef[]): Promise<{
+  /** Explicit selection overrides exclusions; apply exclusions before any upstream model query. */
+  prepareBatch(
+    resourceRefs?: readonly ManagedResourceRef[],
+    excludedResourceRefs?: readonly ManagedResourceRef[],
+  ): Promise<{
     resources: readonly ManagedModelChannelSummary[]
+    /** Existing inventory entries excluded before any model requests. */
+    skippedResources?: readonly ManagedModelChannelSummary[]
     run(options: ManagedResourceModelSyncBatchOptions): Promise<ExecutionResult>
   }>
 }

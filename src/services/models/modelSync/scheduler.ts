@@ -26,7 +26,10 @@ import {
 } from "~/services/protectionBypass/contracts"
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
-import { type ExecutionResult } from "~/types/managedSiteModelSync"
+import {
+  getModelSyncItemStatus,
+  type ExecutionResult,
+} from "~/types/managedSiteModelSync"
 import {
   getTaskNotificationStatusFromCounts,
   TASK_NOTIFICATION_STATUSES,
@@ -123,7 +126,9 @@ function classifyModelSyncError(error: unknown): ProductAnalyticsErrorCategory {
 function classifyModelSyncResultError(
   result: ExecutionResult,
 ): ProductAnalyticsErrorCategory | undefined {
-  const failedItem = result.items.find((item) => !item.ok)
+  const failedItem = result.items.find(
+    (item) => getModelSyncItemStatus(item) === "failed",
+  )
   if (!failedItem) {
     return undefined
   }
@@ -209,7 +214,9 @@ class ModelSyncScheduler {
               tracker.complete(
                 result.statistics.failureCount > 0
                   ? PRODUCT_ANALYTICS_RESULTS.Failure
-                  : PRODUCT_ANALYTICS_RESULTS.Success,
+                  : result.statistics.total === 0
+                    ? PRODUCT_ANALYTICS_RESULTS.Skipped
+                    : PRODUCT_ANALYTICS_RESULTS.Success,
                 {
                   durationMs: Date.now() - startedAt,
                   errorCategory:
@@ -219,9 +226,14 @@ class ModelSyncScheduler {
                   insights: {
                     sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
                     ...(managedSiteType ? { managedSiteType } : {}),
-                    itemCount: result.statistics.total,
+                    itemCount:
+                      result.statistics.total +
+                      (result.statistics.skippedCount ?? 0),
                     successCount: result.statistics.successCount,
                     failureCount: result.statistics.failureCount,
+                    ...(result.statistics.skippedCount
+                      ? { skippedCount: result.statistics.skippedCount }
+                      : {}),
                   },
                 },
               )
@@ -232,10 +244,26 @@ class ModelSyncScheduler {
                   failedCount: result.statistics.failureCount,
                 }),
                 counts: {
-                  total: result.statistics.total,
+                  total:
+                    result.statistics.total +
+                    (result.statistics.skippedCount ?? 0),
                   success: result.statistics.successCount,
                   failed: result.statistics.failureCount,
+                  ...(result.statistics.skippedCount
+                    ? { skipped: result.statistics.skippedCount }
+                    : {}),
                 },
+                ...(result.statistics.total === 0 &&
+                result.statistics.skippedCount
+                  ? {
+                      title: t(
+                        "managedSiteModelSync:messages.notification.allSkippedTitle",
+                      ),
+                      message: t(
+                        "managedSiteModelSync:messages.notification.allSkippedBody",
+                      ),
+                    }
+                  : {}),
               })
             } catch (error) {
               logger.error("Scheduled execution failed", error)

@@ -51,8 +51,11 @@ export function buildManagedSiteModelSyncDiagnostics({
   const retryCount = getRetryCount(execution)
   const failureCount = execution.statistics.failureCount
   const successCount = execution.statistics.successCount
-  const itemCount = execution.statistics.total
-  const skippedCount = Math.max(itemCount - successCount - failureCount, 0)
+  const itemCount =
+    execution.statistics.total + (execution.statistics.skippedCount ?? 0)
+  const skippedCount =
+    execution.statistics.skippedCount ??
+    Math.max(itemCount - successCount - failureCount, 0)
 
   return {
     context: {

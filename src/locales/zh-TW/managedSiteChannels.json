@@ -425,6 +425,7 @@
       "validationProbeIds": "請為每個探測規則至少選擇一個驗證探測。",
       "validationRegex": "無效的正規表示式：{{error}}"
     },
+    "modelSyncExclusionHelp": "儲存後，自動同步和手動點擊「執行全部」都會略過此渠道。「執行所選」和「同步此渠道」仍可臨時同步它。點擊「取消」會放棄本次修改。",
     "placeholders": {
       "description": "可選備註",
       "name": "如：僅允許 GPT-4",

@@ -84,6 +84,42 @@ describe("managed site model sync product analytics diagnostics", () => {
     expect(JSON.stringify(diagnostics)).not.toContain("500")
   })
 
+  it("includes explicit skips in diagnostics without classifying them as failures", () => {
+    const diagnostics = buildManagedSiteModelSyncDiagnostics({
+      managedSiteType: "new-api",
+      mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+      execution: {
+        items: [
+          {
+            resourceRef: modelResourceRef(1),
+            channelName: "Excluded",
+            ok: false,
+            skipReason: "excluded",
+            attempts: 0,
+            finishedAt: 1,
+          },
+        ],
+        statistics: {
+          total: 0,
+          successCount: 0,
+          failureCount: 0,
+          skippedCount: 1,
+          startedAt: 1,
+          endedAt: 1,
+          durationMs: 0,
+        },
+      },
+    })
+    expect(diagnostics.outcome).toMatchObject({
+      itemCount: 1,
+      skippedCount: 1,
+      failureCount: 0,
+      successCount: 0,
+      modelCount: 0,
+    })
+    expect(diagnostics.failure).toBeUndefined()
+  })
+
   it("marks empty executions as skipped without failure diagnostics", () => {
     expect(
       buildManagedSiteModelSyncDiagnostics({

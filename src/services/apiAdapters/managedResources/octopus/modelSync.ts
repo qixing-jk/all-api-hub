@@ -424,7 +424,7 @@ export function createOctopusModelSyncCapability(
       const channels = await client.listChannels()
       return { items: channels.map(summarize), total: channels.length }
     },
-    prepareBatch: async (resourceRefs) => {
+    prepareBatch: async (resourceRefs, excludedResourceRefs = []) => {
       if (
         resourceRefs !== undefined &&
         (!Array.isArray(resourceRefs) || resourceRefs.length === 0)
@@ -440,12 +440,22 @@ export function createOctopusModelSyncCapability(
             ),
           )
         : undefined
+      const excludedIds = new Set(
+        excludedResourceRefs.map((ref) =>
+          requireManagedResourceChannelId(SITE_TYPES.OCTOPUS, config, ref),
+        ),
+      )
       const inventory = await client.listChannels()
       const channels = selectedIds
         ? inventory.filter((channel) => selectedIds.has(channel.id))
-        : inventory
+        : inventory.filter((channel) => !excludedIds.has(channel.id))
       return {
         resources: channels.map(summarize),
+        skippedResources: selectedIds
+          ? []
+          : inventory
+              .filter((channel) => excludedIds.has(channel.id))
+              .map(summarize),
         run: async (options) =>
           await runOctopusBatchWithClient(config, client, channels, options),
       }

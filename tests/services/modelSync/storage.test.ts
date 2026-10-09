@@ -37,6 +37,38 @@ const LEGACY_KEYS = {
 } as const
 
 describe("managedSiteModelSyncStorage - storage key migration", () => {
+  it("retains skipped channel identity and reason when reopening execution history", async () => {
+    const execution: ExecutionResult = {
+      items: [
+        {
+          resourceRef: modelResourceRef("opaque-id"),
+          channelName: "Skipped",
+          ok: false,
+          skipReason: "excluded",
+          attempts: 0,
+          finishedAt: 1,
+        },
+      ],
+      statistics: {
+        total: 0,
+        successCount: 0,
+        failureCount: 0,
+        skippedCount: 1,
+        startedAt: 1,
+        endedAt: 1,
+        durationMs: 0,
+      },
+    }
+    const { set, get } = (Storage as any).__mocks
+    set.mockImplementationOnce(async (_key: string, value: unknown) =>
+      get.mockResolvedValueOnce(value),
+    )
+    await managedSiteModelSyncStorage.saveLastExecution(execution)
+    expect(await managedSiteModelSyncStorage.getLastExecution()).toEqual(
+      execution,
+    )
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
   })

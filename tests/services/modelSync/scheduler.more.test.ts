@@ -140,6 +140,55 @@ vi.mock("~/services/apiAdapters/managedResources/octopus/modelSync", () => ({
 }))
 
 describe("modelSyncScheduler additional scheduler flows", () => {
+  it("passes saved exclusions into provider batch preparation and completes an empty batch", async () => {
+    mocks.getPreferences.mockResolvedValue({
+      managedSiteType: "octopus",
+      octopus: {
+        baseUrl: "https://example.com",
+        username: "admin",
+        password: "test",
+      },
+      managedSiteModelSync: DEFAULT_PREFERENCES.managedSiteModelSync,
+    })
+    const ref = modelResourceRef(1, { siteType: "octopus" })
+    mocks.channelConfigGetConfigsForScope.mockResolvedValue({
+      excluded: {
+        resourceRef: {
+          managedSiteType: ref.siteType,
+          scopeKey: ref.scopeKey,
+          resourceId: ref.resourceId,
+        },
+        modelSyncExcluded: true,
+      },
+    })
+    mocks.prepareOctopusBatch.mockResolvedValue({
+      resources: [],
+      skippedResources: [{ ref, name: "Excluded provider channel" }],
+      run: mocks.runOctopusBatch,
+    })
+    const { modelSyncScheduler } = await import(
+      "~/services/models/modelSync/scheduler"
+    )
+    const result = await modelSyncScheduler.executeSync()
+    expect(mocks.prepareOctopusBatch).toHaveBeenCalledWith(undefined, [ref])
+    expect(result.statistics).toMatchObject({
+      total: 0,
+      successCount: 0,
+      failureCount: 0,
+    })
+    expect(result.statistics.skippedCount).toBe(1)
+    expect(result.items).toEqual([
+      expect.objectContaining({
+        resourceRef: ref,
+        channelName: "Excluded provider channel",
+        skipReason: "excluded",
+      }),
+    ])
+    expect(mocks.runOctopusBatch).not.toHaveBeenCalled()
+    expect(mocks.ensureMigration).not.toHaveBeenCalled()
+    expect(mocks.saveLastExecution).toHaveBeenCalledWith(result)
+  })
+
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()

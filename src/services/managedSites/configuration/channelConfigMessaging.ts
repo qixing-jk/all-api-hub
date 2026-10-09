@@ -18,6 +18,8 @@ export interface ChannelConfigGetRequest {
 
 export interface ChannelConfigUpsertFiltersRequest {
   channelId?: number
+  /** Omitted when the rule editor leaves sync participation unchanged. */
+  modelSyncExcluded?: boolean
   resourceRef: ManagedUpstreamResourceRef
   filters: Array<IncomingChannelFilter | ChannelModelFilterRule>
 }

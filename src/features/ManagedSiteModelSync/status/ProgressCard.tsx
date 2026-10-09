@@ -40,6 +40,13 @@ export default function ProgressCard(props: ProgressCardProps) {
             })}
             {progress.currentChannel && ` - ${progress.currentChannel}`}
           </p>
+          {(progress.skippedCount ?? 0) > 0 && (
+            <p className="text-theme-700 dark:text-theme-300 text-sm">
+              {t("execution.progress.skipped", {
+                skipped: progress.skippedCount,
+              })}
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>

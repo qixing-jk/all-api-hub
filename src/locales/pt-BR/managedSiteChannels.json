@@ -425,6 +425,7 @@
       "validationProbeIds": "Selecione pelo menos um teste de verificação para cada regra de teste.",
       "validationRegex": "Padrão de regex inválido: {{error}}"
     },
+    "modelSyncExclusionHelp": "Após salvar, a sincronização automática e Executar todos ignorarão este canal. Executar selecionados e Sincronizar na linha ainda permitem sincronizá-lo uma vez. Cancelar descarta as alterações deste diálogo.",
     "placeholders": {
       "description": "Observações opcionais sobre esta regra",
       "name": "ex.: Permitir GPT-4",

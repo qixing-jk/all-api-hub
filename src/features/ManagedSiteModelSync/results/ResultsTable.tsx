@@ -1,16 +1,27 @@
 import dayjs from "dayjs"
-import { CircleAlert, CircleCheck, RefreshCw } from "lucide-react"
-import { useEffect, useRef } from "react"
+import {
+  CircleAlert,
+  CircleCheck,
+  CircleMinus,
+  Loader2,
+  RefreshCw,
+} from "lucide-react"
+import { useEffect, useId, useRef } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Badge, Button, Card } from "~/components/ui"
+import { Switch } from "~/components/ui/Switch"
+import type { useModelSyncExclusions } from "~/features/ManagedSiteModelSync/exclusions/useModelSyncExclusions"
 import {
   getModelSyncHistoryItemKey,
   getModelSyncHistoryResourceId,
 } from "~/features/ManagedSiteModelSync/results/executionIdentity"
 import ManagedSiteChannelLinkButton from "~/features/ManagedSiteWidgets/ManagedSiteChannelLinkButton"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
-import type { ExecutionHistoryItemResult } from "~/types/managedSiteModelSync"
+import {
+  getModelSyncItemStatus,
+  type ExecutionHistoryItemResult,
+} from "~/types/managedSiteModelSync"
 
 interface ResultsTableProps {
   items: ExecutionHistoryItemResult[]
@@ -21,6 +32,7 @@ interface ResultsTableProps {
   isRunning: boolean
   runningResourceKey?: string | null
   canUseResource?: (ref: ManagedResourceRef) => boolean
+  exclusions?: ReturnType<typeof useModelSyncExclusions>
   visibleColumns?: Partial<{
     status: boolean
     message: boolean
@@ -40,6 +52,7 @@ interface ResultsTableProps {
  * @param props.isRunning Whether any sync is currently running.
  * @param props.runningResourceKey Resource identity key currently executing, if any.
  * @param props.canUseResource Whether the reference belongs to the active managed site.
+ * @param props.exclusions Persisted model-sync participation controls.
  * @param props.visibleColumns Optional column visibility overrides.
  * @returns Card containing results table.
  */
@@ -53,8 +66,10 @@ export default function ResultsTable({
   runningResourceKey,
   visibleColumns,
   canUseResource = () => true,
+  exclusions,
 }: ResultsTableProps) {
   const { t } = useTranslation("managedSiteModelSync")
+  const autoSaveHintId = useId()
 
   const selectableItems = items.filter(
     (item) => item.resourceRef && canUseResource(item.resourceRef),
@@ -125,6 +140,17 @@ export default function ResultsTable({
                   {t("execution.table.finishedAt")}
                 </th>
               )}
+              {exclusions && (
+                <th className="text-secondary-foreground py-density-3 px-4 text-left text-sm font-medium">
+                  {t("execution.exclusions.title")}
+                  <p
+                    id={autoSaveHintId}
+                    className="text-muted-foreground mt-density-1 text-xs font-normal"
+                  >
+                    {t("execution.exclusions.autoSave")}
+                  </p>
+                </th>
+              )}
               <th className="border-border bg-surface-subtle text-secondary-foreground dark:bg-card py-density-3 sticky right-0 z-20 border-l px-4 text-right text-sm font-medium shadow-[-8px_0_12px_-12px_var(--table-edge-shadow)]">
                 {t("execution.table.actions")}
               </th>
@@ -137,6 +163,15 @@ export default function ResultsTable({
                 item.resourceRef && canUseResource(item.resourceRef),
               )
               const isRunningThis = runningResourceKey === resourceKey
+              const isSavingExclusion = Boolean(
+                item.resourceRef && exclusions?.isSaving(item.resourceRef),
+              )
+              const status = getModelSyncItemStatus(item)
+              const currentlyExcluded = Boolean(
+                available &&
+                  item.resourceRef &&
+                  exclusions?.isExcluded(item.resourceRef),
+              )
 
               return (
                 <tr
@@ -161,7 +196,9 @@ export default function ResultsTable({
                   </td>
                   {columns.status && (
                     <td className="py-density-3 px-4">
-                      {item.ok ? (
+                      {status === "skipped" ? (
+                        <CircleMinus className="text-muted-foreground h-5 w-5" />
+                      ) : status === "success" ? (
                         <CircleCheck className="text-success-indicator h-5 w-5" />
                       ) : (
                         <CircleAlert className="text-destructive-indicator h-5 w-5" />
@@ -179,6 +216,13 @@ export default function ResultsTable({
                       channelName={item.channelName}
                       className="h-auto min-h-0 justify-start p-0 text-sm"
                     />
+                    {currentlyExcluded && (
+                      <p className="mt-density-1">
+                        <Badge variant="secondary">
+                          {t("execution.exclusions.excludedLabel")}
+                        </Badge>
+                      </p>
+                    )}
                     {!available && (
                       <p className="text-muted-foreground mt-density-1 text-xs">
                         {t("execution.table.resourceUnavailable")}
@@ -187,7 +231,16 @@ export default function ResultsTable({
                   </td>
                   {columns.message && (
                     <td className="py-density-3 px-4">
-                      {item.ok ? (
+                      {status === "skipped" ? (
+                        <div>
+                          <Badge variant="secondary">
+                            {t("execution.status.skipped")}
+                          </Badge>
+                          <p className="text-muted-foreground mt-density-1 text-xs">
+                            {t("execution.exclusions.skippedReason")}
+                          </p>
+                        </div>
+                      ) : status === "success" ? (
                         <Badge variant="success">
                           {t("execution.status.success")}
                         </Badge>
@@ -220,6 +273,48 @@ export default function ResultsTable({
                       {item.finishedAt
                         ? dayjs(item.finishedAt).format("HH:mm:ss")
                         : "—"}
+                    </td>
+                  )}
+                  {exclusions && (
+                    <td className="py-density-3 px-4">
+                      <Switch
+                        size="sm"
+                        checked={Boolean(
+                          item.resourceRef &&
+                            exclusions.isExcluded(item.resourceRef),
+                        )}
+                        onChange={(excluded) => {
+                          if (item.resourceRef)
+                            void exclusions.setExcluded(
+                              item.resourceRef,
+                              excluded,
+                            )
+                        }}
+                        disabled={
+                          !available ||
+                          isRunning ||
+                          exclusions.isLoading ||
+                          Boolean(exclusions.error) ||
+                          isSavingExclusion
+                        }
+                        aria-busy={isSavingExclusion}
+                        aria-describedby={autoSaveHintId}
+                        aria-label={t("execution.exclusions.toggle", {
+                          name: item.channelName,
+                        })}
+                      />
+                      {isSavingExclusion && (
+                        <span
+                          role="status"
+                          className="text-muted-foreground mt-density-1 flex items-center gap-x-1 text-xs whitespace-nowrap"
+                        >
+                          <Loader2
+                            className="h-3 w-3 animate-spin"
+                            aria-hidden="true"
+                          />
+                          {t("common:status.saving")}
+                        </span>
+                      )}
                     </td>
                   )}
                   <td className="border-border-subtle bg-card group-hover:bg-surface-subtle dark:border-border dark:bg-background dark:group-hover:bg-card py-density-3 sticky right-0 z-10 border-l px-4 text-right shadow-[-8px_0_12px_-12px_var(--table-edge-shadow)]">

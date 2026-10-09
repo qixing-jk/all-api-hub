@@ -14,6 +14,7 @@ import {
 } from "~/services/managedSites/configuration/runtimeConfig"
 import {
   assertManagedResourceRefForSite,
+  createManagedChannelResourceRef,
   getManagedResourceRefKey,
   toManagedUpstreamResourceRef,
 } from "~/services/managedSites/managedResourceIdentity"
@@ -36,10 +37,12 @@ import {
 } from "~/services/protectionBypass/contracts"
 import type {
   ManagedModelChannel,
+  ManagedModelChannelSummary,
   ManagedModelChannelSummaryListData,
 } from "~/types/managedResourceModels"
 import { DEFAULT_MODEL_REDIRECT_PREFERENCES } from "~/types/managedSiteModelRedirect"
 import {
+  getModelSyncItemStatus,
   type ExecutionItemResult,
   type ExecutionResult,
   type ScopedExecutionProgress,
@@ -199,6 +202,24 @@ export class ModelSyncExecution {
       config.channelProcessingTimeout,
     )
 
+    const excludedResourceRefs =
+      !resourceRefs && selectedTarget
+        ? Object.values(
+            await channelConfigStorage.getConfigsForScope({
+              managedSiteType: selectedTarget.siteType,
+              scopeKey: selectedTarget.config.baseUrl,
+            }),
+          )
+            .filter((entry) => entry.modelSyncExcluded)
+            .map(({ resourceRef }) =>
+              createManagedChannelResourceRef(
+                resourceRef.managedSiteType,
+                resourceRef.scopeKey,
+                resourceRef.resourceId,
+              ),
+            )
+        : []
+
     const createSync =
       getSiteTypeCapabilities(siteType).managedSites?.models?.createSync
     if (createSync) {
@@ -218,6 +239,7 @@ export class ModelSyncExecution {
         messagesKey,
         { concurrency, maxRetries, channelProcessingTimeout },
         progressOwner,
+        excludedResourceRefs,
         protectionBypassExecution,
       )
     }
@@ -245,6 +267,7 @@ export class ModelSyncExecution {
 
     // Match selected resources within the captured managed-site scope.
     let channels: ManagedModelChannel[]
+    let skippedResources: ManagedModelChannelSummary[] = []
     if (resourceRefs && resourceRefs.length > 0) {
       channels = allChannels.filter((c) =>
         resourceRefs.some(
@@ -253,10 +276,21 @@ export class ModelSyncExecution {
         ),
       )
     } else {
-      channels = allChannels
+      const excludedKeys = new Set(
+        excludedResourceRefs.map(getManagedResourceRefKey),
+      )
+      channels = allChannels.filter(
+        ({ ref }) => !excludedKeys.has(getManagedResourceRefKey(ref)),
+      )
+      skippedResources = allChannels.filter(({ ref }) =>
+        excludedKeys.has(getManagedResourceRefKey(ref)),
+      )
     }
 
     if (channels.length === 0) {
+      if (!resourceRefs && allChannels.length > 0) {
+        return this.completeEmptyExecution(progressOwner, skippedResources)
+      }
       throw new Error(getManagedSiteNoChannelsToSyncMessage(t, messagesKey))
     }
 
@@ -283,7 +317,11 @@ export class ModelSyncExecution {
       modelRedirectConfig,
     })
 
-    const progress = this.startProgress(progressOwner, channels.length)
+    const progress = this.startProgress(
+      progressOwner,
+      channels.length,
+      skippedResources.length,
+    )
 
     let failureCount = 0
 
@@ -305,7 +343,11 @@ export class ModelSyncExecution {
         },
       })
 
-      await saveModelSyncExecution(result, !resourceRefs)
+      result = await this.completeExecution(
+        result,
+        skippedResources,
+        !resourceRefs,
+      )
 
       logger.info("Execution completed", {
         successCount: result.statistics.successCount,
@@ -328,14 +370,26 @@ export class ModelSyncExecution {
     messagesKey: ManagedSiteMessagesKey,
     options: ManagedResourceModelSyncBatchOptions,
     progressOwner: ProgressOwner,
+    excludedResourceRefs: readonly ManagedResourceRef[],
     protectionBypassExecution?: ProtectionBypassExecution,
   ): Promise<ExecutionResult> {
-    const batch = await workflow.prepareBatch(resourceRefs)
+    const batch = await workflow.prepareBatch(
+      resourceRefs,
+      excludedResourceRefs,
+    )
+    const skippedResources = batch.skippedResources ?? []
     if (batch.resources.length === 0) {
+      if (!resourceRefs && skippedResources.length > 0) {
+        return this.completeEmptyExecution(progressOwner, skippedResources)
+      }
       throw new Error(getManagedSiteNoChannelsToSyncMessage(t, messagesKey))
     }
 
-    const progress = this.startProgress(progressOwner, batch.resources.length)
+    const progress = this.startProgress(
+      progressOwner,
+      batch.resources.length,
+      skippedResources.length,
+    )
 
     let failureCount = 0
 
@@ -365,7 +419,11 @@ export class ModelSyncExecution {
         },
       })
 
-      await saveModelSyncExecution(result, !resourceRefs)
+      result = await this.completeExecution(
+        result,
+        skippedResources,
+        !resourceRefs,
+      )
 
       logger.info("Provider execution completed", {
         successCount: result.statistics.successCount,
@@ -373,6 +431,64 @@ export class ModelSyncExecution {
       })
 
       return result
+    } finally {
+      progress.finish()
+    }
+  }
+
+  /** Retains the captured skip decisions in history, independent of later settings changes. */
+  private async completeExecution(
+    execution: ExecutionResult,
+    skippedResources: readonly ManagedModelChannelSummary[],
+    isFullSync: boolean,
+  ): Promise<ExecutionResult> {
+    const result: ExecutionResult =
+      skippedResources.length === 0
+        ? execution
+        : {
+            ...execution,
+            items: [
+              ...execution.items,
+              ...skippedResources.map(
+                ({ ref, name }): ExecutionItemResult => ({
+                  resourceRef: ref,
+                  channelName: name,
+                  ok: false,
+                  skipReason: "excluded",
+                  attempts: 0,
+                  finishedAt: execution.statistics.startedAt,
+                }),
+              ),
+            ],
+            statistics: {
+              ...execution.statistics,
+              skippedCount: skippedResources.length,
+            },
+          }
+    await saveModelSyncExecution(result, isFullSync)
+    return result
+  }
+
+  /** A full run with no participating channels retains every skipped inventory entry. */
+  private async completeEmptyExecution(
+    owner: ProgressOwner,
+    skippedResources: readonly ManagedModelChannelSummary[],
+  ): Promise<ExecutionResult> {
+    const timestamp = Date.now()
+    const result: ExecutionResult = {
+      items: [],
+      statistics: {
+        total: 0,
+        successCount: 0,
+        failureCount: 0,
+        durationMs: 0,
+        startedAt: timestamp,
+        endedAt: timestamp,
+      },
+    }
+    const progress = this.startProgress(owner, 0, skippedResources.length)
+    try {
+      return await this.completeExecution(result, skippedResources, true)
     } finally {
       progress.finish()
     }
@@ -392,7 +508,7 @@ export class ModelSyncExecution {
     }
 
     const failedResourceRefs = lastExecution.items
-      .filter((item) => !item.ok)
+      .filter((item) => getModelSyncItemStatus(item) === "failed")
       .flatMap((item) => (item.resourceRef ? [item.resourceRef] : []))
 
     if (failedResourceRefs.length === 0) {
@@ -417,13 +533,14 @@ export class ModelSyncExecution {
   }
 
   /** Captures run ownership so older callbacks cannot overwrite or clear newer progress. */
-  private startProgress(owner: ProgressOwner, total: number) {
+  private startProgress(owner: ProgressOwner, total: number, skippedCount = 0) {
     let progress: ScopedExecutionProgress = {
       configFingerprint: owner.configFingerprint,
       isRunning: true,
       total,
       completed: 0,
       failed: 0,
+      ...(skippedCount > 0 ? { skippedCount } : {}),
     }
     // Preserve invocation order even when an earlier inventory request finishes later.
     if (owner.sequence > this.latestProgressSequence) {

@@ -425,6 +425,7 @@
       "validationProbeIds": "Vui lòng chọn ít nhất một thăm dò xác thực cho mỗi quy tắc thăm dò.",
       "validationRegex": "Biểu thức chính quy không hợp lệ: {{error}}"
     },
+    "modelSyncExclusionHelp": "Sau khi lưu, đồng bộ tự động và Chạy tất cả sẽ bỏ qua kênh này. Chạy mục đã chọn và Đồng bộ hóa kênh này trong hàng vẫn có thể đồng bộ một lần. Hủy sẽ bỏ các thay đổi trong hộp thoại này.",
     "placeholders": {
       "description": "Ghi chú tùy chọn",
       "name": "Ví dụ: Chỉ cho phép GPT-4",

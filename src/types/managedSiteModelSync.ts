@@ -9,6 +9,8 @@ export interface ExecutionItemResult {
   resourceRef: ManagedResourceRef
   channelName: string
   ok: boolean
+  /** A recorded no-op, never a successful sync or a retryable failure. */
+  skipReason?: "excluded"
   httpStatus?: number
   message?: string
   attempts: number
@@ -21,12 +23,22 @@ export interface ExecutionItemResult {
  * Execution statistics
  */
 export interface ExecutionStatistics {
+  /** Channels actually executed, excluding recorded skips. */
   total: number
   successCount: number
   failureCount: number
+  /** Absent in older execution history. */
+  skippedCount?: number
   durationMs: number
   startedAt: number
   endedAt: number
+}
+
+/** Classifies persisted and live results without treating skipped work as a failure. */
+export function getModelSyncItemStatus(
+  item: Pick<ExecutionItemResult, "ok" | "skipReason">,
+): "success" | "failed" | "skipped" {
+  return item.skipReason ? "skipped" : item.ok ? "success" : "failed"
 }
 
 /**
@@ -99,6 +111,7 @@ export interface ExecutionProgress {
   total: number
   completed: number
   failed: number
+  skippedCount?: number
   lastResult?: ExecutionItemResult
   currentChannel?: string
 }

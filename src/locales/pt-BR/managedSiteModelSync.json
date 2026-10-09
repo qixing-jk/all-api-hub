@@ -21,15 +21,29 @@
       "channelTimeout_many": "O processamento do canal excedeu {{count}} segundos",
       "channelTimeout_other": "O processamento do canal excedeu {{count}} segundos"
     },
+    "exclusions": {
+      "autoSave": "As alterações são salvas imediatamente",
+      "description": "Os canais marcados para ignorar são ignorados na sincronização automática e ao clicar em Executar todos. Para sincronizá-los uma vez sem alterar esta configuração, use Executar selecionados ou Sincronizar na linha.",
+      "excludedLabel": "Configurado para ignorar",
+      "loadFailed": "Não foi possível carregar as configurações de canais ignorados. Tente novamente.",
+      "savedExcluded": "Salvo: a sincronização automática e Executar todos ignorarão este canal.",
+      "savedIncluded": "Salvo: este canal participará da sincronização automática e de Executar todos.",
+      "saveFailed": "Não foi possível salvar a configuração para ignorar o canal. Tente novamente.",
+      "showOnly": "Mostrar canais configurados para ignorar",
+      "skippedReason": "Este canal estava configurado para ser ignorado no início da execução. Nenhum modelo foi consultado ou atualizado.",
+      "title": "Ignorar na sincronização automática e em Executar todos",
+      "toggle": "Ignorar {{name}} na sincronização automática e em Executar todos"
+    },
     "filters": {
       "all": "Todos",
       "failed": "Falha",
       "searchPlaceholder": "Pesquisar por nome do canal, ID ou mensagem de erro...",
+      "skipped": "Ignorados",
       "success": "Sucesso"
     },
     "lastExecution": "Última execução",
     "manual": {
-      "description": "Escolha abaixo os canais para iniciar uma sincronização avulsa. As seleções não são salvas.",
+      "description": "Executar selecionados sincroniza todos os canais marcados, inclusive os configurados para ignorar, mesmo ao selecionar todos. As alterações nos interruptores são salvas imediatamente.",
       "empty": {
         "description": "Atualize a lista ou ajuste os filtros para encontrar canais.",
         "title": "Nenhum canal disponível"
@@ -54,7 +68,8 @@
       "never": "Nunca"
     },
     "progress": {
-      "running": "Sincronizando... {{completed}}/{{total}}"
+      "running": "Sincronizando... {{completed}}/{{total}}",
+      "skipped": "Ignorados: {{skipped}}"
     },
     "statistics": {
       "duration": "Duração",
@@ -62,13 +77,15 @@
       "failed": "Falhas",
       "nextRun": "Próxima execução programada",
       "notScheduled": "Não programada",
+      "skipped": "Ignorados",
       "startTime": "Hora de início",
       "success": "Sucessos",
-      "total": "Total de canais"
+      "total": "Canais executados"
     },
     "status": {
       "failed": "Falha",
       "running": "Executando...",
+      "skipped": "Ignorados",
       "success": "Sucesso"
     },
     "table": {
@@ -101,6 +118,14 @@
       "noSelection": "Selecione pelo menos um canal",
       "syncFailed": "Falha na sincronização: {{error}}"
     },
+    "info": {
+      "allSkipped": "Todos os canais foram ignorados ({{skipped}}). Nenhum modelo foi consultado ou atualizado. Abra Ignorados para ver os detalhes."
+    },
+    "notification": {
+      "allSkippedBody": "Todos os canais foram ignorados conforme suas configurações. Nenhum modelo foi consultado ou atualizado.",
+      "allSkippedTitle": "Sincronização de modelos: todos os canais ignorados"
+    },
+    "skippedSummary": "Ignorados: {{skipped}}.",
     "success": {
       "settingsSaved": "Configurações salvas com sucesso",
       "syncCompleted": "Sincronização concluída: {{success}}/{{total}} com sucesso"

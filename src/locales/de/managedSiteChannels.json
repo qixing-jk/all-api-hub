@@ -425,6 +425,7 @@
       "validationProbeIds": "Wählen Sie für jede Prüfregel mindestens eine Verifizierungsprüfung aus.",
       "validationRegex": "Ungültiges Regex-Muster: {{error}}"
     },
+    "modelSyncExclusionHelp": "Nach dem Speichern überspringen die automatische Synchronisierung und „Alle ausführen“ diesen Kanal. „Ausgewählte ausführen“ und „Synchronisieren“ in der Zeile können ihn weiterhin einmalig synchronisieren. „Abbrechen“ verwirft die Änderungen im Dialog.",
     "placeholders": {
       "description": "Optionale Hinweise zu dieser Regel",
       "name": "z.B. Erlaube GPT-4",
