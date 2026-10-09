@@ -1,6 +1,6 @@
 ---
 name: add-site-integration
-description: Add account, managed-site or check-in integrations, or decide site-type boundaries. Uses a completeness checklist to cover applicable features and explain omissions; not routine fixes to existing integrations.
+description: Add or extend account, managed-site or check-in integrations, improve native editors or compare their UX, or decide site-type boundaries. Uses scoped capability and workflow checks; not isolated bug fixes.
 ---
 
 # Add Site Integration
@@ -14,11 +14,14 @@ Keep one entrypoint for shared evidence, authentication, and validation decision
 | Every integration: prevent incomplete adaptation | [Checklist map and shared rules](references/capability-assessment.md#checklist-map) | Selects the scope checklist and reuses preparation, outcome and delivery rules |
 | User/account site: detection, balance, plans, usage, keys, aff/invite | [Account sites](references/account-sites.md) | Owns user identity, account credentials, units, and user actions |
 | Management/admin site: connect, channels, providers, native resources | [Managed sites](references/managed-sites.md) and [management checklist](references/managed-site-checklist.md) | Owns admin scopes and resource operations; assessed separately from account capabilities |
+| Add, extend or compare a native editor, including existing integrations | [Native editor workflow parity](references/native-editor-parity.md) and the relevant account/managed checklist | Establishes common tasks and type/mode variants before choosing fields and layout |
 | Check-in for a new or existing site | [Check-in](references/check-in.md) | Owns read-only discovery, execution, day/status semantics, and rewards |
 | Deployment investigation, retained artifacts, or live validation | [Evidence and validation](references/evidence-and-validation.md) | Shared evidence and reproducible test infrastructure |
 | CDP/UI validation and visual handoff | [Visual previews](references/visual-previews.md) and the project live-extension skill | Shows the actual current-worktree result alongside assertions |
 
 For combined scopes, compose the relevant workflows and reuse captured contracts. For check-in-only work on a registered site, confirm its existing type/auth contract and update only check-in capabilities and consumers; skip unrelated onboarding, key management, and managed-site work. Split these into independent skills only if their invocation or shared workflow actually diverges; separate references already keep loading selective.
+
+For existing-editor work, reuse confirmed site boundaries, authentication and deployment evidence. Apply the affected workflow/editor checks; revisit wider integration decisions only when their contracts change. UX comparison is in scope even without a new site type or API endpoint.
 
 If only an audit is requested, use the checklist to report gaps and evidence limits; do not implement features or perform resource writes solely to fill the checklist.
 
@@ -50,7 +53,8 @@ At each consequential stage, record **choice, evidence, alternatives, and reason
 
 ## Required when the condition applies
 
-- **A gateway/managed site is added or its presentation changes:** Follow the gateway ordering policy in `docs/agents/site-integrations.md`. Verify current upstream GitHub stars or comparable traffic/adoption evidence, place the site deliberately in `MANAGED_SITE_TYPE_ORDER`, and update the dated evidence comment and existing public-order test. Do not append a new gateway by default or preserve an old “no public count” exception without checking it. Confirm related plugin selectors and navigation consume the shared registry order.
+- **Native editor UI is added, extended or compared:** Complete [native workflow comparison](references/native-editor-parity.md) before selecting the field subset and layout, and reconcile it before the first completion claim. Working CRUD, preservation of unsupported fields and green tests alone do not establish usability parity.
+- **A gateway/managed site is added or gateway selector/navigation order changes:** Follow the gateway ordering policy in `docs/agents/site-integrations.md`. Verify current upstream GitHub stars or comparable traffic/adoption evidence, place the site deliberately in `MANAGED_SITE_TYPE_ORDER`, and update the dated evidence comment and existing public-order test. Do not append a new gateway by default or preserve an old “no public count” exception without checking it. Confirm related plugin selectors and navigation consume the shared registry order.
 - **Reversible resource writes are promised:** Use Playwright in an authorized, logged-in target deployment to exercise real create, edit, and delete behavior where those actions exist. Record the starting state, use disposable resources, read back each mutation, and confirm the original state is restored. Verify the observed authentication/signing sequence; keep raw secrets and account data out of committed evidence. For check-in or other irreversible grants, follow the selected workflow's execution limits and record the actual change. Mocks or source inspection do not establish a live write contract.
 - **A durable personal access token is selected:** Reuse and verify an existing token before issuing another. Check whether creation rotates or overwrites an older token; never replay an issuance request after a lost response. New API's personal-access-token path illustrates this choice, but other family members can differ.
 - **Expiring or rotating tokens are selected:** Verify expiry, 401, concurrent requests, uncertain refresh responses, and browser-session loss. Serialize single-use rotation, validate the replacement against the expected account, and persist the complete new credentials together before further requests. Do not replay an uncertain rotation or overwrite usable credentials after failure. Sub2API illustrates this choice and may require a matching browser fetch context for renewal or recovery.
