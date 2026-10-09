@@ -42,6 +42,15 @@ function renderProbeRunner() {
 }
 
 describe("API check probe session", () => {
+  it("does not dispatch cancellation or change results when stopping an idle probe", () => {
+    vi.mocked(sendWebAiApiCheckMessage).mockClear()
+    const { result } = renderProbeRunner()
+    const probes = result.current.probes
+    act(() => result.current.stopProbe("text-generation"))
+    expect(sendWebAiApiCheckMessage).not.toHaveBeenCalled()
+    expect(result.current.probes).toBe(probes)
+    expect(result.current.isAnyProbeRunning).toBe(false)
+  })
   it("keeps a new probe running when a reset batch finishes late", async () => {
     const pending: ((value: unknown) => void)[] = []
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
