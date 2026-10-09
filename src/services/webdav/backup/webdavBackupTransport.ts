@@ -26,6 +26,8 @@ export function buildAuthHeader(username: string, password: string) {
 const WEBDAV_TOO_EARLY_STATUS = 425
 const UPLOAD_READBACK_MAX_ATTEMPTS = 10
 const UPLOAD_READBACK_RETRY_DELAY_MS = 1000
+const UPLOAD_READBACK_TIMEOUT_MS = 10_000
+const TEMP_CLEANUP_TIMEOUT_MS = 5_000
 
 /**
  * Program identifier used in default WebDAV backup paths.
@@ -216,12 +218,57 @@ async function putWebdavContent(params: {
     body: params.content,
   })
 
-  if (res.status >= 200 && res.status < 300) return true
-  if (res.status === 401 || res.status === 403)
-    throw new WebdavHttpError(t("messages:webdav.authFailed"), res.status)
-  throw new WebdavHttpError(
+  await requireWebdavMutationSuccess(
+    res,
     t("messages:webdav.uploadFailed", { status: res.status }),
-    res.status,
+  )
+}
+
+/**
+ * Keep Multi-Status outcomes uncertain until readback proves the mutation.
+ * Only extract terminal DAV status fields; XML success is never proof of a
+ * committed file. This also works in service workers without DOMParser.
+ */
+async function requireWebdavMutationSuccess(
+  res: Response,
+  failureMessage: string,
+) {
+  let status = res.status
+  if (status === 207) {
+    try {
+      const body = (await res.text()).replace(/<!--[\s\S]*?-->/g, "")
+      const statuses = Array.from(
+        body.matchAll(
+          /<(?:[\w.-]+:)?status\b[^>]*>\s*HTTP\/[\d.]+\s+(\d{3})\b[^<]*<\/(?:[\w.-]+:)?status\s*>/g,
+        ),
+        (match) => Number(match[1]),
+      )
+      status =
+        statuses.find((code) => code === 401 || code === 403) ??
+        (statuses.includes(412) ? 412 : 207)
+    } catch {
+      // An unreadable Multi-Status body still requires authoritative readback.
+    }
+  } else if (status >= 200 && status < 300) {
+    return
+  }
+
+  throw new WebdavHttpError(
+    status === 401 || status === 403
+      ? t("messages:webdav.authFailed")
+      : failureMessage,
+    status,
+  )
+}
+
+/** Responses that may have lost or obscured a successful remote mutation. */
+function isAmbiguousWebdavMutationError(error: unknown) {
+  return (
+    !(error instanceof WebdavHttpError) ||
+    error.statusCode === 207 ||
+    error.statusCode === 404 ||
+    error.statusCode === 409 ||
+    error.statusCode >= 500
   )
 }
 
@@ -236,6 +283,8 @@ async function getWebdavContent(params: {
 }) {
   const res = await fetch(params.url, {
     method: "GET",
+    cache: "no-store",
+    signal: AbortSignal.timeout(UPLOAD_READBACK_TIMEOUT_MS),
     headers: {
       Authorization: buildAuthHeader(params.username, params.password),
       Accept: "application/json",
@@ -255,7 +304,7 @@ async function getWebdavContent(params: {
 }
 
 /**
- * Reads a newly uploaded temporary backup after provider post-processing.
+ * Reads a newly uploaded backup after provider post-processing.
  */
 async function getUploadedWebdavContent(params: {
   url: string
@@ -301,30 +350,15 @@ async function moveWebdavContent(params: {
   username: string
   password: string
 }) {
-  const move = () =>
-    fetch(params.sourceUrl, {
-      method: "MOVE",
-      headers: {
-        Authorization: buildAuthHeader(params.username, params.password),
-        Destination: encodeWebdavHeaderUrl(params.destinationUrl),
-        Overwrite: "T",
-      },
-    })
-
-  let res = await move()
-
-  if (shouldRetryMoveAfterDeletingDestination(res.status)) {
-    // RFC 4918 section 9.9.3 requires Overwrite:T to delete the destination
-    // before MOVE. Some providers reject that overwrite step instead:
-    // Nutstore returns 409 and cstcloud returns 500 when the destination exists.
-    await deleteWebdavDestinationBeforeMoveRetry(params)
-    res = await move()
-  }
-
-  if (res.status >= 200 && res.status < 300) return true
-  if (res.status === 401 || res.status === 403)
-    throw new WebdavHttpError(t("messages:webdav.authFailed"), res.status)
-  throw new WebdavHttpError(t("messages:webdav.safeCommitFailed"), res.status)
+  const res = await fetch(params.sourceUrl, {
+    method: "MOVE",
+    headers: {
+      Authorization: buildAuthHeader(params.username, params.password),
+      Destination: encodeWebdavHeaderUrl(params.destinationUrl),
+      Overwrite: "T",
+    },
+  })
+  await requireWebdavMutationSuccess(res, t("messages:webdav.safeCommitFailed"))
 }
 
 /**
@@ -342,20 +376,36 @@ async function deleteWebdavDestinationBeforeMoveRetry(params: {
   username: string
   password: string
 }) {
-  const res = await fetch(params.destinationUrl, {
-    method: "DELETE",
-    headers: {
-      Authorization: buildAuthHeader(params.username, params.password),
-    },
-  })
-
-  if ((res.status >= 200 && res.status < 300) || res.status === 404) {
-    return true
+  try {
+    const res = await fetch(params.destinationUrl, {
+      method: "DELETE",
+      headers: {
+        Authorization: buildAuthHeader(params.username, params.password),
+      },
+    })
+    if (res.status === 404) return
+    await requireWebdavMutationSuccess(
+      res,
+      t("messages:webdav.safeCommitFailed"),
+    )
+  } catch (error) {
+    if (isAmbiguousWebdavMutationError(error)) {
+      try {
+        await getWebdavContent({
+          url: params.destinationUrl,
+          username: params.username,
+          password: params.password,
+        })
+      } catch (readError) {
+        if (
+          readError instanceof WebdavHttpError &&
+          readError.statusCode === 404
+        )
+          return
+      }
+    }
+    throw error
   }
-  if (res.status === 401 || res.status === 403) {
-    throw new WebdavHttpError(t("messages:webdav.authFailed"), res.status)
-  }
-  throw new WebdavHttpError(t("messages:webdav.safeCommitFailed"), res.status)
 }
 
 /**
@@ -369,6 +419,7 @@ async function deleteWebdavContentBestEffort(params: {
   try {
     await fetch(params.url, {
       method: "DELETE",
+      signal: AbortSignal.timeout(TEMP_CLEANUP_TIMEOUT_MS),
       headers: {
         Authorization: buildAuthHeader(params.username, params.password),
       },
@@ -542,6 +593,97 @@ function validateWebdavUploadedBackupContent(
   }
 }
 
+type WebdavBackupContent = {
+  url: string
+  username: string
+  password: string
+  content: string
+}
+
+/** Verify the exact serialized payload, including an encrypted envelope when used. */
+async function verifyWebdavBackupContent(params: WebdavBackupContent) {
+  const uploadedContent = await getUploadedWebdavContent(params)
+  validateWebdavUploadedBackupContent(uploadedContent, params.content)
+}
+
+/** Distinguish a mismatched/missing backup from a failed reconciliation read. */
+async function readWebdavCommitState(params: WebdavBackupContent) {
+  try {
+    const actualContent = await getUploadedWebdavContent(params)
+    return actualContent === params.content ? "committed" : "uncommitted"
+  } catch (error) {
+    return error instanceof WebdavHttpError && error.statusCode === 404
+      ? "uncommitted"
+      : "unknown"
+  }
+}
+
+/** Use direct PUT only after MOVE explicitly reports an unsupported method. */
+async function putVerifiedWebdavBackup(params: WebdavBackupContent) {
+  try {
+    await putWebdavContent(params)
+  } catch (error) {
+    if (
+      isAmbiguousWebdavMutationError(error) &&
+      (await readWebdavCommitState(params)) === "committed"
+    )
+      return
+    throw error
+  }
+  await verifyWebdavBackupContent(params)
+}
+
+/**
+ * Commit a verified temp file, returning whether that temp file may remain.
+ * Readback precedes an overwrite retry so a lost response cannot delete an
+ * already committed backup. Verification failures never trigger another write.
+ */
+async function commitVerifiedWebdavBackup(
+  params: WebdavBackupContent & { tempUrl: string },
+  allowOverwriteRetry = true,
+): Promise<boolean> {
+  try {
+    await moveWebdavContent({
+      sourceUrl: params.tempUrl,
+      destinationUrl: params.url,
+      username: params.username,
+      password: params.password,
+    })
+  } catch (error) {
+    if (
+      error instanceof WebdavHttpError &&
+      (error.statusCode === 405 || error.statusCode === 501)
+    ) {
+      await putVerifiedWebdavBackup(params)
+      return true
+    }
+
+    const commitState = isAmbiguousWebdavMutationError(error)
+      ? await readWebdavCommitState(params)
+      : "unknown"
+    if (commitState === "committed") return true
+
+    if (error instanceof WebdavHttpError && commitState === "uncommitted") {
+      if (
+        allowOverwriteRetry &&
+        shouldRetryMoveAfterDeletingDestination(error.statusCode)
+      ) {
+        // Preserve the established Nutstore (409) / cstcloud (500) workaround.
+        await deleteWebdavDestinationBeforeMoveRetry({
+          destinationUrl: params.url,
+          username: params.username,
+          password: params.password,
+        })
+        return commitVerifiedWebdavBackup(params, false)
+      }
+    }
+    throw error
+  }
+
+  await verifyWebdavBackupContent(params)
+  return false
+}
+
 /** Uploads through a temporary file, verifies readback, then commits or cleans up. */
 export async function commitWebdavBackup(params: {
   targetUrl: string
@@ -566,6 +708,7 @@ export async function commitWebdavBackup(params: {
 
   const tempUrl = createTempBackupUrl(targetUrl)
   let tempUploaded = false
+  let tempVerified = false
 
   try {
     await putWebdavContent({
@@ -576,23 +719,30 @@ export async function commitWebdavBackup(params: {
     })
     tempUploaded = true
 
-    const uploadedContent = await getUploadedWebdavContent({
+    await verifyWebdavBackupContent({
       url: tempUrl,
       username,
       password,
+      content,
     })
-    validateWebdavUploadedBackupContent(uploadedContent, content)
+    tempVerified = true
 
-    await moveWebdavContent({
-      sourceUrl: tempUrl,
-      destinationUrl: targetUrl,
+    const tempMayRemain = await commitVerifiedWebdavBackup({
+      url: targetUrl,
+      tempUrl,
       username,
       password,
+      content,
     })
+    if (tempMayRemain) {
+      void deleteWebdavContentBestEffort({ url: tempUrl, username, password })
+    }
 
     return true
   } catch (error) {
-    if (tempUploaded) {
+    // Retain a verified recovery copy when the final commit is uncertain or
+    // failed, especially if the overwrite workaround already removed the old file.
+    if (tempUploaded && !tempVerified) {
       await deleteWebdavContentBestEffort({
         url: tempUrl,
         username,

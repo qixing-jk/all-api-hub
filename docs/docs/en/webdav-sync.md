@@ -1,8 +1,8 @@
 # Cloud Backup and Automatic Sync
 
-The service, sync data scope, strategy, and automatic sync switch save automatically. The interval saves when you leave its field. Connection details and encryption passwords save when you leave the field, including empty values. Configuration completeness is checked when syncing.
+Back up shared data such as accounts and bookmarks to WebDAV or GitHub Secret Gist, synchronize it across devices, and restore it when needed. Upload or download backups manually, or enable automatic sync for your chosen data scope and strategy.
 
-> Choose WebDAV or GitHub Secret Gist to back up shared data regularly, synchronize devices, and recover from data loss.
+> Cloud sync shares data rather than making a complete device backup. Before migrating devices, export a separate local JSON backup to retain device-specific settings.
 
 ## Highlights
 
@@ -10,7 +10,7 @@ The service, sync data scope, strategy, and automatic sync switch save automatic
 - **Automatic sync**: Run background sync on a schedule (every hour by default), merging or replacing data according to your strategy.
 - **Three strategies**: Merge, upload only, or download only, depending on each device's role.
 - **Conflict merging**: Keep newer accounts, bookmarks, and preferences by update time. Account and bookmark deletions carry deletion markers so older backups do not restore them during the next merge.
-- **WebDAV write verification**: Upload to a temporary file in the same directory, read it back, and move it to the final backup path. If Nutstore returns 409 when `MOVE` targets an existing file, the extension deletes the destination and retries the move.
+- **Upload verification**: Read back and compare the cloud backup after upload, reporting success only after confirming that it was saved.
 - **GitHub Secret Gist**: Connect an existing Secret Gist with a GitHub token, or create a new unlisted Gist. Gist uploads always use encrypted backups.
 
 ## Prerequisites
@@ -27,6 +27,10 @@ The service, sync data scope, strategy, and automatic sync switch save automatic
    - **Server URL**: A directory or a specific JSON file. A directory URL uses `all-api-hub-backup/all-api-hub-1-0.json` beneath it.
    - **Username/password**: Credentials for Basic Auth.
 4. Click **Test Connection**, then use **Upload Backup** or **Download Backup** as needed.
+
+The service, sync data scope, strategy, and automatic sync switch save automatically. The interval saves when you leave its field. Connection details and encryption passwords save when you leave the field, including empty values. Configuration completeness is checked when syncing.
+
+WebDAV uploads update the backup file at the configured location. The extension selects a write method supported by the service and verifies the result, usually without additional settings.
 
 ### GitHub Secret Gist
 
@@ -58,7 +62,7 @@ Enable **Automatic Sync** on the same page to schedule the selected provider:
      - **Merge**: Keep the latest entries by `updated_at` / `lastUpdated`. Merge account and bookmark deletion markers to prevent older copies from restoring deleted items. Account conflicts use whole-account last-write-wins (LWW), not field-by-field merging: a newer account replaces the older account together with its check-in configuration.
      - **Upload/download only**: Use the local or remote data, respectively.
    - Merge and download-only strategies write their results locally; merge and upload-only strategies upload the backup.
-   - WebDAV verifies a temporary file before replacing the final file. Gist rereads and compares the remote revision before writing, then reads back the uploaded content for verification.
+   - Check the cloud file's content after upload. If saving cannot be confirmed, report a failure.
 3. Check the settings page for success/failure status and the last execution time.
 
 ### Version Compatibility and Multi-device Upgrades
@@ -77,20 +81,22 @@ Accounts and preferences can sync through WebDAV or Gist, but **today's executio
 
 - Use a dedicated WebDAV account or access token for the backup directory. Grant GitHub tokens only the required Gists permissions.
 - Avoid saving WebDAV passwords on public devices; rotate them when necessary.
-- For WebDAV 401/403 errors, check credentials and support for Basic Auth and `MKCOL/PUT/GET/MOVE/DELETE`.
+- Keep a separate local backup of important data. The extension does not maintain cloud version history, and some services may leave an incomplete file after an interrupted upload. Do not rely solely on the latest cloud backup.
 
 ## FAQ
 
 | Problem | What to do |
 |---------|------------|
 | WebDAV connection test fails | Check that the URL includes a protocol (`https://`) and that remote writes are allowed. |
+| WebDAV returns 401/403 | Check the username, password, and read/write permissions on the backup directory and file. If the directory cannot be created automatically, create it manually on the cloud service first. |
 | Automatic sync does not run | Check that automatic sync is enabled, the service configuration is complete, and the browser is not suspended. Review errors in the sync status. |
 | Duplicate accounts or bookmarks after merging | Delete duplicates and upload again; use upload-only mode if you need strict control. Deletion markers normally prevent older backups from restoring deleted accounts or bookmarks. |
 | Remote backup reported corrupt before upload | The existing WebDAV backup is not valid JSON. If this device has complete data, follow the prompt to rebuild it from all shared data on this device. Otherwise, upload from a complete device or import a complete backup first. |
 | Gist backup file missing or empty | Automatic sync and import stop; missing content is not treated as an empty backup that clears local data. If this device has complete data, manually upload and confirm replacement to initialize the existing Secret Gist. |
 | Gist content corrupt or incompatible | Import or sync stops. Check `all-api-hub-backup.json` and the encryption password, repair the backup, and retry. Do not replace the remote backup with incomplete local data. |
 | Gist returns 401/403/404 or a rate limit | For 401, check token expiry; for 403, check Gists permissions; for 404, check the Gist ID or whether it was deleted. For rate limits, wait until the indicated retry time. |
-| Nutstore returns 409 on overwrite | Nutstore may reject `MOVE` with `Overwrite: T` when the destination exists. The extension deletes the destination and retries automatically. |
+| Verification fails after upload | Check the network and cloud read/write permissions, then retry. If the cloud backup is damaged, upload again from a device with complete data or restore from a separate backup. |
+| The backup directory contains `.tmp.` files | These temporary upload files are normally cleaned up automatically and do not affect successful syncs. To attempt recovery from a retained file, pause sync and download it for inspection first. Later uploads may remove temporary files older than 24 hours. Encrypted files still require the original encryption password. |
 | JSON file too large | Remove obsolete accounts to stay within the provider's limits. Separate manual exports can be used for archiving, but automatic sync still uploads a complete backup of the selected data. |
 
 ## Related Documentation

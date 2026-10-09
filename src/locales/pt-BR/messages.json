@@ -267,10 +267,10 @@
     "encryptFailedNoPassword": "A criptografia está ativada, mas nenhuma senha foi definida",
     "fileNotFound": "O arquivo de backup remoto não existe",
     "invalidBackupJson": "O arquivo de backup na nuvem está incompleto e não pode ser usado para sincronização. A sincronização foi interrompida para evitar a fusão de dados danificados. Se este dispositivo possuir dados locais completos, use 'Enviar para WebDAV' para recriar o backup na nuvem. Caso contrário, envie a partir de outro dispositivo com dados completos ou importe um arquivo de backup completo primeiro.",
-    "safeCommitFailed": "Este serviço WebDAV não pôde salvar o backup com segurança. Seu backup na nuvem existente foi mantido. Tente novamente mais tarde ou use um serviço WebDAV que suporte mover ou renomear arquivos.",
+    "safeCommitFailed": "Não foi possível confirmar que o backup foi salvo na nuvem. Verifique a conexão e as permissões de leitura e gravação e tente novamente.",
     "syncDataSelectionRequired": "Selecione pelo menos um domínio de dados para sincronizar",
     "uploadFailed": "Falha no envio (upload), código de status: {{status}}",
-    "uploadStillProcessing": "O serviço de nuvem ainda está processando o backup enviado, portanto a verificação ainda não pôde ser concluída. Seu backup existente na nuvem não foi substituído. Tente novamente mais tarde.",
-    "uploadVerificationFailed": "A verificação do backup falhou após o envio (upload). O serviço na nuvem pode não ter salvo o arquivo completamente. Seu backup na nuvem existente foi mantido."
+    "uploadStillProcessing": "O serviço de nuvem ainda está processando o backup enviado, portanto a verificação ainda não pôde ser concluída. Tente novamente mais tarde.",
+    "uploadVerificationFailed": "A verificação do backup falhou após o envio. O arquivo na nuvem pode estar incompleto. Tente sincronizar novamente ou restaure um backup local, se necessário."
   }
 }

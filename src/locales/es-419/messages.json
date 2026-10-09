@@ -267,10 +267,10 @@
     "encryptFailedNoPassword": "El cifrado está habilitado, pero no hay contraseña configurada",
     "fileNotFound": "El archivo remoto de copia de seguridad no existe",
     "invalidBackupJson": "El archivo de copia de seguridad en la nube está incompleto y no se puede usar para sincronizar. La sincronización se detuvo para evitar fusionar datos dañados. Si este dispositivo tiene datos locales completos, usa Subir a WebDAV para recrear la copia en la nube. Si no, sube desde otro dispositivo que tenga datos completos o importa primero un archivo de copia de seguridad completo.",
-    "safeCommitFailed": "Este servicio WebDAV no pudo guardar la copia de seguridad de forma segura. Se conservó tu copia de seguridad existente en la nube. Inténtalo de nuevo más tarde o usa un servicio WebDAV que admita mover o renombrar archivos.",
+    "safeCommitFailed": "No se pudo confirmar que se guardó la copia de seguridad en la nube. Revisa la conexión y los permisos de lectura y escritura, e inténtalo de nuevo.",
     "syncDataSelectionRequired": "Selecciona al menos un dominio de datos para sincronizar",
     "uploadFailed": "La carga falló, código de estado: {{status}}",
-    "uploadStillProcessing": "El servicio en la nube todavía está procesando la copia de seguridad cargada, por lo que la verificación aún no pudo completarse. Tu copia de seguridad existente no fue reemplazada. Inténtalo de nuevo más tarde.",
-    "uploadVerificationFailed": "La verificación de la copia de seguridad falló después de la carga. Es posible que el servicio en la nube no haya guardado el archivo por completo. Se conservó tu copia de seguridad existente en la nube."
+    "uploadStillProcessing": "El servicio en la nube todavía está procesando la copia de seguridad cargada, por lo que la verificación aún no pudo completarse. Inténtalo de nuevo más tarde.",
+    "uploadVerificationFailed": "La verificación de la copia de seguridad falló después de la carga. El archivo en la nube podría estar incompleto. Reintenta la sincronización o restaura una copia de seguridad local si es necesario."
   }
 }
