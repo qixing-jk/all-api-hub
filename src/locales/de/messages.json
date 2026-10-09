@@ -260,10 +260,10 @@
     "encryptFailedNoPassword": "Die Verschlüsselung ist aktiviert, aber es ist kein Passwort festgelegt",
     "fileNotFound": "Remote-Backup-Datei existiert nicht",
     "invalidBackupJson": "Die Cloud-Sicherungsdatei ist unvollständig und kann nicht für die Synchronisierung verwendet werden. Die Synchronisierung wurde gestoppt, um eine Zusammenführung beschädigter Daten zu vermeiden. Wenn dieses Gerät über vollständige lokale Daten verfügt, verwenden Sie „Auf WebDAV hochladen“, um das Cloud-Backup neu zu erstellen. Wenn nicht, laden Sie die Daten von einem anderen Gerät hoch, das über vollständige Daten verfügt, oder importieren Sie zunächst eine vollständige Sicherungsdatei.",
-    "safeCommitFailed": "Dieser WebDAV-Dienst konnte das Backup nicht sicher speichern. Ihr vorhandenes Cloud-Backup wurde beibehalten. Versuchen Sie es später erneut oder verwenden Sie einen WebDAV-Dienst, der das Verschieben oder Umbenennen von Dateien unterstützt.",
+    "safeCommitFailed": "Es konnte nicht bestätigt werden, dass das Cloud-Backup gespeichert wurde. Prüfen Sie die Verbindung und Ihre Lese- und Schreibberechtigungen und versuchen Sie es erneut.",
     "syncDataSelectionRequired": "Wählen Sie mindestens eine Datendomäne zur Synchronisierung aus",
     "uploadFailed": "Upload fehlgeschlagen, Statuscode: {{status}}",
-    "uploadStillProcessing": "Der Cloud-Dienst verarbeitet das hochgeladene Backup noch, daher konnte die Überprüfung noch nicht abgeschlossen werden. Ihr vorhandenes Cloud-Backup wurde nicht ersetzt. Versuchen Sie es später erneut.",
-    "uploadVerificationFailed": "Die Überprüfung der Sicherung ist nach dem Hochladen fehlgeschlagen. Der Cloud-Dienst hat die Datei möglicherweise nicht vollständig gespeichert. Ihr vorhandenes Cloud-Backup wurde beibehalten."
+    "uploadStillProcessing": "Der Cloud-Dienst verarbeitet das hochgeladene Backup noch, daher konnte die Überprüfung noch nicht abgeschlossen werden. Versuchen Sie es später erneut.",
+    "uploadVerificationFailed": "Die Überprüfung des Backups nach dem Hochladen ist fehlgeschlagen. Die Datei in der Cloud ist möglicherweise unvollständig. Wiederholen Sie die Synchronisierung oder stellen Sie bei Bedarf ein lokales Backup wieder her."
   }
 }

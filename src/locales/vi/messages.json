@@ -254,10 +254,10 @@
     "encryptFailedNoPassword": "Đã bật mã hóa, nhưng chưa thiết lập mật khẩu",
     "fileNotFound": "Tệp sao lưu từ xa không tồn tại",
     "invalidBackupJson": "Tệp sao lưu trên đám mây không đầy đủ nên không thể dùng để đồng bộ. Lần đồng bộ này đã dừng để tránh hợp nhất dữ liệu bị hỏng. Nếu dữ liệu cục bộ trên thiết bị này đầy đủ, hãy dùng Tải lên WebDAV để tạo lại bản sao lưu trên đám mây. Nếu không, hãy tải lên từ một thiết bị khác có dữ liệu đầy đủ hoặc nhập một tệp sao lưu hoàn chỉnh trước.",
-    "safeCommitFailed": "Dịch vụ WebDAV này không thể lưu bản sao lưu một cách an toàn. Bản sao lưu đám mây hiện có vẫn được giữ lại. Vui lòng thử lại sau hoặc dùng dịch vụ WebDAV hỗ trợ di chuyển hoặc đổi tên tệp.",
+    "safeCommitFailed": "Không thể xác nhận bản sao lưu đã được lưu trên đám mây. Hãy kiểm tra kết nối và quyền đọc/ghi rồi thử lại.",
     "syncDataSelectionRequired": "Vui lòng chọn ít nhất một loại dữ liệu để đồng bộ",
     "uploadFailed": "Tải lên thất bại, mã trạng thái: {{status}}",
-    "uploadStillProcessing": "Dịch vụ đám mây vẫn đang xử lý bản sao lưu vừa tải lên nên chưa thể hoàn tất xác minh. Bản sao lưu đám mây hiện có chưa bị thay thế. Vui lòng thử lại sau.",
-    "uploadVerificationFailed": "Xác minh bản sao lưu sau khi tải lên thất bại. Dịch vụ đám mây có thể chưa lưu đầy đủ tệp. Bản sao lưu đám mây hiện có vẫn được giữ lại."
+    "uploadStillProcessing": "Dịch vụ đám mây vẫn đang xử lý bản sao lưu vừa tải lên nên chưa thể hoàn tất xác minh. Vui lòng thử lại sau.",
+    "uploadVerificationFailed": "Xác minh bản sao lưu sau khi tải lên thất bại. Tệp trên đám mây có thể chưa đầy đủ. Hãy thử đồng bộ lại hoặc khôi phục từ bản sao lưu cục bộ nếu cần."
   }
 }
