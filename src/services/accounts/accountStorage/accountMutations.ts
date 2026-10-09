@@ -1,3 +1,4 @@
+import { isAccountSiteType } from "~/constants/siteType"
 import { removeEntryIdsFromLayout } from "~/services/accounts/accountEntryLayoutPolicy"
 import {
   AccountUpdateUserTimestampMode,
@@ -5,11 +6,27 @@ import {
   createPersistedSiteAccount,
   type AccountUpdateOptions,
 } from "~/services/accounts/editing/accountDefaults"
+import {
+  hasSameAccountRequestIdentity,
+  hasSameCheckInRequestCredentials,
+} from "~/services/accounts/identity/accountIdentity"
+import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
+import {
+  invalidateCheckInDiscovery,
+  mergeDiscoveredCheckInDraft,
+  mergeRefreshedCheckInStatus,
+  mergeUserOwnedCheckInDraft,
+} from "~/services/checkin/autoCheckin/state"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
-import type { AccountWriteGuard } from "~/services/core/accountWriteGuard"
+import {
+  AccountWriteRejectedError,
+  type AccountWriteGuard,
+} from "~/services/core/accountWriteGuard"
 import { verificationResultHistoryStorage } from "~/services/verification/verificationResultHistory"
 import type { AccountStorageConfig, SiteAccount } from "~/types"
+import type { CheckInMethodSelection } from "~/types/checkIn"
 import type { DeepPartial } from "~/types/utils"
+import { formatLocalDayKey } from "~/utils/core/dayKey"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
@@ -66,6 +83,218 @@ const removeAccountsFromConfig = (
 }
 
 class AccountMutations {
+  async updateAccountWithCheckInDraft(
+    id: string,
+    updates: Omit<DeepPartial<SiteAccount>, "checkIn">,
+    draft: SiteAccount["checkIn"],
+    options: AccountUpdateOptions & {
+      selectionChanged?: boolean
+      discoveryBaseSelection?: CheckInMethodSelection
+      refreshed?: SiteAccount["checkIn"]
+      /** Runs inside the account storage lock; throwing aborts the update. */
+      guard?: AccountWriteGuard
+      /** Credential pair loaded by the editor, before any background rotation. */
+      loadedKimiAuth?: {
+        accessToken: string
+        refreshToken?: string
+        organizationId?: string
+      }
+    },
+  ): Promise<boolean> {
+    const { guard, ...mutationOptions } = options
+    try {
+      return await accountConfigStore.mutateAccount(
+        id,
+        (account) => {
+          const loaded = mutationOptions.loadedKimiAuth
+          const effectiveUpdates = { ...updates }
+          // An unchanged editor does not own session credentials. Preserve the
+          // latest pair atomically with the unrelated form edit.
+          if (
+            loaded &&
+            updates.account_info?.access_token === loaded.accessToken &&
+            updates.kimiOpenPlatformAuth?.refreshToken ===
+              loaded.refreshToken &&
+            updates.kimiOpenPlatformAuth?.organizationId ===
+              loaded.organizationId &&
+            (account.account_info.access_token !== loaded.accessToken ||
+              account.kimiOpenPlatformAuth?.refreshToken !==
+                loaded.refreshToken ||
+              account.kimiOpenPlatformAuth?.organizationId !==
+                loaded.organizationId)
+          ) {
+            delete effectiveUpdates.kimiOpenPlatformAuth
+            if (effectiveUpdates.account_info) {
+              effectiveUpdates.account_info = {
+                ...effectiveUpdates.account_info,
+              }
+              delete effectiveUpdates.account_info.access_token
+            }
+          }
+          const effectiveSiteType = isAccountSiteType(updates.site_type)
+            ? updates.site_type
+            : account.site_type
+          const mergedUserDraft = mutationOptions.discoveryBaseSelection
+            ? mergeDiscoveredCheckInDraft({
+                latest: account.checkIn,
+                draft,
+                candidateMethodIds: getAutoCheckinCandidateMethodIds(
+                  effectiveSiteType,
+                  updates.site_url ?? account.site_url,
+                ),
+                discoveryBaseSelection: mutationOptions.discoveryBaseSelection,
+                selectionChanged: mutationOptions.selectionChanged,
+              })
+            : mergeUserOwnedCheckInDraft({
+                latest: account.checkIn,
+                draft,
+                selectionChanged: mutationOptions.selectionChanged,
+              })
+          const checkIn = mutationOptions.refreshed
+            ? mergeRefreshedCheckInStatus({
+                latest: mergedUserDraft,
+                refreshed: mutationOptions.refreshed,
+              })
+            : mergedUserDraft
+
+          const nextAccount = applySiteAccountUpdates({
+            account,
+            updates: { ...effectiveUpdates, checkIn },
+            now: Date.now(),
+            userTimestampMode: mutationOptions.userTimestampMode,
+          })
+          const hasFreshDraftDiscovery =
+            mutationOptions.discoveryBaseSelection &&
+            (checkIn.methodKnowledge.lastFullDiscoveryAt ?? 0) >
+              (account.checkIn.methodKnowledge.lastFullDiscoveryAt ?? 0)
+          if (
+            !hasSameCheckInRequestCredentials(nextAccount, account) &&
+            !hasFreshDraftDiscovery
+          ) {
+            // Existing facts may still be useful, but a different credential
+            // must establish its own completed discovery after this save.
+            nextAccount.checkIn = invalidateCheckInDiscovery(
+              nextAccount.checkIn,
+            )
+          }
+          return {
+            nextAccount,
+            result: true,
+            changed: true,
+          }
+        },
+        { guard },
+      )
+    } catch (error) {
+      // A rejected guard is a decided outcome, not a storage failure: the caller
+      // reports why the update was refused instead of a generic save error.
+      if (error instanceof AccountWriteRejectedError) throw error
+      logger.error(t("messages:storage.updateFailed", { error: "" }), error)
+      return false
+    }
+  }
+
+  async updateAccountCheckInDraft(
+    id: string,
+    draft: SiteAccount["checkIn"],
+    options: {
+      selectionChanged?: boolean
+      discoveryBaseSelection?: CheckInMethodSelection
+      refreshed?: SiteAccount["checkIn"]
+    } = {},
+  ): Promise<boolean> {
+    return this.updateAccountWithCheckInDraft(id, {}, draft, {
+      ...options,
+      userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+    })
+  }
+
+  /** Applies remote refresh data without replacing newer user-owned fields. */
+  async updateAccountFromRefresh(
+    id: string,
+    updates: DeepPartial<SiteAccount>,
+    refreshedCheckIn?: SiteAccount["checkIn"],
+    requestSnapshot?: SiteAccount,
+  ): Promise<boolean> {
+    try {
+      return await accountConfigStore.mutateAccount(id, (account) => {
+        if (
+          requestSnapshot &&
+          !hasSameAccountRequestIdentity(account, requestSnapshot)
+        ) {
+          return { nextAccount: account, result: false, changed: false }
+        }
+        const effectiveUpdates = {
+          ...updates,
+          account_info: { ...updates.account_info },
+        }
+        if (
+          requestSnapshot &&
+          account.account_info.username !==
+            requestSnapshot.account_info.username
+        ) {
+          delete effectiveUpdates.account_info.username
+        }
+        if (
+          requestSnapshot &&
+          (account.authType !== requestSnapshot.authType ||
+            account.account_info.access_token !==
+              requestSnapshot.account_info.access_token ||
+            account.cookieAuth?.sessionCookie !==
+              requestSnapshot.cookieAuth?.sessionCookie ||
+            account.sub2apiAuth?.refreshToken !==
+              requestSnapshot.sub2apiAuth?.refreshToken ||
+            account.kimiOpenPlatformAuth?.refreshToken !==
+              requestSnapshot.kimiOpenPlatformAuth?.refreshToken)
+        ) {
+          delete effectiveUpdates.account_info.access_token
+          delete effectiveUpdates.account_info.id
+          delete effectiveUpdates.account_info.username
+          delete effectiveUpdates.sub2apiAuth
+          delete effectiveUpdates.kimiOpenPlatformAuth
+        }
+        let checkIn = account.checkIn
+        if (refreshedCheckIn) {
+          checkIn = mergeRefreshedCheckInStatus({
+            latest: checkIn,
+            refreshed: refreshedCheckIn,
+          })
+        }
+
+        const today = formatLocalDayKey()
+        if (
+          refreshedCheckIn &&
+          checkIn.customCheckIn?.url &&
+          checkIn.customCheckIn.lastCheckInDate &&
+          checkIn.customCheckIn.lastCheckInDate !== today
+        ) {
+          checkIn = {
+            ...checkIn,
+            customCheckIn: {
+              ...checkIn.customCheckIn,
+              isCheckedInToday: false,
+              lastCheckInDate: undefined,
+            },
+          }
+        }
+
+        return {
+          nextAccount: applySiteAccountUpdates({
+            account,
+            updates: { ...effectiveUpdates, checkIn },
+            now: Date.now(),
+            userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+          }),
+          result: true,
+          changed: true,
+        }
+      })
+    } catch (error) {
+      logger.error(t("messages:storage.updateFailed", { error: "" }), error)
+      return false
+    }
+  }
+
   /**
    * Appends one account under the account storage lock.
    *

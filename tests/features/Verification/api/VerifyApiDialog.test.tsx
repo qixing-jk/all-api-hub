@@ -1,9 +1,10 @@
-import { act } from "@testing-library/react"
+import { act, renderHook } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { VerifyApiDialog } from "~/features/Verification/api"
+import { useVerifyApiDialogViewModel } from "~/features/Verification/api/useVerifyApiDialogViewModel"
 import { buildServiceCredentialRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import type { AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
@@ -23,6 +24,8 @@ import {
 } from "~/services/verification/verificationResultHistory"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { createDeferred } from "~~/tests/test-utils/deferred"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { requireHistoryTarget } from "~~/tests/test-utils/history"
 import {
   fireEvent,
@@ -177,6 +180,83 @@ describe("VerifyApiDialog", () => {
     })
     await verificationResultHistoryStorage.clearAllData()
   })
+
+  it.each(["target", "reopen"] as const)(
+    "ignores a late account probe after %s",
+    async (transition) => {
+      const account = buildDisplaySiteData({ id: "session-a" })
+      const key = buildServiceCredentialRuntimeKey(account, {
+        kind: "singleton_service_key",
+        service: "codex",
+        label: "Codex",
+        key: "credential",
+        isAuthenticated: true,
+        baseUrl: account.baseUrl,
+      })
+      mockFetchDisplayAccountRuntimeKeys.mockResolvedValue([key])
+      mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValue(key)
+      const oldRequest = createDeferred<any>()
+      const newRequest = createDeferred<any>()
+      mockRunApiVerificationProbe
+        .mockReturnValueOnce(oldRequest.promise)
+        .mockReturnValueOnce(newRequest.promise)
+      const props = { isOpen: true, account, initialModelId: "test-model" }
+      const { result, rerender } = renderHook(useVerifyApiDialogViewModel, {
+        initialProps: props,
+      })
+      await waitFor(() =>
+        expect(result.current.selectedRuntimeKey).toBeTruthy(),
+      )
+      act(() => result.current.runSingleProbe("text-generation"))
+      await waitFor(() =>
+        expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1),
+      )
+      if (transition === "reopen") rerender({ ...props, isOpen: false })
+      rerender(
+        transition === "target"
+          ? { ...props, account: { ...account, id: "session-b" } }
+          : props,
+      )
+      await waitFor(() =>
+        expect(result.current.selectedRuntimeKey).toBeTruthy(),
+      )
+      act(() => result.current.runSingleProbe("text-generation"))
+      await waitFor(() =>
+        expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(2),
+      )
+      await act(async () => {
+        oldRequest.resolve({
+          id: "text-generation",
+          status: "pass",
+          latencyMs: 1,
+          summary: "old",
+        })
+        await oldRequest.promise
+      })
+      expect(
+        result.current.probes.find(
+          (row) => row.definition.id === "text-generation",
+        )?.isRunning,
+      ).toBe(true)
+      expect(result.current.persistedSummary).toBeNull()
+      await act(async () => {
+        newRequest.resolve({
+          id: "text-generation",
+          status: "pass",
+          latencyMs: 1,
+          summary: "new",
+        })
+        await newRequest.promise
+      })
+      await waitFor(() =>
+        expect(
+          result.current.probes.find(
+            (row) => row.definition.id === "text-generation",
+          )?.result?.summary,
+        ).toBe("new"),
+      )
+    },
+  )
 
   it("uses the selected mode and keeps completed results labeled when the selection changes", async () => {
     const user = userEvent.setup()

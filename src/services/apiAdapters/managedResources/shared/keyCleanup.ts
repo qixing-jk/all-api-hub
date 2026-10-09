@@ -3,7 +3,7 @@ import {
   type ManagedResourceKeyCleanup,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import type { NativeResourceEditorDefinition } from "~/services/apiAdapters/managedResources/factory"
+import type { NativeResourceEditorDefinition } from "~/services/apiAdapters/managedResources/editor"
 import type { ManagedSiteMutationResult } from "~/services/managedSites/mutations/contracts"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 

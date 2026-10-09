@@ -104,6 +104,34 @@ which can be used independently of a saved account. An association with an
 Account Runtime Key does not make the profile the owner of that upstream key.
 _Avoid_: saved account, upstream key resource
 
+**API Verification Probe Session**:
+An in-page verification workspace's probe runs, batch cancellation and accepted
+results for a credential context. Resetting the workspace invalidates its pending
+runs; a completed predecessor cannot replace a newer run's state. Background
+cancellation tracks the current task instance independently of the UI session.
+_Avoid_: API Credential Profile, probe result, background message
+
+**Verification Run Session**:
+Probe and suite tasks admitted for one saved-account or API Credential Profile
+verification workspace. Stopping a current task may publish a stopped state;
+invalidating its workspace prevents it from publishing further state or starting
+history writes. A history write already admitted retains its original target.
+_Avoid_: API Verification Probe Session, persisted verification summary
+
+**Usage History Sync Commit**:
+Acceptance of collected usage logs into the latest persisted account history.
+Deduplication, aggregation, cursor advancement and the current retention policy
+are applied together under the history write lock. A completed fetch does not
+establish that its logs were committed successfully.
+_Avoid_: log fetch, usage history snapshot, sync schedule
+
+**Model Selection Attempt**:
+One attempt to select a Managed Upstream Resource's models through the allow-list,
+global rules and resource rules. Probe and credential evidence is shared within
+that attempt and refreshed for the next attempt. Selection does not imply that a
+model update was written successfully.
+_Avoid_: model sync run, channel update, permanent model cache
+
 **Model Redirect Mapping**:
 A mapping from a requested model identity to an upstream model identity for a
 Managed Upstream Resource. Matching candidate identities and accepting a mapping
@@ -138,6 +166,19 @@ for; changing that identity may invalidate the evidence without changing the
 user's Automatic Check-in Intent.
 _Avoid_: saved account, detected account
 
+**Account Credential Evidence**:
+The source scope of an Account Draft's credential and the original authentication
+facts loaded for editing. Observing a credential does not reassign its source
+scope; replacing or clearing it explicitly does. Loaded authentication facts
+allow a save to preserve credentials rotated after the editor opened.
+_Avoid_: saved credential, authentication session, check-in selection
+
+**CLI Verification Session**:
+Tool checks and batches admitted for one account or API Credential Profile source.
+Changing or reopening that source invalidates pending checks; older checks cannot
+publish results or clear a newer batch's running state.
+_Avoid_: CLI configuration export, API Verification Probe Session
+
 **Managed Site Batch Import Session**:
 A batch of Account Runtime Keys selected for import into one managed-site target,
 together with its preview, user edits and cumulative execution results. Retrying
@@ -160,6 +201,14 @@ _Avoid_: check-in support, check-in readiness
 Whether an account currently has a selected usable method and the saved account
 data and credentials required to execute it.
 _Avoid_: enabled, supported, latest status
+
+**Check-in Mutation Admission**:
+The decision immediately before an initial or authentication-recovered check-in
+POST that the current account identity, execution intent, selected method,
+provider readiness and global execution switch still permit that mutation.
+Account reloading and the presentation of rejection remain with the calling
+workflow; admission does not establish an execution outcome.
+_Avoid_: check-in readiness, check-in execution outcome
 
 **Check-in Execution Outcome**:
 What happened in one attempt: succeeded, failed, or was not executed.

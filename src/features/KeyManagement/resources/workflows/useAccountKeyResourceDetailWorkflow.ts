@@ -50,11 +50,11 @@ export function useAccountKeyResourceDetailWorkflow({
 }: WorkflowInputs) {
   const { createdSecretRef } = routing
 
-  const { collectionRef } = inventoryState
+  const { readNativeOwner } = inventoryState
 
   const openDetail = useCallback(
     async (ref: AccountKeyResourceRef) => {
-      const collection = collectionRef.current
+      const collection = readNativeOwner().collection
       if (
         mode !== controllerModes.Single ||
         createdSecretRef.current !== null ||
@@ -99,7 +99,7 @@ export function useAccountKeyResourceDetailWorkflow({
       isCurrentResourceRef,
       mode,
       resolveResourceActionContext,
-      collectionRef,
+      readNativeOwner,
       createdSecretRef,
       requests,
       detailRequestEpoch,

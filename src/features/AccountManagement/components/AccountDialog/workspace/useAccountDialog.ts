@@ -21,6 +21,7 @@ import { useAccountCheckInRedetection } from "~/features/AccountManagement/compo
 import { useAccountAutoDetection } from "~/features/AccountManagement/components/AccountDialog/detection/useAccountAutoDetection"
 import { useAccountCurrentTab } from "~/features/AccountManagement/components/AccountDialog/detection/useAccountCurrentTab"
 import { useAccountDialogDetection } from "~/features/AccountManagement/components/AccountDialog/detection/useAccountDialogDetection"
+import { createAccountCredentialEvidence } from "~/features/AccountManagement/components/AccountDialog/form/accountCredentialEvidence"
 import { useAccountCookieSession } from "~/features/AccountManagement/components/AccountDialog/form/useAccountCookieSession"
 import { useAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/form/useAccountDialogDraft"
 import { useAccountDialogIdentityChanges } from "~/features/AccountManagement/components/AccountDialog/form/useAccountDialogIdentityChanges"
@@ -160,15 +161,7 @@ export function useAccountDialog({
   } = useAccountManagedSiteSetup(managedSiteType)
 
   const selectedSiteUrlRef = useRef("")
-  const loadedKimiAuthRef = useRef<
-    | { accessToken: string; refreshToken?: string; organizationId?: string }
-    | undefined
-  >(undefined)
-  const accountCredentialScopeRef = useRef<{
-    url: string
-    siteType: AccountSiteType
-  } | null>(null)
-  const hasAccountAccessTokenRef = useRef(false)
+  const [credentialEvidence] = useState(createAccountCredentialEvidence)
   const selectedSiteTypeRef = useRef<AccountSiteType>(SITE_TYPES.UNKNOWN)
   const isCloseTransitionStartedRef = useRef(false)
 
@@ -216,8 +209,8 @@ export function useAccountDialog({
     formSource !== ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
 
   useLayoutEffect(() => {
-    hasAccountAccessTokenRef.current = Boolean(accessToken.trim())
-  }, [accessToken])
+    credentialEvidence.observeAccessToken(accessToken)
+  }, [accessToken, credentialEvidence])
 
   useEffect(() => {
     notifyOpenRouterUrlChange(url)
@@ -255,12 +248,10 @@ export function useAccountDialog({
       },
     ) => {
       invalidateDuplicateConfirmation(true)
-      const hasAccessToken = Boolean(value.trim())
-      hasAccountAccessTokenRef.current = hasAccessToken
-      accountCredentialScopeRef.current = hasAccessToken ? scope : null
+      credentialEvidence.rememberCredential(value, scope)
       updateDraft((prev) => ({ ...prev, accessToken: value }))
     },
-    [invalidateDuplicateConfirmation, updateDraft],
+    [credentialEvidence, invalidateDuplicateConfirmation, updateDraft],
   )
   const currentTab = useAccountCurrentTab({
     mode,
@@ -410,8 +401,7 @@ export function useAccountDialog({
       selectedSiteTypeRef,
       selectedSiteUrlRef,
       hasExplicitAuthTypeRef,
-      accountCredentialScopeRef,
-      loadedKimiAuthRef,
+      credentialEvidence,
       automaticExecutionPreferenceChangedRef,
       checkInSelectionChangedRef,
       checkInDiscoveryBaseSelectionRef,
@@ -545,11 +535,10 @@ export function useAccountDialog({
   const { handleAutoDetect, handleShowManualForm } = useAccountDialogDetection({
     context: { mode, url, draft, formSource, isDetected },
     evidence: {
-      accountCredentialScopeRef,
+      credentialEvidence,
       automaticExecutionPreferenceChangedRef,
       checkInDiscoveryBaseSelectionRef,
       selectedSiteTypeRef,
-      hasAccountAccessTokenRef,
       hasExplicitAuthTypeRef,
     },
     form: {
@@ -583,7 +572,7 @@ export function useAccountDialog({
       postSaveWorkflow,
       checkInSelectionChangedRef,
       checkInDiscoveryBaseSelectionRef,
-      loadedKimiAuthRef,
+      credentialEvidence,
       onPostSaveAccountRefresh,
     })
 

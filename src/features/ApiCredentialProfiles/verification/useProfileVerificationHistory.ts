@@ -86,6 +86,7 @@ export function useProfileVerificationHistory({
     persistedSummary,
     setPersistedSummary,
     persistCurrentResults,
+    clearVerificationHistory,
     loadVerificationHistory,
   } = useVerificationDialogState(historyTarget)
 
@@ -204,6 +205,7 @@ export function useProfileVerificationHistory({
     persistedSummary,
     setPersistedSummary,
     persistCurrentResults,
+    clearVerificationHistory,
     historyTarget,
     getHistoryTargetForModel,
     preserveCurrentProbeStateForModel,

@@ -541,26 +541,22 @@ describe("usageHistoryStorage", () => {
       new Error("read failed"),
     )
 
-    await expect(usageHistoryStorage.updateStore(updater)).resolves.toEqual({
-      schemaVersion: USAGE_HISTORY_STORE_SCHEMA_VERSION,
-      accounts: {},
-    })
+    await expect(usageHistoryStorage.updateStore(updater)).rejects.toThrow(
+      "read failed",
+    )
 
     expect(updater).not.toHaveBeenCalled()
     expect(set).not.toHaveBeenCalled()
   })
 
-  it("returns false when persisting or pruning fails", async () => {
+  it("rejects failed writes and returns false when pruning fails", async () => {
     vi.spyOn((usageHistoryStorage as any).storage, "set").mockRejectedValueOnce(
       new Error("write failed"),
     )
 
     await expect(
-      usageHistoryStorage.setStore({
-        schemaVersion: USAGE_HISTORY_STORE_SCHEMA_VERSION,
-        accounts: {},
-      }),
-    ).resolves.toBe(false)
+      usageHistoryStorage.updateStore((store) => store),
+    ).rejects.toThrow("write failed")
 
     vi.spyOn(usageHistoryStorage, "updateStore").mockRejectedValueOnce(
       new Error("prune failed"),

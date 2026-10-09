@@ -52,6 +52,8 @@ export function useManagedSiteModelSyncData({
   ])
   const configMissingTrackedFor = useRef<string | null>(null)
   const contextGenerationRef = useRef(0)
+  const isContextActiveRef = useRef(false)
+  const progressRequestIdRef = useRef(0)
   const lastExecutionRequestIdRef = useRef(0)
   const channelsRequestIdRef = useRef(0)
   const lastExecutionLoadingRequestIdsRef = useRef<Set<number>>(new Set())
@@ -75,7 +77,12 @@ export function useManagedSiteModelSyncData({
   const { completeModelSyncActionAnalytics } =
     useModelSyncAnalytics(managedSiteType)
   const tryStartSyncRequest = () => {
-    if (activeSyncRequestRef.current || progress?.isRunning) return null
+    if (
+      !isContextActiveRef.current ||
+      activeSyncRequestRef.current ||
+      progress?.isRunning
+    )
+      return null
 
     const token = {
       generation: contextGenerationRef.current,
@@ -135,7 +142,12 @@ export function useManagedSiteModelSyncData({
   }, [])
 
   const loadProgress = useCallback(async () => {
+    if (!isContextActiveRef.current) return
     const generation = contextGenerationRef.current
+    const requestId = ++progressRequestIdRef.current
+    const isCurrent = () =>
+      generation === contextGenerationRef.current &&
+      requestId === progressRequestIdRef.current
     try {
       const response = await sendModelSyncMessage(
         ModelSyncMessageTypes.GetProgress,
@@ -143,13 +155,14 @@ export function useManagedSiteModelSyncData({
 
       if (
         response.success &&
-        generation === contextGenerationRef.current &&
+        isCurrent() &&
         (!response.data ||
           response.data.configFingerprint === managedSiteConfigFingerprint)
       ) {
         setProgress(response.data)
       }
     } catch (error) {
+      if (!isCurrent()) return
       logger.error("Failed to load progress", error)
     }
   }, [managedSiteConfigFingerprint])
@@ -313,7 +326,9 @@ export function useManagedSiteModelSyncData({
   }
 
   useEffect(() => {
+    isContextActiveRef.current = true
     contextGenerationRef.current += 1
+    progressRequestIdRef.current += 1
     lastExecutionRequestIdRef.current += 1
     channelsRequestIdRef.current += 1
     lastExecutionLoadingRequestIdsRef.current.clear()
@@ -330,6 +345,12 @@ export function useManagedSiteModelSyncData({
     setChannelsError(null)
     setHasAttemptedChannelsLoad(false)
     setIsLoading(!isConfigMissing && !isModelSyncUnsupported)
+    return () => {
+      isContextActiveRef.current = false
+      contextGenerationRef.current += 1
+      progressRequestIdRef.current += 1
+      activeSyncRequestRef.current = null
+    }
   }, [isConfigMissing, isModelSyncUnsupported, managedSiteConfigFingerprint])
 
   useEffect(() => {
@@ -370,6 +391,8 @@ export function useManagedSiteModelSyncData({
         message.type === "MANAGED_SITE_MODEL_SYNC_PROGRESS" &&
         message.payload?.configFingerprint === managedSiteConfigFingerprint
       ) {
+        // A current broadcast supersedes every query admitted before it.
+        progressRequestIdRef.current += 1
         setProgress(message.payload)
 
         // If sync completed, reload execution results

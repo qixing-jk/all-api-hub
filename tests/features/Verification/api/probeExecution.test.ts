@@ -18,6 +18,7 @@ function createExecution() {
     probeId: API_VERIFICATION_PROBE_IDS.Models,
     mode: API_VERIFICATION_MODES.Streaming,
     isStopped: () => false,
+    isCurrent: () => true,
     readProbes: () => probes,
     replaceProbes: (next: typeof probes) => {
       probes = next

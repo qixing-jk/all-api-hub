@@ -5,7 +5,7 @@ import {
   ManagedResourceError,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import { type NativeResourceEditorDefinition } from "~/services/apiAdapters/managedResources/factory"
+import type { NativeResourceEditorDefinition } from "~/services/apiAdapters/managedResources/editor"
 import {
   buildOctopusCreateCommand,
   buildOctopusUpdateCommand,

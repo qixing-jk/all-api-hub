@@ -11,7 +11,7 @@ import {
   type ResourceFieldIssue,
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import type { NativeResourceEditorDefinition } from "~/services/apiAdapters/managedResources/factory"
+import type { NativeResourceEditorDefinition } from "~/services/apiAdapters/managedResources/editor"
 import type { DoneHubChannelCommand, DoneHubChannelRaw } from "~/types/doneHub"
 import type { NewApiFamilyChannelCommand } from "~/types/newApiFamilyChannelEditor"
 import { isValidProxyUrl } from "~/utils/core/proxyUrl"

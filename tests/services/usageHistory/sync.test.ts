@@ -1,6 +1,8 @@
 import { http, HttpResponse } from "msw"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { type Storage } from "@plasmohq/storage"
+
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { USAGE_HISTORY_LIMITS } from "~/services/history/usageHistory/constants"
@@ -9,6 +11,7 @@ import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
 import { syncUsageHistoryForAccount } from "~/services/history/usageHistory/sync"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
 import type { LogItem } from "~/services/history/usageHistory/usageLogModel"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
 import {
   USAGE_HISTORY_SCHEDULE_MODE,
@@ -89,6 +92,328 @@ async function createTestAccount(baseUrl: string): Promise<string> {
 
 describe("usageHistory sync (MSW)", () => {
   afterEach(() => vi.restoreAllMocks())
+
+  it.each([
+    [Number.NaN, 1],
+    [0, 1],
+    [-3, 1],
+    ["invalid", 1],
+    ["2.8", 2],
+    [1e100, 3],
+  ])("normalizes stored retention %s at commit time", async (raw, retained) => {
+    const now = Date.UTC(2026, 0, 10, 12)
+    vi.spyOn(Date, "now").mockReturnValue(now)
+    const accountId = await createTestAccount(
+      "https://history-retention.invalid",
+    )
+    const config: UsageHistoryPreferences = {
+      enabled: true,
+      retentionDays: 30,
+      scheduleMode: USAGE_HISTORY_SCHEDULE_MODE.MANUAL,
+      syncIntervalMinutes: 60,
+    }
+    const preferences = await userPreferences.getPreferencesStrict()
+    vi.spyOn(userPreferences, "getPreferencesStrict").mockResolvedValue({
+      ...preferences,
+      usageHistory: { ...config, retentionDays: raw as number },
+    })
+    await usageHistoryStorage.updateAccountStore(accountId, (store) => {
+      store.daily["2026-01-01"] = {
+        requests: 1,
+        quotaConsumed: 1,
+        promptTokens: 1,
+        completionTokens: 1,
+        totalTokens: 2,
+      }
+    })
+    vi.spyOn(newApiFamilyRequests, "data").mockResolvedValue({
+      items: [0, 1, 2].map((daysAgo) =>
+        createConsumeLogItem({
+          id: daysAgo + 1,
+          created_at: now / 1000 - daysAgo * 86400,
+        }),
+      ),
+      total: 3,
+    })
+
+    await expect(
+      syncUsageHistoryForAccount({
+        accountId,
+        trigger: "manual",
+        force: true,
+        timeZone: "UTC",
+        config,
+      }),
+    ).resolves.toMatchObject({ status: "success", ingestedCount: retained })
+    const store = await usageHistoryStorage.getAccountStore(accountId)
+    expect(Object.keys(store.daily).sort()).toEqual(
+      retained === 3
+        ? ["2026-01-01", "2026-01-08", "2026-01-09", "2026-01-10"]
+        : retained === 2
+          ? ["2026-01-09", "2026-01-10"]
+          : ["2026-01-10"],
+    )
+  })
+
+  it.each([
+    [60, 3600000],
+    [2.9, 120000],
+    [0, 60000],
+    [-5, 60000],
+    [Number.NaN, 60000],
+  ])(
+    "waits for the normalized %s-minute interval before automatic sync",
+    async (syncIntervalMinutes, intervalMs) => {
+      const now = Date.UTC(2026, 0, 10, 12)
+      vi.spyOn(Date, "now").mockReturnValue(now)
+      const accountId = await createTestAccount(
+        "https://history-interval.invalid",
+      )
+      const config: UsageHistoryPreferences = {
+        enabled: true,
+        retentionDays: 30,
+        scheduleMode: USAGE_HISTORY_SCHEDULE_MODE.ALARM,
+        syncIntervalMinutes,
+      }
+      const request = vi
+        .spyOn(newApiFamilyRequests, "data")
+        .mockResolvedValue({ items: [], total: 0 })
+      await usageHistoryStorage.updateAccountStore(accountId, (store) => {
+        store.status.lastSyncAt = now - intervalMs + 1
+      })
+      await expect(
+        syncUsageHistoryForAccount({ accountId, trigger: "alarm", config }),
+      ).resolves.toMatchObject({ status: "skipped" })
+      expect(request).not.toHaveBeenCalled()
+
+      await usageHistoryStorage.updateAccountStore(accountId, (store) => {
+        store.status.lastSyncAt = now - intervalMs
+      })
+      await expect(
+        syncUsageHistoryForAccount({ accountId, trigger: "alarm", config }),
+      ).resolves.toMatchObject({ status: "success" })
+      expect(request).toHaveBeenCalledOnce()
+    },
+  )
+
+  it.each(["get", "set"] as const)(
+    "does not report success when history %s fails",
+    async (operation) => {
+      const accountId = await createTestAccount(
+        "https://history-storage-failure.example.invalid",
+      )
+      vi.spyOn(newApiFamilyRequests, "data").mockResolvedValue({
+        items: [
+          createConsumeLogItem({
+            created_at: Math.floor(Date.now() / 1000) - 1,
+          }),
+        ],
+        total: 1,
+      })
+      const storage = (usageHistoryStorage as unknown as { storage: Storage })
+        .storage
+      vi.spyOn(storage, operation).mockRejectedValueOnce(
+        new Error(`history ${operation} failed`),
+      )
+      const result = await syncUsageHistoryForAccount({
+        accountId,
+        trigger: "manual",
+        force: true,
+      })
+      expect(result.status).toBe("error")
+      expect(result.ingestedCount).toBe(0)
+      const store = await usageHistoryStorage.getAccountStore(accountId)
+      expect(store.cursor.lastSeenCreatedAt).toBe(0)
+      expect(store.daily).toEqual({})
+    },
+  )
+
+  it("rejects a failed commit read after collecting logs", async () => {
+    const accountId = await createTestAccount(
+      "https://history-commit-read-failure.example.invalid",
+    )
+    const storage = (usageHistoryStorage as unknown as { storage: Storage })
+      .storage
+    vi.spyOn(newApiFamilyRequests, "data").mockImplementation(async () => {
+      vi.spyOn(storage, "get").mockRejectedValueOnce(
+        new Error("commit read failed"),
+      )
+      return {
+        items: [
+          createConsumeLogItem({
+            created_at: Math.floor(Date.now() / 1000) - 1,
+          }),
+        ],
+        total: 1,
+      }
+    })
+    expect(
+      await syncUsageHistoryForAccount({
+        accountId,
+        trigger: "manual",
+        force: true,
+      }),
+    ).toMatchObject({
+      status: "error",
+      ingestedCount: 0,
+      error: "commit read failed",
+    })
+    expect(
+      (await usageHistoryStorage.getAccountStore(accountId)).daily,
+    ).toEqual({})
+  })
+
+  it("skips non-consume items before interpreting their timestamp", async () => {
+    const accountId = await createTestAccount(
+      "https://history-non-consume.example.invalid",
+    )
+    vi.spyOn(newApiFamilyRequests, "data").mockResolvedValue({
+      items: [
+        createConsumeLogItem({ type: LogType.Topup, created_at: Number.NaN }),
+        createConsumeLogItem({ created_at: Math.floor(Date.now() / 1000) - 1 }),
+      ],
+      total: 2,
+    })
+    expect(
+      await syncUsageHistoryForAccount({
+        accountId,
+        trigger: "manual",
+        force: true,
+      }),
+    ).toMatchObject({ status: "success", ingestedCount: 1 })
+  })
+
+  it("reports a persistence error even when saving the error status also fails", async () => {
+    const accountId = await createTestAccount(
+      "https://history-double-write-failure.example.invalid",
+    )
+    vi.spyOn(newApiFamilyRequests, "data").mockResolvedValue({
+      items: [],
+      total: 0,
+    })
+    const storage = (usageHistoryStorage as unknown as { storage: Storage })
+      .storage
+    const write = vi
+      .spyOn(storage, "set")
+      .mockRejectedValue(new Error("history write failed"))
+    await expect(
+      syncUsageHistoryForAccount({ accountId, trigger: "manual", force: true }),
+    ).resolves.toMatchObject({ status: "error" })
+    expect(write).toHaveBeenCalledTimes(2)
+  })
+
+  it("keeps the latest retention policy when settings prune history during collection", async () => {
+    const accountId = await createTestAccount(
+      "https://history-retention-race.example.invalid",
+    )
+    const now = Math.floor(Date.now() / 1000)
+    const oldTimestamp = now - 10 * 24 * 60 * 60
+    const oldDay = getDayKeyFromUnixSeconds(oldTimestamp, "UTC")
+    const config: UsageHistoryPreferences = {
+      enabled: true,
+      retentionDays: 30,
+      scheduleMode: USAGE_HISTORY_SCHEDULE_MODE.MANUAL,
+      syncIntervalMinutes: 60,
+    }
+    await userPreferences.savePreferences({ usageHistory: config })
+    await usageHistoryStorage.updateAccountStore(accountId, (store) => {
+      store.daily[oldDay] = {
+        requests: 1,
+        quotaConsumed: 1,
+        promptTokens: 1,
+        completionTokens: 1,
+        totalTokens: 2,
+      }
+    })
+    let release!: () => void
+    const pending = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let started!: () => void
+    const collecting = new Promise<void>((resolve) => {
+      started = resolve
+    })
+    vi.spyOn(newApiFamilyRequests, "data").mockImplementation(async () => {
+      started()
+      await pending
+      return {
+        items: [
+          createConsumeLogItem({ created_at: now - 1 }),
+          createConsumeLogItem({ created_at: oldTimestamp }),
+        ],
+        total: 2,
+      }
+    })
+    const running = syncUsageHistoryForAccount({
+      accountId,
+      trigger: "manual",
+      force: true,
+      timeZone: "UTC",
+      config,
+    })
+    await collecting
+    await userPreferences.savePreferences({
+      usageHistory: { ...config, retentionDays: 1 },
+    })
+    await usageHistoryStorage.pruneAllAccounts(1, "UTC")
+    release()
+    expect(await running).toMatchObject({ status: "success" })
+    const store = await usageHistoryStorage.getAccountStore(accountId)
+    expect(store.daily[oldDay]).toBeUndefined()
+    expect(
+      Object.values(store.daily).reduce(
+        (total, day) => total + day.requests,
+        0,
+      ),
+    ).toBe(1)
+  })
+
+  it("deduplicates overlapping collections against the cursor committed by the other sync", async () => {
+    const accountId = await createTestAccount(
+      "https://history-overlap.example.invalid",
+    )
+    const now = Math.floor(Date.now() / 1000)
+    const items = [
+      createConsumeLogItem({ id: 2, created_at: now - 1 }),
+      createConsumeLogItem({ id: 1, created_at: now - 2 }),
+    ]
+    let release!: () => void
+    const pending = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let started!: () => void
+    const collecting = new Promise<void>((resolve) => {
+      started = resolve
+    })
+    vi.spyOn(newApiFamilyRequests, "data")
+      .mockImplementationOnce(async () => {
+        started()
+        await pending
+        return { items, total: items.length }
+      })
+      .mockResolvedValue({ items, total: items.length })
+    const params = {
+      accountId,
+      trigger: "manual" as const,
+      force: true,
+      timeZone: "UTC",
+    }
+    const first = syncUsageHistoryForAccount(params)
+    await collecting
+    const second = await syncUsageHistoryForAccount(params)
+    release()
+    const older = await first
+    expect(second).toMatchObject({ status: "success", ingestedCount: 2 })
+    expect(older).toMatchObject({ status: "success", ingestedCount: 0 })
+    const store = await usageHistoryStorage.getAccountStore(accountId)
+    expect(
+      Object.values(store.daily).reduce(
+        (total, day) => total + day.requests,
+        0,
+      ),
+    ).toBe(2)
+    expect(store.cursor.lastSeenCreatedAt).toBe(now - 1)
+  })
 
   it("retains all current boundary fingerprints without recounting usage and discards them when the cursor advances", async () => {
     const baseUrl = "https://usage-history-unlimited.example.invalid"

@@ -121,6 +121,21 @@ export function useVerificationDialogState(
     [applyPersistedSummary, historyTarget],
   )
 
+  const clearVerificationHistory = useCallback(
+    async (
+      apiType: ApiVerificationApiType,
+      target: ApiVerificationHistoryTarget | null = historyTarget,
+    ) => {
+      if (!target) return
+      const requestToken = ++loadTokenRef.current
+      await verificationResultHistoryStorage.clearTarget(target)
+      if (loadTokenRef.current !== requestToken) return
+      applyPersistedSummary(null, false)
+      applyProbes(buildProbeState(apiType), false)
+    },
+    [applyPersistedSummary, applyProbes, historyTarget],
+  )
+
   const loadVerificationHistory = useCallback(
     async ({
       apiType,
@@ -173,6 +188,7 @@ export function useVerificationDialogState(
     setPersistedSummary,
     persistedSummaryRef,
     persistCurrentResults,
+    clearVerificationHistory,
     loadVerificationHistory,
   }
 }

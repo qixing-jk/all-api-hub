@@ -2006,6 +2006,115 @@ describe("check-in methods compatibility activation", () => {
     expect(checkInRequest).toHaveBeenCalledOnce()
   })
 
+  it.each([
+    "identity",
+    "intent",
+    "account-disabled",
+    "readiness",
+    "missing",
+    "reload-error",
+  ] as const)(
+    "blocks a recovered POST when latest admission loses %s",
+    async (change) => {
+      const registration = getNewApiExecutionRegistration()
+      const account = createNewApiExecutionAccount()
+      vi.spyOn(registration.provider, "getStatus").mockResolvedValue({
+        outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+        availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
+        today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+        evidence: {
+          source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+          observedAt: Date.now(),
+        },
+      })
+      const revalidateAccount = vi.fn(
+        async (_config?: CheckInConfig): Promise<typeof account | null> =>
+          account,
+      )
+      const globalSwitch = vi.fn(async () => true)
+      vi.spyOn(registration.provider, "checkIn").mockImplementation(
+        async (_account, context) => {
+          if (change === "reload-error") {
+            revalidateAccount.mockRejectedValueOnce(
+              new Error("Storage unavailable"),
+            )
+          } else if (change === "missing") {
+            revalidateAccount.mockResolvedValueOnce(null)
+          } else if (change === "readiness") {
+            vi.spyOn(registration.provider, "getReadiness").mockReturnValue({
+              ready: false,
+              reason: "credentials_missing",
+            })
+          } else {
+            revalidateAccount.mockResolvedValueOnce({
+              ...account,
+              ...(change === "identity"
+                ? {
+                    account_info: {
+                      ...account.account_info,
+                      id: "another-user",
+                    },
+                  }
+                : {}),
+              ...(change === "account-disabled" ? { disabled: true } : {}),
+              checkIn: {
+                ...account.checkIn,
+                ...(change === "intent"
+                  ? { automaticExecutionEnabled: false }
+                  : {}),
+              },
+            })
+          }
+          expect(await context.beforeRecoveredMutation?.()).toBe(false)
+          expect(revalidateAccount).toHaveBeenLastCalledWith(
+            expect.objectContaining({ methodKnowledge: expect.any(Object) }),
+          )
+          return {
+            status: "failed",
+            reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_ERROR,
+          }
+        },
+      )
+      expect(
+        await executeSelectedCheckIn({
+          account,
+          globalAutomaticExecutionEnabled: true,
+          context: createExecutionContext(),
+          revalidateAccount,
+          isAutomaticExecutionEnabled: globalSwitch,
+        }),
+      ).toMatchObject({ kind: "executed", result: { status: "failed" } })
+      expect(globalSwitch).toHaveBeenCalledOnce()
+    },
+  )
+
+  it("leaves recovered POST guarding absent without an account reload callback", async () => {
+    const registration = getNewApiExecutionRegistration()
+    const account = createNewApiExecutionAccount()
+    vi.spyOn(registration.provider, "getStatus").mockResolvedValue({
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+      availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
+      today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+      evidence: {
+        source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+        observedAt: Date.now(),
+      },
+    })
+    vi.spyOn(registration.provider, "checkIn").mockImplementation(
+      async (_account, context) => {
+        expect(context.beforeRecoveredMutation).toBeUndefined()
+        return { status: "success" }
+      },
+    )
+    expect(
+      await executeSelectedCheckIn({
+        account,
+        globalAutomaticExecutionEnabled: true,
+        context: createExecutionContext(),
+      }),
+    ).toMatchObject({ kind: "executed", result: { status: "success" } })
+  })
+
   it("preserves a dispatched unsupported result when the global switch changes", async () => {
     const registration = getNewApiExecutionRegistration()
     const account = createNewApiExecutionAccount()

@@ -1,6 +1,7 @@
 import {
   act,
   fireEvent,
+  renderHook,
   render as rtlRender,
   screen,
   waitFor,
@@ -11,6 +12,7 @@ import type { ReactNode } from "react"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { useManagedSiteModelSyncData } from "~/features/ManagedSiteModelSync/data/useManagedSiteModelSyncData"
 import ManagedSiteModelSync from "~/features/ManagedSiteModelSync/ManagedSiteModelSync"
 import toast from "~/lib/notify"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
@@ -4353,6 +4355,168 @@ describe("ManagedSiteModelSync page", () => {
 
     unmount()
     expect(removeListener).toHaveBeenCalledWith(listener)
+  })
+
+  describe("progress snapshot acceptance", () => {
+    const options = () => ({
+      isConfigMissing: false,
+      isModelSyncUnsupported: false,
+      managedSiteConfigFingerprint: currentConfigFingerprint(),
+      managedSiteType: "new-api" as const,
+      refreshKey: 0,
+    })
+    const snapshot = (isRunning: boolean, completed: number) => ({
+      configFingerprint: currentConfigFingerprint(),
+      isRunning,
+      completed,
+      total: 2,
+      failed: 0,
+    })
+
+    it.each(["running", "empty"])(
+      "keeps a completed broadcast when an older %s query returns",
+      async (kind) => {
+        const pending = createDeferred<{ success: boolean; data: any }>()
+        const original = mockSendRuntimeMessage.getMockImplementation()!
+        mockSendRuntimeMessage.mockImplementation((type: string, data?: any) =>
+          type === ModelSyncMessageTypes.GetProgress
+            ? pending.promise
+            : original(type, data),
+        )
+        const addListener = vi.spyOn(browser.runtime.onMessage, "addListener")
+        const { result } = renderHook(() =>
+          useManagedSiteModelSyncData(options()),
+        )
+        const listener = addListener.mock.calls.at(-1)![0]
+        await act(async () => {
+          listener(
+            {
+              type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
+              payload: snapshot(true, 1),
+            },
+            {} as any,
+            vi.fn(),
+          )
+          listener(
+            {
+              type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
+              payload: snapshot(false, 2),
+            },
+            {} as any,
+            vi.fn(),
+          )
+        })
+        expect(result.current.progress).toEqual(snapshot(false, 2))
+        await act(async () =>
+          pending.resolve({
+            success: true,
+            data: kind === "running" ? snapshot(true, 0) : null,
+          }),
+        )
+        expect(result.current.progress).toEqual(snapshot(false, 2))
+        expect(result.current.requestGate.tryStart()).not.toBeNull()
+      },
+    )
+
+    it("keeps the newest query result when earlier progress queries return later", async () => {
+      const older = createDeferred<{ success: boolean; data: any }>()
+      const newer = createDeferred<{ success: boolean; data: any }>()
+      let attempt = 0
+      const original = mockSendRuntimeMessage.getMockImplementation()!
+      mockSendRuntimeMessage.mockImplementation((type: string, data?: any) =>
+        type === ModelSyncMessageTypes.GetProgress
+          ? ++attempt === 1
+            ? older.promise
+            : newer.promise
+          : original(type, data),
+      )
+      const { result, rerender } = renderHook(
+        (props) => useManagedSiteModelSyncData(props),
+        { initialProps: options() },
+      )
+      rerender({ ...options(), refreshKey: 1 })
+      await act(async () =>
+        newer.resolve({ success: true, data: snapshot(false, 2) }),
+      )
+      await act(async () =>
+        older.resolve({ success: true, data: snapshot(true, 0) }),
+      )
+      expect(result.current.progress).toEqual(snapshot(false, 2))
+    })
+
+    it("does not invalidate a current query for an unrelated configuration broadcast", async () => {
+      const pending = createDeferred<{ success: boolean; data: any }>()
+      const original = mockSendRuntimeMessage.getMockImplementation()!
+      mockSendRuntimeMessage.mockImplementation((type: string, data?: any) =>
+        type === ModelSyncMessageTypes.GetProgress
+          ? pending.promise
+          : original(type, data),
+      )
+      const addListener = vi.spyOn(browser.runtime.onMessage, "addListener")
+      const { result } = renderHook(() =>
+        useManagedSiteModelSyncData(options()),
+      )
+      await act(async () => {
+        addListener.mock.calls.at(-1)![0](
+          {
+            type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
+            payload: { ...snapshot(false, 2), configFingerprint: "other" },
+          },
+          {} as any,
+          vi.fn(),
+        )
+        pending.resolve({ success: true, data: snapshot(true, 1) })
+      })
+      expect(result.current.progress).toEqual(snapshot(true, 1))
+    })
+
+    it("drops progress query failures after a current broadcast supersedes them", async () => {
+      const pending = createDeferred<{ success: boolean; data: any }>()
+      const original = mockSendRuntimeMessage.getMockImplementation()!
+      mockSendRuntimeMessage.mockImplementation((type: string, data?: any) =>
+        type === ModelSyncMessageTypes.GetProgress
+          ? pending.promise
+          : original(type, data),
+      )
+      const addListener = vi.spyOn(browser.runtime.onMessage, "addListener")
+      const { result } = renderHook(() =>
+        useManagedSiteModelSyncData(options()),
+      )
+      await act(async () => {
+        addListener.mock.calls.at(-1)![0](
+          {
+            type: "MANAGED_SITE_MODEL_SYNC_PROGRESS",
+            payload: snapshot(false, 2),
+          },
+          {} as any,
+          vi.fn(),
+        )
+        pending.reject(new Error("obsolete progress read"))
+      })
+      expect(result.current.progress).toEqual(snapshot(false, 2))
+      expect(loggerMocks.error).not.toHaveBeenCalled()
+    })
+
+    it("invalidates pending progress queries and foreground request tokens on unmount", async () => {
+      const pending = createDeferred<{ success: boolean; data: any }>()
+      const original = mockSendRuntimeMessage.getMockImplementation()!
+      mockSendRuntimeMessage.mockImplementation((type: string, data?: any) =>
+        type === ModelSyncMessageTypes.GetProgress
+          ? pending.promise
+          : original(type, data),
+      )
+      const { result, unmount } = renderHook(() =>
+        useManagedSiteModelSyncData(options()),
+      )
+      const gate = result.current.requestGate
+      const token = gate.tryStart()!
+      unmount()
+      await act(async () =>
+        pending.reject(new Error("unmounted progress read")),
+      )
+      expect(gate.isCurrent(token)).toBe(false)
+      expect(loggerMocks.error).not.toHaveBeenCalled()
+    })
   })
 
   it("polls background progress while a sync is still running", async () => {

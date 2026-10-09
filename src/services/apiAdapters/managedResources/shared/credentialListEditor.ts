@@ -8,7 +8,7 @@ import type {
   ResourceSecretListEntry,
   ResourceSecretListValue,
 } from "~/services/apiAdapters/contracts/resourceNative"
-import type { NativeResourceEditorDefinition } from "~/services/apiAdapters/managedResources/factory"
+import type { NativeResourceEditorDefinition } from "~/services/apiAdapters/managedResources/editor"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 
 type CredentialRecord = {

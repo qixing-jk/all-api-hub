@@ -9,6 +9,7 @@ import {
   type AccountSiteType,
 } from "~/constants/siteType"
 import { type useAccountCurrentTab } from "~/features/AccountManagement/components/AccountDialog/detection/useAccountCurrentTab"
+import type { createAccountCredentialEvidence } from "~/features/AccountManagement/components/AccountDialog/form/accountCredentialEvidence"
 import {
   getAccountDialogSitePolicy,
   normalizeAccountDialogDraftForSitePolicy,
@@ -49,14 +50,7 @@ type InitializationInput = {
     selectedSiteTypeRef: RefObject<AccountSiteType>
     selectedSiteUrlRef: RefObject<string>
     hasExplicitAuthTypeRef: RefObject<boolean>
-    accountCredentialScopeRef: RefObject<{
-      url: string
-      siteType: AccountSiteType
-    } | null>
-    loadedKimiAuthRef: RefObject<
-      | { accessToken: string; refreshToken?: string; organizationId?: string }
-      | undefined
-    >
+    credentialEvidence: ReturnType<typeof createAccountCredentialEvidence>
     automaticExecutionPreferenceChangedRef: RefObject<boolean>
     checkInSelectionChangedRef: RefObject<boolean>
     checkInDiscoveryBaseSelectionRef: RefObject<CheckInMethodSelection | null>
@@ -103,8 +97,7 @@ export function useAccountDialogInitialization({
     selectedSiteTypeRef,
     selectedSiteUrlRef,
     hasExplicitAuthTypeRef,
-    accountCredentialScopeRef,
-    loadedKimiAuthRef,
+    credentialEvidence,
     automaticExecutionPreferenceChangedRef,
     checkInSelectionChangedRef,
     checkInDiscoveryBaseSelectionRef,
@@ -143,8 +136,7 @@ export function useAccountDialogInitialization({
       hasExplicitAuthTypeRef.current = Boolean(nextPrefill?.authType)
       const nextUrl = nextPrefill?.siteUrl ?? ""
       selectedSiteUrlRef.current = nextUrl
-      accountCredentialScopeRef.current = null
-      loadedKimiAuthRef.current = undefined
+      credentialEvidence.reset()
       resetOpenRouterOnboardingSession({
         url: nextUrl,
         siteType: nextSiteType,
@@ -187,13 +179,12 @@ export function useAccountDialogInitialization({
       mode,
       resetCheckInRedetection,
       resetOpenRouterOnboardingSession,
-      accountCredentialScopeRef,
+      credentialEvidence,
       automaticExecutionPreferenceChangedRef,
       checkInDiscoveryBaseSelectionRef,
       checkInSelectionChangedRef,
       hasExplicitAuthTypeRef,
       isCloseTransitionStartedRef,
-      loadedKimiAuthRef,
       selectedSiteTypeRef,
       selectedSiteUrlRef,
       setDraft,
@@ -209,23 +200,24 @@ export function useAccountDialogInitialization({
       try {
         const siteAccount = await accountQueries.getAccountById(accountId)
         if (siteAccount) {
-          loadedKimiAuthRef.current = siteAccount.kimiOpenPlatformAuth
-            ? {
-                accessToken: siteAccount.account_info.access_token,
-                refreshToken: siteAccount.kimiOpenPlatformAuth.refreshToken,
-                organizationId: siteAccount.kimiOpenPlatformAuth.organizationId,
-              }
-            : undefined
           setUrl(siteAccount.site_url)
           const refreshToken = siteAccount.sub2apiAuth?.refreshToken ?? ""
           const normalizedSiteType = resolveStoredSiteType(
             siteAccount.site_type,
             Boolean(siteAccount.sub2apiAuth),
           )
-          accountCredentialScopeRef.current = {
-            url: siteAccount.site_url,
-            siteType: normalizedSiteType,
-          }
+          credentialEvidence.acceptLoadedCredential({
+            accessToken: siteAccount.account_info.access_token,
+            scope: { url: siteAccount.site_url, siteType: normalizedSiteType },
+            loadedKimiAuth: siteAccount.kimiOpenPlatformAuth
+              ? {
+                  accessToken: siteAccount.account_info.access_token,
+                  refreshToken: siteAccount.kimiOpenPlatformAuth.refreshToken,
+                  organizationId:
+                    siteAccount.kimiOpenPlatformAuth.organizationId,
+                }
+              : undefined,
+          })
           selectedSiteUrlRef.current = siteAccount.site_url
           selectedSiteTypeRef.current = normalizedSiteType
           const policy = getAccountDialogSitePolicy(normalizedSiteType)
@@ -295,11 +287,10 @@ export function useAccountDialogInitialization({
     [
       enterForm,
       i18n,
-      accountCredentialScopeRef,
+      credentialEvidence,
       checkInDiscoveryBaseSelectionRef,
       checkInSelectionChangedRef,
       hasExplicitAuthTypeRef,
-      loadedKimiAuthRef,
       selectedSiteTypeRef,
       selectedSiteUrlRef,
       setUrl,
@@ -324,10 +315,10 @@ export function useAccountDialogInitialization({
         checkInDiscoveryBaseSelectionRef.current =
           recoveryState.checkInDiscoveryBaseSelection
         setUrl(recoveryState.url)
-        accountCredentialScopeRef.current = {
+        credentialEvidence.rememberScope({
           url: recoveryState.url,
           siteType: recoveredDraft.siteType,
-        }
+        })
         setDraft(
           normalizeAccountDialogDraftForSitePolicy({
             draft: recoveredDraft,
@@ -361,7 +352,7 @@ export function useAccountDialogInitialization({
     loadAccountData,
     checkCurrentTab,
     i18n,
-    accountCredentialScopeRef,
+    credentialEvidence,
     automaticExecutionPreferenceChangedRef,
     checkInDiscoveryBaseSelectionRef,
     checkInSelectionChangedRef,

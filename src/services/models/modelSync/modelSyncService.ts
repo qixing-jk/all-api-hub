@@ -4,10 +4,7 @@ import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/con
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { type ManagedSiteRuntimeConfig } from "~/services/managedSites/configuration/runtimeConfig"
-import {
-  assertManagedResourceRefForSite,
-  toManagedUpstreamResourceRef,
-} from "~/services/managedSites/managedResourceIdentity"
+import { assertManagedResourceRefForSite } from "~/services/managedSites/managedResourceIdentity"
 import { consumeManagedSiteMutationResult } from "~/services/managedSites/mutations/consumption"
 import { type ManagedSiteMutationResult } from "~/services/managedSites/mutations/contracts"
 import {
@@ -30,20 +27,14 @@ import {
 } from "~/types/managedSiteModelSync"
 import { createLogger } from "~/utils/core/logger"
 
-import {
-  applyChannelModelFilters,
-  getChannelModelFilterRulesForResource,
-  ProbeFilterUnavailableError,
-  type ProbeFilterContext,
-} from "./channelModelFilterEvaluator"
+import { ProbeFilterUnavailableError } from "./channelModelFilterEvaluator"
+import { ChannelModelSelection } from "./channelModelSelection"
 import { runWithChannelProcessingTimeout } from "./channelProcessingTimeout"
 import { RateLimiter } from "./rateLimiter"
 import {
   createModelSyncWriteFailureBoundary,
   type ModelSyncWriteFailureBoundary,
 } from "./writeFailureBoundary"
-
-const PROBE_FILTER_TIMEOUT_MS = 30_000
 
 type ModelSyncChannelListCapability = ManagedResourceModelsCapability & {
   list: NonNullable<ManagedResourceModelsCapability["list"]>
@@ -121,10 +112,7 @@ export class ModelSyncService {
 
   private managedSiteConfig: ManagedSiteRuntimeConfig
   private rateLimiter: RateLimiter | null = null
-  private allowedModelSet: Set<string> | null = null
-  private channelConfigs: ChannelResourceConfigMap | null = null
-  private globalChannelModelFilters: ChannelModelFilterRule[] | null = null
-  private readonly protectionBypassExecution?: ProtectionBypassExecution
+  private readonly modelSelection: ChannelModelSelection
 
   /**
    * Create a model sync service bound to a specific managed-site runtime config.
@@ -151,18 +139,13 @@ export class ModelSyncService {
         rateLimitConfig.burst,
       )
     }
-    if (allowedModels && allowedModels.length > 0) {
-      this.allowedModelSet = new Set(
-        allowedModels.map((model) => model.trim()).filter(Boolean),
-      )
-    }
-    if (channelConfigs) {
-      this.channelConfigs = channelConfigs
-    }
-    if (globalChannelModelFilters && globalChannelModelFilters.length > 0) {
-      this.globalChannelModelFilters = globalChannelModelFilters
-    }
-    this.protectionBypassExecution = protectionBypassExecution
+    this.modelSelection = new ChannelModelSelection(
+      managedSiteConfig,
+      allowedModels,
+      channelConfigs,
+      globalChannelModelFilters,
+      protectionBypassExecution,
+    )
   }
 
   /**
@@ -170,7 +153,7 @@ export class ModelSyncService {
    * @param configs Cached channel configuration map; null clears cache.
    */
   setChannelConfigs(configs: ChannelResourceConfigMap | null) {
-    this.channelConfigs = configs
+    this.modelSelection.setChannelConfigs(configs)
   }
 
   /**
@@ -179,30 +162,6 @@ export class ModelSyncService {
   private async throttle() {
     if (this.rateLimiter) {
       await this.rateLimiter.acquire()
-    }
-  }
-
-  private createProbeFilterAbortSignal(): {
-    signal: AbortSignal
-    cleanup: () => void
-  } {
-    if (typeof AbortSignal.timeout === "function") {
-      return {
-        signal: AbortSignal.timeout(PROBE_FILTER_TIMEOUT_MS),
-        cleanup: () => {},
-      }
-    }
-
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => {
-      controller.abort()
-    }, PROBE_FILTER_TIMEOUT_MS)
-
-    return {
-      signal: controller.signal,
-      cleanup: () => {
-        clearTimeout(timeoutId)
-      },
     }
   }
 
@@ -406,63 +365,38 @@ export class ModelSyncService {
           abortSignal,
         )
         throwIfAborted(abortSignal)
-        const allowListedModels = this.filterAllowedModels(fetchedModels)
-        const probeFilterCache = new Map<string, boolean>()
-        const probeFilterAbort = this.createProbeFilterAbortSignal()
-        const capabilities = getSiteTypeCapabilities(
-          this.managedSiteConfig.siteType,
-        ).managedSites
-        const probeContext: ProbeFilterContext = {
+        const channelScopedModels = await this.modelSelection.select(
           channel,
-          managedConfig: this.managedSiteConfig,
-          matching: capabilities?.matching,
-          models: capabilities?.models,
-          cache: probeFilterCache,
-          abortSignal: probeFilterAbort.signal,
-          protectionBypassExecution: this.protectionBypassExecution,
-        }
-        try {
-          const globallyScopedModels = await applyChannelModelFilters(
-            this.globalChannelModelFilters,
-            allowListedModels,
-            probeContext,
-          )
-          const channelScopedModels = await this.applyChannelFilters(
-            channel,
-            globallyScopedModels,
-            probeContext,
-          )
-          throwIfAborted(abortSignal)
+          fetchedModels,
+        )
+        throwIfAborted(abortSignal)
 
-          if (this.haveModelsChanged(oldModels, channelScopedModels)) {
-            // Only push an update when model sets differ to avoid unnecessary writes
-            try {
-              await this.updateChannelModels(
-                channel,
-                channelScopedModels,
-                abortSignal,
-              )
-            } catch (error) {
-              if (!(error instanceof ModelSyncMutationError)) {
-                writeFailureBoundary.capture(error)
-              }
-              throw error
+        if (this.haveModelsChanged(oldModels, channelScopedModels)) {
+          // Only push an update when model sets differ to avoid unnecessary writes
+          try {
+            await this.updateChannelModels(
+              channel,
+              channelScopedModels,
+              abortSignal,
+            )
+          } catch (error) {
+            if (!(error instanceof ModelSyncMutationError)) {
+              writeFailureBoundary.capture(error)
             }
-            channel.models = channelScopedModels
+            throw error
           }
+          channel.models = channelScopedModels
+        }
 
-          return {
-            resourceRef: channel.ref,
-            channelName: channel.name,
-            ok: true,
-            attempts,
-            finishedAt: Date.now(),
-            oldModels,
-            newModels: channelScopedModels,
-            message: "Success",
-          }
-        } finally {
-          probeFilterAbort.cleanup()
+        return {
+          resourceRef: channel.ref,
+          channelName: channel.name,
+          ok: true,
+          attempts,
+          finishedAt: Date.now(),
+          oldModels,
+          newModels: channelScopedModels,
+          message: "Success",
         }
       } catch (error: any) {
         if (writeFailureBoundary.matches(error)) throw error
@@ -582,25 +516,6 @@ export class ModelSyncService {
   }
 
   /**
-   * Apply optional allow-list and dedupe/trim models.
-   * @param models Models fetched upstream.
-   * @returns Normalized models limited by allow-list when present.
-   */
-  private filterAllowedModels(models: string[]): string[] {
-    if (!this.allowedModelSet || this.allowedModelSet.size === 0) {
-      return Array.from(
-        new Set(models.map((model) => model.trim()).filter(Boolean)),
-      )
-    }
-
-    const filtered = models
-      .map((model) => model.trim())
-      .filter((model) => model && this.allowedModelSet!.has(model))
-
-    return Array.from(new Set(filtered))
-  }
-
-  /**
    * Compare two model lists ignoring order to detect changes.
    */
   private haveModelsChanged(previous: string[], next: string[]): boolean {
@@ -618,24 +533,5 @@ export class ModelSyncService {
     }
 
     return false
-  }
-
-  /**
-   * Applies the per-channel include/exclude filters defined in channel configs
-   * to the provided models.
-   * @param channel Channel used to resolve the scoped resource identity.
-   * @param models Models after global filtering.
-   */
-  private applyChannelFilters(
-    channel: ManagedModelChannel,
-    models: string[],
-    probeContext: ProbeFilterContext,
-  ): Promise<string[]> {
-    const resourceIdentity = toManagedUpstreamResourceRef(channel.ref)
-    const rules = getChannelModelFilterRulesForResource(
-      this.channelConfigs,
-      resourceIdentity,
-    )
-    return applyChannelModelFilters(rules, models, probeContext)
   }
 }

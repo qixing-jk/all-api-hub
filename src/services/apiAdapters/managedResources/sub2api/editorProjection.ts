@@ -22,7 +22,7 @@ import {
   type ResourceValidationResult,
   type SecretEditIntent,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import { type NativeResourceEditorDefinition } from "~/services/apiAdapters/managedResources/factory"
+import type { NativeResourceEditorDefinition } from "~/services/apiAdapters/managedResources/editor"
 import {
   getBaseUrl,
   getModelMapping,

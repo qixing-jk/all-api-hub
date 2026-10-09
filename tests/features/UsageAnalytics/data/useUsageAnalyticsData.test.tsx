@@ -1,3 +1,4 @@
+import { act, renderHook, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUsageAnalyticsData } from "~/features/UsageAnalytics/data/useUsageAnalyticsData"
@@ -11,8 +12,9 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import type { SiteAccount } from "~/types"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
-import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const { startProductAnalyticsActionMock, completeProductAnalyticsActionMock } =
   vi.hoisted(() => ({
@@ -34,10 +36,82 @@ vi.mock("~/services/productAnalytics/actions", () => ({
 
 describe("useUsageAnalyticsData", () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
+  })
+
+  it("rejects an older complete snapshot after a newer refresh", async () => {
+    const oldAccounts = createDeferred<SiteAccount[]>()
+    vi.mocked(accountQueries.getAllAccounts)
+      .mockReturnValueOnce(oldAccounts.promise)
+      .mockResolvedValueOnce([buildSiteAccount({ id: "new" })])
+    vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
+      schemaVersion: 1,
+      accounts: {},
+    })
+    const { result } = renderHook(() => useUsageAnalyticsData())
+    await act(async () => result.current.loadData())
+    await act(async () =>
+      oldAccounts.resolve([buildSiteAccount({ id: "old", disabled: true })]),
+    )
+    expect(result.current.accounts.map((a) => a.id)).toEqual(["new"])
+    expect([...result.current.disabledAccountIdSet]).toEqual([])
+  })
+
+  it.each(["success", "failure"])(
+    "does not let an older %s end newer loading",
+    async (outcome) => {
+      const oldAccounts = createDeferred<SiteAccount[]>()
+      const newAccounts = createDeferred<SiteAccount[]>()
+      vi.mocked(accountQueries.getAllAccounts)
+        .mockReturnValueOnce(oldAccounts.promise)
+        .mockReturnValueOnce(newAccounts.promise)
+      vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
+        schemaVersion: 1,
+        accounts: {},
+      })
+      const { result } = renderHook(() => useUsageAnalyticsData())
+      let next!: Promise<void>
+      act(() => {
+        next = result.current.loadData({ trackAnalytics: true })
+      })
+      await act(async () => {
+        if (outcome === "success") oldAccounts.resolve([])
+        else oldAccounts.reject(new Error("old"))
+      })
+      expect(result.current.isLoading).toBe(true)
+      await act(async () => {
+        newAccounts.resolve([buildSiteAccount({ id: "new" })])
+        await next
+      })
+      expect(result.current.accounts.map((a) => a.id)).toEqual(["new"])
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+        expect.anything(),
+      )
+    },
+  )
+
+  it("does not admit retained reloads after unmount", async () => {
+    const pending = createDeferred<SiteAccount[]>()
+    vi.mocked(accountQueries.getAllAccounts).mockReturnValueOnce(
+      pending.promise,
+    )
+    vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
+      schemaVersion: 1,
+      accounts: {},
+    })
+    const { result, unmount } = renderHook(() => useUsageAnalyticsData())
+    const reload = result.current.loadData
+    unmount()
+    await act(async () => {
+      pending.resolve([])
+      await reload({ trackAnalytics: true })
+    })
+    expect(accountQueries.getAllAccounts).toHaveBeenCalledOnce()
+    expect(startProductAnalyticsActionMock).not.toHaveBeenCalled()
   })
 
   it("loads accounts, filters enabled accounts, and refreshes on demand", async () => {

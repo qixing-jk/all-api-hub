@@ -10,9 +10,11 @@ import type {
   ControllerMode,
   ControllerNotice,
   LoadProgress,
+  ResourceActionContext,
   StatusFilter,
 } from "~/features/KeyManagement/resources/workflows/accountKeyResourceControllerTypes"
 import {
+  boundariesMatch,
   boundaryIdentity,
   refIdentity,
   refMatchesBoundary,
@@ -73,9 +75,36 @@ export function useAccountKeyResourceInventoryState({
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(
     ACCOUNT_KEY_STATUS_FILTERS.All,
   )
-  const collectionRef = useRef<AccountKeyResourceCollection | null>(null)
-  const sessionRef = useRef<AccountKeyResourceSession | null>(null)
-  const activeResourceBoundaryRef = useRef<ActiveResourceBoundary | null>(null)
+  const nativeOwner = useRef<
+    Readonly<{
+      session: AccountKeyResourceSession | null
+      collection: AccountKeyResourceCollection | null
+      boundary: ActiveResourceBoundary | null
+    }>
+  >({ session: null, collection: null, boundary: null })
+  const readNativeOwner = useCallback(() => nativeOwner.current, [])
+  const acceptActionContext = useCallback((context: ResourceActionContext) => {
+    const { session, collection, boundary } = context
+    nativeOwner.current = { session, collection, boundary }
+  }, [])
+  // Creating refreshes authorization without replacing the accepted collection.
+  const adoptCreationSession = useCallback(
+    (session: AccountKeyResourceSession) => {
+      nativeOwner.current = { ...nativeOwner.current, session }
+    },
+    [],
+  )
+  const isNativeOwnerCurrent = useCallback(
+    (context: Pick<ResourceActionContext, "session" | "boundary">) => {
+      const current = nativeOwner.current
+      return (
+        current.session === context.session &&
+        current.boundary !== null &&
+        boundariesMatch(current.boundary, context.boundary)
+      )
+    },
+    [],
+  )
   const getResourceScope = useCallback(
     (ref: AccountKeyResourceRef) => resourceScopes.get(boundaryIdentity(ref)),
     [resourceScopes],
@@ -104,6 +133,89 @@ export function useAccountKeyResourceInventoryState({
     },
     [],
   )
+  const beginInventoryLoad = useCallback(
+    ({ preserveRows, idle }: { preserveRows: boolean; idle: boolean }) => {
+      setScopes([])
+      setSelectedScope(null)
+      setLoadingResourceBoundary(null)
+      if (!preserveRows || idle) {
+        setResourceScopes(new Map())
+        replaceAcceptedRows([])
+      }
+      setFailures({})
+      setScopeInventoryFailure(null)
+      setNotice(null)
+      setIsLoading(!idle)
+    },
+    [replaceAcceptedRows],
+  )
+  const readAcceptedRows = useCallback(() => acceptedRowsRef.current, [])
+  const acceptEditedResource = useCallback(
+    (facts: AccountKeyResourceFacts) => {
+      replaceAcceptedRows(
+        acceptedRowsRef.current.map((row) =>
+          refIdentity(row.ref) === refIdentity(facts.ref) ? facts : row,
+        ),
+      )
+    },
+    [replaceAcceptedRows],
+  )
+  const acceptDeletedResource = useCallback(
+    (ref: AccountKeyResourceRef) => {
+      replaceAcceptedRows(
+        acceptedRowsRef.current.filter(
+          (row) => refIdentity(row.ref) !== refIdentity(ref),
+        ),
+      )
+    },
+    [replaceAcceptedRows],
+  )
+  const acceptInventory = useCallback(
+    (
+      inventory: ResourceActionContext & {
+        scopes: readonly AccountKeyScope[]
+        selectedScope: AccountKeyScope
+        scopeFailure: ResourceFailure | null
+        rows: readonly AccountKeyResourceFacts[]
+      },
+    ) => {
+      acceptActionContext(inventory)
+      setLoadingResourceBoundary(null)
+      setScopes(inventory.scopes)
+      setSelectedScope(inventory.selectedScope)
+      setScopeInventoryFailure(inventory.scopeFailure)
+      rememberResourceScopes(inventory.boundary, inventory.scopes)
+      replaceAcceptedRows(inventory.rows)
+    },
+    [acceptActionContext, rememberResourceScopes, replaceAcceptedRows],
+  )
+  const acceptScopeInventory = useCallback(
+    (
+      boundary: ActiveResourceBoundary,
+      availableScopes: readonly AccountKeyScope[],
+    ) => {
+      const currentScope = selectedScopeRef.current
+      const nextSelectedScope = currentScope
+        ? availableScopes.find(
+            (scope) => scope.scopeKey === currentScope.scopeKey,
+          ) ?? currentScope
+        : availableScopes.find((scope) => scope.isDefault) ??
+          availableScopes[0] ??
+          null
+      const nextScopes =
+        nextSelectedScope &&
+        !availableScopes.some(
+          (scope) => scope.scopeKey === nextSelectedScope.scopeKey,
+        )
+          ? [nextSelectedScope, ...availableScopes]
+          : availableScopes
+      rememberResourceScopes(boundary, nextScopes)
+      setScopes(nextScopes)
+      setSelectedScope(nextSelectedScope)
+      setScopeInventoryFailure(null)
+    },
+    [rememberResourceScopes],
+  )
   const selectedAccountData = accounts.find(
     (account) => account.id === selectedAccount,
   )
@@ -124,7 +236,7 @@ export function useAccountKeyResourceInventoryState({
   const isCurrentResourceRef = useCallback(
     (ref: AccountKeyResourceRef) => {
       if (mode !== controllerModes.Single) return false
-      const boundary = activeResourceBoundaryRef.current
+      const boundary = nativeOwner.current.boundary
       return !!boundary && refMatchesBoundary(ref, boundary)
     },
     [mode],
@@ -171,9 +283,7 @@ export function useAccountKeyResourceInventoryState({
     [mode, scopes, selectedAccount, createdSecretRef, replaceRouteRef],
   )
   const clearNativeOwner = useCallback(() => {
-    sessionRef.current = null
-    collectionRef.current = null
-    activeResourceBoundaryRef.current = null
+    nativeOwner.current = { session: null, collection: null, boundary: null }
   }, [])
   return {
     currentResourceBoundary,
@@ -184,14 +294,9 @@ export function useAccountKeyResourceInventoryState({
     selectScope,
     clearNativeOwner,
     scopes,
-    setScopes,
     selectedScope,
-    setSelectedScope,
-    selectedScopeRef,
     setLoadingResourceBoundary,
     acceptedRows,
-    setResourceScopes,
-    acceptedRowsRef,
     failures,
     setFailures,
     scopeInventoryFailure,
@@ -209,9 +314,16 @@ export function useAccountKeyResourceInventoryState({
     search,
     statusFilter,
     setStatusFilter,
-    collectionRef,
-    sessionRef,
-    activeResourceBoundaryRef,
+    readNativeOwner,
+    acceptActionContext,
+    adoptCreationSession,
+    isNativeOwnerCurrent,
+    readAcceptedRows,
+    acceptEditedResource,
+    acceptDeletedResource,
+    acceptInventory,
+    beginInventoryLoad,
+    acceptScopeInventory,
     getResourceScope,
     rememberResourceScopes,
     replaceAcceptedRows,

@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next"
-import { useCallback, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 import type { ApiCheckOpenModalDetail } from "~/features/WebAiApiCheck/content/events"
 import {
@@ -11,6 +11,7 @@ import type {
   ApiCheckValidationError,
   ProbeItemState,
 } from "~/features/WebAiApiCheck/content/modal/apiCheckModalTypes"
+import { createApiCheckProbeSession } from "~/features/WebAiApiCheck/content/probes/apiCheckProbeSession"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,
@@ -98,37 +99,6 @@ function markProbeNotRunning(
 }
 
 /**
- * Extract completed probe results from the current UI state.
- */
-function extractProbeResultsForContext(
-  probes: ProbeItemState[],
-  resultContextKeys: ReadonlyMap<ApiVerificationProbeId, string>,
-  contextKey: string,
-): ApiVerificationProbeResult[] {
-  return probes
-    .filter((probe) => resultContextKeys.get(probe.id) === contextKey)
-    .map((probe) => probe.result)
-    .filter((result): result is ApiVerificationProbeResult => result !== null)
-}
-
-/**
- * Serializes the credential context represented by a probe run.
- */
-function createVerificationContextKey(params: {
-  apiType: ApiVerificationApiType
-  baseUrl: string
-  apiKey: string
-  modelId: string
-}) {
-  return [
-    params.apiType,
-    params.baseUrl.trim(),
-    params.apiKey.trim(),
-    params.modelId.trim(),
-  ].join("\n")
-}
-
-/**
  * Build the local validation result for probes that cannot run without a model.
  */
 function buildMissingModelResult(
@@ -180,19 +150,15 @@ export function useApiCheckProbeRunner({
       : testStopPhase === "stopped"
         ? t("webAiApiCheck:modal.messages.testStopped")
         : null
-  const shouldStopRunAllRef = useRef(false)
-  const activeProbeRunIdsRef = useRef(new Map<ApiVerificationProbeId, string>())
-  const activeProbeTrackersRef = useRef(
-    new Map<
-      ApiVerificationProbeId,
-      ReturnType<typeof startProductAnalyticsAction>
-    >(),
+  const [session] = useState(() =>
+    createApiCheckProbeSession({
+      cancelRun: (runId) =>
+        sendWebAiApiCheckMessage(WebAiApiCheckMessageTypes.CancelRunProbe, {
+          runId,
+        }),
+    }),
   )
-  const cancelledProbeRunIdsRef = useRef(new Set<string>())
-  const activeRunAllProbeIdRef = useRef<ApiVerificationProbeId | null>(null)
-  const probeResultContextKeysRef = useRef(
-    new Map<ApiVerificationProbeId, string>(),
-  )
+  useEffect(() => () => session.reset(), [session])
 
   const probeDefinitions = useMemo(
     () => getApiVerificationProbeDefinitions(apiType),
@@ -206,46 +172,42 @@ export function useApiCheckProbeRunner({
 
   const isAnyProbeRunning = probes.some((probe) => probe.isRunning)
 
-  const resetProbeState = useCallback((nextApiType: ApiVerificationApiType) => {
-    setProbes(buildProbeState(nextApiType))
-    setTestStopPhase(null)
-    probeResultContextKeysRef.current.clear()
-  }, [])
+  const resetProbeState = useCallback(
+    (nextApiType: ApiVerificationApiType) => {
+      session.reset()
+      setProbes(buildProbeState(nextApiType))
+      setTestStopPhase(null)
+      setIsRunningAll(false)
+      setIsStoppingRunAll(false)
+    },
+    [session],
+  )
 
   const updateProbeResult = useCallback(
-    (probeId: ApiVerificationProbeId, result: ApiVerificationProbeResult) => {
-      probeResultContextKeysRef.current.set(
-        probeId,
-        createVerificationContextKey({
-          apiType,
-          baseUrl,
-          apiKey,
-          modelId,
-        }),
-      )
+    (
+      probeId: ApiVerificationProbeId,
+      result: ApiVerificationProbeResult,
+      acceptResult: (result: ApiVerificationProbeResult) => boolean,
+    ) => {
+      if (!acceptResult(result)) return false
       setProbes((prev) =>
         prev.map((probe) =>
           probe.id === probeId ? { ...probe, isRunning: false, result } : probe,
         ),
       )
+      return true
     },
-    [apiKey, apiType, baseUrl, modelId],
+    [],
   )
 
   const getCurrentVerificationResultsSnapshot =
     useCallback((): VerificationResultsSnapshot | null => {
-      const currentContextKey = createVerificationContextKey({
+      const results = session.resultsForContext({
         apiType,
         baseUrl,
         apiKey,
         modelId,
       })
-
-      const results = extractProbeResultsForContext(
-        probes,
-        probeResultContextKeysRef.current,
-        currentContextKey,
-      )
       if (results.length === 0) return null
 
       const trimmedModelId = modelId.trim()
@@ -256,7 +218,7 @@ export function useApiCheckProbeRunner({
         ...(trimmedModelId ? { modelId: trimmedModelId } : {}),
         results,
       }
-    }, [apiKey, apiType, baseUrl, modelId, probes])
+    }, [apiKey, apiType, baseUrl, modelId, session])
 
   const runProbe = useCallback(
     async (
@@ -335,11 +297,13 @@ export function useApiCheckProbeRunner({
 
       const runId =
         options.runId ?? safeRandomUUID(`web-ai-api-check-${probeId}`)
+      const run = session.beginProbe(probeId, runId, tracker, {
+        apiType,
+        baseUrl,
+        apiKey,
+        modelId,
+      })
       try {
-        activeProbeRunIdsRef.current.set(probeId, runId)
-        if (tracker) {
-          activeProbeTrackersRef.current.set(probeId, tracker)
-        }
         const response = await sendWebAiApiCheckMessage(
           WebAiApiCheckMessageTypes.RunProbe,
           {
@@ -356,18 +320,13 @@ export function useApiCheckProbeRunner({
         if (response.success && response.result) {
           const result =
             response.result as ApiCheckProbeResultWithAnalyticsCategory
-          if (
-            cancelledProbeRunIdsRef.current.has(runId) ||
-            options.shouldIgnoreResult?.()
-          ) {
-            setProbes((prev) =>
-              activeProbeRunIdsRef.current.get(probeId) === runId
-                ? markProbeNotRunning(prev, probeId)
-                : prev,
-            )
+          if (run.shouldIgnoreResult() || options.shouldIgnoreResult?.()) {
+            if (run.isCurrent()) {
+              setProbes((prev) => markProbeNotRunning(prev, probeId))
+            }
             return null
           }
-          updateProbeResult(probeId, result)
+          if (!updateProbeResult(probeId, result, run.acceptResult)) return null
           const analyticsResult = getProbeAnalyticsResult(result)
           tracker?.complete(analyticsResult, {
             ...(analyticsResult === PRODUCT_ANALYTICS_RESULTS.Failure
@@ -405,19 +364,14 @@ export function useApiCheckProbeRunner({
           },
         }
 
-        if (
-          cancelledProbeRunIdsRef.current.has(runId) ||
-          options.shouldIgnoreResult?.()
-        ) {
-          setProbes((prev) =>
-            activeProbeRunIdsRef.current.get(probeId) === runId
-              ? markProbeNotRunning(prev, probeId)
-              : prev,
-          )
+        if (run.shouldIgnoreResult() || options.shouldIgnoreResult?.()) {
+          if (run.isCurrent()) {
+            setProbes((prev) => markProbeNotRunning(prev, probeId))
+          }
           return null
         }
 
-        updateProbeResult(probeId, fallback)
+        if (!updateProbeResult(probeId, fallback, run.acceptResult)) return null
         tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory:
             failedResponse?.errorCategory ??
@@ -446,18 +400,13 @@ export function useApiCheckProbeRunner({
             baseUrl: trimmedBaseUrl,
           },
         }
-        if (
-          cancelledProbeRunIdsRef.current.has(runId) ||
-          options.shouldIgnoreResult?.()
-        ) {
-          setProbes((prev) =>
-            activeProbeRunIdsRef.current.get(probeId) === runId
-              ? markProbeNotRunning(prev, probeId)
-              : prev,
-          )
+        if (run.shouldIgnoreResult() || options.shouldIgnoreResult?.()) {
+          if (run.isCurrent()) {
+            setProbes((prev) => markProbeNotRunning(prev, probeId))
+          }
           return null
         }
-        updateProbeResult(probeId, fallback)
+        if (!updateProbeResult(probeId, fallback, run.acceptResult)) return null
         tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory,
           insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
@@ -466,13 +415,7 @@ export function useApiCheckProbeRunner({
         })
         return fallback
       } finally {
-        if (activeProbeRunIdsRef.current.get(probeId) === runId) {
-          activeProbeRunIdsRef.current.delete(probeId)
-        }
-        if (activeProbeTrackersRef.current.get(probeId) === tracker) {
-          activeProbeTrackersRef.current.delete(probeId)
-        }
-        cancelledProbeRunIdsRef.current.delete(runId)
+        run.finish()
       }
     },
     [
@@ -485,51 +428,33 @@ export function useApiCheckProbeRunner({
       setValidationError,
       trigger,
       updateProbeResult,
+      session,
       verificationMode,
     ],
   )
 
   const stopProbe = useCallback(
     (probeId: ApiVerificationProbeId) => {
-      const activeRunId = activeProbeRunIdsRef.current.get(probeId)
-      if (!activeRunId) return
-
-      void sendWebAiApiCheckMessage(WebAiApiCheckMessageTypes.CancelRunProbe, {
-        runId: activeRunId,
-      }).catch(() => {})
-      cancelledProbeRunIdsRef.current.add(activeRunId)
-
-      activeProbeTrackersRef.current
-        .get(probeId)
-        ?.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
+      if (
+        !session.stopProbe(probeId, {
           insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
             mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
             failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.CancelledByUser,
           }),
         })
-      activeProbeTrackersRef.current.delete(probeId)
+      )
+        return
 
       setProbes((prev) => markProbeNotRunning(prev, probeId))
     },
-    [apiType, trigger],
+    [apiType, trigger, session],
   )
 
   const stopRunAll = useCallback(() => {
-    if (shouldStopRunAllRef.current) return
-    shouldStopRunAllRef.current = true
+    if (!session.stopBatch()) return
     setIsStoppingRunAll(true)
     setTestStopPhase("stopping")
-
-    const activeRunAllProbeId = activeRunAllProbeIdRef.current
-    const activeRunId = activeRunAllProbeId
-      ? activeProbeRunIdsRef.current.get(activeRunAllProbeId)
-      : undefined
-    if (activeRunId) {
-      void sendWebAiApiCheckMessage(WebAiApiCheckMessageTypes.CancelRunProbe, {
-        runId: activeRunId,
-      }).catch(() => {})
-    }
-  }, [])
+  }, [session])
 
   const runAll = useCallback(async () => {
     const tracker = startProductAnalyticsAction({
@@ -555,14 +480,14 @@ export function useApiCheckProbeRunner({
     }
     recordBaseUrlHistory(trimmedBaseUrl)
 
-    shouldStopRunAllRef.current = false
+    const batch = session.beginBatch()
     setIsStoppingRunAll(false)
     setTestStopPhase(null)
     setIsRunningAll(true)
     const results: ApiCheckProbeResultWithAnalyticsCategory[] = []
     try {
       for (const def of probeDefinitions) {
-        if (shouldStopRunAllRef.current) break
+        if (batch.isStopped()) break
         if (def.requiresModelId && !modelId.trim()) {
           const fallback = buildMissingModelResult(
             apiType,
@@ -587,18 +512,18 @@ export function useApiCheckProbeRunner({
         }
         // Run sequentially so the UI updates progressively and we avoid bursty network traffic.
         const runId = safeRandomUUID(`web-ai-api-check-${def.id}`)
-        activeRunAllProbeIdRef.current = def.id
+        batch.selectProbe(def.id)
         const result = await runProbe(def.id, {
           trackIndividual: false,
           recordHistory: false,
           runId,
-          shouldIgnoreResult: () => shouldStopRunAllRef.current,
+          shouldIgnoreResult: () => batch.isStopped(),
         })
-        if (!shouldStopRunAllRef.current && result) results.push(result)
-        if (shouldStopRunAllRef.current) break
+        if (!batch.isStopped() && result) results.push(result)
+        if (batch.isStopped()) break
       }
 
-      if (shouldStopRunAllRef.current) {
+      if (batch.isStopped()) {
         const successCount = results.filter(
           (result) => result.status === API_VERIFICATION_PROBE_STATUSES.Pass,
         ).length
@@ -610,12 +535,14 @@ export function useApiCheckProbeRunner({
           0,
         )
 
-        setProbes((prev) =>
-          prev.map((probe) =>
-            probe.isRunning ? { ...probe, isRunning: false } : probe,
-          ),
-        )
-        setTestStopPhase("stopped")
+        if (batch.isCurrent()) {
+          setProbes((prev) =>
+            prev.map((probe) =>
+              probe.isRunning ? { ...probe, isRunning: false } : probe,
+            ),
+          )
+          setTestStopPhase("stopped")
+        }
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
           insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
             mode: PRODUCT_ANALYTICS_MODE_IDS.All,
@@ -671,10 +598,10 @@ export function useApiCheckProbeRunner({
         }),
       })
     } finally {
-      setIsRunningAll(false)
-      setIsStoppingRunAll(false)
-      shouldStopRunAllRef.current = false
-      activeRunAllProbeIdRef.current = null
+      if (batch.finish()) {
+        setIsRunningAll(false)
+        setIsStoppingRunAll(false)
+      }
     }
   }, [
     apiKey,
@@ -687,6 +614,7 @@ export function useApiCheckProbeRunner({
     setValidationError,
     trigger,
     verificationMode,
+    session,
   ])
 
   return {

@@ -37,7 +37,6 @@ import {
 } from "~/services/verification/aiApiVerification"
 import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVerification/i18n"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
-import { verificationResultHistoryStorage } from "~/services/verification/verificationResultHistory"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/core/logger"
 
@@ -106,6 +105,8 @@ export function useProfileVerification({
   const {
     isRunning,
     isStopped,
+    isCurrent,
+    reset,
     runSuite,
     runProbe: runProbeTask,
     runSequentialProbes,
@@ -120,6 +121,7 @@ export function useProfileVerification({
     API_VERIFICATION_MODES.Streaming,
   )
   const [isPersisting, setIsPersisting] = useState(false)
+  const persistenceLeases = useRef(new Set<symbol>())
   const [activeProbeId, setActiveProbeId] =
     useState<ApiVerificationProbeId | null>(null)
 
@@ -131,6 +133,7 @@ export function useProfileVerification({
     persistedSummary,
     setPersistedSummary,
     persistCurrentResults,
+    clearVerificationHistory,
     historyTarget,
     getHistoryTargetForModel,
     preserveCurrentProbeStateForModel,
@@ -193,6 +196,10 @@ export function useProfileVerification({
   })
 
   useEffect(() => {
+    reset()
+    setActiveProbeId(null)
+    persistenceLeases.current.clear()
+    setIsPersisting(false)
     if (!isOpen || !profile) {
       cancelModelDiscovery()
       resetHistoryContext()
@@ -221,13 +228,21 @@ export function useProfileVerification({
     profile,
     replaceProbes,
     setPersistedSummary,
+    reset,
   ])
 
   // Restore after the opening effect has initialized the active context.
   useEffect(restoreHistory, [restoreHistory])
 
   const persistProbeResults = useCallback(
-    async (nextProbes: ProbeItemState[], modelIdOverride?: string) => {
+    async (
+      nextProbes: ProbeItemState[],
+      isCurrentRun: () => boolean,
+      modelIdOverride?: string,
+    ) => {
+      if (!isCurrentRun()) return
+      const lease = Symbol("verification-history-save")
+      persistenceLeases.current.add(lease)
       const modelForProbe = (modelIdOverride ?? modelId).trim()
       setIsPersisting(true)
 
@@ -241,7 +256,8 @@ export function useProfileVerification({
       } catch (error) {
         logger.error("Failed to persist verification history", { error })
       } finally {
-        setIsPersisting(false)
+        persistenceLeases.current.delete(lease)
+        if (isCurrentRun()) setIsPersisting(persistenceLeases.current.size > 0)
       }
     },
     [
@@ -271,6 +287,7 @@ export function useProfileVerification({
       mode: verificationMode,
       signal: abortSignal,
       isStopped: () => isStopped(abortSignal),
+      isCurrent: () => isCurrent(abortSignal),
       readProbes: () => probesRef.current,
       replaceProbes,
       execute: () =>
@@ -302,7 +319,11 @@ export function useProfileVerification({
             })
           }
         }
-        await persistProbeResults(nextProbes, modelIdOverride)
+        await persistProbeResults(
+          nextProbes,
+          () => isCurrent(abortSignal),
+          modelIdOverride,
+        )
       },
       failure: {
         secrets: () => [
@@ -338,23 +359,22 @@ export function useProfileVerification({
     if (!targetToClear) return
 
     try {
-      await verificationResultHistoryStorage.clearTarget(targetToClear)
-      setPersistedSummary(null)
-      replaceProbes(buildProbeState(apiType))
+      await clearVerificationHistory(apiType, targetToClear)
     } catch (error) {
       logger.error("Failed to clear verification history", { error })
     }
   }
 
   const runSingleProbe = async (probeId: ApiVerificationProbeId) => {
-    setActiveProbeId(probeId)
-    try {
-      await runProbeTask(probeId, (signal) =>
-        runProbe(probeId, undefined, true, signal),
-      )
-    } finally {
-      setActiveProbeId(null)
-    }
+    await runProbeTask(probeId, async (signal) => {
+      setActiveProbeId(probeId)
+      try {
+        await runProbe(probeId, undefined, true, signal)
+      } finally {
+        if (isCurrent(signal))
+          setActiveProbeId((current) => (current === probeId ? null : current))
+      }
+    })
   }
 
   const stopProbe = (probeId: ApiVerificationProbeId) => {
@@ -416,7 +436,7 @@ export function useProfileVerification({
         )
 
         const stopped = isStopped(signal)
-        if (stopped)
+        if (stopped && isCurrent(signal))
           replaceProbes(withUnfinishedProbesStopped(probesRef.current))
         const report = resolveProfileProbeSuiteReport(results, stopped)
         if (report.details) tracker.complete(report.result, report.details)

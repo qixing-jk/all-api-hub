@@ -19,7 +19,7 @@ import {
   prepareAccountPersistenceIdentity,
   requireAccountDataCapability,
 } from "~/services/accounts/accountPersistence/shared"
-import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
+import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/editing/accountDefaults"
 import { isValidAccount } from "~/services/accounts/editing/accountFormValidation"
@@ -38,15 +38,13 @@ async function saveCheckInDraft(
   accountId: string,
   updates: Omit<DeepPartial<SiteAccount>, "checkIn">,
   draft: SiteAccount["checkIn"],
-  options: Parameters<
-    typeof accountCheckInState.updateAccountWithCheckInDraft
-  >[3],
+  options: Parameters<typeof accountMutations.updateAccountWithCheckInDraft>[3],
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const genericMessage = t("messages:errors.validation.updateAccountFailed", {
     error: "",
   })
   try {
-    const saved = await accountCheckInState.updateAccountWithCheckInDraft(
+    const saved = await accountMutations.updateAccountWithCheckInDraft(
       accountId,
       updates,
       draft,

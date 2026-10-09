@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
@@ -38,6 +38,8 @@ function hasUsageAnalyticsData(store: UsageHistoryStore) {
 }
 
 export const useUsageAnalyticsData = () => {
+  const mountedRef = useRef(false)
+  const loadGenerationRef = useRef(0)
   const [accounts, setAccounts] = useState<SiteAccount[]>([])
   const [store, setStore] = useState<UsageHistoryStore | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -60,6 +62,9 @@ export const useUsageAnalyticsData = () => {
    */
   const loadData = useCallback(
     async (options?: LoadUsageAnalyticsDataOptions) => {
+      if (!mountedRef.current) return
+      const generation = ++loadGenerationRef.current
+      const isCurrent = () => generation === loadGenerationRef.current
       const tracker = options?.trackAnalytics
         ? startProductAnalyticsAction({
             featureId: PRODUCT_ANALYTICS_FEATURE_IDS.UsageAnalytics,
@@ -76,8 +81,10 @@ export const useUsageAnalyticsData = () => {
           accountQueries.getAllAccounts(),
           usageHistoryStorage.getStore(),
         ])
-        setAccounts(nextAccounts)
-        setStore(nextStore)
+        if (isCurrent()) {
+          setAccounts(nextAccounts)
+          setStore(nextStore)
+        }
         tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: {
             itemCount: nextAccounts.length,
@@ -88,16 +95,21 @@ export const useUsageAnalyticsData = () => {
         tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
-        logger.error("Failed to load data", error)
+        if (isCurrent()) logger.error("Failed to load data", error)
       } finally {
-        setIsLoading(false)
+        if (isCurrent()) setIsLoading(false)
       }
     },
     [],
   )
 
   useEffect(() => {
+    mountedRef.current = true
     void loadData()
+    return () => {
+      mountedRef.current = false
+      loadGenerationRef.current += 1
+    }
   }, [loadData])
 
   return {

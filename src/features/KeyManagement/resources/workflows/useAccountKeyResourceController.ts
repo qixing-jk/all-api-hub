@@ -126,7 +126,7 @@ export function useAccountKeyResourceController({
     search,
     statusFilter,
     setStatusFilter,
-    activeResourceBoundaryRef,
+    readNativeOwner,
     getResourceScope,
   } = inventoryState
 
@@ -279,7 +279,7 @@ export function useAccountKeyResourceController({
       if (!account) return null
       const boundary =
         mode === controllerModes.Single
-          ? activeResourceBoundaryRef.current!
+          ? readNativeOwner().boundary!
           : boundaryFromResourceRef(ref)
       const session = await openSession(
         account,
@@ -299,7 +299,7 @@ export function useAccountKeyResourceController({
       mode,
       openSession,
       accountsRef,
-      activeResourceBoundaryRef,
+      readNativeOwner,
     ],
   )
 

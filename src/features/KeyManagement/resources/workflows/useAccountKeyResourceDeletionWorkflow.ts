@@ -78,11 +78,10 @@ export function useAccountKeyResourceDeletionWorkflow({
   const { createdSecretRef, accountsRef } = routing
 
   const {
-    collectionRef,
-    activeResourceBoundaryRef,
-    sessionRef,
-    acceptedRowsRef,
-    replaceAcceptedRows,
+    readNativeOwner,
+    readAcceptedRows,
+    acceptActionContext,
+    acceptDeletedResource,
   } = inventoryState
 
   const openDelete = useCallback(
@@ -95,7 +94,7 @@ export function useAccountKeyResourceDeletionWorkflow({
         isFreshReadRequiredForBoundary(boundary) ||
         (mode === controllerModes.All
           ? !isAcceptedResourceRef(ref)
-          : !collectionRef.current || !isCurrentResourceRef(ref))
+          : !readNativeOwner().collection || !isCurrentResourceRef(ref))
       )
         return false
       setDeleteState({ isOpen: true, isExecuting: false, ref, failure: null })
@@ -108,7 +107,7 @@ export function useAccountKeyResourceDeletionWorkflow({
       mode,
       createdSecretRef,
       requests,
-      collectionRef,
+      readNativeOwner,
       setDeleteState,
     ],
   )
@@ -133,7 +132,8 @@ export function useAccountKeyResourceDeletionWorkflow({
         !deleteState.ref ||
         (mode === controllerModes.All
           ? !isAcceptedResourceRef(deleteState.ref)
-          : !collectionRef.current || !isCurrentResourceRef(deleteState.ref))
+          : !readNativeOwner().collection ||
+            !isCurrentResourceRef(deleteState.ref))
       )
         return false
       const current = requests.version()
@@ -141,7 +141,7 @@ export function useAccountKeyResourceDeletionWorkflow({
       const boundary: ActiveResourceBoundary =
         mode === controllerModes.All
           ? boundaryFromResourceRef(ref)
-          : activeResourceBoundaryRef.current!
+          : readNativeOwner().boundary!
       if (isFreshReadRequiredForBoundary(boundary)) return false
       const mutationIdentity = boundaryIdentity(boundary)
       const existingMutation = requests.getMutation(mutationIdentity)
@@ -169,14 +169,12 @@ export function useAccountKeyResourceDeletionWorkflow({
               code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unexpected,
             })
           }
-          sessionRef.current = actionContext.session
-          collectionRef.current = actionContext.collection
-          activeResourceBoundaryRef.current = actionContext.boundary
+          acceptActionContext(actionContext)
           let cleanupInput: Parameters<
             typeof deleteWithLinkedChannelCleanup
           >[0] = null
           if (cleanup) {
-            const keyBaseUrl = acceptedRowsRef.current.find(
+            const keyBaseUrl = readAcceptedRows().find(
               (row) => refIdentity(row.ref) === refIdentity(ref),
             )?.runtimeKey?.baseUrl
             if (!account)
@@ -210,11 +208,7 @@ export function useAccountKeyResourceDeletionWorkflow({
             )
             return true
           }
-          replaceAcceptedRows(
-            acceptedRowsRef.current.filter(
-              (row) => refIdentity(row.ref) !== refIdentity(ref),
-            ),
-          )
+          acceptDeletedResource(ref)
           setDeleteState({
             isOpen: false,
             isExecuting: false,
@@ -283,17 +277,16 @@ export function useAccountKeyResourceDeletionWorkflow({
       mode,
       mutationAnalyticsMode,
       refreshAfterMutation,
-      replaceAcceptedRows,
+      acceptDeletedResource,
+      acceptActionContext,
       requireFreshRead,
       resolveResourceActionContext,
       createdSecretRef,
       requests,
-      collectionRef,
-      activeResourceBoundaryRef,
+      readNativeOwner,
       accountsRef,
       setDeleteState,
-      sessionRef,
-      acceptedRowsRef,
+      readAcceptedRows,
     ],
   )
   return { openDelete, cancelDelete, confirmDelete }

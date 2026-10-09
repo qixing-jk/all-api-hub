@@ -26,10 +26,8 @@ import {
   type SecretEditIntent,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ManagedSiteChannelModelProbe } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import type {
-  NativeResourceCreateSeedBinding,
-  NativeResourceEditorDefinition,
-} from "~/services/apiAdapters/managedResources/factory"
+import type { NativeResourceEditorDefinition } from "~/services/apiAdapters/managedResources/editor"
+import type { NativeResourceCreateSeedBinding } from "~/services/apiAdapters/managedResources/factory"
 import {
   parseNewApiResourceList,
   throwIfNewApiResourceOperationAborted,

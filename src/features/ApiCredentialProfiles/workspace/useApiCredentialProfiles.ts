@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 import {
   apiCredentialProfilesStorage,
@@ -40,22 +40,35 @@ type UpdateProfileInput = Partial<CreateProfileInput>
 export function useApiCredentialProfiles() {
   const [profiles, setProfiles] = useState<ApiCredentialProfile[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const mountedRef = useRef(false)
+  const loadGenerationRef = useRef(0)
 
   const reload = useCallback(async () => {
+    if (!mountedRef.current) return
+    const generation = ++loadGenerationRef.current
     setIsLoading(true)
     try {
       const list = await apiCredentialProfilesStorage.listProfiles()
+      if (generation !== loadGenerationRef.current) return
       setProfiles(list)
     } catch (error) {
+      if (generation !== loadGenerationRef.current) return
       logger.error("Failed to load profiles", error)
       setProfiles([])
     } finally {
-      setIsLoading(false)
+      if (generation === loadGenerationRef.current) {
+        setIsLoading(false)
+      }
     }
   }, [])
 
   useEffect(() => {
+    mountedRef.current = true
     void reload()
+    return () => {
+      mountedRef.current = false
+      loadGenerationRef.current += 1
+    }
   }, [reload])
 
   useEffect(() => {

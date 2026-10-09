@@ -24,7 +24,7 @@ import {
   editInitialValues,
 } from "~/services/apiAdapters/managedResources/axonHub/editorFields"
 import { validateValues } from "~/services/apiAdapters/managedResources/axonHub/editorValidation"
-import { type NativeResourceEditorDefinition } from "~/services/apiAdapters/managedResources/factory"
+import type { NativeResourceEditorDefinition } from "~/services/apiAdapters/managedResources/editor"
 import { withCredentialListEditor } from "~/services/apiAdapters/managedResources/shared/credentialListEditor"
 import type { AxonHubChannel } from "~/types/axonHub"
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import type { NativeResourceEditorDefinition } from "~/services/apiAdapters/managedResources/factory"
+import type { NativeResourceEditorDefinition } from "~/services/apiAdapters/managedResources/editor"
 import { scalarKeyCleanup } from "~/services/apiAdapters/managedResources/shared/keyCleanup"
 
 function editor(

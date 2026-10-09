@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import {
+  createCliVerificationSession,
+  type CliVerificationBatch,
+} from "~/features/Verification/cli/hooks/cliVerificationSession"
 import type {
   ToolItemState,
   VerifyCliSupportDialogProps,
@@ -120,11 +124,7 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
       ? null
       : fetchModelsDiagnostic || t("verifyDialog.modelsFetchFailed")
   const [tools, setTools] = useState<ToolItemState[]>([])
-  const shouldStopRef = useRef(false)
-  const activeAbortControllerRef = useRef<AbortController | null>(null)
-  const toolAbortControllersRef = useRef(
-    new Map<(typeof CLI_TOOL_IDS)[number], AbortController>(),
-  )
+  const [executionSession] = useState(createCliVerificationSession)
   const runtimeKeysRequestIdRef = useRef(0)
   const fetchModelsAbortControllerRef = useRef<AbortController | null>(null)
   const fetchModelsRequestIdRef = useRef(0)
@@ -260,9 +260,9 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
 
   const runTool = async (
     toolId: (typeof CLI_TOOL_IDS)[number],
-    abortSignal?: AbortSignal,
+    batch?: CliVerificationBatch,
   ): Promise<CliSupportResult | null> => {
-    if (abortSignal?.aborted || shouldStopRef.current) return null
+    if (batch?.isStopped()) return null
     if (isProfileSource && !activeApiKey) return null
     const sourceAccount = account
     const accountRuntimeKey = selectedRuntimeKey
@@ -277,6 +277,8 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
     }
 
     if (!resolvedModelId.trim()) return null
+    const run = executionSession.beginTool(toolId, batch)
+    const abortSignal = run.signal
 
     let resolvedApiKey = activeApiKey
     let resolvedBaseUrl = sourceBaseUrl
@@ -310,7 +312,8 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
           accountRuntimeKey,
           { abortSignal },
         )
-        if (abortSignal?.aborted || shouldStopRef.current) {
+        if (!run.isCurrent()) return null
+        if (run.isCancelled()) {
           setTools((prev) =>
             prev.map((t) =>
               t.toolId === toolId
@@ -377,7 +380,8 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
         abortSignal,
       })
 
-      if (abortSignal?.aborted || shouldStopRef.current) {
+      if (!run.isCurrent()) return null
+      if (run.isCancelled()) {
         setTools((prev) =>
           prev.map((t) =>
             t.toolId === toolId
@@ -399,7 +403,8 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
       )
       return result
     } catch (error) {
-      if (isAbortError(error, abortSignal) || shouldStopRef.current) {
+      if (!run.isCurrent()) return null
+      if (isAbortError(error, abortSignal) || run.isCancelled()) {
         setTools((prev) =>
           prev.map((t) =>
             t.toolId === toolId
@@ -487,14 +492,14 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
         }),
       )
       return failureResult
+    } finally {
+      run.finish()
     }
   }
 
   const runAll = async () => {
     if (!hasRunnableSource) return
-    shouldStopRef.current = false
-    const abortController = new AbortController()
-    activeAbortControllerRef.current = abortController
+    const batch = executionSession.beginBatch()
     const tracker = startProductAnalyticsAction(analyticsContext)
     let successCount = 0
     let failureCount = 0
@@ -506,8 +511,8 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
     try {
       // Run sequentially so each tool updates independently (and can be retried individually).
       for (const toolId of CLI_TOOL_IDS) {
-        if (shouldStopRef.current || abortController.signal.aborted) break
-        const result = await runTool(toolId, abortController.signal)
+        if (batch.isStopped()) break
+        const result = await runTool(toolId, batch)
         if (!result) continue
         if (result.status === API_VERIFICATION_PROBE_STATUSES.Pass) {
           hasExecutedTool = true
@@ -518,18 +523,19 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
           failedToolResult ??= result
         }
       }
-      if (shouldStopRef.current || abortController.signal.aborted) {
-        setTools((prev) =>
-          prev.map((tool) =>
-            tool.result
-              ? { ...tool, isRunning: false }
-              : {
-                  ...tool,
-                  isRunning: false,
-                  result: buildStoppedToolResult(tool.toolId),
-                },
-          ),
-        )
+      if (batch.isStopped()) {
+        if (batch.isCurrent())
+          setTools((prev) =>
+            prev.map((tool) =>
+              tool.result
+                ? { ...tool, isRunning: false }
+                : {
+                    ...tool,
+                    isRunning: false,
+                    result: buildStoppedToolResult(tool.toolId),
+                  },
+            ),
+          )
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
           insights: {
             successCount,
@@ -575,24 +581,17 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
         },
       })
     } finally {
-      if (activeAbortControllerRef.current === abortController) {
-        activeAbortControllerRef.current = null
-      }
-      setIsRunning(false)
+      if (batch.finish()) setIsRunning(false)
     }
   }
 
   const stopRun = () => {
-    shouldStopRef.current = true
-    activeAbortControllerRef.current?.abort()
+    executionSession.stopBatch()
   }
 
   useEffect(() => {
-    shouldStopRef.current = false
-    activeAbortControllerRef.current?.abort()
-    activeAbortControllerRef.current = null
-    toolAbortControllersRef.current.forEach((controller) => controller.abort())
-    toolAbortControllersRef.current.clear()
+    executionSession.reset()
+    setIsRunning(false)
     fetchModelsAbortControllerRef.current?.abort()
     fetchModelsAbortControllerRef.current = null
     if (!isOpen) return
@@ -616,22 +615,18 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
     isProfileSource,
     loadProfileModels,
     loadRuntimeKeys,
+    executionSession,
   ])
+
+  useEffect(() => () => executionSession.reset(), [executionSession])
 
   const canRunAll = hasRunnableSource && resolvedModelId.trim().length > 0
 
   const stopSingleTool = (toolId: (typeof CLI_TOOL_IDS)[number]) => {
-    toolAbortControllersRef.current.get(toolId)?.abort()
+    executionSession.stopTool(toolId)
   }
   const runSingleToolCheck = (toolId: (typeof CLI_TOOL_IDS)[number]) => {
-    const abortController = new AbortController()
-    toolAbortControllersRef.current.set(toolId, abortController)
-    shouldStopRef.current = false
-    void runTool(toolId, abortController.signal).finally(() => {
-      if (toolAbortControllersRef.current.get(toolId) === abortController) {
-        toolAbortControllersRef.current.delete(toolId)
-      }
-    })
+    void runTool(toolId)
   }
 
   return {

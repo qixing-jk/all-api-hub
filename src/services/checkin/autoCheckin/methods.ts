@@ -7,11 +7,8 @@ import {
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
-  CHECK_IN_PROVIDER_READINESS_REASONS,
   CHECK_IN_SELECTION_MODES,
 } from "~/constants/checkIn"
-import { normalizeAccountSiteProfileUrlForOriginKey } from "~/services/accounts/accountSiteProfile/urls"
-import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import {
   getSub2ApiAuthPersistenceStatus,
   SUB2API_AUTH_PERSISTENCE_STATUSES,
@@ -25,6 +22,10 @@ import {
   AUTO_CHECKIN_ERROR_CATEGORIES,
   classifyAutoCheckinError,
 } from "~/services/checkin/autoCheckin/errors"
+import {
+  inspectCheckInMutationAdmission,
+  toProviderReadinessSkipReason,
+} from "~/services/checkin/autoCheckin/execution/checkInMutationAdmission"
 import { canAutomaticallyRetryCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import type {
@@ -105,15 +106,6 @@ const resolveSelectedCheckInRegistration = (input: {
 
   return { state, registration }
 }
-
-const toProviderReadinessSkipReason = (
-  reason:
-    | typeof CHECK_IN_PROVIDER_READINESS_REASONS.AccountDataMissing
-    | typeof CHECK_IN_PROVIDER_READINESS_REASONS.CredentialsMissing,
-): CheckInExecutionSkipReason =>
-  reason === CHECK_IN_PROVIDER_READINESS_REASONS.CredentialsMissing
-    ? CHECK_IN_EXECUTION_SKIP_REASONS.CredentialsMissing
-    : CHECK_IN_EXECUTION_SKIP_REASONS.AccountDataMissing
 
 const toStatusReadSkipReason = (
   error: unknown,
@@ -254,23 +246,6 @@ const persistUnsupportedMethod = async (
   }
 }
 
-const hasSameCheckInAccountIdentity = (
-  currentAccount: SiteAccount,
-  latestAccount: SiteAccount,
-): boolean =>
-  latestAccount.id === currentAccount.id &&
-  latestAccount.site_type === currentAccount.site_type &&
-  normalizeAccountIdentity(latestAccount.account_info?.id) ===
-    normalizeAccountIdentity(currentAccount.account_info?.id) &&
-  normalizeAccountSiteProfileUrlForOriginKey({
-    siteType: latestAccount.site_type,
-    url: latestAccount.site_url,
-  }) ===
-    normalizeAccountSiteProfileUrlForOriginKey({
-      siteType: currentAccount.site_type,
-      url: currentAccount.site_url,
-    })
-
 /** Rechecks account identity, intent, selection, and readiness before a recovered POST. */
 const createRecoveredMutationGuard = (input: {
   currentAccount: SiteAccount
@@ -290,27 +265,14 @@ const createRecoveredMutationGuard = (input: {
     } catch {
       return false
     }
-    if (
-      !latestAccount ||
-      !hasSameCheckInAccountIdentity(input.currentAccount, latestAccount)
-    ) {
-      return false
-    }
-
-    const latestState = inspectAccountCheckIn({
-      config: latestAccount.checkIn,
-      siteType: latestAccount.site_type,
-      siteUrl: latestAccount.site_url,
-      accountDisabled: latestAccount.disabled,
+    const admission = await inspectCheckInMutationAdmission({
+      expectedAccount: input.currentAccount,
+      account: latestAccount,
+      registration: input.registration,
       globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
+      isAutomaticExecutionEnabled: input.isAutomaticExecutionEnabled,
     })
-    return (
-      latestState.executionEligibility.eligible &&
-      latestState.executionEligibility.methodId === input.registration.id &&
-      input.registration.provider.getReadiness(latestAccount).ready &&
-      (!input.isAutomaticExecutionEnabled ||
-        (await input.isAutomaticExecutionEnabled()))
-    )
+    return admission.eligible
   }
 }
 
@@ -708,51 +670,20 @@ export async function executeSelectedCheckIn(input: {
       currentAccount = null
     }
   }
-  if (
-    !currentAccount ||
-    !hasSameCheckInAccountIdentity(account, currentAccount)
-  ) {
-    return {
-      kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
-      reason: CHECK_IN_EXECUTION_SKIP_REASONS.AccountUnavailable,
-    }
-  }
-  const currentState = inspectAccountCheckIn({
-    config: currentAccount.checkIn,
-    siteType: currentAccount.site_type,
-    siteUrl: currentAccount.site_url,
-    accountDisabled: currentAccount.disabled,
+  const admission = await inspectCheckInMutationAdmission({
+    expectedAccount: account,
+    account: currentAccount,
+    registration,
     globalAutomaticExecutionEnabled: input.globalAutomaticExecutionEnabled,
+    isAutomaticExecutionEnabled: input.isAutomaticExecutionEnabled,
   })
-  if (!currentState.executionEligibility.eligible) {
+  if (!admission.eligible) {
     return {
       kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
-      reason: currentState.executionEligibility.skipReason,
+      reason: admission.reason,
     }
   }
-  if (currentState.executionEligibility.methodId !== registration.id) {
-    return {
-      kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
-      reason: CHECK_IN_EXECUTION_SKIP_REASONS.MethodNotMatched,
-    }
-  }
-  const currentReadiness = registration.provider.getReadiness(currentAccount)
-  if (!currentReadiness.ready) {
-    return {
-      kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
-      reason: toProviderReadinessSkipReason(currentReadiness.reason),
-    }
-  }
-
-  if (
-    input.isAutomaticExecutionEnabled &&
-    !(await input.isAutomaticExecutionEnabled())
-  ) {
-    return {
-      kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
-      reason: CHECK_IN_EXECUTION_SKIP_REASONS.GlobalAutomaticExecutionDisabled,
-    }
-  }
+  currentAccount = admission.account
 
   const mutationLifecycle = createMutationLifecycle()
   const beforeRecoveredMutation = createRecoveredMutationGuard({
