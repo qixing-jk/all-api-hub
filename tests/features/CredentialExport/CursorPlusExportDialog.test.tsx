@@ -119,15 +119,16 @@ describe("CursorPlusExportDialog", () => {
     expect(loading).toHaveAttribute("role", "status")
     expect(loading).toHaveAttribute("aria-live", "polite")
     expect(loading).toHaveClass("sr-only")
-    expect(
-      screen.getByRole("combobox", {
-        name: "ui:dialog.cursorPlus.labels.models",
-      }),
-    ).not.toHaveFocus()
+    const selector = screen.getByRole("combobox", {
+      name: "ui:dialog.cursorPlus.labels.models",
+    })
+    expect(selector).toHaveAttribute("aria-busy", "true")
+    expect(selector).not.toHaveFocus()
 
     await act(async () => discovery.resolve(["model-a"]))
     await screen.findByText("ui:dialog.cursorPlus.status.loaded")
     expect(loading).toBeEmptyDOMElement()
+    expect(selector).not.toHaveAttribute("aria-busy", "true")
     expect(screen.getByText("model-a")).toBeVisible()
   })
 

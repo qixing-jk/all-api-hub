@@ -243,11 +243,13 @@ vi.mock("~/components/ui", async () => ({
     selected,
     onChange,
     disabled,
+    loading,
   }: {
     options: Array<{ label: string }>
     selected: string[]
     onChange?: (value: string[]) => void
     disabled?: boolean
+    loading?: boolean
   }) => (
     <div>
       <div data-testid={TEST_IDS.allowedModelOptions}>
@@ -258,6 +260,7 @@ vi.mock("~/components/ui", async () => ({
       </div>
       <button
         disabled={disabled}
+        aria-busy={loading}
         onClick={() => onChange?.(["gpt-4o", "claude-3-7-sonnet"])}
       >
         select-allowed-models
@@ -381,18 +384,19 @@ describe("ManagedSiteModelSyncSettings", () => {
     )
     expect(status).toHaveAttribute("aria-live", "polite")
     expect(status).toHaveClass("sr-only")
-    expect(
-      screen.getByRole("button", { name: "select-allowed-models" }),
-    ).toBeDisabled()
+    const selector = screen.getByRole("button", {
+      name: "select-allowed-models",
+    })
+    expect(selector).toBeDisabled()
+    expect(selector).toHaveAttribute("aria-busy", "true")
 
     await act(async () => options.resolve({ success: true, data: ["model-a"] }))
     expect(status).toBeEmptyDOMElement()
     expect(screen.getByTestId(TEST_IDS.allowedModelSelected)).toHaveTextContent(
       "existing-model",
     )
-    expect(
-      screen.getByRole("button", { name: "select-allowed-models" }),
-    ).toBeEnabled()
+    expect(selector).toBeEnabled()
+    expect(selector).not.toHaveAttribute("aria-busy", "true")
   })
 
   it("loads runtime model options and persists toggles, intervals, and allowed models", async () => {
