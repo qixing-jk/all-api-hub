@@ -64,6 +64,9 @@ export function AccountKeyScopeSelector({
 
   return (
     <section aria-labelledby={headingId} className="space-y-density-2">
+      <span role="status" aria-live="polite" className="sr-only">
+        {isLoading ? messages.loading : ""}
+      </span>
       <div className="gap-y-density-2 flex flex-wrap items-baseline justify-between gap-x-2">
         <h2 id={headingId} className="text-sm font-medium">
           {messages.heading}

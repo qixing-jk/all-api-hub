@@ -301,38 +301,47 @@ describe("CompactMultiSelect", () => {
     )
   })
 
-  it("copies chip text when the selected chip label is clicked", async () => {
-    const user = userEvent.setup()
-    const onChange = vi.fn()
-    const writeText = vi.fn().mockResolvedValue(undefined)
+  it.each(["click", "{Enter}", " "])(
+    "copies chip text with %s without changing the selection",
+    async (action) => {
+      const user = userEvent.setup()
+      const onChange = vi.fn()
+      const writeText = vi.fn().mockResolvedValue(undefined)
 
-    Object.defineProperty(globalThis.navigator, "clipboard", {
-      configurable: true,
-      value: { writeText },
-    })
+      Object.defineProperty(globalThis.navigator, "clipboard", {
+        configurable: true,
+        value: { writeText },
+      })
 
-    renderCompact(
-      <CompactMultiSelect
-        displayMode="chips"
-        options={[
-          { value: "id-alpha", label: "Alpha" },
-          { value: "id-beta", label: "Beta" },
-        ]}
-        selected={["id-alpha"]}
-        onChange={onChange}
-      />,
-    )
+      renderCompact(
+        <CompactMultiSelect
+          displayMode="chips"
+          options={[
+            { value: "id-alpha", label: "Alpha" },
+            { value: "id-beta", label: "Beta" },
+          ]}
+          selected={["id-alpha"]}
+          onChange={onChange}
+        />,
+      )
 
-    await user.click(
-      await screen.findByRole("button", {
+      const chip = await screen.findByRole("button", {
         name: "ui:multiSelect.copyChipValue",
-      }),
-    )
+      })
+      if (action === "click") {
+        await user.click(chip)
+      } else {
+        chip.focus()
+        await user.keyboard(action)
+      }
 
-    expect(writeText).toHaveBeenCalledWith("Alpha")
-    expect(onChange).not.toHaveBeenCalled()
-    expect(toastMocks.success).toHaveBeenCalledWith("ui:multiSelect.chipCopied")
-  })
+      expect(writeText).toHaveBeenCalledWith("Alpha")
+      expect(onChange).not.toHaveBeenCalled()
+      expect(toastMocks.success).toHaveBeenCalledWith(
+        "ui:multiSelect.chipCopied",
+      )
+    },
+  )
 
   it("shows an error toast when chip text copying fails", async () => {
     const user = userEvent.setup()

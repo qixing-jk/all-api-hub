@@ -17,7 +17,13 @@ import {
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
-import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "~~/tests/test-utils/render"
 
 const {
   mockedUseUserPreferencesContext,
@@ -362,6 +368,31 @@ describe("ManagedSiteModelSyncSettings", () => {
     mockStartProductAnalyticsAction.mockReturnValue({
       complete: mockCompleteProductAnalyticsAction,
     })
+  })
+
+  it("announces model loading and clears the status after retaining the selected models", async () => {
+    const options = createDeferred<{ success: boolean; data: string[] }>()
+    mockedSendModelSyncMessage.mockReturnValueOnce(options.promise)
+    render(<ManagedSiteModelSyncSettings />)
+
+    const status = screen.getByRole("status")
+    expect(status).toHaveTextContent(
+      "managedSiteModelSync:settings.allowedModelsLoading",
+    )
+    expect(status).toHaveAttribute("aria-live", "polite")
+    expect(status).toHaveClass("sr-only")
+    expect(
+      screen.getByRole("button", { name: "select-allowed-models" }),
+    ).toBeDisabled()
+
+    await act(async () => options.resolve({ success: true, data: ["model-a"] }))
+    expect(status).toBeEmptyDOMElement()
+    expect(screen.getByTestId(TEST_IDS.allowedModelSelected)).toHaveTextContent(
+      "existing-model",
+    )
+    expect(
+      screen.getByRole("button", { name: "select-allowed-models" }),
+    ).toBeEnabled()
   })
 
   it("loads runtime model options and persists toggles, intervals, and allowed models", async () => {

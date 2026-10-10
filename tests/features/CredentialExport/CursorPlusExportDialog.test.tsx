@@ -17,6 +17,7 @@ import {
 import { AuthTypeEnum } from "~/types"
 import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import { buildApiCredentialProfile } from "~~/tests/test-utils/factories"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -97,6 +98,37 @@ describe("CursorPlusExportDialog", () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
     startActionMock.mockReturnValue({ complete: completeActionMock })
+  })
+
+  it("announces model loading without focusing the selector and clears the status when ready", async () => {
+    const discovery = createDeferred<string[]>()
+    fetchModelIdsMock.mockReturnValueOnce(discovery.promise)
+    render(
+      <CursorPlusExportDialog
+        isOpen
+        onClose={vi.fn()}
+        source={createProfileCredentialExportSource(
+          buildApiCredentialProfile(),
+        )}
+      />,
+    )
+
+    const loading = await screen.findByText(
+      "ui:dialog.cursorPlus.status.loading",
+    )
+    expect(loading).toHaveAttribute("role", "status")
+    expect(loading).toHaveAttribute("aria-live", "polite")
+    expect(loading).toHaveClass("sr-only")
+    expect(
+      screen.getByRole("combobox", {
+        name: "ui:dialog.cursorPlus.labels.models",
+      }),
+    ).not.toHaveFocus()
+
+    await act(async () => discovery.resolve(["model-a"]))
+    await screen.findByText("ui:dialog.cursorPlus.status.loaded")
+    expect(loading).toBeEmptyDOMElement()
+    expect(screen.getByText("model-a")).toBeVisible()
   })
 
   it("discovers models and copies a Cursor++ provider fragment", async () => {

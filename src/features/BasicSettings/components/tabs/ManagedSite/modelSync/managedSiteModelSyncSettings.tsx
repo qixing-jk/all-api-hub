@@ -261,6 +261,11 @@ export default function ManagedSiteModelSyncSettings() {
             description={t("managedSiteModelSync:settings.allowedModelsDesc")}
           >
             <div className="space-y-density-2 w-full">
+              <span role="status" aria-live="polite" className="sr-only">
+                {optionsLoading
+                  ? t("managedSiteModelSync:settings.allowedModelsLoading")
+                  : ""}
+              </span>
               <CompactMultiSelect
                 allowCustom
                 options={channelUpstreamModelOptions}

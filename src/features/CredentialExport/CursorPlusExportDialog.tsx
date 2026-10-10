@@ -418,6 +418,9 @@ export function CursorPlusExportDialog({
         label={t("ui:dialog.cursorPlus.labels.models")}
         description={t("ui:dialog.cursorPlus.labels.modelsDescription")}
       >
+        <span role="status" aria-live="polite" className="sr-only">
+          {isLoading ? t("ui:dialog.cursorPlus.status.loading") : ""}
+        </span>
         <CompactMultiSelect
           options={modelOptions}
           loading={isLoading}
