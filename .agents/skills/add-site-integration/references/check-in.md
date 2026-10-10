@@ -6,12 +6,13 @@ Use the [completeness checklist and handoff table](capability-assessment.md) to 
 
 ## Establish discovery, status and execution separately
 
-Read the check-in section of `docs/agents/site-integrations.md` and the closest provider under `src/services/checkin/autoCheckin/providers/`. Inspect `registry.ts`, discovery and feedback consumers before adding a method.
+Read the closest provider under `src/services/checkin/autoCheckin/providers/`. Inspect `registry.ts`, discovery and feedback consumers before adding a method.
 
 - Capture native status and mutation requests/responses independently: authentication, method/body, timezone/day boundary, enablement, already-checked state, eligibility and reward fields. A status request must not perform the action.
 - Keep candidate discovery read-only, including hidden side effects of transport helpers: no credential issuance, login window or recovery-triggered writes merely to classify a method. Reuse verified structural clues across a family when appropriate; retain an origin restriction only when the evidence establishes a deployment-specific contract.
 - Distinguish disabled, unavailable, not checked, already checked, auth failure and inconclusive responses. A guessed endpoint's 404 or missing credential does not establish family-wide absence. Do not treat an unknown status as permission to submit.
-- Register verified feedback/status routes in the owning method definition and reuse shared path/query builders. Do not add a parallel route switch; mutation-only methods must not use POST as a status fallback.
+- Each method definition declares `feedbackStatusRoutes`. A method with `supportsStatusReadback: true` needs at least one verified GET route or a date-aware route factory; mutation-only methods declare an empty list. Keep path/query builders pure and shared with execution. Feedback consumes these definitions, not a parallel route switch or a POST status fallback.
+- For split origins, feedback status queries use the maintained deployment API-origin map; asset scanning stays on the browser origin and shares the existing scan budgets. Cover affected feedback behavior in `tests/services/checkin/feedback/`.
 - Bind cancellation and asynchronous results to the current account/origin/credentials. Test cancellation and timeout even when provider work ignores its signal, so late discovery cannot overwrite a newer draft or trigger fallback.
 
 ## Execute and reconcile rewards
@@ -19,6 +20,8 @@ Read the check-in section of `docs/agents/site-integrations.md` and the closest 
 Verify successful execution, duplicate/already-checked semantics and authoritative readback. Use existing centralized retry/reconciliation policy. After an uncertain response, read status where available rather than blindly replaying a mutation. Record timezone/reset semantics and whether an extension run observed a fresh grant or only the already-completed state; do not perform extra daily mutations solely for evidence.
 
 Keep points, expiring bonus credit, subscription allowance and cash balance distinct. Populate quota rewards only from a verified balance-equivalent amount and valid finite conversion. Preserve authoritative reward/status data through polling, retry and result-replacement paths; absence of a reward field is not zero reward. Include manual/automatic execution, feedback and result UI consumers affected by the method.
+
+Set `AutoCheckinProviderOutcome.reward` from the granted amount using the existing `readQuotaReward` or `readUsdReward` helper for the verified unit. Leave it unset when the response has no authoritative amount; do not substitute a usual award or estimated balance delta. Record the source field, unit and supporting evidence in the current task's spec/evidence index.
 
 ## Validate and hand off
 

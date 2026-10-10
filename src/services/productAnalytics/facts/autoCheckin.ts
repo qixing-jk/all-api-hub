@@ -166,6 +166,8 @@ const AUTO_CHECKIN_METHOD_CATEGORY_BY_ID = {
     PRODUCT_ANALYTICS_AUTO_CHECKIN_METHOD_CATEGORIES.StrictReadback,
   [AUTO_CHECKIN_METHOD_IDS.ToolcodeDailyCheckIn]:
     PRODUCT_ANALYTICS_AUTO_CHECKIN_METHOD_CATEGORIES.StrictReadback,
+  [AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn]:
+    PRODUCT_ANALYTICS_AUTO_CHECKIN_METHOD_CATEGORIES.StrictReadback,
 } as const satisfies Record<
   CheckInMethodId,
   ProductAnalyticsAutoCheckinMethodCategory
