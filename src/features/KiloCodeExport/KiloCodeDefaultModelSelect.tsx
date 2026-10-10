@@ -16,6 +16,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover"
+import { Spinner } from "~/components/ui/spinner"
 import { KILO_CODE_EXPORT_TEST_IDS } from "~/features/KiloCodeExport/kiloCodeExportTestIds"
 import { cn } from "~/lib/utils"
 
@@ -28,6 +29,7 @@ export interface KiloCodeDefaultModelSelectProps
   onChange: (value: string) => void
   allowCustomValue?: boolean
   placeholder?: string
+  loading?: boolean
   searchPlaceholder?: string
   portalContainer?: HTMLElement
 }
@@ -110,6 +112,7 @@ export const KiloCodeDefaultModelSelect = React.forwardRef<
     onChange,
     allowCustomValue = false,
     placeholder,
+    loading = false,
     searchPlaceholder,
     portalContainer,
     className,
@@ -166,6 +169,7 @@ export const KiloCodeDefaultModelSelect = React.forwardRef<
           variant="outline"
           role="combobox"
           aria-expanded={open}
+          aria-busy={loading || buttonProps["aria-busy"]}
           aria-haspopup="listbox"
           aria-label={
             buttonProps["aria-label"] ??
@@ -180,7 +184,11 @@ export const KiloCodeDefaultModelSelect = React.forwardRef<
             className,
           )}
           rightIcon={
-            <ChevronsUpDownIcon className="size-4 shrink-0 opacity-50" />
+            loading ? (
+              <Spinner size="sm" variant="current" aria-hidden="true" />
+            ) : (
+              <ChevronsUpDownIcon className="size-4 shrink-0 opacity-50" />
+            )
           }
         >
           <span className="min-w-0 flex-1 truncate text-left">
@@ -218,7 +226,13 @@ export const KiloCodeDefaultModelSelect = React.forwardRef<
           ) : null}
           <CommandList className="min-h-0 flex-1">
             {!renderedModelIds.length && !customValue ? (
-              <CommandEmpty>{emptyMessage}</CommandEmpty>
+              <CommandEmpty>
+                {loading ? (
+                  <Spinner size="sm" className="mx-auto" />
+                ) : (
+                  emptyMessage
+                )}
+              </CommandEmpty>
             ) : null}
             <CommandGroup>
               {customValue ? (

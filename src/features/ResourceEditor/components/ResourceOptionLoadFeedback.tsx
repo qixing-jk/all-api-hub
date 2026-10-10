@@ -96,7 +96,7 @@ type ResourceAutomaticOptionFeedbackProps = {
   onRetry: () => void
 }
 
-/** Renders progress, empty, and retry feedback for automatically loaded options. */
+/** Renders empty and retry feedback; automatic loading is shown by the control. */
 export function ResourceAutomaticOptionFeedback({
   t,
   label,
@@ -108,17 +108,6 @@ export function ResourceAutomaticOptionFeedback({
   onRetry,
 }: ResourceAutomaticOptionFeedbackProps) {
   if (!state) return null
-  if (state.status === RESOURCE_OPTION_LOAD_STATUSES.Loading) {
-    return (
-      <p
-        role="status"
-        aria-live="polite"
-        className="text-muted-foreground mt-density-1 text-xs"
-      >
-        {RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS.loading(t)}
-      </p>
-    )
-  }
   if (
     state.status === RESOURCE_OPTION_LOAD_STATUSES.Ready &&
     optionCount === 0

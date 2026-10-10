@@ -32,7 +32,8 @@ describe("AccountKeyScopeSelector", () => {
         />,
         { withUserPreferencesProvider: false, withThemeProvider: false },
       )
-      expect(screen.getByRole("status")).toHaveTextContent(
+      expect(screen.getByRole("combobox")).toHaveAttribute("aria-busy", "true")
+      expect(screen.getByRole("combobox")).toHaveAccessibleDescription(
         "keyManagement:native.scope.loading",
       )
 
@@ -127,7 +128,8 @@ describe("AccountKeyScopeSelector", () => {
         { withUserPreferencesProvider: false, withThemeProvider: false },
       )
 
-      expect(screen.getByRole("status")).toHaveTextContent(
+      expect(screen.getByRole("combobox")).toHaveAttribute("aria-busy", "true")
+      expect(screen.getByRole("combobox")).toHaveAccessibleDescription(
         `keyManagement:${siteType === "openrouter" ? "openRouter.workspace" : "native.scope"}.loading`,
       )
       rerender(

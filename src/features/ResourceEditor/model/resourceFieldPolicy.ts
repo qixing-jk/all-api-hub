@@ -117,7 +117,6 @@ export type ResourceEditorFieldPolicy<TSection extends string = string> = {
 }
 
 export const RESOURCE_EDITOR_OPTION_STATE_LABEL_RESOLVERS = {
-  loading: (t: TFunction) => t("common:status.loading"),
   loadingField: (t: TFunction, field: string) =>
     t("common:status.loadingField", { field }),
   empty: (t: TFunction) => t("ui:multiSelect.noOptions"),

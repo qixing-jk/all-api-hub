@@ -20,7 +20,13 @@ import {
   buildNewApiToken,
 } from "~~/tests/test-utils/factories"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
-import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "~~/tests/test-utils/render"
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   const actual =
@@ -282,10 +288,14 @@ describe("ClaudeCodeRouterImportDialog", () => {
     await user.click(screen.getByRole("combobox"))
     await user.click(await screen.findByRole("option", { name: "old-model" }))
     await user.keyboard("{Escape}")
-    expect(screen.getByText("old-model")).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "ui:multiSelect.copyChipValue" }),
+    ).toHaveTextContent("old-model")
 
     rerender(renderDialog(2))
-    expect(screen.queryByText("old-model")).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "ui:multiSelect.copyChipValue" }),
+    ).not.toBeInTheDocument()
     await user.click(screen.getByRole("combobox"))
     expect(
       screen.queryByRole("option", { name: "old-model" }),
@@ -299,7 +309,10 @@ describe("ClaudeCodeRouterImportDialog", () => {
         expect.objectContaining({ providerApiKey: "sk-2", providerModels: [] }),
       ),
     )
-    pendingModels.resolve([])
+    await act(async () => {
+      pendingModels.resolve([])
+      await pendingModels.promise
+    })
   })
 
   it("clears model suggestions when the provider endpoint becomes blank", async () => {

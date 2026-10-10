@@ -23,6 +23,33 @@ const renderCompact = (ui: ReactElement) =>
   })
 
 describe("CompactMultiSelect", () => {
+  it.each(["chips", "summary"] as const)(
+    "preserves the selection and exposes pending options in %s mode",
+    (displayMode) => {
+      const props = {
+        displayMode,
+        options: [{ value: "a", label: "Alpha" }],
+        selected: ["a"],
+        onChange: vi.fn(),
+        "aria-label": "Models",
+        "aria-description": "Fetching available models",
+      }
+      const { rerender } = renderCompact(
+        <CompactMultiSelect {...props} loading />,
+      )
+
+      const control = screen.getByRole("combobox", { name: "Models" })
+      expect(control).toHaveAttribute("aria-busy", "true")
+      expect(control).toHaveAccessibleDescription("Fetching available models")
+      expect(control).toBeEnabled()
+      expect(screen.getByText("Alpha")).toBeVisible()
+
+      rerender(<CompactMultiSelect {...props} loading={false} />)
+      expect(control).not.toHaveAttribute("aria-busy", "true")
+      expect(screen.getByText("Alpha")).toBeVisible()
+    },
+  )
+
   beforeEach(() => {
     toastMocks.success.mockReset()
     toastMocks.error.mockReset()

@@ -458,13 +458,12 @@ export function KiloCodeAccountExportCard({
                                     }
                                     clearDownloadError()
                                   }}
-                                  placeholder={
+                                  placeholder={t(
+                                    "ui:dialog.kiloCode.placeholders.modelId",
+                                  )}
+                                  loading={
                                     isModelInventoryLoading ||
                                     isModelInventoryIdle
-                                      ? t("common:status.loading")
-                                      : t(
-                                          "ui:dialog.kiloCode.placeholders.modelId",
-                                        )
                                   }
                                   options={modelOptions}
                                   allowCustomValue

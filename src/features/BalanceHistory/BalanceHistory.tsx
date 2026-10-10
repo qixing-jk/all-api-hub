@@ -10,6 +10,7 @@ import {
   Card,
   WorkflowTransitionButton,
 } from "~/components/ui"
+import { Spinner } from "~/components/ui/spinner"
 import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { BalanceHistoryFilters } from "~/features/BalanceHistory/filtering/BalanceHistoryFilters"
@@ -128,8 +129,8 @@ export default function BalanceHistory() {
           <BalanceHistoryFilters model={viewModel} />
 
           {isInitialLoading ? (
-            <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
-              {t("messages.loading.loadingData")}
+            <div className="py-density-6 flex justify-center" aria-busy="true">
+              <Spinner aria-label={t("messages.loading.loadingData")} />
             </div>
           ) : isStoreEmpty ? (
             <Card padding="md">

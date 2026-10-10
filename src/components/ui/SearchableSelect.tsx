@@ -14,6 +14,7 @@ import {
   CommandList,
 } from "./command"
 import { Popover, PopoverContent, PopoverTrigger } from "./popover"
+import { Spinner } from "./spinner"
 
 /**
  * Option type for the `SearchableSelect` component.
@@ -68,6 +69,8 @@ export interface SearchableSelectProps
    * Falls back to the i18n key `ui:searchableSelect.empty`.
    */
   emptyMessage?: string
+  /** Indicates pending options without preventing custom input or selection. */
+  loading?: boolean
 
   /**
    * Allow selecting a custom value not present in `options`.
@@ -133,6 +136,7 @@ export const SearchableSelect = React.forwardRef<
     placeholder,
     searchPlaceholder,
     emptyMessage,
+    loading = false,
     allowCustomValue = false,
     open,
     onOpenChange,
@@ -203,8 +207,13 @@ export const SearchableSelect = React.forwardRef<
           )}
           disabled={isDisabled}
           {...buttonProps}
+          aria-busy={loading || buttonProps["aria-busy"]}
           rightIcon={
-            <ChevronsUpDownIcon className="size-4 shrink-0 opacity-50" />
+            loading ? (
+              <Spinner size="sm" variant="current" aria-hidden="true" />
+            ) : (
+              <ChevronsUpDownIcon className="size-4 shrink-0 opacity-50" />
+            )
           }
         >
           {/* Prevent long option labels from overflowing the trigger button. */}
@@ -233,12 +242,22 @@ export const SearchableSelect = React.forwardRef<
                 data-slot="searchable-select-empty"
                 className="py-density-6 text-center text-sm"
               >
-                {resolvedEmptyMessage}
+                {loading ? (
+                  <Spinner size="sm" className="mx-auto" />
+                ) : (
+                  resolvedEmptyMessage
+                )}
               </div>
             ) : null}
 
             {options.length > 0 ? (
-              <CommandEmpty>{resolvedEmptyMessage}</CommandEmpty>
+              <CommandEmpty>
+                {loading ? (
+                  <Spinner size="sm" className="mx-auto" />
+                ) : (
+                  resolvedEmptyMessage
+                )}
+              </CommandEmpty>
             ) : null}
             <CommandGroup>
               {canUseCustomValue ? (

@@ -94,6 +94,8 @@ export function AccountKeyScopeSelector({
       <SearchableSelect
         data-testid={KEY_MANAGEMENT_TEST_IDS.nativeScopeSelect}
         aria-label={messages.label}
+        aria-description={isLoading ? messages.loading : undefined}
+        loading={isLoading}
         options={options}
         value={selectedScope?.scopeKey ?? ""}
         placeholder={messages.placeholder}
@@ -101,11 +103,6 @@ export function AccountKeyScopeSelector({
         disabled={isLoading || Boolean(error)}
         onChange={onSelectScope}
       />
-      {isLoading ? (
-        <p role="status" className="text-muted-foreground text-xs">
-          {messages.loading}
-        </p>
-      ) : null}
       {!isLoading && !error && scopes.length === 0 ? (
         <p className="text-muted-foreground text-xs">{messages.empty}</p>
       ) : null}

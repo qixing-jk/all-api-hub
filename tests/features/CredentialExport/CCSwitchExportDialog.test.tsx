@@ -19,6 +19,7 @@ import {
 import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import {
   buildDisplaySiteData,
   buildNewApiToken,
@@ -128,6 +129,33 @@ describe("CCSwitchExportDialog", () => {
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
+  })
+
+  it("indicates model discovery on the control without replacing its label", async () => {
+    const discovery = createDeferred<ReturnType<typeof createModelDiscovery>>()
+    mockDiscoverOpenAICompatibleModels.mockReturnValueOnce(discovery.promise)
+    render(
+      <CCSwitchExportDialog
+        isOpen
+        onClose={vi.fn()}
+        source={createAccountExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" },
+          { key: "sk-test" },
+        )}
+      />,
+    )
+    const model = await screen.findByLabelText(
+      "ui:dialog.ccswitch.fields.model",
+    )
+    await waitFor(() => expect(model).toHaveAttribute("aria-busy", "true"))
+    expect(model).not.toHaveTextContent("common:status.loading")
+    expect(model).toBeDisabled()
+
+    await act(async () =>
+      discovery.resolve(createModelDiscovery([{ id: "gpt-4" }])),
+    )
+    expect(model).not.toHaveAttribute("aria-busy", "true")
+    expect(model).toBeEnabled()
   })
 
   it("exposes stable test ids for E2E flows", async () => {

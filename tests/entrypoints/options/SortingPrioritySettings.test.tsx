@@ -132,7 +132,10 @@ describe("SortingPrioritySettings", () => {
 
     render(<SortingPrioritySettings />)
 
-    expect(screen.getByText("common:status.loading")).toBeInTheDocument()
+    expect(
+      screen.getByRole("status", { name: "common:status.loading" }),
+    ).toBeVisible()
+    expect(screen.queryByText("common:status.loading")).not.toBeInTheDocument()
     expect(screen.queryByText("settings:sorting.title")).not.toBeInTheDocument()
   })
 

@@ -17,6 +17,113 @@ import { getServiceWorker } from "~~/e2e/utils/extensionState"
 const primaryDetail =
   /^https:\/\/managed\.example\.invalid\/api\/channel\/101(?:\?.*)?$/
 
+test("multi-select loading stays visible beside scrolling selected groups", async ({
+  context,
+  page,
+  extensionId,
+}, testInfo) => {
+  const selectedGroups = Array.from(
+    { length: 24 },
+    (_, index) => `selected-channel-group-${index}`,
+  )
+  await openInterceptedNewApiManagedSiteChannels({
+    context,
+    page,
+    extensionId,
+    nativeFields: { group: selectedGroups.join(",") },
+  })
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  await context.route(
+    "https://managed.example.invalid/api/group",
+    async (route) => {
+      await gate
+      await route.fulfill({ json: { success: true, data: selectedGroups } })
+    },
+  )
+  try {
+    await openManagedSiteChannelRowActions(page, "Example primary")
+    await page.getByRole("menuitem", { name: "Edit", exact: true }).click()
+    const dialog = page.getByRole("dialog")
+    const input = dialog.getByRole("combobox", { name: "Channel Groups" })
+    const chips = dialog
+      .locator('[data-slot="combobox-chips"]')
+      .filter({ has: page.getByRole("combobox", { name: "Channel Groups" }) })
+    await expect(input).toHaveAttribute("aria-busy", "true")
+    await expect(chips.locator('[data-slot="combobox-chip"]')).toHaveCount(24)
+
+    for (const width of [420, 1280]) {
+      await page.setViewportSize({ width, height: 900 })
+      await input.focus()
+      await expect(input).toBeFocused()
+      // Locate the actual scrolling ancestor without prescribing the control's layout.
+      const scrolled = await input.evaluate((element) => {
+        for (
+          let parent = element.parentElement;
+          parent;
+          parent = parent.parentElement
+        ) {
+          if (
+            getComputedStyle(parent).overflowY === "auto" &&
+            parent.scrollHeight > parent.clientHeight
+          ) {
+            parent.scrollTop = parent.scrollHeight
+            return parent.scrollTop > 0
+          }
+        }
+        return false
+      })
+      expect(scrolled).toBe(true)
+      await expect
+        .poll(() =>
+          chips.evaluate((element) => {
+            const spinner = element.querySelector('[role="status"]')
+            if (!spinner) return false
+            const indicator = spinner.getBoundingClientRect()
+            const control = element.getBoundingClientRect()
+            const contents = element.querySelectorAll(
+              '[data-slot="combobox-chip"], input',
+            )
+            return (
+              indicator.top >= control.top &&
+              indicator.bottom <= control.bottom &&
+              indicator.left >= control.left &&
+              indicator.right <= control.right &&
+              Math.abs(
+                indicator.top +
+                  indicator.height / 2 -
+                  (control.top + control.height / 2),
+              ) <= 1 &&
+              Array.from(contents).every((content) => {
+                const bounds = content.getBoundingClientRect()
+                return (
+                  bounds.right <= indicator.left ||
+                  bounds.left >= indicator.right ||
+                  bounds.bottom <= indicator.top ||
+                  bounds.top >= indicator.bottom
+                )
+              })
+            )
+          }),
+        )
+        .toBe(true)
+      await page.screenshot({
+        path: testInfo.outputPath(`selected-groups-loading-${width}.png`),
+      })
+    }
+    release()
+    await expect(input).not.toHaveAttribute("aria-busy", "true")
+    await expect(
+      chips.getByRole("status", { includeHidden: true }),
+    ).toHaveCount(0)
+    await expect(chips.locator('[data-slot="combobox-chip"]')).toHaveCount(24)
+  } finally {
+    release()
+  }
+})
+
 for (const provider of ["new-api", "done-hub"] as const) {
   test(`${provider} loads channel groups once when opening an editor`, async ({
     context,
@@ -44,10 +151,8 @@ for (const provider of ["new-api", "done-hub"] as const) {
     ).toHaveValue(channelName)
     await expect.poll(() => requests.length).toBeGreaterThan(0)
     await expect(
-      dialog
-        .getByRole("group", { name: "Models", exact: true })
-        .getByRole("status"),
-    ).toHaveCount(0)
+      dialog.getByRole("combobox", { name: "Channel Groups" }),
+    ).not.toHaveAttribute("aria-busy", "true")
     await dialog
       .getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
       .fill("Unchanged groups")
@@ -81,10 +186,8 @@ for (const provider of ["new-api", "done-hub"] as const) {
     ).toBeVisible()
     await expect.poll(() => requests.length).toBeGreaterThan(0)
     await expect(
-      dialog
-        .getByRole("group", { name: "Models", exact: true })
-        .getByRole("status"),
-    ).toHaveCount(0)
+      dialog.getByRole("combobox", { name: "Channel Groups" }),
+    ).not.toHaveAttribute("aria-busy", "true")
     await dialog
       .getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
       .fill("Imported groups")
@@ -244,10 +347,8 @@ test("optional group loading and retry preserve an editable channel", async ({
     const name = dialog.getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
     await expect(name).toHaveValue("Example primary")
     await expect(
-      dialog
-        .getByRole("group", { name: "Models", exact: true })
-        .getByRole("status"),
-    ).toBeVisible()
+      dialog.getByRole("combobox", { name: "Channel Groups" }),
+    ).toHaveAttribute("aria-busy", "true")
     await name.fill("Draft kept while groups load")
     await expect(
       dialog.getByTestId(CHANNEL_DIALOG_TEST_IDS.submitButton),
@@ -266,10 +367,8 @@ test("optional group loading and retry preserve an editable channel", async ({
     await retry.click()
     await expect(retry).toBeHidden()
     await expect(
-      dialog
-        .getByRole("group", { name: "Models", exact: true })
-        .getByRole("status"),
-    ).toHaveCount(0)
+      dialog.getByRole("combobox", { name: "Channel Groups" }),
+    ).not.toHaveAttribute("aria-busy", "true")
     await expect(name).toHaveValue("Draft kept while groups load")
   } finally {
     release()

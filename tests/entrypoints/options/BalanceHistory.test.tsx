@@ -333,6 +333,37 @@ describe("BalanceHistory options page", () => {
     })
   })
 
+  it("shows an accessible loading indicator until the initial history is available", async () => {
+    const store =
+      createDeferred<
+        Awaited<ReturnType<typeof dailyBalanceHistoryStorage.getStore>>
+      >()
+    vi.mocked(dailyBalanceHistoryStorage.getStore).mockReturnValueOnce(
+      store.promise,
+    )
+    render(<BalanceHistory />)
+
+    expect(
+      await screen.findByRole("status", {
+        name: "balanceHistory:messages.loading.loadingData",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.queryByText("balanceHistory:messages.loading.loadingData"),
+    ).not.toBeInTheDocument()
+    store.resolve({
+      schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+      snapshotsByAccountId: {},
+    })
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("status", {
+          name: "balanceHistory:messages.loading.loadingData",
+        }),
+      ).not.toBeInTheDocument(),
+    )
+  })
+
   it("updates date inputs when a quick range is selected", async () => {
     const QUICK_RANGE_7D_DAYS = 7
     const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)

@@ -47,6 +47,27 @@ function ControlledSelectFixture({
 }
 
 describe("Select viewport resize behavior", () => {
+  it("preserves the selected value while exposing pending options on the trigger", () => {
+    const renderSelect = (loading: boolean) => (
+      <Select defaultValue="first">
+        <SelectTrigger loading={loading} aria-label="Example selection">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="first">First</SelectItem>
+        </SelectContent>
+      </Select>
+    )
+    const { rerender } = render(renderSelect(true))
+    const control = screen.getByRole("combobox", { name: "Example selection" })
+    expect(control).toHaveTextContent("First")
+    expect(control).toHaveAttribute("aria-busy", "true")
+
+    rerender(renderSelect(false))
+    expect(control).toHaveTextContent("First")
+    expect(control).not.toHaveAttribute("aria-busy", "true")
+  })
+
   it("keeps an action-popup select open during its resize event", async () => {
     const user = userEvent.setup()
     render(<SelectFixture preserveOpen />)

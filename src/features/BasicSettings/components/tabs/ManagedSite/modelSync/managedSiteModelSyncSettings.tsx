@@ -273,12 +273,14 @@ export default function ManagedSiteModelSyncSettings() {
                   void savePreferences({ allowedModels: values })
                 }}
                 disabled={optionsLoading}
+                loading={optionsLoading}
+                aria-description={
+                  optionsLoading
+                    ? t("managedSiteModelSync:settings.allowedModelsLoading")
+                    : undefined
+                }
               />
-              {optionsLoading ? (
-                <p className="text-muted-foreground text-xs">
-                  {t("managedSiteModelSync:settings.allowedModelsLoading")}
-                </p>
-              ) : optionsError ? (
+              {!optionsLoading && optionsError ? (
                 <p className="text-destructive-text text-xs">
                   {t("managedSiteModelSync:settings.allowedModelsLoadFailed", {
                     error: optionsError,

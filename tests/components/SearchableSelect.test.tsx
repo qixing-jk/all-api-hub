@@ -10,6 +10,58 @@ import {
 } from "~~/tests/test-utils/render"
 
 describe("SearchableSelect", () => {
+  it("shows pending feedback instead of an empty result before options arrive", async () => {
+    const props = { options: [], value: "", onChange: vi.fn(), open: true }
+    const { rerender } = render(<SearchableSelect {...props} loading />)
+
+    expect(
+      await screen.findByRole("status", { name: "common:status.loading" }),
+    ).toBeVisible()
+    expect(
+      screen.queryByText("ui:searchableSelect.noOptions"),
+    ).not.toBeInTheDocument()
+
+    rerender(<SearchableSelect {...props} loading={false} />)
+    expect(screen.getByText("ui:searchableSelect.noOptions")).toBeVisible()
+    expect(screen.queryByRole("status")).not.toBeInTheDocument()
+  })
+
+  it("keeps the selected label and custom entry available while options load", async () => {
+    const onChange = vi.fn()
+    const props = {
+      options: [{ value: "saved", label: "Saved model" }],
+      value: "saved",
+      onChange,
+      allowCustomValue: true,
+      placeholder: "Choose a model",
+    }
+    const { rerender } = render(<SearchableSelect {...props} loading />)
+    const trigger = await screen.findByRole("combobox")
+
+    expect(trigger).toHaveAttribute("aria-busy", "true")
+    expect(trigger).toHaveTextContent("Saved model")
+    expect(trigger).not.toHaveTextContent("common:status.loading")
+    expect(trigger).toBeEnabled()
+    fireEvent.click(trigger)
+    expect(
+      screen.queryByText("ui:searchableSelect.empty"),
+    ).not.toBeInTheDocument()
+    fireEvent.change(
+      screen.getByPlaceholderText("ui:searchableSelect.searchPlaceholder"),
+      {
+        target: { value: "custom-model" },
+      },
+    )
+    fireEvent.click(
+      screen.getByRole("option", { name: "ui:searchableSelect.useValue" }),
+    )
+    expect(onChange).toHaveBeenCalledWith("custom-model")
+
+    rerender(<SearchableSelect {...props} loading={false} />)
+    expect(trigger).not.toHaveAttribute("aria-busy", "true")
+    expect(trigger).toHaveTextContent("Saved model")
+  })
+
   it("shows a custom-entry hint when options are empty and allowCustomValue is enabled", async () => {
     render(
       <SearchableSelect

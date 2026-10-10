@@ -8,6 +8,7 @@ import {
   Modal,
   SearchableSelect,
 } from "~/components/ui"
+import { Spinner } from "~/components/ui/spinner"
 import { AccountKeyResourceEditorDialog } from "~/features/KeyManagement/resources/AccountKeyResourceEditorDialog"
 import {
   useAccountKeyResourceController,
@@ -188,7 +189,10 @@ function AccountKeyCreateSession({
           </FormField>
         ) : null}
         {controller.isLoading && !hasPreselectedAccount ? (
-          <p role="status">{t("common:status.loading")}</p>
+          <p role="status" className="gap-density-2 flex items-center text-sm">
+            <Spinner size="sm" aria-hidden="true" />
+            {t("keyManagement:native.editor.opening.loading")}
+          </p>
         ) : null}
         {failure ? (
           <>

@@ -32,7 +32,6 @@
     "models": {
       "hint": "輸入搜尋或按 Enter 新增自定義模型名稱",
       "label": "可用模型",
-      "loading": "載入模型中...",
       "placeholder": "選擇或輸入模型名稱"
     },
     "name": {

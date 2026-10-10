@@ -32,7 +32,6 @@
     "models": {
       "hint": "Geben Sie zum Suchen ein oder drücken Sie die Eingabetaste, um einen benutzerdefinierten Modellnamen hinzuzufügen",
       "label": "Verfügbare Modelle",
-      "loading": "Modelle werden geladen...",
       "placeholder": "Modellnamen auswählen oder eingeben"
     },
     "name": {

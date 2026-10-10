@@ -32,7 +32,6 @@
     "models": {
       "hint": "Nhập để tìm kiếm hoặc nhấn Enter để thêm tên mô hình tùy chỉnh",
       "label": "Các mô hình khả dụng",
-      "loading": "Đang tải mô hình...",
       "placeholder": "Chọn hoặc nhập tên mô hình"
     },
     "name": {
