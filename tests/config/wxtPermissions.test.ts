@@ -9,7 +9,7 @@ async function permissionsFor(browser: string) {
   return wxtConfig.manifest({
     command: "build",
     browser,
-    manifestVersion: browser === "firefox" ? 2 : 3,
+    manifestVersion: browser === "firefox" || browser === "safari" ? 2 : 3,
     mode: "production",
   } as ConfigEnv)
 }
@@ -23,10 +23,10 @@ describe("request-header permission lifecycle", () => {
     const { default: variantConfig } = await import("~~/wxt.config")
     if (typeof variantConfig.manifest !== "function")
       throw new Error("Expected a manifest factory")
-    const manifest = variantConfig.manifest({
+    const manifest = await variantConfig.manifest({
       command: "build",
       browser: "safari",
-      manifestVersion: 3,
+      manifestVersion: 2,
       mode: "test",
     } as ConfigEnv)
     expect(manifest.permissions).not.toContain("cookies")
