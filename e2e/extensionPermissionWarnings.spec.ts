@@ -85,8 +85,8 @@ test("the current manifest adds no browser permission warnings to the approved b
         // native warnings; it does not infer them from the inspector's install mode.
         const control = {
           ...baseline,
-          permissions: [...baseline.permissions, "notifications"],
-          optional_permissions: baseline.optional_permissions.filter(
+          permissions: [...(baseline.permissions ?? []), "notifications"],
+          optional_permissions: (baseline.optional_permissions ?? []).filter(
             (p: string) => p !== "notifications",
           ),
         }

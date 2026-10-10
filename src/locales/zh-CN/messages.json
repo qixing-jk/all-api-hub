@@ -87,10 +87,10 @@
     "waitUserInfoTimeout": "等待用户信息超时，请确保已登录"
   },
   "cookieTransport": {
-    "permissionRequired": "请在扩展权限设置中启用 Cookie 和请求头修改权限，然后重试。",
+    "browserUnsupported": "此账号的独立 Cookie 请求暂不支持 Safari，请在 Chrome 或 Edge 中重试。",
+    "permissionRequired": "当前浏览器无法使用此账号的 Cookie 发起请求。请检查扩展权限或更新浏览器后重试。",
     "requestUnavailable": "请求准备失败，请重试；若仍失败，请重新加载扩展。",
-    "scopeUnavailable": "此请求无法使用所选 Cookie 范围。请导入目标账号的 Cookie，或使用该账号的普通浏览器会话。",
-    "sessionUnavailable": "登录态不可用。请重新登录同一账号；若使用已导入的 Cookie，请重新导入。"
+    "scopeUnavailable": "此请求无法使用所选 Cookie 范围。请导入目标账号的 Cookie，或使用该账号的普通浏览器会话。"
   },
   "donehub": {
     "configMissing": "请先在设置中配置 Done Hub 地址、管理员令牌和用户 ID",

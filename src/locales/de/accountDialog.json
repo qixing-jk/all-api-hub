@@ -38,7 +38,6 @@
     "openApiCredentialProfiles": "API-Anmeldeinformationen öffnen",
     "openManualAddGuide": "Anleitung zum manuellen Hinzufügen dieser Website öffnen",
     "reloadCurrentPage": "Aktuelle Seite neu laden",
-    "reloadExtensionAndRetry": "Erweiterung neu laden und erneut versuchen",
     "reportUnsupportedSite": "Website-Unterstützung anfordern",
     "saveAccount": "Konto speichern",
     "saveChanges": "Änderungen speichern",
@@ -233,7 +232,6 @@
   },
   "messages": {
     "addSuccess": "Konto {{name}} erfolgreich hinzugefügt!",
-    "autoDetectCookiePermissionReloadHint": "Wenn die erste Erkennung direkt nach der Gewährung von Cookie-Mehrfachkontoberechtigungen weiterhin wartet, laden Sie die Erweiterung neu und versuchen Sie es erneut.",
     "autoDetectFailed": "Automatische Erkennung fehlgeschlagen: {{error}}",
     "autoDetectIdentityMismatch": "Das erkannte Konto stimmt nicht mit dem aktuellen Konto überein. Deine vorhandenen Daten wurden beibehalten. Prüfe die Website-URL, melde dich beim gewünschten Konto an und versuche es erneut.",
     "autoDetectSuccess": "Automatische Erkennung erfolgreich!",
@@ -270,7 +268,6 @@
     "managedSiteSettingsOpened": "{{managedSite}}-Einstellungen in einem neuen Tab geöffnet. Tragen Sie die Verbindungsdaten ein und klicken Sie danach hier erneut auf diese Schaltfläche.",
     "newApiConfigFailed": "Automatische Konfiguration auf New API fehlgeschlagen: {{error}}",
     "operationFailed": "Vorgang fehlgeschlagen: {{error}}",
-    "reloadExtensionConfirm": "Durch das erneute Laden der Erweiterung wird die aktuelle Erweiterungsseite geschlossen. Stellen Sie sicher, dass alle erforderlichen Informationen gespeichert wurden.",
     "saveAccountFailed": "Konto konnte nicht gespeichert werden",
     "saveFailed": "Speichern fehlgeschlagen",
     "updateSuccess": "Konto {{name}} erfolgreich aktualisiert!",
@@ -351,10 +348,6 @@
       "description": "{{message}}",
       "nextSteps": "Noch keines installiert? Kein Problem: Richten Sie eines über die offizielle Dokumentation unten ein und tragen Sie anschließend die Verbindungsdaten in den Einstellungen ein. Konten speichern, Guthaben aktualisieren und Check-in funktionieren trotzdem.",
       "title": "Noch kein {{managedSite}}?"
-    },
-    "reloadExtension": {
-      "title": "Erweiterung neu laden",
-      "warningTitle": "Neuladen der Erweiterung bestätigen?"
     }
   }
 }

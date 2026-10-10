@@ -1,10 +1,7 @@
-import { CircleHelp, RefreshCw } from "lucide-react"
-import { useState } from "react"
+import { CircleHelp } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { ActionGroup, Alert, Button } from "~/components/ui"
-import { ConfirmDialog } from "~/components/ui/Dialog/ConfirmDialog"
-import { reloadRuntime } from "~/utils/browser/runtime"
+import { Alert, Button } from "~/components/ui"
 import { createTab } from "~/utils/browser/tabs"
 import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 
@@ -21,8 +18,7 @@ export default function AutoDetectSlowHintAlert({
   helpDocUrl = getDocsAutoDetectUrl(),
   onHelpClick,
 }: AutoDetectSlowHintAlertProps) {
-  const { t } = useTranslation(["accountDialog", "common"])
-  const [isReloadConfirmOpen, setIsReloadConfirmOpen] = useState(false)
+  const { t } = useTranslation("accountDialog")
 
   const handleHelpClick = () => {
     if (onHelpClick) {
@@ -32,60 +28,22 @@ export default function AutoDetectSlowHintAlert({
     void createTab(helpDocUrl, true)
   }
 
-  const handleReloadExtension = () => {
-    setIsReloadConfirmOpen(true)
-  }
-
-  const handleConfirmReloadExtension = () => {
-    setIsReloadConfirmOpen(false)
-    reloadRuntime()
-  }
-
   return (
-    <>
-      <Alert variant="default" className="mb-density-4">
-        <div>
-          <p className="mb-density-2 text-xs">
-            {t("accountDialog:messages.autoDetectTakingTooLong")}
-          </p>
-          <p className="mb-density-2 text-xs">
-            {t("accountDialog:messages.autoDetectCookiePermissionReloadHint")}
-          </p>
-          <ActionGroup className="items-stretch justify-start">
-            <Button
-              type="button"
-              onClick={handleHelpClick}
-              variant="secondary"
-              size="sm"
-              leftIcon={<CircleHelp className="h-3 w-3" />}
-            >
-              {t("accountDialog:actions.helpDocument")}
-            </Button>
-            <Button
-              type="button"
-              onClick={handleReloadExtension}
-              variant="outline"
-              size="sm"
-              leftIcon={<RefreshCw className="h-3 w-3" />}
-            >
-              {t("accountDialog:actions.reloadExtensionAndRetry")}
-            </Button>
-          </ActionGroup>
-        </div>
-      </Alert>
-
-      <ConfirmDialog
-        intent="warning"
-        icon={RefreshCw}
-        isOpen={isReloadConfirmOpen}
-        onClose={() => setIsReloadConfirmOpen(false)}
-        title={t("accountDialog:warnings.reloadExtension.title")}
-        warningTitle={t("accountDialog:warnings.reloadExtension.warningTitle")}
-        description={t("accountDialog:messages.reloadExtensionConfirm")}
-        cancelLabel={t("common:actions.cancel")}
-        confirmLabel={t("accountDialog:actions.reloadExtensionAndRetry")}
-        onConfirm={handleConfirmReloadExtension}
-      />
-    </>
+    <Alert variant="default" className="mb-density-4">
+      <div>
+        <p className="mb-density-2 text-xs">
+          {t("accountDialog:messages.autoDetectTakingTooLong")}
+        </p>
+        <Button
+          type="button"
+          onClick={handleHelpClick}
+          variant="secondary"
+          size="sm"
+          leftIcon={<CircleHelp className="h-3 w-3" />}
+        >
+          {t("accountDialog:actions.helpDocument")}
+        </Button>
+      </div>
+    </Alert>
   )
 }

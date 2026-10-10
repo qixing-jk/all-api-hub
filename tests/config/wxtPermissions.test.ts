@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import type { ConfigEnv } from "wxt"
 
 import wxtConfig from "~~/wxt.config"
@@ -15,6 +15,29 @@ async function permissionsFor(browser: string) {
 }
 
 describe("request-header permission lifecycle", () => {
+  afterEach(() => vi.unstubAllEnvs())
+
+  it("keeps Chromium-only E2E permission promotion out of Safari builds", async () => {
+    vi.stubEnv("AAH_E2E_BUILD_VARIANT", "dnr-required")
+    vi.resetModules()
+    const { default: variantConfig } = await import("~~/wxt.config")
+    if (typeof variantConfig.manifest !== "function")
+      throw new Error("Expected a manifest factory")
+    const manifest = variantConfig.manifest({
+      command: "build",
+      browser: "safari",
+      manifestVersion: 3,
+      mode: "test",
+    } as ConfigEnv)
+    expect(manifest.permissions).not.toContain("cookies")
+    expect(manifest.permissions).not.toContain("sidePanel")
+    expect(manifest.optional_permissions).toEqual(
+      expect.arrayContaining([
+        "cookies",
+        "declarativeNetRequestWithHostAccess",
+      ]),
+    )
+  })
   it("initializes Chromium DNR at extension load while Cookie access stays optional", async () => {
     const manifest = await permissionsFor("chrome")
     expect(manifest.permissions).toContain(
@@ -38,8 +61,9 @@ describe("request-header permission lifecycle", () => {
     )
   })
 
-  it("keeps Safari permission changes deferred", async () => {
+  it("keeps Safari optional permissions separate from Chromium requirements", async () => {
     const manifest = await permissionsFor("safari")
+    expect(manifest.browser_specific_settings).toBeUndefined()
     expect(manifest.permissions).not.toContain(
       "declarativeNetRequestWithHostAccess",
     )

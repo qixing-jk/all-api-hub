@@ -91,10 +91,10 @@
     "waitUserInfoTimeout": "Se agotó el tiempo de espera para la información del usuario; asegúrate de haber iniciado sesión"
   },
   "cookieTransport": {
-    "permissionRequired": "Activa los permisos de cookies y modificación de encabezados en los ajustes de permisos de la extensión y vuelve a intentarlo.",
+    "browserUnsupported": "Safari aún no admite solicitudes con Cookies aisladas para esta cuenta. Vuelve a intentarlo en Chrome o Edge.",
+    "permissionRequired": "Este navegador no puede enviar una solicitud con la Cookie de esta cuenta. Revisa los permisos de la extensión o actualiza el navegador y vuelve a intentarlo.",
     "requestUnavailable": "No se pudo preparar la solicitud. Vuelve a intentarlo; si el error persiste, recarga la extensión.",
-    "scopeUnavailable": "Esta solicitud no puede usar el ámbito de cookies seleccionado. Importa la cookie de la cuenta deseada o usa su sesión normal del navegador.",
-    "sessionUnavailable": "La sesión no está disponible. Inicia sesión de nuevo en la misma cuenta; si usas una cookie importada, vuelve a importarla."
+    "scopeUnavailable": "Esta solicitud no puede usar el ámbito de cookies seleccionado. Importa la cookie de la cuenta deseada o usa su sesión normal del navegador."
   },
   "donehub": {
     "configMissing": "Primero configura la dirección de Done Hub, el token de administrador y el ID de usuario en la configuración básica",

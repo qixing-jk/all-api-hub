@@ -8,14 +8,7 @@ Auto-identification requires opening a temporary page and reading site informati
 
 -   **Site has Cloudflare / Firewall verification enabled**: Please check if a temporary window pops up; if manual verification is required, please complete it before timeout.
 -   **Slow network/site response**: It is recommended to wait a moment, or switch networks/proxies and retry.
--   **Permissions/Browser anomaly**: If you just granted optional permissions and started experiencing "infinite waiting", see "Infinite Waiting After Granting Optional Permissions" below.
-
-### Infinite Waiting After Granting Optional Permissions
-
-After initially granting optional permissions, identifying some sites might get stuck in auto-identification, appearing as a continuously loading interface:
-
--   Solution: First, click **Reload extension and retry** in the slow identification prompt. After confirmation, allow the plugin to reload its runtime, then perform identification again. If the prompt does not appear or the issue persists after reloading, open the browser extension management page, **disable then re-enable** this extension, or **restart the browser** and retry identification/authorization.
--   For the purpose and explanation of optional permissions, see: `/permissions` (Permission Management).
+-   **Missing permissions**: Confirm that the extension can access the target site and grant the permissions needed by the selected authentication method. See [Permission Management](./permissions.md).
 
 ## Identification Failed: First, Confirm You Are Indeed Logged In
 

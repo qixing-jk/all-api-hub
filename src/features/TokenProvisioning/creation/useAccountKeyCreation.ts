@@ -68,6 +68,9 @@ export function useAccountKeyCreation({
   } = useAccountKeyResourceRequestLifecycle()
   const owner = useRef<{ boundary: ActiveResourceBoundary } | null>(null)
   const finished = useRef(false)
+  const pendingSubmission = useRef<Promise<void> | null>(null)
+  const [submissionRevision, setSubmissionRevision] = useState(0)
+  const openedContextKey = useRef<string | null>(null)
   const uncertainBoundary = useRef<ActiveResourceBoundary | null>(null)
   const markUncertain = useCallback(
     (boundary: ActiveResourceBoundary) => {
@@ -106,7 +109,7 @@ export function useAccountKeyCreation({
       )
       if (attempt === null) return
       const controller = new AbortController()
-      requests.assign(requestSlots.Action, controller)
+      requests.assign(requestSlots.Opening, controller)
       const version = requests.version()
       try {
         const session = await awaitAbortable(
@@ -153,7 +156,7 @@ export function useAccountKeyCreation({
           failure: toFailure(error),
         })
       } finally {
-        requests.release(requestSlots.Action, controller)
+        requests.release(requestSlots.Opening, controller)
       }
     },
     [
@@ -165,18 +168,37 @@ export function useAccountKeyCreation({
     ],
   )
 
-  useEffect(() => {
-    // A response-only secret must survive source updates until acknowledged.
-    if (finished.current || createdSecretRef.current) return
-    owner.current = null
-    resetView()
-    void open()
-    return () => {
+  useEffect(
+    () => () => {
       requests.dispose()
       requests.setInventoryLoading(false)
       dispose()
+      openedContextKey.current = null
+    },
+    [requests, dispose],
+  )
+
+  useEffect(() => {
+    // Reads can be replaced, but a dispatched write still owns its outcome.
+    if (
+      !finished.current &&
+      !createdSecretRef.current &&
+      !pendingSubmission.current &&
+      openedContextKey.current !== contextKey
+    ) {
+      openedContextKey.current = contextKey
+      requests.advance()
+      dispose()
+      owner.current = null
+      resetView()
+      void open()
     }
-  }, [contextKey, open, resetView, requests, dispose])
+    return () => {
+      requests.cancel(requestSlots.Opening)
+      requests.cancel(requestSlots.Inventory)
+      requests.setInventoryLoading(false)
+    }
+  }, [contextKey, submissionRevision, open, resetView, requests, dispose])
 
   const recoverUncertain = useCallback(
     async (boundary: ActiveResourceBoundary) => {
@@ -225,6 +247,7 @@ export function useAccountKeyCreation({
         )
         if (
           version !== requests.version() ||
+          controller.signal.aborted ||
           readEditor()?.editorId !== state.editorId
         )
           return
@@ -331,7 +354,7 @@ export function useAccountKeyCreation({
       if (readRetryRequest(attempt)) void open(attempt)
     },
     cancelEditorOpening: (attempt: number) =>
-      cancelOpening(attempt, () => requests.cancel(requestSlots.Action)),
+      cancelOpening(attempt, () => requests.cancel(requestSlots.Opening)),
     closeEditor: (id: number) => {
       requests.cancel(requestSlots.Action)
       close(id)
@@ -341,17 +364,27 @@ export function useAccountKeyCreation({
         previous?.editorId === id ? { ...previous, values } : previous,
       ),
     submitEditor: async (id: number, values: EditableResourceProjection) => {
-      const boundary = owner.current?.boundary
-      const blocked = uncertainBoundary.current
-      if (
-        boundary &&
-        blocked?.accountId === boundary.accountId &&
-        blocked.siteType === boundary.siteType
-      ) {
-        await recoverUncertain(blocked)
-        return
-      }
-      await submit(id, values)
+      if (pendingSubmission.current) return pendingSubmission.current
+      const version = requests.version()
+      const run = (async () => {
+        const boundary = owner.current?.boundary
+        const blocked = uncertainBoundary.current
+        if (
+          boundary &&
+          blocked?.accountId === boundary.accountId &&
+          blocked.siteType === boundary.siteType
+        ) {
+          await recoverUncertain(blocked)
+          return
+        }
+        await submit(id, values)
+      })().finally(() => {
+        pendingSubmission.current = null
+        if (version === requests.version())
+          setSubmissionRevision((previous) => previous + 1)
+      })
+      pendingSubmission.current = run
+      return run
     },
     createdSecret,
     closeCreatedSecret: () => {

@@ -3,7 +3,20 @@ import {
   buildSectionDefinition,
   DEFAULT_BREADCRUMBS,
 } from "~/features/OptionsSearch/registryHelpers"
-import type { OptionsSearchItemDefinition } from "~/features/OptionsSearch/types"
+import type {
+  OptionsSearchContext,
+  OptionsSearchItemDefinition,
+} from "~/features/OptionsSearch/types"
+import {
+  OPTIONAL_PERMISSIONS,
+  type ManifestOptionalPermissions,
+} from "~/services/permissions/permissionManager"
+
+/** Search must only link to controls declared by this browser's manifest. */
+const isOptionalPermissionVisible =
+  (permission: ManifestOptionalPermissions) =>
+  (context: OptionsSearchContext) =>
+    context.hasOptionalPermissions && OPTIONAL_PERMISSIONS.includes(permission)
 
 export const permissionsSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
@@ -50,7 +63,7 @@ export const permissionsSearchControls: OptionsSearchItemDefinition[] = [
         "settings:permissions.title",
       ],
       keywords: ["permission", "cookies", "cookie"],
-      isVisible: (context) => context.hasOptionalPermissions,
+      isVisible: isOptionalPermissionVisible("cookies"),
     },
   ),
   buildControlDefinition(
@@ -68,7 +81,9 @@ export const permissionsSearchControls: OptionsSearchItemDefinition[] = [
         "settings:permissions.title",
       ],
       keywords: ["permission", "declarativeNetRequest", "host access", "dnr"],
-      isVisible: (context) => context.hasOptionalPermissions,
+      isVisible: isOptionalPermissionVisible(
+        "declarativeNetRequestWithHostAccess",
+      ),
     },
   ),
   buildControlDefinition(
@@ -85,7 +100,7 @@ export const permissionsSearchControls: OptionsSearchItemDefinition[] = [
         "settings:permissions.title",
       ],
       keywords: ["permission", "webrequest", "network"],
-      isVisible: (context) => context.hasOptionalPermissions,
+      isVisible: isOptionalPermissionVisible("webRequest"),
     },
   ),
   buildControlDefinition(
@@ -103,7 +118,7 @@ export const permissionsSearchControls: OptionsSearchItemDefinition[] = [
         "settings:permissions.title",
       ],
       keywords: ["permission", "webrequest blocking", "blocking"],
-      isVisible: (context) => context.hasOptionalPermissions,
+      isVisible: isOptionalPermissionVisible("webRequestBlocking"),
     },
   ),
   buildControlDefinition(
@@ -120,7 +135,7 @@ export const permissionsSearchControls: OptionsSearchItemDefinition[] = [
         "settings:permissions.title",
       ],
       keywords: ["permission", "clipboard", "clipboard read"],
-      isVisible: (context) => context.hasOptionalPermissions,
+      isVisible: isOptionalPermissionVisible("clipboardRead"),
     },
   ),
   buildControlDefinition(
@@ -137,7 +152,7 @@ export const permissionsSearchControls: OptionsSearchItemDefinition[] = [
         "settings:permissions.title",
       ],
       keywords: ["permission", "notification", "system notification"],
-      isVisible: (context) => context.hasOptionalPermissions,
+      isVisible: isOptionalPermissionVisible("notifications"),
     },
   ),
   buildControlDefinition(
@@ -154,7 +169,7 @@ export const permissionsSearchControls: OptionsSearchItemDefinition[] = [
         "settings:permissions.title",
       ],
       keywords: ["permission", "bookmark", "bookmarks", "browser bookmarks"],
-      isVisible: (context) => context.hasOptionalPermissions,
+      isVisible: isOptionalPermissionVisible("bookmarks"),
     },
   ),
 ]

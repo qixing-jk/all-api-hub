@@ -38,7 +38,6 @@
     "openApiCredentialProfiles": "前往 API 憑據庫",
     "openManualAddGuide": "查看此站點的手動新增指引",
     "reloadCurrentPage": "重新整理當前頁面",
-    "reloadExtensionAndRetry": "重新載入擴充套件後重試",
     "reportUnsupportedSite": "申請站點適配",
     "saveAccount": "儲存帳號",
     "saveChanges": "儲存更改",
@@ -232,7 +231,6 @@
   },
   "messages": {
     "addSuccess": "帳號 {{name}} 新增成功!",
-    "autoDetectCookiePermissionReloadHint": "如果剛授予 Cookie 多帳號權限後首次識別一直沒有結果，可重新載入擴充套件後再試。",
     "autoDetectFailed": "自動識別失敗: {{error}}",
     "autoDetectIdentityMismatch": "識別到的帳號與目前帳號不一致，已保留原有資料。請檢查站點網址，並登入對應帳號後重試。",
     "autoDetectSuccess": "自動識別成功！",
@@ -269,7 +267,6 @@
     "managedSiteSettingsOpened": "已在新分頁開啟 {{managedSite}} 設定，填好連線資訊後回來點這個按鈕即可。",
     "newApiConfigFailed": "自動配置到 New API失敗: {{error}}",
     "operationFailed": "操作失敗: {{error}}",
-    "reloadExtensionConfirm": "重新載入擴充套件會關閉目前擴充套件頁面，請確認已儲存需要的資訊。",
     "saveAccountFailed": "儲存帳號失敗",
     "saveFailed": "儲存失敗",
     "updateSuccess": "帳號 {{name}} 更新成功!",
@@ -349,10 +346,6 @@
       "description": "{{message}}",
       "nextSteps": "還沒部署也沒關係：依下面的官方文件裝一個，再回到設定裡填好連線資訊即可。這些都不影響儲存帳號、重新整理餘額和簽到。",
       "title": "還沒有 {{managedSite}}？"
-    },
-    "reloadExtension": {
-      "title": "重新載入擴充套件",
-      "warningTitle": "確認重新載入擴充套件？"
     }
   }
 }

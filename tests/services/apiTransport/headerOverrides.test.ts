@@ -18,6 +18,7 @@ describe("credential request header overrides", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.unstubAllEnvs()
     vi.restoreAllMocks()
   })
 
@@ -108,6 +109,82 @@ describe("credential request header overrides", () => {
     })
     return updateSessionRules
   }
+
+  it("rejects unverified Safari private Cookie isolation before changing rules or sending credentials", async () => {
+    vi.stubEnv("BROWSER", "safari")
+    const updateSessionRules = installDnr()
+    await expect(
+      fetchWithHeaderOverrides(
+        "https://console.example/api/keys",
+        {},
+        undefined,
+        {
+          cookieSession: {
+            origin: "https://console.example",
+            cookieHeader: "session=private",
+          },
+        },
+      ),
+    ).rejects.toMatchObject({
+      code: "COOKIE_REQUEST_UNAVAILABLE",
+      message: "messages:cookieTransport.browserUnsupported",
+    })
+    expect(updateSessionRules).not.toHaveBeenCalled()
+    expect(nativeFetch).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { origin: "https://other.example", cookieHeader: "session=private" },
+    { origin: "https://console.example", cookieHeader: " " },
+    {
+      origin: "https://console.example",
+      cookieHeader: "session=private\r\nx-test: injected",
+    },
+  ])(
+    "rejects invalid private Cookie scope before installing rules or dispatching: %j",
+    async (cookieSession) => {
+      const updateSessionRules = installDnr()
+      const onDispatch = vi.fn()
+      await expect(
+        fetchWithHeaderOverrides(
+          "https://console.example/api/keys",
+          {},
+          undefined,
+          { cookieSession, onDispatch },
+        ),
+      ).rejects.toMatchObject({ code: "COOKIE_REQUEST_UNAVAILABLE" })
+      expect(updateSessionRules).not.toHaveBeenCalled()
+      expect(onDispatch).not.toHaveBeenCalled()
+      expect(nativeFetch).not.toHaveBeenCalled()
+    },
+  )
+
+  it("fails a private Cookie request without leaking native rule errors or dispatching when installation fails", async () => {
+    const updateSessionRules = installDnr()
+    updateSessionRules.mockRejectedValueOnce(
+      new Error("invalid rule session=private"),
+    )
+    const onDispatch = vi.fn()
+    await expect(
+      fetchWithHeaderOverrides(
+        "https://console.example/api/keys",
+        {},
+        undefined,
+        {
+          cookieSession: {
+            origin: "https://console.example",
+            cookieHeader: "session=private",
+          },
+          onDispatch,
+        },
+      ),
+    ).rejects.toMatchObject({
+      code: "COOKIE_REQUEST_UNAVAILABLE",
+      message: "messages:cookieTransport.requestUnavailable",
+    })
+    expect(onDispatch).not.toHaveBeenCalled()
+    expect(nativeFetch).not.toHaveBeenCalled()
+  })
 
   it("sends private Cookie credentials without using the browser session", async () => {
     const updateSessionRules = installDnr()

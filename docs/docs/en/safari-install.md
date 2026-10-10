@@ -13,6 +13,12 @@ This document describes how to install the All API Hub extension in the Safari b
 - Safari 14.0 or later
 - Xcode 13.0 or later (for building)
 
+## Feature Compatibility
+
+Safari uses WebKit's WebExtensions permission model. Its permissions are maintained separately from Chromium and Firefox. Cookie access and request rules remain optional, and settings search only lists optional permissions declared by the Safari build.
+
+Direct requests with an account's isolated Cookie have not yet passed native Safari isolation testing. These requests stop with an unsupported-feature message instead of falling back to another account's browser session. Use Chrome or Edge for this feature. A successful Safari build does not establish native compatibility for every feature.
+
 ## Installation Methods
 
 There are two installation methods:

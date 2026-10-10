@@ -126,6 +126,15 @@ export async function fetchWithHeaderOverrides(
   )
   for (const [name, value] of Object.entries(custom)) headers.set(name, value)
   const session = execution?.cookieSession
+  // Safari's DNR condition support differs from Chromium. API presence alone
+  // cannot establish account isolation; enable this only after native validation.
+  if (session && import.meta.env.BROWSER === "safari")
+    throw new ApiError(
+      t("messages:cookieTransport.browserUnsupported"),
+      undefined,
+      undefined,
+      API_ERROR_CODES.COOKIE_REQUEST_UNAVAILABLE,
+    )
   if (session) {
     const url = new URL(input instanceof Request ? input.url : String(input))
     if (

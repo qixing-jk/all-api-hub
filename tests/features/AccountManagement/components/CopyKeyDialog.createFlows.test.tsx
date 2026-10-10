@@ -264,6 +264,12 @@ describe("CopyKeyDialog native creation handoff", () => {
       screen.getByRole("button", { name: "ui:dialog.copyKey.createKey" }),
     ).toBeDisabled()
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    act(() => manualProps.mock.lastCall?.[0].onClose())
+    expect(
+      screen.queryByRole("button", { name: "Submit native editor" }),
+    ).toBeNull()
+    expect(custom).toHaveAccessibleName("ui:dialog.copyKey.createCustomKey")
+    expect(custom).not.toBeDisabled()
   })
 
   it("drops a late creation handoff when credentials change", async () => {

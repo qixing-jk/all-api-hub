@@ -89,10 +89,10 @@
     "waitUserInfoTimeout": "Waiting for user information timeout, please ensure you are logged in"
   },
   "cookieTransport": {
-    "permissionRequired": "Enable Cookie and request-header permissions in the extension permission settings, then retry.",
+    "browserUnsupported": "Isolated Cookie requests for this account are not yet supported in Safari. Retry in Chrome or Edge.",
+    "permissionRequired": "This browser cannot send a request using this account's Cookie. Check the extension permissions or update your browser, then retry.",
     "requestUnavailable": "The request could not be prepared. Retry; if it still fails, reload the extension.",
-    "scopeUnavailable": "This request cannot use the selected Cookie scope. Import the intended account's Cookie or use its regular browser session.",
-    "sessionUnavailable": "The login session is unavailable. Sign into the same account again; if using an imported Cookie, import it again."
+    "scopeUnavailable": "This request cannot use the selected Cookie scope. Import the intended account's Cookie or use its regular browser session."
   },
   "donehub": {
     "configMissing": "Please configure Done Hub address, admin token, and user ID in basic settings first",

@@ -1,15 +1,7 @@
-import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import AutoDetectSlowHintAlert from "~/features/AccountManagement/components/AccountDialog/detection/AutoDetectSlowHintAlert"
-import { fireEvent, render, screen, within } from "~~/tests/test-utils/render"
-
-vi.mock("~/utils/browser/runtime", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/runtime")>()
-
-  return { ...actual, reloadRuntime: vi.fn() }
-})
+import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 vi.mock("~/utils/navigation/docsLinks", () => ({
   getDocsAutoDetectUrl: vi.fn(),
@@ -43,65 +35,22 @@ describe("AutoDetectSlowHintAlert", () => {
     })
   })
 
-  it("offers a confirmed extension reload recovery action for slow Cookie permission detection", async () => {
-    const user = userEvent.setup()
-    const { reloadRuntime } = await import("~/utils/browser/runtime")
-
+  it("keeps troubleshooting available without suggesting a permission-triggered runtime restart", async () => {
     render(<AutoDetectSlowHintAlert />)
-
     expect(
-      await screen.findByText(
+      await screen.findByText("accountDialog:messages.autoDetectTakingTooLong"),
+    ).toBeVisible()
+    expect(
+      screen.queryByText(
         "accountDialog:messages.autoDetectCookiePermissionReloadHint",
       ),
-    ).toBeVisible()
-
-    const reloadButton = screen.getByRole("button", {
-      name: "accountDialog:actions.reloadExtensionAndRetry",
-    })
-    await user.click(reloadButton)
-
-    const reloadDialog = await screen.findByRole("dialog", {
-      name: "accountDialog:warnings.reloadExtension.title",
-    })
-
-    expect(reloadDialog).toBeVisible()
+    ).toBeNull()
+    expect(screen.getAllByRole("button")).toHaveLength(1)
     expect(
-      within(reloadDialog).getByText(
-        "accountDialog:messages.reloadExtensionConfirm",
-      ),
+      screen.getByRole("button", {
+        name: "accountDialog:actions.helpDocument",
+      }),
     ).toBeVisible()
-
-    const confirmButton = within(reloadDialog).getByRole("button", {
-      name: "accountDialog:actions.reloadExtensionAndRetry",
-    })
-    expect.soft(confirmButton).toHaveAttribute("data-variant", "warning")
-    expect
-      .soft(reloadDialog.querySelector(".lucide-trash2, .lucide-trash-2"))
-      .not.toBeInTheDocument()
-    await user.click(confirmButton)
-
-    expect(reloadRuntime).toHaveBeenCalledTimes(1)
-  })
-
-  it("does not reload the extension when the recovery action is cancelled", async () => {
-    const { reloadRuntime } = await import("~/utils/browser/runtime")
-
-    render(<AutoDetectSlowHintAlert />)
-
-    const reloadButton = await screen.findByRole("button", {
-      name: "accountDialog:actions.reloadExtensionAndRetry",
-    })
-    fireEvent.click(reloadButton)
-
-    const reloadDialog = await screen.findByRole("dialog", {
-      name: "accountDialog:warnings.reloadExtension.title",
-    })
-
-    const cancelButton = within(reloadDialog).getByRole("button", {
-      name: "common:actions.cancel",
-    })
-    fireEvent.click(cancelButton)
-
-    expect(reloadRuntime).not.toHaveBeenCalled()
+    expect(screen.queryByRole("dialog")).toBeNull()
   })
 })
