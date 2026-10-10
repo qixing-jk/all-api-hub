@@ -34,7 +34,12 @@ export function createModelSyncRedirectUpdater({
   return {
     async applySuccessfulResult(lastResult: ExecutionItemResult) {
       // Generate and apply model redirect mapping immediately after successful sync
-      if (modelRedirectConfig.enabled && standardModels.length > 0) {
+      if (
+        modelRedirectConfig.enabled &&
+        standardModels.length > 0 &&
+        getSiteTypeCapabilities(siteType).managedSites?.models
+          ?.updateModelMapping
+      ) {
         try {
           // Find the channel that was just synced
           const channel = allChannels.find(
@@ -110,7 +115,12 @@ export function createModelSyncRedirectUpdater({
       }
     },
     logSummary() {
-      if (modelRedirectConfig.enabled && standardModels.length > 0) {
+      if (
+        modelRedirectConfig.enabled &&
+        standardModels.length > 0 &&
+        getSiteTypeCapabilities(siteType).managedSites?.models
+          ?.updateModelMapping
+      ) {
         logger.info("Model redirect mappings applied", {
           succeeded: mappingSuccessCount,
           failed: mappingErrorCount,

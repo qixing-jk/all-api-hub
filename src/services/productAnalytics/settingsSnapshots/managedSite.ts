@@ -38,6 +38,11 @@ function buildManagedSiteSnapshot(
     cli_proxy_configured: isCliProxyApiConfigured(preferences.cliProxyApi),
     omniroute_configured: isOmniRouteConfigured(preferences.omniroute),
     gpt_load_configured: isGptLoadConfigured(preferences.gptLoad),
+    magpie_configured: Boolean(
+      preferences.magpie &&
+        hasText(preferences.magpie.baseUrl) &&
+        hasText(preferences.magpie.webKey),
+    ),
     claude_code_router_configured: isClaudeCodeRouterConfigured(
       preferences.claudeCodeRouter,
     ),
@@ -166,6 +171,7 @@ export const managedSiteSettingsSnapshots = {
       "claudeCodeHub",
       "omniroute",
       "gptLoad",
+      "magpie",
       "cliProxyApi",
       "claudeCodeRouter",
     ],

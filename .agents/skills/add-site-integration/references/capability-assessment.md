@@ -52,6 +52,7 @@ An adapter object, page navigation or passing mock alone does not close implemen
 ### Keys and exports
 
 - [ ] **Key inventory and scopes**: verify pagination, groups/projects/organizations, identity and empty states. Compare list/detail payloads to find omitted writable settings.
+- [ ] **Native editor workflow parity**: follow [the editor comparison](native-editor-parity.md) for affected account-key tasks and type/mode variants before choosing fields/layout and during built-UI validation. Keep account credentials and operations distinct from managed resources.
 - [ ] **Key creation**: inspect native defaults, options, conditional and role-limited fields. Map ordinary-account fields into the existing editor; verify disposable create/readback. Preserve name-only creation when supported.
 - [ ] **Key editing**: compare every ordinary-account native field with the plugin editor, including visibility, validation and wire representation. Hydrate detail where needed; verify reopen, changed values and untouched settings/secrets. PUT preservation alone is not editable support; enumerate missing fields.
 - [ ] **Key deletion and status**: check delete and enable/disable/expiry separately. Respect ownership and read back mutations; inventory alone does not prove CRUD.
@@ -96,6 +97,7 @@ An adapter object, page navigation or passing mock alone does not close implemen
 
 - [ ] **Behavior tests**: start each feature/fix with a failing focused test; implement/refactor with tests green. Cover transport/envelope and affected consumers, not only parsing.
 - [ ] **Live protocol and UI**: run applicable hosted/self-hosted probes and current-worktree site-specific CDP for offered actions, including invitation copy and native fields. Explain each applicable skipped layer/path; mocks/source inspection are not live validation. Follow existing evidence and visual-preview references.
+- [ ] **Editor usability, when affected**: reconcile [the native workflow comparison](native-editor-parity.md) before the first handoff; report worse, missing or unverified common paths separately from passing tests and field preservation.
 
 ### Cleanup and evidence
 

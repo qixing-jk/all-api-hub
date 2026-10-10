@@ -272,6 +272,7 @@ const siteTypeImportOwners = [
   "src/features/BasicSettings/components/tabs/ManagedSite/providers/CliProxyApiSettings.tsx", // Provider settings.
   "src/features/BasicSettings/components/tabs/ManagedSite/providers/OctopusSettings.tsx", // Provider settings.
   "src/features/BasicSettings/components/tabs/ManagedSite/providers/OmniRouteSettings.tsx", // Provider settings.
+  "src/features/BasicSettings/components/tabs/ManagedSite/providers/MagpieSettings.tsx", // Provider settings.
   "src/features/BasicSettings/components/tabs/ManagedSite/providers/GptLoadSettings.tsx", // Provider settings.
   "src/features/BasicSettings/components/tabs/ManagedSite/providers/NewApiSettings.tsx", // Provider settings.
   "src/features/BasicSettings/components/tabs/ManagedSite/providers/Sub2ApiSettings.tsx", // Provider settings.

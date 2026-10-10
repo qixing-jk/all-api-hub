@@ -11,6 +11,7 @@ import {
   OPENROUTER_KEY_LIMIT_MODES,
   OPENROUTER_KEY_LIMIT_RESETS,
 } from "~/services/apiAdapters/openrouter/keys/keyResourceFields"
+import { SECRET_MASK } from "~/utils/core/formatters"
 
 import type { AccountKeyResourceCardAdapter } from "./accountKeyResourceCardAdapter"
 import type {
@@ -168,7 +169,7 @@ const displayFactValue = (fact: ResourceDisplayFact, t: TFunction) => {
     case "list":
       return fact.value.join(", ")
     case "secret":
-      return "••••"
+      return SECRET_MASK
     case "number":
       return usdAmountFieldIds.has(fact.fieldId)
         ? formatUsdAmount(fact.value)

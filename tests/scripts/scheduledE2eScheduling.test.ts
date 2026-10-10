@@ -80,13 +80,15 @@ describe("scheduled E2E build reuse", () => {
     },
   )
 
-  it("keeps shared real-site credentials serialized with the same build prerequisite", () => {
+  it("provides independent inference credentials to the shared real-site matrix", () => {
     const source = workflow("e2e-real-site")
-    for (const name of ["real-site-e2e-new-api", "real-site-e2e-sub2api"]) {
-      const tests = job(source, name)
-      expect(tests).toContain("needs: [real-site-matrix, e2e-build]")
-      expect(tests).toContain("max-parallel: 1")
-      expect(tests).toContain("steps: *real-site-e2e-steps")
+    const tests = job(source, "real-site-e2e")
+    expect(tests).toContain("needs: [real-site-matrix, e2e-build]")
+    for (const name of [
+      "AAH_E2E_UPSTREAM_BASE_URL",
+      "AAH_E2E_UPSTREAM_API_KEY",
+    ]) {
+      expect(tests).toContain(name + ": ${{ secrets." + name + " }}")
     }
     expect(source).not.toContain("AAH_E2E_WORKERS")
   })

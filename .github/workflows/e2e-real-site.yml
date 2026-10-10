@@ -34,12 +34,7 @@ jobs:
     name: Prepare real-site E2E matrix
     runs-on: ubuntu-latest
     outputs:
-      parallel_matrix: ${{ steps.matrix.outputs.parallel_matrix }}
-      new_api_matrix: ${{ steps.matrix.outputs.new_api_matrix }}
-      sub2api_matrix: ${{ steps.matrix.outputs.sub2api_matrix }}
-      has_parallel: ${{ steps.matrix.outputs.has_parallel }}
-      has_new_api: ${{ steps.matrix.outputs.has_new_api }}
-      has_sub2api: ${{ steps.matrix.outputs.has_sub2api }}
+      matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -59,15 +54,14 @@ jobs:
   real-site-e2e:
     name: ${{ matrix.label }}
     needs: [real-site-matrix, e2e-build]
-    if: needs.real-site-matrix.outputs.has_parallel == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     strategy:
       fail-fast: false
-      matrix: ${{ fromJson(needs.real-site-matrix.outputs.parallel_matrix) }}
+      matrix: ${{ fromJson(needs.real-site-matrix.outputs.matrix) }}
 
-    steps: &real-site-e2e-steps
+    steps:
       - name: Checkout code
         uses: actions/checkout@v5
         with:
@@ -129,6 +123,7 @@ jobs:
           MANAGED_SITE_TARGET: ${{ matrix.managed_site_target }}
           MANAGED_SITE_ADMIN_TOKEN: ${{ secrets[format('AAH_E2E_{0}_ADMIN_TOKEN', matrix.env_prefix)] }}
           MANAGED_SITE_MANAGEMENT_KEY: ${{ secrets[format('AAH_E2E_{0}_MANAGEMENT_KEY', matrix.env_prefix)] }}
+          MANAGED_SITE_WEB_KEY: ${{ secrets[format('AAH_E2E_{0}_WEB_KEY', matrix.env_prefix)] }}
           MANAGED_SITE_ADMIN_USER_ID: ${{ secrets[format('AAH_E2E_{0}_ADMIN_USER_ID', matrix.env_prefix)] }}
           MANAGED_SITE_ADMIN_USERNAME: ${{ secrets[format('AAH_E2E_{0}_ADMIN_USERNAME', matrix.env_prefix)] }}
           MANAGED_SITE_ADMIN_PASSWORD: ${{ secrets[format('AAH_E2E_{0}_ADMIN_PASSWORD', matrix.env_prefix)] }}
@@ -183,6 +178,7 @@ jobs:
             write_env "AAH_E2E_${prefix}_AGREE_SELECTOR" "$REAL_SITE_AGREE_SELECTOR"
             write_env "AAH_E2E_${prefix}_ADMIN_TOKEN" "$MANAGED_SITE_ADMIN_TOKEN"
             write_env "AAH_E2E_${prefix}_MANAGEMENT_KEY" "$MANAGED_SITE_MANAGEMENT_KEY"
+            write_env "AAH_E2E_${prefix}_WEB_KEY" "$MANAGED_SITE_WEB_KEY"
             write_env "AAH_E2E_${prefix}_ADMIN_USER_ID" "$MANAGED_SITE_ADMIN_USER_ID"
             write_env "AAH_E2E_${prefix}_ADMIN_USERNAME" "$MANAGED_SITE_ADMIN_USERNAME"
             write_env "AAH_E2E_${prefix}_ADMIN_PASSWORD" "$MANAGED_SITE_ADMIN_PASSWORD"
@@ -211,6 +207,9 @@ jobs:
               GPT_LOAD)
                 [ -z "$MANAGED_SITE_MANAGEMENT_KEY" ] && missing+=("AAH_E2E_${prefix}_MANAGEMENT_KEY")
                 ;;
+              MAGPIE)
+                [ -z "$MANAGED_SITE_WEB_KEY" ] && missing+=("AAH_E2E_${prefix}_WEB_KEY")
+                ;;
             esac
           else
             write_env "AAH_E2E_${prefix}_BASE_URL" "$REAL_SITE_BASE_URL"
@@ -235,34 +234,19 @@ jobs:
             echo "${REAL_SITE_CATEGORY}/${prefix} real-site E2E required secrets are configured."
           fi
 
-      - name: Export managed-site import source environment
-        if: matrix.category == 'managed-site' && matrix.resource_group == 'new-api-account'
+      - name: Export shared inference credentials
+        if: matrix.category == 'managed-site'
         env:
-          AAH_E2E_NEW_API_BASE_URL: ${{ secrets.AAH_E2E_NEW_API_BASE_URL }}
-          AAH_E2E_NEW_API_USERNAME: ${{ secrets.AAH_E2E_NEW_API_USERNAME }}
-          AAH_E2E_NEW_API_PASSWORD: ${{ secrets.AAH_E2E_NEW_API_PASSWORD }}
-          AAH_E2E_NEW_API_TOTP_SECRET: ${{ secrets.AAH_E2E_NEW_API_TOTP_SECRET }}
-          AAH_E2E_NEW_API_LOGIN_PATH: ${{ secrets.AAH_E2E_NEW_API_LOGIN_PATH }}
-          AAH_E2E_NEW_API_LOGIN_API_PATH: ${{ secrets.AAH_E2E_NEW_API_LOGIN_API_PATH }}
-          AAH_E2E_NEW_API_LOGIN_2FA_API_PATH: ${{ secrets.AAH_E2E_NEW_API_LOGIN_2FA_API_PATH }}
-          AAH_E2E_NEW_API_USERNAME_SELECTOR: ${{ secrets.AAH_E2E_NEW_API_USERNAME_SELECTOR }}
-          AAH_E2E_NEW_API_PASSWORD_SELECTOR: ${{ secrets.AAH_E2E_NEW_API_PASSWORD_SELECTOR }}
-          AAH_E2E_NEW_API_SUBMIT_SELECTOR: ${{ secrets.AAH_E2E_NEW_API_SUBMIT_SELECTOR }}
-          AAH_E2E_NEW_API_AGREE_SELECTOR: ${{ secrets.AAH_E2E_NEW_API_AGREE_SELECTOR }}
+          AAH_E2E_UPSTREAM_BASE_URL: ${{ secrets.AAH_E2E_UPSTREAM_BASE_URL }}
+          AAH_E2E_UPSTREAM_API_KEY: ${{ secrets.AAH_E2E_UPSTREAM_API_KEY }}
         run: |
-          for key in "${!AAH_E2E_NEW_API_@}"; do
-            value="${!key}"
-            if [ -n "$value" ]; then
-              printf '%s=%s\n' "$key" "$value" >> "$GITHUB_ENV"
+          for key in AAH_E2E_UPSTREAM_BASE_URL AAH_E2E_UPSTREAM_API_KEY; do
+            if [ -n "${!key}" ]; then
+              printf '%s=%s\n' "$key" "${!key}" >> "$GITHUB_ENV"
+            else
+              echo "::warning::Credential import/model discovery needs $key; management CRUD remains available."
             fi
           done
-          missing=()
-          for key in AAH_E2E_NEW_API_BASE_URL AAH_E2E_NEW_API_USERNAME AAH_E2E_NEW_API_PASSWORD; do
-            [ -z "${!key}" ] && missing+=("$key")
-          done
-          if [ "${#missing[@]}" -gt 0 ]; then
-            echo "::warning::Managed-site import E2E will annotate source-account channel-status checks as skipped without these secrets: ${missing[*]}"
-          fi
 
       - name: Run real-site E2E
         env:
@@ -278,31 +262,3 @@ jobs:
           path: test-results/**/test-failed-*.png
           if-no-files-found: ignore
           retention-days: 3
-
-  real-site-e2e-new-api:
-    name: ${{ matrix.label }}
-    needs: [real-site-matrix, e2e-build]
-    if: needs.real-site-matrix.outputs.has_new_api == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix: ${{ fromJson(needs.real-site-matrix.outputs.new_api_matrix) }}
-
-    steps: *real-site-e2e-steps
-
-  real-site-e2e-sub2api:
-    name: ${{ matrix.label }}
-    needs: [real-site-matrix, e2e-build]
-    if: needs.real-site-matrix.outputs.has_sub2api == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    strategy:
-      fail-fast: false
-      max-parallel: 1
-      matrix: ${{ fromJson(needs.real-site-matrix.outputs.sub2api_matrix) }}
-
-    steps: *real-site-e2e-steps

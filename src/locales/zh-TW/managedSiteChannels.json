@@ -209,6 +209,62 @@
         "help": "手動負載平衡權重；數值越大分到的流量比例越高；留空則使用閘道預設值。",
         "label": "權重"
       },
+      "magpieAnthropic": {
+        "help": "填寫 Anthropic API 根位址（ANTHROPIC_BASE_URL），請勿加上 /v1/messages。",
+        "label": "Anthropic 位址"
+      },
+      "magpieBalancePath": {
+        "help": "回應中的金額，例如 data.balance 或 data.total / 500000。留空使用 Magpie 預設值。預設供應商僅供檢視。",
+        "label": "餘額取值運算式"
+      },
+      "magpieBalanceURL": {
+        "help": "Magpie 使用的選填餘額介面，URL 支援 {key}。保留既有餘額專用權杖。預設供應商僅供檢視。",
+        "label": "餘額查詢網址"
+      },
+      "magpieCatalog": {
+        "help": "填寫 models.dev 供應商 ID，以逗號分隔，用於模型名稱與推理層級；優先採用第一個符合項目。預設供應商僅供檢視。",
+        "label": "模型目錄"
+      },
+      "magpieChat": {
+        "help": "Chat Completions 位址需包含 /v1，請勿加上 /chat/completions。",
+        "label": "Chat Completions 位址",
+        "required": "請填寫目前所選 API 類型的位址。"
+      },
+      "magpieGemini": {
+        "help": "Gemini 位址需包含 /v1beta，請勿加上模型名稱或 generateContent 路徑。",
+        "label": "Gemini 位址"
+      },
+      "magpieHeaders": {
+        "help": "逐列新增標頭名稱和值，也可切換為 JSON 編輯。這些標頭會傳送給上游供應商。",
+        "label": "自訂請求標頭"
+      },
+      "magpieMaxConcurrency": {
+        "help": "每個金鑰或帳號同時處理的請求數，範圍 0–1000。留空使用 Magpie 預設值，0 表示不限。",
+        "label": "每個金鑰的並行上限"
+      },
+      "magpieMaxRPM": {
+        "help": "每個金鑰或帳號每分鐘的請求數，範圍 0–10000。留空或 0 表示不限。",
+        "label": "每個金鑰的每分鐘請求上限"
+      },
+      "magpieModels": {
+        "help": "可選擇已探索到的模型，或輸入模型 ID 後按 Enter 新增。填寫連線資訊後可取得模型；清空選擇將使用 MAGPIE 的自動模型目錄。"
+      },
+      "magpieModelsURL": {
+        "help": "選填完整模型清單 URL，使用目前金鑰與請求標頭查詢。留空使用協定網址。預設供應商僅供檢視。",
+        "label": "模型清單網址"
+      },
+      "magpiePriceRate": {
+        "help": "相對於標價的倍率，例如 0.8。範圍 0–1000，最多 3 位小數。留空或 0 使用標價。",
+        "label": "價格倍率"
+      },
+      "magpieProxy": {
+        "help": "留空使用全域代理，填寫 direct 可直接連線。",
+        "label": "代理"
+      },
+      "magpieResponses": {
+        "help": "Responses 位址通常包含 /v1，請勿加上 /responses。",
+        "label": "Responses 位址"
+      },
       "manualModels": {
         "label": "手動模型"
       },
@@ -464,6 +520,32 @@
     "headerDescription": "管理自建 AI 閘道的渠道，將多個 API 來源接入統一入口。",
     "openChannelConsole": "開啟閘道渠道管理",
     "unconfiguredValueDescription": "設定後，可以把分散的帳號 Key 和 API Key 匯入為閘道渠道，並直接在 All API Hub 中統一查看和管理。"
+  },
+  "magpieKeys": {
+    "anyProtocol": "不限協定",
+    "enabled": "啟用",
+    "help": "新增金鑰或貼上以換行、逗號、空格分隔的多個金鑰。已儲存金鑰中僅主金鑰可查看明文；更換額外金鑰時先新增項目再刪除舊項目。點選儲存後生效。",
+    "invalid": "請檢查新金鑰、協定與權重（0–1000），並至少保留一個啟用的金鑰。",
+    "name": "金鑰名稱",
+    "order": "依序（容錯移轉）",
+    "pace": "依每小時剩餘額度",
+    "primary": "目前主金鑰",
+    "primaryKey": "主要 API 金鑰",
+    "protocol": "協定",
+    "rotate": "輪詢",
+    "routing": "金鑰分配策略",
+    "smart": "智慧（自動容錯移轉）",
+    "title": "金鑰池",
+    "usage": "優先使用量最少",
+    "weighted": "依權重",
+    "weightHelp": "0 或 1 使用預設權重；2–1000 調整加權分配時的請求份額。"
+  },
+  "magpieProtocols": {
+    "checkOther": "其他已設定類型的位址有誤，請切換至對應類型檢查。",
+    "configured": "已設定",
+    "help": "選擇類型後編輯對應位址。需要多種協定時，依次切換並填寫；各類型的位址會分別保留。",
+    "type": "API 類型",
+    "unmanaged": "在 Magpie 中管理"
   },
   "migration": {
     "actions": {

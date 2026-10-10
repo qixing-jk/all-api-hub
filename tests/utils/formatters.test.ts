@@ -19,6 +19,7 @@ import {
   getOppositeCurrency,
   getTodayMetricPresentation,
   maskSecretForDisplay,
+  normalizeSecretMaskForDisplay,
   normalizeToDate,
   normalizeToMs,
 } from "~/utils/core/formatters"
@@ -45,21 +46,34 @@ describe("formatters utilities", () => {
   })
 
   describe("maskSecretForDisplay", () => {
+    it("uses the same mask for a full key and native masked representations", () => {
+      const expected = "sk-a••••••wxyz"
+      expect(maskSecretForDisplay("sk-abcdefghijklmnopqrstuvwxyz")).toBe(
+        expected,
+      )
+      expect(normalizeSecretMaskForDisplay("sk-a…wxyz")).toBe(expected)
+      expect(normalizeSecretMaskForDisplay("sk-a...wxyz")).toBe(expected)
+      expect(normalizeSecretMaskForDisplay(expected)).toBe(expected)
+    })
+
+    it("does not expose unknown or fully masked native values", () => {
+      for (const value of ["••••••", "********", "unexpected-raw-secret", ""]) {
+        expect(normalizeSecretMaskForDisplay(value)).toBe("••••••")
+      }
+    })
     it("fully masks short secrets", () => {
-      expect(maskSecretForDisplay("short-key")).toBe("******")
+      expect(maskSecretForDisplay("short-key")).toBe("••••••")
     })
 
     it("fully masks a 12-character secret", () => {
-      expect(maskSecretForDisplay("123456789012")).toBe("******")
+      expect(maskSecretForDisplay("123456789012")).toBe("••••••")
     })
 
     it("preserves the start and end of long secrets", () => {
       const secret = "sk-1234567890abcdefghijklmnop"
 
       expect(maskSecretForDisplay(secret)).toBe(
-        `${secret.substring(0, 8)}${"*".repeat(16)}${secret.substring(
-          secret.length - 4,
-        )}`,
+        `${secret.substring(0, 4)}••••••${secret.substring(secret.length - 4)}`,
       )
     })
   })

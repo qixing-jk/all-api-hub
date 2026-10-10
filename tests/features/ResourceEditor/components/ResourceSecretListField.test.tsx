@@ -11,6 +11,10 @@ import type {
 } from "~/services/apiAdapters/contracts/resourceNative"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
+// Floating tooltip layout is exercised by Tooltip tests and browser scenarios.
+// Keep the real anchors and accessibility wiring without jsdom positioning work.
+vi.mock("react-tooltip", () => ({ Tooltip: () => null }))
+
 const t = ((key: string, options?: { number?: number }) =>
   ({
     "ui:secretList.row": `API Key ${options?.number}`,
@@ -49,6 +53,8 @@ function Harness({
   compact = false,
   hasErrors = false,
   described = false,
+  nativePool = false,
+  list = false,
 }: {
   onChange?: (value: ResourceSecretListValue) => void
   load?: (
@@ -59,6 +65,8 @@ function Harness({
   compact?: boolean
   hasErrors?: boolean
   described?: boolean
+  nativePool?: boolean
+  list?: boolean
 }) {
   const [value, setValue] = useState(initial)
   return (
@@ -71,8 +79,15 @@ function Harness({
         fieldId: "credentials",
         type: "secret-list",
         minEntries: 1,
+        allowBulkPaste: nativePool,
         savedEntries: [
-          { id: "first", secretState: "available", loadFieldId: "load-first" },
+          {
+            id: "first",
+            secretState: "available",
+            ...(nativePool
+              ? { canReplace: false, maskedValue: "sk-***one" }
+              : { loadFieldId: "load-first" }),
+          },
           {
             id: "second",
             secretState: "available",
@@ -90,6 +105,7 @@ function Harness({
         order: 1,
         renderer: "secret-list",
         compactSecretRows: compact,
+        secretListLayout: list ? "list" : undefined,
         ...(described
           ? {
               resolveEntrySummary: () => "Current key state",
@@ -126,6 +142,100 @@ const row = (number: number) =>
   within(screen.getByRole("group", { name: `API Key ${number}` }))
 
 describe("ResourceSecretListField", () => {
+  it("describes and toggles status directly from a collapsed list row", async () => {
+    const user = userEvent.setup()
+    const change = vi.fn()
+    render(<Harness list compact described onChange={change} />)
+    const enabled = row(1).getByRole("switch", { name: "Enabled" })
+    expect(enabled).toHaveAccessibleDescription(
+      "Enabled: Saved after submission",
+    )
+    await user.click(enabled)
+    expect(enabled).not.toBeChecked()
+    expect(change.mock.lastCall![0].entries[0].fields).toMatchObject({
+      enabled: "false",
+      proxy: "http://first.example",
+    })
+    expect(row(1).getByLabelText("Proxy")).not.toBeVisible()
+  })
+  it("browses a key list with inline status and edits only one row while retaining drafts", async () => {
+    const user = userEvent.setup()
+    const load = vi.fn()
+    render(<Harness list compact load={load} />)
+    expect(row(1).getByRole("switch", { name: "Enabled" })).toBeVisible()
+    expect(row(1).queryByLabelText("Proxy")).not.toBeVisible()
+    await user.click(
+      row(1).getByRole("button", { name: "ui:secretList.expand" }),
+    )
+    await user.clear(row(1).getByLabelText("Proxy"))
+    await user.type(row(1).getByLabelText("Proxy"), "http://draft.example")
+    await user.click(
+      row(2).getByRole("button", { name: "ui:secretList.expand" }),
+    )
+    expect(row(1).getByLabelText("Proxy")).not.toBeVisible()
+    expect(row(2).getByLabelText("Proxy")).toBeVisible()
+    await user.click(
+      row(1).getByRole("button", { name: "ui:secretList.expand" }),
+    )
+    expect(row(1).getByLabelText("Proxy")).toHaveValue("http://draft.example")
+    expect(load).not.toHaveBeenCalled()
+  })
+
+  it("shows a saved mask without an unusable reveal button", () => {
+    render(<Harness nativePool />)
+    expect(row(1).getByLabelText("API Key 1")).toHaveValue("sk-••••••one")
+    expect(
+      row(1).queryByRole("button", { name: "Show key" }),
+    ).not.toBeInTheDocument()
+    expect(row(1).getByText("ui:secretList.maskedOnly")).toBeVisible()
+  })
+
+  it("cancels a pending reveal when editing another list row", async () => {
+    const user = userEvent.setup()
+    let finish: ((value: string) => void) | undefined
+    const load = vi.fn(
+      (_field: string, _options?: ResourceOperationOptions) =>
+        new Promise<string>((resolve) => {
+          finish = resolve
+        }),
+    )
+    render(<Harness list compact load={load} />)
+    await user.click(
+      row(1).getByRole("button", { name: "ui:secretList.expand" }),
+    )
+    await user.click(row(1).getByRole("button", { name: "Show key" }))
+    await user.click(
+      row(2).getByRole("button", { name: "ui:secretList.expand" }),
+    )
+    expect(load.mock.calls[0]?.[1]?.signal?.aborted).toBe(true)
+    await act(async () => {
+      finish?.("sk-late-secret")
+    })
+    await user.click(
+      row(1).getByRole("button", { name: "ui:secretList.expand" }),
+    )
+    expect(row(1).getByLabelText("API Key 1")).toHaveValue("")
+  })
+  it("retains read-only masks and expands a bulk paste into distinct new rows", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<Harness nativePool onChange={onChange} />)
+    expect(row(1).getByLabelText("API Key 1")).toHaveAttribute("readonly")
+    expect(row(1).getByLabelText("API Key 1")).toHaveValue("sk-••••••one")
+    await user.type(row(1).getByLabelText("API Key 1"), "cannot-replace")
+    expect(onChange).not.toHaveBeenCalled()
+    await user.click(screen.getByRole("button", { name: "Add key" }))
+    await user.click(row(3).getByLabelText("API Key 3"))
+    await user.paste("sk-new-one\nsk-new-two;sk-new-one")
+    expect(
+      onChange.mock.calls.at(-1)?.[0].entries.map((entry: any) => entry.secret),
+    ).toEqual([
+      { kind: "unchanged" },
+      { kind: "unchanged" },
+      { kind: "replace", value: "sk-new-one" },
+      { kind: "replace", value: "sk-new-two" },
+    ])
+  })
   it.each([false, true])(
     "connects help to editable controls and separates history (compact=%s)",
     async (compact) => {

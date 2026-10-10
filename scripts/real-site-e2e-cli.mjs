@@ -4,6 +4,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 import {
+  buildRealSiteE2eRuns,
   filterRealSiteE2eMatrix,
   normalizeRealSiteE2eCategory,
 } from "./real-site-e2e-matrix.mjs"
@@ -31,17 +32,17 @@ const normalizedCategory = normalizeRealSiteE2eCategory(category)
 const entries = filterRealSiteE2eMatrix(normalizedCategory)
 let shouldReuseBuild = false
 
-for (const entry of entries) {
+for (const entry of buildRealSiteE2eRuns(entries)) {
   console.log(`\n=== Real-site E2E: ${entry.label} ===`)
   runPnpm(
     [
       "exec",
       "playwright",
       "test",
-      entry.spec,
+      ...entry.specs,
       "--project=chromium",
       "--reporter=list",
-      ...buildEntryPlaywrightArgs(entry, extraPlaywrightArgs),
+      ...extraPlaywrightArgs,
     ],
     buildEntryEnv(entry, { skipBuild: shouldReuseBuild }),
   )
@@ -65,21 +66,6 @@ function parseArgs(args) {
   }
 }
 
-function buildEntryPlaywrightArgs(entry, extraPlaywrightArgs) {
-  if (
-    entry.kind !== "managed-site" ||
-    hasPlaywrightArg(extraPlaywrightArgs, "--workers")
-  ) {
-    return extraPlaywrightArgs
-  }
-
-  return ["--workers=1", ...extraPlaywrightArgs]
-}
-
-function hasPlaywrightArg(args, name) {
-  return args.some((arg) => arg === name || arg.startsWith(`${name}=`))
-}
-
 /**
  * Build the environment for one matrix entry's Playwright run.
  * @param entry Real-site E2E matrix entry.
@@ -96,8 +82,10 @@ function buildEntryEnv(entry, options = {}) {
     env.AAH_SKIP_E2E_BUILD = "1"
   }
 
-  if (entry.kind === "managed-site" && entry.managed_site_target) {
-    env.AAH_E2E_MANAGED_SITE_TARGET = entry.managed_site_target
+  if (entry.kind === "managed-site") {
+    if (entry.managed_site_target)
+      env.AAH_E2E_MANAGED_SITE_TARGET = entry.managed_site_target
+    else delete env.AAH_E2E_MANAGED_SITE_TARGET
   }
 
   if (entry.kind === "webdav") {

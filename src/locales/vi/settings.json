@@ -356,6 +356,30 @@
     "minLevelDesc": "Nhật ký dưới mức đã chọn không được xuất hoặc lưu.",
     "title": "Nhật ký"
   },
+  "magpie": {
+    "description": "Quản lý nhà cung cấp trên máy chủ Magpie Web tự lưu trữ.",
+    "fields": {
+      "baseUrlDesc": "Khởi động magpie web (cổng mặc định 3430). Nhập URL Web, không phải URL suy luận ở cổng 3425.",
+      "baseUrlLabel": "URL quản trị Web",
+      "baseUrlPlaceholder": "http://localhost:3430",
+      "hideWebKey": "Ẩn khóa quản trị",
+      "showWebKey": "Hiện khóa quản trị",
+      "webKeyDesc": "Dùng MAGPIE_WEB_KEY hoặc giá trị k trong liên kết khởi động. MAGPIE_WEB_KEY cố định vẫn dùng được sau khi khởi động lại; nếu không, hãy cập nhật khóa tại đây. API key suy luận không dùng để quản trị.",
+      "webKeyLabel": "Khóa quản trị Web",
+      "webKeyPlaceholder": "Nhập khóa quản trị Web"
+    },
+    "title": "Magpie",
+    "validation": {
+      "description": "Dùng khóa ở trên để kiểm tra kết nối và quyền truy cập danh sách nhà cung cấp.",
+      "failed": "Không thể kết nối Magpie. Kiểm tra địa chỉ Web và máy chủ đã chạy chưa.",
+      "invalidCredential": "Khóa Web bị từ chối. Kiểm tra MAGPIE_WEB_KEY hoặc dùng khóa khởi động hiện tại.",
+      "missingFields": "Trước tiên hãy nhập địa chỉ cổng và khóa quản trị",
+      "success": "Đã xác minh kết nối",
+      "title": "Kiểm tra kết nối",
+      "validate": "Kiểm tra kết nối",
+      "validating": "Đang kiểm tra…"
+    }
+  },
   "managedSite": {
     "axonHub": "AxonHub",
     "claudeCodeHub": "Claude Code Hub",
@@ -380,6 +404,7 @@
       }
     },
     "gptLoad": "gpt-load",
+    "magpie": "Magpie",
     "newApi": "New API",
     "octopus": "Octopus",
     "omniroute": "OmniRoute",

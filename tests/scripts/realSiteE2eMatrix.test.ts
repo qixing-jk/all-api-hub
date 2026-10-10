@@ -5,6 +5,27 @@ import { describe, expect, it } from "vitest"
 
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
+function localRuns(category: string) {
+  return JSON.parse(
+    execFileSync(
+      process.execPath,
+      [
+        "--input-type=module",
+        "-e",
+        `
+    import { buildRealSiteE2eRuns, filterRealSiteE2eMatrix } from './scripts/real-site-e2e-matrix.mjs';
+    console.log(JSON.stringify(buildRealSiteE2eRuns(filterRealSiteE2eMatrix(${JSON.stringify(category)}))));
+  `,
+      ],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+    ),
+  ) as Array<{
+    specs: string[]
+    managed_site_target?: string
+    env_prefix: string
+  }>
+}
+
 function runMatrix(...args: string[]) {
   const scriptPath = path.resolve(
     process.cwd(),
@@ -63,6 +84,27 @@ function selectedIds(matrix: ReturnType<typeof runMatrix>) {
 }
 
 describe("GitHub real-site E2E matrix selection", () => {
+  it("runs all managed targets in one local Playwright worker pool and builds only once", () => {
+    const runs = localRuns("managed-site")
+    expect(runs).toHaveLength(1)
+    expect(runs[0]?.specs).toEqual([
+      "e2e/realSite/managedSiteChannels.spec.ts",
+      "e2e/realSite/cliProxyApiProviders.spec.ts",
+      "e2e/realSite/gptLoadGroups.spec.ts",
+      "e2e/realSite/magpieProviders.spec.ts",
+    ])
+    expect(runs[0]).not.toHaveProperty("managed_site_target")
+  })
+
+  it("keeps WebDAV runs separate because each selects a different provider environment", () => {
+    const runs = localRuns("webdav")
+    expect(runs.map((run) => run.env_prefix)).toEqual([
+      "NUTSTORE_WEBDAV",
+      "CTFILE_WEBDAV",
+      "OPENCLOUD_WEBDAV",
+    ])
+    expect(runs.every((run) => run.specs.length === 1)).toBe(true)
+  })
   it("registers gpt-load as an independent managed-site regression target", () => {
     expect(runMatrix("managed-site", "gpt-load-managed-site").include).toEqual([
       expect.objectContaining({
@@ -73,10 +115,25 @@ describe("GitHub real-site E2E matrix selection", () => {
       }),
     ])
     const output = runMatrixWithOutput("managed-site", "gpt-load-managed-site")
-    expect(atIndex(output, "has_parallel")).toBe("true")
-    expect(atIndex(output, "has_new_api")).toBe("false")
-    expect(atIndex(output, "has_sub2api")).toBe("false")
+    expect(JSON.parse(atIndex(output, "matrix"))).toEqual(
+      runMatrix("managed-site", "gpt-load-managed-site"),
+    )
   })
+  it("registers Magpie without requiring a separate account-test deployment", () => {
+    expect(runMatrix("managed-site", "magpie-managed-site").include).toEqual([
+      expect.objectContaining({
+        id: "magpie-managed-site",
+        env_prefix: "MAGPIE",
+        managed_site_target: "magpie",
+        spec: "e2e/realSite/magpieProviders.spec.ts",
+      }),
+    ])
+    const output = runMatrixWithOutput("managed-site", "magpie-managed-site")
+    expect(JSON.parse(atIndex(output, "matrix"))).toEqual(
+      runMatrix("managed-site", "magpie-managed-site"),
+    )
+  })
+
   it("registers CLIProxyAPI as an independent managed-site target", () => {
     expect(runMatrix("managed-site", "cli-proxy-api").include).toEqual([
       expect.objectContaining({
@@ -135,7 +192,6 @@ describe("GitHub real-site E2E matrix selection", () => {
         category: "managed-site",
         env_prefix: "SUB2API",
         managed_site_target: "sub2api",
-        resource_group: "sub2api-account",
       }),
     ])
   })
@@ -154,132 +210,27 @@ describe("GitHub real-site E2E matrix selection", () => {
     ])
   })
 
-  it("serializes targets sharing source-account credentials", () => {
+  it("allows every target to run independently without source-account locks", () => {
     const matrix = runMatrix()
-    const idsForResourceGroup = (resourceGroup: string) =>
-      matrix.include
-        .filter((entry) => entry.resource_group === resourceGroup)
-        .map((entry) => entry.id)
-
-    expect(idsForResourceGroup("new-api-account")).toEqual([
-      "new-api-account",
-      "new-api-managed-site",
-      "veloera-managed-site",
-      "done-hub-managed-site",
-      "octopus-managed-site",
-      "axonhub-managed-site",
-      "claude-code-hub-managed-site",
-      "omniroute-managed-site",
-    ])
-    expect(idsForResourceGroup("sub2api-account")).toEqual([
-      "sub2api-account",
-      "sub2api-managed-site",
-    ])
+    for (const entry of matrix.include) {
+      expect(entry).not.toHaveProperty("resource_group")
+    }
   })
 
-  it("serializes the OmniRoute import target with its New API source account", () => {
-    const output = runMatrixWithOutput("managed-site", "omniroute-managed-site")
-
-    expect(atIndex(output, "has_parallel")).toBe("false")
-    expect(atIndex(output, "has_new_api")).toBe("true")
-    expect(output.has_sub2api).toBe("false")
-    expect(selectedIds(JSON.parse(atIndex(output, "new_api_matrix")))).toEqual([
-      "omniroute-managed-site",
-    ])
-  })
-
-  it("emits disjoint parallel and provider-serialized matrices", () => {
+  it("emits one complete workflow matrix with no serialized partitions", () => {
     const output = runMatrixWithOutput()
-    const fullMatrix = JSON.parse(atIndex(output, "matrix")) as ReturnType<
-      typeof runMatrix
-    >
-    const parallelMatrix = JSON.parse(
-      atIndex(output, "parallel_matrix"),
-    ) as ReturnType<typeof runMatrix>
-    const newApiMatrix = JSON.parse(
-      atIndex(output, "new_api_matrix"),
-    ) as ReturnType<typeof runMatrix>
-    const sub2ApiMatrix = JSON.parse(
-      atIndex(output, "sub2api_matrix"),
-    ) as ReturnType<typeof runMatrix>
-
-    expect(atIndex(output, "has_parallel")).toBe("true")
-    expect(atIndex(output, "has_new_api")).toBe("true")
-    expect(output.has_sub2api).toBe("true")
-    expect([
-      ...selectedIds(parallelMatrix),
-      ...selectedIds(newApiMatrix),
-      ...selectedIds(sub2ApiMatrix),
-    ]).toEqual(expect.arrayContaining(selectedIds(fullMatrix)))
-    expect(
-      new Set([
-        ...selectedIds(parallelMatrix),
-        ...selectedIds(newApiMatrix),
-        ...selectedIds(sub2ApiMatrix),
-      ]).size,
-    ).toBe(fullMatrix.include.length)
+    expect(Object.keys(output)).toEqual(["matrix"])
+    expect(JSON.parse(atIndex(output, "matrix"))).toEqual(runMatrix())
   })
 
-  it("keeps a narrow New API target in its provider matrix only", () => {
-    const output = runMatrixWithOutput("all", "new-api-account")
-
-    expect(atIndex(output, "has_parallel")).toBe("false")
-    expect(atIndex(output, "has_new_api")).toBe("true")
-    expect(output.has_sub2api).toBe("false")
-    expect(JSON.parse(atIndex(output, "parallel_matrix"))).toEqual({
-      include: [],
-    })
-    expect(selectedIds(JSON.parse(atIndex(output, "new_api_matrix")))).toEqual([
-      "new-api-account",
-    ])
-    expect(JSON.parse(atIndex(output, "sub2api_matrix"))).toEqual({
-      include: [],
-    })
-  })
-
-  it("keeps a narrow Sub2API target in its provider matrix only", () => {
-    const output = runMatrixWithOutput("all", "sub2api-managed-site")
-
-    expect(atIndex(output, "has_parallel")).toBe("false")
-    expect(atIndex(output, "has_new_api")).toBe("false")
-    expect(output.has_sub2api).toBe("true")
-    expect(JSON.parse(atIndex(output, "parallel_matrix"))).toEqual({
-      include: [],
-    })
-    expect(JSON.parse(atIndex(output, "new_api_matrix"))).toEqual({
-      include: [],
-    })
-    expect(selectedIds(JSON.parse(atIndex(output, "sub2api_matrix")))).toEqual([
-      "sub2api-managed-site",
-    ])
-  })
-
-  it("serializes the Octopus import target with its New API source account", () => {
-    const output = runMatrixWithOutput("managed-site", "octopus-managed-site")
-
-    expect(atIndex(output, "has_parallel")).toBe("false")
-    expect(atIndex(output, "has_new_api")).toBe("true")
-    expect(output.has_sub2api).toBe("false")
-    expect(selectedIds(JSON.parse(atIndex(output, "new_api_matrix")))).toEqual([
-      "octopus-managed-site",
-    ])
-  })
-
-  it("keeps a narrow independent target in the parallel matrix only", () => {
-    const output = runMatrixWithOutput("all", "veloera-account")
-
-    expect(atIndex(output, "has_parallel")).toBe("true")
-    expect(atIndex(output, "has_new_api")).toBe("false")
-    expect(output.has_sub2api).toBe("false")
-    expect(selectedIds(JSON.parse(atIndex(output, "parallel_matrix")))).toEqual(
-      ["veloera-account"],
-    )
-    expect(JSON.parse(atIndex(output, "new_api_matrix"))).toEqual({
-      include: [],
-    })
-    expect(JSON.parse(atIndex(output, "sub2api_matrix"))).toEqual({
-      include: [],
-    })
+  it.each([
+    "new-api-account",
+    "sub2api-managed-site",
+    "octopus-managed-site",
+    "omniroute-managed-site",
+  ])("keeps selected target %s in the common workflow matrix", (id) => {
+    const output = runMatrixWithOutput("all", id)
+    expect(selectedIds(JSON.parse(atIndex(output, "matrix")))).toEqual([id])
   })
 
   it("keeps the default all-category matrix unchanged", () => {

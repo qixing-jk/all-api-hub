@@ -170,6 +170,7 @@ export function ChannelTypeField({
 /** Shared secret control that accepts only the binder-provided safe input value. */
 export function ChannelSecretField({
   t,
+  label,
   value,
   onChange,
   disabled,
@@ -193,6 +194,7 @@ export function ChannelSecretField({
   actions,
 }: {
   t: TFunction
+  label?: string
   value: string
   onChange: (value: string) => void
   disabled: boolean
@@ -228,7 +230,7 @@ export function ChannelSecretField({
   return (
     <div>
       <ResourceFieldLabel htmlFor="channel-key" required={required}>
-        {t("channelDialog:fields.key.label")}
+        {label ?? t("channelDialog:fields.key.label")}
       </ResourceFieldLabel>
       <Input
         id="channel-key"

@@ -22,6 +22,7 @@ import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory
 import { DEFAULT_DONE_HUB_CONFIG } from "~/types/doneHubConfig"
 import { DEFAULT_GPT_LOAD_CONFIG } from "~/types/gptLoadConfig"
 import { getDefaultLoggingPreferences } from "~/types/logging"
+import { DEFAULT_MAGPIE_CONFIG } from "~/types/magpieConfig"
 import { DEFAULT_MODEL_REDIRECT_PREFERENCES } from "~/types/managedSiteModelRedirect"
 import { DEFAULT_NEW_API_CONFIG } from "~/types/newApiConfig"
 import { DEFAULT_OCTOPUS_CONFIG } from "~/types/octopusConfig"
@@ -70,6 +71,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   claudeCodeHub: DEFAULT_CLAUDE_CODE_HUB_CONFIG,
   sub2apiManagedSite: DEFAULT_SUB2API_MANAGED_SITE_CONFIG,
   omniroute: DEFAULT_OMNIROUTE_CONFIG,
+  magpie: DEFAULT_MAGPIE_CONFIG,
   gptLoad: DEFAULT_GPT_LOAD_CONFIG,
   managedSiteType: SITE_TYPES.NEW_API,
   cliProxyApi: DEFAULT_CLI_PROXY_API_CONFIG,

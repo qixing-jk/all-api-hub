@@ -209,6 +209,62 @@
         "help": "A manual load-balancing weight. Higher values draw proportionally more traffic; leave empty to use the gateway default.",
         "label": "Weight"
       },
+      "magpieAnthropic": {
+        "help": "Usa la raíz de la API de Anthropic (ANTHROPIC_BASE_URL); no agregues /v1/messages.",
+        "label": "URL de Anthropic"
+      },
+      "magpieBalancePath": {
+        "help": "Importe de la respuesta, p. ej. data.balance o data.total / 500000. Vacía: valor predeterminado de Magpie. Solo lectura en proveedores predefinidos.",
+        "label": "Expresión del saldo"
+      },
+      "magpieBalanceURL": {
+        "help": "API de saldo opcional para Magpie. Admite {key} en la URL. Conserva los tokens de saldo guardados. Solo lectura en proveedores predefinidos.",
+        "label": "URL de saldo"
+      },
+      "magpieCatalog": {
+        "help": "IDs de proveedores de models.dev separados por comas para nombres y niveles de razonamiento; gana la primera coincidencia. Solo lectura en proveedores predefinidos.",
+        "label": "Catálogo de modelos"
+      },
+      "magpieChat": {
+        "help": "Incluye /v1 en la URL base de Chat Completions; no agregues /chat/completions.",
+        "label": "URL de Chat Completions",
+        "required": "Ingresa la dirección del tipo de API seleccionado."
+      },
+      "magpieGemini": {
+        "help": "Incluye /v1beta en la URL base de Gemini; no agregues un modelo ni la ruta generateContent.",
+        "label": "URL de Gemini"
+      },
+      "magpieHeaders": {
+        "help": "Agrega nombres y valores de encabezados por filas, o cambia a JSON. Estos encabezados se envían al proveedor de origen.",
+        "label": "Encabezados personalizados"
+      },
+      "magpieMaxConcurrency": {
+        "help": "De 0 a 1000 por clave o cuenta. Vacío: valor predeterminado de Magpie; 0: sin límite.",
+        "label": "Solicitudes simultáneas por clave"
+      },
+      "magpieMaxRPM": {
+        "help": "De 0 a 10000 por clave o cuenta y minuto. Vacío o 0: sin límite.",
+        "label": "Solicitudes por minuto por clave"
+      },
+      "magpieModels": {
+        "help": "Selecciona modelos detectados o escribe un ID de modelo y presiona Enter. Obtén modelos después de completar los datos de conexión. Deja la selección vacía para usar el catálogo automático de MAGPIE."
+      },
+      "magpieModelsURL": {
+        "help": "URL completa opcional, consultada con la clave y los encabezados actuales. Vacía: usar los protocolos. Solo lectura para proveedores predefinidos.",
+        "label": "URL de modelos"
+      },
+      "magpiePriceRate": {
+        "help": "Factor sobre el precio de lista, p. ej. 0.8. De 0 a 1000, hasta 3 decimales. Vacío o 0: precio de lista.",
+        "label": "Multiplicador de precio"
+      },
+      "magpieProxy": {
+        "help": "Deja vacío para usar el proxy global; usa direct para una conexión directa.",
+        "label": "Proxy"
+      },
+      "magpieResponses": {
+        "help": "La URL base de Responses suele terminar en /v1; no agregues /responses.",
+        "label": "URL de Responses"
+      },
       "manualModels": {
         "label": "Modelos manuales"
       },
@@ -464,6 +520,32 @@
     "headerDescription": "Administra canales de tu puerta de enlace de IA para reunir distintas fuentes API en un punto de acceso.",
     "openChannelConsole": "Abrir la administración de canales del gateway",
     "unconfiguredValueDescription": "Después de configurarlo, podrás importar claves de cuenta y API keys dispersas como canales del gateway, y verlas y administrarlas directamente en All API Hub."
+  },
+  "magpieKeys": {
+    "anyProtocol": "Cualquier protocolo",
+    "enabled": "Habilitada",
+    "help": "Agrega una clave o pega varias separadas por líneas, comas o espacios. Solo se puede revelar la clave principal guardada. Para reemplazar una clave adicional, agrega la nueva y elimina la anterior. Los cambios se aplican al guardar.",
+    "invalid": "Revisa las claves nuevas, los protocolos y los pesos (0–1000). Conserva al menos una clave habilitada.",
+    "name": "Nombre de la clave",
+    "order": "En orden (conmutación por error)",
+    "pace": "Cuota restante por hora",
+    "primary": "Principal",
+    "primaryKey": "Clave API principal",
+    "protocol": "Protocolo",
+    "rotate": "Por turnos",
+    "routing": "Distribución de claves",
+    "smart": "Inteligente (conmutación automática)",
+    "title": "Grupo de claves",
+    "usage": "Menor uso primero",
+    "weighted": "Ponderada",
+    "weightHelp": "0 o 1 usa el peso predeterminado; 2–1000 ajusta la proporción en la distribución ponderada."
+  },
+  "magpieProtocols": {
+    "checkOther": "La dirección de otro tipo configurado no es válida. Cambia a ese tipo para revisarla.",
+    "configured": "Configurado",
+    "help": "Elige un tipo para editar su dirección. Para usar varios protocolos, configura cada uno por separado; se conserva la dirección de cada tipo.",
+    "type": "Tipo de API",
+    "unmanaged": "Se administra en Magpie"
   },
   "migration": {
     "actions": {

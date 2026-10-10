@@ -647,6 +647,7 @@
     "hide": "キーを隠す",
     "keepPlaceholder": "空欄で保存済みキーを保持",
     "loadFailed": "キーを読み込めませんでした。再試行してください。",
+    "maskedOnly": "この保存済みキーはマスク表示のみで、元の値は取得できません。",
     "newPlaceholder": "API キーを入力",
     "newState": "新規・未保存",
     "previousDisableReason": "前回無効になった理由：{{reason}}",

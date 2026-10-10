@@ -2,11 +2,8 @@ import type { Locator, Page } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import {
-  SITE_TYPES,
-  type AccountSiteType,
-  type ManagedSiteType,
-} from "~/constants/siteType"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { CHANNEL_DIALOG_TEST_IDS } from "~/features/ManagedSiteChannels/editor/ChannelDialog/testIds"
 import {
@@ -37,6 +34,7 @@ import {
   runScenarioWithCleanup,
   throwScenarioError,
 } from "~~/e2e/utils/scenarioErrors"
+import type { RealSiteUpstream } from "~~/scripts/utils/real-site-upstream.mjs"
 
 type ManagedSiteChannelScenarioContext<TSiteType extends ManagedSiteType> = {
   page: Page
@@ -58,25 +56,6 @@ type ManagedSiteChannelScenarioContext<TSiteType extends ManagedSiteType> = {
 const CRUD_MODEL = "gpt-4o-mini"
 const CRUD_UPDATED_MODEL = "gpt-4.1-mini"
 const STATUS_MODEL = "aah-e2e-custom-model"
-
-export function getManagedSiteStatusSourceAccountType(
-  siteType: ManagedSiteType,
-): AccountSiteType | null {
-  if (siteType === SITE_TYPES.NEW_API || siteType === SITE_TYPES.SUB2API) {
-    return siteType
-  }
-  if (
-    siteType === SITE_TYPES.OCTOPUS ||
-    siteType === SITE_TYPES.VELOERA ||
-    siteType === SITE_TYPES.DONE_HUB ||
-    siteType === SITE_TYPES.AXON_HUB ||
-    siteType === SITE_TYPES.CLAUDE_CODE_HUB ||
-    siteType === SITE_TYPES.OMNIROUTE
-  )
-    return SITE_TYPES.NEW_API
-
-  return null
-}
 
 /**
  * Editors whose channels carry no per-channel model list, so the scenario must
@@ -279,6 +258,141 @@ export async function runManagedSiteChannelsCrudScenario<
     ],
     cleanupMessage: "Managed-site channel CRUD cleanup failed",
     failureMessage: "Managed-site channel CRUD scenario failed",
+  })
+}
+
+/** Import an independently owned credential profile without creating an account or token. */
+export async function runManagedSiteCredentialImportScenario(
+  context: ManagedSiteChannelScenarioContext<ManagedSiteType> & {
+    upstream: RealSiteUpstream
+  },
+) {
+  const { page, extensionId, upstream, runPrefix, siteType } = context
+  const profileName = `${runPrefix} source`
+  const channelName = `${runPrefix} channel`
+  const profilesUrl = `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.API_CREDENTIAL_PROFILES}`
+  const profileRow = page.getByTestId(/^api-credential-profile-row-/).filter({
+    has: page.getByRole("heading", { name: profileName, exact: true }),
+  })
+  const duplicate = page.getByRole("dialog", {
+    name: "Channel already exists",
+    exact: true,
+  })
+
+  await runScenarioWithCleanup({
+    run: async () => {
+      await page.goto(profilesUrl)
+      await waitForExtensionRoot(page)
+      await page.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.addButton).click()
+      const profileDialog = page.getByTestId(
+        API_CREDENTIAL_PROFILES_TEST_IDS.dialog,
+      )
+      await profileDialog
+        .locator("#api-credential-profile-name")
+        .fill(profileName)
+      await profileDialog
+        .locator("#api-credential-profile-baseUrl")
+        .fill(upstream.baseUrl)
+      await profileDialog
+        .locator("#api-credential-profile-apiKey")
+        .fill(upstream.apiKey)
+      await profileDialog
+        .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.dialogSaveButton)
+        .click()
+      await expect(profileDialog).toBeHidden()
+      await profileRow
+        .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.importToManagedSiteButton)
+        .click()
+      const nameInput = page.getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
+      await expect(nameInput.or(duplicate)).toBeVisible({ timeout: 60_000 })
+      // A reusable upstream may already be present. Create our own named channel;
+      // never edit or clean up the pre-existing duplicate.
+      if (await duplicate.isVisible()) {
+        await duplicate
+          .getByRole("button", { name: "Continue", exact: true })
+          .click()
+      }
+      await nameInput.fill(channelName)
+      if (siteType === SITE_TYPES.OCTOPUS) {
+        await expectOctopusImportModels({
+          page,
+          sourceBaseUrl: upstream.baseUrl,
+        })
+      }
+      if (hasManagedSiteChannelModelList(siteType))
+        await fillModelInput(page, STATUS_MODEL)
+      await submitChannelDialogAndWaitForClose(page)
+      // Reopen from persisted profile state to exercise a fresh duplicate lookup.
+      await page.reload()
+      await waitForExtensionRoot(page)
+      await profileRow
+        .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.importToManagedSiteButton)
+        .click()
+      await expect(duplicate.or(nameInput)).toBeVisible({ timeout: 60_000 })
+      if (await duplicate.isVisible()) {
+        await duplicate
+          .getByRole("button", { name: "Cancel", exact: true })
+          .click()
+        await expect(duplicate).toBeHidden()
+      } else {
+        // Some backends mask stored keys or require an exact model-set match.
+        // They must still identify the persisted candidate, without requiring
+        // a source account or weakening their native verification policy.
+        await expect(
+          page
+            .getByRole("dialog")
+            .getByText(
+              /^(Review potential duplicate candidates|Potential duplicate needs verification|Confirmed duplicate channel)$/u,
+            ),
+        ).toBeVisible()
+        await page.getByTestId(CHANNEL_DIALOG_TEST_IDS.cancelButton).click()
+      }
+      await openManagedSiteChannelsAndExpectRow({
+        page,
+        extensionId,
+        channelName,
+      })
+      await expectPaginationSummary(page, "1", "1", "1")
+      if (siteType === SITE_TYPES.OCTOPUS) {
+        await openSingleVisibleChannelEditDialog(page, channelName)
+        await expectOctopusImportModels({
+          page,
+          sourceBaseUrl: upstream.baseUrl,
+          saved: true,
+        })
+        await expect(
+          page.getByLabel(`Copy ${STATUS_MODEL}`, { exact: true }),
+        ).toBeVisible()
+        await page.getByTestId(CHANNEL_DIALOG_TEST_IDS.cancelButton).click()
+      }
+    },
+    finalizers: [
+      () =>
+        cleanupManagedSiteChannelsByPrefix({
+          page,
+          extensionId,
+          siteType,
+          prefix: runPrefix,
+        }),
+      async () => {
+        await page.goto(profilesUrl)
+        await waitForExtensionRoot(page)
+        await expect(
+          page.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.addButton),
+        ).toBeVisible()
+        if (await profileRow.count()) {
+          await profileRow
+            .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.deleteTriggerButton)
+            .click()
+          await page
+            .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.deleteConfirmButton)
+            .click()
+          await expect(profileRow).toBeHidden()
+        }
+      },
+    ],
+    cleanupMessage: "Standalone credential import cleanup failed",
+    failureMessage: "Standalone credential import scenario failed",
   })
 }
 

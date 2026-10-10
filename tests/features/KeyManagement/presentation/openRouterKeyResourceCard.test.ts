@@ -252,7 +252,7 @@ describe("buildOpenRouterKeyResourceCardPresentation", () => {
       "keyManagement:openRouter.list.values.no",
       "2026-08-05T00:00:00.000Z",
       "first, second",
-      "••••",
+      "••••••",
     ])
   })
 

@@ -22,7 +22,9 @@ For management-only work, use these linked common sections and the checklist bel
 ### Native resources and secrets
 
 - [ ] **Resource inventory**: identify native kinds; verify list/filter/pagination/detail/status for each and actual table/detail facts/labels.
+- [ ] **Native workflow parity**: follow [the editor comparison](native-editor-parity.md) before choosing fields/layout and again on the built UI. Resolve missing or worse in-scope core tasks independently of field coverage and write correctness.
 - [ ] **Create/edit/delete/status**: inspect each operation and ordinary-role native field through managedResources, not just managedSites. Verify replacement PUT, required fields and reopen/readback; enumerate missing fields/actions.
+- [ ] **Credential collections, when supported**: compare common bulk entry, per-key metadata/status/removal and selection/routing. Distinguish a primary secret or pasted list from ordinary collection management.
 - [ ] **Secrets and ownership**: verify keep/replace/clear without resubmitting masks, shared versus run-owned resources, uncertain writes and failure cleanup.
 
 ### Models, import and migration

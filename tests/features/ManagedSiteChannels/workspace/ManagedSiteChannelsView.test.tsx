@@ -369,6 +369,58 @@ describe("ManagedSiteChannelsView", () => {
     })
   })
 
+  it.each(["clear", "replace"])(
+    "shows the exact resource ID and allows users to %s the locator",
+    async (action) => {
+      const user = userEvent.setup()
+      const onSearchChange = vi.fn()
+      const onReplaceRouteQuery = vi.fn()
+      const resourceRef = {
+        siteType: "magpie",
+        kind: "channel",
+        scopeKey: "https://magpie.example.invalid",
+        resourceId: "aah-native-provider-id",
+      }
+      render(
+        <ManagedSiteChannelsView
+          {...commonProps}
+          state={createState({
+            channelIdFilterValue: resourceRef.resourceId,
+            routeQuery: {
+              resourceRef: JSON.stringify(resourceRef),
+              nativeView: "compact",
+            },
+          })}
+          callbacks={createCallbacks({ onSearchChange, onReplaceRouteQuery })}
+        />,
+      )
+      const input = screen.getByTestId(
+        MANAGED_SITE_CHANNELS_TEST_IDS.searchInput,
+      )
+      expect(input).toHaveValue(resourceRef.resourceId)
+      expect(
+        screen.getAllByRole("button", { name: "Clear search" }),
+      ).toHaveLength(1)
+      if (action === "clear") {
+        await user.click(screen.getByRole("button", { name: "Clear search" }))
+      } else {
+        await user.click(input)
+        await user.keyboard("{Control>}a{/Control}")
+        await user.paste("replacement")
+      }
+      expect(onSearchChange).toHaveBeenLastCalledWith(
+        action === "clear" ? "" : "replacement",
+      )
+      expect(onReplaceRouteQuery).toHaveBeenLastCalledWith({
+        nativeView: "compact",
+        channelId: undefined,
+        resourceRef: undefined,
+        search: action === "clear" ? undefined : "replacement",
+      })
+      expect(input).toHaveFocus()
+    },
+  )
+
   it("routes the controlled configuration recovery action", async () => {
     const user = userEvent.setup()
     const onRefresh = vi.fn()

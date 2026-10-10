@@ -23,13 +23,13 @@
     },
     "exclusions": {
       "autoSave": "Los cambios se guardan al instante",
-      "description": "Los canales marcados para omitir se omiten en la sincronización automática y al hacer clic en Ejecutar todo. Para sincronizarlos una vez sin cambiar este ajuste, usa Ejecutar seleccionados o Sincronizar en la fila.",
+      "description": "Los canales marcados para omitir no participan en la sincronización automática ni en Ejecutar todo. Puedes sincronizarlos una vez con Ejecutar seleccionados o Sincronizar en la fila.",
       "excludedLabel": "Configurado para omitir",
       "loadFailed": "No se pudieron cargar los ajustes de omisión. Vuelve a intentarlo.",
       "savedExcluded": "Guardado: la sincronización automática y Ejecutar todo omitirán este canal.",
       "savedIncluded": "Guardado: este canal participará en la sincronización automática y en Ejecutar todo.",
       "saveFailed": "No se pudo guardar el ajuste de omisión. Vuelve a intentarlo.",
-      "showOnly": "Mostrar canales configurados para omitir",
+      "showOnly": "Solo canales marcados para omitir",
       "skippedReason": "Este canal estaba configurado para omitirse al iniciar la ejecución. No se consultaron ni actualizaron modelos.",
       "title": "Omitir en sincronización automática y Ejecutar todo",
       "toggle": "Omitir {{name}} en sincronización automática y Ejecutar todo"
@@ -43,12 +43,12 @@
     },
     "lastExecution": "Última ejecución",
     "manual": {
-      "description": "Ejecutar seleccionados sincroniza todos los canales marcados, incluidos los configurados para omitir, incluso si seleccionas todos. Los interruptores de omisión se guardan al instante.",
       "empty": {
         "description": "Actualiza la lista o ajusta tus filtros para encontrar canales.",
         "title": "No hay canales disponibles"
       },
       "loading": "Cargando canales...",
+      "refresh": "Actualizar canales",
       "reload": "Recargar canales",
       "searchPlaceholder": "Busca canales por nombre o ID..."
     },

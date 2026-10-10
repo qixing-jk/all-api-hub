@@ -10,6 +10,7 @@ export async function stubOctopusChannelImport(params: {
   context: BrowserContext
   version: OctopusVersion
   models?: string[]
+  upstream?: { baseUrl: string; apiKey: string }
 }) {
   const channels: Channel[] = []
   const models = params.models ?? ["gpt-4o-mini", "gpt-4.1-mini"]
@@ -143,20 +144,22 @@ export async function stubOctopusChannelImport(params: {
         payload.base_url ??
         payload.base_urls?.[0]?.url
       const key = payload.key ?? payload.keys?.[0]?.channel_key
+      const sourceRoot =
+        params.upstream?.baseUrl.replace(/\/v1$/u, "") ?? "https://example.com"
       const validUrl =
         params.version === "v0.13"
-          ? baseUrl === "https://example.com" &&
+          ? baseUrl === sourceRoot &&
             payload.channel?.openai_chat_completion_path ===
               "/v1/chat/completions"
           : params.version === "v0.12"
-            ? ["https://example.com", "https://example.com/v1"].includes(
-                baseUrl,
-              )
-            : baseUrl === "https://example.com/v1"
+            ? [sourceRoot, `${sourceRoot}/v1`].includes(baseUrl)
+            : baseUrl === `${sourceRoot}/v1`
       if (
         !validUrl ||
         typeof key !== "string" ||
-        !key.startsWith("sk-created-")
+        !(params.upstream
+          ? key === params.upstream.apiKey
+          : key.startsWith("sk-created-"))
       ) {
         await route.fulfill({
           status: 400,

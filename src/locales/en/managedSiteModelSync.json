@@ -22,13 +22,13 @@
     },
     "exclusions": {
       "autoSave": "Changes save immediately",
-      "description": "Channels marked to skip are skipped during auto-sync and when you click Run All. To sync them once, use Run Selected or the row's Sync button without changing this setting.",
+      "description": "Channels set to skip are excluded from auto-sync and Run All. Use Run Selected or the row's Sync action to sync them once.",
       "excludedLabel": "Set to skip",
       "loadFailed": "Could not load skip settings. Please retry.",
       "savedExcluded": "Saved: auto-sync and Run All will skip this channel.",
       "savedIncluded": "Saved: this channel will take part in auto-sync and Run All.",
       "saveFailed": "Could not save the skip setting. Please retry.",
-      "showOnly": "Show channels set to skip",
+      "showOnly": "Only channels set to skip",
       "skippedReason": "This channel was set to skip when the run started. No models were fetched or updated.",
       "title": "Skip auto-sync and Run All",
       "toggle": "Skip {{name}} during auto-sync and Run All"
@@ -42,12 +42,12 @@
     },
     "lastExecution": "Last Execution",
     "manual": {
-      "description": "Run Selected syncs every checked channel, including those set to skip, even when you select all. Skip switches save immediately.",
       "empty": {
         "description": "Refresh the list or adjust your filters to find channels.",
         "title": "No channels available"
       },
       "loading": "Loading channels...",
+      "refresh": "Refresh channels",
       "reload": "Reload Channels",
       "searchPlaceholder": "Search channels by name or ID..."
     },

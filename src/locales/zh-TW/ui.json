@@ -647,6 +647,7 @@
     "hide": "隱藏金鑰",
     "keepPlaceholder": "留空以保留原金鑰",
     "loadFailed": "無法載入此金鑰，請重試。",
+    "maskedOnly": "此已儲存金鑰僅提供遮罩，無法查看明文。",
     "newPlaceholder": "輸入 API 金鑰",
     "newState": "新增，尚未儲存",
     "previousDisableReason": "上次停用原因：{{reason}}",

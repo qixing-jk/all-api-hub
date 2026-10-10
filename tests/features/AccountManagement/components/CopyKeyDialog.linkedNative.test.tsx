@@ -102,7 +102,7 @@ describe("CopyKeyDialog linked native keys", () => {
 
   it("uses the provider mask and reveals/copies a linked credential without a provider reveal call", async () => {
     const { user } = await renderExpandedKey()
-    expect(screen.getByText(facts.maskedLabel)).toBeVisible()
+    expect(screen.getByText("fe_o••••••9bf5")).toBeVisible()
     expect(screen.queryByText(profile.apiKey)).not.toBeInTheDocument()
     expect(
       screen.queryByText("keyManagement:keyDetails.createResponseOnlySecret"),
@@ -183,7 +183,7 @@ describe("CopyKeyDialog linked native keys", () => {
           : { ...link, state: "needs-confirmation" },
       ]
       await renderExpandedKey()
-      expect(screen.getByText(facts.maskedLabel)).toBeVisible()
+      expect(screen.getByText("fe_o••••••9bf5")).toBeVisible()
       expect(
         screen.queryByRole("button", { name: "keyManagement:actions.showKey" }),
       ).not.toBeInTheDocument()

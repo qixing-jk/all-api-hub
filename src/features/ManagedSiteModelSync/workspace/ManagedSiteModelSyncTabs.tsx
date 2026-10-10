@@ -1,8 +1,10 @@
-import { RefreshCcw, Search } from "lucide-react"
+import { Info, RefreshCcw, Search } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import {
+  ActionGroup,
   Alert,
+  Badge,
   Button,
   EmptyState,
   Input,
@@ -114,12 +116,15 @@ export function ManagedSiteModelSyncTabs({
           {t("execution.table.resourceUnavailable")}
         </Alert>
       )}
-      <p
+      <div
         id={MODEL_SYNC_EXCLUSIONS_TARGET_ID}
-        className="text-muted-foreground mb-density-4 text-sm"
+        className="border-border bg-muted/30 text-muted-foreground mb-density-4 py-density-3 flex items-start gap-2 rounded-lg border px-3 text-sm"
       >
-        {t("execution.exclusions.description")}
-      </p>
+        <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
+        <p className="min-w-0 leading-relaxed">
+          {t("execution.exclusions.description")}
+        </p>
+      </div>
       {exclusions.error && (
         <Alert variant="warning" role="alert" className="mb-density-4">
           {exclusions.error}
@@ -173,34 +178,33 @@ export function ManagedSiteModelSyncTabs({
       </TabsContent>
       <TabsContent value={TAB_VALUE.manual}>
         <div className="space-y-density-4">
-          <Button
-            variant={manualExcludedOnly ? "secondary" : "ghost"}
-            aria-pressed={manualExcludedOnly}
-            disabled={
-              exclusions.isLoading ||
-              Boolean(exclusions.error) ||
-              isChannelsLoading
-            }
-            onClick={() => setManualExcludedOnly(!manualExcludedOnly)}
-          >
-            {t("execution.exclusions.showOnly")} ({manualExcludedCount})
-          </Button>
-          <div className="gap-y-density-4 flex flex-col gap-x-4 md:flex-row md:items-center md:justify-between">
-            <p className="text-muted-foreground text-sm">
-              {t("execution.manual.description")}
-            </p>
-            <div className="gap-y-density-3 flex flex-col gap-x-3 md:flex-row md:items-center">
-              <div className="md:w-64">
-                <Input
-                  type="text"
-                  placeholder={
-                    t("execution.manual.searchPlaceholder") as string
-                  }
-                  value={manualSearchKeyword}
-                  onChange={(e) => handleManualSearchChange(e.target.value)}
-                  leftIcon={<Search className="h-4 w-4" />}
-                />
-              </div>
+          <div className="gap-y-density-3 flex flex-wrap items-center gap-x-3">
+            <div className="w-full min-w-0 sm:w-64 sm:min-w-64 sm:flex-1 lg:max-w-sm">
+              <Input
+                type="text"
+                aria-label={t("execution.manual.searchPlaceholder")}
+                placeholder={t("execution.manual.searchPlaceholder") as string}
+                value={manualSearchKeyword}
+                onChange={(e) => handleManualSearchChange(e.target.value)}
+                leftIcon={<Search className="h-4 w-4" />}
+              />
+            </div>
+            <Button
+              variant={manualExcludedOnly ? "secondary" : "outline"}
+              aria-pressed={manualExcludedOnly}
+              disabled={
+                exclusions.isLoading ||
+                Boolean(exclusions.error) ||
+                isChannelsLoading
+              }
+              onClick={() => setManualExcludedOnly(!manualExcludedOnly)}
+            >
+              {t("execution.exclusions.showOnly")}
+              <Badge variant="secondary" size="sm">
+                {manualExcludedCount}
+              </Badge>
+            </Button>
+            <ActionGroup className="ml-auto">
               <Button
                 onClick={() => handleRunSelected("manual")}
                 variant="secondary"
@@ -228,9 +232,9 @@ export function ManagedSiteModelSyncTabs({
               >
                 {isManualChannelRefresh
                   ? t("common:status.refreshing")
-                  : t("execution.actions.refresh")}
+                  : t("execution.manual.refresh")}
               </Button>
-            </div>
+            </ActionGroup>
           </div>
 
           {isChannelsLoading ? (

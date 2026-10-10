@@ -2,6 +2,7 @@
 /** @type {import('prettier').Config & import('prettier-plugin-tailwindcss').PluginOptions} */
 export default {
   printWidth: 80,
+  proseWrap: "never",
   tabWidth: 2,
   useTabs: false,
   semi: false,

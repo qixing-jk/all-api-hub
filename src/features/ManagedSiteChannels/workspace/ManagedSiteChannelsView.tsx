@@ -17,7 +17,6 @@ import { Badge, ConfirmDialog, IconButton, Input } from "~/components/ui"
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/Alert"
 import { Button, BUTTON_LOADING_BEHAVIORS } from "~/components/ui/button"
 import { Checkbox } from "~/components/ui/checkbox"
-import { ClearableFieldButton } from "~/components/ui/clearableField"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -94,6 +93,8 @@ export function ManagedSiteChannelsView({
   filterDialog,
 }: ManagedSiteChannelsViewProps) {
   const searchInputRef = useRef<HTMLInputElement | null>(null)
+  // Show an exact locator without submitting it to the fuzzy search filter.
+  const searchInputValue = state.searchValue || state.channelIdFilterValue
   const isDeleteReplayBlocked = state.deleteState.requiresRefresh
   const isResourceInteractionBlocked =
     state.isResourceInteractionBlocked ?? false
@@ -290,7 +291,7 @@ export function ManagedSiteChannelsView({
               <div className="relative w-full md:max-w-xs">
                 <Input
                   ref={searchInputRef}
-                  value={state.searchValue}
+                  value={searchInputValue}
                   onChange={(event) => {
                     const value = event.target.value
                     callbacks.onSearchChange(value)
@@ -303,14 +304,6 @@ export function ManagedSiteChannelsView({
                   }}
                   onClear={handleClearSearch}
                   clearButtonLabel={labels.clearSearch}
-                  rightIcon={
-                    state.channelIdFilterValue && !state.searchValue ? (
-                      <ClearableFieldButton
-                        label={labels.clearSearch}
-                        onClick={handleClearSearch}
-                      />
-                    ) : undefined
-                  }
                   placeholder={labels.searchPlaceholder}
                   className="ps-9"
                   data-testid={MANAGED_SITE_CHANNELS_TEST_IDS.searchInput}

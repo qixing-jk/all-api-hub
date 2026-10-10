@@ -655,6 +655,7 @@
     "hide": "Schlüssel verbergen",
     "keepPlaceholder": "Leer lassen, um den gespeicherten Schlüssel zu behalten",
     "loadFailed": "Schlüssel konnte nicht geladen werden. Erneut versuchen.",
+    "maskedOnly": "Für diesen gespeicherten Schlüssel ist nur der maskierte Wert verfügbar.",
     "newPlaceholder": "API-Schlüssel eingeben",
     "newState": "Neu, noch nicht gespeichert",
     "previousDisableReason": "Grund der vorherigen Deaktivierung: {{reason}}",

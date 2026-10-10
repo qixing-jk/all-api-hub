@@ -19,6 +19,7 @@ import {
   GPT_LOAD_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
   GPT_LOAD_MANAGED_RESOURCE_TABLE_FIELD_IDS,
 } from "~/constants/gptLoad"
+import { MAGPIE_DETAIL_FIELDS, MAGPIE_TABLE_FIELDS } from "~/constants/magpie"
 import {
   NEW_API_MANAGED_RESOURCE_DETAIL_FIELD_IDS,
   NEW_API_MANAGED_RESOURCE_TABLE_FIELD_IDS,
@@ -199,18 +200,19 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
 
 export type AccountSiteDefinitionType = (typeof ACCOUNT_SITE_TYPE_ORDER)[number]
 
-// GitHub stars snapshot (2026-10-04), descending; refresh deliberately rather
+// GitHub stars snapshot (2026-10-09), descending; refresh deliberately rather
 // than fetching popularity during UI rendering. Sources: github.com/<repo>:
-// diegosouzapw/OmniRoute 72850, router-for-me/CLIProxyAPI 54110,
-// QuantumNous/new-api 49256, Wei-Shaw/sub2api 43283, tbphp/gpt-load 7044,
-// looplj/axonhub 5334, ding113/claude-code-hub 3390,
-// bestruirui/octopus 2668, Veloera/Veloera 1633, deanxv/done-hub 808.
+// diegosouzapw/OmniRoute 74257, router-for-me/CLIProxyAPI 54503,
+// QuantumNous/new-api 49434, Wei-Shaw/sub2api 43500, tbphp/gpt-load 7055,
+// yetone/magpie 6725, looplj/axonhub 5343, ding113/claude-code-hub 3395,
+// bestruirui/octopus 2686, Veloera/Veloera 1633, deanxv/done-hub 809.
 export const MANAGED_SITE_TYPE_ORDER = [
   SITE_TYPES.OMNIROUTE,
   SITE_TYPES.CLI_PROXY_API,
   SITE_TYPES.NEW_API,
   SITE_TYPES.SUB2API,
   SITE_TYPES.GPT_LOAD,
+  SITE_TYPES.MAGPIE,
   SITE_TYPES.AXON_HUB,
   SITE_TYPES.CLAUDE_CODE_HUB,
   SITE_TYPES.OCTOPUS,
@@ -1115,6 +1117,27 @@ const MANAGED_ONLY_SITE_DEFINITIONS = [
       settingsTarget: {
         ...LEGACY_MANAGED_CHANNEL_POLICY.settingsTarget,
         anchor: SETTINGS_ANCHORS.GPT_LOAD,
+      },
+    },
+  },
+  {
+    // Magpie Web owns native providers; desktop sign-ins do not give this
+    // managed-only integration a saved-account capability.
+    siteType: SITE_TYPES.MAGPIE,
+    scopes: MANAGED_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported,
+    managedResource: {
+      ...LEGACY_MANAGED_CHANNEL_POLICY,
+      legacyNumericChannelConfig: false,
+      consoleRoutes: { channels: "/?view=providers", tokens: "/?view=gateway" },
+      labelKey: "settings:managedSite.magpie",
+      getStartedUrl: "https://usemagpie.ai/docs/start",
+      messagesKey: "magpie",
+      tableFieldIds: MAGPIE_TABLE_FIELDS,
+      detailFieldIds: MAGPIE_DETAIL_FIELDS,
+      settingsTarget: {
+        ...LEGACY_MANAGED_CHANNEL_POLICY.settingsTarget,
+        anchor: SETTINGS_ANCHORS.MAGPIE,
       },
     },
   },

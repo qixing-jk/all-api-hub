@@ -44,6 +44,59 @@ const t = ((key: string, options?: { field?: string }) => {
 }) as TFunction
 
 describe("NativeResourceEditorBody", () => {
+  it.each(["", "rotate"])(
+    "keeps an empty native option distinct from an explicit null selection (%s)",
+    async (currentValue) => {
+      const user = userEvent.setup()
+      const onValueChange = vi.fn()
+      render(
+        <NativeResourceEditorBody
+          t={t}
+          descriptors={[
+            {
+              fieldId: "routing",
+              type: "select",
+              nullable: true,
+              options: [
+                { value: "", displayLabel: "Smart" },
+                { value: "rotate", displayLabel: "Round robin" },
+              ],
+            },
+          ]}
+          policy={defineResourceEditorFieldPolicy({
+            fields: [
+              {
+                fieldId: "routing",
+                section: "basic",
+                order: 1,
+                renderer: "select",
+                resolveLabel: () => "Routing",
+                resolveNullableOptionLabel: () => "No override",
+              },
+            ],
+            hiddenFields: [],
+          })}
+          sectionOrder={{ basic: 0 }}
+          sectionLabelResolvers={{ basic: () => "Basic" }}
+          values={{ routing: currentValue }}
+          onValueChange={onValueChange}
+        />,
+      )
+      expect(
+        screen.getByRole("combobox", { name: "Routing" }),
+      ).toHaveTextContent(currentValue === "" ? "Smart" : "Round robin")
+      await user.click(screen.getByRole("combobox", { name: "Routing" }))
+      await user.click(
+        screen.getByRole("option", {
+          name: currentValue === "" ? "No override" : "Smart",
+        }),
+      )
+      expect(onValueChange).toHaveBeenLastCalledWith(
+        "routing",
+        currentValue === "" ? null : "",
+      )
+    },
+  )
   it("restores saved secret intent, resets an emptied replacement, and announces clearing", async () => {
     const onChange = vi.fn()
     const props = {

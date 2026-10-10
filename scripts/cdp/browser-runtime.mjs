@@ -41,7 +41,11 @@ export async function assertDevBrowserProfile(browser) {
 }
 
 /** Verify CLI-loaded extensions on browsers whose Extensions CDP domain needs a pipe. */
-async function verifyInstalledExtension(browser, extensionDir) {
+async function verifyInstalledExtension(
+  browser,
+  extensionDir,
+  enableIfDisabled = true,
+) {
   const page = await browser.contexts()[0].newPage()
   try {
     await page.goto("chrome://extensions")
@@ -70,7 +74,7 @@ async function verifyInstalledExtension(browser, extensionDir) {
       throw new Error(
         "This browser cannot install extensions over port CDP and the requested extension is not loaded; load it through the browser extension manager or select a browser with port CDP extension loading support",
       )
-    if (extension.state !== "ENABLED") {
+    if (enableIfDisabled && extension.state !== "ENABLED") {
       await enableExtension(page, extension.id)
       extension = findExtension(await readExtensions())
     }
@@ -80,6 +84,11 @@ async function verifyInstalledExtension(browser, extensionDir) {
   } finally {
     await page.close().catch(() => {})
   }
+}
+
+/** Discover one exact build without reloading it or changing its enabled state. */
+export async function findInstalledDevExtension(browser, extensionDir) {
+  return verifyInstalledExtension(browser, extensionDir, false)
 }
 
 /** Enable the chosen extension using the same APIs as the browser extension manager. */

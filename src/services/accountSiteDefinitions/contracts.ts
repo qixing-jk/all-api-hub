@@ -79,6 +79,7 @@ export type ManagedSiteLabelKey =
   | "settings:managedSite.sub2api"
   | "settings:managedSite.omniroute"
   | "settings:managedSite.gptLoad"
+  | "settings:managedSite.magpie"
 
 export type ManagedSiteMessagesKey =
   | "cliProxyApi"
@@ -91,6 +92,7 @@ export type ManagedSiteMessagesKey =
   | "sub2api"
   | "omniroute"
   | "gptLoad"
+  | "magpie"
 
 export interface ManagedResourceProductPolicy {
   /** Whether native ids can identify released numeric channel-config records. */

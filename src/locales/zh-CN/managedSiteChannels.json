@@ -209,6 +209,62 @@
         "help": "手动负载均衡权重；数值越大分到的流量比例越高；留空则使用网关默认值。",
         "label": "权重"
       },
+      "magpieAnthropic": {
+        "help": "填写 Anthropic API 根地址（ANTHROPIC_BASE_URL），不要追加 /v1/messages。",
+        "label": "Anthropic 地址"
+      },
+      "magpieBalancePath": {
+        "help": "响应中的金额，如 data.balance 或 data.total / 500000。留空使用 Magpie 默认值。预设供应商仅可查看。",
+        "label": "余额取值表达式"
+      },
+      "magpieBalanceURL": {
+        "help": "Magpie 使用的可选余额接口，URL 支持 {key}。保留已有的余额专用令牌。预设供应商仅可查看。",
+        "label": "余额查询地址"
+      },
+      "magpieCatalog": {
+        "help": "填写 models.dev 供应商 ID，以逗号分隔，用于模型名称和推理级别；优先采用首个匹配。预设供应商仅可查看。",
+        "label": "模型目录"
+      },
+      "magpieChat": {
+        "help": "Chat Completions 地址需包含 /v1，不要追加 /chat/completions。",
+        "label": "Chat Completions 地址",
+        "required": "请填写当前所选 API 类型的地址。"
+      },
+      "magpieGemini": {
+        "help": "Gemini 地址需包含 /v1beta，不要追加模型名或 generateContent 路径。",
+        "label": "Gemini 地址"
+      },
+      "magpieHeaders": {
+        "help": "按行添加请求头名称和值，也可切换为 JSON 编辑。这些请求头会发送给上游供应商。",
+        "label": "自定义请求头"
+      },
+      "magpieMaxConcurrency": {
+        "help": "每个密钥或账号同时处理的请求数，范围 0–1000。留空使用 Magpie 默认值，0 表示不限。",
+        "label": "每个密钥的并发上限"
+      },
+      "magpieMaxRPM": {
+        "help": "每个密钥或账号每分钟的请求数，范围 0–10000。留空或 0 表示不限。",
+        "label": "每个密钥的每分钟请求上限"
+      },
+      "magpieModels": {
+        "help": "可选择已发现的模型，或输入模型 ID 后按回车添加。填写连接信息后可获取模型；清空选择将使用 MAGPIE 的自动模型目录。"
+      },
+      "magpieModelsURL": {
+        "help": "可选的完整模型列表 URL，使用当前密钥和请求头查询。留空使用协议地址。预设供应商仅可查看。",
+        "label": "模型列表地址"
+      },
+      "magpiePriceRate": {
+        "help": "相对于标价的倍率，如 0.8。范围 0–1000，最多 3 位小数。留空或 0 使用标价。",
+        "label": "价格倍率"
+      },
+      "magpieProxy": {
+        "help": "留空使用全局代理，填写 direct 可直连。",
+        "label": "代理"
+      },
+      "magpieResponses": {
+        "help": "Responses 地址通常包含 /v1，不要追加 /responses。",
+        "label": "Responses 地址"
+      },
       "manualModels": {
         "label": "手动模型"
       },
@@ -464,6 +520,32 @@
     "headerDescription": "管理自建 AI 网关的渠道，将多个 API 来源接入统一入口。",
     "openChannelConsole": "打开网关渠道管理",
     "unconfiguredValueDescription": "配置后，可以把分散的账号 Key 和 API Key 导入为网关渠道，并直接在 All API Hub 中统一查看和管理。"
+  },
+  "magpieKeys": {
+    "anyProtocol": "不限制协议",
+    "enabled": "启用",
+    "help": "添加密钥或粘贴以换行、逗号、空格分隔的多个密钥。已保存密钥中仅主密钥可查看明文；更换额外密钥时先添加新项再删除旧项。点击保存后生效。",
+    "invalid": "请检查新密钥、协议和权重（0–1000），并至少保留一个启用的密钥。",
+    "name": "密钥名称",
+    "order": "按顺序（故障转移）",
+    "pace": "按每小时剩余额度",
+    "primary": "当前主密钥",
+    "primaryKey": "主 API 密钥",
+    "protocol": "协议",
+    "rotate": "轮询",
+    "routing": "密钥调度",
+    "smart": "智能（自动故障转移）",
+    "title": "密钥池",
+    "usage": "优先使用量最少",
+    "weighted": "按权重",
+    "weightHelp": "0 或 1 使用默认权重；2–1000 调整加权调度时的请求份额。"
+  },
+  "magpieProtocols": {
+    "checkOther": "其他已配置类型的地址有误，请切换到对应类型检查。",
+    "configured": "已配置",
+    "help": "选择类型后编辑对应地址。需要多种协议时，依次切换并填写；各类型的地址会分别保留。",
+    "type": "API 类型",
+    "unmanaged": "在 Magpie 中管理"
   },
   "migration": {
     "actions": {

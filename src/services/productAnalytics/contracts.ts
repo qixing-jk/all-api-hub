@@ -1248,6 +1248,7 @@ export const PRODUCT_ANALYTICS_MANAGED_SITE_TYPES = {
   Sub2Api: SITE_TYPES.SUB2API,
   OmniRoute: SITE_TYPES.OMNIROUTE,
   GptLoad: SITE_TYPES.GPT_LOAD,
+  Magpie: SITE_TYPES.MAGPIE,
 } as const
 
 export type ProductAnalyticsManagedSiteType =
@@ -1490,6 +1491,7 @@ export type ProductAnalyticsEventPayloadMap = {
     cli_proxy_configured?: boolean
     omniroute_configured?: boolean
     gpt_load_configured?: boolean
+    magpie_configured?: boolean
     claude_code_router_configured?: boolean
     concurrency?: number
     rate_limit_rpm?: number

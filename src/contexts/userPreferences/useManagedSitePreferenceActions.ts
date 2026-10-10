@@ -10,6 +10,7 @@ import {
   DEFAULT_GPT_LOAD_CONFIG,
   type GptLoadConfig,
 } from "~/types/gptLoadConfig"
+import { DEFAULT_MAGPIE_CONFIG, type MagpieConfig } from "~/types/magpieConfig"
 import {
   DEFAULT_OMNIROUTE_CONFIG,
   type OmniRouteConfig,
@@ -438,6 +439,20 @@ export function useManagedSitePreferenceActions({
     [persistPreferenceUpdates],
   )
 
+  const updateMagpieConfig = useCallback(
+    async (updates: Partial<MagpieConfig>, options?: PreferenceSaveOptions) =>
+      persistPreferenceUpdates({ magpie: updates }, options),
+    [persistPreferenceUpdates],
+  )
+  const resetMagpieConfig = useCallback(async () => {
+    const result = await userPreferences.resetMagpieConfig()
+    if (result.ok)
+      await reloadPreferencesAndTrackSnapshots({
+        magpie: DEFAULT_MAGPIE_CONFIG,
+      })
+    return result
+  }, [reloadPreferencesAndTrackSnapshots])
+
   const updateGptLoadConfig = useCallback(
     async (updates: Partial<GptLoadConfig>, options?: PreferenceSaveOptions) =>
       persistPreferenceUpdates({ gptLoad: updates }, options),
@@ -590,6 +605,8 @@ export function useManagedSitePreferenceActions({
     updateGptLoadBaseUrl,
     updateGptLoadManagementKey,
     updateGptLoadConfig,
+    updateMagpieConfig,
+    resetMagpieConfig,
     updateManagedSiteType,
     resetNewApiConfig,
     resetDoneHubConfig,

@@ -20,6 +20,7 @@ import {
 } from "~/types/doneHubConfig"
 import { type GptLoadConfig } from "~/types/gptLoadConfig"
 import { type LoggingPreferences } from "~/types/logging"
+import { DEFAULT_MAGPIE_CONFIG, type MagpieConfig } from "~/types/magpieConfig"
 import { type NewApiConfig } from "~/types/newApiConfig"
 import { type OctopusConfig } from "~/types/octopusConfig"
 import { type OmniRouteConfig } from "~/types/omnirouteConfig"
@@ -388,6 +389,11 @@ class UserPreferencesService extends PreferencesStore {
     return this.savePreferences({ gptLoad: config })
   }
 
+  /** Reset Magpie Web connection settings. */
+  async resetMagpieConfig(): Promise<PreferenceWriteResult> {
+    return this.savePreferences({ magpie: DEFAULT_MAGPIE_CONFIG })
+  }
+
   /** Reset gpt-load managed-site config. */
   async resetGptLoadConfig(): Promise<PreferenceWriteResult> {
     return this.savePreferences({
@@ -422,6 +428,7 @@ class UserPreferencesService extends PreferencesStore {
       | Sub2ApiManagedSiteConfig
       | OmniRouteConfig
       | GptLoadConfig
+      | MagpieConfig
   }> {
     const prefs = await this.getPreferences()
     const siteType = prefs.managedSiteType || SITE_TYPES.NEW_API

@@ -12,6 +12,8 @@ Select a small set of screenshots that answers the task's visual questions:
 | Managed site | Connection settings; native resource list; editor/detail after the tested write |
 | Check-in | Detected method and today's state; manual/automatic result including reward/status |
 
+For editor work, select states from [the native workflow comparison](native-editor-parity.md): a configured ordinary form, meaningful type/mode or collection variants, and relevant recovery states. When accessible, compare native and extension views for the same task. Inspect placement, unnecessary fields/scrolling, grouping and defaults; saving images or passing assertions alone does not complete the usability review.
+
 Capture the actual current-worktree extension after data settles and the corresponding assertions pass. Also capture a relevant failure or blocked state when encountered. Prefer a focused panel/dialog screenshot when it shows the whole interaction; include a viewport screenshot when layout context matters. Keep enough context to identify the tested feature. Do not fabricate successful UI or change product data merely to improve a screenshot.
 
 Local developer screenshots are **unmasked by default** and stay outside Git, following [evidence storage](evidence-and-validation.md#retain-evidence-while-discovering-it). Do not apply automatic redaction to these previews. Capture intentionally; keep existing CI/real-site automatic screenshot and trace settings unchanged.

@@ -34,6 +34,12 @@ type ResourceFieldPresentationBase<TSection extends string = string> = {
   }
   /** Saved credentials may start collapsed without loading their secrets. */
   compactSecretRows?: boolean
+  /** Browse credentials as a list with status actions and one inline editor. */
+  secretListLayout?: "list"
+  resolveEntryTitle?: (
+    t: TFunction,
+    fields: Readonly<Record<string, string>>,
+  ) => string
   resolveEntrySummary?: (
     t: TFunction,
     fields: Readonly<Record<string, string>>,
@@ -51,6 +57,7 @@ type ResourceFieldPresentationBase<TSection extends string = string> = {
     resolveLabel: ResourceFieldTextResolver
     resolvePlaceholder?: ResourceFieldTextResolver
     resolveHelp?: ResourceFieldTextResolver
+    optionLabelResolvers?: Readonly<Record<string, ResourceFieldTextResolver>>
   }[]
   optionLabelResolvers?: Readonly<Record<string, ResourceFieldTextResolver>>
   /** Unknown option labels may depend on the native value, such as a provider slug. */
@@ -67,6 +74,13 @@ type ResourceFieldPresentationBase<TSection extends string = string> = {
 export type ResourceFieldPresentation<TSection extends string = string> =
   | (ResourceFieldPresentationBase<TSection> & {
       renderer: typeof RESOURCE_FIELD_TYPES.Select
+      /** Visible, keyboard-accessible choices for a small set of related configurations. */
+      selectLayout?: "cards"
+      resolveOptionBadge?: (
+        t: TFunction,
+        value: string,
+        values: EditableResourceProjection,
+      ) => string | undefined
       /** Frontend-owned label for clearing a nullable single-select projection. */
       resolveNullableOptionLabel?: ResourceFieldTextResolver
     })

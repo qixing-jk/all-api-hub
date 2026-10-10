@@ -22,6 +22,9 @@ export const collectManagedConfigSecrets = (
   ) {
     secrets.push(managedConfig.managementKey)
   }
+  if ("webKey" in managedConfig && typeof managedConfig.webKey === "string") {
+    secrets.push(managedConfig.webKey)
+  }
   return secrets
 }
 

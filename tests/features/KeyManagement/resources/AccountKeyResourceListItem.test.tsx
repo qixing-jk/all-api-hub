@@ -86,7 +86,7 @@ describe("AccountKeyResourceListItem", () => {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
     })
-    expect(screen.getByText("masked")).toBeVisible()
+    expect(screen.getByText("••••••")).toBeVisible()
     await user.click(
       screen.getByRole("button", { name: "keyManagement:actions.showKey" }),
     )
@@ -95,7 +95,7 @@ describe("AccountKeyResourceListItem", () => {
       screen.getByRole("button", { name: "keyManagement:actions.hideKey" }),
     )
     expect(screen.queryByText("sk-recoverable-example")).not.toBeInTheDocument()
-    expect(screen.getByText("masked")).toBeVisible()
+    expect(screen.getByText("••••••")).toBeVisible()
   })
 
   it("renders a native key with only detail, edit, and delete actions", async () => {
@@ -117,7 +117,7 @@ describe("AccountKeyResourceListItem", () => {
     expect(
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeKeyRow),
     ).toBeVisible()
-    expect(screen.getByText("sk-or-v1-••••example")).toBeVisible()
+    expect(screen.getByText("sk-o••••••mple")).toBeVisible()
     expect(screen.getByText("Example account")).toBeVisible()
     expect(screen.getByText("Example workspace")).toBeVisible()
     expect(screen.getByText(/-USD\s*2/)).toBeVisible()
@@ -241,100 +241,113 @@ describe("AccountKeyResourceListItem", () => {
     ).toBeNull()
   })
 
-  it("exposes complete-key actions from a linked credential profile", async () => {
-    const user = userEvent.setup()
-    server.use(
-      http.get("https://api.example.invalid/v1/models", () =>
-        HttpResponse.json({ data: { object: "list", data: [] } }),
-      ),
-    )
-    const writeText = vi
-      .spyOn(navigator.clipboard, "writeText")
-      .mockResolvedValue(undefined)
+  it.each([true, false])(
+    "exposes complete-key actions from a linked credential profile (native mask=%s)",
+    async (nativeMask) => {
+      const user = userEvent.setup()
+      server.use(
+        http.get("https://api.example.invalid/v1/models", () =>
+          HttpResponse.json({ data: { object: "list", data: [] } }),
+        ),
+      )
+      const writeText = vi
+        .spyOn(navigator.clipboard, "writeText")
+        .mockResolvedValue(undefined)
 
-    render(
-      <AccountKeyResourceListItem
-        row={row}
-        onExpandedChange={vi.fn()}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        associatedProfile={{
-          id: "profile-example",
-          name: "Example credential",
-          apiType: "openai-compatible",
-          baseUrl: "https://api.example.invalid/v1",
-          apiKey: "complete-example-secret",
-          tagIds: [],
-          notes: "",
-          createdAt: 1,
-          updatedAt: 1,
-        }}
-      />,
-      { withUserPreferencesProvider: true, withThemeProvider: false },
-    )
+      render(
+        <AccountKeyResourceListItem
+          row={{
+            ...row,
+            facts: {
+              ...row.facts,
+              maskedLabel: nativeMask ? row.facts.maskedLabel : undefined,
+            },
+          }}
+          onExpandedChange={vi.fn()}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+          associatedProfile={{
+            id: "profile-example",
+            name: "Example credential",
+            apiType: "openai-compatible",
+            baseUrl: "https://api.example.invalid/v1",
+            apiKey: "complete-example-secret",
+            tagIds: [],
+            notes: "",
+            createdAt: 1,
+            updatedAt: 1,
+          }}
+        />,
+        { withUserPreferencesProvider: true, withThemeProvider: false },
+      )
 
-    expect(await screen.findByText(row.facts.maskedLabel!)).toBeVisible()
-    const showButton = await screen.findByRole("button", {
-      name: "keyManagement:actions.showKey",
-    })
-    expect(showButton).toBeVisible()
-    expect(
-      await screen.findByRole("button", { name: "common:actions.copyKey" }),
-    ).toBeVisible()
-    const exportButton = await screen.findByRole("button", {
-      name: "common:actions.export",
-    })
-    expect(exportButton).toBeVisible()
-    expect(
-      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton),
-    ).toBeVisible()
-    const verifyApiButton = await screen.findByRole("button", {
-      name: "keyManagement:actions.verifyApi",
-    })
-    expect(verifyApiButton).toBeVisible()
-    expect(
-      await screen.findByRole("button", {
-        name: "keyManagement:actions.verifyCliSupport",
-      }),
-    ).toBeVisible()
+      expect(
+        await screen.findByText(
+          nativeMask ? "sk-o••••••mple" : "comp••••••cret",
+        ),
+      ).toBeVisible()
+      const showButton = await screen.findByRole("button", {
+        name: "keyManagement:actions.showKey",
+      })
+      expect(showButton).toBeVisible()
+      expect(
+        await screen.findByRole("button", { name: "common:actions.copyKey" }),
+      ).toBeVisible()
+      const exportButton = await screen.findByRole("button", {
+        name: "common:actions.export",
+      })
+      expect(exportButton).toBeVisible()
+      expect(
+        screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton),
+      ).toBeVisible()
+      const verifyApiButton = await screen.findByRole("button", {
+        name: "keyManagement:actions.verifyApi",
+      })
+      expect(verifyApiButton).toBeVisible()
+      expect(
+        await screen.findByRole("button", {
+          name: "keyManagement:actions.verifyCliSupport",
+        }),
+      ).toBeVisible()
 
-    await user.click(showButton)
-    expect(screen.getByText("complete-example-secret")).toBeVisible()
+      await user.click(showButton)
+      expect(screen.getByText("complete-example-secret")).toBeVisible()
 
-    await user.click(
-      screen.getByRole("button", { name: "keyManagement:actions.hideKey" }),
-    )
-    expect(
-      screen.queryByText("complete-example-secret"),
-    ).not.toBeInTheDocument()
+      await user.click(
+        screen.getByRole("button", { name: "keyManagement:actions.hideKey" }),
+      )
+      expect(
+        screen.queryByText("complete-example-secret"),
+      ).not.toBeInTheDocument()
 
-    await user.click(
-      screen.getByRole("button", { name: "common:actions.copyKey" }),
-    )
-    await waitFor(() =>
-      expect(writeText).toHaveBeenCalledWith("complete-example-secret"),
-    )
+      await user.click(
+        screen.getByRole("button", { name: "common:actions.copyKey" }),
+      )
+      await waitFor(() =>
+        expect(writeText).toHaveBeenCalledWith("complete-example-secret"),
+      )
 
-    const errorToast = vi.spyOn(toast, "error")
-    writeText.mockRejectedValueOnce(new Error("clipboard denied"))
-    await user.click(
-      screen.getByRole("button", { name: "common:actions.copyKey" }),
-    )
-    await waitFor(() =>
-      expect(errorToast).toHaveBeenCalledWith(
-        "keyManagement:messages.copyFailed",
-      ),
-    )
+      const errorToast = vi.spyOn(toast, "error")
+      writeText.mockRejectedValueOnce(new Error("clipboard denied"))
+      await user.click(
+        screen.getByRole("button", { name: "common:actions.copyKey" }),
+      )
+      await waitFor(() =>
+        expect(errorToast).toHaveBeenCalledWith(
+          "keyManagement:messages.copyFailed",
+        ),
+      )
 
-    await user.click(exportButton)
-    expect(
-      await screen.findByText("keyManagement:actions.useInCherry"),
-    ).toBeVisible()
-    await user.keyboard("{Escape}")
+      await user.click(exportButton)
+      expect(
+        await screen.findByText("keyManagement:actions.useInCherry"),
+      ).toBeVisible()
+      await user.keyboard("{Escape}")
 
-    await user.click(verifyApiButton)
-    expect(await screen.findByRole("dialog")).toBeVisible()
-  })
+      await user.click(verifyApiButton)
+      expect(await screen.findByRole("dialog")).toBeVisible()
+    },
+  )
 
   it("hides a newly linked profile secret until the user reveals it", async () => {
     const user = userEvent.setup()
@@ -384,7 +397,7 @@ describe("AccountKeyResourceListItem", () => {
     )
 
     expect(screen.queryByText(nextProfile.apiKey)).not.toBeInTheDocument()
-    expect(screen.getByText(row.facts.maskedLabel!)).toBeVisible()
+    expect(screen.getByText("sk-o••••••mple")).toBeVisible()
     expect(
       screen.getByRole("button", { name: "keyManagement:actions.showKey" }),
     ).toBeVisible()

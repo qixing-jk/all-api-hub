@@ -209,6 +209,62 @@
         "help": "A manual load-balancing weight. Higher values draw proportionally more traffic; leave empty to use the gateway default.",
         "label": "Weight"
       },
+      "magpieAnthropic": {
+        "help": "Use the Anthropic API root (ANTHROPIC_BASE_URL); do not append /v1/messages.",
+        "label": "Anthropic URL"
+      },
+      "magpieBalancePath": {
+        "help": "Amount in the response, e.g. data.balance or data.total / 500000. Leave empty for Magpie’s default. Read-only for preset providers.",
+        "label": "Balance expression"
+      },
+      "magpieBalanceURL": {
+        "help": "Optional balance endpoint used by Magpie. Supports {key} in the URL. Existing balance tokens stay unchanged. Read-only for preset providers.",
+        "label": "Balance URL"
+      },
+      "magpieCatalog": {
+        "help": "Comma-separated models.dev provider IDs for model names and reasoning levels; first match wins. Read-only for preset providers.",
+        "label": "Model catalog"
+      },
+      "magpieChat": {
+        "help": "Include /v1 in the Chat Completions base URL; do not append /chat/completions.",
+        "label": "Chat Completions URL",
+        "required": "Enter the address for the selected API type."
+      },
+      "magpieGemini": {
+        "help": "Include /v1beta in the Gemini base URL; do not append a model or generateContent path.",
+        "label": "Gemini URL"
+      },
+      "magpieHeaders": {
+        "help": "Add header names and values as rows, or switch to JSON. These headers are sent to the upstream provider.",
+        "label": "Custom headers"
+      },
+      "magpieMaxConcurrency": {
+        "help": "0–1000 simultaneous requests for each key/account. Empty uses Magpie’s default; 0 means unlimited.",
+        "label": "Concurrent requests per key"
+      },
+      "magpieMaxRPM": {
+        "help": "0–10000 requests per minute for each key/account. Empty or 0 means unlimited.",
+        "label": "Requests per minute per key"
+      },
+      "magpieModels": {
+        "help": "Select discovered models or type a model ID and press Enter. Fetch models after filling in the connection details. Leave the selection empty to use MAGPIE’s automatic model catalog."
+      },
+      "magpieModelsURL": {
+        "help": "Optional full model-list URL, queried with the current key and headers. Leave empty to use the protocol endpoints. Read-only for preset providers.",
+        "label": "Models URL"
+      },
+      "magpiePriceRate": {
+        "help": "Multiplier against the listed price, e.g. 0.8. Range 0–1000, up to 3 decimal places. Empty or 0 uses the listed price.",
+        "label": "Price multiplier"
+      },
+      "magpieProxy": {
+        "help": "Leave empty to use the global proxy; use direct to bypass it.",
+        "label": "Proxy"
+      },
+      "magpieResponses": {
+        "help": "The Responses base URL usually ends in /v1; do not append /responses.",
+        "label": "Responses URL"
+      },
       "manualModels": {
         "label": "Manual models"
       },
@@ -464,6 +520,32 @@
     "headerDescription": "Manage channels in your self-hosted AI gateway to bring API sources into one endpoint.",
     "openChannelConsole": "Open gateway channel management",
     "unconfiguredValueDescription": "After configuration, you can import scattered account keys and API keys as gateway channels, then view and manage them directly in All API Hub."
+  },
+  "magpieKeys": {
+    "anyProtocol": "Any protocol",
+    "enabled": "Enabled",
+    "help": "Add a key or paste several keys separated by lines, commas or spaces. Only the primary saved key can be revealed. Replace an extra key by adding the new one and removing the old one. Changes apply when you save.",
+    "invalid": "Check new keys, protocols and weights (0–1000). Keep at least one enabled key.",
+    "name": "Key name",
+    "order": "In order (failover)",
+    "pace": "Remaining allowance per hour",
+    "primary": "Primary",
+    "primaryKey": "Primary API Key",
+    "protocol": "Protocol",
+    "rotate": "Round robin",
+    "routing": "Key routing",
+    "smart": "Smart (automatic failover)",
+    "title": "Key pool",
+    "usage": "Least used first",
+    "weighted": "Weighted",
+    "weightHelp": "0 or 1 uses the default weight; 2–1000 changes its share under weighted routing."
+  },
+  "magpieProtocols": {
+    "checkOther": "An address for another configured type is invalid. Switch to that type to check it.",
+    "configured": "Configured",
+    "help": "Choose a type to edit its address. To use several protocols, configure each in turn; each type keeps its own address.",
+    "type": "API type",
+    "unmanaged": "Managed in Magpie"
   },
   "migration": {
     "actions": {

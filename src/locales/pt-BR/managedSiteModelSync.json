@@ -23,13 +23,13 @@
     },
     "exclusions": {
       "autoSave": "As alterações são salvas imediatamente",
-      "description": "Os canais marcados para ignorar são ignorados na sincronização automática e ao clicar em Executar todos. Para sincronizá-los uma vez sem alterar esta configuração, use Executar selecionados ou Sincronizar na linha.",
+      "description": "Canais marcados para ignorar não participam da sincronização automática nem de Executar todos. Use Executar selecionados ou Sincronizar na linha para sincronizá-los uma vez.",
       "excludedLabel": "Configurado para ignorar",
       "loadFailed": "Não foi possível carregar as configurações de canais ignorados. Tente novamente.",
       "savedExcluded": "Salvo: a sincronização automática e Executar todos ignorarão este canal.",
       "savedIncluded": "Salvo: este canal participará da sincronização automática e de Executar todos.",
       "saveFailed": "Não foi possível salvar a configuração para ignorar o canal. Tente novamente.",
-      "showOnly": "Mostrar canais configurados para ignorar",
+      "showOnly": "Somente canais marcados para ignorar",
       "skippedReason": "Este canal estava configurado para ser ignorado no início da execução. Nenhum modelo foi consultado ou atualizado.",
       "title": "Ignorar na sincronização automática e em Executar todos",
       "toggle": "Ignorar {{name}} na sincronização automática e em Executar todos"
@@ -43,12 +43,12 @@
     },
     "lastExecution": "Última execução",
     "manual": {
-      "description": "Executar selecionados sincroniza todos os canais marcados, inclusive os configurados para ignorar, mesmo ao selecionar todos. As alterações nos interruptores são salvas imediatamente.",
       "empty": {
         "description": "Atualize a lista ou ajuste os filtros para encontrar canais.",
         "title": "Nenhum canal disponível"
       },
       "loading": "Carregando canais...",
+      "refresh": "Atualizar canais",
       "reload": "Recarregar canais",
       "searchPlaceholder": "Pesquisar canais por nome ou ID..."
     },

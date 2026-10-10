@@ -23,6 +23,23 @@ const expectSuccessfulWrite = async (write: Promise<PreferenceWriteResult>) => {
 describe("userPreferences managed-site helpers", () => {
   const storage = new Storage({ area: "local" })
 
+  it("resets Magpie credentials without replacing other gateway configurations", async () => {
+    await expectSuccessfulWrite(
+      userPreferences.savePreferences({
+        magpie: { baseUrl: "https://magpie.test/web", webKey: "web-key" },
+      }),
+    )
+    const before = await userPreferences.getPreferences()
+    expect(before.magpie).toEqual({
+      baseUrl: "https://magpie.test/web",
+      webKey: "web-key",
+    })
+    await expectSuccessfulWrite(userPreferences.resetMagpieConfig())
+    const after = await userPreferences.getPreferences()
+    expect(after.magpie).toEqual(DEFAULT_PREFERENCES.magpie)
+    expect(after.newApi).toEqual(before.newApi)
+  })
+
   it("updates and resets OmniRoute without replacing other site configuration", async () => {
     await expectSuccessfulWrite(
       userPreferences.updateManagedSiteType(SITE_TYPES.OMNIROUTE),

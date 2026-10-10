@@ -158,6 +158,7 @@ type ExpectedManagedSiteType =
   | typeof SITE_TYPES.SUB2API
   | typeof SITE_TYPES.OMNIROUTE
   | typeof SITE_TYPES.GPT_LOAD
+  | typeof SITE_TYPES.MAGPIE
 
 const accountSiteTypeIsExact: ExpectExact<
   AccountSiteType,
@@ -288,7 +289,7 @@ describe("account site definition registry", () => {
       expect(
         getAccountSiteDefinition(siteType)?.managedResource
           ?.legacyNumericChannelConfig,
-      ).toBe(siteType !== SITE_TYPES.AXON_HUB)
+      ).toBe(siteType !== SITE_TYPES.AXON_HUB && siteType !== SITE_TYPES.MAGPIE)
     }
   })
 
@@ -438,6 +439,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.NEW_API,
       SITE_TYPES.SUB2API,
       SITE_TYPES.GPT_LOAD,
+      SITE_TYPES.MAGPIE,
       SITE_TYPES.AXON_HUB,
       SITE_TYPES.CLAUDE_CODE_HUB,
       SITE_TYPES.OCTOPUS,

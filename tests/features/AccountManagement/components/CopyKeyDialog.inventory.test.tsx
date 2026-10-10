@@ -116,7 +116,7 @@ describe("CopyKeyDialog inventory", () => {
 
     expect(await screen.findByText("Example native key")).toBeVisible()
     expect(screen.getByText("Default workspace")).toBeVisible()
-    expect(screen.queryByText("sk-or-v1-...example")).not.toBeInTheDocument()
+    expect(screen.queryByText("sk-o••••••mple")).not.toBeInTheDocument()
     expect(
       screen.getByText("keyManagement:keyDetails.createResponseOnlySecret"),
     ).toBeVisible()
@@ -145,7 +145,7 @@ describe("CopyKeyDialog inventory", () => {
     await user.click(detailsButton)
 
     expect(detailsButton).toHaveAttribute("aria-expanded", "true")
-    expect(screen.getByText("sk-or-v1-...example")).toBeVisible()
+    expect(screen.getByText("sk-o••••••mple")).toBeVisible()
     expect(
       screen.getByText("keyManagement:keyDetails.createResponseOnlySecret"),
     ).toBeVisible()
@@ -358,7 +358,7 @@ describe("CopyKeyDialog inventory", () => {
     )
 
     expect(screen.queryByText(shortSecret)).not.toBeInTheDocument()
-    expect(screen.getByText("abcdefgh****************stuv")).toBeInTheDocument()
+    expect(screen.getByText("abcd••••••stuv")).toBeInTheDocument()
   })
 
   it("renders disabled token state and toggles shared key details", async () => {

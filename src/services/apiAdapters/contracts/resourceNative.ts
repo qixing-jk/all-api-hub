@@ -138,15 +138,20 @@ export type ResourceSecretListValue = {
 export type ResourceSecretListDescriptor = ResourceFieldDescriptorBase & {
   type: "secret-list"
   minEntries?: number
+  /** Split a multiline or separated paste into new, independently editable rows. */
+  allowBulkPaste?: boolean
   savedEntries: readonly {
     id: string
     secretState: ResourceSecretState
     /** Opaque target accepted by the editor's existing loadSecret operation. */
     loadFieldId?: string
+    canReplace?: boolean
+    maskedValue?: string
   }[]
   entryFields: readonly {
     fieldId: string
-    type: "text" | "number" | "boolean"
+    type: "text" | "number" | "boolean" | "select"
+    options?: readonly ResourceFieldOption[]
     min?: number
     max?: number
   }[]

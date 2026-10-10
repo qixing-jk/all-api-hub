@@ -83,6 +83,13 @@ const runtimeConfigs: ManagedSiteRuntimeConfig[] = [
       managementKey: "gpt-load-management-key-placeholder",
     },
   },
+  {
+    siteType: SITE_TYPES.MAGPIE,
+    config: {
+      baseUrl: "http://magpie.example.invalid:3430/",
+      webKey: "magpie-web-key-placeholder",
+    },
+  },
 ]
 
 const getTarget = async (runtimeConfig: ManagedSiteRuntimeConfig) =>
@@ -114,6 +121,12 @@ const getRawTargetValues = (
       ]
     case SITE_TYPES.OMNIROUTE:
       return [runtimeConfig.config.baseUrl, "admin", runtimeConfig.config.token]
+    case SITE_TYPES.MAGPIE:
+      return [
+        runtimeConfig.config.baseUrl,
+        "admin",
+        runtimeConfig.config.webKey,
+      ]
     case SITE_TYPES.GPT_LOAD:
       return [
         runtimeConfig.config.baseUrl,
@@ -154,6 +167,7 @@ const changeCompatibleIdentity = (
     case SITE_TYPES.CLI_PROXY_API:
     case SITE_TYPES.OMNIROUTE:
     case SITE_TYPES.GPT_LOAD:
+    case SITE_TYPES.MAGPIE:
       return null
     default:
       return {

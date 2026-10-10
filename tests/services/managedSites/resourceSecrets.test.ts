@@ -7,6 +7,15 @@ import {
 } from "~/services/managedSites/utils/resourceSecrets"
 
 describe("managed resource secrets", () => {
+  it("collects Magpie Web credentials for diagnostic redaction", () => {
+    expect(
+      collectManagedConfigSecrets({
+        baseUrl: "https://magpie.example.invalid",
+        webKey: "magpie-web-secret",
+      }),
+    ).toEqual(["magpie-web-secret"])
+  })
+
   it("merges secret collections immutably with dedupe and incomplete dominance", () => {
     const first = Object.freeze({
       knownSecrets: Object.freeze(["secret-a", "secret-b"]),

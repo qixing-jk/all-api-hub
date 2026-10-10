@@ -56,6 +56,26 @@ function createPreferences(
 }
 
 describe("settings product analytics snapshots", () => {
+  it("tracks Magpie configuration changes without its URL or Web key", () => {
+    const magpie = {
+      baseUrl: "https://private-magpie.invalid",
+      webKey: "private-web-key",
+    }
+    const events = buildSettingsSnapshotEvents(
+      createPreferences({ managedSiteType: SITE_TYPES.MAGPIE, magpie }),
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      { magpie },
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteConfigSnapshot,
+        managed_site_type: SITE_TYPES.MAGPIE,
+        magpie_configured: true,
+      }),
+    )
+    expect(JSON.stringify(events)).not.toContain(magpie.baseUrl)
+    expect(JSON.stringify(events)).not.toContain(magpie.webKey)
+  })
   it.each(["constructor", "toString", "__proto__", "custom-site"])(
     "keeps the default managed-site snapshot for unregistered type %s",
     (value) => {
@@ -524,6 +544,7 @@ describe("settings product analytics snapshots", () => {
         cli_proxy_configured: false,
         omniroute_configured: false,
         gpt_load_configured: false,
+        magpie_configured: false,
         claude_code_router_configured: false,
       },
       {

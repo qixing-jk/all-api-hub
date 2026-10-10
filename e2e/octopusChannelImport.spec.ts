@@ -4,7 +4,10 @@ import {
   OCTOPUS_IMPORT_ORIGIN,
   stubOctopusChannelImport,
 } from "~~/e2e/fixtures/octopusChannelImport"
-import { runManagedSiteTokenChannelStatusScenario } from "~~/e2e/scenarios/managedSiteChannels"
+import {
+  runManagedSiteCredentialImportScenario,
+  runManagedSiteTokenChannelStatusScenario,
+} from "~~/e2e/scenarios/managedSiteChannels"
 import {
   forceExtensionLanguage,
   seedUserPreferences,
@@ -17,6 +20,62 @@ import { parallelizeShardableSpec } from "~~/e2e/utils/parallelizeShardableSpec"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 parallelizeShardableSpec()
+
+test("imports standalone credentials without any source account or management requests", async ({
+  context,
+  page,
+  extensionId,
+}) => {
+  test.setTimeout(120_000)
+  await forceExtensionLanguage(page, "en")
+  await stubLlmMetadataIndex(context)
+  const upstream = {
+    baseUrl: "https://independent-upstream.example.invalid/proxy/v1",
+    apiKey: "sk-independent-upstream",
+  }
+  const sourceRequests: string[] = []
+  await context.route(
+    "https://independent-upstream.example.invalid/**",
+    async (route) => {
+      sourceRequests.push(new URL(route.request().url()).pathname)
+      expect(route.request().headers().authorization).toBe(
+        `Bearer ${upstream.apiKey}`,
+      )
+      await route.fulfill({ json: { data: [{ id: "gpt-4o-mini" }] } })
+    },
+  )
+  const fixture = await stubOctopusChannelImport({
+    context,
+    version: "v0.13",
+    upstream,
+  })
+  await seedUserPreferences(await getServiceWorker(context), {
+    managedSiteType: SITE_TYPES.OCTOPUS,
+    octopus: {
+      baseUrl: OCTOPUS_IMPORT_ORIGIN,
+      username: "admin",
+      password: "fixture-password",
+    },
+    autoCheckin: { globalEnabled: false, pretriggerDailyOnUiOpen: false },
+    openChangelogOnUpdate: false,
+  })
+  await runManagedSiteCredentialImportScenario({
+    page,
+    extensionId,
+    siteType: SITE_TYPES.OCTOPUS,
+    label: "Octopus",
+    runPrefix: "AAH E2E standalone",
+    upstream,
+  })
+  expect(sourceRequests.length).toBeGreaterThan(0)
+  expect(new Set(sourceRequests)).toEqual(new Set(["/proxy/v1/models"]))
+  expect(fixture.createPayloads).toHaveLength(1)
+  expect(fixture.createPayloads[0]).toMatchObject({
+    base_url: "https://independent-upstream.example.invalid/proxy",
+  })
+  expect(fixture.getModelProbes()).toBe(2)
+  expect(fixture.getRemainingChannelCount()).toBe(0)
+})
 
 for (const version of ["jwt", "v0.12", "v0.13"] as const) {
   for (const models of [["gpt-4o-mini", "gpt-4.1-mini"], []]) {

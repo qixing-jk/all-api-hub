@@ -166,9 +166,10 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
   const setServiceMocks = (params: {
     oldModels?: string[]
     newModels?: string[]
+    ref?: ManagedModelChannel["ref"]
   }) => {
     const channel: ManagedModelChannel = {
-      ref: modelResourceRef(1),
+      ref: params.ref ?? modelResourceRef(1),
       name: "channel-1",
       type: 1,
       baseUrl: "https://channel.example.com",
@@ -180,7 +181,7 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
 
     mockRunBatch.mockImplementation(async (_channels: any, options: any) => {
       const lastResult = {
-        resourceRef: modelResourceRef(1),
+        resourceRef: channel.ref,
         channelName: "channel-1",
         ok: true,
         attempts: 1,
@@ -210,6 +211,24 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
 
     return { channel }
   }
+
+  it("syncs Magpie models without attempting unsupported redirect mapping", async () => {
+    setPrefs({ pruneMissingTargetsOnModelSync: true })
+    const preferences = await mockedUserPreferences.getPreferences()
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      ...preferences,
+      managedSiteType: SITE_TYPES.MAGPIE,
+      magpie: { baseUrl: "http://magpie.test:3430", webKey: "test-web-key" },
+    })
+    const ref = modelResourceRef(1, {
+      siteType: SITE_TYPES.MAGPIE,
+      scopeKey: "http://magpie.test:3430",
+    })
+    setServiceMocks({ oldModels: ["a"], newModels: ["a", "b"], ref })
+    await modelSyncScheduler.executeSync([ref])
+    expect(mockRunBatch).toHaveBeenCalled()
+    expect(mockedApplyModelMapping).not.toHaveBeenCalled()
+  })
 
   it("passes prune options when enabled and model list changed", async () => {
     setPrefs({ pruneMissingTargetsOnModelSync: true })

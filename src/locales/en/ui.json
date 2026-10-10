@@ -655,6 +655,7 @@
     "hide": "Hide key",
     "keepPlaceholder": "Leave blank to keep the saved key",
     "loadFailed": "Could not load this key. Try again.",
+    "maskedOnly": "Only the masked value is available for this saved key.",
     "newPlaceholder": "Enter API key",
     "newState": "New, not saved",
     "previousDisableReason": "Previous disable reason: {{reason}}",

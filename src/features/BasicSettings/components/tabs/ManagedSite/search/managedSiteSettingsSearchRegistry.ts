@@ -4,6 +4,7 @@ import { axonHubSettingsSearch } from "~/features/BasicSettings/components/tabs/
 import { claudeCodeHubSettingsSearch } from "~/features/BasicSettings/components/tabs/ManagedSite/search/ManagedSiteClaudeCodeHub.search"
 import { doneHubSettingsSearch } from "~/features/BasicSettings/components/tabs/ManagedSite/search/ManagedSiteDoneHub.search"
 import { gptLoadSettingsSearch } from "~/features/BasicSettings/components/tabs/ManagedSite/search/ManagedSiteGptLoad.search"
+import { magpieSettingsSearch } from "~/features/BasicSettings/components/tabs/ManagedSite/search/ManagedSiteMagpie.search"
 import { newApiSettingsSearch } from "~/features/BasicSettings/components/tabs/ManagedSite/search/ManagedSiteNewApi.search"
 import { octopusSettingsSearch } from "~/features/BasicSettings/components/tabs/ManagedSite/search/ManagedSiteOctopus.search"
 import { omniRouteSettingsSearch } from "~/features/BasicSettings/components/tabs/ManagedSite/search/ManagedSiteOmniRoute.search"
@@ -21,6 +22,7 @@ export const managedSiteSettingsSearchModules = {
   sub2Api: sub2ApiSettingsSearch,
   omniRoute: omniRouteSettingsSearch,
   gptLoad: gptLoadSettingsSearch,
+  magpie: magpieSettingsSearch,
   cliProxyApi: cliProxyApiSettingsSearch,
 }
 export type ManagedSiteSettingsPanelId =

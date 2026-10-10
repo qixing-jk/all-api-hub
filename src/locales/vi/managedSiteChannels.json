@@ -209,6 +209,62 @@
         "help": "A manual load-balancing weight. Higher values draw proportionally more traffic; leave empty to use the gateway default.",
         "label": "Weight"
       },
+      "magpieAnthropic": {
+        "help": "Dùng URL gốc của API Anthropic (ANTHROPIC_BASE_URL); không thêm /v1/messages.",
+        "label": "URL Anthropic"
+      },
+      "magpieBalancePath": {
+        "help": "Số tiền trong phản hồi, ví dụ data.balance hoặc data.total / 500000. Để trống để dùng mặc định của Magpie. Chỉ đọc với nhà cung cấp đặt sẵn.",
+        "label": "Biểu thức số dư"
+      },
+      "magpieBalanceURL": {
+        "help": "API số dư tùy chọn cho Magpie. Hỗ trợ {key} trong URL. Giữ nguyên token số dư đã lưu. Chỉ đọc với nhà cung cấp đặt sẵn.",
+        "label": "URL số dư"
+      },
+      "magpieCatalog": {
+        "help": "ID nhà cung cấp models.dev phân cách bằng dấu phẩy cho tên và mức suy luận; ưu tiên kết quả khớp đầu tiên. Chỉ đọc với nhà cung cấp đặt sẵn.",
+        "label": "Danh mục mô hình"
+      },
+      "magpieChat": {
+        "help": "URL gốc của Chat Completions phải chứa /v1; không thêm /chat/completions.",
+        "label": "URL Chat Completions",
+        "required": "Nhập địa chỉ cho loại API đã chọn."
+      },
+      "magpieGemini": {
+        "help": "URL gốc của Gemini phải chứa /v1beta; không thêm tên mô hình hoặc đường dẫn generateContent.",
+        "label": "URL Gemini"
+      },
+      "magpieHeaders": {
+        "help": "Thêm tên và giá trị header theo từng dòng hoặc chuyển sang JSON. Các header này được gửi đến nhà cung cấp thượng nguồn.",
+        "label": "Header tùy chỉnh"
+      },
+      "magpieMaxConcurrency": {
+        "help": "0–1000 yêu cầu cho mỗi khóa hoặc tài khoản. Để trống: mặc định của Magpie; 0: không giới hạn.",
+        "label": "Yêu cầu đồng thời mỗi khóa"
+      },
+      "magpieMaxRPM": {
+        "help": "0–10000 yêu cầu mỗi phút cho mỗi khóa hoặc tài khoản. Để trống hoặc 0: không giới hạn.",
+        "label": "Yêu cầu mỗi phút mỗi khóa"
+      },
+      "magpieModels": {
+        "help": "Chọn mô hình đã tìm thấy hoặc nhập ID mô hình rồi nhấn Enter. Lấy mô hình sau khi điền thông tin kết nối. Để trống lựa chọn để dùng danh mục mô hình tự động của MAGPIE."
+      },
+      "magpieModelsURL": {
+        "help": "URL đầy đủ tùy chọn, truy vấn bằng khóa và tiêu đề hiện tại. Để trống để dùng URL giao thức. Chỉ đọc với nhà cung cấp đặt sẵn.",
+        "label": "URL danh sách mô hình"
+      },
+      "magpiePriceRate": {
+        "help": "Hệ số so với giá niêm yết, ví dụ 0.8. Từ 0–1000, tối đa 3 chữ số thập phân. Để trống hoặc 0 để dùng giá niêm yết.",
+        "label": "Hệ số giá"
+      },
+      "magpieProxy": {
+        "help": "Để trống để dùng proxy toàn cục; dùng direct để kết nối trực tiếp.",
+        "label": "Proxy"
+      },
+      "magpieResponses": {
+        "help": "URL gốc của Responses thường kết thúc bằng /v1; không thêm /responses.",
+        "label": "URL Responses"
+      },
       "manualModels": {
         "label": "Model thủ công"
       },
@@ -464,6 +520,32 @@
     "headerDescription": "Quản lý kênh trên cổng AI tự triển khai để kết nối nhiều nguồn API qua một điểm truy cập.",
     "openChannelConsole": "Mở trang quản lý kênh gateway",
     "unconfiguredValueDescription": "Sau khi cấu hình, bạn có thể nhập các key tài khoản và API key rời rạc làm kênh gateway, rồi xem và quản lý trực tiếp trong All API Hub."
+  },
+  "magpieKeys": {
+    "anyProtocol": "Mọi giao thức",
+    "enabled": "Bật",
+    "help": "Thêm khóa hoặc dán nhiều khóa ngăn cách bằng xuống dòng, dấu phẩy hoặc dấu cách. Chỉ khóa chính đã lưu mới có thể hiển thị đầy đủ. Để thay khóa bổ sung, hãy thêm khóa mới rồi xóa khóa cũ. Thay đổi có hiệu lực khi lưu.",
+    "invalid": "Kiểm tra khóa mới, giao thức và trọng số (0–1000). Giữ ít nhất một khóa được bật.",
+    "name": "Tên khóa",
+    "order": "Theo thứ tự (chuyển dự phòng)",
+    "pace": "Hạn mức còn lại mỗi giờ",
+    "primary": "Chính",
+    "primaryKey": "Khóa API chính",
+    "protocol": "Giao thức",
+    "rotate": "Luân phiên",
+    "routing": "Định tuyến khóa",
+    "smart": "Thông minh (tự động chuyển dự phòng)",
+    "title": "Nhóm khóa",
+    "usage": "Ưu tiên ít sử dụng nhất",
+    "weighted": "Theo trọng số",
+    "weightHelp": "0 hoặc 1 dùng trọng số mặc định; 2–1000 điều chỉnh tỷ lệ khi định tuyến theo trọng số."
+  },
+  "magpieProtocols": {
+    "checkOther": "Địa chỉ của một loại đã cấu hình khác không hợp lệ. Hãy chuyển sang loại đó để kiểm tra.",
+    "configured": "Đã cấu hình",
+    "help": "Chọn loại để sửa địa chỉ tương ứng. Để dùng nhiều giao thức, hãy lần lượt cấu hình từng loại; mỗi loại giữ địa chỉ riêng.",
+    "type": "Loại API",
+    "unmanaged": "Quản lý trong Magpie"
   },
   "migration": {
     "actions": {

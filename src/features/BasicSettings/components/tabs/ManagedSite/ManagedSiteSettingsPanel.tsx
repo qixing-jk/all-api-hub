@@ -6,6 +6,7 @@ import ClaudeCodeHubSettings from "~/features/BasicSettings/components/tabs/Mana
 import CliProxyApiSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/CliProxyApiSettings"
 import DoneHubSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/DoneHubSettings"
 import GptLoadSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/GptLoadSettings"
+import MagpieSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/MagpieSettings"
 import NewApiSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/NewApiSettings"
 import OctopusSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/OctopusSettings"
 import OmniRouteSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/OmniRouteSettings"
@@ -26,6 +27,7 @@ const panels = {
   sub2Api: Sub2ApiSettings,
   omniRoute: OmniRouteSettings,
   gptLoad: GptLoadSettings,
+  magpie: MagpieSettings,
   cliProxyApi: CliProxyApiSettings,
 } satisfies Record<ManagedSiteSettingsPanelId, ComponentType>
 /** Render the panel belonging to the same module that declares its search targets. */

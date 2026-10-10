@@ -129,6 +129,10 @@
     "missingCredentials": "プロバイダー名と完全な API キーが必要です。",
     "unsupportedApiType": "この API プロトコルは Kelivo にエクスポートできません。"
   },
+  "magpie": {
+    "configMissing": "設定で Magpie Web URL と Web 管理キーを設定してください。",
+    "noChannelsToSync": "同期するチャンネルがありません"
+  },
   "managedSite": {
     "unsupportedModelSync": "このバージョンでは {{siteName}} の管理サイトモデル同期はサポートされていません"
   },

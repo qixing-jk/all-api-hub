@@ -130,6 +130,8 @@ export function getManagedSiteConfigMissingMessage(
       return t("messages:sub2api.configMissing")
     case "omniroute":
       return t("messages:omniroute.configMissing")
+    case "magpie":
+      return t("messages:magpie.configMissing")
     case "gptLoad":
       return t("messages:gptLoad.configMissing")
     case "newapi":
@@ -158,6 +160,8 @@ export function getManagedSiteNoChannelsToSyncMessage(
       return t("messages:claudecodehub.noChannelsToSync")
     case "omniroute":
       return t("messages:omniroute.noChannelsToSync")
+    case "magpie":
+      return t("messages:magpie.noChannelsToSync")
     case "gptLoad":
       return t("messages:gptLoad.noChannelsToSync")
     case "newapi":
