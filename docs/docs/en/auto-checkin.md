@@ -42,7 +42,7 @@ Under **Settings → Check-in & Redemption → Automatic Check-in**:
 | **Window Start / End** | Allowed local-time range for the daily schedule. It can cross midnight. |
 | **Schedule Mode** | Selects a random time within the window, or choose Fixed Time. |
 | **Fixed Time** | Used only in Fixed Time mode. |
-| **Retry Strategy** | Enabled by default. Failed or pending results from daily or manual runs are retried the same day when they meet the [retry conditions](#execution-and-retry-rules). |
+| **Retry Strategy** | Enabled by default. Failed or pending results from daily or manual runs are retried the same day when they meet the [retry conditions](#auto-checkin-retry-rules). |
 | **Retry Interval (minutes)** | Used only when retries are enabled. |
 | **Maximum Daily Attempts** | **Includes the initial daily run**, rather than counting only additional retries. |
 | **View Check-in History / Open Records** | Opens the Automatic Check-in results page. It stores latest status, not a multi-day archive. |
@@ -57,7 +57,7 @@ Settings take effect after saving, without restarting the extension. Upgrades pr
 - Click **Run Now** to run eligible accounts once, regardless of the global automatic check-in switch. Accounts must still be enabled and meet check-in requirements. To process one account, use **Quick Check-in** in its menu.
 - The Quick Check-in calendar icon at the top of the popup or side panel opens the check-in page and starts a manual batch.
 - Failed rows can offer Retry, Manual Check-in, External Check-in, or Open Site. Manual Check-in requires you to finish the action on the site.
-- "Pending confirmation" offers **Verify Status** only when the method can read today's status. Methods without that read offer **Try Again** instead of a verification action that cannot succeed. Automatic retries follow the [execution and retry rules](#execution-and-retry-rules) below. For methods that cannot safely repeat a claim, confirm the result on the site first.
+- "Pending confirmation" offers **Verify Status** only when the method can read today's status. Methods without that read offer **Try Again** instead of a verification action that cannot succeed. Automatic retries follow the [execution and retry rules](#auto-checkin-retry-rules) below. For methods that cannot safely repeat a claim, confirm the result on the site first.
 - To report a problem, choose check-in feedback or a support request in the account menu or result row. Review the report before copying it or opening it on GitHub to submit.
 
 ### 4. Handle Detection and Execution States
@@ -73,6 +73,8 @@ The account's check-in configuration retains your manual method choice and custo
 | Disabled | The site explicitly disabled this method | Keep the method, disable automatic check-in, or switch to manual |
 | Status Unreadable | The method still exists, but today's status cannot be read temporarily | Keep the selection and auto check-in switch, retry later or confirm manually |
 | Pending Confirmation | The request result cannot be reliably confirmed | Verify status first; if unavailable, check the result on the site before deciding whether to retry |
+
+<a id="auto-checkin-retry-rules"></a>
 
 ## Execution and Retry Rules
 
@@ -135,8 +137,8 @@ If no available method is detected for another site, use an external check-in UR
 | Result | Meaning | Automatic retry |
 |------|------|:---:|
 | Success / Already checked in today | The run confirmed a completed check-in, or the site confirmed today's check-in was already done | No |
-| Failed | API, authentication, verification, network, or site response failed | Later the same day when retries are enabled and the [retry conditions](#execution-and-retry-rules) are met |
-| Pending confirmation | The request may have been submitted, but the site result could not be confirmed reliably | Verify status when available; automatic retries are subject to the [retry conditions](#execution-and-retry-rules) |
+| Failed | API, authentication, verification, network, or site response failed | Later the same day when retries are enabled and the [retry conditions](#auto-checkin-retry-rules) are met |
+| Pending confirmation | The request may have been submitted, but the site result could not be confirmed reliably | Verify status when available; automatic retries are subject to the [retry conditions](#auto-checkin-retry-rules) |
 | Skipped | Account disabled, not detected, account-level setting off, no provider, or insufficient credentials | No |
 
 | Problem | Troubleshooting |

@@ -80,6 +80,28 @@ describe("Hiyo daily check-in protocol", () => {
     )
   })
 
+  it("reads status in UTC when the browser cannot resolve its timezone", async () => {
+    vi.mocked(fetchApiResponse).mockResolvedValue(response(statusData))
+    const timezone = vi.spyOn(Intl, "DateTimeFormat").mockImplementation(() => {
+      throw new RangeError("Timezone unavailable")
+    })
+    try {
+      await expect(fetchHiyoDailyCheckInStatus(request)).resolves.toEqual({
+        enabled: true,
+        checkedInToday: false,
+      })
+      expect(fetchApiResponse).toHaveBeenCalledExactlyOnceWith(
+        expect.anything(),
+        {
+          endpoint: "/api/v1/checkin?timezone=UTC",
+          options: { method: "GET", cache: "no-store" },
+        },
+      )
+    } finally {
+      timezone.mockRestore()
+    }
+  })
+
   it.each([
     [
       {

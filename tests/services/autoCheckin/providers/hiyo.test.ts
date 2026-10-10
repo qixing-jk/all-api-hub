@@ -5,6 +5,7 @@ import { fetchApiResponse } from "~/services/apiTransport/request"
 import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery/discovery"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
+import { hiyoProvider } from "~/services/checkin/autoCheckin/providers/hiyo"
 import { createAutoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers/registry"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
@@ -177,6 +178,32 @@ describe("registered Hiyo daily check-in", () => {
     await expect(run()).resolves.toMatchObject({ kind: "blocked" })
     expect(fetchApiResponse).toHaveBeenCalledTimes(1)
   })
+
+  it.each([
+    undefined,
+    { outcome: "known", availability: "disabled", today: "not_checked" },
+    { outcome: "known", availability: "enabled", today: "checked" },
+  ] as const)(
+    "rejects a direct claim without eligible status proof (%j)",
+    async (statusProof) => {
+      await expect(
+        hiyoProvider.checkIn(account(), {
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+          protectionBypassExecution: userCommandExecution(
+            PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+          ),
+          statusProof: statusProof && {
+            ...statusProof,
+            evidence: { source: "probe", observedAt: 200 },
+          },
+        }),
+      ).resolves.toMatchObject({
+        status: "failed",
+        reasonCode: "status_unavailable",
+      })
+      expect(fetchApiResponse).not.toHaveBeenCalled()
+    },
+  )
 
   it.each(["abort", "timeout"])(
     "finishes %s discovery even if the transport ignores cancellation",
