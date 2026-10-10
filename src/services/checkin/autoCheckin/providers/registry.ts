@@ -4,6 +4,10 @@ import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { AGENT_ROUTER_ORIGINS } from "~/services/accountLogin/providers/agentrouter/config"
 import { createAiRouterCheckInStatusEndpoint } from "~/services/apiService/sub2api/checkin/aiRouterCheckInProtocol"
 import {
+  createHiyoCheckInStatusEndpoint,
+  resolveHiyoCheckInTimezone,
+} from "~/services/apiService/sub2api/checkin/hiyoCheckInProtocol"
+import {
   createToolcodeCheckInStatusEndpoint,
   resolveToolcodeCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/toolcodeCheckInProtocol"
@@ -67,9 +71,9 @@ interface AutoCheckinMethodDefinitionBase {
   readonly source: AutoCheckinMethodSource
 }
 
-/** Methods whose same-day check-in must not be replayed. Empty until observed. */
+/** Hiyo's combined daily/bonus claim can award again; never queue a replay. */
 export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
-  new Set()
+  new Set([AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn])
 
 /**
  * Candidate support and pre-registry compatibility are separate decisions.
@@ -318,6 +322,20 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     },
     supportsStatusReadback: true,
     feedbackStatusRoutes: [{ path: "/api/v1/tbe-sponsor-checkin/status" }],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn]: {
+    id: AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "Hiyo Free",
+    },
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: (): FeedbackStatusRoutes => [
+      { path: createHiyoCheckInStatusEndpoint(resolveHiyoCheckInTimezone()) },
+    ],
     legacy: false,
     newAccountCompatibility: false,
   },

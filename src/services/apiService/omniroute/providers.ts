@@ -17,6 +17,9 @@
  *   wins over the provider's static configuration at request time.
  * - A compatible provider node is only needed for a dedicated model prefix; the
  *   connection snapshots the node's `baseUrl`/`prefix`/`nodeName` at creation.
+ * That revision's docs/openapi.yaml incorrectly requires `url` for creation;
+ * the handler requires `apiKey` and carries overrides in `providerSpecificData`.
+ * Follow the linked handler when changing this transport.
  * https://github.com/diegosouzapw/OmniRoute/blob/release/v3.8.51/src/app/api/providers/route.ts
  */
 

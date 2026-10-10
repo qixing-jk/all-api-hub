@@ -10,6 +10,7 @@ import { anyrouterProvider } from "./anyrouter"
 import type { AutoCheckinProvider } from "./contracts"
 import { denxioProvider } from "./denxio"
 import { geniusProgrammerProvider } from "./geniusProgrammer"
+import { hiyoProvider } from "./hiyo"
 import {
   AUTO_CHECKIN_METHOD_DEFINITIONS,
   createAutoCheckinMethodRegistry,
@@ -33,6 +34,7 @@ const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.XiaobaiCodeDailyCheckIn]: xiaobaiCodeProvider,
   [AUTO_CHECKIN_METHOD_IDS.AiRouterDailyCheckIn]: aiRouterProvider,
   [AUTO_CHECKIN_METHOD_IDS.ToolcodeDailyCheckIn]: toolcodeProvider,
+  [AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn]: hiyoProvider,
 } as const satisfies Record<CheckInMethodId, AutoCheckinProvider>
 
 export const autoCheckinMethodRegistry = createAutoCheckinMethodRegistry(

@@ -18,7 +18,7 @@ Single-context layout: read root `CONTEXT.md` and root `docs/adr/` when present.
 
 Read only the guidance relevant to the current task; reuse unchanged material already read. These links are task routes, not a startup reading list.
 
-- Adding or extending account/managed site support, improving a native editor or comparing its UX, adding site-specific check-in, or deciding site-type boundaries: use the project [`add-site-integration` skill](.agents/skills/add-site-integration/SKILL.md), load only its relevant workflow references, then read the relevant [site integration guidance](docs/agents/site-integrations.md). For an isolated bug fix to an existing site, read the relevant site guidance directly.
+- Adding or extending account/managed site support, improving a native editor or comparing its UX, adding site-specific check-in, or deciding site-type boundaries: use the project [`add-site-integration` skill](.agents/skills/add-site-integration/SKILL.md) and only its relevant workflow references. The [integration guide](docs/agents/site-integrations.md) explains type relationships, links upstream material and locates code/documentation owners; for an isolated bug fix, start with the owning adapter and tests.
 - Dependencies, UI primitives, settings navigation, analytics, or user-facing errors: [product guidance](docs/agents/product.md).
 - Persistent stores, storage keys, or writes that cross extension contexts: [storage guidance](docs/agents/storage.md).
 - Translation keys, resources, or language behavior: [i18n guidance](docs/agents/i18n.md). Use `add-app-language` only when adding a supported application language.

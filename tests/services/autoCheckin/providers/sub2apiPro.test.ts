@@ -97,6 +97,18 @@ vi.mock(
   }),
 )
 
+vi.mock(
+  "~/services/apiService/sub2api/checkin/hiyoCheckIn",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/checkin/hiyoCheckIn")
+    >()),
+    fetchHiyoDailyCheckInStatus: vi
+      .fn()
+      .mockRejectedValue(new ApiError("unsupported Hiyo protocol", 404)),
+  }),
+)
+
 const createAccount = (automaticExecutionEnabled = true) =>
   buildSiteAccount({
     id: "sub2api-account",

@@ -24,7 +24,7 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 const { storageData, storageSet, detectors, checkIn } = vi.hoisted(() => ({
   storageData: new Map<string, unknown>(),
   storageSet: vi.fn(),
-  detectors: [vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn()],
+  detectors: [vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn()],
   checkIn: vi.fn(),
 }))
 
@@ -53,6 +53,7 @@ vi.mock("~/services/checkin/autoCheckin/providers", async () => {
         AUTO_CHECKIN_METHOD_IDS.DenxioDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.XiaobaiCodeDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.ToolcodeDailyCheckIn,
+        AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn,
       ].map((id, index) => ({
         id,
         siteTypes: [SITE_TYPES.SUB2API],
