@@ -261,6 +261,11 @@ export default function ManagedSiteModelSyncSettings() {
             description={t("managedSiteModelSync:settings.allowedModelsDesc")}
           >
             <div className="space-y-density-2 w-full">
+              <span role="status" aria-live="polite" className="sr-only">
+                {optionsLoading
+                  ? t("managedSiteModelSync:settings.allowedModelsLoading")
+                  : ""}
+              </span>
               <CompactMultiSelect
                 allowCustom
                 options={channelUpstreamModelOptions}
@@ -273,12 +278,14 @@ export default function ManagedSiteModelSyncSettings() {
                   void savePreferences({ allowedModels: values })
                 }}
                 disabled={optionsLoading}
+                loading={optionsLoading}
+                aria-description={
+                  optionsLoading
+                    ? t("managedSiteModelSync:settings.allowedModelsLoading")
+                    : undefined
+                }
               />
-              {optionsLoading ? (
-                <p className="text-muted-foreground text-xs">
-                  {t("managedSiteModelSync:settings.allowedModelsLoading")}
-                </p>
-              ) : optionsError ? (
+              {!optionsLoading && optionsError ? (
                 <p className="text-destructive-text text-xs">
                   {t("managedSiteModelSync:settings.allowedModelsLoadFailed", {
                     error: optionsError,

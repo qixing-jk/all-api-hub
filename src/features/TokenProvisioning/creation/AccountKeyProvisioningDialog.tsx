@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Alert, Button, Modal } from "~/components/ui"
+import { Spinner } from "~/components/ui/spinner"
 import { ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes } from "~/features/KeyManagement/constants"
 import {
   AccountKeyResourceEditorDialog,
@@ -394,7 +395,10 @@ function ProvisioningSession({
             : cancel
         }
       >
-        <p role="status">
+        <p role="status" className="gap-density-2 flex items-center">
+          {phase === "loading" || phase === "creating" ? (
+            <Spinner size="sm" aria-hidden="true" />
+          ) : null}
           {phase === "loading"
             ? t("common:status.loading")
             : t("keyManagement:provisioning.progress", {

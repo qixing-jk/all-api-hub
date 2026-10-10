@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Card, CardContent, Switch } from "~/components/ui"
+import { Spinner } from "~/components/ui/spinner"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { PreferenceSettingSection as SettingSection } from "~/features/BasicSettings/components/shared/PreferenceSettingSection"
@@ -96,7 +97,11 @@ export default function SortingPrioritySettings() {
     isLoading && items.length === 0 && !initialConfig?.criteria?.length
 
   if (isInitialLoading) {
-    return <div>{t("common:status.loading")}</div>
+    return (
+      <div className="py-density-6 flex justify-center" aria-busy="true">
+        <Spinner />
+      </div>
+    )
   }
 
   // Augment the data-only items with UI text for rendering

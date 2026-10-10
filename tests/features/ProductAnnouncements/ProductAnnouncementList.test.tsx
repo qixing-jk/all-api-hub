@@ -1,8 +1,11 @@
+import { within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ComponentProps } from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import { ProductAnnouncementList } from "~/features/ProductAnnouncements/ProductAnnouncementList"
+import { ProductAnnouncementPanel } from "~/features/ProductAnnouncements/ProductAnnouncementPopover"
+import { PRODUCT_ANNOUNCEMENT_TEST_IDS } from "~/features/ProductAnnouncements/testIds"
 import type { ProductAnnouncement } from "~/services/productAnnouncements/types"
 import { render, screen } from "~~/tests/test-utils/render"
 
@@ -41,10 +44,60 @@ function renderList(
 }
 
 describe("ProductAnnouncementList", () => {
+  it("keeps refresh feedback outside existing notices and clears it when ready", async () => {
+    const props = {
+      surface: "popover" as const,
+      state: {
+        view: {
+          notices: [notice],
+          activeNotices: [notice],
+          dismissedNotices: [],
+          primaryRiskNotice: null,
+          activeRiskCount: 0,
+          unseenActiveCount: 0,
+        },
+      },
+      onDismiss: vi.fn(),
+      onRestore: vi.fn().mockResolvedValue(true),
+      onClose: vi.fn(),
+    }
+    const { rerender } = render(
+      <ProductAnnouncementPanel {...props} isLoading />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+    const list = screen.getByTestId(PRODUCT_ANNOUNCEMENT_TEST_IDS.activeList)
+    expect(within(list).getByText("Risk notice")).toBeVisible()
+    expect(list).toHaveAttribute("aria-busy", "true")
+    expect(
+      screen.getByRole("status", { name: "productAnnouncements:loading" }),
+    ).toBeVisible()
+    expect(within(list).queryByRole("status")).not.toBeInTheDocument()
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: "productAnnouncements:actions.close",
+      }),
+    )
+    expect(props.onClose).toHaveBeenCalledOnce()
+
+    rerender(<ProductAnnouncementPanel {...props} isLoading={false} />)
+    expect(screen.queryByRole("status")).not.toBeInTheDocument()
+    expect(list).toHaveAttribute("aria-busy", "false")
+    expect(within(list).getByText("Risk notice")).toBeVisible()
+  })
+
   it("renders loading and empty states", () => {
     const { rerender } = renderList({ isLoading: true })
 
-    expect(screen.getByText("productAnnouncements:loading")).toBeVisible()
+    expect(
+      screen.getByRole("status", { name: "productAnnouncements:loading" }),
+    ).toBeVisible()
+    expect(
+      screen.queryByText("productAnnouncements:loading"),
+    ).not.toBeInTheDocument()
 
     rerender(
       <ProductAnnouncementList
@@ -57,6 +110,17 @@ describe("ProductAnnouncementList", () => {
     )
 
     expect(screen.getByText("Nothing to review")).toBeVisible()
+  })
+
+  it("keeps existing announcements visible while refreshing", () => {
+    renderList({ notices: [notice], isLoading: true })
+
+    expect(screen.getByText("Risk notice")).toBeVisible()
+    expect(screen.queryByRole("status")).not.toBeInTheDocument()
+    expect(screen.getByTestId("product-announcement-list")).toHaveAttribute(
+      "aria-busy",
+      "true",
+    )
   })
 
   it("falls back to generic action labels when scoped translations are missing", async () => {

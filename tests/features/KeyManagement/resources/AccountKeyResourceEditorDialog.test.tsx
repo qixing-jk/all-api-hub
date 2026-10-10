@@ -1006,14 +1006,11 @@ describe("AccountKeyResourceEditorDialog", () => {
       { withUserPreferencesProvider: false, withThemeProvider: false },
     )
     await waitFor(() => expect(retry).toHaveBeenCalledTimes(1))
-    expect(
-      screen.getByText("common:status.loading").closest("[role=status]"),
-    ).toHaveTextContent("common:status.loading")
-    expect(
-      screen.getByRole("combobox", {
-        name: /keyManagement:openRouter\.editor\.fields\.creator\.label/,
-      }),
-    ).toBeDisabled()
+    const creator = screen.getByRole("combobox", {
+      name: /keyManagement:openRouter\.editor\.fields\.creator\.label/,
+    })
+    expect(creator).toHaveAttribute("aria-busy", "true")
+    expect(creator).toBeDisabled()
     const save = screen.getByRole("button", {
       name: "keyManagement:native.editor.actions.save",
     })

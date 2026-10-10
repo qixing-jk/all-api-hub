@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { Badge, Button } from "~/components/ui"
+import { Spinner } from "~/components/ui/spinner"
 import { cn } from "~/lib/utils"
 import { PRODUCT_ANNOUNCEMENT_CTA_KINDS } from "~/services/productAnnouncements/constants"
 import type { ProductAnnouncement } from "~/services/productAnnouncements/types"
@@ -74,13 +75,14 @@ export function ProductAnnouncementList({
 }: ProductAnnouncementListProps) {
   const { t } = useTranslation("productAnnouncements")
 
-  if (isLoading) {
+  if (isLoading && notices.length === 0) {
     return (
       <div
         data-testid={testId}
-        className="text-muted-foreground py-density-6 text-center text-sm"
+        className="py-density-6 flex justify-center"
+        aria-busy="true"
       >
-        {t("loading")}
+        <Spinner aria-label={t("loading")} />
       </div>
     )
   }
@@ -99,6 +101,7 @@ export function ProductAnnouncementList({
   return (
     <div
       data-testid={testId}
+      aria-busy={isLoading}
       className="space-y-density-3 min-h-0 flex-1 overflow-y-auto pr-1"
     >
       {notices.map((notice) => {

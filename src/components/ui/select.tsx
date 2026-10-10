@@ -6,6 +6,7 @@ import { CORNERS } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
 
 import { useFloatingLayerClass } from "./floating-layer"
+import { Spinner } from "./spinner"
 
 const SelectViewportResizeContext = React.createContext(false)
 
@@ -207,24 +208,36 @@ const SelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger> & {
     size?: "sm" | "default"
+    /** Indicates pending options without changing the current selection. */
+    loading?: boolean
   }
->(({ className, children, size = "default", ...props }, ref) => (
-  <SelectPrimitive.Trigger
-    ref={ref}
-    data-slot="select-trigger"
-    data-size={size}
-    className={cn(
-      "dark:border-border dark:hover:bg-card/80 border-border-strong bg-card text-foreground hover:bg-surface-subtle focus-visible:ring-ring data-placeholder:text-faint-foreground [&_svg:not([class*='text-'])]:text-faint-foreground dark:[&_svg:not([class*='text-'])]:text-muted-foreground aria-invalid:border-destructive-border aria-invalid:focus-visible:ring-destructive-text/40 gap-density-2 *:data-[slot=select-value]:gap-density-2 py-density-1 flex h-auto w-full min-w-0 items-center justify-between rounded-md border px-3 text-left text-sm break-words whitespace-normal shadow-xs transition-colors outline-none focus-visible:border-transparent focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60 data-[size=default]:min-h-(--density-control) data-[size=sm]:min-h-(--density-control-sm) *:data-[slot=select-value]:flex *:data-[slot=select-value]:min-w-0 *:data-[slot=select-value]:items-center [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-      className,
-    )}
-    {...props}
-  >
-    {children}
-    <SelectPrimitive.Icon asChild>
-      <ChevronDownIcon className="size-4 opacity-50" />
-    </SelectPrimitive.Icon>
-  </SelectPrimitive.Trigger>
-))
+>(
+  (
+    { className, children, size = "default", loading = false, ...props },
+    ref,
+  ) => (
+    <SelectPrimitive.Trigger
+      ref={ref}
+      data-slot="select-trigger"
+      data-size={size}
+      className={cn(
+        "dark:border-border dark:hover:bg-card/80 border-border-strong bg-card text-foreground hover:bg-surface-subtle focus-visible:ring-ring data-placeholder:text-faint-foreground [&_svg:not([class*='text-'])]:text-faint-foreground dark:[&_svg:not([class*='text-'])]:text-muted-foreground aria-invalid:border-destructive-border aria-invalid:focus-visible:ring-destructive-text/40 gap-density-2 *:data-[slot=select-value]:gap-density-2 py-density-1 flex h-auto w-full min-w-0 items-center justify-between rounded-md border px-3 text-left text-sm break-words whitespace-normal shadow-xs transition-colors outline-none focus-visible:border-transparent focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-60 data-[size=default]:min-h-(--density-control) data-[size=sm]:min-h-(--density-control-sm) *:data-[slot=select-value]:flex *:data-[slot=select-value]:min-w-0 *:data-[slot=select-value]:items-center [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        className,
+      )}
+      {...props}
+      aria-busy={loading || props["aria-busy"]}
+    >
+      {children}
+      <SelectPrimitive.Icon asChild>
+        {loading ? (
+          <Spinner size="sm" variant="current" aria-hidden="true" />
+        ) : (
+          <ChevronDownIcon className="size-4 opacity-50" />
+        )}
+      </SelectPrimitive.Icon>
+    </SelectPrimitive.Trigger>
+  ),
+)
 SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
 
 const SelectContent = React.forwardRef<

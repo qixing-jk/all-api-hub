@@ -450,11 +450,8 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
             className="mt-density-1"
             value={model}
             onChange={setModel}
-            placeholder={
-              isLoadingModels
-                ? t("common:status.loading")
-                : t("ui:dialog.ccswitch.placeholders.model")
-            }
+            placeholder={t("ui:dialog.ccswitch.placeholders.model")}
+            loading={isLoadingModels}
             options={[
               {
                 value: "",

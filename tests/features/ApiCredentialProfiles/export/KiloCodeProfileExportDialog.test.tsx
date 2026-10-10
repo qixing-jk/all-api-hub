@@ -1071,7 +1071,7 @@ describe("KiloCodeProfileExportDialog", () => {
       screen.getByRole("combobox", {
         name: "ui:dialog.kiloCode.labels.defaultModel",
       }),
-    ).toHaveTextContent("common:status.loading")
+    ).toHaveAttribute("aria-busy", "true")
 
     await act(async () => {
       resolveCurrent(["current-model"])

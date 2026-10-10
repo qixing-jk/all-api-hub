@@ -154,11 +154,8 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
                   options={modelOptions.map((id) => ({ value: id, label: id }))}
                   value={modelId}
                   onChange={setModelId}
-                  placeholder={
-                    isLoadingModels
-                      ? t("verifyDialog.loadingModelsHint")
-                      : t("verifyDialog.modelPickerPlaceholder")
-                  }
+                  placeholder={t("verifyDialog.modelPickerPlaceholder")}
+                  loading={isLoadingModels}
                   allowCustomValue
                   disabled={isRunning}
                 />

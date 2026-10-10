@@ -474,11 +474,8 @@ export function ChannelModelsField({
         onChange={onChange}
         size="default"
         inputTestId={CHANNEL_DIALOG_TEST_IDS.modelsInput}
-        placeholder={
-          isLoading
-            ? t("channelDialog:fields.models.loading")
-            : t("channelDialog:fields.models.placeholder")
-        }
+        placeholder={t("channelDialog:fields.models.placeholder")}
+        loading={isLoading}
         disabled={disabled || isLoading}
         allowCustom
         bulkActionsMinOptions={

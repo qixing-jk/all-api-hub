@@ -44,6 +44,73 @@ const t = ((key: string, options?: { field?: string }) => {
 }) as TFunction
 
 describe("NativeResourceEditorBody", () => {
+  it("keeps card selections visible and announces pending options until ready", async () => {
+    const user = userEvent.setup()
+    const onValueChange = vi.fn()
+    const options = [
+      { value: "openai", displayLabel: "OpenAI" },
+      { value: "anthropic", displayLabel: "Anthropic" },
+    ]
+    const props = {
+      t,
+      descriptors: [
+        {
+          fieldId: "protocol",
+          type: "select" as const,
+          options,
+          optionLoader: { dependsOn: [] },
+        },
+      ],
+      policy: defineResourceEditorFieldPolicy({
+        fields: [
+          {
+            fieldId: "protocol",
+            section: "basic",
+            order: 1,
+            renderer: "select",
+            selectLayout: "cards",
+            resolveLabel: () => "Protocol",
+          },
+        ],
+        hiddenFields: [],
+      }),
+      sectionOrder: { basic: 0 },
+      sectionLabelResolvers: { basic: () => "Basic" },
+      values: { protocol: "openai" },
+      onValueChange,
+    }
+    const { rerender } = render(
+      <NativeResourceEditorBody
+        {...props}
+        controlledOptionStates={{ protocol: { status: "loading", options } }}
+      />,
+    )
+
+    expect(screen.getByRole("radio", { name: "OpenAI" })).toBeChecked()
+    expect(screen.getByRole("radio", { name: "Anthropic" })).toBeDisabled()
+    expect(
+      screen.getByRole("radiogroup", { name: "Protocol" }),
+    ).toHaveAttribute("aria-busy", "true")
+    expect(
+      screen.getByRole("status", { name: "Loading Protocol..." }),
+    ).toBeVisible()
+
+    rerender(
+      <NativeResourceEditorBody
+        {...props}
+        controlledOptionStates={{ protocol: { status: "ready", options } }}
+      />,
+    )
+
+    expect(screen.queryByRole("status")).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("radiogroup", { name: "Protocol" }),
+    ).toHaveAttribute("aria-busy", "false")
+    expect(screen.getByRole("radio", { name: "OpenAI" })).toBeChecked()
+    await user.click(screen.getByRole("radio", { name: "Anthropic" }))
+    expect(onValueChange).toHaveBeenCalledWith("protocol", "anthropic")
+  })
+
   it.each(["", "rotate"])(
     "keeps an empty native option distinct from an explicit null selection (%s)",
     async (currentValue) => {
@@ -1072,7 +1139,12 @@ describe("NativeResourceEditorBody", () => {
       />,
     )
 
-    expect(await screen.findByText("Loading...")).toBeVisible()
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Creator" })).toHaveAttribute(
+        "aria-busy",
+        "true",
+      ),
+    )
     view.rerender(
       <NativeResourceEditorBody
         {...props}
@@ -1899,7 +1971,11 @@ describe("NativeResourceEditorBody", () => {
         }}
       />,
     )
-    expect(screen.getByRole("status")).toHaveTextContent("Loading...")
+    expect(screen.getByRole("combobox", { name: "Tags" })).toHaveAttribute(
+      "aria-busy",
+      "true",
+    )
+    expect(screen.queryByText("Loading...")).not.toBeInTheDocument()
 
     view.rerender(
       <NativeResourceEditorBody

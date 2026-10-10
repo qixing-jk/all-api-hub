@@ -4,6 +4,60 @@ import { describe, expect, it } from "vitest"
 
 const workflows = ["test.yml", "quality.yml", "e2e-smoke.yml", "pr-build.yml"]
 
+it.each([
+  {
+    outcome: "failed",
+    failed: true,
+    screenshots: false,
+    cancelled: false,
+    upload: true,
+  },
+  {
+    outcome: "retry passed",
+    failed: false,
+    screenshots: true,
+    cancelled: false,
+    upload: true,
+  },
+  {
+    outcome: "passed cleanly",
+    failed: false,
+    screenshots: false,
+    cancelled: false,
+    upload: false,
+  },
+  {
+    outcome: "cancelled",
+    failed: false,
+    screenshots: true,
+    cancelled: true,
+    upload: false,
+  },
+])(
+  "preserves smoke failure artifacts when the run $outcome",
+  ({ failed, screenshots, cancelled, upload }) => {
+    const workflow = readFileSync(".github/workflows/e2e-smoke.yml", "utf8")
+    const step = workflow
+      .split("      - name: Upload Playwright artifacts (failure)")[1]
+      ?.split("      - name:")[0]
+    const guard = step
+      ?.match(/^ {8}if: (.+)$/m)?.[1]
+      ?.trim()
+      .replace(/^\$\{\{\s*|\s*\}\}$/g, "")
+    expect(guard).toBeDefined()
+    expect(
+      runInNewContext(guard ?? "false", {
+        failure: () => failed,
+        cancelled: () => cancelled,
+        hashFiles: (pattern: string) =>
+          pattern === "test-results/**/test-failed-*.png" && screenshots
+            ? "failure-screenshot-hash"
+            : "",
+      }),
+    ).toBe(upload)
+  },
+)
+
 it("runs smoke performance cases once in isolation, including after functional failures", () => {
   const workflow = readFileSync(".github/workflows/e2e-smoke.yml", "utf8")
   const functional = workflow

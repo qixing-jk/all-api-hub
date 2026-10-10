@@ -5,6 +5,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Spinner,
 } from "~/components/ui"
 import { ResourceFieldLabel } from "~/features/ResourceEditor/components/ResourceFieldLabel"
 import { ResourceAutomaticOptionFeedback } from "~/features/ResourceEditor/components/ResourceOptionLoadFeedback"
@@ -70,6 +71,9 @@ export function NativeResourceChoiceField<TSection extends string>({
     return null
 
   const loadedOptions = resolvedOptions ?? descriptor.options
+  const isAutomaticallyLoadingOptions =
+    !isManualOptionLoader &&
+    optionState?.status === RESOURCE_OPTION_LOAD_STATUSES.Loading
   const controlledOptionUnavailable =
     controlledOptionState !== undefined &&
     (controlledOptionState.status !== RESOURCE_OPTION_LOAD_STATUSES.Ready ||
@@ -172,6 +176,13 @@ export function NativeResourceChoiceField<TSection extends string>({
         <div className="@container">
           <ResourceFieldLabel required={descriptor.required}>
             {label}
+            {isAutomaticallyLoadingOptions && (
+              <Spinner
+                size="sm"
+                className="shrink-0"
+                aria-label={t("common:status.loadingField", { field: label })}
+              />
+            )}
           </ResourceFieldLabel>
           <div
             id={id}
@@ -179,6 +190,7 @@ export function NativeResourceChoiceField<TSection extends string>({
             aria-label={label}
             aria-describedby={describedBy}
             aria-invalid={Boolean(errorMessage)}
+            aria-busy={isAutomaticallyLoadingOptions}
             className="grid grid-cols-2 gap-2 @min-[34rem]:grid-cols-4"
           >
             {selectOptions.map((option) => {
@@ -240,6 +252,7 @@ export function NativeResourceChoiceField<TSection extends string>({
         >
           <SelectTrigger
             id={id}
+            loading={isAutomaticallyLoadingOptions}
             aria-invalid={Boolean(errorMessage)}
             aria-describedby={describedBy}
           >
@@ -277,6 +290,7 @@ export function NativeResourceChoiceField<TSection extends string>({
         {label}
       </ResourceFieldLabel>
       <CompactMultiSelect
+        loading={isAutomaticallyLoadingOptions}
         options={loadedOptions.map((option) => ({
           value: option.value,
           label: option.displayLabel ?? option.value,

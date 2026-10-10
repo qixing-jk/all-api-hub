@@ -2,7 +2,7 @@ import { Archive, Bell, X } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Button, IconButton } from "~/components/ui"
+import { Button, IconButton, Spinner } from "~/components/ui"
 import { PopoverContent } from "~/components/ui/popover"
 import { SheetDescription, SheetTitle } from "~/components/ui/sheet"
 import { CORNERS } from "~/constants/designTokens"
@@ -68,15 +68,20 @@ function ProductAnnouncementPanel({
   return (
     <div className="gap-y-density-4 flex min-h-0 flex-1 flex-col gap-x-4 overflow-hidden">
       <div className="gap-y-density-3 flex items-center justify-between gap-x-3">
-        {surface === "sheet" ? (
-          <SheetTitle className="text-foreground truncate text-base">
-            {t("title")}
-          </SheetTitle>
-        ) : (
-          <h2 className="text-foreground truncate text-base font-semibold">
-            {t("title")}
-          </h2>
-        )}
+        <div className="gap-density-2 flex min-w-0 items-center">
+          {surface === "sheet" ? (
+            <SheetTitle className="text-foreground truncate text-base">
+              {t("title")}
+            </SheetTitle>
+          ) : (
+            <h2 className="text-foreground truncate text-base font-semibold">
+              {t("title")}
+            </h2>
+          )}
+          {isLoading && visibleNotices.length > 0 && (
+            <Spinner size="sm" className="shrink-0" aria-label={t("loading")} />
+          )}
+        </div>
         {surface === "sheet" ? (
           <SheetDescription className="sr-only">
             {t("empty.active")}

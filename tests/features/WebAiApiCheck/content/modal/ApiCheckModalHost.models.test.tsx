@@ -578,7 +578,7 @@ describe("ApiCheckModalHost", () => {
     })
     expect(
       screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId),
-    ).toHaveTextContent("webAiApiCheck:modal.actions.fetchingModels")
+    ).toHaveAttribute("aria-busy", "true")
     expect(
       screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId),
     ).not.toHaveTextContent("first-model")

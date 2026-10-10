@@ -525,11 +525,8 @@ export function AiToolboxExportDialog(props: AiToolboxExportDialogProps) {
             className="mt-density-1"
             value={model}
             onChange={setModel}
-            placeholder={
-              isLoadingModels
-                ? t("common:status.loading")
-                : t("ui:dialog.aiToolbox.placeholders.model")
-            }
+            placeholder={t("ui:dialog.aiToolbox.placeholders.model")}
+            loading={isLoadingModels}
             options={[
               {
                 value: "",

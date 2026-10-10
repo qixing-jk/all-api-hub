@@ -32,7 +32,6 @@
     "models": {
       "hint": "Digite para pesquisar ou pressione Enter para adicionar um nome de modelo personalizado",
       "label": "Modelos Disponíveis",
-      "loading": "Carregando modelos...",
       "placeholder": "Selecione ou digite os nomes dos modelos"
     },
     "name": {

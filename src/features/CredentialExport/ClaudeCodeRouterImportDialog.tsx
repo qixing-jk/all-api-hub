@@ -301,11 +301,10 @@ export function ClaudeCodeRouterImportDialog(
             selected={selectedModels}
             onChange={setSelectedModels}
             size="default"
-            placeholder={
-              isLoadingModels
-                ? t("common:status.loading")
-                : t("ui:dialog.claudeCodeRouter.placeholders.modelsPicker")
-            }
+            placeholder={t(
+              "ui:dialog.claudeCodeRouter.placeholders.modelsPicker",
+            )}
+            loading={isLoadingModels}
             disabled={isLoadingModels}
             allowCustom
             parseCommaStrings

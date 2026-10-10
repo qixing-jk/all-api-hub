@@ -35,6 +35,7 @@ import {
   CommandList,
 } from "./command"
 import { Popover, PopoverContent, PopoverTrigger } from "./popover"
+import { Spinner } from "./spinner"
 import {
   useCompactMultiSelectModel,
   type ChipsItem,
@@ -64,6 +65,8 @@ export interface CompactMultiSelectProps
    */
   placeholder?: string
   disabled?: boolean
+  /** Indicates pending options while preserving selection and input behavior. */
+  loading?: boolean
   clearable?: boolean
   /**
    * When enabled, pressing Enter with a non-empty search term can add values that are not present
@@ -129,6 +132,7 @@ export function CompactMultiSelect({
   displayMode = "chips",
   placeholder,
   disabled = false,
+  loading = false,
   clearable = true,
   allowCustom = false,
   parseCommaStrings = true,
@@ -353,52 +357,64 @@ export function CompactMultiSelect({
           <ComboboxChips
             ref={chipsAnchor}
             className={cn(
-              "max-h-24 min-w-0 flex-1 overflow-x-hidden overflow-y-auto",
+              "max-h-24 min-w-0 flex-1 flex-nowrap items-stretch",
               className,
             )}
           >
-            <ComboboxValue>
-              {(values) => (
-                <React.Fragment>
-                  {Array.isArray(values)
-                    ? values.map((item: ChipsItem) => (
-                        <ComboboxChip key={item.value} showRemove={!disabled}>
-                          <span
-                            className="max-w-48 cursor-copy truncate select-text"
-                            title={item.label}
-                            role="button"
-                            tabIndex={0}
-                            aria-label={t("ui:multiSelect.copyChipValue", {
-                              value: item.label,
-                            })}
-                            onClick={(event) =>
-                              handleChipTextClick(event, item.label)
-                            }
-                            onKeyDown={(event) =>
-                              handleChipTextKeyDown(event, item.label)
-                            }
-                          >
-                            {item.label}
-                          </span>
-                        </ComboboxChip>
-                      ))
-                    : null}
-                  <ComboboxChipsInput
-                    ref={chipsInputRef}
-                    data-testid={inputTestId}
-                    aria-label={chipsInputAriaLabel}
-                    aria-labelledby={chipsInputAriaLabelledBy}
-                    aria-describedby={chipsInputAriaDescribedBy}
-                    aria-invalid={chipsInputAriaInvalid}
-                    aria-required={chipsInputAriaRequired}
-                    placeholder={chipsInputPlaceholder}
-                    disabled={disabled}
-                    onKeyDown={handleCustomKeyDown}
-                    onPaste={handleCustomPaste}
-                  />
-                </React.Fragment>
-              )}
-            </ComboboxValue>
+            <div className="gap-y-density-1-5 flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 overflow-x-hidden overflow-y-auto">
+              <ComboboxValue>
+                {(values) => (
+                  <React.Fragment>
+                    {Array.isArray(values)
+                      ? values.map((item: ChipsItem) => (
+                          <ComboboxChip key={item.value} showRemove={!disabled}>
+                            <span
+                              className="max-w-48 cursor-copy truncate select-text"
+                              title={item.label}
+                              role="button"
+                              tabIndex={0}
+                              aria-label={t("ui:multiSelect.copyChipValue", {
+                                value: item.label,
+                              })}
+                              onClick={(event) =>
+                                handleChipTextClick(event, item.label)
+                              }
+                              onKeyDown={(event) =>
+                                handleChipTextKeyDown(event, item.label)
+                              }
+                            >
+                              {item.label}
+                            </span>
+                          </ComboboxChip>
+                        ))
+                      : null}
+                    <ComboboxChipsInput
+                      ref={chipsInputRef}
+                      data-testid={inputTestId}
+                      aria-label={chipsInputAriaLabel}
+                      aria-labelledby={chipsInputAriaLabelledBy}
+                      aria-describedby={chipsInputAriaDescribedBy}
+                      aria-description={buttonProps["aria-description"]}
+                      aria-invalid={chipsInputAriaInvalid}
+                      aria-required={chipsInputAriaRequired}
+                      aria-busy={loading || buttonProps["aria-busy"]}
+                      placeholder={chipsInputPlaceholder}
+                      disabled={disabled}
+                      onKeyDown={handleCustomKeyDown}
+                      onPaste={handleCustomPaste}
+                    />
+                  </React.Fragment>
+                )}
+              </ComboboxValue>
+            </div>
+            {loading && (
+              <Spinner
+                size="sm"
+                variant="current"
+                aria-hidden="true"
+                className="pointer-events-none shrink-0 self-center"
+              />
+            )}
           </ComboboxChips>
 
           <ComboboxContent anchor={chipsAnchor}>
@@ -461,7 +477,9 @@ export function CompactMultiSelect({
                 </div>
               </div>
             ) : null}
-            <ComboboxEmpty>{resolvedEmptyMessage}</ComboboxEmpty>
+            <ComboboxEmpty>
+              {loading ? <Spinner size="sm" /> : resolvedEmptyMessage}
+            </ComboboxEmpty>
             <ComboboxList>
               {(item) => (
                 <ComboboxItem
@@ -571,6 +589,7 @@ export function CompactMultiSelect({
               )}
               disabled={disabled}
               {...buttonProps}
+              aria-busy={loading || buttonProps["aria-busy"]}
             >
               <span className="min-w-0 flex-1 truncate">{triggerText}</span>
               <span className="gap-density-2 flex shrink-0 items-center">
@@ -579,7 +598,11 @@ export function CompactMultiSelect({
                     {selected.length}
                   </Badge>
                 )}
-                <ChevronsUpDownIcon className="size-4 shrink-0 opacity-50" />
+                {loading ? (
+                  <Spinner size="sm" variant="current" aria-hidden="true" />
+                ) : (
+                  <ChevronsUpDownIcon className="size-4 shrink-0 opacity-50" />
+                )}
               </span>
             </Button>
           </PopoverTrigger>
@@ -593,7 +616,13 @@ export function CompactMultiSelect({
                 clearButtonLabel={t("multiSelect.clearInput")}
               />
               <CommandList>
-                <CommandEmpty>{resolvedEmptyMessage}</CommandEmpty>
+                <CommandEmpty>
+                  {loading ? (
+                    <Spinner size="sm" className="mx-auto" />
+                  ) : (
+                    resolvedEmptyMessage
+                  )}
+                </CommandEmpty>
                 <CommandGroup>
                   {allowCustom && searchTerm.trim().length > 0 && (
                     <CommandItem

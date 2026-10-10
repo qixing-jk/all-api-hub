@@ -338,9 +338,7 @@ export default function BookmarkDialog({
                   PRODUCT_ANALYTICS_ACTION_IDS.UseCurrentPageForBookmark
                 }
               >
-                {isCurrentPageLoading
-                  ? t("common:status.loading")
-                  : t("bookmark:dialog.useCurrentPage")}
+                {t("bookmark:dialog.useCurrentPage")}
               </Button>
             </div>
           </div>

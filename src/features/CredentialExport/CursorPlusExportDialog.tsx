@@ -385,14 +385,6 @@ export function CursorPlusExportDialog({
         </Select>
       </FormField>
 
-      {isLoading ? (
-        <div
-          role="status"
-          className="dark:text-secondary-foreground text-muted-foreground text-sm"
-        >
-          {t("ui:dialog.cursorPlus.status.loading")}
-        </div>
-      ) : null}
       {!isLoading && !isError && !isEmpty ? (
         <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
           {t("ui:dialog.cursorPlus.status.loaded", {
@@ -426,8 +418,15 @@ export function CursorPlusExportDialog({
         label={t("ui:dialog.cursorPlus.labels.models")}
         description={t("ui:dialog.cursorPlus.labels.modelsDescription")}
       >
+        <span role="status" aria-live="polite" className="sr-only">
+          {isLoading ? t("ui:dialog.cursorPlus.status.loading") : ""}
+        </span>
         <CompactMultiSelect
           options={modelOptions}
+          loading={isLoading}
+          aria-description={
+            isLoading ? t("ui:dialog.cursorPlus.status.loading") : undefined
+          }
           selected={selectedModelIds}
           onChange={(values) => {
             setHasCustomizedModels(true)

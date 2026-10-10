@@ -273,11 +273,8 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                     value={view.modelId}
                     onChange={actions.setModelId}
                     portalContainer={view.popoverPortalContainer ?? undefined}
-                    placeholder={
-                      view.isFetchingModels
-                        ? t("webAiApiCheck:modal.actions.fetchingModels")
-                        : "gpt-4o-mini"
-                    }
+                    placeholder="gpt-4o-mini"
+                    loading={view.isFetchingModels}
                     allowCustomValue
                   />
                 </div>

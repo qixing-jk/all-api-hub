@@ -14,6 +14,33 @@ const workspace: AccountKeyScope = {
 }
 
 describe("AccountKeyScopeSelector", () => {
+  it("announces loading without focusing the selector and clears the status when ready", () => {
+    const props = {
+      siteType: SITE_TYPES.OPENROUTER,
+      scopes: [workspace],
+      selectedScope: workspace,
+      onSelectScope: vi.fn(),
+    }
+    const { rerender } = render(<AccountKeyScopeSelector {...props} />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    const status = screen.getByRole("status")
+    expect(status).toBeEmptyDOMElement()
+    expect(status).toHaveAttribute("aria-live", "polite")
+    expect(status).toHaveClass("sr-only")
+
+    rerender(<AccountKeyScopeSelector {...props} isLoading />)
+    expect(status).toHaveTextContent(
+      "keyManagement:openRouter.workspace.loading",
+    )
+    expect(screen.getByRole("combobox")).not.toHaveFocus()
+
+    rerender(<AccountKeyScopeSelector {...props} />)
+    expect(status).toBeEmptyDOMElement()
+    expect(screen.getByRole("combobox")).toHaveTextContent("Example team")
+  })
+
   it.each([
     SITE_TYPES.NEW_API,
     SITE_TYPES.SUB2API,
@@ -32,7 +59,8 @@ describe("AccountKeyScopeSelector", () => {
         />,
         { withUserPreferencesProvider: false, withThemeProvider: false },
       )
-      expect(screen.getByRole("status")).toHaveTextContent(
+      expect(screen.getByRole("combobox")).toHaveAttribute("aria-busy", "true")
+      expect(screen.getByRole("combobox")).toHaveAccessibleDescription(
         "keyManagement:native.scope.loading",
       )
 
@@ -127,7 +155,8 @@ describe("AccountKeyScopeSelector", () => {
         { withUserPreferencesProvider: false, withThemeProvider: false },
       )
 
-      expect(screen.getByRole("status")).toHaveTextContent(
+      expect(screen.getByRole("combobox")).toHaveAttribute("aria-busy", "true")
+      expect(screen.getByRole("combobox")).toHaveAccessibleDescription(
         `keyManagement:${siteType === "openrouter" ? "openRouter.workspace" : "native.scope"}.loading`,
       )
       rerender(

@@ -64,6 +64,9 @@ export function AccountKeyScopeSelector({
 
   return (
     <section aria-labelledby={headingId} className="space-y-density-2">
+      <span role="status" aria-live="polite" className="sr-only">
+        {isLoading ? messages.loading : ""}
+      </span>
       <div className="gap-y-density-2 flex flex-wrap items-baseline justify-between gap-x-2">
         <h2 id={headingId} className="text-sm font-medium">
           {messages.heading}
@@ -94,6 +97,8 @@ export function AccountKeyScopeSelector({
       <SearchableSelect
         data-testid={KEY_MANAGEMENT_TEST_IDS.nativeScopeSelect}
         aria-label={messages.label}
+        aria-description={isLoading ? messages.loading : undefined}
+        loading={isLoading}
         options={options}
         value={selectedScope?.scopeKey ?? ""}
         placeholder={messages.placeholder}
@@ -101,11 +106,6 @@ export function AccountKeyScopeSelector({
         disabled={isLoading || Boolean(error)}
         onChange={onSelectScope}
       />
-      {isLoading ? (
-        <p role="status" className="text-muted-foreground text-xs">
-          {messages.loading}
-        </p>
-      ) : null}
       {!isLoading && !error && scopes.length === 0 ? (
         <p className="text-muted-foreground text-xs">{messages.empty}</p>
       ) : null}

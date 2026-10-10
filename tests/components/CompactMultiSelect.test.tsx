@@ -23,6 +23,41 @@ const renderCompact = (ui: ReactElement) =>
   })
 
 describe("CompactMultiSelect", () => {
+  it.each(["chips", "summary"] as const)(
+    "preserves a selected-only value until pending options resolve in %s mode",
+    (displayMode) => {
+      const props = {
+        displayMode,
+        options: [],
+        selected: ["a"],
+        onChange: vi.fn(),
+        "aria-label": "Models",
+        "aria-description": "Fetching available models",
+      }
+      const { rerender } = renderCompact(
+        <CompactMultiSelect {...props} loading />,
+      )
+
+      const control = screen.getByRole("combobox", { name: "Models" })
+      expect(control).toHaveAttribute("aria-busy", "true")
+      expect(control).toHaveAccessibleDescription("Fetching available models")
+      expect(control).toBeEnabled()
+      expect(screen.getByText("a")).toBeVisible()
+      expect(props.onChange).not.toHaveBeenCalled()
+
+      rerender(
+        <CompactMultiSelect
+          {...props}
+          options={[{ value: "a", label: "Alpha" }]}
+          loading={false}
+        />,
+      )
+      expect(control).not.toHaveAttribute("aria-busy", "true")
+      expect(screen.getByText("Alpha")).toBeVisible()
+      expect(props.onChange).not.toHaveBeenCalled()
+    },
+  )
+
   beforeEach(() => {
     toastMocks.success.mockReset()
     toastMocks.error.mockReset()
@@ -274,38 +309,47 @@ describe("CompactMultiSelect", () => {
     )
   })
 
-  it("copies chip text when the selected chip label is clicked", async () => {
-    const user = userEvent.setup()
-    const onChange = vi.fn()
-    const writeText = vi.fn().mockResolvedValue(undefined)
+  it.each(["click", "{Enter}", " "])(
+    "copies chip text with %s without changing the selection",
+    async (action) => {
+      const user = userEvent.setup()
+      const onChange = vi.fn()
+      const writeText = vi.fn().mockResolvedValue(undefined)
 
-    Object.defineProperty(globalThis.navigator, "clipboard", {
-      configurable: true,
-      value: { writeText },
-    })
+      Object.defineProperty(globalThis.navigator, "clipboard", {
+        configurable: true,
+        value: { writeText },
+      })
 
-    renderCompact(
-      <CompactMultiSelect
-        displayMode="chips"
-        options={[
-          { value: "id-alpha", label: "Alpha" },
-          { value: "id-beta", label: "Beta" },
-        ]}
-        selected={["id-alpha"]}
-        onChange={onChange}
-      />,
-    )
+      renderCompact(
+        <CompactMultiSelect
+          displayMode="chips"
+          options={[
+            { value: "id-alpha", label: "Alpha" },
+            { value: "id-beta", label: "Beta" },
+          ]}
+          selected={["id-alpha"]}
+          onChange={onChange}
+        />,
+      )
 
-    await user.click(
-      await screen.findByRole("button", {
+      const chip = await screen.findByRole("button", {
         name: "ui:multiSelect.copyChipValue",
-      }),
-    )
+      })
+      if (action === "click") {
+        await user.click(chip)
+      } else {
+        chip.focus()
+        await user.keyboard(action)
+      }
 
-    expect(writeText).toHaveBeenCalledWith("Alpha")
-    expect(onChange).not.toHaveBeenCalled()
-    expect(toastMocks.success).toHaveBeenCalledWith("ui:multiSelect.chipCopied")
-  })
+      expect(writeText).toHaveBeenCalledWith("Alpha")
+      expect(onChange).not.toHaveBeenCalled()
+      expect(toastMocks.success).toHaveBeenCalledWith(
+        "ui:multiSelect.chipCopied",
+      )
+    },
+  )
 
   it("shows an error toast when chip text copying fails", async () => {
     const user = userEvent.setup()

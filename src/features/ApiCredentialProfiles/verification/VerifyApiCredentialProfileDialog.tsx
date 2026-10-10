@@ -207,11 +207,10 @@ export function VerifyApiCredentialProfileDialog({
                   setModelId(value)
                   setPersistedSummary(null)
                 }}
-                placeholder={
-                  isFetchingModels
-                    ? t("apiCredentialProfiles:verify.fetchingModels")
-                    : t("apiCredentialProfiles:verify.modelPickerPlaceholder")
-                }
+                placeholder={t(
+                  "apiCredentialProfiles:verify.modelPickerPlaceholder",
+                )}
+                loading={isFetchingModels}
                 allowCustomValue
                 disabled={!canClose}
               />

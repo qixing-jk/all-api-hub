@@ -518,11 +518,8 @@ export function KiloCodeProfileExportDialog({
                 value={validV7Default?.modelId ?? v7DefaultModelId}
                 modelIds={preparedV7ModelIds}
                 onChange={handleV7ModelChange}
-                placeholder={
-                  isLoadingModels
-                    ? t("common:status.loading")
-                    : t("ui:dialog.kiloCode.placeholders.modelId")
-                }
+                placeholder={t("ui:dialog.kiloCode.placeholders.modelId")}
+                loading={isLoadingModels}
                 allowCustomValue
                 disabled={isLoadingModels}
               />
@@ -541,11 +538,8 @@ export function KiloCodeProfileExportDialog({
                 selectLegacyModel(value)
                 setIsDownloadTooLarge(false)
               }}
-              placeholder={
-                isLoadingModels
-                  ? t("common:status.loading")
-                  : t("ui:dialog.kiloCode.placeholders.modelId")
-              }
+              placeholder={t("ui:dialog.kiloCode.placeholders.modelId")}
+              loading={isLoadingModels}
               options={legacyModelOptions}
               allowCustomValue
               disabled={isLoadingModels}

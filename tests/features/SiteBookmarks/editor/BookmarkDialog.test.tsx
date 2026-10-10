@@ -299,11 +299,11 @@ describe("BookmarkDialog", () => {
   it("fills name and url from the current page helper in add mode", async () => {
     renderAddDialog()
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "bookmark:dialog.useCurrentPage",
-      }),
-    )
+    const useCurrentPageButton = await screen.findByRole("button", {
+      name: "bookmark:dialog.useCurrentPage",
+    })
+    await waitFor(() => expect(useCurrentPageButton).toBeEnabled())
+    fireEvent.click(useCurrentPageButton)
 
     expectBookmarkActionTracked(
       PRODUCT_ANALYTICS_ACTION_IDS.UseCurrentPageForBookmark,
@@ -339,6 +339,9 @@ describe("BookmarkDialog", () => {
     expect(
       screen.queryByText("bookmark:dialog.currentPageUnavailable"),
     ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "bookmark:dialog.useCurrentPage" }),
+    ).toHaveAttribute("aria-busy", "true")
 
     resolveTab?.({
       title: "Current Admin",
@@ -368,7 +371,7 @@ describe("BookmarkDialog", () => {
 
     expect(getSiteNameMock).not.toHaveBeenCalled()
     expect(
-      screen.getAllByText("bookmark:dialog.currentPageUnavailable"),
+      await screen.findAllByText("bookmark:dialog.currentPageUnavailable"),
     ).toHaveLength(2)
   })
 
@@ -390,7 +393,7 @@ describe("BookmarkDialog", () => {
 
     expect(getSiteNameMock).not.toHaveBeenCalled()
     expect(
-      screen.getAllByText("bookmark:dialog.currentPageUnavailable"),
+      await screen.findAllByText("bookmark:dialog.currentPageUnavailable"),
     ).toHaveLength(2)
   })
 
@@ -450,7 +453,7 @@ describe("BookmarkDialog", () => {
     expect(getActiveTabMock).toHaveBeenCalledTimes(1)
     expect(getSiteNameMock).toHaveBeenCalledTimes(1)
     expect(
-      screen.getAllByText("bookmark:dialog.currentPageUnavailable"),
+      await screen.findAllByText("bookmark:dialog.currentPageUnavailable"),
     ).toHaveLength(2)
   })
 

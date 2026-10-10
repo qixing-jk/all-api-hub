@@ -32,7 +32,6 @@
     "models": {
       "hint": "Type to search or press Enter to add a custom model name",
       "label": "Available Models",
-      "loading": "Loading models...",
       "placeholder": "Select or type model names"
     },
     "name": {
