@@ -7,6 +7,17 @@ import type { OptionsSearchContext } from "~/features/OptionsSearch/types"
 import * as search from "~/features/OptionsSearch/useOptionsSearch"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
+vi.mock("~/services/permissions/permissionManager", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/permissions/permissionManager")
+    >()
+  return {
+    ...actual,
+    OPTIONAL_PERMISSIONS: [actual.OPTIONAL_PERMISSION_IDS.ClipboardRead],
+  }
+})
+
 const baseContext: OptionsSearchContext = {
   autoCheckinEnabled: true,
   hasOptionalPermissions: true,
