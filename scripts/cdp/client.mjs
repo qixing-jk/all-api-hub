@@ -13,21 +13,10 @@ export function defaultCdpUrl() {
   return `http://127.0.0.1:${resolveCdpPort()}`
 }
 
-/**
- * Wake a specific extension's service worker and wrap the connection.
- *
- * Several worktrees can have their extension loaded in the same debug browser
- * at once, so a suite that must exercise one exact build pins its id instead of
- * relying on title-based discovery.
- */
-export async function connectExtensionById({
+/** Connect to the verified dev profile without requiring an active extension. */
+export async function connectDevBrowser({
   cdpUrl = process.env.CDP_URL || defaultCdpUrl(),
-  extensionId,
 } = {}) {
-  if (!extensionId) {
-    throw new Error("connectExtensionById 需要一个扩展 ID。")
-  }
-
   let browser
   try {
     browser = await chromium.connectOverCDP(cdpUrl)
@@ -44,7 +33,33 @@ export async function connectExtensionById({
     await browser.close().catch(() => {})
     throw new Error("未找到任何浏览器 Context。")
   }
-  const context = contexts[0]
+  return {
+    browser,
+    context: contexts[0],
+    // CDP close detaches Playwright; only the launch path closes the browser.
+    async close() {
+      await browser.close().catch(() => {})
+    },
+  }
+}
+
+/**
+ * Wake a specific extension's service worker and wrap the connection.
+ *
+ * Several worktrees can have their extension loaded in the same debug browser
+ * at once, so a suite that must exercise one exact build pins its id instead of
+ * relying on title-based discovery.
+ */
+export async function connectExtensionById({
+  cdpUrl = process.env.CDP_URL || defaultCdpUrl(),
+  extensionId,
+} = {}) {
+  if (!extensionId) {
+    throw new Error("connectExtensionById 需要一个扩展 ID。")
+  }
+
+  const dev = await connectDevBrowser({ cdpUrl })
+  const { browser, context } = dev
 
   // A dormant MV3 worker is not listed until something addresses the extension.
   let sw = context.serviceWorkers().find((w) => w.url().includes(extensionId))
@@ -66,15 +81,9 @@ export async function connectExtensionById({
   }
 
   return {
-    browser,
-    context,
+    ...dev,
     extensionId,
     serviceWorker: sw,
-    // For a CDP connection this detaches Playwright without closing the
-    // operator's browser: `Browser.close` is only sent on the launch path.
-    async close() {
-      await browser.close().catch(() => {})
-    },
   }
 }
 
@@ -84,23 +93,8 @@ export async function connectExtensionById({
 export async function connectDevExtension({
   cdpUrl = process.env.CDP_URL || defaultCdpUrl(),
 } = {}) {
-  let browser
-  try {
-    browser = await chromium.connectOverCDP(cdpUrl)
-    await assertDevBrowserProfile(browser)
-  } catch (err) {
-    await browser?.close().catch(() => {})
-    throw new Error(
-      `无法连接到 CDP (${cdpUrl})。请先确认调试浏览器已启动 (pnpm browser:cdp)。\n底层错误: ${err.message}`,
-    )
-  }
-
-  const contexts = browser.contexts()
-  if (contexts.length === 0) {
-    await browser.close().catch(() => {})
-    throw new Error("未找到任何浏览器 Context。")
-  }
-  const context = contexts[0]
+  const dev = await connectDevBrowser({ cdpUrl })
+  const { browser, context } = dev
 
   let targetExtId = null
   const currentWorktree = path.basename(process.cwd()).toLowerCase()
@@ -224,12 +218,8 @@ export async function connectDevExtension({
   }
 
   return {
-    browser,
-    context,
+    ...dev,
     extensionId: targetExtId,
     serviceWorker: sw,
-    async close() {
-      await browser.close().catch(() => {})
-    },
   }
 }
