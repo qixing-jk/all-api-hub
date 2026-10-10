@@ -314,6 +314,7 @@
       "accessToken": "Access Token Authentication",
       "cookieAuth": "Cookie Authentication"
     },
+    "browserCookieSession": "Uses the browser session for this site. Cookie import is optional. If the session expires or the browser signs into another account, sign into the saved account again and refresh.",
     "cookieWarning": "Prefer access tokens. Cookie auth requires importing a session cookie, and it may expire/renew and stop working, requiring re-import; for multiple accounts on the same site, import a session cookie per account. Use only when necessary.",
     "currentLoginAlreadyAdded": "Current login already added",
     "editNow": "Edit Now",

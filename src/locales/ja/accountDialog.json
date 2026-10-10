@@ -313,6 +313,7 @@
       "accessToken": "Access Token 認証",
       "cookieAuth": "Cookie 認証"
     },
+    "browserCookieSession": "このサイトのブラウザーのログイン状態を使用します。Cookie の取り込みは任意です。セッションの有効期限が切れた場合や別のアカウントに切り替えた場合は、保存済みのアカウントで再ログインして更新してください。",
     "cookieWarning": "Access Token を優先してください。Cookie 認証ではセッション Cookie の取り込みが必要で、有効期限切れや更新で使えなくなる場合があり、再取り込みが必要です。同じサイトで複数アカウントを使う場合は、アカウントごとにセッション Cookie を取り込んでください。必要な場合にのみ使用してください。",
     "currentLoginAlreadyAdded": "現在のログインはすでに追加されています",
     "editNow": "今すぐ編集",

@@ -15,6 +15,7 @@ import { resolveResourceFieldPolicy } from "~/features/ResourceEditor/model/reso
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import { createAIHubMixKeyEditor } from "~/services/apiAdapters/aihubmix/keys/keyResourceEditor"
 import type { ResourceFieldDescriptor } from "~/services/apiAdapters/contracts/resourceNative"
+import { createCubenceKeyEditor } from "~/services/apiAdapters/cubence/keyEditor"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keys/keyResourceEditor"
 import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
 import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keys/keyResourceEditor"
@@ -49,6 +50,48 @@ function getPresentation(
 }
 
 describe("native key editor field policies", () => {
+  it("presents only native Cubence creation fields and hides finite quota when unlimited", () => {
+    const editor = createCubenceKeyEditor(async () => [])
+    const presentation = getPresentation(
+      SITE_TYPES.CUBENCE,
+      editorModes.Create,
+      { fields: editor.fields },
+    )
+    const resolved = resolveResourceFieldPolicy(
+      editor.fields,
+      presentation.policy,
+      presentation.sectionOrder,
+    )
+    expect(resolved.fields).toHaveLength(editor.fields.length)
+    expect(presentation.requireFreshOptions).toBe(true)
+    expect(presentation.policy.fields.map((field) => field.fieldId)).toEqual([
+      "name",
+      "group",
+      "unlimited",
+      "quota",
+    ])
+    const quota = presentation.policy.fields.find(
+      (field) => field.fieldId === "quota",
+    )!
+    expect(quota.visibleWhen?.({ unlimited: true })).toBe(false)
+    expect(quota.visibleWhen?.({ unlimited: false })).toBe(true)
+    expect(
+      getPresentation(SITE_TYPES.CUBENCE, editorModes.Edit).policy.fields.map(
+        (field) => field.fieldId,
+      ),
+    ).toEqual(["group", "unlimited", "quota", "enabled"])
+  })
+  it("keeps Cubence status in basic information without an unsupported expiration section", () => {
+    const { policy } = getPresentation(SITE_TYPES.CUBENCE, editorModes.Edit)
+    expect(
+      policy.fields.find((field) => field.fieldId === "enabled"),
+    ).toMatchObject({
+      section: "basic",
+    })
+    expect(policy.fields.some((field) => field.section === "lifecycle")).toBe(
+      false,
+    )
+  })
   it.each([
     SITE_TYPES.ONE_API,
     SITE_TYPES.MODELFLARE,

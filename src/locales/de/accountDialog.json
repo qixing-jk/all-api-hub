@@ -314,6 +314,7 @@
       "accessToken": "Zugriffstoken-Authentifizierung",
       "cookieAuth": "Cookie-Authentifizierung"
     },
+    "browserCookieSession": "Verwendet die Browsersitzung dieser Website. Der Cookie-Import ist optional. Wenn die Sitzung abläuft oder im Browser ein anderes Konto angemeldet wird, melden Sie sich erneut mit dem gespeicherten Konto an und aktualisieren Sie es.",
     "cookieWarning": "Bevorzugen Sie Zugriffstoken. Die Cookie-Authentifizierung erfordert den Import eines Sitzungscookies. Das Cookie kann ablaufen oder erneuert werden und dadurch ungültig werden, sodass es erneut importiert werden muss. Importieren Sie für mehrere Konten auf derselben Website jeweils ein Sitzungscookie. Verwenden Sie diese Methode nur bei Bedarf.",
     "currentLoginAlreadyAdded": "Aktueller Login bereits hinzugefügt",
     "editNow": "Jetzt bearbeiten",

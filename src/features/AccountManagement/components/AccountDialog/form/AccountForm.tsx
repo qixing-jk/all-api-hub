@@ -61,6 +61,7 @@ type AccountFormPresentationSitePolicy = Pick<
   | "accessTokenPresentation"
   | "forceAccessTokenAuth"
   | "allowCookieAuthSession"
+  | "usesBrowserCookieSession"
   | "allowSub2ApiRefreshTokenState"
   | "requireUsername"
   | "requireUserId"
@@ -296,7 +297,9 @@ export default function AccountForm({
               ? t("siteInfo.authMethodSelectedForSite", {
                   siteType: sitePolicy.siteTypeLabel,
                 })
-              : t("siteInfo.cookieWarning")
+              : sitePolicy.usesBrowserCookieSession
+                ? t("siteInfo.browserCookieSession")
+                : t("siteInfo.cookieWarning")
           }
         >
           <Select
@@ -488,8 +491,12 @@ export default function AccountForm({
         {authType === AuthTypeEnum.Cookie && (
           <FormField
             label={t("form.cookieAuthSessionCookie")}
-            description={t("form.cookieAuthSessionCookieDesc")}
-            required
+            description={
+              sitePolicy.usesBrowserCookieSession
+                ? t("siteInfo.browserCookieSession")
+                : t("form.cookieAuthSessionCookieDesc")
+            }
+            required={!sitePolicy.usesBrowserCookieSession}
           >
             <div className="space-y-density-2">
               <CookieAuthPermissionRecommendation
@@ -536,7 +543,7 @@ export default function AccountForm({
                 }
                 placeholder={t("form.cookieAuthSessionCookiePlaceholder")}
                 rows={2}
-                required
+                required={!sitePolicy.usesBrowserCookieSession}
               />
             </div>
           </FormField>

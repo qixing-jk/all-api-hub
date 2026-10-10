@@ -19,6 +19,14 @@ Each optional source supplies `name`, `probe()` and `checkTransfer()`. The probe
 
 Leave `sourceDiscoveryComplete` false while any authorized source remains uninspected. Set it true only when the candidate set is exhausted. `unavailable` means all applicable transfer methods for that source have been ruled out; one failed database-copy or bridge call does not establish this.
 
+Cubence has a concrete read-only entrypoint:
+
+```bash
+pnpm e2e:cdp:cubence -- --isolate --preflight-only
+```
+
+It uses the shared environment loader, checks `CUBENCE_USER_ID` when configured, reports JSON and detaches without running account/key flows. `connectDevBrowser` verifies the selected profile without requiring an active extension worker. The Node runner exits 0 when ready, 2 when further session assessment is needed, and 1 for setup/connection failures; package managers may wrap nonzero codes as lifecycle failures. It does not automatically attach to the daily Edge bridge, so an unauthenticated target remains `source-check-required`. Runners with authorized source access can supply source callbacks to the shared helper. Other runners should use the same helper with their own identity parser.
+
 ## Choosing a reuse method
 
 Extension account records and website login sessions are separate. `browser:sync --list` discovers extension-storage candidates; a candidate is not proof of a currently authenticated website session.

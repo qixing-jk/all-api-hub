@@ -315,6 +315,7 @@
       "accessToken": "Autenticação por token de acesso",
       "cookieAuth": "Autenticação por cookie"
     },
+    "browserCookieSession": "Usa a sessão do navegador deste site. A importação de cookies é opcional. Se a sessão expirar ou outra conta for usada no navegador, entre novamente na conta salva e atualize.",
     "cookieWarning": "Prefira tokens de acesso. A autenticação de cookie requer a importação de um cookie de sessão, e ele pode expirar/renovar e parar de funcionar, exigindo reimportação; para várias contas no mesmo site, importe um cookie de sessão por conta. Use somente quando necessário.",
     "currentLoginAlreadyAdded": "Login atual já adicionado",
     "editNow": "Editar agora",

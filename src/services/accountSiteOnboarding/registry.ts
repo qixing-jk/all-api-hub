@@ -8,6 +8,7 @@ import type {
   AccountBrowserIdentityCapability,
   AccountBrowserIdentityContext,
 } from "~/services/apiAdapters/contracts/accountBrowserIdentity"
+import { cubenceBrowserIdentity } from "~/services/apiAdapters/cubence/browserIdentity"
 import { freeModelBrowserIdentity } from "~/services/apiAdapters/freemodel/browserIdentity"
 import { kimiOpenPlatformBrowserIdentity } from "~/services/apiAdapters/kimiOpenPlatform/browserIdentity"
 import { newApiBrowserIdentity } from "~/services/apiAdapters/newApi/account/browserIdentity"
@@ -20,6 +21,7 @@ import { voApiV2BrowserIdentity } from "~/services/apiAdapters/voapiV2/browserId
 
 import { apiyiContentSessionExtractor } from "./contentSession/apiyi"
 import { compatibleUserContentSessionExtractor } from "./contentSession/compatibleUser"
+import { cubenceContentSessionExtractor } from "./contentSession/cubence"
 import { freeModelContentSessionExtractor } from "./contentSession/freemodel"
 import { grsaiContentSessionExtractor } from "./contentSession/grsai"
 import { kimiOpenPlatformContentSessionExtractor } from "./contentSession/kimiOpenPlatform"
@@ -41,6 +43,10 @@ const siteBrowserAdapters: readonly {
   identity?: AccountBrowserIdentityCapability
   detectionPrivacy?: AccountDetectionPrivacyPolicy
 }[] = [
+  {
+    sessionExtractor: cubenceContentSessionExtractor,
+    identity: cubenceBrowserIdentity,
+  },
   {
     sessionExtractor: freeModelContentSessionExtractor,
     identity: freeModelBrowserIdentity,

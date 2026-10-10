@@ -73,6 +73,9 @@ import {
   AIHUBMIX_LOGIN_PATH,
   AIHUBMIX_WEB_ORIGIN,
   APIYI_HOSTNAME,
+  CUBENCE_API_ORIGIN,
+  CUBENCE_HOSTNAMES,
+  CUBENCE_WEB_ORIGIN,
   FREEMODEL_ANTHROPIC_BASE_URL,
   FREEMODEL_HOSTNAMES,
   FREEMODEL_OPENAI_BASE_URL,
@@ -190,6 +193,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.AIHUBMIX,
   SITE_TYPES.SHAREDCHAT,
   SITE_TYPES.FREEMODEL,
+  SITE_TYPES.CUBENCE,
   SITE_TYPES.RIGHT_CODE,
   SITE_TYPES.OPENROUTER,
   SITE_TYPES.KIMI,
@@ -223,6 +227,49 @@ export const MANAGED_SITE_TYPE_ORDER = [
 export type ManagedSiteDefinitionType = (typeof MANAGED_SITE_TYPE_ORDER)[number]
 
 const ACCOUNT_SITE_DEFINITIONS = [
+  {
+    siteType: SITE_TYPES.CUBENCE,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Cubence,
+    onboarding: {
+      displayName: "Cubence",
+      detection: { hostnames: CUBENCE_HOSTNAMES },
+      routes: {
+        pricingPath: "/dashboard/model-plaza",
+        loginPath: "/auth/login",
+        usagePath: "/dashboard/analytics",
+        adminCredentialsPath: "/dashboard/keys",
+        checkInPath: null,
+        accessTokenPath: null,
+        redeemPath: "/dashboard/subscription",
+        siteAnnouncementsPath: "/dashboard",
+      },
+    },
+    productProfile: {
+      auth: {
+        // https://cubence.com/dashboard: only a console cookie session is verified.
+        usesBrowserCookieSession: true,
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.Cookie],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.Cookie,
+        defaultAuthHostnames: CUBENCE_HOSTNAMES,
+      },
+      identity: {
+        usernameRequired: false,
+        storedUserIdentityFields: ["id", "username"],
+      },
+      urls: {
+        recognizedHostnames: CUBENCE_HOSTNAMES,
+        inferFromHostname: true,
+        storageOrigin: CUBENCE_WEB_ORIGIN,
+        managedChannelOrigin: CUBENCE_API_ORIGIN,
+        duplicateOrigin: CUBENCE_WEB_ORIGIN,
+        inferenceApiBaseUrls: {
+          openAiCompatible: `${CUBENCE_API_ORIGIN}/v1`,
+          anthropic: CUBENCE_API_ORIGIN,
+        },
+      },
+    },
+  },
   {
     siteType: SITE_TYPES.FREEMODEL,
     scopes: ACCOUNT_SCOPE,

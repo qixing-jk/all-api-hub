@@ -31,6 +31,7 @@ type SiteInfoInputPresentationSitePolicy = Pick<
   | "siteTypeLabel"
   | "forceAccessTokenAuth"
   | "allowCookieAuthSession"
+  | "usesBrowserCookieSession"
   | "allowSub2ApiRefreshTokenState"
   | "lockSiteUrl"
 >
@@ -110,7 +111,9 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
     ? t("siteInfo.authMethodSelectedForSite", {
         siteType: props.sitePolicy.siteTypeLabel,
       })
-    : t("siteInfo.cookieWarning")
+    : props.sitePolicy.usesBrowserCookieSession
+      ? t("siteInfo.browserCookieSession")
+      : t("siteInfo.cookieWarning")
 
   const handleEditClick = () => {
     if (detectedAccount && onEditAccount) {
