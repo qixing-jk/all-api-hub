@@ -17,7 +17,7 @@ Determine PATCH versus replacement PUT semantics, required writable fields, omit
 
 Track ownership and IDs of created resources immediately. Multi-step creation may produce provider nodes or upstream resources before a channel exists; on failure, clean up only demonstrably run-owned resources. Deleting a connection must not delete a pre-existing or shared node. Record uncertain write outcomes and readback instead of replaying a create blindly.
 
-Verify the table/detail projection together: a declared field needs an actual fact, label and cell presentation. Read `docs/agents/site-integrations.md` for the managed-channel display contract. Secrets and diagnostic messages follow the existing adapter disclosure semantics; private test evidence does not change product disclosure behavior.
+Verify the table/detail projection together using the [native resource display contract](../../../../src/services/apiAdapters/managedResources/README.md#display-contract). Secrets and diagnostic messages follow the existing adapter disclosure semantics; private test evidence does not change product disclosure behavior.
 
 ## Validate and hand off
 

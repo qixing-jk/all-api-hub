@@ -1,6 +1,6 @@
 # Site evidence and repeatable validation
 
-Use this reference during deployment investigation and live-test planning. Keep generic workflow here; verified provider facts belong in `docs/agents/site-integrations.md` and the owning adapter's source comments.
+Use this reference during deployment investigation and live-test planning. Keep reusable procedures here, deployment observations in the task's spec/evidence index, and durable protocol rationale beside the owning code. The [documentation ownership map](../../../../docs/agents/site-integrations.md#documentation-ownership) explains when public or shared guidance needs an update.
 
 Link evidence and validation to the [completeness checklist and handoff table](capability-assessment.md). For each applicable validation layer, state why it was selected or skipped, the operations covered, actual result and remaining limits; retain exclusion evidence as well as successful samples. Refresh the final table after implementation and cleanup.
 
