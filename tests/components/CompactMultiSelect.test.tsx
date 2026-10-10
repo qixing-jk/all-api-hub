@@ -24,11 +24,11 @@ const renderCompact = (ui: ReactElement) =>
 
 describe("CompactMultiSelect", () => {
   it.each(["chips", "summary"] as const)(
-    "preserves the selection and exposes pending options in %s mode",
+    "preserves a selected-only value until pending options resolve in %s mode",
     (displayMode) => {
       const props = {
         displayMode,
-        options: [{ value: "a", label: "Alpha" }],
+        options: [],
         selected: ["a"],
         onChange: vi.fn(),
         "aria-label": "Models",
@@ -42,11 +42,19 @@ describe("CompactMultiSelect", () => {
       expect(control).toHaveAttribute("aria-busy", "true")
       expect(control).toHaveAccessibleDescription("Fetching available models")
       expect(control).toBeEnabled()
-      expect(screen.getByText("Alpha")).toBeVisible()
+      expect(screen.getByText("a")).toBeVisible()
+      expect(props.onChange).not.toHaveBeenCalled()
 
-      rerender(<CompactMultiSelect {...props} loading={false} />)
+      rerender(
+        <CompactMultiSelect
+          {...props}
+          options={[{ value: "a", label: "Alpha" }]}
+          loading={false}
+        />,
+      )
       expect(control).not.toHaveAttribute("aria-busy", "true")
       expect(screen.getByText("Alpha")).toBeVisible()
+      expect(props.onChange).not.toHaveBeenCalled()
     },
   )
 
