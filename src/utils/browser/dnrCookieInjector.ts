@@ -1,3 +1,4 @@
+import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import {
   COOKIE_AUTH_HEADER_NAME,
   EXTENSION_HEADER_NAME,
@@ -12,6 +13,9 @@ import { createLogger } from "~/utils/core/logger"
  * Unified logger scoped to DNR cookie header injection helpers.
  */
 const logger = createLogger("DnrCookieInjector")
+
+// Optional download protection must not indefinitely block page creation or pool cleanup.
+const DOWNLOAD_RULE_TIMEOUT_MS = 2000
 
 /**
  * DeclarativeNetRequest session-rule helpers.
@@ -126,10 +130,20 @@ export async function applyTempWindowDownloadBlockRule(
   const ruleId = buildDownloadBlockRuleId(tabId)
 
   try {
-    await (globalThis as any).chrome.declarativeNetRequest.updateSessionRules({
-      removeRuleIds: [ruleId],
-      addRules: [buildTempWindowDownloadBlockRule(tabId)],
-    })
+    await runAbortableTask(
+      async (signal) => {
+        await (
+          globalThis as any
+        ).chrome.declarativeNetRequest.updateSessionRules({
+          removeRuleIds: [ruleId],
+          addRules: [buildTempWindowDownloadBlockRule(tabId)],
+        })
+        // A timeout cannot cancel the browser API. Retire a late rule because its
+        // caller already continued without taking ownership of this rule id.
+        if (signal?.aborted) await removeTempWindowDownloadBlockRule(ruleId)
+      },
+      { timeoutMs: DOWNLOAD_RULE_TIMEOUT_MS },
+    )
     return ruleId
   } catch (error) {
     logger.warn("Failed to install temp-window download block rule", error)
@@ -148,9 +162,13 @@ export async function removeTempWindowDownloadBlockRule(
   }
 
   try {
-    await (globalThis as any).chrome.declarativeNetRequest.updateSessionRules({
-      removeRuleIds: [ruleId],
-    })
+    await runAbortableTask(
+      () =>
+        (globalThis as any).chrome.declarativeNetRequest.updateSessionRules({
+          removeRuleIds: [ruleId],
+        }),
+      { timeoutMs: DOWNLOAD_RULE_TIMEOUT_MS },
+    )
   } catch (error) {
     logger.warn("Failed to remove temp-window download block rule", error)
   }

@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react"
+import { useCallback, useRef, useState } from "react"
 
 import type { ACCOUNT_KEY_RESOURCE_REQUEST_SLOTS } from "~/features/KeyManagement/constants"
 import type {
@@ -66,6 +66,8 @@ export type AccountKeyResourceRequestLifecycle = ReturnType<
 export function useAccountKeyResourceRequestLifecycle() {
   const [requests] = useState(createRequestLifecycle)
   const [locks, setLocks] = useState<Record<string, ActiveResourceBoundary>>({})
+  const locksRef = useRef(locks)
+  locksRef.current = locks
   const requireFreshRead = useCallback((boundary: ActiveResourceBoundary) => {
     setLocks((current) => ({
       ...current,
@@ -83,8 +85,10 @@ export function useAccountKeyResourceRequestLifecycle() {
   }, [])
   const isFreshReadRequiredForBoundary = useCallback(
     (boundary: ActiveResourceBoundary) =>
-      Object.values(locks).some((locked) => boundariesMatch(locked, boundary)),
-    [locks],
+      Object.values(locksRef.current).some((locked) =>
+        boundariesMatch(locked, boundary),
+      ),
+    [],
   )
   return {
     requests,

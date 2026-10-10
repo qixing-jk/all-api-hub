@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Alert, Modal, Spinner } from "~/components/ui"
+import { Alert, Modal } from "~/components/ui"
 import { useCopyKeyDialog } from "~/features/AccountManagement/components/CopyKeyDialog/hooks/useCopyKeyDialog"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { useApiCredentialProfileLinks } from "~/features/ApiCredentialProfiles/associations/useApiCredentialProfileLinks"
@@ -29,7 +29,7 @@ import { openKeysPage } from "~/utils/navigation"
 import { DialogFooter } from "./DialogFooter"
 import { DialogHeader } from "./DialogHeader"
 import { ErrorDisplay } from "./ErrorDisplay"
-import { KeyInventoryList } from "./KeyInventoryList"
+import { KeyInventoryList, type KeyEditorAction } from "./KeyInventoryList"
 import { LoadingIndicator } from "./LoadingIndicator"
 
 interface CopyKeyDialogProps {
@@ -53,7 +53,9 @@ export default function CopyKeyDialog({
     isLoading: linksLoading,
     error: linksError,
   } = useApiCredentialProfileLinks()
-  const [isAddTokenDialogOpen, setIsAddTokenDialogOpen] = useState(false)
+  const [createEditorAction, setCreateEditorAction] =
+    useState<KeyEditorAction | null>(null)
+  const isAddTokenDialogOpen = createEditorAction !== null
   const [isCreateEditorReady, setIsCreateEditorReady] = useState(false)
   const [deeplinkExportRequest, setDeeplinkExportRequest] =
     useState<DeeplinkExportRequest | null>(null)
@@ -81,7 +83,7 @@ export default function CopyKeyDialog({
     onCreated: refreshRuntimeKeysAfterCreate,
     onInputRequired: () => {
       setIsCreateEditorReady(false)
-      setIsAddTokenDialogOpen(true)
+      setCreateEditorAction("default")
     },
   })
   const {
@@ -116,10 +118,10 @@ export default function CopyKeyDialog({
   const handleOpenAddTokenDialog = () => {
     defaultTokenQuickCreate.reset()
     setIsCreateEditorReady(false)
-    setIsAddTokenDialogOpen(true)
+    setCreateEditorAction("custom")
   }
   const handleCloseAddTokenDialog = () => {
-    setIsAddTokenDialogOpen(false)
+    setCreateEditorAction(null)
     setIsCreateEditorReady(false)
   }
   const handleAddTokenSuccess = (createdToken: AccountKeyCreationResult) => {
@@ -128,7 +130,7 @@ export default function CopyKeyDialog({
 
   useEffect(() => {
     if (!isOpen || !account) {
-      setIsAddTokenDialogOpen(false)
+      setCreateEditorAction(null)
       setIsCreateEditorReady(false)
     }
   }, [account, isOpen])
@@ -171,7 +173,7 @@ export default function CopyKeyDialog({
         onOpenDeeplinkExport={handleOpenDeeplinkExport}
         canCreateDefaultKey={canCreateDefaultKey}
         isCreating={isDefaultTokenQuickCreateBusy}
-        isOpeningEditor={isOpeningCreateEditor}
+        openingEditorAction={isOpeningCreateEditor ? createEditorAction : null}
         createError={
           defaultTokenGroupSelection
             ? null
@@ -190,6 +192,7 @@ export default function CopyKeyDialog({
         isOpen={isOpen}
         onClose={onClose}
         size="lg"
+        focusFallbackKey={isAddTokenDialogOpen ? undefined : account?.id}
         panelClassName="max-h-[85vh] overflow-hidden flex flex-col"
         footerTestId={ACCOUNT_MANAGEMENT_TEST_IDS.copyKeyDialogFooter}
         header={<DialogHeader account={account} />}
@@ -201,7 +204,7 @@ export default function CopyKeyDialog({
           />
         }
       >
-        <div className="space-y-density-3 flex-1 overflow-y-auto">
+        <div className="space-y-density-3">
           {showCreateResponseOnlyWarning ? (
             <Alert
               compact
@@ -212,16 +215,6 @@ export default function CopyKeyDialog({
             />
           ) : null}
           {renderContent()}
-          {isOpeningCreateEditor ? (
-            <div
-              role="status"
-              aria-label={keyManagementT("native.editor.opening.loading")}
-              className="text-muted-foreground flex items-center gap-2 text-sm"
-            >
-              <Spinner size="sm" aria-hidden="true" />
-              {keyManagementT("native.editor.opening.loading")}
-            </div>
-          ) : null}
         </div>
       </Modal>
       {deeplinkExportRequest && (

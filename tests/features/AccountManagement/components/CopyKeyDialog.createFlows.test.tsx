@@ -222,28 +222,48 @@ describe("CopyKeyDialog native creation handoff", () => {
     )
   })
 
-  it("shows progress in the key list until the native editor is ready", async () => {
+  it("keeps editor-opening feedback on the action without reporting required input as a failure", async () => {
     fetchAccountTokensMock.mockResolvedValue([])
     prepareAccountKeyCreationSpy.mockResolvedValue({ kind: "input-required" })
     await start()
 
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    const createButton = await screen.findByRole("button", {
+      name: "keyManagement:native.editor.opening.loading",
+    })
+    expect(createButton).toBeDisabled()
     expect(
-      await screen.findByRole("status", {
-        name: "keyManagement:native.editor.opening.loading",
-      }),
-    ).toBeVisible()
-    expect(
-      screen.getByRole("button", { name: "ui:dialog.copyKey.createKey" }),
+      screen.getByRole("button", { name: "ui:dialog.copyKey.createCustomKey" }),
     ).toBeDisabled()
+    expect(createButton).toHaveAttribute("aria-busy", "true")
 
     await act(async () => {
       manualProps.mock.lastCall?.[0].onEditorReady()
     })
     expect(
-      screen.queryByRole("status", {
+      screen.queryByRole("button", {
         name: "keyManagement:native.editor.opening.loading",
       }),
     ).toBeNull()
+  })
+
+  it("shows opening progress on the custom action when that action was chosen", async () => {
+    fetchAccountTokensMock.mockResolvedValue([])
+    const user = userEvent.setup()
+    render(<CopyKeyDialog isOpen onClose={() => {}} account={ACCOUNT} />)
+    const custom = await screen.findByRole("button", {
+      name: "ui:dialog.copyKey.createCustomKey",
+    })
+    await user.click(custom)
+    expect(custom).toHaveAccessibleName(
+      "keyManagement:native.editor.opening.loading",
+    )
+    expect(custom).toHaveAttribute("aria-busy", "true")
+    expect(custom).toBeDisabled()
+    expect(
+      screen.getByRole("button", { name: "ui:dialog.copyKey.createKey" }),
+    ).toBeDisabled()
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
 
   it("drops a late creation handoff when credentials change", async () => {

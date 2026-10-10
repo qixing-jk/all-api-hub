@@ -58,7 +58,6 @@ export type EditorOpeningState = NativeResourceEditorOpeningState<
 export type EditorOpenRequest = {
   mode: EditorMode
   ref?: AccountKeyResourceRef
-  boundary: ActiveResourceBoundary
 }
 
 export type ResourceActionContext = {
@@ -99,14 +98,6 @@ export type LoadProgress = {
   loading: number
   error: number
 }
-
-export type OpenAccountResources = (
-  account: DisplaySiteData,
-  options: {
-    signal: AbortSignal
-    protectionBypassExecution: ProtectionBypassExecution
-  },
-) => Promise<AccountKeyResourceSession | null>
 
 export type LoadOptionsEditor = Pick<
   AccountKeyResourceEditor,

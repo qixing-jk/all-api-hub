@@ -12,6 +12,8 @@ import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { AccountKeyResourceItem } from "./AccountKeyResourceItem"
 import { RuntimeKeyItem } from "./RuntimeKeyItem"
 
+export type KeyEditorAction = "default" | "custom"
+
 interface KeyInventoryListProps {
   getCredentialProfile?: (
     row: NativeKeyManagementRow,
@@ -29,7 +31,7 @@ interface KeyInventoryListProps {
   ) => void
   canCreateDefaultKey?: boolean
   isCreating?: boolean
-  isOpeningEditor?: boolean
+  openingEditorAction?: KeyEditorAction | null
   createError?: string | null
   onCreateDefaultKey?: () => void
   onOpenAddTokenDialog?: () => void
@@ -51,13 +53,14 @@ export function KeyInventoryList({
   onOpenDeeplinkExport,
   canCreateDefaultKey = false,
   isCreating = false,
-  isOpeningEditor = false,
+  openingEditorAction = null,
   createError,
   onCreateDefaultKey,
   onOpenAddTokenDialog,
   supportsApiTokenCreation = false,
 }: KeyInventoryListProps) {
-  const { t } = useTranslation("ui")
+  const { t } = useTranslation(["ui", "keyManagement"])
+  const isOpeningEditor = openingEditorAction !== null
 
   if (
     (!Array.isArray(runtimeKeys) || runtimeKeys.length === 0) &&
@@ -69,12 +72,15 @@ export function KeyInventoryList({
             ? [
                 {
                   label: t("dialog.copyKey.createKey"),
-                  loadingLabel: t("dialog.copyKey.creatingKey"),
+                  loadingLabel:
+                    openingEditorAction === "default"
+                      ? t("keyManagement:native.editor.opening.loading")
+                      : t("ui:dialog.copyKey.creatingKey"),
                   onClick: onCreateDefaultKey,
                   icon: <Plus className="h-4 w-4" />,
                   disabled:
                     !canCreateDefaultKey || isCreating || isOpeningEditor,
-                  loading: isCreating,
+                  loading: isCreating || openingEditorAction === "default",
                 },
               ]
             : []),
@@ -82,6 +88,10 @@ export function KeyInventoryList({
             ? [
                 {
                   label: t("dialog.copyKey.createCustomKey"),
+                  loadingLabel: t(
+                    "keyManagement:native.editor.opening.loading",
+                  ),
+                  loading: openingEditorAction === "custom",
                   onClick: onOpenAddTokenDialog,
                   icon: <SquarePen className="h-4 w-4" />,
                   variant: "outline" as const,
@@ -95,15 +105,16 @@ export function KeyInventoryList({
 
     return (
       <div className="space-y-density-4">
+        {createError ? (
+          <Alert compact variant="destructive" description={createError} />
+        ) : null}
         <EmptyState
+          className="py-density-6"
           icon={<KeyRound className="h-12 w-12" />}
           title={t("dialog.copyKey.noKeys")}
           description={t("dialog.copyKey.noKeysDescription")}
           actions={actions}
         />
-        {createError ? (
-          <Alert variant="destructive" description={createError} />
-        ) : null}
       </div>
     )
   }

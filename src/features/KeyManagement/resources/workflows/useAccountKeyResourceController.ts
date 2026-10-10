@@ -12,7 +12,6 @@ import type {
   ControllerMode,
   DeleteState,
   DetailState,
-  OpenAccountResources,
   Options,
   ResourceActionContext,
 } from "~/features/KeyManagement/resources/workflows/accountKeyResourceControllerTypes"
@@ -32,7 +31,7 @@ import { useAccountKeyResourceInventoryWorkflow } from "~/features/KeyManagement
 import { useAccountKeyResourceRequestLifecycle } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceRequestLifecycle"
 import { useAccountKeyResourceRouteCoordinator } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceRouteCoordinator"
 import { useAccountKeyResourceRouteState } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceRouteState"
-import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
+import { openAccountKeyResourceSession } from "~/services/accounts/keys/openAccountKeyResourceSession"
 import {
   type AccountKeyResourceRef,
   type ResourceFailure,
@@ -180,25 +179,6 @@ export function useAccountKeyResourceController({
     [clearActiveResourceRefs, resetEditorView, transitionCreatedSecret],
   )
 
-  const defaultOpenResources = useCallback<OpenAccountResources>(
-    async (account, { signal, protectionBypassExecution }) => {
-      const context = createDisplayAccountApiContext(account)
-      if (!context.accountKeyResources) return null
-      return await context.accountKeyResources.open(
-        {
-          account: {
-            id: account.id,
-            name: account.name,
-            siteType: account.siteType,
-          },
-          request: { ...context.request, protectionBypassExecution },
-        },
-        { signal },
-      )
-    },
-    [],
-  )
-
   const openSession = useCallback(
     async (
       account: DisplaySiteData,
@@ -207,11 +187,13 @@ export function useAccountKeyResourceController({
         AUTOMATIC_INVENTORY_EXECUTION,
     ) => {
       return await awaitAbortable(
-        defaultOpenResources(account, { signal, protectionBypassExecution }),
+        openAccountKeyResourceSession(account, protectionBypassExecution, {
+          signal,
+        }),
         signal,
       )
     },
-    [defaultOpenResources, inventoryExecutionRef],
+    [inventoryExecutionRef],
   )
 
   const clearDialogs = useCallback(() => {

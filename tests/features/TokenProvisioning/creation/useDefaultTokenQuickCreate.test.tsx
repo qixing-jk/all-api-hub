@@ -84,6 +84,7 @@ describe("native default key quick creation", () => {
     expect(onInputRequired).toHaveBeenCalledTimes(1)
     expect(create).not.toHaveBeenCalled()
     expect(result.current.view.isBusy).toBe(false)
+    expect(result.current.view.error).toBeNull()
   })
 
   it("cancels requirement selection without dispatching creation", async () => {
@@ -203,6 +204,7 @@ describe("native default key quick creation", () => {
     await act(() => result.current.start())
     expect(onInputRequired).toHaveBeenCalledTimes(1)
     expect(onCreated).not.toHaveBeenCalled()
+    expect(result.current.view.error).toBeNull()
   })
 
   it("drops work after credentials change on the same account", async () => {

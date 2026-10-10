@@ -23,6 +23,7 @@ import { t } from "~/utils/i18n/core"
 
 import {
   getTempContextTabSnapshot,
+  isTempContextContentReady,
   navigateTempContextToPage,
   prepareTempContextFetchOptions,
   removeInstalledDownloadBlockRules,
@@ -294,6 +295,21 @@ async function acquireTempContext(
 
       try {
         acquiredContext = await getReusableContext(origin)
+        if (
+          acquiredContext &&
+          !(await isTempContextContentReady(acquiredContext.tabId, {
+            requestId,
+            origin,
+            signal: options.signal,
+          }))
+        ) {
+          // No operation has been dispatched to this tab. Retire the dead receiver
+          // and let normal creation establish a fresh content-script context.
+          await destroyContext(acquiredContext, {
+            reason: "contentReceiverUnavailable",
+          })
+          acquiredContext = null
+        }
         reused = acquiredContext !== null
         if (!acquiredContext) {
           logTempWindow("acquireTempContextCreate", {

@@ -124,7 +124,8 @@ export function ResourceAutomaticOptionFeedback({
       </p>
     )
   }
-  if (state.status !== RESOURCE_OPTION_LOAD_STATUSES.Error) return null
+  if (state.status !== RESOURCE_OPTION_LOAD_STATUSES.Error)
+    return <div aria-hidden="true" className="mt-density-1 h-4" />
   return (
     <div className="mt-density-1 gap-y-density-2 flex items-center gap-x-2">
       <p role="alert" className="text-destructive-text text-xs">
