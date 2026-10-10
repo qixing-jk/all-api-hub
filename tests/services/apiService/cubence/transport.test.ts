@@ -7,6 +7,7 @@ import {
   updateKey,
   type CubenceKey,
 } from "~/services/apiService/cubence/keys"
+import { withCubenceSession } from "~/services/apiService/cubence/session"
 import { readCubenceResponse } from "~/services/apiService/cubence/transport"
 import { fetchWithHeaderOverrides } from "~/services/apiTransport/headerOverrides"
 import { AuthTypeEnum } from "~/types"
@@ -19,6 +20,31 @@ describe("Cubence direct Cookie transport", () => {
     browserBoundary = installCookieTransport()
   })
   afterEach(() => vi.restoreAllMocks())
+
+  it("allows a prepared multi-request operation to finish after 60 seconds", async () => {
+    vi.useFakeTimers()
+    try {
+      const pending = withCubenceSession(
+        {
+          baseUrl: "https://cubence.com",
+          auth: { authType: AuthTypeEnum.Cookie, cookie: "token=A" },
+        },
+        async (request) => {
+          await new Promise((resolve) => setTimeout(resolve, 61_000))
+          request.abortSignal?.throwIfAborted()
+          return "readback complete"
+        },
+      )
+      const result = pending.then(
+        (value) => ({ value }),
+        (error: unknown) => ({ error }),
+      )
+      await vi.advanceTimersByTimeAsync(61_000)
+      expect(await result).toEqual({ value: "readback complete" })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 
   it("preserves Cookie domain, path, expiry and partition boundaries", async () => {
     const base = (await browser.cookies.getAll({}))[0]!

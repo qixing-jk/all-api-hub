@@ -15,6 +15,8 @@ export type BrowserIdentityRead = (request: {
 export type BrowserIdentityObservation = {
   /** Page-local session evidence; never persist, send through messaging, or log it. */
   sessionKey: string
+  /** False rechecks opaque login sessions after settlement while coalescing in-flight reads. */
+  cacheResult?: boolean
   expiresAt?: number
   verify: (read: BrowserIdentityRead) => Promise<unknown>
 }

@@ -9,6 +9,8 @@ export const cubenceBrowserIdentity: AccountBrowserIdentityCapability = {
     siteType === SITE_TYPES.CUBENCE && origin === CUBENCE_WEB_ORIGIN,
   observe: ({ origin }) => ({
     sessionKey: readIdentityCookieState(),
+    // The HttpOnly token cannot invalidate document.cookie-based identity caches.
+    cacheResult: false,
     async verify(read) {
       const body = await read({ url: `${origin}/api/v1/auth/me` })
       const user = isRecord(body?.user) ? body.user : undefined

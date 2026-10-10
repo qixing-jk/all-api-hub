@@ -69,9 +69,8 @@ export function createCubenceKeyEditor(
     initialValues: {
       name:
         key?.name ??
-        intent?.nameHint?.trim() ??
-        DEFAULT_AUTO_PROVISION_KEY_NAME,
-      unlimited: key?.quota_limit === -1,
+        (intent?.nameHint?.trim() || DEFAULT_AUTO_PROVISION_KEY_NAME),
+      unlimited: key ? key.quota_limit === -1 : true,
       quota:
         key && key.quota_limit !== -1
           ? key.quota_limit / CUBENCE_UNITS_PER_USD

@@ -10,6 +10,16 @@ import * as cubenceKeys from "~/services/apiService/cubence/keys"
 import { AuthTypeEnum } from "~/types"
 
 describe("Cubence registration and editor", () => {
+  it.each(["", "   "])(
+    "uses the default name for a blank hint %j",
+    (nameHint) => {
+      const editor = createCubenceKeyEditor(async () => [], undefined, {
+        nameHint,
+      })
+      expect(editor.initialValues.name).toBe("default key (auto)")
+    },
+  )
+
   it("retains the model's preferred native group and restricts creation to its allowed groups", async () => {
     const groups = [13, 39, 72].map((id) => ({
       id,
@@ -101,7 +111,7 @@ describe("Cubence registration and editor", () => {
     ).toBe(true)
   })
 
-  it("uses the native 10 USD finite default and requires a loaded, confirmed group", async () => {
+  it("defaults new keys to unlimited and requires a loaded, confirmed group", async () => {
     const loadGroups = vi.fn().mockResolvedValue([
       {
         id: 72,
@@ -115,7 +125,7 @@ describe("Cubence registration and editor", () => {
     expect(loadGroups).not.toHaveBeenCalled()
     expect(editor.initialValues).toMatchObject({
       quota: 10,
-      unlimited: false,
+      unlimited: true,
       group: "",
     })
     expect(editor.validate(editor.initialValues)).toMatchObject({
@@ -127,18 +137,22 @@ describe("Cubence registration and editor", () => {
     await editor.loadOptions!("group", values)
     expect(editor.validate(values)).toEqual({ valid: true })
     expect(editor.buildCommand(values)).toMatchObject({
-      quota_limit: 10000000,
+      quota_limit: -1,
       share_group_id: 72,
     })
-    expect(editor.validate({ ...values, quota: 0.0000001 })).toMatchObject({
+    expect(
+      editor.validate({ ...values, unlimited: false, quota: 0.0000001 }),
+    ).toMatchObject({
       valid: false,
       issues: [{ fieldId: "quota", code: "out_of_range" }],
     })
-    expect(editor.validate({ ...values, quota: 0.000001 })).toEqual({
+    expect(
+      editor.validate({ ...values, unlimited: false, quota: 0.000001 }),
+    ).toEqual({
       valid: true,
     })
-    expect(editor.buildCommand({ ...values, unlimited: true })).toMatchObject({
-      quota_limit: -1,
+    expect(editor.buildCommand({ ...values, unlimited: false })).toMatchObject({
+      quota_limit: 10000000,
     })
   })
 

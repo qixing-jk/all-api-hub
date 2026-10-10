@@ -97,6 +97,8 @@ for (const width of [1280, 800, 320]) {
 
     await page.goto(`chrome-extension://${extensionId}/options.html#account`)
     await waitForExtensionRoot(page)
+    // Desktop account actions become interactive when their row is hovered.
+    await page.locator('[data-site-type="cubence"]').hover()
     await page.getByTestId(accounts.rowCopyKeyButton).click()
     const dialog = page.getByRole("dialog").filter({
       has: page.getByRole("heading", { name: "Key List", exact: true }),

@@ -15,6 +15,7 @@ import {
   type AccountKeyResourceSession,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
+import { createCubenceKeyEditor } from "~/services/apiAdapters/cubence/keyEditor"
 import { createFreeModelKeyEditor } from "~/services/apiAdapters/freemodel/keyResources"
 import { createGrsaiKeyEditor } from "~/services/apiAdapters/grsai/keyResourceEditor"
 import { createKimiKeyEditor } from "~/services/apiAdapters/kimiOpenPlatform/accountKeyResource"
@@ -185,6 +186,23 @@ const fixtures = {
     useNativeOptionLoader: true,
     description:
       "A single channel can be provisioned automatically; multiple channels require a selection. Both scopes prepare one key.",
+  }),
+
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Cubence]: ({
+    availableGroups,
+  }: FixtureParams): Fixture => ({
+    editor: () =>
+      createCubenceKeyEditor(async () =>
+        availableGroups.map((group) => ({
+          id: group.id,
+          name: group.displayName,
+          multiplier: group.ratio,
+          is_active: true,
+          supported_protocols: [],
+        })),
+      ),
+    supportsInputForAllGroups: true,
+    useNativeOptionLoader: true,
   }),
   [ACCOUNT_SITE_ADAPTER_FAMILIES.FreeModel]: (): Fixture => ({
     editor: () => createFreeModelKeyEditor(),

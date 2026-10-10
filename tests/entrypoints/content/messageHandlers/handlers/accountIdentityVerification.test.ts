@@ -39,6 +39,29 @@ describe("current browser account identity verification", () => {
     vi.restoreAllMocks()
   })
 
+  it("rechecks Cubence after an HttpOnly login switches with unchanged visible cookies", async () => {
+    vi.stubGlobal("location", new URL("https://cubence.com/dashboard"))
+    vi.spyOn(document, "cookie", "get").mockReturnValue("analytics=unchanged")
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ user: { id: 7, active: true } })),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ user: { id: 8, active: true } })),
+      )
+    vi.stubGlobal("fetch", fetchMock)
+    expect(await verifyIdentity(SITE_TYPES.CUBENCE)).toMatchObject({
+      success: true,
+      data: { userId: "7", identityVerified: true },
+    })
+    expect(await verifyIdentity(SITE_TYPES.CUBENCE)).toMatchObject({
+      success: true,
+      data: { userId: "8", identityVerified: true },
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
   it("skips token verification when page storage access is denied", async () => {
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
       throw new DOMException("Storage access denied", "SecurityError")

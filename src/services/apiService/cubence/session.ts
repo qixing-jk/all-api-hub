@@ -28,7 +28,7 @@ export async function withCubenceSession<T>(
   // Firefox retains its existing page/interceptor transport until separately verified.
   if (import.meta.env.BROWSER === "firefox") return run(request)
   if (snapshots.has(request)) return run(request)
-  // Includes Cookie preparation and lock admission, which happen before HTTP dispatch.
+  // Caller cancellation covers the operation; only Cookie preparation has an overall limit.
   return runAbortableTask(
     async (signal) => {
       request = { ...request, abortSignal: signal }
@@ -44,41 +44,51 @@ export async function withCubenceSession<T>(
         )
       }
       request.abortSignal?.throwIfAborted()
-      const header =
-        normalizeCookieHeaderValue(request.auth.cookie ?? "") ||
-        normalizeCookieHeaderValue(request.cookieAuthSessionCookie ?? "")
-      let snapshot: Snapshot = { header }
-      if (!header) {
-        if (
-          request.fetchContext?.incognito &&
-          !request.fetchContext.cookieStoreId
-        ) {
-          throw new ApiError(
-            t("messages:cookieTransport.scopeUnavailable"),
-            undefined,
-            undefined,
-            API_ERROR_CODES.COOKIE_REQUEST_UNAVAILABLE,
-          )
-        }
-        if (!(await hasCookieReadPermissionForUrl(CUBENCE_WEB_ORIGIN))) {
-          throw new ApiError(
-            t("messages:cookieTransport.permissionRequired"),
-            undefined,
-            undefined,
-            API_ERROR_CODES.COOKIE_PERMISSION_REQUIRED,
-          )
-        }
-        // Domain capture preserves API path scoping; it does not import other sites.
-        const cookies = await runAbortableTask(
-          () =>
-            getCookiesForDomain(
-              new URL(CUBENCE_WEB_ORIGIN).hostname,
-              request.fetchContext?.cookieStoreId,
-            ),
-          { signals: [signal], timeoutMs: request.requestTimeoutMs ?? 15_000 },
-        )
-        snapshot = { cookies: cookies.map((cookie) => ({ ...cookie })) }
-      }
+      const snapshot = await runAbortableTask(
+        async (preparationSignal) => {
+          const header =
+            normalizeCookieHeaderValue(request.auth.cookie ?? "") ||
+            normalizeCookieHeaderValue(request.cookieAuthSessionCookie ?? "")
+          let snapshot: Snapshot = { header }
+          if (!header) {
+            if (
+              request.fetchContext?.incognito &&
+              !request.fetchContext.cookieStoreId
+            ) {
+              throw new ApiError(
+                t("messages:cookieTransport.scopeUnavailable"),
+                undefined,
+                undefined,
+                API_ERROR_CODES.COOKIE_REQUEST_UNAVAILABLE,
+              )
+            }
+            if (!(await hasCookieReadPermissionForUrl(CUBENCE_WEB_ORIGIN))) {
+              throw new ApiError(
+                t("messages:cookieTransport.permissionRequired"),
+                undefined,
+                undefined,
+                API_ERROR_CODES.COOKIE_PERMISSION_REQUIRED,
+              )
+            }
+            // Domain capture preserves API path scoping; it does not import other sites.
+            const cookies = await runAbortableTask(
+              () =>
+                getCookiesForDomain(
+                  new URL(CUBENCE_WEB_ORIGIN).hostname,
+                  request.fetchContext?.cookieStoreId,
+                ),
+              {
+                signals: [preparationSignal],
+                timeoutMs: request.requestTimeoutMs ?? 15_000,
+              },
+            )
+            snapshot = { cookies: cookies.map((cookie) => ({ ...cookie })) }
+          }
+          preparationSignal?.throwIfAborted()
+          return snapshot
+        },
+        { signals: [signal], timeoutMs: 60_000 },
+      )
       request.abortSignal?.throwIfAborted()
       const scoped = { ...request, auth: { ...request.auth } }
       snapshots.set(scoped, snapshot)
@@ -90,7 +100,6 @@ export async function withCubenceSession<T>(
     },
     {
       signals: [request.abortSignal, request.abortDeadline?.signal],
-      timeoutMs: 60_000,
     },
   )
 }

@@ -221,7 +221,11 @@ export async function verifyAccountBrowserIdentity(input: {
       ).then((userId) => {
         entry.expiresAt =
           Date.now() +
-          (userId ? VERIFIED_IDENTITY_CACHE_MS : UNCONFIRMED_IDENTITY_CACHE_MS)
+          (observation.cacheResult === false
+            ? 0
+            : userId
+              ? VERIFIED_IDENTITY_CACHE_MS
+              : UNCONFIRMED_IDENTITY_CACHE_MS)
         return userId
       }),
     }

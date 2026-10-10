@@ -12,6 +12,34 @@ const user = { id: 7, username: "example", active: true }
 afterEach(() => vi.unstubAllGlobals())
 
 describe("Cubence browser identity", () => {
+  it("does not claim malformed or unrelated console addresses", () => {
+    for (const url of ["invalid", "https://api.cubence.com", undefined]) {
+      expect(
+        cubenceContentSessionExtractor.canExtract({ ...context, url }),
+      ).toBe(false)
+    }
+    expect(
+      cubenceContentSessionExtractor.canExtract({
+        ...context,
+        siteTypeHint: "new-api",
+      }),
+    ).toBe(false)
+  })
+  it("leaves identity unconfirmed after a network or JSON failure", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")))
+    expect(await cubenceContentSessionExtractor.extract(context)).toBeNull()
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => {
+          throw new Error("invalid JSON")
+        },
+      }),
+    )
+    expect(await cubenceContentSessionExtractor.extract(context)).toBeNull()
+  })
+
   it("extracts live cookie identity without persisting a cached console or inference token", async () => {
     const fetchMock = vi
       .fn()
