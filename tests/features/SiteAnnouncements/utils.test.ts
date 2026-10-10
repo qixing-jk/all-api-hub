@@ -7,6 +7,7 @@ import {
   formatDateTime,
   getAnnouncementSourceUrl,
   matchSiteAnnouncementQuery,
+  sortSiteAnnouncements,
 } from "~/features/SiteAnnouncements/utils"
 import type { SiteAnnouncementRecord } from "~/types/siteAnnouncements"
 
@@ -51,6 +52,37 @@ const record: SiteAnnouncementRecord = {
 }
 
 describe("SiteAnnouncements utils", () => {
+  it.each(["new-api", "cubence", "laozhang", "sub2api"] as const)(
+    "orders cached %s announcements by publication time rather than discovery time",
+    (siteType) => {
+      const older = {
+        ...record,
+        siteType,
+        id: "older",
+        createdAt: 1000,
+        firstSeenAt: 5000,
+      }
+      const newer = {
+        ...record,
+        siteType,
+        id: "newer",
+        createdAt: 3000,
+        firstSeenAt: 4000,
+      }
+      const sameBatch = {
+        ...record,
+        siteType,
+        id: "same-batch",
+        createdAt: 2000,
+        firstSeenAt: 5000,
+      }
+      const records = [older, sameBatch, newer]
+
+      expect(sortSiteAnnouncements(records)).toEqual([newer, sameBatch, older])
+      expect(records).toEqual([older, sameBatch, newer])
+    },
+  )
+
   it("uses publication time independently of site identity and discovery time otherwise", () => {
     formatRelativeTimeMock.mockReturnValue("2 hours ago")
     for (const siteType of ["new-api", "laozhang", "sub2api"] as const) {
@@ -63,6 +95,33 @@ describe("SiteAnnouncements utils", () => {
       formatAnnouncementTimestamp({ ...record, createdAt: undefined }),
     ).toBe(formatDateTime(record.firstSeenAt))
     expect(formatRelativeTimeMock).not.toHaveBeenCalled()
+  })
+
+  it("uses discovery time for missing or non-finite publication dates and keeps equal dates stable", () => {
+    const records = [
+      { ...record, id: "old", createdAt: 1000, firstSeenAt: 9000 },
+      { ...record, id: "missing", createdAt: undefined, firstSeenAt: 4000 },
+      { ...record, id: "invalid", createdAt: NaN, firstSeenAt: 5000 },
+      { ...record, id: "infinite", createdAt: Infinity, firstSeenAt: 3000 },
+      { ...record, id: "tie-first", createdAt: 6000, firstSeenAt: 8000 },
+      { ...record, id: "tie-second", createdAt: 6000, firstSeenAt: 8000 },
+      {
+        ...record,
+        id: "tie-later-discovery",
+        createdAt: 6000,
+        firstSeenAt: 8500,
+      },
+    ]
+
+    expect(sortSiteAnnouncements(records).map(({ id }) => id)).toEqual([
+      "tie-later-discovery",
+      "tie-first",
+      "tie-second",
+      "invalid",
+      "missing",
+      "infinite",
+      "old",
+    ])
   })
 
   it("groups independent sources into one site filter without hiding account messages", () => {

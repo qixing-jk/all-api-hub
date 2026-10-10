@@ -142,6 +142,22 @@ export function filterSiteAnnouncements(
   })
 }
 
+/** Orders the displayed list newest first without mutating cached records. */
+export function sortSiteAnnouncements<T extends SiteAnnouncementRecord>(
+  records: T[],
+): T[] {
+  const publicationTime = (record: SiteAnnouncementRecord) =>
+    typeof record.createdAt === "number" && Number.isFinite(record.createdAt)
+      ? record.createdAt
+      : record.firstSeenAt
+
+  return [...records].sort(
+    (left, right) =>
+      publicationTime(right) - publicationTime(left) ||
+      right.firstSeenAt - left.firstSeenAt,
+  )
+}
+
 /**
  * Matches one announcement against the free-text search box.
  *
