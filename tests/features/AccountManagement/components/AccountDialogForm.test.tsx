@@ -57,6 +57,18 @@ vi.mock("~/utils/core/formatters", () => ({
 }))
 
 describe("AccountDialog AccountForm", () => {
+  it("explains that Cubence uses the browser login session without requiring an imported Cookie", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.CUBENCE
+    props.draft.authType = AuthTypeEnum.Cookie
+    render(<AccountForm {...withSitePolicy(props)} />)
+    expect(
+      await screen.findAllByText("accountDialog:siteInfo.browserCookieSession"),
+    ).toHaveLength(2)
+    expect(
+      screen.queryByText("accountDialog:form.cookieAuthSessionCookieDesc"),
+    ).not.toBeInTheDocument()
+  })
   beforeEach(() => {
     mediaQueryState.isSmallScreen = false
   })

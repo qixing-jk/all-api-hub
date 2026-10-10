@@ -183,6 +183,32 @@ describe("Cubence account capabilities", () => {
       editor.submit({ ...editor.initialValues, unlimited: false, quota: 3 }),
     ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
   })
+  it("rejects a concurrent quota change without applying a write", async () => {
+    const collection = await (await open()).openCollection("account")
+    const ref = (await collection.list()).items[0]!.ref
+    const editor = await collection.openEditEditor(ref)
+    await editor.loadOptions!("group", editor.initialValues)
+    let reads = 0
+    const write = vi.fn(() => HttpResponse.json({ success: true }))
+    server.use(
+      http.get(`${origin}/api/v1/user/apikeys`, () =>
+        HttpResponse.json({
+          success: true,
+          data: [
+            {
+              ...key,
+              quota_limit: ++reads === 1 ? key.quota_limit : 2_000_000,
+            },
+          ],
+        }),
+      ),
+      http.patch(`${origin}/api/v1/user/apikeys/:id/quota`, write),
+    )
+    await expect(
+      editor.submit({ ...editor.initialValues, quota: 3 }),
+    ).rejects.toMatchObject({ failure: { code: "resource_changed" } })
+    expect(write).not.toHaveBeenCalled()
+  })
   it("loads console pricing and enriches only the selected model", async () => {
     const pricing = await cubenceModelPricing.fetchPricing(request)
     expect(pricing.data.map((row) => row.model_name)).toEqual(["Example"])
@@ -207,6 +233,25 @@ describe("Cubence account capabilities", () => {
       models: [{ id: "different" }],
     })
     expect(enriched.data).toEqual([])
+    server.use(
+      http.get(`${origin}/api/model-plaza`, () =>
+        HttpResponse.json({
+          success: true,
+          data: { models: [{ ...model, vendor: { name: "Publisher" } }] },
+        }),
+      ),
+    )
+    expect(
+      await cubenceModelCatalog.fetchModels(
+        { ...request, auth: { ...request.auth, apiKey: "sk-example" } },
+        { accountRequest: request },
+      ),
+    ).toEqual([
+      {
+        id: "Example",
+        vendorEvidence: { kind: "publisher", name: "Publisher" },
+      },
+    ])
     await expect(
       cubenceModelCatalog.fetchModels({
         baseUrl: origin,

@@ -19,6 +19,17 @@ vi.mock("~/utils/browser/tabs", async (importOriginal) => ({
 }))
 
 describe("AccountDialog SiteInfoInput", () => {
+  it("explains Cubence browser session authentication before detection", async () => {
+    const props = createAddModeProps()
+    props.testSiteType = SITE_TYPES.CUBENCE
+    props.authType = AuthTypeEnum.Cookie
+    render(<SiteInfoInput {...withSitePolicy(props)} />)
+    expect(
+      await screen.findByRole("button", {
+        name: "accountDialog:siteInfo.browserCookieSession",
+      }),
+    ).toBeInTheDocument()
+  })
   beforeEach(() => {
     mockGetAllTabs.mockReset().mockResolvedValue([])
   })

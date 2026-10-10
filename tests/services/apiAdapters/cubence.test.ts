@@ -136,6 +136,10 @@ describe("Cubence registration and editor", () => {
     expect(editor.validate(values).valid).toBe(false)
     await editor.loadOptions!("group", values)
     expect(editor.validate(values)).toEqual({ valid: true })
+    expect(editor.validate({ ...values, name: "   " })).toMatchObject({
+      valid: false,
+      issues: [{ fieldId: "name", code: "required" }],
+    })
     expect(editor.buildCommand(values)).toMatchObject({
       quota_limit: -1,
       share_group_id: 72,

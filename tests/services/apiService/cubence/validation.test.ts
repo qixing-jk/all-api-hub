@@ -12,6 +12,7 @@ import { fetchGroups, fetchKeys } from "~/services/apiService/cubence/keys"
 import { readCubenceResponse } from "~/services/apiService/cubence/transport"
 import { AuthTypeEnum } from "~/types"
 import { getCookiesForDomain } from "~/utils/browser/cookies"
+import i18n from "~/utils/i18n/core"
 import { server } from "~~/tests/msw/server"
 import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
 
@@ -179,6 +180,36 @@ describe("Cubence protocol rejection and recovery boundaries", () => {
       code: "JSON_PARSE_ERROR",
     })
     expect(read).toHaveBeenCalledTimes(100)
+  })
+  it("uses English before language initialization and keeps missing dates absent", async () => {
+    const language = i18n.language
+    const resolvedLanguage = i18n.resolvedLanguage
+    const read = vi.fn(({ request }: { request: Request }) => {
+      expect(new URL(request.url).searchParams.get("lang")).toBe("en")
+      return HttpResponse.json({
+        success: true,
+        data: {
+          total: 1,
+          announcements: [{ id: 1, title: "News", content: "Body" }],
+        },
+      })
+    })
+    server.use(http.get(`${origin}/api/v1/announcements`, read))
+    try {
+      i18n.resolvedLanguage = undefined
+      i18n.language = undefined as unknown as string
+      expect(await fetchAnnouncements(request)).toEqual([
+        { id: "1", title: "News", content: "Body" },
+      ])
+      i18n.language = "en"
+      expect(await fetchAnnouncements(request)).toEqual([
+        { id: "1", title: "News", content: "Body" },
+      ])
+      expect(read).toHaveBeenCalledTimes(2)
+    } finally {
+      i18n.language = language
+      i18n.resolvedLanguage = resolvedLanguage
+    }
   })
   it("requires an actual login Cookie and Cookie read permission", async () => {
     vi.mocked(browser.cookies.getAll).mockResolvedValue([])
