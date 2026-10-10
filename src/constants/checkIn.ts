@@ -15,6 +15,7 @@ export const AUTO_CHECKIN_METHOD_IDS = {
   XiaobaiCodeDailyCheckIn: "xiaobai-code:daily-checkin",
   AiRouterDailyCheckIn: "ai-router:daily-checkin",
   ToolcodeDailyCheckIn: "toolcode:daily-checkin",
+  HiyoDailyCheckIn: "hiyo:daily-checkin",
 } as const
 
 export const CHECK_IN_METHOD_UNKNOWN_REASON_CODES = {

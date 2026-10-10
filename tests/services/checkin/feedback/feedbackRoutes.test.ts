@@ -11,6 +11,17 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 afterEach(() => vi.restoreAllMocks())
 
 describe("registered check-in feedback status routes", () => {
+  it("uses Hiyo's read-only route with the browser timezone", () => {
+    vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
+      timeZone: "Asia/Singapore",
+    } as Intl.ResolvedDateTimeFormatOptions)
+    expect(
+      getCheckInFeedbackStatusRoutes(
+        SITE_TYPES.SUB2API,
+        "https://free.hiyo.top",
+      ),
+    ).toContainEqual({ path: "/api/v1/checkin?timezone=Asia%2FSingapore" })
+  })
   it("uses the browser timezone for ToolCode growth-center status", () => {
     vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
       timeZone: "Asia/Singapore",
@@ -48,12 +59,12 @@ describe("registered check-in feedback status routes", () => {
     })
   })
 
-  it("retains all six candidate protocols on AI Router without truncation", () => {
+  it("retains all seven candidate protocols on AI Router without truncation", () => {
     const routes = getCheckInFeedbackStatusRoutes(
       SITE_TYPES.SUB2API,
       "https://ai-router.dev",
     )
-    expect(routes).toHaveLength(6)
+    expect(routes).toHaveLength(7)
     expect(routes[0]?.path).toMatch(
       /^\/api\/v1\/user\/daily-checkin\?timezone=/,
     )
