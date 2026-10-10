@@ -8,6 +8,24 @@ This page records major updates for general users (feature changes / experience 
 - **Troubleshooting**: You can enable console logs in "Settings → General → Logs" and report reproduction steps to [Issues](https://github.com/qixing-jk/all-api-hub/issues).
 :::
 
+## 4.4.0
+This release adds support for LaoZhang API and Cubence accounts, introduces Magpie self-hosted gateway management, allows skipping model sync on specific channels, redesigns site announcements with an overview card and search, adds Hiyo Free daily check-in, and improves loading feedback and WebDAV backup reliability.
+
+- **New Features:**
+  - **`LaoZhang API` account support**: Add LaoZhang API accounts across all four official domain endpoints, using either a System token or browser login. View balance, daily transactions, and model pricing; create and configure API keys with billing modes, fallback groups, and rate limits directly in the extension; and read site announcements and messages. See [Supported Sites](./supported-sites.md).
+  - **`Cubence` site support**: Add Cubence accounts using browser login, view balance, today's usage, token counts, and model pricing. Create, edit groups, toggle, or delete API keys in the extension, and quickly copy or export configurations. See [Supported Sites](./supported-sites.md).
+  - **`Magpie` self-hosted gateway management**: Connect to local Magpie gateways to manage provider channels and models. Quickly import saved account keys or API credentials into Magpie channels, and manage multiple keys, concurrency, and rate limits within the extension. See [Self-Hosted Site Management](./self-hosted-site-management.md).
+  - **Skip model sync for specific channels**: When managing channels in self-hosted gateways, toggle "Skip model sync" on individual channels. Scheduled auto-sync and "Run All" will skip them automatically to prevent overwriting manual models, while still allowing manual single-channel sync when needed. See [Self-Hosted Site Management](./self-hosted-site-management.md).
+  - **Site announcements overview and search**: The site announcements page now features an Overview card showing total and unread notice counts for quick filtering, along with site filtering. Added title and content search to find announcements faster, and notices now default to newest first. See [Site Announcements](./site-announcements.md).
+  - **`Hiyo Free` daily check-in**: Hiyo Free accounts (Sub2API) now support daily automatic check-in, checking beforehand whether today's reward has already been claimed to prevent duplicate attempts. See [Automatic Check-in](./auto-checkin.md).
+
+- **Experience Improvements:**
+  - **Smoother loading feedback**: When selecting models, exporting configurations, changing groups, or refreshing data, existing choices and buttons remain visible and usable without abrupt jumps or disappearing inputs. Refreshing announcements also no longer disrupts the view.
+
+- **Bug Fixes:**
+  - **WebDAV cloud backup saving and verification**: Fixed an issue where saving backups failed on certain WebDAV servers; the extension now automatically verifies uploaded backup files to ensure backups are fully written. See [Cloud Sync](./webdav-sync.md).
+  - **Older browser compatibility**: Fixed an issue where account login sessions could not be detected on older versions of Chromium-based browsers, and improved notification click handling.
+
 ## 4.3.0
 This release adds support for Kimi Open Platform, FreeModel, and Grsai accounts, introduces OmniRoute and gpt-load self-hosted gateway management, adds allowance monitoring to the API credential library, and comprehensively improves automatic check-in, account addition, and export workflows.
 
