@@ -72,6 +72,7 @@ import {
  * @param props.setSelectedGroups Setter for candidate group filter set.
  * @param props.availableGroups Available group options.
  * @param props.singleSourceGroupRatios Normalized ratios used in group labels.
+ * @param props.singleSourceGroupDisplayNames Display names keyed by native group identity.
  * @param props.showRealPrice Whether to display real price values.
  * @param props.setShowRealPrice Setter for real price toggle.
  * @param props.showEndpointTypes Whether to show endpoint types.
@@ -111,6 +112,7 @@ export function ControlPanel({
   setSelectedGroups,
   availableGroups,
   singleSourceGroupRatios,
+  singleSourceGroupDisplayNames,
   showRealPrice,
   setShowRealPrice,
   showEndpointTypes,
@@ -161,6 +163,7 @@ export function ControlPanel({
     setSelectedGroups,
     availableGroups,
     singleSourceGroupRatios,
+    singleSourceGroupDisplayNames,
     showRealPrice,
     setShowRealPrice,
     filteredModels,

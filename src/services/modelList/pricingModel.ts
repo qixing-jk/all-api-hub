@@ -38,6 +38,8 @@ export interface ProductCanonicalModel {
   owner_by?: string
   completion_ratio: number
   enable_groups: string[]
+  /** Human-readable names keyed by native group identity; never used for filtering or writes. */
+  groupDisplayNames?: Readonly<Record<string, string>>
   supported_endpoint_types: string[]
 }
 

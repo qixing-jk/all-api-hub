@@ -47,6 +47,7 @@ export interface ControlPanelProps {
   selectedGroups: string[]
   setSelectedGroups: (groups: string[]) => void
   availableGroups: string[]
+  singleSourceGroupDisplayNames?: Readonly<Record<string, string>>
   singleSourceGroupRatios: Record<string, number>
   showRealPrice: boolean
   setShowRealPrice: (show: boolean) => void

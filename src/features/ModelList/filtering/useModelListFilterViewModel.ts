@@ -63,6 +63,7 @@ type ModelFilterInputs = Pick<
   | "setSelectedGroups"
   | "availableGroups"
   | "singleSourceGroupRatios"
+  | "singleSourceGroupDisplayNames"
   | "showRealPrice"
   | "setShowRealPrice"
   | "filteredModels"
@@ -93,6 +94,7 @@ export function useModelListFilterViewModel({
   setSelectedGroups,
   availableGroups,
   singleSourceGroupRatios,
+  singleSourceGroupDisplayNames,
   showRealPrice,
   setShowRealPrice,
   filteredModels,
@@ -140,7 +142,11 @@ export function useModelListFilterViewModel({
     .join(" ")
   const groupOptions = availableGroups.map((group) => ({
     value: group,
-    label: formatGroupLabelFromRatios(group, singleSourceGroupRatios),
+    label: formatGroupLabelFromRatios(
+      group,
+      singleSourceGroupRatios,
+      singleSourceGroupDisplayNames,
+    ),
   }))
   const sortOptions = [
     {

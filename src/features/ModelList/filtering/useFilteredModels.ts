@@ -135,6 +135,22 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     [preparedSources, modelMetadataIndex],
   )
 
+  const singleSourceGroupDisplayNames = useMemo(
+    () =>
+      Object.fromEntries(
+        rawModelItems
+          .filter(
+            (item) =>
+              item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
+              item.source.account.id === selectedAccountId,
+          )
+          .flatMap((item) =>
+            Object.entries(item.model.groupDisplayNames ?? {}),
+          ),
+      ),
+    [rawModelItems, selectedAccountId],
+  )
+
   const availableGroups = useMemo(() => {
     if (
       !selectedSource?.capabilities.supportsGroupFiltering ||
@@ -174,6 +190,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
                     sourceId: getModelListSourceIdentityKey(item),
                     accountId: item.source.account.id,
                     usableGroups: item.groupContext.usableGroups,
+                    groupDisplayNames: item.model.groupDisplayNames,
                     groupRatios: item.groupRatios,
                   },
                 ]
@@ -349,6 +366,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     modelCapabilityMetadataCoverage,
     canRepairGroupSelection,
     singleSourceGroupRatios,
+    singleSourceGroupDisplayNames,
     canRepairGroupSelectionByAccountId,
     availableGroups,
     availableAccountGroupsByAccountId,

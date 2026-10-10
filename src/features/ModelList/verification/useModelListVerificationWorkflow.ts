@@ -120,7 +120,17 @@ export function useModelListVerificationWorkflow({
     verifyContext,
     verifyCliContext,
     verifyProfileContext,
-    modelKeyContext,
+    modelKeyContext: modelKeyContext
+      ? {
+          ...modelKeyContext,
+          groupDisplayNames: displayedModels.find(
+            (item) =>
+              item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
+              item.source.account.id === modelKeyContext.account.id &&
+              item.model.model_name === modelKeyContext.modelId,
+          )?.model.groupDisplayNames,
+        }
+      : null,
     batchVerifyContext,
     handleVerifyModel,
     handleVerifyCliSupport,

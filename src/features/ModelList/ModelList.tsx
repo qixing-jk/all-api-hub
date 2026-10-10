@@ -126,6 +126,7 @@ export default function ModelList(props: {
     getFilteredResultCount,
     availableGroups,
     singleSourceGroupRatios,
+    singleSourceGroupDisplayNames,
     availableAccountGroupsByAccountId,
     availableAccountGroupOptionsByAccountId,
     supportsModelCapabilityFilter,
@@ -531,6 +532,7 @@ export default function ModelList(props: {
               account={modelKeyContext.account}
               modelId={modelKeyContext.modelId}
               modelEnableGroups={modelKeyContext.modelEnableGroups}
+              groupDisplayNames={modelKeyContext.groupDisplayNames}
             />
           )}
 
@@ -569,6 +571,7 @@ export default function ModelList(props: {
             setSelectedGroups={setSelectedGroups}
             availableGroups={availableGroups}
             singleSourceGroupRatios={singleSourceGroupRatios}
+            singleSourceGroupDisplayNames={singleSourceGroupDisplayNames}
             showRealPrice={showRealPrice}
             setShowRealPrice={setShowRealPrice}
             showEndpointTypes={showEndpointTypes}

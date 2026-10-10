@@ -6,6 +6,18 @@ import {
 } from "~/features/ModelList/groups/groupLabels"
 
 describe("group labels", () => {
+  it("looks up the display name while retaining native identity for ratio lookup", () => {
+    expect(
+      formatGroupLabelFromRatios(
+        "13",
+        { "13": 1.75 },
+        { "13": "max-stable(only for CC)" },
+      ),
+    ).toBe("max-stable(only for CC) (1.75x)")
+    expect(formatGroupLabelFromRatios("13", {}, { "13": "max-stable" })).toBe(
+      "max-stable",
+    )
+  })
   it("leaves a group unformatted when its ratio is unknown", () => {
     expect(resolveKnownGroupRatio("vip", {})).toBeUndefined()
     expect(formatGroupLabelFromRatios("vip", {})).toBe("vip")

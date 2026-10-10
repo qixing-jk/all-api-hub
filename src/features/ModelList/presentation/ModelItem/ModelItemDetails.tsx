@@ -9,7 +9,8 @@ import {
   type ModelGroupContext,
 } from "~/features/ModelList/groups/groupContext"
 import {
-  formatGroupLabel,
+  formatGroupLabelFromRatios,
+  resolveGroupDisplayName,
   resolveKnownGroupRatio,
 } from "~/features/ModelList/groups/groupLabels"
 import {
@@ -107,10 +108,11 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
                 const isCurrentGroup = group === effectiveGroup
                 const isClickable = Boolean(onGroupClick) && !isCurrentGroup
                 const groupRatio = resolveKnownGroupRatio(group, groupRatios)
-                const groupLabel =
-                  groupRatio === undefined
-                    ? group
-                    : formatGroupLabel(group, groupRatio)
+                const groupLabel = formatGroupLabelFromRatios(
+                  group,
+                  groupRatios,
+                  model.groupDisplayNames,
+                )
                 const switchGroupLabel = isClickable
                   ? t("clickSwitchGroup", { group: groupLabel })
                   : undefined
@@ -118,7 +120,10 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
                   groupRatio === undefined
                     ? t("groupRatioUnavailable")
                     : t("groupRatioTooltip", {
-                        group,
+                        group: resolveGroupDisplayName(
+                          group,
+                          model.groupDisplayNames,
+                        ),
                         ratio: groupRatio,
                       }),
                   switchGroupLabel,
@@ -174,7 +179,7 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
             <div className="gap-y-density-1-5 flex flex-wrap gap-x-1.5">
               {supportedOnlyGroups.map((group) => (
                 <Badge key={group} variant="secondary" size="sm">
-                  {group}
+                  {resolveGroupDisplayName(group, model.groupDisplayNames)}
                 </Badge>
               ))}
             </div>

@@ -17,6 +17,7 @@ import {
   WorkflowTransitionButton,
 } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
+import { resolveGroupDisplayName } from "~/features/ModelList/groups/groupLabels"
 import {
   useModelKeyDialog,
   type ModelKeyDialogCreateResult,
@@ -101,13 +102,21 @@ interface ModelKeyDialogProps {
   account: DisplaySiteData
   modelId: string
   modelEnableGroups?: string[]
+  groupDisplayNames?: Readonly<Record<string, string>>
 }
 
 /**
  * Model key compatibility dialog for a specific { account, modelId } scope.
  */
 export default function ModelKeyDialog(props: ModelKeyDialogProps) {
-  const { isOpen, onClose, account, modelId, modelEnableGroups } = props
+  const {
+    isOpen,
+    onClose,
+    account,
+    modelId,
+    modelEnableGroups,
+    groupDisplayNames,
+  } = props
   const { t } = useTranslation(["modelList", "common"])
   const [isAddTokenDialogOpen, setIsAddTokenDialogOpen] = useState(false)
   const [lateCreation, setLateCreation] =
@@ -232,7 +241,10 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
       surfaceId: keyDialogSurface,
       entrypoint: optionsEntrypoint,
     })
-    const result = await createDefaultKey(group)
+    const result = await createDefaultKey(
+      group,
+      resolveGroupDisplayName(group, groupDisplayNames),
+    )
     if (result === "input-required") handleOpenAddTokenDialog()
 
     if (result === "failure") {
@@ -388,7 +400,10 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                           <SelectContent>
                             {createGroupOptions.map((group) => (
                               <SelectItem key={group} value={group}>
-                                {group}
+                                {resolveGroupDisplayName(
+                                  group,
+                                  groupDisplayNames,
+                                )}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -398,7 +413,10 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
                           id={createGroupSelectId}
                           className="dark:bg-card dark:text-foreground border-border bg-surface-subtle text-secondary-foreground flex min-h-(--density-control) items-center rounded-md border px-3 text-sm font-medium"
                         >
-                          {createGroupOptions[0]}
+                          {resolveGroupDisplayName(
+                            createGroupOptions[0] ?? "",
+                            groupDisplayNames,
+                          )}
                         </div>
                       )}
                     </div>
@@ -534,7 +552,9 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
         preSelectedAccountId={account.id}
         createPrefill={{
           modelId: "",
-          defaultName: getDefaultAccountKeyName(customCreateGroup),
+          defaultName: getDefaultAccountKeyName(
+            resolveGroupDisplayName(customCreateGroup, groupDisplayNames),
+          ),
           group: customCreateGroup,
           allowedGroups: createGroupOptions,
         }}

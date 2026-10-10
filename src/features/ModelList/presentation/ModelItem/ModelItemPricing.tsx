@@ -207,7 +207,11 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
     calculatedPrice.kind === CALCULATED_PRICE_KINDS.TOKEN &&
     Boolean(model.pricingPlan?.rules.length)
   const effectiveGroupLabel = effectiveGroup
-    ? formatGroupLabelFromRatios(effectiveGroup, groupRatios)
+    ? formatGroupLabelFromRatios(
+        effectiveGroup,
+        groupRatios,
+        model.groupDisplayNames,
+      )
     : undefined
   const priceMetaBadge = resolvePriceMetaBadge({
     effectiveGroup,

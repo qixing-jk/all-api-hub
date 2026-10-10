@@ -3,6 +3,28 @@ import { describe, expect, it } from "vitest"
 import { deriveGroupAvailability } from "~/features/ModelList/groups/groupAvailability"
 
 describe("deriveGroupAvailability", () => {
+  it("keeps names scoped to their accounts without replacing native filter values", () => {
+    const result = deriveGroupAvailability([
+      {
+        sourceId: "a",
+        accountId: "a",
+        usableGroups: ["13"],
+        groupRatios: { "13": 1.75 },
+        groupDisplayNames: { "13": "Primary" },
+      },
+      {
+        sourceId: "b",
+        accountId: "b",
+        usableGroups: ["13"],
+        groupRatios: { "13": 2 },
+        groupDisplayNames: { "13": "Backup" },
+      },
+    ])
+    expect(result.availableAccountGroupOptionsByAccountId).toEqual({
+      a: [{ name: "13", displayName: "Primary", ratio: 1.75 }],
+      b: [{ name: "13", displayName: "Backup", ratio: 2 }],
+    })
+  })
   it("keeps token and runtime-key scopes isolated while unioning account groups in encounter order", () => {
     const result = deriveGroupAvailability([
       {

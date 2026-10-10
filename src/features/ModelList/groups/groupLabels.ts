@@ -16,7 +16,19 @@ export function formatGroupLabel(group: string, ratio: number) {
 export function formatGroupLabelFromRatios(
   group: string,
   groupRatios: Record<string, number>,
+  displayNames?: Readonly<Record<string, string>>,
 ) {
   const ratio = resolveKnownGroupRatio(group, groupRatios)
-  return ratio === undefined ? group : formatGroupLabel(group, ratio)
+  const name = resolveGroupDisplayName(group, displayNames)
+  return ratio === undefined ? name : formatGroupLabel(name, ratio)
+}
+
+/** Group identifiers are provider input, including names shared with object prototype properties. */
+export function resolveGroupDisplayName(
+  group: string,
+  displayNames?: Readonly<Record<string, string>>,
+): string {
+  return displayNames && Object.hasOwn(displayNames, group)
+    ? displayNames[group] ?? group
+    : group
 }
