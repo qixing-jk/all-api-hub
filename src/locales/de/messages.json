@@ -88,6 +88,12 @@
     "userInfoNotFound": "Benutzerinformationen nicht gefunden, bitte stellen Sie sicher, dass Sie angemeldet sind",
     "waitUserInfoTimeout": "Zeitüberschreitung beim Warten auf Benutzerinformationen. Bitte stellen Sie sicher, dass Sie angemeldet sind"
   },
+  "cookieTransport": {
+    "permissionRequired": "Aktiviere in den Erweiterungseinstellungen die Berechtigungen für Cookies und das Ändern von Anfrage-Headern und versuche es erneut.",
+    "requestUnavailable": "Die Anfrage konnte nicht vorbereitet werden. Versuche es erneut. Lade die Erweiterung neu, falls der Fehler weiterhin auftritt.",
+    "scopeUnavailable": "Die Anfrage kann den ausgewählten Cookie-Bereich nicht verwenden. Importiere das Cookie des gewünschten Kontos oder nutze dessen reguläre Browsersitzung.",
+    "sessionUnavailable": "Die Anmeldesitzung ist nicht verfügbar. Melde dich erneut beim selben Konto an. Importiere ein zuvor importiertes Cookie erneut."
+  },
   "donehub": {
     "configMissing": "Bitte konfigurieren Sie zuerst die Done Hub-Adresse, das Admin-Token und die Benutzer-ID in den Grundeinstellungen",
     "noChannelsToSync": "Keine Kanäle zum Synchronisieren"

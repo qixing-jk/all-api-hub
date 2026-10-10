@@ -88,6 +88,12 @@
     "userInfoNotFound": "User information not found, please ensure you are logged in",
     "waitUserInfoTimeout": "Waiting for user information timeout, please ensure you are logged in"
   },
+  "cookieTransport": {
+    "permissionRequired": "Enable Cookie and request-header permissions in the extension permission settings, then retry.",
+    "requestUnavailable": "The request could not be prepared. Retry; if it still fails, reload the extension.",
+    "scopeUnavailable": "This request cannot use the selected Cookie scope. Import the intended account's Cookie or use its regular browser session.",
+    "sessionUnavailable": "The login session is unavailable. Sign into the same account again; if using an imported Cookie, import it again."
+  },
   "donehub": {
     "configMissing": "Please configure Done Hub address, admin token, and user ID in basic settings first",
     "noChannelsToSync": "No channels to sync"

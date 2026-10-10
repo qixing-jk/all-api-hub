@@ -427,6 +427,8 @@ const _fetchApiWithMapper = async <T, TResult>(
         )
         return await mapResponse(response)
       }
+      // Private credentials must never degrade to ambient cookies or a page.
+      if (request.cookieSession) return await primaryRequest()
       const fallback = async () => {
         const execution = request.protectionBypassExecution
         if (!execution) {

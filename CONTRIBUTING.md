@@ -333,6 +333,20 @@ pnpm compile
 
 `noUncheckedIndexedAccess` is enabled for `src/**`, `tests/**`, and `e2e/**`.
 
+### Permission warning validation
+
+Run `pnpm e2e:permissions` when changing required/optional permissions, host access, or other manifest inputs. The pre-commit hook selects this check for manifest configuration, entrypoints, plugins, dependencies, and its own tooling. The independent `Permission warnings` PR workflow uses the existing cached build producer and does not honor `skip-e2e` or `e2e-optional`; the test also runs in the default E2E suite and existing browser compatibility matrix. The command checks build freshness and uses the default manifest, without extra permissions from test-only build variants.
+
+`e2e/extensionPermissionWarnings.spec.ts` asks the actual browser's `management.getPermissionWarningsByManifest` API for warnings from the built candidate and `e2e/fixtures/permission-warnings-baseline.json`. The baseline records the approved version 4.3.0 permission surface before DNR became required, including content-script match patterns. Compare both manifests in the same browser so changes to localized warning text do not require maintaining a warning-text snapshot. A control that promotes optional notifications to required must add a warning; new candidate warnings fail the check. JSON test attachments retain the browser version, manifests, warnings, and differences.
+
+Do not regenerate the baseline merely to make a failure pass. Review the added access and resulting user impact before intentionally accepting a new baseline. If manifest ownership moves, update the hook's input selection as well.
+
+This automates native **warning computation**, not CRX installation, upgrade-triggered disabling, re-approval, or store delivery. Reloading an unpacked extension does not test those flows. For complete upgrade verification, Chrome documents the [Extension Update Testing Tool](https://github.com/GoogleChromeLabs/extension-update-testing-tool): run its local server, upload the old package, install the signed CRX, upload a higher-version candidate using the same signing key, and use the extension management page's Update action. See the official [permission warning and update guide](https://developer.chrome.com/docs/extensions/develop/concepts/permission-warnings). Report that separate outcome explicitly; a passing warning computation test is not evidence that a store upgrade was exercised.
+
+For an isolated Windows CRX check, Chrome for Testing exposes `chrome://policy/test`. In a disposable profile, its local test provider can set `ExtensionInstallAllowlist` for the test extension ID and `ExtensionInstallSources` for the loopback update server without modifying system policies. Do not use forced installation: it can suppress the permission approval behavior being tested. This test page is browser-specific; check availability instead of assuming Edge implements it. Close the test browser and remove its temporary profile afterwards.
+
+When automating that flow, restore native download handling with CDP `Browser.setDownloadBehavior({ behavior: "default" })`; Playwright's download interception can prevent the CRX installer from running. CDP DOM drag events alone are not evidence of a native file drop or installation. Confirm the native install dialog, verify the installed ID and version, and check both candidate and control updates. An ungranted optional permission promoted to required, such as `notifications`, should disable the control with `management.ExtensionInfo.disabledReason === "permissions_increase"` until re-approved. Retain browser versions, update requests, enabled states, and dialog evidence; distinguish reconstructed permission baselines from historical release packages.
+
 ### Git Hooks
 
 This project uses [Husky](https://typicode.github.io/husky) to enforce code quality through Git hooks:

@@ -86,6 +86,12 @@
     "userInfoNotFound": "ユーザー情報が見つかりません。ログイン済みか確認してください",
     "waitUserInfoTimeout": "ユーザー情報待機がタイムアウトしました。ログイン済みか確認してください"
   },
+  "cookieTransport": {
+    "permissionRequired": "拡張機能の権限設定で Cookie とリクエストヘッダーの変更を許可してから、再試行してください。",
+    "requestUnavailable": "リクエストを準備できませんでした。再試行しても失敗する場合は、拡張機能を再読み込みしてください。",
+    "scopeUnavailable": "選択した Cookie の範囲ではリクエストを実行できません。対象アカウントの Cookie をインポートするか、通常のブラウザーセッションを使用してください。",
+    "sessionUnavailable": "ログインセッションを利用できません。同じアカウントに再ログインしてください。インポートした Cookie を使用している場合は、再インポートしてください。"
+  },
   "donehub": {
     "configMissing": "先に設定で Done Hub のアドレス、管理者トークン、ユーザー ID を設定してください",
     "noChannelsToSync": "同期するチャネルがありません"

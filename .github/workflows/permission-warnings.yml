@@ -1,0 +1,68 @@
+name: Permission warnings
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "plugins/**"
+      - "e2e/**"
+      - "scripts/run-permission-warning-check.mjs"
+      - "scripts/e2e-*"
+      - "scripts/utils/run-pnpm.mjs"
+      - "wxt.config.ts"
+      - "playwright.config.ts"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".nvmrc"
+      - ".env*"
+      - ".github/workflows/permission-warnings.yml"
+      - ".github/workflows/e2e-build.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: permission-warnings-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    # No skip-e2e label or optional-build escape: permission changes need a check.
+    uses: ./.github/workflows/e2e-build.yml
+
+  warnings:
+    name: Native permission warnings
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
+        with:
+          run_install: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - run: pnpm exec playwright install --with-deps chromium
+      - uses: actions/download-artifact@v7
+        with:
+          name: e2e-extension-default
+          path: .output/chrome-mv3-test
+      - name: Compare warnings in the real browser
+        # The current run's producer validated the default build fingerprint.
+        env:
+          AAH_E2E_BUILD_VARIANT: default
+          AAH_SKIP_E2E_BUILD: "1"
+        run: pnpm exec playwright test e2e/extensionPermissionWarnings.spec.ts --project=chromium --no-deps --workers=1 --reporter=list,github,html
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: permission-warning-evidence
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

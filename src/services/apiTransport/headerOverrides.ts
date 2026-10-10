@@ -1,3 +1,4 @@
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { getChromiumRequestHeaderApi } from "~/utils/browser/requestHeaderApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -8,6 +9,17 @@ const logger = createLogger("RequestHeaderOverrides")
 
 /** User-maintained headers can contain secrets; never log their values. */
 type HeaderOverrides = Record<string, string>
+
+/** Trusted transport credentials, separate from user-editable headers. */
+export interface CookieRequestSession {
+  origin: string
+  cookieHeader: string
+}
+
+interface HeaderFetchExecution {
+  cookieSession?: CookieRequestSession
+  onDispatch?: () => void
+}
 
 const HEADER_FETCH_LOCK = "all-api-hub:request-header-overrides"
 // Separate from the per-tab Cookie and download rules (1M and 2M).
@@ -95,16 +107,17 @@ export function sanitizeHeaderOverrideError(
 }
 
 /**
- * Chromium drops fetch's User-Agent. A short-lived DNR rule supplies it instead.
- * All extension API/SDK fetches take a shared Web Lock; UA fetches take it
- * exclusively. Thus even ordinary requests to the same URL cannot inherit a
- * concurrent credential's UA. The lock is released on response headers so SSE
+ * Chromium-controlled headers require DNR. Ordinary API/SDK fetches take a
+ * shared Web Lock; UA and private Cookie fetches take it exclusively, so
+ * other extension requests cannot inherit a concurrent account's headers.
+ * The lock is released after response headers and rule cleanup, so SSE
  * bodies remain native streams. Web Locks also coordinate MV3/UI contexts.
  */
 export async function fetchWithHeaderOverrides(
   input: RequestInfo | URL,
   init?: RequestInit,
   overrides?: HeaderOverrides,
+  execution?: HeaderFetchExecution,
 ): Promise<Response> {
   const custom = normalizeHeaderOverrides(overrides)
   const hasOverrides = Object.keys(custom).length > 0
@@ -112,37 +125,74 @@ export async function fetchWithHeaderOverrides(
     init?.headers ?? (input instanceof Request ? input.headers : undefined),
   )
   for (const [name, value] of Object.entries(custom)) headers.set(name, value)
-  const options = hasOverrides
-    ? { ...init, headers, redirect: "error" as const }
-    : init
+  const session = execution?.cookieSession
+  if (session) {
+    const url = new URL(input instanceof Request ? input.url : String(input))
+    if (
+      url.origin !== session.origin ||
+      !session.cookieHeader.trim() ||
+      /[\r\n]/.test(session.cookieHeader)
+    )
+      throw new ApiError(
+        t("messages:cookieTransport.scopeUnavailable"),
+        undefined,
+        undefined,
+        API_ERROR_CODES.COOKIE_REQUEST_UNAVAILABLE,
+      )
+  }
+  const options = session
+    ? {
+        ...init,
+        headers,
+        credentials: "omit" as const,
+        redirect: "error" as const,
+      }
+    : hasOverrides
+      ? { ...init, headers, redirect: "error" as const }
+      : init
   const userAgent = custom["user-agent"]
   const chromeApi = getChromiumRequestHeaderApi()
   const dnr = chromeApi?.declarativeNetRequest
   const locks = globalThis.navigator?.locks
   const needsRule =
-    userAgent !== undefined && import.meta.env.BROWSER !== "firefox"
+    Boolean(session) ||
+    (userAgent !== undefined && import.meta.env.BROWSER !== "firefox")
   const canCoordinate = Boolean(locks && chromeApi?.runtime?.id)
+  const hasDnrApi = typeof dnr?.updateSessionRules === "function"
   let hasDnrPermission = false
+  let permissionInspectionFailed = false
   try {
     hasDnrPermission =
-      typeof dnr?.updateSessionRules === "function" &&
+      hasDnrApi &&
       Boolean(
         await chromeApi?.permissions?.contains({
           permissions: ["declarativeNetRequestWithHostAccess"],
         }),
       )
   } catch {
-    // Permission inspection is unavailable in some extension contexts.
-    // Ordinary headers still work; UA requests fail explicitly below.
+    // An inspection failure does not prove that an old credential rule is
+    // inactive. Ordinary requests must still establish cleanup before dispatch.
+    permissionInspectionFailed = hasDnrApi
   }
   const canUseRules = canCoordinate && hasDnrPermission
 
   if (needsRule && !canUseRules) {
+    if (session)
+      throw new ApiError(
+        t("messages:cookieTransport.permissionRequired"),
+        undefined,
+        undefined,
+        API_ERROR_CODES.COOKIE_PERMISSION_REQUIRED,
+      )
     throw new Error(
       t("apiCredentialProfiles:dialog.errors.userAgentPermission"),
     )
   }
-  if (!canCoordinate) return fetch(input, options)
+  const dispatch = () => {
+    execution?.onDispatch?.()
+    return fetch(input, options)
+  }
+  if (!canCoordinate) return dispatch()
 
   const signal =
     init?.signal ?? (input instanceof Request ? input.signal : undefined)
@@ -152,16 +202,17 @@ export async function fetchWithHeaderOverrides(
     async () => {
       signal?.throwIfAborted()
       if (!needsRule) {
-        // A terminated MV3 worker cannot execute finally. Clear its orphaned
-        // rule before the next ordinary request, while no UA lease is active.
-        if (hasDnrPermission) {
-          const rules = await dnr!.getSessionRules()
-          if (rules.some((rule) => rule.id === HEADER_OVERRIDE_RULE_ID))
-            await dnr!.updateSessionRules({
-              removeRuleIds: [HEADER_OVERRIDE_RULE_ID],
-            })
+        // A terminated owner may leave an install pending in the browser's
+        // native update queue. A rule query can still report [] at that point;
+        // enqueue removal unconditionally so it completes after earlier updates.
+        // No live exclusive owner can be installing a rule under this shared lock.
+        if (hasDnrPermission || permissionInspectionFailed) {
+          await dnr!.updateSessionRules({
+            removeRuleIds: [HEADER_OVERRIDE_RULE_ID],
+          })
         }
-        return fetch(input, options)
+        signal?.throwIfAborted()
+        return dispatch()
       }
 
       const url = new URL(input instanceof Request ? input.url : String(input))
@@ -177,35 +228,81 @@ export async function fetchWithHeaderOverrides(
               action: {
                 type: "modifyHeaders",
                 requestHeaders: [
-                  { header: "user-agent", operation: "set", value: userAgent! },
+                  ...(userAgent !== undefined
+                    ? [
+                        {
+                          header: "user-agent",
+                          operation: "set" as const,
+                          value: userAgent,
+                        },
+                      ]
+                    : []),
+                  ...(session
+                    ? [
+                        {
+                          header: "cookie",
+                          operation: "set" as const,
+                          value: session.cookieHeader,
+                        },
+                        {
+                          header: "origin",
+                          operation: "set" as const,
+                          value: session.origin,
+                        },
+                      ]
+                    : []),
                 ],
               },
               condition: {
                 regexFilter,
                 isUrlFilterCaseSensitive: true,
                 initiatorDomains: [chromeApi!.runtime.id!],
+                ...(session
+                  ? {
+                      requestMethods: [
+                        (
+                          init?.method ??
+                          (input instanceof Request ? input.method : "GET")
+                        ).toLowerCase() as NonNullable<
+                          browser.declarativeNetRequest.Rule["condition"]["requestMethods"]
+                        >[number],
+                      ],
+                    }
+                  : {}),
                 resourceTypes: ["xmlhttprequest", "other"],
               },
             },
           ],
         })
       } catch {
+        if (session)
+          throw new ApiError(
+            t("messages:cookieTransport.requestUnavailable"),
+            undefined,
+            undefined,
+            API_ERROR_CODES.COOKIE_REQUEST_UNAVAILABLE,
+          )
         throw new Error(
           t("apiCredentialProfiles:dialog.errors.userAgentPermission"),
         )
       }
       try {
         signal?.throwIfAborted()
-        return await fetch(input, options)
+        return await dispatch()
       } finally {
+        // Native DNR calls are not cancellable. Keep the lease until cleanup
+        // settles even if the caller already timed out; a late add must not
+        // overlap the next account. A new owner repairs orphaned rules above.
         try {
           await dnr!.updateSessionRules({
             removeRuleIds: [HEADER_OVERRIDE_RULE_ID],
           })
         } catch (error) {
           logger.warn(
-            "Failed to remove User-Agent override rule",
-            sanitizeHeaderOverrideError(error, custom),
+            "Failed to remove request header rule; next request must recover it",
+            session
+              ? "Private Cookie rule cleanup failed"
+              : sanitizeHeaderOverrideError(error, custom),
           )
         }
       }

@@ -5,16 +5,21 @@ import {
   normalizeHeaderOverrides,
   sanitizeHeaderOverrideError,
 } from "~/services/apiTransport/headerOverrides"
+import { isolateWebLocks } from "~~/tests/test-utils/webLocks"
 
 describe("credential request header overrides", () => {
   const nativeFetch = vi.fn()
 
   beforeEach(() => {
+    isolateWebLocks()
     nativeFetch.mockReset().mockResolvedValue(new Response("ok"))
     vi.stubGlobal("fetch", nativeFetch)
   })
 
-  afterEach(() => vi.unstubAllGlobals())
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
 
   it("redacts reflected header values from diagnostics", () => {
     expect(
@@ -104,11 +109,87 @@ describe("credential request header overrides", () => {
     return updateSessionRules
   }
 
-  it("does not mutate DNR rules for ordinary requests when no UA rule is orphaned", async () => {
+  it("sends private Cookie credentials without using the browser session", async () => {
+    const updateSessionRules = installDnr()
+    const onDispatch = vi.fn()
+    await fetchWithHeaderOverrides(
+      "https://console.example/api/keys",
+      { method: "POST", credentials: "include" },
+      undefined,
+      {
+        cookieSession: {
+          cookieHeader: "session=account-A",
+          origin: "https://console.example",
+        },
+        onDispatch,
+      },
+    )
+    expect(nativeFetch.mock.calls[0]![1]).toMatchObject({
+      credentials: "omit",
+      redirect: "error",
+    })
+    const rule = updateSessionRules.mock.calls[0]![0].addRules[0]
+    expect(rule.action.requestHeaders).toEqual(
+      expect.arrayContaining([
+        { header: "cookie", operation: "set", value: "session=account-A" },
+        {
+          header: "origin",
+          operation: "set",
+          value: "https://console.example",
+        },
+      ]),
+    )
+    expect(rule.condition.initiatorDomains).toEqual(["extension-id"])
+    expect(rule.condition.requestMethods).toEqual(["post"])
+    expect(onDispatch).toHaveBeenCalledOnce()
+    expect(updateSessionRules.mock.invocationCallOrder[0]).toBeLessThan(
+      onDispatch.mock.invocationCallOrder[0]!,
+    )
+  })
+
+  it("retires pending header rules even when an ordinary request sees no installed rule", async () => {
     const updateSessionRules = installDnr()
     await fetchWithHeaderOverrides("https://api.example/models")
     expect(nativeFetch).toHaveBeenCalledOnce()
-    expect(updateSessionRules).not.toHaveBeenCalled()
+    expect(updateSessionRules).toHaveBeenCalledExactlyOnceWith({
+      removeRuleIds: [3_000_000],
+    })
+  })
+
+  it("waits behind an interrupted owner's pending native rule update before an ordinary request", async () => {
+    const updateSessionRules = installDnr()
+    const api = (globalThis as any).chrome.declarativeNetRequest
+    let finishInstall!: () => void
+    let activeCookie: string | undefined
+    const pendingInstall = new Promise<void>((resolve) => {
+      finishInstall = () => {
+        activeCookie = "account-A"
+        resolve()
+      }
+    })
+    // A rule query can observe no rule while the browser is still processing
+    // a terminated owner's install. Updates share the browser's native queue.
+    api.getSessionRules.mockResolvedValue([])
+    updateSessionRules.mockImplementation(async () => {
+      await pendingInstall
+      activeCookie = undefined
+    })
+    nativeFetch.mockImplementation(() =>
+      Promise.resolve(new Response(activeCookie ?? "browser-B")),
+    )
+    const request = fetchWithHeaderOverrides("https://console.example/api/keys")
+    try {
+      await vi.waitFor(() =>
+        expect(
+          api.getSessionRules.mock.calls.length +
+            updateSessionRules.mock.calls.length,
+        ).toBeGreaterThan(0),
+      )
+      expect(nativeFetch).not.toHaveBeenCalled()
+    } finally {
+      finishInstall()
+    }
+    expect(await (await request).text()).toBe("browser-B")
   })
 
   it("cleans only the orphaned UA rule before dispatching an ordinary request", async () => {
@@ -126,23 +207,103 @@ describe("credential request header overrides", () => {
       nativeFetch.mock.invocationCallOrder[0]!,
     )
   })
-  it.each(["read", "remove"])(
-    "does not expose ordinary requests to an orphaned UA when rule %s fails",
-    async (failure) => {
-      const updateSessionRules = installDnr()
-      const api = (globalThis as any).chrome.declarativeNetRequest
-      const error = new Error("Rule API unavailable")
-      if (failure === "read") api.getSessionRules.mockRejectedValue(error)
-      else {
-        api.getSessionRules.mockResolvedValue([{ id: 3_000_000 }])
-        updateSessionRules.mockRejectedValue(error)
+  it("does not expose ordinary requests to an orphaned UA when rule removal fails", async () => {
+    const updateSessionRules = installDnr()
+    const api = (globalThis as any).chrome.declarativeNetRequest
+    const error = new Error("Rule API unavailable")
+    api.getSessionRules.mockResolvedValue([{ id: 3_000_000 }])
+    updateSessionRules.mockRejectedValue(error)
+    await expect(
+      fetchWithHeaderOverrides("https://api.example/models"),
+    ).rejects.toBe(error)
+    expect(nativeFetch).not.toHaveBeenCalled()
+  })
+
+  it("does not inherit an orphaned private Cookie when permission inspection fails", async () => {
+    const updateSessionRules = installDnr()
+    const api = (globalThis as any).chrome
+    api.permissions.contains
+      .mockResolvedValueOnce(true)
+      .mockRejectedValueOnce(new Error("Permission inspection unavailable"))
+    let activeCookie: string | undefined
+    let failFirstCleanup = true
+    updateSessionRules.mockImplementation(async (update) => {
+      if (update.addRules) {
+        activeCookie = update.addRules[0].action.requestHeaders.find(
+          (header: { header: string }) => header.header === "cookie",
+        ).value
+      } else if (failFirstCleanup) {
+        failFirstCleanup = false
+        throw new Error("Cleanup unavailable")
+      } else {
+        activeCookie = undefined
       }
-      await expect(
-        fetchWithHeaderOverrides("https://api.example/models"),
-      ).rejects.toBe(error)
-      expect(nativeFetch).not.toHaveBeenCalled()
-    },
-  )
+    })
+    nativeFetch.mockImplementation(() =>
+      Promise.resolve(new Response(activeCookie ?? "browser-B")),
+    )
+    const url = "https://console.example/api/keys"
+    await fetchWithHeaderOverrides(url, undefined, undefined, {
+      cookieSession: {
+        origin: "https://console.example",
+        cookieHeader: "session=account-A",
+      },
+    })
+
+    const response = await fetchWithHeaderOverrides(url)
+    expect(await response.text()).toBe("browser-B")
+  })
+
+  it("does not dispatch when permission inspection and residual rule cleanup both fail", async () => {
+    const updateSessionRules = installDnr()
+    const api = (globalThis as any).chrome
+    api.permissions.contains.mockRejectedValue(
+      new Error("Permission inspection unavailable"),
+    )
+    const cleanupError = new Error("Cleanup unavailable")
+    updateSessionRules.mockRejectedValue(cleanupError)
+    const onDispatch = vi.fn()
+    await expect(
+      fetchWithHeaderOverrides(
+        "https://console.example/api/keys",
+        undefined,
+        undefined,
+        { onDispatch },
+      ),
+    ).rejects.toBe(cleanupError)
+    expect(nativeFetch).not.toHaveBeenCalled()
+    expect(onDispatch).not.toHaveBeenCalled()
+  })
+
+  it("preserves ordinary requests when the header permission is explicitly absent", async () => {
+    const updateSessionRules = installDnr()
+    ;(globalThis as any).chrome.permissions.contains.mockResolvedValue(false)
+    await fetchWithHeaderOverrides("https://api.example/models")
+    expect(nativeFetch).toHaveBeenCalledOnce()
+    expect(updateSessionRules).not.toHaveBeenCalled()
+  })
+
+  it("preserves the private Cookie permission error when inspection fails", async () => {
+    const updateSessionRules = installDnr()
+    ;(globalThis as any).chrome.permissions.contains.mockRejectedValue(
+      new Error("Permission inspection unavailable"),
+    )
+    await expect(
+      fetchWithHeaderOverrides(
+        "https://console.example/api/keys",
+        undefined,
+        undefined,
+        {
+          cookieSession: {
+            origin: "https://console.example",
+            cookieHeader: "session=account-A",
+          },
+        },
+      ),
+    ).rejects.toMatchObject({ code: "COOKIE_PERMISSION_REQUIRED" })
+    expect(nativeFetch).not.toHaveBeenCalled()
+    expect(updateSessionRules).not.toHaveBeenCalled()
+  })
 
   it("scopes UA to this extension and URL and removes the rule after failure", async () => {
     const updateSessionRules = installDnr()

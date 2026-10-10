@@ -90,6 +90,12 @@
     "userInfoNotFound": "No se encontró información del usuario; asegúrate de haber iniciado sesión",
     "waitUserInfoTimeout": "Se agotó el tiempo de espera para la información del usuario; asegúrate de haber iniciado sesión"
   },
+  "cookieTransport": {
+    "permissionRequired": "Activa los permisos de cookies y modificación de encabezados en los ajustes de permisos de la extensión y vuelve a intentarlo.",
+    "requestUnavailable": "No se pudo preparar la solicitud. Vuelve a intentarlo; si el error persiste, recarga la extensión.",
+    "scopeUnavailable": "Esta solicitud no puede usar el ámbito de cookies seleccionado. Importa la cookie de la cuenta deseada o usa su sesión normal del navegador.",
+    "sessionUnavailable": "La sesión no está disponible. Inicia sesión de nuevo en la misma cuenta; si usas una cookie importada, vuelve a importarla."
+  },
   "donehub": {
     "configMissing": "Primero configura la dirección de Done Hub, el token de administrador y el ID de usuario en la configuración básica",
     "noChannelsToSync": "No hay canales para sincronizar"

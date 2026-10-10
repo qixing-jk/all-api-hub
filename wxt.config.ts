@@ -39,7 +39,13 @@ const CORE_EXTENSION_PERMISSIONS = [
   "alarms",
   "contextMenus",
 ] as const
-const CHROMIUM_ONLY_REQUIRED_PERMISSIONS = ["sidePanel"] as const
+const CHROMIUM_ONLY_REQUIRED_PERMISSIONS = [
+  "sidePanel",
+  // Chromium must initialize its rule engine when the extension loads.
+  // A first optional grant can leave native updates pending and rules inactive.
+  // Cookie reads remain optional; this uses the existing host permissions.
+  "declarativeNetRequestWithHostAccess",
+] as const
 const FIREFOX_COOKIE_OPTIONAL_PERMISSIONS = [
   "cookies",
   "webRequest",
@@ -181,7 +187,7 @@ function getManifestRequiredPermissions(browser: BrowserTarget) {
     permissions.push(...getE2eRequiredChromiumPermissions(e2eBuildVariant))
   }
 
-  return permissions
+  return [...new Set(permissions)]
 }
 
 function getManifestOptionalPermissions(browser: BrowserTarget) {
