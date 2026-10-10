@@ -145,8 +145,8 @@ Sub2API: `/api/v1/auth/me` returns `{user}`, native key APIs use
   without double-counting cache counters. Missing/failed statistics stay unknown.
 - **Keys:** `/api/v1/user/apikeys` is an unpaginated inventory with recoverable
   plaintext. Create requires name, quota (`-1` unlimited, otherwise microcredits),
-  `share_type:public`, and a single explicit `share_group_id`. The native default
-  is 10 USD, with no selected group. Separate PATCH routes `/:id/quota`,
+  `share_type:public`, and a single explicit `share_group_id`. The site defaults
+  to 10 USD; Hub defaults new keys to unlimited, with no selected group. Separate PATCH routes `/:id/quota`,
   `/:id/share-group`, and `/:id/status` change only those fields. Names cannot be
   edited and expiry/IP/model limits are not native fields. Compare a fresh
   inventory baseline before editing, then read back writes and deletion.

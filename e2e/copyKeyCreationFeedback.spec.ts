@@ -171,11 +171,16 @@ for (const width of [1280, 800, 320]) {
     }
     await expect(group).toBeEnabled()
     await expect(name).toHaveValue("Draft written while groups load")
+    await expect(editor.locator("#resource-editor-unlimited")).toBeChecked()
+    await expect(editor.locator("#resource-editor-quota")).toHaveCount(0)
     const loadedLayout = await layout(editor)
     expect(loadedLayout.scrollbars).toBe(loadingLayout!.scrollbars)
     expect(
       Math.abs(loadedLayout.height - loadingLayout!.height),
     ).toBeLessThanOrEqual(1)
+    await editor.locator("#resource-editor-unlimited").uncheck()
+    await expect(editor.locator("#resource-editor-quota")).toHaveValue("10")
+    await editor.locator("#resource-editor-unlimited").check()
     expect(reads).toEqual(["/api/v1/auth/me", "/api/v1/share-groups/available"])
     await group.click()
     await expect(

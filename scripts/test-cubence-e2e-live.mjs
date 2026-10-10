@@ -641,6 +641,8 @@ try {
           })
           .click()
         await name.fill(defaultKeyName)
+        await expect(ui.locator("#resource-editor-unlimited")).toBeChecked()
+        await ui.locator("#resource-editor-unlimited").uncheck()
         await ui.locator("#resource-editor-quota").fill("1")
         await site.close()
         const submitStarted = performance.now()
@@ -803,14 +805,12 @@ try {
       { timeout: 30000 },
     )
     await ui.getByTestId(keys.addTokenButton).click()
-    await expect(ui.locator("#resource-editor-quota")).toHaveValue("10", {
+    await expect(ui.locator("#resource-editor-unlimited")).toBeChecked({
       timeout: 30000,
     })
     await expect(ui.locator("#resource-editor-name")).toBeVisible()
     await capture("04-key-editor.png")
-    await checkpoint(
-      "native editor with 10 USD finite default and required group",
-    )
+    await checkpoint("native editor with unlimited default and required group")
     if (mutate) {
       assert.ok(group, "An unrestricted OpenAI test group is required")
       assert.ok(
@@ -825,6 +825,7 @@ try {
           exact: true,
         })
         .click()
+      await ui.locator("#resource-editor-unlimited").uncheck()
       await ui.locator("#resource-editor-quota").fill("1")
       await site.close()
       const submitStarted = performance.now()
