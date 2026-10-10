@@ -38,6 +38,7 @@ import {
   filterSiteAnnouncements,
   matchesUnreadFilter,
   matchSiteAnnouncementQuery,
+  sortSiteAnnouncements,
 } from "./utils"
 
 const logger = createLogger("SiteAnnouncementsPage")
@@ -193,8 +194,10 @@ export function useSiteAnnouncementsWorkspace({
   )
   const filteredRecords = useMemo(
     () =>
-      visibleRecords.filter((record) =>
-        matchSiteAnnouncementQuery(record, searchQuery),
+      sortSiteAnnouncements(
+        visibleRecords.filter((record) =>
+          matchSiteAnnouncementQuery(record, searchQuery),
+        ),
       ),
     [visibleRecords, searchQuery],
   )

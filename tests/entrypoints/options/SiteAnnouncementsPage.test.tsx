@@ -336,6 +336,46 @@ describe("SiteAnnouncementsPage", () => {
     ).toBeInTheDocument()
   })
 
+  it("shows cached announcements newest first across sites and preserves that order when searching", async () => {
+    const user = userEvent.setup()
+    const cachedRecords = [
+      {
+        ...records[0]!,
+        title: "Older notice",
+        createdAt: 1735689600000,
+        firstSeenAt: 1735862400000,
+      },
+      { ...records[1]!, title: "Newest notice", createdAt: 1735776000000 },
+    ]
+    sendSiteAnnouncementsMessageMock.mockImplementation(
+      async (type: string) => ({
+        success: true,
+        data:
+          type === SiteAnnouncementsMessageTypes.ListRecords
+            ? cachedRecords
+            : status,
+      }),
+    )
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByRole("heading", { level: 3, name: "Newest notice" })
+    expect(
+      screen
+        .getAllByRole("heading", { level: 3 })
+        .map((heading) => heading.textContent),
+    ).toEqual(["Newest notice", "Older notice"])
+    await user.type(
+      screen.getByPlaceholderText("siteAnnouncements:search.placeholder"),
+      "notice",
+    )
+    expect(
+      screen
+        .getAllByRole("heading", { level: 3 })
+        .map((heading) => heading.textContent),
+    ).toEqual(["Newest notice", "Older notice"])
+  })
+
   it("shows the selected site counts and list while the site filter is active", async () => {
     const user = userEvent.setup()
 
