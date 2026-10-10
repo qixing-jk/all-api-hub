@@ -112,6 +112,15 @@ export function useDefaultTokenQuickCreate({
         kind: requirementKey ? "creating" : "resolving",
         selection: state.selection,
       })
+      const handoffToEditor = () => {
+        const openEditor = observers.current.onInputRequired
+        planRef.current = null
+        setState({
+          ...idle(),
+          error: openEditor ? null : { kind: "input-required" },
+        })
+        openEditor?.()
+      }
       try {
         const plan = requirementKey
           ? planRef.current?.plan
@@ -125,8 +134,7 @@ export function useDefaultTokenQuickCreate({
         }
         planRef.current = { plan, controller }
         if (plan.kind === "input-required") {
-          setState({ ...idle(), error: { kind: "input-required" } })
-          observers.current.onInputRequired?.()
+          handoffToEditor()
           return
         }
         if (plan.kind === "selection-required") {
@@ -147,8 +155,7 @@ export function useDefaultTokenQuickCreate({
             return
           }
           if (selected.provisioning.kind === "input-required") {
-            setState({ ...idle(), error: { kind: "input-required" } })
-            observers.current.onInputRequired?.()
+            handoffToEditor()
             return
           }
         }

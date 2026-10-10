@@ -25,6 +25,7 @@ type RequestExecutionControls = Pick<
   | "bypassSiteRequestLimit"
   | "observer"
   | "requestHeaders"
+  | "cookieSession"
 >
 
 interface PreparedHttpRequest {
@@ -88,11 +89,11 @@ export async function executePreparedRequest<T>(
           return await run({
             options,
             dispatch: async () => {
-              onDispatch()
               const response = await fetchWithHeaderOverrides(
                 prepared.url,
                 options,
                 request.requestHeaders,
+                { cookieSession: request.cookieSession, onDispatch },
               )
               onResponse()
               return response

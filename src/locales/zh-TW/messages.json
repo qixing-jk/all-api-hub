@@ -86,6 +86,12 @@
     "userInfoNotFound": "未找到使用者資訊，請確保已登入",
     "waitUserInfoTimeout": "等待使用者資訊超時，請確保已登入"
   },
+  "cookieTransport": {
+    "browserUnsupported": "此帳號的獨立 Cookie 請求暫不支援 Safari，請在 Chrome 或 Edge 中重試。",
+    "permissionRequired": "目前瀏覽器無法使用此帳號的 Cookie 發送請求。請檢查擴充套件權限或更新瀏覽器後再試。",
+    "requestUnavailable": "請求準備失敗，請重試；若仍失敗，請重新載入擴充功能。",
+    "scopeUnavailable": "此請求無法使用所選 Cookie 範圍。請匯入目標帳號的 Cookie，或使用該帳號的一般瀏覽器工作階段。"
+  },
   "donehub": {
     "configMissing": "請先在設定中配置 Done Hub 地址、管理員令牌和使用者 ID",
     "noChannelsToSync": "沒有可同步的渠道"

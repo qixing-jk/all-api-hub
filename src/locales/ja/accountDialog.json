@@ -38,7 +38,6 @@
     "openApiCredentialProfiles": "API 資格情報を開く",
     "openManualAddGuide": "このサイトの手動追加ガイドを開く",
     "reloadCurrentPage": "現在のページを再読み込み",
-    "reloadExtensionAndRetry": "拡張機能を再読み込みして再試行",
     "reportUnsupportedSite": "サイト対応を申請",
     "saveAccount": "アカウントを保存",
     "saveChanges": "変更を保存",
@@ -232,7 +231,6 @@
   },
   "messages": {
     "addSuccess": "アカウント {{name}} を正常に追加しました",
-    "autoDetectCookiePermissionReloadHint": "Cookie 複数アカウント権限を許可した直後の初回検出が進まない場合は、拡張機能を再読み込みしてから再試行できます。",
     "autoDetectFailed": "自動検出に失敗しました: {{error}}",
     "autoDetectIdentityMismatch": "検出されたアカウントが現在のアカウントと一致しません。既存のデータは保持されています。サイトの URL を確認し、対象のアカウントにログインしてから再試行してください。",
     "autoDetectSuccess": "自動検出に成功しました",
@@ -269,7 +267,6 @@
     "managedSiteSettingsOpened": "{{managedSite}} の設定を新しいタブで開きました。接続情報を入力してから、このボタンをもう一度押してください。",
     "newApiConfigFailed": "New API への自動設定に失敗しました: {{error}}",
     "operationFailed": "操作に失敗しました: {{error}}",
-    "reloadExtensionConfirm": "拡張機能を再読み込みすると現在の拡張機能ページが閉じます。必要な情報を保存済みであることを確認してください。",
     "saveAccountFailed": "アカウントの保存に失敗しました",
     "saveFailed": "保存に失敗しました",
     "updateSuccess": "アカウント {{name}} を正常に更新しました",
@@ -349,10 +346,6 @@
       "description": "{{message}}",
       "nextSteps": "まだ構築していなくても大丈夫です。下の公式ドキュメントで構築し、設定で接続情報を入力してください。アカウントの保存、残高の更新、チェックインはこれまでどおり使えます。",
       "title": "{{managedSite}} はまだありませんか？"
-    },
-    "reloadExtension": {
-      "title": "拡張機能を再読み込み",
-      "warningTitle": "拡張機能を再読み込みしますか？"
     }
   }
 }

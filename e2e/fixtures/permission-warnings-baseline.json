@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "All API Hub permission baseline",
+  "version": "4.3.0",
+  "permissions": [
+    "tabs",
+    "storage",
+    "unlimitedStorage",
+    "alarms",
+    "contextMenus",
+    "sidePanel"
+  ],
+  "optional_permissions": [
+    "cookies",
+    "declarativeNetRequestWithHostAccess",
+    "clipboardRead",
+    "notifications",
+    "bookmarks"
+  ],
+  "host_permissions": ["<all_urls>"],
+  "content_scripts": [{ "matches": ["<all_urls>"], "js": ["content.js"] }]
+}

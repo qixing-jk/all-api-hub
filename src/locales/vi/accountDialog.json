@@ -38,7 +38,6 @@
     "openApiCredentialProfiles": "Mở API Credentials",
     "openManualAddGuide": "Mở hướng dẫn thêm thủ công cho trang web này",
     "reloadCurrentPage": "Làm mới trang hiện tại",
-    "reloadExtensionAndRetry": "Tải lại tiện ích rồi thử lại",
     "reportUnsupportedSite": "Yêu cầu hỗ trợ trang",
     "saveAccount": "Lưu tài khoản",
     "saveChanges": "Lưu thay đổi",
@@ -232,7 +231,6 @@
   },
   "messages": {
     "addSuccess": "Thêm tài khoản {{name}} thành công!",
-    "autoDetectCookiePermissionReloadHint": "Nếu lần nhận dạng đầu tiên cứ chờ mãi ngay sau khi cấp quyền Cookie nhiều tài khoản, hãy tải lại tiện ích rồi thử lại.",
     "autoDetectFailed": "Tự động nhận dạng thất bại: {{error}}",
     "autoDetectIdentityMismatch": "Tài khoản được phát hiện không khớp với tài khoản hiện tại. Dữ liệu hiện có của bạn đã được giữ lại. Hãy kiểm tra URL trang web, đăng nhập vào đúng tài khoản rồi thử lại.",
     "autoDetectSuccess": "Tự động nhận dạng thành công!",
@@ -269,7 +267,6 @@
     "managedSiteSettingsOpened": "Đã mở cài đặt {{managedSite}} trong tab mới. Hãy điền thông tin kết nối rồi quay lại bấm nút này.",
     "newApiConfigFailed": "Cấu hình tự động vào New API thất bại: {{error}}",
     "operationFailed": "Thao tác thất bại: {{error}}",
-    "reloadExtensionConfirm": "Tải lại tiện ích sẽ đóng trang tiện ích hiện tại. Vui lòng xác nhận bạn đã lưu thông tin cần thiết.",
     "saveAccountFailed": "Lưu tài khoản thất bại",
     "saveFailed": "Lưu thất bại",
     "updateSuccess": "Cập nhật tài khoản {{name}} thành công!",
@@ -349,10 +346,6 @@
       "description": "{{message}}",
       "nextSteps": "Chưa triển khai cũng không sao: hãy làm theo tài liệu chính thức bên dưới rồi điền thông tin kết nối trong cài đặt. Việc lưu tài khoản, làm mới số dư và điểm danh vẫn hoạt động như thường.",
       "title": "Chưa có {{managedSite}}?"
-    },
-    "reloadExtension": {
-      "title": "Tải lại tiện ích",
-      "warningTitle": "Xác nhận tải lại tiện ích?"
     }
   }
 }

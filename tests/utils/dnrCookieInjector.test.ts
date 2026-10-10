@@ -32,6 +32,48 @@ describe("dnrCookieInjector", () => {
 
   afterEach(() => {
     ;(globalThis as any).chrome = originalChrome
+    vi.useRealTimers()
+  })
+
+  it("bounds a stalled download-rule install and removes a rule that arrives after timeout", async () => {
+    vi.useFakeTimers()
+    let installed!: () => void
+    const updateSessionRules = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            installed = resolve
+          }),
+      )
+      .mockResolvedValue(undefined)
+    ;(globalThis as any).chrome = {
+      declarativeNetRequest: { updateSessionRules },
+    }
+    const settled = vi.fn()
+    const result = applyTempWindowDownloadBlockRule(6).then(settled)
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(settled).toHaveBeenCalledWith(null)
+    await result
+    installed()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(updateSessionRules).toHaveBeenLastCalledWith({
+      removeRuleIds: [TEMP_WINDOW_DOWNLOAD_BLOCK_RULE_ID_BASE + 6],
+    })
+  })
+
+  it("bounds download-rule cleanup so another temporary-page task can run", async () => {
+    vi.useFakeTimers()
+    ;(globalThis as any).chrome = {
+      declarativeNetRequest: {
+        updateSessionRules: vi.fn(() => new Promise(() => {})),
+      },
+    }
+    const settled = vi.fn()
+    const result = removeTempWindowDownloadBlockRule(2_000_042).then(settled)
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(settled).toHaveBeenCalledOnce()
+    await result
   })
 
   it("buildTempWindowCookieRule should create a per-tab rule with stable id and cookie header override", () => {

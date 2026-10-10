@@ -1,5 +1,6 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { startAbortableTask } from "~/services/apiTransport/abortableTask"
 import { checkTempContextProtectionGuards } from "~/services/browsingContext/tempPage/tempContextProtectionGuards"
 import {
   DEFAULT_TEMP_CONTEXT_PREFERENCE,
@@ -293,6 +294,26 @@ export async function getTempContextTabSnapshot(
       error: getErrorMessage(error),
     })
     return null
+  }
+}
+
+/** Probe only read-only handlers before reusing a tab; an open tab can have a dead content receiver. */
+export async function isTempContextContentReady(
+  tabId: number,
+  meta: { requestId: string; origin: string; signal?: AbortSignal },
+): Promise<boolean> {
+  try {
+    const guards = await startAbortableTask(
+      () =>
+        checkTempContextProtectionGuards({ tabId, requestId: meta.requestId }),
+      { timeoutMs: 2000, signals: [meta.signal] },
+    ).result
+    if (!guards.cap?.success || !guards.cloudflare?.success) return false
+    if (!guards.passed) await waitForTabComplete(tabId, meta)
+    return true
+  } catch {
+    meta.signal?.throwIfAborted()
+    return false
   }
 }
 

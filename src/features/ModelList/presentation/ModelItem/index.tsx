@@ -294,7 +294,7 @@ export default function ModelItem(props: ModelItemProps) {
         ? activeGroupContext.activeUsableGroups.length > 0
         : true
   const usableGroupLabels = groupContext.usableGroups.map((group) =>
-    formatGroupLabelFromRatios(group, groupRatios),
+    formatGroupLabelFromRatios(group, groupRatios, model.groupDisplayNames),
   )
   const [primaryUsableGroupLabel] = usableGroupLabels
   const [switchableGroup] = groupContext.usableGroups

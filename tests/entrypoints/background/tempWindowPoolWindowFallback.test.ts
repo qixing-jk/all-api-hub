@@ -1366,6 +1366,87 @@ describe("tempWindowPool window fallback", () => {
     })
   })
 
+  it.each(["missing", "unresponsive"])(
+    "replaces a reusable tab with a %s content receiver before dispatching a write",
+    async (failure) => {
+      tempContextMode = "tab"
+      createTabMock
+        .mockResolvedValueOnce({ id: 701 })
+        .mockResolvedValueOnce({ id: 702 })
+      const { executeAuthorizedTempContextTask } = await import(
+        "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+      )
+      const authorize = vi.fn().mockResolvedValue({
+        kind: "allowed",
+        adapter: "tab",
+        feature: "key_management",
+        operation: "fetch",
+        cause: "explicit_page_fetch",
+        surface: "options",
+      })
+      const task = (requestId: string, method: string) => ({
+        kind: "explicit_page_fetch" as const,
+        params: {
+          originUrl: "https://example.invalid",
+          fetchUrl: "https://example.invalid/api/keys",
+          fetchOptions: { method },
+          requestId,
+        },
+      })
+      const initial = executeAuthorizedTempContextTask(
+        task("warm", "GET"),
+        authorize,
+        vi.fn(),
+      )
+      await vi.advanceTimersByTimeAsync(500)
+      await initial
+      const healthyReceiver = sendMessageMock.getMockImplementation()!
+      sendMessageMock.mockImplementation((tabId, message) => {
+        if (tabId === 701) {
+          if (failure === "missing")
+            return Promise.reject(
+              new Error(
+                "Could not establish connection. Receiving end does not exist.",
+              ),
+            )
+          return new Promise(() => {})
+        }
+        return Reflect.apply(healthyReceiver, undefined, [tabId, message])
+      })
+      const reply = vi.fn()
+      const write = executeAuthorizedTempContextTask(
+        task("create", "POST"),
+        authorize,
+        reply,
+      )
+      await vi.advanceTimersByTimeAsync(2500)
+      expect(reply).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true }),
+      )
+      await write
+      expect(createTabMock).toHaveBeenCalledTimes(2)
+      expect(removeTabMock).toHaveBeenCalledWith(701)
+      const writes = sendMessageMock.mock.calls.filter(
+        ([, message]) =>
+          message.action === RuntimeActionIds.ContentPerformTempWindowFetch &&
+          message.fetchOptions.method === "POST",
+      )
+      expect(writes).toHaveLength(1)
+      expect(writes[0]?.[0]).toBe(702)
+      const subsequentReply = vi.fn()
+      const subsequent = executeAuthorizedTempContextTask(
+        task("after-create", "GET"),
+        authorize,
+        subsequentReply,
+      )
+      await vi.advanceTimersByTimeAsync(500)
+      await subsequent
+      expect(subsequentReply).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true }),
+      )
+    },
+  )
+
   it("reports the existing adapter when policy preference differs on reuse", async () => {
     createTabMock.mockResolvedValueOnce({ id: 103 })
     const { executeAuthorizedTempContextTask } = await import(

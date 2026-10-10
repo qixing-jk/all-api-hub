@@ -4202,7 +4202,7 @@ describe("useAccountKeyResourceController", () => {
     expect(editor.submit).toHaveBeenCalledTimes(1)
   })
 
-  it("locks mutations after an uncertain result until a fresh read completes", async () => {
+  it("locks mutations after an uncertain result until a fresh inventory read completes", async () => {
     const refreshedList = deferred<any>()
     const editor = {
       fields: [],
@@ -4215,10 +4215,8 @@ describe("useAccountKeyResourceController", () => {
         }),
       ),
     }
-    const list = vi
-      .fn()
-      .mockResolvedValueOnce({ items: [] })
-      .mockImplementationOnce(() => refreshedList.promise)
+    const list = vi.fn(() => refreshedList.promise)
+    list.mockResolvedValueOnce({ items: [] })
     mockNativeResourceSession(
       vi.fn().mockResolvedValue({
         resolveDefaultScope: vi.fn().mockResolvedValue({

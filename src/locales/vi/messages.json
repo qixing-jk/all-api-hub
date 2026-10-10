@@ -86,6 +86,12 @@
     "userInfoNotFound": "Không tìm thấy thông tin người dùng, vui lòng đảm bảo đã đăng nhập",
     "waitUserInfoTimeout": "Đợi thông tin người dùng quá thời gian, vui lòng đảm bảo đã đăng nhập"
   },
+  "cookieTransport": {
+    "browserUnsupported": "Safari chưa hỗ trợ yêu cầu bằng Cookie riêng biệt cho tài khoản này. Hãy thử lại trên Chrome hoặc Edge.",
+    "permissionRequired": "Trình duyệt này không thể gửi yêu cầu bằng Cookie của tài khoản này. Hãy kiểm tra quyền của tiện ích hoặc cập nhật trình duyệt rồi thử lại.",
+    "requestUnavailable": "Không thể chuẩn bị yêu cầu. Hãy thử lại; nếu vẫn lỗi, hãy tải lại tiện ích.",
+    "scopeUnavailable": "Yêu cầu này không thể dùng phạm vi Cookie đã chọn. Hãy nhập Cookie của tài khoản mong muốn hoặc dùng phiên trình duyệt thông thường của tài khoản đó."
+  },
   "donehub": {
     "configMissing": "Vui lòng cấu hình địa chỉ Done Hub, token quản trị viên và ID người dùng trong phần Cài đặt trước",
     "noChannelsToSync": "Không có kênh nào để đồng bộ"

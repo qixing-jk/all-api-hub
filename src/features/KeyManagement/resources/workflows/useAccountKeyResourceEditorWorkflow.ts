@@ -19,10 +19,7 @@ import {
   awaitAbortable,
   boundariesMatch,
   boundaryFromResourceRef,
-  boundaryIdentity,
-  completeKeyMutationAnalytics,
   isAborted,
-  keyManagementAnalyticsContext,
   resolveCreateDestinationBoundary,
   toFailure,
   USER_KEY_MANAGEMENT_EXECUTION,
@@ -39,13 +36,9 @@ import {
   type AccountKeyResourceRef,
   type EditableResourceProjection,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
-import {
-  PRODUCT_ANALYTICS_ACTION_IDS,
-  PRODUCT_ANALYTICS_RESULTS,
-  PRODUCT_ANALYTICS_SURFACE_IDS,
-} from "~/services/productAnalytics/contracts"
 import { createLogger } from "~/utils/core/logger"
+
+import { useAccountKeyEditorSubmission } from "./useAccountKeyEditorSubmission"
 
 type WorkflowInputs = {
   state: {
@@ -111,8 +104,6 @@ export function useAccountKeyResourceEditorWorkflow({
     readRetryRequest,
     cancelOpening,
     close,
-    captureSubmission,
-    completeSubmission,
     settleTerminalClose,
     transitionEditor,
     transitionEditorOpening,
@@ -153,7 +144,7 @@ export function useAccountKeyResourceEditorWorkflow({
       )
         return
       const attemptId = beginOpening(
-        { mode: editorMode, ref, boundary },
+        { mode: editorMode, ref },
         () => requests.cancel(requestSlots.Action),
         retryAttemptId,
       )
@@ -289,221 +280,89 @@ export function useAccountKeyResourceEditorWorkflow({
     [transitionEditor],
   )
 
-  const submitEditor = useCallback(
-    async (editorId: number, values: EditableResourceProjection) => {
-      const submission = captureSubmission()
-      const nativeEditor = submission.nativeEditor
-      const currentEditorState = submission.state
-      const activeBoundary = readNativeOwner().boundary
-      const editorBoundary = submission.boundary
+  const submitEditor = useAccountKeyEditorSubmission({
+    editorState,
+    requests,
+    mutationAnalyticsMode,
+    requireFreshRead,
+    onUncertain: refreshAfterMutation,
+    resolveContext: () => {
+      const boundary = readNativeOwner().boundary
+      const state = readEditor()
       if (
+        !boundary ||
         mode === controllerModes.Idle ||
-        (currentEditorState?.mode === editorModes.Create &&
+        (state?.mode === editorModes.Create &&
           mode !== controllerModes.Single) ||
-        createdSecretRef.current !== null ||
+        createdSecretRef.current ||
         requests.isInventoryLoading() ||
-        !nativeEditor ||
-        !currentEditorState ||
-        currentEditorState.editorId !== editorId ||
-        !activeBoundary ||
-        !editorBoundary ||
-        !boundariesMatch(activeBoundary, editorBoundary) ||
-        isFreshReadRequiredForBoundary(editorBoundary)
+        isFreshReadRequiredForBoundary(boundary)
       )
-        return
-      const validation = nativeEditor.validate(values)
-      if (!validation.valid) {
-        transitionEditor((current) =>
-          current && current.editorId === editorId
-            ? {
-                ...current,
-                feedback: {
-                  code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed,
-                  fieldIssues: validation.issues,
-                },
-              }
-            : current,
-        )
-        return
-      }
-      const current = requests.version()
-      const submitMode = currentEditorState.mode
-      let intendedBoundary: ActiveResourceBoundary
-      try {
-        intendedBoundary =
-          submitMode === editorModes.Create
+        return null
+      return {
+        boundary,
+        resolveDestination: (nativeEditor, values) =>
+          state?.mode === editorModes.Create
             ? resolveCreateDestinationBoundary(
                 nativeEditor,
                 values,
-                editorBoundary,
+                boundary,
                 scopes,
               )
-            : editorBoundary
-      } catch (error) {
-        const failure = toFailure(error)
-        transitionEditor((previous) =>
-          previous && previous.editorId === editorId
-            ? { ...previous, feedback: failure }
-            : previous,
-        )
-        return
+            : boundary,
       }
-      const mutationIdentity = boundaryIdentity(intendedBoundary)
-      const existingMutation = requests.getMutation(mutationIdentity)
-      if (existingMutation) return existingMutation.promise
-      const account = accountsRef.current.find(
-        (candidate) => candidate.id === editorBoundary.accountId,
-      )
-      const tracker = startProductAnalyticsAction(
-        keyManagementAnalyticsContext(
-          submitMode === editorModes.Create
-            ? PRODUCT_ANALYTICS_ACTION_IDS.CreateAccountToken
-            : PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccountToken,
-          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
-        ),
-      )
-      const controller = new AbortController()
-      requests.assign(requestSlots.Action, controller)
-      const run = nativeEditor
-        .submit(values, { signal: controller.signal })
-        .then(async (result) => {
-          if (current !== requests.version() || !submission.isCurrent()) {
-            requireFreshRead(intendedBoundary)
-            completeKeyMutationAnalytics(
-              tracker,
-              PRODUCT_ANALYTICS_RESULTS.Success,
-              mutationAnalyticsMode,
-              account?.siteType,
-            )
-            return
-          }
-          const returnedFacts = result.facts
-          const returnedScope = scopes.find(
-            (scope) => scope.scopeKey === returnedFacts?.ref.scopeKey,
-          )
-          const returnedBoundary =
-            returnedScope &&
-            returnedFacts &&
-            returnedFacts.ref.accountId === editorBoundary.accountId &&
-            returnedFacts.ref.siteType === editorBoundary.siteType
-              ? {
-                  accountId: returnedFacts.ref.accountId,
-                  siteType: returnedFacts.ref.siteType,
-                  scopeKey: returnedScope.scopeKey,
-                  routeKey: returnedScope.routeKey,
-                }
-              : intendedBoundary
-          if (submitMode === editorModes.Edit && returnedFacts) {
-            acceptEditedResource(returnedFacts)
-          }
-          if (result.createdSecret) {
-            transitionCreatedSecret(result.createdSecret)
-          } else if (submitMode === editorModes.Edit) {
-            const updatedName = returnedFacts?.displayName
-            toast.success(
-              updatedName
-                ? t("keyManagement:messages.keyUpdated", {
-                    name: updatedName,
-                  })
-                : t("keyManagement:messages.keyUpdatedSimple"),
-            )
-          }
-          completeSubmission(editorId, Boolean(result.createdSecret))
-          if (
-            submitMode === editorModes.Create &&
-            account &&
-            onCreatedRef.current
-          ) {
-            try {
-              await onCreatedRef.current(account, {
-                ...result,
-                ref: result.facts?.ref ?? null,
-              })
-            } catch (error) {
-              createLogger("AccountKeyResourceController").error(
-                "Created key handoff failed",
-                error,
-              )
-            }
-          }
-          const accepted = await refreshAfterMutation(
-            returnedBoundary,
-            result.createdSecret ? nextTransitionId() : undefined,
-          )
-          if (!accepted) requireFreshRead(returnedBoundary)
-          completeKeyMutationAnalytics(
-            tracker,
-            PRODUCT_ANALYTICS_RESULTS.Success,
-            mutationAnalyticsMode,
-            account?.siteType,
-          )
-        })
-        .catch(async (error: unknown) => {
-          const failure = toFailure(error)
-          if (current !== requests.version() || !submission.isCurrent()) {
-            if (
-              failure.code ===
-              ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain
-            )
-              requireFreshRead(intendedBoundary)
-            completeKeyMutationAnalytics(
-              tracker,
-              PRODUCT_ANALYTICS_RESULTS.Failure,
-              mutationAnalyticsMode,
-              account?.siteType,
-            )
-            return
-          }
-          transitionEditor((previous) =>
-            previous && previous.editorId === editorId
-              ? { ...previous, feedback: failure }
-              : previous,
-          )
-          if (
-            failure.code ===
-            ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain
-          ) {
-            requireFreshRead(intendedBoundary)
-            await refreshAfterMutation(intendedBoundary)
-          }
-          completeKeyMutationAnalytics(
-            tracker,
-            PRODUCT_ANALYTICS_RESULTS.Failure,
-            mutationAnalyticsMode,
-            account?.siteType,
-          )
-        })
-        .finally(() => {
-          requests.releaseMutation(mutationIdentity, run)
-          requests.release(requestSlots.Action, controller)
-        })
-      requests.registerMutation(mutationIdentity, {
-        controller,
-        promise: run,
-      })
-      return run
     },
-    [
-      isFreshReadRequiredForBoundary,
-      mode,
-      mutationAnalyticsMode,
-      refreshAfterMutation,
-      acceptEditedResource,
-      requireFreshRead,
-      scopes,
-      t,
-      transitionCreatedSecret,
-      transitionEditor,
-      readNativeOwner,
-      createdSecretRef,
-      requests,
-      accountsRef,
-      onCreatedRef,
-      nextTransitionId,
-      captureSubmission,
-      completeSubmission,
-    ],
-  )
+    onSubmitted: async (result, intendedBoundary, submitMode) => {
+      const returnedFacts = result.facts
+      const returnedScope = scopes.find(
+        (scope) => scope.scopeKey === returnedFacts?.ref.scopeKey,
+      )
+      const returnedBoundary =
+        returnedScope &&
+        returnedFacts &&
+        returnedFacts.ref.accountId === intendedBoundary.accountId &&
+        returnedFacts.ref.siteType === intendedBoundary.siteType
+          ? { ...returnedFacts.ref, routeKey: returnedScope.routeKey }
+          : intendedBoundary
+      if (submitMode === editorModes.Edit && returnedFacts)
+        acceptEditedResource(returnedFacts)
+      if (result.createdSecret) transitionCreatedSecret(result.createdSecret)
+      else if (submitMode === editorModes.Edit) {
+        toast.success(
+          returnedFacts?.displayName
+            ? t("keyManagement:messages.keyUpdated", {
+                name: returnedFacts.displayName,
+              })
+            : t("keyManagement:messages.keyUpdatedSimple"),
+        )
+      }
+      const account = accountsRef.current.find(
+        (candidate) => candidate.id === intendedBoundary.accountId,
+      )
+      if (
+        submitMode === editorModes.Create &&
+        account &&
+        onCreatedRef.current
+      ) {
+        try {
+          await onCreatedRef.current(account, {
+            ...result,
+            ref: result.facts?.ref ?? null,
+          })
+        } catch (error) {
+          createLogger("AccountKeyResourceController").error(
+            "Created key handoff failed",
+            error,
+          )
+        }
+      }
+      const accepted = await refreshAfterMutation(
+        returnedBoundary,
+        result.createdSecret ? nextTransitionId() : undefined,
+      )
+      if (!accepted) requireFreshRead(returnedBoundary)
+    },
+  })
   return {
     openEditor,
     retryEditorOpening,

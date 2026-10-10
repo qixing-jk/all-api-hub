@@ -103,10 +103,15 @@ function createRepository() {
     git("commit", "-qm", "fixture")
     return git("rev-parse", "HEAD")
   }
-  const run = (script: string, input = "", exitCode = 0) => {
+  const run = (
+    script: string,
+    input = "",
+    exitCode = 0,
+    args: string[] = [],
+  ) => {
     const result = spawnSync(
       process.execPath,
-      [path.join(scriptsRoot, script)],
+      [path.join(scriptsRoot, script), ...args],
       {
         cwd,
         env: { ...env, VALIDATION_EXIT_CODE: String(exitCode) },
@@ -201,6 +206,79 @@ describe("staged i18n validation", () => {
     const result = repo.run("run-i18n-check-if-staged.mjs", "", 1)
     expect(result.status).not.toBe(0)
     expect(result.calls).toEqual([["run", "i18n:extract:ci"]])
+  })
+})
+
+describe("permission warning validation", () => {
+  const GATE = [
+    [
+      "exec",
+      "playwright",
+      "test",
+      "e2e/extensionPermissionWarnings.spec.ts",
+      "--project=chromium",
+      "--workers=1",
+    ],
+  ]
+  it.each([
+    "wxt.config.ts",
+    "src/entrypoints/content/index.ts",
+    "src/entrypoints/new.content.ts",
+    "plugins/manifest.ts",
+    "package.json",
+    "e2e/fixtures/permission-warnings-baseline.json",
+  ])("requires the real-browser warning gate for %s", (file) => {
+    const repo = createRepository()
+    repo.write(file)
+    repo.git("add", ".")
+    const result = repo.run("run-permission-warning-check.mjs", "", 0, [
+      "--staged",
+    ])
+    expect(result.status, result.stderr).toBe(0)
+    expect(result.calls).toEqual(GATE)
+  })
+  it("skips unrelated staged changes", () => {
+    const repo = createRepository()
+    repo.write("src/features/example.ts")
+    repo.git("add", ".")
+    const result = repo.run("run-permission-warning-check.mjs", "", 0, [
+      "--staged",
+    ])
+    expect(result.status).toBe(0)
+    expect(result.calls).toEqual([])
+  })
+  it.each(["delete", "rename"])(
+    "still checks when a manifest input is removed by %s",
+    (operation) => {
+      const repo = createRepository()
+      repo.write("plugins/manifest input.ts")
+      repo.commit()
+      if (operation === "delete") repo.git("rm", "plugins/manifest input.ts")
+      else repo.git("mv", "plugins/manifest input.ts", "notes.md")
+      const result = repo.run("run-permission-warning-check.mjs", "", 0, [
+        "--staged",
+      ])
+      expect(result.status).toBe(0)
+      expect(result.calls).toEqual(GATE)
+    },
+  )
+  it("does not validate unstaged permission inputs as if they were committed", () => {
+    const repo = createRepository()
+    repo.write("wxt.config.ts", "staged permissions")
+    repo.git("add", ".")
+    repo.write("wxt.config.ts", "different permissions")
+    const result = repo.run("run-permission-warning-check.mjs", "", 0, [
+      "--staged",
+    ])
+    expect(result.status).not.toBe(0)
+    expect(result.stderr).toContain("unstaged")
+    expect(result.calls).toEqual([])
+  })
+  it("propagates browser-check failure", () => {
+    const repo = createRepository()
+    const result = repo.run("run-permission-warning-check.mjs", "", 1)
+    expect(result.status).not.toBe(0)
+    expect(result.calls).toEqual(GATE)
   })
 })
 

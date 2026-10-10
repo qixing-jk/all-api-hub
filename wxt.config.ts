@@ -39,13 +39,22 @@ const CORE_EXTENSION_PERMISSIONS = [
   "alarms",
   "contextMenus",
 ] as const
-const CHROMIUM_ONLY_REQUIRED_PERMISSIONS = ["sidePanel"] as const
+const CHROMIUM_ONLY_REQUIRED_PERMISSIONS = [
+  "sidePanel",
+  // Chromium must initialize its rule engine when the extension loads.
+  // A first optional grant can leave native updates pending and rules inactive.
+  // Cookie reads remain optional; this uses the existing host permissions.
+  "declarativeNetRequestWithHostAccess",
+] as const
 const FIREFOX_COOKIE_OPTIONAL_PERMISSIONS = [
   "cookies",
   "webRequest",
   "webRequestBlocking",
 ] as const
-const CHROMIUM_COOKIE_DNR_OPTIONAL_PERMISSIONS = [
+const CHROMIUM_COOKIE_OPTIONAL_PERMISSIONS = ["cookies"] as const
+// Safari uses WebKit's WebExtensions implementation. Keep its permission
+// declarations independent from Chromium's required DNR and E2E overrides.
+const SAFARI_COOKIE_OPTIONAL_PERMISSIONS = [
   "cookies",
   "declarativeNetRequestWithHostAccess",
 ] as const
@@ -114,16 +123,18 @@ export default defineConfig({
           use_dynamic_url: true,
         },
       ],
-      browser_specific_settings: {
-        gecko: {
-          id: "{bc73541a-133d-4b50-b261-36ea20df0d24}",
-          // Firefox 104 covers the current Vite baseline and p-queue 9 runtime APIs.
-          strict_min_version: "104.0",
-        },
-        gecko_android: {
-          strict_min_version: "120.0",
-        },
-      },
+      browser_specific_settings: isFirefoxManifestTarget(env.browser)
+        ? {
+            gecko: {
+              id: "{bc73541a-133d-4b50-b261-36ea20df0d24}",
+              // Firefox 104 covers the current Vite baseline and p-queue 9 runtime APIs.
+              strict_min_version: "104.0",
+            },
+            gecko_android: {
+              strict_min_version: "120.0",
+            },
+          }
+        : undefined,
       commands: {
         _execute_sidebar_action: {
           description: "__MSG_manifest_commands_sidebar_action__",
@@ -181,13 +192,12 @@ function getManifestRequiredPermissions(browser: BrowserTarget) {
     permissions.push(...getE2eRequiredChromiumPermissions(e2eBuildVariant))
   }
 
-  return permissions
+  return [...new Set(permissions)]
 }
 
 function getManifestOptionalPermissions(browser: BrowserTarget) {
-  const browserOptionalPermissions = isFirefoxManifestTarget(browser)
-    ? FIREFOX_COOKIE_OPTIONAL_PERMISSIONS
-    : getChromiumOptionalPermissions()
+  const browserOptionalPermissions =
+    getBrowserCookieOptionalPermissions(browser)
   const requiredPermissions = getManifestRequiredPermissions(browser)
 
   return [
@@ -197,12 +207,15 @@ function getManifestOptionalPermissions(browser: BrowserTarget) {
   ].filter((permission) => !requiredPermissions.includes(permission))
 }
 
-function getChromiumOptionalPermissions() {
-  const requiredPermissions = getE2eRequiredChromiumPermissions(e2eBuildVariant)
-
-  return CHROMIUM_COOKIE_DNR_OPTIONAL_PERMISSIONS.filter(
-    (permission) => !requiredPermissions.includes(permission),
-  )
+function getBrowserCookieOptionalPermissions(browser: BrowserTarget) {
+  switch (browser) {
+    case MANIFEST_BROWSER_TARGETS.Firefox:
+      return FIREFOX_COOKIE_OPTIONAL_PERMISSIONS
+    case MANIFEST_BROWSER_TARGETS.Safari:
+      return SAFARI_COOKIE_OPTIONAL_PERMISSIONS
+    default:
+      return CHROMIUM_COOKIE_OPTIONAL_PERMISSIONS
+  }
 }
 
 function isFirefoxManifestTarget(browser: BrowserTarget) {

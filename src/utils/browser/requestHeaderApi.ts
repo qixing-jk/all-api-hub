@@ -1,4 +1,4 @@
-/** Chromium APIs used to coordinate scoped User-Agent header rules. */
+/** Chromium APIs used to coordinate scoped User-Agent and Cookie header rules. */
 export function getChromiumRequestHeaderApi() {
   const chromeApi = (
     globalThis as typeof globalThis & { chrome?: typeof browser }

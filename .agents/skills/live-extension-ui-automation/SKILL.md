@@ -15,12 +15,12 @@ Chromium blocks `--remote-debugging-port` on the system default user data direct
 
 By default every worktree mounts the single shared profile (`AllApiHub/dev-browser`) on CDP port 9222. This reuses one account login across worktrees but couples their browser instances: a `--restart` mounts a different worktree's build and closes another session's tabs, and discovery by title can target the wrong extension.
 
-When concurrent worktrees must not interfere (multi-agent runs), mount a **per-worktree profile** with `--isolate`. The profile resolves to `AllApiHub/dev-browser-<worktree>-<path-hash>`, using the canonical checkout path to distinguish same-named worktrees. Its default CDP port is a stable offset from 9222 based on the resolved profile path. Hash collisions remain possible; isolated clients and the launcher verify the listening browser uses the expected profile before reuse, reload or restart. On a collision, choose a free explicit `CDP_PORT`. Account state is cloned from the primary browser into that profile once:
+When concurrent worktrees must not interfere (multi-agent runs), mount a **per-worktree profile** with `--isolate`. The profile resolves to `AllApiHub/dev-browser-<worktree>-<path-hash>`, using the canonical checkout path to distinguish same-named worktrees. Its default CDP port is a stable offset from 9222 based on the resolved profile path. Hash collisions remain possible; isolated clients and the launcher verify the listening browser uses the expected profile before reuse, reload or restart. On a collision, choose a free explicit `CDP_PORT`. Assess existing sessions before seeding an isolated profile:
 
 | Goal | Command |
 | :--- | :--- |
 | Isolated browser (own profile + port) | `pnpm browser:cdp:isolate` |
-| Sync accounts/cookies/localStorage into it | `pnpm browser:sync:isolate -- --cookies` |
+| Offline sync when both browsers are already closed | `pnpm browser:sync:isolate -- --cookies` |
 | Env-var equivalents | `AAH_DEV_PROFILE_PER_WORKTREE=1` (or `--isolate`); explicit `AAH_DEV_PROFILE_DIR` / `CDP_PORT` still win. |
 
 Live suites (`e2e:cdp:*`) compute their default CDP URL from the same resolver, so launching and driving under `--isolate` need no extra flags. The trade-off: each isolated profile needs its own first login or sync, and each buys an extra resident browser process. The shared-profile default is unchanged.
@@ -31,7 +31,7 @@ All commands are cross-platform (Windows, macOS, Linux) and runnable directly vi
 
 | Command | Script | Description |
 | :--- | :--- | :--- |
-| `pnpm browser:sync` | `scripts/sync-extension-profile.mjs` | **Auto-discovers** accounts from the user's primary Edge/Chrome profile and clones them to the dev sandbox. |
+| `pnpm browser:sync` | `scripts/sync-extension-profile.mjs` | Discovers extension storage sources (`--list`); copies databases only with browsers closed. Website sessions require `--cookies`. |
 | `pnpm browser:cdp` | `scripts/launch-cdp-browser.mjs` | Launches (or connects to) the dedicated debug browser on port `9222` with the current worktree extension mounted. |
 | `pnpm e2e:cdp` | `scripts/e2e-cdp-control.mjs` | Connects via CDP, detects the current worktree extension, opens its UI, and automates interactions. |
 
@@ -43,21 +43,7 @@ Always ensure the extension is built for the current branch:
 pnpm build
 ```
 
-### 2. (Optional) Sync Real Accounts & Credentials
-If the dev browser has not yet been seeded with accounts, or if fresh accounts were added in the primary browser:
-```bash
-pnpm browser:sync
-```
-- **Auto-Discovery**: Scans Edge, Chrome, and Brave across all profiles (`Default`, `Profile 1`, `Profile 2`...) and selects the largest/latest All API Hub dataset.
-- **List Candidates**: Run `pnpm browser:sync -- --list` to inspect all detected profile and extension data sources across the system.
-- **Pin Specific Source**: Pass `--source-profile <name>` and/or `--source-ext <id>`:
-  ```bash
-  # Example: sync precisely from official Edge Addons store extension in Profile 2
-  pnpm browser:sync -- --source-profile "Profile 2" --source-ext "abffolffkoejhapkgkmmaaijafghclom"
-  ```
-- **Website Cookies**: Pass `--cookies` (e.g. `pnpm browser:sync -- --cookies`) to clone web session cookies.
-
-### 3. Launch or Reuse the CDP Browser
+### 2. Launch or Reuse the CDP Browser
 ```bash
 pnpm browser:cdp
 ```
@@ -71,6 +57,14 @@ pnpm browser:cdp
   - `pnpm browser:cdp -- --prod`: Force standalone production build mode (`.output/chrome-mv3`).
   - `pnpm browser:cdp -- --build`: Force a full production rebuild before launching.
   - `pnpm browser:cdp -- --restart`: Terminate the running debug browser and start a fresh instance.
+
+### 3. Verify Session Readiness Before Authenticated Flows
+
+Checking readiness is required; synchronizing state is conditional. Use the site's authenticated identity endpoint in the selected dev profile, not a saved extension account, tab title or Cookie count. Reuse a valid target session immediately, checking the expected account ID when known.
+
+If the target is unauthenticated, inspect task-authorized source sessions and select an applicable sync method before asking the user to log in. A target 401 establishes only that the target lacks authentication. A closed-browser requirement applies to database copying, not to all session reuse. Network failures, challenges and identity mismatches require diagnosis rather than a login request.
+
+Read [session assessment and reuse](references/session-reuse.md) for the shared preflight helper, origin-scoped live transfer and offline sync commands. After transfer, re-read the target identity and compare it with the source. Request manual login only after authorized sources and applicable transfer methods have been checked and found unusable; report missing evidence as uninspected, not unavailable. Do not replace an authenticated but mismatched account silently.
 
 ### 4. Automate and Verify the Extension UI
 Run the default smoke runner:

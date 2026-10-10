@@ -263,8 +263,11 @@ export function AllAccountsGroupFilterMenu({
                         value: group.name,
                         label:
                           group.ratio === undefined
-                            ? group.name
-                            : formatGroupLabel(group.name, group.ratio),
+                            ? group.displayName ?? group.name
+                            : formatGroupLabel(
+                                group.displayName ?? group.name,
+                                group.ratio,
+                              ),
                       }))}
                       selected={selectedGroups}
                       onChange={(values) =>

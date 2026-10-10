@@ -53,6 +53,22 @@ export function useModelListVerificationWorkflow({
     items: BatchVerifyModelItem[]
   } | null>(null)
 
+  const modelKeyContextWithGroups = useMemo(
+    () =>
+      modelKeyContext
+        ? {
+            ...modelKeyContext,
+            groupDisplayNames: displayedModels.find(
+              (item) =>
+                item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
+                item.source.account.id === modelKeyContext.account.id &&
+                item.model.model_name === modelKeyContext.modelId,
+            )?.model.groupDisplayNames,
+          }
+        : null,
+    [modelKeyContext, displayedModels],
+  )
+
   const handleVerifyModel = (
     source: ModelManagementItemSource,
     modelId: string,
@@ -120,7 +136,7 @@ export function useModelListVerificationWorkflow({
     verifyContext,
     verifyCliContext,
     verifyProfileContext,
-    modelKeyContext,
+    modelKeyContext: modelKeyContextWithGroups,
     batchVerifyContext,
     handleVerifyModel,
     handleVerifyCliSupport,

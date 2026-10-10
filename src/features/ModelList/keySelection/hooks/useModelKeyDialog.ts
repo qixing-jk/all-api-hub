@@ -422,7 +422,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
   )
 
   const createDefaultKey = useCallback(
-    async (group: string) => {
+    async (group: string, groupDisplayName?: string) => {
       if (!account) return "skipped" as const
 
       if (!canCreateToken) {
@@ -455,7 +455,9 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
         const plan = await prepareDefaultAccountKeyCreation(account, {
           signal: controller.signal,
           intent: {
-            nameHint: getDefaultAccountKeyName(normalizedGroup),
+            nameHint: getDefaultAccountKeyName(
+              groupDisplayName ?? normalizedGroup,
+            ),
             preferredGroup: normalizedGroup,
             allowedGroups: modelEnableGroups,
           },

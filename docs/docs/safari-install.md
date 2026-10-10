@@ -13,6 +13,12 @@
 - Safari 14.0 或更高版本
 - Xcode 13.0 或更高版本（用于构建）
 
+## 功能兼容性
+
+Safari 使用 WebKit 的 WebExtensions 权限机制，权限声明与 Chromium、Firefox 分开维护。Cookie 访问和网络请求规则仍按需授权，设置搜索只展示当前 Safari 构建实际声明的可选权限。
+
+账号独立 Cookie 直连请求目前尚未通过 Safari 实机隔离验证，因此会提示暂不支持并停止请求，不会改用其他账号的浏览器登录态。需要此功能时，请使用 Chrome 或 Edge。Safari 构建成功不代表全部功能均已通过实机验证。
+
 ## 安装方式
 
 有两种安装方式：

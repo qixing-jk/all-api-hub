@@ -83,6 +83,10 @@ globalAny.browser.runtime.getManifest = vi.fn(() => ({
   optional_permissions: ["cookies", "declarativeNetRequestWithHostAccess"],
 }))
 
+// Optional permissions start ungranted. The fake-browser stub throws instead
+// of reporting that state; permission/transport tests override this explicitly.
+globalAny.browser.permissions.contains = vi.fn().mockResolvedValue(false)
+
 globalAny.IntersectionObserver =
   globalAny.IntersectionObserver ||
   class IntersectionObserver {

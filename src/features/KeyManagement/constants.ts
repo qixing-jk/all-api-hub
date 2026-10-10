@@ -23,6 +23,7 @@ export type AccountKeyResourceEditorMode =
 export const ACCOUNT_KEY_RESOURCE_REQUEST_SLOTS = {
   Inventory: "inventory",
   Scopes: "scopes",
+  Opening: "opening",
   Action: "action",
 } as const
 

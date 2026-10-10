@@ -19,6 +19,7 @@ import type { calculateModelPrice } from "~/services/models/utils/modelPricing"
 
 export interface AccountGroupOption {
   name: string
+  displayName?: string
   ratio?: number
 }
 

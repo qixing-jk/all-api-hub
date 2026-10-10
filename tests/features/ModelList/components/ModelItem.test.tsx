@@ -542,6 +542,52 @@ describe("ModelItem", () => {
     expect(screen.queryByText("available")).not.toBeInTheDocument()
   })
 
+  it("shows named groups and rates while key creation receives native group IDs", async () => {
+    const props = createDefaultProps()
+    const open = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <ModelItem
+        {...props}
+        model={{
+          ...props.model,
+          enable_groups: ["13"],
+          groupDisplayNames: { "13": "max-stable(only for CC)" },
+        }}
+        groupRatios={{ "13": 1.75 }}
+        groupContext={{
+          accessState: MODEL_GROUP_ACCESS_STATES.KNOWN,
+          supportedGroups: ["13"],
+          usableGroups: ["13"],
+          priceableGroups: ["13"],
+        }}
+        activeGroupContext={{
+          activeUsableGroups: ["13"],
+          activePriceableGroups: ["13"],
+          actionGroups: ["13"],
+        }}
+        onOpenModelKeyDialog={open}
+        source={{
+          ...props.source,
+          capabilities: {
+            ...props.source.capabilities,
+            supportsTokenCompatibility: true,
+          },
+        }}
+      />,
+    )
+    expect(screen.getByText("max-stable(only for CC) (1.75x)")).toHaveAttribute(
+      "title",
+      "currentUsableGroups: max-stable(only for CC) (1.75x)",
+    )
+    await user.click(screen.getByRole("button", { name: "key" }))
+    expect(open).toHaveBeenCalledWith(
+      expect.anything(),
+      props.model.model_name,
+      ["13"],
+    )
+  })
+
   it("summarizes additional usable groups in the row header", () => {
     const props = createDefaultProps()
 

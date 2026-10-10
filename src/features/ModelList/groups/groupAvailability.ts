@@ -5,6 +5,7 @@ interface GroupAvailabilityInput {
   sourceId: string
   accountId: string
   usableGroups: readonly string[]
+  groupDisplayNames?: Readonly<Record<string, string>>
   /** Ratio keys are normalized by the group-context boundary. */
   groupRatios: Readonly<Record<string, number>>
 }
@@ -19,10 +20,15 @@ interface GroupAvailability {
 export function deriveGroupAvailability(
   items: readonly GroupAvailabilityInput[],
 ): GroupAvailability {
+  const namesByAccount = new Map<string, Record<string, string>>()
   const groupsBySourceId = new Map<string, Set<string>>()
   const ratiosByAccountId = new Map<string, Map<string, number | undefined>>()
 
   for (const item of items) {
+    namesByAccount.set(item.accountId, {
+      ...namesByAccount.get(item.accountId),
+      ...item.groupDisplayNames,
+    })
     const sourceGroups =
       groupsBySourceId.get(item.sourceId) ?? new Set<string>()
     const accountRatios =
@@ -65,6 +71,9 @@ export function deriveGroupAvailability(
           ratios,
           ([name, ratio]): AccountGroupOption => ({
             name,
+            ...(Object.hasOwn(namesByAccount.get(accountId) ?? {}, name)
+              ? { displayName: namesByAccount.get(accountId)![name] }
+              : {}),
             ...(ratio === undefined ? {} : { ratio }),
           }),
         ),

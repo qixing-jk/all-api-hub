@@ -1,4 +1,5 @@
 import type { DeferredAbortDeadline } from "~/services/apiTransport/abortableTask"
+import type { CookieRequestSession } from "~/services/apiTransport/headerOverrides"
 import type { RequestScheduling } from "~/services/apiTransport/requestScheduling"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { type AuthTypeEnum } from "~/types"
@@ -127,6 +128,8 @@ export interface ApiTransportRequestObserver {
 }
 
 export interface ApiTransportRequest {
+  /** Explicit private credentials: direct transport only, with no ambient Cookie fallback. */
+  cookieSession?: CookieRequestSession
   /** Credential-owned headers applied last by the extension transport. */
   requestHeaders?: Record<string, string>
   requestScheduling?: RequestScheduling

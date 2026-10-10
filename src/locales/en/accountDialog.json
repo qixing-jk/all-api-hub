@@ -38,7 +38,6 @@
     "openApiCredentialProfiles": "Open API credentials",
     "openManualAddGuide": "Open this site's manual addition guide",
     "reloadCurrentPage": "Reload current page",
-    "reloadExtensionAndRetry": "Reload extension and retry",
     "reportUnsupportedSite": "Request site support",
     "saveAccount": "Save Account",
     "saveChanges": "Save Changes",
@@ -233,7 +232,6 @@
   },
   "messages": {
     "addSuccess": "Account {{name}} added successfully!",
-    "autoDetectCookiePermissionReloadHint": "If the first detection keeps waiting right after granting Cookie multi-account permissions, reload the extension and try again.",
     "autoDetectFailed": "Auto-detect failed: {{error}}",
     "autoDetectIdentityMismatch": "The detected account does not match the current account. Your existing data has been kept. Check the site URL and sign in to the intended account, then try again.",
     "autoDetectSuccess": "Auto-detect successful!",
@@ -270,7 +268,6 @@
     "managedSiteSettingsOpened": "Opened {{managedSite}} settings in a new tab. Fill in the connection details, then come back and press this button.",
     "newApiConfigFailed": "Auto-configuration to New API failed: {{error}}",
     "operationFailed": "Operation failed: {{error}}",
-    "reloadExtensionConfirm": "Reloading the extension will close the current extension page. Make sure any needed information has been saved.",
     "saveAccountFailed": "Failed to save account",
     "saveFailed": "Save failed",
     "updateSuccess": "Account {{name}} updated successfully!",
@@ -351,10 +348,6 @@
       "description": "{{message}}",
       "nextSteps": "Don't have one yet? That's fine: install it from the official docs below, then add the connection details in settings. Saving accounts, refreshing balances, and check-in keep working either way.",
       "title": "No {{managedSite}} yet?"
-    },
-    "reloadExtension": {
-      "title": "Reload extension",
-      "warningTitle": "Confirm extension reload?"
     }
   }
 }

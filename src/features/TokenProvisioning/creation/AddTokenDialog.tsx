@@ -1,38 +1,18 @@
 import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import {
-  Alert,
-  Button,
-  FormField,
-  Modal,
-  SearchableSelect,
-} from "~/components/ui"
-import { Spinner } from "~/components/ui/spinner"
+import { Alert, FormField, Modal, SearchableSelect } from "~/components/ui"
 import { AccountKeyResourceEditorDialog } from "~/features/KeyManagement/resources/AccountKeyResourceEditorDialog"
-import {
-  useAccountKeyResourceController,
-  type AccountKeyResourceRouteTransition,
-} from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceController"
+import { useAccountKeyCreation } from "~/features/TokenProvisioning/creation/useAccountKeyCreation"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/secretDelivery/apiCredentialProfileSaveAction"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/secretDelivery/OneTimeSecretDialog"
 import type { AccountKeyCreationResult } from "~/services/accounts/keys/accountKeyCreation"
 import { canListAccountKeyResources } from "~/services/accounts/keys/keyProductCapabilities"
 import type { AccountKeyCreationIntent } from "~/services/apiAdapters/contracts/accountKeyResource"
-import { createUserCommandProtectionBypassExecution } from "~/services/protectionBypass/client"
-import {
-  PROTECTION_BYPASS_SURFACES,
-  PROTECTION_BYPASS_USER_COMMANDS,
-} from "~/services/protectionBypass/contracts"
 import type { DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("AddTokenDialog")
-const CREATION_INVENTORY_EXECUTION = createUserCommandProtectionBypassExecution(
-  PROTECTION_BYPASS_USER_COMMANDS.ManageApiKeys,
-  PROTECTION_BYPASS_SURFACES.Options,
-)
-
 interface AddTokenDialogProps {
   isOpen: boolean
   onClose: () => void
@@ -84,10 +64,6 @@ function AccountKeyCreateSession({
         ? accounts[0]?.id ?? ""
         : "",
   )
-  const [route, setRoute] = useState<{
-    params: Record<string, string>
-    transition?: AccountKeyResourceRouteTransition
-  }>({ params: {} })
   const [completed, setCompleted] = useState(false)
   const pendingResult = useRef<AccountKeyCreationResult | null>(null)
   const finish = async (result: AccountKeyCreationResult) => {
@@ -109,42 +85,22 @@ function AccountKeyCreateSession({
           : {}),
       }
     : undefined
-  const controller = useAccountKeyResourceController({
-    accounts,
-    selectedAccount: accountId,
-    inventoryExecution: CREATION_INVENTORY_EXECUTION,
-    creationIntent: intent,
-    routeParams: route.params,
-    routeTransition: route.transition,
-    replaceRoute: (params, transition) => setRoute({ params, transition }),
-    onCreated: async (_account, result) => {
+  const controller = useAccountKeyCreation({
+    account: accounts.find((account) => account.id === accountId),
+    intent,
+    onCreated: async (result) => {
       setCompleted(true)
       if (showOneTimeKeyDialog && result.createdSecret)
         pendingResult.current = result
       else await finish(result)
     },
   })
-  const failure =
-    controller.failures[accountId] ?? controller.scopeInventoryFailure
   const hasEditor =
     Boolean(controller.editor || controller.terminalCloseEditor) ||
     controller.editorOpening.status !== "idle"
   useEffect(() => {
     if (controller.editor) onEditorReady?.()
   }, [controller.editor, onEditorReady])
-  useEffect(() => {
-    if (
-      !accountId ||
-      hasEditor ||
-      controller.isLoading ||
-      !controller.selectedScope ||
-      failure ||
-      completed
-    )
-      return
-    void controller.openCreate()
-  }, [accountId, controller, failure, completed, hasEditor])
-
   const saveAction = controller.createdSecret
     ? buildOneTimeApiKeyProfileSaveAction({
         result: controller.createdSecret,
@@ -157,11 +113,7 @@ function AccountKeyCreateSession({
   return (
     <>
       <Modal
-        isOpen={
-          !hasEditor &&
-          !completed &&
-          (!hasPreselectedAccount || Boolean(failure))
-        }
+        isOpen={!hasEditor && !completed && !hasPreselectedAccount}
         onClose={onClose}
         size="sm"
         title={t("keyManagement:native.editor.title.create")}
@@ -181,29 +133,11 @@ function AccountKeyCreateSession({
               value={accountId}
               onChange={(value) => {
                 setAccountId(value)
-                setRoute({ params: {} })
               }}
               placeholder={t("keyManagement:pleaseSelectAccount")}
-              disabled={controller.isLoading}
+              disabled={controller.editorOpening.status === "loading"}
             />
           </FormField>
-        ) : null}
-        {controller.isLoading && !hasPreselectedAccount ? (
-          <p role="status" className="gap-density-2 flex items-center text-sm">
-            <Spinner size="sm" aria-hidden="true" />
-            {t("keyManagement:native.editor.opening.loading")}
-          </p>
-        ) : null}
-        {failure ? (
-          <>
-            <Alert
-              variant="destructive"
-              description={t("keyManagement:native.editor.feedback.error")}
-            />
-            <Button onClick={() => void controller.refresh()}>
-              {t("common:actions.retry")}
-            </Button>
-          </>
         ) : null}
         {!accounts.length ? (
           <Alert description={t("ui:dialog.copyKey.createNotSupported")} />
