@@ -313,6 +313,7 @@
       "accessToken": "Xác thực Access Token",
       "cookieAuth": "Xác thực Cookie"
     },
+    "browserCookieSession": "Sử dụng phiên đăng nhập của trang web này trong trình duyệt. Việc nhập Cookie là tùy chọn. Nếu phiên hết hạn hoặc trình duyệt chuyển sang tài khoản khác, hãy đăng nhập lại tài khoản đã lưu rồi làm mới.",
     "cookieWarning": "Khuyến nghị ưu tiên sử dụng Access Token. Xác thực Cookie yêu cầu nhập Session Cookie và có thể không hợp lệ do hết hạn/gia hạn, bạn cần nhập lại sau khi không hợp lệ; nhiều tài khoản trên cùng một trang web cần được nhập riêng cho mỗi tài khoản, không khuyến nghị sử dụng trừ khi cần thiết.",
     "currentLoginAlreadyAdded": "Tài khoản đăng nhập hiện tại đã được thêm",
     "editNow": "Chỉnh sửa ngay",

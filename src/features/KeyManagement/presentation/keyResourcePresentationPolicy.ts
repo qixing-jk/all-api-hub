@@ -12,6 +12,7 @@ type PresentationPolicy = {
     | "aihubmix"
     | "rightcode"
     | "grsai"
+    | "cubence"
     | "openrouter"
     | "name-only"
     | "empty"
@@ -40,6 +41,7 @@ const policies = {
   [families.Aihubmix]: { ...native, editor: "aihubmix" },
   [families.RightCode]: { ...native, editor: "rightcode" },
   [families.Grsai]: { ...native, editor: "grsai" },
+  [families.Cubence]: { ...native, editor: "cubence" },
   [families.OpenRouter]: {
     ...generic,
     editor: "openrouter",

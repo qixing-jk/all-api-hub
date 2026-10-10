@@ -57,7 +57,9 @@ export function isValidAccount({
     (!profile.identity.userIdRequired || !!userId.trim()) &&
     isValidExchangeRate(exchangeRate) &&
     (authType !== AuthTypeEnum.AccessToken || !!accessToken.trim()) &&
-    (authType !== AuthTypeEnum.Cookie || !!cookieAuthSessionCookie?.trim())
+    (authType !== AuthTypeEnum.Cookie ||
+      profile.auth.usesBrowserCookieSession === true ||
+      !!cookieAuthSessionCookie?.trim())
   )
 }
 

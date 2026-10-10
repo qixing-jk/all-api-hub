@@ -313,6 +313,7 @@
       "accessToken": "访问令牌认证",
       "cookieAuth": "Cookie 认证"
     },
+    "browserCookieSession": "使用此站点的浏览器登录会话，导入 Cookie 为可选操作。会话过期或浏览器切换到其他账号后，请重新登录已保存的账号并刷新。",
     "cookieWarning": "推荐优先使用访问令牌。Cookie 认证需要导入会话 Cookie，且可能因过期/续期导致失效，需要失效后重新导入；同站点多账号需为每个账号分别导入，非必要不建议使用。",
     "currentLoginAlreadyAdded": "当前登录账号已添加",
     "editNow": "立即编辑",

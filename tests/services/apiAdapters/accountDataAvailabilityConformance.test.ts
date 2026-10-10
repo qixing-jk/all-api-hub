@@ -1,5 +1,5 @@
 import { http, HttpResponse, type HttpHandler } from "msw"
-import { beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DEFAULT_USD_TO_CNY_RATE, QUOTA_PER_USD } from "~/constants/money"
 import {
@@ -23,6 +23,7 @@ import type { AccountTodayStatsAvailability } from "~/types/accountTodayStats"
 import { server } from "~~/tests/msw/server"
 import { accountStorageTestSurface } from "~~/tests/test-utils/accountStorageTestSurface"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
 
 const complete = { status: ACCOUNT_TODAY_METRIC_STATUSES.Complete } as const
 const unavailable = (
@@ -46,6 +47,7 @@ const collectedRequests = {
   kimiAccount: 0,
   grsaiAccount: 0,
   freeModelAccount: 0,
+  cubenceAccount: 0,
 }
 
 const expectClassifiedAvailability = (data: AccountData) => {
@@ -87,6 +89,51 @@ const kimiConsoleOriginBySiteType: Partial<Record<AccountSiteType, string>> = {
 }
 
 const producerFixturesByFamily = {
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Cubence]: {
+    baseUrl: "https://cubence.com",
+    authType: AuthTypeEnum.Cookie,
+    expectedAvailability: {
+      consumption: complete,
+      requests: complete,
+      tokens: complete,
+      income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
+    handlers: [
+      http.get("https://cubence.com/api/v1/auth/me", ({ request }) => {
+        expect(request.headers.get("cookie")).toBe("token=browser-account")
+        collectedRequests.cubenceAccount += 1
+        return HttpResponse.json({
+          user: {
+            id: 7,
+            username: "Example",
+            active: true,
+            normal_balance: 1000000,
+          },
+        })
+      }),
+      http.get(
+        "https://cubence.com/api/v1/analytics/apikeys/hourly-usage",
+        () =>
+          HttpResponse.json({
+            code: 200,
+            range: "today",
+            window_start: `${new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 10)}T00:00:00+08:00`,
+            summary: {
+              cost: 10,
+              calls: 1,
+              tokens: 5,
+              input_tokens: 2,
+              output_tokens: 3,
+              cache_read_tokens: 0,
+              cache_creation_tokens: 0,
+            },
+          }),
+      ),
+    ],
+    expectRequests: (snapshotCount: number) => {
+      expect(collectedRequests.cubenceAccount).toBe(snapshotCount)
+    },
+  },
   [ACCOUNT_SITE_ADAPTER_FAMILIES.FreeModel]: {
     baseUrl: "https://freemodel.dev",
     authType: AuthTypeEnum.Cookie,
@@ -486,7 +533,10 @@ const createRequest = (siteType: AccountSiteType) => {
     accountId: `account-${siteType}`,
     auth: {
       authType: fixture.authType,
-      userId: siteType === SITE_TYPES.FREEMODEL ? "7" : "user-1",
+      userId:
+        siteType === SITE_TYPES.FREEMODEL || siteType === SITE_TYPES.CUBENCE
+          ? "7"
+          : "user-1",
       accessToken: "account-token",
     },
     checkIn: buildCheckInConfig(),
@@ -557,7 +607,10 @@ const createAccountScopedRequest = async (siteType: AccountSiteType) => {
 }
 
 describe("AccountData availability producer conformance", () => {
+  afterEach(() => vi.restoreAllMocks())
+
   beforeEach(() => {
+    vi.spyOn(browser.permissions, "contains").mockResolvedValue(false)
     server.resetHandlers()
     Object.assign(collectedRequests, {
       newApiStat: 0,
@@ -573,6 +626,7 @@ describe("AccountData availability producer conformance", () => {
       kimiAccount: 0,
       grsaiAccount: 0,
       freeModelAccount: 0,
+      cubenceAccount: 0,
     })
     server.use(
       ...Object.values(producerFixturesByFamily).flatMap(
@@ -739,6 +793,9 @@ describe("AccountData availability producer conformance", () => {
     "classifies both registered producer paths for %s",
     async (siteType) => {
       const capabilities = getSiteTypeCapabilities(siteType)
+      if (capabilities.family === ACCOUNT_SITE_ADAPTER_FAMILIES.Cubence) {
+        installCookieTransport()
+      }
       const fixture = getProducerFixture(siteType)
       const request = await createAccountScopedRequest(siteType)
       const fetchData = capabilities.account?.data?.fetchData

@@ -114,6 +114,95 @@ Use the relationship overview for upstream sources and the [supported-sites page
 
 Maintain this guide for source ownership, shared conventions, type relationships and upstream references. Keep a concise entry for each type and meaningful deployment boundary; individual endpoint additions and live runs do not require a new technical profile here.
 
+## Cubence account contract
+
+Cubence (`cubence`) is one account-only site type with a dedicated `Cubence`
+adapter family, verified on `https://cubence.com` on 2026-10-09. It is not
+Sub2API: `/api/v1/auth/me` returns `{user}`, native key APIs use
+`{success,data}`, analytics uses `code:200`, and invitations use `code:0`.
+
+- **Authentication:** the default and only verified console method is Cookie.
+  The observed frontend and official docs expose OAuth/email login and inference
+  keys, but no console PAT or refresh-token flow. Cookie lifetime is not known;
+  never call it permanent. Sign into the same account again when it expires.
+  Browser-session accounts can be saved without exporting Cookie text; an
+  explicit per-account Cookie import remains optional. Form validation follows
+  the same `usesBrowserCookieSession` profile as stored-account requests.
+  Read `/api/v1/auth/me` and match the saved numeric identity; `auth-user` in
+  localStorage is only a UI cache. Inference keys do not authenticate accounts.
+- **Domains:** keep the console/session origin `https://cubence.com`. The live
+  supported-endpoints response lists `api-lb.cubence.ai` (mainland optimized),
+  `api.cubence.ai` (global), and `api.cubence.com` (outside mainland). The last is
+  the documented export default. These are inference endpoints, not console
+  aliases; never send account cookies there or use cross-domain auth fallback.
+  Older docs list `api-dmit`, `api-bwg`, `api-cf` under `cubence.com`; an older
+  notice lists `api`, `api-dmit`, `api-bwg` under `cubence.top`. These older
+  inference alternatives are not automatically probed or promoted to aliases.
+- **Balance/usage:** 1 USD is 1,000,000 native units. `normal_balance` is stored
+  credit; charity and discontinued subscription allowances are not merged.
+  `/api/v1/analytics/apikeys/hourly-usage?range=today` uses Asia/Shanghai midnight;
+  do not substitute the 24h window. Use the native total/output token counters
+  without double-counting cache counters. Missing/failed statistics stay unknown.
+- **Keys:** `/api/v1/user/apikeys` is an unpaginated inventory with recoverable
+  plaintext. Create requires name, quota (`-1` unlimited, otherwise microcredits),
+  `share_type:public`, and a single explicit `share_group_id`. The native default
+  is 10 USD, with no selected group. Separate PATCH routes `/:id/quota`,
+  `/:id/share-group`, and `/:id/status` change only those fields. Names cannot be
+  edited and expiry/IP/model limits are not native fields. Compare a fresh
+  inventory baseline before editing, then read back writes and deletion.
+  Hosted writes reject an unadapted extension Origin with an empty HTTP 403.
+  Chromium direct transport supplies the site Origin and a fixed Cookie snapshot
+  through scoped DNR rules with `credentials:omit` and redirects disabled (real
+  CRUD verified 2026-10-10). Reuse the shared header-request lock; keep rule
+  ownership through late installation/cleanup and clear orphan rules before
+  subsequent requests. Saved Cookie takes precedence; browser-session mode
+  captures cookies once per operation without writing them back. Respect Cookie
+  domain/path/store scope, and reject an unresolved private store. Cubence's
+  observed HttpOnly login Cookie is `token`: bind its value across the operation,
+  rejecting ambiguous or changed effective values before sending. Unrelated
+  scoped Cookies may differ; never broaden their paths to force header equality.
+  Identity and write/readback share the snapshot; only actual writes contribute
+  mutation evidence. Identity/balance responses are reused only within that operation.
+  No verified rotation contract exists: expired snapshots require login/import,
+  never switching to the browser's current account. Firefox retains the existing
+  page/interceptor path pending equivalent browser verification.
+- **Chromium permission lifecycle:** `declarativeNetRequestWithHostAccess` is
+  required at extension load; Cookie reads remain optional. Fresh optional DNR
+  grants reproduced pending native rule updates in isolated Edge/Chromium tests;
+  extension reload could restore API completion without applying request headers.
+  Required-at-load DNR applied the same rule correctly. Do not use an API Promise
+  resolving as proof of header isolation, or auto-reload user drafts after a grant.
+  Updating an ungranted extension to required DNR also passed native testing;
+  browsers already affected by a runtime grant may need one browser restart.
+  This uses the existing host access without expanding it. Explicitly denied
+  permissions and failed permission inspection differ: inspection failure must
+  not let ordinary requests bypass orphan-rule cleanup.
+- **Safari:** shared transport rejects isolated Cookie requests before DNR
+  installation or network dispatch until native isolation is verified. Basic
+  Safari manifest and permission handling are maintained separately; Cubence
+  account requests remain unavailable. Future work must verify native Safari
+  behavior without silently substituting the browser's current account.
+- **Catalog:** `/api/model-plaza` is the provider catalog;
+  `/api/v1/share-groups/available` determines selectable groups. Selected-key
+  model lists are filtered by the owned key's group. Static USD/M token prices
+  are estimates; native tiers, scheduled multipliers, image-area billing and
+  account consumption-tier discounts are not fully reconstructed. Complex rows
+  explicitly have unavailable prices, not invented flat quotes.
+- **Other features:** `/api/v1/invite/my-code` supplies `data.invite_code` for
+  `/signup?code=<encoded-code>`. Announcements use the paginated site list, with
+  local read state; popup revision and presentation state are not new identities.
+  Redemption links to `/dashboard/subscription`, without automated grant writes.
+  The observed lottery event has ended; it is not a currency check-in method.
+  Privacy filtering, balance alerts, commissions/payouts, invoices, private
+  messages, and ticket management remain in the native console.
+
+Sources: [console](https://cubence.com/dashboard),
+[pricing](https://docs.cubence.com/en/docs/guides/pricing),
+[endpoints](https://docs.cubence.com/en/docs/guides/endpoints). Local request,
+native-form, mutation-readback and cleanup evidence is indexed under
+`.scratch/cubence-adaptation/spec.md` and stays outside Git.
+
+
 ## Gateway presentation order
 
 Plugin gateway/managed-site selectors and navigation use `MANAGED_SITE_TYPE_ORDER` in `src/services/accountSiteDefinitions/definitions.ts` as their shared presentation order. Adding a gateway includes choosing its position; registration order or appending at the end is not a popularity decision.

@@ -27,6 +27,7 @@ export interface AccountDialogSitePolicy {
   lockSiteUrl: boolean
   forceAccessTokenAuth: boolean
   allowCookieAuthSession: boolean
+  usesBrowserCookieSession?: boolean
   allowCookieAutoImport: boolean
   allowKimiOpenPlatformAuthState: boolean
   allowSub2ApiRefreshTokenState: boolean
@@ -69,6 +70,7 @@ export function getAccountDialogSitePolicy(
       productProfile.auth.allowedAuthTypes[0] === AuthTypeEnum.AccessToken,
     requireUsername: productProfile.identity.usernameRequired,
     allowCookieAuthSession: allowsCookieAuth,
+    usesBrowserCookieSession: productProfile.auth.usesBrowserCookieSession,
     allowCookieAutoImport: allowsCookieAuth,
     allowKimiOpenPlatformAuthState:
       productProfile.authSession.kind ===

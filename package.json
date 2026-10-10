@@ -83,6 +83,7 @@
     "e2e:cdp:kimi": "node scripts/test-kimi-e2e-live.mjs",
     "e2e:cdp:grsai": "node scripts/test-grsai-e2e-live.mjs",
     "e2e:cdp:laozhang": "node scripts/test-laozhang-e2e-live.mjs",
+    "e2e:cdp:cubence": "node scripts/test-cubence-e2e-live.mjs",
     "prepare": "husky"
   },
   "lint-staged": {

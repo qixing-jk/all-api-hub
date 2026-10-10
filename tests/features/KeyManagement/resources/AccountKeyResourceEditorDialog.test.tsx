@@ -20,6 +20,7 @@ import { NATIVE_RESOURCE_EDITOR_LOADING_REVEALS } from "~/features/ResourceEdito
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/secretDelivery/OneTimeSecretDialog"
 import zhKeyManagement from "~/locales/zh-CN/keyManagement.json"
 import { RESOURCE_FIELD_OPTION_LOAD_TRIGGERS } from "~/services/apiAdapters/contracts/resourceNative"
+import { createCubenceKeyEditor } from "~/services/apiAdapters/cubence/keyEditor"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keys/keyResourceEditor"
 import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
 import {
@@ -306,16 +307,23 @@ describe("AccountKeyResourceEditorDialog", () => {
     },
   )
 
-  it.each([SITE_TYPES.SUB2API, SITE_TYPES.VO_API_V2])(
+  it.each([SITE_TYPES.SUB2API, SITE_TYPES.VO_API_V2, SITE_TYPES.CUBENCE])(
     "names %s keys after the visible group while retaining native group IDs",
     async (siteType) => {
       const user = userEvent.setup()
       const onValuesChange = vi.fn()
       const isMultiple = siteType === SITE_TYPES.VO_API_V2
-      const groupField = isMultiple ? "groups" : "group_id"
+      const isCubence = siteType === SITE_TYPES.CUBENCE
+      const groupField = isMultiple
+        ? "groups"
+        : isCubence
+          ? "group"
+          : "group_id"
       const definition = isMultiple
         ? createVoApiV2KeyEditor(nativeRequest)
-        : createSub2ApiKeyEditor(nativeRequest)
+        : isCubence
+          ? createCubenceKeyEditor(async () => [])
+          : createSub2ApiKeyEditor(nativeRequest)
       render(
         <AccountKeyResourceEditorDialog
           editor={{
@@ -363,6 +371,10 @@ describe("AccountKeyResourceEditorDialog", () => {
         await user.click(screen.getByRole("option", { name: "Priority" }))
         expect(name).toHaveValue("Backup group (auto)")
         await user.keyboard("{Escape}")
+      } else {
+        await user.click(group)
+        await user.click(await screen.findByRole("option", { name: "Backup" }))
+        expect(name).toHaveValue("Backup group (auto)")
       }
       await user.clear(name)
       await user.type(name, "Model specific key")

@@ -8,7 +8,10 @@ import {
   defineResourceEditorFieldPolicy,
   type ResourceFieldPresentation,
 } from "~/features/ResourceEditor/model/resourceFieldPolicy"
-import { getDefaultAccountKeyName } from "~/services/accounts/keys/accountKeyNames"
+import {
+  DEFAULT_AUTO_PROVISION_KEY_NAME,
+  getDefaultAccountKeyName,
+} from "~/services/accounts/keys/accountKeyNames"
 import type { ResourceFieldDescriptor } from "~/services/apiAdapters/contracts/resourceNative"
 
 import type { AccountKeyResourceEditorPresentation as EditorPresentation } from "./accountKeyResourceEditorPresentation"
@@ -146,6 +149,7 @@ const groupAutomaticName =
   (
     fieldId: string,
     useOptionLabels = false,
+    unselectedName = getDefaultAccountKeyName(),
   ): NonNullable<EditorPresentation["getAutomaticName"]> =>
   (values, optionsByField) => {
     const value = values[fieldId]
@@ -154,7 +158,7 @@ const groupAutomaticName =
         ? value[0]
         : null
       : value
-    if (selected == null || selected === "") return getDefaultAccountKeyName()
+    if (selected == null || selected === "") return unselectedName
     if (typeof selected !== "string") return undefined
     const groupName = useOptionLabels
       ? optionsByField?.[fieldId]?.find((option) => option.value === selected)
@@ -347,6 +351,7 @@ const resolveSiteFields = (
 ): {
   fields: ResourceFieldPresentation[]
   getAutomaticName?: EditorPresentation["getAutomaticName"]
+  requireFreshOptions?: EditorPresentation["requireFreshOptions"]
 } => {
   const builders = {
     sub2api: () => buildSub2ApiFields(mode),
@@ -354,6 +359,21 @@ const resolveSiteFields = (
     rightcode: () => buildRightCodeFields(mode),
     "name-only": () => ({ fields: [name] }),
     grsai: buildGrsaiFields,
+    cubence: () => ({
+      requireFreshOptions: true,
+      getAutomaticName:
+        mode === editorModes.Create
+          ? groupAutomaticName("group", true, DEFAULT_AUTO_PROVISION_KEY_NAME)
+          : undefined,
+      fields: [
+        ...(mode === editorModes.Edit ? [] : [name]),
+        group("group", false, false, false),
+        ...quota("quota", "unlimited", true),
+        ...(mode === editorModes.Edit
+          ? [{ ...enabled("enabled"), section: "basic", order: 30 }]
+          : []),
+      ],
+    }),
     aihubmix: buildAiHubMixFields,
     "new-api": () => buildNewApiFamilyFields(descriptors ?? []),
     empty: () => ({ fields: [] }),
@@ -373,7 +393,7 @@ export function getNativeKeyResourceEditorPresentation(
     return getOpenRouterKeyResourceEditorPresentation(mode)
   }
 
-  const { fields, getAutomaticName } = resolveSiteFields(
+  const { fields, getAutomaticName, requireFreshOptions } = resolveSiteFields(
     siteType,
     mode,
     options?.fields,
@@ -381,6 +401,7 @@ export function getNativeKeyResourceEditorPresentation(
 
   return {
     getAutomaticName,
+    requireFreshOptions,
     policy: defineResourceEditorFieldPolicy({ fields, hiddenFields: [] }),
     sectionOrder: { basic: 0, spending: 1, lifecycle: 2, advanced: 3 },
     sectionLabelResolvers: {
