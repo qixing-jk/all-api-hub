@@ -1,5 +1,33 @@
 # Changelog
 
+## [4.4.0](https://github.com/qixing-jk/all-api-hub/compare/v4.3.0...v4.4.0) (2026-10-10)
+
+
+### Features
+
+* **checkin:** add Hiyo Free support and organize integration guidance ([#1668](https://github.com/qixing-jk/all-api-hub/issues/1668)) ([4679890](https://github.com/qixing-jk/all-api-hub/commit/46798905834dfd9e4e719afd63ce25833d559caa))
+* **cubence:** add site support ([#1671](https://github.com/qixing-jk/all-api-hub/issues/1671)) ([8436c96](https://github.com/qixing-jk/all-api-hub/commit/8436c96ee4b563187879dc3d45d1cf38ca5cd32d))
+* **keys:** support interactive default and group provisioning ([#1609](https://github.com/qixing-jk/all-api-hub/issues/1609)) ([b7496fd](https://github.com/qixing-jk/all-api-hub/commit/b7496fde0b185dd81ba06db1ef55f5c785d11f71))
+* **laozhang:** add console account, key and announcement support ([#1615](https://github.com/qixing-jk/all-api-hub/issues/1615)) ([ff94a78](https://github.com/qixing-jk/all-api-hub/commit/ff94a788f61a5c17f4bb928a13b0f78fefdaa667))
+* **magpie:** add gateway management and multi-key editing ([#1661](https://github.com/qixing-jk/all-api-hub/issues/1661)) ([d96f447](https://github.com/qixing-jk/all-api-hub/commit/d96f4475f563d8e66e8ad6714ab453e460a5462d))
+* **model-sync:** support persistent channel exclusions ([#1657](https://github.com/qixing-jk/all-api-hub/issues/1657)) ([e574014](https://github.com/qixing-jk/all-api-hub/commit/e574014756a44161992ccac4f5e8b3a73c5e15d2))
+* **site-announcements:** merge page filters into an announcement overview card ([#1620](https://github.com/qixing-jk/all-api-hub/issues/1620)) ([7259a59](https://github.com/qixing-jk/all-api-hub/commit/7259a59b83b5a2e9aafef5b65c9e67d426fe65fa))
+
+
+### Bug Fixes
+
+* **accounts:** isolate cookie requests and unblock key creation ([#1669](https://github.com/qixing-jk/all-api-hub/issues/1669)) ([b29d702](https://github.com/qixing-jk/all-api-hub/commit/b29d702c1e4e22708f19d35b94ee76dad7972abe))
+* **announcements:** show newest publications first ([#1672](https://github.com/qixing-jk/all-api-hub/issues/1672)) ([09a174c](https://github.com/qixing-jk/all-api-hub/commit/09a174cf8baab8c720d666c05f7c4081b6095b84))
+* **community:** load and cache invitations and QR images remotely ([#1660](https://github.com/qixing-jk/all-api-hub/issues/1660)) ([e078da3](https://github.com/qixing-jk/all-api-hub/commit/e078da358cff3f4d909fc1a977a546c3c309a247))
+* restore browser API compatibility on older Chromium ([#1624](https://github.com/qixing-jk/all-api-hub/issues/1624)) ([a32a5be](https://github.com/qixing-jk/all-api-hub/commit/a32a5beac0e3e6ac1cdfdec7c7098b0fad86dff8))
+* **ui:** use contextual loading feedback across forms and lists ([#1665](https://github.com/qixing-jk/all-api-hub/issues/1665)) ([601f50d](https://github.com/qixing-jk/all-api-hub/commit/601f50d27485b3a22a6f638af5584fa49911e404))
+* **webdav:** verify backup writes and support gateways without MOVE ([#1658](https://github.com/qixing-jk/all-api-hub/issues/1658)) ([479dbfa](https://github.com/qixing-jk/all-api-hub/commit/479dbfa6efa5a9a915ad24e2ae8814a07ff04fe5))
+
+
+### Performance Improvements
+
+* **ci:** reduce runner waits and reuse E2E builds ([#1626](https://github.com/qixing-jk/all-api-hub/issues/1626)) ([949bd8e](https://github.com/qixing-jk/all-api-hub/commit/949bd8e2ec8b15d16475617e5e4e6b8b4923d441))
+
 ## [4.3.0](https://github.com/qixing-jk/all-api-hub/compare/v4.2.0...v4.3.0) (2026-10-04)
 
 
