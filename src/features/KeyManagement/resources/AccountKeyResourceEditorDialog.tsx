@@ -13,6 +13,7 @@ import {
   ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes,
   type AccountKeyResourceEditorMode,
 } from "~/features/KeyManagement/constants"
+import { getNativeKeyResourceEditorPresentation } from "~/features/KeyManagement/presentation/nativeKeyResourceFieldPolicy"
 import { feedbackDescription } from "~/features/KeyManagement/resources/accountKeyResourceEditorFeedback"
 import { useAccountKeyResourceEditorDraft } from "~/features/KeyManagement/resources/useAccountKeyResourceEditorDraft"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
@@ -132,9 +133,16 @@ export function AccountKeyResourceEditorDialog({
   const isOpening = activeEditor === null
   const editorMode = activeEditor?.mode ?? activeOpening?.mode
   const title =
-    editorMode === editorModes.Create
+    (activeEditor
+      ? getNativeKeyResourceEditorPresentation(
+          activeEditor.siteType,
+          activeEditor.mode,
+          { fields: activeEditor.fields },
+        ).title?.(t, activeEditor.values)
+      : undefined) ??
+    (editorMode === editorModes.Create
       ? t("keyManagement:native.editor.title.create")
-      : t("keyManagement:native.editor.title.edit")
+      : t("keyManagement:native.editor.title.edit"))
   const requestClose = () => {
     if (activeEditor) {
       if (
@@ -328,11 +336,15 @@ function AccountKeyResourceEditorDialogSession({
               <Button
                 type="button"
                 loading={isSubmitting}
-                disabled={hasUnresolvedDependentOptions}
+                disabled={
+                  hasUnresolvedDependentOptions ||
+                  presentation.canSubmit?.(values) === false
+                }
                 onClick={() => void submit()}
                 data-testid={KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton}
               >
-                {t("keyManagement:native.editor.actions.save")}
+                {presentation.submitLabel?.(t, values) ??
+                  t("keyManagement:native.editor.actions.save")}
               </Button>
             </ActionGroup>,
             footerHost,
@@ -377,6 +389,21 @@ function AccountKeyResourceEditorDialogSession({
         fieldIssues={fieldIssues}
         disabled={isSubmitting}
         onValueChange={updateValues}
+        renderFieldOverride={(field) =>
+          presentation.renderField?.(field, {
+            values,
+            initialValues: editor.initialValues,
+            onValueChange: updateValues,
+            onSubmit: () => {
+              if (
+                !isSubmitting &&
+                !hasUnresolvedDependentOptions &&
+                presentation.canSubmit?.(values) !== false
+              )
+                void submit()
+            },
+          })
+        }
         controlledOptionStates={controlledOptionStates}
         onRetryControlledOptions={(fieldId) =>
           onLoadOptions?.(editor.editorId, fieldId, values)

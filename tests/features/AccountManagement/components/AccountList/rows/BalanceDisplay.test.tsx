@@ -73,6 +73,25 @@ vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
 }))
 
 describe("BalanceDisplay", () => {
+  it("labels token credit separately from subscription request counts", () => {
+    render(
+      <BalanceDisplay
+        site={buildDisplaySiteData({
+          subscription: {
+            name: "Dahl",
+            remainingTokens: 100000000,
+            isActive: true,
+          },
+        })}
+      />,
+    )
+    expect(
+      screen.getByTitle("account:stats.subscriptionRemainingTokens"),
+    ).toHaveTextContent("100M")
+    expect(
+      screen.queryByTitle("account:stats.subscriptionRemainingCount"),
+    ).not.toBeInTheDocument()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
 

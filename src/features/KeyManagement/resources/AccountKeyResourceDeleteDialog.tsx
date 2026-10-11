@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next"
 import { Alert, ConfirmDialog } from "~/components/ui"
 import type { useKeyCredentialAssociations } from "~/features/KeyManagement/associations/useKeyCredentialAssociations"
 import { LinkedChannelCleanupOption } from "~/features/KeyManagement/managedSite/LinkedChannelCleanup"
+import { getKeyResourcePresentationPolicy } from "~/features/KeyManagement/presentation/keyResourcePresentationPolicy"
 import type { useAccountKeyResourceController } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceController"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import toast from "~/lib/notify"
@@ -70,6 +71,9 @@ function AccountKeyResourceDeleteSession({
   const { t } = useTranslation(["keyManagement", "common"])
   const [nativeCleanupLinkedChannels, setNativeCleanupLinkedChannels] =
     useState(false)
+  const labels = getKeyResourcePresentationPolicy(
+    nativeKeys.deleteState.ref?.siteType,
+  ).actions
   const nativeDeleteFacts = nativeKeys.deleteState.ref
     ? nativeKeys.allRows.find(
         (facts) =>
@@ -136,15 +140,18 @@ function AccountKeyResourceDeleteSession({
       icon={nativeDeleteIsUncertain ? RefreshCw : undefined}
       isOpen={nativeKeys.deleteState.isOpen}
       onClose={nativeKeys.cancelDelete}
-      title={t("keyManagement:native.delete.title")}
-      description={t("keyManagement:native.delete.description", {
-        name: nativeDeleteFacts?.displayName ?? "",
-      })}
+      title={labels?.deleteTitle(t) ?? t("keyManagement:native.delete.title")}
+      description={
+        labels?.deleteDescription(t, nativeDeleteFacts?.displayName ?? "") ??
+        t("keyManagement:native.delete.description", {
+          name: nativeDeleteFacts?.displayName ?? "",
+        })
+      }
       cancelLabel={t("common:actions.cancel")}
       confirmLabel={
         nativeDeleteIsUncertain
           ? t("keyManagement:native.delete.refresh")
-          : t("keyManagement:native.delete.confirm")
+          : labels?.deleteLabel(t) ?? t("keyManagement:native.delete.confirm")
       }
       workingLabel={
         nativeDeleteIsUncertain

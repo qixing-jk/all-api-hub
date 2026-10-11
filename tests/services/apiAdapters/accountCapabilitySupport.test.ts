@@ -12,6 +12,7 @@ import {
   getAccountSiteCapabilitySupportMatrix,
   resolveAccountUserFeatureAvailability,
 } from "~/services/apiAdapters/accountCapabilitySupport"
+import { ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 
 describe("account capability support", () => {
@@ -63,7 +64,7 @@ describe("account capability support", () => {
       const implementationIsComplete = Boolean(
         capabilities.account?.keyResourceManagement?.defaultCreation &&
           capabilities.account.keyResourceManagement.defaultCreation !==
-            "requires-input",
+            creationPolicies.RequiresInput,
       )
 
       expect(availability.status).toBe(

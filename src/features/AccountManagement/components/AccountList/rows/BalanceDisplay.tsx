@@ -381,6 +381,13 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
             </span>
           )}
           {!isSubscriptionInactive &&
+            typeof site.subscription?.remainingTokens === "number" && (
+              <span title={t("stats.subscriptionRemainingTokens")}>
+                {formatCompactNumber(site.subscription.remainingTokens)}{" "}
+                {t("stats.tokenCredit")}
+              </span>
+            )}
+          {!isSubscriptionInactive &&
             typeof site.subscription?.remainingCount === "number" && (
               <span title={t("stats.subscriptionRemainingCount")}>
                 {formatCompactNumber(site.subscription.remainingCount)}

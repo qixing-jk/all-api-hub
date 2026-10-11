@@ -1,4 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import { ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type {
   AccountSiteCapabilities,
   SiteTypeCapabilities,
@@ -71,7 +72,7 @@ const ACCOUNT_USER_FEATURE_SELECTORS = {
   ) => {
     const resource = capabilities.account?.keyResourceManagement
     return resource?.defaultCreation &&
-      resource.defaultCreation !== "requires-input"
+      resource.defaultCreation !== creationPolicies.RequiresInput
       ? resource
       : undefined
   },

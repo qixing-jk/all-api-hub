@@ -1,4 +1,9 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import {
+  ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
+  ACCOUNT_KEY_RESOURCE_LOCAL_METADATA,
+  AccountKeyResourceError,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import type {
   AccountKeyResourceCollection,
   AccountKeyResourceFacts,
@@ -6,10 +11,6 @@ import type {
   AccountKeyScope,
   ResourceFailure,
   ResourceOperationOptions,
-} from "~/services/apiAdapters/contracts/accountKeyResource"
-import {
-  ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
-  AccountKeyResourceError,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   assertNativeResourceFacts,
@@ -63,6 +64,7 @@ export function createAccountKeyResourceCollection<
     | "toListFacts"
     | "toDetailFacts"
     | "editEditor"
+    | "getEditDetail"
     | "update"
     | "delete"
   >
@@ -178,20 +180,45 @@ export function createAccountKeyResourceCollection<
           current.ref,
         )
       }, mapFailure),
-    openEditEditor: (ref, editorOptions) =>
+    openEditEditor: (ref, editorOptions, intent) =>
       mapOperation(async () => {
-        const current = await readDetail(ref, editorOptions)
+        const decoded = decodeRef(ref)
+        if (intent?.snapshot) projectFacts(intent.snapshot, decoded.ref)
+        const current = definition.getEditDetail
+          ? {
+              ref: decoded.ref,
+              detail: await definition.getEditDetail(
+                config,
+                providerScope,
+                decoded.locator,
+                editorOptions,
+                intent,
+              ),
+            }
+          : await readDetail(ref, editorOptions)
+        if (
+          !refBoundary.refsMatch(
+            createRef(definition.locatorFromDetail(current.detail)),
+            current.ref,
+          )
+        )
+          throw unexpectedFailure()
         const editorDefinition = definition.editEditor(
           config,
           providerScope,
           current.detail,
+          intent,
         )
         return createAccountKeyResourceEditor({
           mapFailure,
           editorDefinition,
           resolveDestinationScopeKey: () => canonicalScopeKey,
           mutate: async (command, submitOptions) => {
-            const latest = await readDetail(current.ref, submitOptions)
+            const latest =
+              editorDefinition.mutationKind ===
+              ACCOUNT_KEY_RESOURCE_LOCAL_METADATA
+                ? current
+                : await readDetail(current.ref, submitOptions)
             return definition.update(
               config,
               providerScope,
@@ -206,6 +233,10 @@ export function createAccountKeyResourceCollection<
               throw unexpectedFailure()
             }
             return {
+              ...(editorDefinition.mutationKind ===
+              ACCOUNT_KEY_RESOURCE_LOCAL_METADATA
+                ? { refreshPolicy: ACCOUNT_KEY_RESOURCE_LOCAL_METADATA }
+                : {}),
               facts: projectFacts(
                 definition.toDetailFacts(detail, returnedRef),
                 returnedRef,

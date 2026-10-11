@@ -7,6 +7,7 @@ import { validateAndSaveAccount } from "~/services/accounts/editing/accountCreat
 import { MANUAL_ADD_ACCOUNT_DATA_FETCH_TIMEOUT_MS } from "~/services/accounts/editing/accountCreationTimeout"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/editing/accountDefaults"
 import { validateAndUpdateAccount } from "~/services/accounts/editing/accountUpdate"
+import { ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { openRouterAccountPersistence } from "~/services/apiAdapters/openrouter/account/accountPersistence"
 import { OpenRouterManagementKeyRequiredError } from "~/services/apiService/openrouter/errors"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
@@ -298,7 +299,7 @@ describe("accountPersistence save and update", () => {
           fetchData: fetchAccountDataMock,
         },
         keyResourceManagement: {
-          defaultCreation: "editor-defaults",
+          defaultCreation: creationPolicies.EditorDefaults,
           open: vi.fn(),
         },
       },

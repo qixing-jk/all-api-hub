@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { CREATED_RUNTIME_SECRET_CORRELATION_KINDS as correlationKinds } from "~/services/accounts/keys/createdRuntimeSecret"
 import type { AccountKeyResourceDefinition } from "~/services/apiAdapters/accountKeyResources/definition"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import {
@@ -969,7 +970,7 @@ describe("defineAccountKeyResourceCapability", () => {
           detail: { id: "created-key", name: "Created" },
           createdSecret: {
             correlation: {
-              kind: "account-key-resource",
+              kind: correlationKinds.AccountKeyResource,
               ref: {
                 accountId: "account-example",
                 siteType: SITE_TYPES.OPENROUTER,
@@ -1020,7 +1021,7 @@ describe("defineAccountKeyResourceCapability", () => {
           scopeKey: "workspace-destination",
           createdSecret: {
             correlation: {
-              kind: "account-key-resource",
+              kind: correlationKinds.AccountKeyResource,
               ref: {
                 accountId: "account-example",
                 siteType: SITE_TYPES.OPENROUTER,
@@ -1289,4 +1290,18 @@ describe("defineAccountKeyResourceCapability", () => {
       },
     })
   })
+})
+
+it("rejects an edit-detail identity mismatch before creating or submitting an editor", async () => {
+  const definition = createDefinition({
+    getEditDetail: vi.fn(async () => ({
+      id: "different-key",
+      name: "Other key",
+    })),
+  })
+  const collection = await open(definition)
+  await expect(collection.openEditEditor(REF)).rejects.toMatchObject({
+    failure: { code: "unexpected" },
+  })
+  expect(definition.update).not.toHaveBeenCalled()
 })

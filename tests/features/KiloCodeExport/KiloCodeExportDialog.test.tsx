@@ -10,7 +10,10 @@ import type {
   AccountKeyCreationResult,
   EnsureAccountKeyResult,
 } from "~/services/accounts/keys/accountKeyCreation"
-import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
+import {
+  AccountKeyResourceError,
+  ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { KILO_CODE_EXPORT_TARGETS } from "~/services/integrations/kiloCode/kiloCodeExport"
 import {
@@ -449,7 +452,7 @@ describe("KiloCodeExportDialog", () => {
       account: {
         keyResourceManagement: {
           inventorySecretAvailability: "recoverable",
-          defaultCreation: "editor-defaults",
+          defaultCreation: creationPolicies.EditorDefaults,
           open: async ({
             account,
             request,

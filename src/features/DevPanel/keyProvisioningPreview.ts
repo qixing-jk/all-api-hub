@@ -5,7 +5,10 @@ import {
   createAccountKeyProvisioningPlanner,
   type AccountKeyProvisioningPlan,
 } from "~/services/accounts/keys/accountKeyProvisioning"
-import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
+import {
+  AccountKeyResourceError,
+  ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import type { AccountKeyAutoProvisionMode } from "~/types/accountKeyAutoProvisioning"
@@ -41,7 +44,7 @@ export function getKeyProvisioningPreviewProfile(
     supportsInput: Boolean(
       fixture?.supportsInputForAllGroups ||
         (mode === "default" &&
-          resources?.defaultCreation === "select-requirement"),
+          resources?.defaultCreation === creationPolicies.SelectRequirement),
     ),
     description:
       !resources || !fixture
@@ -115,7 +118,7 @@ export async function prepareKeyProvisioningPreview(
     prepareDefaultCreation: (operationOptions) =>
       prepareDefaultAccountKeyCreationInSession(
         session,
-        resources.defaultCreation ?? "requires-input",
+        resources.defaultCreation ?? creationPolicies.RequiresInput,
         operationOptions,
       ),
   })(mode, { signal: options.signal })

@@ -21,6 +21,10 @@ export const INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY =
   "internalBrowsingBrowserSession_v1"
 
 export const STORAGE_LOCKS = {
+  /** Serializes local Dahl key names and website-sync acknowledgements. */
+  DAHL_KEY_NAMES: "all-api-hub:dahl-key-names",
+  /** Orders website acknowledgements while local names remain independently writable. */
+  DAHL_KEY_NAME_SYNC: "all-api-hub:dahl-key-name-sync",
   /** Serializes local diagnostic log history writes and clears. */
   LOG_HISTORY: "all-api-hub:log-history",
   /** Serializes the shared cooldown for passive browser identity requests. */
@@ -276,6 +280,7 @@ export const ACCOUNT_DIALOG_RECOVERY_STORAGE_KEYS = {
  * specific storage module so discovery and auditing remain straightforward.
  */
 export const STORAGE_KEYS = {
+  DAHL_KEY_NAMES: "dahlKeyNames_v1",
   /** Local logs are bounded and excluded from account backup/sync. */
   LOG_HISTORY: "logHistory_v1",
   PROTECTION_BYPASS_HISTORY: "protectionBypass_history_v1",

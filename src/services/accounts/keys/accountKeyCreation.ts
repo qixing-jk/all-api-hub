@@ -11,6 +11,7 @@ import {
 } from "~/services/accounts/utils/apiServiceRequest"
 import {
   AccountKeyResourceError,
+  ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
   type AccountKeyCreationIntent,
   type AccountKeyDefaultCreationPolicy,
   type AccountKeyProvisioningRequirement,
@@ -58,8 +59,10 @@ export async function prepareDefaultAccountKeyCreation(
   if (!accountKeyResources) {
     throw new AccountKeyResourceError({ code: "unavailable" })
   }
-  const policy = accountKeyResources.defaultCreation ?? "requires-input"
-  if (policy === "requires-input") return { kind: "input-required" }
+  const policy =
+    accountKeyResources.defaultCreation ?? creationPolicies.RequiresInput
+  if (policy === creationPolicies.RequiresInput)
+    return { kind: "input-required" }
   options.signal?.throwIfAborted()
   const session = await accountKeyResources.open(
     {
@@ -81,8 +84,9 @@ export async function prepareDefaultAccountKeyCreationInSession(
   options: Options = {},
 ): Promise<AccountKeyCreationPlan> {
   options.signal?.throwIfAborted()
-  if (policy === "requires-input") return { kind: "input-required" }
-  if (policy === "editor-defaults" || options.intent) {
+  if (policy === creationPolicies.RequiresInput)
+    return { kind: "input-required" }
+  if (policy === creationPolicies.EditorDefaults || options.intent) {
     const scope = await session.resolveDefaultScope(options)
     const editor = await session.openCreateEditor(
       scope.scopeKey,

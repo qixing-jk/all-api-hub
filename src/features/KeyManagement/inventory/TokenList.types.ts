@@ -7,6 +7,7 @@ import {
   type AccountRuntimeKey,
   type AccountRuntimeKeyLocator,
 } from "~/services/accounts/keys/accountRuntimeKeys"
+import type { AccountKeyResourceEditAction } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   type AccountKeyResourceFacts,
   type AccountKeyResourceRef,
@@ -66,7 +67,10 @@ export interface TokenListProps {
   onCloseNativeDetail?: () => void
   nativeDetailsFromRows?: boolean
   onOpenNativeDetail?: (ref: AccountKeyResourceRef) => void
-  onEditNativeKey?: (ref: AccountKeyResourceRef) => void
+  onEditNativeKey?: (
+    ref: AccountKeyResourceRef,
+    intent?: AccountKeyResourceEditAction,
+  ) => void
   onDeleteNativeKey?: (ref: AccountKeyResourceRef) => void
   credentialProfileLinks?: readonly ApiCredentialProfileLink[]
   getCredentialProfileForLocator?: (

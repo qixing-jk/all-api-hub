@@ -1,7 +1,10 @@
 import userEvent from "@testing-library/user-event"
+import { Tag } from "lucide-react"
 import { http, HttpResponse } from "msw"
 import { describe, expect, it, vi } from "vitest"
 
+import { getAccountKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/accountKeyResourcePresentation"
+import * as presentationPolicy from "~/features/KeyManagement/presentation/keyResourcePresentationPolicy"
 import { openRouterKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/openRouterKeyResourceCard"
 import { AccountKeyResourceListItem as NativeAccountKeyResourceListItem } from "~/features/KeyManagement/resources/AccountKeyResourceListItem"
 import { useAccountKeySecretDisclosure } from "~/features/KeyManagement/resources/useAccountKeySecretDisclosure"
@@ -9,6 +12,7 @@ import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
 import toast from "~/lib/notify"
 import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/keys/accountRuntimeKeys"
+import { ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { server } from "~~/tests/msw/server"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 import { createAccount } from "~~/tests/utils/keyManagementFactories"
@@ -56,6 +60,110 @@ const row: NativeKeyManagementRow = {
 }
 
 describe("AccountKeyResourceListItem", () => {
+  it("dispatches a provider-declared action independently of its label and other actions", async () => {
+    const policy = presentationPolicy.getKeyResourcePresentationPolicy("dahl")
+    const declaration = vi
+      .spyOn(presentationPolicy, "getKeyResourcePresentationPolicy")
+      .mockReturnValue({
+        ...policy,
+        actions: {
+          ...policy.actions!,
+          editActions: [
+            {
+              intent: editActions.Rename,
+              label: () => "Custom provider action",
+              icon: Tag,
+            },
+          ],
+        },
+      })
+    try {
+      const edit = vi.fn()
+      const declaredRow = {
+        ...row,
+        facts: {
+          ...row.facts,
+          ref: { ...row.facts.ref, siteType: "cubence" as const },
+        },
+      }
+      render(
+        <AccountKeyResourceListItem
+          row={declaredRow}
+          onExpandedChange={vi.fn()}
+          onEdit={edit}
+          onDelete={vi.fn()}
+        />,
+        { withThemeProvider: false },
+      )
+      await userEvent
+        .setup()
+        .click(
+          await screen.findByRole("button", { name: "Custom provider action" }),
+        )
+      expect(edit).toHaveBeenCalledWith(
+        declaredRow.facts.ref,
+        editActions.Rename,
+      )
+      expect(
+        screen.queryByRole("button", {
+          name: "keyManagement:native.editor.dahl.allocate",
+        }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", {
+          name: "keyManagement:native.editor.dahl.return",
+        }),
+      ).not.toBeInTheDocument()
+    } finally {
+      declaration.mockRestore()
+    }
+  })
+  it("offers a direct Dahl rename action separately from token allocation", async () => {
+    const dahl = {
+      ...row,
+      facts: {
+        ...row.facts,
+        ref: {
+          ...row.facts.ref,
+          siteType: "dahl" as const,
+          scopeKey: "default",
+          resourceId: "7",
+        },
+      },
+    }
+    const edit = vi.fn()
+    render(
+      <AccountKeyResourceListItem
+        row={dahl}
+        cardAdapter={getAccountKeyResourceCardAdapter("dahl")}
+        onExpandedChange={vi.fn()}
+        onEdit={edit}
+        onDelete={vi.fn()}
+      />,
+      { withThemeProvider: false },
+    )
+    await userEvent.setup().click(
+      await screen.findByRole("button", {
+        name: "keyManagement:native.editor.dahl.rename",
+      }),
+    )
+    expect(edit).toHaveBeenCalledWith(dahl.facts.ref, editActions.Rename)
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: "keyManagement:native.editor.dahl.allocate",
+      }),
+    )
+    expect(edit).toHaveBeenLastCalledWith(dahl.facts.ref, editActions.Allocate)
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: "keyManagement:native.editor.dahl.return",
+      }),
+    )
+    expect(edit).toHaveBeenLastCalledWith(dahl.facts.ref, editActions.Return)
+    expect(
+      screen.queryByRole("button", { name: /details/i }),
+    ).not.toBeInTheDocument()
+  })
   it("reveals and hides a recoverable provider key through the shared controls", async () => {
     const user = userEvent.setup()
     const account = createAccount({

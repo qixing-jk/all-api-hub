@@ -13,11 +13,15 @@ import { AccountKeyResourceEditorDialog } from "~/features/KeyManagement/resourc
 import { isAccountKeyResourceRouteTransitionAcknowledged } from "~/features/KeyManagement/resources/workflows/accountKeyResourceWorkflowSupport"
 import { useAccountKeyResourceController } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceController"
 import { NATIVE_RESOURCE_EDITOR_LOADING_REVEALS } from "~/features/ResourceEditor/opening/nativeResourceEditorOpeningState"
+import { CREATED_RUNTIME_SECRET_CORRELATION_KINDS as correlationKinds } from "~/services/accounts/keys/createdRuntimeSecret"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
+  ACCOUNT_KEY_RESOURCE_LOCAL_METADATA,
   AccountKeyResourceError,
+  ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions,
   type ResourceFieldOption,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { DAHL_KEY_RESOURCE_FIELDS as fields } from "~/services/apiAdapters/dahl/keyResourceFields"
 import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_MODES,
@@ -110,6 +114,85 @@ const mockNativeResourceSession = (open: ReturnType<typeof vi.fn>) => {
 }
 
 describe("useAccountKeyResourceController", () => {
+  it("opens a direct rename with its own initial values rather than an unsaved transfer-mode change", async () => {
+    const facts = {
+      ...createFacts("default", "7"),
+      ref: {
+        accountId: "account-example",
+        siteType: "dahl" as const,
+        scopeKey: "default",
+        resourceId: "7",
+      },
+    }
+    const scope = {
+      scopeKey: "default",
+      routeKey: "default",
+      displayName: "Dahl",
+      isDefault: true,
+    }
+    const editor = {
+      fields: [
+        {
+          fieldId: fields.TransferDirection,
+          type: "select",
+          options: [
+            { value: editActions.Allocate },
+            { value: editActions.Return },
+            { value: editActions.Rename },
+          ],
+        },
+        { fieldId: fields.Name, type: "text" },
+      ],
+      initialValues: {
+        transfer_direction: editActions.Rename,
+        local_name: "Work",
+      },
+      validate: () => ({ valid: true }),
+      submit: vi.fn(),
+    }
+    const list = vi.fn().mockResolvedValue({ items: [facts] })
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue(scope),
+        listScopes: vi.fn().mockResolvedValue([scope]),
+        openCollection: vi.fn().mockResolvedValue({
+          list,
+          openEditEditor: vi.fn().mockResolvedValue(editor),
+        }),
+      }),
+    )
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [{ ...createAccount("account-example"), siteType: "dahl" }],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example" },
+      }),
+    )
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    await act(async () =>
+      result.current.openEdit(facts.ref, editActions.Rename),
+    )
+    expect(result.current.editor?.initialValues).toEqual({
+      transfer_direction: editActions.Rename,
+      local_name: "Work",
+    })
+    expect(result.current.editor?.values).toEqual(
+      result.current.editor?.initialValues,
+    )
+    editor.submit.mockResolvedValue({
+      facts: { ...facts, displayName: "Renamed" },
+      refreshPolicy: ACCOUNT_KEY_RESOURCE_LOCAL_METADATA,
+    })
+    await act(async () =>
+      result.current.submitEditor(result.current.editor!.editorId, {
+        local_name: "Renamed",
+      }),
+    )
+    expect(result.current.rows[0]?.displayName).toBe("Renamed")
+    expect(result.current.editor).toBeNull()
+    expect(result.current.isLoading).toBe(false)
+    expect(list).toHaveBeenCalledTimes(1)
+  })
   const recoveryScope = {
     scopeKey: "workspace-example",
     routeKey: "team",
@@ -435,7 +518,10 @@ describe("useAccountKeyResourceController", () => {
   it("keeps a one-time secret when another account is added without changing its route", async () => {
     const facts = createFacts(recoveryScope.scopeKey, "key-created")
     const createdSecret = {
-      correlation: { kind: "account-key-resource", ref: facts.ref },
+      correlation: {
+        kind: correlationKinds.AccountKeyResource,
+        ref: facts.ref,
+      },
       displayName: "Created",
       secret: "one-time-key",
       secretAvailability: "create-response-only",
@@ -1040,7 +1126,7 @@ describe("useAccountKeyResourceController", () => {
     const currentFacts = createFacts(scope.scopeKey, "key-current")
     const createdSecret = {
       correlation: {
-        kind: "account-key-resource" as const,
+        kind: correlationKinds.AccountKeyResource,
         ref: initialFacts.ref,
       },
       displayName: "Created key",
@@ -3376,7 +3462,7 @@ describe("useAccountKeyResourceController", () => {
     const createdFacts = createFacts("workspace-second-id", "key-created")
     const createdSecret = {
       correlation: {
-        kind: "account-key-resource" as const,
+        kind: correlationKinds.AccountKeyResource,
         ref: createdFacts.ref,
       },
       displayName: "Created key",
@@ -3482,7 +3568,7 @@ describe("useAccountKeyResourceController", () => {
     const createdFacts = createFacts("workspace-second-id", "key-created")
     const createdSecret = {
       correlation: {
-        kind: "account-key-resource" as const,
+        kind: correlationKinds.AccountKeyResource,
         ref: createdFacts.ref,
       },
       displayName: "Created key",
@@ -3600,7 +3686,7 @@ describe("useAccountKeyResourceController", () => {
         facts,
         createdSecret: {
           correlation: {
-            kind: "account-key-resource" as const,
+            kind: correlationKinds.AccountKeyResource,
             ref: facts.ref,
           },
           displayName: "Created key",
@@ -3693,7 +3779,10 @@ describe("useAccountKeyResourceController", () => {
     ]
     const facts = createFacts("workspace-second-id", "key-created")
     const createdSecret = {
-      correlation: { kind: "account-key-resource" as const, ref: facts.ref },
+      correlation: {
+        kind: correlationKinds.AccountKeyResource,
+        ref: facts.ref,
+      },
       displayName: "Created key",
       secret: "secret-created",
       secretAvailability: "create-response-only" as const,
@@ -3766,8 +3855,11 @@ describe("useAccountKeyResourceController", () => {
       const facts = createFacts(scope.scopeKey, "key-created")
       const createdSecret = {
         correlation: attributed
-          ? { kind: "account-key-resource" as const, ref: facts.ref }
-          : { kind: "account-create" as const, accountId: "account-example" },
+          ? { kind: correlationKinds.AccountKeyResource, ref: facts.ref }
+          : {
+              kind: correlationKinds.AccountCreate,
+              accountId: "account-example",
+            },
         displayName: "Created key",
         secret: "one-time-secret-example",
         secretAvailability: "create-response-only" as const,
@@ -3933,7 +4025,10 @@ describe("useAccountKeyResourceController", () => {
     }
     const facts = createFacts(scope.scopeKey, "key-created")
     const createdSecret = {
-      correlation: { kind: "account-key-resource" as const, ref: facts.ref },
+      correlation: {
+        kind: correlationKinds.AccountKeyResource,
+        ref: facts.ref,
+      },
       displayName: "Created key",
       secret: "one-time-secret-example",
       secretAvailability: "create-response-only" as const,
@@ -4045,7 +4140,10 @@ describe("useAccountKeyResourceController", () => {
     ]
     const facts = createFacts(atIndex(scopes, 0).scopeKey, "key-created")
     const createdSecret = {
-      correlation: { kind: "account-key-resource" as const, ref: facts.ref },
+      correlation: {
+        kind: correlationKinds.AccountKeyResource,
+        ref: facts.ref,
+      },
       displayName: "Created key",
       secret: "secret-created",
       secretAvailability: "create-response-only" as const,
@@ -5258,7 +5356,10 @@ describe("useAccountKeyResourceController", () => {
       editResult.resolve({
         facts: firstFacts,
         createdSecret: {
-          correlation: { kind: "account-key-resource", ref: firstFacts.ref },
+          correlation: {
+            kind: correlationKinds.AccountKeyResource,
+            ref: firstFacts.ref,
+          },
           displayName: "Late secret",
           secret: "secret-late-example",
           secretAvailability: "create-response-only",
@@ -5334,7 +5435,10 @@ describe("useAccountKeyResourceController", () => {
       submitted.resolve({
         facts,
         createdSecret: {
-          correlation: { kind: "account-key-resource", ref: facts.ref },
+          correlation: {
+            kind: correlationKinds.AccountKeyResource,
+            ref: facts.ref,
+          },
           displayName: "Example key",
           secret: "secret-example",
           secretAvailability: "create-response-only",
@@ -5375,7 +5479,7 @@ describe("useAccountKeyResourceController", () => {
         facts,
         createdSecret: {
           correlation: {
-            kind: "account-key-resource" as const,
+            kind: correlationKinds.AccountKeyResource,
             ref: facts.ref,
           },
           displayName: "Created key",
@@ -5542,7 +5646,10 @@ describe("useAccountKeyResourceController", () => {
   it("keeps settled secrets local to their mounted controller instance", async () => {
     const facts = createFacts("workspace-default-id", "key-example")
     const createdSecret = {
-      correlation: { kind: "account-key-resource" as const, ref: facts.ref },
+      correlation: {
+        kind: correlationKinds.AccountKeyResource,
+        ref: facts.ref,
+      },
       displayName: "Example key",
       secret: "secret-example",
       secretAvailability: "create-response-only" as const,
@@ -5606,7 +5713,10 @@ describe("useAccountKeyResourceController", () => {
   it("keeps a created secret through same-turn search and public refresh commands", async () => {
     const facts = createFacts("workspace-default-id", "key-example")
     const createdSecret = {
-      correlation: { kind: "account-key-resource" as const, ref: facts.ref },
+      correlation: {
+        kind: correlationKinds.AccountKeyResource,
+        ref: facts.ref,
+      },
       displayName: "Example key",
       secret: "secret-example",
       secretAvailability: "create-response-only" as const,
@@ -5731,7 +5841,10 @@ describe("useAccountKeyResourceController", () => {
       submit.resolve({
         facts,
         createdSecret: {
-          correlation: { kind: "account-key-resource", ref: facts.ref },
+          correlation: {
+            kind: correlationKinds.AccountKeyResource,
+            ref: facts.ref,
+          },
           displayName: "Example key",
           secret: "secret-example",
           secretAvailability: "create-response-only",

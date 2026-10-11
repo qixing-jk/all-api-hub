@@ -1,5 +1,6 @@
 import type { SiteType } from "~/constants/siteType"
 import { getAccountSiteProductProfile } from "~/services/accounts/accountSiteProfile"
+import { ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   getInventorySecretAvailability,
   INVENTORY_SECRET_AVAILABILITIES,
@@ -179,7 +180,9 @@ export const getAccountKeyProductCapabilities = (
       rotate: Boolean(serviceCredential?.rotate),
     },
     defaultTokenAutomation: {
-      run: Boolean(defaultCreation && defaultCreation !== "requires-input"),
+      run: Boolean(
+        defaultCreation && defaultCreation !== creationPolicies.RequiresInput,
+      ),
     },
   }
 }

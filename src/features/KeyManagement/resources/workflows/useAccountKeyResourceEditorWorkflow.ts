@@ -20,6 +20,7 @@ import {
   boundariesMatch,
   boundaryFromResourceRef,
   isAborted,
+  refIdentity,
   resolveCreateDestinationBoundary,
   toFailure,
   USER_KEY_MANAGEMENT_EXECUTION,
@@ -31,11 +32,13 @@ import type { AccountKeyResourceRouteStateOwner } from "~/features/KeyManagement
 import toast from "~/lib/notify"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
+  ACCOUNT_KEY_RESOURCE_LOCAL_METADATA,
   AccountKeyResourceError,
   type AccountKeyResourceEditor,
   type AccountKeyResourceRef,
   type EditableResourceProjection,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import type { AccountKeyResourceEditAction } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { createLogger } from "~/utils/core/logger"
 
 import { useAccountKeyEditorSubmission } from "./useAccountKeyEditorSubmission"
@@ -94,6 +97,7 @@ export function useAccountKeyResourceEditorWorkflow({
     acceptActionContext,
     adoptCreationSession,
     acceptEditedResource,
+    readAcceptedRows,
     scopes,
   } = inventoryState
   const {
@@ -114,6 +118,7 @@ export function useAccountKeyResourceEditorWorkflow({
       editorMode: EditorMode,
       ref?: AccountKeyResourceRef,
       retryAttemptId?: number,
+      intent?: AccountKeyResourceEditAction,
     ) => {
       const boundary =
         editorMode === editorModes.Edit && mode === controllerModes.All && ref
@@ -144,7 +149,7 @@ export function useAccountKeyResourceEditorWorkflow({
       )
         return
       const attemptId = beginOpening(
-        { mode: editorMode, ref },
+        { mode: editorMode, ref, intent },
         () => requests.cancel(requestSlots.Action),
         retryAttemptId,
       )
@@ -166,9 +171,20 @@ export function useAccountKeyResourceEditorWorkflow({
           }
           acceptActionContext(actionContext)
           nativeEditor = await awaitAbortable(
-            actionContext.collection.openEditEditor(ref!, {
-              signal: controller.signal,
-            }),
+            actionContext.collection.openEditEditor(
+              ref!,
+              {
+                signal: controller.signal,
+              },
+              intent
+                ? {
+                    action: intent,
+                    snapshot: readAcceptedRows().find(
+                      (row) => refIdentity(row.ref) === refIdentity(ref!),
+                    ),
+                  }
+                : undefined,
+            ),
             controller.signal,
           )
         } else {
@@ -236,6 +252,7 @@ export function useAccountKeyResourceEditorWorkflow({
       adoptCreationSession,
       transitionEditorOpening,
       readNativeOwner,
+      readAcceptedRows,
       createdSecretRef,
       requests,
       accountsRef,
@@ -247,7 +264,7 @@ export function useAccountKeyResourceEditorWorkflow({
     (attemptId: number) => {
       const request = readRetryRequest(attemptId)
       if (!request) return
-      void openEditor(request.mode, request.ref, attemptId)
+      void openEditor(request.mode, request.ref, attemptId, request.intent)
     },
     [openEditor, readRetryRequest],
   )
@@ -336,6 +353,7 @@ export function useAccountKeyResourceEditorWorkflow({
             : t("keyManagement:messages.keyUpdatedSimple"),
         )
       }
+      if (result.refreshPolicy === ACCOUNT_KEY_RESOURCE_LOCAL_METADATA) return
       const account = accountsRef.current.find(
         (candidate) => candidate.id === intendedBoundary.accountId,
       )

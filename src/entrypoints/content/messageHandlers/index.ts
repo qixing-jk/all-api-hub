@@ -16,6 +16,7 @@ import {
   handleWaitAndGetUserInfo,
   handleWaitForTurnstileToken,
 } from "~/entrypoints/content/messageHandlers/handlers"
+import { synchronizeDahlWebsiteKeyNames } from "~/services/apiService/dahl/keyNamePage"
 import {
   handleClearNewApiOAuthEvidence,
   handleCompleteNewApiOAuth,
@@ -35,6 +36,12 @@ import { onRuntimeMessage } from "~/utils/browser/runtimeMessages"
  */
 export function setupContentMessageHandlers() {
   return onRuntimeMessage((request, _sender, sendResponse) => {
+    if (request.action === RuntimeActionIds.ContentSyncDahlKeyNames) {
+      void synchronizeDahlWebsiteKeyNames(request)
+        .then(sendResponse)
+        .catch(() => sendResponse({ success: false }))
+      return true
+    }
     if (request.action === RuntimeActionIds.ContentPrepareSub2ApiOAuth)
       return handlePrepareSub2ApiOAuth(request, sendResponse)
     if (request.action === RuntimeActionIds.ContentCompleteSub2ApiOAuth)

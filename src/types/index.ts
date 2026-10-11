@@ -88,6 +88,8 @@ export interface AccountSubscriptionSummary {
   remainingAmount?: number
   usedCount?: number
   remainingCount?: number
+  /** Remaining token allowance, including provider-owned pool/key allocations. */
+  remainingTokens?: number
   period?: string
   periodResetTime?: string
   expireTime?: string

@@ -1,10 +1,12 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import type {
+  ACCOUNT_KEY_RESOURCE_LOCAL_METADATA,
   AccountKeyCreationIntent,
   AccountKeyEditorSubmitResult,
   AccountKeyProvisionedResource,
   AccountKeyProvisioningSnapshot,
   AccountKeyResourceCapability,
+  AccountKeyResourceEditIntent,
   AccountKeyResourceEditor,
   AccountKeyResourceFacts,
   AccountKeyResourceOpenInput,
@@ -27,6 +29,8 @@ export type AccountKeyResourcePage<TItem> = {
 }
 
 export type AccountKeyResourceEditorDefinition<TCommand> = {
+  /** Local metadata commits do not read or mutate server resource state. */
+  mutationKind?: typeof ACCOUNT_KEY_RESOURCE_LOCAL_METADATA
   fields: AccountKeyResourceEditor["fields"]
   initialValues: EditableResourceProjection
   validate(values: EditableResourceProjection): ResourceValidationResult
@@ -129,7 +133,16 @@ export type AccountKeyResourceDefinition<
     config: TConfig,
     scope: AccountKeyScope,
     detail: TDetail,
+    intent?: AccountKeyResourceEditIntent,
   ): AccountKeyResourceEditorDefinition<TUpdateCommand>
+  /** Optional preparation for an editor, including provider-owned local metadata. */
+  getEditDetail?(
+    config: TConfig,
+    scope: AccountKeyScope,
+    locator: TLocator,
+    options?: ResourceOperationOptions,
+    intent?: AccountKeyResourceEditIntent,
+  ): Promise<TDetail>
   create(
     config: TConfig,
     scope: AccountKeyScope,

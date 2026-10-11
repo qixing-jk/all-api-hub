@@ -6,6 +6,7 @@ import {
   mapAccountKeyResourceFailure,
   mapAccountKeyResourceUncertainFailure,
 } from "~/services/apiAdapters/accountKeyResources/failure"
+import { ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type {
   AccountKeyResourceFacts,
   AccountKeyResourceOpenInput,
@@ -162,7 +163,7 @@ const changedKeys = (
 export const grsaiAccountKeyResources = defineAccountKeyResourceCapability({
   siteType: SITE_TYPES.GRSAI,
   inventorySecretAvailability: INVENTORY_SECRET_AVAILABILITIES.Recoverable,
-  defaultCreation: "editor-defaults",
+  defaultCreation: creationPolicies.EditorDefaults,
   openConfig: async (input): Promise<Config> => ({
     account: input.account,
     request: input.request,

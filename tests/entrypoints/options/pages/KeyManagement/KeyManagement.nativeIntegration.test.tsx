@@ -5,7 +5,7 @@ import { useState } from "react"
 import { I18nextProvider } from "react-i18next"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SITE_TYPES } from "~/constants/siteType"
+import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import KeyManagement from "~/entrypoints/options/pages/KeyManagement"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
 import type { AccountKeyResourceRouteTransition } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceController"
@@ -14,6 +14,7 @@ import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testId
 import enKeyManagement from "~/locales/en/keyManagement.json"
 import zhKeyManagement from "~/locales/zh-CN/keyManagement.json"
 import { buildServiceCredentialRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
+import { CREATED_RUNTIME_SECRET_CORRELATION_KINDS as correlationKinds } from "~/services/accounts/keys/createdRuntimeSecret"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   AccountKeyResourceError,
@@ -449,10 +450,11 @@ const createFacts = (
   scopeKey: string,
   resourceId: string,
   displayName = "Native key",
+  siteType: AccountSiteType = SITE_TYPES.OPENROUTER,
 ) => ({
   ref: {
     accountId,
-    siteType: SITE_TYPES.OPENROUTER,
+    siteType,
     scopeKey,
     resourceId,
   },
@@ -567,12 +569,14 @@ const createOpenRouterEditor = ({
   }
 }
 
-async function renderCreatedNativeSecret() {
+async function renderCreatedNativeSecret(
+  siteType: AccountSiteType = SITE_TYPES.OPENROUTER,
+) {
   const user = userEvent.setup()
   const account = createAccount({
     id: "native-account-private-example",
     name: "Private native key name",
-    siteType: SITE_TYPES.OPENROUTER,
+    siteType,
     baseUrl: "https://native.example.invalid",
   })
   const scope = createScope(
@@ -586,15 +590,19 @@ async function renderCreatedNativeSecret() {
     scope.scopeKey,
     "private-hash-example",
     "Private native key name",
+    siteType,
   )
   const createdSecret = {
     correlation: {
-      kind: "account-key-resource" as const,
+      kind: correlationKinds.AccountKeyResource,
       ref: createdFacts.ref,
     },
     displayName: createdFacts.displayName,
     secret: "one-time-private-plaintext-example",
-    secretAvailability: "create-response-only" as const,
+    secretAvailability:
+      siteType === SITE_TYPES.DAHL
+        ? ("recoverable" as const)
+        : ("create-response-only" as const),
     credential: {
       accountName: account.name,
       apiType: API_TYPES.OPENAI_COMPATIBLE,
@@ -603,12 +611,27 @@ async function renderCreatedNativeSecret() {
       tagIds: [],
     },
   }
-  const createEditor = createOpenRouterEditor({
+  const submit = vi
+    .fn()
+    .mockResolvedValue({ facts: createdFacts, createdSecret })
+  const createEditor =
+    siteType === SITE_TYPES.DAHL
+      ? {
+          fields: [{ fieldId: "local_name", type: "text" as const }],
+          initialValues: { local_name: "" },
+          resolveDestinationScopeKey: () => scope.scopeKey,
+          validate: vi.fn().mockReturnValue({ valid: true }),
+          submit,
+        }
+      : createOpenRouterEditor({
+          scopes: [scope],
+          destinationScopeKey: scope.scopeKey,
+          submit,
+        })
+  const { session, collection } = createNativeSession({
     scopes: [scope],
-    destinationScopeKey: scope.scopeKey,
-    submit: vi.fn().mockResolvedValue({ facts: createdFacts, createdSecret }),
+    createEditor,
   })
-  const { session } = createNativeSession({ scopes: [scope], createEditor })
   createDisplayAccountApiContextMock.mockReturnValue({
     accountKeyResources: { open: vi.fn().mockResolvedValue(session) },
     request: {},
@@ -627,18 +650,24 @@ async function renderCreatedNativeSecret() {
   await user.click(screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.addTokenButton))
   await user.click(
     await screen.findByRole("button", {
-      name: "keyManagement:native.editor.actions.save",
+      name:
+        siteType === SITE_TYPES.DAHL
+          ? "keyManagement:native.editor.dahl.create"
+          : "keyManagement:native.editor.actions.save",
     }),
   )
   await screen.findByRole("dialog", {
-    name: "keyManagement:oneTimeKey.title",
+    name:
+      siteType === SITE_TYPES.DAHL
+        ? "keyManagement:createdKey.title"
+        : "keyManagement:oneTimeKey.title",
   })
 
   // The assertions below are about the secret actions, not the completed create.
   startProductAnalyticsActionMock.mockClear()
   trackCompleteMock.mockClear()
 
-  return { account, createdFacts, createdSecret, user }
+  return { account, createdFacts, createdSecret, user, collection }
 }
 
 function expectSecretActionTelemetry(
@@ -894,7 +923,7 @@ describe("KeyManagement native page integration", () => {
     )
     const createdSecret = {
       correlation: {
-        kind: "account-key-resource" as const,
+        kind: correlationKinds.AccountKeyResource,
         ref: createdFacts.ref,
       },
       displayName: createdFacts.displayName,
@@ -1077,6 +1106,44 @@ describe("KeyManagement native page integration", () => {
     },
   )
 
+  it("hands a recoverable Dahl creation secret directly to Allocate without recommending vault storage", async () => {
+    oneTimeSecretDialogHarnessState.disableAutoCopy = true
+    const { user, createdFacts, collection } = await renderCreatedNativeSecret(
+      SITE_TYPES.DAHL,
+    )
+    expect(
+      screen.queryByTestId(TOKEN_PROVISIONING_TEST_IDS.oneTimeKeySaveButton),
+    ).not.toBeInTheDocument()
+    expect(oneTimeSecretDialogPropsSpy.mock.lastCall?.[0]).toMatchObject({
+      description: "keyManagement:native.editor.dahl.createdHelp",
+      nextAction: {
+        label: "keyManagement:native.editor.dahl.allocate",
+        disabled: false,
+      },
+    })
+    collection.openEditEditor.mockResolvedValue({
+      fields: [],
+      initialValues: {},
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      submit: vi.fn(),
+    })
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:native.editor.dahl.allocate",
+      }),
+    )
+    await waitFor(() =>
+      expect(collection.openEditEditor).toHaveBeenCalledWith(
+        createdFacts.ref,
+        expect.anything(),
+        expect.objectContaining({ action: "allocate" }),
+      ),
+    )
+    expect(
+      screen.queryByRole("dialog", { name: "keyManagement:createdKey.title" }),
+    ).not.toBeInTheDocument()
+  })
+
   it("deliberately cancels then confirms an unhandled secret close without recording a copy/save action or retaining dialog contents", async () => {
     oneTimeSecretDialogHarnessState.disableAutoCopy = true
     const { createdSecret, user } = await renderCreatedNativeSecret()
@@ -1142,7 +1209,7 @@ describe("KeyManagement native page integration", () => {
     )
     const createdSecret = {
       correlation: {
-        kind: "account-key-resource" as const,
+        kind: correlationKinds.AccountKeyResource,
         ref: createdFacts.ref,
       },
       displayName: createdFacts.displayName,

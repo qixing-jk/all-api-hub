@@ -17,7 +17,10 @@ import {
 } from "~/services/accounts/keys/accountRuntimeKeys"
 import { createUnattributedAccountCreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
-import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
+import {
+  AccountKeyResourceError,
+  ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import { MANAGED_RESOURCE_CREATE_SEED_KINDS } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { createNewApiCreateEditor } from "~/services/apiAdapters/managedResources/newApi/editor"
@@ -266,7 +269,7 @@ vi.mock("~/services/apiAdapters/registry", () => ({
     managedSites: { matching: { search: vi.fn() } },
     account: {
       keyResourceManagement: {
-        defaultCreation: "editor-defaults",
+        defaultCreation: creationPolicies.EditorDefaults,
         inventorySecretAvailability:
           siteType === SITE_TYPES.OPENROUTER
             ? "create-response-only"

@@ -62,6 +62,44 @@ describe("current browser account identity verification", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
+  it("rechecks Dahl after an HttpOnly login switches with unchanged visible cookies", async () => {
+    vi.stubGlobal("location", new URL("https://inference.dahl.global/account"))
+    vi.spyOn(document, "cookie", "get").mockReturnValue("analytics=unchanged")
+    const ids = [
+      "00000000-0000-4000-8000-000000000001",
+      "00000000-0000-4000-8000-000000000002",
+    ]
+    const fetchMock = vi.fn()
+    for (const userId of ids)
+      fetchMock.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ user: { user_id: userId, username: "sample" } }),
+        ),
+      )
+    vi.stubGlobal("fetch", fetchMock)
+    for (const userId of ids)
+      expect(await verifyIdentity(SITE_TYPES.DAHL)).toMatchObject({
+        success: true,
+        data: { userId, identityVerified: true },
+      })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("refuses Dahl identity verification when the account response has no valid UUID", async () => {
+    vi.stubGlobal("location", new URL("https://inference.dahl.global/account"))
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(JSON.stringify({ user: { user_id: "invalid" } })),
+        ),
+    )
+    expect(await verifyIdentity(SITE_TYPES.DAHL)).toMatchObject({
+      success: false,
+    })
+  })
+
   it("skips token verification when page storage access is denied", async () => {
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
       throw new DOMException("Storage access denied", "SecurityError")

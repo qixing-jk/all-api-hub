@@ -9,6 +9,7 @@ import type {
   AccountBrowserIdentityContext,
 } from "~/services/apiAdapters/contracts/accountBrowserIdentity"
 import { cubenceBrowserIdentity } from "~/services/apiAdapters/cubence/browserIdentity"
+import { dahlBrowserIdentity } from "~/services/apiAdapters/dahl/browserIdentity"
 import { freeModelBrowserIdentity } from "~/services/apiAdapters/freemodel/browserIdentity"
 import { kimiOpenPlatformBrowserIdentity } from "~/services/apiAdapters/kimiOpenPlatform/browserIdentity"
 import { newApiBrowserIdentity } from "~/services/apiAdapters/newApi/account/browserIdentity"
@@ -22,6 +23,7 @@ import { voApiV2BrowserIdentity } from "~/services/apiAdapters/voapiV2/browserId
 import { apiyiContentSessionExtractor } from "./contentSession/apiyi"
 import { compatibleUserContentSessionExtractor } from "./contentSession/compatibleUser"
 import { cubenceContentSessionExtractor } from "./contentSession/cubence"
+import { dahlContentSessionExtractor } from "./contentSession/dahl"
 import { freeModelContentSessionExtractor } from "./contentSession/freemodel"
 import { grsaiContentSessionExtractor } from "./contentSession/grsai"
 import { kimiOpenPlatformContentSessionExtractor } from "./contentSession/kimiOpenPlatform"
@@ -50,6 +52,10 @@ const siteBrowserAdapters: readonly {
   {
     sessionExtractor: freeModelContentSessionExtractor,
     identity: freeModelBrowserIdentity,
+  },
+  {
+    sessionExtractor: dahlContentSessionExtractor,
+    identity: dahlBrowserIdentity,
   },
   {
     sessionExtractor: sub2ApiContentSessionExtractor,

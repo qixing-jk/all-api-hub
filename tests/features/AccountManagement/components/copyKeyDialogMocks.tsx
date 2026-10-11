@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies } from "~/services/apiAdapters/contracts/accountKeyResource"
 
 const mocks = vi.hoisted(() => ({
   fetchAccountTokensMock: vi.fn(),
@@ -95,7 +96,7 @@ vi.mock("~/services/apiAdapters/registry", () => ({
           }
         : {
             keyResourceManagement: {
-              defaultCreation: "editor-defaults",
+              defaultCreation: creationPolicies.EditorDefaults,
               inventorySecretAvailability: [
                 SITE_TYPES.AIHUBMIX,
                 SITE_TYPES.OPENROUTER,

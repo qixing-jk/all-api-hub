@@ -50,6 +50,26 @@ beforeEach(() => {
   mocks.config.mockReset().mockResolvedValue({})
 })
 
+it("describes Dahl revocation and the return of remaining token credit", async () => {
+  const props = createProps()
+  props.nativeKeys.deleteState.ref = {
+    ...props.nativeKeys.deleteState.ref!,
+    siteType: SITE_TYPES.DAHL,
+  }
+  props.accounts[0]!.siteType = SITE_TYPES.DAHL
+  render(<AccountKeyResourceDeleteDialog {...props} />)
+  expect(
+    await screen.findByText(
+      "keyManagement:native.editor.dahl.revokeDescription",
+    ),
+  ).toBeInTheDocument()
+  expect(
+    screen.getByRole("button", {
+      name: "keyManagement:native.editor.dahl.revoke",
+    }),
+  ).toBeInTheDocument()
+})
+
 it("rechecks cleanup availability when reopening deletion for the same key", async () => {
   const user = userEvent.setup()
   const props = createProps()

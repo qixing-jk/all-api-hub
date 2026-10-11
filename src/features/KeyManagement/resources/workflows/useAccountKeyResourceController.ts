@@ -31,7 +31,9 @@ import { useAccountKeyResourceInventoryWorkflow } from "~/features/KeyManagement
 import { useAccountKeyResourceRequestLifecycle } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceRequestLifecycle"
 import { useAccountKeyResourceRouteCoordinator } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceRouteCoordinator"
 import { useAccountKeyResourceRouteState } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceRouteState"
+import { CREATED_RUNTIME_SECRET_CORRELATION_KINDS as correlationKinds } from "~/services/accounts/keys/createdRuntimeSecret"
 import { openAccountKeyResourceSession } from "~/services/accounts/keys/openAccountKeyResourceSession"
+import type { AccountKeyResourceEditAction } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   type AccountKeyResourceRef,
   type ResourceFailure,
@@ -412,7 +414,7 @@ export function useAccountKeyResourceController({
       result: "success" | "failure",
     ) => {
       const siteType =
-        createdSecret?.correlation.kind === "account-key-resource"
+        createdSecret?.correlation.kind === correlationKinds.AccountKeyResource
           ? createdSecret.correlation.ref.siteType
           : undefined
       const tracker = startProductAnalyticsAction(
@@ -477,7 +479,10 @@ export function useAccountKeyResourceController({
     closeDetail,
     selectScope,
     openCreate: () => openEditor(editorModes.Create),
-    openEdit: (ref: AccountKeyResourceRef) => openEditor(editorModes.Edit, ref),
+    openEdit: (
+      ref: AccountKeyResourceRef,
+      intent?: AccountKeyResourceEditAction,
+    ) => openEditor(editorModes.Edit, ref, undefined, intent),
     closeEditor,
     settleTerminalClose,
     retryEditorOpening,

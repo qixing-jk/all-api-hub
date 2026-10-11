@@ -10,8 +10,10 @@ import {
   type KeyResourceCredentialAssociation,
 } from "~/features/KeyManagement/inventory/KeyResourceCard"
 import type { KeyResourceActionPolicy } from "~/features/KeyManagement/presentation/keyResourceCard"
+import { getKeyResourcePresentationPolicy } from "~/features/KeyManagement/presentation/keyResourcePresentationPolicy"
 import { VerifyCliSupportDialog } from "~/features/Verification/cli"
 import type { AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
+import type { AccountKeyResourceEditAction } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/matching/tokenChannelStatus"
 import type { DisplaySiteData } from "~/types"
 
@@ -32,7 +34,10 @@ export interface RuntimeKeyActionButtonsProps {
     account: DisplaySiteData,
     runtimeKey: AccountRuntimeKey,
   ) => Promise<void>
-  handleEditKey: (runtimeKey: AccountRuntimeKey) => void
+  handleEditKey: (
+    runtimeKey: AccountRuntimeKey,
+    intent?: AccountKeyResourceEditAction,
+  ) => void
   handleDeleteKey: (runtimeKey: AccountRuntimeKey) => void
   account: DisplaySiteData
   onOpenDeeplinkExport?: (target: DeeplinkExportTarget) => void
@@ -72,6 +77,7 @@ export function RuntimeKeyActionButtons({
   association,
 }: RuntimeKeyActionButtonsProps) {
   const { t } = useTranslation("keyManagement")
+  const labels = getKeyResourcePresentationPolicy(account.siteType).actions
   const integrationActions = useRuntimeKeyIntegrationActions({
     account,
     enabled: actionPolicy.exportSecret,
@@ -184,18 +190,32 @@ export function RuntimeKeyActionButtons({
             separated={hasQuickActions || hasIntegrations || hasDiagnostics}
           >
             {actionPolicy.edit ? (
-              <IconButton
-                aria-label={t("actions.editKey")}
-                size="sm"
-                variant="ghost"
-                onClick={() => handleEditKey(runtimeKey)}
-              >
-                <Pencil className="text-theme-500 dark:text-theme-400 h-4 w-4" />
-              </IconButton>
+              labels?.editActions ? (
+                labels.editActions.map(({ intent, label, icon: Icon }) => (
+                  <IconButton
+                    key={intent}
+                    aria-label={label(t)}
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleEditKey(runtimeKey, intent)}
+                  >
+                    <Icon className="text-muted-foreground h-4 w-4" />
+                  </IconButton>
+                ))
+              ) : (
+                <IconButton
+                  aria-label={t("actions.editKey")}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleEditKey(runtimeKey)}
+                >
+                  <Pencil className="text-theme-500 dark:text-theme-400 h-4 w-4" />
+                </IconButton>
+              )
             ) : null}
             {actionPolicy.delete ? (
               <IconButton
-                aria-label={t("actions.deleteKey")}
+                aria-label={labels?.deleteLabel(t) ?? t("actions.deleteKey")}
                 size="sm"
                 variant="destructiveGhost"
                 onClick={() => handleDeleteKey(runtimeKey)}

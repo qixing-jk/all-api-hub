@@ -15,6 +15,7 @@ import { AccountSummaryBar } from "~/features/KeyManagement/inventory/AccountSum
 import { TokenList } from "~/features/KeyManagement/inventory/TokenList"
 import { TokenSearchBar } from "~/features/KeyManagement/inventory/TokenSearchBar"
 import { LinkedChannelCleanupPending } from "~/features/KeyManagement/managedSite/LinkedChannelCleanup"
+import { getKeyResourcePresentationPolicy } from "~/features/KeyManagement/presentation/keyResourcePresentationPolicy"
 import { RepairMissingKeysDialog } from "~/features/KeyManagement/repair"
 import { AccountKeyResourceDeleteDialog } from "~/features/KeyManagement/resources/AccountKeyResourceDeleteDialog"
 import { AccountKeyResourceEditorDialog } from "~/features/KeyManagement/resources/AccountKeyResourceEditorDialog"
@@ -25,7 +26,9 @@ import { useKeyManagementViewModel } from "~/features/KeyManagement/workspace/us
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import AddTokenDialog from "~/features/TokenProvisioning/creation/AddTokenDialog"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/secretDelivery/OneTimeSecretDialog"
+import { CREATED_RUNTIME_SECRET_CORRELATION_KINDS as correlationKinds } from "~/services/accounts/keys/createdRuntimeSecret"
 import { ACCOUNT_KEY_RESOURCE_FAILURE_CODES } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { INVENTORY_SECRET_AVAILABILITIES as secretAvailability } from "~/services/apiAdapters/contracts/inventorySecret"
 import {
   openApiCredentialProfilesPage,
   openSettingsTab,
@@ -147,6 +150,13 @@ export default function KeyManagement(props: {
     canClearAssociationRoute,
     showAssociationRouteNotice,
   } = useKeyManagementViewModel(routeParams)
+  const createdKeyFlow =
+    nativeKeys.createdSecret?.correlation.kind ===
+    correlationKinds.AccountKeyResource
+      ? getKeyResourcePresentationPolicy(
+          nativeKeys.createdSecret.correlation.ref.siteType,
+        ).createdKey
+      : undefined
   const accountSelectorTriggerRef = useRef<HTMLButtonElement>(null)
   const handleRequestAccountSelection = useCallback(() => {
     const selectorTrigger = accountSelectorTriggerRef.current
@@ -340,7 +350,7 @@ export default function KeyManagement(props: {
           selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
         }
         onOpenNativeDetail={(ref) => void nativeKeys.openDetail(ref)}
-        onEditNativeKey={(ref) => void nativeKeys.openEdit(ref)}
+        onEditNativeKey={(ref, intent) => void nativeKeys.openEdit(ref, intent)}
         onDeleteNativeKey={nativeKeys.openDelete}
         onRetryCurrentAccount={
           selectedAccount
@@ -459,7 +469,39 @@ export default function KeyManagement(props: {
         isOpen={nativeKeys.createdSecret !== null}
         result={nativeKeys.createdSecret}
         onClose={nativeKeys.closeCreatedSecret}
-        saveAction={nativeOneTimeSaveAction}
+        saveAction={
+          nativeKeys.createdSecret?.secretAvailability ===
+          secretAvailability.Recoverable
+            ? undefined
+            : nativeOneTimeSaveAction
+        }
+        description={
+          nativeKeys.createdSecret && createdKeyFlow
+            ? createdKeyFlow.description(
+                t,
+                nativeKeys.createdSecret.displayName,
+              )
+            : undefined
+        }
+        nextAction={
+          createdKeyFlow
+            ? {
+                label: createdKeyFlow.continueLabel(t),
+                disabled: nativeKeys.isLoading || nativeKeys.freshReadRequired,
+                onContinue: () => {
+                  const result = nativeKeys.createdSecret
+                  if (
+                    result?.correlation.kind !==
+                    correlationKinds.AccountKeyResource
+                  )
+                    return
+                  const ref = result.correlation.ref
+                  nativeKeys.closeCreatedSecret()
+                  void nativeKeys.openEdit(ref, createdKeyFlow.continueIntent)
+                },
+              }
+            : undefined
+        }
         onCopyResult={nativeKeys.recordCreatedSecretCopyResult}
         onSaveResult={nativeKeys.recordCreatedSecretSaveResult}
         focusWorkflowId={nativeKeys.focusWorkflowId ?? undefined}

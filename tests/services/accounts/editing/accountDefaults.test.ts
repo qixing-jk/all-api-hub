@@ -163,6 +163,27 @@ describe("accountDefaults", () => {
   })
 
   describe("normalizeSiteAccount", () => {
+    it("retains token allowances through account normalization without treating them as request counts", () => {
+      const normalized = normalizeSiteAccount(
+        createSiteAccount({
+          account_info: {
+            ...createSiteAccount().account_info,
+            subscription: {
+              name: "Dahl",
+              billingType: "tokens",
+              remainingTokens: 100000000,
+              isActive: true,
+            },
+          },
+        }),
+      )
+      expect(normalized.account_info.subscription?.remainingTokens).toBe(
+        100000000,
+      )
+      expect(
+        normalized.account_info.subscription?.remainingCount,
+      ).toBeUndefined()
+    })
     it("normalizes V7 check-in config without retaining legacy runtime fields", () => {
       const normalized = normalizeSiteAccount(
         createSiteAccount({

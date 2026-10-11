@@ -1,5 +1,6 @@
 import type { AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import type {
+  AccountKeyResourceEditAction,
   AccountKeyResourceFacts,
   AccountKeyResourceRef,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
@@ -56,7 +57,10 @@ export type KeyManagementDisplayRow =
     }
   | NativeKeyManagementRow
 
-export type NativeKeyManagementRowAction = (ref: AccountKeyResourceRef) => void
+export type NativeKeyManagementRowAction = (
+  ref: AccountKeyResourceRef,
+  intent?: AccountKeyResourceEditAction,
+) => void
 
 /**
  * Counts are nullable because a failed or unresolved inventory cannot prove a

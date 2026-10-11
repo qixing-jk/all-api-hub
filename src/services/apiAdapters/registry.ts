@@ -26,6 +26,7 @@ import type {
   SiteTypeCapabilities,
 } from "./contracts/siteTypeCapabilities"
 import { cubenceCapabilities } from "./cubence"
+import { dahlCapabilities } from "./dahl"
 import { freeModelCapabilities } from "./freemodel"
 import { grsaiCapabilities } from "./grsai"
 import { createKimiOpenPlatformCapabilities } from "./kimiOpenPlatform"
@@ -86,6 +87,7 @@ const accountCapabilityFactories = {
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Aihubmix]: () => aihubmixCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.SharedChat]: () => sharedChatCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.FreeModel]: () => freeModelCapabilities,
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Dahl]: () => dahlCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Cubence]: () => cubenceCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.RightCode]: () => rightCodeCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.OpenRouter]: () => openRouterCapabilities,

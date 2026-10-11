@@ -19,6 +19,7 @@ import {
   toAIHubMixKeyWrite,
   type AIHubMixKeyEditCommand,
 } from "~/services/apiAdapters/aihubmix/keys/keyResourceEditor"
+import { ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type {
   AccountKeyResourceFacts,
   AccountKeyResourceOpenInput,
@@ -193,7 +194,7 @@ const createdSecret = (
 
 /** AIHubMix native keys keep create-only plaintext out of inventory and detail facts. */
 export const aihubmixAccountKeyResources = defineAccountKeyResourceCapability({
-  defaultCreation: "editor-defaults",
+  defaultCreation: creationPolicies.EditorDefaults,
   siteType: SITE_TYPES.AIHUBMIX,
   inventorySecretAvailability:
     INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,

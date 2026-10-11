@@ -32,6 +32,7 @@ export const SITE_TYPES = {
   AIHUBMIX: "AIHubMix",
   SHAREDCHAT: "sharedchat",
   FREEMODEL: "freemodel",
+  DAHL: "dahl",
   CUBENCE: "cubence",
   RIGHT_CODE: "RightCode",
   OPENROUTER: "openrouter",
@@ -80,6 +81,8 @@ export const SHAREDCHAT_HOSTNAMES = ["new.sharedchat.cc"] as const
 export const SHAREDCHAT_WEB_ORIGIN = "https://new.sharedchat.cc"
 
 export const FREEMODEL_HOSTNAMES = ["freemodel.dev"] as const
+export const DAHL_HOSTNAMES = ["inference.dahl.global"] as const
+export const DAHL_WEB_ORIGIN = "https://inference.dahl.global"
 export const CUBENCE_HOSTNAMES = ["cubence.com"] as const
 export const CUBENCE_WEB_ORIGIN = "https://cubence.com"
 export const CUBENCE_API_ORIGIN = "https://api.cubence.com"

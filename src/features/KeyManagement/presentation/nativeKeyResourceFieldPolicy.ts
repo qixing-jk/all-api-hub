@@ -15,7 +15,11 @@ import {
 import type { ResourceFieldDescriptor } from "~/services/apiAdapters/contracts/resourceNative"
 
 import type { AccountKeyResourceEditorPresentation as EditorPresentation } from "./accountKeyResourceEditorPresentation"
-import { getKeyResourcePresentationPolicy } from "./keyResourcePresentationPolicy"
+import { getDahlKeyResourceEditorPresentation } from "./dahlKeyResourceEditorPresentation"
+import {
+  KEY_RESOURCE_EDITOR_KINDS as editorKinds,
+  getKeyResourcePresentationPolicy,
+} from "./keyResourcePresentationPolicy"
 import { laozhangDeploymentFields } from "./laozhangKeyResourceFieldPolicy"
 import { getOpenRouterKeyResourceEditorPresentation } from "./openRouterKeyResourceFieldPolicy"
 import { rixApiDeploymentFields } from "./rixApiKeyResourceFieldPolicy"
@@ -354,12 +358,14 @@ const resolveSiteFields = (
   requireFreshOptions?: EditorPresentation["requireFreshOptions"]
 } => {
   const builders = {
-    sub2api: () => buildSub2ApiFields(mode),
-    "voapi-v2": buildVoApiV2Fields,
-    rightcode: () => buildRightCodeFields(mode),
-    "name-only": () => ({ fields: [name] }),
-    grsai: buildGrsaiFields,
-    cubence: () => ({
+    [editorKinds.Sub2Api]: () => buildSub2ApiFields(mode),
+    [editorKinds.VoApiV2]: buildVoApiV2Fields,
+    [editorKinds.RightCode]: () => buildRightCodeFields(mode),
+    [editorKinds.NameOnly]: () => ({ fields: [name] }),
+    [editorKinds.Grsai]: buildGrsaiFields,
+    // Dahl's transfer editor is selected before this generic field-only builder.
+    [editorKinds.Dahl]: () => ({ fields: [] }),
+    [editorKinds.Cubence]: () => ({
       requireFreshOptions: true,
       getAutomaticName:
         mode === editorModes.Create
@@ -374,11 +380,11 @@ const resolveSiteFields = (
           : []),
       ],
     }),
-    aihubmix: buildAiHubMixFields,
-    "new-api": () => buildNewApiFamilyFields(descriptors ?? []),
-    empty: () => ({ fields: [] }),
+    [editorKinds.AiHubMix]: buildAiHubMixFields,
+    [editorKinds.NewApi]: () => buildNewApiFamilyFields(descriptors ?? []),
+    [editorKinds.Empty]: () => ({ fields: [] }),
     // The full workspace editor is handled before selecting native fields.
-    openrouter: () => ({ fields: [] }),
+    [editorKinds.OpenRouter]: () => ({ fields: [] }),
   }
   return builders[getKeyResourcePresentationPolicy(siteType).editor]()
 }
@@ -389,7 +395,12 @@ export function getNativeKeyResourceEditorPresentation(
   mode: AccountKeyResourceEditorMode,
   options?: { readonly fields?: readonly ResourceFieldDescriptor[] },
 ): EditorPresentation {
-  if (getKeyResourcePresentationPolicy(siteType).editor === "openrouter") {
+  if (getKeyResourcePresentationPolicy(siteType).editor === editorKinds.Dahl) {
+    return getDahlKeyResourceEditorPresentation(mode, options?.fields)
+  }
+  if (
+    getKeyResourcePresentationPolicy(siteType).editor === editorKinds.OpenRouter
+  ) {
     return getOpenRouterKeyResourceEditorPresentation(mode)
   }
 

@@ -61,6 +61,7 @@ These backends have distinct account contracts. Compatible inference APIs do not
 | `AIHubMix` | Account / [aihubmix](../../src/services/apiAdapters/aihubmix/) | Hosted provider with separate web-console and canonical API origins. Saved-account access and one-time key handling use its dedicated contract. | [Account API docs](https://docs.aihubmix.com/en/api/Cli) · [Model API docs](https://docs.aihubmix.com/en/api/Models-API) |
 | `sharedchat` | Account / [sharedchat](../../src/services/apiAdapters/sharedchat/) | Hosted cookie-authenticated account/service integration. No verified public backend repository is recorded. | [Canonical console](https://new.sharedchat.cc/) |
 | `freemodel` | Account / [freemodel](../../src/services/apiAdapters/freemodel/) | Hosted cookie-authenticated account service. Stored balance, subscription allowances and inference-key access are separate concepts; the model list is key-scoped. | [Console](https://freemodel.dev/) |
+| `dahl` | Account / [dahl](../../src/services/apiAdapters/dahl/) | Independent hosted console with UUID identities and HttpOnly Cookie authentication. Token pool and per-key allocations are separate from inference credentials; dollar values represent token credit at the published rate, including free tokens. No verified New API lineage or public backend source. | [Console](https://inference.dahl.global/account) · [Docs](https://inference.dahl.global/docs/) |
 | `RightCode` | Account / [rightcode](../../src/services/apiAdapters/rightcode/) | Provider-owned REST backend, not a One API/New API derivative. `www.right.codes`, `right.codes` and `rightapi.ai` are aliases of one account service. | [Console](https://www.right.codes/) · [Documentation](https://docs.rightapi.ai/) |
 | `openrouter` | Account / [openrouter](../../src/services/apiAdapters/openrouter/) | Hosted platform with Management Keys and its own account/key/model contracts; not a managed/self-hosted gateway integration. | [Platform](https://openrouter.ai/) · [Documentation](https://openrouter.ai/docs) · [OpenAPI source](https://github.com/OpenRouterTeam/docs/blob/main/openapi/openapi.yaml) |
 | `kimi` | Account / [kimiOpenPlatform](../../src/services/apiAdapters/kimiOpenPlatform/) | Kimi China: separate accounts, credentials and CNY balances from Global. Shares implementation with Global, not account identity; neither type is Kimi Code. | [China console](https://platform.kimi.com/) · [Regional boundaries](../../src/services/kimiOpenPlatform/deployments.ts) |
@@ -111,7 +112,7 @@ Keep source comments when external evidence determines authentication, endpoint 
 
 Before removing an existing note, check that its decision-critical rationale and source remain discoverable in the appropriate owner. Implementation alone does not explain why a constraint exists; preserve any missing rationale before deleting the note.
 
-Use the relationship overview for upstream sources and the [supported-sites page](../docs/supported-sites.md) for the public support description. Verify behavior against the target deployment when it differs from upstream; record the deployment/version scope with the task evidence. If missing evidence blocks a protocol decision, identify the missing contract and continue independent work.
+Use the relationship overview for upstream sources and the [supported-sites page](../docs/supported-sites.md) for provider and project introductions. Catalog descriptions explain the upstream service, project lineage and relationships; put extension capabilities, limitations and workflow details in integration or service guides. Verify behavior against the target deployment when it differs from upstream; record the deployment/version scope with the task evidence. If missing evidence blocks a protocol decision, identify the missing contract and continue independent work.
 
 Maintain this guide for source ownership, shared conventions, type relationships and upstream references. Keep a concise entry for each type and meaningful deployment boundary; individual endpoint additions and live runs do not require a new technical profile here.
 
@@ -203,6 +204,16 @@ Sources: [console](https://cubence.com/dashboard),
 native-form, mutation-readback and cleanup evidence is indexed under
 `.scratch/cubence-adaptation/spec.md` and stays outside Git.
 
+
+## Dahl account contract
+
+Dahl (`dahl`) has a dedicated Cookie account adapter at `https://inference.dahl.global`, with verified UUID identities and no managed gateway capabilities.
+
+- **Authentication:** onboarding discovers the UUID through `/v1/account`; blank detection IDs are not saved account bindings. Completed browser identity observations are not cached because the login Cookie is HttpOnly. Account operations capture one Cookie session for identity, mutation and readback; expired saved sessions require logging into the same account again. Native Firefox transport remains unverified.
+- **Credit and usage:** dollar balances value the pool plus key allocations at the configured published $0.03/M token rate, including free credit. This is token-credit value, not cash. Usage covers the rolling 30-day window; no verified calendar-day contract is advertised. Catalog discovery is provider-wide; pricing is a published flat-rate estimate.
+- **Keys:** creation starts at zero tokens with an optional name. Secrets are recoverable, so creation does not recommend vault storage and offers a direct Allocate continuation. Rename, Allocate, Return and Revoke are independent actions. Funding accepts whole-token K/M input, 25%/50%/Max, source-balance validation and transfer previews. Direction, amount and the accepted key baseline survive submission; stale balances stop before POST, and uncertain dispatch is never blindly replayed. Revocation returns remaining credit and retains the website's revoked record.
+- **Names:** save locally before background synchronization. Names are scoped by origin, UUID and browser profile; a verified matching website page synchronizes `dahl_key_labels` in both directions. Without one, edits remain pending. The website needs a reload to display changed labels. Locks and revision checks preserve newer edits; malformed reads do not acknowledge removals.
+- **Other features:** today statistics, check-in, referrals, redemption, announcements and admin management are unavailable. The maintained live runner creates and cleans up its own key when mutation testing is selected, and redacts credentials in generated review evidence.
 
 ## Gateway presentation order
 

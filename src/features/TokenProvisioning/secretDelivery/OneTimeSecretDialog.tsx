@@ -6,10 +6,13 @@ import { Alert, Button, ConfirmDialog, Input, Modal } from "~/components/ui"
 import { ActionGroup } from "~/components/ui/ActionGroup"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import toast from "~/lib/notify"
+import type { CreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
+import { INVENTORY_SECRET_AVAILABILITIES as secretAvailability } from "~/services/apiAdapters/contracts/inventorySecret"
 
 export interface OneTimeSecretPresentation {
   displayName: string
   secret: string
+  secretAvailability?: CreatedRuntimeSecret["secretAvailability"]
 }
 
 interface OneTimeSecretDialogProps {
@@ -18,6 +21,8 @@ interface OneTimeSecretDialogProps {
   onClose: () => void
   autoCopy?: boolean
   saveAction?: { onSave: () => Promise<void>; label?: string }
+  nextAction?: { onContinue: () => void; label: string; disabled?: boolean }
+  description?: string
   onCopyResult?: (result: "success" | "failure") => void
   onSaveResult?: (result: "success" | "failure") => void
   /** Optional explicit workflow key for preserving the opener across a terminal predecessor. */
@@ -37,18 +42,22 @@ const notifyOperationResult = (
   }
 }
 
-/** Presents a create-response-only plaintext secret until the user handles it. */
+/** Presents creation plaintext and guards closure only when it cannot be revealed again. */
 export function OneTimeSecretDialog({
   isOpen,
   result,
   onClose,
   autoCopy = true,
   saveAction,
+  nextAction,
+  description,
   onCopyResult,
   onSaveResult,
   focusWorkflowId,
 }: OneTimeSecretDialogProps) {
   const { t } = useTranslation(["keyManagement", "common"])
+  const recoverable =
+    result?.secretAvailability === secretAvailability.Recoverable
   const [copied, setCopied] = useState(false)
   const [copyFailed, setCopyFailed] = useState(false)
   const [handled, setHandled] = useState(false)
@@ -163,7 +172,7 @@ export function OneTimeSecretDialog({
   }, [invalidateOperations, onClose, resetLocalState])
 
   const requestClose = () => {
-    if (handled) {
+    if (handled || recoverable) {
       close()
       return
     }
@@ -223,21 +232,34 @@ export function OneTimeSecretDialog({
       <Modal
         isOpen={isOpen && !!result}
         onClose={requestClose}
-        title={t("keyManagement:oneTimeKey.title")}
+        title={t(
+          recoverable
+            ? "keyManagement:createdKey.title"
+            : "keyManagement:oneTimeKey.title",
+        )}
         closeOnBackdropClick={false}
         focusWorkflowId={focusWorkflowId}
         size="lg"
         header={
           <div className="min-w-0 pr-10">
             <h2 className="text-foreground truncate text-base font-semibold sm:text-lg">
-              {t("keyManagement:oneTimeKey.title")}
+              {t(
+                recoverable
+                  ? "keyManagement:createdKey.title"
+                  : "keyManagement:oneTimeKey.title",
+              )}
             </h2>
             <p className="text-muted-foreground mt-density-1 text-sm">
-              {result?.displayName
-                ? t("keyManagement:oneTimeKey.subtitle", {
-                    name: result.displayName,
-                  })
-                : t("keyManagement:oneTimeKey.subtitleUnnamed")}
+              {description ??
+                (recoverable
+                  ? t("keyManagement:createdKey.subtitle", {
+                      name: result?.displayName,
+                    })
+                  : result?.displayName
+                    ? t("keyManagement:oneTimeKey.subtitle", {
+                        name: result.displayName,
+                      })
+                    : t("keyManagement:oneTimeKey.subtitleUnnamed"))}
             </p>
           </div>
         }
@@ -255,6 +277,7 @@ export function OneTimeSecretDialog({
             {saveAction ? (
               <Button
                 type="button"
+                variant={recoverable ? "secondary" : "default"}
                 onClick={() => void handleSave()}
                 loading={isSaving}
                 disabled={isCopying || hasSaved}
@@ -266,15 +289,26 @@ export function OneTimeSecretDialog({
                     t("keyManagement:actions.saveToApiProfiles")}
               </Button>
             ) : null}
+            {nextAction ? (
+              <Button
+                type="button"
+                disabled={nextAction.disabled || isSaving || isCopying}
+                onClick={nextAction.onContinue}
+              >
+                {nextAction.label}
+              </Button>
+            ) : null}
           </ActionGroup>
         }
       >
         <div className="space-y-density-4">
-          <Alert
-            variant="warning"
-            title={t("keyManagement:oneTimeKey.warningTitle")}
-            description={t("keyManagement:oneTimeKey.warningDescription")}
-          />
+          {!recoverable ? (
+            <Alert
+              variant="warning"
+              title={t("keyManagement:oneTimeKey.warningTitle")}
+              description={t("keyManagement:oneTimeKey.warningDescription")}
+            />
+          ) : null}
           <div>
             <label
               htmlFor={secretInputId}

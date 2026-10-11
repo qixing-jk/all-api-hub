@@ -17,6 +17,7 @@ import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
   AccountKeyResourceError,
+  ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
   type AccountKeyProvisionedResource,
   type AccountKeyProvisioningSnapshot,
   type AccountKeyResourceFacts,
@@ -511,7 +512,7 @@ const provisionRequirement = async (
 export const voApiV2AccountKeyResources = defineAccountKeyResourceCapability({
   siteType: SITE_TYPES.VO_API_V2,
   inventorySecretAvailability: INVENTORY_SECRET_AVAILABILITIES.Recoverable,
-  defaultCreation: "select-requirement",
+  defaultCreation: creationPolicies.SelectRequirement,
   openConfig: async (input) => ({
     account: input.account,
     request: input.request,
