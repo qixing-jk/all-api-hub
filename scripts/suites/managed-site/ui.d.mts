@@ -7,8 +7,8 @@ export function readManagedSiteConnectionCopy(): {
 }
 
 export function readNewManagedSiteConnectionFeedback(
-  page: Page,
-  locator: Locator,
+  page: Pick<Page, "waitForTimeout">,
+  locator: Pick<Locator, "allTextContents">,
   previousTexts: readonly string[],
   timeoutMs: number,
 ): Promise<{ text: string; observed: string[] }>

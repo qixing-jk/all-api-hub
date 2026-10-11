@@ -1,4 +1,6 @@
 import { act, renderHook } from "@testing-library/react"
+import type { ReactNode } from "react"
+import { I18nextProvider } from "react-i18next"
 import { describe, expect, it, vi } from "vitest"
 
 import { MANAGED_SITE_CONFIG_TEXT_POLICIES } from "~/features/BasicSettings/components/tabs/ManagedSite/configuration/managedSiteConfigFields"
@@ -7,9 +9,11 @@ import {
   useManagedSiteConfigDraft,
 } from "~/features/BasicSettings/components/tabs/ManagedSite/configuration/useManagedSiteConfigDraft"
 import toast from "~/lib/notify"
+import settings from "~/locales/en/settings.json"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import type { PreferenceWriteResult } from "~/services/preferences/preferencesStore"
 import { createDeferred } from "~~/tests/test-utils/deferred"
+import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 
 vi.mock("~/lib/notify", () => ({
   default: {
@@ -22,6 +26,40 @@ vi.mock("~/lib/notify", () => ({
 }))
 
 describe("managed-site save and connection check", () => {
+  it("reports an unreachable connection when validation fails without an error message", async () => {
+    const i18n = await createResourceTestI18n({ en: { settings } })
+    const validate = vi.fn().mockResolvedValue({ success: false })
+    const { result } = renderHook(
+      () =>
+        useManagedSiteConfigDraft({
+          savedConfig: { token: "saved" },
+          savedVersion: 1,
+          storedConfig: { token: "saved" },
+          defaults: {},
+          reset: async () => ({ ok: true, preferences: DEFAULT_PREFERENCES }),
+          fields: { token: { setting: "Token", update: vi.fn() } },
+        }),
+      {
+        wrapper: ({ children }: { children: ReactNode }) => (
+          <I18nextProvider i18n={i18n}>{children}</I18nextProvider>
+        ),
+      },
+    )
+    await act(async () =>
+      result.current.checkConnection({ token: "saved" }, validate),
+    )
+    expect(validate).toHaveBeenCalledExactlyOnceWith({ token: "saved" })
+    expect(toast.error).toHaveBeenCalledWith(
+      settings.managedSiteConnection.failed.replace(
+        "{{reason}}",
+        settings.managedSiteConnection.unreachable,
+      ),
+      expect.objectContaining({ id: expect.any(String) }),
+    )
+    expect(toast.success).not.toHaveBeenCalled()
+    expect(result.current.isValidating).toBe(false)
+    expect(result.current.draft.token).toBe("saved")
+  })
   it("joins a blur save, exposes saving then checking, and rejects duplicate checks", async () => {
     const save = createDeferred<PreferenceWriteResult>()
     const check = createDeferred<{ success: boolean }>()

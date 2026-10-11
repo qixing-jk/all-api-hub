@@ -30,6 +30,12 @@ export async function readNewManagedSiteConnectionFeedback(
     observed = (await locator.allTextContents())
       .map((value) => value.trim())
       .filter(Boolean)
+    if (observed.some((text) => progress.has(text))) {
+      // A repeated result is fresh only if progress replaced its previous notice.
+      for (const text of previous) {
+        if (!observed.includes(text)) previous.delete(text)
+      }
+    }
     const fresh = observed.find(
       (text) => !previous.has(text) && !progress.has(text),
     )
