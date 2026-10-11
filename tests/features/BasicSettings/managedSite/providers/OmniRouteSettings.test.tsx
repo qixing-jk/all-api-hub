@@ -5,13 +5,29 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { OMNIROUTE_ACCESS_TOKEN_PREFIX } from "~/constants/omniroute"
 import OmniRouteSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/OmniRouteSettings"
 import toast from "~/lib/notify"
+import settings from "~/locales/en/settings.json"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import * as browserApi from "~/utils/browser/tabs"
 import { server } from "~~/tests/msw/server"
+import { testI18n } from "~~/tests/test-utils/i18n"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
+
+testI18n.addResourceBundle(
+  "en",
+  "settings",
+  {
+    managedSiteConnection: {
+      failed: settings.managedSiteConnection.failed,
+    },
+  },
+  true,
+  true,
+)
 
 vi.mock("~/lib/notify", () => ({
   default: {
+    loading: vi.fn(),
+    dismiss: vi.fn(),
     success: vi.fn(),
     error: vi.fn(),
     info: vi.fn(),
@@ -54,7 +70,7 @@ const fieldInput = async (
 
 const validateButton = () =>
   screen.findByRole("button", {
-    name: "settings:omniroute.validation.validate",
+    name: "settings:managedSiteConnection.check",
   })
 
 describe("OmniRoute settings", () => {
@@ -90,6 +106,7 @@ describe("OmniRoute settings", () => {
         expect.stringContaining(
           "settings:omniroute.validation.invalidCredential",
         ),
+        expect.objectContaining({ id: expect.any(String) }),
       ),
     )
     expect(await userPreferences.getPreferences()).toMatchObject({
@@ -97,7 +114,8 @@ describe("OmniRoute settings", () => {
     })
     expect(exchange).not.toHaveBeenCalled()
     expect(toast.success).not.toHaveBeenCalledWith(
-      "settings:omniroute.validation.success",
+      "settings:managedSiteConnection.success",
+      expect.objectContaining({ id: expect.any(String) }),
     )
   })
 
@@ -115,7 +133,8 @@ describe("OmniRoute settings", () => {
     await user.click(await validateButton())
     await waitFor(() =>
       expect(toast.success).toHaveBeenCalledWith(
-        "settings:omniroute.validation.success",
+        "settings:managedSiteConnection.success",
+        expect.objectContaining({ id: expect.any(String) }),
       ),
     )
     expect(await userPreferences.getPreferences()).toMatchObject({
@@ -177,11 +196,13 @@ describe("OmniRoute settings", () => {
           expect.stringContaining(
             `settings:omniroute.validation.${messageKey}`,
           ),
+          expect.objectContaining({ id: expect.any(String) }),
         ),
       )
       expect(await validateButton()).toBeEnabled()
       expect(toast.success).not.toHaveBeenCalledWith(
-        "settings:omniroute.validation.success",
+        "settings:managedSiteConnection.success",
+        expect.objectContaining({ id: expect.any(String) }),
       )
     },
   )
@@ -210,7 +231,8 @@ describe("OmniRoute settings", () => {
         omniroute: { token: "" },
       })
       expect(toast.success).not.toHaveBeenCalledWith(
-        "settings:omniroute.validation.success",
+        "settings:managedSiteConnection.success",
+        expect.objectContaining({ id: expect.any(String) }),
       )
     } finally {
       save.mockRestore()
@@ -293,6 +315,7 @@ describe("OmniRoute settings", () => {
         expect.stringContaining(
           "settings:omniroute.validation.insufficientScope",
         ),
+        expect.objectContaining({ id: expect.any(String) }),
       ),
     )
   })

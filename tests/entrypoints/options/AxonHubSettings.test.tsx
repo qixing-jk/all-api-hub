@@ -4,10 +4,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import AxonHubSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/AxonHubSettings"
 import toast from "~/lib/notify"
+import settings from "~/locales/en/settings.json"
 import { signIn } from "~/services/apiService/axonHub/authSession"
 import type { PreferenceWriteResult } from "~/services/preferences/preferencesStore"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
+import { testI18n } from "~~/tests/test-utils/i18n"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+
+testI18n.addResourceBundle(
+  "en",
+  "settings",
+  {
+    managedSiteConnection: {
+      failed: settings.managedSiteConnection.failed,
+    },
+  },
+  true,
+  true,
+)
 
 const {
   mockResetAxonHubConfig,
@@ -69,6 +83,9 @@ vi.mock("~/utils/feedback/preferenceFeedback", () => ({
 
 vi.mock("~/lib/notify", () => ({
   default: {
+    loading: vi.fn(),
+    warning: vi.fn(),
+    dismiss: vi.fn(),
     error: vi.fn(),
     success: vi.fn(),
   },
@@ -124,6 +141,7 @@ vi.mock("~/components/ui", async (importOriginal) => {
     }: {
       children: ReactNode
       onClick?: () => void
+      disabled?: boolean
       "aria-label"?: string
     }) => (
       <button aria-label={ariaLabel} onClick={() => onClick?.()}>
@@ -131,6 +149,7 @@ vi.mock("~/components/ui", async (importOriginal) => {
       </button>
     ),
     Input: ({
+      disabled,
       "aria-label": ariaLabel,
       id,
       onBlur,
@@ -141,6 +160,7 @@ vi.mock("~/components/ui", async (importOriginal) => {
       type,
       value,
     }: {
+      disabled?: boolean
       "aria-label"?: string
       id?: string
       onBlur?: (event: { target: { value: string } }) => void
@@ -158,6 +178,7 @@ vi.mock("~/components/ui", async (importOriginal) => {
       return (
         <div>
           <input
+            disabled={disabled}
             id={id}
             aria-label={ariaLabel}
             type={inputType}
@@ -376,7 +397,7 @@ describe("AxonHubSettings", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "settings:axonHub.validation.validate",
+        name: "settings:managedSiteConnection.check",
       }),
     )
 
@@ -387,7 +408,7 @@ describe("AxonHubSettings", () => {
     expect(mockUpdateAxonHubConfig).not.toHaveBeenCalled()
   })
 
-  it("exposes only validation as busy, suppresses duplicate clicks, and restores on success", async () => {
+  it("disables edits during checking, suppresses duplicate clicks, and restores on success", async () => {
     const deferredSignIn = createDeferred<{ accessToken: string }>()
     mockedSignIn.mockReturnValue(deferredSignIn.promise)
 
@@ -414,7 +435,7 @@ describe("AxonHubSettings", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "settings:axonHub.validation.validate",
+        name: "settings:managedSiteConnection.check",
       }),
     )
 
@@ -426,7 +447,7 @@ describe("AxonHubSettings", () => {
       })
     })
     const validatingButton = screen.getByRole("button", {
-      name: "settings:axonHub.validation.validating",
+      name: "settings:managedSiteConnection.checking",
     })
     expect(validatingButton).toBeDisabled()
     expect(validatingButton).toHaveAttribute("aria-busy", "true")
@@ -437,25 +458,25 @@ describe("AxonHubSettings", () => {
     fireEvent.click(validatingButton)
     expect(mockedSignIn).toHaveBeenCalledTimes(1)
 
-    fireEvent.change(
+    expect(
       screen.getByLabelText("settings:axonHub.fields.emailLabel"),
-      { target: { value: "newer@example.com" } },
-    )
+    ).toBeDisabled()
     deferredSignIn.resolve({ accessToken: "token" })
 
     await waitFor(() => {
       expect(mockUpdateAxonHubConfig).not.toHaveBeenCalled()
       expect(toast.success).toHaveBeenCalledWith(
-        "settings:axonHub.validation.success",
+        "settings:managedSiteConnection.success",
+        expect.objectContaining({ id: expect.any(String) }),
       )
     })
 
     const restoredButton = screen.getByRole("button", {
-      name: "settings:axonHub.validation.validate",
+      name: "settings:managedSiteConnection.check",
     })
     expect(
       screen.getByLabelText("settings:axonHub.fields.emailLabel"),
-    ).toHaveValue("newer@example.com")
+    ).toHaveValue("validated@example.com")
     expect(restoredButton).toBeEnabled()
     expect(restoredButton).not.toHaveAttribute("aria-busy")
   })
@@ -472,13 +493,14 @@ describe("AxonHubSettings", () => {
     await user.type(password, "  new password  ")
     await user.click(
       screen.getByRole("button", {
-        name: "settings:axonHub.validation.validate",
+        name: "settings:managedSiteConnection.check",
       }),
     )
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "settings:axonHub.validation.failed",
+        expect.stringContaining("settings:axonHub.validation.failed"),
+        expect.objectContaining({ id: expect.any(String) }),
       )
     })
     expect(mockUpdateAxonHubPassword).toHaveBeenCalledWith("  new password  ", {
@@ -500,13 +522,14 @@ describe("AxonHubSettings", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "settings:axonHub.validation.validate",
+        name: "settings:managedSiteConnection.check",
       }),
     )
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "settings:axonHub.validation.failed",
+        expect.stringContaining("settings:axonHub.validation.failed"),
+        expect.objectContaining({ id: expect.any(String) }),
       )
     })
     expect(mockUpdateAxonHubConfig).not.toHaveBeenCalled()
@@ -521,13 +544,14 @@ describe("AxonHubSettings", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "settings:axonHub.validation.validate",
+        name: "settings:managedSiteConnection.check",
       }),
     )
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "settings:axonHub.validation.corsFailed",
+        expect.stringContaining("settings:axonHub.validation.corsFailed"),
+        expect.objectContaining({ id: expect.any(String) }),
       )
     })
     expect(mockUpdateAxonHubConfig).not.toHaveBeenCalled()

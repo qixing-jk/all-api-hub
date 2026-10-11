@@ -170,10 +170,7 @@
       "description": "Prüfen, ob die aktuelle Konfiguration die Verbindung und Verwaltung der Website ermöglicht.",
       "failed": "AxonHub Validierung fehlgeschlagen: {{error}}",
       "missingFields": "Bitte füllen Sie alle erforderlichen Felder aus",
-      "success": "Verbindung erfolgreich",
-      "title": "Verbindung prüfen",
-      "validate": "Verbindung prüfen",
-      "validating": "Wird geprüft…"
+      "title": "Verbindung prüfen"
     }
   },
   "changelogOnUpdate": {
@@ -203,10 +200,7 @@
       "description": "Prüfen, ob die aktuelle Konfiguration die Verbindung und Verwaltung der Website ermöglicht.",
       "failed": "Claude Code Hub Validierung fehlgeschlagen: {{error}}",
       "missingFields": "Bitte füllen Sie alle erforderlichen Felder aus",
-      "success": "Verbindung erfolgreich",
-      "title": "Verbindung prüfen",
-      "validate": "Verbindung prüfen",
-      "validating": "Wird geprüft…"
+      "title": "Verbindung prüfen"
     }
   },
   "claudeCodeRouter": {
@@ -221,7 +215,6 @@
   },
   "cliProxyApi": {
     "baseUrlLabel": "Management-API-Basis-URL",
-    "checkConnectionAction": "Verbindung prüfen",
     "checkConnectionDesc": "Prüfen, ob die aktuelle Konfiguration die Verbindung und Verwaltung der Website ermöglicht.",
     "checkConnectionLabel": "Verbindung prüfen",
     "description": "Verbindung zur CLIProxyAPI Management API konfigurieren",
@@ -308,10 +301,7 @@
       "insufficientPrivilege": "The management key lacks permission: {{error}}",
       "invalidCredential": "The management key was rejected: {{error}}",
       "missingFields": "Enter the gateway address and management key first",
-      "success": "Connection verified",
-      "title": "Check connection",
-      "validate": "Check connection",
-      "validating": "Checking…"
+      "title": "Check connection"
     }
   },
   "logging": {
@@ -374,10 +364,7 @@
       "failed": "Keine Verbindung zu Magpie. Prüfen Sie die Web-Adresse und ob der Server läuft.",
       "invalidCredential": "Der Web-Schlüssel wurde abgelehnt. Prüfen Sie MAGPIE_WEB_KEY oder den aktuellen Startschlüssel.",
       "missingFields": "Geben Sie zuerst die Gateway-Adresse und den Verwaltungsschlüssel ein",
-      "success": "Verbindung bestätigt",
-      "title": "Verbindung prüfen",
-      "validate": "Verbindung prüfen",
-      "validating": "Wird geprüft…"
+      "title": "Verbindung prüfen"
     }
   },
   "managedSite": {
@@ -414,6 +401,20 @@
     "sub2api": "Sub2API",
     "title": "Selbstgehostete KI-Gateway-Konfiguration",
     "veloera": "Veloera"
+  },
+  "managedSiteConnection": {
+    "check": "Verbindung prüfen",
+    "checkError": "Konfiguration gespeichert, aber Verbindungsprüfung fehlgeschlagen. Bitte erneut versuchen.",
+    "checking": "Prüfen…",
+    "conflict": "Die Konfiguration wurde auf einer anderen Seite geändert. Ihre Eingabe wurde beibehalten. Prüfen Sie die aktuellen Einstellungen oder laden Sie die gespeicherte Konfiguration, um Ihre Eingabe zu ersetzen.",
+    "failed": "Konfiguration gespeichert, aber Verbindungsprüfung fehlgeschlagen: {{reason}}",
+    "invalidField": "Prüfen Sie {{field}} vor dem Speichern",
+    "reload": "Gespeicherte Konfiguration neu laden",
+    "saveError": "Konfiguration konnte nicht gespeichert werden. Ihre Eingabe wurde beibehalten. Bitte erneut versuchen.",
+    "saveFailed": "Konfiguration konnte nicht gespeichert werden: {{reason}}. Ihre Eingabe wurde beibehalten. Bitte erneut versuchen.",
+    "saving": "Speichern…",
+    "success": "Konfiguration gespeichert. Verbindung bestätigt.",
+    "unreachable": "Die Website konnte nicht erreicht werden"
   },
   "messages": {
     "alreadyDefault": "Bereits auf Standardwerten",
@@ -460,7 +461,6 @@
       "usernamePlaceholder": "admin"
     },
     "sessionTest": {
-      "action": "Testkonfiguration",
       "description": "Testen Sie, ob der eingegebene Login-Benutzername, das Passwort und das TOTP-Geheimnis korrekt und verwendbar sind. Nach erfolgreicher Prüfung können Sie mit Aktionen fortfahren, die eine Anmeldung und 2FA erfordern.",
       "testing": "Konfiguration testen...",
       "title": "Login und 2FA-Konfiguration testen"
@@ -491,10 +491,7 @@
       "error": "Bei der Validierung ist ein Fehler aufgetreten",
       "failed": "Konfigurationsvalidierung fehlgeschlagen, bitte überprüfen Sie Benutzernamen und Passwort",
       "missingFields": "Bitte füllen Sie alle erforderlichen Felder aus",
-      "success": "Verbindung erfolgreich",
-      "title": "Verbindung prüfen",
-      "validate": "Verbindung prüfen",
-      "validating": "Wird geprüft…"
+      "title": "Verbindung prüfen"
     }
   },
   "omniroute": {
@@ -522,11 +519,8 @@
       "insufficientScope": "Der Scope des Tokens reicht nicht: vorhanden ist {{have}}, benötigt wird {{need}}. Lege unter Settings → Access Tokens des Gateways ein neues Token mit dem Scope admin an.",
       "invalidCredential": "Das Zugriffstoken ist ungültig oder abgelaufen: {{error}}",
       "missingFields": "Geben Sie die Bereitstellungs-URL und das Zugriffstoken ein",
-      "success": "Verbindung erfolgreich",
       "title": "Verbindung prüfen",
-      "unknownScope": "unbekannt",
-      "validate": "Verbindung prüfen",
-      "validating": "Wird geprüft…"
+      "unknownScope": "unbekannt"
     }
   },
   "permissions": {
@@ -799,10 +793,7 @@
       "description": "Prüfen, ob die aktuelle Konfiguration die Verbindung und Verwaltung der Website ermöglicht.",
       "failed": "Sub2API-Verbindungsprüfung fehlgeschlagen: {{error}}",
       "missingFields": "Gib zuerst die Website-URL und den Admin API Key ein",
-      "success": "Verbindung erfolgreich",
-      "title": "Verbindung prüfen",
-      "validate": "Verbindung prüfen",
-      "validating": "Wird geprüft…"
+      "title": "Verbindung prüfen"
     }
   },
   "tabs": {

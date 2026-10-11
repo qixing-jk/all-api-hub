@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -48,6 +48,9 @@ export default function Sub2ApiSettings() {
     setDraft: setLocalConfig,
     commitField,
     resetProps,
+    checkConnection,
+    isValidating,
+    connectionCheckLabel,
   } = useManagedSiteConfigDraft({
     savedConfig,
     savedVersion: preferences.lastUpdated,
@@ -69,7 +72,6 @@ export default function Sub2ApiSettings() {
       },
     },
   })
-  const [isValidating, setIsValidating] = useState(false)
   const parsedBaseUrl = tryParseHttpUrl(localConfig.baseUrl)
   const adminCredentialsPath = getSiteRouteConfigForKey(
     SITE_TYPES.SUB2API,
@@ -98,21 +100,19 @@ export default function Sub2ApiSettings() {
       toast.error(t("sub2apiManagedSite.validation.missingFields"))
       return
     }
-
-    setLocalConfig({ baseUrl, adminToken })
-    setIsValidating(true)
-    try {
-      await validateSub2ApiManagedSiteConfig({ baseUrl, adminToken })
-      toast.success(t("sub2apiManagedSite.validation.success"))
-    } catch (error) {
-      toast.error(
-        t("sub2apiManagedSite.validation.failed", {
-          error: getErrorMessage(error),
-        }),
-      )
-    } finally {
-      setIsValidating(false)
-    }
+    await checkConnection({ baseUrl, adminToken }, async (config) => {
+      try {
+        await validateSub2ApiManagedSiteConfig(config)
+        return { success: true }
+      } catch (error) {
+        return {
+          success: false,
+          message: t("sub2apiManagedSite.validation.failed", {
+            error: getErrorMessage(error),
+          }),
+        }
+      }
+    })
   }
 
   return (
@@ -133,6 +133,7 @@ export default function Sub2ApiSettings() {
             description={t("sub2apiManagedSite.fields.baseUrlDesc")}
             rightContent={
               <Input
+                disabled={isValidating}
                 type="url"
                 value={localConfig.baseUrl}
                 onChange={(event) =>
@@ -172,6 +173,7 @@ export default function Sub2ApiSettings() {
             description={t("sub2apiManagedSite.fields.adminApiKeyDesc")}
             rightContent={
               <Input
+                disabled={isValidating}
                 type="password"
                 revealable
                 revealLabels={{
@@ -206,9 +208,7 @@ export default function Sub2ApiSettings() {
                 onClick={handleValidateConfig}
                 loading={isValidating}
               >
-                {isValidating
-                  ? t("sub2apiManagedSite.validation.validating")
-                  : t("sub2apiManagedSite.validation.validate")}
+                {connectionCheckLabel}
               </Button>
             }
           />

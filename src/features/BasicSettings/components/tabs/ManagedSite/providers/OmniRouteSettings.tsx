@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -19,7 +19,10 @@ import { ManagedSiteDeploymentLink } from "~/features/ManagedSiteWidgets/Managed
 import { blurInputOnEnter } from "~/hooks/preferences/useDeferredPreferenceField"
 import toast from "~/lib/notify"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
-import { validateOmniRouteCredential } from "~/services/managedSites/providers/omniroute"
+import {
+  OMNIROUTE_CREDENTIAL_VALIDATION_STATUSES,
+  validateOmniRouteCredential,
+} from "~/services/managedSites/providers/omniroute"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { createTab } from "~/utils/browser/tabs"
 import { joinUrl } from "~/utils/core/url"
@@ -50,6 +53,9 @@ export default function OmniRouteSettings() {
     setDraft: setLocalConfig,
     commitField,
     resetProps,
+    checkConnection,
+    isValidating,
+    connectionCheckLabel,
   } = useManagedSiteConfigDraft({
     savedConfig,
     savedVersion: preferences.lastUpdated,
@@ -70,7 +76,6 @@ export default function OmniRouteSettings() {
       },
     },
   })
-  const [isValidating, setIsValidating] = useState(false)
 
   const parsedBaseUrl = tryParseHttpUrl(localConfig.baseUrl)
   const tokensPath =
@@ -92,45 +97,43 @@ export default function OmniRouteSettings() {
 
   const handleValidateConfig = async () => {
     const baseUrl = localConfig.baseUrl.trim()
-    const credential = localConfig.token.trim()
-    if (!baseUrl || !credential) {
+    const token = localConfig.token.trim()
+    if (!baseUrl || !token) {
       toast.error(t("omniroute.validation.missingFields"))
       return
     }
-
-    setLocalConfig({ baseUrl, token: credential })
-    setIsValidating(true)
-    try {
-      const result = await validateOmniRouteCredential({ baseUrl, credential })
+    await checkConnection({ baseUrl, token }, async (config) => {
+      const result = await validateOmniRouteCredential({
+        baseUrl: config.baseUrl,
+        credential: config.token,
+      })
       switch (result.status) {
-        case "valid": {
-          toast.success(t("omniroute.validation.success"))
-          return
-        }
-        case "insufficient-scope":
-          toast.error(
-            t("omniroute.validation.insufficientScope", {
+        case OMNIROUTE_CREDENTIAL_VALIDATION_STATUSES.Valid:
+          return { success: true }
+        case OMNIROUTE_CREDENTIAL_VALIDATION_STATUSES.InsufficientScope:
+          return {
+            success: false,
+            message: t("omniroute.validation.insufficientScope", {
               have: result.have || t("omniroute.validation.unknownScope"),
               need: result.need,
             }),
-          )
-          return
-        case "invalid-credential":
-          toast.error(
-            t("omniroute.validation.invalidCredential", {
+          }
+        case OMNIROUTE_CREDENTIAL_VALIDATION_STATUSES.InvalidCredential:
+          return {
+            success: false,
+            message: t("omniroute.validation.invalidCredential", {
               error: result.message,
             }),
-          )
-          return
-        case "unreachable":
+          }
         default:
-          toast.error(
-            t("omniroute.validation.failed", { error: result.message }),
-          )
+          return {
+            success: false,
+            message: t("omniroute.validation.failed", {
+              error: result.message,
+            }),
+          }
       }
-    } finally {
-      setIsValidating(false)
-    }
+    })
   }
 
   return (
@@ -153,6 +156,7 @@ export default function OmniRouteSettings() {
             description={t("omniroute.fields.baseUrlDesc")}
             rightContent={
               <Input
+                disabled={isValidating}
                 type="url"
                 value={localConfig.baseUrl}
                 onChange={(event) =>
@@ -174,6 +178,7 @@ export default function OmniRouteSettings() {
             description={t("omniroute.fields.credentialDesc")}
             rightContent={
               <Input
+                disabled={isValidating}
                 type="password"
                 revealable
                 revealLabels={{
@@ -225,9 +230,7 @@ export default function OmniRouteSettings() {
                 onClick={handleValidateConfig}
                 loading={isValidating}
               >
-                {isValidating
-                  ? t("omniroute.validation.validating")
-                  : t("omniroute.validation.validate")}
+                {connectionCheckLabel}
               </Button>
             }
           />

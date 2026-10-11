@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
@@ -44,6 +44,9 @@ export default function OctopusSettings() {
     setDraft: setLocalConfig,
     commitField,
     resetProps,
+    checkConnection,
+    isValidating,
+    connectionCheckLabel,
   } = useManagedSiteConfigDraft({
     savedConfig,
     savedVersion: preferences.lastUpdated,
@@ -68,49 +71,32 @@ export default function OctopusSettings() {
       },
     },
   })
-  const [isValidating, setIsValidating] = useState(false)
   const localBaseUrl = localConfig.baseUrl
   const localUsername = localConfig.username
   const localPassword = localConfig.password
 
   const handleValidateConfig = async () => {
-    const trimmedUrl = localBaseUrl.trim()
-    const trimmedUsername = localUsername.trim()
-    const trimmedPassword = localPassword.trim()
-
-    if (!trimmedUrl || !trimmedUsername || !trimmedPassword) {
+    const baseUrl = localBaseUrl.trim()
+    const username = localUsername.trim()
+    const password = localPassword.trim()
+    if (!baseUrl || !username || !password) {
       toast.error(t("octopus.validation.missingFields"))
       return
     }
-
-    setLocalConfig((prev) => ({
-      ...prev,
-      baseUrl: trimmedUrl,
-      username: trimmedUsername,
-      password: trimmedPassword,
-    }))
-
-    setIsValidating(true)
-    try {
-      const result = await validateOctopusConfig(
-        {
-          baseUrl: trimmedUrl,
-          username: trimmedUsername,
-          password: trimmedPassword,
-        },
-        PROTECTION_BYPASS_SURFACES.Options,
-      )
-
-      if (result.success) {
-        toast.success(t("octopus.validation.success"))
-      } else {
-        toast.error(result.error || t("octopus.validation.failed"))
+    await checkConnection({ baseUrl, username, password }, async (config) => {
+      try {
+        const result = await validateOctopusConfig(
+          config,
+          PROTECTION_BYPASS_SURFACES.Options,
+        )
+        return {
+          success: result.success,
+          message: result.error || t("octopus.validation.failed"),
+        }
+      } catch {
+        return { success: false, message: t("octopus.validation.error") }
       }
-    } catch {
-      toast.error(t("octopus.validation.error"))
-    } finally {
-      setIsValidating(false)
-    }
+    })
   }
 
   return (
@@ -131,6 +117,7 @@ export default function OctopusSettings() {
             description={t("octopus.fields.baseUrlDesc")}
             rightContent={
               <Input
+                disabled={isValidating}
                 type="text"
                 value={localBaseUrl}
                 onChange={(e) =>
@@ -152,6 +139,7 @@ export default function OctopusSettings() {
             description={t("octopus.fields.usernameDesc")}
             rightContent={
               <Input
+                disabled={isValidating}
                 type="text"
                 value={localUsername}
                 onChange={(e) =>
@@ -174,6 +162,7 @@ export default function OctopusSettings() {
             rightContent={
               <div className="relative">
                 <Input
+                  disabled={isValidating}
                   type="password"
                   revealable
                   revealLabels={{
@@ -206,9 +195,7 @@ export default function OctopusSettings() {
                 onClick={handleValidateConfig}
                 loading={isValidating}
               >
-                {isValidating
-                  ? t("octopus.validation.validating")
-                  : t("octopus.validation.validate")}
+                {connectionCheckLabel}
               </Button>
             }
           />

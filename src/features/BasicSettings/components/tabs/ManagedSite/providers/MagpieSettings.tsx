@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
@@ -15,6 +15,8 @@ import { listMagpieProviders } from "~/services/apiService/magpie/providers"
 import { MagpieApiError } from "~/services/apiService/magpie/request"
 import { DEFAULT_MAGPIE_CONFIG } from "~/types/magpieConfig"
 
+const MAGPIE_CONNECTION_HTTP_STATUS = { Unauthorized: 401 } as const
+
 /** Configure a Magpie Web deployment independently of its inference gateway. */
 export default function MagpieSettings() {
   const { t } = useTranslation("settings")
@@ -29,6 +31,9 @@ export default function MagpieSettings() {
     setDraft: setLocalConfig,
     commitField,
     resetProps,
+    checkConnection,
+    isValidating,
+    connectionCheckLabel,
   } = useManagedSiteConfigDraft({
     savedConfig,
     savedVersion: preferences.lastUpdated,
@@ -50,7 +55,6 @@ export default function MagpieSettings() {
       },
     },
   })
-  const [isValidating, setIsValidating] = useState(false)
 
   const handleValidateConfig = async () => {
     const baseUrl = localConfig.baseUrl.trim()
@@ -59,21 +63,21 @@ export default function MagpieSettings() {
       toast.error(t("magpie.validation.missingFields"))
       return
     }
-
-    setLocalConfig({ baseUrl, webKey })
-    setIsValidating(true)
-    try {
-      await listMagpieProviders({ baseUrl, webKey })
-      toast.success(t("magpie.validation.success"))
-    } catch (error) {
-      toast.error(
-        error instanceof MagpieApiError && error.status === 401
-          ? t("magpie.validation.invalidCredential")
-          : t("magpie.validation.failed"),
-      )
-    } finally {
-      setIsValidating(false)
-    }
+    await checkConnection({ baseUrl, webKey }, async (config) => {
+      try {
+        await listMagpieProviders(config)
+        return { success: true }
+      } catch (error) {
+        return {
+          success: false,
+          message:
+            error instanceof MagpieApiError &&
+            error.status === MAGPIE_CONNECTION_HTTP_STATUS.Unauthorized
+              ? t("magpie.validation.invalidCredential")
+              : t("magpie.validation.failed"),
+        }
+      }
+    })
   }
 
   return (
@@ -94,6 +98,7 @@ export default function MagpieSettings() {
             description={t("magpie.fields.baseUrlDesc")}
             rightContent={
               <Input
+                disabled={isValidating}
                 type="url"
                 value={localConfig.baseUrl}
                 onChange={(event) =>
@@ -115,6 +120,7 @@ export default function MagpieSettings() {
             description={t("magpie.fields.webKeyDesc")}
             rightContent={
               <Input
+                disabled={isValidating}
                 type="password"
                 revealable
                 revealLabels={{
@@ -146,9 +152,7 @@ export default function MagpieSettings() {
                 onClick={handleValidateConfig}
                 loading={isValidating}
               >
-                {isValidating
-                  ? t("magpie.validation.validating")
-                  : t("magpie.validation.validate")}
+                {connectionCheckLabel}
               </Button>
             }
           />

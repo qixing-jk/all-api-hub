@@ -170,10 +170,7 @@
       "description": "检查当前配置能否正常连接并管理站点。",
       "failed": "AxonHub 配置验证失败：{{error}}",
       "missingFields": "请填写所有必填字段",
-      "success": "连接成功",
-      "title": "验证连接",
-      "validate": "验证连接",
-      "validating": "正在验证…"
+      "title": "验证连接"
     }
   },
   "changelogOnUpdate": {
@@ -203,10 +200,7 @@
       "description": "检查当前配置能否正常连接并管理站点。",
       "failed": "Claude Code Hub 配置验证失败：{{error}}",
       "missingFields": "请填写所有必填字段",
-      "success": "连接成功",
-      "title": "验证连接",
-      "validate": "验证连接",
-      "validating": "正在验证…"
+      "title": "验证连接"
     }
   },
   "claudeCodeRouter": {
@@ -221,7 +215,6 @@
   },
   "cliProxyApi": {
     "baseUrlLabel": "管理接口基础 URL",
-    "checkConnectionAction": "验证连接",
     "checkConnectionDesc": "检查当前配置能否正常连接并管理站点。",
     "checkConnectionLabel": "验证连接",
     "description": "配置到 CLIProxyAPI 管理接口的连接信息。",
@@ -308,10 +301,7 @@
       "insufficientPrivilege": "管理密钥权限不足：{{error}}",
       "invalidCredential": "管理密钥被拒绝：{{error}}",
       "missingFields": "请先填写网关地址与管理密钥",
-      "success": "连接验证成功",
-      "title": "测试连接",
-      "validate": "测试连接",
-      "validating": "检测中…"
+      "title": "测试连接"
     }
   },
   "logging": {
@@ -374,10 +364,7 @@
       "failed": "无法连接 Magpie，请检查 Web 地址及服务是否已启动。",
       "invalidCredential": "Web 管理密钥被拒绝，请检查 MAGPIE_WEB_KEY 或使用最新启动链接中的密钥。",
       "missingFields": "请先填写网关地址与管理密钥",
-      "success": "连接验证成功",
-      "title": "测试连接",
-      "validate": "测试连接",
-      "validating": "检测中…"
+      "title": "测试连接"
     }
   },
   "managedSite": {
@@ -414,6 +401,20 @@
     "sub2api": "Sub2API",
     "title": "自建 AI 网关配置",
     "veloera": "Veloera"
+  },
+  "managedSiteConnection": {
+    "check": "检查连接",
+    "checkError": "配置已保存，但连接检查失败，请重试。",
+    "checking": "检查中…",
+    "conflict": "配置已在另一页面更新，当前输入已保留。请核对最新配置后重试，或重新加载已保存配置以替换当前输入。",
+    "failed": "配置已保存，但连接检查失败：{{reason}}",
+    "invalidField": "请检查{{field}}后再保存",
+    "reload": "重新加载已保存配置",
+    "saveError": "配置保存失败。当前输入已保留，请重试。",
+    "saveFailed": "配置保存失败：{{reason}}。当前输入已保留，请重试。",
+    "saving": "保存中…",
+    "success": "配置已保存，连接正常",
+    "unreachable": "无法连接到站点"
   },
   "messages": {
     "alreadyDefault": "已是默认值",
@@ -460,7 +461,6 @@
       "usernamePlaceholder": "admin"
     },
     "sessionTest": {
-      "action": "测试配置",
       "description": "测试已填写的登录用户名、密码和 TOTP 密钥是否正确可用。验证成功后，即可继续执行需要登录和两步验证的相关操作。",
       "testing": "正在测试配置...",
       "title": "测试登录与两步验证配置"
@@ -491,10 +491,7 @@
       "error": "验证过程中发生错误",
       "failed": "配置验证失败，请检查用户名和密码",
       "missingFields": "请填写所有必填字段",
-      "success": "连接成功",
-      "title": "验证连接",
-      "validate": "验证连接",
-      "validating": "正在验证…"
+      "title": "验证连接"
     }
   },
   "omniroute": {
@@ -522,11 +519,8 @@
       "insufficientScope": "令牌作用域不足：当前为 {{have}}，需要 {{need}}。请在网关 Settings → Access Tokens 重新生成一条 admin 作用域的令牌。",
       "invalidCredential": "访问令牌不正确或已失效：{{error}}",
       "missingFields": "请填写部署地址和访问令牌",
-      "success": "连接成功",
       "title": "验证连接",
-      "unknownScope": "未知",
-      "validate": "验证连接",
-      "validating": "正在验证…"
+      "unknownScope": "未知"
     }
   },
   "permissions": {
@@ -798,10 +792,7 @@
       "description": "检查当前配置能否正常连接并管理站点。",
       "failed": "Sub2API 连接验证失败：{{error}}",
       "missingFields": "请先填写站点地址和管理员 API Key",
-      "success": "连接成功",
-      "title": "验证连接",
-      "validate": "验证连接",
-      "validating": "正在验证…"
+      "title": "验证连接"
     }
   },
   "tabs": {

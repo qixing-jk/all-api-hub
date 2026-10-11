@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto"
 import { expect } from "@playwright/test"
 
 import { runScenarioWithCleanup } from "../../../e2e/utils/scenarioErrors.ts"
+import { validateMagpieWebKey } from "./connection.mjs"
 import { runMagpieKeyPoolScenario } from "./keyPool.mjs"
 import { createMagpieRunResources } from "./native.mjs"
 import { patchMagpieBrowserState, restoreMagpieBrowserState } from "./state.mjs"
@@ -114,29 +115,23 @@ export async function runMagpieUiScenario({
         config.baseUrl,
         wait,
       )
-      await page.locator("#magpie-web-key input").fill(config.webKey)
-      await page
-        .getByRole("button", { name: "Check connection", exact: true })
-        .click()
-      await expect(
-        page.getByText("Connection verified", { exact: true }),
-      ).toBeVisible(wait)
+      await validateMagpieWebKey(
+        page,
+        config.webKey,
+        "Configuration saved. Connection verified.",
+      )
       authenticatedCookies = await context.cookies(config.baseUrl)
       if (scenario === "management") {
-        await page.locator("#magpie-web-key input").fill(invalidKey)
-        await page
-          .getByRole("button", { name: "Check connection", exact: true })
-          .click()
-        await expect(page.getByText(/The Web key was rejected/)).toBeVisible(
-          wait,
+        await validateMagpieWebKey(
+          page,
+          invalidKey,
+          "Configuration saved, but connection check failed: The Web key was rejected. Check MAGPIE_WEB_KEY or copy the current startup key.",
         )
-        await page.locator("#magpie-web-key input").fill(config.webKey)
-        await page
-          .getByRole("button", { name: "Check connection", exact: true })
-          .click()
-        await expect(
-          page.getByText("Connection verified", { exact: true }),
-        ).toBeVisible(wait)
+        await validateMagpieWebKey(
+          page,
+          config.webKey,
+          "Configuration saved. Connection verified.",
+        )
         authenticatedCookies = await context.cookies(config.baseUrl)
         checked(
           "Web key authentication, rejection with existing Cookie, recovery",

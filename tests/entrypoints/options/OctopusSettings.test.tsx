@@ -3,10 +3,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import OctopusSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/OctopusSettings"
 import toast from "~/lib/notify"
+import settings from "~/locales/en/settings.json"
 import { validateOctopusConfig } from "~/services/apiService/octopus/channels"
 import type { PreferenceWriteResult } from "~/services/preferences/preferencesStore"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
+import { testI18n } from "~~/tests/test-utils/i18n"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+
+testI18n.addResourceBundle(
+  "en",
+  "settings",
+  {
+    managedSiteConnection: {
+      failed: settings.managedSiteConnection.failed,
+    },
+  },
+  true,
+  true,
+)
 
 const {
   mockedUseUserPreferencesContext,
@@ -71,6 +85,9 @@ vi.mock("~/utils/feedback/preferenceFeedback", () => ({
 
 vi.mock("~/lib/notify", () => ({
   default: {
+    loading: vi.fn(),
+    warning: vi.fn(),
+    dismiss: vi.fn(),
     error: vi.fn(),
     success: vi.fn(),
   },
@@ -387,7 +404,7 @@ describe("OctopusSettings", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "settings:octopus.validation.validate",
+        name: "settings:managedSiteConnection.check",
       }),
     )
 
@@ -426,7 +443,7 @@ describe("OctopusSettings", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "settings:octopus.validation.validate",
+        name: "settings:managedSiteConnection.check",
       }),
     )
 
@@ -442,7 +459,7 @@ describe("OctopusSettings", () => {
     })
 
     const validatingButton = screen.getByRole("button", {
-      name: "settings:octopus.validation.validating",
+      name: "settings:managedSiteConnection.checking",
     })
     expect(validatingButton).toBeDisabled()
     expect(validatingButton).toHaveAttribute("aria-busy", "true")
@@ -467,13 +484,14 @@ describe("OctopusSettings", () => {
     await waitFor(() => {
       expect(mockUpdateOctopusConfig).not.toHaveBeenCalled()
       expect(toast.success).toHaveBeenCalledWith(
-        "settings:octopus.validation.success",
+        "settings:managedSiteConnection.success",
+        expect.objectContaining({ id: expect.any(String) }),
       )
     })
 
     await waitFor(() => {
       const restoredButton = screen.getByRole("button", {
-        name: "settings:octopus.validation.validate",
+        name: "settings:managedSiteConnection.check",
       })
       expect(restoredButton).toBeEnabled()
       expect(restoredButton).not.toHaveAttribute("aria-busy")
@@ -490,13 +508,14 @@ describe("OctopusSettings", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "settings:octopus.validation.validate",
+        name: "settings:managedSiteConnection.check",
       }),
     )
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "Octopus auth rejected the credentials",
+        expect.stringContaining("Octopus auth rejected the credentials"),
+        expect.objectContaining({ id: expect.any(String) }),
       )
     })
 
@@ -514,13 +533,14 @@ describe("OctopusSettings", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "settings:octopus.validation.validate",
+        name: "settings:managedSiteConnection.check",
       }),
     )
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "settings:octopus.validation.failed",
+        expect.stringContaining("settings:octopus.validation.failed"),
+        expect.objectContaining({ id: expect.any(String) }),
       )
     })
 
@@ -528,13 +548,14 @@ describe("OctopusSettings", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "settings:octopus.validation.validate",
+        name: "settings:managedSiteConnection.check",
       }),
     )
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        "settings:octopus.validation.error",
+        expect.stringContaining("settings:octopus.validation.error"),
+        expect.objectContaining({ id: expect.any(String) }),
       )
     })
   })

@@ -8,13 +8,29 @@ import { SITE_TYPES } from "~/constants/siteType"
 import GptLoadSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/GptLoadSettings"
 import { gptLoadSettingsSearch } from "~/features/BasicSettings/components/tabs/ManagedSite/search/ManagedSiteGptLoad.search"
 import toast from "~/lib/notify"
+import settings from "~/locales/en/settings.json"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { server } from "~~/tests/msw/server"
+import { testI18n } from "~~/tests/test-utils/i18n"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
+testI18n.addResourceBundle(
+  "en",
+  "settings",
+  {
+    managedSiteConnection: {
+      failed: settings.managedSiteConnection.failed,
+    },
+  },
+  true,
+  true,
+)
+
 vi.mock("~/lib/notify", () => ({
   default: {
+    loading: vi.fn(),
+    dismiss: vi.fn(),
     success: vi.fn(),
     error: vi.fn(),
     info: vi.fn(),
@@ -41,7 +57,7 @@ describe("gpt-load managed-site settings", () => {
     render(<GptLoadSettings />)
     await userEvent.click(
       await screen.findByRole("button", {
-        name: "settings:gptLoad.validation.validate",
+        name: "settings:managedSiteConnection.check",
       }),
     )
     expect(toast.error).toHaveBeenCalledWith(
@@ -84,14 +100,19 @@ describe("gpt-load managed-site settings", () => {
       )
       await user.click(
         await screen.findByRole("button", {
-          name: "settings:gptLoad.validation.validate",
+          name: "settings:managedSiteConnection.check",
         }),
       )
       await waitFor(() =>
         expect(
           expected === "success" ? toast.success : toast.error,
         ).toHaveBeenCalledWith(
-          expect.stringContaining(`settings:gptLoad.validation.${expected}`),
+          expected === "success"
+            ? "settings:managedSiteConnection.success"
+            : expect.stringContaining(
+                `settings:gptLoad.validation.${expected}`,
+              ),
+          expect.objectContaining({ id: expect.any(String) }),
         ),
       )
       expect(await userPreferences.getPreferences()).toMatchObject({
@@ -101,14 +122,19 @@ describe("gpt-load managed-site settings", () => {
       vi.mocked(toast.error).mockClear()
       await user.click(
         await screen.findByRole("button", {
-          name: "settings:gptLoad.validation.validate",
+          name: "settings:managedSiteConnection.check",
         }),
       )
       await waitFor(() =>
         expect(
           expected === "success" ? toast.success : toast.error,
         ).toHaveBeenCalledWith(
-          expect.stringContaining(`settings:gptLoad.validation.${expected}`),
+          expected === "success"
+            ? "settings:managedSiteConnection.success"
+            : expect.stringContaining(
+                `settings:gptLoad.validation.${expected}`,
+              ),
+          expect.objectContaining({ id: expect.any(String) }),
         ),
       )
     },

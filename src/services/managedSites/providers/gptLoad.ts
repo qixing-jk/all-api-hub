@@ -28,11 +28,30 @@ import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("GptLoadProvider")
 
+export const GPT_LOAD_CREDENTIAL_VALIDATION_STATUSES = {
+  Valid: "valid",
+  InvalidCredential: "invalid-credential",
+  InsufficientPrivilege: "insufficient-privilege",
+  Unreachable: "unreachable",
+} as const
+
 export type GptLoadCredentialValidation =
-  | { status: "valid"; principalType: string }
-  | { status: "invalid-credential"; message: string }
-  | { status: "insufficient-privilege"; message: string }
-  | { status: "unreachable"; message: string }
+  | {
+      status: typeof GPT_LOAD_CREDENTIAL_VALIDATION_STATUSES.Valid
+      principalType: string
+    }
+  | {
+      status: typeof GPT_LOAD_CREDENTIAL_VALIDATION_STATUSES.InvalidCredential
+      message: string
+    }
+  | {
+      status: typeof GPT_LOAD_CREDENTIAL_VALIDATION_STATUSES.InsufficientPrivilege
+      message: string
+    }
+  | {
+      status: typeof GPT_LOAD_CREDENTIAL_VALIDATION_STATUSES.Unreachable
+      message: string
+    }
 
 export interface GptLoadCredentialInput {
   baseUrl: string
@@ -57,7 +76,7 @@ const toUnreachable = (
   error: unknown,
   input: GptLoadCredentialInput,
 ): GptLoadCredentialValidation => ({
-  status: "unreachable",
+  status: GPT_LOAD_CREDENTIAL_VALIDATION_STATUSES.Unreachable,
   message: toGptLoadDisclosureError(error, {
     managementKey: input.credential,
   }).message,
@@ -80,7 +99,7 @@ export async function validateGptLoadCredential(
   const credential = input.credential.trim()
   if (!baseUrl || !credential) {
     return {
-      status: "invalid-credential",
+      status: GPT_LOAD_CREDENTIAL_VALIDATION_STATUSES.InvalidCredential,
       message: "gpt-load deployment URL and management key are required",
     }
   }
@@ -91,7 +110,7 @@ export async function validateGptLoadCredential(
     const session = await fetchGptLoadSession(config, options)
     if (!hasGptLoadAdminPrincipal(session)) {
       return {
-        status: "insufficient-privilege",
+        status: GPT_LOAD_CREDENTIAL_VALIDATION_STATUSES.InsufficientPrivilege,
         message:
           "This key authenticates but is not the gateway's admin key; use the AUTH_KEY.",
       }
@@ -100,7 +119,7 @@ export async function validateGptLoadCredential(
     // confirms the control plane answers and the key can list channels.
     await listGptLoadGroups(config, { page: 1, pageSize: 1 }, options)
     return {
-      status: "valid",
+      status: GPT_LOAD_CREDENTIAL_VALIDATION_STATUSES.Valid,
       principalType: session?.principalType ?? "admin",
     }
   } catch (error) {
@@ -112,8 +131,8 @@ export async function validateGptLoadCredential(
       return {
         status:
           reason === GPT_LOAD_AUTH_FAILURE_REASONS.InsufficientPrivilege
-            ? "insufficient-privilege"
-            : "invalid-credential",
+            ? GPT_LOAD_CREDENTIAL_VALIDATION_STATUSES.InsufficientPrivilege
+            : GPT_LOAD_CREDENTIAL_VALIDATION_STATUSES.InvalidCredential,
         message:
           toGptLoadDisclosureError(error, { managementKey: credential })
             .message || readGptLoadFailureMessage(error),
@@ -141,7 +160,7 @@ export async function checkValidGptLoadConfig(): Promise<boolean> {
       baseUrl: config.baseUrl,
       credential: config.managementKey,
     })
-    return result.status === "valid"
+    return result.status === GPT_LOAD_CREDENTIAL_VALIDATION_STATUSES.Valid
   } catch (error) {
     logger.warn(
       "gpt-load config validation failed",

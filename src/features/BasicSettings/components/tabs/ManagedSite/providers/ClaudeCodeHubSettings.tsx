@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
@@ -40,6 +40,9 @@ export default function ClaudeCodeHubSettings() {
     setDraft: setLocalConfig,
     commitField,
     resetProps,
+    checkConnection,
+    isValidating,
+    connectionCheckLabel,
   } = useManagedSiteConfigDraft({
     savedConfig,
     savedVersion: preferences.lastUpdated,
@@ -60,43 +63,28 @@ export default function ClaudeCodeHubSettings() {
       },
     },
   })
-  const [isValidating, setIsValidating] = useState(false)
 
   const handleValidateConfig = async () => {
-    const trimmedUrl = localConfig.baseUrl.trim()
+    const baseUrl = localConfig.baseUrl.trim()
     const adminToken = localConfig.adminToken.trim()
-
-    if (!trimmedUrl || !adminToken) {
+    if (!baseUrl || !adminToken) {
       toast.error(t("claudeCodeHub.validation.missingFields"))
       return
     }
-
-    setLocalConfig((prev) => ({
-      ...prev,
-      baseUrl: trimmedUrl,
-      adminToken,
-    }))
-
-    setIsValidating(true)
-    try {
-      await validateClaudeCodeHubConfig({
-        baseUrl: trimmedUrl,
-        adminToken,
-      })
-
-      toast.success(t("claudeCodeHub.validation.success"))
-    } catch (error) {
-      const safeError =
-        toSanitizedErrorSummary(error, [adminToken]) ||
-        "Claude Code Hub request failed"
-      toast.error(
-        t("claudeCodeHub.validation.failed", {
-          error: safeError,
-        }),
-      )
-    } finally {
-      setIsValidating(false)
-    }
+    await checkConnection({ baseUrl, adminToken }, async (config) => {
+      try {
+        await validateClaudeCodeHubConfig(config)
+        return { success: true }
+      } catch (error) {
+        const safeError =
+          toSanitizedErrorSummary(error, [adminToken]) ||
+          "Claude Code Hub request failed"
+        return {
+          success: false,
+          message: t("claudeCodeHub.validation.failed", { error: safeError }),
+        }
+      }
+    })
   }
 
   return (
@@ -119,6 +107,7 @@ export default function ClaudeCodeHubSettings() {
             description={t("claudeCodeHub.fields.baseUrlDesc")}
             rightContent={
               <Input
+                disabled={isValidating}
                 type="text"
                 value={localConfig.baseUrl}
                 onChange={(event) =>
@@ -140,6 +129,7 @@ export default function ClaudeCodeHubSettings() {
             description={t("claudeCodeHub.fields.adminTokenDesc")}
             rightContent={
               <Input
+                disabled={isValidating}
                 type="password"
                 revealable
                 revealLabels={{
@@ -173,9 +163,7 @@ export default function ClaudeCodeHubSettings() {
                 onClick={handleValidateConfig}
                 loading={isValidating}
               >
-                {isValidating
-                  ? t("claudeCodeHub.validation.validating")
-                  : t("claudeCodeHub.validation.validate")}
+                {connectionCheckLabel}
               </Button>
             }
           />

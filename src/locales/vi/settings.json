@@ -170,10 +170,7 @@
       "description": "Kiểm tra xem cấu hình hiện tại có thể kết nối và quản lý trang web hay không.",
       "failed": "Xác minh cấu hình AxonHub thất bại: {{error}}",
       "missingFields": "Vui lòng điền tất cả trường bắt buộc",
-      "success": "Kết nối thành công",
-      "title": "Xác minh kết nối",
-      "validate": "Xác minh kết nối",
-      "validating": "Đang xác minh…"
+      "title": "Xác minh kết nối"
     }
   },
   "changelogOnUpdate": {
@@ -203,10 +200,7 @@
       "description": "Kiểm tra xem cấu hình hiện tại có thể kết nối và quản lý trang web hay không.",
       "failed": "Xác minh cấu hình Claude Code Hub thất bại: {{error}}",
       "missingFields": "Vui lòng điền tất cả trường bắt buộc",
-      "success": "Kết nối thành công",
-      "title": "Xác minh kết nối",
-      "validate": "Xác minh kết nối",
-      "validating": "Đang xác minh…"
+      "title": "Xác minh kết nối"
     }
   },
   "claudeCodeRouter": {
@@ -221,7 +215,6 @@
   },
   "cliProxyApi": {
     "baseUrlLabel": "URL cơ sở API quản trị",
-    "checkConnectionAction": "Xác minh kết nối",
     "checkConnectionDesc": "Kiểm tra xem cấu hình hiện tại có thể kết nối và quản lý trang web hay không.",
     "checkConnectionLabel": "Xác minh kết nối",
     "description": "Cấu hình thông tin kết nối tới API quản trị CLIProxyAPI.",
@@ -308,10 +301,7 @@
       "insufficientPrivilege": "The management key lacks permission: {{error}}",
       "invalidCredential": "The management key was rejected: {{error}}",
       "missingFields": "Enter the gateway address and management key first",
-      "success": "Connection verified",
-      "title": "Check connection",
-      "validate": "Check connection",
-      "validating": "Checking…"
+      "title": "Check connection"
     }
   },
   "logging": {
@@ -374,10 +364,7 @@
       "failed": "Không thể kết nối Magpie. Kiểm tra địa chỉ Web và máy chủ đã chạy chưa.",
       "invalidCredential": "Khóa Web bị từ chối. Kiểm tra MAGPIE_WEB_KEY hoặc dùng khóa khởi động hiện tại.",
       "missingFields": "Trước tiên hãy nhập địa chỉ cổng và khóa quản trị",
-      "success": "Đã xác minh kết nối",
-      "title": "Kiểm tra kết nối",
-      "validate": "Kiểm tra kết nối",
-      "validating": "Đang kiểm tra…"
+      "title": "Kiểm tra kết nối"
     }
   },
   "managedSite": {
@@ -414,6 +401,20 @@
     "sub2api": "Sub2API",
     "title": "Cấu hình AI gateway tự triển khai",
     "veloera": "Veloera"
+  },
+  "managedSiteConnection": {
+    "check": "Kiểm tra kết nối",
+    "checkError": "Đã lưu cấu hình nhưng kiểm tra kết nối thất bại. Vui lòng thử lại.",
+    "checking": "Đang kiểm tra…",
+    "conflict": "Cấu hình đã thay đổi trên trang khác. Nội dung nhập được giữ lại. Hãy xem cấu hình mới nhất hoặc tải lại cấu hình đã lưu để thay thế nội dung nhập.",
+    "failed": "Đã lưu cấu hình nhưng kiểm tra kết nối thất bại: {{reason}}",
+    "invalidField": "Kiểm tra {{field}} trước khi lưu",
+    "reload": "Tải lại cấu hình đã lưu",
+    "saveError": "Không thể lưu cấu hình. Nội dung nhập được giữ lại. Vui lòng thử lại.",
+    "saveFailed": "Không thể lưu cấu hình: {{reason}}. Nội dung nhập được giữ lại. Vui lòng thử lại.",
+    "saving": "Đang lưu…",
+    "success": "Đã lưu cấu hình. Kết nối đã được xác minh.",
+    "unreachable": "Không thể kết nối đến trang"
   },
   "messages": {
     "alreadyDefault": "Đã ở giá trị mặc định",
@@ -460,7 +461,6 @@
       "usernamePlaceholder": "admin"
     },
     "sessionTest": {
-      "action": "Kiểm tra cấu hình",
       "description": "Kiểm tra tên đăng nhập, mật khẩu và TOTP secret đã điền có chính xác và khả dụng hay không. Sau khi xác minh thành công, bạn có thể tiếp tục thực hiện các thao tác cần đăng nhập và xác minh hai bước.",
       "testing": "Đang kiểm tra cấu hình...",
       "title": "Kiểm tra đăng nhập và xác minh hai bước"
@@ -491,10 +491,7 @@
       "error": "Đã xảy ra lỗi trong quá trình xác minh",
       "failed": "Xác minh cấu hình thất bại, vui lòng kiểm tra tên người dùng và mật khẩu",
       "missingFields": "Vui lòng điền tất cả trường bắt buộc",
-      "success": "Kết nối thành công",
-      "title": "Xác minh kết nối",
-      "validate": "Xác minh kết nối",
-      "validating": "Đang xác minh…"
+      "title": "Xác minh kết nối"
     }
   },
   "omniroute": {
@@ -522,11 +519,8 @@
       "insufficientScope": "Phạm vi token không đủ: hiện có {{have}}, cần {{need}}. Hãy tạo token mới với phạm vi admin trong Settings → Access Tokens của gateway.",
       "invalidCredential": "Token truy cập không hợp lệ hoặc đã hết hạn: {{error}}",
       "missingFields": "Nhập địa chỉ triển khai và token truy cập",
-      "success": "Kết nối thành công",
       "title": "Kiểm tra kết nối",
-      "unknownScope": "không rõ",
-      "validate": "Kiểm tra kết nối",
-      "validating": "Đang kiểm tra…"
+      "unknownScope": "không rõ"
     }
   },
   "permissions": {
@@ -798,10 +792,7 @@
       "description": "Kiểm tra xem cấu hình hiện tại có thể kết nối và quản lý trang web hay không.",
       "failed": "Kiểm tra kết nối Sub2API thất bại: {{error}}",
       "missingFields": "Vui lòng nhập URL trang web và Admin API Key trước",
-      "success": "Kết nối thành công",
-      "title": "Xác minh kết nối",
-      "validate": "Xác minh kết nối",
-      "validating": "Đang xác minh…"
+      "title": "Xác minh kết nối"
     }
   },
   "tabs": {

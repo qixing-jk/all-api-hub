@@ -1,9 +1,11 @@
-import { readFileSync } from "node:fs"
-import path from "node:path"
-import { fileURLToPath } from "node:url"
-
 import { withStoredValue } from "../../cdp/sandbox.mjs"
 import { dismissModals } from "../../cdp/ui-driver.mjs"
+import {
+  managedSiteOptionsPageUrl,
+  openManagedSiteOptionsPage,
+  readManagedSiteConnectionCopy,
+  readNewManagedSiteConnectionFeedback,
+} from "../managed-site/ui.mjs"
 
 /**
  * Live UI end-to-end checks for the gpt-load managed site.
@@ -19,16 +21,8 @@ import { dismissModals } from "../../cdp/ui-driver.mjs"
  * cleanup always runs and preserves the original UI failure.
  */
 
-const REPO_ROOT = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "..",
-  "..",
-)
-
 /** Same key the E2E suite writes; a plain JSON string envelope. */
 const USER_PREFERENCES_STORAGE_KEY = "user_preferences"
-const LANGUAGE_STORAGE_KEY = "all-api-hub-i18nextLng"
 
 const MANAGED_SITE_CHANNELS_TEST_IDS = {
   addChannelButton: "managed-site-channels-add-channel-button",
@@ -54,26 +48,6 @@ const SETTINGS_ANCHOR_IDS = {
   baseUrl: "gpt-load-base-url",
   managementKey: "gpt-load-management-key",
   validate: "gpt-load-validate",
-}
-
-/** Read the shipped copy so an assertion follows the product's own wording. */
-function readEnglishSetting(pathExpression) {
-  const settings = JSON.parse(
-    readFileSync(
-      path.join(REPO_ROOT, "src", "locales", "en", "settings.json"),
-      "utf8",
-    ),
-  )
-  return pathExpression.split(".").reduce((node, key) => node?.[key], settings)
-}
-
-const OPTIONS_PAGE = (extensionId, params = {}, hash = "basic") => {
-  const url = new URL(`chrome-extension://${extensionId}/options.html`)
-  for (const [key, value] of Object.entries(params)) {
-    url.searchParams.set(key, value)
-  }
-  url.hash = hash
-  return url.toString()
 }
 
 const createApi = (baseUrl, managementKey) => {
@@ -149,42 +123,6 @@ const createApi = (baseUrl, managementKey) => {
 }
 
 /**
- * Wait for a live region that was not there before an action.
- *
- * The notification toast shares `role="status"` with the pages' own live
- * notices, so the toast is identified by being new rather than by any
- * library-internal class or attribute.
- */
-async function readNewLiveRegionText(page, locator, previousTexts, timeoutMs) {
-  const previous = new Set(previousTexts)
-  const deadline = Date.now() + timeoutMs
-  let observed = []
-
-  while (Date.now() < deadline) {
-    observed = (await locator.allTextContents())
-      .map((value) => value.trim())
-      .filter(Boolean)
-    const fresh = observed.find((text) => !previous.has(text))
-    if (fresh) return { text: fresh, observed }
-    await page.waitForTimeout(250)
-  }
-
-  return { text: "", observed }
-}
-
-async function openPage(context, extensionId, { params, hash }) {
-  const page = await context.newPage()
-  // Mirrors the E2E helper: the language lives in the page's localStorage.
-  await page.addInitScript(
-    ([key, value]) => window.localStorage.setItem(key, value),
-    [LANGUAGE_STORAGE_KEY, "en"],
-  )
-  await page.goto(OPTIONS_PAGE(extensionId, params, hash))
-  await page.waitForLoadState("domcontentloaded")
-  return page
-}
-
-/**
  * Run the gpt-load live UI suite.
  * @param options Suite options.
  * @param options.context CDP browser context.
@@ -207,7 +145,7 @@ export async function runGptLoadUiTest({
   console.log("\n🖥️ 开始执行 gpt-load 扩展端到端 UI 交互验证...")
   const api = createApi(baseUrl, managementKey)
   const normalizedBaseUrl = baseUrl.replace(/\/+$/, "")
-  const successCopy = readEnglishSetting("gptLoad.validation.success")
+  const successCopy = readManagedSiteConnectionCopy().success
   const runPrefix = `AAH E2E gpt-load CDP ${Date.now().toString(36)}`
   const createdName = `${runPrefix} Channel`
   let seededName
@@ -232,10 +170,14 @@ export async function runGptLoadUiTest({
         // ---------------------------------------------------------------
         // 1. Settings: the form renders the stored config and validates it.
         // ---------------------------------------------------------------
-        const settingsPage = await openPage(context, extensionId, {
-          params: { anchor: "gpt-load" },
-          hash: "basic",
-        })
+        const settingsPage = await openManagedSiteOptionsPage(
+          context,
+          extensionId,
+          {
+            params: { anchor: "gpt-load" },
+            hash: "basic",
+          },
+        )
         try {
           await dismissModals(settingsPage)
           await settingsPage
@@ -263,12 +205,13 @@ export async function runGptLoadUiTest({
           await validateButton.scrollIntoViewIfNeeded()
           await validateButton.click()
 
-          const { text: toastText, observed } = await readNewLiveRegionText(
-            settingsPage,
-            liveRegions,
-            noticesBefore,
-            30_000,
-          )
+          const { text: toastText, observed } =
+            await readNewManagedSiteConnectionFeedback(
+              settingsPage,
+              liveRegions,
+              noticesBefore,
+              30_000,
+            )
           console.log(`  [校验结果提示]: ${toastText}`)
           if (!toastText.includes(successCopy)) {
             throw new Error(
@@ -294,10 +237,14 @@ export async function runGptLoadUiTest({
           deploymentNames = [seededName]
         }
 
-        const channelsPage = await openPage(context, extensionId, {
-          params: {},
-          hash: "managedSiteChannels",
-        })
+        const channelsPage = await openManagedSiteOptionsPage(
+          context,
+          extensionId,
+          {
+            params: {},
+            hash: "managedSiteChannels",
+          },
+        )
         try {
           await dismissModals(channelsPage)
           await channelsPage
@@ -353,7 +300,7 @@ export async function runGptLoadUiTest({
           console.log(`  ✅ UI 创建已落到网关: ${createdName}`)
 
           await channelsPage.goto(
-            OPTIONS_PAGE(
+            managedSiteOptionsPageUrl(
               extensionId,
               { search: createdName },
               "managedSiteChannels",
