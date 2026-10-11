@@ -1,4 +1,5 @@
-import { fireEvent, waitFor, within } from "@testing-library/react"
+import { act, fireEvent, waitFor, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import UsageAnalytics from "~/entrypoints/options/pages/UsageAnalytics"
@@ -13,6 +14,7 @@ import {
 } from "~/services/productAnalytics/contracts"
 import { openSettingsTab } from "~/utils/navigation"
 import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const { trackProductAnalyticsActionStartedMock } = vi.hoisted(() => ({
@@ -154,45 +156,66 @@ describe("UsageAnalytics navigation", () => {
     )
   })
 
-  it("keeps refresh and export actions out of started-only click tracking", async () => {
-    vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([] as any)
-    const accountStore = createEmptyUsageHistoryAccountStore()
-    accountStore.daily["2026-01-01"] = {
-      requests: 1,
-      promptTokens: 10,
-      completionTokens: 5,
-      totalTokens: 15,
-      quotaConsumed: 3,
-    }
-    vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
-      schemaVersion: 2,
-      accounts: { a1: accountStore },
-    } as any)
+  it.each([false, true])(
+    "keeps refresh and export actions out of started-only click tracking (delayed initial read: %s)",
+    async (delayed) => {
+      const user = userEvent.setup()
+      vi.mocked(accountQueries.getAllAccounts).mockResolvedValue([] as any)
+      const accountStore = createEmptyUsageHistoryAccountStore()
+      accountStore.daily["2026-01-01"] = {
+        requests: 1,
+        promptTokens: 10,
+        completionTokens: 5,
+        totalTokens: 15,
+        quotaConsumed: 3,
+      }
+      vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
+        schemaVersion: 2,
+        accounts: { a1: accountStore },
+      } as any)
 
-    render(<UsageAnalytics />)
+      const initialRead =
+        createDeferred<
+          Awaited<ReturnType<typeof accountQueries.getAllAccounts>>
+        >()
+      if (delayed)
+        vi.mocked(accountQueries.getAllAccounts).mockReturnValueOnce(
+          initialRead.promise,
+        )
+      render(<UsageAnalytics />)
+      if (delayed) {
+        expect(
+          screen.queryByText("usageAnalytics:summary.promptTokens"),
+        ).not.toBeInTheDocument()
+        await act(async () => initialRead.resolve([]))
+      }
 
-    const refreshButton = await screen.findByRole("button", {
-      name: "usageAnalytics:actions.refresh",
-    })
-    fireEvent.click(refreshButton)
-    await waitFor(() => {
-      expect(usageHistoryStorage.getStore).toHaveBeenCalledTimes(2)
-    })
+      await screen.findByText("usageAnalytics:summary.promptTokens")
+      expect(usageHistoryStorage.getStore).toHaveBeenCalledTimes(1)
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "usageAnalytics:actions.export",
-      }),
-    )
-    expect(trackProductAnalyticsActionStartedMock).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshUsageAnalyticsData,
-      }),
-    )
-    expect(trackProductAnalyticsActionStartedMock).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportUsageAnalyticsData,
-      }),
-    )
-  })
+      const refreshButton = screen.getByRole("button", {
+        name: "usageAnalytics:actions.refresh",
+      })
+      await user.click(refreshButton)
+      await waitFor(() => {
+        expect(usageHistoryStorage.getStore).toHaveBeenCalledTimes(2)
+      })
+
+      await user.click(
+        screen.getByRole("button", {
+          name: "usageAnalytics:actions.export",
+        }),
+      )
+      expect(trackProductAnalyticsActionStartedMock).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshUsageAnalyticsData,
+        }),
+      )
+      expect(trackProductAnalyticsActionStartedMock).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportUsageAnalyticsData,
+        }),
+      )
+    },
+  )
 })
