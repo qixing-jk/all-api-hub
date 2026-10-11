@@ -85,6 +85,21 @@ describe("current browser account identity verification", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
+  it("refuses Dahl identity verification when the account response has no valid UUID", async () => {
+    vi.stubGlobal("location", new URL("https://inference.dahl.global/account"))
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(JSON.stringify({ user: { user_id: "invalid" } })),
+        ),
+    )
+    expect(await verifyIdentity(SITE_TYPES.DAHL)).toMatchObject({
+      success: false,
+    })
+  })
+
   it("skips token verification when page storage access is denied", async () => {
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
       throw new DOMException("Storage access denied", "SecurityError")

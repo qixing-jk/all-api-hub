@@ -190,3 +190,37 @@ it("never sends private-profile names to a normal browser page", async () => {
   ).toMatchObject({ connected: false })
   expect(message).not.toHaveBeenCalled()
 })
+
+it("synchronizes names only with a page in the account's Cookie container", async () => {
+  const scopedRequest = {
+    ...request,
+    fetchContext: {
+      kind: "browser-context" as const,
+      cookieStoreId: "firefox-container-2",
+    },
+  }
+  await saveDahlKeyName(dahlKeyNameOwner(scopedRequest), 7, "Container work")
+  vi.spyOn(browser.tabs, "query").mockResolvedValue([
+    {
+      id: 8,
+      incognito: false,
+      cookieStoreId: "firefox-container-1",
+    } as browser.tabs.Tab,
+    {
+      id: 9,
+      incognito: false,
+      cookieStoreId: "firefox-container-2",
+    } as browser.tabs.Tab,
+  ])
+  const message = vi.spyOn(browser.tabs, "sendMessage").mockResolvedValue({
+    success: true,
+    userId: request.auth.userId,
+    labels: { "7": "Container work" },
+  })
+  expect(await syncDahlKeyNames(scopedRequest, [7])).toMatchObject({
+    connected: true,
+    names: { "7": { name: "Container work", pending: false } },
+  })
+  expect(message).toHaveBeenCalledTimes(1)
+  expect(message.mock.calls[0]?.[0]).toBe(9)
+})

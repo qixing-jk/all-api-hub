@@ -344,6 +344,37 @@ describe("Dahl account contract", () => {
     expect(editor.initialValues).toEqual({ local_name: "" })
     expect(editor.validate({}).valid).toBe(true)
   })
+  it("rejects oversized names in creation and rename before submitting a mutation", async () => {
+    server.use(
+      http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+      http.get(`${origin}/v1/account/keys`, () =>
+        HttpResponse.json({ keys: [key] }),
+      ),
+    )
+    const session = await getSiteTypeCapabilities(
+      SITE_TYPES.DAHL,
+    ).account!.keyResourceManagement!.open({
+      account: { id: "local", siteType: SITE_TYPES.DAHL },
+      request: { ...request, accountId: "local" },
+    })
+    const creator = await session.openCreateEditor(DAHL_KEY_SCOPE)
+    const collection = await session.openCollection(DAHL_KEY_SCOPE)
+    const row = (await collection.list()).items[0]!
+    const rename = await collection.openEditEditor(row.ref, undefined, {
+      action: editActions.Rename,
+      snapshot: row,
+    })
+    for (const editor of [creator, rename]) {
+      const values = { ...editor.initialValues, local_name: "x".repeat(129) }
+      expect(editor.validate(values)).toMatchObject({
+        valid: false,
+        issues: [{ fieldId: "local_name", code: "out_of_range" }],
+      })
+      await expect(editor.submit(values)).rejects.toMatchObject({
+        failure: { code: "validation_failed" },
+      })
+    }
+  })
   const key: DahlKey = {
     id: 7,
     available_tokens: 100,
@@ -799,43 +830,49 @@ describe("Dahl account contract", () => {
       returnEditor.validate({ ...returned, transfer_amount: "1.5" }).valid,
     ).toBe(false)
   })
-  it("lists recoverable keys and creates a zero-token key without inventing a server name", async () => {
-    server.use(
-      http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
-      http.get(`${origin}/v1/account/keys`, () =>
-        HttpResponse.json({ keys: [key] }),
-      ),
-      http.post(`${origin}/v1/account/keys`, async ({ request }) => {
-        expect(await request.text()).toBe("")
-        return HttpResponse.json(
-          {
-            key: {
-              ...key,
-              available_tokens: 0,
-              total_tokens: 0,
-              status: "exhausted",
+  it.each([true, false])(
+    "creates a zero-token key without inventing a secret when returned token is present: %s",
+    async (hasToken) => {
+      server.use(
+        http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+        http.get(`${origin}/v1/account/keys`, () =>
+          HttpResponse.json({ keys: [key] }),
+        ),
+        http.post(`${origin}/v1/account/keys`, async ({ request }) => {
+          expect(await request.text()).toBe("")
+          return HttpResponse.json(
+            {
+              key: {
+                ...key,
+                token: hasToken ? key.token : undefined,
+                available_tokens: 0,
+                total_tokens: 0,
+                status: "exhausted",
+              },
             },
-          },
-          { status: 201 },
-        )
-      }),
-    )
-    expect(await fetchKeys(request)).toEqual([key])
-    expect(await createKey(request)).toMatchObject({
-      available_tokens: 0,
-      status: "exhausted",
-    })
-    const session = await getSiteTypeCapabilities(
-      SITE_TYPES.DAHL,
-    ).account!.keyResourceManagement!.open({
-      account: { id: "local", siteType: SITE_TYPES.DAHL },
-      request: { ...request, accountId: "local" },
-    })
-    const creator = await session.openCreateEditor(DAHL_KEY_SCOPE)
-    expect((await creator.submit({})).createdSecret?.secret).toBe(
-      "dahl_example",
-    )
-  })
+            { status: 201 },
+          )
+        }),
+      )
+      expect(await fetchKeys(request)).toEqual([key])
+      expect(await createKey(request)).toMatchObject({
+        available_tokens: 0,
+        status: "exhausted",
+      })
+      const session = await getSiteTypeCapabilities(
+        SITE_TYPES.DAHL,
+      ).account!.keyResourceManagement!.open({
+        account: { id: "local", siteType: SITE_TYPES.DAHL },
+        request: { ...request, accountId: "local" },
+      })
+      const creator = await session.openCreateEditor(DAHL_KEY_SCOPE)
+      const result = await creator.submit({})
+      expect(result.facts?.ref.resourceId).toBe(String(key.id))
+      expect(result.createdSecret?.secret).toBe(
+        hasToken ? "dahl_example" : undefined,
+      )
+    },
+  )
   it("allocates only the difference and reads back the new owned-key balance", async () => {
     let current = key
     server.use(

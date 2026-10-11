@@ -12,6 +12,59 @@ import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 import { render, screen } from "~~/tests/test-utils/render"
 
 it.each([editActions.Allocate, editActions.Return] as const)(
+  "explains an empty %s source and prevents submission",
+  async (operation) => {
+    const i18n = await createResourceTestI18n({ en: { keyManagement: en } })
+    const submit = vi.fn()
+    const values = {
+      [fields.TransferDirection]: operation,
+      [fields.TransferAmount]: "1",
+      [fields.PoolTokens]: 0,
+      [fields.KeyTokens]: 0,
+    }
+    render(
+      <I18nextProvider i18n={i18n}>
+        <AccountKeyResourceEditorDialog
+          editor={{
+            editorId: 1,
+            siteType: SITE_TYPES.DAHL,
+            mode: modes.Edit,
+            values,
+            initialValues: values,
+            fields: [
+              { fieldId: fields.TransferAmount, type: "text", required: true },
+              ...[fields.PoolTokens, fields.KeyTokens].map((fieldId) => ({
+                fieldId,
+                type: "number" as const,
+                readOnly: true,
+              })),
+            ],
+          }}
+          onSubmit={submit}
+          onClose={vi.fn()}
+          onValuesChange={vi.fn()}
+        />
+      </I18nextProvider>,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+    expect(
+      screen.getByText(
+        operation === editActions.Return
+          ? en.native.editor.dahl.noKeyTokens
+          : en.native.editor.dahl.noPoolTokens,
+      ),
+    ).toBeVisible()
+    const button = screen.getByRole("button", {
+      name:
+        operation === editActions.Return ? "Return tokens" : "Allocate tokens",
+    })
+    expect(button).toBeDisabled()
+    await userEvent.setup().click(button)
+    expect(submit).not.toHaveBeenCalled()
+  },
+)
+
+it.each([editActions.Allocate, editActions.Return] as const)(
   "opens an independent %s operation with exact amount shortcuts",
   async (operation) => {
     const i18n = await createResourceTestI18n({ en: { keyManagement: en } })
