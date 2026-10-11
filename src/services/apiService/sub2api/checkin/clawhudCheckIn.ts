@@ -111,6 +111,12 @@ export function parseClawhudDailyCheckInStatusResponse(
 ) {
   const data = parseEnvelopeData(response, USER_CHECK_IN_STATUS_ENDPOINT)
   if (
+    Object.hasOwn(data, "checked_in_today") &&
+    Object.hasOwn(data, "today_checked_in")
+  ) {
+    throw invalidResponse(USER_CHECK_IN_STATUS_ENDPOINT)
+  }
+  if (
     !Object.hasOwn(data, "checked_in_today") &&
     typeof data.enabled === "boolean" &&
     typeof data.today_checked_in === "boolean"

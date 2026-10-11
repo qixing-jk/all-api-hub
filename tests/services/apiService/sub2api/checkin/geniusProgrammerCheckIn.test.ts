@@ -123,6 +123,22 @@ describe("Genius Programmer check-in protocol", () => {
     ).toThrow(expect.objectContaining({ code: "JSON_PARSE_ERROR" }))
   })
 
+  it.each([
+    { checked_in_today: false, today_checked_in: false },
+    { checked_in_today: false, today_checked_in: true },
+    { checked_in_today: true, today_checked_in: false },
+    { checked_in_today: true, today_checked_in: true },
+  ])(
+    "rejects hybrid status rather than authorizing either method: %j",
+    (data) => {
+      expect(() =>
+        parseGeniusProgrammerDailyCheckInStatusResponse(
+          response({ enabled: true, ...data }),
+        ),
+      ).toThrow(expect.objectContaining({ code: "JSON_PARSE_ERROR" }))
+    },
+  )
+
   it("keeps a malformed contract on this path as an invalid response", () => {
     let thrown: unknown
     try {
