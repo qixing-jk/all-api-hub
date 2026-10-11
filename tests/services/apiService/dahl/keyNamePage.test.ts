@@ -113,3 +113,41 @@ describe("Dahl website naming bridge", () => {
     expect(storage.setItem).not.toHaveBeenCalled()
   })
 })
+
+it.each(["/v1/account", "/v1/account/keys"])(
+  "does not write website names after an HTTP failure at %s",
+  async (endpoint) => {
+    server.use(
+      http.get(
+        `${origin}${endpoint}`,
+        () => new HttpResponse(null, { status: 401 }),
+      ),
+    )
+    expect(await synchronizeDahlWebsiteKeyNames(command)).toEqual({
+      success: false,
+    })
+    expect(storage.setItem).not.toHaveBeenCalled()
+  },
+)
+
+it("rejects an invalid key inventory without updating website storage", async () => {
+  server.use(
+    http.get(`${origin}/v1/account/keys`, () =>
+      HttpResponse.json({ keys: null }),
+    ),
+  )
+  expect(await synchronizeDahlWebsiteKeyNames(command)).toEqual({
+    success: false,
+  })
+  expect(storage.setItem).not.toHaveBeenCalled()
+})
+
+it("removes only an owned website name on an explicit blank update", async () => {
+  expect(
+    await synchronizeDahlWebsiteKeyNames({
+      ...command,
+      pendingLabels: { "7": " " },
+    }),
+  ).toEqual({ success: true, userId, labels: { "7": "" } })
+  expect(JSON.parse(stored)).toEqual({ "99": "Unrelated key" })
+})

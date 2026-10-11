@@ -21,6 +21,10 @@ import { getAccounts } from "./cdp/sandbox.mjs"
 import { preflightSession, probePageSession } from "./cdp/session-preflight.mjs"
 import { dismissModals } from "./cdp/ui-driver.mjs"
 import { testModelCatalogFlow } from "./flows/model-catalog.mjs"
+import {
+  redactEvidence,
+  redactEvidenceBody,
+} from "./utils/evidence-redaction.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
 // Default: read-only provider probes plus an isolated local account (removed).
@@ -68,11 +72,11 @@ const captureResponse = (response) => {
         {
           url: response.url(),
           method: request.method(),
-          requestHeaders: await request.allHeaders(),
-          requestBody: request.postData(),
+          requestHeaders: redactEvidence(await request.allHeaders()),
+          requestBody: redactEvidenceBody(request.postData()),
           status: response.status(),
-          responseHeaders: await response.allHeaders(),
-          body: await response.text(),
+          responseHeaders: redactEvidence(await response.allHeaders()),
+          body: redactEvidenceBody(await response.text()),
         },
         null,
         2,
@@ -113,6 +117,7 @@ const capture = async (name) => {
   await ui.screenshot({
     path: path.join(evidenceDir, name),
     animations: "disabled",
+    mask: [ui.getByTestId(secrets.oneTimeKeyInput)],
   })
 }
 const stored = () => getAccounts(dev.serviceWorker)
@@ -138,7 +143,7 @@ async function request(endpoint, method = "GET") {
   )
   await fs.writeFile(
     path.join(evidenceDir, `probe-${sequence++}.json`),
-    JSON.stringify(response, null, 2),
+    JSON.stringify(redactEvidence(response), null, 2),
   )
   assert.ok(
     response.status >= 200 && response.status < 300,
@@ -437,6 +442,7 @@ try {
             `native-${nativeAction.toLowerCase()}.png`,
           ),
           animations: "disabled",
+          mask: [ui.getByTestId(secrets.oneTimeKeyInput)],
         })
         await site.getByRole("button", { name: "Close", exact: true }).click()
         await row
@@ -573,6 +579,7 @@ try {
     await site.screenshot({
       path: path.join(evidenceDir, "native-rename-key.png"),
       animations: "disabled",
+      mask: [ui.getByTestId(secrets.oneTimeKeyInput)],
     })
     await ui.reload()
     await expect(row).toContainText(websiteName, { timeout: 30000 })
@@ -651,10 +658,12 @@ try {
   evidence.failure = String(error)
   await fs.writeFile(
     path.join(evidenceDir, "failure-ui.txt"),
-    await ui
-      .locator("body")
-      .innerText()
-      .catch(() => "unavailable"),
+    redactEvidence(
+      await ui
+        .locator("body")
+        .innerText()
+        .catch(() => "unavailable"),
+    ),
   )
   await capture("failure.png").catch(() => {})
   throw error
@@ -744,7 +753,7 @@ try {
   if (captureErrors.length) process.exitCode = 1
   await fs.writeFile(
     path.join(evidenceDir, "index.json"),
-    JSON.stringify(evidence, null, 2),
+    JSON.stringify(redactEvidence(evidence), null, 2),
   )
   await ui.close()
   await site.close().catch(() => {})

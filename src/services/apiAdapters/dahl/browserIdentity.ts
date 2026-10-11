@@ -10,6 +10,7 @@ export const dahlBrowserIdentity: AccountBrowserIdentityCapability = {
     siteType === SITE_TYPES.DAHL && origin === DAHL_WEB_ORIGIN,
   observe: ({ origin }) => ({
     sessionKey: readIdentityCookieState(),
+    cacheResult: false,
     async verify(read) {
       return (
         parseDahlIdentity(

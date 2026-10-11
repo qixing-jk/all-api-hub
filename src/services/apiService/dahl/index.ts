@@ -110,6 +110,7 @@ async function account(request: ApiServiceRequest) {
   if (!user) throw invalid(DAHL_ACCOUNT_ENDPOINT)
   if (
     request.auth.userId !== undefined &&
+    String(request.auth.userId).trim() !== "" &&
     String(request.auth.userId) !== user.id
   )
     throw new ApiError(

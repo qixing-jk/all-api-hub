@@ -3,13 +3,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions } from "~/services/apiAdapters/contracts/accountKeyResource"
+import {
+  readDahlKeyNames,
+  saveDahlKeyName,
+} from "~/services/apiAdapters/dahl/keyNames"
 import { syncDahlKeyNames } from "~/services/apiAdapters/dahl/keyNameSync"
+import { dahlKeyNameOwner } from "~/services/apiAdapters/dahl/keyNameValue"
 import { DAHL_KEY_SCOPE } from "~/services/apiAdapters/dahl/keyResources"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   createKey,
   fetchAccountData,
   fetchKeys,
+  fetchModels,
   fetchUserInfo,
   revokeKey,
   transferKeyTokens,
@@ -43,6 +49,289 @@ describe("Dahl account contract", () => {
     ])
   })
   afterEach(() => vi.restoreAllMocks())
+  it.each([undefined, { user: {} }, { user: { user_id: "not-a-uuid" } }])(
+    "rejects malformed account identities before exposing facts: %j",
+    async (account) => {
+      server.use(
+        http.get(`${origin}/v1/account`, () =>
+          HttpResponse.json(account ?? null),
+        ),
+      )
+      await expect(fetchUserInfo(request)).rejects.toMatchObject({
+        code: "JSON_PARSE_ERROR",
+      })
+    },
+  )
+  it("retains a verified UUID when the optional username is absent", async () => {
+    server.use(
+      http.get(`${origin}/v1/account`, () =>
+        HttpResponse.json({ user: { user_id: userId } }),
+      ),
+    )
+    await expect(fetchUserInfo(request)).resolves.toMatchObject({
+      id: userId,
+      username: "",
+    })
+  })
+  it.each([
+    { direction: editActions.Allocate, amount: 0 },
+    { direction: editActions.Return, amount: -1 },
+    { direction: editActions.Allocate, amount: 1.5 },
+  ])("rejects an invalid transfer without dispatch: %j", async (transfer) => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch")
+    await expect(
+      transferKeyTokens(request, key, transfer),
+    ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+  it.each([
+    { direction: editActions.Allocate, amount: 90000001 },
+    { direction: editActions.Return, amount: 101 },
+  ])(
+    "rejects a transfer above its source balance before POST: %j",
+    async (transfer) => {
+      const write = vi.fn(() => HttpResponse.json({ ok: true }))
+      server.use(
+        http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+        http.get(`${origin}/v1/account/keys`, () =>
+          HttpResponse.json({ keys: [key] }),
+        ),
+        http.post(`${origin}/v1/account/allocate`, write),
+        http.post(`${origin}/v1/account/return`, write),
+      )
+      await expect(
+        transferKeyTokens(request, key, transfer),
+      ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+      expect(write).not.toHaveBeenCalled()
+    },
+  )
+  it("rejects duplicate key IDs rather than choosing an ambiguous target", async () => {
+    server.use(
+      http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+      http.get(`${origin}/v1/account/keys`, () =>
+        HttpResponse.json({ keys: [key, key] }),
+      ),
+    )
+    await expect(fetchKeys(request)).rejects.toMatchObject({
+      code: "JSON_PARSE_ERROR",
+    })
+  })
+  it("reports uncertainty after one transfer dispatch when readback disagrees", async () => {
+    const write = vi.fn(() => HttpResponse.json({ ok: true }))
+    server.use(
+      http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+      http.get(`${origin}/v1/account/keys`, () =>
+        HttpResponse.json({ keys: [key] }),
+      ),
+      http.post(`${origin}/v1/account/allocate`, write),
+    )
+    await expect(
+      transferKeyTokens(request, key, {
+        direction: editActions.Allocate,
+        amount: 1,
+      }),
+    ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+    expect(write).toHaveBeenCalledOnce()
+  })
+  it.each(["0", "07", "9007199254740992"])(
+    "rejects an invalid revoke ID before dispatch: %s",
+    async (id) => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch")
+      await expect(revokeKey(request, id)).rejects.toMatchObject({
+        failure: { code: "not_found" },
+      })
+      expect(fetchSpy).not.toHaveBeenCalled()
+    },
+  )
+  it("reports a missing revoke target without issuing DELETE", async () => {
+    const write = vi.fn(() => HttpResponse.json({ ok: true }))
+    server.use(
+      http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+      http.get(`${origin}/v1/account/keys`, () =>
+        HttpResponse.json({ keys: [] }),
+      ),
+      http.delete(`${origin}/v1/account/keys/7`, write),
+    )
+    await expect(revokeKey(request, "7")).rejects.toMatchObject({
+      failure: { code: "not_found" },
+    })
+    expect(write).not.toHaveBeenCalled()
+  })
+  it("reports uncertainty after one revoke when readback remains active", async () => {
+    const write = vi.fn(() => HttpResponse.json({ ok: true }))
+    server.use(
+      http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+      http.get(`${origin}/v1/account/keys`, () =>
+        HttpResponse.json({ keys: [key] }),
+      ),
+      http.delete(`${origin}/v1/account/keys/7`, write),
+    )
+    await expect(revokeKey(request, "7")).rejects.toMatchObject({
+      failure: { code: "mutation_state_uncertain" },
+    })
+    expect(write).toHaveBeenCalledOnce()
+  })
+  it.each([{}, { data: [null] }, { data: [{ id: " " }] }])(
+    "rejects a malformed public catalog: %j",
+    async (catalog) => {
+      server.use(
+        http.get(`${origin}/v1/models`, () => HttpResponse.json(catalog)),
+      )
+      await expect(fetchModels(request)).rejects.toMatchObject({
+        code: "JSON_PARSE_ERROR",
+      })
+    },
+  )
+
+  it("revokes through the native collection and removes only the acknowledged key label", async () => {
+    let current = { ...key }
+    const write = vi.fn(() => {
+      current = { ...key, status: "revoked", available_tokens: 0 }
+      return HttpResponse.json({ ok: true })
+    })
+    server.use(
+      http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+      http.get(`${origin}/v1/account/keys`, () =>
+        HttpResponse.json({ keys: [current] }),
+      ),
+      http.delete(`${origin}/v1/account/keys/7`, write),
+    )
+    vi.spyOn(browser.tabs, "query").mockResolvedValue([
+      { id: 7, incognito: false } as browser.tabs.Tab,
+    ])
+    vi.spyOn(browser.tabs, "sendMessage").mockResolvedValue({
+      success: true,
+      userId,
+      labels: { "7": "" },
+    })
+    const capability = getSiteTypeCapabilities(SITE_TYPES.DAHL).account!
+      .keyResourceManagement!
+    const session = await capability.open({
+      account: { id: "local", siteType: SITE_TYPES.DAHL },
+      request: { ...request, accountId: "local" },
+    })
+    const owner = dahlKeyNameOwner(request)
+    await saveDahlKeyName(owner, 7, "Work")
+    await saveDahlKeyName(owner, 8, "Other key")
+    const scope = await session.resolveDefaultScope()
+    const collection = await session.openCollection(scope.scopeKey)
+    const ref = (await collection.list()).items[0]!.ref
+    await collection.delete(ref)
+    expect(write).toHaveBeenCalledOnce()
+    expect((await collection.list()).items).toHaveLength(0)
+    expect((await fetchKeys(request))[0]).toMatchObject({
+      status: "revoked",
+      available_tokens: 0,
+    })
+    expect((await readDahlKeyNames(owner))["7"]).toBeUndefined()
+    expect((await readDahlKeyNames(owner))["8"]).toMatchObject({
+      name: "Other key",
+    })
+  })
+
+  it.each(["0", "07", "not-an-id"])(
+    "rejects an invalid rename target without contacting the provider: %s",
+    async (resourceId) => {
+      const session = await getSiteTypeCapabilities(
+        SITE_TYPES.DAHL,
+      ).account!.keyResourceManagement!.open({
+        account: { id: "local", siteType: SITE_TYPES.DAHL },
+        request: { ...request, accountId: "local" },
+      })
+      const collection = await session.openCollection(DAHL_KEY_SCOPE)
+      const fetchSpy = vi.spyOn(globalThis, "fetch")
+      await expect(
+        collection.openEditEditor(
+          {
+            accountId: "local",
+            siteType: SITE_TYPES.DAHL,
+            scopeKey: DAHL_KEY_SCOPE,
+            resourceId,
+          },
+          undefined,
+          { action: editActions.Rename },
+        ),
+      ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+      expect(fetchSpy).not.toHaveBeenCalled()
+    },
+  )
+  it.each(["missing-secret", "revoked"])(
+    "does not expose an unusable runtime secret: %s",
+    async (state) => {
+      server.use(
+        http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+        http.get(`${origin}/v1/account/keys`, () =>
+          HttpResponse.json({
+            keys: [
+              {
+                ...key,
+                ...(state === "missing-secret"
+                  ? { token: undefined }
+                  : { status: "revoked" }),
+              },
+            ],
+          }),
+        ),
+      )
+      const session = await getSiteTypeCapabilities(
+        SITE_TYPES.DAHL,
+      ).account!.keyResourceManagement!.open({
+        account: { id: "local", siteType: SITE_TYPES.DAHL },
+        request: { ...request, accountId: "local" },
+      })
+      expect(
+        await session.runtimeKey!.resolve({
+          accountId: "local",
+          siteType: SITE_TYPES.DAHL,
+          scopeKey: DAHL_KEY_SCOPE,
+          resourceId: "7",
+        }),
+      ).toMatchObject({ kind: "unavailable" })
+    },
+  )
+  it("does not rename a revoked snapshot or send a funding mutation for a missing target", async () => {
+    server.use(
+      http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+      http.get(`${origin}/v1/account/keys`, () =>
+        HttpResponse.json({ keys: [key] }),
+      ),
+    )
+    const session = await getSiteTypeCapabilities(
+      SITE_TYPES.DAHL,
+    ).account!.keyResourceManagement!.open({
+      account: { id: "local", siteType: SITE_TYPES.DAHL },
+      request: { ...request, accountId: "local" },
+    })
+    const collection = await session.openCollection(DAHL_KEY_SCOPE)
+    const ref = {
+      accountId: "local",
+      siteType: SITE_TYPES.DAHL,
+      scopeKey: DAHL_KEY_SCOPE,
+      resourceId: "7",
+    }
+    const snapshot = {
+      ...(await collection.get(ref)),
+      actions: { canUpdate: false, canDelete: false },
+    }
+    await expect(
+      collection.openEditEditor(ref, undefined, {
+        action: editActions.Rename,
+        snapshot,
+      }),
+    ).rejects.toMatchObject({ failure: { code: "not_found" } })
+    server.use(
+      http.get(`${origin}/v1/account/keys`, () =>
+        HttpResponse.json({ keys: [] }),
+      ),
+    )
+    await expect(
+      transferKeyTokens(request, key, {
+        direction: editActions.Allocate,
+        amount: 1,
+      }),
+    ).rejects.toMatchObject({ failure: { code: "not_found" } })
+  })
+
   it("creates a key without asking for an allocation amount", async () => {
     const session = await getSiteTypeCapabilities(
       SITE_TYPES.DAHL,
@@ -642,6 +931,25 @@ describe("Dahl account contract", () => {
       status: "unavailable",
       reason: "unsupported",
     })
+  })
+
+  it.each(["", "   "])(
+    "discovers identity with a blank onboarding userId %j",
+    async (userId) => {
+      server.use(
+        http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+      )
+      await expect(
+        fetchUserInfo({ ...request, auth: { ...request.auth, userId } }),
+      ).resolves.toMatchObject({ id: body.user.user_id })
+    },
+  )
+
+  it("rejects a numeric identity instead of silently treating it as onboarding", async () => {
+    server.use(http.get(`${origin}/v1/account`, () => HttpResponse.json(body)))
+    await expect(
+      fetchUserInfo({ ...request, auth: { ...request.auth, userId: 7 } }),
+    ).rejects.toMatchObject({ code: "ACCOUNT_IDENTITY_MISMATCH" })
   })
 
   it("rejects a different live UUID before returning account data", async () => {

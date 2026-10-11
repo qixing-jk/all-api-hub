@@ -1,4 +1,4 @@
-import { expect, it, vi } from "vitest"
+import { afterEach, expect, it, vi } from "vitest"
 
 import {
   readDahlKeyNames,
@@ -16,6 +16,8 @@ const request = {
   },
 }
 const owner = dahlKeyNameOwner(request)
+
+afterEach(() => vi.restoreAllMocks())
 
 it("orders website writes while a newer local rename remains immediately writable", async () => {
   await saveDahlKeyName(owner, 7, "First")
@@ -130,4 +132,61 @@ it("preserves concurrent names and does not write over a failed storage read", a
     "Unavailable storage",
   )
   expect(write).not.toHaveBeenCalled()
+})
+
+it.each(["tabs", "message"])(
+  "retains pending local names when %s transport fails",
+  async (source) => {
+    await saveDahlKeyName(owner, 7, "Keep me")
+    const tabs = vi
+      .spyOn(browser.tabs, "query")
+      .mockResolvedValue([{ id: 7, incognito: false } as browser.tabs.Tab])
+    const message = vi
+      .spyOn(browser.tabs, "sendMessage")
+      .mockRejectedValue(new Error("Unavailable"))
+    if (source === "tabs") tabs.mockRejectedValue(new Error("Unavailable"))
+    expect(await syncDahlKeyNames(request, [7])).toMatchObject({
+      connected: false,
+      names: { "7": { name: "Keep me", pending: true } },
+    })
+    if (source === "tabs") expect(message).not.toHaveBeenCalled()
+  },
+)
+
+it("acknowledges a deleted website label and removes the local name", async () => {
+  await saveDahlKeyName(owner, 7, "Old")
+  vi.spyOn(browser.tabs, "query").mockResolvedValue([
+    { id: 7, incognito: false } as browser.tabs.Tab,
+  ])
+  vi.spyOn(browser.tabs, "sendMessage").mockResolvedValue({
+    success: true,
+    userId: request.auth.userId,
+    labels: { "7": "" },
+  })
+  expect(await syncDahlKeyNames(request, [7])).toMatchObject({
+    connected: true,
+    names: {},
+  })
+  expect(await readDahlKeyNames(owner)).toEqual({})
+})
+
+it("never sends private-profile names to a normal browser page", async () => {
+  vi.spyOn(browser.tabs, "query").mockResolvedValue([
+    { id: 7, incognito: false } as browser.tabs.Tab,
+  ])
+  const message = vi.spyOn(browser.tabs, "sendMessage")
+  expect(
+    await syncDahlKeyNames(
+      {
+        ...request,
+        fetchContext: {
+          kind: "browser-context",
+          incognito: true,
+          cookieStoreId: "private",
+        },
+      },
+      [7],
+    ),
+  ).toMatchObject({ connected: false })
+  expect(message).not.toHaveBeenCalled()
 })

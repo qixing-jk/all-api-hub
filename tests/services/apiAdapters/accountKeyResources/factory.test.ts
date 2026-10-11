@@ -1291,3 +1291,17 @@ describe("defineAccountKeyResourceCapability", () => {
     })
   })
 })
+
+it("rejects an edit-detail identity mismatch before creating or submitting an editor", async () => {
+  const definition = createDefinition({
+    getEditDetail: vi.fn(async () => ({
+      id: "different-key",
+      name: "Other key",
+    })),
+  })
+  const collection = await open(definition)
+  await expect(collection.openEditEditor(REF)).rejects.toMatchObject({
+    failure: { code: "unexpected" },
+  })
+  expect(definition.update).not.toHaveBeenCalled()
+})

@@ -96,6 +96,19 @@ const setup = (
 }
 
 describe("native account key creation", () => {
+  it.each([creationPolicies.RequiresInput, undefined])(
+    "requires user input without opening a creation session for policy %s",
+    async (policy) => {
+      const owner = account()
+      const { capability } = setup(owner)
+      Object.assign(capability, { defaultCreation: policy })
+      expect(await prepareDefaultAccountKeyCreation(owner)).toEqual({
+        kind: "input-required",
+      })
+      expect(capability.open).not.toHaveBeenCalled()
+    },
+  )
+
   it("does not replay default editor creation after an unclassified submit failure", async () => {
     const owner = account()
     const { submit } = setup(owner)
