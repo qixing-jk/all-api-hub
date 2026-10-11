@@ -8,6 +8,7 @@ import {
 } from "~/constants/checkIn"
 import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
+import { ForeignCheckInContractError } from "~/services/apiService/sub2api/checkin/foreignCheckInContract"
 import {
   fetchGeniusProgrammerDailyCheckInStatus,
   GENIUS_PROGRAMMER_DAILY_CHECK_IN_RESULT_KINDS,
@@ -182,6 +183,23 @@ describe("Genius Programmer check-in integration", () => {
         observedAt: 200,
       }),
     ).resolves.toMatchObject({ outcome })
+  })
+  it("classifies a sibling contract on the shared path as unsupported", async () => {
+    // clawhud answers the same status path with a checked_in_today DTO; an
+    // unknown sibling here would keep the whole decision unresolved even
+    // though this method matched.
+    vi.mocked(fetchGeniusProgrammerDailyCheckInStatus).mockRejectedValue(
+      new ForeignCheckInContractError("/api/v1/user/checkin/status", {
+        enabled: true,
+        checked_in_today: false,
+      }),
+    )
+    await expect(
+      geniusProgrammerProvider.detect?.({
+        account: createAccount(),
+        observedAt: 200,
+      }),
+    ).resolves.toMatchObject({ outcome: "unsupported" })
   })
   it("blocks direct submission without authoritative status proof", async () => {
     await expect(

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import { getCheckInFeedbackStatusRoutes } from "~/services/checkin/autoCheckin/providers/feedbackRoutes"
 import {
@@ -11,6 +12,52 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 afterEach(() => vi.restoreAllMocks())
 
 describe("registered check-in feedback status routes", () => {
+  it.each([
+    AUTO_CHECKIN_METHOD_IDS.ClawhudDailyCheckIn,
+    AUTO_CHECKIN_METHOD_IDS.GeniusProgrammerDailyCheckIn,
+  ])(
+    "uses the native timezone query for user check-in status: %s",
+    (methodId) => {
+      vi.spyOn(
+        Intl.DateTimeFormat.prototype,
+        "resolvedOptions",
+      ).mockReturnValue({
+        timeZone: "Asia/Singapore",
+      } as Intl.ResolvedDateTimeFormatOptions)
+      const definition: AutoCheckinMethodDefinition =
+        AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
+      const declared = definition.feedbackStatusRoutes
+      const routes =
+        typeof declared === "function" ? declared(new Date()) : declared
+      expect(routes).toEqual([
+        { path: "/api/v1/user/checkin/status?timezone=Asia%2FSingapore" },
+      ])
+      expect(
+        getCheckInFeedbackStatusRoutes(
+          SITE_TYPES.SUB2API,
+          "https://api.clawhud.com",
+        ),
+      ).toContainEqual({
+        path: "/api/v1/user/checkin/status?timezone=Asia%2FSingapore",
+      })
+    },
+  )
+
+  it("keeps one user status route with UTC when timezone data is unavailable", () => {
+    vi.spyOn(Intl, "DateTimeFormat").mockImplementation(() => {
+      throw new Error("unavailable")
+    })
+    const routes = getCheckInFeedbackStatusRoutes(
+      SITE_TYPES.SUB2API,
+      "https://api.clawhud.com",
+    )
+    expect(
+      routes.filter(({ path }) =>
+        path.startsWith("/api/v1/user/checkin/status"),
+      ),
+    ).toEqual([{ path: "/api/v1/user/checkin/status?timezone=UTC" }])
+  })
+
   it("uses Hiyo's read-only route with the browser timezone", () => {
     vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
       timeZone: "Asia/Singapore",

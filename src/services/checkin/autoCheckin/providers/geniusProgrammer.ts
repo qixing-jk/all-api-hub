@@ -2,11 +2,13 @@ import {
   CHECK_IN_METHOD_AVAILABILITIES,
   CHECK_IN_METHOD_TODAY_STATUSES,
 } from "~/constants/checkIn"
+import { isForeignCheckInContract } from "~/services/apiService/sub2api/checkin/foreignCheckInContract"
 import {
   fetchGeniusProgrammerDailyCheckInStatus,
   GENIUS_PROGRAMMER_DAILY_CHECK_IN_RESULT_KINDS,
   performGeniusProgrammerDailyCheckIn,
 } from "~/services/apiService/sub2api/checkin/geniusProgrammerCheckIn"
+import { getCheckInMethodUnknownReason } from "~/services/checkin/autoCheckin/errors"
 import { detectWithStatusReadback } from "~/services/checkin/autoCheckin/providers/detection"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
 import type { SiteAccount } from "~/types"
@@ -42,7 +44,12 @@ export const geniusProgrammerProvider: AutoCheckinProvider = {
   getReadiness: getSub2ApiCheckInReadiness,
 
   detect(context) {
-    return detectWithStatusReadback(context, readStatus)
+    return detectWithStatusReadback(
+      context,
+      readStatus,
+      getCheckInMethodUnknownReason,
+      isForeignCheckInContract,
+    )
   },
 
   getStatus: readStatus,

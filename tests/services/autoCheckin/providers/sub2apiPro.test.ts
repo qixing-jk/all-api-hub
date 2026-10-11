@@ -9,6 +9,7 @@ import {
 import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { SUB2API_AUTH_PERSISTENCE_STATUSES } from "~/services/apiService/sub2api/auth/authSession"
+import { fetchClawhudDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/clawhudCheckIn"
 import { fetchDenxioDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/denxioCheckIn"
 import { fetchGeniusProgrammerDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/geniusProgrammerCheckIn"
 import {
@@ -109,6 +110,16 @@ vi.mock(
   }),
 )
 
+vi.mock(
+  "~/services/apiService/sub2api/checkin/clawhudCheckIn",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/checkin/clawhudCheckIn")
+    >()),
+    fetchClawhudDailyCheckInStatus: vi.fn(),
+  }),
+)
+
 const createAccount = (automaticExecutionEnabled = true) =>
   buildSiteAccount({
     id: "sub2api-account",
@@ -170,6 +181,9 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
       new ApiError("unsupported", 404),
     )
     vi.mocked(fetchDenxioDailyCheckInStatus).mockRejectedValue(
+      new ApiError("unsupported", 404),
+    )
+    vi.mocked(fetchClawhudDailyCheckInStatus).mockRejectedValue(
       new ApiError("unsupported", 404),
     )
     vi.mocked(fetchSub2ApiProDailyCheckInStatus).mockResolvedValue({
