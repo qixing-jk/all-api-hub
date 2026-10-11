@@ -228,6 +228,28 @@ describe("Clawhud check-in protocol", () => {
     )
   })
 
+  it.each(["", "   "])(
+    "preserves duplicate classification with a blank upstream message: %j",
+    (message) => {
+      expect(() =>
+        parseClawhudDailyCheckInMutationResponse({
+          ...response(null, 409),
+          body: {
+            code: 409,
+            message,
+            reason: "CHECKIN_ALREADY_DONE",
+          },
+        }),
+      ).toThrow(
+        expect.objectContaining({
+          message: "Clawhud daily check-in request failed with HTTP 409",
+          statusCode: 409,
+          upstreamCode: CLAWHUD_DAILY_CHECK_IN_ERROR_CODES.AlreadyChecked,
+        }),
+      )
+    },
+  )
+
   it.each([
     {},
     { checked_in_today: false, today_amount: 1.14 },
