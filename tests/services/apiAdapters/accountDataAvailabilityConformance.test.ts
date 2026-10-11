@@ -89,6 +89,36 @@ const kimiConsoleOriginBySiteType: Partial<Record<AccountSiteType, string>> = {
 }
 
 const producerFixturesByFamily = {
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Dahl]: {
+    baseUrl: "https://inference.dahl.global",
+    authType: AuthTypeEnum.Cookie,
+    expectedAvailability: {
+      consumption: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
+    handlers: [
+      http.get("https://inference.dahl.global/v1/account", () =>
+        HttpResponse.json({
+          user: {
+            user_id: "00000000-0000-4000-8000-000000000001",
+            username: "sample",
+          },
+          token_balance: 100000000,
+          tokens_on_keys: 0,
+        }),
+      ),
+      http.get("https://inference.dahl.global/v1/account/usage", () =>
+        HttpResponse.json({
+          total_input_tokens: 0,
+          total_output_tokens: 0,
+          total_requests: 0,
+        }),
+      ),
+    ],
+    expectRequests: () => {},
+  },
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Cubence]: {
     baseUrl: "https://cubence.com",
     authType: AuthTypeEnum.Cookie,
@@ -534,9 +564,11 @@ const createRequest = (siteType: AccountSiteType) => {
     auth: {
       authType: fixture.authType,
       userId:
-        siteType === SITE_TYPES.FREEMODEL || siteType === SITE_TYPES.CUBENCE
-          ? "7"
-          : "user-1",
+        siteType === SITE_TYPES.DAHL
+          ? "00000000-0000-4000-8000-000000000001"
+          : siteType === SITE_TYPES.FREEMODEL || siteType === SITE_TYPES.CUBENCE
+            ? "7"
+            : "user-1",
       accessToken: "account-token",
     },
     checkIn: buildCheckInConfig(),
@@ -795,6 +827,13 @@ describe("AccountData availability producer conformance", () => {
       const capabilities = getSiteTypeCapabilities(siteType)
       if (capabilities.family === ACCOUNT_SITE_ADAPTER_FAMILIES.Cubence) {
         installCookieTransport()
+      }
+      if (capabilities.family === ACCOUNT_SITE_ADAPTER_FAMILIES.Dahl) {
+        const boundary = installCookieTransport()
+        const cookie = (await browser.cookies.getAll({}))[0]!
+        boundary.cookies.mockResolvedValue([
+          { ...cookie, domain: "inference.dahl.global", name: "dahl_session" },
+        ])
       }
       const fixture = getProducerFixture(siteType)
       const request = await createAccountScopedRequest(siteType)

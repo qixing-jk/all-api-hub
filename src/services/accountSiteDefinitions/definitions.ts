@@ -76,6 +76,8 @@ import {
   CUBENCE_API_ORIGIN,
   CUBENCE_HOSTNAMES,
   CUBENCE_WEB_ORIGIN,
+  DAHL_HOSTNAMES,
+  DAHL_WEB_ORIGIN,
   FREEMODEL_ANTHROPIC_BASE_URL,
   FREEMODEL_HOSTNAMES,
   FREEMODEL_OPENAI_BASE_URL,
@@ -193,6 +195,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.AIHUBMIX,
   SITE_TYPES.SHAREDCHAT,
   SITE_TYPES.FREEMODEL,
+  SITE_TYPES.DAHL,
   SITE_TYPES.CUBENCE,
   SITE_TYPES.RIGHT_CODE,
   SITE_TYPES.OPENROUTER,
@@ -320,6 +323,56 @@ const ACCOUNT_SITE_DEFINITIONS = [
           openAiCompatible: FREEMODEL_OPENAI_BASE_URL,
           anthropic: FREEMODEL_ANTHROPIC_BASE_URL,
         },
+      },
+    },
+  },
+  {
+    siteType: SITE_TYPES.DAHL,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Dahl,
+    onboarding: {
+      displayName: "Dahl",
+      detection: { hostnames: DAHL_HOSTNAMES },
+      routes: {
+        loginPath: "/account",
+        usagePath: "/account#profile",
+        adminCredentialsPath: "/account",
+        pricingPath: "/pricing/",
+        checkInPath: null,
+        accessTokenPath: null,
+        redeemPath: null,
+        siteAnnouncementsPath: null,
+      },
+    },
+    productProfile: {
+      metrics: {
+        deferredTodayStatsAvailability:
+          createUnsupportedTodayStatsAvailability(),
+        legacyTodayStatsAvailability: createUnsupportedTodayStatsAvailability(),
+      },
+      auth: {
+        usesBrowserCookieSession: true,
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.Cookie],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.Cookie,
+        defaultAuthHostnames: DAHL_HOSTNAMES,
+      },
+      identity: {
+        usernameRequired: false,
+        storedUserIdentityFields: ["id", "username"],
+      },
+      modelList: {
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+        groupSemantics: ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+      },
+      urls: {
+        recognizedHostnames: DAHL_HOSTNAMES,
+        inferFromHostname: true,
+        storageOrigin: DAHL_WEB_ORIGIN,
+        duplicateOrigin: DAHL_WEB_ORIGIN,
+        managedChannelOrigin: `${DAHL_WEB_ORIGIN}/v1`,
+        inferenceApiBaseUrls: { openAiCompatible: `${DAHL_WEB_ORIGIN}/v1` },
       },
     },
   },

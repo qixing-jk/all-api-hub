@@ -158,6 +158,7 @@ describe("account site onboarding registry", () => {
     ).toEqual([
       "cubence",
       "freemodel",
+      "dahl",
       "sub2api",
       "sharedchat",
       "voapi-v2",

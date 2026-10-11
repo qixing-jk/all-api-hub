@@ -11,7 +11,11 @@ import { formatLocaleDateTime } from "~/utils/core/formatters"
 
 import type { AccountKeyResourceCardAdapter } from "./accountKeyResourceCardAdapter"
 import type { KeyResourceFact } from "./keyResourceCard"
-import { getKeyResourcePresentationPolicy } from "./keyResourcePresentationPolicy"
+import {
+  KEY_RESOURCE_CARD_KINDS as cardKinds,
+  getKeyResourcePresentationPolicy,
+  KEY_RESOURCE_SCOPE_KINDS as scopeKinds,
+} from "./keyResourcePresentationPolicy"
 import { openRouterKeyResourceCardAdapter } from "./openRouterKeyResourceCard"
 
 /** Common facts remain usable without interpreting an unregistered provider's fields. */
@@ -209,9 +213,9 @@ const nativeKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
 /** Resolves all card choices from the same policy as the editor and scope UI. */
 export function getAccountKeyResourceCardAdapter(siteType: string) {
   const adapters = {
-    native: nativeKeyResourceCardAdapter,
-    openrouter: openRouterKeyResourceCardAdapter,
-    generic: genericKeyResourceCardAdapter,
+    [cardKinds.Native]: nativeKeyResourceCardAdapter,
+    [cardKinds.OpenRouter]: openRouterKeyResourceCardAdapter,
+    [cardKinds.Generic]: genericKeyResourceCardAdapter,
   }
   return adapters[getKeyResourcePresentationPolicy(siteType).card]
 }
@@ -225,7 +229,7 @@ export function shouldShowAccountKeyScopeSelector(
   scopeCount: number,
 ) {
   return (
-    getKeyResourcePresentationPolicy(siteType).scope === "workspace" ||
+    getKeyResourcePresentationPolicy(siteType).scope === scopeKinds.Workspace ||
     scopeCount > 1
   )
 }
@@ -235,7 +239,9 @@ export function getAccountKeyScopeMessages(
   siteType: string | undefined,
   t: TFunction,
 ) {
-  if (getKeyResourcePresentationPolicy(siteType).scope === "workspace") {
+  if (
+    getKeyResourcePresentationPolicy(siteType).scope === scopeKinds.Workspace
+  ) {
     return {
       heading: t("keyManagement:openRouter.workspace.heading"),
       fallback: t("keyManagement:openRouter.workspace.fallback"),

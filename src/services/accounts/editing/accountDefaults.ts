@@ -135,6 +135,7 @@ const normalizeAccountSubscriptionSummary = (
     remainingAmount: coerceOptionalNumber(raw.remainingAmount),
     usedCount: coerceOptionalNumber(raw.usedCount),
     remainingCount: coerceOptionalNumber(raw.remainingCount),
+    remainingTokens: coerceOptionalNumber(raw.remainingTokens),
     period: coerceOptionalString(raw.period),
     periodResetTime: coerceOptionalString(raw.periodResetTime),
     expireTime: coerceOptionalString(raw.expireTime),

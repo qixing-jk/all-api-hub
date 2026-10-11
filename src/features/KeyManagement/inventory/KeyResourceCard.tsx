@@ -50,6 +50,7 @@ export type KeyResourceCardProps = {
   secretControls?: ReactNode
   actions?: ReactNode
   details?: KeyResourceDetailState
+  showDetails?: boolean
   isDetailsExpanded: boolean
   onDetailsExpandedChange: (isExpanded: boolean) => void
   isSelected?: boolean
@@ -381,6 +382,7 @@ export function KeyResourceCard({
   secretControls,
   actions,
   details,
+  showDetails = true,
   isDetailsExpanded,
   onDetailsExpandedChange,
   isSelected,
@@ -407,7 +409,7 @@ export function KeyResourceCard({
   })
 
   // Expansion is local disclosure state, so it intentionally emits no analytics.
-  const detailsTrigger = (
+  const detailsTrigger = showDetails ? (
     <Tooltip content={detailsLabel} anchorAsChild>
       <IconButton
         id={detailsTriggerId}
@@ -422,7 +424,7 @@ export function KeyResourceCard({
         <Info aria-hidden="true" className="h-4 w-4" />
       </IconButton>
     </Tooltip>
-  )
+  ) : null
   const selection = (
     <BatchSelectionControl
       checked={isSelected === true}
@@ -470,7 +472,7 @@ export function KeyResourceCard({
             facts={presentation.summaryFacts}
             testId={KEY_MANAGEMENT_TEST_IDS.keyResourceSummaryFacts}
           />
-          {isDetailsExpanded ? (
+          {showDetails && isDetailsExpanded ? (
             <div
               id={detailsPanelId}
               role="region"

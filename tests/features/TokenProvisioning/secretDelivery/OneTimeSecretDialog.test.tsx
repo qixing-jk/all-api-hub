@@ -14,6 +14,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/secretDelivery/OneTimeSecretDialog"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import { createUnattributedAccountCreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
+import { INVENTORY_SECRET_AVAILABILITIES as secretAvailability } from "~/services/apiAdapters/contracts/inventorySecret"
 
 const RESULT = {
   displayName: "Example key",
@@ -29,6 +30,63 @@ const createDeferred = <T,>() => {
 }
 
 describe("OneTimeSecretDialog", () => {
+  it("keeps credential-library saving optional when a recoverable key has a next action", async () => {
+    const next = vi.fn()
+    render(
+      <OneTimeSecretDialog
+        isOpen
+        autoCopy={false}
+        result={{
+          ...RESULT,
+          secretAvailability: secretAvailability.Recoverable,
+        }}
+        onClose={vi.fn()}
+        saveAction={{ onSave: vi.fn() }}
+        nextAction={{ label: "Allocate tokens", onContinue: next }}
+      />,
+    )
+    const continueButton = screen.getByRole("button", {
+      name: "Allocate tokens",
+    })
+    expect(
+      within(
+        continueButton.closest('[data-slot="action-group"]') as HTMLElement,
+      )
+        .getAllByRole("button")
+        .at(-1),
+    ).toBe(continueButton)
+    await userEvent.setup().click(continueButton)
+    expect(next).toHaveBeenCalledOnce()
+    expect(
+      screen.queryByText("keyManagement:oneTimeKey.warningTitle"),
+    ).not.toBeInTheDocument()
+  })
+  it("does not claim a recoverable key is lost or require a loss confirmation", async () => {
+    const onClose = vi.fn()
+    render(
+      <OneTimeSecretDialog
+        isOpen
+        autoCopy={false}
+        result={{
+          ...RESULT,
+          secretAvailability: secretAvailability.Recoverable,
+        }}
+        onClose={onClose}
+      />,
+    )
+    expect(
+      screen.queryByText("keyManagement:oneTimeKey.warningTitle"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText("keyManagement:createdKey.title"),
+    ).toBeInTheDocument()
+    await userEvent
+      .setup()
+      .click(
+        screen.getByRole("button", { name: "keyManagement:oneTimeKey.close" }),
+      )
+    expect(onClose).toHaveBeenCalledOnce()
+  })
   it("shows automatic copy as status and keeps save as the primary footer action", async () => {
     render(
       <OneTimeSecretDialog

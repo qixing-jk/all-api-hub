@@ -1,0 +1,695 @@
+import { http, HttpResponse } from "msw"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
+import { SITE_TYPES } from "~/constants/siteType"
+import { ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { syncDahlKeyNames } from "~/services/apiAdapters/dahl/keyNameSync"
+import { DAHL_KEY_SCOPE } from "~/services/apiAdapters/dahl/keyResources"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import {
+  createKey,
+  fetchAccountData,
+  fetchKeys,
+  fetchUserInfo,
+  revokeKey,
+  transferKeyTokens,
+  type DahlKey,
+} from "~/services/apiService/dahl"
+import { AuthTypeEnum } from "~/types"
+import { server } from "~~/tests/msw/server"
+import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
+
+import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
+
+const origin = "https://inference.dahl.global"
+const userId = "00000000-0000-4000-8000-000000000001"
+const request = {
+  baseUrl: origin,
+  auth: { authType: AuthTypeEnum.Cookie, userId },
+}
+const body = {
+  user: { user_id: userId, username: "sample" },
+  token_balance: 90000000,
+  tokens_on_keys: 10000000,
+  paid: false,
+}
+
+describe("Dahl account contract", () => {
+  beforeEach(async () => {
+    const boundary = installCookieTransport()
+    const cookie = (await browser.cookies.getAll({}))[0]!
+    boundary.cookies.mockResolvedValue([
+      { ...cookie, domain: "inference.dahl.global", name: "dahl_session" },
+    ])
+  })
+  afterEach(() => vi.restoreAllMocks())
+  it("creates a key without asking for an allocation amount", async () => {
+    const session = await getSiteTypeCapabilities(
+      SITE_TYPES.DAHL,
+    ).account!.keyResourceManagement!.open({
+      account: { id: "local", siteType: SITE_TYPES.DAHL },
+      request: { ...request, accountId: "local" },
+    })
+    const editor = await session.openCreateEditor(DAHL_KEY_SCOPE)
+    expect(editor.fields.map((field) => field.fieldId)).toEqual(["local_name"])
+    expect(editor.initialValues).toEqual({ local_name: "" })
+    expect(editor.validate({}).valid).toBe(true)
+  })
+  const key: DahlKey = {
+    id: 7,
+    available_tokens: 100,
+    total_tokens: 150,
+    created_at: "2026-10-11T00:00:00Z",
+    status: "active",
+    masked: "dahl_abc…xyz",
+    token: "dahl_example",
+  }
+  it.each([
+    [editActions.Allocate, 300],
+    [editActions.Allocate, 50],
+    [editActions.Return, 300],
+    [editActions.Return, 50],
+  ] as const)(
+    "rejects a changed balance before submitting %s from an open editor (balance %s)",
+    async (action, changedBalance) => {
+      let current = { ...key }
+      const write = vi.fn(() => HttpResponse.json({ ok: true }))
+      server.use(
+        http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+        http.get(`${origin}/v1/account/keys`, () =>
+          HttpResponse.json({ keys: [current] }),
+        ),
+        http.post(`${origin}/v1/account/allocate`, write),
+        http.post(`${origin}/v1/account/return`, write),
+      )
+      const session = await getSiteTypeCapabilities(
+        SITE_TYPES.DAHL,
+      ).account!.keyResourceManagement!.open({
+        account: { id: "local", siteType: SITE_TYPES.DAHL },
+        request: { ...request, accountId: "local" },
+      })
+      const collection = await session.openCollection(DAHL_KEY_SCOPE)
+      const ref = (await collection.list()).items[0]!.ref
+      const editor = await collection.openEditEditor(ref, undefined, { action })
+      current = { ...current, available_tokens: changedBalance }
+      await expect(
+        editor.submit({ ...editor.initialValues, transfer_amount: "40" }),
+      ).rejects.toMatchObject({ failure: { code: "resource_changed" } })
+      expect(write).not.toHaveBeenCalled()
+    },
+  )
+  it.each(["malformed", "network"] as const)(
+    "does not replay a dispatched creation after a %s response failure",
+    async (failure) => {
+      const write = vi.fn(() =>
+        failure === "network"
+          ? HttpResponse.error()
+          : HttpResponse.json({ key: null }),
+      )
+      server.use(
+        http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+        http.post(`${origin}/v1/account/keys`, write),
+      )
+      const session = await getSiteTypeCapabilities(
+        SITE_TYPES.DAHL,
+      ).account!.keyResourceManagement!.open({
+        account: { id: "local", siteType: SITE_TYPES.DAHL },
+        request: { ...request, accountId: "local" },
+      })
+      const editor = await session.openCreateEditor(DAHL_KEY_SCOPE)
+      await expect(editor.submit(editor.initialValues)).rejects.toMatchObject({
+        failure: { code: "mutation_state_uncertain" },
+      })
+      await expect(editor.submit(editor.initialValues)).rejects.toMatchObject({
+        failure: { code: "validation_failed" },
+      })
+      expect(write).toHaveBeenCalledTimes(1)
+    },
+  )
+  it.each([editActions.Allocate, editActions.Return, "revoke"] as const)(
+    "reports an uncertain %s when readback fails after its write",
+    async (action) => {
+      let applied = false
+      const write = vi.fn(() => {
+        applied = true
+        return HttpResponse.json({ ok: true })
+      })
+      server.use(
+        http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+        http.get(`${origin}/v1/account/keys`, () =>
+          applied ? HttpResponse.error() : HttpResponse.json({ keys: [key] }),
+        ),
+        http.post(`${origin}/v1/account/allocate`, write),
+        http.post(`${origin}/v1/account/return`, write),
+        http.delete(`${origin}/v1/account/keys/7`, write),
+      )
+      const session = await getSiteTypeCapabilities(
+        SITE_TYPES.DAHL,
+      ).account!.keyResourceManagement!.open({
+        account: { id: "local", siteType: SITE_TYPES.DAHL },
+        request: { ...request, accountId: "local" },
+      })
+      const collection = await session.openCollection(DAHL_KEY_SCOPE)
+      const ref = (await collection.list()).items[0]!.ref
+      if (action === "revoke") {
+        await expect(collection.delete(ref)).rejects.toMatchObject({
+          failure: { code: "mutation_state_uncertain" },
+        })
+      } else {
+        const editor = await collection.openEditEditor(ref, undefined, {
+          action,
+        })
+        await expect(
+          editor.submit({ ...editor.initialValues, transfer_amount: "40" }),
+        ).rejects.toMatchObject({
+          failure: { code: "mutation_state_uncertain" },
+        })
+        await expect(
+          editor.submit({ ...editor.initialValues, transfer_amount: "40" }),
+        ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+      }
+      expect(write).toHaveBeenCalledTimes(1)
+    },
+  )
+  it("commits a local rename without waiting for any provider or website request", async () => {
+    server.use(
+      http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+      http.get(`${origin}/v1/account/keys`, () =>
+        HttpResponse.json({ keys: [key] }),
+      ),
+    )
+    const session = await getSiteTypeCapabilities(
+      SITE_TYPES.DAHL,
+    ).account!.keyResourceManagement!.open({
+      account: { id: "local", siteType: SITE_TYPES.DAHL },
+      request: { ...request, accountId: "local" },
+    })
+    const collection = await session.openCollection(DAHL_KEY_SCOPE)
+    const row = (await collection.list()).items[0]!
+    let reads = 0
+    server.use(
+      http.get(`${origin}/v1/*`, ({ request }) => {
+        reads++
+        return HttpResponse.json(
+          request.url.endsWith("/keys") ? { keys: [key] } : body,
+        )
+      }),
+    )
+    const send = vi.spyOn(browser.tabs, "sendMessage")
+    const editor = await collection.openEditEditor(row.ref, undefined, {
+      action: editActions.Rename,
+      snapshot: row,
+    })
+    expect(editor.fields.map((field) => field.fieldId)).toEqual([
+      "local_name",
+      "name_sync",
+    ])
+    const result = await editor.submit({
+      ...editor.initialValues,
+      transfer_direction: editActions.Rename,
+      local_name: "Fast rename",
+    })
+    expect(result.facts?.displayName).toBe("Fast rename")
+    expect(reads).toBe(0)
+    expect(send).not.toHaveBeenCalled()
+  })
+  it("imports website names and synchronizes local renames only through a verified same-profile page", async () => {
+    const labels: Record<string, string> = { "7": "Website key" }
+    vi.spyOn(browser.tabs, "query").mockResolvedValue([
+      { id: 7, url: `${origin}/account`, incognito: false } as browser.tabs.Tab,
+    ])
+    const send = vi.spyOn(browser.tabs, "sendMessage").mockImplementation(
+      async (
+        _tabId,
+        message: {
+          action: string
+          expectedUserId: string
+          pendingLabels: Record<string, string>
+        },
+      ) => {
+        expect(message.action).toBe("contentSyncDahlKeyNames")
+        expect(message.expectedUserId).toBe(userId)
+        Object.assign(labels, message.pendingLabels)
+        return { success: true, userId, labels }
+      },
+    )
+    server.use(
+      http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+      http.get(`${origin}/v1/account/keys`, () =>
+        HttpResponse.json({ keys: [key] }),
+      ),
+    )
+    const session = await getSiteTypeCapabilities(
+      SITE_TYPES.DAHL,
+    ).account!.keyResourceManagement!.open({
+      account: { id: "local", siteType: SITE_TYPES.DAHL },
+      request: { ...request, accountId: "local" },
+    })
+    const collection = await session.openCollection(DAHL_KEY_SCOPE)
+    const row = (await collection.list()).items[0]!
+    expect(row.displayName).toBe("Website key")
+    const editor = await collection.openEditEditor(row.ref, undefined, {
+      action: editActions.Rename,
+      snapshot: row,
+    })
+    await editor.submit({
+      ...editor.initialValues,
+      transfer_direction: editActions.Rename,
+      local_name: "Extension key",
+    })
+    await collection.list()
+    expect(labels["7"]).toBe("Extension key")
+    expect(send).toHaveBeenCalled()
+    labels["7"] = "Changed on website"
+    expect((await collection.list()).items[0]!.displayName).toBe(
+      "Changed on website",
+    )
+    send.mockResolvedValue({ success: false })
+    const offline = await collection.openEditEditor(row.ref, undefined, {
+      action: editActions.Rename,
+      snapshot: row,
+    })
+    await offline.submit({
+      ...offline.initialValues,
+      transfer_direction: editActions.Rename,
+      local_name: "Offline key",
+    })
+    expect((await collection.list()).items[0]!.displayName).toBe("Offline key")
+    expect(
+      (
+        await collection.openEditEditor(row.ref, undefined, {
+          action: editActions.Rename,
+          snapshot: row,
+        })
+      ).initialValues.name_sync,
+    ).toBe("pending")
+    expect(labels["7"]).toBe("Changed on website")
+  })
+  it("names a zero-token key and persists a rename without sending funding or name writes to the API", async () => {
+    const current = { ...key, available_tokens: 0, total_tokens: 0 }
+    let serverWrites = 0
+    server.use(
+      http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+      http.get(`${origin}/v1/account/keys`, () =>
+        HttpResponse.json({ keys: [current] }),
+      ),
+      http.post(`${origin}/v1/account/keys`, async ({ request }) => {
+        serverWrites++
+        expect(await request.text()).toBe("")
+        return HttpResponse.json({ key: current }, { status: 201 })
+      }),
+      http.all(`${origin}/v1/account/allocate`, () => {
+        serverWrites++
+        return HttpResponse.json({})
+      }),
+    )
+    const capability = getSiteTypeCapabilities(SITE_TYPES.DAHL).account!
+      .keyResourceManagement!
+    const open = () =>
+      capability.open({
+        account: { id: "local", siteType: SITE_TYPES.DAHL },
+        request: { ...request, accountId: "local" },
+      })
+    const session = await open()
+    const creator = await session.openCreateEditor(DAHL_KEY_SCOPE)
+    const result = await creator.submit({ local_name: "  Work key  " })
+    expect(result.createdSecret?.displayName).toBe("Work key")
+    const collection = await (await open()).openCollection(DAHL_KEY_SCOPE)
+    const row = (await collection.list()).items[0]!
+    expect(row.displayName).toBe("Work key")
+    const editor = await collection.openEditEditor(row.ref, undefined, {
+      action: editActions.Rename,
+      snapshot: row,
+    })
+    expect(editor.initialValues.local_name).toBe("Work key")
+    expect(
+      editor.validate({
+        ...editor.initialValues,
+        transfer_direction: editActions.Rename,
+        local_name: "Personal key",
+      }).valid,
+    ).toBe(true)
+    await editor.submit({
+      ...editor.initialValues,
+      transfer_direction: editActions.Rename,
+      local_name: "Personal key",
+    })
+    expect((await collection.list()).items[0]!.displayName).toBe("Personal key")
+    expect(serverWrites).toBe(1)
+    expect(current.available_tokens).toBe(0)
+    expect(
+      (
+        await syncDahlKeyNames(
+          {
+            ...request,
+            fetchContext: { kind: "browser-context", incognito: true },
+          },
+          [7],
+        )
+      ).names,
+    ).toEqual({})
+    const otherSession = await capability.open({
+      account: { id: "other", siteType: SITE_TYPES.DAHL },
+      request: {
+        ...request,
+        accountId: "other",
+        auth: {
+          ...request.auth,
+          userId: "00000000-0000-4000-8000-000000000002",
+        },
+      },
+    })
+    server.use(
+      http.get(`${origin}/v1/account`, () =>
+        HttpResponse.json({
+          ...body,
+          user: {
+            ...body.user,
+            user_id: "00000000-0000-4000-8000-000000000002",
+          },
+        }),
+      ),
+    )
+    expect(
+      (await (await otherSession.openCollection(DAHL_KEY_SCOPE)).list())
+        .items[0]!.displayName,
+    ).toBe("Dahl #7")
+  })
+  it("submits K/M allocation and full return as native transfer quantities", async () => {
+    let current = { ...key }
+    let pool = 90000000
+    const transfers: unknown[] = []
+    server.use(
+      http.get(`${origin}/v1/account`, () =>
+        HttpResponse.json({ ...body, token_balance: pool }),
+      ),
+      http.get(`${origin}/v1/account/keys`, () =>
+        HttpResponse.json({ keys: [current] }),
+      ),
+      http.post(`${origin}/v1/account/allocate`, async ({ request }) => {
+        const command = (await request.json()) as {
+          key_id: number
+          amount: number
+        }
+        transfers.push(command)
+        pool -= command.amount
+        current = {
+          ...current,
+          available_tokens: current.available_tokens + command.amount,
+          total_tokens: current.total_tokens + command.amount,
+        }
+        return HttpResponse.json({ key: current, token_balance: pool })
+      }),
+      http.post(`${origin}/v1/account/return`, async ({ request }) => {
+        const command = (await request.json()) as {
+          key_id: number
+          amount: number
+        }
+        transfers.push(command)
+        pool += command.amount
+        current = {
+          ...current,
+          available_tokens: current.available_tokens - command.amount,
+        }
+        return HttpResponse.json({ key: current, token_balance: pool })
+      }),
+    )
+    const session = await getSiteTypeCapabilities(
+      SITE_TYPES.DAHL,
+    ).account!.keyResourceManagement!.open({
+      account: { id: "local", siteType: SITE_TYPES.DAHL },
+      request: { ...request, accountId: "local" },
+    })
+    const collection = await session.openCollection(DAHL_KEY_SCOPE)
+    const ref = (await collection.list()).items[0]!.ref
+    const allocation = await collection.openEditEditor(ref)
+    await allocation.submit({
+      ...allocation.initialValues,
+      transfer_amount: "1.5M",
+    })
+    expect(transfers).toEqual([{ key_id: 7, amount: 1500000 }])
+    const returned = await collection.openEditEditor(ref, undefined, {
+      action: editActions.Return,
+    })
+    expect(returned.initialValues).toMatchObject({
+      pool_tokens: 88500000,
+      key_tokens: 1500100,
+    })
+    await returned.submit({
+      ...returned.initialValues,
+      transfer_direction: editActions.Return,
+      transfer_amount: "1500100",
+    })
+    expect(transfers).toEqual([
+      { key_id: 7, amount: 1500000 },
+      { key_id: 7, amount: 1500100 },
+    ])
+    expect(current.available_tokens).toBe(0)
+    expect(pool).toBe(90000100)
+  })
+  it("dispatches provider pricing and a funding editor without exporting console credentials", async () => {
+    server.use(
+      http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+      http.get(`${origin}/v1/account/keys`, () =>
+        HttpResponse.json({ keys: [key] }),
+      ),
+      http.get(`${origin}/v1/models`, ({ request }) => {
+        expect(request.headers.get("Authorization")).toBeNull()
+        return HttpResponse.json({ data: [{ id: "sample-model" }] })
+      }),
+    )
+    const account = getSiteTypeCapabilities(SITE_TYPES.DAHL).account!
+    const pricing = await account.modelPricing!.fetchPricing(request)
+    expect(pricing.data[0]!.token_price_usd_per_million).toEqual({
+      input: 0.03,
+      output: 0.03,
+      cache_read: 0.03,
+    })
+    expect(pricing.model_list_source?.kind).toBe("provider-catalog")
+    const capability = account.keyResourceManagement!
+    expect(capability.defaultCreation).toBe("requires-input")
+    const session = await capability.open({
+      account: { id: "local", siteType: SITE_TYPES.DAHL },
+      request: { ...request, accountId: "local" },
+    })
+    const collection = await session.openCollection(DAHL_KEY_SCOPE)
+    const ref = (await collection.list()).items[0]!.ref
+    expect(await session.runtimeKey!.resolve(ref)).toEqual({
+      kind: "resolved",
+      secret: "dahl_example",
+    })
+    const editor = await collection.openEditEditor(ref)
+    expect(editor.initialValues).toMatchObject({
+      transfer_direction: editActions.Allocate,
+      transfer_amount: "",
+      pool_tokens: 90000000,
+      key_tokens: 100,
+    })
+    const allocation = { ...editor.initialValues, transfer_amount: "2.5M" }
+    expect(editor.validate(allocation).valid).toBe(true)
+    expect(
+      editor.validate({ ...allocation, transfer_amount: "91M" }).valid,
+    ).toBe(false)
+    const returned = {
+      ...allocation,
+      transfer_direction: editActions.Return,
+      transfer_amount: "100",
+    }
+    expect(editor.validate(returned).valid).toBe(false)
+    const returnEditor = await collection.openEditEditor(ref, undefined, {
+      action: editActions.Return,
+    })
+    expect(returnEditor.validate(returned).valid).toBe(true)
+    expect(
+      returnEditor.validate({ ...returned, transfer_amount: "101" }).valid,
+    ).toBe(false)
+    expect(
+      returnEditor.validate({ ...returned, transfer_amount: "0" }).valid,
+    ).toBe(false)
+    expect(
+      returnEditor.validate({ ...returned, transfer_amount: "1.5" }).valid,
+    ).toBe(false)
+  })
+  it("lists recoverable keys and creates a zero-token key without inventing a server name", async () => {
+    server.use(
+      http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+      http.get(`${origin}/v1/account/keys`, () =>
+        HttpResponse.json({ keys: [key] }),
+      ),
+      http.post(`${origin}/v1/account/keys`, async ({ request }) => {
+        expect(await request.text()).toBe("")
+        return HttpResponse.json(
+          {
+            key: {
+              ...key,
+              available_tokens: 0,
+              total_tokens: 0,
+              status: "exhausted",
+            },
+          },
+          { status: 201 },
+        )
+      }),
+    )
+    expect(await fetchKeys(request)).toEqual([key])
+    expect(await createKey(request)).toMatchObject({
+      available_tokens: 0,
+      status: "exhausted",
+    })
+    const session = await getSiteTypeCapabilities(
+      SITE_TYPES.DAHL,
+    ).account!.keyResourceManagement!.open({
+      account: { id: "local", siteType: SITE_TYPES.DAHL },
+      request: { ...request, accountId: "local" },
+    })
+    const creator = await session.openCreateEditor(DAHL_KEY_SCOPE)
+    expect((await creator.submit({})).createdSecret?.secret).toBe(
+      "dahl_example",
+    )
+  })
+  it("allocates only the difference and reads back the new owned-key balance", async () => {
+    let current = key
+    server.use(
+      http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+      http.get(`${origin}/v1/account/keys`, () =>
+        HttpResponse.json({ keys: [current] }),
+      ),
+      http.post(`${origin}/v1/account/allocate`, async ({ request }) => {
+        expect(await request.json()).toEqual({ key_id: 7, amount: 50 })
+        current = { ...key, available_tokens: 150, total_tokens: 200 }
+        return HttpResponse.json({ ok: true })
+      }),
+    )
+    expect(
+      await transferKeyTokens(request, key, {
+        direction: editActions.Allocate,
+        amount: 50,
+      }),
+    ).toMatchObject({
+      available_tokens: 150,
+      total_tokens: 200,
+    })
+  })
+  it("returns only the difference and never transfers tokens after an obsolete key balance", async () => {
+    let current = key
+    let mutations = 0
+    server.use(
+      http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+      http.get(`${origin}/v1/account/keys`, () =>
+        HttpResponse.json({ keys: [current] }),
+      ),
+      http.post(`${origin}/v1/account/return`, async ({ request }) => {
+        mutations++
+        expect(await request.json()).toEqual({ key_id: 7, amount: 40 })
+        current = { ...key, available_tokens: 60 }
+        return HttpResponse.json({ ok: true })
+      }),
+    )
+    expect(
+      await transferKeyTokens(request, key, {
+        direction: editActions.Return,
+        amount: 40,
+      }),
+    ).toMatchObject({
+      available_tokens: 60,
+    })
+    await expect(
+      transferKeyTokens(request, key, {
+        direction: editActions.Return,
+        amount: 50,
+      }),
+    ).rejects.toMatchObject({
+      failure: { code: "resource_changed" },
+    })
+    expect(mutations).toBe(1)
+  })
+  it("reconciles revocation without deleting unrelated keys", async () => {
+    let current = key
+    server.use(
+      http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+      http.get(`${origin}/v1/account/keys`, () =>
+        HttpResponse.json({ keys: [current] }),
+      ),
+      http.delete(`${origin}/v1/account/keys/7`, () => {
+        current = { ...key, status: "revoked", available_tokens: 0 }
+        return HttpResponse.json({ ok: true })
+      }),
+    )
+    await expect(revokeKey(request, "7")).resolves.toBeUndefined()
+  })
+  it("keeps pool and key tokens in the total credit without inventing daily statistics", async () => {
+    server.use(
+      http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+      http.get(`${origin}/v1/account/usage`, () =>
+        HttpResponse.json({
+          daily: [],
+          models: [],
+          total_input_tokens: 20,
+          total_output_tokens: 10,
+          total_requests: 2,
+        }),
+      ),
+    )
+    const result = await fetchAccountData({
+      ...request,
+      checkIn: createCheckInConfig(SITE_TYPES.DAHL),
+    })
+    expect(result.quota).toBe(1500000) // 100M tokens * $0.03/M * 500000 quota/USD.
+    expect(result.subscription).toMatchObject({ remainingTokens: 100000000 })
+    expect(result.subscription?.remainingCount).toBeUndefined()
+    expect(result.usage).toMatchObject({ totalTokens: 30, totalRequests: 2 })
+    expect(result.todayStatsAvailability?.consumption).toMatchObject({
+      status: "unavailable",
+      reason: "unsupported",
+    })
+  })
+
+  it("rejects a different live UUID before returning account data", async () => {
+    server.use(
+      http.get(`${origin}/v1/account`, () =>
+        HttpResponse.json({
+          ...body,
+          user: {
+            ...body.user,
+            user_id: "00000000-0000-4000-8000-000000000002",
+          },
+        }),
+      ),
+    )
+    await expect(fetchUserInfo(request)).rejects.toMatchObject({
+      code: "ACCOUNT_IDENTITY_MISMATCH",
+    })
+  })
+
+  it("rejects inference credentials and other origins before network dispatch", async () => {
+    await expect(
+      fetchUserInfo({
+        ...request,
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "dahl_example",
+        },
+      }),
+    ).rejects.toMatchObject({ code: "FEATURE_UNSUPPORTED" })
+    await expect(
+      fetchUserInfo({
+        ...request,
+        baseUrl: "https://inference.dahl.global.example.invalid",
+      }),
+    ).rejects.toMatchObject({ code: "FEATURE_UNSUPPORTED" })
+  })
+
+  it("does not turn missing balance into zero", async () => {
+    server.use(
+      http.get(`${origin}/v1/account`, () =>
+        HttpResponse.json({ user: body.user, tokens_on_keys: 0 }),
+      ),
+    )
+    await expect(
+      fetchAccountData({
+        ...request,
+        checkIn: createCheckInConfig(SITE_TYPES.DAHL),
+      }),
+    ).rejects.toMatchObject({ code: "JSON_PARSE_ERROR" })
+  })
+})

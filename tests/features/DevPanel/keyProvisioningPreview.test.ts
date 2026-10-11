@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { ACCOUNT_SITE_TYPES } from "~/constants/siteType"
+import { ACCOUNT_SITE_TYPES, SITE_TYPES } from "~/constants/siteType"
 import { createKeyProvisioningFixtureSession } from "~/features/DevPanel/keyProvisioningFixtures"
 import {
   createKeyProvisioningPreviewAccount,
@@ -233,12 +233,9 @@ describe("key provisioning preview plans", () => {
       try {
         const account = createKeyProvisioningPreviewAccount(siteType)
         for (const mode of ["default", "all-groups"] as const) {
-          expect(
-            getKeyProvisioningPreviewProfile(siteType, mode).description,
-          ).toMatch(/key|group|channel/i)
-          if (
-            !getSiteTypeCapabilities(siteType).account?.keyResourceManagement
-          ) {
+          const profile = getKeyProvisioningPreviewProfile(siteType, mode)
+          expect(profile.description).toMatch(/key|group|channel/i)
+          if (!profile.supported) {
             await expect(
               prepareKeyProvisioningPreview(account, mode),
             ).rejects.toThrow()
@@ -258,6 +255,30 @@ describe("key provisioning preview plans", () => {
             }
           }
         }
+        expect(fetchSpy).not.toHaveBeenCalled()
+      } finally {
+        fetchSpy.mockRestore()
+      }
+    },
+  )
+  it.each(["default", "all-groups"] as const)(
+    "reports a missing Dahl preview fixture without using its live adapter in %s mode",
+    async (mode) => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch")
+      try {
+        expect(
+          getSiteTypeCapabilities(SITE_TYPES.DAHL).account
+            ?.keyResourceManagement,
+        ).toBeDefined()
+        expect(
+          getKeyProvisioningPreviewProfile(SITE_TYPES.DAHL, mode).supported,
+        ).toBe(false)
+        await expect(
+          prepareKeyProvisioningPreview(
+            createKeyProvisioningPreviewAccount(SITE_TYPES.DAHL),
+            mode,
+          ),
+        ).rejects.toMatchObject({ failure: { code: "unavailable" } })
         expect(fetchSpy).not.toHaveBeenCalled()
       } finally {
         fetchSpy.mockRestore()

@@ -15,9 +15,12 @@ import { useAccountKeyResourceController } from "~/features/KeyManagement/resour
 import { NATIVE_RESOURCE_EDITOR_LOADING_REVEALS } from "~/features/ResourceEditor/opening/nativeResourceEditorOpeningState"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
+  ACCOUNT_KEY_RESOURCE_LOCAL_METADATA,
   AccountKeyResourceError,
+  ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions,
   type ResourceFieldOption,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { DAHL_KEY_RESOURCE_FIELDS as fields } from "~/services/apiAdapters/dahl/keyResourceFields"
 import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_MODES,
@@ -110,6 +113,85 @@ const mockNativeResourceSession = (open: ReturnType<typeof vi.fn>) => {
 }
 
 describe("useAccountKeyResourceController", () => {
+  it("opens a direct rename with its own initial values rather than an unsaved transfer-mode change", async () => {
+    const facts = {
+      ...createFacts("default", "7"),
+      ref: {
+        accountId: "account-example",
+        siteType: "dahl" as const,
+        scopeKey: "default",
+        resourceId: "7",
+      },
+    }
+    const scope = {
+      scopeKey: "default",
+      routeKey: "default",
+      displayName: "Dahl",
+      isDefault: true,
+    }
+    const editor = {
+      fields: [
+        {
+          fieldId: fields.TransferDirection,
+          type: "select",
+          options: [
+            { value: editActions.Allocate },
+            { value: editActions.Return },
+            { value: editActions.Rename },
+          ],
+        },
+        { fieldId: fields.Name, type: "text" },
+      ],
+      initialValues: {
+        transfer_direction: editActions.Rename,
+        local_name: "Work",
+      },
+      validate: () => ({ valid: true }),
+      submit: vi.fn(),
+    }
+    const list = vi.fn().mockResolvedValue({ items: [facts] })
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue(scope),
+        listScopes: vi.fn().mockResolvedValue([scope]),
+        openCollection: vi.fn().mockResolvedValue({
+          list,
+          openEditEditor: vi.fn().mockResolvedValue(editor),
+        }),
+      }),
+    )
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [{ ...createAccount("account-example"), siteType: "dahl" }],
+        selectedAccount: "account-example",
+        routeParams: { accountId: "account-example" },
+      }),
+    )
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    await act(async () =>
+      result.current.openEdit(facts.ref, editActions.Rename),
+    )
+    expect(result.current.editor?.initialValues).toEqual({
+      transfer_direction: editActions.Rename,
+      local_name: "Work",
+    })
+    expect(result.current.editor?.values).toEqual(
+      result.current.editor?.initialValues,
+    )
+    editor.submit.mockResolvedValue({
+      facts: { ...facts, displayName: "Renamed" },
+      refreshPolicy: ACCOUNT_KEY_RESOURCE_LOCAL_METADATA,
+    })
+    await act(async () =>
+      result.current.submitEditor(result.current.editor!.editorId, {
+        local_name: "Renamed",
+      }),
+    )
+    expect(result.current.rows[0]?.displayName).toBe("Renamed")
+    expect(result.current.editor).toBeNull()
+    expect(result.current.isLoading).toBe(false)
+    expect(list).toHaveBeenCalledTimes(1)
+  })
   const recoveryScope = {
     scopeKey: "workspace-example",
     routeKey: "team",

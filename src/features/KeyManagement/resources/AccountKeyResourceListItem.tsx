@@ -10,6 +10,7 @@ import { KeyResourceCard } from "~/features/KeyManagement/inventory/KeyResourceC
 import type { KeyResourceCredentialAssociation } from "~/features/KeyManagement/inventory/KeyResourceCard"
 import type { AccountKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/accountKeyResourceCardAdapter"
 import type { KeyResourceDetailState } from "~/features/KeyManagement/presentation/keyResourceCard"
+import { getKeyResourcePresentationPolicy } from "~/features/KeyManagement/presentation/keyResourcePresentationPolicy"
 import { useAccountKeySecretDisclosure } from "~/features/KeyManagement/resources/useAccountKeySecretDisclosure"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import type {
@@ -175,7 +176,7 @@ export function AccountKeyResourceListItem({
                 actionPolicy={presentation.actions}
                 association={association}
                 copyKey={copyDisclosedKey}
-                handleEditKey={() => onEdit(row.facts.ref)}
+                handleEditKey={(_key, intent) => onEdit(row.facts.ref, intent)}
                 handleDeleteKey={() => onDelete(row.facts.ref)}
                 onOpenDeeplinkExport={onOpenDeeplinkExport}
                 managedSiteStatus={managedSiteStatus}
@@ -192,6 +193,9 @@ export function AccountKeyResourceListItem({
           : undefined
       }
       details={detailState}
+      showDetails={
+        getKeyResourcePresentationPolicy(row.facts.ref.siteType).showDetails
+      }
       isDetailsExpanded={expanded}
       onDetailsExpandedChange={onExpandedChange}
       selectionDisabledReason={selectionDisabledReason}

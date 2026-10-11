@@ -277,6 +277,8 @@ export type AccountKeyResourceFacts = {
 }
 
 export type AccountKeyEditorSubmitResult = {
+  /** Metadata facts are complete; background name sync must not block resource actions. */
+  readonly refreshPolicy?: typeof ACCOUNT_KEY_RESOURCE_LOCAL_METADATA
   /** Null only for confirmed creation with a response-only secret and no attributable ID. */
   readonly facts: AccountKeyResourceFacts | null
   readonly createdSecret?: CreatedRuntimeSecret
@@ -324,6 +326,22 @@ export interface AccountKeyResourceEditor {
   ): Promise<AccountKeyEditorSubmitResult>
 }
 
+export const ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS = {
+  Rename: "rename",
+  Allocate: "allocate",
+  Return: "return",
+} as const
+export type AccountKeyResourceEditAction =
+  (typeof ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS)[keyof typeof ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS]
+
+/** Local metadata commits preserve the accepted inventory without a server refresh. */
+export const ACCOUNT_KEY_RESOURCE_LOCAL_METADATA = "local-metadata"
+export type AccountKeyResourceEditIntent = {
+  action: AccountKeyResourceEditAction
+  /** Accepted inventory facts; local metadata editors need no fresh server balance. */
+  snapshot?: AccountKeyResourceFacts
+}
+
 export interface AccountKeyResourceCollection {
   readonly scope: AccountKeyScope
   list(
@@ -337,6 +355,7 @@ export interface AccountKeyResourceCollection {
   openEditEditor(
     ref: AccountKeyResourceRef,
     options?: ResourceOperationOptions,
+    intent?: AccountKeyResourceEditIntent,
   ): Promise<AccountKeyResourceEditor>
   delete(
     ref: AccountKeyResourceRef,

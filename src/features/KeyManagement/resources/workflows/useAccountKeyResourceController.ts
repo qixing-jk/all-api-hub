@@ -32,6 +32,7 @@ import { useAccountKeyResourceRequestLifecycle } from "~/features/KeyManagement/
 import { useAccountKeyResourceRouteCoordinator } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceRouteCoordinator"
 import { useAccountKeyResourceRouteState } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceRouteState"
 import { openAccountKeyResourceSession } from "~/services/accounts/keys/openAccountKeyResourceSession"
+import type { AccountKeyResourceEditAction } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   type AccountKeyResourceRef,
   type ResourceFailure,
@@ -477,7 +478,10 @@ export function useAccountKeyResourceController({
     closeDetail,
     selectScope,
     openCreate: () => openEditor(editorModes.Create),
-    openEdit: (ref: AccountKeyResourceRef) => openEditor(editorModes.Edit, ref),
+    openEdit: (
+      ref: AccountKeyResourceRef,
+      intent?: AccountKeyResourceEditAction,
+    ) => openEditor(editorModes.Edit, ref, undefined, intent),
     closeEditor,
     settleTerminalClose,
     retryEditorOpening,

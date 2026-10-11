@@ -6,6 +6,7 @@ import type {
 import { type NativeResourceEditorOpeningState } from "~/features/ResourceEditor/opening/nativeResourceEditorOpeningState"
 import type { AccountKeyCreationResult } from "~/services/accounts/keys/accountKeyCreation"
 import { type DisplayAccountApiSnapshot } from "~/services/accounts/utils/apiServiceRequest"
+import type { AccountKeyResourceEditAction } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   type AccountKeyCreationIntent,
   type AccountKeyResourceCollection,
@@ -58,6 +59,7 @@ export type EditorOpeningState = NativeResourceEditorOpeningState<
 export type EditorOpenRequest = {
   mode: EditorMode
   ref?: AccountKeyResourceRef
+  intent?: AccountKeyResourceEditAction
 }
 
 export type ResourceActionContext = {

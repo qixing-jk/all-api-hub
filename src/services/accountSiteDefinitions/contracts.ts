@@ -43,6 +43,7 @@ export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   Aihubmix: "aihubmix",
   SharedChat: "sharedchat",
   FreeModel: "freemodel",
+  Dahl: "dahl",
   Cubence: "cubence",
   RightCode: "rightcode",
   OpenRouter: "openrouter",

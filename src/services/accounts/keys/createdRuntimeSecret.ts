@@ -4,6 +4,7 @@ import {
   type AccountRuntimeKeyLocator,
 } from "~/services/accounts/keys/accountRuntimeKeys"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
+import { INVENTORY_SECRET_AVAILABILITIES as secretAvailability } from "~/services/apiAdapters/contracts/inventorySecret"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 
 type CreatedRuntimeSecretCorrelation =
@@ -30,12 +31,14 @@ type CreatedRuntimeSecretCredential = {
   readonly tagIds: readonly string[]
 }
 
-/** A response-only secret returned during a successful key creation mutation. */
+/** Plaintext returned during creation, with the provider's subsequent reveal policy. */
 export type CreatedRuntimeSecret = {
   readonly correlation: CreatedRuntimeSecretCorrelation
   readonly displayName: string
   readonly secret: string
-  readonly secretAvailability: "create-response-only"
+  readonly secretAvailability:
+    | typeof secretAvailability.CreateResponseOnly
+    | typeof secretAvailability.Recoverable
   readonly credential: CreatedRuntimeSecretCredential
 }
 
@@ -58,11 +61,13 @@ const createCreatedRuntimeSecret = (params: {
   displayName: string
   secret: string
   credential: CreatedRuntimeSecretCredential
+  secretAvailability?: CreatedRuntimeSecret["secretAvailability"]
 }): CreatedRuntimeSecret => ({
   correlation: params.correlation,
   displayName: params.displayName,
   secret: requireUsableSecret(params.secret),
-  secretAvailability: "create-response-only",
+  secretAvailability:
+    params.secretAvailability ?? secretAvailability.CreateResponseOnly,
   credential: params.credential,
 })
 
@@ -98,12 +103,13 @@ export const createUnattributedAccountCreatedRuntimeSecret = (params: {
     credential: params.credential,
   })
 
-/** Builds a one-time secret from an account-key-resource create result. */
+/** Builds a creation secret without implying that a recoverable key is response-only. */
 export const createAccountKeyResourceCreatedRuntimeSecret = ({
   ref,
   displayName,
   secret,
   credential,
+  secretAvailability,
 }: {
   ref: Extract<
     CreatedRuntimeSecretCorrelation,
@@ -112,6 +118,7 @@ export const createAccountKeyResourceCreatedRuntimeSecret = ({
   displayName: string
   secret: string
   credential: CreatedRuntimeSecretCredential
+  secretAvailability?: CreatedRuntimeSecret["secretAvailability"]
 }): CreatedRuntimeSecret => {
   if (
     !ref.accountId.trim() ||
@@ -129,5 +136,6 @@ export const createAccountKeyResourceCreatedRuntimeSecret = ({
     displayName,
     secret,
     credential,
+    secretAvailability,
   })
 }
