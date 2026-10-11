@@ -1,4 +1,10 @@
 import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
+import { ForeignCheckInContractError } from "~/services/apiService/sub2api/checkin/foreignCheckInContract"
+import {
+  createUserCheckInStatusEndpoint,
+  resolveUserCheckInTimezone,
+  USER_CHECK_IN_STATUS_ENDPOINT,
+} from "~/services/apiService/sub2api/checkin/userCheckInProtocol"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type {
@@ -6,8 +12,6 @@ import type {
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
 
-const GENIUS_PROGRAMMER_DAILY_CHECK_IN_STATUS_ENDPOINT =
-  "/api/v1/user/checkin/status"
 const GENIUS_PROGRAMMER_DAILY_CHECK_IN_ENDPOINT = "/api/v1/user/checkin"
 
 export const GENIUS_PROGRAMMER_DAILY_CHECK_IN_RESULT_KINDS = {
@@ -70,20 +74,26 @@ const parseData = (
 /**
  * Deployment-owned contract observed at https://codexcli.club/dashboard on
  * 2026-09-14: /user/checkin/status uses today_checked_in, unlike Sub2API Pro.
- * Discard nested history/user records; only retain authoritative status fields.
+ * clawhud shares this path with a `checked_in_today` DTO; a valid sibling status
+ * with boolean `enabled` and `checked_in_today` fields is foreign. Discovery
+ * marks it unsupported; missing or malformed status fields remain unknown.
  */
 export function parseGeniusProgrammerDailyCheckInStatusResponse(
   response: ApiTransportResponse<unknown>,
 ) {
-  const data = parseData(
-    response,
-    GENIUS_PROGRAMMER_DAILY_CHECK_IN_STATUS_ENDPOINT,
-  )
+  const data = parseData(response, USER_CHECK_IN_STATUS_ENDPOINT)
+  if (
+    !Object.hasOwn(data, "today_checked_in") &&
+    typeof data.enabled === "boolean" &&
+    typeof data.checked_in_today === "boolean"
+  ) {
+    throw new ForeignCheckInContractError(USER_CHECK_IN_STATUS_ENDPOINT, data)
+  }
   if (
     typeof data.enabled !== "boolean" ||
     typeof data.today_checked_in !== "boolean"
   ) {
-    throw invalidResponse(GENIUS_PROGRAMMER_DAILY_CHECK_IN_STATUS_ENDPOINT)
+    throw invalidResponse(USER_CHECK_IN_STATUS_ENDPOINT)
   }
   return { enabled: data.enabled, checkedInToday: data.today_checked_in }
 }
@@ -122,23 +132,22 @@ export function parseGeniusProgrammerDailyCheckInMutationResponse(
 export async function fetchGeniusProgrammerDailyCheckInStatus(
   request: ApiServiceRequest,
 ) {
-  let timezone = "UTC"
-  try {
-    timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
-  } catch {
-    /* Runtime timezone is optional. */
-  }
+  const endpoint = createUserCheckInStatusEndpoint(resolveUserCheckInTimezone())
   return executeAuthenticatedSub2ApiRequest(
     request,
-    GENIUS_PROGRAMMER_DAILY_CHECK_IN_STATUS_ENDPOINT,
+    USER_CHECK_IN_STATUS_ENDPOINT,
     async (authenticatedRequest) => {
       const response = await fetchApiResponse<unknown>(authenticatedRequest, {
-        endpoint: `${GENIUS_PROGRAMMER_DAILY_CHECK_IN_STATUS_ENDPOINT}?timezone=${encodeURIComponent(timezone)}`,
+        endpoint,
         options: { method: "GET", cache: "no-store" },
       })
       return parseGeniusProgrammerDailyCheckInStatusResponse(response)
     },
-    { proactiveRefresh: false, recoverUnauthorized: false },
+    {
+      proactiveRefresh: false,
+      recoverMissingAccessToken: false,
+      recoverUnauthorized: false,
+    },
   )
 }
 

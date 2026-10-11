@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { recoverSub2ApiBrowserAuth } from "~/services/apiService/sub2api/auth/browserAuth"
+import { refreshSub2ApiTokens } from "~/services/apiService/sub2api/auth/tokenRefresh"
+import { ForeignCheckInContractError } from "~/services/apiService/sub2api/checkin/foreignCheckInContract"
 import {
   fetchGeniusProgrammerDailyCheckInStatus,
   GENIUS_PROGRAMMER_DAILY_CHECK_IN_RESULT_KINDS,
@@ -7,12 +10,34 @@ import {
   parseGeniusProgrammerDailyCheckInStatusResponse,
   performGeniusProgrammerDailyCheckIn,
 } from "~/services/apiService/sub2api/checkin/geniusProgrammerCheckIn"
+import { ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type {
   ApiServiceRequest,
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
+
+vi.mock(
+  "~/services/apiService/sub2api/auth/browserAuth",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/auth/browserAuth")
+    >()),
+    recoverSub2ApiBrowserAuth: vi.fn().mockResolvedValue(null),
+  }),
+)
+vi.mock(
+  "~/services/apiService/sub2api/auth/tokenRefresh",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/auth/tokenRefresh")
+    >()),
+    refreshSub2ApiTokens: vi
+      .fn()
+      .mockRejectedValue(new Error("refresh unavailable")),
+  }),
+)
 
 vi.mock("~/services/apiTransport/request", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/services/apiTransport/request")>()),
@@ -39,6 +64,7 @@ const request: ApiServiceRequest = {
 
 describe("Genius Programmer check-in protocol", () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     vi.mocked(fetchApiResponse).mockReset()
   })
 
@@ -65,6 +91,49 @@ describe("Genius Programmer check-in protocol", () => {
     expect(() =>
       parseGeniusProgrammerDailyCheckInStatusResponse(response(data)),
     ).toThrow()
+  })
+
+  it("classifies a success envelope of a sibling contract as foreign, not malformed", () => {
+    // clawhud (https://api.clawhud.com) serves this same path with
+    // checked_in_today; discovery must treat it as "not served here" instead
+    // of an unknown probe that poisons the unique-match decision.
+    expect(() =>
+      parseGeniusProgrammerDailyCheckInStatusResponse(
+        response({
+          enabled: true,
+          checked_in_today: false,
+          today: "2026-10-11",
+          timezone: "Asia/Taipei",
+          min_amount: 1,
+          max_amount: 10,
+        }),
+      ),
+    ).toThrow(ForeignCheckInContractError)
+  })
+
+  it.each([
+    {},
+    { enabled: true },
+    { enabled: true, checked_in_today: 0 },
+    { enabled: "true", checked_in_today: false },
+    { enabled: true, today_checked_in: undefined, checked_in_today: false },
+  ])("keeps incomplete or malformed status inconclusive: %j", (data) => {
+    expect(() =>
+      parseGeniusProgrammerDailyCheckInStatusResponse(response(data)),
+    ).toThrow(expect.objectContaining({ code: "JSON_PARSE_ERROR" }))
+  })
+
+  it("keeps a malformed contract on this path as an invalid response", () => {
+    let thrown: unknown
+    try {
+      parseGeniusProgrammerDailyCheckInStatusResponse(
+        response({ enabled: "true", today_checked_in: false }),
+      )
+    } catch (error) {
+      thrown = error
+    }
+    expect(thrown).toBeInstanceOf(ApiError)
+    expect(thrown).not.toBeInstanceOf(ForeignCheckInContractError)
   })
 
   it.each([401, 403, 404, 405, 429, 500])(
@@ -185,6 +254,22 @@ describe("Genius Programmer check-in protocol", () => {
       spy.mockRestore()
     }
   })
+
+  it.each([undefined, "example-refresh-token"])(
+    "does not recover missing credentials during status discovery (refresh=%s)",
+    async (refreshToken) => {
+      vi.mocked(fetchApiResponse).mockResolvedValue(response(null, 401))
+      await expect(
+        fetchGeniusProgrammerDailyCheckInStatus({
+          ...request,
+          auth: { ...request.auth!, accessToken: "", refreshToken },
+        }),
+      ).rejects.toMatchObject({ statusCode: 401 })
+      expect(recoverSub2ApiBrowserAuth).not.toHaveBeenCalled()
+      expect(refreshSub2ApiTokens).not.toHaveBeenCalled()
+      expect(fetchApiResponse).not.toHaveBeenCalled()
+    },
+  )
 
   it("submits a single POST without a request body", async () => {
     vi.mocked(fetchApiResponse).mockResolvedValue(

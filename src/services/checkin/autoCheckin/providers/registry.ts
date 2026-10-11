@@ -11,6 +11,10 @@ import {
   createToolcodeCheckInStatusEndpoint,
   resolveToolcodeCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/toolcodeCheckInProtocol"
+import {
+  createUserCheckInStatusEndpoint,
+  resolveUserCheckInTimezone,
+} from "~/services/apiService/sub2api/checkin/userCheckInProtocol"
 import type { CheckInMethodId, PersistedCheckInMethodId } from "~/types/checkIn"
 
 import type { AutoCheckinProvider } from "./contracts"
@@ -290,7 +294,9 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
       sourceName: "天才程序员中转站",
     },
     supportsStatusReadback: true,
-    feedbackStatusRoutes: [{ path: "/api/v1/user/checkin/status" }],
+    feedbackStatusRoutes: (): FeedbackStatusRoutes => [
+      { path: createUserCheckInStatusEndpoint(resolveUserCheckInTimezone()) },
+    ],
     legacy: false,
     newAccountCompatibility: false,
   },
@@ -365,6 +371,22 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     supportsStatusReadback: true,
     feedbackStatusRoutes: (): FeedbackStatusRoutes => [
       { path: createAiRouterCheckInStatusEndpoint() },
+    ],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.ClawhudDailyCheckIn]: {
+    id: AUTO_CHECKIN_METHOD_IDS.ClawhudDailyCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "詞元公益站",
+    },
+    supportsStatusReadback: true,
+    // Shares the status path with Genius Programmer but a distinct response
+    // DTO; verified at https://api.clawhud.com, 2026-10-11.
+    feedbackStatusRoutes: (): FeedbackStatusRoutes => [
+      { path: createUserCheckInStatusEndpoint(resolveUserCheckInTimezone()) },
     ],
     legacy: false,
     newAccountCompatibility: false,

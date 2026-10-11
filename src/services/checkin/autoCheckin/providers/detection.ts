@@ -45,6 +45,13 @@ export async function detectWithStatusReadback(
   classifyError: (
     error: unknown,
   ) => CheckInMethodUnknownReason = getCheckInMethodUnknownReason,
+  /**
+   * Marks an error as "this method's contract is not served here" so a
+   * sibling deployment's DTO on a shared path counts as unsupported rather
+   * than an unknown probe. One unknown candidate keeps the whole decision
+   * unresolved even when exactly one method matched.
+   */
+  isAbsent: (error: unknown) => boolean = () => false,
 ): Promise<AutoCheckinProviderDetectResult> {
   try {
     const status = await readStatus(context)
@@ -74,7 +81,7 @@ export async function detectWithStatusReadback(
     }
   } catch (error) {
     const statusCode = getHttpStatusCode(error)
-    if (statusCode === 404 || statusCode === 405) {
+    if (statusCode === 404 || statusCode === 405 || isAbsent(error)) {
       return {
         outcome: CHECK_IN_METHOD_DETECTION_OUTCOMES.Unsupported,
         evidence: {
