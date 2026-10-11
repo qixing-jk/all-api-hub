@@ -54,7 +54,7 @@ describe("split-origin feedback status queries", () => {
     expect(clues.statusQueries.map((q) => q.path)).toContain(
       "/api/v1/user/daily-checkin",
     )
-    expect(clues.statusQueries).toHaveLength(7)
+    expect(clues.statusQueries).toHaveLength(8)
     expect(fetch).toHaveBeenCalledWith(
       "https://ai-router.dev/app.js",
       expect.objectContaining({ headers: undefined }),

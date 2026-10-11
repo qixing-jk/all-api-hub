@@ -782,6 +782,9 @@ export function isTempContextTask(value: unknown): value is TempContextTask {
         isHttpUrl(params.pageUrl) &&
         isOptionalPositiveNumber(params.turnstileTimeoutMs) &&
         isOptionalString(params.turnstileParamName) &&
+        (params.turnstileTokenPlacement === undefined ||
+          params.turnstileTokenPlacement === "query" ||
+          params.turnstileTokenPlacement === "json-body") &&
         (params.turnstilePreTrigger === undefined ||
           isPlainObject(params.turnstilePreTrigger))
       )

@@ -38,6 +38,7 @@
 | 老张 API      | 商业 AI 模型 API 中转服务，提供默认、国内/备用、欧美直连和 CF-CDN 四个入口，使用同一套账号。 | — |
 | Dahl          | 按 Token 额度使用的 AI 推理服务，提供模型 API 与账户控制台。 | — |
 | FoxCode       | 面向开发者的 AI 编程模型中转与订阅服务平台。 | — |
+| DaiGua | 账号类型选择 Sub2API；支持普通每日签到，不参与幸运签到。Turnstile 验证采用尽力而为方式，无法完成时需到原站人工签到。 | [控制台](https://api.daigua.icu) |
 | Cubence       | 商业 AI 模型 API 服务平台，提供模型调用、分组与额度管理。 | — |
 | RightCode     | 商业 AI Agent 中转服务，right.codes 与 rightapi.ai 为同一服务的入口。 | — |
 | Grsai         | 商业 AI 模型聚合中转服务，grsai.com 与 grsai.ai 为同一服务的入口。 | — |

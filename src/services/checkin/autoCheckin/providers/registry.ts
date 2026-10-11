@@ -4,6 +4,10 @@ import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { AGENT_ROUTER_ORIGINS } from "~/services/accountLogin/providers/agentrouter/config"
 import { createAiRouterCheckInStatusEndpoint } from "~/services/apiService/sub2api/checkin/aiRouterCheckInProtocol"
 import {
+  createDaiguaCheckInStatusEndpoint,
+  resolveDaiguaCheckInTimezone,
+} from "~/services/apiService/sub2api/checkin/daiguaCheckInProtocol"
+import {
   createHiyoCheckInStatusEndpoint,
   resolveHiyoCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/hiyoCheckInProtocol"
@@ -75,9 +79,12 @@ interface AutoCheckinMethodDefinitionBase {
   readonly source: AutoCheckinMethodSource
 }
 
-/** Hiyo's combined daily/bonus claim can award again; never queue a replay. */
+/** Hiyo can award again; DaiGua's duplicate guarantee is unverified. Never queue replays. */
 export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
-  new Set([AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn])
+  new Set([
+    AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn,
+    AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn,
+  ])
 
 /**
  * Candidate support and pre-registry compatibility are separate decisions.
@@ -387,6 +394,22 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     // DTO; verified at https://api.clawhud.com, 2026-10-11.
     feedbackStatusRoutes: (): FeedbackStatusRoutes => [
       { path: createUserCheckInStatusEndpoint(resolveUserCheckInTimezone()) },
+    ],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn]: {
+    id: AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "DaiGua",
+    },
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: (): FeedbackStatusRoutes => [
+      {
+        path: createDaiguaCheckInStatusEndpoint(resolveDaiguaCheckInTimezone()),
+      },
     ],
     legacy: false,
     newAccountCompatibility: false,
