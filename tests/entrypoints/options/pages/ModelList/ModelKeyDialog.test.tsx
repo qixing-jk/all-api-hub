@@ -10,7 +10,10 @@ import {
   createAccountKeyResourceCreatedRuntimeSecret,
   createUnattributedAccountCreatedRuntimeSecret,
 } from "~/services/accounts/keys/createdRuntimeSecret"
-import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
+import {
+  AccountKeyResourceError,
+  ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -108,7 +111,7 @@ vi.mock("~/services/apiAdapters/registry", () => ({
           }
         : {
             keyResourceManagement: {
-              defaultCreation: "editor-defaults",
+              defaultCreation: creationPolicies.EditorDefaults,
               inventorySecretAvailability:
                 siteType === SITE_TYPES.AIHUBMIX
                   ? "create-response-only"

@@ -1,3 +1,4 @@
+import { ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   createNewApiKeyGroupBehavior,
   NEW_API_KEY_GROUP_MODES,
@@ -13,7 +14,7 @@ import type { NewApiVariantRegistration } from "../variantRegistration"
 export const modelflareVariant: NewApiVariantRegistration = {
   key: {
     initialQuota: -1,
-    defaultCreation: "select-requirement",
+    defaultCreation: creationPolicies.SelectRequirement,
     group: createNewApiKeyGroupBehavior(NEW_API_KEY_GROUP_MODES.Required),
   },
   credentials: {

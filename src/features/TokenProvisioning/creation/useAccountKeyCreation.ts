@@ -18,6 +18,7 @@ import { useAccountKeyEditorSubmission } from "~/features/KeyManagement/resource
 import { useAccountKeyResourceEditorState } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceEditorState"
 import { useAccountKeyResourceRequestLifecycle } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceRequestLifecycle"
 import type { AccountKeyCreationResult } from "~/services/accounts/keys/accountKeyCreation"
+import { CREATED_RUNTIME_SECRET_CORRELATION_KINDS as correlationKinds } from "~/services/accounts/keys/createdRuntimeSecret"
 import type { CreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import { openAccountKeyResourceSession } from "~/services/accounts/keys/openAccountKeyResourceSession"
 import {
@@ -338,7 +339,7 @@ export function useAccountKeyCreation({
         ? PRODUCT_ANALYTICS_RESULTS.Success
         : PRODUCT_ANALYTICS_RESULTS.Failure,
       PRODUCT_ANALYTICS_MODE_IDS.Single,
-      createdSecret?.correlation.kind === "account-key-resource"
+      createdSecret?.correlation.kind === correlationKinds.AccountKeyResource
         ? createdSecret.correlation.ref.siteType
         : undefined,
     )

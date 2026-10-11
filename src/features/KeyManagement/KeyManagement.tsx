@@ -26,6 +26,7 @@ import { useKeyManagementViewModel } from "~/features/KeyManagement/workspace/us
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import AddTokenDialog from "~/features/TokenProvisioning/creation/AddTokenDialog"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/secretDelivery/OneTimeSecretDialog"
+import { CREATED_RUNTIME_SECRET_CORRELATION_KINDS as correlationKinds } from "~/services/accounts/keys/createdRuntimeSecret"
 import { ACCOUNT_KEY_RESOURCE_FAILURE_CODES } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES as secretAvailability } from "~/services/apiAdapters/contracts/inventorySecret"
 import {
@@ -150,7 +151,8 @@ export default function KeyManagement(props: {
     showAssociationRouteNotice,
   } = useKeyManagementViewModel(routeParams)
   const createdKeyFlow =
-    nativeKeys.createdSecret?.correlation.kind === "account-key-resource"
+    nativeKeys.createdSecret?.correlation.kind ===
+    correlationKinds.AccountKeyResource
       ? getKeyResourcePresentationPolicy(
           nativeKeys.createdSecret.correlation.ref.siteType,
         ).createdKey
@@ -488,7 +490,10 @@ export default function KeyManagement(props: {
                 disabled: nativeKeys.isLoading || nativeKeys.freshReadRequired,
                 onContinue: () => {
                   const result = nativeKeys.createdSecret
-                  if (result?.correlation.kind !== "account-key-resource")
+                  if (
+                    result?.correlation.kind !==
+                    correlationKinds.AccountKeyResource
+                  )
                     return
                   const ref = result.correlation.ref
                   nativeKeys.closeCreatedSecret()

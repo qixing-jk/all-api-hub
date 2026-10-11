@@ -7,6 +7,7 @@ import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyR
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   AccountKeyResourceError,
+  ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
   type AccountKeyResourceRef,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
@@ -116,7 +117,7 @@ export function createKimiOpenPlatformKeyResources(siteType: AccountSiteType) {
     siteType,
     inventorySecretAvailability:
       INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
-    defaultCreation: "editor-defaults",
+    defaultCreation: creationPolicies.EditorDefaults,
     openConfig: async (input): Promise<Config> => {
       await ensureKimiAuthState(input.request)
       return {

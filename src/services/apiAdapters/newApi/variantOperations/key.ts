@@ -1,4 +1,5 @@
 import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/definition"
+import { ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { AccountKeyDefaultCreationPolicy } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { createNewApiKeyGroupBehavior } from "~/services/apiAdapters/newApi/keys/keyGroupBehavior"
 import type { NewApiKeyEditCommand } from "~/services/apiAdapters/newApi/keys/keyResourceEditor"
@@ -87,7 +88,7 @@ export function createNewApiKeyVariant(
   return {
     group: createNewApiKeyGroupBehavior(),
     initialQuota: 0,
-    defaultCreation: "editor-defaults",
+    defaultCreation: creationPolicies.EditorDefaults,
     readPreservedFields: () => ({}),
     readEditableToken: async (_request, listed) => listed,
     exposesDeploymentFields: () => false,

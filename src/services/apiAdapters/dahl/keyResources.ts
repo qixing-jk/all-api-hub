@@ -9,6 +9,7 @@ import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyR
 import {
   ACCOUNT_KEY_RESOURCE_LOCAL_METADATA,
   AccountKeyResourceError,
+  ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
   ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions,
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES as failures,
   ACCOUNT_KEY_RESOURCE_STATUSES as statuses,
@@ -265,7 +266,7 @@ export const dahlKeyResources = defineAccountKeyResourceCapability({
   siteType: SITE_TYPES.DAHL,
   inventorySecretAvailability: secretAvailability.Recoverable,
   // New native keys have no tokens; automatic creation must not promise a usable key.
-  defaultCreation: "requires-input",
+  defaultCreation: creationPolicies.RequiresInput,
   openConfig: async (input) => input,
   listScopes: async () => [
     {

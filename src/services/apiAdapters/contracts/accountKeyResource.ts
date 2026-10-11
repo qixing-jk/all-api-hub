@@ -62,10 +62,13 @@ export type AccountKeyCreationIntent = {
   }
 }
 
+export const ACCOUNT_KEY_DEFAULT_CREATION_POLICIES = {
+  EditorDefaults: "editor-defaults",
+  SelectRequirement: "select-requirement",
+  RequiresInput: "requires-input",
+} as const
 export type AccountKeyDefaultCreationPolicy =
-  | "editor-defaults"
-  | "select-requirement"
-  | "requires-input"
+  (typeof ACCOUNT_KEY_DEFAULT_CREATION_POLICIES)[keyof typeof ACCOUNT_KEY_DEFAULT_CREATION_POLICIES]
 
 export const ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS = {
   Requirement: "requirement",

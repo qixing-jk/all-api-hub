@@ -5,6 +5,7 @@ import { Storage } from "@plasmohq/storage"
 import { OPENROUTER_WEB_ORIGIN, SITE_TYPES } from "~/constants/siteType"
 import { autoProvisionKeyOnAccountAdd } from "~/services/accounts/accountKeyAutoProvisioning/autoProvisionOnAccountAdd"
 import { validateAndSaveAccount } from "~/services/accounts/editing/accountCreation"
+import { ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { AccountKeyResourceSession } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
@@ -101,7 +102,7 @@ describe("accountPersistence auto-provision key on add", () => {
           fetchData: fetchAccountDataMock,
         },
         keyResourceManagement: {
-          defaultCreation: "editor-defaults",
+          defaultCreation: creationPolicies.EditorDefaults,
           open: vi.fn(),
         },
       },

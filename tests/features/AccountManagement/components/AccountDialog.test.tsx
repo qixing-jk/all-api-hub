@@ -17,6 +17,7 @@ import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testId
 import toast from "~/lib/notify"
 import enAccountDialog from "~/locales/en/accountDialog.json"
 import { ACCOUNT_POST_SAVE_WORKFLOW_STEPS } from "~/services/accounts/accountPostSaveWorkflow"
+import { CREATED_RUNTIME_SECRET_CORRELATION_KINDS as correlationKinds } from "~/services/accounts/keys/createdRuntimeSecret"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
 import { API_CREDENTIAL_PROFILE_CAPTURE_STATUSES } from "~/services/apiCredentialProfiles/links/contracts"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
@@ -1250,7 +1251,7 @@ describe("AccountDialog", () => {
   it("renders the post-save one-time key dialog only when a created secret is pending", async () => {
     mockState.postSaveOneTimeSecret = {
       correlation: {
-        kind: "account-create",
+        kind: correlationKinds.AccountCreate,
         accountId: "created-secret-fixture",
       },
       displayName: "Default API Key",
@@ -1292,7 +1293,7 @@ describe("AccountDialog", () => {
     mockState.draft.tagIds = ["tag-a"]
     mockState.postSaveOneTimeSecret = {
       correlation: {
-        kind: "account-key-resource",
+        kind: correlationKinds.AccountKeyResource,
         ref: {
           accountId: "aihubmix-account",
           siteType: SITE_TYPES.AIHUBMIX,
@@ -1374,7 +1375,7 @@ describe("AccountDialog", () => {
     mockState.draft.siteName = "AIHubMix"
     mockState.postSaveOneTimeSecret = {
       correlation: {
-        kind: "account-create",
+        kind: correlationKinds.AccountCreate,
         accountId: "created-secret-fixture",
       },
       displayName: "Default API Key",

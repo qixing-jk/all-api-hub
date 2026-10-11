@@ -8,6 +8,8 @@ import {
 } from "~/services/accounts/keys/accountKeyCreation"
 import {
   AccountKeyResourceError,
+  ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
+  type AccountKeyDefaultCreationPolicy,
   type AccountKeyResourceFacts,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { AuthTypeEnum, type DisplaySiteData } from "~/types"
@@ -54,7 +56,10 @@ const facts = (owner: DisplaySiteData): AccountKeyResourceFacts => ({
     },
   },
 })
-const setup = (owner: DisplaySiteData, policy = "editor-defaults") => {
+const setup = (
+  owner: DisplaySiteData,
+  policy: AccountKeyDefaultCreationPolicy = creationPolicies.EditorDefaults,
+) => {
   const submit = vi.fn().mockResolvedValue({ facts: facts(owner) })
   const editor = {
     initialValues: { native: "initial" },
@@ -125,7 +130,10 @@ describe("native account key creation", () => {
 
   it("stops before creation when requirement inspection is incomplete", async () => {
     const owner = account()
-    const { session, provision } = setup(owner, "select-requirement")
+    const { session, provision } = setup(
+      owner,
+      creationPolicies.SelectRequirement,
+    )
     session.provisioning.inspect.mockResolvedValueOnce({
       requirements: [],
       items: [],
@@ -139,7 +147,7 @@ describe("native account key creation", () => {
 
   it("rejects an unknown requirement without dispatching", async () => {
     const owner = account()
-    const { provision } = setup(owner, "select-requirement")
+    const { provision } = setup(owner, creationPolicies.SelectRequirement)
     const plan = await prepareDefaultAccountKeyCreation(owner)
     if (plan.kind !== "selection-required")
       throw new Error("Expected selection")
@@ -155,7 +163,7 @@ describe("native account key creation", () => {
       const owner = account()
       const { session, provision, requirements } = setup(
         owner,
-        "select-requirement",
+        creationPolicies.SelectRequirement,
       )
       session.provisioning.inspect.mockResolvedValue({
         requirements: [{ ...requirements[0], provisioning: { kind } }],
@@ -198,7 +206,7 @@ describe("native account key creation", () => {
       const owner = account()
       const { session, capability, provision } = setup(
         owner,
-        "select-requirement",
+        creationPolicies.SelectRequirement,
       )
       if (kind === "missing")
         capability.open.mockResolvedValueOnce({
@@ -219,7 +227,7 @@ describe("native account key creation", () => {
 
   it("allows one retry after a provider proves a mutation was not applied", async () => {
     const owner = account()
-    const { provision } = setup(owner, "select-requirement")
+    const { provision } = setup(owner, creationPolicies.SelectRequirement)
     provision.mockResolvedValueOnce({
       certainty: "not-applied",
       failure: { code: "unavailable" },
@@ -252,7 +260,7 @@ describe("native account key creation", () => {
 
   it("forwards model and group intent to the provider editor without constructing a write DTO", async () => {
     const owner = account()
-    const { session } = setup(owner, "select-requirement")
+    const { session } = setup(owner, creationPolicies.SelectRequirement)
     const intent = {
       preferredGroup: "group",
       allowedGroups: ["group"],
@@ -279,7 +287,10 @@ describe("native account key creation", () => {
 
   it("keeps duplicate group labels separate by opaque requirement identity", async () => {
     const owner = account()
-    const { requirements, provision } = setup(owner, "select-requirement")
+    const { requirements, provision } = setup(
+      owner,
+      creationPolicies.SelectRequirement,
+    )
     const plan = await prepareDefaultAccountKeyCreation(owner)
     if (plan.kind !== "selection-required")
       throw new Error("Expected selection")
@@ -292,7 +303,7 @@ describe("native account key creation", () => {
 
   it("retains confirmed identity when the follow-up detail read fails", async () => {
     const owner = account()
-    const { get, provision } = setup(owner, "select-requirement")
+    const { get, provision } = setup(owner, creationPolicies.SelectRequirement)
     get.mockRejectedValue(new Error("offline"))
     const plan = await prepareDefaultAccountKeyCreation(owner)
     if (plan.kind !== "selection-required")
@@ -527,7 +538,7 @@ describe("native account key creation", () => {
 describe("definite creation failure recovery", () => {
   it("allows a new group confirmation after a definitely not-applied failure", async () => {
     const owner = account()
-    const { provision } = setup(owner, "select-requirement")
+    const { provision } = setup(owner, creationPolicies.SelectRequirement)
     provision.mockResolvedValueOnce({
       certainty: "not-applied",
       failure: { code: "validation_failed" },
@@ -547,7 +558,7 @@ it.each(["possibly-applied", "partially-applied"] as const)(
   "never replays a %s creation after another group confirmation",
   async (certainty) => {
     const owner = account()
-    const { provision } = setup(owner, "select-requirement")
+    const { provision } = setup(owner, creationPolicies.SelectRequirement)
     provision.mockResolvedValueOnce({
       certainty,
       failure: { code: "unavailable" },

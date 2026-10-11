@@ -7,13 +7,18 @@ import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import { INVENTORY_SECRET_AVAILABILITIES as secretAvailability } from "~/services/apiAdapters/contracts/inventorySecret"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 
+export const CREATED_RUNTIME_SECRET_CORRELATION_KINDS = {
+  AccountCreate: "account-create",
+  AccountKeyResource: "account-key-resource",
+} as const
+
 type CreatedRuntimeSecretCorrelation =
   | {
-      readonly kind: "account-create"
+      readonly kind: typeof CREATED_RUNTIME_SECRET_CORRELATION_KINDS.AccountCreate
       readonly accountId: string
     }
   | {
-      readonly kind: "account-key-resource"
+      readonly kind: typeof CREATED_RUNTIME_SECRET_CORRELATION_KINDS.AccountKeyResource
       readonly ref: {
         readonly accountId: string
         readonly siteType: AccountSiteType
@@ -76,12 +81,12 @@ export const getCreatedRuntimeSecretLocator = (
   result: CreatedRuntimeSecret,
 ): AccountRuntimeKeyLocator | undefined => {
   switch (result.correlation.kind) {
-    case "account-key-resource":
+    case CREATED_RUNTIME_SECRET_CORRELATION_KINDS.AccountKeyResource:
       return {
         source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource,
         ref: result.correlation.ref,
       }
-    case "account-create":
+    case CREATED_RUNTIME_SECRET_CORRELATION_KINDS.AccountCreate:
       return undefined
   }
 }
@@ -95,7 +100,7 @@ export const createUnattributedAccountCreatedRuntimeSecret = (params: {
 }): CreatedRuntimeSecret =>
   createCreatedRuntimeSecret({
     correlation: {
-      kind: "account-create",
+      kind: CREATED_RUNTIME_SECRET_CORRELATION_KINDS.AccountCreate,
       accountId: requireNonBlankString(params.accountId, "an account id"),
     },
     displayName: params.displayName,
@@ -113,7 +118,7 @@ export const createAccountKeyResourceCreatedRuntimeSecret = ({
 }: {
   ref: Extract<
     CreatedRuntimeSecretCorrelation,
-    { kind: "account-key-resource" }
+    { kind: typeof CREATED_RUNTIME_SECRET_CORRELATION_KINDS.AccountKeyResource }
   >["ref"]
   displayName: string
   secret: string
@@ -132,7 +137,10 @@ export const createAccountKeyResourceCreatedRuntimeSecret = ({
   }
 
   return createCreatedRuntimeSecret({
-    correlation: { kind: "account-key-resource", ref },
+    correlation: {
+      kind: CREATED_RUNTIME_SECRET_CORRELATION_KINDS.AccountKeyResource,
+      ref,
+    },
     displayName,
     secret,
     credential,

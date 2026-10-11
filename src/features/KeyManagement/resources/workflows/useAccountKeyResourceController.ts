@@ -31,6 +31,7 @@ import { useAccountKeyResourceInventoryWorkflow } from "~/features/KeyManagement
 import { useAccountKeyResourceRequestLifecycle } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceRequestLifecycle"
 import { useAccountKeyResourceRouteCoordinator } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceRouteCoordinator"
 import { useAccountKeyResourceRouteState } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceRouteState"
+import { CREATED_RUNTIME_SECRET_CORRELATION_KINDS as correlationKinds } from "~/services/accounts/keys/createdRuntimeSecret"
 import { openAccountKeyResourceSession } from "~/services/accounts/keys/openAccountKeyResourceSession"
 import type { AccountKeyResourceEditAction } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
@@ -413,7 +414,7 @@ export function useAccountKeyResourceController({
       result: "success" | "failure",
     ) => {
       const siteType =
-        createdSecret?.correlation.kind === "account-key-resource"
+        createdSecret?.correlation.kind === correlationKinds.AccountKeyResource
           ? createdSecret.correlation.ref.siteType
           : undefined
       const tracker = startProductAnalyticsAction(

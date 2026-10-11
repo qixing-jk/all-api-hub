@@ -4,6 +4,7 @@ import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accou
 import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyResources/failure"
 import {
   AccountKeyResourceError,
+  ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
   type AccountKeyResourceFacts,
   type AccountKeyResourceRef,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
@@ -78,7 +79,7 @@ const facts = (
 export const cubenceKeyResources = defineAccountKeyResourceCapability({
   siteType: SITE_TYPES.CUBENCE,
   inventorySecretAvailability: "recoverable",
-  defaultCreation: "requires-input",
+  defaultCreation: creationPolicies.RequiresInput,
   openConfig: async (input) => input,
   listScopes: async () => [
     {

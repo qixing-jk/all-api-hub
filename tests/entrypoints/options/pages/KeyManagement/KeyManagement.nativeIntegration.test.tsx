@@ -14,6 +14,7 @@ import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testId
 import enKeyManagement from "~/locales/en/keyManagement.json"
 import zhKeyManagement from "~/locales/zh-CN/keyManagement.json"
 import { buildServiceCredentialRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
+import { CREATED_RUNTIME_SECRET_CORRELATION_KINDS as correlationKinds } from "~/services/accounts/keys/createdRuntimeSecret"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   AccountKeyResourceError,
@@ -589,7 +590,7 @@ async function renderCreatedNativeSecret() {
   )
   const createdSecret = {
     correlation: {
-      kind: "account-key-resource" as const,
+      kind: correlationKinds.AccountKeyResource,
       ref: createdFacts.ref,
     },
     displayName: createdFacts.displayName,
@@ -894,7 +895,7 @@ describe("KeyManagement native page integration", () => {
     )
     const createdSecret = {
       correlation: {
-        kind: "account-key-resource" as const,
+        kind: correlationKinds.AccountKeyResource,
         ref: createdFacts.ref,
       },
       displayName: createdFacts.displayName,
@@ -1142,7 +1143,7 @@ describe("KeyManagement native page integration", () => {
     )
     const createdSecret = {
       correlation: {
-        kind: "account-key-resource" as const,
+        kind: correlationKinds.AccountKeyResource,
         ref: createdFacts.ref,
       },
       displayName: createdFacts.displayName,

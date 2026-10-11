@@ -5,6 +5,7 @@ import {
   mapAccountKeyResourceFailure,
   mapAccountKeyResourceUncertainFailure,
 } from "~/services/apiAdapters/accountKeyResources/failure"
+import { ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type {
   AccountKeyResourceFacts,
   AccountKeyResourceOpenInput,
@@ -246,7 +247,7 @@ const changedKeys = (
 export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
   siteType: SITE_TYPES.RIGHT_CODE,
   inventorySecretAvailability: INVENTORY_SECRET_AVAILABILITIES.Recoverable,
-  defaultCreation: "editor-defaults",
+  defaultCreation: creationPolicies.EditorDefaults,
   openConfig: async (input, options): Promise<Config> => {
     const channels = toRightCodeChannelInfos(
       await fetchRightCodeEffectiveUpstreams(

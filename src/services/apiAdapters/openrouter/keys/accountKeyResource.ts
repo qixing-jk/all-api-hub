@@ -1,5 +1,6 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
+import { ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import { toFacts } from "~/services/apiAdapters/openrouter/keys/accountKeyDisplayFacts"
 import {
@@ -28,7 +29,7 @@ import {
 export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
   {
     siteType: SITE_TYPES.OPENROUTER,
-    defaultCreation: "editor-defaults",
+    defaultCreation: creationPolicies.EditorDefaults,
     // OpenRouter returns plaintext only from key creation; existing inventory
     // rows expose an opaque hash and masked key. Local profile associations are
     // the only supported historical recovery source.

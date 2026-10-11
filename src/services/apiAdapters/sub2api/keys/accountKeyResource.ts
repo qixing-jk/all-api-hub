@@ -17,6 +17,7 @@ import {
   ACCOUNT_KEY_REQUIREMENT_PROVISIONING_KINDS,
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   ACCOUNT_KEY_RUNTIME_KEY_RESOLUTION_KINDS,
+  ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
   type AccountKeyProvisionedResource,
   type AccountKeyProvisioningRequirement,
   type AccountKeyProvisioningSnapshot,
@@ -557,7 +558,7 @@ const resolveRuntimeKey = async (
 export const sub2ApiAccountKeyResources = defineAccountKeyResourceCapability({
   siteType: SITE_TYPES.SUB2API,
   inventorySecretAvailability: INVENTORY_SECRET_AVAILABILITIES.Recoverable,
-  defaultCreation: "select-requirement",
+  defaultCreation: creationPolicies.SelectRequirement,
   openConfig: async (input) => ({
     account: input.account,
     request: input.request,

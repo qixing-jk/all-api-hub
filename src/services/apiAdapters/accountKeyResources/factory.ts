@@ -1,3 +1,4 @@
+import { CREATED_RUNTIME_SECRET_CORRELATION_KINDS as correlationKinds } from "~/services/accounts/keys/createdRuntimeSecret"
 import type {
   AccountKeyProvisionedResource,
   AccountKeyResourceCapability,
@@ -70,7 +71,8 @@ export function defineAccountKeyResourceCapability<
           const createdSecret = value.createdSecret
           if (
             createdSecret &&
-            (createdSecret.correlation.kind !== "account-key-resource" ||
+            (createdSecret.correlation.kind !==
+              correlationKinds.AccountKeyResource ||
               !isSessionRef(createdSecret.correlation.ref) ||
               createdSecret.correlation.ref.scopeKey !== value.ref.scopeKey ||
               createdSecret.correlation.ref.resourceId !== value.ref.resourceId)
@@ -258,7 +260,8 @@ export function defineAccountKeyResourceCapability<
                   const secret = result.createdSecret
                   if (
                     !secret ||
-                    secret.correlation.kind !== "account-create" ||
+                    secret.correlation.kind !==
+                      correlationKinds.AccountCreate ||
                     secret.correlation.accountId !== accountId
                   )
                     throw unexpectedFailure()
@@ -299,7 +302,8 @@ export function defineAccountKeyResourceCapability<
                 const createdSecret = result.createdSecret
                 if (
                   createdSecret &&
-                  (createdSecret.correlation.kind !== "account-key-resource" ||
+                  (createdSecret.correlation.kind !==
+                    correlationKinds.AccountKeyResource ||
                     !refBoundary.refsMatch(createdSecret.correlation.ref, ref))
                 ) {
                   throw unexpectedFailure()
