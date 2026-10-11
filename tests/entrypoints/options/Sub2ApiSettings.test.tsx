@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import Sub2ApiSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/Sub2ApiSettings"
+import settings from "~/locales/en/settings.json"
 import { validateSub2ApiManagedSiteConfig } from "~/services/managedSites/providers/sub2api"
 import { createTab } from "~/utils/browser/tabs"
 import { testI18n } from "~~/tests/test-utils/i18n"
@@ -21,8 +22,26 @@ vi.mock("~/utils/browser/tabs", async (importOriginal) => ({
   createTab: vi.fn(),
 }))
 vi.mock("~/lib/notify", () => ({
-  default: { error: vi.fn(), success: vi.fn() },
+  default: {
+    loading: vi.fn(),
+    warning: vi.fn(),
+    dismiss: vi.fn(),
+    error: vi.fn(),
+    success: vi.fn(),
+  },
 }))
+
+testI18n.addResourceBundle(
+  "en",
+  "settings",
+  {
+    managedSiteConnection: {
+      failed: settings.managedSiteConnection.failed,
+    },
+  },
+  true,
+  true,
+)
 
 const successfulWrite = { ok: true, preferences: {} }
 
@@ -153,7 +172,7 @@ describe("Sub2ApiSettings", () => {
     )
     fireEvent.click(
       screen.getByRole("button", {
-        name: "settings:sub2apiManagedSite.validation.validate",
+        name: "settings:managedSiteConnection.check",
       }),
     )
 
@@ -166,7 +185,8 @@ describe("Sub2ApiSettings", () => {
     expect(context.updateSub2ApiManagedSiteConfig).not.toHaveBeenCalled()
     await waitFor(() => {
       expect(vi.mocked(toast.default.success)).toHaveBeenCalledWith(
-        "settings:sub2apiManagedSite.validation.success",
+        "settings:managedSiteConnection.success",
+        expect.objectContaining({ id: expect.any(String) }),
       )
     })
   })
@@ -219,12 +239,13 @@ describe("Sub2ApiSettings", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "settings:sub2apiManagedSite.validation.validate",
+        name: "settings:managedSiteConnection.check",
       }),
     )
     await waitFor(() => {
       expect(vi.mocked(toast.default.success)).toHaveBeenCalledWith(
-        "settings:sub2apiManagedSite.validation.success",
+        "settings:managedSiteConnection.success",
+        expect.objectContaining({ id: expect.any(String) }),
       )
     })
 
@@ -235,12 +256,15 @@ describe("Sub2ApiSettings", () => {
     )
     fireEvent.click(
       screen.getByRole("button", {
-        name: "settings:sub2apiManagedSite.validation.validate",
+        name: "settings:managedSiteConnection.check",
       }),
     )
     await waitFor(() => {
       expect(vi.mocked(toast.default.error)).toHaveBeenCalledWith(
-        "settings:sub2apiManagedSite.validation.failed",
+        expect.stringContaining(
+          "settings:sub2apiManagedSite.validation.failed",
+        ),
+        expect.objectContaining({ id: expect.any(String) }),
       )
     })
   })
@@ -254,7 +278,7 @@ describe("Sub2ApiSettings", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "settings:sub2apiManagedSite.validation.validate",
+        name: "settings:managedSiteConnection.check",
       }),
     )
 

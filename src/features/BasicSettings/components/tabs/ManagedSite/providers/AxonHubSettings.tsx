@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
@@ -47,6 +47,9 @@ export default function AxonHubSettings() {
     setDraft: setLocalConfig,
     commitField,
     resetProps,
+    checkConnection,
+    isValidating,
+    connectionCheckLabel,
   } = useManagedSiteConfigDraft({
     savedConfig,
     savedVersion: preferences.lastUpdated,
@@ -70,42 +73,29 @@ export default function AxonHubSettings() {
       },
     },
   })
-  const [isValidating, setIsValidating] = useState(false)
 
   const handleValidateConfig = async () => {
-    const trimmedUrl = localConfig.baseUrl.trim()
-    const trimmedEmail = localConfig.email.trim()
-
-    if (!trimmedUrl || !trimmedEmail || !localConfig.password) {
+    const baseUrl = localConfig.baseUrl.trim()
+    const email = localConfig.email.trim()
+    const password = localConfig.password
+    if (!baseUrl || !email || !password) {
       toast.error(t("axonHub.validation.missingFields"))
       return
     }
-
-    setLocalConfig((prev) => ({
-      ...prev,
-      baseUrl: trimmedUrl,
-      email: trimmedEmail,
-    }))
-
-    setIsValidating(true)
-    try {
-      await signIn({
-        baseUrl: trimmedUrl,
-        email: trimmedEmail,
-        password: localConfig.password,
-      })
-
-      toast.success(t("axonHub.validation.success"))
-    } catch (error) {
-      const errorMessage = getErrorMessage(error)
-      toast.error(
-        isLikelyCorsSetupError(errorMessage)
-          ? t("axonHub.validation.corsFailed", { error: errorMessage })
-          : t("axonHub.validation.failed", { error: errorMessage }),
-      )
-    } finally {
-      setIsValidating(false)
-    }
+    await checkConnection({ baseUrl, email, password }, async (config) => {
+      try {
+        await signIn(config)
+        return { success: true }
+      } catch (error) {
+        const errorMessage = getErrorMessage(error)
+        return {
+          success: false,
+          message: isLikelyCorsSetupError(errorMessage)
+            ? t("axonHub.validation.corsFailed", { error: errorMessage })
+            : t("axonHub.validation.failed", { error: errorMessage }),
+        }
+      }
+    })
   }
 
   return (
@@ -128,6 +118,7 @@ export default function AxonHubSettings() {
             description={t("axonHub.fields.baseUrlDesc")}
             rightContent={
               <Input
+                disabled={isValidating}
                 id="axonhub-base-url-input"
                 aria-label={t("axonHub.fields.baseUrlLabel")}
                 type="text"
@@ -151,6 +142,7 @@ export default function AxonHubSettings() {
             description={t("axonHub.fields.emailDesc")}
             rightContent={
               <Input
+                disabled={isValidating}
                 id="axonhub-email-input"
                 aria-label={t("axonHub.fields.emailLabel")}
                 type="email"
@@ -174,6 +166,7 @@ export default function AxonHubSettings() {
             description={t("axonHub.fields.passwordDesc")}
             rightContent={
               <Input
+                disabled={isValidating}
                 id="axonhub-password-input"
                 aria-label={t("axonHub.fields.passwordLabel")}
                 type="password"
@@ -207,9 +200,7 @@ export default function AxonHubSettings() {
                 onClick={handleValidateConfig}
                 loading={isValidating}
               >
-                {isValidating
-                  ? t("axonHub.validation.validating")
-                  : t("axonHub.validation.validate")}
+                {connectionCheckLabel}
               </Button>
             }
           />

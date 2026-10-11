@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
@@ -11,7 +11,10 @@ import { useManagedSiteConfigDraft } from "~/features/BasicSettings/components/t
 import { ManagedSiteDeploymentLink } from "~/features/ManagedSiteWidgets/ManagedSiteDeploymentLink"
 import { blurInputOnEnter } from "~/hooks/preferences/useDeferredPreferenceField"
 import toast from "~/lib/notify"
-import { validateGptLoadCredential } from "~/services/managedSites/providers/gptLoad"
+import {
+  GPT_LOAD_CREDENTIAL_VALIDATION_STATUSES,
+  validateGptLoadCredential,
+} from "~/services/managedSites/providers/gptLoad"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 
 /**
@@ -41,6 +44,9 @@ export default function GptLoadSettings() {
     setDraft: setLocalConfig,
     commitField,
     resetProps,
+    checkConnection,
+    isValidating,
+    connectionCheckLabel,
   } = useManagedSiteConfigDraft({
     savedConfig,
     savedVersion: preferences.lastUpdated,
@@ -62,7 +68,6 @@ export default function GptLoadSettings() {
       },
     },
   })
-  const [isValidating, setIsValidating] = useState(false)
 
   const handleValidateConfig = async () => {
     const baseUrl = localConfig.baseUrl.trim()
@@ -71,40 +76,35 @@ export default function GptLoadSettings() {
       toast.error(t("gptLoad.validation.missingFields"))
       return
     }
-
-    setLocalConfig({ baseUrl, managementKey })
-    setIsValidating(true)
-    try {
+    await checkConnection({ baseUrl, managementKey }, async (config) => {
       const result = await validateGptLoadCredential({
-        baseUrl,
-        credential: managementKey,
+        baseUrl: config.baseUrl,
+        credential: config.managementKey,
       })
       switch (result.status) {
-        case "valid": {
-          toast.success(t("gptLoad.validation.success"))
-          return
-        }
-        case "insufficient-privilege":
-          toast.error(
-            t("gptLoad.validation.insufficientPrivilege", {
+        case GPT_LOAD_CREDENTIAL_VALIDATION_STATUSES.Valid:
+          return { success: true }
+        case GPT_LOAD_CREDENTIAL_VALIDATION_STATUSES.InsufficientPrivilege:
+          return {
+            success: false,
+            message: t("gptLoad.validation.insufficientPrivilege", {
               error: result.message,
             }),
-          )
-          return
-        case "invalid-credential":
-          toast.error(
-            t("gptLoad.validation.invalidCredential", {
+          }
+        case GPT_LOAD_CREDENTIAL_VALIDATION_STATUSES.InvalidCredential:
+          return {
+            success: false,
+            message: t("gptLoad.validation.invalidCredential", {
               error: result.message,
             }),
-          )
-          return
-        case "unreachable":
+          }
         default:
-          toast.error(t("gptLoad.validation.failed", { error: result.message }))
+          return {
+            success: false,
+            message: t("gptLoad.validation.failed", { error: result.message }),
+          }
       }
-    } finally {
-      setIsValidating(false)
-    }
+    })
   }
 
   return (
@@ -127,6 +127,7 @@ export default function GptLoadSettings() {
             description={t("gptLoad.fields.baseUrlDesc")}
             rightContent={
               <Input
+                disabled={isValidating}
                 type="url"
                 value={localConfig.baseUrl}
                 onChange={(event) =>
@@ -148,6 +149,7 @@ export default function GptLoadSettings() {
             description={t("gptLoad.fields.managementKeyDesc")}
             rightContent={
               <Input
+                disabled={isValidating}
                 type="password"
                 revealable
                 revealLabels={{
@@ -181,9 +183,7 @@ export default function GptLoadSettings() {
                 onClick={handleValidateConfig}
                 loading={isValidating}
               >
-                {isValidating
-                  ? t("gptLoad.validation.validating")
-                  : t("gptLoad.validation.validate")}
+                {connectionCheckLabel}
               </Button>
             }
           />

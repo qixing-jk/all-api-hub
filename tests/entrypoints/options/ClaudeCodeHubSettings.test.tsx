@@ -4,9 +4,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ClaudeCodeHubSettings from "~/features/BasicSettings/components/tabs/ManagedSite/providers/ClaudeCodeHubSettings"
+import settings from "~/locales/en/settings.json"
 import { validateClaudeCodeHubConfig } from "~/services/apiService/claudeCodeHub"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { createResourceTestI18n, testI18n } from "~~/tests/test-utils/i18n"
+
+testI18n.addResourceBundle(
+  "en",
+  "settings",
+  {
+    managedSiteConnection: {
+      failed: settings.managedSiteConnection.failed,
+    },
+  },
+  true,
+  true,
+)
 
 const { showUpdateToastMock, toSanitizedErrorSummaryMock } = vi.hoisted(() => ({
   showUpdateToastMock: vi.fn(),
@@ -44,6 +57,9 @@ vi.mock("~/utils/feedback/preferenceFeedback", () => ({
 
 vi.mock("~/lib/notify", () => ({
   default: {
+    loading: vi.fn(),
+    warning: vi.fn(),
+    dismiss: vi.fn(),
     error: vi.fn(),
     success: vi.fn(),
   },
@@ -212,7 +228,7 @@ describe("ClaudeCodeHubSettings", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "settings:claudeCodeHub.validation.validate",
+        name: "settings:managedSiteConnection.check",
       }),
     )
 
@@ -271,7 +287,7 @@ describe("ClaudeCodeHubSettings", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "settings:claudeCodeHub.validation.validate",
+        name: "settings:managedSiteConnection.check",
       }),
     )
 
@@ -283,7 +299,7 @@ describe("ClaudeCodeHubSettings", () => {
     })
 
     const validatingButton = screen.getByRole("button", {
-      name: "settings:claudeCodeHub.validation.validating",
+      name: "settings:managedSiteConnection.checking",
     })
     expect(validatingButton).toBeDisabled()
     expect(validatingButton).toHaveAttribute("aria-busy", "true")
@@ -298,12 +314,13 @@ describe("ClaudeCodeHubSettings", () => {
 
     await waitFor(() => {
       expect(vi.mocked(toast.default.success)).toHaveBeenCalledWith(
-        "settings:claudeCodeHub.validation.success",
+        "settings:managedSiteConnection.success",
+        expect.objectContaining({ id: expect.any(String) }),
       )
     })
     expect(updateClaudeCodeHubConfig).not.toHaveBeenCalled()
     const restoredButton = screen.getByRole("button", {
-      name: "settings:claudeCodeHub.validation.validate",
+      name: "settings:managedSiteConnection.check",
     })
     expect(restoredButton).toBeEnabled()
     expect(restoredButton).not.toHaveAttribute("aria-busy")
@@ -337,13 +354,14 @@ describe("ClaudeCodeHubSettings", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "settings:claudeCodeHub.validation.validate",
+        name: "settings:managedSiteConnection.check",
       }),
     )
 
     await waitFor(() => {
       expect(vi.mocked(toast.default.error)).toHaveBeenCalledWith(
-        "settings:claudeCodeHub.validation.failed",
+        expect.stringContaining("settings:claudeCodeHub.validation.failed"),
+        expect.objectContaining({ id: expect.any(String) }),
       )
     })
   })
@@ -366,13 +384,14 @@ describe("ClaudeCodeHubSettings", () => {
     renderSubject()
     fireEvent.click(
       screen.getByRole("button", {
-        name: "settings:claudeCodeHub.validation.validate",
+        name: "settings:managedSiteConnection.check",
       }),
     )
 
     await waitFor(() => {
       expect(vi.mocked(toast.default.error)).toHaveBeenCalledWith(
-        "settings:claudeCodeHub.validation.failed",
+        expect.stringContaining("settings:claudeCodeHub.validation.failed"),
+        expect.objectContaining({ id: expect.any(String) }),
       )
     })
     expect(toSanitizedErrorSummaryMock).toHaveBeenCalledWith(
@@ -386,6 +405,10 @@ describe("ClaudeCodeHubSettings", () => {
     const i18n = await createResourceTestI18n({
       en: {
         settings: {
+          managedSiteConnection: {
+            check: "Check connection",
+            failed: settings.managedSiteConnection.failed,
+          },
           claudeCodeHub: {
             validation: {
               validate: "Validate configuration",
@@ -408,13 +431,14 @@ describe("ClaudeCodeHubSettings", () => {
     } as any)
 
     renderSubject(i18n)
-    fireEvent.click(
-      screen.getByRole("button", { name: "Validate configuration" }),
-    )
+    fireEvent.click(screen.getByRole("button", { name: "Check connection" }))
 
     await waitFor(() => {
       expect(vi.mocked(toast.default.error)).toHaveBeenCalledWith(
-        "Validation failed: Claude Code Hub request failed",
+        expect.stringContaining(
+          "Validation failed: Claude Code Hub request failed",
+        ),
+        expect.objectContaining({ id: expect.any(String) }),
       )
     })
   })

@@ -73,6 +73,9 @@ export default function NewApiSettings() {
     setDraft: setLocalConfig,
     commitField,
     resetProps,
+    checkConnection,
+    isValidating,
+    connectionCheckLabel,
   } = useManagedSiteConfigDraft({
     savedConfig,
     savedVersion: preferences.lastUpdated,
@@ -143,17 +146,13 @@ export default function NewApiSettings() {
     verification.dialogState.isBusy &&
     verification.dialogState.request?.kind === "settings"
 
-  const handleTestManagedSession = () => {
-    verification.openNewApiManagedVerification({
-      kind: "settings",
-      config: {
-        baseUrl: trimmedBaseUrl,
-        userId: localUserId,
-        username: localUsername,
-        password: localPassword,
-        totpSecret: localTotpSecret,
+  const handleTestManagedSession = async () => {
+    await checkConnection(
+      { ...localConfig, baseUrl: trimmedBaseUrl },
+      (config) => {
+        verification.openNewApiManagedVerification({ kind: "settings", config })
       },
-    })
+    )
   }
 
   return (
@@ -163,6 +162,7 @@ export default function NewApiSettings() {
       title={t("newApi.title")}
       description={t("newApi.description")}
       {...resetProps}
+      resetDisabled={resetProps.resetDisabled || isTestingManagedSession}
       resetRequiresConfirmation
       resetDescription={t("settings:messages.resetConnectionConfirmDesc")}
     >
@@ -174,6 +174,7 @@ export default function NewApiSettings() {
             description={t("newApi.urlDesc")}
             rightContent={
               <Input
+                disabled={isValidating || isTestingManagedSession}
                 type="text"
                 value={localBaseUrl}
                 onChange={(e) =>
@@ -213,6 +214,7 @@ export default function NewApiSettings() {
             rightContent={
               <div className="relative">
                 <Input
+                  disabled={isValidating || isTestingManagedSession}
                   type="password"
                   revealable
                   revealLabels={{
@@ -239,6 +241,7 @@ export default function NewApiSettings() {
             description={t("newApi.userIdDesc")}
             rightContent={
               <Input
+                disabled={isValidating || isTestingManagedSession}
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
@@ -263,6 +266,7 @@ export default function NewApiSettings() {
             description={t("newApi.fields.usernameDesc")}
             rightContent={
               <Input
+                disabled={isValidating || isTestingManagedSession}
                 type="text"
                 value={localUsername}
                 onChange={(e) =>
@@ -285,6 +289,7 @@ export default function NewApiSettings() {
             rightContent={
               <div className="relative">
                 <Input
+                  disabled={isValidating || isTestingManagedSession}
                   type="password"
                   revealable
                   revealLabels={{
@@ -313,6 +318,7 @@ export default function NewApiSettings() {
             rightContent={
               <div className="relative">
                 <Input
+                  disabled={isValidating || isTestingManagedSession}
                   type="password"
                   revealable
                   revealLabels={{
@@ -344,11 +350,11 @@ export default function NewApiSettings() {
                 size="sm"
                 onClick={handleTestManagedSession}
                 disabled={!trimmedBaseUrl || verification.dialogState.isBusy}
-                loading={isTestingManagedSession}
+                loading={isTestingManagedSession || isValidating}
               >
                 {isTestingManagedSession
                   ? t("newApi.sessionTest.testing")
-                  : t("newApi.sessionTest.action")}
+                  : connectionCheckLabel}
               </Button>
             }
           />

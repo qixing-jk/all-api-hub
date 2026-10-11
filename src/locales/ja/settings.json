@@ -170,10 +170,7 @@
       "description": "現在の設定でサイトに接続し、管理できるかを確認します。",
       "failed": "AxonHub 検証に失敗しました: {{error}}",
       "missingFields": "必須項目をすべて入力してください",
-      "success": "接続に成功しました",
-      "title": "接続を確認",
-      "validate": "接続を確認",
-      "validating": "確認中…"
+      "title": "接続を確認"
     }
   },
   "changelogOnUpdate": {
@@ -203,10 +200,7 @@
       "description": "現在の設定でサイトに接続し、管理できるかを確認します。",
       "failed": "Claude Code Hub 検証に失敗しました: {{error}}",
       "missingFields": "必須項目をすべて入力してください",
-      "success": "接続に成功しました",
-      "title": "接続を確認",
-      "validate": "接続を確認",
-      "validating": "確認中…"
+      "title": "接続を確認"
     }
   },
   "claudeCodeRouter": {
@@ -221,7 +215,6 @@
   },
   "cliProxyApi": {
     "baseUrlLabel": "Management API Base URL",
-    "checkConnectionAction": "接続を確認",
     "checkConnectionDesc": "現在の設定でサイトに接続し、管理できるかを確認します。",
     "checkConnectionLabel": "接続を確認",
     "description": "CLIProxyAPI Management API への接続を設定します",
@@ -308,10 +301,7 @@
       "insufficientPrivilege": "管理キーの権限が不足しています: {{error}}",
       "invalidCredential": "管理キーが拒否されました: {{error}}",
       "missingFields": "先にゲートウェイアドレスと管理キーを入力してください",
-      "success": "接続を確認しました",
-      "title": "接続を確認",
-      "validate": "接続を確認",
-      "validating": "確認中…"
+      "title": "接続を確認"
     }
   },
   "logging": {
@@ -374,10 +364,7 @@
       "failed": "Magpie に接続できません。Web URL とサーバーの起動状態を確認してください。",
       "invalidCredential": "Web キーが拒否されました。MAGPIE_WEB_KEY または最新の起動キーを確認してください。",
       "missingFields": "先にゲートウェイアドレスと管理キーを入力してください",
-      "success": "接続を確認しました",
-      "title": "接続を確認",
-      "validate": "接続を確認",
-      "validating": "確認中…"
+      "title": "接続を確認"
     }
   },
   "managedSite": {
@@ -414,6 +401,20 @@
     "sub2api": "Sub2API",
     "title": "セルフホスト AI ゲートウェイ設定",
     "veloera": "Veloera"
+  },
+  "managedSiteConnection": {
+    "check": "接続を確認",
+    "checkError": "設定を保存しましたが、接続確認に失敗しました。再試行してください。",
+    "checking": "確認中…",
+    "conflict": "別のページで設定が変更されました。入力は保持されています。最新の設定を確認して再試行するか、保存済み設定を再読み込みして入力を置き換えてください。",
+    "failed": "設定を保存しましたが、接続確認に失敗しました：{{reason}}",
+    "invalidField": "保存する前に{{field}}を確認してください",
+    "reload": "保存済み設定を再読み込み",
+    "saveError": "設定を保存できませんでした。入力は保持されています。再試行してください。",
+    "saveFailed": "設定を保存できませんでした：{{reason}}。入力は保持されています。再試行してください。",
+    "saving": "保存中…",
+    "success": "設定を保存しました。接続を確認しました。",
+    "unreachable": "サイトに接続できませんでした"
   },
   "messages": {
     "alreadyDefault": "すでに初期値です",
@@ -460,7 +461,6 @@
       "usernamePlaceholder": "admin"
     },
     "sessionTest": {
-      "action": "設定をテスト",
       "description": "入力したログインユーザー名、パスワード、TOTP シークレットが正しく利用可能かテストします。成功後はログインや 2FA を必要とする操作を続行できます。",
       "testing": "設定をテスト中...",
       "title": "ログインと 2FA 設定をテスト"
@@ -491,10 +491,7 @@
       "error": "検証中にエラーが発生しました",
       "failed": "設定検証に失敗しました。ユーザー名とパスワードを確認してください",
       "missingFields": "必須項目をすべて入力してください",
-      "success": "接続に成功しました",
-      "title": "接続を確認",
-      "validate": "接続を確認",
-      "validating": "確認中…"
+      "title": "接続を確認"
     }
   },
   "omniroute": {
@@ -522,11 +519,8 @@
       "insufficientScope": "トークンのスコープが不足しています：現在は {{have}}、必要は {{need}} です。ゲートウェイの Settings → Access Tokens で admin スコープのトークンを作り直してください。",
       "invalidCredential": "アクセストークンが無効か、有効期限が切れています：{{error}}",
       "missingFields": "デプロイ先アドレスとアクセストークンを入力してください",
-      "success": "接続に成功しました",
       "title": "接続を検証",
-      "unknownScope": "不明",
-      "validate": "接続を検証",
-      "validating": "検証中…"
+      "unknownScope": "不明"
     }
   },
   "permissions": {
@@ -798,10 +792,7 @@
       "description": "現在の設定でサイトに接続し、管理できるかを確認します。",
       "failed": "Sub2API の接続確認に失敗しました：{{error}}",
       "missingFields": "先にサイト URL と管理者 API キーを入力してください",
-      "success": "接続に成功しました",
-      "title": "接続を確認",
-      "validate": "接続を確認",
-      "validating": "確認中…"
+      "title": "接続を確認"
     }
   },
   "tabs": {

@@ -425,7 +425,7 @@ describe("ManagedSiteTab", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "settings:newApi.sessionTest.action",
+        name: "settings:managedSiteConnection.check",
       }),
     )
 
@@ -447,7 +447,7 @@ describe("ManagedSiteTab", () => {
 
     await waitFor(() => {
       const idleButton = screen.getByRole("button", {
-        name: "settings:newApi.sessionTest.action",
+        name: "settings:managedSiteConnection.check",
       })
       expect(idleButton).not.toHaveAttribute("aria-busy")
       expect(idleButton.querySelector("svg.animate-spin")).toBeNull()

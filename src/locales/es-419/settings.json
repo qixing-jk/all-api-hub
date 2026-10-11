@@ -170,10 +170,7 @@
       "description": "Comprueba si la configuración actual permite conectarse al sitio y administrarlo.",
       "failed": "La validación de AxonHub falló: {{error}}",
       "missingFields": "Completa todos los campos obligatorios",
-      "success": "Conexión exitosa",
-      "title": "Verificar conexión",
-      "validate": "Verificar conexión",
-      "validating": "Verificando…"
+      "title": "Verificar conexión"
     }
   },
   "changelogOnUpdate": {
@@ -203,10 +200,7 @@
       "description": "Comprueba si la configuración actual permite conectarse al sitio y administrarlo.",
       "failed": "La validación de Claude Code Hub falló: {{error}}",
       "missingFields": "Completa todos los campos obligatorios",
-      "success": "Conexión exitosa",
-      "title": "Verificar conexión",
-      "validate": "Verificar conexión",
-      "validating": "Verificando…"
+      "title": "Verificar conexión"
     }
   },
   "claudeCodeRouter": {
@@ -221,7 +215,6 @@
   },
   "cliProxyApi": {
     "baseUrlLabel": "Base URL de Management API",
-    "checkConnectionAction": "Verificar conexión",
     "checkConnectionDesc": "Comprueba si la configuración actual permite conectarse al sitio y administrarlo.",
     "checkConnectionLabel": "Verificar conexión",
     "description": "Configura la conexión a CLIProxyAPI Management API",
@@ -308,10 +301,7 @@
       "insufficientPrivilege": "The management key lacks permission: {{error}}",
       "invalidCredential": "The management key was rejected: {{error}}",
       "missingFields": "Enter the gateway address and management key first",
-      "success": "Connection verified",
-      "title": "Check connection",
-      "validate": "Check connection",
-      "validating": "Checking…"
+      "title": "Check connection"
     }
   },
   "logging": {
@@ -374,10 +364,7 @@
       "failed": "No se pudo conectar a Magpie. Revisa la dirección Web y que el servidor esté en ejecución.",
       "invalidCredential": "Se rechazó la clave Web. Revisa MAGPIE_WEB_KEY o usa la clave de inicio actual.",
       "missingFields": "Primero ingresa la dirección del gateway y la clave de administración",
-      "success": "Conexión verificada",
-      "title": "Verificar conexión",
-      "validate": "Verificar conexión",
-      "validating": "Verificando…"
+      "title": "Verificar conexión"
     }
   },
   "managedSite": {
@@ -414,6 +401,20 @@
     "sub2api": "Sub2API",
     "title": "Configuración del AI gateway autohospedado",
     "veloera": "Veloera"
+  },
+  "managedSiteConnection": {
+    "check": "Comprobar conexión",
+    "checkError": "Configuración guardada, pero falló la comprobación de conexión. Inténtalo de nuevo.",
+    "checking": "Comprobando…",
+    "conflict": "La configuración cambió en otra página. Se conservó tu entrada. Revisa la configuración actual o vuelve a cargar la configuración guardada para reemplazar tu entrada.",
+    "failed": "Configuración guardada, pero falló la comprobación de conexión: {{reason}}",
+    "invalidField": "Revisa {{field}} antes de guardar",
+    "reload": "Volver a cargar la configuración guardada",
+    "saveError": "No se pudo guardar la configuración. Se conservó tu entrada. Inténtalo de nuevo.",
+    "saveFailed": "No se pudo guardar la configuración: {{reason}}. Se conservó tu entrada. Inténtalo de nuevo.",
+    "saving": "Guardando…",
+    "success": "Configuración guardada. Conexión verificada.",
+    "unreachable": "No se pudo conectar con el sitio"
   },
   "messages": {
     "alreadyDefault": "Ya usa los valores predeterminados",
@@ -460,7 +461,6 @@
       "usernamePlaceholder": "admin"
     },
     "sessionTest": {
-      "action": "Probar configuración",
       "description": "Prueba si el usuario, contraseña y secreto TOTP ingresados son correctos y utilizables. Después de una comprobación exitosa, puedes continuar con acciones que requieren inicio de sesión y 2FA.",
       "testing": "Probando configuración...",
       "title": "Probar configuración de inicio de sesión y 2FA"
@@ -491,10 +491,7 @@
       "error": "Ocurrió un error durante la validación",
       "failed": "La validación de configuración falló; revisa el usuario y la contraseña",
       "missingFields": "Completa todos los campos obligatorios",
-      "success": "Conexión exitosa",
-      "title": "Verificar conexión",
-      "validate": "Verificar conexión",
-      "validating": "Verificando…"
+      "title": "Verificar conexión"
     }
   },
   "omniroute": {
@@ -522,11 +519,8 @@
       "insufficientScope": "El alcance del token no basta: tiene {{have}} y se necesita {{need}}. Crea un token nuevo con alcance admin en Settings → Access Tokens del gateway.",
       "invalidCredential": "El token de acceso es inválido o ha expirado: {{error}}",
       "missingFields": "Ingresa la URL de la implementación y el token de acceso",
-      "success": "Conexión correcta",
       "title": "Verificar la conexión",
-      "unknownScope": "desconocido",
-      "validate": "Verificar la conexión",
-      "validating": "Verificando…"
+      "unknownScope": "desconocido"
     }
   },
   "permissions": {
@@ -800,10 +794,7 @@
       "description": "Comprueba si la configuración actual permite conectarse al sitio y administrarlo.",
       "failed": "Falló la verificación de conexión con Sub2API: {{error}}",
       "missingFields": "Primero ingresa la URL del sitio y la Admin API Key",
-      "success": "Conexión exitosa",
-      "title": "Verificar conexión",
-      "validate": "Verificar conexión",
-      "validating": "Verificando…"
+      "title": "Verificar conexión"
     }
   },
   "tabs": {

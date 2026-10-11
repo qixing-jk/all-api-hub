@@ -35,7 +35,9 @@ describe("gpt-load UI cleanup", () => {
         allTextContents: vi
           .fn()
           .mockResolvedValueOnce([])
-          .mockResolvedValue([settings.gptLoad.validation.success]),
+          .mockResolvedValueOnce([settings.managedSiteConnection.saving])
+          .mockResolvedValueOnce([settings.managedSiteConnection.checking])
+          .mockResolvedValue([settings.managedSiteConnection.success]),
         scrollIntoViewIfNeeded: async () => {},
         getAttribute: async () => "managed-site-channel-row-2",
         waitFor: async (options: { state: string }) => {
@@ -57,6 +59,7 @@ describe("gpt-load UI cleanup", () => {
         addInitScript: async () => {},
         goto: async () => {},
         waitForLoadState: async () => {},
+        waitForTimeout: async () => {},
         close: async () => {},
         locator,
       }

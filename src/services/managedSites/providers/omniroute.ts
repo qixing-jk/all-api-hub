@@ -52,16 +52,33 @@ const OMNIROUTE_PROTOCOL_PROVIDER_IDS: Partial<
   [API_TYPES.GOOGLE]: "gemini",
 }
 
+export const OMNIROUTE_CREDENTIAL_VALIDATION_STATUSES = {
+  Valid: "valid",
+  InvalidCredential: "invalid-credential",
+  InsufficientScope: "insufficient-scope",
+  Unreachable: "unreachable",
+} as const
+
 export type OmniRouteCredentialValidation =
-  | { status: "valid"; token: string; scope: string }
-  | { status: "invalid-credential"; message: string }
   | {
-      status: "insufficient-scope"
+      status: typeof OMNIROUTE_CREDENTIAL_VALIDATION_STATUSES.Valid
+      token: string
+      scope: string
+    }
+  | {
+      status: typeof OMNIROUTE_CREDENTIAL_VALIDATION_STATUSES.InvalidCredential
+      message: string
+    }
+  | {
+      status: typeof OMNIROUTE_CREDENTIAL_VALIDATION_STATUSES.InsufficientScope
       have: string
       need: string
       message: string
     }
-  | { status: "unreachable"; message: string }
+  | {
+      status: typeof OMNIROUTE_CREDENTIAL_VALIDATION_STATUSES.Unreachable
+      message: string
+    }
 
 export interface OmniRouteCredentialInput {
   baseUrl: string
@@ -86,7 +103,7 @@ const toUnreachable = (
   error: unknown,
   input: OmniRouteCredentialInput,
 ): OmniRouteCredentialValidation => ({
-  status: "unreachable",
+  status: OMNIROUTE_CREDENTIAL_VALIDATION_STATUSES.Unreachable,
   message: toOmniRouteDisclosureError(error, { token: input.credential })
     .message,
 })
@@ -104,7 +121,7 @@ export async function validateOmniRouteCredential(
   const credential = input.credential.trim()
   if (!baseUrl || !credential) {
     return {
-      status: "invalid-credential",
+      status: OMNIROUTE_CREDENTIAL_VALIDATION_STATUSES.InvalidCredential,
       message: "OmniRoute deployment URL and access token are required",
     }
   }
@@ -116,7 +133,7 @@ export async function validateOmniRouteCredential(
     const scope = whoAmI?.scope?.trim() ?? ""
     if (!hasOmniRouteAdminScope(whoAmI)) {
       return {
-        status: "insufficient-scope",
+        status: OMNIROUTE_CREDENTIAL_VALIDATION_STATUSES.InsufficientScope,
         have: scope,
         need: OMNIROUTE_REQUIRED_SCOPE,
         message: "",
@@ -125,7 +142,11 @@ export async function validateOmniRouteCredential(
     // The scope-checked read doubles as the connectivity check: it fails on an
     // unreachable deployment and on a token the gateway no longer accepts.
     await listOmniRouteConnections({ baseUrl, token }, { limit: 1 }, options)
-    return { status: "valid", token, scope }
+    return {
+      status: OMNIROUTE_CREDENTIAL_VALIDATION_STATUSES.Valid,
+      token,
+      scope,
+    }
   } catch (error) {
     const reason = classifyOmniRouteAuthFailure(error)
     if (reason === OMNIROUTE_AUTH_FAILURE_REASONS.InsufficientScope) {
@@ -133,7 +154,7 @@ export async function validateOmniRouteCredential(
         readOmniRouteFailureMessage(error),
       )
       return {
-        status: "insufficient-scope",
+        status: OMNIROUTE_CREDENTIAL_VALIDATION_STATUSES.InsufficientScope,
         have: shortfall?.have ?? "",
         need: shortfall?.need ?? OMNIROUTE_REQUIRED_SCOPE,
         message: toOmniRouteDisclosureError(error, { token }).message,
@@ -141,7 +162,7 @@ export async function validateOmniRouteCredential(
     }
     if (reason === OMNIROUTE_AUTH_FAILURE_REASONS.InvalidCredential) {
       return {
-        status: "invalid-credential",
+        status: OMNIROUTE_CREDENTIAL_VALIDATION_STATUSES.InvalidCredential,
         message: toOmniRouteDisclosureError(error, { token }).message,
       }
     }
@@ -192,7 +213,7 @@ export async function checkValidOmniRouteConfig(): Promise<boolean> {
       baseUrl: config.baseUrl,
       credential: config.token,
     })
-    return result.status === "valid"
+    return result.status === OMNIROUTE_CREDENTIAL_VALIDATION_STATUSES.Valid
   } catch (error) {
     logger.warn(
       "OmniRoute config validation failed",

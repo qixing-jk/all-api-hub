@@ -170,10 +170,7 @@
       "description": "Check whether the current configuration can connect to and manage the site.",
       "failed": "AxonHub validation failed: {{error}}",
       "missingFields": "Please fill in all required fields",
-      "success": "Connection successful",
-      "title": "Verify connection",
-      "validate": "Verify connection",
-      "validating": "Verifying…"
+      "title": "Verify connection"
     }
   },
   "changelogOnUpdate": {
@@ -203,10 +200,7 @@
       "description": "Check whether the current configuration can connect to and manage the site.",
       "failed": "Claude Code Hub validation failed: {{error}}",
       "missingFields": "Please fill in all required fields",
-      "success": "Connection successful",
-      "title": "Verify connection",
-      "validate": "Verify connection",
-      "validating": "Verifying…"
+      "title": "Verify connection"
     }
   },
   "claudeCodeRouter": {
@@ -221,7 +215,6 @@
   },
   "cliProxyApi": {
     "baseUrlLabel": "Management API Base URL",
-    "checkConnectionAction": "Verify connection",
     "checkConnectionDesc": "Check whether the current configuration can connect to and manage the site.",
     "checkConnectionLabel": "Verify connection",
     "description": "Configure connection to CLIProxyAPI Management API",
@@ -308,10 +301,7 @@
       "insufficientPrivilege": "The management key lacks permission: {{error}}",
       "invalidCredential": "The management key was rejected: {{error}}",
       "missingFields": "Enter the gateway address and management key first",
-      "success": "Connection verified",
-      "title": "Check connection",
-      "validate": "Check connection",
-      "validating": "Checking…"
+      "title": "Check connection"
     }
   },
   "logging": {
@@ -374,10 +364,7 @@
       "failed": "Unable to connect to Magpie. Check the Web address and that the server is running.",
       "invalidCredential": "The Web key was rejected. Check MAGPIE_WEB_KEY or copy the current startup key.",
       "missingFields": "Enter the gateway address and management key first",
-      "success": "Connection verified",
-      "title": "Check connection",
-      "validate": "Check connection",
-      "validating": "Checking…"
+      "title": "Check connection"
     }
   },
   "managedSite": {
@@ -414,6 +401,20 @@
     "sub2api": "Sub2API",
     "title": "Self-hosted AI gateway configuration",
     "veloera": "Veloera"
+  },
+  "managedSiteConnection": {
+    "check": "Check connection",
+    "checkError": "Configuration saved, but connection check failed. Please retry.",
+    "checking": "Checking…",
+    "conflict": "Configuration changed in another page. Your input was kept. Review the latest settings and retry, or reload saved configuration to replace your input.",
+    "failed": "Configuration saved, but connection check failed: {{reason}}",
+    "invalidField": "Check {{field}} before saving",
+    "reload": "Reload saved configuration",
+    "saveError": "Could not save configuration. Your input was kept. Please retry.",
+    "saveFailed": "Could not save configuration: {{reason}}. Your input was kept. Please retry.",
+    "saving": "Saving…",
+    "success": "Configuration saved. Connection verified.",
+    "unreachable": "The site could not be reached"
   },
   "messages": {
     "alreadyDefault": "Already at defaults",
@@ -460,7 +461,6 @@
       "usernamePlaceholder": "admin"
     },
     "sessionTest": {
-      "action": "Test config",
       "description": "Test whether the entered login username, password, and TOTP secret are correct and usable. After a successful check, you can continue with actions that require login and 2FA.",
       "testing": "Testing config...",
       "title": "Test login & 2FA config"
@@ -491,10 +491,7 @@
       "error": "An error occurred during validation",
       "failed": "Configuration validation failed, please check username and password",
       "missingFields": "Please fill in all required fields",
-      "success": "Connection successful",
-      "title": "Verify connection",
-      "validate": "Verify connection",
-      "validating": "Verifying…"
+      "title": "Verify connection"
     }
   },
   "omniroute": {
@@ -522,11 +519,8 @@
       "insufficientScope": "The token scope is insufficient: it has {{have}} but needs {{need}}. Create a new token with the admin scope under the gateway's Settings → Access Tokens.",
       "invalidCredential": "The access token is invalid or expired: {{error}}",
       "missingFields": "Enter the deployment URL and access token",
-      "success": "Connected",
       "title": "Verify connection",
-      "unknownScope": "unknown",
-      "validate": "Verify connection",
-      "validating": "Verifying…"
+      "unknownScope": "unknown"
     }
   },
   "permissions": {
@@ -799,10 +793,7 @@
       "description": "Check whether the current configuration can connect to and manage the site.",
       "failed": "Sub2API connection check failed: {{error}}",
       "missingFields": "Enter the site URL and Admin API Key first",
-      "success": "Connection successful",
-      "title": "Verify connection",
-      "validate": "Verify connection",
-      "validating": "Verifying…"
+      "title": "Verify connection"
     }
   },
   "tabs": {

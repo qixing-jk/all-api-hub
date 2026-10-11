@@ -170,10 +170,7 @@
       "description": "檢查目前設定能否正常連線並管理站台。",
       "failed": "AxonHub 配置驗證失敗：{{error}}",
       "missingFields": "請填寫所有必填欄位",
-      "success": "連線成功",
-      "title": "驗證連線",
-      "validate": "驗證連線",
-      "validating": "正在驗證…"
+      "title": "驗證連線"
     }
   },
   "changelogOnUpdate": {
@@ -203,10 +200,7 @@
       "description": "檢查目前設定能否正常連線並管理站台。",
       "failed": "Claude Code Hub 設定驗證失敗：{{error}}",
       "missingFields": "請填寫所有必填欄位",
-      "success": "連線成功",
-      "title": "驗證連線",
-      "validate": "驗證連線",
-      "validating": "正在驗證…"
+      "title": "驗證連線"
     }
   },
   "claudeCodeRouter": {
@@ -221,7 +215,6 @@
   },
   "cliProxyApi": {
     "baseUrlLabel": "管理介面基礎 URL",
-    "checkConnectionAction": "驗證連線",
     "checkConnectionDesc": "檢查目前設定能否正常連線並管理站台。",
     "checkConnectionLabel": "驗證連線",
     "description": "配置到 CLIProxyAPI 管理介面的連線資訊。",
@@ -308,10 +301,7 @@
       "insufficientPrivilege": "管理金鑰權限不足：{{error}}",
       "invalidCredential": "管理金鑰被拒絕：{{error}}",
       "missingFields": "請先填寫閘道位址與管理金鑰",
-      "success": "連線驗證成功",
-      "title": "測試連線",
-      "validate": "測試連線",
-      "validating": "檢測中…"
+      "title": "測試連線"
     }
   },
   "logging": {
@@ -374,10 +364,7 @@
       "failed": "無法連線至 Magpie，請檢查 Web 位址及服務是否已啟動。",
       "invalidCredential": "Web 管理金鑰遭拒，請檢查 MAGPIE_WEB_KEY 或使用最新啟動連結中的金鑰。",
       "missingFields": "請先填寫閘道位址與管理金鑰",
-      "success": "連線驗證成功",
-      "title": "測試連線",
-      "validate": "測試連線",
-      "validating": "檢測中…"
+      "title": "測試連線"
     }
   },
   "managedSite": {
@@ -414,6 +401,20 @@
     "sub2api": "Sub2API",
     "title": "自建 AI 閘道設定",
     "veloera": "Veloera"
+  },
+  "managedSiteConnection": {
+    "check": "檢查連線",
+    "checkError": "設定已儲存，但連線檢查失敗，請重試。",
+    "checking": "檢查中…",
+    "conflict": "設定已在另一頁面更新，目前輸入已保留。請核對最新設定後重試，或重新載入已儲存設定以取代目前輸入。",
+    "failed": "設定已儲存，但連線檢查失敗：{{reason}}",
+    "invalidField": "請檢查{{field}}後再儲存",
+    "reload": "重新載入已儲存設定",
+    "saveError": "設定儲存失敗。目前輸入已保留，請重試。",
+    "saveFailed": "設定儲存失敗：{{reason}}。目前輸入已保留，請重試。",
+    "saving": "儲存中…",
+    "success": "設定已儲存，連線正常",
+    "unreachable": "無法連線至網站"
   },
   "messages": {
     "alreadyDefault": "已是預設值",
@@ -460,7 +461,6 @@
       "usernamePlaceholder": "admin"
     },
     "sessionTest": {
-      "action": "測試配置",
       "description": "測試已填寫的登入使用者名稱、密碼和 TOTP 金鑰是否正確可用。驗證成功後，即可繼續執行需要登入和兩步驗證的相關操作。",
       "testing": "正在測試配置...",
       "title": "測試登入與兩步驗證配置"
@@ -491,10 +491,7 @@
       "error": "驗證過程中發生錯誤",
       "failed": "配置驗證失敗，請檢查使用者名稱和密碼",
       "missingFields": "請填寫所有必填欄位",
-      "success": "連線成功",
-      "title": "驗證連線",
-      "validate": "驗證連線",
-      "validating": "正在驗證…"
+      "title": "驗證連線"
     }
   },
   "omniroute": {
@@ -522,11 +519,8 @@
       "insufficientScope": "權杖作用域不足：目前為 {{have}}，需要 {{need}}。請在閘道 Settings → Access Tokens 重新產生一條 admin 作用域的權杖。",
       "invalidCredential": "存取權杖不正確或已失效：{{error}}",
       "missingFields": "請填寫部署位址和存取權杖",
-      "success": "連線成功",
       "title": "驗證連線",
-      "unknownScope": "未知",
-      "validate": "驗證連線",
-      "validating": "正在驗證…"
+      "unknownScope": "未知"
     }
   },
   "permissions": {
@@ -798,10 +792,7 @@
       "description": "檢查目前設定能否正常連線並管理站台。",
       "failed": "Sub2API 連線驗證失敗：{{error}}",
       "missingFields": "請先填寫站點網址和管理員 API Key",
-      "success": "連線成功",
-      "title": "驗證連線",
-      "validate": "驗證連線",
-      "validating": "正在驗證…"
+      "title": "驗證連線"
     }
   },
   "tabs": {
