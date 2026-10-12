@@ -94,6 +94,9 @@ describe("AccountKeyResourceList", () => {
     expect(closeDetail).not.toHaveBeenCalled()
     expect(openDetail).toHaveBeenNthCalledWith(1, atIndex(rows, 0).facts.ref)
     expect(openDetail).toHaveBeenNthCalledWith(2, atIndex(rows, 1).facts.ref)
+    act(() => itemProps.get("b").onExpandedChange(false))
+    expect(screen.getByTestId("row-b")).toHaveTextContent("collapsed")
+    expect(closeDetail).toHaveBeenCalledOnce()
   })
 
   it("binds detail loading and failure state only to the active row", () => {

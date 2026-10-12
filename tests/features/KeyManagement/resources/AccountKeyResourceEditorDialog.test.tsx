@@ -82,6 +82,63 @@ const nativeRequest = {
   },
 }
 
+it.each([false, true])(
+  "fills a late group label while preserving a manually edited name (%s)",
+  async (manualName) => {
+    const user = userEvent.setup()
+    const definition = createSub2ApiKeyEditor(nativeRequest)
+    const values = { ...definition.initialValues, group_id: "11" }
+    const onValuesChange = vi.fn()
+    const state: AccountKeyResourceEditorDialogState = {
+      editorId: 1,
+      siteType: SITE_TYPES.SUB2API,
+      mode: editorModes.Create,
+      fields: definition.fields,
+      initialValues: values,
+      values,
+    }
+    const props = {
+      onClose: vi.fn(),
+      onSubmit: vi.fn(),
+      onValuesChange,
+      onLoadOptions: vi.fn(),
+    }
+    const { rerender } = render(
+      <AccountKeyResourceEditorDialog editor={state} {...props} />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+    const name = screen.getByRole("textbox", {
+      name: /keyManagement:dialog.tokenName/,
+    })
+    if (manualName) {
+      await user.clear(name)
+      await user.type(name, "Custom key")
+    }
+    rerender(
+      <AccountKeyResourceEditorDialog
+        editor={{
+          ...state,
+          optionsByField: {
+            group_id: [{ value: "11", displayLabel: "Priority" }],
+          },
+        }}
+        {...props}
+      />,
+    )
+    expect(name).toHaveValue(
+      manualName ? "Custom key" : "Priority group (auto)",
+    )
+    if (!manualName)
+      expect(onValuesChange).toHaveBeenLastCalledWith(
+        1,
+        expect.objectContaining({
+          name: "Priority group (auto)",
+          group_id: "11",
+        }),
+      )
+  },
+)
+
 const editor = (mode: AccountKeyResourceEditorMode = editorModes.Create) => ({
   editorId: 1,
   siteType: SITE_TYPES.OPENROUTER,

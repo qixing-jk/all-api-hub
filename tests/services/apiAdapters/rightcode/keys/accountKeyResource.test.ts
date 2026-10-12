@@ -356,7 +356,7 @@ describe("rightCodeAccountKeyResources", () => {
     expect(body).not.toHaveProperty("allowed_prefixes")
   })
 
-  it("returns verified edits using the existing channel snapshot after cancellation", async () => {
+  it("retains mutation uncertainty when the post-update verification is cancelled", async () => {
     const session = await openSession()
     const controller = new AbortController()
     const original = key({ name: "Original" })
@@ -364,7 +364,10 @@ describe("rightCodeAccountKeyResources", () => {
     mockFetchRightCodeKey
       .mockResolvedValueOnce(original)
       .mockResolvedValueOnce(original)
-      .mockResolvedValueOnce(renamed)
+      .mockImplementationOnce(async (request) => {
+        request.abortSignal?.throwIfAborted()
+        return renamed
+      })
     mockUpdateRightCodeKey.mockImplementationOnce(async () => {
       controller.abort()
       return renamed
@@ -383,10 +386,9 @@ describe("rightCodeAccountKeyResources", () => {
         { ...editor.initialValues, name: "Renamed" },
         { signal: controller.signal },
       ),
-    ).resolves.toMatchObject({
-      facts: {
-        displayName: "Renamed",
-        runtimeKey: { baseUrl: "https://console.example.invalid/codex/v1" },
+    ).rejects.toMatchObject({
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
       },
     })
     expect(mockFetchRightCodeKey).toHaveBeenCalledTimes(3)

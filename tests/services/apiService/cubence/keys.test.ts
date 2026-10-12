@@ -86,6 +86,21 @@ describe("Cubence key protocol", () => {
     await expect(fetchKeys(request)).resolves.toEqual([key])
   })
 
+  it.each([
+    { ...key, id: 18 },
+    { ...key, user_id: 8 },
+  ])(
+    "rejects a prepared update snapshot for another key or owner",
+    async (prepared) => {
+      const write = vi.fn(() => HttpResponse.json({ success: true }))
+      server.use(http.patch(`${origin}/api/v1/user/apikeys/:id/quota`, write))
+      await expect(
+        updateKey(request, key, { ...key, quota_limit: 20000000 }, prepared),
+      ).rejects.toMatchObject({ failure: { code: "not_found" } })
+      expect(write).not.toHaveBeenCalled()
+    },
+  )
+
   it("reuses inventory plaintext while explicit provider resolution still reads the site", async () => {
     server.use(
       http.get(`${origin}/api/v1/user/apikeys`, () =>
