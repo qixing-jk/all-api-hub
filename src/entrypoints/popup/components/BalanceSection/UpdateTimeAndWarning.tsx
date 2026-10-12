@@ -13,6 +13,7 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { normalizeSearchUrl } from "~/services/search/accountSearch"
 import { formatFullTime, formatRelativeTime } from "~/utils/core/formatters"
 
 interface UpdateTimeAndWarningProps {
@@ -24,20 +25,19 @@ interface UpdateTimeAndWarningProps {
 }
 
 /**
- * Extracts a searchable host query from a detected account's site URL.
- * Returns null when no parsable host exists so the badge stays non-interactive.
+ * Extracts a searchable domain query from a detected account's site URL.
+ *
+ * The account search index keeps `baseUrl` in its normalized original form, so
+ * the query must go through the same `normalizeSearchUrl` pipeline instead of
+ * `URL.host`, which would punycode-encode internationalized domains and never
+ * match the index. Returns null when no domain exists so the badge stays
+ * non-interactive.
  */
 function resolveDetectedSiteSearchQuery(
   siteUrl: string | undefined,
 ): string | null {
-  if (!siteUrl) {
-    return null
-  }
-  try {
-    return new URL(siteUrl).host || null
-  } catch {
-    return null
-  }
+  const domain = siteUrl ? normalizeSearchUrl(siteUrl).split("/")[0] : ""
+  return domain || null
 }
 
 export const UpdateTimeAndWarning = ({
@@ -87,9 +87,7 @@ export const UpdateTimeAndWarning = ({
   }, [])
 
   const handleFilterCurrentSite = () => {
-    if (!detectedSiteSearchQuery) {
-      return
-    }
+    if (detectedSiteSearchQuery === null) return
 
     const analyticsContext = resolveProductAnalyticsActionContext(
       {
