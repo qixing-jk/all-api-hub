@@ -6,6 +6,7 @@ import {
   ACCOUNT_RUNTIME_KEY_SECRET_SOURCES,
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { createFoxCodeKeyEditor } from "~/services/apiAdapters/foxcode/keyEditor"
 import { FOXCODE_KEY_EDITOR_FIELDS } from "~/services/apiAdapters/foxcode/keyEditorFields"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
@@ -94,6 +95,345 @@ beforeEach(async () => {
   )
 })
 afterEach(() => vi.restoreAllMocks())
+
+it("retains mutation uncertainty after a dispatched editor update loses its response", async () => {
+  const write = vi.fn(() => HttpResponse.error())
+  server.use(
+    http.get(`${origin}/api/keys`, () =>
+      HttpResponse.json({
+        success: true,
+        data: { apiKeys: [key], pagination: { page: 1, pages: 1 } },
+      }),
+    ),
+    http.patch(`${origin}/api/keys/${key.id}`, write),
+  )
+  const session = await getSiteTypeCapabilities(
+    "foxcode",
+  ).account!.keyResourceManagement!.open({
+    account: { id: "saved", siteType: "foxcode" },
+    request: { ...request, accountId: "saved" },
+  })
+  const collection = await session.openCollection("account")
+  const row = (await collection.list()).items[0]!
+  const editor = await collection.openEditEditor(row.ref, undefined, {
+    snapshot: row,
+  })
+  await expect(
+    editor.submit({ ...editor.initialValues, name: "Renamed" }),
+  ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+  expect(write).toHaveBeenCalledOnce()
+})
+
+it("restricts native creation options to the permitted channel and model", async () => {
+  const channels = config.channels.map((channel) => ({
+    ...channel,
+    aliases: [],
+    complexPricing: false,
+    protocols: [],
+  }))
+  const editor = createFoxCodeKeyEditor(async () => channels, undefined, {
+    allowedGroups: ["anthropic"],
+    modelContext: { modelId: "claude-sonnet" },
+  })
+  expect(await editor.loadOptions!("channelKey", editor.initialValues)).toEqual(
+    [{ value: "anthropic", displayLabel: "Official" }],
+  )
+  expect(
+    editor.validate({ ...editor.initialValues, channelKey: "codex" }),
+  ).toMatchObject({
+    valid: false,
+    issues: [{ fieldId: "channelKey", code: "unsupported_option" }],
+  })
+})
+
+it.each([
+  [{ name: " " }, "name", "required"],
+  [{ description: 1 }, "description", "invalid_value"],
+  [{ unlimited: "yes" }, "unlimited", "invalid_value"],
+  [{ unlimited: false, quotaUsd: -1 }, "quotaUsd", "out_of_range"],
+  [{ enabled: "yes" }, "enabled", "invalid_value"],
+] as const)(
+  "rejects invalid native key editor values (%s)",
+  (changes, fieldId, code) => {
+    const editor = createFoxCodeKeyEditor(async () => [], {
+      ...key,
+      modelIds: [],
+      baseUrl: "https://code1.newcli.com",
+    })
+    expect(
+      editor.validate({ ...editor.initialValues, ...changes }),
+    ).toMatchObject({ valid: false, issues: [{ fieldId, code }] })
+  },
+)
+
+it("preserves a removed channel and null description during unrelated edits", async () => {
+  const editor = createFoxCodeKeyEditor(async () => [], {
+    ...key,
+    description: null,
+    modelIds: [],
+    baseUrl: "https://code1.newcli.com",
+  })
+  expect(await editor.loadOptions!("channelKey", editor.initialValues)).toEqual(
+    [{ value: "anthropic", displayLabel: "anthropic" }],
+  )
+  expect(
+    editor.buildCommand({ ...editor.initialValues, name: "Renamed" }),
+  ).toMatchObject({ description: null, channelKey: "anthropic" })
+})
+
+it.each([
+  ["anthropic", ["claude-sonnet"]],
+  [null, ["claude-sonnet", "gpt-sample"]],
+  ["removed", []],
+] as const)(
+  "discovers models using the owned native key binding %s",
+  async (channelKey, expected) => {
+    server.use(
+      http.get(`${origin}/api/keys`, () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            apiKeys: [{ ...key, channelKey }],
+            pagination: { page: 1, pages: 1 },
+          },
+        }),
+      ),
+    )
+    const capabilities = getSiteTypeCapabilities("foxcode").account!
+    const catalog = capabilities.modelCatalog!
+    const modelRequest = {
+      baseUrl: "https://code1.newcli.com",
+      auth: { authType: AuthTypeEnum.None, apiKey: key.key },
+    }
+    const models = await catalog.fetchModels(modelRequest, {
+      accountRequest: request,
+    })
+    expect(models).toEqual(expected.map((id) => ({ id })))
+    if (channelKey === null) {
+      server.use(
+        http.get(`${origin}/api/model-pricing`, () =>
+          HttpResponse.json({ success: true, data: { pricing: {} } }),
+        ),
+      )
+      const session = await capabilities.keyResourceManagement!.open({
+        account: { id: "saved", siteType: "foxcode" },
+        request: { ...request, accountId: "saved" },
+      })
+      const facts = (await (await session.openCollection("account")).list())
+        .items[0]!
+      const runtimeKey = buildAccountKeyResourceRuntimeKeyFromFacts(
+        buildDisplaySiteData({ id: "saved", siteType: "foxcode" }),
+        facts,
+      )
+      const prices = await catalog.enrichPricing!({
+        accountRequest: request,
+        runtimeKey,
+        models: expected.map((id) => ({ id })),
+      })
+      expect(prices.groupAccess).toMatchObject({
+        usableGroups: ["anthropic", "codex"],
+      })
+      expect(prices.data[0]?.enable_groups).toEqual(["anthropic"])
+    }
+  },
+)
+
+it.each([false, true])(
+  "refuses runtime model discovery without an active owned key (%s)",
+  async (active) => {
+    server.use(
+      http.get(`${origin}/api/keys`, () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            apiKeys: [{ ...key, isActive: active }],
+            pagination: { page: 1, pages: 1 },
+          },
+        }),
+      ),
+    )
+    const catalog = getSiteTypeCapabilities("foxcode").account!.modelCatalog!
+    const modelRequest = {
+      baseUrl: "https://code1.newcli.com",
+      auth: {
+        authType: AuthTypeEnum.None,
+        apiKey: active ? "different-secret" : key.key,
+      },
+    }
+    await expect(
+      catalog.fetchModels(modelRequest, { accountRequest: request }),
+    ).rejects.toMatchObject({ code: "TOKEN_SECRET_UNAVAILABLE" })
+    await expect(catalog.fetchModels(modelRequest)).rejects.toMatchObject({
+      code: "FEATURE_UNSUPPORTED",
+    })
+  },
+)
+
+it("creates, reads, resolves and deletes keys through the public resource capability", async () => {
+  const write = vi.fn(() =>
+    HttpResponse.json({
+      success: true,
+      data: { apiKey: { ...key, quotaLimit: -1 } },
+    }),
+  )
+  const remove = vi.fn(() => HttpResponse.json({ success: true }))
+  server.use(
+    http.post(`${origin}/api/keys`, write),
+    http.delete(`${origin}/api/keys/${key.id}`, remove),
+    http.get(`${origin}/api/keys`, () =>
+      HttpResponse.json({
+        success: true,
+        data: { apiKeys: [key], pagination: { page: 1, pages: 1 } },
+      }),
+    ),
+  )
+  const session = await getSiteTypeCapabilities(
+    "foxcode",
+  ).account!.keyResourceManagement!.open({
+    account: { id: "saved", siteType: "foxcode" },
+    request: { ...request, accountId: "saved" },
+  })
+  expect(await session.resolveDefaultScope()).toMatchObject({
+    scopeKey: "account",
+  })
+  const collection = await session.openCollection("account")
+  const editor = await session.openCreateEditor("account")
+  await editor.loadOptions!(
+    FOXCODE_KEY_EDITOR_FIELDS.Channel,
+    editor.initialValues,
+  )
+  const created = await editor.submit({
+    ...editor.initialValues,
+    name: key.name,
+    description: key.description,
+    channelKey: key.channelKey,
+  })
+  expect(created.facts).toMatchObject({
+    displayName: "Work",
+    runtimeSecret: key.key,
+  })
+  expect(await collection.get(created.facts!.ref)).toMatchObject({
+    displayName: "Work",
+  })
+  expect(await session.runtimeKey!.resolve(created.facts!.ref)).toEqual({
+    kind: "resolved",
+    secret: key.key,
+  })
+  await collection.delete(created.facts!.ref)
+  expect(write).toHaveBeenCalledOnce()
+  expect(remove).toHaveBeenCalledOnce()
+})
+
+it.each([{}, { apiKey: { ...key, name: "Unexpected" } }])(
+  "reports uncertain creation when the acknowledgement cannot verify the submitted key",
+  async (data) => {
+    const write = vi.fn(() => HttpResponse.json({ success: true, data }))
+    server.use(http.post(`${origin}/api/keys`, write))
+    await expect(createKey(request, key)).rejects.toMatchObject({
+      failure: { code: "mutation_state_uncertain" },
+    })
+    expect(write).toHaveBeenCalledOnce()
+  },
+)
+
+it.each(["create", "update"])(
+  "refuses an unavailable channel before %s dispatch",
+  async (operation) => {
+    const write = vi.fn(() => HttpResponse.json({ success: true, data: {} }))
+    server.use(
+      http.post(`${origin}/api/keys`, write),
+      http.patch(`${origin}/api/keys/${key.id}`, write),
+    )
+    const baseline = {
+      ...key,
+      modelIds: ["claude-sonnet"],
+      baseUrl: "https://code1.newcli.com",
+    }
+    await expect(
+      operation === "create"
+        ? createKey(request, { ...key, channelKey: "removed" })
+        : updateKey(
+            request,
+            baseline,
+            { ...key, channelKey: "removed" },
+            baseline,
+          ),
+    ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+    expect(write).not.toHaveBeenCalled()
+  },
+)
+
+it.each(["../key", "", "/other"])(
+  "rejects invalid native resource paths (%s)",
+  async (id) => {
+    await expect(deleteKey(request, id)).rejects.toMatchObject({
+      failure: { code: "validation_failed" },
+    })
+  },
+)
+
+it.each([{ id: "another-key" }, { userId: "another-owner" }])(
+  "rejects a prepared update snapshot for another key or owner",
+  async (different) => {
+    const baseline = {
+      ...key,
+      modelIds: ["claude-sonnet"],
+      baseUrl: "https://code1.newcli.com",
+    }
+    await expect(
+      updateKey(
+        request,
+        baseline,
+        { ...key, name: "Renamed" },
+        { ...baseline, ...different },
+      ),
+    ).rejects.toMatchObject({ failure: { code: "not_found" } })
+  },
+)
+
+it("rejects updates when the key no longer exists or the response names another resource", async () => {
+  const baseline = {
+    ...key,
+    modelIds: ["claude-sonnet"],
+    baseUrl: "https://code1.newcli.com",
+  }
+  server.use(
+    http.get(`${origin}/api/keys`, () =>
+      HttpResponse.json({
+        success: true,
+        data: { apiKeys: [], pagination: { page: 1, pages: 0 } },
+      }),
+    ),
+  )
+  await expect(
+    updateKey(request, baseline, { ...key, name: "Renamed" }),
+  ).rejects.toMatchObject({ failure: { code: "not_found" } })
+  server.use(
+    http.patch(`${origin}/api/keys/${key.id}`, () =>
+      HttpResponse.json({
+        success: true,
+        data: { apiKey: { ...key, id: "different", name: "Renamed" } },
+      }),
+    ),
+  )
+  await expect(
+    updateKey(request, baseline, { ...key, name: "Renamed" }, baseline),
+  ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+})
+
+it("rejects malformed pagination instead of returning a partial key inventory", async () => {
+  server.use(
+    http.get(`${origin}/api/keys`, () =>
+      HttpResponse.json({
+        success: true,
+        data: { apiKeys: [], pagination: { page: 1, pages: 1001 } },
+      }),
+    ),
+  )
+  await expect(fetchKeys(request)).rejects.toMatchObject({
+    code: "JSON_PARSE_ERROR",
+  })
+})
 
 it("still requires a channel for creation and refuses unbinding a restricted key", async () => {
   const write = vi.fn(() => HttpResponse.json({ success: true, data: {} }))

@@ -2,6 +2,10 @@ import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import {
+  fetchChannels,
+  fetchInferenceOrigin,
+} from "~/services/apiService/foxcode/catalog"
 import { calculateModelPrice } from "~/services/models/utils/modelPricing"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
@@ -72,6 +76,90 @@ beforeEach(async () => {
   )
 })
 afterEach(() => vi.restoreAllMocks())
+
+it.each([
+  {},
+  {
+    channels: [
+      { key: "same", models: [] },
+      { key: "same", models: [] },
+    ],
+  },
+  { channels: [{ key: "bad", models: [null] }] },
+])("rejects malformed channel configuration", async (config) => {
+  server.use(
+    http.get(`${origin}/api/system-config/public/model_square_config`, () =>
+      HttpResponse.json({ success: true, data: { config } }),
+    ),
+  )
+  await expect(fetchChannels(request)).rejects.toMatchObject({
+    code: "JSON_PARSE_ERROR",
+  })
+})
+
+it("preserves channel labels and explicitly unavailable multipliers", async () => {
+  server.use(
+    http.get(`${origin}/api/system-config/public/model_square_config`, () =>
+      HttpResponse.json({
+        success: true,
+        data: {
+          channels: [
+            {
+              key: "localized",
+              name: { "zh-CN": "本地" },
+              models: [],
+              groupKey: "openai",
+            },
+            { key: "fallback", models: [], quotaMultiplier: 0 },
+          ],
+        },
+      }),
+    ),
+  )
+  expect(await fetchChannels(request)).toMatchObject([
+    { key: "localized", name: "本地", protocols: ["openai"] },
+    { key: "fallback", name: "fallback", quotaMultiplier: undefined },
+  ])
+})
+
+it.each([
+  {},
+  { defaultKey: "missing", endpoints: [] },
+  ...[
+    "bad-url",
+    "http://inference.example",
+    "https://user:password@inference.example",
+    "https://inference.example?token=private",
+  ].map((baseUrl) => ({
+    defaultKey: "primary",
+    endpoints: [{ key: "primary", baseUrl }],
+  })),
+])(
+  "rejects invalid inference routes before projecting credentials",
+  async (data) => {
+    server.use(
+      http.get(`${origin}/api/system-config/public/api_endpoint_config`, () =>
+        HttpResponse.json({ success: true, data }),
+      ),
+    )
+    await expect(fetchInferenceOrigin(request)).rejects.toMatchObject({
+      code: "JSON_PARSE_ERROR",
+    })
+  },
+)
+
+it("rejects missing pricing instead of inventing rates", async () => {
+  server.use(
+    http.get(`${origin}/api/model-pricing`, () =>
+      HttpResponse.json({ success: true, data: {} }),
+    ),
+  )
+  await expect(
+    getSiteTypeCapabilities("foxcode").account!.modelPricing!.fetchPricing(
+      request,
+    ),
+  ).rejects.toMatchObject({ code: "JSON_PARSE_ERROR" })
+})
 
 it("projects native USD token and request rates with channel multipliers through the shared calculator", async () => {
   const catalog =

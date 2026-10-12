@@ -4,6 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { QUOTA_PER_USD } from "~/constants/money"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { fetchAccountData, fetchUserInfo } from "~/services/apiService/foxcode"
+import { fetchRecentUsage } from "~/services/apiService/foxcode/usage"
+import * as permissions from "~/services/permissions/permissionManager"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
@@ -29,7 +31,345 @@ describe("FoxCode console account contract", () => {
       { ...cookie, domain: "foxcode.rjj.cc", name: "auth_token" },
     ])
   })
-  afterEach(() => vi.restoreAllMocks())
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllEnvs()
+  })
+
+  it("exposes supported onboarding routes without advertising token or check-in support", async () => {
+    const bootstrap = getSiteTypeCapabilities("foxcode").account!.bootstrap!
+    const facts = await bootstrap.loadBootstrapFacts(request)
+    expect(facts).toMatchObject({
+      displayName: "FoxCode",
+      checkInSupported: false,
+    })
+    expect(await bootstrap.fetchCheckInSupport(request, facts)).toBe(false)
+    expect(
+      await bootstrap.resolveRoutePath(
+        { baseUrl: origin, siteType: "foxcode" },
+        "login",
+      ),
+    ).toBe("/auth/login")
+    await expect(
+      bootstrap.getOrCreateAccessToken(request),
+    ).rejects.toMatchObject({ code: "FEATURE_UNSUPPORTED" })
+  })
+
+  it("rejects invalid console envelopes", async () => {
+    server.use(
+      http.get(`${origin}/api/auth/me`, () =>
+        HttpResponse.json({ success: false }),
+      ),
+    )
+    await expect(fetchUserInfo(request)).rejects.toMatchObject({
+      code: "JSON_PARSE_ERROR",
+    })
+  })
+
+  it.each([
+    { records: {} },
+    { records: [{ model: "example", createdAt: "invalid" }] },
+  ])("rejects malformed native usage records", async (data) => {
+    server.use(
+      http.get(`${origin}/api/user/quota/usage`, () =>
+        HttpResponse.json({ success: true, data }),
+      ),
+    )
+    await expect(fetchRecentUsage(request)).rejects.toMatchObject({
+      code: "JSON_PARSE_ERROR",
+    })
+  })
+
+  it("uses the nearest expiry across active resetting plans", async () => {
+    const plan = {
+      plan: { name: "Daily", resetType: "DAILY", quotaLimit: 1000000 },
+      quotaUsed: 0,
+      quotaRemaining: 1000000,
+    }
+    server.use(
+      http.get(`${origin}/api/auth/me`, () =>
+        HttpResponse.json({ success: true, data: { user } }),
+      ),
+      http.get(`${origin}/api/user/dashboard`, () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            user,
+            subscription: {
+              active: [
+                { ...plan, endDate: "2099-01-01T00:00:00Z" },
+                { ...plan, endDate: "2098-01-01T00:00:00Z" },
+              ],
+            },
+          },
+        }),
+      ),
+    )
+    expect(
+      await fetchAccountData({
+        ...request,
+        checkIn: createCheckInConfig("foxcode"),
+        includeTodayCashflow: false,
+      }),
+    ).toMatchObject({
+      subscription: { expireTime: "2098-01-01T00:00:00Z", remainingAmount: 2 },
+    })
+  })
+
+  it("keeps malformed usage unavailable and unknown token counts absent", async () => {
+    server.use(
+      http.get(`${origin}/api/auth/me`, () =>
+        HttpResponse.json({ success: true, data: { user } }),
+      ),
+      http.get(`${origin}/api/user/dashboard`, () =>
+        HttpResponse.json({
+          success: true,
+          data: { user, subscription: { active: [] } },
+        }),
+      ),
+      http.get(`${origin}/api/user/quota/usage`, () =>
+        HttpResponse.json({ success: true, data: { records: {} } }),
+      ),
+    )
+    const accountRequest = {
+      ...request,
+      checkIn: createCheckInConfig("foxcode"),
+      includeTodayCashflow: true,
+    }
+    expect(
+      (await fetchAccountData(accountRequest)).recentUsageRecords,
+    ).toBeUndefined()
+    server.use(
+      http.get(`${origin}/api/user/quota/usage`, () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            records: [
+              {
+                createdAt: "2026-10-12T00:00:00Z",
+                model: "example",
+                inputTokens: -1,
+              },
+            ],
+          },
+        }),
+      ),
+    )
+    expect(
+      (await fetchAccountData(accountRequest)).recentUsageRecords?.[0]
+        ?.inputTokens,
+    ).toBeUndefined()
+  })
+
+  it("requires Firefox Cookie permissions before a console read", async () => {
+    vi.stubEnv("BROWSER", "firefox")
+    vi.spyOn(permissions, "hasCookieInterceptorPermissions").mockResolvedValue(
+      false,
+    )
+    await expect(fetchUserInfo(request)).rejects.toMatchObject({
+      code: "COOKIE_PERMISSION_REQUIRED",
+    })
+  })
+
+  it("uses the captured Cookie for Firefox console reads", async () => {
+    vi.stubEnv("BROWSER", "firefox")
+    vi.spyOn(permissions, "hasCookieInterceptorPermissions").mockResolvedValue(
+      true,
+    )
+    server.use(
+      http.get(`${origin}/api/auth/me`, ({ request }) => {
+        expect(request.headers.get("cookie")).toContain(
+          "auth_token=browser-account",
+        )
+        return HttpResponse.json({ success: true, data: { user } })
+      }),
+    )
+    expect(await fetchUserInfo(request)).toMatchObject({ id: userId })
+  })
+
+  it.each([
+    {},
+    {
+      announcements: [
+        { id: "notice", title: "Bad", content: "", createdAt: "invalid" },
+      ],
+    },
+  ])("rejects malformed announcement data", async (data) => {
+    server.use(
+      http.get(`${origin}/api/auth/me`, () =>
+        HttpResponse.json({ success: true, data: { user } }),
+      ),
+      http.get(`${origin}/api/user/dashboard`, () =>
+        HttpResponse.json({ success: true, data: { user, ...data } }),
+      ),
+    )
+    await expect(
+      getSiteTypeCapabilities("foxcode").account!.announcements!.fetch(request),
+    ).rejects.toMatchObject({ code: "JSON_PARSE_ERROR" })
+  })
+
+  it.each([{ enabled: false }, { enabled: true, referralCode: " " }])(
+    "does not invent an invitation when referral data is unavailable",
+    async (data) => {
+      server.use(
+        http.get(`${origin}/api/auth/me`, () =>
+          HttpResponse.json({ success: true, data: { user } }),
+        ),
+        http.get(`${origin}/api/user/referral`, () =>
+          HttpResponse.json({ success: true, data }),
+        ),
+      )
+      await expect(
+        getSiteTypeCapabilities("foxcode").account!.inviteLink!.fetchInviteLink(
+          { request },
+        ),
+      ).rejects.toThrow()
+    },
+  )
+
+  it.each([
+    { subscription: {} },
+    { subscription: { active: [{ plan: {} }] } },
+    {
+      subscription: {
+        active: [
+          {
+            plan: { name: "Credit", resetType: "NEVER", quotaLimit: -1 },
+            endDate: "2099-01-01",
+            quotaUsed: 0,
+            quotaRemaining: 0,
+          },
+        ],
+      },
+    },
+  ])(
+    "does not display fabricated balances for malformed plans",
+    async (data) => {
+      server.use(
+        http.get(`${origin}/api/auth/me`, () =>
+          HttpResponse.json({ success: true, data: { user } }),
+        ),
+        http.get(`${origin}/api/user/dashboard`, () =>
+          HttpResponse.json({ success: true, data: { user, ...data } }),
+        ),
+      )
+      await expect(
+        fetchAccountData({
+          ...request,
+          checkIn: createCheckInConfig("foxcode"),
+          includeTodayCashflow: false,
+        }),
+      ).rejects.toMatchObject({ code: "JSON_PARSE_ERROR" })
+    },
+  )
+
+  it("keeps a verified balance when optional usage is unavailable", async () => {
+    server.use(
+      http.get(`${origin}/api/auth/me`, () =>
+        HttpResponse.json({ success: true, data: { user } }),
+      ),
+      http.get(`${origin}/api/user/dashboard`, () =>
+        HttpResponse.json({
+          success: true,
+          data: { user, subscription: { active: [] } },
+        }),
+      ),
+      http.get(`${origin}/api/user/quota/usage`, () =>
+        HttpResponse.json({ success: true, data: { records: {} } }),
+      ),
+    )
+    const account = getSiteTypeCapabilities("foxcode").account!
+    const result = await account.refresh!.refreshAccount({
+      ...request,
+      checkIn: createCheckInConfig("foxcode"),
+    })
+    expect(result).toMatchObject({ success: true, data: { quota: 0 } })
+    expect(result.data?.recentUsageRecords).toBeUndefined()
+    server.use(
+      http.get(
+        `${origin}/api/auth/me`,
+        () => new HttpResponse(null, { status: 401 }),
+      ),
+    )
+    expect(
+      await account.refresh!.refreshAccount({
+        ...request,
+        checkIn: createCheckInConfig("foxcode"),
+      }),
+    ).toMatchObject({ success: false })
+  })
+
+  it("rejects a console identity different from the saved account", async () => {
+    server.use(
+      http.get(`${origin}/api/auth/me`, () =>
+        HttpResponse.json({
+          success: true,
+          data: { user: { ...user, id: "another-account" } },
+        }),
+      ),
+    )
+    await expect(fetchUserInfo(request)).rejects.toMatchObject({
+      code: "ACCOUNT_IDENTITY_MISMATCH",
+    })
+  })
+
+  it("rejects dashboard data for a different account", async () => {
+    server.use(
+      http.get(`${origin}/api/auth/me`, () =>
+        HttpResponse.json({ success: true, data: { user } }),
+      ),
+      http.get(`${origin}/api/user/dashboard`, () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            user: { ...user, id: "another-account" },
+            subscription: { active: [] },
+          },
+        }),
+      ),
+    )
+    await expect(
+      fetchAccountData({
+        ...request,
+        checkIn: createCheckInConfig("foxcode"),
+        includeTodayCashflow: false,
+      }),
+    ).rejects.toMatchObject({ code: "ACCOUNT_IDENTITY_MISMATCH" })
+  })
+
+  it("propagates expired-session errors from optional usage reads", async () => {
+    server.use(
+      http.get(`${origin}/api/auth/me`, () =>
+        HttpResponse.json({ success: true, data: { user } }),
+      ),
+      http.get(`${origin}/api/user/dashboard`, () =>
+        HttpResponse.json({
+          success: true,
+          data: { user, subscription: { active: [] } },
+        }),
+      ),
+      http.get(
+        `${origin}/api/user/quota/usage`,
+        () => new HttpResponse(null, { status: 401 }),
+      ),
+    )
+    await expect(
+      fetchAccountData({ ...request, checkIn: createCheckInConfig("foxcode") }),
+    ).rejects.toMatchObject({ statusCode: 401 })
+  })
+
+  it("fails without dispatch when the console login Cookie is absent", async () => {
+    const boundary = installCookieTransport()
+    boundary.cookies.mockResolvedValue([])
+    const read = vi.fn(() =>
+      HttpResponse.json({ success: true, data: { user } }),
+    )
+    server.use(http.get(`${origin}/api/auth/me`, read))
+    await expect(fetchUserInfo(request)).rejects.toMatchObject({
+      statusCode: 401,
+    })
+    expect(read).not.toHaveBeenCalled()
+  })
 
   it("uses the console cookie and preserves a verified string account identity", async () => {
     server.use(
