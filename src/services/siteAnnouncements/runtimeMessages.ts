@@ -130,7 +130,10 @@ export async function resolveSiteAnnouncementsGetStatusMessage(): Promise<
     }
     const [cached, accounts] = await Promise.all([
       siteAnnouncementStorage.getStatus(),
-      accountQueries.getEnabledAccounts(),
+      accountQueries.getEnabledAccounts().catch((error) => {
+        logger.warn("Failed to discover site announcement sources", error)
+        return []
+      }),
     ])
     const states = new Map(cached.map((state) => [state.siteKey, state]))
     // Source discovery is read-only: unscanned accounts must be selectable even

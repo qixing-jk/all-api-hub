@@ -641,7 +641,9 @@ async function renderCreatedNativeSecret(
     initialSelectedAccount: account.id,
   }
 
-  render(<KeyManagement routeParams={{ accountId: account.id }} />)
+  render(<KeyManagement routeParams={{ accountId: account.id }} />, {
+    withFeatureGuidanceProvider: true,
+  })
   await waitFor(() =>
     expect(
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.addTokenButton),
@@ -1128,7 +1130,9 @@ describe("KeyManagement native page integration", () => {
       submit: vi.fn(),
     })
     await user.click(
-      screen.getByRole("button", {
+      within(
+        screen.getByRole("dialog", { name: "keyManagement:createdKey.title" }),
+      ).getByRole("button", {
         name: "keyManagement:native.editor.dahl.allocate",
       }),
     )

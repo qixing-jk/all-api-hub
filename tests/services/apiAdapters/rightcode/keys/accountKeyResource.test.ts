@@ -274,6 +274,29 @@ describe("rightCodeAccountKeyResources", () => {
     expect(mockFetchRightCodeKey).not.toHaveBeenCalled()
   })
 
+  it("returns the created key when cancellation follows the successful write", async () => {
+    const session = await openSession()
+    const controller = new AbortController()
+    mockCreateRightCodeKey.mockImplementationOnce(async () => {
+      controller.abort()
+      return key({ id: 21, name: "Fresh key" })
+    })
+    const editor = await session.openCreateEditor("account")
+
+    await expect(
+      editor.submit(
+        { ...editor.initialValues, name: "Fresh key", channel: "1" },
+        { signal: controller.signal },
+      ),
+    ).resolves.toMatchObject({
+      facts: {
+        ref: { resourceId: "21" },
+        runtimeKey: { baseUrl: "https://console.example.invalid/codex/v1" },
+      },
+    })
+    expect(mockCreateRightCodeKey).toHaveBeenCalledTimes(1)
+  })
+
   it("applies expiry through its own endpoint when one is requested", async () => {
     const session = await openSession()
     mockCreateRightCodeKey.mockResolvedValueOnce(key({ id: 22 }))
@@ -331,6 +354,43 @@ describe("rightCodeAccountKeyResources", () => {
     expect(body).toMatchObject({ name: "Renamed" })
     expect(body).not.toHaveProperty("allowed_item_ids")
     expect(body).not.toHaveProperty("allowed_prefixes")
+  })
+
+  it("returns verified edits using the existing channel snapshot after cancellation", async () => {
+    const session = await openSession()
+    const controller = new AbortController()
+    const original = key({ name: "Original" })
+    const renamed = key({ name: "Renamed" })
+    mockFetchRightCodeKey
+      .mockResolvedValueOnce(original)
+      .mockResolvedValueOnce(original)
+      .mockResolvedValueOnce(renamed)
+    mockUpdateRightCodeKey.mockImplementationOnce(async () => {
+      controller.abort()
+      return renamed
+    })
+    const editor = await (
+      await session.openCollection("account")
+    ).openEditEditor({
+      accountId: "account-example",
+      siteType: SITE_TYPES.RIGHT_CODE,
+      scopeKey: "account",
+      resourceId: "11",
+    })
+
+    await expect(
+      editor.submit(
+        { ...editor.initialValues, name: "Renamed" },
+        { signal: controller.signal },
+      ),
+    ).resolves.toMatchObject({
+      facts: {
+        displayName: "Renamed",
+        runtimeKey: { baseUrl: "https://console.example.invalid/codex/v1" },
+      },
+    })
+    expect(mockFetchRightCodeKey).toHaveBeenCalledTimes(3)
+    expect(mockUpdateRightCodeKey).toHaveBeenCalledTimes(1)
   })
 
   it("deletes a key and surfaces upstream authentication failures", async () => {

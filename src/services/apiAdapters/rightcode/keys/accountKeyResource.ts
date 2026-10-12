@@ -380,7 +380,7 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
 
     const entry = toEntry(
       config.request.baseUrl,
-      await config.readChannels(options),
+      await config.readChannels(),
       values.expiresAt
         ? await fetchRightCodeKey(request, created.id).catch(() => created)
         : created,
@@ -446,7 +446,7 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
     try {
       const entry = toEntry(
         config.request.baseUrl,
-        await config.readChannels(options),
+        detail.channels,
         await fetchRightCodeKey(request, detail.key.id),
       )
       const actual = toRightCodeKeySnapshot(entry.key)

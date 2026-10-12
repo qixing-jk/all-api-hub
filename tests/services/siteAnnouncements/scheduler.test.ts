@@ -1570,6 +1570,28 @@ describe("siteAnnouncementScheduler", () => {
     })
   })
 
+  it("returns cached announcement status when enabled-account discovery fails", async () => {
+    getPreferencesMock.mockResolvedValue({
+      siteAnnouncementNotifications: { enabled: false },
+    })
+    await seedCheckedSite({
+      siteKey: "site:new-api:https://example.com",
+      accountId: "saved-account",
+      siteType: "new-api",
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
+      baseUrl: "https://example.com",
+    })
+    const cached = await siteAnnouncementStorage.getStatus()
+    getEnabledAccountsMock.mockRejectedValue(new Error("account store offline"))
+
+    await expect(resolveSiteAnnouncementsGetStatusMessage()).resolves.toEqual({
+      success: true,
+      data: cached,
+    })
+    expect(handlerFetchMock).not.toHaveBeenCalled()
+    expect(await siteAnnouncementStorage.getStatus()).toEqual(cached)
+  })
+
   it("exposes unscanned enabled sources beside historical cache without fetching or persisting them", async () => {
     getPreferencesMock.mockResolvedValue({
       siteAnnouncementNotifications: { enabled: false },
