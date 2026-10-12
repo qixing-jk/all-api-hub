@@ -233,7 +233,7 @@ describe("AccountKeyResourceEditorDialog", () => {
   })
 
   it.each([editorModes.Create, editorModes.Edit] as const)(
-    "updates generated names with the group while preserving custom names in %s mode",
+    "follows groups for automatic names and preserves custom names in %s mode",
     async (mode) => {
       const user = userEvent.setup()
       const onSubmit = vi.fn()

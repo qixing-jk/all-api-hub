@@ -168,12 +168,16 @@ export async function updateKey(
   request: ApiServiceRequest,
   baseline: CubenceKey,
   next: CubenceKeyUpdate,
+  prepared?: CubenceKey,
 ): Promise<CubenceKey> {
   return withCubenceSession(request, async (request) => {
     const path = resourcePath(String(baseline.id))
-    const current = (await fetchKeys(request)).find(
-      (key) => key.id === baseline.id,
-    )
+    const owner = await readCubenceUser(request)
+    const current =
+      prepared ??
+      (await fetchKeys(request)).find((key) => key.id === baseline.id)
+    if (current && (current.id !== baseline.id || current.user_id !== owner.id))
+      throw new AccountKeyResourceError({ code: "not_found" })
     if (!current) throw new AccountKeyResourceError({ code: "not_found" })
     const fields = [
       ["quota_limit", "quota"],
@@ -192,29 +196,21 @@ export async function updateKey(
         body: JSON.stringify({ [field]: next[field] }),
       })
     }
-    const confirmed = (await fetchKeys(request)).find(
-      (key) => key.id === baseline.id,
-    )
-    if (
-      !confirmed ||
-      changed.some(([field]) => confirmed[field] !== next[field])
-    )
-      throw new AccountKeyResourceError({ code: "mutation_state_uncertain" })
-    return confirmed
+    return {
+      ...current,
+      ...Object.fromEntries(changed.map(([field]) => [field, next[field]])),
+    }
   })
 }
 
-/** Delete only an owned key and require readback absence. */
+/** Delete once after verifying the saved Cookie account identity. */
 export async function deleteKey(
   request: ApiServiceRequest,
   id: string,
 ): Promise<void> {
+  const path = resourcePath(id)
   return withCubenceSession(request, async (request) => {
-    const path = resourcePath(id)
-    if (!(await fetchKeys(request)).some((key) => String(key.id) === id))
-      throw new AccountKeyResourceError({ code: "not_found" })
+    await readCubenceUser(request)
     await readCubenceResponse(request, path, { method: "DELETE" })
-    if ((await fetchKeys(request)).some((key) => String(key.id) === id))
-      throw new AccountKeyResourceError({ code: "mutation_state_uncertain" })
   })
 }

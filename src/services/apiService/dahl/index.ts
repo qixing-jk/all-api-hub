@@ -315,17 +315,9 @@ export async function revokeKey(
     if (!/^[1-9]\d*$/.test(id) || !Number.isSafeInteger(Number(id)))
       throw keyFailure(failures.NotFound)
     await fetchUserInfo(request)
-    const key = (await keys(request)).find((key) => String(key.id) === id)
-    if (!key) throw keyFailure(failures.NotFound)
-    if (key.status === DAHL_KEY_STATUSES.Revoked) return
-    await read(request, `${DAHL_KEYS_ENDPOINT}/${id}`, { method: "DELETE" })
-    const updated = (await keys(request)).find((key) => String(key.id) === id)
-    if (
-      !updated ||
-      updated.status !== DAHL_KEY_STATUSES.Revoked ||
-      updated.available_tokens !== 0
-    )
-      throw keyFailure(failures.MutationStateUncertain)
+    const endpoint = `${DAHL_KEYS_ENDPOINT}/${id}`
+    const response = await read(request, endpoint, { method: "DELETE" })
+    if (response.ok !== true) throw invalid(endpoint)
   })
 }
 

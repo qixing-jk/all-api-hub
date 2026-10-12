@@ -1570,6 +1570,75 @@ describe("siteAnnouncementScheduler", () => {
     })
   })
 
+  it("exposes unscanned enabled sources beside historical cache without fetching or persisting them", async () => {
+    getPreferencesMock.mockResolvedValue({
+      siteAnnouncementNotifications: { enabled: false },
+    })
+    getEnabledAccountsMock.mockResolvedValue([
+      createAccount({
+        id: "new-account",
+        site_name: "New site",
+        site_url: "https://new.example",
+      }),
+    ])
+    await seedCheckedSite({
+      siteKey: "site:new-api:https://old.example",
+      accountId: "removed-account",
+      siteType: "new-api",
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
+      baseUrl: "https://old.example",
+    })
+    const before = await siteAnnouncementStorage.getStatus()
+    const response = await resolveSiteAnnouncementsGetStatusMessage()
+    expect(response).toMatchObject({
+      success: true,
+      data: expect.arrayContaining([
+        expect.objectContaining({
+          siteKey: "site:new-api:https://old.example",
+          status: "success",
+        }),
+        expect.objectContaining({
+          siteKey: "site:new-api:https://new.example",
+          accountId: "new-account",
+          siteName: "New site",
+          status: "never",
+          records: [],
+        }),
+      ]),
+    })
+    expect(handlerFetchMock).not.toHaveBeenCalled()
+    expect(await siteAnnouncementStorage.getStatus()).toEqual(before)
+  })
+
+  it("rebinds cached site status to the current source account without discarding its error or records", async () => {
+    getEnabledAccountsMock.mockResolvedValue([
+      createAccount({ id: "replacement", site_name: "Renamed" }),
+    ])
+    await siteAnnouncementStorage.upsertSiteStatus({
+      siteKey: "site:new-api:https://example.com",
+      siteName: "Old",
+      siteType: "new-api",
+      baseUrl: "https://example.com",
+      accountId: "deleted",
+      sourceScope: ANNOUNCEMENT_SOURCE_SCOPES.Site,
+      status: "error",
+      lastError: "offline",
+      lastCheckedAt: 123,
+    })
+    expect(await resolveSiteAnnouncementsGetStatusMessage()).toMatchObject({
+      success: true,
+      data: [
+        expect.objectContaining({
+          accountId: "replacement",
+          siteName: "Renamed",
+          status: "error",
+          lastError: "offline",
+          lastCheckedAt: 123,
+        }),
+      ],
+    })
+  })
+
   it("converts thrown message handler errors into error responses", async () => {
     vi.spyOn(siteAnnouncementStorage, "listRecords").mockRejectedValueOnce(
       new Error("boom"),

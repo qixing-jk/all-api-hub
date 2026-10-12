@@ -314,6 +314,7 @@ export function useAccountKeyResourceEditorState(
       })
       clearNativeOwner()
       transitionEditor(() => null)
+      if (!retainsFocus) setFocusWorkflowId(null)
     },
     [transitionTerminalCloseEditor, clearNativeOwner, transitionEditor],
   )

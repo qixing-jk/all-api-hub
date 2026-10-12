@@ -43,7 +43,6 @@ type PresentationPolicy = {
   readonly editor: (typeof KEY_RESOURCE_EDITOR_KINDS)[keyof typeof KEY_RESOURCE_EDITOR_KINDS]
   readonly card: (typeof KEY_RESOURCE_CARD_KINDS)[keyof typeof KEY_RESOURCE_CARD_KINDS]
   readonly scope: (typeof KEY_RESOURCE_SCOPE_KINDS)[keyof typeof KEY_RESOURCE_SCOPE_KINDS]
-  readonly showDetails?: boolean
   readonly createdKey?: {
     description: (t: TFunction, name: string) => string
     continueLabel: (t: TFunction) => string
@@ -103,7 +102,6 @@ const policies = {
   [families.Dahl]: {
     ...native,
     editor: KEY_RESOURCE_EDITOR_KINDS.Dahl,
-    showDetails: false,
     createdKey: {
       description: (t, name) =>
         t("keyManagement:native.editor.dahl.createdHelp", { name }),

@@ -1,4 +1,5 @@
 import { QUOTA_PER_USD } from "~/constants/money"
+import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
 import {
   keyExpiryDisplayFact,
   keyLastUsedDisplayFacts,
@@ -38,10 +39,11 @@ export const tokenCoverage = (
 export const toFacts = (
   token: NewApiToken,
   ref: AccountKeyResourceFacts["ref"],
-): AccountKeyResourceFacts => ({
+): AccountKeyResourceProviderFacts => ({
   ref,
   displayName: token.name?.trim() || `Token ${token.id}`,
   maskedLabel: maskSecretForDisplay(token.key ?? ""),
+  runtimeSecret: token.key,
   status: tokenStatus(token),
   runtimeKey: {
     modelAccess: projectNewApiTokenModelAccess(token),

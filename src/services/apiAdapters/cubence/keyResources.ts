@@ -1,11 +1,11 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import { CUBENCE_API_ORIGIN } from "~/services/accountSiteDefinitions/identifiers"
+import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyResources/failure"
 import {
   AccountKeyResourceError,
   ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
-  type AccountKeyResourceFacts,
   type AccountKeyResourceRef,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { runNativeResourceMutation } from "~/services/apiAdapters/nativeResources/mutation"
@@ -21,7 +21,7 @@ import {
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { maskSecretForDisplay } from "~/utils/core/formatters"
 
-import { createCubenceKeyEditor } from "./keyEditor"
+import { createCubenceKeyEditor, type CubenceKeyCommand } from "./keyEditor"
 
 const withSignal = (
   request: ApiServiceRequest,
@@ -38,10 +38,11 @@ const findKey = async (request: ApiServiceRequest, id: string) => {
 const facts = (
   key: CubenceKey,
   ref: AccountKeyResourceRef,
-): AccountKeyResourceFacts => ({
+): AccountKeyResourceProviderFacts => ({
   ref,
   displayName: key.name,
   maskedLabel: maskSecretForDisplay(key.key),
+  runtimeSecret: key.key,
   status: key.status === "active" ? "enabled" : "disabled",
   runtimeKey: {
     modelAccess: {
@@ -78,6 +79,13 @@ const facts = (
 
 export const cubenceKeyResources = defineAccountKeyResourceCapability({
   siteType: SITE_TYPES.CUBENCE,
+  requiresFreshUpdateDetail: (
+    command: CubenceKeyCommand,
+    baseline: CubenceKey,
+  ) =>
+    (["quota_limit", "share_group_id", "status"] as const).some(
+      (field) => command[field] !== baseline[field],
+    ),
   inventorySecretAvailability: "recoverable",
   defaultCreation: creationPolicies.RequiresInput,
   openConfig: async (input) => input,
@@ -136,10 +144,10 @@ export const cubenceKeyResources = defineAccountKeyResourceCapability({
       }),
       mapFailure: mapAccountKeyResourceFailure,
     }),
-  update: (config, _scope, detail, command, options) =>
+  update: (config, _scope, { baseline, current: detail }, command, options) =>
     runNativeResourceMutation({
       request: withSignal(config.request, options),
-      execute: (request) => updateKey(request, detail, command),
+      execute: (request) => updateKey(request, baseline, command, detail),
       mapFailure: mapAccountKeyResourceFailure,
       classifyError: (error) =>
         error instanceof AccountKeyResourceError &&

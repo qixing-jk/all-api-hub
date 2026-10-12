@@ -29,6 +29,7 @@ import {
 export const openRouterAccountKeyResources = defineAccountKeyResourceCapability(
   {
     siteType: SITE_TYPES.OPENROUTER,
+    requiresFreshUpdateDetail: () => false,
     defaultCreation: creationPolicies.EditorDefaults,
     // OpenRouter returns plaintext only from key creation; existing inventory
     // rows expose an opaque hash and masked key. Local profile associations are

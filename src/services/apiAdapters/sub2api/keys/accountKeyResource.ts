@@ -4,7 +4,10 @@ import {
   isAutomaticAccountKeyName,
 } from "~/services/accounts/keys/accountKeyNames"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
-import type { AccountKeyResourcePage } from "~/services/apiAdapters/accountKeyResources/definition"
+import type {
+  AccountKeyResourcePage,
+  AccountKeyResourceProviderFacts,
+} from "~/services/apiAdapters/accountKeyResources/definition"
 import { keyExpiryDisplayFact } from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import {
@@ -271,6 +274,11 @@ const provisionRequirement = async (
       isApiBusinessError(error) ? "not-applied" : undefined,
   })
   if (createResult.certainty === "not-applied") return createResult
+  if (createResult.certainty === "possibly-applied")
+    return {
+      certainty: "possibly-applied",
+      failure: mapAccountKeyResourceUncertainFailure(createResult.failure),
+    }
   const created =
     createResult.certainty === "applied" ? createResult.value : undefined
   const createdToken =
@@ -311,11 +319,7 @@ const provisionRequirement = async (
 
   return {
     certainty: "possibly-applied",
-    failure: mapAccountKeyResourceUncertainFailure(
-      createResult.certainty === "possibly-applied"
-        ? createResult.failure
-        : reconciliationError,
-    ),
+    failure: mapAccountKeyResourceUncertainFailure(reconciliationError),
   }
 }
 
@@ -395,10 +399,11 @@ const renameProvisionedResource = async (
 const toFacts = (
   token: Sub2ApiNativeKey,
   ref: AccountKeyResourceFacts["ref"],
-): AccountKeyResourceFacts => ({
+): AccountKeyResourceProviderFacts => ({
   ref,
   displayName: token.name?.trim() || `Key ${token.id}`,
   maskedLabel: maskSecretForDisplay(token.key ?? ""),
+  runtimeSecret: token.key,
   status: tokenStatus(token),
   runtimeKey: {
     modelAccess: {
@@ -493,6 +498,7 @@ async function createNativeKey(
   options?: ResourceOperationOptions,
 ) {
   const request = requestWithOptions(config, options)
+  // ID-less acknowledgments need a submit-time baseline, not historical UI rows.
   const before = new Set((await fetchSub2ApiKeys(request)).map((key) => key.id))
   const matches = (key: Sub2ApiNativeKey) =>
     !before.has(key.id) &&
@@ -506,6 +512,11 @@ async function createNativeKey(
       isApiBusinessError(error) ? "not-applied" : undefined,
   })
   if (result.certainty === "not-applied") return result
+  if (result.certainty === "possibly-applied")
+    return {
+      certainty: "possibly-applied" as const,
+      failure: mapAccountKeyResourceUncertainFailure(result.failure),
+    }
   if (result.certainty === "applied" && result.value && matches(result.value))
     return { certainty: "applied" as const, value: { detail: result.value } }
   try {
@@ -521,9 +532,7 @@ async function createNativeKey(
   }
   return {
     certainty: "possibly-applied" as const,
-    failure: mapAccountKeyResourceUncertainFailure(
-      result.certainty === "possibly-applied" ? result.failure : undefined,
-    ),
+    failure: mapAccountKeyResourceUncertainFailure(),
   }
 }
 
@@ -557,6 +566,8 @@ const resolveRuntimeKey = async (
 /** Sub2API-native account key resources for one saved account. */
 export const sub2ApiAccountKeyResources = defineAccountKeyResourceCapability({
   siteType: SITE_TYPES.SUB2API,
+  requiresFreshUpdateDetail: (command: Sub2ApiKeyEditorCommand) =>
+    !resourceValuesEqual(command.baseline, command.values),
   inventorySecretAvailability: INVENTORY_SECRET_AVAILABILITIES.Recoverable,
   defaultCreation: creationPolicies.SelectRequirement,
   openConfig: async (input) => ({
@@ -614,7 +625,7 @@ export const sub2ApiAccountKeyResources = defineAccountKeyResourceCapability({
   update: async (
     config,
     _scope,
-    detail,
+    { current: detail },
     command: Sub2ApiKeyEditorCommand,
     options,
   ) => {

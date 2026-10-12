@@ -1654,8 +1654,6 @@ describe("openRouterAccountKeyResources", () => {
     })
     fetchOpenRouterKey
       .mockResolvedValueOnce(initialKey)
-      .mockResolvedValueOnce(initialKey)
-      .mockResolvedValueOnce(limitedKey)
       .mockResolvedValueOnce(limitedKey)
     updateOpenRouterKey
       .mockResolvedValueOnce(limitedKey)
@@ -1726,7 +1724,6 @@ describe("openRouterAccountKeyResources", () => {
     }
     fetchOpenRouterKey
       .mockResolvedValueOnce(key())
-      .mockResolvedValueOnce(key())
       .mockResolvedValueOnce(key({ name: "Recovered" }))
     updateOpenRouterKey.mockRejectedValue(new TypeError("fetch failed"))
     const editor = await collection.openEditEditor(ref)
@@ -1737,7 +1734,7 @@ describe("openRouterAccountKeyResources", () => {
       facts: { displayName: "Recovered" },
     })
     expect(updateOpenRouterKey).toHaveBeenCalledTimes(1)
-    expect(fetchOpenRouterKey).toHaveBeenCalledTimes(3)
+    expect(fetchOpenRouterKey).toHaveBeenCalledTimes(2)
   })
 
   it("keeps an uncertain update observable but unresolved when reconciliation differs", async () => {
@@ -1751,7 +1748,6 @@ describe("openRouterAccountKeyResources", () => {
     }
     fetchOpenRouterKey
       .mockResolvedValueOnce(key())
-      .mockResolvedValueOnce(key())
       .mockResolvedValueOnce(key({ name: "Different result" }))
     updateOpenRouterKey.mockRejectedValue(new TypeError("fetch failed"))
     const editor = await collection.openEditEditor(ref)
@@ -1760,7 +1756,7 @@ describe("openRouterAccountKeyResources", () => {
       editor.submit({ ...editor.initialValues, name: "Requested result" }),
     ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
     expect(updateOpenRouterKey).toHaveBeenCalledTimes(1)
-    expect(fetchOpenRouterKey).toHaveBeenCalledTimes(3)
+    expect(fetchOpenRouterKey).toHaveBeenCalledTimes(2)
   })
 
   it.each(["create", "update", "delete"] as const)(
@@ -1791,7 +1787,6 @@ describe("openRouterAccountKeyResources", () => {
       fetchOpenRouterKey
         .mockResolvedValueOnce(key())
         .mockResolvedValueOnce(key())
-        .mockResolvedValueOnce(key())
       if (operation === "update") {
         updateOpenRouterKey.mockRejectedValue(abortError)
         const editor = await collection.openEditEditor(ref)
@@ -1801,7 +1796,7 @@ describe("openRouterAccountKeyResources", () => {
           failure: { code: "mutation_state_uncertain" },
         })
         expect(updateOpenRouterKey).toHaveBeenCalledTimes(1)
-        expect(fetchOpenRouterKey).toHaveBeenCalledTimes(2)
+        expect(fetchOpenRouterKey).toHaveBeenCalledTimes(1)
         return
       }
 
@@ -1828,9 +1823,7 @@ describe("openRouterAccountKeyResources", () => {
       const abortError = new DOMException("Aborted", "AbortError")
 
       if (operation === "update") {
-        fetchOpenRouterKey
-          .mockResolvedValueOnce(key())
-          .mockResolvedValueOnce(key())
+        fetchOpenRouterKey.mockResolvedValueOnce(key())
         updateOpenRouterKey.mockRejectedValue(abortError)
         const editor = await collection.openEditEditor(ref)
         await expect(
@@ -1838,7 +1831,7 @@ describe("openRouterAccountKeyResources", () => {
         ).rejects.toMatchObject({
           failure: { code: "mutation_state_uncertain" },
         })
-        expect(fetchOpenRouterKey).toHaveBeenCalledTimes(2)
+        expect(fetchOpenRouterKey).toHaveBeenCalledTimes(1)
         return
       }
 
@@ -1870,9 +1863,7 @@ describe("openRouterAccountKeyResources", () => {
       const uncertainError = new ApiError("uncertain", status)
 
       if (operation === "update") {
-        fetchOpenRouterKey
-          .mockResolvedValueOnce(key())
-          .mockResolvedValueOnce(key())
+        fetchOpenRouterKey.mockResolvedValueOnce(key())
         updateOpenRouterKey.mockRejectedValue(uncertainError)
         const editor = await collection.openEditEditor(ref)
         await expect(
@@ -1880,7 +1871,7 @@ describe("openRouterAccountKeyResources", () => {
         ).rejects.toMatchObject({
           failure: { code: "mutation_state_uncertain" },
         })
-        expect(fetchOpenRouterKey).toHaveBeenCalledTimes(2)
+        expect(fetchOpenRouterKey).toHaveBeenCalledTimes(1)
         return
       }
 
@@ -1919,7 +1910,7 @@ describe("openRouterAccountKeyResources", () => {
         ).rejects.toMatchObject({
           failure: { code: "mutation_state_uncertain" },
         })
-        expect(fetchOpenRouterKey).toHaveBeenCalledTimes(3)
+        expect(fetchOpenRouterKey).toHaveBeenCalledTimes(2)
         return
       }
 
@@ -2104,7 +2095,7 @@ describe("openRouterAccountKeyResources", () => {
     await expect(
       editor.submit({ ...editor.initialValues, name: "Rejected" }),
     ).rejects.toMatchObject({ failure: { code: "upstream_rejected" } })
-    expect(readsWhenUpdateWasDispatched).toBe(readsAfterEditorOpen + 1)
+    expect(readsWhenUpdateWasDispatched).toBe(readsAfterEditorOpen)
     expect(fetchOpenRouterKey).toHaveBeenCalledTimes(
       readsWhenUpdateWasDispatched,
     )
@@ -2140,7 +2131,6 @@ describe("openRouterAccountKeyResources", () => {
       include_byok_in_limit: true,
     })
     fetchOpenRouterKey
-      .mockResolvedValueOnce(key())
       .mockResolvedValueOnce(key())
       .mockResolvedValueOnce(reconciled)
     updateOpenRouterKey.mockRejectedValue(new TypeError("fetch failed"))
@@ -2230,7 +2220,6 @@ describe("openRouterAccountKeyResources", () => {
       resourceId: "opaque-hash-example",
     }
     fetchOpenRouterKey
-      .mockResolvedValueOnce(key())
       .mockResolvedValueOnce(key())
       .mockRejectedValueOnce(new ApiError("read unavailable", 500))
     updateOpenRouterKey.mockRejectedValue(new TypeError("fetch failed"))

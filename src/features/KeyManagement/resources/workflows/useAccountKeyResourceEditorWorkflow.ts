@@ -97,6 +97,7 @@ export function useAccountKeyResourceEditorWorkflow({
     acceptActionContext,
     adoptCreationSession,
     acceptEditedResource,
+    acceptCreatedResource,
     readAcceptedRows,
     scopes,
   } = inventoryState
@@ -176,14 +177,12 @@ export function useAccountKeyResourceEditorWorkflow({
               {
                 signal: controller.signal,
               },
-              intent
-                ? {
-                    action: intent,
-                    snapshot: readAcceptedRows().find(
-                      (row) => refIdentity(row.ref) === refIdentity(ref!),
-                    ),
-                  }
-                : undefined,
+              {
+                ...(intent ? { action: intent } : {}),
+                snapshot: readAcceptedRows().find(
+                  (row) => refIdentity(row.ref) === refIdentity(ref!),
+                ),
+              },
             ),
             controller.signal,
           )
@@ -353,7 +352,11 @@ export function useAccountKeyResourceEditorWorkflow({
             : t("keyManagement:messages.keyUpdatedSimple"),
         )
       }
-      if (result.refreshPolicy === ACCOUNT_KEY_RESOURCE_LOCAL_METADATA) return
+      if (
+        result.refreshPolicy === ACCOUNT_KEY_RESOURCE_LOCAL_METADATA ||
+        (submitMode === editorModes.Edit && returnedFacts)
+      )
+        return
       const account = accountsRef.current.find(
         (candidate) => candidate.id === intendedBoundary.accountId,
       )
@@ -373,6 +376,16 @@ export function useAccountKeyResourceEditorWorkflow({
             error,
           )
         }
+      }
+      const nativeBoundary = readNativeOwner().boundary
+      if (
+        submitMode === editorModes.Create &&
+        returnedFacts &&
+        nativeBoundary &&
+        boundariesMatch(nativeBoundary, returnedBoundary)
+      ) {
+        acceptCreatedResource(returnedFacts)
+        return
       }
       const accepted = await refreshAfterMutation(
         returnedBoundary,

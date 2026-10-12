@@ -28,6 +28,7 @@ export type KeyResourceCardPresentation = {
   /** Preferred compact-list context, such as a group or workspace. */
   contextFact?: KeyResourceFact
   summaryFacts: KeyResourceFact[]
+  /** Complete inventories supply only facts not already allocated to the summary. */
   detailFacts: KeyResourceFact[]
   actions: KeyResourceActionPolicy
 }

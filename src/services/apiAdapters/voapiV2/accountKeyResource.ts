@@ -3,7 +3,10 @@ import {
   getDefaultAccountKeyName,
   isAutomaticAccountKeyName,
 } from "~/services/accounts/keys/accountKeyNames"
-import type { AccountKeyResourcePage } from "~/services/apiAdapters/accountKeyResources/definition"
+import type {
+  AccountKeyResourcePage,
+  AccountKeyResourceProviderFacts,
+} from "~/services/apiAdapters/accountKeyResources/definition"
 import { keyExpiryDisplayFact } from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import {
@@ -166,10 +169,11 @@ const createRef = (config: VoApiV2AccountKeyResourceConfig, keyId: number) => ({
 const toFacts = (
   key: VoApiV2Key & { runtimeGroupNames?: readonly string[] },
   ref: AccountKeyResourceFacts["ref"],
-): AccountKeyResourceFacts => ({
+): AccountKeyResourceProviderFacts => ({
   ref,
   displayName: key.name?.trim() || `Key ${key.id}`,
   maskedLabel: maskSecretForDisplay(key.tokenMasked?.trim() || "••••"),
+  runtimeSecret: undefined,
   status: keyStatus(key),
   runtimeKey: {
     modelAccess: {
@@ -438,6 +442,7 @@ const createNativeKey = async (
   options?: ResourceOperationOptions,
 ) => {
   const request = requestWithOptions(config, options)
+  // ID-less acknowledgments need a submit-time baseline, not historical UI rows.
   const before = new Set(
     (await fetchAllVoApiV2RawKeys(request)).map((key) => key.id),
   )
@@ -450,6 +455,11 @@ const createNativeKey = async (
       isApiBusinessError(error) ? "not-applied" : undefined,
   })
   if (result.certainty === "not-applied") return result
+  if (result.certainty === "possibly-applied")
+    return {
+      certainty: "possibly-applied" as const,
+      failure: mapAccountKeyResourceUncertainFailure(result.failure),
+    }
   try {
     const created = (await fetchKeysWithRuntimeGroups(request)).filter(
       (key) => !before.has(key.id) && matchesVoApiKeyWrite(key, command.values),
@@ -465,9 +475,7 @@ const createNativeKey = async (
   }
   return {
     certainty: "possibly-applied" as const,
-    failure: mapAccountKeyResourceUncertainFailure(
-      result.certainty === "possibly-applied" ? result.failure : undefined,
-    ),
+    failure: mapAccountKeyResourceUncertainFailure(),
   }
 }
 
@@ -511,6 +519,8 @@ const provisionRequirement = async (
 /** VoAPI v2-native account key resources for one saved account. */
 export const voApiV2AccountKeyResources = defineAccountKeyResourceCapability({
   siteType: SITE_TYPES.VO_API_V2,
+  requiresFreshUpdateDetail: (command: VoApiV2KeyEditCommand) =>
+    !resourceValuesEqual(command.baseline, command.values),
   inventorySecretAvailability: INVENTORY_SECRET_AVAILABILITIES.Recoverable,
   defaultCreation: creationPolicies.SelectRequirement,
   openConfig: async (input) => ({
@@ -594,7 +604,7 @@ export const voApiV2AccountKeyResources = defineAccountKeyResourceCapability({
   update: async (
     config,
     _scope,
-    detail,
+    { current: detail },
     command: VoApiV2KeyEditCommand,
     options,
   ) => {

@@ -150,8 +150,11 @@ Sub2API: `/api/v1/auth/me` returns `{user}`, native key APIs use
   `share_type:public`, and a single explicit `share_group_id`. The site defaults
   to 10 USD; Hub defaults new keys to unlimited, with no selected group. Separate PATCH routes `/:id/quota`,
   `/:id/share-group`, and `/:id/status` change only those fields. Names cannot be
-  edited and expiry/IP/model limits are not native fields. Compare a fresh
-  inventory baseline before editing, then read back writes and deletion.
+  edited and expiry/IP/model limits are not native fields. Editors retain the
+  accepted native record and PATCH only changed fields. Changed submissions read
+  one fresh native record before dispatch to reject same-field conflicts and
+  preserve unrelated remote edits; unchanged submissions skip that read. Successful
+  write and deletion acknowledgments are authoritative; uncertain writes are not replayed.
   Hosted writes reject an unadapted extension Origin with an empty HTTP 403.
   Chromium direct transport supplies the site Origin and a fixed Cookie snapshot
   through scoped DNR rules with `credentials:omit` and redirects disabled (real

@@ -56,6 +56,26 @@ const key = (overrides: Partial<AIHubMixKey> = {}): AIHubMixKey => ({
 })
 
 describe("AIHubMix native account keys", () => {
+  it.each(["acknowledged", "lost"])(
+    "does not adopt a pre-existing matching key after an acknowledged or lost creation response: %s",
+    async (response) => {
+      mocks.list.mockResolvedValue([
+        key({ id: 92, name: "Created", models: "", subnet: "" }),
+      ])
+      mocks.create.mockImplementationOnce(async (request) => {
+        request.observer?.onDispatch()
+        if (response === "lost") throw new Error("response lost")
+      })
+      const session = await aihubmixAccountKeyResources.open(input)
+      const editor = await session.openCreateEditor("account")
+      await expect(
+        editor.submit({ ...editor.initialValues, name: "Created" }),
+      ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+      expect(mocks.create).toHaveBeenCalledOnce()
+      expect(mocks.list).toHaveBeenCalledTimes(response === "lost" ? 1 : 2)
+    },
+  )
+
   beforeEach(() => Object.values(mocks).forEach((mock) => mock.mockReset()))
 
   it("projects native restrictions without exposing inventory secrets", async () => {

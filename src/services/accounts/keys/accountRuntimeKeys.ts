@@ -407,11 +407,11 @@ export const buildAccountKeyResourceRuntimeKey = (
   }
 }
 
-/** Adapts safe resource facts to the narrower runtime credential interface. */
+/** Projects runtime policy and any verified snapshot plaintext into the credential interface. */
 export const buildAccountKeyResourceRuntimeKeyFromFacts = (
   account: AccountRuntimeKeyAccountSource,
   facts: AccountKeyResourceFacts,
-  secret = "",
+  secret = facts.runtimeSecret ?? "",
 ): AccountKeyResourceRuntimeKey =>
   buildAccountKeyResourceRuntimeKey(account, {
     ...facts.runtimeKey,

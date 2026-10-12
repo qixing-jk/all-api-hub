@@ -4,6 +4,7 @@ import {
   ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes,
   type AccountKeyResourceEditorMode,
 } from "~/features/KeyManagement/constants"
+import { ACCOUNT_KEY_AUTOMATIC_NAME_KINDS } from "~/features/KeyManagement/presentation/accountKeyResourceEditorPresentation"
 import {
   defineResourceEditorFieldPolicy,
   type ResourceEditorFieldPolicy,
@@ -285,6 +286,7 @@ export function getOpenRouterKeyResourceEditorPresentation(
   mode: AccountKeyResourceEditorMode,
 ): AccountKeyResourceEditorPresentation {
   return {
+    automaticName: { kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed },
     policy: getOpenRouterKeyResourceFieldPolicy(mode),
     sectionOrder: OPENROUTER_KEY_EDITOR_SECTION_ORDER,
     sectionLabelResolvers: OPENROUTER_KEY_EDITOR_SECTION_LABEL_RESOLVERS,

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { resolveAccountKeyAutomaticName } from "~/features/KeyManagement/presentation/accountKeyAutomaticName"
+import { ACCOUNT_KEY_AUTOMATIC_NAME_KINDS } from "~/features/KeyManagement/presentation/accountKeyResourceEditorPresentation"
 import { getNativeKeyResourceEditorPresentation } from "~/features/KeyManagement/presentation/nativeKeyResourceFieldPolicy"
 import type {
   AccountKeyResourceEditorDialogProps,
@@ -103,6 +105,18 @@ export function useAccountKeyResourceEditorDraft({
   )
   const valuesRef = useRef(values)
   const loadedOptionSignaturesRef = useRef(new Map<string, string>())
+  const nameEditedRef = useRef(false)
+  const lastAutomaticNameRef = useRef(
+    resolveAccountKeyAutomaticName(
+      presentation.automaticName,
+      values,
+      editor.optionsByField,
+    ) ??
+      (presentation.automaticName.kind ===
+      ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Group
+        ? presentation.automaticName.unselectedName
+        : undefined),
+  )
 
   useEffect(() => {
     const controllerValues = toEditorValues(editor.values, editor.fields)
@@ -111,6 +125,33 @@ export function useAccountKeyResourceEditorDraft({
       setValues(controllerValues)
     }
   }, [editor.fields, editor.values])
+
+  // Labels can arrive after the selected native ID; never replace a user-authored name.
+  useEffect(() => {
+    const nextName = resolveAccountKeyAutomaticName(
+      presentation.automaticName,
+      valuesRef.current,
+      editor.optionsByField,
+    )
+    if (
+      nameEditedRef.current ||
+      nextName === undefined ||
+      valuesRef.current.name !== lastAutomaticNameRef.current ||
+      valuesRef.current.name === nextName
+    )
+      return
+    const next = { ...valuesRef.current, name: nextName }
+    lastAutomaticNameRef.current = nextName
+    valuesRef.current = next
+    setValues(next)
+    onValuesChange(editor.editorId, next)
+  }, [
+    presentation.automaticName,
+    editor.mode,
+    editor.optionsByField,
+    editor.editorId,
+    onValuesChange,
+  ])
 
   const dynamicOptionFields = useMemo(
     () => editor.fields.filter(isDynamicOptionField),
@@ -208,6 +249,7 @@ export function useAccountKeyResourceEditorDraft({
   )
 
   const updateValues = (fieldId: string, value: ResourceFieldValue) => {
+    if (fieldId === "name") nameEditedRef.current = true
     const next = { ...valuesRef.current, [fieldId]: value }
     for (const candidate of dynamicOptionFields) {
       if (
@@ -222,20 +264,24 @@ export function useAccountKeyResourceEditorDraft({
             : ""
       }
     }
-    const previousAutoName = presentation.getAutomaticName?.(
+    const previousAutoName = resolveAccountKeyAutomaticName(
+      presentation.automaticName,
       valuesRef.current,
       editor.optionsByField,
     )
-    const nextAutoName = presentation.getAutomaticName?.(
+    const nextAutoName = resolveAccountKeyAutomaticName(
+      presentation.automaticName,
       next,
       editor.optionsByField,
     )
     if (
+      !nameEditedRef.current &&
       previousAutoName !== undefined &&
       next.name === previousAutoName &&
       nextAutoName !== undefined
     ) {
       next.name = nextAutoName
+      lastAutomaticNameRef.current = nextAutoName
     }
     valuesRef.current = next
     setValues(next)

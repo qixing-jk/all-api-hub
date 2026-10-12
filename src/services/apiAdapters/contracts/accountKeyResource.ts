@@ -253,11 +253,20 @@ export const ACCOUNT_KEY_RESOURCE_STATUSES = {
 export type AccountKeyResourceStatus =
   (typeof ACCOUNT_KEY_RESOURCE_STATUSES)[keyof typeof ACCOUNT_KEY_RESOURCE_STATUSES]
 
+export const ACCOUNT_KEY_DETAIL_AVAILABILITIES = {
+  Complete: "complete",
+} as const
+
 export type AccountKeyResourceFacts = {
+  /** Complete inventory facts can be disclosed locally; omitted means detail may need a read. */
+  readonly detailAvailability?: (typeof ACCOUNT_KEY_DETAIL_AVAILABILITIES)[keyof typeof ACCOUNT_KEY_DETAIL_AVAILABILITIES]
+
   readonly ref: AccountKeyResourceRef
   readonly displayName: string
   readonly maskedLabel: string
   readonly status: AccountKeyResourceStatus
+  /** Verified inventory plaintext for the current snapshot only; never persist as display metadata. */
+  readonly runtimeSecret?: string
   /** Safe machine policy projected by the provider, never parsed from display fields. */
   readonly runtimeKey?: {
     readonly modelAccess: AccountRuntimeKeyModelAccess
@@ -340,8 +349,9 @@ export type AccountKeyResourceEditAction =
 /** Local metadata commits preserve the accepted inventory without a server refresh. */
 export const ACCOUNT_KEY_RESOURCE_LOCAL_METADATA = "local-metadata"
 export type AccountKeyResourceEditIntent = {
-  action: AccountKeyResourceEditAction
-  /** Accepted inventory facts; local metadata editors need no fresh server balance. */
+  /** Providers with separate edit actions can select one explicitly. */
+  action?: AccountKeyResourceEditAction
+  /** Accepted inventory facts can supply metadata; writable server fields are read fresh. */
   snapshot?: AccountKeyResourceFacts
 }
 

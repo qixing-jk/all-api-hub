@@ -2,6 +2,7 @@ import type { TFunction } from "i18next"
 
 import { ACCOUNT_RUNTIME_KEY_STATUSES } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
+  ACCOUNT_KEY_DETAIL_AVAILABILITIES,
   ACCOUNT_KEY_RESOURCE_STATUSES,
   type AccountKeyResourceFacts,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
@@ -187,14 +188,19 @@ const nativeKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
         }
       : undefined
     const details = nativeDetailFacts(row.facts, t)
+    const summaryDetailCount = 4 - (contextFact ? 1 : 0)
     return {
       ...base,
       contextFact,
-      summaryFacts: [...(contextFact ? [contextFact] : []), ...details].slice(
-        0,
-        4,
-      ),
-      detailFacts: details,
+      summaryFacts: [
+        ...(contextFact ? [contextFact] : []),
+        ...details.slice(0, summaryDetailCount),
+      ],
+      detailFacts:
+        row.facts.detailAvailability ===
+        ACCOUNT_KEY_DETAIL_AVAILABILITIES.Complete
+          ? details.slice(summaryDetailCount)
+          : details,
       actions: {
         ...base.actions,
         copySecret: usableSecret,

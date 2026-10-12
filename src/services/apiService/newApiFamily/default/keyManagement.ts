@@ -217,7 +217,9 @@ export async function createApiToken(
   tokenData: NewApiTokenWrite,
 ): Promise<boolean | NewApiToken> {
   try {
-    const response = await newApiFamilyRequests.envelope<any>(request, {
+    const response = await newApiFamilyRequests.envelope<
+      NewApiToken | undefined
+    >(request, {
       endpoint: "/api/token/",
       options: {
         method: "POST",
@@ -235,6 +237,14 @@ export async function createApiToken(
     }
 
     invalidateResolvedApiTokenKeyCache(request)
+    if (
+      isRecord(response.data) &&
+      Number.isSafeInteger(response.data.id) &&
+      response.data.id > 0 &&
+      typeof response.data.name === "string" &&
+      typeof response.data.key === "string"
+    )
+      return normalizeApiTokenKey(response.data)
     return true
   } catch (error) {
     logger.error("创建令牌失败", error)

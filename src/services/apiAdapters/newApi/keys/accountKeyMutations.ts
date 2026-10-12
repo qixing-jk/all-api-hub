@@ -44,8 +44,12 @@ const matchesNewApiTokenWrite = (
 
 export const createNewApiAccountToken: NewApiAccountTokenDefinition["create"] =
   async (config, _scope, command: NewApiKeyEditCommand, options) => {
-    const before = await collectValidatedInventoryTokens(config, options)
-    const beforeIds = new Set(before.map((token) => token.id))
+    // ID-less acknowledgments need a submit-time baseline, not historical UI rows.
+    const beforeIds = new Set(
+      (await collectValidatedInventoryTokens(config, options)).map(
+        (token) => token.id,
+      ),
+    )
     const result = await runNativeResourceMutation({
       request: requestWithOptions(config, options),
       execute: (request) =>
@@ -55,6 +59,11 @@ export const createNewApiAccountToken: NewApiAccountTokenDefinition["create"] =
         isApiBusinessError(error) ? "not-applied" : undefined,
     })
     if (result.certainty === "not-applied") return result
+    if (result.certainty === "possibly-applied")
+      return {
+        certainty: "possibly-applied" as const,
+        failure: mapAccountKeyResourceUncertainFailure(result.failure),
+      }
     if (result.certainty === "applied" && result.value === false) {
       return {
         certainty: "not-applied" as const,
@@ -63,6 +72,16 @@ export const createNewApiAccountToken: NewApiAccountTokenDefinition["create"] =
         },
       }
     }
+    if (
+      result.certainty === "applied" &&
+      typeof result.value === "object" &&
+      result.value &&
+      Number.isSafeInteger(result.value.id) &&
+      result.value.id > 0 &&
+      !beforeIds.has(result.value.id) &&
+      matchesNewApiTokenWrite(config.variant, result.value, command.values)
+    )
+      return { certainty: "applied" as const, value: { detail: result.value } }
     try {
       const after = await collectValidatedInventoryTokens(config, options)
       const candidates = await Promise.all(
@@ -95,7 +114,13 @@ export const createNewApiAccountToken: NewApiAccountTokenDefinition["create"] =
   }
 
 export const updateNewApiAccountToken: NewApiAccountTokenDefinition["update"] =
-  async (config, _scope, detail, command: NewApiKeyEditCommand, options) => {
+  async (
+    config,
+    _scope,
+    { current: detail },
+    command: NewApiKeyEditCommand,
+    options,
+  ) => {
     const latest = toNewApiTokenWrite(detail, config.variant)
     const values = mergeResourceEdits(command.baseline, command.values, latest)
     if (!values)

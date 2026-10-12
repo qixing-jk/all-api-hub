@@ -77,6 +77,43 @@ const rawKey = (overrides: Partial<VoApiV2Key>): VoApiV2Key => ({
 })
 
 describe("VoAPI v2 account key resources", () => {
+  it.each(["acknowledged", "lost"])(
+    "does not adopt a pre-existing matching key after an acknowledged or lost creation response: %s",
+    async (response) => {
+      mockFetchAllVoApiV2RawKeys.mockResolvedValue([
+        rawKey({
+          id: 92,
+          name: "Created",
+          groups: [9],
+          boundlessAmount: true,
+          amount: "0",
+          used: "0",
+          note: "",
+        }),
+      ])
+      mockCreateVoApiV2Key.mockImplementationOnce(async (request) => {
+        request.observer?.onDispatch()
+        if (response === "lost") throw new Error("response lost")
+      })
+      const session = await voApiV2AccountKeyResources.open({
+        account: { id: "account-example", siteType: SITE_TYPES.VO_API_V2 },
+        request,
+      })
+      const editor = await session.openCreateEditor("account")
+      await expect(
+        editor.submit({
+          ...editor.initialValues,
+          name: "Created",
+          groups: ["9"],
+        }),
+      ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+      expect(mockCreateVoApiV2Key).toHaveBeenCalledOnce()
+      expect(mockFetchAllVoApiV2RawKeys).toHaveBeenCalledTimes(
+        response === "lost" ? 1 : 2,
+      )
+    },
+  )
+
   it.each([
     { groups: [] },
     { groups: [{ id: 0, requirementKey: "0", displayName: "Invalid" }] },
@@ -115,6 +152,8 @@ describe("VoAPI v2 account key resources", () => {
       "10",
     )
     expect(editor.initialValues.groups).toEqual(["10"])
+    await editor.loadOptions!("groups", editor.initialValues)
+    expect(mockFetchVoApiV2KeyGroupDescriptors).toHaveBeenCalledOnce()
     expect(editor.validate({ ...editor.initialValues, amount: 5 }).valid).toBe(
       true,
     )
@@ -139,7 +178,7 @@ describe("VoAPI v2 account key resources", () => {
   })
 
   it.each(["reconciled", "missing", "read-failed", "rejected"])(
-    "reconciles native creation without replay: %s",
+    "does not attribute a lost create response using inventory: %s",
     async (outcome) => {
       mockFetchAllVoApiV2RawKeys.mockResolvedValueOnce([rawKey({ id: 1 })])
       if (outcome === "read-failed")
@@ -184,15 +223,9 @@ describe("VoAPI v2 account key resources", () => {
         groups: ["9"],
         amount: 1,
       })
-      if (outcome === "reconciled")
-        await expect(result).resolves.toMatchObject({
-          facts: { ref: { resourceId: "2" } },
-        })
-      else await expect(result).rejects.toBeDefined()
+      await expect(result).rejects.toBeDefined()
       expect(mockCreateVoApiV2Key).toHaveBeenCalledTimes(1)
-      expect(mockFetchAllVoApiV2RawKeys).toHaveBeenCalledTimes(
-        outcome === "rejected" ? 1 : 2,
-      )
+      expect(mockFetchAllVoApiV2RawKeys).toHaveBeenCalledTimes(1)
     },
   )
 
@@ -596,9 +629,7 @@ describe("VoAPI v2 account key resources", () => {
         },
       )
       expect(mockCreateVoApiV2Key).toHaveBeenCalledOnce()
-      expect(mockFetchAllVoApiV2RawKeys).toHaveBeenCalledTimes(
-        outcome === "rejected" ? 1 : 2,
-      )
+      expect(mockFetchAllVoApiV2RawKeys).toHaveBeenCalledTimes(1)
     },
   )
 

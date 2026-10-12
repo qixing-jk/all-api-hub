@@ -3,10 +3,14 @@ import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/account
 import { UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS } from "~/services/accounts/keys/runtimeKeyModelAccess"
 import { DAHL_WEB_ORIGIN } from "~/services/accountSiteDefinitions/identifiers"
 import { toProtocolRoot } from "~/services/aiApi/protocolAddress"
-import type { AccountKeyResourceEditorDefinition } from "~/services/apiAdapters/accountKeyResources/definition"
+import type {
+  AccountKeyResourceEditorDefinition,
+  AccountKeyResourceProviderFacts,
+} from "~/services/apiAdapters/accountKeyResources/definition"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyResources/failure"
 import {
+  ACCOUNT_KEY_DETAIL_AVAILABILITIES,
   ACCOUNT_KEY_RESOURCE_LOCAL_METADATA,
   AccountKeyResourceError,
   ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
@@ -62,7 +66,12 @@ type RenameDetail = {
   nameSync: DahlKeyNameSyncState
   facts: AccountKeyResourceFacts
 }
-type Detail = FundingDetail | RenameDetail
+type Detail = NamedKey | FundingDetail | RenameDetail
+const requireFundingDetail = (detail: NamedKey): FundingDetail => {
+  if (!("poolTokens" in detail) || typeof detail.poolTokens !== "number")
+    throw new AccountKeyResourceError({ code: failures.ValidationFailed })
+  return { ...detail, poolTokens: detail.poolTokens }
+}
 const TRANSFER_COMMAND_KIND = "transfer"
 
 export const DAHL_KEY_SCOPE = "default"
@@ -116,18 +125,22 @@ const keyDisplayName = (id: number, name: string) => name || `Dahl #${id}`
 const facts = (
   detail: NamedKey | RenameDetail,
   ref: AccountKeyResourceRef,
-): AccountKeyResourceFacts => {
+): AccountKeyResourceProviderFacts => {
   if ("kind" in detail)
     return {
       ...detail.facts,
+      runtimeSecret: detail.facts.runtimeSecret,
       ref,
       displayName: keyDisplayName(detail.keyId, detail.name),
     }
   const { key, name } = detail
   return {
     ref,
+    detailAvailability: ACCOUNT_KEY_DETAIL_AVAILABILITIES.Complete,
     displayName: keyDisplayName(key.id, name),
     maskedLabel: key.masked,
+    runtimeSecret:
+      key.status !== DAHL_KEY_STATUSES.Revoked ? key.token : undefined,
     status:
       key.status === DAHL_KEY_STATUSES.Active
         ? statuses.Enabled
@@ -264,6 +277,7 @@ const fundingEditor = (
 
 export const dahlKeyResources = defineAccountKeyResourceCapability({
   siteType: SITE_TYPES.DAHL,
+  requiresFreshUpdateDetail: () => false,
   inventorySecretAvailability: secretAvailability.Recoverable,
   // New native keys have no tokens; automatic creation must not promise a usable key.
   defaultCreation: creationPolicies.RequiresInput,
@@ -365,7 +379,7 @@ export const dahlKeyResources = defineAccountKeyResourceCapability({
           }),
         }
       : fundingEditor(
-          detail,
+          requireFundingDetail(detail),
           intent?.action === editActions.Return
             ? editActions.Return
             : editActions.Allocate,
@@ -375,12 +389,10 @@ export const dahlKeyResources = defineAccountKeyResourceCapability({
       request: operationRequest(config, options),
       mapFailure: mapAccountKeyResourceFailure,
       execute: async (request) => {
-        const poolTokens = await fetchTokenPool(request)
         const key = await createKey(request)
         if (name) await saveDahlKeyName(dahlKeyNameOwner(request), key.id, name)
-        const detail: FundingDetail = {
+        const detail: NamedKey = {
           ...(await namedKeys(request, [key]))[0]!,
-          poolTokens,
         }
         return {
           detail,
@@ -411,7 +423,7 @@ export const dahlKeyResources = defineAccountKeyResourceCapability({
         }
       },
     }),
-  update: async (config, _scope, detail, command, options) => {
+  update: async (config, _scope, { current: detail }, command, options) => {
     if (command.kind === editActions.Rename) {
       if (!("kind" in detail))
         throw new AccountKeyResourceError({ code: failures.ValidationFailed })

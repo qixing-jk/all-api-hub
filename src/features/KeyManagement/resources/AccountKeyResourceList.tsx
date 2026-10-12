@@ -8,6 +8,7 @@ import type {
   NativeKeyManagementRow,
   NativeKeyManagementRowAction,
 } from "~/features/KeyManagement/types"
+import { ACCOUNT_KEY_DETAIL_AVAILABILITIES } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type {
   AccountKeyResourceFacts,
   AccountKeyResourceRef,
@@ -79,13 +80,23 @@ export function AccountKeyResourceList({
         if (expandedRowKeyRef.current !== row.rowKey) return
         expandedRowKeyRef.current = null
         setExpandedRowKey(null)
-        if (!detailsFromRows) onCloseDetail?.()
+        if (
+          !detailsFromRows &&
+          row.facts.detailAvailability !==
+            ACCOUNT_KEY_DETAIL_AVAILABILITIES.Complete
+        )
+          onCloseDetail?.()
         return
       }
 
       expandedRowKeyRef.current = row.rowKey
       setExpandedRowKey(row.rowKey)
-      if (!detailsFromRows) onOpenDetail?.(row.facts.ref)
+      if (
+        !detailsFromRows &&
+        row.facts.detailAvailability !==
+          ACCOUNT_KEY_DETAIL_AVAILABILITIES.Complete
+      )
+        onOpenDetail?.(row.facts.ref)
     },
     [detailsFromRows, onCloseDetail, onOpenDetail],
   )
@@ -118,7 +129,11 @@ export function AccountKeyResourceList({
             }
             isDetailLoading={expandedRowKey === row.rowKey && isDetailLoading}
             detailFailure={expandedRowKey === row.rowKey ? detailFailure : null}
-            detailsFromRow={detailsFromRows}
+            detailsFromRow={
+              detailsFromRows ||
+              row.facts.detailAvailability ===
+                ACCOUNT_KEY_DETAIL_AVAILABILITIES.Complete
+            }
             selectionDisabledReason={selectionDisabledReason}
             association={getAssociation?.(row)}
             associatedProfile={getCredentialProfile?.(row)}

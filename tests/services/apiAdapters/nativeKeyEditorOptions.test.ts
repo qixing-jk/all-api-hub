@@ -44,13 +44,11 @@ it("restricts Sub2API options and submitted group IDs to the creation intent", a
   ).resolves.toEqual([
     { value: "1", displayLabel: "VIP", secondaryLabel: "Priority · #1" },
   ])
-  expect(fetch).toHaveBeenCalledWith(
-    expect.objectContaining({ abortSignal: signal }),
-  )
+  expect(fetch).not.toHaveBeenCalled()
   await expect(
     editor.loadOptions!("name", editor.initialValues),
   ).resolves.toEqual([])
-  expect(fetch).toHaveBeenCalledTimes(1)
+  expect(fetch).not.toHaveBeenCalled()
 })
 
 it("restricts VoAPI options and every selected group to the creation intent", async () => {
@@ -84,13 +82,11 @@ it("restricts VoAPI options and every selected group to the creation intent", as
   ).resolves.toEqual([
     { value: "1", displayLabel: "VIP", secondaryLabel: "#1" },
   ])
-  expect(fetch).toHaveBeenCalledWith(
-    expect.objectContaining({ abortSignal: signal }),
-  )
+  expect(fetch).not.toHaveBeenCalled()
   await expect(
     editor.loadOptions!("note", editor.initialValues),
   ).resolves.toEqual([])
-  expect(fetch).toHaveBeenCalledTimes(1)
+  expect(fetch).not.toHaveBeenCalled()
 })
 
 it("loads AIHubMix models with cancellation and converts expiry/quota only at submission", async () => {

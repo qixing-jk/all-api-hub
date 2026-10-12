@@ -44,8 +44,7 @@ export function useRuntimeKeyDisclosure(
     account.token,
     account.userId,
     account.cookieAuthSessionCookie,
-    runtimeKey.id,
-    runtimeKey.secret,
+    runtimeKey,
   ])
 
   const run = async (copy: boolean) => {
@@ -98,11 +97,11 @@ export function useRuntimeKeyDisclosure(
         ReturnType<typeof resolveDisplayAccountRuntimeKeySecret>
       >
       try {
-        resolved = await resolveDisplayAccountRuntimeKeySecret(
-          account,
-          runtimeKey,
-          { abortSignal: source.signal },
-        )
+        resolved = secret
+          ? { ...runtimeKey, secret }
+          : await resolveDisplayAccountRuntimeKeySecret(account, runtimeKey, {
+              abortSignal: source.signal,
+            })
       } catch {
         if (source.signal.aborted) {
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
@@ -119,6 +118,7 @@ export function useRuntimeKeyDisclosure(
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
         return
       }
+      setSecret(resolved.secret)
       if (copy) {
         await navigator.clipboard.writeText(resolved.secret)
         if (source.signal.aborted || sourceRef.current !== source) {
@@ -127,7 +127,6 @@ export function useRuntimeKeyDisclosure(
         }
         toast.success(t("messages.keyCopied", { name: runtimeKey.label }))
       } else {
-        setSecret(resolved.secret)
         setVisible(true)
       }
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)

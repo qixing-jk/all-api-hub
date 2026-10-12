@@ -86,6 +86,22 @@ describe("native runtime key disclosure", () => {
     )
   })
 
+  it.each(["copy", "toggle"] as const)(
+    "reuses plaintext after an initial %s for subsequent reveal and copy actions",
+    async (firstAction) => {
+      const view = renderDisclosure()
+      await act(async () => view.result.current[firstAction]())
+      if (firstAction === "toggle")
+        await act(async () => view.result.current.toggle())
+      expect(view.result.current.secret).toBeNull()
+      await act(async () => view.result.current.copy())
+      await act(async () => view.result.current.toggle())
+      expect(view.result.current.secret).toBe("resolved-private-key")
+      expect(writeText).toHaveBeenLastCalledWith("resolved-private-key")
+      expect(resolveSecret).toHaveBeenCalledOnce()
+    },
+  )
+
   it("reveals, hides and reopens a current secret, but clears it after authentication changes", async () => {
     const view = renderDisclosure()
     await act(async () => view.result.current.toggle())
@@ -97,6 +113,10 @@ describe("native runtime key disclosure", () => {
     view.rerender({ account: { ...account, token: "replacement-auth" } })
     expect(view.result.current.secret).toBeNull()
     expect(view.result.current.visible).toBe(false)
+    resolveSecret.mockResolvedValueOnce({ ...key, secret: "replacement-key" })
+    await act(async () => view.result.current.copy())
+    expect(writeText).toHaveBeenLastCalledWith("replacement-key")
+    expect(resolveSecret).toHaveBeenCalledTimes(2)
   })
 
   it.each(["change", "unmount"])(
@@ -158,6 +178,22 @@ describe("native runtime key disclosure", () => {
     await act(async () => view.result.current.toggle())
     expect(error).toHaveBeenCalledWith("messages.revealFailed")
     expect(writeText).not.toHaveBeenCalled()
+  })
+
+  it("discards resolved plaintext when a refreshed inventory replaces the runtime key snapshot", async () => {
+    const view = renderHook(
+      ({ runtimeKey }) => useRuntimeKeyDisclosure(account, runtimeKey),
+      {
+        initialProps: { runtimeKey: key },
+      },
+    )
+    await act(async () => view.result.current.toggle())
+    view.rerender({ runtimeKey: { ...key } })
+    expect(view.result.current.secret).toBeNull()
+    resolveSecret.mockResolvedValueOnce({ ...key, secret: "refreshed-key" })
+    await act(async () => view.result.current.copy())
+    expect(writeText).toHaveBeenLastCalledWith("refreshed-key")
+    expect(resolveSecret).toHaveBeenCalledTimes(2)
   })
 
   it("treats a rejected resolve as cancellation once the disclosure was aborted", async () => {

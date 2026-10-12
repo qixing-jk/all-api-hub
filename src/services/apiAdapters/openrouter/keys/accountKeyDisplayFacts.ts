@@ -1,4 +1,5 @@
 import { UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS } from "~/services/accounts/keys/runtimeKeyModelAccess"
+import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
 import {
   type AccountKeyResourceFacts,
   type AccountKeyScope,
@@ -57,7 +58,7 @@ export const toDetail = (
 export const toFacts = (
   detail: OpenRouterKeyDetail,
   ref: AccountKeyResourceFacts["ref"],
-): AccountKeyResourceFacts => {
+): AccountKeyResourceProviderFacts => {
   const key = detail.key
   const expired = key.expires_at
     ? Date.parse(key.expires_at) <= Date.now()
@@ -68,6 +69,7 @@ export const toFacts = (
     ref,
     displayName: key.name,
     maskedLabel: key.label,
+    runtimeSecret: undefined,
     status,
     runtimeKey: {
       modelAccess: UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS,

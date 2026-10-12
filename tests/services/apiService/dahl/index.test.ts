@@ -2,6 +2,8 @@ import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/keys/accountRuntimeKeys"
+import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import { ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   readDahlKeyNames,
@@ -24,6 +26,7 @@ import {
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
 import { createCheckInConfig } from "../../apiAdapters/checkInFixtures"
 
@@ -41,6 +44,43 @@ const body = {
 }
 
 describe("Dahl account contract", () => {
+  it("reuses verified optional inventory tokens without repeating account and key requests", async () => {
+    server.use(
+      http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+      http.get(`${origin}/v1/account/keys`, () =>
+        HttpResponse.json({ keys: [key] }),
+      ),
+    )
+    const account = buildDisplaySiteData({
+      id: "dahl-test",
+      siteType: SITE_TYPES.DAHL,
+      baseUrl: origin,
+      authType: AuthTypeEnum.Cookie,
+      userId,
+      token: "",
+    })
+    const session = await getSiteTypeCapabilities(
+      SITE_TYPES.DAHL,
+    ).account!.keyResourceManagement!.open({
+      account: { id: account.id, siteType: SITE_TYPES.DAHL },
+      request: { ...request, accountId: account.id },
+    })
+    const facts = (await (await session.openCollection(DAHL_KEY_SCOPE)).list())
+      .items[0]!
+    expect(facts.detailAvailability).toBe("complete")
+    const runtimeKey = buildAccountKeyResourceRuntimeKeyFromFacts(
+      account,
+      facts,
+    )
+    const unexpectedRead = vi.fn(() => new HttpResponse(null, { status: 503 }))
+    server.use(http.get(`${origin}/*`, unexpectedRead))
+    await expect(
+      resolveDisplayAccountRuntimeKeySecret(account, runtimeKey),
+    ).resolves.toMatchObject({ secret: key.token })
+    expect(unexpectedRead).not.toHaveBeenCalled()
+    expect(facts.maskedLabel).not.toBe(key.token)
+  })
+
   beforeEach(async () => {
     const boundary = installCookieTransport()
     const cookie = (await browser.cookies.getAll({}))[0]!
@@ -143,31 +183,28 @@ describe("Dahl account contract", () => {
       expect(fetchSpy).not.toHaveBeenCalled()
     },
   )
-  it("reports a missing revoke target without issuing DELETE", async () => {
+  it("accepts acknowledged revocation without reading the key inventory", async () => {
+    const read = vi.fn(() => HttpResponse.error())
     const write = vi.fn(() => HttpResponse.json({ ok: true }))
     server.use(
       http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
-      http.get(`${origin}/v1/account/keys`, () =>
-        HttpResponse.json({ keys: [] }),
-      ),
+      http.get(`${origin}/v1/account/keys`, read),
       http.delete(`${origin}/v1/account/keys/7`, write),
     )
-    await expect(revokeKey(request, "7")).rejects.toMatchObject({
-      failure: { code: "not_found" },
-    })
-    expect(write).not.toHaveBeenCalled()
+    await expect(revokeKey(request, "7")).resolves.toBeUndefined()
+    expect(read).not.toHaveBeenCalled()
+    expect(write).toHaveBeenCalledOnce()
   })
-  it("reports uncertainty after one revoke when readback remains active", async () => {
-    const write = vi.fn(() => HttpResponse.json({ ok: true }))
+  it("surfaces server rejection for a missing revoke target", async () => {
+    const write = vi.fn(() =>
+      HttpResponse.json({ error: "Not found" }, { status: 404 }),
+    )
     server.use(
       http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
-      http.get(`${origin}/v1/account/keys`, () =>
-        HttpResponse.json({ keys: [key] }),
-      ),
       http.delete(`${origin}/v1/account/keys/7`, write),
     )
     await expect(revokeKey(request, "7")).rejects.toMatchObject({
-      failure: { code: "mutation_state_uncertain" },
+      statusCode: 404,
     })
     expect(write).toHaveBeenCalledOnce()
   })
@@ -446,7 +483,7 @@ describe("Dahl account contract", () => {
       expect(write).toHaveBeenCalledTimes(1)
     },
   )
-  it.each([editActions.Allocate, editActions.Return, "revoke"] as const)(
+  it.each([editActions.Allocate, editActions.Return] as const)(
     "reports an uncertain %s when readback fails after its write",
     async (action) => {
       let applied = false
@@ -471,23 +508,13 @@ describe("Dahl account contract", () => {
       })
       const collection = await session.openCollection(DAHL_KEY_SCOPE)
       const ref = (await collection.list()).items[0]!.ref
-      if (action === "revoke") {
-        await expect(collection.delete(ref)).rejects.toMatchObject({
-          failure: { code: "mutation_state_uncertain" },
-        })
-      } else {
-        const editor = await collection.openEditEditor(ref, undefined, {
-          action,
-        })
-        await expect(
-          editor.submit({ ...editor.initialValues, transfer_amount: "40" }),
-        ).rejects.toMatchObject({
-          failure: { code: "mutation_state_uncertain" },
-        })
-        await expect(
-          editor.submit({ ...editor.initialValues, transfer_amount: "40" }),
-        ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
-      }
+      const editor = await collection.openEditEditor(ref, undefined, { action })
+      await expect(
+        editor.submit({ ...editor.initialValues, transfer_amount: "40" }),
+      ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+      await expect(
+        editor.submit({ ...editor.initialValues, transfer_amount: "40" }),
+      ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
       expect(write).toHaveBeenCalledTimes(1)
     },
   )
@@ -833,8 +860,9 @@ describe("Dahl account contract", () => {
   it.each([true, false])(
     "creates a zero-token key without inventing a secret when returned token is present: %s",
     async (hasToken) => {
+      const accountRead = vi.fn(() => HttpResponse.json(body))
       server.use(
-        http.get(`${origin}/v1/account`, () => HttpResponse.json(body)),
+        http.get(`${origin}/v1/account`, accountRead),
         http.get(`${origin}/v1/account/keys`, () =>
           HttpResponse.json({ keys: [key] }),
         ),
@@ -866,7 +894,9 @@ describe("Dahl account contract", () => {
         request: { ...request, accountId: "local" },
       })
       const creator = await session.openCreateEditor(DAHL_KEY_SCOPE)
+      accountRead.mockClear()
       const result = await creator.submit({})
+      expect(accountRead).toHaveBeenCalledOnce()
       expect(result.facts?.ref.resourceId).toBe(String(key.id))
       expect(result.createdSecret?.secret).toBe(
         hasToken ? "dahl_example" : undefined,
