@@ -345,7 +345,7 @@ describe("manualBatch", () => {
         runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
         targetAccountIds: ["legacy"],
       }),
-    ).resolves.toBeUndefined()
+    ).resolves.toEqual({ persisted: true })
 
     expect(schedulerTestState.storedStatus.lastRunResult).toBe("failed")
     expect(schedulerTestState.storedStatus.perAccount).toEqual({
@@ -407,7 +407,7 @@ describe("manualBatch", () => {
       runCheckinsForTest({
         runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
       }),
-    ).resolves.toBeUndefined()
+    ).resolves.toEqual({ persisted: true })
 
     expect(mockedAccountStorage.getAllAccounts).not.toHaveBeenCalled()
     expect(schedulerTestState.storedStatus.lastRunResult).toBe("failed")
