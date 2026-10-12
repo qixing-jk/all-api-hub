@@ -44,6 +44,9 @@ import {
   PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES,
   PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES,
   PRODUCT_ANALYTICS_STATUS_KINDS,
+  PRODUCT_ANALYTICS_STORAGE_AREAS,
+  PRODUCT_ANALYTICS_STORAGE_FAILURE_STAGES,
+  PRODUCT_ANALYTICS_STORAGE_OPERATIONS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
   PRODUCT_ANALYTICS_TARGET_STATES,
@@ -75,6 +78,29 @@ describe("product analytics privacy filtering", () => {
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       result: PRODUCT_ANALYTICS_RESULTS.Success,
       item_count: 2,
+    })
+  })
+
+  it("keeps only controlled storage write failure fields", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.StorageWriteFailed,
+      {
+        storage_area: PRODUCT_ANALYTICS_STORAGE_AREAS.Local,
+        storage_operation:
+          PRODUCT_ANALYTICS_STORAGE_OPERATIONS.AutoCheckinStatus,
+        storage_failure_stage: PRODUCT_ANALYTICS_STORAGE_FAILURE_STAGES.Write,
+        error_name: "QuotaExceededError",
+        // Never leak free-form messages or key names.
+        error_message: "storage.local quota exceeded for autoCheckin_status",
+        storage_key: "autoCheckin_status",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      storage_area: PRODUCT_ANALYTICS_STORAGE_AREAS.Local,
+      storage_operation: PRODUCT_ANALYTICS_STORAGE_OPERATIONS.AutoCheckinStatus,
+      storage_failure_stage: PRODUCT_ANALYTICS_STORAGE_FAILURE_STAGES.Write,
+      error_name: "QuotaExceededError",
     })
   })
 

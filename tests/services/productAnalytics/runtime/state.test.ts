@@ -10,6 +10,14 @@ import {
   productAnalyticsState,
 } from "~/services/productAnalytics/runtime/state"
 
+const { trackStorageWriteFailureMock } = vi.hoisted(() => ({
+  trackStorageWriteFailureMock: vi.fn(),
+}))
+
+vi.mock("~/services/productAnalytics/facts/storageWriteFailure", () => ({
+  trackStorageWriteFailure: trackStorageWriteFailureMock,
+}))
+
 describe("productAnalyticsState", () => {
   const storage = new Storage({ area: "local" })
   const analyticsStorage = (
@@ -341,6 +349,31 @@ describe("productAnalyticsState", () => {
         itemTotal: 2,
       }),
     ).resolves.toBe(false)
+
+    await expect(
+      storage.get(PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_STATE),
+    ).resolves.toBeUndefined()
+
+    storageSetSpy.mockRestore()
+  })
+
+  it("reports analytics state write failures to storage write telemetry", async () => {
+    const storageSetSpy = vi
+      .spyOn(analyticsStorage, "set")
+      .mockRejectedValueOnce(new Error("write failed"))
+
+    await expect(
+      productAnalyticsState.setLastSettingsSnapshotAt(12345),
+    ).resolves.toBe(false)
+
+    expect(trackStorageWriteFailureMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        storageArea: "local",
+        operation: "product_analytics_state",
+        failureStage: "write",
+        error: expect.any(Error),
+      }),
+    )
 
     await expect(
       storage.get(PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_STATE),

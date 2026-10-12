@@ -66,7 +66,32 @@ export const PRODUCT_ANALYTICS_EVENTS = {
   PermissionResult: "permission_result",
   SiteEcosystemSnapshot: "site_ecosystem_snapshot",
   SiteTypePresent: "site_type_present",
+  StorageWriteFailed: "storage_write_failed",
 } as const
+
+export const PRODUCT_ANALYTICS_STORAGE_AREAS = {
+  Local: "local",
+} as const
+
+export type ProductAnalyticsStorageArea =
+  (typeof PRODUCT_ANALYTICS_STORAGE_AREAS)[keyof typeof PRODUCT_ANALYTICS_STORAGE_AREAS]
+
+export const PRODUCT_ANALYTICS_STORAGE_FAILURE_STAGES = {
+  Read: "read",
+  Apply: "apply",
+  Write: "write",
+} as const
+
+export type ProductAnalyticsStorageFailureStage =
+  (typeof PRODUCT_ANALYTICS_STORAGE_FAILURE_STAGES)[keyof typeof PRODUCT_ANALYTICS_STORAGE_FAILURE_STAGES]
+
+export const PRODUCT_ANALYTICS_STORAGE_OPERATIONS = {
+  AutoCheckinStatus: "auto_checkin_status",
+  ProductAnalyticsState: "product_analytics_state",
+} as const
+
+export type ProductAnalyticsStorageOperation =
+  (typeof PRODUCT_ANALYTICS_STORAGE_OPERATIONS)[keyof typeof PRODUCT_ANALYTICS_STORAGE_OPERATIONS]
 
 export type ProductAnalyticsEventName =
   (typeof PRODUCT_ANALYTICS_EVENTS)[keyof typeof PRODUCT_ANALYTICS_EVENTS]
@@ -1664,6 +1689,13 @@ export type ProductAnalyticsEventPayloadMap = {
   [PRODUCT_ANALYTICS_EVENTS.SiteTypePresent]: {
     site_type: ProductAnalyticsSiteType
     account_count: number
+  }
+  [PRODUCT_ANALYTICS_EVENTS.StorageWriteFailed]: {
+    storage_area: ProductAnalyticsStorageArea
+    storage_operation: ProductAnalyticsStorageOperation
+    storage_failure_stage: ProductAnalyticsStorageFailureStage
+    /** `Error.name` only — never a message, key, or path. */
+    error_name: string
   }
 }
 
