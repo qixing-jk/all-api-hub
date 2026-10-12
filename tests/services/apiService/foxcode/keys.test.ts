@@ -96,6 +96,54 @@ beforeEach(async () => {
 })
 afterEach(() => vi.restoreAllMocks())
 
+it.each(["anthropic", null])(
+  "preserves runtime facts when renaming a %s key without prepared detail",
+  async (channelKey) => {
+    let persisted = { ...key, channelKey }
+    const write = vi.fn(async ({ request }: { request: Request }) => {
+      const patch = await request.json()
+      expect(patch).toEqual({ name: "Renamed" })
+      persisted = { ...persisted, ...patch }
+      return HttpResponse.json({ success: true, data: { apiKey: persisted } })
+    })
+    server.use(
+      http.get(`${origin}/api/keys`, () =>
+        HttpResponse.json({
+          success: true,
+          data: { apiKeys: [persisted], pagination: { page: 1, pages: 1 } },
+        }),
+      ),
+      http.patch(`${origin}/api/keys/${key.id}`, write),
+    )
+    const baseline = (await fetchKeys(request))[0]!
+    const catalogRead = vi.fn(() => HttpResponse.error())
+    server.use(
+      http.get(
+        `${origin}/api/system-config/public/model_square_config`,
+        catalogRead,
+      ),
+      http.get(
+        `${origin}/api/system-config/public/api_endpoint_config`,
+        catalogRead,
+      ),
+    )
+    const saved = await updateKey(request, baseline, {
+      ...persisted,
+      name: "Renamed",
+    })
+    expect(saved).toMatchObject({
+      name: "Renamed",
+      channelKey,
+      key: baseline.key,
+      canonicalChannelKey: baseline.canonicalChannelKey,
+      modelIds: baseline.modelIds,
+      baseUrl: baseline.baseUrl,
+    })
+    expect(write).toHaveBeenCalledOnce()
+    expect(catalogRead).not.toHaveBeenCalled()
+  },
+)
+
 it("retains mutation uncertainty after a dispatched editor update loses its response", async () => {
   const write = vi.fn(() => HttpResponse.error())
   server.use(
