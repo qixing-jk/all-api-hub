@@ -91,6 +91,7 @@ const keyFacts = (key: KeyRecord, ref: AccountKeyResourceRef) => ({
   ref,
   displayName: key.name || key.key,
   maskedLabel: isMaskedKimiSecret(key.auth) ? key.auth : key.key,
+  runtimeSecret: undefined,
   status: "enabled" as const,
   runtimeKey: {
     modelAccess: UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS,
@@ -115,6 +116,7 @@ const keyFacts = (key: KeyRecord, ref: AccountKeyResourceRef) => ({
 export function createKimiOpenPlatformKeyResources(siteType: AccountSiteType) {
   return defineAccountKeyResourceCapability({
     siteType,
+    requiresFreshUpdateDetail: () => false,
     inventorySecretAvailability:
       INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
     defaultCreation: creationPolicies.EditorDefaults,
@@ -216,7 +218,7 @@ export function createKimiOpenPlatformKeyResources(siteType: AccountSiteType) {
         },
       }
     },
-    update: async (config, scope, detail, command) => {
+    update: async (config, scope, { current: detail }, command) => {
       if (command.name === detail.name)
         return { certainty: "applied" as const, value: detail }
       await renameKimiKey(

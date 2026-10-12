@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AccountKeyResourceList as NativeAccountKeyResourceList } from "~/features/KeyManagement/resources/AccountKeyResourceList"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
+import { ACCOUNT_KEY_DETAIL_AVAILABILITIES } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render, screen } from "~~/tests/test-utils/render"
 import { createAccount } from "~~/tests/utils/keyManagementFactories"
@@ -93,6 +94,9 @@ describe("AccountKeyResourceList", () => {
     expect(closeDetail).not.toHaveBeenCalled()
     expect(openDetail).toHaveBeenNthCalledWith(1, atIndex(rows, 0).facts.ref)
     expect(openDetail).toHaveBeenNthCalledWith(2, atIndex(rows, 1).facts.ref)
+    act(() => itemProps.get("b").onExpandedChange(false))
+    expect(screen.getByTestId("row-b")).toHaveTextContent("collapsed")
+    expect(closeDetail).toHaveBeenCalledOnce()
   })
 
   it("binds detail loading and failure state only to the active row", () => {
@@ -156,4 +160,32 @@ describe("AccountKeyResourceList", () => {
       "Wrong account detail",
     )
   })
+})
+
+it("expands complete inventory details without invoking the remote detail workflow", () => {
+  const original = createRow("complete", "resource-one")
+  const row = {
+    ...original,
+    facts: {
+      ...original.facts,
+      detailAvailability: ACCOUNT_KEY_DETAIL_AVAILABILITIES.Complete,
+    },
+  }
+  const openDetail = vi.fn()
+  const closeDetail = vi.fn()
+  render(
+    <AccountKeyResourceList
+      rows={[row]}
+      onOpenDetail={openDetail}
+      onCloseDetail={closeDetail}
+      onEdit={vi.fn()}
+      onDelete={vi.fn()}
+    />,
+    { withUserPreferencesProvider: false, withThemeProvider: false },
+  )
+  act(() => itemProps.get("complete").onExpandedChange(true))
+  expect(itemProps.get("complete").detailsFromRow).toBe(true)
+  expect(openDetail).not.toHaveBeenCalled()
+  act(() => itemProps.get("complete").onExpandedChange(false))
+  expect(closeDetail).not.toHaveBeenCalled()
 })

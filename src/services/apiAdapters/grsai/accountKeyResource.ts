@@ -1,5 +1,6 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import { UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS } from "~/services/accounts/keys/runtimeKeyModelAccess"
+import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
 import { keyExpiryDisplayFact } from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import {
@@ -84,7 +85,7 @@ const keyStatus = (key: GrsaiApiKey): AccountKeyResourceFacts["status"] => {
 const toFacts = (
   key: GrsaiApiKey,
   ref: AccountKeyResourceRef,
-): AccountKeyResourceFacts => {
+): AccountKeyResourceProviderFacts => {
   const snapshot = toGrsaiKeySnapshot(key)
   const createdAt = Date.parse(key.createTime ?? "")
 
@@ -92,6 +93,7 @@ const toFacts = (
     ref,
     displayName: snapshot.name || `Key ${key.id}`,
     maskedLabel: maskSecretForDisplay(key.key),
+    runtimeSecret: key.key,
     status: keyStatus(key),
     runtimeKey: {
       // Keys are addressed by the deployment's own OpenAI-compatible endpoint
@@ -162,6 +164,8 @@ const changedKeys = (
  */
 export const grsaiAccountKeyResources = defineAccountKeyResourceCapability({
   siteType: SITE_TYPES.GRSAI,
+  requiresFreshUpdateDetail: (command: GrsaiKeyEditCommand) =>
+    !resourceValuesEqual(command.baseline, command.values),
   inventorySecretAvailability: INVENTORY_SECRET_AVAILABILITIES.Recoverable,
   defaultCreation: creationPolicies.EditorDefaults,
   openConfig: async (input): Promise<Config> => ({
@@ -244,7 +248,7 @@ export const grsaiAccountKeyResources = defineAccountKeyResourceCapability({
   update: async (
     config,
     _scope,
-    detail: GrsaiApiKey,
+    { current: detail },
     command: GrsaiKeyEditCommand,
     options,
   ) => {

@@ -9,10 +9,65 @@ import {
 } from "~/features/KeyManagement/presentation/accountKeyResourcePresentation"
 import { openRouterKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/openRouterKeyResourceCard"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
+import { ACCOUNT_KEY_DETAIL_AVAILABILITIES } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const t = ((key: string) => key) as TFunction
+
+it("allocates complete inventory facts to summary or additional detail without overlap", () => {
+  const facts: NativeKeyManagementRow["facts"] = {
+    ref: {
+      accountId: "a",
+      siteType: SITE_TYPES.DAHL,
+      scopeKey: "default",
+      resourceId: "7",
+    },
+    detailAvailability: ACCOUNT_KEY_DETAIL_AVAILABILITIES.Complete,
+    displayName: "Key",
+    maskedLabel: "masked",
+    status: "enabled",
+    actions: { canUpdate: true, canDelete: true },
+    fields: [],
+    displayFacts: [
+      { fieldId: "credits", kind: "credits", value: 100 },
+      { fieldId: "used", kind: "money", role: "used", amountUsd: 1 },
+      { fieldId: "expires", kind: "expiry", timestampMs: "never" },
+      {
+        fieldId: "models",
+        kind: "restriction",
+        role: "models",
+        value: ["model-a"],
+      },
+    ],
+    runtimeKey: {
+      createdAt: 1,
+      notes: "Extra note",
+      modelAccess: { groups: [], allowedModelIds: null, suggestedModelIds: [] },
+    },
+  }
+  const card = getAccountKeyResourceCardAdapter(
+    SITE_TYPES.DAHL,
+  ).buildPresentation(
+    {
+      kind: "account-key-resource",
+      rowKey: "row",
+      accountId: "a",
+      accountName: "A",
+      scopeName: "Account",
+      facts,
+    },
+    t,
+    { hasAssociatedSecret: false },
+  )
+  expect(card.summaryFacts.map((fact) => fact.id)).toEqual([
+    "credits",
+    "used",
+    "expires",
+    "models",
+  ])
+  expect(card.detailFacts.map((fact) => fact.id)).toEqual(["createdAt", "note"])
+})
 
 it("renders declared restriction and group semantics independently of native field names", () => {
   const row: NativeKeyManagementRow = {

@@ -28,6 +28,11 @@ export type AccountKeyResourcePage<TItem> = {
   nextCursor?: string
 }
 
+/** Provider projections pass native values; the factory validates plaintext before publishing facts. */
+export type AccountKeyResourceProviderFacts = AccountKeyResourceFacts & {
+  readonly runtimeSecret: string | undefined
+}
+
 export type AccountKeyResourceEditorDefinition<TCommand> = {
   /** Local metadata commits do not read or mutate server resource state. */
   mutationKind?: typeof ACCOUNT_KEY_RESOURCE_LOCAL_METADATA
@@ -55,6 +60,8 @@ export type AccountKeyResourceDefinition<
   TFailure,
 > = {
   siteType: AccountSiteType
+  /** Providers select fresh detail for replacement writes or concurrent-edit protection. */
+  requiresFreshUpdateDetail(command: TUpdateCommand, baseline: TDetail): boolean
   inventorySecretAvailability?: AccountKeyResourceCapability["inventorySecretAvailability"]
   defaultCreation?: AccountKeyResourceCapability["defaultCreation"]
   openConfig(
@@ -116,11 +123,11 @@ export type AccountKeyResourceDefinition<
   toListFacts(
     item: TListItem,
     ref: AccountKeyResourceRef,
-  ): AccountKeyResourceFacts
+  ): AccountKeyResourceProviderFacts
   toDetailFacts(
     detail: TDetail,
     ref: AccountKeyResourceRef,
-  ): AccountKeyResourceFacts
+  ): AccountKeyResourceProviderFacts
   createEditor(
     config: TConfig,
     scope: AccountKeyScope,
@@ -151,10 +158,11 @@ export type AccountKeyResourceDefinition<
   ): Promise<
     NativeResourceMutationResult<AccountKeyCreateMutation<TDetail>, TFailure>
   >
+  /** Providers explicitly select whether a fresh merge baseline is needed. */
   update(
     config: TConfig,
     scope: AccountKeyScope,
-    detail: TDetail,
+    state: { readonly baseline: TDetail; readonly current: TDetail },
     command: TUpdateCommand,
     options?: ResourceOperationOptions,
   ): Promise<NativeResourceMutationResult<TDetail, TFailure>>

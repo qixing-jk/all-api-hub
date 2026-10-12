@@ -160,6 +160,20 @@ export function useAccountKeyResourceInventoryState({
     },
     [replaceAcceptedRows],
   )
+  const acceptCreatedResource = useCallback(
+    (facts: AccountKeyResourceFacts) => {
+      const identity = refIdentity(facts.ref)
+      const existing = acceptedRowsRef.current
+      replaceAcceptedRows(
+        existing.some((row) => refIdentity(row.ref) === identity)
+          ? existing.map((row) =>
+              refIdentity(row.ref) === identity ? facts : row,
+            )
+          : [...existing, facts],
+      )
+    },
+    [replaceAcceptedRows],
+  )
   const acceptDeletedResource = useCallback(
     (ref: AccountKeyResourceRef) => {
       replaceAcceptedRows(
@@ -320,6 +334,7 @@ export function useAccountKeyResourceInventoryState({
     isNativeOwnerCurrent,
     readAcceptedRows,
     acceptEditedResource,
+    acceptCreatedResource,
     acceptDeletedResource,
     acceptInventory,
     beginInventoryLoad,

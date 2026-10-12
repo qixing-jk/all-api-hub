@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next"
-import { describe, expect, it } from "vitest"
+import { describe, expect, expectTypeOf, it } from "vitest"
 
 import {
   ACCOUNT_SITE_ADAPTER_FAMILIES,
@@ -10,6 +10,9 @@ import {
   ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes,
   type AccountKeyResourceEditorMode,
 } from "~/features/KeyManagement/constants"
+import { resolveAccountKeyAutomaticName } from "~/features/KeyManagement/presentation/accountKeyAutomaticName"
+import { ACCOUNT_KEY_AUTOMATIC_NAME_KINDS } from "~/features/KeyManagement/presentation/accountKeyResourceEditorPresentation"
+import type { AccountKeyResourceEditorPresentation } from "~/features/KeyManagement/presentation/accountKeyResourceEditorPresentation"
 import { getNativeKeyResourceEditorPresentation } from "~/features/KeyManagement/presentation/nativeKeyResourceFieldPolicy"
 import { resolveResourceFieldPolicy } from "~/features/ResourceEditor/model/resourceFieldPolicy"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
@@ -239,10 +242,15 @@ describe("native key editor field policies", () => {
   it("keeps group IDs out of generated names when option labels are unavailable", () => {
     const presentation = getPresentation(SITE_TYPES.SUB2API, editorModes.Create)
     expect(
-      presentation.getAutomaticName?.({ group_id: "11" }, {}),
+      resolveAccountKeyAutomaticName(
+        presentation.automaticName,
+        { group_id: "11" },
+        {},
+      ),
     ).toBeUndefined()
     expect(
-      presentation.getAutomaticName?.(
+      resolveAccountKeyAutomaticName(
+        presentation.automaticName,
         { group_id: "11" },
         {
           group_id: [{ value: "11" }],
@@ -253,9 +261,8 @@ describe("native key editor field policies", () => {
 
   it("does not treat a workspace as a token group", () => {
     expect(
-      getPresentation(SITE_TYPES.OPENROUTER, editorModes.Create)
-        .getAutomaticName,
-    ).toBeUndefined()
+      getPresentation(SITE_TYPES.OPENROUTER, editorModes.Create).automaticName,
+    ).toEqual({ kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed })
   })
 
   it.each([editorModes.Create, editorModes.Edit] as const)(
@@ -526,7 +533,8 @@ it("configures RightCode key editor fields and automatic naming", () => {
     "keyManagement:native.editor.allowWalletHelp",
   )
 
-  const autoName = createPresentation.getAutomaticName?.(
+  const autoName = resolveAccountKeyAutomaticName(
+    createPresentation.automaticName,
     { channel: "1" },
     { channel: [{ value: "1", displayLabel: "Codex" }] },
   )
@@ -539,4 +547,21 @@ it("configures RightCode key editor fields and automatic naming", () => {
   expect(
     editPresentation.policy.fields.some((f) => f.fieldId === "is_active"),
   ).toBe(true)
+})
+
+it("declares the grouping field or an explicit fixed naming policy", () => {
+  expect(
+    getPresentation(SITE_TYPES.GRSAI, editorModes.Create).automaticName,
+  ).toEqual({ kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed })
+})
+
+it("requires a naming decision in every editor presentation", () => {
+  expectTypeOf<
+    Omit<
+      AccountKeyResourceEditorPresentation,
+      "automaticName"
+    > extends AccountKeyResourceEditorPresentation
+      ? true
+      : false
+  >().toEqualTypeOf<false>()
 })

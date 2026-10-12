@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   ACCOUNT_KEY_PROVISIONING_COVERAGE,
   ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS,
@@ -12,6 +13,7 @@ import { sub2ApiAccountKeyResources } from "~/services/apiAdapters/sub2api/keys/
 import type { Sub2ApiNativeKey } from "~/services/apiService/sub2api/type"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
@@ -78,6 +80,104 @@ const token = (overrides: Partial<Sub2ApiNativeKey>): Sub2ApiNativeKey => ({
 })
 
 describe("Sub2API account key resources", () => {
+  it.each(["already-present", "concurrent"])(
+    "keeps an ID-less lost create response uncertain with a %s matching key",
+    async (timing) => {
+      const otherKey = token({ id: 92, name: "Created", group_id: undefined })
+      let dispatched = false
+      mockFetchSub2ApiKeys.mockImplementation(async () =>
+        timing === "already-present" || dispatched ? [otherKey] : [],
+      )
+      mockCreateSub2ApiKey.mockImplementationOnce(async (request) => {
+        request.observer?.onDispatch()
+        dispatched = true
+        throw new Error("response lost without creating this key")
+      })
+      const session = await sub2ApiAccountKeyResources.open({
+        account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
+        request,
+      })
+      const editor = await session.openCreateEditor("account")
+      await expect(
+        editor.submit({ ...editor.initialValues, name: "Created" }),
+      ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+      expect(mockCreateSub2ApiKey).toHaveBeenCalledOnce()
+    },
+  )
+  it("does not claim a concurrent key after an uncertain automatic create", async () => {
+    mockFetchSub2ApiGroupDescriptors.mockResolvedValue([
+      { id: 9, requirementKey: "9", displayName: "Example group" },
+    ])
+    mockFetchSub2ApiKeys
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([token({ id: 92 })])
+    mockCreateSub2ApiKey.mockImplementationOnce(async (request) => {
+      request.observer?.onDispatch()
+      throw new Error("response lost")
+    })
+    const session = await sub2ApiAccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
+      request,
+    })
+    await expect(session.provisioning!.provision("9")).resolves.toMatchObject({
+      certainty: "possibly-applied",
+      failure: { code: "mutation_state_uncertain" },
+    })
+    expect(mockCreateSub2ApiKey).toHaveBeenCalledOnce()
+    expect(mockFetchSub2ApiKeys).toHaveBeenCalledOnce()
+  })
+  it.each([true, false])(
+    "reads a fresh creation baseline and skips readback with a response record=%s",
+    async (hasRecord) => {
+      const created = token({ id: 92, name: "Created", group_id: undefined })
+      mockCreateSub2ApiKey.mockResolvedValueOnce(
+        hasRecord ? created : undefined,
+      )
+      mockFetchSub2ApiKeys
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([created])
+      const session = await sub2ApiAccountKeyResources.open({
+        account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
+        request,
+      })
+      const editor = await session.openCreateEditor("account")
+      const result = await editor.submit({
+        ...editor.initialValues,
+        name: "Created",
+      })
+      expect(result.facts?.ref.resourceId).toBe("92")
+      expect(mockFetchSub2ApiKeys).toHaveBeenCalledTimes(hasRecord ? 1 : 2)
+      expect(mockCreateSub2ApiKey).toHaveBeenCalledOnce()
+    },
+  )
+  it.each([
+    ["sk-inventory-plaintext", "sk-inventory-plaintext"],
+    ["sk-****masked", ""],
+    ["sk-••••masked", ""],
+    ["", ""],
+  ])(
+    "makes only usable inventory plaintext available for runtime actions: %s",
+    async (secret, expected) => {
+      mockFetchSub2ApiKeys.mockResolvedValueOnce([token({ key: secret })])
+      const session = await sub2ApiAccountKeyResources.open({
+        account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
+        request,
+      })
+      const facts = (await (await session.openCollection("account")).list())
+        .items[0]!
+      const runtimeKey = buildAccountKeyResourceRuntimeKeyFromFacts(
+        buildDisplaySiteData({
+          id: "account-example",
+          siteType: SITE_TYPES.SUB2API,
+        }),
+        facts,
+      )
+      expect(runtimeKey.secret).toBe(expected)
+      expect(facts.maskedLabel).not.toBe("sk-inventory-plaintext")
+      expect(mockFetchSub2ApiKey).not.toHaveBeenCalled()
+    },
+  )
+
   beforeEach(() => {
     vi.clearAllMocks()
     mockCreateSub2ApiKey.mockReset()
@@ -89,7 +189,7 @@ describe("Sub2API account key resources", () => {
   })
 
   it.each(["reconciled", "missing", "read-failed", "rejected"])(
-    "reconciles native creation without replay: %s",
+    "does not attribute a lost create response using inventory: %s",
     async (outcome) => {
       mockFetchSub2ApiKeys.mockResolvedValueOnce([token({ id: 1 })])
       if (outcome === "read-failed")
@@ -122,15 +222,9 @@ describe("Sub2API account key resources", () => {
         ...editor.initialValues,
         name: "Recovered",
       })
-      if (outcome === "reconciled")
-        await expect(result).resolves.toMatchObject({
-          facts: { ref: { resourceId: "2" } },
-        })
-      else await expect(result).rejects.toBeDefined()
+      await expect(result).rejects.toBeDefined()
       expect(mockCreateSub2ApiKey).toHaveBeenCalledTimes(1)
-      expect(mockFetchSub2ApiKeys).toHaveBeenCalledTimes(
-        outcome === "rejected" ? 1 : 2,
-      )
+      expect(mockFetchSub2ApiKeys).toHaveBeenCalledTimes(1)
     },
   )
 
@@ -1165,6 +1259,29 @@ describe("Sub2API account key resources", () => {
     })
   })
 
+  it("rejects a concurrent quota edit through the public editor before writing", async () => {
+    const before = token({ id: 9, quota: 10 })
+    mockFetchSub2ApiKey
+      .mockResolvedValueOnce(before)
+      .mockResolvedValue({ ...before, quota: 20 })
+    const session = await sub2ApiAccountKeyResources.open({
+      account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
+      request,
+    })
+    const editor = await (
+      await session.openCollection("account")
+    ).openEditEditor({
+      accountId: "account-example",
+      siteType: SITE_TYPES.SUB2API,
+      scopeKey: "account",
+      resourceId: "9",
+    })
+    await expect(
+      editor.submit({ ...editor.initialValues, quota: 30 }),
+    ).rejects.toMatchObject({ failure: { code: "resource_changed" } })
+    expect(mockUpdateSub2ApiKey).not.toHaveBeenCalled()
+  })
+
   it("renames using a partial update and preserves fresh native quota, expiry and status", async () => {
     const before = token({
       id: 9,
@@ -1197,12 +1314,13 @@ describe("Sub2API account key resources", () => {
   })
 
   it.each([false, true])(
-    "avoids writes for unchanged fields or conflicting concurrent edits (conflict=%s)",
-    async (conflict) => {
+    "skips unchanged writes and sends only edited fields (changed=%s)",
+    async (changed) => {
       const before = token({ id: 9 })
       mockFetchSub2ApiKey
         .mockResolvedValueOnce(before)
-        .mockResolvedValueOnce({ ...before, name: "Remote rename" })
+        .mockResolvedValueOnce({ ...before, quota: 18 })
+        .mockResolvedValueOnce({ ...before, name: "Local rename", quota: 18 })
       const session = await sub2ApiAccountKeyResources.open({
         account: { id: "account-example", siteType: SITE_TYPES.SUB2API },
         request,
@@ -1215,23 +1333,24 @@ describe("Sub2API account key resources", () => {
         scopeKey: "account",
         resourceId: "9",
       })
-      const submitted = editor.submit({
-        ...editor.initialValues,
-        ...(conflict ? { name: "Local rename" } : {}),
+      await expect(
+        editor.submit({
+          ...editor.initialValues,
+          ...(changed ? { name: "Local rename" } : {}),
+        }),
+      ).resolves.toMatchObject({
+        facts: { displayName: changed ? "Local rename" : "Example key" },
       })
-
-      if (conflict)
-        await expect(submitted).rejects.toMatchObject({
-          failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ResourceChanged },
-        })
-      else
-        await expect(submitted).resolves.toMatchObject({
-          facts: { displayName: "Remote rename" },
-        })
-      expect(mockUpdateSub2ApiKey).not.toHaveBeenCalled()
+      expect(mockFetchSub2ApiKey).toHaveBeenCalledTimes(changed ? 3 : 1)
+      if (changed)
+        expect(mockUpdateSub2ApiKey).toHaveBeenCalledWith(
+          expect.anything(),
+          9,
+          { name: "Local rename" },
+        )
+      else expect(mockUpdateSub2ApiKey).not.toHaveBeenCalled()
     },
   )
-
   it("registers native resources for ordinary Key Management", () => {
     expect(sub2ApiCapabilities.account?.keyResourceManagement).toBe(
       sub2ApiAccountKeyResources,

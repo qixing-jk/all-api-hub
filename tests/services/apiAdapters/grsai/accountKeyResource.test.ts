@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { prepareAccountKeyProvisioning } from "~/services/accounts/keys/accountKeyProvisioning"
+import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/keys/accountRuntimeKeys"
 import { grsaiAccountKeyResources } from "~/services/apiAdapters/grsai/accountKeyResource"
 import type { GrsaiApiKey } from "~/services/apiService/grsai/type"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
@@ -64,6 +65,31 @@ const key = (overrides: Partial<GrsaiApiKey> = {}): GrsaiApiKey => ({
 const openSession = async () => await grsaiAccountKeyResources.open(openInput)
 
 describe("grsaiAccountKeyResources", () => {
+  it.each([
+    ["sk-inventory-plaintext", "sk-inventory-plaintext"],
+    ["sk-****masked", ""],
+    ["sk-••••masked", ""],
+    ["", ""],
+  ])(
+    "makes only usable inventory plaintext available for runtime actions: %s",
+    async (secret, expected) => {
+      mockFetchGrsaiKeys.mockResolvedValueOnce([key({ key: secret })])
+      const session = await openSession()
+      const facts = (await (await session.openCollection("account")).list())
+        .items[0]!
+      const runtimeKey = buildAccountKeyResourceRuntimeKeyFromFacts(
+        buildDisplaySiteData({
+          id: "account-example",
+          siteType: SITE_TYPES.GRSAI,
+        }),
+        facts,
+      )
+      expect(runtimeKey.secret).toBe(expected)
+      expect(facts.maskedLabel).not.toBe("sk-inventory-plaintext")
+      expect(mockFetchGrsaiKeys).toHaveBeenCalledOnce()
+    },
+  )
+
   it("declares Grsai credits as credits rather than monetary quota", async () => {
     mockFetchGrsaiKeys.mockResolvedValue([
       key({ type: 1, credits: 250, expireTime: 1893456000 }),

@@ -17,6 +17,42 @@ const request = {
 }
 afterEach(() => vi.restoreAllMocks())
 
+it("loads uncached Sub2API groups with cancellation", async () => {
+  const fetch = vi
+    .spyOn(sub2api, "fetchSub2ApiGroupDescriptors")
+    .mockResolvedValue([
+      { id: 1, displayName: "VIP", description: "Priority", ratio: 1 },
+    ])
+  const editor = createSub2ApiKeyEditor(request)
+  const signal = new AbortController().signal
+  await expect(
+    editor.loadOptions!("group_id", editor.initialValues, { signal }),
+  ).resolves.toEqual([
+    { value: "1", displayLabel: "VIP", secondaryLabel: "Priority · #1" },
+  ])
+  expect(fetch).toHaveBeenCalledExactlyOnceWith({
+    ...request,
+    abortSignal: signal,
+  })
+})
+
+it("loads uncached VoAPI groups with cancellation", async () => {
+  const fetch = vi
+    .spyOn(voapi, "fetchVoApiV2KeyGroupDescriptors")
+    .mockResolvedValue([{ id: 1, displayName: "VIP", requirementKey: "VIP" }])
+  const editor = createVoApiV2KeyEditor(request)
+  const signal = new AbortController().signal
+  await expect(
+    editor.loadOptions!("groups", editor.initialValues, { signal }),
+  ).resolves.toEqual([
+    { value: "1", displayLabel: "VIP", secondaryLabel: "#1" },
+  ])
+  expect(fetch).toHaveBeenCalledExactlyOnceWith({
+    ...request,
+    abortSignal: signal,
+  })
+})
+
 it("restricts Sub2API options and submitted group IDs to the creation intent", async () => {
   const groups = [
     { id: 1, displayName: "VIP", description: "Priority", ratio: 1 },
@@ -44,13 +80,11 @@ it("restricts Sub2API options and submitted group IDs to the creation intent", a
   ).resolves.toEqual([
     { value: "1", displayLabel: "VIP", secondaryLabel: "Priority · #1" },
   ])
-  expect(fetch).toHaveBeenCalledWith(
-    expect.objectContaining({ abortSignal: signal }),
-  )
+  expect(fetch).not.toHaveBeenCalled()
   await expect(
     editor.loadOptions!("name", editor.initialValues),
   ).resolves.toEqual([])
-  expect(fetch).toHaveBeenCalledTimes(1)
+  expect(fetch).not.toHaveBeenCalled()
 })
 
 it("restricts VoAPI options and every selected group to the creation intent", async () => {
@@ -84,13 +118,11 @@ it("restricts VoAPI options and every selected group to the creation intent", as
   ).resolves.toEqual([
     { value: "1", displayLabel: "VIP", secondaryLabel: "#1" },
   ])
-  expect(fetch).toHaveBeenCalledWith(
-    expect.objectContaining({ abortSignal: signal }),
-  )
+  expect(fetch).not.toHaveBeenCalled()
   await expect(
     editor.loadOptions!("note", editor.initialValues),
   ).resolves.toEqual([])
-  expect(fetch).toHaveBeenCalledTimes(1)
+  expect(fetch).not.toHaveBeenCalled()
 })
 
 it("loads AIHubMix models with cancellation and converts expiry/quota only at submission", async () => {

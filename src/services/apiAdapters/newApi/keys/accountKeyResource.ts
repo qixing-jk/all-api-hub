@@ -4,6 +4,7 @@ import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accou
 import { mapAccountKeyResourceFailure as mapFailure } from "~/services/apiAdapters/accountKeyResources/failure"
 import { type AccountKeyScope } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
+import { resourceValuesEqual } from "~/services/apiAdapters/nativeResources/editableChanges"
 import { toFacts } from "~/services/apiAdapters/newApi/keys/accountKeyDisplayFacts"
 import {
   ACCOUNT_SCOPE_KEY,
@@ -35,6 +36,8 @@ export const createNewApiAccountKeyResources = (siteType: AccountSiteType) => {
   const variant = resolveNewApiKeyVariant(siteType)
   return defineAccountKeyResourceCapability({
     siteType,
+    requiresFreshUpdateDetail: (command) =>
+      !resourceValuesEqual(command.baseline, command.values),
     inventorySecretAvailability: INVENTORY_SECRET_AVAILABILITIES.Recoverable,
     defaultCreation: variant.defaultCreation,
     openConfig: async (input) => ({

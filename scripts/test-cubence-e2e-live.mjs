@@ -172,6 +172,12 @@ const trackSitePage = (page) =>
 let clipboardPermissionOverride = false
 const pendingCaptures = new Set()
 const captureErrors = []
+let providerRequestCount = 0
+const countProviderRequest = (request) => {
+  if (request.url().startsWith("https://cubence.com/api/"))
+    providerRequestCount += 1
+}
+dev.context.on("request", countProviderRequest)
 
 /** Retain the extension's actual provider traffic, including failed writes. */
 function captureResponse(response) {
@@ -804,6 +810,38 @@ try {
       originalKeys.length,
       { timeout: 30000 },
     )
+    if (originalKeys.length) {
+      const original = originalKeys[0]
+      const row = ui
+        .getByTestId(keys.nativeKeyRow)
+        .and(ui.locator(`[data-resource-id="${original.id}"]`))
+      const beforeDisclosure = providerRequestCount
+      await row.getByRole("button", { name: "Show Key", exact: true }).click()
+      await expect
+        .poll(async () => (await row.textContent()).includes(original.key))
+        .toBe(true)
+      await row.getByRole("button", { name: "Hide Key", exact: true }).click()
+      await dev.context.grantPermissions(["clipboard-read"])
+      clipboardPermissionOverride = true
+      await ui.bringToFront()
+      await row.getByRole("button", { name: "Copy Key", exact: true }).click()
+      await expect
+        .poll(() =>
+          ui.evaluate(
+            (secret) =>
+              navigator.clipboard.readText().then((text) => text === secret),
+            original.key,
+          ),
+        )
+        .toBe(true)
+      assert.equal(providerRequestCount, beforeDisclosure)
+      await dev.context.clearPermissions()
+      clipboardPermissionOverride = false
+      await capture("03b-inventory-secret-actions.png")
+      await checkpoint(
+        "existing inventory key reveal, hide and copy perform zero provider requests",
+      )
+    }
     await ui.getByTestId(keys.addTokenButton).click()
     await expect(ui.locator("#resource-editor-unlimited")).toBeChecked({
       timeout: 30000,
@@ -906,8 +944,8 @@ try {
         })
         .click()
       await ui.getByTestId(keys.nativeEditorSubmitButton).click()
-      // Three sequential native PATCH requests each acquire a page context,
-      // followed by fresh inventory readback before the editor can close.
+      // Three native field PATCH requests finish before the editor closes;
+      // the site's inventory below independently verifies the persisted result.
       await expect(ui.getByTestId(keys.nativeEditorSubmitButton)).toBeHidden({
         timeout: 90000,
       })
@@ -1058,6 +1096,7 @@ try {
   }
   evidence.cleanup.errors = cleanupErrors
   dev.context.off("response", captureResponse)
+  dev.context.off("request", countProviderRequest)
   dev.context.off("page", trackSitePage)
   await Promise.all(pendingCaptures)
   evidence.captureErrors = captureErrors

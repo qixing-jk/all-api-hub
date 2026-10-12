@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, expectTypeOf, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { CREATED_RUNTIME_SECRET_CORRELATION_KINDS as correlationKinds } from "~/services/accounts/keys/createdRuntimeSecret"
@@ -18,7 +18,7 @@ import {
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { AuthTypeEnum } from "~/types"
 
-type Detail = { id: string; name: string }
+type Detail = { id: string; name: string; secret?: string }
 type CreateCommand = { name: string; destinationScopeKey?: string }
 type Definition = AccountKeyResourceDefinition<
   { scopeKey: string },
@@ -63,6 +63,7 @@ const OPEN_INPUT: AccountKeyResourceOpenInput = {
 
 const createDefinition = (overrides: Partial<Definition> = {}): Definition => ({
   siteType: SITE_TYPES.OPENROUTER,
+  requiresFreshUpdateDetail: () => true,
   openConfig: vi.fn(async () => ({ scopeKey: "workspace-example" })),
   listScopes: vi.fn(async () => [SCOPE]),
   defaultScopeKey: (config) => config.scopeKey,
@@ -78,6 +79,7 @@ const createDefinition = (overrides: Partial<Definition> = {}): Definition => ({
     ref,
     displayName: item.name,
     maskedLabel: "…example",
+    runtimeSecret: item.secret,
     status: "enabled",
     fields: [],
     actions: { canUpdate: true, canDelete: true },
@@ -86,6 +88,7 @@ const createDefinition = (overrides: Partial<Definition> = {}): Definition => ({
     ref,
     displayName: detail.name,
     maskedLabel: "…example",
+    runtimeSecret: detail.secret,
     status: "enabled",
     fields: [],
     actions: { canUpdate: true, canDelete: true },
@@ -144,6 +147,49 @@ it("rejects requirement-bound creation editors unless their adapter explicitly s
 
 const openSession = (definition = createDefinition()) =>
   defineAccountKeyResourceCapability(definition).open(OPEN_INPUT)
+
+it("requires existing provider projections to include their native secret value", () => {
+  type ProviderFacts = ReturnType<Definition["toListFacts"]>
+  expectTypeOf<
+    Omit<ProviderFacts, "runtimeSecret"> extends ProviderFacts ? true : false
+  >().toEqualTypeOf<false>()
+})
+
+it.each([
+  ["sk-private", "sk-private"],
+  ["sk-****masked", undefined],
+  ["sk-••••masked", undefined],
+  ["sk-start…end", undefined],
+  [undefined, undefined],
+])(
+  "automatically projects only declared complete plaintext for list and detail: %s",
+  async (secret, expected) => {
+    const definition = createDefinition({
+      inventorySecretAvailability: "recoverable",
+      list: vi.fn(async () => ({
+        items: [{ id: REF.resourceId, name: "Key", secret }],
+      })),
+      get: vi.fn(async () => ({ id: REF.resourceId, name: "Key", secret })),
+    })
+    const session = await openSession(definition)
+    const collection = await session.openCollection(SCOPE.scopeKey)
+    expect((await collection.list()).items[0]?.runtimeSecret).toBe(expected)
+    expect((await collection.get(REF)).runtimeSecret).toBe(expected)
+  },
+)
+
+it("does not infer plaintext from a resource identity that looks like a secret", async () => {
+  const definition = createDefinition({
+    list: vi.fn(async () => ({
+      items: [{ id: "sk-resource-id", name: "Key" }],
+    })),
+  })
+  const session = await openSession(definition)
+  expect(
+    (await (await session.openCollection(SCOPE.scopeKey)).list()).items[0]
+      ?.runtimeSecret,
+  ).toBeUndefined()
+})
 
 const open = async (definition = createDefinition()) =>
   (await openSession(definition)).openCollection("workspace-example")
@@ -862,7 +908,7 @@ describe("defineAccountKeyResourceCapability", () => {
       }),
     )
     const update = vi.fn<Definition["update"]>(
-      async (_config, _scope, detail, command) => ({
+      async (_config, _scope, { current: detail }, command) => ({
         certainty: "applied",
         value: { ...detail, name: command.name },
       }),
@@ -890,7 +936,10 @@ describe("defineAccountKeyResourceCapability", () => {
     expect(update).toHaveBeenCalledWith(
       { scopeKey: "workspace-example" },
       expect.objectContaining(SCOPE),
-      { id: "opaque-key-example", name: "Key" },
+      {
+        baseline: { id: "opaque-key-example", name: "Key" },
+        current: { id: "opaque-key-example", name: "Key" },
+      },
       { name: "Renamed" },
       editOptions,
     )
@@ -1304,4 +1353,48 @@ it("rejects an edit-detail identity mismatch before creating or submitting an ed
     failure: { code: "unexpected" },
   })
   expect(definition.update).not.toHaveBeenCalled()
+})
+
+it("passes both the opening baseline and one fresh detail to the update owner", async () => {
+  const baseline = { id: REF.resourceId, name: "Opening" }
+  const current = { id: REF.resourceId, name: "Changed elsewhere" }
+  const definition = createDefinition({
+    get: vi.fn().mockResolvedValueOnce(baseline).mockResolvedValueOnce(current),
+  })
+  const collection = await (
+    await openSession(definition)
+  ).openCollection(SCOPE.scopeKey)
+  const editor = await collection.openEditEditor(REF)
+  await editor.submit({ name: "Local edit" })
+  expect(definition.get).toHaveBeenCalledTimes(2)
+  expect(definition.update).toHaveBeenCalledWith(
+    expect.anything(),
+    expect.anything(),
+    { baseline, current },
+    { name: "Local edit" },
+    undefined,
+  )
+})
+
+it("does not reread details before a snapshot-based update", async () => {
+  const definition = createDefinition({
+    requiresFreshUpdateDetail: () => false,
+  })
+  const session =
+    await defineAccountKeyResourceCapability(definition).open(OPEN_INPUT)
+  const editor = await (
+    await session.openCollection(SCOPE.scopeKey)
+  ).openEditEditor(REF)
+  await editor.submit({ name: "Changed" })
+  expect(definition.get).toHaveBeenCalledTimes(1)
+  expect(definition.update).toHaveBeenCalledWith(
+    expect.anything(),
+    expect.anything(),
+    {
+      baseline: { id: REF.resourceId, name: "Key" },
+      current: { id: REF.resourceId, name: "Key" },
+    },
+    { name: "Changed" },
+    undefined,
+  )
 })

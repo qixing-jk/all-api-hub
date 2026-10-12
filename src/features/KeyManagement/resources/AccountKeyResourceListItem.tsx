@@ -10,7 +10,6 @@ import { KeyResourceCard } from "~/features/KeyManagement/inventory/KeyResourceC
 import type { KeyResourceCredentialAssociation } from "~/features/KeyManagement/inventory/KeyResourceCard"
 import type { AccountKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/accountKeyResourceCardAdapter"
 import type { KeyResourceDetailState } from "~/features/KeyManagement/presentation/keyResourceCard"
-import { getKeyResourcePresentationPolicy } from "~/features/KeyManagement/presentation/keyResourcePresentationPolicy"
 import { useAccountKeySecretDisclosure } from "~/features/KeyManagement/resources/useAccountKeySecretDisclosure"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import type {
@@ -19,6 +18,7 @@ import type {
 } from "~/features/KeyManagement/types"
 import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/keys/accountRuntimeKeys"
 import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keys/keyProductCapabilities"
+import { ACCOUNT_KEY_DETAIL_AVAILABILITIES } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type {
   AccountKeyResourceFacts,
   ResourceFailure,
@@ -106,21 +106,25 @@ export function AccountKeyResourceListItem({
   const presentation = cardAdapter.buildPresentation(row, t, {
     hasAssociatedSecret,
   })
+  const completeInventory =
+    row.facts.detailAvailability === ACCOUNT_KEY_DETAIL_AVAILABILITIES.Complete
   const visibleDetail = detail ?? (detailsFromRow ? row.facts : null)
-  const detailState: KeyResourceDetailState = isDetailLoading
-    ? { status: "loading" }
-    : detailFailure
-      ? {
-          status: "error",
-          message: cardAdapter.getDetailsLoadFailedMessage(t),
-          onRetry: () => onExpandedChange(true),
-        }
-      : {
-          status: "ready",
-          facts: visibleDetail
-            ? cardAdapter.buildDetailFacts(visibleDetail, t)
-            : [],
-        }
+  const detailState: KeyResourceDetailState = completeInventory
+    ? { status: "ready", facts: presentation.detailFacts }
+    : isDetailLoading
+      ? { status: "loading" }
+      : detailFailure
+        ? {
+            status: "error",
+            message: cardAdapter.getDetailsLoadFailedMessage(t),
+            onRetry: () => onExpandedChange(true),
+          }
+        : {
+            status: "ready",
+            facts: visibleDetail
+              ? cardAdapter.buildDetailFacts(visibleDetail, t)
+              : [],
+          }
   const managementActions =
     presentation.actions.edit || presentation.actions.delete ? (
       <>
@@ -193,9 +197,7 @@ export function AccountKeyResourceListItem({
           : undefined
       }
       details={detailState}
-      showDetails={
-        getKeyResourcePresentationPolicy(row.facts.ref.siteType).showDetails
-      }
+      showDetails={!completeInventory || presentation.detailFacts.length > 0}
       isDetailsExpanded={expanded}
       onDetailsExpandedChange={onExpandedChange}
       selectionDisabledReason={selectionDisabledReason}

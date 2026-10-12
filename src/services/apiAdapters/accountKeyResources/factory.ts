@@ -1,4 +1,5 @@
 import { CREATED_RUNTIME_SECRET_CORRELATION_KINDS as correlationKinds } from "~/services/accounts/keys/createdRuntimeSecret"
+import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
 import type {
   AccountKeyProvisionedResource,
   AccountKeyResourceCapability,
@@ -12,7 +13,10 @@ import {
 } from "~/services/apiAdapters/nativeResources/factory"
 
 import { createAccountKeyResourceCollection } from "./collection"
-import type { AccountKeyResourceDefinition } from "./definition"
+import type {
+  AccountKeyResourceDefinition,
+  AccountKeyResourceProviderFacts,
+} from "./definition"
 import { createAccountKeyResourceEditor } from "./editor"
 import {
   mapOperation,
@@ -33,7 +37,7 @@ export function defineAccountKeyResourceCapability<
   TUpdateCommand,
   TFailure,
 >(
-  definition: AccountKeyResourceDefinition<
+  source: AccountKeyResourceDefinition<
     TConfig,
     TLocator,
     TListItem,
@@ -43,6 +47,23 @@ export function defineAccountKeyResourceCapability<
     TFailure
   >,
 ): AccountKeyResourceCapability {
+  const projectSecret = (
+    facts: AccountKeyResourceProviderFacts,
+  ): AccountKeyResourceProviderFacts => {
+    const secret = facts.runtimeSecret
+    return {
+      ...facts,
+      runtimeSecret:
+        secret && hasUsableApiTokenKey(secret) ? secret : undefined,
+    }
+  }
+  const definition = {
+    ...source,
+    toListFacts: (item: TListItem, ref: AccountKeyResourceRef) =>
+      projectSecret(source.toListFacts(item, ref)),
+    toDetailFacts: (detail: TDetail, ref: AccountKeyResourceRef) =>
+      projectSecret(source.toDetailFacts(detail, ref)),
+  }
   const mapFailure = (error: unknown) => definition.mapFailure(error)
   const siteType = definition.siteType
 

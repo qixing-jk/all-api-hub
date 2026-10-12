@@ -5,6 +5,7 @@ import {
   createUnattributedAccountCreatedRuntimeSecret,
 } from "~/services/accounts/keys/createdRuntimeSecret"
 import { hasUsableApiTokenKey } from "~/services/accountTokens/apiTokenKey"
+import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
 import {
   keyExpiryDisplayFact,
   keyLastUsedDisplayFacts,
@@ -90,7 +91,7 @@ const keyStatus = (key: AIHubMixKey): AccountKeyResourceFacts["status"] =>
 const toFacts = (
   key: AIHubMixKey,
   ref: AccountKeyResourceRef,
-): AccountKeyResourceFacts => {
+): AccountKeyResourceProviderFacts => {
   const values = toAIHubMixKeyWrite(key)
   const models = values.models
     .split(",")
@@ -100,6 +101,7 @@ const toFacts = (
     ref,
     displayName: key.name?.trim() || `Key ${key.id}`,
     maskedLabel: maskSecretForDisplay(key.key ?? key.token ?? key.value ?? ""),
+    runtimeSecret: undefined,
     status: keyStatus(key),
     runtimeKey: {
       modelAccess: {
@@ -196,6 +198,8 @@ const createdSecret = (
 export const aihubmixAccountKeyResources = defineAccountKeyResourceCapability({
   defaultCreation: creationPolicies.EditorDefaults,
   siteType: SITE_TYPES.AIHUBMIX,
+  requiresFreshUpdateDetail: (command: AIHubMixKeyEditCommand) =>
+    !resourceValuesEqual(command.baseline, command.values),
   inventorySecretAvailability:
     INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
   openConfig: async (input): Promise<Config> => input,
@@ -239,6 +243,7 @@ export const aihubmixAccountKeyResources = defineAccountKeyResourceCapability({
     createAIHubMixKeyEditor(requestWithOptions(config), detail),
   create: async (config, _scope, command: AIHubMixKeyEditCommand, options) => {
     const request = requestWithOptions(config, options)
+    // ID-less acknowledgments need a submit-time baseline, not historical UI rows.
     const before = new Set(
       (await fetchAIHubMixKeys(request)).map((key) => key.id),
     )
@@ -251,6 +256,11 @@ export const aihubmixAccountKeyResources = defineAccountKeyResourceCapability({
         isApiBusinessError(error) ? "not-applied" : undefined,
     })
     if (result.certainty === "not-applied") return result
+    if (result.certainty === "possibly-applied")
+      return {
+        certainty: "possibly-applied" as const,
+        failure: mapAccountKeyResourceUncertainFailure(result.failure),
+      }
     const response = result.certainty === "applied" ? result.value : undefined
     const secret = readSecret(response)
     const responseId = Number(response?.id ?? response?.token_id)
@@ -299,17 +309,13 @@ export const aihubmixAccountKeyResources = defineAccountKeyResourceCapability({
       }
     return {
       certainty: "possibly-applied" as const,
-      failure: mapAccountKeyResourceUncertainFailure(
-        result.certainty === "possibly-applied"
-          ? result.failure
-          : reconciliationFailure,
-      ),
+      failure: mapAccountKeyResourceUncertainFailure(reconciliationFailure),
     }
   },
   update: async (
     config,
     _scope,
-    detail,
+    { current: detail },
     command: AIHubMixKeyEditCommand,
     options,
   ) => {

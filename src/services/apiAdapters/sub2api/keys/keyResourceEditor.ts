@@ -188,11 +188,13 @@ export function createSub2ApiKeyEditor(
     },
     async loadOptions(fieldId, _values, options) {
       if (fieldId !== field.Group) return []
-      const groups = await fetchSub2ApiGroupDescriptors({
-        ...request,
-        ...(options?.signal ? { abortSignal: options.signal } : {}),
-      })
-      return groups
+      const availableGroups =
+        groups ??
+        (await fetchSub2ApiGroupDescriptors({
+          ...request,
+          ...(options?.signal ? { abortSignal: options.signal } : {}),
+        }))
+      return availableGroups
         .filter((group) => !allowedIds || allowedIds.has(String(group.id)))
         .map((group) => ({
           value: String(group.id),

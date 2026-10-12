@@ -10,7 +10,6 @@ import type {
   ControllerMode,
   DeleteState,
   MutationAnalyticsMode,
-  RefreshAfterMutation,
   ResolveResourceActionContext,
 } from "~/features/KeyManagement/resources/workflows/accountKeyResourceControllerTypes"
 import {
@@ -53,7 +52,6 @@ type WorkflowInputs = {
     isCurrentResourceRef: (ref: AccountKeyResourceRef) => boolean
     resolveResourceActionContext: ResolveResourceActionContext
     requireFreshRead: (boundary: ActiveResourceBoundary) => void
-    refreshAfterMutation: RefreshAfterMutation
   }
   requests: AccountKeyResourceRequestLifecycle
   inventoryState: AccountKeyResourceInventoryStateOwner
@@ -69,7 +67,6 @@ export function useAccountKeyResourceDeletionWorkflow({
     isCurrentResourceRef,
     resolveResourceActionContext,
     requireFreshRead,
-    refreshAfterMutation,
   },
   requests,
   inventoryState,
@@ -215,11 +212,6 @@ export function useAccountKeyResourceDeletionWorkflow({
             ref: null,
             failure: null,
           })
-          void refreshAfterMutation()
-            .then((accepted) => {
-              if (!accepted) requireFreshRead(boundary)
-            })
-            .catch(() => requireFreshRead(boundary))
           completeKeyMutationAnalytics(
             tracker,
             PRODUCT_ANALYTICS_RESULTS.Success,
@@ -276,7 +268,6 @@ export function useAccountKeyResourceDeletionWorkflow({
       isFreshReadRequiredForBoundary,
       mode,
       mutationAnalyticsMode,
-      refreshAfterMutation,
       acceptDeletedResource,
       acceptActionContext,
       requireFreshRead,

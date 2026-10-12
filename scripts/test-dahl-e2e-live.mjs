@@ -88,6 +88,11 @@ const captureResponse = (response) => {
   captures.add(pending)
 }
 dev.context.on("response", captureResponse)
+let providerRequestCount = 0
+const countProviderRequest = (request) => {
+  if (request.url().startsWith(`${origin}/v1/`)) providerRequestCount += 1
+}
+dev.context.on("request", countProviderRequest)
 let site = await dev.context.newPage()
 const ui = await dev.context.newPage()
 await ui.addInitScript(() =>
@@ -328,6 +333,45 @@ try {
     originalKeys.length,
     { timeout: 30000 },
   )
+  const reusable = originalKeys.find((key) =>
+    /^dahl_[a-z0-9]+$/i.test(key.token ?? ""),
+  )
+  if (reusable) {
+    const row = ui
+      .getByTestId(keys.nativeKeyRow)
+      .and(ui.locator(`[data-resource-id="${reusable.id}"]`))
+    const beforeDisclosure = providerRequestCount
+    await row.getByRole("button", { name: "Show Key", exact: true }).click()
+    await expect
+      .poll(async () => (await row.textContent()).includes(reusable.token))
+      .toBe(true)
+    await row.getByRole("button", { name: "Hide Key", exact: true }).click()
+    await dev.context.grantPermissions(["clipboard-read"])
+    try {
+      await ui.bringToFront()
+      await row.getByRole("button", { name: "Copy Key", exact: true }).click()
+      await expect
+        .poll(() =>
+          ui.evaluate(
+            (secret) =>
+              navigator.clipboard.readText().then((text) => text === secret),
+            reusable.token,
+          ),
+        )
+        .toBe(true)
+      assert.equal(providerRequestCount, beforeDisclosure)
+    } finally {
+      await dev.context.clearPermissions()
+    }
+    await capture("02a-inventory-secret-actions.png")
+    evidence.checks.push(
+      "existing plaintext inventory token reveal/hide/copy performs zero provider requests",
+    )
+  } else {
+    evidence.checks.push(
+      "plaintext inventory reuse unverified: this account inventory contains no full token",
+    )
+  }
   await ui.getByTestId(keys.addTokenButton).click()
   const amount = ui.locator("#resource-editor-transfer_amount")
   await expect(ui.getByTestId(keys.nativeEditor)).toContainText(
@@ -748,6 +792,7 @@ try {
     process.exitCode = 1
   }
   dev.context.off("response", captureResponse)
+  dev.context.off("request", countProviderRequest)
   await Promise.all(captures)
   evidence.captureErrors = captureErrors
   if (captureErrors.length) process.exitCode = 1

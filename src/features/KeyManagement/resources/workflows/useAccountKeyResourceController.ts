@@ -399,7 +399,6 @@ export function useAccountKeyResourceController({
         isCurrentResourceRef,
         resolveResourceActionContext,
         requireFreshRead,
-        refreshAfterMutation,
       },
       requests,
       inventoryState,

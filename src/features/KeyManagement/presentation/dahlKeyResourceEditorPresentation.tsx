@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { Button, Input, Label } from "~/components/ui"
 import type { AccountKeyResourceEditorMode } from "~/features/KeyManagement/constants"
 import { ACCOUNT_KEY_RESOURCE_EDITOR_MODES } from "~/features/KeyManagement/constants"
+import { ACCOUNT_KEY_AUTOMATIC_NAME_KINDS } from "~/features/KeyManagement/presentation/accountKeyResourceEditorPresentation"
 import type { AccountKeyResourceEditorPresentation } from "~/features/KeyManagement/presentation/accountKeyResourceEditorPresentation"
 import { defineResourceEditorFieldPolicy } from "~/features/ResourceEditor/model/resourceFieldPolicy"
 import { ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions } from "~/services/apiAdapters/contracts/accountKeyResource"
@@ -153,6 +154,7 @@ export function getDahlKeyResourceEditorPresentation(
 ): AccountKeyResourceEditorPresentation {
   const creating = mode === ACCOUNT_KEY_RESOURCE_EDITOR_MODES.Create
   return {
+    automaticName: { kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed },
     title: (t, values) =>
       t(
         creating

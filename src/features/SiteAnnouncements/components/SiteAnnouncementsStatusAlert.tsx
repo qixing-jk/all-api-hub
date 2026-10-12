@@ -2,7 +2,10 @@ import { Info, ShieldAlert } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { cn } from "~/lib/utils"
-import type { SiteAnnouncementSiteState } from "~/types/siteAnnouncements"
+import {
+  SITE_ANNOUNCEMENT_STATUS,
+  type SiteAnnouncementSiteState,
+} from "~/types/siteAnnouncements"
 
 import { formatDateTime } from "../utils"
 
@@ -18,11 +21,14 @@ export function SiteAnnouncementsStatusAlert({
 }: SiteAnnouncementsStatusAlertProps) {
   const { t } = useTranslation("siteAnnouncements")
 
-  if (status.status === "success") {
+  if (
+    status.status === SITE_ANNOUNCEMENT_STATUS.Success ||
+    status.status === SITE_ANNOUNCEMENT_STATUS.Never
+  ) {
     return null
   }
 
-  const unsupported = status.status === "unsupported"
+  const unsupported = status.status === SITE_ANNOUNCEMENT_STATUS.Unsupported
   const Icon = unsupported ? Info : ShieldAlert
 
   return (
@@ -38,12 +44,10 @@ export function SiteAnnouncementsStatusAlert({
       <Icon className="mt-0.5 h-4 w-4 shrink-0" />
       <div className="min-w-0">
         <p className="font-medium">
-          {status.status === "unsupported"
-            ? t("status.unsupportedTitle")
-            : t("status.failedTitle")}
+          {unsupported ? t("status.unsupportedTitle") : t("status.failedTitle")}
         </p>
         <p className="mt-density-1 break-words">
-          {status.status === "unsupported"
+          {unsupported
             ? t("status.unsupported")
             : t("status.failed", {
                 error: status.lastError ?? "-",

@@ -1,6 +1,12 @@
 import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/keys/accountRuntimeKeys"
+import {
+  ACCOUNT_RUNTIME_KEY_SECRET_SOURCES,
+  resolveDisplayAccountRuntimeKeySecret,
+} from "~/services/accounts/utils/apiServiceRequest"
+import { cubenceKeyResources } from "~/services/apiAdapters/cubence/keyResources"
 import {
   createKey,
   deleteKey,
@@ -17,6 +23,7 @@ import {
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
 const { pageFetch } = vi.hoisted(() => ({ pageFetch: vi.fn() }))
 vi.mock("~/utils/browser/index", async (importOriginal) => ({
@@ -77,6 +84,60 @@ describe("Cubence key protocol", () => {
       ),
     )
     await expect(fetchKeys(request)).resolves.toEqual([key])
+  })
+
+  it.each([
+    { ...key, id: 18 },
+    { ...key, user_id: 8 },
+  ])(
+    "rejects a prepared update snapshot for another key or owner",
+    async (prepared) => {
+      const write = vi.fn(() => HttpResponse.json({ success: true }))
+      server.use(http.patch(`${origin}/api/v1/user/apikeys/:id/quota`, write))
+      await expect(
+        updateKey(request, key, { ...key, quota_limit: 20000000 }, prepared),
+      ).rejects.toMatchObject({ failure: { code: "not_found" } })
+      expect(write).not.toHaveBeenCalled()
+    },
+  )
+
+  it("reuses inventory plaintext while explicit provider resolution still reads the site", async () => {
+    server.use(
+      http.get(`${origin}/api/v1/user/apikeys`, () =>
+        HttpResponse.json({ success: true, data: [key] }),
+      ),
+    )
+    const account = buildDisplaySiteData({
+      id: "saved",
+      siteType: "cubence",
+      baseUrl: origin,
+      authType: AuthTypeEnum.Cookie,
+      userId: "7",
+      token: "",
+    })
+    const session = await cubenceKeyResources.open({
+      account: { id: account.id, siteType: "cubence" },
+      request: { ...request, accountId: account.id },
+    })
+    const collection = await session.openCollection("account")
+    const facts = (await collection.list()).items[0]!
+    const runtimeKey = buildAccountKeyResourceRuntimeKeyFromFacts(
+      account,
+      facts,
+    )
+    const unexpectedRead = vi.fn(() => new HttpResponse(null, { status: 503 }))
+    server.use(http.get(`${origin}/*`, unexpectedRead))
+    await expect(
+      resolveDisplayAccountRuntimeKeySecret(account, runtimeKey),
+    ).resolves.toMatchObject({ secret: "sk-example-secret" })
+    expect(unexpectedRead).not.toHaveBeenCalled()
+    expect(facts.maskedLabel).not.toBe(key.key)
+    await expect(
+      resolveDisplayAccountRuntimeKeySecret(account, runtimeKey, {
+        secretSource: ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.Provider,
+      }),
+    ).rejects.toThrow()
+    expect(unexpectedRead).toHaveBeenCalledOnce()
   })
 
   it("retains the Firefox page transport for writes without capturing Chromium Cookie credentials", async () => {
@@ -252,23 +313,39 @@ describe("Cubence key protocol", () => {
     })
   })
 
-  it("requires deletion readback rather than trusting a success response", async () => {
+  it("accepts acknowledged deletion without reading the key inventory", async () => {
+    const read = vi.fn(() => HttpResponse.error())
+    const write = vi.fn(() => HttpResponse.json({ success: true }))
     server.use(
-      http.get(`${origin}/api/v1/user/apikeys`, () =>
-        HttpResponse.json({ success: true, data: [key] }),
-      ),
-      http.delete(`${origin}/api/v1/user/apikeys/17`, () =>
-        HttpResponse.json({ success: true }),
-      ),
+      http.get(`${origin}/api/v1/user/apikeys`, read),
+      http.delete(`${origin}/api/v1/user/apikeys/17`, write),
     )
-    await expect(deleteKey(request, "17")).rejects.toMatchObject({
-      failure: { code: "mutation_state_uncertain" },
-    })
+    await expect(deleteKey(request, "17")).resolves.toBeUndefined()
+    expect(read).not.toHaveBeenCalled()
+    expect(write).toHaveBeenCalledTimes(1)
   })
 
   it("does not delete or edit arbitrary resource paths", async () => {
     await expect(deleteKey(request, "../another-user")).rejects.toMatchObject({
       code: "JSON_PARSE_ERROR",
     })
+  })
+  it("uses the shared fresh Cubence snapshot without another inventory read", async () => {
+    const read = vi.fn(() =>
+      HttpResponse.json({
+        success: true,
+        data: [{ ...key, quota_limit: 20000000 }],
+      }),
+    )
+    const patch = vi.fn(() => HttpResponse.json({ success: true, data: {} }))
+    server.use(
+      http.get(`${origin}/api/v1/user/apikeys`, read),
+      http.patch(`${origin}/api/v1/user/apikeys/${key.id}/quota`, patch),
+    )
+    await expect(
+      updateKey(request, key, { ...key, quota_limit: 20000000 }, key),
+    ).resolves.toMatchObject({ quota_limit: 20000000 })
+    expect(patch).toHaveBeenCalledOnce()
+    expect(read).not.toHaveBeenCalled()
   })
 })

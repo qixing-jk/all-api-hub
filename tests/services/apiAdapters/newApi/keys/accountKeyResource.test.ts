@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   ACCOUNT_KEY_PROVISIONING_COVERAGE,
   ACCOUNT_KEY_PROVISIONING_PLACEMENT_KINDS,
@@ -15,6 +16,7 @@ import {
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
@@ -116,6 +118,83 @@ const token = (overrides: Partial<NewApiToken>): NewApiToken => ({
 })
 
 describe("New API account key resources", () => {
+  it.each(["acknowledged", "lost"])(
+    "does not adopt a pre-existing matching key after an acknowledged or lost creation response: %s",
+    async (response) => {
+      mockFetchAccountTokens.mockResolvedValue([
+        token({ id: 92, name: "Created" }),
+      ])
+      mockCreateApiToken.mockImplementationOnce(async (request) => {
+        request.observer?.onDispatch()
+        if (response === "lost") throw new Error("response lost")
+      })
+      const session = await createNewApiAccountKeyResources(
+        SITE_TYPES.NEW_API,
+      ).open({
+        account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+        request,
+      })
+      const editor = await session.openCreateEditor("account")
+      await expect(
+        editor.submit({
+          ...editor.initialValues,
+          name: "Created",
+          group: "default",
+        }),
+      ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+      expect(mockCreateApiToken).toHaveBeenCalledOnce()
+      expect(mockFetchAccountTokens).toHaveBeenCalledTimes(
+        response === "lost" ? 1 : 2,
+      )
+    },
+  )
+
+  it("reads a fresh creation baseline and skips readback with a complete response", async () => {
+    mockFetchAccountTokens.mockResolvedValueOnce([])
+    mockCreateApiToken.mockResolvedValueOnce(token({ id: 92, name: "Created" }))
+    const session = await createNewApiAccountKeyResources(
+      SITE_TYPES.NEW_API,
+    ).open({
+      account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+      request,
+    })
+    const editor = await session.openCreateEditor("account")
+    const result = await editor.submit({
+      ...editor.initialValues,
+      name: "Created",
+      group: "default",
+    })
+    expect(result.facts?.ref.resourceId).toBe("92")
+    expect(mockFetchAccountTokens).toHaveBeenCalledOnce()
+  })
+  it.each([
+    ["sk-inventory-plaintext", "sk-inventory-plaintext"],
+    ["sk-****masked", ""],
+    ["sk-••••masked", ""],
+    ["", ""],
+  ])(
+    "makes only usable inventory plaintext available for runtime actions: %s",
+    async (secret, expected) => {
+      mockFetchAccountTokens.mockResolvedValueOnce([token({ key: secret })])
+      const session = await createNewApiAccountKeyResources(
+        SITE_TYPES.NEW_API,
+      ).open({
+        account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+        request,
+      })
+      const facts = (await (await session.openCollection("account")).list())
+        .items[0]!
+      const runtimeKey = buildAccountKeyResourceRuntimeKeyFromFacts(
+        buildDisplaySiteData({ id: "account-1", siteType: SITE_TYPES.NEW_API }),
+        facts,
+      )
+      expect(runtimeKey.secret).toBe(expected)
+      expect(facts.maskedLabel).not.toBe("sk-inventory-plaintext")
+      expect(mockFetchTokenById).not.toHaveBeenCalled()
+      expect(mockResolveApiTokenKey).not.toHaveBeenCalled()
+    },
+  )
+
   beforeEach(() => {
     vi.clearAllMocks()
     mockFetchAccountTokens.mockReset()
@@ -1909,7 +1988,11 @@ describe("New API account key resources", () => {
       })
       const editor = await session.openCreateEditor("account")
       await expect(
-        editor.submit({ ...editor.initialValues, name: "Created" }),
+        editor.submit({
+          ...editor.initialValues,
+          name: "Created",
+          group: "default",
+        }),
       ).rejects.toMatchObject({
         failure: {
           code:

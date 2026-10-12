@@ -1,4 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
 import { keyExpiryDisplayFact } from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import {
@@ -59,12 +60,15 @@ const ACCOUNT_SCOPE_KEY = "account"
 type Config = {
   account: AccountKeyResourceOpenInput["account"]
   request: ApiServiceRequest
-  channels: RightCodeChannelInfo[]
+  readChannels: (
+    options?: ResourceOperationOptions,
+  ) => Promise<RightCodeChannelInfo[]>
 }
 
 /** One inventory entry together with the channel that addresses it. */
 type RightCodeKeyEntry = {
   key: RightCodeApiKey
+  channels: readonly RightCodeChannelInfo[]
   channel?: RightCodeChannelInfo
   /** Client-facing address for this key's channel, when one is known. */
   baseUrl?: string
@@ -110,6 +114,7 @@ const toEntry = (
     undefined
   return {
     key,
+    channels,
     ...(channel ? { channel } : {}),
     ...(baseUrl ? { baseUrl } : {}),
   }
@@ -127,7 +132,7 @@ const keyStatus = (key: RightCodeApiKey): AccountKeyResourceFacts["status"] => {
 const toFacts = (
   entry: RightCodeKeyEntry,
   ref: AccountKeyResourceRef,
-): AccountKeyResourceFacts => {
+): AccountKeyResourceProviderFacts => {
   const snapshot = toRightCodeKeySnapshot(entry.key)
   const createdAt = Date.parse(entry.key.created_at ?? "")
 
@@ -135,6 +140,7 @@ const toFacts = (
     ref,
     displayName: snapshot.name || `Key ${entry.key.id}`,
     maskedLabel: maskSecretForDisplay(entry.key.key ?? ""),
+    runtimeSecret: entry.key.key,
     status: keyStatus(entry.key),
     runtimeKey: {
       modelAccess: {
@@ -246,15 +252,24 @@ const changedKeys = (
  */
 export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
   siteType: SITE_TYPES.RIGHT_CODE,
+  requiresFreshUpdateDetail: (command: RightCodeKeyEditCommand) =>
+    !resourceValuesEqual(command.baseline, command.values),
   inventorySecretAvailability: INVENTORY_SECRET_AVAILABILITIES.Recoverable,
   defaultCreation: creationPolicies.EditorDefaults,
-  openConfig: async (input, options): Promise<Config> => {
-    const channels = toRightCodeChannelInfos(
-      await fetchRightCodeEffectiveUpstreams(
-        withOptions(input.request, options),
-      ),
-    )
-    return { account: input.account, request: input.request, channels }
+  openConfig: async (input): Promise<Config> => {
+    let channels: RightCodeChannelInfo[] | undefined
+    return {
+      account: input.account,
+      request: input.request,
+      readChannels: async (options) => {
+        options?.signal?.throwIfAborted()
+        return (channels ??= toRightCodeChannelInfos(
+          await fetchRightCodeEffectiveUpstreams(
+            withOptions(input.request, options),
+          ),
+        ))
+      },
+    }
   },
   listScopes: async (config) => [
     {
@@ -274,17 +289,16 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
   locatorFromDetail: (entry: RightCodeKeyEntry) => requireId(entry.key.id),
   list: async (config, _scope, _query, options) => {
     const items = await fetchRightCodeKeys(withOptions(config.request, options))
+    const channels = await config.readChannels(options)
     return {
-      items: items.map((key) =>
-        toEntry(config.request.baseUrl, config.channels, key),
-      ),
+      items: items.map((key) => toEntry(config.request.baseUrl, channels, key)),
       total: items.length,
     }
   },
   get: async (config, _scope, id, options) =>
     toEntry(
       config.request.baseUrl,
-      config.channels,
+      await config.readChannels(options),
       await fetchRightCodeKey(withOptions(config.request, options), id),
     ),
   toListFacts: (entry, ref) => toFacts(entry, ref),
@@ -308,10 +322,13 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
       }
     },
   },
-  createEditor: async (config, _scope, _options, _inventory, intent) =>
-    createRightCodeKeyEditor({ channels: config.channels, intent }),
-  editEditor: (config, _scope, detail) =>
-    createRightCodeKeyEditor({ channels: config.channels, key: detail.key }),
+  createEditor: async (config, _scope, options, _inventory, intent) =>
+    createRightCodeKeyEditor({
+      channels: await config.readChannels(options),
+      intent,
+    }),
+  editEditor: (_config, _scope, detail) =>
+    createRightCodeKeyEditor({ channels: detail.channels, key: detail.key }),
   create: async (config, _scope, command: RightCodeKeyEditCommand, options) => {
     const request = withOptions(config.request, options)
     const values = command.values
@@ -363,8 +380,10 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
 
     const entry = toEntry(
       config.request.baseUrl,
-      config.channels,
-      await fetchRightCodeKey(request, created.id).catch(() => created),
+      await config.readChannels(),
+      values.expiresAt
+        ? await fetchRightCodeKey(request, created.id).catch(() => created)
+        : created,
     )
     // No one-time secret: Right Code re-reveals the key on every read, so the
     // inventory owns the value and the create response must not imply that
@@ -374,7 +393,7 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
   update: async (
     config,
     _scope,
-    detail: RightCodeKeyEntry,
+    { current: detail },
     command: RightCodeKeyEditCommand,
     options,
   ) => {
@@ -427,7 +446,7 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
     try {
       const entry = toEntry(
         config.request.baseUrl,
-        config.channels,
+        detail.channels,
         await fetchRightCodeKey(request, detail.key.id),
       )
       const actual = toRightCodeKeySnapshot(entry.key)

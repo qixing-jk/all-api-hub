@@ -86,7 +86,7 @@ export function formatOptionalSkPrefixSiteTokenComparableKey(
  */
 export function isMaskedApiTokenKey(key: string): boolean {
   const normalizedKey = normalizeApiTokenKeyValue(key)
-  return normalizedKey.includes("*") || normalizedKey.includes("•")
+  return /[*•…]/.test(normalizedKey)
 }
 
 /**

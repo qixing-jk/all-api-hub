@@ -176,14 +176,51 @@ describe("Cubence account capabilities", () => {
     await editor.loadOptions!("group", editor.initialValues)
     server.use(
       http.patch(`${origin}/api/v1/user/apikeys/:id/quota`, () =>
-        HttpResponse.json({ success: true }),
+        HttpResponse.json({ success: false }, { status: 503 }),
       ),
     )
     await expect(
       editor.submit({ ...editor.initialValues, unlimited: false, quota: 3 }),
     ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
   })
-  it("rejects a concurrent quota change without applying a write", async () => {
+  it("rejects a concurrent quota edit through the public editor before writing", async () => {
+    const collection = await (await open()).openCollection("account")
+    const ref = (await collection.list()).items[0]!.ref
+    const editor = await collection.openEditEditor(ref)
+    await editor.loadOptions!("group", editor.initialValues)
+    current = [{ ...key, quota_limit: 20_000_000 }]
+    const write = vi.fn(() => HttpResponse.json({ success: true }))
+    server.use(http.patch(`${origin}/api/v1/user/apikeys/:id/quota`, write))
+    await expect(
+      editor.submit({ ...editor.initialValues, quota: 30 }),
+    ).rejects.toMatchObject({ failure: { code: "resource_changed" } })
+    expect(write).not.toHaveBeenCalled()
+    expect((await collection.get(ref)).displayFacts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ fieldId: "quota", amountUsd: 20 }),
+      ]),
+    )
+  })
+
+  it("skips inventory reads and writes for an unchanged submission", async () => {
+    const collection = await (await open()).openCollection("account")
+    const ref = (await collection.list()).items[0]!.ref
+    const editor = await collection.openEditEditor(ref)
+    await editor.loadOptions!("group", editor.initialValues)
+    const read = vi.fn(() => HttpResponse.error())
+    const write = vi.fn(() => HttpResponse.json({ success: true }))
+    server.use(
+      http.get(`${origin}/api/v1/user/apikeys`, read),
+      http.patch(`${origin}/api/v1/user/apikeys/:id/:field`, write),
+    )
+    await expect(editor.submit(editor.initialValues)).resolves.toMatchObject({
+      facts: { displayName: "Example", status: "enabled" },
+    })
+    expect(read).not.toHaveBeenCalled()
+    expect(write).not.toHaveBeenCalled()
+  })
+
+  it("uses one preflight inventory read and adopts an acknowledged quota edit", async () => {
     const collection = await (await open()).openCollection("account")
     const ref = (await collection.list()).items[0]!.ref
     const editor = await collection.openEditEditor(ref)
@@ -206,8 +243,38 @@ describe("Cubence account capabilities", () => {
     )
     await expect(
       editor.submit({ ...editor.initialValues, quota: 3 }),
-    ).rejects.toMatchObject({ failure: { code: "resource_changed" } })
-    expect(write).not.toHaveBeenCalled()
+    ).resolves.toMatchObject({ facts: { displayName: "Example" } })
+    expect(write).toHaveBeenCalledOnce()
+    expect(reads).toBe(1)
+  })
+  it("preserves unrelated remote quota changes when disabling a key", async () => {
+    const collection = await (await open()).openCollection("account")
+    const ref = (await collection.list()).items[0]!.ref
+    const editor = await collection.openEditEditor(ref)
+    await editor.loadOptions!("group", editor.initialValues)
+    current = [{ ...key, quota_limit: 20_000_000 }]
+    server.use(
+      http.patch(
+        `${origin}/api/v1/user/apikeys/:id/:field`,
+        async ({ params, request }) => {
+          expect(params.field).toBe("status")
+          const input = await request.json()
+          expect(input).toEqual({ status: "disabled" })
+          current = [{ ...current[0]!, status: "disabled" }]
+          return HttpResponse.json({ success: true })
+        },
+      ),
+    )
+    await expect(
+      editor.submit({ ...editor.initialValues, enabled: false }),
+    ).resolves.toMatchObject({
+      facts: {
+        status: "disabled",
+        displayFacts: expect.arrayContaining([
+          expect.objectContaining({ fieldId: "quota", amountUsd: 20 }),
+        ]),
+      },
+    })
   })
   it("loads console pricing and enriches only the selected model", async () => {
     const pricing = await cubenceModelPricing.fetchPricing(request)

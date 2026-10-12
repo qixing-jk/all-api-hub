@@ -162,11 +162,13 @@ export function createVoApiV2KeyEditor(
     },
     async loadOptions(fieldId, _values, options) {
       if (fieldId !== field.Groups) return []
-      const groups = await fetchVoApiV2KeyGroupDescriptors({
-        ...request,
-        ...(options?.signal ? { abortSignal: options.signal } : {}),
-      })
-      return groups
+      const availableGroups =
+        groups ??
+        (await fetchVoApiV2KeyGroupDescriptors({
+          ...request,
+          ...(options?.signal ? { abortSignal: options.signal } : {}),
+        }))
+      return availableGroups
         .filter((group) => !allowedIds || allowedIds.has(String(group.id)))
         .map((group) => ({
           value: String(group.id),

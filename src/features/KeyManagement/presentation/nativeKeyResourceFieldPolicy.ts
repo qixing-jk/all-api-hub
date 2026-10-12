@@ -4,6 +4,7 @@ import {
   ACCOUNT_KEY_RESOURCE_EDITOR_MODES as editorModes,
   type AccountKeyResourceEditorMode,
 } from "~/features/KeyManagement/constants"
+import { ACCOUNT_KEY_AUTOMATIC_NAME_KINDS } from "~/features/KeyManagement/presentation/accountKeyResourceEditorPresentation"
 import {
   defineResourceEditorFieldPolicy,
   type ResourceFieldPresentation,
@@ -148,38 +149,24 @@ const enabled = (fieldId: string): ResourceFieldPresentation => ({
   issueLabelResolvers: issues,
 })
 
-/** Uses visible group names; multiple groups retain the generic generated name. */
-const groupAutomaticName =
-  (
-    fieldId: string,
-    useOptionLabels = false,
-    unselectedName = getDefaultAccountKeyName(),
-  ): NonNullable<EditorPresentation["getAutomaticName"]> =>
-  (values, optionsByField) => {
-    const value = values[fieldId]
-    const selected = Array.isArray(value)
-      ? value.length === 1
-        ? value[0]
-        : null
-      : value
-    if (selected == null || selected === "") return unselectedName
-    if (typeof selected !== "string") return undefined
-    const groupName = useOptionLabels
-      ? optionsByField?.[fieldId]?.find((option) => option.value === selected)
-          ?.displayLabel
-      : selected
-    return groupName === undefined
-      ? undefined
-      : getDefaultAccountKeyName(groupName)
-  }
+const groupNamePolicy = (
+  fieldId: string,
+  useOptionLabels = false,
+  unselectedName = getDefaultAccountKeyName(),
+): EditorPresentation["automaticName"] => ({
+  kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Group,
+  fieldId,
+  useOptionLabels,
+  unselectedName,
+})
 
 const buildSub2ApiFields = (
   mode: AccountKeyResourceEditorMode,
 ): {
   fields: ResourceFieldPresentation[]
-  getAutomaticName: EditorPresentation["getAutomaticName"]
+  automaticName: EditorPresentation["automaticName"]
 } => ({
-  getAutomaticName: groupAutomaticName("group_id", true),
+  automaticName: groupNamePolicy("group_id", true),
   fields: [
     name,
     group("group_id"),
@@ -202,9 +189,9 @@ const buildSub2ApiFields = (
 
 const buildVoApiV2Fields = (): {
   fields: ResourceFieldPresentation[]
-  getAutomaticName: EditorPresentation["getAutomaticName"]
+  automaticName: EditorPresentation["automaticName"]
 } => ({
-  getAutomaticName: groupAutomaticName("groups", true),
+  automaticName: groupNamePolicy("groups", true),
   fields: [
     name,
     group("groups", true),
@@ -226,9 +213,9 @@ const buildRightCodeFields = (
   mode: AccountKeyResourceEditorMode,
 ): {
   fields: ResourceFieldPresentation[]
-  getAutomaticName: EditorPresentation["getAutomaticName"]
+  automaticName: EditorPresentation["automaticName"]
 } => ({
-  getAutomaticName: groupAutomaticName("channel", true),
+  automaticName: groupNamePolicy("channel", true),
   fields: [
     name,
     {
@@ -261,8 +248,9 @@ const buildRightCodeFields = (
  */
 const buildGrsaiFields = (): {
   fields: ResourceFieldPresentation[]
-  getAutomaticName?: EditorPresentation["getAutomaticName"]
+  automaticName: EditorPresentation["automaticName"]
 } => ({
+  automaticName: { kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed },
   fields: [
     name,
     ...quotaField(
@@ -277,8 +265,9 @@ const buildGrsaiFields = (): {
 
 const buildAiHubMixFields = (): {
   fields: ResourceFieldPresentation[]
-  getAutomaticName?: EditorPresentation["getAutomaticName"]
+  automaticName: EditorPresentation["automaticName"]
 } => ({
+  automaticName: { kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed },
   fields: [
     name,
     ...quota("quotaUsd", "unlimited_quota"),
@@ -300,7 +289,7 @@ const buildNewApiFamilyFields = (
   descriptors: readonly ResourceFieldDescriptor[],
 ): {
   fields: ResourceFieldPresentation[]
-  getAutomaticName: EditorPresentation["getAutomaticName"]
+  automaticName: EditorPresentation["automaticName"]
 } => {
   const descriptorsById = new Map(
     descriptors.map((descriptor) => [descriptor.fieldId, descriptor]),
@@ -343,7 +332,7 @@ const buildNewApiFamilyFields = (
     )
 
   return {
-    getAutomaticName: groupAutomaticName("group"),
+    automaticName: groupNamePolicy("group"),
     fields,
   }
 }
@@ -354,23 +343,30 @@ const resolveSiteFields = (
   descriptors?: readonly ResourceFieldDescriptor[],
 ): {
   fields: ResourceFieldPresentation[]
-  getAutomaticName?: EditorPresentation["getAutomaticName"]
+  automaticName: EditorPresentation["automaticName"]
   requireFreshOptions?: EditorPresentation["requireFreshOptions"]
 } => {
   const builders = {
     [editorKinds.Sub2Api]: () => buildSub2ApiFields(mode),
     [editorKinds.VoApiV2]: buildVoApiV2Fields,
     [editorKinds.RightCode]: () => buildRightCodeFields(mode),
-    [editorKinds.NameOnly]: () => ({ fields: [name] }),
+    [editorKinds.NameOnly]: () => ({
+      fields: [name],
+      automaticName: { kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed } as const,
+    }),
     [editorKinds.Grsai]: buildGrsaiFields,
     // Dahl's transfer editor is selected before this generic field-only builder.
-    [editorKinds.Dahl]: () => ({ fields: [] }),
+    [editorKinds.Dahl]: () => ({
+      fields: [],
+      automaticName: { kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed } as const,
+    }),
     [editorKinds.Cubence]: () => ({
       requireFreshOptions: true,
-      getAutomaticName:
-        mode === editorModes.Create
-          ? groupAutomaticName("group", true, DEFAULT_AUTO_PROVISION_KEY_NAME)
-          : undefined,
+      automaticName: groupNamePolicy(
+        "group",
+        true,
+        DEFAULT_AUTO_PROVISION_KEY_NAME,
+      ),
       fields: [
         ...(mode === editorModes.Edit ? [] : [name]),
         group("group", false, false, false),
@@ -382,9 +378,15 @@ const resolveSiteFields = (
     }),
     [editorKinds.AiHubMix]: buildAiHubMixFields,
     [editorKinds.NewApi]: () => buildNewApiFamilyFields(descriptors ?? []),
-    [editorKinds.Empty]: () => ({ fields: [] }),
+    [editorKinds.Empty]: () => ({
+      fields: [],
+      automaticName: { kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed } as const,
+    }),
     // The full workspace editor is handled before selecting native fields.
-    [editorKinds.OpenRouter]: () => ({ fields: [] }),
+    [editorKinds.OpenRouter]: () => ({
+      fields: [],
+      automaticName: { kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed } as const,
+    }),
   }
   return builders[getKeyResourcePresentationPolicy(siteType).editor]()
 }
@@ -404,14 +406,14 @@ export function getNativeKeyResourceEditorPresentation(
     return getOpenRouterKeyResourceEditorPresentation(mode)
   }
 
-  const { fields, getAutomaticName, requireFreshOptions } = resolveSiteFields(
+  const { fields, automaticName, requireFreshOptions } = resolveSiteFields(
     siteType,
     mode,
     options?.fields,
   )
 
   return {
-    getAutomaticName,
+    automaticName,
     requireFreshOptions,
     policy: defineResourceEditorFieldPolicy({ fields, hiddenFields: [] }),
     sectionOrder: { basic: 0, spending: 1, lifecycle: 2, advanced: 3 },

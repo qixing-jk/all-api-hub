@@ -66,6 +66,7 @@ export function createAccountKeyResourceCollection<
     | "editEditor"
     | "getEditDetail"
     | "update"
+    | "requiresFreshUpdateDetail"
     | "delete"
   >
   config: TConfig
@@ -216,13 +217,14 @@ export function createAccountKeyResourceCollection<
           mutate: async (command, submitOptions) => {
             const latest =
               editorDefinition.mutationKind ===
-              ACCOUNT_KEY_RESOURCE_LOCAL_METADATA
+                ACCOUNT_KEY_RESOURCE_LOCAL_METADATA ||
+              !definition.requiresFreshUpdateDetail(command, current.detail)
                 ? current
                 : await readDetail(current.ref, submitOptions)
             return definition.update(
               config,
               providerScope,
-              latest.detail,
+              { baseline: current.detail, current: latest.detail },
               command,
               submitOptions,
             )

@@ -565,4 +565,12 @@ describe("newApiFamily keyManagement", () => {
       tokenKeyReference,
     )
   })
+  it("preserves a native creation record instead of discarding it as a boolean", async () => {
+    const created = { id: 92, name: "Created", key: "  sk-created  " }
+    mockFetchApi.mockResolvedValueOnce({ success: true, data: created })
+    await expect(createApiToken(request, tokenData)).resolves.toMatchObject({
+      ...created,
+      key: "sk-created",
+    })
+  })
 })

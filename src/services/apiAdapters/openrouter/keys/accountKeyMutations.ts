@@ -80,7 +80,7 @@ export const createOpenRouterKeyResource: OpenRouterAccountKeyDefinition["create
   }
 
 export const updateOpenRouterKeyResource: OpenRouterAccountKeyDefinition["update"] =
-  async (config, scope, detail, command, options) => {
+  async (config, scope, { current: detail }, command, options) => {
     if (Object.keys(command.input).length === 0)
       return { certainty: "applied" as const, value: detail }
     try {

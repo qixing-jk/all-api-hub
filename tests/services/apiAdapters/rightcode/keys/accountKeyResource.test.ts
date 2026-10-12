@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/keys/accountRuntimeKeys"
 import { ACCOUNT_KEY_RESOURCE_FAILURE_CODES } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { rightCodeAccountKeyResources } from "~/services/apiAdapters/rightcode/keys/accountKeyResource"
 import type { RightCodeApiKey } from "~/services/apiService/rightcode/type"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
@@ -99,6 +101,31 @@ const openSession = async () => {
 }
 
 describe("rightCodeAccountKeyResources", () => {
+  it.each([
+    ["sk-inventory-plaintext", "sk-inventory-plaintext"],
+    ["sk-****masked", ""],
+    ["sk-••••masked", ""],
+    ["", ""],
+  ])(
+    "makes only usable inventory plaintext available for runtime actions: %s",
+    async (secret, expected) => {
+      mockFetchRightCodeKeys.mockResolvedValueOnce([key({ key: secret })])
+      const session = await openSession()
+      const facts = (await (await session.openCollection("account")).list())
+        .items[0]!
+      const runtimeKey = buildAccountKeyResourceRuntimeKeyFromFacts(
+        buildDisplaySiteData({
+          id: "account-example",
+          siteType: SITE_TYPES.RIGHT_CODE,
+        }),
+        facts,
+      )
+      expect(runtimeKey.secret).toBe(expected)
+      expect(facts.maskedLabel).not.toBe("sk-inventory-plaintext")
+      expect(mockFetchRightCodeKey).not.toHaveBeenCalled()
+    },
+  )
+
   beforeEach(() => {
     vi.resetAllMocks()
   })
@@ -209,7 +236,9 @@ describe("rightCodeAccountKeyResources", () => {
 
   it("creates a channel-bound key, reporting only the inventory entry", async () => {
     const session = await openSession()
-    mockCreateRightCodeKey.mockResolvedValueOnce(key({ id: 21 }))
+    mockCreateRightCodeKey.mockResolvedValueOnce(
+      key({ id: 21, name: "Fresh key" }),
+    )
     mockFetchRightCodeKey.mockResolvedValueOnce(
       key({ id: 21, name: "Fresh key" }),
     )
@@ -242,6 +271,30 @@ describe("rightCodeAccountKeyResources", () => {
     expect(result.createdSecret).toBeUndefined()
     // No expiry was requested, so the dedicated endpoint must not be called.
     expect(mockSetRightCodeKeyExpiry).not.toHaveBeenCalled()
+    expect(mockFetchRightCodeKey).not.toHaveBeenCalled()
+  })
+
+  it("returns the created key when cancellation follows the successful write", async () => {
+    const session = await openSession()
+    const controller = new AbortController()
+    mockCreateRightCodeKey.mockImplementationOnce(async () => {
+      controller.abort()
+      return key({ id: 21, name: "Fresh key" })
+    })
+    const editor = await session.openCreateEditor("account")
+
+    await expect(
+      editor.submit(
+        { ...editor.initialValues, name: "Fresh key", channel: "1" },
+        { signal: controller.signal },
+      ),
+    ).resolves.toMatchObject({
+      facts: {
+        ref: { resourceId: "21" },
+        runtimeKey: { baseUrl: "https://console.example.invalid/codex/v1" },
+      },
+    })
+    expect(mockCreateRightCodeKey).toHaveBeenCalledTimes(1)
   })
 
   it("applies expiry through its own endpoint when one is requested", async () => {
@@ -303,6 +356,45 @@ describe("rightCodeAccountKeyResources", () => {
     expect(body).not.toHaveProperty("allowed_prefixes")
   })
 
+  it("retains mutation uncertainty when the post-update verification is cancelled", async () => {
+    const session = await openSession()
+    const controller = new AbortController()
+    const original = key({ name: "Original" })
+    const renamed = key({ name: "Renamed" })
+    mockFetchRightCodeKey
+      .mockResolvedValueOnce(original)
+      .mockResolvedValueOnce(original)
+      .mockImplementationOnce(async (request) => {
+        request.abortSignal?.throwIfAborted()
+        return renamed
+      })
+    mockUpdateRightCodeKey.mockImplementationOnce(async () => {
+      controller.abort()
+      return renamed
+    })
+    const editor = await (
+      await session.openCollection("account")
+    ).openEditEditor({
+      accountId: "account-example",
+      siteType: SITE_TYPES.RIGHT_CODE,
+      scopeKey: "account",
+      resourceId: "11",
+    })
+
+    await expect(
+      editor.submit(
+        { ...editor.initialValues, name: "Renamed" },
+        { signal: controller.signal },
+      ),
+    ).rejects.toMatchObject({
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+      },
+    })
+    expect(mockFetchRightCodeKey).toHaveBeenCalledTimes(3)
+    expect(mockUpdateRightCodeKey).toHaveBeenCalledTimes(1)
+  })
+
   it("deletes a key and surfaces upstream authentication failures", async () => {
     const session = await openSession()
     const collection = await session.openCollection("account")
@@ -313,12 +405,17 @@ describe("rightCodeAccountKeyResources", () => {
       resourceId: "11",
     }
 
+    expect(mockFetchRightCodeEffectiveUpstreams).not.toHaveBeenCalled()
     mockDeleteRightCodeKey.mockResolvedValueOnce(undefined)
     await expect(collection.delete(ref)).resolves.toBeUndefined()
     expect(mockDeleteRightCodeKey).toHaveBeenCalledWith(
       expect.objectContaining({ baseUrl }),
       11,
     )
+
+    expect(mockFetchRightCodeEffectiveUpstreams).not.toHaveBeenCalled()
+    expect(mockFetchRightCodeKey).not.toHaveBeenCalled()
+    expect(mockFetchRightCodeKeys).not.toHaveBeenCalled()
 
     mockDeleteRightCodeKey.mockRejectedValueOnce(
       Object.assign(new Error("Unauthorized"), { statusCode: 401 }),

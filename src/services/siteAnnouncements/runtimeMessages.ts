@@ -13,7 +13,10 @@ import type {
   SiteAnnouncementRecordView,
   SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
-import { SITE_ANNOUNCEMENT_CHECK_TRIGGERS } from "~/types/siteAnnouncements"
+import {
+  SITE_ANNOUNCEMENT_CHECK_TRIGGERS,
+  SITE_ANNOUNCEMENT_STATUS,
+} from "~/types/siteAnnouncements"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
@@ -31,6 +34,7 @@ import {
 import {
   getAnnouncementRecordViews,
   resolveAnnouncementSource,
+  resolveAnnouncementSources,
 } from "./sources"
 import { siteAnnouncementStorage } from "./storage"
 
@@ -124,10 +128,32 @@ export async function resolveSiteAnnouncementsGetStatusMessage(): Promise<
     } catch (error) {
       logger.warn("Failed to reconcile site announcement schedule", error)
     }
-    return {
-      success: true,
-      data: await siteAnnouncementStorage.getStatus(),
+    const [cached, accounts] = await Promise.all([
+      siteAnnouncementStorage.getStatus(),
+      accountQueries.getEnabledAccounts().catch((error) => {
+        logger.warn("Failed to discover site announcement sources", error)
+        return []
+      }),
+    ])
+    const states = new Map(cached.map((state) => [state.siteKey, state]))
+    // Source discovery is read-only: unscanned accounts must be selectable even
+    // when polling is off and historical records already populate the page.
+    for (const { account, handler, siteKey } of resolveAnnouncementSources(
+      accounts,
+    )) {
+      states.set(siteKey, {
+        status: SITE_ANNOUNCEMENT_STATUS.Never,
+        records: [],
+        ...states.get(siteKey),
+        siteKey,
+        siteName: account.site_name,
+        siteType: account.site_type,
+        baseUrl: account.site_url,
+        accountId: account.id,
+        sourceScope: handler.scope,
+      })
     }
+    return { success: true, data: [...states.values()] }
   } catch (error) {
     logger.error("Message handling failed", error)
     return createRuntimeMessageFailure(getErrorMessage(error))

@@ -57,6 +57,7 @@ const facts = (key: FreeModelKey, ref: AccountKeyResourceRef) => ({
   // Match the official console mask (index-CDUNPcwU.js, verified 2026-10-04).
   maskedLabel: `fe_oa_••••••••••••${key.suffix}`,
   status: "enabled" as const,
+  runtimeSecret: undefined,
   runtimeKey: {
     modelAccess: UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS,
     baseUrl: FREEMODEL_OPENAI_BASE_URL,
@@ -72,6 +73,7 @@ const unsupported = () =>
 
 export const freeModelKeyResources = defineAccountKeyResourceCapability({
   siteType: SITE_TYPES.FREEMODEL,
+  requiresFreshUpdateDetail: () => false,
   inventorySecretAvailability:
     INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
   defaultCreation: creationPolicies.EditorDefaults,

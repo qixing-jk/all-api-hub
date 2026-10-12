@@ -5,9 +5,15 @@ import * as definitions from "~/services/accountSiteDefinitions/registry"
 import {
   formatOptionalSkPrefixSiteTokenAuthKey,
   formatOptionalSkPrefixSiteTokenComparableKey,
+  hasUsableApiTokenKey,
 } from "~/services/accountTokens/apiTokenKey"
 
 describe("registered token key semantics", () => {
+  it.each(["sk-****masked", "sk-••••masked", "sk-start…end", "", "   "])(
+    "does not use masked or absent values as runtime secrets: %s",
+    (secret) => expect(hasUsableApiTokenKey(secret)).toBe(false),
+  )
+
   it.each([
     SITE_TYPES.ONE_API,
     SITE_TYPES.NEW_API,

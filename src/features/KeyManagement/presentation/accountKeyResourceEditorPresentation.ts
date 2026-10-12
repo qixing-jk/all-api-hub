@@ -10,6 +10,20 @@ import type {
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { ResourceFieldValue } from "~/services/apiAdapters/contracts/resourceNative"
 
+export const ACCOUNT_KEY_AUTOMATIC_NAME_KINDS = {
+  Fixed: "fixed",
+  Group: "group",
+} as const
+
+export type AccountKeyAutomaticNamePolicy =
+  | { readonly kind: typeof ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed }
+  | {
+      readonly kind: typeof ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Group
+      readonly fieldId: string
+      readonly useOptionLabels: boolean
+      readonly unselectedName: string
+    }
+
 /** Provider-owned presentation rules consumed by the shared editor shell. */
 export type AccountKeyResourceEditorPresentation = {
   policy: ResourceEditorFieldPolicy
@@ -27,10 +41,8 @@ export type AccountKeyResourceEditorPresentation = {
       onSubmit: () => void
     },
   ) => ReturnType<ResourceFieldRenderOverride>
-  getAutomaticName?: (
-    values: EditableResourceProjection,
-    optionsByField?: Readonly<Record<string, readonly ResourceFieldOption[]>>,
-  ) => string | undefined
+  /** Every editor declares whether new key names follow a native grouping field. */
+  automaticName: AccountKeyAutomaticNamePolicy
   /** Some providers must validate even unchanged selections against fresh options. */
   requireFreshOptions?: boolean
   getOptionFeedback?: (

@@ -12,7 +12,10 @@ import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
 import toast from "~/lib/notify"
 import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/keys/accountRuntimeKeys"
-import { ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions } from "~/services/apiAdapters/contracts/accountKeyResource"
+import {
+  ACCOUNT_KEY_DETAIL_AVAILABILITIES,
+  ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import { server } from "~~/tests/msw/server"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 import { createAccount } from "~~/tests/utils/keyManagementFactories"
@@ -123,6 +126,7 @@ describe("AccountKeyResourceListItem", () => {
       ...row,
       facts: {
         ...row.facts,
+        detailAvailability: ACCOUNT_KEY_DETAIL_AVAILABILITIES.Complete,
         ref: {
           ...row.facts.ref,
           siteType: "dahl" as const,
@@ -628,3 +632,71 @@ describe("AccountKeyResourceListItem", () => {
     expect(retry).toHaveBeenCalledWith(true)
   })
 })
+
+it.each(["dahl", "new-api", "sub2api"] as const)(
+  "shows details only for additional information in a complete %s inventory row",
+  async (siteType) => {
+    const completeRow: NativeKeyManagementRow = {
+      ...row,
+      facts: {
+        ...row.facts,
+        ref: { ...row.facts.ref, siteType },
+        detailAvailability: ACCOUNT_KEY_DETAIL_AVAILABILITIES.Complete,
+        displayFacts: [
+          {
+            fieldId: "channel",
+            kind: "group",
+            value: "Official",
+            emptyValue: "ungrouped",
+          },
+          { fieldId: "quota", kind: "money", role: "total", amountUsd: 1 },
+          { fieldId: "used", kind: "money", role: "used", amountUsd: 0.1 },
+        ],
+        runtimeKey: {
+          createdAt: Date.parse("2026-10-01T00:00:00Z"),
+          modelAccess: {
+            groups: ["Official"],
+            allowedModelIds: null,
+            suggestedModelIds: [],
+          },
+        },
+      },
+    }
+    const props = {
+      row: completeRow,
+      cardAdapter: getAccountKeyResourceCardAdapter(siteType),
+      onExpandedChange: vi.fn(),
+      onEdit: vi.fn(),
+      onDelete: vi.fn(),
+    }
+    const { rerender } = render(<AccountKeyResourceListItem {...props} />, {
+      withThemeProvider: false,
+    })
+    expect(
+      await screen.findByTestId(
+        KEY_MANAGEMENT_TEST_IDS.keyResourceSummaryFacts,
+      ),
+    ).toHaveTextContent("Official")
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    ).toBeNull()
+    const extraRow = {
+      ...completeRow,
+      facts: {
+        ...completeRow.facts,
+        runtimeKey: { ...completeRow.facts.runtimeKey!, notes: "Extra note" },
+      },
+    }
+    rerender(<AccountKeyResourceListItem {...props} row={extraRow} expanded />)
+    expect(
+      screen.getByRole("button", { name: "keyManagement:actions.detailsFor" }),
+    ).toBeInTheDocument()
+    const details = screen.getByRole("region", {
+      name: "keyManagement:actions.detailsFor",
+    })
+    expect(details).toHaveTextContent("Extra note")
+    expect(details).not.toHaveTextContent("keyManagement:keyDetails.usedQuota")
+  },
+)
