@@ -36,7 +36,15 @@ vi.mock("~/features/AccountManagement/components/AccountList", () => ({
 }))
 
 vi.mock("~/entrypoints/popup/components/BalanceSection", () => ({
-  default: () => <div>BalanceSection</div>,
+  default: ({
+    onFilterCurrentSiteAccounts,
+  }: {
+    onFilterCurrentSiteAccounts?: (query: string) => void
+  }) => (
+    <button onClick={() => onFilterCurrentSiteAccounts?.("example.com")}>
+      BalanceSection
+    </button>
+  ),
 }))
 
 vi.mock("~/entrypoints/popup/components/ShareOverviewSnapshotButton", () => ({
@@ -182,6 +190,31 @@ describe("usePopupViewRegistry", () => {
       await screen.findByText("ApiCredentialProfilesPopupView"),
     ).toBeInTheDocument()
     expect(openAddDialogMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("threads detected-site filter requests from the stats badge into account list search props", () => {
+    render(<RegistryProbe />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "BalanceSection" }))
+
+    expect(accountListPropsMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        initialSearchQuery: "example.com",
+        initialSearchQueryRevision: 1,
+      }),
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "BalanceSection" }))
+
+    expect(accountListPropsMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        initialSearchQuery: "example.com",
+        initialSearchQueryRevision: 2,
+      }),
+    )
   })
 
   it("disables popup reordering and forwards its shared scroll container", () => {

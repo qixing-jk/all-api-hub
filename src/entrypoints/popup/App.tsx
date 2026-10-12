@@ -173,9 +173,18 @@ function PopupContent({ inPopup }: { inPopup: boolean }) {
               {activeViewConfig.headerAction}
             </ProductAnalyticsScope>
           </div>
-          {!isLoading && activeViewConfig.statsSection
-            ? activeViewConfig.statsSection
-            : null}
+          {!isLoading && activeViewConfig.statsSection ? (
+            <ProductAnalyticsScope
+              entrypoint={entrypoint}
+              surfaceId={
+                inSidePanel
+                  ? PRODUCT_ANALYTICS_SURFACE_IDS.SidepanelStats
+                  : PRODUCT_ANALYTICS_SURFACE_IDS.PopupStats
+              }
+            >
+              {activeViewConfig.statsSection}
+            </ProductAnalyticsScope>
+          ) : null}
         </section>
 
         <div className="flex-1" data-testid={getPopupViewTestId(activeView)}>

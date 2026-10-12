@@ -234,4 +234,35 @@ describe("useAccountSearch", () => {
     expect(result.current.debouncedQuery).toBe("beta")
     expect(mockSearchAccounts).toHaveBeenLastCalledWith([accountAlpha], "beta")
   })
+
+  it("re-applies the initial query when the initial query revision changes", async () => {
+    const { result, rerender } = renderHook(
+      ({ initialQuery, initialQueryRevision }) =>
+        useAccountSearch(
+          [accountAlpha as any],
+          initialQuery,
+          initialQueryRevision,
+        ),
+      {
+        initialProps: { initialQuery: "alpha", initialQueryRevision: 1 },
+      },
+    )
+
+    expect(result.current.query).toBe("alpha")
+
+    await act(async () => {
+      result.current.clearSearch()
+    })
+
+    expect(result.current.query).toBe("")
+
+    rerender({ initialQuery: "alpha", initialQueryRevision: 1 })
+
+    expect(result.current.query).toBe("")
+
+    rerender({ initialQuery: "alpha", initialQueryRevision: 2 })
+
+    expect(result.current.query).toBe("alpha")
+    expect(result.current.debouncedQuery).toBe("alpha")
+  })
 })

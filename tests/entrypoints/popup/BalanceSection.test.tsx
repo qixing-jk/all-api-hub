@@ -777,6 +777,66 @@ describe("popup BalanceSection components", () => {
     expect(screen.getByText("common:time.updatedAt")).toBeInTheDocument()
   })
 
+  it("filters the account list to the detected site origin when the detected-accounts badge is clicked", () => {
+    const onFilterCurrentSiteAccounts = vi.fn()
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        detectedAccount: {
+          id: "acc-enabled",
+          site_name: "Fallback Login Name",
+          site_url: "https://login.example.com/console",
+        },
+        detectedSiteAccounts: [
+          {
+            id: "acc-enabled",
+            site_name: "Fallback Site",
+            site_url: "https://login.example.com/console",
+          },
+        ],
+      }),
+    )
+
+    render(
+      <UpdateTimeAndWarning
+        onFilterCurrentSiteAccounts={onFilterCurrentSiteAccounts}
+      />,
+    )
+
+    const filterTrigger = screen.getByRole("button", {
+      name: /account:currentLoginAdded/,
+    })
+    expect(filterTrigger).toHaveTextContent("account:currentSiteFilterAction")
+
+    fireEvent.click(filterTrigger)
+
+    expect(onFilterCurrentSiteAccounts).toHaveBeenCalledTimes(1)
+    expect(onFilterCurrentSiteAccounts).toHaveBeenCalledWith(
+      "login.example.com",
+    )
+  })
+
+  it("renders the detected-accounts badge as a static hint when the site origin cannot be resolved", () => {
+    const onFilterCurrentSiteAccounts = vi.fn()
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        detectedSiteAccounts: [
+          { id: "acc-enabled", site_name: "Fallback Site" },
+        ],
+      }),
+    )
+
+    render(
+      <UpdateTimeAndWarning
+        onFilterCurrentSiteAccounts={onFilterCurrentSiteAccounts}
+      />,
+    )
+
+    expect(screen.getByText("account:currentSiteAdded")).toBeInTheDocument()
+    expect(screen.queryByRole("button")).not.toBeInTheDocument()
+  })
+
   it("falls back to site names for single-site detection and shows the count badge for multiple detected site accounts", () => {
     const { rerender } = render(<UpdateTimeAndWarning />)
 

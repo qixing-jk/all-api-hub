@@ -98,6 +98,20 @@ export function usePopupViewRegistry({
     "apiCredentialProfiles",
   ])
   const { handleAddAccountClick } = useAddAccountHandler()
+
+  // Popup-level bridge between the detected-accounts badge in the stats
+  // section and the account list's search box. The revision lets repeated
+  // requests re-apply the same query after the user edits or clears it.
+  const [accountSearchRequest, setAccountSearchRequest] = useState<{
+    query: string
+    revision: number
+  } | null>(null)
+  const requestAccountSearch = useCallback((query: string) => {
+    setAccountSearchRequest((prev) => ({
+      query,
+      revision: (prev?.revision ?? 0) + 1,
+    }))
+  }, [])
   const { openAddBookmark } = useBookmarkDialogContext()
   // Native action-popup pointer lifecycles do not reliably deliver dnd-kit drag
   // completion, so keep reordering discoverable there but direct users elsewhere.
@@ -126,7 +140,9 @@ export function usePopupViewRegistry({
     accounts: {
       showRefresh: true,
       headerAction: <ShareOverviewSnapshotButton />,
-      statsSection: <BalanceSection />,
+      statsSection: (
+        <BalanceSection onFilterCurrentSiteAccounts={requestAccountSearch} />
+      ),
       primaryActionLabel: t("account:addAccount"),
       onPrimaryAction: handleAddAccountClick,
       primaryAnalyticsAction: {
@@ -136,6 +152,8 @@ export function usePopupViewRegistry({
       primaryActionTestId: ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton,
       content: (
         <AccountList
+          initialSearchQuery={accountSearchRequest?.query}
+          initialSearchQueryRevision={accountSearchRequest?.revision}
           reorderUnavailableReason={reorderUnavailableReason}
           showAddAccountAction={false}
           virtualScrollParent={scrollParent}
