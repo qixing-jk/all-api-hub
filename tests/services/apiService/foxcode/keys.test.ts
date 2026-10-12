@@ -135,7 +135,7 @@ it("edits an unrestricted existing key without binding it to a channel", async (
   )
   const session = await getSiteTypeCapabilities(
     "foxcode",
-  ).account.keyResourceManagement!.open({
+  ).account!.keyResourceManagement!.open({
     account: { id: "saved", siteType: "foxcode" },
     request: { ...request, accountId: "saved" },
   })
