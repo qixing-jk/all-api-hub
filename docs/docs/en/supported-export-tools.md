@@ -17,6 +17,7 @@
 | Kilo Code | Kilo is an integrated Agentic Engineering platform.                                                              | [Official Website](https://kilocode.ai/) / [GitHub](https://github.com/Kilo-Org/kilocode)   |
 | Roo Code  | Roo Code allows an entire AI development team to reside directly within your code editor.                        | [Official Website](https://roocode.com/) / [GitHub](https://github.com/RooCodeInc/Roo-Code) |
 | Cursor++  | Use Anthropic, OpenAI, Gemini, and other models in Cursor with your own API keys.                                | [Official Website](https://ccursor.cometix.dev/)                                            |
+| AI Toolbox  | A desktop utility for developers and AI coding assistants, supporting configuration switching across Claude Code, Codex, Grok, Kimi, Gemini, and more. | [GitHub](https://github.com/coulsontl/ai-toolbox) |
 
 ## Gateways and Routing Tools
 
@@ -102,6 +103,9 @@ If you have also set up an AI relay or aggregation backend, All API Hub can dire
 | Octopus         | An LLM API aggregation service for individuals.                                                                                                                                                        | [GitHub](https://github.com/bestruirui/octopus)                                                 |
 | Veloera         | This project is no longer maintained.                                                                                                                                                                  | [GitHub](https://github.com/Veloera/Veloera)                                                    |
 | DoneHub         | This project is a secondary development based on one-hub.                                                                                                                                              | [GitHub](https://github.com/deanxv/done-hub)                                                    |
+| [OmniRoute](./omniroute-integration.md) | Self-hosted AI gateway with extensive built-in providers, supporting scoped access tokens and per-connection upstream address overrides. | [GitHub](https://github.com/diegosouzapw/OmniRoute) |
+| [gpt-load](./gpt-load-integration.md) | Lightweight self-hosted AI gateway (written in Go) where groups represent channel drivers and key pools. | [GitHub](https://github.com/tbphp/gpt-load) |
+| Magpie          | A model gateway for AI coding tools that lets you switch models from the menu bar for Codex, Claude Code, and others. | [GitHub](https://github.com/yetone/magpie) |
 
 ## Related Documentation
 

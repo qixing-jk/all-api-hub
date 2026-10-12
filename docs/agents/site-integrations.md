@@ -67,6 +67,7 @@ These backends have distinct account contracts. Compatible inference APIs do not
 | `kimi` | Account / [kimiOpenPlatform](../../src/services/apiAdapters/kimiOpenPlatform/) | Kimi China: separate accounts, credentials and CNY balances from Global. Shares implementation with Global, not account identity; neither type is Kimi Code. | [China console](https://platform.kimi.com/) · [Regional boundaries](../../src/services/kimiOpenPlatform/deployments.ts) |
 | `kimi-global` | Account / [kimiOpenPlatform](../../src/services/apiAdapters/kimiOpenPlatform/) | Kimi Global: separate accounts, credentials and USD balances from China. Region changes must not silently reuse the other region's credentials. | [Global console](https://platform.kimi.ai/) · [Regional boundaries](../../src/services/kimiOpenPlatform/deployments.ts) |
 | `grsai` | Account / [grsai](../../src/services/apiAdapters/grsai/) | Provider-owned REST backend, not a New API derivative. `grsai.com` and `grsai.ai` share an account service; console API and inference origins have separate roles. | [Console](https://grsai.com/) · [Alternate console](https://grsai.ai/) · [Protocol owner](../../src/services/apiService/grsai/) |
+| `cubence` | Account / [cubence](../../src/services/apiAdapters/cubence/) | Hosted cookie-authenticated account service with stored credit, today's usage, native keys and invitation aff. | [Website](https://cubence.com/) · [Documentation](https://docs.cubence.com/en/docs) |
 
 ### Managed-only backend types
 
@@ -107,6 +108,7 @@ Update the owner of the information when its contract changes:
 | Reusable integration procedures | The relevant integration skill reference; shared module invariants belong in the module's existing README |
 | Deployment observations, versions, build hashes, sample rewards and live validation results | The current task's spec and evidence index; raw captures remain local under the [evidence workflow](../../.agents/skills/add-site-integration/references/evidence-and-validation.md) |
 | User actions, supported features and limitations | The relevant public feature/usage page; update affected translations together |
+| Public site / gateway / tool support matrices and root READMEs | [docs/docs/supported-sites.md](../docs/supported-sites.md) and [supported-export-tools.md](../docs/supported-export-tools.md) across all locales (`zh`, `en`, `ja`), plus root `README.md`, `README_CN.md`, and `README_JA.md`. Update these synchronously whenever integrations change |
 
 Keep source comments when external evidence determines authentication, endpoint selection, unsupported capabilities, compatibility boundaries, secret handling or deliberate non-fallback behavior. Record the source and the specific constraint; do not narrate implementation already clear from local types and tests.
 
