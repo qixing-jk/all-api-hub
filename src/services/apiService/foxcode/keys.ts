@@ -170,10 +170,11 @@ const createFields = [
 ] as const
 const writeFields = [...createFields, "isActive"] as const
 /** Keep console write validation consistent across creation and editing. */
-function validateInput(input: FoxCodeKeyInput) {
+function validateInput(input: FoxCodeKeyInput, preserveUnrestricted = false) {
   if (
     !input.name.trim() ||
-    !input.channelKey ||
+    (!input.channelKey &&
+      !(preserveUnrestricted && input.channelKey === null)) ||
     (input.description !== null && typeof input.description !== "string") ||
     (input.quotaLimit !== FOXCODE_UNLIMITED_QUOTA &&
       (!Number.isFinite(input.quotaLimit) || input.quotaLimit < 0))
@@ -232,7 +233,7 @@ export async function updateKey(
   next: FoxCodeKeyUpdate,
   prepared?: FoxCodeKey,
 ): Promise<FoxCodeKey> {
-  validateInput(next)
+  validateInput(next, baseline.channelKey === null)
   const path = resourcePath(baseline.id)
   return withFoxCodeSession(request, async (request) => {
     const owner = await fetchUserInfo(request)

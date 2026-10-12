@@ -95,6 +95,69 @@ beforeEach(async () => {
 })
 afterEach(() => vi.restoreAllMocks())
 
+it("still requires a channel for creation and refuses unbinding a restricted key", async () => {
+  const write = vi.fn(() => HttpResponse.json({ success: true, data: {} }))
+  server.use(
+    http.post(`${origin}/api/keys`, write),
+    http.patch(`${origin}/api/keys/${key.id}`, write),
+  )
+  await expect(
+    createKey(request, { ...key, channelKey: null }),
+  ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+  await expect(
+    updateKey(
+      request,
+      {
+        ...key,
+        modelIds: ["claude-sonnet"],
+        baseUrl: "https://code1.newcli.com",
+      },
+      { ...key, channelKey: null },
+    ),
+  ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+  expect(write).not.toHaveBeenCalled()
+})
+
+it("edits an unrestricted existing key without binding it to a channel", async () => {
+  const unrestricted = { ...key, channelKey: null }
+  const patches: unknown[] = []
+  server.use(
+    http.get(`${origin}/api/keys`, () =>
+      HttpResponse.json({
+        success: true,
+        data: { apiKeys: [unrestricted], pagination: { page: 1, pages: 1 } },
+      }),
+    ),
+    http.patch(`${origin}/api/keys/${key.id}`, async ({ request }) => {
+      patches.push(await request.json())
+      return HttpResponse.json({ success: true, data: {} })
+    }),
+  )
+  const session = await getSiteTypeCapabilities(
+    "foxcode",
+  ).account.keyResourceManagement!.open({
+    account: { id: "saved", siteType: "foxcode" },
+    request: { ...request, accountId: "saved" },
+  })
+  const collection = await session.openCollection("account")
+  const row = (await collection.list()).items[0]!
+  const editor = await collection.openEditEditor(row.ref, undefined, {
+    snapshot: row,
+  })
+  await editor.loadOptions!(
+    FOXCODE_KEY_EDITOR_FIELDS.Channel,
+    editor.initialValues,
+  )
+  const saved = await editor.submit({
+    ...editor.initialValues,
+    name: "Renamed",
+  })
+  expect(patches).toEqual([{ name: "Renamed" }])
+  expect(saved.facts?.displayName).toBe("Renamed")
+  expect(saved.facts?.runtimeKey?.modelAccess.groups).toEqual([])
+  expect(saved.facts?.runtimeKey?.modelAccess.allowedModelIds).toBeNull()
+})
+
 it.each(["", "   ", "sk-****masked"])(
   "rejects unavailable or masked native secrets (%s) instead of exporting them",
   async (secret) => {

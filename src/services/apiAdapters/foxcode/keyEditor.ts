@@ -36,7 +36,8 @@ export function createFoxCodeKeyEditor(
       {
         fieldId: fields.Channel,
         type: fieldTypes.Select,
-        required: true,
+        required: key?.channelKey !== null,
+        nullable: key?.channelKey === null,
         options: [],
         optionLoader: { dependsOn: [] },
       },
@@ -54,7 +55,7 @@ export function createFoxCodeKeyEditor(
         key?.name ??
         (intent?.nameHint?.trim() || DEFAULT_AUTO_PROVISION_KEY_NAME),
       description: key?.description ?? "",
-      channelKey: key?.channelKey ?? intent?.preferredGroup ?? "",
+      channelKey: key ? key.channelKey : intent?.preferredGroup ?? "",
       unlimited: !key || key.quotaLimit === FOXCODE_UNLIMITED_QUOTA,
       quotaUsd:
         key && key.quotaLimit !== FOXCODE_UNLIMITED_QUOTA
@@ -98,7 +99,9 @@ export function createFoxCodeKeyEditor(
           fieldId: fields.Description,
           code: issueCodes.InvalidValue,
         })
-      if (!values.channelKey)
+      if (key?.channelKey === null && values.channelKey === null) {
+        // Preserve existing unrestricted access when editing unrelated fields.
+      } else if (!values.channelKey)
         issues.push({ fieldId: fields.Channel, code: issueCodes.Required })
       else if (
         values.channelKey !== key?.channelKey &&
@@ -136,7 +139,8 @@ export function createFoxCodeKeyEditor(
           key?.description === null && values.description === ""
             ? null
             : String(values.description),
-        channelKey: String(values.channelKey),
+        channelKey:
+          values.channelKey === null ? null : String(values.channelKey),
         quotaLimit:
           values.unlimited === true
             ? FOXCODE_UNLIMITED_QUOTA

@@ -83,6 +83,56 @@ const nativeRequest = {
   },
 }
 
+it("submits an existing unrestricted FoxCode key without selecting a channel", async () => {
+  const user = userEvent.setup()
+  const onSubmit = vi.fn()
+  const definition = createFoxCodeKeyEditor(async () => [], {
+    id: "existing-key",
+    userId: "sample-account",
+    name: "Unrestricted",
+    description: "",
+    key: "sk-example",
+    channelKey: null,
+    isActive: true,
+    quotaLimit: -1,
+    quotaUsed: 0,
+    createdAt: "2026-10-01T00:00:00Z",
+    lastUsedAt: null,
+    modelIds: null,
+    baseUrl: "https://inference.example",
+  })
+  render(
+    <AccountKeyResourceEditorDialog
+      editor={{
+        editorId: 1,
+        siteType: SITE_TYPES.FOXCODE,
+        mode: editorModes.Edit,
+        fields: definition.fields,
+        initialValues: definition.initialValues,
+        values: definition.initialValues,
+        optionsByField: { channelKey: [] },
+      }}
+      onClose={vi.fn()}
+      onSubmit={onSubmit}
+      onValuesChange={vi.fn()}
+    />,
+    { withUserPreferencesProvider: false, withThemeProvider: false },
+  )
+  const name = screen.getByRole("textbox", {
+    name: /keyManagement:dialog.tokenName/,
+  })
+  await user.clear(name)
+  await user.type(name, "Renamed")
+  await user.click(
+    screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton),
+  )
+  expect(onSubmit).toHaveBeenCalledWith(
+    1,
+    expect.objectContaining({ name: "Renamed", channelKey: null }),
+  )
+  expect(definition.validate(onSubmit.mock.calls[0]![1]).valid).toBe(true)
+})
+
 it.each([false, true])(
   "fills a late group label while preserving a manually edited name (%s)",
   async (manualName) => {
