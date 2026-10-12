@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockInstance,
+} from "vitest"
 
 import { initializeCompactPageSizing } from "~/entrypoints/shared/compactPageSizing"
 import { getDeviceTypeInfo, isDesktopDevice } from "~/utils/browser"
@@ -35,8 +43,8 @@ const originalScreenHeightDescriptor = Object.getOwnPropertyDescriptor(
 )
 const baseNavigator = globalThis.navigator
 
-let addEventListenerSpy: ReturnType<typeof vi.spyOn>
-let matchMediaSpy: ReturnType<typeof vi.spyOn>
+let addEventListenerSpy: MockInstance<typeof window.addEventListener>
+let matchMediaSpy: MockInstance<typeof window.matchMedia>
 
 function configureDevice(
   options: {
@@ -119,15 +127,23 @@ afterEach(() => {
 
   if (originalNavigatorDescriptor) {
     Object.defineProperty(globalThis, "navigator", originalNavigatorDescriptor)
+  } else {
+    Reflect.deleteProperty(globalThis, "navigator")
   }
   if (originalInnerWidthDescriptor) {
     Object.defineProperty(window, "innerWidth", originalInnerWidthDescriptor)
+  } else {
+    Reflect.deleteProperty(window, "innerWidth")
   }
   if (originalScreenWidthDescriptor) {
     Object.defineProperty(screen, "width", originalScreenWidthDescriptor)
+  } else {
+    Reflect.deleteProperty(screen, "width")
   }
   if (originalScreenHeightDescriptor) {
     Object.defineProperty(screen, "height", originalScreenHeightDescriptor)
+  } else {
+    Reflect.deleteProperty(screen, "height")
   }
   document.documentElement.removeAttribute("data-compact-extension-page")
   document.documentElement.style.removeProperty("--extension-surface-min-width")

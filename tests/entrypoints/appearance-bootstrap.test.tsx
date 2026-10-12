@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+  type MockInstance,
+} from "vitest"
 
 import appearanceEntrypoint from "~/entrypoints/appearance-bootstrap"
 import { createDeferred } from "~~/tests/test-utils/deferred"
@@ -28,7 +36,7 @@ const WIDTH_PROPERTY = "--extension-surface-min-width"
 const originalWidth = Object.getOwnPropertyDescriptor(window, "innerWidth")!
 
 describe("appearance entrypoint", () => {
-  let addedListeners: ReturnType<typeof vi.spyOn>
+  let addedListeners: MockInstance<typeof window.addEventListener>
 
   beforeEach(() => {
     vi.clearAllMocks()
