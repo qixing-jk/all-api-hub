@@ -32,6 +32,18 @@ import { type TempWindowRequestSource } from "~/types/tempWindowFetch"
 import { formatLocalDayKey } from "~/utils/core/dayKey"
 
 /**
+ * Outcome of one automatic retry run.
+ */
+export type AutoCheckinRetryRunOutcome = {
+  /**
+   * `false` when the run's status update could not be persisted. The queue and
+   * its attempt ledger then did not advance, so re-arming the retry alarm would
+   * replay the same pending accounts against stale state.
+   */
+  persisted: boolean
+}
+
+/**
  * Execute account-level retries for the current day.
  *
  * This MUST only retry accounts from today's retry queue.
@@ -45,7 +57,7 @@ export async function runRetryCheckins(
   tempWindowRequestSource: TempWindowRequestSource,
   protectionBypassExecution: ProtectionBypassExecution,
   retryScheduling: AutoCheckinRetryScheduling,
-): Promise<void> {
+): Promise<AutoCheckinRetryRunOutcome> {
   const startTime = Date.now()
   const now = new Date()
   const today = formatLocalDayKey(now)
@@ -61,14 +73,14 @@ export async function runRetryCheckins(
   if (!config.globalEnabled || !config.retryStrategy?.enabled) {
     logger.info("Retry skipped (feature disabled)")
     await retryScheduling.clearRetryAlarmAndState()
-    return
+    return { persisted: true }
   }
 
   // Same-day queue only. Do not require the daily alarm to have run.
   if (currentStatus?.retryState?.day !== today) {
     logger.info("Retry skipped (no same-day queue)")
     await retryScheduling.clearRetryAlarmAndState()
-    return
+    return { persisted: true }
   }
 
   // Ensure we have a retry state with pending accounts
@@ -78,7 +90,7 @@ export async function runRetryCheckins(
     await retryScheduling.clearRetryAlarm(
       config.retryStrategy.maxAttemptsPerDay,
     )
-    return
+    return { persisted: true }
   }
 
   const maxAttempts = config.retryStrategy.maxAttemptsPerDay
@@ -158,8 +170,8 @@ export async function runRetryCheckins(
   // Derived from the stored status inside the update so a run that persisted
   // while this one was executing is not reverted. The result carries what was
   // persisted to the notifications and analytics below.
-  const { result: retryOutcome } = await autoCheckinStorage.updateStatus(
-    (current) => {
+  const { ok: persisted, result: retryOutcome } =
+    await autoCheckinStorage.updateStatus((current) => {
       const perAccount: Record<string, CheckinAccountResult> = {
         ...(current?.perAccount ?? {}),
         ...updates,
@@ -201,8 +213,7 @@ export async function runRetryCheckins(
           retryAlarmTargetDay: undefined,
         },
       }
-    },
-  )
+    })
 
   await accountCheckinRunWorkflow.recordStarPromotionCheckinSuccesses(
     updatedAccountIds.length,
@@ -287,4 +298,16 @@ export async function runRetryCheckins(
       retryExhausted,
     })
   }
+
+  if (!persisted) {
+    // Nothing advanced: the queue and its attempt ledger are as they were
+    // before the run. Re-arming would replay the same pending accounts
+    // against stale state, so stop instead of hammering the sites.
+    logger.warn(
+      "Retry run results could not be persisted; stopping the retry alarm",
+    )
+    await retryScheduling.clearRetryAlarmAndState()
+  }
+
+  return { persisted }
 }

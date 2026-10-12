@@ -11,6 +11,7 @@ import { autoCheckinScheduler } from "~/services/checkin/autoCheckin/scheduling/
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import {
   mockedAccountStorage,
+  mockedAutoCheckinStorage,
   mockedBrowserApi,
   mockedUserPreferences,
   resolveProviderForTest,
@@ -44,6 +45,34 @@ describe("autoCheckinScheduler retry scheduling", () => {
     )
 
     expect(nextRetryTime.getTime()).toBe(now.getTime() + 15_000)
+
+    vi.useRealTimers()
+  })
+
+  it("spaces retries by the configured interval when the stored lastRunAt is stale", () => {
+    vi.useFakeTimers()
+    const now = new Date(2024, 0, 1, 12, 0, 0)
+    vi.setSystemTime(now)
+
+    const nextRetryTime = computeNextRetryTriggerTime(
+      {
+        ...(DEFAULT_PREFERENCES as any).autoCheckin,
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+      {
+        // The last run finished longer than the interval ago (for example
+        // because a later status write failed), so `lastRunAt + interval`
+        // already lies in the past.
+        lastRunAt: new Date(now.getTime() - 60 * 60_000).toISOString(),
+      },
+      now,
+    )
+
+    expect(nextRetryTime.getTime()).toBe(now.getTime() + 30 * 60_000)
 
     vi.useRealTimers()
   })
@@ -540,6 +569,67 @@ describe("autoCheckinScheduler retry scheduling", () => {
     expect(
       schedulerTestState.storedStatus.retryState?.pendingAccountIds,
     ).toEqual([])
+
+    vi.useRealTimers()
+  })
+
+  it("does not re-arm the retry alarm when the run cannot persist its results", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 10, 0, 0))
+
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...(DEFAULT_PREFERENCES as any).autoCheckin,
+        globalEnabled: true,
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+
+    schedulerTestState.storedStatus = {
+      lastRunAt: "2024-01-01T09:16:00.000Z",
+      lastDailyRunDay: "2024-01-01",
+      retryState: {
+        day: "2024-01-01",
+        pendingAccountIds: ["a"],
+        attemptsByAccount: { a: 1 },
+      },
+      pendingRetry: true,
+    } as any
+
+    mockedAccountStorage.getAccountById.mockResolvedValue({
+      id: "a",
+      disabled: false,
+      site_name: "Failing Site",
+      site_type: SITE_TYPES.ANYROUTER,
+      account_info: { username: "user-a" },
+      checkIn: runnableCheckIn(),
+    })
+    resolveProviderForTest.mockReturnValue({
+      getReadiness: vi.fn(() => ({ ready: true })),
+      checkIn: vi.fn(async () => ({ status: "failed", retryable: true })),
+    })
+
+    // The status write fails, so the queue and its attempt ledger cannot advance.
+    mockedAutoCheckinStorage.updateStatus.mockImplementationOnce(async () => ({
+      ok: false,
+      result: null,
+    }))
+
+    await (autoCheckinScheduler as any).handleRetryAlarm({
+      name: "autoCheckinRetry",
+      scheduledTime: Date.now(),
+    })
+
+    // The account was retried, but the alarm must not be re-armed from the
+    // stale queue: the loop stops instead of hammering the site.
+    expect(mockedAccountStorage.getAccountById).toHaveBeenCalled()
+    expect(mockedBrowserApi.createAlarm).not.toHaveBeenCalled()
+    expect(mockedBrowserApi.clearAlarm).toHaveBeenCalledWith("autoCheckinRetry")
+    expect(schedulerTestState.alarmStore.autoCheckinRetry).toBeUndefined()
 
     vi.useRealTimers()
   })

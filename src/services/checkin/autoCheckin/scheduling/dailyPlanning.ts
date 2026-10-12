@@ -305,26 +305,39 @@ export function computeNextDailyTriggerPlan(
  * We use `status.lastRunAt` as the base to avoid bunching retries too closely when multiple
  * status updates happen quickly, then add `retryStrategy.intervalMinutes`.
  *
- * Returns a short fallback delay when inputs are missing/invalid.
+ * A stale base (the last run finished longer than the interval ago — for example
+ * because a later status write failed and `lastRunAt` never advanced) must not
+ * collapse into the short fallback: falling back here would re-arm the retry
+ * alarm every few seconds against the same pending queue. The fallback is only
+ * for inputs that are missing or invalid.
  */
 export function computeNextRetryTriggerTime(
   config: AutoCheckinPreferences,
   status: AutoCheckinStatus | null,
   now: Date,
 ): Date {
-  const intervalMinutes = Math.max(
-    0,
-    config.retryStrategy?.intervalMinutes ?? 0,
-  )
-  const intervalMs = intervalMinutes * 60 * 1000
+  const intervalMinutes = config.retryStrategy?.intervalMinutes ?? 0
+  const intervalMs =
+    Number.isFinite(intervalMinutes) && intervalMinutes >= 1
+      ? Math.max(0, Math.round(intervalMinutes)) * 60 * 1000
+      : 0
 
   const lastRunMs =
     status?.lastRunAt != null
       ? new Date(status.lastRunAt).getTime()
       : now.getTime()
   const baseMs = Number.isFinite(lastRunMs) ? lastRunMs : now.getTime()
-  const candidate = new Date(baseMs + intervalMs)
 
+  if (intervalMs > 0) {
+    const candidate = new Date(baseMs + intervalMs)
+    if (!Number.isNaN(candidate.getTime()) && candidate > now) {
+      return candidate
+    }
+    // Valid but stale inputs still respect the configured interval.
+    return new Date(now.getTime() + intervalMs)
+  }
+
+  const candidate = new Date(baseMs + intervalMs)
   if (Number.isNaN(candidate.getTime()) || candidate <= now) {
     return new Date(now.getTime() + 15 * 1000)
   }
