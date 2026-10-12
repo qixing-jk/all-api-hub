@@ -366,6 +366,8 @@ export interface TempWindowSessionReadParams {
   useIncognito?: boolean
   suppressMinimize?: boolean
   siteType: AccountSiteType
+  /** Explicit onboarding probe for an unclassified modern New API site. */
+  allowNewApiAuthProbe?: boolean
   tempWindowRequestSource?: TempWindowRequestSource
   protectionBypassExecution: ProtectionBypassExecution
 }
@@ -799,6 +801,7 @@ export function isTempContextTask(value: unknown): value is TempContextTask {
         isHttpUrl(params.url) &&
         isNonEmptyString(params.requestId) &&
         isAccountSiteType(params.siteType) &&
+        isOptionalBoolean(params.allowNewApiAuthProbe) &&
         isOptionalBoolean(params.useIncognito) &&
         isOptionalBoolean(params.suppressMinimize)
       )

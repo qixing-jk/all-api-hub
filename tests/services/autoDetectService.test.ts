@@ -913,6 +913,100 @@ describe("autoDetectSmart", () => {
     )
   })
 
+  it("detects a white-label modern New API through a temp page after an existing tab cannot receive messages", async () => {
+    const baseUrl = "https://white-label.example.invalid"
+    const transientAuth = {
+      kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+      token: "placeholder-dashboard-token",
+      expiresAt: 2_000_000_000,
+      sessionId: "placeholder-session",
+      origin: baseUrl,
+    }
+    mockGetAccountSiteType.mockResolvedValue(SITE_TYPES.UNKNOWN)
+    browserAny.tabs.query.mockResolvedValue([
+      { id: 101, active: false, url: `${baseUrl}/console` },
+    ])
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      { id: 10, active: true, url: "chrome-extension://test/options.html" },
+    ])
+    browserAny.tabs.sendMessage.mockRejectedValue(
+      new Error(
+        "Could not establish connection. Receiving end does not exist.",
+      ),
+    )
+    mockHasCookiesForUrl.mockResolvedValue(false)
+    mockFetchUserInfo.mockRejectedValue(
+      new Error("Unauthorized, invalid access token"),
+    )
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "1",
+        user: { id: 1, username: "test-user" },
+        siteTypeHint: SITE_TYPES.NEW_API,
+        transientAuth,
+      },
+    })
+
+    const result = await autoDetectSmart(baseUrl, testExecution)
+
+    expect(result).toMatchObject({
+      success: true,
+      data: { userId: "1", siteType: SITE_TYPES.NEW_API, transientAuth },
+    })
+    expect(browserAny.tabs.sendMessage).toHaveBeenCalledWith(
+      101,
+      expect.objectContaining({
+        action: RuntimeActionIds.ContentGetUserFromLocalStorage,
+      }),
+    )
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        execution: testExecution,
+        task: {
+          kind: "session_read",
+          params: expect.objectContaining({
+            url: baseUrl,
+            siteType: SITE_TYPES.UNKNOWN,
+            allowNewApiAuthProbe: true,
+          }),
+        },
+      }),
+    )
+    expect(mockFetchUserInfo).not.toHaveBeenCalled()
+    expect(mockHasCookiesForUrl).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    [SITE_TYPES.NEW_API, "https://other.example.invalid"],
+    [SITE_TYPES.SUB2API, "https://white-label.example.invalid"],
+    [SITE_TYPES.UNKNOWN, "https://white-label.example.invalid"],
+  ])(
+    "rejects temp-page New API auth with incompatible site hint %s or origin %s",
+    async (hint, origin) => {
+      mockGetAccountSiteType.mockResolvedValue(SITE_TYPES.UNKNOWN)
+      mockSendRuntimeMessage.mockResolvedValueOnce({
+        success: true,
+        data: {
+          userId: "1",
+          siteTypeHint: hint,
+          transientAuth: {
+            kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+            token: "placeholder-token",
+            expiresAt: 2_000_000_000,
+            sessionId: "placeholder-session",
+            origin,
+          },
+        },
+      })
+      const result = await autoDetectSmart(
+        "https://white-label.example.invalid",
+        testExecution,
+      )
+      expect(result.data).not.toHaveProperty("transientAuth")
+    },
+  )
+
   it("returns privacy-safe current-tab metadata when current-tab detection succeeds", async () => {
     mockGetActiveOrAllTabs.mockResolvedValue([
       {

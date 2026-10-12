@@ -548,6 +548,40 @@ describe("protection bypass runtime contracts", () => {
     expect(isTempContextTask(task)).toBe(false)
   })
 
+  it.each([true, false, undefined])(
+    "accepts the optional New API session probe flag %s",
+    (allowNewApiAuthProbe) => {
+      expect(
+        isTempContextTask({
+          kind: "session_read",
+          params: {
+            url: "https://example.invalid",
+            requestId: "request-session",
+            siteType: "unknown",
+            allowNewApiAuthProbe,
+          },
+        }),
+      ).toBe(true)
+    },
+  )
+
+  it.each(["true", 1, null])(
+    "rejects a non-boolean New API session probe flag %s",
+    (allowNewApiAuthProbe) => {
+      expect(
+        isTempContextTask({
+          kind: "session_read",
+          params: {
+            url: "https://example.invalid",
+            requestId: "request-session",
+            siteType: "unknown",
+            allowNewApiAuthProbe,
+          },
+        }),
+      ).toBe(false)
+    },
+  )
+
   const urlFields = [
     [TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch, "originUrl"],
     [TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch, "fetchUrl"],

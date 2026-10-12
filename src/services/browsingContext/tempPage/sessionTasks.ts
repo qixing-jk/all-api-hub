@@ -1,5 +1,6 @@
 import { OCTOPUS_COOKIE_SESSION_STATUS_PATH } from "~/constants/octopus"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { isUnknownAccountSiteType } from "~/constants/siteType"
 import {
   API_ERROR_CODES,
   type ApiErrorCode,
@@ -190,6 +191,9 @@ export async function executeAutoDetectSite(
         incognito: Boolean(useIncognito),
         siteType,
         diagnosticId: request.diagnosticId,
+        allowNewApiAuthProbe:
+          isUnknownAccountSiteType(siteType) &&
+          request.allowNewApiAuthProbe === true,
       },
       authorizeAtAcquire,
     )
@@ -230,6 +234,7 @@ async function getSiteDataFromTab(
     incognito?: boolean
     siteType?: string
     diagnosticId?: string
+    allowNewApiAuthProbe?: boolean
   } = {},
   authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
 ) {
@@ -249,6 +254,9 @@ async function getSiteDataFromTab(
       url: url,
       siteType: options.siteType,
       diagnosticId: options.diagnosticId ?? requestId,
+      ...(options.allowNewApiAuthProbe
+        ? { allowNewApiAuthProbe: true, expectedOrigin: new URL(url).origin }
+        : {}),
     })
 
     await tempWindowBackgroundRuntime.release(requestId)

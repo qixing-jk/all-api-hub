@@ -1,5 +1,8 @@
 import { AUTO_DETECT_STRATEGIES } from "~/constants/autoDetect"
-import { type AccountSiteType } from "~/constants/siteType"
+import {
+  isUnknownAccountSiteType,
+  type AccountSiteType,
+} from "~/constants/siteType"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession"
 import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import { type AccountDetectionDiagnostics } from "~/services/accountSiteOnboarding/diagnostics"
@@ -74,11 +77,15 @@ async function getUserDataViaBackground(
       fetchContext: summarizeApiServiceFetchContext(fetchContext),
     })
 
+    // White-label modern New API sites may have neither a recognizable title
+    // nor a stored user. Probe only this explicit onboarding temp-page read.
+    const allowNewApiAuthProbe = isUnknownAccountSiteType(siteType)
     const params = {
       url: url,
       requestId: requestId,
       diagnosticId: diagnostics?.requestId,
       siteType,
+      ...(allowNewApiAuthProbe ? { allowNewApiAuthProbe: true } : {}),
       ...(fetchContext?.incognito === true ? { useIncognito: true } : {}),
       ...(fetchContext?.cookieStoreId
         ? { cookieStoreId: fetchContext.cookieStoreId }
@@ -155,7 +162,12 @@ async function getUserDataViaBackground(
 
     const transientAuth = normalizeContentSessionTransientAuth(
       response.data.transientAuth,
-      { baseUrl: url, siteType },
+      {
+        baseUrl: url,
+        siteType,
+        siteTypeHint: normalizeSiteTypeHint(response.data.siteTypeHint),
+        allowNewApiAuthProbe,
+      },
     )
     if (response.data.transientAuth && !transientAuth) {
       diagnostics?.record("session_auth_rejected", {
