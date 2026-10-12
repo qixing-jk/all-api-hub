@@ -6,14 +6,9 @@ import { createDefaultPreferences } from "~/services/preferences/preferencesDefa
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
+  PRODUCT_ANALYTICS_SETTING_IDS,
 } from "~/services/productAnalytics/contracts"
 import { ProductAnalyticsMessageTypes } from "~/services/productAnalytics/runtime/messaging"
-import {
-  handleProductAnalyticsMessage,
-  setupProductAnalyticsAccountChangeListener,
-  setupProductAnalyticsMessagingListeners,
-  setupProductAnalyticsPreferencesChangeListener,
-} from "~/services/productAnalytics/runtime/runtime"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
@@ -40,6 +35,7 @@ const {
   stateMocks: {
     getState: vi.fn(),
     getShieldBypassSummaryState: vi.fn(),
+    setLastAutoCheckinConfigSnapshotAt: vi.fn(),
     setLastSettingsSnapshotAt: vi.fn(),
     setLastSiteEcosystemSnapshotAt: vi.fn(),
   },
@@ -137,10 +133,25 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   }
 })
 
+let {
+  handleProductAnalyticsMessage,
+  setupProductAnalyticsAccountChangeListener,
+  setupProductAnalyticsMessagingListeners,
+  setupProductAnalyticsPreferencesChangeListener,
+} = await import("~/services/productAnalytics/runtime/runtime")
+
 describe("product analytics runtime", () => {
   const originalBrowser = (globalThis as any).browser
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    vi.resetModules()
+    ;({
+      handleProductAnalyticsMessage,
+      setupProductAnalyticsAccountChangeListener,
+      setupProductAnalyticsMessagingListeners,
+      setupProductAnalyticsPreferencesChangeListener,
+    } = await import("~/services/productAnalytics/runtime/runtime"))
+    await browser.storage.session.clear()
     vi.clearAllMocks()
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-05-12T00:00:00.000Z"))
@@ -150,6 +161,7 @@ describe("product analytics runtime", () => {
     stateMocks.getShieldBypassSummaryState.mockResolvedValue({})
     stateMocks.setLastSettingsSnapshotAt.mockResolvedValue(true)
     stateMocks.setLastSiteEcosystemSnapshotAt.mockResolvedValue(true)
+    stateMocks.setLastAutoCheckinConfigSnapshotAt.mockResolvedValue(true)
     getAllAccountsMock.mockResolvedValue([])
     getPreferencesMock.mockResolvedValue(createDefaultPreferences())
     flushSponsorRecommendationsDailySummaryMock.mockResolvedValue(true)
@@ -242,6 +254,155 @@ describe("product analytics runtime", () => {
     expect(stateMocks.setLastSettingsSnapshotAt).not.toHaveBeenCalled()
   })
 
+  it("captures only one auto check-in config snapshot for concurrent requests", async () => {
+    let capturedAt: number | undefined
+    stateMocks.getState.mockImplementation(async () => ({
+      lastAutoCheckinConfigSnapshotAt: capturedAt,
+    }))
+    stateMocks.setLastAutoCheckinConfigSnapshotAt.mockImplementation(
+      async (timestamp: number) => {
+        capturedAt = timestamp
+        return true
+      },
+    )
+    const request = () =>
+      handleProductAnalyticsMessage(
+        ProductAnalyticsMessageTypes.TrackAutoCheckinConfigSnapshot,
+        { entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options },
+      )
+    const responses = await Promise.all([request(), request()])
+    expect(captureMock).toHaveBeenCalledTimes(1)
+    expect(responses.filter((response) => response.success)).toHaveLength(1)
+  })
+
+  it("sends one rate-limited auto check-in config snapshot per surface request", async () => {
+    await expect(
+      handleProductAnalyticsMessage(
+        ProductAnalyticsMessageTypes.TrackAutoCheckinConfigSnapshot,
+        {
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        },
+      ),
+    ).resolves.toEqual({ success: true })
+
+    expect(captureMock).toHaveBeenCalledTimes(1)
+    expect(captureMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+      expect.objectContaining({
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinConfigSnapshot,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        global_enabled: true,
+      }),
+    )
+    expect(stateMocks.setLastAutoCheckinConfigSnapshotAt).toHaveBeenCalledWith(
+      Date.parse("2026-05-12T00:00:00.000Z"),
+    )
+
+    vi.clearAllMocks()
+    preferenceMocks.isEnabled.mockResolvedValue(true)
+    stateMocks.getState.mockResolvedValue({
+      lastAutoCheckinConfigSnapshotAt: Date.parse("2026-05-12T00:00:00.000Z"),
+    })
+
+    await expect(
+      handleProductAnalyticsMessage(
+        ProductAnalyticsMessageTypes.TrackAutoCheckinConfigSnapshot,
+        {
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        },
+      ),
+    ).resolves.toEqual({ success: false })
+
+    expect(getPreferencesMock).not.toHaveBeenCalled()
+    expect(captureMock).not.toHaveBeenCalled()
+    expect(stateMocks.setLastAutoCheckinConfigSnapshotAt).not.toHaveBeenCalled()
+  })
+
+  it("does not update auto check-in config snapshot cadence when capture returns false", async () => {
+    captureMock.mockResolvedValueOnce(false)
+
+    await expect(
+      handleProductAnalyticsMessage(
+        ProductAnalyticsMessageTypes.TrackAutoCheckinConfigSnapshot,
+        {
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Sidepanel,
+        },
+      ),
+    ).resolves.toEqual({ success: false })
+
+    expect(captureMock).toHaveBeenCalledTimes(1)
+    expect(stateMocks.setLastAutoCheckinConfigSnapshotAt).not.toHaveBeenCalled()
+  })
+
+  it("keeps the three-day cooldown across worker restart when the local timestamp write fails", async () => {
+    stateMocks.setLastAutoCheckinConfigSnapshotAt.mockResolvedValue(false)
+    const request = { entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options }
+    await expect(
+      handleProductAnalyticsMessage(
+        ProductAnalyticsMessageTypes.TrackAutoCheckinConfigSnapshot,
+        request,
+      ),
+    ).resolves.toEqual({ success: true })
+
+    vi.resetModules()
+    const restartedRuntime = await import(
+      "~/services/productAnalytics/runtime/runtime"
+    )
+    await expect(
+      restartedRuntime.handleProductAnalyticsMessage(
+        ProductAnalyticsMessageTypes.TrackAutoCheckinConfigSnapshot,
+        request,
+      ),
+    ).resolves.toEqual({ success: false })
+    expect(captureMock).toHaveBeenCalledTimes(1)
+
+    vi.advanceTimersByTime(3 * 24 * 60 * 60 * 1000)
+    await expect(
+      restartedRuntime.handleProductAnalyticsMessage(
+        ProductAnalyticsMessageTypes.TrackAutoCheckinConfigSnapshot,
+        request,
+      ),
+    ).resolves.toEqual({ success: true })
+    expect(captureMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("keeps the worker cooldown when session reads become unavailable", async () => {
+    stateMocks.setLastAutoCheckinConfigSnapshotAt.mockResolvedValue(false)
+    const request = { entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options }
+    await handleProductAnalyticsMessage(
+      ProductAnalyticsMessageTypes.TrackAutoCheckinConfigSnapshot,
+      request,
+    )
+    const sessionRead = vi
+      .spyOn(browser.storage.session, "get")
+      .mockRejectedValue(new Error("session unavailable"))
+    try {
+      await expect(
+        handleProductAnalyticsMessage(
+          ProductAnalyticsMessageTypes.TrackAutoCheckinConfigSnapshot,
+          request,
+        ),
+      ).resolves.toEqual({ success: false })
+      expect(captureMock).toHaveBeenCalledTimes(1)
+    } finally {
+      sessionRead.mockRestore()
+    }
+  })
+
+  it("rejects auto check-in config snapshot requests with an unknown entrypoint", async () => {
+    await expect(
+      handleProductAnalyticsMessage(
+        ProductAnalyticsMessageTypes.TrackAutoCheckinConfigSnapshot,
+        {
+          entrypoint: "unknown-entrypoint",
+        },
+      ),
+    ).resolves.toEqual({ success: false })
+
+    expect(captureMock).not.toHaveBeenCalled()
+    expect(stateMocks.setLastAutoCheckinConfigSnapshotAt).not.toHaveBeenCalled()
+  })
+
   it("ignores invalid runtime events", async () => {
     await expect(
       handleProductAnalyticsMessage(ProductAnalyticsMessageTypes.TrackEvent, {
@@ -310,7 +471,7 @@ describe("product analytics runtime", () => {
     setupProductAnalyticsMessagingListeners()
     setupProductAnalyticsMessagingListeners()
 
-    expect(mockOnProductAnalyticsMessage).toHaveBeenCalledTimes(3)
+    expect(mockOnProductAnalyticsMessage).toHaveBeenCalledTimes(4)
     expect(mockOnProductAnalyticsMessage).toHaveBeenNthCalledWith(
       1,
       ProductAnalyticsMessageTypes.TrackEvent,
@@ -324,6 +485,11 @@ describe("product analytics runtime", () => {
     expect(mockOnProductAnalyticsMessage).toHaveBeenNthCalledWith(
       3,
       ProductAnalyticsMessageTypes.TrackSettingsSnapshot,
+      expect.any(Function),
+    )
+    expect(mockOnProductAnalyticsMessage).toHaveBeenNthCalledWith(
+      4,
+      ProductAnalyticsMessageTypes.TrackAutoCheckinConfigSnapshot,
       expect.any(Function),
     )
   })

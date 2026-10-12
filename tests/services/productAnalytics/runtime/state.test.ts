@@ -79,6 +79,18 @@ describe("productAnalyticsState", () => {
     )
   })
 
+  it("persists auto check-in config snapshot timestamp in analytics local state", async () => {
+    await expect(
+      productAnalyticsState.setLastAutoCheckinConfigSnapshotAt(24680),
+    ).resolves.toBe(true)
+
+    await expect(productAnalyticsState.getState()).resolves.toEqual(
+      expect.objectContaining({
+        lastAutoCheckinConfigSnapshotAt: 24680,
+      }),
+    )
+  })
+
   it("rejects invalid settings snapshot timestamps", async () => {
     await expect(
       productAnalyticsState.setLastSettingsSnapshotAt(Number.NaN),
@@ -341,10 +353,12 @@ describe("productAnalyticsState", () => {
     expect(
       normalizeProductAnalyticsState({
         lastSettingsSnapshotAt: 67890,
+        lastAutoCheckinConfigSnapshotAt: 13579,
         lastSiteEcosystemSnapshotAt: Number.NaN,
       }),
     ).toEqual({
       lastSettingsSnapshotAt: 67890,
+      lastAutoCheckinConfigSnapshotAt: 13579,
     })
   })
 

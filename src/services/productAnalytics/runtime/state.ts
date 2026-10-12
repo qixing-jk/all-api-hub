@@ -14,6 +14,7 @@ const logger = createLogger("ProductAnalyticsState")
 interface ProductAnalyticsState {
   lastSiteEcosystemSnapshotAt?: number
   lastSettingsSnapshotAt?: number
+  lastAutoCheckinConfigSnapshotAt?: number
   shieldBypassSummary?: ProductAnalyticsShieldBypassSummaryState
   sponsorRecommendationsSummary?: ProductAnalyticsSponsorRecommendationsSummaryState
 }
@@ -221,6 +222,14 @@ export function normalizeProductAnalyticsState(
     normalized.lastSettingsSnapshotAt = state.lastSettingsSnapshotAt
   }
 
+  if (
+    typeof state.lastAutoCheckinConfigSnapshotAt === "number" &&
+    Number.isFinite(state.lastAutoCheckinConfigSnapshotAt)
+  ) {
+    normalized.lastAutoCheckinConfigSnapshotAt =
+      state.lastAutoCheckinConfigSnapshotAt
+  }
+
   const shieldBypassSummary = normalizeShieldBypassSummaryState(
     state.shieldBypassSummary,
   )
@@ -306,6 +315,27 @@ class ProductAnalyticsStateService {
       return true
     } catch (error) {
       logger.warn("Failed to update settings snapshot timestamp", error)
+      return false
+    }
+  }
+
+  async setLastAutoCheckinConfigSnapshotAt(
+    timestamp: number,
+  ): Promise<boolean> {
+    if (!Number.isFinite(timestamp)) {
+      return false
+    }
+
+    try {
+      await this.withStorageWriteLock(async () => {
+        await this.saveState({ lastAutoCheckinConfigSnapshotAt: timestamp })
+      })
+      return true
+    } catch (error) {
+      logger.warn(
+        "Failed to update auto check-in config snapshot timestamp",
+        error,
+      )
       return false
     }
   }
