@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event"
 import React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
+import BalanceSection from "~/entrypoints/popup/components/BalanceSection"
 import AccountBalanceSummary from "~/entrypoints/popup/components/BalanceSection/AccountBalanceSummary"
 import { TokenStats } from "~/entrypoints/popup/components/BalanceSection/TokenStats"
 import { UpdateTimeAndWarning } from "~/entrypoints/popup/components/BalanceSection/UpdateTimeAndWarning"
@@ -10,6 +12,12 @@ import {
   RELATIVE_TIME_REFRESH_INTERVAL_MS,
   SUMMARY_ANIMATION_DURATION,
 } from "~/entrypoints/popup/summaryConfig"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/contracts"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
@@ -27,11 +35,13 @@ const {
   formatRelativeTimeMock,
   mockUseAccountDataContext,
   mockUseUserPreferencesContext,
+  trackActionStartedMock,
 } = vi.hoisted(() => ({
   formatFullTimeMock: vi.fn(),
   formatRelativeTimeMock: vi.fn(),
   mockUseAccountDataContext: vi.fn(),
   mockUseUserPreferencesContext: vi.fn(),
+  trackActionStartedMock: vi.fn(),
 }))
 
 vi.mock("react-countup", () => ({
@@ -66,6 +76,13 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
 
 vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
   useAccountDataContext: () => mockUseAccountDataContext(),
+}))
+
+vi.mock("~/services/productAnalytics/actions", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/productAnalytics/actions")
+  >()),
+  trackProductAnalyticsActionStarted: trackActionStartedMock,
 }))
 
 vi.mock("~/components/Tooltip", () => ({
@@ -775,6 +792,172 @@ describe("popup BalanceSection components", () => {
 
     expect(formatRelativeTimeMock).toHaveBeenCalledTimes(2)
     expect(screen.getByText("common:time.updatedAt")).toBeInTheDocument()
+  })
+
+  it("filters the account list to the detected site origin when the detected-accounts badge is clicked", () => {
+    const onFilterCurrentSiteAccounts = vi.fn()
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        detectedAccount: {
+          id: "acc-enabled",
+          site_name: "Fallback Login Name",
+          site_url: "https://login.example.com/console",
+        },
+        detectedSiteAccounts: [
+          {
+            id: "acc-enabled",
+            site_name: "Fallback Site",
+            site_url: "https://login.example.com/console",
+          },
+        ],
+      }),
+    )
+
+    render(
+      <UpdateTimeAndWarning
+        onFilterCurrentSiteAccounts={onFilterCurrentSiteAccounts}
+      />,
+    )
+
+    const filterTrigger = screen.getByRole("button", {
+      name: /account:currentLoginAdded/,
+    })
+    expect(filterTrigger).toHaveTextContent("account:currentSiteFilterAction")
+
+    fireEvent.click(filterTrigger)
+
+    expect(onFilterCurrentSiteAccounts).toHaveBeenCalledTimes(1)
+    expect(onFilterCurrentSiteAccounts).toHaveBeenCalledWith(
+      "login.example.com",
+    )
+  })
+
+  it("passes internationalized site URLs through the search index's own domain form", () => {
+    const onFilterCurrentSiteAccounts = vi.fn()
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        detectedSiteAccounts: [
+          {
+            id: "acc-idn",
+            site_name: "IDN Site",
+            site_url: "https://例え.テスト/console",
+          },
+        ],
+      }),
+    )
+
+    render(
+      <UpdateTimeAndWarning
+        onFilterCurrentSiteAccounts={onFilterCurrentSiteAccounts}
+      />,
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /account:currentSiteAdded/ }),
+    )
+
+    // The account search index keeps baseUrl in its original Unicode form, so
+    // a punycode host from URL.host would never match it.
+    expect(onFilterCurrentSiteAccounts).toHaveBeenCalledWith("例え.テスト")
+  })
+
+  it("tracks the detected-site filter click through the popup analytics scope", () => {
+    const onFilterCurrentSiteAccounts = vi.fn()
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        detectedSiteAccounts: [
+          {
+            id: "acc-enabled",
+            site_name: "Fallback Site",
+            site_url: "https://login.example.com/console",
+          },
+        ],
+      }),
+    )
+
+    render(
+      <ProductAnalyticsScope
+        entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Popup}
+        surfaceId={PRODUCT_ANALYTICS_SURFACE_IDS.PopupStats}
+      >
+        <UpdateTimeAndWarning
+          onFilterCurrentSiteAccounts={onFilterCurrentSiteAccounts}
+        />
+      </ProductAnalyticsScope>,
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /account:currentSiteAdded/ }),
+    )
+
+    expect(trackActionStartedMock).toHaveBeenCalledTimes(1)
+    expect(trackActionStartedMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
+        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.PopupStats,
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterAccounts,
+      }),
+    )
+  })
+
+  it("composes the balance section and forwards the detected-site filter to the badge", () => {
+    const onFilterCurrentSiteAccounts = vi.fn()
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        detectedSiteAccounts: [
+          {
+            id: "acc-enabled",
+            site_name: "Fallback Site",
+            site_url: "https://login.example.com/console",
+          },
+        ],
+      }),
+    )
+
+    render(
+      <BalanceSection
+        onFilterCurrentSiteAccounts={onFilterCurrentSiteAccounts}
+      />,
+    )
+
+    // TokenStats renders alongside the summary when today's cashflow is shown.
+    expect(
+      screen.getByRole("group", { name: /account:stats\.prompt/ }),
+    ).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /account:currentSiteAdded/ }),
+    )
+
+    expect(onFilterCurrentSiteAccounts).toHaveBeenCalledWith(
+      "login.example.com",
+    )
+  })
+
+  it("renders the detected-accounts badge as a static hint when the site origin cannot be resolved", () => {
+    const onFilterCurrentSiteAccounts = vi.fn()
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        detectedSiteAccounts: [
+          { id: "acc-enabled", site_name: "Fallback Site" },
+        ],
+      }),
+    )
+
+    render(
+      <UpdateTimeAndWarning
+        onFilterCurrentSiteAccounts={onFilterCurrentSiteAccounts}
+      />,
+    )
+
+    expect(screen.getByText("account:currentSiteAdded")).toBeInTheDocument()
+    expect(screen.queryByRole("button")).not.toBeInTheDocument()
   })
 
   it("falls back to site names for single-site detection and shows the count badge for multiple detected site accounts", () => {

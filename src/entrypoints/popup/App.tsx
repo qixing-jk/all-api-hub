@@ -102,6 +102,15 @@ function PopupContent({ inPopup }: { inPopup: boolean }) {
   const viewTabsSurface = inSidePanel
     ? PRODUCT_ANALYTICS_SURFACE_IDS.SidepanelViewTabs
     : PRODUCT_ANALYTICS_SURFACE_IDS.PopupViewTabs
+  const statsSurfaceId = inSidePanel
+    ? PRODUCT_ANALYTICS_SURFACE_IDS.SidepanelStats
+    : PRODUCT_ANALYTICS_SURFACE_IDS.PopupStats
+  const statsSection =
+    !isLoading && activeViewConfig.statsSection ? (
+      <ProductAnalyticsScope entrypoint={entrypoint} surfaceId={statsSurfaceId}>
+        {activeViewConfig.statsSection}
+      </ProductAnalyticsScope>
+    ) : null
 
   useProductAnalyticsPageView({
     entrypoint,
@@ -173,9 +182,7 @@ function PopupContent({ inPopup }: { inPopup: boolean }) {
               {activeViewConfig.headerAction}
             </ProductAnalyticsScope>
           </div>
-          {!isLoading && activeViewConfig.statsSection
-            ? activeViewConfig.statsSection
-            : null}
+          {statsSection}
         </section>
 
         <div className="flex-1" data-testid={getPopupViewTestId(activeView)}>

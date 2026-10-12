@@ -50,6 +50,11 @@ import { getHealthStatusDisplay } from "~/utils/healthStatus"
 
 export interface AccountListViewModelOptions {
   initialSearchQuery?: string
+  /**
+   * External revision for {@link initialSearchQuery}; a change re-applies the
+   * query even when its text is unchanged (e.g. popup detected-site filter).
+   */
+  initialSearchQueryRevision?: number
   onAddAccount?: () => void
   reorderUnavailableReason?: string
 }
@@ -57,6 +62,7 @@ export interface AccountListViewModelOptions {
 /** Compose list filtering, summaries and existing selection/reorder owners for the view. */
 export function useAccountListViewModel({
   initialSearchQuery,
+  initialSearchQueryRevision,
   onAddAccount,
   reorderUnavailableReason,
 }: AccountListViewModelOptions) {
@@ -92,7 +98,11 @@ export function useAccountListViewModel({
     useState<AccountDisabledFilterValue | null>(null)
 
   const { query, setQuery, clearSearch, searchResults, inSearchMode } =
-    useAccountSearch(displayData, initialSearchQuery)
+    useAccountSearch(
+      displayData,
+      initialSearchQuery,
+      initialSearchQueryRevision,
+    )
 
   const reordering = useAccountListReordering({
     inSearchMode,

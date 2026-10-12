@@ -37,6 +37,8 @@ import { VirtualizedAccountList } from "./VirtualizedAccountList"
 
 interface AccountListProps {
   initialSearchQuery?: string
+  /** External revision for {@link initialSearchQuery}; a change re-applies the query even when its text is unchanged. */
+  initialSearchQueryRevision?: number
   onAddAccount?: () => void
   reorderUnavailableReason?: string
   showAddAccountAction?: boolean
@@ -48,6 +50,7 @@ interface AccountListProps {
  */
 export default function AccountList({
   initialSearchQuery,
+  initialSearchQueryRevision,
   onAddAccount,
   reorderUnavailableReason,
   showAddAccountAction = true,
@@ -56,6 +59,7 @@ export default function AccountList({
   const { t } = useTranslation(["account", "common"])
   const model = useAccountListViewModel({
     initialSearchQuery,
+    initialSearchQueryRevision,
     onAddAccount,
     reorderUnavailableReason,
   })

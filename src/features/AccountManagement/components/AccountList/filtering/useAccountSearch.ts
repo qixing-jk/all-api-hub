@@ -240,11 +240,13 @@ function generateHighlights(
  * 搜索账号列表并提供高亮信息、去抖和清空逻辑。
  * @param accounts 可用账号数据
  * @param initialQuery 初始查询字符串
+ * @param initialQueryRevision 外部强制重新应用初始查询的版本号；变化时即使查询串相同也会重新应用
  * @returns 查询状态、结果及工具函数
  */
 export function useAccountSearch(
   accounts: DisplaySiteData[],
   initialQuery?: string,
+  initialQueryRevision?: number,
 ) {
   const normalizedInitialQuery = initialQuery ?? ""
   const [query, setQuery] = useState(() => normalizedInitialQuery)
@@ -252,14 +254,19 @@ export function useAccountSearch(
     () => normalizedInitialQuery,
   )
   const lastAppliedInitialQuery = useRef(normalizedInitialQuery)
+  const lastAppliedInitialRevision = useRef(initialQueryRevision)
 
   useEffect(() => {
-    if (lastAppliedInitialQuery.current !== normalizedInitialQuery) {
+    if (
+      lastAppliedInitialQuery.current !== normalizedInitialQuery ||
+      lastAppliedInitialRevision.current !== initialQueryRevision
+    ) {
       setQuery(normalizedInitialQuery)
       setDebouncedQuery(normalizedInitialQuery)
       lastAppliedInitialQuery.current = normalizedInitialQuery
+      lastAppliedInitialRevision.current = initialQueryRevision
     }
-  }, [normalizedInitialQuery])
+  }, [normalizedInitialQuery, initialQueryRevision])
 
   useEffect(() => {
     const timer = setTimeout(() => {
