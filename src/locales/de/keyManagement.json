@@ -400,6 +400,7 @@
         "saveName": "Name speichern",
         "transferAmount": "Zu übertragende Tokens"
       },
+      "description": "Beschreibung (optional)",
       "excludeIps": "Ausgeschlossene IPs",
       "excludeIpsPlaceholder": "Eine pro Zeile (CIDR unterstützt)",
       "expiryDays": "Gültigkeitsdauer (Tage)",

@@ -390,6 +390,7 @@
         "saveName": "Lưu tên",
         "transferAmount": "Số token cần chuyển"
       },
+      "description": "Mô tả (không bắt buộc)",
       "excludeIps": "IP loại trừ",
       "excludeIpsPlaceholder": "Mỗi dòng một mục (hỗ trợ CIDR)",
       "expiryDays": "Hết hạn sau (ngày)",

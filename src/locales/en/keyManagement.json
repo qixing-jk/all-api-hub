@@ -400,6 +400,7 @@
         "saveName": "Save name",
         "transferAmount": "Tokens to transfer"
       },
+      "description": "Description (optional)",
       "excludeIps": "Excluded IPs",
       "excludeIpsPlaceholder": "One per line (CIDR supported)",
       "expiryDays": "Expires in (days)",

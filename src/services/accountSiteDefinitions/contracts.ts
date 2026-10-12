@@ -44,6 +44,7 @@ export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   SharedChat: "sharedchat",
   FreeModel: "freemodel",
   Dahl: "dahl",
+  FoxCode: "foxcode",
   Cubence: "cubence",
   RightCode: "rightcode",
   OpenRouter: "openrouter",

@@ -141,6 +141,7 @@ type ExpectedAccountSiteType =
   | typeof SITE_TYPES.SHAREDCHAT
   | typeof SITE_TYPES.FREEMODEL
   | typeof SITE_TYPES.DAHL
+  | typeof SITE_TYPES.FOXCODE
   | typeof SITE_TYPES.CUBENCE
   | typeof SITE_TYPES.RIGHT_CODE
   | typeof SITE_TYPES.OPENROUTER
@@ -425,6 +426,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.SHAREDCHAT,
       SITE_TYPES.FREEMODEL,
       SITE_TYPES.DAHL,
+      SITE_TYPES.FOXCODE,
       SITE_TYPES.CUBENCE,
       SITE_TYPES.RIGHT_CODE,
       SITE_TYPES.OPENROUTER,

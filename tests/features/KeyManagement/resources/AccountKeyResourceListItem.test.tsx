@@ -633,7 +633,7 @@ describe("AccountKeyResourceListItem", () => {
   })
 })
 
-it.each(["dahl", "new-api", "sub2api"] as const)(
+it.each(["foxcode", "dahl", "new-api", "sub2api"] as const)(
   "shows details only for additional information in a complete %s inventory row",
   async (siteType) => {
     const completeRow: NativeKeyManagementRow = {

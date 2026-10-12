@@ -390,6 +390,7 @@
         "saveName": "儲存名稱",
         "transferAmount": "轉帳 Token 數量"
       },
+      "description": "描述（選填）",
       "excludeIps": "排除 IP",
       "excludeIpsPlaceholder": "一行一個（支援 CIDR）",
       "expiryDays": "有效期限（天）",
