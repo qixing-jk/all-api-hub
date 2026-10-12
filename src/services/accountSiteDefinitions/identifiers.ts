@@ -33,6 +33,7 @@ export const SITE_TYPES = {
   SHAREDCHAT: "sharedchat",
   FREEMODEL: "freemodel",
   DAHL: "dahl",
+  FOXCODE: "foxcode",
   CUBENCE: "cubence",
   RIGHT_CODE: "RightCode",
   OPENROUTER: "openrouter",
@@ -83,6 +84,10 @@ export const SHAREDCHAT_WEB_ORIGIN = "https://new.sharedchat.cc"
 export const FREEMODEL_HOSTNAMES = ["freemodel.dev"] as const
 export const DAHL_HOSTNAMES = ["inference.dahl.global"] as const
 export const DAHL_WEB_ORIGIN = "https://inference.dahl.global"
+/** FoxCode's logged-in console; its official inference routes are separate origins. */
+export const FOXCODE_HOSTNAMES = ["foxcode.rjj.cc"] as const
+export const FOXCODE_WEB_ORIGIN = "https://foxcode.rjj.cc"
+export const FOXCODE_INFERENCE_ORIGIN = "https://code1.newcli.com"
 export const CUBENCE_HOSTNAMES = ["cubence.com"] as const
 export const CUBENCE_WEB_ORIGIN = "https://cubence.com"
 export const CUBENCE_API_ORIGIN = "https://api.cubence.com"

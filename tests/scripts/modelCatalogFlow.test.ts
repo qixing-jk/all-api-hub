@@ -12,6 +12,27 @@ describe("live model catalog assertions", () => {
     accountName: "Fixture",
     accountId: "fixture-id",
   }
+  it.each([undefined, 30000])(
+    "honors the bounded provider readiness timeout (%s)",
+    async (timeoutMs) => {
+      const page = {
+        goto: vi.fn(),
+        waitForLoadState: vi.fn(),
+        waitForFunction: vi.fn(),
+        locator: () => ({
+          locator: () => ({ allTextContents: async () => [] }),
+        }),
+      } as unknown as Page
+      await expect(
+        testModelCatalogFlow({ ...options, page, timeoutMs }),
+      ).rejects.toThrow("model_catalog_has_no_rendered_models")
+      expect(page.waitForFunction).toHaveBeenCalledWith(
+        expect.any(Function),
+        "account:fixture-id",
+        { timeout: timeoutMs ?? 15000 },
+      )
+    },
+  )
   it("reports an empty completed catalog without timing out", async () => {
     const root = {
       getAttribute: () => "account:fixture-id",

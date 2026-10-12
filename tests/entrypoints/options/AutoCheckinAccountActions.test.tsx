@@ -387,6 +387,10 @@ describe("AutoCheckin account actions", () => {
       const rejectedReads = vi.fn()
       const accountReads = vi.fn()
       let statusCalls = 0
+      let completeRetry!: (response: { success: true }) => void
+      const pendingRetry = new Promise<{ success: true }>((resolve) => {
+        completeRetry = resolve
+      })
       vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
         async (message: unknown, data?: any) => {
           if (message === AutoCheckinMessageTypes.GetStatus) {
@@ -430,6 +434,8 @@ describe("AutoCheckin account actions", () => {
               data: { id: data.accountId, name: data.accountId },
             }
           }
+          if (message === AutoCheckinMessageTypes.RetryAccount)
+            return pendingRetry
           return { success: true }
         },
       )
@@ -441,6 +447,9 @@ describe("AutoCheckin account actions", () => {
           name: "autoCheckin:execution.actions.retryAccount",
         }),
       )
+      expect(statusCalls).toBe(1)
+      completeRetry({ success: true })
+      await waitFor(() => expect(statusCalls).toBeGreaterThanOrEqual(2))
       await waitFor(() =>
         expect(
           screen.queryByRole("button", {

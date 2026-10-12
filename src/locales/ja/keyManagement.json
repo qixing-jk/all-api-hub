@@ -390,6 +390,7 @@
         "saveName": "名前を保存",
         "transferAmount": "転送するトークン数"
       },
+      "description": "説明（任意）",
       "excludeIps": "除外 IP",
       "excludeIpsPlaceholder": "1 行に 1 件（CIDR 対応）",
       "expiryDays": "有効期間（日）",

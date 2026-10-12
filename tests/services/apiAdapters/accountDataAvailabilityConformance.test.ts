@@ -89,6 +89,40 @@ const kimiConsoleOriginBySiteType: Partial<Record<AccountSiteType, string>> = {
 }
 
 const producerFixturesByFamily = {
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.FoxCode]: {
+    baseUrl: "https://foxcode.rjj.cc",
+    authType: AuthTypeEnum.Cookie,
+    expectedAvailability: {
+      consumption: unavailable(ACCOUNT_TODAY_METRIC_REASONS.NotCollected),
+      requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.NotCollected),
+      tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.NotCollected),
+      income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.NotCollected),
+    },
+    handlers: [
+      http.get("https://foxcode.rjj.cc/api/auth/me", () =>
+        HttpResponse.json({
+          success: true,
+          data: { user: { id: "user-1", name: "Work" } },
+        }),
+      ),
+      http.get("https://foxcode.rjj.cc/api/user/dashboard", () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            user: { id: "user-1", name: "Work" },
+            subscription: { active: [] },
+          },
+        }),
+      ),
+      http.get("https://foxcode.rjj.cc/api/user/quota/usage", () =>
+        HttpResponse.json({
+          success: true,
+          data: { records: [], pagination: { page: 1, pages: 1 } },
+        }),
+      ),
+    ],
+    expectRequests: () => {},
+  },
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Dahl]: {
     baseUrl: "https://inference.dahl.global",
     authType: AuthTypeEnum.Cookie,
@@ -825,6 +859,13 @@ describe("AccountData availability producer conformance", () => {
     "classifies both registered producer paths for %s",
     async (siteType) => {
       const capabilities = getSiteTypeCapabilities(siteType)
+      if (capabilities.family === ACCOUNT_SITE_ADAPTER_FAMILIES.FoxCode) {
+        const boundary = installCookieTransport()
+        const cookie = (await browser.cookies.getAll({}))[0]!
+        boundary.cookies.mockResolvedValue([
+          { ...cookie, domain: "foxcode.rjj.cc", name: "auth_token" },
+        ])
+      }
       if (capabilities.family === ACCOUNT_SITE_ADAPTER_FAMILIES.Cubence) {
         installCookieTransport()
       }

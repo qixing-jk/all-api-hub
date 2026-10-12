@@ -78,6 +78,9 @@ import {
   CUBENCE_WEB_ORIGIN,
   DAHL_HOSTNAMES,
   DAHL_WEB_ORIGIN,
+  FOXCODE_HOSTNAMES,
+  FOXCODE_INFERENCE_ORIGIN,
+  FOXCODE_WEB_ORIGIN,
   FREEMODEL_ANTHROPIC_BASE_URL,
   FREEMODEL_HOSTNAMES,
   FREEMODEL_OPENAI_BASE_URL,
@@ -196,6 +199,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.SHAREDCHAT,
   SITE_TYPES.FREEMODEL,
   SITE_TYPES.DAHL,
+  SITE_TYPES.FOXCODE,
   SITE_TYPES.CUBENCE,
   SITE_TYPES.RIGHT_CODE,
   SITE_TYPES.OPENROUTER,
@@ -322,6 +326,55 @@ const ACCOUNT_SITE_DEFINITIONS = [
         inferenceApiBaseUrls: {
           openAiCompatible: FREEMODEL_OPENAI_BASE_URL,
           anthropic: FREEMODEL_ANTHROPIC_BASE_URL,
+        },
+      },
+    },
+  },
+  {
+    siteType: SITE_TYPES.FOXCODE,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.FoxCode,
+    onboarding: {
+      displayName: "FoxCode",
+      detection: { hostnames: FOXCODE_HOSTNAMES },
+      routes: {
+        loginPath: "/auth/login",
+        usagePath: "/usage",
+        adminCredentialsPath: "/api-keys",
+        pricingPath: "/model-square",
+        checkInPath: null,
+        accessTokenPath: null,
+        redeemPath: "/redeem",
+        siteAnnouncementsPath: "/dashboard",
+      },
+    },
+    productProfile: {
+      auth: {
+        usesBrowserCookieSession: true,
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.Cookie],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.Cookie,
+        defaultAuthHostnames: FOXCODE_HOSTNAMES,
+      },
+      identity: {
+        usernameRequired: false,
+        storedUserIdentityFields: ["id", "username"],
+      },
+      modelList: {
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+        groupSemantics:
+          ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
+      },
+      urls: {
+        recognizedHostnames: FOXCODE_HOSTNAMES,
+        inferFromHostname: true,
+        storageOrigin: FOXCODE_WEB_ORIGIN,
+        duplicateOrigin: FOXCODE_WEB_ORIGIN,
+        managedChannelOrigin: FOXCODE_INFERENCE_ORIGIN,
+        inferenceApiBaseUrls: {
+          openAiCompatible: `${FOXCODE_INFERENCE_ORIGIN}/v1`,
+          anthropic: FOXCODE_INFERENCE_ORIGIN,
         },
       },
     },

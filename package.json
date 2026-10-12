@@ -86,6 +86,7 @@
     "e2e:cdp:laozhang": "node scripts/test-laozhang-e2e-live.mjs",
     "e2e:cdp:cubence": "node scripts/test-cubence-e2e-live.mjs",
     "e2e:cdp:dahl": "node scripts/test-dahl-e2e-live.mjs",
+    "e2e:cdp:foxcode": "node scripts/test-foxcode-e2e-live.mjs",
     "prepare": "husky"
   },
   "lint-staged": {

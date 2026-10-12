@@ -19,6 +19,7 @@ import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import { createAIHubMixKeyEditor } from "~/services/apiAdapters/aihubmix/keys/keyResourceEditor"
 import type { ResourceFieldDescriptor } from "~/services/apiAdapters/contracts/resourceNative"
 import { createCubenceKeyEditor } from "~/services/apiAdapters/cubence/keyEditor"
+import { createFoxCodeKeyEditor } from "~/services/apiAdapters/foxcode/keyEditor"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keys/keyResourceEditor"
 import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
 import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keys/keyResourceEditor"
@@ -53,6 +54,29 @@ function getPresentation(
 }
 
 describe("native key editor field policies", () => {
+  it("presents FoxCode name, description, channel and quota without unrelated fields", () => {
+    const editor = createFoxCodeKeyEditor(async () => [])
+    const presentation = getPresentation(
+      SITE_TYPES.FOXCODE,
+      editorModes.Create,
+      { fields: editor.fields },
+    )
+    expect(presentation.requireFreshOptions).toBe(true)
+    expect(presentation.policy.fields.map((field) => field.fieldId)).toEqual([
+      "name",
+      "description",
+      "channelKey",
+      "unlimited",
+      "quotaUsd",
+    ])
+    expect(
+      resolveResourceFieldPolicy(
+        editor.fields,
+        presentation.policy,
+        presentation.sectionOrder,
+      ).fields,
+    ).toHaveLength(editor.fields.length)
+  })
   it("presents only native Cubence creation fields and hides finite quota when unlimited", () => {
     const editor = createCubenceKeyEditor(async () => [])
     const presentation = getPresentation(
@@ -550,6 +574,14 @@ it("configures RightCode key editor fields and automatic naming", () => {
 })
 
 it("declares the grouping field or an explicit fixed naming policy", () => {
+  expect(
+    getPresentation(SITE_TYPES.FOXCODE, editorModes.Create).automaticName,
+  ).toEqual({
+    kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Group,
+    fieldId: "channelKey",
+    useOptionLabels: true,
+    unselectedName: "default key (auto)",
+  })
   expect(
     getPresentation(SITE_TYPES.GRSAI, editorModes.Create).automaticName,
   ).toEqual({ kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed })

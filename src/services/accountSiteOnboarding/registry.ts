@@ -10,6 +10,7 @@ import type {
 } from "~/services/apiAdapters/contracts/accountBrowserIdentity"
 import { cubenceBrowserIdentity } from "~/services/apiAdapters/cubence/browserIdentity"
 import { dahlBrowserIdentity } from "~/services/apiAdapters/dahl/browserIdentity"
+import { foxCodeBrowserIdentity } from "~/services/apiAdapters/foxcode/browserIdentity"
 import { freeModelBrowserIdentity } from "~/services/apiAdapters/freemodel/browserIdentity"
 import { kimiOpenPlatformBrowserIdentity } from "~/services/apiAdapters/kimiOpenPlatform/browserIdentity"
 import { newApiBrowserIdentity } from "~/services/apiAdapters/newApi/account/browserIdentity"
@@ -24,6 +25,7 @@ import { apiyiContentSessionExtractor } from "./contentSession/apiyi"
 import { compatibleUserContentSessionExtractor } from "./contentSession/compatibleUser"
 import { cubenceContentSessionExtractor } from "./contentSession/cubence"
 import { dahlContentSessionExtractor } from "./contentSession/dahl"
+import { foxCodeContentSessionExtractor } from "./contentSession/foxcode"
 import { freeModelContentSessionExtractor } from "./contentSession/freemodel"
 import { grsaiContentSessionExtractor } from "./contentSession/grsai"
 import { kimiOpenPlatformContentSessionExtractor } from "./contentSession/kimiOpenPlatform"
@@ -45,6 +47,10 @@ const siteBrowserAdapters: readonly {
   identity?: AccountBrowserIdentityCapability
   detectionPrivacy?: AccountDetectionPrivacyPolicy
 }[] = [
+  {
+    sessionExtractor: foxCodeContentSessionExtractor,
+    identity: foxCodeBrowserIdentity,
+  },
   {
     sessionExtractor: cubenceContentSessionExtractor,
     identity: cubenceBrowserIdentity,

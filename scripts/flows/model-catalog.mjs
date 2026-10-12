@@ -6,6 +6,7 @@ export async function testModelCatalogFlow({
   extensionId,
   accountName,
   accountId,
+  timeoutMs = 15000,
 }) {
   if (!accountId) throw new Error("model_catalog_requires_account_id")
   await page.goto(
@@ -24,7 +25,7 @@ export async function testModelCatalogFlow({
       )
     },
     `account:${accountId}`,
-    { timeout: 15000 },
+    { timeout: timeoutMs },
   )
   const modelDisplay = page.locator('[data-testid="model-list-display"]')
   const names = await modelDisplay.locator("h3").allTextContents()

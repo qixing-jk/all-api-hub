@@ -390,6 +390,7 @@
         "saveName": "保存名称",
         "transferAmount": "转账 Token 数量"
       },
+      "description": "描述（可选）",
       "excludeIps": "排除 IP",
       "excludeIpsPlaceholder": "一行一个（支持 CIDR）",
       "expiryDays": "有效期（天）",

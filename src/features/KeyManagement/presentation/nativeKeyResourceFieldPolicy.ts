@@ -14,6 +14,7 @@ import {
   getDefaultAccountKeyName,
 } from "~/services/accounts/keys/accountKeyNames"
 import type { ResourceFieldDescriptor } from "~/services/apiAdapters/contracts/resourceNative"
+import { FOXCODE_KEY_EDITOR_FIELDS as foxCodeFields } from "~/services/apiAdapters/foxcode/keyEditorFields"
 
 import type { AccountKeyResourceEditorPresentation as EditorPresentation } from "./accountKeyResourceEditorPresentation"
 import { getDahlKeyResourceEditorPresentation } from "./dahlKeyResourceEditorPresentation"
@@ -355,6 +356,43 @@ const resolveSiteFields = (
       automaticName: { kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed } as const,
     }),
     [editorKinds.Grsai]: buildGrsaiFields,
+    [editorKinds.FoxCode]: (): {
+      fields: ResourceFieldPresentation[]
+      requireFreshOptions: boolean
+      automaticName: EditorPresentation["automaticName"]
+    } => ({
+      requireFreshOptions: true,
+      automaticName: groupNamePolicy(
+        foxCodeFields.Channel,
+        true,
+        DEFAULT_AUTO_PROVISION_KEY_NAME,
+      ),
+      fields: [
+        name,
+        {
+          fieldId: foxCodeFields.Description,
+          section: "basic",
+          order: 5,
+          renderer: "textarea",
+          resolveLabel: (t: TFunction) =>
+            t("keyManagement:native.editor.description"),
+          issueLabelResolvers: issues,
+        },
+        {
+          fieldId: foxCodeFields.Channel,
+          section: "basic",
+          order: 10,
+          renderer: "select",
+          resolveLabel: (t: TFunction) =>
+            t("keyManagement:native.editor.channel"),
+          issueLabelResolvers: issues,
+        },
+        ...quota(foxCodeFields.Quota, foxCodeFields.Unlimited, true),
+        ...(mode === editorModes.Edit
+          ? [{ ...enabled(foxCodeFields.Enabled), section: "basic", order: 30 }]
+          : []),
+      ],
+    }),
     // Dahl's transfer editor is selected before this generic field-only builder.
     [editorKinds.Dahl]: () => ({
       fields: [],

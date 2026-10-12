@@ -21,6 +21,7 @@ import { OneTimeSecretDialog } from "~/features/TokenProvisioning/secretDelivery
 import zhKeyManagement from "~/locales/zh-CN/keyManagement.json"
 import { RESOURCE_FIELD_OPTION_LOAD_TRIGGERS } from "~/services/apiAdapters/contracts/resourceNative"
 import { createCubenceKeyEditor } from "~/services/apiAdapters/cubence/keyEditor"
+import { createFoxCodeKeyEditor } from "~/services/apiAdapters/foxcode/keyEditor"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keys/keyResourceEditor"
 import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
 import {
@@ -81,6 +82,56 @@ const nativeRequest = {
     userId: 1,
   },
 }
+
+it("submits an existing unrestricted FoxCode key without selecting a channel", async () => {
+  const user = userEvent.setup()
+  const onSubmit = vi.fn()
+  const definition = createFoxCodeKeyEditor(async () => [], {
+    id: "existing-key",
+    userId: "sample-account",
+    name: "Unrestricted",
+    description: "",
+    key: "sk-example",
+    channelKey: null,
+    isActive: true,
+    quotaLimit: -1,
+    quotaUsed: 0,
+    createdAt: "2026-10-01T00:00:00Z",
+    lastUsedAt: null,
+    modelIds: null,
+    baseUrl: "https://inference.example",
+  })
+  render(
+    <AccountKeyResourceEditorDialog
+      editor={{
+        editorId: 1,
+        siteType: SITE_TYPES.FOXCODE,
+        mode: editorModes.Edit,
+        fields: definition.fields,
+        initialValues: definition.initialValues,
+        values: definition.initialValues,
+        optionsByField: { channelKey: [] },
+      }}
+      onClose={vi.fn()}
+      onSubmit={onSubmit}
+      onValuesChange={vi.fn()}
+    />,
+    { withUserPreferencesProvider: false, withThemeProvider: false },
+  )
+  const name = screen.getByRole("textbox", {
+    name: /keyManagement:dialog.tokenName/,
+  })
+  await user.clear(name)
+  await user.type(name, "Renamed")
+  await user.click(
+    screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton),
+  )
+  expect(onSubmit).toHaveBeenCalledWith(
+    1,
+    expect.objectContaining({ name: "Renamed", channelKey: null }),
+  )
+  expect(definition.validate(onSubmit.mock.calls[0]![1]).valid).toBe(true)
+})
 
 it.each([false, true])(
   "fills a late group label while preserving a manually edited name (%s)",
@@ -364,23 +415,33 @@ describe("AccountKeyResourceEditorDialog", () => {
     },
   )
 
-  it.each([SITE_TYPES.SUB2API, SITE_TYPES.VO_API_V2, SITE_TYPES.CUBENCE])(
+  it.each([
+    SITE_TYPES.SUB2API,
+    SITE_TYPES.VO_API_V2,
+    SITE_TYPES.CUBENCE,
+    SITE_TYPES.FOXCODE,
+  ])(
     "names %s keys after the visible group while retaining native group IDs",
     async (siteType) => {
       const user = userEvent.setup()
       const onValuesChange = vi.fn()
       const isMultiple = siteType === SITE_TYPES.VO_API_V2
       const isCubence = siteType === SITE_TYPES.CUBENCE
+      const isFoxCode = siteType === SITE_TYPES.FOXCODE
       const groupField = isMultiple
         ? "groups"
         : isCubence
           ? "group"
-          : "group_id"
+          : isFoxCode
+            ? "channelKey"
+            : "group_id"
       const definition = isMultiple
         ? createVoApiV2KeyEditor(nativeRequest)
         : isCubence
           ? createCubenceKeyEditor(async () => [])
-          : createSub2ApiKeyEditor(nativeRequest)
+          : isFoxCode
+            ? createFoxCodeKeyEditor(async () => [])
+            : createSub2ApiKeyEditor(nativeRequest)
       render(
         <AccountKeyResourceEditorDialog
           editor={{
@@ -409,7 +470,9 @@ describe("AccountKeyResourceEditorDialog", () => {
         name: /keyManagement:dialog.tokenName/,
       })
       const group = screen.getByRole("combobox", {
-        name: /keyManagement:dialog.groupLabel/,
+        name: isFoxCode
+          ? /keyManagement:native.editor.channel/
+          : /keyManagement:dialog.groupLabel/,
       })
       await user.click(group)
       await user.click(await screen.findByRole("option", { name: "Priority" }))
@@ -438,6 +501,75 @@ describe("AccountKeyResourceEditorDialog", () => {
       await user.click(group)
       await user.click(await screen.findByRole("option", { name: "Priority" }))
       expect(name).toHaveValue("Model specific key")
+    },
+  )
+
+  it.each([
+    {
+      initialName: "Priority group (auto)",
+      expectedName: "Backup group (auto)",
+    },
+    { initialName: "My custom key", expectedName: "My custom key" },
+    { initialName: "Other group (auto)", expectedName: "Other group (auto)" },
+  ])(
+    "changes an existing FoxCode channel with name $initialName",
+    async ({ initialName, expectedName }) => {
+      const user = userEvent.setup()
+      const onSubmit = vi.fn()
+      const definition = createFoxCodeKeyEditor(async () => [], {
+        id: "existing-key",
+        userId: "sample-account",
+        name: initialName,
+        description: "",
+        key: "sk-example",
+        channelKey: "11",
+        isActive: true,
+        quotaLimit: -1,
+        quotaUsed: 0,
+        createdAt: "2026-10-01T00:00:00Z",
+        lastUsedAt: null,
+        modelIds: null,
+        baseUrl: "https://inference.example",
+      })
+      render(
+        <AccountKeyResourceEditorDialog
+          editor={{
+            editorId: 1,
+            siteType: SITE_TYPES.FOXCODE,
+            mode: editorModes.Edit,
+            fields: definition.fields,
+            initialValues: definition.initialValues,
+            values: definition.initialValues,
+            optionsByField: {
+              channelKey: [
+                { value: "11", displayLabel: "Priority" },
+                { value: "15", displayLabel: "Backup" },
+              ],
+            },
+          }}
+          onClose={vi.fn()}
+          onSubmit={onSubmit}
+          onValuesChange={vi.fn()}
+          onLoadOptions={vi.fn()}
+        />,
+        { withUserPreferencesProvider: false, withThemeProvider: false },
+      )
+      await user.click(
+        screen.getByRole("combobox", {
+          name: /keyManagement:native.editor.channel/,
+        }),
+      )
+      await user.click(await screen.findByRole("option", { name: "Backup" }))
+      expect(
+        screen.getByRole("textbox", { name: /keyManagement:dialog.tokenName/ }),
+      ).toHaveValue(expectedName)
+      await user.click(
+        screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton),
+      )
+      expect(onSubmit).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ name: expectedName, channelKey: "15" }),
+      )
     },
   )
 
@@ -2038,4 +2170,54 @@ describe("AccountKeyResourceEditorDialog", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
     expect(trigger).toHaveFocus()
   })
+})
+
+it("fills the group name when labels arrive and stops following after a manual name edit", async () => {
+  const user = userEvent.setup()
+  const definition = createFoxCodeKeyEditor(async () => [])
+  const values = { ...definition.initialValues, channelKey: "primary" }
+  const state = {
+    editorId: 99,
+    siteType: SITE_TYPES.FOXCODE,
+    mode: editorModes.Create,
+    fields: definition.fields,
+    initialValues: values,
+    values,
+  }
+  const props = {
+    onClose: vi.fn(),
+    onSubmit: vi.fn(),
+    onValuesChange: vi.fn(),
+    onLoadOptions: vi.fn(),
+  }
+  const { rerender } = render(
+    <AccountKeyResourceEditorDialog editor={state} {...props} />,
+    { withUserPreferencesProvider: false, withThemeProvider: false },
+  )
+  const name = screen.getByRole("textbox", {
+    name: /keyManagement:dialog.tokenName/,
+  })
+  expect(name).toHaveValue("default key (auto)")
+  const optionsByField = {
+    channelKey: [
+      { value: "primary", displayLabel: "Priority" },
+      { value: "backup", displayLabel: "Backup" },
+    ],
+  }
+  rerender(
+    <AccountKeyResourceEditorDialog
+      editor={{ ...state, optionsByField }}
+      {...props}
+    />,
+  )
+  await waitFor(() => expect(name).toHaveValue("Priority group (auto)"))
+  await user.clear(name)
+  await user.type(name, "Priority group (auto)")
+  await user.click(
+    screen.getByRole("combobox", {
+      name: /keyManagement:native.editor.channel/,
+    }),
+  )
+  await user.click(await screen.findByRole("option", { name: "Backup" }))
+  expect(name).toHaveValue("Priority group (auto)")
 })

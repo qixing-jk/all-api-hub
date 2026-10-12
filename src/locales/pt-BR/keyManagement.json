@@ -410,6 +410,7 @@
         "saveName": "Salvar nome",
         "transferAmount": "Tokens a transferir"
       },
+      "description": "Descrição (opcional)",
       "excludeIps": "IPs excluídos",
       "excludeIpsPlaceholder": "Um por linha (com suporte a CIDR)",
       "expiryDays": "Expira em (dias)",
