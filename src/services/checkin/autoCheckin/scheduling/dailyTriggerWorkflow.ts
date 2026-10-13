@@ -45,6 +45,7 @@ type AutoCheckinUiOpenPretriggerIneligibleReason =
   | "daily_alarm_missing"
   | "daily_alarm_not_today"
   | "status_write_failed_recently"
+  | "status_write_guard_unavailable"
 
 /**
  * How long a failed daily status write keeps blocking the pre-trigger.
@@ -280,7 +281,9 @@ export class DailyTriggerWorkflow {
         }
         this.persistFailureGuardLoaded = true
       } catch {
-        // Retry recovery on the next UI open if session reads fail.
+        // The stored day may be stale after a failed write. Block admission
+        // until the next UI open can recover the session cooldown marker.
+        return returnIneligible("status_write_guard_unavailable")
       }
     }
 

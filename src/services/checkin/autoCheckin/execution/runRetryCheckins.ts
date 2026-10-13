@@ -306,7 +306,6 @@ export async function runRetryCheckins(
     logger.warn(
       "Retry run results could not be persisted; stopping the retry alarm",
     )
-    await retryScheduling.clearRetryAlarmAndState()
   }
 
   return { persisted }

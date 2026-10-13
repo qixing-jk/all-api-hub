@@ -630,6 +630,11 @@ describe("autoCheckinScheduler retry scheduling", () => {
     expect(mockedBrowserApi.createAlarm).not.toHaveBeenCalled()
     expect(mockedBrowserApi.clearAlarm).toHaveBeenCalledWith("autoCheckinRetry")
     expect(schedulerTestState.alarmStore.autoCheckinRetry).toBeUndefined()
+    expect(schedulerTestState.storedStatus.retryState).toEqual({
+      day: "2024-01-01",
+      pendingAccountIds: ["a"],
+      attemptsByAccount: { a: 1 },
+    })
 
     vi.useRealTimers()
   })

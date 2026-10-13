@@ -84,6 +84,55 @@ it("restores the failed-write cooldown after the worker creates a new workflow",
   ).resolves.toMatchObject({ eligible: true })
 })
 
+it("blocks pre-trigger admission until an unreadable session guard recovers", async () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
+  const runCheckins = vi.fn().mockResolvedValue({ persisted: false })
+  const deps = {
+    dailyAlarmName: "daily",
+    runCheckins,
+    scheduleNextRun: vi.fn().mockResolvedValue(undefined),
+  }
+  const execution = automaticExecution("checkin", "scheduled")
+  await new DailyTriggerWorkflow(deps).handleDailyAlarm(
+    { name: "daily" } as browser.alarms.Alarm,
+    TEMP_WINDOW_REQUEST_SOURCES.Background,
+    execution,
+  )
+  const workflow = new DailyTriggerWorkflow(deps)
+  const sessionRead = vi
+    .spyOn(browser.storage.session, "get")
+    .mockRejectedValueOnce(new Error("session unavailable"))
+  try {
+    const pretrigger = () =>
+      workflow.pretriggerDailyOnUiOpen({
+        protectionBypassExecution: execution,
+      })
+    await expect(pretrigger()).resolves.toMatchObject({
+      started: false,
+      eligible: false,
+      ineligibleReason: "status_write_guard_unavailable",
+    })
+    expect(runCheckins).toHaveBeenCalledTimes(1)
+    await expect(pretrigger()).resolves.toMatchObject({
+      started: false,
+      ineligibleReason: "status_write_failed_recently",
+    })
+    expect(sessionRead).toHaveBeenCalledTimes(2)
+    expect(runCheckins).toHaveBeenCalledTimes(1)
+
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 16, 0))
+    runCheckins.mockResolvedValue({ persisted: true })
+    await expect(pretrigger()).resolves.toMatchObject({
+      started: true,
+      eligible: true,
+    })
+    expect(runCheckins).toHaveBeenCalledTimes(2)
+  } finally {
+    sessionRead.mockRestore()
+  }
+})
+
 it("reschedules and releases admission after a daily execution rejects", async () => {
   vi.useFakeTimers()
   const runCheckins = vi.fn().mockRejectedValue(new Error("network"))
