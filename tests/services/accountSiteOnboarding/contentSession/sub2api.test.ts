@@ -158,13 +158,11 @@ describe("sub2ApiContentSessionExtractor", () => {
           const fetchMock =
             phase === "headers"
               ? vi.fn().mockReturnValue(pending)
-              : vi
-                  .fn()
-                  .mockResolvedValue({
-                    ok: true,
-                    status: 200,
-                    json: () => pending,
-                  })
+              : vi.fn().mockResolvedValue({
+                  ok: true,
+                  status: 200,
+                  json: () => pending,
+                })
           vi.stubGlobal("fetch", fetchMock)
           const observed = sub2ApiContentSessionExtractor.probe!({
             siteTypeHint: SITE_TYPES.UNKNOWN,
@@ -568,6 +566,105 @@ describe("sub2ApiContentSessionExtractor", () => {
       } finally {
         vi.useRealTimers()
       }
+    },
+  )
+
+  it.each(["lost", "successful"])(
+    "accepts a same-account website update during a %s refresh",
+    async (responseKind) => {
+      localStorage.setItem("auth_token", "alice-token")
+      localStorage.setItem(
+        "auth_user",
+        JSON.stringify({ id: 123, username: "alice", balance: 1 }),
+      )
+      localStorage.setItem("refresh_token", "alice-refresh")
+      localStorage.setItem("token_expires_at", String(Date.now() + 30_000))
+      const fetchMock = vi.fn().mockImplementation(async () => {
+        localStorage.setItem(
+          "auth_user",
+          JSON.stringify({ id: 123, username: "alice", balance: 2 }),
+        )
+        if (responseKind === "lost") {
+          localStorage.setItem("auth_token", "alice-renewed")
+          localStorage.setItem("refresh_token", "alice-renewed-refresh")
+          localStorage.setItem(
+            "token_expires_at",
+            String(Date.now() + 3_600_000),
+          )
+          throw new TypeError("Response lost")
+        }
+        return new Response(
+          JSON.stringify({
+            code: 0,
+            data: {
+              access_token: "alice-renewed",
+              refresh_token: "alice-renewed-refresh",
+              expires_in: 3600,
+            },
+          }),
+          { status: 200 },
+        )
+      })
+      vi.stubGlobal("fetch", fetchMock)
+      await expect(
+        sub2ApiContentSessionExtractor.extract({
+          url: "https://panel.example.invalid",
+          siteTypeHint: SITE_TYPES.SUB2API,
+        }),
+      ).resolves.toMatchObject({
+        userId: 123,
+        accessToken: "alice-renewed",
+        sub2apiAuth: { refreshToken: "alice-renewed-refresh" },
+      })
+      expect(fetchMock).toHaveBeenCalledOnce()
+      expect(localStorage.getItem("auth_token")).toBe("alice-renewed")
+      expect(localStorage.getItem("refresh_token")).toBe(
+        "alice-renewed-refresh",
+      )
+    },
+  )
+
+  it.each(["lost", "successful"])(
+    "rejects an account switch during a %s refresh without overwriting the new session",
+    async (responseKind) => {
+      localStorage.setItem("auth_token", "alice-token")
+      localStorage.setItem(
+        "auth_user",
+        JSON.stringify({ id: 123, username: "alice" }),
+      )
+      localStorage.setItem("refresh_token", "alice-refresh")
+      localStorage.setItem("token_expires_at", String(Date.now() + 30_000))
+      const fetchMock = vi.fn().mockImplementation(async () => {
+        localStorage.setItem(
+          "auth_user",
+          JSON.stringify({ id: 456, username: "bob" }),
+        )
+        localStorage.setItem("auth_token", "bob-token")
+        localStorage.setItem("refresh_token", "bob-refresh")
+        localStorage.setItem("token_expires_at", String(Date.now() + 3_600_000))
+        if (responseKind === "lost") throw new TypeError("Response lost")
+        return new Response(
+          JSON.stringify({
+            code: 0,
+            data: {
+              access_token: "alice-renewed",
+              refresh_token: "alice-renewed-refresh",
+              expires_in: 3600,
+            },
+          }),
+          { status: 200 },
+        )
+      })
+      vi.stubGlobal("fetch", fetchMock)
+      await expect(
+        sub2ApiContentSessionExtractor.extract({
+          url: "https://panel.example.invalid",
+          siteTypeHint: SITE_TYPES.SUB2API,
+        }),
+      ).rejects.toBeInstanceOf(Sub2ApiContentSessionLoginRequiredError)
+      expect(fetchMock).toHaveBeenCalledOnce()
+      expect(localStorage.getItem("auth_token")).toBe("bob-token")
+      expect(localStorage.getItem("refresh_token")).toBe("bob-refresh")
     },
   )
 

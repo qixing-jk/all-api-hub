@@ -61,8 +61,23 @@ const readStoredTokenState = () => ({
   ),
 })
 
+/** Token rotation may overlap a website account switch; keep identity bound. */
+const assertStoredUserUnchanged = (authUserRaw: string) => {
+  const identity = parseSub2ApiUserIdentity(JSON.parse(authUserRaw))
+  const currentIdentity = parseSub2ApiUserIdentity(
+    JSON.parse(
+      localStorage.getItem(SUB2API_AUTH_STORAGE_KEYS.authUser) ?? "null",
+    ),
+  )
+  if (currentIdentity.userId !== identity.userId) {
+    throw new Sub2ApiContentSessionLoginRequiredError()
+  }
+  return identity
+}
+
 const refreshSub2ApiTokensIfNeeded = async (params: {
   baseUrl: string | null
+  authUserRaw: string
   accessToken: string
   refreshToken: string
   tokenExpiresAt: number | null
@@ -139,6 +154,7 @@ const refreshSub2ApiTokensIfNeeded = async (params: {
 
   const nextExpiresAt = now + expiresInSeconds * 1000
 
+  assertStoredUserUnchanged(params.authUserRaw)
   localStorage.setItem(SUB2API_AUTH_STORAGE_KEYS.accessToken, nextAccessToken)
   localStorage.setItem(SUB2API_AUTH_STORAGE_KEYS.refreshToken, nextRefreshToken)
   localStorage.setItem(
@@ -245,6 +261,7 @@ export const sub2ApiContentSessionExtractor: ContentSessionExtractor = {
     try {
       const refreshed = await refreshSub2ApiTokensIfNeeded({
         baseUrl,
+        authUserRaw,
         accessToken,
         refreshToken,
         tokenExpiresAt,
@@ -255,6 +272,11 @@ export const sub2ApiContentSessionExtractor: ContentSessionExtractor = {
         tokenExpiresAt = refreshed.tokenExpiresAt
       }
     } catch {
+      try {
+        assertStoredUserUnchanged(authUserRaw)
+      } catch {
+        throw new Sub2ApiContentSessionLoginRequiredError()
+      }
       const stored = readStoredTokenState()
       if (
         stored.accessToken &&
@@ -273,8 +295,7 @@ export const sub2ApiContentSessionExtractor: ContentSessionExtractor = {
     }
 
     try {
-      const authUser = authUserRaw ? JSON.parse(authUserRaw) : null
-      const identity = parseSub2ApiUserIdentity(authUser)
+      const identity = assertStoredUserUnchanged(authUserRaw)
 
       return {
         userId: identity.userId,
