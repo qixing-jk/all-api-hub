@@ -32,6 +32,7 @@ function createLocalStorageMock() {
 describe("voApiV2ContentSessionExtractor", () => {
   beforeEach(() => {
     vi.unstubAllGlobals()
+    vi.restoreAllMocks()
     vi.stubGlobal("localStorage", createLocalStorageMock())
     vi.stubGlobal("location", { origin: "https://voapi.example" })
   })
@@ -145,6 +146,21 @@ describe("voApiV2ContentSessionExtractor", () => {
     ).resolves.toBeNull()
   })
 
+  it("rejects malformed probe URLs before requesting account data", async () => {
+    localStorage.setItem(
+      "userStore",
+      JSON.stringify({ auth: { token: jwtWithUserId } }),
+    )
+    localStorage.setItem("user", JSON.stringify({ id: 42 }))
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+
+    await expect(
+      voApiV2ContentSessionExtractor.probe?.({ url: "not a URL" }),
+    ).resolves.toBeNull()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it("does not extract if the token snapshot changes during the probe", async () => {
     localStorage.setItem(
       "userStore",
@@ -221,6 +237,61 @@ describe("voApiV2ContentSessionExtractor", () => {
     await expect(
       voApiV2ContentSessionExtractor.probe?.({ url: "https://voapi.example" }),
     ).rejects.toBeInstanceOf(ContentSessionProtocolError)
+  })
+
+  it("rejects when the extracted VoAPI identity changes after verification", async () => {
+    localStorage.setItem(
+      "userStore",
+      JSON.stringify({ auth: { token: jwtWithUserId } }),
+    )
+    localStorage.setItem("user", JSON.stringify({ id: 42 }))
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ code: 0, data: { id: 42 } }),
+      }),
+    )
+    vi.spyOn(voApiV2ContentSessionExtractor, "extract").mockResolvedValue({
+      userId: 99,
+      user: { id: 99 },
+      accessToken: jwtWithUserId,
+      siteTypeHint: SITE_TYPES.VO_API_V2,
+    })
+
+    const result = voApiV2ContentSessionExtractor.probe?.({
+      url: "https://voapi.example",
+    })
+    await expect(result).rejects.toBeInstanceOf(ContentSessionProtocolError)
+    await expect(result).rejects.toThrow(
+      "VoAPI session identity changed after verification",
+    )
+  })
+
+  it("wraps unexpected extraction failures after VoAPI identity verification", async () => {
+    localStorage.setItem(
+      "userStore",
+      JSON.stringify({ auth: { token: jwtWithUserId } }),
+    )
+    localStorage.setItem("user", JSON.stringify({ id: 42 }))
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ code: 0, data: { id: 42 } }),
+      }),
+    )
+    vi.spyOn(voApiV2ContentSessionExtractor, "extract").mockRejectedValue(
+      new Error("unexpected failure"),
+    )
+
+    const result = voApiV2ContentSessionExtractor.probe?.({
+      url: "https://voapi.example",
+    })
+    await expect(result).rejects.toBeInstanceOf(ContentSessionProtocolError)
+    await expect(result).rejects.toThrow("VoAPI session extraction failed")
   })
 
   it("rejects a 503 probe instead of returning null and masking a cached fallback", async () => {

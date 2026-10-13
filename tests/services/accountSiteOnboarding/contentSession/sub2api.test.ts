@@ -6,6 +6,7 @@ import {
   sub2ApiContentSessionExtractor,
   Sub2ApiContentSessionLoginRequiredError,
 } from "~/services/accountSiteOnboarding/contentSession/sub2api"
+import { ContentSessionProtocolError } from "~/services/accountSiteOnboarding/contracts"
 
 function createLocalStorageMock() {
   const store = new Map<string, string>()
@@ -917,6 +918,85 @@ describe("sub2ApiContentSessionExtractor", () => {
     expect(firstResult?.accessToken).toBe("new-token")
     expect(secondResult?.accessToken).toBe("new-token")
     expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("does not send an authenticated request when cached auth_user is malformed", async () => {
+    vi.stubGlobal(
+      "location",
+      new URL("https://panel.example.invalid/dashboard"),
+    )
+    localStorage.setItem("auth_token", "jwt-token")
+    localStorage.setItem("auth_user", "not-json")
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+
+    await expect(
+      sub2ApiContentSessionExtractor.probe!({
+        siteTypeHint: SITE_TYPES.UNKNOWN,
+      }),
+    ).resolves.toBeNull()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("preserves protocol errors raised after Sub2API identity verification", async () => {
+    vi.stubGlobal(
+      "location",
+      new URL("https://panel.example.invalid/dashboard"),
+    )
+    localStorage.setItem("auth_token", "jwt-token")
+    localStorage.setItem(
+      "auth_user",
+      JSON.stringify({ id: 123, username: "alice", balance: 1.5 }),
+    )
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ code: 0, data: { id: 123 } }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    )
+    const protocolError = new ContentSessionProtocolError("provider failure")
+    vi.spyOn(sub2ApiContentSessionExtractor, "extract").mockRejectedValue(
+      protocolError,
+    )
+
+    await expect(
+      sub2ApiContentSessionExtractor.probe!({
+        siteTypeHint: SITE_TYPES.UNKNOWN,
+      }),
+    ).rejects.toBe(protocolError)
+  })
+
+  it("wraps unexpected extraction failures after Sub2API identity verification", async () => {
+    vi.stubGlobal(
+      "location",
+      new URL("https://panel.example.invalid/dashboard"),
+    )
+    localStorage.setItem("auth_token", "jwt-token")
+    localStorage.setItem(
+      "auth_user",
+      JSON.stringify({ id: 123, username: "alice", balance: 1.5 }),
+    )
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ code: 0, data: { id: 123 } }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    )
+    vi.spyOn(sub2ApiContentSessionExtractor, "extract").mockRejectedValue(
+      new Error("unexpected failure"),
+    )
+
+    const result = sub2ApiContentSessionExtractor.probe!({
+      siteTypeHint: SITE_TYPES.UNKNOWN,
+    })
+    await expect(result).rejects.toBeInstanceOf(ContentSessionProtocolError)
+    await expect(result).rejects.toThrow("Sub2API session extraction failed")
   })
 
   it("throws login-required when auth_user is invalid", async () => {

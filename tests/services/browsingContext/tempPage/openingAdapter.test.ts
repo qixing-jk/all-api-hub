@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
+import { logger } from "~/services/browsingContext/tempPage/diagnostics"
 import { openFallbackAwareTempContext } from "~/services/browsingContext/tempPage/openingAdapter"
 import * as browserApi_tabs from "~/utils/browser/tabs"
 import * as browserApi_windows from "~/utils/browser/windows"
@@ -43,6 +44,62 @@ describe("openingAdapter", () => {
         mode: TEMP_CONTEXT_MODES.Tab,
       })
     })
+
+    it("preserves the browser error when an ordinary temporary tab cannot be created", async () => {
+      const browserError = new Error("Browser tab creation failed")
+      vi.spyOn(browserApi_tabs, "createTab").mockRejectedValueOnce(browserError)
+      const createWindow = vi.spyOn(browserApi_windows, "createWindow")
+
+      await expect(
+        openFallbackAwareTempContext({
+          url: "https://example.com",
+          origin: "https://example.com",
+          requestId: "req-tab-browser-error",
+          requestedMode: TEMP_CONTEXT_MODES.Tab,
+          allowWindowRollback: true,
+        }),
+      ).rejects.toBe(browserError)
+      expect(createWindow).not.toHaveBeenCalled()
+    })
+
+    it.each(["firefox-default", undefined])(
+      "rejects a mismatched cookie store even if tab cleanup fails (actual store: %s)",
+      async (cookieStoreId) => {
+        vi.spyOn(browserApi_tabs, "createTab").mockResolvedValueOnce({
+          id: 21,
+          cookieStoreId,
+        } as any)
+        const removeTab = vi
+          .spyOn(browserApi_tabs, "removeTab")
+          .mockRejectedValueOnce(new Error("Tab cleanup failed"))
+        const createWindow = vi.spyOn(browserApi_windows, "createWindow")
+        const warn = vi.spyOn(logger, "warn").mockImplementation(() => {})
+
+        await expect(
+          openFallbackAwareTempContext({
+            url: "https://example.com",
+            origin: "https://example.com",
+            requestId: "req-store-cleanup-error",
+            requestedMode: TEMP_CONTEXT_MODES.Tab,
+            allowWindowRollback: true,
+            cookieStoreId: "store-a",
+          }),
+        ).rejects.toMatchObject({
+          name: "CookieStoreContextUnavailableError",
+        })
+        expect(removeTab).toHaveBeenCalledWith(21)
+        expect(createWindow).not.toHaveBeenCalled()
+        expect(warn).toHaveBeenCalledWith(
+          "Failed to remove tab created in the wrong cookie store",
+          {
+            tabId: 21,
+            expectedCookieStoreId: "store-a",
+            actualCookieStoreId: cookieStoreId ?? null,
+            error: "Tab cleanup failed",
+          },
+        )
+      },
+    )
 
     it("creates cookie-store contexts in that store and rejects mismatched tabs", async () => {
       const createTab = vi.spyOn(browserApi_tabs, "createTab")
