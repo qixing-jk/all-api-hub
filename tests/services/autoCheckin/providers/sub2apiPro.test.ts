@@ -611,7 +611,7 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
         context: executionContext(),
       }),
     ).resolves.toMatchObject({ kind: "executed" })
-    expect(getStatus).toHaveBeenCalledOnce()
+    expect(getStatus).toHaveBeenCalledTimes(2)
     expect(checkIn).toHaveBeenCalledOnce()
   })
 
@@ -861,7 +861,7 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
       kind: "executed",
       result: { status: CHECKIN_RESULT_STATUS.SUCCESS },
     })
-    expect(order).toEqual(["GET", "POST", "GET", "GET", "POST"])
+    expect(order).toEqual(["GET", "POST", "GET", "GET", "POST", "GET"])
   })
 
   it.each([

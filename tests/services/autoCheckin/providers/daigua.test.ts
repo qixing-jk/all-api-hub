@@ -83,7 +83,9 @@ const run = () =>
 
 describe("registered DaiGua daily check-in", () => {
   beforeEach(() => {
-    vi.mocked(fetchApiResponse).mockReset()
+    vi.mocked(fetchApiResponse)
+      .mockReset()
+      .mockResolvedValue(response(statusData()))
     vi.mocked(tempWindowTurnstileFetch)
       .mockReset()
       .mockResolvedValue({
@@ -137,7 +139,135 @@ describe("registered DaiGua daily check-in", () => {
         messageParams: { checkInUrl: "https://api.daigua.icu/checkin" },
       },
     })
-    expect(fetchApiResponse).toHaveBeenCalledTimes(3)
+    expect(fetchApiResponse).toHaveBeenCalledTimes(4)
+  })
+
+  it.each(["timeout", "not_present", "rejected"] as const)(
+    "confirms native completion after verification %s without another claim",
+    async (verification) => {
+      vi.mocked(fetchApiResponse)
+        .mockResolvedValueOnce(response(statusData()))
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          headers: {},
+          body: {
+            code: 400,
+            message: "turnstile verification failed",
+            reason: "TURNSTILE_VERIFICATION_FAILED",
+          },
+        })
+        .mockResolvedValueOnce(response(statusData()))
+        .mockResolvedValueOnce(response(statusData(true)))
+
+      vi.mocked(tempWindowTurnstileFetch).mockResolvedValue(
+        verification === "rejected"
+          ? {
+              success: false,
+              status: 400,
+              error: "turnstile verification failed",
+              turnstile: { status: "token_obtained", hasTurnstile: true },
+            }
+          : {
+              success: false,
+              error: "token unavailable",
+              turnstile: {
+                status: verification,
+                hasTurnstile: verification !== "not_present",
+              },
+            },
+      )
+
+      const outcome = await run()
+      expect(outcome).toMatchObject({
+        kind: "executed",
+        retryable: false,
+        result: { status: "success", reconciliation: "checked" },
+      })
+      if (outcome.kind === "executed") {
+        expect(outcome.result.reward).toBeUndefined()
+        expect(outcome.result.reasonCode).toBeUndefined()
+      }
+      expect(
+        vi
+          .mocked(fetchApiResponse)
+          .mock.calls.filter(
+            ([, options]) => options?.options?.method === "POST",
+          ),
+      ).toHaveLength(1)
+    },
+  )
+
+  it.each(["direct", "assisted"])(
+    "preserves the %s grant and reward when final status readback fails",
+    async (mode) => {
+      vi.mocked(fetchApiResponse)
+        .mockResolvedValueOnce(response(statusData()))
+        .mockResolvedValueOnce(
+          mode === "direct"
+            ? response({ reward_amount: 0.19, checkin_type: "normal" })
+            : {
+                ok: false,
+                status: 400,
+                headers: {},
+                body: {
+                  code: 400,
+                  message: "turnstile verification failed",
+                  reason: "TURNSTILE_VERIFICATION_FAILED",
+                },
+              },
+        )
+      if (mode === "assisted") {
+        vi.mocked(fetchApiResponse).mockResolvedValueOnce(
+          response(statusData()),
+        )
+        vi.mocked(tempWindowTurnstileFetch).mockResolvedValue({
+          success: true,
+          status: 200,
+          data: {
+            code: 0,
+            message: "success",
+            data: { reward_amount: 0.19, checkin_type: "normal" },
+          },
+          turnstile: { status: "token_obtained", hasTurnstile: true },
+        })
+      }
+      vi.mocked(fetchApiResponse).mockRejectedValueOnce(
+        new TypeError("Failed to fetch"),
+      )
+
+      await expect(run()).resolves.toMatchObject({
+        kind: "executed",
+        retryable: false,
+        result: { status: "success", reward: { quota: 95000 } },
+      })
+      expect(
+        vi.mocked(fetchApiResponse).mock.calls.at(-1)?.[1]?.options?.method,
+      ).toBe("GET")
+    },
+  )
+
+  it("preserves manual guidance when final status is unavailable", async () => {
+    vi.mocked(fetchApiResponse)
+      .mockResolvedValueOnce(response(statusData()))
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        headers: {},
+        body: {
+          code: 400,
+          message: "turnstile verification failed",
+          reason: "TURNSTILE_VERIFICATION_FAILED",
+        },
+      })
+      .mockResolvedValueOnce(response(statusData()))
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+
+    await expect(run()).resolves.toMatchObject({
+      kind: "executed",
+      retryable: false,
+      result: { status: "failed", reasonCode: "manual_verification_required" },
+    })
   })
 
   it("tries shared browser assistance once with a body token after explicit rejection", async () => {
@@ -202,7 +332,7 @@ describe("registered DaiGua daily check-in", () => {
       kind: "executed",
       result: { status: "success", reward: { quota: 145000 } },
     })
-    expect(fetchApiResponse).toHaveBeenCalledTimes(2)
+    expect(fetchApiResponse).toHaveBeenCalledTimes(3)
   })
 
   it.each([
