@@ -161,3 +161,17 @@ export function isMobileDevice(options?: DeviceDetectionOptions): boolean {
 export function isDesktopDevice(options?: DeviceDetectionOptions): boolean {
   return getDeviceTypeInfo(options).isDesktop
 }
+
+/**
+ * Whether compact extension pages need a mobile initial-width seed. This is a
+ * sizing policy, separate from device classification: touch/screen heuristics
+ * alone must not opt explicit desktop platforms into mobile width protection.
+ */
+export function shouldSeedCompactPageWidth(): boolean {
+  const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : ""
+  const mobileHint = getNavigatorUserAgentDataMobile()
+  const desktopPlatform =
+    /Windows NT|X11|CrOS/i.test(userAgent) && !/Android/i.test(userAgent)
+
+  return !isDesktopDevice() && (!desktopPlatform || mobileHint === true)
+}

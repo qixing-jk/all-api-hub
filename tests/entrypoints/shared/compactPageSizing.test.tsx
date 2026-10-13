@@ -177,6 +177,14 @@ describe("initializeCompactPageSizing", () => {
     window.dispatchEvent(new Event("resize"))
     expect(minWidth()).toBe("")
 
+    setViewportWidth(63)
+    window.dispatchEvent(new Event("resize"))
+    expect(minWidth()).toBe("")
+
+    setViewportWidth(64)
+    window.dispatchEvent(new Event("resize"))
+    expect(minWidth()).toBe("64px")
+
     setViewportWidth(180)
     window.dispatchEvent(new Event("resize"))
     expect(minWidth()).toBe("180px")

@@ -13,18 +13,18 @@ import { createDeferred } from "~~/tests/test-utils/deferred"
 
 const {
   bootstrapAppearanceMock,
-  isDesktopDeviceMock,
+  shouldSeedCompactPageWidthMock,
   isExtensionPopupMock,
   isExtensionSidePanelMock,
 } = vi.hoisted(() => ({
   bootstrapAppearanceMock: vi.fn(),
-  isDesktopDeviceMock: vi.fn(),
+  shouldSeedCompactPageWidthMock: vi.fn(),
   isExtensionPopupMock: vi.fn(),
   isExtensionSidePanelMock: vi.fn(),
 }))
 
 vi.mock("~/utils/browser", () => ({
-  isDesktopDevice: isDesktopDeviceMock,
+  shouldSeedCompactPageWidth: shouldSeedCompactPageWidthMock,
   isExtensionPopup: isExtensionPopupMock,
   isExtensionSidePanel: isExtensionSidePanelMock,
 }))
@@ -42,7 +42,7 @@ describe("appearance entrypoint", () => {
     vi.clearAllMocks()
     isExtensionPopupMock.mockReturnValue(true)
     isExtensionSidePanelMock.mockReturnValue(false)
-    isDesktopDeviceMock.mockReturnValue(false)
+    shouldSeedCompactPageWidthMock.mockReturnValue(true)
     vi.spyOn(navigator, "userAgent", "get").mockReturnValue("Android Mobile")
     Object.defineProperty(window, "innerWidth", {
       configurable: true,
@@ -92,7 +92,9 @@ describe("appearance entrypoint", () => {
   it.each(["desktop popup", "options page"])(
     "still starts appearance loading without changing sizing on a %s",
     (surface) => {
-      isDesktopDeviceMock.mockReturnValue(surface === "desktop popup")
+      shouldSeedCompactPageWidthMock.mockReturnValue(
+        surface !== "desktop popup",
+      )
       isExtensionPopupMock.mockReturnValue(surface === "desktop popup")
       document.documentElement.style.setProperty(WIDTH_PROPERTY, "410px")
       bootstrapAppearanceMock.mockResolvedValue(undefined)
