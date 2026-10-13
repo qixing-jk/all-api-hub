@@ -3,15 +3,14 @@ import {
   isUnknownAccountSiteType,
   type AccountSiteType,
 } from "~/constants/siteType"
-import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession"
-import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
+import {
+  ACCOUNT_BROWSER_SESSION_SOURCES,
+  readAccountBrowserSessionFromTempWindow,
+} from "~/services/accountBrowserSession"
 import { type AccountDetectionDiagnostics } from "~/services/accountSiteOnboarding/diagnostics"
-import { normalizeContentSessionTransientAuth } from "~/services/accountSiteOnboarding/transientAuth"
 import { summarizeApiServiceFetchContext } from "~/services/apiTransport/type"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
-import { executeProtectionBypassTask } from "~/utils/browser/tempWindowFetch"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
-import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 import type {
@@ -24,7 +23,7 @@ import type { UserDataResult } from "./resultAssembly"
 import {
   combineUserDataAndSiteType,
   createAutoDetectContext,
-  normalizeSiteTypeHint,
+  userDataFromBrowserSession,
   withAutoDetectContext,
 } from "./resultAssembly"
 
@@ -48,168 +47,45 @@ async function getUserDataViaBackground(
   diagnostics?: AccountDetectionDiagnostics,
 ): Promise<UserDataResult | null> {
   const tempWindowRequestSource = getCurrentTempWindowRequestSource()
-  diagnostics?.record("session_read_started", {
-    source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+  let sessionReadFailed = false
+  const session = await readAccountBrowserSessionFromTempWindow({
+    baseUrl: url,
     siteType,
-  })
-
-  try {
-    if (!protectionBypassExecution) {
-      diagnostics?.record("source_skipped", {
-        source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
-        reason: "execution_missing",
-      })
-      return await getUserDataViaAPI(
-        url,
-        siteType,
-        fetchContext,
-        tempWindowRequestSource,
-        protectionBypassExecution,
-        diagnostics,
-      )
-    }
-    const requestId = `auto-detect-${Date.now()}`
-    logger.debug("Background auto-detect request prepared", {
-      url,
-      siteType,
-      requestId,
-      useIncognito: fetchContext?.incognito === true,
-      fetchContext: summarizeApiServiceFetchContext(fetchContext),
-    })
-
+    fetchContext,
+    browserContext: fetchContext,
+    protectionBypassExecution,
+    diagnostics,
+    requestIdPrefix: "auto-detect",
     // Unknown branding must not select an authentication protocol here.
-    // Let registered adapters probe this explicit onboarding temp-page read.
-    const allowSessionProbe = isUnknownAccountSiteType(siteType)
-    const params = {
-      url: url,
-      requestId: requestId,
-      diagnosticId: diagnostics?.requestId,
-      siteType,
-      ...(allowSessionProbe ? { allowSessionProbe: true } : {}),
-      ...(fetchContext?.incognito === true ? { useIncognito: true } : {}),
-      ...(fetchContext?.cookieStoreId
-        ? { cookieStoreId: fetchContext.cookieStoreId }
-        : {}),
-    }
-    const response = await executeProtectionBypassTask({
-      task: { kind: "session_read" as const, params },
-      execution: protectionBypassExecution,
-    })
+    // Registered adapters own probes for this explicit onboarding read.
+    allowSessionProbe: isUnknownAccountSiteType(siteType),
+    onError: () => {
+      sessionReadFailed = true
+    },
+  })
+  if (session) return userDataFromBrowserSession(session)
 
-    diagnostics?.record("temp_session_response", {
-      success: response?.success === true,
-      hasData: Boolean(response?.data),
-      reason: response?.error,
-      code: response?.code,
-    })
-    if (!response || !response.success || !response.data) {
-      diagnostics?.record("source_fallback", {
-        from: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
-        to: "api",
-        reason: response?.error ?? "no_session_data",
-        code: response?.code,
-      })
-      // Fallback: if content script/localStorage fetch fails, attempt API-based fetch
-      logger.info(
-        "Background auto-detect returned no user data; using API fallback",
-        {
-          url,
-          siteType,
-          requestId,
-          responseSuccess: response?.success === true,
-          hasResponseData: Boolean(response?.data),
-          fetchContext: summarizeApiServiceFetchContext(fetchContext),
-        },
-      )
-      return await getUserDataViaAPI(
-        url,
-        siteType,
-        fetchContext,
-        tempWindowRequestSource,
-        protectionBypassExecution,
-        diagnostics,
-      )
-    }
-
-    logger.debug("Background auto-detect returned user data", {
-      url,
-      siteType,
-      requestId,
-      hasFetchContext: Boolean(fetchContext),
-      siteTypeHint: response.data.siteTypeHint ?? null,
-    })
-
-    const userId = normalizeAccountIdentity(response.data.userId)
-    if (!userId) {
-      diagnostics?.record("session_invalid", {
-        source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
-        reason: "user_id_missing",
-      })
-      logger.debug("Background auto-detect returned no usable user id", {
-        url,
-        siteType,
-        requestId,
-      })
-      return await getUserDataViaAPI(
-        url,
-        siteType,
-        fetchContext,
-        tempWindowRequestSource,
-        protectionBypassExecution,
-        diagnostics,
-      )
-    }
-
-    const transientAuth = normalizeContentSessionTransientAuth(
-      response.data.transientAuth,
-      {
-        baseUrl: url,
-        siteType,
-        siteTypeHint: normalizeSiteTypeHint(response.data.siteTypeHint),
-        allowSessionProbe,
-      },
-    )
-    if (response.data.transientAuth && !transientAuth) {
-      diagnostics?.record("session_auth_rejected", {
-        source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
-        reason: "invalid_transient_auth",
-      })
-    }
-
-    return {
-      userId,
-      user: response.data.user,
-      accessToken: response.data.accessToken,
-      ...(transientAuth ? { transientAuth } : {}),
-      sub2apiAuth: response.data.sub2apiAuth,
-      ...(response.data.kimiOpenPlatformAuth
-        ? { kimiOpenPlatformAuth: response.data.kimiOpenPlatformAuth }
-        : {}),
-      siteTypeHint: normalizeSiteTypeHint(response.data.siteTypeHint),
-      ...(fetchContext ? { fetchContext } : {}),
-    }
-  } catch (error) {
-    diagnostics?.record("source_fallback", {
-      from: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
-      to: "api",
-      reason: "exception",
-      error: getErrorMessage(error),
-    })
-    logger.warn("Background 方式获取用户数据失败", {
+  diagnostics?.record("source_fallback", {
+    from: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+    to: "api",
+    reason: sessionReadFailed ? "exception" : "no_session_data",
+  })
+  logger.info(
+    "Background auto-detect returned no user data; using API fallback",
+    {
       url,
       siteType,
       fetchContext: summarizeApiServiceFetchContext(fetchContext),
-      error: getErrorMessage(error),
-    })
-    return await getUserDataViaAPI(
-      url,
-      siteType,
-      fetchContext,
-      tempWindowRequestSource,
-      protectionBypassExecution,
-      diagnostics,
-    )
-  }
+    },
+  )
+  return await getUserDataViaAPI(
+    url,
+    siteType,
+    fetchContext,
+    tempWindowRequestSource,
+    protectionBypassExecution,
+    diagnostics,
+  )
 }
 
 /**

@@ -1,3 +1,5 @@
+import type { ApiTransportBrowserFetchContext } from "~/services/apiTransport/type"
+
 import {
   TEMP_CONTEXT_TYPES,
   type TempContext,
@@ -15,7 +17,7 @@ export type DestroyContextOptions = {
 /** Keeps regular, private, and Firefox cookie-store context pools separate. */
 export function buildTempContextPoolKey(
   origin: string,
-  options: { incognito?: boolean; cookieStoreId?: string } = {},
+  options: ApiTransportBrowserFetchContext = {},
 ): string {
   if (options.cookieStoreId) {
     const profile = options.incognito ? "incognito-store" : "store"

@@ -5,6 +5,7 @@ import {
   API_ERROR_CODES,
   type ApiErrorCode,
 } from "~/services/apiTransport/errors"
+import type { ApiTransportBrowserFetchContext } from "~/services/apiTransport/type"
 import {
   type TEMP_CONTEXT_TASK_KINDS,
   type TempContextTask,
@@ -232,9 +233,7 @@ async function getSiteDataFromTab(
   url: string,
   requestId: string,
   suppressMinimize?: boolean,
-  options: {
-    incognito?: boolean
-    cookieStoreId?: string
+  options: ApiTransportBrowserFetchContext & {
     siteType?: string
     diagnosticId?: string
     allowSessionProbe?: boolean

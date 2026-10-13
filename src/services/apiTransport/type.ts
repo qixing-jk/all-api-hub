@@ -71,7 +71,8 @@ export const API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES = {
 export type ApiTransportCurrentTabFallbackMode =
   (typeof API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES)[keyof typeof API_TRANSPORT_CURRENT_TAB_FALLBACK_MODES]
 
-type ApiTransportBrowserFetchContext = {
+/** Browser session partition shared by tab reads and temporary contexts. */
+export type ApiTransportBrowserFetchContext = {
   incognito?: boolean
   cookieStoreId?: string
 }

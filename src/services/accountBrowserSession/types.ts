@@ -1,7 +1,10 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import type { ContentSessionTransientAuth } from "~/services/accountSiteOnboarding/contracts"
 import type { AccountDetectionDiagnostics } from "~/services/accountSiteOnboarding/diagnostics"
-import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
+import type {
+  ApiServiceFetchContext,
+  ApiTransportBrowserFetchContext,
+} from "~/services/apiTransport/type"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { KimiOpenPlatformAuthConfig, Sub2ApiAuthConfig } from "~/types"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
@@ -65,10 +68,7 @@ export type ReadAccountBrowserSessionFromExistingTabsOptions = {
   diagnostics?: AccountDetectionDiagnostics
   baseUrl: string
   siteType: AccountSiteType
-  browserContext?: {
-    incognito?: boolean
-    cookieStoreId?: string
-  }
+  browserContext?: ApiTransportBrowserFetchContext
   /** Reuse a tab query snapshot; origin and browser context are still checked. */
   candidateTabs?: readonly browser.tabs.Tab[]
   isUsableSession?: AccountBrowserSessionPredicate
@@ -76,15 +76,26 @@ export type ReadAccountBrowserSessionFromExistingTabsOptions = {
   onError?: AccountBrowserSessionErrorHandler
 }
 
+/** Reads one authorized temp session; callers own fallback selection. */
+export type ReadAccountBrowserSessionFromTempWindowOptions = {
+  diagnostics?: AccountDetectionDiagnostics
+  baseUrl: string
+  siteType: AccountSiteType
+  browserContext?: ApiTransportBrowserFetchContext
+  fetchContext?: AccountBrowserSessionFetchContext
+  /** Enables registered unknown-site session probes for explicit onboarding. */
+  allowSessionProbe?: boolean
+  protectionBypassExecution?: ProtectionBypassExecution
+  suppressMinimize?: boolean
+  requestIdPrefix?: string
+  onError?: AccountBrowserSessionErrorHandler
+}
+
 export type ResolveAccountBrowserSessionOptions = {
   diagnostics?: AccountDetectionDiagnostics
   baseUrl: string
   siteType: AccountSiteType
-  currentTab?: {
-    tabId: number
-    incognito?: boolean
-    cookieStoreId?: string
-  }
+  currentTab?: ApiTransportBrowserFetchContext & { tabId: number }
   useExistingTabs?: boolean
   useTempWindow?: boolean
   tempWindowRequestSource?: TempWindowRequestSource

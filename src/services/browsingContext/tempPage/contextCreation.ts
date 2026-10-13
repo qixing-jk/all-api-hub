@@ -1,4 +1,5 @@
 import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
+import type { ApiTransportBrowserFetchContext } from "~/services/apiTransport/type"
 import { scheduleTempPageReclaimRetry } from "~/services/browsingContext/internalTabReclamation"
 import {
   INTERNAL_TAB_WINDOW_SCOPES,
@@ -38,9 +39,7 @@ export async function createTempContextInstance(
   requestId: string,
   requestedMode: TempContextOpenMode,
   suppressMinimize = false,
-  options: {
-    incognito?: boolean
-    cookieStoreId?: string
+  options: ApiTransportBrowserFetchContext & {
     signal?: AbortSignal
   } = {},
 ): Promise<TempContext> {

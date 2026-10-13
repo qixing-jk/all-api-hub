@@ -1,4 +1,5 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import type { ApiTransportBrowserFetchContext } from "~/services/apiTransport/type"
 import { scheduleTempPageReclaimRetry } from "~/services/browsingContext/internalTabReclamation"
 import { unregisterInternalTab } from "~/services/browsingContext/internalTabsBackground"
 import { createTempContextInstance } from "~/services/browsingContext/tempPage/contextCreation"
@@ -69,7 +70,7 @@ const {
 /** Runs one complete temp-page handler operation under its origin key. */
 async function runTempPageHandler(
   url: string,
-  options: { incognito?: boolean; cookieStoreId?: string },
+  options: ApiTransportBrowserFetchContext,
   task: () => Promise<void>,
 ): Promise<void> {
   const originKey = buildTempContextPoolKey(normalizeOrigin(url), options)
@@ -246,9 +247,7 @@ async function acquireTempContext(
   url: string,
   requestId: string,
   suppressMinimize?: boolean,
-  options: {
-    incognito?: boolean
-    cookieStoreId?: string
+  options: ApiTransportBrowserFetchContext & {
     signal?: AbortSignal
   } = {},
   authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
@@ -428,7 +427,7 @@ export const tempWindowBackgroundRuntime = {
   prepareFetchOptions: prepareTempContextFetchOptions,
   run(
     url: string,
-    options: { incognito?: boolean; cookieStoreId?: string },
+    options: ApiTransportBrowserFetchContext,
     task: () => Promise<void>,
   ): Promise<void> {
     return runTempPageHandler(url, options, task)
@@ -438,9 +437,7 @@ export const tempWindowBackgroundRuntime = {
     url: string,
     requestId: string,
     suppressMinimize?: boolean,
-    options: {
-      incognito?: boolean
-      cookieStoreId?: string
+    options: ApiTransportBrowserFetchContext & {
       signal?: AbortSignal
     } = {},
     authorizeAtAcquire?: AuthorizeTempContextAtAcquire,

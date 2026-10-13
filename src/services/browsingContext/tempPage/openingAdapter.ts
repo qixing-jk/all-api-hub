@@ -1,4 +1,5 @@
 import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
+import type { ApiTransportBrowserFetchContext } from "~/services/apiTransport/type"
 import { createTab, queryTabs, removeTab } from "~/utils/browser/tabs"
 import {
   createWindow,
@@ -76,13 +77,13 @@ async function openPlainTabTempContext(
 /**
  * Opens a popup-backed temp context and cleans up partial windows on failure.
  */
-async function openPopupWindowTempContext(params: {
-  origin: string
-  requestId: string
-  suppressMinimize?: boolean
-  incognito?: boolean
-  cookieStoreId?: string
-}): Promise<TempContextOpenResult> {
+async function openPopupWindowTempContext(
+  params: ApiTransportBrowserFetchContext & {
+    origin: string
+    requestId: string
+    suppressMinimize?: boolean
+  },
+): Promise<TempContextOpenResult> {
   let windowId: number | null = null
 
   try {
@@ -186,16 +187,16 @@ async function openPopupWindowTempContext(params: {
  * Runs the preferred temp-context mode first, then retries once as a plain tab
  * when the failure is recoverable and the flow allows rollback.
  */
-export async function openFallbackAwareTempContext(params: {
-  url: string
-  origin: string
-  requestId: string
-  requestedMode: TempContextOpenMode
-  allowWindowRollback: boolean
-  suppressMinimize?: boolean
-  incognito?: boolean
-  cookieStoreId?: string
-}): Promise<TempContextOpenResult> {
+export async function openFallbackAwareTempContext(
+  params: ApiTransportBrowserFetchContext & {
+    url: string
+    origin: string
+    requestId: string
+    requestedMode: TempContextOpenMode
+    allowWindowRollback: boolean
+    suppressMinimize?: boolean
+  },
+): Promise<TempContextOpenResult> {
   if (
     params.requestedMode === TEMP_CONTEXT_MODES.Tab ||
     (params.cookieStoreId && !params.incognito)

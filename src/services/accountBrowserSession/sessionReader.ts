@@ -25,6 +25,7 @@ import type {
   AccountBrowserSessionSource,
   ReadAccountBrowserSessionFromExistingTabsOptions,
   ReadAccountBrowserSessionFromTabOptions,
+  ReadAccountBrowserSessionFromTempWindowOptions,
   ResolveAccountBrowserSessionOptions,
 } from "./types"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "./types"
@@ -433,8 +434,8 @@ export async function readAccountBrowserSessionFromExistingTabs(
   return null
 }
 
-const readAccountBrowserSessionFromTempWindow = async (
-  options: ResolveAccountBrowserSessionOptions,
+export const readAccountBrowserSessionFromTempWindow = async (
+  options: ReadAccountBrowserSessionFromTempWindowOptions,
 ): Promise<AccountBrowserSession | null> => {
   const diagnostics = options.diagnostics ?? createAccountDetectionDiagnostics()
   try {
@@ -447,18 +448,24 @@ const readAccountBrowserSessionFromTempWindow = async (
     }
     diagnostics.record("session_read_started", {
       source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
+      siteType: options.siteType,
     })
     const params = {
       url: options.baseUrl,
       requestId: `${options.requestIdPrefix ?? "account-browser-session"}-${Date.now()}`,
       diagnosticId: diagnostics.requestId,
       siteType: options.siteType,
+      ...(options.allowSessionProbe === true
+        ? { allowSessionProbe: true }
+        : {}),
       ...(typeof options.suppressMinimize === "boolean"
         ? { suppressMinimize: options.suppressMinimize }
         : {}),
-      ...(options.currentTab?.incognito === true ? { useIncognito: true } : {}),
-      ...(options.currentTab?.cookieStoreId
-        ? { cookieStoreId: options.currentTab.cookieStoreId }
+      ...(options.browserContext?.incognito === true
+        ? { useIncognito: true }
+        : {}),
+      ...(options.browserContext?.cookieStoreId
+        ? { cookieStoreId: options.browserContext.cookieStoreId }
         : {}),
     }
     const response = await executeProtectionBypassTask({
@@ -466,6 +473,12 @@ const readAccountBrowserSessionFromTempWindow = async (
       execution: options.protectionBypassExecution,
     })
 
+    diagnostics.record("temp_session_response", {
+      success: response?.success === true,
+      hasData: Boolean(response?.data),
+      reason: readContentSessionFailureReason(response),
+      code: response?.code,
+    })
     if (!response?.success || !response.data) {
       diagnostics.record("session_read_failed", {
         source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
@@ -487,6 +500,8 @@ const readAccountBrowserSessionFromTempWindow = async (
       source: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
       baseUrl: options.baseUrl,
       siteType: options.siteType,
+      allowSessionProbe: options.allowSessionProbe,
+      fetchContext: options.fetchContext,
       diagnostics,
     })
   } catch (error) {
@@ -570,7 +585,13 @@ export async function resolveAccountBrowserSession(
 
   if (options.useTempWindow) {
     const session = await readAccountBrowserSessionFromTempWindow({
-      ...options,
+      baseUrl: options.baseUrl,
+      siteType: options.siteType,
+      browserContext: options.currentTab,
+      protectionBypassExecution: options.protectionBypassExecution,
+      suppressMinimize: options.suppressMinimize,
+      requestIdPrefix: options.requestIdPrefix,
+      onError: options.onError,
       diagnostics,
     })
     if (session && isUsable(session)) return succeed(session)
