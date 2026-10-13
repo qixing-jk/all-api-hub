@@ -155,6 +155,7 @@ class AutoCheckinAlarmSchedule {
   async scheduleNextRun(options?: {
     preserveExisting?: boolean
     allowCatchUp?: boolean
+    dailyNotBefore?: number
   }) {
     if (!hasAlarmsAPI()) {
       logger.warn("Alarms API not supported, cannot schedule")
@@ -199,10 +200,16 @@ class AutoCheckinAlarmSchedule {
    */
   async scheduleDailyAlarm(
     config: AutoCheckinPreferences,
-    options?: { preserveExisting?: boolean; allowCatchUp?: boolean },
+    options?: {
+      preserveExisting?: boolean
+      allowCatchUp?: boolean
+      dailyNotBefore?: number
+    },
   ) {
     const currentStatus = await autoCheckinStorage.getStatus()
-    const now = new Date()
+    // A failed result write leaves the recorded daily day stale. Plan from
+    // the end of its cooldown so random scheduling cannot replay it early.
+    const now = new Date(Math.max(Date.now(), options?.dailyNotBefore ?? 0))
     const nextTriggerPlan = computeNextDailyTriggerPlan(
       config,
       currentStatus,

@@ -81,7 +81,7 @@ class AutoCheckinScheduler {
   private readonly dailyTrigger = new DailyTriggerWorkflow({
     dailyAlarmName: AUTO_CHECKIN_ALARM_NAMES.Daily,
     runCheckins: (options) => this.runCheckins(options),
-    scheduleNextRun: () => this.scheduleNextRun(),
+    scheduleNextRun: (options) => this.scheduleNextRun(options),
   })
 
   /**

@@ -106,7 +106,7 @@ export class DailyTriggerWorkflow {
     private readonly deps: {
       dailyAlarmName: string
       runCheckins: typeof runCheckins
-      scheduleNextRun: () => Promise<void>
+      scheduleNextRun: (options?: { dailyNotBefore?: number }) => Promise<void>
     },
   ) {}
   async handleDailyAlarm(
@@ -164,7 +164,15 @@ export class DailyTriggerWorkflow {
           [AUTO_CHECKIN_SESSION_STORAGE_KEYS.DAILY_RUN_PERSIST_FAILED_AT]:
             this.lastDailyRunPersistFailedAt,
         })
-        await this.deps.scheduleNextRun()
+        await this.deps.scheduleNextRun(
+          this.lastDailyRunPersistFailedAt == null
+            ? undefined
+            : {
+                dailyNotBefore:
+                  this.lastDailyRunPersistFailedAt +
+                  DAILY_RUN_PERSIST_FAILURE_GUARD_MS,
+              },
+        )
       }
     })()
 

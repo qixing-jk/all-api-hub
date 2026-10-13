@@ -10,6 +10,7 @@ import {
   PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_SETTING_IDS,
 } from "~/services/productAnalytics/contracts"
+import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { formatLocalDayKey } from "~/utils/core/dayKey"
 import {
   mockedBrowserApi,
@@ -17,12 +18,59 @@ import {
   mockedUserPreferences,
   schedulerTestState,
 } from "~~/tests/services/autoCheckin/schedulerTestHarness"
+import { automaticExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 describe("autoCheckinScheduler.scheduleNextRun", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockedBrowserApi.hasAlarmsAPI.mockReturnValue(true)
   })
+
+  it.each([
+    { hour: 9, minute: 0 },
+    { hour: 23, minute: 55 },
+  ])(
+    "defers random daily alarms after a failed write at $hour:$minute",
+    async ({ hour, minute }) => {
+      vi.useFakeTimers()
+      const now = new Date(2024, 0, 1, hour, minute, 0)
+      vi.setSystemTime(now)
+      const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0)
+      const runSpy = vi
+        .spyOn(autoCheckinScheduler, "runCheckins")
+        .mockResolvedValueOnce({ persisted: false })
+      mockedUserPreferences.getPreferences.mockResolvedValue({
+        autoCheckin: {
+          ...DEFAULT_PREFERENCES.autoCheckin,
+          globalEnabled: true,
+          windowStart: "00:00",
+          windowEnd: "23:59",
+          scheduleMode: "random",
+          retryStrategy: {
+            enabled: false,
+            intervalMinutes: 30,
+            maxAttemptsPerDay: 3,
+          },
+        },
+      })
+      schedulerTestState.storedStatus = null
+      try {
+        await (autoCheckinScheduler as any).handleDailyAlarm(
+          { name: "autoCheckinDaily", scheduledTime: now.getTime() },
+          TEMP_WINDOW_REQUEST_SOURCES.Background,
+          automaticExecution("checkin", "scheduled"),
+        )
+        expect(runSpy).toHaveBeenCalledTimes(1)
+        expect(
+          schedulerTestState.alarmStore.autoCheckinDaily.scheduledTime,
+        ).toBe(now.getTime() + 15 * 60_000)
+      } finally {
+        runSpy.mockRestore()
+        randomSpy.mockRestore()
+        vi.useRealTimers()
+      }
+    },
+  )
 
   it("does not emit a settings snapshot on every schedule refresh", async () => {
     vi.useFakeTimers()
