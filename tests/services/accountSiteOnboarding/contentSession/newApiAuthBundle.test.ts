@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { CONTENT_SESSION_REQUEST_TIMEOUT_MS } from "~/services/accountSiteOnboarding/contentSession/network"
 import { newApiAuthBundleContentSessionExtractor } from "~/services/accountSiteOnboarding/contentSession/newApiAuthBundle"
 
 const NOW_SECONDS = 1_800_000_000
@@ -113,31 +112,41 @@ describe("newApiAuthBundleContentSessionExtractor", () => {
   })
 
   it.each(["headers", "body"])(
-    "aborts a hanging refresh %s without retrying",
+    "accepts refresh %s that complete after 15 seconds",
     async (phase) => {
       vi.useFakeTimers()
       try {
+        let complete!: () => void
+        const pending = new Promise<unknown>((resolve) => {
+          complete = () =>
+            resolve(
+              phase === "headers"
+                ? createResponse(createAuthBundle())
+                : createAuthBundle(),
+            )
+        })
         const fetchMock =
           phase === "headers"
-            ? vi.fn().mockImplementation(() => new Promise(() => {}))
-            : vi.fn().mockResolvedValue({
-                ok: true,
-                status: 200,
-                json: () => new Promise(() => {}),
-              })
+            ? vi.fn().mockReturnValue(pending)
+            : vi
+                .fn()
+                .mockResolvedValue({
+                  ok: true,
+                  status: 200,
+                  json: () => pending,
+                })
         vi.stubGlobal("fetch", fetchMock)
-        const result = newApiAuthBundleContentSessionExtractor.probe!({
+        const observed = newApiAuthBundleContentSessionExtractor.probe!({
           siteTypeHint: SITE_TYPES.UNKNOWN,
-        })
-        const failure = expect(result).rejects.toThrow(
-          "New API session refresh request failed",
+        }).then(
+          (value) => ({ value }),
+          (error) => ({ error }),
         )
-        await vi.advanceTimersByTimeAsync(CONTENT_SESSION_REQUEST_TIMEOUT_MS)
-        await failure
+        await vi.advanceTimersByTimeAsync(16_000)
+        complete()
+        expect(await observed).toMatchObject({ value: { userId: "42" } })
         expect(fetchMock).toHaveBeenCalledOnce()
-        expect(fetchMock.mock.calls[0]?.[1]?.signal.aborted).toBe(true)
         expect(localStorage.setItem).not.toHaveBeenCalled()
-        expect(vi.getTimerCount()).toBe(0)
       } finally {
         vi.useRealTimers()
       }
@@ -196,10 +205,9 @@ describe("newApiAuthBundleContentSessionExtractor", () => {
       expect.objectContaining({
         credentials: "include",
         method: "POST",
-        redirect: "error",
-        signal: expect.any(AbortSignal),
       }),
     )
+    expect(fetchMock.mock.calls[0]?.[1]).not.toHaveProperty("redirect")
     expect(localStorage.setItem).not.toHaveBeenCalled()
     expect(localStorage.removeItem).not.toHaveBeenCalled()
     expect(localStorage.clear).not.toHaveBeenCalled()

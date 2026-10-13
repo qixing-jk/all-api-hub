@@ -16,7 +16,6 @@ import {
   type ContentSessionExtractionResult,
   type ContentSessionExtractor,
 } from "../contracts"
-import { runContentSessionRequest } from "./network"
 
 const CONTROLLED_ERROR_STATUSES = new Set([401, 409, 429])
 const AUTH_REFRESH_REQUEST_ERROR = "New API session refresh request failed"
@@ -51,9 +50,8 @@ async function createControlledRefreshError(
  * https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.22/docs/authentication.md
  * https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.22/controller/user.go
  */
-async function readNewApiAuthBundle(
+async function extractNewApiAuthBundle(
   context: ContentSessionExtractionContext,
-  signal?: AbortSignal,
 ): Promise<ContentSessionExtractionResult | null> {
   const origin = location.origin
   let response: Response
@@ -64,8 +62,6 @@ async function readNewApiAuthBundle(
     response = await fetch(`${origin}${NEW_API_DASHBOARD_AUTH_REFRESH_PATH}`, {
       credentials: "include",
       method: "POST",
-      redirect: "error",
-      signal,
     })
   } catch (error) {
     diagnostics?.record("refresh_failed", {
@@ -136,25 +132,6 @@ async function readNewApiAuthBundle(
       sessionId: parsed.bundle.sessionId,
       origin,
     },
-  }
-}
-
-/** Bounds AuthBundle extraction without replaying a credential refresh. */
-async function extractNewApiAuthBundle(
-  context: ContentSessionExtractionContext,
-) {
-  try {
-    return await runContentSessionRequest((signal) =>
-      readNewApiAuthBundle(context, signal),
-    )
-  } catch (error) {
-    if (isRecord(error) && error.name === "TimeoutError") {
-      context.diagnostics?.record("refresh_failed", {
-        reason: "request_timeout",
-      })
-      throw new Error(AUTH_REFRESH_REQUEST_ERROR)
-    }
-    throw error
   }
 }
 

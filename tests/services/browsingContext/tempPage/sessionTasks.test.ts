@@ -28,7 +28,7 @@ describe("temp-page onboarding session probe", () => {
     })
   })
 
-  it("binds an explicit unknown-site probe to the requested origin and preserves the detected type", async () => {
+  it("forwards explicit unknown-site probe intent and preserves the detected type", async () => {
     const sendResponse = vi.fn()
     await executeAutoDetectSite(
       {
@@ -48,7 +48,6 @@ describe("temp-page onboarding session probe", () => {
       siteType: SITE_TYPES.UNKNOWN,
       diagnosticId: "diagnostic-parent",
       allowSessionProbe: true,
-      expectedOrigin: "https://white-label.example.invalid",
     })
     expect(acquire).toHaveBeenCalledWith(
       "https://white-label.example.invalid/console",
@@ -89,11 +88,8 @@ describe("temp-page onboarding session probe", () => {
         42,
         expect.not.objectContaining({ allowSessionProbe: true }),
       )
-      expect(sendMessage).toHaveBeenCalledWith(
-        42,
-        expect.objectContaining({
-          expectedOrigin: "https://site.example.invalid",
-        }),
+      expect(sendMessage.mock.calls.at(-1)?.[1]).not.toHaveProperty(
+        "expectedOrigin",
       )
     },
   )

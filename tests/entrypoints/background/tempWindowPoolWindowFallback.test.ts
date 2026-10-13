@@ -2839,7 +2839,6 @@ describe("tempWindowPool window fallback", () => {
           tabId,
           expect.objectContaining({
             action: RuntimeActionIds.ContentGetUserFromLocalStorage,
-            expectedOrigin: `https://${device}-${mode}.example.invalid`,
           }),
         )
         expect(sendResponse).toHaveBeenCalledWith(

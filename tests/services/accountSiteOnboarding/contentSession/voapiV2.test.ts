@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { CONTENT_SESSION_REQUEST_TIMEOUT_MS } from "~/services/accountSiteOnboarding/contentSession/network"
 import { voApiV2ContentSessionExtractor } from "~/services/accountSiteOnboarding/contentSession/voapiV2"
 import { ContentSessionProtocolError } from "~/services/accountSiteOnboarding/contracts"
 
@@ -123,9 +122,8 @@ describe("voApiV2ContentSessionExtractor", () => {
       method: "GET",
       credentials: "omit",
       headers: { Authorization: jwtWithUserId },
-      redirect: "error",
     })
-    expect(options.signal).toBeDefined()
+    expect(options).not.toHaveProperty("redirect")
   })
 
   it("does not probe when the server identity does not match stored and JWT identity", async () => {
@@ -146,19 +144,27 @@ describe("voApiV2ContentSessionExtractor", () => {
     ).resolves.toBeNull()
   })
 
-  it("rejects malformed probe URLs before requesting account data", async () => {
+  it("uses the live page origin even when the caller URL is malformed", async () => {
     localStorage.setItem(
       "userStore",
       JSON.stringify({ auth: { token: jwtWithUserId } }),
     )
     localStorage.setItem("user", JSON.stringify({ id: 42 }))
-    const fetchMock = vi.fn()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ code: 0, data: { id: 42 } }),
+      })
     vi.stubGlobal("fetch", fetchMock)
 
     await expect(
       voApiV2ContentSessionExtractor.probe?.({ url: "not a URL" }),
-    ).resolves.toBeNull()
-    expect(fetchMock).not.toHaveBeenCalled()
+    ).resolves.toMatchObject({ userId: 42 })
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
+      "https://voapi.example/api/user/info",
+    )
   })
 
   it("does not extract if the token snapshot changes during the probe", async () => {
@@ -189,7 +195,7 @@ describe("voApiV2ContentSessionExtractor", () => {
     expect(extractSpy).not.toHaveBeenCalled()
   })
 
-  it("does not extract if the page origin changes during the probe", async () => {
+  it("extracts a matching identity without an extra origin-change rejection", async () => {
     localStorage.setItem(
       "userStore",
       JSON.stringify({ auth: { token: jwtWithUserId } }),
@@ -212,8 +218,8 @@ describe("voApiV2ContentSessionExtractor", () => {
 
     await expect(
       voApiV2ContentSessionExtractor.probe?.({ url: "https://voapi.example" }),
-    ).resolves.toBeNull()
-    expect(extractSpy).not.toHaveBeenCalled()
+    ).resolves.toMatchObject({ userId: 42, siteTypeHint: SITE_TYPES.VO_API_V2 })
+    expect(extractSpy).toHaveBeenCalledOnce()
   })
 
   it("treats an identity cache change after server verification as authoritative", async () => {
@@ -313,7 +319,7 @@ describe("voApiV2ContentSessionExtractor", () => {
     ).rejects.toThrow("VoAPI session probe request failed")
   })
 
-  it("times out a hanging response body", async () => {
+  it("accepts a matching probe body that completes after 15 seconds", async () => {
     vi.useFakeTimers()
     try {
       localStorage.setItem(
@@ -325,25 +331,22 @@ describe("voApiV2ContentSessionExtractor", () => {
       const pendingBody = new Promise<unknown>((resolve) => {
         resolveBody = resolve
       })
-      const fetchMock = vi.fn().mockResolvedValue({
-        ok: true,
-        status: 200,
-        json: () => pendingBody,
-      })
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValue({ ok: true, status: 200, json: () => pendingBody })
       vi.stubGlobal("fetch", fetchMock)
-      const probe = voApiV2ContentSessionExtractor.probe?.({
+      const observed = voApiV2ContentSessionExtractor.probe!({
         url: "https://voapi.example",
-      })
-      const failure = expect(probe).rejects.toThrow(
-        "VoAPI session probe request failed",
+      }).then(
+        (value) => ({ value }),
+        (error) => ({ error }),
       )
-      await vi.advanceTimersByTimeAsync(CONTENT_SESSION_REQUEST_TIMEOUT_MS)
-      await failure
-      expect(fetchMock).toHaveBeenCalledOnce()
-      expect(fetchMock.mock.calls[0]?.[1]?.signal.aborted).toBe(true)
+      await vi.advanceTimersByTimeAsync(16_000)
       resolveBody({ code: 0, data: { id: 42 } })
-      await vi.advanceTimersByTimeAsync(0)
-      expect(vi.getTimerCount()).toBe(0)
+      expect(await observed).toMatchObject({
+        value: { userId: 42, accessToken: jwtWithUserId },
+      })
+      expect(fetchMock).toHaveBeenCalledOnce()
     } finally {
       vi.useRealTimers()
     }

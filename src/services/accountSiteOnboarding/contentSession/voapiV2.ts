@@ -7,7 +7,6 @@ import {
   type ContentSessionExtractionContext,
   type ContentSessionExtractor,
 } from "../contracts"
-import { runContentSessionRequest } from "./network"
 
 const VOAPI_V2_USER_STORE_STORAGE_KEY = "userStore"
 const COMPATIBLE_USER_STORAGE_KEY = "user"
@@ -93,13 +92,6 @@ export const voApiV2ContentSessionExtractor: ContentSessionExtractor = {
     localStorage.getItem(VOAPI_V2_USER_STORE_STORAGE_KEY) !== null,
   async probe(context: ContentSessionExtractionContext) {
     const origin = location.origin
-    if (typeof context.url === "string") {
-      try {
-        if (new URL(context.url).origin !== origin) return null
-      } catch {
-        return null
-      }
-    }
     const userStoreRaw = localStorage.getItem(VOAPI_V2_USER_STORE_STORAGE_KEY)
     const accessToken = readVoApiV2BrowserToken()
     if (!userStoreRaw || !accessToken) return null
@@ -108,24 +100,20 @@ export const voApiV2ContentSessionExtractor: ContentSessionExtractor = {
 
     let responseBody: unknown
     try {
-      responseBody = await runContentSessionRequest(async (signal) => {
-        const response = await fetch(
-          new URL(VOAPI_V2_ENDPOINTS.UserInfo, origin),
-          {
-            method: "GET",
-            cache: "no-store",
-            credentials: "omit",
-            redirect: "error",
-            headers: { Authorization: accessToken },
-            signal,
-          },
-        )
-        if (response.status >= 500 || response.status === 429) {
-          throw new Error("VoAPI session probe unavailable")
-        }
-        if (!response.ok) return null
-        return await response.json()
-      })
+      const response = await fetch(
+        new URL(VOAPI_V2_ENDPOINTS.UserInfo, origin),
+        {
+          method: "GET",
+          cache: "no-store",
+          credentials: "omit",
+          headers: { Authorization: accessToken },
+        },
+      )
+      if (response.status >= 500 || response.status === 429) {
+        throw new Error("VoAPI session probe unavailable")
+      }
+      if (!response.ok) return null
+      responseBody = await response.json()
     } catch {
       throw new Error("VoAPI session probe request failed")
     }
@@ -138,7 +126,6 @@ export const voApiV2ContentSessionExtractor: ContentSessionExtractor = {
       return null
     }
     if (
-      location.origin !== origin ||
       localStorage.getItem(VOAPI_V2_USER_STORE_STORAGE_KEY) !== userStoreRaw ||
       readVoApiV2BrowserToken() !== accessToken
     ) {

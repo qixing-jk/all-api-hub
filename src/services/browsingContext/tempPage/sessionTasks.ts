@@ -258,7 +258,6 @@ async function getSiteDataFromTab(
       siteType: options.siteType,
       diagnosticId: options.diagnosticId ?? requestId,
       ...(options.allowSessionProbe ? { allowSessionProbe: true } : {}),
-      expectedOrigin: new URL(url).origin,
     })
 
     await tempWindowBackgroundRuntime.release(requestId)

@@ -9,7 +9,6 @@ import {
   ContentSessionProtocolError,
   type ContentSessionExtractor,
 } from "../contracts"
-import { runContentSessionRequest } from "./network"
 
 /**
  * Sub2API uses a short-lived JWT access token with a refresh-token flow.
@@ -97,21 +96,17 @@ const refreshSub2ApiTokensIfNeeded = async (params: {
 
   let payload: Sub2ApiEnvelope<Sub2ApiRefreshTokenData> | null = null
   try {
-    payload = await runContentSessionRequest(async (signal) => {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        redirect: "error",
-        headers: {
-          "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
-        body: JSON.stringify({ refresh_token: refreshToken }),
-        signal,
-      })
-      const body = await response.json()
-      if (!response.ok) throw new Error("Sub2API token refresh failed")
-      return body as Sub2ApiEnvelope<Sub2ApiRefreshTokenData> | null
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
+      body: JSON.stringify({ refresh_token: refreshToken }),
     })
+    const body = await response.json()
+    if (!response.ok) throw new Error("Sub2API token refresh failed")
+    payload = body as Sub2ApiEnvelope<Sub2ApiRefreshTokenData> | null
   } catch {
     // The server may have rotated the refresh token before the response was
     // lost. Never export the old pair as a successful refresh or replay it.
@@ -181,24 +176,20 @@ export const sub2ApiContentSessionExtractor: ContentSessionExtractor = {
     }
     let body: unknown
     try {
-      body = await runContentSessionRequest(async (signal) => {
-        const response = await fetch(
-          new URL(SUB2API_AUTH_ME_ENDPOINT, resolveDeploymentApiOrigin(origin)),
-          {
-            method: "GET",
-            cache: "no-store",
-            credentials: "omit",
-            redirect: "error",
-            headers: { Authorization: `Bearer ${accessToken}` },
-            signal,
-          },
-        )
-        if (response.status >= 500 || response.status === 429) {
-          throw new Error("Sub2API session probe unavailable")
-        }
-        if (!response.ok) return null
-        return await response.json()
-      })
+      const response = await fetch(
+        new URL(SUB2API_AUTH_ME_ENDPOINT, resolveDeploymentApiOrigin(origin)),
+        {
+          method: "GET",
+          cache: "no-store",
+          credentials: "omit",
+          headers: { Authorization: `Bearer ${accessToken}` },
+        },
+      )
+      if (response.status >= 500 || response.status === 429) {
+        throw new Error("Sub2API session probe unavailable")
+      }
+      if (!response.ok) return null
+      body = await response.json()
     } catch {
       // A transport/body failure does not establish that another protocol owns
       // the page, and must not be hidden by a cached generic user fallback.
@@ -212,7 +203,6 @@ export const sub2ApiContentSessionExtractor: ContentSessionExtractor = {
       return null
     }
     if (
-      location.origin !== origin ||
       localStorage.getItem(SUB2API_AUTH_STORAGE_KEYS.accessToken)?.trim() !==
         accessToken ||
       localStorage.getItem(SUB2API_AUTH_STORAGE_KEYS.authUser) !== authUserRaw
