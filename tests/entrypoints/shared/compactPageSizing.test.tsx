@@ -212,6 +212,46 @@ describe("initializeCompactPageSizing", () => {
     expect(minWidth()).toBe("80px")
   })
 
+  it.each(["popup", "sidepanel"])(
+    "avoids redundant style writes when the mobile %s width constraint is unchanged",
+    (surface) => {
+      isPopupMock.mockReturnValue(surface === "popup")
+      isSidePanelMock.mockReturnValue(surface === "sidepanel")
+      configureDevice({ userAgent: "Android Mobile", mobileHint: true })
+      setViewportWidth(390)
+      initializeCompactPageSizing()
+      expect(minWidth()).toBe("320px")
+
+      const setPropertySpy = vi.spyOn(
+        document.documentElement.style,
+        "setProperty",
+      )
+
+      for (const width of [390, 820, 600]) {
+        setViewportWidth(width)
+        window.dispatchEvent(new Event("resize"))
+      }
+      expect(setPropertySpy).not.toHaveBeenCalled()
+
+      setViewportWidth(180)
+      window.dispatchEvent(new Event("resize"))
+      expect(minWidth()).toBe("180px")
+      expect(setPropertySpy).toHaveBeenCalledTimes(1)
+
+      for (const width of [180, 0]) {
+        setViewportWidth(width)
+        window.dispatchEvent(new Event("resize"))
+      }
+      expect(minWidth()).toBe("180px")
+      expect(setPropertySpy).toHaveBeenCalledTimes(1)
+
+      setViewportWidth(390)
+      window.dispatchEvent(new Event("resize"))
+      expect(minWidth()).toBe("320px")
+      expect(setPropertySpy).toHaveBeenCalledTimes(2)
+    },
+  )
+
   it("leaves desktop popup sizing untouched", () => {
     configureDevice({
       userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/126.0",

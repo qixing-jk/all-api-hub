@@ -4,6 +4,7 @@ import {
   isExtensionSidePanel,
 } from "~/utils/browser"
 
+const MIN_WIDTH_PROPERTY = "--extension-surface-min-width"
 const INITIAL_MIN_WIDTH_PX = 320
 const MIN_INITIAL_VIEWPORT_WIDTH_PX = 64
 
@@ -29,10 +30,10 @@ export function initializeCompactPageSizing() {
     // host has resolved a usable width, honor subsequent zoom/resizes fully.
     if (width >= MIN_INITIAL_VIEWPORT_WIDTH_PX) hasUsableViewport = true
     if (!hasUsableViewport || width <= 0) return
-    root.style.setProperty(
-      "--extension-surface-min-width",
-      `${Math.min(INITIAL_MIN_WIDTH_PX, width)}px`,
-    )
+    const minWidth = `${Math.min(INITIAL_MIN_WIDTH_PX, width)}px`
+    if (root.style.getPropertyValue(MIN_WIDTH_PROPERTY) !== minWidth) {
+      root.style.setProperty(MIN_WIDTH_PROPERTY, minWidth)
+    }
   }
 
   root.setAttribute("data-compact-extension-page", "mobile")
