@@ -3,6 +3,7 @@ import { logger } from "~/services/checkin/autoCheckin/diagnostics"
 import type { runCheckins } from "~/services/checkin/autoCheckin/execution/runCheckins"
 import { recalculateSummaryFromResults } from "~/services/checkin/autoCheckin/execution/runResults"
 import {
+  DAILY_RUN_PERSIST_FAILURE_GUARD_MS,
   isMinutesWithinWindow,
   parseTimeToMinutes,
 } from "~/services/checkin/autoCheckin/scheduling/dailyPlanning"
@@ -46,14 +47,6 @@ type AutoCheckinUiOpenPretriggerIneligibleReason =
   | "daily_alarm_not_today"
   | "status_write_failed_recently"
   | "status_write_guard_unavailable"
-
-/**
- * How long a failed daily status write keeps blocking the pre-trigger.
- *
- * The day guard lives in storage; when that write failed, every UI open would
- * otherwise start another full daily run against the same unrecorded day.
- */
-const DAILY_RUN_PERSIST_FAILURE_GUARD_MS = 15 * 60 * 1000
 
 interface AutoCheckinUiOpenPretriggerDebugInfo {
   nowIso: string

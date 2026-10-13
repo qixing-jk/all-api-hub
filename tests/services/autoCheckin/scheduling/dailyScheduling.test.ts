@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { autoCheckinAlarmSchedule } from "~/services/checkin/autoCheckin/scheduling/alarmSchedule"
 import { autoCheckinScheduler } from "~/services/checkin/autoCheckin/scheduling/schedulerCore"
+import { AUTO_CHECKIN_SESSION_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import {
   PRODUCT_ANALYTICS_EVENTS,
@@ -21,10 +22,81 @@ import {
 import { automaticExecution } from "~~/tests/services/protectionBypass/fixtures"
 
 describe("autoCheckinScheduler.scheduleNextRun", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    await browser.storage.session.clear()
     vi.clearAllMocks()
     mockedBrowserApi.hasAlarmsAPI.mockReturnValue(true)
   })
+
+  it.each([
+    { preserveExisting: false, unreadableGuard: false },
+    { preserveExisting: true, unreadableGuard: false },
+    { preserveExisting: true, unreadableGuard: true },
+  ])(
+    "restores the failed-write cooldown with preserveExisting=$preserveExisting, unreadableGuard=$unreadableGuard and resumes after expiry",
+    async ({ preserveExisting, unreadableGuard }) => {
+      vi.useFakeTimers()
+      const failedAt = new Date(2024, 0, 1, 9, 0, 0).getTime()
+      vi.setSystemTime(failedAt + 60_000)
+      const randomSpy = vi.spyOn(Math, "random").mockReturnValue(0)
+      await browser.storage.session.set({
+        [AUTO_CHECKIN_SESSION_STORAGE_KEYS.DAILY_RUN_PERSIST_FAILED_AT]:
+          failedAt,
+      })
+      mockedUserPreferences.getPreferences.mockResolvedValue({
+        autoCheckin: {
+          ...DEFAULT_PREFERENCES.autoCheckin,
+          globalEnabled: true,
+          windowStart: "00:00",
+          windowEnd: "23:59",
+          scheduleMode: "random",
+          retryStrategy: {
+            enabled: true,
+            intervalMinutes: 1,
+            maxAttemptsPerDay: 3,
+          },
+        },
+      })
+      const retryState = {
+        day: "2024-01-01",
+        pendingAccountIds: ["a"],
+        attemptsByAccount: { a: 2 },
+      }
+      schedulerTestState.storedStatus = { retryState, pendingRetry: true }
+      if (preserveExisting) {
+        for (const name of ["autoCheckinDaily", "autoCheckinRetry"]) {
+          schedulerTestState.alarmStore[name] = {
+            name,
+            scheduledTime: failedAt + 2 * 60_000,
+          }
+        }
+      }
+      const sessionRead = unreadableGuard
+        ? vi
+            .spyOn(browser.storage.session, "get")
+            .mockRejectedValueOnce(new Error("session unavailable"))
+        : undefined
+      try {
+        await autoCheckinScheduler.scheduleNextRun({
+          preserveExisting,
+          allowCatchUp: true,
+        })
+        expect(
+          schedulerTestState.alarmStore.autoCheckinDaily.scheduledTime,
+        ).toBe(failedAt + (unreadableGuard ? 16 : 15) * 60_000)
+        expect(schedulerTestState.alarmStore.autoCheckinRetry).toBeUndefined()
+        expect(schedulerTestState.storedStatus.retryState).toEqual(retryState)
+        vi.setSystemTime(failedAt + 15 * 60_000)
+        await autoCheckinScheduler.scheduleNextRun()
+        expect(schedulerTestState.alarmStore.autoCheckinRetry).toBeDefined()
+        expect(schedulerTestState.storedStatus.pendingRetry).toBe(true)
+      } finally {
+        sessionRead?.mockRestore()
+        randomSpy.mockRestore()
+        vi.useRealTimers()
+      }
+    },
+  )
 
   it.each([false, true])(
     "only re-arms an eligible retry queue when daily persistence succeeds (%s)",

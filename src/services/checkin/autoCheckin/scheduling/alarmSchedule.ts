@@ -2,10 +2,12 @@ import { logger } from "~/services/checkin/autoCheckin/diagnostics"
 import {
   computeNextDailyTriggerPlan,
   computeNextRetryTriggerTime,
+  DAILY_RUN_PERSIST_FAILURE_GUARD_MS,
   type AutoCheckinDailyTriggerPlan,
 } from "~/services/checkin/autoCheckin/scheduling/dailyPlanning"
 import { pruneExhaustedPending } from "~/services/checkin/autoCheckin/scheduling/retryQueue"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
+import { AUTO_CHECKIN_SESSION_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import {
@@ -18,6 +20,7 @@ import {
   getAlarm,
   hasAlarmsAPI,
 } from "~/utils/browser/alarms"
+import { getSessionStorageValues } from "~/utils/browser/storage"
 import { formatLocalDayKey } from "~/utils/core/dayKey"
 
 export const AUTO_CHECKIN_ALARM_NAMES = {
@@ -189,8 +192,37 @@ class AutoCheckinAlarmSchedule {
       return
     }
 
-    await this.scheduleDailyAlarm(config, options)
-    await this.scheduleRetryAlarm(config, options)
+    let cooldownUntil = 0
+    try {
+      const values = await getSessionStorageValues(
+        AUTO_CHECKIN_SESSION_STORAGE_KEYS.DAILY_RUN_PERSIST_FAILED_AT,
+      )
+      const failedAt =
+        values[AUTO_CHECKIN_SESSION_STORAGE_KEYS.DAILY_RUN_PERSIST_FAILED_AT]
+      if (typeof failedAt === "number" && Number.isFinite(failedAt)) {
+        cooldownUntil = failedAt + DAILY_RUN_PERSIST_FAILURE_GUARD_MS
+      }
+    } catch (error) {
+      // Unknown cooldown state must not restore an immediate daily/retry run.
+      cooldownUntil = Date.now() + DAILY_RUN_PERSIST_FAILURE_GUARD_MS
+      logger.warn(
+        "Cannot read persistence guard; deferring alarm restoration",
+        error,
+      )
+    }
+    const schedulingOptions =
+      cooldownUntil > Date.now()
+        ? {
+            ...options,
+            dailyNotBefore: Math.max(
+              options?.dailyNotBefore ?? 0,
+              cooldownUntil,
+            ),
+            suppressRetryRearm: true,
+          }
+        : options
+    await this.scheduleDailyAlarm(config, schedulingOptions)
+    await this.scheduleRetryAlarm(config, schedulingOptions)
   }
 
   /**
@@ -226,6 +258,7 @@ class AutoCheckinAlarmSchedule {
       const targetDay = formatLocalDayKey(scheduledTime)
 
       if (
+        scheduledTime.getTime() < (options?.dailyNotBefore ?? 0) ||
         !this.isExistingDailyAlarmReusable(
           config,
           scheduledTime,

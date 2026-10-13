@@ -7,6 +7,9 @@ import { formatLocalDayKey } from "~/utils/core/dayKey"
 
 const DETERMINISTIC_CATCH_UP_DELAY_MS = 60_000
 
+/** Cooldown shared by daily admission and alarm restoration after failed writes. */
+export const DAILY_RUN_PERSIST_FAILURE_GUARD_MS = 15 * 60 * 1000
+
 export interface AutoCheckinDailyTriggerPlan {
   triggerTime: Date
   enforceTodayTarget?: boolean
