@@ -1,0 +1,5 @@
+/* Only mobile content-sized hosts need an independent initial width. Desktop
+   surfaces keep their native sizing, including side panels at high zoom. */
+html[data-compact-extension-page="mobile"] {
+  min-width: var(--extension-surface-min-width, 320px);
+}
