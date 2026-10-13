@@ -111,7 +111,7 @@ export default function PopupViewSwitchTabs({
     >
       <TabsList
         className={cn(
-          "corners-concentric gap-y-density-1 py-density-1 inline-flex min-w-0 gap-x-1 rounded-md px-1 [--corner-inset:4px]",
+          "corners-concentric gap-y-density-1 py-density-1 inline-flex max-w-full min-w-0 gap-x-1 rounded-md px-1 [--corner-inset:4px]",
           COLORS.background.tertiary,
         )}
       >
