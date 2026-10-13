@@ -86,7 +86,7 @@ const normalizeSessionData = (
     source: AccountBrowserSession["source"]
     baseUrl: string
     siteType: AccountBrowserSession["siteType"]
-    allowNewApiAuthProbe?: boolean
+    allowSessionProbe?: boolean
     fetchContext?: AccountBrowserSessionFetchContext
     diagnostics?: AccountDetectionDiagnostics
   },
@@ -142,7 +142,7 @@ const normalizeSessionData = (
       baseUrl: options.baseUrl,
       siteType: options.siteType,
       siteTypeHint,
-      allowNewApiAuthProbe: options.allowNewApiAuthProbe,
+      allowSessionProbe: options.allowSessionProbe,
     },
   )
   const fetchContext =
@@ -226,18 +226,16 @@ export async function readAccountBrowserSessionFromTab(
     siteType: options.siteType,
   })
   try {
-    const allowNewApiAuthProbe =
+    const allowSessionProbe =
       options.source === ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB &&
-      options.allowNewApiAuthProbe === true
+      options.allowSessionProbe === true
     const response = await sendTabMessageWithRetry(options.tabId, {
       action: RuntimeActionIds.ContentGetUserFromLocalStorage,
       url: options.baseUrl,
       siteType: options.siteType,
       diagnosticId: diagnostics.requestId,
-      ...(options.source === ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB
-        ? { expectedOrigin: tryParseOrigin(options.baseUrl) ?? "" }
-        : {}),
-      ...(allowNewApiAuthProbe ? { allowNewApiAuthProbe: true } : {}),
+      expectedOrigin: tryParseOrigin(options.baseUrl) ?? "",
+      ...(allowSessionProbe ? { allowSessionProbe: true } : {}),
     })
 
     if (!response?.success || !response.data) {
@@ -265,7 +263,7 @@ export async function readAccountBrowserSessionFromTab(
       source: options.source,
       baseUrl: options.baseUrl,
       siteType: options.siteType,
-      allowNewApiAuthProbe,
+      allowSessionProbe,
       fetchContext: options.fetchContext,
       diagnostics,
     })
@@ -457,6 +455,9 @@ const readAccountBrowserSessionFromTempWindow = async (
         ? { suppressMinimize: options.suppressMinimize }
         : {}),
       ...(options.currentTab?.incognito === true ? { useIncognito: true } : {}),
+      ...(options.currentTab?.cookieStoreId
+        ? { cookieStoreId: options.currentTab.cookieStoreId }
+        : {}),
     }
     const response = await executeProtectionBypassTask({
       task: { kind: "session_read", params },

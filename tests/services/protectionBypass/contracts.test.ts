@@ -544,13 +544,22 @@ describe("protection bypass runtime contracts", () => {
         useIncognito: "yes",
       },
     },
+    {
+      kind: "session_read",
+      params: {
+        url: "https://example.invalid",
+        requestId: "request-session",
+        siteType: "unknown",
+        cookieStoreId: 12,
+      },
+    },
   ])("rejects invalid optional task primitives %#", (task) => {
     expect(isTempContextTask(task)).toBe(false)
   })
 
   it.each([true, false, undefined])(
     "accepts the optional New API session probe flag %s",
-    (allowNewApiAuthProbe) => {
+    (allowSessionProbe) => {
       expect(
         isTempContextTask({
           kind: "session_read",
@@ -558,7 +567,8 @@ describe("protection bypass runtime contracts", () => {
             url: "https://example.invalid",
             requestId: "request-session",
             siteType: "unknown",
-            allowNewApiAuthProbe,
+            allowSessionProbe,
+            cookieStoreId: "firefox-container-1",
           },
         }),
       ).toBe(true)
@@ -567,7 +577,7 @@ describe("protection bypass runtime contracts", () => {
 
   it.each(["true", 1, null])(
     "rejects a non-boolean New API session probe flag %s",
-    (allowNewApiAuthProbe) => {
+    (allowSessionProbe) => {
       expect(
         isTempContextTask({
           kind: "session_read",
@@ -575,7 +585,7 @@ describe("protection bypass runtime contracts", () => {
             url: "https://example.invalid",
             requestId: "request-session",
             siteType: "unknown",
-            allowNewApiAuthProbe,
+            allowSessionProbe,
           },
         }),
       ).toBe(false)

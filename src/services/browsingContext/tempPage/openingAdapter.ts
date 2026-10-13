@@ -1,5 +1,5 @@
 import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
-import { createTab, queryTabs } from "~/utils/browser/tabs"
+import { createTab, queryTabs, removeTab } from "~/utils/browser/tabs"
 import {
   createWindow,
   removeWindow,
@@ -22,6 +22,7 @@ import {
 import { logger, logTempWindow } from "./diagnostics"
 import {
   classifyWindowCreationFailure,
+  createCookieStoreContextError,
   createRecoverableWindowCreationError,
   createUnsupportedTempContextError,
   isRecoverableWindowCreationError,
@@ -31,15 +32,37 @@ import {
  * Opens a standard tab-backed temp context.
  */
 async function openPlainTabTempContext(
-  options: { windowId?: number } = {},
+  options: { windowId?: number; cookieStoreId?: string } = {},
 ): Promise<TempContextOpenResult> {
-  const tab =
-    options.windowId == null
-      ? await createTab(TEMP_CONTEXT_INITIAL_URL, false)
-      : await createTab(TEMP_CONTEXT_INITIAL_URL, false, options)
+  let tab: browser.tabs.Tab | undefined
+  try {
+    tab =
+      options.windowId == null && options.cookieStoreId == null
+        ? await createTab(TEMP_CONTEXT_INITIAL_URL, false)
+        : await createTab(TEMP_CONTEXT_INITIAL_URL, false, options)
+  } catch (error) {
+    if (options.cookieStoreId) {
+      throw createCookieStoreContextError()
+    }
+    throw error
+  }
 
   if (!tab?.id) {
     throw new Error(t("messages:background.cannotCreateWindowOrTab"))
+  }
+
+  if (options.cookieStoreId && tab.cookieStoreId !== options.cookieStoreId) {
+    try {
+      await removeTab(tab.id)
+    } catch (error) {
+      logger.warn("Failed to remove tab created in the wrong cookie store", {
+        tabId: tab.id,
+        expectedCookieStoreId: options.cookieStoreId,
+        actualCookieStoreId: tab.cookieStoreId ?? null,
+        error: getErrorMessage(error),
+      })
+    }
+    throw createCookieStoreContextError()
   }
 
   return {
@@ -58,6 +81,7 @@ async function openPopupWindowTempContext(params: {
   requestId: string
   suppressMinimize?: boolean
   incognito?: boolean
+  cookieStoreId?: string
 }): Promise<TempContextOpenResult> {
   let windowId: number | null = null
 
@@ -107,6 +131,13 @@ async function openPopupWindowTempContext(params: {
         missingTabReason ??
           WINDOW_CREATION_FAILURE_REASONS.WINDOW_HANDLE_UNAVAILABLE,
       )
+    }
+
+    if (
+      params.cookieStoreId &&
+      tabs[0]?.cookieStoreId !== params.cookieStoreId
+    ) {
+      throw createCookieStoreContextError()
     }
 
     // Best-effort minimize to reduce disturbance unless suppressed (e.g., popup context).
@@ -163,9 +194,17 @@ export async function openFallbackAwareTempContext(params: {
   allowWindowRollback: boolean
   suppressMinimize?: boolean
   incognito?: boolean
+  cookieStoreId?: string
 }): Promise<TempContextOpenResult> {
-  if (params.requestedMode === TEMP_CONTEXT_MODES.Tab) {
-    return await openPlainTabTempContext()
+  if (
+    params.requestedMode === TEMP_CONTEXT_MODES.Tab ||
+    (params.cookieStoreId && !params.incognito)
+  ) {
+    return await openPlainTabTempContext(
+      params.cookieStoreId && !params.incognito
+        ? { cookieStoreId: params.cookieStoreId }
+        : {},
+    )
   }
 
   try {
@@ -190,6 +229,7 @@ export async function openFallbackAwareTempContext(params: {
       requestId: params.requestId,
       suppressMinimize: params.suppressMinimize,
       incognito: params.incognito,
+      cookieStoreId: params.cookieStoreId,
     })
   } catch (error) {
     if (!isRecoverableWindowCreationError(error)) {

@@ -679,7 +679,7 @@ describe("detectSiteType", () => {
     })
 
     describe("Fallback to API detection", () => {
-      it("detects VoAPI v2 from a protected endpoint signature on custom origins", async () => {
+      it("does not classify a generic protected endpoint auth error as VoAPI v2", async () => {
         let titleFetched = false
         server.use(
           http.get("https://example.com", () => {
@@ -688,16 +688,28 @@ describe("detectSiteType", () => {
           }),
           http.get("https://example.com/api/user/info", () =>
             HttpResponse.json(
-              { code: 2, data: null, msg: "Unauthorized", rid: "request-id" },
-              { status: 403 },
+              { code: 401, data: null, msg: "Unauthorized", rid: "request-id" },
+              { status: 401 },
+            ),
+          ),
+          http.get("https://example.com/api/v1/auth/me", () =>
+            HttpResponse.json(
+              { code: 404, message: "not found" },
+              { status: 404 },
+            ),
+          ),
+          http.get("https://example.com/api/user/self", () =>
+            HttpResponse.json(
+              { success: false, message: "unmatched response" },
+              { status: 400 },
             ),
           ),
         )
 
         await expect(getAccountSiteType("https://example.com")).resolves.toBe(
-          SITE_TYPES.VO_API_V2,
+          SITE_TYPES.UNKNOWN,
         )
-        expect(titleFetched).toBe(false)
+        expect(titleFetched).toBe(true)
       })
 
       it("detects VoAPI v2 from a successful account-info envelope", async () => {
@@ -778,7 +790,7 @@ describe("detectSiteType", () => {
         )
       })
 
-      it("detects Sub2API from its unauthenticated auth endpoint JSON code", async () => {
+      it("detects Sub2API from its exact unauthenticated JWT middleware response", async () => {
         server.use(
           http.get("https://example.com", () => {
             return new HttpResponse(
@@ -810,6 +822,64 @@ describe("detectSiteType", () => {
 
         await expect(getAccountSiteType("https://example.com")).resolves.toBe(
           SITE_TYPES.SUB2API,
+        )
+      })
+
+      it("does not treat a generic string UNAUTHORIZED error as Sub2API", async () => {
+        server.use(
+          http.get("https://example.com", () => {
+            return new HttpResponse(
+              "<html><title>White Label Dashboard</title></html>",
+              { headers: { "Content-Type": "text/html" } },
+            )
+          }),
+          http.get("https://example.com/api/v1/auth/me", () =>
+            HttpResponse.json(
+              { code: "UNAUTHORIZED", message: "Authorization required" },
+              { status: 401 },
+            ),
+          ),
+          http.get("https://example.com/api/user/self", () =>
+            HttpResponse.json(
+              { success: false, message: "unmatched response" },
+              { status: 400 },
+            ),
+          ),
+        )
+
+        await expect(getAccountSiteType("https://example.com")).resolves.toBe(
+          SITE_TYPES.UNKNOWN,
+        )
+      })
+
+      it("does not treat an arbitrary numeric 401 envelope as Sub2API", async () => {
+        server.use(
+          http.get(
+            "https://example.com",
+            () =>
+              new HttpResponse(
+                "<html><title>White Label Dashboard</title></html>",
+                {
+                  headers: { "Content-Type": "text/html" },
+                },
+              ),
+          ),
+          http.get("https://example.com/api/v1/auth/me", () =>
+            HttpResponse.json(
+              { code: 401, message: "Unauthorized", data: null },
+              { status: 401 },
+            ),
+          ),
+          http.get("https://example.com/api/user/self", () =>
+            HttpResponse.json(
+              { success: false, message: "unmatched response" },
+              { status: 400 },
+            ),
+          ),
+        )
+
+        await expect(getAccountSiteType("https://example.com")).resolves.toBe(
+          SITE_TYPES.UNKNOWN,
         )
       })
 

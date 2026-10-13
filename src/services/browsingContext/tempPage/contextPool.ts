@@ -11,6 +11,20 @@ export type DestroyContextOptions = {
   skipBrowserRemoval?: boolean
   reason?: string
 }
+
+/** Keeps regular, private, and Firefox cookie-store context pools separate. */
+export function buildTempContextPoolKey(
+  origin: string,
+  options: { incognito?: boolean; cookieStoreId?: string } = {},
+): string {
+  if (options.cookieStoreId) {
+    const profile = options.incognito ? "incognito-store" : "store"
+    return `${profile}:${encodeURIComponent(options.cookieStoreId)}:${origin}`
+  }
+
+  return options.incognito ? `incognito:${origin}` : origin
+}
+
 /** Owns pool indexes, request leases, origin serialization and idle retirement. */
 export function createTempContextPool({
   cleanup,

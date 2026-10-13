@@ -77,15 +77,15 @@ async function getUserDataViaBackground(
       fetchContext: summarizeApiServiceFetchContext(fetchContext),
     })
 
-    // White-label modern New API sites may have neither a recognizable title
-    // nor a stored user. Probe only this explicit onboarding temp-page read.
-    const allowNewApiAuthProbe = isUnknownAccountSiteType(siteType)
+    // Unknown branding must not select an authentication protocol here.
+    // Let registered adapters probe this explicit onboarding temp-page read.
+    const allowSessionProbe = isUnknownAccountSiteType(siteType)
     const params = {
       url: url,
       requestId: requestId,
       diagnosticId: diagnostics?.requestId,
       siteType,
-      ...(allowNewApiAuthProbe ? { allowNewApiAuthProbe: true } : {}),
+      ...(allowSessionProbe ? { allowSessionProbe: true } : {}),
       ...(fetchContext?.incognito === true ? { useIncognito: true } : {}),
       ...(fetchContext?.cookieStoreId
         ? { cookieStoreId: fetchContext.cookieStoreId }
@@ -166,7 +166,7 @@ async function getUserDataViaBackground(
         baseUrl: url,
         siteType,
         siteTypeHint: normalizeSiteTypeHint(response.data.siteTypeHint),
-        allowNewApiAuthProbe,
+        allowSessionProbe,
       },
     )
     if (response.data.transientAuth && !transientAuth) {

@@ -21,6 +21,7 @@ import {
 } from "./contracts"
 import { logger, logTempWindow, normalizeOrigin } from "./diagnostics"
 import {
+  isCookieStoreContextError,
   reportAuthorizedTempContextOutcome,
   toTempWindowFailureResponse,
 } from "./failures"
@@ -165,7 +166,7 @@ export async function executeAutoDetectSite(
   sendResponse: (response?: any) => void,
   authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
 ) {
-  const { url, requestId, useIncognito } = request
+  const { url, requestId, useIncognito, cookieStoreId } = request
   try {
     if (useIncognito) {
       const allowed = await isAllowedIncognitoAccess()
@@ -189,11 +190,12 @@ export async function executeAutoDetectSite(
       suppressMinimize,
       {
         incognito: Boolean(useIncognito),
+        cookieStoreId,
         siteType,
         diagnosticId: request.diagnosticId,
-        allowNewApiAuthProbe:
+        allowSessionProbe:
           isUnknownAccountSiteType(siteType) &&
-          request.allowNewApiAuthProbe === true,
+          request.allowSessionProbe === true,
       },
       authorizeAtAcquire,
     )
@@ -232,9 +234,10 @@ async function getSiteDataFromTab(
   suppressMinimize?: boolean,
   options: {
     incognito?: boolean
+    cookieStoreId?: string
     siteType?: string
     diagnosticId?: string
-    allowNewApiAuthProbe?: boolean
+    allowSessionProbe?: boolean
   } = {},
   authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
 ) {
@@ -254,9 +257,8 @@ async function getSiteDataFromTab(
       url: url,
       siteType: options.siteType,
       diagnosticId: options.diagnosticId ?? requestId,
-      ...(options.allowNewApiAuthProbe
-        ? { allowNewApiAuthProbe: true, expectedOrigin: new URL(url).origin }
-        : {}),
+      ...(options.allowSessionProbe ? { allowSessionProbe: true } : {}),
+      expectedOrigin: new URL(url).origin,
     })
 
     await tempWindowBackgroundRuntime.release(requestId)
@@ -298,6 +300,7 @@ async function getSiteDataFromTab(
         ? (error as { code?: ApiErrorCode }).code
         : undefined
     if (
+      isCookieStoreContextError(error) ||
       errorCode === API_ERROR_CODES.TEMP_WINDOW_DISABLED ||
       errorCode === API_ERROR_CODES.TEMP_WINDOW_PERMISSION_REQUIRED ||
       errorCode === API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID

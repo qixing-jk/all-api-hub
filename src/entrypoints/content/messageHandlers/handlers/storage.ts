@@ -1,6 +1,10 @@
 import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
 import { verifyAccountBrowserIdentity } from "~/services/accountBrowserSession/identityVerification"
 import {
+  ContentSessionOriginMismatchError,
+  extractContentSession,
+} from "~/services/accountSiteOnboarding/contentSession/extraction"
+import {
   SUB2API_LOGIN_REQUIRED_I18N_KEY,
   Sub2ApiContentSessionLoginRequiredError,
 } from "~/services/accountSiteOnboarding/contentSession/sub2api"
@@ -8,7 +12,6 @@ import {
   createAccountDetectionDiagnostics,
   type AccountDetectionDiagnostics,
 } from "~/services/accountSiteOnboarding/diagnostics"
-import { getContentSessionExtractors } from "~/services/accountSiteOnboarding/registry"
 import {
   PAGE_CONTEXT,
   readCurrentPageContext,
@@ -63,8 +66,8 @@ export function handleGetUserFromLocalStorage(
         siteTypeHint: isAccountSiteType(request?.siteType)
           ? request.siteType
           : SITE_TYPES.UNKNOWN,
-        ...(request?.allowNewApiAuthProbe === true
-          ? { allowNewApiAuthProbe: true }
+        ...(request?.allowSessionProbe === true
+          ? { allowSessionProbe: true }
           : {}),
       }
 
@@ -108,42 +111,21 @@ export function handleGetUserFromLocalStorage(
       // A tab ID can survive navigation after the caller's eligibility query.
       // Bind existing-tab reads to the live document before reading credentials
       // and again after an asynchronous extractor completes.
-      const rejectChangedOrigin = () => {
+      const assertOrigin = () => {
         if (
-          request?.expectedOrigin === undefined ||
-          (typeof location !== "undefined" &&
-            location.origin === request.expectedOrigin)
+          request?.expectedOrigin !== undefined &&
+          (typeof location === "undefined" ||
+            location.origin !== request.expectedOrigin)
         ) {
-          return false
+          throw new ContentSessionOriginMismatchError()
         }
-        diagnostics?.finish("failed", { reason: "origin_mismatch" })
-        sendResponse({
-          success: false,
-          error: t("messages:content.userInfoNotFound"),
-        })
-        return true
       }
-      if (rejectChangedOrigin()) return
-      const extractionContext = { ...context, diagnostics }
-      for (const extractor of getContentSessionExtractors()) {
-        if (!extractor.canExtract(context)) continue
-        diagnostics.record("extractor_started", {
-          extractor: extractor.id,
-          siteType: context.siteTypeHint,
-        })
-        const result = await extractor.extract(extractionContext)
-        if (rejectChangedOrigin()) return
-        diagnostics.record("extractor_finished", {
-          extractor: extractor.id,
-          outcome: result ? "success" : "empty",
-        })
-        if (!result) continue
-
-        diagnostics.finish("success", { extractor: extractor.id })
-        sendResponse({
-          success: true,
-          data: result,
-        })
+      const result = await extractContentSession(
+        { ...context, diagnostics },
+        assertOrigin,
+      )
+      if (result) {
+        sendResponse({ success: true, data: result })
         return
       }
 
@@ -153,6 +135,14 @@ export function handleGetUserFromLocalStorage(
         error: t("messages:content.userInfoNotFound"),
       })
     } catch (error) {
+      if (error instanceof ContentSessionOriginMismatchError) {
+        diagnostics?.finish("failed", { reason: "origin_mismatch" })
+        sendResponse({
+          success: false,
+          error: t("messages:content.userInfoNotFound"),
+        })
+        return
+      }
       diagnostics?.finish("failed", {
         reason: "extraction_error",
         error: getErrorMessage(error),

@@ -334,10 +334,11 @@ describe("account browser-session reader", () => {
       diagnosticId: expect.any(String),
       url: "https://sub2.example.com",
       siteType: SITE_TYPES.SUB2API,
+      expectedOrigin: "https://sub2.example.com",
     })
   })
 
-  it("passes the explicit modern New API probe intent to the current tab", async () => {
+  it("passes registered session probe intent and binds the current tab origin", async () => {
     mockSendTabMessage.mockResolvedValueOnce({
       success: true,
       data: {
@@ -352,7 +353,7 @@ describe("account browser-session reader", () => {
       baseUrl: "https://white-label.example.invalid",
       siteType: SITE_TYPES.UNKNOWN,
       source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
-      allowNewApiAuthProbe: true,
+      allowSessionProbe: true,
     })
 
     expect(mockSendTabMessage).toHaveBeenCalledWith(14, {
@@ -360,11 +361,12 @@ describe("account browser-session reader", () => {
       diagnosticId: expect.any(String),
       url: "https://white-label.example.invalid",
       siteType: SITE_TYPES.UNKNOWN,
-      allowNewApiAuthProbe: true,
+      allowSessionProbe: true,
+      expectedOrigin: "https://white-label.example.invalid",
     })
   })
 
-  it("rejects the modern New API probe intent for existing-tab reads", async () => {
+  it("rejects unknown-site session probing for existing-tab reads", async () => {
     mockSendTabMessage.mockResolvedValueOnce({
       success: true,
       data: {
@@ -385,7 +387,7 @@ describe("account browser-session reader", () => {
       baseUrl: "https://white-label.example.invalid",
       siteType: SITE_TYPES.UNKNOWN,
       source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
-      allowNewApiAuthProbe: true,
+      allowSessionProbe: true,
     })
 
     expect(mockSendTabMessage).toHaveBeenCalledWith(14, {
@@ -420,7 +422,7 @@ describe("account browser-session reader", () => {
       baseUrl: "https://white-label.example.invalid/dashboard",
       siteType: SITE_TYPES.UNKNOWN,
       source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
-      allowNewApiAuthProbe: true,
+      allowSessionProbe: true,
     })
 
     expect(session).toEqual(
@@ -551,7 +553,7 @@ describe("account browser-session reader", () => {
 
   it.each([false, true])(
     "drops transient dashboard auth for a known other site even with probe permission: %s",
-    async (allowNewApiAuthProbe) => {
+    async (allowSessionProbe) => {
       mockSendTabMessage.mockResolvedValueOnce({
         success: true,
         data: {
@@ -572,7 +574,7 @@ describe("account browser-session reader", () => {
         baseUrl: "https://dashboard.example.invalid/account",
         siteType: SITE_TYPES.VELOERA,
         source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
-        allowNewApiAuthProbe,
+        allowSessionProbe,
       })
 
       expect(session).toEqual(
@@ -1252,7 +1254,7 @@ describe("account browser-session reader", () => {
     expect(session?.fetchContext).toBeUndefined()
   })
 
-  it("passes incognito but not cookie-store metadata to AutoDetectSite temp-window fallback", async () => {
+  it("passes the requested cookie store to known-type temp-window fallback", async () => {
     mockGetAllTabs.mockResolvedValueOnce([])
     mockSendRuntimeMessage.mockResolvedValueOnce({
       success: true,
@@ -1269,7 +1271,7 @@ describe("account browser-session reader", () => {
       currentTab: {
         tabId: 9,
         incognito: true,
-        cookieStoreId: "firefox-container-1",
+        cookieStoreId: "firefox-private",
       },
       useExistingTabs: true,
       useTempWindow: true,
@@ -1288,13 +1290,9 @@ describe("account browser-session reader", () => {
           params: expect.objectContaining({
             url: "https://sub2.example.com",
             useIncognito: true,
+            cookieStoreId: "firefox-private",
           }),
         },
-      }),
-    )
-    expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
-      expect.not.objectContaining({
-        cookieStoreId: expect.any(String),
       }),
     )
   })

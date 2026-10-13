@@ -10,11 +10,13 @@ import { isRecord } from "~/utils/core/object"
 import { trimToNull } from "~/utils/core/string"
 
 import {
+  ContentSessionProtocolError,
   NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
   type ContentSessionExtractionContext,
   type ContentSessionExtractionResult,
   type ContentSessionExtractor,
 } from "../contracts"
+import { runContentSessionRequest } from "./network"
 
 const CONTROLLED_ERROR_STATUSES = new Set([401, 409, 429])
 const AUTH_REFRESH_REQUEST_ERROR = "New API session refresh request failed"
@@ -49,8 +51,9 @@ async function createControlledRefreshError(
  * https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.22/docs/authentication.md
  * https://github.com/QuantumNous/new-api/blob/v1.0.0-rc.22/controller/user.go
  */
-async function extractNewApiAuthBundle(
+async function readNewApiAuthBundle(
   context: ContentSessionExtractionContext,
+  signal?: AbortSignal,
 ): Promise<ContentSessionExtractionResult | null> {
   const origin = location.origin
   let response: Response
@@ -61,6 +64,8 @@ async function extractNewApiAuthBundle(
     response = await fetch(`${origin}${NEW_API_DASHBOARD_AUTH_REFRESH_PATH}`, {
       credentials: "include",
       method: "POST",
+      redirect: "error",
+      signal,
     })
   } catch (error) {
     diagnostics?.record("refresh_failed", {
@@ -103,7 +108,9 @@ async function extractNewApiAuthBundle(
   const parsed = parseNewApiDashboardAuthBundleResponse(body)
   diagnostics?.record("refresh_body_parsed", { kind: parsed.kind })
   if (parsed.kind === "malformed") {
-    throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
+    throw new ContentSessionProtocolError(
+      NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE,
+    )
   }
   if (parsed.kind === "unrelated") return null
 
@@ -113,7 +120,9 @@ async function extractNewApiAuthBundle(
   )
   if (!identity) {
     diagnostics?.record("refresh_invalid", { reason: "user_id_missing" })
-    throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
+    throw new ContentSessionProtocolError(
+      NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE,
+    )
   }
 
   return {
@@ -130,11 +139,29 @@ async function extractNewApiAuthBundle(
   }
 }
 
+/** Bounds AuthBundle extraction without replaying a credential refresh. */
+async function extractNewApiAuthBundle(
+  context: ContentSessionExtractionContext,
+) {
+  try {
+    return await runContentSessionRequest((signal) =>
+      readNewApiAuthBundle(context, signal),
+    )
+  } catch (error) {
+    if (isRecord(error) && error.name === "TimeoutError") {
+      context.diagnostics?.record("refresh_failed", {
+        reason: "request_timeout",
+      })
+      throw new Error(AUTH_REFRESH_REQUEST_ERROR)
+    }
+    throw error
+  }
+}
+
 export const newApiAuthBundleContentSessionExtractor: ContentSessionExtractor =
   {
     id: "new-api-auth-bundle",
-    canExtract: (context) =>
-      context.siteTypeHint === SITE_TYPES.NEW_API ||
-      context.allowNewApiAuthProbe === true,
+    canExtract: (context) => context.siteTypeHint === SITE_TYPES.NEW_API,
+    probe: extractNewApiAuthBundle,
     extract: extractNewApiAuthBundle,
   }

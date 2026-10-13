@@ -217,3 +217,114 @@ test("Options detects and saves a white-label AuthBundle account through a tempo
     })
     .toBe(true)
 })
+
+test("Options discovers and saves an unknown Sub2API account through the shared temporary-tab probe", async ({
+  context,
+  page,
+  extensionId,
+}) => {
+  const baseUrl = "https://options-sub2-probe.example.invalid"
+  const user = {
+    id: 123,
+    username: "probe-user",
+    email: "probe@example.invalid",
+    balance: 2,
+  }
+  const accessToken = "e2e-sub2-probe-token"
+  let verifiedPageReads = 0
+  await forceExtensionLanguage(page, "en")
+  await stubLlmMetadataIndex(context)
+  await context.route(`${baseUrl}/**`, async (route) => {
+    const request = route.request()
+    const path = new URL(request.url()).pathname
+    if (path === "/api/v1/auth/me") {
+      if (request.headers().authorization === `Bearer ${accessToken}`) {
+        verifiedPageReads += 1
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ code: 0, message: "ok", data: user }),
+        })
+      } else {
+        // The extension's unauthenticated detector cannot classify this shielded
+        // response; only the logged-in page can confirm the account protocol.
+        await route.fulfill({
+          status: 401,
+          contentType: "text/html",
+          body: "Authentication required",
+        })
+      }
+      return
+    }
+    if (path === "/api/status") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          data: { system_name: "Custom AI Console" },
+        }),
+      })
+      return
+    }
+    if (path === "/api/user/self") {
+      await route.fulfill({
+        status: 401,
+        contentType: "application/json",
+        body: JSON.stringify({ success: false, message: "Unauthorized" }),
+      })
+      return
+    }
+    if (path.startsWith("/api/")) {
+      await route.fulfill({
+        status: 404,
+        contentType: "text/plain",
+        body: "Not found",
+      })
+      return
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "text/html",
+      body: `<!doctype html><title>Custom AI Console</title><script>
+      localStorage.setItem('auth_token', ${JSON.stringify(accessToken)});
+      localStorage.setItem('auth_user', JSON.stringify(${JSON.stringify(user)}));
+    </script><h1>Custom AI Console</h1>`,
+    })
+  })
+  const serviceWorker = await getServiceWorker(context)
+  await seedUserPreferences(serviceWorker, {
+    autoFillCurrentSiteUrlOnAccountAdd: false,
+    autoProvisionKeyOnAccountAdd: false,
+    tempWindowFallback: { enabled: true, tempContextMode: "tab" },
+  })
+  await openAccountManagementPage({ page, extensionId })
+  await page.bringToFront()
+  await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton).click()
+  const dialog = page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog)
+  await dialog
+    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput)
+    .fill(baseUrl)
+  await dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton).click()
+  await expect(
+    dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput),
+  ).toHaveValue("123")
+  await expect(
+    dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteTypeTrigger),
+  ).toHaveAttribute("data-site-type", SITE_TYPES.SUB2API)
+  await expect(
+    dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput),
+  ).toHaveValue(accessToken)
+  expect(verifiedPageReads).toBeGreaterThan(0)
+  await expect(
+    dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton),
+  ).toBeEnabled()
+  await dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton).click()
+  await expect(dialog).toBeHidden()
+  const saved = (await readStoredAccounts(serviceWorker)).find(
+    (account) => account.site_url === baseUrl,
+  )
+  expect(saved?.site_type).toBe(SITE_TYPES.SUB2API)
+  expect(saved?.account_info.id).toBe("123")
+  expect(saved?.account_info.access_token).toBe(accessToken)
+})

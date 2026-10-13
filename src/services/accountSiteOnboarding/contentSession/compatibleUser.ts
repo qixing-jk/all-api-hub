@@ -6,6 +6,7 @@ import type { ContentSessionExtractor } from "../contracts"
 
 export const compatibleUserContentSessionExtractor: ContentSessionExtractor = {
   id: "compatible-user",
+  isUnverifiedFallback: true,
   canExtract: () => compatibleStoredUserHint.isPresent(),
   async extract(context) {
     const user = compatibleStoredUserHint.read()

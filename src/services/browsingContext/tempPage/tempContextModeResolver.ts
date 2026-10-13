@@ -13,11 +13,17 @@ import {
 export function resolveTempContextOpenMode(params: {
   preferredMode: TempContextPreferenceMode
   incognito: boolean
+  isMobileOrTablet?: boolean
+  hasCookieStore?: boolean
   sharedWindowAvailable: boolean
   focusState: BrowserFocusState
 }): TempContextMode {
   if (params.incognito) {
     return TEMP_CONTEXT_MODES.Window
+  }
+
+  if (params.isMobileOrTablet || params.hasCookieStore) {
+    return TEMP_CONTEXT_MODES.Tab
   }
 
   if (params.preferredMode !== TEMP_CONTEXT_PREFERENCE_MODES.Auto) {

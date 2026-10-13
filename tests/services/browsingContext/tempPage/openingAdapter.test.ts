@@ -44,6 +44,66 @@ describe("openingAdapter", () => {
       })
     })
 
+    it("creates cookie-store contexts in that store and rejects mismatched tabs", async () => {
+      const createTab = vi.spyOn(browserApi_tabs, "createTab")
+      const removeTab = vi
+        .spyOn(browserApi_tabs, "removeTab")
+        .mockResolvedValue()
+      createTab.mockResolvedValueOnce({
+        id: 19,
+        cookieStoreId: "store-a",
+      } as any)
+
+      const result = await openFallbackAwareTempContext({
+        url: "https://example.com",
+        origin: "https://example.com",
+        requestId: "req-store-a",
+        requestedMode: TEMP_CONTEXT_MODES.Tab,
+        allowWindowRollback: false,
+        cookieStoreId: "store-a",
+      })
+
+      expect(createTab).toHaveBeenCalledWith("about:blank", false, {
+        cookieStoreId: "store-a",
+      })
+      expect(result.tabId).toBe(19)
+
+      createTab.mockResolvedValueOnce({
+        id: 20,
+        cookieStoreId: "firefox-default",
+      } as any)
+      await expect(
+        openFallbackAwareTempContext({
+          url: "https://example.com",
+          origin: "https://example.com",
+          requestId: "req-store-mismatch",
+          requestedMode: TEMP_CONTEXT_MODES.Tab,
+          allowWindowRollback: false,
+          cookieStoreId: "store-a",
+        }),
+      ).rejects.toThrow(/cookie store/i)
+      expect(removeTab).toHaveBeenCalledWith(20)
+    })
+
+    it("rejects when the browser cannot create a tab in the requested store", async () => {
+      vi.spyOn(browserApi_tabs, "createTab").mockRejectedValueOnce(
+        new Error("cookieStoreId is not supported"),
+      )
+
+      await expect(
+        openFallbackAwareTempContext({
+          url: "https://example.com",
+          origin: "https://example.com",
+          requestId: "req-store-unsupported",
+          requestedMode: TEMP_CONTEXT_MODES.Tab,
+          allowWindowRollback: false,
+          cookieStoreId: "store-a",
+        }),
+      ).rejects.toMatchObject({
+        name: "CookieStoreContextUnavailableError",
+      })
+    })
+
     it("throws if plain tab creation fails", async () => {
       vi.spyOn(browserApi_tabs, "createTab").mockResolvedValue(null as any)
 
@@ -103,6 +163,66 @@ describe("openingAdapter", () => {
         ownerWindowId: 77,
       })
       expect(updateWindowSpy).toHaveBeenCalledWith(77, { state: "minimized" })
+    })
+
+    it("keeps an incognito cookie store when the private window exposes it", async () => {
+      vi.spyOn(browserApi_windows, "createWindow").mockResolvedValue({
+        id: 80,
+      } as any)
+      vi.spyOn(browserApi_tabs, "queryTabs").mockResolvedValue([
+        { id: 81, cookieStoreId: "firefox-private" },
+      ] as any)
+
+      const result = await openFallbackAwareTempContext({
+        url: "https://example.com",
+        origin: "https://example.com",
+        requestId: "req-private-store",
+        requestedMode: TEMP_CONTEXT_MODES.Window,
+        allowWindowRollback: false,
+        suppressMinimize: true,
+        incognito: true,
+        cookieStoreId: "firefox-private",
+      })
+
+      expect(result).toMatchObject({
+        id: 80,
+        tabId: 81,
+        mode: TEMP_CONTEXT_MODES.Window,
+      })
+      expect(browserApi_windows.createWindow).toHaveBeenCalledWith(
+        expect.objectContaining({ incognito: true }),
+      )
+    })
+
+    it("cleans up an incognito window whose tab belongs to another cookie store", async () => {
+      vi.spyOn(browserApi_windows, "createWindow").mockResolvedValue({
+        id: 82,
+      } as any)
+      vi.spyOn(browserApi_tabs, "queryTabs").mockResolvedValue([
+        { id: 83, cookieStoreId: "firefox-default" },
+      ] as any)
+      const removeWindow = vi
+        .spyOn(browserApi_windows, "removeWindow")
+        .mockResolvedValue()
+      const createTab = vi.spyOn(browserApi_tabs, "createTab")
+
+      await expect(
+        openFallbackAwareTempContext({
+          url: "https://example.com",
+          origin: "https://example.com",
+          requestId: "req-private-store-mismatch",
+          requestedMode: TEMP_CONTEXT_MODES.Window,
+          allowWindowRollback: false,
+          suppressMinimize: true,
+          incognito: true,
+          cookieStoreId: "firefox-private",
+        }),
+      ).rejects.toMatchObject({
+        name: "CookieStoreContextUnavailableError",
+      })
+
+      expect(removeWindow).toHaveBeenCalledWith(82)
+      expect(createTab).not.toHaveBeenCalled()
     })
 
     it("handles updateWindow minimize failure gracefully", async () => {

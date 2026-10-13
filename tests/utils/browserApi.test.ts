@@ -80,6 +80,7 @@ import {
   setSessionStorageValues,
 } from "~/utils/browser/storage"
 import {
+  createTab,
   focusTab,
   getActiveOrAllTabs,
   getActiveTab,
@@ -1425,6 +1426,26 @@ describe("browserApi tab helpers", () => {
     expect(queryMock).toHaveBeenCalledWith({
       active: true,
       currentWindow: true,
+    })
+  })
+
+  it("creates a tab in the requested Firefox cookie store", async () => {
+    const createMock = vi.fn().mockResolvedValue({
+      id: 12,
+      cookieStoreId: "firefox-container-1",
+    })
+    ;(globalThis as any).browser.tabs.create = createMock
+
+    await expect(
+      createTab("about:blank", false, {
+        cookieStoreId: "firefox-container-1",
+      }),
+    ).resolves.toMatchObject({ cookieStoreId: "firefox-container-1" })
+    expect(createMock).toHaveBeenCalledWith({
+      url: "about:blank",
+      active: false,
+      windowId: undefined,
+      cookieStoreId: "firefox-container-1",
     })
   })
 

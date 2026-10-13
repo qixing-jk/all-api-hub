@@ -968,7 +968,7 @@ describe("autoDetectSmart", () => {
           params: expect.objectContaining({
             url: baseUrl,
             siteType: SITE_TYPES.UNKNOWN,
-            allowNewApiAuthProbe: true,
+            allowSessionProbe: true,
           }),
         },
       }),
@@ -1264,7 +1264,7 @@ describe("autoDetectSmart", () => {
       expect.objectContaining({
         tabId: 301,
         siteType: SITE_TYPES.UNKNOWN,
-        allowNewApiAuthProbe: true,
+        allowSessionProbe: true,
       }),
     )
   })

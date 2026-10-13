@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { CONTENT_SESSION_REQUEST_TIMEOUT_MS } from "~/services/accountSiteOnboarding/contentSession/network"
 import {
   sub2ApiContentSessionExtractor,
   Sub2ApiContentSessionLoginRequiredError,
@@ -32,6 +33,309 @@ describe("sub2ApiContentSessionExtractor", () => {
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
     vi.stubGlobal("localStorage", createLocalStorageMock())
+  })
+
+  describe("unknown-site session probing", () => {
+    beforeEach(() => {
+      vi.stubGlobal(
+        "location",
+        new URL("https://panel.example.invalid/dashboard"),
+      )
+      localStorage.setItem("auth_token", "jwt-token")
+      localStorage.setItem(
+        "auth_user",
+        JSON.stringify({ id: 123, username: "alice", balance: 1.5 }),
+      )
+    })
+
+    it.each([
+      ["another protocol", { success: true, data: { id: 123 } }, 200],
+      [
+        "an ambiguous auth failure",
+        { code: "UNAUTHORIZED", message: "Unauthorized" },
+        401,
+      ],
+      ["a different identity", { code: 0, data: { id: 456 } }, 200],
+      ["an invalid identity", { code: 0, data: { id: "bad" } }, 200],
+    ])(
+      "rejects %s before refreshing or writing website credentials",
+      async (_, body, status) => {
+        localStorage.setItem("refresh_token", "refresh-before")
+        localStorage.setItem("token_expires_at", String(Date.now() - 1))
+        const fetchMock = vi.fn().mockResolvedValue(
+          new Response(JSON.stringify(body), {
+            status,
+            headers: { "Content-Type": "application/json" },
+          }),
+        )
+        vi.stubGlobal("fetch", fetchMock)
+        const setItem = vi.spyOn(localStorage, "setItem").mockClear()
+        await expect(
+          sub2ApiContentSessionExtractor.probe!({
+            siteTypeHint: SITE_TYPES.UNKNOWN,
+          }),
+        ).resolves.toBeNull()
+        expect(fetchMock).toHaveBeenCalledOnce()
+        expect(fetchMock.mock.calls[0]?.[1]?.method).toBe("GET")
+        expect(setItem).not.toHaveBeenCalled()
+        expect(localStorage.getItem("auth_token")).toBe("jwt-token")
+        expect(localStorage.getItem("refresh_token")).toBe("refresh-before")
+      },
+    )
+
+    it.each(["origin", "token", "user"])(
+      "rejects a changed %s before credential refresh",
+      async (changed) => {
+        localStorage.setItem("refresh_token", "refresh-before")
+        localStorage.setItem("token_expires_at", String(Date.now() + 30_000))
+        const fetchMock = vi.fn().mockImplementation(async () => {
+          if (changed === "origin")
+            vi.stubGlobal("location", new URL("https://other.example.invalid"))
+          if (changed === "token")
+            localStorage.setItem("auth_token", "other-token")
+          if (changed === "user")
+            localStorage.setItem("auth_user", JSON.stringify({ id: 456 }))
+          return new Response(JSON.stringify({ code: 0, data: { id: 123 } }), {
+            status: 200,
+          })
+        })
+        vi.stubGlobal("fetch", fetchMock)
+        await expect(
+          sub2ApiContentSessionExtractor.probe!({
+            url: "https://panel.example.invalid",
+            siteTypeHint: SITE_TYPES.UNKNOWN,
+          }),
+        ).resolves.toBeNull()
+        expect(fetchMock).toHaveBeenCalledOnce()
+        expect(localStorage.getItem("refresh_token")).toBe("refresh-before")
+      },
+    )
+
+    it("reports a disconnected probe instead of treating it as a protocol mismatch", async () => {
+      const fetchMock = vi
+        .fn()
+        .mockRejectedValue(new TypeError("Failed to fetch"))
+      vi.stubGlobal("fetch", fetchMock)
+      await expect(
+        sub2ApiContentSessionExtractor.probe!({
+          siteTypeHint: SITE_TYPES.UNKNOWN,
+        }),
+      ).rejects.toThrow("Sub2API session probe request failed")
+      expect(fetchMock).toHaveBeenCalledOnce()
+      expect(localStorage.getItem("auth_token")).toBe("jwt-token")
+    })
+
+    it.each(["headers", "body"])(
+      "aborts hanging probe %s before refreshing credentials",
+      async (phase) => {
+        vi.useFakeTimers()
+        try {
+          localStorage.setItem("refresh_token", "refresh-before")
+          localStorage.setItem("token_expires_at", String(Date.now() + 30_000))
+          const fetchMock =
+            phase === "headers"
+              ? vi.fn().mockImplementation(() => new Promise(() => {}))
+              : vi.fn().mockResolvedValue({
+                  ok: true,
+                  status: 200,
+                  json: () => new Promise(() => {}),
+                })
+          vi.stubGlobal("fetch", fetchMock)
+          const result = sub2ApiContentSessionExtractor.probe!({
+            siteTypeHint: SITE_TYPES.UNKNOWN,
+          })
+          const failure = expect(result).rejects.toThrow(
+            "Sub2API session probe request failed",
+          )
+          await vi.advanceTimersByTimeAsync(CONTENT_SESSION_REQUEST_TIMEOUT_MS)
+          await failure
+          expect(fetchMock).toHaveBeenCalledOnce()
+          expect(fetchMock.mock.calls[0]?.[1]?.signal.aborted).toBe(true)
+          expect(localStorage.getItem("auth_token")).toBe("jwt-token")
+          expect(localStorage.getItem("refresh_token")).toBe("refresh-before")
+          expect(vi.getTimerCount()).toBe(0)
+        } finally {
+          vi.useRealTimers()
+        }
+      },
+    )
+
+    it.each([429, 503])(
+      "reports HTTP %i as unavailable rather than another protocol",
+      async (status) => {
+        vi.stubGlobal(
+          "fetch",
+          vi.fn().mockResolvedValue(new Response(null, { status })),
+        )
+        await expect(
+          sub2ApiContentSessionExtractor.probe!({
+            siteTypeHint: SITE_TYPES.UNKNOWN,
+          }),
+        ).rejects.toThrow("Sub2API session probe request failed")
+      },
+    )
+
+    it("reports a disconnected response body without rotating tokens", async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: vi.fn().mockRejectedValue(new TypeError("Body interrupted")),
+      })
+      vi.stubGlobal("fetch", fetchMock)
+      await expect(
+        sub2ApiContentSessionExtractor.probe!({
+          siteTypeHint: SITE_TYPES.UNKNOWN,
+        }),
+      ).rejects.toThrow("Sub2API session probe request failed")
+      expect(fetchMock).toHaveBeenCalledOnce()
+    })
+
+    it("confirms the live identity before refreshing exactly once", async () => {
+      localStorage.setItem("refresh_token", "refresh-before")
+      localStorage.setItem("token_expires_at", String(Date.now() + 30_000))
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ code: 0, data: { id: 123 } }), {
+            status: 200,
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              code: 0,
+              data: {
+                access_token: "next-access",
+                refresh_token: "next-refresh",
+                expires_in: 3600,
+              },
+            }),
+            { status: 200 },
+          ),
+        )
+      vi.stubGlobal("fetch", fetchMock)
+      const result = await sub2ApiContentSessionExtractor.probe!({
+        url: "https://panel.example.invalid",
+        siteTypeHint: SITE_TYPES.UNKNOWN,
+      })
+      expect(result).toMatchObject({
+        accessToken: "next-access",
+        userId: 123,
+        siteTypeHint: SITE_TYPES.SUB2API,
+      })
+      expect(fetchMock).toHaveBeenCalledTimes(2)
+      expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+        method: "GET",
+        redirect: "error",
+      })
+      expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ method: "POST" })
+      expect(localStorage.getItem("refresh_token")).toBe("next-refresh")
+    })
+
+    it.each(["auth_token", "auth_user"])(
+      "does not probe without the %s footprint",
+      async (key) => {
+        localStorage.removeItem(key)
+        const fetchMock = vi.fn()
+        vi.stubGlobal("fetch", fetchMock)
+        await expect(
+          sub2ApiContentSessionExtractor.probe!({
+            siteTypeHint: SITE_TYPES.UNKNOWN,
+          }),
+        ).resolves.toBeNull()
+        expect(fetchMock).not.toHaveBeenCalled()
+      },
+    )
+  })
+
+  it.each([
+    ["https://ai-router.dev/dashboard", "https://api.ai-router.dev"],
+    ["https://www.ai-router.dev", "https://api.ai-router.dev"],
+    [
+      "https://panel.example.invalid/dashboard",
+      "https://panel.example.invalid",
+    ],
+  ])(
+    "uses the registered API origin when refreshing %s",
+    async (browserUrl, apiOrigin) => {
+      localStorage.setItem("auth_token", "old-token")
+      localStorage.setItem(
+        "auth_user",
+        JSON.stringify({ id: 123, username: "alice" }),
+      )
+      localStorage.setItem("refresh_token", "old-refresh")
+      localStorage.setItem("token_expires_at", String(Date.now() + 30_000))
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            code: 0,
+            data: {
+              access_token: "new-access",
+              refresh_token: "new-refresh",
+              expires_in: 3600,
+            },
+          }),
+          { status: 200 },
+        ),
+      )
+      vi.stubGlobal("fetch", fetchMock)
+      await expect(
+        sub2ApiContentSessionExtractor.extract({
+          url: browserUrl,
+          siteTypeHint: SITE_TYPES.SUB2API,
+        }),
+      ).resolves.toMatchObject({ accessToken: "new-access" })
+      expect(fetchMock).toHaveBeenCalledWith(
+        `${apiOrigin}/api/v1/auth/refresh`,
+        expect.objectContaining({ method: "POST", redirect: "error" }),
+      )
+      expect(fetchMock).toHaveBeenCalledOnce()
+    },
+  )
+
+  it("binds unknown-site probe and refresh to the live browser origin's registered API", async () => {
+    vi.stubGlobal("location", new URL("https://ai-router.dev/dashboard"))
+    localStorage.setItem("auth_token", "old-token")
+    localStorage.setItem(
+      "auth_user",
+      JSON.stringify({ id: 123, username: "alice" }),
+    )
+    localStorage.setItem("refresh_token", "old-refresh")
+    localStorage.setItem("token_expires_at", String(Date.now() + 30_000))
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ code: 0, data: { id: 123 } }), {
+          status: 200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            code: 0,
+            data: {
+              access_token: "new-access",
+              refresh_token: "new-refresh",
+              expires_in: 3600,
+            },
+          }),
+          { status: 200 },
+        ),
+      )
+    vi.stubGlobal("fetch", fetchMock)
+    await expect(
+      sub2ApiContentSessionExtractor.probe!({
+        url: "https://unrelated.example.invalid",
+        siteTypeHint: SITE_TYPES.UNKNOWN,
+      }),
+    ).resolves.toMatchObject({ accessToken: "new-access" })
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
+      "https://api.ai-router.dev/api/v1/auth/me",
+    )
+    expect(String(fetchMock.mock.calls[1]?.[0])).toBe(
+      "https://api.ai-router.dev/api/v1/auth/refresh",
+    )
+    expect(fetchMock).toHaveBeenCalledTimes(2)
   })
 
   it("returns the Sub2API user payload when auth_token and auth_user are valid", async () => {
@@ -189,7 +493,54 @@ describe("sub2ApiContentSessionExtractor", () => {
     ).rejects.toBeInstanceOf(Sub2ApiContentSessionLoginRequiredError)
   })
 
-  it("keeps a still-valid token when the refresh request rejects", async () => {
+  it("rejects a refresh body timeout and ignores a late response without overwriting website credentials", async () => {
+    vi.useFakeTimers()
+    try {
+      localStorage.setItem("auth_token", "old-token")
+      localStorage.setItem(
+        "auth_user",
+        JSON.stringify({ id: 123, username: "alice" }),
+      )
+      localStorage.setItem("refresh_token", "old-refresh")
+      localStorage.setItem("token_expires_at", String(Date.now() + 60_000))
+      let resolveBody!: (value: unknown) => void
+      const pendingBody = new Promise<unknown>((resolve) => {
+        resolveBody = resolve
+      })
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => pendingBody,
+      })
+      vi.stubGlobal("fetch", fetchMock)
+      const setItem = vi.spyOn(localStorage, "setItem").mockClear()
+      const result = sub2ApiContentSessionExtractor.extract({
+        url: "https://panel.example.invalid",
+      })
+      const failure = expect(result).rejects.toBeInstanceOf(
+        Sub2ApiContentSessionLoginRequiredError,
+      )
+      await vi.advanceTimersByTimeAsync(CONTENT_SESSION_REQUEST_TIMEOUT_MS)
+      await failure
+      expect(fetchMock).toHaveBeenCalledOnce()
+      expect(fetchMock.mock.calls[0]?.[1]?.signal.aborted).toBe(true)
+      resolveBody({
+        code: 0,
+        data: {
+          access_token: "late-token",
+          refresh_token: "late-refresh",
+          expires_in: 3600,
+        },
+      })
+      await vi.advanceTimersByTimeAsync(0)
+      expect(setItem).not.toHaveBeenCalled()
+      expect(localStorage.getItem("auth_token")).toBe("old-token")
+      expect(localStorage.getItem("refresh_token")).toBe("old-refresh")
+      expect(vi.getTimerCount()).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+  it("fails closed when a dispatched refresh request disconnects without retrying or writing credentials", async () => {
     const now = 1_700_000_000_000
     vi.spyOn(Date, "now").mockReturnValue(now)
 
@@ -201,21 +552,22 @@ describe("sub2ApiContentSessionExtractor", () => {
     localStorage.setItem("refresh_token", "old-refresh")
     localStorage.setItem("token_expires_at", String(now + 60_000))
 
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")))
+    const fetchMock = vi.fn().mockRejectedValue(new Error("offline"))
+    vi.stubGlobal("fetch", fetchMock)
+    const setItem = vi.spyOn(localStorage, "setItem").mockClear()
 
     await expect(
       sub2ApiContentSessionExtractor.extract({
         url: "https://sub2.example.invalid",
       }),
-    ).resolves.toMatchObject({
-      accessToken: "old-token",
-      sub2apiAuth: {
-        refreshToken: "old-refresh",
-        tokenExpiresAt: now + 60_000,
-      },
-    })
-  })
+    ).rejects.toBeInstanceOf(Sub2ApiContentSessionLoginRequiredError)
 
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(setItem).not.toHaveBeenCalled()
+    expect(localStorage.getItem("auth_token")).toBe("old-token")
+    expect(localStorage.getItem("refresh_token")).toBe("old-refresh")
+    expect(localStorage.getItem("token_expires_at")).toBe(String(now + 60_000))
+  })
   it("throws login-required when refresh request rejects and the token is expired", async () => {
     const now = 1_700_000_000_000
     vi.spyOn(Date, "now").mockReturnValue(now)
@@ -237,7 +589,7 @@ describe("sub2ApiContentSessionExtractor", () => {
     ).rejects.toBeInstanceOf(Sub2ApiContentSessionLoginRequiredError)
   })
 
-  it("keeps a still-valid token when the refresh response is not JSON", async () => {
+  it("fails closed when a dispatched refresh response is not JSON", async () => {
     const now = 1_700_000_000_000
     vi.spyOn(Date, "now").mockReturnValue(now)
 
@@ -249,29 +601,26 @@ describe("sub2ApiContentSessionExtractor", () => {
     localStorage.setItem("refresh_token", "old-refresh")
     localStorage.setItem("token_expires_at", String(now + 60_000))
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        new Response("not-json", {
-          status: 200,
-          headers: { "Content-Type": "text/plain" },
-        }),
-      ) as any,
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response("not-json", {
+        status: 200,
+        headers: { "Content-Type": "text/plain" },
+      }),
     )
+    vi.stubGlobal("fetch", fetchMock)
+    const setItem = vi.spyOn(localStorage, "setItem").mockClear()
 
     await expect(
       sub2ApiContentSessionExtractor.extract({
         url: "https://sub2.example.invalid",
       }),
-    ).resolves.toMatchObject({
-      accessToken: "old-token",
-      sub2apiAuth: {
-        refreshToken: "old-refresh",
-        tokenExpiresAt: now + 60_000,
-      },
-    })
-  })
+    ).rejects.toBeInstanceOf(Sub2ApiContentSessionLoginRequiredError)
 
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(setItem).not.toHaveBeenCalled()
+    expect(localStorage.getItem("auth_token")).toBe("old-token")
+    expect(localStorage.getItem("refresh_token")).toBe("old-refresh")
+  })
   it("throws login-required when an expired refresh response is not JSON", async () => {
     const now = 1_700_000_000_000
     vi.spyOn(Date, "now").mockReturnValue(now)
@@ -301,7 +650,7 @@ describe("sub2ApiContentSessionExtractor", () => {
     ).rejects.toBeInstanceOf(Sub2ApiContentSessionLoginRequiredError)
   })
 
-  it("keeps a still-valid token when refreshed token fields are incomplete", async () => {
+  it("fails closed when a dispatched refresh response has incomplete token fields", async () => {
     const now = 1_700_000_000_000
     vi.spyOn(Date, "now").mockReturnValue(now)
 
@@ -313,32 +662,29 @@ describe("sub2ApiContentSessionExtractor", () => {
     localStorage.setItem("refresh_token", "old-refresh")
     localStorage.setItem("token_expires_at", String(now + 60_000))
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(
-          JSON.stringify({
-            code: 0,
-            data: { access_token: "", refresh_token: "", expires_in: 0 },
-          }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        ),
-      ) as any,
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          code: 0,
+          data: { access_token: "", refresh_token: "", expires_in: 0 },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
     )
+    vi.stubGlobal("fetch", fetchMock)
+    const setItem = vi.spyOn(localStorage, "setItem").mockClear()
 
     await expect(
       sub2ApiContentSessionExtractor.extract({
         url: "https://sub2.example.invalid",
       }),
-    ).resolves.toMatchObject({
-      accessToken: "old-token",
-      sub2apiAuth: {
-        refreshToken: "old-refresh",
-        tokenExpiresAt: now + 60_000,
-      },
-    })
-  })
+    ).rejects.toBeInstanceOf(Sub2ApiContentSessionLoginRequiredError)
 
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(setItem).not.toHaveBeenCalled()
+    expect(localStorage.getItem("auth_token")).toBe("old-token")
+    expect(localStorage.getItem("refresh_token")).toBe("old-refresh")
+  })
   it("throws login-required when an expired token has no refresh token", async () => {
     const now = 1_700_000_000_000
     vi.spyOn(Date, "now").mockReturnValue(now)
@@ -379,6 +725,113 @@ describe("sub2ApiContentSessionExtractor", () => {
       accessToken: "old-token",
     })
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("fails closed when a dispatched refresh response has code zero but no data", async () => {
+    const now = 1_700_000_000_000
+    vi.spyOn(Date, "now").mockReturnValue(now)
+
+    localStorage.setItem("auth_token", "old-token")
+    localStorage.setItem(
+      "auth_user",
+      JSON.stringify({ id: 123, username: "alice", balance: 1.5 }),
+    )
+    localStorage.setItem("refresh_token", "old-refresh")
+    localStorage.setItem("token_expires_at", String(now + 60_000))
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ code: 0 }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+    const setItem = vi.spyOn(localStorage, "setItem").mockClear()
+
+    await expect(
+      sub2ApiContentSessionExtractor.extract({
+        url: "https://sub2.example.invalid",
+      }),
+    ).rejects.toBeInstanceOf(Sub2ApiContentSessionLoginRequiredError)
+
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(setItem).not.toHaveBeenCalled()
+    expect(localStorage.getItem("auth_token")).toBe("old-token")
+    expect(localStorage.getItem("refresh_token")).toBe("old-refresh")
+  })
+
+  it("rejects a non-OK refresh response even when the JSON body has code zero", async () => {
+    const now = 1_700_000_000_000
+    vi.spyOn(Date, "now").mockReturnValue(now)
+
+    localStorage.setItem("auth_token", "old-token")
+    localStorage.setItem(
+      "auth_user",
+      JSON.stringify({ id: 123, username: "alice", balance: 1.5 }),
+    )
+    localStorage.setItem("refresh_token", "old-refresh")
+    localStorage.setItem("token_expires_at", String(now + 60_000))
+
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          code: 0,
+          data: {
+            access_token: "unexpected-access",
+            refresh_token: "unexpected-refresh",
+            expires_in: 3600,
+          },
+        }),
+        { status: 503, headers: { "Content-Type": "application/json" } },
+      ),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+    const setItem = vi.spyOn(localStorage, "setItem").mockClear()
+
+    await expect(
+      sub2ApiContentSessionExtractor.extract({
+        url: "https://sub2.example.invalid",
+      }),
+    ).rejects.toBeInstanceOf(Sub2ApiContentSessionLoginRequiredError)
+
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(setItem).not.toHaveBeenCalled()
+    expect(localStorage.getItem("auth_token")).toBe("old-token")
+    expect(localStorage.getItem("refresh_token")).toBe("old-refresh")
+  })
+
+  it("fails closed when refresh response headers never arrive", async () => {
+    vi.useFakeTimers()
+    try {
+      localStorage.setItem("auth_token", "old-token")
+      localStorage.setItem(
+        "auth_user",
+        JSON.stringify({ id: 123, username: "alice" }),
+      )
+      localStorage.setItem("refresh_token", "old-refresh")
+      localStorage.setItem("token_expires_at", String(Date.now() + 60_000))
+      const fetchMock = vi.fn().mockImplementation(() => new Promise(() => {}))
+      vi.stubGlobal("fetch", fetchMock)
+      const setItem = vi.spyOn(localStorage, "setItem").mockClear()
+      const result = sub2ApiContentSessionExtractor.extract({
+        url: "https://panel.example.invalid",
+      })
+      const failure = expect(result).rejects.toBeInstanceOf(
+        Sub2ApiContentSessionLoginRequiredError,
+      )
+
+      await vi.advanceTimersByTimeAsync(CONTENT_SESSION_REQUEST_TIMEOUT_MS)
+      await failure
+
+      expect(fetchMock).toHaveBeenCalledOnce()
+      expect(fetchMock.mock.calls[0]?.[1]?.signal.aborted).toBe(true)
+      expect(setItem).not.toHaveBeenCalled()
+      expect(localStorage.getItem("auth_token")).toBe("old-token")
+      expect(localStorage.getItem("refresh_token")).toBe("old-refresh")
+      expect(vi.getTimerCount()).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it("throws login-required when an expired refresh response has invalid token field types", async () => {
