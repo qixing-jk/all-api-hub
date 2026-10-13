@@ -24,6 +24,10 @@ import {
   type ProductAnalyticsSourceKind,
 } from "~/services/productAnalytics/contracts"
 import { trackProductAnalyticsEvent } from "~/services/productAnalytics/runtime/dispatch"
+import {
+  ProductAnalyticsMessageTypes,
+  sendProductAnalyticsMessage,
+} from "~/services/productAnalytics/runtime/messaging"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum } from "~/types"
 import type {
@@ -531,14 +535,18 @@ export function buildAutoCheckinConfigSnapshotProperties(
 }
 
 /**
- * Emits the privacy-filtered Auto Check-in strategy snapshot.
+ * Requests the cadence-gated Auto Check-in strategy snapshot from the background runtime.
+ *
+ * The snapshot is throttled centrally in the background (3-day cadence), so a
+ * surface opening repeatedly no longer re-emits the same config event.
  */
 export function trackAutoCheckinConfigSnapshot(
-  preferences: AutoCheckinPreferences,
   entrypoint: ProductAnalyticsEntrypoint,
 ) {
-  void trackProductAnalyticsEvent(
-    PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
-    buildAutoCheckinConfigSnapshotProperties(preferences, entrypoint),
-  )
+  void sendProductAnalyticsMessage(
+    ProductAnalyticsMessageTypes.TrackAutoCheckinConfigSnapshot,
+    { entrypoint },
+  ).catch(() => {
+    // Best-effort: surfaces must not fail when the runtime is unavailable.
+  })
 }

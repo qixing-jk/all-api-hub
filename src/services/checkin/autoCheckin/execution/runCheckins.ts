@@ -52,6 +52,19 @@ import {
 import { formatLocalDayKey } from "~/utils/core/dayKey"
 
 /**
+ * Outcome of one check-in run.
+ */
+export type AutoCheckinRunOutcome = {
+  /**
+   * `false` when the run's status update could not be persisted. Today's
+   * attempt was then never recorded, so admission controls that read
+   * `lastDailyRunDay` see stale state and must not re-run accounts on a short
+   * cycle — the storage failure itself is reported separately.
+   */
+  persisted: boolean
+}
+
+/**
  * Execute check-ins for all eligible accounts, optionally scoped to a target set.
  *
  * Run types:
@@ -68,7 +81,7 @@ export async function runCheckins(options: {
   targetAccountIds?: string[]
   tempWindowRequestSource?: TempWindowRequestSource
   protectionBypassExecution: ProtectionBypassExecution
-}): Promise<void> {
+}): Promise<AutoCheckinRunOutcome> {
   // Default to manual runs for UI-triggered or debug entry points.
   const runType = options?.runType ?? AUTO_CHECKIN_RUN_TYPE.MANUAL
   const isDailyRun = runType === AUTO_CHECKIN_RUN_TYPE.DAILY
@@ -157,7 +170,7 @@ export async function runCheckins(options: {
     // runs, including an unscoped batch run from the UI, remain available.
     if (!config.globalEnabled && isDailyRun) {
       logger.info("Global feature disabled; skipping")
-      return
+      return { persisted: true }
     }
 
     // Get all accounts, then exclude disabled accounts from runnable selection.
@@ -280,8 +293,8 @@ export async function runCheckins(options: {
         loginProviderOwners,
       )
 
-      const { result: runSummary } = await autoCheckinStorage.updateStatus(
-        (current) => {
+      const { ok: persisted, result: runSummary } =
+        await autoCheckinStorage.updateStatus((current) => {
           const perAccount = mergePerAccountIfNeeded(current, results)
           const accountsSnapshot = mergeAccountsSnapshotIfNeeded(
             current,
@@ -313,8 +326,7 @@ export async function runCheckins(options: {
                 : {}),
             },
           }
-        },
-      )
+        })
       const mergedSummary = runSummary ?? summary
 
       if (notifyUiOnCompletion) {
@@ -344,7 +356,7 @@ export async function runCheckins(options: {
           retryExhausted: 0,
         })
       }
-      return
+      return { persisted }
     }
 
     // API/page resources are limited by their owning lower layers.
@@ -420,8 +432,8 @@ export async function runCheckins(options: {
     // status, so they are computed inside the update: a run that finished
     // while this one was executing keeps its results instead of being
     // reverted.
-    const { result: runOutcome } = await autoCheckinStorage.updateStatus(
-      (current) => {
+    const { ok: persisted, result: runOutcome } =
+      await autoCheckinStorage.updateStatus((current) => {
         const retryStrategy = config.retryStrategy
         const retryState = mergeRunResults({
           today,
@@ -466,8 +478,7 @@ export async function runCheckins(options: {
               : {}),
           },
         }
-      },
-    )
+      })
     const mergedSummary = runOutcome?.mergedSummary ?? summary
     const retryPendingAfter = runOutcome?.retryPendingAfter ?? 0
 
@@ -521,24 +532,27 @@ export async function runCheckins(options: {
       successCount,
       failedCount,
     })
+    return { persisted }
   } catch (error) {
     logger.error("Execution failed", error)
-    await autoCheckinStorage.updateStatus((current) => ({
-      patch: {
-        lastRunAt: new Date().toISOString(),
-        lastRunResult: AUTO_CHECKIN_RUN_RESULT.FAILED,
-        perAccount: mergeHistory ? current?.perAccount ?? {} : {},
-        pendingRetry: false,
-        retryState: isDailyRun ? undefined : current?.retryState,
-        ...(isDailyRun
-          ? {
-              lastDailyRunDay: today,
-              nextRetryScheduledAt: undefined,
-              retryAlarmTargetDay: undefined,
-            }
-          : {}),
-      },
-    }))
+    const { ok: persisted } = await autoCheckinStorage.updateStatus(
+      (current) => ({
+        patch: {
+          lastRunAt: new Date().toISOString(),
+          lastRunResult: AUTO_CHECKIN_RUN_RESULT.FAILED,
+          perAccount: mergeHistory ? current?.perAccount ?? {} : {},
+          pendingRetry: false,
+          retryState: isDailyRun ? undefined : current?.retryState,
+          ...(isDailyRun
+            ? {
+                lastDailyRunDay: today,
+                nextRetryScheduledAt: undefined,
+                retryAlarmTargetDay: undefined,
+              }
+            : {}),
+        },
+      }),
+    )
 
     if (notifyUiOnCompletion === null) {
       try {
@@ -563,5 +577,9 @@ export async function runCheckins(options: {
         status: TASK_NOTIFICATION_STATUSES.Failure,
       })
     }
+
+    // What matters for admission is whether this failure patch recorded the
+    // day, not that the run itself threw.
+    return { persisted }
   }
 }

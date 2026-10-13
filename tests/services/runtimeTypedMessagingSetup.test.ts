@@ -1997,6 +1997,9 @@ describe("typed runtime messaging setup", () => {
       trackProductAnalyticsActionCompleted: vi.fn(),
     }))
     vi.doMock("~/services/productAnalytics/facts/autoCheckin", () => ({
+      buildAutoCheckinConfigSnapshotProperties: vi.fn(() => ({
+        setting_id: "auto_checkin_config_snapshot",
+      })),
       buildAutoCheckinDiagnostics: vi.fn(() => ({})),
       trackAutoCheckinConfigSnapshot: vi.fn(),
       trackAutoCheckinRunAnalytics: vi.fn(),

@@ -4,6 +4,12 @@ import { isRetryableCheckinResult } from "~/services/checkin/autoCheckin/executi
 import { STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
+  PRODUCT_ANALYTICS_STORAGE_AREAS,
+  PRODUCT_ANALYTICS_STORAGE_FAILURE_STAGES,
+  PRODUCT_ANALYTICS_STORAGE_OPERATIONS,
+} from "~/services/productAnalytics/contracts"
+import { trackStorageWriteFailure } from "~/services/productAnalytics/facts/storageWriteFailure"
+import {
   AUTO_CHECKIN_SKIP_REASON,
   CHECKIN_RESULT_STATUS,
   getAutoCheckinRunResultFromSummary,
@@ -17,6 +23,19 @@ import { createLogger } from "~/utils/core/logger"
 import { isPlainObject } from "~/utils/core/object"
 
 const logger = createLogger("AutoCheckinStorage")
+
+/** Reports a failed status storage operation as throttled telemetry. */
+function trackStatusStorageFailure(
+  failureStage: (typeof PRODUCT_ANALYTICS_STORAGE_FAILURE_STAGES)[keyof typeof PRODUCT_ANALYTICS_STORAGE_FAILURE_STAGES],
+  error: unknown,
+) {
+  trackStorageWriteFailure({
+    storageArea: PRODUCT_ANALYTICS_STORAGE_AREAS.Local,
+    operation: PRODUCT_ANALYTICS_STORAGE_OPERATIONS.AutoCheckinStatus,
+    failureStage,
+    error,
+  })
+}
 
 /**
  * Storage keys for Auto Check-in
@@ -172,6 +191,10 @@ class AutoCheckinStorage {
       return stored || null
     } catch (error) {
       logger.error("Failed to get status", error)
+      trackStatusStorageFailure(
+        PRODUCT_ANALYTICS_STORAGE_FAILURE_STAGES.Read,
+        error,
+      )
       return null
     }
   }
@@ -201,6 +224,10 @@ class AutoCheckinStorage {
           // Without a trustworthy read there is no base to patch, and writing
           // anyway would drop whatever is stored.
           logger.error("Failed to read status for update", error)
+          trackStatusStorageFailure(
+            PRODUCT_ANALYTICS_STORAGE_FAILURE_STAGES.Read,
+            error,
+          )
           return { ok: false, result: null }
         }
 
@@ -209,6 +236,10 @@ class AutoCheckinStorage {
           applied = update(current)
         } catch (error) {
           logger.error("Failed to apply status update", error)
+          trackStatusStorageFailure(
+            PRODUCT_ANALYTICS_STORAGE_FAILURE_STAGES.Apply,
+            error,
+          )
           return { ok: false, result: null }
         }
 
@@ -226,6 +257,10 @@ class AutoCheckinStorage {
           return { ok: true, result: applied.result ?? null }
         } catch (error) {
           logger.error("Failed to update status", error)
+          trackStatusStorageFailure(
+            PRODUCT_ANALYTICS_STORAGE_FAILURE_STAGES.Write,
+            error,
+          )
           return { ok: false, result: null }
         }
       },

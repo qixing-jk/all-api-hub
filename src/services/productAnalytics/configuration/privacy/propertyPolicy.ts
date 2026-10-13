@@ -48,6 +48,9 @@ import {
   PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES,
   PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES,
   PRODUCT_ANALYTICS_STATUS_KINDS,
+  PRODUCT_ANALYTICS_STORAGE_AREAS,
+  PRODUCT_ANALYTICS_STORAGE_FAILURE_STAGES,
+  PRODUCT_ANALYTICS_STORAGE_OPERATIONS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
   PRODUCT_ANALYTICS_TARGET_STATES,
@@ -85,6 +88,11 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   editor_mode: Object.values(PRODUCT_ANALYTICS_EDITOR_MODES),
   entrypoint: Object.values(PRODUCT_ANALYTICS_ENTRYPOINTS),
   error_category: Object.values(PRODUCT_ANALYTICS_ERROR_CATEGORIES),
+  storage_area: Object.values(PRODUCT_ANALYTICS_STORAGE_AREAS),
+  storage_failure_stage: Object.values(
+    PRODUCT_ANALYTICS_STORAGE_FAILURE_STAGES,
+  ),
+  storage_operation: Object.values(PRODUCT_ANALYTICS_STORAGE_OPERATIONS),
   failure_stage: Object.values(PRODUCT_ANALYTICS_FAILURE_STAGES),
   feature_id: Object.values(PRODUCT_ANALYTICS_FEATURE_IDS),
   guidance_status: Object.values(
@@ -187,6 +195,7 @@ const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
   "account_state_durability_failure_count",
   "active_tab",
   "background_execution",
+  "error_name",
   "auto_checkin_enabled_accounts",
   "detection_enabled_accounts",
   "provider_available_accounts",
@@ -411,6 +420,11 @@ function isAllowedFieldValue(
 
   if (key === "sponsor_campaign_locale") {
     return /^[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8})?$/.test(value)
+  }
+
+  if (key === "error_name") {
+    // Identifier-shaped `Error.name` only — never a message, key, or path.
+    return /^[A-Za-z][A-Za-z0-9._-]{0,63}$/.test(value)
   }
 
   if (

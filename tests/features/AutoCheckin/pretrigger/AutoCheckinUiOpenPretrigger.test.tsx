@@ -9,10 +9,8 @@ import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
-  PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
-  PRODUCT_ANALYTICS_SETTING_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import {
@@ -33,12 +31,12 @@ import { render, screen, waitFor } from "~~/tests/test-utils/render"
 const {
   trackProductAnalyticsActionCompletedMock,
   trackProductAnalyticsActionStartedMock,
-  trackProductAnalyticsEventMock,
+  sendProductAnalyticsMessageMock,
   getCurrentTempWindowRequestSourceMock,
 } = vi.hoisted(() => ({
   trackProductAnalyticsActionCompletedMock: vi.fn(),
   trackProductAnalyticsActionStartedMock: vi.fn(),
-  trackProductAnalyticsEventMock: vi.fn(),
+  sendProductAnalyticsMessageMock: vi.fn(async () => ({ success: true })),
   getCurrentTempWindowRequestSourceMock: vi.fn(),
 }))
 
@@ -73,17 +71,16 @@ vi.mock("~/services/productAnalytics/actions", () => ({
 }))
 
 vi.mock(
-  "~/services/productAnalytics/runtime/dispatch",
+  "~/services/productAnalytics/runtime/messaging",
   async (importOriginal) => {
     const actual =
       await importOriginal<
-        typeof import("~/services/productAnalytics/runtime/dispatch")
+        typeof import("~/services/productAnalytics/runtime/messaging")
       >()
 
     return {
       ...actual,
-      trackProductAnalyticsEvent: (...args: unknown[]) =>
-        trackProductAnalyticsEventMock(...args),
+      sendProductAnalyticsMessage: sendProductAnalyticsMessageMock,
     }
   },
 )
@@ -329,13 +326,9 @@ describe("AutoCheckinUiOpenPretrigger", () => {
         },
       }),
     )
-    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
-      expect.objectContaining({
-        global_enabled: true,
-        ui_pretrigger_enabled: true,
-        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinConfigSnapshot,
-      }),
+    expect(sendProductAnalyticsMessageMock).toHaveBeenCalledWith(
+      "productAnalytics:trackAutoCheckinConfigSnapshot",
+      { entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options },
     )
 
     expect(

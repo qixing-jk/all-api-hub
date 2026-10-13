@@ -81,7 +81,7 @@ class AutoCheckinScheduler {
   private readonly dailyTrigger = new DailyTriggerWorkflow({
     dailyAlarmName: AUTO_CHECKIN_ALARM_NAMES.Daily,
     runCheckins: (options) => this.runCheckins(options),
-    scheduleNextRun: () => this.scheduleNextRun(),
+    scheduleNextRun: (options) => this.scheduleNextRun(options),
   })
 
   /**
@@ -200,20 +200,27 @@ class AutoCheckinScheduler {
     }
 
     logger.info("Retry alarm triggered; starting retries")
+    let persisted = true
     try {
-      await this.runRetryCheckins(
+      ;({ persisted } = await this.runRetryCheckins(
         TEMP_WINDOW_REQUEST_SOURCES.Background,
         createAutomaticCheckinExecution(
           PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Retry,
           TEMP_WINDOW_REQUEST_SOURCES.Background,
         ),
-      )
+      ))
     } catch (error) {
       logger.error("Error during retry execution", error)
     } finally {
       const prefs = await userPreferences.getPreferences()
       const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
-      await autoCheckinAlarmSchedule.scheduleRetryAlarm(config)
+      if (persisted) {
+        await autoCheckinAlarmSchedule.scheduleRetryAlarm(config)
+      } else {
+        // The run could not persist its results, so the stored queue is stale.
+        // Re-arming from it would replay the same pending accounts in a loop.
+        await autoCheckinAlarmSchedule.clearRetryAlarm()
+      }
     }
   }
 

@@ -8,11 +8,13 @@ import {
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
 
-const { mockWithExtensionStorageWriteLock } = vi.hoisted(() => ({
-  mockWithExtensionStorageWriteLock: vi.fn(
-    async (_key: string, work: () => Promise<unknown>) => await work(),
-  ),
-}))
+const { mockWithExtensionStorageWriteLock, trackStorageWriteFailureMock } =
+  vi.hoisted(() => ({
+    mockWithExtensionStorageWriteLock: vi.fn(
+      async (_key: string, work: () => Promise<unknown>) => await work(),
+    ),
+    trackStorageWriteFailureMock: vi.fn(),
+  }))
 
 vi.mock("@plasmohq/storage", () => {
   const set = vi.fn()
@@ -35,6 +37,10 @@ vi.mock("@plasmohq/storage", () => {
 
 vi.mock("~/services/core/storageWriteLock", () => ({
   withExtensionStorageWriteLock: mockWithExtensionStorageWriteLock,
+}))
+
+vi.mock("~/services/productAnalytics/facts/storageWriteFailure", () => ({
+  trackStorageWriteFailure: trackStorageWriteFailureMock,
 }))
 
 describe("autoCheckinStorage", () => {
@@ -134,6 +140,13 @@ describe("autoCheckinStorage", () => {
 
     expect(set).not.toHaveBeenCalled()
     expect(result).toEqual({ ok: false, result: null })
+    expect(trackStorageWriteFailureMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        storageArea: "local",
+        operation: "auto_checkin_status",
+        failureStage: "read",
+      }),
+    )
   })
 
   it("updateStatus should report failure on write error", async () => {
@@ -146,6 +159,13 @@ describe("autoCheckinStorage", () => {
     }))
 
     expect(result.ok).toBe(false)
+    expect(trackStorageWriteFailureMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        storageArea: "local",
+        operation: "auto_checkin_status",
+        failureStage: "write",
+      }),
+    )
   })
 
   it("updateStatus should not write when deriving the patch throws", async () => {
@@ -158,6 +178,13 @@ describe("autoCheckinStorage", () => {
 
     expect(set).not.toHaveBeenCalled()
     expect(result).toEqual({ ok: false, result: null })
+    expect(trackStorageWriteFailureMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        storageArea: "local",
+        operation: "auto_checkin_status",
+        failureStage: "apply",
+      }),
+    )
   })
 
   it("clearStatus should remove key and return true", async () => {

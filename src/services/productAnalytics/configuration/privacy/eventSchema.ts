@@ -453,6 +453,12 @@ export const EVENT_ALLOWED_KEYS = {
     "managed_site_count",
   ],
   [PRODUCT_ANALYTICS_EVENTS.SiteTypePresent]: ["site_type", "account_count"],
+  [PRODUCT_ANALYTICS_EVENTS.StorageWriteFailed]: [
+    "storage_area",
+    "storage_operation",
+    "storage_failure_stage",
+    "error_name",
+  ],
 } as const satisfies Record<ProductAnalyticsEventName, readonly string[]>
 
 /**
