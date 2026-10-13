@@ -26,6 +26,71 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
     mockedBrowserApi.hasAlarmsAPI.mockReturnValue(true)
   })
 
+  it.each([false, true])(
+    "only re-arms an eligible retry queue when daily persistence succeeds (%s)",
+    async (persisted) => {
+      vi.useFakeTimers()
+      const now = new Date(2024, 0, 1, 9, 0, 0)
+      vi.setSystemTime(now)
+      const runSpy = vi
+        .spyOn(autoCheckinScheduler, "runCheckins")
+        .mockResolvedValueOnce({ persisted })
+      mockedUserPreferences.getPreferences.mockResolvedValue({
+        autoCheckin: {
+          ...DEFAULT_PREFERENCES.autoCheckin,
+          globalEnabled: true,
+          windowStart: "00:00",
+          windowEnd: "23:59",
+          scheduleMode: "random",
+          retryStrategy: {
+            enabled: true,
+            intervalMinutes: 1,
+            maxAttemptsPerDay: 3,
+          },
+        },
+      })
+      const retryState = {
+        day: "2024-01-01",
+        pendingAccountIds: ["a"],
+        attemptsByAccount: { a: 2 },
+      }
+      schedulerTestState.storedStatus = {
+        retryState,
+        pendingRetry: true,
+        nextRetryScheduledAt: new Date(now.getTime() + 60_000).toISOString(),
+        retryAlarmTargetDay: "2024-01-01",
+      }
+      schedulerTestState.alarmStore.autoCheckinRetry = {
+        name: "autoCheckinRetry",
+        scheduledTime: now.getTime() + 60_000,
+      }
+      try {
+        await autoCheckinScheduler.debugTriggerDailyAlarmNow()
+        expect(runSpy).toHaveBeenCalledTimes(1)
+        expect(schedulerTestState.storedStatus.retryState).toEqual(retryState)
+        if (persisted) {
+          expect(schedulerTestState.alarmStore.autoCheckinRetry).toBeDefined()
+          expect(schedulerTestState.storedStatus.pendingRetry).toBe(true)
+        } else {
+          expect(schedulerTestState.alarmStore.autoCheckinRetry).toBeUndefined()
+          expect(schedulerTestState.storedStatus.pendingRetry).toBe(false)
+          expect(
+            schedulerTestState.storedStatus.nextRetryScheduledAt,
+          ).toBeUndefined()
+          expect(
+            schedulerTestState.storedStatus.retryAlarmTargetDay,
+          ).toBeUndefined()
+          expect(
+            schedulerTestState.alarmStore.autoCheckinDaily.scheduledTime,
+          ).toBeGreaterThanOrEqual(now.getTime() + 15 * 60_000)
+        }
+      } finally {
+        runSpy.mockRestore()
+        vi.useRealTimers()
+      }
+    },
+  )
+
   it.each([
     { hour: 9, minute: 0 },
     { hour: 23, minute: 55 },

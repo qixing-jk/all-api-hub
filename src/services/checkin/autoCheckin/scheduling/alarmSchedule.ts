@@ -156,6 +156,7 @@ class AutoCheckinAlarmSchedule {
     preserveExisting?: boolean
     allowCatchUp?: boolean
     dailyNotBefore?: number
+    suppressRetryRearm?: boolean
   }) {
     if (!hasAlarmsAPI()) {
       logger.warn("Alarms API not supported, cannot schedule")
@@ -406,7 +407,7 @@ class AutoCheckinAlarmSchedule {
    */
   async scheduleRetryAlarm(
     config: AutoCheckinPreferences,
-    options?: { preserveExisting?: boolean },
+    options?: { preserveExisting?: boolean; suppressRetryRearm?: boolean },
   ) {
     const currentStatus = await autoCheckinStorage.getStatus()
     const now = new Date()
@@ -439,6 +440,13 @@ class AutoCheckinAlarmSchedule {
       // Every queued account spent the day's budget. Nothing to schedule, and
       // the counts stay: they are what stops the next run from re-adding them.
       await this.clearRetryAlarm(maxAttempts)
+      return
+    }
+
+    if (options?.suppressRetryRearm) {
+      // Failed daily persistence leaves this queue stale. Stop its alarm
+      // without resetting the attempts already spent today.
+      await this.clearRetryAlarm()
       return
     }
 
