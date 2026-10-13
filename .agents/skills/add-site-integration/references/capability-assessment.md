@@ -103,6 +103,10 @@ An adapter object, page navigation or passing mock alone does not close implemen
 
 - [ ] **Cleanup and evidence**: read back mutations/cleanup, retain evidence pointers and rerun commands. Record irreversible grants; do not claim they were restored.
 
+### Documentation and matrix synchronization
+
+- [ ] **Public documentation and README synchronization**: When adding, extending, or updating an account site, managed gateway, or export integration, update the matrix rows and feature sections in `docs/docs/supported-sites.md` (or `supported-export-tools.md`) across all locales (`zh`, `en`, `ja`), and synchronize root compatibility lists in `README.md`, `README_CN.md`, and `README_JA.md`.
+
 ### Final coverage
 
 - [ ] **Final coverage**: reconcile checklist, delivered code and visible actions. Include every applicable item in the handoff table; partial/deferred/unverified rows cannot disappear behind “site supported” or “fully tested”.

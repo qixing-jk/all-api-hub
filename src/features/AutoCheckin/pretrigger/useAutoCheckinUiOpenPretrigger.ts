@@ -126,10 +126,7 @@ export function useAutoCheckinUiOpenPretrigger(): {
     void trackProductAnalyticsActionStarted(
       UI_OPEN_PRETRIGGER_ANALYTICS_CONTEXT,
     )
-    trackAutoCheckinConfigSnapshot(
-      autoCheckinPreferences,
-      PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    )
+    trackAutoCheckinConfigSnapshot(PRODUCT_ANALYTICS_ENTRYPOINTS.Options)
 
     void (async () => {
       try {

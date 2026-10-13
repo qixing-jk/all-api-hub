@@ -43,4 +43,5 @@ Read only the guidance relevant to the current task; reuse unchanged material al
 ## Documentation
 
 - Under `docs/docs/`, Chinese is the source; synchronize via `docs_assistant/translate.py`, `.github/workflows/translate-docs.yml`, or scoped manual updates. Finalize source edits first. If affected translated counterparts exist (including root READMEs) and synchronization is undecided, ask once; follow existing decisions directly and report deferred translations separately from source completion.
+- Adding, removing, or modifying support for account sites, managed backends, or export tools requires updating their public matrix entries in `docs/docs/supported-sites.md` and/or `docs/docs/supported-export-tools.md` (and their `en/` and `ja/` counterparts), as well as the root compatibility lists in `README.md`, `README_CN.md`, and `README_JA.md`.
 - Adding or removing documentation pages requires updating locale navigation in `docs/docs/.vuepress/config.js`.

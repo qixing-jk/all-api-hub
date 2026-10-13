@@ -17,6 +17,7 @@
 | Kilo Code | Kilo 是一体化的 Agentic Engineering 平台。                                                           | [官网](https://kilocode.ai/) / [GitHub](https://github.com/Kilo-Org/kilocode)   |
 | Roo Code  | Roo Code 让一整支 AI 开发团队直接驻留在你的代码编辑器里。                                            | [官网](https://roocode.com/) / [GitHub](https://github.com/RooCodeInc/Roo-Code) |
 | Cursor++  | 通过自备 API 密钥在 Cursor 中使用 Anthropic、OpenAI 与 Gemini 等模型。                               | [官网](https://ccursor.cometix.dev/)                                            |
+| AI Toolbox  | 面向开发者与 AI 编码助手的桌面效率工具，支持 Claude Code、Codex、Grok、Kimi、Gemini 等多工具配置切换。 | [GitHub](https://github.com/coulsontl/ai-toolbox) |
 
 ## 网关与路由工具
 
@@ -102,6 +103,9 @@ Kilo Code 当前的设置导入大小上限为 1 MiB。文件超出限制时，�
 | Octopus         | 面向个人的 LLM API 聚合服务。                                                                                                   | [GitHub](https://github.com/bestruirui/octopus)                                     |
 | Veloera         | 本项目已停止维护。                                                                                                              | [GitHub](https://github.com/Veloera/Veloera)                                        |
 | DoneHub         | 本项目是基于 one-hub 二次开发而来的。                                                                                           | [GitHub](https://github.com/deanxv/done-hub)                                        |
+| [OmniRoute](./omniroute-integration.md) | 自建 AI 网关，内置大量 provider，支持作用域访问令牌与连接级上游地址覆盖。 | [GitHub](https://github.com/diegosouzapw/OmniRoute) |
+| [gpt-load](./gpt-load-integration.md) | 自建 AI 网关（Go 编写），分组即渠道驱动＋密钥池，架构轻量、内置驱动丰富。 | [GitHub](https://github.com/tbphp/gpt-load) |
+| Magpie          | 面向 AI 编程工具的模型网关，可从菜单栏为 Codex、Claude Code 等工具切换模型服务。 | [GitHub](https://github.com/yetone/magpie) |
 
 ## 相关文档
 

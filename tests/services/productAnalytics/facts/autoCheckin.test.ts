@@ -26,9 +26,11 @@ import {
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
 
-const { trackProductAnalyticsEventMock } = vi.hoisted(() => ({
-  trackProductAnalyticsEventMock: vi.fn(),
-}))
+const { trackProductAnalyticsEventMock, sendProductAnalyticsMessageMock } =
+  vi.hoisted(() => ({
+    trackProductAnalyticsEventMock: vi.fn(),
+    sendProductAnalyticsMessageMock: vi.fn(async () => ({ success: true })),
+  }))
 
 vi.mock(
   "~/services/productAnalytics/runtime/dispatch",
@@ -40,7 +42,32 @@ vi.mock(
   }),
 )
 
+vi.mock(
+  "~/services/productAnalytics/runtime/messaging",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/productAnalytics/runtime/messaging")
+    >()),
+    sendProductAnalyticsMessage: sendProductAnalyticsMessageMock,
+  }),
+)
+
 describe("auto-checkin product analytics", () => {
+  it("keeps snapshot reporting best-effort when background messaging rejects", async () => {
+    sendProductAnalyticsMessageMock.mockRejectedValueOnce(
+      new Error("runtime unavailable"),
+    )
+    expect(() =>
+      trackAutoCheckinConfigSnapshot(PRODUCT_ANALYTICS_ENTRYPOINTS.Options),
+    ).not.toThrow()
+    // Let the rejected message settle; Vitest also detects unhandled rejections.
+    await Promise.resolve()
+    expect(sendProductAnalyticsMessageMock).toHaveBeenCalledWith(
+      "productAnalytics:trackAutoCheckinConfigSnapshot",
+      { entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options },
+    )
+  })
+
   it("builds an exact config snapshot without exporting raw schedule strings", () => {
     const snapshot = buildAutoCheckinConfigSnapshotProperties(
       {
@@ -78,33 +105,17 @@ describe("auto-checkin product analytics", () => {
     expect(JSON.stringify(snapshot)).not.toContain("09:30")
   })
 
-  it("tracks the config snapshot as a snapshot event", () => {
-    trackAutoCheckinConfigSnapshot(
-      {
-        globalEnabled: false,
-        pretriggerDailyOnUiOpen: true,
-        notifyUiOnCompletion: false,
-        windowStart: "20:00",
-        windowEnd: "01:00",
-        scheduleMode: AUTO_CHECKIN_SCHEDULE_MODE.RANDOM,
-        retryStrategy: {
-          enabled: false,
-          intervalMinutes: 5,
-          maxAttemptsPerDay: 1,
-        },
-      },
-      PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    )
+  it("requests the cadence-gated config snapshot through the background runtime", () => {
+    trackAutoCheckinConfigSnapshot(PRODUCT_ANALYTICS_ENTRYPOINTS.Options)
 
-    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
+    expect(sendProductAnalyticsMessageMock).toHaveBeenCalledWith(
+      "productAnalytics:trackAutoCheckinConfigSnapshot",
+      { entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options },
+    )
+    expect(trackProductAnalyticsEventMock).not.toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
       expect.objectContaining({
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinConfigSnapshot,
-        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-        global_enabled: false,
-        retry_interval_minutes: 5,
-        retry_max_attempts: 1,
-        window_length_minutes: 300,
       }),
     )
   })

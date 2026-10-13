@@ -5,7 +5,13 @@ import {
   STORAGE_LOCKS,
 } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
-import { PRODUCT_ANALYTICS_PROTECTION_BYPASS_DIMENSIONS } from "~/services/productAnalytics/contracts"
+import {
+  PRODUCT_ANALYTICS_PROTECTION_BYPASS_DIMENSIONS,
+  PRODUCT_ANALYTICS_STORAGE_AREAS,
+  PRODUCT_ANALYTICS_STORAGE_FAILURE_STAGES,
+  PRODUCT_ANALYTICS_STORAGE_OPERATIONS,
+} from "~/services/productAnalytics/contracts"
+import { trackStorageWriteFailure } from "~/services/productAnalytics/facts/storageWriteFailure"
 import { formatUtcDayKey } from "~/utils/core/dayKey"
 import { createLogger } from "~/utils/core/logger"
 
@@ -14,6 +20,7 @@ const logger = createLogger("ProductAnalyticsState")
 interface ProductAnalyticsState {
   lastSiteEcosystemSnapshotAt?: number
   lastSettingsSnapshotAt?: number
+  lastAutoCheckinConfigSnapshotAt?: number
   shieldBypassSummary?: ProductAnalyticsShieldBypassSummaryState
   sponsorRecommendationsSummary?: ProductAnalyticsSponsorRecommendationsSummaryState
 }
@@ -221,6 +228,14 @@ export function normalizeProductAnalyticsState(
     normalized.lastSettingsSnapshotAt = state.lastSettingsSnapshotAt
   }
 
+  if (
+    typeof state.lastAutoCheckinConfigSnapshotAt === "number" &&
+    Number.isFinite(state.lastAutoCheckinConfigSnapshotAt)
+  ) {
+    normalized.lastAutoCheckinConfigSnapshotAt =
+      state.lastAutoCheckinConfigSnapshotAt
+  }
+
   const shieldBypassSummary = normalizeShieldBypassSummaryState(
     state.shieldBypassSummary,
   )
@@ -251,19 +266,41 @@ class ProductAnalyticsStateService {
   }
 
   private async saveState(patch: ProductAnalyticsStatePatch): Promise<void> {
-    const stored = await this.storage.get(
-      PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_STATE,
-    )
-    await this.storage.set(
-      PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_STATE,
-      {
-        ...(stored && typeof stored === "object" && !Array.isArray(stored)
-          ? stored
-          : {}),
-        ...patch,
-        updatedAt: Date.now(),
-      },
-    )
+    let stored: unknown
+    try {
+      stored = await this.storage.get(
+        PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_STATE,
+      )
+    } catch (error) {
+      trackStorageWriteFailure({
+        storageArea: PRODUCT_ANALYTICS_STORAGE_AREAS.Local,
+        operation: PRODUCT_ANALYTICS_STORAGE_OPERATIONS.ProductAnalyticsState,
+        failureStage: PRODUCT_ANALYTICS_STORAGE_FAILURE_STAGES.Read,
+        error,
+      })
+      throw error
+    }
+
+    try {
+      await this.storage.set(
+        PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_STATE,
+        {
+          ...(stored && typeof stored === "object" && !Array.isArray(stored)
+            ? stored
+            : {}),
+          ...patch,
+          updatedAt: Date.now(),
+        },
+      )
+    } catch (error) {
+      trackStorageWriteFailure({
+        storageArea: PRODUCT_ANALYTICS_STORAGE_AREAS.Local,
+        operation: PRODUCT_ANALYTICS_STORAGE_OPERATIONS.ProductAnalyticsState,
+        failureStage: PRODUCT_ANALYTICS_STORAGE_FAILURE_STAGES.Write,
+        error,
+      })
+      throw error
+    }
   }
 
   async getState(): Promise<ProductAnalyticsState> {
@@ -306,6 +343,27 @@ class ProductAnalyticsStateService {
       return true
     } catch (error) {
       logger.warn("Failed to update settings snapshot timestamp", error)
+      return false
+    }
+  }
+
+  async setLastAutoCheckinConfigSnapshotAt(
+    timestamp: number,
+  ): Promise<boolean> {
+    if (!Number.isFinite(timestamp)) {
+      return false
+    }
+
+    try {
+      await this.withStorageWriteLock(async () => {
+        await this.saveState({ lastAutoCheckinConfigSnapshotAt: timestamp })
+      })
+      return true
+    } catch (error) {
+      logger.warn(
+        "Failed to update auto check-in config snapshot timestamp",
+        error,
+      )
       return false
     }
   }

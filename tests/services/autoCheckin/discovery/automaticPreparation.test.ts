@@ -153,7 +153,7 @@ describe("daily automatic check-in preparation", () => {
 
     await expect(
       runCheckinsForTest({ runType: AUTO_CHECKIN_RUN_TYPE.DAILY }),
-    ).resolves.toBeUndefined()
+    ).resolves.toEqual({ persisted: true })
     expect(schedulerTestState.storedStatus.perAccount[account.id].status).toBe(
       "success",
     )

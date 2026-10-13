@@ -17,6 +17,7 @@
 | Kilo Code | Kilo は、統合されたエージェンティブエンジニアリングプラットフォームです。                                                       | [公式サイト](https://kilocode.ai/) / [GitHub](https://github.com/Kilo-Org/kilocode)   |
 | Roo Code  | Roo Code は、AI 開発チーム全体をコードエディタに直接配置します。                                                                | [公式サイト](https://roocode.com/) / [GitHub](https://github.com/RooCodeInc/Roo-Code) |
 | Cursor++  | 自分の API キーを使用して、Cursor で Anthropic、OpenAI、Gemini などのモデルを利用できます。                                     | [公式サイト](https://ccursor.cometix.dev/)                                            |
+| AI Toolbox  | 開発者および AI コーディングアシスタント向けのデスクトップユーティリティ。Claude Code、Codex、Grok、Kimi、Gemini などの設定切り替えに対応します。 | [GitHub](https://github.com/coulsontl/ai-toolbox) |
 
 ## ゲートウェイとルーティングツール
 
@@ -102,6 +103,9 @@ Kilo Code の設定インポート上限は現在 1 MiB です。ファイルが
 | Octopus         | 個人向けの LLM API 集約サービス。                                                                                                                                                                   | [GitHub](https://github.com/bestruirui/octopus)                                           |
 | Veloera         | このプロジェクトはメンテナンスを停止しました。                                                                                                                                                      | [GitHub](https://github.com/Veloera/Veloera)                                              |
 | DoneHub         | このプロジェクトは one-hub をベースに二次開発されました。                                                                                                                                           | [GitHub](https://github.com/deanxv/done-hub)                                              |
+| [OmniRoute](./omniroute-integration.md) | セルフホストの AI ゲートウェイ。多数の provider を内蔵し、スコープ付きアクセストークンと接続単位の上流アドレス上書きに対応します。 | [GitHub](https://github.com/diegosouzapw/OmniRoute) |
+| [gpt-load](./gpt-load-integration.md) | 軽量なセルフホスト AI ゲートウェイ（Go 製）。グループはチャンネルドライバとキープールで構成されます。 | [GitHub](https://github.com/tbphp/gpt-load) |
+| Magpie          | Codex や Claude Code などの AI コーディングツール向けに、メニューバーからモデルを切り替えられるモデルゲートウェイ。 | [GitHub](https://github.com/yetone/magpie) |
 
 ## 関連ドキュメント
 

@@ -1,8 +1,10 @@
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import {
   ACCOUNT_STORAGE_KEYS,
+  PRODUCT_ANALYTICS_SESSION_STORAGE_KEYS,
   USER_PREFERENCES_STORAGE_KEYS,
 } from "~/services/core/storageKeys"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { productAnalyticsPreferences } from "~/services/productAnalytics/configuration/preferences"
 import { buildAggregateSettingsSnapshotEvent } from "~/services/productAnalytics/configuration/settings"
@@ -10,8 +12,10 @@ import { shouldSendSettingsSnapshot } from "~/services/productAnalytics/configur
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
+  type ProductAnalyticsEntrypoint,
   type ProductAnalyticsEventName,
 } from "~/services/productAnalytics/contracts"
+import { buildAutoCheckinConfigSnapshotProperties } from "~/services/productAnalytics/facts/autoCheckin"
 import { flushShieldBypassDailySummary } from "~/services/productAnalytics/facts/shieldBypassSummary"
 import {
   buildSiteEcosystemAnalyticsEvents,
@@ -28,8 +32,10 @@ import {
 } from "~/services/productAnalytics/runtime/messaging"
 import { productAnalyticsState } from "~/services/productAnalytics/runtime/state"
 import {
+  getSessionStorageValues,
   hasStorageChangedListener,
   onStorageChanged,
+  setSessionStorageValues,
 } from "~/utils/browser/storage"
 import { isDevBuild } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
@@ -41,6 +47,8 @@ const PREFERENCES_CHANGE_SNAPSHOT_DEBOUNCE_MS = 2_000
 let cleanupAccountChangeListener: (() => void) | null = null
 let cleanupPreferencesChangeListener: (() => void) | null = null
 let productAnalyticsMessagingCleanup: (() => void)[] | null = null
+let autoCheckinConfigSnapshotInFlight = false
+let lastAutoCheckinConfigSnapshotFallbackAt: number | undefined
 
 /**
  * Checks whether an incoming runtime event name is one of the fixed analytics enums.
@@ -50,6 +58,20 @@ function isKnownEventName(value: unknown): value is ProductAnalyticsEventName {
     typeof value === "string" &&
     Object.values(PRODUCT_ANALYTICS_EVENTS).includes(
       value as ProductAnalyticsEventName,
+    )
+  )
+}
+
+/**
+ * Checks whether an incoming config snapshot entrypoint is one of the fixed analytics enums.
+ */
+function isKnownEntrypoint(
+  value: unknown,
+): value is ProductAnalyticsEntrypoint {
+  return (
+    typeof value === "string" &&
+    Object.values(PRODUCT_ANALYTICS_ENTRYPOINTS).includes(
+      value as ProductAnalyticsEntrypoint,
     )
   )
 }
@@ -112,6 +134,71 @@ async function captureSettingsSnapshot(): Promise<boolean> {
 }
 
 /**
+ * Captures the Auto Check-in strategy snapshot when analytics is enabled and cadence allows it.
+ */
+async function captureAutoCheckinConfigSnapshot(
+  entrypoint: unknown,
+): Promise<boolean> {
+  if (!(await productAnalyticsPreferences.isEnabled())) return false
+  if (!isKnownEntrypoint(entrypoint)) return false
+
+  const state = await productAnalyticsState.getState()
+  const now = Date.now()
+  let sessionCapturedAt: number | undefined
+  try {
+    const values = await getSessionStorageValues(
+      PRODUCT_ANALYTICS_SESSION_STORAGE_KEYS.AUTO_CHECKIN_CONFIG_SNAPSHOT_AT,
+    )
+    const timestamp =
+      values[
+        PRODUCT_ANALYTICS_SESSION_STORAGE_KEYS.AUTO_CHECKIN_CONFIG_SNAPSHOT_AT
+      ]
+    if (typeof timestamp === "number" && Number.isFinite(timestamp)) {
+      sessionCapturedAt = timestamp
+    }
+  } catch {
+    // Persistent cadence and the current worker's fallback still apply.
+  }
+  if (
+    !shouldSendSettingsSnapshot(state.lastAutoCheckinConfigSnapshotAt, now) ||
+    !shouldSendSettingsSnapshot(sessionCapturedAt, now) ||
+    !shouldSendSettingsSnapshot(lastAutoCheckinConfigSnapshotFallbackAt, now)
+  ) {
+    return false
+  }
+
+  const preferences = await userPreferences.getPreferences()
+  const event = buildAutoCheckinConfigSnapshotProperties(
+    preferences.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!,
+    entrypoint,
+  )
+
+  const captured = await productAnalyticsClient.capture(
+    PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+    event,
+  )
+  if (!captured) return false
+
+  const persisted =
+    await productAnalyticsState.setLastAutoCheckinConfigSnapshotAt(now)
+  if (!persisted) {
+    lastAutoCheckinConfigSnapshotFallbackAt = now
+    // Capture already succeeded. Retain its cadence independently of local
+    // storage so a write outage does not turn every UI open into another event.
+    const savedToSession = await setSessionStorageValues({
+      [PRODUCT_ANALYTICS_SESSION_STORAGE_KEYS.AUTO_CHECKIN_CONFIG_SNAPSHOT_AT]:
+        now,
+    })
+    if (!savedToSession) {
+      logger.warn(
+        "Auto check-in snapshot cooldown could not be saved to session storage",
+      )
+    }
+  }
+  return true
+}
+
+/**
  * Validates and forwards a single typed analytics event request.
  */
 async function handleTrackEventRequest(
@@ -143,6 +230,22 @@ async function handleSettingsSnapshotRequest() {
 }
 
 /**
+ * Captures a cadence-limited Auto Check-in config snapshot request.
+ */
+async function handleAutoCheckinConfigSnapshotRequest(
+  request: Record<string, unknown>,
+) {
+  if (autoCheckinConfigSnapshotInFlight) return { success: false }
+  autoCheckinConfigSnapshotInFlight = true
+  try {
+    const success = await captureAutoCheckinConfigSnapshot(request?.entrypoint)
+    return { success }
+  } finally {
+    autoCheckinConfigSnapshotInFlight = false
+  }
+}
+
+/**
  * Routes typed product analytics runtime requests to their focused handlers.
  */
 async function resolveProductAnalyticsResponse(
@@ -159,6 +262,10 @@ async function resolveProductAnalyticsResponse(
       return await handleSiteEcosystemSnapshotRequest()
     case ProductAnalyticsMessageTypes.TrackSettingsSnapshot:
       return await handleSettingsSnapshotRequest()
+    case ProductAnalyticsMessageTypes.TrackAutoCheckinConfigSnapshot:
+      return await handleAutoCheckinConfigSnapshotRequest(
+        request as Record<string, unknown>,
+      )
     default:
       return { success: false }
   }
@@ -216,6 +323,14 @@ export function setupProductAnalyticsMessagingListeners() {
       ({ data }) =>
         handleProductAnalyticsMessage(
           ProductAnalyticsMessageTypes.TrackSettingsSnapshot,
+          data,
+        ),
+    ),
+    onProductAnalyticsMessage(
+      ProductAnalyticsMessageTypes.TrackAutoCheckinConfigSnapshot,
+      ({ data }) =>
+        handleProductAnalyticsMessage(
+          ProductAnalyticsMessageTypes.TrackAutoCheckinConfigSnapshot,
           data,
         ),
     ),

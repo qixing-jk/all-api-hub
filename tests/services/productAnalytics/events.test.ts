@@ -16,6 +16,9 @@ import {
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_SETTING_IDS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
+  PRODUCT_ANALYTICS_STORAGE_AREAS,
+  PRODUCT_ANALYTICS_STORAGE_FAILURE_STAGES,
+  PRODUCT_ANALYTICS_STORAGE_OPERATIONS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/contracts"
@@ -314,6 +317,27 @@ describe("product analytics event enums", () => {
     expect(PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES).toMatchObject({
       Random: "random",
       Deterministic: "deterministic",
+    })
+  })
+
+  it("defines fixed storage write failure analytics ids", () => {
+    expect(PRODUCT_ANALYTICS_EVENTS).toMatchObject({
+      StorageWriteFailed: "storage_write_failed",
+    })
+
+    expect(PRODUCT_ANALYTICS_STORAGE_AREAS).toMatchObject({
+      Local: "local",
+    })
+
+    expect(PRODUCT_ANALYTICS_STORAGE_FAILURE_STAGES).toMatchObject({
+      Read: "read",
+      Apply: "apply",
+      Write: "write",
+    })
+
+    expect(PRODUCT_ANALYTICS_STORAGE_OPERATIONS).toMatchObject({
+      AutoCheckinStatus: "auto_checkin_status",
+      ProductAnalyticsState: "product_analytics_state",
     })
   })
 

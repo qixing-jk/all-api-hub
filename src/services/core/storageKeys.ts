@@ -195,6 +195,16 @@ export const PRODUCT_ANALYTICS_STORAGE_KEYS = {
   PRODUCT_ANALYTICS_STATE: "productAnalytics_state_v1",
 } as const
 
+/** Worker recovery facts kept independently of persistent local-storage writes. */
+export const AUTO_CHECKIN_SESSION_STORAGE_KEYS = {
+  DAILY_RUN_PERSIST_FAILED_AT: "autoCheckin_dailyRunPersistFailedAt_v1",
+} as const
+
+export const PRODUCT_ANALYTICS_SESSION_STORAGE_KEYS = {
+  AUTO_CHECKIN_CONFIG_SNAPSHOT_AT:
+    "productAnalytics_autoCheckinConfigSnapshotAt_v1",
+} as const
+
 const DAILY_BALANCE_HISTORY_STORAGE_KEYS = {
   STORE: "dailyBalanceHistory_store",
 } as const

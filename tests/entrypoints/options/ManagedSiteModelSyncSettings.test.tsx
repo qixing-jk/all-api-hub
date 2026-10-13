@@ -400,6 +400,8 @@ describe("ManagedSiteModelSyncSettings", () => {
   })
 
   it("loads runtime model options and persists toggles, intervals, and allowed models", async () => {
+    const options = createDeferred<{ success: boolean; data: string[] }>()
+    mockedSendModelSyncMessage.mockReturnValueOnce(options.promise)
     render(<ManagedSiteModelSyncSettings />)
 
     await waitFor(() => {
@@ -408,9 +410,12 @@ describe("ManagedSiteModelSyncSettings", () => {
       )
     })
 
-    expect(screen.getByTestId(TEST_IDS.allowedModelOptions)).toHaveTextContent(
-      "a-model,z-model",
-    )
+    options.resolve({ success: true, data: ["z-model", "a-model"] })
+    await waitFor(() => {
+      expect(
+        screen.getByTestId(TEST_IDS.allowedModelOptions),
+      ).toHaveTextContent("a-model,z-model")
+    })
     expect(screen.getByTestId(TEST_IDS.allowedModelSelected)).toHaveTextContent(
       "existing-model",
     )

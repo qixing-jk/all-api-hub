@@ -1,4 +1,5 @@
 import type {
+  ProductAnalyticsEntrypoint,
   ProductAnalyticsEventName,
   ProductAnalyticsEventPayload,
 } from "~/services/productAnalytics/contracts"
@@ -12,6 +13,8 @@ export const ProductAnalyticsMessageTypes = {
   TrackEvent: "productAnalytics:trackEvent",
   TrackSiteEcosystemSnapshot: "productAnalytics:trackSiteEcosystemSnapshot",
   TrackSettingsSnapshot: "productAnalytics:trackSettingsSnapshot",
+  TrackAutoCheckinConfigSnapshot:
+    "productAnalytics:trackAutoCheckinConfigSnapshot",
 } as const
 
 export type ProductAnalyticsTrackRequest<
@@ -33,6 +36,10 @@ type ProductAnalyticsTrackSettingsSnapshotRequest = {
   reason: "startup" | "preferences_changed" | "manual"
 }
 
+type ProductAnalyticsTrackAutoCheckinConfigSnapshotRequest = {
+  entrypoint: ProductAnalyticsEntrypoint
+}
+
 export type ProductAnalyticsRuntimeResponse = {
   success: boolean
   error?: string
@@ -47,6 +54,9 @@ interface ProductAnalyticsProtocolMap {
   ): ProductAnalyticsRuntimeResponse
   [ProductAnalyticsMessageTypes.TrackSettingsSnapshot](
     data: ProductAnalyticsTrackSettingsSnapshotRequest,
+  ): ProductAnalyticsRuntimeResponse
+  [ProductAnalyticsMessageTypes.TrackAutoCheckinConfigSnapshot](
+    data: ProductAnalyticsTrackAutoCheckinConfigSnapshotRequest,
   ): ProductAnalyticsRuntimeResponse
 }
 

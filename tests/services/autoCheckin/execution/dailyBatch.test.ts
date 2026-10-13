@@ -24,6 +24,7 @@ import {
   createDeferred,
   expectRecordedRetryDecision,
   mockedAccountStorage,
+  mockedAutoCheckinStorage,
   mockedBrowserApi,
   mockedMethods,
   mockedProductAnalytics,
@@ -738,6 +739,37 @@ describe("dailyBatch", () => {
     })
   })
 
+  it("reports persistence failure when the daily status update cannot be written", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
+
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...(DEFAULT_PREFERENCES as any).autoCheckin,
+        globalEnabled: true,
+        notifyUiOnCompletion: false,
+        retryStrategy: {
+          enabled: false,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+
+    mockedAutoCheckinStorage.updateStatus.mockResolvedValueOnce({
+      ok: false,
+      result: null,
+    })
+
+    const outcome = await runCheckinsForTest({
+      runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
+    })
+
+    expect(outcome).toEqual({ persisted: false })
+
+    vi.useRealTimers()
+  })
+
   it("marks the day as attempted when a daily run has no runnable accounts", async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
@@ -844,7 +876,7 @@ describe("dailyBatch", () => {
       runCheckinsForTest({
         runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
       }),
-    ).resolves.toBeUndefined()
+    ).resolves.toEqual({ persisted: true })
 
     expect(mockedAccountStorage.getAllAccounts).not.toHaveBeenCalled()
     expect(resolveProviderForTest).not.toHaveBeenCalled()
@@ -889,7 +921,7 @@ describe("dailyBatch", () => {
       runCheckinsForTest({
         runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
       }),
-    ).resolves.toBeUndefined()
+    ).resolves.toEqual({ persisted: true })
 
     expect(schedulerTestState.storedStatus.lastRunResult).toBe("failed")
     expect(schedulerTestState.storedStatus.lastDailyRunDay).toBe("2024-01-01")

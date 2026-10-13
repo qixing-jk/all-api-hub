@@ -3,10 +3,12 @@ import { logger } from "~/services/checkin/autoCheckin/diagnostics"
 import type { runCheckins } from "~/services/checkin/autoCheckin/execution/runCheckins"
 import { recalculateSummaryFromResults } from "~/services/checkin/autoCheckin/execution/runResults"
 import {
+  DAILY_RUN_PERSIST_FAILURE_GUARD_MS,
   isMinutesWithinWindow,
   parseTimeToMinutes,
 } from "~/services/checkin/autoCheckin/scheduling/dailyPlanning"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
+import { AUTO_CHECKIN_SESSION_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
@@ -21,6 +23,10 @@ import {
 } from "~/types/tempWindowFetch"
 import { getAlarm, hasAlarmsAPI } from "~/utils/browser/alarms"
 import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
+import {
+  getSessionStorageValues,
+  setSessionStorageValues,
+} from "~/utils/browser/storage"
 import { formatLocalDayKey } from "~/utils/core/dayKey"
 
 /**
@@ -39,6 +45,8 @@ type AutoCheckinUiOpenPretriggerIneligibleReason =
   | "outside_time_window"
   | "daily_alarm_missing"
   | "daily_alarm_not_today"
+  | "status_write_failed_recently"
+  | "status_write_guard_unavailable"
 
 interface AutoCheckinUiOpenPretriggerDebugInfo {
   nowIso: string
@@ -85,11 +93,16 @@ interface AutoCheckinUiOpenPretriggerResult {
 export class DailyTriggerWorkflow {
   private dailyRunInFlightDay: string | null = null
   private dailyRunInFlightPromise: Promise<void> | null = null
+  private lastDailyRunPersistFailedAt: number | null = null
+  private persistFailureGuardLoaded = false
   constructor(
     private readonly deps: {
       dailyAlarmName: string
       runCheckins: typeof runCheckins
-      scheduleNextRun: () => Promise<void>
+      scheduleNextRun: (options?: {
+        dailyNotBefore?: number
+        suppressRetryRearm?: boolean
+      }) => Promise<void>
     },
   ) {}
   async handleDailyAlarm(
@@ -124,16 +137,39 @@ export class DailyTriggerWorkflow {
       }
 
       logger.info("Daily alarm triggered; starting check-in execution")
+      let persisted = true
       try {
-        await this.deps.runCheckins({
+        const outcome = await this.deps.runCheckins({
           runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
           tempWindowRequestSource,
           protectionBypassExecution,
         })
+        persisted = outcome?.persisted !== false
       } catch (error) {
         logger.error("Error during daily check-in execution", error)
+        persisted = false
       } finally {
-        await this.deps.scheduleNextRun()
+        // A run that could not persist never recorded today, so the stored
+        // day guard stays stale; remember the failure so the pre-trigger does
+        // not start another full run on every UI open.
+        this.lastDailyRunPersistFailedAt = persisted ? null : Date.now()
+        this.persistFailureGuardLoaded = true
+        // Session storage survives worker suspension and is independent of
+        // the failing local-storage write. Keep the instance value as fallback.
+        await setSessionStorageValues({
+          [AUTO_CHECKIN_SESSION_STORAGE_KEYS.DAILY_RUN_PERSIST_FAILED_AT]:
+            this.lastDailyRunPersistFailedAt,
+        })
+        await this.deps.scheduleNextRun(
+          this.lastDailyRunPersistFailedAt == null
+            ? undefined
+            : {
+                dailyNotBefore:
+                  this.lastDailyRunPersistFailedAt +
+                  DAILY_RUN_PERSIST_FAILURE_GUARD_MS,
+                suppressRetryRearm: true,
+              },
+        )
       }
     })()
 
@@ -233,6 +269,35 @@ export class DailyTriggerWorkflow {
 
     if (this.dailyRunInFlightDay === today && this.dailyRunInFlightPromise) {
       return returnIneligible("daily_run_in_flight")
+    }
+
+    if (!this.persistFailureGuardLoaded) {
+      try {
+        const values = await getSessionStorageValues(
+          AUTO_CHECKIN_SESSION_STORAGE_KEYS.DAILY_RUN_PERSIST_FAILED_AT,
+        )
+        const failedAt =
+          values[AUTO_CHECKIN_SESSION_STORAGE_KEYS.DAILY_RUN_PERSIST_FAILED_AT]
+        if (
+          failedAt === null ||
+          (typeof failedAt === "number" && Number.isFinite(failedAt))
+        ) {
+          this.lastDailyRunPersistFailedAt = failedAt
+        }
+        this.persistFailureGuardLoaded = true
+      } catch {
+        // The stored day may be stale after a failed write. Block admission
+        // until the next UI open can recover the session cooldown marker.
+        return returnIneligible("status_write_guard_unavailable")
+      }
+    }
+
+    if (
+      typeof this.lastDailyRunPersistFailedAt === "number" &&
+      now.getTime() - this.lastDailyRunPersistFailedAt <
+        DAILY_RUN_PERSIST_FAILURE_GUARD_MS
+    ) {
+      return returnIneligible("status_write_failed_recently")
     }
 
     /**
