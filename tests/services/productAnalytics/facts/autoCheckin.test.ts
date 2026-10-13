@@ -53,6 +53,21 @@ vi.mock(
 )
 
 describe("auto-checkin product analytics", () => {
+  it("keeps snapshot reporting best-effort when background messaging rejects", async () => {
+    sendProductAnalyticsMessageMock.mockRejectedValueOnce(
+      new Error("runtime unavailable"),
+    )
+    expect(() =>
+      trackAutoCheckinConfigSnapshot(PRODUCT_ANALYTICS_ENTRYPOINTS.Options),
+    ).not.toThrow()
+    // Let the rejected message settle; Vitest also detects unhandled rejections.
+    await Promise.resolve()
+    expect(sendProductAnalyticsMessageMock).toHaveBeenCalledWith(
+      "productAnalytics:trackAutoCheckinConfigSnapshot",
+      { entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options },
+    )
+  })
+
   it("builds an exact config snapshot without exporting raw schedule strings", () => {
     const snapshot = buildAutoCheckinConfigSnapshotProperties(
       {

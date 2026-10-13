@@ -111,6 +111,72 @@ describe("productAnalyticsState", () => {
     )
   })
 
+  it("rejects non-finite auto check-in snapshot timestamps without changing stored state", async () => {
+    await productAnalyticsState.setLastAutoCheckinConfigSnapshotAt(12345)
+    await expect(
+      productAnalyticsState.setLastAutoCheckinConfigSnapshotAt(Number.NaN),
+    ).resolves.toBe(false)
+    await expect(
+      productAnalyticsState.setLastAutoCheckinConfigSnapshotAt(Infinity),
+    ).resolves.toBe(false)
+    await expect(productAnalyticsState.getState()).resolves.toMatchObject({
+      lastAutoCheckinConfigSnapshotAt: 12345,
+    })
+  })
+
+  it("reports a failed cadence-state read and skips writing over an unknown base", async () => {
+    await productAnalyticsState.setLastAutoCheckinConfigSnapshotAt(12345)
+    const failure = new Error("read unavailable")
+    const read = vi
+      .spyOn(analyticsStorage, "get")
+      .mockRejectedValueOnce(failure)
+    const write = vi.spyOn(analyticsStorage, "set")
+    try {
+      await expect(
+        productAnalyticsState.setLastAutoCheckinConfigSnapshotAt(67890),
+      ).resolves.toBe(false)
+      expect(write).not.toHaveBeenCalled()
+      expect(trackStorageWriteFailureMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: "product_analytics_state",
+          failureStage: "read",
+          error: failure,
+        }),
+      )
+      await expect(productAnalyticsState.getState()).resolves.toMatchObject({
+        lastAutoCheckinConfigSnapshotAt: 12345,
+      })
+    } finally {
+      read.mockRestore()
+      write.mockRestore()
+    }
+  })
+
+  it("reports auto check-in cadence write failure without advancing the persisted timestamp", async () => {
+    await productAnalyticsState.setLastAutoCheckinConfigSnapshotAt(12345)
+    const failure = new Error("write unavailable")
+    const write = vi
+      .spyOn(analyticsStorage, "set")
+      .mockRejectedValueOnce(failure)
+    try {
+      await expect(
+        productAnalyticsState.setLastAutoCheckinConfigSnapshotAt(67890),
+      ).resolves.toBe(false)
+      expect(trackStorageWriteFailureMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          operation: "product_analytics_state",
+          failureStage: "write",
+          error: failure,
+        }),
+      )
+      await expect(productAnalyticsState.getState()).resolves.toMatchObject({
+        lastAutoCheckinConfigSnapshotAt: 12345,
+      })
+    } finally {
+      write.mockRestore()
+    }
+  })
+
   it("increments shield bypass summary counts for the current UTC day", async () => {
     await productAnalyticsState.incrementShieldBypassSummary({
       promptShownCount: 2,

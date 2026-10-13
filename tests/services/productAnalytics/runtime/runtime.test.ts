@@ -27,7 +27,9 @@ const {
   getPreferencesMock: vi.fn(),
   mockIsDevBuild: vi.fn(() => false),
   mockLoggerDebug: vi.fn(),
-  mockOnProductAnalyticsMessage: vi.fn(() => vi.fn()),
+  mockOnProductAnalyticsMessage: vi.fn((_type: string, _handler: unknown) =>
+    vi.fn(),
+  ),
   flushSponsorRecommendationsDailySummaryMock: vi.fn(),
   preferenceMocks: {
     isEnabled: vi.fn(),
@@ -492,6 +494,58 @@ describe("product analytics runtime", () => {
       ProductAnalyticsMessageTypes.TrackAutoCheckinConfigSnapshot,
       expect.any(Function),
     )
+  })
+
+  it("routes config snapshot messages through the typed listener and preserves cadence", async () => {
+    setupProductAnalyticsMessagingListeners()
+    const registration = mockOnProductAnalyticsMessage.mock.calls.find(
+      ([type]) =>
+        type === ProductAnalyticsMessageTypes.TrackAutoCheckinConfigSnapshot,
+    )
+    expect(registration).toBeDefined()
+    const handler = registration![1] as (message: {
+      data: { entrypoint: string }
+    }) => Promise<{ success: boolean }>
+    const message = {
+      data: { entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options },
+    }
+    await expect(handler(message)).resolves.toEqual({ success: true })
+    stateMocks.getState.mockResolvedValue({
+      lastAutoCheckinConfigSnapshotAt: Date.now(),
+    })
+    await expect(handler(message)).resolves.toEqual({ success: false })
+    expect(captureMock).toHaveBeenCalledTimes(1)
+    expect(captureMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+      expect.objectContaining({
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinConfigSnapshot,
+      }),
+    )
+  })
+
+  it("keeps the worker cadence when neither local nor session writes succeed", async () => {
+    stateMocks.setLastAutoCheckinConfigSnapshotAt.mockResolvedValue(false)
+    const write = vi
+      .spyOn(browser.storage.session, "set")
+      .mockRejectedValue(new Error("session unavailable"))
+    const request = { entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options }
+    try {
+      await expect(
+        handleProductAnalyticsMessage(
+          ProductAnalyticsMessageTypes.TrackAutoCheckinConfigSnapshot,
+          request,
+        ),
+      ).resolves.toEqual({ success: true })
+      await expect(
+        handleProductAnalyticsMessage(
+          ProductAnalyticsMessageTypes.TrackAutoCheckinConfigSnapshot,
+          request,
+        ),
+      ).resolves.toEqual({ success: false })
+      expect(captureMock).toHaveBeenCalledTimes(1)
+    } finally {
+      write.mockRestore()
+    }
   })
 
   it("sends rate-limited site ecosystem snapshots", async () => {
