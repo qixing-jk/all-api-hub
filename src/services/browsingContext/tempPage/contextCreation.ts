@@ -1,4 +1,5 @@
 import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
+import type { ApiTransportBrowserFetchContext } from "~/services/apiTransport/type"
 import { scheduleTempPageReclaimRetry } from "~/services/browsingContext/internalTabReclamation"
 import {
   INTERNAL_TAB_WINDOW_SCOPES,
@@ -38,7 +39,9 @@ export async function createTempContextInstance(
   requestId: string,
   requestedMode: TempContextOpenMode,
   suppressMinimize = false,
-  options: { incognito?: boolean; signal?: AbortSignal } = {},
+  options: ApiTransportBrowserFetchContext & {
+    signal?: AbortSignal
+  } = {},
 ): Promise<TempContext> {
   let opened: TempContextOpenResult | undefined
   let downloadBlockRuleId: number | null = null
@@ -47,7 +50,9 @@ export async function createTempContextInstance(
   // Incognito/private temp contexts must stay window-backed so storage/session
   // isolation does not silently collapse back into the regular profile.
   const allowWindowRollback =
-    !useIncognito && requestedMode !== TEMP_CONTEXT_MODES.Tab
+    !useIncognito &&
+    !options.cookieStoreId &&
+    requestedMode !== TEMP_CONTEXT_MODES.Tab
 
   try {
     opened = await openFallbackAwareTempContext({
@@ -58,6 +63,7 @@ export async function createTempContextInstance(
       allowWindowRollback,
       suppressMinimize,
       incognito: useIncognito,
+      cookieStoreId: options.cookieStoreId,
     })
     ;[downloadBlockRuleId, firefoxDownloadBlockTabId] = await Promise.all([
       applyTempWindowDownloadBlockRule(opened.tabId),

@@ -13,6 +13,7 @@ import { createAccountDetectionDiagnostics } from "~/services/accountSiteOnboard
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { autoDetectSmart as autoDetectSmartProduction } from "~/services/siteDetection/autoDetectService"
+import { autoDetectViaBackground } from "~/services/siteDetection/sources/background"
 import { AuthTypeEnum } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
@@ -551,6 +552,75 @@ describe("autoDetectSmart", () => {
     },
   )
 
+  it.each([
+    {
+      name: "valid credentials",
+      auth: { refreshToken: "refresh", tokenExpiresAt: 123 },
+      expectedAuth: { refreshToken: "refresh", tokenExpiresAt: 123 },
+      accessToken: "access",
+      expectedAccessToken: "access",
+    },
+    {
+      name: "whitespace and non-finite expiry",
+      auth: { refreshToken: " refresh ", tokenExpiresAt: Infinity },
+      expectedAuth: { refreshToken: "refresh" },
+      accessToken: " access ",
+      expectedAccessToken: "access",
+    },
+    {
+      name: "unusable credentials",
+      auth: { refreshToken: " " },
+      expectedAuth: undefined,
+      accessToken: " ",
+      expectedAccessToken: undefined,
+    },
+  ])(
+    "normalizes temp-session $name through the shared session contract",
+    async ({ auth, expectedAuth, accessToken, expectedAccessToken }) => {
+      mockGetAccountSiteType.mockResolvedValue(SITE_TYPES.SUB2API)
+      mockSendRuntimeMessage.mockResolvedValue({
+        success: true,
+        data: {
+          userId: 42,
+          user: { id: 42, username: "temp-user" },
+          accessToken,
+          sub2apiAuth: auth,
+        },
+      })
+      const fetchContext = {
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+        incognito: true,
+        cookieStoreId: "container-1",
+      } as const
+      const result = await autoDetectViaBackground(
+        "https://example.invalid",
+        fetchContext,
+        testExecution,
+      )
+      expect(result.success).toBe(true)
+      expect(result.data).toMatchObject({
+        userId: "42",
+        user: { id: 42, username: "temp-user" },
+        siteType: SITE_TYPES.SUB2API,
+        fetchContext,
+      })
+      expect(result.data?.accessToken).toBe(expectedAccessToken)
+      expect(result.data?.sub2apiAuth).toEqual(expectedAuth)
+      expect(mockFetchUserInfo).not.toHaveBeenCalled()
+      expect(mockSendRuntimeMessage).toHaveBeenCalledOnce()
+      expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          task: expect.objectContaining({
+            params: expect.objectContaining({
+              useIncognito: true,
+              cookieStoreId: "container-1",
+            }),
+          }),
+        }),
+      )
+    },
+  )
+
   it.each(["invalid-session", "worker-rejection"])(
     "recovers background session %s through the API without accepting invalid identity",
     async (kind) => {
@@ -913,6 +983,100 @@ describe("autoDetectSmart", () => {
     )
   })
 
+  it("detects a white-label modern New API through a temp page after an existing tab cannot receive messages", async () => {
+    const baseUrl = "https://white-label.example.invalid"
+    const transientAuth = {
+      kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+      token: "placeholder-dashboard-token",
+      expiresAt: 2_000_000_000,
+      sessionId: "placeholder-session",
+      origin: baseUrl,
+    }
+    mockGetAccountSiteType.mockResolvedValue(SITE_TYPES.UNKNOWN)
+    browserAny.tabs.query.mockResolvedValue([
+      { id: 101, active: false, url: `${baseUrl}/console` },
+    ])
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      { id: 10, active: true, url: "chrome-extension://test/options.html" },
+    ])
+    browserAny.tabs.sendMessage.mockRejectedValue(
+      new Error(
+        "Could not establish connection. Receiving end does not exist.",
+      ),
+    )
+    mockHasCookiesForUrl.mockResolvedValue(false)
+    mockFetchUserInfo.mockRejectedValue(
+      new Error("Unauthorized, invalid access token"),
+    )
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "1",
+        user: { id: 1, username: "test-user" },
+        siteTypeHint: SITE_TYPES.NEW_API,
+        transientAuth,
+      },
+    })
+
+    const result = await autoDetectSmart(baseUrl, testExecution)
+
+    expect(result).toMatchObject({
+      success: true,
+      data: { userId: "1", siteType: SITE_TYPES.NEW_API, transientAuth },
+    })
+    expect(browserAny.tabs.sendMessage).toHaveBeenCalledWith(
+      101,
+      expect.objectContaining({
+        action: RuntimeActionIds.ContentGetUserFromLocalStorage,
+      }),
+    )
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        execution: testExecution,
+        task: {
+          kind: "session_read",
+          params: expect.objectContaining({
+            url: baseUrl,
+            siteType: SITE_TYPES.UNKNOWN,
+            allowSessionProbe: true,
+          }),
+        },
+      }),
+    )
+    expect(mockFetchUserInfo).not.toHaveBeenCalled()
+    expect(mockHasCookiesForUrl).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    [SITE_TYPES.NEW_API, "https://other.example.invalid"],
+    [SITE_TYPES.SUB2API, "https://white-label.example.invalid"],
+    [SITE_TYPES.UNKNOWN, "https://white-label.example.invalid"],
+  ])(
+    "rejects temp-page New API auth with incompatible site hint %s or origin %s",
+    async (hint, origin) => {
+      mockGetAccountSiteType.mockResolvedValue(SITE_TYPES.UNKNOWN)
+      mockSendRuntimeMessage.mockResolvedValueOnce({
+        success: true,
+        data: {
+          userId: "1",
+          siteTypeHint: hint,
+          transientAuth: {
+            kind: NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
+            token: "placeholder-token",
+            expiresAt: 2_000_000_000,
+            sessionId: "placeholder-session",
+            origin,
+          },
+        },
+      })
+      const result = await autoDetectSmart(
+        "https://white-label.example.invalid",
+        testExecution,
+      )
+      expect(result.data).not.toHaveProperty("transientAuth")
+    },
+  )
+
   it("returns privacy-safe current-tab metadata when current-tab detection succeeds", async () => {
     mockGetActiveOrAllTabs.mockResolvedValue([
       {
@@ -1170,7 +1334,7 @@ describe("autoDetectSmart", () => {
       expect.objectContaining({
         tabId: 301,
         siteType: SITE_TYPES.UNKNOWN,
-        allowNewApiAuthProbe: true,
+        allowSessionProbe: true,
       }),
     )
   })

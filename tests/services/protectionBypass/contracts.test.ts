@@ -544,9 +544,53 @@ describe("protection bypass runtime contracts", () => {
         useIncognito: "yes",
       },
     },
+    {
+      kind: "session_read",
+      params: {
+        url: "https://example.invalid",
+        requestId: "request-session",
+        siteType: "unknown",
+        cookieStoreId: 12,
+      },
+    },
   ])("rejects invalid optional task primitives %#", (task) => {
     expect(isTempContextTask(task)).toBe(false)
   })
+
+  it.each([true, false, undefined])(
+    "accepts the optional New API session probe flag %s",
+    (allowSessionProbe) => {
+      expect(
+        isTempContextTask({
+          kind: "session_read",
+          params: {
+            url: "https://example.invalid",
+            requestId: "request-session",
+            siteType: "unknown",
+            allowSessionProbe,
+            cookieStoreId: "firefox-container-1",
+          },
+        }),
+      ).toBe(true)
+    },
+  )
+
+  it.each(["true", 1, null])(
+    "rejects a non-boolean New API session probe flag %s",
+    (allowSessionProbe) => {
+      expect(
+        isTempContextTask({
+          kind: "session_read",
+          params: {
+            url: "https://example.invalid",
+            requestId: "request-session",
+            siteType: "unknown",
+            allowSessionProbe,
+          },
+        }),
+      ).toBe(false)
+    },
+  )
 
   const urlFields = [
     [TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch, "originUrl"],

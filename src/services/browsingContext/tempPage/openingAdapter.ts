@@ -1,5 +1,6 @@
 import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
-import { createTab, queryTabs } from "~/utils/browser/tabs"
+import type { ApiTransportBrowserFetchContext } from "~/services/apiTransport/type"
+import { createTab, queryTabs, removeTab } from "~/utils/browser/tabs"
 import {
   createWindow,
   removeWindow,
@@ -22,6 +23,7 @@ import {
 import { logger, logTempWindow } from "./diagnostics"
 import {
   classifyWindowCreationFailure,
+  createCookieStoreContextError,
   createRecoverableWindowCreationError,
   createUnsupportedTempContextError,
   isRecoverableWindowCreationError,
@@ -31,15 +33,37 @@ import {
  * Opens a standard tab-backed temp context.
  */
 async function openPlainTabTempContext(
-  options: { windowId?: number } = {},
+  options: { windowId?: number; cookieStoreId?: string } = {},
 ): Promise<TempContextOpenResult> {
-  const tab =
-    options.windowId == null
-      ? await createTab(TEMP_CONTEXT_INITIAL_URL, false)
-      : await createTab(TEMP_CONTEXT_INITIAL_URL, false, options)
+  let tab: browser.tabs.Tab | undefined
+  try {
+    tab =
+      options.windowId == null && options.cookieStoreId == null
+        ? await createTab(TEMP_CONTEXT_INITIAL_URL, false)
+        : await createTab(TEMP_CONTEXT_INITIAL_URL, false, options)
+  } catch (error) {
+    if (options.cookieStoreId) {
+      throw createCookieStoreContextError()
+    }
+    throw error
+  }
 
   if (!tab?.id) {
     throw new Error(t("messages:background.cannotCreateWindowOrTab"))
+  }
+
+  if (options.cookieStoreId && tab.cookieStoreId !== options.cookieStoreId) {
+    try {
+      await removeTab(tab.id)
+    } catch (error) {
+      logger.warn("Failed to remove tab created in the wrong cookie store", {
+        tabId: tab.id,
+        expectedCookieStoreId: options.cookieStoreId,
+        actualCookieStoreId: tab.cookieStoreId ?? null,
+        error: getErrorMessage(error),
+      })
+    }
+    throw createCookieStoreContextError()
   }
 
   return {
@@ -53,12 +77,13 @@ async function openPlainTabTempContext(
 /**
  * Opens a popup-backed temp context and cleans up partial windows on failure.
  */
-async function openPopupWindowTempContext(params: {
-  origin: string
-  requestId: string
-  suppressMinimize?: boolean
-  incognito?: boolean
-}): Promise<TempContextOpenResult> {
+async function openPopupWindowTempContext(
+  params: ApiTransportBrowserFetchContext & {
+    origin: string
+    requestId: string
+    suppressMinimize?: boolean
+  },
+): Promise<TempContextOpenResult> {
   let windowId: number | null = null
 
   try {
@@ -109,6 +134,13 @@ async function openPopupWindowTempContext(params: {
       )
     }
 
+    if (
+      params.cookieStoreId &&
+      tabs[0]?.cookieStoreId !== params.cookieStoreId
+    ) {
+      throw createCookieStoreContextError()
+    }
+
     // Best-effort minimize to reduce disturbance unless suppressed (e.g., popup context).
     if (!params.suppressMinimize) {
       try {
@@ -155,17 +187,25 @@ async function openPopupWindowTempContext(params: {
  * Runs the preferred temp-context mode first, then retries once as a plain tab
  * when the failure is recoverable and the flow allows rollback.
  */
-export async function openFallbackAwareTempContext(params: {
-  url: string
-  origin: string
-  requestId: string
-  requestedMode: TempContextOpenMode
-  allowWindowRollback: boolean
-  suppressMinimize?: boolean
-  incognito?: boolean
-}): Promise<TempContextOpenResult> {
-  if (params.requestedMode === TEMP_CONTEXT_MODES.Tab) {
-    return await openPlainTabTempContext()
+export async function openFallbackAwareTempContext(
+  params: ApiTransportBrowserFetchContext & {
+    url: string
+    origin: string
+    requestId: string
+    requestedMode: TempContextOpenMode
+    allowWindowRollback: boolean
+    suppressMinimize?: boolean
+  },
+): Promise<TempContextOpenResult> {
+  if (
+    params.requestedMode === TEMP_CONTEXT_MODES.Tab ||
+    (params.cookieStoreId && !params.incognito)
+  ) {
+    return await openPlainTabTempContext(
+      params.cookieStoreId && !params.incognito
+        ? { cookieStoreId: params.cookieStoreId }
+        : {},
+    )
   }
 
   try {
@@ -190,6 +230,7 @@ export async function openFallbackAwareTempContext(params: {
       requestId: params.requestId,
       suppressMinimize: params.suppressMinimize,
       incognito: params.incognito,
+      cookieStoreId: params.cookieStoreId,
     })
   } catch (error) {
     if (!isRecoverableWindowCreationError(error)) {

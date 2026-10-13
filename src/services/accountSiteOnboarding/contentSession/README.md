@@ -1,0 +1,15 @@
+# Browser session extraction
+
+`extractContentSession` selects registered `ContentSessionExtractor` implementations in registry order. `canExtract` handles recognized types or existing adapter-specific local evidence; its errors keep their normal behavior. An invalid confirmed protocol must not fall through to stale credentials.
+
+Unknown-site onboarding may set `allowSessionProbe`. Only adapters that explicitly register `probe` participate, and each probe owns the evidence required to recognize its protocol. A probe returns the completed session result so the coordinator never repeats extraction or token refresh. Empty or failed speculative probes allow later protocol candidates; if no candidate succeeds, the first probe error is retained. Generic cached identity fallbacks are deferred and cannot hide a probe failure. Once a probe confirms a protocol, its extraction error is authoritative and stops fallback.
+
+Reusable existing-tab reads retain their origin binding before and after asynchronous extraction, and do not enable unknown-site probes. Explicit current-tab and dedicated temporary-page onboarding reads may enable probes without an additional requested-origin check. Passive identity checks remain separate from extraction. Probe permission does not grant permission to persist returned authentication; protocol-specific normalization still validates the returned type and origin.
+
+New API discovery reuses the AuthBundle contract and preserves dashboard bearer authentication only for onboarding completion. Sub2API discovery verifies the bearer-authenticated `auth/me` identity before entering its ordinary token-refresh extractor. New API uses the live page origin; Sub2API resolves it through the existing deployment API-origin map, preserving registered split console/API deployments without guessing credential hosts. VoAPI v2 discovery verifies the same-origin raw-token `user/info` identity against local user and JWT hints before ordinary extraction; a generic `userStore` key does not select the protocol. Generic storage keys or unauthorized responses alone are insufficient, and an unverifiable expired unknown session requires normal login or recognized-type recovery.
+
+Session requests use normal browser fetch behavior without a dedicated deadline or redirect restriction. Sub2API extraction does not retry credential refresh. A dispatched refresh with an uncertain or invalid response fails instead of returning the old refresh credential; only a newer valid pair already stored by a concurrent refresh can recover extraction. Network, body-read and server failures remain distinct from a clear protocol mismatch.
+
+Temporary-page scheduling and reuse separate ordinary, incognito and cookie-store contexts. Regular mobile/tablet requests use inactive tabs; incognito stays window-backed. Cookie-store requests verify the created tab store and fail explicitly if the browser cannot preserve it.
+
+This seam does not imply that every unknown deployment can be classified. New protocol probes need reliable type/identity evidence and tests; fixed-provider origin restrictions and existing account types remain authoritative.

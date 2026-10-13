@@ -23,7 +23,7 @@ export function normalizeNewApiDashboardTransientAuth(
   const acceptsSite =
     options.siteType === SITE_TYPES.NEW_API ||
     (options.siteType === SITE_TYPES.UNKNOWN &&
-      options.allowNewApiAuthProbe === true &&
+      options.allowSessionProbe === true &&
       options.siteTypeHint === SITE_TYPES.NEW_API)
   if (
     !acceptsSite ||

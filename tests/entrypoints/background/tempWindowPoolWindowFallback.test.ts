@@ -113,6 +113,8 @@ describe("tempWindowPool window fallback", () => {
   let tabsGetMock: ReturnType<typeof vi.fn>
   let tabsQueryMock: ReturnType<typeof vi.fn>
   let tabsUpdateMock: ReturnType<typeof vi.fn>
+  let isMobileRuntime: boolean
+  let isTabletRuntime: boolean
   let tempContextMode: "auto" | "window" | "composite" | "tab"
 
   beforeEach(() => {
@@ -188,6 +190,8 @@ describe("tempWindowPool window fallback", () => {
     tabsGetMock = vi.fn().mockResolvedValue({ status: "complete" })
     tabsQueryMock = vi.fn().mockResolvedValue([])
     tabsUpdateMock = vi.fn().mockResolvedValue(undefined)
+    isMobileRuntime = false
+    isTabletRuntime = false
     tempContextMode = "window"
     trackProductAnalyticsActionCompletedMock.mockReset()
     recordTempWindowFetchResultMock.mockReset()
@@ -267,6 +271,25 @@ describe("tempWindowPool window fallback", () => {
       return {
         ...actual,
         isAllowedIncognitoAccess: isAllowedIncognitoAccessMock,
+      }
+    })
+    vi.doMock("~/utils/browser/device", async (importOriginal) => {
+      const actual =
+        await importOriginal<typeof import("~/utils/browser/device")>()
+
+      return {
+        ...actual,
+        getDeviceTypeInfo: vi.fn(() => ({
+          type: isMobileRuntime
+            ? "mobile"
+            : isTabletRuntime
+              ? "tablet"
+              : "desktop",
+          isMobile: isMobileRuntime,
+          isTablet: isTabletRuntime,
+          isDesktop: !isMobileRuntime && !isTabletRuntime,
+          isTouchDevice: isMobileRuntime || isTabletRuntime,
+        })),
       }
     })
     vi.doMock("~/utils/browser/browserFocus", async (importOriginal) => {
@@ -353,6 +376,7 @@ describe("tempWindowPool window fallback", () => {
     vi.doUnmock("~/utils/browser/windows")
     vi.doUnmock("~/utils/browser/runtimeMessages")
     vi.doUnmock("~/utils/browser/runtime")
+    vi.doUnmock("~/utils/browser/device")
     vi.doUnmock("~/utils/browser/bookmarks")
     vi.doUnmock("~/utils/browser/storage")
     vi.doUnmock("~/utils/browser/sidePanel")
@@ -2776,6 +2800,107 @@ describe("tempWindowPool window fallback", () => {
 
     await vi.advanceTimersByTimeAsync(2500)
     expect(removeTabMock).toHaveBeenCalledWith(508)
+  })
+
+  it.each([
+    { device: "mobile", isMobile: true, isTablet: false },
+    { device: "tablet", isMobile: false, isTablet: true },
+  ])(
+    "uses an inactive tab for $device session reads with explicit window and composite preferences",
+    async ({ device, isMobile, isTablet }) => {
+      isMobileRuntime = isMobile
+      isTabletRuntime = isTablet
+
+      const { handleAutoDetectSite } = await import(
+        "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+      )
+
+      for (const mode of ["window", "composite"] as const) {
+        tempContextMode = mode
+        const tabId =
+          700 + (device === "tablet" ? 10 : 0) + (mode === "composite" ? 1 : 0)
+        createTabMock.mockResolvedValueOnce({ id: tabId })
+        const sendResponse = vi.fn()
+        const request = handleAutoDetectSite(
+          {
+            url: `https://${device}-${mode}.example.invalid/account`,
+            requestId: `req-${device}-${mode}-mode`,
+            siteType: "new-api",
+          },
+          sendResponse,
+        )
+
+        await vi.advanceTimersByTimeAsync(500)
+        await request
+
+        expect(createWindowMock).not.toHaveBeenCalled()
+        expect(createTabMock).toHaveBeenLastCalledWith("about:blank", false)
+        expect(sendMessageMock).toHaveBeenCalledWith(
+          tabId,
+          expect.objectContaining({
+            action: RuntimeActionIds.ContentGetUserFromLocalStorage,
+          }),
+        )
+        expect(sendResponse).toHaveBeenCalledWith(
+          expect.objectContaining({
+            success: true,
+            data: expect.objectContaining({
+              siteType: "new-api",
+              userId: "user-1",
+            }),
+          }),
+        )
+
+        await vi.advanceTimersByTimeAsync(2500)
+        expect(removeTabMock).toHaveBeenCalledWith(tabId)
+      }
+    },
+  )
+
+  it("does not reuse a same-origin session tab across Firefox cookie stores", async () => {
+    tempContextMode = "window"
+    createTabMock
+      .mockResolvedValueOnce({ id: 720, cookieStoreId: "firefox-container-1" })
+      .mockResolvedValueOnce({ id: 721, cookieStoreId: "firefox-container-2" })
+
+    const { handleAutoDetectSite } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+
+    for (const [cookieStoreId, requestId] of [
+      ["firefox-container-1", "req-container-one"],
+      ["firefox-container-2", "req-container-two"],
+    ] as const) {
+      const sendResponse = vi.fn()
+      const request = handleAutoDetectSite(
+        {
+          url: "https://shared.example.invalid/account",
+          requestId,
+          siteType: "new-api",
+          cookieStoreId,
+        },
+        sendResponse,
+      )
+
+      await vi.advanceTimersByTimeAsync(500)
+      await request
+      expect(sendResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true }),
+      )
+    }
+
+    expect(createWindowMock).not.toHaveBeenCalled()
+    expect(createTabMock).toHaveBeenCalledTimes(2)
+    expect(createTabMock).toHaveBeenNthCalledWith(1, "about:blank", false, {
+      cookieStoreId: "firefox-container-1",
+    })
+    expect(createTabMock).toHaveBeenNthCalledWith(2, "about:blank", false, {
+      cookieStoreId: "firefox-container-2",
+    })
+
+    await vi.advanceTimersByTimeAsync(2500)
+    expect(removeTabMock).toHaveBeenCalledWith(720)
+    expect(removeTabMock).toHaveBeenCalledWith(721)
   })
 
   it("projects transient dashboard auth from the temp context", async () => {

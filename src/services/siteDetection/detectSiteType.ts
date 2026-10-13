@@ -190,9 +190,9 @@ function isJsonObject(value: unknown): value is Record<string, unknown> {
  *
  * Source: https://github.com/Wei-Shaw/sub2api
  * `/api/v1/auth/me` is protected by JWT middleware; without Authorization,
- * upstream returns a JSON object with a string `code`. The endpoint-shape signal
- * is enough to identify white-label Sub2API deployments in the current adapter
- * set without relying on the visible page title.
+ * upstream returns HTTP 401 with the exact `{ code: "UNAUTHORIZED", message:
+ * "Authorization header is required" }` envelope. Do not generalize from
+ * arbitrary error codes.
  */
 async function detectSub2ApiFromAuthEndpoint(
   url: string,
@@ -210,7 +210,13 @@ async function detectSub2ApiFromAuthEndpoint(
     }
 
     const responseBody = (await response.json()) as unknown
-    if (isJsonObject(responseBody) && typeof responseBody.code === "string") {
+    const hasSub2ApiAuthFailureEnvelope =
+      response.status === 401 &&
+      isJsonObject(responseBody) &&
+      responseBody.code === "UNAUTHORIZED" &&
+      responseBody.message === "Authorization header is required" &&
+      Object.keys(responseBody).length === 2
+    if (hasSub2ApiAuthFailureEnvelope) {
       return SITE_TYPES.SUB2API
     }
   } catch (error) {
@@ -221,13 +227,13 @@ async function detectSub2ApiFromAuthEndpoint(
 }
 
 /**
- * VoAPI v2 exposes a protected account-info endpoint that returns a distinctive
- * JSON business envelope even without credentials. Probe it before page-title
- * detection so white-label/self-hosted deployments do not depend on branding.
+ * VoAPI v2 exposes a public account-info endpoint whose successful data includes
+ * distinctive balance fields. Unauthenticated auth errors are generic across
+ * many APIs, so they are not sufficient evidence to classify a white-label site.
  *
  * Source: https://github.com/VoAPI/VoAPI and observed `/api/user/info`
- * contract: raw JWT auth, `{ code, data, msg }` envelope, auth failures with
- * numeric non-zero code and null data.
+ * contract: raw JWT auth and `{ code, data, msg }` envelope with account balance
+ * fields on success.
  */
 async function detectVoApiV2FromProtectedEndpoint(
   url: string,
@@ -250,21 +256,14 @@ async function detectVoApiV2FromProtectedEndpoint(
     }
 
     const code = responseBody.code
-    const message = [responseBody.msg, responseBody.message]
-      .filter((value): value is string => typeof value === "string")
-      .join(" ")
-    const hasProtectedEndpointEnvelope =
-      typeof code === "number" &&
-      "data" in responseBody &&
-      responseBody.data === null &&
-      /\b(?:unauthorized|auth\s*expire|token|jwt)\b/i.test(message)
     const hasAccountInfoEnvelope =
+      response.ok &&
       code === 0 &&
       isJsonObject(responseBody.data) &&
       ("basicBalance" in responseBody.data ||
         "bindBalance" in responseBody.data)
 
-    if (hasProtectedEndpointEnvelope || hasAccountInfoEnvelope) {
+    if (hasAccountInfoEnvelope) {
       return SITE_TYPES.VO_API_V2
     }
   } catch (error) {

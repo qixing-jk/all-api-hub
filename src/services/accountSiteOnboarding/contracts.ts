@@ -11,8 +11,8 @@ import type { AccountDetectionDiagnostics } from "./diagnostics"
 export type ContentSessionExtractionContext = {
   url?: string
   siteTypeHint?: AccountSiteType
-  /** Allows an explicit current-tab auto-detect to probe the modern New API session. */
-  allowNewApiAuthProbe?: boolean
+  /** Allows explicit onboarding to try registered session probes for unknown sites. */
+  allowSessionProbe?: boolean
   diagnostics?: AccountDetectionDiagnostics
 }
 
@@ -50,11 +50,20 @@ export type ContentSessionTransientAuthContext = {
   baseUrl: string
   siteType: AccountSiteType
   siteTypeHint?: AccountSiteType
-  allowNewApiAuthProbe?: boolean
+  allowSessionProbe?: boolean
 }
+
+/** A recognized protocol failed; speculative fallback must not replace its identity. */
+export class ContentSessionProtocolError extends Error {}
 
 export type ContentSessionExtractor = {
   id: string
+  /** Cached generic identity only; defer it and never use it to hide a failed probe. */
+  isUnverifiedFallback?: boolean
+  /** Optional protocol-aware discovery. Called only for explicit unknown-site onboarding. */
+  probe?(
+    context: ContentSessionExtractionContext,
+  ): Promise<ContentSessionExtractionResult | null>
   canExtract(context: ContentSessionExtractionContext): boolean
   extract(
     context: ContentSessionExtractionContext,

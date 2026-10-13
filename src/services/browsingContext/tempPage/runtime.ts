@@ -1,4 +1,5 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import type { ApiTransportBrowserFetchContext } from "~/services/apiTransport/type"
 import { scheduleTempPageReclaimRetry } from "~/services/browsingContext/internalTabReclamation"
 import { unregisterInternalTab } from "~/services/browsingContext/internalTabsBackground"
 import { createTempContextInstance } from "~/services/browsingContext/tempPage/contextCreation"
@@ -15,6 +16,7 @@ import {
   createBrowserFocusObservation,
   readBrowserFocusState,
 } from "~/utils/browser/browserFocus"
+import { getDeviceTypeInfo } from "~/utils/browser/device"
 import { getTab, onTabRemoved } from "~/utils/browser/tabs"
 import { onWindowRemoved } from "~/utils/browser/windows"
 import { getErrorMessage } from "~/utils/core/error"
@@ -34,6 +36,7 @@ import {
   hasLiveCompositeWindow,
 } from "./compositeWindow"
 import {
+  buildTempContextPoolKey,
   createTempContextPool,
   type DestroyContextOptions,
 } from "./contextPool"
@@ -67,10 +70,10 @@ const {
 /** Runs one complete temp-page handler operation under its origin key. */
 async function runTempPageHandler(
   url: string,
-  options: { incognito?: boolean },
+  options: ApiTransportBrowserFetchContext,
   task: () => Promise<void>,
 ): Promise<void> {
-  const originKey = buildTempContextOriginKey(normalizeOrigin(url), options)
+  const originKey = buildTempContextPoolKey(normalizeOrigin(url), options)
   await tempPageTaskScheduler.run(originKey, task)
 }
 
@@ -244,10 +247,12 @@ async function acquireTempContext(
   url: string,
   requestId: string,
   suppressMinimize?: boolean,
-  options: { incognito?: boolean; signal?: AbortSignal } = {},
+  options: ApiTransportBrowserFetchContext & {
+    signal?: AbortSignal
+  } = {},
   authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
 ) {
-  const origin = buildTempContextOriginKey(normalizeOrigin(url), options)
+  const origin = buildTempContextPoolKey(normalizeOrigin(url), options)
   let finalDecision: ProtectionBypassPolicyDecision | undefined
   let reused = false
 
@@ -283,9 +288,12 @@ async function acquireTempContext(
         decision?.kind === PROTECTION_BYPASS_DECISION_RESULTS.Allowed
           ? decision.adapter
           : storedPreference
+      const deviceType = getDeviceTypeInfo()
       const requestedMode = resolveTempContextOpenMode({
         preferredMode,
         incognito: Boolean(options.incognito),
+        isMobileOrTablet: deviceType.isMobile || deviceType.isTablet,
+        hasCookieStore: Boolean(options.cookieStoreId),
         sharedWindowAvailable,
         focusState,
       })
@@ -413,32 +421,13 @@ async function acquireTempContext(
   }
 }
 
-/**
- * Build a temp-context pool key.
- *
- * The temp-window pool is keyed by origin. When `incognito` is enabled we must
- * keep a separate pool so the temporary context does not inherit normal-mode
- * storage (local/session storage) which can affect Turnstile rendering in
- * multi-account scenarios.
- */
-function buildTempContextOriginKey(
-  origin: string,
-  options: { incognito?: boolean } = {},
-): string {
-  if (options.incognito) {
-    return `incognito:${origin}`
-  }
-
-  return origin
-}
-
 /** Generic runtime port for background features that need a temporary page. */
 export const tempWindowBackgroundRuntime = {
   release: releaseTempContext,
   prepareFetchOptions: prepareTempContextFetchOptions,
   run(
     url: string,
-    options: { incognito?: boolean },
+    options: ApiTransportBrowserFetchContext,
     task: () => Promise<void>,
   ): Promise<void> {
     return runTempPageHandler(url, options, task)
@@ -448,7 +437,9 @@ export const tempWindowBackgroundRuntime = {
     url: string,
     requestId: string,
     suppressMinimize?: boolean,
-    options: { incognito?: boolean; signal?: AbortSignal } = {},
+    options: ApiTransportBrowserFetchContext & {
+      signal?: AbortSignal
+    } = {},
     authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
   ) {
     const context = await acquireTempContext(

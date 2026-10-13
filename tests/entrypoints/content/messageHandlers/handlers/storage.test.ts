@@ -44,6 +44,75 @@ describe("content storage handler", () => {
     ])
   })
 
+  it.each(["new-api", "unknown"])(
+    "uses the real registry without letting stale VoAPI storage override %s AuthBundle sessions",
+    async (siteType) => {
+      const registry = await vi.importActual<
+        typeof import("~/services/accountSiteOnboarding/registry")
+      >("~/services/accountSiteOnboarding/registry")
+      mockGetContentSessionExtractors.mockReturnValue(
+        registry.getContentSessionExtractors(),
+      )
+      const origin = "https://custom-brand.example.invalid"
+      vi.stubGlobal("location", new URL(`${origin}/dashboard`))
+      const nowSeconds = Math.floor(Date.now() / 1000)
+      localStorage.setItem(
+        "userStore",
+        JSON.stringify({ auth: { token: "stale-voapi-token" } }),
+      )
+      localStorage.setItem("user", JSON.stringify({ id: "stale-voapi-user" }))
+      const fetchedPaths: string[] = []
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: RequestInfo | URL) => {
+          const pathname = new URL(String(input), origin).pathname
+          fetchedPaths.push(pathname)
+          if (pathname === "/api/user/info") {
+            return new Response(null, { status: 404 })
+          }
+          expect(pathname).toBe("/api/user/auth/refresh")
+          return new Response(
+            JSON.stringify({
+              success: true,
+              data: {
+                access_token: "verified-dashboard-token",
+                token_type: "Bearer",
+                access_expires_at: nowSeconds + 900,
+                user: { id: "verified-newapi-user", username: "current" },
+                session: { sid: "verified-session", current: true },
+              },
+            }),
+            { status: 200 },
+          )
+        }),
+      )
+      const response = await new Promise<unknown>((resolve) => {
+        handleGetUserFromLocalStorage(
+          {
+            url: origin,
+            expectedOrigin: origin,
+            siteType,
+            ...(siteType === "unknown" ? { allowSessionProbe: true } : {}),
+          },
+          resolve,
+        )
+      })
+      expect(response).toEqual({
+        success: true,
+        data: expect.objectContaining({
+          userId: "verified-newapi-user",
+          siteTypeHint: "new-api",
+          transientAuth: expect.objectContaining({ origin }),
+        }),
+      })
+      expect(fetchedPaths).toEqual(
+        siteType === "unknown"
+          ? ["/api/user/info", "/api/user/auth/refresh"]
+          : ["/api/user/auth/refresh"],
+      )
+    },
+  )
+
   it("returns a single localStorage key when requested directly", () => {
     localStorage.setItem("theme", "dark")
 
@@ -116,6 +185,62 @@ describe("content storage handler", () => {
       success: true,
       data: { userId: "42", user: { id: 42, username: "current" } },
     })
+  })
+
+  it("discovers an unknown Sub2API session through the shared onboarding probe", async () => {
+    vi.stubGlobal(
+      "location",
+      new URL("https://white-label.example.invalid/dashboard"),
+    )
+    localStorage.setItem("auth_token", "sub2-token")
+    localStorage.setItem(
+      "auth_user",
+      JSON.stringify({ id: 123, username: "alice", balance: 1.5 }),
+    )
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          code: 0,
+          data: { id: 123, username: "alice", balance: 1.5 },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+    mockGetContentSessionExtractors.mockReturnValue([
+      sub2ApiContentSessionExtractor,
+      newApiAuthBundleContentSessionExtractor,
+      compatibleUserContentSessionExtractor,
+    ])
+    const response = await new Promise<unknown>((resolve) => {
+      handleGetUserFromLocalStorage(
+        {
+          url: "https://white-label.example.invalid",
+          expectedOrigin: "https://white-label.example.invalid",
+          siteType: "unknown",
+          allowSessionProbe: true,
+        },
+        resolve,
+      )
+    })
+    expect(response).toEqual({
+      success: true,
+      data: {
+        userId: 123,
+        user: { id: 123, username: "alice", balance: 1.5 },
+        accessToken: "sub2-token",
+        siteTypeHint: "sub2api",
+      },
+    })
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(fetchMock).toHaveBeenCalledWith(
+      new URL("https://white-label.example.invalid/api/v1/auth/me"),
+      expect.objectContaining({
+        method: "GET",
+        credentials: "omit",
+        headers: { Authorization: "Bearer sub2-token" },
+      }),
+    )
   })
 
   it("returns every localStorage entry when no specific key is requested", () => {
@@ -450,7 +575,7 @@ describe("content storage handler", () => {
     nowSpy.mockRestore()
   })
 
-  it("keeps existing token when refresh fails but token is not expired", async () => {
+  it("rejects failed refresh instead of exporting an unchanged still-valid token pair", async () => {
     const now = 1_700_000_000_000
     const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now)
 
@@ -480,12 +605,11 @@ describe("content storage handler", () => {
     })
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
-    expect(response.success).toBe(true)
-    expect(response.data?.accessToken).toBe("old-token")
-    expect(response.data?.sub2apiAuth).toEqual({
-      refreshToken: "old-refresh",
-      tokenExpiresAt: now + 60_000,
-    })
+    expect(response.success).toBe(false)
+    expect(response.error).toBe("messages:sub2api.loginRequired")
+    expect(response.data).toBeUndefined()
+    expect(localStorage.getItem("auth_token")).toBe("old-token")
+    expect(localStorage.getItem("refresh_token")).toBe("old-refresh")
 
     nowSpy.mockRestore()
   })
@@ -840,56 +964,60 @@ describe("content storage handler", () => {
       })
     })
 
-    it("does not fall through to stale compatible-user storage for an invalid rc.22 AuthBundle", async () => {
-      const nowSeconds = 1_800_000_000
-      vi.spyOn(Date, "now").mockReturnValue(nowSeconds * 1000)
-      localStorage.setItem(
-        "user",
-        JSON.stringify({ id: "stale-user", username: "stale" }),
-      )
-      vi.stubGlobal(
-        "fetch",
-        vi.fn().mockResolvedValue(
-          new Response(
-            JSON.stringify({
-              success: true,
-              data: {
-                access_token: "dashboard-token-placeholder",
-                token_type: "Bearer",
-                access_expires_at: nowSeconds - 1,
-                user: { id: "current-user", username: "current" },
-                session: { sid: "session-placeholder", current: true },
-              },
-            }),
-            { status: 200, headers: { "Content-Type": "application/json" } },
-          ),
-        ),
-      )
-      const compatibleExtractSpy = vi.spyOn(
-        compatibleUserContentSessionExtractor,
-        "extract",
-      )
-      mockGetContentSessionExtractors.mockReturnValue([
-        newApiAuthBundleContentSessionExtractor,
-        compatibleUserContentSessionExtractor,
-      ])
-
-      const response = await new Promise<any>((resolve) => {
-        handleGetUserFromLocalStorage(
-          {
-            url: "https://message-origin.example.invalid",
-            siteType: "new-api",
-          },
-          resolve,
+    it.each(["new-api", "unknown"])(
+      "does not fall through to stale compatible-user storage for an invalid AuthBundle on %s",
+      async (siteType) => {
+        const nowSeconds = 1_800_000_000
+        vi.spyOn(Date, "now").mockReturnValue(nowSeconds * 1000)
+        localStorage.setItem(
+          "user",
+          JSON.stringify({ id: "stale-user", username: "stale" }),
         )
-      })
+        vi.stubGlobal(
+          "fetch",
+          vi.fn().mockResolvedValue(
+            new Response(
+              JSON.stringify({
+                success: true,
+                data: {
+                  access_token: "dashboard-token-placeholder",
+                  token_type: "Bearer",
+                  access_expires_at: nowSeconds - 1,
+                  user: { id: "current-user", username: "current" },
+                  session: { sid: "session-placeholder", current: true },
+                },
+              }),
+              { status: 200, headers: { "Content-Type": "application/json" } },
+            ),
+          ),
+        )
+        const compatibleExtractSpy = vi.spyOn(
+          compatibleUserContentSessionExtractor,
+          "extract",
+        )
+        mockGetContentSessionExtractors.mockReturnValue([
+          newApiAuthBundleContentSessionExtractor,
+          compatibleUserContentSessionExtractor,
+        ])
 
-      expect(response).toEqual({
-        success: false,
-        error: "New API dashboard session response is invalid",
-      })
-      expect(compatibleExtractSpy).not.toHaveBeenCalled()
-    })
+        const response = await new Promise<any>((resolve) => {
+          handleGetUserFromLocalStorage(
+            {
+              url: "https://message-origin.example.invalid",
+              siteType,
+              ...(siteType === "unknown" ? { allowSessionProbe: true } : {}),
+            },
+            resolve,
+          )
+        })
+
+        expect(response).toEqual({
+          success: false,
+          error: "New API dashboard session response is invalid",
+        })
+        expect(compatibleExtractSpy).not.toHaveBeenCalled()
+      },
+    )
 
     it.each([
       ["generic user", { user: { id: "unrelated-user" } }],
@@ -1014,7 +1142,7 @@ describe("content storage handler", () => {
           {
             url: "https://white-label.example.invalid",
             siteType: "unknown",
-            allowNewApiAuthProbe: true,
+            allowSessionProbe: true,
           },
           resolve,
         )
@@ -1061,7 +1189,7 @@ describe("content storage handler", () => {
           {
             url: "https://unknown.example.invalid",
             siteType: "unknown",
-            allowNewApiAuthProbe: true,
+            allowSessionProbe: true,
           },
           resolve,
         )

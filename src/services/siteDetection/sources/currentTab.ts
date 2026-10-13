@@ -81,9 +81,7 @@ async function getUserDataFromCurrentTab(
       siteType,
       source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
       fetchContext,
-      ...(siteType === SITE_TYPES.UNKNOWN
-        ? { allowNewApiAuthProbe: true }
-        : {}),
+      ...(siteType === SITE_TYPES.UNKNOWN ? { allowSessionProbe: true } : {}),
       protectionBypassExecution,
       onError(error) {
         contentScriptUnavailable = isMessageReceiverUnavailableError(error)

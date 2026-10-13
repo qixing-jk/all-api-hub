@@ -364,8 +364,11 @@ export interface TempWindowSessionReadParams {
   url: string
   requestId: string
   useIncognito?: boolean
+  cookieStoreId?: string
   suppressMinimize?: boolean
   siteType: AccountSiteType
+  /** Explicit onboarding permission for registered unknown-site session probes. */
+  allowSessionProbe?: boolean
   tempWindowRequestSource?: TempWindowRequestSource
   protectionBypassExecution: ProtectionBypassExecution
 }
@@ -799,7 +802,9 @@ export function isTempContextTask(value: unknown): value is TempContextTask {
         isHttpUrl(params.url) &&
         isNonEmptyString(params.requestId) &&
         isAccountSiteType(params.siteType) &&
+        isOptionalBoolean(params.allowSessionProbe) &&
         isOptionalBoolean(params.useIncognito) &&
+        isOptionalString(params.cookieStoreId) &&
         isOptionalBoolean(params.suppressMinimize)
       )
     case TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead:

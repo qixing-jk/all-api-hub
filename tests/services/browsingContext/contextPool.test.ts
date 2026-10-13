@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 
 import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
-import { createTempContextPool } from "~/services/browsingContext/tempPage/contextPool"
+import {
+  buildTempContextPoolKey,
+  createTempContextPool,
+} from "~/services/browsingContext/tempPage/contextPool"
 import { type TempContext } from "~/services/browsingContext/tempPage/contracts"
 import { logger } from "~/services/browsingContext/tempPage/diagnostics"
 
@@ -122,6 +125,43 @@ it("does not clean an already-destroyed context after waiting for an origin lock
   await locked
   await vi.advanceTimersByTimeAsync(0)
   expect(cleanup).toHaveBeenCalledTimes(1)
+})
+
+it("isolates same-origin pools across Firefox cookie stores", async () => {
+  const pool = createTempContextPool({
+    cleanup: vi.fn(),
+    isAlive: vi.fn().mockResolvedValue(true),
+  })
+  const origin = "https://containers.invalid"
+  const storeA = buildTempContextPoolKey(origin, {
+    cookieStoreId: "firefox-container-1",
+  })
+  const storeB = buildTempContextPoolKey(origin, {
+    cookieStoreId: "firefox-container-2",
+  })
+  const tabA = context(31)
+  pool.registerContext(storeA, tabA)
+
+  expect(storeA).not.toBe(storeB)
+  expect(await pool.getReusableContext(storeA)).toBe(tabA)
+  expect(await pool.getReusableContext(storeB)).toBeNull()
+})
+
+it("keeps pool and scheduler keys distinct across profiles and encoded store ids", () => {
+  const origin = "https://containers.invalid"
+  const keys = [
+    buildTempContextPoolKey(origin),
+    buildTempContextPoolKey(origin, { incognito: true }),
+    buildTempContextPoolKey(origin, { cookieStoreId: "firefox-container-1" }),
+    buildTempContextPoolKey(origin, {
+      incognito: true,
+      cookieStoreId: "firefox-private",
+    }),
+    buildTempContextPoolKey(origin, { cookieStoreId: "store:a" }),
+    buildTempContextPoolKey(origin, { cookieStoreId: "store%3Aa" }),
+  ]
+
+  expect(new Set(keys).size).toBe(keys.length)
 })
 
 it("keeps active tasks tracked when external idle cleanup rejects", async () => {

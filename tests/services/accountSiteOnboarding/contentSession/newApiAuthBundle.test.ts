@@ -56,7 +56,7 @@ describe("newApiAuthBundleContentSessionExtractor", () => {
     vi.stubGlobal("localStorage", createLocalStorageMock())
   })
 
-  it("extracts known New API sites or an explicitly enabled unknown-site probe", () => {
+  it("extracts known New API sites and registers discovery separately", () => {
     expect(
       newApiAuthBundleContentSessionExtractor.canExtract({
         siteTypeHint: SITE_TYPES.NEW_API,
@@ -74,23 +74,29 @@ describe("newApiAuthBundleContentSessionExtractor", () => {
     ).toBe(false)
     expect(
       newApiAuthBundleContentSessionExtractor.canExtract({
-        allowNewApiAuthProbe: true,
+        siteTypeHint: SITE_TYPES.UNKNOWN,
+        allowSessionProbe: true,
       }),
-    ).toBe(true)
+    ).toBe(false)
+    expect(newApiAuthBundleContentSessionExtractor.probe).toBeDefined()
     expect(newApiAuthBundleContentSessionExtractor.canExtract({})).toBe(false)
   })
 
   it("reports refresh headers immediately even when the body is still pending", async () => {
     const record = vi.fn()
+    let resolveBody!: (value: unknown) => void
+    const pendingBody = new Promise<unknown>((resolve) => {
+      resolveBody = resolve
+    })
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
-        json: () => new Promise(() => {}),
+        json: () => pendingBody,
       }),
     )
-    void newApiAuthBundleContentSessionExtractor.extract({
+    const result = newApiAuthBundleContentSessionExtractor.extract({
       siteTypeHint: SITE_TYPES.NEW_API,
       diagnostics: { requestId: "detect-1", record, finish: vi.fn() },
     })
@@ -101,7 +107,51 @@ describe("newApiAuthBundleContentSessionExtractor", () => {
       ),
     )
     expect(record).toHaveBeenCalledWith("refresh_started")
+    resolveBody(createAuthBundle())
+    await result
   })
+
+  it.each(["headers", "body"])(
+    "accepts refresh %s that complete after 15 seconds",
+    async (phase) => {
+      vi.useFakeTimers()
+      try {
+        let complete!: () => void
+        const pending = new Promise<unknown>((resolve) => {
+          complete = () =>
+            resolve(
+              phase === "headers"
+                ? createResponse(createAuthBundle())
+                : createAuthBundle(),
+            )
+        })
+        const fetchMock =
+          phase === "headers"
+            ? vi.fn().mockReturnValue(pending)
+            : vi
+                .fn()
+                .mockResolvedValue({
+                  ok: true,
+                  status: 200,
+                  json: () => pending,
+                })
+        vi.stubGlobal("fetch", fetchMock)
+        const observed = newApiAuthBundleContentSessionExtractor.probe!({
+          siteTypeHint: SITE_TYPES.UNKNOWN,
+        }).then(
+          (value) => ({ value }),
+          (error) => ({ error }),
+        )
+        await vi.advanceTimersByTimeAsync(16_000)
+        complete()
+        expect(await observed).toMatchObject({ value: { userId: "42" } })
+        expect(fetchMock).toHaveBeenCalledOnce()
+        expect(localStorage.setItem).not.toHaveBeenCalled()
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
 
   it("records network failure without changing the extraction error", async () => {
     const record = vi.fn()
@@ -152,11 +202,12 @@ describe("newApiAuthBundleContentSessionExtractor", () => {
     })
     expect(fetchMock).toHaveBeenCalledWith(
       `${PAGE_ORIGIN}/api/user/auth/refresh`,
-      {
+      expect.objectContaining({
         credentials: "include",
         method: "POST",
-      },
+      }),
     )
+    expect(fetchMock.mock.calls[0]?.[1]).not.toHaveProperty("redirect")
     expect(localStorage.setItem).not.toHaveBeenCalled()
     expect(localStorage.removeItem).not.toHaveBeenCalled()
     expect(localStorage.clear).not.toHaveBeenCalled()

@@ -1,9 +1,11 @@
 import { OCTOPUS_COOKIE_SESSION_STATUS_PATH } from "~/constants/octopus"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { isUnknownAccountSiteType } from "~/constants/siteType"
 import {
   API_ERROR_CODES,
   type ApiErrorCode,
 } from "~/services/apiTransport/errors"
+import type { ApiTransportBrowserFetchContext } from "~/services/apiTransport/type"
 import {
   type TEMP_CONTEXT_TASK_KINDS,
   type TempContextTask,
@@ -20,6 +22,7 @@ import {
 } from "./contracts"
 import { logger, logTempWindow, normalizeOrigin } from "./diagnostics"
 import {
+  isCookieStoreContextError,
   reportAuthorizedTempContextOutcome,
   toTempWindowFailureResponse,
 } from "./failures"
@@ -164,7 +167,7 @@ export async function executeAutoDetectSite(
   sendResponse: (response?: any) => void,
   authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
 ) {
-  const { url, requestId, useIncognito } = request
+  const { url, requestId, useIncognito, cookieStoreId } = request
   try {
     if (useIncognito) {
       const allowed = await isAllowedIncognitoAccess()
@@ -188,8 +191,12 @@ export async function executeAutoDetectSite(
       suppressMinimize,
       {
         incognito: Boolean(useIncognito),
+        cookieStoreId,
         siteType,
         diagnosticId: request.diagnosticId,
+        allowSessionProbe:
+          isUnknownAccountSiteType(siteType) &&
+          request.allowSessionProbe === true,
       },
       authorizeAtAcquire,
     )
@@ -226,10 +233,10 @@ async function getSiteDataFromTab(
   url: string,
   requestId: string,
   suppressMinimize?: boolean,
-  options: {
-    incognito?: boolean
+  options: ApiTransportBrowserFetchContext & {
     siteType?: string
     diagnosticId?: string
+    allowSessionProbe?: boolean
   } = {},
   authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
 ) {
@@ -249,6 +256,7 @@ async function getSiteDataFromTab(
       url: url,
       siteType: options.siteType,
       diagnosticId: options.diagnosticId ?? requestId,
+      ...(options.allowSessionProbe ? { allowSessionProbe: true } : {}),
     })
 
     await tempWindowBackgroundRuntime.release(requestId)
@@ -290,6 +298,7 @@ async function getSiteDataFromTab(
         ? (error as { code?: ApiErrorCode }).code
         : undefined
     if (
+      isCookieStoreContextError(error) ||
       errorCode === API_ERROR_CODES.TEMP_WINDOW_DISABLED ||
       errorCode === API_ERROR_CODES.TEMP_WINDOW_PERMISSION_REQUIRED ||
       errorCode === API_ERROR_CODES.TEMP_WINDOW_POLICY_CONTEXT_INVALID

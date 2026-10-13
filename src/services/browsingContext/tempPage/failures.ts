@@ -40,6 +40,24 @@ type UnsupportedTempContextError = Error & {
   reason: WindowCreationFailureReason
 }
 
+/** Identifies failures that must not degrade to a default-profile session read. */
+export function createCookieStoreContextError(): Error {
+  const error = new Error("Requested browser cookie store is unavailable")
+  error.name = "CookieStoreContextUnavailableError"
+  return error
+}
+
+/** Guards failures that must be surfaced instead of returning an empty user. */
+export function isCookieStoreContextError(error: unknown): boolean {
+  return Boolean(
+    error &&
+      typeof error === "object" &&
+      "name" in error &&
+      (error as { name?: unknown }).name ===
+        "CookieStoreContextUnavailableError",
+  )
+}
+
 const TEMP_WINDOW_UNSUPPORTED_CODE_BY_REASON: Record<
   WindowCreationFailureReason,
   ApiErrorCode

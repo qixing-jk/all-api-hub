@@ -10,6 +10,7 @@ import { isRecord } from "~/utils/core/object"
 import { trimToNull } from "~/utils/core/string"
 
 import {
+  ContentSessionProtocolError,
   NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND,
   type ContentSessionExtractionContext,
   type ContentSessionExtractionResult,
@@ -103,7 +104,9 @@ async function extractNewApiAuthBundle(
   const parsed = parseNewApiDashboardAuthBundleResponse(body)
   diagnostics?.record("refresh_body_parsed", { kind: parsed.kind })
   if (parsed.kind === "malformed") {
-    throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
+    throw new ContentSessionProtocolError(
+      NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE,
+    )
   }
   if (parsed.kind === "unrelated") return null
 
@@ -113,7 +116,9 @@ async function extractNewApiAuthBundle(
   )
   if (!identity) {
     diagnostics?.record("refresh_invalid", { reason: "user_id_missing" })
-    throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
+    throw new ContentSessionProtocolError(
+      NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE,
+    )
   }
 
   return {
@@ -133,8 +138,7 @@ async function extractNewApiAuthBundle(
 export const newApiAuthBundleContentSessionExtractor: ContentSessionExtractor =
   {
     id: "new-api-auth-bundle",
-    canExtract: (context) =>
-      context.siteTypeHint === SITE_TYPES.NEW_API ||
-      context.allowNewApiAuthProbe === true,
+    canExtract: (context) => context.siteTypeHint === SITE_TYPES.NEW_API,
+    probe: extractNewApiAuthBundle,
     extract: extractNewApiAuthBundle,
   }
