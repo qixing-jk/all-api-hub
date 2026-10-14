@@ -232,7 +232,7 @@ describe("TokenList batch export selection", () => {
             draft: {
               name: runtimeKey.label,
               base_url: "https://example.invalid/v1",
-              key: "sk-test",
+              key: `sk-test-${runtimeKey.id}`,
               models: ["model-a"],
               groups: ["default"],
             },

@@ -128,6 +128,8 @@ for (const action of ["check", "single import", "batch import"] as const) {
     }
     await expect.poll(() => detailReads).toBe(2)
     expect(searches).toBe(2)
-    await expect.poll(() => groupReads).toBe(action === "check" ? 0 : 1)
+    // Only the single native editor loads group choices. Batch preview seeds
+    // retain native defaults without requesting unused group options.
+    await expect.poll(() => groupReads).toBe(action === "single import" ? 1 : 0)
   })
 }

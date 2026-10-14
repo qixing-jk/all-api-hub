@@ -131,7 +131,7 @@
         "success": "Creado",
         "uncertain": "Requiere revisión"
       },
-      "summary": "Resultado: {{created}} creados, {{failed}} fallidos, {{skipped}} omitidas, {{total}} en total."
+      "summary": "Resultado: {{created}} creadas, {{failed}} fallidas, {{skipped}} omitidas, {{total}} en total."
     },
     "selection": {
       "accountGroup": "Seleccionar claves visibles para la cuenta {{name}}",

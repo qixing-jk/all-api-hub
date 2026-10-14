@@ -115,6 +115,8 @@ export function useManagedSiteTokenBatchSession({
   const editedModelsByItemIdRef = useRef<Map<string, string[]>>(new Map())
   const retryBaselineRef =
     useRef<ManagedSiteTokenBatchExportExecutionResult | null>(null)
+  const retryBaselinePreviewRef =
+    useRef<ManagedSiteTokenBatchExportPreview | null>(null)
   const latestItemsRef = useRef(items)
   const openedItemsRef = useRef(items)
   const wasOpenRef = useRef(false)
@@ -144,6 +146,7 @@ export function useManagedSiteTokenBatchSession({
       selectedIdsRef.current = new Set()
       editedModelsByItemIdRef.current = new Map()
       retryBaselineRef.current = null
+      retryBaselinePreviewRef.current = null
       pendingPreviewLoadOriginRef.current = null
       setPreview(null)
       setSelectedIds(new Set())
@@ -208,6 +211,7 @@ export function useManagedSiteTokenBatchSession({
       pendingPreviewLoadOriginRef.current = null
       resolvedChannelKeysByItemIdRef.current = {}
       retryBaselineRef.current = null
+      retryBaselinePreviewRef.current = null
       return
     }
 
@@ -271,11 +275,13 @@ export function useManagedSiteTokenBatchSession({
                 ),
               )
         if (cancelled || !isCurrentWorkflow(previewWorkflowEpoch)) return
-        const previousPreview = previewRef.current
+        const previousPreview = retryIds
+          ? retryBaselinePreviewRef.current
+          : previewRef.current
         if (
           retryIds &&
-          previousPreview &&
-          previousPreview.targetFingerprint !== nextPreview.targetFingerprint
+          (!previousPreview ||
+            previousPreview.targetFingerprint !== nextPreview.targetFingerprint)
         ) {
           throw new ManagedSiteTokenBatchImportTargetChangedError()
         }
@@ -419,6 +425,7 @@ export function useManagedSiteTokenBatchSession({
     if (nextRetryItemIds.length === 0) return
 
     retryBaselineRef.current = executionResult
+    retryBaselinePreviewRef.current = previewRef.current
     setRetryItemIds(new Set(nextRetryItemIds))
     setSelectedIds(new Set(nextRetryItemIds))
     setExecutionResult(null)
@@ -593,6 +600,7 @@ export function useManagedSiteTokenBatchSession({
       retryItemIds,
     )
     retryBaselineRef.current = null
+    retryBaselinePreviewRef.current = null
     setRetryItemIds(new Set())
     setExecutionResult(cumulativeResult)
     return cumulativeResult
@@ -617,6 +625,7 @@ export function useManagedSiteTokenBatchSession({
     if (retryBaselineRef.current) {
       setExecutionResult(retryBaselineRef.current)
       retryBaselineRef.current = null
+      retryBaselinePreviewRef.current = null
       setRetryItemIds(new Set())
     }
   }
