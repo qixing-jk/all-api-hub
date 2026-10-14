@@ -1,6 +1,6 @@
 ---
 name: live-extension-ui-automation
-description: Control, debug, and test the live dev browser extension UI (Options, Popup, Sidepanel) via CDP with persistent login states and accounts.
+description: Control, debug, and test live All API Hub extension UI on desktop or Android Firefox, Edge, and Lemur, including installed release diagnostics and development hot updates via CDP/RDP.
 ---
 
 # Live Extension UI Automation
@@ -8,6 +8,13 @@ description: Control, debug, and test the live dev browser extension UI (Options
 ## Core principle
 
 Automate and test the development browser extension UI against real accounts and logged-in states without closing or disturbing the user's daily primary browser.
+
+## Choose the runtime
+
+- **Android phone/tablet, including Firefox, Edge, or Lemur (狐猴):** read [mobile debugging and hot updates](references/mobile-debugging.md). Use the unified `scripts/mobile-browser.mjs` entrypoint for discovery, diagnostics, and development sessions. Diagnose the installed release when that is the user's goal; do not replace it with a dev build merely to obtain execution access.
+- **Desktop Chromium:** use the profile and CDP workflow below. Its build, profile-sync, and launcher steps do not apply to Android.
+
+## Desktop Chromium
 
 Chromium blocks `--remote-debugging-port` on the system default user data directory. To preserve daily browser workflows while enabling CDP automation, tests run in a dedicated dev profile (`AllApiHub/dev-browser`) that shares accounts and sessions across all Git worktrees.
 
