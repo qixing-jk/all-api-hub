@@ -25,6 +25,60 @@ const message = {
 }
 
 describe("Xiaoen account messages", () => {
+  it.each([null, { success: false }])(
+    "does not accept a failed acknowledgement %j",
+    async (result) => {
+      const patch = vi.fn(() => HttpResponse.json(result))
+      server.use(
+        http.get(`${origin}/api/messages`, () => HttpResponse.json([message])),
+        http.patch(`${origin}/api/messages`, patch),
+      )
+      const capability =
+        getSiteTypeCapabilities("xiaoen").account!.announcements!
+      expect(await capability.markRead!({ request, id: "" })).toBe(false)
+      expect(patch).not.toHaveBeenCalled()
+      expect(await capability.markRead!({ request, id: message.id })).toBe(
+        false,
+      )
+      expect(patch).toHaveBeenCalledTimes(1)
+    },
+  )
+  it("keeps malformed optional reward metadata out of messages without exposing coupon codes", async () => {
+    server.use(
+      http.get(`${origin}/api/messages`, () =>
+        HttpResponse.json([
+          {
+            ...message,
+            template: {
+              ...message.template,
+              type: "quota",
+              quotaAmount: -3,
+              expiresAt: "invalid",
+            },
+          },
+          {
+            ...message,
+            id: "coupon",
+            isClaimed: false,
+            template: {
+              ...message.template,
+              type: "coupon",
+              redeemCode: "private-coupon",
+            },
+          },
+        ]),
+      ),
+    )
+    const items =
+      await getSiteTypeCapabilities("xiaoen").account!.announcements!.fetch(
+        request,
+      )
+    expect(items).toHaveLength(2)
+    expect(items[0]!.content).not.toContain("-3")
+    expect(items[0]!.content).not.toContain("invalid")
+    expect(items[1]!.content).not.toContain("private-coupon")
+    expect(items[1]!.content).toContain("dashboard/messages?messageId=coupon")
+  })
   afterEach(() => vi.restoreAllMocks())
   beforeEach(async () => {
     i18n.addResourceBundle("en", "siteAnnouncements", announcementLocale)

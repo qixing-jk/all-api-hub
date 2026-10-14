@@ -536,6 +536,17 @@ export function applySiteAccountUpdates(params: {
   const result = normalizeSiteAccount(merged)
 
   if (
+    params.updates.account_info &&
+    Object.prototype.hasOwnProperty.call(
+      params.updates.account_info,
+      "nativeBalance",
+    ) &&
+    params.updates.account_info.nativeBalance === undefined
+  ) {
+    delete result.account_info.nativeBalance
+  }
+
+  if (
     params.updates.checkIn &&
     Object.prototype.hasOwnProperty.call(
       params.updates.checkIn,

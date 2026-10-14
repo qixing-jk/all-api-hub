@@ -511,6 +511,38 @@ describe("accountDefaults", () => {
   })
 
   describe("applySiteAccountUpdates", () => {
+    it.each([true, false])(
+      "clears native credits only when an update explicitly removes them (%s)",
+      (explicitRemoval) => {
+        const account = createSiteAccount()
+        account.account_info.nativeBalance = {
+          unit: "credits",
+          total: 30,
+          permanent: 20,
+          daily: 10,
+        }
+        const updated = applySiteAccountUpdates({
+          account,
+          updates: {
+            account_info: {
+              quota: 5000,
+              ...(explicitRemoval ? { nativeBalance: undefined } : {}),
+            },
+          },
+          now: 100,
+          userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+        })
+        if (explicitRemoval) {
+          expect(updated.account_info).not.toHaveProperty("nativeBalance")
+        } else {
+          expect(updated.account_info.nativeBalance).toEqual(
+            account.account_info.nativeBalance,
+          )
+        }
+        expect(updated.account_info.quota).toBe(5000)
+        expect(account.account_info.nativeBalance?.total).toBe(30)
+      },
+    )
     it("deep merges nested updates and preserves sibling fields", () => {
       const current = createSiteAccount({
         checkIn: {

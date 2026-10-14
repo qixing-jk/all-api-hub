@@ -10,6 +10,35 @@ import { server } from "~~/tests/msw/server"
 const origin = "https://free.supxh.xin"
 const context = { url: `${origin}/dashboard`, siteTypeHint: "xiaoen" as const }
 
+it("rejects malformed URLs and unrelated site types before extraction", () => {
+  expect(extractor.canExtract({ ...context, url: "invalid-url" })).toBe(false)
+  expect(extractor.canExtract({ ...context, url: "" })).toBe(false)
+  expect(extractor.canExtract({ ...context, siteTypeHint: "new-api" })).toBe(
+    false,
+  )
+  expect(
+    xiaoenBrowserIdentity.canObserve({
+      origin,
+      siteType: "xiaoen",
+      candidateUserIds: [],
+    }),
+  ).toBe(true)
+  expect(
+    xiaoenBrowserIdentity.canObserve({
+      origin: "https://go.toter.me",
+      siteType: "xiaoen",
+      candidateUserIds: [],
+    }),
+  ).toBe(false)
+  expect(
+    xiaoenBrowserIdentity.canObserve({
+      origin,
+      siteType: "new-api",
+      candidateUserIds: [],
+    }),
+  ).toBe(false)
+})
+
 it("detects the authenticated Cookie identity without exposing the inference credential", async () => {
   expect(
     getAccountSiteDefinition("xiaoen")?.productProfile?.auth,

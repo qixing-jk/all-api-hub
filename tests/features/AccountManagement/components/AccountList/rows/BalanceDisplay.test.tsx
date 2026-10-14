@@ -73,6 +73,45 @@ vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
 }))
 
 describe("BalanceDisplay", () => {
+  it("refreshes native credits through the balance action", async () => {
+    const refreshAccount = vi.fn().mockResolvedValue(undefined)
+    mockUseAccountActionsContext.mockReturnValue({
+      handleRefreshAccount: refreshAccount,
+      refreshingAccountId: null,
+    })
+    const site = buildDisplaySiteData({
+      nativeBalance: { unit: "credits", total: 30, permanent: 20, daily: 10 },
+    })
+    render(<BalanceDisplay site={site} />)
+    await userEvent.click(
+      screen.getByTitle("account:list.balance.refreshBalance"),
+    )
+    expect(refreshAccount).toHaveBeenCalledExactlyOnceWith(site, true)
+  })
+  it("keeps disabled native-credit accounts from triggering refresh", async () => {
+    const handleRefreshAccount = vi.fn()
+    mockUseAccountActionsContext.mockReturnValue({
+      handleRefreshAccount,
+      refreshingAccountId: null,
+    })
+    render(
+      <BalanceDisplay
+        site={buildDisplaySiteData({
+          disabled: true,
+          nativeBalance: {
+            unit: "credits",
+            total: 30,
+            permanent: 20,
+            daily: 10,
+          },
+        })}
+      />,
+    )
+    const balance = screen.getByRole("button", { name: /nativeCredits/ })
+    expect(balance).toBeDisabled()
+    await userEvent.click(balance)
+    expect(handleRefreshAccount).not.toHaveBeenCalled()
+  })
   it("does not display cash estimates for native credits", () => {
     mockUseUserPreferencesContext.mockReturnValue({
       currencyType: "USD",
