@@ -622,6 +622,25 @@ describe("newApiSession", () => {
     expect(generateNewApiTotpCodeMock).toHaveBeenCalledTimes(2)
   })
 
+  it("does not retain stale method availability when post-verification probes lose authentication", async () => {
+    const probe = vi.fn(() => unauthorizedResponse())
+    server.use(
+      http.post(`${BASE_CONFIG.baseUrl}/api/verify`, () =>
+        jsonData({ verified: true, expires_at: 1_700_000_123 }),
+      ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, probe),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, probe),
+    )
+    await expect(
+      submitNewApiSecureVerificationCode(BASE_CONFIG, "456789"),
+    ).resolves.toEqual({
+      status: NEW_API_MANAGED_SESSION_STATUSES.VERIFIED,
+      methods: { twoFactorEnabled: false, passkeyEnabled: false },
+      verifiedUntil: 1_700_000_123_000,
+    })
+    expect(probe).toHaveBeenCalledTimes(2)
+  })
+
   it("supports a manual login-code step followed by a manual secure-verification step", async () => {
     const endpointCalls = new Map<string, number>()
 

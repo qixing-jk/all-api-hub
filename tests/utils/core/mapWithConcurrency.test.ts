@@ -4,6 +4,16 @@ import { mapWithConcurrency } from "~/utils/core/mapWithConcurrency"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 
 describe("bounded reads", () => {
+  it.each([0, -1, 1.5, NaN, Infinity])(
+    "rejects invalid concurrency %s before dispatching reads",
+    async (concurrency) => {
+      const mapper = vi.fn()
+      await expect(
+        mapWithConcurrency([1], concurrency, mapper),
+      ).rejects.toThrow(RangeError)
+      expect(mapper).not.toHaveBeenCalled()
+    },
+  )
   it("drains active reads before rejecting and does not start queued work", async () => {
     const first = createDeferred<number>()
     const second = createDeferred<number>()

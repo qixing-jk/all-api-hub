@@ -3387,6 +3387,91 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it("verifies only failed retry rows while preserving completed warning rows", async () => {
+    const user = userEvent.setup()
+    const warningItems = preview.items.map((item, index) =>
+      buildRecoverablePreviewItem(item, {
+        ref: matchingResourceRef(7 + index),
+        name: `Potential channel ${index}`,
+      }),
+    )
+    mockPreparePreview
+      .mockResolvedValueOnce({
+        ...preview,
+        items: warningItems,
+        readyCount: 0,
+        warningCount: 2,
+      })
+      .mockResolvedValueOnce({
+        ...preview,
+        items: [warningItems[1]!],
+        totalCount: 1,
+        readyCount: 0,
+        warningCount: 1,
+      })
+    mockExecuteBatchExport.mockResolvedValueOnce({
+      totalSelected: 2,
+      attemptedCount: 2,
+      createdCount: 1,
+      failedCount: 1,
+      uncertainCount: 0,
+      skippedCount: 0,
+      items: preview.items.map((item, index) => ({
+        id: item.id,
+        accountName: item.accountName,
+        runtimeKeyName: item.runtimeKeyName,
+        result: index === 0 ? "created" : "failed",
+        success: index === 0,
+        skipped: false,
+      })),
+    })
+    mockLoadNewApiChannelKeyWithVerification.mockImplementation(
+      async (params) => {
+        await params.setKey("different-key")
+        await params.onLoaded?.()
+        return true
+      },
+    )
+    renderDialog()
+    await user.click(
+      await screen.findByRole("checkbox", { name: "Account 1 / Token 1" }),
+    )
+    await user.click(
+      screen.getByRole("checkbox", { name: "Account 1 / Token 2" }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await user.click(getBatchImportConfirmButton())
+    await user.click(
+      await screen.findByTestId(
+        "key-management-managed-site-batch-export-retry-button",
+      ),
+    )
+    const verifyButtons = await screen.findAllByRole("button", {
+      name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+    })
+    await user.click(
+      verifyButtons.find((button) => !button.hasAttribute("disabled"))!,
+    )
+    await waitFor(() =>
+      expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledTimes(1),
+    )
+    expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledWith(
+      expect.objectContaining({ resourceRef: matchingResourceRef(8) }),
+    )
+    expect(
+      screen.getByRole("checkbox", { name: "Account 1 / Token 1" }),
+    ).toBeDisabled()
+    expect(
+      screen.getByText(
+        "keyManagement:batchManagedSiteExport.results.status.success",
+      ),
+    ).toBeVisible()
+  })
+
   it("retries only failed rows and keeps confirmed successes visible", async () => {
     const user = userEvent.setup()
     const firstResult = {

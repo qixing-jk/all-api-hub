@@ -35,6 +35,34 @@ const capability: ManagedSiteCapabilities<MagpieConfig> =
 beforeEach(() => vi.clearAllMocks())
 
 describe("Magpie provider import", () => {
+  it("retains explicit model selections for a provider without protocol endpoints", async () => {
+    vi.mocked(listMagpieProviders).mockResolvedValue([
+      {
+        id: "unconfigured",
+        name: "Unconfigured provider",
+        chat: "",
+        responses: "",
+        anthropic: "",
+        key: { set: false, masked: "", optional: true },
+        chosen: ["model-a"],
+        models: [],
+        off: true,
+      },
+    ])
+    expect(await capability.models!.list!(config)).toMatchObject({
+      items: [
+        {
+          ref: { resourceId: "unconfigured" },
+          type: "chat",
+          baseUrl: "",
+          models: ["model-a"],
+          disabled: true,
+        },
+      ],
+      total: 1,
+    })
+    expect(readMagpieProviderKey).not.toHaveBeenCalled()
+  })
   it("updates explicit models with one fresh inventory read and preserves unrelated provider fields", async () => {
     const fresh = {
       id: "relay",

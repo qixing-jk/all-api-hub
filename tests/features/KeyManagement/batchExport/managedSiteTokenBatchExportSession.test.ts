@@ -6,13 +6,17 @@ import {
   mergeManagedSiteTokenBatchExportExecutionResults,
   mergeManagedSiteTokenBatchRetryPreview,
   reconcileManagedSiteTokenBatchExportPreview,
+  selectManagedSiteTokenBatchPreviewInputs,
   shouldConfirmManagedSiteTokenBatchExport,
 } from "~/features/KeyManagement/batchExport/managedSiteTokenBatchExportSession"
 import {
+  MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES,
+  MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES,
   MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES,
   MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS,
+  type BlockedManagedSiteTokenBatchExportItemInput,
   type ManagedSiteTokenBatchExportExecutionResult,
   type ManagedSiteTokenBatchExportPreview,
   type ManagedSiteTokenBatchExportPreviewItem,
@@ -63,6 +67,66 @@ const buildPreview = (
 })
 
 describe("managed-site token batch export session", () => {
+  it("filters unresolved retry inputs by their stable reference id", () => {
+    const failed: BlockedManagedSiteTokenBatchExportItemInput = {
+      kind: "blocked-reference",
+      id: "failed",
+      accountLabel: "Example account",
+      keyLabel: "Unavailable key",
+      blockingReasonCode:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.INPUT_PREPARATION_FAILED,
+      blockingDetailCode:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_DETAIL_CODES.SOURCE_KEY_INVENTORY_UNAVAILABLE,
+    }
+    const inputs = [failed, { ...failed, id: "untouched" }]
+    expect(
+      selectManagedSiteTokenBatchPreviewInputs(inputs, new Set(["failed"])),
+    ).toEqual([failed])
+    expect(selectManagedSiteTokenBatchPreviewInputs(inputs, null)).toBe(inputs)
+  })
+
+  it("restores a warning batch duplicate when its representative is deselected", () => {
+    const first = buildItem("first", ["model-a"])
+    const second = {
+      ...buildItem("second", ["model-a"]),
+      draft: first.draft,
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING,
+      warningCodes: ["exact-verification-unavailable" as const],
+    }
+    const initial = buildPreview([first, second])
+    const marked = reconcileManagedSiteTokenBatchExportPreview({
+      previousPreview: initial,
+      nextPreview: initial,
+      selectedIds: new Set([first.id, second.id]),
+      editedModelsByItemId: new Map(),
+    })
+    expect(marked.preview.items[1]).toMatchObject({
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,
+      duplicateOfItemId: first.id,
+      batchDuplicateOriginalStatus:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING,
+    })
+    // Older preview rows may not carry the original-status metadata.
+    const legacy = {
+      ...marked.preview,
+      items: marked.preview.items.map((item) => ({
+        ...item,
+        batchDuplicateOriginalStatus: undefined,
+      })),
+    }
+    const restored = reconcileManagedSiteTokenBatchExportPreview({
+      previousPreview: legacy,
+      nextPreview: legacy,
+      selectedIds: new Set([second.id]),
+      editedModelsByItemId: new Map(),
+    })
+    expect(restored.preview.items[1]).toMatchObject({
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING,
+      warningCodes: second.warningCodes,
+    })
+    expect(restored.preview.items[1]?.duplicateOfItemId).toBeUndefined()
+    expect(restored.selectedIds).toEqual(new Set([second.id]))
+  })
   it("keeps history order and missing retry rows while taking fresh preview metadata", () => {
     const previous = buildPreview([
       buildItem("success", ["model-a"]),
