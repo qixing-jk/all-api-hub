@@ -291,6 +291,8 @@
   "stats": {
     "completion": "Completion",
     "estimatedTodayIncome": "Estimated income",
+    "nativeCredits": "credits",
+    "nativeCreditsDetail": "Fixed {{permanent, number}} · Today {{daily, number}} (expires daily)",
     "prompt": "Prompt",
     "subscriptionInactive": "Inactive or expired",
     "subscriptionRemainingCount": "Remaining subscription requests",

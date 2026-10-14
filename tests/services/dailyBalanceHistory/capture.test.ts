@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { maybeCaptureDailyBalanceSnapshot } from "~/services/history/dailyBalanceHistory/capture"
-import type { AccountTodayStatsAvailability } from "~/types"
+import type {
+  AccountNativeBalance,
+  AccountTodayStatsAvailability,
+} from "~/types"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
@@ -29,7 +32,10 @@ const partial = {
   reason: ACCOUNT_TODAY_METRIC_REASONS.SourcePartial,
 } as const
 
-const capture = (todayStatsAvailability: AccountTodayStatsAvailability) =>
+const capture = (
+  todayStatsAvailability: AccountTodayStatsAvailability,
+  nativeBalance?: AccountNativeBalance,
+) =>
   maybeCaptureDailyBalanceSnapshot({
     config: {
       ...DEFAULT_BALANCE_HISTORY_PREFERENCES,
@@ -37,6 +43,7 @@ const capture = (todayStatsAvailability: AccountTodayStatsAvailability) =>
     },
     accountId: "account-1",
     quota: 1_000_000,
+    nativeBalance,
     today_income: 200_000,
     today_quota_consumption: 300_000,
     todayStatsAvailability,
@@ -46,6 +53,17 @@ const capture = (todayStatsAvailability: AccountTodayStatsAvailability) =>
   })
 
 describe("maybeCaptureDailyBalanceSnapshot", () => {
+  it("does not record native credits as monetary balance history", async () => {
+    expect(
+      await capture(complete, {
+        unit: "credits",
+        total: 36000,
+        permanent: 34000,
+        daily: 2000,
+      }),
+    ).toBe(false)
+    expect(upsertSnapshotMock).not.toHaveBeenCalled()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     upsertSnapshotMock.mockResolvedValue(true)

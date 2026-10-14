@@ -286,6 +286,7 @@ export async function validateAndUpdateAccount(
         todayStatsAvailability: freshAccountData.todayStatsAvailability,
         usage: freshAccountData.usage,
         subscription: freshAccountData.subscription,
+        nativeBalance: freshAccountData.nativeBalance,
         recentUsageRecords: freshAccountData.recentUsageRecords,
       },
       last_sync_time: Date.now(),

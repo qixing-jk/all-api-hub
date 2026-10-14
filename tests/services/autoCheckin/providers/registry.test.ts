@@ -48,6 +48,16 @@ const getAnyrouterRegistration = () =>
   registrationFor(AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn)
 
 describe("autoCheckinMethodRegistry", () => {
+  it("uses Xiaoen's own daily method with authoritative status readback", () => {
+    expect(getAutoCheckinCandidateMethodIds(SITE_TYPES.XIAOEN)).toEqual([
+      AUTO_CHECKIN_METHOD_IDS.XiaoenDailyCheckIn,
+    ])
+    expect(
+      supportsCheckInStatusReadback(AUTO_CHECKIN_METHOD_IDS.XiaoenDailyCheckIn),
+    ).toBe(true)
+    expect(getLegacyAutoCheckinMethodIds(SITE_TYPES.XIAOEN)).toEqual([])
+    expect(getNewAccountCompatibilityMethodIds(SITE_TYPES.XIAOEN)).toEqual([])
+  })
   it("registers stable identities without changing legacy method mapping", () => {
     const registrationContracts = autoCheckinMethodRegistry.registrations.map(
       ({ id, siteTypes, provider }) => ({
@@ -57,7 +67,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(15)
+    expect(registrationContracts).toHaveLength(16)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {

@@ -291,6 +291,8 @@
   "stats": {
     "completion": "Ausgabe",
     "estimatedTodayIncome": "Geschätztes Einkommen",
+    "nativeCredits": "Guthabeneinheiten",
+    "nativeCreditsDetail": "Dauerhaft {{permanent, number}} · Heute {{daily, number}} (verfällt täglich)",
     "prompt": "Eingabe",
     "subscriptionInactive": "Inaktiv oder abgelaufen",
     "subscriptionRemainingCount": "Verbleibende Abonnementanfragen",

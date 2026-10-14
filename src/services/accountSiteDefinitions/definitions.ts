@@ -110,6 +110,8 @@ import {
   SHAREDCHAT_HOSTNAMES,
   SHAREDCHAT_WEB_ORIGIN,
   SITE_TYPES,
+  XIAOEN_HOSTNAMES,
+  XIAOEN_WEB_ORIGIN,
 } from "./identifiers"
 
 /**
@@ -200,6 +202,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.FREEMODEL,
   SITE_TYPES.DAHL,
   SITE_TYPES.FOXCODE,
+  SITE_TYPES.XIAOEN,
   SITE_TYPES.CUBENCE,
   SITE_TYPES.RIGHT_CODE,
   SITE_TYPES.OPENROUTER,
@@ -234,6 +237,54 @@ export const MANAGED_SITE_TYPE_ORDER = [
 export type ManagedSiteDefinitionType = (typeof MANAGED_SITE_TYPE_ORDER)[number]
 
 const ACCOUNT_SITE_DEFINITIONS = [
+  {
+    siteType: SITE_TYPES.XIAOEN,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Xiaoen,
+    onboarding: {
+      displayName: "肖恩 AI",
+      detection: { hostnames: XIAOEN_HOSTNAMES },
+      routes: {
+        loginPath: "/login",
+        usagePath: "/dashboard/models",
+        adminCredentialsPath: "/dashboard/keys",
+        pricingPath: "/dashboard/models",
+        checkInPath: "/dashboard",
+        accessTokenPath: null,
+        redeemPath: null,
+        siteAnnouncementsPath: "/dashboard/messages",
+      },
+    },
+    productProfile: {
+      metrics: {
+        deferredTodayStatsAvailability:
+          createUnsupportedTodayStatsAvailability(),
+        legacyTodayStatsAvailability: createUnsupportedTodayStatsAvailability(),
+      },
+      auth: {
+        usesBrowserCookieSession: true,
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.Cookie],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.Cookie,
+        defaultAuthHostnames: XIAOEN_HOSTNAMES,
+      },
+      identity: {
+        usernameRequired: false,
+        storedUserIdentityFields: ["id", "username"],
+      },
+      modelList: {
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+        groupSemantics: ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+      },
+      urls: {
+        recognizedHostnames: XIAOEN_HOSTNAMES,
+        inferFromHostname: true,
+        storageOrigin: XIAOEN_WEB_ORIGIN,
+        duplicateOrigin: XIAOEN_WEB_ORIGIN,
+      },
+    },
+  },
   {
     siteType: SITE_TYPES.CUBENCE,
     scopes: ACCOUNT_SCOPE,

@@ -73,6 +73,54 @@ vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
 }))
 
 describe("BalanceDisplay", () => {
+  it("does not display cash estimates for native credits", () => {
+    mockUseUserPreferencesContext.mockReturnValue({
+      currencyType: "USD",
+      showTodayCashflow: true,
+      preferences: {
+        balanceHistory: { estimatedTodayIncome: { enabled: true } },
+      },
+    })
+    render(
+      <BalanceDisplay
+        site={buildDisplaySiteData({
+          nativeBalance: {
+            unit: "credits",
+            total: 36000,
+            permanent: 34000,
+            daily: 2000,
+          },
+          estimatedTodayIncome: { USD: 5, CNY: 35 },
+        })}
+      />,
+    )
+    expect(
+      screen.queryByTitle("account:stats.estimatedTodayIncome"),
+    ).not.toBeInTheDocument()
+  })
+  it("displays native credits and their expiry distinction without a cash balance", () => {
+    render(
+      <BalanceDisplay
+        site={buildDisplaySiteData({
+          nativeBalance: {
+            unit: "credits",
+            total: 36000,
+            permanent: 34000,
+            daily: 2000,
+          },
+        })}
+      />,
+    )
+    expect(
+      screen.getByTitle("account:list.balance.refreshBalance"),
+    ).toHaveTextContent("36,000")
+    expect(
+      screen.getByTitle("account:list.balance.refreshBalance"),
+    ).not.toHaveTextContent("$")
+    expect(
+      screen.getByText("account:stats.nativeCreditsDetail"),
+    ).toBeInTheDocument()
+  })
   it("labels token credit separately from subscription request counts", () => {
     render(
       <BalanceDisplay

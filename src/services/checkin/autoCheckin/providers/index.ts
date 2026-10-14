@@ -21,8 +21,10 @@ import { toolcodeProvider } from "./toolcode"
 import { veloeraProvider } from "./veloera"
 import { wongGongyiProvider } from "./wong"
 import { xiaobaiCodeProvider } from "./xiaobaiCode"
+import { xiaoenProvider } from "./xiaoen"
 
 const PROVIDER_BY_METHOD_ID = {
+  [AUTO_CHECKIN_METHOD_IDS.XiaoenDailyCheckIn]: xiaoenProvider,
   [AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn]: agentRouterProvider,
   [AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn]: anyrouterProvider,
   [AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn]: veloeraProvider,
