@@ -1,5 +1,6 @@
 [
   "src",
+  "e2e/fixtures/accountDetectionProbe.ts",
   "public",
   "e2e/e2e-build-variants.json",
   "e2e/utils/e2eBuildVariants.shared.d.ts",

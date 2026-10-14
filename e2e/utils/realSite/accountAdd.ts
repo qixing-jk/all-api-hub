@@ -79,10 +79,12 @@ async function openAccountAddDialog(page: Page) {
 export async function autoDetectAccountFromAddDialog(
   page: Page,
   baseUrl: string,
+  beforeDetect?: () => Promise<void>,
 ) {
   const dialog = await openAccountAddDialog(page)
   await dialog.siteUrlInput.fill(baseUrl)
   await expect(dialog.siteUrlInput).toHaveValue(baseUrl)
+  await beforeDetect?.()
   await dialog.autoDetectButton.click()
   return dialog
 }

@@ -6,6 +6,7 @@ import {
   stubLlmMetadataIndex,
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
+import { registerRealSiteAccountDetectionTests } from "~~/e2e/utils/realSite/accountDetection"
 import {
   realSiteAccountUsageChecks,
   runRealSiteAccountFixtureUsageChecks,
@@ -22,6 +23,20 @@ import {
   createSharedRealSiteAccountFixtureCache,
   resolveSharedRealSiteAccountFixture,
 } from "~~/e2e/utils/realSite/sharedAccountFixture"
+
+registerRealSiteAccountDetectionTests({
+  label: "New API",
+  siteType: SITE_TYPES.NEW_API,
+  cookieBootstrap: false,
+  resolve: resolveNewApiRealSiteConfig,
+  login: async (page, config) => {
+    const result = await loginToRealNewApiSite(page, config)
+    return {
+      userId: String(result.user.id),
+      cleanup: result.cleanupOwnedSession,
+    }
+  },
+})
 
 test.describe("real-site E2E: New API account add flow", () => {
   // All checks share one real account. A terminal session-limit failure must

@@ -85,6 +85,15 @@ export default defineConfig({
   },
   outDirTemplate: getOutDirTemplate(),
   modules: ["@wxt-dev/auto-icons", "@wxt-dev/module-react"],
+  hooks: {
+    "entrypoints:found": (_wxt, entrypoints) => {
+      if (isTestBuild) return
+      const probeIndex = entrypoints.findIndex(
+        (entry) => entry.name === "account-detection-test",
+      )
+      if (probeIndex >= 0) entrypoints.splice(probeIndex, 1)
+    },
+  },
   webExt: {
     // Keep WXT's default startup; opt out via dev:no-browser or the CDP runner.
     disabled: process.env.WXT_OPEN_BROWSER === "0",

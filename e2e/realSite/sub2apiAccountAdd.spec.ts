@@ -1,3 +1,4 @@
+import { SITE_TYPES } from "~/constants/siteType"
 import { test } from "~~/e2e/fixtures/extensionTest"
 import {
   forceExtensionLanguage,
@@ -5,6 +6,7 @@ import {
   stubLlmMetadataIndex,
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
+import { registerRealSiteAccountDetectionTests } from "~~/e2e/utils/realSite/accountDetection"
 import {
   realSiteAccountUsageChecks,
   runRealSiteAccountFixtureUsageChecks,
@@ -16,9 +18,21 @@ import {
 } from "~~/e2e/utils/realSite/sharedAccountFixture"
 import {
   getSub2ApiRealSiteSkipReason,
+  loginToRealSub2ApiSite,
   resolveSub2ApiRealSiteConfig,
 } from "~~/e2e/utils/realSite/sub2api"
 import { runSub2ApiRealSiteAccountSaveFlow } from "~~/e2e/utils/realSite/sub2apiAccountSaveFlow"
+
+registerRealSiteAccountDetectionTests({
+  label: "Sub2API",
+  siteType: SITE_TYPES.SUB2API,
+  cookieBootstrap: false,
+  resolve: resolveSub2ApiRealSiteConfig,
+  login: async (page, config) => {
+    const result = await loginToRealSub2ApiSite(page, config)
+    return { userId: String(result.authState.user.id) }
+  },
+})
 
 test.describe("real-site E2E: Sub2API auto-detect account add flow", () => {
   const sharedAccountCache = createSharedRealSiteAccountFixtureCache()
