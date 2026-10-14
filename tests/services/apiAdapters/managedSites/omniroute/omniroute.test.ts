@@ -81,6 +81,45 @@ describe("OmniRoute managed-site capabilities", () => {
     ).rejects.toThrow()
   })
 
+  it("shares one plaintext inventory between different refs in a batch and refreshes the next batch", async () => {
+    let reads = 0
+    server.use(
+      http.get(`${BASE_URL}/api/providers/client`, () => {
+        reads += 1
+        return HttpResponse.json({
+          connections: [
+            connection({ apiKey: "secret-one" }),
+            connection({ id: "conn-2", apiKey: "secret-two" }),
+          ],
+        })
+      }),
+    )
+    const ref = {
+      siteType: SITE_TYPES.OMNIROUTE,
+      kind: MANAGED_RESOURCE_KINDS.Channel,
+      scopeKey: BASE_URL,
+      resourceId: "conn-1",
+    }
+    const options = {
+      inventoryCache: new Map(),
+      protectionBypassExecution: {
+        version: 2 as const,
+        kind: "automatic" as const,
+        feature: "managed_site_channels" as const,
+        trigger: "background_recovery" as const,
+        surface: "background" as const,
+      },
+    }
+    const read = omniRouteManagedSiteCapabilities.matching.fetchSecretKey!
+    await expect(read(config, ref, options)).resolves.toBe("secret-one")
+    await expect(
+      read(config, { ...ref, resourceId: "conn-2" }, options),
+    ).resolves.toBe("secret-two")
+    expect(reads).toBe(1)
+    await read(config, ref, { ...options, inventoryCache: new Map() })
+    expect(reads).toBe(2)
+  })
+
   it("matches channels by their connection-level address without a credential", async () => {
     const readPaths: string[] = []
     server.use(

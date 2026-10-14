@@ -1,3 +1,4 @@
+import { MANAGED_RESOURCE_EXACT_MATCH_BASES } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import { areManagedResourceRefsEqual } from "~/services/managedSites/managedResourceIdentity"
 import type { ManagedResourceMatchCandidate } from "~/types/managedResourceMatching"
@@ -114,7 +115,9 @@ export const getManagedSiteChannelExactMatch = (
   inspection: ManagedSiteChannelMatchInspection,
   matching?: Pick<ManagedResourceMatchingCapability, "exactMatchBasis">,
 ): ManagedResourceMatchCandidate | null => {
-  if (matching?.exactMatchBasis === "url-key") {
+  if (
+    matching?.exactMatchBasis === MANAGED_RESOURCE_EXACT_MATCH_BASES.URL_KEY
+  ) {
     if (
       !inspection.url.matched ||
       !inspection.key.matched ||

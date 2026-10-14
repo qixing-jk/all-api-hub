@@ -1,5 +1,6 @@
 import {
   GPT_LOAD_DEFAULT_CHANNEL_ID,
+  GPT_LOAD_READ_CONCURRENCY,
   resolveGptLoadFirstPartyChannel,
 } from "~/constants/gptLoad"
 import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
@@ -25,6 +26,7 @@ import type {
   ManagedSiteChannelDraftSource,
 } from "~/types/managedSiteChannelDraft"
 import { createLogger } from "~/utils/core/logger"
+import { mapWithConcurrency } from "~/utils/core/mapWithConcurrency"
 
 const logger = createLogger("GptLoadProvider")
 
@@ -240,20 +242,27 @@ export async function fetchGptLoadChannelSecretKey(
   if (credentials.length === 0) {
     throw new Error("gpt-load group has no credentials to read")
   }
-  const values: string[] = []
-  for (const credential of credentials) {
-    try {
-      const value = await revealGptLoadGroupCredential(
-        config,
-        parsedGroupId,
-        credential.credential_id,
-        options,
-      )
-      if (value) values.push(value)
-    } catch {
-      // A single unrevealable row degrades that comparison, not the import.
-    }
-  }
+  const values = (
+    await mapWithConcurrency(
+      credentials,
+      GPT_LOAD_READ_CONCURRENCY,
+      async (credential) => {
+        try {
+          return await revealGptLoadGroupCredential(
+            config,
+            parsedGroupId,
+            credential.credential_id,
+            options,
+          )
+        } catch {
+          options?.signal?.throwIfAborted()
+          // A single unrevealable row degrades comparison, not the import.
+          return ""
+        }
+      },
+      options,
+    )
+  ).filter(Boolean)
   if (values.length === 0) {
     throw new Error("gpt-load did not return a readable channel credential")
   }

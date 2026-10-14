@@ -2147,6 +2147,91 @@ describe("Octopus API service", () => {
     expect(mockTempWindowOctopusApiFetch).toHaveBeenCalledTimes(14)
   })
 
+  it("starts another search detail as soon as one worker finishes", async () => {
+    const gates = new Map(
+      [1, 2, 3, 4, 5].map((id) => [id, createDeferred<void>()]),
+    )
+    const started: number[] = []
+    mockGetValidSession.mockResolvedValue(v013CookieSession())
+    mockTempWindowOctopusApiFetch.mockImplementation(async (request) => {
+      const path = new URL(request.fetchUrl).pathname
+      if (path.endsWith("/stats"))
+        return {
+          success: true,
+          status: 200,
+          data: {
+            code: 200,
+            data: [1, 2, 3, 4, 5].map((channel_id) =>
+              v013ChannelStatsResponse({ channel_id }),
+            ),
+          },
+        }
+      const id = Number(path.split("/").at(-1))
+      started.push(id)
+      await gates.get(id)!.promise
+      return {
+        success: true,
+        status: 200,
+        data: { code: 200, data: v013ChannelDetailResponse({ id }) },
+      }
+    })
+    const result = searchChannels(config, "")
+    try {
+      await vi.waitFor(() => expect(started).toEqual([1, 2, 3, 4]))
+      gates.get(2)!.resolve()
+      await vi.waitFor(() => expect(started).toEqual([1, 2, 3, 4, 5]))
+    } finally {
+      for (const gate of gates.values()) gate.resolve()
+    }
+    await expect(result).resolves.toMatchObject(
+      [1, 2, 3, 4, 5].map((id) => ({ id })),
+    )
+  })
+
+  it("drains active search details after a failure without starting queued details", async () => {
+    const gates = new Map(
+      [1, 2, 3, 4].map((id) => [id, createDeferred<void>()]),
+    )
+    const started: number[] = []
+    mockGetValidSession.mockResolvedValue(v013CookieSession())
+    mockTempWindowOctopusApiFetch.mockImplementation(async (request) => {
+      const path = new URL(request.fetchUrl).pathname
+      if (path.endsWith("/stats"))
+        return {
+          success: true,
+          status: 200,
+          data: {
+            code: 200,
+            data: [1, 2, 3, 4, 5].map((channel_id) =>
+              v013ChannelStatsResponse({ channel_id }),
+            ),
+          },
+        }
+      const id = Number(path.split("/").at(-1))
+      started.push(id)
+      await gates.get(id)!.promise
+      if (id === 2)
+        return { success: false, status: 503, error: "detail unavailable" }
+      return {
+        success: true,
+        status: 200,
+        data: { code: 200, data: v013ChannelDetailResponse({ id }) },
+      }
+    })
+    let settled = false
+    const result = searchChannels(config, "").finally(() => {
+      settled = true
+    })
+    const rejected = expect(result).rejects.toThrow()
+    await vi.waitFor(() => expect(started).toEqual([1, 2, 3, 4]))
+    gates.get(2)!.resolve()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(settled).toBe(false)
+    for (const gate of gates.values()) gate.resolve()
+    await rejected
+    expect(started).toEqual([1, 2, 3, 4])
+  })
+
   it("stops loading further v0.13 search details when the caller cancels", async () => {
     const controller = new AbortController()
     const gate = createDeferred<void>()

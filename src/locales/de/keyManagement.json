@@ -99,7 +99,8 @@
     "gatewayDescription": "Dadurch werden Kontoschlüssel als selbstgehostete AI-Gateway-Kanäle importiert. Nach dem Import können mehrere Schlüssel von Clients über eine AI-API verwendet werden.",
     "loadingDescription": "Vorschau wird für ausgewählte Schlüssel vorbereitet (Auswahl: {{selectedCount}}).",
     "messages": {
-      "completed": "Batch-Import abgeschlossen: {{created}} erstellt, {{failed}} fehlgeschlagen, {{skipped}} bereits vorhanden.",
+      "batchDuplicate": "Duplikat von {{item}} in diesem Stapel; wurde übersprungen.",
+      "completed": "Batch-Import abgeschlossen: {{created}} erstellt, {{failed}} fehlgeschlagen, {{skipped}} übersprungen.",
       "duplicate": "Ein identischer Kanal ist bereits vorhanden: {{channel}}. Er wird nicht erneut erstellt.",
       "executionFailed": "Batch-Import konnte nicht ausgeführt werden: {{error}}",
       "targetChanged": "Das Ziel der verwalteten Website wurde geändert. Aktualisieren Sie die Vorschau oder wählen Sie vor dem Import das gewünschte Ziel aus.",
@@ -110,7 +111,7 @@
       "loading": "Kanalvorschau wird vorbereitet...",
       "selected_one": "{{count}} Schlüssel ausgewählt",
       "selected_other": "{{count}} Schlüssel ausgewählt",
-      "summary": "Vorschau: {{ready}} bereit, {{warning}} Warnungen, {{skipped}} bereits vorhanden, {{blocked}} blockiert, {{total}} insgesamt."
+      "summary": "Vorschau: {{ready}} bereit, {{warning}} Warnungen, {{skipped}} übersprungen, {{blocked}} blockiert, {{total}} insgesamt."
     },
     "repairTrusted": {
       "description": "Diese Schlüssel wurden gerade erstellt. Bei der vereinfachten Prüfung werden Duplikat- und exakte Schlüsselprüfungen ausgelassen. Verwenden Sie die vollständige Prüfung, wenn Sie sie vor dem Import überprüfen möchten.",
@@ -121,11 +122,11 @@
       "status": {
         "failed": "Fehlgeschlagen",
         "notSelected": "Nicht ausgewählt",
-        "skipped": "Bereits vorhanden",
+        "skipped": "Übersprungen",
         "success": "Erstellt",
         "uncertain": "Überprüfung erforderlich"
       },
-      "summary": "Ergebnis: {{created}} erstellt, {{failed}} fehlgeschlagen, {{skipped}} bereits vorhanden, {{total}} insgesamt."
+      "summary": "Ergebnis: {{created}} erstellt, {{failed}} fehlgeschlagen, {{skipped}} übersprungen, {{total}} insgesamt."
     },
     "selection": {
       "accountGroup": "Wählen Sie sichtbare Schlüssel für Konto {{name}}",
@@ -135,7 +136,7 @@
     "status": {
       "blocked": "Blockiert",
       "ready": "Bereit",
-      "skipped": "Bereits vorhanden",
+      "skipped": "Übersprungen",
       "warning": "Warnung"
     },
     "target": {

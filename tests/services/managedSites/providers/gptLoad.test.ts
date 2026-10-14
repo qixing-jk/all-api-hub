@@ -259,3 +259,48 @@ describe("prepareGptLoadChannelFormData", () => {
     expect(draft.base_url).toBe("")
   })
 })
+
+describe("bounded credential reads", () => {
+  it("reveals two credentials concurrently and preserves pool order", async () => {
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const started: number[] = []
+    server.use(
+      http.get(`${BASE_URL}/api/groups/1/credentials`, () =>
+        HttpResponse.json({
+          code: 0,
+          data: {
+            items: [11, 12, 13].map((credential_id) => ({
+              credential_id,
+              mask: "masked",
+              effective_status: "available",
+            })),
+          },
+        }),
+      ),
+      http.post(
+        `${BASE_URL}/api/groups/1/credentials/:id/reveal`,
+        async ({ params }) => {
+          started.push(Number(params.id))
+          await gate
+          return HttpResponse.json({
+            code: 0,
+            data: { credential: { api_key: `key-${params.id}` } },
+          })
+        },
+      ),
+    )
+    const result = fetchGptLoadChannelSecretKey(
+      { baseUrl: BASE_URL, managementKey: "fake" },
+      1,
+    )
+    try {
+      await vi.waitFor(() => expect(started).toEqual([11, 12]))
+    } finally {
+      release()
+    }
+    await expect(result).resolves.toBe("key-11\nkey-12\nkey-13")
+  })
+})

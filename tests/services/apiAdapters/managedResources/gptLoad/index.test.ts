@@ -64,6 +64,77 @@ const registration = () =>
   )!
 
 describe("gpt-load native workspace", () => {
+  it("reads independent detail endpoints concurrently with two workers", async () => {
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const started: string[] = []
+    server.use(
+      http.get(`${BASE_URL}/api/groups/1/settings`, async () => {
+        started.push("settings")
+        await gate
+        return envelope(groupRow())
+      }),
+      http.get(`${BASE_URL}/api/groups/1/models`, async () => {
+        started.push("models")
+        await gate
+        return envelope({ items: [] })
+      }),
+      http.get(`${BASE_URL}/api/groups/1/credentials`, async () => {
+        started.push("credentials")
+        await gate
+        return envelope({ items: [] })
+      }),
+    )
+    const operations = await openGptLoadNativeResourceOperations()
+    const result = operations.get(1)
+    try {
+      await vi.waitFor(() => expect(started).toEqual(["settings", "models"]))
+    } finally {
+      release()
+    }
+    await expect(result).resolves.toMatchObject({ group: { id: 1 } })
+    expect(started).toEqual(["settings", "models", "credentials"])
+  })
+
+  it("reveals native credential records with two workers in stable order", async () => {
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const started: number[] = []
+    server.use(
+      http.get(`${BASE_URL}/api/groups/1/credentials`, () =>
+        envelope({
+          items: [11, 12, 13].map((credential_id) => ({ credential_id })),
+        }),
+      ),
+      http.post(
+        `${BASE_URL}/api/groups/1/credentials/:id/reveal`,
+        async ({ params }) => {
+          started.push(Number(params.id))
+          await gate
+          return envelope({ credential: { api_key: `key-${params.id}` } })
+        },
+      ),
+    )
+    const operations = await openGptLoadNativeResourceOperations()
+    const result = operations.loadSecret(1)
+    try {
+      await vi.waitFor(() => expect(started).toEqual([11, 12]))
+    } finally {
+      release()
+    }
+    await expect(result).resolves.toEqual(
+      [11, 12, 13].map((id) => ({
+        id: String(id),
+        key: `key-${id}`,
+        fields: {},
+      })),
+    )
+  })
+
   it.each([
     [401, "authentication_failed"],
     [423, "authentication_failed"],
@@ -369,13 +440,22 @@ describe("gpt-load native workspace", () => {
     const laterReveal = vi.fn()
     server.use(
       http.get(`${BASE_URL}/api/groups/1/credentials`, () =>
-        envelope({ items: [{ credential_id: 11 }, { credential_id: 12 }] }),
+        envelope({
+          items: [
+            { credential_id: 11 },
+            { credential_id: 12 },
+            { credential_id: 13 },
+          ],
+        }),
       ),
       http.post(`${BASE_URL}/api/groups/1/credentials/11/reveal`, () => {
         controller.abort()
         return envelope({ credential: { api_key: "sk-first" } })
       }),
-      http.post(`${BASE_URL}/api/groups/1/credentials/12/reveal`, laterReveal),
+      http.post(`${BASE_URL}/api/groups/1/credentials/12/reveal`, () =>
+        envelope({ credential: { api_key: "sk-second" } }),
+      ),
+      http.post(`${BASE_URL}/api/groups/1/credentials/13/reveal`, laterReveal),
     )
     const ops = await openGptLoadNativeResourceOperations()
     await expect(

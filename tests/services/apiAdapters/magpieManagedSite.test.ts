@@ -35,6 +35,46 @@ const capability: ManagedSiteCapabilities<MagpieConfig> =
 beforeEach(() => vi.clearAllMocks())
 
 describe("Magpie provider import", () => {
+  it("updates explicit models with one fresh inventory read and preserves unrelated provider fields", async () => {
+    const fresh = {
+      id: "relay",
+      name: "Native edit",
+      chat: "https://relay.test/v1",
+      responses: "",
+      anthropic: "",
+      key: { set: true, masked: "***", optional: false },
+      chosen: ["m1"],
+      models: [],
+      off: false,
+      headers: { "X-Tenant": "current" },
+    }
+    vi.mocked(listMagpieProviders).mockResolvedValue([fresh])
+    vi.mocked(saveMagpieProvider).mockResolvedValue([
+      { ...fresh, chosen: ["m2"] },
+    ])
+    const result = await capability.models!.updateModels!(
+      config,
+      {
+        siteType: "magpie",
+        kind: "channel",
+        scopeKey: config.baseUrl,
+        resourceId: "relay",
+      },
+      ["m2"],
+    )
+    expect(result).toMatchObject({ outcome: "succeeded" })
+    expect(listMagpieProviders).toHaveBeenCalledTimes(1)
+    expect(saveMagpieProvider).toHaveBeenCalledWith(
+      config,
+      expect.objectContaining({
+        id: "relay",
+        name: "Native edit",
+        models: ["m2"],
+        headers: { "X-Tenant": "current" },
+      }),
+      undefined,
+    )
+  })
   it("retains an uncertain model-save outcome without replaying the write", async () => {
     vi.mocked(listMagpieProviders).mockResolvedValue([
       {
@@ -260,10 +300,12 @@ describe("Magpie provider import", () => {
         off: false,
       }
       vi.mocked(listMagpieProviders).mockResolvedValue([provider])
-      if (betweenReads)
+      if (betweenReads) {
         vi.mocked(listMagpieProviders).mockResolvedValueOnce([
           { ...provider, chosen: ["m1"] },
         ])
+        await capability.models!.list!(config)
+      }
       await expect(
         capability.models!.updateModels!(
           config,

@@ -95,7 +95,8 @@
     "gatewayDescription": "這會將帳號 Key 匯入為自建 AI 閘道渠道。匯入後，多個 Key 即可透過同一個 AI API 提供給客戶端使用。",
     "loadingDescription": "正在為 {{selectedCount}} 個已選金鑰準備預覽。",
     "messages": {
-      "completed": "批次匯入完成：成功 {{created}} 個、失敗 {{failed}} 個、已存在 {{skipped}} 個。",
+      "batchDuplicate": "與本批次的 {{item}} 重複，已略過。",
+      "completed": "批次匯入完成：成功 {{created}} 個、失敗 {{failed}} 個、已略過 {{skipped}} 個。",
       "duplicate": "已存在精確符合渠道：{{channel}}，不會重複建立。",
       "executionFailed": "執行批次匯入失敗：{{error}}",
       "targetChanged": "自建 AI 閘道目標已變更。請重新整理預覽或選擇正確目標後再匯入。",
@@ -105,7 +106,7 @@
       "loadFailed": "載入預覽失敗：{{error}}",
       "loading": "正在準備渠道預覽...",
       "selected_other": "已選擇 {{count}} 個金鑰",
-      "summary": "預覽：可建立 {{ready}} 個，警告 {{warning}} 個，已存在 {{skipped}} 個，阻擋 {{blocked}} 個，共 {{total}} 個。"
+      "summary": "預覽：可建立 {{ready}} 個，警告 {{warning}} 個，已略過 {{skipped}} 個，阻擋 {{blocked}} 個，共 {{total}} 個。"
     },
     "repairTrusted": {
       "description": "這些金鑰剛剛建立完成。簡化審核會略過重複檢查與精確 Key 檢查；若要在匯入前再次核對，可以使用完整檢查。",
@@ -116,11 +117,11 @@
       "status": {
         "failed": "失敗",
         "notSelected": "未選擇",
-        "skipped": "已存在",
+        "skipped": "已略過",
         "success": "已建立",
         "uncertain": "需檢查"
       },
-      "summary": "結果：成功 {{created}} 個，失敗 {{failed}} 個，已存在 {{skipped}} 個，共 {{total}} 個。"
+      "summary": "結果：成功 {{created}} 個，失敗 {{failed}} 個，已略過 {{skipped}} 個，共 {{total}} 個。"
     },
     "selection": {
       "accountGroup": "選擇帳號 {{name}} 目前可見密鑰",
@@ -130,7 +131,7 @@
     "status": {
       "blocked": "已阻擋",
       "ready": "可建立",
-      "skipped": "已存在",
+      "skipped": "已略過",
       "warning": "需確認"
     },
     "target": {

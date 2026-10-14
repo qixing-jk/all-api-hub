@@ -234,6 +234,14 @@ export function ManagedSiteTokenBatchExportPreviewRow({
         </div>
       ) : null}
 
+      {item.duplicateOfItemId ? (
+        <div className="text-muted-foreground dark:bg-secondary bg-surface-subtle py-density-2 rounded-md px-2 text-xs">
+          {t("keyManagement:batchManagedSiteExport.messages.batchDuplicate", {
+            item: item.duplicateOfItemName,
+          })}
+        </div>
+      ) : null}
+
       {item.warningCodes.length > 0 ? (
         <div className="border-warning-border bg-warning-soft text-warning-soft-foreground space-y-density-2 py-density-2 rounded-md border px-2 text-xs">
           <ul className="space-y-density-1 list-disc pl-4 leading-5">

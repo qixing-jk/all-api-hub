@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { MANAGED_SITE_CHANNEL_DRAFT_PURPOSES } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+
 const mockFetchSiteUserGroups = vi.fn()
 
 describe("resolveDefaultChannelGroups", () => {
@@ -16,7 +18,7 @@ describe("resolveDefaultChannelGroups", () => {
       await resolveDefaultChannelGroups({
         getConfig,
         fetchSiteUserGroups: mockFetchSiteUserGroups,
-        purpose: "matching",
+        purpose: MANAGED_SITE_CHANNEL_DRAFT_PURPOSES.MATCHING,
       }),
     ).toEqual(["default"])
     expect(getConfig).not.toHaveBeenCalled()

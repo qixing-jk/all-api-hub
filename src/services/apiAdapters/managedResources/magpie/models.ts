@@ -1,10 +1,17 @@
-import { MAGPIE_ENDPOINT_FIELDS, MAGPIE_PROTOCOLS } from "~/constants/magpie"
+import {
+  MAGPIE_ENDPOINT_FIELDS,
+  MAGPIE_ENDPOINT_TYPES,
+  MAGPIE_PROTOCOLS,
+} from "~/constants/magpie"
+import { SITE_TYPES } from "~/constants/siteType"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import type { ManagedResourceModelsCapability } from "~/services/apiAdapters/contracts/managedResourceModels"
 import {
+  MANAGED_RESOURCE_FAILURE_CODES,
   ManagedResourceError,
   type ManagedResourceRef,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
-import { updateMagpieResource } from "~/services/apiAdapters/managedResources/magpie/mutations"
+import { updateMagpieResourceById } from "~/services/apiAdapters/managedResources/magpie/mutations"
 import {
   getMagpieProvider,
   magpieScope,
@@ -16,17 +23,20 @@ import {
   readMagpieProviderKey,
 } from "~/services/apiService/magpie/providers"
 import { buildMagpieProviderSavePayload } from "~/services/apiService/magpie/providerUpdate"
+import { MANAGED_SITE_MUTATION_OUTCOMES } from "~/services/managedSites/mutations/contracts"
 import type { MagpieConfig } from "~/types/magpieConfig"
 
 /** Resource identity is bound to the configured Web deployment. */
 function resourceId(config: MagpieConfig, ref: ManagedResourceRef) {
   if (
-    ref.siteType !== "magpie" ||
-    ref.kind !== "channel" ||
+    ref.siteType !== SITE_TYPES.MAGPIE ||
+    ref.kind !== MANAGED_RESOURCE_KINDS.Channel ||
     ref.scopeKey !== magpieScope(config) ||
     !ref.resourceId
   )
-    throw new ManagedResourceError({ code: "validation_failed" })
+    throw new ManagedResourceError({
+      code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+    })
   return ref.resourceId
 }
 
@@ -46,11 +56,12 @@ export const magpieModels: ManagedResourceModelsCapability<MagpieConfig> = {
       .filter((item) => !item.account && Boolean(item.chosen?.length))
       .map((provider) => {
         const type =
-          MAGPIE_ENDPOINT_FIELDS.find((field) => provider[field]) ?? "chat"
+          MAGPIE_ENDPOINT_FIELDS.find((field) => provider[field]) ??
+          MAGPIE_ENDPOINT_TYPES.Chat
         return {
           ref: {
-            siteType: "magpie" as const,
-            kind: "channel" as const,
+            siteType: SITE_TYPES.MAGPIE,
+            kind: MANAGED_RESOURCE_KINDS.Channel,
             scopeKey: magpieScope(config),
             resourceId: provider.id,
           },
@@ -81,7 +92,9 @@ export const magpieModels: ManagedResourceModelsCapability<MagpieConfig> = {
         probe.channelType as (typeof MAGPIE_ENDPOINT_FIELDS)[number],
       )
     )
-      throw new ManagedResourceError({ code: "validation_failed" })
+      throw new ManagedResourceError({
+        code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+      })
     return discoverMagpieModels(
       config,
       { [probe.channelType]: probe.baseUrl, key: probe.credential },
@@ -89,16 +102,14 @@ export const magpieModels: ManagedResourceModelsCapability<MagpieConfig> = {
     )
   },
   updateModels: async (config, ref, models, options) => {
-    const provider = requireMagpieApiProvider(
-      await getMagpieProvider(config, resourceId(config, ref), options),
-    )
-    const result = await updateMagpieResource(
+    const result = await updateMagpieResourceById(
       config,
-      provider,
+      resourceId(config, ref),
       { fields: { models: [...new Set(models)] }, requireExplicitModels: true },
       options,
     )
-    return result.outcome === "succeeded" || result.outcome === "partial"
+    return result.outcome === MANAGED_SITE_MUTATION_OUTCOMES.Succeeded ||
+      result.outcome === MANAGED_SITE_MUTATION_OUTCOMES.Partial
       ? { ...result, data: undefined }
       : result
   },

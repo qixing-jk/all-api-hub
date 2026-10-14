@@ -4,7 +4,9 @@ const BATCH_IMPORT_CONCURRENCY = 4
 export const mapBatchImportWithConcurrency = async <TItem, TResult>(
   items: TItem[],
   mapper: (item: TItem, index: number) => Promise<TResult>,
+  options: { signal?: AbortSignal } = {},
 ): Promise<TResult[]> => {
+  options.signal?.throwIfAborted()
   if (items.length === 0) {
     return []
   }
@@ -18,7 +20,7 @@ export const mapBatchImportWithConcurrency = async <TItem, TResult>(
     { length: Math.min(BATCH_IMPORT_CONCURRENCY, items.length) },
     async () => {
       while (true) {
-        if (hasFailure) return
+        if (hasFailure || options.signal?.aborted) return
         const index = nextIndex
         nextIndex += 1
 
@@ -41,6 +43,7 @@ export const mapBatchImportWithConcurrency = async <TItem, TResult>(
   )
 
   await Promise.all(workers)
+  options.signal?.throwIfAborted()
   if (hasFailure) throw firstFailure
 
   return results

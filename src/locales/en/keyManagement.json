@@ -99,7 +99,8 @@
     "gatewayDescription": "This imports account keys as self-hosted AI gateway channels. After import, multiple keys can be used by clients through one AI API.",
     "loadingDescription": "Preparing preview for {{selectedCount}} selected keys.",
     "messages": {
-      "completed": "Batch import completed: {{created}} created, {{failed}} failed, {{skipped}} already present.",
+      "batchDuplicate": "Duplicates {{item}} in this batch and has been skipped.",
+      "completed": "Batch import completed: {{created}} created, {{failed}} failed, {{skipped}} skipped.",
       "duplicate": "An exact channel already exists: {{channel}}. It will not be created again.",
       "executionFailed": "Failed to run batch import: {{error}}",
       "targetChanged": "The managed-site target changed. Refresh the preview or choose the intended target before importing.",
@@ -110,7 +111,7 @@
       "loading": "Preparing channel preview...",
       "selected_one": "{{count}} key selected",
       "selected_other": "{{count}} keys selected",
-      "summary": "Preview: {{ready}} ready, {{warning}} warnings, {{skipped}} already present, {{blocked}} blocked, {{total}} total."
+      "summary": "Preview: {{ready}} ready, {{warning}} warnings, {{skipped}} skipped, {{blocked}} blocked, {{total}} total."
     },
     "repairTrusted": {
       "description": "These keys were just created. The simplified review omits duplicate and exact-key checks; use complete checks if you want to verify them before importing.",
@@ -121,11 +122,11 @@
       "status": {
         "failed": "Failed",
         "notSelected": "Not selected",
-        "skipped": "Already present",
+        "skipped": "Skipped",
         "success": "Created",
         "uncertain": "Needs review"
       },
-      "summary": "Result: {{created}} created, {{failed}} failed, {{skipped}} already present, {{total}} total."
+      "summary": "Result: {{created}} created, {{failed}} failed, {{skipped}} skipped, {{total}} total."
     },
     "selection": {
       "accountGroup": "Select visible keys for account {{name}}",
@@ -135,7 +136,7 @@
     "status": {
       "blocked": "Blocked",
       "ready": "Ready",
-      "skipped": "Already present",
+      "skipped": "Skipped",
       "warning": "Warning"
     },
     "target": {

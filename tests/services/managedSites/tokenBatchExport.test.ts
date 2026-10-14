@@ -5,6 +5,7 @@ import {
   buildAccountKeyResourceRuntimeKey,
   buildServiceCredentialRuntimeKey,
 } from "~/services/accounts/keys/accountRuntimeKeys"
+import { MANAGED_RESOURCE_EXACT_MATCH_BASES } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import {
   MANAGED_RESOURCE_FAILURE_CODES,
   ManagedResourceError,
@@ -349,6 +350,211 @@ describe("managed-site token batch export", () => {
       skippedCount: 0,
       blockedCount: 0,
       items: [],
+    })
+  })
+
+  it("skips a verified URL/key duplicate before preparing models or validating a create", async () => {
+    const managedSite = buildService({
+      siteType: SITE_TYPES.SUB2API,
+      matching: { exactMatchBasis: MANAGED_RESOURCE_EXACT_MATCH_BASES.URL_KEY },
+      channelDrafts: {
+        prepareFormData: vi.fn().mockRejectedValue(new Error("models offline")),
+      },
+    })
+    configureManagedSiteCapabilities(managedSite)
+    const channel = buildManagedResourceMatchCandidate({ name: "Existing" })
+    mockResolveManagedSiteChannelMatch.mockResolvedValue(
+      buildMatchInspection({
+        url: { matched: true, channel, candidateCount: 1 },
+        key: { comparable: true, matched: true, reason: "matched", channel },
+      }),
+    )
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/batchImport/tokenBatchImportPreview"
+    )
+    const preview = await prepareManagedSiteTokenBatchExportPreview({
+      items: [buildAccountTokenInput()],
+    })
+    expect(preview).toMatchObject({
+      skippedCount: 1,
+      blockedCount: 0,
+      items: [{ status: "skipped", matchedChannel: { name: "Existing" } }],
+    })
+    expect(managedSite.channelDrafts.prepareFormData).not.toHaveBeenCalled()
+  })
+
+  it("keeps the first executable batch credential and skips its duplicate across accounts", async () => {
+    const managedSite = buildService()
+    configureManagedSiteCapabilities(managedSite)
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/batchImport/tokenBatchImportPreview"
+    )
+    const preview = await prepareManagedSiteTokenBatchExportPreview({
+      items: [
+        buildAccountTokenInput(
+          buildDisplaySiteData({
+            id: "a",
+            baseUrl: "https://source.invalid/v1",
+          }),
+        ),
+        buildAccountTokenInput(
+          buildDisplaySiteData({ id: "b", baseUrl: "https://source.invalid/" }),
+        ),
+        buildAccountTokenInput(
+          buildDisplaySiteData({ id: "c", baseUrl: "https://source.invalid" }),
+          buildAccountToken({ key: "different-key" }),
+        ),
+        buildAccountTokenInput(
+          buildDisplaySiteData({
+            id: "d",
+            baseUrl: "https://different.invalid",
+          }),
+        ),
+      ],
+    })
+    expect(preview).toMatchObject({ readyCount: 3, skippedCount: 1 })
+    expect(preview.items[1]).toMatchObject({
+      status: "skipped",
+      duplicateOfItemId: preview.items[0]!.id,
+    })
+  })
+
+  it("checks only selected current drafts for duplicates before dispatching writes", async () => {
+    const managedSite = buildService({
+      channelDrafts: {
+        prepareFormData: vi.fn(async (source) => ({
+          name: source.name,
+          type: 1,
+          key: source.apiKey,
+          base_url: source.baseUrl,
+          models: [source.name],
+          groups: ["default"],
+          enabled: true,
+        })),
+      },
+    })
+    configureManagedSiteCapabilities(managedSite)
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/batchImport/tokenBatchImportPreview"
+    )
+    const { executeManagedSiteTokenBatchExport } = await import(
+      "~/services/managedSites/batchImport/tokenBatchImportExecution"
+    )
+    const preview = await prepareManagedSiteTokenBatchExportPreview({
+      items: [11, 12, 13].map((id) =>
+        buildAccountTokenInput(
+          undefined,
+          buildAccountToken({ id, name: `Token ${id}` }),
+        ),
+      ),
+    })
+    preview.items[1]!.draft!.models = ["same-model"]
+    preview.items[2]!.draft!.models = ["same-model"]
+    const result = await executeManagedSiteTokenBatchExport({
+      preview,
+      selectedItemIds: preview.items.slice(1).map((item) => item.id),
+    })
+    expect(result).toMatchObject({
+      totalSelected: 2,
+      attemptedCount: 1,
+      createdCount: 1,
+      skippedCount: 1,
+    })
+    expect(managedSite.submit).toHaveBeenCalledTimes(1)
+    expect(result.items[0]?.id).toBe(preview.items[1]!.id)
+  })
+
+  it.each([
+    {
+      siteType: SITE_TYPES.NEW_API,
+      basis: MANAGED_RESOURCE_EXACT_MATCH_BASES.KEY_MODELS,
+      readyCount: 2,
+      skippedCount: 0,
+    },
+    {
+      siteType: SITE_TYPES.SUB2API,
+      basis: MANAGED_RESOURCE_EXACT_MATCH_BASES.URL_KEY,
+      readyCount: 1,
+      skippedCount: 1,
+    },
+  ])(
+    "respects $basis identity when the same credential has different model lists",
+    async ({ siteType, basis, readyCount, skippedCount }) => {
+      const managedSite = buildService({
+        siteType,
+        matching: { exactMatchBasis: basis },
+        channelDrafts: {
+          prepareFormData: vi.fn(async (source) => ({
+            name: source.name,
+            type: siteType === SITE_TYPES.SUB2API ? "openai" : 1,
+            key: source.apiKey,
+            base_url: source.baseUrl,
+            models: source.name.includes("Token 12")
+              ? ["model-b"]
+              : ["model-a"],
+            groups: ["default"],
+            enabled: true,
+          })),
+        },
+      })
+      configureManagedSiteCapabilities(managedSite)
+      const { prepareManagedSiteTokenBatchExportPreview } = await import(
+        "~/services/managedSites/batchImport/tokenBatchImportPreview"
+      )
+      const preview = await prepareManagedSiteTokenBatchExportPreview({
+        items: [
+          buildAccountTokenInput(),
+          buildAccountTokenInput(
+            undefined,
+            buildAccountToken({ id: 12, name: "Token 12" }),
+          ),
+        ],
+      })
+      expect(preview).toMatchObject({ readyCount, skippedCount })
+    },
+  )
+
+  it("uses New API key aliases and model sets without reserving blocked rows", async () => {
+    const managedSite = buildService({
+      channelDrafts: {
+        prepareFormData: vi.fn(async (source) => ({
+          name: source.name,
+          type: 1,
+          key: source.apiKey,
+          base_url: source.baseUrl,
+          models: source.name.includes("Token 11")
+            ? []
+            : source.name.includes("Token 12")
+              ? ["model-a", "model-b"]
+              : ["model-b", "model-a"],
+          groups: ["default"],
+          enabled: true,
+        })),
+      },
+    })
+    configureManagedSiteCapabilities(managedSite)
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/batchImport/tokenBatchImportPreview"
+    )
+    const preview = await prepareManagedSiteTokenBatchExportPreview({
+      items: [11, 12, 13].map((id) =>
+        buildAccountTokenInput(
+          undefined,
+          buildAccountToken({
+            id,
+            name: `Token ${id}`,
+            key: id === 13 ? "sk-token-secret" : "token-secret",
+          }),
+        ),
+      ),
+    })
+    expect(preview).toMatchObject({
+      readyCount: 1,
+      blockedCount: 1,
+      skippedCount: 1,
+    })
+    expect(preview.items[2]).toMatchObject({
+      duplicateOfItemId: preview.items[1]!.id,
     })
   })
 
@@ -907,6 +1113,7 @@ describe("managed-site token batch export", () => {
           buildAccountToken({
             id: 12,
             name: "Token 12",
+            key: "second-token-secret",
           }),
         ),
       ],
@@ -993,7 +1200,11 @@ describe("managed-site token batch export", () => {
       items: [
         buildAccountTokenInput(),
         buildAccountTokenInput(
-          buildDisplaySiteData({ id: "account-2", name: "Account 2" }),
+          buildDisplaySiteData({
+            id: "account-2",
+            name: "Account 2",
+            baseUrl: "https://second-source.invalid",
+          }),
           buildAccountToken({
             id: 12,
             name: "Token 12",
@@ -1099,6 +1310,7 @@ describe("managed-site token batch export", () => {
         buildDisplaySiteData({ id: accountId, name: `Account ${index + 1}` }),
         buildAccountToken({
           id: index + 11,
+          key: `secret-${index}`,
           name: `Token ${index + 11}`,
         }),
       )
@@ -1150,6 +1362,7 @@ describe("managed-site token batch export", () => {
           buildAccountToken({
             id: 12,
             name: "Token 12",
+            key: "second-token-secret",
           }),
         ),
       ],
@@ -1237,7 +1450,7 @@ describe("managed-site token batch export", () => {
       const managedSite = buildService({
         siteType: SITE_TYPES.SUB2API,
         matching: {
-          exactMatchBasis: "url-key",
+          exactMatchBasis: MANAGED_RESOURCE_EXACT_MATCH_BASES.URL_KEY,
           search: searchChannel,
           fetchSecretKey: vi.fn().mockResolvedValue("token-secret"),
         },
@@ -2451,7 +2664,11 @@ describe("managed-site token batch export", () => {
       items: Array.from({ length: 6 }, (_, index) =>
         buildAccountTokenInput(
           account,
-          buildAccountToken({ id: index + 1, name: `Key ${index + 1}` }),
+          buildAccountToken({
+            id: index + 1,
+            name: `Key ${index + 1}`,
+            key: `secret-${index}`,
+          }),
         ),
       ),
     })

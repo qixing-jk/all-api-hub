@@ -6,6 +6,7 @@ import { Button, Checkbox } from "~/components/ui"
 import type { CompactMultiSelectOption } from "~/components/ui/useCompactMultiSelectModel"
 import { ManagedSiteTokenBatchExportPreviewRow } from "~/features/KeyManagement/batchExport/ManagedSiteTokenBatchExportPreviewRow"
 import type {
+  ManagedSiteTokenBatchExportExecutionItem,
   ManagedSiteTokenBatchExportExecutionResult,
   ManagedSiteTokenBatchExportMatchedChannel,
   ManagedSiteTokenBatchExportPreview,
@@ -24,6 +25,7 @@ interface ManagedSiteTokenBatchExportPreviewListProps {
   }
   modelOptions: CompactMultiSelectOption[]
   executionResult: ManagedSiteTokenBatchExportExecutionResult | null
+  retainedExecutionItems?: ManagedSiteTokenBatchExportExecutionItem[]
   isLoadingPreview: boolean
   isManualPreviewRefresh: boolean
   isRunning: boolean
@@ -52,6 +54,7 @@ export function ManagedSiteTokenBatchExportPreviewList({
   executableSelection,
   modelOptions,
   executionResult,
+  retainedExecutionItems = [],
   isLoadingPreview,
   isManualPreviewRefresh,
   isRunning,
@@ -76,6 +79,10 @@ export function ManagedSiteTokenBatchExportPreviewList({
         ]) ?? [],
       ),
     [executionResult],
+  )
+  const retainedExecutionItemById = useMemo(
+    () => new Map(retainedExecutionItems.map((item) => [item.id, item])),
+    [retainedExecutionItems],
   )
 
   return (
@@ -123,7 +130,8 @@ export function ManagedSiteTokenBatchExportPreviewList({
 
       <div className="space-y-density-3 py-density-3 max-h-[60vh] overflow-y-auto rounded-md border px-3 md:max-h-[min(70vh,48rem)]">
         {preview.items.map((item) => {
-          const result = executionItemById.get(item.id)
+          const retainedResult = retainedExecutionItemById.get(item.id)
+          const result = executionItemById.get(item.id) ?? retainedResult
           return (
             <ManagedSiteTokenBatchExportPreviewRow
               key={item.id}
@@ -139,7 +147,7 @@ export function ManagedSiteTokenBatchExportPreviewList({
               )}
               modelOptions={modelOptions}
               isSelected={selectedIds.has(item.id)}
-              hasExecutionResult={hasExecutionResult}
+              hasExecutionResult={hasExecutionResult || Boolean(retainedResult)}
               isLoadingPreview={isLoadingPreview}
               isRunning={isRunning}
               verifyingItemId={verifyingItemId}

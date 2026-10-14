@@ -3,6 +3,7 @@ import {
   resolveOmniRouteBuiltinProvider,
 } from "~/constants/omniroute"
 import { SITE_TYPES } from "~/constants/siteType"
+import { MANAGED_RESOURCE_EXACT_MATCH_BASES } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type {
   ManagedSiteCapabilities,
@@ -20,39 +21,52 @@ import {
   readOmniRouteConnectionBaseUrl,
   toOmniRouteSanitizedConnection,
 } from "~/services/apiService/omniroute/redaction"
-import { sharePendingConfigRead } from "~/services/apiTransport/requestScheduling"
+import { shareInventoryRead } from "~/services/apiTransport/inventoryReads"
 import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
+import {
+  createNativeInventoryIndex,
+  NATIVE_INVENTORY_NAMESPACES,
+} from "~/services/managedSites/matching/nativeInventoryIndex"
 import {
   checkValidOmniRouteConfig,
   fetchOmniRouteChannelSecretKey,
   prepareChannelFormData,
 } from "~/services/managedSites/providers/omniroute"
-import type { OmniRouteConnection } from "~/types/omniroute"
 import type { OmniRouteConfig } from "~/types/omnirouteConfig"
 
-const readMatchingInventory = sharePendingConfigRead(
-  listAllOmniRouteConnections,
+/** Keep provider lookup rules local; share the secret-free batch index structure. */
+const readMatchingInventory = shareInventoryRead(
+  async (config: OmniRouteConfig, options) =>
+    createNativeInventoryIndex(
+      await listAllOmniRouteConnections(config, options),
+      (row) => {
+        const baseUrl = readOmniRouteConnectionBaseUrl(row)
+        return baseUrl
+          ? {
+              namespace: NATIVE_INVENTORY_NAMESPACES.OVERRIDE,
+              key: normalizeOmniRouteComparableUrl(baseUrl),
+            }
+          : {
+              namespace: NATIVE_INVENTORY_NAMESPACES.DEFAULT,
+              key: row.provider,
+            }
+      },
+      (row) => {
+        const sanitized = toOmniRouteSanitizedConnection(row)
+        return {
+          ref: createManagedChannelResourceRef(
+            SITE_TYPES.OMNIROUTE,
+            config.baseUrl,
+            sanitized.id,
+          ),
+          name: sanitized.name,
+          type: sanitized.provider,
+          base_url: sanitized.baseUrl,
+          models: "",
+        }
+      },
+    ),
 )
-
-/**
- * Whether a connection represents the same upstream as the searched address.
- *
- * A source whose address is a known first-party endpoint imports the provider
- * with no connection-level override (the gateway uses the provider's own
- * endpoint), so the empty override is compared by provider identity instead.
- * An override connection matches only the exact normalized address, never a
- * longer address that merely starts with it.
- */
-function omniRouteConnectionMatchesSource(
-  connection: OmniRouteConnection,
-  searchTarget: string,
-): boolean {
-  const override = readOmniRouteConnectionBaseUrl(connection)
-  if (override) {
-    return normalizeOmniRouteComparableUrl(override) === searchTarget
-  }
-  return resolveOmniRouteBuiltinProvider(searchTarget) === connection.provider
-}
 
 const omniRouteManagedSiteConfig: ManagedSiteConfigCapability<OmniRouteConfig> =
   createManagedSiteConfigCapability(
@@ -73,32 +87,22 @@ const omniRouteManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
 
 const matching: ManagedResourceMatchingCapability<OmniRouteConfig> = {
   // Connection-level base URL plus the stored credential identify one channel.
-  exactMatchBasis: "url-key",
+  exactMatchBasis: MANAGED_RESOURCE_EXACT_MATCH_BASES.URL_KEY,
   search: async (config, baseUrl, options) => {
-    const connections = await readMatchingInventory(config, options)
+    const index = await readMatchingInventory(config, options)
     const searchTarget = normalizeOmniRouteComparableUrl(baseUrl)
-    const items = connections
-      .filter((connection) =>
-        omniRouteConnectionMatchesSource(connection, searchTarget),
-      )
-      .map((connection) => {
-        const sanitized = toOmniRouteSanitizedConnection(connection)
-        return {
-          ref: createManagedChannelResourceRef(
-            SITE_TYPES.OMNIROUTE,
-            config.baseUrl,
-            sanitized.id,
-          ),
-          name: sanitized.name,
-          type: sanitized.provider,
-          base_url: sanitized.baseUrl,
-          models: "",
-          // Never copy the list response's credential field: it is masked by
-          // default but plaintext on a reveal-enabled deployment, and match
-          // candidates surface in review UIs.
-          key: "",
-        }
-      })
+    const defaultIdentity = resolveOmniRouteBuiltinProvider(searchTarget)
+    const items = index.find([
+      { namespace: NATIVE_INVENTORY_NAMESPACES.OVERRIDE, key: searchTarget },
+      ...(defaultIdentity === null
+        ? []
+        : [
+            {
+              namespace: NATIVE_INVENTORY_NAMESPACES.DEFAULT,
+              key: defaultIdentity,
+            },
+          ]),
+    ])
     return { items, total: items.length, type_counts: {} }
   },
   fetchSecretKey: async (config, ref, options) =>

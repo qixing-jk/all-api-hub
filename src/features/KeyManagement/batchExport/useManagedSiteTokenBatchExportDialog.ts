@@ -4,7 +4,10 @@ import { useMemo } from "react"
 import { PREVIEW_LOAD_ORIGINS } from "~/constants/previewLoadOrigin"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { getPreviewVerificationTargets } from "~/features/KeyManagement/batchExport/managedSiteTokenBatchExportPreview"
-import { shouldConfirmManagedSiteTokenBatchExport } from "~/features/KeyManagement/batchExport/managedSiteTokenBatchExportSession"
+import {
+  MANAGED_SITE_BATCH_EXECUTION_FAILURE_KINDS,
+  shouldConfirmManagedSiteTokenBatchExport,
+} from "~/features/KeyManagement/batchExport/managedSiteTokenBatchExportSession"
 import { verifyManagedSiteTokenBatchTargets } from "~/features/KeyManagement/batchExport/managedSiteTokenBatchVerification"
 import { useManagedSiteTokenBatchSession } from "~/features/KeyManagement/batchExport/useManagedSiteTokenBatchSession"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
@@ -156,7 +159,14 @@ export function useManagedSiteTokenBatchExportDialog({
       return
     }
 
-    const verificationTargets = getPreviewVerificationTargets(preview)
+    const verificationTargets = getPreviewVerificationTargets(
+      retryItemIds.size
+        ? {
+            ...preview,
+            items: preview.items.filter((item) => retryItemIds.has(item.id)),
+          }
+        : preview,
+    )
     const targets =
       verificationTargets.length > 0
         ? verificationTargets
@@ -270,9 +280,11 @@ export function useManagedSiteTokenBatchExportDialog({
     modelOptions,
     previewError,
     executionError:
-      executionFailure?.kind === "target-changed"
+      executionFailure?.kind ===
+      MANAGED_SITE_BATCH_EXECUTION_FAILURE_KINDS.TARGET_CHANGED
         ? t("keyManagement:batchManagedSiteExport.messages.targetChanged")
-        : executionFailure?.kind === "verification"
+        : executionFailure?.kind ===
+            MANAGED_SITE_BATCH_EXECUTION_FAILURE_KINDS.VERIFICATION
           ? t(
               "keyManagement:batchManagedSiteExport.messages.verificationFailed",
               { error: executionFailure.message },
@@ -283,6 +295,7 @@ export function useManagedSiteTokenBatchExportDialog({
     isManualPreviewRefresh: previewLoadOrigin === PREVIEW_LOAD_ORIGINS.MANUAL,
     isRunning,
     executionResult,
+    retainedExecutionItems: session.retainedExecutionItems,
     retryItemIds,
     isConfirmOpen,
     verifyingItemId,

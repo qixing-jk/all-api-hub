@@ -95,7 +95,8 @@
     "gatewayDescription": "这会将账号 Key 导入为自建 AI 网关渠道。导入后，多个 Key 即可通过同一个 AI API 提供给客户端使用。",
     "loadingDescription": "正在为 {{selectedCount}} 个已选择密钥准备预览。",
     "messages": {
-      "completed": "批量导入完成：成功 {{created}} 个，失败 {{failed}} 个，已存在 {{skipped}} 个。",
+      "batchDuplicate": "与本批次的 {{item}} 重复，已跳过。",
+      "completed": "批量导入完成：成功 {{created}} 个，失败 {{failed}} 个，已跳过 {{skipped}} 个。",
       "duplicate": "已存在精确匹配渠道：{{channel}}，不会重复创建。",
       "executionFailed": "执行批量导入失败：{{error}}",
       "targetChanged": "自建 AI 网关目标已变化。请刷新预览或选择正确目标后再导入。",
@@ -105,7 +106,7 @@
       "loadFailed": "加载预览失败：{{error}}",
       "loading": "正在准备渠道预览...",
       "selected": "已选择 {{count}} 个密钥",
-      "summary": "预览：可创建 {{ready}} 个，警告 {{warning}} 个，已存在 {{skipped}} 个，阻塞 {{blocked}} 个，共 {{total}} 个。"
+      "summary": "预览：可创建 {{ready}} 个，警告 {{warning}} 个，已跳过 {{skipped}} 个，阻塞 {{blocked}} 个，共 {{total}} 个。"
     },
     "repairTrusted": {
       "description": "这些 Key 刚刚创建完成。简化审核会跳过重复检查和精确 Key 检查；如果希望在导入前再次核对，可使用完整检查。",
@@ -116,11 +117,11 @@
       "status": {
         "failed": "失败",
         "notSelected": "未选择",
-        "skipped": "已存在",
+        "skipped": "已跳过",
         "success": "已创建",
         "uncertain": "需检查"
       },
-      "summary": "结果：成功 {{created}} 个，失败 {{failed}} 个，已存在 {{skipped}} 个，共 {{total}} 个。"
+      "summary": "结果：成功 {{created}} 个，失败 {{failed}} 个，已跳过 {{skipped}} 个，共 {{total}} 个。"
     },
     "selection": {
       "accountGroup": "选择账号 {{name}} 当前可见密钥",
@@ -130,7 +131,7 @@
     "status": {
       "blocked": "已阻塞",
       "ready": "可创建",
-      "skipped": "已存在",
+      "skipped": "已跳过",
       "warning": "需确认"
     },
     "target": {

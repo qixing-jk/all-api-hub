@@ -1,9 +1,18 @@
 import {
+  MANAGED_RESOURCE_EXACT_MATCH_BASES,
+  MANAGED_RESOURCE_SEARCH_INVENTORY_MODES,
+} from "~/services/apiAdapters/contracts/managedResourceMatching"
+import {
   MANAGED_RESOURCE_FAILURE_CODES,
   ManagedResourceError,
   type ManagedResourceRef,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import type { InventoryReadCache } from "~/services/apiTransport/inventoryReads"
+import {
+  createApiOperationContext,
+  type ApiOperationContext,
+} from "~/services/apiTransport/operationContext"
 import {
   SharedRead,
   type ScheduledReadOptions,
@@ -15,6 +24,7 @@ import {
   getManagedResourceRefKey,
 } from "~/services/managedSites/managedResourceIdentity"
 import {
+  getManagedSiteChannelExactMatch,
   getRecoverableManagedSiteChannelCandidate,
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
@@ -22,6 +32,10 @@ import {
   type ManagedSiteChannelMatchInspection,
   type ManagedSiteChannelMatchUnresolvedReason,
 } from "~/services/managedSites/matching/channelMatch"
+import {
+  getMatchingInventoryUrlBucket,
+  type MatchingInventoryIndexCache,
+} from "~/services/managedSites/matching/channelMatchInventory"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import {
   findManagedSiteChannelsByBaseUrl,
@@ -41,6 +55,9 @@ export type ManagedSiteChannelMatchContext = Pick<
 >
 
 export interface ManagedSiteChannelMatchRequestCache {
+  operationContext?: ApiOperationContext
+  inventoryReads?: InventoryReadCache
+  indexedInventories?: MatchingInventoryIndexCache
   /** Shared reads stay reusable for the life of the batch that owns this cache. */
   searchResultsByTargetKey: Map<
     string,
@@ -68,6 +85,8 @@ function getPendingSearch(
   managedConfig: ManagedSiteRuntimeConfigValue,
   searchBaseUrl: string,
   bypassJoin = false,
+  inventoryCache?: InventoryReadCache,
+  operationContext?: ApiOperationContext,
 ): SharedRead<ManagedResourceMatchList | null> {
   let searches = pendingSearches.get(managedSite.matching)
   if (!searches) {
@@ -86,11 +105,11 @@ function getPendingSearch(
   const read = new SharedRead<ManagedResourceMatchList | null>(
     async (sharedOptions) => {
       try {
-        return await managedSite.matching.search(
-          managedConfig,
-          searchBaseUrl,
-          sharedOptions,
-        )
+        return await managedSite.matching.search(managedConfig, searchBaseUrl, {
+          ...sharedOptions,
+          inventoryCache,
+          ...(operationContext ? { operationContext } : {}),
+        })
       } finally {
         if (searches.get(key) === read) searches.delete(key)
       }
@@ -101,13 +120,23 @@ function getPendingSearch(
 }
 
 export const createManagedSiteChannelMatchRequestCache = (
-  options: { bypassPendingSearches?: boolean } = {},
-): ManagedSiteChannelMatchRequestCache => ({
-  searchResultsByTargetKey: new Map(),
-  channelSecretKeysByResourceKey: new Map(),
-  resolvedChannelKeysByResourceKey: {},
-  ...(options.bypassPendingSearches ? { bypassPendingSearches: true } : {}),
-})
+  options: {
+    bypassPendingSearches?: boolean
+    operationContext?: ApiOperationContext
+  } = {},
+): ManagedSiteChannelMatchRequestCache => {
+  const operationContext =
+    options.operationContext ?? createApiOperationContext()
+  return {
+    operationContext,
+    inventoryReads: operationContext.inventoryReads,
+    indexedInventories: new WeakMap(),
+    searchResultsByTargetKey: new Map(),
+    channelSecretKeysByResourceKey: new Map(),
+    resolvedChannelKeysByResourceKey: {},
+    ...(options.bypassPendingSearches ? { bypassPendingSearches: true } : {}),
+  }
+}
 
 interface ResolveManagedSiteChannelMatchParams extends ScheduledReadOptions {
   managedSite: ManagedSiteChannelMatchContext
@@ -117,6 +146,10 @@ interface ResolveManagedSiteChannelMatchParams extends ScheduledReadOptions {
   key?: string
   resolvedChannelKeysByResourceKey?: Record<string, string>
   resolveHiddenKeys?: boolean
+  /** Batch duplicate checks need only one proven duplicate, not all comparable keys. */
+  stopAfterExactMatch?: boolean
+  /** One row's preparation attempt; a new attempt must use a fresh map. */
+  secretReadFailures?: Map<string, ManagedSiteChannelMatchUnresolvedReason>
   hiddenKeyResourceRefs?: readonly ManagedResourceRef[]
   requestCache?: ManagedSiteChannelMatchRequestCache
   protectionBypassExecution?: ProtectionBypassExecution
@@ -185,6 +218,8 @@ const fetchRecoverableCandidateSecretKey = async (
             protectionBypassExecution: params.protectionBypassExecution,
             signal: sharedOptions.signal,
             requestScheduling: sharedOptions.requestScheduling,
+            inventoryCache: params.requestCache?.inventoryReads,
+            operationContext: params.requestCache?.operationContext,
           },
         ),
       )
@@ -267,6 +302,8 @@ export async function resolveManagedSiteChannelMatch(
       managedConfig,
       searchBaseUrl,
       requestCache?.bypassPendingSearches === true,
+      requestCache?.inventoryReads,
+      requestCache?.operationContext,
     )
     requestCache?.searchResultsByTargetKey.set(searchCacheKey, searchRead)
   }
@@ -311,27 +348,39 @@ export async function resolveManagedSiteChannelMatch(
     }
   }
 
-  const searchResultItems = Array.isArray(searchResults.items)
+  let searchResultItems = Array.isArray(searchResults.items)
     ? searchResults.items
     : []
   try {
-    for (const candidate of searchResultItems) {
-      assertManagedResourceRefForSite(candidate.ref, target)
+    if (
+      managedSite.matching.searchInventoryMode ===
+        MANAGED_RESOURCE_SEARCH_INVENTORY_MODES.FULL &&
+      requestCache
+    ) {
+      requestCache.indexedInventories ??= new WeakMap()
+      searchResultItems = getMatchingInventoryUrlBucket(
+        searchResults,
+        target,
+        searchBaseUrl,
+        requestCache.indexedInventories,
+      )
+    } else {
+      for (const candidate of searchResultItems) {
+        assertManagedResourceRefForSite(candidate.ref, target)
+      }
     }
   } catch (error) {
     requestCache?.searchResultsByTargetKey.delete(searchCacheKey)
     throw error
   }
-  const availableKeys: Record<string, string> = {
-    ...(requestCache?.resolvedChannelKeysByResourceKey ?? {}),
-    ...(resolvedChannelKeysByResourceKey ?? {}),
-  }
   const mergedResolvedChannelKeysByResourceKey: Record<string, string> = {}
   for (const candidate of searchResultItems) {
     const resourceKey = getManagedResourceRefKey(candidate.ref)
-    if (typeof availableKeys[resourceKey] === "string") {
-      mergedResolvedChannelKeysByResourceKey[resourceKey] =
-        availableKeys[resourceKey]
+    const availableKey =
+      resolvedChannelKeysByResourceKey?.[resourceKey] ??
+      requestCache?.resolvedChannelKeysByResourceKey[resourceKey]
+    if (typeof availableKey === "string") {
+      mergedResolvedChannelKeysByResourceKey[resourceKey] = availableKey
     }
   }
 
@@ -368,13 +417,16 @@ export async function resolveManagedSiteChannelMatch(
       models,
     })
 
-    if (
-      !exactModelChannels.some((channel) =>
-        areManagedResourceRefsEqual(channel.ref, keyAssessment.channel?.ref),
-      )
-    ) {
+    const exactKeyAssessment = inspectManagedSiteChannelKeyMatch({
+      channels: exactModelChannels,
+      accountBaseUrl: searchBaseUrl,
+      key,
+      keyComparisonMode,
+    })
+    if (!exactKeyAssessment.matched || !exactKeyAssessment.channel) {
       return
     }
+    keyAssessment = exactKeyAssessment
 
     const keyedModelsAssessment = inspectManagedSiteChannelModelsMatch({
       channels: assessmentChannels,
@@ -435,9 +487,30 @@ export async function resolveManagedSiteChannelMatch(
   }
 
   const attemptedSecretReads = new Set<string>()
+  const hasRequiredExactMatch = () =>
+    !!getManagedSiteChannelExactMatch(
+      {
+        searchBaseUrl,
+        searchCompleted: true,
+        url: {
+          matched: urlBucket.length > 0,
+          channel:
+            managedSite.matching.exactMatchBasis ===
+            MANAGED_RESOURCE_EXACT_MATCH_BASES.URL_KEY
+              ? keyAssessment.channel ?? urlBucket[0] ?? null
+              : urlBucket[0] ?? null,
+          candidateCount: urlBucket.length,
+        },
+        key: keyAssessment,
+        models: modelsAssessment,
+      },
+      managedSite.matching,
+    )
+  const canStop = () => params.stopAfterExactMatch && hasRequiredExactMatch()
 
   if (
     resolveHiddenKeys &&
+    !canStop() &&
     params.protectionBypassExecution &&
     typeof managedSite.matching.fetchSecretKey === "function" &&
     key?.trim()
@@ -496,6 +569,11 @@ export async function resolveManagedSiteChannelMatch(
       params.signal?.throwIfAborted()
       const resourceKey = getManagedResourceRefKey(recoverableCandidate.ref)
       attemptedSecretReads.add(resourceKey)
+      const priorFailure = params.secretReadFailures?.get(resourceKey)
+      if (priorFailure) {
+        unresolvedReason ??= priorFailure
+        continue
+      }
       try {
         const resolvedChannelKey = await fetchRecoverableCandidateSecretKey({
           managedSite,
@@ -511,12 +589,17 @@ export async function resolveManagedSiteChannelMatch(
           requestCache.resolvedChannelKeysByResourceKey[resourceKey] =
             resolvedChannelKey
         }
+        if (params.stopAfterExactMatch) {
+          refreshAssessmentsWithResolvedKeys()
+          if (canStop()) break
+        }
       } catch (error) {
         params.signal?.throwIfAborted()
         if (!(error instanceof MatchResolutionUnresolvedError)) {
           throw error
         }
         unresolvedReason ??= error.reason
+        params.secretReadFailures?.set(resourceKey, error.reason)
       }
     }
 
@@ -529,6 +612,7 @@ export async function resolveManagedSiteChannelMatch(
     params.protectionBypassExecution &&
     typeof managedSite.matching.hydrateComparableKeys === "function" &&
     key?.trim() &&
+    !canStop() &&
     !hasExactKeyAndModelMatch()
   ) {
     const exactModelChannels = findManagedSiteChannelsByBaseUrlAndModels({
@@ -598,6 +682,8 @@ export async function resolveManagedSiteChannelMatch(
               protectionBypassExecution: params.protectionBypassExecution,
               signal: params.signal,
               requestScheduling: params.requestScheduling,
+              inventoryCache: requestCache?.inventoryReads,
+              operationContext: requestCache?.operationContext,
             },
           )
 
@@ -640,7 +726,13 @@ export async function resolveManagedSiteChannelMatch(
   }
 
   const resolvedUrlChannel =
-    urlBucket[0] ?? keyAssessment.channel ?? modelsAssessment.channel
+    (managedSite.matching.exactMatchBasis ===
+    MANAGED_RESOURCE_EXACT_MATCH_BASES.URL_KEY
+      ? keyAssessment.channel
+      : null) ??
+    urlBucket[0] ??
+    keyAssessment.channel ??
+    modelsAssessment.channel
 
   return {
     searchBaseUrl,

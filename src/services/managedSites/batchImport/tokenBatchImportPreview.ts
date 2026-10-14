@@ -3,10 +3,15 @@ import {
   type AccountRuntimeKey,
 } from "~/services/accounts/keys/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
-import { type ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
+import { MANAGED_RESOURCE_EXACT_MATCH_BASES } from "~/services/apiAdapters/contracts/managedResourceMatching"
+import {
+  MANAGED_SITE_CHANNEL_DRAFT_PURPOSES,
+  type ManagedSiteCapabilities,
+} from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { validateNativeManagedChannelImportDraft } from "~/services/apiAdapters/managedResources/channelImport"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import { mapBatchImportWithConcurrency } from "~/services/managedSites/batchImport/tokenBatchImportConcurrency"
+import { skipManagedSiteBatchDuplicates } from "~/services/managedSites/batchImport/tokenBatchImportDuplicates"
 import {
   createManagedSiteTokenBatchImportTarget,
   type ManagedSiteTokenBatchImportTarget,
@@ -21,6 +26,7 @@ import {
   getManagedSiteChannelExactMatch,
   getRecoverableManagedSiteChannelCandidate,
   type ManagedSiteChannelMatchInspection,
+  type ManagedSiteChannelMatchUnresolvedReason,
 } from "~/services/managedSites/matching/channelMatch"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/matching/channelMatchResolver"
 import {
@@ -41,6 +47,7 @@ import type { ProtectionBypassExecution } from "~/services/protectionBypass/cont
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
 import {
+  countPreviewItems,
   isResolvedManagedSiteTokenBatchExportItemInput,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES,
@@ -66,14 +73,6 @@ export const DEFAULT_MANAGED_SITE_TOKEN_BATCH_IMPORT_INTENT: ManagedSiteBatchImp
     source: MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES.MANUAL_SELECTION,
     verification: MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE,
   }
-
-const getInputRuntimeKeyId = (
-  input: ResolvedManagedSiteTokenBatchExportItemInput,
-) => input.runtimeKey.id
-
-const getInputRuntimeKeyName = (
-  input: ResolvedManagedSiteTokenBatchExportItemInput,
-) => input.runtimeKey.label
 
 const getVerificationCandidate = (
   managedSite: ManagedSiteCapabilities,
@@ -103,12 +102,12 @@ const buildBasePreviewItem = (
   ManagedSiteTokenBatchExportPreviewItem,
   "id" | "accountId" | "accountName" | "runtimeKeyId" | "runtimeKeyName"
 > => ({
-  id: getInputRuntimeKeyId(input),
+  id: input.runtimeKey.id,
   accountId: input.account.id,
   accountName:
     input.account.name || input.runtimeKey.accountName || input.account.id,
   runtimeKeyId: input.runtimeKey.id,
-  runtimeKeyName: getInputRuntimeKeyName(input),
+  runtimeKeyName: input.runtimeKey.label,
 })
 
 const buildBlockedPreviewItem = (
@@ -145,6 +144,16 @@ const buildExplicitBlockedPreviewItem = (
 const uniqueWarningCodes = (
   warnings: ManagedSiteTokenBatchExportWarningCode[],
 ) => Array.from(new Set(warnings))
+
+const buildExecutableWarningState = (
+  warnings: ManagedSiteTokenBatchExportWarningCode[],
+) => ({
+  status:
+    warnings.length > 0
+      ? MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING
+      : MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY,
+  warningCodes: uniqueWarningCodes(warnings),
+})
 
 const isExactVerificationUnavailable = (
   resolution: Awaited<ReturnType<typeof resolveManagedSiteChannelMatch>>,
@@ -196,6 +205,7 @@ const toSafePreviewDiagnostic = (
 const resolveInputRuntimeKeyForManagedSiteExport = async (
   input: ResolvedManagedSiteTokenBatchExportItemInput,
   protectionBypassExecution?: ProtectionBypassExecution,
+  signal?: AbortSignal,
 ): Promise<AccountRuntimeKey> => {
   if (!isAccountKeyResourceRuntimeKey(input.runtimeKey)) {
     return input.runtimeKey
@@ -206,6 +216,7 @@ const resolveInputRuntimeKeyForManagedSiteExport = async (
     input.runtimeKey,
     {
       protectionBypassExecution,
+      ...(signal ? { abortSignal: signal } : {}),
     },
   )
 }
@@ -238,8 +249,27 @@ const preparePreviewItem = async (params: {
   resolvedChannelKeysByResourceKey?: Record<string, string>
   operationContext?: ManagedSiteOperationContext
   protectionBypassExecution?: ProtectionBypassExecution
+  signal?: AbortSignal
 }): Promise<ManagedSiteTokenBatchExportPreviewItem> => {
+  params.signal?.throwIfAborted()
   const { input, managedSite, managedConfig } = params
+  // Early URL/key checks and post-draft checks are one preparation attempt.
+  // A subsequent preview gets a new map and may retry transient failures.
+  const secretReadFailures = new Map<
+    string,
+    ManagedSiteChannelMatchUnresolvedReason
+  >()
+  const matchOptions = {
+    managedSite,
+    managedConfig,
+    resolvedChannelKeysByResourceKey: params.resolvedChannelKeysByResourceKey,
+    resolveHiddenKeys: true,
+    stopAfterExactMatch: true,
+    secretReadFailures,
+    requestCache: params.operationContext?.channelMatch,
+    protectionBypassExecution: params.protectionBypassExecution,
+    signal: params.signal,
+  }
   let secretCollection = collectManagedResourceSecrets(input, managedConfig)
 
   let resolvedRuntimeKey: AccountRuntimeKey
@@ -248,12 +278,15 @@ const preparePreviewItem = async (params: {
     resolvedRuntimeKey = await resolveInputRuntimeKeyForManagedSiteExport(
       input,
       params.protectionBypassExecution,
+      params.signal,
     )
+    params.signal?.throwIfAborted()
     secretCollection = mergeManagedResourceSecretCollections(
       secretCollection,
       collectManagedResourceSecrets(resolvedRuntimeKey),
     )
   } catch (error) {
+    params.signal?.throwIfAborted()
     const diagnostic = toSafePreviewDiagnostic(error, secretCollection)
     logger.warn("Managed-site token batch secret resolution failed", {
       accountId: input.account.id,
@@ -271,12 +304,43 @@ const preparePreviewItem = async (params: {
   }
 
   try {
-    const draft = await managedSite.channelDrafts.prepareFormData(
-      buildInputDraftSource(input, resolvedRuntimeKey),
-      {
-        operationContext: params.operationContext,
-      },
-    )
+    const source = buildInputDraftSource(input, resolvedRuntimeKey)
+    if (
+      params.verification ===
+        MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE &&
+      managedSite.matching.exactMatchBasis ===
+        MANAGED_RESOURCE_EXACT_MATCH_BASES.URL_KEY &&
+      supportsManagedSiteBaseUrlChannelLookup(managedSite.siteType)
+    ) {
+      const resolution = await resolveManagedSiteChannelMatch({
+        ...matchOptions,
+        accountBaseUrl: normalizeManagedSiteChannelBaseUrl(source.baseUrl),
+        models: [],
+        key: source.apiKey,
+      })
+      params.signal?.throwIfAborted()
+      const exactMatch = getManagedSiteChannelExactMatch(
+        resolution,
+        managedSite.matching,
+      )
+      if (exactMatch) {
+        return {
+          ...buildBasePreviewItem(input),
+          draft: null,
+          status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,
+          warningCodes: [],
+          matchedChannel: toManagedSiteAssessmentChannel(exactMatch),
+          assessment: toManagedSiteVerifiedKeyAssessment(resolution),
+        }
+      }
+    }
+    const draft = await managedSite.channelDrafts.prepareFormData(source, {
+      // Execution uses native import seeds, whose routing defaults belong to the editor.
+      purpose: MANAGED_SITE_CHANNEL_DRAFT_PURPOSES.NATIVE_EDITOR,
+      operationContext: params.operationContext,
+      ...(params.signal ? { signal: params.signal } : {}),
+    })
+    params.signal?.throwIfAborted()
     secretCollection = mergeManagedResourceSecretCollections(
       secretCollection,
       collectManagedResourceSecrets(draft),
@@ -307,11 +371,7 @@ const preparePreviewItem = async (params: {
       return {
         ...buildBasePreviewItem(input),
         draft,
-        status:
-          warningCodes.length > 0
-            ? MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING
-            : MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY,
-        warningCodes: uniqueWarningCodes(warningCodes),
+        ...buildExecutableWarningState(warningCodes),
       }
     }
 
@@ -323,26 +383,18 @@ const preparePreviewItem = async (params: {
       return {
         ...buildBasePreviewItem(input),
         draft,
-        status:
-          warningCodes.length > 0
-            ? MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING
-            : MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY,
-        warningCodes: uniqueWarningCodes(warningCodes),
+        ...buildExecutableWarningState(warningCodes),
       }
     }
 
     const searchBaseUrl = normalizeManagedSiteChannelBaseUrl(draft.base_url)
     const resolution = await resolveManagedSiteChannelMatch({
-      managedSite,
-      managedConfig,
+      ...matchOptions,
       accountBaseUrl: searchBaseUrl,
       models: draft.models,
       key: draft.key,
-      resolvedChannelKeysByResourceKey: params.resolvedChannelKeysByResourceKey,
-      resolveHiddenKeys: true,
-      requestCache: params.operationContext?.channelMatch,
-      protectionBypassExecution: params.protectionBypassExecution,
     })
+    params.signal?.throwIfAborted()
     const exactMatch = getManagedSiteChannelExactMatch(
       resolution,
       managedSite.matching,
@@ -387,15 +439,12 @@ const preparePreviewItem = async (params: {
     return {
       ...buildBasePreviewItem(input),
       draft,
-      status:
-        warningCodes.length > 0
-          ? MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING
-          : MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY,
-      warningCodes: uniqueWarningCodes(warningCodes),
+      ...buildExecutableWarningState(warningCodes),
       assessment,
       ...(verificationCandidate ? { verificationCandidate } : {}),
     }
   } catch (error) {
+    params.signal?.throwIfAborted()
     const diagnostic = toSafePreviewDiagnostic(error, secretCollection)
     logger.warn("Managed-site token batch preview item failed", {
       accountId: input.account.id,
@@ -421,33 +470,6 @@ const buildPreview = (
   },
   items: ManagedSiteTokenBatchExportPreviewItem[],
 ): ManagedSiteTokenBatchExportPreview => {
-  const counts = items.reduce(
-    (accumulator, item) => {
-      switch (item.status) {
-        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY:
-          accumulator.readyCount += 1
-          break
-        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING:
-          accumulator.warningCount += 1
-          break
-        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED:
-          accumulator.skippedCount += 1
-          break
-        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED:
-          accumulator.blockedCount += 1
-          break
-      }
-
-      return accumulator
-    },
-    {
-      readyCount: 0,
-      warningCount: 0,
-      skippedCount: 0,
-      blockedCount: 0,
-    },
-  )
-
   return {
     intent: params.intent,
     siteType: params.siteType,
@@ -455,7 +477,7 @@ const buildPreview = (
     targetSummary: params.target?.targetSummary ?? null,
     items,
     totalCount: items.length,
-    ...counts,
+    ...countPreviewItems(items),
   }
 }
 
@@ -468,14 +490,17 @@ export async function prepareManagedSiteTokenBatchExportPreview(params: {
   intent?: ManagedSiteBatchImportIntent
   resolvedChannelKeysByItemId?: Record<string, Record<string, string>>
   protectionBypassExecution?: ProtectionBypassExecution
+  signal?: AbortSignal
 }): Promise<ManagedSiteTokenBatchExportPreview> {
+  params.signal?.throwIfAborted()
   const intent = params.intent ?? DEFAULT_MANAGED_SITE_TOKEN_BATCH_IMPORT_INTENT
   const runtimeConfig = await getCurrentManagedSiteRuntimeConfig()
+  params.signal?.throwIfAborted()
 
   if (!runtimeConfig) {
-    const managedSite = getManagedSiteCapabilities(
-      await getCurrentManagedSiteType(),
-    )
+    const siteType = await getCurrentManagedSiteType()
+    params.signal?.throwIfAborted()
+    const managedSite = getManagedSiteCapabilities(siteType)
     return buildPreview(
       { intent, siteType: managedSite.siteType, target: null },
       params.items.map((input) =>
@@ -490,26 +515,34 @@ export async function prepareManagedSiteTokenBatchExportPreview(params: {
   }
 
   const target = await createManagedSiteTokenBatchImportTarget(runtimeConfig)
-  const operationContext = createManagedSiteOperationContext()
-  const items = await mapBatchImportWithConcurrency(params.items, (input) => {
-    if (!isResolvedManagedSiteTokenBatchExportItemInput(input)) {
-      return Promise.resolve(buildExplicitBlockedPreviewItem(input))
-    }
-
-    return preparePreviewItem({
-      input,
-      managedSite: target.managedSite,
-      managedConfig: target.config,
-      verification: intent.verification,
-      resolvedChannelKeysByResourceKey:
-        params.resolvedChannelKeysByItemId?.[getInputRuntimeKeyId(input)],
-      operationContext,
-      protectionBypassExecution: params.protectionBypassExecution,
-    })
+  params.signal?.throwIfAborted()
+  const operationContext = createManagedSiteOperationContext({
+    freshChannelSearches: true,
   })
+  const items = await mapBatchImportWithConcurrency(
+    params.items,
+    (input) => {
+      if (!isResolvedManagedSiteTokenBatchExportItemInput(input)) {
+        return Promise.resolve(buildExplicitBlockedPreviewItem(input))
+      }
+
+      return preparePreviewItem({
+        input,
+        managedSite: target.managedSite,
+        managedConfig: target.config,
+        verification: intent.verification,
+        resolvedChannelKeysByResourceKey:
+          params.resolvedChannelKeysByItemId?.[input.runtimeKey.id],
+        operationContext,
+        protectionBypassExecution: params.protectionBypassExecution,
+        signal: params.signal,
+      })
+    },
+    { signal: params.signal },
+  )
 
   return buildPreview(
     { intent, siteType: target.managedSite.siteType, target },
-    items,
+    skipManagedSiteBatchDuplicates(items, target.managedSite),
   )
 }

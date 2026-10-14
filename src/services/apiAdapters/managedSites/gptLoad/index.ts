@@ -3,6 +3,7 @@ import {
   resolveGptLoadFirstPartyChannel,
 } from "~/constants/gptLoad"
 import { SITE_TYPES } from "~/constants/siteType"
+import { MANAGED_RESOURCE_EXACT_MATCH_BASES } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type {
   ManagedSiteCapabilities,
@@ -20,37 +21,53 @@ import {
   readGptLoadGroupBaseUrl,
   toGptLoadSanitizedGroup,
 } from "~/services/apiService/gptLoad/redaction"
+import { shareInventoryRead } from "~/services/apiTransport/inventoryReads"
 import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
+import {
+  createNativeInventoryIndex,
+  NATIVE_INVENTORY_NAMESPACES,
+} from "~/services/managedSites/matching/nativeInventoryIndex"
 import {
   checkValidGptLoadConfig,
   fetchGptLoadChannelSecretKey,
   prepareGptLoadChannelFormData,
 } from "~/services/managedSites/providers/gptLoad"
-import type { GptLoadGroup } from "~/types/gptLoad"
 import type { GptLoadConfig } from "~/types/gptLoadConfig"
 
-/**
- * Whether a group represents the same upstream as the searched address.
- *
- * A group whose channel is a known first-party endpoint imports the channel
- * with no base-url override (the gateway uses the channel's own endpoint), so
- * the empty override is compared by channel identity instead. An override group
- * matches only the exact normalized address, never a longer address that merely
- * starts with it.
- */
-function gptLoadGroupMatchesSource(
-  group: GptLoadGroup,
-  searchTarget: string,
-): boolean {
-  // The channel-level override lives in `params.base_url` on the classic route
-  // and in the resolved `endpoint` on the modern one.
-  const baseUrl =
-    readGptLoadGroupBaseUrl(group) || (group.endpoint ?? "").trim()
-  if (baseUrl) {
-    return normalizeGptLoadComparableUrl(baseUrl) === searchTarget
-  }
-  return resolveGptLoadFirstPartyChannel(searchTarget) === group.channel_id
-}
+/** Keep provider lookup rules local; share the secret-free batch index structure. */
+const readMatchingInventory = shareInventoryRead(
+  async (config: GptLoadConfig, options) =>
+    createNativeInventoryIndex(
+      await listAllGptLoadGroups(config, options),
+      (row) => {
+        const baseUrl =
+          readGptLoadGroupBaseUrl(row) || (row.endpoint ?? "").trim()
+        return baseUrl
+          ? {
+              namespace: NATIVE_INVENTORY_NAMESPACES.OVERRIDE,
+              key: normalizeGptLoadComparableUrl(baseUrl),
+            }
+          : {
+              namespace: NATIVE_INVENTORY_NAMESPACES.DEFAULT,
+              key: row.channel_id,
+            }
+      },
+      (row) => {
+        const sanitized = toGptLoadSanitizedGroup(row)
+        return {
+          ref: createManagedChannelResourceRef(
+            SITE_TYPES.GPT_LOAD,
+            config.baseUrl,
+            String(sanitized.id),
+          ),
+          name: sanitized.name,
+          type: sanitized.channelId,
+          base_url: sanitized.baseUrl,
+          models: sanitized.models.join(","),
+        }
+      },
+    ),
+)
 
 const gptLoadManagedSiteConfig: ManagedSiteConfigCapability<GptLoadConfig> =
   createManagedSiteConfigCapability(
@@ -68,29 +85,22 @@ const gptLoadManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
 
 const matching: ManagedResourceMatchingCapability<GptLoadConfig> = {
   // The stored base-url override plus channel identity identify one group.
-  exactMatchBasis: "url-key",
+  exactMatchBasis: MANAGED_RESOURCE_EXACT_MATCH_BASES.URL_KEY,
   search: async (config, baseUrl, options) => {
-    const groups = await listAllGptLoadGroups(config, options)
+    const index = await readMatchingInventory(config, options)
     const searchTarget = normalizeGptLoadComparableUrl(baseUrl)
-    const items = groups
-      .filter((group) => gptLoadGroupMatchesSource(group, searchTarget))
-      .map((group) => {
-        const sanitized = toGptLoadSanitizedGroup(group)
-        return {
-          ref: createManagedChannelResourceRef(
-            SITE_TYPES.GPT_LOAD,
-            config.baseUrl,
-            String(sanitized.id),
-          ),
-          name: sanitized.name,
-          type: sanitized.channelId,
-          base_url: sanitized.baseUrl,
-          models: sanitized.models.join(","),
-          // Never copy the list response's credential field: it is masked by
-          // default and plaintext is per-row reveal only.
-          key: "",
-        }
-      })
+    const defaultIdentity = resolveGptLoadFirstPartyChannel(searchTarget)
+    const items = index.find([
+      { namespace: NATIVE_INVENTORY_NAMESPACES.OVERRIDE, key: searchTarget },
+      ...(defaultIdentity === null
+        ? []
+        : [
+            {
+              namespace: NATIVE_INVENTORY_NAMESPACES.DEFAULT,
+              key: defaultIdentity,
+            },
+          ]),
+    ])
     return { items, total: items.length, type_counts: {} }
   },
   fetchSecretKey: async (config, ref, options) =>

@@ -4,6 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   getManagedSiteTokenBatchExportRetryItemIds,
   mergeManagedSiteTokenBatchExportExecutionResults,
+  mergeManagedSiteTokenBatchRetryPreview,
   reconcileManagedSiteTokenBatchExportPreview,
   shouldConfirmManagedSiteTokenBatchExport,
 } from "~/features/KeyManagement/batchExport/managedSiteTokenBatchExportSession"
@@ -62,6 +63,71 @@ const buildPreview = (
 })
 
 describe("managed-site token batch export session", () => {
+  it("keeps history order and missing retry rows while taking fresh preview metadata", () => {
+    const previous = buildPreview([
+      buildItem("success", ["model-a"]),
+      buildItem("retry", ["model-b"]),
+      buildItem("missing", ["model-c"]),
+    ])
+    const next = buildPreview([buildItem("retry", ["fresh-model"])])
+    const merged = mergeManagedSiteTokenBatchRetryPreview(
+      previous,
+      next,
+      new Set(["retry", "missing"]),
+    )
+    expect(merged.items).toEqual([
+      previous.items[0],
+      next.items[0],
+      previous.items[2],
+    ])
+    expect(merged.totalCount).toBe(3)
+    expect(merged.intent).toBe(next.intent)
+    expect(mergeManagedSiteTokenBatchRetryPreview(previous, next, null)).toBe(
+      next,
+    )
+    expect(mergeManagedSiteTokenBatchRetryPreview(null, next, new Set())).toBe(
+      next,
+    )
+  })
+  it("never restores rows skipped because the target already contains them", () => {
+    const first = buildItem("key-1", ["model-a"])
+    const targetDuplicate = {
+      ...buildItem("key-2", ["model-a"]),
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,
+    }
+    const previousPreview = buildPreview([first, targetDuplicate])
+    const reconciled = reconcileManagedSiteTokenBatchExportPreview({
+      previousPreview,
+      nextPreview: previousPreview,
+      selectedIds: new Set(),
+      editedModelsByItemId: new Map([[first.id, ["model-b"]]]),
+    })
+    expect(reconciled.preview.items[1]?.status).toBe(
+      MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,
+    )
+  })
+  it("restores a batch duplicate when the selected representative's models change", () => {
+    const first = buildItem("key-1", ["model-a"])
+    const second = {
+      ...buildItem("key-2", ["model-a"]),
+      draft: { ...first.draft!, name: "Second channel" },
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,
+      duplicateOfItemId: first.id,
+      duplicateOfItemName: first.runtimeKeyName,
+    }
+    const previousPreview = buildPreview([first, second])
+    const reconciled = reconcileManagedSiteTokenBatchExportPreview({
+      previousPreview,
+      nextPreview: previousPreview,
+      selectedIds: new Set([first.id]),
+      editedModelsByItemId: new Map([[first.id, ["model-b"]]]),
+    })
+    expect(reconciled.preview.items[1]?.status).toBe(
+      MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY,
+    )
+    expect(reconciled.preview.items[1]?.duplicateOfItemId).toBeUndefined()
+    expect(reconciled.selectedIds).toEqual(new Set([first.id]))
+  })
   it("requires confirmation for complete checks but not trusted repair review", () => {
     expect(
       shouldConfirmManagedSiteTokenBatchExport({

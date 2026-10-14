@@ -6,6 +6,7 @@ import {
   buildServiceCredentialRuntimeKey,
   formatAccountRuntimeKeySecretForSite,
 } from "~/services/accounts/keys/accountRuntimeKeys"
+import { MANAGED_RESOURCE_EXACT_MATCH_BASES } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import {
   MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
@@ -411,7 +412,10 @@ describe("getManagedSiteTokenChannelStatus", () => {
           enabled: true,
         }),
       },
-      matching: { exactMatchBasis: "url-key", search: searchChannel },
+      matching: {
+        exactMatchBasis: MANAGED_RESOURCE_EXACT_MATCH_BASES.URL_KEY,
+        search: searchChannel,
+      },
     })
 
     const result = await getManagedSiteTokenChannelStatus({

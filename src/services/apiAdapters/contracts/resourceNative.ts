@@ -1,3 +1,5 @@
+import type { ApiOperationContext } from "~/services/apiTransport/operationContext"
+
 export const RESOURCE_FIELD_TYPES = {
   Text: "text",
   Textarea: "textarea",
@@ -70,7 +72,10 @@ export const RESOURCE_SECRET_REPLACEMENT_BLOCK_REASONS = {
 export type ResourceSecretReplacementBlockReason =
   (typeof RESOURCE_SECRET_REPLACEMENT_BLOCK_REASONS)[keyof typeof RESOURCE_SECRET_REPLACEMENT_BLOCK_REASONS]
 
-export type ResourceOperationOptions = { signal?: AbortSignal }
+export type ResourceOperationOptions = {
+  signal?: AbortSignal
+  operationContext?: ApiOperationContext
+}
 
 export type ResourceListQuery = {
   cursor?: string
