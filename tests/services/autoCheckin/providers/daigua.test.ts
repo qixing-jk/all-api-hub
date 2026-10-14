@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery/discovery"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
@@ -475,6 +476,73 @@ describe("registered DaiGua daily check-in", () => {
       result: { status: "failed", reasonCode: "manual_verification_required" },
     })
     expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    [statusData(true), "already_checked"],
+    [{ ...statusData(), enabled: false }, "failed"],
+  ])(
+    "does not attempt verification after eligibility changes (%j)",
+    async (freshStatus, expectedStatus) => {
+      vi.mocked(fetchApiResponse)
+        .mockResolvedValueOnce(response(statusData()))
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          headers: {},
+          body: {
+            code: 400,
+            message: "verification failed",
+            reason: "TURNSTILE_VERIFICATION_FAILED",
+          },
+        })
+        .mockResolvedValue(response(freshStatus))
+      await expect(run()).resolves.toMatchObject({
+        kind: "executed",
+        result: { status: expectedStatus },
+        retryable: false,
+      })
+      expect(tempWindowTurnstileFetch).not.toHaveBeenCalled()
+      expect(
+        vi
+          .mocked(fetchApiResponse)
+          .mock.calls.filter(
+            ([, options]) => options?.options?.method === "POST",
+          ),
+      ).toHaveLength(1)
+    },
+  )
+
+  it("maps a browser assistance authentication failure without replaying the claim", async () => {
+    vi.mocked(fetchApiResponse)
+      .mockResolvedValueOnce(response(statusData()))
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        headers: {},
+        body: {
+          code: 400,
+          message: "verification failed",
+          reason: "TURNSTILE_VERIFICATION_FAILED",
+        },
+      })
+      .mockResolvedValue(response(statusData()))
+    vi.mocked(tempWindowTurnstileFetch).mockRejectedValue(
+      new ApiError("Unauthorized", 401),
+    )
+    await expect(run()).resolves.toMatchObject({
+      kind: "executed",
+      result: { status: "failed", reasonCode: "authentication_required" },
+      retryable: false,
+    })
+    expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(1)
+    expect(
+      vi
+        .mocked(fetchApiResponse)
+        .mock.calls.filter(
+          ([, options]) => options?.options?.method === "POST",
+        ),
+    ).toHaveLength(1)
   })
 
   it.each(["abort", "timeout"])(

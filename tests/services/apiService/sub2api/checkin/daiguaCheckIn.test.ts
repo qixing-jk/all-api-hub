@@ -191,6 +191,33 @@ describe("DaiGua ordinary daily check-in", () => {
     })
   })
 
+  it.each([null, [], "not an object"])(
+    "rejects non-object success data without inventing a reward (%j)",
+    async (data) => {
+      vi.mocked(fetchApiResponse).mockResolvedValue(response(data))
+      await expect(performDaiguaDailyCheckIn(request)).rejects.toMatchObject({
+        code: "JSON_PARSE_ERROR",
+      })
+      expect(fetchApiResponse).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it("preserves a business rejection carried by a successful HTTP response", async () => {
+    vi.mocked(fetchApiResponse).mockResolvedValue({
+      ...response(null),
+      body: {
+        code: 400,
+        message: "verification failed",
+        reason: "TURNSTILE_VERIFICATION_FAILED",
+      },
+    })
+    await expect(performDaiguaDailyCheckIn(request)).rejects.toMatchObject({
+      code: "BUSINESS_ERROR",
+      upstreamCode: "TURNSTILE_VERIFICATION_FAILED",
+    })
+    expect(fetchApiResponse).toHaveBeenCalledTimes(1)
+  })
+
   it("does not recover or refresh credentials during passive discovery", async () => {
     await expect(
       fetchDaiguaDailyCheckInStatus({
