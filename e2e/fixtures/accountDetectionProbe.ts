@@ -13,7 +13,11 @@ export type AccountDetectionProbeInput = {
   tabId: number
 }
 
-/** Packaged test-build probe: real interfaces, no eval or production test switch. */
+/**
+ * Run an API-only detection contract through the packaged test-build interface.
+ * @param input Source, target URL and native tab for this isolated attempt.
+ * @returns Detection identity, strategy and filtered native-context evidence.
+ */
 export async function accountDetectionProbe(input: AccountDetectionProbeInput) {
   const events: Record<string, unknown>[] = []
   const observation = observeNativeContexts(input.url)
@@ -73,7 +77,11 @@ export async function accountDetectionProbe(input: AccountDetectionProbeInput) {
   }
 }
 
-/** Read-only native observation; UI actions own all successful detection calls. */
+/**
+ * Observe native contexts without starting detection or creating tabs/windows.
+ * @param url Target origin whose tab events should be recorded.
+ * @returns Context records and a finish operation that removes all listeners.
+ */
 function observeNativeContexts(url: string) {
   const contexts: { windowType: string | undefined }[] = []
   const pending: Promise<void>[] = []

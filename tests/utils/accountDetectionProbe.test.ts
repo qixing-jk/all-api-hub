@@ -10,6 +10,10 @@ vi.mock("~/services/siteDetection/sources/direct", () => ({
   autoDetectDirect: vi.fn(),
 }))
 
+/**
+ * Start the packaged observer with controllable native browser lookups.
+ * @returns Browser lookup controls and a target-tab event emitter.
+ */
 async function startObservation() {
   const onCreated = { addListener: vi.fn(), removeListener: vi.fn() }
   const onUpdated = { addListener: vi.fn(), removeListener: vi.fn() }

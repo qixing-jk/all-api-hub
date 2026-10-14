@@ -61,7 +61,10 @@ const test = extensionTest.extend<{ detectionCleanup: DetectionCleanup }>({
   ],
 })
 
-/** Each target runs its source matrix with one login and one isolated profile. */
+/**
+ * Register the source matrix using one login and one isolated profile per target.
+ * @param target Real-site login/configuration adapter and expected identity type.
+ */
 export function registerRealSiteAccountDetectionTests<
   C extends { baseUrl: string },
 >(target: {

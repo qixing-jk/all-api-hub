@@ -50,6 +50,11 @@ for (const entry of buildRealSiteE2eRuns(entries)) {
   builtVariants.add(buildVariant)
 }
 
+/**
+ * Separate the optional category from Playwright flags, including `--` arguments.
+ * @param args Command-line arguments after the script name.
+ * @returns Selected category and arguments passed through to Playwright.
+ */
 function parseArgs(args) {
   const separatorIndex = args.indexOf("--")
   const ownArgs = separatorIndex === -1 ? args : args.slice(0, separatorIndex)
@@ -120,6 +125,7 @@ function runPnpm(args, env) {
   }
 }
 
+/** Print the category commands and forwarding syntax without starting a run. */
 function printUsage() {
   console.log(`Usage:
   pnpm e2e:real-site
