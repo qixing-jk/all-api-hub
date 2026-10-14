@@ -577,6 +577,7 @@ describe("CopyKeyDialog exports and service credentials", () => {
     expect(resolveApiTokenKeyMock).toHaveBeenCalledTimes(1)
 
     await selectExportAction(user, "keyManagement:actions.exportToKiloCode")
+    await act(async () => vi.dynamicImportSettled())
     await waitFor(() => {
       expect(kiloCodeExportDialogMock).toHaveBeenCalledWith(
         expect.objectContaining({

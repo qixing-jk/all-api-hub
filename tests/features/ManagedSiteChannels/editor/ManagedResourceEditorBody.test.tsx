@@ -1633,13 +1633,11 @@ describe("ManagedResourceEditorBody", () => {
     )
     const nameInput = screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput)
     await user.clear(nameInput)
-    await user.type(nameInput, "Unsaved rename")
+    await user.paste("Unsaved rename")
     await user.click(screen.getByRole("button", { name: "View saved API key" }))
     await waitFor(() => expect(onLoadSecret).toHaveBeenCalledOnce())
-    await user.type(
-      screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput),
-      "replacement-secret",
-    )
+    await user.click(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput))
+    await user.paste("replacement-secret")
 
     expect(loadSignal?.aborted).toBe(true)
     expect(screen.getByRole("dialog")).toBeVisible()

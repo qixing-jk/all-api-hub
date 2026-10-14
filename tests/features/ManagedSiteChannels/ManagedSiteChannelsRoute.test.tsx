@@ -1866,7 +1866,7 @@ describe("ManagedSiteChannelsRoute", () => {
     const editDialog = await screen.findByRole("dialog")
     const nameInput = within(editDialog).getByRole("textbox")
     await user.clear(nameInput)
-    await user.type(nameInput, "Unsaved local edit")
+    await user.paste("Unsaved local edit")
 
     await act(async () => resourceI18n.changeLanguage("en"))
 
@@ -2341,23 +2341,19 @@ describe("ManagedSiteChannelsRoute", () => {
       screen.queryByText("managedSiteChannels:editor.validation.required"),
     ).not.toBeInTheDocument()
 
-    await user.type(
-      screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput),
-      "Example channel",
-    )
+    await user.click(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.nameInput))
+    await user.paste("Example channel")
     await user.click(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.typeSelect))
     await user.click(
       await screen.findByRole("option", {
         name: "managedSiteChannels:editor.options.unknown",
       }),
     )
-    await user.type(
-      screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput),
-      "example-key",
-    )
+    await user.click(screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.keyInput))
+    await user.paste("example-key")
     const modelsInput = screen.getByTestId(CHANNEL_DIALOG_TEST_IDS.modelsInput)
     await user.click(modelsInput)
-    await user.type(modelsInput, "model-example")
+    await user.paste("model-example")
     await user.keyboard("{Enter}")
 
     await waitFor(() => expect(submitButton).toBeEnabled())

@@ -77,21 +77,23 @@ function ApiYiModelRow({
 }
 
 describe("APIyi model groups and prices", () => {
-  beforeEach(() => {
+  let pricing: ModelCatalogSnapshot
+
+  beforeEach(async () => {
     server.use(
       http.get(`${account.baseUrl}/api/pricing`, () =>
         HttpResponse.json(apiyiPricingSample),
       ),
     )
-  })
-
-  it("keeps all four gpt-6-astra groups when pricing conditions are unverified or its group changes", async () => {
-    const pricing = await getSiteTypeCapabilities(
+    pricing = await getSiteTypeCapabilities(
       SITE_TYPES.APIYI,
     ).account!.modelPricing!.fetchPricing({
       baseUrl: account.baseUrl,
       auth: { authType: AuthTypeEnum.Cookie, userId: account.userId },
     })
+  })
+
+  it("keeps all four gpt-6-astra groups when pricing conditions are unverified or its group changes", async () => {
     const user = userEvent.setup()
     render(<ApiYiModelRow pricing={pricing} />)
 
@@ -125,12 +127,6 @@ describe("APIyi model groups and prices", () => {
   })
 
   it("shows both context price tiers and applies the selected group to each tier", async () => {
-    const pricing = await getSiteTypeCapabilities(
-      SITE_TYPES.APIYI,
-    ).account!.modelPricing!.fetchPricing({
-      baseUrl: account.baseUrl,
-      auth: { authType: AuthTypeEnum.Cookie, userId: account.userId },
-    })
     const user = userEvent.setup()
     render(
       <ApiYiModelRow
