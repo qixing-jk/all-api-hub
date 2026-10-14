@@ -1,4 +1,11 @@
 {
+  "accountMessage": {
+    "claimed": "Abgeholt",
+    "credits": "Belohnung: {{amount}} Credits",
+    "expires": "Ablauf: {{time}}",
+    "openNative": "Auf der Website ansehen und bearbeiten",
+    "unclaimed": "Nicht abgeholt"
+  },
   "actions": {
     "checkNow": "Jetzt prüfen",
     "collapse": "Reduzieren",

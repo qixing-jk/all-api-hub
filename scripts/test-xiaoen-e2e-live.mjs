@@ -1,7 +1,7 @@
 /* global chrome */
 import assert from "node:assert/strict"
 import { execFileSync } from "node:child_process"
-import { randomUUID } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 import fs from "node:fs/promises"
 import path from "node:path"
 import { expect } from "@playwright/test"
@@ -13,14 +13,14 @@ import { XIAOEN_WEB_ORIGIN as origin } from "../src/services/accountSiteDefiniti
 import { findInstalledDevExtension } from "./cdp/browser-runtime.mjs"
 import { connectDevBrowser, connectExtensionById } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
-import { getAccounts } from "./cdp/sandbox.mjs"
+import { getAccounts, withStoredValue } from "./cdp/sandbox.mjs"
 import { preflightSession, probePageSession } from "./cdp/session-preflight.mjs"
 import { dismissModals } from "./cdp/ui-driver.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
-// Read-only provider validation; the only write is a run-owned local extension account.
+// Provider reads by default; --sync-message-read acknowledges one already-read message.
 // Requires an authenticated Xiaoen session in the dedicated dev browser.
-// No login, key rotation, signup, credit claim or message acknowledgement is performed.
+// No login, key rotation, signup, credit claim or popup acknowledgement is performed.
 await loadLocalEnv()
 applyIsolateFlag(process.argv)
 if (process.argv.includes("--prepare-login")) {
@@ -94,13 +94,27 @@ const readIdentity = () =>
     return body.data
   })
 const forbiddenWrites = []
+const syncMessageRead = process.argv.includes("--sync-message-read")
+let allowedMessageId
+const messageReadWrites = []
 const observeRequest = (request) => {
   if (
     request.url().startsWith(`${origin}/api/`) &&
     !["GET", "HEAD", "OPTIONS"].includes(request.method()) &&
     !request.url().endsWith("/api/analytics/event")
-  )
-    forbiddenWrites.push({ url: request.url(), method: request.method() })
+  ) {
+    if (
+      syncMessageRead &&
+      allowedMessageId &&
+      request.url() === `${origin}/api/messages` &&
+      request.method() === "PATCH" &&
+      JSON.stringify(request.postDataJSON()) ===
+        JSON.stringify({ messageId: allowedMessageId })
+    ) {
+      messageReadWrites.push({ url: request.url(), method: request.method() })
+    } else
+      forbiddenWrites.push({ url: request.url(), method: request.method() })
+  }
 }
 dev.context.on("request", observeRequest)
 try {
@@ -120,6 +134,12 @@ try {
     "Inspect authorized source sessions when the target preflight is not ready",
   )
   const initial = await readIdentity()
+  const messageResponse = await dev.context.request.get(
+    `${origin}/api/messages`,
+  )
+  assert.equal(messageResponse.status(), 200)
+  const nativeMessages = await messageResponse.json()
+  assert.ok(Array.isArray(nativeMessages))
   const runtimeResponse = await site.request.get(
     `${initial.apiBaseUrl.replace(/\/+$/, "").replace(/\/v1$/, "")}/v1/models`,
     { headers: { Authorization: `Bearer ${initial.apiKey}` } },
@@ -211,10 +231,11 @@ try {
     "fresh Cookie auto-detection, live identity, save and native credits",
   )
   await site.close()
-  assert.ok(
-    dev.context.pages().every((page) => !page.url().startsWith(`${origin}/`)),
-    "Another console tab remains open; tab-free refresh was not established",
-  )
+  if (!process.argv.includes("--allow-existing-site-tabs"))
+    assert.ok(
+      dev.context.pages().every((page) => !page.url().startsWith(`${origin}/`)),
+      "Another console tab remains open; tab-free refresh was not established",
+    )
   const before = saved.last_sync_time
   await card().getByTestId(accounts.rowMoreActionsButton).click()
   await ui.getByTestId(accounts.rowRefreshMenuItem).click()
@@ -226,7 +247,11 @@ try {
       { timeout: 45000 },
     )
     .toBeGreaterThan(before)
-  evidence.checks.push("refresh with no console tab")
+  evidence.checks.push(
+    process.argv.includes("--allow-existing-site-tabs")
+      ? "refresh while preserving existing console tabs (tab-free behavior not asserted)"
+      : "refresh with no console tab",
+  )
   await dev.context.grantPermissions(["clipboard-read"])
   clipboardOverride = true
   await ui.bringToFront()
@@ -365,12 +390,168 @@ try {
   ).toBeEnabled()
   await ui.getByRole("button", { name: "Check now", exact: true }).click()
   await expect(
+    ui.getByRole("button", { name: "Check now", exact: true }),
+  ).toBeEnabled({ timeout: 45000 })
+  const messageStore = await dev.serviceWorker.evaluate(async () => {
+    const raw = (await chrome.storage.local.get("siteAnnouncements_store"))
+      .siteAnnouncements_store
+    return typeof raw === "string" ? JSON.parse(raw) : raw
+  })
+  const publicRecord = Object.values(messageStore.sites)
+    .filter(
+      (source) =>
+        source.sourceScope === "site" &&
+        source.baseUrl === origin &&
+        source.siteType === "xiaoen",
+    )
+    .flatMap((source) => source.records)
+    .find((record) => record.content.includes("go.toter.me"))
+  assert.ok(publicRecord, "Native public migration notice is missing")
+  await ui.goto(
+    `chrome-extension://${extensionId}/options.html#siteAnnouncements?recordId=${encodeURIComponent(publicRecord.id)}`,
+  )
+  await ui.reload()
+  await dismissModals(ui)
+  await expect(
     ui.locator("h3").filter({ hasText: "go.toter.me" }).first(),
   ).toBeVisible({ timeout: 45000 })
   await capture("05-announcements.png")
   evidence.checks.push(
     "scoped public announcement refresh and rendered native migration notice without inbox acknowledgement",
   )
+  const accountSource = Object.values(messageStore.sites).find(
+    (source) =>
+      source.accountId === accountId && source.sourceScope === "account",
+  )
+  assert.ok(accountSource, "Account-scoped inbox source was not discovered")
+  assert.equal(
+    accountSource.records.length,
+    nativeMessages.filter((item) => !item.isDeleted).length,
+  )
+  const ownedNative = nativeMessages.find(
+    (item) =>
+      item.userId === initial.id &&
+      item.isRead &&
+      !item.isDeleted &&
+      item.template.type === "quota",
+  )
+  assert.ok(
+    ownedNative,
+    "An already-read reward message is required for non-consuming acceptance",
+  )
+  const cached = accountSource.records.find(
+    (record) => record.upstreamId === ownedNative.id,
+  )
+  assert.ok(cached)
+  await ui.goto(
+    `chrome-extension://${extensionId}/options.html#siteAnnouncements?recordId=${encodeURIComponent(cached.id)}`,
+  )
+  await dismissModals(ui)
+  await expect(
+    ui.getByRole("link", { name: "View and handle on the site", exact: true }),
+  ).toHaveAttribute(
+    "href",
+    `${origin}/dashboard/messages?messageId=${ownedNative.id}`,
+  )
+  await expect(ui.getByText("Claimed", { exact: true }).first()).toBeVisible()
+  await capture("06-account-messages.png")
+  evidence.checks.push(
+    "account-scoped messages, reward status and native message link",
+  )
+  if (syncMessageRead) {
+    // Only the run-owned local cache is made unread; the native message was already read.
+    // Restore the exact cache after the UI action, without consuming native unread messages.
+    cached.read = false
+    delete cached.readAt
+    const digest = createHash("sha256").update(cached.fingerprint).digest("hex")
+    delete messageStore.identityLedger[accountSource.siteKey][digest].readAt
+    allowedMessageId = ownedNative.id
+    await withStoredValue(
+      dev.serviceWorker,
+      "siteAnnouncements_store",
+      messageStore,
+      async () => {
+        await ui.goto(
+          `chrome-extension://${extensionId}/options.html#siteAnnouncements`,
+        )
+        await ui.reload()
+        await dismissModals(ui)
+        await ui.getByRole("combobox", { name: "Site", exact: true }).click()
+        await ui.getByRole("option", { name: new RegExp(accountName) }).click()
+        await ui.evaluate(() => {
+          const nativeSend = chrome.runtime.sendMessage.bind(chrome.runtime)
+          globalThis.__xiaoenReadResponses = []
+          chrome.runtime.sendMessage = (...args) => {
+            const tracked = args[0]?.type === "siteAnnouncements:markRead"
+            const callback = args.at(-1)
+            if (tracked && typeof callback === "function")
+              args[args.length - 1] = (response) => {
+                globalThis.__xiaoenReadResponses.push(response)
+                callback(response)
+              }
+            const result = nativeSend(...args)
+            if (tracked && result?.then)
+              result.then((response) =>
+                globalThis.__xiaoenReadResponses.push(response),
+              )
+            return result
+          }
+        })
+        const heading = ui.locator(
+          `[aria-controls="site-announcement-content-${cached.id}"]`,
+        )
+        await expect(heading).toBeVisible()
+        await heading.click()
+        await expect
+          .poll(() => messageReadWrites.length, { timeout: 45000 })
+          .toBe(1)
+        await expect
+          .poll(
+            async () => {
+              const response = await ui.evaluate(async () =>
+                chrome.runtime.sendMessage({
+                  type: "siteAnnouncements:listRecords",
+                  id: Date.now(),
+                  timestamp: Date.now(),
+                  data: {},
+                }),
+              )
+              return response.res?.data?.find(
+                (record) => record.id === cached.id,
+              )?.read
+            },
+            { timeout: 45000 },
+          )
+          .toBe(true)
+        const afterMessages = await (
+          await dev.context.request.get(`${origin}/api/messages`)
+        ).json()
+        const after = afterMessages.find((item) => item.id === ownedNative.id)
+        assert.equal(after.isRead, true)
+        assert.equal(after.isClaimed, ownedNative.isClaimed)
+        assert.equal(after.popupAcknowledgedAt, ownedNative.popupAcknowledgedAt)
+        await expect
+          .poll(
+            async () => {
+              const responses = await ui.evaluate(
+                () => globalThis.__xiaoenReadResponses,
+              )
+              evidence.readSyncResponses = responses
+              return responses[0]?.res?.success
+            },
+            { timeout: 45000 },
+          )
+          .toBe(true)
+        await expect(heading.getByText("Unread", { exact: true })).toHaveCount(
+          0,
+        )
+        await capture("07-message-read-sync.png")
+      },
+    )
+    evidence.checks.push(
+      "expanding a locally unread inbox item syncs native read state once without claiming or acknowledging its popup",
+    )
+  }
   assert.deepEqual(
     forbiddenWrites,
     [],
@@ -405,6 +586,7 @@ try {
   }
   dev.context.off("request", observeRequest)
   evidence.forbiddenWrites = forbiddenWrites
+  evidence.messageReadWrites = messageReadWrites
   await fs.writeFile(
     path.join(evidenceDir, "index.json"),
     JSON.stringify(evidence, null, 2),

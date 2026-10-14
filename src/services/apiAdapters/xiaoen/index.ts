@@ -20,6 +20,7 @@ import { t } from "~/utils/i18n/core"
 
 import { resolveStaticAccountRoutePath } from "../accountRoutes"
 import { xiaoenAnnouncements } from "./announcements"
+import { xiaoenAccountMessages } from "./messages"
 import { xiaoenModelCatalog, xiaoenModelPricing } from "./modelCatalog"
 
 export const xiaoenCapabilities: SiteTypeCapabilities = {
@@ -27,6 +28,7 @@ export const xiaoenCapabilities: SiteTypeCapabilities = {
   family: ACCOUNT_SITE_ADAPTER_FAMILIES.Xiaoen,
   site: { announcements: xiaoenAnnouncements },
   account: {
+    announcements: xiaoenAccountMessages,
     modelCatalog: xiaoenModelCatalog,
     modelPricing: xiaoenModelPricing,
     inviteLink: {

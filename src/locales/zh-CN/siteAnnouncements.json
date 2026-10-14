@@ -1,4 +1,11 @@
 {
+  "accountMessage": {
+    "claimed": "已领取",
+    "credits": "奖励：{{amount}} 额度",
+    "expires": "截止时间：{{time}}",
+    "openNative": "前往原站查看与处理",
+    "unclaimed": "未领取"
+  },
   "actions": {
     "checkNow": "立即检查",
     "collapse": "收起",

@@ -8,7 +8,7 @@ import { isRecord } from "~/utils/core/object"
 
 import { XIAOEN_ENDPOINTS } from "./constants"
 
-export const XIAOEN_CONSOLE_ORIGIN = XIAOEN_WEB_ORIGIN
+const XIAOEN_CONSOLE_ORIGIN = XIAOEN_WEB_ORIGIN
 const session = createCookieOperationSession({
   origin: XIAOEN_CONSOLE_ORIGIN,
   loginCookieName: "auth_token",
@@ -47,11 +47,11 @@ export const invalidXiaoenResponse = (endpoint: string) =>
   )
 
 /** Bind the HttpOnly console login across identity checks, native writes and readback. */
-export async function fetchXiaoenEnvelope(
+export async function fetchXiaoenRaw(
   request: ApiServiceRequest,
   endpoint: string,
   options: RequestInit = {},
-): Promise<Record<string, unknown>> {
+): Promise<unknown> {
   return withXiaoenSession(request, async (request) => {
     const cookieSession = session.getSession(
       request,
@@ -93,24 +93,32 @@ export async function fetchXiaoenEnvelope(
       },
       false,
     )
-    if (!isRecord(body) || typeof body.success !== "boolean")
-      throw invalidXiaoenResponse(endpoint)
-    if (!body.success) {
-      const message =
-        typeof body.message === "string"
-          ? body.message
-          : "肖恩 AI request failed"
-      throw new ApiError(
-        message,
-        message === "未登录" ? 401 : undefined,
-        endpoint,
-        message === "未登录"
-          ? API_ERROR_CODES.HTTP_401
-          : API_ERROR_CODES.BUSINESS_ERROR,
-      )
-    }
     return body
   })
+}
+
+/** Most console endpoints use envelopes; the message list is a native array. */
+export async function fetchXiaoenEnvelope(
+  request: ApiServiceRequest,
+  endpoint: string,
+  options: RequestInit = {},
+): Promise<Record<string, unknown>> {
+  const body = await fetchXiaoenRaw(request, endpoint, options)
+  if (!isRecord(body) || typeof body.success !== "boolean")
+    throw invalidXiaoenResponse(endpoint)
+  if (!body.success) {
+    const message =
+      typeof body.message === "string" ? body.message : "肖恩 AI request failed"
+    throw new ApiError(
+      message,
+      message === "未登录" ? 401 : undefined,
+      endpoint,
+      message === "未登录"
+        ? API_ERROR_CODES.HTTP_401
+        : API_ERROR_CODES.BUSINESS_ERROR,
+    )
+  }
+  return body
 }
 
 /** Read a successful object payload without reusing prior operation facts. */

@@ -1,4 +1,11 @@
 {
+  "accountMessage": {
+    "claimed": "Đã nhận",
+    "credits": "Phần thưởng: {{amount}} tín dụng",
+    "expires": "Hết hạn: {{time}}",
+    "openNative": "Xem và xử lý trên trang web",
+    "unclaimed": "Chưa nhận"
+  },
   "actions": {
     "checkNow": "Kiểm tra ngay",
     "collapse": "Thu gọn",

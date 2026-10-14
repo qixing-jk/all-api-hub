@@ -4,4 +4,5 @@ export const XIAOEN_ENDPOINTS = {
   Config: "/api/site-config",
   Models: "/api/models/pricing",
   Announcements: "/api/announcements",
+  Messages: "/api/messages",
 } as const
