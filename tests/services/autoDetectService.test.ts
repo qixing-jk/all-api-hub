@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  AUTO_DETECT_DIAGNOSTIC_EVENTS,
   AUTO_DETECT_ERROR_CODES,
   AUTO_DETECT_FETCH_CONTEXT_KINDS,
+  AUTO_DETECT_SOURCE_REASONS,
   AUTO_DETECT_STRATEGIES,
 } from "~/constants/autoDetect"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
@@ -10,6 +12,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { createAccountDetectionDiagnostics } from "~/services/accountSiteOnboarding/diagnostics"
+import * as detectionDiagnostics from "~/services/accountSiteOnboarding/diagnostics"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { autoDetectSmart as autoDetectSmartProduction } from "~/services/siteDetection/autoDetectService"
@@ -185,6 +188,52 @@ describe("autoDetectSmart", () => {
       username: "tester",
     })
   })
+
+  it.each([true, false])(
+    "records an unexpected browser capability failure and preserves the error (caller trace: %s)",
+    async (callerOwnsTrace) => {
+      const failure = new Error("Browser API became unavailable")
+      browserAny.tabs = {
+        get query() {
+          throw failure
+        },
+      }
+      const trace = createAccountDetectionDiagnostics()
+      const record = vi.spyOn(trace, "record")
+      const finish = vi.spyOn(trace, "finish")
+      const factory = vi
+        .spyOn(detectionDiagnostics, "createAccountDetectionDiagnostics")
+        .mockReturnValue(trace)
+
+      try {
+        await expect(
+          autoDetectSmartProduction(
+            "https://site.example.invalid",
+            undefined,
+            callerOwnsTrace ? trace : undefined,
+          ),
+        ).rejects.toBe(failure)
+
+        if (callerOwnsTrace) {
+          expect(record).toHaveBeenLastCalledWith(
+            AUTO_DETECT_DIAGNOSTIC_EVENTS.SiteDetectionFinished,
+            { success: false, reason: AUTO_DETECT_SOURCE_REASONS.Exception },
+          )
+          expect(finish).not.toHaveBeenCalled()
+          expect(factory).not.toHaveBeenCalled()
+        } else {
+          expect(finish).toHaveBeenCalledExactlyOnceWith(
+            detectionDiagnostics.ACCOUNT_DETECTION_OUTCOMES.Failed,
+            { reason: AUTO_DETECT_SOURCE_REASONS.Exception },
+          )
+          expect(factory).toHaveBeenCalledOnce()
+        }
+        expect(mockFetchUserInfo).not.toHaveBeenCalled()
+      } finally {
+        factory.mockRestore()
+      }
+    },
+  )
 
   it("normalizes browser identity while preserving provider fields separately", async () => {
     mockGetActiveOrAllTabs.mockResolvedValue([
