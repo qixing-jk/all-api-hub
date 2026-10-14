@@ -18,13 +18,11 @@ You represent that you have the right to submit the contribution and that it doe
 - Node.js from `.nvmrc`, satisfying `package.json` engines
 - Corepack (`corepack pnpm` uses the pnpm version declared in each `package.json`)
 
-Enable Corepack once with `corepack enable`. It selects the pnpm version declared
-by the nearest `package.json` when you run `pnpm`. If an older global pnpm still
-takes precedence on your PATH, use `corepack pnpm` explicitly.
+Enable Corepack once with `corepack enable`. It selects the pnpm version declared by the nearest `package.json` when you run `pnpm`. If an older global pnpm still takes precedence on your PATH, use `corepack pnpm` explicitly.
 
-## Tech Stack
+### Tech Stack
 
-All API Hub is built with the same stack highlighted in the in-app About page to ensure the docs match what you see in the UI:
+All API Hub uses:
 
 - **Framework**: [WXT](https://wxt.dev) drives the multi-browser extension tooling and build pipeline
 - **UI Layer**: [React](https://react.dev) powers the options UI and popup surfaces
@@ -34,33 +32,25 @@ All API Hub is built with the same stack highlighted in the in-app About page to
 
 ### Getting Started
 
-1. **Fork and clone the repository**
+Fork and clone the repository, then install dependencies:
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/all-api-hub.git
 cd all-api-hub
-```
-
-2. **Install dependencies**
-
-```bash
 pnpm install
 ```
 
-3. **Start development server**
+Start the development server for your target browser:
 
-For Chrome:
 ```bash
+# Chrome:
 pnpm dev
-```
 
-For Firefox:
-```bash
+# Firefox:
 pnpm dev:firefox
 ```
 
-These commands automatically open a browser with the extension loaded, following
-WXT's default behavior. To start only the dev server without opening a browser:
+These commands automatically open a browser with the extension loaded, following WXT's default behavior. To start only the dev server without opening a browser:
 
 ```bash
 pnpm dev:no-browser
@@ -68,29 +58,22 @@ pnpm dev:no-browser
 pnpm dev:no-browser -b firefox
 ```
 
-When needed, `pnpm browser:cdp` opens a debugging browser with the Chrome extension
-loaded automatically and reuses an existing debugging window. It can also start
-the dev server itself. Alternatively, load the extension in your own browser as
-described below. `WXT_OPEN_BROWSER=0` also disables automatic browser startup for
-the regular dev commands.
+When needed, `pnpm browser:cdp` opens a debugging browser with the Chrome extension loaded automatically and reuses an existing debugging window. It can also start the dev server itself. Alternatively, load the extension in your own browser as described below. `WXT_OPEN_BROWSER=0` also disables automatic browser startup for the regular dev commands.
 
-The dev server listens on `http://127.0.0.1:3000`, and the pages it generates load their scripts from that exact address. Pass `--host` to bind elsewhere. If the browser reaches a different loopback address than the server bound (for example it resolves `localhost` to IPv6 `::1`), or a system proxy intercepts loopback requests, every extension page stays blank with `net::ERR_CONNECTION_REFUSED`.
+The dev server binds to `127.0.0.1`; use the address and port printed at startup. If extension pages stay blank with `net::ERR_CONNECTION_REFUSED`, check that the server is running and that a system proxy is not intercepting loopback requests. See `wxt.config.ts` for the server configuration.
 
-4. **Load the extension in your own browser (optional)**
+To load the development extension in your own browser while the server is running:
 
 - Chrome: Navigate to `chrome://extensions/`, enable "Developer mode", click "Load unpacked", and select the `.output/chrome-mv3-dev` directory.
 - Firefox: Navigate to `about:debugging#/runtime/this-firefox`, click "Load Temporary Add-on", and select `manifest.json` inside the `.output/firefox-mv2-dev` directory.
+
+For live desktop automation or Android Firefox, Edge, and Lemur debugging, use the [live-extension-ui-automation skill](.agents/skills/live-extension-ui-automation/SKILL.md). The [Android workflow](.agents/skills/live-extension-ui-automation/references/mobile-debugging.md) covers installed extensions, development installation, and hot updates.
 
 ## Testing
 
 ### Local tooling environment configuration
 
-Playwright, real-site E2E runners, CDP launch/control runners, standalone provider
-probes, browser profile sync, and the E2E diagnostics launcher use
-`scripts/utils/local-env.mjs`. Linked worktrees automatically reuse the primary
-checkout's `.env.local`; the primary checkout is identified by Git, independently
-of which branch it has checked out. Shared credentials need only be maintained
-there. Files are read directly and are never copied into other worktrees.
+Playwright, real-site E2E runners, CDP launch/control runners, standalone provider probes, browser profile sync, and the E2E diagnostics launcher use `scripts/utils/local-env.mjs`. Linked worktrees automatically reuse the primary checkout's `.env.local`; the primary checkout is identified by Git, independently of which branch it has checked out. Shared credentials need only be maintained there. Files are read directly and are never copied into other worktrees.
 
 From lowest to highest priority:
 
@@ -100,40 +83,21 @@ From lowest to highest priority:
 4. A runner's explicit `--env-file`, where supported (currently OmniRoute).
 5. Environment variables already present when the command starts, including CI.
 
-An empty value can override a shared default. Keep checkout-specific ports,
-extension output paths, and other runtime differences in the current checkout.
-The loader does not rewrite relative paths: their interpretation remains owned
-by each consuming command. Prefer absolute paths for shared browser/profile
-locations. Never point a linked checkout's extension output at the primary
-checkout merely because its credentials are shared.
+An empty value can override a shared default. Keep checkout-specific ports, extension output paths, and other runtime differences in the current checkout. The loader does not rewrite relative paths: their interpretation remains owned by each consuming command. Prefer absolute paths for shared browser/profile locations. Never point a linked checkout's extension output at the primary checkout merely because its credentials are shared.
 
-Shared defaults assume trusted local checkout configuration. Service addresses
-and credentials are merged independently; when switching deployments, also
-override the matching credentials rather than inheriting another deployment's
-token.
+Shared defaults assume trusted local checkout configuration. Service addresses and credentials are merged independently; when switching deployments, also override the matching credentials rather than inheriting another deployment's token.
 
 These controls must be set in the launching shell, not in an env file:
 
 - `AAH_SHARED_ENV=0` disables shared-file loading.
-- `AAH_SHARED_ENV_DIR=<directory>` explicitly selects the directory containing
-  the shared `.env.local`. Relative directories resolve against this checkout.
-  A missing explicitly selected file fails with its path; an absent automatically
-  discovered shared file is optional.
+- `AAH_SHARED_ENV_DIR=<directory>` explicitly selects the directory containing the shared `.env.local`. Relative directories resolve against this checkout. A missing explicitly selected file fails with its path; an absent automatically discovered shared file is optional.
 - A nonempty `CI` disables shared-file loading, including explicit shared paths.
 
-Ordinary clones and archives work with their own files. The primary checkout
-loads its own files once. Use `pnpm env:diagnostics` to print the selected shared
-directory and loaded file paths; this command does not print keys or values.
+Ordinary clones and archives work with their own files. The primary checkout loads its own files once. Use `pnpm env:diagnostics` to print the selected shared directory and loaded file paths; this command does not print keys or values.
 
-The loader uses Node's `util.parseEnv` syntax (comments, quoted values, multiline
-values, and `export`), with no shell evaluation or `${VAR}` expansion. See the
-[Node environment file specification](https://nodejs.org/api/environment_variables.html#dotenv).
+The loader uses Node's `util.parseEnv` syntax (comments, quoted values, multiline values, and `export`), with no shell evaluation or `${VAR}` expansion. See the [Node environment file specification](https://nodejs.org/api/environment_variables.html#dotenv).
 
-WXT dev/build commands retain native mode/browser-specific env loading. Shared
-defaults with `WXT_` or `VITE_` prefixes are excluded by the Node loader because
-those prefixes expose variables to extension code. Keep test credentials in
-Node-only variables and env files out of Git; see
-[WXT environment variables](https://wxt.dev/guide/essentials/config/environment-variables).
+WXT dev/build commands retain native mode/browser-specific env loading. Shared defaults with `WXT_` or `VITE_` prefixes are excluded by the Node loader because those prefixes expose variables to extension code. Keep test credentials in Node-only variables and env files out of Git; see [WXT environment variables](https://wxt.dev/guide/essentials/config/environment-variables).
 
 ### Overview
 
@@ -162,17 +126,36 @@ During normal development, run the smallest relevant test set and let the pull r
 
 ### Sharding in CI
 
-CI splits the unit suite across six runners (`unit-tests` in `.github/workflows/test.yml`). `vitest.shardSequencer.ts` assigns files by measured cost instead of by file count, because test files differ by two orders of magnitude in cost: equal file counts left the slowest shard running about twice the work of the fastest one.
+CI splits the unit suite across six runners in [the test workflow](.github/workflows/test.yml). [The shard sequencer](vitest.shardSequencer.ts) balances files using measured durations from previous runs.
 
-The costs come from the blob reports the shards already upload. The `unit-tests-merge` job turns them into `.vitest-durations/shard-durations.json` and saves that to the Actions cache, and the next run's shards restore it, so there is nothing to maintain by hand. Published weights are corrected for each shard's measured load, because a file measured in an overloaded shard reads expensive from contention rather than from its own cost. The correction is conditional: when shard attribution is incomplete or a shard measured nothing, the raw measurements are published with a warning in the job log. A partial report set warns separately but does not by itself force raw weights. Without a cached manifest — a first run, an evicted cache, or any local `--shard` run — sharding falls back to Vitest's default file-count slices.
+The merge job generates `.vitest-durations/shard-durations.json` from blob reports and caches it for later runs. No manual weight maintenance is needed. If no usable manifest exists, the sequencer falls back to Vitest's default file-count slices. See [the duration-report generator](scripts/write-unit-test-durations.mjs) for load correction and incomplete-report handling.
 
 To see a duration-balanced split locally, publish a manifest from your own run and shard against it:
 
 ```bash
 pnpm exec vitest --run --reporter=blob
 pnpm test:durations
-UNIT_TEST_SHARD_DURATIONS=.vitest-durations/shard-durations.json pnpm exec vitest --run --shard=1/6
+pnpm exec vitest --run --shard=1/6
 ```
+
+The sequencer reads that manifest path by default. Set `UNIT_TEST_SHARD_DURATIONS` in your shell to use a different manifest.
+
+### Browser and extension tests
+
+Use Playwright when the behavior depends on the extension runtime or browser interactions:
+
+```bash
+# Install the Chromium test browser
+pnpm e2e:install
+
+# Run a focused extension workflow
+pnpm e2e e2e/your-workflow.spec.ts --project=chromium
+
+# Open the Playwright test UI
+pnpm e2e:ui
+```
+
+For installed extensions, logged-in sites, desktop CDP, or Android devices, follow the [live-extension-ui-automation skill](.agents/skills/live-extension-ui-automation/SKILL.md). Use the [local environment configuration](#local-tooling-environment-configuration) for credentials and browser paths.
 
 ### Test Coverage
 
@@ -197,7 +180,7 @@ Add or update tests when a change modifies meaningful executable behavior. A use
 Unit tests should be placed under the repo-level `tests/` tree. Mirror the source area in the path when it helps readability:
 
 ```
-src/utils/formatters.ts
+src/utils/core/formatters.ts
 tests/utils/formatters.test.ts
 ```
 
@@ -205,7 +188,7 @@ Example unit test:
 
 ```typescript
 import { describe, it, expect } from "vitest"
-import { formatTokenCount } from "~/utils/formatters"
+import { formatTokenCount } from "~/utils/core/formatters"
 
 describe("formatTokenCount", () => {
   it("should format large numbers with M suffix", () => {
@@ -229,22 +212,34 @@ tests/components/LinkCard.test.tsx
 
 Example component test:
 
-```typescript
+```tsx
+import { Link } from "lucide-react"
 import { describe, it, expect } from "vitest"
 import { render, screen } from "~~/tests/test-utils/render"
 import LinkCard from "~/components/LinkCard"
 
 describe("LinkCard", () => {
   it("should render correctly with required props", async () => {
-    render(<LinkCard title="Test" description="Test description" href="https://example.com" buttonText="Click" Icon={TestIcon} />)
-    
-    expect(await screen.findByText("Test")).toBeInTheDocument()
-    expect(await screen.findByText("Test description")).toBeInTheDocument()
+    render(
+      <LinkCard
+        title="Test"
+        description="Test description"
+        href="https://example.com"
+        buttonText="Click"
+        Icon={Link}
+      />,
+    )
+
+    expect(await screen.findByRole("heading", { name: "Test" })).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Click" })).toHaveAttribute(
+      "href",
+      "https://example.com",
+    )
   })
 })
 ```
 
-The wrapper renders its children behind `UserPreferencesProvider` and the other app providers, which defer until their initial load settles. Nothing is in the DOM for the first `await` after `render`, so a synchronous `getBy*` throws "Unable to find an accessible element" even though the component is correct. Reach the first render with `findBy*` (or `await screen.findByRole(...)`) and query synchronously only afterwards.
+The wrapper includes app providers such as `UserPreferencesProvider`, whose initial loading can defer rendering. Await the first visible element with `findBy*`, then use synchronous queries for elements already rendered. See [the render helper](tests/test-utils/render.tsx) for provider toggles and [existing component tests](tests/components/LinkCard.test.tsx) for working examples.
 
 #### i18n in Tests (Translation Key Assertions)
 
@@ -292,37 +287,30 @@ it("should handle API error", async () => {
       return HttpResponse.json({ error: "Not found" }, { status: 404 })
     })
   )
-  
+
   // Test code here
 })
 ```
-
-#### Custom Render
-
-The `render` function from `tests/test-utils/render.tsx` wraps components with necessary providers:
-- DeviceProvider
-- UserPreferencesProvider  
-- ThemeProvider
-
-This ensures components have access to all required contexts during testing.
 
 ## Code Style
 
 ### Linting and Formatting
 
 ```bash
-# Run ESLint
+# Run ESLint and the color/typography checks
 pnpm lint
 
-# Fix linting issues automatically
+# Fix ESLint issues automatically
 pnpm lint:fix
 
-# Format code with Prettier
-pnpm format
+# Format only the files you changed
+pnpm exec prettier --write path/to/changed-file.ts
 
 # Check formatting without modifying files
 pnpm format:check
 ```
+
+`pnpm format` formats the entire repository; use it when repository-wide formatting is intended.
 
 ### Type Checking
 
@@ -351,12 +339,11 @@ When automating that flow, restore native download handling with CDP `Browser.se
 
 This project uses [Husky](https://typicode.github.io/husky) to enforce code quality through Git hooks:
 
-- **pre-commit**: `validate:staged` formats and lints applicable staged files, runs staged Vitest test files, then runs extraction and completeness checks when staged inputs affect i18n. Staged test execution does not find related tests or replace affected-behavior validation.
+- **pre-commit**: `validate:staged` formats and lints applicable staged files, runs staged Vitest test files, and selects i18n and native permission-warning checks when their inputs change. Staged test execution does not find related tests or replace affected-behavior validation.
 - **commit-msg**: `commitlint` checks the message against the Conventional Commits rules in `commitlint.config.mjs`. Pull request titles use the same rules in CI, because a squash merge can land the title instead of an individual commit.
 - **pre-push**: `validate:push:changed` examines every ref update supplied by Git. Known documentation-only ranges and ref deletions skip the extension gate; other changes and unknown ranges run `validate:push` (`compile` + `knip`). New remote refs conservatively run the full gate. Checks execute in the current checkout, so keep the checkout aligned with the code being delivered.
 
-The hooks are automatically set up when you run `pnpm install` (via the `prepare` script).
-Use `pnpm run validate:staged` or the unconditional `pnpm run validate:push` manually for troubleshooting or when the corresponding hook will not run. Let an imminent hook execute its gate once rather than pre-running it on unchanged state. Bare `pnpm lint-staged` is not the complete pre-commit flow. See [.husky/README.md](.husky/README.md) for trigger ownership and troubleshooting.
+The hooks are automatically set up when you run `pnpm install` (via the `prepare` script). Use `pnpm run validate:staged` or the unconditional `pnpm run validate:push` manually for troubleshooting or when the corresponding hook will not run. Let an imminent hook execute its gate once rather than pre-running it on unchanged state. Bare `pnpm lint-staged` is not the complete pre-commit flow. See [.husky/README.md](.husky/README.md) for trigger ownership and troubleshooting.
 
 #### Skipping Hooks (Not Recommended)
 
@@ -364,48 +351,26 @@ Fix hook failures or report the blocked delivery. Bypassing a required gate need
 
 ## Building
 
-### Development Build
-
-```bash
-pnpm build
-```
-
 ### Production Build
 
-For Chrome:
-```bash
-pnpm build
-pnpm zip
-```
+Use a build command for an unpacked production extension, or a zip command to build and package it for distribution:
 
-For Firefox:
-```bash
-pnpm build:firefox
-pnpm zip:firefox
-```
+| Target | Build | Package |
+| --- | --- | --- |
+| Chrome / Chromium | `pnpm build` | `pnpm zip` |
+| Firefox | `pnpm build:firefox` | `pnpm zip:firefox` |
+| Safari | `pnpm build:safari` | `pnpm zip:safari` |
+| All configured browsers | `pnpm build:all` | `pnpm zip:all` |
 
-For all browsers:
-```bash
-pnpm build:all
-pnpm zip:all
-```
-
-### Android extension debugging and development
-
-For Android Firefox, Edge, and Lemur diagnostics, development installation, and hot updates, follow the [mobile extension workflow](.agents/skills/live-extension-ui-automation/references/mobile-debugging.md) in the [live-extension-ui-automation skill](.agents/skills/live-extension-ui-automation/SKILL.md).
+Outputs are written under `.output/`. For development with hot updates, use the commands in [Getting Started](#getting-started).
 
 ## Continuous Integration
 
-GitHub Actions runs the test workflow for pull requests and for pushes to `main` or `develop` when configured source or tooling paths change. The workflow:
+GitHub Actions selects checks according to each workflow's configured events and changed paths:
 
-1. Checks out the code
-2. Installs dependencies with pnpm
-3. Runs `pnpm compile` for full-repo type checking
-4. Runs `pnpm lint` for repository-wide lint validation
-5. Runs `pnpm knip` to catch unused files, exports, and dependencies
-6. Runs `pnpm run i18n:extract:ci` and `pnpm run i18n:status` to ensure locale files stay in sync with code and all secondary locales are complete
-7. Runs the Vitest suite in parallel shards with coverage
-8. Uploads coverage artifacts
+- [Quality](.github/workflows/quality.yml) runs type checking, linting, unused-code checks, and translation extraction/completeness validation.
+- [Test](.github/workflows/test.yml) runs the Vitest suite in parallel shards, merges coverage, and uploads artifacts.
+- [Commit message checks](.github/workflows/commitlint.yml) and [PR title checks](.github/workflows/commitlint-title.yml) enforce Conventional Commits for delivery.
 
 Before submitting a pull request, run the focused tests and local validation relevant to your change. The pull request CI is the authoritative full-suite and coverage check.
 
@@ -442,6 +407,9 @@ all-api-hub/
 │   └── utils/        # Utility functions
 ├── e2e/              # Playwright end-to-end tests (repo-root tooling)
 ├── plugins/          # Repo-root tooling (e.g. Vite/WXT plugins)
+├── scripts/          # Development, diagnostics, and validation commands
+├── docs/             # Public documentation and project guidance
+├── .agents/skills/   # Task-specific agent workflows and references
 ├── tests/            # Vitest setup and utilities (repo-root tooling)
 │   ├── msw/          # MSW handlers and server setup
 │   └── test-utils/   # Testing utilities (custom render, etc.)
@@ -462,6 +430,10 @@ To keep the options UI consistent and reusable, this repo follows a single modul
   - `src/utils/**`: shared non-UI helpers (keep UI concerns like toasts/i18n in features/entrypoints)
 
 Dependency direction should stay one-way: `src/entrypoints/**` → `src/features/**` → shared layers (`src/components/`, `src/services/`, `src/types/`, `src/utils/`).
+
+Use `~/` imports for `src/` and `~~/` for the repository root. Keep React state ownership outside `src/services/` and tests under `tests/` or `e2e/`.
+
+Consult the focused guides for [product and UI conventions](docs/agents/product.md), [persistent storage](docs/agents/storage.md), [translations](docs/agents/i18n.md), and [site integrations](docs/agents/site-integrations.md) when changing those areas.
 
 ## Getting Help
 
