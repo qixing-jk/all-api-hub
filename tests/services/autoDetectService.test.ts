@@ -186,6 +186,67 @@ describe("autoDetectSmart", () => {
     })
   })
 
+  it("keeps the matched-tab recovery order and reload hint when every source fails", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      { id: 7, active: true, url: "https://site.example.invalid" },
+    ])
+    mockReadAccountBrowserSessionFromTab.mockImplementation(async (options) => {
+      options.onError?.(new Error("no receiver"))
+      return null
+    })
+    mockIsMessageReceiverUnavailableError.mockReturnValue(true)
+    mockFetchUserInfo.mockResolvedValue(null)
+    const diagnostics = createAccountDetectionDiagnostics()
+    const record = vi.spyOn(diagnostics, "record")
+
+    const result = await autoDetectSmartProduction(
+      "https://site.example.invalid",
+      testExecution,
+      diagnostics,
+    )
+
+    expect(result.errorCode).toBe(
+      AUTO_DETECT_ERROR_CODES.CURRENT_TAB_CONTENT_SCRIPT_UNAVAILABLE,
+    )
+    expect(
+      record.mock.calls
+        .filter(([event]) => event === "strategy_finished")
+        .map(([, details]) => details?.strategy),
+    ).toEqual([
+      AUTO_DETECT_STRATEGIES.CurrentTab,
+      AUTO_DETECT_STRATEGIES.BackgroundTempContext,
+      AUTO_DETECT_STRATEGIES.BackgroundTempContext,
+      AUTO_DETECT_STRATEGIES.DirectApi,
+    ])
+    expect(mockReadAccountBrowserSessionFromTab).toHaveBeenCalledOnce()
+  })
+
+  it("preserves a specific API failure instead of replacing it with the current-tab reload hint", async () => {
+    browserAny.runtime = null
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      { id: 7, active: true, url: "https://site.example.invalid" },
+    ])
+    mockReadAccountBrowserSessionFromTab.mockImplementation(async (options) => {
+      options.onError?.(new Error("no receiver"))
+      return null
+    })
+    mockIsMessageReceiverUnavailableError.mockReturnValue(true)
+    mockFetchUserInfo.mockResolvedValue(null)
+    mockGetAccountSiteType
+      .mockResolvedValueOnce(SITE_TYPES.NEW_API)
+      .mockResolvedValueOnce(SITE_TYPES.NEW_API)
+      .mockRejectedValueOnce(new Error("specific classification failure"))
+
+    await expect(
+      autoDetectSmart("https://site.example.invalid", testExecution),
+    ).resolves.toMatchObject({
+      success: false,
+      error: "specific classification failure",
+      errorCode: AUTO_DETECT_ERROR_CODES.SITE_TYPE_DETECTION_FAILED,
+      autoDetectContext: { strategy: AUTO_DETECT_STRATEGIES.DirectApi },
+    })
+  })
+
   it("carries one diagnostic ID from the current tab to a temp-context fallback", async () => {
     mockGetActiveOrAllTabs.mockResolvedValue([
       { id: 7, active: true, url: "https://site.example.invalid" },
@@ -592,11 +653,11 @@ describe("autoDetectSmart", () => {
         incognito: true,
         cookieStoreId: "container-1",
       } as const
-      const result = await autoDetectViaBackground(
-        "https://example.invalid",
+      const result = await autoDetectViaBackground({
+        url: "https://example.invalid",
         fetchContext,
-        testExecution,
-      )
+        protectionBypassExecution: testExecution,
+      })
       expect(result.success).toBe(true)
       expect(result.data).toMatchObject({
         userId: "42",

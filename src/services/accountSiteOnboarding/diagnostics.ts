@@ -1,3 +1,4 @@
+import { AUTO_DETECT_DIAGNOSTIC_EVENTS } from "~/constants/autoDetect"
 import { relayContentLog } from "~/utils/browser/contentLogRelay"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
@@ -5,10 +6,18 @@ import { createLogger } from "~/utils/core/logger"
 const logger = createLogger("AccountDetection")
 const MAX_SUMMARY_EVENTS = 16
 
+export const ACCOUNT_DETECTION_OUTCOMES = {
+  Success: "success",
+  Failed: "failed",
+} as const
+
 export type AccountDetectionDiagnostics = {
   requestId: string
   record(event: string, details?: Record<string, unknown>): void
-  finish(outcome: "success" | "failed", details?: Record<string, unknown>): void
+  finish(
+    outcome: (typeof ACCOUNT_DETECTION_OUTCOMES)[keyof typeof ACCOUNT_DETECTION_OUTCOMES],
+    details?: Record<string, unknown>,
+  ): void
 }
 
 /** Keeps one local trace across detection strategies and extension contexts. */
@@ -56,7 +65,7 @@ export function createAccountDetectionDiagnostics(
     },
     finish(outcome, details = {}) {
       emit(
-        "detection_finished",
+        AUTO_DETECT_DIAGNOSTIC_EVENTS.DetectionFinished,
         { ...details, outcome, eventCount, events: [...events] },
         true,
       )

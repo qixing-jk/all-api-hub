@@ -1,18 +1,16 @@
 import {
+  AUTO_DETECT_DIAGNOSTIC_EVENTS,
   AUTO_DETECT_ERROR_CODES,
+  AUTO_DETECT_FAILURE_REASONS,
   AUTO_DETECT_FETCH_CONTEXT_KINDS,
   type AutoDetectAnalyticsContext,
+  type AutoDetectStrategy,
 } from "~/constants/autoDetect"
 import { isAccountSiteType, type AccountSiteType } from "~/constants/siteType"
 import { type AccountBrowserSession } from "~/services/accountBrowserSession"
-import type { ContentSessionTransientAuth } from "~/services/accountSiteOnboarding/contracts"
 import { type AccountDetectionDiagnostics } from "~/services/accountSiteOnboarding/diagnostics"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
-import {
-  type KimiOpenPlatformAuthConfig,
-  type Sub2ApiAuthConfig,
-} from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
 
@@ -31,15 +29,26 @@ export function normalizeSiteTypeHint(
   return isAccountSiteType(value) ? value : undefined
 }
 
-export interface UserDataResult {
-  userId: string
-  user: any
-  accessToken?: string
-  transientAuth?: ContentSessionTransientAuth
-  sub2apiAuth?: Sub2ApiAuthConfig
-  kimiOpenPlatformAuth?: KimiOpenPlatformAuthConfig
+export interface UserDataResult
+  extends Omit<NonNullable<AutoDetectResult["data"]>, "siteType"> {
   siteTypeHint?: AccountSiteType
-  fetchContext?: AutoDetectFetchContext
+}
+
+/** Records the attempted strategy, even when its session read used API fallback. */
+export function recordAutoDetectStrategyResult({
+  strategy,
+  result,
+  diagnostics,
+}: {
+  strategy: AutoDetectStrategy
+  result: AutoDetectResult
+  diagnostics?: AccountDetectionDiagnostics
+}): void {
+  diagnostics?.record(AUTO_DETECT_DIAGNOSTIC_EVENTS.StrategyFinished, {
+    strategy,
+    success: result.success,
+    reason: result.errorCode ?? result.error,
+  })
 }
 
 /** Preserves provider authentication and the selected tab's fetch context. */
@@ -121,7 +130,9 @@ export async function combineUserDataAndSiteType(
   diagnostics?: AccountDetectionDiagnostics,
 ): Promise<AutoDetectResult> {
   if (!userData) {
-    diagnostics?.record("session_invalid", { reason: "user_data_missing" })
+    diagnostics?.record(AUTO_DETECT_DIAGNOSTIC_EVENTS.SessionInvalid, {
+      reason: AUTO_DETECT_FAILURE_REASONS.UserDataMissing,
+    })
     return {
       success: false,
       error: t("messages:operations.detection.getUserIdFailed"),

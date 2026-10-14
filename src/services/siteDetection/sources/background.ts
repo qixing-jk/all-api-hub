@@ -1,4 +1,9 @@
-import { AUTO_DETECT_STRATEGIES } from "~/constants/autoDetect"
+import {
+  AUTO_DETECT_DIAGNOSTIC_EVENTS,
+  AUTO_DETECT_SESSION_SOURCES,
+  AUTO_DETECT_SOURCE_REASONS,
+  AUTO_DETECT_STRATEGIES,
+} from "~/constants/autoDetect"
 import {
   isUnknownAccountSiteType,
   type AccountSiteType,
@@ -7,15 +12,13 @@ import {
   ACCOUNT_BROWSER_SESSION_SOURCES,
   readAccountBrowserSessionFromTempWindow,
 } from "~/services/accountBrowserSession"
-import { type AccountDetectionDiagnostics } from "~/services/accountSiteOnboarding/diagnostics"
 import { summarizeApiServiceFetchContext } from "~/services/apiTransport/type"
-import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { createLogger } from "~/utils/core/logger"
 
 import type {
-  AutoDetectFetchContext,
   AutoDetectResult,
+  BackgroundAutoDetectRequest,
 } from "../autoDetectContracts"
 import { getAccountSiteType } from "../detectSiteType"
 import { getUserDataViaAPI } from "./apiFallback"
@@ -35,17 +38,17 @@ const logger = createLogger("AutoDetectService")
  * Sends a runtime request to the background handler, which reads site data from
  * a temporary browser context. If that path fails, this function falls back to
  * an API-based cookie-auth request.
- * @param url Target site URL.
- * @param siteType Detected site type used to select an API implementation.
  * @returns User data or null when both methods fail.
  */
-async function getUserDataViaBackground(
-  url: string,
-  siteType: AccountSiteType,
-  fetchContext?: AutoDetectFetchContext,
-  protectionBypassExecution?: ProtectionBypassExecution,
-  diagnostics?: AccountDetectionDiagnostics,
-): Promise<UserDataResult | null> {
+async function getUserDataViaBackground({
+  url,
+  siteType,
+  fetchContext,
+  protectionBypassExecution,
+  diagnostics,
+}: BackgroundAutoDetectRequest & {
+  siteType: AccountSiteType
+}): Promise<UserDataResult | null> {
   const tempWindowRequestSource = getCurrentTempWindowRequestSource()
   let sessionReadFailed = false
   const session = await readAccountBrowserSessionFromTempWindow({
@@ -65,10 +68,12 @@ async function getUserDataViaBackground(
   })
   if (session) return userDataFromBrowserSession(session)
 
-  diagnostics?.record("source_fallback", {
+  diagnostics?.record(AUTO_DETECT_DIAGNOSTIC_EVENTS.SourceFallback, {
     from: ACCOUNT_BROWSER_SESSION_SOURCES.TEMP_WINDOW,
-    to: "api",
-    reason: sessionReadFailed ? "exception" : "no_session_data",
+    to: AUTO_DETECT_SESSION_SOURCES.Api,
+    reason: sessionReadFailed
+      ? AUTO_DETECT_SOURCE_REASONS.Exception
+      : AUTO_DETECT_SOURCE_REASONS.NoSessionData,
   })
   logger.info(
     "Background auto-detect returned no user data; using API fallback",
@@ -78,30 +83,34 @@ async function getUserDataViaBackground(
       fetchContext: summarizeApiServiceFetchContext(fetchContext),
     },
   )
-  return await getUserDataViaAPI(
+  return await getUserDataViaAPI({
     url,
     siteType,
     fetchContext,
     tempWindowRequestSource,
     protectionBypassExecution,
     diagnostics,
-  )
+  })
 }
 
 /**
  * Auto-detect via background flow when runtime/background messaging is available.
  *
- * 1) Background script acquires a temporary browser context to read localStorage
- * 2) Falls back to API-based fetch when storage read fails
+ * 1) Read the registered browser session through an authorized temporary context
+ * 2) Fall back to the adapter's Cookie bootstrap when no usable session is returned
  */
 export async function autoDetectViaBackground(
-  url: string,
-  fetchContext?: AutoDetectFetchContext,
-  protectionBypassExecution?: ProtectionBypassExecution,
-  diagnostics?: AccountDetectionDiagnostics,
-  options: { currentTabMatched?: true } = {},
+  request: BackgroundAutoDetectRequest,
 ): Promise<AutoDetectResult> {
-  diagnostics?.record("strategy_started", {
+  const {
+    url,
+    fetchContext,
+    protectionBypassExecution,
+    diagnostics,
+    currentTabMatched,
+  } = request
+  const options = currentTabMatched ? { currentTabMatched } : {}
+  diagnostics?.record(AUTO_DETECT_DIAGNOSTIC_EVENTS.StrategyStarted, {
     strategy: AUTO_DETECT_STRATEGIES.BackgroundTempContext,
     ...options,
   })
@@ -119,13 +128,7 @@ export async function autoDetectViaBackground(
   const siteType = await getAccountSiteType(url, protectionBypassExecution)
 
   // 通过 Background 获取用户数据
-  const userData = await getUserDataViaBackground(
-    url,
-    siteType,
-    fetchContext,
-    protectionBypassExecution,
-    diagnostics,
-  )
+  const userData = await getUserDataViaBackground({ ...request, siteType })
 
   // 组合用户数据和站点类型（公共逻辑）
   return withAutoDetectContext(

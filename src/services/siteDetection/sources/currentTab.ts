@@ -1,27 +1,26 @@
 import {
+  AUTO_DETECT_DIAGNOSTIC_EVENTS,
   AUTO_DETECT_ERROR_CODES,
+  AUTO_DETECT_SESSION_SOURCES,
+  AUTO_DETECT_SOURCE_REASONS,
   AUTO_DETECT_STRATEGIES,
-  type AutoDetectAnalyticsContext,
 } from "~/constants/autoDetect"
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import {
   ACCOUNT_BROWSER_SESSION_SOURCES,
   readAccountBrowserSessionFromTab,
 } from "~/services/accountBrowserSession"
-import { type AccountDetectionDiagnostics } from "~/services/accountSiteOnboarding/diagnostics"
-import {
-  API_SERVICE_FETCH_CONTEXT_KINDS,
-  summarizeApiServiceFetchContext,
-} from "~/services/apiTransport/type"
-import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
+import { summarizeApiServiceFetchContext } from "~/services/apiTransport/type"
 import { isMessageReceiverUnavailableError } from "~/utils/browser/runtimeMessages"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
+import { createCurrentTabAutoDetectContext } from "../autoDetectContext"
 import type {
   AutoDetectFetchContext,
   AutoDetectResult,
+  CurrentTabAutoDetectRequest,
 } from "../autoDetectContracts"
 import { getAccountSiteType } from "../detectSiteType"
 import { getUserDataViaAPI } from "./apiFallback"
@@ -38,34 +37,34 @@ const logger = createLogger("AutoDetectService")
 interface CurrentTabUserDataResult {
   userData: UserDataResult | null
   contentScriptUnavailable: boolean
-  strategy: AutoDetectAnalyticsContext["strategy"]
+  strategy:
+    | typeof AUTO_DETECT_STRATEGIES.CurrentTab
+    | typeof AUTO_DETECT_STRATEGIES.FallbackApi
   fetchContext: AutoDetectFetchContext
 }
 
 /**
  * Fetch user data from the active tab using content script, with API fallback.
- * @param url Target site URL.
- * @param siteType Detected site type used to select an API implementation.
- * @param tabId The ID of the tab to query for user data via content script messaging.
- * @returns User data or null when not available.
+ * @returns Session data (possibly null), attempted strategy and content-script availability.
  */
-async function getUserDataFromCurrentTab(
-  url: string,
-  siteType: AccountSiteType,
-  tabId: number,
-  incognito?: boolean,
-  cookieStoreId?: string,
-  protectionBypassExecution?: ProtectionBypassExecution,
-  diagnostics?: AccountDetectionDiagnostics,
-): Promise<CurrentTabUserDataResult> {
+async function getUserDataFromCurrentTab({
+  url,
+  siteType,
+  tabId,
+  incognito,
+  cookieStoreId,
+  protectionBypassExecution,
+  diagnostics,
+}: CurrentTabAutoDetectRequest & {
+  siteType: AccountSiteType
+}): Promise<CurrentTabUserDataResult> {
   let contentScriptUnavailable = false
-  const fetchContext: AutoDetectFetchContext = {
-    kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+  const fetchContext = createCurrentTabAutoDetectContext({
+    url,
     tabId,
-    origin: new URL(url).origin,
-    ...(incognito === true ? { incognito: true } : {}),
-    ...(cookieStoreId ? { cookieStoreId } : {}),
-  }
+    incognito,
+    cookieStoreId,
+  })
 
   logger.debug("Current-tab auto-detect fetch context prepared", {
     url,
@@ -86,21 +85,17 @@ async function getUserDataFromCurrentTab(
       onError(error) {
         contentScriptUnavailable = isMessageReceiverUnavailableError(error)
 
-        if (contentScriptUnavailable) {
-          logger.warn("当前标签页 content script 不可用，尝试 API 降级", {
+        logger.warn(
+          contentScriptUnavailable
+            ? "当前标签页 content script 不可用，尝试 API 降级"
+            : "从当前标签页获取用户数据失败",
+          {
             url,
             tabId,
             fetchContext: summarizeApiServiceFetchContext(fetchContext),
             error: getErrorMessage(error),
-          })
-        } else {
-          logger.warn("从当前标签页获取用户数据失败", {
-            url,
-            tabId,
-            fetchContext: summarizeApiServiceFetchContext(fetchContext),
-            error: getErrorMessage(error),
-          })
-        }
+          },
+        )
       },
     })
 
@@ -113,39 +108,28 @@ async function getUserDataFromCurrentTab(
       }
     }
 
-    diagnostics?.record("source_fallback", {
+    diagnostics?.record(AUTO_DETECT_DIAGNOSTIC_EVENTS.SourceFallback, {
       from: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
-      to: "api",
+      to: AUTO_DETECT_SESSION_SOURCES.Api,
       reason: contentScriptUnavailable
-        ? "content_script_unavailable"
-        : "no_session",
+        ? AUTO_DETECT_SOURCE_REASONS.ContentScriptUnavailable
+        : AUTO_DETECT_SOURCE_REASONS.NoSession,
     })
-    // fallback
-    const fallbackUserData = await getUserDataViaAPI(
+    const fallbackUserData = await getUserDataViaAPI({
       url,
       siteType,
       fetchContext,
-      undefined,
       protectionBypassExecution,
       diagnostics,
-    )
-    if (fallbackUserData) {
-      return {
-        userData: fallbackUserData,
-        contentScriptUnavailable,
-        strategy: AUTO_DETECT_STRATEGIES.FallbackApi,
-        fetchContext,
-      }
-    }
-
+    })
     return {
-      userData: null,
+      userData: fallbackUserData,
       contentScriptUnavailable,
       strategy: AUTO_DETECT_STRATEGIES.FallbackApi,
       fetchContext,
     }
   } catch (error) {
-    diagnostics?.record("source_failed", {
+    diagnostics?.record(AUTO_DETECT_DIAGNOSTIC_EVENTS.SourceFailed, {
       source: ACCOUNT_BROWSER_SESSION_SOURCES.CURRENT_TAB,
       error: getErrorMessage(error),
     })
@@ -167,18 +151,14 @@ async function getUserDataFromCurrentTab(
 /**
  * Auto-detect from the currently active tab (popup scenario).
  *
- * 1) Ask content script for user info from localStorage in active tab
+ * 1) Ask the content script for the active tab's browser session
  * 2) Fall back to API call if content script response is missing
  */
 export async function autoDetectFromCurrentTab(
-  url: string,
-  tabId: number,
-  incognito?: boolean,
-  cookieStoreId?: string,
-  protectionBypassExecution?: ProtectionBypassExecution,
-  diagnostics?: AccountDetectionDiagnostics,
+  request: CurrentTabAutoDetectRequest,
 ): Promise<AutoDetectResult> {
-  diagnostics?.record("strategy_started", {
+  const { url, tabId, protectionBypassExecution, diagnostics } = request
+  diagnostics?.record(AUTO_DETECT_DIAGNOSTIC_EVENTS.StrategyStarted, {
     strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
     tabId,
   })
@@ -189,15 +169,7 @@ export async function autoDetectFromCurrentTab(
 
   // 从当前标签页获取用户数据
   const { userData, contentScriptUnavailable, strategy, fetchContext } =
-    await getUserDataFromCurrentTab(
-      url,
-      siteType,
-      tabId,
-      incognito,
-      cookieStoreId,
-      protectionBypassExecution,
-      diagnostics,
-    )
+    await getUserDataFromCurrentTab({ ...request, siteType })
 
   // 组合用户数据和站点类型（公共逻辑）
   const result = await combineUserDataAndSiteType(

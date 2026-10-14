@@ -9,6 +9,7 @@ import os from "node:os"
 import path from "node:path"
 import { afterEach, expect, it } from "vitest"
 
+import buildInputPaths from "~~/e2e/e2e-build-inputs.json"
 import { createE2eBuildInputHash } from "~~/e2e/utils/e2eBuildInputs.shared.js"
 
 const directories: string[] = []
@@ -94,4 +95,23 @@ it("invalidates when the input policy adds a previously unlisted path", async ()
   expect(await createE2eBuildInputHash(cwd, ["src"])).not.toBe(
     await createE2eBuildInputHash(cwd, ["src", "plugins"]),
   )
+})
+
+it("invalidates the packaged probe build when shared probe commands change", async () => {
+  const cwd = fixture()
+  const commands = path.join(
+    cwd,
+    "e2e/fixtures/accountDetectionProbeSources.ts",
+  )
+  mkdirSync(path.dirname(commands), { recursive: true })
+  writeFileSync(commands, 'export const source = "current_tab"')
+  const before = await createE2eBuildInputHash(cwd, buildInputPaths, {
+    env: {},
+  })
+
+  writeFileSync(commands, 'export const source = "direct"')
+
+  expect(
+    await createE2eBuildInputHash(cwd, buildInputPaths, { env: {} }),
+  ).not.toBe(before)
 })
