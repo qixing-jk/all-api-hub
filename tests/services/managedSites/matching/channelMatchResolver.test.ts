@@ -343,7 +343,11 @@ describe("resolveManagedSiteChannelMatch", () => {
     expect(hydrateComparableChannelKeys).toHaveBeenCalledWith(
       managedConfig,
       [expect.objectContaining({ ref: matchingResourceRef(7) })],
-      sessionResyncOptions,
+      {
+        ...sessionResyncOptions,
+        inventoryCache: requestCache.inventoryReads,
+        operationContext: requestCache.operationContext,
+      },
     )
     expect(result.key.matched).toBe(true)
     expect(result.models.matched).toBe(true)

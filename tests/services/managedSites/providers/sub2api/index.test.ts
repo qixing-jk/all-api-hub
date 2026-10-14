@@ -437,6 +437,70 @@ describe("Sub2API API-key account managed-site provider", () => {
     expect(mockFetch).toHaveBeenCalledTimes(1)
   })
 
+  it("loads known remaining pages concurrently in page order", async () => {
+    const releases = new Map<number, () => void>()
+    const started: number[] = []
+    mockFetch.mockImplementation(async (input) => {
+      const page = Number(new URL(String(input)).searchParams.get("page"))
+      started.push(page)
+      if (page > 1)
+        await new Promise<void>((resolve) => releases.set(page, resolve))
+      return jsonResponse({
+        code: 0,
+        data: { items: [{ ...account, id: page }], pages: 4, total: 4 },
+      })
+    })
+    const result = listSub2ApiApiKeyAccounts(config)
+    try {
+      await vi.waitFor(() => expect(started).toEqual([1, 2, 3]))
+      releases.get(3)!()
+      await vi.waitFor(() => expect(started).toEqual([1, 2, 3, 4]))
+    } finally {
+      for (const release of releases.values()) release()
+    }
+    await expect(result).resolves.toMatchObject({
+      items: [1, 2, 3, 4].map((id) => ({ id })),
+    })
+  })
+
+  it("drains a pending page after failure without dispatching later pages", async () => {
+    let rejectPage!: (error: Error) => void
+    let release!: () => void
+    const failedPage = new Promise<Response>((_resolve, reject) => {
+      rejectPage = reject
+    })
+    const activePage = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const started: number[] = []
+    const beforeRequest = vi.fn(async () => {})
+    mockFetch.mockImplementation(async (input) => {
+      const page = Number(new URL(String(input)).searchParams.get("page"))
+      started.push(page)
+      if (page === 2) return await failedPage
+      if (page === 3) await activePage
+      return jsonResponse({
+        code: 0,
+        data: { items: [account], pages: 5, total: 5 },
+      })
+    })
+    let settled = false
+    const result = listSub2ApiApiKeyAccounts(config, { beforeRequest }).finally(
+      () => {
+        settled = true
+      },
+    )
+    const rejection = expect(result).rejects.toThrow()
+    await vi.waitFor(() => expect(started).toEqual([1, 2, 3]))
+    rejectPage(new Error("unavailable"))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(settled).toBe(false)
+    release()
+    await rejection
+    expect(started).toEqual([1, 2, 3])
+    expect(beforeRequest).toHaveBeenCalledTimes(3)
+  })
+
   it("derives pagination from total when the server omits page count", async () => {
     mockFetch
       .mockResolvedValueOnce(

@@ -622,6 +622,25 @@ describe("newApiSession", () => {
     expect(generateNewApiTotpCodeMock).toHaveBeenCalledTimes(2)
   })
 
+  it("does not retain stale method availability when post-verification probes lose authentication", async () => {
+    const probe = vi.fn(() => unauthorizedResponse())
+    server.use(
+      http.post(`${BASE_CONFIG.baseUrl}/api/verify`, () =>
+        jsonData({ verified: true, expires_at: 1_700_000_123 }),
+      ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, probe),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, probe),
+    )
+    await expect(
+      submitNewApiSecureVerificationCode(BASE_CONFIG, "456789"),
+    ).resolves.toEqual({
+      status: NEW_API_MANAGED_SESSION_STATUSES.VERIFIED,
+      methods: { twoFactorEnabled: false, passkeyEnabled: false },
+      verifiedUntil: 1_700_000_123_000,
+    })
+    expect(probe).toHaveBeenCalledTimes(2)
+  })
+
   it("supports a manual login-code step followed by a manual secure-verification step", async () => {
     const endpointCalls = new Map<string, number>()
 
@@ -680,6 +699,7 @@ describe("newApiSession", () => {
       automaticAttempted: false,
     })
 
+    const beforeManualVerification = new Map(endpointCalls)
     const verifyResult = await submitNewApiSecureVerificationCode(
       BASE_CONFIG,
       "456789",
@@ -693,6 +713,11 @@ describe("newApiSession", () => {
       },
       verifiedUntil: 1_700_000_123_000,
     })
+    for (const endpoint of ["/api/user/2fa/status", "/api/user/passkey"]) {
+      expect(endpointCalls.get(endpoint)).toBe(
+        (beforeManualVerification.get(endpoint) ?? 0) + 1,
+      )
+    }
   })
 
   it.each([false, true])(
@@ -2117,19 +2142,28 @@ describe("newApiSession", () => {
       const dashboardToken = "example-bound-dashboard-token"
       const proofs = new Map<string, number>()
       const verifiedChannels: number[] = []
+      let twoFactorReads = 0
+      let passkeyReads = 0
       let rejectNextRead = failFirst
       generateNewApiTotpCodeMock.mockReturnValue("777777")
       server.use(
-        http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, ({ request }) =>
-          request.headers.get("authorization") === `Bearer ${dashboardToken}`
-            ? jsonData({ enabled: true })
-            : unauthorizedResponse(),
+        http.get(
+          `${BASE_CONFIG.baseUrl}/api/user/2fa/status`,
+          ({ request }) => {
+            twoFactorReads += 1
+            return request.headers.get("authorization") ===
+              `Bearer ${dashboardToken}`
+              ? jsonData({ enabled: true })
+              : unauthorizedResponse()
+          },
         ),
-        http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, ({ request }) =>
-          request.headers.get("authorization") === `Bearer ${dashboardToken}`
+        http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, ({ request }) => {
+          passkeyReads += 1
+          return request.headers.get("authorization") ===
+            `Bearer ${dashboardToken}`
             ? jsonData({ enabled: false })
-            : unauthorizedResponse(),
-        ),
+            : unauthorizedResponse()
+        }),
         http.post(`${BASE_CONFIG.baseUrl}/api/user/login`, () =>
           jsonData({
             require_verification: true,
@@ -2194,6 +2228,7 @@ describe("newApiSession", () => {
         expect(error).toBeInstanceOf(Error)
         expect(error.message).not.toContain("example-bound-proof")
       }
+      const beforeReads = { twoFactorReads, passkeyReads }
       await expect(
         Promise.all(
           [12, 13, 12].map((channelId) =>
@@ -2205,6 +2240,15 @@ describe("newApiSession", () => {
         failFirst ? [12, 12, 13, 12] : [12, 13, 12],
       )
       expect(proofs.size).toBe(0)
+      // Each operation still probes its live authentication and methods once.
+      // Verification must not repeat those same two status requests.
+      const requiredVerifications = failFirst ? 3 : 2
+      expect(twoFactorReads - beforeReads.twoFactorReads).toBe(
+        requiredVerifications,
+      )
+      expect(passkeyReads - beforeReads.passkeyReads).toBe(
+        requiredVerifications,
+      )
     },
   )
 

@@ -95,7 +95,8 @@
     "gatewayDescription": "Thao tác này nhập key tài khoản làm kênh của AI gateway tự triển khai. Sau khi nhập, nhiều key có thể được client sử dụng thông qua một AI API.",
     "loadingDescription": "Đang chuẩn bị bản xem trước cho {{selectedCount}} khóa đã chọn.",
     "messages": {
-      "completed": "Nhập hàng loạt hoàn tất: đã tạo {{created}}, thất bại {{failed}}, đã tồn tại {{skipped}}.",
+      "batchDuplicate": "Trùng với {{item}} trong lô này và đã được bỏ qua.",
+      "completed": "Nhập hàng loạt hoàn tất: đã tạo {{created}}, thất bại {{failed}}, đã bỏ qua {{skipped}}.",
       "duplicate": "Đã có kênh khớp chính xác: {{channel}}. Kênh này sẽ không được tạo lại.",
       "executionFailed": "Thực thi nhập hàng loạt thất bại: {{error}}",
       "targetChanged": "Đích site được quản lý đã thay đổi. Hãy làm mới bản xem trước hoặc chọn lại đích trước khi nhập.",
@@ -105,7 +106,7 @@
       "loadFailed": "Tải bản xem trước thất bại: {{error}}",
       "loading": "Đang chuẩn bị xem trước kênh...",
       "selected_other": "Đã chọn {{count}} khóa",
-      "summary": "Xem trước: Có thể tạo {{ready}}, cảnh báo {{warning}}, đã tồn tại {{skipped}}, bị chặn {{blocked}}, tổng cộng {{total}}."
+      "summary": "Xem trước: Có thể tạo {{ready}}, cảnh báo {{warning}}, đã bỏ qua {{skipped}}, bị chặn {{blocked}}, tổng cộng {{total}}."
     },
     "repairTrusted": {
       "description": "Các key này vừa được tạo. Bản xem xét đơn giản bỏ qua kiểm tra trùng lặp và Key chính xác; bạn vẫn có thể dùng kiểm tra đầy đủ trước khi nhập.",
@@ -116,11 +117,11 @@
       "status": {
         "failed": "Thất bại",
         "notSelected": "Chưa chọn",
-        "skipped": "Đã tồn tại",
+        "skipped": "Đã bỏ qua",
         "success": "Đã tạo",
         "uncertain": "Cần xem lại"
       },
-      "summary": "Kết quả: Đã tạo {{created}}, thất bại {{failed}}, đã tồn tại {{skipped}}, tổng cộng {{total}}."
+      "summary": "Kết quả: Đã tạo {{created}}, thất bại {{failed}}, đã bỏ qua {{skipped}}, tổng cộng {{total}}."
     },
     "selection": {
       "accountGroup": "Chọn khóa hiện đang hiển thị của tài khoản {{name}}",
@@ -130,7 +131,7 @@
     "status": {
       "blocked": "Bị chặn",
       "ready": "Có thể tạo",
-      "skipped": "Đã tồn tại",
+      "skipped": "Đã bỏ qua",
       "warning": "Cần xác nhận"
     },
     "target": {

@@ -1,5 +1,8 @@
 import { SITE_TYPES } from "~/constants/siteType"
-import { ManagedResourceError } from "~/services/apiAdapters/contracts/managedResourceNative"
+import {
+  MANAGED_RESOURCE_FAILURE_CODES,
+  ManagedResourceError,
+} from "~/services/apiAdapters/contracts/managedResourceNative"
 import { defineNativeResourceKind } from "~/services/apiAdapters/managedResources/factory"
 import {
   magpieDisplayFacts,
@@ -25,6 +28,7 @@ import {
   listMagpieProviders,
   type MagpieProvider,
 } from "~/services/apiService/magpie/providers"
+import { withMagpieRequestSession } from "~/services/apiService/magpie/request"
 import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/configuration/runtimeConfig"
 
 export const magpieManagedResourceRegistration = defineNativeResourceKind({
@@ -52,16 +56,24 @@ export const magpieManagedResourceRegistration = defineNativeResourceKind({
       },
     },
   ],
-  openConfig: async () => {
+  openConfig: async (options) => {
     const runtime = await getManagedSiteRuntimeConfigForType(SITE_TYPES.MAGPIE)
     if (!runtime)
-      throw new ManagedResourceError({ code: "configuration_required" })
-    return runtime.config
+      throw new ManagedResourceError({
+        code: MANAGED_RESOURCE_FAILURE_CODES.ConfigurationRequired,
+      })
+    return withMagpieRequestSession(
+      runtime.config,
+      options?.operationContext?.sessions,
+    )
   },
   scopeKey: magpieScope,
   encodeLocator: (id: string) => id,
   decodeLocator: (id: string) => {
-    if (!id) throw new ManagedResourceError({ code: "validation_failed" })
+    if (!id)
+      throw new ManagedResourceError({
+        code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+      })
     return id
   },
   locatorFromListItem: (item: MagpieProvider) => item.id,

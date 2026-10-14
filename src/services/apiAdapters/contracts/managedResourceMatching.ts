@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next"
 
 import type { ManagedSiteType } from "~/constants/siteType"
-import type { ScheduledReadOptions } from "~/services/apiTransport/requestScheduling"
+import type { InventoryReadOptions } from "~/services/apiTransport/inventoryReads"
 import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/configuration/runtimeConfig"
 import type {
   ManagedResourceMatchCandidate,
@@ -10,6 +10,15 @@ import type {
 
 import type { ManagedResourceRef } from "./managedResourceNative"
 import type { ManagedSiteChannelSecretReadOptions } from "./managedSiteCapabilities"
+
+export const MANAGED_RESOURCE_EXACT_MATCH_BASES = {
+  URL_KEY: "url-key",
+  KEY_MODELS: "key-models",
+} as const
+
+export const MANAGED_RESOURCE_SEARCH_INVENTORY_MODES = {
+  FULL: "full",
+} as const
 
 export const MANAGED_RESOURCE_SECRET_VERIFICATION_KINDS = {
   NEW_API_SESSION: "new-api-session",
@@ -40,11 +49,13 @@ export interface ManagedResourceMatchingCapability<
 > {
   secretVerification?: ManagedResourceSecretVerificationCapability<TConfig>
   /** Signals that identify one exact duplicate; absent uses key plus exact models. */
-  exactMatchBasis?: "url-key" | "key-models"
+  exactMatchBasis?: (typeof MANAGED_RESOURCE_EXACT_MATCH_BASES)[keyof typeof MANAGED_RESOURCE_EXACT_MATCH_BASES]
+  /** Complete, unfiltered canonical inventories can be indexed once per read-only batch. */
+  searchInventoryMode?: typeof MANAGED_RESOURCE_SEARCH_INVENTORY_MODES.FULL
   search(
     config: TConfig,
     baseUrl: string,
-    options?: ScheduledReadOptions,
+    options?: InventoryReadOptions,
   ): Promise<ManagedResourceMatchList | null>
   fetchSecretKey?(
     config: TConfig,

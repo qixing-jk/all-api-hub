@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { sub2ApiManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/sub2api"
+import type { InventoryReadCache } from "~/services/apiTransport/inventoryReads"
+import { listSub2ApiApiKeyAccounts } from "~/services/managedSites/providers/sub2api"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { buildUserPreferences } from "~~/tests/test-utils/factories"
 
@@ -33,6 +35,40 @@ describe("Sub2API managed-site adapter", () => {
 
   afterEach(() => {
     vi.restoreAllMocks()
+  })
+
+  it("projects a shared inventory once across distinct batch search URLs", async () => {
+    let platformReads = 0
+    vi.mocked(listSub2ApiApiKeyAccounts).mockResolvedValue({
+      items: [
+        {
+          id: 7,
+          name: "API account",
+          type: "apikey",
+          status: "active",
+          get platform() {
+            platformReads += 1
+            return "openai" as const
+          },
+          credentials: { base_url: "https://source.invalid/v1" },
+        },
+      ],
+      total: 1,
+    })
+    const inventoryCache: InventoryReadCache = new Map()
+    const first = await sub2ApiManagedSiteCapabilities.matching.search(
+      config,
+      "https://source.invalid",
+      { inventoryCache },
+    )
+    await sub2ApiManagedSiteCapabilities.matching.search(
+      config,
+      "https://other.invalid",
+      { inventoryCache },
+    )
+    expect(first?.items[0]?.type).toBe("openai")
+    expect(listSub2ApiApiKeyAccounts).toHaveBeenCalledTimes(1)
+    expect(platformReads).toBe(1)
   })
 
   it("checks persisted Sub2API runtime configuration defensively", async () => {

@@ -18,12 +18,14 @@ import {
   type Sub2ApiApiKeyAccountStatus,
 } from "~/types/sub2apiManagedSite"
 import type { Sub2ApiManagedSiteConfig } from "~/types/sub2apiManagedSiteConfig"
+import { mapWithConcurrency } from "~/utils/core/mapWithConcurrency"
 import { joinUrl, normalizeBaseUrl } from "~/utils/core/url"
 
 const SUB2API_ADMIN_ACCOUNTS_ENDPOINT = "/api/v1/admin/accounts"
 const SUB2API_ADMIN_ACCOUNTS_DATA_ENDPOINT = "/api/v1/admin/accounts/data"
 const PAGE_SIZE = 100
 const MAX_LIST_PAGES = 100
+const LIST_PAGE_CONCURRENCY = 2
 export const SUB2API_STEP_UP_ADMIN_KEY_FORBIDDEN_CODE =
   "STEP_UP_ADMIN_API_KEY_FORBIDDEN"
 const SUB2API_STEP_UP_UNSUPPORTED_MESSAGE =
@@ -337,11 +339,16 @@ const listAllPages = async (
       },
     )
   }
-  const items = [...(first.items ?? [])]
-  for (let page = 2; page <= pages; page += 1) {
-    const next = await loadPage(page)
-    items.push(...(next.items ?? []))
-  }
+  const remaining = await mapWithConcurrency(
+    Array.from({ length: pages - 1 }, (_, index) => index + 2),
+    LIST_PAGE_CONCURRENCY,
+    loadPage,
+    options,
+  )
+  const items = [
+    ...(first.items ?? []),
+    ...remaining.flatMap((page) => page.items ?? []),
+  ]
   return { items, total: first.total ?? items.length }
 }
 

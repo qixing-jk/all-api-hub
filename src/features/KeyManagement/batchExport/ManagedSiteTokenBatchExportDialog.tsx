@@ -14,7 +14,10 @@ import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import ManagedSiteTypeSwitcher from "~/features/ManagedSiteWidgets/ManagedSiteTypeSwitcher"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
-import { MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS } from "~/types/managedSiteTokenBatchExport"
+import {
+  MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS,
+  MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS,
+} from "~/types/managedSiteTokenBatchExport"
 import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 /**
@@ -128,7 +131,8 @@ export function ManagedSiteTokenBatchExportDialog({
           ) : null}
 
           {dialog.intent.source === "repair-created" &&
-          dialog.intent.verification === "trusted-new" ? (
+          dialog.intent.verification ===
+            MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.TRUSTED_NEW ? (
             <div className="border-primary-soft-border bg-primary-soft space-y-density-2 py-density-3 rounded-md border px-3 text-sm">
               <div>
                 {t(
@@ -174,6 +178,7 @@ export function ManagedSiteTokenBatchExportDialog({
               executableSelection={dialog.executableSelection}
               modelOptions={dialog.modelOptions}
               executionResult={dialog.executionResult}
+              retainedExecutionItems={dialog.retainedExecutionItems}
               isLoadingPreview={dialog.isLoadingPreview}
               isManualPreviewRefresh={dialog.isManualPreviewRefresh}
               isRunning={dialog.isRunning}

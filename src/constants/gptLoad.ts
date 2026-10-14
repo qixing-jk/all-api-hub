@@ -124,3 +124,6 @@ export function resolveGptLoadFirstPartyChannel(
   }
   return best?.channelId ?? null
 }
+
+/** Bound independent inventory/detail reads without increasing mutation concurrency. */
+export const GPT_LOAD_READ_CONCURRENCY = 2

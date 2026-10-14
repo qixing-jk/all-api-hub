@@ -1,5 +1,6 @@
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { SITE_TYPES } from "~/constants/siteType"
+import { MANAGED_RESOURCE_SEARCH_INVENTORY_MODES } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type {
@@ -12,7 +13,7 @@ import {
   getAxonHubChannelSecretKey,
   listAxonHubChannelPage,
 } from "~/services/apiService/axonHub/channels"
-import { sharePendingConfigRead } from "~/services/apiTransport/requestScheduling"
+import { shareInventoryRead } from "~/services/apiTransport/inventoryReads"
 import {
   assertManagedResourceRefForSite,
   createManagedChannelResourceRef,
@@ -39,7 +40,9 @@ const axonHubManagedSiteChannelDrafts: ManagedSiteChannelDraftsCapability = {
   prepareFormData: prepareChannelFormData,
 }
 
-const readMatchingInventory = sharePendingConfigRead(
+const MATCHING_PAGE_SIZE = 100
+
+const readMatchingInventory = shareInventoryRead(
   async (config: AxonHubConfig, options) => {
     const items: ManagedResourceMatchCandidate[] = []
     const cursors = new Set<string>()
@@ -47,7 +50,7 @@ const readMatchingInventory = sharePendingConfigRead(
     do {
       const page = await listAxonHubChannelPage(
         config,
-        { cursor, limit: 100 },
+        { cursor, limit: MATCHING_PAGE_SIZE },
         options,
       )
       items.push(
@@ -77,6 +80,7 @@ const readMatchingInventory = sharePendingConfigRead(
 )
 
 const matching: ManagedResourceMatchingCapability<AxonHubConfig> = {
+  searchInventoryMode: MANAGED_RESOURCE_SEARCH_INVENTORY_MODES.FULL,
   search: (config, _keyword, options) => readMatchingInventory(config, options),
   fetchSecretKey,
   hydrateComparableKeys: async (config, candidates, options) => {

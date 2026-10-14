@@ -471,6 +471,23 @@ const preview: ManagedSiteTokenBatchExportPreview = {
   ],
 }
 
+/** The second credential duplicates the first; counts reflect the service projection. */
+const buildBatchDuplicatePreview = (): ManagedSiteTokenBatchExportPreview => ({
+  ...preview,
+  readyCount: 1,
+  skippedCount: 1,
+  items: [
+    atIndex(preview.items, 0),
+    {
+      ...atIndex(preview.items, 1),
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,
+      duplicateOfItemId: atIndex(preview.items, 0).id,
+      duplicateOfItemName: "Account 1 | Token 1",
+      draft: { ...atIndex(preview.items, 1).draft!, key: "test-key" },
+    },
+  ],
+})
+
 const buildSingleRecoverablePreview =
   (): ManagedSiteTokenBatchExportPreview => ({
     ...preview,
@@ -679,6 +696,50 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         return true
       },
     )
+  })
+
+  it("explains when a row is skipped as a duplicate within the batch", async () => {
+    mockPreparePreview.mockResolvedValue(buildBatchDuplicatePreview())
+    renderDialog()
+    expect(
+      await screen.findByText(
+        "keyManagement:batchManagedSiteExport.messages.batchDuplicate",
+      ),
+    ).toBeVisible()
+    expect(
+      screen.getByText("keyManagement:batchManagedSiteExport.status.skipped"),
+    ).toBeVisible()
+  })
+
+  it("lets users select another batch representative after deselecting the first", async () => {
+    const user = userEvent.setup()
+    mockPreparePreview.mockResolvedValue(buildBatchDuplicatePreview())
+    renderDialog()
+    const first = await screen.findByRole("checkbox", {
+      name: "Account 1 / Token 1",
+    })
+    await user.click(first)
+    const second = screen.getByRole("checkbox", { name: "Account 1 / Token 2" })
+    expect(second).not.toBeDisabled()
+    await user.click(second)
+    expect(second).toHaveAttribute("aria-checked", "true")
+    expect(first).toHaveAttribute("aria-checked", "false")
+    expect(first).toBeDisabled()
+  })
+
+  it("makes a batch duplicate selectable when the representative's models change", async () => {
+    const user = userEvent.setup()
+    mockPreparePreview.mockResolvedValue(buildBatchDuplicatePreview())
+    renderDialog()
+    await screen.findByRole("checkbox", { name: "Account 1 / Token 1" })
+    await user.click(screen.getByText("Set editable models"))
+    const second = screen.getByRole("checkbox", { name: "Account 1 / Token 2" })
+    expect(second).not.toBeDisabled()
+    await user.click(second)
+    expect(second).toHaveAttribute("aria-checked", "true")
+    expect(
+      screen.getByRole("checkbox", { name: "Account 1 / Token 1" }),
+    ).toHaveAttribute("aria-checked", "true")
   })
 
   it("keeps Sub2API batch previews lightweight with an optional model whitelist", async () => {
@@ -1072,6 +1133,9 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
 
     const view = renderDialog({ items: stableItems })
     expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    const firstSignal = mockPreparePreview.mock.calls[0]?.[0]
+      .signal as AbortSignal
+    expect(firstSignal.aborted).toBe(false)
 
     mockUserPreferencesContextValue.current = {
       managedSiteType: SITE_TYPES.DONE_HUB,
@@ -1096,11 +1160,17 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     await waitFor(() => {
       expect(mockPreparePreview).toHaveBeenCalledTimes(2)
     })
+    expect(firstSignal.aborted).toBe(true)
+    const nextSignal = mockPreparePreview.mock.calls[1]?.[0]
+      .signal as AbortSignal
+    expect(nextSignal.aborted).toBe(false)
     expect(
       screen.getByTestId(
         "key-management-managed-site-batch-export-target-switcher",
       ),
     ).toHaveTextContent("settings:managedSite.doneHub")
+    view.unmount()
+    expect(nextSignal.aborted).toBe(true)
   })
 
   it.each([
@@ -1563,6 +1633,9 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         "keyManagement:batchManagedSiteExport.preview.loadFailed",
       ),
     ).toBeInTheDocument()
+    const previewSignal = mockPreparePreview.mock.calls[0]?.[0]
+      .signal as AbortSignal
+    expect(previewSignal.aborted).toBe(false)
 
     rerender(
       <ManagedSiteTokenBatchExportDialog
@@ -1573,6 +1646,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     )
 
     expect(screen.queryByRole("dialog")).toBeNull()
+    expect(previewSignal.aborted).toBe(true)
 
     rerender(
       <ManagedSiteTokenBatchExportDialog
@@ -3313,6 +3387,100 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it("verifies only failed retry rows while preserving completed warning rows", async () => {
+    const user = userEvent.setup()
+    const warningItems = preview.items.map((item, index) =>
+      buildRecoverablePreviewItem(item, {
+        ref: matchingResourceRef(7 + index),
+        name: `Potential channel ${index}`,
+      }),
+    )
+    mockPreparePreview
+      .mockResolvedValueOnce({
+        ...preview,
+        items: warningItems,
+        readyCount: 0,
+        warningCount: 2,
+      })
+      .mockResolvedValueOnce({
+        ...preview,
+        items: [warningItems[1]!],
+        totalCount: 1,
+        readyCount: 0,
+        warningCount: 1,
+      })
+    mockExecuteBatchExport.mockResolvedValueOnce({
+      totalSelected: 2,
+      attemptedCount: 2,
+      createdCount: 1,
+      failedCount: 1,
+      uncertainCount: 0,
+      skippedCount: 0,
+      items: preview.items.map((item, index) => ({
+        id: item.id,
+        accountName: item.accountName,
+        runtimeKeyName: item.runtimeKeyName,
+        result: index === 0 ? "created" : "failed",
+        success: index === 0,
+        skipped: false,
+      })),
+    })
+    mockLoadNewApiChannelKeyWithVerification.mockImplementation(
+      async (params) => {
+        await params.setKey("different-key")
+        await params.onLoaded?.()
+        return true
+      },
+    )
+    renderDialog({
+      items: [
+        { account, runtimeKey },
+        { account, runtimeKey: { ...runtimeKey, id: preview.items[1]!.id } },
+      ],
+    })
+    await user.click(
+      await screen.findByRole("checkbox", { name: "Account 1 / Token 1" }),
+    )
+    await user.click(
+      screen.getByRole("checkbox", { name: "Account 1 / Token 2" }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await user.click(getBatchImportConfirmButton())
+    await user.click(
+      await screen.findByTestId(
+        "key-management-managed-site-batch-export-retry-button",
+      ),
+    )
+    await waitFor(() => expect(mockPreparePreview).toHaveBeenCalledTimes(2))
+    expect(atIndex(mockPreparePreview.mock.calls, 1)[0].items).toEqual([
+      { account, runtimeKey: { ...runtimeKey, id: preview.items[1]!.id } },
+    ])
+    const verifyButtons = await screen.findAllByRole("button", {
+      name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
+    })
+    await user.click(
+      verifyButtons.find((button) => !button.hasAttribute("disabled"))!,
+    )
+    await waitFor(() =>
+      expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledTimes(1),
+    )
+    expect(mockLoadNewApiChannelKeyWithVerification).toHaveBeenCalledWith(
+      expect.objectContaining({ resourceRef: matchingResourceRef(8) }),
+    )
+    expect(
+      screen.getByRole("checkbox", { name: "Account 1 / Token 1" }),
+    ).toBeDisabled()
+    expect(
+      screen.getByText(
+        "keyManagement:batchManagedSiteExport.results.status.success",
+      ),
+    ).toBeVisible()
+  })
+
   it("retries only failed rows and keeps confirmed successes visible", async () => {
     const user = userEvent.setup()
     const firstResult = {
@@ -3360,14 +3528,22 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         },
       ],
     }
-    mockPreparePreview
-      .mockResolvedValueOnce(preview)
-      .mockResolvedValueOnce(preview)
+    mockPreparePreview.mockResolvedValueOnce(preview).mockResolvedValueOnce({
+      ...preview,
+      items: [preview.items[1]],
+      totalCount: 1,
+      readyCount: 1,
+    })
     mockExecuteBatchExport
       .mockResolvedValueOnce(firstResult)
       .mockResolvedValueOnce(retryResult)
 
-    renderDialog()
+    renderDialog({
+      items: [
+        { account, runtimeKey },
+        { account, runtimeKey: { ...runtimeKey, id: preview.items[1]!.id } },
+      ],
+    })
 
     expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
     await user.click(
@@ -3390,6 +3566,17 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     await waitFor(() => {
       expect(mockPreparePreview).toHaveBeenCalledTimes(2)
     })
+    expect(atIndex(mockPreparePreview.mock.calls, 1)[0].items).toEqual([
+      { account, runtimeKey: { ...runtimeKey, id: preview.items[1]!.id } },
+    ])
+    expect(
+      screen.getByRole("checkbox", { name: "Account 1 / Token 1" }),
+    ).toBeDisabled()
+    expect(
+      screen.getByText(
+        "keyManagement:batchManagedSiteExport.results.status.success",
+      ),
+    ).toBeVisible()
     expect(
       screen.getByRole("checkbox", { name: "Account 1 / Token 1" }),
     ).toHaveAttribute("aria-checked", "false")
@@ -3420,6 +3607,121 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       ),
     ).toBeNull()
   })
+
+  it.each([false, true])(
+    "preserves the retry baseline after a preview error (target changed: %s)",
+    async (targetChanged) => {
+      const user = userEvent.setup()
+      const third = {
+        ...preview.items[0]!,
+        id: "account_token:account-1:3",
+        runtimeKeyId: "account_token:account-1:3",
+        runtimeKeyName: "Token 3",
+        draft: { ...preview.items[0]!.draft!, key: "third-key" },
+      }
+      const baseline = {
+        ...preview,
+        items: [...preview.items, third],
+        totalCount: 3,
+        readyCount: 3,
+      }
+      const results = ["created", "failed", "uncertain"] as const
+      mockExecuteBatchExport.mockResolvedValueOnce({
+        totalSelected: 3,
+        attemptedCount: 3,
+        createdCount: 1,
+        failedCount: 1,
+        uncertainCount: 1,
+        skippedCount: 0,
+        items: baseline.items.map((item, index) => ({
+          id: item.id,
+          accountName: item.accountName,
+          runtimeKeyName: item.runtimeKeyName,
+          result: results[index],
+          success: index === 0,
+          skipped: false,
+        })),
+      })
+      mockPreparePreview
+        .mockResolvedValueOnce(baseline)
+        .mockRejectedValueOnce(new Error("retry preview offline"))
+        .mockResolvedValueOnce({
+          ...preview,
+          targetFingerprint: targetChanged
+            ? "different-target"
+            : preview.targetFingerprint,
+          items: [preview.items[1]!],
+          totalCount: 1,
+          readyCount: 1,
+        })
+      renderDialog({
+        items: baseline.items.map((item) => ({
+          account,
+          runtimeKey: { ...runtimeKey, id: item.id },
+        })),
+      })
+      await screen.findByText("Account 1 / Token 1")
+      await user.click(
+        screen.getByRole("button", {
+          name: "keyManagement:batchManagedSiteExport.actions.start",
+        }),
+      )
+      await user.click(getBatchImportConfirmButton())
+      await user.click(
+        await screen.findByTestId(
+          "key-management-managed-site-batch-export-retry-button",
+        ),
+      )
+      const refresh = await screen.findByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.refreshPreview",
+      })
+      await user.click(refresh)
+      if (targetChanged) {
+        await waitFor(() =>
+          expect(
+            screen.getByRole("button", {
+              name: "keyManagement:batchManagedSiteExport.actions.start",
+            }),
+          ).toBeDisabled(),
+        )
+        expect(
+          screen.queryByRole("checkbox", {
+            name: "Account 1 / Token 2",
+          }),
+        ).toBeNull()
+      } else {
+        expect(
+          await screen.findByRole("checkbox", {
+            name: "Account 1 / Token 1",
+          }),
+        ).toBeDisabled()
+        expect(
+          screen.getByRole("checkbox", {
+            name: "Account 1 / Token 3",
+          }),
+        ).toBeDisabled()
+        expect(
+          screen.getByRole("checkbox", {
+            name: "Account 1 / Token 2",
+          }),
+        ).toHaveAttribute("aria-checked", "true")
+        expect(
+          screen.getByText(
+            "keyManagement:batchManagedSiteExport.results.status.success",
+          ),
+        ).toBeVisible()
+        expect(
+          screen.getByText(
+            "keyManagement:batchManagedSiteExport.results.status.uncertain",
+          ),
+        ).toBeVisible()
+      }
+      expect(mockExecuteBatchExport).toHaveBeenCalledOnce()
+      expect(mockPreparePreview.mock.calls[2]?.[0].items).toEqual([
+        { account, runtimeKey: { ...runtimeKey, id: preview.items[1]!.id } },
+      ])
+    },
+  )
 
   it("does not offer blind retry for uncertain rows", async () => {
     const user = userEvent.setup()
@@ -3497,7 +3799,16 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       .mockResolvedValueOnce(preview)
     mockExecuteBatchExport.mockResolvedValueOnce(mixedResult)
 
-    renderDialog()
+    const failedInput = {
+      account,
+      runtimeKey: { ...runtimeKey, id: preview.items[0]!.id },
+    }
+    renderDialog({
+      items: [
+        failedInput,
+        { account, runtimeKey: { ...runtimeKey, id: preview.items[1]!.id } },
+      ],
+    })
 
     expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
     await user.click(
@@ -3521,6 +3832,17 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     expect(
       screen.getByRole("checkbox", { name: "Account 1 / Token 2" }),
     ).toHaveAttribute("aria-checked", "false")
+    expect(
+      screen.getByRole("checkbox", { name: "Account 1 / Token 2" }),
+    ).toBeDisabled()
+    expect(
+      screen.getByText(
+        "keyManagement:batchManagedSiteExport.results.status.uncertain",
+      ),
+    ).toBeVisible()
+    expect(atIndex(mockPreparePreview.mock.calls, 1)[0].items).toEqual([
+      failedInput,
+    ])
   })
 
   it.each(["verification-dialog", "item-verification"] as const)(

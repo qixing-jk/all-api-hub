@@ -12,7 +12,6 @@ import {
   type PreviewLoadOrigin,
 } from "~/constants/previewLoadOrigin"
 import {
-  applyNormalizedModelsToPreviewItem,
   applyResolvedChannelKeyToPreviewItem,
   countPreviewItems,
   normalizeModels,
@@ -20,8 +19,12 @@ import {
 } from "~/features/KeyManagement/batchExport/managedSiteTokenBatchExportPreview"
 import {
   getManagedSiteTokenBatchExportRetryItemIds,
+  MANAGED_SITE_BATCH_EXECUTION_FAILURE_KINDS,
   mergeManagedSiteTokenBatchExportExecutionResults,
+  mergeManagedSiteTokenBatchRetryPreview,
   reconcileManagedSiteTokenBatchExportPreview,
+  selectManagedSiteTokenBatchPreviewInputs,
+  type ManagedSiteBatchExecutionFailure,
 } from "~/features/KeyManagement/batchExport/managedSiteTokenBatchExportSession"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import {
@@ -92,11 +95,8 @@ export function useManagedSiteTokenBatchSession({
   const [previewLoadOrigin, setPreviewLoadOrigin] =
     useState<PreviewLoadOrigin>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
-  const [executionFailure, setExecutionError] = useState<
-    | { kind: "target-changed" }
-    | { kind: "verification" | "upstream"; message: string }
-    | null
-  >(null)
+  const [executionFailure, setExecutionError] =
+    useState<ManagedSiteBatchExecutionFailure | null>(null)
   const [isTargetChanged, setIsTargetChanged] = useState(false)
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
@@ -115,6 +115,8 @@ export function useManagedSiteTokenBatchSession({
   const editedModelsByItemIdRef = useRef<Map<string, string[]>>(new Map())
   const retryBaselineRef =
     useRef<ManagedSiteTokenBatchExportExecutionResult | null>(null)
+  const retryBaselinePreviewRef =
+    useRef<ManagedSiteTokenBatchExportPreview | null>(null)
   const latestItemsRef = useRef(items)
   const openedItemsRef = useRef(items)
   const wasOpenRef = useRef(false)
@@ -144,6 +146,7 @@ export function useManagedSiteTokenBatchSession({
       selectedIdsRef.current = new Set()
       editedModelsByItemIdRef.current = new Map()
       retryBaselineRef.current = null
+      retryBaselinePreviewRef.current = null
       pendingPreviewLoadOriginRef.current = null
       setPreview(null)
       setSelectedIds(new Set())
@@ -208,6 +211,7 @@ export function useManagedSiteTokenBatchSession({
       pendingPreviewLoadOriginRef.current = null
       resolvedChannelKeysByItemIdRef.current = {}
       retryBaselineRef.current = null
+      retryBaselinePreviewRef.current = null
       return
     }
 
@@ -217,6 +221,7 @@ export function useManagedSiteTokenBatchSession({
     }
 
     let cancelled = false
+    const previewController = new AbortController()
     const requestOrigin =
       pendingPreviewLoadOriginRef.current ?? PREVIEW_LOAD_ORIGINS.AUTOMATIC
     pendingPreviewLoadOriginRef.current = null
@@ -232,6 +237,14 @@ export function useManagedSiteTokenBatchSession({
     setExecutionResult(null)
     setIsLoadingPreview(true)
     const previewWorkflowEpoch = activeWorkflowEpochRef.current
+    const retryBaseline = retryBaselineRef.current
+    const retryIds = retryBaseline
+      ? new Set(getManagedSiteTokenBatchExportRetryItemIds(retryBaseline))
+      : null
+    const previewInputs = selectManagedSiteTokenBatchPreviewInputs(
+      openedItemsRef.current,
+      retryIds,
+    )
 
     void (async () => {
       try {
@@ -241,10 +254,11 @@ export function useManagedSiteTokenBatchSession({
           >[0]["protectionBypassExecution"],
         ) =>
           prepareManagedSiteTokenBatchExportPreview({
-            items: openedItemsRef.current,
+            items: previewInputs,
             intent: activeIntent,
             resolvedChannelKeysByItemId: resolvedChannelKeysByItemIdRef.current,
             protectionBypassExecution,
+            signal: previewController.signal,
           })
         const nextPreview =
           requestOrigin === PREVIEW_LOAD_ORIGINS.MANUAL
@@ -261,9 +275,24 @@ export function useManagedSiteTokenBatchSession({
                 ),
               )
         if (cancelled || !isCurrentWorkflow(previewWorkflowEpoch)) return
+        const previousPreview = retryIds
+          ? retryBaselinePreviewRef.current
+          : previewRef.current
+        if (
+          retryIds &&
+          (!previousPreview ||
+            previousPreview.targetFingerprint !== nextPreview.targetFingerprint)
+        ) {
+          throw new ManagedSiteTokenBatchImportTargetChangedError()
+        }
+        const combinedPreview = mergeManagedSiteTokenBatchRetryPreview(
+          previousPreview,
+          nextPreview,
+          retryIds,
+        )
         const reconciled = reconcileManagedSiteTokenBatchExportPreview({
           previousPreview: previewRef.current,
-          nextPreview,
+          nextPreview: combinedPreview,
           selectedIds: selectedIdsRef.current,
           editedModelsByItemId: editedModelsByItemIdRef.current,
         })
@@ -282,6 +311,7 @@ export function useManagedSiteTokenBatchSession({
 
     return () => {
       cancelled = true
+      previewController.abort()
     }
   }, [
     activeIntent,
@@ -292,8 +322,13 @@ export function useManagedSiteTokenBatchSession({
   ])
 
   const executableItems = useMemo(
-    () => preview?.items.filter(isExecutablePreviewItem) ?? [],
-    [preview],
+    () =>
+      preview?.items.filter(
+        (item) =>
+          isExecutablePreviewItem(item) &&
+          (retryItemIds.size === 0 || retryItemIds.has(item.id)),
+      ) ?? [],
+    [preview, retryItemIds],
   )
   const selectedExecutableCount = executableItems.filter((item) =>
     selectedIds.has(item.id),
@@ -390,6 +425,7 @@ export function useManagedSiteTokenBatchSession({
     if (nextRetryItemIds.length === 0) return
 
     retryBaselineRef.current = executionResult
+    retryBaselinePreviewRef.current = previewRef.current
     setRetryItemIds(new Set(nextRetryItemIds))
     setSelectedIds(new Set(nextRetryItemIds))
     setExecutionResult(null)
@@ -471,7 +507,7 @@ export function useManagedSiteTokenBatchSession({
 
   const handleToggleAll = () => {
     if (!preview || executionResult || isRunning) return
-    setSelectedIds(
+    updatePreviewSelection(
       allExecutableSelected
         ? new Set()
         : new Set(executableItems.map((item) => item.id)),
@@ -479,62 +515,70 @@ export function useManagedSiteTokenBatchSession({
   }
 
   const handleToggleItem = (item: ManagedSiteTokenBatchExportPreviewItem) => {
-    if (!isExecutablePreviewItem(item) || executionResult || isRunning) return
-    setSelectedIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(item.id)) {
-        next.delete(item.id)
-      } else {
-        next.add(item.id)
-      }
-      return next
+    if (
+      !isExecutablePreviewItem(item) ||
+      executionResult ||
+      isRunning ||
+      (retryItemIds.size > 0 && !retryItemIds.has(item.id))
+    )
+      return
+    const next = new Set(selectedIdsRef.current)
+    if (next.has(item.id)) {
+      next.delete(item.id)
+    } else {
+      next.add(item.id)
+    }
+    updatePreviewSelection(next)
+  }
+
+  const updatePreviewSelection = (
+    nextSelectedIds: Set<string>,
+    nextEditedModels = editedModelsByItemIdRef.current,
+  ) => {
+    const currentPreview = previewRef.current
+    if (!currentPreview) return
+    const reconciled = reconcileManagedSiteTokenBatchExportPreview({
+      previousPreview: currentPreview,
+      nextPreview: currentPreview,
+      selectedIds: nextSelectedIds,
+      editedModelsByItemId: nextEditedModels,
     })
+    previewRef.current = reconciled.preview
+    selectedIdsRef.current = reconciled.selectedIds
+    setPreview(reconciled.preview)
+    setSelectedIds(reconciled.selectedIds)
   }
 
   const handleItemModelsChange = (
     item: ManagedSiteTokenBatchExportPreviewItem,
     models: string[],
   ) => {
-    if (!item.draft || executionResult || isRunning) return
+    if (
+      !item.draft ||
+      executionResult ||
+      isRunning ||
+      (retryItemIds.size > 0 && !retryItemIds.has(item.id))
+    )
+      return
 
     const normalizedModels = normalizeModels(models)
 
-    setEditedModelsByItemId((currentEditedModels) => {
-      const nextEditedModels = new Map(currentEditedModels)
-      nextEditedModels.set(item.id, normalizedModels)
-      return nextEditedModels
-    })
-
-    setPreview((currentPreview) => {
-      if (!currentPreview) return currentPreview
-
-      const nextItems = currentPreview.items.map((previewItem) =>
-        previewItem.id === item.id && previewItem.draft
-          ? applyNormalizedModelsToPreviewItem(previewItem, normalizedModels)
-          : previewItem,
-      )
-
-      return {
-        ...currentPreview,
-        items: nextItems,
-        ...countPreviewItems(nextItems),
-      }
-    })
-
-    setSelectedIds((currentSelectedIds) => {
-      const nextSelectedIds = new Set(currentSelectedIds)
-      if (normalizedModels.length === 0) {
-        nextSelectedIds.delete(item.id)
-      } else if (
-        item.status ===
-          MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED &&
-        item.blockingReasonCode ===
-          MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED
-      ) {
-        nextSelectedIds.add(item.id)
-      }
-      return nextSelectedIds
-    })
+    const nextEditedModels = new Map(editedModelsByItemIdRef.current)
+    nextEditedModels.set(item.id, normalizedModels)
+    editedModelsByItemIdRef.current = nextEditedModels
+    setEditedModelsByItemId(nextEditedModels)
+    const nextSelectedIds = new Set(selectedIdsRef.current)
+    if (normalizedModels.length === 0) {
+      nextSelectedIds.delete(item.id)
+    } else if (
+      item.status ===
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED &&
+      item.blockingReasonCode ===
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED
+    ) {
+      nextSelectedIds.add(item.id)
+    }
+    updatePreviewSelection(nextSelectedIds, nextEditedModels)
   }
 
   const captureWorkflow = () => {
@@ -556,6 +600,7 @@ export function useManagedSiteTokenBatchSession({
       retryItemIds,
     )
     retryBaselineRef.current = null
+    retryBaselinePreviewRef.current = null
     setRetryItemIds(new Set())
     setExecutionResult(cumulativeResult)
     return cumulativeResult
@@ -571,12 +616,16 @@ export function useManagedSiteTokenBatchSession({
     setIsTargetChanged(targetChanged)
     setExecutionError(
       targetChanged
-        ? { kind: "target-changed" }
-        : { kind: "upstream", message: getErrorMessage(error) },
+        ? { kind: MANAGED_SITE_BATCH_EXECUTION_FAILURE_KINDS.TARGET_CHANGED }
+        : {
+            kind: MANAGED_SITE_BATCH_EXECUTION_FAILURE_KINDS.UPSTREAM,
+            message: getErrorMessage(error),
+          },
     )
     if (retryBaselineRef.current) {
       setExecutionResult(retryBaselineRef.current)
       retryBaselineRef.current = null
+      retryBaselinePreviewRef.current = null
       setRetryItemIds(new Set())
     }
   }
@@ -592,6 +641,10 @@ export function useManagedSiteTokenBatchSession({
     previewLoadOrigin,
     isRunning,
     executionResult,
+    retainedExecutionItems:
+      retryBaselineRef.current?.items.filter(
+        (item) => !retryItemIds.has(item.id),
+      ) ?? [],
     retryItemIds,
     isConfirmOpen,
     verifyingItemId,
@@ -609,7 +662,12 @@ export function useManagedSiteTokenBatchSession({
     setVerificationProgress: setVerifyingItemId,
     setVerificationFailure: (message: string | null) =>
       setExecutionError(
-        message === null ? null : { kind: "verification", message },
+        message === null
+          ? null
+          : {
+              kind: MANAGED_SITE_BATCH_EXECUTION_FAILURE_KINDS.VERIFICATION,
+              message,
+            },
       ),
     resolveChannelKey: (
       item: ManagedSiteTokenBatchExportPreviewItem,

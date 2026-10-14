@@ -1,8 +1,15 @@
+export const MAGPIE_ENDPOINT_TYPES = {
+  Chat: "chat",
+  Responses: "responses",
+  Anthropic: "anthropic",
+  Gemini: "gemini",
+} as const
+
 export const MAGPIE_ENDPOINT_FIELDS = [
-  "chat",
-  "responses",
-  "anthropic",
-  "gemini",
+  MAGPIE_ENDPOINT_TYPES.Chat,
+  MAGPIE_ENDPOINT_TYPES.Responses,
+  MAGPIE_ENDPOINT_TYPES.Anthropic,
+  MAGPIE_ENDPOINT_TYPES.Gemini,
 ] as const
 
 export const MAGPIE_PROTOCOLS = {

@@ -1,4 +1,8 @@
-import { ManagedResourceError } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
+import {
+  MANAGED_RESOURCE_FAILURE_CODES,
+  ManagedResourceError,
+} from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { MagpieProviderCommand } from "~/services/apiAdapters/managedResources/magpie/editorProjection"
 import {
   applyMagpieKeyPool,
@@ -20,7 +24,11 @@ import {
   MagpieApiError,
   type MagpieRequestOptions,
 } from "~/services/apiService/magpie/request"
-import type { ManagedSiteMutationConfirmedEffect } from "~/services/managedSites/mutations/contracts"
+import {
+  MANAGED_SITE_MUTATION_EFFECT_KINDS,
+  MANAGED_SITE_MUTATION_FINAL_STATES,
+  type ManagedSiteMutationConfirmedEffect,
+} from "~/services/managedSites/mutations/contracts"
 import { createManagedSiteMutationSequence } from "~/services/managedSites/mutations/execution"
 import type { MagpieConfig } from "~/types/magpieConfig"
 
@@ -56,17 +64,20 @@ async function mutate<T>(
         attempt.complete()
       }
     })
-    return sequence.finish({ finalState: "confirmed", data })
+    return sequence.finish({
+      finalState: MANAGED_SITE_MUTATION_FINAL_STATES.Confirmed,
+      data,
+    })
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
       return sequence.finish({
-        finalState: "unconfirmed",
+        finalState: MANAGED_SITE_MUTATION_FINAL_STATES.Unconfirmed,
         diagnostic: { message: "Magpie operation aborted before dispatch" },
       })
     }
     if (!(error instanceof MagpieApiError)) throw error
     return sequence.finish({
-      finalState: "unconfirmed",
+      finalState: MANAGED_SITE_MUTATION_FINAL_STATES.Unconfirmed,
       diagnostic: {
         message: error.message,
         ...(error.status === undefined ? {} : { statusCode: error.status }),
@@ -80,7 +91,7 @@ const effect = (
   resourceId: string,
 ): ManagedSiteMutationConfirmedEffect => ({
   kind,
-  resourceKind: "channel",
+  resourceKind: MANAGED_RESOURCE_KINDS.Channel,
   resourceId,
 })
 const saved = (items: MagpieProvider[], id: string, enabled?: boolean) => {
@@ -103,7 +114,9 @@ export async function createMagpieResource(
 ) {
   const id = `aah-${crypto.randomUUID()}`
   if (command.keyPool?.update.length || command.keyPool?.remove.length)
-    throw new ManagedResourceError({ code: "validation_failed" })
+    throw new ManagedResourceError({
+      code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+    })
   const operations = command.keyPool
     ? await prepareMagpieKeyPool(
         {
@@ -121,53 +134,79 @@ export async function createMagpieResource(
       )
     : []
   return mutate(async (step) => {
-    let provider = await step(effect("resource-created", id), async () =>
-      saved(
-        await saveMagpieProvider(
-          config,
-          { ...command.fields, id, new: true },
-          options,
+    let provider = await step(
+      effect(MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceCreated, id),
+      async () =>
+        saved(
+          await saveMagpieProvider(
+            config,
+            { ...command.fields, id, new: true },
+            options,
+          ),
+          id,
         ),
-        id,
-      ),
     )
     provider = await applyMagpieKeyPool(
       config,
       provider,
       operations,
-      (run) => step(effect("resource-updated", id), run),
+      (run) =>
+        step(
+          effect(MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceUpdated, id),
+          run,
+        ),
       options,
     )
     if (command.enabled === false)
-      provider = await step(effect("status-updated", id), async () =>
-        saved(
-          await setMagpieProviderEnabled(config, id, false, options),
-          id,
-          false,
-        ),
+      provider = await step(
+        effect(MANAGED_SITE_MUTATION_EFFECT_KINDS.StatusUpdated, id),
+        async () =>
+          saved(
+            await setMagpieProviderEnabled(config, id, false, options),
+            id,
+            false,
+          ),
       )
     return provider
   })
+}
+
+type MagpieResourceUpdateCommand = MagpieProviderCommand & {
+  requireExplicitModels?: boolean
 }
 
 /** Read fresh before replacement-like saves, preserving fields outside this edit. */
 export async function updateMagpieResource(
   config: MagpieConfig,
   detail: MagpieProvider,
-  command: MagpieProviderCommand & { requireExplicitModels?: boolean },
+  command: MagpieResourceUpdateCommand,
+  options?: MagpieRequestOptions,
+) {
+  return updateMagpieResourceById(config, detail.id, command, options)
+}
+
+/** Model-only callers need an identity; the write still reads the latest provider. */
+export async function updateMagpieResourceById(
+  config: MagpieConfig,
+  id: string,
+  command: MagpieResourceUpdateCommand,
   options?: MagpieRequestOptions,
 ) {
   const current = requireMagpieApiProvider(
-    await getMagpieProvider(config, detail.id, options),
+    await getMagpieProvider(config, id, options),
   )
   // Recheck immediately before saving: native edits can restore an automatic catalog.
   if (command.requireExplicitModels && !current.chosen?.length)
-    throw new ManagedResourceError({ code: "resource_changed" })
+    throw new ManagedResourceError({
+      code: MANAGED_RESOURCE_FAILURE_CODES.ResourceChanged,
+    })
   if (
     command.primaryKeyRef &&
     current.keyList?.find((key) => key.active)?.id !== command.primaryKeyRef
   )
-    throw new ManagedResourceError({ code: "resource_changed" })
+    throw new ManagedResourceError({
+      code: MANAGED_RESOURCE_FAILURE_CODES.ResourceChanged,
+    })
   const replacement =
     typeof command.fields.key === "string"
       ? await magpieKeyFingerprint(command.fields.key)
@@ -176,7 +215,9 @@ export async function updateMagpieResource(
     replacement &&
     current.keyList?.some((key) => key.id === replacement && !key.active)
   )
-    throw new ManagedResourceError({ code: "validation_failed" })
+    throw new ManagedResourceError({
+      code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+    })
   const operations = await prepareMagpieKeyPool(
     current,
     command.keyPool,
@@ -188,41 +229,52 @@ export async function updateMagpieResource(
     (command.enabled === undefined || command.enabled !== current.off)
   )
     return createManagedSiteMutationSequence({ idempotent: true }).finish({
-      finalState: "confirmed",
+      finalState: MANAGED_SITE_MUTATION_FINAL_STATES.Confirmed,
       data: current,
     })
   return mutate(async (step) => {
     let provider = current
     if (Object.keys(command.fields).length)
-      provider = await step(effect("resource-updated", current.id), async () =>
-        saved(
-          await saveMagpieProvider(
-            config,
-            buildMagpieProviderSavePayload(current, command.fields),
-            options,
+      provider = await step(
+        effect(MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceUpdated, current.id),
+        async () =>
+          saved(
+            await saveMagpieProvider(
+              config,
+              buildMagpieProviderSavePayload(current, command.fields),
+              options,
+            ),
+            current.id,
           ),
-          current.id,
-        ),
       )
     provider = await applyMagpieKeyPool(
       config,
       provider,
       operations,
-      (run) => step(effect("resource-updated", current.id), run),
+      (run) =>
+        step(
+          effect(
+            MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceUpdated,
+            current.id,
+          ),
+          run,
+        ),
       options,
     )
     if (command.enabled !== undefined && command.enabled === provider.off)
-      provider = await step(effect("status-updated", current.id), async () =>
-        saved(
-          await setMagpieProviderEnabled(
-            config,
+      provider = await step(
+        effect(MANAGED_SITE_MUTATION_EFFECT_KINDS.StatusUpdated, current.id),
+        async () =>
+          saved(
+            await setMagpieProviderEnabled(
+              config,
+              current.id,
+              command.enabled!,
+              options,
+            ),
             current.id,
-            command.enabled!,
-            options,
+            command.enabled,
           ),
-          current.id,
-          command.enabled,
-        ),
       )
     return provider
   })
@@ -236,15 +288,18 @@ export async function deleteMagpieResource(
 ) {
   requireMagpieApiProvider(await getMagpieProvider(config, id, options))
   return mutate(async (step) =>
-    step(effect("resource-deleted", id), async () => {
-      const remaining = await deleteMagpieProvider(config, id, options)
-      if (remaining.some((item) => item.id === id))
-        throw new MagpieApiError(
-          "Magpie deletion could not be confirmed",
-          200,
-          true,
-          false,
-        )
-    }),
+    step(
+      effect(MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceDeleted, id),
+      async () => {
+        const remaining = await deleteMagpieProvider(config, id, options)
+        if (remaining.some((item) => item.id === id))
+          throw new MagpieApiError(
+            "Magpie deletion could not be confirmed",
+            200,
+            true,
+            false,
+          )
+      },
+    ),
   )
 }

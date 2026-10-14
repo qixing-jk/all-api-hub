@@ -10,7 +10,10 @@ import { cleanupNewApiOwnedSession } from "~/services/managedSites/newApiOwnedSe
 import { createNewApiDashboardAuthAcceptance } from "~/services/managedSites/providers/newApi/newApiDashboardAuthAcceptance"
 import {
   hasNewApiLoginAssistCredentials,
+  NEW_API_DASHBOARD_REFRESH_RESULTS,
+  NEW_API_LOGIN_STATUSES,
   NEW_API_SECURITY_PROOF_SCOPES,
+  NEW_API_VERIFICATION_METHODS,
   NEW_API_VERIFIED_SESSION_WINDOW_MS,
   type EnsureNewApiLoginResult,
   type NewApiDashboardRefreshResult,
@@ -27,6 +30,12 @@ import type { NewApiConfig } from "~/types/newApiConfig"
 import { isRecord } from "~/utils/core/object"
 import { trimToNull } from "~/utils/core/string"
 import { t } from "~/utils/i18n/core"
+
+/** Compatibility defaults are fresh values, never shared mutable method state. */
+const defaultVerificationMethods = (): NewApiVerificationMethods => ({
+  twoFactorEnabled: false,
+  passkeyEnabled: false,
+})
 
 /** Adapts dashboard authentication and secure verification using the workflow's single runtime. */
 export function createNewApiSessionProtocol(
@@ -225,7 +234,7 @@ export function createNewApiSessionProtocol(
       response.status === 404 ||
       response.status === 405
     ) {
-      return "unavailable"
+      return NEW_API_DASHBOARD_REFRESH_RESULTS.Unavailable
     }
 
     if (!response.ok) {
@@ -243,16 +252,16 @@ export function createNewApiSessionProtocol(
     }
 
     const body = parseDashboardRefreshBody(response.body)
-    if (body === undefined) return "unavailable"
+    if (body === undefined) return NEW_API_DASHBOARD_REFRESH_RESULTS.Unavailable
     const parsedKind = await acceptDashboardAuth(baseUrl, body, "refresh")
     if (parsedKind === "valid") {
-      return "refreshed"
+      return NEW_API_DASHBOARD_REFRESH_RESULTS.Refreshed
     }
     if (parsedKind === "malformed") {
       throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
     }
 
-    return "unavailable"
+    return NEW_API_DASHBOARD_REFRESH_RESULTS.Unavailable
   }
 
   /** Deduplicates refresh-cookie rotation per managed-site origin. */
@@ -334,7 +343,8 @@ export function createNewApiSessionProtocol(
     if (methods) return methods
 
     const refreshResult = await refreshNewApiDashboardSession(baseUrl)
-    if (refreshResult !== "refreshed") return null
+    if (refreshResult !== NEW_API_DASHBOARD_REFRESH_RESULTS.Refreshed)
+      return null
 
     const refreshedMethods = await readNewApiVerificationMethods(
       baseUrl,
@@ -360,7 +370,7 @@ export function createNewApiSessionProtocol(
     config: Pick<NewApiConfig, "baseUrl" | "userId" | "username" | "password">,
   ): Promise<EnsureNewApiLoginResult> {
     if (sessionRuntime.hasActivePendingLoginFlow(config.baseUrl)) {
-      return { status: "login-2fa-required" }
+      return { status: NEW_API_LOGIN_STATUSES.TwoFactorRequired }
     }
 
     const methods = await readNewApiVerificationMethodsWithRefresh(
@@ -369,14 +379,14 @@ export function createNewApiSessionProtocol(
     )
     if (methods) {
       return {
-        status: "logged-in",
+        status: NEW_API_LOGIN_STATUSES.LoggedIn,
         methods,
       }
     }
 
     if (!hasNewApiLoginAssistCredentials(config)) {
       return {
-        status: "credentials-missing",
+        status: NEW_API_LOGIN_STATUSES.CredentialsMissing,
       }
     }
 
@@ -467,7 +477,9 @@ export function createNewApiSessionProtocol(
           throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
         if (
           !verificationMethods.some(
-            (method) => method.method === "2fa" && method.available,
+            (method) =>
+              method.method === NEW_API_VERIFICATION_METHODS.TwoFactor &&
+              method.available,
           )
         ) {
           sessionRuntime.clearPendingLoginFlow(config.baseUrl)
@@ -477,7 +489,7 @@ export function createNewApiSessionProtocol(
             )
           )
             return {
-              status: "passkey-manual-required",
+              status: NEW_API_LOGIN_STATUSES.PasskeyManualRequired,
               methods: { twoFactorEnabled: false, passkeyEnabled: true },
             }
           throw new Error(NEW_API_DASHBOARD_AUTH_INVALID_RESPONSE)
@@ -498,7 +510,7 @@ export function createNewApiSessionProtocol(
       }
 
       return {
-        status: "login-2fa-required",
+        status: NEW_API_LOGIN_STATUSES.TwoFactorRequired,
       }
     }
 
@@ -508,14 +520,10 @@ export function createNewApiSessionProtocol(
     }
 
     return {
-      status: "logged-in",
-      methods: (await readNewApiVerificationMethods(
-        config.baseUrl,
-        config.userId,
-      )) ?? {
-        twoFactorEnabled: false,
-        passkeyEnabled: false,
-      },
+      status: NEW_API_LOGIN_STATUSES.LoggedIn,
+      methods:
+        (await readNewApiVerificationMethods(config.baseUrl, config.userId)) ??
+        defaultVerificationMethods(),
     }
   }
 
@@ -536,9 +544,12 @@ export function createNewApiSessionProtocol(
   async function verifyNewApiSession(
     config: Pick<NewApiConfig, "baseUrl" | "userId"> & { channelId?: number },
     params: {
-      method: "2fa"
+      method: typeof NEW_API_VERIFICATION_METHODS.TwoFactor
       code: string
     },
+    // Only the automatic path supplies methods fetched live in this operation.
+    // Manual verification has no such evidence and must probe after submission.
+    knownMethods?: NewApiVerificationMethods,
   ): Promise<VerifyNewApiSessionResult> {
     return sessionRuntime.runVerification(
       config.baseUrl,
@@ -593,13 +604,13 @@ export function createNewApiSessionProtocol(
         )
 
         return {
-          methods: (await readNewApiVerificationMethods(
-            config.baseUrl,
-            config.userId,
-          )) ?? {
-            twoFactorEnabled: false,
-            passkeyEnabled: false,
-          },
+          methods:
+            knownMethods ??
+            (await readNewApiVerificationMethods(
+              config.baseUrl,
+              config.userId,
+            )) ??
+            defaultVerificationMethods(),
           verifiedUntil,
         }
       },
@@ -624,7 +635,9 @@ export function createNewApiSessionProtocol(
         method: "POST",
         body: JSON.stringify({
           code: trimmedCode,
-          ...(pendingLoginFlow?.unified ? { method: "2fa" } : {}),
+          ...(pendingLoginFlow?.unified
+            ? { method: NEW_API_VERIFICATION_METHODS.TwoFactor }
+            : {}),
           ...(pendingLoginFlow ? { flow_token: pendingLoginFlow.token } : {}),
         }),
       },
@@ -670,13 +683,9 @@ export function createNewApiSessionProtocol(
       sessionRuntime.markLoggedIn(config.baseUrl)
     }
 
-    const methods = (await readNewApiVerificationMethods(
-      config.baseUrl,
-      config.userId,
-    )) ?? {
-      twoFactorEnabled: false,
-      passkeyEnabled: false,
-    }
+    const methods =
+      (await readNewApiVerificationMethods(config.baseUrl, config.userId)) ??
+      defaultVerificationMethods()
 
     return methods
   }

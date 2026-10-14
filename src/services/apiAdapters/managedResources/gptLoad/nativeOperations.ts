@@ -1,3 +1,4 @@
+import { GPT_LOAD_READ_CONCURRENCY } from "~/constants/gptLoad"
 import {
   MANAGED_RESOURCE_FAILURE_CODES,
   type ResourceOperationOptions,
@@ -37,6 +38,10 @@ import {
   readGptLoadGroupBaseUrl,
   toGptLoadSanitizedGroup,
 } from "~/services/apiService/gptLoad/redaction"
+import {
+  mapWithConcurrency,
+  readObjectWithConcurrency,
+} from "~/utils/core/mapWithConcurrency"
 
 /** Opens the scope-bound gpt-load operations shared by UI and matching. */
 export async function openGptLoadNativeResourceOperations(
@@ -50,15 +55,25 @@ export async function openGptLoadNativeResourceOperations(
     readOptions?: ResourceOperationOptions,
   ): Promise<GptLoadGroupDetail> =>
     await runRead(nativeConfig, readOptions, async () => {
-      const settings = await getGptLoadGroupSettings(config, locator, {
-        signal: readOptions?.signal,
-      })
-      const modelRows = await getGptLoadGroupModels(config, locator, {
-        signal: readOptions?.signal,
-      })
-      const credentials = await listGptLoadGroupCredentials(config, locator, {
-        signal: readOptions?.signal,
-      })
+      const { settings, modelRows, credentials } =
+        await readObjectWithConcurrency(
+          {
+            settings: () =>
+              getGptLoadGroupSettings(config, locator, {
+                signal: readOptions?.signal,
+              }),
+            modelRows: () =>
+              getGptLoadGroupModels(config, locator, {
+                signal: readOptions?.signal,
+              }),
+            credentials: () =>
+              listGptLoadGroupCredentials(config, locator, {
+                signal: readOptions?.signal,
+              }),
+          },
+          GPT_LOAD_READ_CONCURRENCY,
+          readOptions,
+        )
       const modelIds = modelRows.map((model) => model.id)
       const group: Parameters<typeof toGptLoadSanitizedGroup>[0] = {
         id: locator,
@@ -144,22 +159,24 @@ export async function openGptLoadNativeResourceOperations(
             signal: operationOptions?.signal,
           }),
       )
-      const records: CredentialRecord[] = []
-      for (const credential of credentials) {
-        const key = await runRead(nativeConfig, operationOptions, () =>
-          revealGptLoadGroupCredential(
-            config,
-            locator,
-            credential.credential_id,
-            { signal: operationOptions?.signal },
-          ),
-        )
-        records.push({
-          id: String(credential.credential_id),
-          key,
-          fields: {},
-        })
-      }
+      const records = await runRead(nativeConfig, operationOptions, () =>
+        mapWithConcurrency(
+          credentials,
+          GPT_LOAD_READ_CONCURRENCY,
+          async (credential): Promise<CredentialRecord> => {
+            const key = await runRead(nativeConfig, operationOptions, () =>
+              revealGptLoadGroupCredential(
+                config,
+                locator,
+                credential.credential_id,
+                { signal: operationOptions?.signal },
+              ),
+            )
+            return { id: String(credential.credential_id), key, fields: {} }
+          },
+          operationOptions,
+        ),
+      )
       return records
     },
     create: async (command, operationOptions) => {

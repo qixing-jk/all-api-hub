@@ -1,4 +1,5 @@
 import type { ManagedSiteType } from "~/constants/siteType"
+import type { InventoryReadOptions } from "~/services/apiTransport/inventoryReads"
 import type { ScheduledReadOptions } from "~/services/apiTransport/requestScheduling"
 import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/configuration/runtimeConfig"
 import type { ManagedSiteOperationContext } from "~/services/managedSites/operationContext"
@@ -10,6 +11,12 @@ import type {
 
 import type { ManagedResourceMatchingCapability } from "./managedResourceMatching"
 import type { ManagedResourceModelsCapability } from "./managedResourceModels"
+
+export const MANAGED_SITE_CHANNEL_DRAFT_PURPOSES = {
+  IMPORT: "import",
+  MATCHING: "matching",
+  NATIVE_EDITOR: "native-editor",
+} as const
 
 export type ManagedSiteChannelRequestOptions = ScheduledReadOptions & {
   signal?: AbortSignal
@@ -27,7 +34,7 @@ export type ManagedSitePaginatedChannelRequestOptions =
     pageStart?: number
   }
 
-export type ManagedSiteChannelSecretReadOptions = ScheduledReadOptions & {
+export type ManagedSiteChannelSecretReadOptions = InventoryReadOptions & {
   protectionBypassExecution: ProtectionBypassExecution
   signal?: AbortSignal
 }
@@ -62,7 +69,7 @@ export type ManagedSiteQueriesCapability<
 
 export type ManagedSiteChannelDraftRequestOptions = ScheduledReadOptions & {
   /** Native editors own group loading; matching also needs no draft groups. */
-  purpose?: "import" | "matching" | "native-editor"
+  purpose?: (typeof MANAGED_SITE_CHANNEL_DRAFT_PURPOSES)[keyof typeof MANAGED_SITE_CHANNEL_DRAFT_PURPOSES]
   operationContext?: ManagedSiteOperationContext
 }
 

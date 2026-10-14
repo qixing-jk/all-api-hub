@@ -1,4 +1,8 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import {
+  MANAGED_RESOURCE_EXACT_MATCH_BASES,
+  MANAGED_RESOURCE_SEARCH_INVENTORY_MODES,
+} from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type {
   ManagedSiteCapabilities,
@@ -10,7 +14,7 @@ import {
   toNativeNumericMatchCandidates,
 } from "~/services/apiAdapters/managedResources/shared/matchingInputs"
 import { requireManagedResourceChannelId } from "~/services/apiAdapters/managedResources/shared/resourceIds"
-import { sharePendingConfigRead } from "~/services/apiTransport/requestScheduling"
+import { shareInventoryRead } from "~/services/apiTransport/inventoryReads"
 import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/configuration/runtimeConfig"
 import { createManagedChannelResourceRef } from "~/services/managedSites/managedResourceIdentity"
 import {
@@ -52,14 +56,9 @@ const channelDrafts: ManagedSiteChannelDraftsCapability = {
   prepareFormData: prepareChannelFormData,
 }
 
-const readMatchingInventory = sharePendingConfigRead(listSub2ApiApiKeyAccounts)
-
-const matching: ManagedResourceMatchingCapability<Sub2ApiManagedSiteConfig> = {
-  // Native API-key accounts have URL/key identity; no channel model inventory.
-  exactMatchBasis: "url-key",
-  // The upstream search is name-only; inspect the URL bucket from a full API-key inventory.
-  search: async (config, _keyword, options) => {
-    const data = await readMatchingInventory(config, options)
+const readMatchingInventory = shareInventoryRead(
+  async (config: Sub2ApiManagedSiteConfig, options) => {
+    const data = await listSub2ApiApiKeyAccounts(config, options)
     const items = data.items
       .filter((account) => account.type === "apikey")
       .map((account) => ({
@@ -79,6 +78,14 @@ const matching: ManagedResourceMatchingCapability<Sub2ApiManagedSiteConfig> = {
       }))
     return { items, total: data.total, type_counts: {} }
   },
+)
+
+const matching: ManagedResourceMatchingCapability<Sub2ApiManagedSiteConfig> = {
+  // Native API-key accounts have URL/key identity; no channel model inventory.
+  exactMatchBasis: MANAGED_RESOURCE_EXACT_MATCH_BASES.URL_KEY,
+  searchInventoryMode: MANAGED_RESOURCE_SEARCH_INVENTORY_MODES.FULL,
+  // The upstream search is name-only; inspect the URL bucket from a full API-key inventory.
+  search: (config, _keyword, options) => readMatchingInventory(config, options),
   fetchSecretKey: async (config, ref, options) =>
     revealSub2ApiApiKey(
       config,

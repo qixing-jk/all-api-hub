@@ -9,16 +9,13 @@ import {
   resolveOctopusCookieApiVersion,
 } from "~/services/apiService/octopus/cookieProtocol"
 import { OCTOPUS_API_OPERATIONS } from "~/services/apiService/octopus/operations"
-import {
-  throwIfOctopusRequestAborted,
-  type OctopusRequestInit,
-} from "~/services/apiService/octopus/requestContext"
+import { type OctopusRequestInit } from "~/services/apiService/octopus/requestContext"
 import { fetchOctopusApi } from "~/services/apiService/octopus/requestExecution"
 import { ApiError } from "~/services/apiTransport/errors"
 import {
-  sharePendingConfigRead,
-  type ScheduledReadOptions,
-} from "~/services/apiTransport/requestScheduling"
+  shareInventoryRead,
+  type InventoryReadOptions,
+} from "~/services/apiTransport/inventoryReads"
 import { createUserCommandProtectionBypassExecution } from "~/services/protectionBypass/client"
 import {
   PROTECTION_BYPASS_USER_COMMANDS,
@@ -34,6 +31,7 @@ import {
 import type { OctopusConfig } from "~/types/octopusConfig"
 import { OCTOPUS_API_RESOURCE_BINDINGS } from "~/types/tempWindowFetch"
 import { createLogger } from "~/utils/core/logger"
+import { mapWithConcurrency } from "~/utils/core/mapWithConcurrency"
 import { normalizeBaseUrl } from "~/utils/core/url"
 
 const logger = createLogger("OctopusAPI")
@@ -156,7 +154,7 @@ const SEARCH_DETAIL_CONCURRENCY = 4
 
 // Search fetches the full inventory before filtering. Keep protection intent in
 // its identity so interactive and automatic execution never borrow each other's policy.
-const readSearchInventory = sharePendingConfigRead(
+const readSearchInventory = shareInventoryRead(
   async (
     {
       protectionBypassExecution,
@@ -166,42 +164,29 @@ const readSearchInventory = sharePendingConfigRead(
   ) => {
     const requestOptions = { ...options, protectionBypassExecution }
     const channels = await listChannels(config, requestOptions)
-    const inventory: OctopusChannel[] = []
-
-    // v0.13 stats omit base URLs and keys. Matching needs full details, while
-    // ordinary listChannels callers keep the lightweight stats inventory.
-    // https://github.com/bestruirui/octopus/blob/v0.13.4/internal/model/channel.go
-    for (
-      let offset = 0;
-      offset < channels.length;
-      offset += SEARCH_DETAIL_CONCURRENCY
-    ) {
-      throwIfOctopusRequestAborted(options.signal)
-      const batch = await Promise.all(
-        channels
-          .slice(offset, offset + SEARCH_DETAIL_CONCURRENCY)
-          .map(async (channel) => {
-            if (
-              channel.detailAvailability !==
-              OCTOPUS_CHANNEL_DETAIL_AVAILABILITY.Summary
-            ) {
-              return channel
-            }
-            const detail = await getChannel(config, channel.id, requestOptions)
-            if (detail.id !== channel.id) {
-              throw new Error(
-                "Octopus channel detail identity does not match its summary",
-              )
-            }
-            return {
-              ...channel,
-              ...detail,
-              detailAvailability: OCTOPUS_CHANNEL_DETAIL_AVAILABILITY.Full,
-            }
-          }),
-      )
-      inventory.push(...batch)
-    }
+    // v0.13 stats omit URLs and keys; rolling workers avoid waiting for the slowest detail in each wave.
+    const inventory = await mapWithConcurrency(
+      channels,
+      SEARCH_DETAIL_CONCURRENCY,
+      async (channel) => {
+        if (
+          channel.detailAvailability !==
+          OCTOPUS_CHANNEL_DETAIL_AVAILABILITY.Summary
+        )
+          return channel
+        const detail = await getChannel(config, channel.id, requestOptions)
+        if (detail.id !== channel.id)
+          throw new Error(
+            "Octopus channel detail identity does not match its summary",
+          )
+        return {
+          ...channel,
+          ...detail,
+          detailAvailability: OCTOPUS_CHANNEL_DETAIL_AVAILABILITY.Full,
+        }
+      },
+      options,
+    )
     return inventory
   },
 )
@@ -210,7 +195,7 @@ const readSearchInventory = sharePendingConfigRead(
 export async function searchChannels(
   config: OctopusConfig,
   keyword: string,
-  options?: ScheduledReadOptions &
+  options?: InventoryReadOptions &
     Pick<OctopusRequestInit, "protectionBypassExecution">,
 ): Promise<OctopusChannel[]> {
   const channels = await readSearchInventory(

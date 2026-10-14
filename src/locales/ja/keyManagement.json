@@ -95,7 +95,8 @@
     "gatewayDescription": "アカウントキーをセルフホスト AI ゲートウェイチャネルとして取り込みます。取り込み後は、複数のキーを 1 つの AI API からクライアントで利用できます。",
     "loadingDescription": "選択済み {{selectedCount}} 件のキーのプレビューを準備しています。",
     "messages": {
-      "completed": "一括インポート完了: 作成 {{created}} 件、失敗 {{failed}} 件、既存 {{skipped}} 件。",
+      "batchDuplicate": "このバッチの {{item}} と重複するため、スキップしました。",
+      "completed": "一括インポート完了: 作成 {{created}} 件、失敗 {{failed}} 件、スキップ {{skipped}} 件。",
       "duplicate": "完全一致するチャネルが既にあります: {{channel}}。再作成されません。",
       "executionFailed": "一括インポートの実行に失敗しました: {{error}}",
       "targetChanged": "管理対象サイトが変更されました。インポート前にプレビューを更新するか、対象を選び直してください。",
@@ -105,7 +106,7 @@
       "loadFailed": "プレビューの読み込みに失敗しました: {{error}}",
       "loading": "チャネルプレビューを準備中...",
       "selected_other": "{{count}} 件のキーを選択中",
-      "summary": "プレビュー: 作成可能 {{ready}} 件、警告 {{warning}} 件、既存 {{skipped}} 件、ブロック {{blocked}} 件、合計 {{total}} 件。"
+      "summary": "プレビュー: 作成可能 {{ready}} 件、警告 {{warning}} 件、スキップ {{skipped}} 件、ブロック {{blocked}} 件、合計 {{total}} 件。"
     },
     "repairTrusted": {
       "description": "これらのキーは直前に作成されました。簡易レビューでは重複と正確な Key のチェックを省略します。インポート前に完全なチェックへ切り替えることもできます。",
@@ -116,11 +117,11 @@
       "status": {
         "failed": "失敗",
         "notSelected": "未選択",
-        "skipped": "既存",
+        "skipped": "スキップ",
         "success": "作成済み",
         "uncertain": "要確認"
       },
-      "summary": "結果: 作成 {{created}} 件、失敗 {{failed}} 件、既存 {{skipped}} 件、合計 {{total}} 件。"
+      "summary": "結果: 作成 {{created}} 件、失敗 {{failed}} 件、スキップ {{skipped}} 件、合計 {{total}} 件。"
     },
     "selection": {
       "accountGroup": "アカウント {{name}} の表示中のキーを選択",
@@ -130,7 +131,7 @@
     "status": {
       "blocked": "ブロック",
       "ready": "準備完了",
-      "skipped": "既存",
+      "skipped": "スキップ",
       "warning": "警告"
     },
     "target": {

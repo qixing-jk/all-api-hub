@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { veloeraManagedResourceModels } from "~/services/apiAdapters/managedResources/veloera/operations"
 import { veloeraManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/veloera"
 import { ApiError } from "~/services/apiTransport/errors"
+import type { InventoryReadCache } from "~/services/apiTransport/inventoryReads"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import type { NewApiChannel } from "~/types/newApi"
@@ -157,6 +158,40 @@ describe("Veloera managed-site channel capability", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  it("decodes one full matching response only once across distinct batch search URLs", async () => {
+    let addressReads = 0
+    const row = {
+      id: 7,
+      name: "Channel",
+      type: 1,
+      key: "key",
+      models: "model",
+      get base_url() {
+        addressReads += 1
+        return "https://source.invalid"
+      },
+    }
+    veloeraApi.listAllChannels.mockResolvedValue({
+      items: [row],
+      total: 1,
+      type_counts: {},
+    })
+    const inventoryCache: InventoryReadCache = new Map()
+    const first = await veloeraManagedSiteCapabilities.matching.search(
+      config,
+      "https://source.invalid",
+      { inventoryCache },
+    )
+    await veloeraManagedSiteCapabilities.matching.search(
+      config,
+      "https://other.invalid",
+      { inventoryCache },
+    )
+    expect(first?.items[0]?.base_url).toBe("https://source.invalid")
+    expect(veloeraApi.listAllChannels).toHaveBeenCalledTimes(1)
+    expect(addressReads).toBe(1)
   })
 
   const createPayload = { name: "channel", status: 1 } as const

@@ -5,6 +5,7 @@ import {
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { openNativeManagedChannelImportSession } from "~/services/apiAdapters/managedResources/channelImport"
 import { mapBatchImportWithConcurrency } from "~/services/managedSites/batchImport/tokenBatchImportConcurrency"
+import { skipManagedSiteBatchDuplicates } from "~/services/managedSites/batchImport/tokenBatchImportDuplicates"
 import { createManagedSiteTokenBatchImportTarget } from "~/services/managedSites/batchImport/tokenBatchImportTarget"
 import { getCurrentManagedSiteRuntimeConfig } from "~/services/managedSites/configuration/runtimeConfig"
 import {
@@ -20,11 +21,9 @@ import { collectManagedResourceSecrets } from "~/services/managedSites/utils/res
 import {
   isExecutableManagedSiteTokenBatchExportPreviewItem,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS,
-  type ExecutableManagedSiteTokenBatchExportPreviewItem,
   type ManagedSiteTokenBatchExportExecutionItem,
   type ManagedSiteTokenBatchExportExecutionResult,
   type ManagedSiteTokenBatchExportPreview,
-  type ManagedSiteTokenBatchExportPreviewItem,
 } from "~/types/managedSiteTokenBatchExport"
 
 const FALLBACK_EXECUTION_ERROR = "Failed to create channel"
@@ -81,14 +80,10 @@ export async function executeManagedSiteTokenBatchExport(params: {
   const selectedPreviewItems = params.preview.items.filter((item) =>
     selectedIds.has(item.id),
   )
-  const isSelectedExecutablePreviewItem = (
-    item: ManagedSiteTokenBatchExportPreviewItem,
-  ): item is ExecutableManagedSiteTokenBatchExportPreviewItem =>
-    selectedIds.has(item.id) &&
-    isExecutableManagedSiteTokenBatchExportPreviewItem(item)
-  const executableItems = params.preview.items.filter(
-    isSelectedExecutablePreviewItem,
-  )
+  const executableItems = skipManagedSiteBatchDuplicates(
+    selectedPreviewItems,
+    target.managedSite,
+  ).filter(isExecutableManagedSiteTokenBatchExportPreviewItem)
   const nativeImportSessionResult = executableItems.length
     ? await openNativeManagedChannelImportSession(
         target.managedSite.siteType,
@@ -97,12 +92,19 @@ export async function executeManagedSiteTokenBatchExport(params: {
         (error: unknown) => ({ session: null, error }),
       )
     : { session: null, error: null }
+  const reconcileBestEffort = async () => {
+    try {
+      await nativeImportSessionResult.session?.reconcile()
+    } catch {
+      // Reconciliation is best effort; ambiguous creates remain non-replayable.
+    }
+  }
   let executedItems: ManagedSiteTokenBatchExportExecutionItem[]
   try {
     executedItems = await mapBatchImportWithConcurrency(
       executableItems,
       async (item): Promise<ManagedSiteTokenBatchExportExecutionItem> => {
-        const preDispatchSecretCollection = collectManagedResourceSecrets(
+        const secretCollection = collectManagedResourceSecrets(
           target.config,
           item.draft,
         )
@@ -110,10 +112,10 @@ export async function executeManagedSiteTokenBatchExport(params: {
           nativeImportSessionResult.error ||
           !nativeImportSessionResult.session
         ) {
-          const message = preDispatchSecretCollection.complete
+          const message = secretCollection.complete
             ? toPrivateManagedSiteThrownErrorMessage(
                 nativeImportSessionResult.error,
-                { knownSecrets: preDispatchSecretCollection.knownSecrets },
+                { knownSecrets: secretCollection.knownSecrets },
               )
             : undefined
           return {
@@ -128,32 +130,27 @@ export async function executeManagedSiteTokenBatchExport(params: {
               : FALLBACK_EXECUTION_ERROR,
           }
         }
-        const secretCollection = preDispatchSecretCollection
         let mutation: ManagedSiteMutationResult<unknown>
-        {
-          try {
-            mutation = await nativeImportSessionResult.session.submit(
-              item.draft,
-            )
-          } catch (error) {
-            const message = secretCollection.complete
-              ? toPrivateManagedSiteThrownErrorMessage(error, {
-                  knownSecrets: secretCollection.knownSecrets,
-                })
-              : undefined
-            return {
-              id: item.id,
-              accountName: item.accountName,
-              runtimeKeyName: item.runtimeKeyName,
-              result: isDefiniteNativeImportFailure(error)
-                ? MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.FAILED
-                : MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.UNCERTAIN,
-              success: false,
-              skipped: false,
-              error: message
-                ? `${FALLBACK_EXECUTION_ERROR}: ${message}`
-                : FALLBACK_EXECUTION_ERROR,
-            }
+        try {
+          mutation = await nativeImportSessionResult.session.submit(item.draft)
+        } catch (error) {
+          const message = secretCollection.complete
+            ? toPrivateManagedSiteThrownErrorMessage(error, {
+                knownSecrets: secretCollection.knownSecrets,
+              })
+            : undefined
+          return {
+            id: item.id,
+            accountName: item.accountName,
+            runtimeKeyName: item.runtimeKeyName,
+            result: isDefiniteNativeImportFailure(error)
+              ? MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.FAILED
+              : MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.UNCERTAIN,
+            success: false,
+            skipped: false,
+            error: message
+              ? `${FALLBACK_EXECUTION_ERROR}: ${message}`
+              : FALLBACK_EXECUTION_ERROR,
           }
         }
         assertManagedSiteMutationResult(mutation, { idempotent: false })
@@ -217,11 +214,7 @@ export async function executeManagedSiteTokenBatchExport(params: {
       },
     )
   } catch (error) {
-    try {
-      await nativeImportSessionResult.session?.reconcile()
-    } catch {
-      // Reconciliation is best effort; post-invocation failures stay non-replayable.
-    }
+    await reconcileBestEffort()
     throw error
   }
 
@@ -232,11 +225,7 @@ export async function executeManagedSiteTokenBatchExport(params: {
         MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS.UNCERTAIN,
     )
   ) {
-    try {
-      await nativeImportSessionResult.session?.reconcile()
-    } catch {
-      // Reconciliation is best effort; ambiguous creates remain non-replayable.
-    }
+    await reconcileBestEffort()
   }
 
   const createdCount = executedItems.filter(

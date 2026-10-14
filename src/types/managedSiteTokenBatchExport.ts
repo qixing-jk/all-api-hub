@@ -124,6 +124,13 @@ export interface ManagedSiteTokenBatchExportPreviewItem {
   blockingDetailCode?: ManagedSiteTokenBatchExportBlockedDetailCode
   blockingMessage?: string
   matchedChannel?: ManagedSiteTokenBatchExportMatchedChannel
+  /** Executable batch representative with the same destination-specific identity. */
+  duplicateOfItemId?: string
+  duplicateOfItemName?: string
+  /** The executable status before the transient batch-duplicate projection. */
+  batchDuplicateOriginalStatus?:
+    | typeof MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY
+    | typeof MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING
   verificationCandidate?: ManagedSiteTokenBatchExportMatchedChannel
   assessment?: ManagedSiteTokenBatchExportAssessment
 }
@@ -182,3 +189,33 @@ export interface ManagedSiteTokenBatchExportExecutionResult {
   skippedCount: number
   items: ManagedSiteTokenBatchExportExecutionItem[]
 }
+
+export const countPreviewItems = (
+  items: ManagedSiteTokenBatchExportPreviewItem[],
+) =>
+  items.reduce(
+    (accumulator, item) => {
+      switch (item.status) {
+        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY:
+          accumulator.readyCount += 1
+          break
+        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING:
+          accumulator.warningCount += 1
+          break
+        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED:
+          accumulator.skippedCount += 1
+          break
+        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED:
+          accumulator.blockedCount += 1
+          break
+      }
+
+      return accumulator
+    },
+    {
+      readyCount: 0,
+      warningCount: 0,
+      skippedCount: 0,
+      blockedCount: 0,
+    },
+  )

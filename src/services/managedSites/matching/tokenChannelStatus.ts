@@ -6,6 +6,7 @@ import {
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
 import type { ManagedResourceSecretVerificationRecovery } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
+import { MANAGED_SITE_CHANNEL_DRAFT_PURPOSES } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import type { ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import type { ScheduledReadOptions } from "~/services/apiTransport/requestScheduling"
@@ -291,7 +292,7 @@ export async function getManagedSiteTokenChannelStatus(
     })
     const formData = await managedSite.channelDrafts.prepareFormData(source, {
       operationContext: params.operationContext,
-      purpose: "matching",
+      purpose: MANAGED_SITE_CHANNEL_DRAFT_PURPOSES.MATCHING,
       signal: params.signal,
       requestScheduling: params.requestScheduling,
     })

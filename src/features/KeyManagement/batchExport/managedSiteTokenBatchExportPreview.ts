@@ -127,35 +127,7 @@ export const getPreviewVerificationTargets = (
     return candidate ? [{ item, candidate }] : []
   })
 
-export const countPreviewItems = (
-  items: ManagedSiteTokenBatchExportPreviewItem[],
-) =>
-  items.reduce(
-    (accumulator, item) => {
-      switch (item.status) {
-        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY:
-          accumulator.readyCount += 1
-          break
-        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING:
-          accumulator.warningCount += 1
-          break
-        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED:
-          accumulator.skippedCount += 1
-          break
-        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED:
-          accumulator.blockedCount += 1
-          break
-      }
-
-      return accumulator
-    },
-    {
-      readyCount: 0,
-      warningCount: 0,
-      skippedCount: 0,
-      blockedCount: 0,
-    },
-  )
+export { countPreviewItems } from "~/types/managedSiteTokenBatchExport"
 
 const removeWarningCode = (
   codes: ManagedSiteTokenBatchExportWarningCode[],

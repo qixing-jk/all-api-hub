@@ -68,15 +68,25 @@ for (const action of ["check", "single import", "batch import"] as const) {
       priority: 0,
       weight: 1,
     }
+    let created: typeof candidate | undefined
+    let writes = 0
     await context.route(`${origin}/**`, async (route) => {
       const path = new URL(route.request().url()).pathname
       let data: unknown
       if (path === "/api/channel/17") {
         detailReads++
         data = candidate
+      } else if (
+        path === "/api/channel/" &&
+        route.request().method() === "POST"
+      ) {
+        writes++
+        created = { ...candidate, ...route.request().postDataJSON(), id: 18 }
+        data = null
       } else if (path === "/api/channel/") {
         searches++
-        data = { data: [candidate], total_count: 1, page: 1, size: 100 }
+        const items = created ? [candidate, created] : [candidate]
+        data = { data: items, total_count: items.length, page: 1, size: 100 }
       } else if (path.includes("group")) {
         groupReads++
         data = ["default"]
@@ -128,6 +138,25 @@ for (const action of ["check", "single import", "batch import"] as const) {
     }
     await expect.poll(() => detailReads).toBe(2)
     expect(searches).toBe(2)
-    await expect.poll(() => groupReads).toBe(action === "check" ? 0 : 1)
+    // Only the single native editor loads group choices.
+    await expect.poll(() => groupReads).toBe(action === "single import" ? 1 : 0)
+    if (action === "batch import") {
+      await page
+        .getByRole("dialog")
+        .getByRole("checkbox", { name: /Audited key/ })
+        .check()
+      await page
+        .getByRole("button", { name: "Start import", exact: true })
+        .click()
+      await page
+        .getByRole("dialog", { name: "Import selected keys" })
+        .getByRole("button", { name: "Start import", exact: true })
+        .click()
+      await expect(page.getByText("Created", { exact: true })).toBeVisible()
+      expect(writes).toBe(1)
+      // Execution rechecks are separate operations; submitting a batch must
+      // still preserve native group defaults without loading editor choices.
+      expect(groupReads).toBe(0)
+    }
   })
 }

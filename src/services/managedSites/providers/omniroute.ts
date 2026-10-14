@@ -13,6 +13,10 @@ import {
   readOmniRouteFailureMessage,
   readOmniRouteScopeShortfall,
 } from "~/services/apiService/omniroute"
+import {
+  shareInventoryRead,
+  type InventoryReadOptions,
+} from "~/services/apiTransport/inventoryReads"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 import { userPreferences } from "~/services/preferences/userPreferences"
@@ -32,6 +36,11 @@ import {
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("OmniRouteProvider")
+// Plaintext stays within the caller-owned read operation and never reaches
+// the sanitized inventory used by preview rows or persistent storage.
+const readMatchingSecretInventory = shareInventoryRead(
+  listOmniRouteConnectionSecrets,
+)
 
 /**
  * OmniRoute requires the `admin` scope for channel writes, because
@@ -183,9 +192,9 @@ export async function validateOmniRouteCredential(
 export async function fetchOmniRouteChannelSecretKey(
   config: OmniRouteConfig,
   connectionId: string,
-  options?: { signal?: AbortSignal },
+  options?: InventoryReadOptions,
 ): Promise<string> {
-  const connections = await listOmniRouteConnectionSecrets(config, options)
+  const connections = await readMatchingSecretInventory(config, options)
   const connection = connections.find((item) => item.id === connectionId)
   const apiKey =
     typeof connection?.apiKey === "string" ? connection.apiKey.trim() : ""

@@ -5,8 +5,10 @@ import {
 } from "~/services/managedSites/newApiOwnedSession/client"
 import {
   NEW_API_CHANNEL_KEY_ERROR_KINDS,
+  NEW_API_LOGIN_STATUSES,
   NEW_API_MANAGED_SESSION_STATUSES,
   NEW_API_SESSION_LIMIT_CODES,
+  NEW_API_VERIFICATION_METHODS,
   NEW_API_VERIFIED_SESSION_WINDOW_MS,
   NewApiChannelKeyRequirementError,
   type EnsureNewApiLoginResult,
@@ -98,6 +100,13 @@ export async function hasNewApiAuthenticatedBrowserSession(
 export const isNewApiVerifiedSessionActive = (baseUrl: string) =>
   sessionRuntime.isVerifiedSessionActive(baseUrl)
 
+/** Legacy verification applies to any channel; modern proof must match its channel. */
+const hasVerifiedChannelAccess = (baseUrl: string, channelId?: number) => {
+  if (!isNewApiVerifiedSessionActive(baseUrl)) return false
+  const proof = sessionRuntime.getActiveSecurityProof(baseUrl)
+  return !proof?.channelId || proof.channelId === channelId
+}
+
 const getNewApiChannelKeyRequirementKind = (
   result: NewApiChannelKeyRequirementSessionResult,
 ): NewApiChannelKeyErrorKind => {
@@ -126,12 +135,7 @@ async function ensureNewApiChannelKeyAccess(
     "baseUrl" | "userId" | "username" | "password" | "totpSecret"
   > & { channelId?: number },
 ): Promise<void> {
-  if (
-    isNewApiVerifiedSessionActive(config.baseUrl) &&
-    (!sessionRuntime.getActiveSecurityProof(config.baseUrl)?.channelId ||
-      sessionRuntime.getActiveSecurityProof(config.baseUrl)?.channelId ===
-        config.channelId)
-  ) {
+  if (hasVerifiedChannelAccess(config.baseUrl, config.channelId)) {
     return
   }
 
@@ -156,12 +160,7 @@ async function continueFromLoggedInSession(
   },
   methods: NewApiVerificationMethods,
 ): Promise<EnsureNewApiManagedSessionResult> {
-  if (
-    isNewApiVerifiedSessionActive(config.baseUrl) &&
-    (!sessionRuntime.getActiveSecurityProof(config.baseUrl)?.channelId ||
-      sessionRuntime.getActiveSecurityProof(config.baseUrl)?.channelId ===
-        config.channelId)
-  ) {
+  if (hasVerifiedChannelAccess(config.baseUrl, config.channelId)) {
     return {
       status: NEW_API_MANAGED_SESSION_STATUSES.VERIFIED,
       methods,
@@ -174,10 +173,14 @@ async function continueFromLoggedInSession(
 
     try {
       generatedCode = generateNewApiTotpCode(config.totpSecret!)
-      const result = await verifyNewApiSession(config, {
-        method: "2fa",
-        code: generatedCode,
-      })
+      const result = await verifyNewApiSession(
+        config,
+        {
+          method: NEW_API_VERIFICATION_METHODS.TwoFactor,
+          code: generatedCode,
+        },
+        methods,
+      )
 
       return {
         status: NEW_API_MANAGED_SESSION_STATUSES.VERIFIED,
@@ -238,15 +241,16 @@ export async function ensureNewApiManagedSession(
     throw error
   }
 
-  if (loginResult.status === "credentials-missing") {
+  if (loginResult.status === NEW_API_LOGIN_STATUSES.CredentialsMissing) {
     return {
       status: NEW_API_MANAGED_SESSION_STATUSES.CREDENTIALS_MISSING,
     }
   }
 
-  if (loginResult.status === "passkey-manual-required") return loginResult
+  if (loginResult.status === NEW_API_LOGIN_STATUSES.PasskeyManualRequired)
+    return loginResult
 
-  if (loginResult.status === "login-2fa-required") {
+  if (loginResult.status === NEW_API_LOGIN_STATUSES.TwoFactorRequired) {
     if (!hasNewApiTotpSecret(config.totpSecret)) {
       return {
         status: NEW_API_MANAGED_SESSION_STATUSES.LOGIN_2FA_REQUIRED,
@@ -332,7 +336,7 @@ export async function submitNewApiSecureVerificationCode(
 ): Promise<EnsureNewApiManagedSessionResult> {
   const trimmedCode = code.trim()
   const result = await verifyNewApiSession(config, {
-    method: "2fa",
+    method: NEW_API_VERIFICATION_METHODS.TwoFactor,
     code: trimmedCode,
   })
 
