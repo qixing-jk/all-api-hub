@@ -56,6 +56,8 @@ jobs:
     needs: [real-site-matrix, e2e-build]
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      AAH_E2E_BUILD_VARIANT: default
 
     strategy:
       fail-fast: false
@@ -260,5 +262,14 @@ jobs:
         with:
           name: real-site-failure-screenshots-${{ matrix.category }}-${{ matrix.env_prefix }}-${{ github.run_attempt }}
           path: test-results/**/test-failed-*.png
+          if-no-files-found: ignore
+          retention-days: 3
+
+      - name: Upload account detection diagnostics
+        if: always() && matrix.kind == 'account'
+        uses: actions/upload-artifact@v7
+        with:
+          name: real-site-detection-${{ matrix.env_prefix }}-${{ github.run_attempt }}
+          path: test-results/**/detection-*.json
           if-no-files-found: ignore
           retention-days: 3

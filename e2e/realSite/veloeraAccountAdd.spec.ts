@@ -6,6 +6,7 @@ import {
   stubLlmMetadataIndex,
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
+import { registerRealSiteAccountDetectionTests } from "~~/e2e/utils/realSite/accountDetection"
 import {
   realSiteAccountUsageChecks,
   runRealSiteAccountFixtureUsageChecks,
@@ -21,6 +22,21 @@ import {
   loginToRealVeloeraSite,
   resolveVeloeraRealSiteConfig,
 } from "~~/e2e/utils/realSite/veloera"
+
+registerRealSiteAccountDetectionTests({
+  label: "Veloera",
+  siteType: SITE_TYPES.VELOERA,
+  cookieBootstrap: true,
+  cookieIdentityHeader: "Veloera-User",
+  resolve: resolveVeloeraRealSiteConfig,
+  login: async (page, config) => {
+    const result = await loginToRealVeloeraSite(page, config)
+    return {
+      userId: String(result.user.id),
+      cleanup: result.cleanupOwnedSession,
+    }
+  },
+})
 
 test.describe("real-site E2E: Veloera account add flow", () => {
   const sharedAccountCache = createSharedRealSiteAccountFixtureCache()

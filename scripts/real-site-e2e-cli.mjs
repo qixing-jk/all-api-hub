@@ -30,9 +30,10 @@ if (category === "--help" || category === "-h") {
 
 const normalizedCategory = normalizeRealSiteE2eCategory(category)
 const entries = filterRealSiteE2eMatrix(normalizedCategory)
-let shouldReuseBuild = false
+const builtVariants = new Set()
 
 for (const entry of buildRealSiteE2eRuns(entries)) {
+  const buildVariant = entry.build_variant ?? "default"
   console.log(`\n=== Real-site E2E: ${entry.label} ===`)
   runPnpm(
     [
@@ -44,11 +45,16 @@ for (const entry of buildRealSiteE2eRuns(entries)) {
       "--reporter=list",
       ...extraPlaywrightArgs,
     ],
-    buildEntryEnv(entry, { skipBuild: shouldReuseBuild }),
+    buildEntryEnv(entry, { skipBuild: builtVariants.has(buildVariant) }),
   )
-  shouldReuseBuild = true
+  builtVariants.add(buildVariant)
 }
 
+/**
+ * Separate the optional category from Playwright flags, including `--` arguments.
+ * @param args Command-line arguments after the script name.
+ * @returns Selected category and arguments passed through to Playwright.
+ */
 function parseArgs(args) {
   const separatorIndex = args.indexOf("--")
   const ownArgs = separatorIndex === -1 ? args : args.slice(0, separatorIndex)
@@ -76,6 +82,7 @@ function buildEntryEnv(entry, options = {}) {
   const env = {
     ...process.env,
     AAH_E2E_REAL_SITE_CATEGORY: entry.category,
+    AAH_E2E_BUILD_VARIANT: entry.build_variant ?? "default",
   }
 
   if (options.skipBuild) {
@@ -118,6 +125,7 @@ function runPnpm(args, env) {
   }
 }
 
+/** Print the category commands and forwarding syntax without starting a run. */
 function printUsage() {
   console.log(`Usage:
   pnpm e2e:real-site

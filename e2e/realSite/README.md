@@ -20,6 +20,26 @@ For current coverage details, inspect the specs in this directory and the shared
 
 Account auto-detection and existing-account feature checks are separate scenario helpers. Real-site specs compose them by saving an account from a live site, passing the returned account fixture into reusable usage scenarios, then cleaning up through the fixture owner.
 
+## Account detection source matrix
+
+All five account targets also register the detection matrix in `utils/realSite/accountDetection.ts`. One isolated browser profile and one real login exercise detection by clicking the add-account UI: the Popup entrypoint with an active target tab, Options with an existing target tab, and Options with no remaining target tabs through temporary-tab and temporary-window modes selected in Settings. Each path must match the login response's identity and expected site type. Filtered diagnostics from the real UI attempt establish the selected source; a successful fallback cannot satisfy another source's check. A test-only observer records native tab/window events without invoking detection, establishing the actual temporary surface. Temporary pages must be released afterward. These detection-only cases do not save an account or claim that a management credential was acquired; the existing add/save scenarios cover completion separately.
+
+The OneHub and DoneHub fixtures additionally remove and restore only this profile's stored `user` hint to verify Cookie-authenticated direct API and current-tab API fallback. Veloera's real `/api/user/self` rejects a Cookie-only request without `Veloera-User`: its fixture verifies that rejection and successful native read with the login identity header, then requires both API-only detection paths to fail safely when the stored identity hint is absent. Browser-session sources must still identify that account. The New API AuthBundle fixture and Sub2API JWT fixture exercise their browser-session contracts instead. Every target verifies that direct API detection returns no identity after session cookies are removed. Target login/API responses are never mocked; shared metadata catalog stubs remain in place.
+
+Account runs use the default test manifest with production permission declarations: Chromium already requires `declarativeNetRequestWithHostAccess`, while `cookies` remains optional. Cookie API contract cases click Allow in the real Cookie access settings and verify the native grant before making requests. No account CI variant pre-grants Cookie permission. The `dnr-required` variant remains available for its separate browser transport tests. The test-only probe invokes detection directly only for API contracts that cannot be selected independently through the UI.
+
+Configure dedicated test deployments that allow automation without a challenge page at the root, login and API paths. A challenge or missing permission is a failure, not a successful detection check. These instances establish real backend/browser behavior, not compatibility with a protected hosted deployment. Protected deployments require separate browser validation with their actual challenge/session state.
+
+Also size the test deployment's web rate limit for repeated real page loads, including static assets. Veloera's upstream defaults are `GLOBAL_WEB_RATE_LIMIT_ENABLE=true`, `GLOBAL_WEB_RATE_LIMIT=60` and `GLOBAL_WEB_RATE_LIMIT_DURATION=180` seconds ([upstream initialization](https://github.com/Veloera/Veloera/blob/main/common/init.go)). A dedicated CI deployment can raise the request budget while keeping rate limiting enabled. HTTP 429 on the root or assets, with `/api/status` still returning 200, must remain a failed run with transport diagnostics; an unprotected domain alone does not establish sufficient capacity.
+
+Run only the source matrix locally:
+
+```bash
+pnpm e2e:real-site:account -- --grep "each applicable detection source" --workers=1
+```
+
+For a direct Playwright invocation, set `AAH_E2E_REAL_SITE_CATEGORY=account` and use the default build variant. The new detection cases disable automatic authenticated screenshots, traces and videos without changing the existing usage scenarios' policy. They persist only selected detection facts in `detection-*.json`; CI retains those diagnostics on both success and failure. Missing target configuration is reported as a skip and is not live-validation evidence. The test probe page is included only in WXT test builds, excluded from development and production discovery, and included in the E2E build fingerprint.
+
 Managed-gateway import tests use the credential library directly. Configure one reusable OpenAI-compatible inference source in the primary worktree's `.env.local`:
 
 ```env

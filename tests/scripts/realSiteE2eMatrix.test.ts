@@ -84,6 +84,23 @@ function selectedIds(matrix: ReturnType<typeof runMatrix>) {
 }
 
 describe("GitHub real-site E2E matrix selection", () => {
+  it("runs every account target with the default production permission declarations", () => {
+    const matrix = runMatrix("account")
+    expect(matrix.include).toHaveLength(5)
+    expect(
+      matrix.include.every((entry) => entry.build_variant === undefined),
+    ).toBe(true)
+    expect(
+      runMatrix("managed-site").include.every(
+        (entry) => entry.build_variant === undefined,
+      ),
+    ).toBe(true)
+    expect(
+      localRuns("account").every(
+        (run) => !("build_variant" in run) || run.build_variant === undefined,
+      ),
+    ).toBe(true)
+  })
   it("runs all managed targets in one local Playwright worker pool and builds only once", () => {
     const runs = localRuns("managed-site")
     expect(runs).toHaveLength(1)

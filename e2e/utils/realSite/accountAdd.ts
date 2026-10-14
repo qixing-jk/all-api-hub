@@ -76,13 +76,22 @@ async function openAccountAddDialog(page: Page) {
   return dialog
 }
 
+/**
+ * Start detection through the add-account UI and return its form controls.
+ * @param page Extension page containing the add-account action.
+ * @param baseUrl Target site URL to identify.
+ * @param beforeDetect Optional action immediately before the click, allowing
+ * current-tab scenarios to activate the target tab after preparing the form.
+ */
 export async function autoDetectAccountFromAddDialog(
   page: Page,
   baseUrl: string,
+  beforeDetect?: () => Promise<void>,
 ) {
   const dialog = await openAccountAddDialog(page)
   await dialog.siteUrlInput.fill(baseUrl)
   await expect(dialog.siteUrlInput).toHaveValue(baseUrl)
+  await beforeDetect?.()
   await dialog.autoDetectButton.click()
   return dialog
 }

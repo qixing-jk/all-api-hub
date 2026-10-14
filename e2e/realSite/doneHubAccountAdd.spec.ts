@@ -6,6 +6,7 @@ import {
   stubLlmMetadataIndex,
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
+import { registerRealSiteAccountDetectionTests } from "~~/e2e/utils/realSite/accountDetection"
 import {
   realSiteAccountUsageChecks,
   runRealSiteAccountFixtureUsageChecks,
@@ -21,6 +22,20 @@ import {
   createSharedRealSiteAccountFixtureCache,
   resolveSharedRealSiteAccountFixture,
 } from "~~/e2e/utils/realSite/sharedAccountFixture"
+
+registerRealSiteAccountDetectionTests({
+  label: "DoneHub",
+  siteType: SITE_TYPES.DONE_HUB,
+  cookieBootstrap: true,
+  resolve: resolveDoneHubRealSiteConfig,
+  login: async (page, config) => {
+    const result = await loginToRealDoneHubSite(page, config)
+    return {
+      userId: String(result.user.id),
+      cleanup: result.cleanupOwnedSession,
+    }
+  },
+})
 
 test.describe("real-site E2E: DoneHub account add flow", () => {
   const sharedAccountCache = createSharedRealSiteAccountFixtureCache()
