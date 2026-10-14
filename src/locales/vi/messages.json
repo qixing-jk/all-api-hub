@@ -180,7 +180,7 @@
       "getInfoFailed": "Không thể lấy tên người dùng hoặc token truy cập",
       "getSiteStatusFailedDetailed": "Đã phát hiện tài khoản, nhưng không thể đọc trạng thái trang web. Hãy thử lại sau; nếu vẫn lỗi, hãy lưu tài khoản thủ công trước.",
       "getUserIdFailed": "Không thể lấy ID người dùng",
-      "getUserIdFailedDetailed": "Đã kết nối tới trang web, nhưng không thể đọc ID người dùng. Hãy đảm bảo bạn đã đăng nhập vào trang web mục tiêu rồi thử lại.",
+      "getUserIdFailedDetailed": "Không thể xác nhận tài khoản đang đăng nhập. Mở trang web đích trong trình duyệt này, đảm bảo bạn đã đăng nhập rồi thử lại. Nếu vẫn thất bại, hãy bổ sung thông tin tài khoản theo cách thủ công.",
       "getUsernameFailedDetailed": "Đã phát hiện tài khoản, nhưng trang web không trả về tên người dùng. Hãy đảm bảo bạn đã đăng nhập, hoặc nhập tài khoản thủ công."
     }
   },

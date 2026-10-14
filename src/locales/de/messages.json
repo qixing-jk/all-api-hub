@@ -182,7 +182,7 @@
       "getInfoFailed": "Benutzername oder Zugriffstoken konnten nicht abgerufen werden",
       "getSiteStatusFailedDetailed": "Das Konto wurde erkannt, aber der Website-Status konnte nicht gelesen werden. Versuchen Sie es später noch einmal. Wenn dies immer noch fehlschlägt, speichern Sie das Konto zunächst manuell.",
       "getUserIdFailed": "Benutzer-ID konnte nicht abgerufen werden",
-      "getUserIdFailedDetailed": "Die Verbindung zur Website war erfolgreich, aber die Benutzer-ID konnte nicht gelesen werden. Stellen Sie sicher, dass Sie auf der Zielseite angemeldet sind, und versuchen Sie es erneut.",
+      "getUserIdFailedDetailed": "Das angemeldete Konto konnte nicht bestätigt werden. Öffnen Sie die Zielseite in diesem Browser, stellen Sie sicher, dass Sie angemeldet sind, und versuchen Sie es erneut. Falls es weiterhin fehlschlägt, ergänzen Sie die Kontodaten manuell.",
       "getUsernameFailedDetailed": "Das Konto wurde erkannt, aber die Website hat keinen Benutzernamen zurückgegeben. Stellen Sie sicher, dass Sie angemeldet sind, oder geben Sie das Konto manuell ein."
     }
   },

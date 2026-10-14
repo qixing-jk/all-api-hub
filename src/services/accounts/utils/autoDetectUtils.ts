@@ -172,6 +172,19 @@ export function analyzeAutoDetectError(error: any): AutoDetectError {
     return createCurrentTabReloadRequiredError()
   }
 
+  // Recognize our localized identity failure before broad keyword buckets;
+  // the guidance may mention login or connectivity without proving either.
+  if (
+    errorMessage === t("messages:operations.detection.getUserIdFailed") ||
+    errorMessage === t("messages:operations.detection.getUserIdFailedDetailed")
+  ) {
+    return {
+      type: AutoDetectErrorType.INVALID_RESPONSE,
+      message: t("messages:operations.detection.getUserIdFailedDetailed"),
+      helpDocUrl: docsUrl,
+    }
+  }
+
   // Iterate known keyword buckets and return the first matching structured error
   for (const [type, keywords] of Object.entries(ERROR_KEYWORDS)) {
     if (keywords.some((k) => msg.includes(k.toLowerCase()))) {

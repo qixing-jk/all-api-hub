@@ -252,10 +252,9 @@ async function runAutoDetectAccount(
         kind: "detected",
         success: false,
         message: t("messages:operations.detection.getUserIdFailedDetailed"),
-        detailedError: {
-          type: AutoDetectErrorType.INVALID_RESPONSE,
-          message: t("messages:operations.detection.getUserIdFailedDetailed"),
-        },
+        detailedError: analyzeAutoDetectError(
+          t("messages:operations.detection.getUserIdFailedDetailed"),
+        ),
         autoDetectContext,
         autoDetectFailureReason: AUTO_DETECT_FAILURE_REASONS.UserIdMissing,
         recoveryData,

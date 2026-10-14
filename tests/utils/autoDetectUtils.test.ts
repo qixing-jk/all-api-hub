@@ -134,6 +134,17 @@ describe("autoDetectUtils", () => {
     })
 
     describe("Invalid response errors", () => {
+      it.each([
+        "messages:operations.detection.getUserIdFailed",
+        "messages:operations.detection.getUserIdFailedDetailed",
+      ])("preserves actionable user-ID guidance for %s", (message) => {
+        expect(analyzeAutoDetectError(message)).toEqual({
+          type: AutoDetectErrorType.INVALID_RESPONSE,
+          message: "messages:operations.detection.getUserIdFailedDetailed",
+          helpDocUrl: getDocsAutoDetectUrl(),
+        })
+      })
+
       it("should detect format error", () => {
         const error = new Error("响应格式错误")
         const result = analyzeAutoDetectError(error)

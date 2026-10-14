@@ -182,7 +182,7 @@
       "getInfoFailed": "Failure to get username or access token",
       "getSiteStatusFailedDetailed": "The account was detected, but site status could not be read. Try again later; if it still fails, save the account manually first.",
       "getUserIdFailed": "Could not get user ID",
-      "getUserIdFailedDetailed": "Connected to the site, but could not read the user ID. Make sure you are logged in to the target site and try again.",
+      "getUserIdFailedDetailed": "The signed-in account could not be confirmed. Open the target site in this browser, make sure you are signed in, and retry. If it still fails, complete the account details manually.",
       "getUsernameFailedDetailed": "The account was detected, but the site did not return a username. Make sure you are logged in, or enter the account manually."
     }
   },

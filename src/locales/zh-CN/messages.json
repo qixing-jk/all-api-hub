@@ -180,7 +180,7 @@
       "getInfoFailed": "未能获取到用户名或访问令牌",
       "getSiteStatusFailedDetailed": "已识别到账号，但读取站点状态失败。请稍后重试；如果仍失败，可先手动保存账号。",
       "getUserIdFailed": "无法获取用户 ID",
-      "getUserIdFailedDetailed": "已连接到站点，但未能读取用户 ID。请确认已在目标站点登录后重试。",
+      "getUserIdFailedDetailed": "未能确认当前登录的账号。请在当前浏览器打开目标站点，确认已登录后重试；仍失败时，可手动补全账号信息。",
       "getUsernameFailedDetailed": "已识别到账号，但站点未返回用户名。请确认已登录，或改用手动输入。"
     }
   },

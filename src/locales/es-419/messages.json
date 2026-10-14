@@ -184,7 +184,7 @@
       "getInfoFailed": "No se pudo obtener el nombre de usuario o el token de acceso",
       "getSiteStatusFailedDetailed": "La cuenta fue detectada, pero no se pudo leer el estado del sitio. Inténtalo más tarde; si sigue fallando, guarda la cuenta manualmente primero.",
       "getUserIdFailed": "No se pudo obtener el ID de usuario",
-      "getUserIdFailedDetailed": "Se conectó al sitio, pero no se pudo leer el ID de usuario. Asegúrate de haber iniciado sesión en el sitio de destino y vuelve a intentarlo.",
+      "getUserIdFailedDetailed": "No se pudo confirmar la cuenta con la sesión iniciada. Abre el sitio de destino en este navegador, asegúrate de haber iniciado sesión y vuelve a intentarlo. Si sigue fallando, completa manualmente los datos de la cuenta.",
       "getUsernameFailedDetailed": "La cuenta fue detectada, pero el sitio no devolvió un nombre de usuario. Asegúrate de haber iniciado sesión o ingresa la cuenta manualmente."
     }
   },
