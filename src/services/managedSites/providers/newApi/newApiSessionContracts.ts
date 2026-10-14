@@ -25,6 +25,17 @@ export interface NewApiVerificationMethods {
   passkeyEnabled: boolean
 }
 
+export const NEW_API_VERIFICATION_METHODS = {
+  TwoFactor: "2fa",
+} as const
+
+export const NEW_API_LOGIN_STATUSES = {
+  LoggedIn: "logged-in",
+  TwoFactorRequired: "login-2fa-required",
+  CredentialsMissing: "credentials-missing",
+  PasskeyManualRequired: "passkey-manual-required",
+} as const
+
 export type EnsureNewApiManagedSessionResult =
   | {
       status: typeof NEW_API_MANAGED_SESSION_STATUSES.VERIFIED
@@ -95,21 +106,27 @@ export const NEW_API_SESSION_LIMIT_CODES = {
 export const hasNewApiLoginAssistCredentials = (
   config?: Pick<NewApiConfig, "username" | "password"> | null,
 ) => Boolean(config?.username?.trim() && config?.password?.trim())
-export type NewApiDashboardRefreshResult = "refreshed" | "unavailable"
+export const NEW_API_DASHBOARD_REFRESH_RESULTS = {
+  Refreshed: "refreshed",
+  Unavailable: "unavailable",
+} as const
+
+export type NewApiDashboardRefreshResult =
+  (typeof NEW_API_DASHBOARD_REFRESH_RESULTS)[keyof typeof NEW_API_DASHBOARD_REFRESH_RESULTS]
 
 export type EnsureNewApiLoginResult =
   | {
-      status: "logged-in"
+      status: typeof NEW_API_LOGIN_STATUSES.LoggedIn
       methods: NewApiVerificationMethods
     }
   | {
-      status: "login-2fa-required"
+      status: typeof NEW_API_LOGIN_STATUSES.TwoFactorRequired
     }
   | {
-      status: "credentials-missing"
+      status: typeof NEW_API_LOGIN_STATUSES.CredentialsMissing
     }
   | {
-      status: "passkey-manual-required"
+      status: typeof NEW_API_LOGIN_STATUSES.PasskeyManualRequired
       methods: NewApiVerificationMethods
     }
 
