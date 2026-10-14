@@ -3432,7 +3432,12 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         return true
       },
     )
-    renderDialog()
+    renderDialog({
+      items: [
+        { account, runtimeKey },
+        { account, runtimeKey: { ...runtimeKey, id: preview.items[1]!.id } },
+      ],
+    })
     await user.click(
       await screen.findByRole("checkbox", { name: "Account 1 / Token 1" }),
     )
@@ -3450,6 +3455,10 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         "key-management-managed-site-batch-export-retry-button",
       ),
     )
+    await waitFor(() => expect(mockPreparePreview).toHaveBeenCalledTimes(2))
+    expect(atIndex(mockPreparePreview.mock.calls, 1)[0].items).toEqual([
+      { account, runtimeKey: { ...runtimeKey, id: preview.items[1]!.id } },
+    ])
     const verifyButtons = await screen.findAllByRole("button", {
       name: "keyManagement:batchManagedSiteExport.actions.verifyAndRefresh",
     })
