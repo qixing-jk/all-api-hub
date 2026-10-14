@@ -137,6 +137,7 @@ export function registerRealSiteAccountDetectionTests<
         if (url.origin === origin)
           responses.push({ path: url.pathname, status: response.status() })
       })
+      /** Run an API-only contract and persist its filtered detection evidence. */
       const probe = async (source: AccountDetectionProbeInput["source"]) => {
         responses.length = 0
         const result = await probePage.evaluate(
@@ -162,6 +163,7 @@ export function registerRealSiteAccountDetectionTests<
         })
         return result
       }
+      /** Compare a probe result with the identity obtained independently at login. */
       const expectIdentity = (
         result: Awaited<ReturnType<typeof accountDetectionProbe>>,
         strategy: string,
@@ -172,6 +174,7 @@ export function registerRealSiteAccountDetectionTests<
         expect(result.strategy).toBe(strategy)
       }
 
+      /** Require the UI attempt to use the requested source and record its surface. */
       const detectThroughUi = async (
         uiPage: Page,
         strategy: string,
@@ -268,6 +271,7 @@ export function registerRealSiteAccountDetectionTests<
         return { events, contexts }
       }
 
+      /** Grant optional Cookie access in Settings before testing session absence. */
       const grantCookiesThroughUi = async () => {
         await page.goto(
           `chrome-extension://${extensionId}/options.html?tab=permissions#basic`,

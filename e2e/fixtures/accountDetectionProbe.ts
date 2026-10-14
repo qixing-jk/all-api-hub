@@ -77,7 +77,9 @@ export async function accountDetectionProbe(input: AccountDetectionProbeInput) {
 function observeNativeContexts(url: string) {
   const contexts: { windowType: string | undefined }[] = []
   const pending: Promise<void>[] = []
+  const lookupErrors: unknown[] = []
   const observedTabs = new Set<number>()
+  /** Record a matching tab's native surface once, tolerating its window closing. */
   const observeTab = (tab: chrome.tabs.Tab) => {
     if (
       !tab.url ||
@@ -88,11 +90,24 @@ function observeNativeContexts(url: string) {
       return
     observedTabs.add(tab.id)
     pending.push(
-      chrome.windows.get(tab.windowId).then((win) => {
-        contexts.push({ windowType: win.type })
-      }),
+      chrome.windows
+        .get(tab.windowId)
+        .then((win) => {
+          contexts.push({ windowType: win.type })
+        })
+        .catch(async (error: unknown) => {
+          try {
+            // Contain rejections immediately, but only ignore a closed window.
+            const windows = await chrome.windows.getAll()
+            if (windows.some((win) => win.id === tab.windowId))
+              lookupErrors.push(error)
+          } catch (verificationError) {
+            lookupErrors.push(verificationError)
+          }
+        }),
     )
   }
+  /** Include tabs whose target URL becomes available after their creation. */
   const onUpdated = (
     _tabId: number,
     _change: chrome.tabs.TabChangeInfo,
@@ -102,10 +117,12 @@ function observeNativeContexts(url: string) {
   chrome.tabs.onUpdated.addListener(onUpdated)
   return {
     contexts,
+    /** Stop observing and await lookups, retaining unexpected browser errors. */
     async finish() {
       chrome.tabs.onCreated.removeListener(observeTab)
       chrome.tabs.onUpdated.removeListener(onUpdated)
       await Promise.all(pending)
+      if (lookupErrors.length) throw lookupErrors[0]
       return contexts
     },
   }
