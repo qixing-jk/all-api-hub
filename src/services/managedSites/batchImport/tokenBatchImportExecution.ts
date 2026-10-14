@@ -6,6 +6,7 @@ import {
 import { openNativeManagedChannelImportSession } from "~/services/apiAdapters/managedResources/channelImport"
 import { mapBatchImportWithConcurrency } from "~/services/managedSites/batchImport/tokenBatchImportConcurrency"
 import { skipManagedSiteBatchDuplicates } from "~/services/managedSites/batchImport/tokenBatchImportDuplicates"
+import { planManagedSiteTokenBatchImport } from "~/services/managedSites/batchImport/tokenBatchImportPlan"
 import { createManagedSiteTokenBatchImportTarget } from "~/services/managedSites/batchImport/tokenBatchImportTarget"
 import { getCurrentManagedSiteRuntimeConfig } from "~/services/managedSites/configuration/runtimeConfig"
 import {
@@ -24,6 +25,7 @@ import {
   type ManagedSiteTokenBatchExportExecutionItem,
   type ManagedSiteTokenBatchExportExecutionResult,
   type ManagedSiteTokenBatchExportPreview,
+  type ManagedSiteTokenBatchImportMode,
 } from "~/types/managedSiteTokenBatchExport"
 
 const FALLBACK_EXECUTION_ERROR = "Failed to create channel"
@@ -62,6 +64,8 @@ export class ManagedSiteTokenBatchImportTargetChangedError extends Error {
 export async function executeManagedSiteTokenBatchExport(params: {
   preview: ManagedSiteTokenBatchExportPreview
   selectedItemIds: string[]
+  mode?: ManagedSiteTokenBatchImportMode
+  resourceNamesByItemId?: Readonly<Record<string, string>>
 }): Promise<ManagedSiteTokenBatchExportExecutionResult> {
   const runtimeConfig = await getCurrentManagedSiteRuntimeConfig()
   if (!runtimeConfig) {
@@ -84,6 +88,21 @@ export async function executeManagedSiteTokenBatchExport(params: {
     selectedPreviewItems,
     target.managedSite,
   ).filter(isExecutableManagedSiteTokenBatchExportPreviewItem)
+  const groups = planManagedSiteTokenBatchImport(
+    target.managedSite.siteType,
+    executableItems,
+    params.mode ?? "independent",
+  )
+  const executionItems = groups.map((group) => {
+    const name = params.resourceNamesByItemId?.[group.id]
+    return {
+      ...executableItems.find((item) => item.id === group.id)!,
+      draft:
+        name === undefined
+          ? group.draft
+          : { ...group.draft, name: name.trim() },
+    }
+  })
   const nativeImportSessionResult = executableItems.length
     ? await openNativeManagedChannelImportSession(
         target.managedSite.siteType,
@@ -102,7 +121,7 @@ export async function executeManagedSiteTokenBatchExport(params: {
   let executedItems: ManagedSiteTokenBatchExportExecutionItem[]
   try {
     executedItems = await mapBatchImportWithConcurrency(
-      executableItems,
+      executionItems,
       async (item): Promise<ManagedSiteTokenBatchExportExecutionItem> => {
         const secretCollection = collectManagedResourceSecrets(
           target.config,
@@ -213,6 +232,18 @@ export async function executeManagedSiteTokenBatchExport(params: {
         }
       },
     )
+    const groupResults = new Map(executedItems.map((item) => [item.id, item]))
+    const resultByItemId = new Map(
+      groups.flatMap((group) =>
+        group.itemIds.map((id) => [id, groupResults.get(group.id)!] as const),
+      ),
+    )
+    executedItems = executableItems.map((item) => ({
+      ...resultByItemId.get(item.id)!,
+      id: item.id,
+      accountName: item.accountName,
+      runtimeKeyName: item.runtimeKeyName,
+    }))
   } catch (error) {
     await reconcileBestEffort()
     throw error

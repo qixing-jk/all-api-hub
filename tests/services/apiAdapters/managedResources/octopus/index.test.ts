@@ -62,6 +62,31 @@ const channel: OctopusChannel = {
   param_override: "{}",
 }
 describe("Octopus native resource", () => {
+  it("seeds every imported key into one native create editor", async () => {
+    const workspace = await octopusManagedResourceRegistration.open()
+    const editor = await workspace.openCreateEditor({
+      seed: {
+        kind: "managed-channel-import",
+        name: "Grouped import",
+        channelType: "0",
+        credential: "sk-first",
+        credentials: ["sk-first", "sk-second"],
+        baseUrl: "https://upstream.example.invalid/v1",
+        models: ["model-a"],
+        enabled: true,
+        notes: "",
+      },
+    })
+    expect(editor.initialValues[fields.Key]).toMatchObject({
+      kind: "secret-list",
+      entries: [
+        { secret: { kind: "replace", value: "sk-first" } },
+        { secret: { kind: "replace", value: "sk-second" } },
+      ],
+    })
+    expect(editor.validate(editor.initialValues)).toEqual({ valid: true })
+  })
+
   it("removes a selected secondary key through the native removal command", async () => {
     const detail = {
       ...channel,

@@ -93,6 +93,20 @@
       "models": "Mô hình"
     },
     "gatewayDescription": "Thao tác này nhập key tài khoản làm kênh của AI gateway tự triển khai. Sau khi nhập, nhiều key có thể được client sử dụng thông qua một AI API.",
+    "importMode": {
+      "grouped": "Gộp các khóa của cùng trang web",
+      "independent": "Tạo riêng cho từng khóa",
+      "keyCount_other": "{{count}} khóa",
+      "label": "Cách tổ chức nhập",
+      "modelDifferences": "Danh sách mô hình của các khóa khác nhau. Tài nguyên gộp sử dụng hợp của các danh sách; cổng đích xử lý định tuyến.",
+      "models": "Mô hình: {{models}}",
+      "resourceName": "Tên tài nguyên",
+      "resultSummary": "Khóa: {{created}} đã nhập, {{failed}} thất bại, {{uncertain}} chưa xác định, {{skipped}} bỏ qua.",
+      "saveFailed": "Lựa chọn được áp dụng cho lần nhập này nhưng không thể lưu tùy chọn.",
+      "scheduling": "Cổng đích điều phối các khóa đã gộp. Hãy xác nhận quyền và mục đích sử dụng phù hợp với nhu cầu của bạn.",
+      "summary": "Đã chọn {{keyCount}} khóa → tạo {{resourceCount}} tài nguyên",
+      "unsupported": "Loại tài nguyên này không hỗ trợ gộp nhiều khóa và sẽ được tạo riêng."
+    },
     "loadingDescription": "Đang chuẩn bị bản xem trước cho {{selectedCount}} khóa đã chọn.",
     "messages": {
       "batchDuplicate": "Trùng với {{item}} trong lô này và đã được bỏ qua.",

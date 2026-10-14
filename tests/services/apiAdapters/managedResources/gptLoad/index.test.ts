@@ -64,6 +64,31 @@ const registration = () =>
   )!
 
 describe("gpt-load native workspace", () => {
+  it("seeds every imported key into one native create editor", async () => {
+    const workspace = await registration().open()
+    const editor = await workspace.openCreateEditor({
+      seed: {
+        kind: "managed-channel-import",
+        name: "Grouped import",
+        channelType: "openai_compatible",
+        credential: "sk-first",
+        credentials: ["sk-first", "sk-second"],
+        baseUrl: "https://upstream.example.invalid/v1",
+        models: ["model-a"],
+        enabled: true,
+        notes: "",
+      },
+    })
+    expect(editor.initialValues[fields.Key]).toMatchObject({
+      kind: "secret-list",
+      entries: [
+        { secret: { kind: "replace", value: "sk-first" } },
+        { secret: { kind: "replace", value: "sk-second" } },
+      ],
+    })
+    expect(editor.validate(editor.initialValues)).toEqual({ valid: true })
+  })
+
   it("reads independent detail endpoints concurrently with two workers", async () => {
     let release!: () => void
     const gate = new Promise<void>((resolve) => {

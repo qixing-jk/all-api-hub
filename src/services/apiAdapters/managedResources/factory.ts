@@ -37,6 +37,7 @@ import {
   type ManagedSiteMutationConfirmedEffect,
   type ManagedSiteMutationResult,
 } from "~/services/managedSites/mutations/contracts"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 
 export type NativeResourcePage<TItem> = {
   items: readonly TItem[]
@@ -47,6 +48,9 @@ export type NativeResourcePage<TItem> = {
 export type NativeResourceCreateSeedBinding = {
   [TKind in ManagedResourceCreateSeedKind]: {
     kind: TKind
+    supportsMultipleCredentials?(
+      seed: Extract<ManagedResourceCreateSeed, { kind: TKind }>,
+    ): boolean
     project(
       seed: Extract<ManagedResourceCreateSeed, { kind: TKind }>,
     ): EditableResourceProjection
@@ -189,6 +193,10 @@ export function defineNativeResourceKind<
     siteType: definition.siteType,
     kind: definition.kind,
     createSeedKinds,
+    supportsMultipleImportCredentials: (seed) =>
+      definition.createSeedBindings
+        ?.find((binding) => binding.kind === seed.kind)
+        ?.supportsMultipleCredentials?.(seed) === true,
     ...(createSeedKinds.length
       ? {
           validateCreateSeed: (
@@ -198,7 +206,39 @@ export function defineNativeResourceKind<
               (candidate) => candidate.kind === seed.kind,
             )
             if (!binding) throw invalidPublicInput()
-            const validation = binding.validate(binding.project(seed))
+            if (
+              (seed.credentials?.length ?? 0) > 1 &&
+              binding.supportsMultipleCredentials?.(seed) !== true
+            )
+              throw new ManagedResourceError({ code: "unavailable" })
+            const credentials = seed.credentials ?? [seed.credential]
+            if (
+              seed.credentials &&
+              (!credentials.length ||
+                credentials.some(
+                  (key) =>
+                    !hasUsableManagedSiteChannelKey(key) || /[\r\n]/.test(key),
+                ))
+            ) {
+              return {
+                valid: false,
+                issues: [{ fieldId: "credential", code: "invalid_value" }],
+              }
+            }
+            // The synchronous binding validates each native scalar input; the
+            // opened editor validates the structured list and its command.
+            const validations = credentials.map((credential) =>
+              binding.validate(
+                binding.project({
+                  ...seed,
+                  credential,
+                  credentials: undefined,
+                }),
+              ),
+            )
+            const validation = validations.find((result) => !result.valid) ?? {
+              valid: true as const,
+            }
             return validation.valid
               ? validation
               : {
@@ -479,6 +519,15 @@ export function defineNativeResourceKind<
                     : undefined
                   if (createSeed && !createSeedBinding) {
                     throw invalidPublicInput()
+                  }
+                  if (
+                    createSeed &&
+                    (createSeed.credentials?.length ?? 0) > 1 &&
+                    createSeedBinding?.supportsMultipleCredentials?.(
+                      createSeed,
+                    ) !== true
+                  ) {
+                    throw new ManagedResourceError({ code: "unavailable" })
                   }
                   const seedProjection =
                     createSeed && createSeedBinding

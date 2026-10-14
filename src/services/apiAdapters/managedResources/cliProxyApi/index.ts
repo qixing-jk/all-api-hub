@@ -37,6 +37,8 @@ export const cliProxyApiManagedResourceRegistration = defineNativeResourceKind({
   createSeedBindings: [
     {
       kind: "managed-channel-import",
+      supportsMultipleCredentials: (seed) =>
+        seed.channelType === "openai-compatibility",
       project: importProjection,
       validate,
       sourceFieldIds: {

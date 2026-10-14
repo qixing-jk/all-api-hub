@@ -5,7 +5,6 @@ import {
 import { SITE_TYPES } from "~/constants/siteType"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
 import {
-  MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS as intents,
   MANAGED_RESOURCE_CREATE_SEED_KINDS,
   ManagedResourceError,
   MANAGED_RESOURCE_STATUSES as statuses,
@@ -29,6 +28,7 @@ import {
   mapFailure,
 } from "~/services/apiAdapters/managedResources/octopus/nativeRuntime"
 import { type CredentialListPatch } from "~/services/apiAdapters/managedResources/shared/credentialListEditor"
+import { importCredentialValue } from "~/services/apiAdapters/managedResources/shared/importCredentials"
 import {
   type OctopusChannel,
   type OctopusCreateChannelInput,
@@ -66,6 +66,7 @@ export const octopusManagedResourceRegistration = defineNativeResourceKind({
   createSeedBindings: [
     {
       kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+      supportsMultipleCredentials: () => true,
       validate: validateOctopusValues,
       sourceFieldIds: {
         [fields.Name]: "name",
@@ -86,7 +87,7 @@ export const octopusManagedResourceRegistration = defineNativeResourceKind({
             : initialValues[fields.Type] ?? "",
           [fields.Name]: seed.name,
           [fields.BaseUrl]: seed.baseUrl,
-          [fields.Key]: { kind: intents.Replace, value: seed.credential },
+          [fields.Key]: importCredentialValue(seed),
           [fields.Models]: [...seed.models],
           [fields.Status]: seed.enabled ? statuses.Enabled : statuses.Disabled,
         }

@@ -261,7 +261,9 @@ export async function openNewApiNativeResourceOperations(): Promise<NewApiNative
 const newApiNativeDefinition = {
   siteType: SITE_TYPES.NEW_API,
   kind: MANAGED_RESOURCE_KINDS.Channel,
-  createSeedBindings: [newApiImportSeedBinding],
+  createSeedBindings: [
+    { ...newApiImportSeedBinding, supportsMultipleCredentials: () => true },
+  ],
   capabilities: {
     canSearch: true,
     canCreate: true,

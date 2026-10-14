@@ -43,6 +43,7 @@ export const magpieManagedResourceRegistration = defineNativeResourceKind({
   createSeedBindings: [
     {
       kind: "managed-channel-import",
+      supportsMultipleCredentials: () => true,
       project: magpieImportProjection,
       validate: validateMagpieValues,
       sourceFieldIds: {

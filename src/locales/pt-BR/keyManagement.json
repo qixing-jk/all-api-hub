@@ -101,6 +101,22 @@
       "models": "Modelos"
     },
     "gatewayDescription": "Isso importa chaves de contas como canais de um gateway de IA auto-hospedado. Após a importação, os clientes poderão usar várias chaves por meio de uma única API de IA.",
+    "importMode": {
+      "grouped": "Combinar chaves do mesmo site",
+      "independent": "Criar separadamente para cada chave",
+      "keyCount_one": "{{count}} chave",
+      "keyCount_many": "{{count}} chaves",
+      "keyCount_other": "{{count}} chaves",
+      "label": "Organização da importação",
+      "modelDifferences": "As listas de modelos diferem. O recurso combinado usa a união delas; o gateway cuida do roteamento.",
+      "models": "Modelos: {{models}}",
+      "resourceName": "Nome do recurso",
+      "resultSummary": "Chaves: {{created}} importadas, {{failed}} com falha, {{uncertain}} incertas, {{skipped}} ignoradas.",
+      "saveFailed": "A seleção vale para esta importação, mas não foi possível salvar a preferência.",
+      "scheduling": "O gateway de destino distribui as solicitações entre as chaves combinadas. Confirme se as permissões e o uso são adequados.",
+      "summary": "{{keyCount}} chaves selecionadas → {{resourceCount}} recursos",
+      "unsupported": "Este tipo de recurso não aceita chaves combinadas e será criado separadamente."
+    },
     "loadingDescription": "Preparando a prévia. Chaves selecionadas: {{selectedCount}}.",
     "messages": {
       "batchDuplicate": "Duplica {{item}} neste lote e foi ignorado.",

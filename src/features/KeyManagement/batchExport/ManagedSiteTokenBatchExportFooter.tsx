@@ -6,6 +6,7 @@ import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import type {
   ManagedSiteTokenBatchExportExecutionResult,
   ManagedSiteTokenBatchExportPreview,
+  ManagedSiteTokenBatchImportMode,
 } from "~/types/managedSiteTokenBatchExport"
 
 interface ManagedSiteTokenBatchExportFooterProps {
@@ -17,6 +18,8 @@ interface ManagedSiteTokenBatchExportFooterProps {
   isLoadingPreview: boolean
   isRunning: boolean
   selectedExecutableCount: number
+  hasInvalidImportGroups?: boolean
+  importMode?: ManagedSiteTokenBatchImportMode
   canRetry: boolean
   onClose: () => void
   onStart: () => void
@@ -36,6 +39,8 @@ export function ManagedSiteTokenBatchExportFooter({
   isLoadingPreview,
   isRunning,
   selectedExecutableCount,
+  hasInvalidImportGroups = false,
+  importMode = "independent",
   canRetry,
   onClose,
   onStart,
@@ -46,12 +51,18 @@ export function ManagedSiteTokenBatchExportFooter({
     return (
       <div className="gap-y-density-3 flex flex-wrap items-center justify-between gap-x-3">
         <div className="text-muted-foreground min-w-0 flex-1 text-sm break-words">
-          {t("keyManagement:batchManagedSiteExport.results.summary", {
-            created: executionResult.createdCount,
-            failed: executionResult.failedCount,
-            skipped: executionResult.skippedCount,
-            total: executionResult.items.length,
-          })}
+          {t(
+            importMode === "grouped"
+              ? "keyManagement:batchManagedSiteExport.importMode.resultSummary"
+              : "keyManagement:batchManagedSiteExport.results.summary",
+            {
+              created: executionResult.createdCount,
+              failed: executionResult.failedCount,
+              skipped: executionResult.skippedCount,
+              total: executionResult.items.length,
+              uncertain: executionResult.uncertainCount,
+            },
+          )}
         </div>
         <ActionGroup className="min-w-0">
           {canRetry ? (
@@ -124,6 +135,7 @@ export function ManagedSiteTokenBatchExportFooter({
           leftIcon={<SendToBack className="h-4 w-4" />}
           loading={isRunning}
           disabled={
+            hasInvalidImportGroups ||
             isLoadingPreview ||
             !preview ||
             selectedExecutableCount === 0 ||

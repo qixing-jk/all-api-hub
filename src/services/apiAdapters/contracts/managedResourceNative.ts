@@ -130,6 +130,7 @@ export type ManagedChannelImportCreateSeed = {
   name: string
   channelType: string
   credential: string
+  credentials?: readonly string[]
   baseUrl: string
   enabled: boolean
   models: readonly string[]
@@ -220,6 +221,9 @@ export interface ManagedResourceRegistration {
   readonly siteType: ManagedSiteType
   readonly kind: ManagedResourceKind
   readonly createSeedKinds?: readonly ManagedResourceCreateSeedKind[]
+  supportsMultipleImportCredentials?(
+    seed: ManagedChannelImportCreateSeed,
+  ): boolean
   /** Checks an import without opening a workspace; issue fields refer to the input seed. */
   validateCreateSeed?(seed: ManagedResourceCreateSeed): ResourceValidationResult
   open(options?: ResourceOperationOptions): Promise<ManagedResourceWorkspace>

@@ -97,6 +97,21 @@
       "models": "Models"
     },
     "gatewayDescription": "This imports account keys as self-hosted AI gateway channels. After import, multiple keys can be used by clients through one AI API.",
+    "importMode": {
+      "grouped": "Combine keys from the same site",
+      "independent": "Create separately for each key",
+      "keyCount_one": "{{count}} key",
+      "keyCount_other": "{{count}} keys",
+      "label": "Import organization",
+      "modelDifferences": "These keys have different model lists. The combined resource uses their union; routing is handled by the gateway.",
+      "models": "Models: {{models}}",
+      "resourceName": "Resource name",
+      "resultSummary": "Keys: {{created}} imported, {{failed}} failed, {{uncertain}} uncertain, {{skipped}} skipped.",
+      "saveFailed": "The selection applies to this import, but the preference could not be saved.",
+      "scheduling": "The target gateway schedules combined keys. Confirm that their permissions and intended use suit your needs.",
+      "summary": "{{keyCount}} selected keys → {{resourceCount}} resources",
+      "unsupported": "This resource type does not support combined keys and will be created separately."
+    },
     "loadingDescription": "Preparing preview for {{selectedCount}} selected keys.",
     "messages": {
       "batchDuplicate": "Duplicates {{item}} in this batch and has been skipped.",

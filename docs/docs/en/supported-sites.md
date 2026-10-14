@@ -178,6 +178,19 @@ If you are also building your own backend system, All API Hub supports importing
 | Veloera                                           | This project has been discontinued.                                                                                                                                                                   | [GitHub](https://github.com/Veloera/Veloera)                                                          |
 | DoneHub                                           | This project is a secondary development based on one-hub.                                                                                                                                             | [GitHub](https://github.com/deanxv/done-hub)                                                          |
 
+### Batch importing multiple keys from one site
+
+Choose “Create separately for each key” or “Combine keys from the same site” during batch import. The choice is remembered per target management connection. The grouped preview shows source keys, resource count, and the union of model lists. Different model permissions produce a notice; users decide whether to combine keys, and the target gateway owns scheduling. Different inference endpoints (including paths) or native channel types remain separate.
+
+| Managed site | Combined import scope |
+| --- | --- |
+| Magpie, New API, Octopus, gpt-load | Native multi-key resource creation |
+| AxonHub | Regular API-key channel types |
+| CLIProxyAPI | `openai-compatibility` resources |
+| Sub2API, OmniRoute, Claude Code Hub, Veloera, DoneHub | Separate creation only |
+
+This choice applies to new resources in the current import. It does not merge, split, or append to existing resources. Check the target after a partial or uncertain write before attempting another import of the group.
+
 ## Related Documentation
 
 - [Supported Export Tools List](./supported-export-tools.md)

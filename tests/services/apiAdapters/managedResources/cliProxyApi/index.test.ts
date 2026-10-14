@@ -84,6 +84,31 @@ beforeEach(() => {
 const workspace = () => cliProxyApiManagedResourceRegistration.open()
 
 describe("CLIProxyAPI native managed resources", () => {
+  it("seeds every imported key into one native create editor", async () => {
+    const workspace = await cliProxyApiManagedResourceRegistration.open()
+    const editor = await workspace.openCreateEditor({
+      seed: {
+        kind: "managed-channel-import",
+        name: "Grouped import",
+        channelType: "openai-compatibility",
+        credential: "sk-first",
+        credentials: ["sk-first", "sk-second"],
+        baseUrl: "https://upstream.example.invalid/v1",
+        models: ["model-a"],
+        enabled: true,
+        notes: "",
+      },
+    })
+    expect(editor.initialValues["credentials"]).toMatchObject({
+      kind: "secret-list",
+      entries: [
+        { secret: { kind: "replace", value: "sk-first" } },
+        { secret: { kind: "replace", value: "sk-second" } },
+      ],
+    })
+    expect(editor.validate(editor.initialValues)).toEqual({ valid: true })
+  })
+
   it("contains configuration storage failure at the native workspace boundary", async () => {
     const spy = vi
       .spyOn(userPreferences, "getPreferences")

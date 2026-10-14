@@ -97,6 +97,21 @@
       "models": "Modelle"
     },
     "gatewayDescription": "Dadurch werden Kontoschlüssel als selbstgehostete AI-Gateway-Kanäle importiert. Nach dem Import können mehrere Schlüssel von Clients über eine AI-API verwendet werden.",
+    "importMode": {
+      "grouped": "Schlüssel derselben Website zusammenfassen",
+      "independent": "Für jeden Schlüssel separat erstellen",
+      "keyCount_one": "{{count}} Schlüssel",
+      "keyCount_other": "{{count}} Schlüssel",
+      "label": "Importorganisation",
+      "modelDifferences": "Die Modelllisten unterscheiden sich. Die Ressource nutzt deren Vereinigungsmenge; das Gateway übernimmt das Routing.",
+      "models": "Modelle: {{models}}",
+      "resourceName": "Ressourcenname",
+      "resultSummary": "Schlüssel: {{created}} importiert, {{failed}} fehlgeschlagen, {{uncertain}} unklar, {{skipped}} übersprungen.",
+      "saveFailed": "Die Auswahl gilt für diesen Import, konnte aber nicht gespeichert werden.",
+      "scheduling": "Das Zielgateway verteilt Anfragen auf die zusammengefassten Schlüssel. Prüfen Sie, ob deren Berechtigungen und Zweck passen.",
+      "summary": "{{keyCount}} ausgewählte Schlüssel → {{resourceCount}} Ressourcen",
+      "unsupported": "Dieser Ressourcentyp unterstützt keine zusammengefassten Schlüssel und wird separat erstellt."
+    },
     "loadingDescription": "Vorschau wird für ausgewählte Schlüssel vorbereitet (Auswahl: {{selectedCount}}).",
     "messages": {
       "batchDuplicate": "Duplikat von {{item}} in diesem Stapel; wurde übersprungen.",

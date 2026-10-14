@@ -9,6 +9,7 @@ import {
 import {
   openNativeManagedChannelImportEditor,
   openNativeManagedChannelImportSession,
+  supportsNativeManagedChannelMultiKeyImport,
   validateNativeManagedChannelImportDraft,
 } from "~/services/apiAdapters/managedResources/channelImport"
 import * as managedResourceRegistry from "~/services/apiAdapters/managedResources/registry"
@@ -29,6 +30,63 @@ afterEach(() => {
 })
 
 describe("native managed-channel import", () => {
+  it.each([
+    [SITE_TYPES.MAGPIE, "chat", true],
+    [SITE_TYPES.NEW_API, 1, true],
+    [SITE_TYPES.OCTOPUS, 0, true],
+    [SITE_TYPES.GPT_LOAD, "openai", true],
+    [SITE_TYPES.AXON_HUB, "openai", true],
+    [SITE_TYPES.CLI_PROXY_API, "openai-compatibility", true],
+    [SITE_TYPES.CLI_PROXY_API, "codex-api-key", false],
+    [SITE_TYPES.SUB2API, "openai", false],
+    [SITE_TYPES.VELOERA, 1, false],
+  ])(
+    "declares multi-key import for %s/%s as %s",
+    (siteType, type, supported) => {
+      expect(
+        supportsNativeManagedChannelMultiKeyImport(siteType, {
+          ...draft,
+          type,
+        }),
+      ).toBe(supported)
+    },
+  )
+
+  it("rejects unsupported multi-key creation rather than dropping keys", async () => {
+    await expect(
+      openNativeManagedChannelImportEditor(SITE_TYPES.SUB2API, {
+        ...draft,
+        credentials: ["sk-one", "sk-two"],
+      }),
+    ).rejects.toMatchObject({ failure: { code: "unavailable" } })
+  })
+  it("validates every credential in a New API multi-key import", () => {
+    expect(
+      validateNativeManagedChannelImportDraft(SITE_TYPES.NEW_API, {
+        ...draft,
+        type: 1,
+        credentials: ["sk-valid-first", ""],
+      }),
+    ).toMatchObject({ valid: false })
+  })
+
+  it.each([
+    [SITE_TYPES.NEW_API, 1],
+    [SITE_TYPES.OCTOPUS, 0],
+    [SITE_TYPES.AXON_HUB, "openai"],
+    [SITE_TYPES.GPT_LOAD, "openai_compatible"],
+    [SITE_TYPES.MAGPIE, "chat"],
+    [SITE_TYPES.CLI_PROXY_API, "openai-compatibility"],
+  ])("accepts complete multi-key drafts for %s", (siteType, type) => {
+    expect(
+      validateNativeManagedChannelImportDraft(siteType, {
+        ...draft,
+        type,
+        credentials: ["sk-first", "sk-second"],
+      }),
+    ).toEqual({ valid: true })
+  })
+
   it.each([
     { case: "duplicate", models: ["model-a", "model-a"] },
     { case: "empty", models: [] },

@@ -15,6 +15,8 @@ export interface ManagedSiteChannelDraft {
   name: string
   type: string | number
   key: string
+  /** Explicit native multi-key creation; the gateway owns scheduling. */
+  credentials?: readonly string[]
   base_url: string
   models: string[]
   modelPrefillFetchFailed?: boolean

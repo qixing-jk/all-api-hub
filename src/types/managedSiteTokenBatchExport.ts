@@ -8,6 +8,8 @@ import type {
 import type { DisplaySiteData } from "~/types"
 import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
 
+export type ManagedSiteTokenBatchImportMode = "independent" | "grouped"
+
 export const MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES = {
   MANUAL_SELECTION: "manual-selection",
   REPAIR_CREATED: "repair-created",

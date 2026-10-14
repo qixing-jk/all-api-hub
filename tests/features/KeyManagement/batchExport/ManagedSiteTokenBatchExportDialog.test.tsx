@@ -711,6 +711,114 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     ).toBeVisible()
   })
 
+  it("lets users group same-site keys and updates the resource plan when a key is deselected", async () => {
+    const user = userEvent.setup()
+    mockPreparePreview.mockResolvedValue(preview)
+    renderDialog()
+    await screen.findByRole("checkbox", { name: "Account 1 / Token 1" })
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "keyManagement:batchManagedSiteExport.importMode.label",
+      }),
+    )
+    await user.click(
+      screen.getByRole("option", {
+        name: "keyManagement:batchManagedSiteExport.importMode.grouped",
+      }),
+    )
+    expect(screen.getByTestId("managed-site-import-group")).toHaveTextContent(
+      "Account 1",
+    )
+    expect(screen.getByTestId("managed-site-import-group")).toHaveTextContent(
+      "Token 2",
+    )
+    const name = screen.getByRole("textbox", {
+      name: "keyManagement:batchManagedSiteExport.importMode.resourceName",
+    })
+    await user.clear(name)
+    expect(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    ).toBeDisabled()
+    await user.type(name, "Shared provider")
+    expect(name).toHaveValue("Shared provider")
+    await user.click(
+      screen.getByRole("checkbox", { name: "Account 1 / Token 2" }),
+    )
+    expect(
+      screen.getByTestId("managed-site-import-group"),
+    ).not.toHaveTextContent("Token 2")
+    mockExecuteBatchExport.mockResolvedValue({
+      totalSelected: 1,
+      attemptedCount: 1,
+      createdCount: 1,
+      failedCount: 0,
+      uncertainCount: 0,
+      skippedCount: 0,
+      items: [
+        {
+          id: preview.items[0]!.id,
+          accountName: "Account 1",
+          runtimeKeyName: "Token 1",
+          result: "created",
+          success: true,
+          skipped: false,
+        },
+      ],
+    })
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await user.click(
+      within(getBatchImportConfirmDialog()).getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await waitFor(() =>
+      expect(mockExecuteBatchExport).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mode: "grouped",
+          resourceNamesByItemId: { [preview.items[0]!.id]: "Shared provider" },
+        }),
+      ),
+    )
+    expect(
+      await screen.findByText(
+        "keyManagement:batchManagedSiteExport.importMode.resultSummary",
+      ),
+    ).toBeVisible()
+  })
+
+  it.each(["grouped", "independent"] as const)(
+    "restores %s only for the current target connection",
+    async (mode) => {
+      const preferences = mockUserPreferencesContextValue.current
+        .preferences as UserPreferences
+      mockUserPreferencesContextValue.current = {
+        ...mockUserPreferencesContextValue.current,
+        preferences: {
+          ...preferences,
+          managedSiteTokenBatchImportModes: {
+            "test-target-fingerprint": mode,
+            "different-target": mode === "grouped" ? "independent" : "grouped",
+          },
+        },
+      }
+      mockPreparePreview.mockResolvedValue(preview)
+      renderDialog()
+      expect(
+        await screen.findByRole("combobox", {
+          name: "keyManagement:batchManagedSiteExport.importMode.label",
+        }),
+      ).toHaveTextContent(
+        `keyManagement:batchManagedSiteExport.importMode.${mode}`,
+      )
+    },
+  )
+
   it("lets users select another batch representative after deselecting the first", async () => {
     const user = userEvent.setup()
     mockPreparePreview.mockResolvedValue(buildBatchDuplicatePreview())

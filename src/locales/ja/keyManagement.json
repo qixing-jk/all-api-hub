@@ -93,6 +93,20 @@
       "models": "モデル"
     },
     "gatewayDescription": "アカウントキーをセルフホスト AI ゲートウェイチャネルとして取り込みます。取り込み後は、複数のキーを 1 つの AI API からクライアントで利用できます。",
+    "importMode": {
+      "grouped": "同じサイトのキーをまとめて作成",
+      "independent": "キーごとに個別に作成",
+      "keyCount_other": "キー {{count}} 個",
+      "label": "インポート時の構成",
+      "modelDifferences": "キーごとにモデル一覧が異なります。統合リソースでは一覧の和集合を使用し、ゲートウェイがルーティングを行います。",
+      "models": "モデル：{{models}}",
+      "resourceName": "リソース名",
+      "resultSummary": "キーの結果：{{created}} 個インポート済み、{{failed}} 個失敗、{{uncertain}} 個結果不明、{{skipped}} 個スキップ。",
+      "saveFailed": "今回のインポートには選択が適用されますが、設定を保存できませんでした。",
+      "scheduling": "まとめたキーの振り分けは対象ゲートウェイが行います。権限と用途が適切か確認してください。",
+      "summary": "選択したキー {{keyCount}} 個 → 作成するリソース {{resourceCount}} 個",
+      "unsupported": "このリソースの種類は複数キーの統合に対応していないため、個別に作成します。"
+    },
     "loadingDescription": "選択済み {{selectedCount}} 件のキーのプレビューを準備しています。",
     "messages": {
       "batchDuplicate": "このバッチの {{item}} と重複するため、スキップしました。",

@@ -1,7 +1,17 @@
 import { SendToBack } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { Button, ConfirmDialog, Modal } from "~/components/ui"
+import {
+  Button,
+  ConfirmDialog,
+  Input,
+  Modal,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { ManagedSiteTokenBatchExportFooter } from "~/features/KeyManagement/batchExport/ManagedSiteTokenBatchExportFooter"
 import { ManagedSiteTokenBatchExportPreviewList } from "~/features/KeyManagement/batchExport/ManagedSiteTokenBatchExportPreviewList"
@@ -89,6 +99,8 @@ export function ManagedSiteTokenBatchExportDialog({
             isLoadingPreview={dialog.isLoadingPreview}
             isRunning={dialog.isRunning}
             selectedExecutableCount={dialog.executableSelection.selectedCount}
+            hasInvalidImportGroups={dialog.hasInvalidImportGroups}
+            importMode={dialog.importMode}
             canRetry={Boolean(
               dialog.executionResult?.items.some(
                 (item) =>
@@ -127,6 +139,124 @@ export function ManagedSiteTokenBatchExportDialog({
                 }
                 disabled={dialog.isLoadingPreview || dialog.isRunning}
               />
+            </div>
+          ) : null}
+
+          {dialog.preview &&
+          (dialog.canGroup || dialog.importMode === "grouped") ? (
+            <div className="space-y-density-2 rounded-md border p-3 text-sm">
+              <Select
+                value={dialog.importMode}
+                onValueChange={(value) => {
+                  void dialog.actions.changeImportMode(value)
+                }}
+                disabled={
+                  dialog.isLoadingPreview ||
+                  dialog.isRunning ||
+                  Boolean(dialog.executionResult)
+                }
+              >
+                <SelectTrigger
+                  aria-label={t(
+                    "keyManagement:batchManagedSiteExport.importMode.label",
+                  )}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="independent">
+                    {t(
+                      "keyManagement:batchManagedSiteExport.importMode.independent",
+                    )}
+                  </SelectItem>
+                  <SelectItem value="grouped" disabled={!dialog.canGroup}>
+                    {t(
+                      "keyManagement:batchManagedSiteExport.importMode.grouped",
+                    )}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              {dialog.importMode === "grouped" ? (
+                <>
+                  <p className="text-muted-foreground">
+                    {t(
+                      "keyManagement:batchManagedSiteExport.importMode.scheduling",
+                    )}
+                  </p>
+                  <p>
+                    {t(
+                      "keyManagement:batchManagedSiteExport.importMode.summary",
+                      {
+                        keyCount: dialog.executableSelection.selectedCount,
+                        resourceCount: dialog.importGroups.length,
+                      },
+                    )}
+                  </p>
+                  {dialog.importGroups.map((group) => (
+                    <details
+                      key={group.id}
+                      open
+                      data-testid="managed-site-import-group"
+                      className="rounded-md border p-2"
+                    >
+                      <summary className="cursor-pointer font-medium">
+                        {group.draft.name} ·{" "}
+                        {t(
+                          "keyManagement:batchManagedSiteExport.importMode.keyCount",
+                          { count: group.draft.credentials?.length ?? 1 },
+                        )}
+                      </summary>
+                      <div className="text-muted-foreground mt-2 space-y-1">
+                        <p className="break-all">{group.draft.base_url}</p>
+                        <Input
+                          aria-label={t(
+                            "keyManagement:batchManagedSiteExport.importMode.resourceName",
+                          )}
+                          value={group.draft.name}
+                          onChange={(event) =>
+                            dialog.actions.changeImportGroupName(
+                              group.id,
+                              event.target.value,
+                            )
+                          }
+                          aria-invalid={!group.draft.name.trim()}
+                          disabled={
+                            dialog.isRunning || Boolean(dialog.executionResult)
+                          }
+                        />
+                        {group.itemIds.map((id) => {
+                          const item = dialog.previewItemsById.get(id)
+                          return item ? (
+                            <p key={id}>
+                              {item.accountName} / {item.runtimeKeyName}
+                            </p>
+                          ) : null
+                        })}
+                        <p>
+                          {t(
+                            "keyManagement:batchManagedSiteExport.importMode.models",
+                            { models: group.draft.models.join(", ") },
+                          )}
+                        </p>
+                        {group.modelSetsDiffer ? (
+                          <p>
+                            {t(
+                              "keyManagement:batchManagedSiteExport.importMode.modelDifferences",
+                            )}
+                          </p>
+                        ) : null}
+                        {!group.supportsMultipleCredentials ? (
+                          <p>
+                            {t(
+                              "keyManagement:batchManagedSiteExport.importMode.unsupported",
+                            )}
+                          </p>
+                        ) : null}
+                      </div>
+                    </details>
+                  ))}
+                </>
+              ) : null}
             </div>
           ) : null}
 

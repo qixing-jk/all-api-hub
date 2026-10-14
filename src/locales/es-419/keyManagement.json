@@ -101,6 +101,22 @@
       "models": "Modelos"
     },
     "gatewayDescription": "Esto importa claves de cuenta como canales del AI gateway autohospedado. Después de importar, los clientes pueden usar varias claves mediante una AI API.",
+    "importMode": {
+      "grouped": "Combinar claves del mismo sitio",
+      "independent": "Crear por separado para cada clave",
+      "keyCount_one": "{{count}} clave",
+      "keyCount_many": "{{count}} claves",
+      "keyCount_other": "{{count}} claves",
+      "label": "Organización de la importación",
+      "modelDifferences": "Las listas de modelos difieren. El recurso combinado usa su unión; la puerta de enlace se encarga del enrutamiento.",
+      "models": "Modelos: {{models}}",
+      "resourceName": "Nombre del recurso",
+      "resultSummary": "Claves: {{created}} importadas, {{failed}} fallidas, {{uncertain}} sin confirmar, {{skipped}} omitidas.",
+      "saveFailed": "La selección se aplica a esta importación, pero no se pudo guardar la preferencia.",
+      "scheduling": "La puerta de enlace de destino distribuye las solicitudes entre las claves combinadas. Confirma que sus permisos y uso sean adecuados.",
+      "summary": "{{keyCount}} claves seleccionadas → {{resourceCount}} recursos",
+      "unsupported": "Este tipo de recurso no admite claves combinadas y se creará por separado."
+    },
     "loadingDescription": "Preparando vista previa para {{selectedCount}} claves seleccionadas.",
     "messages": {
       "batchDuplicate": "Duplica a {{item}} en este lote y se omitió.",

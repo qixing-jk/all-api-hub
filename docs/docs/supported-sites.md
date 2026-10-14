@@ -178,6 +178,19 @@
 | Veloera                                           | 本项目已停止维护。                                                                                                                 | [GitHub](https://github.com/Veloera/Veloera)                                                 |
 | DoneHub                                           | 本项目是基于 one-hub 二次开发而来的。                                                                                              | [GitHub](https://github.com/deanxv/done-hub)                                                 |
 
+### 同站点多密钥批量导入
+
+批量导入时可选择“每个密钥独立创建”或“同站点密钥合并创建”，并按目标管理站点连接记住选择。合并预览显示来源密钥、最终资源数量和模型并集；模型权限不同只会提示，由用户决定是否合并，调度由目标网关负责。实际推理地址（包含路径）或原生渠道类型不同的密钥仍分开创建。
+
+| 管理站点 | 合并导入范围 |
+| --- | --- |
+| Magpie、New API、Octopus、gpt-load | 支持原生多密钥资源创建 |
+| AxonHub | 使用普通 API key 的渠道类型 |
+| CLIProxyAPI | `openai-compatibility` 资源 |
+| Sub2API、OmniRoute、Claude Code Hub、Veloera、DoneHub | 当前仍独立创建 |
+
+此选择只影响本次新建资源，不会自动合并、拆分或追加到已有资源。部分写入或结果不确定时需先核对目标站点，不应重复导入整个组。
+
 ## 相关文档
 
 - [支持的导出工具列表](./supported-export-tools.md)

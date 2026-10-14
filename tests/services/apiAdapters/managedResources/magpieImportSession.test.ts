@@ -11,6 +11,31 @@ vi.mock("~/services/managedSites/configuration/runtimeConfig", () => ({
 
 afterEach(() => vi.unstubAllGlobals())
 
+it("opens one provider editor with all imported keys and native routing defaults", async () => {
+  const workspace = await magpieManagedResourceRegistration.open()
+  const editor = await workspace.openCreateEditor({
+    seed: {
+      kind: "managed-channel-import",
+      name: "Same site",
+      channelType: "chat",
+      credential: "key-first",
+      credentials: ["key-first", "key-second"],
+      baseUrl: "https://relay.test/v1",
+      models: ["m1"],
+      enabled: true,
+      notes: "",
+    },
+  })
+  expect(editor.initialValues.keyPool).toMatchObject({
+    kind: "secret-list",
+    entries: [
+      { secret: { kind: "replace", value: "key-first" } },
+      { secret: { kind: "replace", value: "key-second" } },
+    ],
+  })
+  expect(editor.validate(editor.initialValues)).toMatchObject({ valid: true })
+})
+
 it("shares authentication across two native imports and their final inventory refresh", async () => {
   const providers: unknown[] = []
   const fetchMock = vi.fn(async (url: string, options: RequestInit) => {

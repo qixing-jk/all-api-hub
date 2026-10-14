@@ -30,6 +30,7 @@ const definition = {
   createSeedBindings: [
     {
       kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+      supportsMultipleCredentials: () => true,
       project: createImportProjection,
       validate: validateCreateValues,
       sourceFieldIds: {

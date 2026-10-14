@@ -353,6 +353,93 @@ describe("managed-site token batch export", () => {
     })
   })
 
+  it("imports same-site keys into one native resource while returning results for every source key", async () => {
+    const managedSite = buildAxonHubImportService()
+    configureManagedSiteCapabilities(managedSite)
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/batchImport/tokenBatchImportPreview"
+    )
+    const { executeManagedSiteTokenBatchExport } = await import(
+      "~/services/managedSites/batchImport/tokenBatchImportExecution"
+    )
+    const preview = await prepareManagedSiteTokenBatchExportPreview({
+      items: [
+        buildAccountTokenInput(
+          undefined,
+          buildAccountToken({ id: 11, key: "key-first" }),
+        ),
+        buildAccountTokenInput(
+          undefined,
+          buildAccountToken({ id: 12, key: "key-second" }),
+        ),
+      ],
+    })
+    const result = await executeManagedSiteTokenBatchExport({
+      preview,
+      selectedItemIds: preview.items.map((item) => item.id),
+      mode: "grouped",
+    })
+    expect(managedSite.submit).toHaveBeenCalledTimes(1)
+    expect(managedSite.submit).toHaveBeenCalledWith(
+      expect.objectContaining({ credentials: ["key-first", "key-second"] }),
+    )
+    expect(result).toMatchObject({
+      createdCount: 2,
+      failedCount: 0,
+      items: [{ result: "created" }, { result: "created" }],
+    })
+  })
+
+  it("keeps every member of a partially written group uncertain and redacts all group secrets", async () => {
+    const managedSite = buildAxonHubImportService()
+    managedSite.submit.mockResolvedValue({
+      outcome: "partial",
+      completion: "uncertain",
+      confirmedEffects: [
+        {
+          kind: "resource-created",
+          resourceKind: "channel",
+          resourceId: "created",
+        },
+      ],
+      diagnostic: { message: "Failed after key-first and key-second" },
+    })
+    configureManagedSiteCapabilities(managedSite)
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/batchImport/tokenBatchImportPreview"
+    )
+    const { executeManagedSiteTokenBatchExport } = await import(
+      "~/services/managedSites/batchImport/tokenBatchImportExecution"
+    )
+    const preview = await prepareManagedSiteTokenBatchExportPreview({
+      items: [
+        buildAccountTokenInput(
+          undefined,
+          buildAccountToken({ id: 11, key: "key-first" }),
+        ),
+        buildAccountTokenInput(
+          undefined,
+          buildAccountToken({ id: 12, key: "key-second" }),
+        ),
+      ],
+    })
+    const result = await executeManagedSiteTokenBatchExport({
+      preview,
+      selectedItemIds: preview.items.map((item) => item.id),
+      mode: "grouped",
+    })
+    expect(result).toMatchObject({
+      createdCount: 0,
+      failedCount: 0,
+      uncertainCount: 2,
+      items: [{ result: "uncertain" }, { result: "uncertain" }],
+    })
+    expect(JSON.stringify(result)).not.toContain("key-first")
+    expect(JSON.stringify(result)).not.toContain("key-second")
+    expect(managedSite.submit).toHaveBeenCalledOnce()
+    expect(managedSite.reconcile).toHaveBeenCalledOnce()
+  })
+
   it("skips a verified URL/key duplicate before preparing models or validating a create", async () => {
     const managedSite = buildService({
       siteType: SITE_TYPES.SUB2API,
