@@ -258,6 +258,23 @@ describe("accountAutoDetection", () => {
     expect(serializedLogError).not.toContain(reflectedMessage)
   })
 
+  it("keeps user-ID recovery guidance when all detection sources return no identity", async () => {
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: false,
+      error: "messages:operations.detection.getUserIdFailed",
+    })
+    const result = await autoDetectAccount(
+      "https://example.com",
+      AuthTypeEnum.Cookie,
+    )
+    expect(result).toMatchObject({
+      success: false,
+      message: "messages:operations.detection.getUserIdFailedDetailed",
+      detailedError: { type: AutoDetectErrorType.INVALID_RESPONSE },
+    })
+    expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
+  })
+
   it("returns a get-user-id failure when detection succeeds without a user id", async () => {
     mockSendRuntimeMessage.mockResolvedValueOnce(null)
     mockAutoDetectSmart.mockResolvedValueOnce({

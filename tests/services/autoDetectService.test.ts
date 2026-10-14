@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  AUTO_DETECT_DIAGNOSTIC_EVENTS,
   AUTO_DETECT_ERROR_CODES,
   AUTO_DETECT_FETCH_CONTEXT_KINDS,
+  AUTO_DETECT_SOURCE_REASONS,
   AUTO_DETECT_STRATEGIES,
 } from "~/constants/autoDetect"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
@@ -10,6 +12,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
 import { NEW_API_DASHBOARD_TRANSIENT_AUTH_KIND } from "~/services/accountSiteOnboarding/contracts"
 import { createAccountDetectionDiagnostics } from "~/services/accountSiteOnboarding/diagnostics"
+import * as detectionDiagnostics from "~/services/accountSiteOnboarding/diagnostics"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { autoDetectSmart as autoDetectSmartProduction } from "~/services/siteDetection/autoDetectService"
@@ -183,6 +186,182 @@ describe("autoDetectSmart", () => {
     mockFetchUserInfo.mockResolvedValue({
       id: 1,
       username: "tester",
+    })
+  })
+
+  it.each([true, false])(
+    "records an unexpected browser capability failure and preserves the error (caller trace: %s)",
+    async (callerOwnsTrace) => {
+      const failure = new Error("Browser API became unavailable")
+      browserAny.tabs = {
+        get query() {
+          throw failure
+        },
+      }
+      const trace = createAccountDetectionDiagnostics()
+      const record = vi.spyOn(trace, "record")
+      const finish = vi.spyOn(trace, "finish")
+      const factory = vi
+        .spyOn(detectionDiagnostics, "createAccountDetectionDiagnostics")
+        .mockReturnValue(trace)
+
+      try {
+        await expect(
+          autoDetectSmartProduction(
+            "https://site.example.invalid",
+            undefined,
+            callerOwnsTrace ? trace : undefined,
+          ),
+        ).rejects.toBe(failure)
+
+        if (callerOwnsTrace) {
+          expect(record).toHaveBeenLastCalledWith(
+            AUTO_DETECT_DIAGNOSTIC_EVENTS.SiteDetectionFinished,
+            { success: false, reason: AUTO_DETECT_SOURCE_REASONS.Exception },
+          )
+          expect(finish).not.toHaveBeenCalled()
+          expect(factory).not.toHaveBeenCalled()
+        } else {
+          expect(finish).toHaveBeenCalledExactlyOnceWith(
+            detectionDiagnostics.ACCOUNT_DETECTION_OUTCOMES.Failed,
+            { reason: AUTO_DETECT_SOURCE_REASONS.Exception },
+          )
+          expect(factory).toHaveBeenCalledOnce()
+        }
+        expect(mockFetchUserInfo).not.toHaveBeenCalled()
+      } finally {
+        factory.mockRestore()
+      }
+    },
+  )
+
+  it("normalizes browser identity while preserving provider fields separately", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      { id: 7, active: true, url: "https://site.example.invalid" },
+    ])
+    const rawUser = {
+      id: 42,
+      username: "alice",
+      display_name: "Alice",
+      role: 10,
+    }
+    mockReadAccountBrowserSessionFromTab.mockResolvedValue({
+      userId: "42",
+      user: rawUser,
+      accessToken: "dashboard-token",
+      siteTypeHint: SITE_TYPES.NEW_API,
+    })
+
+    const result = await autoDetectSmartProduction(
+      "https://site.example.invalid",
+    )
+    expect(result.success).toBe(true)
+    expect(result.data?.user).toEqual({ id: "42", username: "alice" })
+    expect(result.data).toHaveProperty("rawUser", rawUser)
+    expect(result.data?.accessToken).toBe("dashboard-token")
+  })
+
+  it("normalizes API identity without exposing credentials in the user model", async () => {
+    browserAny.runtime = null
+    browserAny.tabs = null
+    mockFetchUserInfo.mockResolvedValue({
+      id: 42,
+      username: "alice",
+      access_token: "api-token",
+    })
+
+    const result = await autoDetectSmartProduction(
+      "https://site.example.invalid",
+    )
+    expect(result.success).toBe(true)
+    expect(result.data?.user).toEqual({ id: "42", username: "alice" })
+    expect(result.data?.rawUser).toEqual({
+      id: 42,
+      username: "alice",
+      access_token: "api-token",
+    })
+    expect(result.data?.accessToken).toBe("api-token")
+  })
+
+  it("does not invent a username when the browser payload has no string username", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      { id: 7, active: true, url: "https://site.example.invalid" },
+    ])
+    mockReadAccountBrowserSessionFromTab.mockResolvedValue({
+      userId: "account-42",
+      user: { id: 42, username: 123, email: "alice@example.invalid" },
+      siteTypeHint: SITE_TYPES.NEW_API,
+    })
+
+    const result = await autoDetectSmartProduction(
+      "https://site.example.invalid",
+    )
+    expect(result.success).toBe(true)
+    expect(result.data?.user).toEqual({ id: "account-42" })
+    expect(result.data?.rawUser).toHaveProperty(
+      "email",
+      "alice@example.invalid",
+    )
+  })
+
+  it("keeps the matched-tab recovery order and reload hint when every source fails", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      { id: 7, active: true, url: "https://site.example.invalid" },
+    ])
+    mockReadAccountBrowserSessionFromTab.mockImplementation(async (options) => {
+      options.onError?.(new Error("no receiver"))
+      return null
+    })
+    mockIsMessageReceiverUnavailableError.mockReturnValue(true)
+    mockFetchUserInfo.mockResolvedValue(null)
+    const diagnostics = createAccountDetectionDiagnostics()
+    const record = vi.spyOn(diagnostics, "record")
+
+    const result = await autoDetectSmartProduction(
+      "https://site.example.invalid",
+      testExecution,
+      diagnostics,
+    )
+
+    expect(result.errorCode).toBe(
+      AUTO_DETECT_ERROR_CODES.CURRENT_TAB_CONTENT_SCRIPT_UNAVAILABLE,
+    )
+    expect(
+      record.mock.calls
+        .filter(([event]) => event === "strategy_finished")
+        .map(([, details]) => details?.strategy),
+    ).toEqual([
+      AUTO_DETECT_STRATEGIES.CurrentTab,
+      AUTO_DETECT_STRATEGIES.BackgroundTempContext,
+      AUTO_DETECT_STRATEGIES.BackgroundTempContext,
+      AUTO_DETECT_STRATEGIES.DirectApi,
+    ])
+    expect(mockReadAccountBrowserSessionFromTab).toHaveBeenCalledOnce()
+  })
+
+  it("preserves a specific API failure instead of replacing it with the current-tab reload hint", async () => {
+    browserAny.runtime = null
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      { id: 7, active: true, url: "https://site.example.invalid" },
+    ])
+    mockReadAccountBrowserSessionFromTab.mockImplementation(async (options) => {
+      options.onError?.(new Error("no receiver"))
+      return null
+    })
+    mockIsMessageReceiverUnavailableError.mockReturnValue(true)
+    mockFetchUserInfo.mockResolvedValue(null)
+    mockGetAccountSiteType
+      .mockResolvedValueOnce(SITE_TYPES.NEW_API)
+      .mockResolvedValueOnce(SITE_TYPES.NEW_API)
+      .mockRejectedValueOnce(new Error("specific classification failure"))
+
+    await expect(
+      autoDetectSmart("https://site.example.invalid", testExecution),
+    ).resolves.toMatchObject({
+      success: false,
+      error: "specific classification failure",
+      errorCode: AUTO_DETECT_ERROR_CODES.SITE_TYPE_DETECTION_FAILED,
+      autoDetectContext: { strategy: AUTO_DETECT_STRATEGIES.DirectApi },
     })
   })
 
@@ -414,7 +593,7 @@ describe("autoDetectSmart", () => {
       success: true,
       data: {
         userId: "12",
-        user: { id: 12, username: "alice" },
+        user: { id: "12", username: "alice" },
         siteType: SITE_TYPES.NEW_API,
         accessToken: "current-tab-token",
         transientAuth: {
@@ -592,15 +771,15 @@ describe("autoDetectSmart", () => {
         incognito: true,
         cookieStoreId: "container-1",
       } as const
-      const result = await autoDetectViaBackground(
-        "https://example.invalid",
+      const result = await autoDetectViaBackground({
+        url: "https://example.invalid",
         fetchContext,
-        testExecution,
-      )
+        protectionBypassExecution: testExecution,
+      })
       expect(result.success).toBe(true)
       expect(result.data).toMatchObject({
         userId: "42",
-        user: { id: 42, username: "temp-user" },
+        user: { id: "42", username: "temp-user" },
         siteType: SITE_TYPES.SUB2API,
         fetchContext,
       })
@@ -894,7 +1073,7 @@ describe("autoDetectSmart", () => {
       success: true,
       data: {
         userId: "12",
-        user: { id: 12, username: "alice" },
+        user: { id: "12", username: "alice" },
         siteType: SITE_TYPES.NEW_API,
         accessToken: undefined,
         sub2apiAuth: undefined,
@@ -1153,7 +1332,7 @@ describe("autoDetectSmart", () => {
       success: true,
       data: {
         userId: "13",
-        user: { id: 13, username: "api-incognito-user" },
+        user: { id: "13", username: "api-incognito-user" },
         siteType: SITE_TYPES.NEW_API,
         accessToken: undefined,
         sub2apiAuth: undefined,
@@ -1423,7 +1602,7 @@ describe("autoDetectSmart", () => {
     expect(result.success).toBe(true)
     expect(result.data).toMatchObject({
       userId: "18",
-      user: { id: 18, username: "api-after-content-error" },
+      user: { id: "18", username: "api-after-content-error" },
       fetchContext: {
         kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
         tabId: 107,
@@ -1466,7 +1645,7 @@ describe("autoDetectSmart", () => {
     expect(result.success).toBe(true)
     expect(result.data).toMatchObject({
       userId: "19",
-      user: { id: 19, username: "background-after-classifier-error" },
+      user: { id: "19", username: "background-after-classifier-error" },
     })
     expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(1)
   })
@@ -1506,7 +1685,7 @@ describe("autoDetectSmart", () => {
       data: {
         userId: "17",
         user: {
-          id: 17,
+          id: "17",
           username: "fallback-after-site-type-failure",
         },
         siteType: SITE_TYPES.NEW_API,
@@ -1604,7 +1783,7 @@ describe("autoDetectSmart", () => {
       success: true,
       data: {
         userId: "7",
-        user: { id: 7, username: "aihubmix-user" },
+        user: { id: "7", username: "aihubmix-user" },
         siteType: SITE_TYPES.AIHUBMIX,
         accessToken: "console-session-token",
         sub2apiAuth: undefined,
@@ -1706,7 +1885,7 @@ describe("autoDetectSmart", () => {
         data: {
           userId: "31",
           user: {
-            id: 31,
+            id: "31",
             username: "api-fallback-user",
           },
           siteType: SITE_TYPES.NEW_API,
@@ -1753,7 +1932,7 @@ describe("autoDetectSmart", () => {
       success: true,
       data: {
         userId: "7",
-        user: { id: 7, username: "aihubmix-user" },
+        user: { id: "7", username: "aihubmix-user" },
         siteType: SITE_TYPES.AIHUBMIX,
         accessToken: "main-origin-session-token",
         sub2apiAuth: undefined,
@@ -1876,7 +2055,7 @@ describe("autoDetectSmart", () => {
       success: true,
       data: {
         userId: "88",
-        user: { id: 88, username: "background-user" },
+        user: { id: "88", username: "background-user" },
         siteType: SITE_TYPES.NEW_API,
         accessToken: "background-token",
         transientAuth: {
@@ -1926,7 +2105,7 @@ describe("autoDetectSmart", () => {
       success: true,
       data: {
         userId: "89",
-        user: { id: 89, username: "background-user" },
+        user: { id: "89", username: "background-user" },
         siteType: SITE_TYPES.NEW_API,
       },
     })
@@ -2067,7 +2246,7 @@ describe("autoDetectSmart", () => {
       data: {
         userId: "9",
         user: {
-          id: 9,
+          id: "9",
           username: "api-user",
         },
         siteType: SITE_TYPES.NEW_API,
@@ -2103,7 +2282,7 @@ describe("autoDetectSmart", () => {
       data: {
         userId: "23",
         user: {
-          id: 23,
+          id: "23",
           username: "api-after-runtime-throw",
         },
         siteType: SITE_TYPES.NEW_API,
@@ -2148,7 +2327,7 @@ describe("autoDetectSmart", () => {
       data: {
         userId: "24",
         user: {
-          id: 24,
+          id: "24",
           username: "direct-after-api-throw",
         },
         siteType: SITE_TYPES.NEW_API,
@@ -2185,7 +2364,7 @@ describe("autoDetectSmart", () => {
       data: {
         userId: "15",
         user: {
-          id: 15,
+          id: "15",
           username: "api-incognito-context-user",
         },
         siteType: SITE_TYPES.NEW_API,
@@ -2244,10 +2423,10 @@ describe("autoDetectSmart", () => {
       data: {
         userId: "10",
         user: {
-          id: 10,
+          id: "10",
           username: "api-user",
-          access_token: "api-access-token",
         },
+        rawUser: { id: 10, access_token: "api-access-token" },
         siteType: SITE_TYPES.NEW_API,
         accessToken: "api-access-token",
         sub2apiAuth: undefined,
@@ -2261,10 +2440,10 @@ describe("autoDetectSmart", () => {
       data: {
         userId: "11",
         user: {
-          id: 11,
+          id: "11",
           username: "api-user-with-object-token",
-          access_token: { value: "not-a-string" },
         },
+        rawUser: { id: 11, access_token: { value: "not-a-string" } },
         siteType: SITE_TYPES.NEW_API,
         accessToken: undefined,
         sub2apiAuth: undefined,
@@ -2295,7 +2474,7 @@ describe("autoDetectSmart", () => {
       data: {
         userId: "21",
         user: {
-          id: 21,
+          id: "21",
           username: "direct-user",
         },
         siteType: SITE_TYPES.NEW_API,
@@ -2327,7 +2506,7 @@ describe("autoDetectSmart", () => {
       data: {
         userId: "22",
         user: {
-          id: 22,
+          id: "22",
           username: "direct-after-background-failure",
         },
         siteType: SITE_TYPES.NEW_API,
@@ -2376,7 +2555,7 @@ describe("autoDetectSmart", () => {
     expect(result.success).toBe(true)
     expect(result.data).toMatchObject({
       userId: "32",
-      user: { id: 32, username: "background-after-current-tab-throw" },
+      user: { id: "32", username: "background-after-current-tab-throw" },
     })
     expect(result.data).not.toHaveProperty("fetchContext")
     expect(mockReadAccountBrowserSessionFromTab).not.toHaveBeenCalled()
@@ -2512,7 +2691,7 @@ describe("autoDetectSmart", () => {
       data: {
         userId: "42",
         user: {
-          id: 42,
+          id: "42",
           username: "invalid-url-user",
         },
         siteType: SITE_TYPES.NEW_API,

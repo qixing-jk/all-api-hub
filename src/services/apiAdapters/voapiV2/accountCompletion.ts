@@ -36,12 +36,11 @@ export const voApiV2AccountCompletion: AccountCompletionCapability = {
       )
     }
 
-    const detectedUser = detected.user as Record<string, unknown> | undefined
     const userId = helpers.trimString(detected.userId) || String(userInfo.id)
     const username =
-      helpers.trimString(detectedUser?.username) ||
-      helpers.trimString(detectedUser?.display_name) ||
-      helpers.trimString(detectedUser?.email) ||
+      helpers.trimString(detected.user?.username) ||
+      helpers.trimString(detected.rawUser?.display_name) ||
+      helpers.trimString(detected.rawUser?.email) ||
       helpers.trimString(userInfo.username) ||
       helpers.trimString(userInfo.nickname) ||
       userId

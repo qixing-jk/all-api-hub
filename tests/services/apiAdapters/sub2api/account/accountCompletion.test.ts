@@ -65,7 +65,7 @@ describe("sub2ApiAccountCompletion", () => {
         detected: {
           userId: "12",
           user: {
-            id: 12,
+            id: "12",
             username: "  ",
           },
           siteType: SITE_TYPES.SUB2API,

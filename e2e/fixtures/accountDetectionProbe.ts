@@ -1,3 +1,4 @@
+import { AUTO_DETECT_DIAGNOSTIC_EVENTS } from "~/constants/autoDetect"
 import type { AccountDetectionDiagnostics } from "~/services/accountSiteOnboarding/diagnostics"
 import { createUserCommandProtectionBypassExecution } from "~/services/protectionBypass/client"
 import {
@@ -7,8 +8,21 @@ import {
 import { autoDetectFromCurrentTab } from "~/services/siteDetection/sources/currentTab"
 import { autoDetectDirect } from "~/services/siteDetection/sources/direct"
 
+import { ACCOUNT_DETECTION_PROBE_SOURCES } from "./accountDetectionProbeSources"
+
+const SAFE_DIAGNOSTIC_DETAIL_KEYS = new Set([
+  "source",
+  "strategy",
+  "success",
+  "reason",
+  "from",
+  "to",
+  "mode",
+  "requestedMode",
+])
+
 export type AccountDetectionProbeInput = {
-  source: "current_tab" | "direct"
+  source: (typeof ACCOUNT_DETECTION_PROBE_SOURCES)[keyof typeof ACCOUNT_DETECTION_PROBE_SOURCES]
   url: string
   tabId: number
 }
@@ -25,25 +39,20 @@ export async function accountDetectionProbe(input: AccountDetectionProbeInput) {
   const diagnostics: AccountDetectionDiagnostics = {
     requestId: crypto.randomUUID(),
     record(event, details = {}) {
-      const safeKeys = [
-        "source",
-        "strategy",
-        "success",
-        "reason",
-        "from",
-        "to",
-        "mode",
-        "requestedMode",
-      ]
       events.push({
         event,
         ...Object.fromEntries(
-          Object.entries(details).filter(([key]) => safeKeys.includes(key)),
+          Object.entries(details).filter(([key]) =>
+            SAFE_DIAGNOSTIC_DETAIL_KEYS.has(key),
+          ),
         ),
       })
     },
     finish(outcome) {
-      events.push({ event: "detection_finished", outcome })
+      events.push({
+        event: AUTO_DETECT_DIAGNOSTIC_EVENTS.DetectionFinished,
+        outcome,
+      })
     },
   }
   const execution = createUserCommandProtectionBypassExecution(
@@ -52,16 +61,15 @@ export async function accountDetectionProbe(input: AccountDetectionProbeInput) {
   )
   try {
     const result =
-      input.source === "current_tab"
-        ? await autoDetectFromCurrentTab(
-            input.url,
-            input.tabId,
-            false,
-            undefined,
-            execution,
+      input.source === ACCOUNT_DETECTION_PROBE_SOURCES.CurrentTab
+        ? await autoDetectFromCurrentTab({
+            url: input.url,
+            tabId: input.tabId,
+            incognito: false,
+            protectionBypassExecution: execution,
             diagnostics,
-          )
-        : await autoDetectDirect(input.url, undefined, diagnostics)
+          })
+        : await autoDetectDirect({ url: input.url, diagnostics })
     await observation.finish()
     return {
       success: result.success,

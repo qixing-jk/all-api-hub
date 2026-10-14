@@ -1,43 +1,36 @@
-import { type AccountSiteType } from "~/constants/siteType"
+import {
+  AUTO_DETECT_DIAGNOSTIC_EVENTS,
+  AUTO_DETECT_FAILURE_REASONS,
+  AUTO_DETECT_SESSION_SOURCES,
+  AUTO_DETECT_SOURCE_REASONS,
+} from "~/constants/autoDetect"
 import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
-import { type AccountDetectionDiagnostics } from "~/services/accountSiteOnboarding/diagnostics"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { summarizeApiServiceFetchContext } from "~/services/apiTransport/type"
-import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
-import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
-import type { AutoDetectFetchContext } from "../autoDetectContracts"
+import type { ApiAutoDetectRequest } from "../autoDetectContracts"
 import type { UserDataResult } from "./resultAssembly"
 
 const logger = createLogger("AutoDetectService")
 
 /**
- * Resolve the account-bootstrap capability used by API fallback.
- * @param siteType Detected site type used to select an adapter.
- * @returns Account-bootstrap capability when supported.
- */
-function getAccountBootstrapForApiFallback(siteType: AccountSiteType) {
-  return getSiteTypeCapabilities(siteType).account?.bootstrap
-}
-
-/**
  * Fetch user data via upstream API (cookie-based).
- * @param url Base site URL used for API calls.
- * @param siteType Detected site type used to select an API implementation.
  * @returns UserDataResult when ID present; otherwise null.
  */
-export async function getUserDataViaAPI(
-  url: string,
-  siteType: AccountSiteType,
-  fetchContext?: AutoDetectFetchContext,
-  tempWindowRequestSource?: TempWindowRequestSource,
-  protectionBypassExecution?: ProtectionBypassExecution,
-  diagnostics?: AccountDetectionDiagnostics,
-): Promise<UserDataResult | null> {
-  diagnostics?.record("api_session_started", { siteType })
+export async function getUserDataViaAPI({
+  url,
+  siteType,
+  fetchContext,
+  tempWindowRequestSource,
+  protectionBypassExecution,
+  diagnostics,
+}: ApiAutoDetectRequest): Promise<UserDataResult | null> {
+  diagnostics?.record(AUTO_DETECT_DIAGNOSTIC_EVENTS.ApiSessionStarted, {
+    siteType,
+  })
   try {
     if (fetchContext) {
       logger.debug("API auto-detect using browser fetch context", {
@@ -47,11 +40,12 @@ export async function getUserDataViaAPI(
       })
     }
 
-    const accountBootstrap = getAccountBootstrapForApiFallback(siteType)
+    const accountBootstrap =
+      getSiteTypeCapabilities(siteType).account?.bootstrap
     if (!accountBootstrap) {
-      diagnostics?.record("source_skipped", {
-        source: "api",
-        reason: "capability_unavailable",
+      diagnostics?.record(AUTO_DETECT_DIAGNOSTIC_EVENTS.SourceSkipped, {
+        source: AUTO_DETECT_SESSION_SOURCES.Api,
+        reason: AUTO_DETECT_SOURCE_REASONS.CapabilityUnavailable,
         siteType,
       })
       logger.warn("Account bootstrap capability is unavailable", {
@@ -72,9 +66,9 @@ export async function getUserDataViaAPI(
     })
     const userId = normalizeAccountIdentity(userInfo?.id)
     if (!userInfo || !userId) {
-      diagnostics?.record("session_invalid", {
-        source: "api",
-        reason: "user_id_missing",
+      diagnostics?.record(AUTO_DETECT_DIAGNOSTIC_EVENTS.SessionInvalid, {
+        source: AUTO_DETECT_SESSION_SOURCES.Api,
+        reason: AUTO_DETECT_FAILURE_REASONS.UserIdMissing,
         siteType,
       })
       logger.debug("API auto-detect returned no user id", {
@@ -84,10 +78,13 @@ export async function getUserDataViaAPI(
       })
       return null
     }
-    diagnostics?.record("api_session_finished", { success: true, siteType })
+    diagnostics?.record(AUTO_DETECT_DIAGNOSTIC_EVENTS.ApiSessionFinished, {
+      success: true,
+      siteType,
+    })
     return {
       userId,
-      user: userInfo,
+      user: { ...userInfo },
       accessToken:
         typeof userInfo.access_token === "string"
           ? userInfo.access_token
@@ -96,7 +93,7 @@ export async function getUserDataViaAPI(
       ...(fetchContext ? { fetchContext } : {}),
     }
   } catch (error) {
-    diagnostics?.record("api_session_failed", {
+    diagnostics?.record(AUTO_DETECT_DIAGNOSTIC_EVENTS.ApiSessionFailed, {
       siteType,
       error: getErrorMessage(error),
     })

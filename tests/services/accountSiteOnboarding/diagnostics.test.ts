@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession/types"
-import { createAccountDetectionDiagnostics } from "~/services/accountSiteOnboarding/diagnostics"
+import {
+  ACCOUNT_DETECTION_OUTCOMES,
+  createAccountDetectionDiagnostics,
+} from "~/services/accountSiteOnboarding/diagnostics"
 
 const { log, send } = vi.hoisted(() => ({ log: vi.fn(), send: vi.fn() }))
 vi.mock("~/utils/core/logger", () => ({
@@ -22,7 +25,9 @@ describe("account detection diagnostics", () => {
         source: ACCOUNT_BROWSER_SESSION_SOURCES.EXISTING_TAB,
         index,
       })
-    trace.finish("failed", { reason: "no_usable_session" })
+    trace.finish(ACCOUNT_DETECTION_OUTCOMES.Failed, {
+      reason: "no_usable_session",
+    })
     const summary = log.mock.calls.at(-1)?.[1]
     expect(summary).toMatchObject({
       requestId: "detect-1",
@@ -67,7 +72,7 @@ describe("account detection diagnostics", () => {
     const trace = createAccountDetectionDiagnostics({ relayToBackground: true })
     expect(() => {
       trace.record("refresh_started")
-      trace.finish("failed")
+      trace.finish(ACCOUNT_DETECTION_OUTCOMES.Failed)
     }).not.toThrow()
     log.mockReset()
   })

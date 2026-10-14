@@ -69,7 +69,7 @@ describe("aihubmixAccountCompletion", () => {
         detected: {
           userId: "11",
           user: {
-            id: 11,
+            id: "11",
             username: "  aihubmix-user  ",
           },
           siteType: SITE_TYPES.AIHUBMIX,
@@ -186,7 +186,7 @@ describe("aihubmixAccountCompletion", () => {
           detected: {
             userId: "13",
             user: {
-              id: 13,
+              id: "13",
               username: "  ",
             },
             siteType: SITE_TYPES.AIHUBMIX,
@@ -247,7 +247,7 @@ describe("aihubmixAccountCompletion", () => {
           detected: {
             userId: "15",
             user: {
-              id: 15,
+              id: "15",
               username: "aihubmix-user",
             },
             siteType: SITE_TYPES.AIHUBMIX,
@@ -283,7 +283,7 @@ describe("aihubmixAccountCompletion", () => {
         detected: {
           userId: "16",
           user: {
-            id: 16,
+            id: "16",
             username: "aihubmix-user",
           },
           siteType: SITE_TYPES.AIHUBMIX,

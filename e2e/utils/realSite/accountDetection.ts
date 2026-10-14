@@ -7,6 +7,7 @@ import type {
   accountDetectionProbe,
   AccountDetectionProbeInput,
 } from "~~/e2e/fixtures/accountDetectionProbe"
+import { ACCOUNT_DETECTION_PROBE_SOURCES } from "~~/e2e/fixtures/accountDetectionProbeSources"
 import { expect, test as extensionTest } from "~~/e2e/fixtures/extensionTest"
 import {
   forceExtensionLanguage,
@@ -61,13 +62,7 @@ const test = extensionTest.extend<{ detectionCleanup: DetectionCleanup }>({
   ],
 })
 
-/**
- * Register the source matrix using one login and one isolated profile per target.
- * @param target Real-site login/configuration adapter and expected identity type.
- */
-export function registerRealSiteAccountDetectionTests<
-  C extends { baseUrl: string },
->(target: {
+type RealSiteAccountDetectionTarget<C extends { baseUrl: string }> = {
   label: string
   siteType: AccountSiteType
   cookieBootstrap: boolean
@@ -80,7 +75,15 @@ export function registerRealSiteAccountDetectionTests<
     userId: string
     cleanup?: () => Promise<void>
   }>
-}) {
+}
+
+/**
+ * Register the source matrix using one login and one isolated profile per target.
+ * @param target Real-site login/configuration adapter and expected identity type.
+ */
+export function registerRealSiteAccountDetectionTests<
+  C extends { baseUrl: string },
+>(target: RealSiteAccountDetectionTarget<C>) {
   test.describe(`${target.label} real detection sources`, () => {
     test.describe.configure({ retries: 0 })
     test("identifies the same real user through each applicable detection source", async ({
@@ -383,12 +386,15 @@ export function registerRealSiteAccountDetectionTests<
                 success: true,
                 userId: expectedId,
               })
-              for (const source of ["direct", "current_tab"] as const) {
+              for (const source of [
+                ACCOUNT_DETECTION_PROBE_SOURCES.Direct,
+                ACCOUNT_DETECTION_PROBE_SOURCES.CurrentTab,
+              ] as const) {
                 const result = await probe(source)
                 expect(result.success).toBe(false)
                 expect(result.userId).toBeUndefined()
                 expect(result.strategy).toBe(
-                  source === "direct"
+                  source === ACCOUNT_DETECTION_PROBE_SOURCES.Direct
                     ? AUTO_DETECT_STRATEGIES.DirectApi
                     : AUTO_DETECT_STRATEGIES.FallbackApi,
                 )
@@ -402,11 +408,11 @@ export function registerRealSiteAccountDetectionTests<
               expect(nativeSelf.success).toBe(true)
               expect(String(nativeSelf.userId)).toBe(expectedId)
               expectIdentity(
-                await probe("direct"),
+                await probe(ACCOUNT_DETECTION_PROBE_SOURCES.Direct),
                 AUTO_DETECT_STRATEGIES.DirectApi,
               )
               expectIdentity(
-                await probe("current_tab"),
+                await probe(ACCOUNT_DETECTION_PROBE_SOURCES.CurrentTab),
                 AUTO_DETECT_STRATEGIES.FallbackApi,
               )
             }
@@ -504,7 +510,7 @@ export function registerRealSiteAccountDetectionTests<
         // Grant first so this proves cookie absence rather than a denied read.
         await grantCookiesThroughUi()
         await context.clearCookies()
-        const result = await probe("direct")
+        const result = await probe(ACCOUNT_DETECTION_PROBE_SOURCES.Direct)
         expect(result.success).toBe(false)
         expect(result.userId).toBeUndefined()
         expect(result.events).toEqual(

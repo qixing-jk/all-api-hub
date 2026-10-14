@@ -48,7 +48,7 @@ describe("voApiV2AccountCompletion", () => {
         detected: {
           userId: "42",
           user: {
-            id: 42,
+            id: "42",
             username: "  dashboard-owner  ",
           },
           siteType: SITE_TYPES.VO_API_V2,
@@ -99,6 +99,45 @@ describe("voApiV2AccountCompletion", () => {
       },
     })
   })
+
+  it.each([
+    {
+      rawUser: { display_name: "  Dashboard Name  " },
+      expected: "Dashboard Name",
+    },
+    {
+      rawUser: { email: "owner@example.invalid" },
+      expected: "owner@example.invalid",
+    },
+  ])(
+    "preserves the native name fallback $expected",
+    async ({ rawUser, expected }) => {
+      vi.mocked(fetchVoApiV2UserInfo).mockResolvedValueOnce({
+        id: 42,
+        username: "api-owner",
+        nickname: "API Owner",
+      })
+      const result = await voApiV2AccountCompletion.complete(
+        {
+          url: "https://voapi.example.invalid",
+          requestedAuthType: AuthTypeEnum.AccessToken,
+          detected: {
+            userId: "42",
+            user: { id: "42" },
+            rawUser,
+            siteType: SITE_TYPES.VO_API_V2,
+            accessToken: "dashboard-jwt",
+          },
+          context: {},
+        },
+        helpers,
+      )
+      expect(result.username).toBe(expected)
+      expect(captureRecoveryData).toHaveBeenCalledWith(
+        expect.objectContaining({ username: expected }),
+      )
+    },
+  )
 
   it("classifies missing dashboard JWT as an access-token completion failure", async () => {
     await expect(

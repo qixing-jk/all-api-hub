@@ -33,6 +33,7 @@ interface DetectedAccountRecoverySource {
   siteType: AccountSiteType
   userId?: unknown
   user?: unknown
+  rawUser?: Record<string, unknown>
   accessToken?: unknown
   transientAuth?: ContentSessionTransientAuth
   sub2apiAuth?: Sub2ApiAuthConfig
@@ -53,10 +54,10 @@ export function createDetectedAccountRecoveryData(params: {
       : undefined
   const username = [
     detectedUser?.username,
-    detectedUser?.name,
-    detectedUser?.display_name,
-    detectedUser?.nickname,
-    detectedUser?.email,
+    detected.rawUser?.name ?? detectedUser?.name,
+    detected.rawUser?.display_name ?? detectedUser?.display_name,
+    detected.rawUser?.nickname ?? detectedUser?.nickname,
+    detected.rawUser?.email ?? detectedUser?.email,
   ].find(
     (value): value is string => typeof value === "string" && !!value.trim(),
   )

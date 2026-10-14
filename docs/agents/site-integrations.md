@@ -11,12 +11,16 @@ Site type, account/managed scope, and adapter family are separate decisions. A d
 | Which types, scopes, families, onboarding defaults and product profiles are registered? | [Site definitions](../../src/services/accountSiteDefinitions/definitions.ts), with [identifiers](../../src/services/accountSiteDefinitions/identifiers.ts) and [registry accessors](../../src/services/accountSiteDefinitions/registry.ts) |
 | Which domains share a deployment policy? | [Deployment definitions](../../src/services/accountSiteDefinitions/deployments.ts) and [API-origin mappings](../../src/constants/deploymentApiOrigins.ts) |
 | How is a site detected during onboarding? | [Site detection](../../src/services/siteDetection/detectSiteType.ts) |
+| Who selects account-detection sources and final errors? | [Detection entrypoint](../../src/services/siteDetection/autoDetectService.ts) owns target-origin policy, final API fallback and diagnostic completion; [browser source orchestration](../../src/services/siteDetection/autoDetectSources.ts) owns tab selection, browser-profile inheritance and browser recovery |
+| Where do detection sources read and assemble account sessions? | [Source adapters](../../src/services/siteDetection/sources/), with shared [request/result contracts](../../src/services/siteDetection/autoDetectContracts.ts); browser reads go through [account browser sessions](../../src/services/accountBrowserSession/sessionReader.ts) |
 | Which account capabilities are dispatched? | [Adapter registry](../../src/services/apiAdapters/registry.ts) and the selected family/variant |
 | Where do authentication and wire-protocol differences belong? | [API services](../../src/services/apiService/) and the owning adapter |
 | Where are management operations and native resources implemented? | [Managed sites](../../src/services/apiAdapters/managedSites/) and [native resource adapters](../../src/services/apiAdapters/managedResources/README.md) |
 | How are check-in methods discovered and executed? | [Method registry and providers](../../src/services/checkin/autoCheckin/providers/registry.ts); follow the [check-in workflow](../../.agents/skills/add-site-integration/references/check-in.md) |
 
 `src/constants/siteType.ts` is a compatibility facade over the definition registry. Provider directories, detection rules and documentation lists are not separate support declarations.
+
+Account detection retains the active browser profile when selecting current or existing tabs and when recovering through a temporary context. A matched current tab first recovers through background detection with its tab fetch context; ordinary background detection can then retry with the inherited browser profile. Browser exhaustion returns an advisory reload hint, while the entrypoint still tries direct API detection and preserves more specific failures. Source adapters accept named request objects so bypass intent, diagnostics and browser context are explicit at each handoff. Temporary-context acquisition, sharing and release remain owned by the [browsing-context runtime](../../src/services/browsingContext/), behind the protection-bypass task boundary.
 
 ## Site types and upstream relationships
 
