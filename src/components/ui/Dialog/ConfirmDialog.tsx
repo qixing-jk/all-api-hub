@@ -1,5 +1,5 @@
 import { CircleHelp, TriangleAlert, type LucideIcon } from "lucide-react"
-import type { ReactNode } from "react"
+import { isValidElement, type ReactElement, type ReactNode } from "react"
 
 import { ActionGroup } from "~/components/ui/ActionGroup"
 import { Button } from "~/components/ui/button"
@@ -68,9 +68,9 @@ interface ConfirmDialogProps {
    */
   cancelButtonTestId?: string
   /**
-   * Optional action-specific header icon; its color follows the action intent.
+   * Optional header icon. Lucide icons follow the intent color; custom elements retain their branding.
    */
-  icon?: LucideIcon
+  icon?: LucideIcon | ReactElement
 }
 
 const intentPresentation = {
@@ -114,7 +114,9 @@ export function ConfirmDialog({
   icon,
 }: ConfirmDialogProps) {
   const presentation = intentPresentation[intent]
-  const Icon = icon ?? presentation.icon
+  const Icon = isValidElement(icon)
+    ? presentation.icon
+    : icon ?? presentation.icon
 
   return (
     <Modal
@@ -128,10 +130,16 @@ export function ConfirmDialog({
       header={
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <Icon
-              className={`h-5 w-5 ${presentation.iconClassName}`}
-              aria-hidden="true"
-            />
+            {isValidElement(icon) ? (
+              <span aria-hidden="true" className="shrink-0">
+                {icon}
+              </span>
+            ) : (
+              <Icon
+                className={`h-5 w-5 ${presentation.iconClassName}`}
+                aria-hidden="true"
+              />
+            )}
             <h2 className="text-foreground text-lg font-semibold">{title}</h2>
           </div>
         </div>

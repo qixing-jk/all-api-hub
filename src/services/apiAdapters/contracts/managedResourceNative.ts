@@ -130,6 +130,7 @@ export type ManagedChannelImportCreateSeed = {
   name: string
   channelType: string
   credential: string
+  credentials?: readonly string[]
   baseUrl: string
   enabled: boolean
   models: readonly string[]
@@ -174,6 +175,11 @@ export interface ResourceEditor {
 }
 
 export interface ManagedResourceWorkspace {
+  appendImportCredentials?(
+    ref: ManagedResourceRef,
+    seed: ManagedChannelImportCreateSeed,
+    options?: ResourceOperationOptions,
+  ): Promise<ManagedSiteMutationResult<ResourceDisplayFacts>>
   /** Complete native credentials, read afresh for explicit linked-key cleanup. */
   openKeyCleanup?: (
     ref: ManagedResourceRef,
@@ -217,9 +223,13 @@ export interface ManagedResourceKeyCleanup {
 }
 
 export interface ManagedResourceRegistration {
+  readonly canAppendImportCredentials?: boolean
   readonly siteType: ManagedSiteType
   readonly kind: ManagedResourceKind
   readonly createSeedKinds?: readonly ManagedResourceCreateSeedKind[]
+  supportsMultipleImportCredentials?(
+    seed: ManagedChannelImportCreateSeed,
+  ): boolean
   /** Checks an import without opening a workspace; issue fields refer to the input seed. */
   validateCreateSeed?(seed: ManagedResourceCreateSeed): ResourceValidationResult
   open(options?: ResourceOperationOptions): Promise<ManagedResourceWorkspace>

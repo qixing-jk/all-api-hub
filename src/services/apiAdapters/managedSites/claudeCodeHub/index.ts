@@ -1,5 +1,6 @@
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { SITE_TYPES } from "~/constants/siteType"
+import { readEdgeKeyMask } from "~/services/accountTokens/keyMaskEvidence"
 import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type {
   ManagedSiteCapabilities,
@@ -50,28 +51,35 @@ const matching: ManagedResourceMatchingCapability<ClaudeCodeHubConfig> = {
   search: async (config, keyword, options) =>
     runClaudeCodeHubResourceRead(config, async () => {
       const items = (await searchProviders(config, keyword, options)).map(
-        (provider) => ({
-          ref: createManagedChannelResourceRef(
-            SITE_TYPES.CLAUDE_CODE_HUB,
-            config.baseUrl,
-            provider.id,
-          ),
-          name: provider.name || `Provider ${provider.id}`,
-          type:
-            provider.providerType ||
-            CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
-          base_url: provider.url ?? "",
-          key: provider.maskedKey ?? provider.key ?? "",
-          models: normalizeList(
-            (provider.allowedModels ?? []).map((model) =>
-              typeof model === "string"
-                ? model
-                : !model.matchType || model.matchType === "exact"
-                  ? model.pattern ?? ""
-                  : "",
+        (provider) => {
+          // ding113/claude-code-hub src/lib/utils/validation/index.ts:maskKey.
+          // Only the explicit masked field carries the confirmed single-key contract.
+          const keyMask = readEdgeKeyMask(provider.maskedKey)
+          return {
+            ref: createManagedChannelResourceRef(
+              SITE_TYPES.CLAUDE_CODE_HUB,
+              config.baseUrl,
+              provider.id,
             ),
-          ).join(","),
-        }),
+            name: provider.name || `Provider ${provider.id}`,
+            type:
+              provider.providerType ||
+              CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+            base_url: provider.url ?? "",
+            // Unknown masked formats must never become comparable plaintext.
+            key: provider.maskedKey != null ? "" : provider.key ?? "",
+            ...(keyMask ? { keyMasks: [keyMask] } : {}),
+            models: normalizeList(
+              (provider.allowedModels ?? []).map((model) =>
+                typeof model === "string"
+                  ? model
+                  : !model.matchType || model.matchType === "exact"
+                    ? model.pattern ?? ""
+                    : "",
+              ),
+            ).join(","),
+          }
+        },
       )
       return { items, total: items.length, type_counts: {} }
     }),

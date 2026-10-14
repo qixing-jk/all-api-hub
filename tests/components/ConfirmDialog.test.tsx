@@ -1,5 +1,5 @@
 import userEvent from "@testing-library/user-event"
-import { SendToBack } from "lucide-react"
+import { Download } from "lucide-react"
 import { describe, expect, it, vi } from "vitest"
 
 import { ConfirmDialog } from "~/components/ui"
@@ -156,19 +156,36 @@ describe("ConfirmDialog", () => {
         confirmLabel="Import"
         cancelLabel="Cancel"
         onConfirm={vi.fn()}
-        icon={SendToBack}
+        icon={Download}
       />,
     )
 
     const dialog = await screen.findByRole("dialog", {
       name: "Import selected keys",
     })
-    expect(dialog.querySelector(".lucide-send-to-back")).toHaveClass(
-      "text-link",
-    )
+    expect(dialog.querySelector(".lucide-download")).toHaveClass("text-link")
     expect(screen.getByRole("button", { name: "Import" })).toHaveAttribute(
       "data-variant",
       "default",
     )
+  })
+
+  it("supports a managed-site brand icon in the confirmation header", async () => {
+    render(
+      <ConfirmDialog
+        isOpen
+        onClose={vi.fn()}
+        title="Import to Magpie"
+        description="Import selected keys."
+        confirmLabel="Import"
+        cancelLabel="Cancel"
+        onConfirm={vi.fn()}
+        icon={<img alt="Magpie" src="/magpie.svg" />}
+      />,
+    )
+    expect(await screen.findByAltText("Magpie")).toBeInTheDocument()
+    expect(
+      screen.getByRole("dialog", { name: "Import to Magpie" }),
+    ).toContainElement(screen.getByAltText("Magpie"))
   })
 })

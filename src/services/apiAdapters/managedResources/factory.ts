@@ -5,6 +5,7 @@ import {
   MANAGED_RESOURCE_FAILURE_CODES,
   ManagedResourceError,
   type EditableResourceProjection,
+  type ManagedChannelImportCreateSeed,
   type ManagedResourceCreateSeed,
   type ManagedResourceCreateSeedKind,
   type ManagedResourceKeyCleanup,
@@ -37,6 +38,7 @@ import {
   type ManagedSiteMutationConfirmedEffect,
   type ManagedSiteMutationResult,
 } from "~/services/managedSites/mutations/contracts"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 
 export type NativeResourcePage<TItem> = {
   items: readonly TItem[]
@@ -47,6 +49,9 @@ export type NativeResourcePage<TItem> = {
 export type NativeResourceCreateSeedBinding = {
   [TKind in ManagedResourceCreateSeedKind]: {
     kind: TKind
+    supportsMultipleCredentials?(
+      seed: Extract<ManagedResourceCreateSeed, { kind: TKind }>,
+    ): boolean
     project(
       seed: Extract<ManagedResourceCreateSeed, { kind: TKind }>,
     ): EditableResourceProjection
@@ -80,6 +85,12 @@ export type NativeResourceKindDefinition<
   /** Config-backed providers may derive identity from editable connection values. */
   updateChangesIdentity?: boolean
   createSeedBindings?: readonly NativeResourceCreateSeedBinding[]
+  appendImportCredentials?(
+    config: TConfig,
+    locator: TLocator,
+    seed: ManagedChannelImportCreateSeed,
+    options?: ResourceOperationOptions,
+  ): Promise<ManagedSiteMutationResult<TDetail>>
   openConfig(options?: ResourceOperationOptions): Promise<TConfig>
   scopeKey(config: TConfig): string
   encodeLocator(locator: TLocator): string
@@ -189,6 +200,11 @@ export function defineNativeResourceKind<
     siteType: definition.siteType,
     kind: definition.kind,
     createSeedKinds,
+    canAppendImportCredentials: Boolean(definition.appendImportCredentials),
+    supportsMultipleImportCredentials: (seed) =>
+      definition.createSeedBindings
+        ?.find((binding) => binding.kind === seed.kind)
+        ?.supportsMultipleCredentials?.(seed) === true,
     ...(createSeedKinds.length
       ? {
           validateCreateSeed: (
@@ -198,7 +214,39 @@ export function defineNativeResourceKind<
               (candidate) => candidate.kind === seed.kind,
             )
             if (!binding) throw invalidPublicInput()
-            const validation = binding.validate(binding.project(seed))
+            if (
+              (seed.credentials?.length ?? 0) > 1 &&
+              binding.supportsMultipleCredentials?.(seed) !== true
+            )
+              throw new ManagedResourceError({ code: "unavailable" })
+            const credentials = seed.credentials ?? [seed.credential]
+            if (
+              seed.credentials &&
+              (!credentials.length ||
+                credentials.some(
+                  (key) =>
+                    !hasUsableManagedSiteChannelKey(key) || /[\r\n]/.test(key),
+                ))
+            ) {
+              return {
+                valid: false,
+                issues: [{ fieldId: "credential", code: "invalid_value" }],
+              }
+            }
+            // The synchronous binding validates each native scalar input; the
+            // opened editor validates the structured list and its command.
+            const validations = credentials.map((credential) =>
+              binding.validate(
+                binding.project({
+                  ...seed,
+                  credential,
+                  credentials: undefined,
+                }),
+              ),
+            )
+            const validation = validations.find((result) => !result.valid) ?? {
+              valid: true as const,
+            }
             return validation.valid
               ? validation
               : {
@@ -363,6 +411,47 @@ export function defineNativeResourceKind<
         }
         const rejectUnsupported = () => Promise.reject(invalidPublicInput())
         const workspace: ManagedResourceWorkspace = {
+          ...(definition.appendImportCredentials
+            ? {
+                appendImportCredentials: (
+                  ref: ManagedResourceRef,
+                  seed: ManagedChannelImportCreateSeed,
+                  appendOptions?: ResourceOperationOptions,
+                ) =>
+                  mapOperationFailure(async () => {
+                    if (!capabilities.canUpdate) throw invalidPublicInput()
+                    const { ref: canonicalRef, locator } = decodeRef(ref)
+                    const result = await definition.appendImportCredentials!(
+                      config,
+                      locator,
+                      seed,
+                      appendOptions,
+                    )
+                    assertManagedSiteMutationResult(result, {
+                      idempotent: true,
+                    })
+                    switch (result.outcome) {
+                      case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded:
+                        return {
+                          ...result,
+                          data: projectDetailAtRef(result.data, canonicalRef),
+                        }
+                      case MANAGED_SITE_MUTATION_OUTCOMES.Partial:
+                        return result.data === undefined
+                          ? (result as ManagedSiteMutationResult<ResourceDisplayFacts>)
+                          : {
+                              ...result,
+                              data: projectDetailAtRef(
+                                result.data,
+                                canonicalRef,
+                              ),
+                            }
+                      default:
+                        return result
+                    }
+                  }, mapFailure),
+              }
+            : {}),
           ...(definition.keyCleanup || definition.scalarKeyCleanup
             ? {
                 openKeyCleanup: (
@@ -479,6 +568,15 @@ export function defineNativeResourceKind<
                     : undefined
                   if (createSeed && !createSeedBinding) {
                     throw invalidPublicInput()
+                  }
+                  if (
+                    createSeed &&
+                    (createSeed.credentials?.length ?? 0) > 1 &&
+                    createSeedBinding?.supportsMultipleCredentials?.(
+                      createSeed,
+                    ) !== true
+                  ) {
+                    throw new ManagedResourceError({ code: "unavailable" })
                   }
                   const seedProjection =
                     createSeed && createSeedBinding

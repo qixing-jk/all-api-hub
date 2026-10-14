@@ -32,6 +32,7 @@ import {
   credentialFingerprint,
   withCredentialListEditor,
 } from "~/services/apiAdapters/managedResources/shared/credentialListEditor"
+import { importCredentialValue } from "~/services/apiAdapters/managedResources/shared/importCredentials"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import type { GptLoadCredential } from "~/types/gptLoad"
 
@@ -323,10 +324,7 @@ export const createImportProjection = (
   [fields.Provider]: seed.channelType.trim() || GPT_LOAD_DEFAULT_CHANNEL_ID,
   [fields.BaseUrl]: seed.baseUrl,
   [fields.Models]: [...seed.models],
-  [fields.Key]: {
-    kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Replace,
-    value: seed.credential,
-  },
+  [fields.Key]: importCredentialValue(seed),
 })
 
 /** Masked metadata rows for the editor's saved credential pool. */

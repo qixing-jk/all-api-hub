@@ -34,6 +34,7 @@ import {
 } from "~/services/apiAdapters/managedResources/newApi/resourceUtils"
 import type { NewApiFamilyChannelFields } from "~/services/apiAdapters/managedResources/newApiFamily/channelFields"
 import { createNewApiFamilyResourceFacts } from "~/services/apiAdapters/managedResources/newApiFamily/resourceFacts"
+import { importCredentialValue } from "~/services/apiAdapters/managedResources/shared/importCredentials"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { CHANNEL_STATUS } from "~/types/newApi"
 import type { NewApiFamilyChannelCommand } from "~/types/newApiFamilyChannelEditor"
@@ -466,10 +467,7 @@ const projectNewApiImportSeed = (
     seed.enabled ? policy.status.Enable : policy.status.ManuallyDisabled,
   ),
   [policy.fields.BaseUrl]: seed.baseUrl,
-  [policy.fields.Key]: {
-    kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Replace,
-    value: seed.credential,
-  },
+  [policy.fields.Key]: importCredentialValue(seed),
   [policy.fields.Models]: normalizeList(seed.models),
   [policy.fields.Groups]: [...DEFAULT_CHANNEL_FIELDS.groups],
   [policy.fields.Priority]: DEFAULT_CHANNEL_FIELDS.priority,

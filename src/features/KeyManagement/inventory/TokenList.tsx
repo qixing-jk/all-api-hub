@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, Library, SendToBack } from "lucide-react"
+import { ChevronDown, ChevronUp, Library } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
@@ -345,10 +345,13 @@ export function TokenList(props: TokenListProps) {
               type="button"
               disabled={selectedManagedSiteBatchItems.length === 0}
               onClick={openBatchExportDialog}
-              leftIcon={<SendToBack className="h-4 w-4" />}
+              leftIcon={
+                <span aria-hidden="true">
+                  <ManagedSiteIcon siteType={managedSiteType} size="sm" />
+                </span>
+              }
             >
               <span className="gap-density-1 inline-flex items-center">
-                <ManagedSiteIcon siteType={managedSiteType} size="sm" />
                 {t("batchManagedSiteExport.actions.open", {
                   site: managedSiteLabel,
                   selectedCount: selectedManagedSiteBatchItems.length,

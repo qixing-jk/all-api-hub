@@ -14,6 +14,7 @@ import {
   invalid,
   providerKind,
 } from "~/services/apiAdapters/managedResources/cliProxyApi/nativeRuntime"
+import { importCredentialList } from "~/services/apiAdapters/managedResources/shared/importCredentials"
 import {
   CLI_PROXY_API_PROVIDER_KINDS,
   type CliProxyApiProvider,
@@ -406,16 +407,7 @@ export function importProjection(
     name: seed.name,
     baseURL: seed.baseUrl,
     key: { kind: "replace", value: seed.credential },
-    credentials: {
-      kind: "secret-list",
-      entries: [
-        {
-          id: "new",
-          secret: { kind: "replace", value: seed.credential },
-          fields: {},
-        },
-      ],
-    },
+    credentials: importCredentialList(seed),
     supportedModels: seed.models.join("\n"),
   }
 }

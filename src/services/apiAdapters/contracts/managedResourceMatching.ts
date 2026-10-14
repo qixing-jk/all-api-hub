@@ -52,6 +52,8 @@ export interface ManagedResourceMatchingCapability<
   exactMatchBasis?: (typeof MANAGED_RESOURCE_EXACT_MATCH_BASES)[keyof typeof MANAGED_RESOURCE_EXACT_MATCH_BASES]
   /** Complete, unfiltered canonical inventories can be indexed once per read-only batch. */
   searchInventoryMode?: typeof MANAGED_RESOURCE_SEARCH_INVENTORY_MODES.FULL
+  /** Convert a credential to the identity used by this gateway's native key pool. */
+  getKeyIdentity?(key: string): Promise<string>
   search(
     config: TConfig,
     baseUrl: string,

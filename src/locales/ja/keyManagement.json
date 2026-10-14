@@ -93,10 +93,32 @@
       "models": "モデル"
     },
     "gatewayDescription": "アカウントキーをセルフホスト AI ゲートウェイチャネルとして取り込みます。取り込み後は、複数のキーを 1 つの AI API からクライアントで利用できます。",
+    "importMode": {
+      "appendTo": "既存のチャネルに追加：{{name}}",
+      "chooseTarget": "キーを追加するチャネルを選択",
+      "createNew": "新しいチャネルを作成",
+      "grouped": "同じサイトのキーを1つの新しいチャネルにまとめる",
+      "independent": "キーごとに新しいチャネルを作成",
+      "keyCount_other": "キー {{count}} 個",
+      "label": "キーのインポート方法",
+      "modelDifferences": "キーごとにモデル一覧が異なります。統合リソースでは一覧の和集合を使用し、ゲートウェイがルーティングを行います。",
+      "models": "モデル：{{models}}",
+      "preserveSettings": "既存のチャネル設定とモデル設定を保持し、未インポートのキーだけを追加します。",
+      "resourceName": "新しいチャネルの名前",
+      "resultSummary": "キーの結果：{{created}} 個インポート済み、{{failed}} 個失敗、{{uncertain}} 個結果不明、{{skipped}} 個スキップ。",
+      "reuse": "既存のチャネルへの追加を優先",
+      "reuseHelp": "同じアドレスのチャネルにキーを追加します。複数ある場合は追加先を選び、ない場合はまとめて新規作成します。",
+      "reuseSummary": "{{keyCount}} 個のキーを選択：{{createCount}} 個のチャネルを新規作成し、{{appendCount}} 個の既存チャネルに追加します。",
+      "saveFailed": "今回のインポートには選択が適用されますが、設定を保存できませんでした。",
+      "scheduling": "複数キーの切り替えは接続先のゲートウェイが行います。用途に応じて選択してください。",
+      "summary": "{{keyCount}} 個のキーを選択。{{resourceCount}} 個のチャネルを新規作成します。",
+      "target": "キーの追加先チャネル",
+      "unsupported": "このリソースの種類は複数キーの統合に対応していないため、個別に作成します。"
+    },
     "loadingDescription": "選択済み {{selectedCount}} 件のキーのプレビューを準備しています。",
     "messages": {
       "batchDuplicate": "このバッチの {{item}} と重複するため、スキップしました。",
-      "completed": "一括インポート完了: 作成 {{created}} 件、失敗 {{failed}} 件、スキップ {{skipped}} 件。",
+      "completed": "キーの結果：{{created}} 個インポート済み、{{failed}} 個失敗、{{uncertain}} 個結果不明、{{skipped}} 個スキップ。",
       "duplicate": "完全一致するチャネルが既にあります: {{channel}}。再作成されません。",
       "executionFailed": "一括インポートの実行に失敗しました: {{error}}",
       "targetChanged": "管理対象サイトが変更されました。インポート前にプレビューを更新するか、対象を選び直してください。",
@@ -113,15 +135,15 @@
       "useCompleteChecks": "完全なチェックを使用"
     },
     "results": {
-      "channelCreationFailed": "チャネルの作成に失敗しました。",
+      "channelCreationFailed": "キーのインポートに失敗しました。",
       "status": {
         "failed": "失敗",
         "notSelected": "未選択",
         "skipped": "スキップ",
-        "success": "作成済み",
+        "success": "インポート済み",
         "uncertain": "要確認"
       },
-      "summary": "結果: 作成 {{created}} 件、失敗 {{failed}} 件、スキップ {{skipped}} 件、合計 {{total}} 件。"
+      "summary": "キーの結果：{{created}} 個インポート済み、{{failed}} 個失敗、{{uncertain}} 個結果不明、{{skipped}} 個スキップ。"
     },
     "selection": {
       "accountGroup": "アカウント {{name}} の表示中のキーを選択",

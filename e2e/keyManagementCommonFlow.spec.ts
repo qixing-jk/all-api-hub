@@ -1091,7 +1091,7 @@ test("repairs missing account keys, deletes invalid resources, and records manag
   ).toHaveCount(0)
   await expect.poll(() => createPayloads.length).toBe(1)
   await expect(
-    batchImportDialog.getByText("Created", { exact: true }),
+    batchImportDialog.getByText("Imported", { exact: true }),
   ).toBeVisible()
   await expect(
     batchImportDialog.getByText("Not selected", { exact: true }),

@@ -97,10 +97,33 @@
       "models": "Modelle"
     },
     "gatewayDescription": "Dadurch werden Kontoschlüssel als selbstgehostete AI-Gateway-Kanäle importiert. Nach dem Import können mehrere Schlüssel von Clients über eine AI-API verwendet werden.",
+    "importMode": {
+      "appendTo": "Zu bestehendem Kanal hinzufügen: {{name}}",
+      "chooseTarget": "Kanal für diese Schlüssel auswählen",
+      "createNew": "Neuen Kanal erstellen",
+      "grouped": "Schlüssel derselben Website in einem neuen Kanal bündeln",
+      "independent": "Für jeden Schlüssel einen neuen Kanal erstellen",
+      "keyCount_one": "{{count}} Schlüssel",
+      "keyCount_other": "{{count}} Schlüssel",
+      "label": "Schlüssel importieren",
+      "modelDifferences": "Die Modelllisten unterscheiden sich. Die Ressource nutzt deren Vereinigungsmenge; das Gateway übernimmt das Routing.",
+      "models": "Modelle: {{models}}",
+      "preserveSettings": "Konfiguration und Modelleinstellungen des Kanals beibehalten. Nur noch nicht importierte Schlüssel hinzufügen.",
+      "resourceName": "Name des neuen Kanals",
+      "resultSummary": "Schlüssel: {{created}} importiert, {{failed}} fehlgeschlagen, {{uncertain}} unklar, {{skipped}} übersprungen.",
+      "reuse": "Bevorzugt zu einem bestehenden Kanal hinzufügen",
+      "reuseHelp": "Schlüssel zu einem Kanal mit derselben Adresse hinzufügen. Bei mehreren Treffern wählen Sie das Ziel; ohne Treffer wird ein gemeinsamer Kanal erstellt.",
+      "reuseSummary": "{{keyCount}} Schlüssel ausgewählt: {{createCount}} Kanäle erstellen und zu {{appendCount}} bestehenden Kanälen hinzufügen.",
+      "saveFailed": "Die Auswahl gilt für diesen Import, konnte aber nicht gespeichert werden.",
+      "scheduling": "Das Ziel-Gateway bestimmt den Wechsel zwischen Schlüsseln. Wählen Sie nach Ihren Anforderungen.",
+      "summary": "{{keyCount}} Schlüssel ausgewählt; {{resourceCount}} neue Kanäle werden erstellt.",
+      "target": "Zielkanal für die Schlüssel",
+      "unsupported": "Dieser Ressourcentyp unterstützt keine zusammengefassten Schlüssel und wird separat erstellt."
+    },
     "loadingDescription": "Vorschau wird für ausgewählte Schlüssel vorbereitet (Auswahl: {{selectedCount}}).",
     "messages": {
       "batchDuplicate": "Duplikat von {{item}} in diesem Stapel; wurde übersprungen.",
-      "completed": "Batch-Import abgeschlossen: {{created}} erstellt, {{failed}} fehlgeschlagen, {{skipped}} übersprungen.",
+      "completed": "Schlüssel: {{created}} importiert, {{failed}} fehlgeschlagen, {{uncertain}} unklar, {{skipped}} übersprungen.",
       "duplicate": "Ein identischer Kanal ist bereits vorhanden: {{channel}}. Er wird nicht erneut erstellt.",
       "executionFailed": "Batch-Import konnte nicht ausgeführt werden: {{error}}",
       "targetChanged": "Das Ziel der verwalteten Website wurde geändert. Aktualisieren Sie die Vorschau oder wählen Sie vor dem Import das gewünschte Ziel aus.",
@@ -118,15 +141,15 @@
       "useCompleteChecks": "Vollständige Prüfung verwenden"
     },
     "results": {
-      "channelCreationFailed": "Kanalerstellung fehlgeschlagen.",
+      "channelCreationFailed": "Schlüsselimport fehlgeschlagen.",
       "status": {
         "failed": "Fehlgeschlagen",
         "notSelected": "Nicht ausgewählt",
         "skipped": "Übersprungen",
-        "success": "Erstellt",
+        "success": "Importiert",
         "uncertain": "Überprüfung erforderlich"
       },
-      "summary": "Ergebnis: {{created}} erstellt, {{failed}} fehlgeschlagen, {{skipped}} übersprungen, {{total}} insgesamt."
+      "summary": "Schlüssel: {{created}} importiert, {{failed}} fehlgeschlagen, {{uncertain}} unklar, {{skipped}} übersprungen."
     },
     "selection": {
       "accountGroup": "Wählen Sie sichtbare Schlüssel für Konto {{name}}",

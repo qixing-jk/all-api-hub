@@ -9,6 +9,7 @@ import {
   buildTargetScopedAccountKeyResourceId,
   collectAccountRuntimeKeySecrets,
   findDefaultSelectableAccountRuntimeKey,
+  formatAccountRuntimeKeyMaskForSite,
   formatAccountRuntimeKeySecretForSite,
   getAccountRuntimeKeyExportId,
   getAccountRuntimeKeyLocator,
@@ -53,6 +54,28 @@ const service = (authenticated = true) =>
   })
 
 describe("account runtime keys", () => {
+  it.each([
+    ["sk-abcd", "sk-abcd"],
+    ["", "sk-"],
+    ["s", "sk-"],
+    ["sk", "sk-"],
+    ["abcd", "sk-abcd"],
+  ])(
+    "retains only guaranteed auth bytes for mask prefix %s",
+    (prefix, expected) => {
+      const keyMask = { prefix, suffix: "tail" }
+      const runtimeKey = { ...native(), keyMask }
+      expect(formatAccountRuntimeKeyMaskForSite(runtimeKey)).toEqual({
+        prefix: expected,
+        suffix: "tail",
+      })
+      expect(runtimeKey.keyMask).toEqual(keyMask)
+      expect(
+        formatAccountRuntimeKeyMaskForSite({ ...runtimeKey, siteType: "dahl" }),
+      ).toEqual(keyMask)
+      expect(formatAccountRuntimeKeyMaskForSite(native())).toBeUndefined()
+    },
+  )
   it("preserves released token associations when the current adapter family changes", () => {
     const definition = siteDefinitions.getAccountSiteDefinition("new-api")!
     const lookup = vi.spyOn(siteDefinitions, "getAccountSiteDefinition")

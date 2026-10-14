@@ -19,6 +19,7 @@ import {
   REGULAR_AXON_HUB_CHANNEL_TYPES,
 } from "~/services/apiAdapters/managedResources/axonHub/credentialProjection"
 import { normalizeList } from "~/services/apiAdapters/managedResources/axonHub/editorValues"
+import { importCredentialValue } from "~/services/apiAdapters/managedResources/shared/importCredentials"
 import type { AxonHubChannel } from "~/types/axonHub"
 
 export const createFieldDescriptors = (
@@ -166,10 +167,7 @@ export const createAxonHubChannelImportProjection = (
     [AXON_HUB_CHANNEL_FIELD_IDS.STATUS]: seed.enabled
       ? AXON_HUB_CHANNEL_STATUS.ENABLED
       : AXON_HUB_CHANNEL_STATUS.DISABLED,
-    [AXON_HUB_CHANNEL_FIELD_IDS.KEY]: {
-      kind: MANAGED_RESOURCE_SECRET_EDIT_INTENT_KINDS.Replace,
-      value: seed.credential,
-    },
+    [AXON_HUB_CHANNEL_FIELD_IDS.KEY]: importCredentialValue(seed),
     [AXON_HUB_CHANNEL_FIELD_IDS.SUPPORTED_MODELS]: models,
     [AXON_HUB_CHANNEL_FIELD_IDS.MANUAL_MODELS]: models,
     [AXON_HUB_CHANNEL_FIELD_IDS.DEFAULT_TEST_MODEL]: models[0] ?? "",

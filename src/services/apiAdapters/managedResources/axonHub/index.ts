@@ -5,6 +5,7 @@ import {
   MANAGED_RESOURCE_CREATE_SEED_KINDS,
   ManagedResourceError,
   type EditableResourceProjection,
+  type ManagedChannelImportCreateSeed,
   type ManagedResourceRef,
   type ResourceListQuery,
   type ResourceOperationOptions,
@@ -46,6 +47,8 @@ const axonHubNativeDefinition = {
   createSeedBindings: [
     {
       kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+      supportsMultipleCredentials: (seed: ManagedChannelImportCreateSeed) =>
+        isRegularAxonHubChannelType(seed.channelType),
       project: createAxonHubChannelImportProjection,
       validate: (values: EditableResourceProjection) =>
         validateAxonHubCreateProjection(values),

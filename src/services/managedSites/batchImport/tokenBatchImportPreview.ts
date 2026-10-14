@@ -3,12 +3,14 @@ import {
   type AccountRuntimeKey,
 } from "~/services/accounts/keys/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
-import { MANAGED_RESOURCE_EXACT_MATCH_BASES } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import {
   MANAGED_SITE_CHANNEL_DRAFT_PURPOSES,
   type ManagedSiteCapabilities,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { validateNativeManagedChannelImportDraft } from "~/services/apiAdapters/managedResources/channelImport"
+import {
+  supportsNativeManagedChannelExistingImport,
+  validateNativeManagedChannelImportDraft,
+} from "~/services/apiAdapters/managedResources/channelImport"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import { mapBatchImportWithConcurrency } from "~/services/managedSites/batchImport/tokenBatchImportConcurrency"
 import { skipManagedSiteBatchDuplicates } from "~/services/managedSites/batchImport/tokenBatchImportDuplicates"
@@ -26,9 +28,8 @@ import {
   getManagedSiteChannelExactMatch,
   getRecoverableManagedSiteChannelCandidate,
   type ManagedSiteChannelMatchInspection,
-  type ManagedSiteChannelMatchUnresolvedReason,
 } from "~/services/managedSites/matching/channelMatch"
-import { resolveManagedSiteChannelMatch } from "~/services/managedSites/matching/channelMatchResolver"
+import { prepareManagedSiteChannelMatch } from "~/services/managedSites/matching/prepareChannelMatch"
 import {
   toManagedSiteAssessmentChannel,
   toManagedSiteVerifiedKeyAssessment,
@@ -156,7 +157,7 @@ const buildExecutableWarningState = (
 })
 
 const isExactVerificationUnavailable = (
-  resolution: Awaited<ReturnType<typeof resolveManagedSiteChannelMatch>>,
+  resolution: ManagedSiteChannelMatchInspection,
 ) => resolution.url.matched && !resolution.key.comparable
 
 const getDraftBlockedReason = (
@@ -253,23 +254,6 @@ const preparePreviewItem = async (params: {
 }): Promise<ManagedSiteTokenBatchExportPreviewItem> => {
   params.signal?.throwIfAborted()
   const { input, managedSite, managedConfig } = params
-  // Early URL/key checks and post-draft checks are one preparation attempt.
-  // A subsequent preview gets a new map and may retry transient failures.
-  const secretReadFailures = new Map<
-    string,
-    ManagedSiteChannelMatchUnresolvedReason
-  >()
-  const matchOptions = {
-    managedSite,
-    managedConfig,
-    resolvedChannelKeysByResourceKey: params.resolvedChannelKeysByResourceKey,
-    resolveHiddenKeys: true,
-    stopAfterExactMatch: true,
-    secretReadFailures,
-    requestCache: params.operationContext?.channelMatch,
-    protectionBypassExecution: params.protectionBypassExecution,
-    signal: params.signal,
-  }
   let secretCollection = collectManagedResourceSecrets(input, managedConfig)
 
   let resolvedRuntimeKey: AccountRuntimeKey
@@ -305,46 +289,45 @@ const preparePreviewItem = async (params: {
 
   try {
     const source = buildInputDraftSource(input, resolvedRuntimeKey)
-    if (
-      params.verification ===
-        MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE &&
-      managedSite.matching.exactMatchBasis ===
-        MANAGED_RESOURCE_EXACT_MATCH_BASES.URL_KEY &&
-      supportsManagedSiteBaseUrlChannelLookup(managedSite.siteType)
-    ) {
-      const resolution = await resolveManagedSiteChannelMatch({
-        ...matchOptions,
-        accountBaseUrl: normalizeManagedSiteChannelBaseUrl(source.baseUrl),
-        models: [],
-        key: source.apiKey,
+    const { draft, resolution, creationSkipped } =
+      await prepareManagedSiteChannelMatch({
+        source,
+        managedSite,
+        managedConfig,
+        purpose: MANAGED_SITE_CHANNEL_DRAFT_PURPOSES.NATIVE_EDITOR,
+        includeUrlCandidates: supportsNativeManagedChannelExistingImport(
+          managedSite.siteType,
+        ),
+        verifyExisting:
+          params.verification ===
+          MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE,
+        resolvedChannelKeysByResourceKey:
+          params.resolvedChannelKeysByResourceKey,
+        operationContext: params.operationContext,
+        protectionBypassExecution: params.protectionBypassExecution,
+        signal: params.signal,
+        onDraftPrepared: (preparedDraft) => {
+          secretCollection = mergeManagedResourceSecretCollections(
+            secretCollection,
+            collectManagedResourceSecrets(preparedDraft),
+          )
+        },
       })
-      params.signal?.throwIfAborted()
+    params.signal?.throwIfAborted()
+    if (resolution && creationSkipped) {
       const exactMatch = getManagedSiteChannelExactMatch(
         resolution,
         managedSite.matching,
-      )
-      if (exactMatch) {
-        return {
-          ...buildBasePreviewItem(input),
-          draft: null,
-          status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,
-          warningCodes: [],
-          matchedChannel: toManagedSiteAssessmentChannel(exactMatch),
-          assessment: toManagedSiteVerifiedKeyAssessment(resolution),
-        }
+      )!
+      return {
+        ...buildBasePreviewItem(input),
+        draft: null,
+        status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,
+        warningCodes: [],
+        matchedChannel: toManagedSiteAssessmentChannel(exactMatch),
+        assessment: toManagedSiteVerifiedKeyAssessment(resolution),
       }
     }
-    const draft = await managedSite.channelDrafts.prepareFormData(source, {
-      // Execution uses native import seeds, whose routing defaults belong to the editor.
-      purpose: MANAGED_SITE_CHANNEL_DRAFT_PURPOSES.NATIVE_EDITOR,
-      operationContext: params.operationContext,
-      ...(params.signal ? { signal: params.signal } : {}),
-    })
-    params.signal?.throwIfAborted()
-    secretCollection = mergeManagedResourceSecretCollections(
-      secretCollection,
-      collectManagedResourceSecrets(draft),
-    )
     const blockedReason = getDraftBlockedReason(managedSite, draft)
 
     if (blockedReason) {
@@ -387,14 +370,7 @@ const preparePreviewItem = async (params: {
       }
     }
 
-    const searchBaseUrl = normalizeManagedSiteChannelBaseUrl(draft.base_url)
-    const resolution = await resolveManagedSiteChannelMatch({
-      ...matchOptions,
-      accountBaseUrl: searchBaseUrl,
-      models: draft.models,
-      key: draft.key,
-    })
-    params.signal?.throwIfAborted()
+    if (!resolution) throw new Error("Missing managed-site match evidence")
     const exactMatch = getManagedSiteChannelExactMatch(
       resolution,
       managedSite.matching,
@@ -441,6 +417,15 @@ const preparePreviewItem = async (params: {
       draft,
       ...buildExecutableWarningState(warningCodes),
       assessment,
+      ...(supportsNativeManagedChannelExistingImport(managedSite.siteType)
+        ? {
+            existingImportTargets: (resolution.urlCandidates ?? [])
+              .filter(
+                (candidate) => String(candidate.type) === String(draft.type),
+              )
+              .map(toManagedSiteAssessmentChannel),
+          }
+        : {}),
       ...(verificationCandidate ? { verificationCandidate } : {}),
     }
   } catch (error) {

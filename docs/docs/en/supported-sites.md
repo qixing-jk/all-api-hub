@@ -178,6 +178,20 @@ If you are also building your own backend system, All API Hub supports importing
 | Veloera                                           | This project has been discontinued.                                                                                                                                                                   | [GitHub](https://github.com/Veloera/Veloera)                                                          |
 | DoneHub                                           | This project is a secondary development based on one-hub.                                                                                                                                             | [GitHub](https://github.com/deanxv/done-hub)                                                          |
 
+### Batch importing multiple keys from one site
+
+Choose “Create one new channel per key” or “Combine same-site keys into one new channel” during batch import. The choice is remembered per target management connection. The grouped preview shows source keys, resource count, and the union of model lists. Different model permissions produce a notice; users decide whether to combine keys, and the target gateway owns scheduling. Different inference endpoints (including paths) or native channel types remain separate.
+
+| Managed site | Combined import scope |
+| --- | --- |
+| Magpie | Combined creation and appending missing keys to existing channels with the same address and protocol |
+| New API, Octopus, gpt-load | Native multi-key resource creation |
+| AxonHub | Regular API-key channel types |
+| CLIProxyAPI | `openai-compatibility` resources |
+| Sub2API, OmniRoute, Claude Code Hub, Veloera, DoneHub | Separate creation only |
+
+Magpie also supports “Prefer adding to an existing channel”. A single channel with the same address and protocol is selected automatically; choose a target when several match, or choose to create a new one. Existing names, configuration, and model settings are preserved; only missing keys are added through native key actions. Without a matching channel, a combined channel is created. The target is read again before appending; an address or protocol change stops the operation. Check the target after partial or uncertain writes before importing again.
+
 ## Related Documentation
 
 - [Supported Export Tools List](./supported-export-tools.md)

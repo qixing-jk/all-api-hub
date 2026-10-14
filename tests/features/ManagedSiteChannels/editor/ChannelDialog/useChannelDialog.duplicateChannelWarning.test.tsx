@@ -17,6 +17,7 @@ import {
 } from "~/services/accounts/keys/accountRuntimeKeys"
 import { createUnattributedAccountCreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
+import * as openaiCompatible from "~/services/aiApi/openaiCompatible"
 import {
   AccountKeyResourceError,
   ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
@@ -25,6 +26,7 @@ import { MANAGED_RESOURCE_CREATE_SEED_KINDS } from "~/services/apiAdapters/contr
 import type { ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import { createNewApiCreateEditor } from "~/services/apiAdapters/managedResources/newApi/editor"
 import * as nativeResourceRegistry from "~/services/apiAdapters/managedResources/registry"
+import { magpieManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/magpie"
 import * as managedSiteRegistry from "~/services/apiAdapters/registry"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import {
@@ -323,6 +325,68 @@ vi.mock(
 )
 
 describe("useChannelDialog", () => {
+  it.each(["account", "credentials"] as const)(
+    "defers model reads until a URL/key duplicate is accepted for %s import",
+    async (entrypoint) => {
+      const fetchModels = vi
+        .spyOn(openaiCompatible, "fetchOpenAICompatibleModelIds")
+        .mockResolvedValue(["gpt-4"])
+      try {
+        const service = buildManagedSiteCapabilitiesMock({
+          siteType: SITE_TYPES.MAGPIE,
+          channelDrafts: magpieManagedSiteCapabilities.channelDrafts,
+          matching: {
+            exactMatchBasis:
+              magpieManagedSiteCapabilities.matching.exactMatchBasis,
+            search: vi.fn().mockResolvedValue({
+              items: [
+                buildManagedResourceMatchCandidate({
+                  ref: matchingResourceRef("duplicate", {
+                    siteType: SITE_TYPES.MAGPIE,
+                    scopeKey: "https://managed.example.com",
+                  }),
+                }),
+              ],
+              total: 1,
+            }),
+          },
+        })
+        getManagedSiteCapabilitiesSpy.mockReturnValue(service)
+        const { result } = await renderChannelDialogHook()
+        let opening: Promise<unknown>
+        await act(async () => {
+          opening =
+            entrypoint === "account"
+              ? result.current.dialog.openWithAccount(
+                  buildDisplaySiteData(),
+                  buildNewApiRuntimeKey(
+                    buildDisplaySiteData(),
+                    buildNewApiToken({ key: "sk-test" }),
+                  ),
+                )
+              : result.current.dialog.openWithCredentials({
+                  name: "Credential",
+                  baseUrl: "https://upstream.example.com",
+                  apiKey: "sk-test",
+                })
+        })
+        await waitFor(() =>
+          expect(result.current.context.duplicateChannelWarning.isOpen).toBe(
+            true,
+          ),
+        )
+        expect(fetchModels).not.toHaveBeenCalled()
+        await act(async () => {
+          result.current.context.resolveDuplicateChannelWarning(false)
+          expect(await opening!).toEqual({ opened: false })
+        })
+        expect(fetchModels).not.toHaveBeenCalled()
+      } finally {
+        fetchModels.mockRestore()
+      }
+    },
+  )
+
   let registrationSpy: { mockRestore: () => void } | undefined
 
   beforeEach(() => {
@@ -736,6 +800,67 @@ describe("useChannelDialog", () => {
     expect(result.current.context.state.isOpen).toBe(false)
   })
 
+  it("does not open an editor when cancelled during model prefill after accepting a duplicate", async () => {
+    const pendingModels = createDeferred<string[]>()
+    const fetchModels = vi
+      .spyOn(openaiCompatible, "fetchOpenAICompatibleModelIds")
+      .mockReturnValue(pendingModels.promise)
+    try {
+      const service = buildManagedSiteCapabilitiesMock({
+        siteType: SITE_TYPES.MAGPIE,
+        channelDrafts: magpieManagedSiteCapabilities.channelDrafts,
+        matching: {
+          exactMatchBasis:
+            magpieManagedSiteCapabilities.matching.exactMatchBasis,
+          search: vi.fn().mockResolvedValue({
+            items: [
+              buildManagedResourceMatchCandidate({
+                ref: matchingResourceRef("duplicate", {
+                  siteType: SITE_TYPES.MAGPIE,
+                  scopeKey: "https://managed.example.com",
+                }),
+              }),
+            ],
+            total: 1,
+          }),
+        },
+      })
+      getManagedSiteCapabilitiesSpy.mockReturnValue(service)
+      const { result } = await renderChannelDialogHook()
+      let current = true
+      let opening!: Promise<unknown>
+      await act(async () => {
+        opening = result.current.dialog.openWithAccount(
+          buildDisplaySiteData(),
+          buildNewApiRuntimeKey(
+            buildDisplaySiteData(),
+            buildNewApiToken({ key: "sk-test" }),
+          ),
+          undefined,
+          { shouldContinue: () => current },
+        )
+      })
+      await waitFor(() =>
+        expect(result.current.context.duplicateChannelWarning.isOpen).toBe(
+          true,
+        ),
+      )
+      await act(async () =>
+        result.current.context.resolveDuplicateChannelWarning(true),
+      )
+      await waitFor(() => expect(fetchModels).toHaveBeenCalledOnce())
+      current = false
+      await act(async () => {
+        pendingModels.resolve(["gpt-4"])
+        expect(await opening).toEqual({ opened: false })
+      })
+      expect(nativeOpenCreateEditorMock).not.toHaveBeenCalled()
+      expect(result.current.context.state.isOpen).toBe(false)
+    } finally {
+      fetchModels.mockRestore()
+    }
+  })
+
   it("opens ChannelDialog when user continues despite duplicate", async () => {
     const existingChannel = buildManagedResourceMatchCandidate()
     const mockService = createManagedSiteCapabilitiesStub({
@@ -850,7 +975,7 @@ describe("useChannelDialog", () => {
         apiKey: providedToken.key,
         modelHints: [],
       },
-      { purpose: "native-editor" },
+      expect.objectContaining({ purpose: "native-editor" }),
     )
     expect(result.current.context.state.isOpen).toBe(true)
   })
@@ -1346,7 +1471,7 @@ describe("useChannelDialog", () => {
     expect(mockFetchAccountTokens).not.toHaveBeenCalled()
     expect(prepare).toHaveBeenCalledWith(
       expect.objectContaining({ apiKey: token.key }),
-      { purpose: "native-editor" },
+      expect.objectContaining({ purpose: "native-editor" }),
     )
     expect(nativeOpenCreateEditorMock).toHaveBeenLastCalledWith({
       signal: expect.any(AbortSignal),
@@ -1375,7 +1500,7 @@ describe("useChannelDialog", () => {
     expect(mockFetchAccountTokens).toHaveBeenCalledTimes(1)
     expect(prepare).toHaveBeenCalledWith(
       expect.objectContaining({ apiKey: token.key }),
-      { purpose: "native-editor" },
+      expect.objectContaining({ purpose: "native-editor" }),
     )
     expect(ensureAccountKeySpy).toHaveBeenCalledTimes(1)
   })
@@ -1611,7 +1736,7 @@ describe("useChannelDialog", () => {
     expect(result.current.context.state.isOpen).toBe(false)
   })
 
-  it("uses an explicit managed-site duplicate status without re-running channel search", async () => {
+  it("rechecks an added page status before showing a duplicate warning", async () => {
     const searchChannelMock = vi.fn(async () => ({
       items: [buildManagedResourceMatchCandidate()],
       total: 1,
@@ -1656,7 +1781,7 @@ describe("useChannelDialog", () => {
       await openPromise
     })
 
-    expect(searchChannelMock).not.toHaveBeenCalled()
+    expect(searchChannelMock).toHaveBeenCalledOnce()
     expect(result.current.context.state.isOpen).toBe(false)
   })
 
@@ -2012,7 +2137,10 @@ describe("useChannelDialog", () => {
       )
     })
 
-    expect(prepareChannelFormDataMock).toHaveBeenCalledTimes(1)
+    expect(prepareChannelFormDataMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ modelPrefill: false }),
+    )
     expect(result.current.context.state).toMatchObject({
       isOpen: true,
       nativeCreate: {

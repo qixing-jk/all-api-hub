@@ -93,10 +93,32 @@
       "models": "Mô hình"
     },
     "gatewayDescription": "Thao tác này nhập key tài khoản làm kênh của AI gateway tự triển khai. Sau khi nhập, nhiều key có thể được client sử dụng thông qua một AI API.",
+    "importMode": {
+      "appendTo": "Thêm vào kênh hiện có: {{name}}",
+      "chooseTarget": "Chọn kênh cho các khóa này",
+      "createNew": "Tạo kênh mới",
+      "grouped": "Gộp khóa cùng trang vào một kênh mới",
+      "independent": "Tạo một kênh mới cho mỗi khóa",
+      "keyCount_other": "{{count}} khóa",
+      "label": "Cách nhập khóa",
+      "modelDifferences": "Danh sách mô hình của các khóa khác nhau. Tài nguyên gộp sử dụng hợp của các danh sách; cổng đích xử lý định tuyến.",
+      "models": "Mô hình: {{models}}",
+      "preserveSettings": "Giữ nguyên cấu hình và cài đặt mô hình của kênh. Chỉ thêm các khóa chưa được nhập.",
+      "resourceName": "Tên kênh mới",
+      "resultSummary": "Khóa: {{created}} đã nhập, {{failed}} thất bại, {{uncertain}} chưa xác định, {{skipped}} bỏ qua.",
+      "reuse": "Ưu tiên thêm vào kênh hiện có",
+      "reuseHelp": "Thêm khóa vào kênh có cùng địa chỉ. Nếu có nhiều kênh, hãy chọn đích; nếu không có, tạo một kênh gộp mới.",
+      "reuseSummary": "Đã chọn {{keyCount}} khóa: tạo {{createCount}} kênh và thêm vào {{appendCount}} kênh hiện có.",
+      "saveFailed": "Lựa chọn được áp dụng cho lần nhập này nhưng không thể lưu tùy chọn.",
+      "scheduling": "Cổng đích quyết định cách luân phiên các khóa. Hãy chọn theo nhu cầu của bạn.",
+      "summary": "Đã chọn {{keyCount}} khóa; sẽ tạo {{resourceCount}} kênh mới.",
+      "target": "Kênh để thêm khóa",
+      "unsupported": "Loại tài nguyên này không hỗ trợ gộp nhiều khóa và sẽ được tạo riêng."
+    },
     "loadingDescription": "Đang chuẩn bị bản xem trước cho {{selectedCount}} khóa đã chọn.",
     "messages": {
       "batchDuplicate": "Trùng với {{item}} trong lô này và đã được bỏ qua.",
-      "completed": "Nhập hàng loạt hoàn tất: đã tạo {{created}}, thất bại {{failed}}, đã bỏ qua {{skipped}}.",
+      "completed": "Khóa: {{created}} đã nhập, {{failed}} thất bại, {{uncertain}} chưa xác định, {{skipped}} bỏ qua.",
       "duplicate": "Đã có kênh khớp chính xác: {{channel}}. Kênh này sẽ không được tạo lại.",
       "executionFailed": "Thực thi nhập hàng loạt thất bại: {{error}}",
       "targetChanged": "Đích site được quản lý đã thay đổi. Hãy làm mới bản xem trước hoặc chọn lại đích trước khi nhập.",
@@ -113,15 +135,15 @@
       "useCompleteChecks": "Dùng kiểm tra đầy đủ"
     },
     "results": {
-      "channelCreationFailed": "Tạo kênh thất bại.",
+      "channelCreationFailed": "Không thể nhập khóa.",
       "status": {
         "failed": "Thất bại",
         "notSelected": "Chưa chọn",
         "skipped": "Đã bỏ qua",
-        "success": "Đã tạo",
+        "success": "Đã nhập",
         "uncertain": "Cần xem lại"
       },
-      "summary": "Kết quả: Đã tạo {{created}}, thất bại {{failed}}, đã bỏ qua {{skipped}}, tổng cộng {{total}}."
+      "summary": "Khóa: {{created}} đã nhập, {{failed}} thất bại, {{uncertain}} chưa xác định, {{skipped}} bỏ qua."
     },
     "selection": {
       "accountGroup": "Chọn khóa hiện đang hiển thị của tài khoản {{name}}",

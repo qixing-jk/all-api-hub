@@ -1,7 +1,10 @@
+import { MAGPIE_ENDPOINT_FIELDS, MAGPIE_PROTOCOLS } from "~/constants/magpie"
 import { MANAGED_RESOURCE_KINDS } from "~/services/accountSiteDefinitions/contracts"
+import { toProtocolRoot } from "~/services/aiApi/protocolAddress"
 import {
   MANAGED_RESOURCE_FAILURE_CODES,
   ManagedResourceError,
+  type ManagedChannelImportCreateSeed,
 } from "~/services/apiAdapters/contracts/managedResourceNative"
 import type { MagpieProviderCommand } from "~/services/apiAdapters/managedResources/magpie/editorProjection"
 import {
@@ -30,6 +33,7 @@ import {
   type ManagedSiteMutationConfirmedEffect,
 } from "~/services/managedSites/mutations/contracts"
 import { createManagedSiteMutationSequence } from "~/services/managedSites/mutations/execution"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import type { MagpieConfig } from "~/types/magpieConfig"
 
 /** Retain confirmed steps when a later native action fails or loses its response. */
@@ -173,6 +177,46 @@ export async function createMagpieResource(
 
 type MagpieResourceUpdateCommand = MagpieProviderCommand & {
   requireExplicitModels?: boolean
+  expectedImportSeed?: ManagedChannelImportCreateSeed
+}
+
+/** Append through native key actions; existing fields and model policy remain untouched. */
+export async function appendMagpieImportCredentials(
+  config: MagpieConfig,
+  id: string,
+  seed: ManagedChannelImportCreateSeed,
+  options?: MagpieRequestOptions,
+) {
+  const credentials = seed.credentials ?? [seed.credential]
+  if (
+    !credentials.length ||
+    credentials.some(
+      (key) => !hasUsableManagedSiteChannelKey(key) || /[\r\n]/.test(key),
+    )
+  )
+    throw new ManagedResourceError({
+      code: MANAGED_RESOURCE_FAILURE_CODES.ValidationFailed,
+    })
+  return updateMagpieResourceById(
+    config,
+    id,
+    {
+      fields: {},
+      expectedImportSeed: seed,
+      keyPool: {
+        add: credentials.map((key) => ({
+          key,
+          name: "",
+          protocol: "",
+          on: true,
+          weight: 1,
+        })),
+        update: [],
+        remove: [],
+      },
+    },
+    options,
+  )
 }
 
 /** Read fresh before replacement-like saves, preserving fields outside this edit. */
@@ -195,6 +239,24 @@ export async function updateMagpieResourceById(
   const current = requireMagpieApiProvider(
     await getMagpieProvider(config, id, options),
   )
+  if (command.expectedImportSeed) {
+    const seed = command.expectedImportSeed
+    const field = MAGPIE_ENDPOINT_FIELDS.find(
+      (field) => field === seed.channelType,
+    )
+    const expectedRoot = field
+      ? toProtocolRoot(MAGPIE_PROTOCOLS[field], seed.baseUrl)
+      : null
+    if (
+      !field ||
+      !expectedRoot ||
+      !current[field] ||
+      toProtocolRoot(MAGPIE_PROTOCOLS[field], current[field]) !== expectedRoot
+    )
+      throw new ManagedResourceError({
+        code: MANAGED_RESOURCE_FAILURE_CODES.ResourceChanged,
+      })
+  }
   // Recheck immediately before saving: native edits can restore an automatic catalog.
   if (command.requireExplicitModels && !current.chosen?.length)
     throw new ManagedResourceError({

@@ -3,6 +3,7 @@ import {
   resolveOmniRouteBuiltinProvider,
 } from "~/constants/omniroute"
 import { SITE_TYPES } from "~/constants/siteType"
+import { readEdgeKeyMask } from "~/services/accountTokens/keyMaskEvidence"
 import { MANAGED_RESOURCE_EXACT_MATCH_BASES } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type { ManagedResourceMatchingCapability } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type {
@@ -53,6 +54,9 @@ const readMatchingInventory = shareInventoryRead(
       },
       (row) => {
         const sanitized = toOmniRouteSanitizedConnection(row)
+        // OmniRoute release/v3.8.51 src/lib/apiKeyExposure.ts:maskStoredApiKey.
+        // Reveal-enabled plaintext is deliberately not retained in matching rows.
+        const keyMask = readEdgeKeyMask(row.apiKey)
         return {
           ref: createManagedChannelResourceRef(
             SITE_TYPES.OMNIROUTE,
@@ -63,6 +67,7 @@ const readMatchingInventory = shareInventoryRead(
           type: sanitized.provider,
           base_url: sanitized.baseUrl,
           models: "",
+          ...(keyMask ? { keyMasks: [keyMask] } : {}),
         }
       },
     ),

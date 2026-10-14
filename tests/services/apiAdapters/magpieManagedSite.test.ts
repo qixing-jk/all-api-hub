@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
@@ -10,7 +11,9 @@ import {
 } from "~/services/apiService/magpie/providers"
 import { MagpieApiError } from "~/services/apiService/magpie/request"
 import { getManagedSiteRuntimeConfigForType } from "~/services/managedSites/configuration/runtimeConfig"
+import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/matching/channelMatchResolver"
+import { createManagedSiteOperationContext } from "~/services/managedSites/operationContext"
 import { fetchManagedSiteImportModels } from "~/services/managedSites/utils/fetchManagedSiteImportModels"
 import { ModelSyncService } from "~/services/models/modelSync/modelSyncService"
 import type { MagpieConfig } from "~/types/magpieConfig"
@@ -35,6 +38,102 @@ const capability: ManagedSiteCapabilities<MagpieConfig> =
 beforeEach(() => vi.clearAllMocks())
 
 describe("Magpie provider import", () => {
+  it("matches every native pool key without treating the primary key as the whole pool", async () => {
+    const keys = ["sk-primary", "sk-secondary", "sk-disabled"]
+    vi.mocked(listMagpieProviders).mockResolvedValue([
+      {
+        id: "pool",
+        name: "Existing pool",
+        chat: "https://relay.test/v1",
+        responses: "",
+        anthropic: "",
+        chosen: ["different-model"],
+        models: [],
+        off: false,
+        key: { set: true, masked: "***", optional: false },
+        keyList: keys.map((key, index) => ({
+          id: createHash("sha256").update(key).digest("hex").slice(0, 10),
+          masked: "***",
+          active: index === 0,
+          on: index !== 2,
+        })),
+      },
+    ])
+    vi.mocked(readMagpieProviderKey).mockResolvedValue(keys[0]!)
+    const operationContext = createManagedSiteOperationContext()
+    for (const key of keys) {
+      const result = await resolveManagedSiteChannelMatch({
+        managedSite: capability,
+        managedConfig: config,
+        accountBaseUrl: "https://relay.test",
+        models: [],
+        key,
+        requestCache: operationContext.channelMatch,
+        resolveHiddenKeys: true,
+        stopAfterExactMatch: true,
+        protectionBypassExecution: {
+          version: 2,
+          kind: "automatic",
+          feature: "managed_site_channels",
+          trigger: "background_recovery",
+          surface: "background",
+        },
+      })
+      expect(result.key).toMatchObject({
+        comparable: true,
+        matched: true,
+        channel: { ref: { resourceId: "pool" } },
+      })
+    }
+    expect(listMagpieProviders).toHaveBeenCalledOnce()
+    expect(readMagpieProviderKey).not.toHaveBeenCalled()
+  })
+
+  it("uses the current complete key pool instead of a previously resolved primary key", async () => {
+    vi.mocked(listMagpieProviders).mockResolvedValue([
+      {
+        id: "pool",
+        name: "Existing pool",
+        chat: "https://relay.test/v1",
+        responses: "",
+        anthropic: "",
+        chosen: [],
+        models: [],
+        off: false,
+        key: { set: true, masked: "***", optional: false },
+        keyList: [
+          {
+            id: createHash("sha256")
+              .update("sk-current")
+              .digest("hex")
+              .slice(0, 10),
+            masked: "***",
+            active: true,
+            on: true,
+          },
+        ],
+      },
+    ])
+    const ref = {
+      siteType: "magpie",
+      kind: "channel",
+      scopeKey: config.baseUrl,
+      resourceId: "pool",
+    } as const
+    const result = await resolveManagedSiteChannelMatch({
+      managedSite: capability,
+      managedConfig: config,
+      accountBaseUrl: "https://relay.test",
+      models: [],
+      key: "sk-removed",
+      resolvedChannelKeysByResourceKey: {
+        [getManagedResourceRefKey(ref)]: "sk-removed",
+      },
+    })
+    expect(result.key).toMatchObject({ comparable: true, matched: false })
+    expect(readMagpieProviderKey).not.toHaveBeenCalled()
+  })
+
   it("retains explicit model selections for a provider without protocol endpoints", async () => {
     vi.mocked(listMagpieProviders).mockResolvedValue([
       {

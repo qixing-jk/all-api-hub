@@ -278,6 +278,11 @@ export interface UserPreferences {
 
   // 管理站点类型 (用户可以选择管理 New API / Done Hub / Veloera / Octopus / AxonHub / Claude Code Hub)
   managedSiteType: ManagedSiteType
+  /** Batch import choices keyed by the hashed target connection identity. */
+  managedSiteTokenBatchImportModes?: Record<
+    string,
+    "independent" | "grouped" | "reuse"
+  >
 
   // Released integration configuration: read only by the migration.
   cliProxy?: LegacyCliProxyApiConfig

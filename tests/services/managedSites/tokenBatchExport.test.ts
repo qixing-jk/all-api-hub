@@ -305,6 +305,146 @@ const repairCompleteIntent = {
 } as const
 
 describe("managed-site token batch export", () => {
+  it.each([
+    "succeeded",
+    "changed",
+    "uncertain",
+    "append-unavailable",
+    "ambiguous",
+  ])(
+    "uses the existing Magpie target without falling back to provider creation (%s)",
+    async (outcome) => {
+      const target = buildManagedResourceMatchCandidate({
+        ref: matchingResourceRef("existing", {
+          siteType: SITE_TYPES.MAGPIE,
+          scopeKey: "https://managed.example",
+        }),
+        name: "Coding group",
+        type: "chat",
+        base_url: "https://example.com",
+        key: "key-existing",
+      })
+      const managedSite = buildService({
+        siteType: SITE_TYPES.MAGPIE,
+        matching: { exactMatchBasis: "url-key", search: vi.fn() },
+        channelDrafts: {
+          prepareFormData: vi.fn(
+            async (source: ManagedSiteChannelDraftSource) => ({
+              name: source.name,
+              type: "chat",
+              key: source.apiKey,
+              base_url: source.baseUrl,
+              models: ["m1"],
+              groups: [],
+              enabled: true,
+            }),
+          ),
+        },
+      })
+      configureManagedSiteCapabilities(managedSite)
+      mockGetCurrentManagedSiteRuntimeConfig.mockResolvedValue({
+        siteType: SITE_TYPES.MAGPIE,
+        config: { baseUrl: "https://managed.example", webKey: "web-key" },
+      })
+      mockResolveManagedSiteChannelMatch.mockResolvedValue({
+        searchCompleted: true,
+        searchBaseUrl: "https://example.com",
+        urlCandidates: [target],
+        url: { matched: true, channel: target, candidateCount: 1 },
+        key: {
+          comparable: true,
+          matched: false,
+          reason: "no-match",
+          channel: null,
+        },
+        models: {
+          comparable: false,
+          matched: false,
+          reason: "comparison-unavailable",
+          channel: null,
+        },
+      })
+      const append = vi.fn().mockResolvedValue({
+        outcome: "succeeded",
+        data: null,
+        confirmedEffects: [
+          {
+            kind: "resource-updated",
+            resourceKind: "channel",
+            resourceId: "existing",
+          },
+        ],
+      })
+      const submit = vi.fn()
+      if (outcome === "changed" || outcome === "uncertain")
+        append.mockRejectedValue(
+          new ManagedResourceError({
+            code:
+              outcome === "changed"
+                ? MANAGED_RESOURCE_FAILURE_CODES.ResourceChanged
+                : MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+          }),
+        )
+      mockOpenNativeManagedChannelImportSession.mockResolvedValue({
+        ...(outcome === "append-unavailable" ? {} : { append }),
+        submit,
+        reconcile: vi.fn(),
+      })
+      const { prepareManagedSiteTokenBatchExportPreview } = await import(
+        "~/services/managedSites/batchImport/tokenBatchImportPreview"
+      )
+      const { executeManagedSiteTokenBatchExport } = await import(
+        "~/services/managedSites/batchImport/tokenBatchImportExecution"
+      )
+      const account = buildDisplaySiteData()
+      const runtimeKey = buildNewApiRuntimeKey(
+        account,
+        buildNewApiToken({ key: "key-new" }),
+      )
+      const preview = await prepareManagedSiteTokenBatchExportPreview({
+        items: [{ account, runtimeKey }],
+      })
+      expect(preview.items[0]?.existingImportTargets).toEqual([
+        { ref: target.ref, name: "Coding group" },
+      ])
+      if (outcome === "ambiguous") {
+        preview.items[0]!.existingImportTargets!.push({
+          ref: { ...target.ref, resourceId: "second" },
+          name: "Second candidate",
+        })
+        await expect(
+          executeManagedSiteTokenBatchExport({
+            preview,
+            selectedItemIds: [runtimeKey.id],
+            mode: "reuse",
+          }),
+        ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+        expect(mockOpenNativeManagedChannelImportSession).not.toHaveBeenCalled()
+        expect(submit).not.toHaveBeenCalled()
+        return
+      }
+      const result = await executeManagedSiteTokenBatchExport({
+        preview,
+        selectedItemIds: [runtimeKey.id],
+        mode: "reuse",
+      })
+      expect(result).toMatchObject({
+        createdCount: outcome === "succeeded" ? 1 : 0,
+        failedCount: outcome === "changed" ? 1 : 0,
+        uncertainCount:
+          outcome === "uncertain" || outcome === "append-unavailable" ? 1 : 0,
+      })
+      if (outcome === "append-unavailable")
+        expect(append).not.toHaveBeenCalled()
+      else
+        expect(append).toHaveBeenCalledWith(
+          target.ref,
+          expect.objectContaining({ key: "key-new" }),
+        )
+      expect(submit).not.toHaveBeenCalled()
+    },
+  )
+
   beforeEach(() => {
     vi.resetAllMocks()
     mockGetCurrentManagedSiteRuntimeConfig.mockImplementation(async () => {
@@ -353,12 +493,114 @@ describe("managed-site token batch export", () => {
     })
   })
 
+  it("imports same-site keys into one named native resource while returning results for every source key", async () => {
+    const managedSite = buildAxonHubImportService()
+    configureManagedSiteCapabilities(managedSite)
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/batchImport/tokenBatchImportPreview"
+    )
+    const { executeManagedSiteTokenBatchExport } = await import(
+      "~/services/managedSites/batchImport/tokenBatchImportExecution"
+    )
+    const preview = await prepareManagedSiteTokenBatchExportPreview({
+      items: [
+        buildAccountTokenInput(
+          undefined,
+          buildAccountToken({ id: 11, key: "key-first" }),
+        ),
+        buildAccountTokenInput(
+          undefined,
+          buildAccountToken({ id: 12, key: "key-second" }),
+        ),
+      ],
+    })
+    const result = await executeManagedSiteTokenBatchExport({
+      preview,
+      selectedItemIds: preview.items.map((item) => item.id),
+      mode: "grouped",
+      resourceNamesByItemId: { [preview.items[0]!.id]: "  Shared provider  " },
+    })
+    expect(managedSite.submit).toHaveBeenCalledTimes(1)
+    expect(managedSite.submit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "Shared provider",
+        credentials: ["key-first", "key-second"],
+      }),
+    )
+    expect(result).toMatchObject({
+      createdCount: 2,
+      failedCount: 0,
+      items: [{ result: "created" }, { result: "created" }],
+    })
+  })
+
+  it("keeps every member of a partially written group uncertain and redacts all group secrets", async () => {
+    const managedSite = buildAxonHubImportService()
+    managedSite.submit.mockResolvedValue({
+      outcome: "partial",
+      completion: "uncertain",
+      confirmedEffects: [
+        {
+          kind: "resource-created",
+          resourceKind: "channel",
+          resourceId: "created",
+        },
+      ],
+      diagnostic: { message: "Failed after key-first and key-second" },
+    })
+    configureManagedSiteCapabilities(managedSite)
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/batchImport/tokenBatchImportPreview"
+    )
+    const { executeManagedSiteTokenBatchExport } = await import(
+      "~/services/managedSites/batchImport/tokenBatchImportExecution"
+    )
+    const preview = await prepareManagedSiteTokenBatchExportPreview({
+      items: [
+        buildAccountTokenInput(
+          undefined,
+          buildAccountToken({ id: 11, key: "key-first" }),
+        ),
+        buildAccountTokenInput(
+          undefined,
+          buildAccountToken({ id: 12, key: "key-second" }),
+        ),
+      ],
+    })
+    const result = await executeManagedSiteTokenBatchExport({
+      preview,
+      selectedItemIds: preview.items.map((item) => item.id),
+      mode: "grouped",
+    })
+    expect(result).toMatchObject({
+      createdCount: 0,
+      failedCount: 0,
+      uncertainCount: 2,
+      items: [{ result: "uncertain" }, { result: "uncertain" }],
+    })
+    expect(JSON.stringify(result)).not.toContain("key-first")
+    expect(JSON.stringify(result)).not.toContain("key-second")
+    expect(managedSite.submit).toHaveBeenCalledOnce()
+    expect(managedSite.reconcile).toHaveBeenCalledOnce()
+  })
+
   it("skips a verified URL/key duplicate before preparing models or validating a create", async () => {
     const managedSite = buildService({
       siteType: SITE_TYPES.SUB2API,
       matching: { exactMatchBasis: MANAGED_RESOURCE_EXACT_MATCH_BASES.URL_KEY },
       channelDrafts: {
-        prepareFormData: vi.fn().mockRejectedValue(new Error("models offline")),
+        prepareFormData: vi.fn(async (source, options) => {
+          if (options?.modelPrefill !== false) throw new Error("models offline")
+          return {
+            name: source.name,
+            base_url: source.baseUrl,
+            key: source.apiKey,
+            type: 1,
+            models: [],
+            groups: [],
+            enabled: true,
+          }
+        }),
       },
     })
     configureManagedSiteCapabilities(managedSite)
@@ -380,7 +622,11 @@ describe("managed-site token batch export", () => {
       blockedCount: 0,
       items: [{ status: "skipped", matchedChannel: { name: "Existing" } }],
     })
-    expect(managedSite.channelDrafts.prepareFormData).not.toHaveBeenCalled()
+    expect(managedSite.channelDrafts.prepareFormData).toHaveBeenCalledOnce()
+    expect(managedSite.channelDrafts.prepareFormData).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ modelPrefill: false }),
+    )
   })
 
   it("keeps the first executable batch credential and skips its duplicate across accounts", async () => {
@@ -1622,7 +1868,12 @@ describe("managed-site token batch export", () => {
       status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY,
       warningCodes: [],
     })
-    expect(mockResolveManagedSiteChannelMatch).toHaveBeenCalledOnce()
+    expect(mockResolveManagedSiteChannelMatch).toHaveBeenCalledWith(
+      expect.objectContaining({ models: [] }),
+    )
+    expect(mockResolveManagedSiteChannelMatch).toHaveBeenCalledWith(
+      expect.objectContaining({ models: ["gpt-4o"] }),
+    )
   })
 
   it.each([

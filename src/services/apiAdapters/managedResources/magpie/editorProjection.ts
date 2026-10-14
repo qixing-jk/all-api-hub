@@ -15,6 +15,7 @@ import {
   magpieKeyPoolProjection,
   type MagpieKeyPoolPatch,
 } from "~/services/apiAdapters/managedResources/magpie/keyPoolEditor"
+import { importCredentialList } from "~/services/apiAdapters/managedResources/shared/importCredentials"
 import type { MagpieProvider } from "~/services/apiService/magpie/providers"
 import { isValidProxyUrl } from "~/utils/core/proxyUrl"
 
@@ -250,6 +251,7 @@ export function magpieImportProjection(
     status: seed.enabled ? "enabled" : "disabled",
     supportedModels: [...seed.models],
     key: { kind: "replace", value: seed.credential },
+    ...(seed.credentials ? { keyPool: importCredentialList(seed) } : {}),
   }
 }
 

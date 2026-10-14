@@ -68,6 +68,8 @@ export type ManagedSiteQueriesCapability<
 }
 
 export type ManagedSiteChannelDraftRequestOptions = ScheduledReadOptions & {
+  /** Identity checks defer upstream model reads until URL/key evidence requires them. */
+  modelPrefill?: boolean
   /** Native editors own group loading; matching also needs no draft groups. */
   purpose?: (typeof MANAGED_SITE_CHANNEL_DRAFT_PURPOSES)[keyof typeof MANAGED_SITE_CHANNEL_DRAFT_PURPOSES]
   operationContext?: ManagedSiteOperationContext

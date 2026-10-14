@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next"
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 
 import { PREVIEW_LOAD_ORIGINS } from "~/constants/previewLoadOrigin"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -12,9 +12,16 @@ import { verifyManagedSiteTokenBatchTargets } from "~/features/KeyManagement/bat
 import { useManagedSiteTokenBatchSession } from "~/features/KeyManagement/batchExport/useManagedSiteTokenBatchSession"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import toast from "~/lib/notify"
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
+import {
+  supportsNativeManagedChannelExistingImport,
+  supportsNativeManagedChannelMultiKeyImport,
+} from "~/services/apiAdapters/managedResources/channelImport"
 import { executeManagedSiteTokenBatchExport } from "~/services/managedSites/batchImport/tokenBatchImportExecution"
+import { planManagedSiteTokenBatchImport } from "~/services/managedSites/batchImport/tokenBatchImportPlan"
 import { DEFAULT_MANAGED_SITE_TOKEN_BATCH_IMPORT_INTENT } from "~/services/managedSites/batchImport/tokenBatchImportPreview"
 import { getManagedSiteRuntimeConfigFingerprint } from "~/services/managedSites/configuration/runtimeConfig"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   trackProductAnalyticsActionCompleted,
   trackProductAnalyticsActionStarted,
@@ -33,8 +40,10 @@ import type {
   ManagedSiteTokenBatchExportItemInput,
   ManagedSiteTokenBatchExportMatchedChannel,
   ManagedSiteTokenBatchExportPreviewItem,
+  ManagedSiteTokenBatchImportMode,
 } from "~/types/managedSiteTokenBatchExport"
 import {
+  isExecutableManagedSiteTokenBatchExportPreviewItem,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES,
   MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES,
 } from "~/types/managedSiteTokenBatchExport"
@@ -92,6 +101,7 @@ export function useManagedSiteTokenBatchExportDialog({
     newApiUsername,
     newApiPassword,
     newApiTotpSecret,
+    loadPreferences,
   } = useUserPreferencesContext()
   const managedSiteConfigFingerprint = useMemo(
     () => getManagedSiteRuntimeConfigFingerprint(preferences, managedSiteType),
@@ -135,6 +145,111 @@ export function useManagedSiteTokenBatchExportDialog({
     handleToggleItem,
     handleItemModelsChange,
   } = session
+  const [modeOverrides, setModeOverrides] = useState<
+    Record<string, ManagedSiteTokenBatchImportMode>
+  >({})
+  const [resourceNames, setResourceNames] = useState<Record<string, string>>({})
+  const [resourceTargets, setResourceTargets] = useState<
+    Record<string, ManagedResourceRef | null>
+  >({})
+  const targetIdentity = preview?.targetFingerprint ?? ""
+  const savedMode =
+    preferences?.managedSiteTokenBatchImportModes?.[targetIdentity]
+  const importMode =
+    modeOverrides[targetIdentity] ??
+    (savedMode === "reuse"
+      ? "reuse"
+      : savedMode === "grouped"
+        ? "grouped"
+        : "independent")
+  const canReuse = Boolean(
+    preview && supportsNativeManagedChannelExistingImport(preview.siteType),
+  )
+  const selectedPlanItems = executableItems
+    .filter(isExecutableManagedSiteTokenBatchExportPreviewItem)
+    .filter((item) => selectedIds.has(item.id))
+  const canGroup =
+    Boolean(preview) &&
+    executableItems.some(
+      (item) =>
+        item.draft &&
+        supportsNativeManagedChannelMultiKeyImport(
+          preview!.siteType,
+          item.draft,
+        ),
+    )
+  const previewItemsById = useMemo(
+    () => new Map(preview?.items.map((item) => [item.id, item]) ?? []),
+    [preview],
+  )
+  const importGroups = (
+    preview
+      ? planManagedSiteTokenBatchImport(
+          preview.siteType,
+          selectedPlanItems,
+          importMode,
+          Object.fromEntries(
+            Object.entries(resourceTargets)
+              .filter(([key]) => key.startsWith(`${targetIdentity}:`))
+              .map(([key, value]) => [
+                key.slice(targetIdentity.length + 1),
+                value,
+              ]),
+          ),
+        )
+      : []
+  ).map((group) => ({
+    ...group,
+    draft: {
+      ...group.draft,
+      name: resourceNames[`${targetIdentity}:${group.id}`] ?? group.draft.name,
+    },
+  }))
+  const hasInvalidImportGroups =
+    importMode !== "independent" &&
+    importGroups.some(
+      (group) =>
+        group.requiresTargetSelection ||
+        (!group.target && !group.draft.name.trim()),
+    )
+  const handleImportGroupTargetChange = (
+    id: string,
+    ref: ManagedResourceRef | null,
+  ) => {
+    if (isRunning || executionResult) return
+    setResourceTargets((current) => ({
+      ...current,
+      [`${targetIdentity}:${id}`]: ref,
+    }))
+  }
+  const handleImportGroupNameChange = (id: string, name: string) => {
+    if (isRunning || executionResult) return
+    setResourceNames((current) => ({
+      ...current,
+      [`${targetIdentity}:${id}`]: name,
+    }))
+  }
+  const handleImportModeChange = async (mode: string) => {
+    if (
+      !targetIdentity ||
+      isRunning ||
+      executionResult ||
+      (mode !== "independent" && mode !== "grouped" && mode !== "reuse") ||
+      (mode === "reuse" && !canReuse)
+    )
+      return
+    setModeOverrides((current) => ({ ...current, [targetIdentity]: mode }))
+    const result = await userPreferences.savePreferences({
+      managedSiteTokenBatchImportModes: { [targetIdentity]: mode },
+    })
+    if (result.ok) {
+      await loadPreferences?.()
+    } else {
+      toast.error(
+        t("keyManagement:batchManagedSiteExport.importMode.saveFailed"),
+      )
+    }
+  }
   const handleClose = () => {
     if (isRunning) return
     if (verification.dialogState.isOpen) {
@@ -191,7 +306,12 @@ export function useManagedSiteTokenBatchExportDialog({
 
   const handleConfirm = async () => {
     const isActive = session.captureWorkflow()
-    if (!isActive() || !preview || selectedExecutionIds.length === 0) {
+    if (
+      !isActive() ||
+      !preview ||
+      selectedExecutionIds.length === 0 ||
+      hasInvalidImportGroups
+    ) {
       return
     }
 
@@ -205,6 +325,27 @@ export function useManagedSiteTokenBatchExportDialog({
       const result = await executeManagedSiteTokenBatchExport({
         preview,
         selectedItemIds: selectedExecutionIds,
+        ...(importMode !== "independent"
+          ? {
+              mode: importMode,
+              ...(importMode === "reuse"
+                ? {
+                    targetsByGroupId: Object.fromEntries(
+                      importGroups.map((group) => [
+                        group.id,
+                        group.target?.ref ?? null,
+                      ]),
+                    ),
+                  }
+                : {}),
+              resourceNamesByItemId: Object.fromEntries(
+                importGroups.map((group) => [
+                  group.id,
+                  group.draft.name.trim(),
+                ]),
+              ),
+            }
+          : {}),
       })
       void trackProductAnalyticsActionCompleted({
         ...analyticsContext,
@@ -230,11 +371,17 @@ export function useManagedSiteTokenBatchExportDialog({
           .map((item) => item.id),
       })
       toast.success(
-        t("keyManagement:batchManagedSiteExport.messages.completed", {
-          created: cumulativeResult.createdCount,
-          failed: cumulativeResult.failedCount,
-          skipped: cumulativeResult.skippedCount,
-        }),
+        t(
+          importMode !== "independent"
+            ? "keyManagement:batchManagedSiteExport.importMode.resultSummary"
+            : "keyManagement:batchManagedSiteExport.messages.completed",
+          {
+            created: cumulativeResult.createdCount,
+            failed: cumulativeResult.failedCount,
+            skipped: cumulativeResult.skippedCount,
+            uncertain: cumulativeResult.uncertainCount,
+          },
+        ),
       )
     } catch (error) {
       void trackProductAnalyticsActionCompleted({
@@ -260,7 +407,8 @@ export function useManagedSiteTokenBatchExportDialog({
     if (
       !session.captureWorkflow()() ||
       !preview ||
-      selectedExecutionIds.length === 0
+      selectedExecutionIds.length === 0 ||
+      hasInvalidImportGroups
     ) {
       return
     }
@@ -274,6 +422,7 @@ export function useManagedSiteTokenBatchExportDialog({
   }
 
   return {
+    managedSiteType,
     preview,
     intent: activeIntent,
     selectedIds,
@@ -305,7 +454,16 @@ export function useManagedSiteTokenBatchExportDialog({
       itemCount: executableItems.length,
       selectedCount: selectedExecutableCount,
     },
+    importMode,
+    importGroups,
+    canGroup,
+    canReuse,
+    previewItemsById,
+    hasInvalidImportGroups,
     actions: {
+      changeImportMode: handleImportModeChange,
+      changeImportGroupName: handleImportGroupNameChange,
+      changeImportGroupTarget: handleImportGroupTargetChange,
       close: handleClose,
       refreshPreview: handleRefreshPreview,
       retryPreview: handleRetryPreview,

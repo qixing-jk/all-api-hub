@@ -1,10 +1,11 @@
 import {
   collectAccountRuntimeKeySecrets,
+  formatAccountRuntimeKeyMaskForSite,
   isAccountKeyResourceRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/keys/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
-import type { ManagedResourceSecretVerificationRecovery } from "~/services/apiAdapters/contracts/managedResourceMatching"
+import { type ManagedResourceSecretVerificationRecovery } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { MANAGED_SITE_CHANNEL_DRAFT_PURPOSES } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import type { ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
@@ -22,6 +23,7 @@ import {
   type ManagedSiteChannelMatchInspection,
 } from "~/services/managedSites/matching/channelMatch"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/matching/channelMatchResolver"
+import { prepareManagedSiteChannelMatch } from "~/services/managedSites/matching/prepareChannelMatch"
 import {
   applyVerifiedManagedSiteChannelKey,
   toManagedSiteAssessmentChannel,
@@ -29,7 +31,9 @@ import {
   type ManagedSiteAssessmentChannel,
   type ManagedSiteVerifiedKeyAssessment,
 } from "~/services/managedSites/matching/verifiedChannelKeyAssessment"
+import { createManagedSiteOperationContext } from "~/services/managedSites/operationContext"
 import type { ManagedSiteOperationContext } from "~/services/managedSites/operationContext"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
 import { supportsManagedSiteBaseUrlChannelLookup } from "~/services/managedSites/utils/managedSite"
 import { collectManagedConfigSecrets } from "~/services/managedSites/utils/resourceSecrets"
@@ -232,6 +236,8 @@ export async function getManagedSiteTokenChannelStatus(
   params.signal?.throwIfAborted()
   let resolvedRuntimeKey = runtimeKey
   let secretsToRedact = collectSecrets(runtimeKey, managedConfig)
+  const operationContext =
+    params.operationContext ?? createManagedSiteOperationContext()
 
   // This feature is not supported on managed-site backends whose channel
   // search cannot provide a trustworthy base-URL lookup result.
@@ -240,6 +246,64 @@ export async function getManagedSiteTokenChannelStatus(
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
       reason:
         MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.BASE_URL_SEARCH_UNSUPPORTED,
+    }
+  }
+
+  // Only a negative preflight can avoid resolving the source secret. Compatible
+  // masks (including identical masks) always continue through exact verification.
+  if (
+    isAccountKeyResourceRuntimeKey(runtimeKey) &&
+    !hasUsableManagedSiteChannelKey(runtimeKey.secret)
+  ) {
+    try {
+      const draft = await managedSite.channelDrafts.prepareFormData(
+        buildManagedSiteChannelDraftSource(runtimeKey),
+        {
+          purpose: MANAGED_SITE_CHANNEL_DRAFT_PURPOSES.MATCHING,
+          modelPrefill: false,
+          operationContext,
+          signal: params.signal,
+          requestScheduling: params.requestScheduling,
+        },
+      )
+      params.signal?.throwIfAborted()
+      if (draft.base_url.trim()) {
+        const resolution = await resolveManagedSiteChannelMatch({
+          managedSite,
+          managedConfig,
+          accountBaseUrl: draft.base_url,
+          keyMask: formatAccountRuntimeKeyMaskForSite(runtimeKey),
+          resolvedChannelKeysByResourceKey:
+            params.resolvedChannelKeysByResourceKey,
+          models: [],
+          requestCache: operationContext.channelMatch,
+          signal: params.signal,
+          requestScheduling: params.requestScheduling,
+        })
+        params.signal?.throwIfAborted()
+        if (!resolution.searchCompleted)
+          return {
+            status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+            reason:
+              MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.BACKEND_SEARCH_FAILED,
+          }
+        if (
+          !resolution.url.matched ||
+          (resolution.key.comparable && !resolution.key.matched)
+        )
+          return {
+            status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.NOT_ADDED,
+            assessment: toManagedSiteVerifiedKeyAssessment(resolution),
+          }
+      }
+    } catch (error) {
+      params.signal?.throwIfAborted()
+      return {
+        status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+        reason:
+          MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.INPUT_PREPARATION_FAILED,
+        diagnostic: toSanitizedErrorSummary(error, secretsToRedact),
+      }
     }
   }
 
@@ -290,16 +354,17 @@ export async function getManagedSiteTokenChannelStatus(
           ? normalizeManagedSiteChannelBaseUrl(resolvedRuntimeKey.baseUrl)
           : resolvedRuntimeKey.baseUrl,
     })
-    const formData = await managedSite.channelDrafts.prepareFormData(source, {
-      operationContext: params.operationContext,
-      purpose: MANAGED_SITE_CHANNEL_DRAFT_PURPOSES.MATCHING,
-      signal: params.signal,
-      requestScheduling: params.requestScheduling,
-    })
+    const { draft: formData, resolution } =
+      await prepareManagedSiteChannelMatch({
+        ...params,
+        operationContext,
+        source,
+        managedSite,
+        managedConfig,
+        purpose: MANAGED_SITE_CHANNEL_DRAFT_PURPOSES.MATCHING,
+      })
     params.signal?.throwIfAborted()
-    const searchBaseUrl = normalizeManagedSiteChannelBaseUrl(formData.base_url)
-
-    if (!searchBaseUrl) {
+    if (!resolution) {
       return {
         status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
         reason:
@@ -307,23 +372,6 @@ export async function getManagedSiteTokenChannelStatus(
         diagnostic: "missing-comparable-inputs",
       }
     }
-
-    // The match module owns which evidence is required for an exact match.
-    // Empty optional dimensions must reach it instead of being rejected here.
-    const resolution = await resolveManagedSiteChannelMatch({
-      managedSite,
-      managedConfig,
-      accountBaseUrl: searchBaseUrl,
-      models: formData.models,
-      key: formData.key,
-      resolvedChannelKeysByResourceKey: params.resolvedChannelKeysByResourceKey,
-      resolveHiddenKeys: true,
-      requestCache: params.operationContext?.channelMatch,
-      signal: params.signal,
-      requestScheduling: params.requestScheduling,
-      protectionBypassExecution: params.protectionBypassExecution,
-    })
-    params.signal?.throwIfAborted()
     const assessment = toManagedSiteVerifiedKeyAssessment(resolution)
     const exactMatch = getManagedSiteChannelExactMatch(
       resolution,
