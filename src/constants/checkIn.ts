@@ -17,6 +17,7 @@ export const AUTO_CHECKIN_METHOD_IDS = {
   ToolcodeDailyCheckIn: "toolcode:daily-checkin",
   HiyoDailyCheckIn: "hiyo:daily-checkin",
   ClawhudDailyCheckIn: "clawhud:daily-checkin",
+  DaiguaDailyCheckIn: "daigua:daily-checkin",
 } as const
 
 export const CHECK_IN_METHOD_UNKNOWN_REASON_CODES = {

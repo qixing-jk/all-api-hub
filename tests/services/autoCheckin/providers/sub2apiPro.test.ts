@@ -10,6 +10,7 @@ import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { SUB2API_AUTH_PERSISTENCE_STATUSES } from "~/services/apiService/sub2api/auth/authSession"
 import { fetchClawhudDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/clawhudCheckIn"
+import { fetchDaiguaDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/daiguaCheckIn"
 import { fetchDenxioDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/denxioCheckIn"
 import { fetchGeniusProgrammerDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/geniusProgrammerCheckIn"
 import {
@@ -120,6 +121,16 @@ vi.mock(
   }),
 )
 
+vi.mock(
+  "~/services/apiService/sub2api/checkin/daiguaCheckIn",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/checkin/daiguaCheckIn")
+    >()),
+    fetchDaiguaDailyCheckInStatus: vi.fn(),
+  }),
+)
+
 const createAccount = (automaticExecutionEnabled = true) =>
   buildSiteAccount({
     id: "sub2api-account",
@@ -184,6 +195,9 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
       new ApiError("unsupported", 404),
     )
     vi.mocked(fetchClawhudDailyCheckInStatus).mockRejectedValue(
+      new ApiError("unsupported", 404),
+    )
+    vi.mocked(fetchDaiguaDailyCheckInStatus).mockRejectedValue(
       new ApiError("unsupported", 404),
     )
     vi.mocked(fetchSub2ApiProDailyCheckInStatus).mockResolvedValue({
@@ -597,7 +611,7 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
         context: executionContext(),
       }),
     ).resolves.toMatchObject({ kind: "executed" })
-    expect(getStatus).toHaveBeenCalledOnce()
+    expect(getStatus).toHaveBeenCalledTimes(2)
     expect(checkIn).toHaveBeenCalledOnce()
   })
 
@@ -847,7 +861,7 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
       kind: "executed",
       result: { status: CHECKIN_RESULT_STATUS.SUCCESS },
     })
-    expect(order).toEqual(["GET", "POST", "GET", "GET", "POST"])
+    expect(order).toEqual(["GET", "POST", "GET", "GET", "POST", "GET"])
   })
 
   it.each([

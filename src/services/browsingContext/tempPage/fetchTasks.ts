@@ -255,6 +255,7 @@ export async function executeTempWindowTurnstileFetch(
     cookieStoreId,
     turnstileTimeoutMs,
     turnstileParamName,
+    turnstileTokenPlacement,
     turnstilePreTrigger,
   } = request
   const turnstile: TempWindowTurnstileMeta = {
@@ -387,12 +388,29 @@ export async function executeTempWindowTurnstileFetch(
       typeof turnstileParamName === "string" && turnstileParamName.trim()
         ? turnstileParamName.trim()
         : TURNSTILE_DEFAULT_QUERY_PARAM_NAME
-    const fetchUrlWithToken = appendQueryParam(fetchUrl, paramName, token)
+    let fetchUrlWithToken = fetchUrl
+    let tokenFetchOptions = rawOptions
+    if (turnstileTokenPlacement === "json-body") {
+      const body =
+        rawOptions.body === undefined ? {} : JSON.parse(String(rawOptions.body))
+      if (!body || typeof body !== "object" || Array.isArray(body)) {
+        throw new Error("Turnstile JSON body must be an object")
+      }
+      const headers = new Headers(rawOptions.headers)
+      headers.set("Content-Type", "application/json")
+      tokenFetchOptions = {
+        ...rawOptions,
+        headers: Object.fromEntries(headers.entries()),
+        body: JSON.stringify({ ...body, [paramName]: token }),
+      }
+    } else {
+      fetchUrlWithToken = appendQueryParam(fetchUrl, paramName, token)
+    }
 
     const prepared = await tempWindowBackgroundRuntime.prepareFetchOptions({
       tabId,
       url: fetchUrlWithToken,
-      rawOptions,
+      rawOptions: tokenFetchOptions,
       resolvedAuthType,
       accountId,
       cookieAuthSessionCookie,

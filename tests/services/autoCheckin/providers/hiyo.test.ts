@@ -119,7 +119,7 @@ describe("registered Hiyo daily check-in", () => {
       result: { status: "success", reward: { quota: 213750 } },
       retryable: false,
     })
-    expect(fetchApiResponse).toHaveBeenCalledTimes(2)
+    expect(fetchApiResponse).toHaveBeenCalledTimes(3)
   })
 
   it.each([true, false])(

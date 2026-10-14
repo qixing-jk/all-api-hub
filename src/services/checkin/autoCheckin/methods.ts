@@ -284,20 +284,21 @@ const withAutomaticRetry = (
   retryable: canAutomaticallyRetryCheckinResult(result, methodId),
 })
 
-const reconcileUncertainResult = async (input: {
+/** Reads final status for every provider outcome without erasing confirmed grants. */
+const reconcileProviderResult = async (input: {
   account: SiteAccount
   methodId: AutoCheckinMethodRegistration["id"]
   providerResult: AutoCheckinProviderResult
   getStatus?: NonNullable<AutoCheckinProvider["getStatus"]>
 }): Promise<DecidedCheckInResult> => {
+  const original = withAutomaticRetry(input.providerResult, input.methodId)
+  const uncertain =
+    input.providerResult.status === CHECKIN_RESULT_STATUS.UNCERTAIN
+  const unresolved = (
+    reconciliation: DecidedCheckInResult["reconciliation"],
+  ) => (uncertain ? { ...original, reconciliation } : original)
   if (!input.getStatus) {
-    return withAutomaticRetry(
-      {
-        ...input.providerResult,
-        reconciliation: CHECKIN_RECONCILIATION_OUTCOME.UNAVAILABLE,
-      },
-      input.methodId,
-    )
+    return unresolved(CHECKIN_RECONCILIATION_OUTCOME.UNAVAILABLE)
   }
 
   try {
@@ -306,17 +307,19 @@ const reconcileUncertainResult = async (input: {
       observedAt: Date.now(),
     })
     if (status?.outcome !== CHECK_IN_METHOD_STATUS_OUTCOMES.Known) {
-      return withAutomaticRetry(
-        {
-          ...input.providerResult,
-          reconciliation: status
-            ? CHECKIN_RECONCILIATION_OUTCOME.UNKNOWN
-            : CHECKIN_RECONCILIATION_OUTCOME.UNAVAILABLE,
-        },
-        input.methodId,
+      return unresolved(
+        status
+          ? CHECKIN_RECONCILIATION_OUTCOME.UNKNOWN
+          : CHECKIN_RECONCILIATION_OUTCOME.UNAVAILABLE,
       )
     }
     if (status.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked) {
+      if (
+        !uncertain &&
+        input.providerResult.reasonCode !==
+          AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED
+      )
+        return original
       return {
         status: CHECKIN_RESULT_STATUS.SUCCESS,
         messageKey:
@@ -326,6 +329,9 @@ const reconcileUncertainResult = async (input: {
         reconciliation: CHECKIN_RECONCILIATION_OUTCOME.CHECKED,
       }
     }
+    // Known provider results remain authoritative when readback is inconclusive
+    // or has not yet caught up; only uncertain writes need further classification.
+    if (!uncertain) return original
     if (status.availability === CHECK_IN_METHOD_AVAILABILITIES.Disabled) {
       return {
         ...input.providerResult,
@@ -357,21 +363,9 @@ const reconcileUncertainResult = async (input: {
         input.methodId,
       )
     }
-    return withAutomaticRetry(
-      {
-        ...input.providerResult,
-        reconciliation: CHECKIN_RECONCILIATION_OUTCOME.UNKNOWN,
-      },
-      input.methodId,
-    )
+    return unresolved(CHECKIN_RECONCILIATION_OUTCOME.UNKNOWN)
   } catch {
-    return withAutomaticRetry(
-      {
-        ...input.providerResult,
-        reconciliation: CHECKIN_RECONCILIATION_OUTCOME.UNAVAILABLE,
-      },
-      input.methodId,
-    )
+    return unresolved(CHECKIN_RECONCILIATION_OUTCOME.UNAVAILABLE)
   }
 }
 
@@ -714,23 +708,12 @@ export async function executeSelectedCheckIn(input: {
       return accountStateWriteFailure()
     }
   }
-  const result: DecidedCheckInResult =
-    providerResult.status === CHECKIN_RESULT_STATUS.UNCERTAIN
-      ? await reconcileUncertainResult({
-          account: currentAccount,
-          methodId: registration.id,
-          providerResult,
-          getStatus: registration.provider.getStatus,
-        })
-      : providerResult.status === CHECKIN_RESULT_STATUS.FAILED
-        ? {
-            ...providerResult,
-            retryable: canAutomaticallyRetryCheckinResult(
-              providerResult,
-              registration.id,
-            ),
-          }
-        : { ...providerResult, retryable: false }
+  const result = await reconcileProviderResult({
+    account: currentAccount,
+    methodId: registration.id,
+    providerResult,
+    getStatus: registration.provider.getStatus,
+  })
   return {
     kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Executed,
     methodId: registration.id,

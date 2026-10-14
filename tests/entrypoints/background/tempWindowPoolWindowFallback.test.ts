@@ -5611,6 +5611,109 @@ describe("tempWindowPool window fallback", () => {
     })
   })
 
+  /** Acquires a verified temporary context and attempts the supplied JSON body. */
+  async function runTurnstileJsonBody(body: string) {
+    tempContextMode = "tab"
+    isProtectionBypassFirefoxEnvMock.mockReturnValue(true)
+    createTabMock.mockResolvedValueOnce({ id: 811 })
+    vi.useRealTimers()
+    sendMessageMock.mockImplementation(
+      async (_tabId: number, message: { action: string }) => {
+        switch (message.action) {
+          case RuntimeActionIds.ContentShowShieldBypassUi:
+            return undefined
+          case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckCloudflareGuard:
+            return { success: true, passed: true }
+          case RuntimeActionIds.ContentWaitForTurnstileToken:
+            return {
+              success: true,
+              status: "token_obtained",
+              token: "token-xyz",
+              detection: {
+                hasTurnstile: true,
+              },
+            }
+          case RuntimeActionIds.ContentPerformTempWindowFetch:
+            return {
+              success: true,
+              data: {
+                success: true,
+                message: "",
+                data: "ok",
+              },
+            }
+          default:
+            throw new Error(`Unexpected action: ${message.action}`)
+        }
+      },
+    )
+
+    const { handleTempWindowTurnstileFetch } = await import(
+      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+    )
+
+    const sendResponse = vi.fn()
+    await handleTempWindowTurnstileFetch(
+      {
+        originUrl: "https://example.com",
+        pageUrl: "https://example.com/checkin",
+        fetchUrl: "https://example.com/api/token-checkin",
+        fetchOptions: {
+          method: "POST",
+          credentials: "omit",
+          body,
+        },
+        authType: AuthTypeEnum.AccessToken,
+        requestId: "req-turnstile-json-body",
+        turnstileTokenPlacement: "json-body",
+        turnstileParamName: "turnstile_token",
+      },
+      sendResponse,
+    )
+
+    const fetchCall = sendMessageMock.mock.calls.find(
+      ([, message]) =>
+        message.action === RuntimeActionIds.ContentPerformTempWindowFetch,
+    )
+
+    return { fetchCall, sendResponse }
+  }
+
+  it("attaches Turnstile to a JSON object while preserving fields and keeping it out of the URL", async () => {
+    const { fetchCall } = await runTurnstileJsonBody(
+      JSON.stringify({ existing: 7 }),
+    )
+    expect(fetchCall?.[1].fetchUrl).toBe(
+      "https://example.com/api/token-checkin",
+    )
+    expect(JSON.parse(fetchCall?.[1].fetchOptions.body)).toEqual({
+      existing: 7,
+      turnstile_token: "token-xyz",
+    })
+    expect(fetchCall?.[1].fetchOptions.headers).toMatchObject({
+      "content-type": "application/json",
+      "X-Auth-Mode": AUTH_MODE.TOKEN_AUTH_MODE,
+    })
+    expect(removeTempWindowCookieRuleMock).not.toHaveBeenCalled()
+  })
+
+  it.each(["null", "[]", "7"])(
+    "rejects a non-object JSON token body before dispatch (%s)",
+    async (body) => {
+      const { fetchCall, sendResponse } = await runTurnstileJsonBody(body)
+      expect(fetchCall).toBeUndefined()
+      expect(sendResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          error: expect.stringContaining(
+            "Turnstile JSON body must be an object",
+          ),
+        }),
+      )
+    },
+  )
+
   it("defaults to Firefox cookie-auth mode headers when turnstile fetches have no explicit auth hints", async () => {
     tempContextMode = "tab"
     isProtectionBypassFirefoxEnvMock.mockReturnValue(true)

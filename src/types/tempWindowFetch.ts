@@ -116,8 +116,10 @@ export interface TempWindowTurnstileFetchParams extends TempWindowFetchParams {
   useIncognito?: boolean
   /** Timeout (ms) for Turnstile token wait in the content script. */
   turnstileTimeoutMs?: number
-  /** Query parameter name used for token attachment (default: `turnstile`). */
+  /** Token field name (default: `turnstile`); applies to the chosen placement. */
   turnstileParamName?: string
+  /** Defaults to query for existing callers; JSON APIs can opt into body attachment. */
+  turnstileTokenPlacement?: "query" | "json-body"
   /** Optional pre-trigger used to render the Turnstile widget (best-effort). */
   turnstilePreTrigger?: TurnstilePreTrigger
 }

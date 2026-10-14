@@ -126,6 +126,29 @@ const canonicalTasks = [
 ] as const
 
 describe("protection bypass runtime contracts", () => {
+  it.each([
+    [undefined, true],
+    ["query", true],
+    ["json-body", true],
+    ["header", false],
+    [null, false],
+    [42, false],
+  ])(
+    "validates the optional Turnstile token placement (%j)",
+    (placement, valid) => {
+      expect(
+        isTempContextTask({
+          kind: TEMP_CONTEXT_TASK_KINDS.TurnstileFetch,
+          params: {
+            originUrl: "https://example.invalid",
+            pageUrl: "https://example.invalid/checkin",
+            fetchUrl: "https://example.invalid/api/checkin",
+            turnstileTokenPlacement: placement,
+          },
+        }),
+      ).toBe(valid)
+    },
+  )
   const staleExecution: ProtectionBypassExecution = {
     // @ts-expect-error V2 execution metadata must not accept legacy versions.
     version: 1,
