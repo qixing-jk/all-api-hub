@@ -7,6 +7,10 @@ import {
   hasOptionalSkPrefixSiteTokenSemantics,
 } from "~/services/accountTokens/apiTokenKey"
 import {
+  areKeyMasksIncompatible,
+  type KeyMaskEvidence,
+} from "~/services/accountTokens/keyMaskEvidence"
+import {
   MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
   MANAGED_SITE_CHANNEL_MATCH_LEVELS,
   MANAGED_SITE_CHANNEL_MATCH_REASONS,
@@ -43,6 +47,7 @@ interface InspectManagedSiteChannelKeyMatchParams {
   channels: ManagedResourceMatchCandidate[]
   accountBaseUrl: string
   key?: string
+  keyMask?: KeyMaskEvidence
   keyIdentity?: string
   exactChannel?: ManagedResourceMatchCandidate | null
   keyComparisonMode?: ManagedSiteChannelKeyComparisonMode
@@ -133,6 +138,41 @@ const toChannelKeyCandidates = (
   channel: ManagedResourceMatchCandidate,
   mode: ManagedSiteChannelKeyComparisonMode,
 ): string[] => toChannelKeyCandidatesFromString(channel.key ?? "", mode)
+
+/** A complete pool can be excluded only when every key has conflicting evidence. */
+export function canExcludeManagedSiteChannelKey(
+  channel: ManagedResourceMatchCandidate,
+  key: string | undefined,
+  keyMask: KeyMaskEvidence | undefined,
+  mode: ManagedSiteChannelKeyComparisonMode,
+): boolean {
+  const usableSource = hasUsableManagedSiteChannelKey(key)
+  const source = usableSource
+    ? { prefix: key!.trim(), suffix: toComparableChannelKey(key!, mode) }
+    : keyMask
+  if (!source) return false
+  const keys = (channel.key ?? "")
+    .split(/[\n,]/)
+    .map((value) => value.trim())
+    .filter(Boolean)
+  const evidence =
+    keys.length > 0 && keys.every(hasUsableManagedSiteChannelKey)
+      ? keys.map((value) => ({
+          prefix: value,
+          suffix: toComparableChannelKey(value, mode),
+        }))
+      : channel.keyMasks
+  return (
+    !!evidence?.length &&
+    evidence.every((mask) =>
+      areKeyMasksIncompatible(
+        source,
+        mask,
+        mode === MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.OPTIONAL_SK_PREFIX,
+      ),
+    )
+  )
+}
 
 const isSubset = (subset: string[], superset: string[]) =>
   subset.every((item) => superset.includes(item))
@@ -249,7 +289,8 @@ export function inspectManagedSiteChannelKeyMatch(
     keyComparisonMode,
   )
 
-  if (!normalizedDesiredKey) {
+  const usableSource = hasUsableManagedSiteChannelKey(params.key)
+  if (!usableSource && !params.keyMask) {
     return {
       comparable: false,
       matched: false,
@@ -258,7 +299,7 @@ export function inspectManagedSiteChannelKeyMatch(
     }
   }
 
-  if (params.exactChannel) {
+  if (usableSource && params.exactChannel) {
     return {
       comparable: true,
       matched: true,
@@ -283,14 +324,15 @@ export function inspectManagedSiteChannelKeyMatch(
 
   const matchedChannel =
     urlBucket.find((channel) => {
+      if (!usableSource) return false
       if (
         params.keyIdentity !== undefined &&
         channel.keyIdentities !== undefined
       )
         return channel.keyIdentities.includes(params.keyIdentity)
-      return toChannelKeyCandidates(channel, keyComparisonMode).includes(
-        normalizedDesiredKey,
-      )
+      return toChannelKeyCandidates(channel, keyComparisonMode)
+        .filter(hasUsableManagedSiteChannelKey)
+        .includes(normalizedDesiredKey)
     }) ?? null
 
   if (matchedChannel) {
@@ -304,10 +346,23 @@ export function inspectManagedSiteChannelKeyMatch(
 
   // A negative result requires readable keys for every candidate, including multi-key entries.
   const hasComparableChannelKey = urlBucket.every((channel) => {
+    if (
+      canExcludeManagedSiteChannelKey(
+        channel,
+        params.key,
+        params.keyMask,
+        keyComparisonMode,
+      )
+    )
+      return true
     if (params.keyIdentity !== undefined && channel.keyIdentities !== undefined)
       return true
     const keys = toChannelKeyCandidates(channel, keyComparisonMode)
-    return keys.length > 0 && keys.every(hasUsableManagedSiteChannelKey)
+    return (
+      usableSource &&
+      keys.length > 0 &&
+      keys.every(hasUsableManagedSiteChannelKey)
+    )
   })
 
   if (!hasComparableChannelKey) {

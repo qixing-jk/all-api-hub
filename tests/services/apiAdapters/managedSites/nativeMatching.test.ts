@@ -418,7 +418,7 @@ describe("native managed-resource matching", () => {
       name: "Provider",
       type: "claude",
       base_url: "https://upstream.example",
-      key: "********",
+      key: "",
       models: "claude-sonnet,gpt-4o",
     })
   })

@@ -39,6 +39,31 @@ const connection = (overrides: Record<string, unknown> = {}) => ({
 })
 
 describe("OmniRoute managed-site capabilities", () => {
+  it.each([
+    ["sk-abcde****1234", [{ prefix: "sk-abcde", suffix: "1234" }]],
+    ["********", undefined],
+    ["sk-abcde…1234", [{ prefix: "sk-abcde", suffix: "1234" }]],
+    ["sk-ab**12", [{ prefix: "sk-ab", suffix: "12" }]],
+    ["sk-abcde**ab**1234", undefined],
+    ["sk-plaintext-secret", undefined],
+  ])(
+    "preserves only anchored evidence from masked inventory: %s",
+    async (apiKey, expected) => {
+      server.use(
+        http.get(`${BASE_URL}/api/providers`, () =>
+          HttpResponse.json({ connections: [connection({ apiKey })] }),
+        ),
+      )
+      const result = await omniRouteManagedSiteCapabilities.matching.search(
+        config,
+        "https://relay.example.invalid/v1",
+      )
+      expect(result?.items[0]?.keyMasks).toEqual(expected)
+      expect(result?.items[0]?.key).toBe("")
+      expect(JSON.stringify(result)).not.toContain("sk-plaintext-secret")
+    },
+  )
+
   beforeEach(() => {
     vi.resetAllMocks()
     server.resetHandlers()
@@ -158,6 +183,7 @@ describe("OmniRoute managed-site capabilities", () => {
         base_url: "https://relay.example.invalid/v1",
         models: "",
         key: "",
+        keyMasks: [{ prefix: "sk-aaaaaaa", suffix: "bbbb" }],
       },
     ])
     // Matching reads the masked list route only.

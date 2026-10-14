@@ -1,4 +1,6 @@
 import { QUOTA_PER_USD } from "~/constants/money"
+import { SITE_TYPES } from "~/constants/siteType"
+import { readEdgeKeyMask } from "~/services/accountTokens/keyMaskEvidence"
 import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
 import {
   keyExpiryDisplayFact,
@@ -44,6 +46,13 @@ export const toFacts = (
   displayName: token.name?.trim() || `Token ${token.id}`,
   maskedLabel: maskSecretForDisplay(token.key ?? ""),
   runtimeSecret: token.key,
+  // Source: QuantumNous/new-api model/token.go:MaskTokenKey. Other family
+  // variants do not inherit this evidence without their own confirmed contract.
+  ...(ref.siteType === SITE_TYPES.NEW_API
+    ? {
+        keyMask: readEdgeKeyMask(token.key),
+      }
+    : {}),
   status: tokenStatus(token),
   runtimeKey: {
     modelAccess: projectNewApiTokenModelAccess(token),

@@ -118,6 +118,36 @@ const token = (overrides: Partial<NewApiToken>): NewApiToken => ({
 })
 
 describe("New API account key resources", () => {
+  it.each([
+    ["abcd**********1234", { prefix: "abcd", suffix: "1234" }],
+    ["ab****34", { prefix: "ab", suffix: "34" }],
+    ["**********", undefined],
+    ["abcd••••••1234", { prefix: "abcd", suffix: "1234" }],
+    ["abc●12345", { prefix: "abc", suffix: "12345" }],
+    ["abc...12345", { prefix: "abc", suffix: "12345" }],
+    ["ab**cd**1234", undefined],
+    ["abcd********1234", { prefix: "abcd", suffix: "1234" }],
+  ])(
+    "preserves anchored mask evidence across format changes for %s",
+    async (key, expected) => {
+      mockFetchAccountTokens.mockResolvedValueOnce([token({ key })])
+      const session = await createNewApiAccountKeyResources(
+        SITE_TYPES.NEW_API,
+      ).open({
+        account: { id: "account-1", siteType: SITE_TYPES.NEW_API },
+        request,
+      })
+      const facts = (await (await session.openCollection("account")).list())
+        .items[0]!
+      const runtimeKey = buildAccountKeyResourceRuntimeKeyFromFacts(
+        buildDisplaySiteData({ id: "account-1", siteType: SITE_TYPES.NEW_API }),
+        facts,
+      )
+      expect(runtimeKey.keyMask).toEqual(expected)
+      expect(runtimeKey.secret).toBe("")
+    },
+  )
+
   it.each(["acknowledged", "lost"])(
     "does not adopt a pre-existing matching key after an acknowledged or lost creation response: %s",
     async (response) => {

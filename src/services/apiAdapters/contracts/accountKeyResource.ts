@@ -1,6 +1,7 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import type { CreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import type { AccountRuntimeKeyModelAccess } from "~/services/accounts/keys/runtimeKeyModelAccess"
+import type { KeyMaskEvidence } from "~/services/accountTokens/keyMaskEvidence"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 
 import type { InventorySecretAvailability } from "./inventorySecret"
@@ -267,6 +268,8 @@ export type AccountKeyResourceFacts = {
   readonly status: AccountKeyResourceStatus
   /** Verified inventory plaintext for the current snapshot only; never persist as display metadata. */
   readonly runtimeSecret?: string
+  /** Provider-confirmed inventory evidence; never derive this from maskedLabel. */
+  readonly keyMask?: KeyMaskEvidence
   /** Safe machine policy projected by the provider, never parsed from display fields. */
   readonly runtimeKey?: {
     readonly modelAccess: AccountRuntimeKeyModelAccess

@@ -1,3 +1,4 @@
+import type { KeyMaskEvidence } from "~/services/accountTokens/keyMaskEvidence"
 import {
   MANAGED_RESOURCE_EXACT_MATCH_BASES,
   MANAGED_RESOURCE_SEARCH_INVENTORY_MODES,
@@ -38,6 +39,7 @@ import {
 } from "~/services/managedSites/matching/channelMatchInventory"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/channelKeys"
 import {
+  canExcludeManagedSiteChannelKey,
   findManagedSiteChannelsByBaseUrl,
   findManagedSiteChannelsByBaseUrlAndModels,
   getManagedSiteChannelKeyComparisonMode,
@@ -148,6 +150,7 @@ interface ResolveManagedSiteChannelMatchParams extends ScheduledReadOptions {
   accountBaseUrl: string
   models: string[]
   key?: string
+  keyMask?: KeyMaskEvidence
   resolvedChannelKeysByResourceKey?: Record<string, string>
   resolveHiddenKeys?: boolean
   /** Batch duplicate checks need only one proven duplicate, not all comparable keys. */
@@ -330,7 +333,8 @@ export async function resolveManagedSiteChannelMatch(
   }
   params.signal?.throwIfAborted()
 
-  if (!searchResults) {
+  if (!searchResults || !Array.isArray(searchResults.items)) {
+    requestCache?.searchResultsByTargetKey.delete(searchCacheKey)
     return {
       searchBaseUrl,
       searchCompleted: false,
@@ -353,9 +357,7 @@ export async function resolveManagedSiteChannelMatch(
     }
   }
 
-  let searchResultItems = Array.isArray(searchResults.items)
-    ? searchResults.items
-    : []
+  let searchResultItems = searchResults.items
   try {
     if (
       managedSite.matching.searchInventoryMode ===
@@ -394,10 +396,10 @@ export async function resolveManagedSiteChannelMatch(
     mergedResolvedChannelKeysByResourceKey,
   )
   const keyIdentity =
-    key?.trim() &&
+    hasUsableManagedSiteChannelKey(key) &&
     managedSite.matching.getKeyIdentity &&
     channels.some((channel) => channel.keyIdentities !== undefined)
-      ? await managedSite.matching.getKeyIdentity(key)
+      ? await managedSite.matching.getKeyIdentity(key!)
       : undefined
   params.signal?.throwIfAborted()
   let urlBucket = findManagedSiteChannelsByBaseUrl({
@@ -408,6 +410,7 @@ export async function resolveManagedSiteChannelMatch(
     channels,
     accountBaseUrl: searchBaseUrl,
     key,
+    keyMask: params.keyMask,
     keyComparisonMode,
     keyIdentity,
   })
@@ -434,6 +437,7 @@ export async function resolveManagedSiteChannelMatch(
       channels: exactModelChannels,
       accountBaseUrl: searchBaseUrl,
       key,
+      keyMask: params.keyMask,
       keyComparisonMode,
       keyIdentity,
     })
@@ -472,6 +476,7 @@ export async function resolveManagedSiteChannelMatch(
       channels: channelsWithResolvedKeys,
       accountBaseUrl: searchBaseUrl,
       key,
+      keyMask: params.keyMask,
       keyComparisonMode,
       keyIdentity,
     })
@@ -528,7 +533,7 @@ export async function resolveManagedSiteChannelMatch(
     !canStop() &&
     params.protectionBypassExecution &&
     typeof managedSite.matching.fetchSecretKey === "function" &&
-    key?.trim()
+    hasUsableManagedSiteChannelKey(key)
   ) {
     const recoverableUrlCandidates = urlBucket.filter(
       (channel) =>
@@ -579,10 +584,16 @@ export async function resolveManagedSiteChannelMatch(
         : []),
     ].filter(
       (channel) =>
-        !params.hiddenKeyResourceRefs ||
-        params.hiddenKeyResourceRefs.some((ref) =>
-          areManagedResourceRefsEqual(ref, channel.ref),
-        ),
+        !canExcludeManagedSiteChannelKey(
+          channel,
+          key,
+          params.keyMask,
+          keyComparisonMode,
+        ) &&
+        (!params.hiddenKeyResourceRefs ||
+          params.hiddenKeyResourceRefs.some((ref) =>
+            areManagedResourceRefsEqual(ref, channel.ref),
+          )),
     )
 
     for (const recoverableCandidate of recoverableCandidates) {
@@ -631,7 +642,7 @@ export async function resolveManagedSiteChannelMatch(
   if (
     params.protectionBypassExecution &&
     typeof managedSite.matching.hydrateComparableKeys === "function" &&
-    key?.trim() &&
+    hasUsableManagedSiteChannelKey(key) &&
     !canStop() &&
     !hasExactKeyAndModelMatch()
   ) {
@@ -687,6 +698,12 @@ export async function resolveManagedSiteChannelMatch(
         : []),
     ].filter(
       (channel) =>
+        !canExcludeManagedSiteChannelKey(
+          channel,
+          key,
+          params.keyMask,
+          keyComparisonMode,
+        ) &&
         !attemptedSecretReads.has(getManagedResourceRefKey(channel.ref)) &&
         typeof mergedResolvedChannelKeysByResourceKey[
           getManagedResourceRefKey(channel.ref)

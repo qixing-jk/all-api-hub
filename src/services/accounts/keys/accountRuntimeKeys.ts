@@ -7,7 +7,9 @@ import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/regi
 import {
   formatOptionalSkPrefixSiteTokenAuthKey,
   formatOptionalSkPrefixSiteTokenComparableKey,
+  hasOptionalSkPrefixSiteTokenSemantics,
 } from "~/services/accountTokens/apiTokenKey"
+import type { KeyMaskEvidence } from "~/services/accountTokens/keyMaskEvidence"
 import {
   ACCOUNT_KEY_RESOURCE_STATUSES,
   type AccountKeyResourceFacts,
@@ -153,6 +155,7 @@ type AccountRuntimeKeyBase = {
   siteType: AccountSiteType
   label: string
   secret: string
+  keyMask?: KeyMaskEvidence
   baseUrl: string
   status: AccountRuntimeKeyStatus
   capabilities: AccountRuntimeKeyCapabilities
@@ -370,6 +373,7 @@ export const buildAccountKeyResourceRuntimeKey = (
     ref: AccountKeyResourceRef
     label: string
     secret: string
+    keyMask?: KeyMaskEvidence
     /** Client-facing address for credential-routed providers; defaults to the account origin. */
     baseUrl?: string
     modelAccess?: AccountRuntimeKeyModelAccess
@@ -385,6 +389,7 @@ export const buildAccountKeyResourceRuntimeKey = (
       id: buildAccountKeyResourceRuntimeKeyId(resource.ref),
       label: resource.label,
       secret: resource.secret,
+      ...(resource.keyMask ? { keyMask: resource.keyMask } : {}),
       ...(resource.baseUrl ? { baseUrl: resource.baseUrl } : {}),
       modelAccess: resource.modelAccess,
       createdAt: resource.createdAt,
@@ -418,6 +423,7 @@ export const buildAccountKeyResourceRuntimeKeyFromFacts = (
     ref: facts.ref,
     label: facts.displayName,
     secret,
+    keyMask: facts.keyMask,
     status:
       facts.status === ACCOUNT_KEY_RESOURCE_STATUSES.Enabled
         ? ACCOUNT_RUNTIME_KEY_STATUSES.Active
@@ -433,6 +439,25 @@ export const getAccountRuntimeKeyExportId = (
   if (isAccountKeyResourceRuntimeKey(key) && key.legacyTokenId !== undefined)
     return String(key.legacyTokenId)
   return key.id
+}
+
+/** Projects inventory fragments through the same auth formatting as the resolved secret. */
+export const formatAccountRuntimeKeyMaskForSite = (
+  runtimeKey: AccountRuntimeKey,
+): KeyMaskEvidence | undefined => {
+  const mask = runtimeKey.keyMask
+  if (!mask || !hasOptionalSkPrefixSiteTokenSemantics(runtimeKey.siteType))
+    return mask
+  return {
+    ...mask,
+    // Auth formatting may add sk-. A partial "s"/"sk" inventory prefix cannot
+    // tell whether the raw credential already has it; retain only guaranteed bytes.
+    prefix: mask.prefix.startsWith("sk-")
+      ? mask.prefix
+      : "sk-".startsWith(mask.prefix)
+        ? "sk-"
+        : `sk-${mask.prefix}`,
+  }
 }
 
 /** Formats the runtime secret without changing the provider's original credential. */
