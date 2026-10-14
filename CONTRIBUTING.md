@@ -390,6 +390,10 @@ pnpm build:all
 pnpm zip:all
 ```
 
+### Android extension debugging and development
+
+For Android Firefox, Edge, and Lemur diagnostics, development installation, and hot updates, follow the [mobile extension workflow](.agents/skills/live-extension-ui-automation/references/mobile-debugging.md) in the [live-extension-ui-automation skill](.agents/skills/live-extension-ui-automation/SKILL.md).
+
 ## Continuous Integration
 
 GitHub Actions runs the test workflow for pull requests and for pushes to `main` or `develop` when configured source or tooling paths change. The workflow:

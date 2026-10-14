@@ -112,7 +112,13 @@ export default defineConfig({
       // Local builds share a display name, so the dev name carries the project
       // path to keep them apart in the extension list, menus and window titles.
       name: isDevServe
-        ? formatDevManifestName(APP_SHORT_NAME, projectPath)
+        ? formatDevManifestName(
+            APP_SHORT_NAME,
+            // web-ext Android derives its ZIP filename from this name.
+            process.env.AAH_MOBILE_DEV === "1"
+              ? path.basename(projectPath)
+              : projectPath,
+          )
         : "__MSG_manifest_name__",
       description,
       default_locale: "en",

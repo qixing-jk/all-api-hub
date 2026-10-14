@@ -15,6 +15,7 @@
     "dev:no-browser": "node scripts/dev-no-browser.mjs",
     "dev:firefox": "wxt -b firefox",
     "dev:mobile:firefox": "node scripts/android-dev.js",
+    "browser:mobile": "node scripts/mobile-browser.mjs",
     "build": "wxt build",
     "build:e2e": "node scripts/e2e-build.mjs",
     "build:firefox": "wxt build -b firefox",

@@ -23,7 +23,7 @@ Read only the guidance relevant to the current task; reuse unchanged material al
 - Persistent stores, storage keys, or writes that cross extension contexts: [storage guidance](docs/agents/storage.md).
 - Translation keys, resources, or language behavior: [i18n guidance](docs/agents/i18n.md). Use `add-app-language` only when adding a supported application language.
 - Sponsor catalog changes or audits use the project `sponsor-catalog` skill, not ordinary documentation edits.
-- Live dev extension UI automation, real accounts, or CDP control: use project skill `live-extension-ui-automation`.
+- Live extension UI automation, real accounts, desktop CDP, or Android Firefox/Edge/Lemur diagnostics and hot updates: use project skill `live-extension-ui-automation`.
 - Development setup, test harnesses, or hook troubleshooting: [CONTRIBUTING.md](CONTRIBUTING.md). Commands and versions belong to `package.json`, `.nvmrc`, and hooks.
 - For local E2E, live E2E, or CDP environment configuration, use the shared Node loader in `scripts/utils/local-env.mjs`: primary worktree `.env.local` supplies defaults below current-worktree files and explicit environment variables. Locate the primary checkout through Git rather than its branch name; do not duplicate shared credentials into linked worktrees. See [local tooling configuration](CONTRIBUTING.md#local-tooling-environment-configuration) for overrides and diagnostics. WXT retains its native mode/browser env loading.
 
