@@ -10,10 +10,9 @@ import {
 import { xiaoenProvider } from "~/services/checkin/autoCheckin/providers/xiaoen"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
+import { createAccountCompletionHelpersMock } from "~~/tests/services/apiAdapters/checkInFixtures"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
-
-import { createAccountCompletionHelpersMock } from "../../apiAdapters/checkInFixtures"
 
 const { fetchApi, fetchModels } = vi.hoisted(() => ({
   fetchApi: vi.fn(),
