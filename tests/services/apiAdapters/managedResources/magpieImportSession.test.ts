@@ -13,11 +13,12 @@ vi.mock("~/services/managedSites/configuration/runtimeConfig", () => ({
 afterEach(() => vi.unstubAllGlobals())
 
 it.each([
-  ["https://other.test/v1", "https://relay.test/v1"],
-  ["invalid-address", "also-invalid"],
+  ["https://other.test/v1", "https://relay.test/v1", "chat"],
+  ["invalid-address", "also-invalid", "chat"],
+  ["https://relay.test/v1", "https://relay.test/v1", "unsupported-native-type"],
 ])(
   "refuses an existing target whose fresh endpoint cannot match the import (%s)",
-  async (currentUrl, importUrl) => {
+  async (currentUrl, importUrl, channelType) => {
     const fetchMock = vi.fn(async (url: string) => {
       if (url.includes("?k=")) return Response.json({})
       expect(url.endsWith("/api/providers")).toBe(true)
@@ -51,7 +52,7 @@ it.each([
         {
           kind: "managed-channel-import",
           name: "New",
-          channelType: "chat",
+          channelType,
           baseUrl: importUrl,
           credential: "key-new",
           models: [],
@@ -65,6 +66,39 @@ it.each([
         ([url]) => url.includes("?k=") || url.endsWith("/api/providers"),
       ),
     ).toBe(true)
+  },
+)
+
+it.each(
+  [[], [""], ["***"], ["key\nsecond"]].map((credentials) => ({ credentials })),
+)(
+  "rejects invalid appended credentials before any network request (%j)",
+  async ({ credentials }) => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+    const workspace = await magpieManagedResourceRegistration.open()
+    await expect(
+      workspace.appendImportCredentials!(
+        {
+          siteType: "magpie",
+          kind: "channel",
+          scopeKey: "http://magpie.test",
+          resourceId: "existing",
+        },
+        {
+          kind: "managed-channel-import",
+          name: "New",
+          channelType: "chat",
+          baseUrl: "https://relay.test/v1",
+          credential: "",
+          credentials,
+          models: [],
+          enabled: true,
+          notes: "",
+        },
+      ),
+    ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+    expect(fetchMock).not.toHaveBeenCalled()
   },
 )
 

@@ -223,6 +223,53 @@ describe("native managed-channel import", () => {
     expect(openCreateEditor).not.toHaveBeenCalled()
   })
 
+  it("appends through the native workspace with the target, normalized seed and abort signal", async () => {
+    const result = {
+      outcome: "uncertain",
+      diagnostic: { message: "readback unavailable" },
+    }
+    const appendImportCredentials = vi.fn().mockResolvedValue(result)
+    vi.spyOn(
+      managedResourceRegistry,
+      "getManagedResourceRegistration",
+    ).mockReturnValue({
+      siteType: SITE_TYPES.MAGPIE,
+      kind: MANAGED_RESOURCE_KINDS.Channel,
+      createSeedKinds: [
+        MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+      ],
+      supportsMultipleImportCredentials: () => true,
+      open: vi.fn(async () => ({ appendImportCredentials })),
+    } as unknown as ManagedResourceRegistration)
+    const session = await openNativeManagedChannelImportSession(
+      SITE_TYPES.MAGPIE,
+    )
+    const ref = {
+      siteType: SITE_TYPES.MAGPIE,
+      kind: MANAGED_RESOURCE_KINDS.Channel,
+      scopeKey: "scope",
+      resourceId: "existing",
+    }
+    const signal = new AbortController().signal
+    await expect(
+      session.append!(
+        ref,
+        { ...draft, credentials: ["key-a", "key-b"] },
+        { signal },
+      ),
+    ).resolves.toBe(result)
+    expect(appendImportCredentials).toHaveBeenCalledWith(
+      ref,
+      expect.objectContaining({
+        kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+        credential: draft.key,
+        credentials: ["key-a", "key-b"],
+        baseUrl: draft.base_url,
+      }),
+      { signal },
+    )
+  })
+
   it("normalizes a disabled draft into a disabled provider-neutral seed", async () => {
     const openCreateEditor = vi.fn(async () => ({
       fields: [],

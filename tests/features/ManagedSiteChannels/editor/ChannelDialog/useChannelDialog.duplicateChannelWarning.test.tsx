@@ -800,6 +800,67 @@ describe("useChannelDialog", () => {
     expect(result.current.context.state.isOpen).toBe(false)
   })
 
+  it("does not open an editor when cancelled during model prefill after accepting a duplicate", async () => {
+    const pendingModels = createDeferred<string[]>()
+    const fetchModels = vi
+      .spyOn(openaiCompatible, "fetchOpenAICompatibleModelIds")
+      .mockReturnValue(pendingModels.promise)
+    try {
+      const service = buildManagedSiteCapabilitiesMock({
+        siteType: SITE_TYPES.MAGPIE,
+        channelDrafts: magpieManagedSiteCapabilities.channelDrafts,
+        matching: {
+          exactMatchBasis:
+            magpieManagedSiteCapabilities.matching.exactMatchBasis,
+          search: vi.fn().mockResolvedValue({
+            items: [
+              buildManagedResourceMatchCandidate({
+                ref: matchingResourceRef("duplicate", {
+                  siteType: SITE_TYPES.MAGPIE,
+                  scopeKey: "https://managed.example.com",
+                }),
+              }),
+            ],
+            total: 1,
+          }),
+        },
+      })
+      getManagedSiteCapabilitiesSpy.mockReturnValue(service)
+      const { result } = await renderChannelDialogHook()
+      let current = true
+      let opening!: Promise<unknown>
+      await act(async () => {
+        opening = result.current.dialog.openWithAccount(
+          buildDisplaySiteData(),
+          buildNewApiRuntimeKey(
+            buildDisplaySiteData(),
+            buildNewApiToken({ key: "sk-test" }),
+          ),
+          undefined,
+          { shouldContinue: () => current },
+        )
+      })
+      await waitFor(() =>
+        expect(result.current.context.duplicateChannelWarning.isOpen).toBe(
+          true,
+        ),
+      )
+      await act(async () =>
+        result.current.context.resolveDuplicateChannelWarning(true),
+      )
+      await waitFor(() => expect(fetchModels).toHaveBeenCalledOnce())
+      current = false
+      await act(async () => {
+        pendingModels.resolve(["gpt-4"])
+        expect(await opening).toEqual({ opened: false })
+      })
+      expect(nativeOpenCreateEditorMock).not.toHaveBeenCalled()
+      expect(result.current.context.state.isOpen).toBe(false)
+    } finally {
+      fetchModels.mockRestore()
+    }
+  })
+
   it("opens ChannelDialog when user continues despite duplicate", async () => {
     const existingChannel = buildManagedResourceMatchCandidate()
     const mockService = createManagedSiteCapabilitiesStub({

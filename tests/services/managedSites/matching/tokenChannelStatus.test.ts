@@ -334,6 +334,41 @@ describe("getManagedSiteTokenChannelStatus", () => {
     expect(resolveDisplayAccountRuntimeKeySecretMock).not.toHaveBeenCalled()
   })
 
+  it.each([false, true])(
+    "preserves unknown evidence or cancellation when mask preflight fails (abort=%s)",
+    async (abort) => {
+      const account = buildDisplaySiteData({ siteType: SITE_TYPES.NEW_API })
+      const runtimeKey = {
+        ...buildNewApiRuntimeKey(account, buildNewApiToken({ key: "" })),
+        keyMask: { prefix: "abcd", suffix: "1234" },
+      }
+      const controller = new AbortController()
+      const managedSite = createManagedSiteCapabilitiesStub({
+        siteType: SITE_TYPES.NEW_API,
+        channelDrafts: {
+          prepareFormData: vi.fn(async () => {
+            if (abort) controller.abort()
+            throw new Error("preflight unavailable")
+          }),
+        },
+      })
+      const pending = getManagedSiteTokenChannelStatus({
+        runtimeKey,
+        managedSite,
+        signal: controller.signal,
+      })
+      if (abort)
+        await expect(pending).rejects.toMatchObject({ name: "AbortError" })
+      else
+        await expect(pending).resolves.toMatchObject({
+          status: "unknown",
+          reason:
+            MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.INPUT_PREPARATION_FAILED,
+        })
+      expect(resolveDisplayAccountRuntimeKeySecretMock).not.toHaveBeenCalled()
+    },
+  )
+
   it("preserves a raw account mask that matches a prefixed credential on an exact-comparison gateway", async () => {
     const account = buildDisplaySiteData({
       baseUrl: "https://api.example.com",

@@ -305,7 +305,13 @@ const repairCompleteIntent = {
 } as const
 
 describe("managed-site token batch export", () => {
-  it.each(["succeeded", "changed", "uncertain"])(
+  it.each([
+    "succeeded",
+    "changed",
+    "uncertain",
+    "append-unavailable",
+    "ambiguous",
+  ])(
     "uses the existing Magpie target without falling back to provider creation (%s)",
     async (outcome) => {
       const target = buildManagedResourceMatchCandidate({
@@ -370,7 +376,7 @@ describe("managed-site token batch export", () => {
         ],
       })
       const submit = vi.fn()
-      if (outcome !== "succeeded")
+      if (outcome === "changed" || outcome === "uncertain")
         append.mockRejectedValue(
           new ManagedResourceError({
             code:
@@ -380,7 +386,7 @@ describe("managed-site token batch export", () => {
           }),
         )
       mockOpenNativeManagedChannelImportSession.mockResolvedValue({
-        append,
+        ...(outcome === "append-unavailable" ? {} : { append }),
         submit,
         reconcile: vi.fn(),
       })
@@ -401,6 +407,22 @@ describe("managed-site token batch export", () => {
       expect(preview.items[0]?.existingImportTargets).toEqual([
         { ref: target.ref, name: "Coding group" },
       ])
+      if (outcome === "ambiguous") {
+        preview.items[0]!.existingImportTargets!.push({
+          ref: { ...target.ref, resourceId: "second" },
+          name: "Second candidate",
+        })
+        await expect(
+          executeManagedSiteTokenBatchExport({
+            preview,
+            selectedItemIds: [runtimeKey.id],
+            mode: "reuse",
+          }),
+        ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+        expect(mockOpenNativeManagedChannelImportSession).not.toHaveBeenCalled()
+        expect(submit).not.toHaveBeenCalled()
+        return
+      }
       const result = await executeManagedSiteTokenBatchExport({
         preview,
         selectedItemIds: [runtimeKey.id],
@@ -409,12 +431,16 @@ describe("managed-site token batch export", () => {
       expect(result).toMatchObject({
         createdCount: outcome === "succeeded" ? 1 : 0,
         failedCount: outcome === "changed" ? 1 : 0,
-        uncertainCount: outcome === "uncertain" ? 1 : 0,
+        uncertainCount:
+          outcome === "uncertain" || outcome === "append-unavailable" ? 1 : 0,
       })
-      expect(append).toHaveBeenCalledWith(
-        target.ref,
-        expect.objectContaining({ key: "key-new" }),
-      )
+      if (outcome === "append-unavailable")
+        expect(append).not.toHaveBeenCalled()
+      else
+        expect(append).toHaveBeenCalledWith(
+          target.ref,
+          expect.objectContaining({ key: "key-new" }),
+        )
       expect(submit).not.toHaveBeenCalled()
     },
   )
@@ -467,7 +493,7 @@ describe("managed-site token batch export", () => {
     })
   })
 
-  it("imports same-site keys into one native resource while returning results for every source key", async () => {
+  it("imports same-site keys into one named native resource while returning results for every source key", async () => {
     const managedSite = buildAxonHubImportService()
     configureManagedSiteCapabilities(managedSite)
     const { prepareManagedSiteTokenBatchExportPreview } = await import(
@@ -492,10 +518,14 @@ describe("managed-site token batch export", () => {
       preview,
       selectedItemIds: preview.items.map((item) => item.id),
       mode: "grouped",
+      resourceNamesByItemId: { [preview.items[0]!.id]: "  Shared provider  " },
     })
     expect(managedSite.submit).toHaveBeenCalledTimes(1)
     expect(managedSite.submit).toHaveBeenCalledWith(
-      expect.objectContaining({ credentials: ["key-first", "key-second"] }),
+      expect.objectContaining({
+        name: "Shared provider",
+        credentials: ["key-first", "key-second"],
+      }),
     )
     expect(result).toMatchObject({
       createdCount: 2,

@@ -8,6 +8,7 @@ import {
   MANAGED_RESOURCE_FIELD_ISSUE_CODES,
   ManagedResourceError,
   type EditableResourceProjection,
+  type ManagedChannelImportCreateSeed,
   type ManagedResourceRef,
   type ManagedResourceRegistration,
   type ManagedResourceWorkspace,
@@ -106,6 +107,17 @@ const TEST_DETAIL: TestDetail = {
   name: "Example channel",
   secret: "native-only-secret",
   settings: { visible: "shown", hidden: "preserve-me" },
+}
+
+const importSeed: ManagedChannelImportCreateSeed = {
+  kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+  name: "Imported channel",
+  channelType: "example",
+  credential: "key-first",
+  baseUrl: "https://upstream.example.invalid",
+  enabled: true,
+  models: [],
+  notes: "",
 }
 
 const OTHER_LOCATOR: TestLocator = {
@@ -281,6 +293,108 @@ const captureManagedError = async (promise: Promise<unknown>) => {
 }
 
 describe("defineNativeResourceKind", () => {
+  it("rejects unsupported multi-key seeds during validation and editor opening", async () => {
+    const { registration, definition } = createHarness({
+      createSeedBindings: [
+        {
+          kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+          project: (seed) => ({ name: seed.name }),
+          validate: () => ({ valid: true }),
+          sourceFieldIds: {},
+        },
+      ],
+    })
+    const seed = { ...importSeed, credentials: ["key-first", "key-second"] }
+    expect(() => registration.validateCreateSeed!(seed)).toThrowError(
+      expect.objectContaining({ failure: { code: "unavailable" } }),
+    )
+    await expect(
+      (await registration.open()).openCreateEditor({ seed }),
+    ).rejects.toMatchObject({ failure: { code: "unavailable" } })
+    expect(definition.createEditor).not.toHaveBeenCalled()
+  })
+
+  it.each(
+    [[], [""], ["***"], ["key\nsecond"]].map((credentials) => ({
+      credentials,
+    })),
+  )(
+    "rejects invalid credential lists before provider validation (%j)",
+    ({ credentials }) => {
+      const validate = vi.fn(() => ({ valid: true as const }))
+      const { registration } = createHarness({
+        createSeedBindings: [
+          {
+            kind: MANAGED_RESOURCE_CREATE_SEED_KINDS.ManagedChannelImport,
+            project: (seed) => ({ name: seed.name }),
+            validate,
+            sourceFieldIds: {},
+          },
+        ],
+      })
+      expect(
+        registration.validateCreateSeed!({ ...importSeed, credentials }),
+      ).toEqual({
+        valid: false,
+        issues: [{ fieldId: "credential", code: "invalid_value" }],
+      })
+      expect(validate).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([
+    "partial-data",
+    "partial-no-data",
+    "rejected",
+    "uncertain",
+  ] as const)("preserves append mutation evidence for %s", async (mode) => {
+    const result = mode.startsWith("partial")
+      ? {
+          outcome: MANAGED_SITE_MUTATION_OUTCOMES.Partial,
+          ...(mode === "partial-data" ? { data: TEST_DETAIL } : {}),
+          confirmedEffects: [
+            testEffect(MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceUpdated),
+          ],
+          completion: MANAGED_SITE_MUTATION_COMPLETIONS.Uncertain,
+          diagnostic: { message: "readback unavailable" },
+        }
+      : mode === "rejected"
+        ? rejected("denied")
+        : {
+            outcome: MANAGED_SITE_MUTATION_OUTCOMES.Uncertain,
+            diagnostic: { message: "readback unavailable" },
+          }
+    const appendImportCredentials = vi
+      .fn<NonNullable<TestDefinition["appendImportCredentials"]>>()
+      .mockResolvedValue(result as ManagedSiteMutationResult<TestDetail>)
+    const { registration } = createHarness({ appendImportCredentials })
+    const workspace = await registration.open()
+    const signal = new AbortController().signal
+    const actual = await workspace.appendImportCredentials!(
+      toRef(),
+      importSeed,
+      { signal },
+    )
+    if (mode === "partial-data") {
+      expect(actual).toMatchObject({
+        outcome: "partial",
+        confirmedEffects: [
+          testEffect(MANAGED_SITE_MUTATION_EFFECT_KINDS.ResourceUpdated),
+        ],
+        diagnostic: result.diagnostic,
+        data: { ref: toRef(), displayName: TEST_DETAIL.name },
+      })
+      if (actual.outcome === "partial")
+        expect(actual.data).not.toHaveProperty("secret")
+    } else expect(actual).toBe(result)
+    expect(appendImportCredentials).toHaveBeenCalledOnce()
+    expect(appendImportCredentials).toHaveBeenCalledWith(
+      { scope: "scope-a" },
+      TEST_LOCATOR,
+      importSeed,
+      { signal },
+    )
+  })
   it("keeps unchanged managed editor descriptors compatible with neutral contracts", async () => {
     const { registration } = createHarness()
     const editor = await (await registration.open()).openCreateEditor()

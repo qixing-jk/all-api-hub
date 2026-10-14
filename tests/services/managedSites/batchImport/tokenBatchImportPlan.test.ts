@@ -28,6 +28,18 @@ const item = (
 })
 
 describe("public batch import plan", () => {
+  it("keeps distinct invalid endpoints apart while normalizing surrounding whitespace", () => {
+    const plan = planManagedSiteTokenBatchImport(
+      SITE_TYPES.MAGPIE,
+      [
+        item("a", [], " invalid-one "),
+        item("b", [], "invalid-one"),
+        item("c", [], "invalid-two"),
+      ],
+      "grouped",
+    )
+    expect(plan.map((group) => group.itemIds)).toEqual([["a", "b"], ["c"]])
+  })
   it("requires a choice for multiple existing channels and accepts an explicit new channel", () => {
     const first = {
       ref: {

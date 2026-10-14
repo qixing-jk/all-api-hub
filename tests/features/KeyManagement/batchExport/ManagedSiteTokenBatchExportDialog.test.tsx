@@ -6,7 +6,7 @@ import {
   type ComponentProps,
   type ReactNode,
 } from "react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { ConfirmDialog } from "~/components/ui"
 import { SITE_TYPES } from "~/constants/siteType"
@@ -16,6 +16,8 @@ import { NEW_API_MANAGED_VERIFICATION_CLOSE_MODES } from "~/features/ManagedSite
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import type { UserPreferences } from "~/services/preferences/preferencesSchema"
+import { PREFERENCE_WRITE_FAILURE_TYPES } from "~/services/preferences/preferencesStore"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -83,6 +85,7 @@ const {
   mockTrackProductAnalyticsActionCompleted,
   mockTrackProductAnalyticsActionStarted,
   mockToastSuccess,
+  mockToastError,
   mockUserPreferencesContextValue,
   mockVerificationDialogState,
 } = vi.hoisted(() => ({
@@ -104,6 +107,7 @@ const {
   mockTrackProductAnalyticsActionCompleted: vi.fn(),
   mockTrackProductAnalyticsActionStarted: vi.fn(),
   mockToastSuccess: vi.fn(),
+  mockToastError: vi.fn(),
   mockUserPreferencesContextValue: {
     current: {} as Record<string, unknown>,
   },
@@ -234,6 +238,7 @@ vi.mock("~/services/productAnalytics/actions", () => ({
 vi.mock("~/lib/notify", () => ({
   default: {
     success: mockToastSuccess,
+    error: mockToastError,
   },
 }))
 
@@ -657,6 +662,69 @@ const getBatchImportConfirmButton = () =>
   })
 
 describe("ManagedSiteTokenBatchExportDialog", () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it("keeps the selected import mode and reports a preference save failure", async () => {
+    vi.spyOn(userPreferences, "savePreferences").mockResolvedValue({
+      ok: false,
+      reason: {
+        type: PREFERENCE_WRITE_FAILURE_TYPES.StorageError,
+        error: new Error("storage unavailable"),
+      },
+    })
+    mockPreparePreview.mockResolvedValue(preview)
+    const user = userEvent.setup()
+    renderDialog()
+    await screen.findByRole("checkbox", { name: "Account 1 / Token 1" })
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "keyManagement:batchManagedSiteExport.importMode.label",
+      }),
+    )
+    await user.click(
+      screen.getByRole("option", {
+        name: "keyManagement:batchManagedSiteExport.importMode.grouped",
+      }),
+    )
+    await waitFor(() =>
+      expect(mockToastError).toHaveBeenCalledWith(
+        "keyManagement:batchManagedSiteExport.importMode.saveFailed",
+      ),
+    )
+    expect(screen.getByTestId("managed-site-import-group")).toHaveTextContent(
+      "Token 2",
+    )
+  })
+
+  it.each([SITE_TYPES.NEW_API, SITE_TYPES.SUB2API])(
+    "shows model differences or unsupported grouping for %s",
+    async (siteType) => {
+      mockUserPreferencesContextValue.current.preferences = {
+        ...(mockUserPreferencesContextValue.current
+          .preferences as UserPreferences),
+        managedSiteTokenBatchImportModes: {
+          "test-target-fingerprint": "grouped",
+        },
+      }
+      mockPreparePreview.mockResolvedValue({
+        ...preview,
+        siteType,
+        items: preview.items.map((item, index) => ({
+          ...item,
+          draft: { ...item.draft!, models: [`model-${index}`] },
+        })),
+      })
+      renderDialog()
+      await screen.findByRole("checkbox", { name: "Account 1 / Token 1" })
+      const warning =
+        siteType === SITE_TYPES.NEW_API ? "modelDifferences" : "unsupported"
+      expect(
+        await screen.findAllByText(
+          `keyManagement:batchManagedSiteExport.importMode.${warning}`,
+        ),
+      ).not.toHaveLength(0)
+    },
+  )
   beforeEach(() => {
     vi.clearAllMocks()
     mockUserPreferencesContextValue.current = {
