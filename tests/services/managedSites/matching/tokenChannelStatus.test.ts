@@ -6,7 +6,10 @@ import {
   buildServiceCredentialRuntimeKey,
   formatAccountRuntimeKeySecretForSite,
 } from "~/services/accounts/keys/accountRuntimeKeys"
+import * as openaiCompatible from "~/services/aiApi/openaiCompatible"
 import { MANAGED_RESOURCE_EXACT_MATCH_BASES } from "~/services/apiAdapters/contracts/managedResourceMatching"
+import { magpieManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/magpie"
+import { newApiManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/newApi"
 import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import {
   MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
@@ -309,6 +312,138 @@ describe("resolveManagedSiteTokenChannelStatusWithVerifiedKey", () => {
 })
 
 describe("getManagedSiteTokenChannelStatus", () => {
+  it.each([
+    {
+      siteType: SITE_TYPES.MAGPIE,
+      candidate: "absent",
+      expected: "not-added",
+      reads: 0,
+    },
+    {
+      siteType: SITE_TYPES.MAGPIE,
+      candidate: "different-key",
+      expected: "not-added",
+      reads: 0,
+    },
+    {
+      siteType: SITE_TYPES.MAGPIE,
+      candidate: "matching-key",
+      expected: "added",
+      reads: 0,
+    },
+    {
+      siteType: SITE_TYPES.MAGPIE,
+      candidate: "hidden-key",
+      expected: "unknown",
+      reads: 0,
+    },
+    {
+      siteType: SITE_TYPES.NEW_API,
+      candidate: "absent",
+      expected: "not-added",
+      reads: 0,
+    },
+    {
+      siteType: SITE_TYPES.NEW_API,
+      candidate: "different-key",
+      expected: "not-added",
+      reads: 0,
+    },
+    {
+      siteType: SITE_TYPES.NEW_API,
+      candidate: "matching-key",
+      expected: "added",
+      reads: 1,
+    },
+    {
+      siteType: SITE_TYPES.NEW_API,
+      candidate: "different-models",
+      expected: "unknown",
+      reads: 1,
+    },
+    {
+      siteType: SITE_TYPES.NEW_API,
+      candidate: "hidden-key",
+      expected: "unknown",
+      reads: 1,
+    },
+    {
+      siteType: SITE_TYPES.NEW_API,
+      candidate: "search-failed",
+      expected: "unknown",
+      reads: 0,
+    },
+  ])(
+    "reads models only when needed for $siteType / $candidate",
+    async ({ siteType, candidate, expected, reads }) => {
+      const fetchModels = vi
+        .spyOn(openaiCompatible, "fetchOpenAICompatibleModelIds")
+        .mockResolvedValue(["gpt-4o"])
+      try {
+        const search = vi.fn().mockResolvedValue(
+          candidate === "search-failed"
+            ? null
+            : {
+                items:
+                  candidate === "absent"
+                    ? []
+                    : [
+                        buildManagedResourceMatchCandidate({
+                          ref: matchingResourceRef("model-order", { siteType }),
+                          base_url: "https://api.example.com",
+                          key:
+                            candidate === "different-key"
+                              ? "another-key"
+                              : candidate === "hidden-key"
+                                ? "sk-****"
+                                : "test-token-key",
+                          models:
+                            candidate === "different-models"
+                              ? "other-model"
+                              : "gpt-4o",
+                        }),
+                      ],
+                total: candidate === "absent" ? 0 : 1,
+              },
+        )
+        const nativeSite =
+          siteType === SITE_TYPES.MAGPIE
+            ? magpieManagedSiteCapabilities
+            : newApiManagedSiteCapabilities
+        const managedSite = createManagedSiteCapabilitiesStub({
+          siteType,
+          channelDrafts: nativeSite.channelDrafts,
+          matching: {
+            exactMatchBasis: nativeSite.matching.exactMatchBasis,
+            search,
+          },
+        })
+        const result = await getManagedSiteTokenChannelStatus({
+          runtimeKey: buildNewApiRuntimeKey(
+            buildDisplaySiteData({ baseUrl: "https://api.example.com" }),
+            buildNewApiToken({ key: "test-token-key" }),
+          ),
+          managedSite,
+        })
+        expect(result.status).toBe(expected)
+        expect(fetchModels).toHaveBeenCalledTimes(reads)
+        expect(search).toHaveBeenCalledOnce()
+        if (candidate === "hidden-key")
+          expect(result).toMatchObject({
+            reason:
+              MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
+          })
+        if (candidate === "search-failed")
+          expect(result).toMatchObject({
+            reason:
+              MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.BACKEND_SEARCH_FAILED,
+          })
+      } finally {
+        fetchModels.mockRestore()
+      }
+    },
+  )
+
   beforeEach(() => {
     resolveDisplayAccountRuntimeKeySecretMock.mockReset()
     resolveDisplayAccountRuntimeKeySecretMock.mockImplementation(
@@ -618,9 +753,9 @@ describe("getManagedSiteTokenChannelStatus", () => {
         models: {
           comparable: false,
           matched: false,
-          reason:
-            MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.COMPARISON_UNAVAILABLE,
+          reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.NO_MODELS_PROVIDED,
           channel: undefined,
+          similarityScore: undefined,
         },
       },
     })
@@ -687,7 +822,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     },
   )
 
-  it("returns not added when base URL and models match but the key does not", async () => {
+  it("returns not added without comparing models when the URL matches but the key does not", async () => {
     const account = buildDisplaySiteData({ baseUrl: "https://api.example.com" })
     const token = buildNewApiToken({ key: "test-token-key" })
     const managedSite = createManagedSiteCapabilitiesStub({
@@ -733,14 +868,11 @@ describe("getManagedSiteTokenChannelStatus", () => {
           channel: undefined,
         },
         models: {
-          comparable: true,
-          matched: true,
-          reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
-          channel: {
-            ref: matchingResourceRef(23),
-            name: "Managed Channel 23",
-          },
-          similarityScore: 1,
+          comparable: false,
+          matched: false,
+          reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.NO_MODELS_PROVIDED,
+          channel: undefined,
+          similarityScore: undefined,
         },
       },
     })
@@ -1102,9 +1234,9 @@ describe("getManagedSiteTokenChannelStatus", () => {
         models: {
           comparable: false,
           matched: false,
-          reason:
-            MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.COMPARISON_UNAVAILABLE,
+          reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.NO_MODELS_PROVIDED,
           channel: undefined,
+          similarityScore: undefined,
         },
       },
     })

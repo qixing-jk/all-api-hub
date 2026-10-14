@@ -445,7 +445,18 @@ describe("managed-site token batch export", () => {
       siteType: SITE_TYPES.SUB2API,
       matching: { exactMatchBasis: MANAGED_RESOURCE_EXACT_MATCH_BASES.URL_KEY },
       channelDrafts: {
-        prepareFormData: vi.fn().mockRejectedValue(new Error("models offline")),
+        prepareFormData: vi.fn(async (source, options) => {
+          if (options?.modelPrefill !== false) throw new Error("models offline")
+          return {
+            name: source.name,
+            base_url: source.baseUrl,
+            key: source.apiKey,
+            type: 1,
+            models: [],
+            groups: [],
+            enabled: true,
+          }
+        }),
       },
     })
     configureManagedSiteCapabilities(managedSite)
@@ -467,7 +478,11 @@ describe("managed-site token batch export", () => {
       blockedCount: 0,
       items: [{ status: "skipped", matchedChannel: { name: "Existing" } }],
     })
-    expect(managedSite.channelDrafts.prepareFormData).not.toHaveBeenCalled()
+    expect(managedSite.channelDrafts.prepareFormData).toHaveBeenCalledOnce()
+    expect(managedSite.channelDrafts.prepareFormData).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ modelPrefill: false }),
+    )
   })
 
   it("keeps the first executable batch credential and skips its duplicate across accounts", async () => {
@@ -1709,7 +1724,12 @@ describe("managed-site token batch export", () => {
       status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY,
       warningCodes: [],
     })
-    expect(mockResolveManagedSiteChannelMatch).toHaveBeenCalledOnce()
+    expect(mockResolveManagedSiteChannelMatch).toHaveBeenCalledWith(
+      expect.objectContaining({ models: [] }),
+    )
+    expect(mockResolveManagedSiteChannelMatch).toHaveBeenCalledWith(
+      expect.objectContaining({ models: ["gpt-4o"] }),
+    )
   })
 
   it.each([

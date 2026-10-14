@@ -4,7 +4,7 @@ import {
   type AccountRuntimeKey,
 } from "~/services/accounts/keys/accountRuntimeKeys"
 import { resolveDisplayAccountRuntimeKeySecret } from "~/services/accounts/utils/apiServiceRequest"
-import type { ManagedResourceSecretVerificationRecovery } from "~/services/apiAdapters/contracts/managedResourceMatching"
+import { type ManagedResourceSecretVerificationRecovery } from "~/services/apiAdapters/contracts/managedResourceMatching"
 import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { MANAGED_SITE_CHANNEL_DRAFT_PURPOSES } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import type { ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
@@ -21,7 +21,7 @@ import {
   getManagedSiteChannelExactMatch,
   type ManagedSiteChannelMatchInspection,
 } from "~/services/managedSites/matching/channelMatch"
-import { resolveManagedSiteChannelMatch } from "~/services/managedSites/matching/channelMatchResolver"
+import { prepareManagedSiteChannelMatch } from "~/services/managedSites/matching/prepareChannelMatch"
 import {
   applyVerifiedManagedSiteChannelKey,
   toManagedSiteAssessmentChannel,
@@ -290,16 +290,16 @@ export async function getManagedSiteTokenChannelStatus(
           ? normalizeManagedSiteChannelBaseUrl(resolvedRuntimeKey.baseUrl)
           : resolvedRuntimeKey.baseUrl,
     })
-    const formData = await managedSite.channelDrafts.prepareFormData(source, {
-      operationContext: params.operationContext,
-      purpose: MANAGED_SITE_CHANNEL_DRAFT_PURPOSES.MATCHING,
-      signal: params.signal,
-      requestScheduling: params.requestScheduling,
-    })
+    const { draft: formData, resolution } =
+      await prepareManagedSiteChannelMatch({
+        ...params,
+        source,
+        managedSite,
+        managedConfig,
+        purpose: MANAGED_SITE_CHANNEL_DRAFT_PURPOSES.MATCHING,
+      })
     params.signal?.throwIfAborted()
-    const searchBaseUrl = normalizeManagedSiteChannelBaseUrl(formData.base_url)
-
-    if (!searchBaseUrl) {
+    if (!resolution) {
       return {
         status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
         reason:
@@ -307,23 +307,6 @@ export async function getManagedSiteTokenChannelStatus(
         diagnostic: "missing-comparable-inputs",
       }
     }
-
-    // The match module owns which evidence is required for an exact match.
-    // Empty optional dimensions must reach it instead of being rejected here.
-    const resolution = await resolveManagedSiteChannelMatch({
-      managedSite,
-      managedConfig,
-      accountBaseUrl: searchBaseUrl,
-      models: formData.models,
-      key: formData.key,
-      resolvedChannelKeysByResourceKey: params.resolvedChannelKeysByResourceKey,
-      resolveHiddenKeys: true,
-      requestCache: params.operationContext?.channelMatch,
-      signal: params.signal,
-      requestScheduling: params.requestScheduling,
-      protectionBypassExecution: params.protectionBypassExecution,
-    })
-    params.signal?.throwIfAborted()
     const assessment = toManagedSiteVerifiedKeyAssessment(resolution)
     const exactMatch = getManagedSiteChannelExactMatch(
       resolution,

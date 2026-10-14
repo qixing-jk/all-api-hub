@@ -1,4 +1,5 @@
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
+import type { ManagedSiteChannelDraftRequestOptions } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
 import {
   sharePendingConfigRead,
   type ScheduledReadOptions,
@@ -22,8 +23,10 @@ const readPendingModels = sharePendingConfigRead(fetchUncachedModels)
  */
 export async function fetchManagedSiteImportModels(
   source: Pick<ManagedSiteChannelDraftSource, "baseUrl" | "apiKey">,
-  options: ScheduledReadOptions = {},
+  options: ManagedSiteChannelDraftRequestOptions = {},
 ): Promise<ManagedSiteImportModelsResult> {
+  options.signal?.throwIfAborted()
+  if (options.modelPrefill === false) return { models: [], fetchFailed: false }
   const result = await readPendingModels(
     { baseUrl: source.baseUrl, apiKey: source.apiKey },
     options,

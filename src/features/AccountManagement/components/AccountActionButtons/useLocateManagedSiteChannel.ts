@@ -13,12 +13,9 @@ import { getCurrentManagedSiteType } from "~/services/managedSites/configuration
 import {
   getManagedSiteChannelExactMatch,
   getRecoverableManagedSiteChannelCandidate,
-  MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
 } from "~/services/managedSites/matching/channelMatch"
-import {
-  createManagedSiteChannelMatchRequestCache,
-  resolveManagedSiteChannelMatch,
-} from "~/services/managedSites/matching/channelMatchResolver"
+import { prepareManagedSiteChannelMatch } from "~/services/managedSites/matching/prepareChannelMatch"
+import { createManagedSiteOperationContext } from "~/services/managedSites/operationContext"
 import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
 import { collectManagedConfigSecrets } from "~/services/managedSites/utils/resourceSecrets"
 import { withProtectionBypassUserCommand } from "~/services/protectionBypass/client"
@@ -118,59 +115,51 @@ export function useLocateManagedSiteChannel({
         runtimeKey,
       )
       addRuntimeKeyRedactionSecrets(secretsToRedact, [resolvedRuntimeKey])
-      let formData: Awaited<
-        ReturnType<typeof managedSite.channelDrafts.prepareFormData>
-      >
-      try {
-        formData = await managedSite.channelDrafts.prepareFormData(
-          buildManagedSiteChannelDraftSource({
-            ...resolvedRuntimeKey,
-            baseUrl:
-              isAccountKeyResourceRuntimeKey(resolvedRuntimeKey) &&
-              resolvedRuntimeKey.baseUrl.trim() ===
-                tokenLookupAccount.baseUrl.trim()
-                ? normalizedAccountBaseUrl
-                : resolvedRuntimeKey.baseUrl,
-          }),
-        )
-      } catch (error) {
-        logger.warn(
-          "Failed to build channel match inputs; using URL-only match",
-          {
-            diagnostic: toSanitizedErrorSummary(
-              error,
-              Array.from(secretsToRedact),
-            ),
-            siteId: site.id,
-            baseUrl: site.baseUrl,
-            siteType: site.siteType,
-          },
-        )
-        return handleChannelLocateFallback(
-          t("actions.channelLocateInputPreparationFallback"),
-        )
-      }
-
-      const searchBaseUrl = normalizeManagedSiteChannelBaseUrl(
-        formData.base_url,
-      )
-
-      if (!searchBaseUrl || formData.models.length === 0) {
-        return handleChannelLocateFallback(
-          t("actions.channelLocateInputPreparationFallback"),
-        )
-      }
-
-      const requestCache = createManagedSiteChannelMatchRequestCache()
+      const source = buildManagedSiteChannelDraftSource({
+        ...resolvedRuntimeKey,
+        baseUrl:
+          isAccountKeyResourceRuntimeKey(resolvedRuntimeKey) &&
+          resolvedRuntimeKey.baseUrl.trim() ===
+            tokenLookupAccount.baseUrl.trim()
+            ? normalizedAccountBaseUrl
+            : resolvedRuntimeKey.baseUrl,
+      })
+      let inputsPrepared = false
       const matchParams = {
+        source,
         managedSite,
         managedConfig,
-        accountBaseUrl: searchBaseUrl,
-        models: formData.models,
-        key: formData.key,
-        requestCache,
+        purpose: "matching" as const,
+        onDraftPrepared: () => {
+          inputsPrepared = true
+        },
+        operationContext: createManagedSiteOperationContext({
+          freshChannelSearches: true,
+        }),
       }
-      let resolution = await resolveManagedSiteChannelMatch(matchParams)
+      let prepared: Awaited<ReturnType<typeof prepareManagedSiteChannelMatch>>
+      try {
+        prepared = await prepareManagedSiteChannelMatch(matchParams)
+      } catch (error) {
+        if (inputsPrepared) throw error
+        logger.warn("Failed to build channel match inputs", {
+          diagnostic: toSanitizedErrorSummary(
+            error,
+            Array.from(secretsToRedact),
+          ),
+          siteId: site.id,
+        })
+        // Upstream input failures retain a URL search; backend lookup failures
+        // remain errors once the shared preparation has produced its inputs.
+        return handleChannelLocateFallback(
+          t("actions.channelLocateInputPreparationFallback"),
+        )
+      }
+      let resolution = prepared.resolution
+      if (!resolution)
+        return handleChannelLocateFallback(
+          t("actions.channelLocateInputPreparationFallback"),
+        )
       const recoverableCandidate = getRecoverableManagedSiteChannelCandidate({
         url: resolution.url,
         models: resolution.models,
@@ -182,25 +171,25 @@ export function useLocateManagedSiteChannel({
           MANAGED_RESOURCE_SECRET_VERIFICATION_KINDS.NEW_API_SESSION &&
         "userId" in managedConfig
       ) {
-        resolution = await withProtectionBypassUserCommand(
+        const verified = await withProtectionBypassUserCommand(
           PROTECTION_BYPASS_USER_COMMANDS.ManageSiteChannels,
           getCurrentTempWindowRequestSource(),
           async (protectionBypassExecution) =>
-            await resolveManagedSiteChannelMatch({
+            await prepareManagedSiteChannelMatch({
               ...matchParams,
-              resolveHiddenKeys: true,
+              preparedDraft: prepared.draft,
               hiddenKeyResourceRefs: [recoverableCandidate.ref],
               protectionBypassExecution,
             }),
         )
+        if (verified.resolution) resolution = verified.resolution
       }
-      const exactMatch = getManagedSiteChannelExactMatch(resolution)
+      const exactMatch = getManagedSiteChannelExactMatch(
+        resolution,
+        managedSite.matching,
+      )
 
-      if (
-        exactMatch &&
-        resolution.models.reason ===
-          MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT
-      ) {
+      if (exactMatch) {
         openManagedSiteChannelsPage({ resourceRef: exactMatch.ref })
         return
       }

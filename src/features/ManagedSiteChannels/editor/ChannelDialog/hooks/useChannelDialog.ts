@@ -41,15 +41,12 @@ import {
   getManagedSiteChannelExactMatch,
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
 } from "~/services/managedSites/matching/channelMatch"
-import { resolveManagedSiteChannelMatch } from "~/services/managedSites/matching/channelMatchResolver"
-import {
-  MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
-  type ManagedSiteTokenChannelStatus,
-} from "~/services/managedSites/matching/tokenChannelStatus"
+import { prepareManagedSiteChannelMatch } from "~/services/managedSites/matching/prepareChannelMatch"
+import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/matching/tokenChannelStatus"
+import { createManagedSiteOperationContext } from "~/services/managedSites/operationContext"
 import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteMessagesKeyFromSiteType,
-  supportsManagedSiteBaseUrlChannelLookup,
 } from "~/services/managedSites/utils/managedSite"
 import { collectManagedConfigSecrets } from "~/services/managedSites/utils/resourceSecrets"
 import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
@@ -159,45 +156,14 @@ export function useChannelDialog() {
   ): ChannelDialogAdvisoryWarning =>
     buildChannelDialogAdvisoryWarning(t, kind, options)
 
-  const resolvePrefilledDialogDuplicateState = async (params: {
+  const resolvePrefilledDialogDuplicateState = (params: {
     managedSite: ManagedSiteCapabilities
-    managedConfig: ManagedSiteRuntimeConfigValue
-    accountBaseUrl: string
-    models: string[]
-    key?: string
-    managedSiteStatus?: ManagedSiteTokenChannelStatus
-  }): Promise<PrefilledDialogDuplicateState> => {
-    if (
-      params.managedSiteStatus?.status ===
-      MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED
-    ) {
-      return {
-        existingChannelName: params.managedSiteStatus.matchedChannel.name,
-        advisoryWarning: null,
-      }
-    }
-
-    if (!supportsManagedSiteBaseUrlChannelLookup(params.managedSite.siteType)) {
-      return {
-        existingChannelName: null,
-        advisoryWarning: null,
-      }
-    }
-
-    const resolution = await resolveManagedSiteChannelMatch({
-      managedSite: params.managedSite,
-      managedConfig: params.managedConfig,
-      accountBaseUrl: params.accountBaseUrl,
-      models: params.models,
-      key: params.key,
-      // URL candidates can expose readable keys even when their models differ.
-      resolveHiddenKeys: true,
-      protectionBypassExecution: createAutomaticProtectionBypassExecution(
-        PROTECTION_BYPASS_FEATURES.ManagedSiteChannels,
-        PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
-        getCurrentTempWindowRequestSource(),
-      ),
-    })
+    resolution: Awaited<
+      ReturnType<typeof prepareManagedSiteChannelMatch>
+    >["resolution"]
+  }): PrefilledDialogDuplicateState => {
+    const { resolution } = params
+    if (!resolution) return { existingChannelName: null, advisoryWarning: null }
     const exactMatch = getManagedSiteChannelExactMatch(
       resolution,
       params.managedSite.matching,
@@ -259,6 +225,63 @@ export function useChannelDialog() {
       existingChannelName: null,
       advisoryWarning: null,
     }
+  }
+
+  const preparePrefilledChannelCreate = async (params: {
+    source: ManagedSiteChannelDraftSource
+    managedSite: ManagedSiteCapabilities
+    managedConfig: ManagedSiteRuntimeConfigValue
+    managedSiteStatus?: ManagedSiteTokenChannelStatus
+    toastId: string
+    shouldContinue?: () => boolean
+  }) => {
+    const shouldContinue = () => params.shouldContinue?.() ?? true
+    const controller = new AbortController()
+    const options = {
+      source: params.source,
+      managedSite: params.managedSite,
+      managedConfig: params.managedConfig,
+      purpose: "native-editor" as const,
+      signal: controller.signal,
+      onDraftPrepared: () => {
+        if (!shouldContinue()) controller.abort()
+      },
+      operationContext: createManagedSiteOperationContext({
+        freshChannelSearches: true,
+      }),
+      protectionBypassExecution: createAutomaticProtectionBypassExecution(
+        PROTECTION_BYPASS_FEATURES.ManagedSiteChannels,
+        PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.UiLifecycle,
+        getCurrentTempWindowRequestSource(),
+      ),
+    }
+    const prepared = await prepareManagedSiteChannelMatch(options)
+    if (!shouldContinue()) return null
+    const duplicateState = resolvePrefilledDialogDuplicateState({
+      managedSite: params.managedSite,
+      resolution: prepared.resolution,
+    })
+    toast.dismiss(params.toastId)
+    if (duplicateState.existingChannelName) {
+      if (
+        !(await requestDuplicateChannelWarning({
+          existingChannelName: duplicateState.existingChannelName,
+        })) ||
+        !shouldContinue()
+      )
+        return null
+    }
+    const formData = prepared.creationSkipped
+      ? (
+          await prepareManagedSiteChannelMatch({
+            ...options,
+            verifyExisting: false,
+          })
+        ).draft
+      : prepared.draft
+    return shouldContinue()
+      ? { formData, advisoryWarning: duplicateState.advisoryWarning }
+      : null
   }
 
   /**
@@ -384,51 +407,25 @@ export function useChannelDialog() {
       secretsToRedact.push(
         ...collectAccountRuntimeKeySecrets([resolvedRuntimeKey]),
       )
-      const formData = await managedSite.channelDrafts.prepareFormData(
-        buildManagedSiteChannelDraftSource(resolvedRuntimeKey),
-        { purpose: "native-editor" },
-      )
-      if (!shouldContinue()) {
-        return cancelOpen()
-      }
-
-      const duplicateState = await resolvePrefilledDialogDuplicateState({
+      const prepared = await preparePrefilledChannelCreate({
+        source: buildManagedSiteChannelDraftSource(resolvedRuntimeKey),
         managedSite,
         managedConfig,
-        accountBaseUrl: formData.base_url,
-        models: formData.models,
-        key: formData.key,
         managedSiteStatus: options?.managedSiteStatus,
+        toastId,
+        shouldContinue,
       })
-      if (!shouldContinue()) {
-        return cancelOpen()
-      }
-
-      if (duplicateState.existingChannelName) {
-        toast.dismiss(toastId)
-        const confirmedDuplicate = await requestDuplicateChannelWarning({
-          existingChannelName: duplicateState.existingChannelName,
-        })
-        if (!confirmedDuplicate) {
-          return { opened: false }
-        }
-      } else {
-        toast.dismiss(toastId)
-      }
-      if (!shouldContinue()) {
-        return cancelOpen()
-      }
-
+      if (!prepared) return cancelOpen()
       const opened = await openPreparedChannelCreateDialog({
         managedSite,
-        formData,
-        advisoryWarning: duplicateState.advisoryWarning,
+        ...prepared,
         onSuccess,
         shouldContinue,
       })
       if (!opened) return cancelOpen()
       return { opened: true }
     } catch (error) {
+      if (!shouldContinue()) return cancelOpen()
       const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)
       toast.error(
         t("messages:errors.operation.failed", {
@@ -483,36 +480,17 @@ export function useChannelDialog() {
         credentials.apiKey,
         ...collectManagedConfigSecrets(managedConfig),
       ].filter(Boolean) as string[]
-      const formData = await managedSite.channelDrafts.prepareFormData(
-        buildManagedSiteCredentialDraftSource(credentials),
-        { purpose: "native-editor" },
-      )
-
-      const duplicateState = await resolvePrefilledDialogDuplicateState({
+      const prepared = await preparePrefilledChannelCreate({
+        source: buildManagedSiteCredentialDraftSource(credentials),
         managedSite,
         managedConfig,
-        accountBaseUrl: formData.base_url,
-        models: formData.models,
-        key: formData.key,
         managedSiteStatus: options?.managedSiteStatus,
+        toastId,
       })
-
-      if (duplicateState.existingChannelName) {
-        toast.dismiss(toastId)
-        const confirmedDuplicate = await requestDuplicateChannelWarning({
-          existingChannelName: duplicateState.existingChannelName,
-        })
-        if (!confirmedDuplicate) {
-          return { opened: false }
-        }
-      } else {
-        toast.dismiss(toastId)
-      }
-
+      if (!prepared) return { opened: false }
       const opened = await openPreparedChannelCreateDialog({
         managedSite,
-        formData,
-        advisoryWarning: duplicateState.advisoryWarning,
+        ...prepared,
         onSuccess,
       })
       return { opened }

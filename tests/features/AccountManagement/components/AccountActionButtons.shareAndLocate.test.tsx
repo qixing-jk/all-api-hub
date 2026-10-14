@@ -8,6 +8,8 @@ import { SITE_TYPES } from "~/constants/siteType"
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
 import { useLocateManagedSiteChannel } from "~/features/AccountManagement/components/AccountActionButtons/useLocateManagedSiteChannel"
 import { buildServiceCredentialRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
+import * as openaiCompatible from "~/services/aiApi/openaiCompatible"
+import { magpieManagedSiteCapabilities } from "~/services/apiAdapters/managedSites/magpie"
 import { newApiSecretVerification } from "~/services/apiAdapters/managedSites/newApi/newApiSecretVerification"
 import type { UserPreferences } from "~/services/preferences/preferencesSchema"
 import {
@@ -53,6 +55,46 @@ import {
 describe("AccountActionButtons", () => {
   setupAccountActionButtonsTest()
 
+  it("does not fetch models when channel locate has no URL candidate", async () => {
+    const fetchModels = vi
+      .spyOn(openaiCompatible, "fetchOpenAICompatibleModelIds")
+      .mockResolvedValue(["gpt-4"])
+    try {
+      fetchAccountTokensMock.mockResolvedValueOnce([{ key: "sk-1" }])
+      getManagedSiteCapabilitiesMock.mockReturnValueOnce({
+        siteType: SITE_TYPES.MAGPIE,
+        config: {
+          get: vi.fn().mockResolvedValue({
+            baseUrl: "https://admin.example",
+            webKey: "test-web-key",
+          }),
+        },
+        channelDrafts: magpieManagedSiteCapabilities.channelDrafts,
+        matching: {
+          exactMatchBasis:
+            magpieManagedSiteCapabilities.matching.exactMatchBasis,
+          search: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+        },
+      } as any)
+      const { result } = renderHook(() =>
+        useLocateManagedSiteChannel({
+          site: buildDisplaySiteData({ baseUrl: "https://api.example.com" }),
+          canLocateManagedSiteChannel: true,
+          isManagedSiteChannelLookupSupported: true,
+        }),
+      )
+      await act(async () => {
+        await result.current()
+      })
+      expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
+        search: "https://api.example.com",
+      })
+      expect(fetchModels).not.toHaveBeenCalled()
+    } finally {
+      fetchModels.mockRestore()
+    }
+  })
+
   it.each(["draft-error", "empty-models", "search-error"])(
     "keeps URL search available after channel lookup %s",
     async (failure) => {
@@ -92,7 +134,7 @@ describe("AccountActionButtons", () => {
       expect(openManagedSiteChannelsPageMock).toHaveBeenCalledWith({
         search: "https://api.example.com",
       })
-      if (failure === "search-error") {
+      if (failure === "search-error" || failure === "empty-models") {
         expect(toastErrorMock).toHaveBeenCalledWith(
           "account:actions.channelLocateFailed",
         )
@@ -659,6 +701,7 @@ describe("AccountActionButtons", () => {
         baseUrl: "https://runtime.example.invalid",
         apiKey: "sk-current-service-key",
       }),
+      expect.objectContaining({ purpose: "matching" }),
     )
     expect(managedService.matching.search).toHaveBeenCalledWith(
       expect.any(Object),
