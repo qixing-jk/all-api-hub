@@ -28,6 +28,66 @@ const item = (
 })
 
 describe("public batch import plan", () => {
+  it("requires a choice for multiple existing channels and accepts an explicit new channel", () => {
+    const first = {
+      ref: {
+        siteType: "magpie",
+        kind: "channel",
+        scopeKey: "http://magpie.test",
+        resourceId: "first",
+      },
+      name: "First",
+    } as const
+    const second = {
+      ...first,
+      ref: { ...first.ref, resourceId: "second" },
+      name: "Second",
+    }
+    const input = item("a", ["m1"])
+    input.existingImportTargets = [first, second]
+    expect(
+      planManagedSiteTokenBatchImport(SITE_TYPES.MAGPIE, [input], "reuse")[0],
+    ).toMatchObject({ requiresTargetSelection: true, target: undefined })
+    expect(
+      planManagedSiteTokenBatchImport(SITE_TYPES.MAGPIE, [input], "reuse", {
+        a: second.ref,
+      })[0],
+    ).toMatchObject({ requiresTargetSelection: false, target: second })
+    expect(
+      planManagedSiteTokenBatchImport(SITE_TYPES.MAGPIE, [input], "reuse", {
+        a: null,
+      })[0],
+    ).toMatchObject({ requiresTargetSelection: false, target: undefined })
+    expect(
+      planManagedSiteTokenBatchImport(SITE_TYPES.MAGPIE, [input], "reuse", {
+        a: { ...first.ref, scopeKey: "http://different.test" },
+      })[0],
+    ).toMatchObject({ requiresTargetSelection: true, target: undefined })
+  })
+  it("targets an existing same-endpoint channel while preserving the new-key group", () => {
+    const target = {
+      ref: {
+        siteType: "magpie",
+        kind: "channel",
+        scopeKey: "http://magpie.test",
+        resourceId: "existing",
+      },
+      name: "Coding group",
+    } as const
+    const inputs = [item("a", ["m1"]), item("b", ["m2"])]
+    for (const input of inputs) input.existingImportTargets = [target]
+    expect(
+      planManagedSiteTokenBatchImport(SITE_TYPES.MAGPIE, inputs, "reuse"),
+    ).toMatchObject([
+      {
+        itemIds: ["a", "b"],
+        target,
+        requiresTargetSelection: false,
+        draft: { credentials: ["key-a", "key-b"] },
+      },
+    ])
+  })
+
   it("deduplicates grouped key aliases without losing distinct model hints", () => {
     const first = item("a", ["m1"])
     const second = item("b", ["m2"])

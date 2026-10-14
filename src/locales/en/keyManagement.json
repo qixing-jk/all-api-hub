@@ -98,24 +98,32 @@
     },
     "gatewayDescription": "This imports account keys as self-hosted AI gateway channels. After import, multiple keys can be used by clients through one AI API.",
     "importMode": {
-      "grouped": "Combine keys from the same site",
-      "independent": "Create separately for each key",
+      "appendTo": "Add to existing channel: {{name}}",
+      "chooseTarget": "Choose a channel for these keys",
+      "createNew": "Create a new channel",
+      "grouped": "Combine same-site keys into one new channel",
+      "independent": "Create one new channel per key",
       "keyCount_one": "{{count}} key",
       "keyCount_other": "{{count}} keys",
-      "label": "Import organization",
+      "label": "Key import method",
       "modelDifferences": "These keys have different model lists. The combined resource uses their union; routing is handled by the gateway.",
       "models": "Models: {{models}}",
-      "resourceName": "Resource name",
+      "preserveSettings": "Keep the existing channel configuration and model settings. Only add keys that have not been imported.",
+      "resourceName": "New channel name",
       "resultSummary": "Keys: {{created}} imported, {{failed}} failed, {{uncertain}} uncertain, {{skipped}} skipped.",
+      "reuse": "Prefer adding to an existing channel",
+      "reuseHelp": "Add keys to a channel at the same address. Choose a target if several match; create a combined channel if none match.",
+      "reuseSummary": "{{keyCount}} keys selected: create {{createCount}} channels and add to {{appendCount}} existing channels.",
       "saveFailed": "The selection applies to this import, but the preference could not be saved.",
-      "scheduling": "The target gateway schedules combined keys. Confirm that their permissions and intended use suit your needs.",
-      "summary": "{{keyCount}} selected keys → {{resourceCount}} resources",
+      "scheduling": "The target gateway decides how multiple keys are rotated. Choose according to your needs.",
+      "summary": "{{keyCount}} keys selected; {{resourceCount}} new channels will be created.",
+      "target": "Channel to add keys to",
       "unsupported": "This resource type does not support combined keys and will be created separately."
     },
     "loadingDescription": "Preparing preview for {{selectedCount}} selected keys.",
     "messages": {
       "batchDuplicate": "Duplicates {{item}} in this batch and has been skipped.",
-      "completed": "Batch import completed: {{created}} created, {{failed}} failed, {{skipped}} skipped.",
+      "completed": "Keys: {{created}} imported, {{failed}} failed, {{uncertain}} uncertain, {{skipped}} skipped.",
       "duplicate": "An exact channel already exists: {{channel}}. It will not be created again.",
       "executionFailed": "Failed to run batch import: {{error}}",
       "targetChanged": "The managed-site target changed. Refresh the preview or choose the intended target before importing.",
@@ -133,15 +141,15 @@
       "useCompleteChecks": "Use complete checks"
     },
     "results": {
-      "channelCreationFailed": "Channel creation failed.",
+      "channelCreationFailed": "Key import failed.",
       "status": {
         "failed": "Failed",
         "notSelected": "Not selected",
         "skipped": "Skipped",
-        "success": "Created",
+        "success": "Imported",
         "uncertain": "Needs review"
       },
-      "summary": "Result: {{created}} created, {{failed}} failed, {{skipped}} skipped, {{total}} total."
+      "summary": "Keys: {{created}} imported, {{failed}} failed, {{uncertain}} uncertain, {{skipped}} skipped."
     },
     "selection": {
       "accountGroup": "Select visible keys for account {{name}}",

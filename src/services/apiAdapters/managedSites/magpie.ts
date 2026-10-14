@@ -18,6 +18,7 @@ import type { ManagedSiteCapabilities } from "~/services/apiAdapters/contracts/m
 import { magpieModels } from "~/services/apiAdapters/managedResources/magpie/models"
 import { magpieScope } from "~/services/apiAdapters/managedResources/magpie/nativeRuntime"
 import { createManagedSiteConfigCapability } from "~/services/apiAdapters/managedSites/config"
+import { magpieKeyFingerprint } from "~/services/apiService/magpie/keyIdentity"
 import {
   listMagpieProviders,
   readMagpieProviderKey,
@@ -36,6 +37,7 @@ type IndexedProvider = {
   models: string
   ordinal: number
   field: EndpointField
+  keyIdentities?: readonly string[]
 }
 
 const readMatchingInventory = shareInventoryRead(
@@ -48,6 +50,9 @@ const readMatchingInventory = shareInventoryRead(
         resourceId: provider.id,
         name: provider.name,
         models: (provider.chosen ?? []).join(","),
+        ...(provider.keyList != null
+          ? { keyIdentities: provider.keyList.map((key) => key.id) }
+          : {}),
       }
       for (const field of MAGPIE_ENDPOINT_FIELDS) {
         const endpoint = provider[field]
@@ -83,6 +88,7 @@ export const magpieManagedSiteCapabilities = {
   }),
   matching: {
     exactMatchBasis: MANAGED_RESOURCE_EXACT_MATCH_BASES.URL_KEY,
+    getKeyIdentity: magpieKeyFingerprint,
     search: async (config, baseUrl, options) => {
       const index = await readMatchingInventory(
         withMagpieRequestSession(
@@ -102,7 +108,7 @@ export const magpieManagedSiteCapabilities = {
       }
       const items = [...matches.values()]
         .sort((left, right) => left.ordinal - right.ordinal)
-        .map(({ resourceId, name, models, field: type }) => ({
+        .map(({ resourceId, name, models, keyIdentities, field: type }) => ({
           ref: {
             siteType: SITE_TYPES.MAGPIE,
             kind: MANAGED_RESOURCE_KINDS.Channel,
@@ -117,6 +123,7 @@ export const magpieManagedSiteCapabilities = {
           base_url: baseUrl,
           models,
           key: "",
+          ...(keyIdentities ? { keyIdentities } : {}),
         }))
       return { items, total: items.length, type_counts: {} }
     },

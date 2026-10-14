@@ -13,6 +13,7 @@ import {
   validateMagpieValues,
 } from "~/services/apiAdapters/managedResources/magpie/editorProjection"
 import {
+  appendMagpieImportCredentials,
   createMagpieResource,
   deleteMagpieResource,
   updateMagpieResource,
@@ -95,6 +96,7 @@ export const magpieManagedResourceRegistration = defineNativeResourceKind({
   editEditor: (config, detail) =>
     magpieNativeEditor(config, requireMagpieApiProvider(detail)),
   create: createMagpieResource,
+  appendImportCredentials: appendMagpieImportCredentials,
   update: updateMagpieResource,
   delete: deleteMagpieResource,
   mapFailure: magpieFailure,

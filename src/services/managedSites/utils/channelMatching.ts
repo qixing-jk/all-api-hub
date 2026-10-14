@@ -43,6 +43,7 @@ interface InspectManagedSiteChannelKeyMatchParams {
   channels: ManagedResourceMatchCandidate[]
   accountBaseUrl: string
   key?: string
+  keyIdentity?: string
   exactChannel?: ManagedResourceMatchCandidate | null
   keyComparisonMode?: ManagedSiteChannelKeyComparisonMode
 }
@@ -281,11 +282,16 @@ export function inspectManagedSiteChannelKeyMatch(
   }
 
   const matchedChannel =
-    urlBucket.find((channel) =>
-      toChannelKeyCandidates(channel, keyComparisonMode).includes(
+    urlBucket.find((channel) => {
+      if (
+        params.keyIdentity !== undefined &&
+        channel.keyIdentities !== undefined
+      )
+        return channel.keyIdentities.includes(params.keyIdentity)
+      return toChannelKeyCandidates(channel, keyComparisonMode).includes(
         normalizedDesiredKey,
-      ),
-    ) ?? null
+      )
+    }) ?? null
 
   if (matchedChannel) {
     return {
@@ -298,6 +304,8 @@ export function inspectManagedSiteChannelKeyMatch(
 
   // A negative result requires readable keys for every candidate, including multi-key entries.
   const hasComparableChannelKey = urlBucket.every((channel) => {
+    if (params.keyIdentity !== undefined && channel.keyIdentities !== undefined)
+      return true
     const keys = toChannelKeyCandidates(channel, keyComparisonMode)
     return keys.length > 0 && keys.every(hasUsableManagedSiteChannelKey)
   })

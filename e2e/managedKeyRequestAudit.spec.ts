@@ -152,7 +152,7 @@ for (const action of ["check", "single import", "batch import"] as const) {
         .getByRole("dialog", { name: "Import selected keys" })
         .getByRole("button", { name: "Start import", exact: true })
         .click()
-      await expect(page.getByText("Created", { exact: true })).toBeVisible()
+      await expect(page.getByText("Imported", { exact: true })).toBeVisible()
       expect(writes).toBe(1)
       // Execution rechecks are separate operations; submitting a batch must
       // still preserve native group defaults without loading editor choices.

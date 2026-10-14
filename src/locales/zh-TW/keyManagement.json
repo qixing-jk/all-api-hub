@@ -94,23 +94,31 @@
     },
     "gatewayDescription": "這會將帳號 Key 匯入為自建 AI 閘道渠道。匯入後，多個 Key 即可透過同一個 AI API 提供給客戶端使用。",
     "importMode": {
-      "grouped": "同站點金鑰合併建立",
-      "independent": "每個金鑰獨立建立",
+      "appendTo": "加入已有渠道：{{name}}",
+      "chooseTarget": "請選擇要加入金鑰的渠道",
+      "createNew": "新建一個渠道",
+      "grouped": "同站點金鑰合併到一個新渠道",
+      "independent": "每個金鑰新建一個渠道",
       "keyCount_other": "{{count}} 個金鑰",
-      "label": "匯入組織方式",
+      "label": "金鑰匯入方式",
       "modelDifferences": "這些金鑰的模型清單不同，合併資源採用模型聯集，由目標閘道負責路由。",
       "models": "模型：{{models}}",
-      "resourceName": "資源名稱",
+      "preserveSettings": "保留已有渠道的配置和模型設定，只加入尚未匯入的金鑰。",
+      "resourceName": "新渠道名稱",
       "resultSummary": "金鑰結果：{{created}} 個已匯入，{{failed}} 個失敗，{{uncertain}} 個結果不確定，{{skipped}} 個已略過。",
+      "reuse": "優先加入已有渠道",
+      "reuseHelp": "同地址有可用渠道時加入金鑰；有多個渠道時選擇目標，沒有時合併新建。",
+      "reuseSummary": "已選擇 {{keyCount}} 個金鑰：新建 {{createCount}} 個渠道，加入 {{appendCount}} 個已有渠道。",
       "saveFailed": "本次匯入已採用所選方式，但未能儲存偏好。",
-      "scheduling": "合併後的金鑰由目標閘道調度，請確認其權限和用途符合你的需求。",
-      "summary": "已選取 {{keyCount}} 個金鑰 → 將建立 {{resourceCount}} 個資源",
+      "scheduling": "多個金鑰如何輪替由目標閘道決定，請按你的使用需求選擇。",
+      "summary": "已選擇 {{keyCount}} 個金鑰，將新建 {{resourceCount}} 個渠道。",
+      "target": "加入哪個渠道",
       "unsupported": "此資源類型不支援多金鑰合併，將獨立建立。"
     },
     "loadingDescription": "正在為 {{selectedCount}} 個已選金鑰準備預覽。",
     "messages": {
       "batchDuplicate": "與本批次的 {{item}} 重複，已略過。",
-      "completed": "批次匯入完成：成功 {{created}} 個、失敗 {{failed}} 個、已略過 {{skipped}} 個。",
+      "completed": "金鑰結果：{{created}} 個已匯入，{{failed}} 個失敗，{{uncertain}} 個結果不確定，{{skipped}} 個已略過。",
       "duplicate": "已存在精確符合渠道：{{channel}}，不會重複建立。",
       "executionFailed": "執行批次匯入失敗：{{error}}",
       "targetChanged": "自建 AI 閘道目標已變更。請重新整理預覽或選擇正確目標後再匯入。",
@@ -127,15 +135,15 @@
       "useCompleteChecks": "使用完整檢查"
     },
     "results": {
-      "channelCreationFailed": "建立渠道失敗。",
+      "channelCreationFailed": "金鑰匯入失敗。",
       "status": {
         "failed": "失敗",
         "notSelected": "未選擇",
         "skipped": "已略過",
-        "success": "已建立",
+        "success": "已匯入",
         "uncertain": "需檢查"
       },
-      "summary": "結果：成功 {{created}} 個，失敗 {{failed}} 個，已略過 {{skipped}} 個，共 {{total}} 個。"
+      "summary": "金鑰結果：{{created}} 個已匯入，{{failed}} 個失敗，{{uncertain}} 個結果不確定，{{skipped}} 個已略過。"
     },
     "selection": {
       "accountGroup": "選擇帳號 {{name}} 目前可見密鑰",

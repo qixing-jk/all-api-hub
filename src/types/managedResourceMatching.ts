@@ -8,6 +8,8 @@ export interface ManagedResourceMatchCandidate {
   base_url: string
   models: string
   key?: string
+  /** Complete native key-pool identities; absent means the inventory cannot prove membership. */
+  keyIdentities?: readonly string[]
 }
 export interface ManagedResourceMatchList {
   items: ManagedResourceMatchCandidate[]

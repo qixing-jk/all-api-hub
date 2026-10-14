@@ -46,7 +46,10 @@ import {
   normalizeManagedSiteChannelBaseUrl,
 } from "~/services/managedSites/utils/channelMatching"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
-import type { ManagedResourceMatchList } from "~/types/managedResourceMatching"
+import type {
+  ManagedResourceMatchCandidate,
+  ManagedResourceMatchList,
+} from "~/types/managedResourceMatching"
 import { normalizeManagedUpstreamResourceScopeKey } from "~/types/managedUpstreamResource"
 
 export type ManagedSiteChannelMatchContext = Pick<
@@ -139,6 +142,7 @@ export const createManagedSiteChannelMatchRequestCache = (
 }
 
 interface ResolveManagedSiteChannelMatchParams extends ScheduledReadOptions {
+  includeUrlCandidates?: boolean
   managedSite: ManagedSiteChannelMatchContext
   managedConfig: ManagedSiteRuntimeConfigValue
   accountBaseUrl: string
@@ -157,6 +161,7 @@ interface ResolveManagedSiteChannelMatchParams extends ScheduledReadOptions {
 
 interface ManagedSiteChannelMatchResolution
   extends ManagedSiteChannelMatchInspection {
+  urlCandidates?: ManagedResourceMatchCandidate[]
   resolvedChannelKeysByResourceKey?: Record<string, string>
   unresolvedReason?: ManagedSiteChannelMatchUnresolvedReason
 }
@@ -388,6 +393,13 @@ export async function resolveManagedSiteChannelMatch(
     searchResultItems,
     mergedResolvedChannelKeysByResourceKey,
   )
+  const keyIdentity =
+    key?.trim() &&
+    managedSite.matching.getKeyIdentity &&
+    channels.some((channel) => channel.keyIdentities !== undefined)
+      ? await managedSite.matching.getKeyIdentity(key)
+      : undefined
+  params.signal?.throwIfAborted()
   let urlBucket = findManagedSiteChannelsByBaseUrl({
     channels,
     accountBaseUrl: searchBaseUrl,
@@ -397,6 +409,7 @@ export async function resolveManagedSiteChannelMatch(
     accountBaseUrl: searchBaseUrl,
     key,
     keyComparisonMode,
+    keyIdentity,
   })
   let modelsAssessment = inspectManagedSiteChannelModelsMatch({
     channels,
@@ -422,6 +435,7 @@ export async function resolveManagedSiteChannelMatch(
       accountBaseUrl: searchBaseUrl,
       key,
       keyComparisonMode,
+      keyIdentity,
     })
     if (!exactKeyAssessment.matched || !exactKeyAssessment.channel) {
       return
@@ -459,6 +473,7 @@ export async function resolveManagedSiteChannelMatch(
       accountBaseUrl: searchBaseUrl,
       key,
       keyComparisonMode,
+      keyIdentity,
     })
     modelsAssessment = inspectManagedSiteChannelModelsMatch({
       channels: channelsWithResolvedKeys,
@@ -517,6 +532,7 @@ export async function resolveManagedSiteChannelMatch(
   ) {
     const recoverableUrlCandidates = urlBucket.filter(
       (channel) =>
+        !(keyIdentity !== undefined && channel.keyIdentities !== undefined) &&
         !hasUsableManagedSiteChannelKey(channel.key) &&
         typeof mergedResolvedChannelKeysByResourceKey[
           getManagedResourceRefKey(channel.ref)
@@ -550,6 +566,10 @@ export async function resolveManagedSiteChannelMatch(
           channel.ref,
           rankedRecoverableCandidate.ref,
         ),
+      ) &&
+      !(
+        keyIdentity !== undefined &&
+        rankedRecoverableCandidate.keyIdentities !== undefined
       ) &&
       !hasUsableManagedSiteChannelKey(rankedRecoverableCandidate.key) &&
       typeof mergedResolvedChannelKeysByResourceKey[
@@ -625,6 +645,7 @@ export async function resolveManagedSiteChannelMatch(
     })
     const recoverableExactModelCandidates = exactModelChannels.filter(
       (channel) =>
+        !(keyIdentity !== undefined && channel.keyIdentities !== undefined) &&
         !hasUsableManagedSiteChannelKey(channel.key) &&
         typeof mergedResolvedChannelKeysByResourceKey[
           getManagedResourceRefKey(channel.ref)
@@ -656,6 +677,10 @@ export async function resolveManagedSiteChannelMatch(
           channel.ref,
           rankedRecoverableCandidate.ref,
         ),
+      ) &&
+      !(
+        keyIdentity !== undefined &&
+        rankedRecoverableCandidate.keyIdentities !== undefined
       ) &&
       !hasUsableManagedSiteChannelKey(rankedRecoverableCandidate.key)
         ? [rankedRecoverableCandidate]
@@ -737,6 +762,7 @@ export async function resolveManagedSiteChannelMatch(
   return {
     searchBaseUrl,
     searchCompleted: true,
+    ...(params.includeUrlCandidates ? { urlCandidates: urlBucket } : {}),
     url: {
       matched: urlBucket.length > 0 || resolvedUrlChannel != null,
       channel: resolvedUrlChannel,

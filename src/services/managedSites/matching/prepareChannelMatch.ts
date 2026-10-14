@@ -27,6 +27,7 @@ export async function prepareManagedSiteChannelMatch(
     managedSite: ManagedSiteCapabilities
     managedConfig: ManagedSiteRuntimeConfigValue
     verifyExisting?: boolean
+    includeUrlCandidates?: boolean
     resolvedChannelKeysByResourceKey?: Record<string, string>
     protectionBypassExecution?: ProtectionBypassExecution
     /** Reuse the same operation's model inputs during explicit secret verification. */
@@ -60,6 +61,7 @@ export async function prepareManagedSiteChannelMatch(
     return { draft, resolution: null, creationSkipped: false }
   }
   const matchOptions = {
+    includeUrlCandidates: params.includeUrlCandidates,
     managedSite,
     managedConfig: params.managedConfig,
     accountBaseUrl: normalizeManagedSiteChannelBaseUrl(draft.base_url),

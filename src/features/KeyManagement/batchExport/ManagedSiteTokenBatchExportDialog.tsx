@@ -1,6 +1,6 @@
-import { SendToBack } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import {
   Button,
   ConfirmDialog,
@@ -23,6 +23,7 @@ import {
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import ManagedSiteTypeSwitcher from "~/features/ManagedSiteWidgets/ManagedSiteTypeSwitcher"
+import { getManagedResourceRefKey } from "~/services/managedSites/managedResourceIdentity"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import {
   MANAGED_SITE_TOKEN_BATCH_EXPORT_EXECUTION_RESULTS,
@@ -92,6 +93,7 @@ export function ManagedSiteTokenBatchExportDialog({
         footer={
           <ManagedSiteTokenBatchExportFooter
             t={t}
+            siteType={dialog.managedSiteType}
             selectedItemCount={items.length}
             preview={dialog.preview}
             previewError={dialog.previewError}
@@ -143,8 +145,11 @@ export function ManagedSiteTokenBatchExportDialog({
           ) : null}
 
           {dialog.preview &&
-          (dialog.canGroup || dialog.importMode === "grouped") ? (
+          (dialog.canGroup || dialog.importMode !== "independent") ? (
             <div className="space-y-density-2 rounded-md border p-3 text-sm">
+              <p className="font-medium">
+                {t("keyManagement:batchManagedSiteExport.importMode.label")}
+              </p>
               <Select
                 value={dialog.importMode}
                 onValueChange={(value) => {
@@ -174,9 +179,23 @@ export function ManagedSiteTokenBatchExportDialog({
                       "keyManagement:batchManagedSiteExport.importMode.grouped",
                     )}
                   </SelectItem>
+                  {dialog.canReuse ? (
+                    <SelectItem value="reuse">
+                      {t(
+                        "keyManagement:batchManagedSiteExport.importMode.reuse",
+                      )}
+                    </SelectItem>
+                  ) : null}
                 </SelectContent>
               </Select>
-              {dialog.importMode === "grouped" ? (
+              {dialog.importMode === "reuse" ? (
+                <p className="text-muted-foreground">
+                  {t(
+                    "keyManagement:batchManagedSiteExport.importMode.reuseHelp",
+                  )}
+                </p>
+              ) : null}
+              {dialog.importMode !== "independent" ? (
                 <>
                   <p className="text-muted-foreground">
                     {t(
@@ -184,13 +203,27 @@ export function ManagedSiteTokenBatchExportDialog({
                     )}
                   </p>
                   <p>
-                    {t(
-                      "keyManagement:batchManagedSiteExport.importMode.summary",
-                      {
-                        keyCount: dialog.executableSelection.selectedCount,
-                        resourceCount: dialog.importGroups.length,
-                      },
-                    )}
+                    {dialog.importMode === "reuse"
+                      ? t(
+                          "keyManagement:batchManagedSiteExport.importMode.reuseSummary",
+                          {
+                            keyCount: dialog.executableSelection.selectedCount,
+                            createCount: dialog.importGroups.filter(
+                              (group) =>
+                                !group.target && !group.requiresTargetSelection,
+                            ).length,
+                            appendCount: dialog.importGroups.filter(
+                              (group) => group.target,
+                            ).length,
+                          },
+                        )
+                      : t(
+                          "keyManagement:batchManagedSiteExport.importMode.summary",
+                          {
+                            keyCount: dialog.executableSelection.selectedCount,
+                            resourceCount: dialog.importGroups.length,
+                          },
+                        )}
                   </p>
                   {dialog.importGroups.map((group) => (
                     <details
@@ -200,7 +233,7 @@ export function ManagedSiteTokenBatchExportDialog({
                       className="rounded-md border p-2"
                     >
                       <summary className="cursor-pointer font-medium">
-                        {group.draft.name} ·{" "}
+                        {group.target?.name ?? group.draft.name} ·{" "}
                         {t(
                           "keyManagement:batchManagedSiteExport.importMode.keyCount",
                           { count: group.draft.credentials?.length ?? 1 },
@@ -208,22 +241,98 @@ export function ManagedSiteTokenBatchExportDialog({
                       </summary>
                       <div className="text-muted-foreground mt-2 space-y-1">
                         <p className="break-all">{group.draft.base_url}</p>
-                        <Input
-                          aria-label={t(
-                            "keyManagement:batchManagedSiteExport.importMode.resourceName",
-                          )}
-                          value={group.draft.name}
-                          onChange={(event) =>
-                            dialog.actions.changeImportGroupName(
-                              group.id,
-                              event.target.value,
-                            )
-                          }
-                          aria-invalid={!group.draft.name.trim()}
-                          disabled={
-                            dialog.isRunning || Boolean(dialog.executionResult)
-                          }
-                        />
+                        {dialog.importMode === "reuse" &&
+                        group.existingTargets.length ? (
+                          <Select
+                            value={
+                              group.target
+                                ? getManagedResourceRefKey(group.target.ref)
+                                : group.requiresTargetSelection
+                                  ? ""
+                                  : "new"
+                            }
+                            onValueChange={(value) =>
+                              dialog.actions.changeImportGroupTarget(
+                                group.id,
+                                group.existingTargets.find(
+                                  (target) =>
+                                    getManagedResourceRefKey(target.ref) ===
+                                    value,
+                                )?.ref ?? null,
+                              )
+                            }
+                            disabled={
+                              dialog.isRunning ||
+                              Boolean(dialog.executionResult)
+                            }
+                          >
+                            <SelectTrigger
+                              aria-label={t(
+                                "keyManagement:batchManagedSiteExport.importMode.target",
+                              )}
+                            >
+                              <SelectValue
+                                placeholder={t(
+                                  "keyManagement:batchManagedSiteExport.importMode.chooseTarget",
+                                )}
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="new">
+                                {t(
+                                  "keyManagement:batchManagedSiteExport.importMode.createNew",
+                                )}
+                              </SelectItem>
+                              {group.existingTargets.map((target) => (
+                                <SelectItem
+                                  key={getManagedResourceRefKey(target.ref)}
+                                  value={getManagedResourceRefKey(target.ref)}
+                                >
+                                  {target.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : null}
+                        <p>
+                          {group.requiresTargetSelection
+                            ? t(
+                                "keyManagement:batchManagedSiteExport.importMode.chooseTarget",
+                              )
+                            : group.target
+                              ? t(
+                                  "keyManagement:batchManagedSiteExport.importMode.appendTo",
+                                  { name: group.target.name },
+                                )
+                              : t(
+                                  "keyManagement:batchManagedSiteExport.importMode.createNew",
+                                )}
+                        </p>
+                        {group.target ? (
+                          <p>
+                            {t(
+                              "keyManagement:batchManagedSiteExport.importMode.preserveSettings",
+                            )}
+                          </p>
+                        ) : (
+                          <Input
+                            aria-label={t(
+                              "keyManagement:batchManagedSiteExport.importMode.resourceName",
+                            )}
+                            value={group.draft.name}
+                            onChange={(event) =>
+                              dialog.actions.changeImportGroupName(
+                                group.id,
+                                event.target.value,
+                              )
+                            }
+                            aria-invalid={!group.draft.name.trim()}
+                            disabled={
+                              dialog.isRunning ||
+                              Boolean(dialog.executionResult)
+                            }
+                          />
+                        )}
                         {group.itemIds.map((id) => {
                           const item = dialog.previewItemsById.get(id)
                           return item ? (
@@ -232,13 +341,15 @@ export function ManagedSiteTokenBatchExportDialog({
                             </p>
                           ) : null
                         })}
-                        <p>
-                          {t(
-                            "keyManagement:batchManagedSiteExport.importMode.models",
-                            { models: group.draft.models.join(", ") },
-                          )}
-                        </p>
-                        {group.modelSetsDiffer ? (
+                        {!group.target ? (
+                          <p>
+                            {t(
+                              "keyManagement:batchManagedSiteExport.importMode.models",
+                              { models: group.draft.models.join(", ") },
+                            )}
+                          </p>
+                        ) : null}
+                        {group.modelSetsDiffer && !group.target ? (
                           <p>
                             {t(
                               "keyManagement:batchManagedSiteExport.importMode.modelDifferences",
@@ -326,7 +437,12 @@ export function ManagedSiteTokenBatchExportDialog({
 
       <ConfirmDialog
         intent="confirm"
-        icon={SendToBack}
+        icon={
+          <ManagedSiteIcon
+            siteType={dialog.preview?.siteType ?? dialog.managedSiteType}
+            size="md"
+          />
+        }
         isOpen={isOpen && dialog.isConfirmOpen}
         onClose={dialog.actions.closeConfirm}
         onConfirm={dialog.actions.confirm}

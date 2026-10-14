@@ -1,7 +1,8 @@
 import type { TFunction } from "i18next"
-import { SendToBack } from "lucide-react"
 
+import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
 import { ActionGroup, Button } from "~/components/ui"
+import type { ManagedSiteType } from "~/constants/siteType"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import type {
   ManagedSiteTokenBatchExportExecutionResult,
@@ -11,6 +12,7 @@ import type {
 
 interface ManagedSiteTokenBatchExportFooterProps {
   t: TFunction
+  siteType?: ManagedSiteType
   selectedItemCount: number
   preview: ManagedSiteTokenBatchExportPreview | null
   previewError: string | null
@@ -32,6 +34,7 @@ interface ManagedSiteTokenBatchExportFooterProps {
  */
 export function ManagedSiteTokenBatchExportFooter({
   t,
+  siteType,
   selectedItemCount,
   preview,
   previewError,
@@ -47,12 +50,13 @@ export function ManagedSiteTokenBatchExportFooter({
   onRetry,
   onViewChannels,
 }: ManagedSiteTokenBatchExportFooterProps) {
+  const targetSiteType = preview?.siteType ?? siteType
   if (executionResult) {
     return (
       <div className="gap-y-density-3 flex flex-wrap items-center justify-between gap-x-3">
         <div className="text-muted-foreground min-w-0 flex-1 text-sm break-words">
           {t(
-            importMode === "grouped"
+            importMode !== "independent"
               ? "keyManagement:batchManagedSiteExport.importMode.resultSummary"
               : "keyManagement:batchManagedSiteExport.results.summary",
             {
@@ -132,7 +136,13 @@ export function ManagedSiteTokenBatchExportFooter({
         </Button>
         <Button
           type="button"
-          leftIcon={<SendToBack className="h-4 w-4" />}
+          leftIcon={
+            targetSiteType ? (
+              <span aria-hidden="true">
+                <ManagedSiteIcon siteType={targetSiteType} size="sm" />
+              </span>
+            ) : undefined
+          }
           loading={isRunning}
           disabled={
             hasInvalidImportGroups ||

@@ -31,7 +31,11 @@ test("Magpie batch import creates one provider with selected keys and remembers 
   const prefix = `AAH batch ${randomUUID()}`
   const native = await createMagpieNativeClient(request, config)
   const baseline = await native.inventory()
-  const keys = [`sk-first-${randomUUID()}`, `sk-second-${randomUUID()}`]
+  const keys = [
+    `sk-first-${randomUUID()}`,
+    `sk-second-${randomUUID()}`,
+    `sk-third-${randomUUID()}`,
+  ]
   await runScenarioWithCleanup({
     run: async () => {
       await forceExtensionLanguage(page, "en")
@@ -82,14 +86,14 @@ test("Magpie batch import creates one provider with selected keys and remembers 
         .getByRole("button", { name: /Batch import to Magpie/i })
         .click()
       const mode = page.getByRole("combobox", {
-        name: "Import organization",
+        name: "Key import method",
         exact: true,
       })
-      await expect(mode).toHaveText("Create separately for each key")
+      await expect(mode).toHaveText("Create one new channel per key")
       await mode.click()
       await page
         .getByRole("option", {
-          name: "Combine keys from the same site",
+          name: "Combine same-site keys into one new channel",
           exact: true,
         })
         .click()
@@ -98,7 +102,7 @@ test("Magpie batch import creates one provider with selected keys and remembers 
       await expect(group).toContainText("2 keys")
       const resourceName = `${prefix} shared provider`
       await group
-        .getByRole("textbox", { name: "Resource name", exact: true })
+        .getByRole("textbox", { name: "New channel name", exact: true })
         .fill(resourceName)
       const secondKey = page
         .getByRole("dialog")
@@ -141,6 +145,7 @@ test("Magpie batch import creates one provider with selected keys and remembers 
         throw new Error("Native key pool is missing")
       expect(created.keyList.map((key) => key.id).sort()).toEqual(
         keys
+          .slice(0, 2)
           .map((key) =>
             createHash("sha256").update(key).digest("hex").slice(0, 10),
           )
@@ -148,11 +153,87 @@ test("Magpie batch import creates one provider with selected keys and remembers 
       )
       expect(created.chat).toBe("https://example.com/v1")
       expect(created.chosen).toContain("aah-batch-model")
-      await expect(page.getByText("Created", { exact: true })).toHaveCount(2)
+      await expect(page.getByText("Imported", { exact: true })).toHaveCount(2)
       await page.screenshot({
         path: testInfo.outputPath("magpie-grouped-batch.png"),
         fullPage: true,
       })
+      await page
+        .getByRole("button", { name: "Close", exact: true })
+        .last()
+        .click()
+      // Reimport includes existing pool members and one missing key. Native key
+      // actions must preserve the provider instead of submitting another save.
+      const beforeAppend = (await native.inventory()).find(
+        (provider) => provider.id === created.id,
+      )
+      if (!beforeAppend || !Array.isArray(beforeAppend.keyList))
+        throw new Error("Existing provider pool is missing")
+      let saves = 0
+      let additions = 0
+      const countWrites = (request: import("@playwright/test").Request) => {
+        if (request.url().endsWith("/api/provider/save")) saves++
+        if (request.url().endsWith("/api/keys/add")) additions++
+      }
+      context.on("request", countWrites)
+      for (const index of [1, 2, 3])
+        await page
+          .getByRole("checkbox", { name: new RegExp(`Batch key ${index}`) })
+          .check()
+      await page
+        .getByRole("button", { name: /Batch import to Magpie/i })
+        .click()
+      await mode.click()
+      await page
+        .getByRole("option", {
+          name: "Prefer adding to an existing channel",
+          exact: true,
+        })
+        .click()
+      await page
+        .getByRole("dialog")
+        .getByRole("checkbox", { name: /Batch key 3/ })
+        .check()
+      await page.screenshot({
+        path: testInfo.outputPath("magpie-reuse-preview.png"),
+        fullPage: true,
+      })
+      await expect(group).toHaveCount(1)
+      await expect(group).toContainText(
+        `Add to existing channel: ${resourceName}`,
+      )
+      await page
+        .getByRole("button", { name: "Start import", exact: true })
+        .click()
+      await page
+        .getByRole("dialog", { name: "Import selected keys", exact: true })
+        .getByRole("button", { name: "Start import", exact: true })
+        .click()
+      await expect(page.getByText("Imported", { exact: true })).toHaveCount(1)
+      const afterAppend = (await native.inventory()).find(
+        (provider) => provider.id === created.id,
+      )
+      if (!afterAppend || !Array.isArray(afterAppend.keyList))
+        throw new Error("Appended provider pool is missing")
+      expect(afterAppend?.keyList).toHaveLength(3)
+      expect(afterAppend).toMatchObject({
+        name: beforeAppend.name,
+        chat: beforeAppend.chat,
+        chosen: beforeAppend.chosen,
+        off: beforeAppend.off,
+      })
+      for (const original of beforeAppend.keyList)
+        expect(
+          afterAppend.keyList.find((key) => key.id === original.id),
+        ).toEqual(original)
+      expect(
+        (await native.inventory()).filter((provider) =>
+          provider.name.includes(prefix),
+        ),
+      ).toHaveLength(1)
+      expect(saves).toBe(0)
+      expect(additions).toBe(1)
+      context.off("request", countWrites)
       await page
         .getByRole("button", { name: "Close", exact: true })
         .last()
@@ -166,11 +247,11 @@ test("Magpie batch import creates one provider with selected keys and remembers 
       await page
         .getByRole("button", { name: /Batch import to Magpie/i })
         .click()
-      await expect(mode).toHaveText("Combine keys from the same site")
+      await expect(mode).toHaveText("Prefer adding to an existing channel")
       await mode.click()
       await page
         .getByRole("option", {
-          name: "Create separately for each key",
+          name: "Create one new channel per key",
           exact: true,
         })
         .click()

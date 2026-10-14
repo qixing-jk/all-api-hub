@@ -5,6 +5,7 @@ import {
   MANAGED_RESOURCE_FAILURE_CODES,
   ManagedResourceError,
   type EditableResourceProjection,
+  type ManagedChannelImportCreateSeed,
   type ManagedResourceCreateSeed,
   type ManagedResourceCreateSeedKind,
   type ManagedResourceKeyCleanup,
@@ -84,6 +85,12 @@ export type NativeResourceKindDefinition<
   /** Config-backed providers may derive identity from editable connection values. */
   updateChangesIdentity?: boolean
   createSeedBindings?: readonly NativeResourceCreateSeedBinding[]
+  appendImportCredentials?(
+    config: TConfig,
+    locator: TLocator,
+    seed: ManagedChannelImportCreateSeed,
+    options?: ResourceOperationOptions,
+  ): Promise<ManagedSiteMutationResult<TDetail>>
   openConfig(options?: ResourceOperationOptions): Promise<TConfig>
   scopeKey(config: TConfig): string
   encodeLocator(locator: TLocator): string
@@ -193,6 +200,7 @@ export function defineNativeResourceKind<
     siteType: definition.siteType,
     kind: definition.kind,
     createSeedKinds,
+    canAppendImportCredentials: Boolean(definition.appendImportCredentials),
     supportsMultipleImportCredentials: (seed) =>
       definition.createSeedBindings
         ?.find((binding) => binding.kind === seed.kind)
@@ -403,6 +411,47 @@ export function defineNativeResourceKind<
         }
         const rejectUnsupported = () => Promise.reject(invalidPublicInput())
         const workspace: ManagedResourceWorkspace = {
+          ...(definition.appendImportCredentials
+            ? {
+                appendImportCredentials: (
+                  ref: ManagedResourceRef,
+                  seed: ManagedChannelImportCreateSeed,
+                  appendOptions?: ResourceOperationOptions,
+                ) =>
+                  mapOperationFailure(async () => {
+                    if (!capabilities.canUpdate) throw invalidPublicInput()
+                    const { ref: canonicalRef, locator } = decodeRef(ref)
+                    const result = await definition.appendImportCredentials!(
+                      config,
+                      locator,
+                      seed,
+                      appendOptions,
+                    )
+                    assertManagedSiteMutationResult(result, {
+                      idempotent: true,
+                    })
+                    switch (result.outcome) {
+                      case MANAGED_SITE_MUTATION_OUTCOMES.Succeeded:
+                        return {
+                          ...result,
+                          data: projectDetailAtRef(result.data, canonicalRef),
+                        }
+                      case MANAGED_SITE_MUTATION_OUTCOMES.Partial:
+                        return result.data === undefined
+                          ? (result as ManagedSiteMutationResult<ResourceDisplayFacts>)
+                          : {
+                              ...result,
+                              data: projectDetailAtRef(
+                                result.data,
+                                canonicalRef,
+                              ),
+                            }
+                      default:
+                        return result
+                    }
+                  }, mapFailure),
+              }
+            : {}),
           ...(definition.keyCleanup || definition.scalarKeyCleanup
             ? {
                 openKeyCleanup: (

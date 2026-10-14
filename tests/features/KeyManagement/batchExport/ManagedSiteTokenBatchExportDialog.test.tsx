@@ -711,6 +711,158 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     ).toBeVisible()
   })
 
+  it("shows the grouped key count using real Chinese translations", async () => {
+    testI18n.addResourceBundle(
+      "zh-CN",
+      "keyManagement",
+      (await import("~/locales/zh-CN/keyManagement.json")).default,
+    )
+    try {
+      await testI18n.changeLanguage("zh-CN")
+      mockUserPreferencesContextValue.current.preferences = {
+        ...(mockUserPreferencesContextValue.current
+          .preferences as Partial<UserPreferences>),
+        managedSiteTokenBatchImportModes: {
+          [manualPreviewTarget.targetFingerprint]: "grouped",
+        },
+      }
+      mockPreparePreview.mockResolvedValue(preview)
+      renderDialog()
+      expect(
+        await screen.findByTestId("managed-site-import-group"),
+      ).toHaveTextContent("Account 1 · 2 个密钥")
+      expect(
+        screen.getByRole("combobox", { name: "密钥导入方式" }),
+      ).toHaveTextContent("同站点密钥合并到一个新渠道")
+    } finally {
+      await act(async () => {
+        await testI18n.changeLanguage("en")
+      })
+      testI18n.removeResourceBundle("zh-CN", "keyManagement")
+    }
+  })
+
+  it("shows the existing target and submits its identity when adding Magpie keys", async () => {
+    const user = userEvent.setup()
+    const target = {
+      name: "Coding group",
+      ref: matchingResourceRef("existing", {
+        siteType: SITE_TYPES.MAGPIE,
+        scopeKey: "https://managed.example",
+      }),
+    }
+    mockPreparePreview.mockResolvedValue({
+      ...preview,
+      siteType: SITE_TYPES.MAGPIE,
+      items: preview.items.map((item) => ({
+        ...item,
+        existingImportTargets: [target],
+        draft: item.draft ? { ...item.draft, type: "chat" } : null,
+      })),
+    })
+    renderDialog()
+    await screen.findByRole("checkbox", { name: "Account 1 / Token 1" })
+    expect(
+      within(
+        screen.getByRole("button", {
+          name: "keyManagement:batchManagedSiteExport.actions.start",
+        }),
+      ).getByAltText("MAGPIE logo"),
+    ).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "keyManagement:batchManagedSiteExport.importMode.label",
+      }),
+    )
+    await user.click(
+      screen.getByRole("option", {
+        name: "keyManagement:batchManagedSiteExport.importMode.reuse",
+      }),
+    )
+    expect(screen.getByTestId("managed-site-import-group")).toHaveTextContent(
+      "Coding group",
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await user.click(getBatchImportConfirmButton())
+    expect(mockExecuteBatchExport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mode: "reuse",
+        targetsByGroupId: { [preview.items[0]!.id]: target.ref },
+      }),
+    )
+  })
+
+  it.each(["existing", "new"])(
+    "requires an explicit target when several Magpie channels match (%s)",
+    async (choice) => {
+      const user = userEvent.setup()
+      const targets = ["First", "Second"].map((name) => ({
+        name,
+        ref: matchingResourceRef(name, {
+          siteType: SITE_TYPES.MAGPIE,
+          scopeKey: "https://managed.example",
+        }),
+      }))
+      mockPreparePreview.mockResolvedValue({
+        ...preview,
+        siteType: SITE_TYPES.MAGPIE,
+        items: preview.items.map((item) => ({
+          ...item,
+          existingImportTargets: targets,
+          draft: item.draft ? { ...item.draft, type: "chat" } : null,
+        })),
+      })
+      mockUserPreferencesContextValue.current.preferences = {
+        ...(mockUserPreferencesContextValue.current
+          .preferences as Partial<UserPreferences>),
+        managedSiteTokenBatchImportModes: {
+          [manualPreviewTarget.targetFingerprint]: "reuse",
+        },
+      }
+      renderDialog()
+      await screen.findByRole("checkbox", { name: "Account 1 / Token 1" })
+      const start = screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      })
+      expect(start).toBeDisabled()
+      await user.click(
+        screen.getByRole("combobox", {
+          name: "keyManagement:batchManagedSiteExport.importMode.target",
+        }),
+      )
+      await user.click(
+        screen.getByRole("option", {
+          name:
+            choice === "existing"
+              ? "Second"
+              : "keyManagement:batchManagedSiteExport.importMode.createNew",
+        }),
+      )
+      expect(start).toBeEnabled()
+      if (choice === "existing")
+        expect(
+          screen.queryByRole("textbox", {
+            name: "keyManagement:batchManagedSiteExport.importMode.resourceName",
+          }),
+        ).not.toBeInTheDocument()
+      await user.click(start)
+      await user.click(getBatchImportConfirmButton())
+      expect(mockExecuteBatchExport).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mode: "reuse",
+          targetsByGroupId: {
+            [preview.items[0]!.id]:
+              choice === "existing" ? targets[1]!.ref : null,
+          },
+        }),
+      )
+    },
+  )
+
   it("lets users group same-site keys and updates the resource plan when a key is deselected", async () => {
     const user = userEvent.setup()
     mockPreparePreview.mockResolvedValue(preview)

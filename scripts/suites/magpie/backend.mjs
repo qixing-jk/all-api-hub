@@ -11,7 +11,7 @@ export const MAGPIE_WINDOWS_SHA256 =
 
 /** Magpie reads its user home directly; XDG-only isolation is insufficient. */
 export function makeMagpieProcessEnv(parent, root, webKey) {
-  return {
+  const environment = {
     ...parent,
     USERPROFILE: root,
     HOME: root,
@@ -21,6 +21,11 @@ export function makeMagpieProcessEnv(parent, root, webKey) {
     MAGPIE_WEB_KEY: webKey,
     DO_NOT_TRACK: "1",
   }
+  // Agent configuration overrides bypass HOME and can expose the operator's
+  // subscriptions inside an otherwise disposable Magpie process.
+  delete environment.CODEX_HOME
+  delete environment.CLAUDE_CONFIG_DIR
+  return environment
 }
 
 /** Start only an explicitly supplied and checksummed binary in a disposable home. */

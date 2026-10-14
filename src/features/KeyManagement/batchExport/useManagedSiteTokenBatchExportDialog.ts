@@ -12,7 +12,11 @@ import { verifyManagedSiteTokenBatchTargets } from "~/features/KeyManagement/bat
 import { useManagedSiteTokenBatchSession } from "~/features/KeyManagement/batchExport/useManagedSiteTokenBatchSession"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import toast from "~/lib/notify"
-import { supportsNativeManagedChannelMultiKeyImport } from "~/services/apiAdapters/managedResources/channelImport"
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
+import {
+  supportsNativeManagedChannelExistingImport,
+  supportsNativeManagedChannelMultiKeyImport,
+} from "~/services/apiAdapters/managedResources/channelImport"
 import { executeManagedSiteTokenBatchExport } from "~/services/managedSites/batchImport/tokenBatchImportExecution"
 import { planManagedSiteTokenBatchImport } from "~/services/managedSites/batchImport/tokenBatchImportPlan"
 import { DEFAULT_MANAGED_SITE_TOKEN_BATCH_IMPORT_INTENT } from "~/services/managedSites/batchImport/tokenBatchImportPreview"
@@ -145,12 +149,22 @@ export function useManagedSiteTokenBatchExportDialog({
     Record<string, ManagedSiteTokenBatchImportMode>
   >({})
   const [resourceNames, setResourceNames] = useState<Record<string, string>>({})
+  const [resourceTargets, setResourceTargets] = useState<
+    Record<string, ManagedResourceRef | null>
+  >({})
   const targetIdentity = preview?.targetFingerprint ?? ""
   const savedMode =
     preferences?.managedSiteTokenBatchImportModes?.[targetIdentity]
   const importMode =
     modeOverrides[targetIdentity] ??
-    (savedMode === "grouped" ? "grouped" : "independent")
+    (savedMode === "reuse"
+      ? "reuse"
+      : savedMode === "grouped"
+        ? "grouped"
+        : "independent")
+  const canReuse = Boolean(
+    preview && supportsNativeManagedChannelExistingImport(preview.siteType),
+  )
   const selectedPlanItems = executableItems
     .filter(isExecutableManagedSiteTokenBatchExportPreviewItem)
     .filter((item) => selectedIds.has(item.id))
@@ -174,6 +188,14 @@ export function useManagedSiteTokenBatchExportDialog({
           preview.siteType,
           selectedPlanItems,
           importMode,
+          Object.fromEntries(
+            Object.entries(resourceTargets)
+              .filter(([key]) => key.startsWith(`${targetIdentity}:`))
+              .map(([key, value]) => [
+                key.slice(targetIdentity.length + 1),
+                value,
+              ]),
+          ),
         )
       : []
   ).map((group) => ({
@@ -184,8 +206,22 @@ export function useManagedSiteTokenBatchExportDialog({
     },
   }))
   const hasInvalidImportGroups =
-    importMode === "grouped" &&
-    importGroups.some((group) => !group.draft.name.trim())
+    importMode !== "independent" &&
+    importGroups.some(
+      (group) =>
+        group.requiresTargetSelection ||
+        (!group.target && !group.draft.name.trim()),
+    )
+  const handleImportGroupTargetChange = (
+    id: string,
+    ref: ManagedResourceRef | null,
+  ) => {
+    if (isRunning || executionResult) return
+    setResourceTargets((current) => ({
+      ...current,
+      [`${targetIdentity}:${id}`]: ref,
+    }))
+  }
   const handleImportGroupNameChange = (id: string, name: string) => {
     if (isRunning || executionResult) return
     setResourceNames((current) => ({
@@ -198,7 +234,8 @@ export function useManagedSiteTokenBatchExportDialog({
       !targetIdentity ||
       isRunning ||
       executionResult ||
-      (mode !== "independent" && mode !== "grouped")
+      (mode !== "independent" && mode !== "grouped" && mode !== "reuse") ||
+      (mode === "reuse" && !canReuse)
     )
       return
     setModeOverrides((current) => ({ ...current, [targetIdentity]: mode }))
@@ -288,9 +325,19 @@ export function useManagedSiteTokenBatchExportDialog({
       const result = await executeManagedSiteTokenBatchExport({
         preview,
         selectedItemIds: selectedExecutionIds,
-        ...(importMode === "grouped"
+        ...(importMode !== "independent"
           ? {
               mode: importMode,
+              ...(importMode === "reuse"
+                ? {
+                    targetsByGroupId: Object.fromEntries(
+                      importGroups.map((group) => [
+                        group.id,
+                        group.target?.ref ?? null,
+                      ]),
+                    ),
+                  }
+                : {}),
               resourceNamesByItemId: Object.fromEntries(
                 importGroups.map((group) => [
                   group.id,
@@ -325,7 +372,7 @@ export function useManagedSiteTokenBatchExportDialog({
       })
       toast.success(
         t(
-          importMode === "grouped"
+          importMode !== "independent"
             ? "keyManagement:batchManagedSiteExport.importMode.resultSummary"
             : "keyManagement:batchManagedSiteExport.messages.completed",
           {
@@ -375,6 +422,7 @@ export function useManagedSiteTokenBatchExportDialog({
   }
 
   return {
+    managedSiteType,
     preview,
     intent: activeIntent,
     selectedIds,
@@ -409,11 +457,13 @@ export function useManagedSiteTokenBatchExportDialog({
     importMode,
     importGroups,
     canGroup,
+    canReuse,
     previewItemsById,
     hasInvalidImportGroups,
     actions: {
       changeImportMode: handleImportModeChange,
       changeImportGroupName: handleImportGroupNameChange,
+      changeImportGroupTarget: handleImportGroupTargetChange,
       close: handleClose,
       refreshPreview: handleRefreshPreview,
       retryPreview: handleRetryPreview,

@@ -5,6 +5,7 @@ import {
 } from "~/services/accountSiteDefinitions/contracts"
 import type {
   ManagedChannelImportCreateSeed,
+  ManagedResourceRef,
   ResourceDisplayFacts,
   ResourceEditor,
   ResourceOperationOptions,
@@ -27,6 +28,11 @@ interface NativeManagedChannelImportEditor {
 }
 
 interface NativeManagedChannelImportSession {
+  append?(
+    ref: ManagedResourceRef,
+    draft: ManagedSiteChannelDraft,
+    options?: ResourceOperationOptions,
+  ): Promise<ManagedSiteMutationResult<ResourceDisplayFacts>>
   siteType: ManagedSiteType
   kind: ManagedResourceKind
   reconcile(options?: ResourceOperationOptions): Promise<void>
@@ -38,6 +44,16 @@ interface NativeManagedChannelImportSession {
     draft: ManagedSiteChannelDraft,
     options?: ResourceOperationOptions,
   ): Promise<ManagedSiteMutationResult<ResourceDisplayFacts>>
+}
+
+/** Whether the native backend can add import keys without replacing channel settings. */
+export function supportsNativeManagedChannelExistingImport(
+  siteType: ManagedSiteType,
+): boolean {
+  return (
+    getManagedResourceRegistration(siteType, MANAGED_RESOURCE_KINDS.Channel)
+      ?.canAppendImportCredentials === true
+  )
 }
 
 const createManagedChannelImportSeed = (
@@ -163,6 +179,22 @@ export async function openNativeManagedChannelImportSession(
     siteType,
     kind,
     openEditor,
+    ...(workspace.appendImportCredentials
+      ? {
+          append: (
+            ref: ManagedResourceRef,
+            draft: ManagedSiteChannelDraft,
+            appendOptions?: ResourceOperationOptions,
+          ) => {
+            assertMultipleCredentialSupport(siteType, draft)
+            return workspace.appendImportCredentials!(
+              ref,
+              createManagedChannelImportSeed(draft),
+              appendOptions,
+            )
+          },
+        }
+      : {}),
     reconcile: async (reconcileOptions) => {
       await workspace.list(undefined, reconcileOptions)
     },

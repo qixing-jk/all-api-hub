@@ -305,6 +305,120 @@ const repairCompleteIntent = {
 } as const
 
 describe("managed-site token batch export", () => {
+  it.each(["succeeded", "changed", "uncertain"])(
+    "uses the existing Magpie target without falling back to provider creation (%s)",
+    async (outcome) => {
+      const target = buildManagedResourceMatchCandidate({
+        ref: matchingResourceRef("existing", {
+          siteType: SITE_TYPES.MAGPIE,
+          scopeKey: "https://managed.example",
+        }),
+        name: "Coding group",
+        type: "chat",
+        base_url: "https://example.com",
+        key: "key-existing",
+      })
+      const managedSite = buildService({
+        siteType: SITE_TYPES.MAGPIE,
+        matching: { exactMatchBasis: "url-key", search: vi.fn() },
+        channelDrafts: {
+          prepareFormData: vi.fn(
+            async (source: ManagedSiteChannelDraftSource) => ({
+              name: source.name,
+              type: "chat",
+              key: source.apiKey,
+              base_url: source.baseUrl,
+              models: ["m1"],
+              groups: [],
+              enabled: true,
+            }),
+          ),
+        },
+      })
+      configureManagedSiteCapabilities(managedSite)
+      mockGetCurrentManagedSiteRuntimeConfig.mockResolvedValue({
+        siteType: SITE_TYPES.MAGPIE,
+        config: { baseUrl: "https://managed.example", webKey: "web-key" },
+      })
+      mockResolveManagedSiteChannelMatch.mockResolvedValue({
+        searchCompleted: true,
+        searchBaseUrl: "https://example.com",
+        urlCandidates: [target],
+        url: { matched: true, channel: target, candidateCount: 1 },
+        key: {
+          comparable: true,
+          matched: false,
+          reason: "no-match",
+          channel: null,
+        },
+        models: {
+          comparable: false,
+          matched: false,
+          reason: "comparison-unavailable",
+          channel: null,
+        },
+      })
+      const append = vi.fn().mockResolvedValue({
+        outcome: "succeeded",
+        data: null,
+        confirmedEffects: [
+          {
+            kind: "resource-updated",
+            resourceKind: "channel",
+            resourceId: "existing",
+          },
+        ],
+      })
+      const submit = vi.fn()
+      if (outcome !== "succeeded")
+        append.mockRejectedValue(
+          new ManagedResourceError({
+            code:
+              outcome === "changed"
+                ? MANAGED_RESOURCE_FAILURE_CODES.ResourceChanged
+                : MANAGED_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+          }),
+        )
+      mockOpenNativeManagedChannelImportSession.mockResolvedValue({
+        append,
+        submit,
+        reconcile: vi.fn(),
+      })
+      const { prepareManagedSiteTokenBatchExportPreview } = await import(
+        "~/services/managedSites/batchImport/tokenBatchImportPreview"
+      )
+      const { executeManagedSiteTokenBatchExport } = await import(
+        "~/services/managedSites/batchImport/tokenBatchImportExecution"
+      )
+      const account = buildDisplaySiteData()
+      const runtimeKey = buildNewApiRuntimeKey(
+        account,
+        buildNewApiToken({ key: "key-new" }),
+      )
+      const preview = await prepareManagedSiteTokenBatchExportPreview({
+        items: [{ account, runtimeKey }],
+      })
+      expect(preview.items[0]?.existingImportTargets).toEqual([
+        { ref: target.ref, name: "Coding group" },
+      ])
+      const result = await executeManagedSiteTokenBatchExport({
+        preview,
+        selectedItemIds: [runtimeKey.id],
+        mode: "reuse",
+      })
+      expect(result).toMatchObject({
+        createdCount: outcome === "succeeded" ? 1 : 0,
+        failedCount: outcome === "changed" ? 1 : 0,
+        uncertainCount: outcome === "uncertain" ? 1 : 0,
+      })
+      expect(append).toHaveBeenCalledWith(
+        target.ref,
+        expect.objectContaining({ key: "key-new" }),
+      )
+      expect(submit).not.toHaveBeenCalled()
+    },
+  )
+
   beforeEach(() => {
     vi.resetAllMocks()
     mockGetCurrentManagedSiteRuntimeConfig.mockImplementation(async () => {

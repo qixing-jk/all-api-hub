@@ -7,7 +7,10 @@ import {
   MANAGED_SITE_CHANNEL_DRAFT_PURPOSES,
   type ManagedSiteCapabilities,
 } from "~/services/apiAdapters/contracts/managedSiteCapabilities"
-import { validateNativeManagedChannelImportDraft } from "~/services/apiAdapters/managedResources/channelImport"
+import {
+  supportsNativeManagedChannelExistingImport,
+  validateNativeManagedChannelImportDraft,
+} from "~/services/apiAdapters/managedResources/channelImport"
 import { getManagedSiteCapabilities } from "~/services/apiAdapters/registry"
 import { mapBatchImportWithConcurrency } from "~/services/managedSites/batchImport/tokenBatchImportConcurrency"
 import { skipManagedSiteBatchDuplicates } from "~/services/managedSites/batchImport/tokenBatchImportDuplicates"
@@ -292,6 +295,9 @@ const preparePreviewItem = async (params: {
         managedSite,
         managedConfig,
         purpose: MANAGED_SITE_CHANNEL_DRAFT_PURPOSES.NATIVE_EDITOR,
+        includeUrlCandidates: supportsNativeManagedChannelExistingImport(
+          managedSite.siteType,
+        ),
         verifyExisting:
           params.verification ===
           MANAGED_SITE_TOKEN_BATCH_IMPORT_VERIFICATIONS.COMPLETE,
@@ -411,6 +417,15 @@ const preparePreviewItem = async (params: {
       draft,
       ...buildExecutableWarningState(warningCodes),
       assessment,
+      ...(supportsNativeManagedChannelExistingImport(managedSite.siteType)
+        ? {
+            existingImportTargets: (resolution.urlCandidates ?? [])
+              .filter(
+                (candidate) => String(candidate.type) === String(draft.type),
+              )
+              .map(toManagedSiteAssessmentChannel),
+          }
+        : {}),
       ...(verificationCandidate ? { verificationCandidate } : {}),
     }
   } catch (error) {

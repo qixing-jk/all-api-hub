@@ -1,14 +1,20 @@
 import type { ManagedSiteType } from "~/constants/siteType"
 import { formatOptionalSkPrefixSiteTokenComparableKey } from "~/services/accountTokens/apiTokenKey"
+import type { ManagedResourceRef } from "~/services/apiAdapters/contracts/managedResourceNative"
 import { supportsNativeManagedChannelMultiKeyImport } from "~/services/apiAdapters/managedResources/channelImport"
+import { areManagedResourceRefsEqual } from "~/services/managedSites/managedResourceIdentity"
 import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
 import type {
   ExecutableManagedSiteTokenBatchExportPreviewItem,
+  ManagedSiteTokenBatchExportMatchedChannel,
   ManagedSiteTokenBatchImportMode,
 } from "~/types/managedSiteTokenBatchExport"
 import { normalizeList } from "~/utils/core/string"
 
 export interface ManagedSiteTokenBatchImportGroup {
+  target?: ManagedSiteTokenBatchExportMatchedChannel
+  existingTargets: ManagedSiteTokenBatchExportMatchedChannel[]
+  requiresTargetSelection: boolean
   id: string
   itemIds: string[]
   draft: ManagedSiteChannelDraft
@@ -32,6 +38,7 @@ export function planManagedSiteTokenBatchImport(
   siteType: ManagedSiteType,
   items: readonly ExecutableManagedSiteTokenBatchExportPreviewItem[],
   mode: ManagedSiteTokenBatchImportMode,
+  targetsByGroupId: Readonly<Record<string, ManagedResourceRef | null>> = {},
 ): ManagedSiteTokenBatchImportGroup[] {
   const buckets = new Map<
     string,
@@ -43,7 +50,7 @@ export function planManagedSiteTokenBatchImport(
       item.draft,
     )
     const key =
-      mode === "grouped" && supported
+      mode !== "independent" && supported
         ? JSON.stringify([
             endpointIdentity(item.draft.base_url),
             String(item.draft.type),
@@ -58,6 +65,27 @@ export function planManagedSiteTokenBatchImport(
   }
   return [...buckets.values()].map((members) => {
     const first = members[0]!
+    const existingTargets =
+      mode === "reuse"
+        ? (first.existingImportTargets ?? []).filter((candidate) =>
+            members.every((member) =>
+              member.existingImportTargets?.some((other) =>
+                areManagedResourceRefsEqual(candidate.ref, other.ref),
+              ),
+            ),
+          )
+        : []
+    const selected = targetsByGroupId[first.id]
+    const target =
+      selected === null
+        ? undefined
+        : selected
+          ? existingTargets.find((candidate) =>
+              areManagedResourceRefsEqual(candidate.ref, selected),
+            )
+          : existingTargets.length === 1
+            ? existingTargets[0]
+            : undefined
     const keys = new Map<string, string>()
     for (const member of members) {
       const key = member.draft.key.trim()
@@ -71,6 +99,13 @@ export function planManagedSiteTokenBatchImport(
       JSON.stringify(normalizeList(member.draft.models).sort()),
     )
     return {
+      target,
+      existingTargets,
+      requiresTargetSelection:
+        mode === "reuse" &&
+        selected !== null &&
+        !target &&
+        (existingTargets.length > 1 || selected !== undefined),
       id: first.id,
       itemIds: members.map((item) => item.id),
       supportsMultipleCredentials: supportsNativeManagedChannelMultiKeyImport(

@@ -8,7 +8,10 @@ import type {
 import type { DisplaySiteData } from "~/types"
 import type { ManagedSiteChannelDraft } from "~/types/managedSiteChannelDraft"
 
-export type ManagedSiteTokenBatchImportMode = "independent" | "grouped"
+export type ManagedSiteTokenBatchImportMode =
+  | "independent"
+  | "grouped"
+  | "reuse"
 
 export const MANAGED_SITE_TOKEN_BATCH_IMPORT_SOURCES = {
   MANUAL_SELECTION: "manual-selection",
@@ -114,6 +117,7 @@ export type ManagedSiteTokenBatchExportAssessment =
   ManagedSiteVerifiedKeyAssessment<ManagedSiteTokenBatchExportMatchedChannel>
 
 export interface ManagedSiteTokenBatchExportPreviewItem {
+  existingImportTargets?: ManagedSiteTokenBatchExportMatchedChannel[]
   id: string
   accountId: string
   accountName: string

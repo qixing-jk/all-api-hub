@@ -102,25 +102,33 @@
     },
     "gatewayDescription": "Esto importa claves de cuenta como canales del AI gateway autohospedado. Después de importar, los clientes pueden usar varias claves mediante una AI API.",
     "importMode": {
-      "grouped": "Combinar claves del mismo sitio",
-      "independent": "Crear por separado para cada clave",
+      "appendTo": "Agregar al canal existente: {{name}}",
+      "chooseTarget": "Elige un canal para estas claves",
+      "createNew": "Crear un canal nuevo",
+      "grouped": "Combinar las claves del mismo sitio en un canal nuevo",
+      "independent": "Crear un canal nuevo por clave",
       "keyCount_one": "{{count}} clave",
       "keyCount_many": "{{count}} claves",
       "keyCount_other": "{{count}} claves",
-      "label": "Organización de la importación",
+      "label": "Cómo importar las claves",
       "modelDifferences": "Las listas de modelos difieren. El recurso combinado usa su unión; la puerta de enlace se encarga del enrutamiento.",
       "models": "Modelos: {{models}}",
-      "resourceName": "Nombre del recurso",
+      "preserveSettings": "Conserva la configuración y los modelos del canal. Solo agrega claves que aún no se hayan importado.",
+      "resourceName": "Nombre del canal nuevo",
       "resultSummary": "Claves: {{created}} importadas, {{failed}} fallidas, {{uncertain}} sin confirmar, {{skipped}} omitidas.",
+      "reuse": "Preferir agregar a un canal existente",
+      "reuseHelp": "Agrega claves a un canal con la misma dirección. Si hay varios, elige uno; si no hay ninguno, crea un canal combinado.",
+      "reuseSummary": "{{keyCount}} claves seleccionadas: crear {{createCount}} canales y agregar a {{appendCount}} canales existentes.",
       "saveFailed": "La selección se aplica a esta importación, pero no se pudo guardar la preferencia.",
-      "scheduling": "La puerta de enlace de destino distribuye las solicitudes entre las claves combinadas. Confirma que sus permisos y uso sean adecuados.",
-      "summary": "{{keyCount}} claves seleccionadas → {{resourceCount}} recursos",
+      "scheduling": "La puerta de enlace de destino decide cómo alternar entre las claves. Elige según tus necesidades.",
+      "summary": "{{keyCount}} claves seleccionadas; se crearán {{resourceCount}} canales nuevos.",
+      "target": "Canal al que agregar las claves",
       "unsupported": "Este tipo de recurso no admite claves combinadas y se creará por separado."
     },
     "loadingDescription": "Preparando vista previa para {{selectedCount}} claves seleccionadas.",
     "messages": {
       "batchDuplicate": "Duplica a {{item}} en este lote y se omitió.",
-      "completed": "Importación por lote completada: {{created}} creadas, {{failed}} fallidas, {{skipped}} omitidas.",
+      "completed": "Claves: {{created}} importadas, {{failed}} fallidas, {{uncertain}} sin confirmar, {{skipped}} omitidas.",
       "duplicate": "Ya existe un canal exacto: {{channel}}. No se volverá a crear.",
       "executionFailed": "No se pudo ejecutar la importación por lote: {{error}}",
       "targetChanged": "El destino del sitio administrado cambió. Actualiza la vista previa o elige el destino correcto antes de importar.",
@@ -139,15 +147,15 @@
       "useCompleteChecks": "Usar comprobaciones completas"
     },
     "results": {
-      "channelCreationFailed": "Falló la creación del canal.",
+      "channelCreationFailed": "No se pudo importar la clave.",
       "status": {
         "failed": "Falló",
         "notSelected": "No seleccionada",
         "skipped": "Omitido",
-        "success": "Creado",
+        "success": "Importada",
         "uncertain": "Requiere revisión"
       },
-      "summary": "Resultado: {{created}} creadas, {{failed}} fallidas, {{skipped}} omitidas, {{total}} en total."
+      "summary": "Claves: {{created}} importadas, {{failed}} fallidas, {{uncertain}} sin confirmar, {{skipped}} omitidas."
     },
     "selection": {
       "accountGroup": "Seleccionar claves visibles para la cuenta {{name}}",
