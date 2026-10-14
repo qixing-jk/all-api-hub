@@ -20,7 +20,7 @@ For current coverage details, inspect the specs in this directory and the shared
 
 Account auto-detection and existing-account feature checks are separate scenario helpers. Real-site specs compose them by saving an account from a live site, passing the returned account fixture into reusable usage scenarios, then cleaning up through the fixture owner.
 
-### Account detection source matrix
+## Account detection source matrix
 
 All five account targets also register the detection matrix in `utils/realSite/accountDetection.ts`. One isolated browser profile and one real login exercise detection by clicking the add-account UI: the Popup entrypoint with an active target tab, Options with an existing target tab, and Options with no remaining target tabs through temporary-tab and temporary-window modes selected in Settings. Each path must match the login response's identity and expected site type. Filtered diagnostics from the real UI attempt establish the selected source; a successful fallback cannot satisfy another source's check. A test-only observer records native tab/window events without invoking detection, establishing the actual temporary surface. Temporary pages must be released afterward. These detection-only cases do not save an account or claim that a management credential was acquired; the existing add/save scenarios cover completion separately.
 

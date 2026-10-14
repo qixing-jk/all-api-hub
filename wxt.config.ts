@@ -86,6 +86,7 @@ export default defineConfig({
   outDirTemplate: getOutDirTemplate(),
   modules: ["@wxt-dev/auto-icons", "@wxt-dev/module-react"],
   hooks: {
+    /** Keep the packaged detection probe out of non-test entrypoint discovery. */
     "entrypoints:found": (_wxt, entrypoints) => {
       if (isTestBuild) return
       const probeIndex = entrypoints.findIndex(

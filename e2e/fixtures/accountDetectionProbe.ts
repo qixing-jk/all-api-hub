@@ -122,6 +122,11 @@ declare global {
 }
 
 window.accountDetectionProbe = accountDetectionProbe
+/**
+ * Observe native contexts for one UI attempt without invoking detection.
+ * Call finishAccountDetectionUiObservation before starting another attempt;
+ * finishing removes the listeners and returns the observed window types.
+ */
 window.startAccountDetectionUiObservation = (url) => {
   const observation = observeNativeContexts(url)
   window.finishAccountDetectionUiObservation = observation.finish
