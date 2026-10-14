@@ -84,7 +84,7 @@ export async function getUserDataViaAPI({
     })
     return {
       userId,
-      user: userInfo,
+      user: { ...userInfo },
       accessToken:
         typeof userInfo.access_token === "string"
           ? userInfo.access_token

@@ -33,7 +33,7 @@ const baseUrl = "https://api.apiyi.com"
 const detected = {
   siteType: SITE_TYPES.APIYI,
   userId: "42",
-  user: { id: 42, username: "apiyi-user" },
+  user: { id: "42", username: "apiyi-user" },
 }
 
 describe("APIyi account capabilities", () => {

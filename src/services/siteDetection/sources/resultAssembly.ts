@@ -30,7 +30,11 @@ export function normalizeSiteTypeHint(
 }
 
 export interface UserDataResult
-  extends Omit<NonNullable<AutoDetectResult["data"]>, "siteType"> {
+  extends Omit<
+    NonNullable<AutoDetectResult["data"]>,
+    "siteType" | "user" | "rawUser"
+  > {
+  user: Record<string, unknown>
   siteTypeHint?: AccountSiteType
 }
 
@@ -147,7 +151,13 @@ export async function combineUserDataAndSiteType(
       success: true,
       data: {
         userId: userData.userId,
-        user: userData.user,
+        user: {
+          id: userData.userId,
+          ...(typeof userData.user.username === "string"
+            ? { username: userData.user.username }
+            : {}),
+        },
+        rawUser: userData.user,
         siteType,
         accessToken: userData.accessToken,
         ...(userData.transientAuth

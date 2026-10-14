@@ -4,9 +4,9 @@ import type {
   AutoDetectErrorCode,
 } from "~/constants/autoDetect"
 import { type AccountSiteType } from "~/constants/siteType"
+import type { DetectedAccountUser } from "~/services/accounts/identity/accountIdentity"
 import type { ContentSessionTransientAuth } from "~/services/accountSiteOnboarding/contracts"
 import type { AccountDetectionDiagnostics } from "~/services/accountSiteOnboarding/diagnostics"
-import type { UserInfo } from "~/services/apiAdapters/contracts/accountBootstrap"
 import type {
   ApiServiceFetchContext,
   ApiTransportBrowserFetchContext,
@@ -22,7 +22,9 @@ export type AutoDetectFetchContext = ApiServiceFetchContext
 
 export interface AutoDetectData {
   userId: string
-  user: UserInfo | Record<string, unknown>
+  user: DetectedAccountUser
+  /** Provider data retained locally for provider-specific completion and recovery. */
+  rawUser: Record<string, unknown>
   siteType: AccountSiteType
   accessToken?: string
   transientAuth?: ContentSessionTransientAuth

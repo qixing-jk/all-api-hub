@@ -9,6 +9,24 @@ import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 
 describe("account auto-detect recovery", () => {
+  it("retains native name fallbacks after the user model is normalized", () => {
+    expect(
+      createDetectedAccountRecoveryData({
+        detected: {
+          siteType: SITE_TYPES.NEW_API,
+          userId: "42",
+          user: { id: "42" },
+          rawUser: {
+            id: 42,
+            display_name: "  Alice  ",
+            email: "alice@example.invalid",
+          },
+        },
+        requestedAuthType: AuthTypeEnum.Cookie,
+      }),
+    ).toMatchObject({ username: "Alice", userId: "42" })
+  })
+
   it("preserves the Kimi organization and rotated credentials in recovery data", () => {
     const auth = {
       refreshToken: "refresh",

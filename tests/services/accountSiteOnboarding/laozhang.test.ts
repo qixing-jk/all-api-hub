@@ -53,7 +53,7 @@ describe.each([
           detected: {
             siteType: SITE_TYPES.LAOZHANG,
             userId: "42",
-            user: { id: 42 },
+            user: { id: "42" },
           },
           requestedAuthType: AuthTypeEnum.Cookie,
         }),
@@ -77,7 +77,7 @@ describe.each([
         detected: {
           siteType: SITE_TYPES.LAOZHANG,
           userId: "42",
-          user: { id: 42 },
+          user: { id: "42" },
         },
         requestedAuthType: AuthTypeEnum.Cookie,
       }),
@@ -161,7 +161,7 @@ describe.each([
         detected: {
           siteType: SITE_TYPES.LAOZHANG,
           userId: "42",
-          user: { id: 42 },
+          user: { id: "42" },
         },
         requestedAuthType: AuthTypeEnum.AccessToken,
         onRecoveryData,

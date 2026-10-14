@@ -2,6 +2,12 @@ import type { AccountSiteType } from "~/constants/siteType"
 import { resolveAccountSiteUserIdentity } from "~/services/accounts/accountSiteProfile/identity"
 import type { AccountIdentity, SiteAccount } from "~/types"
 
+/** Confirmed identity and optional username, independent of provider payloads. */
+export interface DetectedAccountUser {
+  id: AccountIdentity
+  username?: string
+}
+
 type StoredAccountUserIdentity = {
   userId: AccountIdentity
   user: Record<string, unknown>

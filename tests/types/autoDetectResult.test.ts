@@ -7,7 +7,12 @@ describe("account detection result contract", () => {
   it("requires data on success and excludes it on failure", () => {
     type Success = Extract<AutoDetectResult, { success: true }>
     type Failure = Extract<AutoDetectResult, { success: false }>
-    const data = { userId: "1", user: {}, siteType: SITE_TYPES.NEW_API }
+    const data = {
+      userId: "1",
+      user: { id: "1" },
+      rawUser: {},
+      siteType: SITE_TYPES.NEW_API,
+    }
 
     expectTypeOf<Success["data"]>().not.toBeNullable()
     expectTypeOf<Failure["data"]>().toEqualTypeOf<undefined>()
@@ -25,6 +30,13 @@ describe("account detection result contract", () => {
     const checkResult = (result: AutoDetectResult) => {
       if (result.success) {
         expectTypeOf(result.data.userId).toEqualTypeOf<string>()
+        expectTypeOf(result.data.user.id).toEqualTypeOf<string>()
+        expectTypeOf(result.data.user.username).toEqualTypeOf<
+          string | undefined
+        >()
+        expectTypeOf(result.data.rawUser).toEqualTypeOf<
+          Record<string, unknown>
+        >()
         expectTypeOf(result.error).toEqualTypeOf<undefined>()
       } else {
         expectTypeOf(result.data).toEqualTypeOf<undefined>()

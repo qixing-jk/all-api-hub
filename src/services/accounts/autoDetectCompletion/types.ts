@@ -4,6 +4,7 @@ import type {
 } from "~/constants/autoDetect"
 import type { AccountSiteType } from "~/constants/siteType"
 import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"
+import type { DetectedAccountUser } from "~/services/accounts/identity/accountIdentity"
 import type { ContentSessionTransientAuth } from "~/services/accountSiteOnboarding/contracts"
 import type { ApiServiceFetchContext } from "~/services/apiTransport/type"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
@@ -17,10 +18,8 @@ import { getErrorMessage } from "~/utils/core/error"
 
 export interface DetectedAccountIdentity {
   userId: string
-  user?: {
-    id?: string | number
-    username?: string
-  }
+  user?: Partial<DetectedAccountUser>
+  rawUser?: Record<string, unknown>
   siteType: AccountSiteType
   accessToken?: string
   transientAuth?: ContentSessionTransientAuth
