@@ -1,4 +1,11 @@
 {
+  "accountMessage": {
+    "claimed": "Claimed",
+    "credits": "Reward: {{amount}} credits",
+    "expires": "Expires: {{time}}",
+    "openNative": "View and handle on the site",
+    "unclaimed": "Not claimed"
+  },
   "actions": {
     "checkNow": "Check now",
     "collapse": "Collapse",

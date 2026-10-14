@@ -268,6 +268,8 @@
   "stats": {
     "completion": "補完",
     "estimatedTodayIncome": "推定収入",
+    "nativeCredits": "クレジット",
+    "nativeCreditsDetail": "永久 {{permanent, number}} · 本日 {{daily, number}}（翌日失効）",
     "prompt": "プロンプト",
     "subscriptionInactive": "未有効または期限切れ",
     "subscriptionRemainingCount": "サブスクリプション残り回数",

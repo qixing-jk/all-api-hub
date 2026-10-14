@@ -38,6 +38,7 @@
 | 老张 API      | 商业 AI 模型 API 中转服务，提供默认、国内/备用、欧美直连和 CF-CDN 四个入口，使用同一套账号。 | — |
 | Dahl          | 按 Token 额度使用的 AI 推理服务，提供模型 API 与账户控制台。 | — |
 | FoxCode       | 面向开发者的 AI 编程模型中转与订阅服务平台。 | — |
+| 肖恩 AI (`free.supxh.xin`) | 独立 CharityAPI 公益站：Cookie 自动添加、永久/每日额度、签到、唯一推理密钥读取与导出、邀请链接、公开公告、站内信读取与已读同步和密钥可用模型。消息奖励与优惠券请在原站处理。额度按原生单位显示，不换算现金；每日额度次日清零。密钥轮换请在原站操作；VIP 权益与非空使用记录尚未适配。 | [站点](https://free.supxh.xin/) |
 | Cubence       | 商业 AI 模型 API 服务平台，提供模型调用、分组与额度管理。 | — |
 | RightCode     | 商业 AI Agent 中转服务，right.codes 与 rightapi.ai 为同一服务的入口。 | — |
 | Grsai         | 商业 AI 模型聚合中转服务，grsai.com 与 grsai.ai 为同一服务的入口。 | — |

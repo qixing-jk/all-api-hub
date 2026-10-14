@@ -224,6 +224,15 @@ const newApiFeedbackStatusRoutes = (now: Date): FeedbackStatusRoutes => {
 
 /** All method definitions, including post-registry discovery candidates. */
 export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
+  [AUTO_CHECKIN_METHOD_IDS.XiaoenDailyCheckIn]: {
+    id: AUTO_CHECKIN_METHOD_IDS.XiaoenDailyCheckIn,
+    siteTypes: [SITE_TYPES.XIAOEN],
+    source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: [{ path: "/api/auth/me" }],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
   [AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn]: {
     id: AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn,
     siteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.ONE_API, SITE_TYPES.UNKNOWN],

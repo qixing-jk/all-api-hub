@@ -1,6 +1,7 @@
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import {
   type AccountIdentity,
+  type AccountNativeBalance,
   type AccountSubscriptionSummary,
   type AccountTodayStatsAvailability,
   type AccountUsageRecord,
@@ -39,6 +40,7 @@ export type TodayIncomeDataWithAvailability = TodayIncomeData & {
 
 export interface AccountData extends TodayStatsData {
   quota: number
+  nativeBalance?: AccountNativeBalance
   todayStatsAvailability?: AccountTodayStatsAvailability
   usage?: AccountUsageSummary
   subscription?: AccountSubscriptionSummary

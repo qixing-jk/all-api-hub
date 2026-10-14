@@ -42,6 +42,7 @@ import { rightCodeCapabilities } from "./rightcode"
 import { sharedChatCapabilities } from "./sharedchat"
 import { sub2ApiCapabilities } from "./sub2api"
 import { voApiV2Capabilities } from "./voapiV2"
+import { xiaoenCapabilities } from "./xiaoen"
 
 const managedSitesBySiteType = {
   [SITE_TYPES.CLI_PROXY_API]: cliProxyApiCapabilities,
@@ -90,6 +91,7 @@ const accountCapabilityFactories = {
   [ACCOUNT_SITE_ADAPTER_FAMILIES.FreeModel]: () => freeModelCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Dahl]: () => dahlCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.FoxCode]: () => foxCodeCapabilities,
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Xiaoen]: () => xiaoenCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Cubence]: () => cubenceCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.RightCode]: () => rightCodeCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.OpenRouter]: () => openRouterCapabilities,

@@ -1,4 +1,11 @@
 {
+  "accountMessage": {
+    "claimed": "受取済み",
+    "credits": "報酬：{{amount}} クレジット",
+    "expires": "期限：{{time}}",
+    "openNative": "元のサイトで確認・操作",
+    "unclaimed": "未受取"
+  },
   "actions": {
     "checkNow": "今すぐ確認",
     "collapse": "折りたたむ",

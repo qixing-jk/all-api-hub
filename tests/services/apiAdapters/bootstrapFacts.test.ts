@@ -96,8 +96,45 @@ describe("provider-neutral bootstrap facts", () => {
         message: "ok",
         data: { site_name: "Portal", private_field: "ignored" },
       })
+      const bootstrapRequest =
+        siteType === SITE_TYPES.XIAOEN
+          ? {
+              baseUrl: "https://free.supxh.xin",
+              auth: {
+                authType: AuthTypeEnum.Cookie,
+                cookie: "auth_token=bootstrap-fixture",
+                userId: "xiaoen-fixture-user",
+              },
+            }
+          : request
+      if (siteType === SITE_TYPES.XIAOEN) {
+        fetchApi.mockResolvedValue({
+          success: true,
+          data: {
+            id: "xiaoen-fixture-user",
+            username: "owner",
+            private_field: "ignored",
+          },
+        })
+      }
       const bootstrap = getSiteTypeCapabilities(siteType).account!.bootstrap!
-      const facts = await bootstrap.loadBootstrapFacts(request)
+      const facts = await bootstrap.loadBootstrapFacts(bootstrapRequest)
+      if (siteType === SITE_TYPES.XIAOEN) {
+        expect(facts).toEqual({
+          displayName: "肖恩 AI",
+          checkInSupported: true,
+        })
+        expect(fetchApi).toHaveBeenCalledExactlyOnceWith(
+          expect.objectContaining({
+            baseUrl: bootstrapRequest.baseUrl,
+            cookieSession: expect.objectContaining({
+              cookieHeader: "auth_token=bootstrap-fixture",
+            }),
+          }),
+          expect.objectContaining({ endpoint: "/api/auth/me" }),
+          false,
+        )
+      }
       expect(Object.keys(facts).length).toBeGreaterThan(0)
       for (const key of Object.keys(facts)) {
         expect([

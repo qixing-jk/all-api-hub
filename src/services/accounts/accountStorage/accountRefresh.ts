@@ -152,6 +152,7 @@ class AccountRefresh {
           todayStatsAvailability: result.data.todayStatsAvailability,
           usage: result.data.usage,
           subscription: result.data.subscription,
+          nativeBalance: result.data.nativeBalance,
           recentUsageRecords: result.data.recentUsageRecords,
         }
         if (shouldReEnable) updateData.disabled = false
@@ -190,6 +191,7 @@ class AccountRefresh {
             config: prefs.balanceHistory,
             accountId: account.id,
             quota: manualQuota ?? result.data.quota,
+            nativeBalance: result.data.nativeBalance,
             today_income: result.data.today_income,
             today_quota_consumption: result.data.today_quota_consumption,
             todayStatsAvailability: normalizeAccountTodayStatsAvailability(

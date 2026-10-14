@@ -787,6 +787,20 @@ describe("accountStorage core behaviors", () => {
     expect(display).not.toHaveProperty("supports_check_in")
   })
 
+  it("excludes native credits from monetary totals while preserving their units", () => {
+    const account = createAccount({ excludeFromTotalBalance: false })
+    account.account_info.nativeBalance = {
+      unit: "credits",
+      total: 36000,
+      permanent: 34000,
+      daily: 2000,
+    }
+    const display = accountStorage.convertToDisplayData(account)
+    expect(display.nativeBalance).toEqual(account.account_info.nativeBalance)
+    expect(display.excludeFromTotalBalance).toBe(true)
+    expect(account.excludeFromTotalBalance).toBe(false)
+  })
+
   it("projects missing availability through generic and AIHubMix legacy policies", () => {
     const generic = createAccount({ site_type: SITE_TYPES.NEW_API })
     const aihubmix = createAccount({ site_type: SITE_TYPES.AIHUBMIX })

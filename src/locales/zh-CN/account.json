@@ -268,6 +268,8 @@
   "stats": {
     "completion": "补全",
     "estimatedTodayIncome": "估算收入",
+    "nativeCredits": "额度",
+    "nativeCreditsDetail": "永久 {{permanent, number}} · 今日 {{daily, number}}（次日清零）",
     "prompt": "提示",
     "subscriptionInactive": "权益未激活或已过期",
     "subscriptionRemainingCount": "订阅剩余次数",

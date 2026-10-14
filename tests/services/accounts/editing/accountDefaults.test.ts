@@ -163,6 +163,40 @@ describe("accountDefaults", () => {
   })
 
   describe("normalizeSiteAccount", () => {
+    it("retains native credits across storage normalization and refresh updates", () => {
+      const source = createSiteAccount()
+      source.account_info.nativeBalance = {
+        unit: "credits",
+        total: 36000,
+        permanent: 34000,
+        daily: 2000,
+      }
+      const normalized = normalizeSiteAccount(source)
+      expect(normalized.account_info.nativeBalance).toEqual(
+        source.account_info.nativeBalance,
+      )
+      const refreshed = applySiteAccountUpdates({
+        account: normalized,
+        updates: {
+          account_info: {
+            nativeBalance: {
+              unit: "credits",
+              total: 34000,
+              permanent: 34000,
+              daily: 0,
+            },
+          },
+        },
+        now: 12345,
+        userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+      })
+      expect(refreshed.account_info.nativeBalance).toEqual({
+        unit: "credits",
+        total: 34000,
+        permanent: 34000,
+        daily: 0,
+      })
+    })
     it("retains token allowances through account normalization without treating them as request counts", () => {
       const normalized = normalizeSiteAccount(
         createSiteAccount({
@@ -477,6 +511,38 @@ describe("accountDefaults", () => {
   })
 
   describe("applySiteAccountUpdates", () => {
+    it.each([true, false])(
+      "clears native credits only when an update explicitly removes them (%s)",
+      (explicitRemoval) => {
+        const account = createSiteAccount()
+        account.account_info.nativeBalance = {
+          unit: "credits",
+          total: 30,
+          permanent: 20,
+          daily: 10,
+        }
+        const updated = applySiteAccountUpdates({
+          account,
+          updates: {
+            account_info: {
+              quota: 5000,
+              ...(explicitRemoval ? { nativeBalance: undefined } : {}),
+            },
+          },
+          now: 100,
+          userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
+        })
+        if (explicitRemoval) {
+          expect(updated.account_info).not.toHaveProperty("nativeBalance")
+        } else {
+          expect(updated.account_info.nativeBalance).toEqual(
+            account.account_info.nativeBalance,
+          )
+        }
+        expect(updated.account_info.quota).toBe(5000)
+        expect(account.account_info.nativeBalance?.total).toBe(30)
+      },
+    )
     it("deep merges nested updates and preserves sibling fields", () => {
       const current = createSiteAccount({
         checkIn: {

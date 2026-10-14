@@ -268,6 +268,8 @@
   "stats": {
     "completion": "Hoàn thành",
     "estimatedTodayIncome": "Thu nhập ước tính",
+    "nativeCredits": "tín dụng",
+    "nativeCreditsDetail": "Vĩnh viễn {{permanent, number}} · Hôm nay {{daily, number}} (hết hạn mỗi ngày)",
     "prompt": "Nhắc nhở",
     "subscriptionInactive": "Chưa kích hoạt hoặc đã hết hạn",
     "subscriptionRemainingCount": "Số lượt đăng ký còn lại",

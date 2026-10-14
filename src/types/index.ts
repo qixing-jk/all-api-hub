@@ -58,6 +58,7 @@ export interface AccountInfo {
   todayStatsAvailability?: AccountTodayStatsAvailability
   usage?: AccountUsageSummary
   subscription?: AccountSubscriptionSummary
+  nativeBalance?: AccountNativeBalance
   recentUsageRecords?: AccountUsageRecord[]
 }
 
@@ -95,6 +96,14 @@ export interface AccountSubscriptionSummary {
   expireTime?: string
   isLongTerm?: boolean
   isActive?: boolean
+}
+
+/** Provider credits without a verified cash value, excluded from monetary totals. */
+export interface AccountNativeBalance {
+  unit: "credits"
+  total: number
+  permanent: number
+  daily: number
 }
 
 export interface AccountUsageRecord {
@@ -410,6 +419,7 @@ export interface DisplaySiteData {
   baseName?: string
   username: string
   balance: CurrencyAmount
+  nativeBalance?: AccountNativeBalance
   todayConsumption: CurrencyAmount
   todayIncome: CurrencyAmount
   estimatedTodayIncome?: CurrencyAmount | null

@@ -20,6 +20,7 @@ import { rightCodeBrowserIdentity } from "~/services/apiAdapters/rightcode/accou
 import { sharedChatBrowserIdentity } from "~/services/apiAdapters/sharedchat/browserIdentity"
 import { sub2ApiBrowserIdentity } from "~/services/apiAdapters/sub2api/auth/browserIdentity"
 import { voApiV2BrowserIdentity } from "~/services/apiAdapters/voapiV2/browserIdentity"
+import { xiaoenBrowserIdentity } from "~/services/apiAdapters/xiaoen/browserIdentity"
 
 import { apiyiContentSessionExtractor } from "./contentSession/apiyi"
 import { compatibleUserContentSessionExtractor } from "./contentSession/compatibleUser"
@@ -35,6 +36,7 @@ import { sharedChatContentSessionExtractor } from "./contentSession/sharedchat"
 import { sub2ApiContentSessionExtractor } from "./contentSession/sub2api"
 import { vApiContentSessionExtractor } from "./contentSession/vApi"
 import { voApiV2ContentSessionExtractor } from "./contentSession/voapiV2"
+import { xiaoenContentSessionExtractor } from "./contentSession/xiaoen"
 import type {
   AccountDetectionPrivacyPolicy,
   ContentSessionExtractor,
@@ -47,6 +49,10 @@ const siteBrowserAdapters: readonly {
   identity?: AccountBrowserIdentityCapability
   detectionPrivacy?: AccountDetectionPrivacyPolicy
 }[] = [
+  {
+    sessionExtractor: xiaoenContentSessionExtractor,
+    identity: xiaoenBrowserIdentity,
+  },
   {
     sessionExtractor: foxCodeContentSessionExtractor,
     identity: foxCodeBrowserIdentity,

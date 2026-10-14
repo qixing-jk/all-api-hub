@@ -1,5 +1,8 @@
 import { isAccountTodayMetricComplete } from "~/services/accounts/metrics/accountTodayStats"
-import type { AccountTodayStatsAvailability } from "~/types"
+import type {
+  AccountNativeBalance,
+  AccountTodayStatsAvailability,
+} from "~/types"
 import type {
   BalanceHistoryPreferences,
   DailyBalanceHistoryCaptureSource,
@@ -24,6 +27,7 @@ export async function maybeCaptureDailyBalanceSnapshot(params: {
   config?: BalanceHistoryPreferences
   accountId: string
   quota: number
+  nativeBalance?: AccountNativeBalance
   today_income: number
   today_quota_consumption: number
   todayStatsAvailability: AccountTodayStatsAvailability
@@ -32,7 +36,7 @@ export async function maybeCaptureDailyBalanceSnapshot(params: {
   timeZone?: string
 }): Promise<boolean> {
   const config = params.config ?? DEFAULT_BALANCE_HISTORY_PREFERENCES
-  if (!config.enabled) {
+  if (!config.enabled || params.nativeBalance) {
     return false
   }
 

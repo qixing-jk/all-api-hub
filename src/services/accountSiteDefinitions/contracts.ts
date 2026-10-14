@@ -45,6 +45,7 @@ export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   FreeModel: "freemodel",
   Dahl: "dahl",
   FoxCode: "foxcode",
+  Xiaoen: "xiaoen",
   Cubence: "cubence",
   RightCode: "rightcode",
   OpenRouter: "openrouter",

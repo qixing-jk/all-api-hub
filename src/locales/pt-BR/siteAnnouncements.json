@@ -1,4 +1,11 @@
 {
+  "accountMessage": {
+    "claimed": "Resgatado",
+    "credits": "Recompensa: {{amount}} créditos",
+    "expires": "Expira: {{time}}",
+    "openNative": "Ver e gerenciar no site",
+    "unclaimed": "Não resgatado"
+  },
   "actions": {
     "checkNow": "Verificar agora",
     "collapse": "Recolher",

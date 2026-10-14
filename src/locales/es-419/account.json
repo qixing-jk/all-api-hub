@@ -314,6 +314,8 @@
   "stats": {
     "completion": "Salida",
     "estimatedTodayIncome": "Ingresos estimados",
+    "nativeCredits": "créditos",
+    "nativeCreditsDetail": "Permanentes {{permanent, number}} · Hoy {{daily, number}} (vencen a diario)",
     "prompt": "Entrada",
     "subscriptionInactive": "Inactiva o vencida",
     "subscriptionRemainingCount": "Solicitudes de suscripción restantes",

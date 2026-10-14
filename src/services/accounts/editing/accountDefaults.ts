@@ -15,6 +15,7 @@ import {
   DELETED_ENTRY_KINDS,
   SiteHealthStatus,
   type AccountInfo,
+  type AccountNativeBalance,
   type AccountStorageConfig,
   type AccountSubscriptionSummary,
   type AccountUsageRecord,
@@ -141,6 +142,27 @@ const normalizeAccountSubscriptionSummary = (
     expireTime: coerceOptionalString(raw.expireTime),
     isLongTerm: coerceOptionalBoolean(raw.isLongTerm),
     isActive: coerceOptionalBoolean(raw.isActive),
+  }
+}
+
+const normalizeNativeBalance = (
+  raw: AccountNativeBalance | undefined,
+): AccountNativeBalance | undefined => {
+  if (
+    !raw ||
+    raw.unit !== "credits" ||
+    [raw.total, raw.permanent, raw.daily].some(
+      (value) =>
+        typeof value !== "number" || !Number.isFinite(value) || value < 0,
+    ) ||
+    raw.total !== raw.permanent + raw.daily
+  )
+    return undefined
+  return {
+    unit: "credits",
+    total: raw.total,
+    permanent: raw.permanent,
+    daily: raw.daily,
   }
 }
 
@@ -318,6 +340,7 @@ function normalizeAccountInfo(raw: Partial<AccountInfo> | undefined) {
         : normalizeAccountTodayStatsAvailability(raw.todayStatsAvailability),
     usage: normalizeAccountUsageSummary(merged.usage),
     subscription: normalizeAccountSubscriptionSummary(merged.subscription),
+    nativeBalance: normalizeNativeBalance(merged.nativeBalance),
     recentUsageRecords: normalizeAccountUsageRecords(merged.recentUsageRecords),
   }
 }
@@ -511,6 +534,17 @@ export function applySiteAccountUpdates(params: {
   }
 
   const result = normalizeSiteAccount(merged)
+
+  if (
+    params.updates.account_info &&
+    Object.prototype.hasOwnProperty.call(
+      params.updates.account_info,
+      "nativeBalance",
+    ) &&
+    params.updates.account_info.nativeBalance === undefined
+  ) {
+    delete result.account_info.nativeBalance
+  }
 
   if (
     params.updates.checkIn &&

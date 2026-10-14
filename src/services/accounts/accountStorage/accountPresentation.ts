@@ -42,7 +42,8 @@ class AccountPresentation {
       baseName: account.site_name,
       username: account.account_info.username,
       disabled: account.disabled,
-      excludeFromTotalBalance: account.excludeFromTotalBalance,
+      excludeFromTotalBalance:
+        !!account.account_info.nativeBalance || account.excludeFromTotalBalance,
       excludeFromTodayIncome: account.excludeFromTodayIncome,
       balance: convertQuotaToCurrencyAmounts(
         account.account_info.quota,
@@ -63,6 +64,7 @@ class AccountPresentation {
       todayStatsAvailability: resolveAccountTodayStatsAvailability(account),
       usage: account.account_info.usage,
       subscription: account.account_info.subscription,
+      nativeBalance: account.account_info.nativeBalance,
       recentUsageRecords: account.account_info.recentUsageRecords,
       health: account.health,
       last_sync_time: account.last_sync_time,

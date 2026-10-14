@@ -91,6 +91,7 @@ const policies = {
   [families.Grsai]: { ...native, editor: KEY_RESOURCE_EDITOR_KINDS.Grsai },
   [families.Cubence]: { ...native, editor: KEY_RESOURCE_EDITOR_KINDS.Cubence },
   [families.FoxCode]: { ...native, editor: KEY_RESOURCE_EDITOR_KINDS.FoxCode },
+  [families.Xiaoen]: generic,
   [families.OpenRouter]: {
     ...generic,
     editor: KEY_RESOURCE_EDITOR_KINDS.OpenRouter,

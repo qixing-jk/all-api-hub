@@ -89,6 +89,32 @@ const kimiConsoleOriginBySiteType: Partial<Record<AccountSiteType, string>> = {
 }
 
 const producerFixturesByFamily = {
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Xiaoen]: {
+    baseUrl: "https://free.supxh.xin",
+    authType: AuthTypeEnum.Cookie,
+    expectedAvailability: {
+      consumption: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
+    handlers: [
+      http.get("https://free.supxh.xin/api/auth/me", () =>
+        HttpResponse.json({
+          success: true,
+          data: {
+            id: "user-1",
+            username: "user",
+            quota: 36000,
+            permanentQuota: 36000,
+            dailyQuota: 0,
+            hasSignedInToday: true,
+          },
+        }),
+      ),
+    ],
+    expectRequests: () => {},
+  },
   [ACCOUNT_SITE_ADAPTER_FAMILIES.FoxCode]: {
     baseUrl: "https://foxcode.rjj.cc",
     authType: AuthTypeEnum.Cookie,
@@ -859,6 +885,13 @@ describe("AccountData availability producer conformance", () => {
     "classifies both registered producer paths for %s",
     async (siteType) => {
       const capabilities = getSiteTypeCapabilities(siteType)
+      if (capabilities.family === ACCOUNT_SITE_ADAPTER_FAMILIES.Xiaoen) {
+        const boundary = installCookieTransport()
+        const cookie = (await browser.cookies.getAll({}))[0]!
+        boundary.cookies.mockResolvedValue([
+          { ...cookie, domain: "free.supxh.xin", name: "auth_token" },
+        ])
+      }
       if (capabilities.family === ACCOUNT_SITE_ADAPTER_FAMILIES.FoxCode) {
         const boundary = installCookieTransport()
         const cookie = (await browser.cookies.getAll({}))[0]!

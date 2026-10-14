@@ -34,6 +34,7 @@ export const SITE_TYPES = {
   FREEMODEL: "freemodel",
   DAHL: "dahl",
   FOXCODE: "foxcode",
+  XIAOEN: "xiaoen",
   CUBENCE: "cubence",
   RIGHT_CODE: "RightCode",
   OPENROUTER: "openrouter",
@@ -87,6 +88,9 @@ export const DAHL_WEB_ORIGIN = "https://inference.dahl.global"
 /** FoxCode's logged-in console; its official inference routes are separate origins. */
 export const FOXCODE_HOSTNAMES = ["foxcode.rjj.cc"] as const
 export const FOXCODE_WEB_ORIGIN = "https://foxcode.rjj.cc"
+/** Cookie sessions remain bound to the requested console, not the public migration domain. */
+export const XIAOEN_HOSTNAMES = ["free.supxh.xin"] as const
+export const XIAOEN_WEB_ORIGIN = "https://free.supxh.xin"
 export const FOXCODE_INFERENCE_ORIGIN = "https://code1.newcli.com"
 export const CUBENCE_HOSTNAMES = ["cubence.com"] as const
 export const CUBENCE_WEB_ORIGIN = "https://cubence.com"

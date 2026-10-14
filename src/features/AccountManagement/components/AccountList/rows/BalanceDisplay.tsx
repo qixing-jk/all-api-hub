@@ -190,6 +190,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
   const isAccountDisabled = site.disabled === true
   const isSubscriptionInactive = site.subscription?.isActive === false
   const estimatedTodayIncomeEnabled =
+    !site.nativeBalance &&
     preferences?.balanceHistory?.estimatedTodayIncome?.enabled === true
   const estimatedTodayIncome = site.estimatedTodayIncome?.[currencyType]
   const consumptionPresentation = getTodayMetricPresentation(
@@ -245,22 +246,52 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
   return (
     <div className="flex w-full flex-col items-end overflow-hidden text-right">
       {/* Balance */}
-      <AnimatedValue
-        value={site.balance[currencyType]}
-        startValue={
-          isInitialLoad ? 0 : prevBalances[site.id]?.[currencyType] || 0
-        }
-        className="text-foreground mb-0.5 text-sm font-semibold sm:text-base md:text-lg"
-        title={refreshTitle}
-        onClick={
-          isAccountDisabled
-            ? undefined
-            : () => refreshMetric(BALANCE_REFRESH_TARGETS.BALANCE)
-        }
-        isRefreshing={isRefreshing}
-        loading={activeRefreshTarget === BALANCE_REFRESH_TARGETS.BALANCE}
-        disabled={isRefreshLocked}
-      />
+      {site.nativeBalance ? (
+        <div className="text-right">
+          <Button
+            variant="ghost"
+            size="sm"
+            title={refreshTitle}
+            disabled={isAccountDisabled || isRefreshLocked}
+            aria-busy={
+              isRefreshing ||
+              activeRefreshTarget === BALANCE_REFRESH_TARGETS.BALANCE
+            }
+            onClick={
+              isAccountDisabled
+                ? undefined
+                : () => refreshMetric(BALANCE_REFRESH_TARGETS.BALANCE)
+            }
+            className="text-sm font-semibold sm:text-base md:text-lg"
+          >
+            {new Intl.NumberFormat().format(site.nativeBalance.total)}{" "}
+            {t("stats.nativeCredits")}
+          </Button>
+          <div className="text-muted-foreground text-xs">
+            {t("stats.nativeCreditsDetail", {
+              permanent: site.nativeBalance.permanent,
+              daily: site.nativeBalance.daily,
+            })}
+          </div>
+        </div>
+      ) : (
+        <AnimatedValue
+          value={site.balance[currencyType]}
+          startValue={
+            isInitialLoad ? 0 : prevBalances[site.id]?.[currencyType] || 0
+          }
+          className="text-foreground mb-0.5 text-sm font-semibold sm:text-base md:text-lg"
+          title={refreshTitle}
+          onClick={
+            isAccountDisabled
+              ? undefined
+              : () => refreshMetric(BALANCE_REFRESH_TARGETS.BALANCE)
+          }
+          isRefreshing={isRefreshing}
+          loading={activeRefreshTarget === BALANCE_REFRESH_TARGETS.BALANCE}
+          disabled={isRefreshLocked}
+        />
+      )}
 
       {/* Today's Statistics */}
       {showTodayCashflow && (
