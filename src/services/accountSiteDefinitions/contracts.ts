@@ -46,6 +46,7 @@ export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   Dahl: "dahl",
   FoxCode: "foxcode",
   Xiaoen: "xiaoen",
+  Krill: "krill",
   Cubence: "cubence",
   RightCode: "rightcode",
   OpenRouter: "openrouter",

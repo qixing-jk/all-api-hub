@@ -15,6 +15,7 @@ import {
 } from "~/services/accounts/keys/accountKeyNames"
 import type { ResourceFieldDescriptor } from "~/services/apiAdapters/contracts/resourceNative"
 import { FOXCODE_KEY_EDITOR_FIELDS as foxCodeFields } from "~/services/apiAdapters/foxcode/keyEditorFields"
+import { krillKeyFields } from "~/services/apiAdapters/krill/keyResourceFields"
 
 import type { AccountKeyResourceEditorPresentation as EditorPresentation } from "./accountKeyResourceEditorPresentation"
 import { getDahlKeyResourceEditorPresentation } from "./dahlKeyResourceEditorPresentation"
@@ -397,6 +398,55 @@ const resolveSiteFields = (
     [editorKinds.Dahl]: () => ({
       fields: [],
       automaticName: { kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed } as const,
+    }),
+    // Krill keys have no quota or expiry; permissions are channels, fallback and IPs.
+    [editorKinds.Krill]: (): {
+      fields: ResourceFieldPresentation[]
+      requireFreshOptions: boolean
+      automaticName: EditorPresentation["automaticName"]
+    } => ({
+      requireFreshOptions: mode === editorModes.Edit,
+      automaticName: { kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed } as const,
+      fields: (
+        [
+          name,
+          {
+            fieldId: krillKeyFields.Channels,
+            section: "basic",
+            order: 10,
+            renderer: "multi-select",
+            resolveLabel: (t: TFunction) =>
+              t("keyManagement:native.editor.krill.channels"),
+            resolveHelp: (t: TFunction) =>
+              t("keyManagement:native.editor.krill.channelsHelp"),
+            issueLabelResolvers: issues,
+          },
+          {
+            fieldId: krillKeyFields.AllowBalanceFallback,
+            section: "spending",
+            order: 20,
+            renderer: "boolean",
+            resolveLabel: (t) => t("keyManagement:native.editor.allowWallet"),
+            resolveHelp: (t) =>
+              t("keyManagement:native.editor.allowWalletHelp"),
+            issueLabelResolvers: issues,
+          },
+          {
+            fieldId: krillKeyFields.IpWhitelistDisabled,
+            section: "advanced",
+            order: 0,
+            renderer: "boolean",
+            resolveLabel: (t) =>
+              t("keyManagement:native.editor.krill.allowAnyIp"),
+            resolveHelp: (t) =>
+              t("keyManagement:native.editor.krill.allowAnyIpHelp"),
+            issueLabelResolvers: issues,
+          },
+          ips(krillKeyFields.IpWhitelist),
+        ] satisfies ResourceFieldPresentation[]
+      ).filter((field) =>
+        descriptors?.some(({ fieldId }) => fieldId === field.fieldId),
+      ),
     }),
     [editorKinds.Cubence]: () => ({
       requireFreshOptions: true,

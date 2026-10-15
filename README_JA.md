@@ -75,7 +75,7 @@
 ### 🚀 Web からのクイック取り込みとクライアント連携
 
 - **Web ページからのクイック取り込み**：Web ページから Base URL と API Key を検出し、その場でテストして認証情報ライブラリへ保存できます。
-- **クライアントへのワンクリックエクスポート**：Cherry Studio、CC Switch、AI Toolbox、Claude Code Router、Kilo Code、Roo Code、Cursor++、Kelivo などの[サポートされているエクスポートツール](https://all-api-hub.qixing1217.top/ja/supported-export-tools.html)へ認証情報をすばやくエクスポートできます。
+- **クライアントへのワンクリックエクスポート**：CC Switch、Cherry Studio、Claude Code Router、Kilo Code、Roo Code、Kelivo、AI Toolbox、Cursor++ などの[サポートされているエクスポートツール](https://all-api-hub.qixing1217.top/ja/supported-export-tools.html)へ認証情報をすばやくエクスポートできます。
 
 ### 🧪 API 検証とトラブルシューティング
 
@@ -89,7 +89,7 @@
 
 ### 🛠️ セルフホスト AI ゲートウェイ管理
 
-- **主要 AI ゲートウェイを一元管理**：OmniRoute、CLIProxyAPI、New API、Sub2API、gpt-load、Magpie、AxonHub、Claude Code Hub、Octopus、Veloera、DoneHub のチャネルやプロバイダーを、個別の管理画面を開かずに拡張機能から直接管理できます。
+- **主要 AI ゲートウェイを一元管理**：OmniRoute、CLIProxyAPI、New API、Sub2API、Magpie、gpt-load、AxonHub、Claude Code Hub、Octopus、Veloera、DoneHub のチャネルやプロバイダーを、個別の管理画面を開かずに拡張機能から直接管理できます。
 - **ゲートウェイチャネルをすばやく作成**：保存済みのサイトアカウントや API 認証情報ライブラリの認証情報から、セルフホスト AI ゲートウェイのチャネルをすばやく作成できます。その後はゲートウェイ経由で各種モデルをまとめて呼び出し、チャネルを柔軟に切り替えられます。
 - **モデル同期とリダイレクト**：対応サイトでは、チャネルのモデル一覧を手動またはスケジュールで自動同期し、上流のモデル変更に追従できます。モデルリダイレクトも自由に設定でき、クライアントでは任意のモデル名で呼び出せます。
 
@@ -260,11 +260,11 @@ GitHub Stable と Nightly は手動インストール用チャネルで、自動
 
 どのアーキテクチャを使っていても、高い確率で対応しています。
 
-- **アカウントサイト互換アーキテクチャ**：[New API](https://github.com/QuantumNous/new-api)、[One API](https://github.com/songquanpeng/one-api)、[Sub2API](https://github.com/Wei-Shaw/sub2api)、[one-hub](https://github.com/MartialBE/one-hub)、[DoneHub](https://github.com/deanxv/done-hub)、[VoAPI / VoAPI v2](https://github.com/VoAPI/VoAPI)、[Veloera](https://github.com/Veloera/Veloera)、[Super-API](https://github.com/SuperAI-Api/Super-API)、API易、ModelFlare、v-api、および Neo-API、RIX_API などの派生版。
-- **特色あるアカウントプラットフォームと中継サービス**：[OpenRouter](https://openrouter.ai)、[Kimi オープンプラットフォーム（国内版/国際版）](https://platform.kimi.ai)、[AnyRouter](https://anyrouter.top/register?aff=tDKX)、[AgentRouter](https://agentrouter.org/register?aff=TUX6)、[AIHubMix](https://aihubmix.com/?aff=W3DN)、老張 API、Dahl、FoxCode、肖恩 AI、Cubence、RightCode、Grsai、FreeModel、SharedChat、WONG公益站 など
-- **セルフホスト型管理バックエンドと AI ゲートウェイ**：[OmniRoute](https://github.com/diegosouzapw/OmniRoute)、[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI)、[New API](https://github.com/QuantumNous/new-api)、[Sub2API](https://github.com/Wei-Shaw/sub2api)、[gpt-load](https://github.com/tbphp/gpt-load)、[Magpie](https://github.com/yetone/magpie)、[AxonHub](https://github.com/looplj/axonhub)、[Claude Code Hub](https://github.com/ding113/claude-code-hub)、[Octopus](https://github.com/bestruirui/octopus)、[Veloera](https://github.com/Veloera/Veloera)、[DoneHub](https://github.com/deanxv/done-hub) など。チャネルやプロバイダーの管理に利用でき、対応サイトでは移行とモデル同期も行えます
+- **アカウントサイト互換アーキテクチャ**：[New API](https://github.com/QuantumNous/new-api)、[Sub2API](https://github.com/Wei-Shaw/sub2api)、[One API](https://github.com/songquanpeng/one-api)、[one-hub](https://github.com/MartialBE/one-hub)、[Veloera](https://github.com/Veloera/Veloera)、[VoAPI / VoAPI v2](https://github.com/VoAPI/VoAPI)、[DoneHub](https://github.com/deanxv/done-hub)、[Super-API](https://github.com/SuperAI-Api/Super-API)、API易、ModelFlare、v-api、および Neo-API、RIX_API などの派生版。
+- **特色あるアカウントプラットフォームと中継サービス**：[OpenRouter](https://openrouter.ai)、[Kimi オープンプラットフォーム（国内版/国際版）](https://platform.kimi.ai)、[AnyRouter](https://anyrouter.top/register?aff=tDKX)、[AgentRouter](https://agentrouter.org/register?aff=TUX6)、[AIHubMix](https://aihubmix.com/?aff=W3DN)、老張 API、Dahl、FoxCode、肖恩 AI、Cubence、RightCode、Grsai、FreeModel、SharedChat、WONG公益站、Krill AI など
+- **セルフホスト型管理バックエンドと AI ゲートウェイ**：[OmniRoute](https://github.com/diegosouzapw/OmniRoute)、[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI)、[New API](https://github.com/QuantumNous/new-api)、[Sub2API](https://github.com/Wei-Shaw/sub2api)、[Magpie](https://github.com/yetone/magpie)、[gpt-load](https://github.com/tbphp/gpt-load)、[AxonHub](https://github.com/looplj/axonhub)、[Claude Code Hub](https://github.com/ding113/claude-code-hub)、[Octopus](https://github.com/bestruirui/octopus)、[Veloera](https://github.com/Veloera/Veloera)、[DoneHub](https://github.com/deanxv/done-hub) など。チャネルやプロバイダーの管理に利用でき、対応サイトでは移行とモデル同期も行えます
   - Magpie、New API、Octopus、gpt-load、AxonHub の通常 API キーチャネル、CLIProxyAPI の OpenAI 互換リソースでは、同じサイトのキーをまとめてインポートできます。キーの振り分けは対象ゲートウェイが行います。 Magpie では同じアドレスとプロトコルの既存チャネルに未登録のキーを追加でき、既存の設定とモデル設定を保持します。
-- **クライアントおよび開発ツールへのエクスポート**：Cherry Studio、CC Switch、AI Toolbox、Claude Code Router、Kilo Code、Roo Code、Cursor++、Kelivo など、詳細は [サポートされているエクスポートツールリスト](https://all-api-hub.qixing1217.top/ja/supported-export-tools.html)
+- **クライアントおよび開発ツールへのエクスポート**：CC Switch、Cherry Studio、Claude Code Router、Kilo Code、Roo Code、Kelivo、AI Toolbox、Cursor++ など、詳細は [サポートされているエクスポートツールリスト](https://all-api-hub.qixing1217.top/ja/supported-export-tools.html)
 - **完全な一覧**：👉 [対応サイト](https://all-api-hub.qixing1217.top/ja/supported-sites.html) と [サポートされているエクスポートツールリスト](https://all-api-hub.qixing1217.top/ja/supported-export-tools.html)
 
 <a id="ui-preview"></a>

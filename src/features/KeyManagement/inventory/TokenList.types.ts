@@ -72,6 +72,7 @@ export interface TokenListProps {
     intent?: AccountKeyResourceEditAction,
   ) => void
   onDeleteNativeKey?: (ref: AccountKeyResourceRef) => void
+  onRevokeNativeKey?: (ref: AccountKeyResourceRef) => void
   credentialProfileLinks?: readonly ApiCredentialProfileLink[]
   getCredentialProfileForLocator?: (
     locator: AccountRuntimeKeyLocator,

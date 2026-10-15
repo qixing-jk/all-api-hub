@@ -79,10 +79,11 @@ export function useAccountKeyResourceDeletionWorkflow({
     readAcceptedRows,
     acceptActionContext,
     acceptDeletedResource,
+    acceptEditedResource,
   } = inventoryState
 
   const openDelete = useCallback(
-    (ref: AccountKeyResourceRef) => {
+    (ref: AccountKeyResourceRef, operation: "delete" | "revoke" = "delete") => {
       const boundary = boundaryFromResourceRef(ref)
       if (
         mode === controllerModes.Idle ||
@@ -94,7 +95,20 @@ export function useAccountKeyResourceDeletionWorkflow({
           : !readNativeOwner().collection || !isCurrentResourceRef(ref))
       )
         return false
-      setDeleteState({ isOpen: true, isExecuting: false, ref, failure: null })
+      if (
+        operation === "revoke" &&
+        !readAcceptedRows().find(
+          (facts) => refIdentity(facts.ref) === refIdentity(ref),
+        )?.actions.canRevoke
+      )
+        return false
+      setDeleteState({
+        isOpen: true,
+        isExecuting: false,
+        ref,
+        failure: null,
+        operation,
+      })
       return true
     },
     [
@@ -105,6 +119,7 @@ export function useAccountKeyResourceDeletionWorkflow({
       createdSecretRef,
       requests,
       readNativeOwner,
+      readAcceptedRows,
       setDeleteState,
     ],
   )
@@ -135,6 +150,7 @@ export function useAccountKeyResourceDeletionWorkflow({
         return false
       const current = requests.version()
       const ref = deleteState.ref
+      const isRevoke = deleteState.operation === "revoke"
       const boundary: ActiveResourceBoundary =
         mode === controllerModes.All
           ? boundaryFromResourceRef(ref)
@@ -148,7 +164,9 @@ export function useAccountKeyResourceDeletionWorkflow({
       )
       const tracker = startProductAnalyticsAction(
         keyManagementAnalyticsContext(
-          PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccountToken,
+          isRevoke
+            ? PRODUCT_ANALYTICS_ACTION_IDS.RevokeAccountToken
+            : PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccountToken,
           PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
         ),
       )
@@ -167,6 +185,15 @@ export function useAccountKeyResourceDeletionWorkflow({
             })
           }
           acceptActionContext(actionContext)
+          if (isRevoke) {
+            if (!actionContext.collection.revoke)
+              throw new AccountKeyResourceError({
+                code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+              })
+            return actionContext.collection.revoke(ref, {
+              signal: controller.signal,
+            })
+          }
           let cleanupInput: Parameters<
             typeof deleteWithLinkedChannelCleanup
           >[0] = null
@@ -194,7 +221,7 @@ export function useAccountKeyResourceDeletionWorkflow({
             })
           })
         })
-        .then(async () => {
+        .then(async (revokedFacts) => {
           if (current !== requests.version()) {
             requireFreshRead(boundary)
             completeKeyMutationAnalytics(
@@ -205,7 +232,8 @@ export function useAccountKeyResourceDeletionWorkflow({
             )
             return true
           }
-          acceptDeletedResource(ref)
+          if (revokedFacts) acceptEditedResource(revokedFacts)
+          else acceptDeletedResource(ref)
           setDeleteState({
             isOpen: false,
             isExecuting: false,
@@ -263,12 +291,14 @@ export function useAccountKeyResourceDeletionWorkflow({
     },
     [
       deleteState.ref,
+      deleteState.operation,
       isAcceptedResourceRef,
       isCurrentResourceRef,
       isFreshReadRequiredForBoundary,
       mode,
       mutationAnalyticsMode,
       acceptDeletedResource,
+      acceptEditedResource,
       acceptActionContext,
       requireFreshRead,
       resolveResourceActionContext,
@@ -280,5 +310,9 @@ export function useAccountKeyResourceDeletionWorkflow({
       readAcceptedRows,
     ],
   )
-  return { openDelete, cancelDelete, confirmDelete }
+  const openRevoke = useCallback(
+    (ref: AccountKeyResourceRef) => openDelete(ref, "revoke"),
+    [openDelete],
+  )
+  return { openDelete, openRevoke, cancelDelete, confirmDelete }
 }

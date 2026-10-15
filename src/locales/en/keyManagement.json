@@ -242,8 +242,10 @@
     }
   },
   "keyDetails": {
+    "channels": "Channels",
     "createResponseOnlySecret": "This site shows the full key only when it is created. If you did not save it, open Key Management and create a replacement key.",
     "createTime": "Create Time:",
+    "defaultChannels": "Default channels",
     "expireTime": "Expire Time:",
     "followsAccountGroup": "Follows account group",
     "group": "Group:",
@@ -367,7 +369,8 @@
   "native": {
     "actions": {
       "delete": "Delete key",
-      "edit": "Edit key"
+      "edit": "Edit key",
+      "revoke": "Revoke key"
     },
     "delete": {
       "confirm": "Delete key",
@@ -445,6 +448,12 @@
         "required": "This field is required.",
         "unsupportedOption": "Choose an available option."
       },
+      "krill": {
+        "allowAnyIp": "Allow any IP",
+        "allowAnyIpHelp": "Disables the saved IP whitelist. Requests from any IP will be allowed.",
+        "channels": "Channels",
+        "channelsHelp": "Which billing routes this key may use."
+      },
       "laozhang": {
         "activateOnFirstUse": "Activate on first use",
         "activationHelp": "0 means no validity period after activation. The site rules still determine the absolute expiry.",
@@ -503,6 +512,15 @@
     },
     "heading": "API keys",
     "missing": "Not available",
+    "revoke": {
+      "description": "Revoke “{{name}}”? This permanently disables the key. Its record remains until you delete it.",
+      "feedback": {
+        "error": "Could not revoke this key. Refresh and try again."
+      },
+      "success": "Key revoked",
+      "title": "Revoke key",
+      "working": "Revoking..."
+    },
     "scope": {
       "empty": "No scopes available",
       "error": "Could not load scopes",

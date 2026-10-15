@@ -31,6 +31,7 @@ import { foxCodeCapabilities } from "./foxcode"
 import { freeModelCapabilities } from "./freemodel"
 import { grsaiCapabilities } from "./grsai"
 import { createKimiOpenPlatformCapabilities } from "./kimiOpenPlatform"
+import { krillCapabilities } from "./krill"
 import { axonHubManagedSiteCapabilities } from "./managedSites/axonHub"
 import { cliProxyApiCapabilities } from "./managedSites/cliProxyApi"
 import { doneHubManagedSiteCapabilities } from "./managedSites/doneHub"
@@ -92,6 +93,7 @@ const accountCapabilityFactories = {
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Dahl]: () => dahlCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.FoxCode]: () => foxCodeCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Xiaoen]: () => xiaoenCapabilities,
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Krill]: () => krillCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Cubence]: () => cubenceCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.RightCode]: () => rightCodeCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.OpenRouter]: () => openRouterCapabilities,

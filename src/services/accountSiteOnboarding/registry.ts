@@ -13,6 +13,7 @@ import { dahlBrowserIdentity } from "~/services/apiAdapters/dahl/browserIdentity
 import { foxCodeBrowserIdentity } from "~/services/apiAdapters/foxcode/browserIdentity"
 import { freeModelBrowserIdentity } from "~/services/apiAdapters/freemodel/browserIdentity"
 import { kimiOpenPlatformBrowserIdentity } from "~/services/apiAdapters/kimiOpenPlatform/browserIdentity"
+import { krillBrowserIdentity } from "~/services/apiAdapters/krill/browserIdentity"
 import { newApiBrowserIdentity } from "~/services/apiAdapters/newApi/account/browserIdentity"
 import { openRouterAccountDetectionPrivacy } from "~/services/apiAdapters/openrouter/account/accountDetection"
 import { openRouterBrowserIdentity } from "~/services/apiAdapters/openrouter/account/browserIdentity"
@@ -30,6 +31,7 @@ import { foxCodeContentSessionExtractor } from "./contentSession/foxcode"
 import { freeModelContentSessionExtractor } from "./contentSession/freemodel"
 import { grsaiContentSessionExtractor } from "./contentSession/grsai"
 import { kimiOpenPlatformContentSessionExtractor } from "./contentSession/kimiOpenPlatform"
+import { krillContentSessionExtractor } from "./contentSession/krill"
 import { newApiAuthBundleContentSessionExtractor } from "./contentSession/newApiAuthBundle"
 import { rightCodeContentSessionExtractor } from "./contentSession/rightcode"
 import { sharedChatContentSessionExtractor } from "./contentSession/sharedchat"
@@ -49,6 +51,10 @@ const siteBrowserAdapters: readonly {
   identity?: AccountBrowserIdentityCapability
   detectionPrivacy?: AccountDetectionPrivacyPolicy
 }[] = [
+  {
+    sessionExtractor: krillContentSessionExtractor,
+    identity: krillBrowserIdentity,
+  },
   {
     sessionExtractor: xiaoenContentSessionExtractor,
     identity: xiaoenBrowserIdentity,

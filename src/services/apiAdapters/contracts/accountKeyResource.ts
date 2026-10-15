@@ -238,6 +238,13 @@ export type AccountKeyDisplayFact =
     }
   | {
       readonly fieldId: string
+      /** Billing-route permissions, independent of account/model access groups. */
+      readonly kind: "channels"
+      readonly value: readonly string[]
+      readonly usesDefault: boolean
+    }
+  | {
+      readonly fieldId: string
       readonly kind: "group"
       readonly value: string | readonly string[]
       /** The provider decides whether an empty group inherits the account group. */
@@ -288,7 +295,11 @@ export type AccountKeyResourceFacts = {
   /** Provider-owned presentation semantics; raw fields are never evidence of these meanings. */
   readonly displayFacts?: readonly AccountKeyDisplayFact[]
   readonly searchValues?: readonly string[]
-  readonly actions: Readonly<{ canUpdate: boolean; canDelete: boolean }>
+  readonly actions: Readonly<{
+    canUpdate: boolean
+    canDelete: boolean
+    canRevoke?: boolean
+  }>
 }
 
 export type AccountKeyEditorSubmitResult = {
@@ -359,6 +370,11 @@ export type AccountKeyResourceEditIntent = {
 }
 
 export interface AccountKeyResourceCollection {
+  /** Irreversibly disables a credential while retaining its inventory record. */
+  revoke?(
+    ref: AccountKeyResourceRef,
+    options?: ResourceOperationOptions,
+  ): Promise<AccountKeyResourceFacts>
   readonly scope: AccountKeyScope
   list(
     query?: ResourceListQuery,

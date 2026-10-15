@@ -15,7 +15,11 @@ import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts
 import { ACCOUNT_KEY_RESOURCE_FAILURE_CODES } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { DisplaySiteData } from "~/types"
 
-const nativeDeleteFailureMessage = (code: string | undefined, t: TFunction) => {
+const nativeDeleteFailureMessage = (
+  code: string | undefined,
+  t: TFunction,
+  isRevoke: boolean,
+) => {
   switch (code) {
     case ACCOUNT_KEY_RESOURCE_FAILURE_CODES.AuthenticationFailed:
       return t("keyManagement:native.delete.feedback.authenticationFailed")
@@ -26,7 +30,9 @@ const nativeDeleteFailureMessage = (code: string | undefined, t: TFunction) => {
     case ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain:
       return t("keyManagement:native.delete.feedback.uncertain")
     default:
-      return t("keyManagement:native.delete.feedback.error")
+      return isRevoke
+        ? t("keyManagement:native.revoke.feedback.error")
+        : t("keyManagement:native.delete.feedback.error")
   }
 }
 
@@ -69,6 +75,7 @@ function AccountKeyResourceDeleteSession({
   getProfileForLocator,
 }: DeleteDialogInput) {
   const { t } = useTranslation(["keyManagement", "common"])
+  const isRevoke = nativeKeys.deleteState.operation === "revoke"
   const [nativeCleanupLinkedChannels, setNativeCleanupLinkedChannels] =
     useState(false)
   const labels = getKeyResourcePresentationPolicy(
@@ -92,7 +99,7 @@ function AccountKeyResourceDeleteSession({
     [displayData, nativeKeys.deleteState.ref],
   )
   const canResolveDeleteKeySecret = useMemo(() => {
-    if (!nativeKeys.deleteState.ref || !deleteAccount) return false
+    if (isRevoke || !nativeKeys.deleteState.ref || !deleteAccount) return false
     if (supportsRecoverableAccountRuntimeKeySecrets(deleteAccount.siteType)) {
       return true
     }
@@ -103,6 +110,7 @@ function AccountKeyResourceDeleteSession({
     return Boolean(profile?.apiKey?.trim())
   }, [
     deleteAccount,
+    isRevoke,
     getProfileForLocator,
     nativeDeleteFacts?.ref,
     nativeKeys.deleteState.ref,
@@ -121,13 +129,16 @@ function AccountKeyResourceDeleteSession({
     )
     if (success) {
       toast.success(
-        keyName
-          ? t("keyManagement:messages.keyDeleted", { name: keyName })
-          : t("keyManagement:messages.keyDeletedSimple"),
+        isRevoke
+          ? t("keyManagement:native.revoke.success")
+          : keyName
+            ? t("keyManagement:messages.keyDeleted", { name: keyName })
+            : t("keyManagement:messages.keyDeletedSimple"),
       )
     }
   }, [
     canResolveDeleteKeySecret,
+    isRevoke,
     nativeCleanupLinkedChannels,
     nativeDeleteFacts?.displayName,
     nativeDeleteIsUncertain,
@@ -136,27 +147,42 @@ function AccountKeyResourceDeleteSession({
   ])
   return (
     <ConfirmDialog
-      intent={nativeDeleteIsUncertain ? "warning" : "destructive"}
+      intent={nativeDeleteIsUncertain || isRevoke ? "warning" : "destructive"}
       icon={nativeDeleteIsUncertain ? RefreshCw : undefined}
       isOpen={nativeKeys.deleteState.isOpen}
       onClose={nativeKeys.cancelDelete}
-      title={labels?.deleteTitle(t) ?? t("keyManagement:native.delete.title")}
+      title={
+        isRevoke
+          ? t("keyManagement:native.revoke.title")
+          : labels?.deleteTitle(t) ?? t("keyManagement:native.delete.title")
+      }
       description={
-        labels?.deleteDescription(t, nativeDeleteFacts?.displayName ?? "") ??
-        t("keyManagement:native.delete.description", {
-          name: nativeDeleteFacts?.displayName ?? "",
-        })
+        isRevoke
+          ? t("keyManagement:native.revoke.description", {
+              name: nativeDeleteFacts?.displayName ?? "",
+            })
+          : labels?.deleteDescription(
+              t,
+              nativeDeleteFacts?.displayName ?? "",
+            ) ??
+            t("keyManagement:native.delete.description", {
+              name: nativeDeleteFacts?.displayName ?? "",
+            })
       }
       cancelLabel={t("common:actions.cancel")}
       confirmLabel={
         nativeDeleteIsUncertain
           ? t("keyManagement:native.delete.refresh")
-          : labels?.deleteLabel(t) ?? t("keyManagement:native.delete.confirm")
+          : isRevoke
+            ? t("keyManagement:native.actions.revoke")
+            : labels?.deleteLabel(t) ?? t("keyManagement:native.delete.confirm")
       }
       workingLabel={
         nativeDeleteIsUncertain
           ? t("common:status.refreshing")
-          : t("common:status.deleting")
+          : isRevoke
+            ? t("keyManagement:native.revoke.working")
+            : t("common:status.deleting")
       }
       confirmButtonTestId={KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton}
       isWorking={nativeKeys.deleteState.isExecuting}
@@ -177,6 +203,7 @@ function AccountKeyResourceDeleteSession({
               title={nativeDeleteFailureMessage(
                 nativeKeys.deleteState.failure.code,
                 t,
+                isRevoke,
               )}
             >
               {nativeKeys.deleteState.failure.message}

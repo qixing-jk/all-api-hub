@@ -15,6 +15,51 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const t = ((key: string) => key) as TFunction
 
+it.each([true, false])(
+  "renders billing channels independently of account groups (default=%s)",
+  (usesDefault) => {
+    const row: NativeKeyManagementRow = {
+      kind: "account-key-resource",
+      rowKey: "krill",
+      accountId: "a",
+      accountName: "Krill",
+      scopeName: "Account",
+      facts: {
+        ref: {
+          accountId: "a",
+          siteType: SITE_TYPES.KRILL,
+          scopeKey: "account",
+          resourceId: "1",
+        },
+        displayName: "Key",
+        maskedLabel: "masked",
+        status: "enabled",
+        fields: [],
+        actions: { canUpdate: true, canDelete: true },
+        displayFacts: [
+          {
+            fieldId: "channels",
+            kind: "channels",
+            value: ["Openai 官渠"],
+            usesDefault,
+          },
+        ],
+      },
+    }
+    const card = getAccountKeyResourceCardAdapter(
+      SITE_TYPES.KRILL,
+    ).buildPresentation(row, t, { hasAssociatedSecret: false })
+    expect(card.contextFact).toEqual({
+      id: "channels",
+      label: "keyManagement:keyDetails.channels",
+      value: usesDefault
+        ? "keyManagement:keyDetails.defaultChannels (Openai 官渠)"
+        : "Openai 官渠",
+    })
+    expect(JSON.stringify(card)).not.toContain("followsAccountGroup")
+  },
+)
+
 it("allocates complete inventory facts to summary or additional detail without overlap", () => {
   const facts: NativeKeyManagementRow["facts"] = {
     ref: {

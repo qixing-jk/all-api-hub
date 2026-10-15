@@ -250,8 +250,10 @@
     }
   },
   "keyDetails": {
+    "channels": "Canales",
     "createResponseOnlySecret": "Este sitio muestra la clave completa solo al crearla. Si no la guardaste, abre Gestión de claves y crea una clave de reemplazo.",
     "createTime": "Hora de creación:",
+    "defaultChannels": "Canales predeterminados del sitio",
     "expireTime": "Hora de expiración:",
     "followsAccountGroup": "Usa el grupo de la cuenta",
     "group": "Grupo:",
@@ -378,7 +380,8 @@
   "native": {
     "actions": {
       "delete": "Eliminar clave",
-      "edit": "Editar clave"
+      "edit": "Editar clave",
+      "revoke": "Revocar clave"
     },
     "delete": {
       "confirm": "Eliminar clave",
@@ -456,6 +459,12 @@
         "required": "Este campo es obligatorio.",
         "unsupportedOption": "Elige una opción disponible."
       },
+      "krill": {
+        "allowAnyIp": "Permitir cualquier IP",
+        "allowAnyIpHelp": "Desactiva la lista de IP permitidas guardada. Se permitirán solicitudes desde cualquier IP.",
+        "channels": "Canales",
+        "channelsHelp": "Qué rutas de facturación puede usar esta clave."
+      },
       "laozhang": {
         "activateOnFirstUse": "Activar al primer uso",
         "activationHelp": "0 significa sin periodo de validez tras la activación. Las reglas del sitio siguen determinando el vencimiento absoluto.",
@@ -514,6 +523,15 @@
     },
     "heading": "Claves API",
     "missing": "No disponible",
+    "revoke": {
+      "description": "¿Revocar “{{name}}”? La clave se desactivará permanentemente. Su registro permanecerá hasta que lo elimines.",
+      "feedback": {
+        "error": "No se pudo revocar esta clave. Actualiza e inténtalo de nuevo."
+      },
+      "success": "Clave revocada",
+      "title": "Revocar clave",
+      "working": "Revocando..."
+    },
     "scope": {
       "empty": "No hay ámbitos disponibles",
       "error": "No se pudieron cargar los ámbitos",

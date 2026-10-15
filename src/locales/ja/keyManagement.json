@@ -234,8 +234,10 @@
     }
   },
   "keyDetails": {
+    "channels": "チャネル",
     "createResponseOnlySecret": "このサイトで完全なキーが表示されるのは作成時だけです。保存していない場合は、キー管理を開いて新しいキーを作成してください。",
     "createTime": "作成時刻:",
+    "defaultChannels": "サイトの既定チャネル",
     "expireTime": "有効期限:",
     "followsAccountGroup": "アカウントのグループに従う",
     "group": "グループ:",
@@ -356,7 +358,8 @@
   "native": {
     "actions": {
       "delete": "キーを削除",
-      "edit": "キーを編集"
+      "edit": "キーを編集",
+      "revoke": "キーを失効"
     },
     "delete": {
       "confirm": "キーを削除",
@@ -434,6 +437,12 @@
         "required": "この項目は必須です。",
         "unsupportedOption": "利用可能な選択肢を選んでください。"
       },
+      "krill": {
+        "allowAnyIp": "すべての IP を許可",
+        "allowAnyIpHelp": "保存された IP ホワイトリストを無効にし、すべての IP からのリクエストを許可します。",
+        "channels": "チャネル",
+        "channelsHelp": "このキーを使用できる課金経路。"
+      },
       "laozhang": {
         "activateOnFirstUse": "初回使用時に有効化",
         "activationHelp": "0 は有効化後の期間を設定しないことを意味します。絶対有効期限はサイトの規則に従います。",
@@ -492,6 +501,15 @@
     },
     "heading": "API キー",
     "missing": "利用不可",
+    "revoke": {
+      "description": "「{{name}}」を失効しますか？キーは永久に無効になります。削除するまで記録は残ります。",
+      "feedback": {
+        "error": "キーを無効化できませんでした。更新して再試行してください。"
+      },
+      "success": "キーを失効しました",
+      "title": "キーを失効",
+      "working": "失効中..."
+    },
     "scope": {
       "empty": "利用可能なスコープがありません",
       "error": "スコープを読み込めませんでした",

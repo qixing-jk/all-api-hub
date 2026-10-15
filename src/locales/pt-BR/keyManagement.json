@@ -250,8 +250,10 @@
     }
   },
   "keyDetails": {
+    "channels": "Canais",
     "createResponseOnlySecret": "Este site mostra a chave completa somente na criação. Se você não a salvou, abra o Gerenciamento de Chaves e crie uma chave substituta.",
     "createTime": "Criada em:",
+    "defaultChannels": "Canais padrão do site",
     "expireTime": "Expira em:",
     "followsAccountGroup": "Usa o grupo da conta",
     "group": "Grupo:",
@@ -378,7 +380,8 @@
   "native": {
     "actions": {
       "delete": "Excluir chave",
-      "edit": "Editar chave"
+      "edit": "Editar chave",
+      "revoke": "Revogar chave"
     },
     "delete": {
       "confirm": "Excluir chave",
@@ -456,6 +459,12 @@
         "required": "Este campo é obrigatório.",
         "unsupportedOption": "Escolha uma opção disponível."
       },
+      "krill": {
+        "allowAnyIp": "Permitir qualquer IP",
+        "allowAnyIpHelp": "Desativa a lista de IPs permitidos salva. Solicitações de qualquer IP serão permitidas.",
+        "channels": "Canais",
+        "channelsHelp": "Quais rotas de cobrança esta chave pode usar."
+      },
       "laozhang": {
         "activateOnFirstUse": "Ativar no primeiro uso",
         "activationHelp": "0 significa sem período de validade após ativação. As regras do site ainda determinam o vencimento absoluto.",
@@ -514,6 +523,15 @@
     },
     "heading": "Chaves de API",
     "missing": "Indisponível",
+    "revoke": {
+      "description": "Revogar “{{name}}”? A chave será desativada permanentemente. O registro permanecerá até ser excluído.",
+      "feedback": {
+        "error": "Não foi possível revogar esta chave. Atualize e tente novamente."
+      },
+      "success": "Chave revogada",
+      "title": "Revogar chave",
+      "working": "Revogando..."
+    },
     "scope": {
       "empty": "Nenhum escopo disponível",
       "error": "Não foi possível carregar os escopos",

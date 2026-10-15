@@ -390,7 +390,7 @@ export function useAccountKeyResourceController({
     routing,
   })
 
-  const { openDelete, cancelDelete, confirmDelete } =
+  const { openDelete, openRevoke, cancelDelete, confirmDelete } =
     useAccountKeyResourceDeletionWorkflow({
       state: { mode, setDeleteState, deleteState, mutationAnalyticsMode },
       actions: {
@@ -501,6 +501,7 @@ export function useAccountKeyResourceController({
         result,
       ),
     openDelete,
+    openRevoke,
     cancelDelete,
     confirmDelete,
   }
