@@ -234,8 +234,10 @@
     }
   },
   "keyDetails": {
+    "channels": "渠道",
     "createResponseOnlySecret": "此站點僅在建立時顯示完整金鑰。如果當時沒有儲存，請前往金鑰管理建立替代金鑰。",
     "createTime": "建立時間：",
+    "defaultChannels": "站點預設渠道",
     "expireTime": "過期時間：",
     "followsAccountGroup": "跟隨帳號分組",
     "group": "分組：",
@@ -356,7 +358,8 @@
   "native": {
     "actions": {
       "delete": "刪除金鑰",
-      "edit": "編輯金鑰"
+      "edit": "編輯金鑰",
+      "revoke": "撤銷金鑰"
     },
     "delete": {
       "confirm": "刪除金鑰",
@@ -434,6 +437,12 @@
         "required": "此項為必填項。",
         "unsupportedOption": "請選擇可用選項。"
       },
+      "krill": {
+        "allowAnyIp": "允許任意 IP",
+        "allowAnyIpHelp": "停用已儲存的 IP 白名單，允許任意 IP 發起請求。",
+        "channels": "渠道",
+        "channelsHelp": "該金鑰可以使用的計費線路。"
+      },
       "laozhang": {
         "activateOnFirstUse": "首次使用時啟用",
         "activationHelp": "0 表示不設定啟用後有效期；絕對到期時間仍由網站規則決定。",
@@ -492,6 +501,12 @@
     },
     "heading": "API 金鑰",
     "missing": "無可用資料",
+    "revoke": {
+      "description": "確定撤銷「{{name}}」嗎？金鑰將永久停用，記錄會保留，直到你將其刪除。",
+      "success": "金鑰已撤銷",
+      "title": "撤銷金鑰",
+      "working": "正在撤銷..."
+    },
     "scope": {
       "empty": "暫無可用作用域",
       "error": "無法載入作用域",

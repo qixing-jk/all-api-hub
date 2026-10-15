@@ -65,6 +65,7 @@ export const keyManagementAnalyticsContext = (
     | typeof PRODUCT_ANALYTICS_ACTION_IDS.CreateAccountToken
     | typeof PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccountToken
     | typeof PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccountToken
+    | typeof PRODUCT_ANALYTICS_ACTION_IDS.RevokeAccountToken
     | typeof PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountTokenKey
     | typeof PRODUCT_ANALYTICS_ACTION_IDS.SaveAccountTokenToApiCredentialProfile,
   surfaceId:

@@ -234,8 +234,10 @@
     }
   },
   "keyDetails": {
+    "channels": "渠道",
     "createResponseOnlySecret": "该站点仅在创建时显示完整密钥。如果当时没有保存，请前往密钥管理创建替代密钥。",
     "createTime": "创建时间：",
+    "defaultChannels": "站点默认渠道",
     "expireTime": "过期时间：",
     "followsAccountGroup": "跟随账号分组",
     "group": "分组：",
@@ -356,7 +358,8 @@
   "native": {
     "actions": {
       "delete": "删除密钥",
-      "edit": "编辑密钥"
+      "edit": "编辑密钥",
+      "revoke": "撤销密钥"
     },
     "delete": {
       "confirm": "删除密钥",
@@ -434,6 +437,12 @@
         "required": "此项为必填项。",
         "unsupportedOption": "请选择可用选项。"
       },
+      "krill": {
+        "allowAnyIp": "允许任意 IP",
+        "allowAnyIpHelp": "停用已保存的 IP 白名单，允许任意 IP 发起请求。",
+        "channels": "渠道",
+        "channelsHelp": "该密钥可以使用的计费线路。"
+      },
       "laozhang": {
         "activateOnFirstUse": "首次使用时激活",
         "activationHelp": "0 表示不设置激活后有效期；绝对到期时间仍由站点规则决定。",
@@ -492,6 +501,12 @@
     },
     "heading": "API 密钥",
     "missing": "暂无数据",
+    "revoke": {
+      "description": "确定撤销“{{name}}”吗？密钥将永久停用，记录会保留，直到你将其删除。",
+      "success": "密钥已撤销",
+      "title": "撤销密钥",
+      "working": "正在撤销..."
+    },
     "scope": {
       "empty": "暂无可用作用域",
       "error": "无法加载作用域",

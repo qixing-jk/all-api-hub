@@ -62,6 +62,33 @@ const plan: PricingPlan = {
   issues: [],
 }
 
+it("omits a neutral group multiplier without a group while retaining currency conversion", async () => {
+  const quote = quoteModelPrice(
+    plan,
+    { purpose: "request", inputTokens: 1, usage: { input: 1 } },
+    { currency: "CNY", cnyPerUsd: 7 },
+  )
+  render(<ModelPriceQuote quote={quote} details />)
+  expect(
+    await screen.findByText(/modelList:scenario.appliedConversion/),
+  ).toBeVisible()
+  expect(
+    screen.queryByText(/modelList:scenario.appliedMultiplier/),
+  ).not.toBeInTheDocument()
+})
+
+it("shows a named group's neutral multiplier in calculation details", async () => {
+  const quote = quoteModelPrice(plan, {
+    purpose: "request",
+    inputTokens: 1,
+    usage: { input: 1 },
+  })
+  render(<ModelPriceQuote quote={quote} details effectiveGroup="default" />)
+  expect(
+    await screen.findByText(/modelList:scenario.appliedMultiplier/),
+  ).toBeVisible()
+})
+
 it.each([
   ["source-conflict", "sourceConflict"],
   ["service-tier-unavailable", "serviceTierUnavailable"],

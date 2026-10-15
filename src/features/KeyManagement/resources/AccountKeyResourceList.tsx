@@ -25,6 +25,7 @@ export function AccountKeyResourceList({
   onOpenDetail,
   onEdit,
   onDelete,
+  onRevoke,
   detail,
   isDetailLoading,
   detailFailure,
@@ -42,6 +43,7 @@ export function AccountKeyResourceList({
   onOpenDetail?: (ref: AccountKeyResourceRef) => void
   onEdit: NativeKeyManagementRowAction
   onDelete: NativeKeyManagementRowAction
+  onRevoke?: NativeKeyManagementRowAction
   detail?: AccountKeyResourceFacts | null
   isDetailLoading?: boolean
   detailFailure?: ResourceFailure | null
@@ -117,6 +119,7 @@ export function AccountKeyResourceList({
             )}
             onEdit={onEdit}
             onDelete={onDelete}
+            onRevoke={onRevoke}
             expanded={expandedRowKey === row.rowKey}
             onExpandedChange={(expanded) => handleExpandedChange(row, expanded)}
             detail={

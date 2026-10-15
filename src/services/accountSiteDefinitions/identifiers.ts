@@ -35,6 +35,7 @@ export const SITE_TYPES = {
   DAHL: "dahl",
   FOXCODE: "foxcode",
   XIAOEN: "xiaoen",
+  KRILL: "krill",
   CUBENCE: "cubence",
   RIGHT_CODE: "RightCode",
   OPENROUTER: "openrouter",
@@ -159,3 +160,27 @@ export const GRSAI_CONSOLE_API_ORIGIN = "https://eb.grsaiapi.com"
 export const GRSAI_API_BASE_URL = "https://grsaiapi.com/v1"
 /** Settings entry of the account whose keys carry the credits. */
 export const GRSAI_ACCOUNT_PATH = "/dashboard"
+
+/**
+ * Krill AI serves one console origin. `www.krill-ai.net` is the public entry
+ * address and redirects to `www.krill-code.com/app`; the console session,
+ * account API and saved account all live on the redirect target, so that is
+ * the storage/duplicate origin. The `api*.krill-ai.net` and
+ * `api.cdn-krill-ai.com` hosts are inference-only routes (advertised by
+ * `GET /api/endpoint-settings/me`) and stay out of console detection.
+ * Verified 2026-10-14.
+ */
+export const KRILL_HOSTNAMES = [
+  "www.krill-code.com",
+  "www.krill-ai.net",
+] as const
+export const KRILL_DISPLAY_NAME = "Krill AI"
+/** Console origin owning the Cookie session and every `/api/*` account route. */
+export const KRILL_WEB_ORIGIN = "https://www.krill-code.com"
+/**
+ * Default OpenAI-compatible export base URL: the provider's own `直连`
+ * (overseas) route. The `均衡`/`cdn` routes are equivalent alternatives the
+ * user can pick in the native console; the extension never falls back across
+ * them automatically.
+ */
+export const KRILL_API_BASE_URL = "https://api.krill-ai.net/v1"

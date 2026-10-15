@@ -172,5 +172,11 @@ export type AccountKeyResourceDefinition<
     locator: TLocator,
     options?: ResourceOperationOptions,
   ): Promise<NativeResourceMutationResult<void, TFailure>>
+  revoke?(
+    config: TConfig,
+    scope: AccountKeyScope,
+    locator: TLocator,
+    options?: ResourceOperationOptions,
+  ): Promise<NativeResourceMutationResult<TDetail, TFailure>>
   mapFailure(error: unknown): ResourceFailure
 }

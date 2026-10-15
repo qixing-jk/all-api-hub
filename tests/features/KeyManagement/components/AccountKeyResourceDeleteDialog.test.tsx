@@ -50,6 +50,23 @@ beforeEach(() => {
   mocks.config.mockReset().mockResolvedValue({})
 })
 
+it("confirms record-preserving revocation separately and never offers linked deletion cleanup", async () => {
+  const props = createProps()
+  props.nativeKeys.deleteState.operation = "revoke"
+  render(<AccountKeyResourceDeleteDialog {...props} />)
+  expect(
+    await screen.findByText("keyManagement:native.revoke.description"),
+  ).toBeInTheDocument()
+  expect(screen.queryByRole("checkbox")).toBeNull()
+  expect(
+    screen.getByRole("button", { name: "keyManagement:native.actions.revoke" }),
+  ).toHaveClass("bg-(--button-warning-bg)")
+  await userEvent.click(
+    screen.getByRole("button", { name: "keyManagement:native.actions.revoke" }),
+  )
+  expect(props.nativeKeys.confirmDelete).toHaveBeenCalledWith(false)
+})
+
 it("describes Dahl revocation and the return of remaining token credit", async () => {
   const props = createProps()
   props.nativeKeys.deleteState.ref = {

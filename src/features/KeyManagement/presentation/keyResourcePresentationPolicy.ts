@@ -22,6 +22,7 @@ export const KEY_RESOURCE_EDITOR_KINDS = {
   RightCode: "rightcode",
   Grsai: "grsai",
   Cubence: "cubence",
+  Krill: "krill",
   Dahl: "dahl",
   FoxCode: "foxcode",
   OpenRouter: "openrouter",
@@ -90,6 +91,7 @@ const policies = {
   },
   [families.Grsai]: { ...native, editor: KEY_RESOURCE_EDITOR_KINDS.Grsai },
   [families.Cubence]: { ...native, editor: KEY_RESOURCE_EDITOR_KINDS.Cubence },
+  [families.Krill]: { ...native, editor: KEY_RESOURCE_EDITOR_KINDS.Krill },
   [families.FoxCode]: { ...native, editor: KEY_RESOURCE_EDITOR_KINDS.FoxCode },
   [families.Xiaoen]: generic,
   [families.OpenRouter]: {

@@ -97,6 +97,8 @@ import {
   KIMI_GLOBAL_DISPLAY_NAME,
   KIMI_GLOBAL_HOSTNAMES,
   KIMI_HOSTNAMES,
+  KRILL_HOSTNAMES,
+  KRILL_WEB_ORIGIN,
   LAOZHANG_HOSTNAMES,
   MODELFLARE_HOSTNAME,
   MODELFLARE_USER_ID_HEADER_NAME,
@@ -203,6 +205,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.DAHL,
   SITE_TYPES.FOXCODE,
   SITE_TYPES.XIAOEN,
+  SITE_TYPES.KRILL,
   SITE_TYPES.CUBENCE,
   SITE_TYPES.RIGHT_CODE,
   SITE_TYPES.OPENROUTER,
@@ -282,6 +285,50 @@ const ACCOUNT_SITE_DEFINITIONS = [
         inferFromHostname: true,
         storageOrigin: XIAOEN_WEB_ORIGIN,
         duplicateOrigin: XIAOEN_WEB_ORIGIN,
+      },
+    },
+  },
+  {
+    siteType: SITE_TYPES.KRILL,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Krill,
+    onboarding: {
+      displayName: "Krill AI",
+      detection: { hostnames: KRILL_HOSTNAMES },
+      routes: {
+        loginPath: "/login",
+        usagePath: "/app/logs",
+        adminCredentialsPath: "/app/keys",
+        pricingPath: "/app/pricing",
+        checkInPath: null,
+        accessTokenPath: null,
+        redeemPath: "/app",
+        siteAnnouncementsPath: "/app/announcements",
+      },
+    },
+    productProfile: {
+      auth: {
+        usesBrowserCookieSession: true,
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.Cookie],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.Cookie,
+        defaultAuthHostnames: KRILL_HOSTNAMES,
+      },
+      identity: {
+        usernameRequired: false,
+        storedUserIdentityFields: ["id", "email"],
+      },
+      modelList: {
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+        // Channels gate billing routes, so the catalogue carries no model groups.
+        groupSemantics: ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+      },
+      urls: {
+        recognizedHostnames: KRILL_HOSTNAMES,
+        inferFromHostname: true,
+        storageOrigin: KRILL_WEB_ORIGIN,
+        duplicateOrigin: KRILL_WEB_ORIGIN,
       },
     },
   },

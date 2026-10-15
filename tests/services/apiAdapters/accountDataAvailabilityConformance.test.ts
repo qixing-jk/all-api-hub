@@ -115,6 +115,80 @@ const producerFixturesByFamily = {
     ],
     expectRequests: () => {},
   },
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Krill]: {
+    baseUrl: "https://www.krill-code.com",
+    authType: AuthTypeEnum.Cookie,
+    expectedAvailability: {
+      consumption: complete,
+      requests: complete,
+      tokens: complete,
+      income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
+    handlers: [
+      http.get("https://www.krill-code.com/api/auth/me", () =>
+        HttpResponse.json({
+          success: true,
+          code: 0,
+          data: {
+            id: 7,
+            email: "user@example.com",
+            credit_balance_usd: "0.000000",
+            enterprise_memberships: [],
+          },
+        }),
+      ),
+      http.get("https://www.krill-code.com/api/subscription", () =>
+        HttpResponse.json({
+          success: true,
+          code: 0,
+          data: {
+            subscriptions: [],
+            summary: {
+              total_daily_quota_usd: "0",
+              total_used_usd: "0",
+              total_remaining_usd: "0",
+              total_forwarded_remaining_usd: "0",
+              entry_route_keys: [],
+              subscription_end_at: null,
+            },
+            credit_balance_usd: "0.000000",
+            welfare_balance_usd: "0",
+            request_count_quota: null,
+            freeze_policy: {
+              enabled: true,
+              free_mode: false,
+              can_freeze: false,
+            },
+          },
+        }),
+      ),
+      http.post("https://www.krill-code.com/api/request-logs/stats", () =>
+        HttpResponse.json({
+          success: true,
+          code: 0,
+          data: {
+            total_requests: 0,
+            success_requests: 0,
+            failed_requests: 0,
+            input_tokens: 0,
+            cache_creation_input_tokens: 0,
+            cache_read_input_tokens: 0,
+            output_tokens: 0,
+            total_tokens: 0,
+            total_cost_usd: "0",
+            rpm: 0,
+            peak_rpm: 0,
+            tpm: 0,
+            range_start: "2026-10-14T16:00:00Z",
+            range_end: "2026-10-14T23:59:59Z",
+            bucket_seconds: 3600,
+            trend: [],
+          },
+        }),
+      ),
+    ],
+    expectRequests: () => {},
+  },
   [ACCOUNT_SITE_ADAPTER_FAMILIES.FoxCode]: {
     baseUrl: "https://foxcode.rjj.cc",
     authType: AuthTypeEnum.Cookie,
@@ -626,7 +700,9 @@ const createRequest = (siteType: AccountSiteType) => {
       userId:
         siteType === SITE_TYPES.DAHL
           ? "00000000-0000-4000-8000-000000000001"
-          : siteType === SITE_TYPES.FREEMODEL || siteType === SITE_TYPES.CUBENCE
+          : siteType === SITE_TYPES.FREEMODEL ||
+              siteType === SITE_TYPES.CUBENCE ||
+              siteType === SITE_TYPES.KRILL
             ? "7"
             : "user-1",
       accessToken: "account-token",
@@ -901,6 +977,13 @@ describe("AccountData availability producer conformance", () => {
       }
       if (capabilities.family === ACCOUNT_SITE_ADAPTER_FAMILIES.Cubence) {
         installCookieTransport()
+      }
+      if (capabilities.family === ACCOUNT_SITE_ADAPTER_FAMILIES.Krill) {
+        const boundary = installCookieTransport()
+        const cookie = (await browser.cookies.getAll({}))[0]!
+        boundary.cookies.mockResolvedValue([
+          { ...cookie, domain: "www.krill-code.com", name: "krill_jwt" },
+        ])
       }
       if (capabilities.family === ACCOUNT_SITE_ADAPTER_FAMILIES.Dahl) {
         const boundary = installCookieTransport()

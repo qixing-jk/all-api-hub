@@ -4969,6 +4969,58 @@ describe("useAccountKeyResourceController", () => {
     }
   })
 
+  it("revokes an accepted key while retaining its disabled record", async () => {
+    const facts = {
+      ...createFacts("workspace-example", "key-to-revoke"),
+      actions: { canUpdate: true, canDelete: true, canRevoke: true },
+    }
+    const revoked = {
+      ...facts,
+      status: "disabled" as const,
+      actions: { canUpdate: false, canDelete: true, canRevoke: false },
+    }
+    const collection = {
+      list: vi.fn().mockResolvedValue({ items: [facts] }),
+      get: vi.fn(),
+      delete: vi.fn(),
+      revoke: vi.fn().mockResolvedValue(revoked),
+    }
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue({
+          scopeKey: "workspace-example",
+          routeKey: "workspace-example",
+          displayName: "Workspace",
+          isDefault: true,
+        }),
+        listScopes: vi.fn().mockResolvedValue([]),
+        openCollection: vi.fn().mockResolvedValue(collection),
+        openCreateEditor: vi.fn(),
+      }),
+    )
+    const account = createAccount("account-example")
+    const { result } = renderHook(() =>
+      useAccountKeyResourceController({
+        accounts: [account],
+        selectedAccount: account.id,
+      }),
+    )
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    act(() => {
+      expect(result.current.openRevoke(facts.ref)).toBe(true)
+    })
+    await act(async () => {
+      expect(await result.current.confirmDelete()).toBe(true)
+    })
+    expect(collection.revoke).toHaveBeenCalledTimes(1)
+    expect(collection.delete).not.toHaveBeenCalled()
+    expect(result.current.rows[0]!.status).toBe("disabled")
+    expect(result.current.rows).toHaveLength(1)
+    act(() => {
+      expect(result.current.openRevoke(facts.ref)).toBe(false)
+    })
+  })
+
   it("removes only the acknowledged key without reloading inventory or scopes", async () => {
     const remove = deferred<void>()
     const facts = createFacts("workspace-example", "key-to-delete")

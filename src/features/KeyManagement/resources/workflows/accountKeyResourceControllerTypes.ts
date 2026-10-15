@@ -88,6 +88,7 @@ export type RefreshAfterMutation = (
 export type DetailState = AccountKeyResourceFacts | null
 
 export type DeleteState = {
+  operation?: "delete" | "revoke"
   isOpen: boolean
   isExecuting: boolean
   ref: AccountKeyResourceRef | null
