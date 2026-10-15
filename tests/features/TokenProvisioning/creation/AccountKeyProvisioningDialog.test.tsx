@@ -1,17 +1,22 @@
 import { act, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { Toaster } from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AccountKeyProvisioningDialog } from "~/features/TokenProvisioning/creation/AccountKeyProvisioningDialog"
+import notify from "~/lib/notify"
 import { AccountKeyResourceError } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 
-const { prepare, notify } = vi.hoisted(() => ({
+const { prepare } = vi.hoisted(() => ({
   prepare: vi.fn(),
-  notify: { success: vi.fn(), info: vi.fn(), error: vi.fn() },
 }))
-vi.mock("~/lib/notify", () => ({ default: notify }))
+vi.spyOn(notify, "success")
+vi.spyOn(notify, "info")
+vi.spyOn(notify, "error")
+vi.spyOn(notify, "loading")
+vi.spyOn(notify, "dismiss")
 vi.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) =>
@@ -95,16 +100,41 @@ const setup = () => {
   return {
     onClose,
     ...render(
-      <AccountKeyProvisioningDialog
-        account={account}
-        mode="all-groups"
-        onClose={onClose}
-      />,
+      <>
+        <Toaster />
+        <AccountKeyProvisioningDialog
+          account={account}
+          mode="all-groups"
+          onClose={onClose}
+        />
+      </>,
     ),
   }
 }
 
 describe("foreground account key provisioning", () => {
+  it("updates the visible progress toast without dismissing it between keys", async () => {
+    const first = entry("first")
+    const second = entry("second")
+    const firstResult = createDeferred<any>()
+    const secondResult = createDeferred<any>()
+    first.create.mockReturnValue(firstResult.promise)
+    second.create.mockReturnValue(secondResult.promise)
+    prepare.mockResolvedValue({ coveredCount: 0, entries: [first, second] })
+    setup()
+    await screen.findByRole("button", { name: "common:actions.cancel" })
+    const options = vi.mocked(notify.loading).mock.calls.at(-1)![1]!
+    vi.mocked(notify.dismiss).mockClear()
+    const previousUpdates = vi.mocked(notify.loading).mock.calls.length
+    await act(async () => firstResult.resolve({ ref: null, facts: null }))
+    await waitFor(() => expect(second.create).toHaveBeenCalledOnce())
+    expect(notify.loading).toHaveBeenCalledTimes(previousUpdates + 1)
+    expect(vi.mocked(notify.loading).mock.calls.at(-1)![1]?.id).toBe(options.id)
+    expect(notify.dismiss).not.toHaveBeenCalledWith(options.id)
+    await act(async () => secondResult.resolve({ ref: null, facts: null }))
+    await waitFor(() => expect(notify.dismiss).toHaveBeenCalledWith(options.id))
+  })
+
   it.each([false, true])(
     "ignores a stale option load after a newer successful request (reject=%s)",
     async (reject) => {
@@ -136,8 +166,42 @@ describe("foreground account key provisioning", () => {
     },
   )
   beforeEach(() => {
+    notify.remove()
     prepare.mockReset()
     vi.clearAllMocks()
+  })
+
+  it.each([1, 5])(
+    "shows non-blocking progress for %s automatic keys",
+    async (count) => {
+      const pending = createDeferred<any>()
+      const entries = Array.from({ length: count }, (_, index) =>
+        entry(String(index)),
+      )
+      entries[0]!.create.mockReturnValue(pending.promise)
+      prepare.mockResolvedValue({ coveredCount: 0, entries })
+      const { onClose } = setup()
+      await screen.findByRole("button", { name: "common:actions.cancel" })
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+      await act(async () => pending.resolve({ ref: null, facts: null }))
+      await waitFor(() => expect(onClose).toHaveBeenCalledOnce())
+      expect(notify.success).toHaveBeenCalled()
+    },
+  )
+
+  it("finishes with a toast after the required input instead of another dialog", async () => {
+    const user = userEvent.setup()
+    prepare.mockResolvedValue({
+      coveredCount: 0,
+      entries: [entry("manual", true)],
+    })
+    const { onClose } = setup()
+    await user.click(
+      await screen.findByRole("button", { name: "Accept input" }),
+    )
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce())
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    expect(notify.success).toHaveBeenCalled()
   })
 
   it("finishes an automatic plan without requiring a result-dialog click", async () => {
@@ -199,28 +263,60 @@ describe("foreground account key provisioning", () => {
     await waitFor(() => expect(second.create).toHaveBeenCalledOnce())
   })
 
-  it("reports partial completion and stops after an uncertain write", async () => {
-    const first = entry("first"),
-      second = entry("second"),
-      third = entry("third")
-    second.create.mockRejectedValue(
+  it.each(["mutation_state_uncertain", "validation_failed"] as const)(
+    "retains partial completion after %s until acknowledgement",
+    async (code) => {
+      const first = entry("first"),
+        second = entry("second"),
+        third = entry("third")
+      second.create.mockRejectedValue(new AccountKeyResourceError({ code }))
+      prepare.mockResolvedValue({
+        coveredCount: 0,
+        entries: [first, second, third],
+      })
+      const { onClose } = setup()
+      const result = await screen.findByRole("dialog", {
+        name:
+          code === "mutation_state_uncertain"
+            ? "keyManagement:provisioning.result.uncertain"
+            : "keyManagement:provisioning.result.failed",
+      })
+      expect(result).toHaveTextContent(
+        code === "mutation_state_uncertain"
+          ? "keyManagement:native.editor.feedback.uncertain"
+          : "keyManagement:native.editor.feedback.error",
+      )
+      expect(result).toHaveTextContent(
+        "keyManagement:provisioning.result.created",
+      )
+      expect(onClose).not.toHaveBeenCalled()
+      expect(notify.error).not.toHaveBeenCalled()
+      expect(second.create).toHaveBeenCalledOnce()
+      expect(third.create).not.toHaveBeenCalled()
+      expect(
+        screen.queryByRole("button", { name: /retry/i }),
+      ).not.toBeInTheDocument()
+    },
+  )
+
+  it("keeps an uncertain first write visible even without confirmed creations", async () => {
+    const first = entry("first")
+    first.create.mockRejectedValue(
       new AccountKeyResourceError({ code: "mutation_state_uncertain" }),
     )
-    prepare.mockResolvedValue({
-      coveredCount: 0,
-      entries: [first, second, third],
+    prepare.mockResolvedValue({ coveredCount: 2, entries: [first] })
+    const { onClose } = setup()
+    const result = await screen.findByRole("dialog", {
+      name: "keyManagement:provisioning.result.uncertain",
     })
-    setup()
-    await screen.findByText(/1.*3/)
-    await screen.findByRole("alert")
-    expect(second.create).toHaveBeenCalledOnce()
-    expect(third.create).not.toHaveBeenCalled()
-    expect(
-      screen.queryByRole("button", { name: /retry/i }),
-    ).not.toBeInTheDocument()
+    expect(result).toHaveTextContent(
+      "keyManagement:provisioning.result.remaining",
+    )
+    expect(onClose).not.toHaveBeenCalled()
+    expect(notify.error).not.toHaveBeenCalled()
   })
 
-  it.each(["cancel", "close"])(
+  it.each(["cancel"])(
     "lets the in-flight write settle after %s and preserves its one-time secret",
     async (action) => {
       const user = userEvent.setup()
@@ -244,7 +340,15 @@ describe("foreground account key provisioning", () => {
       )
       await screen.findByRole("dialog", { name: "Secret" })
       await user.click(screen.getByRole("button", { name: "Secret handled" }))
-      await screen.findByText("keyManagement:provisioning.cancelled")
+      await screen.findByRole("dialog", {
+        name: "keyManagement:provisioning.result.cancelled",
+      })
+      expect(notify.info).not.toHaveBeenCalled()
+      expect(onClose).not.toHaveBeenCalled()
+      await user.click(
+        screen.getAllByRole("button", { name: "common:actions.close" }).at(-1)!,
+      )
+      expect(onClose).toHaveBeenCalledOnce()
       expect(second.create).not.toHaveBeenCalled()
     },
   )
@@ -357,17 +461,17 @@ describe("foreground account key provisioning", () => {
     prepare.mockResolvedValue({ coveredCount: 1, entries: [] })
     const { onClose } = setup()
     await waitFor(() => expect(onClose).toHaveBeenCalledOnce())
+    expect(notify.success).toHaveBeenCalledWith(
+      "keyManagement:provisioning.completed",
+    )
   })
 
-  it("reports preparation failures and permits closing", async () => {
-    const user = userEvent.setup()
+  it("reports preparation failures with a toast and closes automatically", async () => {
     prepare.mockRejectedValue(new Error("inventory failed"))
     const { onClose } = setup()
-    await screen.findByRole("alert")
-    await user.click(
-      screen.getAllByRole("button", { name: "common:actions.close" }).at(-1)!,
-    )
-    expect(onClose).toHaveBeenCalledOnce()
+    await waitFor(() => expect(onClose).toHaveBeenCalledOnce())
+    expect(notify.error).toHaveBeenCalled()
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
   it("keeps invalid input editable and loads native options from updated values", async () => {

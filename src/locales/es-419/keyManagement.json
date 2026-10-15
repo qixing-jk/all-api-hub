@@ -714,15 +714,34 @@
   "pleaseAddAccount": "Agrega una cuenta primero",
   "pleaseSelectAccount": "Selecciona una cuenta",
   "provisioning": {
+    "actions": {
+      "allGroups": "Completar todos los grupos faltantes",
+      "default": "Asegurar una clave predeterminada",
+      "hint": "Crear solo las claves faltantes y conservar las existentes.",
+      "title": "Completar claves faltantes"
+    },
     "cancelled": "Detenido. Se conservan las claves ya creadas.",
+    "completed": "Claves listas: {{created}} creadas, {{covered}} ya cubiertas.",
     "continue": "Continuar con intervención del usuario",
+    "creating": "Completando las claves de la cuenta: {{created}} / {{total}} creadas…",
     "input": "{{label}} · {{current}} / {{total}}. Completa todos los datos antes de crear las claves.",
+    "preparing": "Comprobando las claves de la cuenta…",
     "progress": "Creadas {{created}} / {{total}}; ya cubiertas: {{covered}}.",
-    "title": "Preparar claves de la cuenta"
+    "result": {
+      "cancelled": "Se detuvo la creación de claves faltantes",
+      "covered": "Ya cubiertas",
+      "created": "Creadas",
+      "failed": "No se pudieron crear algunas claves",
+      "next": "Siguiente paso",
+      "remaining": "Sin confirmar",
+      "resume": "Vuelve a completar las claves más tarde. Se omitirán las existentes.",
+      "retained": "Se conservan las claves creadas y las existentes.",
+      "uncertain": "Algunas claves requieren verificación"
+    }
   },
   "refreshTokenList": "Actualizar lista de claves",
   "repairMissingKeys": {
-    "action": "Comprobación de claves",
+    "action": "Revisar y reparar",
     "actions": {
       "cancel": "Cancelar comprobación",
       "rerun": "Comprobar de nuevo",
@@ -738,7 +757,7 @@
       "title_many": "¿Eliminar {{count}} claves inválidas?",
       "title_other": "¿Eliminar {{count}} claves inválidas?"
     },
-    "description": "Revisa todos los grupos disponibles de las cuentas guardadas y crea las claves utilizables faltantes donde se admita la creación automática. Otros problemas aparecen abajo.",
+    "description": "Revisa todos los grupos disponibles de las cuentas seleccionadas y crea las claves utilizables faltantes donde se admita la creación automática. Otros problemas aparecen abajo.",
     "failureGuidance": {
       "aborted": "La operación se canceló antes de finalizar. Vuelve a ejecutar la comprobación cuando estés listo.",
       "authenticationFailed": "Vuelve a iniciar sesión o actualiza las credenciales de esta cuenta y vuelve a intentarlo.",
@@ -753,7 +772,7 @@
       "validationFailed": "Revisa la configuración requerida de la clave, corrígela y vuelve a intentarlo."
     },
     "historyNote": "Esto muestra el resultado de la comprobación anterior. No hay ningún trabajo en ejecución y puedes volver a ejecutar la comprobación.",
-    "initialNotice": "Revisa las cuentas guardadas grupo por grupo y crea las claves faltantes donde se admita. Se omiten los grupos que ya tienen claves utilizables.",
+    "initialNotice": "Revisa las cuentas seleccionadas grupo por grupo y crea las claves faltantes donde se admita. Se omiten los grupos que ya tienen claves utilizables.",
     "invalidKeys": {
       "badge": "Inválida",
       "deleteFailed": "No se pudieron eliminar las claves inválidas",
@@ -863,6 +882,10 @@
     },
     "resultsTitle": "Resultados",
     "runningNote": "Este trabajo se ejecuta en segundo plano. Puedes cerrar este diálogo y revisar más tarde, o cancelarlo desde la tarjeta de progreso.",
+    "scope": {
+      "allSelected": "Todas las cuentas seleccionadas",
+      "label": "Cuentas para revisar"
+    },
     "searchLabel": "Buscar",
     "searchPlaceholder": "Buscar cuenta, nombre de clave, grupo, dominio o tipo de sitio...",
     "skipReasons": {
@@ -903,6 +926,9 @@
   "showingCount_many": "Mostrando {{count}}",
   "showingCount_other": "Mostrando {{count}}",
   "title": "Administración de claves",
+  "tools": {
+    "title": "Herramientas de claves"
+  },
   "totalKeys_one": "Total {{count}} clave",
   "totalKeys_many": "Total {{count}} claves",
   "totalKeys_other": "Total {{count}} claves",

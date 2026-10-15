@@ -288,6 +288,50 @@ describe("accountKeyRepair", () => {
     )
   })
 
+  it("limits an explicit selection to those accounts without falling back to all accounts", async () => {
+    mocks.getAllAccounts.mockResolvedValue([
+      buildRepairAccount("selected", SITE_TYPES.SHAREDCHAT),
+      buildRepairAccount("other", SITE_TYPES.SHAREDCHAT),
+    ])
+    const { startAccountKeyRepair, accountKeyRepairRunner } = await import(
+      "~/services/accounts/accountKeyAutoProvisioning/repair"
+    )
+    await startAccountKeyRepair({ accountIds: ["selected"] })
+    await waitForStoredState(ACCOUNT_KEY_REPAIR_JOB_STATES.Completed)
+    const progress = await accountKeyRepairRunner.getProgress()
+    expect(progress.results.map((result) => result.accountId)).toEqual([
+      "selected",
+    ])
+    expect(progress.totals.enabledAccounts).toBe(1)
+  })
+
+  it.each([[], [""], [null], "all"])(
+    "rejects invalid explicit account selections: %j",
+    async (accountIds) => {
+      const { accountKeyRepairRunner } = await import(
+        "~/services/accounts/accountKeyAutoProvisioning/repair"
+      )
+      await expect(
+        accountKeyRepairRunner.start({ accountIds } as never),
+      ).rejects.toThrow("invalid_account_selection")
+      expect(mocks.getAllAccounts).not.toHaveBeenCalled()
+    },
+  )
+
+  it("keeps stale or disabled selections empty rather than auditing other accounts", async () => {
+    mocks.getAllAccounts.mockResolvedValue([
+      buildRepairAccount("disabled", SITE_TYPES.SHAREDCHAT, { disabled: true }),
+      buildRepairAccount("other", SITE_TYPES.SHAREDCHAT),
+    ])
+    const { startAccountKeyRepair, accountKeyRepairRunner } = await import(
+      "~/services/accounts/accountKeyAutoProvisioning/repair"
+    )
+    await startAccountKeyRepair({ accountIds: ["missing", "disabled"] })
+    await waitForStoredState(ACCOUNT_KEY_REPAIR_JOB_STATES.Completed)
+    expect((await accountKeyRepairRunner.getProgress()).results).toEqual([])
+    expect(mocks.openKeyResources).not.toHaveBeenCalled()
+  })
+
   it("orders progress snapshots even when the clock does not advance", async () => {
     const { startAccountKeyRepair } = await import(
       "~/services/accounts/accountKeyAutoProvisioning/repair"

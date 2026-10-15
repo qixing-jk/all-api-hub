@@ -128,6 +128,18 @@ class AccountKeyRepairRunner {
   async start(
     options: AccountKeyRepairStartOptions = {},
   ): Promise<AccountKeyRepairProgress> {
+    if (options.accountIds !== undefined) {
+      if (
+        !Array.isArray(options.accountIds) ||
+        options.accountIds.length === 0 ||
+        options.accountIds.some(
+          (id) => typeof id !== "string" || id.trim().length === 0,
+        )
+      ) {
+        throw new Error("invalid_account_selection")
+      }
+      options = { ...options, accountIds: [...new Set(options.accountIds)] }
+    }
     if (this.currentRun) {
       const reservedRunProgress = this.getReservedRunProgress()
       if (reservedRunProgress) {
@@ -240,8 +252,13 @@ class AccountKeyRepairRunner {
       if (this.isCurrentJobCancelled(jobId, abortSignal)) {
         return
       }
+      const selectedIds = options.accountIds
+        ? new Set(options.accountIds)
+        : null
       const enabledAccounts = allAccounts.filter(
-        (account) => account.disabled !== true,
+        (account) =>
+          account.disabled !== true &&
+          (!selectedIds || selectedIds.has(account.id)),
       )
       const displaySiteDataById = new Map(
         accountPresentation

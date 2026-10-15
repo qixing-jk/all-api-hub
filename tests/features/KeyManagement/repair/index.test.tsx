@@ -383,6 +383,129 @@ function buildRepairImportCandidate(
 }
 
 describe("RepairMissingKeysDialog", () => {
+  it("preselects all enabled accounts and disables start after deselecting them", async () => {
+    const user = userEvent.setup()
+    mockProgress = buildRepairProgress(ACCOUNT_KEY_REPAIR_JOB_STATES.Idle)
+    const accounts = [
+      buildAccount(),
+      { ...buildAccount(), id: "disabled", name: "Disabled", disabled: true },
+    ]
+    render(
+      <RepairMissingKeysDialog
+        isOpen
+        onClose={vi.fn()}
+        accounts={accounts}
+        startOnOpen={false}
+      />,
+    )
+    await waitFor(() =>
+      expect(mockUseRepairMissingKeysJob).toHaveBeenLastCalledWith(
+        expect.objectContaining({ accountIds: ["account-1"] }),
+      ),
+    )
+    expect(
+      screen.getByRole("combobox", {
+        name: "keyManagement:repairMissingKeys.scope.label",
+      }),
+    ).toHaveTextContent("keyManagement:repairMissingKeys.scope.allSelected")
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "keyManagement:repairMissingKeys.scope.label",
+      }),
+    )
+    expect(
+      screen.queryByRole("option", { name: "Disabled" }),
+    ).not.toBeInTheDocument()
+    await user.click(screen.getByRole("option", { name: "Account 1" }))
+    await user.keyboard("{Escape}")
+    expect(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.actions.start",
+      }),
+    ).toBeDisabled()
+    await user.click(
+      screen.getByRole("button", { name: "ui:multiSelect.selectAll" }),
+    )
+    await waitFor(() =>
+      expect(mockUseRepairMissingKeysJob).toHaveBeenLastCalledWith(
+        expect.objectContaining({ accountIds: ["account-1"] }),
+      ),
+    )
+    expect(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.actions.start",
+      }),
+    ).toBeEnabled()
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:repairMissingKeys.scope.all",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("preselects the page account but lets users add another account before starting", async () => {
+    const user = userEvent.setup()
+    mockProgress = buildRepairProgress(ACCOUNT_KEY_REPAIR_JOB_STATES.Idle)
+    const accounts = [
+      buildAccount(),
+      { ...buildAccount(), id: "account-2", name: "Account 2" },
+    ]
+    const props = { accounts, onClose: vi.fn(), startOnOpen: false }
+    const view = render(
+      <RepairMissingKeysDialog
+        {...props}
+        isOpen
+        initialAccountId="account-1"
+      />,
+    )
+    await waitFor(() =>
+      expect(mockUseRepairMissingKeysJob).toHaveBeenLastCalledWith(
+        expect.objectContaining({ accountIds: ["account-1"] }),
+      ),
+    )
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "keyManagement:repairMissingKeys.scope.label",
+      }),
+    )
+    await user.click(screen.getByRole("option", { name: "Account 2" }))
+    await waitFor(() =>
+      expect(mockUseRepairMissingKeysJob).toHaveBeenLastCalledWith(
+        expect.objectContaining({ accountIds: ["account-1", "account-2"] }),
+      ),
+    )
+    await user.keyboard("{Escape}")
+    view.rerender(
+      <RepairMissingKeysDialog
+        {...props}
+        isOpen
+        initialAccountId="account-2"
+      />,
+    )
+    expect(mockUseRepairMissingKeysJob).toHaveBeenLastCalledWith(
+      expect.objectContaining({ accountIds: ["account-1", "account-2"] }),
+    )
+    view.rerender(
+      <RepairMissingKeysDialog
+        {...props}
+        isOpen={false}
+        initialAccountId="account-2"
+      />,
+    )
+    view.rerender(
+      <RepairMissingKeysDialog
+        {...props}
+        isOpen
+        initialAccountId="account-2"
+      />,
+    )
+    await waitFor(() =>
+      expect(mockUseRepairMissingKeysJob).toHaveBeenLastCalledWith(
+        expect.objectContaining({ accountIds: ["account-2"] }),
+      ),
+    )
+  })
+
   it("continues a current input-blocked repair in the foreground and closes it independently", async () => {
     const account = buildAccount()
     const user = userEvent.setup()
@@ -1130,7 +1253,7 @@ describe("RepairMissingKeysDialog", () => {
         KEY_MANAGEMENT_TEST_IDS.repairCreatedManagedSiteImportCard,
       ),
     ).toBeVisible()
-    expect(screen.getByText("Account 1")).toBeInTheDocument()
+    expect(screen.getAllByText("Account 1").length).toBeGreaterThan(0)
     expect(
       mockManagedSiteTokenBatchExportDialog.mock.calls.at(-1)?.[0],
     ).toEqual(expect.objectContaining({ isOpen: false }))

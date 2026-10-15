@@ -692,15 +692,34 @@
   "pleaseAddAccount": "先にアカウントを追加してください",
   "pleaseSelectAccount": "アカウントを選択してください",
   "provisioning": {
+    "actions": {
+      "allGroups": "すべての不足グループを補完",
+      "default": "デフォルトキーを補完",
+      "hint": "不足分のみ作成し、既存のキーは保持します。",
+      "title": "不足するキーを補完"
+    },
     "cancelled": "停止しました。作成済みのキーは保持されます。",
+    "completed": "キーの準備完了：{{created}} 件を作成、{{covered}} 件は既存のキーで対応済み。",
     "continue": "入力して続行",
+    "creating": "アカウントのキーを作成中：{{created}} / {{total}}…",
     "input": "{{label}} · {{current}} / {{total}}。すべての入力が完了してからキーを作成します。",
+    "preparing": "アカウントのキーを確認しています…",
     "progress": "作成済み {{created}} / {{total}}、既存の対応数：{{covered}}。",
-    "title": "アカウントキーを準備"
+    "result": {
+      "cancelled": "キーの補完を停止しました",
+      "covered": "既存キーで対応済み",
+      "created": "作成済み",
+      "failed": "一部のキーを作成できませんでした",
+      "next": "次の手順",
+      "remaining": "作成未確認",
+      "resume": "後で再度補完できます。既存のキーはスキップされます。",
+      "retained": "作成済みのキーと既存のキーは保持されます。",
+      "uncertain": "確認が必要なキーがあります"
+    }
   },
   "refreshTokenList": "キー一覧を更新",
   "repairMissingKeys": {
-    "action": "キーをチェック",
+    "action": "チェックと修復",
     "actions": {
       "cancel": "チェックをキャンセル",
       "rerun": "再チェック",
@@ -712,7 +731,7 @@
       "more_other": "ほか {{count}} 件",
       "title_other": "{{count}} 件の例外キーを削除しますか？"
     },
-    "description": "保存済みアカウントの利用可能なすべてのグループを確認し、自動作成に対応している場合は不足している有効なキーを作成します。その他の問題は下に表示されます。",
+    "description": "選択したアカウントの利用可能なすべてのグループを確認し、自動作成に対応している場合は不足している有効なキーを作成します。その他の問題は下に表示されます。",
     "failureGuidance": {
       "aborted": "完了前に操作がキャンセルされました。準備ができたら、もう一度チェックしてください。",
       "authenticationFailed": "再度ログインするか、このアカウントの認証情報を更新してから再試行してください。",
@@ -727,7 +746,7 @@
       "validationFailed": "必要なキー設定を確認して修正し、再試行してください。"
     },
     "historyNote": "前回のチェック結果を表示しています。現在実行中のタスクはありません。再チェックできます。",
-    "initialNotice": "保存済みアカウントのグループを順に確認し、対応しているグループの不足しているキーを作成します。有効なキーがあるグループはスキップします。",
+    "initialNotice": "選択したアカウントのグループを順に確認し、対応しているグループの不足しているキーを作成します。有効なキーがあるグループはスキップされます。",
     "invalidKeys": {
       "badge": "例外",
       "deleteFailed": "例外キーの削除に失敗しました",
@@ -813,6 +832,10 @@
     },
     "resultsTitle": "結果",
     "runningNote": "このジョブはバックグラウンドで実行されます。このダイアログを閉じて後で確認するか、進捗カードからキャンセルできます。",
+    "scope": {
+      "allSelected": "すべてのアカウントを選択済み",
+      "label": "確認するアカウント"
+    },
     "searchLabel": "検索",
     "searchPlaceholder": "アカウント、キー名、グループ、ドメイン、サイト種別で検索...",
     "skipReasons": {
@@ -851,6 +874,9 @@
   },
   "showingCount_other": "{{count}} 件を表示中",
   "title": "キー管理",
+  "tools": {
+    "title": "キー管理ツール"
+  },
   "totalKeys_other": "合計 {{count}} キー",
   "unifiedApiGuidance": {
     "headerBridge": "キーを自前のゲートウェイにインポートするか、クライアントにエクスポートできます。"

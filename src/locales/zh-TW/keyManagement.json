@@ -692,15 +692,34 @@
   "pleaseAddAccount": "請先新增帳號",
   "pleaseSelectAccount": "請選擇帳號",
   "provisioning": {
+    "actions": {
+      "allGroups": "補齊所有群組",
+      "default": "補齊預設金鑰",
+      "hint": "僅建立缺少的項目，保留現有金鑰。",
+      "title": "補齊金鑰"
+    },
     "cancelled": "已停止，已建立的金鑰會保留。",
+    "completed": "帳號金鑰補全完成：新建 {{created}} 個，已有金鑰涵蓋 {{covered}} 項。",
     "continue": "繼續處理",
+    "creating": "正在補全帳號金鑰：已建立 {{created}} / {{total}}…",
     "input": "{{label}} · {{current}} / {{total}}。填寫完所有參數後再建立金鑰。",
+    "preparing": "正在檢查帳號金鑰…",
     "progress": "已建立 {{created}} / {{total}}，已有涵蓋：{{covered}}。",
-    "title": "準備帳號金鑰"
+    "result": {
+      "cancelled": "金鑰補全已停止",
+      "covered": "已有涵蓋",
+      "created": "已建立",
+      "failed": "部分金鑰未能建立",
+      "next": "接下來",
+      "remaining": "未確認建立",
+      "resume": "可稍後重新補齊，現有金鑰會自動略過。",
+      "retained": "已建立和現有的金鑰均會保留。",
+      "uncertain": "部分金鑰需要核實"
+    }
   },
   "refreshTokenList": "重新整理金鑰列表",
   "repairMissingKeys": {
-    "action": "金鑰檢查",
+    "action": "檢查與修復",
     "actions": {
       "cancel": "取消檢查",
       "rerun": "重新檢查",
@@ -712,7 +731,7 @@
       "more_other": "以及另外 {{count}} 個",
       "title_other": "刪除 {{count}} 個異常金鑰？"
     },
-    "description": "檢查已儲存帳號的所有可用群組，為支援自動建立且缺少可用金鑰的群組補齊金鑰；其他問題會列在下方。",
+    "description": "檢查所選帳號的全部可用分組，在支援自動建立時補齊缺少的可用金鑰，其他問題會在下方列出。",
     "failureGuidance": {
       "aborted": "操作在完成前已取消；準備好後可重新檢查。",
       "authenticationFailed": "請重新登入或更新此帳號的憑證，然後重試。",
@@ -727,7 +746,7 @@
       "validationFailed": "請檢查並修正所需的金鑰設定，然後重試。"
     },
     "historyNote": "這裡顯示上次檢查結果；目前沒有正在執行的任務，可重新檢查。",
-    "initialNotice": "開始後會逐一檢查已儲存帳號的群組，並為支援自動建立的缺少群組補齊金鑰；已有可用金鑰的群組會略過。",
+    "initialNotice": "開始後會逐一檢查所選帳號的分組，並為支援自動建立的缺少分組補齊金鑰；已有可用金鑰的分組會略過。",
     "invalidKeys": {
       "badge": "異常",
       "deleteFailed": "刪除異常金鑰失敗",
@@ -813,6 +832,10 @@
     },
     "resultsTitle": "結果",
     "runningNote": "任務在後台執行；可關閉此對話框稍後查看，或在進度卡片中取消任務。",
+    "scope": {
+      "allSelected": "已選取全部帳號",
+      "label": "檢查帳號"
+    },
     "searchLabel": "搜尋",
     "searchPlaceholder": "搜尋帳號、金鑰名稱、群組、網域或網站類型...",
     "skipReasons": {
@@ -851,6 +874,9 @@
   },
   "showingCount_other": "顯示 {{count}} 個",
   "title": "金鑰管理",
+  "tools": {
+    "title": "金鑰工具"
+  },
   "totalKeys_other": "總計 {{count}} 個金鑰",
   "unifiedApiGuidance": {
     "headerBridge": "可將金鑰匯入自建閘道，或匯出至用戶端使用。"

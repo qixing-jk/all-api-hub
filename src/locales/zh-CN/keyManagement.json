@@ -692,15 +692,34 @@
   "pleaseAddAccount": "请先添加账号",
   "pleaseSelectAccount": "请选择账号",
   "provisioning": {
+    "actions": {
+      "allGroups": "补齐全部分组",
+      "default": "补齐默认密钥",
+      "hint": "仅创建缺失项，保留现有密钥。",
+      "title": "补齐密钥"
+    },
     "cancelled": "已停止，已创建的密钥会保留。",
+    "completed": "账号密钥补全完成：新建 {{created}} 个，已有密钥覆盖 {{covered}} 项。",
     "continue": "继续处理",
+    "creating": "正在补全账号密钥：已创建 {{created}} / {{total}}…",
     "input": "{{label}} · {{current}} / {{total}}。填写完所有参数后再创建密钥。",
+    "preparing": "正在检查账号密钥…",
     "progress": "已创建 {{created}} / {{total}}，已有覆盖：{{covered}}。",
-    "title": "准备账号密钥"
+    "result": {
+      "cancelled": "密钥补全已停止",
+      "covered": "已有覆盖",
+      "created": "已创建",
+      "failed": "部分密钥未能创建",
+      "next": "接下来",
+      "remaining": "未确认创建",
+      "resume": "可稍后重新补齐，已有密钥会自动跳过。",
+      "retained": "已创建和已有的密钥均会保留。",
+      "uncertain": "部分密钥需要核实"
+    }
   },
   "refreshTokenList": "刷新密钥列表",
   "repairMissingKeys": {
-    "action": "密钥检查",
+    "action": "检查与修复",
     "actions": {
       "cancel": "取消检查",
       "rerun": "重新检查",
@@ -712,7 +731,7 @@
       "more": "以及另外 {{count}} 个",
       "title": "删除 {{count}} 个异常密钥？"
     },
-    "description": "检查已保存账号的所有可用分组，为支持自动创建且缺少可用密钥的分组补齐密钥；其他问题会列在下方。",
+    "description": "检查所选账号的全部可用分组，在支持自动创建时补齐缺失的可用密钥，其他问题会在下方列出。",
     "failureGuidance": {
       "aborted": "操作在完成前已取消；准备好后可重新检查。",
       "authenticationFailed": "请重新登录或更新此账号的凭据，然后重试。",
@@ -727,7 +746,7 @@
       "validationFailed": "请检查并修正所需的密钥设置，然后重试。"
     },
     "historyNote": "这里显示上次检查结果；当前没有正在执行的任务，可重新检查。",
-    "initialNotice": "开始后会逐个检查已保存账号的分组，并为支持自动创建的缺失分组补齐密钥；已有可用密钥的分组会跳过。",
+    "initialNotice": "开始后会逐个检查所选账号的分组，并为支持自动创建的缺失分组补齐密钥；已有可用密钥的分组会跳过。",
     "invalidKeys": {
       "badge": "异常",
       "deleteFailed": "删除异常密钥失败",
@@ -813,6 +832,10 @@
     },
     "resultsTitle": "结果",
     "runningNote": "任务在后台运行；可关闭此对话框稍后查看，或在进度卡片中取消任务。",
+    "scope": {
+      "allSelected": "已选择全部账号",
+      "label": "检查账号"
+    },
     "searchLabel": "搜索",
     "searchPlaceholder": "搜索账号、密钥名称、分组、域名或站点类型...",
     "skipReasons": {
@@ -851,6 +874,9 @@
   },
   "showingCount": "显示 {{count}} 个",
   "title": "密钥管理",
+  "tools": {
+    "title": "密钥工具"
+  },
   "totalKeys": "总计 {{count}} 个密钥",
   "unifiedApiGuidance": {
     "headerBridge": "可将密钥导入自建网关，或导出到客户端使用。"

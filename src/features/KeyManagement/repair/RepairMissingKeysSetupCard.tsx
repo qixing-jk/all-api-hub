@@ -6,6 +6,8 @@ import { Alert, Button, Card, CardContent, CardFooter } from "~/components/ui"
 
 interface RepairMissingKeysSetupCardProps {
   isStarting: boolean
+  isStartDisabled?: boolean
+  accountScope?: ReactNode
   previousResultSummary?: ReactNode
   renameOption: ReactNode
   onStartRepair: () => void
@@ -17,6 +19,8 @@ interface RepairMissingKeysSetupCardProps {
  */
 export function RepairMissingKeysSetupCard({
   isStarting,
+  isStartDisabled,
+  accountScope,
   previousResultSummary,
   renameOption,
   onStartRepair,
@@ -38,6 +42,7 @@ export function RepairMissingKeysSetupCard({
           compact
           description={t("keyManagement:repairMissingKeys.remoteWriteNotice")}
         />
+        {accountScope}
         {renameOption}
         {previousResultSummary}
       </CardContent>
@@ -49,6 +54,7 @@ export function RepairMissingKeysSetupCard({
           type="button"
           onClick={onStartRepair}
           loading={isStarting}
+          disabled={isStartDisabled}
           className="w-full sm:w-auto"
         >
           {isStarting

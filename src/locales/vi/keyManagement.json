@@ -692,15 +692,34 @@
   "pleaseAddAccount": "Vui lòng thêm tài khoản trước",
   "pleaseSelectAccount": "Vui lòng chọn tài khoản",
   "provisioning": {
+    "actions": {
+      "allGroups": "Bổ sung tất cả nhóm còn thiếu",
+      "default": "Đảm bảo có khóa mặc định",
+      "hint": "Chỉ tạo khóa còn thiếu và giữ nguyên khóa hiện có.",
+      "title": "Bổ sung khóa còn thiếu"
+    },
     "cancelled": "Đã dừng. Các khóa đã tạo được giữ lại.",
+    "completed": "Khóa tài khoản đã sẵn sàng: đã tạo {{created}}, đã có khóa cho {{covered}} mục.",
     "continue": "Tiếp tục nhập thông tin",
+    "creating": "Đang bổ sung khóa tài khoản: đã tạo {{created}} / {{total}}…",
     "input": "{{label}} · {{current}} / {{total}}. Hoàn tất mọi thông tin trước khi tạo khóa.",
+    "preparing": "Đang kiểm tra khóa tài khoản…",
     "progress": "Đã tạo {{created}} / {{total}}; đã có: {{covered}}.",
-    "title": "Chuẩn bị khóa tài khoản"
+    "result": {
+      "cancelled": "Đã dừng bổ sung khóa",
+      "covered": "Đã có khóa",
+      "created": "Đã tạo",
+      "failed": "Không thể tạo một số khóa",
+      "next": "Bước tiếp theo",
+      "remaining": "Chưa xác nhận",
+      "resume": "Có thể bổ sung lại sau. Các khóa hiện có sẽ được bỏ qua.",
+      "retained": "Các khóa đã tạo và hiện có đều được giữ lại.",
+      "uncertain": "Một số khóa cần được xác minh"
+    }
   },
   "refreshTokenList": "Làm mới danh sách khóa",
   "repairMissingKeys": {
-    "action": "Kiểm tra khóa",
+    "action": "Kiểm tra và sửa chữa",
     "actions": {
       "cancel": "Hủy kiểm tra",
       "rerun": "Kiểm tra lại",
@@ -712,7 +731,7 @@
       "more_other": "Và {{count}} mục khác",
       "title_other": "Xóa {{count}} khóa bất thường?"
     },
-    "description": "Kiểm tra tất cả nhóm khả dụng của tài khoản đã lưu và tạo khóa dùng được còn thiếu khi có hỗ trợ tạo tự động. Các vấn đề khác được liệt kê bên dưới.",
+    "description": "Kiểm tra tất cả nhóm khả dụng của các tài khoản đã chọn và tạo khóa còn thiếu khi hỗ trợ tạo tự động. Các vấn đề khác được liệt kê bên dưới.",
     "failureGuidance": {
       "aborted": "Thao tác đã bị hủy trước khi hoàn tất. Hãy chạy lại kiểm tra khi bạn sẵn sàng.",
       "authenticationFailed": "Đăng nhập lại hoặc cập nhật thông tin xác thực của tài khoản này, rồi thử lại.",
@@ -727,7 +746,7 @@
       "validationFailed": "Kiểm tra và sửa các thiết lập khóa bắt buộc, rồi thử lại."
     },
     "historyNote": "Đây là kết quả kiểm tra trước đó. Hiện không có tác vụ nào đang chạy và bạn có thể kiểm tra lại.",
-    "initialNotice": "Kiểm tra từng nhóm của tài khoản đã lưu và tạo khóa còn thiếu khi được hỗ trợ. Bỏ qua các nhóm đã có khóa dùng được.",
+    "initialNotice": "Kiểm tra từng nhóm của các tài khoản đã chọn và tạo khóa còn thiếu khi được hỗ trợ. Các nhóm đã có khóa dùng được sẽ được bỏ qua.",
     "invalidKeys": {
       "badge": "Bất thường",
       "deleteFailed": "Xóa khóa bất thường thất bại",
@@ -813,6 +832,10 @@
     },
     "resultsTitle": "Kết quả",
     "runningNote": "Tác vụ đang chạy trong nền. Bạn có thể đóng hộp thoại này để kiểm tra sau hoặc hủy trong thẻ tiến trình.",
+    "scope": {
+      "allSelected": "Đã chọn tất cả tài khoản",
+      "label": "Tài khoản cần kiểm tra"
+    },
     "searchLabel": "Tìm kiếm",
     "searchPlaceholder": "Tìm tài khoản, tên khóa, nhóm, tên miền hoặc loại trang web...",
     "skipReasons": {
@@ -851,6 +874,9 @@
   },
   "showingCount_other": "Đang hiển thị {{count}}",
   "title": "Quản lý khóa",
+  "tools": {
+    "title": "Công cụ khóa"
+  },
   "totalKeys_other": "Tổng cộng {{count}} key",
   "unifiedApiGuidance": {
     "headerBridge": "Nhập khóa vào cổng API tự triển khai hoặc xuất sang ứng dụng khách."

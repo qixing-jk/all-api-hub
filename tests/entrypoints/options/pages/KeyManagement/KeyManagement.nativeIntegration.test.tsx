@@ -10,6 +10,7 @@ import KeyManagement from "~/entrypoints/options/pages/KeyManagement"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
 import type { AccountKeyResourceRouteTransition } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceController"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import * as provisioningUi from "~/features/TokenProvisioning/creation/AccountKeyProvisioningDialog"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
 import enKeyManagement from "~/locales/en/keyManagement.json"
 import zhKeyManagement from "~/locales/zh-CN/keyManagement.json"
@@ -719,6 +720,93 @@ function expectSecretActionTelemetry(
 
 describe("KeyManagement native page integration", () => {
   afterEach(() => vi.restoreAllMocks())
+
+  it.each(["default", "all-groups"] as const)(
+    "completes %s keys for the selected account and refreshes its inventory",
+    async (mode) => {
+      const user = userEvent.setup()
+      const account = createAccount({
+        id: "completion-account",
+        siteType: SITE_TYPES.NEW_API,
+      })
+      const { session, collection } = createNativeSession({
+        scopes: [createScope("default", "default", "Default", true)],
+      })
+      createDisplayAccountApiContextMock.mockReturnValue({
+        accountKeyResources: { open: vi.fn().mockResolvedValue(session) },
+        request: {},
+      })
+      legacyHarnessConfig = {
+        accounts: [account],
+        initialSelectedAccount: account.id,
+      }
+      vi.spyOn(
+        provisioningUi,
+        "AccountKeyProvisioningDialog",
+      ).mockImplementation(({ account: owner, mode: scope, onClose }) => (
+        <div role="dialog" aria-label="Key completion">
+          <p>
+            {owner.id}:{scope}
+          </p>
+          <button onClick={onClose}>Finish completion</button>
+        </div>
+      ))
+      render(<KeyManagement routeParams={{ accountId: account.id }} />)
+      await waitFor(() => expect(collection.list).toHaveBeenCalled())
+      await user.click(
+        await screen.findByRole("button", {
+          name: "keyManagement:tools.title",
+        }),
+      )
+      await user.click(
+        screen.getByRole("menuitem", {
+          name: `keyManagement:provisioning.actions.${mode === "default" ? "default" : "allGroups"}`,
+        }),
+      )
+      expect(
+        await screen.findByRole("dialog", { name: "Key completion" }),
+      ).toHaveTextContent(`${account.id}:${mode}`)
+      collection.list.mockClear()
+      await user.click(
+        screen.getByRole("button", { name: "Finish completion" }),
+      )
+      await waitFor(() => expect(collection.list).toHaveBeenCalled())
+      expect(
+        screen.queryByRole("dialog", { name: "Key completion" }),
+      ).not.toBeInTheDocument()
+    },
+  )
+
+  it("keeps completion scoped to a selected account even when the all-account filter has one account", async () => {
+    const account = createAccount({
+      id: "filtered-account",
+      siteType: SITE_TYPES.NEW_API,
+    })
+    const { session } = createNativeSession({
+      scopes: [createScope("default", "default", "Default", true)],
+    })
+    createDisplayAccountApiContextMock.mockReturnValue({
+      accountKeyResources: { open: vi.fn().mockResolvedValue(session) },
+      request: {},
+    })
+    legacyHarnessConfig = {
+      accounts: [account],
+      initialSelectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+      allAccountsFilterAccountIds: [account.id],
+    }
+    render(<KeyManagement />)
+    await waitFor(() => expect(accountSelectorPanelPropsSpy).toHaveBeenCalled())
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:provisioning.actions.title",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "keyManagement:repairMissingKeys.action",
+      }),
+    ).toBeVisible()
+  })
 
   beforeEach(() => {
     accountKeyResourceControllerOptionsSpy.mockReset()
@@ -1572,7 +1660,7 @@ describe("KeyManagement native page integration", () => {
       ).toBeVisible()
       expect(
         screen.getByRole("button", {
-          name: "keyManagement:repairMissingKeys.action",
+          name: "keyManagement:tools.title",
         }),
       ).toBeVisible()
       expect(

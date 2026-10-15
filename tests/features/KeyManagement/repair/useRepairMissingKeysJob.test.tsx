@@ -131,6 +131,37 @@ describe("useRepairMissingKeysJob", () => {
     vi.clearAllMocks()
   })
 
+  it("sends the chosen account ids to the background and prevents an empty selection from starting", async () => {
+    sendAccountKeyRepairMessageMock.mockResolvedValue({
+      success: true,
+      data: buildProgress(),
+    })
+    const { result, rerender } = renderHook(
+      ({ accountIds }) =>
+        useRepairMissingKeysJob({
+          accounts: [buildAccount()],
+          accountIds,
+          isOpen: true,
+          startOnOpen: false,
+          t: testI18n.t,
+        }),
+      { initialProps: { accountIds: ["account-1"] } },
+    )
+    await waitFor(() => expect(result.current?.progress).toBeTruthy())
+    await act(async () => result.current.handleStartAudit())
+    expect(sendAccountKeyRepairMessageMock).toHaveBeenCalledWith(
+      AccountKeyRepairMessageTypes.Start,
+      { renameAutoTemplateTokens: true, accountIds: ["account-1"] },
+    )
+    sendAccountKeyRepairMessageMock.mockClear()
+    rerender({ accountIds: [] })
+    await act(async () => result.current.handleStartAudit())
+    expect(sendAccountKeyRepairMessageMock).not.toHaveBeenCalledWith(
+      AccountKeyRepairMessageTypes.Start,
+      expect.anything(),
+    )
+  })
+
   it("ignores a delayed older job without replacing the current job", async () => {
     const current = buildProgress({
       jobId: "new",

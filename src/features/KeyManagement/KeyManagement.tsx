@@ -80,6 +80,8 @@ export default function KeyManagement(props: {
     "apiCredentialProfiles",
   ])
   const {
+    keyProvisioning,
+    provisioningAccount,
     headerState,
     isRepairOpen,
     isAddTokenOpen,
@@ -175,6 +177,12 @@ export default function KeyManagement(props: {
   return (
     <div className="py-density-4 sm:py-density-6 px-4 sm:px-6">
       <Header
+        onProvisionKeys={
+          provisioningAccount
+            ? (mode) => keyProvisioning.open(provisioningAccount, mode)
+            : undefined
+        }
+        isProvisioningKeys={keyProvisioning.isRunning}
         onAddToken={handleRequestAddToken}
         onRepairMissingKeys={handleRepairMissingKeys}
         onRefresh={handleRefreshTokens}
@@ -444,6 +452,11 @@ export default function KeyManagement(props: {
         onClose={handleCloseRepairMissingKeys}
         accounts={displayData}
         startOnOpen={repairStartOnOpen}
+        initialAccountId={
+          selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
+            ? undefined
+            : selectedAccount || undefined
+        }
       />
 
       <AccountKeyResourceEditorDialog
@@ -508,6 +521,7 @@ export default function KeyManagement(props: {
         focusWorkflowId={nativeKeys.focusWorkflowId ?? undefined}
       />
 
+      {keyProvisioning.dialog}
       <NewApiManagedVerificationDialog
         isOpen={verification.dialogState.isOpen}
         step={verification.dialogState.step}

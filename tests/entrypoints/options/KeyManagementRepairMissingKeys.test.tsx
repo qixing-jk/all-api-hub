@@ -1,3 +1,5 @@
+import userEvent from "@testing-library/user-event"
+import { http, HttpResponse } from "msw"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -20,6 +22,7 @@ import {
   ACCOUNT_KEY_REPAIR_SKIP_REASONS,
   type AccountKeyRepairProgress,
 } from "~/types/accountKeyAutoProvisioning"
+import { server } from "~~/tests/msw/server"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import {
   act,
@@ -40,6 +43,7 @@ const { sendRuntimeActionMessageMock, runtimeMessageState } = vi.hoisted(
 const { mockOpenDefaultTokenQuickCreateDialogForAccount } = vi.hoisted(() => ({
   mockOpenDefaultTokenQuickCreateDialogForAccount: vi.fn(),
 }))
+const pageSelection = vi.hoisted(() => ({ accountId: "" }))
 const {
   mockTrackProductAnalyticsActionCompleted,
   mockTrackProductAnalyticsActionStarted,
@@ -129,7 +133,7 @@ vi.mock("~/features/KeyManagement/inventory/useKeyManagement", () => ({
         authType: "access_token",
       },
     ],
-    selectedAccount: "",
+    selectedAccount: pageSelection.accountId,
     setSelectedAccount: vi.fn(),
     searchTerm: "",
     setSearchTerm: vi.fn(),
@@ -562,57 +566,92 @@ function createDeferred<T>() {
   return { promise, resolve, reject }
 }
 
+async function openKeyCheck() {
+  const user = userEvent.setup()
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:repairMissingKeys.action",
+      }) ?? screen.queryByRole("button", { name: "keyManagement:tools.title" }),
+    ).toBeInTheDocument(),
+  )
+  const direct = screen.queryByRole("button", {
+    name: "keyManagement:repairMissingKeys.action",
+  })
+  if (direct) {
+    await user.click(direct)
+    return
+  }
+  await user.click(
+    await screen.findByRole("button", { name: "keyManagement:tools.title" }),
+  )
+  await user.click(
+    screen.getByRole("menuitem", {
+      name: "keyManagement:repairMissingKeys.action",
+    }),
+  )
+}
+
 describe("KeyManagement repair missing keys entry point", () => {
   beforeEach(() => {
+    pageSelection.accountId = ""
     mockOpenDefaultTokenQuickCreateDialogForAccount.mockReset()
     mockTrackProductAnalyticsActionCompleted.mockReset()
     mockTrackProductAnalyticsActionStarted.mockReset()
   })
 
-  it("opens the key check dialog without starting until the user confirms", async () => {
-    sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
-      if (message === AccountKeyRepairMessageTypes.GetProgress) {
-        return { success: true, data: idleProgress }
-      }
-      if (message === AccountKeyRepairMessageTypes.Start) {
-        return { success: true, data: startProgress }
-      }
-      return { success: false }
-    })
-
-    render(<KeyManagement />)
-
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
-      }),
-    )
-
-    expect(
-      screen.getByText("keyManagement:repairMissingKeys.initialNotice"),
-    ).toBeInTheDocument()
-    expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
-      AccountKeyRepairMessageTypes.GetProgress,
-      undefined,
-    )
-    expect(sendRuntimeActionMessageMock).not.toHaveBeenCalledWith(
-      AccountKeyRepairMessageTypes.Start,
-      undefined,
-    )
-
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "keyManagement:repairMissingKeys.actions.start",
-      }),
-    )
-
-    await waitFor(() => {
-      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
-        AccountKeyRepairMessageTypes.Start,
-        { renameAutoTemplateTokens: true },
+  it.each([
+    ["", ["account-enabled", "account-enabled-2"]],
+    ["account-enabled", ["account-enabled"]],
+  ])(
+    "preselects the page scope %s and starts only after confirmation",
+    async (accountId, expectedAccountIds) => {
+      pageSelection.accountId = accountId
+      server.use(
+        http.get("https://enabled.example.com/api/token/", () =>
+          HttpResponse.json({ success: true, data: [] }),
+        ),
       )
-    })
-  })
+      sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
+        if (message === AccountKeyRepairMessageTypes.GetProgress) {
+          return { success: true, data: idleProgress }
+        }
+        if (message === AccountKeyRepairMessageTypes.Start) {
+          return { success: true, data: startProgress }
+        }
+        return { success: false }
+      })
+
+      render(<KeyManagement />)
+
+      await openKeyCheck()
+
+      expect(
+        screen.getByText("keyManagement:repairMissingKeys.initialNotice"),
+      ).toBeInTheDocument()
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+        AccountKeyRepairMessageTypes.GetProgress,
+        undefined,
+      )
+      expect(sendRuntimeActionMessageMock).not.toHaveBeenCalledWith(
+        AccountKeyRepairMessageTypes.Start,
+        undefined,
+      )
+
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: "keyManagement:repairMissingKeys.actions.start",
+        }),
+      )
+
+      await waitFor(() => {
+        expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+          AccountKeyRepairMessageTypes.Start,
+          { renameAutoTemplateTokens: true, accountIds: expectedAccountIds },
+        )
+      })
+    },
+  )
 
   it("ignores repeated start clicks while the first start request is pending", async () => {
     const startRequest = createDeferred<{
@@ -632,11 +671,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     render(<KeyManagement />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
-      }),
-    )
+    await openKeyCheck()
 
     const startButton = screen.getByRole("button", {
       name: "keyManagement:repairMissingKeys.actions.start",
@@ -648,7 +683,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     await waitFor(() => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
         AccountKeyRepairMessageTypes.Start,
-        { renameAutoTemplateTokens: true },
+        expect.objectContaining({ renameAutoTemplateTokens: true }),
       )
     })
     expect(
@@ -681,11 +716,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     render(<KeyManagement />)
 
-    const repairButton = await screen.findByRole("button", {
-      name: "keyManagement:repairMissingKeys.action",
-    })
-
-    fireEvent.click(repairButton)
+    await openKeyCheck()
     fireEvent.click(
       screen.getByRole("button", {
         name: /keyManagement:repairMissingKeys\.actions\.start/,
@@ -695,7 +726,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     await waitFor(() => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
         AccountKeyRepairMessageTypes.Start,
-        { renameAutoTemplateTokens: true },
+        expect.objectContaining({ renameAutoTemplateTokens: true }),
       )
     })
 
@@ -705,7 +736,7 @@ describe("KeyManagement repair missing keys entry point", () => {
       }),
     )
 
-    fireEvent.click(repairButton)
+    await openKeyCheck()
     const pendingStartButton = screen.getByRole("button", {
       name: "common:status.starting",
     })
@@ -748,10 +779,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     render(<KeyManagement />)
 
-    const repairButton = await screen.findByRole("button", {
-      name: "keyManagement:repairMissingKeys.action",
-    })
-    fireEvent.click(repairButton)
+    await openKeyCheck()
 
     expect(
       screen.getByText("keyManagement:repairMissingKeys.description"),
@@ -766,7 +794,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     await waitFor(() => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
         AccountKeyRepairMessageTypes.Start,
-        { renameAutoTemplateTokens: true },
+        expect.objectContaining({ renameAutoTemplateTokens: true }),
       )
     })
 
@@ -816,11 +844,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     render(<KeyManagement />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
-      }),
-    )
+    await openKeyCheck()
     fireEvent.click(
       screen.getByRole("button", {
         name: "keyManagement:repairMissingKeys.actions.start",
@@ -830,7 +854,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     await waitFor(() => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
         AccountKeyRepairMessageTypes.Start,
-        { renameAutoTemplateTokens: true },
+        expect.objectContaining({ renameAutoTemplateTokens: true }),
       )
     })
     expect(
@@ -885,11 +909,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     render(<KeyManagement />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
-      }),
-    )
+    await openKeyCheck()
 
     expect(
       await screen.findByText(
@@ -937,11 +957,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     render(<KeyManagement />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
-      }),
-    )
+    await openKeyCheck()
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -952,7 +968,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     await waitFor(() => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
         AccountKeyRepairMessageTypes.Start,
-        { renameAutoTemplateTokens: true },
+        expect.objectContaining({ renameAutoTemplateTokens: true }),
       )
     })
 
@@ -991,11 +1007,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     render(<KeyManagement />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
-      }),
-    )
+    await openKeyCheck()
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -1003,9 +1015,10 @@ describe("KeyManagement repair missing keys entry point", () => {
       }),
     )
 
-    expect(await screen.findByText("Enabled Site")).toBeInTheDocument()
     expect(
-      screen.getByText("keyManagement:repairMissingKeys.skipReasons.noneAuth"),
+      await screen.findByText(
+        "keyManagement:repairMissingKeys.skipReasons.noneAuth",
+      ),
     ).toBeInTheDocument()
   })
 
@@ -1022,11 +1035,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     render(<KeyManagement />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
-      }),
-    )
+    await openKeyCheck()
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -1037,7 +1046,7 @@ describe("KeyManagement repair missing keys entry point", () => {
     await waitFor(() => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
         AccountKeyRepairMessageTypes.Start,
-        { renameAutoTemplateTokens: true },
+        expect.objectContaining({ renameAutoTemplateTokens: true }),
       )
     })
 
@@ -1084,11 +1093,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     render(<KeyManagement />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
-      }),
-    )
+    await openKeyCheck()
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -1128,11 +1133,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     render(<KeyManagement />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
-      }),
-    )
+    await openKeyCheck()
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -1166,11 +1167,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     render(<KeyManagement />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
-      }),
-    )
+    await openKeyCheck()
 
     const viewSwitch = await screen.findByRole("group", {
       name: "keyManagement:repairMissingKeys.views.label",
@@ -1237,19 +1234,13 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     render(<KeyManagement />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
-      }),
-    )
+    await openKeyCheck()
 
-    expect(await screen.findByText("Enabled Site")).toBeInTheDocument()
+    const details = await screen.findByRole("button", {
+      name: "keyManagement:actions.detailsFor",
+    })
     expect(screen.queryByText("legacy")).not.toBeInTheDocument()
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "keyManagement:actions.detailsFor",
-      }),
-    )
+    fireEvent.click(details)
     expect(screen.getByText("legacy")).toBeInTheDocument()
 
     fireEvent.click(
@@ -1285,11 +1276,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     render(<KeyManagement />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
-      }),
-    )
+    await openKeyCheck()
 
     fireEvent.click(
       await screen.findByRole("button", {
@@ -1340,11 +1327,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     render(<KeyManagement />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
-      }),
-    )
+    await openKeyCheck()
     fireEvent.click(
       await screen.findByRole("button", {
         name: "keyManagement:repairMissingKeys.views.invalidKeys",
@@ -1461,11 +1444,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     render(<KeyManagement />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
-      }),
-    )
+    await openKeyCheck()
     fireEvent.click(
       await screen.findByRole("button", {
         name: "keyManagement:repairMissingKeys.views.invalidKeys",
@@ -1507,11 +1486,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     render(<KeyManagement />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
-      }),
-    )
+    await openKeyCheck()
     fireEvent.click(
       await screen.findByRole("button", {
         name: "keyManagement:repairMissingKeys.views.invalidKeys",
@@ -1558,11 +1533,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     render(<KeyManagement />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
-      }),
-    )
+    await openKeyCheck()
     fireEvent.click(
       await screen.findByRole("button", {
         name: "keyManagement:repairMissingKeys.views.invalidKeys",
@@ -1612,11 +1583,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     render(<KeyManagement />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
-      }),
-    )
+    await openKeyCheck()
     fireEvent.click(
       await screen.findByRole("button", {
         name: "keyManagement:repairMissingKeys.views.invalidKeys",
@@ -1694,11 +1661,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     render(<KeyManagement />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
-      }),
-    )
+    await openKeyCheck()
     fireEvent.click(
       await screen.findByRole("button", {
         name: "keyManagement:repairMissingKeys.views.invalidKeys",
@@ -1750,11 +1713,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     render(<KeyManagement />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
-      }),
-    )
+    await openKeyCheck()
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -1814,11 +1773,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     render(<KeyManagement />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
-      }),
-    )
+    await openKeyCheck()
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -1862,11 +1817,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     render(<KeyManagement />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
-      }),
-    )
+    await openKeyCheck()
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -1912,11 +1863,7 @@ describe("KeyManagement repair missing keys entry point", () => {
 
     render(<KeyManagement />)
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
-      }),
-    )
+    await openKeyCheck()
 
     fireEvent.click(
       screen.getByRole("button", {
