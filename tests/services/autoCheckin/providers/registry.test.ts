@@ -67,7 +67,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(16)
+    expect(registrationContracts).toHaveLength(17)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -289,6 +289,7 @@ describe("autoCheckinMethodRegistry", () => {
       AUTO_CHECKIN_METHOD_IDS.XiaobaiCodeDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.ClawhudDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn,
+      AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
     ])
     expect(
       autoCheckinMethodRegistry
