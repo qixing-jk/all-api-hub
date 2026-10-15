@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
+import { fetchSidruneDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/sidruneCheckIn"
+import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import { executeSelectedCheckIn } from "~/services/checkin/autoCheckin/methods"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
@@ -233,6 +235,103 @@ describe("Sidrune welfare check-in", () => {
     ).toMatchObject({ outcome: "unknown" })
     expect(fetchApiResponse).not.toHaveBeenCalled()
   })
+
+  it.each([
+    {
+      ok: false,
+      status: 429,
+      body: {
+        code: "RATE_LIMITED",
+        message: "Slow down",
+        reason: "daily_limit",
+      },
+      expected: {
+        code: API_ERROR_CODES.HTTP_429,
+        statusCode: 429,
+        message: "Slow down",
+        upstreamCode: "daily_limit",
+      },
+    },
+    {
+      ok: false,
+      status: 503,
+      body: null,
+      expected: {
+        code: API_ERROR_CODES.HTTP_OTHER,
+        statusCode: 503,
+        message: "Sidrune welfare request failed",
+        upstreamCode: "503",
+      },
+    },
+    {
+      ok: true,
+      status: 200,
+      body: { code: 1001 },
+      expected: {
+        code: API_ERROR_CODES.BUSINESS_ERROR,
+        statusCode: undefined,
+        message: "Sidrune welfare request failed",
+        upstreamCode: "1001",
+      },
+    },
+  ])(
+    "preserves HTTP and business failure evidence: $status / $expected.code",
+    async ({ ok, status, body, expected }) => {
+      vi.mocked(fetchApiResponse).mockResolvedValue({
+        ok,
+        status,
+        headers: {},
+        body,
+      })
+      await expect(
+        fetchSidruneDailyCheckInStatus(request),
+      ).rejects.toMatchObject({
+        ...expected,
+        endpoint: "/api/v1/welfare/profile",
+      })
+      expect(fetchApiResponse).toHaveBeenCalledOnce()
+      expect(fetchApiResponse).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          options: { method: "GET", cache: "no-store" },
+        }),
+      )
+    },
+  )
+
+  it.each([
+    undefined,
+    {
+      outcome: "known",
+      availability: "disabled",
+      today: "not_checked",
+      evidence: { source: "probe", observedAt: 100 },
+    } as const,
+    {
+      outcome: "known",
+      availability: "enabled",
+      today: "checked",
+      evidence: { source: "probe", observedAt: 100 },
+    } as const,
+  ])(
+    "rejects direct mutation without eligible status proof: %j",
+    async (statusProof) => {
+      const entry = autoCheckinMethodRegistry.resolveById(methodId)!
+      await expect(
+        entry.provider.checkIn(account(), {
+          statusProof,
+          tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+          protectionBypassExecution: userCommandExecution(
+            PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+          ),
+        }),
+      ).resolves.toMatchObject({
+        status: "failed",
+        reasonCode: "status_unavailable",
+      })
+      expect(fetchApiResponse).not.toHaveBeenCalled()
+    },
+  )
 
   it.each([true, false])(
     "reconciles a lost response with status without replay (checked=%s)",
