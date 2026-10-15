@@ -105,7 +105,7 @@ An adapter object, page navigation or passing mock alone does not close implemen
 
 ### Documentation and matrix synchronization
 
-- [ ] **Public documentation and README synchronization**: When adding, extending, or updating an account site, managed gateway, or export integration, update the matrix rows and feature sections in `docs/docs/supported-sites.md` (or `supported-export-tools.md`) across all locales (`zh`, `en`, `ja`), and synchronize root compatibility lists in `README.md`, `README_CN.md`, and `README_JA.md`.
+- [ ] **Public documentation and README synchronization**: Apply [public catalog conventions](../../../../docs/agents/site-integrations.md#public-catalog-conventions). Synchronize affected support tables and root compatibility lists across locales when catalog contents or advertised support boundaries change; otherwise record that existing entries remain accurate. Put capability and workflow details in the relevant usage guide, not catalog names or introductions.
 
 ### Final coverage
 

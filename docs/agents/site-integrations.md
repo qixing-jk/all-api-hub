@@ -113,13 +113,22 @@ Update the owner of the information when its contract changes:
 | Reusable integration procedures | The relevant integration skill reference; shared module invariants belong in the module's existing README |
 | Deployment observations, versions, build hashes, sample rewards and live validation results | The current task's spec and evidence index; raw captures remain local under the [evidence workflow](../../.agents/skills/add-site-integration/references/evidence-and-validation.md) |
 | User actions, supported features and limitations | The relevant public feature/usage page; update affected translations together |
-| Public site / gateway / tool support matrices and root READMEs | [docs/docs/supported-sites.md](../docs/supported-sites.md) and [supported-export-tools.md](../docs/supported-export-tools.md) across all locales (`zh`, `en`, `ja`), plus root `README.md`, `README_CN.md`, and `README_JA.md`. Update these synchronously whenever integrations change |
+| Public site / gateway / tool support matrices and root READMEs | [docs/docs/supported-sites.md](../docs/supported-sites.md) and [supported-export-tools.md](../docs/supported-export-tools.md) across all locales (`zh`, `en`, `ja`), plus root `README.md`, `README_CN.md`, and `README_JA.md`. Synchronize affected entries when catalog contents change, following the public catalog conventions below |
 
 Keep source comments when external evidence determines authentication, endpoint selection, unsupported capabilities, compatibility boundaries, secret handling or deliberate non-fallback behavior. Record the source and the specific constraint; do not narrate implementation already clear from local types and tests.
 
 Before removing an existing note, check that its decision-critical rationale and source remain discoverable in the appropriate owner. Implementation alone does not explain why a constraint exists; preserve any missing rationale before deleting the note.
 
-Use the relationship overview for upstream sources and the [supported-sites page](../docs/supported-sites.md) for provider and project introductions. Catalog descriptions explain the upstream service, project lineage and relationships; put extension capabilities, limitations and workflow details in integration or service guides. Verify behavior against the target deployment when it differs from upstream; record the deployment/version scope with the task evidence. If missing evidence blocks a protocol decision, identify the missing contract and continue independent work.
+### Public catalog conventions
+
+Use the relationship overview for upstream sources and the [supported-sites page](../docs/supported-sites.md) for provider and project introductions. Apply these rules to support catalogs and root README compatibility lists:
+
+- Match sibling entries in naming, formatting and level of detail. Name cells contain the public site or project name, without appended domains, internal identifiers, authentication methods or implementation notes. Use a short regional qualifier only when needed to distinguish separately listed platforms.
+- Do not automatically promote investigation or deployment URLs into public catalog links. Match comparable entries: when those use plain names and no official link, keep that presentation rather than adding the adapted deployment's domain. Retain investigation URLs in developer references or local evidence. For deliberately curated official references, use the existing link column or linked-name convention; do not repeat hostnames as name suffixes.
+- Keep introductions about the upstream service, project lineage and relationships. Do not append deployment-specific check-in rules, reward amounts or units, reset times, eligibility, authentication procedures, endpoint behavior, or adaptation limitations. User actions and capability details belong in the relevant integration or service guide; protocol rationale belongs beside its code, and live observations belong in local task evidence.
+- Update catalogs when an entry, name, link, introduction or advertised support boundary changes. A capability-only adaptation does not require artificial catalog edits while existing entries remain accurate. Check the affected locale counterparts and root compatibility lists together before completion.
+
+Verify behavior against the target deployment when it differs from upstream; record the deployment/version scope with the task evidence. If missing evidence blocks a protocol decision, identify the missing contract and continue independent work.
 
 Maintain this guide for source ownership, shared conventions, type relationships and upstream references. Keep a concise entry for each type and meaningful deployment boundary; individual endpoint additions and live runs do not require a new technical profile here.
 
