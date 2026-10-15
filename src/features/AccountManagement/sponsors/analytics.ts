@@ -9,7 +9,6 @@ import {
 } from "~/features/AccountManagement/sponsors/types"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
-  PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
@@ -19,6 +18,7 @@ import {
   PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsActionId,
+  type ProductAnalyticsEntrypoint,
   type ProductAnalyticsSponsorActionAvailability,
   type ProductAnalyticsSponsorCatalogSource,
   type ProductAnalyticsSponsorSupportStatus,
@@ -91,11 +91,13 @@ export function trackSponsorRecommendationClick({
   item,
   itemCount,
   surface,
+  entrypoint,
 }: {
   actionKind: SponsorRecommendationActionKind
   item: SponsorRecommendation
   itemCount: number
   surface: SponsorRecommendationSurface
+  entrypoint: ProductAnalyticsEntrypoint
 }) {
   void trackProductAnalyticsEvent(
     PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
@@ -103,7 +105,7 @@ export function trackSponsorRecommendationClick({
       feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.SponsorRecommendations,
       action_id: SPONSOR_ACTION_TO_PRODUCT_ANALYTICS_ACTION[actionKind],
       surface_id: resolveProductAnalyticsSponsorSurface(surface),
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      entrypoint,
       result: PRODUCT_ANALYTICS_RESULTS.Success,
       item_count: itemCount,
       sponsor_action_kind: actionKind,

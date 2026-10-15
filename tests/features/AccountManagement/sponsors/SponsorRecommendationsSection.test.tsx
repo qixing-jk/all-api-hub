@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import {
   SPONSOR_CATALOG_SCHEMA_VERSION,
   SPONSOR_RECOMMENDATION_SURFACES,
@@ -17,6 +18,7 @@ import {
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { PRODUCT_ANALYTICS_EVENTS } from "~/services/productAnalytics/contracts"
 import { AuthTypeEnum } from "~/types"
+import * as browserUtils from "~/utils/browser"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const { recordSponsorSummaryMock, trackProductAnalyticsEventMock } = vi.hoisted(
@@ -132,6 +134,7 @@ function createUnsupportedSponsor(
 
 describe("SponsorRecommendationsSection", () => {
   beforeEach(() => {
+    vi.restoreAllMocks()
     vi.unstubAllGlobals()
     trackProductAnalyticsEventMock.mockReset()
     recordSponsorSummaryMock.mockReset()
@@ -181,6 +184,66 @@ describe("SponsorRecommendationsSection", () => {
     expect(
       screen.queryByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPrimaryAction),
     ).not.toBeInTheDocument()
+  })
+
+  it.each([
+    [false, false, "options"],
+    [true, false, "popup"],
+    [false, true, "sidepanel"],
+  ] as const)(
+    "attributes sponsor clicks to the runtime entrypoint (popup=%s, sidepanel=%s)",
+    async (inPopup, inSidePanel, entrypoint) => {
+      vi.spyOn(browserUtils, "isExtensionPopup").mockReturnValue(inPopup)
+      vi.spyOn(browserUtils, "isExtensionSidePanel").mockReturnValue(
+        inSidePanel,
+      )
+      vi.stubGlobal("open", vi.fn())
+      renderSection([createSupportedSponsor()])
+      await userEvent
+        .setup()
+        .click(
+          await screen.findByTestId(
+            ACCOUNT_MANAGEMENT_TEST_IDS.sponsorContinueAddAccountAction,
+          ),
+        )
+
+      expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+        expect.objectContaining({ entrypoint }),
+      )
+    },
+  )
+
+  it("preserves a caller's explicit sponsor analytics entrypoint", async () => {
+    vi.spyOn(browserUtils, "isExtensionPopup").mockReturnValue(true)
+    vi.stubGlobal("open", vi.fn())
+    render(
+      <ProductAnalyticsScope entrypoint="sidepanel">
+        <SponsorRecommendationsSection
+          surface={SPONSOR_RECOMMENDATION_SURFACES.Newcomer}
+          items={[createSupportedSponsor()]}
+          onContinueAddAccount={vi.fn()}
+          onOpenBookmarkManager={vi.fn()}
+          onOpenApiCredentialProfiles={vi.fn()}
+        />
+      </ProductAnalyticsScope>,
+      {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+        withReleaseUpdateStatusProvider: false,
+      },
+    )
+    await userEvent
+      .setup()
+      .click(
+        await screen.findByTestId(
+          ACCOUNT_MANAGEMENT_TEST_IDS.sponsorContinueAddAccountAction,
+        ),
+      )
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      expect.objectContaining({ entrypoint: "sidepanel" }),
+    )
   })
 
   it("omits optional auth type from sponsor add-account prefill when none is provided", async () => {

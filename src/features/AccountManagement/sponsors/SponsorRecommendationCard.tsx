@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { ApiCredentialLibraryIcon } from "~/components/icons/productIcons"
 import { Badge, IconButton } from "~/components/ui"
+import { useProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import {
   SPONSOR_RECOMMENDATION_ACTION_KINDS,
   trackSponsorRecommendationClick,
@@ -23,6 +24,8 @@ import {
 } from "~/features/AccountManagement/sponsors/types"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { cn } from "~/lib/utils"
+import { PRODUCT_ANALYTICS_ENTRYPOINTS } from "~/services/productAnalytics/contracts"
+import { isExtensionPopup, isExtensionSidePanel } from "~/utils/browser"
 
 interface SponsorRecommendationCardProps {
   item: SponsorRecommendation
@@ -157,6 +160,14 @@ export function SponsorRecommendationCard({
   onOpenApiCredentialProfiles,
 }: SponsorRecommendationCardProps) {
   const { t } = useTranslation("account")
+  const scope = useProductAnalyticsScope()
+  const entrypoint =
+    scope.entrypoint ??
+    (isExtensionSidePanel()
+      ? PRODUCT_ANALYTICS_ENTRYPOINTS.Sidepanel
+      : isExtensionPopup()
+        ? PRODUCT_ANALYTICS_ENTRYPOINTS.Popup
+        : PRODUCT_ANALYTICS_ENTRYPOINTS.Options)
 
   const trackClick = (actionKind: SponsorRecommendationActionKind) => {
     trackSponsorRecommendationClick({
@@ -164,6 +175,7 @@ export function SponsorRecommendationCard({
       item,
       itemCount,
       surface,
+      entrypoint,
     })
   }
 
