@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import userEvent from "@testing-library/user-event"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   SPONSOR_CATALOG_SCHEMA_VERSION,
@@ -11,7 +12,13 @@ import {
   type SponsorRecommendation,
 } from "~/features/AccountManagement/sponsors/types"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import { openFullAccountManagerPage } from "~/utils/navigation"
 import { render, screen } from "~~/tests/test-utils/render"
+
+vi.mock("~/utils/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/navigation")>()),
+  openFullAccountManagerPage: vi.fn(),
+}))
 
 const { mockSponsorRecommendationItems, mockUseSponsorRecommendations } =
   vi.hoisted(() => ({
@@ -62,8 +69,11 @@ function createSponsorRecommendation(): SponsorRecommendation {
 describe("PopupSponsorRecommendationsSection", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.spyOn(window, "open").mockReturnValue(null)
     setSponsorRecommendations([])
   })
+
+  afterEach(() => vi.restoreAllMocks())
 
   it("returns null when no recommendations are present", () => {
     const { container } = render(
@@ -114,5 +124,48 @@ describe("PopupSponsorRecommendationsSection", () => {
 
     const wrapper = container.firstChild as HTMLElement
     expect(wrapper).toHaveClass("mt-density-5", "pt-density-4")
+  })
+
+  it("opens account management when a supported recommendation has no local dialog", async () => {
+    const user = userEvent.setup()
+    setSponsorRecommendations([createSponsorRecommendation()])
+    render(
+      <PopupSponsorRecommendationsSection
+        surface={SPONSOR_RECOMMENDATION_SURFACES.Newcomer}
+      />,
+    )
+
+    await user.click(
+      await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sponsorContinueAddAccountAction,
+      ),
+    )
+    expect(openFullAccountManagerPage).toHaveBeenCalledOnce()
+  })
+
+  it("uses the supplied account handler with the sponsor prefill", async () => {
+    const user = userEvent.setup()
+    const onContinueAddAccount = vi.fn()
+    setSponsorRecommendations([createSponsorRecommendation()])
+    render(
+      <PopupSponsorRecommendationsSection
+        surface={SPONSOR_RECOMMENDATION_SURFACES.Newcomer}
+        onContinueAddAccount={onContinueAddAccount}
+      />,
+    )
+
+    await user.click(
+      await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sponsorContinueAddAccountAction,
+      ),
+    )
+    expect(onContinueAddAccount).toHaveBeenCalledWith(
+      expect.objectContaining({
+        siteUrl: "https://example.com/sponsor",
+        source: "sponsor",
+        sponsorId: "sponsor-1",
+      }),
+    )
+    expect(openFullAccountManagerPage).not.toHaveBeenCalled()
   })
 })

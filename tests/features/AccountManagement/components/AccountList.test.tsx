@@ -803,6 +803,19 @@ describe("AccountList", () => {
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
   })
 
+  it("can hide the empty-state action while retaining onboarding guidance", () => {
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({ sortedData: [], displayData: [] }),
+    )
+    render(<AccountList showAddAccountAction={false} />)
+
+    expect(
+      screen.queryByRole("button", { name: "account:addFirstAccount" }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText("account:emptyStateDescription")).toBeVisible()
+    expect(screen.getByTestId("newcomer-sponsor-recommendations")).toBeVisible()
+  })
+
   it("tracks the empty-state create-account action before opening the dialog", async () => {
     const user = userEvent.setup()
     mockUseAccountDataContext.mockReturnValue(
