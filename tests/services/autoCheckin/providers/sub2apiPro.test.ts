@@ -122,6 +122,18 @@ vi.mock(
 )
 
 vi.mock(
+  "~/services/apiService/sub2api/checkin/sidruneCheckIn",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/checkin/sidruneCheckIn")
+    >()),
+    fetchSidruneDailyCheckInStatus: vi
+      .fn()
+      .mockRejectedValue(new ApiError("unsupported Sidrune protocol", 404)),
+  }),
+)
+
+vi.mock(
   "~/services/apiService/sub2api/checkin/daiguaCheckIn",
   async (importOriginal) => ({
     ...(await importOriginal<

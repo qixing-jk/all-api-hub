@@ -79,11 +79,12 @@ interface AutoCheckinMethodDefinitionBase {
   readonly source: AutoCheckinMethodSource
 }
 
-/** Hiyo can award again; DaiGua's duplicate guarantee is unverified. Never queue replays. */
+/** Hiyo can award again; DaiGua/Sidrune duplicate guarantees are unverified. Never queue replays. */
 export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
   new Set([
     AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn,
+    AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
   ])
 
 /**
@@ -420,6 +421,18 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
         path: createDaiguaCheckInStatusEndpoint(resolveDaiguaCheckInTimezone()),
       },
     ],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn]: {
+    id: AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "Sidrune",
+    },
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: [{ path: "/api/v1/welfare/profile" }],
     legacy: false,
     newAccountCompatibility: false,
   },

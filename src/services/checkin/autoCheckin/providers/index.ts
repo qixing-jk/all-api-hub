@@ -17,6 +17,7 @@ import {
   AUTO_CHECKIN_METHOD_DEFINITIONS,
   createAutoCheckinMethodRegistry,
 } from "./registry"
+import { sidruneProvider } from "./sidrune"
 import { toolcodeProvider } from "./toolcode"
 import { veloeraProvider } from "./veloera"
 import { wongGongyiProvider } from "./wong"
@@ -24,6 +25,7 @@ import { xiaobaiCodeProvider } from "./xiaobaiCode"
 import { xiaoenProvider } from "./xiaoen"
 
 const PROVIDER_BY_METHOD_ID = {
+  [AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn]: sidruneProvider,
   [AUTO_CHECKIN_METHOD_IDS.XiaoenDailyCheckIn]: xiaoenProvider,
   [AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn]: agentRouterProvider,
   [AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn]: anyrouterProvider,

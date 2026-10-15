@@ -54,7 +54,21 @@ describe("split-origin feedback status queries", () => {
     expect(clues.statusQueries.map((q) => q.path)).toContain(
       "/api/v1/user/daily-checkin",
     )
-    expect(clues.statusQueries).toHaveLength(8)
+    expect(clues.statusQueries).toHaveLength(9)
+    expect(clues.statusQueries.map((q) => q.path)).toContain(
+      "/api/v1/welfare/profile",
+    )
+    expect(fetch).toHaveBeenCalledWith(
+      "https://api.ai-router.dev/api/v1/welfare/profile",
+      expect.objectContaining({
+        method: "GET",
+        credentials: "omit",
+        redirect: "error",
+        headers: expect.objectContaining({
+          Authorization: "Bearer selected-account-token",
+        }),
+      }),
+    )
     expect(fetch).toHaveBeenCalledWith(
       "https://ai-router.dev/app.js",
       expect.objectContaining({ headers: undefined }),

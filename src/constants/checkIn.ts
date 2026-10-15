@@ -19,6 +19,7 @@ export const AUTO_CHECKIN_METHOD_IDS = {
   ClawhudDailyCheckIn: "clawhud:daily-checkin",
   DaiguaDailyCheckIn: "daigua:daily-checkin",
   XiaoenDailyCheckIn: "xiaoen:daily-checkin",
+  SidruneDailyCheckIn: "sidrune:daily-checkin",
 } as const
 
 export const CHECK_IN_METHOD_UNKNOWN_REASON_CODES = {

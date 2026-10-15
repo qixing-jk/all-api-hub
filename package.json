@@ -78,6 +78,7 @@
     "e2e:cdp:hiyo": "node scripts/test-hiyo-checkin-e2e-live.mjs",
     "e2e:cdp:daigua": "node scripts/test-daigua-checkin-e2e-live.mjs",
     "e2e:cdp:clawhud": "node scripts/test-clawhud-e2e-live.mjs",
+    "e2e:cdp:sidrune": "node scripts/test-sidrune-checkin-e2e-live.mjs",
     "e2e:cdp:rix": "node scripts/test-rix-api-e2e-live.mjs",
     "e2e:cdp:omniroute": "node scripts/test-omniroute-e2e-live.mjs",
     "e2e:cdp:gpt-load": "node scripts/test-gpt-load-e2e-live.mjs",
