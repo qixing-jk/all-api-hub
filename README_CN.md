@@ -75,7 +75,7 @@
 ### 🚀 便捷录入与客户端集成
 
 - **网页快速录入**：从网页中识别 Base URL 与 API Key，直接测试并存入 API 凭据库，减少反复复制和切换页面。
-- **客户端一键导出**：将凭据快速导出至 Cherry Studio、CC Switch、AI Toolbox、Claude Code Router、Kilo Code、Roo Code、Cursor++、Kelivo 等客户端与工具，详见 [支持的导出工具](https://all-api-hub.qixing1217.top/supported-export-tools.html)。
+- **客户端一键导出**：将凭据快速导出至 CC Switch、Cherry Studio、Claude Code Router、Kilo Code、Roo Code、Kelivo、AI Toolbox、Cursor++ 等客户端与工具，详见 [支持的导出工具](https://all-api-hub.qixing1217.top/supported-export-tools.html)。
 
 ### 🧪 接口验证与故障排查
 
@@ -89,7 +89,7 @@
 
 ### 🛠️ 自建 AI 网关集成与管理
 
-- **主流 AI 网关统一管理**：OmniRoute、CLIProxyAPI、New API、Sub2API、gpt-load、Magpie、AxonHub、Claude Code Hub、Octopus、Veloera、DoneHub 网关都能直接在插件里管理渠道或提供商，不必逐个打开后台。
+- **主流 AI 网关统一管理**：OmniRoute、CLIProxyAPI、New API、Sub2API、Magpie、gpt-load、AxonHub、Claude Code Hub、Octopus、Veloera、DoneHub 网关都能直接在插件里管理渠道或提供商，不必逐个打开后台。
 - **快速创建网关渠道**：把已保存的站点账号或 API 凭据库中的凭据快速创建为自建 AI 网关渠道，之后便能通过网关统一调用各类模型，并在不同渠道间灵活切换。
 - **模型同步与重定向**：在支持的站点中，可手动或定时自动自定义同步渠道模型列表，及时跟进上游模型变化；支持自定义模型重定向规则，让客户端使用任何模型名称也能正常调用。
 
@@ -263,11 +263,11 @@ GitHub Stable 和 Nightly 属于手动安装通道，不会自动更新；可 St
 
 不论你用的是哪种架构，我们基本都支持：
 
-- **账号站点兼容架构**：[New API](https://github.com/QuantumNous/new-api)、[One API](https://github.com/songquanpeng/one-api)、[Sub2API](https://github.com/Wei-Shaw/sub2api)、[one-hub](https://github.com/MartialBE/one-hub)、[DoneHub](https://github.com/deanxv/done-hub)、[VoAPI / VoAPI v2](https://github.com/VoAPI/VoAPI)、[Veloera](https://github.com/Veloera/Veloera)、[Super-API](https://github.com/SuperAI-Api/Super-API)、API易、ModelFlare、v-api 以及 Neo-API、RIX_API 等变体。
-- **独立账号平台与中转站**：[OpenRouter](https://openrouter.ai)、[Kimi 开放平台（国内/国际版）](https://platform.kimi.ai)、[AnyRouter](https://anyrouter.top/register?aff=tDKX)、[AgentRouter](https://agentrouter.org/register?aff=TUX6)、[AIHubMix](https://aihubmix.com/?aff=W3DN)、老张 API、Dahl、FoxCode、肖恩 AI、Krill AI、Cubence、RightCode、Grsai、FreeModel、SharedChat、WONG公益站 等
-- **自建管理后台与 AI 网关**：[OmniRoute](https://github.com/diegosouzapw/OmniRoute)、[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI)、[New API](https://github.com/QuantumNous/new-api)、[Sub2API](https://github.com/Wei-Shaw/sub2api)、[gpt-load](https://github.com/tbphp/gpt-load)、[Magpie](https://github.com/yetone/magpie)、[AxonHub](https://github.com/looplj/axonhub)、[Claude Code Hub](https://github.com/ding113/claude-code-hub)、[Octopus](https://github.com/bestruirui/octopus)、[Veloera](https://github.com/Veloera/Veloera)、[DoneHub](https://github.com/deanxv/done-hub) 等，用于渠道或提供商管理，并按站点能力提供迁移和模型同步
+- **账号站点兼容架构**：[New API](https://github.com/QuantumNous/new-api)、[Sub2API](https://github.com/Wei-Shaw/sub2api)、[One API](https://github.com/songquanpeng/one-api)、[one-hub](https://github.com/MartialBE/one-hub)、[Veloera](https://github.com/Veloera/Veloera)、[VoAPI / VoAPI v2](https://github.com/VoAPI/VoAPI)、[DoneHub](https://github.com/deanxv/done-hub)、[Super-API](https://github.com/SuperAI-Api/Super-API)、API易、ModelFlare、v-api 以及 Neo-API、RIX_API 等变体。
+- **独立账号平台与中转站**：[OpenRouter](https://openrouter.ai)、[Kimi 开放平台（国内/国际版）](https://platform.kimi.ai)、[AnyRouter](https://anyrouter.top/register?aff=tDKX)、[AgentRouter](https://agentrouter.org/register?aff=TUX6)、[AIHubMix](https://aihubmix.com/?aff=W3DN)、老张 API、Dahl、FoxCode、肖恩 AI、Cubence、RightCode、Grsai、FreeModel、SharedChat、WONG公益站、Krill AI 等
+- **自建管理后台与 AI 网关**：[OmniRoute](https://github.com/diegosouzapw/OmniRoute)、[CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI)、[New API](https://github.com/QuantumNous/new-api)、[Sub2API](https://github.com/Wei-Shaw/sub2api)、[Magpie](https://github.com/yetone/magpie)、[gpt-load](https://github.com/tbphp/gpt-load)、[AxonHub](https://github.com/looplj/axonhub)、[Claude Code Hub](https://github.com/ding113/claude-code-hub)、[Octopus](https://github.com/bestruirui/octopus)、[Veloera](https://github.com/Veloera/Veloera)、[DoneHub](https://github.com/deanxv/done-hub) 等，用于渠道或提供商管理，并按站点能力提供迁移和模型同步
   - 批量导入可将同站点密钥合并到 Magpie、New API、Octopus、gpt-load、AxonHub 普通 API key 渠道及 CLIProxyAPI OpenAI 兼容资源中，密钥调度由目标网关负责。 Magpie 还可将缺失密钥添加到同地址、同协议的已有渠道，并保留原有配置和模型设置。
-- **客户端与开发工具一键导出**：Cherry Studio、CC Switch、AI Toolbox、Claude Code Router、Kilo Code、Roo Code、Cursor++、Kelivo 等，详见 [支持的导出工具](https://all-api-hub.qixing1217.top/supported-export-tools.html)
+- **客户端与开发工具一键导出**：CC Switch、Cherry Studio、Claude Code Router、Kilo Code、Roo Code、Kelivo、AI Toolbox、Cursor++ 等，详见 [支持的导出工具](https://all-api-hub.qixing1217.top/supported-export-tools.html)
 - **查看完整列表**：👉 [支持的站点](https://all-api-hub.qixing1217.top/supported-sites.html) 与 [支持的导出工具](https://all-api-hub.qixing1217.top/supported-export-tools.html)
 
 <a id="ui-preview"></a>

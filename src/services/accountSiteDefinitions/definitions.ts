@@ -217,19 +217,19 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
 
 export type AccountSiteDefinitionType = (typeof ACCOUNT_SITE_TYPE_ORDER)[number]
 
-// GitHub stars snapshot (2026-10-09), descending; refresh deliberately rather
+// GitHub stars snapshot (2026-10-15), descending; refresh deliberately rather
 // than fetching popularity during UI rendering. Sources: github.com/<repo>:
-// diegosouzapw/OmniRoute 74257, router-for-me/CLIProxyAPI 54503,
-// QuantumNous/new-api 49434, Wei-Shaw/sub2api 43500, tbphp/gpt-load 7055,
-// yetone/magpie 6725, looplj/axonhub 5343, ding113/claude-code-hub 3395,
-// bestruirui/octopus 2686, Veloera/Veloera 1633, deanxv/done-hub 809.
+// diegosouzapw/OmniRoute 76741, router-for-me/CLIProxyAPI 55296,
+// QuantumNous/new-api 50001, Wei-Shaw/sub2api 44078, yetone/magpie 13144,
+// tbphp/gpt-load 7097, looplj/axonhub 5359, ding113/claude-code-hub 3396,
+// bestruirui/octopus 2707, Veloera/Veloera 1630, deanxv/done-hub 809.
 export const MANAGED_SITE_TYPE_ORDER = [
   SITE_TYPES.OMNIROUTE,
   SITE_TYPES.CLI_PROXY_API,
   SITE_TYPES.NEW_API,
   SITE_TYPES.SUB2API,
-  SITE_TYPES.GPT_LOAD,
   SITE_TYPES.MAGPIE,
+  SITE_TYPES.GPT_LOAD,
   SITE_TYPES.AXON_HUB,
   SITE_TYPES.CLAUDE_CODE_HUB,
   SITE_TYPES.OCTOPUS,

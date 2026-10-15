@@ -16,8 +16,8 @@
 | CC Switch | Claude Code、Codex、Gemini CLI、Grok CLI、Hermes、OpenCode、OpenClaw 向けのクロスプラットフォームデスクトップ統合アシスタント。 | [GitHub](https://github.com/farion1231/cc-switch)                                     |
 | Kilo Code | Kilo は、統合されたエージェンティブエンジニアリングプラットフォームです。                                                       | [公式サイト](https://kilocode.ai/) / [GitHub](https://github.com/Kilo-Org/kilocode)   |
 | Roo Code  | Roo Code は、AI 開発チーム全体をコードエディタに直接配置します。                                                                | [公式サイト](https://roocode.com/) / [GitHub](https://github.com/RooCodeInc/Roo-Code) |
-| Cursor++  | 自分の API キーを使用して、Cursor で Anthropic、OpenAI、Gemini などのモデルを利用できます。                                     | [公式サイト](https://ccursor.cometix.dev/)                                            |
 | AI Toolbox  | 開発者および AI コーディングアシスタント向けのデスクトップユーティリティ。Claude Code、Codex、Grok、Kimi、Gemini などの設定切り替えに対応します。 | [GitHub](https://github.com/coulsontl/ai-toolbox) |
+| Cursor++  | 自分の API キーを使用して、Cursor で Anthropic、OpenAI、Gemini などのモデルを利用できます。                                     | [公式サイト](https://ccursor.cometix.dev/)                                            |
 
 ## ゲートウェイとルーティングツール
 
@@ -95,17 +95,17 @@ Kilo Code の設定インポート上限は現在 1 MiB です。ファイルが
 
 | 製品            | 公式説明                                                                                                                                                                                            | 公式リンク                                                                                |
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| [OmniRoute](./omniroute-integration.md) | セルフホストの AI ゲートウェイ。多数の provider を内蔵し、スコープ付きアクセストークンと接続単位の上流アドレス上書きに対応します。 | [GitHub](https://github.com/diegosouzapw/OmniRoute) |
 | [CLIProxyAPI](./cliproxyapi-integration.md) | Gemini CLI、Antigravity、ChatGPT Codex、Claude Code、Qwen Code、iFlow を OpenAI / Gemini / Claude / Codex と互換性のある API サービスにラップします。  | [ドキュメント](https://help.router-for.me/) / [GitHub](https://github.com/router-for-me/CLIProxyAPI)                        |
 | New API         | 統合された AI モデル集約および配布センター。                                                                                                                                                        | [公式サイト](https://www.newapi.ai/) / [GitHub](https://github.com/QuantumNous/new-api)   |
 | Sub2API         | Sub2API-CRS2 は、Claude、OpenAI、Gemini、Antigravity のサブスクリプションを統一的に接続できる、オールインワンのオープンソースプロキシサービスです。                                                 | [GitHub](https://github.com/Wei-Shaw/sub2api)                                             |
+| Magpie          | Codex や Claude Code などの AI コーディングツール向けに、メニューバーからモデルを切り替えられるモデルゲートウェイ。 | [GitHub](https://github.com/yetone/magpie) |
+| [gpt-load](./gpt-load-integration.md) | 軽量なセルフホスト AI ゲートウェイ（Go 製）。グループはチャンネルドライバとキープールで構成されます。 | [GitHub](https://github.com/tbphp/gpt-load) |
 | AxonHub         | オープンソース AI Gateway。任意の SDK を介して 100 以上の LLM を呼び出すことができ、フェイルオーバー、ロードバランシング、コスト管理、およびエンドツーエンドの追跡が組み込まれています。            | [公式サイト](https://axonhub.onrender.com/) / [GitHub](https://github.com/looplj/axonhub) |
 | Claude Code Hub | チーム向けのマルチベンダー AI API プロキシおよび運用プラットフォーム。Claude、OpenAI Compatible、Codex、Gemini への統一アクセスを提供し、弾力的なスケジューリング、監視、価格設定をサポートします。 | [GitHub](https://github.com/ding113/claude-code-hub)                                      |
 | Octopus         | 個人向けの LLM API 集約サービス。                                                                                                                                                                   | [GitHub](https://github.com/bestruirui/octopus)                                           |
 | Veloera         | このプロジェクトはメンテナンスを停止しました。                                                                                                                                                      | [GitHub](https://github.com/Veloera/Veloera)                                              |
 | DoneHub         | このプロジェクトは one-hub をベースに二次開発されました。                                                                                                                                           | [GitHub](https://github.com/deanxv/done-hub)                                              |
-| [OmniRoute](./omniroute-integration.md) | セルフホストの AI ゲートウェイ。多数の provider を内蔵し、スコープ付きアクセストークンと接続単位の上流アドレス上書きに対応します。 | [GitHub](https://github.com/diegosouzapw/OmniRoute) |
-| [gpt-load](./gpt-load-integration.md) | 軽量なセルフホスト AI ゲートウェイ（Go 製）。グループはチャンネルドライバとキープールで構成されます。 | [GitHub](https://github.com/tbphp/gpt-load) |
-| Magpie          | Codex や Claude Code などの AI コーディングツール向けに、メニューバーからモデルを切り替えられるモデルゲートウェイ。 | [GitHub](https://github.com/yetone/magpie) |
 
 ## 関連ドキュメント
 
