@@ -141,7 +141,7 @@ export async function fetchKrillKey(
 export async function createKrillKey(
   request: ApiServiceRequest,
   input: { name: string },
-): Promise<{ secret: string; item: KrillToken }> {
+): Promise<{ secret: string; item: KrillToken | null }> {
   return withKrillSession(request, async (scoped) => {
     await fetchKrillIdentity(scoped)
     const body = await readKrillEnvelope(scoped, KRILL_ENDPOINTS.Tokens, {
@@ -156,10 +156,15 @@ export async function createKrillKey(
       !(body.data as { token: string }).token.trim()
     )
       invalidKrillResponse(KRILL_ENDPOINTS.Tokens)
-    return {
-      secret: (body.data as { token: string }).token,
-      item: parseToken((body.data as { item?: unknown }).item),
+    // Creation is confirmed and its secret cannot be read again. Optional
+    // inventory metadata must never prevent immediate delivery of the secret.
+    let item: KrillToken | null = null
+    try {
+      item = parseToken((body.data as { item?: unknown }).item)
+    } catch {
+      // Keep malformed metadata out of the inventory; a later refresh owns it.
     }
+    return { secret: (body.data as { token: string }).token, item }
   })
 }
 

@@ -1,4 +1,5 @@
 import {
+  KRILL_HOSTNAMES,
   KRILL_WEB_ORIGIN,
   SITE_TYPES,
 } from "~/services/accountSiteDefinitions/identifiers"
@@ -12,7 +13,12 @@ export const krillContentSessionExtractor: ContentSessionExtractor = {
   canExtract({ siteTypeHint, url }) {
     if (siteTypeHint !== SITE_TYPES.KRILL || !url) return false
     try {
-      return new URL(url).origin === KRILL_WEB_ORIGIN
+      const parsed = new URL(url)
+      return (
+        parsed.protocol === "https:" &&
+        parsed.port === "" &&
+        KRILL_HOSTNAMES.some((hostname) => hostname === parsed.hostname)
+      )
     } catch {
       return false
     }

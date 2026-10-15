@@ -6,6 +6,7 @@ import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/keys/accoun
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import { KRILL_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
 import { krillContentSessionExtractor } from "~/services/accountSiteOnboarding/contentSession/krill"
+import { krillBrowserIdentity } from "~/services/apiAdapters/krill/browserIdentity"
 import { createKrillKeyEditor } from "~/services/apiAdapters/krill/keyEditor"
 import { krillKeyResources } from "~/services/apiAdapters/krill/keyResources"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
@@ -186,6 +187,12 @@ describe("Krill AI registration", () => {
     expect(
       krillContentSessionExtractor.canExtract({
         siteTypeHint: "krill",
+        url: "https://www.krill-ai.net/app",
+      }),
+    ).toBe(true)
+    expect(
+      krillContentSessionExtractor.canExtract({
+        siteTypeHint: "krill",
         url: `${origin}/app`,
       }),
     ).toBe(true)
@@ -195,6 +202,90 @@ describe("Krill AI registration", () => {
         url: "https://api.krill-ai.net/v1",
       }),
     ).toBe(false)
+  })
+})
+
+describe("Krill browser identity", () => {
+  afterEach(() => vi.unstubAllGlobals())
+  it.each([
+    undefined,
+    "invalid",
+    "http://www.krill-code.com",
+    "https://www.krill-code.com:444",
+    "https://evil.example",
+  ])("ignores unsupported page %s", (url) => {
+    expect(
+      krillContentSessionExtractor.canExtract({ siteTypeHint: "krill", url }),
+    ).toBe(false)
+    expect(
+      krillContentSessionExtractor.canExtract({
+        siteTypeHint: "new-api",
+        url: origin,
+      }),
+    ).toBe(false)
+  })
+  it("extracts only a verified live identity without copying the credential", async () => {
+    const fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: {
+            id: 47044,
+            email: "kai@example.com",
+            credit_balance_usd: "0",
+            enterprise_memberships: [],
+          },
+        }),
+      ),
+    )
+    vi.stubGlobal("fetch", fetch)
+    await expect(
+      krillContentSessionExtractor.extract({} as never),
+    ).resolves.toEqual({
+      userId: "47044",
+      user: { id: "47044", username: "kai@example.com" },
+      siteTypeHint: "krill",
+    })
+    expect(fetch).toHaveBeenCalledWith(`${origin}/api/auth/me`, {
+      credentials: "include",
+      cache: "no-store",
+    })
+  })
+  it.each([new Response("", { status: 401 }), new Response("{}")])(
+    "returns no session for unreadable identity",
+    async (response) => {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response))
+      await expect(
+        krillContentSessionExtractor.extract({} as never),
+      ).resolves.toBeNull()
+    },
+  )
+  it("does not cache failed browser verification", async () => {
+    expect(
+      krillBrowserIdentity.canObserve({ siteType: "krill", origin } as never),
+    ).toBe(true)
+    expect(
+      krillBrowserIdentity.canObserve({
+        siteType: "krill",
+        origin: "https://evil.example",
+      } as never),
+    ).toBe(false)
+    const observation = (await krillBrowserIdentity.observe({
+      origin,
+    } as never))!
+    expect(observation.cacheResult).toBe(false)
+    const read = vi.fn().mockResolvedValue({
+      data: {
+        id: 47044,
+        email: "kai@example.com",
+        credit_balance_usd: "0",
+        enterprise_memberships: [],
+      },
+    })
+    expect(await observation.verify(read)).toBe("47044")
+    expect(read).toHaveBeenCalledWith({ url: `${origin}/api/auth/me` })
+    read.mockRejectedValue(new Error("expired"))
+    expect(await observation.verify(read)).toBeNull()
   })
 })
 
@@ -271,6 +362,40 @@ describe("Krill AI key editor", () => {
     })
   })
 
+  it("validates unsupported channels and malformed editor values", async () => {
+    const editor = createKrillKeyEditor({
+      channels: catalogue,
+      detail: {
+        name: "",
+        channelIds: [55],
+        allowBalanceFallback: true,
+        ipWhitelist: [],
+        ipWhitelistGrey: true,
+      },
+    })
+    expect(
+      editor.validate({
+        ...editor.initialValues,
+        name: 4,
+        channels: ["999"],
+        ip_whitelist: [],
+      }),
+    ).toMatchObject({
+      valid: false,
+      issues: expect.arrayContaining([
+        { fieldId: "name", code: "invalid_value" },
+        { fieldId: "channels", code: "unsupported_option" },
+        { fieldId: "ip_whitelist", code: "invalid_value" },
+      ]),
+    })
+    expect(await editor.loadOptions!("name", editor.initialValues)).toEqual([])
+    const loader = vi.fn().mockResolvedValue(catalogue)
+    const dynamic = createKrillKeyEditor({ channels: [], loadChannels: loader })
+    expect(
+      await dynamic.loadOptions!("channels", dynamic.initialValues),
+    ).toHaveLength(3)
+    expect(loader).toHaveBeenCalledTimes(1)
+  })
   it("round-trips the IP whitelist through its comma-separated form", () => {
     const editor = createKrillKeyEditor({
       channels: catalogue,
@@ -322,6 +447,63 @@ describe("Krill AI key editor", () => {
 })
 
 describe("Krill AI key resources", () => {
+  it("updates a key with fresh detail and reads back its channel selection", async () => {
+    const collection = await (await openSession()).openCollection("account")
+    const editor = await collection.openEditEditor(
+      (await collection.list()).items[0]!.ref,
+    )
+    const result = await editor.submit({
+      ...editor.initialValues,
+      name: "updated",
+    })
+    expect(result.facts?.displayName).toBe("native")
+    expect(calls.map((call) => call.url)).toEqual([
+      "/api/tokens/71750",
+      "/api/tokens/71750/channels",
+    ])
+    expect(calls[0]!.body).toMatchObject({
+      name: "updated",
+      ip_whitelist_disabled: false,
+    })
+  })
+  it("reports uncertain revocation when the server still lists an enabled key", async () => {
+    server.use(
+      http.delete(`${origin}/api/tokens/:id`, () =>
+        HttpResponse.json({ success: true }),
+      ),
+    )
+    const collection = await (await openSession()).openCollection("account")
+    await expect(
+      collection.revoke!((await collection.list()).items[0]!.ref),
+    ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+  })
+  it.each([undefined, { ...tokens[0], ip_whitelist: [] }, { id: 90001 }])(
+    "delivers the confirmed secret when creation metadata drifts: %j",
+    async (item) => {
+      let creates = 0
+      server.use(
+        http.post(`${origin}/api/tokens`, () => {
+          creates++
+          return HttpResponse.json({
+            success: true,
+            data: { token: "nb_saved-secret", item },
+          })
+        }),
+      )
+      const editor = await (await openSession()).openCreateEditor("account")
+      const result = await editor.submit({
+        ...editor.initialValues,
+        name: "safe",
+      })
+      expect(result.facts).toBeNull()
+      expect(result.createdSecret).toMatchObject({
+        correlation: { kind: "account-create", accountId: "acc-1" },
+        displayName: "safe",
+        secret: "nb_saved-secret",
+      })
+      expect(creates).toBe(1)
+    },
+  )
   it("revokes without destroying the record and rejects foreign references", async () => {
     let revoked = false
     server.use(

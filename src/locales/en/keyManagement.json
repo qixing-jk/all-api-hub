@@ -514,6 +514,9 @@
     "missing": "Not available",
     "revoke": {
       "description": "Revoke “{{name}}”? This permanently disables the key. Its record remains until you delete it.",
+      "feedback": {
+        "error": "Could not revoke this key. Refresh and try again."
+      },
       "success": "Key revoked",
       "title": "Revoke key",
       "working": "Revoking..."

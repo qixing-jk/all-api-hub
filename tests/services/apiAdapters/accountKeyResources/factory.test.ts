@@ -1398,3 +1398,18 @@ it("does not reread details before a snapshot-based update", async () => {
     undefined,
   )
 })
+
+it("rejects a revoke result attributed to another resource", async () => {
+  const definition = createDefinition({
+    revoke: async () => ({
+      certainty: "applied",
+      value: { id: "foreign-key", name: "Foreign" },
+    }),
+  })
+  const collection = await (
+    await openSession(definition)
+  ).openCollection(SCOPE.scopeKey)
+  await expect(collection.revoke!(REF)).rejects.toMatchObject({
+    failure: { code: "unexpected" },
+  })
+})

@@ -1,7 +1,10 @@
 import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 
-import { krillModelPricing } from "~/services/apiAdapters/krill/modelCatalog"
+import {
+  krillModelCatalog,
+  krillModelPricing,
+} from "~/services/apiAdapters/krill/modelCatalog"
 import { pricingPlanSchema } from "~/services/modelPricing/pricingPlan"
 import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
 import { AuthTypeEnum } from "~/types"
@@ -282,6 +285,96 @@ it("does not treat an unavailable dedicated-price response as proof that there a
       ),
     ),
   )
+  await expect(
+    krillModelPricing.fetchPricing(request as never),
+  ).rejects.toThrow()
+})
+
+it("requires account context for model discovery and enriches account pricing", async () => {
+  await expect(
+    krillModelCatalog.fetchModels(request as never),
+  ).rejects.toMatchObject({ code: "FEATURE_UNSUPPORTED" })
+  respond("/api/models", ["gpt-example", " ", "gpt-example", 3])
+  expect(
+    await krillModelCatalog.fetchModels(
+      request as never,
+      { accountRequest: request } as never,
+    ),
+  ).toEqual([{ id: "gpt-example" }])
+  expect(
+    (
+      await krillModelCatalog.enrichPricing!({
+        accountRequest: request,
+      } as never)
+    ).data,
+  ).toHaveLength(1)
+})
+it("selects the most expensive dedicated price across the model's channels", async () => {
+  respond("/api/my/model-routes", [
+    { model_name: model.model_name, provider_id: 37 },
+    { model_name: model.model_name, provider_id: 35 },
+  ])
+  respond("/api/my/dedicated-models", [
+    { ...model, provider_id: 37, route_key: "", input_token_price: "1" },
+    { ...model, provider_id: 35, route_key: "", input_token_price: "5" },
+  ])
+  expect(
+    (await krillModelPricing.fetchPricing(request as never)).data[0]!
+      .pricingPlan?.rates.input?.amount,
+  ).toBe(5)
+})
+it("retains base prices and an honest default route when catalogs have no routing metadata", async () => {
+  respond("/api/endpoint-settings/me", { routes: [] })
+  respond("/api/my/model-routes", [])
+  respond("/api/my/channels", [])
+  respond("/api/model-pricing", [
+    {
+      ...model,
+      provider: null,
+      context_window: null,
+      max_output_tokens: null,
+      cache_creation_1h_token_price: undefined,
+      route_multipliers: undefined,
+    },
+  ])
+  const row = (await krillModelPricing.fetchPricing(request as never)).data[0]!
+  expect(row.pricingPlan?.rates.input?.amount).toBe(2)
+  expect(row.pricingPlan?.source.pricingDescription?.en).toContain(
+    "Default route",
+  )
+  expect(row.presentation?.summaryFacts).toEqual([])
+  expect(row.vendorEvidence).toBeUndefined()
+})
+it.each([
+  ["/api/model-pricing", [{ ...model, input_token_price: "9".repeat(400) }]],
+  [
+    "/api/model-pricing",
+    [
+      {
+        ...model,
+        high_context_rule: { enabled: true, input_tokens_threshold: -1 },
+      },
+    ],
+  ],
+  ["/api/model-pricing", [{ ...model, time_window_rules: {} }]],
+  ["/api/model-pricing", [{ ...model, time_window_rules: [null] }]],
+  [
+    "/api/model-pricing",
+    [
+      {
+        ...model,
+        time_window_rules: [
+          { enabled: true, start_minute: 1440, end_minute: 1 },
+        ],
+      },
+    ],
+  ],
+  ["/api/endpoint-settings/me", {}],
+  ["/api/endpoint-settings/me", { routes: [{ key: 1, name: "bad" }] }],
+  ["/api/my/model-routes", [{ model_name: "x", provider_id: 0 }]],
+  ["/api/my/dedicated-models", [{ provider_id: 0 }]],
+])("rejects malformed price context from %s", async (path, data) => {
+  respond(path as string, data)
   await expect(
     krillModelPricing.fetchPricing(request as never),
   ).rejects.toThrow()

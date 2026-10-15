@@ -211,7 +211,10 @@ export async function readKrill(
     const reads = operationReads.get(scoped)!
     let pending = reads.get(endpoint)
     if (!pending) {
-      pending = readKrillUncached(scoped, endpoint, options)
+      pending = readKrillUncached(scoped, endpoint, options).catch((error) => {
+        reads.delete(endpoint)
+        throw error
+      })
       reads.set(endpoint, pending)
     }
     return pending

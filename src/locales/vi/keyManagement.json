@@ -503,6 +503,9 @@
     "missing": "Không khả dụng",
     "revoke": {
       "description": "Thu hồi “{{name}}”? Khóa sẽ bị vô hiệu hóa vĩnh viễn. Bản ghi được giữ lại cho đến khi bạn xóa.",
+      "feedback": {
+        "error": "Không thể thu hồi khóa này. Hãy làm mới và thử lại."
+      },
       "success": "Đã thu hồi khóa",
       "title": "Thu hồi khóa",
       "working": "Đang thu hồi..."

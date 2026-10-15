@@ -1,6 +1,7 @@
 import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import {
   fetchKrillAnnouncementItems,
   fetchKrillInviteLink,
@@ -238,5 +239,76 @@ describe("Krill AI console surfaces", () => {
       contextWindow: null,
       routeMultipliers: {},
     })
+  })
+  it.each([null, { invite_code: " " }])(
+    "rejects invalid invitation payload %j",
+    async (data) => {
+      server.use(
+        http.get(`${origin}/api/invite/me`, () =>
+          HttpResponse.json({ success: true, data }),
+        ),
+      )
+      await expect(fetchKrillInviteLink(request as never)).rejects.toThrow()
+    },
+  )
+  it("rejects a blank redemption before dispatch", async () => {
+    await expect(redeemKrillCode(request as never, " ")).rejects.toThrow()
+  })
+  it("rejects malformed redemption acknowledgments", async () => {
+    server.use(
+      http.post(`${origin}/api/redeem`, () =>
+        HttpResponse.json({ success: true, data: {} }),
+      ),
+    )
+    await expect(redeemKrillCode(request as never, "code")).rejects.toThrow()
+  })
+  it.each([{ success: false }, { success: true, data: { items: null } }])(
+    "rejects unreadable public notices %j",
+    async (body) => {
+      server.use(
+        http.get(`${origin}/api/public/announcements`, () =>
+          HttpResponse.json(body),
+        ),
+      )
+      await expect(
+        fetchKrillAnnouncementItems(request as never),
+      ).rejects.toThrow()
+    },
+  )
+  it("refuses public notice requests to another origin", async () => {
+    await expect(
+      fetchKrillAnnouncementItems({
+        ...request,
+        baseUrl: "https://evil.example",
+      } as never),
+    ).rejects.toThrow()
+  })
+  it("routes site announcements, invites and redemption through registered capabilities", async () => {
+    server.use(
+      http.get(`${origin}/api/public/announcements`, () =>
+        HttpResponse.json({ success: true, data: { items: [] } }),
+      ),
+      http.get(`${origin}/api/invite/me`, () =>
+        HttpResponse.json({ success: true, data: { invite_code: "abc" } }),
+      ),
+      http.post(`${origin}/api/redeem`, () =>
+        HttpResponse.json({ success: true, data: { code_type: "quota" } }),
+      ),
+    )
+    const capabilities = getSiteTypeCapabilities("krill")
+    expect(
+      await capabilities.site!.announcements!.fetch(request as never),
+    ).toEqual([])
+    expect(
+      await capabilities.account!.inviteLink!.fetchInviteLink({
+        request,
+      } as never),
+    ).toContain("invite=abc")
+    await expect(
+      capabilities.account!.redemption!.redeem({
+        request,
+        code: "code",
+      } as never),
+    ).resolves.toBeUndefined()
   })
 })

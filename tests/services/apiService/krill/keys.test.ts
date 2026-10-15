@@ -271,4 +271,79 @@ describe("Krill AI key management", () => {
       },
     ])
   })
+  it.each(["0", "-1", "1/other", "9007199254740992"])(
+    "rejects invalid key locators %s before mutation",
+    async (id) => {
+      record()
+      await expect(deleteKrillKey(request as never, id)).rejects.toThrow()
+      expect(calls).toEqual([])
+    },
+  )
+  it.each([
+    { ...listItem, id: 0 },
+    { ...listItem, ip_whitelist: [] },
+  ])("rejects invalid inventory rows %j", async (item) => {
+    server.use(
+      http.get(`${origin}/api/tokens`, () =>
+        HttpResponse.json({ success: true, data: [item] }),
+      ),
+    )
+    await expect(fetchKrillKeys(request as never)).rejects.toThrow()
+  })
+  it.each([null, { channel_ids: [-1] }])(
+    "rejects malformed key channel data %j",
+    async (data) => {
+      record()
+      server.use(
+        http.get(`${origin}/api/tokens/:id/channels`, () =>
+          HttpResponse.json({ success: true, data }),
+        ),
+      )
+      await expect(fetchKrillKey(request as never, "71750")).rejects.toThrow()
+    },
+  )
+  it.each([null, { token: " " }])(
+    "rejects create responses without a usable secret %j",
+    async (data) => {
+      server.use(
+        http.post(`${origin}/api/tokens`, () =>
+          HttpResponse.json({ success: true, data }),
+        ),
+      )
+      await expect(
+        createKrillKey(request as never, { name: "" }),
+      ).rejects.toThrow()
+    },
+  )
+  it.each([
+    { id: 0, name: "bad", default_routed: true, billing_multiplier: "1" },
+    {
+      id: 1,
+      name: "bad",
+      default_routed: true,
+      billing_multiplier: "9".repeat(400),
+    },
+  ])("rejects invalid channel catalog rows %j", async (item) => {
+    server.use(
+      http.get(`${origin}/api/my/channels`, () =>
+        HttpResponse.json({ success: true, data: [item] }),
+      ),
+    )
+    await expect(fetchKrillChannels(request as never)).rejects.toThrow()
+  })
+  it("sends null for a cleared edit name and preserves native IP bypass", async () => {
+    record()
+    await updateKrillKey(request as never, {
+      id: 71750,
+      name: " ",
+      allowBalanceFallback: true,
+      ipWhitelist: [],
+      ipWhitelistDisabled: true,
+      channelIds: [],
+    })
+    expect(calls[0]!.body).toMatchObject({
+      name: null,
+      ip_whitelist_disabled: true,
+    })
+  })
 })

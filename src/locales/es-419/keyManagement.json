@@ -525,6 +525,9 @@
     "missing": "No disponible",
     "revoke": {
       "description": "¿Revocar “{{name}}”? La clave se desactivará permanentemente. Su registro permanecerá hasta que lo elimines.",
+      "feedback": {
+        "error": "No se pudo revocar esta clave. Actualiza e inténtalo de nuevo."
+      },
       "success": "Clave revocada",
       "title": "Revocar clave",
       "working": "Revocando..."

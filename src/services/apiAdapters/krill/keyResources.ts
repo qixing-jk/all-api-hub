@@ -1,6 +1,9 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/keys/accountKeyNames"
-import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
+import {
+  createAccountKeyResourceCreatedRuntimeSecret,
+  createUnattributedAccountCreatedRuntimeSecret,
+} from "~/services/accounts/keys/createdRuntimeSecret"
 import { KRILL_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
 import { toProtocolRoot } from "~/services/aiApi/protocolAddress"
 import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
@@ -208,6 +211,25 @@ export const krillKeyResources = defineAccountKeyResourceCapability({
         const { secret, item } = await createKrillKey(request, {
           name: command.name,
         })
+        const credential = {
+          accountName: config.account.name ?? "Krill AI",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: toProtocolRoot(
+            API_TYPES.OPENAI_COMPATIBLE,
+            KRILL_API_BASE_URL,
+          )!,
+          tagIds: [],
+        }
+        if (!item)
+          return {
+            detail: null,
+            createdSecret: createUnattributedAccountCreatedRuntimeSecret({
+              accountId: config.account.id,
+              displayName: command.name.trim() || "Krill AI",
+              secret,
+              credential,
+            }),
+          }
         return {
           detail: { ...item, channelIds: [] },
           createdSecret: createAccountKeyResourceCreatedRuntimeSecret({
@@ -219,15 +241,7 @@ export const krillKeyResources = defineAccountKeyResourceCapability({
             },
             displayName: item.name || `Krill #${item.id}`,
             secret,
-            credential: {
-              accountName: config.account.name ?? "Krill AI",
-              apiType: API_TYPES.OPENAI_COMPATIBLE,
-              baseUrl: toProtocolRoot(
-                API_TYPES.OPENAI_COMPATIBLE,
-                KRILL_API_BASE_URL,
-              )!,
-              tagIds: [],
-            },
+            credential,
           }),
         }
       },

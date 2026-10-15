@@ -503,6 +503,9 @@
     "missing": "無可用資料",
     "revoke": {
       "description": "確定撤銷「{{name}}」嗎？金鑰將永久停用，記錄會保留，直到你將其刪除。",
+      "feedback": {
+        "error": "無法撤銷此金鑰，請重新整理後再試。"
+      },
       "success": "金鑰已撤銷",
       "title": "撤銷金鑰",
       "working": "正在撤銷..."

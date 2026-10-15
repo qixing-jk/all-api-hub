@@ -514,6 +514,9 @@
     "missing": "Nicht verfügbar",
     "revoke": {
       "description": "„{{name}}“ widerrufen? Der Schlüssel wird dauerhaft deaktiviert. Der Eintrag bleibt bis zur Löschung erhalten.",
+      "feedback": {
+        "error": "Dieser Schlüssel konnte nicht widerrufen werden. Aktualisiere die Seite und versuche es erneut."
+      },
       "success": "Schlüssel widerrufen",
       "title": "Schlüssel widerrufen",
       "working": "Wird widerrufen..."

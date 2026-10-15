@@ -15,7 +15,11 @@ import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts
 import { ACCOUNT_KEY_RESOURCE_FAILURE_CODES } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { DisplaySiteData } from "~/types"
 
-const nativeDeleteFailureMessage = (code: string | undefined, t: TFunction) => {
+const nativeDeleteFailureMessage = (
+  code: string | undefined,
+  t: TFunction,
+  isRevoke: boolean,
+) => {
   switch (code) {
     case ACCOUNT_KEY_RESOURCE_FAILURE_CODES.AuthenticationFailed:
       return t("keyManagement:native.delete.feedback.authenticationFailed")
@@ -26,7 +30,9 @@ const nativeDeleteFailureMessage = (code: string | undefined, t: TFunction) => {
     case ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain:
       return t("keyManagement:native.delete.feedback.uncertain")
     default:
-      return t("keyManagement:native.delete.feedback.error")
+      return isRevoke
+        ? t("keyManagement:native.revoke.feedback.error")
+        : t("keyManagement:native.delete.feedback.error")
   }
 }
 
@@ -197,6 +203,7 @@ function AccountKeyResourceDeleteSession({
               title={nativeDeleteFailureMessage(
                 nativeKeys.deleteState.failure.code,
                 t,
+                isRevoke,
               )}
             >
               {nativeKeys.deleteState.failure.message}

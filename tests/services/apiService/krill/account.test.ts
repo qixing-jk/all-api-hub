@@ -2,7 +2,13 @@ import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { QUOTA_PER_USD } from "~/constants/money"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { fetchAccountData } from "~/services/apiService/krill"
+import {
+  readKrill,
+  withKrillSession,
+} from "~/services/apiService/krill/transport"
+import * as permissions from "~/services/permissions/permissionManager"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
@@ -91,6 +97,30 @@ function useHappyPath(
 }
 
 describe("Krill AI account console", () => {
+  it("retries a failed reusable read within the operation and retains its successful result", async () => {
+    let reads = 0
+    server.use(
+      http.get(`${origin}/api/auth/me`, () => {
+        reads++
+        return HttpResponse.json(
+          reads === 1
+            ? { success: false, message: "Temporarily unavailable" }
+            : { success: true, data: user },
+        )
+      }),
+    )
+    await withKrillSession(request as never, async (scoped) => {
+      await expect(readKrill(scoped, "/api/auth/me")).rejects.toThrow()
+      const [a, b] = await Promise.all([
+        readKrill(scoped, "/api/auth/me"),
+        readKrill(scoped, "/api/auth/me"),
+      ])
+      expect(a.id).toBe(47044)
+      expect(b).toEqual(a)
+      expect(await readKrill(scoped, "/api/auth/me")).toEqual(a)
+    })
+    expect(reads).toBe(2)
+  })
   let browserBoundary: ReturnType<typeof installCookieTransport>
   beforeEach(() => {
     browserBoundary = installCookieTransport()
@@ -111,7 +141,10 @@ describe("Krill AI account console", () => {
       },
     ])
   })
-  afterEach(() => vi.restoreAllMocks())
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllEnvs()
+  })
 
   it("uses the newer subscription balance when usage changes it after the identity read", async () => {
     useHappyPath({ subscription: { credit_balance_usd: "12.400000" } })
@@ -222,5 +255,232 @@ describe("Krill AI account console", () => {
     await expect(fetchAccountData(request as never)).rejects.toMatchObject({
       code: "JSON_PARSE_ERROR",
     })
+  })
+  it.each([
+    [null],
+    [{ ...stats, input_tokens: -1 }],
+    [{ ...stats, input_tokens: "5" }],
+  ])(
+    "retains balance and marks malformed today stats unavailable: %j",
+    async (data) => {
+      useHappyPath()
+      server.use(
+        http.post(`${origin}/api/request-logs/stats`, () =>
+          HttpResponse.json({ success: true, data }),
+        ),
+      )
+      const result = await fetchAccountData(request as never)
+      expect(result.quota).toBe(12.5 * QUOTA_PER_USD)
+      expect(result.todayStatsAvailability?.tokens).toMatchObject({
+        status: "unavailable",
+        reason: "invalid_payload",
+      })
+    },
+  )
+  it("retains balance on temporary stats failure", async () => {
+    useHappyPath()
+    server.use(
+      http.post(`${origin}/api/request-logs/stats`, () =>
+        HttpResponse.json({ success: false, message: "busy" }),
+      ),
+    )
+    const result = await fetchAccountData(request as never)
+    expect(result.todayStatsAvailability?.requests).toMatchObject({
+      status: "unavailable",
+      reason: "request_failed",
+    })
+  })
+  it.each([401, 403])(
+    "propagates stats authorization failure %s",
+    async (status) => {
+      useHappyPath()
+      server.use(
+        http.post(`${origin}/api/request-logs/stats`, () =>
+          HttpResponse.json({ success: false }, { status }),
+        ),
+      )
+      await expect(fetchAccountData(request as never)).rejects.toMatchObject({
+        statusCode: status,
+      })
+    },
+  )
+  it.each([
+    null,
+    { subscriptions: null },
+    { subscriptions: [{}], summary: null },
+    {
+      subscriptions: [{}],
+      summary: { ...subscription.summary, subscription_end_at: 123 },
+    },
+  ])("rejects malformed subscription data: %j", async (data) => {
+    useHappyPath()
+    server.use(
+      http.get(`${origin}/api/subscription`, () =>
+        HttpResponse.json({
+          success: true,
+          data: data === null ? null : { ...subscription, ...data },
+        }),
+      ),
+    )
+    await expect(fetchAccountData(request as never)).rejects.toMatchObject({
+      code: "JSON_PARSE_ERROR",
+    })
+  })
+  it("does not invent a subscription when there are no plans", async () => {
+    useHappyPath({ subscription: { subscriptions: [] } })
+    expect(
+      (
+        await fetchAccountData({
+          ...request,
+          includeTodayCashflow: false,
+        } as never)
+      ).subscription,
+    ).toBeUndefined()
+  })
+  it.each([
+    { success: false, error: { message: "unauthorized" } },
+    { success: false, code: 401 },
+    { success: false },
+    { data: {} },
+    { success: true, data: null },
+    { success: true, data: { ...user, email: "" } },
+    { success: true, data: { ...user, credit_balance_usd: "-1" } },
+  ])(
+    "rejects invalid or unauthenticated identity envelopes: %j",
+    async (body) => {
+      server.use(
+        http.get(`${origin}/api/auth/me`, () => HttpResponse.json(body)),
+      )
+      await expect(fetchAccountData(request as never)).rejects.toThrow()
+    },
+  )
+  it("rejects a malformed escaped login credential before dispatch", async () => {
+    browserBoundary.cookies.mockResolvedValue([
+      {
+        name: "krill_jwt",
+        value: "%ZZ",
+        domain: "www.krill-code.com",
+        path: "/",
+        secure: true,
+      },
+    ] as never)
+    await expect(fetchAccountData(request as never)).rejects.toMatchObject({
+      code: "JSON_PARSE_ERROR",
+    })
+  })
+
+  it("bootstraps and completes cookie onboarding with verified recovery data", async () => {
+    useHappyPath()
+    const account = getSiteTypeCapabilities("krill").account!
+    const bootstrap = account.bootstrap!
+    await expect(
+      bootstrap.getOrCreateAccessToken({} as never),
+    ).rejects.toMatchObject({ code: "FEATURE_UNSUPPORTED" })
+    expect(await bootstrap.loadBootstrapFacts!({} as never)).toMatchObject({
+      checkInSupported: false,
+    })
+    expect(await bootstrap.fetchCheckInSupport!({} as never, {} as never)).toBe(
+      false,
+    )
+    expect(
+      await bootstrap.resolveRoutePath!(
+        { siteType: "krill" } as never,
+        "login",
+      ),
+    ).toBe("/login")
+    const captureRecoveryData = vi.fn()
+    const result = await account.completion!.complete(
+      {
+        url: origin,
+        requestedAuthType: AuthTypeEnum.Cookie,
+        detected: { userId: "47044" },
+        context: {},
+      } as never,
+      {
+        createServiceRequest: (input: unknown) => input,
+        captureRecoveryData,
+        createInitialCheckInConfig: () => ({ enableDetection: false }),
+      } as never,
+    )
+    expect(result).toMatchObject({
+      userId: "47044",
+      username: "kai@example.com",
+      authType: "cookie",
+      accessToken: "",
+    })
+    expect(captureRecoveryData).toHaveBeenCalledWith({
+      userId: "47044",
+      username: "kai@example.com",
+      authType: "cookie",
+    })
+  })
+  it("reports healthy refreshes and classifies expired authentication", async () => {
+    useHappyPath()
+    const refresh = getSiteTypeCapabilities("krill").account!.refresh!
+    expect(await refresh.refreshAccount(request as never)).toMatchObject({
+      success: true,
+      data: { quota: 12.5 * QUOTA_PER_USD },
+    })
+    server.use(
+      http.get(`${origin}/api/auth/me`, () =>
+        HttpResponse.json({ success: false, code: 401 }),
+      ),
+    )
+    expect(await refresh.refreshAccount(request as never)).toMatchObject({
+      success: false,
+    })
+  })
+  it("requires Firefox cookie interception permission", async () => {
+    vi.stubEnv("BROWSER", "firefox")
+    vi.spyOn(permissions, "hasCookieInterceptorPermissions").mockResolvedValue(
+      false,
+    )
+    await expect(fetchAccountData(request as never)).rejects.toMatchObject({
+      code: "COOKIE_PERMISSION_REQUIRED",
+    })
+  })
+  it("uses the captured cookie for Firefox account requests", async () => {
+    vi.stubEnv("BROWSER", "firefox")
+    vi.spyOn(permissions, "hasCookieInterceptorPermissions").mockResolvedValue(
+      true,
+    )
+    useHappyPath()
+    const result = await fetchAccountData(request as never)
+    expect(result.quota).toBe(12.5 * QUOTA_PER_USD)
+  })
+  it("rejects a non-API endpoint before transport dispatch", async () => {
+    await expect(readKrill(request as never, "/unsafe")).rejects.toMatchObject({
+      code: "FEATURE_UNSUPPORTED",
+    })
+  })
+  it("rejects an explicit cookie without the console login credential", async () => {
+    await expect(
+      fetchAccountData({
+        ...request,
+        auth: { ...request.auth, cookie: "other=value" },
+      } as never),
+    ).rejects.toMatchObject({ statusCode: 401 })
+  })
+  it("uses the latest native plan expiry when multiple plans omit the summary expiry", async () => {
+    useHappyPath({
+      subscription: {
+        summary: { ...subscription.summary, subscription_end_at: null },
+        subscriptions: [
+          {
+            plan: { name: "A" },
+            subscription_end_at: "2026-10-20T00:00:00Z",
+            status: "active",
+          },
+          {
+            plan: { name: "B" },
+            subscription_end_at: "2026-10-21T00:00:00Z",
+            status: "active",
+          },
+        ],
+      },
+    })
+    expect(
+      (await fetchAccountData(request as never)).subscription?.expireTime,
+    ).toBe("2026-10-21T00:00:00Z")
   })
 })

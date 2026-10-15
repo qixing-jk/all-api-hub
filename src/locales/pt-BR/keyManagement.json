@@ -525,6 +525,9 @@
     "missing": "Indisponível",
     "revoke": {
       "description": "Revogar “{{name}}”? A chave será desativada permanentemente. O registro permanecerá até ser excluído.",
+      "feedback": {
+        "error": "Não foi possível revogar esta chave. Atualize e tente novamente."
+      },
       "success": "Chave revogada",
       "title": "Revogar chave",
       "working": "Revogando..."

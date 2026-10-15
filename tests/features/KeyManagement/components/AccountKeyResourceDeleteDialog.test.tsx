@@ -50,6 +50,18 @@ beforeEach(() => {
   mocks.config.mockReset().mockResolvedValue({})
 })
 
+it("uses revocation-specific failure feedback", async () => {
+  const props = createProps()
+  props.nativeKeys.deleteState.operation = "revoke"
+  props.nativeKeys.deleteState.failure = {
+    code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed,
+  }
+  render(<AccountKeyResourceDeleteDialog {...props} />)
+  expect(
+    await screen.findByText("keyManagement:native.revoke.feedback.error"),
+  ).toBeVisible()
+})
+
 it("confirms record-preserving revocation separately and never offers linked deletion cleanup", async () => {
   const props = createProps()
   props.nativeKeys.deleteState.operation = "revoke"

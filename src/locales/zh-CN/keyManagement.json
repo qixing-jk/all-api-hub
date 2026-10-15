@@ -503,6 +503,9 @@
     "missing": "暂无数据",
     "revoke": {
       "description": "确定撤销“{{name}}”吗？密钥将永久停用，记录会保留，直到你将其删除。",
+      "feedback": {
+        "error": "无法撤销此密钥，请刷新后重试。"
+      },
       "success": "密钥已撤销",
       "title": "撤销密钥",
       "working": "正在撤销..."
