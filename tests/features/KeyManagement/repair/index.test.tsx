@@ -383,6 +383,48 @@ function buildRepairImportCandidate(
 }
 
 describe("RepairMissingKeysDialog", () => {
+  it.each([undefined, "account-1"])(
+    "waits for accounts before freezing the default selection (initial=%s)",
+    async (initialAccountId) => {
+      const user = userEvent.setup()
+      mockProgress = buildRepairProgress(ACCOUNT_KEY_REPAIR_JOB_STATES.Idle)
+      const props = {
+        isOpen: true,
+        onClose: vi.fn(),
+        startOnOpen: false,
+        initialAccountId,
+      }
+      const view = render(<RepairMissingKeysDialog {...props} accounts={[]} />)
+      const start = await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.actions.start",
+      })
+      expect(start).toBeDisabled()
+      const accounts = [buildAccount()]
+      view.rerender(<RepairMissingKeysDialog {...props} accounts={accounts} />)
+      await waitFor(() => expect(start).toBeEnabled())
+      expect(mockUseRepairMissingKeysJob).toHaveBeenLastCalledWith(
+        expect.objectContaining({ accountIds: ["account-1"] }),
+      )
+      await user.click(
+        screen.getByRole("button", { name: "ui:multiSelect.clearSelected" }),
+      )
+      expect(start).toBeDisabled()
+      view.rerender(
+        <RepairMissingKeysDialog
+          {...props}
+          accounts={[
+            ...accounts,
+            { ...buildAccount(), id: "account-2", name: "Account 2" },
+          ]}
+        />,
+      )
+      expect(start).toBeDisabled()
+      expect(mockUseRepairMissingKeysJob).toHaveBeenLastCalledWith(
+        expect.objectContaining({ accountIds: [] }),
+      )
+    },
+  )
+
   it("preselects all enabled accounts and disables start after deselecting them", async () => {
     const user = userEvent.setup()
     mockProgress = buildRepairProgress(ACCOUNT_KEY_REPAIR_JOB_STATES.Idle)

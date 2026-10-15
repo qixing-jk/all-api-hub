@@ -174,14 +174,7 @@ function ProvisioningSession({
     }
     toast.error(
       <span className="gap-y-density-1 flex flex-col">
-        <span>
-          {t(
-            error instanceof AccountKeyResourceError &&
-              error.failure.code === "mutation_state_uncertain"
-              ? "keyManagement:native.editor.feedback.uncertain"
-              : "keyManagement:native.editor.feedback.error",
-          )}
-        </span>
+        <span>{t("keyManagement:native.editor.feedback.error")}</span>
         {progressSummary()}
       </span>,
     )

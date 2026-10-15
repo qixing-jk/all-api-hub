@@ -861,7 +861,10 @@ test("repairs missing account keys, deletes invalid resources, and records manag
     page.getByRole("heading", { name: "Legacy Group Key" }),
   ).toBeVisible()
 
-  await page.getByRole("button", { name: "Key check" }).click()
+  await page.getByRole("button", { name: "Key tools", exact: true }).click()
+  await page
+    .getByRole("menuitem", { name: "Check and repair", exact: true })
+    .click()
   await expect(
     page.getByRole("heading", { name: "Check account keys" }),
   ).toBeVisible()

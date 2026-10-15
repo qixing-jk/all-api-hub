@@ -95,9 +95,10 @@ export function useRepairResultListMaxHeight(
         trailingContentHeight,
       })
 
-      setMaxHeight((current) =>
-        current === nextMaxHeight ? current : nextMaxHeight,
-      )
+      // When setup fills the viewport, let the modal body scroll to the results.
+      // A zero-height inner scroller would hide every result and its controls.
+      const height = nextMaxHeight > 0 ? nextMaxHeight : null
+      setMaxHeight((current) => (current === height ? current : height))
     }
 
     updateMaxHeight()

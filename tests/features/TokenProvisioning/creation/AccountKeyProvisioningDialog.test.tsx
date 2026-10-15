@@ -113,6 +113,25 @@ const setup = () => {
 }
 
 describe("foreground account key provisioning", () => {
+  it("shows cancellable progress during slow preparation and ignores a late plan", async () => {
+    const user = userEvent.setup()
+    const pending = createDeferred<any>()
+    const first = entry("first")
+    prepare.mockReturnValue(pending.promise)
+    const { onClose } = setup()
+    await screen.findByText("keyManagement:provisioning.preparing")
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.cancel" }),
+    )
+    expect(prepare.mock.calls[0]![2].signal.aborted).toBe(true)
+    expect(onClose).toHaveBeenCalledOnce()
+    await act(async () =>
+      pending.resolve({ coveredCount: 0, entries: [first] }),
+    )
+    expect(first.create).not.toHaveBeenCalled()
+    expect(notify.success).not.toHaveBeenCalled()
+  })
+
   it("updates the visible progress toast without dismissing it between keys", async () => {
     const first = entry("first")
     const second = entry("second")

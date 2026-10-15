@@ -77,7 +77,8 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
   }, [selectedAccountIds, initialAccountId, enabledAccounts])
   useEffect(() => {
     if (!isOpen) setSelectedAccountIds(null)
-    else if (selectedAccountIds === null) setSelectedAccountIds(accountIds)
+    else if (selectedAccountIds === null && accountIds.length > 0)
+      setSelectedAccountIds(accountIds)
   }, [isOpen, selectedAccountIds, accountIds])
   const [hasStartedRepairInSession, setHasStartedRepairInSession] =
     useState(false)
