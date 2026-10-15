@@ -1,8 +1,9 @@
-import { Search } from "lucide-react"
+import { KeyRound, Search } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { ApiCredentialLibraryIcon } from "~/components/icons/productIcons"
+import { PopupTabOnboarding } from "~/components/PopupTabOnboarding"
 import {
   EmptyState,
   Input,
@@ -13,6 +14,7 @@ import {
   TagFilter,
 } from "~/components/ui"
 import { ApiCredentialProfilesAllowanceOverview } from "~/features/ApiCredentialProfiles/allowance/ApiCredentialProfilesAllowanceOverview"
+import { ApiCredentialProfilesSponsorRecommendationsSection } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfilesSponsorRecommendationsSection"
 import {
   API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY,
   API_CREDENTIAL_PROFILE_ASSOCIATION_AVAILABILITY_STATUSES,
@@ -52,6 +54,7 @@ export interface ApiCredentialProfilesListViewProps {
   controller: ApiCredentialProfilesController
   variant?: ApiCredentialProfilesViewVariant
   autoFocusSearch?: boolean
+  showKeyManagementImportHint?: boolean
   guidedImportEntryRequest?: number
   targetProfileId?: string
   targetProfileRequest?: number
@@ -84,6 +87,7 @@ export function ApiCredentialProfilesListView({
   controller,
   variant = API_CREDENTIAL_PROFILES_VIEW_VARIANTS.Options,
   autoFocusSearch = false,
+  showKeyManagementImportHint = true,
   guidedImportEntryRequest = 0,
   targetProfileId,
   targetProfileRequest = 0,
@@ -212,6 +216,7 @@ export function ApiCredentialProfilesListView({
 
   const isInitialLoading =
     controller.isLoading && controller.profiles.length === 0
+  const showFilters = !isInitialLoading && controller.profiles.length > 0
 
   useEffect(() => {
     if (!analyticsMode || activeFilterCount === 0) return
@@ -367,65 +372,75 @@ export function ApiCredentialProfilesListView({
         />
       ) : null}
 
-      <div className="gap-y-density-3 grid grid-cols-1 gap-x-3 sm:grid-cols-3">
-        <div className="sm:col-span-2">
-          <Input
-            autoFocus={autoFocusSearch}
-            size={searchInputSize}
-            value={searchTerm}
-            onChange={handleSearchChange}
-            onKeyDown={handleSearchKeyDown}
-            placeholder={t("apiCredentialProfiles:controls.searchPlaceholder")}
-            leftIcon={<Search className="h-4 w-4" />}
-            onClear={clearSearch}
-            clearButtonLabel={t("common:actions.clear")}
+      {showFilters && (
+        <>
+          <div className="gap-y-density-3 grid grid-cols-1 gap-x-3 sm:grid-cols-3">
+            <div className="sm:col-span-2">
+              <Input
+                autoFocus={autoFocusSearch}
+                size={searchInputSize}
+                value={searchTerm}
+                onChange={handleSearchChange}
+                onKeyDown={handleSearchKeyDown}
+                placeholder={t(
+                  "apiCredentialProfiles:controls.searchPlaceholder",
+                )}
+                leftIcon={<Search className="h-4 w-4" />}
+                onClear={clearSearch}
+                clearButtonLabel={t("common:actions.clear")}
+              />
+            </div>
+
+            <SearchableSelect
+              options={[
+                {
+                  value: "",
+                  label: t("apiCredentialProfiles:controls.apiTypeAll"),
+                },
+                {
+                  value: API_TYPES.OPENAI_COMPATIBLE,
+                  label: t(
+                    "aiApiVerification:verifyDialog.apiTypes.openaiCompatible",
+                  ),
+                },
+                {
+                  value: API_TYPES.OPENAI,
+                  label: t("aiApiVerification:verifyDialog.apiTypes.openai"),
+                },
+                {
+                  value: API_TYPES.ANTHROPIC,
+                  label: t("aiApiVerification:verifyDialog.apiTypes.anthropic"),
+                },
+                {
+                  value: API_TYPES.GOOGLE,
+                  label: t("aiApiVerification:verifyDialog.apiTypes.google"),
+                },
+              ]}
+              value={apiTypeFilter}
+              onChange={handleApiTypeFilterChange}
+              placeholder={t(
+                "apiCredentialProfiles:controls.apiTypePlaceholder",
+              )}
+              aria-label={t(
+                "apiCredentialProfiles:controls.apiTypePlaceholder",
+              )}
+              className={cn(
+                variant === API_CREDENTIAL_PROFILES_VIEW_VARIANTS.Popup &&
+                  "min-h-(--density-control-sm) px-2 text-xs",
+              )}
+            />
+          </div>
+
+          <TagFilter
+            options={tagFilterOptions}
+            value={selectedTagIds}
+            onChange={handleTagFilterChange}
+            maxVisibleLines={maxTagFilterLines}
+            allLabel={t("apiCredentialProfiles:filter.tagsAllLabel")}
+            allCount={controller.profiles.length}
           />
-        </div>
-
-        <SearchableSelect
-          options={[
-            {
-              value: "",
-              label: t("apiCredentialProfiles:controls.apiTypeAll"),
-            },
-            {
-              value: API_TYPES.OPENAI_COMPATIBLE,
-              label: t(
-                "aiApiVerification:verifyDialog.apiTypes.openaiCompatible",
-              ),
-            },
-            {
-              value: API_TYPES.OPENAI,
-              label: t("aiApiVerification:verifyDialog.apiTypes.openai"),
-            },
-            {
-              value: API_TYPES.ANTHROPIC,
-              label: t("aiApiVerification:verifyDialog.apiTypes.anthropic"),
-            },
-            {
-              value: API_TYPES.GOOGLE,
-              label: t("aiApiVerification:verifyDialog.apiTypes.google"),
-            },
-          ]}
-          value={apiTypeFilter}
-          onChange={handleApiTypeFilterChange}
-          placeholder={t("apiCredentialProfiles:controls.apiTypePlaceholder")}
-          aria-label={t("apiCredentialProfiles:controls.apiTypePlaceholder")}
-          className={cn(
-            variant === API_CREDENTIAL_PROFILES_VIEW_VARIANTS.Popup &&
-              "min-h-(--density-control-sm) px-2 text-xs",
-          )}
-        />
-      </div>
-
-      <TagFilter
-        options={tagFilterOptions}
-        value={selectedTagIds}
-        onChange={handleTagFilterChange}
-        maxVisibleLines={maxTagFilterLines}
-        allLabel={t("apiCredentialProfiles:filter.tagsAllLabel")}
-        allCount={controller.profiles.length}
-      />
+        </>
+      )}
 
       {controller.isLoading && !isInitialLoading ? (
         <div className="gap-y-density-2 py-density-1 flex items-center gap-x-2">
@@ -454,45 +469,59 @@ export function ApiCredentialProfilesListView({
           </div>
         </div>
       ) : filteredProfiles.length === 0 ? (
-        <div className="gap-y-density-4 mx-auto flex max-w-md flex-col gap-x-4">
-          <EmptyState
-            icon={<ApiCredentialLibraryIcon className="h-8 w-8" />}
-            title={
-              controller.profiles.length === 0
-                ? t("apiCredentialProfiles:empty.title")
-                : t("apiCredentialProfiles:empty.filteredTitle")
-            }
-            description={
-              controller.profiles.length === 0
-                ? t("apiCredentialProfiles:empty.description")
-                : t("apiCredentialProfiles:empty.filteredDescription")
-            }
-            action={
-              controller.profiles.length === 0
-                ? {
-                    label: t("apiCredentialProfiles:actions.add"),
-                    onClick: controller.openAddDialog,
-                    analyticsAction: emptyStateAddAnalyticsAction,
+        controller.profiles.length === 0 ? (
+          <PopupTabOnboarding
+            padded={variant !== API_CREDENTIAL_PROFILES_VIEW_VARIANTS.Popup}
+            icon={ApiCredentialLibraryIcon}
+            title={t("apiCredentialProfiles:empty.title")}
+            titleId="popup-api-credential-profiles-onboarding-title"
+            description={t("apiCredentialProfiles:empty.description")}
+            action={{
+              label: t("apiCredentialProfiles:actions.add"),
+              onClick: controller.openAddDialog,
+              analyticsAction: emptyStateAddAnalyticsAction,
+            }}
+            extra={
+              showKeyManagementImportHint && (
+                <Notice
+                  tone="neutral"
+                  size="sm"
+                  className="text-left"
+                  icon={
+                    <KeyRound
+                      aria-hidden="true"
+                      className="text-primary/70 size-3.5"
+                    />
                   }
-                : undefined
+                  description={
+                    <span>
+                      {t("apiCredentialProfiles:empty.keyManagementImportHint")}{" "}
+                      <NoticeActionButton
+                        onClick={handleOpenKeyManagement}
+                        className="text-primary hover:text-primary-hover font-medium underline underline-offset-2"
+                      >
+                        {t("apiCredentialProfiles:empty.keyManagementLink")}
+                      </NoticeActionButton>
+                    </span>
+                  }
+                />
+              )
+            }
+            sponsors={
+              <ApiCredentialProfilesSponsorRecommendationsSection
+                onOpenApiCredentialProfiles={controller.openAddDialog}
+              />
             }
           />
-          {controller.profiles.length === 0 ? (
-            <Notice
-              tone="default"
-              icon={<ApiCredentialLibraryIcon className="h-3.5 w-3.5" />}
-              className="text-left"
-              description={
-                <span>
-                  {t("apiCredentialProfiles:empty.keyManagementImportHint")}{" "}
-                  <NoticeActionButton onClick={handleOpenKeyManagement}>
-                    {t("apiCredentialProfiles:empty.keyManagementLink")}
-                  </NoticeActionButton>
-                </span>
-              }
+        ) : (
+          <div className="gap-y-density-4 mx-auto flex max-w-md flex-col gap-x-4">
+            <EmptyState
+              icon={<ApiCredentialLibraryIcon className="h-8 w-8" />}
+              title={t("apiCredentialProfiles:empty.filteredTitle")}
+              description={t("apiCredentialProfiles:empty.filteredDescription")}
             />
-          ) : null}
-        </div>
+          </div>
+        )
       ) : (
         <ApiCredentialProfilesList
           profiles={filteredProfiles}

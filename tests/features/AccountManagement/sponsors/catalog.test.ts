@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { normalizeSponsorCatalog } from "~/features/AccountManagement/sponsors/catalog"
+import {
+  normalizeSponsorCatalog,
+  selectSponsorRecommendations,
+} from "~/features/AccountManagement/sponsors/catalog"
+import { SPONSOR_RECOMMENDATION_SURFACES } from "~/features/AccountManagement/sponsors/constants"
 import {
   SPONSOR_CATALOG_SOURCES,
   SPONSOR_SUPPORT_STATUS,
+  type SponsorRecommendation,
 } from "~/features/AccountManagement/sponsors/types"
 import { AuthTypeEnum } from "~/types"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
@@ -955,5 +960,65 @@ describe("sponsor catalog v5 normalization", () => {
     expect(result.errors.join("\n")).toContain(
       "locale en has unsupported addAccount action fields: extra",
     )
+  })
+})
+
+describe("selectSponsorRecommendations", () => {
+  const dummyItems: SponsorRecommendation[] = [
+    {
+      id: "account-only",
+      rank: 1,
+      name: "Account Only",
+      tagline: "Account only provider",
+      selectedLocale: "en",
+      schemaVersion: 5,
+      supportStatus: SPONSOR_SUPPORT_STATUS.Supported,
+      links: { primary: "https://example.invalid/1" },
+      actions: {
+        addAccount: {
+          siteType: SITE_TYPES.NEW_API,
+          siteUrl: "https://api.example.invalid/1",
+        },
+      },
+      source: SPONSOR_CATALOG_SOURCES.Bundled,
+    },
+    {
+      id: "api-profile-enabled",
+      rank: 2,
+      name: "API Profile Enabled",
+      tagline: "API profile provider",
+      selectedLocale: "en",
+      schemaVersion: 5,
+      supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
+      links: { primary: "https://example.invalid/2" },
+      actions: {
+        apiCredentialProfileFallback: {
+          baseUrl: "https://api.example.invalid/v1",
+        },
+      },
+      source: SPONSOR_CATALOG_SOURCES.Bundled,
+    },
+  ]
+
+  it("filters recommendations for PopupApiCredentialProfiles to only those with apiCredentialProfileFallback", () => {
+    const selected = selectSponsorRecommendations(
+      dummyItems,
+      SPONSOR_RECOMMENDATION_SURFACES.PopupApiCredentialProfiles,
+    )
+    expect(selected.map((item) => item.id)).toEqual(["api-profile-enabled"])
+  })
+
+  it("returns all recommendations for Newcomer and PopupBookmarks surfaces", () => {
+    const newcomer = selectSponsorRecommendations(
+      dummyItems,
+      SPONSOR_RECOMMENDATION_SURFACES.Newcomer,
+    )
+    expect(newcomer).toHaveLength(2)
+
+    const bookmarks = selectSponsorRecommendations(
+      dummyItems,
+      SPONSOR_RECOMMENDATION_SURFACES.PopupBookmarks,
+    )
+    expect(bookmarks).toHaveLength(2)
   })
 })

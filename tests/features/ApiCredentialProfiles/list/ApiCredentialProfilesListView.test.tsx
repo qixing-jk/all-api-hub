@@ -58,6 +58,15 @@ vi.mock(
   }),
 )
 
+vi.mock(
+  "~/features/ApiCredentialProfiles/components/ApiCredentialProfilesSponsorRecommendationsSection",
+  () => ({
+    ApiCredentialProfilesSponsorRecommendationsSection: () => (
+      <div data-testid="api-credential-profiles-sponsor-recommendations" />
+    ),
+  }),
+)
+
 vi.mock("~/components/PageHeader", () => ({
   PageHeader: ({ actions, description, title }: any) => (
     <header>
@@ -73,13 +82,33 @@ vi.mock("~/components/ui", () => ({
     <span {...props}>{children}</span>
   ),
   Button: ({
-    analyticsAction: _analyticsAction,
+    analyticsAction,
     children,
+    leftIcon: _leftIcon,
     rightIcon: _rightIcon,
     ...props
   }: any) => (
-    <button type="button" {...props}>
+    <button
+      type="button"
+      data-analytics-action={
+        analyticsAction
+          ? `${analyticsAction.featureId}:${analyticsAction.actionId}:${analyticsAction.surfaceId}:${analyticsAction.entrypoint}`
+          : undefined
+      }
+      {...props}
+    >
       {children}
+    </button>
+  ),
+  IconButton: ({
+    analyticsAction: _analyticsAction,
+    children,
+    icon: _icon,
+    label,
+    ...props
+  }: any) => (
+    <button type="button" aria-label={label} {...props}>
+      {children ?? label}
     </button>
   ),
   Card: ({ children, ...props }: any) => <div {...props}>{children}</div>,
@@ -253,7 +282,7 @@ describe("ApiCredentialProfilesListView", () => {
       ].join(":"),
     )
     const importHint = screen.getByRole("status")
-    expect(importHint).toHaveAttribute("data-tone", "default")
+    expect(importHint).toHaveAttribute("data-tone", "neutral")
     expect(importHint).toHaveTextContent(
       "apiCredentialProfiles:empty.keyManagementImportHint",
     )
@@ -262,6 +291,19 @@ describe("ApiCredentialProfilesListView", () => {
         name: "apiCredentialProfiles:empty.keyManagementLink",
       }),
     ).toBeInTheDocument()
+    expect(
+      screen.queryByPlaceholderText(
+        "apiCredentialProfiles:controls.searchPlaceholder",
+      ),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByLabelText(
+        "apiCredentialProfiles:controls.apiTypePlaceholder",
+      ),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("apiCredentialProfiles:filter.tagsAllLabel"),
+    ).not.toBeInTheDocument()
   })
 
   it("opens Key Management from the empty-state import hint", async () => {
@@ -283,6 +325,32 @@ describe("ApiCredentialProfilesListView", () => {
     )
 
     expect(openKeysPageMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("hides key management import hint when showKeyManagementImportHint is false", async () => {
+    const controller = {
+      profiles: [],
+      isLoading: false,
+      tags: [],
+      tagNameById: new Map<string, string>(),
+      openAddDialog: vi.fn(),
+    } as any
+
+    render(
+      <ApiCredentialProfilesListView
+        controller={controller}
+        showKeyManagementImportHint={false}
+      />,
+    )
+
+    expect(
+      screen.queryByText("apiCredentialProfiles:empty.keyManagementImportHint"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "apiCredentialProfiles:empty.keyManagementLink",
+      }),
+    ).not.toBeInTheDocument()
   })
 
   it("declares popup empty-state add action analytics metadata", async () => {

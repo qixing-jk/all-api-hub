@@ -38,6 +38,7 @@
     "dragHandle": "ブックマークの順序を変更"
   },
   "search": {
+    "noResults": "一致するブックマークはありません",
     "placeholder": "ブックマークを検索..."
   },
   "stats": {

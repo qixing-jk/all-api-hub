@@ -24,6 +24,7 @@ import {
 } from "~~/tests/test-utils/render"
 
 let bookmarksMock: SiteBookmark[] = []
+let isInitialLoadMock = false
 let pinnedAccountIdsMock: string[] = []
 let orderedAccountIdsMock: string[] = []
 let tagsMock: Tag[] = []
@@ -121,6 +122,7 @@ vi.mock("@dnd-kit/sortable", () => ({
 vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
   useAccountDataContext: () => ({
     bookmarks: bookmarksMock,
+    isInitialLoad: isInitialLoadMock,
     pinnedAccountIds: pinnedAccountIdsMock,
     orderedAccountIds: orderedAccountIdsMock,
     tags: tagsMock,
@@ -183,6 +185,7 @@ const expectConfirmedDeleteBookmarkActionStarted = () => {
 beforeEach(() => {
   vi.useRealTimers()
   bookmarksMock = []
+  isInitialLoadMock = false
   pinnedAccountIdsMock = []
   orderedAccountIdsMock = []
   tagsMock = []
@@ -217,6 +220,22 @@ beforeEach(() => {
 })
 
 describe("BookmarksList", () => {
+  it("waits for saved bookmarks before showing first-use guidance", async () => {
+    isInitialLoadMock = true
+    const { rerender } = render(<BookmarksList />)
+    expect(await screen.findByText("common:status.loading")).toBeVisible()
+    expect(screen.queryByText("bookmark:emptyState")).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "bookmark:addFirstBookmark" }),
+    ).not.toBeInTheDocument()
+
+    isInitialLoadMock = false
+    rerender(<BookmarksList />)
+    expect(screen.getByText("bookmark:description")).toBeVisible()
+    expect(
+      screen.getByRole("button", { name: "bookmark:addFirstBookmark" }),
+    ).toBeVisible()
+  })
   const createBookmark = (id: string, name: string): SiteBookmark => ({
     id,
     name,
@@ -225,6 +244,21 @@ describe("BookmarksList", () => {
     notes: "",
     created_at: 0,
     updated_at: 0,
+  })
+
+  it("explains an empty search and clears it without offering first-use onboarding", async () => {
+    bookmarksMock = [createBookmark("docs", "Saved Docs")]
+    render(<BookmarksList initialSearchQuery="missing-bookmark" />)
+    expect(await screen.findByText("bookmark:search.noResults")).toBeVisible()
+    expect(screen.queryByText("bookmark:emptyState")).not.toBeInTheDocument()
+    await userEvent.setup().click(
+      within(screen.getByRole("status")).getByRole("button", {
+        name: "common:actions.clear",
+      }),
+    )
+    expect(
+      await screen.findByRole("button", { name: "Saved Docs" }),
+    ).toBeVisible()
   })
 
   it("keeps pinned ordering, reorders known rows and ignores invalid drag targets", () => {

@@ -26,6 +26,7 @@ import {
 import {
   SPONSOR_CATALOG_SCHEMA_VERSION,
   SPONSOR_LOCALE_FALLBACKS,
+  SPONSOR_RECOMMENDATION_SURFACES,
   type SponsorRecommendationSurface,
 } from "./constants"
 import {
@@ -93,7 +94,11 @@ export function selectSponsorRecommendations(
   items: SponsorRecommendation[],
   surface: SponsorRecommendationSurface,
 ): SponsorRecommendation[] {
-  void surface
+  if (surface === SPONSOR_RECOMMENDATION_SURFACES.PopupApiCredentialProfiles) {
+    return items.filter((item) =>
+      Boolean(item.actions.apiCredentialProfileFallback),
+    )
+  }
   return items
 }
 

@@ -43,6 +43,10 @@ const SPONSOR_SURFACE_TO_PRODUCT_ANALYTICS_SURFACE = {
     PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementAddAccountSponsorRecommendations,
   [SPONSOR_RECOMMENDATION_SURFACES.Newcomer]:
     PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementNewcomerSponsorRecommendations,
+  [SPONSOR_RECOMMENDATION_SURFACES.PopupApiCredentialProfiles]:
+    PRODUCT_ANALYTICS_SURFACE_IDS.PopupApiCredentialProfilesSponsorRecommendations,
+  [SPONSOR_RECOMMENDATION_SURFACES.PopupBookmarks]:
+    PRODUCT_ANALYTICS_SURFACE_IDS.PopupBookmarksSponsorRecommendations,
 } satisfies Record<SponsorRecommendationSurface, ProductAnalyticsSurfaceId>
 
 const SPONSOR_ACTION_TO_PRODUCT_ANALYTICS_ACTION = {

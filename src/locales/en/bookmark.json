@@ -38,6 +38,7 @@
     "dragHandle": "Reorder bookmarks"
   },
   "search": {
+    "noResults": "No matching bookmarks",
     "placeholder": "Search bookmarks..."
   },
   "stats": {

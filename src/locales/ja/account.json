@@ -230,6 +230,9 @@
     "sortMenu": "並び替え",
     "toggleSortOrder": "昇順・降順を切り替え"
   },
+  "popupOnboarding": {
+    "signInHint": "API サイトにログインしてから、自動検出または手動入力でアカウントを追加してください。"
+  },
   "refresh": {
     "refreshComplete": "更新完了: 成功 {{success}} 件、失敗 {{failed}} 件",
     "refreshDisabledComplete": "無効アカウントの再検出が完了しました: {{restored}} 件を復旧、{{stillDisabled}} 件は無効のまま",
@@ -255,6 +258,14 @@
     "newcomer": {
       "description": "プロバイダーのサイトで登録し、カードの案内に従ってアカウントの追加、API 認証情報の保存、またはサイトのブックマークを行えます。",
       "title": "利用可能なプロバイダーを探す"
+    },
+    "popupApiCredentialProfiles": {
+      "description": "開発用 API または Coding Plan の枠が必要ですか？Base URL の自動入力とキー取得リンクに対応：",
+      "title": "おすすめプロバイダーとサブスクリプション"
+    },
+    "popupBookmarks": {
+      "description": "ワンクリックでブックマークに追加し、いつでも素早くアクセス：",
+      "title": "おすすめサイト"
     },
     "recommendedProviders": "おすすめプロバイダー",
     "supportStatus": {

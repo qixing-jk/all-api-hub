@@ -276,6 +276,9 @@
     "sortMenu": "Ordenar por",
     "toggleSortOrder": "Cambiar orden"
   },
+  "popupOnboarding": {
+    "signInHint": "Inicia sesión en tu sitio de API y agrega una cuenta mediante detección automática o de forma manual."
+  },
   "refresh": {
     "refreshComplete": "Actualización completa: {{success}} correctas, {{failed}} fallidas",
     "refreshDisabledComplete": "Sondeo de cuentas deshabilitadas completo: {{restored}} restauradas, {{stillDisabled}} aún deshabilitadas",
@@ -301,6 +304,14 @@
     "newcomer": {
       "description": "Regístrate en el sitio web de un proveedor y sigue las indicaciones de la tarjeta para agregar una cuenta, guardar credenciales de API o guardar el sitio en marcadores.",
       "title": "Explora proveedores disponibles"
+    },
+    "popupApiCredentialProfiles": {
+      "description": "¿Necesitas API para desarrolladores o cuota de Coding Plan? Rellena la URL base y obtén claves rápidamente:",
+      "title": "Proveedores y suscripciones recomendados"
+    },
+    "popupBookmarks": {
+      "description": "Agrega a marcadores con un clic para un acceso rápido en cualquier momento:",
+      "title": "Sitios recomendados"
     },
     "recommendedProviders": "Proveedores recomendados",
     "supportStatus": {

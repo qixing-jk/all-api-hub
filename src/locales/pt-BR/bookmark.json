@@ -38,6 +38,7 @@
     "dragHandle": "Reordenar marcadores"
   },
   "search": {
+    "noResults": "Nenhum favorito correspondente",
     "placeholder": "Pesquisar marcadores..."
   },
   "stats": {

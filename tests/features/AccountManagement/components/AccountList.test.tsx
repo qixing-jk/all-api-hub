@@ -284,7 +284,14 @@ vi.mock("~/components/ui", async () => {
 
   return {
     Modal,
-    Button: ({ children, loading, leftIcon, rightIcon, ...props }: any) => (
+    Button: ({
+      children,
+      loading,
+      leftIcon,
+      rightIcon,
+      analyticsAction: _analyticsAction,
+      ...props
+    }: any) => (
       <button type="button" {...props}>
         {!loading && leftIcon}
         {children}

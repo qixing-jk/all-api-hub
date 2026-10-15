@@ -770,4 +770,71 @@ describe("SponsorRecommendationsSection", () => {
       "add-account,api",
     ])
   })
+
+  it("promotes API credential fallback action when surface is PopupApiCredentialProfiles", async () => {
+    const user = userEvent.setup()
+    const item = createSupportedSponsor({
+      id: "hybrid-provider",
+      name: "Hybrid Provider",
+      actions: {
+        addAccount: {
+          siteType: SITE_TYPES.NEW_API,
+          siteUrl: "https://hybrid.example.invalid",
+        },
+        apiCredentialProfileFallback: {
+          baseUrl: "https://api.hybrid.example.invalid/v1",
+          apiKeyCreateUrl: "https://hybrid.example.invalid/keys",
+          apiKeyCreateHint: "Copy your key here",
+        },
+      },
+    })
+
+    renderSection(
+      [item],
+      SPONSOR_RECOMMENDATION_SURFACES.PopupApiCredentialProfiles,
+    )
+
+    const button = screen.getByRole("button", {
+      name: /account:sponsor.actions.openApiCredentialProfilesFallback: Hybrid Provider/u,
+    })
+    expect(button).toBeVisible()
+
+    await user.click(button)
+    expect(onOpenApiCredentialProfiles).toHaveBeenCalledWith({
+      name: "Hybrid Provider",
+      baseUrl: "https://api.hybrid.example.invalid/v1",
+      apiKeyCreateUrl: "https://hybrid.example.invalid/keys",
+      apiKeyCreateHint: "Copy your key here",
+    })
+  })
+
+  it("promotes bookmark fallback action when surface is PopupBookmarks", async () => {
+    const user = userEvent.setup()
+    const item = createSupportedSponsor({
+      id: "any-provider",
+      name: "Any Provider",
+      links: {
+        primary: "https://provider.example.invalid",
+      },
+      actions: {
+        addAccount: {
+          siteType: SITE_TYPES.NEW_API,
+          siteUrl: "https://provider.example.invalid",
+        },
+      },
+    })
+
+    renderSection([item], SPONSOR_RECOMMENDATION_SURFACES.PopupBookmarks)
+
+    const button = screen.getByRole("button", {
+      name: /account:sponsor.actions.openBookmarkManagerFallback: Any Provider/u,
+    })
+    expect(button).toBeVisible()
+
+    await user.click(button)
+    expect(onOpenBookmarkManager).toHaveBeenCalledWith({
+      name: "Any Provider",
+      url: "https://provider.example.invalid",
+    })
+  })
 })
