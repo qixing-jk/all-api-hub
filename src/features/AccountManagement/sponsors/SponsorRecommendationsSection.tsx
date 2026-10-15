@@ -15,7 +15,10 @@ import type {
 } from "~/features/AccountManagement/sponsors/types"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 
+import type { SponsorWorkflowStarter } from "./sponsorWorkflowIntent"
+
 interface SponsorRecommendationsSectionProps {
+  onStartWorkflow?: SponsorWorkflowStarter
   surface: SponsorRecommendationSurface
   items: SponsorRecommendation[]
   onContinueAddAccount: (prefill: AddAccountPrefill) => void
@@ -32,6 +35,7 @@ export function SponsorRecommendationsSection({
   onContinueAddAccount,
   onOpenBookmarkManager,
   onOpenApiCredentialProfiles,
+  onStartWorkflow,
 }: SponsorRecommendationsSectionProps) {
   const { t } = useTranslation("account")
   const headingId = useId()
@@ -94,6 +98,7 @@ export function SponsorRecommendationsSection({
             onContinueAddAccount={onContinueAddAccount}
             onOpenBookmarkManager={onOpenBookmarkManager}
             onOpenApiCredentialProfiles={onOpenApiCredentialProfiles}
+            onStartWorkflow={onStartWorkflow}
           />
         ))}
       </div>

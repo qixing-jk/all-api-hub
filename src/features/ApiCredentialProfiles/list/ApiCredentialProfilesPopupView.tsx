@@ -1,12 +1,13 @@
 import { forwardRef, useEffect, useImperativeHandle } from "react"
 
+import type { SponsorApiCredentialFallbackPrefill } from "~/features/AccountManagement/sponsors/types"
 import { API_CREDENTIAL_PROFILES_VIEW_VARIANTS } from "~/features/ApiCredentialProfiles/contracts"
 import { ApiCredentialProfilesListView } from "~/features/ApiCredentialProfiles/list/ApiCredentialProfilesListView"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
 import { useApiCredentialProfilesController } from "~/features/ApiCredentialProfiles/workspace/useApiCredentialProfilesController"
 
 export type ApiCredentialProfilesPopupViewHandle = {
-  openAddDialog: () => void
+  openAddDialog: (prefill?: SponsorApiCredentialFallbackPrefill) => void
 }
 
 /**

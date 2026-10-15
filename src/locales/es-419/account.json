@@ -305,6 +305,7 @@
       "description": "Regístrate en el sitio web de un proveedor y sigue las indicaciones de la tarjeta para agregar una cuenta, guardar credenciales de API o guardar el sitio en marcadores.",
       "title": "Explora proveedores disponibles"
     },
+    "openWorkflowFailed": "No se pudo abrir la configuración. Inténtalo de nuevo.",
     "popupApiCredentialProfiles": {
       "description": "¿Necesitas API para desarrolladores o cuota de Coding Plan? Rellena la URL base y obtén claves rápidamente:",
       "title": "Proveedores y suscripciones recomendados"

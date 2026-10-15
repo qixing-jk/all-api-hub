@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   SPONSOR_CATALOG_SCHEMA_VERSION,
   SPONSOR_RECOMMENDATION_SURFACES,
+  SPONSOR_WORKFLOW_KINDS,
 } from "~/features/AccountManagement/sponsors/constants"
 import { PopupSponsorRecommendationsSection } from "~/features/AccountManagement/sponsors/PopupSponsorRecommendationsSection"
 import {
@@ -11,9 +12,21 @@ import {
   SPONSOR_SUPPORT_STATUS,
   type SponsorRecommendation,
 } from "~/features/AccountManagement/sponsors/types"
+import type { useSponsorRecommendations } from "~/features/AccountManagement/sponsors/useSponsorRecommendations"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { openFullAccountManagerPage } from "~/utils/navigation"
-import { render, screen } from "~~/tests/test-utils/render"
+import { act, render, screen } from "~~/tests/test-utils/render"
+import { consumeSponsorWorkflow } from "~~/tests/test-utils/sponsorWorkflow"
+
+type SponsorRecommendationOptions = Parameters<
+  typeof useSponsorRecommendations
+>[0]
+
+const popupRuntime = vi.hoisted(() => ({ inPopup: false }))
+vi.mock("~/utils/browser", async (original) => ({
+  ...(await original<typeof import("~/utils/browser")>()),
+  isExtensionPopup: () => popupRuntime.inPopup,
+}))
 
 vi.mock("~/utils/navigation", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/utils/navigation")>()),
@@ -23,16 +36,18 @@ vi.mock("~/utils/navigation", async (importOriginal) => ({
 const { mockSponsorRecommendationItems, mockUseSponsorRecommendations } =
   vi.hoisted(() => ({
     mockSponsorRecommendationItems: [] as SponsorRecommendation[],
-    mockUseSponsorRecommendations: vi.fn((_options?: any) => ({
-      isLoading: false,
-      items: mockSponsorRecommendationItems,
-    })),
+    mockUseSponsorRecommendations: vi.fn(
+      (_options?: SponsorRecommendationOptions) => ({
+        isLoading: false,
+        items: mockSponsorRecommendationItems,
+      }),
+    ),
   }))
 
 vi.mock(
   "~/features/AccountManagement/sponsors/useSponsorRecommendations",
   () => ({
-    useSponsorRecommendations: (options: any) =>
+    useSponsorRecommendations: (options: SponsorRecommendationOptions) =>
       mockUseSponsorRecommendations(options),
   }),
 )
@@ -69,17 +84,61 @@ function createSponsorRecommendation(): SponsorRecommendation {
 describe("PopupSponsorRecommendationsSection", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    popupRuntime.inPopup = false
     vi.spyOn(window, "open").mockReturnValue(null)
+    vi.spyOn(window, "close").mockImplementation(() => {})
     setSponsorRecommendations([])
   })
 
-  afterEach(() => vi.restoreAllMocks())
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
 
-  it("returns null when no recommendations are present", () => {
-    const { container } = render(
+  it("moves popup sponsor creation to the sidebar before visiting, bypassing the transient local handler", async () => {
+    popupRuntime.inPopup = true
+    const open = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal("chrome", { sidePanel: { open } })
+    vi.spyOn(browser.tabs, "query").mockResolvedValue([
+      { id: 3, windowId: 2 },
+    ] as browser.tabs.Tab[])
+    const localHandler = vi.fn()
+    setSponsorRecommendations([createSponsorRecommendation()])
+    render(
       <PopupSponsorRecommendationsSection
         surface={SPONSOR_RECOMMENDATION_SURFACES.Newcomer}
+        onContinueAddAccount={localHandler}
       />,
+    )
+    await userEvent
+      .setup()
+      .click(
+        await screen.findByTestId(
+          ACCOUNT_MANAGEMENT_TEST_IDS.sponsorContinueAddAccountAction,
+        ),
+      )
+    expect(open).toHaveBeenCalledWith({ windowId: 2 })
+    expect(localHandler).not.toHaveBeenCalled()
+    expect(await consumeSponsorWorkflow(2)).toEqual({
+      kind: SPONSOR_WORKFLOW_KINDS.Account,
+      prefill: expect.objectContaining({
+        sponsorId: "sponsor-1",
+        source: "sponsor",
+      }),
+    })
+    expect(
+      await browser.tabs.query({ url: "https://example.com/sponsor" }),
+    ).toHaveLength(1)
+    expect(window.open).not.toHaveBeenCalled()
+  })
+
+  it("returns null when no recommendations are present", async () => {
+    const { container } = await act(async () =>
+      render(
+        <PopupSponsorRecommendationsSection
+          surface={SPONSOR_RECOMMENDATION_SURFACES.Newcomer}
+        />,
+      ),
     )
 
     expect(container.firstChild).toBeNull()

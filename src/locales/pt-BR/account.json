@@ -305,6 +305,7 @@
       "description": "Cadastre-se no site de um provedor e siga as orientações do cartão para adicionar uma conta, salvar credenciais de API ou favoritar o site.",
       "title": "Explore os provedores disponíveis"
     },
+    "openWorkflowFailed": "Não foi possível abrir a configuração. Tente novamente.",
     "popupApiCredentialProfiles": {
       "description": "Precisa de API para desenvolvedores ou cota do Coding Plan? Preencha o URL base e obtenha chaves rapidamente:",
       "title": "Provedores e assinaturas recomendados"

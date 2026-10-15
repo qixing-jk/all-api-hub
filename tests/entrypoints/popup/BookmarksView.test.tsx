@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import App from "~/entrypoints/popup/App"
 import { getPopupViewTestId } from "~/entrypoints/popup/testIds"
+import { POPUP_VIEW_TYPES } from "~/entrypoints/popup/viewTypes"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -159,7 +160,9 @@ describe("popup bookmarks view", () => {
     expect(screen.getByText("AccountList")).toBeInTheDocument()
     expect(screen.queryByText("BookmarksList")).not.toBeInTheDocument()
 
-    const accountsView = screen.getByTestId(getPopupViewTestId("accounts"))
+    const accountsView = screen.getByTestId(
+      getPopupViewTestId(POPUP_VIEW_TYPES.Accounts),
+    )
     expect(within(accountsView).getByText("AccountList")).toBeInTheDocument()
 
     expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
@@ -192,7 +195,9 @@ describe("popup bookmarks view", () => {
     expect(screen.getByText("ActionButtons")).toBeInTheDocument()
     expect(screen.queryByText("AccountList")).not.toBeInTheDocument()
 
-    const bookmarksView = screen.getByTestId(getPopupViewTestId("bookmarks"))
+    const bookmarksView = screen.getByTestId(
+      getPopupViewTestId(POPUP_VIEW_TYPES.Bookmarks),
+    )
     expect(within(bookmarksView).getByText("BookmarksList")).toBeInTheDocument()
 
     fireEvent.click(
@@ -224,7 +229,7 @@ describe("popup bookmarks view", () => {
     expect(screen.queryByText("BookmarksList")).not.toBeInTheDocument()
 
     const apiCredentialProfilesView = screen.getByTestId(
-      getPopupViewTestId("apiCredentialProfiles"),
+      getPopupViewTestId(POPUP_VIEW_TYPES.ApiCredentialProfiles),
     )
     expect(
       within(apiCredentialProfilesView).getByText(

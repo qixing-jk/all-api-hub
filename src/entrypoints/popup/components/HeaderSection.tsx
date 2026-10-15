@@ -37,6 +37,7 @@ import {
 import { openSidePanelPage } from "~/utils/navigation/sidepanel"
 
 import { getPopupOpenFullPageButtonTestId } from "../testIds"
+import { POPUP_VIEW_TYPES } from "../viewTypes"
 import type { PopupViewType } from "./PopupViewSwitchTabs"
 
 /**
@@ -51,7 +52,7 @@ const logger = createLogger("PopupHeaderSection")
  */
 export default function HeaderSection({
   showRefresh = true,
-  activeView = "accounts",
+  activeView = POPUP_VIEW_TYPES.Accounts,
 }: {
   showRefresh?: boolean
   activeView?: PopupViewType
@@ -146,32 +147,32 @@ export default function HeaderSection({
   ])
 
   const openFullPageLabel =
-    activeView === "bookmarks"
+    activeView === POPUP_VIEW_TYPES.Bookmarks
       ? t("ui:navigation.bookmark")
-      : activeView === "apiCredentialProfiles"
+      : activeView === POPUP_VIEW_TYPES.ApiCredentialProfiles
         ? t("ui:navigation.apiCredentialProfiles")
         : t("ui:navigation.account")
   const openFullPageFeatureId =
-    activeView === "bookmarks"
+    activeView === POPUP_VIEW_TYPES.Bookmarks
       ? PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement
-      : activeView === "apiCredentialProfiles"
+      : activeView === POPUP_VIEW_TYPES.ApiCredentialProfiles
         ? PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles
         : PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement
   const openFullPageActionId =
-    activeView === "bookmarks"
+    activeView === POPUP_VIEW_TYPES.Bookmarks
       ? PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupBookmarkManagementPage
-      : activeView === "apiCredentialProfiles"
+      : activeView === POPUP_VIEW_TYPES.ApiCredentialProfiles
         ? PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupApiCredentialProfilesPage
         : PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupAccountManagementPage
   const openFullPageTestId = getPopupOpenFullPageButtonTestId(activeView)
 
   const handleOpenFullPage = async () => {
-    if (activeView === "bookmarks") {
+    if (activeView === POPUP_VIEW_TYPES.Bookmarks) {
       await openFullBookmarkManagerPage()
       return
     }
 
-    if (activeView === "apiCredentialProfiles") {
+    if (activeView === POPUP_VIEW_TYPES.ApiCredentialProfiles) {
       await openApiCredentialProfilesPage()
       return
     }

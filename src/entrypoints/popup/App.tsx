@@ -34,6 +34,7 @@ import PopupViewSwitchTabs, {
 } from "./components/PopupViewSwitchTabs"
 import { getPopupViewTestId, POPUP_TEST_IDS } from "./testIds"
 import { usePopupViewRegistry } from "./viewRegistry"
+import { POPUP_VIEW_TYPES } from "./viewTypes"
 
 /**
  * Maps popup tab state to the fixed analytics page id enum.
@@ -42,11 +43,11 @@ function mapPopupViewToAnalyticsPageId(
   view: PopupViewType,
 ): ProductAnalyticsPageId {
   switch (view) {
-    case "bookmarks":
+    case POPUP_VIEW_TYPES.Bookmarks:
       return PRODUCT_ANALYTICS_PAGE_IDS.PopupBookmarks
-    case "apiCredentialProfiles":
+    case POPUP_VIEW_TYPES.ApiCredentialProfiles:
       return PRODUCT_ANALYTICS_PAGE_IDS.PopupApiCredentialProfiles
-    case "accounts":
+    case POPUP_VIEW_TYPES.Accounts:
     default:
       return PRODUCT_ANALYTICS_PAGE_IDS.PopupAccounts
   }
@@ -60,17 +61,17 @@ function mapPopupViewToAnalyticsAction(view: PopupViewType): {
   actionId: ProductAnalyticsActionId
 } {
   switch (view) {
-    case "bookmarks":
+    case POPUP_VIEW_TYPES.Bookmarks:
       return {
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement,
         actionId: PRODUCT_ANALYTICS_ACTION_IDS.SelectBookmarksView,
       }
-    case "apiCredentialProfiles":
+    case POPUP_VIEW_TYPES.ApiCredentialProfiles:
       return {
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
         actionId: PRODUCT_ANALYTICS_ACTION_IDS.SelectApiCredentialProfilesView,
       }
-    case "accounts":
+    case POPUP_VIEW_TYPES.Accounts:
     default:
       return {
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
@@ -88,9 +89,12 @@ function PopupContent({ inPopup }: { inPopup: boolean }) {
   const { isLoading } = useUserPreferencesContext()
   const inSidePanel = isExtensionSidePanel()
   const isDesktopPopup = inPopup && isDesktopDevice()
-  const [activeView, setActiveView] = useState<PopupViewType>("accounts")
+  const [activeView, setActiveView] = useState<PopupViewType>(
+    POPUP_VIEW_TYPES.Accounts,
+  )
   const [scrollParent, setScrollParent] = useState<HTMLDivElement | null>(null)
   const viewConfig = usePopupViewRegistry({
+    onSelectView: setActiveView,
     isPopup: inPopup,
     scrollParent: isDesktopPopup ? scrollParent : null,
   })

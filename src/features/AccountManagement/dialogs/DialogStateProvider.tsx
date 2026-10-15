@@ -1,6 +1,5 @@
 import {
   useCallback,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -17,18 +16,10 @@ import {
   DialogStateContext,
   type DialogOptions,
 } from "~/features/AccountManagement/dialogs/useDialogStateContext"
-import {
-  ACCOUNT_MANAGEMENT_ROUTE_ACTIONS,
-  ACCOUNT_MANAGEMENT_ROUTE_PARAMS,
-} from "~/features/AccountManagement/routeParams"
-import {
-  getAndClearPendingSponsorAddAccountPrefill,
-  isAddAccountPrefill,
-  watchPendingSponsorAddAccountPrefill,
-} from "~/features/AccountManagement/sponsors/pendingAddAccountIntent"
+import { isAddAccountPrefill } from "~/features/AccountManagement/sponsors/addAccountPrefill"
 import type { AddAccountPrefill } from "~/features/AccountManagement/sponsors/types"
+import { UI_HANDOFF_RECEIVE_RESULTS } from "~/hooks/useUiHandoffReceiver"
 import type { DisplaySiteData } from "~/types"
-import { isExtensionOptions, isExtensionSidePanel } from "~/utils/browser"
 
 interface DialogState {
   isOpen: boolean
@@ -57,12 +48,12 @@ export const DialogStateProvider = ({
   })
 
   const promiseRef = useRef<{
-    resolve: (value: any) => void
-    reject: (reason?: any) => void
+    resolve: (value: unknown) => void
+    reject: (reason?: unknown) => void
   } | null>(null)
 
   const openAccountDialog = useCallback((options: DialogOptions) => {
-    return new Promise((resolve, reject) => {
+    return new Promise<unknown>((resolve, reject) => {
       setDialogState({
         isOpen: true,
         mode: options.mode,
@@ -76,19 +67,20 @@ export const DialogStateProvider = ({
 
   const receiveRecovery = useCallback(
     (recoveryState: AccountDialogRecoveryState) => {
-      if (dialogState.isOpen) return "busy" as const
+      if (dialogState.isOpen) return UI_HANDOFF_RECEIVE_RESULTS.Busy
       const account = recoveryState.accountId
         ? displayData?.find(
             (candidate) => candidate.id === recoveryState.accountId,
           )
         : undefined
-      if (recoveryState.accountId && !account) return "unavailable" as const
+      if (recoveryState.accountId && !account)
+        return UI_HANDOFF_RECEIVE_RESULTS.Unavailable
       void openAccountDialog({
         mode: account ? DIALOG_MODES.EDIT : DIALOG_MODES.ADD,
         account,
         recoveryState,
       })
-      return "accepted" as const
+      return UI_HANDOFF_RECEIVE_RESULTS.Accepted
     },
     [dialogState.isOpen, displayData, openAccountDialog],
   )
@@ -109,7 +101,7 @@ export const DialogStateProvider = ({
     onOpenBookmarkImport?.()
   }, [onOpenBookmarkImport])
 
-  const handleSuccess = (data: any) => {
+  const handleSuccess = (data: unknown) => {
     promiseRef.current?.resolve(data)
     handleClose()
   }
@@ -137,35 +129,6 @@ export const DialogStateProvider = ({
     },
     [openAccountDialog],
   )
-
-  useEffect(() => {
-    const optionsAddAccount =
-      isExtensionOptions() &&
-      new URLSearchParams(window.location.search).get(
-        ACCOUNT_MANAGEMENT_ROUTE_PARAMS.Action,
-      ) === ACCOUNT_MANAGEMENT_ROUTE_ACTIONS.Add
-    if (!isExtensionSidePanel() && !optionsAddAccount) return
-
-    let cancelled = false
-
-    const consumePendingPrefill = () => {
-      void getAndClearPendingSponsorAddAccountPrefill().then((prefill) => {
-        if (cancelled || !prefill) return
-
-        openAccountDialog({ mode: DIALOG_MODES.ADD, prefill })
-      })
-    }
-
-    consumePendingPrefill()
-    const stopWatchingPendingPrefill = watchPendingSponsorAddAccountPrefill(
-      consumePendingPrefill,
-    )
-
-    return () => {
-      cancelled = true
-      stopWatchingPendingPrefill()
-    }
-  }, [openAccountDialog])
 
   const closeAddAccount = useCallback(handleClose, [loadAccountData])
   const openEditAccount = useCallback(

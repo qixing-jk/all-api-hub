@@ -1,3 +1,8 @@
+import { mkdir } from "node:fs/promises"
+import { createServer } from "node:http"
+import type { AddressInfo } from "node:net"
+import path from "node:path"
+
 import {
   OPTIONS_PAGE_PATH,
   SIDEPANEL_PAGE_PATH,
@@ -5,6 +10,12 @@ import {
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import { getPopupViewTestId, POPUP_TEST_IDS } from "~/entrypoints/popup/testIds"
+import { POPUP_VIEW_TYPES } from "~/entrypoints/popup/viewTypes"
+import {
+  SPONSOR_CATALOG_SCHEMA_VERSION,
+  SPONSOR_REMOTE_CATALOG_V5_URL,
+  SPONSOR_WORKFLOW_KINDS,
+} from "~/features/AccountManagement/sponsors/constants"
 import { SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
 import {
   ACCOUNT_MANAGEMENT_LIST_ITEM_TEST_ID_PREFIX,
@@ -17,7 +28,11 @@ import {
   createDefaultAccountStorageConfig,
   normalizeAccountStorageConfigForWrite,
 } from "~/services/accounts/editing/accountDefaults"
-import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import {
+  SPONSOR_WORKFLOW_STORAGE_KEYS,
+  STORAGE_KEYS,
+  STORAGE_LOCKS,
+} from "~/services/core/storageKeys"
 import { AuthTypeEnum } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
@@ -32,7 +47,6 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import {
   expectPermissionOnboardingHidden,
-  getPlasmoStorageRawValue,
   getServiceWorker,
   setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
@@ -54,6 +68,45 @@ async function expectBrowserTabOpened(
       }, url)
     })
     .toBe(true)
+}
+
+/** Seed the public session envelope under the same lock as production senders. */
+async function seedSponsorHandoff(
+  serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
+  intent: unknown,
+) {
+  await serviceWorker.evaluate(
+    async ({ keys, lock, intent }) => {
+      const api = (globalThis as any).chrome
+      const windowId = (await api.windows.getLastFocused()).id
+      const id = crypto.randomUUID()
+      await navigator.locks.request(lock, async () => {
+        await api.storage.session.set({
+          [`${keys.DRAFT_PREFIX}${id}`]: {
+            version: 1,
+            createdAt: Date.now(),
+            windowId,
+            state: intent,
+          },
+          [`${keys.PENDING_PREFIX}${windowId}`]: id,
+        })
+      })
+    },
+    {
+      keys: SPONSOR_WORKFLOW_STORAGE_KEYS,
+      lock: STORAGE_LOCKS.SPONSOR_WORKFLOW,
+      intent,
+    },
+  )
+}
+
+async function getSponsorPending(
+  serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
+) {
+  return serviceWorker.evaluate(async (prefix) => {
+    const values = await (globalThis as any).chrome.storage.session.get(null)
+    return Object.keys(values).find((key) => key.startsWith(prefix))
+  }, SPONSOR_WORKFLOW_STORAGE_KEYS.PENDING_PREFIX)
 }
 
 test.beforeEach(async ({ context, page }) => {
@@ -112,7 +165,9 @@ test("sidepanel switches common saved-item tabs and opens the matching managemen
   await expectPermissionOnboardingHidden(page)
 
   await expect(page.getByText("All API Hub", { exact: true })).toBeVisible()
-  await expect(page.getByTestId(getPopupViewTestId("accounts"))).toBeVisible()
+  await expect(
+    page.getByTestId(getPopupViewTestId(POPUP_VIEW_TYPES.Accounts)),
+  ).toBeVisible()
   await expect(page.getByText("Sidepanel Account")).toBeVisible()
   await expect(
     page.getByRole("button", { name: "Open Side Panel" }),
@@ -131,7 +186,9 @@ test("sidepanel switches common saved-item tabs and opens the matching managemen
   await accountsPage.close()
 
   await page.getByRole("tab", { name: "Bookmarks" }).click()
-  await expect(page.getByTestId(getPopupViewTestId("bookmarks"))).toBeVisible()
+  await expect(
+    page.getByTestId(getPopupViewTestId(POPUP_VIEW_TYPES.Bookmarks)),
+  ).toBeVisible()
   await expect(
     page.getByRole("button", { name: "Sidepanel Docs" }),
   ).toBeVisible()
@@ -269,7 +326,9 @@ test("sidepanel opens saved account and bookmark targets in browser tabs", async
   await waitForExtensionRoot(page)
   await expectPermissionOnboardingHidden(page)
 
-  await expect(page.getByTestId(getPopupViewTestId("accounts"))).toBeVisible()
+  await expect(
+    page.getByTestId(getPopupViewTestId(POPUP_VIEW_TYPES.Accounts)),
+  ).toBeVisible()
   await page.getByRole("button", { name: "Sidepanel Open Account" }).click()
   await expectBrowserTabOpened(
     serviceWorker,
@@ -361,20 +420,16 @@ test("sidepanel consumes pending sponsor add-account prefill", async ({
   page,
 }) => {
   const serviceWorker = await getServiceWorker(context)
-  await setPlasmoStorageValue(
-    serviceWorker,
-    STORAGE_KEYS.SPONSOR_ADD_ACCOUNT_PENDING_PREFILL,
-    {
-      createdAt: Date.now(),
-      prefill: {
-        source: SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE,
-        sponsorId: "e2e-supported-provider",
-        siteType: SITE_TYPES.NEW_API,
-        siteUrl: "https://sponsor-prefill.example.invalid",
-        authType: AuthTypeEnum.AccessToken,
-      },
+  await seedSponsorHandoff(serviceWorker, {
+    kind: SPONSOR_WORKFLOW_KINDS.Account,
+    prefill: {
+      source: SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE,
+      sponsorId: "e2e-supported-provider",
+      siteType: SITE_TYPES.NEW_API,
+      siteUrl: "https://sponsor-prefill.example.invalid",
+      authType: AuthTypeEnum.AccessToken,
     },
-  )
+  })
 
   await page.goto(SIDEPANEL_URL(extensionId))
   await waitForExtensionRoot(page)
@@ -396,12 +451,221 @@ test("sidepanel consumes pending sponsor add-account prefill", async ({
   await expect(
     accountDialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteTypeTrigger),
   ).toHaveAttribute("data-site-type", SITE_TYPES.NEW_API)
-  await expect
-    .poll(() =>
-      getPlasmoStorageRawValue(
-        serviceWorker,
-        STORAGE_KEYS.SPONSOR_ADD_ACCOUNT_PENDING_PREFILL,
-      ),
-    )
-    .toBeUndefined()
+  await expect.poll(() => getSponsorPending(serviceWorker)).toBeUndefined()
 })
+
+for (const kind of Object.values(SPONSOR_WORKFLOW_KINDS)) {
+  test(`sidepanel receives ${kind} sponsor setup while already mounted`, async ({
+    context,
+    extensionId,
+    page,
+  }) => {
+    await page.goto(SIDEPANEL_URL(extensionId))
+    await waitForExtensionRoot(page)
+    await expectPermissionOnboardingHidden(page)
+    const serviceWorker = await getServiceWorker(context)
+    const prefill =
+      kind === SPONSOR_WORKFLOW_KINDS.Account
+        ? {
+            source: "sponsor",
+            sponsorId: "e2e-provider",
+            siteType: SITE_TYPES.NEW_API,
+            siteUrl: "https://sponsor-setup.example.invalid",
+            authType: AuthTypeEnum.AccessToken,
+          }
+        : kind === SPONSOR_WORKFLOW_KINDS.Bookmark
+          ? {
+              name: "Sponsor Setup",
+              url: "https://sponsor-setup.example.invalid",
+            }
+          : {
+              name: "Sponsor Setup",
+              baseUrl: "https://sponsor-setup.example.invalid/v1",
+              apiKeyCreateHint: "Create a key in the provider console",
+            }
+    await seedSponsorHandoff(serviceWorker, { kind, prefill })
+    if (kind === SPONSOR_WORKFLOW_KINDS.Account) {
+      const dialog = page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog)
+      await expect(dialog).toBeVisible()
+      await expect(
+        dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput),
+      ).toHaveValue("https://sponsor-setup.example.invalid")
+    } else {
+      const dialog = page.getByTestId(
+        kind === SPONSOR_WORKFLOW_KINDS.Bookmark
+          ? SITE_BOOKMARKS_TEST_IDS.dialog
+          : API_CREDENTIAL_PROFILES_TEST_IDS.dialog,
+      )
+      await expect(dialog).toBeVisible()
+      await expect(dialog.locator('input[value="Sponsor Setup"]')).toBeVisible()
+      await expect(
+        dialog.locator(
+          `input[value="https://sponsor-setup.example.invalid${kind === SPONSOR_WORKFLOW_KINDS.ApiCredential ? "/v1" : ""}"]`,
+        ),
+      ).toBeVisible()
+    }
+    await expect.poll(() => getSponsorPending(serviceWorker)).toBeUndefined()
+  })
+}
+
+test("Options account setup restores sponsor hints from its own destination URL", async ({
+  extensionId,
+  page,
+}) => {
+  const params = new URLSearchParams({
+    action: "add",
+    source: "sponsor",
+    sponsorId: "e2e-provider",
+    siteType: SITE_TYPES.NEW_API,
+    siteUrl: "https://sponsor-setup.example.invalid",
+    authType: AuthTypeEnum.AccessToken,
+  })
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}?${params}#${MENU_ITEM_IDS.ACCOUNT}`,
+  )
+  const dialog = page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog)
+  await expect(dialog).toBeVisible()
+  await expect(
+    dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput),
+  ).toHaveValue("https://sponsor-setup.example.invalid")
+})
+
+const sponsorTest = test.extend<{ sponsorSite: string }>({
+  sponsorSite: async ({ extensionId }, runFixture) => {
+    void extensionId
+    const server = createServer((_request, response) => {
+      response.writeHead(200, { "Content-Type": "text/html" })
+      response.end(
+        "<!doctype html><html><body><h1>Provider registration</h1><label>Email <input></label></body></html>",
+      )
+    })
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+    try {
+      await runFixture(
+        `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
+      )
+    } finally {
+      server.closeAllConnections()
+      await new Promise<void>((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve())),
+      )
+    }
+  },
+})
+
+for (const destination of ["sidepanel", "unsupported", "rejected"] as const) {
+  sponsorTest(
+    `popup sponsor click tries ${destination} without Options fallback`,
+    async ({ context, extensionId, page, sponsorSite }) => {
+      const serviceWorker = await getServiceWorker(context)
+      if (destination !== "sidepanel") {
+        await page.addInitScript((mode) => {
+          ;(globalThis as any).chrome.sidePanel.open =
+            mode === "unsupported"
+              ? undefined
+              : () => Promise.reject(new Error("Unavailable"))
+        }, destination)
+      }
+      const payload = {
+        schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
+        items: [
+          {
+            id: "e2e-provider",
+            locales: {
+              en: {
+                enabled: true,
+                rank: 1,
+                supportStatus: "supported",
+                name: "E2E Sponsor",
+                tagline: "Test setup handoff",
+                links: {
+                  primary: `${sponsorSite}/register`,
+                },
+                actions: {
+                  addAccount: {
+                    siteType: SITE_TYPES.NEW_API,
+                    siteUrl: sponsorSite,
+                  },
+                },
+              },
+            },
+          },
+        ],
+      }
+      await setPlasmoStorageValue(
+        serviceWorker,
+        STORAGE_KEYS.SPONSOR_CATALOG_VERSIONED_CACHE,
+        {
+          [`${SPONSOR_CATALOG_SCHEMA_VERSION}:${SPONSOR_REMOTE_CATALOG_V5_URL}`]:
+            {
+              schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
+              sourceUrl: SPONSOR_REMOTE_CATALOG_V5_URL,
+              fetchedAt: Date.now(),
+              payload,
+            },
+        },
+        { lock: STORAGE_LOCKS.SPONSOR_CATALOG },
+      )
+      await page.goto(`chrome-extension://${extensionId}/popup.html`)
+      await waitForExtensionRoot(page)
+      await page
+        .getByRole("button", {
+          name: /Continue adding this account: E2E Sponsor/,
+        })
+        .click()
+      await expectBrowserTabOpened(serviceWorker, `${sponsorSite}/register`)
+      if (destination === "sidepanel") {
+        await expect
+          .poll(() =>
+            serviceWorker.evaluate(async () => {
+              const contexts = await (
+                globalThis as any
+              ).chrome.runtime.getContexts({
+                contextTypes: ["SIDE_PANEL"],
+              })
+              return contexts.length
+            }),
+          )
+          .toBe(1)
+      }
+      const tabs = await serviceWorker.evaluate(async () =>
+        (globalThis as any).chrome.tabs.query({}),
+      )
+      expect(
+        tabs.filter((tab: { url?: string }) =>
+          tab.url?.includes("/options.html"),
+        ),
+      ).toHaveLength(0)
+      const provider = context
+        .pages()
+        .find((candidate) => candidate.url() === `${sponsorSite}/register`)!
+      await expect(
+        provider.getByRole("heading", { name: "Provider registration" }),
+      ).toBeVisible()
+      await expect(
+        provider.getByRole("button", { name: "Return to setup" }),
+      ).toHaveCount(0)
+      const reopenedPopup = await context.newPage()
+      await reopenedPopup.goto(`chrome-extension://${extensionId}/popup.html`)
+      await waitForExtensionRoot(reopenedPopup)
+      await expect(
+        reopenedPopup.getByRole("button", { name: "Return to setup" }),
+      ).toHaveCount(0)
+      if (destination === "unsupported") {
+        const visualDir = process.env.AAH_SPONSOR_VISUAL_DIR
+        if (visualDir) {
+          await mkdir(visualDir, { recursive: true })
+          await reopenedPopup.screenshot({
+            path: path.join(visualDir, "popup-after-click.png"),
+            animations: "disabled",
+          })
+          await provider.screenshot({
+            path: path.join(visualDir, "provider-after-click.png"),
+            animations: "disabled",
+          })
+        }
+      }
+      await expect.poll(() => getSponsorPending(serviceWorker)).toBeUndefined()
+    },
+  )
+}

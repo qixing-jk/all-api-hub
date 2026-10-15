@@ -12,20 +12,26 @@ import AccountList from "~/features/AccountManagement/components/AccountList"
 import { PopupAccountOnboarding } from "~/features/AccountManagement/components/PopupAccountOnboarding"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import { useAddAccountHandler } from "~/features/AccountManagement/opening/useAddAccountHandler"
+import { SPONSOR_WORKFLOW_KINDS } from "~/features/AccountManagement/sponsors/constants"
+import type { SponsorApiCredentialFallbackPrefill } from "~/features/AccountManagement/sponsors/types"
+import { useSponsorWorkflowReceiver } from "~/features/AccountManagement/sponsors/useSponsorWorkflowReceiver"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import type { ApiCredentialProfilesPopupViewHandle } from "~/features/ApiCredentialProfiles/list/ApiCredentialProfilesPopupView"
 import { useBookmarkDialogContext } from "~/features/SiteBookmarks/editor/BookmarkDialogStateContext"
+import { UI_HANDOFF_RECEIVE_RESULTS } from "~/hooks/useUiHandoffReceiver"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   type ProductAnalyticsActionId,
   type ProductAnalyticsFeatureId,
 } from "~/services/productAnalytics/contracts"
+import { isExtensionSidePanel } from "~/utils/browser"
 
 import BalanceSection from "./components/BalanceSection"
 import type { PopupViewType } from "./components/PopupViewSwitchTabs"
 import ShareOverviewSnapshotButton from "./components/ShareOverviewSnapshotButton"
 import { POPUP_TEST_IDS } from "./testIds"
+import { POPUP_VIEW_TYPES } from "./viewTypes"
 
 const loadBookmarksList = () =>
   import("~/features/SiteBookmarks/list/BookmarksList")
@@ -62,6 +68,7 @@ interface PopupViewConfig {
 }
 
 interface PopupViewRegistryOptions {
+  onSelectView?: (view: PopupViewType) => void
   isPopup?: boolean
   scrollParent?: HTMLElement | null
 }
@@ -94,6 +101,7 @@ function PopupContentFallback() {
 export function usePopupViewRegistry({
   isPopup = false,
   scrollParent,
+  onSelectView,
 }: PopupViewRegistryOptions = {}): Record<PopupViewType, PopupViewConfig> {
   const { t } = useTranslation([
     "account",
@@ -129,7 +137,7 @@ export function usePopupViewRegistry({
   const apiCredentialProfilesViewRef =
     useRef<ApiCredentialProfilesPopupViewHandle>(null)
   const [pendingApiCredentialProfilesAdd, setPendingApiCredentialProfilesAdd] =
-    useState(false)
+    useState<SponsorApiCredentialFallbackPrefill | true | null>(null)
   const [hasApiCredentialProfiles, setHasApiCredentialProfiles] =
     useState(false)
 
@@ -138,15 +146,42 @@ export function usePopupViewRegistry({
       apiCredentialProfilesViewRef.current = handle
 
       if (handle && pendingApiCredentialProfilesAdd) {
-        handle.openAddDialog()
-        setPendingApiCredentialProfilesAdd(false)
+        handle.openAddDialog(
+          pendingApiCredentialProfilesAdd === true
+            ? undefined
+            : pendingApiCredentialProfilesAdd,
+        )
+        setPendingApiCredentialProfilesAdd(null)
       }
     },
     [pendingApiCredentialProfilesAdd],
   )
 
+  useSponsorWorkflowReceiver(isExtensionSidePanel(), (intent) => {
+    switch (intent.kind) {
+      case SPONSOR_WORKFLOW_KINDS.Account:
+        onSelectView?.(POPUP_VIEW_TYPES.Accounts)
+        handleAddAccountClick(intent.prefill)
+        break
+      case SPONSOR_WORKFLOW_KINDS.Bookmark:
+        onSelectView?.(POPUP_VIEW_TYPES.Bookmarks)
+        openAddBookmark(intent.prefill)
+        break
+      case SPONSOR_WORKFLOW_KINDS.ApiCredential:
+        onSelectView?.(POPUP_VIEW_TYPES.ApiCredentialProfiles)
+        if (apiCredentialProfilesViewRef.current) {
+          apiCredentialProfilesViewRef.current.openAddDialog(intent.prefill)
+        } else {
+          setPendingApiCredentialProfilesAdd(intent.prefill)
+          void loadApiCredentialProfilesPopupView()
+        }
+        break
+    }
+    return UI_HANDOFF_RECEIVE_RESULTS.Accepted
+  })
+
   return {
-    accounts: {
+    [POPUP_VIEW_TYPES.Accounts]: {
       showRefresh: showAccountOverview,
       showActionBar: showAccountOverview,
       showAccountActions: showAccountOverview,
@@ -176,7 +211,7 @@ export function usePopupViewRegistry({
           />
         ),
     },
-    bookmarks: {
+    [POPUP_VIEW_TYPES.Bookmarks]: {
       showRefresh: false,
       showActionBar: !isInitialLoad && bookmarks.length > 0,
       showAccountActions: false,
@@ -202,7 +237,7 @@ export function usePopupViewRegistry({
         void loadBookmarksList()
       },
     },
-    apiCredentialProfiles: {
+    [POPUP_VIEW_TYPES.ApiCredentialProfiles]: {
       showRefresh: false,
       showActionBar: hasApiCredentialProfiles,
       showAccountActions: false,

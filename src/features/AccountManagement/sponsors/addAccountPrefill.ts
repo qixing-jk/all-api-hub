@@ -1,11 +1,7 @@
-import { Storage } from "@plasmohq/storage"
-
 import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
 import { normalizeOptionalAccountAuthType } from "~/features/AccountManagement/utils/accountAuthType"
 import { resolveAccountSiteDefaultAuthType } from "~/services/accounts/accountSiteProfile/auth"
 import { normalizeAccountSiteProfileUrlForStorage } from "~/services/accounts/accountSiteProfile/urls"
-import { STORAGE_KEYS } from "~/services/core/storageKeys"
-import { createLogger } from "~/utils/core/logger"
 import { isRecord } from "~/utils/core/object"
 import { isHttpUrl, tryParseHttpUrl } from "~/utils/core/urlParsing"
 
@@ -16,74 +12,7 @@ import {
   type SponsorAddAccountPrefill,
 } from "./types"
 
-const logger = createLogger("SponsorAddAccountIntent")
-const storage = new Storage({ area: "local" })
-const PENDING_SPONSOR_ADD_ACCOUNT_PREFILL_TTL_MS = 5 * 60 * 1000
-
-interface PendingSponsorAddAccountPrefillEnvelope {
-  createdAt: number
-  prefill: AddAccountPrefill
-}
-
-type PendingSponsorAddAccountPrefillSignal = () => void
-
-/** Stores a short-lived sponsor add-account prefill for side-panel handoff. */
-export async function setPendingSponsorAddAccountPrefill(
-  prefill: AddAccountPrefill,
-): Promise<void> {
-  const normalized = normalizeAddAccountPrefill(prefill)
-  if (!normalized) return
-
-  try {
-    await storage.set(STORAGE_KEYS.SPONSOR_ADD_ACCOUNT_PENDING_PREFILL, {
-      createdAt: Date.now(),
-      prefill: normalized,
-    } satisfies PendingSponsorAddAccountPrefillEnvelope)
-  } catch (error) {
-    logger.warn("Failed to store pending sponsor add-account prefill", error)
-  }
-}
-
-/** Consumes and clears the pending sponsor add-account prefill if still valid. */
-export async function getAndClearPendingSponsorAddAccountPrefill(): Promise<AddAccountPrefill | null> {
-  let raw: unknown
-
-  try {
-    raw = await storage.get(STORAGE_KEYS.SPONSOR_ADD_ACCOUNT_PENDING_PREFILL)
-  } catch (error) {
-    logger.warn("Failed to read pending sponsor add-account prefill", error)
-    return null
-  }
-
-  try {
-    await storage.remove(STORAGE_KEYS.SPONSOR_ADD_ACCOUNT_PENDING_PREFILL)
-  } catch (error) {
-    logger.warn("Failed to clear pending sponsor add-account prefill", error)
-  }
-
-  return normalizePendingEnvelope(raw)
-}
-
-/** Watches for new pending sponsor add-account prefill writes in mounted side panels. */
-export function watchPendingSponsorAddAccountPrefill(
-  onPendingPrefill: PendingSponsorAddAccountPrefillSignal,
-): () => void {
-  const callbackMap = {
-    [STORAGE_KEYS.SPONSOR_ADD_ACCOUNT_PENDING_PREFILL]: (change) => {
-      if (change.newValue !== undefined) {
-        onPendingPrefill()
-      }
-    },
-  } satisfies Parameters<typeof storage.watch>[0]
-
-  if (!storage.watch(callbackMap)) {
-    return () => {}
-  }
-
-  return () => {
-    storage.unwatch(callbackMap)
-  }
-}
+const LEGACY_PREFILL_TTL_MS = 5 * 60 * 1000
 
 /** Identifies validated sponsor add-account prefill values while ignoring UI events. */
 export function isSponsorAddAccountPrefill(
@@ -100,16 +29,13 @@ export function isAddAccountPrefill(
 }
 
 /**
- * Validates a stored pending-prefill envelope and enforces its short TTL.
+ * Validates legacy pending-prefill envelopes and preserves their short TTL.
  */
-function normalizePendingEnvelope(value: unknown): AddAccountPrefill | null {
+function normalizeLegacyEnvelope(value: unknown): AddAccountPrefill | null {
   if (!isRecord(value)) return null
   if (typeof value.createdAt !== "number") return null
   if (!Number.isFinite(value.createdAt)) return null
-  if (
-    Date.now() - value.createdAt >
-    PENDING_SPONSOR_ADD_ACCOUNT_PREFILL_TTL_MS
-  ) {
+  if (Date.now() - value.createdAt > LEGACY_PREFILL_TTL_MS) {
     return null
   }
 
@@ -117,12 +43,12 @@ function normalizePendingEnvelope(value: unknown): AddAccountPrefill | null {
 }
 
 /**
- * Validates the add-account prefill payload before it is written into an envelope.
+ * Validates raw add-account hints and backward-compatible legacy envelopes.
  */
 export function normalizeAddAccountPrefill(
   value: unknown,
 ): AddAccountPrefill | null {
-  const envelopePrefill = normalizePendingEnvelope(value)
+  const envelopePrefill = normalizeLegacyEnvelope(value)
   if (envelopePrefill) return envelopePrefill
 
   return normalizeAddAccountPrefillPayload(value)
@@ -134,7 +60,7 @@ export function normalizeAddAccountPrefill(
 export function normalizeSponsorAddAccountPrefill(
   value: unknown,
 ): SponsorAddAccountPrefill | null {
-  const envelopePrefill = normalizePendingEnvelope(value)
+  const envelopePrefill = normalizeLegacyEnvelope(value)
   if (envelopePrefill?.source === SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE) {
     return envelopePrefill
   }

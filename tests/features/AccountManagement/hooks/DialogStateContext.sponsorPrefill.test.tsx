@@ -16,33 +16,18 @@ const accountDialogProps = vi.hoisted(() => ({
 
 const loadAccountDataMock = vi.hoisted(() => vi.fn())
 
-const {
-  getAndClearPendingSponsorAddAccountPrefillMock,
-  isExtensionSidePanelMock,
-  isAddAccountPrefillMock,
-  isSponsorAddAccountPrefillMock,
-  stopWatchingPendingSponsorAddAccountPrefillMock,
-  watchPendingSponsorAddAccountPrefillMock,
-} = vi.hoisted(() => ({
-  getAndClearPendingSponsorAddAccountPrefillMock: vi.fn(),
-  isExtensionSidePanelMock: vi.fn(() => false),
-  isAddAccountPrefillMock: vi.fn((value: unknown) => {
-    return (
-      typeof value === "object" &&
-      value !== null &&
-      ["sponsor", "bookmark-import"].includes((value as any).source)
-    )
+const { isExtensionSidePanelMock, isAddAccountPrefillMock } = vi.hoisted(
+  () => ({
+    isExtensionSidePanelMock: vi.fn(() => false),
+    isAddAccountPrefillMock: vi.fn((value: unknown) => {
+      return (
+        typeof value === "object" &&
+        value !== null &&
+        ["sponsor", "bookmark-import"].includes((value as any).source)
+      )
+    }),
   }),
-  isSponsorAddAccountPrefillMock: vi.fn((value: unknown) => {
-    return (
-      typeof value === "object" &&
-      value !== null &&
-      (value as any).source === "sponsor"
-    )
-  }),
-  stopWatchingPendingSponsorAddAccountPrefillMock: vi.fn(),
-  watchPendingSponsorAddAccountPrefillMock: vi.fn(),
-}))
+)
 
 vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
   useAccountDataContext: () => ({
@@ -71,17 +56,9 @@ vi.mock("~/features/AccountManagement/components/AccountDialog", () => ({
   },
 }))
 
-vi.mock(
-  "~/features/AccountManagement/sponsors/pendingAddAccountIntent",
-  () => ({
-    getAndClearPendingSponsorAddAccountPrefill:
-      getAndClearPendingSponsorAddAccountPrefillMock,
-    isAddAccountPrefill: isAddAccountPrefillMock,
-    isSponsorAddAccountPrefill: isSponsorAddAccountPrefillMock,
-    watchPendingSponsorAddAccountPrefill:
-      watchPendingSponsorAddAccountPrefillMock,
-  }),
-)
+vi.mock("~/features/AccountManagement/sponsors/addAccountPrefill", () => ({
+  isAddAccountPrefill: isAddAccountPrefillMock,
+}))
 
 vi.mock("~/utils/browser", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/utils/browser")>()
@@ -132,44 +109,6 @@ describe("DialogStateContext sponsor prefill", () => {
         ["sponsor", "bookmark-import"].includes((value as any).source)
       )
     })
-    isSponsorAddAccountPrefillMock.mockImplementation((value: unknown) => {
-      return (
-        typeof value === "object" &&
-        value !== null &&
-        (value as any).source === "sponsor"
-      )
-    })
-    getAndClearPendingSponsorAddAccountPrefillMock.mockResolvedValue(null)
-    watchPendingSponsorAddAccountPrefillMock.mockReturnValue(
-      stopWatchingPendingSponsorAddAccountPrefillMock,
-    )
-  })
-
-  it("restores pending sponsor intent in the Options add-account fallback", async () => {
-    accountDialogProps.inOptions = true
-    window.history.replaceState(null, "", "/?action=add#account")
-    getAndClearPendingSponsorAddAccountPrefillMock.mockResolvedValueOnce({
-      source: "sponsor",
-      sponsorId: "aihubmix",
-      siteType: SITE_TYPES.AIHUBMIX,
-      siteUrl: "https://aihubmix.com",
-    })
-    render(
-      <DialogStateProvider>
-        <Harness />
-      </DialogStateProvider>,
-      {
-        withUserPreferencesProvider: false,
-        withThemeProvider: false,
-        withReleaseUpdateStatusProvider: false,
-      },
-    )
-    expect(await screen.findByTestId("account-dialog")).toHaveTextContent(
-      "aihubmix",
-    )
-    expect(accountDialogProps.current.prefill.siteUrl).toBe(
-      "https://aihubmix.com",
-    )
   })
 
   it("threads add-account sponsor prefill into AccountDialog", async () => {
@@ -343,105 +282,6 @@ describe("DialogStateContext sponsor prefill", () => {
     await rejection
     expect(screen.queryByTestId("account-dialog")).not.toBeInTheDocument()
     expect(loadAccountDataMock).toHaveBeenCalledTimes(1)
-  })
-
-  it("opens add account from a pending side-panel sponsor prefill and clears the intent", async () => {
-    isExtensionSidePanelMock.mockReturnValue(true)
-    getAndClearPendingSponsorAddAccountPrefillMock.mockResolvedValueOnce({
-      siteUrl: "https://aihubmix.com/path",
-      siteType: SITE_TYPES.AIHUBMIX,
-      source: "sponsor",
-      sponsorId: "aihubmix",
-    })
-
-    render(
-      <DialogStateProvider>
-        <div>side panel</div>
-      </DialogStateProvider>,
-      {
-        withUserPreferencesProvider: false,
-        withThemeProvider: false,
-        withReleaseUpdateStatusProvider: false,
-      },
-    )
-
-    expect(await screen.findByTestId("account-dialog")).toBeInTheDocument()
-    expect(accountDialogProps.current).toMatchObject({
-      mode: DIALOG_MODES.ADD,
-      prefill: {
-        siteUrl: "https://aihubmix.com/path",
-        siteType: SITE_TYPES.AIHUBMIX,
-        source: "sponsor",
-        sponsorId: "aihubmix",
-      },
-    })
-    expect(
-      getAndClearPendingSponsorAddAccountPrefillMock,
-    ).toHaveBeenCalledTimes(1)
-  })
-
-  it("opens add account when an already-mounted side panel receives a pending sponsor prefill signal", async () => {
-    isExtensionSidePanelMock.mockReturnValue(true)
-    getAndClearPendingSponsorAddAccountPrefillMock
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({
-        siteUrl: "https://aihubmix.com/path",
-        siteType: SITE_TYPES.AIHUBMIX,
-        source: "sponsor",
-        sponsorId: "aihubmix",
-      })
-
-    render(
-      <DialogStateProvider>
-        <div>side panel</div>
-      </DialogStateProvider>,
-      {
-        withUserPreferencesProvider: false,
-        withThemeProvider: false,
-        withReleaseUpdateStatusProvider: false,
-      },
-    )
-
-    expect(watchPendingSponsorAddAccountPrefillMock).toHaveBeenCalledTimes(1)
-    const onPendingPrefill =
-      watchPendingSponsorAddAccountPrefillMock.mock.calls[0]?.[0]
-    expect(onPendingPrefill).toEqual(expect.any(Function))
-
-    onPendingPrefill()
-
-    expect(await screen.findByTestId("account-dialog")).toBeInTheDocument()
-    expect(accountDialogProps.current).toMatchObject({
-      mode: DIALOG_MODES.ADD,
-      prefill: {
-        siteUrl: "https://aihubmix.com/path",
-        siteType: SITE_TYPES.AIHUBMIX,
-        source: "sponsor",
-        sponsorId: "aihubmix",
-      },
-    })
-    expect(accountDialogProps.renderCount).toBe(1)
-    expect(
-      getAndClearPendingSponsorAddAccountPrefillMock,
-    ).toHaveBeenCalledTimes(2)
-  })
-
-  it("stops watching pending sponsor prefill when a side panel unmounts", () => {
-    isExtensionSidePanelMock.mockReturnValue(true)
-
-    const { unmount } = render(
-      <DialogStateProvider>
-        <div>side panel</div>
-      </DialogStateProvider>,
-      {
-        withUserPreferencesProvider: false,
-        withThemeProvider: false,
-        withReleaseUpdateStatusProvider: false,
-      },
-    )
-
-    unmount()
-
-    expect(stopWatchingPendingSponsorAddAccountPrefillMock).toHaveBeenCalled()
   })
 
   it("throws when useDialogStateContext is rendered outside its provider", () => {

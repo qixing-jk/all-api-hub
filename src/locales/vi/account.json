@@ -259,6 +259,7 @@
       "description": "Đăng ký trên trang web của nhà cung cấp, sau đó làm theo hướng dẫn trên thẻ để thêm tài khoản, lưu thông tin xác thực API hoặc đánh dấu trang web.",
       "title": "Khám phá các nhà cung cấp khả dụng"
     },
+    "openWorkflowFailed": "Không thể mở quy trình thiết lập. Vui lòng thử lại.",
     "popupApiCredentialProfiles": {
       "description": "Cần API cho nhà phát triển hoặc gói Coding Plan? Tự động điền Base URL và nhận khóa nhanh chóng:",
       "title": "Nhà cung cấp & gói đăng ký được đề xuất"

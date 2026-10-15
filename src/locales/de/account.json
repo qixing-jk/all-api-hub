@@ -282,6 +282,7 @@
       "description": "Registrieren Sie sich auf der Website eines Anbieters und folgen Sie dann der Karte, um ein Konto hinzuzufügen, API-Anmeldeinformationen zu speichern oder die Website mit einem Lesezeichen zu versehen.",
       "title": "Entdecken Sie verfügbare Anbieter"
     },
+    "openWorkflowFailed": "Die Einrichtung konnte nicht geöffnet werden. Bitte versuche es erneut.",
     "popupApiCredentialProfiles": {
       "description": "Benötigen Sie Entwickler-APIs oder Coding-Plan-Guthaben? Unterstützt schnelles Ausfüllen von Basis-URLs und Abrufen von Schlüsseln:",
       "title": "Empfohlene Anbieter & Abonnements"
