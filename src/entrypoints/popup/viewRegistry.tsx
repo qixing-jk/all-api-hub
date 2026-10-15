@@ -136,7 +136,6 @@ export function usePopupViewRegistry({
   const handleApiCredentialProfilesViewRef = useCallback(
     (handle: ApiCredentialProfilesPopupViewHandle | null) => {
       apiCredentialProfilesViewRef.current = handle
-      if (!handle) setHasApiCredentialProfiles(false)
 
       if (handle && pendingApiCredentialProfilesAdd) {
         handle.openAddDialog()

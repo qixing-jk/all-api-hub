@@ -1,12 +1,24 @@
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
-import { forceExtensionLanguage } from "~~/e2e/utils/commonUserFlows"
+import {
+  createStoredAccount,
+  forceExtensionLanguage,
+  seedStoredAccounts,
+  stubLlmMetadataIndex,
+} from "~~/e2e/utils/commonUserFlows"
+import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
 for (const entrypoint of ["options", "popup", "sidepanel"]) {
   test(`${entrypoint} preserves the logo and hides cramped branding`, async ({
     page,
     extensionId,
+    context,
   }, testInfo) => {
+    await stubLlmMetadataIndex(context)
+    // Keep the refresh action present so the narrow header is actually cramped.
+    await seedStoredAccounts(await getServiceWorker(context), [
+      createStoredAccount({ disabled: true }),
+    ])
     await forceExtensionLanguage(page, "en")
     await page.goto(`chrome-extension://${extensionId}/${entrypoint}.html`)
     await waitForExtensionRoot(page)

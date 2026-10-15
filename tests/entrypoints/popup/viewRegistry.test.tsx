@@ -91,12 +91,14 @@ vi.mock(
   "~/features/ApiCredentialProfiles/list/ApiCredentialProfilesPopupView",
   () => ({
     default: forwardRef(function ApiCredentialProfilesPopupView(
-      props: { onHasProfilesChange?: (hasProfiles: boolean) => void },
+      {
+        onHasProfilesChange,
+      }: { onHasProfilesChange?: (hasProfiles: boolean) => void },
       ref,
     ) {
       useEffect(() => {
-        props.onHasProfilesChange?.(true)
-      }, [props])
+        onHasProfilesChange?.(true)
+      }, [onHasProfilesChange])
 
       useImperativeHandle(ref, () => ({
         openAddDialog: openAddDialogMock,

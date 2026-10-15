@@ -3,6 +3,8 @@ import type { SortField } from "~/types"
 
 export const ACCOUNT_MANAGEMENT_TEST_IDS = {
   addAccountButton: "account-management-add-account-button",
+  emptyStateAddAccountButton:
+    "account-management-empty-state-add-account-button",
   externalCheckInButton: "account-management-external-check-in-button",
   headerActions: "account-management-header-actions",
   accountListHeader: "account-management-account-list-header",

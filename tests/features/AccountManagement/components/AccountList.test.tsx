@@ -782,6 +782,10 @@ describe("AccountList", () => {
     const addAccountButton = screen.getByRole("button", {
       name: "account:addFirstAccount",
     })
+    expect(addAccountButton).not.toHaveAttribute(
+      "data-testid",
+      ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton,
+    )
     const sponsorRecommendations = screen.getByTestId(
       "newcomer-sponsor-recommendations",
     )

@@ -91,7 +91,7 @@ export default function AccountList({
             ? {
                 label: t("account:addFirstAccount"),
                 onClick: model.handleEmptyStateAddAccountClick,
-                testId: ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton,
+                testId: ACCOUNT_MANAGEMENT_TEST_IDS.emptyStateAddAccountButton,
               }
             : undefined
         }
