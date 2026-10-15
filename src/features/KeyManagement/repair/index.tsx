@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Alert, Button, Modal } from "~/components/ui"
+import { CompactMultiSelect } from "~/components/ui/CompactMultiSelect"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { ManagedSiteTokenBatchExportDialog } from "~/features/KeyManagement/batchExport/ManagedSiteTokenBatchExportDialog"
 import { RepairInvalidKeysDeleteConfirm } from "~/features/KeyManagement/repair/RepairInvalidKeysDeleteConfirm"
@@ -36,13 +37,14 @@ interface RepairMissingKeysDialogProps {
   onClose: () => void
   accounts: DisplaySiteData[]
   startOnOpen: boolean
+  initialAccountId?: string
 }
 
 /**
  * Modal dialog showing the background progress of the "ensure at least one key" job.
  */
 export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
-  const { isOpen, onClose, accounts, startOnOpen } = props
+  const { isOpen, onClose, accounts, startOnOpen, initialAccountId } = props
   const { t } = useTranslation(["keyManagement", "common"])
   const { managedSiteType } = useUserPreferencesContext()
 
@@ -56,6 +58,28 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     REPAIR_RESULT_VIEWS.AccountCoverage,
   )
   const [renameAutoTemplateTokens, setRenameAutoTemplateTokens] = useState(true)
+  const [selectedAccountIds, setSelectedAccountIds] = useState<string[] | null>(
+    null,
+  )
+  const enabledAccounts = useMemo(
+    () => accounts.filter((account) => !account.disabled),
+    [accounts],
+  )
+  const accountIds = useMemo(() => {
+    const selection =
+      selectedAccountIds ??
+      (initialAccountId
+        ? [initialAccountId]
+        : enabledAccounts.map((account) => account.id))
+    return selection.filter((id) =>
+      enabledAccounts.some((account) => account.id === id),
+    )
+  }, [selectedAccountIds, initialAccountId, enabledAccounts])
+  useEffect(() => {
+    if (!isOpen) setSelectedAccountIds(null)
+    else if (selectedAccountIds === null && accountIds.length > 0)
+      setSelectedAccountIds(accountIds)
+  }, [isOpen, selectedAccountIds, accountIds])
   const [hasStartedRepairInSession, setHasStartedRepairInSession] =
     useState(false)
   const [hasSeenRunningRepairInSession, setHasSeenRunningRepairInSession] =
@@ -75,6 +99,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
     setProgress,
   } = useRepairMissingKeysJob({
     accounts,
+    accountIds,
     isOpen,
     renameAutoTemplateTokens,
     startOnOpen,
@@ -187,6 +212,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
   })
 
   const handleStartRepair = () => {
+    if (!accountIds.length) return
     setHasStartedRepairInSession(true)
     setPreviousResultJobId(progress?.jobId ?? null)
     setIsPreviousResultExpanded(false)
@@ -229,6 +255,27 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
       onCheckedChange={setRenameAutoTemplateTokens}
       t={t}
     />
+  )
+  const accountScope = (
+    <div className="space-y-density-2">
+      <CompactMultiSelect
+        displayMode="summary"
+        allSelectedLabel={t(
+          "keyManagement:repairMissingKeys.scope.allSelected",
+        )}
+        label={t("keyManagement:repairMissingKeys.scope.label")}
+        options={enabledAccounts.map((account) => ({
+          value: account.id,
+          label: account.name,
+        }))}
+        selected={accountIds}
+        onChange={setSelectedAccountIds}
+        disabled={
+          isStarting ||
+          progress?.state === ACCOUNT_KEY_REPAIR_JOB_STATES.Running
+        }
+      />
+    </div>
   )
 
   const handleReturnToCheckSetup = () => {
@@ -281,6 +328,8 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
         {shouldShowCheckSetup ? (
           <RepairMissingKeysSetupCard
             isStarting={isStarting}
+            isStartDisabled={!accountIds.length}
+            accountScope={accountScope}
             previousResultSummary={
               shouldShowPreviousResultSummary ? (
                 <RepairPreviousResultSummary
@@ -299,6 +348,10 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
           <div className="space-y-density-4">
             {progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Running &&
             !shouldShowReadonlyPreviousResult
+              ? accountScope
+              : null}
+            {progress.state !== ACCOUNT_KEY_REPAIR_JOB_STATES.Running &&
+            !shouldShowReadonlyPreviousResult
               ? renameOption
               : null}
 
@@ -306,6 +359,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
               progress={progress}
               isCancelling={isCancelling}
               isStarting={isStarting}
+              isStartDisabled={!accountIds.length}
               onCancelAudit={() => void handleCancelAudit()}
               onStartAudit={handleStartRepair}
               actions={shouldShowReadonlyPreviousResult ? null : undefined}

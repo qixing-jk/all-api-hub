@@ -93,5 +93,10 @@ describe("useRepairResultListMaxHeight", () => {
     act(() => window.dispatchEvent(new Event("resize")))
 
     expect(resultList).toHaveStyle({ maxHeight: "95px" })
+
+    // A taller setup area must leave results reachable through the modal body's scroll.
+    resultListTop = 700
+    act(() => window.dispatchEvent(new Event("resize")))
+    expect(resultList.style.maxHeight).toBe("")
   })
 })

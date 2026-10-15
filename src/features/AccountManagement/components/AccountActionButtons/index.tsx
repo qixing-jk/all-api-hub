@@ -16,6 +16,7 @@ import {
   Search,
   Share2,
   Trash2,
+  Wrench,
 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
@@ -29,6 +30,7 @@ import {
 import { CHECK_IN_DISCOVERY_DECISION_OUTCOMES } from "~/constants/checkIn"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import { AccountKeyProvisioningScopeItems } from "~/features/TokenProvisioning/creation/AccountKeyProvisioningScopeItems"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
 import {
@@ -56,8 +58,11 @@ export default function AccountActionButtons({
     "messages",
     "common",
     "autoCheckin",
+    "keyManagement",
   ])
   const {
+    keyProvisioning,
+    canProvisionKeys,
     refreshingAccountId,
     isPinFeatureEnabled,
     openFeedback,
@@ -223,6 +228,21 @@ export default function AccountActionButtons({
                     PRODUCT_ANALYTICS_ACTION_IDS.OpenKeyManagement
                   }
                 />
+
+                {canProvisionKeys && !keyProvisioning.isRunning ? (
+                  <AccountActionSubmenu
+                    icon={Wrench}
+                    label={t("keyManagement:provisioning.actions.title")}
+                  >
+                    <AccountKeyProvisioningScopeItems
+                      onSelect={(mode) => {
+                        suppressMoreActionsFocusRestoreRef.current = true
+                        setIsMoreActionsOpen(false)
+                        keyProvisioning.open(site, mode)
+                      }}
+                    />
+                  </AccountActionSubmenu>
+                ) : null}
 
                 <ProductAnalyticsScope
                   featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ModelList}
@@ -428,6 +448,7 @@ export default function AccountActionButtons({
         </DropdownMenu>
       </div>
       {feedbackDialog}
+      {keyProvisioning.dialog}
       {selectionDialog}
       {manualInviteLinkPayload !== null ? (
         <InviteLinkManualCopyDialog

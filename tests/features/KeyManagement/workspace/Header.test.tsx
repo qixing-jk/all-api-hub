@@ -14,6 +14,130 @@ const createDeferred = <T,>() => {
 }
 
 describe("KeyManagement Header", () => {
+  it("keeps checks accessible while completion is busy and disables its shortcuts", async () => {
+    const user = userEvent.setup()
+    const onProvisionKeys = vi.fn()
+    render(
+      <Header
+        selectedAccount="account-1"
+        onAddToken={vi.fn()}
+        onRefresh={vi.fn()}
+        onRepairMissingKeys={vi.fn()}
+        onProvisionKeys={onProvisionKeys}
+        isProvisioningKeys
+        isLoading={false}
+        isAddTokenDisabled={false}
+        isRepairDisabled={false}
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:tools.title" }),
+    )
+    expect(
+      screen.getByRole("menuitem", {
+        name: "keyManagement:repairMissingKeys.action",
+      }),
+    ).not.toHaveAttribute("aria-disabled", "true")
+    for (const action of ["default", "allGroups"]) {
+      const item = screen.getByRole("menuitem", {
+        name: `keyManagement:provisioning.actions.${action}`,
+      })
+      expect(item).toHaveAttribute("aria-disabled", "true")
+      await user.click(item)
+    }
+    expect(onProvisionKeys).not.toHaveBeenCalled()
+  })
+  it.each([true, false])(
+    "groups key tools with single-account shortcuts available: %s",
+    async (singleAccount) => {
+      const user = userEvent.setup()
+      const onRepair = vi.fn()
+      render(
+        <Header
+          selectedAccount={singleAccount ? "account-1" : "all"}
+          onAddToken={vi.fn()}
+          onRefresh={vi.fn()}
+          onRepairMissingKeys={onRepair}
+          onProvisionKeys={singleAccount ? vi.fn() : undefined}
+          isLoading={false}
+          isAddTokenDisabled={false}
+          isRepairDisabled={false}
+        />,
+        { withUserPreferencesProvider: false, withThemeProvider: false },
+      )
+      if (!singleAccount) {
+        expect(
+          screen.queryByRole("button", { name: "keyManagement:tools.title" }),
+        ).not.toBeInTheDocument()
+        await user.click(
+          screen.getByRole("button", {
+            name: "keyManagement:repairMissingKeys.action",
+          }),
+        )
+        expect(onRepair).toHaveBeenCalledTimes(1)
+        expect(screen.queryByRole("menu")).not.toBeInTheDocument()
+        return
+      }
+      expect(
+        screen.queryByRole("button", {
+          name: "keyManagement:repairMissingKeys.action",
+        }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", {
+          name: "keyManagement:provisioning.actions.title",
+        }),
+      ).not.toBeInTheDocument()
+      await user.click(
+        screen.getByRole("button", { name: "keyManagement:tools.title" }),
+      )
+      expect(screen.queryAllByRole("menuitem")).toHaveLength(
+        singleAccount ? 3 : 1,
+      )
+      await user.click(
+        screen.getByRole("menuitem", {
+          name: "keyManagement:repairMissingKeys.action",
+        }),
+      )
+      expect(onRepair).toHaveBeenCalledTimes(1)
+    },
+  )
+  it.each(["default", "all-groups"] as const)(
+    "offers %s completion separately from adding another key",
+    async (mode) => {
+      const user = userEvent.setup()
+      const onProvisionKeys = vi.fn()
+      const onAddToken = vi.fn()
+      render(
+        <Header
+          selectedAccount="account-1"
+          onAddToken={onAddToken}
+          onProvisionKeys={onProvisionKeys}
+          onRefresh={vi.fn()}
+          isLoading={false}
+          isAddTokenDisabled={false}
+          isRepairDisabled={false}
+        />,
+        { withUserPreferencesProvider: false, withThemeProvider: false },
+      )
+      await user.click(
+        screen.getByRole("button", {
+          name: "keyManagement:tools.title",
+        }),
+      )
+      expect(
+        screen.getByText("keyManagement:provisioning.actions.hint"),
+      ).toBeVisible()
+      await user.click(
+        screen.getByRole("menuitem", {
+          name: `keyManagement:provisioning.actions.${mode === "default" ? "default" : "allGroups"}`,
+        }),
+      )
+      expect(onProvisionKeys).toHaveBeenCalledWith(mode)
+      expect(onAddToken).not.toHaveBeenCalled()
+    },
+  )
   it("marks only refresh busy, suppresses duplicate clicks, and restores after refresh", async () => {
     const user = userEvent.setup()
     const deferredRefresh = createDeferred<void>()
@@ -164,7 +288,7 @@ describe("KeyManagement Header", () => {
 
     expect(
       screen.queryByRole("button", {
-        name: "keyManagement:repairMissingKeys.action",
+        name: "keyManagement:tools.title",
       }),
     ).toBeNull()
   })

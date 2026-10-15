@@ -116,6 +116,8 @@ export interface AccountKeyRepairDeleteInvalidResourcesResult {
 
 export interface AccountKeyRepairStartOptions {
   renameAutoTemplateTokens?: boolean
+  /** Omitted for all enabled accounts; an explicit selection never expands to all accounts. */
+  accountIds?: string[]
 }
 
 export type AccountKeyRepairRenameResult =

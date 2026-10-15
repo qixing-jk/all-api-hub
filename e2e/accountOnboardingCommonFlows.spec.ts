@@ -1169,7 +1169,9 @@ test("enables all-group key provisioning, adds an account, saves a created key a
     page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListView),
   ).toContainText("e2e-user")
   await expect(
-    page.getByText("Created 2 / 2; already covered: 0.", { exact: true }),
+    page.getByText("Account keys ready: 2 created, 0 already covered.", {
+      exact: true,
+    }),
   ).toBeVisible()
   expect(createdGroups).toHaveLength(2)
   expect(createdGroups).toEqual(expect.arrayContaining(["default", "vip"]))

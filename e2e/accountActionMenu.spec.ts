@@ -5,7 +5,9 @@ import {
   getAccountManagementListItemTestId,
 } from "~/features/AccountManagement/testIds"
 import en from "~/locales/en/account.json" with { type: "json" }
+import enKeys from "~/locales/en/keyManagement.json" with { type: "json" }
 import zh from "~/locales/zh-CN/account.json" with { type: "json" }
+import zhKeys from "~/locales/zh-CN/keyManagement.json" with { type: "json" }
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   createStoredAccount,
@@ -30,6 +32,8 @@ for (const width of [320, 390, 1100]) {
       extensionId,
     }, testInfo) => {
       const copy = (language === "en" ? en : zh).actions
+      const completionCopy = (language === "en" ? enKeys : zhKeys).provisioning
+        .actions
       await page.setViewportSize({ width, height: 850 })
       installExtensionPageGuards(page)
       await forceExtensionLanguage(page, language)
@@ -66,7 +70,8 @@ for (const width of [320, 390, 1100]) {
       )
       await more.click()
       const root = page.getByRole("menu")
-      expect(await root.getByRole("menuitem").count()).toBeLessThanOrEqual(12)
+      // Completion adds one grouped entry, rather than two top-level scope actions.
+      expect(await root.getByRole("menuitem").count()).toBe(13)
       await expect(
         page.getByRole("menuitem", { name: copy.keyManagement, exact: true }),
       ).toBeVisible()
@@ -77,9 +82,12 @@ for (const width of [320, 390, 1100]) {
         copy.keyManagement,
       )
       await expect(root.getByRole("menuitem").nth(2)).toHaveAccessibleName(
-        copy.modelManagement,
+        completionCopy.title,
       )
       await expect(root.getByRole("menuitem").nth(3)).toHaveAccessibleName(
+        copy.modelManagement,
+      )
+      await expect(root.getByRole("menuitem").nth(4)).toHaveAccessibleName(
         copy.locateManagedSiteChannel,
       )
       await expect(
@@ -92,6 +100,29 @@ for (const width of [320, 390, 1100]) {
         path: testInfo.outputPath("menu.png"),
         animations: "disabled",
       })
+      const completion = root.getByRole("menuitem", {
+        name: completionCopy.title,
+        exact: true,
+      })
+      await completion.focus()
+      await page.keyboard.press("ArrowRight")
+      const completionMenu = page.getByRole("menu", {
+        name: completionCopy.title,
+        exact: true,
+      })
+      for (const name of [completionCopy.default, completionCopy.allGroups]) {
+        await expect(
+          completionMenu.getByRole("menuitem", { name, exact: true }),
+        ).toBeVisible()
+      }
+      await expect(async () => {
+        const box = await completionMenu.boundingBox()
+        expect(box).not.toBeNull()
+        expect(box!.x).toBeGreaterThanOrEqual(0)
+        expect(box!.x + box!.width).toBeLessThanOrEqual(width)
+      }).toPass()
+      await page.keyboard.press("ArrowLeft")
+      await expect(completion).toBeFocused()
       const relatedPages = page.getByRole("menuitem", {
         name: copy.relatedPages,
         exact: true,

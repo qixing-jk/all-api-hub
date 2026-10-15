@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { Toaster } from "react-hot-toast"
 import { I18nextProvider } from "react-i18next"
 import { describe, expect, it, vi } from "vitest"
 
@@ -67,6 +68,7 @@ describe("provisioning with the real native editor", () => {
     prepare.mockResolvedValue({ coveredCount: 0, entries })
     render(
       <I18nextProvider i18n={i18n}>
+        <Toaster />
         <AccountKeyProvisioningDialog
           account={buildDisplaySiteData({ siteType: "voapi-v2" })}
           mode="all-groups"
@@ -95,6 +97,9 @@ describe("provisioning with the real native editor", () => {
     expect(entries[0]!.create).toHaveBeenCalledWith(
       expect.objectContaining({ amount: 5 }),
     )
-    expect(await screen.findByRole("status")).toHaveTextContent("Created 2 / 2")
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Account keys ready: 2 created",
+    )
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 })

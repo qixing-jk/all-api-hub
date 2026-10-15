@@ -20,6 +20,7 @@ import { useKeyManagementManagedSiteActions } from "~/features/KeyManagement/man
 import { useManagedSiteKeyStatuses } from "~/features/KeyManagement/managedSite/useManagedSiteKeyStatuses"
 import { useKeyManagementRouteCoordinator } from "~/features/KeyManagement/workspace/useKeyManagementRouteCoordinator"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
+import { useAccountKeyProvisioning } from "~/features/TokenProvisioning/creation/useAccountKeyProvisioning"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/secretDelivery/apiCredentialProfileSaveAction"
 import {
   AccountKeyRepairMessageTypes,
@@ -270,6 +271,17 @@ export function useKeyManagementViewModel(
     () => displayData.filter(canCreateAccountKeyResources),
     [displayData],
   )
+  const keyProvisioning = useAccountKeyProvisioning(() => {
+    void nativeKeys.refresh()
+  })
+  const provisioningAccount =
+    selectedAccount !== KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
+      ? displayData.find(
+          (account) =>
+            account.id === selectedAccount &&
+            canCreateAccountKeyResources(account),
+        )
+      : undefined
 
   const singleFilteredAllAccountsAccount =
     selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE &&
@@ -430,6 +442,8 @@ export function useKeyManagementViewModel(
         : undefined,
   }
   return {
+    keyProvisioning,
+    provisioningAccount,
     headerState,
     isRepairOpen,
     isAddTokenOpen,

@@ -1,12 +1,14 @@
 import userEvent from "@testing-library/user-event"
+import { Toaster } from "react-hot-toast"
 import { I18nextProvider } from "react-i18next"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   DevPanelProvider,
   useDevPanelSections,
 } from "~/features/DevPanel/DevPanelSectionsContext"
 import { KeyProvisioningPreviewSection } from "~/features/DevPanel/sections/keyProvisioningPreviewSection"
+import notify from "~/lib/notify"
 import accountDialog from "~/locales/zh-CN/accountDialog.json"
 import common from "~/locales/zh-CN/common.json"
 import keyManagement from "~/locales/zh-CN/keyManagement.json"
@@ -50,6 +52,7 @@ function setup() {
   const user = userEvent.setup()
   render(
     <I18nextProvider i18n={i18n}>
+      <Toaster />
       <DevPanelProvider surface="options" page="account">
         <KeyProvisioningPreviewSection />
         <RegisteredActions />
@@ -60,6 +63,41 @@ function setup() {
 }
 
 describe("key provisioning dev preview", () => {
+  beforeEach(() => notify.remove())
+  it.each(["Single key", "Multiple keys"])(
+    "starts the %s preset in one click and leaves toast cancellation accessible",
+    async (label) => {
+      const user = setup()
+      await user.click(
+        await screen.findByRole("button", {
+          name: "Dev: Preview key provisioning",
+        }),
+      )
+      await user.click(screen.getByRole("button", { name: label }))
+      expect(
+        screen.queryByRole("dialog", { name: "Key provisioning preview" }),
+      ).not.toBeInTheDocument()
+      await user.click(await screen.findByRole("button", { name: "取消" }))
+      const result = await screen.findByRole(
+        "dialog",
+        { name: "密钥补全已停止" },
+        { timeout: 4000 },
+      )
+      expect(result).toHaveTextContent("已创建")
+      await user.click(
+        within(result).getAllByRole("button", { name: "关闭" }).at(-1)!,
+      )
+      expect(
+        await screen.findByRole(
+          "dialog",
+          { name: "Key provisioning preview" },
+          { timeout: 4000 },
+        ),
+      ).toBeVisible()
+      expect(nativePrepare).not.toHaveBeenCalled()
+      expect(realSave).not.toHaveBeenCalled()
+    },
+  )
   it("lets AIHubMix previews cancel or confirm before creation and closes the preview", async () => {
     const user = setup()
     await user.click(
@@ -92,10 +130,10 @@ describe("key provisioning dev preview", () => {
         .getAllByRole("button", { name: "关闭" })
         .at(-1)!,
     )
-    await user.click(
-      within(await screen.findByRole("dialog", { name: "准备账号密钥" }))
-        .getAllByRole("button", { name: "关闭" })
-        .at(-1)!,
+    await waitFor(() =>
+      expect(
+        screen.getByRole("status", { name: "Preview results" }),
+      ).toHaveTextContent("Preview finished"),
     )
     expect(
       screen.getByRole("status", { name: "Preview results" }),
@@ -168,10 +206,6 @@ describe("key provisioning dev preview", () => {
       })
       await user.click(
         within(secretDialog).getAllByRole("button", { name: "关闭" }).at(-1)!,
-      )
-      const result = await screen.findByRole("dialog", { name: "准备账号密钥" })
-      await user.click(
-        within(result).getAllByRole("button", { name: "关闭" }).at(-1)!,
       )
       await waitFor(() =>
         expect(

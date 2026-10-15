@@ -112,6 +112,7 @@ function getRepairProgressResult(progress: AccountKeyRepairProgress) {
 
 interface UseRepairMissingKeysJobOptions {
   accounts: DisplaySiteData[]
+  accountIds?: string[]
   isOpen: boolean
   startOnOpen: boolean
   renameAutoTemplateTokens?: boolean
@@ -123,6 +124,7 @@ interface UseRepairMissingKeysJobOptions {
  */
 export function useRepairMissingKeysJob({
   accounts,
+  accountIds,
   isOpen,
   renameAutoTemplateTokens = true,
   startOnOpen,
@@ -238,7 +240,7 @@ export function useRepairMissingKeysJob({
   }, [])
 
   const handleStartAudit = useCallback(async () => {
-    if (startInFlightRef.current) {
+    if (startInFlightRef.current || accountIds?.length === 0) {
       return
     }
 
@@ -267,6 +269,7 @@ export function useRepairMissingKeysJob({
         AccountKeyRepairMessageTypes.Start,
         {
           renameAutoTemplateTokens,
+          ...(accountIds ? { accountIds: [...accountIds] } : {}),
         },
       )
       if (response?.success && response.data) {
@@ -294,7 +297,7 @@ export function useRepairMissingKeysJob({
         }
       }
     }
-  }, [renameAutoTemplateTokens, applyProgress])
+  }, [renameAutoTemplateTokens, applyProgress, accountIds])
 
   const handleCancelAudit = useCallback(async () => {
     if (cancelInFlightRef.current) {

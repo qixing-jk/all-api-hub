@@ -14,6 +14,7 @@ interface RepairMissingKeysProgressCardProps {
   progress: AccountKeyRepairProgress
   isCancelling: boolean
   isStarting: boolean
+  isStartDisabled?: boolean
   onCancelAudit: () => void
   onStartAudit: () => void
   actions?: ReactNode
@@ -43,6 +44,7 @@ export function RepairMissingKeysProgressCard({
   progress,
   isCancelling,
   isStarting,
+  isStartDisabled,
   onCancelAudit,
   onStartAudit,
   actions,
@@ -70,6 +72,7 @@ export function RepairMissingKeysProgressCard({
         size="sm"
         onClick={onStartAudit}
         loading={isStarting}
+        disabled={isStartDisabled}
       >
         {isStarting
           ? t("common:status.starting")

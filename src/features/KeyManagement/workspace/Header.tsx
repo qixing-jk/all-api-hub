@@ -1,7 +1,8 @@
-import { Cpu, Plus, RefreshCw, Wrench } from "lucide-react"
+import { Cpu, Plus, RefreshCw, ShieldCheck, Wrench } from "lucide-react"
 import { useState, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
+import { ActionMenu } from "~/components/ActionMenu"
 import { AccountKeyIcon } from "~/components/icons/productIcons"
 import { PageActions } from "~/components/PageActions"
 import { PageHeader } from "~/components/PageHeader"
@@ -9,16 +10,20 @@ import Tooltip from "~/components/Tooltip"
 import { Button, IconButton } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import { useAccountKeyProvisioningActions } from "~/features/TokenProvisioning/creation/AccountKeyProvisioningScopeItems"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import type { AccountKeyAutoProvisionMode } from "~/types/accountKeyAutoProvisioning"
 
 interface HeaderProps {
   selectedAccount: string
   onAddToken: () => void
+  onProvisionKeys?: (mode: AccountKeyAutoProvisionMode) => void
+  isProvisioningKeys?: boolean
   onRepairMissingKeys?: () => void
   onRefresh: () => void
   onOpenSelectedAccountModels?: () => void
@@ -37,6 +42,8 @@ interface HeaderProps {
  */
 export function Header({
   onAddToken,
+  onProvisionKeys,
+  isProvisioningKeys = false,
   onRepairMissingKeys,
   onRefresh,
   onOpenSelectedAccountModels,
@@ -52,6 +59,10 @@ export function Header({
 }: HeaderProps) {
   const { t } = useTranslation(["keyManagement", "common"])
   const [isManualRefreshLoading, setIsManualRefreshLoading] = useState(false)
+  const provisioningActions = useAccountKeyProvisioningActions(
+    onProvisionKeys,
+    isLoading || isProvisioningKeys,
+  )
   const bridgeDescription = (
     <span className="text-muted-foreground mt-density-1 block text-sm">
       {t("unifiedApiGuidance.headerBridge")}
@@ -151,17 +162,31 @@ export function Header({
                 )
               }
             >
-              {onRepairMissingKeys ? (
-                <Button
-                  onClick={onRepairMissingKeys}
-                  disabled={isRepairDisabled}
-                  size="sm"
-                  variant="outline"
-                  leftIcon={<Wrench className="h-4 w-4" />}
-                >
-                  {t("repairMissingKeys.action")}
-                </Button>
-              ) : null}
+              <ActionMenu
+                label={t("keyManagement:tools.title")}
+                icon={Wrench}
+                groups={[
+                  {
+                    id: "check",
+                    actions: onRepairMissingKeys
+                      ? [
+                          {
+                            id: "check",
+                            label: t("keyManagement:repairMissingKeys.action"),
+                            icon: ShieldCheck,
+                            disabled: isRepairDisabled,
+                            onSelect: onRepairMissingKeys,
+                          },
+                        ]
+                      : [],
+                  },
+                  {
+                    id: "provision",
+                    label: t("keyManagement:provisioning.actions.hint"),
+                    actions: provisioningActions,
+                  },
+                ]}
+              />
               {onRefreshManagedSiteStatus ? (
                 <Button
                   onClick={onRefreshManagedSiteStatus}

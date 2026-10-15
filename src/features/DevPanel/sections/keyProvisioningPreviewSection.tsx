@@ -42,7 +42,73 @@ type PreviewRun = {
   scenario: KeyProvisioningPreviewScenario
   serial: number
   confirmed: boolean
+  delayMs: number
 }
+
+type PreviewConfiguration = {
+  siteType: AccountSiteType
+  mode: AccountKeyAutoProvisionMode
+  scenario: KeyProvisioningPreviewScenario
+  delayMs?: number
+}
+
+const quickScenarios: readonly (PreviewConfiguration & { label: string })[] = [
+  {
+    label: "Single key",
+    siteType: "new-api",
+    mode: "all-groups",
+    scenario: "single-target",
+  },
+  {
+    label: "Multiple keys",
+    siteType: "new-api",
+    mode: "all-groups",
+    scenario: "normal",
+  },
+  {
+    label: "Required input",
+    siteType: "sub2api",
+    mode: "default",
+    scenario: "normal",
+  },
+  {
+    label: "One-time secret",
+    siteType: "openrouter",
+    mode: "default",
+    scenario: "normal",
+  },
+  {
+    label: "Slow batch / cancel",
+    siteType: "new-api",
+    mode: "all-groups",
+    scenario: "normal",
+    delayMs: 3000,
+  },
+  {
+    label: "Partial / uncertain",
+    siteType: "new-api",
+    mode: "all-groups",
+    scenario: "uncertain",
+  },
+  {
+    label: "Inventory failure",
+    siteType: "new-api",
+    mode: "all-groups",
+    scenario: "inventory-failure",
+  },
+  {
+    label: "Already covered",
+    siteType: "new-api",
+    mode: "all-groups",
+    scenario: "covered",
+  },
+  {
+    label: "Option loading failure",
+    siteType: "sub2api",
+    mode: "default",
+    scenario: "option-failure",
+  },
+]
 
 /** Dev-only operation owner; mocks remote writes and keeps simulated saves in component memory. */
 export function KeyProvisioningPreviewSection() {
@@ -80,29 +146,36 @@ export function KeyProvisioningPreviewSection() {
   )
   useRegisterDevPanelSection(section)
 
-  const start = () => {
+  const start = (
+    config: PreviewConfiguration = { siteType, mode, scenario },
+  ) => {
     const nextSerial = serial + 1
-    const account = createKeyProvisioningPreviewAccount(siteType)
+    const account = createKeyProvisioningPreviewAccount(config.siteType)
     const requiresConfirmation =
-      mode === "default" &&
-      scenario !== "covered" &&
-      getAccountDialogSitePolicy(siteType).deferSuccessForOneTimeKeyPostSaveFlow
+      config.mode === "default" &&
+      config.scenario !== "covered" &&
+      getAccountDialogSitePolicy(config.siteType)
+        .deferSuccessForOneTimeKeyPostSaveFlow
+    setSiteType(config.siteType)
+    setMode(config.mode)
+    setScenario(config.scenario)
     setSerial(nextSerial)
     setCreated([])
     setSaved([])
     setHasRun(true)
     setRun({
       account,
-      mode,
-      scenario,
+      mode: config.mode,
+      scenario: config.scenario,
       serial: nextSerial,
       confirmed: !requiresConfirmation,
+      delayMs: config.delayMs ?? 1100,
     })
   }
   return (
     <>
       <Modal
-        isOpen={open}
+        isOpen={open && !run}
         onClose={() => {
           if (!run) setOpen(false)
         }}
@@ -120,6 +193,25 @@ export function KeyProvisioningPreviewSection() {
             variant="info"
             description="Uses simulated inventory and keys with the actual creation UI. Saves stay in this preview; the copy button copies an example key."
           />
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Quick scenarios</p>
+            <p className="text-muted-foreground text-sm">
+              Start a preset directly. During the run, use the real toast or
+              dialog; this panel returns when the preview finishes.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {quickScenarios.map((preset) => (
+                <Button
+                  key={preset.label}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => start(preset)}
+                >
+                  {preset.label}
+                </Button>
+              ))}
+            </div>
+          </div>
           <FormField label="Site type" htmlFor="key-preview-site">
             <SearchableSelect
               id="key-preview-site"
@@ -180,7 +272,7 @@ export function KeyProvisioningPreviewSection() {
           </div>
           <p className="text-muted-foreground text-sm">{profile.description}</p>
           <Button
-            onClick={start}
+            onClick={() => start()}
             disabled={
               Boolean(run) ||
               !profile.supported ||
@@ -231,7 +323,7 @@ export function KeyProvisioningPreviewSection() {
             prepareKeyProvisioningPreview(account, scope, {
               signal: options?.signal,
               scenario: run.scenario,
-              delayMs: 1100,
+              delayMs: run.delayMs,
               onCreated: (label) =>
                 setCreated((current) => [...current, label]),
             })

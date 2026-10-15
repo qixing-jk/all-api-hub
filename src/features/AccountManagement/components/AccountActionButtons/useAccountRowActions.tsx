@@ -10,8 +10,10 @@ import { useDialogStateContext } from "~/features/AccountManagement/dialogs/useD
 import { useCheckInRedetection } from "~/features/CheckIn/useCheckInRedetection"
 import { useCheckInFeedback } from "~/features/CheckInFeedback/useCheckInFeedback"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
+import { useAccountKeyProvisioning } from "~/features/TokenProvisioning/creation/useAccountKeyProvisioning"
 import toast from "~/lib/notify"
 import {
+  canCreateAccountKeyResources,
   canResolveAccountRuntimeKeySecret,
   supportsRecoverableAccountRuntimeKeySecrets,
 } from "~/services/accounts/keys/keyProductCapabilities"
@@ -125,6 +127,7 @@ export function useAccountRowActions({
     handleCopyInviteLink,
   } = useAccountInviteLinkCopy(site)
   const isAccountDisabled = site.disabled === true
+  const keyProvisioning = useAccountKeyProvisioning()
   const supportsSmartCopyKey = supportsRecoverableAccountRuntimeKeySecrets(
     site.siteType,
   )
@@ -432,6 +435,8 @@ export function useAccountRowActions({
   }
 
   return {
+    keyProvisioning,
+    canProvisionKeys: canCreateAccountKeyResources(site),
     refreshingAccountId,
     isPinFeatureEnabled,
     openFeedback,

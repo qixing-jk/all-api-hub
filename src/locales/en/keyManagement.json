@@ -703,15 +703,34 @@
   "pleaseAddAccount": "Please add an account first",
   "pleaseSelectAccount": "Please select account",
   "provisioning": {
+    "actions": {
+      "allGroups": "Fill all missing groups",
+      "default": "Ensure a default key",
+      "hint": "Create only missing keys and keep existing keys.",
+      "title": "Complete missing keys"
+    },
     "cancelled": "Stopped. Keys already created are retained.",
+    "completed": "Account keys ready: {{created}} created, {{covered}} already covered.",
     "continue": "Continue with user input",
+    "creating": "Completing account keys: {{created}} / {{total}} created…",
     "input": "{{label}} · {{current}} / {{total}}. Complete all inputs before any keys are created.",
+    "preparing": "Checking account keys…",
     "progress": "Created {{created}} / {{total}}; already covered: {{covered}}.",
-    "title": "Prepare account keys"
+    "result": {
+      "cancelled": "Key completion stopped",
+      "covered": "Already covered",
+      "created": "Created",
+      "failed": "Some keys could not be created",
+      "next": "Next step",
+      "remaining": "Not confirmed",
+      "resume": "Run completion again later. Existing keys will be skipped.",
+      "retained": "Created and existing keys are retained.",
+      "uncertain": "Some keys need verification"
+    }
   },
   "refreshTokenList": "Refresh Key List",
   "repairMissingKeys": {
-    "action": "Key check",
+    "action": "Check and repair",
     "actions": {
       "cancel": "Cancel check",
       "rerun": "Check again",
@@ -725,7 +744,7 @@
       "title_one": "Delete {{count}} invalid key?",
       "title_other": "Delete {{count}} invalid keys?"
     },
-    "description": "Check all available groups of saved accounts and create missing usable keys where automatic creation is supported. Other issues are listed below.",
+    "description": "Check all available groups of selected accounts and create missing usable keys where automatic creation is supported. Other issues are listed below.",
     "failureGuidance": {
       "aborted": "The operation was cancelled before it completed. Run the check again when ready.",
       "authenticationFailed": "Sign in again or update this account's credentials, then retry.",
@@ -740,7 +759,7 @@
       "validationFailed": "Review the required key settings, correct them, and retry."
     },
     "historyNote": "This shows the previous check result. No job is currently running, and you can rerun the check.",
-    "initialNotice": "Check saved accounts group by group and create missing keys where supported. Groups that already have usable keys are skipped.",
+    "initialNotice": "Check selected accounts group by group and create missing keys where supported. Groups that already have usable keys are skipped.",
     "invalidKeys": {
       "badge": "Invalid",
       "deleteFailed": "Failed to delete invalid keys",
@@ -838,6 +857,10 @@
     },
     "resultsTitle": "Results",
     "runningNote": "This job runs in the background. You can close this dialog and check later, or cancel it from the progress card.",
+    "scope": {
+      "allSelected": "All accounts selected",
+      "label": "Accounts to check"
+    },
     "searchLabel": "Search",
     "searchPlaceholder": "Search account, key name, group, domain, or site type...",
     "skipReasons": {
@@ -877,6 +900,9 @@
   "showingCount_one": "Showing {{count}}",
   "showingCount_other": "Showing {{count}}",
   "title": "Key Management",
+  "tools": {
+    "title": "Key tools"
+  },
   "totalKeys_one": "Total {{count}} key",
   "totalKeys_other": "Total {{count}} keys",
   "unifiedApiGuidance": {
