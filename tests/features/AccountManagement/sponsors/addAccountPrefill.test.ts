@@ -9,6 +9,22 @@ import {
 import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
 
 describe("add-account prefill validation", () => {
+  it("accepts live legacy envelopes and rejects expired envelopes", () => {
+    const prefill = {
+      source: BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE,
+      siteUrl: "https://prefill.example.invalid",
+    }
+    expect(
+      normalizeAddAccountPrefill({ createdAt: Date.now(), prefill }),
+    ).toEqual(prefill)
+    expect(
+      normalizeAddAccountPrefill({
+        createdAt: Date.now() - 5 * 60 * 1000 - 1,
+        prefill,
+      }),
+    ).toBeNull()
+  })
+
   it("rejects malformed sponsor prefill values before opening account setup", () => {
     const prefill = {
       source: "sponsor",

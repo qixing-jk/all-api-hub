@@ -16,6 +16,16 @@ describe("UI handoff channel", () => {
   })
   afterEach(() => vi.restoreAllMocks())
 
+  it("rejects invalid handoff state and window IDs before writing storage", async () => {
+    await expect(channel.prepare(null as unknown as string, 2)).rejects.toThrow(
+      "Invalid UI handoff",
+    )
+    await expect(channel.prepare("valid", 2.5)).rejects.toThrow(
+      "Invalid UI handoff",
+    )
+    expect(await browser.storage.session.get(null)).toEqual({})
+  })
+
   it.each([
     { version: 2 },
     { windowId: "2" },

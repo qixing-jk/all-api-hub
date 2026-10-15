@@ -75,6 +75,13 @@ describe("useAddAccountHandler sponsor prefill", () => {
     runtime.supported = true
   })
 
+  it("keeps the add-account handler stable across unchanged renders", () => {
+    const { result, rerender } = renderHook(() => useAddAccountHandler())
+    const handler = result.current.handleAddAccountClick
+    rerender()
+    expect(result.current.handleAddAccountClick).toBe(handler)
+  })
+
   it("adds accounts directly in Options instead of recommending a side panel", () => {
     runtime.inPopup = false
     const { result } = renderHook(() => useAddAccountHandler())

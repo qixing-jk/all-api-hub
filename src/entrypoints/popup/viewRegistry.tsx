@@ -11,8 +11,10 @@ import { useTranslation } from "react-i18next"
 import AccountList from "~/features/AccountManagement/components/AccountList"
 import { PopupAccountOnboarding } from "~/features/AccountManagement/components/PopupAccountOnboarding"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
+import { useDialogStateContext } from "~/features/AccountManagement/dialogs/useDialogStateContext"
 import { useAddAccountHandler } from "~/features/AccountManagement/opening/useAddAccountHandler"
 import { SPONSOR_WORKFLOW_KINDS } from "~/features/AccountManagement/sponsors/constants"
+import type { SponsorWorkflowIntent } from "~/features/AccountManagement/sponsors/sponsorWorkflowIntent"
 import type { SponsorApiCredentialFallbackPrefill } from "~/features/AccountManagement/sponsors/types"
 import { useSponsorWorkflowReceiver } from "~/features/AccountManagement/sponsors/useSponsorWorkflowReceiver"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
@@ -127,7 +129,9 @@ export function usePopupViewRegistry({
       revision: (prev?.revision ?? 0) + 1,
     }))
   }, [])
-  const { openAddBookmark } = useBookmarkDialogContext()
+  const { openAddBookmark, isBookmarkDialogOpen } = useBookmarkDialogContext()
+  const { isAddAccountOpen, isEditAccountOpen } = useDialogStateContext()
+  const [isApiEditorOpen, setIsApiEditorOpen] = useState(false)
   // Native action-popup pointer lifecycles do not reliably deliver dnd-kit drag
   // completion, so keep reordering discoverable there but direct users elsewhere.
   const reorderUnavailableReason = isPopup
@@ -157,28 +161,49 @@ export function usePopupViewRegistry({
     [pendingApiCredentialProfilesAdd],
   )
 
-  useSponsorWorkflowReceiver(isExtensionSidePanel(), (intent) => {
-    switch (intent.kind) {
-      case SPONSOR_WORKFLOW_KINDS.Account:
-        onSelectView?.(POPUP_VIEW_TYPES.Accounts)
-        handleAddAccountClick(intent.prefill)
-        break
-      case SPONSOR_WORKFLOW_KINDS.Bookmark:
-        onSelectView?.(POPUP_VIEW_TYPES.Bookmarks)
-        openAddBookmark(intent.prefill)
-        break
-      case SPONSOR_WORKFLOW_KINDS.ApiCredential:
-        onSelectView?.(POPUP_VIEW_TYPES.ApiCredentialProfiles)
-        if (apiCredentialProfilesViewRef.current) {
-          apiCredentialProfilesViewRef.current.openAddDialog(intent.prefill)
-        } else {
-          setPendingApiCredentialProfilesAdd(intent.prefill)
-          void loadApiCredentialProfilesPopupView()
-        }
-        break
-    }
-    return UI_HANDOFF_RECEIVE_RESULTS.Accepted
-  })
+  const receiveSponsorWorkflow = useCallback(
+    (intent: SponsorWorkflowIntent) => {
+      if (
+        isAddAccountOpen ||
+        isEditAccountOpen ||
+        isBookmarkDialogOpen ||
+        isApiEditorOpen ||
+        pendingApiCredentialProfilesAdd !== null
+      )
+        return UI_HANDOFF_RECEIVE_RESULTS.Busy
+      switch (intent.kind) {
+        case SPONSOR_WORKFLOW_KINDS.Account:
+          onSelectView?.(POPUP_VIEW_TYPES.Accounts)
+          handleAddAccountClick(intent.prefill)
+          break
+        case SPONSOR_WORKFLOW_KINDS.Bookmark:
+          onSelectView?.(POPUP_VIEW_TYPES.Bookmarks)
+          openAddBookmark(intent.prefill)
+          break
+        case SPONSOR_WORKFLOW_KINDS.ApiCredential:
+          onSelectView?.(POPUP_VIEW_TYPES.ApiCredentialProfiles)
+          if (apiCredentialProfilesViewRef.current) {
+            apiCredentialProfilesViewRef.current.openAddDialog(intent.prefill)
+          } else {
+            setPendingApiCredentialProfilesAdd(intent.prefill)
+            void loadApiCredentialProfilesPopupView()
+          }
+          break
+      }
+      return UI_HANDOFF_RECEIVE_RESULTS.Accepted
+    },
+    [
+      isAddAccountOpen,
+      isEditAccountOpen,
+      isBookmarkDialogOpen,
+      isApiEditorOpen,
+      pendingApiCredentialProfilesAdd,
+      onSelectView,
+      handleAddAccountClick,
+      openAddBookmark,
+    ],
+  )
+  useSponsorWorkflowReceiver(isExtensionSidePanel(), receiveSponsorWorkflow)
 
   return {
     [POPUP_VIEW_TYPES.Accounts]: {
@@ -268,6 +293,7 @@ export function usePopupViewRegistry({
             ref={handleApiCredentialProfilesViewRef}
             showKeyManagementImportHint={showAccountOverview}
             onHasProfilesChange={setHasApiCredentialProfiles}
+            onEditorOpenChange={setIsApiEditorOpen}
           />
         </Suspense>
       ),

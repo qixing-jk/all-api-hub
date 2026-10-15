@@ -5,23 +5,46 @@ import {
   useImperativeHandle,
   useState,
 } from "react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { usePopupViewRegistry } from "~/entrypoints/popup/viewRegistry"
-import { fireEvent, render, screen } from "~~/tests/test-utils/render"
+import { SPONSOR_WORKFLOW_KINDS } from "~/features/AccountManagement/sponsors/constants"
+import { sponsorWorkflowChannel } from "~/features/AccountManagement/sponsors/sponsorWorkflowIntent"
+import type { SponsorWorkflowIntent } from "~/features/AccountManagement/sponsors/sponsorWorkflowIntent"
+import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+import { stageSponsorWorkflow } from "~~/tests/test-utils/sponsorWorkflow"
 
 const {
+  dialogState,
   accountListPropsMock,
   handleAddAccountClickMock,
   openAddBookmarkMock,
   openAddDialogMock,
   accountDataMock,
 } = vi.hoisted(() => ({
+  dialogState: {
+    inSidePanel: false,
+    accountAdd: false,
+    accountEdit: false,
+    bookmark: false,
+    api: false,
+  },
   accountListPropsMock: vi.fn(),
   handleAddAccountClickMock: vi.fn(),
   openAddBookmarkMock: vi.fn(),
   openAddDialogMock: vi.fn(),
   accountDataMock: vi.fn(),
+}))
+
+vi.mock("~/utils/browser", async (original) => ({
+  ...(await original<typeof import("~/utils/browser")>()),
+  isExtensionSidePanel: () => dialogState.inSidePanel,
+}))
+vi.mock("~/features/AccountManagement/dialogs/useDialogStateContext", () => ({
+  useDialogStateContext: () => ({
+    isAddAccountOpen: dialogState.accountAdd,
+    isEditAccountOpen: dialogState.accountEdit,
+  }),
 }))
 
 vi.mock("~/features/AccountManagement/opening/useAddAccountHandler", () => ({
@@ -37,6 +60,7 @@ vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
 vi.mock("~/features/SiteBookmarks/editor/BookmarkDialogStateContext", () => ({
   useBookmarkDialogContext: () => ({
     openAddBookmark: openAddBookmarkMock,
+    isBookmarkDialogOpen: dialogState.bookmark,
   }),
 }))
 
@@ -93,12 +117,21 @@ vi.mock(
     default: forwardRef(function ApiCredentialProfilesPopupView(
       {
         onHasProfilesChange,
-      }: { onHasProfilesChange?: (hasProfiles: boolean) => void },
+        onEditorOpenChange,
+      }: {
+        onHasProfilesChange?: (hasProfiles: boolean) => void
+        onEditorOpenChange?: (open: boolean) => void
+      },
       ref,
     ) {
       useEffect(() => {
         onHasProfilesChange?.(true)
       }, [onHasProfilesChange])
+
+      useEffect(() => {
+        onEditorOpenChange?.(dialogState.api)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [onEditorOpenChange, dialogState.api])
 
       useImperativeHandle(ref, () => ({
         openAddDialog: openAddDialogMock,
@@ -168,13 +201,114 @@ function DeferredApiMountProbe() {
 }
 
 describe("usePopupViewRegistry", () => {
-  beforeEach(() => {
+  afterEach(() => vi.restoreAllMocks())
+  beforeEach(async () => {
+    await browser.storage.session.clear()
+    Object.assign(dialogState, {
+      inSidePanel: false,
+      accountAdd: false,
+      accountEdit: false,
+      bookmark: false,
+      api: false,
+    })
     vi.clearAllMocks()
     accountDataMock.mockReturnValue({
       accounts: [{ id: "account-1" }],
       bookmarks: [{ id: "bookmark-1" }],
       isInitialLoad: false,
     })
+  })
+
+  it.each(["accountAdd", "accountEdit", "bookmark", "api"] as const)(
+    "retains sponsor setup while %s is open and delivers it once after closing",
+    async (busy) => {
+      dialogState.inSidePanel = true
+      dialogState[busy] = true
+      vi.spyOn(browser.tabs, "query").mockResolvedValue([
+        { id: 1, windowId: 2 } as browser.tabs.Tab,
+      ])
+      const receive = vi.spyOn(sponsorWorkflowChannel, "receive")
+      const intent: SponsorWorkflowIntent =
+        busy === "bookmark"
+          ? {
+              kind: SPONSOR_WORKFLOW_KINDS.Bookmark,
+              prefill: { name: "Sponsor", url: "https://sponsor.example/" },
+            }
+          : busy === "api"
+            ? {
+                kind: SPONSOR_WORKFLOW_KINDS.ApiCredential,
+                prefill: {
+                  name: "Sponsor",
+                  baseUrl: "https://sponsor.example/v1",
+                },
+              }
+            : {
+                kind: SPONSOR_WORKFLOW_KINDS.Account,
+                prefill: {
+                  source: "sponsor",
+                  sponsorId: "provider",
+                  siteType: "new-api",
+                  siteUrl: "https://sponsor.example/",
+                },
+              }
+      const { rerender } = render(<RegistryProbe />, {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      })
+      await screen.findByText("ApiCredentialProfilesPopupView")
+      await stageSponsorWorkflow(intent, 2)
+      await waitFor(async () => {
+        expect(receive).toHaveBeenCalled()
+        expect(await receive.mock.results.at(-1)?.value).toBe(false)
+      })
+      expect(await sponsorWorkflowChannel.getPending(2)).not.toBeNull()
+      expect(handleAddAccountClickMock).not.toHaveBeenCalled()
+      expect(openAddBookmarkMock).not.toHaveBeenCalled()
+      expect(openAddDialogMock).not.toHaveBeenCalled()
+      dialogState[busy] = false
+      rerender(<RegistryProbe />)
+      await waitFor(async () =>
+        expect(await sponsorWorkflowChannel.getPending(2)).toBeNull(),
+      )
+      const handler =
+        busy === "bookmark"
+          ? openAddBookmarkMock
+          : busy === "api"
+            ? openAddDialogMock
+            : handleAddAccountClickMock
+      expect(handler).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining(intent.prefill),
+      )
+    },
+  )
+
+  it("keeps sponsor API prefill queued until its lazy view mounts", async () => {
+    dialogState.inSidePanel = true
+    vi.spyOn(browser.tabs, "query").mockResolvedValue([
+      { id: 1, windowId: 2 } as browser.tabs.Tab,
+    ])
+    const intent = {
+      kind: SPONSOR_WORKFLOW_KINDS.ApiCredential,
+      prefill: {
+        name: "Sponsor",
+        baseUrl: "https://sponsor.example/v1",
+        apiKeyCreateUrl: "https://sponsor.example/keys",
+        apiKeyCreateHint: "Create a key",
+      },
+    }
+    const { rerender } = render(<RegistryProbe mountApiContent={false} />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    await stageSponsorWorkflow(intent, 2)
+    await waitFor(async () =>
+      expect(await sponsorWorkflowChannel.getPending(2)).toBeNull(),
+    )
+    expect(openAddDialogMock).not.toHaveBeenCalled()
+    rerender(<RegistryProbe mountApiContent />)
+    await waitFor(() =>
+      expect(openAddDialogMock).toHaveBeenCalledExactlyOnceWith(intent.prefill),
+    )
   })
 
   it("waits for accounts to load before offering onboarding and restores the overview after adding one", () => {
