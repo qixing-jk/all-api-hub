@@ -234,8 +234,10 @@
     }
   },
   "keyDetails": {
+    "channels": "Kênh",
     "createResponseOnlySecret": "Trang web này chỉ hiển thị khóa đầy đủ khi tạo. Nếu bạn chưa lưu khóa, hãy mở Quản lý khóa và tạo khóa thay thế.",
     "createTime": "Thời gian tạo:",
+    "defaultChannels": "Kênh mặc định của trang",
     "expireTime": "Thời gian hết hạn:",
     "followsAccountGroup": "Theo nhóm tài khoản",
     "group": "Nhóm:",
@@ -356,7 +358,8 @@
   "native": {
     "actions": {
       "delete": "Xóa khóa",
-      "edit": "Sửa khóa"
+      "edit": "Sửa khóa",
+      "revoke": "Thu hồi khóa"
     },
     "delete": {
       "confirm": "Xóa khóa",
@@ -434,6 +437,12 @@
         "required": "Trường này là bắt buộc.",
         "unsupportedOption": "Chọn một tùy chọn có sẵn."
       },
+      "krill": {
+        "allowAnyIp": "Cho phép mọi IP",
+        "allowAnyIpHelp": "Tắt danh sách IP được phép đã lưu. Yêu cầu từ mọi IP sẽ được cho phép.",
+        "channels": "Kênh",
+        "channelsHelp": "Các tuyến tính phí mà khóa này có thể dùng."
+      },
       "laozhang": {
         "activateOnFirstUse": "Kích hoạt khi sử dụng lần đầu",
         "activationHelp": "0 nghĩa là không đặt thời hạn sau khi kích hoạt. Quy tắc của trang web vẫn quyết định thời điểm hết hạn tuyệt đối.",
@@ -492,6 +501,15 @@
     },
     "heading": "Khóa API",
     "missing": "Không khả dụng",
+    "revoke": {
+      "description": "Thu hồi “{{name}}”? Khóa sẽ bị vô hiệu hóa vĩnh viễn. Bản ghi được giữ lại cho đến khi bạn xóa.",
+      "feedback": {
+        "error": "Không thể thu hồi khóa này. Hãy làm mới và thử lại."
+      },
+      "success": "Đã thu hồi khóa",
+      "title": "Thu hồi khóa",
+      "working": "Đang thu hồi..."
+    },
     "scope": {
       "empty": "Không có phạm vi khả dụng",
       "error": "Không thể tải phạm vi",

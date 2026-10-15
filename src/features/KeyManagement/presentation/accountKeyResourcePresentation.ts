@@ -175,17 +175,27 @@ const nativeKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
     const usableSecret =
       options.hasAssociatedSecret ||
       base.secretAvailability === INVENTORY_SECRET_AVAILABILITIES.Recoverable
-    const group = row.facts.displayFacts?.find((fact) => fact.kind === "group")
+    const group = row.facts.displayFacts?.find(
+      (fact) => fact.kind === "group" || fact.kind === "channels",
+    )
     const contextFact = group
-      ? {
-          id: "group",
-          label: t("keyManagement:keyDetails.group"),
-          value:
-            displayText(group.value) ||
-            (group.emptyValue === "account-group"
-              ? t("keyManagement:keyDetails.followsAccountGroup")
-              : t("keyManagement:keyDetails.ungrouped")),
-        }
+      ? group.kind === "channels"
+        ? {
+            id: "channels",
+            label: t("keyManagement:keyDetails.channels"),
+            value: group.usesDefault
+              ? `${t("keyManagement:keyDetails.defaultChannels")}${group.value.length ? ` (${displayText(group.value)})` : ""}`
+              : displayText(group.value) || t("common:labels.notAvailable"),
+          }
+        : {
+            id: "group",
+            label: t("keyManagement:keyDetails.group"),
+            value:
+              displayText(group.value) ||
+              (group.emptyValue === "account-group"
+                ? t("keyManagement:keyDetails.followsAccountGroup")
+                : t("keyManagement:keyDetails.ungrouped")),
+          }
       : undefined
     const details = nativeDetailFacts(row.facts, t)
     const summaryDetailCount = 4 - (contextFact ? 1 : 0)

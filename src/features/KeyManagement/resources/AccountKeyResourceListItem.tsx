@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from "lucide-react"
+import { Ban, Pencil, Trash2 } from "lucide-react"
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -34,6 +34,7 @@ export function AccountKeyResourceListItem({
   cardAdapter,
   onEdit,
   onDelete,
+  onRevoke,
   detail,
   isDetailLoading = false,
   detailFailure,
@@ -59,6 +60,7 @@ export function AccountKeyResourceListItem({
   cardAdapter: AccountKeyResourceCardAdapter
   onEdit: NativeKeyManagementRowAction
   onDelete: NativeKeyManagementRowAction
+  onRevoke?: NativeKeyManagementRowAction
   detail?: AccountKeyResourceFacts | null
   isDetailLoading?: boolean
   detailFailure?: ResourceFailure | null
@@ -109,6 +111,22 @@ export function AccountKeyResourceListItem({
   const completeInventory =
     row.facts.detailAvailability === ACCOUNT_KEY_DETAIL_AVAILABILITIES.Complete
   const visibleDetail = detail ?? (detailsFromRow ? row.facts : null)
+  const loadedContext = visibleDetail
+    ? cardAdapter.buildPresentation({ ...row, facts: visibleDetail }, t, {
+        hasAssociatedSecret,
+      }).contextFact
+    : undefined
+  const additionalFacts = visibleDetail
+    ? [
+        ...(loadedContext ? [loadedContext] : []),
+        ...cardAdapter.buildDetailFacts(visibleDetail, t),
+      ].filter(
+        (fact) =>
+          !presentation.summaryFacts.some(
+            (summary) => summary.id === fact.id && summary.value === fact.value,
+          ),
+      )
+    : []
   const detailState: KeyResourceDetailState = completeInventory
     ? { status: "ready", facts: presentation.detailFacts }
     : isDetailLoading
@@ -121,12 +139,12 @@ export function AccountKeyResourceListItem({
           }
         : {
             status: "ready",
-            facts: visibleDetail
-              ? cardAdapter.buildDetailFacts(visibleDetail, t)
-              : [],
+            facts: additionalFacts,
           }
   const managementActions =
-    presentation.actions.edit || presentation.actions.delete ? (
+    presentation.actions.edit ||
+    presentation.actions.delete ||
+    (row.facts.actions.canRevoke && onRevoke) ? (
       <>
         {presentation.actions.edit ? (
           <IconButton
@@ -140,6 +158,17 @@ export function AccountKeyResourceListItem({
               aria-hidden="true"
               className="text-theme-500 dark:text-theme-400 h-4 w-4"
             />
+          </IconButton>
+        ) : null}
+        {row.facts.actions.canRevoke && onRevoke ? (
+          <IconButton
+            type="button"
+            size="sm"
+            variant="warningGhost"
+            aria-label={t("native.actions.revoke")}
+            onClick={() => onRevoke(row.facts.ref)}
+          >
+            <Ban aria-hidden="true" className="h-4 w-4" />
           </IconButton>
         ) : null}
         {presentation.actions.delete ? (

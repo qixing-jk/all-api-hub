@@ -63,6 +63,131 @@ const row: NativeKeyManagementRow = {
 }
 
 describe("AccountKeyResourceListItem", () => {
+  it("keeps the disclosure open with explicit empty feedback when fetched details add nothing", async () => {
+    const user = userEvent.setup()
+    const nativeRow = {
+      ...row,
+      facts: {
+        ...row.facts,
+        ref: { ...row.facts.ref, siteType: "krill" },
+        displayFacts: [
+          {
+            fieldId: "accessed_time",
+            kind: "last-used" as const,
+            timestampMs: Date.parse("2026-10-01T00:00:00Z"),
+          },
+        ],
+      },
+    }
+    const props = {
+      row: nativeRow,
+      cardAdapter: getAccountKeyResourceCardAdapter("krill"),
+      onExpandedChange: vi.fn(),
+      onEdit: vi.fn(),
+      onDelete: vi.fn(),
+    }
+    const { rerender } = render(<AccountKeyResourceListItem {...props} />)
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    )
+    expect(props.onExpandedChange).toHaveBeenCalledWith(true)
+    rerender(<AccountKeyResourceListItem {...props} expanded isDetailLoading />)
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "keyManagement:details.loading",
+    )
+    rerender(
+      <AccountKeyResourceListItem
+        {...props}
+        detail={nativeRow.facts}
+        expanded
+      />,
+    )
+    const trigger = screen.getByRole("button", {
+      name: "keyManagement:actions.detailsFor",
+    })
+    expect(trigger).toHaveAttribute("aria-expanded", "true")
+    expect(
+      screen.getByRole("region", { name: "keyManagement:actions.detailsFor" }),
+    ).toHaveTextContent("keyManagement:details.empty")
+    await user.click(trigger)
+    expect(props.onExpandedChange).toHaveBeenCalledWith(false)
+    rerender(
+      <AccountKeyResourceListItem
+        {...props}
+        detail={nativeRow.facts}
+        expanded={false}
+      />,
+    )
+    expect(
+      screen.getByRole("button", { name: "keyManagement:actions.detailsFor" }),
+    ).toHaveAttribute("aria-expanded", "false")
+    expect(
+      screen.queryByRole("region", {
+        name: "keyManagement:actions.detailsFor",
+      }),
+    ).toBeNull()
+  })
+
+  it("dispatches revoke separately from permanent deletion", async () => {
+    const onRevoke = vi.fn()
+    const onDelete = vi.fn()
+    const nativeRow = {
+      ...row,
+      facts: {
+        ...row.facts,
+        ref: { ...row.facts.ref, siteType: "krill" },
+        actions: { ...row.facts.actions, canRevoke: true },
+      },
+    }
+    render(
+      <AccountKeyResourceListItem
+        row={nativeRow}
+        cardAdapter={getAccountKeyResourceCardAdapter("krill")}
+        onExpandedChange={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={onDelete}
+        onRevoke={onRevoke}
+      />,
+    )
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:native.actions.revoke",
+      }),
+    )
+    expect(onRevoke).toHaveBeenCalledWith(nativeRow.facts.ref)
+    expect(onDelete).not.toHaveBeenCalled()
+    expect(
+      screen.getByRole("button", {
+        name: "keyManagement:native.actions.revoke",
+      }),
+    ).toHaveClass(
+      "bg-transparent",
+      "text-warning-indicator",
+      "hover:bg-warning-soft",
+    )
+    expect(
+      screen.getByRole("button", {
+        name: "keyManagement:native.actions.delete",
+      }),
+    ).toHaveClass("text-destructive-text")
+    const managementActions = screen
+      .getAllByRole("button")
+      .map((button) => button.getAttribute("aria-label"))
+      .filter((label) =>
+        [
+          "keyManagement:native.actions.edit",
+          "keyManagement:native.actions.revoke",
+          "keyManagement:native.actions.delete",
+        ].includes(label ?? ""),
+      )
+    expect(managementActions).toEqual([
+      "keyManagement:native.actions.edit",
+      "keyManagement:native.actions.revoke",
+      "keyManagement:native.actions.delete",
+    ])
+  })
   it("dispatches a provider-declared action independently of its label and other actions", async () => {
     const policy = presentationPolicy.getKeyResourcePresentationPolicy("dahl")
     const declaration = vi
@@ -589,7 +714,7 @@ describe("AccountKeyResourceListItem", () => {
 
     expect(
       screen.getAllByText("keyManagement:openRouter.list.details.limit"),
-    ).toHaveLength(2)
+    ).toHaveLength(1)
     expect(screen.getAllByText(row.facts.displayName)).toHaveLength(1)
   })
 

@@ -97,6 +97,8 @@ import {
   KIMI_GLOBAL_DISPLAY_NAME,
   KIMI_GLOBAL_HOSTNAMES,
   KIMI_HOSTNAMES,
+  KRILL_HOSTNAMES,
+  KRILL_WEB_ORIGIN,
   LAOZHANG_HOSTNAMES,
   MODELFLARE_HOSTNAME,
   MODELFLARE_USER_ID_HEADER_NAME,
@@ -203,6 +205,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.DAHL,
   SITE_TYPES.FOXCODE,
   SITE_TYPES.XIAOEN,
+  SITE_TYPES.KRILL,
   SITE_TYPES.CUBENCE,
   SITE_TYPES.RIGHT_CODE,
   SITE_TYPES.OPENROUTER,
@@ -214,19 +217,19 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
 
 export type AccountSiteDefinitionType = (typeof ACCOUNT_SITE_TYPE_ORDER)[number]
 
-// GitHub stars snapshot (2026-10-09), descending; refresh deliberately rather
+// GitHub stars snapshot (2026-10-15), descending; refresh deliberately rather
 // than fetching popularity during UI rendering. Sources: github.com/<repo>:
-// diegosouzapw/OmniRoute 74257, router-for-me/CLIProxyAPI 54503,
-// QuantumNous/new-api 49434, Wei-Shaw/sub2api 43500, tbphp/gpt-load 7055,
-// yetone/magpie 6725, looplj/axonhub 5343, ding113/claude-code-hub 3395,
-// bestruirui/octopus 2686, Veloera/Veloera 1633, deanxv/done-hub 809.
+// diegosouzapw/OmniRoute 76741, router-for-me/CLIProxyAPI 55296,
+// QuantumNous/new-api 50001, Wei-Shaw/sub2api 44078, yetone/magpie 13144,
+// tbphp/gpt-load 7097, looplj/axonhub 5359, ding113/claude-code-hub 3396,
+// bestruirui/octopus 2707, Veloera/Veloera 1630, deanxv/done-hub 809.
 export const MANAGED_SITE_TYPE_ORDER = [
   SITE_TYPES.OMNIROUTE,
   SITE_TYPES.CLI_PROXY_API,
   SITE_TYPES.NEW_API,
   SITE_TYPES.SUB2API,
-  SITE_TYPES.GPT_LOAD,
   SITE_TYPES.MAGPIE,
+  SITE_TYPES.GPT_LOAD,
   SITE_TYPES.AXON_HUB,
   SITE_TYPES.CLAUDE_CODE_HUB,
   SITE_TYPES.OCTOPUS,
@@ -282,6 +285,50 @@ const ACCOUNT_SITE_DEFINITIONS = [
         inferFromHostname: true,
         storageOrigin: XIAOEN_WEB_ORIGIN,
         duplicateOrigin: XIAOEN_WEB_ORIGIN,
+      },
+    },
+  },
+  {
+    siteType: SITE_TYPES.KRILL,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Krill,
+    onboarding: {
+      displayName: "Krill AI",
+      detection: { hostnames: KRILL_HOSTNAMES },
+      routes: {
+        loginPath: "/login",
+        usagePath: "/app/logs",
+        adminCredentialsPath: "/app/keys",
+        pricingPath: "/app/pricing",
+        checkInPath: null,
+        accessTokenPath: null,
+        redeemPath: "/app",
+        siteAnnouncementsPath: "/app/announcements",
+      },
+    },
+    productProfile: {
+      auth: {
+        usesBrowserCookieSession: true,
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.Cookie],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.Cookie,
+        defaultAuthHostnames: KRILL_HOSTNAMES,
+      },
+      identity: {
+        usernameRequired: false,
+        storedUserIdentityFields: ["id", "email"],
+      },
+      modelList: {
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+        // Channels gate billing routes, so the catalogue carries no model groups.
+        groupSemantics: ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+      },
+      urls: {
+        recognizedHostnames: KRILL_HOSTNAMES,
+        inferFromHostname: true,
+        storageOrigin: KRILL_WEB_ORIGIN,
+        duplicateOrigin: KRILL_WEB_ORIGIN,
       },
     },
   },

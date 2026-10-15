@@ -54,6 +54,12 @@ export function ModelPriceCalculationDetails({
   const pricingDescription = i18n.language.startsWith("zh")
     ? quote.source.pricingDescription?.zh ?? quote.source.pricingDescription?.en
     : quote.source.pricingDescription?.en ?? quote.source.pricingDescription?.zh
+  const showsGroupMultiplier =
+    !!quote.calculation &&
+    (!!effectiveGroup || quote.calculation.groupMultiplier !== 1)
+  const showsConversion =
+    quote.calculation?.cnyPerUsd !== undefined &&
+    quote.lines.some((line) => line.rate.currency !== quote.currency)
 
   /** Formats each published predicate separately from the schedule's markup. */
   const formatCondition = (
@@ -105,23 +111,20 @@ export function ModelPriceCalculationDetails({
       <h4 className="text-sm font-medium">
         {t("scenario.calculationDetails")}
       </h4>
-      {quote.calculation && (
+      {quote.calculation && (showsGroupMultiplier || showsConversion) && (
         <p className="text-muted-foreground">
-          {t("scenario.appliedMultiplier", {
-            value: quote.calculation.groupMultiplier,
-          })}
-          {quote.calculation.cnyPerUsd !== undefined &&
-            quote.lines.some(
-              (line) => line.rate.currency !== quote.currency,
-            ) && (
-              <>
-                {" "}
-                ·{" "}
-                {t("scenario.appliedConversion", {
-                  value: quote.calculation.cnyPerUsd,
-                })}
-              </>
-            )}
+          {showsGroupMultiplier &&
+            t("scenario.appliedMultiplier", {
+              value: quote.calculation.groupMultiplier,
+            })}
+          {showsConversion && (
+            <>
+              {showsGroupMultiplier && " · "}
+              {t("scenario.appliedConversion", {
+                value: quote.calculation.cnyPerUsd,
+              })}
+            </>
+          )}
         </p>
       )}
       {showsPublishedSchedule && <p>{t("scenario.publishedPrices")}</p>}

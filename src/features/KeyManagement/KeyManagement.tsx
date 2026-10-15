@@ -352,6 +352,7 @@ export default function KeyManagement(props: {
         onOpenNativeDetail={(ref) => void nativeKeys.openDetail(ref)}
         onEditNativeKey={(ref, intent) => void nativeKeys.openEdit(ref, intent)}
         onDeleteNativeKey={nativeKeys.openDelete}
+        onRevokeNativeKey={nativeKeys.openRevoke}
         onRetryCurrentAccount={
           selectedAccount
             ? () => void handleRefreshTokens(selectedAccount)

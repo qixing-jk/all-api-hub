@@ -73,6 +73,7 @@ These backends have distinct account contracts. Compatible inference APIs do not
 | `kimi-global` | Account / [kimiOpenPlatform](../../src/services/apiAdapters/kimiOpenPlatform/) | Kimi Global: separate accounts, credentials and USD balances from China. Region changes must not silently reuse the other region's credentials. | [Global console](https://platform.kimi.ai/) · [Regional boundaries](../../src/services/kimiOpenPlatform/deployments.ts) |
 | `grsai` | Account / [grsai](../../src/services/apiAdapters/grsai/) | Provider-owned REST backend, not a New API derivative. `grsai.com` and `grsai.ai` share an account service; console API and inference origins have separate roles. | [Console](https://grsai.com/) · [Alternate console](https://grsai.ai/) · [Protocol owner](../../src/services/apiService/grsai/) |
 | `cubence` | Account / [cubence](../../src/services/apiAdapters/cubence/) | Hosted cookie-authenticated account service with stored credit, today's usage, native keys and invitation aff. | [Website](https://cubence.com/) · [Documentation](https://docs.cubence.com/en/docs) |
+| `krill` | Account / [krill](../../src/services/apiAdapters/krill/) | Provider-owned backend, not a New API/One API derivative (`/api/status`, `/api/user/self` and `/api/user/token` do not exist). `www.krill-ai.net` is a redirect entry address; the console Cookie, account API and saved account all live on `www.krill-code.com`. Keys are channel-routed and never expose a stored plaintext; `api.krill-ai.net`, `api-slb.krill-ai.net` and `api.cdn-krill-ai.com` are inference-only routes and stay out of console detection. | [Console](https://www.krill-code.com/) |
 
 ### Managed-only backend types
 
@@ -124,6 +125,7 @@ Before removing an existing note, check that its decision-critical rationale and
 Use the relationship overview for upstream sources and the [supported-sites page](../docs/supported-sites.md) for provider and project introductions. Apply these rules to support catalogs and root README compatibility lists:
 
 - Match sibling entries in naming, formatting and level of detail. Name cells contain the public site or project name, without appended domains, internal identifiers, authentication methods or implementation notes. Use a short regional qualifier only when needed to distinguish separately listed platforms.
+- Order comparable entries by popularity within each existing category, following the [catalog and gateway popularity policy](#gateway-presentation-order). Synchronize that relative order across support tables, locale counterparts and README compatibility lists; do not use registration order or prepend a newly adapted site. Sponsor showcases retain their separately curated order.
 - Do not automatically promote investigation or deployment URLs into public catalog links. Match comparable entries: when those use plain names and no official link, keep that presentation rather than adding the adapted deployment's domain. Retain investigation URLs in developer references or local evidence. For deliberately curated official references, use the existing link column or linked-name convention; do not repeat hostnames as name suffixes.
 - Keep introductions about the upstream service, project lineage and relationships. Do not append deployment-specific check-in rules, reward amounts or units, reset times, eligibility, authentication procedures, endpoint behavior, or adaptation limitations. User actions and capability details belong in the relevant integration or service guide; protocol rationale belongs beside its code, and live observations belong in local task evidence.
 - Update catalogs when an entry, name, link, introduction or advertised support boundary changes. A capability-only adaptation does not require artificial catalog edits while existing entries remain accurate. Check the affected locale counterparts and root compatibility lists together before completion.
@@ -247,11 +249,46 @@ FoxCode (`foxcode`) is an account-only Cookie adapter at `https://foxcode.rjj.cc
 
 Run `pnpm e2e:cdp:foxcode -- --isolate` against the current-worktree build. `--mutate` creates, edits and deletes one owned key, without inference or monetary writes. An optional `FOXCODE_SESSION_FILE` accepts a verified identity and only origin-scoped authorized cookies. Raw local screenshots and protocol evidence live outside Git under `.scratch/foxcode-adaptation/evidence/`.
 
-## Gateway presentation order
+<a id="gateway-presentation-order"></a>
 
-Plugin gateway/managed-site selectors and navigation use `MANAGED_SITE_TYPE_ORDER` in `src/services/accountSiteDefinitions/definitions.ts` as their shared presentation order. Adding a gateway includes choosing its position; registration order or appending at the end is not a popularity decision.
+## Catalog and gateway popularity order
 
-- For open-source gateways with comparable public repositories, sort by upstream GitHub stars descending. Verify counts live when adding a gateway or revising the order; refresh the compared repositories together and record repository sources, counts, and the snapshot date beside the order constant. Keep this a deliberate static snapshot rather than fetching popularity during UI rendering.
+Public support catalogs and README compatibility lists use popularity order within their existing categories. Plugin gateway/managed-site selectors and navigation use `MANAGED_SITE_TYPE_ORDER` in `src/services/accountSiteDefinitions/definitions.ts`; their relative order must also match the public gateway catalogs. Adding an entry includes choosing its position; registration order or appending at the end is not a popularity decision.
+
+- For open-source projects with comparable public repositories, sort by upstream GitHub stars descending. Verify counts live when adding an entry or revising the order; refresh the compared repositories together and record repository sources, counts, and the snapshot date here. Keep the runtime gateway snapshot beside its order constant consistent. Keep this a deliberate static snapshot rather than fetching popularity during UI rendering.
 - Use traffic or adoption evidence where stars are unavailable or insufficient to distinguish candidates. Record the source, measurement period, and rationale; compare the same metric and period. Do not combine stars and visits into an invented score or substitute a guessed traffic ranking. Self-hosting alone does not mean a public repository has no star count.
-- Keep equal-ranked sites in their existing relative order. Place sites without comparable evidence after the ranked group and record the reason; revisit that exception when the site changes. If evidence cannot be retrieved, disclose the provisional placement in the task report.
-- Update the existing public-order assertion in `tests/services/accountSiteDefinitions/registry.test.ts` and check affected selectors/navigation for hard-coded lists that bypass the registry. Preserve saved-account/user-customized ordering; `ACCOUNT_SITE_TYPE_ORDER` has its own compatibility order and is not implicitly covered by this gateway ranking rule.
+- Keep equal-ranked entries in their existing relative order. Place entries without comparable evidence after the ranked group, preserve the existing relative order of that unranked remainder, and append new unranked entries to it. Record the reason and revisit when comparable evidence becomes available. If evidence cannot be retrieved, disclose the provisional placement in the task report.
+- Update the public-order assertions in `tests/services/accountSiteDefinitions/registry.test.ts` and `publicCatalogOrder.test.ts`; check affected selectors/navigation for hard-coded lists that bypass the registry. Preserve saved-account/user-customized ordering. `ACCOUNT_SITE_TYPE_ORDER` remains the runtime compatibility order, independently of the categorized public catalogs; this policy does not reorder saved accounts or change detection precedence.
+
+### Popularity snapshot (2026-10-15)
+
+Source: upstream GitHub repository API `stargazers_count`, retrieved together on the date above. Compare only entries within the same catalog category; README export summaries combine the export-tool categories using the same metric. These counts measure project interest, not hosted-service traffic or an endorsement.
+
+| Upstream repository | GitHub stars |
+| --- | ---: |
+| [farion1231/cc-switch](https://github.com/farion1231/cc-switch) | 144,538 |
+| [diegosouzapw/OmniRoute](https://github.com/diegosouzapw/OmniRoute) | 76,741 |
+| [router-for-me/CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI) | 55,296 |
+| [CherryHQ/cherry-studio](https://github.com/CherryHQ/cherry-studio) | 52,652 |
+| [QuantumNous/new-api](https://github.com/QuantumNous/new-api) | 50,001 |
+| [Wei-Shaw/sub2api](https://github.com/Wei-Shaw/sub2api) | 44,078 |
+| [musistudio/claude-code-router](https://github.com/musistudio/claude-code-router) | 37,685 |
+| [songquanpeng/one-api](https://github.com/songquanpeng/one-api) | 37,167 |
+| [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode) | 27,612 |
+| [RooCodeInc/Roo-Code](https://github.com/RooCodeInc/Roo-Code) | 24,276 |
+| [yetone/magpie](https://github.com/yetone/magpie) | 13,144 |
+| [tbphp/gpt-load](https://github.com/tbphp/gpt-load) | 7,097 |
+| [looplj/axonhub](https://github.com/looplj/axonhub) | 5,359 |
+| [Chevey339/kelivo](https://github.com/Chevey339/kelivo) | 4,224 |
+| [ding113/claude-code-hub](https://github.com/ding113/claude-code-hub) | 3,396 |
+| [MartialBE/one-hub](https://github.com/MartialBE/one-hub) | 2,898 |
+| [bestruirui/octopus](https://github.com/bestruirui/octopus) | 2,707 |
+| [coulsontl/ai-toolbox](https://github.com/coulsontl/ai-toolbox) | 1,780 |
+| [Veloera/Veloera](https://github.com/Veloera/Veloera) | 1,630 |
+| [VoAPI/VoAPI](https://github.com/VoAPI/VoAPI) | 1,092 |
+| [deanxv/done-hub](https://github.com/deanxv/done-hub) | 809 |
+| [SuperAI-Api/Super-API](https://github.com/SuperAI-Api/Super-API) | 116 |
+
+APIyi, ModelFlare and v-api have no comparable repository identified in the curated catalog. Cursor++ likewise has a curated website but no comparable repository identified there; it follows the ranked editor tools. These entries retain their existing relative order after ranked entries.
+
+Independent platforms and commercial relays have no complete, same-period traffic/adoption comparison in this snapshot. Their existing relative order is retained provisionally; the new unranked Krill AI entry follows that remainder. A single provider's traffic estimate or its parent chatbot's traffic is insufficient to rank the whole category. Refresh the cohort together when comparable evidence becomes available.

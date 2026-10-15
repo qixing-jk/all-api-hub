@@ -645,6 +645,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   DecryptImportWebDavBackup: "decrypt_import_webdav_backup",
   DeleteAccount: "delete_account",
   DeleteAccountToken: "delete_account_token",
+  RevokeAccountToken: "revoke_account_token",
   DeleteApiCredentialProfile: "delete_api_credential_profile",
   DeleteAutoCheckinAccount: "delete_auto_checkin_account",
   DeleteBookmark: "delete_bookmark",

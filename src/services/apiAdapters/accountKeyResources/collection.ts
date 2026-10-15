@@ -68,6 +68,7 @@ export function createAccountKeyResourceCollection<
     | "update"
     | "requiresFreshUpdateDetail"
     | "delete"
+    | "revoke"
   >
   config: TConfig
   accountId: string
@@ -153,6 +154,43 @@ export function createAccountKeyResourceCollection<
     return { detail, ref: decoded.ref }
   }
   return {
+    ...(definition.revoke
+      ? {
+          revoke: (
+            ref: AccountKeyResourceRef,
+            options?: ResourceOperationOptions,
+          ) =>
+            mapOperation(async () => {
+              const decoded = decodeRef(ref)
+              const resolution = resolveNativeResourceMutation(
+                await definition.revoke!(
+                  config,
+                  providerScope,
+                  decoded.locator,
+                  options,
+                ),
+              )
+              if (resolution.status === "not-applied")
+                throw new AccountKeyResourceError(
+                  mapFailure(resolution.failure),
+                )
+              if (resolution.status === "uncertain")
+                throw new AccountKeyResourceError({
+                  ...mapFailure(resolution.failure),
+                  code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+                })
+              const actualRef = createRef(
+                definition.locatorFromDetail(resolution.value),
+              )
+              if (!refBoundary.refsMatch(actualRef, decoded.ref))
+                throw unexpectedFailure()
+              return projectFacts(
+                definition.toDetailFacts(resolution.value, actualRef),
+                actualRef,
+              )
+            }, mapFailure),
+        }
+      : {}),
     scope: publicScope,
     list: (query, listOptions) =>
       mapOperation(async () => {

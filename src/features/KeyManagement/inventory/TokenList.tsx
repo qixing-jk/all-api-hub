@@ -90,6 +90,7 @@ export function TokenList(props: TokenListProps) {
     onOpenNativeDetail,
     onEditNativeKey,
     onDeleteNativeKey,
+    onRevokeNativeKey,
     credentialProfileLinks = [],
     getCredentialProfileForLocator,
     canManageCredentialAssociations = false,
@@ -218,6 +219,7 @@ export function TokenList(props: TokenListProps) {
       onOpenDetail={onOpenNativeDetail}
       onEdit={onEditNativeKey ?? (() => undefined)}
       onDelete={onDeleteNativeKey ?? (() => undefined)}
+      onRevoke={onRevokeNativeKey}
       detail={nativeDetail}
       isDetailLoading={nativeDetailLoading}
       detailFailure={nativeDetailFailure}

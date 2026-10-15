@@ -242,8 +242,10 @@
     }
   },
   "keyDetails": {
+    "channels": "Kanäle",
     "createResponseOnlySecret": "Diese Website zeigt den vollständigen Schlüssel nur an, wenn er erstellt wird. Wenn Sie ihn nicht gespeichert haben, öffnen Sie die Schlüsselverwaltung und erstellen Sie einen Ersatzschlüssel.",
     "createTime": "Erstellungszeit:",
+    "defaultChannels": "Standardkanäle der Website",
     "expireTime": "Ablaufzeit:",
     "followsAccountGroup": "Folgt der Kontogruppe",
     "group": "Gruppe:",
@@ -367,7 +369,8 @@
   "native": {
     "actions": {
       "delete": "Schlüssel löschen",
-      "edit": "Schlüssel bearbeiten"
+      "edit": "Schlüssel bearbeiten",
+      "revoke": "Schlüssel widerrufen"
     },
     "delete": {
       "confirm": "Schlüssel löschen",
@@ -445,6 +448,12 @@
         "required": "Dieses Feld ist erforderlich.",
         "unsupportedOption": "Wählen Sie eine verfügbare Option."
       },
+      "krill": {
+        "allowAnyIp": "Jede IP zulassen",
+        "allowAnyIpHelp": "Deaktiviert die gespeicherte IP-Whitelist. Anfragen von jeder IP sind erlaubt.",
+        "channels": "Kanäle",
+        "channelsHelp": "Welche abrechenbaren Routen dieser Schlüssel verwenden darf."
+      },
       "laozhang": {
         "activateOnFirstUse": "Bei erster Nutzung aktivieren",
         "activationHelp": "0 bedeutet keine Gültigkeitsdauer nach der Aktivierung. Die Website-Regeln bestimmen weiterhin das absolute Ablaufdatum.",
@@ -503,6 +512,15 @@
     },
     "heading": "API-Schlüssel",
     "missing": "Nicht verfügbar",
+    "revoke": {
+      "description": "„{{name}}“ widerrufen? Der Schlüssel wird dauerhaft deaktiviert. Der Eintrag bleibt bis zur Löschung erhalten.",
+      "feedback": {
+        "error": "Dieser Schlüssel konnte nicht widerrufen werden. Aktualisiere die Seite und versuche es erneut."
+      },
+      "success": "Schlüssel widerrufen",
+      "title": "Schlüssel widerrufen",
+      "working": "Wird widerrufen..."
+    },
     "scope": {
       "empty": "Keine Bereiche verfügbar",
       "error": "Bereiche konnten nicht geladen werden",
