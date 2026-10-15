@@ -175,6 +175,21 @@ const getMockedRouteResolver = async () => {
 }
 
 describe("navigation utilities", () => {
+  it("preserves an occupied handoff and opens the supplied fallback without delaying native opening", async () => {
+    let finishPublish!: (accepted: boolean) => void
+    const publish = new Promise<boolean>((resolve) => {
+      finishPublish = resolve
+    })
+    const fallback = vi.fn(async () => {})
+    const tab = { id: 4, windowId: 2 } as browser.tabs.Tab
+    const opening = openSidePanelWithFallback(tab, fallback, {
+      handoff: { publish: () => publish, retract: async () => true },
+    })
+    expect(mockedOpenSidePanel).toHaveBeenCalledWith(tab)
+    finishPublish(false)
+    expect(await opening).toBe("options")
+    expect(fallback).toHaveBeenCalledOnce()
+  })
   it("counts unsupported check-in pages without opening empty tabs or blocking other accounts", async () => {
     vi.mocked(resolveAccountSiteRouteUrl)
       .mockResolvedValueOnce(null)

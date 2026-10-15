@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
 import { useAccountDialogRecoveryReceiver } from "~/features/AccountManagement/dialogs/useAccountDialogRecoveryReceiver"
+import { UI_HANDOFF_RECEIVE_RESULTS } from "~/hooks/useUiHandoffReceiver"
 import toast from "~/lib/notify"
 import { getActiveTab } from "~/utils/browser/tabs"
 import { createDeferred } from "~~/tests/test-utils/deferred"
@@ -70,7 +71,7 @@ describe("account dialog recovery receiver", () => {
         ? firstReception.promise
         : Promise.resolve(accept(secondState)),
     )
-    const onReceive = vi.fn(() => "accepted" as const)
+    const onReceive = vi.fn(() => UI_HANDOFF_RECEIVE_RESULTS.Accepted)
     renderHook(
       () => useAccountDialogRecoveryReceiver({ enabled: true, onReceive }),
       { withUserPreferencesProvider: false, withThemeProvider: false },
@@ -112,7 +113,7 @@ describe("account dialog recovery receiver", () => {
       const failingOperation =
         operation === "pending lookup" ? getPending : receiveRecovery
       failingOperation.mockRejectedValueOnce(new Error("Session read failed"))
-      const onReceive = vi.fn(() => "accepted" as const)
+      const onReceive = vi.fn(() => UI_HANDOFF_RECEIVE_RESULTS.Accepted)
       renderHook(
         () => useAccountDialogRecoveryReceiver({ enabled: true, onReceive }),
         {
@@ -142,7 +143,7 @@ describe("account dialog recovery receiver", () => {
     vi.mocked(getActiveTab).mockRejectedValueOnce(
       new Error("Tab lookup failed"),
     )
-    const onReceive = vi.fn(() => "accepted" as const)
+    const onReceive = vi.fn(() => UI_HANDOFF_RECEIVE_RESULTS.Accepted)
     renderHook(
       () => useAccountDialogRecoveryReceiver({ enabled: true, onReceive }),
       {
@@ -172,7 +173,7 @@ describe("account dialog recovery receiver", () => {
             ? getPending
             : receiveRecovery
       failingOperation.mockReturnValueOnce(pending.promise)
-      const onReceive = vi.fn(() => "accepted" as const)
+      const onReceive = vi.fn(() => UI_HANDOFF_RECEIVE_RESULTS.Accepted)
       const { unmount } = renderHook(
         () => useAccountDialogRecoveryReceiver({ enabled: true, onReceive }),
         {

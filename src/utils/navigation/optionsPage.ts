@@ -11,6 +11,17 @@ import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("Navigation")
 
+/** Creates a persistent workflow target, optionally keeping popup focus until a later visit. */
+export async function openOptionsMenuItemInNewTab(
+  menuItemId: OptionsMenuItemId,
+  searchParams?: Record<string, string | undefined>,
+  active = true,
+): Promise<void> {
+  const url = `${OPTIONS_PAGE_URL}${buildSearchString(searchParams)}#${menuItemId}`
+  const tab = await createTabApi(url, active)
+  if (typeof tab?.id !== "number") throw new Error("Options tab unavailable")
+}
+
 /**
  * Detects whether the current page is the extension options page.
  * @returns True if the current location matches OPTIONS_PAGE_URL.
