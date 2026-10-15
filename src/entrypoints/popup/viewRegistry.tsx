@@ -9,6 +9,8 @@ import {
 import { useTranslation } from "react-i18next"
 
 import AccountList from "~/features/AccountManagement/components/AccountList"
+import { PopupAccountOnboarding } from "~/features/AccountManagement/components/PopupAccountOnboarding"
+import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import { useAddAccountHandler } from "~/features/AccountManagement/opening/useAddAccountHandler"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import type { ApiCredentialProfilesPopupViewHandle } from "~/features/ApiCredentialProfiles/list/ApiCredentialProfilesPopupView"
@@ -44,6 +46,8 @@ const LazyApiCredentialProfilesStatsSection = lazy(
 
 interface PopupViewConfig {
   showRefresh: boolean
+  showActionBar?: boolean
+  showAccountActions?: boolean
   headerAction?: ReactNode
   statsSection?: ReactNode
   primaryActionLabel: string
@@ -98,6 +102,9 @@ export function usePopupViewRegistry({
     "apiCredentialProfiles",
   ])
   const { handleAddAccountClick } = useAddAccountHandler()
+  const { accounts, bookmarks, isInitialLoad } = useAccountDataContext()
+  const hasAccounts = accounts.length > 0
+  const showAccountOverview = !isInitialLoad && hasAccounts
 
   // Popup-level bridge between the detected-accounts badge in the stats
   // section and the account list's search box. The revision lets repeated
@@ -123,6 +130,8 @@ export function usePopupViewRegistry({
     useRef<ApiCredentialProfilesPopupViewHandle>(null)
   const [pendingApiCredentialProfilesAdd, setPendingApiCredentialProfilesAdd] =
     useState(false)
+  const [hasApiCredentialProfiles, setHasApiCredentialProfiles] =
+    useState(false)
 
   const handleApiCredentialProfilesViewRef = useCallback(
     (handle: ApiCredentialProfilesPopupViewHandle | null) => {
@@ -138,11 +147,15 @@ export function usePopupViewRegistry({
 
   return {
     accounts: {
-      showRefresh: true,
-      headerAction: <ShareOverviewSnapshotButton />,
-      statsSection: (
+      showRefresh: showAccountOverview,
+      showActionBar: showAccountOverview,
+      showAccountActions: showAccountOverview,
+      headerAction: showAccountOverview ? (
+        <ShareOverviewSnapshotButton />
+      ) : null,
+      statsSection: showAccountOverview ? (
         <BalanceSection onFilterCurrentSiteAccounts={requestAccountSearch} />
-      ),
+      ) : null,
       primaryActionLabel: t("account:addAccount"),
       onPrimaryAction: handleAddAccountClick,
       primaryAnalyticsAction: {
@@ -150,23 +163,29 @@ export function usePopupViewRegistry({
         actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateAccountDialog,
       },
       primaryActionTestId: ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton,
-      content: (
-        <AccountList
-          initialSearchQuery={accountSearchRequest?.query}
-          initialSearchQueryRevision={accountSearchRequest?.revision}
-          reorderUnavailableReason={reorderUnavailableReason}
-          showAddAccountAction={false}
-          virtualScrollParent={scrollParent}
-        />
-      ),
+      content:
+        !isInitialLoad && !hasAccounts ? (
+          <PopupAccountOnboarding onAdd={handleAddAccountClick} />
+        ) : (
+          <AccountList
+            initialSearchQuery={accountSearchRequest?.query}
+            initialSearchQueryRevision={accountSearchRequest?.revision}
+            reorderUnavailableReason={reorderUnavailableReason}
+            showAddAccountAction={false}
+            virtualScrollParent={scrollParent}
+          />
+        ),
     },
     bookmarks: {
       showRefresh: false,
-      statsSection: (
-        <Suspense fallback={<PopupStatsFallback />}>
-          <LazyBookmarkStatsSection />
-        </Suspense>
-      ),
+      showActionBar: !isInitialLoad && bookmarks.length > 0,
+      showAccountActions: false,
+      statsSection:
+        !isInitialLoad && bookmarks.length > 0 ? (
+          <Suspense fallback={<PopupStatsFallback />}>
+            <LazyBookmarkStatsSection />
+          </Suspense>
+        ) : null,
       primaryActionLabel: t("bookmark:actions.add"),
       primaryActionTestId: POPUP_TEST_IDS.bookmarksPrimaryAction,
       onPrimaryAction: openAddBookmark,
@@ -185,11 +204,13 @@ export function usePopupViewRegistry({
     },
     apiCredentialProfiles: {
       showRefresh: false,
-      statsSection: (
+      showActionBar: hasApiCredentialProfiles,
+      showAccountActions: false,
+      statsSection: hasApiCredentialProfiles ? (
         <Suspense fallback={<PopupStatsFallback />}>
           <LazyApiCredentialProfilesStatsSection />
         </Suspense>
-      ),
+      ) : null,
       primaryActionLabel: t("apiCredentialProfiles:actions.add"),
       primaryActionTestId: POPUP_TEST_IDS.apiCredentialProfilesPrimaryAction,
       onPrimaryAction: () => {
@@ -210,6 +231,8 @@ export function usePopupViewRegistry({
         <Suspense fallback={<PopupContentFallback />}>
           <LazyApiCredentialProfilesPopupView
             ref={handleApiCredentialProfilesViewRef}
+            showKeyManagementImportHint={showAccountOverview}
+            onHasProfilesChange={setHasApiCredentialProfiles}
           />
         </Suspense>
       ),

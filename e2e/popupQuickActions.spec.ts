@@ -3,8 +3,10 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
+  createStoredAccount,
   forceExtensionLanguage,
   installExtensionPageGuards,
+  seedStoredAccounts,
   stubLlmMetadataIndex,
   waitForExtensionPage,
 } from "~~/e2e/utils/commonUserFlows"
@@ -168,6 +170,9 @@ test("opens the key-management destination from the popup quick action", async (
   extensionId,
   page,
 }) => {
+  await seedStoredAccounts(await getServiceWorker(context), [
+    createStoredAccount(),
+  ])
   await page.goto(`chrome-extension://${extensionId}/${POPUP_PAGE_PATH}`)
   await waitForExtensionRoot(page)
 
@@ -191,6 +196,9 @@ test("opens the model-management destination from the popup quick action", async
   extensionId,
   page,
 }) => {
+  await seedStoredAccounts(await getServiceWorker(context), [
+    createStoredAccount(),
+  ])
   await page.goto(`chrome-extension://${extensionId}/${POPUP_PAGE_PATH}`)
   await waitForExtensionRoot(page)
 
@@ -214,6 +222,9 @@ test("preserves run-now routing when opening auto check-in from the popup", asyn
   extensionId,
   page,
 }) => {
+  await seedStoredAccounts(await getServiceWorker(context), [
+    createStoredAccount(),
+  ])
   await page.goto(`chrome-extension://${extensionId}/${POPUP_PAGE_PATH}`)
   await waitForExtensionRoot(page)
 

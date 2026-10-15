@@ -150,6 +150,8 @@ export default function ApiCredentialProfilesStatsSection() {
     usedTagsCount,
   ])
 
+  if (profiles.length === 0) return null
+
   return (
     <div className="space-y-density-3">
       <div className="gap-y-density-3 flex items-center justify-between gap-x-3">

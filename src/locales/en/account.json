@@ -253,6 +253,9 @@
     "sortMenu": "Sort by",
     "toggleSortOrder": "Toggle sort order"
   },
+  "popupOnboarding": {
+    "signInHint": "Sign in to your API site, then add an account using automatic detection or manual entry."
+  },
   "refresh": {
     "refreshComplete": "Refresh complete: {{success}} success, {{failed}} failed",
     "refreshDisabledComplete": "Disabled account probe complete: {{restored}} restored, {{stillDisabled}} still disabled",
@@ -278,6 +281,14 @@
     "newcomer": {
       "description": "Register on a provider's website, then follow the card to add an account, save API credentials, or bookmark the site.",
       "title": "Explore available providers"
+    },
+    "popupApiCredentialProfiles": {
+      "description": "Need developer API or Coding Plan access? Quickly prefill Base URL and get keys from the provider console:",
+      "title": "Recommended Providers & Subscriptions"
+    },
+    "popupBookmarks": {
+      "description": "One-click bookmarking for quick and convenient access anytime:",
+      "title": "Featured Site Recommendations"
     },
     "recommendedProviders": "Recommended providers",
     "supportStatus": {

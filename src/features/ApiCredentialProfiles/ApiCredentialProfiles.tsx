@@ -82,7 +82,8 @@ export default function ApiCredentialProfiles({
   ])
 
   const controller = useApiCredentialProfilesController()
-  const { displayData: localAccounts } = useAccountData()
+  const { displayData: localAccounts, isInitialLoad: isAccountInitialLoad } =
+    useAccountData()
   const {
     links: storedProfileLinks,
     isLoading: areProfileLinksLoading,
@@ -330,6 +331,9 @@ export default function ApiCredentialProfiles({
           onRetryAssociatedKeys={() => void reloadProfileLinks()}
           onConfirmAssociatedKey={handleConfirmAssociatedKey}
           onUnlinkAssociatedKey={handleUnlinkAssociatedKey}
+          showKeyManagementImportHint={
+            !isAccountInitialLoad && localAccounts.length > 0
+          }
         />
       </div>
     </ProductAnalyticsScope>

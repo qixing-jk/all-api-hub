@@ -230,6 +230,9 @@
     "sortMenu": "Sắp xếp theo",
     "toggleSortOrder": "Đổi thứ tự sắp xếp"
   },
+  "popupOnboarding": {
+    "signInHint": "Đăng nhập vào trang API, sau đó thêm tài khoản bằng cách tự động nhận diện hoặc nhập thủ công."
+  },
   "refresh": {
     "refreshComplete": "Làm mới hoàn tất: {{success}} thành công, {{failed}} thất bại",
     "refreshDisabledComplete": "Khám phá tài khoản đã vô hiệu hóa hoàn tất: khôi phục {{restored}}, vẫn vô hiệu hóa {{stillDisabled}}",
@@ -255,6 +258,14 @@
     "newcomer": {
       "description": "Đăng ký trên trang web của nhà cung cấp, sau đó làm theo hướng dẫn trên thẻ để thêm tài khoản, lưu thông tin xác thực API hoặc đánh dấu trang web.",
       "title": "Khám phá các nhà cung cấp khả dụng"
+    },
+    "popupApiCredentialProfiles": {
+      "description": "Cần API cho nhà phát triển hoặc gói Coding Plan? Tự động điền Base URL và nhận khóa nhanh chóng:",
+      "title": "Nhà cung cấp & gói đăng ký được đề xuất"
+    },
+    "popupBookmarks": {
+      "description": "Thêm vào dấu trang chỉ bằng một cú nhấp chuột để truy cập nhanh bất cứ lúc nào:",
+      "title": "Trang web nổi bật"
     },
     "recommendedProviders": "Nhà cung cấp được đề xuất",
     "supportStatus": {

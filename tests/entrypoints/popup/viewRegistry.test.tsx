@@ -1,4 +1,10 @@
-import { forwardRef, Suspense, useImperativeHandle, useState } from "react"
+import {
+  forwardRef,
+  Suspense,
+  useEffect,
+  useImperativeHandle,
+  useState,
+} from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { usePopupViewRegistry } from "~/entrypoints/popup/viewRegistry"
@@ -9,17 +15,23 @@ const {
   handleAddAccountClickMock,
   openAddBookmarkMock,
   openAddDialogMock,
+  accountDataMock,
 } = vi.hoisted(() => ({
   accountListPropsMock: vi.fn(),
   handleAddAccountClickMock: vi.fn(),
   openAddBookmarkMock: vi.fn(),
   openAddDialogMock: vi.fn(),
+  accountDataMock: vi.fn(),
 }))
 
 vi.mock("~/features/AccountManagement/opening/useAddAccountHandler", () => ({
   useAddAccountHandler: () => ({
     handleAddAccountClick: handleAddAccountClickMock,
   }),
+}))
+
+vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
+  useAccountDataContext: accountDataMock,
 }))
 
 vi.mock("~/features/SiteBookmarks/editor/BookmarkDialogStateContext", () => ({
@@ -34,6 +46,15 @@ vi.mock("~/features/AccountManagement/components/AccountList", () => ({
     return <div>AccountList</div>
   },
 }))
+
+vi.mock(
+  "~/features/AccountManagement/components/NewcomerSponsorRecommendationsSection",
+  () => ({
+    NewcomerSponsorRecommendationsSection: () => (
+      <div>NewcomerSponsorRecommendationsSection</div>
+    ),
+  }),
+)
 
 vi.mock("~/entrypoints/popup/components/BalanceSection", () => ({
   default: ({
@@ -69,7 +90,16 @@ vi.mock(
 vi.mock(
   "~/features/ApiCredentialProfiles/list/ApiCredentialProfilesPopupView",
   () => ({
-    default: forwardRef(function ApiCredentialProfilesPopupView(_props, ref) {
+    default: forwardRef(function ApiCredentialProfilesPopupView(
+      {
+        onHasProfilesChange,
+      }: { onHasProfilesChange?: (hasProfiles: boolean) => void },
+      ref,
+    ) {
+      useEffect(() => {
+        onHasProfilesChange?.(true)
+      }, [onHasProfilesChange])
+
       useImperativeHandle(ref, () => ({
         openAddDialog: openAddDialogMock,
       }))
@@ -140,6 +170,58 @@ function DeferredApiMountProbe() {
 describe("usePopupViewRegistry", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    accountDataMock.mockReturnValue({
+      accounts: [{ id: "account-1" }],
+      bookmarks: [{ id: "bookmark-1" }],
+      isInitialLoad: false,
+    })
+  })
+
+  it("waits for accounts to load before offering onboarding and restores the overview after adding one", () => {
+    accountDataMock.mockReturnValue({
+      accounts: [],
+      bookmarks: [],
+      isInitialLoad: true,
+    })
+    const { rerender } = render(<RegistryProbe />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    expect(screen.queryByText("account:emptyState")).not.toBeInTheDocument()
+    expect(screen.queryByText("BalanceSection")).not.toBeInTheDocument()
+    expect(screen.getByText("AccountList")).toBeInTheDocument()
+    expect(
+      screen.queryByText("NewcomerSponsorRecommendationsSection"),
+    ).not.toBeInTheDocument()
+
+    accountDataMock.mockReturnValue({
+      accounts: [],
+      bookmarks: [],
+      isInitialLoad: false,
+    })
+    rerender(<RegistryProbe />)
+    expect(
+      screen.getByRole("heading", { name: "account:emptyState" }),
+    ).toBeVisible()
+    expect(
+      screen.getByText("NewcomerSponsorRecommendationsSection"),
+    ).toBeVisible()
+    expect(screen.queryByText("BalanceSection")).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("ShareOverviewSnapshotButton"),
+    ).not.toBeInTheDocument()
+
+    accountDataMock.mockReturnValue({
+      accounts: [{ id: "new-account" }],
+      bookmarks: [],
+      isInitialLoad: false,
+    })
+    rerender(<RegistryProbe />)
+    expect(screen.queryByText("account:emptyState")).not.toBeInTheDocument()
+    expect(screen.getByText("BalanceSection")).toBeVisible()
+    expect(
+      screen.queryByText("NewcomerSponsorRecommendationsSection"),
+    ).not.toBeInTheDocument()
   })
 
   it("builds the default account and bookmark views with their actions", async () => {
@@ -232,5 +314,23 @@ describe("usePopupViewRegistry", () => {
         virtualScrollParent: scrollParent,
       }),
     )
+  })
+
+  it("omits API credentials and bookmark stats sections when empty", () => {
+    accountDataMock.mockReturnValue({
+      accounts: [],
+      bookmarks: [],
+      isInitialLoad: false,
+    })
+
+    render(<RegistryProbe mountApiContent={false} />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    expect(screen.queryByText("BookmarkStatsSection")).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("ApiCredentialProfilesStatsSection"),
+    ).not.toBeInTheDocument()
   })
 })

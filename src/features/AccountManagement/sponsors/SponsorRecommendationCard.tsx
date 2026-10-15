@@ -4,12 +4,16 @@ import { useTranslation } from "react-i18next"
 
 import { ApiCredentialLibraryIcon } from "~/components/icons/productIcons"
 import { Badge, IconButton } from "~/components/ui"
+import { useProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import {
   SPONSOR_RECOMMENDATION_ACTION_KINDS,
   trackSponsorRecommendationClick,
   type SponsorRecommendationActionKind,
 } from "~/features/AccountManagement/sponsors/analytics"
-import { type SponsorRecommendationSurface } from "~/features/AccountManagement/sponsors/constants"
+import {
+  SPONSOR_RECOMMENDATION_SURFACES,
+  type SponsorRecommendationSurface,
+} from "~/features/AccountManagement/sponsors/constants"
 import { SponsorBrandIcon } from "~/features/AccountManagement/sponsors/SponsorBrandIcon"
 import {
   SPONSOR_SUPPORT_STATUS,
@@ -20,6 +24,8 @@ import {
 } from "~/features/AccountManagement/sponsors/types"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { cn } from "~/lib/utils"
+import { PRODUCT_ANALYTICS_ENTRYPOINTS } from "~/services/productAnalytics/contracts"
+import { isExtensionPopup, isExtensionSidePanel } from "~/utils/browser"
 
 interface SponsorRecommendationCardProps {
   item: SponsorRecommendation
@@ -82,7 +88,20 @@ function getSupportBadgeVariant(
 }
 
 /** Picks the compact row action, preferring plugin workflows over a plain visit. */
-function getMainActionKind(item: SponsorRecommendation): SponsorMainActionKind {
+function getMainActionKind(
+  item: SponsorRecommendation,
+  surface?: SponsorRecommendationSurface,
+): SponsorMainActionKind {
+  if (surface === SPONSOR_RECOMMENDATION_SURFACES.PopupApiCredentialProfiles) {
+    if (item.actions.apiCredentialProfileFallback) {
+      return SPONSOR_MAIN_ACTION_KINDS.ApiCredentialProfilesFallback
+    }
+  }
+
+  if (surface === SPONSOR_RECOMMENDATION_SURFACES.PopupBookmarks) {
+    return SPONSOR_MAIN_ACTION_KINDS.BookmarkFallback
+  }
+
   if (item.actions.addAccount) {
     return SPONSOR_MAIN_ACTION_KINDS.ContinueAddAccount
   }
@@ -141,6 +160,14 @@ export function SponsorRecommendationCard({
   onOpenApiCredentialProfiles,
 }: SponsorRecommendationCardProps) {
   const { t } = useTranslation("account")
+  const scope = useProductAnalyticsScope()
+  const entrypoint =
+    scope.entrypoint ??
+    (isExtensionSidePanel()
+      ? PRODUCT_ANALYTICS_ENTRYPOINTS.Sidepanel
+      : isExtensionPopup()
+        ? PRODUCT_ANALYTICS_ENTRYPOINTS.Popup
+        : PRODUCT_ANALYTICS_ENTRYPOINTS.Options)
 
   const trackClick = (actionKind: SponsorRecommendationActionKind) => {
     trackSponsorRecommendationClick({
@@ -148,6 +175,7 @@ export function SponsorRecommendationCard({
       item,
       itemCount,
       surface,
+      entrypoint,
     })
   }
 
@@ -178,8 +206,9 @@ export function SponsorRecommendationCard({
 
   const handleOpenBookmarkManager = () => {
     const bookmarkFallback = item.actions.bookmarkFallback
+    const targetUrl = bookmarkFallback?.url || item.links.primary
 
-    if (!bookmarkFallback) {
+    if (!targetUrl) {
       return
     }
 
@@ -187,7 +216,7 @@ export function SponsorRecommendationCard({
     window.open(item.links.primary, "_blank", "noopener,noreferrer")
     onOpenBookmarkManager({
       name: item.name,
-      url: bookmarkFallback.url,
+      url: targetUrl,
     })
   }
 
@@ -210,7 +239,7 @@ export function SponsorRecommendationCard({
     })
   }
 
-  const mainActionKind = getMainActionKind(item)
+  const mainActionKind = getMainActionKind(item, surface)
   const mainActionLabel = getMainActionLabel(t, mainActionKind)
   const hasAddAccountAction = Boolean(item.actions.addAccount)
   const isIntegratedMainAction =

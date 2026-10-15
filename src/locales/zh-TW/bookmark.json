@@ -38,6 +38,7 @@
     "dragHandle": "拖拽排序書籤"
   },
   "search": {
+    "noResults": "找不到符合條件的書籤",
     "placeholder": "搜尋書籤..."
   },
   "stats": {

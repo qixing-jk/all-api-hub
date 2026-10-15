@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle } from "react"
+import { forwardRef, useEffect, useImperativeHandle } from "react"
 
 import { API_CREDENTIAL_PROFILES_VIEW_VARIANTS } from "~/features/ApiCredentialProfiles/contracts"
 import { ApiCredentialProfilesListView } from "~/features/ApiCredentialProfiles/list/ApiCredentialProfilesListView"
@@ -15,9 +15,17 @@ export type ApiCredentialProfilesPopupViewHandle = {
  */
 const ApiCredentialProfilesPopupView = forwardRef<
   ApiCredentialProfilesPopupViewHandle,
-  Record<never, never>
->((_, ref) => {
+  {
+    showKeyManagementImportHint?: boolean
+    onHasProfilesChange?: (hasProfiles: boolean) => void
+  }
+>(({ showKeyManagementImportHint = true, onHasProfilesChange }, ref) => {
   const controller = useApiCredentialProfilesController()
+  const hasProfiles = controller.profiles.length > 0
+
+  useEffect(() => {
+    onHasProfilesChange?.(hasProfiles)
+  }, [hasProfiles, onHasProfilesChange])
 
   useImperativeHandle(
     ref,
@@ -36,6 +44,7 @@ const ApiCredentialProfilesPopupView = forwardRef<
         controller={controller}
         variant={API_CREDENTIAL_PROFILES_VIEW_VARIANTS.Popup}
         autoFocusSearch={true}
+        showKeyManagementImportHint={showKeyManagementImportHint}
       />
     </div>
   )

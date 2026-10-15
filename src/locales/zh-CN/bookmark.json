@@ -6,12 +6,12 @@
     "pin": "置顶",
     "unpin": "取消置顶"
   },
-  "addFirstBookmark": "添加第一个书签",
+  "addFirstBookmark": "添加常用网址",
   "delete": {
     "description": "将永久删除“{{name}}”。",
     "title": "删除书签？"
   },
-  "description": "收藏站点、控制台与文档链接，按标签整理并快速访问。",
+  "description": "集中收藏各类 AI 平台控制台、官方文档与常用工具，省去在浏览器繁杂书签中翻找。",
   "dialog": {
     "currentPageLabel": "当前页面",
     "currentPageUnavailable": "暂时无法读取当前页面",
@@ -20,7 +20,7 @@
     "titleEdit": "编辑书签",
     "useCurrentPage": "填充当前页面"
   },
-  "emptyState": "暂无书签",
+  "emptyState": "打造你的 AI 常用导航",
   "filter": {
     "tagsAllLabel": "全部标签"
   },
@@ -38,6 +38,7 @@
     "dragHandle": "拖拽排序书签"
   },
   "search": {
+    "noResults": "未找到匹配的书签",
     "placeholder": "搜索书签..."
   },
   "stats": {

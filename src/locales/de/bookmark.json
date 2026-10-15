@@ -38,6 +38,7 @@
     "dragHandle": "Lesezeichen neu anordnen"
   },
   "search": {
+    "noResults": "Keine passenden Lesezeichen",
     "placeholder": "Lesezeichen durchsuchen..."
   },
   "stats": {

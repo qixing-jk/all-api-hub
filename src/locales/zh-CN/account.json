@@ -101,7 +101,7 @@
   "currentSiteFilterAction": "查看",
   "currentSiteFilterHint": "点击在列表中筛选出本站点的账号",
   "description": "管理站点账号，查看余额、用量与健康状态。",
-  "emptyState": "暂无站点账号",
+  "emptyState": "开始管理你的中转站点",
   "emptyStateDescription": "添加账号后，可以集中查看余额、健康状态、API Key 和使用情况。",
   "filter": {
     "checkIn": {
@@ -230,6 +230,9 @@
     "sortMenu": "排序方式",
     "toggleSortOrder": "切换正序/倒序"
   },
+  "popupOnboarding": {
+    "signInHint": "登录站点后台即可自动识别并添加。集中掌握各站余额与用量变化，开启每日自动打卡，并在全网跨站比对模型价格。"
+  },
   "refresh": {
     "refreshComplete": "刷新完成: {{success}} 成功, {{failed}} 失败",
     "refreshDisabledComplete": "已禁用账号探测完成：恢复 {{restored}} 个，仍禁用 {{stillDisabled}} 个",
@@ -253,8 +256,16 @@
       "visitProvider": "访问服务商"
     },
     "newcomer": {
-      "description": "前往服务商网站注册，再按卡片提示添加账号、保存 API 凭据或收藏站点。",
-      "title": "探索可用服务商"
+      "description": "还没有可用站点？可参考以下推荐服务商，支持一键配置接入：",
+      "title": "精选合作伙伴"
+    },
+    "popupApiCredentialProfiles": {
+      "description": "需要开发 API 或 Coding Plan 额度？支持一键预填 Base URL 与控制台快捷领 Key：",
+      "title": "推荐服务商与订阅"
+    },
+    "popupBookmarks": {
+      "description": "支持一键加入书签，随时快速访问：",
+      "title": "精选站点推荐"
     },
     "recommendedProviders": "推荐服务商",
     "supportStatus": {

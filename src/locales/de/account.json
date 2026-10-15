@@ -253,6 +253,9 @@
     "sortMenu": "Sortieren nach",
     "toggleSortOrder": "Sortierreihenfolge wechseln"
   },
+  "popupOnboarding": {
+    "signInHint": "Melde dich bei deiner API-Seite an und füge dann ein Konto per automatischer Erkennung oder manuell hinzu."
+  },
   "refresh": {
     "refreshComplete": "Aktualisierung abgeschlossen: {{success}} erfolgreich, {{failed}} fehlgeschlagen",
     "refreshDisabledComplete": "Prüfung deaktivierter Konten abgeschlossen: {{restored}} wiederhergestellt, {{stillDisabled}} weiterhin deaktiviert",
@@ -278,6 +281,14 @@
     "newcomer": {
       "description": "Registrieren Sie sich auf der Website eines Anbieters und folgen Sie dann der Karte, um ein Konto hinzuzufügen, API-Anmeldeinformationen zu speichern oder die Website mit einem Lesezeichen zu versehen.",
       "title": "Entdecken Sie verfügbare Anbieter"
+    },
+    "popupApiCredentialProfiles": {
+      "description": "Benötigen Sie Entwickler-APIs oder Coding-Plan-Guthaben? Unterstützt schnelles Ausfüllen von Basis-URLs und Abrufen von Schlüsseln:",
+      "title": "Empfohlene Anbieter & Abonnements"
+    },
+    "popupBookmarks": {
+      "description": "Mit einem Klick zu Lesezeichen hinzufügen für schnellen Zugriff jederzeit:",
+      "title": "Empfohlene Websites"
     },
     "recommendedProviders": "Empfohlene Anbieter",
     "supportStatus": {

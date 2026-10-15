@@ -36,11 +36,28 @@ export function SponsorRecommendationsSection({
   const { t } = useTranslation("account")
   const headingId = useId()
   const isNewcomer = surface === SPONSOR_RECOMMENDATION_SURFACES.Newcomer
+  const isPopupApiCredentials =
+    surface === SPONSOR_RECOMMENDATION_SURFACES.PopupApiCredentialProfiles
+  const isPopupBookmarks =
+    surface === SPONSOR_RECOMMENDATION_SURFACES.PopupBookmarks
   const showVisibleHeader =
     surface !== SPONSOR_RECOMMENDATION_SURFACES.AddAccountDialog
+
   const heading = isNewcomer
     ? t("sponsor.newcomer.title")
-    : t("sponsor.recommendedProviders")
+    : isPopupApiCredentials
+      ? t("sponsor.popupApiCredentialProfiles.title")
+      : isPopupBookmarks
+        ? t("sponsor.popupBookmarks.title")
+        : t("sponsor.recommendedProviders")
+
+  const description = isNewcomer
+    ? t("sponsor.newcomer.description")
+    : isPopupApiCredentials
+      ? t("sponsor.popupApiCredentialProfiles.description")
+      : isPopupBookmarks
+        ? t("sponsor.popupBookmarks.description")
+        : null
 
   useEffect(() => {
     if (items.length === 0) return
@@ -61,9 +78,9 @@ export function SponsorRecommendationsSection({
         <h3 id={headingId} className="text-foreground text-sm font-medium">
           {heading}
         </h3>
-        {isNewcomer ? (
+        {description ? (
           <p className="dark:text-secondary-foreground text-muted-foreground text-xs leading-5">
-            {t("sponsor.newcomer.description")}
+            {description}
           </p>
         ) : null}
       </div>

@@ -879,8 +879,11 @@ test("adds a bookmark from the popup bookmarks tab and keeps it in storage", asy
   await page.getByTestId(POPUP_TEST_IDS.bookmarksTab).click()
   await expect(page.getByTestId(SITE_BOOKMARKS_TEST_IDS.listView)).toBeVisible()
   await expect(page.getByText("No bookmarks yet")).toBeVisible()
+  await expect(
+    page.getByTestId(POPUP_TEST_IDS.bookmarksPrimaryAction),
+  ).toHaveCount(0)
 
-  await page.getByTestId(POPUP_TEST_IDS.bookmarksPrimaryAction).click()
+  await page.getByTestId(SITE_BOOKMARKS_TEST_IDS.emptyStateAddButton).click()
 
   const dialog = page.getByTestId(SITE_BOOKMARKS_TEST_IDS.dialog)
   await expect(dialog.getByPlaceholder("e.g. Admin Console")).toBeVisible()
@@ -895,6 +898,9 @@ test("adds a bookmark from the popup bookmarks tab and keeps it in storage", asy
 
   await expect(page.getByRole("button", { name: "Popup Docs" })).toBeVisible()
   await expect(page.getByText("No bookmarks yet")).toHaveCount(0)
+  await expect(
+    page.getByTestId(POPUP_TEST_IDS.bookmarksPrimaryAction),
+  ).toBeVisible()
 
   await expect
     .poll(async () => {
@@ -908,6 +914,11 @@ test("adds a bookmark from the popup bookmarks tab and keeps it in storage", asy
       url: "https://docs.example.com/popup",
       notes: "Added from the popup",
     })
+  await page.getByPlaceholder("Search bookmarks...").fill("no-such-bookmark")
+  await expect(page.getByText("No matching bookmarks")).toBeVisible()
+  await expect(
+    page.getByTestId(POPUP_TEST_IDS.bookmarksPrimaryAction),
+  ).toBeVisible()
 })
 
 test("adds a bookmark from the popup, edits it in management, and opens the updated target", async ({
@@ -930,7 +941,7 @@ test("adds a bookmark from the popup, edits it in management, and opens the upda
   await page.getByTestId(POPUP_TEST_IDS.bookmarksTab).click()
   await expect(page.getByTestId(SITE_BOOKMARKS_TEST_IDS.listView)).toBeVisible()
 
-  await page.getByTestId(POPUP_TEST_IDS.bookmarksPrimaryAction).click()
+  await page.getByTestId(SITE_BOOKMARKS_TEST_IDS.emptyStateAddButton).click()
 
   const addDialog = page.getByTestId(SITE_BOOKMARKS_TEST_IDS.dialog)
   await addDialog.getByPlaceholder("e.g. Admin Console").fill("Journey Docs")

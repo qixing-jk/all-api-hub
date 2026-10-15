@@ -90,6 +90,13 @@ function StatsScopeProbe() {
   )
 }
 
+function HeaderScopeProbe() {
+  const scope = useProductAnalyticsScope()
+  return (
+    <div data-testid="header-scope">{`${scope.entrypoint}/${scope.featureId}/${scope.surfaceId}`}</div>
+  )
+}
+
 function buildViewRegistry() {
   const accountsView = {
     showRefresh: false,
@@ -157,4 +164,25 @@ describe("popup App stats section analytics scope", () => {
 
     expect(screen.queryByTestId("stats-scope")).not.toBeInTheDocument()
   })
+
+  it.each([false, true])(
+    "scopes the header action to its entrypoint (sidepanel=%s)",
+    async (inSidePanel) => {
+      mockIsExtensionSidePanel.mockReturnValue(inSidePanel)
+      const registry = buildViewRegistry()
+      mockUsePopupViewRegistry.mockReturnValue({
+        ...registry,
+        accounts: { ...registry.accounts, headerAction: <HeaderScopeProbe /> },
+      })
+      const { default: App } = await import("~/entrypoints/popup/App")
+      render(<App />, {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      })
+
+      expect(screen.getByTestId("header-scope")).toHaveTextContent(
+        `${inSidePanel ? "sidepanel" : "popup"}/${PRODUCT_ANALYTICS_FEATURE_IDS.ShareSnapshots}/${inSidePanel ? PRODUCT_ANALYTICS_SURFACE_IDS.SidepanelHeader : PRODUCT_ANALYTICS_SURFACE_IDS.PopupHeader}`,
+      )
+    },
+  )
 })

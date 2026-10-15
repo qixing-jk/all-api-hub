@@ -31,6 +31,7 @@ import {
 } from "~/utils/navigation"
 
 interface ActionButtonsProps {
+  showAccountActions?: boolean
   primaryActionLabel: string
   onPrimaryAction: () => void
   primaryActionTestId?: string
@@ -49,6 +50,7 @@ export default function ActionButtons({
   onPrimaryAction,
   primaryActionTestId,
   primaryAnalyticsAction,
+  showAccountActions = true,
 }: ActionButtonsProps) {
   const { t } = useTranslation("ui")
   const { displayData } = useAccountDataContext()
@@ -120,83 +122,87 @@ export default function ActionButtons({
             {primaryActionLabel}
           </Button>
 
-          <Tooltip content={t("navigation.keys")}>
-            <ProductAnalyticsScope
-              featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement}
-            >
-              <IconButton
-                onClick={handleOpenKeysPageClick}
-                variant="outline"
-                size="default"
-                className="touch-manipulation"
-                aria-label={t("navigation.keys")}
-                analyticsAction={
-                  PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupKeyManagement
-                }
-              >
-                <KeyRound className="h-4 w-4" />
-              </IconButton>
-            </ProductAnalyticsScope>
-          </Tooltip>
-
-          <Tooltip content={t("navigation.models")}>
-            <ProductAnalyticsScope
-              featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ModelList}
-            >
-              <IconButton
-                onClick={handleOpenModelsPageClick}
-                variant="outline"
-                size="default"
-                className="touch-manipulation"
-                aria-label={t("navigation.models")}
-                analyticsAction={
-                  PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupModelManagement
-                }
-              >
-                <Cpu className="h-4 w-4" />
-              </IconButton>
-            </ProductAnalyticsScope>
-          </Tooltip>
-
-          <ProductAnalyticsScope
-            featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin}
-          >
-            <Tooltip content={t("navigation.autoCheckinRunNow")}>
-              <IconButton
-                onClick={handleQuickCheckinClick}
-                variant="outline"
-                size="default"
-                className="touch-manipulation"
-                aria-label={t("navigation.autoCheckinRunNow")}
-                analyticsAction={
-                  PRODUCT_ANALYTICS_ACTION_IDS.RunPopupQuickCheckin
-                }
-              >
-                <CalendarDays className="h-4 w-4" />
-              </IconButton>
-            </Tooltip>
-
-            {canOpenExternalCheckIns && (
-              <Tooltip content={t("navigation.externalCheckinAllHint")}>
-                <IconButton
-                  onClick={handleOpenExternalCheckInsClick}
-                  variant="outline"
-                  size="default"
-                  className="touch-manipulation"
-                  aria-label={t("navigation.externalCheckinAll")}
+          {showAccountActions && (
+            <>
+              <Tooltip content={t("navigation.keys")}>
+                <ProductAnalyticsScope
+                  featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement}
                 >
-                  {/* Match per-account indicators: neutral while pending, success when done. */}
-                  <CircleDollarSign
-                    className={`h-4 w-4 ${
-                      hasUncheckedExternalCheckIns
-                        ? "text-neutral-indicator"
-                        : "text-success-indicator"
-                    }`}
-                  />
-                </IconButton>
+                  <IconButton
+                    onClick={handleOpenKeysPageClick}
+                    variant="outline"
+                    size="default"
+                    className="touch-manipulation"
+                    aria-label={t("navigation.keys")}
+                    analyticsAction={
+                      PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupKeyManagement
+                    }
+                  >
+                    <KeyRound className="h-4 w-4" />
+                  </IconButton>
+                </ProductAnalyticsScope>
               </Tooltip>
-            )}
-          </ProductAnalyticsScope>
+
+              <Tooltip content={t("navigation.models")}>
+                <ProductAnalyticsScope
+                  featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ModelList}
+                >
+                  <IconButton
+                    onClick={handleOpenModelsPageClick}
+                    variant="outline"
+                    size="default"
+                    className="touch-manipulation"
+                    aria-label={t("navigation.models")}
+                    analyticsAction={
+                      PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupModelManagement
+                    }
+                  >
+                    <Cpu className="h-4 w-4" />
+                  </IconButton>
+                </ProductAnalyticsScope>
+              </Tooltip>
+
+              <ProductAnalyticsScope
+                featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin}
+              >
+                <Tooltip content={t("navigation.autoCheckinRunNow")}>
+                  <IconButton
+                    onClick={handleQuickCheckinClick}
+                    variant="outline"
+                    size="default"
+                    className="touch-manipulation"
+                    aria-label={t("navigation.autoCheckinRunNow")}
+                    analyticsAction={
+                      PRODUCT_ANALYTICS_ACTION_IDS.RunPopupQuickCheckin
+                    }
+                  >
+                    <CalendarDays className="h-4 w-4" />
+                  </IconButton>
+                </Tooltip>
+
+                {canOpenExternalCheckIns && (
+                  <Tooltip content={t("navigation.externalCheckinAllHint")}>
+                    <IconButton
+                      onClick={handleOpenExternalCheckInsClick}
+                      variant="outline"
+                      size="default"
+                      className="touch-manipulation"
+                      aria-label={t("navigation.externalCheckinAll")}
+                    >
+                      {/* Match per-account indicators: neutral while pending, success when done. */}
+                      <CircleDollarSign
+                        className={`h-4 w-4 ${
+                          hasUncheckedExternalCheckIns
+                            ? "text-neutral-indicator"
+                            : "text-success-indicator"
+                        }`}
+                      />
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </ProductAnalyticsScope>
+            </>
+          )}
         </div>
       </ProductAnalyticsScope>
     </section>

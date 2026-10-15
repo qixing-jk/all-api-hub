@@ -1001,7 +1001,11 @@ export const PRODUCT_ANALYTICS_SURFACE_IDS = {
   PopupActionBar: "popup_action_bar",
   PopupApiCredentialProfilesEmptyState:
     "popup_api_credential_profiles_empty_state",
+  PopupApiCredentialProfilesSponsorRecommendations:
+    "popup_api_credential_profiles_sponsor_recommendations",
   PopupApiCredentialProfilesStats: "popup_api_credential_profiles_stats",
+  PopupBookmarksSponsorRecommendations:
+    "popup_bookmarks_sponsor_recommendations",
   PopupHeader: "popup_header",
   PopupProductAnnouncementsHeader: "popup_product_announcements_header",
   PopupStats: "popup_stats",

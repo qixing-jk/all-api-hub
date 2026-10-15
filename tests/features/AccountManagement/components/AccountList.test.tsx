@@ -284,7 +284,14 @@ vi.mock("~/components/ui", async () => {
 
   return {
     Modal,
-    Button: ({ children, loading, leftIcon, rightIcon, ...props }: any) => (
+    Button: ({
+      children,
+      loading,
+      leftIcon,
+      rightIcon,
+      analyticsAction: _analyticsAction,
+      ...props
+    }: any) => (
       <button type="button" {...props}>
         {!loading && leftIcon}
         {children}
@@ -775,6 +782,10 @@ describe("AccountList", () => {
     const addAccountButton = screen.getByRole("button", {
       name: "account:addFirstAccount",
     })
+    expect(addAccountButton).not.toHaveAttribute(
+      "data-testid",
+      ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton,
+    )
     const sponsorRecommendations = screen.getByTestId(
       "newcomer-sponsor-recommendations",
     )
@@ -790,6 +801,19 @@ describe("AccountList", () => {
     expect(
       addAccountButton.compareDocumentPosition(sponsorRecommendations),
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+  })
+
+  it("can hide the empty-state action while retaining onboarding guidance", () => {
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({ sortedData: [], displayData: [] }),
+    )
+    render(<AccountList showAddAccountAction={false} />)
+
+    expect(
+      screen.queryByRole("button", { name: "account:addFirstAccount" }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText("account:emptyStateDescription")).toBeVisible()
+    expect(screen.getByTestId("newcomer-sponsor-recommendations")).toBeVisible()
   })
 
   it("tracks the empty-state create-account action before opening the dialog", async () => {

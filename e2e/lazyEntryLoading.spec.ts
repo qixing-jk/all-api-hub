@@ -6,6 +6,14 @@ import { SITE_BOOKMARKS_TEST_IDS } from "~/features/SiteBookmarks/testIds"
 import { USAGE_ANALYTICS_TEST_IDS } from "~/features/UsageAnalytics/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
+  createStoredApiCredentialProfile,
+  createStoredBookmark,
+  seedApiCredentialProfiles,
+  seedStoredBookmarks,
+  stubLlmMetadataIndex,
+} from "~~/e2e/utils/commonUserFlows"
+import { getServiceWorker } from "~~/e2e/utils/extensionState"
+import {
   attachJsonReport,
   captureExtensionResourceSnapshot,
   createExtensionRequestTracker,
@@ -31,7 +39,15 @@ test.beforeEach(({ page }) => {
 test("popup defers non-default tab chunks until users select them", async ({
   page,
   extensionId,
+  context,
 }, testInfo) => {
+  await stubLlmMetadataIndex(context)
+  const serviceWorker = await getServiceWorker(context)
+  // Statistics are only mounted for populated libraries.
+  await seedStoredBookmarks(serviceWorker, [createStoredBookmark()])
+  await seedApiCredentialProfiles(serviceWorker, [
+    createStoredApiCredentialProfile(),
+  ])
   const strictMode = shouldAssertLazyLoading()
   const tracker = createExtensionRequestTracker(page, extensionId)
 
@@ -78,6 +94,15 @@ test("popup defers non-default tab chunks until users select them", async ({
     await bookmarksTab.click()
     if (strictMode) {
       await waitForTrackedResourceCountIncrease(tracker, initial.resourceCount)
+      await expect
+        .poll(() =>
+          tracker
+            .getResources()
+            .some((resource) =>
+              /chunks\/BookmarkStatsSection-.*\.js$/.test(resource),
+            ),
+        )
+        .toBeTruthy()
     } else {
       await waitForProbeSettle(page, 500, {
         expectedSelector: `[data-testid="${SITE_BOOKMARKS_TEST_IDS.listView}"]`,
@@ -113,6 +138,17 @@ test("popup defers non-default tab chunks until users select them", async ({
         tracker,
         afterBookmarks.resourceCount,
       )
+      await expect
+        .poll(() =>
+          tracker
+            .getResources()
+            .some((resource) =>
+              /chunks\/ApiCredentialProfilesStatsSection-.*\.js$/.test(
+                resource,
+              ),
+            ),
+        )
+        .toBeTruthy()
     } else {
       await waitForProbeSettle(page, 500, {
         expectedSelector: `[data-testid="${API_CREDENTIAL_PROFILES_TEST_IDS.popupView}"]`,

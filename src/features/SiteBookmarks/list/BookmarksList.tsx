@@ -7,18 +7,21 @@ import {
   useSensors,
 } from "@dnd-kit/core"
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
-import { Inbox, Plus } from "lucide-react"
+import { Bookmark, Inbox } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { PopupTabOnboarding } from "~/components/PopupTabOnboarding"
 import {
   Card,
   CardContent,
   CardList,
   ConfirmDialog,
   EmptyState,
+  Spinner,
   TagFilter,
 } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
+import { BookmarkSponsorRecommendationsSection } from "~/features/SiteBookmarks/components/BookmarkSponsorRecommendationsSection"
 import BookmarkSearchInput from "~/features/SiteBookmarks/list/BookmarkSearchInput"
 import SortableBookmarkListItem from "~/features/SiteBookmarks/list/SortableBookmarkListItem"
 import { useBookmarksListViewModel } from "~/features/SiteBookmarks/list/useBookmarksListViewModel"
@@ -74,34 +77,50 @@ export default function BookmarksList({
     reorder,
   } = useBookmarksListViewModel(initialSearchQuery)
 
-  if (resolvedBookmarks.length === 0) {
+  if (isInitialLoad && resolvedBookmarks.length === 0) {
     return (
       <div
         data-testid={SITE_BOOKMARKS_TEST_IDS.listView}
-        data-options-page-pending={isInitialLoad ? "" : undefined}
+        data-options-page-pending
+        role="status"
+        className="text-muted-foreground gap-y-density-2 py-density-8 flex items-center justify-center gap-x-2 px-4 text-sm"
       >
-        <ProductAnalyticsScope
-          entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
-          featureId={PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement}
-          surfaceId={
-            PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementEmptyState
-          }
-        >
-          <EmptyState
-            icon={<Inbox className="h-12 w-12" />}
-            title={t("bookmark:emptyState")}
-            action={{
-              label: t("bookmark:addFirstBookmark"),
-              onClick: openAddBookmark,
-              variant: "default",
-              icon: <Plus className="h-4 w-4" />,
-              testId: SITE_BOOKMARKS_TEST_IDS.emptyStateAddButton,
-              analyticsAction:
-                PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateBookmarkDialog,
-            }}
-          />
-        </ProductAnalyticsScope>
+        <Spinner size="sm" />
+        {t("common:status.loading")}
       </div>
+    )
+  }
+
+  if (resolvedBookmarks.length === 0) {
+    return (
+      <ProductAnalyticsScope
+        entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
+        featureId={PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement}
+        surfaceId={
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementEmptyState
+        }
+      >
+        <PopupTabOnboarding
+          data-testid={SITE_BOOKMARKS_TEST_IDS.listView}
+          data-options-page-pending={isInitialLoad ? "" : undefined}
+          icon={Bookmark}
+          title={t("bookmark:emptyState")}
+          titleId="popup-bookmark-onboarding-title"
+          description={t("bookmark:description")}
+          action={{
+            label: t("bookmark:addFirstBookmark"),
+            onClick: () => openAddBookmark(),
+            testId: SITE_BOOKMARKS_TEST_IDS.emptyStateAddButton,
+            analyticsAction:
+              PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateBookmarkDialog,
+          }}
+          sponsors={
+            <BookmarkSponsorRecommendationsSection
+              onOpenBookmarkManager={openAddBookmark}
+            />
+          }
+        />
+      </ProductAnalyticsScope>
     )
   }
 
@@ -148,7 +167,20 @@ export default function BookmarksList({
             />
           </div>
 
-          {dragDisabled ? (
+          {displayedResults.length === 0 ? (
+            <EmptyState
+              icon={<Inbox className="h-8 w-8" />}
+              title={t("bookmark:search.noResults")}
+              action={{
+                label: t("common:actions.clear"),
+                variant: "outline",
+                onClick: () => {
+                  clearSearch()
+                  setSelectedTagIds([])
+                },
+              }}
+            />
+          ) : dragDisabled ? (
             listContent
           ) : (
             <DndContext

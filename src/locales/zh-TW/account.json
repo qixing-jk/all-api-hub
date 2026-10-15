@@ -230,6 +230,9 @@
     "sortMenu": "排序方式",
     "toggleSortOrder": "切換正序/倒序"
   },
+  "popupOnboarding": {
+    "signInHint": "先登入你的 API 站點，再新增帳號，可自動辨識或手動填寫。"
+  },
   "refresh": {
     "refreshComplete": "重新整理完成: {{success}} 成功, {{failed}} 失敗",
     "refreshDisabledComplete": "已停用帳號探測完成：恢復 {{restored}} 個，仍停用 {{stillDisabled}} 個",
@@ -255,6 +258,14 @@
     "newcomer": {
       "description": "前往服務商網站註冊，再依照卡片提示新增帳號、儲存 API 憑據或收藏站點。",
       "title": "探索可用服務商"
+    },
+    "popupApiCredentialProfiles": {
+      "description": "需要開發 API 或 Coding Plan 額度？支援一鍵預填 Base URL 與控制台快捷領 Key：",
+      "title": "推薦服務商與訂閱"
+    },
+    "popupBookmarks": {
+      "description": "支援一鍵加入書籤，隨時快速存取：",
+      "title": "精選站點推薦"
     },
     "recommendedProviders": "推薦服務商",
     "supportStatus": {

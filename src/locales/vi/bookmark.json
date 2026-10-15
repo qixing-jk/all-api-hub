@@ -38,6 +38,7 @@
     "dragHandle": "Kéo để sắp xếp dấu trang"
   },
   "search": {
+    "noResults": "Không tìm thấy dấu trang phù hợp",
     "placeholder": "Tìm kiếm dấu trang..."
   },
   "stats": {

@@ -511,7 +511,6 @@ function AccountManagementContent({
         <AccountList
           initialSearchQuery={searchQuery}
           onAddAccount={openAddAccount}
-          showAddAccountAction={false}
         />
       </div>
 

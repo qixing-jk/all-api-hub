@@ -8,6 +8,8 @@ export const SPONSOR_LOCALE_FALLBACKS = ["zh-CN", "en"] as const
 export const SPONSOR_RECOMMENDATION_SURFACES = {
   Newcomer: "newcomer",
   AddAccountDialog: "add-account-dialog",
+  PopupApiCredentialProfiles: "popup-api-credential-profiles",
+  PopupBookmarks: "popup-bookmarks",
 } as const
 
 export type SponsorRecommendationSurface =

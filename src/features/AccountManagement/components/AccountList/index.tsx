@@ -1,6 +1,13 @@
-import { ChevronDown, Inbox, Info, Plus, SlidersHorizontal } from "lucide-react"
+import {
+  ChevronDown,
+  Inbox,
+  Info,
+  SlidersHorizontal,
+  UserRound,
+} from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { PopupTabOnboarding } from "~/components/PopupTabOnboarding"
 import {
   Button,
   Card,
@@ -70,41 +77,26 @@ export default function AccountList({
 
   if (!model.status.hasAccounts) {
     return (
-      <Card
+      <PopupTabOnboarding
         aria-label={t("account:emptyState")}
         className="mb-density-2"
         data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountListView}
-        padding="md"
+        icon={UserRound}
         role="region"
-      >
-        <div className="gap-y-density-4 flex flex-col gap-x-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="gap-y-density-3 flex items-start gap-x-3">
-            <div className="bg-primary-soft text-primary-soft-foreground py-density-2 shrink-0 rounded-md px-2">
-              <Inbox className="h-5 w-5" />
-            </div>
-            <div className="space-y-density-1">
-              <h2 className="text-foreground text-sm font-medium">
-                {t("account:emptyState")}
-              </h2>
-              <p className="dark:text-secondary-foreground text-muted-foreground max-w-2xl text-sm leading-6">
-                {t("account:emptyStateDescription")}
-              </p>
-            </div>
-          </div>
-          {showAddAccountAction && (
-            <Button
-              className="w-full shrink-0 sm:w-auto"
-              data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton}
-              leftIcon={<Plus className="h-4 w-4" />}
-              onClick={model.handleEmptyStateAddAccountClick}
-              size="sm"
-            >
-              {t("account:addFirstAccount")}
-            </Button>
-          )}
-        </div>
-        <NewcomerSponsorRecommendationsSection />
-      </Card>
+        title={t("account:emptyState")}
+        titleId="account-empty-state-title"
+        description={t("account:emptyStateDescription")}
+        action={
+          showAddAccountAction
+            ? {
+                label: t("account:addFirstAccount"),
+                onClick: model.handleEmptyStateAddAccountClick,
+                testId: ACCOUNT_MANAGEMENT_TEST_IDS.emptyStateAddAccountButton,
+              }
+            : undefined
+        }
+        sponsors={<NewcomerSponsorRecommendationsSection />}
+      />
     )
   }
 

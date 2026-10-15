@@ -150,7 +150,14 @@ function PopupContent({ inPopup }: { inPopup: boolean }) {
         />
         <PopupInterruptionHintBanner surfaceClassName="rounded-none border-x-0 shadow-none" />
 
-        <section className="border-border from-theme-50/50 dark:from-theme-900/20 to-theme-50/30 dark:to-theme-900/10 space-y-density-2 py-density-3 sm:py-density-4 shrink-0 border-b bg-linear-to-br px-3 sm:px-4">
+        <section
+          className={cn(
+            "border-border from-theme-50/50 dark:from-theme-900/20 to-theme-50/30 dark:to-theme-900/10 shrink-0 border-b bg-linear-to-br px-3 sm:px-4",
+            statsSection
+              ? "space-y-density-2 py-density-3 sm:py-density-4"
+              : "py-density-2 sm:py-density-2.5",
+          )}
+        >
           <div className="gap-y-density-2 flex items-center justify-between gap-x-2">
             <ProductAnalyticsScope
               entrypoint={entrypoint}
@@ -158,6 +165,7 @@ function PopupContent({ inPopup }: { inPopup: boolean }) {
             >
               <PopupViewSwitchTabs
                 value={activeView}
+                fullWidth={!activeViewConfig.headerAction}
                 onChange={(nextView) => {
                   setActiveView(nextView)
                   viewConfig[nextView].preload?.()
@@ -170,28 +178,33 @@ function PopupContent({ inPopup }: { inPopup: boolean }) {
                 getAnalyticsAction={mapPopupViewToAnalyticsAction}
               />
             </ProductAnalyticsScope>
-            <ProductAnalyticsScope
-              entrypoint={entrypoint}
-              featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ShareSnapshots}
-              surfaceId={
-                inSidePanel
-                  ? PRODUCT_ANALYTICS_SURFACE_IDS.SidepanelHeader
-                  : PRODUCT_ANALYTICS_SURFACE_IDS.PopupHeader
-              }
-            >
-              {activeViewConfig.headerAction}
-            </ProductAnalyticsScope>
+            {activeViewConfig.headerAction ? (
+              <ProductAnalyticsScope
+                entrypoint={entrypoint}
+                featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ShareSnapshots}
+                surfaceId={
+                  inSidePanel
+                    ? PRODUCT_ANALYTICS_SURFACE_IDS.SidepanelHeader
+                    : PRODUCT_ANALYTICS_SURFACE_IDS.PopupHeader
+                }
+              >
+                {activeViewConfig.headerAction}
+              </ProductAnalyticsScope>
+            ) : null}
           </div>
           {statsSection}
         </section>
 
         <div className="flex-1" data-testid={getPopupViewTestId(activeView)}>
-          <ActionButtons
-            primaryActionLabel={activeViewConfig.primaryActionLabel}
-            onPrimaryAction={activeViewConfig.onPrimaryAction}
-            primaryActionTestId={activeViewConfig.primaryActionTestId}
-            primaryAnalyticsAction={activeViewConfig.primaryAnalyticsAction}
-          />
+          {activeViewConfig.showActionBar !== false && (
+            <ActionButtons
+              primaryActionLabel={activeViewConfig.primaryActionLabel}
+              onPrimaryAction={activeViewConfig.onPrimaryAction}
+              primaryActionTestId={activeViewConfig.primaryActionTestId}
+              primaryAnalyticsAction={activeViewConfig.primaryAnalyticsAction}
+              showAccountActions={activeViewConfig.showAccountActions}
+            />
+          )}
 
           {activeViewConfig.content}
         </div>
