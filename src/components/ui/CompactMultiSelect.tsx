@@ -81,6 +81,8 @@ export interface CompactMultiSelectProps
    * Max number of selected labels shown in the trigger before collapsing to a "+N" suffix.
    */
   maxDisplayValues?: number
+  /** Optional summary-mode text for an exact selection of all selectable options. */
+  allSelectedLabel?: string
   searchPlaceholder?: string
   emptyMessage?: string
   /**
@@ -88,7 +90,7 @@ export interface CompactMultiSelectProps
    */
   size?: React.ComponentProps<typeof Button>["size"]
   /**
-   * Minimum selectable option count required before rendering chips-mode bulk action buttons.
+   * Minimum selectable option count required before rendering bulk action buttons in either display mode.
    * Defaults to `0` to preserve the current always-visible behavior.
    */
   bulkActionsMinOptions?: number
@@ -137,6 +139,7 @@ export function CompactMultiSelect({
   allowCustom = false,
   parseCommaStrings = true,
   maxDisplayValues = 2,
+  allSelectedLabel,
   searchPlaceholder,
   emptyMessage,
   size = "default",
@@ -334,6 +337,25 @@ export function CompactMultiSelect({
     [copyChipText],
   )
 
+  const selectAllButton = (
+    <Button
+      type="button"
+      variant="outline"
+      size={clearButtonSize}
+      onClick={selectAllSelectableOptions}
+      aria-label={selectAllButtonLabel}
+      title={selectAllButtonLabel}
+      disabled={
+        disabled ||
+        selectableOptionValues.length === 0 ||
+        allSelectableOptionsSelected
+      }
+      className="dark:border-border dark:bg-card dark:text-foreground dark:hover:bg-card/80 shrink-0"
+    >
+      <ListChecksIcon className="size-4" />
+    </Button>
+  )
+
   if (displayMode === "chips") {
     const chipsControl = (
       <div className="gap-density-2 flex w-full items-center">
@@ -508,22 +530,7 @@ export function CompactMultiSelect({
                 : "gap-density-2 flex flex-row items-center",
             )}
           >
-            <Button
-              type="button"
-              variant="outline"
-              size={clearButtonSize}
-              onClick={selectAllSelectableOptions}
-              aria-label={selectAllButtonLabel}
-              title={selectAllButtonLabel}
-              disabled={
-                disabled ||
-                selectableOptionValues.length === 0 ||
-                allSelectableOptionsSelected
-              }
-              className="dark:border-border dark:bg-card dark:text-foreground dark:hover:bg-card/80"
-            >
-              <ListChecksIcon className="size-4" />
-            </Button>
+            {selectAllButton}
             <Button
               type="button"
               variant="outline"
@@ -561,6 +568,14 @@ export function CompactMultiSelect({
       ? buttonProps["aria-labelledby"]
       : labelId
 
+  const summaryText =
+    allSelectedLabel &&
+    !loading &&
+    allSelectableOptionsSelected &&
+    selected.every((value) => selectableOptionValues.includes(value))
+      ? allSelectedLabel
+      : triggerText
+
   return (
     <div className="w-full">
       {label && (
@@ -591,7 +606,7 @@ export function CompactMultiSelect({
               {...buttonProps}
               aria-busy={loading || buttonProps["aria-busy"]}
             >
-              <span className="min-w-0 flex-1 truncate">{triggerText}</span>
+              <span className="min-w-0 flex-1 truncate">{summaryText}</span>
               <span className="gap-density-2 flex shrink-0 items-center">
                 {hasSelection && (
                   <Badge variant="secondary" size="sm">
@@ -667,6 +682,8 @@ export function CompactMultiSelect({
             </Command>
           </PopoverContent>
         </Popover>
+
+        {showBulkActions ? selectAllButton : null}
 
         {/* Keep selection clearing out of the options list to avoid it being mistaken as a real option. */}
         {clearable && !disabled && hasSelection && (

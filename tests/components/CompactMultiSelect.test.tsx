@@ -23,6 +23,141 @@ const renderCompact = (ui: ReactElement) =>
   })
 
 describe("CompactMultiSelect", () => {
+  it.each([
+    { selected: [], options: [], loading: false },
+    {
+      selected: ["a"],
+      options: [{ value: "a", label: "Alpha" }],
+      loading: true,
+    },
+    {
+      selected: ["a", "custom"],
+      options: [{ value: "a", label: "Alpha" }],
+      loading: false,
+    },
+  ])(
+    "keeps selection details instead of claiming all selected for %j",
+    async (state) => {
+      renderCompact(
+        <CompactMultiSelect
+          {...state}
+          displayMode="summary"
+          label="Accounts"
+          allSelectedLabel="All accounts selected"
+          onChange={vi.fn()}
+        />,
+      )
+      expect(
+        await screen.findByRole("combobox", { name: "Accounts" }),
+      ).not.toHaveTextContent("All accounts selected")
+      if (state.selected.includes("custom"))
+        expect(screen.getByRole("combobox")).toHaveTextContent("custom")
+      else if (state.loading)
+        expect(screen.getByRole("combobox")).toHaveTextContent("Alpha")
+    },
+  )
+  it("uses an optional all-selected summary and returns to item names for partial selections", async () => {
+    const user = userEvent.setup()
+    function Harness() {
+      const [selected, setSelected] = useState(["a", "b"])
+      return (
+        <CompactMultiSelect
+          displayMode="summary"
+          label="Accounts"
+          allSelectedLabel="All accounts selected"
+          options={[
+            { value: "a", label: "Alpha" },
+            { value: "b", label: "Beta" },
+            { value: "disabled", label: "Disabled", disabled: true },
+          ]}
+          selected={selected}
+          onChange={setSelected}
+        />
+      )
+    }
+    renderCompact(<Harness />)
+    expect(
+      await screen.findByRole("combobox", { name: "Accounts" }),
+    ).toHaveTextContent("All accounts selected")
+    await user.click(screen.getByRole("combobox", { name: "Accounts" }))
+    await user.click(screen.getByRole("option", { name: "Beta" }))
+    await user.keyboard("{Escape}")
+    expect(
+      screen.getByRole("combobox", { name: "Accounts" }),
+    ).toHaveTextContent("Alpha")
+    expect(
+      screen.getByRole("combobox", { name: "Accounts" }),
+    ).not.toHaveTextContent("All accounts selected")
+    await user.click(
+      screen.getByRole("button", { name: "ui:multiSelect.selectAll" }),
+    )
+    expect(
+      screen.getByRole("combobox", { name: "Accounts" }),
+    ).toHaveTextContent("All accounts selected")
+  })
+  it.each(["chips", "summary"] as const)(
+    "disables select all when no options are selectable or the %s control is disabled",
+    async (displayMode) => {
+      const onChange = vi.fn()
+      const props = { displayMode, selected: [], onChange }
+      const view = renderCompact(<CompactMultiSelect {...props} options={[]} />)
+      expect(
+        await screen.findByRole("button", { name: "ui:multiSelect.selectAll" }),
+      ).toBeDisabled()
+      view.rerender(
+        <CompactMultiSelect
+          {...props}
+          options={[{ value: "a", label: "Alpha", disabled: true }]}
+        />,
+      )
+      expect(
+        screen.getByRole("button", { name: "ui:multiSelect.selectAll" }),
+      ).toBeDisabled()
+      view.rerender(
+        <CompactMultiSelect
+          {...props}
+          disabled
+          options={[{ value: "a", label: "Alpha" }]}
+        />,
+      )
+      expect(
+        screen.getByRole("button", { name: "ui:multiSelect.selectAll" }),
+      ).toBeDisabled()
+      expect(onChange).not.toHaveBeenCalled()
+    },
+  )
+  it.each(["chips", "summary"] as const)(
+    "selects all enabled options while preserving custom selections in %s mode",
+    async (displayMode) => {
+      const user = userEvent.setup()
+      const onChange = vi.fn()
+      function Harness() {
+        const [selected, setSelected] = useState(["custom", "a"])
+        return (
+          <CompactMultiSelect
+            displayMode={displayMode}
+            options={[
+              { value: "a", label: "Alpha" },
+              { value: "b", label: "Beta" },
+              { value: "disabled", label: "Disabled", disabled: true },
+            ]}
+            selected={selected}
+            onChange={(values) => {
+              onChange(values)
+              setSelected(values)
+            }}
+          />
+        )
+      }
+      renderCompact(<Harness />)
+      const selectAll = await screen.findByRole("button", {
+        name: "ui:multiSelect.selectAll",
+      })
+      await user.click(selectAll)
+      expect(onChange).toHaveBeenCalledWith(["custom", "a", "b"])
+      expect(selectAll).toBeDisabled()
+    },
+  )
   it.each(["chips", "summary"] as const)(
     "preserves a selected-only value until pending options resolve in %s mode",
     (displayMode) => {
@@ -487,32 +622,35 @@ describe("CompactMultiSelect", () => {
     }
   })
 
-  it("hides chips bulk action buttons when the option count is below the configured threshold", async () => {
-    renderCompact(
-      <CompactMultiSelect
-        displayMode="chips"
-        options={[
-          { value: "a", label: "Alpha" },
-          { value: "b", label: "Beta" },
-          { value: "c", label: "Gamma" },
-          { value: "d", label: "Delta" },
-        ]}
-        selected={["a"]}
-        onChange={vi.fn()}
-        bulkActionsMinOptions={5}
-      />,
-    )
+  it.each(["chips", "summary"] as const)(
+    "hides select all below the configured option threshold in %s mode",
+    async (displayMode) => {
+      renderCompact(
+        <CompactMultiSelect
+          displayMode={displayMode}
+          options={[
+            { value: "a", label: "Alpha" },
+            { value: "b", label: "Beta" },
+            { value: "c", label: "Gamma" },
+            { value: "d", label: "Delta" },
+          ]}
+          selected={["a"]}
+          onChange={vi.fn()}
+          bulkActionsMinOptions={5}
+        />,
+      )
 
-    expect(
-      screen.queryByTestId("compact-multiselect-bulk-actions"),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole("button", { name: "ui:multiSelect.selectAll" }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole("button", { name: "ui:multiSelect.cancelSelected" }),
-    ).not.toBeInTheDocument()
-  })
+      expect(
+        screen.queryByTestId("compact-multiselect-bulk-actions"),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", { name: "ui:multiSelect.selectAll" }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", { name: "ui:multiSelect.cancelSelected" }),
+      ).not.toBeInTheDocument()
+    },
+  )
 
   it("splits pasted custom values on newlines when allowCustom is enabled", async () => {
     const user = userEvent.setup()
