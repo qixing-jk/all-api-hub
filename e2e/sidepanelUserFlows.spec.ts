@@ -482,6 +482,7 @@ for (const kind of Object.values(SPONSOR_WORKFLOW_KINDS)) {
               name: "Sponsor Setup",
               baseUrl: "https://sponsor-setup.example.invalid/v1",
               apiKeyCreateHint: "Create a key in the provider console",
+              apiKeyCreateUrl: "https://sponsor-setup.example.invalid/keys",
             }
     await seedSponsorHandoff(serviceWorker, { kind, prefill })
     if (kind === SPONSOR_WORKFLOW_KINDS.Account) {
@@ -503,6 +504,34 @@ for (const kind of Object.values(SPONSOR_WORKFLOW_KINDS)) {
           `input[value="https://sponsor-setup.example.invalid${kind === SPONSOR_WORKFLOW_KINDS.ApiCredential ? "/v1" : ""}"]`,
         ),
       ).toBeVisible()
+    }
+    if (kind === SPONSOR_WORKFLOW_KINDS.ApiCredential) {
+      const link = page.getByRole("link", { name: "Get API key" })
+      await expect(link).toHaveAttribute(
+        "href",
+        "https://sponsor-setup.example.invalid/keys",
+      )
+      await expect(link).toHaveAttribute("target", "_blank")
+      const visualDir = process.env.AAH_API_HINT_VISUAL_DIR
+      if (visualDir) {
+        await mkdir(visualDir, { recursive: true })
+        for (const dark of [false, true]) {
+          await page.setViewportSize({ width: dark ? 320 : 380, height: 700 })
+          await page.evaluate(
+            (enabled) =>
+              document.documentElement.classList.toggle("dark", enabled),
+            dark,
+          )
+          await link.scrollIntoViewIfNeeded()
+          await page.screenshot({
+            path: path.join(
+              visualDir,
+              dark ? "hint-dark-320.png" : "hint-light-380.png",
+            ),
+            animations: "disabled",
+          })
+        }
+      }
     }
     await expect.poll(() => getSponsorPending(serviceWorker)).toBeUndefined()
   })
