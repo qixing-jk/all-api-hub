@@ -159,39 +159,13 @@ For installed extensions, logged-in sites, desktop CDP, or Android devices, foll
 
 ### Turnstile verification scenarios
 
-Start the official Turnstile test server with `pnpm dev:turnstile`, then open
-Settings → Refresh → Website verification assistance in a **development** extension.
-The existing development trigger includes four Turnstile presets: automatic success,
-manual verification, verification failure, and a three-site queue. Selecting one
-prefills `http://127.0.0.1:8787/`; the existing delay lets you switch away before
-verification starts. The trigger is unavailable in release builds.
+Start the official Turnstile test server with `pnpm dev:turnstile`, then open Settings → Refresh → Website verification assistance in a **development** extension. The existing development trigger includes four Turnstile presets: automatic success, manual verification, verification failure, and a three-site queue. Selecting one prefills `http://127.0.0.1:8787/`; the existing delay lets you switch away before verification starts. The trigger is unavailable in release builds.
 
-The server uses [Cloudflare's official test component and dummy keys](https://developers.cloudflare.com/turnstile/troubleshooting/testing/)
-and validates dummy tokens through Siteverify. It needs network access to Cloudflare,
-but no account, login, production key, or daily check-in allowance. It does not
-perform real account mutations. Failure stays pending until the existing token-wait
-timeout expires.
+The server uses [Cloudflare's official test component and dummy keys](https://developers.cloudflare.com/turnstile/troubleshooting/testing/) and validates dummy tokens through Siteverify. It needs network access to Cloudflare, but no account, login, production key, or daily check-in allowance. It does not perform real account mutations. Failure stays pending until the existing token-wait timeout expires.
 
-The two independent reminder channels are **In-page reminders** (on by default)
-and **Browser notifications** (off by default). Either, both, or neither can be
-enabled. In-page reminders use the focused extension page or current web page.
-Browser notifications require permission: enabling the channel without permission
-opens an explanation dialog with an explicit authorization button. Refusing or
-cancelling leaves the channel off. A blocked browser shows settings guidance.
-Delivery failures never enable a disabled channel or bring verification forward;
-click **Open verification window** or a browser notification to focus verification.
-For the three-site scenario, open and complete each request using its reminder.
-The server listens only on loopback ports 8787–8789. Set `AAH_TURNSTILE_PORT` to
-change the first port and update the trigger URL accordingly. Stop it with Ctrl+C.
-These local reminders do not use remote push providers. Closing or finishing a request clears
-its reminder. OS quiet mode can still hide an accepted system notification.
+The two independent reminder channels are **In-page reminders** (on by default) and **Browser notifications** (off by default). Either, both, or neither can be enabled. In-page reminders use the focused extension page or current web page. Browser notifications require permission: enabling the channel without permission opens an explanation dialog with an explicit authorization button. Refusing or cancelling leaves the channel off. A blocked browser shows settings guidance. Delivery failures never enable a disabled channel or bring verification forward; click **Open verification window** or a browser notification to focus verification. For the three-site scenario, open and complete each request using its reminder. The server listens only on loopback ports 8787–8789. Set `AAH_TURNSTILE_PORT` to change the first port and update the trigger URL accordingly. Stop it with Ctrl+C. These local reminders do not use remote push providers. Closing or finishing a request clears its reminder. OS quiet mode can still hide an accepted system notification.
 
-To automate official automatic success, reminders on extension/web pages, and the
-three-site interactive queue, stop
-the standalone test server, launch `pnpm browser:cdp:isolate`, then run
-`pnpm e2e:cdp:turnstile -- --isolate`. This runner starts its own local servers,
-restores preferences after the run, and saves screenshots under
-`.scratch/turnstile-channels/live-<timestamp>/`.
+To automate official automatic success, reminders on extension/web pages, and the three-site interactive queue, stop the standalone test server, launch `pnpm browser:cdp:isolate`, then run `pnpm e2e:cdp:turnstile -- --isolate`. This runner starts its own local servers, restores preferences after the run, and saves screenshots under `.scratch/turnstile-channels/live-<timestamp>/`.
 
 ### Test Coverage
 
