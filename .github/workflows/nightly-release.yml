@@ -100,6 +100,7 @@ jobs:
           VITE_PUBLIC_POSTHOG_HOST: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST || vars.VITE_PUBLIC_POSTHOG_HOST }}
         with:
           working-directory: source
+          distribution-channel: github-nightly
 
       - name: Collect build metadata
         id: metadata

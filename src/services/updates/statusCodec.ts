@@ -1,3 +1,5 @@
+import { isBuildRevision } from "~/utils/core/buildRevision"
+import { isDistributionChannel } from "~/utils/core/distributionChannel"
 import { trimToNull } from "~/utils/core/string"
 import { tryParseUrl } from "~/utils/core/urlParsing"
 
@@ -101,10 +103,18 @@ export function parseReleaseUpdateStatus(
   const fallback = createDefaultReleaseUpdateStatus(normalizedCurrentVersion)
 
   return {
+    ...(isDistributionChannel(record.distributionChannel)
+      ? {
+          distributionChannel: record.distributionChannel,
+        }
+      : {}),
     eligible:
       typeof record.eligible === "boolean"
         ? record.eligible
         : fallback.eligible,
+    ...(isBuildRevision(record.buildRevision)
+      ? { buildRevision: record.buildRevision }
+      : {}),
     reason: isReleaseUpdateReason(record.reason)
       ? record.reason
       : fallback.reason,
@@ -120,6 +130,9 @@ export function parseReleaseUpdateStatus(
         ? record.checkedAt
         : null,
     lastError: trimToNull(record.lastError),
+    ...(record.githubLatestVersion !== undefined
+      ? { githubLatestVersion: trimToNull(record.githubLatestVersion) }
+      : {}),
     storeUpdate: parseBrowserStoreUpdateState(record.storeUpdate),
   }
 }

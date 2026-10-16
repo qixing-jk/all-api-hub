@@ -1,3 +1,4 @@
+import { writeFile } from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { defineConfig, type ConfigEnv } from "wxt"
@@ -15,6 +16,10 @@ import {
   formatDevManifestName,
   type BakedDevIdentity,
 } from "./src/utils/core/devIdentity"
+import {
+  DISTRIBUTION_CHANNEL,
+  resolveDistributionChannel,
+} from "./src/utils/core/distributionChannel"
 
 type BrowserTarget = "chrome" | "firefox" | "safari" | string
 type ManifestPermission = string
@@ -70,6 +75,8 @@ const e2eBuildVariant = readE2eBuildVariant()
 // See https://wxt.dev/api/config.html
 export default defineConfig({
   srcDir: "src",
+  outDir: process.env.AAH_DISTRIBUTION_OUT_DIR || undefined,
+  zip: { excludeSources: [".output/**"] },
   // Dependency caches are not source files; watching them is costly on Windows.
   watchOptions: { ignored: ["**/.pnpm-store/**"] },
   publicDir: "src/public",
@@ -88,6 +95,17 @@ export default defineConfig({
   outDirTemplate: getOutDirTemplate(),
   modules: ["@wxt-dev/auto-icons", "@wxt-dev/module-react"],
   hooks: {
+    "build:done": async (wxt) => {
+      const channel = resolveDistributionChannel(
+        process.env.AAH_DISTRIBUTION_CHANNEL,
+        wxt.config.browser,
+        wxt.config.command,
+      )
+      await writeFile(
+        path.join(wxt.config.outDir, "distribution.json"),
+        JSON.stringify({ channel, browser: wxt.config.browser }),
+      )
+    },
     /** Keep the packaged detection probe out of non-test entrypoint discovery. */
     "entrypoints:found": (_wxt, entrypoints) => {
       if (isTestBuild) return
@@ -178,6 +196,19 @@ export default defineConfig({
       // Baked for every command so release bundles bake an explicit `null`
       // instead of leaking a local path or leaving the global undefined.
       define: {
+        __AAH_BUILD_REVISION__: JSON.stringify(
+          process.env.AAH_DISTRIBUTION_CHANNEL ===
+            DISTRIBUTION_CHANNEL.GithubNightly
+            ? process.env.AAH_BUILD_REVISION || null
+            : null,
+        ),
+        __AAH_DISTRIBUTION_CHANNEL__: JSON.stringify(
+          resolveDistributionChannel(
+            process.env.AAH_DISTRIBUTION_CHANNEL,
+            env.browser,
+            env.command,
+          ),
+        ),
         [DEV_IDENTITY_GLOBAL_KEY]: JSON.stringify(
           buildBakedDevIdentity(env, getProjectRootPath()),
         ),

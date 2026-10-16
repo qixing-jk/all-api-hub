@@ -714,40 +714,29 @@
     }
   },
   "releaseUpdate": {
-    "checkNow": "今すぐ確認",
+    "changelog": "変更履歴",
+    "checkNow": "更新を確認",
     "downloadUpdate": "更新をダウンロード",
     "helpers": {
-      "checkFailed": "後でもう一度試すか、リリースページで最新バージョンを手動確認してください。",
+      "amoUpdate": "Firefox Add-ons に新しいバージョンがあります。ストアで更新するか、Firefox の自動更新をお待ちください。",
+      "checkFailed": "もう一度更新を確認してください。",
       "manualUpdate": "現在のインストールは手動更新です。リリースページから新しいバージョンを取得してください。",
       "manualUpdateGeneric": "現在のインストール経路で更新してください。必要ならリリースページから手動更新してください。",
-      "notChecked": "「今すぐ確認」を実行すると、現在のバージョンに更新が必要か確認できます。",
-      "openLatest": "リリースページで最新安定版と更新内容を確認できます。",
-      "storeUpdate": "このストア版はブラウザ経由で更新されます。GitHub が新しくてもストアで未提供の場合は、通常レビューまたは配信が進行中です。",
+      "storeUpdate": "ストア版はブラウザーが自動更新します。ストアでの配信をお待ちください。",
       "storeUpdateReady": "ブラウザがストア更新を検出しました。拡張機能を再読み込みすると新しいバージョンを使用できます。",
-      "unavailable": "後でもう一度試すか、リリースページで最新安定版を直接確認してください。",
-      "upToDate": "必要ならリリースページでこのバージョンの変更内容を確認できます。"
+      "unavailable": "もう一度更新を確認してください。"
     },
-    "lastChecked": "最終確認: {{time}}",
-    "latestVersionPending": "最新安定版: 未確認",
-    "latestVersionUnavailable": "最新安定版: 取得不可",
-    "openLatest": "最新リリースを開く",
-    "reasons": {
-      "api-unavailable": "現在のブラウザ環境では自動検出を利用できません。必要なら最新安定版を手動で確認してください",
-      "chromium-development": "現在のインストール経路では最新安定版を確認できます。手動チェックでバージョン差分を確認してください",
-      "firefox-ambiguous": "Firefox では現在インストール経路を確実に判定できません。必要に応じて最新安定版を手動で確認してください",
-      "safari-unsupported": "Safari はまだ自動検出に対応していません。リリースページで最新安定版を確認してください",
-      "store-build": "現在はブラウザストア版です。ストア更新を確認し、GitHub の最新安定版と比較できます",
-      "unknown": "現在のインストール経路は自動検出に対応していません。必要に応じて最新安定版を手動で確認してください"
-    },
+    "latestAmoVersion": "Firefox Add-ons：v{{version}}",
+    "latestNightlyVersion": "最新 Nightly：{{version}}",
     "reloadToUpdate": "再読み込みして更新",
     "states": {
-      "checkFailed": "確認に失敗したため、最新安定版の情報を取得できませんでした",
+      "checkFailed": "更新を確認できませんでした",
       "notChecked": "最新安定版はまだ確認していません。手動チェックで比較できます",
-      "storeUpdatePending": "GitHub には新しいリリースがありますが、ストア更新はまだ利用できません",
-      "storeUpdateReady": "ストア更新を適用できます。再読み込みしてください",
-      "unavailable": "更新状態を取得できませんでした",
-      "updateAvailable": "アップグレード可能な新しいバージョンがあります",
-      "upToDate": "確認完了。現在のバージョンはすでに最新安定版です"
+      "storeUpdatePending": "ストアでの更新を待っています",
+      "storeUpdateReady": "更新の準備ができました",
+      "unavailable": "更新状況を取得できません",
+      "updateAvailable": "更新があります",
+      "upToDate": "最新バージョンです"
     },
     "versionBadge": {
       "changelogAriaLabel": "バージョン {{version}} の更新履歴",

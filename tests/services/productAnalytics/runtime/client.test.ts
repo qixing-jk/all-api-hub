@@ -8,6 +8,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_PAGE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { DISTRIBUTION_CHANNEL } from "~/utils/core/distributionChannel"
 
 const {
   posthogMocks,
@@ -211,6 +212,10 @@ describe("productAnalyticsClient", () => {
   })
 
   it("adds anonymous distinct id and shared context to captured events while stripping urls", async () => {
+    vi.stubGlobal(
+      "__AAH_DISTRIBUTION_CHANNEL__",
+      DISTRIBUTION_CHANNEL.EdgeAddons,
+    )
     vi.stubEnv("VITE_PUBLIC_POSTHOG_PROJECT_TOKEN", "phc_test")
     vi.stubEnv("VITE_PUBLIC_POSTHOG_HOST", "https://posthog.example")
 
@@ -221,12 +226,14 @@ describe("productAnalyticsClient", () => {
         page_id: PRODUCT_ANALYTICS_PAGE_IDS.OptionsBasicSettings,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         url: "https://private.example/path",
+        distribution_channel: "https://private.example/forged",
       }),
     ).resolves.toBe(true)
 
     expect(posthogMocks.capture).toHaveBeenCalledWith("page_viewed", {
       app_version: "3.37.0",
       browser_family: "chromium",
+      distribution_channel: "edge-addons",
       ui_language: "en",
       page_id: PRODUCT_ANALYTICS_PAGE_IDS.OptionsBasicSettings,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
@@ -250,6 +257,7 @@ describe("productAnalyticsClient", () => {
     expect(posthogMocks.capture).toHaveBeenCalledWith("app_opened", {
       app_version: "3.37.0",
       browser_family: "chromium",
+      distribution_channel: "unknown",
       ui_language: "ja",
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
     })
@@ -273,6 +281,7 @@ describe("productAnalyticsClient", () => {
     expect(posthogMocks.capture).toHaveBeenCalledWith("app_opened", {
       app_version: "3.37.0",
       browser_family: "chromium",
+      distribution_channel: "unknown",
       ui_language: "en",
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
     })
@@ -328,6 +337,7 @@ describe("productAnalyticsClient", () => {
       {
         app_version: "3.37.0",
         browser_family: "chromium",
+        distribution_channel: "unknown",
         ui_language: "en",
       },
     )
@@ -530,6 +540,7 @@ describe("productAnalyticsClient", () => {
     expect(posthogMocks.capture).toHaveBeenCalledWith("app_opened", {
       app_version: "3.37.0",
       browser_family: "chromium",
+      distribution_channel: "unknown",
       ui_language: "en",
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
     })
@@ -554,6 +565,7 @@ describe("productAnalyticsClient", () => {
     expect(posthogMocks.capture).toHaveBeenCalledWith("page_viewed", {
       app_version: "3.37.0",
       browser_family: "chromium",
+      distribution_channel: "unknown",
       ui_language: "en",
       page_id: PRODUCT_ANALYTICS_PAGE_IDS.OptionsBasicSettings,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,

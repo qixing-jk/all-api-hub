@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { fakeBrowser } from "wxt/testing/fake-browser"
 
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import { DISTRIBUTION_CHANNEL } from "~/utils/core/distributionChannel"
 
 vi.mock("~/utils/browser/runtimeUpdateCheck", () => ({
   requestRuntimeUpdateCheck: requestRuntimeUpdateCheckMock,
@@ -85,6 +86,7 @@ describe("releaseUpdateService", () => {
   const browserAny = fakeBrowser as any
 
   beforeEach(async () => {
+    vi.stubGlobal("__AAH_DISTRIBUTION_CHANNEL__", DISTRIBUTION_CHANNEL.Unknown)
     vi.resetModules()
     vi.clearAllMocks()
 
@@ -102,7 +104,308 @@ describe("releaseUpdateService", () => {
   })
 
   afterEach(() => {
+    vi.unstubAllGlobals()
     globalThis.fetch = originalFetch
+  })
+
+  it("checks AMO for a marked Firefox store build without claiming an update is installed", async () => {
+    vi.stubGlobal(
+      "__AAH_DISTRIBUTION_CHANNEL__",
+      DISTRIBUTION_CHANNEL.FirefoxAmo,
+    )
+    browserAny.runtime.getURL = vi.fn(
+      () => "moz-extension://firefox-extension/",
+    )
+    browserAny.management.getSelf = undefined
+    vi.mocked(globalThis.fetch).mockImplementation(
+      async (url) =>
+        ({
+          ok: true,
+          json: async () =>
+            String(url).includes("addons.mozilla.org")
+              ? { current_version: { version: "3.40.0" } }
+              : { tag_name: "v3.41.0" },
+        }) as Response,
+    )
+    const { releaseUpdateService } = await import(
+      "~/services/updates/releaseUpdateService"
+    )
+    const status = await releaseUpdateService.checkNow()
+    expect(status).toMatchObject({
+      eligible: true,
+      reason: "firefox-amo",
+      latestVersion: "3.40.0",
+      updateAvailable: true,
+      storeUpdate: { status: "unsupported" },
+    })
+    expect(status.releaseUrl).toContain("addons.mozilla.org")
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("addons.mozilla.org/api/v5/addons/addon/"),
+      expect.anything(),
+    )
+    expect(requestRuntimeUpdateCheckMock).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    [DISTRIBUTION_CHANNEL.ChromeWebStore, "store-build"],
+    [DISTRIBUTION_CHANNEL.EdgeAddons, "store-build"],
+    [DISTRIBUTION_CHANNEL.GithubRelease, "github-release"],
+    [DISTRIBUTION_CHANNEL.LocalDevelopment, "chromium-development"],
+  ])(
+    "uses the %s marker independently of runtime ID or management metadata",
+    async (channel, reason) => {
+      vi.stubGlobal("__AAH_DISTRIBUTION_CHANNEL__", channel)
+      browserAny.management.getSelf = undefined
+      const { releaseUpdateService } = await import(
+        "~/services/updates/releaseUpdateService"
+      )
+      expect(await releaseUpdateService.getStatus()).toMatchObject({
+        eligible: true,
+        distributionChannel: channel,
+        reason,
+      })
+      expect(globalThis.fetch).not.toHaveBeenCalled()
+    },
+  )
+
+  it("keeps GitHub ahead informational, retries AMO failures and runs scheduled AMO checks", async () => {
+    vi.stubGlobal(
+      "__AAH_DISTRIBUTION_CHANNEL__",
+      DISTRIBUTION_CHANNEL.FirefoxAmo,
+    )
+    let fail = true
+    vi.mocked(globalThis.fetch).mockImplementation(async (url) => {
+      if (String(url).includes("addons.mozilla.org") && fail)
+        throw new Error("AMO unavailable")
+      return {
+        ok: true,
+        json: async () =>
+          String(url).includes("addons.mozilla.org")
+            ? { current_version: { version: "3.32.0" } }
+            : { tag_name: "v3.40.0" },
+      } as Response
+    })
+    const { releaseUpdateService } = await import(
+      "~/services/updates/releaseUpdateService"
+    )
+    expect(await releaseUpdateService.checkNow()).toMatchObject({
+      lastError: "AMO unavailable",
+      updateAvailable: false,
+      githubLatestVersion: "3.40.0",
+    })
+    fail = false
+    expect(await releaseUpdateService.checkNow()).toMatchObject({
+      lastError: null,
+      latestVersion: "3.32.0",
+      updateAvailable: false,
+      githubLatestVersion: "3.40.0",
+    })
+    await releaseUpdateService.initialize()
+    vi.mocked(globalThis.fetch).mockClear()
+    await onAlarmMock.mock.calls[0]?.[0]({ name: "releaseUpdateDailyCheck" })
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("addons.mozilla.org"),
+      expect.anything(),
+    )
+  })
+
+  it("compares nightly revisions even when the package version has not changed", async () => {
+    vi.stubGlobal(
+      "__AAH_DISTRIBUTION_CHANNEL__",
+      DISTRIBUTION_CHANNEL.GithubNightly,
+    )
+    vi.stubGlobal("__AAH_BUILD_REVISION__", "a".repeat(40))
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ object: { type: "commit", sha: "b".repeat(40) } }),
+    } as Response)
+    const { releaseUpdateService } = await import(
+      "~/services/updates/releaseUpdateService"
+    )
+    expect(await releaseUpdateService.checkNow()).toMatchObject({
+      reason: "github-nightly",
+      latestVersion: "bbbbbbb",
+      updateAvailable: true,
+      releaseUrl:
+        "https://github.com/qixing-jk/all-api-hub/releases/tag/nightly",
+    })
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/git/ref/tags/nightly"),
+      expect.anything(),
+    )
+  })
+
+  it.each([undefined, "A".repeat(40), "a".repeat(39)])(
+    "reports an unavailable Nightly revision instead of offering an update: %s",
+    async (revision) => {
+      vi.stubGlobal(
+        "__AAH_DISTRIBUTION_CHANNEL__",
+        DISTRIBUTION_CHANNEL.GithubNightly,
+      )
+      vi.stubGlobal("__AAH_BUILD_REVISION__", revision)
+      vi.mocked(globalThis.fetch).mockResolvedValue({
+        ok: true,
+        json: async () => ({ object: { type: "commit", sha: "b".repeat(40) } }),
+      } as Response)
+      const { releaseUpdateService } = await import(
+        "~/services/updates/releaseUpdateService"
+      )
+      expect(await releaseUpdateService.checkNow()).toMatchObject({
+        buildRevision: null,
+        latestVersion: null,
+        updateAvailable: false,
+        lastError: "Nightly revision unavailable",
+      })
+    },
+  )
+
+  it("keeps AMO results actionable when the informational GitHub lookup fails", async () => {
+    vi.stubGlobal(
+      "__AAH_DISTRIBUTION_CHANNEL__",
+      DISTRIBUTION_CHANNEL.FirefoxAmo,
+    )
+    vi.mocked(globalThis.fetch).mockImplementation(async (url) => {
+      if (String(url).includes("api.github.com"))
+        throw new Error("GitHub unavailable")
+      return {
+        ok: true,
+        json: async () => ({ current_version: { version: "3.40.0" } }),
+      } as Response
+    })
+    const { releaseUpdateService } = await import(
+      "~/services/updates/releaseUpdateService"
+    )
+    expect(await releaseUpdateService.checkNow()).toMatchObject({
+      latestVersion: "3.40.0",
+      updateAvailable: true,
+      githubLatestVersion: null,
+      lastError: null,
+    })
+  })
+
+  it.each([
+    {
+      ok: false,
+      status: 503,
+      payload: null,
+      error: "Nightly request failed with HTTP 503",
+    },
+    {
+      ok: true,
+      status: 200,
+      payload: { object: { type: "tag", sha: "b".repeat(40) } },
+      error: "Nightly revision unavailable",
+    },
+    {
+      ok: true,
+      status: 200,
+      payload: { object: { type: "commit", sha: 123 } },
+      error: "Nightly revision unavailable",
+    },
+    {
+      ok: true,
+      status: 200,
+      payload: null,
+      error: "Nightly revision unavailable",
+    },
+  ])(
+    "does not offer an update from an unusable Nightly response: $error",
+    async ({ ok, status, payload, error }) => {
+      vi.stubGlobal(
+        "__AAH_DISTRIBUTION_CHANNEL__",
+        DISTRIBUTION_CHANNEL.GithubNightly,
+      )
+      vi.stubGlobal("__AAH_BUILD_REVISION__", "a".repeat(40))
+      vi.mocked(globalThis.fetch).mockResolvedValue({
+        ok,
+        status,
+        json: async () => payload,
+      } as Response)
+      const { releaseUpdateService } = await import(
+        "~/services/updates/releaseUpdateService"
+      )
+      expect(await releaseUpdateService.checkNow()).toMatchObject({
+        latestVersion: null,
+        updateAvailable: false,
+        lastError: error,
+      })
+    },
+  )
+
+  it.each([
+    ["a", true],
+    ["c", false],
+  ])(
+    "reuses Nightly cache only for the same build revision: %s",
+    async (revision, reuse) => {
+      vi.stubGlobal(
+        "__AAH_DISTRIBUTION_CHANNEL__",
+        DISTRIBUTION_CHANNEL.GithubNightly,
+      )
+      vi.stubGlobal("__AAH_BUILD_REVISION__", "a".repeat(40))
+      vi.mocked(globalThis.fetch).mockResolvedValue({
+        ok: true,
+        json: async () => ({ object: { type: "commit", sha: "b".repeat(40) } }),
+      } as Response)
+      const { releaseUpdateService } = await import(
+        "~/services/updates/releaseUpdateService"
+      )
+      const checked = await releaseUpdateService.checkNow()
+
+      vi.stubGlobal("__AAH_BUILD_REVISION__", revision.repeat(40))
+      expect(await releaseUpdateService.getStatus()).toMatchObject({
+        currentVersion: checked.currentVersion,
+        buildRevision: revision.repeat(40),
+        latestVersion: reuse ? "bbbbbbb" : null,
+        updateAvailable: reuse,
+        checkedAt: reuse ? checked.checkedAt : null,
+      })
+      expect(globalThis.fetch).toHaveBeenCalledOnce()
+    },
+  )
+
+  it("reuses legacy unknown-channel cache without triggering a network request", async () => {
+    const { releaseUpdateService } = await import(
+      "~/services/updates/releaseUpdateService"
+    )
+    const checkedAt = Date.now()
+    const { Storage } = await import("@plasmohq/storage")
+    ;(Storage as any).__store.set(STORAGE_KEYS.RELEASE_UPDATE_STATUS, {
+      ...(await releaseUpdateService.getStatus()),
+      distributionChannel: undefined,
+      latestVersion: "3.40.0",
+      updateAvailable: true,
+      checkedAt,
+    })
+    expect(await releaseUpdateService.getStatus()).toMatchObject({
+      latestVersion: "3.40.0",
+      updateAvailable: true,
+      checkedAt,
+    })
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+  })
+
+  it("allows manual checks on unknown builds while keeping automatic checks disabled", async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValue({
+      ok: true,
+      json: async () => ({ tag_name: "v3.40.0" }),
+    } as Response)
+    const { releaseUpdateService } = await import(
+      "~/services/updates/releaseUpdateService"
+    )
+    expect(await releaseUpdateService.checkNow()).toMatchObject({
+      eligible: false,
+      reason: "unknown",
+      latestVersion: "3.40.0",
+      updateAvailable: true,
+    })
+    expect(await releaseUpdateService.getStatus()).toMatchObject({
+      latestVersion: "3.40.0",
+    })
+    await releaseUpdateService.initialize()
+    vi.mocked(globalThis.fetch).mockClear()
+    await onAlarmMock.mock.calls[0]?.[0]({ name: "releaseUpdateDailyCheck" })
+    expect(globalThis.fetch).not.toHaveBeenCalled()
   })
 
   it("marks Chromium development installs as eligible and stores latest stable status", async () => {
@@ -474,7 +777,7 @@ describe("releaseUpdateService", () => {
       "~/services/updates/releaseUpdateService"
     )
 
-    const status = await releaseUpdateService.checkNow()
+    const status = await releaseUpdateService.getStatus()
 
     expect(status).toMatchObject({
       eligible: false,

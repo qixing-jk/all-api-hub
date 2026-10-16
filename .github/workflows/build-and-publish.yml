@@ -127,6 +127,7 @@ jobs:
           VITE_PUBLIC_POSTHOG_HOST: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST || vars.VITE_PUBLIC_POSTHOG_HOST }}
         with:
           working-directory: source
+          build-stores: "true"
 
       - name: Validate Safari build inputs
         if: ${{ steps.get_ref.outputs.checkout_ref != '' }}
@@ -169,7 +170,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: packaged-archives
-          path: source/.output/*.zip
+          path: |
+            source/.output/*.zip
+            source/.output/stores/*.zip
           include-hidden-files: true
           if-no-files-found: error
 
@@ -266,14 +269,14 @@ jobs:
           echo "Firefox publish: $([ "$PUBLISH_FIREFOX" = "true" ] && echo enabled || echo skipped)"
 
           args=(
-            --chrome-zip .output/*-chrome.zip
-            --edge-zip .output/*-chrome.zip
+            --chrome-zip .output/stores/chrome-web-store.zip
+            --edge-zip .output/stores/edge-addons.zip
           )
 
           if [ "$PUBLISH_FIREFOX" = "true" ]; then
             args+=(
-              --firefox-zip .output/*-firefox.zip
-              --firefox-sources-zip .output/*-sources.zip
+              --firefox-zip .output/stores/firefox-amo.zip
+              --firefox-sources-zip .output/stores/firefox-amo-sources.zip
             )
           fi
 
