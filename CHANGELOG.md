@@ -1,5 +1,44 @@
 # Changelog
 
+## [4.5.0](https://github.com/qixing-jk/all-api-hub/compare/v4.4.0...v4.5.0) (2026-10-16)
+
+
+### Features
+
+* **accounts:** add FoxCode account integration ([#1682](https://github.com/qixing-jk/all-api-hub/issues/1682)) ([df4e53e](https://github.com/qixing-jk/all-api-hub/commit/df4e53e217ee2109fc58961dde0a4f5e15500426))
+* **accounts:** support Dahl inference accounts and native key workflows ([#1677](https://github.com/qixing-jk/all-api-hub/issues/1677)) ([de34111](https://github.com/qixing-jk/all-api-hub/commit/de3411186b18a985d10c5d8ada937ea7c996ce5d))
+* **accounts:** support Krill AI and align catalog popularity order ([#1700](https://github.com/qixing-jk/all-api-hub/issues/1700)) ([13923cd](https://github.com/qixing-jk/all-api-hub/commit/13923cd3400dd86304cf7077a83c60f56f1761f0))
+* **accounts:** support Xiaoen AI console, check-in and account messages ([#1694](https://github.com/qixing-jk/all-api-hub/issues/1694)) ([c4b2b08](https://github.com/qixing-jk/all-api-hub/commit/c4b2b08a4d16de70dbe86e89c4482051b9c7af5c))
+* add Turnstile verification reminders and consistent page notices ([#1706](https://github.com/qixing-jk/all-api-hub/issues/1706)) ([b2918db](https://github.com/qixing-jk/all-api-hub/commit/b2918dbed98b98ac108dc37f03fc77d98e4a5a23))
+* **checkin:** support Clawhud daily check-in ([#1676](https://github.com/qixing-jk/all-api-hub/issues/1676)) ([4f24056](https://github.com/qixing-jk/all-api-hub/commit/4f24056b4bcb031dfe5c6e924d6f4d9b13b7774d))
+* **checkin:** support DaiGua ordinary daily check-in ([#1693](https://github.com/qixing-jk/all-api-hub/issues/1693)) ([c0a9f6a](https://github.com/qixing-jk/all-api-hub/commit/c0a9f6a46cbc0b6bd7e2f61fe867a078a9f54b85))
+* **checkin:** support FreeAPI daily check-in ([#1713](https://github.com/qixing-jk/all-api-hub/issues/1713)) ([2910405](https://github.com/qixing-jk/all-api-hub/commit/291040590fc9250b0c6983fb9e870dad257bfcaa))
+* **checkin:** support Sidrune and standardize public catalogs ([#1699](https://github.com/qixing-jk/all-api-hub/issues/1699)) ([398179a](https://github.com/qixing-jk/all-api-hub/commit/398179a68f21a60954c8f3db87d080f025fcaaa3))
+* **keys:** unify account key completion and scoped repairs ([#1702](https://github.com/qixing-jk/all-api-hub/issues/1702)) ([ed963eb](https://github.com/qixing-jk/all-api-hub/commit/ed963ebda75c532debf27a36dfb9683a952f9e29))
+* **managed-sites:** support multi-key imports and reduce key lookup requests ([#1697](https://github.com/qixing-jk/all-api-hub/issues/1697)) ([390da4a](https://github.com/qixing-jk/all-api-hub/commit/390da4aeaef261dbc030507073dcd4bca2d3293c))
+* **popup:** make the detected-site badge filter the account list ([#1680](https://github.com/qixing-jk/all-api-hub/issues/1680)) ([005ef61](https://github.com/qixing-jk/all-api-hub/commit/005ef6132e80b70247594dc962f15e9d330c2c58))
+* **popup:** unify tab empty states, onboarding guidance, and sponsor exposure ([#1701](https://github.com/qixing-jk/all-api-hub/issues/1701)) ([6bc9aa0](https://github.com/qixing-jk/all-api-hub/commit/6bc9aa075126e5316cc3c86540fa2ee8919b1f9a))
+* **tooling:** add reusable visual evidence capture and comparison ([#1707](https://github.com/qixing-jk/all-api-hub/issues/1707)) ([187d015](https://github.com/qixing-jk/all-api-hub/commit/187d01554414ff0e6e1663738b3c6f23cb4e4e22))
+* **tooling:** unify Android extension debugging and hot updates ([#1696](https://github.com/qixing-jk/all-api-hub/issues/1696)) ([6bae18c](https://github.com/qixing-jk/all-api-hub/commit/6bae18ccc15b0660998fb0e3ae698665fa9b4539))
+
+
+### Bug Fixes
+
+* **accounts:** generalize browser session detection across protocols ([#1683](https://github.com/qixing-jk/all-api-hub/issues/1683)) ([e5fc057](https://github.com/qixing-jk/all-api-hub/commit/e5fc05730c8865dca022a4d37c80840a8201e9e2))
+* **checkin:** detect captcha and improve verification handoff ([#1712](https://github.com/qixing-jk/all-api-hub/issues/1712)) ([cdea9b5](https://github.com/qixing-jk/all-api-hub/commit/cdea9b54eae7f729120fc02b3510235d7380a0ad))
+* **checkin:** prevent repeated runs after storage write failures ([#1685](https://github.com/qixing-jk/all-api-hub/issues/1685)) ([94b1a20](https://github.com/qixing-jk/all-api-hub/commit/94b1a20fb561d49609f1fd67391f0954f8d07ff9))
+* **firefox:** correct popup sizing and add native extension smoke coverage ([#1708](https://github.com/qixing-jk/all-api-hub/issues/1708)) ([5437c4f](https://github.com/qixing-jk/all-api-hub/commit/5437c4fcfa7c5ec5f671e7cc8475392c52247d1f))
+* **permissions:** restore Firefox bulk grants and order optional permissions ([#1709](https://github.com/qixing-jk/all-api-hub/issues/1709)) ([0582911](https://github.com/qixing-jk/all-api-hub/commit/05829115b1a81f5079b5fab407c4739218df079d))
+* **popup:** prevent collapsed mobile extension surfaces ([#1684](https://github.com/qixing-jk/all-api-hub/issues/1684)) ([acf5200](https://github.com/qixing-jk/all-api-hub/commit/acf5200ec4d648bec05ddd4ed38ad631f3db82cb))
+* **settings:** save managed-site configuration before checking connections ([#1673](https://github.com/qixing-jk/all-api-hub/issues/1673)) ([220dceb](https://github.com/qixing-jk/all-api-hub/commit/220dceb9c7d81fc569964cd804f8144b0942f81d))
+* **sponsors:** prepare popup setup in an optional side panel ([#1704](https://github.com/qixing-jk/all-api-hub/issues/1704)) ([f4badcd](https://github.com/qixing-jk/all-api-hub/commit/f4badcd2f63272a8adf9b8e10d59d92bb9fdece3))
+
+
+### Performance Improvements
+
+* **keys:** streamline native workflows and announcement discovery ([#1681](https://github.com/qixing-jk/all-api-hub/issues/1681)) ([59ffc1c](https://github.com/qixing-jk/all-api-hub/commit/59ffc1cb41c64dc199723a936e7ec1e046ffadd2))
+* **managed-sites:** speed up batch imports and key verification ([#1692](https://github.com/qixing-jk/all-api-hub/issues/1692)) ([87b397c](https://github.com/qixing-jk/all-api-hub/commit/87b397c8f75dc81a8dbfae746d3ca2d2c7ba38a3))
+
 ## [4.4.0](https://github.com/qixing-jk/all-api-hub/compare/v4.3.0...v4.4.0) (2026-10-10)
 
 
