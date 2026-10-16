@@ -129,13 +129,24 @@
     },
     "unexpectedContent": "Die Antwort hatte ein unerwartetes Format und könnte eine Verifizierungsseite der Website gewesen sein."
   },
+  "notification": {
+    "openVerification": "Verifizierungsfenster öffnen",
+    "reminderSettings": "Benachrichtigungseinstellungen",
+    "turnstileAssistBody": "Eine Hintergrundaufgabe erfordert eine menschliche Verifizierung. Danach wird sie automatisch fortgesetzt.",
+    "turnstileAssistTitle": "All API Hub · Verifizierung erforderlich",
+    "turnstilePageBody": "Eine Hintergrundaufgabe erfordert eine menschliche Verifizierung. Danach wird sie automatisch fortgesetzt.",
+    "verificationEnded": "Diese Verifizierung ist beendet. Keine weitere Aktion erforderlich."
+  },
   "titlePrefix": "All API Hub · Schutzumgehung",
   "toast": {
     "actions": {
-      "dismiss": "Ausblenden",
       "openSettings": "Einstellungen für die Schutzumgehung öffnen"
     },
-    "body": "Diese Seite wurde automatisch von All API Hub geöffnet, um Schutzprüfungen (z. B. Cloudflare-Challenges) zu bestehen und die erforderlichen Cookies bzw. die Sitzung zu erhalten.\n\nDies ist notwendig, damit All API Hub erfolgreiche Anfragen stellen und Daten auf geschützten Websites erkennen kann.\n\nWenn ein Verifizierungsschritt angezeigt wird, führen Sie ihn in diesem Fenster aus. Sobald er bestanden ist, setzt All API Hub den Vorgang fort; das Fenster wird möglicherweise automatisch geschlossen.",
-    "title": "All API Hub – Helfer für Schutzprüfungen (temporäres Fenster)"
+    "body": "Diese Seite wurde automatisch von All API Hub geöffnet, um Schutzprüfungen (z. B. Cloudflare-Challenges) zu bestehen und die erforderlichen Cookies bzw. die Sitzung zu erhalten.\nDies ist notwendig, damit All API Hub erfolgreiche Anfragen stellen und Daten auf geschützten Websites erkennen kann.\nWenn ein Verifizierungsschritt angezeigt wird, führen Sie ihn in diesem Fenster aus. Sobald er bestanden ist, setzt All API Hub den Vorgang fort; das Fenster wird möglicherweise automatisch geschlossen.",
+    "title": "Helfer für Schutzprüfungen",
+    "turnstile": {
+      "body": "Die automatische Prüfung ist noch nicht fertig. Schließen Sie die Cloudflare-Turnstile-Prüfung in diesem Fenster ab (zum Beispiel das Kontrollkästchen). Danach wird der Check-in automatisch fortgesetzt, und dieses Fenster kann sich schließen.",
+      "title": "Menschliche Überprüfung abschließen"
+    }
   }
 }

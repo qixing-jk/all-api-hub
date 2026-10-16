@@ -128,13 +128,24 @@
     },
     "unexpectedContent": "Phản hồi có định dạng không mong đợi và có thể là trang xác minh của trang web."
   },
+  "notification": {
+    "openVerification": "Mở cửa sổ xác minh",
+    "reminderSettings": "Cài đặt lời nhắc",
+    "turnstileAssistBody": "Một tác vụ nền cần bạn hoàn thành xác minh con người. Tác vụ sẽ tự động tiếp tục sau đó.",
+    "turnstileAssistTitle": "All API Hub · Nhắc xác minh",
+    "turnstilePageBody": "Một tác vụ nền cần bạn hoàn thành xác minh con người. Tác vụ sẽ tự động tiếp tục sau đó.",
+    "verificationEnded": "Lần xác minh này đã kết thúc. Không cần thao tác thêm."
+  },
   "titlePrefix": "All API Hub · Trợ lý Vượt Rào",
   "toast": {
     "actions": {
-      "dismiss": "Đóng thông báo",
       "openSettings": "Mở cài đặt vượt rào"
     },
-    "body": "Trang này được tự động mở bởi All API Hub để vượt qua các trang bảo vệ (như Cloudflare 5 giây) nhằm thu thập thông tin Cookie/phiên cần thiết.\n\nĐây là bước bắt buộc để All API Hub có thể gửi yêu cầu và nhận diện dữ liệu bình thường trên các trang web có lớp bảo vệ.\n\nNếu có xác minh CAPTCHA, vui lòng hoàn thành trong cửa sổ này; sau khi vượt qua, All API Hub sẽ tiếp tục quá trình và tự động đóng cửa sổ này.",
-    "title": "All API Hub Trợ lý Vượt Rào (Cửa sổ tạm thời)"
+    "body": "Trang này được tự động mở bởi All API Hub để vượt qua các trang bảo vệ (như Cloudflare 5 giây) nhằm thu thập thông tin Cookie/phiên cần thiết.\nĐây là bước bắt buộc để All API Hub có thể gửi yêu cầu và nhận diện dữ liệu bình thường trên các trang web có lớp bảo vệ.\nNếu có xác minh CAPTCHA, vui lòng hoàn thành trong cửa sổ này; sau khi vượt qua, All API Hub sẽ tiếp tục quá trình và tự động đóng cửa sổ này.",
+    "title": "Trợ lý Vượt Rào",
+    "turnstile": {
+      "body": "Xác minh tự động chưa xong. Hãy hoàn tất Cloudflare Turnstile trong cửa sổ này (ví dụ tick vào ô xác nhận). Sau đó điểm danh sẽ tự tiếp tục và cửa sổ này có thể tự đóng.",
+      "title": "Hoàn tất xác minh người dùng"
+    }
   }
 }

@@ -61,6 +61,10 @@ export const SHIELD_DEV_TRIGGER_PRESET_IDS = {
   RedemptionAssistRecovery: "redemption_assist_recovery",
   LdohSiteLookupRecovery: "ldoh_site_lookup_recovery",
   KeyManagementRecovery: "key_management_recovery",
+  TurnstileInteractive: "turnstile_interactive",
+  TurnstileAutomatic: "turnstile_automatic",
+  TurnstileFailure: "turnstile_failure",
+  TurnstileQueue: "turnstile_queue",
 } as const
 
 export type ShieldDevTriggerPresetId =
@@ -104,11 +108,40 @@ export const SHIELD_DEV_TRIGGER_PRESETS = [
     trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.BackgroundRecovery,
     surface: PROTECTION_BYPASS_SURFACES.Options,
   },
+  {
+    id: SHIELD_DEV_TRIGGER_PRESET_IDS.TurnstileInteractive,
+    feature: PROTECTION_BYPASS_AUTOMATIC_FEATURES.Checkin,
+    trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+    surface: PROTECTION_BYPASS_SURFACES.Background,
+    turnstileScenario: "interactive",
+  },
+  {
+    id: SHIELD_DEV_TRIGGER_PRESET_IDS.TurnstileAutomatic,
+    feature: PROTECTION_BYPASS_AUTOMATIC_FEATURES.Checkin,
+    trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+    surface: PROTECTION_BYPASS_SURFACES.Background,
+    turnstileScenario: "automatic",
+  },
+  {
+    id: SHIELD_DEV_TRIGGER_PRESET_IDS.TurnstileFailure,
+    feature: PROTECTION_BYPASS_AUTOMATIC_FEATURES.Checkin,
+    trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+    surface: PROTECTION_BYPASS_SURFACES.Background,
+    turnstileScenario: "failure",
+  },
+  {
+    id: SHIELD_DEV_TRIGGER_PRESET_IDS.TurnstileQueue,
+    feature: PROTECTION_BYPASS_AUTOMATIC_FEATURES.Checkin,
+    trigger: PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
+    surface: PROTECTION_BYPASS_SURFACES.Background,
+    turnstileScenario: "interactive",
+  },
 ] as const satisfies readonly {
   id: ShieldDevTriggerPresetId
   feature: ProtectionBypassAutomaticFeature
   trigger: ProtectionBypassAutomaticTrigger
   surface: ProtectionBypassSurface
+  turnstileScenario?: "interactive" | "automatic" | "failure"
 }[]
 
 export const DEFAULT_SHIELD_DEV_TRIGGER_PRESET_ID =

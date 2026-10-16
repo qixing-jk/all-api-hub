@@ -51,11 +51,19 @@ import {
   createProtectionBypassDecisionError,
   reportAuthorizedTempContextOutcome,
 } from "./failures"
+import { createTempContextTurnstileAssist } from "./turnstileAssist"
 
 const contextPool = createTempContextPool({
   cleanup: cleanupContext,
   isAlive: isContextAlive,
+  onRequestDetached: (requestId) => turnstileAssist.drop(requestId),
 })
+const turnstileAssist = createTempContextTurnstileAssist({
+  getRequestContext: contextPool.getByRequestId,
+  hasTab: (tabId) => Boolean(contextPool.getByTabId(tabId)),
+})
+export const presentTempContextForTurnstileAssist = turnstileAssist.present
+
 const {
   withOriginLock,
   destroyOriginPool,
@@ -89,6 +97,7 @@ export function setupTempWindowListeners() {
 
   // 手机: 监听标签页关闭
   onTabRemoved(handleTempTabRemoved)
+  turnstileAssist.setup()
 }
 
 /**

@@ -78,6 +78,7 @@ const mocks = vi.hoisted(() => ({
       managed_site_model_sync: true,
     },
     tempContextMode: "composite" as const,
+    turnstileAssistPresentation: "both" as const,
   },
 }))
 

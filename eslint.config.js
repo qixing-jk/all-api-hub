@@ -96,6 +96,13 @@ const newApiAdapterLegacyApiServiceImportPattern = {
 // Each entry also lists the allowed import targets as prefix matches, so a
 // new dynamic import inside an allowlisted file still needs a config diff.
 const dynamicImportAllowlist = [
+  // Turnstile waits load content UI only when the user is asked to assist.
+  {
+    file: "src/entrypoints/content/messageHandlers/handlers/turnstileGuard.ts",
+    imports: [
+      "~/entrypoints/content/shieldBypassAssist/utils/shieldBypassToasts",
+    ],
+  },
   // Development-only discovery fixtures stay outside production detection and UI loading.
   {
     file: "src/services/checkin/autoCheckin/discovery/accountDiscovery.ts",
@@ -148,7 +155,13 @@ const dynamicImportAllowlist = [
   // injected bundle.
   {
     file: "src/entrypoints/content/messageHandlers/index.ts",
-    imports: ["~/services/checkin/feedback/pageScan"],
+    imports: [
+      "~/services/checkin/feedback/pageScan",
+      // Mount the existing isolated toast host only when a page reminder arrives.
+      "~/entrypoints/content/shared/uiRoot",
+      "~/lib/notify/content",
+      "~/services/checkin/turnstile/assistPageNotice",
+    ],
   },
   {
     file: "src/entrypoints/content/redemptionAssist/utils/redemptionToasts.ts",

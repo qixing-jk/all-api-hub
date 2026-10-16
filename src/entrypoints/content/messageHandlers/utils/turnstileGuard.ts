@@ -1,7 +1,11 @@
 import {
+  TURNSTILE_ASSIST_TURN_WAIT_MS,
+  TURNSTILE_AUTO_ASSIST_MS,
   TURNSTILE_CONTAINER_SELECTOR,
   TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS,
   TURNSTILE_IFRAME_SELECTOR,
+  TURNSTILE_MANUAL_WAIT_MS,
+  TURNSTILE_PAGE_API_POLL_MS,
   TURNSTILE_RESPONSE_FIELD_SELECTOR,
   TURNSTILE_SCRIPT_SELECTOR,
 } from "~/constants/turnstile"
@@ -699,21 +703,85 @@ function normalizeTimeoutMs(timeoutMs: unknown): number {
 /**
  * Wait for a Turnstile token to appear in the DOM.
  */
+const MAX_ASSIST_DELAY_MS = 120_000
+const MAX_PAGE_TOKEN_LENGTH = 4_096
+
+export type TurnstilePageTokenRead = (params: {
+  allowExecute: boolean
+}) => Promise<string | null>
+
+/**
+ * Optional hand-off used when the official widget does not complete on its own.
+ * Interactive Turnstile checks require a trusted user gesture, which a content
+ * script cannot synthesize. The temp window is brought forward and the wait
+ * continues until the widget writes a token.
+ */
+export type TurnstileUserAssist = {
+  /** Quiet period before the window is brought forward. */
+  autoAttemptMs?: number
+  /** Total wait budget once the user is asked to finish verification. */
+  manualTimeoutMs?: number
+  /** Minimum gap between official page-API reads. */
+  pageTokenIntervalMs?: number
+  requestAssist: () => Promise<unknown> | unknown
+  readPageToken?: TurnstilePageTokenRead
+}
+
+/**
+ * Accept a non-negative assist delay without the short-wait clamp.
+ */
+function normalizeAssistDelay(value: unknown, fallback: number) {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    return fallback
+  }
+  return Math.min(value, MAX_ASSIST_DELAY_MS)
+}
+
+/**
+ * Read a token from the page-world Turnstile client, if the caller provided one.
+ */
+async function readAssistedPageToken(
+  assist: TurnstileUserAssist | undefined,
+  allowExecute: boolean,
+): Promise<string | null> {
+  if (!assist?.readPageToken) return null
+  try {
+    const token = await assist.readPageToken({ allowExecute })
+    if (typeof token !== "string") return null
+    const normalized = token.trim()
+    if (!normalized || normalized.length > MAX_PAGE_TOKEN_LENGTH) return null
+    return normalized
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Wait for a Turnstile token to appear in the DOM or the official page API.
+ */
 export async function waitForTurnstileToken(params: {
   requestId?: string | null
   timeoutMs?: unknown
   preTrigger?: TurnstilePreTrigger
+  userAssist?: TurnstileUserAssist
 }): Promise<TurnstileTokenWaitResult> {
   let detection = detectTurnstileWidget()
 
   const preTriggerEnabled = Boolean(
     params.preTrigger && params.preTrigger.kind !== "none",
   )
+  const assist = params.userAssist
 
   const existing = readTurnstileTokenFromDom()
   if (existing) {
     clearTurnstileGuardState(params.requestId)
     return { status: "token_obtained", token: existing, detection }
+  }
+
+  const initialPageToken = await readAssistedPageToken(assist, false)
+  if (initialPageToken) {
+    clearTurnstileGuardState(params.requestId)
+    return { status: "token_obtained", token: initialPageToken, detection }
   }
 
   if (!detection.hasTurnstile && !preTriggerEnabled) {
@@ -722,16 +790,48 @@ export async function waitForTurnstileToken(params: {
   }
 
   const timeoutMs = normalizeTimeoutMs(params.timeoutMs)
-  const deadline = Date.now() + timeoutMs
-
+  const startedAt = Date.now()
+  let deadline = startedAt + timeoutMs
+  const autoAttemptMs = assist
+    ? Math.min(
+        timeoutMs,
+        normalizeAssistDelay(assist.autoAttemptMs, TURNSTILE_AUTO_ASSIST_MS),
+      )
+    : timeoutMs
+  const assistAt = startedAt + autoAttemptMs
+  const pageTokenIntervalMs = normalizeAssistDelay(
+    assist?.pageTokenIntervalMs,
+    TURNSTILE_PAGE_API_POLL_MS,
+  )
+  let assistRequested = false
+  let assistDeclined = false
+  let lastPageTokenReadAt = 0
   let sawTurnstile = detection.hasTurnstile
+  // Set while the assist waits for its turn in front of the user, so the wait can
+  // outlast the normal timeout without blocking token detection.
+  let assistPendingUntil: number | null = null
+  const activeDeadline = () => Math.max(deadline, assistPendingUntil ?? 0)
 
-  while (Date.now() < deadline) {
+  while (Date.now() < activeDeadline()) {
     const token = readTurnstileTokenFromDom()
     if (token) {
       detection = detectTurnstileWidget()
       clearTurnstileGuardState(params.requestId)
       return { status: "token_obtained", token, detection }
+    }
+
+    const now = Date.now()
+    if (
+      assist?.readPageToken &&
+      now - lastPageTokenReadAt >= pageTokenIntervalMs
+    ) {
+      lastPageTokenReadAt = now
+      const pageToken = await readAssistedPageToken(assist, sawTurnstile)
+      if (pageToken) {
+        detection = detectTurnstileWidget()
+        clearTurnstileGuardState(params.requestId)
+        return { status: "token_obtained", token: pageToken, detection }
+      }
     }
 
     detection = detectTurnstileWidget()
@@ -751,6 +851,41 @@ export async function waitForTurnstileToken(params: {
         )
         continue
       }
+    }
+
+    if (
+      assist &&
+      !assistRequested &&
+      !assistDeclined &&
+      sawTurnstile &&
+      Date.now() >= assistAt
+    ) {
+      assistRequested = true
+      // The assist can wait for its turn behind another verification window, and
+      // the widget may still resolve on its own while it waits. Keep polling for
+      // a token instead of blocking until the presentation settles.
+      assistPendingUntil = Date.now() + TURNSTILE_ASSIST_TURN_WAIT_MS
+      const manualWindowMs = Math.max(
+        timeoutMs,
+        normalizeAssistDelay(assist.manualTimeoutMs, TURNSTILE_MANUAL_WAIT_MS),
+      )
+      void Promise.resolve()
+        .then(() => assist.requestAssist())
+        .then(
+          (accepted) => accepted !== false,
+          () => true,
+        )
+        .then((accepted) => {
+          assistPendingUntil = null
+          if (!accepted) {
+            assistDeclined = true
+            return
+          }
+          // The window only reaches the user now, so the manual window they need
+          // to finish the challenge starts here.
+          deadline = Math.max(deadline, Date.now() + manualWindowMs)
+        })
+      continue
     }
 
     await new Promise((resolve) => setTimeout(resolve, WAIT_POLL_INTERVAL_MS))

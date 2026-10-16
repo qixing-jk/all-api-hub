@@ -128,13 +128,24 @@
     },
     "unexpectedContent": "接口响应不是预期格式，可能返回了站点验证页面。"
   },
+  "notification": {
+    "openVerification": "打开验证窗口",
+    "reminderSettings": "提醒设置",
+    "turnstileAssistBody": "后台任务需要你完成人机验证，完成后将自动继续。",
+    "turnstileAssistTitle": "All API Hub · 验证提醒",
+    "turnstilePageBody": "后台任务需要你完成人机验证，完成后将自动继续。",
+    "verificationEnded": "此次验证已结束，无需继续处理。"
+  },
   "titlePrefix": "All API Hub · 过盾助手",
   "toast": {
     "actions": {
-      "dismiss": "关闭提示",
       "openSettings": "打开过盾设置"
     },
-    "body": "此页面由 All API Hub 自动打开，用于通过站点防护页（如 Cloudflare 五秒盾）以获取必要的 Cookie/会话信息。\n\n这是让 All API Hub 在防护站点上正常请求和识别数据所必需的步骤。\n\n如出现人机验证，请在此窗口内完成验证；通过后 All API Hub 会继续流程并自动关闭该窗口。",
-    "title": "All API Hub 过盾助手（临时窗口）"
+    "body": "此页面由 All API Hub 自动打开，用于通过站点防护页（如 Cloudflare 五秒盾）以获取必要的 Cookie/会话信息。\n这是让 All API Hub 在防护站点上正常请求和识别数据所必需的步骤。\n如出现人机验证，请在此窗口内完成验证；通过后 All API Hub 会继续流程并自动关闭该窗口。",
+    "title": "过盾助手",
+    "turnstile": {
+      "body": "自动验证还没有完成。请在这个窗口里完成 Cloudflare Turnstile 验证（例如勾选“确认您是真人”）。完成后会自动继续签到，这个窗口可能会自动关闭。",
+      "title": "需要完成人机验证"
+    }
   }
 }

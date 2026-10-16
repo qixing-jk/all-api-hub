@@ -36,6 +36,27 @@ import { onRuntimeMessage } from "~/utils/browser/runtimeMessages"
  */
 export function setupContentMessageHandlers() {
   return onRuntimeMessage((request, _sender, sendResponse) => {
+    if (request.action === RuntimeActionIds.TurnstileAssistPageNotice) {
+      void Promise.all([
+        import("~/entrypoints/content/shared/uiRoot"),
+        import("~/lib/notify/content"),
+        import("~/services/checkin/turnstile/assistPageNotice"),
+      ])
+        .then(
+          async ([
+            ui,
+            { default: notify },
+            { showTurnstileAssistPageNotice },
+          ]) => {
+            await ui.ensureRedemptionToastUi()
+            sendResponse({
+              presented: showTurnstileAssistPageNotice(request, notify),
+            })
+          },
+        )
+        .catch(() => sendResponse({ presented: false }))
+      return true
+    }
     if (request.action === RuntimeActionIds.ContentSyncDahlKeyNames) {
       void synchronizeDahlWebsiteKeyNames(request)
         .then(sendResponse)

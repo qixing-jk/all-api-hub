@@ -366,6 +366,7 @@ export function buildTempWindowPrefs(
       managed_site_model_sync: true,
     },
     tempContextMode: "composite",
+    turnstileAssistPresentation: "both",
   }
 
   return {

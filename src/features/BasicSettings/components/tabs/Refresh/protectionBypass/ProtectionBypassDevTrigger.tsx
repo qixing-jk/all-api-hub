@@ -27,6 +27,7 @@ import {
   parseShieldDevTriggerDelay,
   SHIELD_DEV_TRIGGER_DEFAULT_URL,
   SHIELD_DEV_TRIGGER_DELAY_SECONDS,
+  SHIELD_DEV_TURNSTILE_DEFAULT_URL,
 } from "~/features/BasicSettings/components/tabs/Refresh/protectionBypass/protectionBypassDevTriggerRuntime"
 import {
   BROWSER_FOCUS_STATES,
@@ -139,6 +140,14 @@ export function getShieldDevTriggerPresetLabel(
       return t("settings:refresh.shieldDevTriggerPresetLdohSiteLookupRecovery")
     case SHIELD_DEV_TRIGGER_PRESET_IDS.KeyManagementRecovery:
       return t("settings:refresh.shieldDevTriggerPresetKeyManagementRecovery")
+    case SHIELD_DEV_TRIGGER_PRESET_IDS.TurnstileInteractive:
+      return t("settings:refresh.shieldDevTriggerPresetTurnstileInteractive")
+    case SHIELD_DEV_TRIGGER_PRESET_IDS.TurnstileAutomatic:
+      return t("settings:refresh.shieldDevTriggerPresetTurnstileAutomatic")
+    case SHIELD_DEV_TRIGGER_PRESET_IDS.TurnstileFailure:
+      return t("settings:refresh.shieldDevTriggerPresetTurnstileFailure")
+    case SHIELD_DEV_TRIGGER_PRESET_IDS.TurnstileQueue:
+      return t("settings:refresh.shieldDevTriggerPresetTurnstileQueue")
     default:
       return assertNever(id, `Unexpected development trigger preset: ${id}`)
   }
@@ -327,9 +336,17 @@ export function ProtectionBypassDevTrigger() {
               </Label>
               <Select
                 value={presetId}
-                onValueChange={(value) =>
+                onValueChange={(value) => {
                   setPresetId(value as ShieldDevTriggerPresetId)
-                }
+                  const preset = SHIELD_DEV_TRIGGER_PRESETS.find(
+                    (item) => item.id === value,
+                  )
+                  if (preset && "turnstileScenario" in preset) {
+                    setUrl(SHIELD_DEV_TURNSTILE_DEFAULT_URL)
+                  } else if (url === SHIELD_DEV_TURNSTILE_DEFAULT_URL) {
+                    setUrl(SHIELD_DEV_TRIGGER_DEFAULT_URL)
+                  }
+                }}
                 disabled={isBusy}
               >
                 <SelectTrigger
@@ -376,6 +393,9 @@ export function ProtectionBypassDevTrigger() {
               disabled={isBusy}
             />
           </div>
+          {presetId.startsWith("turnstile_") && (
+            <Muted>{t("refresh.shieldDevTriggerTurnstileHint")}</Muted>
+          )}
           <div className="gap-y-density-2 flex flex-wrap items-center gap-x-2">
             {isWaiting ? (
               <Button size="sm" variant="outline" onClick={handleCancel}>

@@ -63,6 +63,10 @@ describe("content turnstile guard handler", () => {
       requestId: "req-turnstile",
       timeoutMs: 2500,
       preTrigger,
+      userAssist: expect.objectContaining({
+        requestAssist: expect.any(Function),
+        readPageToken: expect.any(Function),
+      }),
     })
     expect(loggerMocks.debug).toHaveBeenCalledWith(
       "Turnstile token wait completed",
@@ -122,6 +126,10 @@ describe("content turnstile guard handler", () => {
       requestId: undefined,
       timeoutMs: 500,
       preTrigger: undefined,
+      userAssist: expect.objectContaining({
+        requestAssist: expect.any(Function),
+        readPageToken: expect.any(Function),
+      }),
     })
     expect(loggerMocks.debug).toHaveBeenCalledWith(
       "Turnstile token wait completed",

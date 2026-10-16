@@ -32,6 +32,7 @@ import { getAllCookieStores, hasCookieStoresAPI } from "~/utils/browser/cookies"
 import {
   clearNotification,
   createNotification,
+  getNotificationPermissionLevel,
   hasNotificationsAPI,
   onNotificationClicked,
 } from "~/utils/browser/notifications"
@@ -152,6 +153,17 @@ describe("browserApi callback-only Chromium compatibility", () => {
     complete!()
     await pending
     expect(settled).toBe(true)
+  })
+
+  it("reads callback-only notification permission", async () => {
+    installNativeChrome({
+      notifications: {
+        getPermissionLevel: vi.fn((callback) =>
+          queueMicrotask(() => callback("denied")),
+        ),
+      },
+    })
+    await expect(getNotificationPermissionLevel()).resolves.toBe("denied")
   })
 
   it("returns callback-only notification creation and clearing results", async () => {

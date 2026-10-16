@@ -404,6 +404,7 @@ describe("settings product analytics snapshots", () => {
           managed_site_model_sync: false,
         },
         tempContextMode: "window",
+        turnstileAssistPresentation: "both",
       },
       tempWindowFallbackReminder: {
         dismissed: true,
@@ -1012,6 +1013,7 @@ describe("settings product analytics snapshots", () => {
           managed_site_model_sync: true,
         },
         tempContextMode: "tab",
+        turnstileAssistPresentation: "both",
       },
     })
 

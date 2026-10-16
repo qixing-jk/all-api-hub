@@ -13,6 +13,7 @@
   "scripts": {
     "dev": "wxt",
     "dev:no-browser": "node scripts/dev-no-browser.mjs",
+    "dev:turnstile": "node scripts/dev-turnstile.mjs",
     "dev:firefox": "wxt -b firefox",
     "dev:mobile:firefox": "node scripts/android-dev.js",
     "browser:mobile": "node scripts/mobile-browser.mjs",
@@ -77,6 +78,7 @@
     "e2e:cdp:ai-router": "node scripts/test-ai-router-e2e-live.mjs",
     "e2e:cdp:hiyo": "node scripts/test-hiyo-checkin-e2e-live.mjs",
     "e2e:cdp:daigua": "node scripts/test-daigua-checkin-e2e-live.mjs",
+    "e2e:cdp:turnstile": "node scripts/test-turnstile-assist-e2e-live.mjs",
     "e2e:cdp:clawhud": "node scripts/test-clawhud-e2e-live.mjs",
     "e2e:cdp:sidrune": "node scripts/test-sidrune-checkin-e2e-live.mjs",
     "e2e:cdp:rix": "node scripts/test-rix-api-e2e-live.mjs",
