@@ -12,6 +12,7 @@ import { SUB2API_AUTH_PERSISTENCE_STATUSES } from "~/services/apiService/sub2api
 import { fetchClawhudDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/clawhudCheckIn"
 import { fetchDaiguaDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/daiguaCheckIn"
 import { fetchDenxioDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/denxioCheckIn"
+import { fetchFreeApiDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/freeApiCheckIn"
 import { fetchGeniusProgrammerDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/geniusProgrammerCheckIn"
 import {
   fetchSub2ApiProDailyCheckInStatus,
@@ -143,6 +144,16 @@ vi.mock(
   }),
 )
 
+vi.mock(
+  "~/services/apiService/sub2api/checkin/freeApiCheckIn",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/checkin/freeApiCheckIn")
+    >()),
+    fetchFreeApiDailyCheckInStatus: vi.fn(),
+  }),
+)
+
 const createAccount = (automaticExecutionEnabled = true) =>
   buildSiteAccount({
     id: "sub2api-account",
@@ -210,6 +221,9 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
       new ApiError("unsupported", 404),
     )
     vi.mocked(fetchDaiguaDailyCheckInStatus).mockRejectedValue(
+      new ApiError("unsupported", 404),
+    )
+    vi.mocked(fetchFreeApiDailyCheckInStatus).mockRejectedValue(
       new ApiError("unsupported", 404),
     )
     vi.mocked(fetchSub2ApiProDailyCheckInStatus).mockResolvedValue({

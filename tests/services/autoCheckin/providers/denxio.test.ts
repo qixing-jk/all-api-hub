@@ -14,6 +14,7 @@ import {
   fetchDenxioDailyCheckInStatus,
   performDenxioDailyCheckIn,
 } from "~/services/apiService/sub2api/checkin/denxioCheckIn"
+import { fetchFreeApiDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/freeApiCheckIn"
 import { fetchGeniusProgrammerDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/geniusProgrammerCheckIn"
 import { fetchSub2ApiProDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/proCheckInExecution"
 import { fetchToolcodeDailyCheckInStatus } from "~/services/apiService/sub2api/checkin/toolcodeCheckIn"
@@ -130,6 +131,16 @@ vi.mock(
   }),
 )
 
+vi.mock(
+  "~/services/apiService/sub2api/checkin/freeApiCheckIn",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/checkin/freeApiCheckIn")
+    >()),
+    fetchFreeApiDailyCheckInStatus: vi.fn(),
+  }),
+)
+
 const createAccount = () =>
   buildSiteAccount({
     id: "sub2api-account",
@@ -191,6 +202,9 @@ describe("Denxio daily check-in method Adapter", () => {
       new ApiError("unsupported", 404),
     )
     vi.mocked(fetchDaiguaDailyCheckInStatus).mockRejectedValue(
+      new ApiError("unsupported", 404),
+    )
+    vi.mocked(fetchFreeApiDailyCheckInStatus).mockRejectedValue(
       new ApiError("unsupported", 404),
     )
   })

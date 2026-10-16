@@ -8,6 +8,10 @@ import {
   resolveDaiguaCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/daiguaCheckInProtocol"
 import {
+  createFreeApiDailyCheckInStatusEndpoint,
+  resolveFreeApiCheckInTimezone,
+} from "~/services/apiService/sub2api/checkin/freeApiCheckInProtocol"
+import {
   createHiyoCheckInStatusEndpoint,
   resolveHiyoCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/hiyoCheckInProtocol"
@@ -79,12 +83,13 @@ interface AutoCheckinMethodDefinitionBase {
   readonly source: AutoCheckinMethodSource
 }
 
-/** Hiyo can award again; DaiGua/Sidrune duplicate guarantees are unverified. Never queue replays. */
+/** Hiyo can award again; DaiGua/Sidrune/FreeAPI duplicate guarantees are unverified. Never queue replays. */
 export const NON_REPEAT_SAFE_CHECKIN_METHOD_IDS: ReadonlySet<CheckInMethodId> =
   new Set([
     AUTO_CHECKIN_METHOD_IDS.HiyoDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn,
     AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
+    AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
   ])
 
 /**
@@ -433,6 +438,28 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     },
     supportsStatusReadback: true,
     feedbackStatusRoutes: [{ path: "/api/v1/welfare/profile" }],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn]: {
+    id: AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    // The dashboard reads and writes `/api/v1/user/checkin` itself, so the
+    // method is probed on every Sub2API candidate like its siblings; no origin
+    // gate is needed for a protocol served from the account's own origin.
+    // Verified at https://freeapi.site/checkin, 2026-10-16.
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "露娜",
+    },
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: (): FeedbackStatusRoutes => [
+      {
+        path: createFreeApiDailyCheckInStatusEndpoint(
+          resolveFreeApiCheckInTimezone(),
+        ),
+      },
+    ],
     legacy: false,
     newAccountCompatibility: false,
   },

@@ -20,6 +20,7 @@ export const AUTO_CHECKIN_METHOD_IDS = {
   DaiguaDailyCheckIn: "daigua:daily-checkin",
   XiaoenDailyCheckIn: "xiaoen:daily-checkin",
   SidruneDailyCheckIn: "sidrune:daily-checkin",
+  FreeApiDailyCheckIn: "freeapi:daily-checkin",
 } as const
 
 export const CHECK_IN_METHOD_UNKNOWN_REASON_CODES = {
