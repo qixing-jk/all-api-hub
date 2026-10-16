@@ -26,13 +26,19 @@ import {
 } from "~~/tests/test-utils/devIdentityFixtures"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
-const { toastErrorMock, toastSuccessMock, getDevIdentityMock } = vi.hoisted(
-  () => ({
-    toastErrorMock: vi.fn(),
-    toastSuccessMock: vi.fn(),
-    getDevIdentityMock: vi.fn(),
-  }),
-)
+const {
+  toastErrorMock,
+  toastSuccessMock,
+  toastInfoMock,
+  toastCustomMock,
+  getDevIdentityMock,
+} = vi.hoisted(() => ({
+  toastErrorMock: vi.fn(),
+  toastSuccessMock: vi.fn(),
+  toastInfoMock: vi.fn(),
+  toastCustomMock: vi.fn(),
+  getDevIdentityMock: vi.fn(),
+}))
 
 vi.mock("~/utils/browser/extensionIdentity", () => ({
   getDevIdentity: (...args: unknown[]) => getDevIdentityMock(...args),
@@ -44,6 +50,9 @@ vi.mock("~/lib/notify", () => ({
   default: {
     error: toastErrorMock,
     success: toastSuccessMock,
+    info: toastInfoMock,
+    custom: toastCustomMock,
+    dismiss: vi.fn(),
   },
 }))
 
@@ -758,5 +767,39 @@ describe("DevPanel", () => {
     } finally {
       consoleError.mockRestore()
     }
+  })
+
+  it("triggers notice and reminder previews from the Dialogs section", async () => {
+    render(
+      <DevPanelProvider surface="options">
+        <DevPanel />
+      </DevPanelProvider>,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      },
+    )
+
+    await openDevPanel()
+    fireEvent.click(screen.getByRole("button", { name: "Dialogs" }))
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "Dev: Preview Turnstile reminder",
+      }),
+    )
+    expect(toastInfoMock).toHaveBeenCalledWith(
+      expect.stringContaining("人机验证"),
+      expect.objectContaining({
+        title: expect.stringContaining("验证提醒"),
+      }),
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Dev: Preview ContentNotice (toast)",
+      }),
+    )
+    expect(toastCustomMock).toHaveBeenCalled()
   })
 })
