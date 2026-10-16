@@ -157,6 +157,36 @@ pnpm e2e:ui
 
 For installed extensions, logged-in sites, desktop CDP, or Android devices, follow the [live-extension-ui-automation skill](.agents/skills/live-extension-ui-automation/SKILL.md). Use the [local environment configuration](#local-tooling-environment-configuration) for credentials and browser paths.
 
+#### Firefox extension smoke tests
+
+Run `pnpm e2e:firefox` for the real desktop Firefox toolbar popup. This separate
+suite builds `.output/firefox-mv2-test`, installs it in a temporary Firefox
+profile, and uses Selenium/geckodriver to control the native browser UI plus the
+shared Firefox RDP adapter to inspect extension documents. It uses the Playwright
+runner and assertions; the Chromium extension fixture is not used.
+
+Install Firefox first. Selenium Manager resolves geckodriver automatically and
+may download it on the first run. Set `AAH_E2E_FIREFOX_EXECUTABLE_PATH` or
+`AAH_E2E_GECKODRIVER_PATH` to use specific local binaries. The runner loads these
+through the shared [local environment configuration](#local-tooling-environment-configuration).
+`AAH_SKIP_E2E_BUILD=1` explicitly reuses the existing Firefox test artifact;
+leave it unset for a fresh build.
+
+The smoke profile runs headlessly, fixes desktop pointer capabilities independently
+of host touch hardware, prevents popup auto-hide during inspection, and disables
+external networking. It uses bundled resources and synthetic data, without real
+accounts or credentials. Screenshots of the actual popup browsing context are
+saved under `test-results/firefox/` and retained by the E2E workflow on success
+and failure. Geometry and behavior assertions are automated; these screenshots
+are review evidence, not pixel comparison baselines.
+
+Extend `e2e/firefox/` incrementally when a feature depends on browser layout or
+extension APIs, and add regressions for Firefox-specific failures. Start with
+popup bounds, tabs, dialogs, dropdowns, scrolling, and interruption guidance;
+add account persistence, clipboard, downloads, permissions, and background
+lifecycle coverage as those areas change. Passing popup smoke does not establish
+Android Firefox, sidebar, or all-feature compatibility.
+
 ### Test Coverage
 
 Coverage reports are automatically generated when running `pnpm test:ci`. You can view detailed coverage reports in the `coverage/` directory after running tests.

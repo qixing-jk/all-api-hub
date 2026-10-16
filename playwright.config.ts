@@ -29,7 +29,7 @@ const smokeOnlyTestIgnore =
 
 export default defineConfig({
   testDir: "./e2e",
-  testIgnore: smokeOnlyTestIgnore,
+  testIgnore: [...smokeOnlyTestIgnore, /e2e[\\/]firefox/u],
   projects: [
     {
       name: "build",

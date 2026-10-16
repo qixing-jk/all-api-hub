@@ -6,9 +6,10 @@ html.desktop-extension-popup {
 
 html.desktop-extension-popup body,
 html.desktop-extension-popup #root {
-  width: 100%;
+  /* Give Firefox's native popup measurement an explicit content size. */
+  width: var(--extension-popup-width);
   max-width: 100%;
-  height: 100%;
+  height: var(--extension-popup-height);
   max-height: 100%;
   overflow: hidden;
 }
