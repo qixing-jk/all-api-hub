@@ -2,7 +2,7 @@ import fs from "node:fs/promises"
 import net from "node:net"
 import path from "node:path"
 import { test as base, expect } from "@playwright/test"
-import { Builder } from "selenium-webdriver"
+import { Builder, Origin, type WebElement } from "selenium-webdriver"
 import firefox from "selenium-webdriver/firefox.js"
 
 import { POPUP_TEST_IDS } from "~/entrypoints/popup/testIds"
@@ -17,30 +17,94 @@ import { firefoxAdapter } from "~~/scripts/mobile/adapters.mjs"
 type Adapter = Awaited<ReturnType<typeof firefoxAdapter>>
 type Target = Adapter["targets"][number]
 
-/** Real Firefox popup control, sharing the maintained Firefox RDP transport. */
+// Sidebar documents can contain a nested remote browser. Resolve all surfaces
+// by URL rather than assuming the popup is still mounted after navigation.
+const findExtensionBrowser = `
+  const url = arguments[0]
+  function findPage(doc) {
+    for (const item of doc.querySelectorAll('browser')) {
+      if (item.currentURI?.spec?.split(/[?#]/)[0] === url) return item
+      const nested = item.contentDocument && findPage(item.contentDocument)
+      if (nested) return nested
+    }
+  }
+  const pageBrowser = findPage(document)
+`
+
+/** Real Firefox extension surfaces, sharing the maintained Firefox RDP transport. */
 class FirefoxExtension {
+  private asyncResultId = 0
   constructor(
     readonly driver: firefox.Driver,
     readonly adapter: Adapter,
     readonly origin: string,
     readonly extensionId: string,
+    readonly pagePath = "popup.html",
   ) {}
 
-  async popupTarget(): Promise<Target> {
+  page(pagePath: string) {
+    return new FirefoxExtension(
+      this.driver,
+      this.adapter,
+      this.origin,
+      this.extensionId,
+      pagePath,
+    )
+  }
+
+  async openInTab(suffix = "") {
+    await this.driver.executeScript(
+      `
+      gBrowser.selectedTab = gBrowser.addTab(arguments[0], {
+        triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal()
+      })
+    `,
+      `${this.origin}${this.pagePath}${suffix}`,
+    )
+    await this.pageTarget()
+  }
+
+  async respondToPermissionPrompt(allow: boolean) {
+    const button = await this.driver.wait(
+      () =>
+        this.driver.executeScript<WebElement | null>(
+          `
+      const notification = document.getElementById('addon-webext-permissions-notification')
+      if (!notification || PopupNotifications.panel.state !== 'open') return null
+      const button = arguments[0] ? notification.button : notification.secondaryButton
+      const target = button?.shadowRoot?.querySelector('button') ?? button
+      return target && !target.disabled && target.getBoundingClientRect().width > 0 ? target : null
+    `,
+          allow,
+        ),
+      15_000,
+      "Firefox optional permission prompt did not appear",
+    )
+    if (!button) throw new Error("Firefox permission prompt has no action")
+    await this.driver
+      .actions({ async: true })
+      .move({ origin: button })
+      .click()
+      .perform()
+  }
+
+  async pageTarget(): Promise<Target> {
     const target = await this.driver.wait(
       () =>
         this.adapter.targets.find(
-          (target) => target.url === `${this.origin}popup.html`,
+          (target) =>
+            target.url.split(/[?#]/)[0] === `${this.origin}${this.pagePath}`,
         ),
       15_000,
-      "Firefox action popup target did not appear",
+      `Firefox extension page did not appear: ${this.pagePath}`,
     )
-    if (!target) throw new Error("Firefox action popup target did not appear")
+    if (!target)
+      throw new Error(`Firefox extension page did not appear: ${this.pagePath}`)
     return target
   }
 
   async evaluate<T>(expression: string): Promise<T> {
-    const target = await this.popupTarget()
+    const target = await this.pageTarget()
     const { value } = await this.adapter.evaluate(
       target,
       `JSON.stringify(${expression})`,
@@ -48,6 +112,31 @@ class FirefoxExtension {
     if (typeof value !== "string")
       throw new Error(`Firefox did not return a JSON value for: ${expression}`)
     return JSON.parse(value) as T
+  }
+
+  /** RDP returns Promise grips; settle async browser API results in the page. */
+  async evaluateAsync<T>(expression: string): Promise<T> {
+    const slot = JSON.stringify(`__aahFirefoxTestResult${this.asyncResultId++}`)
+    await this.evaluate(`(() => {
+      window[${slot}] = {done: false}
+      Promise.resolve(${expression}).then(
+        value => { window[${slot}] = {done: true, value} },
+        error => { window[${slot}] = {done: true, error: String(error)} }
+      )
+      return true
+    })()`)
+    try {
+      await expect
+        .poll(() => this.evaluate<boolean>(`window[${slot}].done`))
+        .toBe(true)
+      const result = await this.evaluate<{ value: T; error?: string }>(
+        `window[${slot}]`,
+      )
+      if (result.error) throw new Error(result.error)
+      return result.value
+    } finally {
+      await this.evaluate(`delete window[${slot}]`)
+    }
   }
 
   async openPopup() {
@@ -98,6 +187,85 @@ class FirefoxExtension {
     await this.clickSelector(`[data-testid="${testId}"]`)
   }
 
+  async isPopupOpen(): Promise<boolean> {
+    return this.driver.executeScript<boolean>(
+      `
+      return [...document.querySelectorAll('browser')].some(item =>
+        item.currentURI?.spec === arguments[0] + 'popup.html' && item.closest('panel')?.state === 'open')
+    `,
+      this.origin,
+    )
+  }
+
+  async closePopup() {
+    await this.driver.executeScript(
+      `
+      const browser = [...document.querySelectorAll('browser')].find(item => item.currentURI?.spec === arguments[0] + 'popup.html')
+      browser?.closest('panel')?.hidePopup()
+    `,
+      this.origin,
+    )
+    await expect.poll(() => this.isPopupOpen()).toBe(false)
+  }
+
+  async isNativeSidebarOpen(): Promise<boolean> {
+    return this.driver.executeScript<boolean>(
+      `
+      return window.SidebarController.isOpen && window.SidebarController.currentID.includes(arguments[0].toLowerCase().replace(/[^a-z0-9_-]/g, '_'))
+    `,
+      this.extensionId,
+    )
+  }
+
+  /** Native pointer input preserves Firefox's user activation for sidebarAction.open. */
+  async nativeClickSelector(cssSelector: string) {
+    await expect
+      .poll(() =>
+        this.evaluate<boolean>(
+          `Boolean(document.querySelector(${JSON.stringify(cssSelector)}))`,
+        ),
+      )
+      .toBe(true)
+    const point = await this.evaluate<{ x: number; y: number }>(`(() => {
+      const element = document.querySelector(${JSON.stringify(cssSelector)})
+      element.scrollIntoView({block: 'nearest'})
+      const bounds = element.getBoundingClientRect()
+      return {x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2}
+    })()`)
+    const bounds = await this.driver.executeScript<{ x: number; y: number }>(
+      `
+      ${findExtensionBrowser}
+      const bounds = pageBrowser.getBoundingClientRect()
+      let x = bounds.x, y = bounds.y
+      for (let frame = pageBrowser.ownerDocument.defaultView.frameElement; frame; frame = frame.ownerDocument.defaultView.frameElement) {
+        const offset = frame.getBoundingClientRect()
+        x += offset.x
+        y += offset.y
+      }
+      return {x, y}
+    `,
+      `${this.origin}${this.pagePath}`,
+    )
+    await this.driver
+      .actions({ async: true })
+      .move({
+        x: Math.round(bounds.x + point.x),
+        y: Math.round(bounds.y + point.y),
+        origin: Origin.VIEWPORT,
+      })
+      .click()
+      .perform()
+  }
+
+  async fill(testId: string, value: string) {
+    await this.evaluate(`(() => {
+      const element = document.querySelector('[data-testid="${testId}"]')
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(element, ${JSON.stringify(value)})
+      element.dispatchEvent(new Event('input', {bubbles: true}))
+      return true
+    })()`)
+  }
+
   async clickSelector(cssSelector: string) {
     const selector = JSON.stringify(cssSelector)
     await expect
@@ -135,10 +303,9 @@ class FirefoxExtension {
     }>(
       `
       const done = arguments[arguments.length - 1]
-      const browser = [...document.querySelectorAll('browser')].find(
-        item => item.currentURI?.spec === arguments[0] + 'popup.html'
-      )
-      browser.browsingContext.currentWindowGlobal.drawSnapshot(null, 1, 'white').then(image => {
+      ${findExtensionBrowser}
+      if (!pageBrowser) { done({error: 'Firefox extension page is not mounted: ' + url}); return }
+      pageBrowser.browsingContext.currentWindowGlobal.drawSnapshot(null, 1, 'white').then(image => {
         const canvas = document.createElementNS('http://www.w3.org/1999/xhtml', 'canvas')
         canvas.width = image.width
         canvas.height = image.height
@@ -147,7 +314,7 @@ class FirefoxExtension {
         done({data: canvas.toDataURL('image/png').split(',')[1]})
       }, error => done({error: String(error)}))
     `,
-      this.origin,
+      `${this.origin}${this.pagePath}`,
     )
     if (!data.data)
       throw new Error(data.error ?? "Firefox popup screenshot was empty")
@@ -240,6 +407,16 @@ export const test = base.extend<{
       }
       await driver.get("about:blank")
       await driver.setContext(firefox.Context.CHROME)
+      // Installing a sidebar extension can auto-open its sidebar. Start closed
+      // so handoff tests cannot pass by observing the installation side effect.
+      await driver.executeScript("window.SidebarController.hide()")
+      await driver.wait(
+        () =>
+          driver.executeScript<boolean>(
+            "return !window.SidebarController.isOpen",
+          ),
+        15_000,
+      )
       adapter = await firefoxAdapter({ port }, { extensionId })
       extension = new FirefoxExtension(driver, adapter, origin, extensionId)
       await testInfo.attach("firefox-version", {
@@ -251,11 +428,24 @@ export const test = base.extend<{
       try {
         if (extension && testInfo.status !== testInfo.expectedStatus) {
           const file = testInfo.outputPath("failure.png")
-          await extension.screenshot(file)
-          await testInfo.attach("Firefox popup failure", {
-            path: file,
-            contentType: "image/png",
-          })
+          try {
+            const surface = (await extension.isPopupOpen())
+              ? extension
+              : (await extension.isNativeSidebarOpen())
+                ? extension.page("sidepanel.html")
+                : extension.page("options.html")
+            await surface.screenshot(file)
+            await testInfo.attach("Firefox extension failure", {
+              path: file,
+              contentType: "image/png",
+            })
+          } catch (error) {
+            // Preserve the original assertion even if navigation destroyed its page.
+            await testInfo.attach("Firefox screenshot unavailable", {
+              body: String(error),
+              contentType: "text/plain",
+            })
+          }
         }
       } finally {
         adapter?.close()
