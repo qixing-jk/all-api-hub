@@ -28,7 +28,11 @@ import { setVisualDarkMode } from "~~/e2e/utils/visualTheme"
  * floating layer, not to the page canvas.
  */
 async function opaqueSurfacesBehindCard(card: Locator): Promise<string[]> {
-  return card.evaluate((element) => {
+  // Resolve and inspect the optional card in one browser task. It may disappear
+  // after a separate count() when navigation or asynchronous data replaces it.
+  return card.evaluateAll((elements) => {
+    const element = elements[0]
+    if (!element) return []
     const pageSurface = element.closest('[data-testid="options-content-card"]')
     if (!pageSurface) return []
 
@@ -56,6 +60,31 @@ test.beforeEach(async ({ context, page }) => {
     themeMode: THEME_MODE.LIGHT,
     currencyType: "USD",
   })
+})
+
+test("card backdrop inspection handles a card disappearing during navigation", async ({
+  page,
+}) => {
+  page.setDefaultTimeout(1_000)
+  await page.setContent(`
+    <main data-testid="options-content-card">
+      <section class="backdrop" style="background: rgb(255, 255, 255)">
+        <div data-slot="card">Departing page</div>
+      </section>
+    </main>
+  `)
+  const card = page.locator('main [data-slot="card"]:visible').first()
+  expect(await card.count()).toBe(1)
+  expect(await opaqueSurfacesBehindCard(card)).toEqual([
+    "section.backdrop → rgb(255, 255, 255)",
+  ])
+  await page.locator("section").evaluate((element) => {
+    element.style.background = "transparent"
+  })
+  expect(await opaqueSurfacesBehindCard(card)).toEqual([])
+  await card.evaluate((element) => element.remove())
+
+  expect(await opaqueSurfacesBehindCard(card)).toEqual([])
 })
 
 test("responsive finite radii restore continuous shaping after rounded-full", async ({
@@ -233,7 +262,9 @@ test("page roots and card backdrops keep the workspace canvas behind every corne
   for (const { label, preferences } of appearances) {
     await seedUserPreferences(await getServiceWorker(context), preferences)
     for (const route of Object.values(MENU_ITEM_IDS)) {
-      await page.goto(`${base}#${route}`)
+      // Force document navigation: a hash-only change leaves the departing
+      // page's heading and cards visible while its exit animation runs.
+      await page.goto(`${base}?surface-check=${route}#${route}`)
       await expect(
         page.locator("main").getByRole("heading").first(),
       ).toBeVisible()
@@ -248,7 +279,6 @@ test("page roots and card backdrops keep the workspace canvas behind every corne
       ).toHaveCSS("background-color", "rgba(0, 0, 0, 0)")
 
       const card = page.locator('main [data-slot="card"]:visible').first()
-      if ((await card.count()) === 0) continue
       expect(
         await opaqueSurfacesBehindCard(card),
         `${route}/${label}: the card background would hide its own corners`,
