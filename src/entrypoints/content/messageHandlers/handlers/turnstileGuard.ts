@@ -178,6 +178,7 @@ export function handleTriggerCheckinPageAction(
 
       const verification = result.clicked
         ? await waitForPageVerification({
+            requestId: request.requestId,
             requestAssist: createTurnstileUserAssist(request.requestId)
               .requestAssist,
           })

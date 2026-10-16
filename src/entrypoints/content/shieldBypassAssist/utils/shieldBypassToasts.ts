@@ -12,6 +12,7 @@ import { TurnstileManualAssistToast } from "../components/TurnstileManualAssistT
 
 const SHIELD_BYPASS_TOAST_ID = "shield-bypass-helper"
 const TURNSTILE_MANUAL_ASSIST_TOAST_ID = "turnstile-manual-assist"
+let manualVerificationStarted = false
 
 /**
  * Unified logger scoped to shield-bypass toast interactions.
@@ -22,7 +23,9 @@ const logger = createLogger("ShieldBypassToasts")
  * Shows (or updates) the shield-bypass helper prompt toast in the content UI root.
  */
 export async function showShieldBypassPromptToast() {
+  if (manualVerificationStarted) return
   await ensureRedemptionToastUi()
+  if (manualVerificationStarted) return
 
   void recordShieldBypassPromptShown()
 
@@ -48,6 +51,8 @@ export async function showShieldBypassPromptToast() {
  * Asks the user to finish an interactive Turnstile check in the temp window.
  */
 export async function showTurnstileManualAssistToast() {
+  manualVerificationStarted = true
+  toast.dismiss(SHIELD_BYPASS_TOAST_ID)
   await ensureRedemptionToastUi()
 
   toast.custom(

@@ -203,6 +203,16 @@ export function createTempContextTurnstileAssist({
     try {
       windowId = await focusTempContextForTurnstile(context)
       focused = true
+      // The active content wait owns the lease; opening a reminder starts its
+      // fresh manual budget without creating a second tab or replaying actions.
+      await sendTabMessageWithRetry(
+        context.tabId,
+        {
+          action: RuntimeActionIds.ContentVerificationAssistOpened,
+          requestId: normalized,
+        },
+        { maxAttempts: 1, frameId: 0 },
+      ).catch(() => {})
     } catch (error) {
       logTempWindow("turnstileUserAssistPresentFailed", {
         requestId: normalized,

@@ -2,10 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { handleTriggerCheckinPageAction } from "~/entrypoints/content/messageHandlers/handlers/turnstileGuard"
-import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
+import {
+  onRuntimeMessage,
+  sendRuntimeMessage,
+} from "~/utils/browser/runtimeMessages"
 
 vi.mock("~/utils/browser/runtimeMessages", () => ({
   sendRuntimeMessage: vi.fn(async () => ({ presented: true })),
+  onRuntimeMessage: vi.fn(() => vi.fn()),
 }))
 vi.mock(
   "~/entrypoints/content/shieldBypassAssist/utils/shieldBypassToasts",
@@ -20,6 +24,98 @@ describe("native check-in verification", () => {
     globalThis.__aahTurnstilePreTriggerState = undefined
   })
   afterEach(() => vi.useRealTimers())
+
+  it.each(["another-request", "bounded-open"])(
+    "isolates and bounds reminder extension: %s",
+    async (openedRequestId) => {
+      document.querySelector("button")!.addEventListener("click", () => {
+        if (!document.querySelector(".cf-turnstile"))
+          document.body.insertAdjacentHTML(
+            "beforeend",
+            '<div class="cf-turnstile"></div>',
+          )
+      })
+      const response = vi.fn()
+      handleTriggerCheckinPageAction(
+        {
+          requestId: "bounded-open",
+          trigger: { kind: "clickSelector", selector: "#checkin" },
+        },
+        response,
+      )
+      await vi.advanceTimersByTimeAsync(6_000)
+      await vi.dynamicImportSettled()
+      await vi.advanceTimersByTimeAsync(34_000)
+      const listener = vi.mocked(onRuntimeMessage).mock.calls.at(-1)![0]
+      listener(
+        { action: "verificationAssistOpened", requestId: openedRequestId },
+        {},
+        vi.fn(),
+      )
+      await vi.advanceTimersByTimeAsync(20_000)
+      if (openedRequestId === "another-request") {
+        expect(response).toHaveBeenCalledWith(
+          expect.objectContaining({
+            verification: { status: "required", provider: "turnstile" },
+          }),
+        )
+      } else {
+        expect(response).not.toHaveBeenCalled()
+        listener(
+          { action: "verificationAssistOpened", requestId: openedRequestId },
+          {},
+          vi.fn(),
+        )
+        await vi.advanceTimersByTimeAsync(26_000)
+        expect(response).toHaveBeenCalledWith(
+          expect.objectContaining({
+            verification: { status: "required", provider: "turnstile" },
+          }),
+        )
+      }
+    },
+  )
+
+  it("gives a full manual window after opening a late reminder and removes its listener", async () => {
+    document.querySelector("button")!.addEventListener("click", () => {
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        '<div class="cf-turnstile"></div>',
+      )
+    })
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "late-open",
+        trigger: { kind: "clickSelector", selector: "#checkin" },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(6_000)
+    await vi.dynamicImportSettled()
+    await vi.advanceTimersByTimeAsync(34_000)
+    const listener = vi.mocked(onRuntimeMessage).mock.calls.at(-1)?.[0]
+    expect(listener).toBeDefined()
+    listener!(
+      { action: "verificationAssistOpened", requestId: "late-open" },
+      {},
+      vi.fn(),
+    )
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(response).not.toHaveBeenCalled()
+    document
+      .querySelectorAll(".cf-turnstile")
+      .forEach((element) => element.remove())
+    await vi.advanceTimersByTimeAsync(500)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({
+        verification: { status: "completed", provider: "turnstile" },
+      }),
+    )
+    expect(
+      vi.mocked(onRuntimeMessage).mock.results.at(-1)?.value,
+    ).toHaveBeenCalledOnce()
+  })
 
   it.each([
     '<section><h2>图形验证码</h2><canvas></canvas><input aria-label="请输入图片中的字符"></section>',

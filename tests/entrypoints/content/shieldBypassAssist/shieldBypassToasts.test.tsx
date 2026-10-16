@@ -152,6 +152,8 @@ describe("shieldBypassToasts", () => {
 
     await showTurnstileManualAssistToast()
 
+    expect(toastDismissMock).toHaveBeenCalledWith("shield-bypass-helper")
+
     expect(ensureRedemptionToastUiMock).toHaveBeenCalledOnce()
     expect(toastCustomMock).toHaveBeenCalledWith(
       expect.any(Function),
@@ -166,5 +168,16 @@ describe("shieldBypassToasts", () => {
     const element = renderer()
     element.props.onDismiss()
     expect(toastDismissMock).toHaveBeenCalledWith("turnstile-manual-assist")
+  })
+
+  it("does not restore the generic window explanation after manual verification starts", async () => {
+    const { showTurnstileManualAssistToast, showShieldBypassPromptToast } =
+      await import(
+        "~/entrypoints/content/shieldBypassAssist/utils/shieldBypassToasts"
+      )
+    await showTurnstileManualAssistToast()
+    toastCustomMock.mockClear()
+    await showShieldBypassPromptToast()
+    expect(toastCustomMock).not.toHaveBeenCalled()
   })
 })

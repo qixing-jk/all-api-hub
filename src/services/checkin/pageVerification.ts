@@ -8,6 +8,8 @@ import {
 } from "~/constants/turnstile"
 import type { PageVerificationResult } from "~/types/turnstile"
 
+import { createVerificationManualWindow } from "./verificationManualWindow"
+
 const APPEARANCE_WAIT_MS = 2_000
 const POLL_INTERVAL_MS = 250
 
@@ -215,6 +217,7 @@ function observeVerification(): ObservedVerification | undefined {
 
 /** Observes native-page verification; the page owns submission and token use. */
 export async function waitForPageVerification(params: {
+  requestId?: string
   requestAssist: () => Promise<unknown> | unknown
 }): Promise<PageVerificationResult> {
   const appearanceDeadline = Date.now() + APPEARANCE_WAIT_MS
@@ -231,34 +234,40 @@ export async function waitForPageVerification(params: {
   let deadline = autoDeadline
   let assistPendingUntil = 0
   let assistRequested = false
+  const manualWindow = createVerificationManualWindow(params.requestId)
 
-  // A real timer can wake after the automatic deadline; still admit the one
-  // assist attempt before deciding that the wait has expired.
-  while (
-    !assistRequested ||
-    Date.now() <= Math.max(deadline, assistPendingUntil)
-  ) {
-    if (!observed.isPending()) {
-      // Disappearance is only a cue to read back status, never proof of success.
-      return { status: "completed", provider }
+  try {
+    // A real timer can wake after the automatic deadline; still admit the one
+    // assist attempt before deciding that the wait has expired.
+    while (
+      !assistRequested ||
+      Date.now() <=
+        Math.max(deadline, assistPendingUntil, manualWindow.getDeadline())
+    ) {
+      if (!observed.isPending()) {
+        // Disappearance is only a cue to read back status, never proof of success.
+        return { status: "completed", provider }
+      }
+
+      if (!assistRequested && Date.now() >= autoDeadline) {
+        assistRequested = true
+        assistPendingUntil = Date.now() + TURNSTILE_ASSIST_TURN_WAIT_MS
+        void Promise.resolve()
+          .then(() => params.requestAssist())
+          .then(
+            (accepted) => accepted !== false,
+            () => false,
+          )
+          .then((accepted) => {
+            assistPendingUntil = 0
+            if (accepted) deadline = Date.now() + TURNSTILE_MANUAL_WAIT_MS
+          })
+      }
+      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
     }
 
-    if (!assistRequested && Date.now() >= autoDeadline) {
-      assistRequested = true
-      assistPendingUntil = Date.now() + TURNSTILE_ASSIST_TURN_WAIT_MS
-      void Promise.resolve()
-        .then(() => params.requestAssist())
-        .then(
-          (accepted) => accepted !== false,
-          () => false,
-        )
-        .then((accepted) => {
-          assistPendingUntil = 0
-          if (accepted) deadline = Date.now() + TURNSTILE_MANUAL_WAIT_MS
-        })
-    }
-    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
+    return { status: "required", provider }
+  } finally {
+    manualWindow.dispose()
   }
-
-  return { status: "required", provider }
 }
