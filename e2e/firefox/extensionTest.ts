@@ -175,6 +175,15 @@ class FirefoxExtension {
     await expect
       .poll(() => this.evaluate<string>("document.fonts.status"))
       .toBe("loaded")
+    // The document can render before Firefox finishes measuring its native
+    // panel. Start interactions only once the expected viewport is available.
+    await expect
+      .poll(() =>
+        this.evaluate<{ width: number; height: number }>(
+          "({width: innerWidth, height: innerHeight})",
+        ),
+      )
+      .toEqual({ width: 410, height: 600 })
     await this.evaluate(`(() => {
       const style = document.createElement('style')
       style.textContent = '*, *::before, *::after { animation: none !important; transition: none !important; }'

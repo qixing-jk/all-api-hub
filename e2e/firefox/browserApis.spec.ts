@@ -75,6 +75,15 @@ test("Firefox copies a credential with native activation and recovers from clipb
       ),
     )
     .toBe(true)
+  // Toasts can overlap the copy button near the bottom of the native popup.
+  // Wait for dismissal before issuing the next pointer click.
+  await expect
+    .poll(() =>
+      popup.evaluate<boolean>(
+        "document.body.innerText.includes('API key copied')",
+      ),
+    )
+    .toBe(false)
   // A rejected platform write must show failure and leave the existing value intact.
   await popup.evaluate(`(() => {
     const write = navigator.clipboard.writeText.bind(navigator.clipboard)
@@ -96,14 +105,30 @@ test("Firefox copies a credential with native activation and recovers from clipb
     .poll(() => popup.evaluateAsync<string>("navigator.clipboard.readText()"))
     .toBe("sk-firefox-synthetic-copy")
   await popup.screenshot(testInfo.outputPath("clipboard-rejection.png"))
+  await expect
+    .poll(() =>
+      popup.evaluate<boolean>(
+        "document.body.innerText.includes('Copy failed')",
+      ),
+    )
+    .toBe(false)
   // Firefox headless keeps its clipboard in memory. Replace the value so a
   // successful retry cannot pass by reading the earlier successful copy.
-  await popup.driver.executeScript(`
-    Cc['@mozilla.org/widget/clipboardhelper;1'].getService(Ci.nsIClipboardHelper)
-      .copyString('Firefox clipboard retry sentinel')
-  `)
+  // Read the browser-owned sentinel in the same privileged context that writes
+  // it. Reading another principal's clipboard through the popup can require a
+  // new activation on Linux; the native copy below still uses the real UI.
   expect(
-    await popup.evaluateAsync<string>("navigator.clipboard.readText()"),
+    await popup.driver.executeScript<string>(`
+      Cc['@mozilla.org/widget/clipboardhelper;1'].getService(Ci.nsIClipboardHelper)
+        .copyString('Firefox clipboard retry sentinel')
+      const transferable = Cc['@mozilla.org/widget/transferable;1'].createInstance(Ci.nsITransferable)
+      transferable.init(null)
+      transferable.addDataFlavor('text/plain')
+      Services.clipboard.getData(transferable, Ci.nsIClipboard.kGlobalClipboard)
+      const data = {}
+      transferable.getTransferData('text/plain', data)
+      return data.value.QueryInterface(Ci.nsISupportsString).data
+    `),
   ).toBe("Firefox clipboard retry sentinel")
   await popup.nativeClickSelector(copyButton)
   await expect
