@@ -58,7 +58,7 @@ const SAFARI_COOKIE_OPTIONAL_PERMISSIONS = [
   "cookies",
   "declarativeNetRequestWithHostAccess",
 ] as const
-const COMMON_OPTIONAL_PERMISSIONS = ["clipboardRead", "notifications"] as const
+const COMMON_OPTIONAL_PERMISSIONS = ["notifications", "clipboardRead"] as const
 const BOOKMARK_IMPORT_OPTIONAL_PERMISSIONS = ["bookmarks"] as const
 
 const requestedMode = readWxtCliMode()
