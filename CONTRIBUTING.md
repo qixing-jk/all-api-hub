@@ -99,6 +99,22 @@ The loader uses Node's `util.parseEnv` syntax (comments, quoted values, multilin
 
 WXT dev/build commands retain native mode/browser-specific env loading. Shared defaults with `WXT_` or `VITE_` prefixes are excluded by the Node loader because those prefixes expose variables to extension code. Keep test credentials in Node-only variables and env files out of Git; see [WXT environment variables](https://wxt.dev/guide/essentials/config/environment-variables).
 
+### Local screenshot comparison
+
+Reuse existing Playwright/CDP flows to capture the real before/after states, then run the shared PNG comparison command from the worktree receiving the evidence:
+
+```bash
+pnpm visual:compare --before .scratch/ui/before.png --after .scratch/ui/after.png --before-source "commit/build before" --after-source "commit/build after plus local diff" --context "Chromium; 390x844; DPR 1; en; light; fixture A; dialog open" --diff
+```
+
+The command uses Node and the project's pure JavaScript PNG dependency; it needs no Python, image CLI or browser installation. Relative paths resolve against the invoking directory. Absolute input paths can reference another worktree. By default, each invocation creates a unique ignored `.scratch/visual-comparisons/run-*` directory in the current worktree. `--output <parent-directory>` selects another parent, still with a unique run directory; keep custom evidence locations outside version control. It does not read shared credentials, switch branches, build or alter input images.
+
+The output directory contains original `before.png` / `after.png`, a labelled `comparison.png`, and `report.md` / `report.json`. JSON stdout identifies the run directory and report for automation. Reports record absolute input paths, SHA-256 hashes, decoded dimensions, declared source/build descriptions and optional capture context. These descriptions are supplied by the caller; hashes prove image bytes, not that a particular source revision produced them. Record the actual viewport, device scale, language, theme, fixtures and interaction state in `--context` or the task's capture report.
+
+`--diff` adds an exact RGBA pixel comparison only when dimensions match: changed pixels are magenta, unchanged pixels black, with counts in the JSON report. It has no perceptual threshold or anti-aliasing tolerance. Different dimensions produce an unscaled, padded preview with `dimension-mismatch` status and no pixel diff. Omit `--before` and `--before-source` for after-only evidence with `missing-baseline` status. Neither status establishes a passed comparison; matching dimensions also do not establish equivalent capture environments. Exit code zero means evidence generation succeeded, and visual review is always required. Invalid options, missing required source descriptions, unreadable images or invalid PNGs exit nonzero before creating a run directory.
+
+Agents prioritize representative final after images when visual judgment is needed, as described in [task acceptance](docs/agents/task-acceptance.md#compare-changed-ui). Baseline, comparison and diff artifacts primarily serve developer review; agents open them only for a concrete unresolved question. Report generation does not require opening each image or repeating review after every small edit. Reuse retained artifacts in the handoff. Do not replace existing maintained visual regression assertions with this report generator.
+
 ### Overview
 
 This project uses [Vitest](https://vitest.dev/) for unit and component testing. The `dom` project runs component and browser-dependent tests in jsdom through `tests/setup.ts`; the `node` project runs other TypeScript tests through `tests/setup.node.ts`. Choose the environment needed by the behavior under test; `vitest.config.ts` owns project selection and both setups provide the applicable shared mocks.
