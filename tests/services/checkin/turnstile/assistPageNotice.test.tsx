@@ -56,3 +56,28 @@ it("provides an action for the live request and removes ended reminders even on 
     showTurnstileAssistPageNotice({ ...message, dismiss: true }, notify),
   ).toBe(true)
 })
+
+it("rejects invalid or blank request IDs", () => {
+  const notify = { info: vi.fn(), dismiss: vi.fn() }
+  expect(
+    showTurnstileAssistPageNotice(
+      { action: RuntimeActionIds.TurnstileAssistPageNotice, requestId: "" },
+      notify,
+    ),
+  ).toBe(false)
+  expect(
+    showTurnstileAssistPageNotice(
+      { action: RuntimeActionIds.TurnstileAssistPageNotice, requestId: "   " },
+      notify,
+    ),
+  ).toBe(false)
+  expect(
+    showTurnstileAssistPageNotice(
+      {
+        action: RuntimeActionIds.TurnstileAssistPageNotice,
+        requestId: null as any,
+      },
+      notify,
+    ),
+  ).toBe(false)
+})

@@ -166,6 +166,15 @@ describe("browserApi callback-only Chromium compatibility", () => {
     await expect(getNotificationPermissionLevel()).resolves.toBe("denied")
   })
 
+  it("returns null when getPermissionLevel is unavailable or throws", async () => {
+    ;(globalThis as any).browser.notifications = {}
+    await expect(getNotificationPermissionLevel()).resolves.toBeNull()
+    ;(globalThis as any).browser.notifications = {
+      getPermissionLevel: vi.fn(() => Promise.reject(new Error("Failed"))),
+    }
+    await expect(getNotificationPermissionLevel()).resolves.toBeNull()
+  })
+
   it("returns callback-only notification creation and clearing results", async () => {
     installNativeChrome({
       notifications: {

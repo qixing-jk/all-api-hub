@@ -207,4 +207,50 @@ describe("waitForTurnstileToken user assist", () => {
     expect(allowExecuteValues).toContain(true)
     expect(requestAssist).not.toHaveBeenCalled()
   })
+
+  it("handles readPageToken errors gracefully", async () => {
+    document.body.innerHTML = '<div class="cf-turnstile"></div>'
+    const result = await waitForTurnstileToken({
+      requestId: "req-read-error",
+      timeoutMs: 50,
+      userAssist: {
+        autoAttemptMs: 100,
+        manualTimeoutMs: 100,
+        pageTokenIntervalMs: 0,
+        requestAssist: vi.fn(),
+        readPageToken: async () => {
+          throw new Error("API call failed")
+        },
+      },
+    })
+    expect(result.status).toBe("timeout")
+  })
+
+  it("treats requestAssist rejection as accepted and keeps waiting", async () => {
+    document.body.innerHTML = '<div class="cf-turnstile"></div>'
+    let assisted = false
+    const requestAssist = vi.fn(async () => {
+      assisted = true
+      throw new Error("network issue")
+    })
+
+    const result = await waitForTurnstileToken({
+      requestId: "req-assist-reject",
+      timeoutMs: 80,
+      userAssist: {
+        autoAttemptMs: 20,
+        manualTimeoutMs: 300,
+        pageTokenIntervalMs: 0,
+        requestAssist,
+        readPageToken: async () =>
+          assisted ? "token-after-assist-reject" : null,
+      },
+    })
+
+    expect(result).toMatchObject({
+      status: "token_obtained",
+      token: "token-after-assist-reject",
+    })
+    expect(requestAssist).toHaveBeenCalledTimes(1)
+  })
 })

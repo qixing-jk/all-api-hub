@@ -142,4 +142,29 @@ describe("shieldBypassToasts", () => {
       expect.any(Error),
     )
   })
+
+  it("shows turnstile manual assist toast and handles dismiss", async () => {
+    toastCustomMock.mockReturnValue("manual-assist-toast-id")
+
+    const { showTurnstileManualAssistToast } = await import(
+      "~/entrypoints/content/shieldBypassAssist/utils/shieldBypassToasts"
+    )
+
+    await showTurnstileManualAssistToast()
+
+    expect(ensureRedemptionToastUiMock).toHaveBeenCalledOnce()
+    expect(toastCustomMock).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({
+        id: "turnstile-manual-assist",
+        duration: Infinity,
+      }),
+    )
+
+    const renderer = toastCustomMock.mock
+      .calls[0]?.[0] as () => React.ReactElement<any>
+    const element = renderer()
+    element.props.onDismiss()
+    expect(toastDismissMock).toHaveBeenCalledWith("turnstile-manual-assist")
+  })
 })

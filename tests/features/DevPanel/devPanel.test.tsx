@@ -31,12 +31,14 @@ const {
   toastSuccessMock,
   toastInfoMock,
   toastCustomMock,
+  toastDismissMock,
   getDevIdentityMock,
 } = vi.hoisted(() => ({
   toastErrorMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastInfoMock: vi.fn(),
   toastCustomMock: vi.fn(),
+  toastDismissMock: vi.fn(),
   getDevIdentityMock: vi.fn(),
 }))
 
@@ -52,7 +54,7 @@ vi.mock("~/lib/notify", () => ({
     success: toastSuccessMock,
     info: toastInfoMock,
     custom: toastCustomMock,
-    dismiss: vi.fn(),
+    dismiss: toastDismissMock,
   },
 }))
 
@@ -795,11 +797,38 @@ describe("DevPanel", () => {
       }),
     )
 
+    const infoOptions = toastInfoMock.mock.calls[0]![1]
+    infoOptions.action.onClick()
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      "Dev: 点击了主操作【打开验证窗口】",
+    )
+    infoOptions.secondaryAction.onClick()
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      "Dev: 点击了次操作【提醒设置】",
+    )
+
     fireEvent.click(
       screen.getByRole("button", {
         name: "Dev: Preview ContentNotice (toast)",
       }),
     )
-    expect(toastCustomMock).toHaveBeenCalled()
+    const renderCustomNotice = toastCustomMock.mock.calls[0]![0]
+    const customInstance = { id: "test-preview-toast" }
+    const rendered = renderCustomNotice(customInstance)
+    const notice = rendered.props.children
+    expect(notice.props.title).toBe("需要完成人机验证")
+
+    // onClose callback
+    notice.props.onClose()
+    expect(toastDismissMock).toHaveBeenCalledWith("test-preview-toast")
+
+    // Actions
+    const [cancelAction, confirmAction] = notice.props.actions.props.children
+    cancelAction.props.onClick()
+    expect(toastDismissMock).toHaveBeenCalledWith("test-preview-toast")
+
+    confirmAction.props.onClick()
+    expect(toastSuccessMock).toHaveBeenCalledWith("Dev: 操作已确认")
+    expect(toastDismissMock).toHaveBeenCalledWith("test-preview-toast")
   })
 })

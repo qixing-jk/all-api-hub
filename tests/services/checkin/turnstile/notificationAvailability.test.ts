@@ -36,4 +36,8 @@ describe("browser notification availability", () => {
     getLevel.mockResolvedValue(null)
     expect(await getBrowserNotificationAvailability()).toBe("unknown")
   })
+  it("returns unknown when permission lookup throws", async () => {
+    hasPermission.mockRejectedValue(new Error("Storage unavailable"))
+    expect(await getBrowserNotificationAvailability()).toBe("unknown")
+  })
 })

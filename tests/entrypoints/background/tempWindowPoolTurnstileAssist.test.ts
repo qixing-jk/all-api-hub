@@ -133,6 +133,13 @@ describe("tempWindowPool Turnstile assist turns", () => {
   let notificationCreateMock: ReturnType<typeof vi.fn>
   let notificationClearMock: ReturnType<typeof vi.fn>
   let notificationClickListeners: Array<(notificationId: string) => void>
+  let runtimeMessageListeners: Array<
+    (
+      message: any,
+      sender: any,
+      sendResponse: (res?: any) => void,
+    ) => void | boolean
+  >
   let getPreferencesMock: ReturnType<typeof vi.fn>
   let turnstileAssistPresentation: string
   let createdContexts: Array<{ windowId: number; tabId: number }>
@@ -148,6 +155,7 @@ describe("tempWindowPool Turnstile assist turns", () => {
     createdContexts = []
     contentWaits = new Map()
     notificationClickListeners = []
+    runtimeMessageListeners = []
     turnstileAssistPresentation = TURNSTILE_ASSIST_PRESENTATIONS.Page
 
     getAccountByIdMock.mockReset()
@@ -250,9 +258,16 @@ describe("tempWindowPool Turnstile assist turns", () => {
         getURL: vi.fn((path: string) => `chrome-extension://test/${path}`),
         sendMessage: vi.fn().mockResolvedValue(undefined),
         onMessage: {
-          addListener: vi.fn(),
+          addListener: vi.fn((listener) => {
+            runtimeMessageListeners.push(listener)
+          }),
           removeListener: vi.fn(),
         },
+      },
+      scripting: {
+        executeScript: vi.fn(async () => [
+          { result: { hasApi: true, token: "token-from-probe" } },
+        ]),
       },
       tabs: {
         get: tabsGetMock,
@@ -379,8 +394,11 @@ describe("tempWindowPool Turnstile assist turns", () => {
   }
 
   /** Asks the pool to present one waiting verification window. */
-  async function presentAssist(requestId: string) {
-    return (await presentFromPool(requestId)) as PresentedAssist
+  async function presentAssist(
+    requestId: string,
+    options?: { forceFocus?: boolean },
+  ) {
+    return (await presentFromPool(requestId, options)) as PresentedAssist
   }
 
   async function finish(task: Awaited<ReturnType<typeof startTurnstileFetch>>) {
@@ -478,5 +496,254 @@ describe("tempWindowPool Turnstile assist turns", () => {
     )
     await flushAssistWork()
     expect(focusedWindowIds()).toEqual([101])
+  })
+
+  it("validates request and context existence and failure handling during assist presentation", async () => {
+    expect(await presentAssist("")).toEqual({
+      presented: false,
+      reason: "missing_request",
+    })
+    expect(await presentAssist("nonexistent")).toEqual({
+      presented: false,
+      reason: "missing_context",
+    })
+
+    const task = await startTurnstileFetch(
+      "req-present-fail",
+      "https://a.invalid",
+    )
+    windowsUpdateMock.mockRejectedValueOnce(new Error("window crashed"))
+    expect(
+      await presentAssist("req-present-fail", { forceFocus: true }),
+    ).toEqual({
+      presented: false,
+      reason: "present_failed",
+    })
+    await finish(task)
+  })
+
+  it("falls back to focused window and active tab when runtime message is not presented", async () => {
+    turnstileAssistPresentation = "page"
+    ;(globalThis as any).browser.runtime.sendMessage.mockResolvedValue({
+      presented: false,
+    })
+    tabsQueryMock.mockImplementation(
+      async (query?: {
+        windowId?: number
+        active?: boolean
+        lastFocusedWindow?: boolean
+      }) => {
+        if (query?.windowId != null) {
+          const match = createdContexts.find(
+            (item) => item.windowId === query.windowId,
+          )
+          return match ? [{ id: match.tabId }] : []
+        }
+        if (query?.active) return [{ id: 999 }]
+        return []
+      },
+    )
+    sendMessageMock.mockImplementation(
+      async (tabId: number, message: { action: string }) => {
+        if (message.action === RuntimeActionIds.TurnstileAssistPageNotice) {
+          return { presented: true }
+        }
+        switch (message.action) {
+          case RuntimeActionIds.ContentShowShieldBypassUi:
+            return undefined
+          case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckCloudflareGuard:
+            return { success: true, passed: true }
+          case RuntimeActionIds.ContentWaitForTurnstileToken: {
+            const deferred = createDeferred<any>()
+            contentWaits.set(tabId, deferred)
+            return deferred.promise
+          }
+          case RuntimeActionIds.ContentPerformTempWindowFetch:
+            return { success: true, status: 200, data: { success: true } }
+          default:
+            throw new Error(`Unexpected action: ${message.action}`)
+        }
+      },
+    )
+
+    const task = await startTurnstileFetch(
+      "req-tab-fallback",
+      "https://a.invalid",
+    )
+    const assistResult = await presentAssist("req-tab-fallback")
+    expect(assistResult).toMatchObject({
+      presented: true,
+      channels: ["page"],
+    })
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      999,
+      expect.objectContaining({
+        action: RuntimeActionIds.TurnstileAssistPageNotice,
+        requestId: "req-tab-fallback",
+      }),
+      expect.anything(),
+    )
+
+    await finish(task)
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      999,
+      expect.objectContaining({
+        action: RuntimeActionIds.TurnstileAssistPageNotice,
+        requestId: "req-tab-fallback",
+        dismiss: true,
+      }),
+      expect.anything(),
+    )
+  })
+
+  it("handles turnstile assist runtime messages for assist requests, probe api, and user click open", async () => {
+    const { setupTempWindowListeners } = await import(
+      "./tempWindowPoolTestAdapter"
+    )
+    setupTempWindowListeners()
+    const handler = runtimeMessageListeners[0]!
+
+    // Unrecognized action
+    expect(handler({ action: "unknown_action" }, {}, vi.fn())).toBeUndefined()
+
+    const task = await startTurnstileFetch("req-msg", "https://a.invalid")
+
+    // 1. TurnstileRequestUserAssist
+    const replyUserAssist = vi.fn()
+    ;(globalThis as any).browser.runtime.sendMessage.mockResolvedValue({
+      presented: true,
+    })
+    expect(
+      handler(
+        {
+          action: RuntimeActionIds.TurnstileRequestUserAssist,
+          requestId: "req-msg",
+        },
+        {},
+        replyUserAssist,
+      ),
+    ).toBe(true)
+    await flushAssistWork()
+    expect(replyUserAssist).toHaveBeenCalledWith(
+      expect.objectContaining({ presented: true }),
+    )
+
+    // 2. TurnstileReadPageApi
+    const replyProbe = vi.fn()
+    expect(
+      handler(
+        { action: RuntimeActionIds.TurnstileReadPageApi, allowExecute: true },
+        { tab: { id: 201 } },
+        replyProbe,
+      ),
+    ).toBe(true)
+    await flushAssistWork()
+    expect(replyProbe).toHaveBeenCalledWith({
+      success: true,
+      token: "token-from-probe",
+      hasApi: true,
+    })
+
+    // Probe missing tab
+    const replyProbeMissing = vi.fn()
+    expect(
+      handler(
+        { action: RuntimeActionIds.TurnstileReadPageApi },
+        { tab: { id: 999 } },
+        replyProbeMissing,
+      ),
+    ).toBe(true)
+    await flushAssistWork()
+    expect(replyProbeMissing).toHaveBeenCalledWith({
+      success: false,
+      token: null,
+      hasApi: false,
+    })
+
+    // 3. TurnstileAssistOpen - missing notice
+    const replyOpenMissing = vi.fn()
+    expect(
+      handler(
+        {
+          action: RuntimeActionIds.TurnstileAssistOpen,
+          requestId: "no-notice",
+        },
+        {},
+        replyOpenMissing,
+      ),
+    ).toBe(true)
+    expect(replyOpenMissing).toHaveBeenCalledWith({
+      presented: false,
+      reason: "missing_notice",
+    })
+
+    // 4. TurnstileAssistOpen - with notice registered via tab fallback
+    tabsQueryMock.mockImplementation(
+      async (query?: { windowId?: number; active?: boolean }) => {
+        if (query?.active) return [{ id: 999 }]
+        return []
+      },
+    )
+    ;(globalThis as any).browser.runtime.sendMessage.mockResolvedValue({
+      presented: false,
+    })
+    const prevSendMessage = sendMessageMock.getMockImplementation()
+    sendMessageMock.mockImplementation(
+      async (tabId: number, message: { action: string }, ...args) => {
+        if (message.action === RuntimeActionIds.TurnstileAssistPageNotice) {
+          return { presented: true }
+        }
+        return (prevSendMessage as ((...args: any[]) => any) | undefined)?.(
+          tabId,
+          message,
+          ...args,
+        )
+      },
+    )
+    await presentAssist("req-msg")
+
+    // Mismatched sender tab
+    const replyMismatch = vi.fn()
+    expect(
+      handler(
+        { action: RuntimeActionIds.TurnstileAssistOpen, requestId: "req-msg" },
+        { tab: { id: 888 } },
+        replyMismatch,
+      ),
+    ).toBe(true)
+    expect(replyMismatch).toHaveBeenCalledWith({
+      presented: false,
+      reason: "missing_notice",
+    })
+
+    // Matching sender tab
+    const replyMatch = vi.fn()
+    expect(
+      handler(
+        { action: RuntimeActionIds.TurnstileAssistOpen, requestId: "req-msg" },
+        { tab: { id: 999 } },
+        replyMatch,
+      ),
+    ).toBe(true)
+    await flushAssistWork()
+    expect(replyMatch).toHaveBeenCalledWith(
+      expect.objectContaining({ presented: true, focused: true }),
+    )
+    expect(focusedWindowIds()).toContain(101)
+
+    await finish(task)
+  })
+
+  it("ignores notification clicks with unrelated notification IDs", async () => {
+    const { setupTempWindowListeners } = await import(
+      "./tempWindowPoolTestAdapter"
+    )
+    setupTempWindowListeners()
+    notificationClickListeners.forEach((listener) =>
+      listener("unrelated-notification-id"),
+    )
+    await flushAssistWork()
+    expect(focusedWindowIds()).toEqual([])
   })
 })

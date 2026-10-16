@@ -238,6 +238,22 @@ describe("ShieldSettings", () => {
     })
   })
 
+  it("updates temp window fallback preferences when turnstile assist presentation changes", async () => {
+    const user = userEvent.setup()
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    const pageSwitch = screen.getByRole("switch", {
+      name: "settings:refresh.shieldTurnstileAssistPage",
+    })
+    expect(pageSwitch).toBeChecked()
+    await user.click(pageSwitch)
+    expect(updateTempWindowFallback).toHaveBeenCalledWith({
+      turnstileAssistPresentation: "quiet",
+    })
+  })
+
   it("keeps a failed window-size draft available for retry", async () => {
     const user = userEvent.setup()
     updateTempWindowFallback
@@ -995,6 +1011,30 @@ describe("ShieldSettings", () => {
     })
   })
 
+  it("returns success when all concurrent Turnstile requests succeed", async () => {
+    isDevelopmentModeMock.mockReturnValue(true)
+    executeProtectionBypassTaskMock.mockResolvedValue({
+      success: true,
+      status: 200,
+    })
+
+    const result = await executeShieldDevTrigger({
+      presetId: "turnstile_queue" as never,
+      url: "http://127.0.0.1:8787/",
+    })
+    expect(result).toEqual({ success: true, status: 200 })
+  })
+
+  it("rejects when Turnstile queue ports exceed 65535", async () => {
+    isDevelopmentModeMock.mockReturnValue(true)
+    await expect(
+      executeShieldDevTrigger({
+        presetId: "turnstile_queue" as never,
+        url: "http://127.0.0.1:65534/",
+      }),
+    ).rejects.toThrow("Invalid Turnstile test server port.")
+  })
+
   it("blocks development-trigger execution outside development mode", async () => {
     await expect(
       executeShieldDevTrigger({
@@ -1042,6 +1082,21 @@ describe("ShieldSettings", () => {
     expect(
       screen.getByText("settings:refresh.shieldDevTriggerTurnstileHint"),
     ).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "settings:refresh.shieldDevTriggerPresetLabel",
+      }),
+    )
+    await user.click(
+      await screen.findByRole("option", {
+        name: "settings:refresh.shieldDevTriggerPresetAccountRefreshScheduled",
+      }),
+    )
+    expect(
+      screen.getByRole("textbox", {
+        name: "settings:refresh.shieldDevTriggerUrlLabel",
+      }),
+    ).toHaveValue("https://example.com/")
   })
 
   it("rejects an unexpected development-trigger preset label", () => {

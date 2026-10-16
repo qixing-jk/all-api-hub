@@ -74,4 +74,18 @@ describe("probeTurnstilePageApi", () => {
       executed: false,
     })
   })
+
+  it("treats getResponse error as null token", () => {
+    ;(window as TurnstileTestWindow).turnstile = {
+      getResponse: () => {
+        throw new Error("Widget destroyed")
+      },
+    }
+
+    expect(probeTurnstilePageApi(false)).toEqual({
+      hasApi: true,
+      token: null,
+      executed: false,
+    })
+  })
 })

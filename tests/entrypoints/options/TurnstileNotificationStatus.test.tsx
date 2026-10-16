@@ -150,3 +150,32 @@ it("renders a quiet mode notice when all reminders are disabled", async () => {
     await screen.findByText(/shieldTurnstileAssistQuietNotice/),
   ).toBeInTheDocument()
 })
+
+it("opens permission dialog when manage button in the row is clicked", async () => {
+  availability.mockResolvedValue("blocked")
+  render(<TurnstileNotificationStatus preference="notify" onChange={vi.fn()} />)
+  const manageButton = await screen.findByRole("button", {
+    name: /turnstileNotificationManage/,
+  })
+  fireEvent.click(manageButton)
+  expect(await screen.findByRole("dialog")).toBeVisible()
+})
+
+it("sets status to unknown when permission request throws", async () => {
+  availability.mockResolvedValue("permission_required")
+  request.mockRejectedValue(new Error("Permission request crashed"))
+  render(<TurnstileNotificationStatus preference="page" onChange={vi.fn()} />)
+  fireEvent.click(
+    await screen.findByRole("switch", { name: /shieldTurnstileAssistNotify/ }),
+  )
+  await screen.findByRole("dialog")
+  fireEvent.click(
+    screen.getByRole("button", { name: /turnstileNotificationEnable/ }),
+  )
+  await waitFor(() => expect(request).toHaveBeenCalledTimes(1))
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: /turnstileNotificationManage/ }),
+    ).toBeInTheDocument(),
+  )
+})

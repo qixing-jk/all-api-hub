@@ -119,3 +119,12 @@ it.each([
     }
   },
 )
+
+it("cancels API detection toast when close control is clicked", async () => {
+  const onAction = vi.fn()
+  const user = userEvent.setup()
+  render(<ApiCheckConfirmToast onAction={onAction} />)
+  const closeButton = await screen.findByRole("button", { name: /close/i })
+  await user.click(closeButton)
+  expect(onAction).toHaveBeenCalledWith("cancel")
+})
