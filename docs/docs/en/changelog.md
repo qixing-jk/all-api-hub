@@ -8,6 +8,31 @@ This page records major updates for general users (feature changes / experience 
 - **Troubleshooting**: You can enable console logs in "Settings → General → Logs" and report reproduction steps to [Issues](https://github.com/qixing-jk/all-api-hub/issues).
 :::
 
+## 4.5.0
+This release adds Dahl, FoxCode, Krill AI, and Xiaoen AI accounts, expands automatic check-in support, introduces account selection for key repairs and multi-key gateway imports, and improves verification handling and Firefox compatibility.
+
+- **New Features:**
+  - **`Dahl` account support**: Add accounts using browser login, view token balances and model pricing, and create, name, or revoke API keys. Allocate tokens to keys or return remaining tokens to the account. See [Supported Sites](./supported-sites.md).
+  - **`FoxCode` account support**: Add accounts using browser login to view balance, usage, model pricing, and announcements. Create, edit, enable, disable, or delete API keys, and configure their channels and quotas. See [Supported Sites](./supported-sites.md).
+  - **`Krill AI` account support**: Add accounts using browser login to view balance, usage, model pricing, and announcements, and redeem codes. Create, edit, revoke, or delete API keys; configure channels, IP allowlists, and balance fallback; and save keys shown only once after creation. See [Supported Sites](./supported-sites.md).
+  - **`Xiaoen AI` account support**: Add accounts using browser login to view balance, usage, and model pricing, receive site announcements and personal messages, and run daily automatic check-ins. See [Supported Sites](./supported-sites.md).
+  - **Daily check-in for more sites**: Added Clawhud, DaiGua, Sidrune, and FreeAPI daily automatic check-ins, with today's status checked before execution. DaiGua uses ordinary check-in without entering the lottery. Sidrune rewards go to a separate welfare wallet rather than directly increasing the account balance. See [Automatic Check-in](./auto-checkin.md).
+  - **Multi-key gateway imports**: When importing account keys in bulk, choose separate channels for each key or combine compatible keys into one channel where the target gateway supports it. Magpie also supports appending keys to existing providers. Select a destination when several are available, and edit channel names before importing. See [Self-Hosted Site Management](./self-hosted-site-management.md).
+  - **Account selection for key completion and checks**: Complete missing keys from the account menu, filling in settings required by the site. Select which accounts to check and repair in bulk. Keys shown only once come with a reminder to save them, and partial completion or unconfirmed results are clearly reported. See [Key Management](./key-management.md).
+
+- **Experience Improvements:**
+  - **Verification guidance and reminders**: Check-ins that encounter human verification, image captchas, or interactive challenges now explain that manual action is needed and guide you to the relevant page. Configure in-page reminders and system notifications separately for Turnstile; system notifications require notification permission. See [Automatic Check-in](./auto-checkin.md).
+  - **Quick filtering for the current site**: Click the current-site account badge in the popup to filter the list to saved accounts for that site.
+  - **More responsive key actions and bulk imports**: Fewer repeated requests when viewing or verifying keys and importing them into gateways reduce waiting.
+  - **More complete announcement site filters**: Saved accounts that support announcements appear in the site filter even before their first announcement check. Select them and check manually even when background polling is disabled. See [Site Announcements](./site-announcements.md).
+
+- **Bug Fixes:**
+  - **Browser login detection**: Fixed failures to read login sessions on some sites that prevented automatic account addition. See [Auto-Detection Troubleshooting](./auto-detect.md).
+  - **Mobile and Firefox popup sizing**: Fixed popups or side panels collapsing into narrow strips on some mobile browsers, and incorrect popup sizing in Firefox.
+  - **Firefox bulk permission grants**: Fixed permission prompts failing to appear when granting several optional permissions at once in Firefox.
+  - **Gateway connection checks**: Current settings are saved before checking the connection, so newly entered addresses or credentials are used rather than the previous configuration. See [Self-Hosted Site Management](./self-hosted-site-management.md).
+  - **Check-in retries after errors**: Fixed repeated execution of the same check-in batch when results could not be saved.
+
 ## 4.4.0
 This release adds support for LaoZhang API and Cubence accounts, introduces Magpie self-hosted gateway management, allows skipping model sync on specific channels, redesigns site announcements with an overview card and search, adds Hiyo Free daily check-in, and improves loading feedback and WebDAV backup reliability.
 
