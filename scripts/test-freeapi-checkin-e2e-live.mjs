@@ -178,12 +178,18 @@ async function main() {
               ["skipped", "already_checked", "success"].includes(result.status)
             )
           })
-          if (!execute)
+          if (!execute) {
+            assert.notEqual(
+              result.status,
+              "success",
+              "read-only run must not submit",
+            )
             assert(
               ["already_checked", "already_checked_today"].includes(
                 result.reasonCode,
               ) || result.status === "already_checked",
             )
+          }
           if (execute && !initial.status.checked_in_today) {
             assert.equal(result.status, "success", "fresh grant must succeed")
             // The dashboard quotes awards in USD, so the reported quota must
