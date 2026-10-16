@@ -33,6 +33,6 @@ export function chromiumAdapter(
   }
 >
 export function firefoxAdapter(
-  connection: MobileConnection,
+  connection: Pick<MobileConnection, "port">,
   options?: { extensionId?: string },
 ): Promise<Adapter>

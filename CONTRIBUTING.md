@@ -99,6 +99,59 @@ The loader uses Node's `util.parseEnv` syntax (comments, quoted values, multilin
 
 WXT dev/build commands retain native mode/browser-specific env loading. Shared defaults with `WXT_` or `VITE_` prefixes are excluded by the Node loader because those prefixes expose variables to extension code. Keep test credentials in Node-only variables and env files out of Git; see [WXT environment variables](https://wxt.dev/guide/essentials/config/environment-variables).
 
+### Local screenshot comparison
+
+Use `pnpm visual:capture --help` for the generic entrypoint. Existing asserted Playwright workflows do not need a scenario registry entry. Add an opt-in checkpoint after the UI is ready:
+
+```ts
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
+
+await captureVisualViews({
+  page,
+  ready: page.getByRole("dialog"), // choose a meaningful ready control
+  id: "account-dialog",
+  extensionDir,
+})
+```
+
+Without capture output configured, the helper does nothing during ordinary tests. It handles visible-state/font/render waiting, screenshots, image hashes and build/environment metadata. With no view configuration it captures the current view; pass `views` in the workflow for defaults, or override them from the CLI:
+
+```bash
+pnpm visual:capture --spec e2e/appearanceSettings.spec.ts --grep "changing text size keeps the appearance drawer bottom aligned at 390px$" --fixture appearance-drawer-default-text-v1 --view dark:390x900 --view light:1280x900
+# Repeat the same command after editing; add --baseline <printed-before-directory> --diff when needed.
+```
+
+Use an actual spec and a narrow test title from the current task. `--fixture` identifies seeded state; change it when the setup semantics change. Repeated `--view` options control All API Hub's root dark class and viewport. Build variants follow `AAH_E2E_BUILD_VARIANT` (otherwise `default`); `--variant default|dnr-required|bookmarks-required` overrides it, and baselines must use the same variant. The matrix helper restores the prior dark class and an explicitly configured viewport after capture. Checkpoint IDs are discovered from emitted metadata, must be unique across selected tests, and cannot overwrite another checkpoint. Baseline pairing requires the same spec/grep identity, fixture, checkpoint IDs and environment metadata. A workflow that emits no checkpoints fails with an actionable error. The runner records spec/grep/view settings in `capture.json`. Page navigation, fixtures and meaningful assertions stay in the existing test: generic capture cannot establish that arbitrary UI has reached the right state.
+
+For a maintained hotspot shortcut, use `pnpm visual:capture --list` and then:
+
+```bash
+# Before editing: retain the printed run directory as the baseline.
+pnpm visual:capture --scenario api-key-hint
+# After editing: capture the same workflow and compare matching checkpoints.
+pnpm visual:capture --scenario api-key-hint --baseline .scratch/visual-captures/run-BASELINE --diff
+```
+
+The first supported scenario is the API credential creation hint reached through the mounted sidepanel sponsor workflow, in light 380×700 and dark 320×700 views. It runs the existing real-extension Playwright scenario with deterministic fixtures, waits for asserted controls and fonts, disables capture animations, and saves images plus capture metadata. It automatically uses this checkout's content-validated test build, rebuilding only when the existing build-input check requires it. It needs Playwright Chromium (`pnpm e2e:install`); it does not use the logged-in desktop profile. Per-worktree builds, temporary browser profiles, unique ignored `.scratch/visual-captures/run-*` directories and a per-worktree capture lock avoid cross-worktree output/profile collisions. The lock serializes this command within one checkout; unrelated build/dev commands do not participate in it.
+
+Capture output includes `capture.json`, `capture.md`, per-checkpoint PNG/JSON and `playwright.log`, with build input hashes, build/capture commit identities, viewport, device scale, language, theme, browser version and image hashes. An optional `--baseline` accepts an earlier run directory. It validates workflow/fixture/checkpoint identity and image hashes before running; after capture, matching environment metadata is required for automatic pairing. It then invokes `visual:compare` for each checkpoint, without opening any image in the agent. When no baseline is supplied, the run is current-state evidence only. Failures retain runner logs and `failure.json`; a valid `capture.json` may still exist if capture succeeded but subsequent comparison failed. Capture commands never switch Git revisions or invent old UI; run the before command while the real old build/source is available.
+
+Prefer the generic spec entrypoint for new surfaces; add registry shortcuts only for frequently used workflows. `captureVisualViews` handles both a single current view and a matrix with the same checkpoint format. Use fixed IDs and bump the fixture identifier when seeded state or capture semantics change. Keep capture opt-in. The API hint's legacy `AAH_API_HINT_VISUAL_DIR` capture option remains supported. `AAH_VISUAL_CAPTURE_INTEGRATION=1 pnpm exec vitest run tests/scripts/visualCapture.test.ts` exercises generic acquisition, configurable views and automatic pairing; ordinary unit runs omit the browser integration case.
+
+Reuse existing Playwright/CDP flows to capture the real before/after states, then run the shared PNG comparison command from the worktree receiving the evidence:
+
+```bash
+pnpm visual:compare --before .scratch/ui/before.png --after .scratch/ui/after.png --before-source "commit/build before" --after-source "commit/build after plus local diff" --context "Chromium; 390x844; DPR 1; en; light; fixture A; dialog open" --diff
+```
+
+The command uses Node and the project's pure JavaScript PNG dependency; it needs no Python, image CLI or browser installation. Relative paths resolve against the invoking directory. Absolute input paths can reference another worktree. By default, each invocation creates a unique ignored `.scratch/visual-comparisons/run-*` directory in the current worktree. `--output <parent-directory>` selects another parent, still with a unique run directory; keep custom evidence locations outside version control. It does not read shared credentials, switch branches, build or alter input images.
+
+The output directory contains original `before.png` / `after.png`, a labelled `comparison.png`, and `report.md` / `report.json`. JSON stdout identifies the run directory and report for automation. Reports record absolute input paths, SHA-256 hashes, decoded dimensions, declared source/build descriptions and optional capture context. These descriptions are supplied by the caller; hashes prove image bytes, not that a particular source revision produced them. Record the actual viewport, device scale, language, theme, fixtures and interaction state in `--context` or the task's capture report.
+
+`--diff` adds an exact RGBA pixel comparison only when dimensions match: changed pixels are magenta, unchanged pixels black, with counts in the JSON report. It has no perceptual threshold or anti-aliasing tolerance. Different dimensions produce an unscaled, padded preview with `dimension-mismatch` status and no pixel diff. Omit `--before` and `--before-source` for after-only evidence with `missing-baseline` status. Neither status establishes a passed comparison; matching dimensions also do not establish equivalent capture environments. Exit code zero means evidence generation succeeded, and visual review is always required. Invalid options, missing required source descriptions, unreadable images or invalid PNGs exit nonzero before creating a run directory.
+
+Agents prioritize representative final after images when visual judgment is needed, as described in [task acceptance](docs/agents/task-acceptance.md#compare-changed-ui). Baseline, comparison and diff artifacts primarily serve developer review; agents open them only for a concrete unresolved question. Report generation does not require opening each image or repeating review after every small edit. Reuse retained artifacts in the handoff. Do not replace existing maintained visual regression assertions with this report generator.
+
 ### Overview
 
 This project uses [Vitest](https://vitest.dev/) for unit and component testing. The `dom` project runs component and browser-dependent tests in jsdom through `tests/setup.ts`; the `node` project runs other TypeScript tests through `tests/setup.node.ts`. Choose the environment needed by the behavior under test; `vitest.config.ts` owns project selection and both setups provide the applicable shared mocks.
@@ -166,6 +219,20 @@ The server uses [Cloudflare's official test component and dummy keys](https://de
 The two independent reminder channels are **In-page reminders** (on by default) and **Browser notifications** (off by default). Either, both, or neither can be enabled. In-page reminders use the focused extension page or current web page. Browser notifications require permission: enabling the channel without permission opens an explanation dialog with an explicit authorization button. Refusing or cancelling leaves the channel off. A blocked browser shows settings guidance. Delivery failures never enable a disabled channel or bring verification forward; click **Open verification window** or a browser notification to focus verification. For the three-site scenario, open and complete each request using its reminder. The server listens only on loopback ports 8787–8789. Set `AAH_TURNSTILE_PORT` to change the first port and update the trigger URL accordingly. Stop it with Ctrl+C. These local reminders do not use remote push providers. Closing or finishing a request clears its reminder. OS quiet mode can still hide an accepted system notification.
 
 To automate official automatic success, reminders on extension/web pages, and the three-site interactive queue, stop the standalone test server, launch `pnpm browser:cdp:isolate`, then run `pnpm e2e:cdp:turnstile -- --isolate`. This runner starts its own local servers, restores preferences after the run, and saves screenshots under `.scratch/turnstile-channels/live-<timestamp>/`.
+
+#### Firefox extension smoke tests
+
+Run `pnpm e2e:firefox` for the real desktop Firefox toolbar popup and its handoff to the native sidebar or Options. This separate suite builds `.output/firefox-mv2-test`, installs it in a temporary Firefox profile, and uses Selenium/geckodriver to control the native browser UI plus the shared Firefox RDP adapter to inspect extension documents. It uses the Playwright runner and assertions; the Chromium extension fixture is not used.
+
+Install Firefox first. Selenium Manager resolves geckodriver automatically and may download it on the first run. Set `AAH_E2E_FIREFOX_EXECUTABLE_PATH` or `AAH_E2E_GECKODRIVER_PATH` to use specific local binaries. The runner loads these through the shared [local environment configuration](#local-tooling-environment-configuration). `AAH_SKIP_E2E_BUILD=1` explicitly reuses the existing Firefox test artifact; leave it unset for a fresh build.
+
+The smoke profile runs headlessly, fixes desktop pointer capabilities independently of host touch hardware, prevents popup auto-hide during inspection, and disables external networking. It uses bundled resources and synthetic data, without real accounts or credentials. Screenshots of the actual extension browsing contexts are saved under `test-results/firefox/` and retained by the E2E workflow on success and failure. Geometry and behavior assertions are automated; these screenshots are review evidence, not pixel comparison baselines.
+
+The suite covers popup bounds, tabs, dialogs, dropdowns and scrolling; native sidebar opening and form survival after popup closure; missing/rejected sidebar API fallback to account creation in Options; and retry after both navigation destinations fail. Installing a temporary sidebar extension can open its sidebar, so the fixture closes it before testing user-initiated handoff. Gesture-sensitive actions use native WebDriver pointer input rather than scripted DOM clicks.
+
+Browser API checks exercise Firefox's actual optional clipboard permission prompt (deny, retry, grant and revoke), credential copying and clipboard failure recovery. Successful copies are read back from Firefox's headless, in-memory clipboard. Failure scenarios inject errors only at browser API boundaries; account data and keys are synthetic. The suite does not access the desktop clipboard.
+
+Extend `e2e/firefox/` incrementally when a feature depends on browser layout or extension APIs, and add regressions for Firefox-specific failures. Account persistence, downloads, other permissions and background lifecycle still need coverage as those areas change. Passing these checks does not establish Android Firefox, every sidebar workflow, or all-feature compatibility.
 
 ### Test Coverage
 

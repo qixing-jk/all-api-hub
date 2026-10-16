@@ -89,3 +89,7 @@ src/public/react-devtools*
 
 # Local Scout audit records
 .scratch/**/scout-audit-*.md
+
+# Local screenshot comparison runs
+.scratch/visual-comparisons/
+.scratch/visual-captures/
