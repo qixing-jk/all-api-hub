@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { createTempContextTurnstileAssist } from "~/services/browsingContext/tempPage/turnstileAssist"
 import { TURNSTILE_ASSIST_PRESENTATIONS } from "~/services/checkin/turnstile/assistPresentation"
 
 const originalBrowser = (globalThis as any).browser
@@ -745,5 +746,90 @@ describe("tempWindowPool Turnstile assist turns", () => {
     )
     await flushAssistWork()
     expect(focusedWindowIds()).toEqual([])
+  })
+
+  it("covers turnstile assist edge cases for detached contexts, tab resolution, and notice handling", async () => {
+    // 1. Line 90: clearNotification rejection in drop
+    notificationClearMock.mockRejectedValueOnce(new Error("clear failed"))
+    const assist = createTempContextTurnstileAssist({
+      getRequestContext: () => undefined,
+      hasTab: () => false,
+    })
+    expect(() => assist.drop("req-drop")).not.toThrow()
+
+    // 2. Lines 134, 136, 137: context without ownerWindowId resolving window from getTab
+    tabsGetMock.mockResolvedValueOnce({ id: 301, windowId: 777 })
+    const tabOnlyContext: any = { tabId: 301 }
+    const assistTabOnly = createTempContextTurnstileAssist({
+      getRequestContext: () => tabOnlyContext,
+      hasTab: () => true,
+    })
+    const forceFocusRes = await assistTabOnly.present("req-no-win", {
+      forceFocus: true,
+    })
+    expect(forceFocusRes).toMatchObject({ presented: true, focused: true })
+    expect(windowsUpdateMock).toHaveBeenCalledWith(777, expect.anything())
+
+    // 3. Lines 176, 177: context detachment during deliverTurnstileAssistNotice
+    turnstileAssistPresentation = "page"
+    let detachableContext: any = { tabId: 302, ownerWindowId: 888 }
+    const assistDetachable = createTempContextTurnstileAssist({
+      getRequestContext: () => detachableContext,
+      hasTab: () => true,
+    })
+    ;(globalThis as any).browser.runtime.sendMessage.mockImplementationOnce(
+      async () => {
+        detachableContext = undefined
+        return { presented: true }
+      },
+    )
+    const detachedRes = await assistDetachable.present("req-detach")
+    expect(detachedRes).toEqual({ presented: false, reason: "missing_context" })
+
+    // 4. Line 197: context missing immediately after clearAssistNotice during forceFocus
+    let getContextCall = 0
+    const assistVolatile = createTempContextTurnstileAssist({
+      getRequestContext: () => {
+        getContextCall++
+        return getContextCall === 1 ? ({ tabId: 303 } as any) : undefined
+      },
+      hasTab: () => true,
+    })
+    const volatileRes = await assistVolatile.present("req-volatile", {
+      forceFocus: true,
+    })
+    expect(volatileRes).toEqual({ presented: false, reason: "missing_context" })
+
+    // 5. Line 65: queryTabs error in notifyCurrentPage
+    tabsQueryMock.mockRejectedValueOnce(new Error("tabs query failed"))
+    ;(globalThis as any).browser.runtime.sendMessage.mockResolvedValueOnce({
+      presented: false,
+    })
+    const assistQueryFail = createTempContextTurnstileAssist({
+      getRequestContext: () => ({ tabId: 304, ownerWindowId: 999 }) as any,
+      hasTab: () => true,
+    })
+    const failRes = await assistQueryFail.present("req-query-fail")
+    expect(failRes).toMatchObject({
+      presented: false,
+      reason: "notice_unavailable",
+    })
+
+    // 6. Line 275: TurnstileAssistOpen with non-string requestId
+    assist.setup()
+    const lastHandler =
+      runtimeMessageListeners[runtimeMessageListeners.length - 1]!
+    const replyNonString = vi.fn()
+    expect(
+      lastHandler(
+        { action: RuntimeActionIds.TurnstileAssistOpen, requestId: 12345 },
+        {},
+        replyNonString,
+      ),
+    ).toBe(true)
+    expect(replyNonString).toHaveBeenCalledWith({
+      presented: false,
+      reason: "missing_notice",
+    })
   })
 })
