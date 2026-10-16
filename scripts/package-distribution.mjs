@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process"
-import { cpSync, mkdirSync, readdirSync } from "node:fs"
+import { cpSync, mkdirSync, readdirSync, rmSync } from "node:fs"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
@@ -58,6 +58,13 @@ function packageDistributions() {
     channel,
     process.argv.includes("--stores"),
   )) {
+    const outputRoot = path.resolve(".output/distribution")
+    const outputDirectory = path.resolve(item.outputDirectory)
+    if (!outputDirectory.startsWith(`${outputRoot}${path.sep}`))
+      throw new Error(
+        `Unsafe distribution output directory: ${outputDirectory}`,
+      )
+    rmSync(outputDirectory, { recursive: true, force: true })
     execFileSync(
       process.execPath,
       ["node_modules/wxt/bin/wxt.mjs", "zip", "-b", item.browser],

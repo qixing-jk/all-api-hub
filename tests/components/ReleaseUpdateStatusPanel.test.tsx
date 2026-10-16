@@ -511,3 +511,21 @@ describe("ReleaseUpdateStatusPanel", () => {
     expect(screen.queryByText("No listeners available")).not.toBeInTheDocument()
   })
 })
+
+it("shows the published Nightly revision with its download action", () => {
+  mockHook(
+    buildStatus({
+      reason: "github-nightly",
+      latestVersion: "bbbbbbb",
+      updateAvailable: true,
+      checkedAt: Date.now(),
+    }),
+  )
+  renderSubject()
+  expect(
+    screen.getByText("settings:releaseUpdate.latestNightlyVersion"),
+  ).toBeInTheDocument()
+  expect(
+    screen.getByRole("link", { name: "settings:releaseUpdate.downloadUpdate" }),
+  ).toBeInTheDocument()
+})

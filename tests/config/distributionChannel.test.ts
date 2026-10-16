@@ -74,3 +74,17 @@ it("rejects a store channel for the wrong browser", async () => {
     }),
   ).toThrow(/channel/i)
 })
+
+it("rejects invalid channel metadata before building", () => {
+  vi.stubEnv("AAH_DISTRIBUTION_CHANNEL", "untrusted-channel")
+  const vite = wxtConfig.vite
+  if (typeof vite !== "function") throw new Error("Expected Vite factory")
+  expect(() =>
+    vite({
+      command: "build",
+      mode: "production",
+      browser: "chrome",
+      manifestVersion: 3,
+    }),
+  ).toThrow("Invalid distribution channel")
+})

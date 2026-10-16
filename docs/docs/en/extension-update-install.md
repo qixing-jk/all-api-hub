@@ -94,11 +94,11 @@ For manual installation and update steps, see the [Other Browser Installation Gu
 
 ## Frequently Asked Questions
 
-### Do I Need to Keep Clicking "Check now"?
+### Do I Need to Keep Clicking "Check for updates"?
 
 No. Store versions are updated automatically by the browser. Only check manually when you see that GitHub has published a newer version, or when you want to confirm whether the store version can already be updated.
 
-### Does "Check now" Automatically Download the GitHub Package?
+### Does "Check for updates" Automatically Download the GitHub Package?
 
 No. It only shows the version status and asks the browser to check whether the store version can be updated. GitHub packages still need to be downloaded manually from the Releases page.
 
