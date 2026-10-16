@@ -115,14 +115,32 @@ describe("permissionManager", () => {
 
     await expect(hasPermissions([])).resolves.toBe(true)
     await expect(hasCookieInterceptorPermissions()).resolves.toBe(true)
+    await expect(ensurePermissionsDetailed([])).resolves.toEqual({
+      success: true,
+      results: [],
+      requestedResults: [],
+    })
 
     expect(containsPermissionsMock).toHaveBeenCalledTimes(1)
     expect(containsPermissionsMock).toHaveBeenCalledWith({
       permissions: COOKIE_INTERCEPTOR_PERMISSIONS,
     })
+    expect(requestPermissionsDetailedMock).not.toHaveBeenCalled()
   })
 
-  it("requests only missing permissions during ensurePermissionsDetailed", async () => {
+  it("starts the permission request before yielding the user gesture", async () => {
+    containsPermissionsMock.mockResolvedValue(false)
+    requestPermissionsDetailedMock.mockResolvedValueOnce({ success: false })
+
+    const result = ensurePermissionsDetailed(["cookies", "clipboardRead"])
+
+    expect(requestPermissionsDetailedMock).toHaveBeenCalledWith({
+      permissions: ["cookies", "clipboardRead"],
+    })
+    await expect(result).resolves.toMatchObject({ success: false })
+  })
+
+  it("requests permissions together without awaiting the before-state checks", async () => {
     containsPermissionsMock
       .mockResolvedValueOnce(true)
       .mockResolvedValueOnce(false)
@@ -136,7 +154,7 @@ describe("permissionManager", () => {
     ).resolves.toMatchObject({ success: true })
 
     expect(requestPermissionsDetailedMock).toHaveBeenCalledWith({
-      permissions: ["webRequest", "clipboardRead"],
+      permissions: ["cookies", "webRequest", "clipboardRead"],
     })
   })
 
@@ -195,7 +213,7 @@ describe("permissionManager", () => {
     })
 
     expect(requestPermissionsDetailedMock).toHaveBeenCalledWith({
-      permissions: ["webRequest", "clipboardRead"],
+      permissions: ["cookies", "webRequest", "clipboardRead"],
     })
   })
 
@@ -332,7 +350,9 @@ describe("permissionManager", () => {
     await expect(
       ensurePermissionsDetailed(["cookies", "webRequest", "clipboardRead"]),
     ).resolves.toMatchObject({ success: true })
-    expect(requestPermissionsDetailedMock).not.toHaveBeenCalled()
+    expect(requestPermissionsDetailedMock).toHaveBeenCalledWith({
+      permissions: ["cookies", "webRequest", "clipboardRead"],
+    })
   })
 
   it("only notifies listeners for declared optional permissions and unsubscribes both handlers", () => {
