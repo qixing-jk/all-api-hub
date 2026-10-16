@@ -115,11 +115,17 @@ describe("permissionManager", () => {
 
     await expect(hasPermissions([])).resolves.toBe(true)
     await expect(hasCookieInterceptorPermissions()).resolves.toBe(true)
+    await expect(ensurePermissionsDetailed([])).resolves.toEqual({
+      success: true,
+      results: [],
+      requestedResults: [],
+    })
 
     expect(containsPermissionsMock).toHaveBeenCalledTimes(1)
     expect(containsPermissionsMock).toHaveBeenCalledWith({
       permissions: COOKIE_INTERCEPTOR_PERMISSIONS,
     })
+    expect(requestPermissionsDetailedMock).not.toHaveBeenCalled()
   })
 
   it("starts the permission request before yielding the user gesture", async () => {
