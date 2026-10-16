@@ -1,10 +1,38 @@
 import { POPUP_TEST_IDS } from "~/entrypoints/popup/testIds"
 import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
+import { OPTIONS_OVERVIEW_TEST_IDS } from "~/features/OptionsOverview/testIds"
 import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { API_CREDENTIAL_PROFILES_CONFIG_VERSION } from "~/types/apiCredentialProfiles"
 import { createStoredApiCredentialProfile } from "~~/e2e/utils/commonUserFlows"
 
 import { expect, test } from "./extensionTest"
+
+test("Firefox grants all onboarding permissions after denial and retry", async ({
+  firefoxExtension,
+}) => {
+  const options = firefoxExtension.page("options.html")
+  await options.openInTab("?onboarding=permissions#overview")
+  const grantAll = `button:has(+ [data-testid="${OPTIONS_OVERVIEW_TEST_IDS.permissionOnboardingDeferButton}"])`
+  const granted = () =>
+    options.evaluateAsync<boolean>(
+      "browser.permissions.contains({permissions: browser.runtime.getManifest().optional_permissions})",
+    )
+
+  expect(await granted()).toBe(false)
+  await options.nativeClickSelector(grantAll)
+  await options.respondToPermissionPrompt(false)
+  expect(await granted()).toBe(false)
+  await options.nativeClickSelector(`${grantAll}:not(:disabled)`)
+  await options.respondToPermissionPrompt(true)
+  await expect.poll(granted).toBe(true)
+  await expect
+    .poll(() =>
+      options.evaluate<boolean>(
+        "document.body.innerText.includes('All recommended permissions granted')",
+      ),
+    )
+    .toBe(true)
+})
 
 test("Firefox clipboard permission can be denied, granted on retry, and revoked", async ({
   firefoxExtension,
