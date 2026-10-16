@@ -3,6 +3,7 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import HeaderSection from "~/entrypoints/popup/components/HeaderSection"
+import { POPUP_VIEW_TYPES } from "~/entrypoints/popup/viewTypes"
 import { useUpdateLogDialogContext } from "~/features/UpdateLog"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -27,7 +28,13 @@ import {
   openSettingsPage,
 } from "~/utils/navigation"
 import { openSidePanelPage } from "~/utils/navigation/sidepanel"
-import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "~~/tests/test-utils/render"
 
 const createDeferred = <T,>() => {
   let resolve!: (value: T) => void
@@ -225,7 +232,9 @@ describe("popup HeaderSection", () => {
       reason: "missing",
     })
 
-    render(<HeaderSection />, { withReleaseUpdateStatusProvider: false })
+    await act(async () => {
+      render(<HeaderSection />, { withReleaseUpdateStatusProvider: false })
+    })
 
     expect(
       screen.queryByRole("button", { name: "common:actions.openSidePanel" }),
@@ -249,7 +258,7 @@ describe("popup HeaderSection", () => {
   })
 
   it("routes open full page to account manager for accounts view", async () => {
-    render(<HeaderSection activeView="accounts" />, {
+    render(<HeaderSection activeView={POPUP_VIEW_TYPES.Accounts} />, {
       withReleaseUpdateStatusProvider: false,
     })
 
@@ -265,7 +274,7 @@ describe("popup HeaderSection", () => {
   })
 
   it("routes open full page to bookmark manager for bookmarks view", async () => {
-    render(<HeaderSection activeView="bookmarks" />, {
+    render(<HeaderSection activeView={POPUP_VIEW_TYPES.Bookmarks} />, {
       withReleaseUpdateStatusProvider: false,
     })
 
@@ -281,9 +290,12 @@ describe("popup HeaderSection", () => {
   })
 
   it("routes open full page to API credential profiles for API credentials view", async () => {
-    render(<HeaderSection activeView="apiCredentialProfiles" />, {
-      withReleaseUpdateStatusProvider: false,
-    })
+    render(
+      <HeaderSection activeView={POPUP_VIEW_TYPES.ApiCredentialProfiles} />,
+      {
+        withReleaseUpdateStatusProvider: false,
+      },
+    )
 
     fireEvent.click(
       await screen.findByRole("button", {

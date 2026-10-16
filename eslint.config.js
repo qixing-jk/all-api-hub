@@ -262,7 +262,7 @@ const siteTypeImportOwners = [
   "src/features/AccountManagement/components/AccountDialog/detection/useAccountDialogDetection.ts", // Explicit provider onboarding results.
   "src/features/AccountManagement/components/AccountDialog/form/useAccountDialogInitialization.ts", // Initial identity and legacy provider hydration.
   "src/features/AccountManagement/sponsors/catalogActions.ts", // Sponsor identity prefill.
-  "src/features/AccountManagement/sponsors/pendingAddAccountIntent.ts", // Sponsor intent validation.
+  "src/features/AccountManagement/sponsors/addAccountPrefill.ts", // Sponsor prefill validation.
   "src/features/ApiCredentialProfiles/utils/exportShims.ts", // Synthetic account identity for export compatibility.
   "src/features/BasicSettings/components/tabs/ManagedSite/providers/DoneHubSettings.tsx", // Provider settings.
   "src/features/BasicSettings/components/tabs/ManagedSite/ManagedSiteTab.tsx", // Provider settings dispatch.

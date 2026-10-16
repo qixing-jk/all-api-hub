@@ -1,6 +1,6 @@
 import { waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
@@ -133,9 +133,15 @@ function createUnsupportedSponsor(
 }
 
 describe("SponsorRecommendationsSection", () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
   beforeEach(() => {
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
+    vi.stubGlobal("open", vi.fn())
     trackProductAnalyticsEventMock.mockReset()
     recordSponsorSummaryMock.mockReset()
     recordSponsorSummaryMock.mockResolvedValue(undefined)
@@ -168,6 +174,10 @@ describe("SponsorRecommendationsSection", () => {
     expect(continueAction).toHaveAttribute("type", "button")
 
     await user.click(continueAction)
+
+    expect(
+      screen.queryByText("account:sponsor.actions.continueAddAccount"),
+    ).not.toBeInTheDocument()
 
     expect(onContinueAddAccount).toHaveBeenCalledWith({
       siteUrl: "https://supported.example.invalid",

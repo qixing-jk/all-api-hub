@@ -259,6 +259,7 @@
       "description": "プロバイダーのサイトで登録し、カードの案内に従ってアカウントの追加、API 認証情報の保存、またはサイトのブックマークを行えます。",
       "title": "利用可能なプロバイダーを探す"
     },
+    "openWorkflowFailed": "追加画面を開けませんでした。もう一度お試しください。",
     "popupApiCredentialProfiles": {
       "description": "開発用 API または Coding Plan の枠が必要ですか？Base URL の自動入力とキー取得リンクに対応：",
       "title": "おすすめプロバイダーとサブスクリプション"

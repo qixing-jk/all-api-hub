@@ -34,6 +34,7 @@ import {
   ACCOUNT_MANAGEMENT_ROUTE_ACTIONS,
   ACCOUNT_MANAGEMENT_ROUTE_PARAMS,
 } from "~/features/AccountManagement/routeParams"
+import { normalizeSponsorAddAccountPrefill } from "~/features/AccountManagement/sponsors/addAccountPrefill"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { AccountManagementProvider } from "~/features/AccountManagement/workspace/AccountManagementProvider"
 import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/workspace/useApiCredentialProfiles"
@@ -147,7 +148,10 @@ function AccountManagementContent({
     }
 
     consumedAddRouteActionRef.current = true
-    openAddAccount()
+    const prefill = normalizeSponsorAddAccountPrefill(
+      Object.fromEntries(new URLSearchParams(window.location.search)),
+    )
+    openAddAccount(prefill)
   }, [openAddAccount, routeAction])
 
   const externalCheckInAccounts = displayData.filter((account) => {

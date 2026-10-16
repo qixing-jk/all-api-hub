@@ -26,7 +26,7 @@ import {
   type AccountDialogRecoveryState,
   type AddAccountPrefill,
 } from "~/features/AccountManagement/components/AccountDialog/models"
-import { normalizeAddAccountPrefill } from "~/features/AccountManagement/sponsors/pendingAddAccountIntent"
+import { normalizeAddAccountPrefill } from "~/features/AccountManagement/sponsors/addAccountPrefill"
 import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
 import toast from "~/lib/notify"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"

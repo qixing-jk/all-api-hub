@@ -21,6 +21,8 @@ export const INTERNAL_TAB_BROWSER_SESSION_STORAGE_KEY =
   "internalBrowsingBrowserSession_v1"
 
 export const STORAGE_LOCKS = {
+  /** Serializes sponsor creation handoffs between popup and side panels. */
+  SPONSOR_WORKFLOW: "all-api-hub:sponsor-workflow",
   /** Serializes local Dahl key names and website-sync acknowledgements. */
   DAHL_KEY_NAMES: "all-api-hub:dahl-key-names",
   /** Orders website acknowledgements while local names remain independently writable. */
@@ -262,10 +264,6 @@ const SPONSOR_CATALOG_STORAGE_KEYS = {
   VERSIONED_CACHE: "sponsorCatalog_versionedCache_v1",
 } as const
 
-const SPONSOR_ADD_ACCOUNT_INTENT_STORAGE_KEYS = {
-  PENDING_PREFILL: "sponsorAddAccount_pendingPrefill_v1",
-} as const
-
 const POPUP_INTERRUPTION_STORAGE_KEYS = {
   HINT: "popupInterruption_hint_v1",
 } as const
@@ -276,6 +274,11 @@ const STAR_PROMOTION_STORAGE_KEYS = {
 
 const UNINSTALL_SURVEY_STORAGE_KEYS = {
   STATE: "uninstallSurvey_state_v1",
+} as const
+
+export const SPONSOR_WORKFLOW_STORAGE_KEYS = {
+  DRAFT_PREFIX: "sponsorWorkflow_draft_v1:",
+  PENDING_PREFIX: "sponsorWorkflow_pending_v1:",
 } as const
 
 export const ACCOUNT_DIALOG_RECOVERY_STORAGE_KEYS = {
@@ -323,8 +326,6 @@ export const STORAGE_KEYS = {
   PRODUCT_ANNOUNCEMENTS_STATE: PRODUCT_ANNOUNCEMENTS_STORAGE_KEYS.STATE,
   SPONSOR_CATALOG_CACHE: SPONSOR_CATALOG_STORAGE_KEYS.CACHE,
   SPONSOR_CATALOG_VERSIONED_CACHE: SPONSOR_CATALOG_STORAGE_KEYS.VERSIONED_CACHE,
-  SPONSOR_ADD_ACCOUNT_PENDING_PREFILL:
-    SPONSOR_ADD_ACCOUNT_INTENT_STORAGE_KEYS.PENDING_PREFILL,
   POPUP_INTERRUPTION_HINT: POPUP_INTERRUPTION_STORAGE_KEYS.HINT,
   STAR_PROMOTION_STATE: STAR_PROMOTION_STORAGE_KEYS.STATE,
   UNINSTALL_SURVEY_STATE: UNINSTALL_SURVEY_STORAGE_KEYS.STATE,

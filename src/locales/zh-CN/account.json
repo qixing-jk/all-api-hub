@@ -259,6 +259,7 @@
       "description": "还没有可用站点？可参考以下推荐服务商，支持一键配置接入：",
       "title": "精选合作伙伴"
     },
+    "openWorkflowFailed": "无法打开添加流程，请重试。",
     "popupApiCredentialProfiles": {
       "description": "需要开发 API 或 Coding Plan 额度？支持一键预填 Base URL 与控制台快捷领 Key：",
       "title": "推荐服务商与订阅"

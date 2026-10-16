@@ -1,5 +1,6 @@
 import type { TFunction } from "i18next"
 import { Bookmark } from "lucide-react"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { ApiCredentialLibraryIcon } from "~/components/icons/productIcons"
@@ -12,6 +13,7 @@ import {
 } from "~/features/AccountManagement/sponsors/analytics"
 import {
   SPONSOR_RECOMMENDATION_SURFACES,
+  SPONSOR_WORKFLOW_KINDS,
   type SponsorRecommendationSurface,
 } from "~/features/AccountManagement/sponsors/constants"
 import { SponsorBrandIcon } from "~/features/AccountManagement/sponsors/SponsorBrandIcon"
@@ -26,8 +28,15 @@ import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testId
 import { cn } from "~/lib/utils"
 import { PRODUCT_ANALYTICS_ENTRYPOINTS } from "~/services/productAnalytics/contracts"
 import { isExtensionPopup, isExtensionSidePanel } from "~/utils/browser"
+import { createTab } from "~/utils/browser/tabs"
+
+import type {
+  SponsorWorkflowIntent,
+  SponsorWorkflowStarter,
+} from "./sponsorWorkflowIntent"
 
 interface SponsorRecommendationCardProps {
+  onStartWorkflow?: SponsorWorkflowStarter
   item: SponsorRecommendation
   itemCount: number
   surface: SponsorRecommendationSurface
@@ -158,7 +167,9 @@ export function SponsorRecommendationCard({
   onContinueAddAccount,
   onOpenBookmarkManager,
   onOpenApiCredentialProfiles,
+  onStartWorkflow,
 }: SponsorRecommendationCardProps) {
+  const [isOpening, setIsOpening] = useState(false)
   const { t } = useTranslation("account")
   const scope = useProductAnalyticsScope()
   const entrypoint =
@@ -184,6 +195,21 @@ export function SponsorRecommendationCard({
     window.open(item.links.primary, "_blank", "noopener,noreferrer")
   }
 
+  const startWorkflow = (intent: SponsorWorkflowIntent, local: () => void) => {
+    if (isOpening) return
+    const visit = async () => {
+      const tab = await createTab(item.links.primary, false)
+      return tab ? { ...tab, url: item.links.primary } : undefined
+    }
+    if (onStartWorkflow) {
+      setIsOpening(true)
+      void onStartWorkflow(intent, visit).finally(() => setIsOpening(false))
+    } else {
+      local()
+      window.open(item.links.primary, "_blank", "noopener,noreferrer")
+    }
+  }
+
   const handleContinueAddAccount = () => {
     const addAccountAction = item.actions.addAccount
 
@@ -192,7 +218,7 @@ export function SponsorRecommendationCard({
     }
 
     trackClick(SPONSOR_RECOMMENDATION_ACTION_KINDS.ContinueAddAccount)
-    onContinueAddAccount({
+    const prefill: AddAccountPrefill = {
       siteUrl: addAccountAction.siteUrl,
       siteType: addAccountAction.siteType,
       ...(addAccountAction.authType
@@ -200,8 +226,10 @@ export function SponsorRecommendationCard({
         : {}),
       source: "sponsor",
       sponsorId: item.id,
-    })
-    window.open(item.links.primary, "_blank", "noopener,noreferrer")
+    }
+    startWorkflow({ kind: SPONSOR_WORKFLOW_KINDS.Account, prefill }, () =>
+      onContinueAddAccount(prefill),
+    )
   }
 
   const handleOpenBookmarkManager = () => {
@@ -213,11 +241,13 @@ export function SponsorRecommendationCard({
     }
 
     trackClick(SPONSOR_RECOMMENDATION_ACTION_KINDS.BookmarkFallback)
-    window.open(item.links.primary, "_blank", "noopener,noreferrer")
-    onOpenBookmarkManager({
+    const prefill = {
       name: item.name,
       url: targetUrl,
-    })
+    }
+    startWorkflow({ kind: SPONSOR_WORKFLOW_KINDS.Bookmark, prefill }, () =>
+      onOpenBookmarkManager(prefill),
+    )
   }
 
   const handleOpenApiCredentialProfiles = () => {
@@ -230,13 +260,15 @@ export function SponsorRecommendationCard({
     trackClick(
       SPONSOR_RECOMMENDATION_ACTION_KINDS.ApiCredentialProfilesFallback,
     )
-    window.open(item.links.primary, "_blank", "noopener,noreferrer")
-    onOpenApiCredentialProfiles({
+    const prefill = {
       name: item.name,
       baseUrl: apiCredentialFallback.baseUrl,
       apiKeyCreateUrl: apiCredentialFallback.apiKeyCreateUrl,
       apiKeyCreateHint: apiCredentialFallback.apiKeyCreateHint,
-    })
+    }
+    startWorkflow({ kind: SPONSOR_WORKFLOW_KINDS.ApiCredential, prefill }, () =>
+      onOpenApiCredentialProfiles(prefill),
+    )
   }
 
   const mainActionKind = getMainActionKind(item, surface)
@@ -279,6 +311,8 @@ export function SponsorRecommendationCard({
             : "dark:text-foreground dark:hover:bg-secondary/70 text-secondary-foreground hover:bg-muted",
         )}
         onClick={handleMainAction}
+        disabled={isOpening}
+        aria-busy={isOpening}
         aria-label={`${mainActionLabel}: ${item.name}`}
         data-testid={getMainActionTestId(mainActionKind)}
       >
@@ -315,6 +349,7 @@ export function SponsorRecommendationCard({
               aria-label={t("sponsor.actions.openBookmarkManagerFallback")}
               title={t("sponsor.actions.openBookmarkManagerFallback")}
               onClick={handleOpenBookmarkManager}
+              disabled={isOpening}
               data-testid={
                 ACCOUNT_MANAGEMENT_TEST_IDS.sponsorFallbackBookmarkAction
               }
@@ -332,6 +367,7 @@ export function SponsorRecommendationCard({
               )}
               title={t("sponsor.actions.openApiCredentialProfilesFallback")}
               onClick={handleOpenApiCredentialProfiles}
+              disabled={isOpening}
               data-testid={
                 ACCOUNT_MANAGEMENT_TEST_IDS.sponsorFallbackApiCredentialProfilesAction
               }

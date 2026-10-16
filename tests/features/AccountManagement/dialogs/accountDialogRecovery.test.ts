@@ -77,6 +77,16 @@ const recoveryState = (siteType: AccountSiteType = SITE_TYPES.NEW_API) => ({
 })
 
 describe("account dialog recovery handoff", () => {
+  it("rejects invalid recovery state before staging a draft", async () => {
+    await expect(
+      prepareAccountDialogRecovery({
+        ...recoveryState(),
+        url: "javascript:invalid",
+      }),
+    ).rejects.toThrow("Invalid account recovery draft")
+    expect(sessionValues.size).toBe(0)
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     sessionValues.clear()

@@ -68,14 +68,9 @@ vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
     isInitialLoad: false,
   }),
 }))
-vi.mock(
-  "~/features/AccountManagement/sponsors/pendingAddAccountIntent",
-  () => ({
-    getAndClearPendingSponsorAddAccountPrefill: vi.fn(async () => null),
-    watchPendingSponsorAddAccountPrefill: vi.fn(() => () => {}),
-    isAddAccountPrefill: vi.fn(() => false),
-  }),
-)
+vi.mock("~/features/AccountManagement/sponsors/addAccountPrefill", () => ({
+  isAddAccountPrefill: vi.fn(() => false),
+}))
 vi.mock("~/features/AccountManagement/components/AccountDialog", () => ({
   default: (props: {
     recoveryState?: { draft: { siteName: string; notes: string } }

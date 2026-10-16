@@ -239,7 +239,12 @@ export function ApiCredentialProfileDialog({
                   {addPrefill.apiKeyCreateHint ??
                     t("apiCredentialProfiles:dialog.hints.apiKeyCreateUrl")}
                 </p>
-                <Button asChild variant="secondary" size="sm">
+                <Button
+                  asChild
+                  variant="dashed"
+                  size="sm"
+                  className="text-theme-700 hover:text-theme-800 dark:text-theme-300 dark:hover:text-theme-200"
+                >
                   <a
                     href={addPrefill.apiKeyCreateUrl}
                     target="_blank"

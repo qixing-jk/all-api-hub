@@ -17,6 +17,7 @@ interface OpenBookmarkDialogOptions {
 }
 
 interface BookmarkDialogStateContextType {
+  isBookmarkDialogOpen: boolean
   openBookmarkDialog: (options: OpenBookmarkDialogOptions) => void
   openAddBookmark: (prefill?: { name?: string; url?: string } | null) => void
   openEditBookmark: (bookmark: SiteBookmark) => void
@@ -60,12 +61,14 @@ export function BookmarkDialogStateProvider({
 
   const value = useMemo(
     () => ({
+      isBookmarkDialogOpen: dialogProps.isOpen,
       openBookmarkDialog,
       openAddBookmark,
       openEditBookmark,
       closeBookmarkDialog,
     }),
     [
+      dialogProps.isOpen,
       closeBookmarkDialog,
       openAddBookmark,
       openBookmarkDialog,

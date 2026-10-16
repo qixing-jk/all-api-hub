@@ -9,6 +9,7 @@ import {
 } from "~/features/AccountManagement/components/AccountDialog/models"
 import { useAccountDialogRecoveryHandoff } from "~/features/AccountManagement/components/AccountDialog/recovery/useAccountDialogRecoveryHandoff"
 import {
+  ACCOUNT_DIALOG_RECOVERY_DESTINATIONS,
   canUseAccountDialogRecoverySidePanel,
   discardAccountDialogRecovery,
   openAccountDialogRecovery,
@@ -26,12 +27,18 @@ import {
   waitFor,
 } from "~~/tests/test-utils/render"
 
-vi.mock("~/features/AccountManagement/dialogs/accountDialogRecovery", () => ({
-  canUseAccountDialogRecoverySidePanel: vi.fn(),
-  discardAccountDialogRecovery: vi.fn(),
-  openAccountDialogRecovery: vi.fn(),
-  prepareAccountDialogRecovery: vi.fn(),
-}))
+vi.mock(
+  "~/features/AccountManagement/dialogs/accountDialogRecovery",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/features/AccountManagement/dialogs/accountDialogRecovery")
+    >()),
+    canUseAccountDialogRecoverySidePanel: vi.fn(),
+    discardAccountDialogRecovery: vi.fn(),
+    openAccountDialogRecovery: vi.fn(),
+    prepareAccountDialogRecovery: vi.fn(),
+  }),
+)
 vi.mock("~/utils/navigation/popup", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/utils/navigation/popup")>()),
   closeIfPopup: vi.fn(),
@@ -76,7 +83,7 @@ describe("account dialog recovery continuation", () => {
       .mockResolvedValue(prepared)
     vi.mocked(openAccountDialogRecovery)
       .mockReset()
-      .mockResolvedValue("sidepanel")
+      .mockResolvedValue(ACCOUNT_DIALOG_RECOVERY_DESTINATIONS.SidePanel)
     vi.mocked(discardAccountDialogRecovery)
       .mockReset()
       .mockResolvedValue(undefined)
@@ -127,7 +134,9 @@ describe("account dialog recovery continuation", () => {
   it("offers a full page when a sidebar is unavailable", async () => {
     const user = userEvent.setup()
     vi.mocked(canUseAccountDialogRecoverySidePanel).mockReturnValue(false)
-    vi.mocked(openAccountDialogRecovery).mockResolvedValue("tab")
+    vi.mocked(openAccountDialogRecovery).mockResolvedValue(
+      ACCOUNT_DIALOG_RECOVERY_DESTINATIONS.Tab,
+    )
     renderGuide(snapshot())
 
     await user.click(

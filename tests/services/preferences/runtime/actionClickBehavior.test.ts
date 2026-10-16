@@ -10,6 +10,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { NATIVE_SIDE_PANEL_ACTION_CLICK_RESULTS } from "~/utils/browser/sidePanel"
+import { SIDE_PANEL_NAVIGATION_DESTINATIONS } from "~/utils/navigation/destinations"
 
 describe("background applyActionClickBehavior", () => {
   let addActionClickListener: ReturnType<typeof vi.fn>
@@ -36,7 +37,9 @@ describe("background applyActionClickBehavior", () => {
     })
     getPreferencesStrict = vi.fn()
     loggerWarn = vi.fn()
-    openSidePanelWithFallback = vi.fn().mockResolvedValue("sidepanel")
+    openSidePanelWithFallback = vi
+      .fn()
+      .mockResolvedValue(SIDE_PANEL_NAVIGATION_DESTINATIONS.SidePanel)
     openOptionsPage = vi.fn().mockResolvedValue(undefined)
     trackerComplete = vi.fn().mockResolvedValue(undefined)
     startProductAnalyticsAction = vi.fn().mockReturnValue({
@@ -628,7 +631,9 @@ describe("background applyActionClickBehavior", () => {
     })
     setupActionClickBehaviorListener()
     await applyActionClickBehavior("sidepanel")
-    openSidePanelWithFallback.mockResolvedValueOnce("options")
+    openSidePanelWithFallback.mockResolvedValueOnce(
+      SIDE_PANEL_NAVIGATION_DESTINATIONS.Options,
+    )
     await addActionClickListener.mock.calls[0]?.[0]({ id: 7, windowId: 9 })
     expect(trackerComplete).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,

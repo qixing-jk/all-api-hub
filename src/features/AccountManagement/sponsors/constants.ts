@@ -1,3 +1,9 @@
+export const SPONSOR_WORKFLOW_KINDS = {
+  Account: "account",
+  Bookmark: "bookmark",
+  ApiCredential: "apiCredential",
+} as const
+
 export const SPONSOR_CATALOG_SCHEMA_VERSION = 5
 
 export const SPONSOR_REMOTE_CATALOG_V5_URL =

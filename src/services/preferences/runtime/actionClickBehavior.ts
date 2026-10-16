@@ -22,6 +22,7 @@ import {
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { openOptionsPage } from "~/utils/navigation"
+import { SIDE_PANEL_NAVIGATION_DESTINATIONS } from "~/utils/navigation/destinations"
 import { openSidePanelWithFallback } from "~/utils/navigation/sidepanel"
 
 /**
@@ -49,7 +50,7 @@ const handleOpenSidePanelActionClick = async (tab: browser.tabs.Tab) => {
 
   try {
     const destination = await openSidePanelWithFallback(tab)
-    if (destination === "options") {
+    if (destination === SIDE_PANEL_NAVIGATION_DESTINATIONS.Options) {
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })

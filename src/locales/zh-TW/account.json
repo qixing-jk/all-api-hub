@@ -259,6 +259,7 @@
       "description": "前往服務商網站註冊，再依照卡片提示新增帳號、儲存 API 憑據或收藏站點。",
       "title": "探索可用服務商"
     },
+    "openWorkflowFailed": "無法開啟新增流程，請重試。",
     "popupApiCredentialProfiles": {
       "description": "需要開發 API 或 Coding Plan 額度？支援一鍵預填 Base URL 與控制台快捷領 Key：",
       "title": "推薦服務商與訂閱"

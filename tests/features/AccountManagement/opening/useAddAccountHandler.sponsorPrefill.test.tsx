@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAddAccountHandler } from "~/features/AccountManagement/opening/useAddAccountHandler"
-import { atIndex } from "~~/tests/test-utils/indexedAccess"
+import { SPONSOR_WORKFLOW_KINDS } from "~/features/AccountManagement/sponsors/constants"
 
 const { openAddAccountMock, showFirefoxWarningDialogMock } = vi.hoisted(() => ({
   openAddAccountMock: vi.fn(),
@@ -40,6 +40,11 @@ vi.mock("~/utils/browser", async (importOriginal) => {
   }
 })
 
+const openWorkflowMock = vi.hoisted(() => vi.fn())
+vi.mock("~/features/AccountManagement/sponsors/openSponsorWorkflow", () => ({
+  openSponsorWorkflow: openWorkflowMock,
+}))
+
 vi.mock("~/utils/navigation/sidepanel", () => ({
   openSidePanelWithFallback: openSidePanelPageMock,
 }))
@@ -48,19 +53,15 @@ vi.mock("~/utils/navigation/optionsPage", () => ({
 }))
 vi.mock("~/utils/navigation/popup", () => ({ closeIfPopup: vi.fn() }))
 
-vi.mock(
-  "~/features/AccountManagement/sponsors/pendingAddAccountIntent",
-  () => ({
-    isSponsorAddAccountPrefill: (value: unknown) =>
-      typeof value === "object" &&
-      value !== null &&
-      (value as any).source === "sponsor" &&
-      typeof (value as any).sponsorId === "string" &&
-      typeof (value as any).siteUrl === "string" &&
-      typeof (value as any).siteType === "string",
-    setPendingSponsorAddAccountPrefill: vi.fn(),
-  }),
-)
+vi.mock("~/features/AccountManagement/sponsors/addAccountPrefill", () => ({
+  isSponsorAddAccountPrefill: (value: unknown) =>
+    typeof value === "object" &&
+    value !== null &&
+    (value as any).source === "sponsor" &&
+    typeof (value as any).sponsorId === "string" &&
+    typeof (value as any).siteUrl === "string" &&
+    typeof (value as any).siteType === "string",
+}))
 
 vi.mock("~/utils/browser/sidePanel", async (original) => ({
   ...(await original<typeof import("~/utils/browser/sidePanel")>()),
@@ -72,6 +73,13 @@ describe("useAddAccountHandler sponsor prefill", () => {
     vi.clearAllMocks()
     runtime.inPopup = true
     runtime.supported = true
+  })
+
+  it("keeps the add-account handler stable across unchanged renders", () => {
+    const { result, rerender } = renderHook(() => useAddAccountHandler())
+    const handler = result.current.handleAddAccountClick
+    rerender()
+    expect(result.current.handleAddAccountClick).toBe(handler)
   })
 
   it("adds accounts directly in Options instead of recommending a side panel", () => {
@@ -91,14 +99,15 @@ describe("useAddAccountHandler sponsor prefill", () => {
       false,
     )
     await showFirefoxWarningDialogMock.mock.calls[0]?.[0]()
+    expect(openSidePanelPageMock).toHaveBeenCalledWith(
+      undefined,
+      expect.any(Function),
+    )
+    await openSidePanelPageMock.mock.calls[0]?.[1]()
     expect(openOptionsMock).toHaveBeenCalledWith("account", { action: "add" })
-    expect(openSidePanelPageMock).not.toHaveBeenCalled()
   })
 
-  it("persists sponsor prefill before opening the Firefox side-panel warning target", async () => {
-    const { setPendingSponsorAddAccountPrefill } = await import(
-      "~/features/AccountManagement/sponsors/pendingAddAccountIntent"
-    )
+  it("delegates sponsor continuation to the shared workflow after Firefox confirmation", async () => {
     const prefill = {
       source: "sponsor" as const,
       sponsorId: "supported-provider",
@@ -119,23 +128,13 @@ describe("useAddAccountHandler sponsor prefill", () => {
 
     await onConfirm()
 
-    expect(setPendingSponsorAddAccountPrefill).toHaveBeenCalledWith(prefill)
-    expect(openSidePanelPageMock).toHaveBeenCalledTimes(1)
-    const persistCallOrder = atIndex(
-      vi.mocked(setPendingSponsorAddAccountPrefill).mock.invocationCallOrder,
-      0,
+    expect(openWorkflowMock).toHaveBeenCalledWith(
+      { kind: SPONSOR_WORKFLOW_KINDS.Account, prefill },
+      expect.any(Function),
     )
-    const navigateCallOrder = atIndex(
-      openSidePanelPageMock.mock.invocationCallOrder,
-      0,
-    )
-    expect(persistCallOrder).toBeLessThan(navigateCallOrder)
   })
 
   it("does not persist sponsor prefill when invoked from a click event", async () => {
-    const { setPendingSponsorAddAccountPrefill } = await import(
-      "~/features/AccountManagement/sponsors/pendingAddAccountIntent"
-    )
     const { result } = renderHook(() => useAddAccountHandler())
 
     act(() => {
@@ -149,7 +148,7 @@ describe("useAddAccountHandler sponsor prefill", () => {
 
     await onConfirm()
 
-    expect(setPendingSponsorAddAccountPrefill).not.toHaveBeenCalled()
+    expect(openWorkflowMock).not.toHaveBeenCalled()
     expect(openSidePanelPageMock).toHaveBeenCalledTimes(1)
   })
 })

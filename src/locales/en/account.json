@@ -282,6 +282,7 @@
       "description": "Register on a provider's website, then follow the card to add an account, save API credentials, or bookmark the site.",
       "title": "Explore available providers"
     },
+    "openWorkflowFailed": "Could not open setup. Please try again.",
     "popupApiCredentialProfiles": {
       "description": "Need developer API or Coding Plan access? Quickly prefill Base URL and get keys from the provider console:",
       "title": "Recommended Providers & Subscriptions"
