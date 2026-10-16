@@ -156,6 +156,7 @@ export function TurnstileNotificationStatus({
         onConfirm={async () => {
           if (status !== "permission_required") {
             void openSettingsTab("permissions", { preserveHistory: true })
+            setPermissionDialog(false)
             return
           }
           setPending(true)

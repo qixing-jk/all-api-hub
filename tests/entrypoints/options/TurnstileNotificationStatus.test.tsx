@@ -3,9 +3,14 @@ import { beforeEach, expect, it, vi } from "vitest"
 import { TurnstileNotificationStatus } from "~/features/BasicSettings/components/tabs/Refresh/protectionBypass/TurnstileNotificationStatus"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
-const { availability, request } = vi.hoisted(() => ({
+const { availability, request, openSettings } = vi.hoisted(() => ({
   availability: vi.fn(),
   request: vi.fn(),
+  openSettings: vi.fn(),
+}))
+vi.mock("~/utils/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/navigation")>()),
+  openSettingsTab: openSettings,
 }))
 vi.mock("~/services/notifications/browserNotificationAvailability", () => ({
   getBrowserNotificationAvailability: availability,
@@ -18,7 +23,33 @@ vi.mock("~/services/permissions/permissionManager", () => ({
 beforeEach(() => {
   availability.mockReset().mockResolvedValue("permission_required")
   request.mockReset()
+  openSettings.mockReset()
 })
+
+it.each(["blocked", "unavailable", "unknown"])(
+  "closes the %s permission dialog after opening permission settings",
+  async (status) => {
+    availability.mockResolvedValue(status)
+    const change = vi.fn()
+    render(<TurnstileNotificationStatus preference="page" onChange={change} />)
+    fireEvent.click(
+      await screen.findByRole("switch", {
+        name: /shieldTurnstileAssistNotify/,
+      }),
+    )
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: /turnstileNotificationManage/,
+      }),
+    )
+    expect(openSettings).toHaveBeenCalledWith("permissions", {
+      preserveHistory: true,
+    })
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    expect(change).not.toHaveBeenCalled()
+    expect(request).not.toHaveBeenCalled()
+  },
+)
 
 it("offers permission in a dialog and enables system reminders only after grant", async () => {
   const change = vi.fn()

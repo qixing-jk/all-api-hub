@@ -23,7 +23,7 @@ console.log(
   "In the dev extension: Settings → Refresh → Website verification assistance → Development trigger.",
 )
 console.log(
-  "Choose a Turnstile preset. Use foreground/both to test the three-site queue. Ctrl+C stops the servers.",
+  "Choose a Turnstile preset. Enable In-page reminders to test the three-site queue. Ctrl+C stops the servers.",
 )
 let stopping = false
 async function stop() {
