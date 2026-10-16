@@ -10,6 +10,27 @@ test("real Firefox action popup fills its viewport and keeps tabs reachable", as
   firefoxExtension: popup,
 }, testInfo) => {
   await popup.openPopup()
+  // Inspect Firefox chrome as well as the document: a correctly sized root
+  // must not hide an oversized native toolbar panel.
+  const nativeSize = await popup.driver.executeScript<{
+    browserWidth: number
+    browserHeight: number
+    panelWidth: number
+  }>(
+    `
+    const browser = [...document.querySelectorAll('browser')].find(item =>
+      item.currentURI?.spec === arguments[0] + 'popup.html' && item.closest('panel')?.state === 'open')
+    const bounds = browser.getBoundingClientRect()
+    return {browserWidth: bounds.width, browserHeight: bounds.height,
+      panelWidth: browser.closest('panel').getBoundingClientRect().width}
+  `,
+    popup.origin,
+  )
+  expect(nativeSize.browserWidth).toBe(410)
+  expect(nativeSize.browserHeight).toBe(600)
+  // Leave room for Firefox's border/shadow chrome while excluding an 800px panel.
+  expect(nativeSize.panelWidth).toBeGreaterThanOrEqual(410)
+  expect(nativeSize.panelWidth).toBeLessThanOrEqual(450)
   await expect
     .poll(() =>
       popup.evaluate(`(() => {
