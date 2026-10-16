@@ -85,6 +85,7 @@
     "e2e:cdp:turnstile": "node scripts/test-turnstile-assist-e2e-live.mjs",
     "e2e:cdp:clawhud": "node scripts/test-clawhud-e2e-live.mjs",
     "e2e:cdp:sidrune": "node scripts/test-sidrune-checkin-e2e-live.mjs",
+    "e2e:cdp:freeapi": "node scripts/test-freeapi-checkin-e2e-live.mjs",
     "e2e:cdp:rix": "node scripts/test-rix-api-e2e-live.mjs",
     "e2e:cdp:omniroute": "node scripts/test-omniroute-e2e-live.mjs",
     "e2e:cdp:gpt-load": "node scripts/test-gpt-load-e2e-live.mjs",

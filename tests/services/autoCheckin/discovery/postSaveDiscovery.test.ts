@@ -34,6 +34,7 @@ const { storageData, storageSet, detectors, checkIn } = vi.hoisted(() => ({
     vi.fn(),
     vi.fn(),
     vi.fn(),
+    vi.fn(),
   ],
   checkIn: vi.fn(),
 }))
@@ -67,6 +68,7 @@ vi.mock("~/services/checkin/autoCheckin/providers", async () => {
         AUTO_CHECKIN_METHOD_IDS.ClawhudDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
+        AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
       ].map((id, index) => ({
         id,
         siteTypes: [SITE_TYPES.SUB2API],

@@ -1,16 +1,22 @@
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
+import { createCheckInCodeEnvelopeParser } from "~/services/apiService/sub2api/checkin/codeEnvelope"
 import { ForeignCheckInContractError } from "~/services/apiService/sub2api/checkin/foreignCheckInContract"
 import {
   createUserCheckInStatusEndpoint,
   resolveUserCheckInTimezone,
   USER_CHECK_IN_STATUS_ENDPOINT,
 } from "~/services/apiService/sub2api/checkin/userCheckInProtocol"
-import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type {
   ApiServiceRequest,
   ApiTransportResponse,
 } from "~/services/apiTransport/type"
+
+import {
+  classifySiblingStatusDto,
+  SIBLING_DTO_VERDICTS,
+} from "./siblingStatusContracts"
 
 const CLAWHUD_DAILY_CHECK_IN_ENDPOINT = "/api/v1/user/checkin"
 
@@ -23,88 +29,21 @@ export const CLAWHUD_DAILY_CHECK_IN_RESULT_KINDS = {
   Applied: "applied",
 } as const
 
-const toRecord = (value: unknown): Record<string, unknown> | null =>
-  value !== null && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null
-
-const getHttpErrorCode = (status: number) => {
-  if (status === 401) return API_ERROR_CODES.HTTP_401
-  if (status === 403) return API_ERROR_CODES.HTTP_403
-  if (status === 429) return API_ERROR_CODES.HTTP_429
-  return API_ERROR_CODES.HTTP_OTHER
-}
-
-const invalidResponse = (endpoint: string) =>
-  new ApiError(
-    "Invalid Clawhud daily check-in response",
-    undefined,
-    endpoint,
-    API_ERROR_CODES.JSON_PARSE_ERROR,
-  )
-
 /**
  * This deployment's envelopes keep `code` numeric on success but switch to a
  * string (`UNAUTHORIZED`) on transport-level failures, and failure envelopes
  * carry their classification in `reason` (verified 2026-10-11 at
  * https://api.clawhud.com). Preserve both for the provider's mapping.
  */
-const parseEnvelopeData = (
-  response: ApiTransportResponse<unknown>,
-  endpoint: string,
-): Record<string, unknown> => {
-  const envelope = toRecord(response.body)
-  if (!envelope) {
-    if (!response.ok) {
-      throw new ApiError(
-        `Clawhud daily check-in request failed with HTTP ${response.status}`,
-        response.status,
-        endpoint,
-        getHttpErrorCode(response.status),
-      )
-    }
-    throw invalidResponse(endpoint)
-  }
-
-  if (
-    (typeof envelope.code !== "string" && typeof envelope.code !== "number") ||
-    typeof envelope.message !== "string"
-  ) {
-    throw invalidResponse(endpoint)
-  }
-
-  const upstreamCode =
-    typeof envelope.reason === "string" && envelope.reason
-      ? envelope.reason
-      : String(envelope.code)
-  const message = envelope.message.trim() || undefined
-  const isSuccessEnvelope = envelope.code === 0 && response.ok
-
-  if (!isSuccessEnvelope) {
-    throw new ApiError(
-      message ??
-        `Clawhud daily check-in request failed with HTTP ${response.status}`,
-      response.ok ? undefined : response.status,
-      endpoint,
-      response.ok
-        ? API_ERROR_CODES.BUSINESS_ERROR
-        : getHttpErrorCode(response.status),
-      upstreamCode,
-    )
-  }
-
-  const data = toRecord(envelope.data)
-  if (!data) throw invalidResponse(endpoint)
-  return data
-}
+const { parseEnvelopeData, invalidResponse } =
+  createCheckInCodeEnvelopeParser("Clawhud")
 
 /**
  * Deployment-owned contract observed at https://api.clawhud.com/dashboard on
  * 2026-10-11: the status DTO names its already-checked field
  * `checked_in_today`, unlike the Genius Programmer sibling that shares the
- * same path. A valid Genius Programmer status with `today_checked_in` and
- * `enabled` booleans belongs to a foreign contract. Discovery marks that
- * method unsupported; missing or malformed status fields remain unknown.
+ * same path. Sibling classification comes from the shared discriminator
+ * table; missing or malformed status fields remain unknown.
  */
 export function parseClawhudDailyCheckInStatusResponse(
   response: ApiTransportResponse<unknown>,
@@ -118,8 +57,10 @@ export function parseClawhudDailyCheckInStatusResponse(
   }
   if (
     !Object.hasOwn(data, "checked_in_today") &&
-    typeof data.enabled === "boolean" &&
-    typeof data.today_checked_in === "boolean"
+    classifySiblingStatusDto(
+      AUTO_CHECKIN_METHOD_IDS.ClawhudDailyCheckIn,
+      data,
+    ) === SIBLING_DTO_VERDICTS.Foreign
   ) {
     throw new ForeignCheckInContractError(USER_CHECK_IN_STATUS_ENDPOINT, data)
   }
