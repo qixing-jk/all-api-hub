@@ -332,6 +332,38 @@ describe("releaseUpdateService", () => {
     },
   )
 
+  it.each([
+    ["a", true],
+    ["c", false],
+  ])(
+    "reuses Nightly cache only for the same build revision: %s",
+    async (revision, reuse) => {
+      vi.stubGlobal(
+        "__AAH_DISTRIBUTION_CHANNEL__",
+        DISTRIBUTION_CHANNEL.GithubNightly,
+      )
+      vi.stubGlobal("__AAH_BUILD_REVISION__", "a".repeat(40))
+      vi.mocked(globalThis.fetch).mockResolvedValue({
+        ok: true,
+        json: async () => ({ object: { type: "commit", sha: "b".repeat(40) } }),
+      } as Response)
+      const { releaseUpdateService } = await import(
+        "~/services/updates/releaseUpdateService"
+      )
+      const checked = await releaseUpdateService.checkNow()
+
+      vi.stubGlobal("__AAH_BUILD_REVISION__", revision.repeat(40))
+      expect(await releaseUpdateService.getStatus()).toMatchObject({
+        currentVersion: checked.currentVersion,
+        buildRevision: revision.repeat(40),
+        latestVersion: reuse ? "bbbbbbb" : null,
+        updateAvailable: reuse,
+        checkedAt: reuse ? checked.checkedAt : null,
+      })
+      expect(globalThis.fetch).toHaveBeenCalledOnce()
+    },
+  )
+
   it("reuses legacy unknown-channel cache without triggering a network request", async () => {
     const { releaseUpdateService } = await import(
       "~/services/updates/releaseUpdateService"
