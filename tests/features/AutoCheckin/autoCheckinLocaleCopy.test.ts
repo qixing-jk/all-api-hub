@@ -204,6 +204,7 @@ describe("auto-checkin failure copy", () => {
         providerFallback.nativePageTargetNotFound,
         providerFallback.nativePageTriggerFailed,
         providerFallback.nativePageStatusUnconfirmed,
+        providerFallback.nativePageVerificationRequired,
       ]) {
         expect(message).toContain("{{checkInUrl}}")
       }

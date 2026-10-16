@@ -195,10 +195,16 @@ export async function resolveNativePageCheckinResult(params: {
     }
   }
 
+  const verificationRequired =
+    action.trigger?.verification?.status === "required"
   return {
     status: CHECKIN_RESULT_STATUS.FAILED,
-    reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
-    messageKey: NEW_API_MESSAGE_KEYS.nativePageStatusUnconfirmed,
+    reasonCode: verificationRequired
+      ? AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED
+      : AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+    messageKey: verificationRequired
+      ? NEW_API_MESSAGE_KEYS.nativePageVerificationRequired
+      : NEW_API_MESSAGE_KEYS.nativePageStatusUnconfirmed,
     messageParams: { checkInUrl },
     rawMessage: action.error || undefined,
     data: action,

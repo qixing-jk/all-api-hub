@@ -44,6 +44,8 @@ export const NEW_API_MESSAGE_KEYS = {
     "autoCheckin:providerFallback.nativePageTriggerFailed",
   nativePageStatusUnconfirmed:
     "autoCheckin:providerFallback.nativePageStatusUnconfirmed",
+  nativePageVerificationRequired:
+    "autoCheckin:providerFallback.nativePageVerificationRequired",
 } as const
 
 type CheckinResult = AutoCheckinProviderOutcome

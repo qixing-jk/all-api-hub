@@ -848,6 +848,69 @@ describe("newApiProvider", () => {
       }
     })
 
+    it.each([
+      ["required", false, "failed", "manual_verification_required"],
+      ["completed", false, "failed", "checkin_unconfirmed"],
+      ["required", true, "already_checked", undefined],
+    ] as const)(
+      "classifies native verification %s with checked-in status %s using server evidence",
+      async (
+        verificationStatus,
+        checkedInToday,
+        expectedStatus,
+        expectedReason,
+      ) => {
+        vi.useFakeTimers()
+        try {
+          vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+            success: false,
+            message: "missing check-in signature header",
+            data: null,
+          })
+          vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValueOnce({
+            success: true,
+            reason: "clicked",
+            trigger: {
+              status: "clicked",
+              clicked: true,
+              reason: "clicked",
+              detection: {
+                hasTurnstile: false,
+                reasons: [],
+                score: 0,
+                title: "Check in",
+                url: null,
+              },
+              verification: {
+                status: verificationStatus,
+                provider: "hcaptcha",
+              },
+            },
+          })
+          vi.mocked(newApiFamilyRequests.data).mockResolvedValue({
+            stats: { checked_in_today: checkedInToday },
+          } as any)
+          const pending = checkInForTest(mockAccount)
+          await vi.advanceTimersByTimeAsync(9_000)
+          const result = await pending
+          expect(result.status).toBe(expectedStatus)
+          expect(result.reasonCode).toBe(expectedReason)
+          if (!checkedInToday) {
+            expect(result.messageKey).toBe(
+              verificationStatus === "required"
+                ? "autoCheckin:providerFallback.nativePageVerificationRequired"
+                : "autoCheckin:providerFallback.nativePageStatusUnconfirmed",
+            )
+            expect(result.messageParams).toEqual({
+              checkInUrl: "https://site.example.invalid/console/personal",
+            })
+          }
+        } finally {
+          vi.useRealTimers()
+        }
+      },
+    )
+
     it("does not add native page identity matching to Turnstile replay failures", async () => {
       vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
         success: false,

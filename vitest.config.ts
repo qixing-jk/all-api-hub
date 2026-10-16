@@ -11,6 +11,7 @@ const domOnlyTsTests = [
   "entrypoints/content/messageHandlers/utils/capGuard.test.ts",
   "entrypoints/content/messageHandlers/utils/turnstileGuard.test.ts",
   "entrypoints/content/messageHandlers/utils/turnstileUserAssist.test.ts",
+  "entrypoints/content/messageHandlers/handlers/nativeCheckinVerification.test.ts",
   "services/checkin/turnstile/pageApi.test.ts",
   "entrypoints/content/webAiApiCheck/index.test.ts",
   "entrypoints/content/messageHandlers/handlers/storage.test.ts",

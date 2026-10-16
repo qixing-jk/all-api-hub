@@ -28,6 +28,10 @@ vi.mock("~/utils/core/logger", () => ({
   createLogger: () => loggerMocks,
 }))
 
+vi.mock("~/services/checkin/pageVerification", () => ({
+  waitForPageVerification: vi.fn(async () => ({ status: "not_present" })),
+}))
+
 vi.mock("~/utils/browser/runtimeMessages", () => ({
   sendRuntimeMessage: sendRuntimeMessageMock,
 }))
@@ -201,6 +205,7 @@ describe("content turnstile guard handler", () => {
     expect(response).toEqual({
       success: true,
       ...triggerResult,
+      verification: { status: "not_present" },
     })
   })
 

@@ -131,9 +131,9 @@
   "notification": {
     "openVerification": "打开验证窗口",
     "reminderSettings": "提醒设置",
-    "turnstileAssistBody": "后台任务需要你完成人机验证，完成后将自动继续。",
+    "turnstileAssistBody": "站点的人机验证尚未完成。点击“打开验证窗口”完成验证码，扩展会继续检查任务结果。",
     "turnstileAssistTitle": "All API Hub · 验证提醒",
-    "turnstilePageBody": "后台任务需要你完成人机验证，完成后将自动继续。",
+    "turnstilePageBody": "站点的人机验证尚未完成。点击“打开验证窗口”完成验证码，扩展会继续检查任务结果。",
     "verificationEnded": "此次验证已结束，无需继续处理。"
   },
   "titlePrefix": "All API Hub · 过盾助手",
@@ -144,7 +144,7 @@
     "body": "此页面由 All API Hub 自动打开，用于通过站点防护页（如 Cloudflare 五秒盾）以获取必要的 Cookie/会话信息。\n这是让 All API Hub 在防护站点上正常请求和识别数据所必需的步骤。\n如出现人机验证，请在此窗口内完成验证；通过后 All API Hub 会继续流程并自动关闭该窗口。",
     "title": "过盾助手",
     "turnstile": {
-      "body": "自动验证还没有完成。请在这个窗口里完成 Cloudflare Turnstile 验证（例如勾选“确认您是真人”）。完成后会自动继续签到，这个窗口可能会自动关闭。",
+      "body": "请在这个窗口内完成站点的人机验证（例如勾选“确认您是真人”或按提示选择图片）。扩展正在等待，完成后会继续检查任务结果；若页面仍显示未签到，请在页面上完成签到。",
       "title": "需要完成人机验证"
     }
   }

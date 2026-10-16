@@ -118,6 +118,7 @@ describe("autoCheckin utils", () => {
       "autoCheckin:providerFallback.nativePageIdentityMismatch",
       "autoCheckin:providerFallback.nativePageIdentityMissing",
       "autoCheckin:providerFallback.nativePageStatusUnconfirmed",
+      "autoCheckin:providerFallback.nativePageVerificationRequired",
       "autoCheckin:providerFallback.nativePageTargetNotFound",
       "autoCheckin:providerFallback.nativePageTriggerFailed",
       "autoCheckin:providerFallback.sessionBusy",
