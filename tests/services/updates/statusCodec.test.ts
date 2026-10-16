@@ -7,6 +7,32 @@ import {
 import { parseReleaseUpdateStatus } from "~/services/updates/statusCodec"
 
 describe("parseReleaseUpdateStatus", () => {
+  it.each([undefined, null, "future-channel", 42, {}, ["firefox-amo"]])(
+    "omits unrecognized channel metadata: %j",
+    (distributionChannel) => {
+      const parsed = parseReleaseUpdateStatus({
+        currentVersion: "4.5.0",
+        distributionChannel,
+      })
+      expect(parsed).not.toHaveProperty("distributionChannel")
+    },
+  )
+
+  it.each(["a".repeat(40), "A".repeat(40), "a".repeat(39), null, 42])(
+    "preserves only a full lowercase build revision: %j",
+    (buildRevision) => {
+      const parsed = parseReleaseUpdateStatus({
+        currentVersion: "4.5.0",
+        buildRevision,
+      })
+      if (buildRevision === "a".repeat(40)) {
+        expect(parsed).toHaveProperty("buildRevision", buildRevision)
+      } else {
+        expect(parsed).not.toHaveProperty("buildRevision")
+      }
+    },
+  )
+
   it("returns null for non-object payloads and whitespace-only current versions", () => {
     expect(parseReleaseUpdateStatus(null)).toBeNull()
     expect(parseReleaseUpdateStatus("invalid")).toBeNull()

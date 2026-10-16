@@ -1,9 +1,12 @@
 import userEvent from "@testing-library/user-event"
 import React from "react"
+import { I18nextProvider } from "react-i18next"
 import { describe, expect, it, vi } from "vitest"
 
 import { ReleaseUpdateStatusPanel } from "~/components/ReleaseUpdateStatusPanel"
+import settingsEn from "~/locales/en/settings.json"
 import type { ReleaseUpdateStatus } from "~/services/updates/releaseUpdateStatus"
+import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const toastMocks = vi.hoisted(() => ({
@@ -16,6 +19,37 @@ vi.mock("~/lib/notify", () => ({
 }))
 
 const mockUseReleaseUpdateStatus = vi.fn()
+
+it("shows the actionable AMO version and links to AMO without unrelated metadata", async () => {
+  mockHook(
+    buildStatus({
+      reason: "firefox-amo",
+      latestVersion: "3.40.0",
+      githubLatestVersion: "3.41.0",
+      updateAvailable: true,
+      releaseUrl: "https://addons.mozilla.org/firefox/addon/all-api-hub/",
+    }),
+  )
+  const i18n = await createResourceTestI18n({ en: { settings: settingsEn } })
+  render(
+    <I18nextProvider i18n={i18n}>
+      <ReleaseUpdateStatusPanel />
+    </I18nextProvider>,
+    { withThemeProvider: false, withUserPreferencesProvider: false },
+  )
+  expect(screen.getByText(/Firefox Add-ons.*3.40.0/)).toBeInTheDocument()
+  expect(screen.queryByText(/GitHub.*3.41.0/)).not.toBeInTheDocument()
+  expect(screen.queryByText("Update details")).not.toBeInTheDocument()
+  expect(
+    screen.getByRole("link", { name: /download update/i }),
+  ).toHaveAttribute(
+    "href",
+    "https://addons.mozilla.org/firefox/addon/all-api-hub/",
+  )
+  expect(
+    screen.queryByRole("button", { name: /reload/i }),
+  ).not.toBeInTheDocument()
+})
 
 vi.mock("~/contexts/ReleaseUpdateStatusContext", () => ({
   useReleaseUpdateStatus: () => mockUseReleaseUpdateStatus(),
@@ -199,20 +233,28 @@ describe("ReleaseUpdateStatusPanel", () => {
     })
   })
 
-  it("shows not-checked copy instead of up-to-date before the first check", () => {
+  it("prioritizes the installed version and check action without diagnostic controls", () => {
     mockHook(buildStatus())
 
     renderSubject()
 
     expect(
-      screen.getByText("settings:releaseUpdate.states.notChecked"),
+      screen.getByRole("heading", {
+        name: "about:releaseUpdate.currentVersion",
+      }),
     ).toBeInTheDocument()
     expect(
-      screen.getByText("settings:releaseUpdate.latestVersionPending"),
-    ).toBeInTheDocument()
+      screen.queryByText("settings:releaseUpdate.latestVersionPending"),
+    ).not.toBeInTheDocument()
     expect(
-      screen.getByText("settings:releaseUpdate.helpers.notChecked"),
-    ).toBeInTheDocument()
+      screen.queryByText("settings:releaseUpdate.helpers.notChecked"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("settings:releaseUpdate.distributionChannel"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("settings:releaseUpdate.details"),
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByText("settings:releaseUpdate.states.upToDate"),
     ).not.toBeInTheDocument()
@@ -293,12 +335,9 @@ describe("ReleaseUpdateStatusPanel", () => {
     ).not.toBeInTheDocument()
     expect(
       screen.getByRole("link", {
-        name: "settings:releaseUpdate.openLatest",
+        name: "settings:releaseUpdate.changelog",
       }),
-    ).toHaveAttribute(
-      "href",
-      "https://github.com/qixing-jk/all-api-hub/releases/tag/v3.51.0",
-    )
+    ).toHaveAttribute("href", expect.stringContaining("/changelog.html"))
     expect(
       screen.queryByRole("link", {
         name: "settings:releaseUpdate.downloadUpdate",
@@ -346,7 +385,7 @@ describe("ReleaseUpdateStatusPanel", () => {
     })
   })
 
-  it("shows an unavailable latest-version line after a failed check", () => {
+  it("shows a recoverable failure without an empty latest-version line", () => {
     mockHook(
       buildStatus({
         lastError: "network error",
@@ -359,11 +398,11 @@ describe("ReleaseUpdateStatusPanel", () => {
       screen.getByText("settings:releaseUpdate.states.checkFailed"),
     ).toBeInTheDocument()
     expect(
-      screen.getByText("settings:releaseUpdate.latestVersionUnavailable"),
-    ).toBeInTheDocument()
+      screen.queryByText("settings:releaseUpdate.latestVersionUnavailable"),
+    ).not.toBeInTheDocument()
   })
 
-  it("shows an unavailable latest-version line for unsupported installs before any check", () => {
+  it("omits install diagnostics for unsupported installs", () => {
     mockHook(
       buildStatus({
         eligible: false,
@@ -374,17 +413,17 @@ describe("ReleaseUpdateStatusPanel", () => {
     renderSubject()
 
     expect(
-      screen.getByText("settings:releaseUpdate.reasons.unknown"),
-    ).toBeInTheDocument()
+      screen.queryByText("settings:releaseUpdate.reasons.unknown"),
+    ).not.toBeInTheDocument()
     expect(
-      screen.getByText("settings:releaseUpdate.latestVersionUnavailable"),
-    ).toBeInTheDocument()
+      screen.queryByText("settings:releaseUpdate.latestVersionUnavailable"),
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByText("settings:releaseUpdate.latestVersionPending"),
     ).not.toBeInTheDocument()
   })
 
-  it("shows an ineligible toast and skips checking when the install cannot use release checks", async () => {
+  it("allows a manual check when the install cannot use automatic checks", async () => {
     const user = userEvent.setup()
     const checkNow = vi.fn()
 
@@ -401,9 +440,9 @@ describe("ReleaseUpdateStatusPanel", () => {
       screen.getByRole("button", { name: "settings:releaseUpdate.checkNow" }),
     )
 
-    expect(checkNow).not.toHaveBeenCalled()
+    expect(checkNow).toHaveBeenCalledOnce()
     expect(toastMocks.error).toHaveBeenCalledWith(
-      "settings:releaseUpdate.reasons.unknown",
+      "settings:releaseUpdate.states.checkFailed",
     )
   })
 
@@ -466,8 +505,8 @@ describe("ReleaseUpdateStatusPanel", () => {
       screen.getByText("settings:releaseUpdate.states.unavailable"),
     ).toBeInTheDocument()
     expect(
-      screen.getByText("settings:releaseUpdate.latestVersionUnavailable"),
-    ).toBeInTheDocument()
+      screen.queryByText("settings:releaseUpdate.latestVersionUnavailable"),
+    ).not.toBeInTheDocument()
     expect(screen.queryByText("0.0.0")).not.toBeInTheDocument()
     expect(screen.queryByText("No listeners available")).not.toBeInTheDocument()
   })

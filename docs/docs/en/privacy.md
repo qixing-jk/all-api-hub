@@ -27,7 +27,7 @@ You can disable anonymous product analytics in "Settings"; doing so will immedia
 
 Anonymous product analytics adhere to the principles of minimization and de-identification:
 
-*   Only fixed enumerated values or rough intervals are sent, such as extension version, browser type, interface language, entry page, feature/operation identifiers, success or failure results, error categories, duration intervals, quantity intervals, and fixed enumerated site types.
+*   Only fixed enumerated values or rough intervals are sent, such as extension version, distribution channel, browser type, interface language, entry page, feature/operation identifiers, success or failure results, error categories, duration intervals, quantity intervals, and fixed enumerated site types.
 *   Free text, raw error stacks, page addresses, site domains, account names, token names, user notes, import/export content, request content, response content, Prompts, or model outputs are not sent.
 *   Precise balances, quotas, usage, account counts, or durations are not sent; interval values are used only when necessary to determine the scale of a problem.
 *   Before being sent, analytics events undergo field whitelisting, enumerated value validation, and sensitive field filtering within the code; fields that are not whitelisted, whose names appear to contain sensitive meanings like URL, Token, Key, Cookie, email, balance, Prompt, response content, or account, or whose values are not controlled enumerations/intervals, are discarded.

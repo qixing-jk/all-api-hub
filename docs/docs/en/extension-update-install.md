@@ -12,7 +12,7 @@ Chrome, Edge, and Firefox users should install the matching store version first.
 |---|---|---|
 | You use Chrome | Chrome Web Store version | Updated automatically by the browser, and you can also check manually inside the extension |
 | You use Edge | Edge Add-ons version | Updated automatically by the browser, and you can also check manually inside the extension |
-| You use Firefox | Firefox Add-ons version | Updated automatically by Firefox |
+| You use Firefox | Firefox Add-ons version | Updated automatically by Firefox; the extension can also check AMO's published version |
 | You use Brave / Vivaldi / Opera | Try Chrome Web Store first; use the GitHub Chrome package only if it is unavailable | Store builds update automatically; manual builds require re-download |
 | You use QQ Browser / 360 Browser / Cheetah Browser or a similar browser | Use the built-in extension center first if available; otherwise use the GitHub Chrome package | Depends on the installation source; manual builds require re-download |
 | The store version has not received an urgent fix yet | Temporarily use GitHub Stable | You need to download new versions manually later |
@@ -35,22 +35,20 @@ If you use the store version, usually you only need to wait for the browser to u
 
 ## Check for Updates Inside the Extension
 
-Open the All API Hub settings page, then click **Check now** in the version and update area.
+Open the All API Hub settings page and click **Check for updates** in the version area. Before the first check, it shows your current version. Click **Changelog** to read what changed without opening a download page.
 
-The extension checks two things for you:
-
-1. Whether the project has published a newer stable version on GitHub.
-2. Whether your browser store version can already be updated.
+Checks follow the current artifact's channel: Firefox Add-ons builds check the version published on AMO, GitHub Release builds check the latest stable release, and Nightly builds compare source commits so an unchanged version number does not hide a new build. Chrome and Edge store builds also ask the browser whether an update is ready. Old or unmarked packages can still check manually; automatic-check support depends on the installation environment.
 
 You may see these results:
 
-- **Already on the latest stable version**: no action is needed.
-- **A newer version is available**: GitHub already has a newer version. If you use the store version, you may still need to wait for store review or rollout.
-- **Store update is ready**: your browser has already downloaded the new version. Click **Reload to update** to apply it.
-- **Check failed**: the network, GitHub access, or the browser update check may be temporarily unavailable. Try again later.
+- **You’re up to date**: no action is needed. You can read the changelog for version details.
+- **Update available**: click **Download update** to open the matching release page or Firefox Add-ons listing. A published AMO version does not mean Firefox has downloaded it.
+- **Waiting for the store update**: the browser updates store installs automatically. Wait for the store rollout.
+- **Update ready to apply**: the browser has prepared an update. Click **Reload to update** to apply it.
+- **Could not check for updates**: the network, GitHub / AMO access, or browser update check may be temporarily unavailable. Try checking again.
 
 ::: warning Note
-The in-extension check cannot skip browser store review. In other words, if GitHub has published a version but the store has not listed it yet, the extension cannot directly update the store version to that release.
+The in-extension check cannot skip browser store review. If GitHub has published a version but the store has not listed it yet, the extension cannot directly update the store version to that release.
 :::
 
 ## Manually Check Store Updates in the Browser

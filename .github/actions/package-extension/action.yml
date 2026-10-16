@@ -2,6 +2,12 @@ name: package-extension
 description: Set up Node and pnpm, build the extension archives, and expose artifact metadata.
 
 inputs:
+  distribution-channel:
+    description: Release artifact channel
+    default: github-release
+  build-stores:
+    description: Produce separate archives for store submission
+    default: "false"
   node-version-file:
     description: Path to the Node.js version file relative to the repository root
     required: false
@@ -54,7 +60,12 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       env:
         NODE_OPTIONS: --max-old-space-size=6144
-      run: pnpm zip:all
+        AAH_DISTRIBUTION_CHANNEL: ${{ inputs.distribution-channel }}
+        BUILD_STORES: ${{ inputs.build-stores }}
+      run: |
+        args=()
+        if [ "$BUILD_STORES" = "true" ]; then args+=(--stores); fi
+        node scripts/package-distribution.mjs "${args[@]}"
 
     - name: Collect artifact metadata
       id: collect

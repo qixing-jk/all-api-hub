@@ -441,6 +441,12 @@ Use a build command for an unpacked production extension, or a zip command to bu
 
 Outputs are written under `.output/`. For development with hot updates, use the commands in [Getting Started](#getting-started).
 
+Release automation uses `node scripts/package-distribution.mjs --stores` to build separate Chrome Web Store, Edge Add-ons, and Firefox AMO archives under `.output/stores/`. GitHub archives remain at `.output/*.zip`. The command validates each archive's `distribution.json` using `unzip`, available on the CI runner. Nightly sets `AAH_DISTRIBUTION_CHANNEL=github-nightly` and omits `--stores`.
+
+To reproduce a single store build, set `AAH_DISTRIBUTION_CHANNEL` to `chrome-web-store`, `edge-addons`, or `firefox-amo`, then run `pnpm exec wxt zip -b chrome`, `-b edge`, or `-b firefox` respectively. `AAH_BUILD_REVISION` supplies the source commit for Nightly comparisons. Unmarked production builds report `unknown`; serve builds report `local-development`. Markers identify the current artifact, not its download website. Keep store packages separate from GitHub packages and from other stores' packages.
+
+Analytics includes the finite `distribution_channel` enum on existing consent-controlled events. Count distinct anonymous installations on `app_opened`, grouped by channel, browser family and application version, for active-install distribution. Event counts are not installation counts. Old or unmarked packages remain unknown; installations with analytics disabled are absent from this sample.
+
 ## Continuous Integration
 
 GitHub Actions selects checks according to each workflow's configured events and changed paths:

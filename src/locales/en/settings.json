@@ -715,40 +715,29 @@
     }
   },
   "releaseUpdate": {
-    "checkNow": "Check now",
+    "changelog": "Changelog",
+    "checkNow": "Check for updates",
     "downloadUpdate": "Download update",
     "helpers": {
-      "checkFailed": "Try again later, or open the release page to verify the latest version manually.",
+      "amoUpdate": "A newer version is published on Firefox Add-ons. Open the store to update, or let Firefox update automatically.",
+      "checkFailed": "Try checking for updates again.",
       "manualUpdate": "This install is updated manually. Open the release page to get the new version.",
       "manualUpdateGeneric": "Update through your current install channel, or open the release page if you need to update manually.",
-      "notChecked": "Run “Check now” to confirm whether your current version needs an update.",
-      "openLatest": "Open the release page to review the latest stable release and release notes.",
-      "storeUpdate": "This store install updates through the browser. If GitHub is newer but the store is not ready yet, review or rollout is usually still in progress.",
+      "storeUpdate": "Store installs update automatically through the browser. Wait for the store rollout.",
       "storeUpdateReady": "The browser found a store update. Reload the extension to start using the new version.",
-      "unavailable": "Try again later, or open the release page to review the latest stable release directly.",
-      "upToDate": "Open the release page if you want to review what changed in this version."
+      "unavailable": "Try checking for updates again."
     },
-    "lastChecked": "Last checked: {{time}}",
-    "latestVersionPending": "Latest stable: not checked yet",
-    "latestVersionUnavailable": "Latest stable: unavailable",
-    "openLatest": "Open latest release",
-    "reasons": {
-      "api-unavailable": "This browser environment does not support automatic detection. You can still check the latest stable release manually",
-      "chromium-development": "This install channel can check the latest stable release. Run a manual check to compare versions",
-      "firefox-ambiguous": "Firefox cannot reliably determine the install channel right now. Manually check the latest stable release when needed",
-      "safari-unsupported": "Safari does not support automatic detection yet. Open the release page to review the latest stable release",
-      "store-build": "This is a browser-store install. You can check store updates and compare against the latest GitHub release",
-      "unknown": "This install channel does not currently support automatic detection. You can still check the latest stable release manually"
-    },
+    "latestAmoVersion": "Firefox Add-ons: v{{version}}",
+    "latestNightlyVersion": "Latest Nightly: {{version}}",
     "reloadToUpdate": "Reload to update",
     "states": {
-      "checkFailed": "Check failed, so the latest stable release could not be retrieved",
+      "checkFailed": "Could not check for updates",
       "notChecked": "The latest stable release has not been checked yet. Run a manual check to compare versions",
-      "storeUpdatePending": "GitHub has a newer release, but the store update is not ready yet",
-      "storeUpdateReady": "Store update is ready. Reload to apply it",
-      "unavailable": "Update status is currently unavailable",
-      "updateAvailable": "A newer version is available to upgrade",
-      "upToDate": "Check complete. Your current version is already the latest stable release"
+      "storeUpdatePending": "Waiting for the store update",
+      "storeUpdateReady": "Update ready to apply",
+      "unavailable": "Update status unavailable",
+      "updateAvailable": "Update available",
+      "upToDate": "You’re up to date"
     },
     "versionBadge": {
       "changelogAriaLabel": "Version {{version}} changelog",

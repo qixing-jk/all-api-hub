@@ -716,40 +716,29 @@
     }
   },
   "releaseUpdate": {
-    "checkNow": "Comprobar ahora",
+    "changelog": "Historial de cambios",
+    "checkNow": "Buscar actualizaciones",
     "downloadUpdate": "Descargar actualización",
     "helpers": {
-      "checkFailed": "Inténtalo más tarde o abre la página de releases para verificar manualmente la versión más reciente.",
+      "amoUpdate": "Hay una nueva versión en Firefox Add-ons. Abre la tienda para actualizar o espera la actualización automática de Firefox.",
+      "checkFailed": "Vuelve a buscar actualizaciones.",
       "manualUpdate": "Esta instalación se actualiza manualmente. Abre la página de releases para obtener la nueva versión.",
       "manualUpdateGeneric": "Actualiza desde tu canal de instalación actual o abre la página de releases si necesitas actualizar manualmente.",
-      "notChecked": "Ejecuta “Comprobar ahora” para confirmar si tu versión actual necesita una actualización.",
-      "openLatest": "Abre la página de releases para revisar la última versión estable y las notas de versión.",
-      "storeUpdate": "Esta instalación de tienda se actualiza mediante el navegador. Si GitHub tiene una versión más nueva pero la tienda aún no está lista, normalmente la revisión o despliegue sigue en curso.",
+      "storeUpdate": "El navegador actualiza automáticamente la versión de la tienda. Espera a que esté disponible.",
       "storeUpdateReady": "El navegador encontró una actualización de tienda. Recarga la extensión para empezar a usar la nueva versión.",
-      "unavailable": "Inténtalo más tarde o abre directamente la página de releases para revisar la última versión estable.",
-      "upToDate": "Abre la página de releases si quieres revisar qué cambió en esta versión."
+      "unavailable": "Vuelve a buscar actualizaciones."
     },
-    "lastChecked": "Última comprobación: {{time}}",
-    "latestVersionPending": "Última estable: aún no comprobada",
-    "latestVersionUnavailable": "Última estable: no disponible",
-    "openLatest": "Abrir último release",
-    "reasons": {
-      "api-unavailable": "Este entorno de navegador no admite detección automática. Aún puedes comprobar manualmente la última versión estable",
-      "chromium-development": "Este canal de instalación puede comprobar la última versión estable. Ejecuta una comprobación manual para comparar versiones",
-      "firefox-ambiguous": "Firefox no puede determinar de forma confiable el canal de instalación ahora. Comprueba manualmente la última versión estable cuando sea necesario",
-      "safari-unsupported": "Safari aún no admite detección automática. Abre la página de releases para revisar la última versión estable",
-      "store-build": "Esta es una instalación de tienda del navegador. Puedes comprobar actualizaciones de tienda y compararlas con el último release de GitHub",
-      "unknown": "Este canal de instalación actualmente no admite detección automática. Aún puedes comprobar manualmente la última versión estable"
-    },
+    "latestAmoVersion": "Firefox Add-ons: v{{version}}",
+    "latestNightlyVersion": "Última Nightly: {{version}}",
     "reloadToUpdate": "Recargar para actualizar",
     "states": {
-      "checkFailed": "La comprobación falló, así que no se pudo obtener la última versión estable",
+      "checkFailed": "No se pudieron buscar actualizaciones",
       "notChecked": "La última versión estable aún no se ha comprobado. Ejecuta una comprobación manual para comparar versiones",
-      "storeUpdatePending": "GitHub tiene una versión más nueva, pero la actualización de la tienda aún no está lista",
-      "storeUpdateReady": "La actualización de tienda está lista. Recarga para aplicarla",
-      "unavailable": "El estado de actualización no está disponible actualmente",
-      "updateAvailable": "Hay una versión más nueva disponible para actualizar",
-      "upToDate": "Comprobación completada. Tu versión actual ya es la última estable"
+      "storeUpdatePending": "Esperando la actualización de la tienda",
+      "storeUpdateReady": "Actualización lista",
+      "unavailable": "Estado de actualización no disponible",
+      "updateAvailable": "Actualización disponible",
+      "upToDate": "Tienes la última versión"
     },
     "versionBadge": {
       "changelogAriaLabel": "Changelog de la versión {{version}}",

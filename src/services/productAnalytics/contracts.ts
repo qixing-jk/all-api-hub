@@ -46,6 +46,12 @@ import {
   BROWSER_FOCUS_STATES,
   BROWSER_FOCUS_TRANSITIONS,
 } from "~/utils/browser/browserFocus"
+import type { DistributionChannel } from "~/utils/core/distributionChannel"
+
+/** Build facts attached after event-specific filtering; never installation provenance. */
+export interface ProductAnalyticsDistributionContext {
+  distribution_channel: DistributionChannel
+}
 
 type SettingsSnapshotAutomaticFeatureBypassPayload = Partial<
   Record<SettingsSnapshotAutomaticFeatureBypassProperty, boolean>

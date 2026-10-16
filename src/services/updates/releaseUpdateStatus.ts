@@ -1,6 +1,11 @@
+import type { DistributionChannel } from "~/utils/core/distributionChannel"
+
 export const RELEASE_UPDATE_REASONS = {
   ChromiumDevelopment: "chromium-development",
   StoreBuild: "store-build",
+  FirefoxAmo: "firefox-amo",
+  GithubRelease: "github-release",
+  GithubNightly: "github-nightly",
   FirefoxAmbiguous: "firefox-ambiguous",
   SafariUnsupported: "safari-unsupported",
   ApiUnavailable: "api-unavailable",
@@ -37,6 +42,8 @@ export type BrowserStoreUpdateState = {
 }
 
 export type ReleaseUpdateStatus = {
+  distributionChannel?: DistributionChannel
+  buildRevision?: string | null
   eligible: boolean
   reason: ReleaseUpdateReason
   currentVersion: string
@@ -45,11 +52,16 @@ export type ReleaseUpdateStatus = {
   releaseUrl: string
   checkedAt: number | null
   lastError: string | null
+  /** Informational only for AMO builds; latestVersion remains the AMO version. */
+  githubLatestVersion?: string | null
   storeUpdate: BrowserStoreUpdateState
 }
 
 export const LATEST_STABLE_RELEASE_URL =
   "https://github.com/qixing-jk/all-api-hub/releases/latest"
+
+export const LATEST_NIGHTLY_RELEASE_URL =
+  "https://github.com/qixing-jk/all-api-hub/releases/tag/nightly"
 
 export const createDefaultBrowserStoreUpdateState =
   (): BrowserStoreUpdateState => ({

@@ -715,40 +715,29 @@
     }
   },
   "releaseUpdate": {
-    "checkNow": "Jetzt prüfen",
+    "changelog": "Änderungsprotokoll",
+    "checkNow": "Nach Updates suchen",
     "downloadUpdate": "Update herunterladen",
     "helpers": {
-      "checkFailed": "Versuchen Sie es später noch einmal oder öffnen Sie die Release-Seite, um die neueste Version manuell zu überprüfen.",
+      "amoUpdate": "Eine neue Version ist auf Firefox Add-ons verfügbar. Öffnen Sie den Store oder warten Sie auf das automatische Update.",
+      "checkFailed": "Bitte erneut nach Updates suchen.",
       "manualUpdate": "Diese Installation wird manuell aktualisiert. Öffnen Sie die Release-Seite, um die neue Version zu erhalten.",
       "manualUpdateGeneric": "Aktualisieren Sie über Ihren aktuellen Installationskanal oder öffnen Sie die Release-Seite, wenn Sie manuell aktualisieren müssen.",
-      "notChecked": "Führen Sie „Jetzt prüfen“ aus, um zu bestätigen, ob Ihre aktuelle Version ein Update benötigt.",
-      "openLatest": "Öffnen Sie die Release-Seite, um die neueste stabile Version und Versionshinweise zu lesen.",
-      "storeUpdate": "Dieser Store installiert Updates über den Browser. Wenn GitHub neuer ist, der Store aber noch nicht bereit ist, ist die Überprüfung oder Einführung normalerweise noch im Gange.",
+      "storeUpdate": "Store-Versionen werden automatisch vom Browser aktualisiert. Bitte auf die Bereitstellung im Store warten.",
       "storeUpdateReady": "Der Browser hat ein Store-Update gefunden. Laden Sie die Erweiterung neu, um die neue Version zu verwenden.",
-      "unavailable": "Versuchen Sie es später noch einmal oder öffnen Sie die Release-Seite, um die neueste stabile Version direkt zu überprüfen.",
-      "upToDate": "Öffnen Sie die Release-Seite, wenn Sie überprüfen möchten, was sich in dieser Version geändert hat."
+      "unavailable": "Bitte erneut nach Updates suchen."
     },
-    "lastChecked": "Zuletzt überprüft: {{time}}",
-    "latestVersionPending": "Neueste stabile Version: noch nicht überprüft",
-    "latestVersionUnavailable": "Neueste stabile Version: nicht verfügbar",
-    "openLatest": "Neueste Version öffnen",
-    "reasons": {
-      "api-unavailable": "Diese Browserumgebung unterstützt keine automatische Erkennung. Sie können die neueste stabile Version weiterhin manuell überprüfen",
-      "chromium-development": "Dieser Installationskanal kann die neueste stabile Version überprüfen. Führen Sie eine manuelle Prüfung durch, um Versionen zu vergleichen",
-      "firefox-ambiguous": "Firefox kann den Installationskanal derzeit nicht zuverlässig bestimmen. Überprüfen Sie bei Bedarf manuell die neueste stabile Version",
-      "safari-unsupported": "Safari unterstützt noch keine automatische Erkennung. Öffnen Sie die Release-Seite, um die neueste stabile Version zu überprüfen",
-      "store-build": "Dies ist eine Browser-Store-Installation. Sie können nach Store-Updates suchen und sie mit der neuesten GitHub-Version vergleichen.",
-      "unknown": "Dieser Installationskanal unterstützt derzeit keine automatische Erkennung. Sie können die neueste stabile Version weiterhin manuell überprüfen"
-    },
+    "latestAmoVersion": "Firefox Add-ons: v{{version}}",
+    "latestNightlyVersion": "Neuestes Nightly: {{version}}",
     "reloadToUpdate": "Zum Aktualisieren neu laden",
     "states": {
-      "checkFailed": "Die Prüfung ist fehlgeschlagen, daher konnte die neueste stabile Version nicht abgerufen werden",
+      "checkFailed": "Updates konnten nicht geprüft werden",
       "notChecked": "Die neueste stabile Version wurde noch nicht überprüft. Führen Sie eine manuelle Prüfung durch, um Versionen zu vergleichen",
-      "storeUpdatePending": "GitHub hat eine neuere Version, aber das Store-Update ist noch nicht fertig",
-      "storeUpdateReady": "Store-Update ist bereit. Neu laden, um es anzuwenden",
-      "unavailable": "Update-Status ist derzeit nicht verfügbar",
-      "updateAvailable": "Eine neuere Version ist zum Upgrade verfügbar",
-      "upToDate": "Prüfung abgeschlossen. Ihre aktuelle Version ist bereits die neueste stabile Version"
+      "storeUpdatePending": "Store-Update steht noch aus",
+      "storeUpdateReady": "Update bereit",
+      "unavailable": "Update-Status nicht verfügbar",
+      "updateAvailable": "Update verfügbar",
+      "upToDate": "Auf dem neuesten Stand"
     },
     "versionBadge": {
       "changelogAriaLabel": "Änderungsprotokoll für Version {{version}}",

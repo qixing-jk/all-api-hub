@@ -1,13 +1,18 @@
 import type { Properties } from "posthog-js/dist/module.no-external"
 
 import { productAnalyticsPreferences } from "~/services/productAnalytics/configuration/preferences"
-import { sanitizeProductAnalyticsEvent } from "~/services/productAnalytics/configuration/privacy"
+import {
+  sanitizeDistributionChannel,
+  sanitizeProductAnalyticsEvent,
+} from "~/services/productAnalytics/configuration/privacy"
 import {
   PRODUCT_ANALYTICS_EVENTS,
+  type ProductAnalyticsDistributionContext,
   type ProductAnalyticsEventName,
 } from "~/services/productAnalytics/contracts"
 import { getExtensionVersion } from "~/utils/browser/runtime"
 import { detectBrowserFamily } from "~/utils/browser/userAgent"
+import { getDistributionChannel } from "~/utils/core/distributionChannel"
 import { isDevBuild } from "~/utils/core/environment"
 import { createLogger } from "~/utils/core/logger"
 import i18n from "~/utils/i18n/core"
@@ -107,7 +112,11 @@ function resolveLanguage(): string {
  * Builds shared, non-identifying context attached to every analytics event.
  */
 function buildSharedContext() {
+  const distribution: ProductAnalyticsDistributionContext = {
+    distribution_channel: sanitizeDistributionChannel(getDistributionChannel()),
+  }
   return {
+    ...distribution,
     app_version: getExtensionVersion("unknown"),
     browser_family: detectBrowserFamily(),
     ui_language: resolveLanguage(),
