@@ -362,7 +362,7 @@ test("opens Redemption Assist settings from the content prompt", async ({
   context,
   extensionId,
   page,
-}) => {
+}, testInfo) => {
   await context.route(REDEEM_PAGE_URL, async (route) => {
     await route.fulfill({
       status: 200,
@@ -447,6 +447,12 @@ test("opens Redemption Assist settings from the content prompt", async ({
       exact: true,
     }),
   ).toBeVisible()
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.screenshot({
+    path: testInfo.outputPath("redemption-prompt-mobile.png"),
+    animations: "disabled",
+  })
 
   const settingsPagePromise = waitForExtensionPage(context, {
     extensionId,

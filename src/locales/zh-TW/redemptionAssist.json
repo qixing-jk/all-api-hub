@@ -20,7 +20,6 @@
     "promptConfirm": "檢測到疑似兌換碼 {{code}}，是否為當前站點嘗試自動兌換？",
     "promptConfirmBatch_other": "檢測到 {{count}} 個疑似兌換碼，請選擇要為當前站點嘗試自動兌換的兌換碼。",
     "promptSettingsLink": "開啟兌換助手設定",
-    "promptSource": "此提示來自 All API Hub 瀏覽器擴充套件",
     "promptTitle": "兌換助手",
     "redeemFailed": "兌換失敗，請稍後重試。",
     "redeemLoading": "正在嘗試兌換，請稍候…",
