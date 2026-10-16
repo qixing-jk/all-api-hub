@@ -130,13 +130,24 @@
     },
     "unexpectedContent": "A resposta tinha um formato inesperado e pode ter sido uma página de verificação do site."
   },
+  "notification": {
+    "openVerification": "Abrir janela de verificação",
+    "reminderSettings": "Configurações de avisos",
+    "turnstileAssistBody": "Uma tarefa em segundo plano precisa de verificação humana. Ela continuará automaticamente após a conclusão.",
+    "turnstileAssistTitle": "All API Hub · Aviso de verificação",
+    "turnstilePageBody": "Uma tarefa em segundo plano precisa de verificação humana. Ela continuará automaticamente após a conclusão.",
+    "verificationEnded": "Esta verificação terminou. Nenhuma ação adicional é necessária."
+  },
   "titlePrefix": "All API Hub · Bypass de proteção",
   "toast": {
     "actions": {
-      "dismiss": "Dispensar",
       "openSettings": "Abrir configurações do bypass de proteção"
     },
-    "body": "Esta página foi aberta automaticamente pelo All API Hub para passar por páginas de proteção (por exemplo, desafios do Cloudflare) e obter os cookies ou a sessão necessários.\n\nIsso é necessário para que o All API Hub faça solicitações com sucesso e detecte dados em sites protegidos.\n\nSe uma etapa de verificação aparecer, conclua-a nesta janela. Após a aprovação, o All API Hub continuará e esta janela poderá ser fechada automaticamente.",
-    "title": "Assistente de bypass de proteção do All API Hub (janela temporária)"
+    "body": "Esta página foi aberta automaticamente pelo All API Hub para passar por páginas de proteção (por exemplo, desafios do Cloudflare) e obter os cookies ou a sessão necessários.\nIsso é necessário para que o All API Hub faça solicitações com sucesso e detecte dados em sites protegidos.\nSe uma etapa de verificação aparecer, conclua-a nesta janela. Após a aprovação, o All API Hub continuará e esta janela poderá ser fechada automaticamente.",
+    "title": "Assistente de bypass de proteção",
+    "turnstile": {
+      "body": "A verificação automática ainda não terminou. Conclua o Cloudflare Turnstile nesta janela (por exemplo, marque a caixa). Depois o check-in continua automaticamente e esta janela pode fechar.",
+      "title": "Conclua a verificação humana"
+    }
   }
 }

@@ -238,6 +238,22 @@ describe("ShieldSettings", () => {
     })
   })
 
+  it("updates temp window fallback preferences when turnstile assist presentation changes", async () => {
+    const user = userEvent.setup()
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    const pageSwitch = screen.getByRole("switch", {
+      name: "settings:refresh.shieldTurnstileAssistPage",
+    })
+    expect(pageSwitch).toBeChecked()
+    await user.click(pageSwitch)
+    expect(updateTempWindowFallback).toHaveBeenCalledWith({
+      turnstileAssistPresentation: "quiet",
+    })
+  })
+
   it("keeps a failed window-size draft available for retry", async () => {
     const user = userEvent.setup()
     updateTempWindowFallback
@@ -542,7 +558,11 @@ describe("ShieldSettings", () => {
     })
     expect(canUseTempWindowFetchMock).toHaveBeenCalledTimes(2)
 
-    expect(screen.getByRole("switch")).toBeEnabled()
+    expect(
+      within(
+        document.getElementById(SHIELD_SETTINGS_TARGET_IDS.enabled)!,
+      ).getByRole("switch"),
+    ).toBeEnabled()
     expect(
       screen.getByRole("button", {
         name: /^settings:refresh\.shieldMethodTab/,
@@ -631,7 +651,11 @@ describe("ShieldSettings", () => {
       withThemeProvider: false,
     })
 
-    fireEvent.click(screen.getByRole("switch"))
+    fireEvent.click(
+      within(
+        document.getElementById(SHIELD_SETTINGS_TARGET_IDS.enabled)!,
+      ).getByRole("switch"),
+    )
 
     expect(updateTempWindowFallback).toHaveBeenCalledWith({ enabled: false })
     await waitFor(() => {
@@ -685,7 +709,12 @@ describe("ShieldSettings", () => {
       currentMode = mode
       rerender(<ShieldSettings />)
 
-      const pressedButtons = screen.getAllByRole("button", { pressed: true })
+      const methodGroup = screen.getByRole("group", {
+        name: "settings:refresh.shieldMethodTitle",
+      })
+      const pressedButtons = within(methodGroup).getAllByRole("button", {
+        pressed: true,
+      })
       expect(pressedButtons).toHaveLength(1)
       expect(pressedButtons[0]).toHaveAccessibleName(selectedButtonName)
       expect(screen.getByText(selectedHint)).not.toHaveAttribute("aria-hidden")
@@ -917,6 +946,95 @@ describe("ShieldSettings", () => {
     },
   )
 
+  it("runs the interactive Turnstile preset through the real token-wait task", async () => {
+    isDevelopmentModeMock.mockReturnValue(true)
+    executeProtectionBypassTaskMock.mockResolvedValue({
+      success: true,
+      status: 200,
+    })
+
+    await executeShieldDevTrigger({
+      presetId: "turnstile_interactive" as never,
+      url: "http://127.0.0.1:8787/",
+    })
+
+    expect(executeProtectionBypassTaskMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        execution: expect.objectContaining({ feature: "checkin" }),
+        task: {
+          kind: "turnstile_fetch",
+          params: expect.objectContaining({
+            originUrl: "http://127.0.0.1:8787",
+            pageUrl: "http://127.0.0.1:8787/?scenario=interactive",
+            fetchUrl: "http://127.0.0.1:8787/verify",
+            turnstileTokenPlacement: "json-body",
+            fetchOptions: expect.objectContaining({
+              method: "POST",
+              credentials: "omit",
+            }),
+          }),
+        },
+      }),
+    )
+  })
+
+  it("starts three independent Turnstile requests concurrently and preserves a failed result", async () => {
+    isDevelopmentModeMock.mockReturnValue(true)
+    const first = createDeferred<{ success: boolean; status: number }>()
+    executeProtectionBypassTaskMock
+      .mockReturnValueOnce(first.promise)
+      .mockResolvedValueOnce({ success: false, error: "window closed" })
+      .mockResolvedValueOnce({ success: true, status: 200 })
+
+    const result = executeShieldDevTrigger({
+      presetId: "turnstile_queue" as never,
+      url: "http://127.0.0.1:8787/",
+    })
+    expect(executeProtectionBypassTaskMock).toHaveBeenCalledTimes(3)
+    expect(
+      executeProtectionBypassTaskMock.mock.calls.map(
+        ([request]) => request.task.params.originUrl,
+      ),
+    ).toEqual([
+      "http://127.0.0.1:8787",
+      "http://127.0.0.1:8788",
+      "http://127.0.0.1:8789",
+    ])
+    const requestIds = executeProtectionBypassTaskMock.mock.calls.map(
+      ([request]) => request.task.params.requestId,
+    )
+    expect(new Set(requestIds).size).toBe(3)
+    first.resolve({ success: true, status: 200 })
+    await expect(result).resolves.toMatchObject({
+      success: false,
+      error: expect.stringContaining("window closed"),
+    })
+  })
+
+  it("returns success when all concurrent Turnstile requests succeed", async () => {
+    isDevelopmentModeMock.mockReturnValue(true)
+    executeProtectionBypassTaskMock.mockResolvedValue({
+      success: true,
+      status: 200,
+    })
+
+    const result = await executeShieldDevTrigger({
+      presetId: "turnstile_queue" as never,
+      url: "http://127.0.0.1:8787/",
+    })
+    expect(result).toEqual({ success: true, status: 200 })
+  })
+
+  it("rejects when Turnstile queue ports exceed 65535", async () => {
+    isDevelopmentModeMock.mockReturnValue(true)
+    await expect(
+      executeShieldDevTrigger({
+        presetId: "turnstile_queue" as never,
+        url: "http://127.0.0.1:65534/",
+      }),
+    ).rejects.toThrow("Invalid Turnstile test server port.")
+  })
+
   it("blocks development-trigger execution outside development mode", async () => {
     await expect(
       executeShieldDevTrigger({
@@ -926,6 +1044,59 @@ describe("ShieldSettings", () => {
     ).rejects.toThrow(/development mode/i)
 
     expect(executeProtectionBypassTaskMock).not.toHaveBeenCalled()
+  })
+
+  it("does not send Turnstile test tokens to non-local targets", async () => {
+    isDevelopmentModeMock.mockReturnValue(true)
+    await expect(
+      executeShieldDevTrigger({
+        presetId: SHIELD_DEV_TRIGGER_PRESET_IDS.TurnstileInteractive,
+        url: "https://example.com/",
+      }),
+    ).rejects.toThrow(/loopback/)
+    expect(executeProtectionBypassTaskMock).not.toHaveBeenCalled()
+  })
+
+  it("prefills the local server when a Turnstile preset is selected", async () => {
+    isDevelopmentModeMock.mockReturnValue(true)
+    const user = userEvent.setup()
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "settings:refresh.shieldDevTriggerPresetLabel",
+      }),
+    )
+    await user.click(
+      await screen.findByRole("option", {
+        name: "settings:refresh.shieldDevTriggerPresetTurnstileInteractive",
+      }),
+    )
+    expect(
+      screen.getByRole("textbox", {
+        name: "settings:refresh.shieldDevTriggerUrlLabel",
+      }),
+    ).toHaveValue("http://127.0.0.1:8787/")
+    expect(
+      screen.getByText("settings:refresh.shieldDevTriggerTurnstileHint"),
+    ).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "settings:refresh.shieldDevTriggerPresetLabel",
+      }),
+    )
+    await user.click(
+      await screen.findByRole("option", {
+        name: "settings:refresh.shieldDevTriggerPresetAccountRefreshScheduled",
+      }),
+    )
+    expect(
+      screen.getByRole("textbox", {
+        name: "settings:refresh.shieldDevTriggerUrlLabel",
+      }),
+    ).toHaveValue("https://example.com/")
   })
 
   it("rejects an unexpected development-trigger preset label", () => {

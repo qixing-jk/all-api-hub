@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next"
 
 import { getThemeAwareToastStyles } from "~/components/toast/themeAwareToastStyles"
 import { useToasterPortalHost } from "~/components/toast/ToasterPortal"
+import { useTurnstileAssistPageNotice } from "~/components/toast/useTurnstileAssistPageNotice"
 import { NOTIFICATION_DURATIONS } from "~/lib/notify/defaults"
 
 interface ThemeAwareToasterProps {
@@ -28,6 +29,7 @@ export const ThemeAwareToaster = ({
   containerStyle,
 }: ThemeAwareToasterProps) => {
   const portalHost = useToasterPortalHost()
+  useTurnstileAssistPageNotice()
   const { t: translate } = useTranslation("common")
 
   const toaster = (

@@ -31,12 +31,14 @@ export function buildTempContextPoolKey(
 export function createTempContextPool({
   cleanup,
   isAlive,
+  onRequestDetached,
 }: {
   cleanup: (
     context: TempContext,
     options: DestroyContextOptions,
   ) => Promise<void>
   isAlive: (context: TempContext) => Promise<boolean>
+  onRequestDetached?: (requestId: string) => void
 }) {
   const tempRequestContextMap = new Map<string, TempContext>()
 
@@ -145,6 +147,7 @@ export function createTempContextPool({
   ): Promise<void> {
     const context = tempRequestContextMap.get(requestId)
     tempRequestContextMap.delete(requestId)
+    onRequestDetached?.(requestId)
 
     if (!context) {
       logTempWindow("releaseTempContextNoContext", {
@@ -417,6 +420,7 @@ export function createTempContextPool({
     for (const [requestId, ctx] of tempRequestContextMap.entries()) {
       if (ctx === context) {
         tempRequestContextMap.delete(requestId)
+        onRequestDetached?.(requestId)
       }
     }
     context.activeRequestIds.clear()
@@ -434,6 +438,7 @@ export function createTempContextPool({
     for (const [requestId, context] of tempRequestContextMap.entries()) {
       if (!isTrackedContext(context)) {
         tempRequestContextMap.delete(requestId)
+        onRequestDetached?.(requestId)
         context.activeRequestIds.delete(requestId)
         cleared += 1
       }
@@ -455,6 +460,7 @@ export function createTempContextPool({
     hasContext: (id: number) => tempContextById.has(id),
     getById: (id: number) => tempContextById.get(id),
     getByTabId: (id: number) => tempContextByTabId.get(id),
+    getByRequestId: (id: string) => tempRequestContextMap.get(id),
     hasRequest: (id: string) => tempRequestContextMap.has(id),
     get contexts() {
       return Array.from(tempContextById.values())

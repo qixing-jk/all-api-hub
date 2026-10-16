@@ -20,7 +20,6 @@
     "promptConfirm": "このページで引き換えコード候補 {{code}} を検出しました。このサイトで自動引き換えを試しますか？",
     "promptConfirmBatch_other": "このページで {{count}} 件の引き換えコード候補を検出しました。このサイトで自動引き換えするコードを選択してください。",
     "promptSettingsLink": "Redemption Assist の設定を開く",
-    "promptSource": "この案内は All API Hub 拡張機能によって表示されています",
     "promptTitle": "Redemption Assist",
     "redeemFailed": "引き換えに失敗しました。しばらくしてからもう一度お試しください。",
     "redeemLoading": "引き換えを試行中…",

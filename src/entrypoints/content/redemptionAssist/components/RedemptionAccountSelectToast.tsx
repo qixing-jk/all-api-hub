@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { ActionGroup, Button } from "~/components/ui"
+import {
+  ContentNotice,
+  ContentNoticeAction,
+} from "~/components/toast/ContentNotice"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import AccountSearchInput from "~/features/AccountManagement/components/AccountList/filtering/AccountSearchInput"
 import { useAccountSearch } from "~/features/AccountManagement/components/AccountList/filtering/useAccountSearch"
@@ -137,8 +140,8 @@ export const RedemptionAccountSelectToast: React.FC<
     confirmSelected()
   }
 
-  const handleCancel = (e: React.MouseEvent) => {
-    e.stopPropagation()
+  const handleCancel = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
     onSelect(null)
   }
 
@@ -150,22 +153,45 @@ export const RedemptionAccountSelectToast: React.FC<
         PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionAccountSelectToast
       }
     >
-      <div
-        className="border-border bg-background text-foreground gap-y-density-3 py-density-2 sm:py-density-3 pointer-events-auto flex w-full flex-col gap-x-3 rounded-lg border px-3 text-xs sm:px-4 sm:text-sm"
+      <ContentNotice
+        title={title || t("accountSelect.title")}
+        titleId={titleId}
+        onClose={handleCancel}
+        closeAnalyticsAction={
+          PRODUCT_ANALYTICS_ACTION_IDS.CancelRedemptionAccountSelection
+        }
+        actions={
+          <>
+            <ContentNoticeAction
+              variant="secondary"
+              analyticsAction={
+                PRODUCT_ANALYTICS_ACTION_IDS.CancelRedemptionAccountSelection
+              }
+              onClick={handleCancel}
+            >
+              {t("common:actions.cancel")}
+            </ContentNoticeAction>
+            <ContentNoticeAction
+              disabled={!selectedAccount}
+              analyticsAction={
+                PRODUCT_ANALYTICS_ACTION_IDS.ConfirmRedemptionAccountSelection
+              }
+              onClick={handleConfirm}
+            >
+              {t("accountSelect.confirm")}
+            </ContentNoticeAction>
+          </>
+        }
         onKeyDownCapture={handleKeyDownCapture}
       >
-        <div className="gap-y-density-1 flex flex-col gap-x-1">
-          <div id={titleId} className="text-foreground text-sm font-medium">
-            {title || t("accountSelect.title")}
+        {message && (
+          <div className="text-muted-foreground text-xs whitespace-pre-line">
+            {message}
           </div>
-          {message && (
-            <div className="text-muted-foreground text-xs whitespace-pre-line">
-              {message}
-            </div>
-          )}
-        </div>
+        )}
 
         <AccountSearchInput
+          autoFocus={false}
           value={query}
           onChange={setQuery}
           onClear={clearSearch}
@@ -267,28 +293,7 @@ export const RedemptionAccountSelectToast: React.FC<
             })
           )}
         </div>
-
-        <ActionGroup className="mt-density-2">
-          <Button
-            variant="secondary"
-            analyticsAction={
-              PRODUCT_ANALYTICS_ACTION_IDS.CancelRedemptionAccountSelection
-            }
-            onClick={handleCancel}
-          >
-            {t("common:actions.cancel")}
-          </Button>
-          <Button
-            disabled={!selectedAccount}
-            analyticsAction={
-              PRODUCT_ANALYTICS_ACTION_IDS.ConfirmRedemptionAccountSelection
-            }
-            onClick={handleConfirm}
-          >
-            {t("accountSelect.confirm")}
-          </Button>
-        </ActionGroup>
-      </div>
+      </ContentNotice>
     </ProductAnalyticsScope>
   )
 }

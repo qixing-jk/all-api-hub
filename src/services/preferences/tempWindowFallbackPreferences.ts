@@ -3,6 +3,11 @@ import {
   type TempContextPreferenceMode,
 } from "~/constants/tempContextMode"
 import {
+  DEFAULT_TURNSTILE_ASSIST_PRESENTATION,
+  isTurnstileAssistPresentation,
+  type TurnstileAssistPresentation,
+} from "~/services/checkin/turnstile/assistPresentation"
+import {
   PROTECTION_BYPASS_AUTOMATIC_FEATURES,
   type ProtectionBypassAutomaticFeature,
 } from "~/services/protectionBypass/contracts"
@@ -34,6 +39,8 @@ export interface TempWindowFallbackPreferences {
   enabled: boolean
   automaticFeatureBypass: Record<ProtectionBypassAutomaticFeature, boolean>
   tempContextMode: TempContextPreferenceMode
+  /** How to surface a Turnstile check that needs the user. */
+  turnstileAssistPresentation: TurnstileAssistPresentation
   windowWidth: number
   windowHeight: number
 }
@@ -43,6 +50,7 @@ interface LegacyTempWindowFallbackPreferences {
   automaticFeatureBypass?: unknown
   useForAutoRefresh?: unknown
   tempContextMode?: unknown
+  turnstileAssistPresentation?: unknown
   windowWidth?: unknown
   windowHeight?: unknown
 }
@@ -96,5 +104,10 @@ export function normalizeTempWindowFallbackPreferences(
     tempContextMode: isTempContextPreferenceMode(source.tempContextMode)
       ? source.tempContextMode
       : DEFAULT_TEMP_CONTEXT_PREFERENCE,
+    turnstileAssistPresentation: isTurnstileAssistPresentation(
+      source.turnstileAssistPresentation,
+    )
+      ? source.turnstileAssistPresentation
+      : DEFAULT_TURNSTILE_ASSIST_PRESENTATION,
   }
 }

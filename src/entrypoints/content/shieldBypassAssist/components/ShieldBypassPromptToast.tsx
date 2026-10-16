@@ -2,16 +2,10 @@ import { useEffect, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
-  ActionGroup,
-  Body,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  Heading3,
-} from "~/components/ui"
+  ContentNotice,
+  ContentNoticeAction,
+} from "~/components/toast/ContentNotice"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
-import { ProtectionBypassHistoryLink } from "~/features/ProtectionBypass/components/ProtectionBypassHistoryLink"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -108,11 +102,9 @@ function usePrefixedDocumentTitle(prefix: string) {
 export function ShieldBypassPromptToast({
   onDismiss,
   onOpenSettings,
-  onOpenHistory,
 }: {
   onDismiss: () => void
   onOpenSettings: () => void
-  onOpenHistory: () => void | Promise<void>
 }) {
   const { t } = useTranslation("shieldBypass")
 
@@ -133,37 +125,26 @@ export function ShieldBypassPromptToast({
       featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist}
       surfaceId={PRODUCT_ANALYTICS_SURFACE_IDS.ContentShieldBypassPromptToast}
     >
-      <Card>
-        <CardHeader padding="sm">
-          <Heading3>{t("toast.title")}</Heading3>
-        </CardHeader>
-        <CardContent padding="sm">
-          <Body className="whitespace-pre-line">{t("toast.body")}</Body>
-          <ProtectionBypassHistoryLink
-            className="mt-density-3"
-            onOpen={onOpenHistory}
-          />
-          <ActionGroup className="mt-density-3">
-            <Button
-              variant="secondary"
-              analyticsAction={
-                PRODUCT_ANALYTICS_ACTION_IDS.ShieldBypassPromptDismissed
-              }
-              onClick={handleDismiss}
-            >
-              {t("toast.actions.dismiss")}
-            </Button>
-            <Button
-              analyticsAction={
-                PRODUCT_ANALYTICS_ACTION_IDS.ShieldBypassSettingsVisited
-              }
-              onClick={handleOpenSettings}
-            >
-              {t("toast.actions.openSettings")}
-            </Button>
-          </ActionGroup>
-        </CardContent>
-      </Card>
+      <ContentNotice
+        title={t("toast.title")}
+        onClose={handleDismiss}
+        closeAnalyticsAction={
+          PRODUCT_ANALYTICS_ACTION_IDS.ShieldBypassPromptDismissed
+        }
+      >
+        <p className="whitespace-pre-line">{t("toast.body")}</p>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <ContentNoticeAction
+            variant="link"
+            analyticsAction={
+              PRODUCT_ANALYTICS_ACTION_IDS.ShieldBypassSettingsVisited
+            }
+            onClick={handleOpenSettings}
+          >
+            {t("toast.actions.openSettings")}
+          </ContentNoticeAction>
+        </div>
+      </ContentNotice>
     </ProductAnalyticsScope>
   )
 }

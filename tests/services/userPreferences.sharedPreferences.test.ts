@@ -168,6 +168,7 @@ describe("userPreferences shared preference timestamps", () => {
       )) as any
       expect(storedAfter.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
       expect(storedAfter.tempWindowFallback).toEqual({
+        turnstileAssistPresentation: "page",
         windowWidth: 600,
         windowHeight: 720,
         enabled: false,
@@ -222,6 +223,7 @@ describe("userPreferences shared preference timestamps", () => {
       const exported = await userPreferences.exportPreferences()
       expect(storageSetSpy).toHaveBeenCalledTimes(1)
       expect(storedAfter.tempWindowFallback).toEqual({
+        turnstileAssistPresentation: "page",
         windowWidth: 600,
         windowHeight: 720,
         enabled: false,

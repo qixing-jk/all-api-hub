@@ -21,7 +21,6 @@
     "promptConfirmBatch_one": "Detected {{count}} possible redemption code on this page. Select codes to auto redeem for this site.",
     "promptConfirmBatch_other": "Detected {{count}} possible redemption codes on this page. Select codes to auto redeem for this site.",
     "promptSettingsLink": "Open Redemption Assist settings",
-    "promptSource": "This prompt is provided by the All API Hub extension",
     "promptTitle": "Redemption Assist",
     "redeemFailed": "Redemption failed. Please try again later.",
     "redeemLoading": "Trying to redeem…",

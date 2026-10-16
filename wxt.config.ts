@@ -38,6 +38,8 @@ const CORE_EXTENSION_PERMISSIONS = [
   "unlimitedStorage",
   "alarms",
   "contextMenus",
+  // No extra install warning. Used to call the page's official Turnstile API.
+  "scripting",
 ] as const
 const CHROMIUM_ONLY_REQUIRED_PERMISSIONS = [
   "sidePanel",

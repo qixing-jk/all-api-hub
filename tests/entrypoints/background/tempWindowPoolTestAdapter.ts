@@ -1,6 +1,7 @@
 import {
   cleanupTempContextsOnSuspend,
   handleCloseTempWindow,
+  presentTempContextForTurnstileAssist,
   setupTempWindowListeners,
 } from "~/services/browsingContext/tempPage/runtime"
 import { executeAuthorizedTempContextTask as executeAuthorizedProductionTask } from "~/services/browsingContext/tempPage/taskDispatch"
@@ -31,6 +32,7 @@ import type {
 export {
   cleanupTempContextsOnSuspend,
   handleCloseTempWindow,
+  presentTempContextForTurnstileAssist,
   setupTempWindowListeners,
 }
 

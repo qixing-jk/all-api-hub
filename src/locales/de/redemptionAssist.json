@@ -21,7 +21,6 @@
     "promptConfirmBatch_one": "{{count}} möglicher Einlösungscode wurde auf dieser Seite erkannt. Wählen Sie die Codes aus, die für diese Website automatisch eingelöst werden sollen.",
     "promptConfirmBatch_other": "{{count}} mögliche Einlösungscodes wurden auf dieser Seite erkannt. Wählen Sie die Codes aus, die für diese Website automatisch eingelöst werden sollen.",
     "promptSettingsLink": "Öffnen Sie die Einstellungen für den Einlösungsassistenten",
-    "promptSource": "Dieser Hinweis wird von der All-API-Hub-Erweiterung angezeigt.",
     "promptTitle": "Einlösungshilfe",
     "redeemFailed": "Einlösung fehlgeschlagen. Bitte versuchen Sie es später noch einmal.",
     "redeemLoading": "Versuche einzulösen…",

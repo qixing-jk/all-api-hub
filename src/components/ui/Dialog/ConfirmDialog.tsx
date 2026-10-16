@@ -128,19 +128,21 @@ export function ConfirmDialog({
       showCloseButton={!isWorking}
       size={size}
       header={
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+        <div className="flex min-w-0 items-center justify-between pr-8">
+          <div className="flex min-w-0 items-center space-x-3">
             {isValidElement(icon) ? (
               <span aria-hidden="true" className="shrink-0">
                 {icon}
               </span>
             ) : (
               <Icon
-                className={`h-5 w-5 ${presentation.iconClassName}`}
+                className={`h-5 w-5 shrink-0 ${presentation.iconClassName}`}
                 aria-hidden="true"
               />
             )}
-            <h2 className="text-foreground text-lg font-semibold">{title}</h2>
+            <h2 className="text-foreground min-w-0 text-lg font-semibold break-words">
+              {title}
+            </h2>
           </div>
         </div>
       }

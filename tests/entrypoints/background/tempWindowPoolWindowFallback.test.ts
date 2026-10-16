@@ -224,6 +224,12 @@ describe("tempWindowPool window fallback", () => {
       storage: originalBrowser.storage,
       runtime: {
         getURL: vi.fn((path: string) => `chrome-extension://test/${path}`),
+        // `setupTempWindowListeners` also subscribes to runtime messages for the
+        // Turnstile assist requests sent by temp-tab content scripts.
+        onMessage: {
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+        },
       },
       tabs: {
         get: tabsGetMock,

@@ -2,16 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
-  ActionGroup,
-  Body,
-  Button,
-  Caption,
-  Card,
-  CardContent,
-  CardHeader,
-  Heading3,
-  Link,
-} from "~/components/ui"
+  ContentNotice,
+  ContentNoticeAction,
+} from "~/components/toast/ContentNotice"
+import { Link } from "~/components/ui"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useProductAnalyticsActionTracking } from "~/hooks/analytics/useProductAnalyticsActionTracking"
@@ -79,8 +73,8 @@ export const RedemptionPromptToast: React.FC<RedemptionPromptToastProps> = ({
     el.indeterminate = someSelected
   }, [someSelected])
 
-  const handleCancel = (e: React.MouseEvent) => {
-    e.stopPropagation()
+  const handleCancel = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
     void trackProductAnalyticsActionStarted({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.CancelRedemptionPrompt,
@@ -144,60 +138,62 @@ export const RedemptionPromptToast: React.FC<RedemptionPromptToastProps> = ({
       featureId={PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist}
       surfaceId={PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionPromptToast}
     >
-      <Card>
-        <CardHeader padding="sm">
-          <Heading3>{t("redemptionAssist:messages.promptTitle")}</Heading3>
-        </CardHeader>
-        <CardContent padding="sm">
-          <Body>{message}</Body>
-          {codes.length > 1 && (
-            <label className="mt-density-2 gap-y-density-2 flex items-center gap-x-2">
-              <input
-                ref={selectAllRef}
-                type="checkbox"
-                className="h-3 w-3"
-                checked={allSelected}
-                onChange={handleToggleAll}
-              />
-              <span className="text-foreground text-xs">
-                {t("redemptionAssist:messages.selectAll")}
-              </span>
-            </label>
-          )}
-          {codes.length > 0 && (
-            <div className="mt-density-2 space-y-density-1 max-h-44 overflow-y-auto pr-1">
-              {codes.map(({ code, preview }) => (
-                <label
-                  key={code}
-                  className="border-border/60 hover:bg-muted/70 gap-y-density-2 py-density-1-5 flex cursor-pointer items-center gap-x-2 rounded-md border px-2 text-xs"
-                >
-                  <input
-                    type="checkbox"
-                    className="h-3 w-3"
-                    checked={selected.has(code)}
-                    onChange={() => toggleCode(code)}
-                  />
-                  <code className="text-foreground font-mono">{preview}</code>
-                </label>
-              ))}
-            </div>
-          )}
-          <div className="gap-y-density-1 flex flex-wrap items-center gap-x-1">
-            <Caption>{t("redemptionAssist:messages.promptSource")}</Caption>
-            <Link size="xs" href="#" onClick={handleOpenSettings}>
-              {t("redemptionAssist:messages.promptSettingsLink")}
-            </Link>
-          </div>
-          <ActionGroup>
-            <Button variant="secondary" onClick={handleCancel}>
+      <ContentNotice
+        title={t("redemptionAssist:messages.promptTitle")}
+        onClose={handleCancel}
+        actions={
+          <>
+            <ContentNoticeAction variant="secondary" onClick={handleCancel}>
               {t("common:actions.cancel")}
-            </Button>
-            <Button disabled={selectedCount === 0} onClick={handleAutoRedeem}>
+            </ContentNoticeAction>
+            <ContentNoticeAction
+              onClick={handleAutoRedeem}
+              disabled={selectedCount === 0}
+            >
               {t("redemptionAssist:actions.autoRedeem")}
-            </Button>
-          </ActionGroup>
-        </CardContent>
-      </Card>
+            </ContentNoticeAction>
+          </>
+        }
+      >
+        <p>{message}</p>
+        {codes.length > 1 && (
+          <label className="gap-y-density-2 flex items-center gap-x-2">
+            <input
+              ref={selectAllRef}
+              type="checkbox"
+              className="h-3 w-3"
+              checked={allSelected}
+              onChange={handleToggleAll}
+            />
+            <span className="text-foreground text-xs">
+              {t("redemptionAssist:messages.selectAll")}
+            </span>
+          </label>
+        )}
+        {codes.length > 0 && (
+          <div className="space-y-density-1 max-h-44 overflow-y-auto pr-1">
+            {codes.map(({ code, preview }) => (
+              <label
+                key={code}
+                className="border-border/60 hover:bg-muted/70 gap-y-density-2 py-density-1-5 flex cursor-pointer items-center gap-x-2 rounded-md border px-2 text-xs"
+              >
+                <input
+                  type="checkbox"
+                  className="h-3 w-3"
+                  checked={selected.has(code)}
+                  onChange={() => toggleCode(code)}
+                />
+                <code className="text-foreground font-mono">{preview}</code>
+              </label>
+            ))}
+          </div>
+        )}
+        <div>
+          <Link size="sm" href="#" onClick={handleOpenSettings}>
+            {t("redemptionAssist:messages.promptSettingsLink")}
+          </Link>
+        </div>
+      </ContentNotice>
     </ProductAnalyticsScope>
   )
 }

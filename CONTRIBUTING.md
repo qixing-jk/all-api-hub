@@ -210,48 +210,29 @@ pnpm e2e:ui
 
 For installed extensions, logged-in sites, desktop CDP, or Android devices, follow the [live-extension-ui-automation skill](.agents/skills/live-extension-ui-automation/SKILL.md). Use the [local environment configuration](#local-tooling-environment-configuration) for credentials and browser paths.
 
+### Turnstile verification scenarios
+
+Start the official Turnstile test server with `pnpm dev:turnstile`, then open Settings → Refresh → Website verification assistance in a **development** extension. The existing development trigger includes four Turnstile presets: automatic success, manual verification, verification failure, and a three-site queue. Selecting one prefills `http://127.0.0.1:8787/`; the existing delay lets you switch away before verification starts. The trigger is unavailable in release builds.
+
+The server uses [Cloudflare's official test component and dummy keys](https://developers.cloudflare.com/turnstile/troubleshooting/testing/) and validates dummy tokens through Siteverify. It needs network access to Cloudflare, but no account, login, production key, or daily check-in allowance. It does not perform real account mutations. Failure stays pending until the existing token-wait timeout expires.
+
+The two independent reminder channels are **In-page reminders** (on by default) and **Browser notifications** (off by default). Either, both, or neither can be enabled. In-page reminders use the focused extension page or current web page. Browser notifications require permission: enabling the channel without permission opens an explanation dialog with an explicit authorization button. Refusing or cancelling leaves the channel off. A blocked browser shows settings guidance. Delivery failures never enable a disabled channel or bring verification forward; click **Open verification window** or a browser notification to focus verification. For the three-site scenario, open and complete each request using its reminder. The server listens only on loopback ports 8787–8789. Set `AAH_TURNSTILE_PORT` to change the first port and update the trigger URL accordingly. Stop it with Ctrl+C. These local reminders do not use remote push providers. Closing or finishing a request clears its reminder. OS quiet mode can still hide an accepted system notification.
+
+To automate official automatic success, reminders on extension/web pages, and the three-site interactive queue, stop the standalone test server, launch `pnpm browser:cdp:isolate`, then run `pnpm e2e:cdp:turnstile -- --isolate`. This runner starts its own local servers, restores preferences after the run, and saves screenshots under `.scratch/turnstile-channels/live-<timestamp>/`.
+
 #### Firefox extension smoke tests
 
-Run `pnpm e2e:firefox` for the real desktop Firefox toolbar popup and its handoff
-to the native sidebar or Options. This separate
-suite builds `.output/firefox-mv2-test`, installs it in a temporary Firefox
-profile, and uses Selenium/geckodriver to control the native browser UI plus the
-shared Firefox RDP adapter to inspect extension documents. It uses the Playwright
-runner and assertions; the Chromium extension fixture is not used.
+Run `pnpm e2e:firefox` for the real desktop Firefox toolbar popup and its handoff to the native sidebar or Options. This separate suite builds `.output/firefox-mv2-test`, installs it in a temporary Firefox profile, and uses Selenium/geckodriver to control the native browser UI plus the shared Firefox RDP adapter to inspect extension documents. It uses the Playwright runner and assertions; the Chromium extension fixture is not used.
 
-Install Firefox first. Selenium Manager resolves geckodriver automatically and
-may download it on the first run. Set `AAH_E2E_FIREFOX_EXECUTABLE_PATH` or
-`AAH_E2E_GECKODRIVER_PATH` to use specific local binaries. The runner loads these
-through the shared [local environment configuration](#local-tooling-environment-configuration).
-`AAH_SKIP_E2E_BUILD=1` explicitly reuses the existing Firefox test artifact;
-leave it unset for a fresh build.
+Install Firefox first. Selenium Manager resolves geckodriver automatically and may download it on the first run. Set `AAH_E2E_FIREFOX_EXECUTABLE_PATH` or `AAH_E2E_GECKODRIVER_PATH` to use specific local binaries. The runner loads these through the shared [local environment configuration](#local-tooling-environment-configuration). `AAH_SKIP_E2E_BUILD=1` explicitly reuses the existing Firefox test artifact; leave it unset for a fresh build.
 
-The smoke profile runs headlessly, fixes desktop pointer capabilities independently
-of host touch hardware, prevents popup auto-hide during inspection, and disables
-external networking. It uses bundled resources and synthetic data, without real
-accounts or credentials. Screenshots of the actual extension browsing contexts are
-saved under `test-results/firefox/` and retained by the E2E workflow on success
-and failure. Geometry and behavior assertions are automated; these screenshots
-are review evidence, not pixel comparison baselines.
+The smoke profile runs headlessly, fixes desktop pointer capabilities independently of host touch hardware, prevents popup auto-hide during inspection, and disables external networking. It uses bundled resources and synthetic data, without real accounts or credentials. Screenshots of the actual extension browsing contexts are saved under `test-results/firefox/` and retained by the E2E workflow on success and failure. Geometry and behavior assertions are automated; these screenshots are review evidence, not pixel comparison baselines.
 
-The suite covers popup bounds, tabs, dialogs, dropdowns and scrolling; native
-sidebar opening and form survival after popup closure; missing/rejected sidebar
-API fallback to account creation in Options; and retry after both navigation
-destinations fail. Installing a temporary sidebar extension can open its sidebar,
-so the fixture closes it before testing user-initiated handoff. Gesture-sensitive
-actions use native WebDriver pointer input rather than scripted DOM clicks.
+The suite covers popup bounds, tabs, dialogs, dropdowns and scrolling; native sidebar opening and form survival after popup closure; missing/rejected sidebar API fallback to account creation in Options; and retry after both navigation destinations fail. Installing a temporary sidebar extension can open its sidebar, so the fixture closes it before testing user-initiated handoff. Gesture-sensitive actions use native WebDriver pointer input rather than scripted DOM clicks.
 
-Browser API checks exercise Firefox's actual optional clipboard permission prompt
-(deny, retry, grant and revoke), credential copying and clipboard failure recovery.
-Successful copies are read back from Firefox's headless, in-memory clipboard.
-Failure scenarios inject errors only at browser API boundaries; account data and
-keys are synthetic. The suite does not access the desktop clipboard.
+Browser API checks exercise Firefox's actual optional clipboard permission prompt (deny, retry, grant and revoke), credential copying and clipboard failure recovery. Successful copies are read back from Firefox's headless, in-memory clipboard. Failure scenarios inject errors only at browser API boundaries; account data and keys are synthetic. The suite does not access the desktop clipboard.
 
-Extend `e2e/firefox/` incrementally when a feature depends on browser layout or
-extension APIs, and add regressions for Firefox-specific failures. Account
-persistence, downloads, other permissions and background lifecycle still need
-coverage as those areas change. Passing these checks does not establish Android
-Firefox, every sidebar workflow, or all-feature compatibility.
+Extend `e2e/firefox/` incrementally when a feature depends on browser layout or extension APIs, and add regressions for Firefox-specific failures. Account persistence, downloads, other permissions and background lifecycle still need coverage as those areas change. Passing these checks does not establish Android Firefox, every sidebar workflow, or all-feature compatibility.
 
 ### Test Coverage
 
