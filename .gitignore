@@ -92,3 +92,4 @@ src/public/react-devtools*
 
 # Local screenshot comparison runs
 .scratch/visual-comparisons/
+.scratch/visual-captures/

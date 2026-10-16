@@ -17,6 +17,7 @@
     "dev:mobile:firefox": "node scripts/android-dev.js",
     "browser:mobile": "node scripts/mobile-browser.mjs",
     "visual:compare": "node scripts/visual-compare.mjs",
+    "visual:capture": "node scripts/visual-capture.mjs",
     "build": "wxt build",
     "build:e2e": "node scripts/e2e-build.mjs",
     "build:firefox": "wxt build -b firefox",

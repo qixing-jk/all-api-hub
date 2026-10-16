@@ -22,6 +22,7 @@ import {
   closeExtensionViews,
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 import { readVisualThemeRoleColor } from "~~/e2e/utils/visualTheme"
 
 test("theme mode keeps supporting copy close and does not reserve an invisible reset slot", async ({
@@ -68,6 +69,7 @@ for (const width of [1280, 390, 320]) {
     context,
     page,
     extensionId,
+    extensionDir,
   }) => {
     await forceExtensionLanguage(page, "en")
     await stubLlmMetadataIndex(context)
@@ -113,6 +115,12 @@ for (const width of [1280, 390, 320]) {
         )
         .toBeLessThan(48)
     }
+    await captureVisualViews({
+      page,
+      ready: drawer,
+      id: "appearance-drawer",
+      extensionDir,
+    })
   })
 }
 

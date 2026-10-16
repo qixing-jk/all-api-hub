@@ -101,6 +101,43 @@ WXT dev/build commands retain native mode/browser-specific env loading. Shared d
 
 ### Local screenshot comparison
 
+Use `pnpm visual:capture --help` for the generic entrypoint. Existing asserted Playwright workflows do not need a scenario registry entry. Add an opt-in checkpoint after the UI is ready:
+
+```ts
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
+
+await captureVisualViews({
+  page,
+  ready: page.getByRole("dialog"), // choose a meaningful ready control
+  id: "account-dialog",
+  extensionDir,
+})
+```
+
+Without capture output configured, the helper does nothing during ordinary tests. It handles visible-state/font/render waiting, screenshots, image hashes and build/environment metadata. With no view configuration it captures the current view; pass `views` in the workflow for defaults, or override them from the CLI:
+
+```bash
+pnpm visual:capture --spec e2e/appearanceSettings.spec.ts --grep "changing text size keeps the appearance drawer bottom aligned at 390px$" --fixture appearance-drawer-default-text-v1 --view dark:390x900 --view light:1280x900
+# Repeat the same command after editing; add --baseline <printed-before-directory> --diff when needed.
+```
+
+Use an actual spec and a narrow test title from the current task. `--fixture` identifies seeded state; change it when the setup semantics change. Repeated `--view` options control All API Hub's root dark class and viewport. Build variants follow `AAH_E2E_BUILD_VARIANT` (otherwise `default`); `--variant default|dnr-required|bookmarks-required` overrides it, and baselines must use the same variant. The matrix helper restores the prior dark class and an explicitly configured viewport after capture. Checkpoint IDs are discovered from emitted metadata, must be unique across selected tests, and cannot overwrite another checkpoint. Baseline pairing requires the same spec/grep identity, fixture, checkpoint IDs and environment metadata. A workflow that emits no checkpoints fails with an actionable error. The runner records spec/grep/view settings in `capture.json`. Page navigation, fixtures and meaningful assertions stay in the existing test: generic capture cannot establish that arbitrary UI has reached the right state.
+
+For a maintained hotspot shortcut, use `pnpm visual:capture --list` and then:
+
+```bash
+# Before editing: retain the printed run directory as the baseline.
+pnpm visual:capture --scenario api-key-hint
+# After editing: capture the same workflow and compare matching checkpoints.
+pnpm visual:capture --scenario api-key-hint --baseline .scratch/visual-captures/run-BASELINE --diff
+```
+
+The first supported scenario is the API credential creation hint reached through the mounted sidepanel sponsor workflow, in light 380×700 and dark 320×700 views. It runs the existing real-extension Playwright scenario with deterministic fixtures, waits for asserted controls and fonts, disables capture animations, and saves images plus capture metadata. It automatically uses this checkout's content-validated test build, rebuilding only when the existing build-input check requires it. It needs Playwright Chromium (`pnpm e2e:install`); it does not use the logged-in desktop profile. Per-worktree builds, temporary browser profiles, unique ignored `.scratch/visual-captures/run-*` directories and a per-worktree capture lock avoid cross-worktree output/profile collisions. The lock serializes this command within one checkout; unrelated build/dev commands do not participate in it.
+
+Capture output includes `capture.json`, `capture.md`, per-checkpoint PNG/JSON and `playwright.log`, with build input hashes, build/capture commit identities, viewport, device scale, language, theme, browser version and image hashes. An optional `--baseline` accepts an earlier run directory. It validates workflow/fixture/checkpoint identity and image hashes before running; after capture, matching environment metadata is required for automatic pairing. It then invokes `visual:compare` for each checkpoint, without opening any image in the agent. When no baseline is supplied, the run is current-state evidence only. Failures retain runner logs and `failure.json`; a valid `capture.json` may still exist if capture succeeded but subsequent comparison failed. Capture commands never switch Git revisions or invent old UI; run the before command while the real old build/source is available.
+
+Prefer the generic spec entrypoint for new surfaces; add registry shortcuts only for frequently used workflows. `captureVisualViews` handles both a single current view and a matrix with the same checkpoint format. Use fixed IDs and bump the fixture identifier when seeded state or capture semantics change. Keep capture opt-in. The API hint's legacy `AAH_API_HINT_VISUAL_DIR` capture option remains supported. `AAH_VISUAL_CAPTURE_INTEGRATION=1 pnpm exec vitest run tests/scripts/visualCapture.test.ts` exercises generic acquisition, configurable views and automatic pairing; ordinary unit runs omit the browser integration case.
+
 Reuse existing Playwright/CDP flows to capture the real before/after states, then run the shared PNG comparison command from the worktree receiving the evidence:
 
 ```bash

@@ -51,6 +51,7 @@ import {
   setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
 const SIDEPANEL_URL = (extensionId: string) =>
   `chrome-extension://${extensionId}/${SIDEPANEL_PAGE_PATH}`
@@ -458,6 +459,7 @@ for (const kind of Object.values(SPONSOR_WORKFLOW_KINDS)) {
   test(`sidepanel receives ${kind} sponsor setup while already mounted`, async ({
     context,
     extensionId,
+    extensionDir,
     page,
   }) => {
     await page.goto(SIDEPANEL_URL(extensionId))
@@ -512,25 +514,21 @@ for (const kind of Object.values(SPONSOR_WORKFLOW_KINDS)) {
         "https://sponsor-setup.example.invalid/keys",
       )
       await expect(link).toHaveAttribute("target", "_blank")
-      const visualDir = process.env.AAH_API_HINT_VISUAL_DIR
+      const visualDir =
+        process.env.AAH_VISUAL_CAPTURE_DIR ||
+        process.env.AAH_API_HINT_VISUAL_DIR
       if (visualDir) {
-        await mkdir(visualDir, { recursive: true })
-        for (const dark of [false, true]) {
-          await page.setViewportSize({ width: dark ? 320 : 380, height: 700 })
-          await page.evaluate(
-            (enabled) =>
-              document.documentElement.classList.toggle("dark", enabled),
-            dark,
-          )
-          await link.scrollIntoViewIfNeeded()
-          await page.screenshot({
-            path: path.join(
-              visualDir,
-              dark ? "hint-dark-320.png" : "hint-light-380.png",
-            ),
-            animations: "disabled",
-          })
-        }
+        await captureVisualViews({
+          page,
+          ready: link,
+          directory: visualDir,
+          id: "hint",
+          extensionDir,
+          views: [
+            { id: "light-380", width: 380, height: 700, theme: "light" },
+            { id: "dark-320", width: 320, height: 700, theme: "dark" },
+          ],
+        })
       }
     }
     await expect.poll(() => getSponsorPending(serviceWorker)).toBeUndefined()

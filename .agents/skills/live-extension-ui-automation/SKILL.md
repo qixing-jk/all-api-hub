@@ -130,6 +130,8 @@ For native resource editors, a visible modal may still contain only the opening/
 
 ## Developer image previews
 
+For deterministic Playwright workflows, use `pnpm visual:capture --help` and the [generic capture/comparison workflow](../../../CONTRIBUTING.md#local-screenshot-comparison). Select an existing test via `--spec --grep --fixture` and add opt-in `captureVisualViews` checkpoints; optional `--view` settings control dimensions/themes. No registry entry is needed for new surfaces; `--list` exposes maintained hotspot shortcuts. This runner handles current-worktree build validation, capture, metadata and optional baseline pairing in temporary browser profiles. It does not replace authenticated site-specific CDP workflows or add automatic image inspection.
+
 For site adaptation or a requested visual handoff, follow [visual previews](../add-site-integration/references/visual-previews.md). Persist screenshots at meaningful asserted states in the site-specific runner. Agents prioritize representative final results when visual judgment is needed; inspect baseline/comparison/diff images only for a concrete question, rather than after every small edit. Display representative images directly with brief captions, reusing retained artifacts without another image-tool call. Local developer evidence is raw and unmasked by default, lives outside Git, and uses the shared [evidence storage rules](../add-site-integration/references/evidence-and-validation.md#retain-evidence-while-discovering-it). Keep automatic CI/real-site capture settings unchanged; report missing live access or image-rendering limitations explicitly.
 
 ## Multi-Worktree Conventions
