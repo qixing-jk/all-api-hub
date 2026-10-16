@@ -20,12 +20,15 @@ on:
       - "pnpm-workspace.yaml"
       - "tsconfig.json"
       - "playwright.config.ts"
+      - "playwright.firefox.config.ts"
       - "postcss.config.js"
       - "tailwind.config.js"
       - "wxt.config.ts"
       - ".github/workflows/e2e-smoke.yml"
       - ".github/workflows/e2e-build.yml"
       - "scripts/e2e-ci-build-cache.mjs"
+      - "scripts/mobile/adapters.*"
+      - "scripts/mobile/protocol.*"
   pull_request:
     paths:
       - "src/**"
@@ -42,12 +45,15 @@ on:
       - "pnpm-workspace.yaml"
       - "tsconfig.json"
       - "playwright.config.ts"
+      - "playwright.firefox.config.ts"
       - "postcss.config.js"
       - "tailwind.config.js"
       - "wxt.config.ts"
       - ".github/workflows/e2e-smoke.yml"
       - ".github/workflows/e2e-build.yml"
       - "scripts/e2e-ci-build-cache.mjs"
+      - "scripts/mobile/adapters.*"
+      - "scripts/mobile/protocol.*"
   workflow_dispatch: {}
 
 permissions:
@@ -58,6 +64,42 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  firefox-smoke:
+    name: Firefox extension smoke
+    runs-on: ubuntu-latest
+    needs: release-changes
+    if: ${{ !cancelled() && needs.release-changes.result != 'failure' && needs.release-changes.outputs.release-only != 'true' && (github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'skip-e2e')) }}
+    continue-on-error: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'e2e-optional') }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
+        with:
+          run_install: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Install Firefox stable
+        id: firefox
+        uses: browser-actions/setup-firefox@v1
+        with:
+          firefox-version: latest
+      - name: Run Firefox extension smoke
+        env:
+          AAH_E2E_FIREFOX_EXECUTABLE_PATH: ${{ steps.firefox.outputs.firefox-path }}
+        run: pnpm e2e:firefox
+      - name: Retain Firefox screenshots and report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: firefox-extension-smoke-${{ github.run_attempt }}
+          path: |
+            test-results/firefox/
+            playwright-report/firefox/
+          retention-days: 7
+
   release-changes:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.event.pull_request.head.ref, 'release-please--branches--')
     uses: ./.github/workflows/release-pr-check.yml

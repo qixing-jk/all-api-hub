@@ -389,6 +389,9 @@ importers:
       '@types/react-dom':
         specifier: ^19.1.9
         version: 19.2.2(@types/react@19.1.12)
+      '@types/selenium-webdriver':
+        specifier: ^4.35.7
+        version: 4.35.7
       '@types/webextension-polyfill':
         specifier: ^0.12.4
         version: 0.12.4
@@ -455,6 +458,9 @@ importers:
       react-devtools:
         specifier: ^7.0.1
         version: 7.0.1
+      'selenium-webdriver':
+        specifier: ^4.51.0
+        version: 4.51.0
       shadcn:
         specifier: ^3.6.3
         version: 3.6.3(@types/node@24.12.0)(babel-plugin-macros@3.1.0)(hono@4.11.3)(typescript@5.9.3)
@@ -9445,6 +9451,39 @@ packages:
 
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
+
+  '@bazel/runfiles@6.5.0':
+    resolution: {integrity: sha512-RzahvqTkfpY2jsDxo8YItPX+/iZ6hbiikw1YhE0bA9EKBR5Og8Pa6FHn9PO9M0zaXRVsr0GFQLKbB/0rzy9SzA==}
+
+  '@types/selenium-webdriver@4.35.7':
+    resolution: {integrity: sha512-TVduvRhQrIdjPWEC6YJLxwZWegWLD3uDOsqMuWk2U9+TiXw6wAH9RlKEtuHO8kioZkJ5MWGC9pQDY0nXvgi0nA==}
+
+  '@types/ws@8.18.2':
+    resolution: {integrity: sha512-67MQl+fpWKVTT1NYdnmo3U4sc/xPo/zQBncVnI74qmQa0z/b+1g6iYqNmGCPbxO+zz2aklb08a0oHfegiVd0/w==}
+
+  jszip@3.10.2:
+    resolution: {integrity: sha512-3l+rb15IOWtUhU0H5MFqES/T6Kh7abYwjosBey/vD6hDt8zoEffkSC5Ws5SGtgVw3gBx2NEbhTeSW1+kWkpyTQ==}
+
+  selenium-webdriver@4.51.0:
+    resolution: {integrity: sha512-2FY/x+THHk9uWj+WLBib0r+53D1G0pidox796H5AfbRHhJdPc7CVQPNJi31ip1Tb9duBYRw0zX0wJovnbwSDHg==}
+    engines: {node: '>= 22.0.0'}
+
+  tmp@0.2.7:
+    resolution: {integrity: sha512-e0votIpp4Uo2AJYSzVHV6xCcawuiez3DzqDAbrTc3YxBkplN6e+dM13ZeIcZnDg/QpSuU2zfZ3rzwY8ukEnaXw==}
+    engines: {node: '>=14.14'}
+
+  ws@8.22.0:
+    resolution: {integrity: sha512-Ydggc987+RO0AnWtZ/7Wq9FtNvcrL1b/RO0ud9mWjUPgDrsAAwQSF51sm2hm1XofbU/4jkpGEsLFsZZxU+1DOg==}
+    engines: {node: '>=10.0.0'}
+    peerDependencies:
+      bufferutil: ^4.0.1
+      utf-8-validate: '>=5.0.2'
+    peerDependenciesMeta:
+      bufferutil:
+        optional: true
+      utf-8-validate:
+        optional: true
+
 
 snapshots:
 
@@ -19362,3 +19401,35 @@ snapshots:
       react: 19.2.0
 
   zwitch@2.0.4: {}
+
+  '@bazel/runfiles@6.5.0': {}
+
+  '@types/selenium-webdriver@4.35.7':
+    dependencies:
+      '@types/node': 24.12.0
+      '@types/ws': 8.18.2
+
+  '@types/ws@8.18.2':
+    dependencies:
+      '@types/node': 24.12.0
+
+  jszip@3.10.2:
+    dependencies:
+      lie: 3.3.0
+      pako: 1.0.11
+      readable-stream: 2.3.8
+      setimmediate: 1.0.5
+
+  selenium-webdriver@4.51.0:
+    dependencies:
+      '@bazel/runfiles': 6.5.0
+      jszip: 3.10.2
+      tmp: 0.2.7
+      ws: 8.22.0
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
+  tmp@0.2.7: {}
+
+  ws@8.22.0: {}
