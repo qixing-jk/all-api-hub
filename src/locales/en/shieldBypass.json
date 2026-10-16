@@ -129,13 +129,24 @@
     },
     "unexpectedContent": "The response had an unexpected format and may have been a site verification page."
   },
+  "notification": {
+    "openVerification": "Open verification window",
+    "reminderSettings": "Reminder settings",
+    "turnstileAssistBody": "A background task needs you to complete human verification. It will continue automatically afterwards.",
+    "turnstileAssistTitle": "All API Hub · Verification reminder",
+    "turnstilePageBody": "A background task needs you to complete human verification. It will continue automatically afterwards.",
+    "verificationEnded": "This verification has ended. No further action is needed."
+  },
   "titlePrefix": "All API Hub · Shield Bypass",
   "toast": {
     "actions": {
-      "dismiss": "Dismiss",
       "openSettings": "Open shield bypass settings"
     },
-    "body": "This page was opened automatically by All API Hub to pass protection pages (e.g., Cloudflare challenges) and obtain the required cookies/session.\n\nIt’s necessary so All API Hub can make successful requests and detect data on protected sites.\n\nIf a verification step appears, complete it in this window; once passed, All API Hub continues and this window may close automatically.",
-    "title": "All API Hub shielded bypass helper (temporary window)"
+    "body": "This page was opened automatically by All API Hub to pass protection pages (e.g., Cloudflare challenges) and obtain the required cookies/session.\nIt’s necessary so All API Hub can make successful requests and detect data on protected sites.\nIf a verification step appears, complete it in this window; once passed, All API Hub continues and this window may close automatically.",
+    "title": "Shield bypass helper",
+    "turnstile": {
+      "body": "Automatic verification has not finished. Complete the Cloudflare Turnstile check in this window (for example, select the checkbox). Check-in then continues automatically, and this window may close.",
+      "title": "Complete the human verification"
+    }
   }
 }

@@ -16,7 +16,6 @@ const {
   trackStartedMock,
   recordDismissedMock,
   recordSettingsVisitedMock,
-  toastErrorMock,
 } = vi.hoisted(() => ({
   translationMap: {
     titlePrefix: "Shield Mode",
@@ -33,11 +32,6 @@ const {
   trackStartedMock: vi.fn(),
   recordDismissedMock: vi.fn(),
   recordSettingsVisitedMock: vi.fn(),
-  toastErrorMock: vi.fn(),
-}))
-
-vi.mock("~/lib/notify/content", () => ({
-  default: { error: toastErrorMock },
 }))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
@@ -72,6 +66,33 @@ vi.mock("react-i18next", async (importOriginal) => {
 })
 
 describe("ShieldBypassPromptToast", () => {
+  it("uses its contextual title in a non-modal notice and dismisses from its close control", async () => {
+    const user = userEvent.setup()
+    const onDismiss = vi.fn()
+    render(
+      <ShieldBypassPromptToast
+        onDismiss={onDismiss}
+        onOpenSettings={vi.fn()}
+      />,
+    )
+    const notice = await screen.findByRole("region", {
+      name: "Shield Prompt",
+    })
+    expect(notice).toBeVisible()
+    expect(notice.querySelector("footer")).toBeNull()
+    expect(
+      screen.queryByRole("button", { name: "Dismiss" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "View shield history" }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.close" }),
+    )
+    expect(onDismiss).toHaveBeenCalledOnce()
+    expect(recordDismissedMock).toHaveBeenCalledOnce()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     trackStartedMock.mockResolvedValue(undefined)
@@ -86,11 +107,7 @@ describe("ShieldBypassPromptToast", () => {
     document.title = "Original Title"
 
     const { unmount } = render(
-      <ShieldBypassPromptToast
-        onDismiss={vi.fn()}
-        onOpenSettings={vi.fn()}
-        onOpenHistory={vi.fn()}
-      />,
+      <ShieldBypassPromptToast onDismiss={vi.fn()} onOpenSettings={vi.fn()} />,
     )
 
     await waitFor(() => {
@@ -128,7 +145,6 @@ describe("ShieldBypassPromptToast", () => {
         <ShieldBypassPromptToast
           onDismiss={vi.fn()}
           onOpenSettings={vi.fn()}
-          onOpenHistory={vi.fn()}
         />,
       )
 
@@ -170,7 +186,6 @@ describe("ShieldBypassPromptToast", () => {
       <ShieldBypassPromptToast
         onDismiss={onDismiss}
         onOpenSettings={onOpenSettings}
-        onOpenHistory={vi.fn()}
       />,
     )
 
@@ -183,7 +198,9 @@ describe("ShieldBypassPromptToast", () => {
       expect(document.title).toBe("Shield Mode · Existing Title")
     })
 
-    await user.click(screen.getByRole("button", { name: "Dismiss" }))
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.close" }),
+    )
     await user.click(screen.getByRole("button", { name: "Open settings" }))
 
     expect(onDismiss).toHaveBeenCalledTimes(1)
@@ -212,11 +229,7 @@ describe("ShieldBypassPromptToast", () => {
     document.title = ""
 
     const { unmount } = render(
-      <ShieldBypassPromptToast
-        onDismiss={vi.fn()}
-        onOpenSettings={vi.fn()}
-        onOpenHistory={vi.fn()}
-      />,
+      <ShieldBypassPromptToast onDismiss={vi.fn()} onOpenSettings={vi.fn()} />,
     )
 
     await waitFor(() => {
@@ -228,68 +241,12 @@ describe("ShieldBypassPromptToast", () => {
     expect(document.title).toBe("")
   })
 
-  it("opens diagnostic history without dismissing the verification prompt or opening settings", async () => {
-    const user = userEvent.setup()
-    const onOpenHistory = vi.fn().mockResolvedValue(undefined)
-    const onDismiss = vi.fn()
-    const onOpenSettings = vi.fn()
-    render(
-      <ShieldBypassPromptToast
-        onDismiss={onDismiss}
-        onOpenSettings={onOpenSettings}
-        onOpenHistory={onOpenHistory}
-      />,
-    )
-
-    await user.click(
-      await screen.findByRole("button", { name: "View shield history" }),
-    )
-
-    expect(onOpenHistory).toHaveBeenCalledTimes(1)
-    expect(onDismiss).not.toHaveBeenCalled()
-    expect(onOpenSettings).not.toHaveBeenCalled()
-    expect(recordSettingsVisitedMock).not.toHaveBeenCalled()
-    expect(screen.getByText("Shield Prompt")).toBeVisible()
-  })
-
-  it("keeps history available for retry and reports a navigation failure", async () => {
-    const user = userEvent.setup()
-    const onOpenHistory = vi
-      .fn()
-      .mockRejectedValueOnce(new Error("navigation failed"))
-    render(
-      <ShieldBypassPromptToast
-        onDismiss={vi.fn()}
-        onOpenSettings={vi.fn()}
-        onOpenHistory={onOpenHistory}
-      />,
-    )
-
-    const historyButton = await screen.findByRole("button", {
-      name: "View shield history",
-    })
-    await user.click(historyButton)
-
-    expect(toastErrorMock).toHaveBeenCalledWith(
-      "Could not open history. Please try again.",
-    )
-    expect(historyButton).toBeEnabled()
-    expect(screen.getByText("Shield Prompt")).toBeVisible()
-
-    await user.click(historyButton)
-    expect(onOpenHistory).toHaveBeenCalledTimes(2)
-  })
-
   it("does not modify the document title when the translated prefix is blank", async () => {
     translationMap.titlePrefix = "   "
     document.title = "Unchanged Title"
 
     const { unmount } = render(
-      <ShieldBypassPromptToast
-        onDismiss={vi.fn()}
-        onOpenSettings={vi.fn()}
-        onOpenHistory={vi.fn()}
-      />,
+      <ShieldBypassPromptToast onDismiss={vi.fn()} onOpenSettings={vi.fn()} />,
     )
 
     await waitFor(() => {

@@ -20,7 +20,6 @@
     "promptConfirm": "Phát hiện mã có thể là mã đổi thưởng {{code}}, bạn có muốn thử tự động đổi mã cho trang web hiện tại không?",
     "promptConfirmBatch_other": "Phát hiện {{count}} mã có thể là mã đổi thưởng. Vui lòng chọn mã bạn muốn thử tự động đổi cho trang hiện tại.",
     "promptSettingsLink": "Mở cài đặt Trợ lý đổi mã",
-    "promptSource": "Lời nhắc này đến từ tiện ích mở rộng trình duyệt All API Hub",
     "promptTitle": "Trợ lý đổi mã",
     "redeemFailed": "Đổi mã thất bại, vui lòng thử lại sau.",
     "redeemLoading": "Đang thử đổi mã, vui lòng đợi…",

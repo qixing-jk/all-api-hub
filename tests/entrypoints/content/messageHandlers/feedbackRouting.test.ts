@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   prepareNewApi: vi.fn(),
   completeNewApi: vi.fn(),
   clearNewApi: vi.fn(),
+  ensureRedemptionToastUi: vi.fn(),
+  showTurnstileAssistPageNotice: vi.fn(),
 }))
 vi.mock("~/utils/browser/runtimeMessages", () => ({
   onRuntimeMessage: mocks.register,
@@ -30,6 +32,15 @@ vi.mock("~/services/apiService/newApiFamily/oauth/newApiContent", () => ({
 }))
 vi.mock("~/services/checkin/feedback/pageScan", () => ({
   handlePageFeedbackScan: mocks.scan,
+}))
+vi.mock("~/entrypoints/content/shared/uiRoot", () => ({
+  ensureRedemptionToastUi: mocks.ensureRedemptionToastUi,
+}))
+vi.mock("~/services/checkin/turnstile/assistPageNotice", () => ({
+  showTurnstileAssistPageNotice: mocks.showTurnstileAssistPageNotice,
+}))
+vi.mock("~/lib/notify/content", () => ({
+  default: { info: vi.fn(), dismiss: vi.fn() },
 }))
 beforeEach(() => vi.resetAllMocks())
 
@@ -83,6 +94,48 @@ describe("feedback content routing", () => {
     )
     await vi.waitFor(() =>
       expect(reply).toHaveBeenCalledWith({ success: false }),
+    )
+  })
+
+  it("handles TurnstileAssistPageNotice action by showing page notice", async () => {
+    mocks.ensureRedemptionToastUi.mockResolvedValueOnce(undefined)
+    mocks.showTurnstileAssistPageNotice.mockReturnValueOnce(true)
+
+    setupContentMessageHandlers()
+    const reply = vi.fn()
+    const request = {
+      action: RuntimeActionIds.TurnstileAssistPageNotice,
+      requestId: "req-notice-1",
+    }
+    const listener = atIndex(mocks.register.mock.calls, 0)[0]
+    expect(listener(request, {}, reply)).toBe(true)
+
+    await vi.waitFor(() =>
+      expect(reply).toHaveBeenCalledWith({ presented: true }),
+    )
+    expect(mocks.ensureRedemptionToastUi).toHaveBeenCalledOnce()
+    expect(mocks.showTurnstileAssistPageNotice).toHaveBeenCalledWith(
+      request,
+      expect.any(Object),
+    )
+  })
+
+  it("handles TurnstileAssistPageNotice action when loading UI rejects", async () => {
+    mocks.ensureRedemptionToastUi.mockRejectedValueOnce(
+      new Error("UI container missing"),
+    )
+
+    setupContentMessageHandlers()
+    const reply = vi.fn()
+    const request = {
+      action: RuntimeActionIds.TurnstileAssistPageNotice,
+      requestId: "req-notice-err",
+    }
+    const listener = atIndex(mocks.register.mock.calls, 0)[0]
+    expect(listener(request, {}, reply)).toBe(true)
+
+    await vi.waitFor(() =>
+      expect(reply).toHaveBeenCalledWith({ presented: false }),
     )
   })
 })

@@ -522,6 +522,29 @@ describe("setupRuntimeMessageListeners additional routing", () => {
     })
   })
 
+  it("opens Turnstile reminder settings from a content script and reports navigation failures", async () => {
+    const listener = await loadListener()
+    mocks.openOrFocusOptionsMenuItem.mockResolvedValueOnce(undefined)
+    const success = vi.fn()
+    listener({ action: "openSettings:turnstileAssist" }, {}, success)
+    await waitForAsyncResponse()
+    expect(mocks.openOrFocusOptionsMenuItem).toHaveBeenLastCalledWith(
+      MENU_ITEM_IDS.BASIC,
+      { tab: "refresh", anchor: "shield-turnstile-assist" },
+    )
+    expect(success).toHaveBeenCalledWith({ success: true })
+    mocks.openOrFocusOptionsMenuItem.mockRejectedValueOnce(
+      new Error("cannot open"),
+    )
+    const failure = vi.fn()
+    listener({ action: "openSettings:turnstileAssist" }, {}, failure)
+    await waitForAsyncResponse()
+    expect(failure).toHaveBeenCalledWith({
+      success: false,
+      error: "cannot open",
+    })
+  })
+
   it("opens the expected settings destinations for background-triggered navigation", async () => {
     const listener = await loadListener()
 

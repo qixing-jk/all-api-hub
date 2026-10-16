@@ -13,6 +13,23 @@ export function hasNotificationsAPI(): boolean {
   return !!browser.notifications
 }
 
+/** Reads the notification-level grant without confusing it with API access permission. */
+export async function getNotificationPermissionLevel(): Promise<
+  "granted" | "denied" | null
+> {
+  if (typeof browser.notifications?.getPermissionLevel !== "function")
+    return null
+  try {
+    return await runBrowserAsyncApi(
+      () => browser.notifications.getPermissionLevel(),
+      (callback) =>
+        (globalThis as any).chrome.notifications.getPermissionLevel(callback),
+    )
+  } catch {
+    return null
+  }
+}
+
 /**
  * Creates or replaces a browser notification. Returns the created id, or null
  * when notifications are unavailable or creation fails.

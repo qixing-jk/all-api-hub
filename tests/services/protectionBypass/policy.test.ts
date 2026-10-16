@@ -215,6 +215,7 @@ describe("normalizeProtectionBypassPreferences", () => {
       managed_site_model_sync: true,
     },
     tempContextMode: TEMP_CONTEXT_MODES.Composite,
+    turnstileAssistPresentation: "both" as const,
   }
 
   it("maps persisted automatic feature preferences", () => {

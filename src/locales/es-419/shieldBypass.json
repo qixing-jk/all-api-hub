@@ -130,13 +130,24 @@
     },
     "unexpectedContent": "La respuesta tenía un formato inesperado y pudo haber sido una página de verificación del sitio."
   },
+  "notification": {
+    "openVerification": "Abrir ventana de verificación",
+    "reminderSettings": "Configuración de avisos",
+    "turnstileAssistBody": "Una tarea en segundo plano requiere verificación humana. Continuará automáticamente al completarla.",
+    "turnstileAssistTitle": "All API Hub · Aviso de verificación",
+    "turnstilePageBody": "Una tarea en segundo plano requiere verificación humana. Continuará automáticamente al completarla.",
+    "verificationEnded": "Esta verificación terminó. No se requiere ninguna acción."
+  },
   "titlePrefix": "All API Hub · Omisión de protección",
   "toast": {
     "actions": {
-      "dismiss": "Descartar",
       "openSettings": "Abrir ajustes de omisión de protección"
     },
-    "body": "All API Hub abrió esta página automáticamente para pasar páginas de protección (por ejemplo, desafíos de Cloudflare) y obtener las cookies/sesión necesarias.\n\nEsto es necesario para que All API Hub pueda realizar solicitudes correctamente y detectar datos en sitios protegidos.\n\nSi aparece un paso de verificación, complétalo en esta ventana; una vez aprobado, All API Hub continuará y esta ventana podría cerrarse automáticamente.",
-    "title": "Ayudante de omisión protegida de All API Hub (ventana temporal)"
+    "body": "All API Hub abrió esta página automáticamente para pasar páginas de protección (por ejemplo, desafíos de Cloudflare) y obtener las cookies/sesión necesarias.\nEsto es necesario para que All API Hub pueda realizar solicitudes correctamente y detectar datos en sitios protegidos.\nSi aparece un paso de verificación, complétalo en esta ventana; una vez aprobado, All API Hub continuará y esta ventana podría cerrarse automáticamente.",
+    "title": "Ayudante de omisión protegida",
+    "turnstile": {
+      "body": "La verificación automática aún no terminó. Completa Cloudflare Turnstile en esta ventana (por ejemplo, marca la casilla). Después el check-in continúa solo y esta ventana puede cerrarse.",
+      "title": "Completa la verificación humana"
+    }
   }
 }

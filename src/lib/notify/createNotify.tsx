@@ -8,7 +8,9 @@ import type { NotificationAction } from "~/components/toast/types"
 import { NOTIFICATION_DURATIONS } from "./defaults"
 
 export type NotificationOptions = ToastOptions & {
+  title?: string
   action?: NotificationAction
+  secondaryAction?: NotificationAction
 }
 
 /** Creates the same notification API for page and isolated content runtimes. */
@@ -36,10 +38,10 @@ export function createNotify(runtime: typeof toast) {
       message = message.trim()
       if (!message) return undefined
     }
-    const { action, ...overrides } = options ?? {}
+    const { title, action, secondaryAction, ...overrides } = options ?? {}
     const Icon = kind === "warning" ? TriangleAlert : Info
     return runtime(
-      action
+      title || action || secondaryAction
         ? (instance) => (
             <NotificationMessage
               key={instance.id}
@@ -47,6 +49,8 @@ export function createNotify(runtime: typeof toast) {
                 typeof message === "function" ? message(instance) : message
               }
               action={action}
+              title={title}
+              secondaryAction={secondaryAction}
               onDismiss={() => runtime.dismiss(instance.id)}
             />
           )

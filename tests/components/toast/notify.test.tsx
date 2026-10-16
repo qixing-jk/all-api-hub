@@ -62,6 +62,55 @@ afterEach(async () => {
 })
 
 describe("notification facade", () => {
+  it("shows an attributed reminder with separate verification and settings actions", async () => {
+    const verify = vi.fn()
+    const settings = vi.fn()
+    render(<ThemeAwareToaster />)
+    act(() => {
+      notify.info("Complete verification to continue", {
+        title: "All API Hub · Verification reminder",
+        action: { label: "Open verification", onClick: verify },
+        secondaryAction: { label: "Reminder settings", onClick: settings },
+      })
+    })
+    expect(
+      screen.getByText("All API Hub · Verification reminder"),
+    ).toBeVisible()
+    fireEvent.click(screen.getByRole("button", { name: "Reminder settings" }))
+    await waitFor(() => expect(settings).toHaveBeenCalledTimes(1))
+    expect(verify).not.toHaveBeenCalled()
+  })
+  it("distinguishes primary and secondary action styles and isolates pending state", async () => {
+    let resolveAction: () => void = () => {}
+    const verifyPromise = new Promise<void>((resolve) => {
+      resolveAction = resolve
+    })
+    const verify = vi.fn().mockReturnValue(verifyPromise)
+    const settings = vi.fn()
+    render(<ThemeAwareToaster />)
+    act(() => {
+      notify.info("Verification needed", {
+        action: { label: "Open verification", onClick: verify },
+        secondaryAction: { label: "Reminder settings", onClick: settings },
+      })
+    })
+    const verifyBtn = screen.getByRole("button", { name: "Open verification" })
+    const settingsBtn = screen.getByRole("button", {
+      name: "Reminder settings",
+    })
+    expect(verifyBtn).toHaveClass("font-medium")
+    expect(settingsBtn).toHaveClass("text-muted-foreground")
+
+    await act(async () => {
+      fireEvent.click(verifyBtn)
+    })
+    await waitFor(() => expect(verifyBtn.querySelector("svg")).not.toBeNull())
+    expect(settingsBtn.querySelector("svg")).toBeNull()
+    expect(settingsBtn).toBeDisabled()
+    await act(async () => {
+      resolveAction()
+    })
+  })
   it.each(["success", "error", "loading"] as const)(
     "applies shared %s lifetimes before a renderer mounts and preserves overrides",
     async (kind) => {

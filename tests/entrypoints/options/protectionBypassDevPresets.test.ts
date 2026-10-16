@@ -8,7 +8,7 @@ import {
 
 describe("protection bypass development presets", () => {
   it("contains only existing automatic behaviors that permit API fallback fetches", () => {
-    expect(SHIELD_DEV_TRIGGER_PRESETS).toHaveLength(6)
+    expect(SHIELD_DEV_TRIGGER_PRESETS).toHaveLength(10)
     expect(SHIELD_DEV_TRIGGER_PRESETS).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

@@ -2,13 +2,9 @@ import React, { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
-  Body,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  Heading3,
-} from "~/components/ui"
+  ContentNotice,
+  ContentNoticeAction,
+} from "~/components/toast/ContentNotice"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -134,76 +130,61 @@ export const RedemptionBatchResultToast: React.FC<
         PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionBatchResultToast
       }
     >
-      <Card>
-        <CardHeader padding="sm">
-          <div className="gap-y-density-2 flex items-center justify-between gap-x-2">
-            <Heading3>
-              {t("redemptionAssist:messages.batchResultTitle")}
-            </Heading3>
-            <Button
-              size="sm"
-              variant="secondary"
-              analyticsAction={
-                PRODUCT_ANALYTICS_ACTION_IDS.CloseRedemptionBatchResult
-              }
-              onClick={onClose}
-            >
-              {t("common:actions.close")}
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent padding="sm">
-          <Body>
-            {t("redemptionAssist:messages.batchResultSummary", {
-              total: summary.total,
-              success: summary.successCount,
-              failed: summary.failedCount,
-            })}
-          </Body>
+      <ContentNotice
+        title={t("redemptionAssist:messages.batchResultTitle")}
+        onClose={onClose}
+        closeAnalyticsAction={
+          PRODUCT_ANALYTICS_ACTION_IDS.CloseRedemptionBatchResult
+        }
+      >
+        <p>
+          {t("redemptionAssist:messages.batchResultSummary", {
+            total: summary.total,
+            success: summary.successCount,
+            failed: summary.failedCount,
+          })}
+        </p>
 
-          <div className="mt-density-3 space-y-density-2 max-h-60 overflow-y-auto pr-1">
-            {items.map((item, index) => (
-              <div
-                key={`${item.code}-${index}`}
-                className="border-border/60 bg-muted/20 gap-y-density-1 py-density-2 flex flex-col gap-x-1 rounded-md border px-2 text-xs"
-              >
-                <div className="gap-y-density-2 flex items-center justify-between gap-x-2">
-                  <code className="text-foreground font-mono">
-                    {item.preview}
-                  </code>
-                  {item.success ? (
-                    <span className="text-success-text">
-                      {t("common:status.success")}
+        <div className="space-y-density-2 max-h-60 overflow-y-auto pr-1">
+          {items.map((item, index) => (
+            <div
+              key={`${item.code}-${index}`}
+              className="border-border/60 bg-muted/20 gap-y-density-1 py-density-2 flex flex-col gap-x-1 rounded-md border px-2 text-xs"
+            >
+              <div className="gap-y-density-2 flex items-center justify-between gap-x-2">
+                <code className="text-foreground font-mono">
+                  {item.preview}
+                </code>
+                {item.success ? (
+                  <span className="text-success-text">
+                    {t("common:status.success")}
+                  </span>
+                ) : (
+                  <div className="gap-y-density-2 flex items-center gap-x-2">
+                    <span className="text-destructive-text">
+                      {t("common:status.failed")}
                     </span>
-                  ) : (
-                    <div className="gap-y-density-2 flex items-center gap-x-2">
-                      <span className="text-destructive-text">
-                        {t("common:status.failed")}
-                      </span>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        disabled={retryingCode !== null}
-                        loading={retryingCode === item.code}
-                        onClick={() => handleRetry(item.code)}
-                      >
-                        {retryingCode === item.code
-                          ? t("common:status.retrying")
-                          : t("common:actions.retry")}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                <div className="text-muted-foreground whitespace-pre-line">
-                  {item.genericRetryFailure
-                    ? t("common:status.error")
-                    : item.message}
-                </div>
+                    <ContentNoticeAction
+                      disabled={retryingCode !== null}
+                      loading={retryingCode === item.code}
+                      onClick={() => handleRetry(item.code)}
+                    >
+                      {retryingCode === item.code
+                        ? t("common:status.retrying")
+                        : t("common:actions.retry")}
+                    </ContentNoticeAction>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              <div className="text-muted-foreground whitespace-pre-line">
+                {item.genericRetryFailure
+                  ? t("common:status.error")
+                  : item.message}
+              </div>
+            </div>
+          ))}
+        </div>
+      </ContentNotice>
     </ProductAnalyticsScope>
   )
 }

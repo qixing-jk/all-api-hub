@@ -22,7 +22,6 @@
     "promptConfirmBatch_many": "Detectamos {{count}} possíveis códigos de resgate nesta página. Selecione os códigos que deseja resgatar automaticamente neste site.",
     "promptConfirmBatch_other": "Detectamos {{count}} possíveis códigos de resgate nesta página. Selecione os códigos que deseja resgatar automaticamente neste site.",
     "promptSettingsLink": "Abrir configurações do assistente de resgate",
-    "promptSource": "Este prompt é fornecido pela extensão All API Hub",
     "promptTitle": "Assistente de resgate",
     "redeemFailed": "Falha no resgate. Por favor, tente novamente mais tarde.",
     "redeemLoading": "Tentando resgatar…",

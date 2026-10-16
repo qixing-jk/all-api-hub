@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 import { Input } from "~/components/ui"
 
 interface AccountSearchInputProps {
+  autoFocus?: boolean
   disabled?: boolean
   value: string
   onChange: (value: string) => void
@@ -13,12 +14,14 @@ interface AccountSearchInputProps {
 /**
  * Compact search field used to filter account list entries.
  * @param props Component props containing search value and handlers.
+ * @param props.autoFocus Whether to focus the input automatically on mount.
  * @param props.disabled Whether account reordering temporarily locks search.
  * @param props.value Current search string.
  * @param props.onChange Handler invoked when user types in the field.
  * @param props.onClear Handler clearing the current search string.
  */
 export default function AccountSearchInput({
+  autoFocus = true,
   disabled = false,
   value,
   onChange,
@@ -37,7 +40,7 @@ export default function AccountSearchInput({
   return (
     <div className="relative">
       <Input
-        autoFocus={true}
+        autoFocus={autoFocus}
         disabled={disabled}
         type="text"
         size="sm"

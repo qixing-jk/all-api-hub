@@ -42,6 +42,8 @@ import { canUseTempWindowFetch } from "~/utils/browser/tempWindowFetch"
 import { openSettingsTab } from "~/utils/navigation"
 import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
 
+import { TurnstileNotificationStatus } from "./TurnstileNotificationStatus"
+
 /** Compares complete automatic-feature preference maps. */
 function hasSameAutomaticFeatureBypass(
   left: Record<ProtectionBypassAutomaticFeature, boolean>,
@@ -299,6 +301,20 @@ export default function ShieldSettings() {
                   })}
                 </div>
               </div>
+            }
+          />
+          <CardItem
+            id={SHIELD_SETTINGS_TARGET_IDS.turnstileAssist}
+            title={t("refresh.shieldTurnstileAssistTitle")}
+            description={t("refresh.shieldTurnstileAssistDesc")}
+            rightContentClassName="[@container(min-width:42rem)]:flex-1"
+            rightContent={
+              <TurnstileNotificationStatus
+                preference={normalizedPreferences.turnstileAssistPresentation}
+                onChange={(turnstileAssistPresentation) => {
+                  void updateTempWindowFallback({ turnstileAssistPresentation })
+                }}
+              />
             }
           />
           <ShieldWindowSizeSettings />

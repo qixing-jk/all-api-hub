@@ -1484,6 +1484,7 @@ describe("preferencesMigration", () => {
         windowHeight: 720,
         enabled: false,
         tempContextMode: "tab",
+        turnstileAssistPresentation: "page",
         automaticFeatureBypass: {
           account_refresh: true,
           balance_history: true,

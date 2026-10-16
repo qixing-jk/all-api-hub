@@ -114,6 +114,10 @@ export const RuntimeActionIds = {
     RuntimeActionPrefixes.OpenSettings,
     "shieldHistory",
   ),
+  OpenSettingsTurnstileAssist: composeRuntimeAction(
+    RuntimeActionPrefixes.OpenSettings,
+    "turnstileAssist",
+  ),
   OpenSettingsApiCredentialProfiles: composeRuntimeAction(
     RuntimeActionPrefixes.OpenSettings,
     "apiCredentialProfiles",
@@ -175,6 +179,10 @@ export const RuntimeActionIds = {
   ContentCheckCapGuard: "checkCapGuard",
   ContentCheckCloudflareGuard: "checkCloudflareGuard",
   ContentWaitForTurnstileToken: "waitForTurnstileToken",
+  TurnstileRequestUserAssist: "turnstileRequestUserAssist",
+  TurnstileReadPageApi: "turnstileReadPageApi",
+  TurnstileAssistPageNotice: "turnstileAssistPageNotice",
+  TurnstileAssistOpen: "turnstileAssistOpen",
   ContentTriggerCheckinPageAction: "triggerCheckinPageAction",
   ContentOpenRouterManagementKeyAction: "openRouterManagementKeyAction",
   ContentWaitAndGetUserInfo: "waitAndGetUserInfo",

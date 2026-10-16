@@ -1,6 +1,7 @@
 import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { WEB_AI_API_CHECK_TARGET_IDS } from "~/features/BasicSettings/components/tabs/WebAiApiCheck/searchTargets"
 import { setupAccountBrowserIdentityRateLimitMessaging } from "~/services/accountBrowserSession/identityRateLimit"
 import { setupAccountKeyRepairMessagingListeners } from "~/services/accounts/accountKeyAutoProvisioning"
@@ -411,6 +412,18 @@ export function setupRuntimeMessageListeners() {
           anchor: "shield-settings",
         })
         sendResponse({ success: true })
+        return true
+      }
+
+      if (request.action === RuntimeActionIds.OpenSettingsTurnstileAssist) {
+        void openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC, {
+          tab: "refresh",
+          anchor: SETTINGS_ANCHORS.SHIELD_TURNSTILE_ASSIST,
+        })
+          .then(() => sendResponse({ success: true }))
+          .catch((error) =>
+            sendResponse({ success: false, error: getErrorMessage(error) }),
+          )
         return true
       }
 

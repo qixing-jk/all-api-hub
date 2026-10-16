@@ -144,7 +144,7 @@ test.beforeEach(async ({ context, page }) => {
   })
 })
 
-test("shows the shield-bypass content prompt and opens settings and diagnostic history", async ({
+test("shows the shield-bypass content prompt and opens settings without redundant history or dismiss actions", async ({
   context,
   extensionId,
   page,
@@ -161,13 +161,41 @@ test("shows the shield-bypass content prompt and opens settings and diagnostic h
   const contentHost = page.locator("all-api-hub-redemption-toast")
   await expect(
     contentHost.getByRole("heading", {
-      name: "All API Hub shielded bypass helper (temporary window)",
+      name: "Shield bypass helper",
+      exact: true,
     }),
     `Expected shield bypass prompt to render after content message; last result: ${JSON.stringify(
       messageResult,
     )}`,
   ).toBeVisible()
   await expect(page).toHaveTitle(/All API Hub · Shield Bypass · Shield Fixture/)
+  const notice = contentHost.getByRole("region")
+  const header = notice.locator("header")
+  await expect(header.locator("svg").first()).toBeVisible()
+  await expect(header).toHaveCSS("border-bottom-width", "1px")
+  const body = notice.locator('[data-slot="notice-body"] > p')
+  await expect(body).toBeVisible()
+  expect(await body.textContent()).not.toMatch(/\n\s*\n/)
+  const bodyBox = await body.boundingBox()
+  const titleBox = await header.getByRole("heading").boundingBox()
+  expect(bodyBox!.x).toBeLessThan(titleBox!.x)
+  await expect(
+    notice
+      .locator('[data-slot="notice-body"]')
+      .getByRole("button", { name: "Open shield bypass settings" }),
+  ).toBeVisible()
+  await expect(notice.locator("footer")).toHaveCount(0)
+  await expect(
+    notice.getByRole("button", { name: "Dismiss", exact: true }),
+  ).toHaveCount(0)
+  await expect(
+    notice.getByRole("button", { name: "View shield bypass history" }),
+  ).toHaveCount(0)
+  await expect(header).toHaveCSS("padding-left", "16px")
+  await page.screenshot({
+    path: testInfo.outputPath("shield-content-desktop.png"),
+    animations: "disabled",
+  })
 
   const settingsPagePromise = waitForExtensionPage(context, {
     extensionId,
@@ -225,32 +253,30 @@ test("shows the shield-bypass content prompt and opens settings and diagnostic h
 
   await page.bringToFront()
   await page.setViewportSize({ width: 390, height: 844 })
-  const historyLink = contentHost.getByRole("button", {
-    name: "View shield bypass history",
+  const settingsLink = contentHost.getByRole("button", {
+    name: "Open shield bypass settings",
   })
-  await expect(historyLink).toBeInViewport({ ratio: 1 })
+  await expect(settingsLink).toBeInViewport({ ratio: 1 })
   await page.screenshot({
     path: testInfo.outputPath("shield-history-content-entry-mobile.png"),
     animations: "disabled",
   })
-
-  const historyPagePromise = waitForExtensionPage(context, {
-    extensionId,
-    path: OPTIONS_PAGE_PATH,
-    hash: `#${MENU_ITEM_IDS.BASIC}`,
-    searchParams: {
-      tab: "refresh",
-      anchor: SHIELD_SETTINGS_TARGET_IDS.history,
-    },
+  await seedUserPreferences(serviceWorker, {
+    language: "en",
+    themeMode: "dark",
   })
-  await historyLink.click()
-  const historyPage = await historyPagePromise
-  installExtensionPageGuards(historyPage)
-  await waitForExtensionRoot(historyPage)
+  await expect(contentHost.locator(".dark").getByRole("region")).toBeVisible()
+  await page.screenshot({
+    path: testInfo.outputPath("shield-content-mobile-dark.png"),
+    animations: "disabled",
+  })
+  await seedUserPreferences(serviceWorker, {
+    language: "en",
+    themeMode: "light",
+  })
+  await expect(contentHost.locator(".dark")).toHaveCount(0)
 
-  await expect(
-    historyPage.getByRole("dialog", { name: "Shield bypass history" }),
-  ).toBeVisible()
+  await contentHost.getByRole("button", { name: "Close", exact: true }).click()
+  await expect(notice).toHaveCount(0)
   expect(page.isClosed()).toBe(false)
-  await expect(historyLink).toBeVisible()
 })

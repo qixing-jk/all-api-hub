@@ -22,7 +22,6 @@
     "promptConfirmBatch_many": "Se detectaron {{count}} posibles códigos de canje en esta página. Selecciona códigos para canjear automáticamente en este sitio.",
     "promptConfirmBatch_other": "Se detectaron {{count}} posibles códigos de canje en esta página. Selecciona códigos para canjear automáticamente en este sitio.",
     "promptSettingsLink": "Abrir configuración de Asistente de canje",
-    "promptSource": "Este aviso lo proporciona la extensión All API Hub",
     "promptTitle": "Asistente de canje",
     "redeemFailed": "El canje falló. Inténtalo de nuevo más tarde.",
     "redeemLoading": "Intentando canjear...",
