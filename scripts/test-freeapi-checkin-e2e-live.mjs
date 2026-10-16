@@ -7,7 +7,7 @@ import path from "node:path"
 import { connectDevExtension } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
 import { getAccounts, withTemporaryAccount } from "./cdp/sandbox.mjs"
-import { openExtensionPage } from "./cdp/ui-driver.mjs"
+import { dismissModals, openExtensionPage } from "./cdp/ui-driver.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
 loadLocalEnv()
@@ -129,6 +129,8 @@ async function main() {
             .getByTestId("account-management-confirm-add-button")
             .click()
           await dialog.waitFor({ state: "hidden" })
+          // Saving can offer key creation; this check-in run leaves it untouched.
+          await dismissModals(page)
           const saved = (await getAccounts(dev.serviceWorker)).find(
             (a) => a.id === fixture.id,
           )
@@ -232,6 +234,14 @@ async function main() {
             path.join(evidenceDir, "readback.json"),
             JSON.stringify(after, null, 2),
           )
+          // Per-account persistence can precede completion of the visible run.
+          await assertEventually(() =>
+            checkinPage.getByTestId("auto-checkin-run-now-button").isEnabled(),
+          )
+          await checkinPage
+            .getByText(fixture.site_name, { exact: true })
+            .first()
+            .waitFor()
           await checkinPage.screenshot({
             path: path.join(evidenceDir, "02-result.png"),
             fullPage: true,
