@@ -2,6 +2,8 @@
 
 Use for site-specific UI validation and developer handoff. Save real screenshots from the tested build and display them directly so the developer can assess the result without opening a browser or reading a trace.
 
+For task before/after comparisons, use [task acceptance](../../../../docs/agents/task-acceptance.md#compare-changed-ui) for scope, baseline provenance and proportionate comparison tooling. Native-site versus extension comparison below answers workflow parity; it does not replace comparison with the extension's pre-change UI.
+
 ## Capture useful states
 
 Select a small set of screenshots that answers the task's visual questions:
@@ -33,6 +35,6 @@ Create and verify the local evidence directory before execution. Record the view
 
 ## Show the developer the result
 
-Inspect saved images with the available local-image tool (`view_image` in Codex) and return representative images through the tool's image output or inline Markdown images with absolute local paths. Include a short caption describing the observed state and a clickable artifact/index link; a path-only list is not a visual preview. Display during progress when useful and include the decisive preview in the final handoff when the client supports local images.
+Inspect representative final images with the available local-image tool (`view_image` in Codex) when visual judgment is needed, following the task-level checkpoints in [task acceptance](../../../../docs/agents/task-acceptance.md#compare-changed-ui). Batch minor refinements; do not reopen images after every edit or inspect every captured artifact. Agents prioritize the after image; baseline, comparison and diff images primarily serve developer review and need agent inspection only for a concrete unresolved question. Return representative images through the tool's image output or inline Markdown images with absolute local paths. Include a short caption describing the observed state and a clickable artifact/index link; a path-only list is not a visual preview. Display during progress when it answers a current question, and reuse retained artifacts in the final handoff without another image-tool call. Do not claim to have inspected images merely retained for developer review.
 
 If the client cannot render local images, provide clickable PNG links and state that display limitation. If live access was unavailable, say which screenshot could not be obtained; a fixture or mocked screenshot must be labelled as such. Pictures complement behavior assertions and live readback; they do not establish authentication correctness, write preservation or cleanup alone.
