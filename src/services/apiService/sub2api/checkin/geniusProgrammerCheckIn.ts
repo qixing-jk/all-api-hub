@@ -1,5 +1,10 @@
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { executeAuthenticatedSub2ApiRequest } from "~/services/apiService/sub2api/auth/authLifecycle"
 import { ForeignCheckInContractError } from "~/services/apiService/sub2api/checkin/foreignCheckInContract"
+import {
+  classifySiblingStatusDto,
+  SIBLING_DTO_VERDICTS,
+} from "~/services/apiService/sub2api/checkin/siblingStatusContracts"
 import {
   createUserCheckInStatusEndpoint,
   resolveUserCheckInTimezone,
@@ -74,9 +79,9 @@ const parseData = (
 /**
  * Deployment-owned contract observed at https://codexcli.club/dashboard on
  * 2026-09-14: /user/checkin/status uses today_checked_in, unlike Sub2API Pro.
- * clawhud shares this path with a `checked_in_today` DTO; a valid sibling status
- * with boolean `enabled` and `checked_in_today` fields is foreign. Discovery
- * marks it unsupported; missing or malformed status fields remain unknown.
+ * clawhud shares this path with a `checked_in_today` DTO. Sibling
+ * classification comes from the shared discriminator table; missing or
+ * malformed status fields remain unknown.
  */
 export function parseGeniusProgrammerDailyCheckInStatusResponse(
   response: ApiTransportResponse<unknown>,
@@ -90,8 +95,10 @@ export function parseGeniusProgrammerDailyCheckInStatusResponse(
   }
   if (
     !Object.hasOwn(data, "today_checked_in") &&
-    typeof data.enabled === "boolean" &&
-    typeof data.checked_in_today === "boolean"
+    classifySiblingStatusDto(
+      AUTO_CHECKIN_METHOD_IDS.GeniusProgrammerDailyCheckIn,
+      data,
+    ) === SIBLING_DTO_VERDICTS.Foreign
   ) {
     throw new ForeignCheckInContractError(USER_CHECK_IN_STATUS_ENDPOINT, data)
   }

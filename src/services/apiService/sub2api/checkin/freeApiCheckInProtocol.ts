@@ -7,14 +7,7 @@
  */
 export const FREE_API_CHECK_IN_ENDPOINT = "/api/v1/user/checkin"
 
-/** Resolve the native dashboard timezone independently of path construction. */
-export function resolveFreeApiCheckInTimezone(): string {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
-  } catch {
-    return "UTC"
-  }
-}
+export { resolveUserCheckInTimezone as resolveFreeApiCheckInTimezone } from "./userCheckInProtocol"
 
 /** Pure route builder shared by execution and diagnostic feedback. */
 export function createFreeApiDailyCheckInStatusEndpoint(

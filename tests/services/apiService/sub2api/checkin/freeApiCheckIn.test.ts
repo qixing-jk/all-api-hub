@@ -10,7 +10,11 @@ import {
   parseFreeApiDailyCheckInStatusResponse,
   performFreeApiDailyCheckIn,
 } from "~/services/apiService/sub2api/checkin/freeApiCheckIn"
-import { ApiError } from "~/services/apiTransport/errors"
+import {
+  createFreeApiDailyCheckInStatusEndpoint,
+  resolveFreeApiCheckInTimezone,
+} from "~/services/apiService/sub2api/checkin/freeApiCheckInProtocol"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { fetchApiResponse } from "~/services/apiTransport/request"
 import type {
   ApiServiceRequest,
@@ -63,9 +67,9 @@ const request: ApiServiceRequest = {
   },
 }
 
-const STATUS_ENDPOINT = `/api/v1/user/checkin?timezone=${encodeURIComponent(
-  Intl.DateTimeFormat().resolvedOptions().timeZone,
-)}`
+const STATUS_ENDPOINT = createFreeApiDailyCheckInStatusEndpoint(
+  resolveFreeApiCheckInTimezone(),
+)
 
 describe("FreeAPI check-in protocol", () => {
   beforeEach(() => {
@@ -147,7 +151,9 @@ describe("FreeAPI check-in protocol", () => {
         parseFreeApiDailyCheckInStatusResponse(
           response({ enabled: true, ...data }),
         ),
-      ).toThrow(expect.objectContaining({ code: "JSON_PARSE_ERROR" }))
+      ).toThrow(
+        expect.objectContaining({ code: API_ERROR_CODES.JSON_PARSE_ERROR }),
+      )
     },
   )
 

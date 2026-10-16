@@ -3,9 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   AUTO_CHECKIN_METHOD_IDS,
   CHECK_IN_METHOD_AVAILABILITIES,
+  CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES,
+  CHECK_IN_METHOD_DETECTION_OUTCOMES,
+  CHECK_IN_METHOD_EXECUTION_RESULT_KINDS,
   CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
+  CHECK_IN_SELECTION_MODES,
 } from "~/constants/checkIn"
 import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
@@ -21,7 +25,10 @@ import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/provid
 import { freeApiProvider } from "~/services/checkin/autoCheckin/providers/freeApi"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
-import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import {
+  AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_RESULT_STATUS,
+} from "~/types/autoCheckin"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import { userCommandExecution } from "~~/tests/services/protectionBypass/fixtures"
 import { createAutoCheckinMutationLifecycle } from "~~/tests/test-utils/autoCheckin"
@@ -67,13 +74,19 @@ const createAccount = (automaticExecutionEnabled = true) =>
         methods: {
           [METHOD_ID]: {
             detection: {
-              outcome: "matched",
-              evidence: { source: "probe", observedAt: 100 },
+              outcome: CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched,
+              evidence: {
+                source: CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.Probe,
+                observedAt: 100,
+              },
             },
           },
         },
       },
-      selection: { mode: "automatic", methodId: METHOD_ID },
+      selection: {
+        mode: CHECK_IN_SELECTION_MODES.Automatic,
+        methodId: METHOD_ID,
+      },
     },
   })
 
@@ -167,7 +180,9 @@ describe("FreeAPI check-in integration", () => {
         account: createAccount(),
         observedAt: 200,
       }),
-    ).resolves.toMatchObject({ detection: { outcome: "matched" } })
+    ).resolves.toMatchObject({
+      detection: { outcome: CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched },
+    })
     expect(performFreeApiDailyCheckIn).not.toHaveBeenCalled()
   })
 
@@ -181,10 +196,10 @@ describe("FreeAPI check-in integration", () => {
   })
 
   it.each([
-    [401, "unknown"],
-    [404, "unsupported"],
-    [405, "unsupported"],
-    [500, "unknown"],
+    [401, CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown],
+    [404, CHECK_IN_METHOD_DETECTION_OUTCOMES.Unsupported],
+    [405, CHECK_IN_METHOD_DETECTION_OUTCOMES.Unsupported],
+    [500, CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown],
   ])("classifies discovery HTTP %s as %s", async (status, outcome) => {
     vi.mocked(fetchFreeApiDailyCheckInStatus).mockRejectedValue(
       new ApiError("unavailable", status),
@@ -209,13 +224,17 @@ describe("FreeAPI check-in integration", () => {
         account: createAccount(),
         observedAt: 200,
       }),
-    ).resolves.toMatchObject({ outcome: "unsupported" })
+    ).resolves.toMatchObject({
+      outcome: CHECK_IN_METHOD_DETECTION_OUTCOMES.Unsupported,
+    })
   })
 
   it("blocks direct submission without authoritative status proof", async () => {
     await expect(
       freeApiProvider.checkIn(createAccount(), executionContext()),
-    ).resolves.toMatchObject({ reasonCode: "status_unavailable" })
+    ).resolves.toMatchObject({
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE,
+    })
     expect(performFreeApiDailyCheckIn).not.toHaveBeenCalled()
   })
 
@@ -245,7 +264,9 @@ describe("FreeAPI check-in integration", () => {
         globalAutomaticExecutionEnabled: true,
         context: executionContext(),
       }),
-    ).resolves.toMatchObject({ kind: "blocked" })
+    ).resolves.toMatchObject({
+      kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Blocked,
+    })
     expect(performFreeApiDailyCheckIn).not.toHaveBeenCalled()
   })
 
@@ -308,7 +329,10 @@ describe("FreeAPI check-in integration", () => {
       })
       // Duplicate guarantees are unverified for this deployment, so a lost
       // write never re-enters the same-day replay queue.
-      expect(result).toMatchObject({ kind: "executed", retryable: false })
+      expect(result).toMatchObject({
+        kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Executed,
+        retryable: false,
+      })
       expect(performFreeApiDailyCheckIn).toHaveBeenCalledOnce()
       expect(
         vi.mocked(fetchFreeApiDailyCheckInStatus).mock.calls.length,
