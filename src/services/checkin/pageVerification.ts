@@ -153,12 +153,34 @@ function observeGenericVerification(): ObservedVerification | undefined {
   return undefined
 }
 
-/** Prefer explicit widget evidence, then recognize unfamiliar verification UI. */
-function observeVerification(): ObservedVerification | undefined {
-  const widget = WIDGETS.find((candidate) =>
-    document.querySelector(`${candidate.widget}, ${candidate.response}`),
+/** Only visible, interactive vendor widgets can require user intervention. */
+function shownVendorWidgets(selector: string): Element[] {
+  return Array.from(document.querySelectorAll(selector)).filter(
+    (element) =>
+      isShown(element) &&
+      !element.closest('.grecaptcha-badge, [data-size="invisible"]') &&
+      !/[?&]size=invisible\b/i.test(element.getAttribute("src") ?? ""),
   )
-  if (widget)
+}
+
+/** Remember visible vendor UI so unrelated, unchanged widgets are not attributed to a click. */
+export function capturePageVerificationWidgets(): ReadonlySet<Element> {
+  return new Set(WIDGETS.flatMap((widget) => shownVendorWidgets(widget.widget)))
+}
+
+/** Prefer explicit widget evidence, then recognize unfamiliar verification UI. */
+function observeVerification(
+  existingWidgets?: ReadonlySet<Element>,
+): ObservedVerification | undefined {
+  const widget = WIDGETS.find((candidate) =>
+    shownVendorWidgets(candidate.widget).some(
+      (element) => !existingWidgets?.has(element),
+    ),
+  )
+  if (widget) {
+    const activeWidgets = shownVendorWidgets(widget.widget).filter(
+      (element) => !existingWidgets?.has(element),
+    )
     return {
       provider: widget.provider,
       isPending: () => {
@@ -167,10 +189,11 @@ function observeVerification(): ObservedVerification | undefined {
         >(widget.response)
         return (
           !Array.from(fields).some((field) => field.value?.trim()) &&
-          !!document.querySelector(`${widget.widget}, ${widget.response}`)
+          activeWidgets.some(isShown)
         )
       },
     }
+  }
 
   // Recognizable interactive captcha containers must also have a rendered
   // challenge surface; an empty/loading/error container is insufficient.
@@ -218,12 +241,13 @@ function observeVerification(): ObservedVerification | undefined {
 /** Observes native-page verification; the page owns submission and token use. */
 export async function waitForPageVerification(params: {
   requestId?: string
+  existingWidgets?: ReadonlySet<Element>
   requestAssist: () => Promise<unknown> | unknown
 }): Promise<PageVerificationResult> {
   const appearanceDeadline = Date.now() + APPEARANCE_WAIT_MS
   let observed: ObservedVerification | undefined
   while (Date.now() <= appearanceDeadline) {
-    observed = observeVerification()
+    observed = observeVerification(params.existingWidgets)
     if (observed) break
     await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
   }

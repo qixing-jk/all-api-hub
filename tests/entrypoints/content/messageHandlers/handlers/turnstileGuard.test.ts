@@ -29,6 +29,7 @@ vi.mock("~/utils/core/logger", () => ({
 }))
 
 vi.mock("~/services/checkin/pageVerification", () => ({
+  capturePageVerificationWidgets: vi.fn(() => new Set()),
   waitForPageVerification: vi.fn(async () => ({ status: "not_present" })),
 }))
 

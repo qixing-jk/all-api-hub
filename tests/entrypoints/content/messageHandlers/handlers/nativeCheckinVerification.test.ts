@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { handleTriggerCheckinPageAction } from "~/entrypoints/content/messageHandlers/handlers/turnstileGuard"
+import { showTurnstileManualAssistToast } from "~/entrypoints/content/shieldBypassAssist/utils/shieldBypassToasts"
 import {
   onRuntimeMessage,
   sendRuntimeMessage,
@@ -24,6 +25,137 @@ describe("native check-in verification", () => {
     globalThis.__aahTurnstilePreTriggerState = undefined
   })
   afterEach(() => vi.useRealTimers())
+
+  it("returns a verification result when displaying the reminder fails", async () => {
+    vi.mocked(showTurnstileManualAssistToast).mockRejectedValueOnce(
+      new Error("UI unavailable"),
+    )
+    document
+      .querySelector("button")!
+      .addEventListener("click", () =>
+        document.body.insertAdjacentHTML(
+          "beforeend",
+          '<div class="cf-turnstile"></div>',
+        ),
+      )
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "failed-reminder",
+        trigger: { kind: "clickSelector", selector: "#checkin" },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(6_000)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({
+        verification: { status: "required", provider: "turnstile" },
+      }),
+    )
+  })
+
+  it("detects a pre-rendered widget when the click makes it visible", async () => {
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      '<div hidden><div class="cf-turnstile"></div></div>',
+    )
+    document
+      .querySelector("button")!
+      .addEventListener("click", () =>
+        document.querySelector("[hidden]")?.removeAttribute("hidden"),
+      )
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "revealed-vendor",
+        trigger: { kind: "clickSelector", selector: "#checkin" },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(6_000)
+    expect(sendRuntimeMessage).toHaveBeenCalledOnce()
+    document.querySelector(".cf-turnstile")!.setAttribute("hidden", "")
+    await vi.advanceTimersByTimeAsync(500)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({
+        verification: { status: "completed", provider: "turnstile" },
+      }),
+    )
+  })
+
+  it("ignores an unchanged vendor widget from an unrelated form", async () => {
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      '<form><div class="cf-turnstile"></div></form>',
+    )
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "existing-vendor",
+        trigger: { kind: "clickSelector", selector: "#checkin" },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(6_000)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({ verification: { status: "not_present" } }),
+    )
+    expect(sendRuntimeMessage).not.toHaveBeenCalled()
+  })
+
+  it("finishes observing the new widget when it closes while an unrelated widget remains", async () => {
+    document.body.insertAdjacentHTML(
+      "beforeend",
+      '<form><div class="cf-turnstile"></div></form>',
+    )
+    document.querySelector("button")!.addEventListener("click", () => {
+      if (!document.querySelector("#new-widget"))
+        document.body.insertAdjacentHTML(
+          "beforeend",
+          '<div id="new-widget" class="cf-turnstile"></div>',
+        )
+    })
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "closed-vendor",
+        trigger: { kind: "clickSelector", selector: "#checkin" },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(6_000)
+    document.querySelector("#new-widget")!.remove()
+    await vi.advanceTimersByTimeAsync(500)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({
+        verification: { status: "completed", provider: "turnstile" },
+      }),
+    )
+  })
+
+  it.each([
+    '<div hidden><div class="cf-turnstile"></div></div>',
+    '<textarea name="g-recaptcha-response" hidden></textarea>',
+    '<div class="grecaptcha-badge"><iframe src="https://www.google.com/recaptcha/api2/anchor?size=invisible"></iframe></div>',
+    '<div class="h-captcha" data-size="invisible"></div>',
+  ])("ignores non-actionable vendor evidence: %s", async (html) => {
+    document.querySelector("button")!.addEventListener("click", () => {
+      document.body.insertAdjacentHTML("beforeend", html)
+    })
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "hidden-vendor",
+        trigger: { kind: "clickSelector", selector: "#checkin" },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(6_000)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({ verification: { status: "not_present" } }),
+    )
+    expect(sendRuntimeMessage).not.toHaveBeenCalled()
+  })
 
   it.each(["another-request", "bounded-open"])(
     "isolates and bounds reminder extension: %s",
@@ -119,6 +251,7 @@ describe("native check-in verification", () => {
 
   it.each([
     '<section><h2>图形验证码</h2><canvas></canvas><input aria-label="请输入图片中的字符"></section>',
+    '<section><h2>Captcha</h2><p>Type the characters in the image</p><canvas></canvas><input placeholder="Type the characters in the image"></section>',
     '<div role="dialog"><h2>Security verification</h2><p>Drag the slider to complete the puzzle</p><canvas></canvas><div role="slider" tabindex="0"></div></div>',
     '<div role="dialog"><p>Select the matching shapes in the image in order</p><div role="group" tabindex="0"><img src="challenge.png" alt="Challenge"></div></div>',
     '<form><img src="/captcha/image"><label for="answer">验证码</label><input id="answer"></form>',

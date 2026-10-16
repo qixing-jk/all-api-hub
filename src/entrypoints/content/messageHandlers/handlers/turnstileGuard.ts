@@ -9,7 +9,10 @@ import {
   waitForTurnstileToken,
   type TurnstileUserAssist,
 } from "~/entrypoints/content/messageHandlers/utils/turnstileGuard"
-import { waitForPageVerification } from "~/services/checkin/pageVerification"
+import {
+  capturePageVerificationWidgets,
+  waitForPageVerification,
+} from "~/services/checkin/pageVerification"
 import type {
   CheckinPageActionTriggerResult,
   TurnstilePreTrigger,
@@ -164,6 +167,7 @@ export function handleTriggerCheckinPageAction(
 ) {
   const perform = async () => {
     try {
+      const existingWidgets = capturePageVerificationWidgets()
       const result = triggerCheckinPageAction({
         requestId: request.requestId,
         trigger: request.trigger,
@@ -179,6 +183,7 @@ export function handleTriggerCheckinPageAction(
       const verification = result.clicked
         ? await waitForPageVerification({
             requestId: request.requestId,
+            existingWidgets,
             requestAssist: createTurnstileUserAssist(request.requestId)
               .requestAssist,
           })
