@@ -505,6 +505,14 @@ describe("tempWindowPool Turnstile assist turns", () => {
     )
     await flushAssistWork()
     expect(focusedWindowIds()).toEqual([101])
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      createdContexts[0]!.tabId,
+      expect.objectContaining({
+        action: "verificationAssistOpened",
+        requestId: "req-click",
+      }),
+      expect.anything(),
+    )
     await finish(task)
     notificationClickListeners.forEach((listener) =>
       listener("all-api-hub:turnstile-assist:req-click"),

@@ -343,6 +343,11 @@ export function translateAutoCheckinMessageKey(
         "autoCheckin:providerFallback.nativePageStatusUnconfirmed",
         messageParams,
       )
+    case "autoCheckin:providerFallback.nativePageVerificationRequired":
+      return t(
+        "autoCheckin:providerFallback.nativePageVerificationRequired",
+        messageParams,
+      )
     case "autoCheckin:providerFallback.nativePageTargetNotFound":
       return t(
         "autoCheckin:providerFallback.nativePageTargetNotFound",

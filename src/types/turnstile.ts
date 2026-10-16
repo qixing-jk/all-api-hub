@@ -89,7 +89,16 @@ export type CheckinPageActionTriggerResult = {
     text: string
   }
   error?: string
+  verification?: PageVerificationResult
 }
+
+/** Evidence from observing a native page action, without exporting captcha tokens. */
+export type PageVerificationResult =
+  | { status: "not_present" }
+  | {
+      status: "completed" | "required"
+      provider: "turnstile" | "recaptcha" | "hcaptcha" | "image" | "interactive"
+    }
 
 /**
  * Serializable detection information produced by the content script when it

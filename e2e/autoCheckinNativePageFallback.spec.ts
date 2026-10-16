@@ -4,6 +4,7 @@ import type { Page, Worker } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { TEMP_CONTEXT_MODES } from "~/constants/tempContextMode"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
@@ -31,6 +32,7 @@ import {
   setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
 const AUTO_CHECKIN_STATUS_STORAGE_KEY = "autoCheckin_status"
 const AUTO_CHECKIN_DAILY_ALARM_NAME = "autoCheckinDaily"
@@ -198,7 +200,9 @@ function fulfillHtml(response: ServerResponse, body: string) {
   response.end(body)
 }
 
-async function createNativeCheckinFixture(): Promise<NativeCheckinFixture> {
+async function createNativeCheckinFixture(
+  captcha: false | "turnstile" | "image" | "interactive" = false,
+): Promise<NativeCheckinFixture> {
   const counts = {
     directCheckinPostCount: 0,
     nativePageClickCount: 0,
@@ -269,6 +273,31 @@ async function createNativeCheckinFixture(): Promise<NativeCheckinFixture> {
       )
 
       document.getElementById("check-in").addEventListener("click", () => {
+        if (${!!captcha}) {
+          setTimeout(() => {
+            if (document.querySelector('[data-fixture-captcha]')) return
+            const widget = document.createElement('div')
+            widget.dataset.fixtureCaptcha = 'true'
+            widget.setAttribute('role', 'dialog')
+            widget.className = ${JSON.stringify(captcha === "turnstile" ? "cf-turnstile" : "")}
+            widget.innerHTML = ${JSON.stringify(
+              (captcha === "image"
+                ? '<img alt="Verification Code" src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%2258%22%3E%3Ctext x=%2220%22 y=%2236%22%3EABCD%3C/text%3E%3C/svg%3E"><input placeholder="Please enter verification code">'
+                : captcha === "interactive"
+                  ? '<p>Drag the slider to complete the puzzle</p><div><canvas width="300" height="100"></canvas><input type="range" aria-label="Puzzle slider"></div>'
+                  : "") +
+                '<p>Human verification required (local simulation)</p><button id="finish-verification">Complete verification</button>',
+            )}
+            document.body.appendChild(widget)
+            document.getElementById('finish-verification').addEventListener('click', () => {
+              const request = new XMLHttpRequest()
+              request.open('POST', '/native-clicked', false)
+              request.send()
+              widget.remove()
+            })
+          }, 500)
+          return
+        }
         const request = new XMLHttpRequest()
         request.open("POST", "/native-clicked", false)
         request.send()
@@ -495,3 +524,177 @@ test("automatic native-page fallback is denied while an explicit run is allowed"
     await nativeFixture.close()
   }
 })
+
+for (const { captcha, completeVerification } of [
+  { captcha: "turnstile", completeVerification: true },
+  { captcha: "turnstile", completeVerification: false },
+  { captcha: "image", completeVerification: true },
+  { captcha: "interactive", completeVerification: false },
+] as const) {
+  test(
+    `${captcha}: ` +
+      (completeVerification
+        ? "native-page captcha reminder opens the retained page and confirms check-in after user completion"
+        : "native-page captcha result explains the recovery when verification is not completed"),
+    async ({ context, extensionId, extensionDir, page }) => {
+      const serviceWorker = await getServiceWorker(context)
+      const nativeFixture = await createNativeCheckinFixture(captcha)
+      try {
+        await serviceWorker.evaluate(
+          (actions) => {
+            const scope = globalThis as any
+            scope.__nativeCaptchaMessages = []
+            scope.chrome.runtime.onMessage.addListener((message: any) => {
+              if (actions.includes(message?.action)) {
+                scope.__nativeCaptchaMessages.push({
+                  action: message.action,
+                  requestId: message.requestId,
+                })
+              }
+            })
+          },
+          [
+            RuntimeActionIds.TurnstileRequestUserAssist,
+            RuntimeActionIds.TurnstileAssistPageNotice,
+          ],
+        )
+        await stubLlmMetadataIndex(context)
+        await seedUserPreferences(serviceWorker, {
+          autoCheckin: {
+            ...DEFAULT_PREFERENCES.autoCheckin!,
+            globalEnabled: true,
+            pretriggerDailyOnUiOpen: false,
+            notifyUiOnCompletion: false,
+            retryStrategy: {
+              enabled: false,
+              intervalMinutes: 30,
+              maxAttemptsPerDay: 1,
+            },
+          },
+          tempWindowFallback: {
+            ...DEFAULT_PREFERENCES.tempWindowFallback!,
+            enabled: true,
+            tempContextMode: TEMP_CONTEXT_MODES.Tab,
+            turnstileAssistPresentation: completeVerification
+              ? "page"
+              : "quiet",
+          },
+        })
+        await seedStoredAccounts(serviceWorker, [
+          createStoredAccount({
+            id: NATIVE_ACCOUNT_ID,
+            site_name: NATIVE_ACCOUNT_NAME,
+            site_url: nativeFixture.siteUrl,
+            site_type: SITE_TYPES.NEW_API,
+            account_info: {
+              id: NATIVE_ACCOUNT_USER_ID,
+              username: "native-page-user",
+              access_token: "native-page-token",
+            },
+            checkIn: createCompatibilityCheckInConfig({
+              siteType: SITE_TYPES.NEW_API,
+              supported: true,
+              automaticExecutionEnabled: true,
+            }),
+          }),
+        ])
+        await forceExtensionLanguage(page, "zh-CN")
+        installExtensionPageGuards(page)
+        await page.goto(autoCheckinOptionsUrl(extensionId))
+        await waitForExtensionRoot(page)
+        await expectPermissionOnboardingHidden(page)
+        await page.bringToFront()
+        await page
+          .getByTestId(BASIC_SETTINGS_TEST_IDS.autoCheckinRunNowButton)
+          .click()
+        if (!completeVerification) {
+          await expect
+            .poll(() => readAutoCheckinStatus(serviceWorker), {
+              timeout: 25_000,
+            })
+            .toMatchObject({
+              perAccount: {
+                [NATIVE_ACCOUNT_ID]: {
+                  status: "failed",
+                  reasonCode: "manual_verification_required",
+                  retryable: false,
+                },
+              },
+            })
+          const resultMessage = page.getByText(/^签到被人机验证阻止/)
+          await expect(resultMessage).toBeVisible()
+          await expect(resultMessage).toContainText("请打开签到页面完成验证码")
+          await expect(resultMessage).toContainText("确认今日已签到")
+          expect(nativeFixture.counts.nativePageClickCount).toBe(0)
+          expect(nativeFixture.counts.directCheckinPostCount).toBe(1)
+          await captureVisualViews({
+            page,
+            ready: resultMessage,
+            id: "native-captcha-result",
+            extensionDir,
+          })
+          return
+        }
+        const openVerification = page.getByRole("button", {
+          name: "打开验证窗口",
+          exact: true,
+        })
+        try {
+          await expect(openVerification).toBeVisible({ timeout: 30_000 })
+        } catch (error) {
+          const messages = await serviceWorker.evaluate(
+            () => (globalThis as any).__nativeCaptchaMessages,
+          )
+          const focus = await page.evaluate(() => ({
+            focused: document.hasFocus(),
+            visibility: document.visibilityState,
+          }))
+          throw new Error(
+            `Native captcha reminder missing: ${JSON.stringify({ messages, focus, counts: nativeFixture.counts, status: await readAutoCheckinStatus(serviceWorker) })}`,
+            { cause: error },
+          )
+        }
+        expect(nativeFixture.counts.nativePageClickCount).toBe(0)
+        const verificationPage = context
+          .pages()
+          .find((candidate) =>
+            candidate.url().startsWith(nativeFixture.siteUrl),
+          )
+        expect(verificationPage).toBeDefined()
+        await captureVisualViews({
+          page,
+          ready: openVerification,
+          id: "native-captcha-reminder",
+          extensionDir,
+        })
+        await openVerification.click()
+        await expect(
+          verificationPage!.getByRole("button", {
+            name: "Complete verification",
+          }),
+        ).toBeVisible()
+        await captureVisualViews({
+          page: verificationPage!,
+          ready: verificationPage!.getByRole("button", {
+            name: "Complete verification",
+          }),
+          id: "native-captcha-wait",
+          extensionDir,
+        })
+        await verificationPage!
+          .getByRole("button", { name: "Complete verification" })
+          .click()
+        await expect
+          .poll(() => readAutoCheckinStatus(serviceWorker), { timeout: 20_000 })
+          .toMatchObject({
+            perAccount: { [NATIVE_ACCOUNT_ID]: { status: "already_checked" } },
+          })
+        expect(nativeFixture.counts.nativePageClickCount).toBe(1)
+        expect(nativeFixture.counts.directCheckinPostCount).toBe(1)
+        await expect(openVerification).toBeHidden()
+      } finally {
+        await nativeFixture.close()
+      }
+    },
+  )
+}

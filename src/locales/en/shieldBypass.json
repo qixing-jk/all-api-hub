@@ -132,9 +132,9 @@
   "notification": {
     "openVerification": "Open verification window",
     "reminderSettings": "Reminder settings",
-    "turnstileAssistBody": "A background task needs you to complete human verification. It will continue automatically afterwards.",
+    "turnstileAssistBody": "The site is waiting for human verification. Select “Open verification window” to finish the captcha. The extension will then check the task result.",
     "turnstileAssistTitle": "All API Hub · Verification reminder",
-    "turnstilePageBody": "A background task needs you to complete human verification. It will continue automatically afterwards.",
+    "turnstilePageBody": "The site is waiting for human verification. Select “Open verification window” to finish the captcha. The extension will then check the task result.",
     "verificationEnded": "This verification has ended. No further action is needed."
   },
   "titlePrefix": "All API Hub · Shield Bypass",
@@ -145,7 +145,7 @@
     "body": "This page was opened automatically by All API Hub to pass protection pages (e.g., Cloudflare challenges) and obtain the required cookies/session.\nIt’s necessary so All API Hub can make successful requests and detect data on protected sites.\nIf a verification step appears, complete it in this window; once passed, All API Hub continues and this window may close automatically.",
     "title": "Shield bypass helper",
     "turnstile": {
-      "body": "Automatic verification has not finished. Complete the Cloudflare Turnstile check in this window (for example, select the checkbox). Check-in then continues automatically, and this window may close.",
+      "body": "Complete the site’s human verification in this window, such as checking “I am human” or selecting the requested images. The extension is waiting and will check the task result afterwards. If the page still shows you as not checked in, complete check-in there.",
       "title": "Complete the human verification"
     }
   }

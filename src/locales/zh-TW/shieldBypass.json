@@ -131,9 +131,9 @@
   "notification": {
     "openVerification": "開啟驗證視窗",
     "reminderSettings": "提醒設定",
-    "turnstileAssistBody": "背景工作需要你完成人機驗證，完成後將自動繼續。",
+    "turnstileAssistBody": "站點的人機驗證尚未完成。點擊「開啟驗證視窗」完成驗證碼，擴充套件會繼續檢查工作結果。",
     "turnstileAssistTitle": "All API Hub · 驗證提醒",
-    "turnstilePageBody": "背景工作需要你完成人機驗證，完成後將自動繼續。",
+    "turnstilePageBody": "站點的人機驗證尚未完成。點擊「開啟驗證視窗」完成驗證碼，擴充套件會繼續檢查工作結果。",
     "verificationEnded": "此次驗證已結束，無需繼續處理。"
   },
   "titlePrefix": "All API Hub · 過盾助手",
@@ -144,7 +144,7 @@
     "body": "此頁面由 All API Hub 自動開啟，用於透過站點防護頁（如 Cloudflare 五秒盾）以獲取必要的 Cookie/會話資訊。\n這是讓 All API Hub 在防護站點上正常請求和識別資料所必需的步驟。\n如出現人機驗證，請在此視窗內完成驗證；透過後 All API Hub 會繼續流程並自動關閉該視窗。",
     "title": "過盾助手",
     "turnstile": {
-      "body": "自動驗證尚未完成。請在這個視窗完成 Cloudflare Turnstile 驗證（例如勾選「確認您是真人」）。完成後會自動繼續簽到，這個視窗可能會自動關閉。",
+      "body": "請在這個視窗內完成站點的人機驗證（例如勾選「確認您是真人」或依提示選擇圖片）。擴充套件正在等候，完成後會繼續檢查工作結果；若頁面仍顯示未簽到，請在頁面上完成簽到。",
       "title": "需要完成人機驗證"
     }
   }

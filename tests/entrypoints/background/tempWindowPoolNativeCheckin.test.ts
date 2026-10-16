@@ -36,7 +36,14 @@ describe("tempWindowPool native check-in page action", () => {
   let hasWindowsApiMock: ReturnType<typeof vi.fn>
   let onTabRemovedMock: ReturnType<typeof vi.fn>
   let onWindowRemovedMock: ReturnType<typeof vi.fn>
-  let sendMessageMock: ReturnType<typeof vi.fn>
+  let sendMessageMock: ReturnType<
+    typeof vi.fn<
+      (
+        tabId: number,
+        message: RuntimeMessage,
+      ) => Promise<Record<string, unknown> | undefined>
+    >
+  >
   let tabsGetMock: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
@@ -168,60 +175,80 @@ describe("tempWindowPool native check-in page action", () => {
     })
   })
 
-  it("resolves page identity and triggers the page action when identity matches", async () => {
-    const { handleTempWindowCheckinPageAction } = await import(
-      "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
-    )
-
-    const sendResponse = vi.fn()
-    const request = handleTempWindowCheckinPageAction(
-      {
-        originUrl: "https://example.invalid",
-        pageUrl: "https://example.invalid/console/personal",
-        expectedUserId: "target-user",
-        siteType: SITE_TYPES.NEW_API,
-        requestId: "req-native-match",
-        authType: AuthTypeEnum.AccessToken,
-        trigger: { kind: "checkinButton" },
-      },
-      sendResponse,
-    )
-
-    await settleTempContextReadiness()
-    await request
-
-    expect(sendMessageMock).toHaveBeenCalledWith(
-      701,
-      expect.objectContaining({
-        action: RuntimeActionIds.ContentGetUserFromLocalStorage,
-        url: "https://example.invalid/console/personal",
-        siteType: SITE_TYPES.NEW_API,
-      }),
-    )
-    expect(sendMessageMock).toHaveBeenCalledWith(
-      701,
-      expect.objectContaining({
-        action: RuntimeActionIds.ContentTriggerCheckinPageAction,
-        requestId: "req-native-match",
-        trigger: { kind: "checkinButton" },
-      }),
-    )
-    expect(sendResponse).toHaveBeenCalledWith(
-      expect.objectContaining({
-        success: true,
-        reason: "clicked",
-        identity: {
-          userId: "target-user",
-          user: { id: "target-user", username: "Target" },
-          siteTypeHint: SITE_TYPES.NEW_API,
+  it.each([
+    undefined,
+    { status: "required", provider: "image" },
+    { status: "completed", provider: "turnstile" },
+  ])(
+    "resolves page identity and forwards verification %j",
+    async (verification) => {
+      const sendMessage = sendMessageMock.getMockImplementation()!
+      sendMessageMock.mockImplementation(
+        async (tabId: number, message: RuntimeMessage) => {
+          const result = await sendMessage(tabId, message)
+          return message.action ===
+            RuntimeActionIds.ContentTriggerCheckinPageAction
+            ? { ...result, ...(verification ? { verification } : {}) }
+            : result
         },
-        trigger: expect.objectContaining({
-          status: "clicked",
-          clicked: true,
+      )
+      const { handleTempWindowCheckinPageAction } = await import(
+        "~~/tests/entrypoints/background/tempWindowPoolTestAdapter"
+      )
+
+      const sendResponse = vi.fn()
+      const request = handleTempWindowCheckinPageAction(
+        {
+          originUrl: "https://example.invalid",
+          pageUrl: "https://example.invalid/console/personal",
+          expectedUserId: "target-user",
+          siteType: SITE_TYPES.NEW_API,
+          requestId: "req-native-match",
+          authType: AuthTypeEnum.AccessToken,
+          trigger: { kind: "checkinButton" },
+        },
+        sendResponse,
+      )
+
+      await settleTempContextReadiness()
+      await request
+
+      expect(sendMessageMock).toHaveBeenCalledWith(
+        701,
+        expect.objectContaining({
+          action: RuntimeActionIds.ContentGetUserFromLocalStorage,
+          url: "https://example.invalid/console/personal",
+          siteType: SITE_TYPES.NEW_API,
         }),
-      }),
-    )
-  })
+      )
+      expect(sendMessageMock).toHaveBeenCalledWith(
+        701,
+        expect.objectContaining({
+          action: RuntimeActionIds.ContentTriggerCheckinPageAction,
+          requestId: "req-native-match",
+          trigger: { kind: "checkinButton" },
+        }),
+      )
+      expect(sendResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          reason: "clicked",
+          identity: {
+            userId: "target-user",
+            user: { id: "target-user", username: "Target" },
+            siteTypeHint: SITE_TYPES.NEW_API,
+          },
+          trigger: expect.objectContaining({
+            status: "clicked",
+            clicked: true,
+          }),
+        }),
+      )
+      const forwarded = sendResponse.mock.calls[0]?.[0]?.trigger
+      if (verification) expect(forwarded.verification).toEqual(verification)
+      else expect(forwarded).not.toHaveProperty("verification")
+    },
+  )
 
   it("does not click when page identity is missing", async () => {
     sendMessageMock.mockImplementation(

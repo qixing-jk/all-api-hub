@@ -9,6 +9,10 @@ import {
   waitForTurnstileToken,
   type TurnstileUserAssist,
 } from "~/entrypoints/content/messageHandlers/utils/turnstileGuard"
+import {
+  capturePageVerificationWidgets,
+  waitForPageVerification,
+} from "~/services/checkin/pageVerification"
 import type {
   CheckinPageActionTriggerResult,
   TurnstilePreTrigger,
@@ -154,34 +158,50 @@ export function handleWaitForTurnstileToken(
 /**
  * Handle native page check-in action trigger requests.
  *
- * This only clicks the page action. It deliberately does not decide whether the
- * account is checked in.
+ * Clicks the page action and observes any verification it opens. Server-side
+ * status readback remains the caller's responsibility.
  */
 export function handleTriggerCheckinPageAction(
   request: TriggerCheckinPageActionRequest,
   sendResponse: (res: TriggerCheckinPageActionResponse) => void,
 ) {
-  try {
-    const result = triggerCheckinPageAction({
-      requestId: request.requestId,
-      trigger: request.trigger,
-    })
+  const perform = async () => {
+    try {
+      const existingWidgets = capturePageVerificationWidgets()
+      const result = triggerCheckinPageAction({
+        requestId: request.requestId,
+        trigger: request.trigger,
+      })
 
-    logger.debug("Check-in page action trigger completed", {
-      requestId: request.requestId ?? null,
-      status: result.status,
-      reason: result.reason,
-      clicked: result.clicked,
-    })
+      logger.debug("Check-in page action trigger completed", {
+        requestId: request.requestId ?? null,
+        status: result.status,
+        reason: result.reason,
+        clicked: result.clicked,
+      })
 
-    sendResponse({ success: true, ...result })
-  } catch (error) {
-    logger.warn("Check-in page action trigger failed", {
-      requestId: request.requestId ?? null,
-      error: getErrorMessage(error),
-    })
-    sendResponse({ success: false, error: getErrorMessage(error) })
+      const verification = result.clicked
+        ? await waitForPageVerification({
+            requestId: request.requestId,
+            existingWidgets,
+            requestAssist: createTurnstileUserAssist(request.requestId)
+              .requestAssist,
+          })
+        : undefined
+      sendResponse({
+        success: true,
+        ...result,
+        ...(verification ? { verification } : {}),
+      })
+    } catch (error) {
+      logger.warn("Check-in page action trigger failed", {
+        requestId: request.requestId ?? null,
+        error: getErrorMessage(error),
+      })
+      sendResponse({ success: false, error: getErrorMessage(error) })
+    }
   }
+  void perform()
 
   return true
 }

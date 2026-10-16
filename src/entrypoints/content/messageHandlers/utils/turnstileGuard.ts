@@ -9,6 +9,7 @@ import {
   TURNSTILE_RESPONSE_FIELD_SELECTOR,
   TURNSTILE_SCRIPT_SELECTOR,
 } from "~/constants/turnstile"
+import { createVerificationManualWindow } from "~/services/checkin/verificationManualWindow"
 import type {
   CheckinPageActionTriggerResult,
   TurnstilePreTrigger,
@@ -810,93 +811,104 @@ export async function waitForTurnstileToken(params: {
   // Set while the assist waits for its turn in front of the user, so the wait can
   // outlast the normal timeout without blocking token detection.
   let assistPendingUntil: number | null = null
-  const activeDeadline = () => Math.max(deadline, assistPendingUntil ?? 0)
+  const manualWindow = createVerificationManualWindow(
+    assist ? params.requestId : undefined,
+  )
+  const activeDeadline = () =>
+    Math.max(deadline, assistPendingUntil ?? 0, manualWindow.getDeadline())
 
-  while (Date.now() < activeDeadline()) {
-    const token = readTurnstileTokenFromDom()
-    if (token) {
-      detection = detectTurnstileWidget()
-      clearTurnstileGuardState(params.requestId)
-      return { status: "token_obtained", token, detection }
-    }
-
-    const now = Date.now()
-    if (
-      assist?.readPageToken &&
-      now - lastPageTokenReadAt >= pageTokenIntervalMs
-    ) {
-      lastPageTokenReadAt = now
-      const pageToken = await readAssistedPageToken(assist, sawTurnstile)
-      if (pageToken) {
+  try {
+    while (Date.now() < activeDeadline()) {
+      const token = readTurnstileTokenFromDom()
+      if (token) {
         detection = detectTurnstileWidget()
         clearTurnstileGuardState(params.requestId)
-        return { status: "token_obtained", token: pageToken, detection }
+        return { status: "token_obtained", token, detection }
       }
+
+      const now = Date.now()
+      if (
+        assist?.readPageToken &&
+        now - lastPageTokenReadAt >= pageTokenIntervalMs
+      ) {
+        lastPageTokenReadAt = now
+        const pageToken = await readAssistedPageToken(assist, sawTurnstile)
+        if (pageToken) {
+          detection = detectTurnstileWidget()
+          clearTurnstileGuardState(params.requestId)
+          return { status: "token_obtained", token: pageToken, detection }
+        }
+      }
+
+      detection = detectTurnstileWidget()
+      if (detection.hasTurnstile) {
+        sawTurnstile = true
+        maybeAutoStartTurnstile({ requestId: params.requestId, detection })
+      } else if (preTriggerEnabled) {
+        const attempt = triggerCheckinPageAction({
+          requestId: params.requestId,
+          trigger: params.preTrigger,
+          detection,
+        })
+
+        if (attempt.clicked) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, PRETRIGGER_SETTLE_DELAY_MS),
+          )
+          continue
+        }
+      }
+
+      if (
+        assist &&
+        !assistRequested &&
+        !assistDeclined &&
+        sawTurnstile &&
+        Date.now() >= assistAt
+      ) {
+        assistRequested = true
+        // The assist can wait for its turn behind another verification window, and
+        // the widget may still resolve on its own while it waits. Keep polling for
+        // a token instead of blocking until the presentation settles.
+        assistPendingUntil = Date.now() + TURNSTILE_ASSIST_TURN_WAIT_MS
+        const manualWindowMs = Math.max(
+          timeoutMs,
+          normalizeAssistDelay(
+            assist.manualTimeoutMs,
+            TURNSTILE_MANUAL_WAIT_MS,
+          ),
+        )
+        void Promise.resolve()
+          .then(() => assist.requestAssist())
+          .then(
+            (accepted) => accepted !== false,
+            () => true,
+          )
+          .then((accepted) => {
+            assistPendingUntil = null
+            if (!accepted) {
+              assistDeclined = true
+              return
+            }
+            // The window only reaches the user now, so the manual window they need
+            // to finish the challenge starts here.
+            deadline = Math.max(deadline, Date.now() + manualWindowMs)
+          })
+        continue
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, WAIT_POLL_INTERVAL_MS))
     }
 
     detection = detectTurnstileWidget()
-    if (detection.hasTurnstile) {
-      sawTurnstile = true
-      maybeAutoStartTurnstile({ requestId: params.requestId, detection })
-    } else if (preTriggerEnabled) {
-      const attempt = triggerCheckinPageAction({
-        requestId: params.requestId,
-        trigger: params.preTrigger,
-        detection,
-      })
+    clearTurnstileGuardState(params.requestId)
 
-      if (attempt.clicked) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, PRETRIGGER_SETTLE_DELAY_MS),
-        )
-        continue
-      }
+    if (!sawTurnstile) {
+      return { status: "not_present", token: null, detection }
     }
 
-    if (
-      assist &&
-      !assistRequested &&
-      !assistDeclined &&
-      sawTurnstile &&
-      Date.now() >= assistAt
-    ) {
-      assistRequested = true
-      // The assist can wait for its turn behind another verification window, and
-      // the widget may still resolve on its own while it waits. Keep polling for
-      // a token instead of blocking until the presentation settles.
-      assistPendingUntil = Date.now() + TURNSTILE_ASSIST_TURN_WAIT_MS
-      const manualWindowMs = Math.max(
-        timeoutMs,
-        normalizeAssistDelay(assist.manualTimeoutMs, TURNSTILE_MANUAL_WAIT_MS),
-      )
-      void Promise.resolve()
-        .then(() => assist.requestAssist())
-        .then(
-          (accepted) => accepted !== false,
-          () => true,
-        )
-        .then((accepted) => {
-          assistPendingUntil = null
-          if (!accepted) {
-            assistDeclined = true
-            return
-          }
-          // The window only reaches the user now, so the manual window they need
-          // to finish the challenge starts here.
-          deadline = Math.max(deadline, Date.now() + manualWindowMs)
-        })
-      continue
-    }
-
-    await new Promise((resolve) => setTimeout(resolve, WAIT_POLL_INTERVAL_MS))
+    return { status: "timeout", token: null, detection }
+  } finally {
+    manualWindow.dispose()
   }
-
-  detection = detectTurnstileWidget()
-  clearTurnstileGuardState(params.requestId)
-
-  if (!sawTurnstile) {
-    return { status: "not_present", token: null, detection }
-  }
-
-  return { status: "timeout", token: null, detection }
 }

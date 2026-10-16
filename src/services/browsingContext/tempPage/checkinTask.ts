@@ -200,6 +200,9 @@ export async function executeTempWindowCheckinPageAction(
         clicked: triggerResult.clicked,
         reason: triggerResult.reason,
         detection: triggerResult.detection,
+        ...(triggerResult.verification
+          ? { verification: triggerResult.verification }
+          : {}),
         ...(triggerResult.target ? { target: triggerResult.target } : {}),
         ...(triggerResult.error ? { error: triggerResult.error } : {}),
       },

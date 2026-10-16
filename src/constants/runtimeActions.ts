@@ -183,6 +183,7 @@ export const RuntimeActionIds = {
   TurnstileReadPageApi: "turnstileReadPageApi",
   TurnstileAssistPageNotice: "turnstileAssistPageNotice",
   TurnstileAssistOpen: "turnstileAssistOpen",
+  ContentVerificationAssistOpened: "verificationAssistOpened",
   ContentTriggerCheckinPageAction: "triggerCheckinPageAction",
   ContentOpenRouterManagementKeyAction: "openRouterManagementKeyAction",
   ContentWaitAndGetUserInfo: "waitAndGetUserInfo",
