@@ -168,6 +168,35 @@ export function capturePageVerificationWidgets(): ReadonlySet<Element> {
   return new Set(WIDGETS.flatMap((widget) => shownVendorWidgets(widget.widget)))
 }
 
+/** Accept tokens only from an unambiguous container of the active widgets. */
+function hasActiveWidgetResponse(
+  widget: (typeof WIDGETS)[number],
+  activeWidgets: Element[],
+): boolean {
+  return activeWidgets.some((element) => {
+    for (
+      let scope: Element | null = element;
+      scope && scope !== document.body && scope !== document.documentElement;
+      scope = scope.parentElement
+    ) {
+      const fields = Array.from(
+        scope.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+          widget.response,
+        ),
+      )
+      if (!fields.length) continue
+      const containedWidgets = Array.from(scope.querySelectorAll(widget.widget))
+      if (scope.matches(widget.widget)) containedWidgets.push(scope)
+      return (
+        containedWidgets.every((candidate) =>
+          activeWidgets.includes(candidate),
+        ) && fields.some((field) => !!field.value?.trim())
+      )
+    }
+    return false
+  })
+}
+
 /** Prefer explicit widget evidence, then recognize unfamiliar verification UI. */
 function observeVerification(
   existingWidgets?: ReadonlySet<Element>,
@@ -183,15 +212,9 @@ function observeVerification(
     )
     return {
       provider: widget.provider,
-      isPending: () => {
-        const fields = document.querySelectorAll<
-          HTMLInputElement | HTMLTextAreaElement
-        >(widget.response)
-        return (
-          !Array.from(fields).some((field) => field.value?.trim()) &&
-          activeWidgets.some(isShown)
-        )
-      },
+      isPending: () =>
+        !hasActiveWidgetResponse(widget, activeWidgets) &&
+        activeWidgets.some(isShown),
     }
   }
 

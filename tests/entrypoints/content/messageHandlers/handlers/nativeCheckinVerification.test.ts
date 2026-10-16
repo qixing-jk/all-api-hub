@@ -26,6 +26,42 @@ describe("native check-in verification", () => {
   })
   afterEach(() => vi.useRealTimers())
 
+  it.each([
+    '<section><div id="new-widget" class="cf-turnstile"><input id="new-response" name="cf-turnstile-response"></div></section>',
+    '<section><iframe id="new-widget" src="https://challenges.cloudflare.com/widget"></iframe><input id="new-response" name="cf-turnstile-response"></section>',
+  ])(
+    "does not consume another widget's response as completion: %s",
+    async (html) => {
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        '<form><div class="cf-turnstile"><input name="cf-turnstile-response" value="old-token"></div></form>',
+      )
+      document.querySelector("button")!.addEventListener("click", () => {
+        if (!document.querySelector("#new-widget"))
+          document.body.insertAdjacentHTML("beforeend", html)
+      })
+      const response = vi.fn()
+      handleTriggerCheckinPageAction(
+        {
+          requestId: "scoped-token",
+          trigger: { kind: "clickSelector", selector: "#checkin" },
+        },
+        response,
+      )
+      await vi.advanceTimersByTimeAsync(6_000)
+      expect(response).not.toHaveBeenCalled()
+      expect(sendRuntimeMessage).toHaveBeenCalledOnce()
+      document.querySelector<HTMLInputElement>("#new-response")!.value =
+        "new-token"
+      await vi.advanceTimersByTimeAsync(500)
+      expect(response).toHaveBeenCalledWith(
+        expect.objectContaining({
+          verification: { status: "completed", provider: "turnstile" },
+        }),
+      )
+    },
+  )
+
   it("returns a verification result when displaying the reminder fails", async () => {
     vi.mocked(showTurnstileManualAssistToast).mockRejectedValueOnce(
       new Error("UI unavailable"),
@@ -106,14 +142,16 @@ describe("native check-in verification", () => {
   it("finishes observing the new widget when it closes while an unrelated widget remains", async () => {
     document.body.insertAdjacentHTML(
       "beforeend",
-      '<form><div class="cf-turnstile"></div></form>',
+      '<form id="shared-form"><div class="cf-turnstile"><input name="cf-turnstile-response" value="unrelated-token"></div></form>',
     )
     document.querySelector("button")!.addEventListener("click", () => {
       if (!document.querySelector("#new-widget"))
-        document.body.insertAdjacentHTML(
-          "beforeend",
-          '<div id="new-widget" class="cf-turnstile"></div>',
-        )
+        document
+          .querySelector("#shared-form")!
+          .insertAdjacentHTML(
+            "beforeend",
+            '<div id="new-widget" class="cf-turnstile"></div>',
+          )
     })
     const response = vi.fn()
     handleTriggerCheckinPageAction(
@@ -252,6 +290,7 @@ describe("native check-in verification", () => {
   it.each([
     '<section><h2>图形验证码</h2><canvas></canvas><input aria-label="请输入图片中的字符"></section>',
     '<section><h2>Captcha</h2><p>Type the characters in the image</p><canvas></canvas><input placeholder="Type the characters in the image"></section>',
+    "<section><h2>Captcha</h2><p>Type the characters in the image</p><canvas></canvas><input></section>",
     '<div role="dialog"><h2>Security verification</h2><p>Drag the slider to complete the puzzle</p><canvas></canvas><div role="slider" tabindex="0"></div></div>',
     '<div role="dialog"><p>Select the matching shapes in the image in order</p><div role="group" tabindex="0"><img src="challenge.png" alt="Challenge"></div></div>',
     '<form><img src="/captcha/image"><label for="answer">验证码</label><input id="answer"></form>',
