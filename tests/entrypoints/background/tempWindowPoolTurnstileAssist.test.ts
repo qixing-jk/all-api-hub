@@ -22,6 +22,7 @@ const {
   recordShieldBypassFocusObservationMock,
   recordShieldBypassTempWindowFetchResultMock,
   recordShieldBypassTempWindowTurnstileFetchResultMock,
+  clearNotificationMock,
 } = vi.hoisted(() => ({
   getAccountByIdMock: vi.fn(),
   getCookieHeaderForUrlMock: vi.fn(),
@@ -38,7 +39,17 @@ const {
   recordShieldBypassFocusObservationMock: vi.fn(),
   recordShieldBypassTempWindowFetchResultMock: vi.fn(),
   recordShieldBypassTempWindowTurnstileFetchResultMock: vi.fn(),
+  clearNotificationMock: vi.fn(),
 }))
+
+vi.mock("~/utils/browser/notifications", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/notifications")>()
+  return {
+    ...actual,
+    clearNotification: (id: string) => clearNotificationMock(id),
+  }
+})
 
 vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
   accountQueries: { getAccountById: getAccountByIdMock },
@@ -227,6 +238,9 @@ describe("tempWindowPool Turnstile assist turns", () => {
       async (notificationId: string) => notificationId,
     )
     notificationClearMock = vi.fn().mockResolvedValue(true)
+    clearNotificationMock
+      .mockReset()
+      .mockImplementation(async (id: string) => notificationClearMock(id))
     getPreferencesMock = vi.fn(async () => ({
       tempWindowFallback: {
         tempContextMode: "window",
@@ -347,14 +361,6 @@ describe("tempWindowPool Turnstile assist turns", () => {
     vi.doMock("~/utils/i18n/core", () => ({
       t: vi.fn((key: string) => key),
     }))
-    vi.doMock("~/utils/browser/notifications", async (importOriginal) => {
-      const actual =
-        await importOriginal<typeof import("~/utils/browser/notifications")>()
-      return {
-        ...actual,
-        clearNotification: vi.fn(actual.clearNotification),
-      }
-    })
     // Load the pool fixture before the behavior clock starts. Cold module
     // transforms on Windows must not race a running fake-timer scenario.
     const adapter = await import("./tempWindowPoolTestAdapter")
@@ -370,7 +376,6 @@ describe("tempWindowPool Turnstile assist turns", () => {
     vi.doUnmock("~/services/permissions/permissionManager")
     vi.doUnmock("~/services/preferences/userPreferences")
     vi.doUnmock("~/utils/i18n/core")
-    vi.doUnmock("~/utils/browser/notifications")
     vi.resetModules()
     vi.restoreAllMocks()
   })
@@ -759,10 +764,7 @@ describe("tempWindowPool Turnstile assist turns", () => {
 
   it("covers turnstile assist edge cases for detached contexts, tab resolution, and notice handling", async () => {
     // 1. Line 90: clearNotification rejection in drop
-    const notifications = await import("~/utils/browser/notifications")
-    vi.mocked(notifications.clearNotification).mockRejectedValueOnce(
-      new Error("clear failed"),
-    )
+    clearNotificationMock.mockRejectedValueOnce(new Error("clear failed"))
     const assist = createTempContextTurnstileAssist({
       getRequestContext: () => undefined,
       hasTab: () => false,
