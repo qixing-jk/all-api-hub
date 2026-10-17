@@ -1,104 +1,87 @@
 # All API Hub Privacy Policy
 
-**Last Updated:** September 21, 2026
+**Last updated:** October 17, 2026
 
-## Overview
+[简体中文](https://all-api-hub.qixing1217.top/privacy.html) | [English](https://all-api-hub.qixing1217.top/en/privacy.html) | [日本語](https://all-api-hub.qixing1217.top/ja/privacy.html)
 
-All API Hub is a browser extension designed to help users manage account information for AI API aggregation services. This Privacy Policy explains how we handle your data and how we limit data processing to the minimum necessary for implementing features, troubleshooting issues, and improving the user experience.
+## Scope and developer
 
-## Data Collection and Storage
+This policy covers the All API Hub browser extension and its uninstall feedback page. All API Hub is maintained by the [qixing-jk/all-api-hub open-source project](https://github.com/qixing-jk/all-api-hub). “We” means the project developers. API platforms, sync services and other third-party services you configure are operated by their respective providers.
 
-### Data Collection
+**The extension accesses, uses and stores user data needed for its features, including sensitive authentication information. Local storage does not mean that no data is processed.** Account credentials are not uploaded to us as product analytics. However, account operations require the extension to send authentication information to the corresponding service. Product analytics, enabled by default, and feedback you submit are sent to PostHog for developer analysis, as described below.
 
-This extension **does not collect or transmit any personal identifiable data or sensitive account data to our servers**. The account data you add and manage is primarily used for local functionality, including account display, balance refresh, key management, model management, usage analysis, automatic sign-in, website announcements, and synchronization.
+## Data collection and use
 
-Specifically, All API Hub does not collect or transmit the following data to our servers:
+| Category | Source and data | Purpose |
+| --- | --- | --- |
+| Account and authentication information | Service addresses, account names, user IDs, email addresses (when returned by a site), API keys, access/refresh tokens, login sessions and cookies that you enter, import or authorize the extension to read from a site; login details entered in applicable login flows | Identify and sign in to accounts, retrieve account status, manage keys and perform configured site operations |
+| Account status and service data | Balances, quotas, models, prices, usage/request logs, check-in status and announcements returned by the corresponding platform | Account displays, balance history, usage analysis, model pricing comparisons, check-ins and announcements |
+| Content and settings | Bookmarks, notes, tags, ordering, preferences, imported files, managed-site configuration, and sync/notification addresses and credentials | Configuration, import/export, site administration, automated tasks, backup, sync and notifications |
+| Feature-related web and input content | Page addresses, relevant page content, selected content, clipboard data or verification input accessed according to permissions and actions in account setup, cookie import, web API credential detection, redemption assistance or API verification | Extract site/credential details, redeem codes or send verification requests to a selected API; not continuously record all visited pages to build a browsing history |
+| Product analytics and feedback | Feature events, an installation analytics identifier, technical context, and uninstall reasons/comments you submit, as detailed below | Measure feature reliability, investigate compatibility issues and understand feedback |
 
-*   Does not collect or transmit API Keys, access tokens, Cookies, full URLs, account balances, request content, or response content to any server.
-*   Does not collect sensitive account information, personally identifiable information, or browsing history.
-*   Does not record browsing history.
-*   Does not store any personally identifiable information.
+Processing depends on the features you use, permissions you grant and settings for automatic refresh, check-ins, sync and notifications. Enabled background tasks can run while the extension interface is closed. API verification sends request content to your selected API service, which may also process it through its upstream model providers.
 
-## Anonymous Product Analytics
+## Product analytics and uninstall feedback
 
-All API Hub can collect anonymous product analytics via PostHog, which are enabled by default. This type of analytics is used solely to understand which features are being used, which operations are more prone to failure, the general distribution of different site types, and which compatibility issues should be prioritized for maintenance. Its purpose is not to identify users, but to help us focus our repair and development efforts on areas that actually impact user experience.
+### Product analytics
 
-You can disable anonymous product analytics in "Settings"; doing so will immediately stop subsequent analytics events.
+Product analytics is **enabled by default** in distributed builds configured with the analytics service. **PostHog** receives and stores events, which developers can view and analyze in the project. You can turn off the option called “anonymous product analytics” in Settings to stop subsequent product analytics events.
 
-Anonymous product analytics adhere to the principles of minimization and de-identification:
+- The extension generates and locally stores a random installation analytics ID and sends it with events to link activity from the same installation. It is not your API platform user ID and does not require your name or email. However, it is a persistent, linkable identifier: **“anonymous” does not mean that events cannot be associated with the same installation**. Disabling analytics does not automatically delete this local ID or previously sent data.
+- Business event fields are allowlisted. They include extension version, distribution channel, browser family, interface language, extension entry point, feature/action identifiers, outcomes, error categories, site types, and duration/count/scale ranges. They are used only to maintain, secure and measure the performance and reliability of the extension's disclosed features.
+- Business events do not include account API keys, access/refresh tokens, cookies, authorization headers, account names, platform user IDs, email addresses, configured site addresses, notes, import/export content, raw error stacks or API request/response bodies. Exact balances, quotas and usage are not sent.
+- In addition to business fields, the analytics SDK can attach technical context such as event time, browser, operating system, device/screen and extension-page information. The analytics service may also process and store IP addresses, HTTP request metadata and approximate location derived from IP addresses. Business field filtering does not mean that this network information is never processed.
+- Automatic page-view events, automatic interaction capture and session recording are disabled. Product analytics is not used to record your complete browsing history on other websites.
 
-*   Only fixed enumerated values or rough intervals are sent, such as extension version, distribution channel, browser type, interface language, entry page, feature/operation identifiers, success or failure results, error categories, duration intervals, quantity intervals, and fixed enumerated site types.
-*   Free text, raw error stacks, page addresses, site domains, account names, token names, user notes, import/export content, request content, response content, Prompts, or model outputs are not sent.
-*   Precise balances, quotas, usage, account counts, or durations are not sent; interval values are used only when necessary to determine the scale of a problem.
-*   Before being sent, analytics events undergo field whitelisting, enumerated value validation, and sensitive field filtering within the code; fields that are not whitelisted, whose names appear to contain sensitive meanings like URL, Token, Key, Cookie, email, balance, Prompt, response content, or account, or whose values are not controlled enumerations/intervals, are discarded.
+### Uninstall feedback
 
-In other words, anonymous product analytics do not collect API Keys, access tokens, refresh tokens, Cookies, authorization headers, account names, token names, user IDs, emails, full URLs, domains, sources, paths, query parameters, account balances, quotas, request content, response content, Prompts, model outputs, import/export content, user notes, or raw error stacks.
+On uninstall, your browser may open our [uninstall feedback page](https://all-api-hub.qixing1217.top/uninstall.html). Its URL contains the extension version, days since installation and language. Only while analytics is enabled does it include the installation analytics ID and send a page-open event linking the uninstall to earlier usage. With analytics disabled, that ID is omitted and no page-open event is sent; loading the page still makes a network request to its hosting service.
 
-These restrictions can be reviewed through the open-source code. The relevant filtering logic is located in `src/services/productAnalytics/privacy.ts`, with corresponding tests in `tests/services/productAnalytics/privacy.test.ts`.
+After you choose a reason and submit, the selected reason, any comment you enter (up to 500 characters), and the version and related context described above are sent to the same PostHog project for developers to view. **Submitting feedback sends these details even if product analytics is disabled**, without linking to the earlier installation analytics ID. Do not include passwords, API keys or other sensitive information in comments.
 
-### Uninstall Feedback Survey
+## Data storage and security
 
-When you uninstall this extension, the browser opens a survey page hosted by us (`https://all-api-hub.qixing1217.top/uninstall.html`) to learn why you left. That page follows the same boundaries as anonymous product analytics:
+- **Local data:** Accounts, credentials, preferences and history are stored by default in extension-local storage or local databases in your current browser profile. Browser storage isolation does not mean that the extension additionally encrypts all local data. People with access to your device or browser profile may be able to read it.
+- **Local exports:** You control exported JSON files, copied configuration and share snapshots. Backups and configuration may contain credentials; review their contents before sharing and store them securely.
+- **WebDAV (optional):** Selected backup data is sent to your configured server, authenticated with your supplied username/password. Backups may contain account credentials. WebDAV backup encryption depends on whether you enable the relevant setting. Use HTTPS; encrypted transport cannot be promised for HTTP addresses you configure.
+- **GitHub Secret Gist (optional):** The extension calls GitHub's API with your supplied GitHub token. Backups are encrypted locally with your password using AES-256-GCM before upload. GitHub receives the authentication token and encrypted backup. The Gist token, Gist ID and encryption password are excluded from manual JSON exports. A Secret Gist is unlisted, which does not mean only you can access its link. See [cloud sync](./webdav-sync.md).
+- **Analytics and feedback:** Stored in the configured PostHog project, serviced by PostHog and accessible to developers. Processing is also subject to [PostHog's privacy policy](https://posthog.com/privacy) and applicable service terms.
 
-*   The page address carries the anonymous analytics ID only while anonymous product analytics is enabled, so this uninstall can be linked to how the features were used before it. With analytics disabled the page still opens, but the address contains no such ID and no event is sent when the page loads.
-*   The address also carries the extension version, the number of days between installation and uninstall, and the interface language, to tell cases like "uninstalled shortly after installing" apart from "uninstalled after long-term use".
-*   The uninstall reason is sent only after you pick one on the page and click submit. The explanation text is sent only when you write it yourself and submit it; it is never collected automatically.
-*   Survey responses and anonymous product analytics are stored in the same PostHog project.
-*   Even with anonymous product analytics disabled, clicking submit still sends your feedback to the developer — it is simply not linked to any anonymous analytics ID.
+We do not operate an account-management server that centrally stores your account credentials. Protect your device, backups, sync passwords and third-party accounts. No storage or transmission method guarantees absolute security.
 
-### How Data is Stored
+## Data sharing and recipients
 
-Apart from the anonymous product analytics described above, account data and user management data are **stored on your local device by default**, including:
+We do not sell or rent user data or use it for personalized advertising or cross-site advertising tracking. Data is transferred to the following recipients for the features and processing described in this policy:
 
-*   The browser's local storage
-*   No account data or user management data is transmitted to any external servers operated by us.
-*   Account data and user management data are synchronized only if you enable browser sync or this extension's WebDAV sync feature, in which case the data is handled by the corresponding sync mechanism or your configured WebDAV server.
+| Recipient | When and what is transferred |
+| --- | --- |
+| API platforms, managed sites and their related authentication/upstream services that you add or select | Authentication information, operation parameters and verification content needed for account requests, login, refresh, check-ins, key/model management, managed-site imports or API verification; the extension also reads the results |
+| Your configured WebDAV provider; GitHub when you select Gist | Service authentication information and backup content when you back up or enable automatic sync; encryption is described above |
+| Export tools or applications you select | Selected service addresses, keys and configuration when you export, copy or open an application integration, such as Cherry Studio or CC Switch; your action determines the destination |
+| Notification services you enable | Telegram, DingTalk, Feishu, WeCom, ntfy or custom webhooks receive the relevant authentication/routing information and task notification titles/bodies, which may include task results and site/account-related details; browser notifications are handled by your local browser |
+| PostHog and project developers | The product events described above while analytics is enabled, and uninstall feedback when you submit it |
+| GitHub, LDOH (ldoh.105117.xyz) and external websites you open | Ordinary network request information when retrieving updates, project announcements or public site indexes; LDOH index matching takes place locally, and clicking a site lookup link passes the site hostname to the destination page as a search term |
+| GitHub Pages hosting for documentation and the uninstall page, and CDN services through which page requests pass | IP addresses, requested URLs (including query parameters), browser request headers and other ordinary network information when you visit, to deliver pages and operate the service |
 
-### Optional Cloud Sync Feature
+Third-party services may process data outside your country or region. Their retention, security and deletion rules depend on their policies and your configuration. When you send support requests or post public GitHub issues, developers and the relevant platform also receive the information you provide. Public issues are visible to others.
 
-This extension offers an **optional** WebDAV sync feature:
+## Retention, deletion and your choices
 
-*   You can choose to synchronize your account data to your own WebDAV server.
-*   This feature is **off by default**.
-*   When enabled, data will only be transmitted to your specified WebDAV server via a secure connection (HTTPS).
-*   We cannot access your WebDAV server or related credentials.
+- **Accounts and settings:** Kept locally until you edit/delete entries or clear extension data. Balance and usage history are cleaned up according to their feature-specific retention settings. Deleting a local account does not close the corresponding platform account or automatically revoke issued API keys.
+- **Uninstalling:** Browsers normally remove extension-local data on uninstall. Separate exported files, clipboard contents, other devices, remote backups and data held by third-party services are not automatically deleted.
+- **Remote copies:** Disabling automatic sync stops subsequent scheduled syncs but does not delete existing WebDAV/Gist backups. Delete backups and their revision history in the corresponding service and revoke tokens where appropriate. Check other synced devices to prevent re-upload.
+- **Analytics and feedback:** Disabling analytics or uninstalling does not delete events already sent. The extension has no automatic remote-event expiry or one-click remote deletion feature. Sent events and feedback remain in the PostHog project until deleted there or removed by applicable service retention settings; they do not expire automatically because you disable analytics or uninstall. You can request access to or deletion of records we can locate through the contact channels below. Records without a linkable identifier may not be attributable to an individual.
+- **Permissions and background tasks:** Revoke optional permissions in your browser, turn off automatic refresh, check-ins, sync or notifications in the extension, or stop using and uninstall the extension.
 
-## How Data is Used
+To request access, correction or deletion of analytics or feedback data accessible to us, first contact a maintainer with the type of request. Do not post credentials publicly. We may ask for information needed to locate the relevant records.
 
-Any account data accessed or stored by this extension is used solely to enable the functionality you use within the extension, such as managing accounts, refreshing status, executing automated tasks you configure, displaying local analysis results, importing/exporting configurations, or synchronizing to your specified location.
+## Chrome Web Store User Data Policy
 
-Apart from the anonymous product analytics described above, this data will not be used for purposes such as analytics, advertising, user profiling, or tracking. Anonymous product analytics will also not be used for advertising, cross-site tracking, user profiling, or selling data to third parties.
+All API Hub's use and transfer of user data obtained through browser APIs complies with the Chrome Web Store User Data Policy, including its Limited Use requirements. Such data is used only to provide or improve the disclosed single purpose and user-facing features. It is not used for personalized advertising, sold to data brokers or used for creditworthiness or lending decisions. Human access to such data is not permitted except in policy-allowed circumstances, such as explicit user consent, necessary security investigations, legal requirements, or internal operations using aggregated and de-identified data.
 
-The primary value of anonymous product analytics to users is helping us prioritize fixing issues that have a significant impact in real-world usage, such as an increased failure rate for a certain type of function, degradation of compatibility with a specific site type, instability in the experience of a particular entry point, or a new version encountering more errors in specific browser environments.
+## Policy updates and contact
 
-## Third-Party Services
+We will update this page and its “Last updated” date when the policy changes. Changes requiring additional disclosure or consent will be addressed in the product as applicable. Updating this policy does not replace any required authorization.
 
-Apart from the PostHog anonymous product analytics mentioned above, this extension **does not integrate any third-party advertising or data collection services**.
-
-This extension will only communicate with the following third-party services **if explicitly configured by you**, including but not limited to:
-
-*   AI API aggregation platforms you add (e.g., one-api, new-api, etc.)
-*   Your configured WebDAV server (e.g., if the sync feature is enabled)
-
-All communication with these services is triggered by you, or by the extension's background tasks according to your configured settings, and is solely for the purpose of enabling the corresponding functionality.
-We do not receive, monitor, or store any data transmitted to these services.
-
-## Changes to This Privacy Policy
-
-We may update this Privacy Policy from time to time. Any changes will be reflected in the "Last Updated" date.
-Your continued use of this extension after a policy update signifies your agreement to the updated Privacy Policy.
-
-## Open Source Information
-
-This extension is open-source software. You can view the source code at:
-[https://github.com/qixing-jk/all-api-hub](https://github.com/qixing-jk/all-api-hub)
-
-## Contact Us
-
-If you have any privacy-related questions or concerns, please:
-
-*   Contact us by submitting an Issue in the GitHub repository
-
----
-
-**Your Privacy Matters**: All API Hub is designed to limit data processing to local and necessary scopes. Apart from the anonymous product analytics described above and any sync features you explicitly enable, account data and user management data remain on your device, and we cannot access your account information or API keys; anonymous product analytics also reduce data risks through whitelisting, intervalization, and sensitive field filtering, and can be disabled by you and reviewed through the open-source code.
+For privacy questions or data requests, contact the [GitHub project maintainer](https://github.com/qixing-jk) or [project issues](https://github.com/qixing-jk/all-api-hub/issues). Issues are public: do not attach API keys, passwords, full backups or sensitive personal information. If your request needs private handling, first ask the maintainer for an available private communication channel.
