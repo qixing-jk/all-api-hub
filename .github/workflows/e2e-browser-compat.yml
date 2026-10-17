@@ -100,7 +100,7 @@ jobs:
         # The list reporter preserves per-test progress even during a timeout.
         # Retain the budget for slow versions and retries until the new
         # concurrency has been measured across every version in CI.
-        run: pnpm run e2e:default --shard=${{ matrix.shard }}/3 --grep-invert="major pages with" --output=test-results/compatibility --global-timeout=2100000 --reporter=list,github,html
+        run: pnpm run e2e:default --shard=${{ matrix.shard }}/3 --grep-invert="major pages with" --output=test-results/compatibility --global-timeout=2100000 --fail-on-flaky-tests --reporter=list,github,html
 
       # Performance measurements need a single browser context on the runner.
       # Execute the complete file once per Chrome version, outside the sharded
@@ -124,8 +124,9 @@ jobs:
           path: playwright-report/performance/
           retention-days: 7
 
-      - name: Upload Playwright artifacts (failure)
-        if: failure()
+      # Keep first-attempt failures and reports even if a retry succeeds.
+      - name: Upload Playwright artifacts
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
         with:
           name: playwright-browser-compat-${{ matrix.chrome_version }}-${{ matrix.shard }}-${{ github.run_attempt }}

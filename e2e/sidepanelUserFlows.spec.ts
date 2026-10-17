@@ -635,13 +635,18 @@ for (const destination of ["sidepanel", "unsupported", "rejected"] as const) {
       )
       await page.goto(`chrome-extension://${extensionId}/popup.html`)
       await waitForExtensionRoot(page)
+      // Chrome 114 exposes sidePanel but cannot open it programmatically.
+      // Keep verifying the registration/no-Options flow on that support floor.
+      const canOpenSidePanel = await page.evaluate(
+        () => typeof (globalThis as any).chrome.sidePanel?.open === "function",
+      )
       await page
         .getByRole("button", {
           name: /Continue adding this account: E2E Sponsor/,
         })
         .click()
       await expectBrowserTabOpened(serviceWorker, `${sponsorSite}/register`)
-      if (destination === "sidepanel") {
+      if (destination === "sidepanel" && canOpenSidePanel) {
         await expect
           .poll(() =>
             serviceWorker.evaluate(async () => {
