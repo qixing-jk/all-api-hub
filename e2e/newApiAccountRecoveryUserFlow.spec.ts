@@ -1,3 +1,6 @@
+import { createServer } from "node:http"
+import type { AddressInfo } from "node:net"
+
 import { SITE_TYPES } from "~/constants/siteType"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
@@ -40,151 +43,142 @@ const scenarios = [
   },
 ] as const
 
-for (const scenario of scenarios) {
-  test(`New API real-site account flow ${scenario.name}`, async ({
-    context,
-    page,
-    extensionId,
-  }) => {
-    const baseUrl = "https://new-api-account-recovery.example.invalid"
-    const managementToken = "e2e-account-management-token"
-    const needsRecovery = scenario.method !== null
-    const config: CompatibleApiRealSiteConfig = {
-      baseUrl,
-      loginUrl: `${baseUrl}/login`,
-      loginApiUrl: `${baseUrl}/api/user/login`,
-      login2faApiUrl: `${baseUrl}/api/user/login/2fa`,
-      username: "e2e-user",
-      password: "e2e-password",
-      totpSecret: scenario.method === "2fa" ? "JBSWY3DPEHPK3PXP" : undefined,
+const recoveryTest = test.extend<{
+  securitySite: { baseUrl: string; html: string; requests: number }
+}>({
+  securitySite: async ({ extensionId }, runFixture) => {
+    void extensionId
+    const site = { baseUrl: "", html: "", requests: 0 }
+    const server = createServer((request, response) => {
+      if (request.url === "/security") {
+        site.requests += 1
+        response.writeHead(200, { "Content-Type": "text/html" })
+        response.end(site.html)
+      } else {
+        response.writeHead(404)
+        response.end()
+      }
+    })
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+    site.baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+    try {
+      await runFixture(site)
+    } finally {
+      server.closeAllConnections()
+      await new Promise<void>((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve())),
+      )
     }
-    let blockedTokenRequests = 0
-    let verifiedTokenRequests = 0
-    let verificationRequests = 0
-    let automaticTokenRequests = 0
-    let securityPageRequests = 0
+  },
+})
 
-    await forceExtensionLanguage(page, "en")
-    await stubLlmMetadataIndex(context)
-    await stubNewApiSiteRoutes(context, {
-      baseUrl,
-      dashboardAuthMode: "auth-bundle",
-      accessToken: managementToken,
-    })
-    await context.route(`${baseUrl}/api/user/token`, (route) => {
-      const request = route.request()
-      const verified =
-        request.method() === "POST" &&
-        request.headers()["x-security-proof"] === "verified"
-      const automatic = !needsRecovery && request.method() === "GET"
-      if (verified) verifiedTokenRequests += 1
-      else if (automatic) automaticTokenRequests += 1
-      else blockedTokenRequests += 1
-      return route.fulfill({
-        status: verified || automatic ? 200 : 403,
-        json:
-          verified || automatic
-            ? { success: true, data: managementToken }
-            : {
-                success: false,
-                code: "SECURITY_PROOF_REQUIRED",
-                message: "Security verification required",
-              },
+for (const scenario of scenarios) {
+  recoveryTest(
+    `New API real-site account flow ${scenario.name}`,
+    async ({ context, page, extensionId, securitySite }) => {
+      const { baseUrl } = securitySite
+      securitySite.html = securityPageHtml(scenario)
+      const managementToken = "e2e-account-management-token"
+      const needsRecovery = scenario.method !== null
+      const config: CompatibleApiRealSiteConfig = {
+        baseUrl,
+        loginUrl: `${baseUrl}/login`,
+        loginApiUrl: `${baseUrl}/api/user/login`,
+        login2faApiUrl: `${baseUrl}/api/user/login/2fa`,
+        username: "e2e-user",
+        password: "e2e-password",
+        totpSecret: scenario.method === "2fa" ? "JBSWY3DPEHPK3PXP" : undefined,
+      }
+      let blockedTokenRequests = 0
+      let verifiedTokenRequests = 0
+      let verificationRequests = 0
+      let automaticTokenRequests = 0
+
+      await forceExtensionLanguage(page, "en")
+      await stubLlmMetadataIndex(context)
+      await stubNewApiSiteRoutes(context, {
+        baseUrl,
+        dashboardAuthMode: "auth-bundle",
+        accessToken: managementToken,
       })
-    })
-    await context.route(`${baseUrl}/api/verify`, (route) => {
-      verificationRequests += 1
-      const body = route.request().postDataJSON()
-      const valid =
-        body.method === scenario.method &&
-        (scenario.method === "password"
-          ? body.password === config.password
-          : /^\d{6}$/u.test(body.code))
-      return route.fulfill({
-        status: valid ? 200 : 403,
-        json: { success: valid },
+      await context.route(`${baseUrl}/api/user/token`, (route) => {
+        const request = route.request()
+        const verified =
+          request.method() === "POST" &&
+          request.headers()["x-security-proof"] === "verified"
+        const automatic = !needsRecovery && request.method() === "GET"
+        if (verified) verifiedTokenRequests += 1
+        else if (automatic) automaticTokenRequests += 1
+        else blockedTokenRequests += 1
+        return route.fulfill({
+          status: verified || automatic ? 200 : 403,
+          json:
+            verified || automatic
+              ? { success: true, data: managementToken }
+              : {
+                  success: false,
+                  code: "SECURITY_PROOF_REQUIRED",
+                  message: "Security verification required",
+                },
+        })
       })
-    })
-    await context.route(`${baseUrl}/security`, (route) => {
-      securityPageRequests += 1
-      return route.fulfill({
-        contentType: "text/html",
-        body: securityPageHtml(scenario),
+      await context.route(`${baseUrl}/api/verify`, (route) => {
+        verificationRequests += 1
+        const body = route.request().postDataJSON()
+        const valid =
+          body.method === scenario.method &&
+          (scenario.method === "password"
+            ? body.password === config.password
+            : /^\d{6}$/u.test(body.code))
+        return route.fulfill({
+          status: valid ? 200 : 403,
+          json: { success: valid },
+        })
       })
-    })
-    const serviceWorker = await getServiceWorker(context)
-    await seedUserPreferences(serviceWorker, {
-      autoFillCurrentSiteUrlOnAccountAdd: false,
-      autoProvisionKeyOnAccountAdd: false,
-      tempWindowFallback: { enabled: false },
-    })
-    const recovery = createNewApiAccountRecovery({ page, config })
+      // tabs.create can start loading before Playwright attaches its routes.
+      // Let the browser reach the local server without replaying the navigation.
+      await context.route(`${baseUrl}/security`, (route) => route.continue())
+      const serviceWorker = await getServiceWorker(context)
+      await seedUserPreferences(serviceWorker, {
+        autoFillCurrentSiteUrlOnAccountAdd: false,
+        autoProvisionKeyOnAccountAdd: false,
+        tempWindowFallback: { enabled: false },
+      })
+      const recovery = createNewApiAccountRecovery({ page, config })
 
-    const prepareAccount = createCompatibleRealSiteAccountFixturePreparer({
-      context,
-      page,
-      extensionId,
-      serviceWorker,
-      config,
-      ...recovery,
-      prepareDetectedDialog: async (dialog) => {
-        if (!needsRecovery) return recovery.prepareDetectedDialog(dialog)
+      const prepareAccount = createCompatibleRealSiteAccountFixturePreparer({
+        context,
+        page,
+        extensionId,
+        serviceWorker,
+        config,
+        ...recovery,
+        siteType: SITE_TYPES.NEW_API,
+        login: async (sitePage) => {
+          await sitePage.goto(baseUrl)
+          return { user: { id: 1, username: "e2e-user" } }
+        },
+      })
 
-        await expect(
-          dialog.dialog.getByText("Enter an Access Token manually", {
-            exact: true,
-          }),
-        ).toBeVisible()
-        // tabs.create may navigate before Playwright attaches route interception.
-        // Verify the browser's actual target before replaying that exact URL.
-        const interceptedNavigation = context
-          .waitForEvent("page")
-          .then(async (securityPage) => {
-            let requestedUrl = ""
-            await expect
-              .poll(async () => {
-                requestedUrl = await serviceWorker.evaluate(async () => {
-                  const [tab] = await chrome.tabs.query({
-                    active: true,
-                    currentWindow: true,
-                  })
-                  return tab?.pendingUrl ?? tab?.url ?? ""
-                })
-                return requestedUrl
-              })
-              .toBe(`${baseUrl}/security#security-access`)
-            await securityPage.goto(requestedUrl)
-          })
-        await Promise.all([
-          interceptedNavigation,
-          recovery.prepareDetectedDialog(dialog),
-        ])
-      },
-      siteType: SITE_TYPES.NEW_API,
-      login: async (sitePage) => {
-        await sitePage.goto(baseUrl)
-        return { user: { id: 1, username: "e2e-user" } }
-      },
-    })
-
-    const savedAccount = await prepareAccount()
-    expect(savedAccount.accountId).toBeTruthy()
-    const stored = await waitForSavedAccount({
-      serviceWorker,
-      siteType: SITE_TYPES.NEW_API,
-      baseUrl,
-    })
-    expect(stored.account_info.access_token).toBe(managementToken)
-    expect(stored.account_info.username).toBe("e2e-user")
-    expect(JSON.stringify(stored)).not.toContain(
-      E2E_NEW_API_RC22_AUTH.dashboardToken,
-    )
-    expect(blockedTokenRequests).toBe(needsRecovery ? 1 : 0)
-    expect(verificationRequests).toBe(needsRecovery ? 1 : 0)
-    expect(verifiedTokenRequests).toBe(needsRecovery ? 1 : 0)
-    expect(automaticTokenRequests).toBe(needsRecovery ? 0 : 1)
-    expect(securityPageRequests > 0).toBe(needsRecovery)
-  })
+      const savedAccount = await prepareAccount()
+      expect(savedAccount.accountId).toBeTruthy()
+      const stored = await waitForSavedAccount({
+        serviceWorker,
+        siteType: SITE_TYPES.NEW_API,
+        baseUrl,
+      })
+      expect(stored.account_info.access_token).toBe(managementToken)
+      expect(stored.account_info.username).toBe("e2e-user")
+      expect(JSON.stringify(stored)).not.toContain(
+        E2E_NEW_API_RC22_AUTH.dashboardToken,
+      )
+      expect(blockedTokenRequests).toBe(needsRecovery ? 1 : 0)
+      expect(verificationRequests).toBe(needsRecovery ? 1 : 0)
+      expect(verifiedTokenRequests).toBe(needsRecovery ? 1 : 0)
+      expect(automaticTokenRequests).toBe(needsRecovery ? 0 : 1)
+      expect(securitySite.requests).toBe(needsRecovery ? 1 : 0)
+    },
+  )
 }
 
 /**
