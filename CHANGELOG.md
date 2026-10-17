@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.6.0](https://github.com/qixing-jk/all-api-hub/compare/v4.5.0...v4.6.0) (2026-10-17)
+
+
+### Features
+
+* **updates:** check releases using each distribution channel ([#1715](https://github.com/qixing-jk/all-api-hub/issues/1715)) ([37fd99f](https://github.com/qixing-jk/all-api-hub/commit/37fd99f4ad59c891b29295d3b0d21fafccd3785d))
+
 ## [4.5.0](https://github.com/qixing-jk/all-api-hub/compare/v4.4.0...v4.5.0) (2026-10-16)
 
 
