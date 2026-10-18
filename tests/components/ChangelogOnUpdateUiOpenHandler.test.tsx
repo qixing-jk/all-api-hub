@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ChangelogOnUpdateUiOpenHandler } from "~/components/ChangelogOnUpdateUiOpenHandler"
 import {
@@ -9,11 +9,51 @@ import { UPDATE_LOG_DIALOG_TEST_IDS } from "~/features/UpdateLog/testIds"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
+import * as browserEnvironment from "~/utils/browser"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 describe("ChangelogOnUpdateUiOpenHandler", () => {
+  beforeEach(() => {
+    vi.spyOn(browserEnvironment, "isExtensionOptions").mockReturnValue(true)
+  })
+
   afterEach(() => {
     vi.restoreAllMocks()
+  })
+
+  it("preserves the pending update outside options until options opens", async () => {
+    vi.mocked(browserEnvironment.isExtensionOptions).mockReturnValue(false)
+    vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
+      ...DEFAULT_PREFERENCES,
+      openChangelogOnUpdate: true,
+    })
+    const consumeSpy = vi
+      .spyOn(changelogOnUpdateState, "consumePendingVersion")
+      .mockResolvedValue("2.39.0")
+
+    const compact = render(
+      <UpdateLogDialogProvider>
+        <span>Compact page ready</span>
+        <ChangelogOnUpdateUiOpenHandler />
+        <UpdateLogDialogContainer />
+      </UpdateLogDialogProvider>,
+    )
+    await screen.findByText("Compact page ready")
+    expect(consumeSpy).not.toHaveBeenCalled()
+    expect(screen.queryByTestId(UPDATE_LOG_DIALOG_TEST_IDS.root)).toBeNull()
+    compact.unmount()
+
+    vi.mocked(browserEnvironment.isExtensionOptions).mockReturnValue(true)
+    render(
+      <UpdateLogDialogProvider>
+        <ChangelogOnUpdateUiOpenHandler />
+        <UpdateLogDialogContainer />
+      </UpdateLogDialogProvider>,
+    )
+    expect(
+      await screen.findByTestId(UPDATE_LOG_DIALOG_TEST_IDS.root),
+    ).toBeInTheDocument()
+    expect(consumeSpy).toHaveBeenCalledTimes(1)
   })
 
   it("opens once on first UI open and clears the pending marker", async () => {

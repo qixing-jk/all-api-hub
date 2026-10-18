@@ -174,9 +174,9 @@
     }
   },
   "changelogOnUpdate": {
-    "description": "Control whether All API Hub shows a What's New dialog the first time you open the extension UI after updates.",
+    "description": "Control whether All API Hub shows a What's New dialog the first time you open the settings page after updates.",
     "title": "Changelog",
-    "toggleDesc": "When enabled, the update log is shown inline on first UI open after an update (once per version). You can still open the full docs changelog manually.",
+    "toggleDesc": "When enabled, the update log is shown inline when you first open the settings page after an update (once per version). You can still open the full docs changelog manually.",
     "toggleLabel": "Show What's New after updates"
   },
   "claudeCodeHub": {

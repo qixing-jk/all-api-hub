@@ -188,7 +188,7 @@ export function UpdateLogDialog({
             variant="outline"
             onClick={onClose}
             type="button"
-            className="w-full sm:w-auto"
+            className="hidden sm:inline-flex sm:w-auto"
           >
             {t("common:actions.close")}
           </Button>
