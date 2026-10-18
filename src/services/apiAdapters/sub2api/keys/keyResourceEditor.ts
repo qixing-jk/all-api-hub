@@ -226,7 +226,9 @@ export function createSub2ApiKeyEditor(
           name,
           group_id,
           quota,
-          ip_whitelist,
+          // Some deployments reject a payload that merely mentions an IP
+          // whitelist, so an empty one is left out instead of sent as [].
+          ...(ip_whitelist.length ? { ip_whitelist } : {}),
           ...(values.expires_in_days == null
             ? {}
             : { expires_in_days: values.expires_in_days as number }),
