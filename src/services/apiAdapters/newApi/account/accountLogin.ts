@@ -1,3 +1,5 @@
+import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
+import { BROWSER_LOGIN_STATUS } from "~/constants/browserLogin"
 import type { AccountSiteType } from "~/constants/siteType"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import type {
@@ -5,6 +7,8 @@ import type {
   AccountLoginTarget,
 } from "~/services/apiAdapters/contracts/accountLogin"
 import { createNewApiOAuthFlow } from "~/services/apiAdapters/newApi/account/browserOAuth"
+import { loginNewApiWithPassword } from "~/services/apiAdapters/newApi/account/passwordLogin"
+import type { NewApiOAuthProvider } from "~/services/apiService/newApiFamily/oauth/contracts"
 import { isNewApiLoginProvider } from "~/services/apiService/newApiFamily/oauth/discovery"
 import { fetchNewApiLoginMethods } from "~/services/apiService/newApiFamily/oauth/publicStatus"
 import { createBrowserOAuthContext } from "~/services/browserOAuth/browserOAuth"
@@ -18,7 +22,13 @@ export function createNewApiAccountLogin(
   const protocol = config?.protocols?.newApi
   const loginPath = definition?.onboarding?.routes.loginPath
   if (!config || !protocol || !loginPath) return undefined
-  const providers = config.methods.filter(isNewApiLoginProvider)
+  const providers = config.methods.filter(
+    (
+      method,
+    ): method is typeof ACCOUNT_LOGIN_METHODS.Password | NewApiOAuthProvider =>
+      method === ACCOUNT_LOGIN_METHODS.Password ||
+      isNewApiLoginProvider(method),
+  )
   if (providers.length === 0) return undefined
   const supports = (account: AccountLoginTarget) => {
     try {
@@ -45,11 +55,13 @@ export function createNewApiAccountLogin(
         (candidate) => candidate === request.methodId,
       )
       if (!supports(request.account) || !provider)
-        return { status: "unsupported" }
+        return { status: BROWSER_LOGIN_STATUS.Unsupported }
+      if (provider === ACCOUNT_LOGIN_METHODS.Password)
+        return loginNewApiWithPassword(request, loginPath)
       const expectedIdentity = String(
         request.account.account_info.id ?? "",
       ).trim()
-      if (!expectedIdentity) return { status: "failed" }
+      if (!expectedIdentity) return { status: BROWSER_LOGIN_STATUS.Failed }
       return createBrowserOAuthContext(
         createNewApiOAuthFlow({
           ...protocol,

@@ -19,7 +19,7 @@ describe("login check-in configuration", () => {
       }),
     ).toBe(AuthTypeEnum.AccessToken)
   })
-  it("saves only a valid login provider and preserves it across status refresh", () => {
+  it("normalizes legacy login providers but prevents check-in drafts from persisting them", () => {
     const base = buildSiteAccount().checkIn
     const draft = normalizeCheckInConfigV7({
       ...base,
@@ -27,10 +27,10 @@ describe("login check-in configuration", () => {
     })
     expect(draft.loginCheckIn).toEqual({ provider: "linuxdo" })
     const latest = mergeUserOwnedCheckInDraft({ latest: base, draft })
-    expect(latest.loginCheckIn).toEqual({ provider: "linuxdo" })
+    expect(latest).not.toHaveProperty("loginCheckIn")
     expect(
       mergeRefreshedCheckInStatus({ latest, refreshed: base }).loginCheckIn,
-    ).toEqual({ provider: "linuxdo" })
+    ).toBeUndefined()
     expect(
       normalizeCheckInConfigV7({
         ...base,

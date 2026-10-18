@@ -298,15 +298,12 @@ export const createNewApiAccountCompletion = (
       userId: detected.userId.toString(),
       exchangeRate: siteMetadata.exchangeRate,
       authType: effectiveAuthType,
+      // A proven binding belongs to account authentication, independently of check-in.
+      ...(isAgentRouterLoginUrl(url) && tokenInfo.loginProviders.length === 1
+        ? { login: { methodId: tokenInfo.loginProviders[0]! } }
+        : {}),
       checkIn: helpers.createInitialCheckInConfig({
         supported: checkSupport ?? false,
-        // AgentRouter grants the check-in benefit during a fresh OAuth login
-        // that reuses whichever GitHub / Linux DO identity the browser holds.
-        // One proven binding therefore preselects the provider; two bindings or
-        // none stay unselected instead of guessing GitHub.
-        ...(isAgentRouterLoginUrl(url) && tokenInfo.loginProviders.length === 1
-          ? { loginCheckInProvider: tokenInfo.loginProviders[0] }
-          : {}),
       }),
     }
   },

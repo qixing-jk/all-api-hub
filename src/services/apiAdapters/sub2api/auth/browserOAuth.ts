@@ -1,3 +1,5 @@
+import { BROWSER_LOGIN_SESSION_KEYS } from "~/constants/browserLogin"
+import { BROWSER_OAUTH_COMPLETION_STATUS } from "~/constants/browserOAuth"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   buildSub2ApiOAuthStartUrl,
@@ -17,7 +19,7 @@ export function createSub2ApiOAuthFlow(input: {
 }): BrowserOAuthFlow<undefined> {
   return {
     id: "sub2api-" + input.provider,
-    concurrencyKey: "sub2api-session",
+    concurrencyKey: BROWSER_LOGIN_SESSION_KEYS.Sub2Api,
     displayName: "Sub2API",
     loginPath: input.loginPath,
     prepareAction: RuntimeActionIds.ContentPrepareSub2ApiOAuth,
@@ -47,7 +49,8 @@ export function createSub2ApiOAuthFlow(input: {
       return null
     },
     parseCompletion(response) {
-      if (!isRecord(response)) return { status: "invalid" }
+      if (!isRecord(response))
+        return { status: BROWSER_OAUTH_COMPLETION_STATUS.Invalid }
       if (response.reason === "identity_mismatch") {
         return { status: "identity_mismatch" }
       }
@@ -56,8 +59,12 @@ export function createSub2ApiOAuthFlow(input: {
       }
       const identity = normalizeSub2ApiLoginIdentity(response.identity)
       return response.success === true && identity
-        ? { status: "verified", identity, evidence: undefined }
-        : { status: "invalid" }
+        ? {
+            status: BROWSER_OAUTH_COMPLETION_STATUS.Verified,
+            identity,
+            evidence: undefined,
+          }
+        : { status: BROWSER_OAUTH_COMPLETION_STATUS.Invalid }
     },
     isAuthorizationUrl(url) {
       // Only navigate to the site's selected backend start route. The backend

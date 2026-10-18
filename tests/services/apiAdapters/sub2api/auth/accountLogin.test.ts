@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ACCOUNT_PASSWORD_IDENTITIES } from "~/constants/accountLogin"
+import { BROWSER_LOGIN_SESSION_KEYS } from "~/constants/browserLogin"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
@@ -97,7 +99,16 @@ describe("Sub2API adapter-owned OAuth login", () => {
       siteDefinitions.getAccountSiteDefinition(SITE_TYPES.SUB2API)
         ?.accountLogin,
     ).toEqual({
-      methods: ["github", "google", "linuxdo", "oidc", "dingtalk", "wechat"],
+      passwordIdentity: ACCOUNT_PASSWORD_IDENTITIES.Email,
+      methods: [
+        "github",
+        "google",
+        "linuxdo",
+        "oidc",
+        "dingtalk",
+        "wechat",
+        "password",
+      ],
     })
   })
 
@@ -106,6 +117,7 @@ describe("Sub2API adapter-owned OAuth login", () => {
       { id: "google", label: "Google" },
       { id: "linuxdo", label: "Linux DO" },
       { id: "oidc", label: "Company SSO" },
+      { id: "password", label: "Password" },
     ])
     expect(dependencies.request).toHaveBeenCalledExactlyOnceWith(
       { baseUrl: origin, auth: { authType: AuthTypeEnum.None } },
@@ -130,7 +142,7 @@ describe("Sub2API adapter-owned OAuth login", () => {
       expect(dependencies.createBrowser).toHaveBeenCalledExactlyOnceWith(
         expect.objectContaining({
           id: "sub2api-" + methodId,
-          concurrencyKey: "sub2api-session",
+          concurrencyKey: BROWSER_LOGIN_SESSION_KEYS.Sub2Api,
           loginPath: "/login",
           prepareAction: RuntimeActionIds.ContentPrepareSub2ApiOAuth,
           prepareDetails: { loginProvider: methodId },
@@ -216,14 +228,19 @@ describe("Sub2API adapter-owned OAuth login", () => {
     },
   )
 
-  it("keeps other adapters and non-OAuth methods outside its capability", async () => {
+  it("keeps other adapters and unimplemented methods outside its capability", async () => {
     expect(
       sub2ApiAccountLogin.supports({
         ...account,
         site_type: SITE_TYPES.NEW_API,
       }),
     ).toBe(false)
-    for (const methodId of ["password", "discord", "custom-oidc", "../bind"]) {
+    for (const methodId of [
+      "unimplemented",
+      "discord",
+      "custom-oidc",
+      "../bind",
+    ]) {
       expect(
         await loginAccount({ account, methodId, requestId: "login" }),
       ).toEqual({ status: "unsupported" })

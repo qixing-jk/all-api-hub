@@ -81,3 +81,22 @@ it("rejects invalid or blank request IDs", () => {
     ),
   ).toBe(false)
 })
+
+it.each(["login-session", "login"] as const)(
+  "offers the native login action with reason %s",
+  (reason) => {
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible")
+    vi.spyOn(document, "hasFocus").mockReturnValue(true)
+    const notify = { info: vi.fn(), dismiss: vi.fn() }
+    expect(showTurnstileAssistPageNotice({ ...message, reason }, notify)).toBe(
+      true,
+    )
+    const [body, options] = notify.info.mock.calls[0]!
+    expect(body).toBe(
+      reason === "login-session"
+        ? "shieldBypass:notification.loginSessionBody"
+        : "shieldBypass:notification.loginAssistBody",
+    )
+    expect(options.action.label).toBe("shieldBypass:notification.openLogin")
+  },
+)

@@ -6,6 +6,12 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mocks = vi.hoisted(() => ({
   register: vi.fn(),
+  newApiPasswordUi: vi.fn(),
+  sub2ApiPasswordUi: vi.fn(),
+  newApiPasswordLogin: vi.fn(),
+  clearNewApiPassword: vi.fn(),
+  sub2ApiPasswordLogin: vi.fn(),
+  clearSub2ApiPassword: vi.fn(),
   scan: vi.fn(),
   prepareSub2Api: vi.fn(),
   completeSub2Api: vi.fn(),
@@ -15,6 +21,20 @@ const mocks = vi.hoisted(() => ({
   clearNewApi: vi.fn(),
   ensureRedemptionToastUi: vi.fn(),
   showTurnstileAssistPageNotice: vi.fn(),
+}))
+vi.mock("~/services/apiService/newApiFamily/passwordUi", () => ({
+  handleNewApiPasswordUi: mocks.newApiPasswordUi,
+}))
+vi.mock("~/services/apiService/sub2api/auth/passwordUi", () => ({
+  handleSub2ApiPasswordUi: mocks.sub2ApiPasswordUi,
+}))
+vi.mock("~/services/apiService/newApiFamily/passwordLogin", () => ({
+  handleNewApiPasswordLogin: mocks.newApiPasswordLogin,
+  handleClearNewApiPasswordLogin: mocks.clearNewApiPassword,
+}))
+vi.mock("~/services/apiService/sub2api/auth/passwordLogin", () => ({
+  handleSub2ApiPasswordLogin: mocks.sub2ApiPasswordLogin,
+  handleClearSub2ApiPasswordLogin: mocks.clearSub2ApiPassword,
 }))
 vi.mock("~/utils/browser/runtimeMessages", () => ({
   onRuntimeMessage: mocks.register,
@@ -46,6 +66,12 @@ beforeEach(() => vi.resetAllMocks())
 
 describe("feedback content routing", () => {
   it.each([
+    [RuntimeActionIds.ContentNewApiPasswordUi, "newApiPasswordUi"],
+    [RuntimeActionIds.ContentSub2ApiPasswordUi, "sub2ApiPasswordUi"],
+    [RuntimeActionIds.ContentNewApiPasswordLogin, "newApiPasswordLogin"],
+    [RuntimeActionIds.ContentClearNewApiPasswordLogin, "clearNewApiPassword"],
+    [RuntimeActionIds.ContentSub2ApiPasswordLogin, "sub2ApiPasswordLogin"],
+    [RuntimeActionIds.ContentClearSub2ApiPasswordLogin, "clearSub2ApiPassword"],
     [RuntimeActionIds.ContentPrepareSub2ApiOAuth, "prepareSub2Api"],
     [RuntimeActionIds.ContentCompleteSub2ApiOAuth, "completeSub2Api"],
     [RuntimeActionIds.ContentClearSub2ApiOAuthEvidence, "clearSub2Api"],
@@ -53,7 +79,7 @@ describe("feedback content routing", () => {
     [RuntimeActionIds.ContentCompleteNewApiOAuth, "completeNewApi"],
     [RuntimeActionIds.ContentClearNewApiOAuthEvidence, "clearNewApi"],
   ] as const)(
-    "routes OAuth action %s to its content handler",
+    "routes login action %s to its content handler",
     (action, key) => {
       mocks[key].mockReturnValue(true)
       setupContentMessageHandlers()

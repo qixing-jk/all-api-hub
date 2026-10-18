@@ -36,6 +36,7 @@ export const ACCOUNT_MANAGEMENT_TEST_IDS = {
   accessTokenInput: "account-management-access-token-input",
   accountFormSectionSiteInfo:
     "account-management-account-form-section-site-info",
+  accountFormSectionLogin: "account-management-account-form-section-login",
   accountFormSectionAuth: "account-management-account-form-section-auth",
   accountFormSectionTagsNotes:
     "account-management-account-form-section-tags-notes",

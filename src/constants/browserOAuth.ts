@@ -1,10 +1,8 @@
-/** Stable status values shared by browser OAuth flows and their results. */
-export const BROWSER_OAUTH_STATUS = {
-  Authenticated: "authenticated",
-  Cancelled: "cancelled",
-  Failed: "failed",
-  IdentityMismatch: "identity_mismatch",
-  InteractionRequired: "interaction_required",
-  SessionBusy: "session_busy",
-  Uncertain: "uncertain",
+/** Compatibility name for existing OAuth callers; account login owns the outcomes. */
+export { BROWSER_LOGIN_STATUS as BROWSER_OAUTH_STATUS } from "./browserLogin"
+
+/** Parsing outcomes before the browser executor accepts account authentication. */
+export const BROWSER_OAUTH_COMPLETION_STATUS = {
+  Verified: "verified",
+  Invalid: "invalid",
 } as const

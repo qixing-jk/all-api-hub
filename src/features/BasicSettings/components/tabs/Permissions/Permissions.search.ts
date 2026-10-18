@@ -1,3 +1,4 @@
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   buildControlDefinition,
   buildSectionDefinition,
@@ -32,6 +33,30 @@ export const permissionsSearchSections: OptionsSearchItemDefinition[] = [
 ]
 
 export const permissionsSearchControls: OptionsSearchItemDefinition[] = [
+  buildControlDefinition(
+    "control:permissions-incognito",
+    "permissions",
+    SETTINGS_ANCHORS.INCOGNITO_ACCESS,
+    "settings:permissions.incognito.title",
+    708,
+    {
+      descriptionKey: "settings:permissions.incognito.summary",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.permissions",
+        "settings:permissions.title",
+      ],
+      keywords: [
+        "incognito",
+        "private",
+        "InPrivate",
+        "无痕",
+        "隐私",
+        "permission",
+      ],
+      isVisible: (context) => context.hasOptionalPermissions,
+    },
+  ),
   buildControlDefinition(
     "control:permissions-refresh",
     "permissions",

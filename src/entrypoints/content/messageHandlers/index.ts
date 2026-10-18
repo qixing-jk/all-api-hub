@@ -23,6 +23,16 @@ import {
   handlePrepareNewApiOAuth,
 } from "~/services/apiService/newApiFamily/oauth/newApiContent"
 import {
+  handleClearNewApiPasswordLogin,
+  handleNewApiPasswordLogin,
+} from "~/services/apiService/newApiFamily/passwordLogin"
+import { handleNewApiPasswordUi } from "~/services/apiService/newApiFamily/passwordUi"
+import {
+  handleClearSub2ApiPasswordLogin,
+  handleSub2ApiPasswordLogin,
+} from "~/services/apiService/sub2api/auth/passwordLogin"
+import { handleSub2ApiPasswordUi } from "~/services/apiService/sub2api/auth/passwordUi"
+import {
   handleClearSub2ApiOAuthEvidence,
   handleCompleteSub2ApiOAuth,
   handlePrepareSub2ApiOAuth,
@@ -36,6 +46,18 @@ import { onRuntimeMessage } from "~/utils/browser/runtimeMessages"
  */
 export function setupContentMessageHandlers() {
   return onRuntimeMessage((request, _sender, sendResponse) => {
+    if (request.action === RuntimeActionIds.ContentNewApiPasswordUi)
+      return handleNewApiPasswordUi(request, sendResponse)
+    if (request.action === RuntimeActionIds.ContentSub2ApiPasswordUi)
+      return handleSub2ApiPasswordUi(request, sendResponse)
+    if (request.action === RuntimeActionIds.ContentNewApiPasswordLogin)
+      return handleNewApiPasswordLogin(request, sendResponse)
+    if (request.action === RuntimeActionIds.ContentClearNewApiPasswordLogin)
+      return handleClearNewApiPasswordLogin(request, sendResponse)
+    if (request.action === RuntimeActionIds.ContentSub2ApiPasswordLogin)
+      return handleSub2ApiPasswordLogin(request, sendResponse)
+    if (request.action === RuntimeActionIds.ContentClearSub2ApiPasswordLogin)
+      return handleClearSub2ApiPasswordLogin(request, sendResponse)
     if (request.action === RuntimeActionIds.TurnstileAssistPageNotice) {
       void Promise.all([
         import("~/entrypoints/content/shared/uiRoot"),

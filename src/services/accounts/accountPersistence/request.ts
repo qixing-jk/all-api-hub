@@ -6,6 +6,7 @@ import {
   type KimiOpenPlatformAuthConfig,
   type Sub2ApiAuthConfig,
 } from "~/types"
+import type { AccountLoginConfiguration } from "~/types/accountLogin"
 import type { CheckInMethodSelection } from "~/types/checkIn"
 import { extractSessionCookieHeader } from "~/utils/browser/cookieString"
 
@@ -19,6 +20,8 @@ export interface AccountSaveInput {
   exchangeRate: string
   notes: string
   tagIds: TagIdsInput
+  /** Undefined preserves the current configuration; null explicitly clears it. */
+  loginChange?: AccountLoginConfiguration | null
   checkInConfig: CheckInConfig
   siteType: string
   authType: AuthTypeEnum

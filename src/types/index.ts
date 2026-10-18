@@ -159,6 +159,9 @@ export interface Sub2ApiAuthConfig {
 
 // 站点账号完整信息
 export interface SiteAccount {
+  login?: import("~/types/accountLogin").AccountLoginConfiguration
+  /** @deprecated Read-only migration compatibility; canonical writes use login.credentials. */
+  passwordAuth?: import("~/types/accountLogin").AccountPasswordCredentials
   id: string // 此项 id
   /**
    * Emoji icon previously used for the account label in legacy UIs.

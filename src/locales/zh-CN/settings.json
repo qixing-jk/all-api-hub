@@ -531,6 +531,28 @@
     },
     "description": "按需授予可选权限，用于账号数据更新、辅助工具、任务通知和站点导入等功能。",
     "helper": "每项权限只在对应功能需要时使用，并且可以随时撤销；未授权的功能可能受限，但不影响其他功能。",
+    "incognito": {
+      "checking": "正在检测无痕访问权限…",
+      "chromeInstructions": "在本扩展详情页开启「允许在无痕模式下使用」。",
+      "denied": "尚未允许在无痕／隐私窗口运行",
+      "details": "去设置",
+      "edgeInstructions": "在本扩展详情页开启「允许在 InPrivate 中使用」。",
+      "enabled": "已允许在无痕／隐私窗口运行",
+      "firefoxInstructions": "打开 Firefox「扩展和主题」，选择本扩展，将「在隐私窗口中运行」设为「允许」。",
+      "firefoxMobileInstructions": "Firefox: 请从浏览器菜单进入扩展管理，找到本扩展并查看是否支持无痕／隐私访问。菜单和支持情况因浏览器版本而异。",
+      "genericInstructions": "请在浏览器的扩展管理中查看本扩展的无痕／隐私访问设置。",
+      "manualSteps": "查看设置步骤",
+      "mobileInstructions": "请从浏览器菜单进入扩展管理，找到本扩展并查看是否支持无痕／隐私访问。菜单和支持情况因浏览器版本而异。",
+      "openChromeSettings": "前往 Chrome 设置",
+      "openEdgeSettings": "前往 Edge 设置",
+      "recommended": "建议允许扩展在无痕窗口运行",
+      "reloadWarning": "更改此权限可能重新加载扩展、关闭扩展页面或中断任务。请先保存未完成的编辑。",
+      "safariInstructions": "在 Safari 的扩展设置中选择本扩展，允许在无痕浏览中使用；具体选项取决于 Safari 版本。",
+      "settingsFailed": "无法打开设置页。请从浏览器菜单打开扩展管理，找到本扩展并允许在无痕窗口运行。",
+      "summary": "隔离常规窗口的登录态，避免密码登录时串号或影响已登录账号。",
+      "title": "无痕／隐私窗口访问",
+      "unknown": "无法检测无痕／隐私访问权限"
+    },
     "items": {
       "bookmarks": {
         "description": "仅在你选择从浏览器书签导入站点时，读取已保存的网址。",

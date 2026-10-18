@@ -11,6 +11,7 @@ import {
   PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
+import { isAllowedIncognitoAccess } from "~/utils/browser/runtime"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 const {
@@ -58,6 +59,11 @@ vi.mock("~/services/permissions/permissionManager", () => ({
   requestPermissionDetailed: (id: string) => requestPermissionDetailedMock(id),
 }))
 
+vi.mock("~/utils/browser/runtime", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/runtime")>()),
+  isAllowedIncognitoAccess: vi.fn().mockResolvedValue(false),
+}))
+
 vi.mock("~/utils/feedback/operationFeedback", () => ({
   showResultToast: (...args: unknown[]) => showResultToastMock(...args),
 }))
@@ -79,6 +85,7 @@ vi.mock(
 describe("PermissionSettings", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(isAllowedIncognitoAccess).mockResolvedValue(false)
     hasPermissionMock.mockImplementation(
       async (id: string) => id === "cookies" || id === "notifications",
     )
@@ -94,6 +101,52 @@ describe("PermissionSettings", () => {
     cleanup()
   })
 
+  it("includes private browsing access with a warning before changing browser settings", async () => {
+    render(<PermissionSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    expect(
+      await screen.findByText("settings:permissions.incognito.title"),
+    ).toBeInTheDocument()
+    const privateRow = document.getElementById("permissions-incognito")
+    expect(privateRow).toHaveAttribute("data-slot", "card-item")
+    await screen.findByText("settings:permissions.items.cookies.title")
+    expect(privateRow?.parentElement).toBe(
+      document.getElementById("cookies")?.parentElement,
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /settings:permissions.incognito.(details|manualSteps)/,
+      }),
+    )
+    expect(
+      screen.getByText("settings:permissions.incognito.reloadWarning"),
+    ).toBeInTheDocument()
+    expect(requestPermissionDetailedMock).not.toHaveBeenCalled()
+  })
+
+  it("refreshes private access together with optional permission states", async () => {
+    render(<PermissionSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    await within(document.getElementById("permissions-incognito")!).findByText(
+      "settings:permissions.status.denied",
+    )
+    vi.mocked(isAllowedIncognitoAccess).mockResolvedValue(true)
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings:permissions.actions.refresh",
+      }),
+    )
+    expect(
+      await within(
+        document.getElementById("permissions-incognito")!,
+      ).findByText("settings:permissions.status.granted"),
+    ).toBeInTheDocument()
+  })
+
   it("loads permission states, refreshes, and toggles grant/remove actions", async () => {
     render(<PermissionSettings />, {
       withUserPreferencesProvider: false,
@@ -105,7 +158,7 @@ describe("PermissionSettings", () => {
     ).toHaveLength(2)
     expect(
       screen.getAllByText("settings:permissions.status.denied"),
-    ).toHaveLength(2)
+    ).toHaveLength(3)
     expect(
       screen.getByText("settings:permissions.items.notifications.title"),
     ).toBeInTheDocument()
@@ -293,7 +346,7 @@ describe("PermissionSettings", () => {
     ).toHaveLength(1)
     expect(
       screen.getAllByText("settings:permissions.status.denied"),
-    ).toHaveLength(2)
+    ).toHaveLength(3)
     expect(
       screen.getAllByText("settings:permissions.status.unavailable"),
     ).toHaveLength(1)

@@ -1,6 +1,6 @@
 import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import {
-  canonicalizeV6Accounts,
+  canonicalizeLegacyAccountConfigs,
   readChannelConfigSnapshot,
 } from "~/services/importExport/backupCodec"
 import {
@@ -71,7 +71,9 @@ export async function importV1Backup(
 
     if (accountsData) {
       await accountDataTransfer.importData({
-        accounts: canonicalizeV6Accounts(accountsData) as SiteAccount[],
+        accounts: canonicalizeLegacyAccountConfigs(
+          accountsData,
+        ) as SiteAccount[],
       })
       // Ensure legacy imports (string tags) are migrated to tag ids.
       await tagStorage.ensureLegacyMigration()

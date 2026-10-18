@@ -261,6 +261,11 @@ function observeVerification(
   return observeGenericVerification()
 }
 
+/** Whether the current native page exposes verification that must not be bypassed. */
+export function hasPageVerification(): boolean {
+  return Boolean(observeVerification())
+}
+
 /** Observes native-page verification; the page owns submission and token use. */
 export async function waitForPageVerification(params: {
   requestId?: string

@@ -531,6 +531,28 @@
     },
     "description": "Cấp quyền tùy chọn khi cần để làm mới dữ liệu tài khoản, dùng công cụ hỗ trợ, nhận thông báo tác vụ và nhập trang.",
     "helper": "Mỗi quyền chỉ được dùng cho chức năng tương ứng và có thể thu hồi bất cứ lúc nào. Chức năng chưa được cấp quyền có thể bị hạn chế, còn các chức năng khác vẫn hoạt động.",
+    "incognito": {
+      "checking": "Đang kiểm tra quyền truy cập cửa sổ riêng tư…",
+      "chromeInstructions": "Trong chi tiết tiện ích trên Chrome, bật “Cho phép ở chế độ ẩn danh”.",
+      "denied": "Chưa cho phép truy cập riêng tư",
+      "details": "Cài đặt",
+      "edgeInstructions": "Trong chi tiết tiện ích trên Edge, bật “Cho phép trong InPrivate”.",
+      "enabled": "Đã cho phép truy cập riêng tư",
+      "firefoxInstructions": "Mở Tiện ích và chủ đề trong Firefox, chọn tiện ích này và cho phép chạy trong cửa sổ riêng tư.",
+      "firefoxMobileInstructions": "Firefox: Mở trình quản lý tiện ích từ menu trình duyệt và kiểm tra tùy chọn truy cập riêng tư. Menu và khả năng hỗ trợ tùy thuộc phiên bản trình duyệt.",
+      "genericInstructions": "Kiểm tra quyền truy cập riêng tư trong trình quản lý tiện ích của trình duyệt.",
+      "manualSteps": "Xem hướng dẫn",
+      "mobileInstructions": "Mở trình quản lý tiện ích từ menu trình duyệt và kiểm tra tùy chọn truy cập riêng tư. Menu và khả năng hỗ trợ tùy thuộc phiên bản trình duyệt.",
+      "openChromeSettings": "Cài đặt Chrome",
+      "openEdgeSettings": "Cài đặt Edge",
+      "recommended": "Nên cho phép tiện ích chạy trong cửa sổ riêng tư",
+      "reloadWarning": "Thay đổi quyền này có thể tải lại tiện ích, đóng trang tiện ích hoặc gián đoạn tác vụ. Hãy lưu các chỉnh sửa chưa hoàn tất trước.",
+      "safariInstructions": "Chọn tiện ích này trong cài đặt tiện ích của Safari và cho phép dùng trong chế độ riêng tư. Các tùy chọn phụ thuộc vào phiên bản Safari.",
+      "settingsFailed": "Không thể mở cài đặt. Hãy mở trình quản lý tiện ích của trình duyệt và cho phép tiện ích chạy trong cửa sổ riêng tư.",
+      "summary": "Tách đăng nhập khỏi cửa sổ thường để tránh nhầm tài khoản hoặc ảnh hưởng đến phiên đang đăng nhập.",
+      "title": "Quyền truy cập cửa sổ ẩn danh / riêng tư",
+      "unknown": "Không thể kiểm tra quyền truy cập riêng tư"
+    },
     "items": {
       "bookmarks": {
         "description": "Chỉ đọc URL đã lưu khi bạn chọn nhập trang từ dấu trang trình duyệt.",

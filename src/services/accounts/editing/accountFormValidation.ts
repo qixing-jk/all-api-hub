@@ -1,14 +1,17 @@
+import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
 import { DEFAULT_USD_TO_CNY_RATE, QUOTA_PER_USD } from "~/constants/money"
 import {
   isAccountSiteType,
   SITE_TYPES,
   type AccountSiteType,
 } from "~/constants/siteType"
+import { normalizePasswordCredentials } from "~/services/accountLogin/passwordCredentials"
 import {
   getAccountSiteProductProfile,
   isAccountAuthTypeAllowed,
 } from "~/services/accounts/accountSiteProfile"
 import { AuthTypeEnum } from "~/types"
+import type { AccountLoginConfiguration } from "~/types/accountLogin"
 
 /** Converts a non-negative manual USD balance to quota units. */
 export function parseManualQuotaFromUsd(
@@ -34,6 +37,7 @@ export function isValidAccount({
   accessToken,
   cookieAuthSessionCookie,
   exchangeRate,
+  loginChange,
 }: {
   siteName: string
   username: string
@@ -43,6 +47,7 @@ export function isValidAccount({
   accessToken: string
   cookieAuthSessionCookie?: string
   exchangeRate: string
+  loginChange?: AccountLoginConfiguration | null
 }) {
   const normalizedSiteType = isAccountSiteType(siteType)
     ? siteType
@@ -51,6 +56,8 @@ export function isValidAccount({
 
   return (
     !!siteName.trim() &&
+    (loginChange?.methodId !== ACCOUNT_LOGIN_METHODS.Password ||
+      !!normalizePasswordCredentials(loginChange.credentials)) &&
     (authType === AuthTypeEnum.None ||
       isAccountAuthTypeAllowed(normalizedSiteType, authType)) &&
     (!profile.identity.usernameRequired || !!username.trim()) &&

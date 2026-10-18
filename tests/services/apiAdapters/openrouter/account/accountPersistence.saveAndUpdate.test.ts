@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
 import { SITE_TYPES } from "~/constants/siteType"
 import { EMPTY_ACCOUNT_INFO_METRICS } from "~/services/accounts/accountPersistence/constants"
 import { prepareAccountPersistenceIdentity } from "~/services/accounts/accountPersistence/shared"
@@ -305,6 +306,40 @@ describe("accountPersistence save and update", () => {
       },
     }))
   })
+
+  it.each(["create", "update"])(
+    "rejects incomplete password configuration before %s performs network or storage writes",
+    async (operation) => {
+      const request = {
+        accountId: "not-written",
+        url: "https://agentrouter.org",
+        siteName: "AgentRouter",
+        username: "member",
+        accessToken: "token",
+        userId: "17",
+        exchangeRate: "7",
+        notes: "",
+        tagIds: [],
+        loginChange: {
+          methodId: ACCOUNT_LOGIN_METHODS.Password,
+          credentials: { username: "member", password: "" },
+        },
+        checkInConfig: CHECK_IN_DISABLED,
+        siteType: SITE_TYPES.NEW_API,
+        authType: AuthTypeEnum.AccessToken,
+        cookieAuthSessionCookie: "",
+      }
+      const result = await (operation === "create"
+        ? validateAndSaveAccount(request)
+        : validateAndUpdateAccount(request))
+      expect(result).toMatchObject({
+        success: false,
+        message: "messages:errors.validation.incompleteAccountInfo",
+      })
+      expect(fetchAccountDataMock).not.toHaveBeenCalled()
+      expect(await accountStorage.getAllAccounts()).toEqual([])
+    },
+  )
 
   it.each(["deferred", "refreshed", "fallback"])(
     "keeps the latest Kimi session when saving a loaded draft through %s",
@@ -2925,9 +2960,9 @@ describe("accountPersistence save and update", () => {
       exchange_rate: 7,
       notes: "",
       tagIds: [],
+      login: { methodId: "github" },
       checkIn: buildCheckInConfig({
         automaticExecutionEnabled: true,
-        loginCheckIn: { provider: "github" },
       }),
       account_info: {
         id: "17",
@@ -2948,9 +2983,9 @@ describe("accountPersistence save and update", () => {
       exchangeRate: "7",
       notes: "",
       tagIds: [],
+      loginChange: { methodId: "github" },
       checkInConfig: buildCheckInConfig({
         automaticExecutionEnabled: true,
-        loginCheckIn: { provider: "github" },
       }),
       siteType: SITE_TYPES.NEW_API,
       authType: AuthTypeEnum.AccessToken,
@@ -2984,9 +3019,9 @@ describe("accountPersistence save and update", () => {
         exchangeRate: "7",
         notes: "",
         tagIds: [],
+        loginChange: { methodId: "github" },
         checkInConfig: buildCheckInConfig({
           automaticExecutionEnabled: true,
-          loginCheckIn: { provider: "github" },
         }),
         siteType: SITE_TYPES.NEW_API,
         authType: AuthTypeEnum.AccessToken,
@@ -3022,9 +3057,9 @@ describe("accountPersistence save and update", () => {
       exchange_rate: 7,
       notes: "",
       tagIds: [],
+      login: { methodId: "github" },
       checkIn: buildCheckInConfig({
         automaticExecutionEnabled: true,
-        loginCheckIn: { provider: "github" },
       }),
       account_info: {
         id: "17",
@@ -3045,9 +3080,9 @@ describe("accountPersistence save and update", () => {
       exchangeRate: "7",
       notes: "",
       tagIds: [],
+      loginChange: { methodId: "linuxdo" },
       checkInConfig: buildCheckInConfig({
         automaticExecutionEnabled: true,
-        loginCheckIn: { provider: "linuxdo" },
       }),
       siteType: SITE_TYPES.NEW_API,
       authType: AuthTypeEnum.AccessToken,
@@ -3076,9 +3111,9 @@ describe("accountPersistence save and update", () => {
       exchange_rate: 7,
       notes: "",
       tagIds: [],
+      login: { methodId: "github" },
       checkIn: buildCheckInConfig({
         automaticExecutionEnabled: true,
-        loginCheckIn: { provider: "github" },
       }),
       account_info: {
         id: "17",
@@ -3123,9 +3158,9 @@ describe("accountPersistence save and update", () => {
       exchangeRate: "7",
       notes: "",
       tagIds: [],
+      loginChange: { methodId: "github" },
       checkInConfig: buildCheckInConfig({
         automaticExecutionEnabled: true,
-        loginCheckIn: { provider: "github" },
       }),
       siteType: SITE_TYPES.NEW_API,
       authType: AuthTypeEnum.AccessToken,
@@ -3145,11 +3180,11 @@ describe("accountPersistence save and update", () => {
     const accounts = await accountStorage.getAllAccounts()
     expect(accounts).toHaveLength(2)
     expect(
-      accounts.find((account) => account.id === targetId)?.checkIn.loginCheckIn,
+      accounts.find((account) => account.id === targetId)?.login,
     ).toBeUndefined()
-    expect(
-      accounts.find((account) => account.id === ownerId)?.checkIn.loginCheckIn,
-    ).toEqual({ provider: "github" })
+    expect(accounts.find((account) => account.id === ownerId)?.login).toEqual({
+      methodId: "github",
+    })
   })
 
   it("refuses a create that claims a login provider owned by another account", async () => {
@@ -3165,9 +3200,9 @@ describe("accountPersistence save and update", () => {
       exchange_rate: 7,
       notes: "",
       tagIds: [],
+      login: { methodId: "github" },
       checkIn: buildCheckInConfig({
         automaticExecutionEnabled: true,
-        loginCheckIn: { provider: "github" },
       }),
       account_info: {
         id: "17",
@@ -3183,9 +3218,9 @@ describe("accountPersistence save and update", () => {
     // so the refusal has to travel back out of the persistence fallback too.
     fetchAccountDataMock.mockResolvedValueOnce({
       ...LOG_TEST_ACCOUNT_DATA,
+      login: { methodId: "github" },
       checkIn: buildCheckInConfig({
         automaticExecutionEnabled: true,
-        loginCheckIn: { provider: "github" },
       }),
     })
 
@@ -3198,9 +3233,9 @@ describe("accountPersistence save and update", () => {
       exchangeRate: "7",
       notes: "",
       tagIds: [],
+      loginChange: { methodId: "github" },
       checkInConfig: buildCheckInConfig({
         automaticExecutionEnabled: true,
-        loginCheckIn: { provider: "github" },
       }),
       siteType: SITE_TYPES.NEW_API,
       authType: AuthTypeEnum.AccessToken,

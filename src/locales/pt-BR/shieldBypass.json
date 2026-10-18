@@ -131,6 +131,9 @@
     "unexpectedContent": "A resposta tinha um formato inesperado e pode ter sido uma página de verificação do site."
   },
   "notification": {
+    "loginAssistBody": "O login está aguardando. Abra a janela de login para concluir a verificação ou a autenticação de dois fatores; a extensão verificará a conta e o resultado da tarefa.",
+    "loginSessionBody": "Esta janela já tem uma sessão iniciada. Para evitar encerrar contas em outras janelas, abra a janela de login e saia manualmente após confirmar; a extensão entrará na conta de destino.",
+    "openLogin": "Abrir janela de login",
     "openVerification": "Abrir janela de verificação",
     "reminderSettings": "Configurações de avisos",
     "turnstileAssistBody": "O site está aguardando uma verificação humana. Abra a janela de verificação para resolver o captcha. A extensão verificará o resultado em seguida.",

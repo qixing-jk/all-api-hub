@@ -259,3 +259,52 @@ describe("account dialog auto-detect draft mapping", () => {
     expect(merged.siteType).toBe(SITE_TYPES.KIMI)
   })
 })
+
+it.each([false, true])(
+  "adopts detected login only when the new-account login was not edited (changed=%s)",
+  (changed) => {
+    const draft = createEmptyAccountDialogDraft(SITE_TYPES.NEW_API)
+    draft.loginChanged = changed
+    const login = { methodId: "github" }
+    const nextCheckIn = buildCheckInConfig()
+    const merged = buildDraftFromAutoDetectResult({
+      draft,
+      resultData: {
+        username: "user",
+        siteName: "Detected",
+        accessToken: "token",
+        userId: "7",
+        exchangeRate: null,
+        authType: AuthTypeEnum.AccessToken,
+        checkIn: nextCheckIn,
+        siteType: SITE_TYPES.NEW_API,
+        login,
+      },
+      nextSiteType: SITE_TYPES.NEW_API,
+      nextCheckIn,
+      preserveExistingCheckIn: false,
+      automaticExecutionPreferenceChanged: false,
+      mode: DIALOG_MODES.ADD,
+      policy: getAccountDialogSitePolicy(SITE_TYPES.NEW_API),
+    })
+    expect(merged.login).toEqual(changed ? undefined : login)
+    expect(merged.loginChanged).toBe(true)
+  },
+)
+it.each([false, true])(
+  "recovery preserves explicitly edited login (changed=%s)",
+  (changed) => {
+    const draft = createEmptyAccountDialogDraft(SITE_TYPES.NEW_API)
+    draft.loginChanged = changed
+    const login = { methodId: "github" }
+    const merged = mergeAutoDetectRecoveryIntoDraft({
+      draft,
+      recoveryData: { login },
+      nextSiteType: SITE_TYPES.NEW_API,
+      hasExplicitAuthType: false,
+      sub2apiRefreshTokenPreferenceChanged: false,
+    })
+    expect(merged.login).toEqual(changed ? undefined : login)
+    expect(merged.loginChanged).toBe(true)
+  },
+)

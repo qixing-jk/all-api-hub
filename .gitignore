@@ -74,7 +74,10 @@ web-ext.config.ts
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
+# Share only portable JetBrains module and directory-exclusion settings.
+/.idea/*
+!/.idea/modules.xml
+!/.idea/all-api-hub.iml
 *.suo
 *.ntvs*
 *.njsproj

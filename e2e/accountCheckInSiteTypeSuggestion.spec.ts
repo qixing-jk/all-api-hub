@@ -37,7 +37,7 @@ const ACCOUNT_ID = "site-type-mismatch-account"
 const SITE_URL = "https://site-type-mismatch.example.invalid"
 const CHECK_IN_FEEDBACK_ID = "#account-check-in-feedback"
 const ACCOUNT_REDETECT_LABEL = "Re-detect"
-const CHECK_IN_REDETECT_LABEL = "Re-detect check-in method"
+const CHECK_IN_REDETECT_LABEL = "Detect check-in method"
 
 /**
  * Serves a site that brands itself through the public status name while its shell

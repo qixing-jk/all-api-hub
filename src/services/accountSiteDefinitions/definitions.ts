@@ -1,4 +1,8 @@
 import {
+  ACCOUNT_LOGIN_METHODS,
+  ACCOUNT_PASSWORD_IDENTITIES,
+} from "~/constants/accountLogin"
+import {
   AXON_HUB_DETAIL_FIELD_IDS,
   AXON_HUB_TABLE_FIELD_IDS,
 } from "~/constants/axonHub"
@@ -553,7 +557,14 @@ const ACCOUNT_SITE_DEFINITIONS = [
     tokenKey: { optionalSkPrefix: true },
     accountLogin: {
       ...NEW_API_COMPATIBLE_LOGIN,
-      methods: ["github", "linuxdo", "discord", "oidc"],
+      passwordIdentity: ACCOUNT_PASSWORD_IDENTITIES.UsernameOrEmail,
+      methods: [
+        "github",
+        "linuxdo",
+        "discord",
+        "oidc",
+        ACCOUNT_LOGIN_METHODS.Password,
+      ],
       // QuantumNous/new-api: v1.0.0-rc.37 web/src/routes/oauth/$provider.tsx;
       // earlier web/src/components/OAuth2Callback.js completes under /console.
       protocols: {
@@ -727,8 +738,17 @@ const ACCOUNT_SITE_DEFINITIONS = [
     adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Sub2Api,
     legacyAccountTokenScope: "account",
     accountLogin: {
+      passwordIdentity: ACCOUNT_PASSWORD_IDENTITIES.Email,
       // Wei-Shaw/sub2api@881f320: public settings and native OAuth start routes.
-      methods: ["github", "google", "linuxdo", "oidc", "dingtalk", "wechat"],
+      methods: [
+        "github",
+        "google",
+        "linuxdo",
+        "oidc",
+        "dingtalk",
+        "wechat",
+        ACCOUNT_LOGIN_METHODS.Password,
+      ],
     },
     managedResource: {
       ...LEGACY_MANAGED_CHANNEL_POLICY,

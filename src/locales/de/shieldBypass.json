@@ -130,6 +130,9 @@
     "unexpectedContent": "Die Antwort hatte ein unerwartetes Format und könnte eine Verifizierungsseite der Website gewesen sein."
   },
   "notification": {
+    "loginAssistBody": "Die Anmeldung wartet. Öffnen Sie das Anmeldefenster, um die Verifizierung oder Zwei-Faktor-Authentifizierung abzuschließen. Danach prüft die Erweiterung Konto und Aufgabenergebnis.",
+    "loginSessionBody": "Dieses Fenster hat bereits eine angemeldete Sitzung. Öffnen Sie das Anmeldefenster und melden Sie sich nach Prüfung manuell ab, um andere Fenster nicht unbeabsichtigt abzumelden. Danach meldet die Erweiterung das Zielkonto an.",
+    "openLogin": "Anmeldefenster öffnen",
     "openVerification": "Verifizierungsfenster öffnen",
     "reminderSettings": "Benachrichtigungseinstellungen",
     "turnstileAssistBody": "Die Website wartet auf eine menschliche Verifizierung. Öffnen Sie das Verifizierungsfenster und lösen Sie das Captcha. Die Erweiterung prüft danach das Ergebnis.",

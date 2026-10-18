@@ -1,11 +1,9 @@
-import type { AccountLoginProvider } from "~/constants/accountLogin"
 import {
   AUTO_DETECT_FAILURE_REASONS,
   type AutoDetectFailureReason,
 } from "~/constants/autoDetect"
 import { CHECK_IN_DISCOVERY_DECISION_OUTCOMES } from "~/constants/checkIn"
 import type { AccountSiteType } from "~/constants/siteType"
-import { setLoginProviderSelection } from "~/services/accountLogin/providerClaims"
 import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"
 import { createPersistedSiteAccount } from "~/services/accounts/editing/accountDefaults"
 import { getSiteName } from "~/services/accounts/identity/siteName"
@@ -123,25 +121,21 @@ function createInitialCheckInConfig(input: {
   supported: boolean
   siteType: AccountSiteType
   siteUrl: string
-  loginCheckInProvider?: AccountLoginProvider
 }) {
-  return setLoginProviderSelection(
-    createCompatibilityCheckInConfig({
-      siteType: input.siteType,
-      supported: input.supported,
-      automaticExecutionEnabled: getNewAccountAutomaticExecutionDefault(
-        input.siteType,
-        input.siteUrl,
-      ),
-      customCheckIn: {
-        url: "",
-        redeemUrl: "",
-        openRedeemWithCheckIn: true,
-        isCheckedInToday: false,
-      },
-    }),
-    input.loginCheckInProvider ?? null,
-  )
+  return createCompatibilityCheckInConfig({
+    siteType: input.siteType,
+    supported: input.supported,
+    automaticExecutionEnabled: getNewAccountAutomaticExecutionDefault(
+      input.siteType,
+      input.siteUrl,
+    ),
+    customCheckIn: {
+      url: "",
+      redeemUrl: "",
+      openRedeemWithCheckIn: true,
+      isCheckedInToday: false,
+    },
+  })
 }
 
 const createMissingAccountCompletionCapabilityError = (siteType: string) =>
@@ -481,6 +475,7 @@ export async function discoverCompletedCheckIn(params: {
       ...(params.cookieAuthSessionCookie
         ? { cookieAuth: { sessionCookie: params.cookieAuthSessionCookie } }
         : {}),
+      login: params.completed.login,
       checkIn: params.completed.checkIn,
       health: { status: SiteHealthStatus.Unknown },
       notes: "",

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { CURRENT_CONFIG_VERSION } from "~/services/accounts/migrations/accountDataMigration"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/storage/profiles"
 import { API_CREDENTIAL_PROFILES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { tagStorage } from "~/services/tags/tagStorage"
@@ -163,7 +164,9 @@ describe("tagStorage", () => {
     ) as AccountStorageConfig
     expect(atIndex(savedAccounts.accounts, 0).tagIds).toHaveLength(1)
     expect((savedAccounts.accounts[0] as any).tags).toBeUndefined()
-    expect(atIndex(savedAccounts.accounts, 0).configVersion).toBe(7)
+    expect(atIndex(savedAccounts.accounts, 0).configVersion).toBe(
+      CURRENT_CONFIG_VERSION,
+    )
     expect(atIndex(savedAccounts.accounts, 0).checkIn).not.toHaveProperty(
       "enableDetection",
     )
@@ -452,7 +455,9 @@ describe("tagStorage", () => {
     const savedAccounts = storageData.get(
       "site_accounts",
     ) as AccountStorageConfig
-    expect(atIndex(savedAccounts.accounts, 0).configVersion).toBe(7)
+    expect(atIndex(savedAccounts.accounts, 0).configVersion).toBe(
+      CURRENT_CONFIG_VERSION,
+    )
     expect(atIndex(savedAccounts.accounts, 0).checkIn).not.toHaveProperty(
       "enableDetection",
     )

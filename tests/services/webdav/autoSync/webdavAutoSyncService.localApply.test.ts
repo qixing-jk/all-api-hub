@@ -276,7 +276,7 @@ describe("WebdavAutoSyncService local apply phase", () => {
     )[0].accounts[0] as any
     expect(importedAccount).toMatchObject({
       site_name: "remote-newer",
-      configVersion: 7,
+      configVersion: 8,
       checkIn: {
         automaticExecutionEnabled: false,
         selection: { methodId: "new-api:daily-checkin" },
@@ -288,7 +288,7 @@ describe("WebdavAutoSyncService local apply phase", () => {
     expect(uploaded.version).toBe("4.0")
     expect(uploaded.accounts.accounts[0]).toMatchObject({
       site_name: "remote-newer",
-      configVersion: 7,
+      configVersion: 8,
     })
   })
 

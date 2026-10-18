@@ -69,6 +69,12 @@ To load the development extension in your own browser while the server is runnin
 
 For live desktop automation or Android Firefox, Edge, and Lemur debugging, use the [live-extension-ui-automation skill](.agents/skills/live-extension-ui-automation/SKILL.md). The [Android workflow](.agents/skills/live-extension-ui-automation/references/mobile-debugging.md) covers installed extensions, development installation, and hot updates.
 
+### JetBrains project settings
+
+The repository shares `.idea/modules.xml` and `.idea/all-api-hub.iml` to exclude build output, caches, test reports and visual captures from IDE project analysis and normal project searches. Test source directories (`tests/` and `e2e/`) and feature specifications under `.scratch/` remain included. Personal IDE state and other `.idea` files stay ignored.
+
+These settings use a fixed module name and relative paths. New worktrees inherit them when checking out a revision that contains these files; existing worktree branches need to integrate that revision. Reopen the project if the IDE has not reloaded the module configuration. An explicitly selected directory or custom search scope can have different search behavior.
+
 ## Testing
 
 ### Local tooling environment configuration

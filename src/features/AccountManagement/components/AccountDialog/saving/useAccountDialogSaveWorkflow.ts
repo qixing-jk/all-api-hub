@@ -236,6 +236,7 @@ export function useAccountDialogSaveWorkflow({
         notes: notes.trim(),
         tagIds: tagIds,
         checkInConfig: checkIn,
+        loginChange: draft.loginChanged ? draft.login ?? null : undefined,
         siteType: siteType,
         authType: authType,
         cookieAuthSessionCookie: cookieAuthSessionCookie.trim(),

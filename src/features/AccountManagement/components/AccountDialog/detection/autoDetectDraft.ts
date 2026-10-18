@@ -130,6 +130,9 @@ export function mergeAutoDetectRecoveryIntoDraft(params: {
           recoveryData.cookieAuthSessionCookie,
         )
       : "",
+    ...(!draft.login && !draft.loginChanged && recoveryData.login
+      ? { login: recoveryData.login, loginChanged: true }
+      : {}),
     checkIn: recoveredCheckIn
       ? mergeUserOwnedCheckInDraft({
           latest: recoveredCheckIn,
@@ -227,6 +230,9 @@ export function buildDraftFromAutoDetectResult(params: {
       ? draft.cookieAuthSessionCookie
       : "",
     checkIn,
+    ...(mode === DIALOG_MODES.ADD && !draft.loginChanged && resultData.login
+      ? { login: resultData.login, loginChanged: true }
+      : {}),
     sub2apiRefreshToken:
       policy.allowSub2ApiRefreshTokenState && resultData.sub2apiAuth
         ? resultData.sub2apiAuth.refreshToken

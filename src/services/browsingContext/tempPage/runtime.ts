@@ -1,5 +1,11 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import type { ApiTransportBrowserFetchContext } from "~/services/apiTransport/type"
+import {
+  getLoginVerificationContext,
+  hasLoginVerificationTab,
+  setLoginVerificationNoticeCleanup,
+  setLoginVerificationPresenter,
+} from "~/services/browserLogin/verificationContexts"
 import { scheduleTempPageReclaimRetry } from "~/services/browsingContext/internalTabReclamation"
 import { unregisterInternalTab } from "~/services/browsingContext/internalTabsBackground"
 import { createTempContextInstance } from "~/services/browsingContext/tempPage/contextCreation"
@@ -59,10 +65,15 @@ const contextPool = createTempContextPool({
   onRequestDetached: (requestId) => turnstileAssist.drop(requestId),
 })
 const turnstileAssist = createTempContextTurnstileAssist({
-  getRequestContext: contextPool.getByRequestId,
-  hasTab: (tabId) => Boolean(contextPool.getByTabId(tabId)),
+  getRequestContext: (requestId) =>
+    contextPool.getByRequestId(requestId) ??
+    getLoginVerificationContext(requestId),
+  hasTab: (tabId) =>
+    Boolean(contextPool.getByTabId(tabId)) || hasLoginVerificationTab(tabId),
 })
 export const presentTempContextForTurnstileAssist = turnstileAssist.present
+setLoginVerificationNoticeCleanup(turnstileAssist.drop)
+setLoginVerificationPresenter(turnstileAssist.present)
 
 const {
   withOriginLock,

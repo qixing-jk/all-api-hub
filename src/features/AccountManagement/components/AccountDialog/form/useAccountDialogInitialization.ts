@@ -29,6 +29,7 @@ import {
 import { normalizeAddAccountPrefill } from "~/features/AccountManagement/sponsors/addAccountPrefill"
 import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
 import toast from "~/lib/notify"
+import { resolveAccountLogin } from "~/services/accountLogin/configCodec"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import { AuthTypeEnum, type DisplaySiteData } from "~/types"
@@ -240,6 +241,8 @@ export function useAccountDialogInitialization({
                   siteAccount.excludeFromTotalBalance === true,
                 excludeFromTodayIncome:
                   siteAccount.excludeFromTodayIncome === true,
+                login: resolveAccountLogin(siteAccount),
+                loginChanged: false,
                 checkIn: {
                   ...siteAccount.checkIn,
                   customCheckIn: {

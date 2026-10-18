@@ -531,6 +531,28 @@
     },
     "description": "Grant optional permissions as needed for account data refresh, assistive tools, task notifications, and site imports.",
     "helper": "Each permission is used only by its related feature and can be revoked at any time. Features without permission may be limited, while others keep working.",
+    "incognito": {
+      "checking": "Checking private browsing access…",
+      "chromeInstructions": "In this extension’s Chrome details, enable “Allow in incognito”.",
+      "denied": "Private browsing access is not allowed",
+      "details": "Settings",
+      "edgeInstructions": "In this extension’s Edge details, enable “Allow in InPrivate”.",
+      "enabled": "Private browsing access allowed",
+      "firefoxInstructions": "Open Firefox Add-ons and themes, select this extension and allow Run in Private Windows.",
+      "firefoxMobileInstructions": "Firefox: Open extension management from your browser menu and check this extension’s private browsing options. Menus and support vary by browser version.",
+      "genericInstructions": "Check this extension’s private browsing access in your browser’s extension manager.",
+      "manualSteps": "View setup steps",
+      "mobileInstructions": "Open extension management from your browser menu and check this extension’s private browsing options. Menus and support vary by browser version.",
+      "openChromeSettings": "Chrome settings",
+      "openEdgeSettings": "Edge settings",
+      "recommended": "Allow private browsing for isolated login",
+      "reloadWarning": "Changing this permission may reload the extension, close extension pages or interrupt tasks. Save unfinished edits first.",
+      "safariInstructions": "Select this extension in Safari’s extension settings and allow it in Private Browsing. Available options depend on your Safari version.",
+      "settingsFailed": "Could not open settings. Open your browser’s extensions manager and allow this extension in private windows.",
+      "summary": "Keep password login separate from regular windows to avoid account mix-ups and session interference.",
+      "title": "Incognito / private browsing access",
+      "unknown": "Could not check private browsing access"
+    },
     "items": {
       "bookmarks": {
         "description": "Read saved URLs only when you choose to import sites from browser bookmarks.",

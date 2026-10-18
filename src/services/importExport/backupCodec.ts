@@ -51,16 +51,20 @@ export function getSupportedBackupVersion(
 }
 
 /**
- * V4 activates the V7 account check-in schema for every WebDAV merge path.
+ * Canonicalize released V6/V7 accounts before backup import and WebDAV merge.
  * Keep already-current accounts byte-for-byte intact while upgrading the only
- * account schema emitted by the immediately preceding app version.
+ * account schemas emitted by preceding app versions.
  */
-export function canonicalizeV6Accounts(accounts: unknown[]): unknown[] {
+export function canonicalizeLegacyAccountConfigs(
+  accounts: unknown[],
+): unknown[] {
   return accounts.map((account) => {
     if (
       !account ||
       typeof account !== "object" ||
-      (account as { configVersion?: unknown }).configVersion !== 6
+      ![6, 7].includes(
+        (account as { configVersion?: number }).configVersion ?? -1,
+      )
     ) {
       return account
     }
@@ -256,7 +260,7 @@ export function normalizeV2BackupForMerge(
     ? { accounts: accountsField }
     : accountsField || {}
   const accounts = Array.isArray(accountsConfig.accounts)
-    ? canonicalizeV6Accounts(accountsConfig.accounts)
+    ? canonicalizeLegacyAccountConfigs(accountsConfig.accounts)
     : []
   const bookmarks = Array.isArray(accountsConfig.bookmarks)
     ? accountsConfig.bookmarks
@@ -323,9 +327,9 @@ function normalizeV1BackupForMerge(
   const legacyBookmarks = (data.data as any)?.bookmarks
 
   const accounts = Array.isArray(accountsConfig.accounts)
-    ? canonicalizeV6Accounts(accountsConfig.accounts)
+    ? canonicalizeLegacyAccountConfigs(accountsConfig.accounts)
     : Array.isArray(legacyAccounts)
-      ? canonicalizeV6Accounts(legacyAccounts)
+      ? canonicalizeLegacyAccountConfigs(legacyAccounts)
       : []
 
   const bookmarks = Array.isArray(accountsConfig.bookmarks)

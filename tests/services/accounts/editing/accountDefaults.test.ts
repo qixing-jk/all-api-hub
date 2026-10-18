@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
 import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
@@ -20,6 +21,56 @@ import {
 } from "~/types/accountTodayStats"
 
 describe("accountDefaults", () => {
+  it.each([
+    { site_url: "https://other.example" },
+    { account_info: { id: "2" } },
+    { site_type: SITE_TYPES.SUB2API },
+  ])(
+    "preserves an explicit replacement login when identity changes: %j",
+    (identity) => {
+      const login = {
+        methodId: ACCOUNT_LOGIN_METHODS.Password,
+        credentials: { username: "bob", password: " new secret " },
+      }
+      const changed = applySiteAccountUpdates({
+        account: createSiteAccount({
+          login: {
+            methodId: ACCOUNT_LOGIN_METHODS.Password,
+            credentials: { username: "alice", password: "old secret" },
+          },
+        }),
+        updates: { ...identity, login },
+        now: 20,
+        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+      })
+      expect(changed.login).toEqual(login)
+    },
+  )
+  it("does not carry saved console passwords to a changed account origin or identity", () => {
+    const saved = createSiteAccount({
+      login: {
+        methodId: ACCOUNT_LOGIN_METHODS.Password,
+        credentials: { username: "alice", password: " secret " },
+      },
+    })
+    for (const updates of [
+      { site_url: "https://other.example" },
+      { account_info: { id: "2" } },
+      { site_type: SITE_TYPES.SUB2API },
+    ]) {
+      const changed = applySiteAccountUpdates({
+        account: saved,
+        updates,
+        now: 20,
+        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+      })
+      expect(changed.login).toBeUndefined()
+    }
+    expect(normalizeSiteAccount(saved).login?.credentials).toEqual({
+      username: "alice",
+      password: " secret ",
+    })
+  })
   const createSiteAccount = (
     overrides: Partial<SiteAccount> = {},
   ): SiteAccount =>

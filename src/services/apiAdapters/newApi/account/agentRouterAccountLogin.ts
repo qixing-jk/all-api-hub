@@ -1,4 +1,8 @@
-import { ACCOUNT_LOGIN_PROVIDERS } from "~/constants/accountLogin"
+import {
+  ACCOUNT_LOGIN_METHODS,
+  ACCOUNT_LOGIN_PROVIDERS,
+} from "~/constants/accountLogin"
+import { BROWSER_LOGIN_STATUS } from "~/constants/browserLogin"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   isAgentRouterLoginUrl,
@@ -20,6 +24,8 @@ import {
   type BrowserOAuthFlow,
 } from "~/services/browserOAuth/browserOAuth"
 import { isRecord } from "~/utils/core/object"
+
+import { loginNewApiWithPassword } from "./passwordLogin"
 
 /** Adapts the canonical deployment's actions and responses to the shared browser flow. */
 export function createAgentRouterOAuthFlow(
@@ -58,21 +64,27 @@ export const agentRouterAccountLogin: AccountLoginCapability = {
     if (!isAgentRouterLoginUrl(account.site_url)) return []
     const methods = await fetchNewApiLoginMethods(
       account.site_url,
-      AGENT_ROUTER_ACCOUNT_LOGIN.methods,
+      [...AGENT_ROUTER_ACCOUNT_LOGIN.methods, ACCOUNT_LOGIN_METHODS.Password],
       isAgentRouterSystemName,
     )
     return methods.map(({ provider, label }) => ({ id: provider, label }))
   },
-  async login({ account, methodId, requestId, attended }) {
+  async login(request) {
+    const { account, methodId, requestId, attended } = request
     if (!isAgentRouterLoginUrl(account.site_url)) {
-      return { status: "unsupported" }
+      return { status: BROWSER_LOGIN_STATUS.Unsupported }
     }
     const expectedIdentity = String(account.account_info.id ?? "").trim()
-    if (!expectedIdentity) return { status: "failed" }
+    if (!expectedIdentity) return { status: BROWSER_LOGIN_STATUS.Failed }
+    if (methodId === ACCOUNT_LOGIN_METHODS.Password)
+      return loginNewApiWithPassword(
+        request,
+        AGENT_ROUTER_ACCOUNT_LOGIN.loginPath,
+      )
     const provider = AGENT_ROUTER_ACCOUNT_LOGIN.methods.find(
       (implemented) => implemented === methodId,
     )
-    if (!provider) return { status: "unsupported" }
+    if (!provider) return { status: BROWSER_LOGIN_STATUS.Unsupported }
     return createBrowserOAuthContext(
       createAgentRouterOAuthFlow(provider),
     ).authenticate({

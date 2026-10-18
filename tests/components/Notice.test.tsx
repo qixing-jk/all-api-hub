@@ -77,6 +77,7 @@ describe("Notice", () => {
         icon={<span data-testid="custom-icon">icon</span>}
         iconWrapperClassName="custom-icon-wrapper"
         description="Compact hint"
+        actions={<Button size="sm">Continue</Button>}
       />,
       {
         withReleaseUpdateStatusProvider: false,

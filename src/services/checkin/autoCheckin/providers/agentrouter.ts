@@ -1,4 +1,9 @@
+import {
+  ACCOUNT_LOGIN_METHODS,
+  isAccountLoginProvider,
+} from "~/constants/accountLogin"
 import type { AccountLoginProvider } from "~/constants/accountLogin"
+import { BROWSER_LOGIN_SESSION_MODES } from "~/constants/browserLogin"
 import { BROWSER_OAUTH_STATUS } from "~/constants/browserOAuth"
 import {
   CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES,
@@ -6,7 +11,8 @@ import {
   CHECK_IN_PROVIDER_READINESS_REASONS,
 } from "~/constants/checkIn"
 import { loginAccount } from "~/services/accountLogin"
-import { resolveLoginCheckInProvider } from "~/services/accountLogin/providerClaims"
+import { resolveAccountLogin } from "~/services/accountLogin/configCodec"
+import { normalizePasswordCredentials } from "~/services/accountLogin/passwordCredentials"
 import { loginProviderEvidence } from "~/services/accountLogin/providerEvidence"
 import {
   isAgentRouterLoginUrl,
@@ -132,7 +138,8 @@ export function createAgentRouterProvider(
       // identity. Fail visibly and let the user select the login method. The
       // reason code is what keeps the account out of the retry queue: no run can
       // succeed until the user picks one.
-      const provider = resolveLoginCheckInProvider(account.checkIn)
+      const login = resolveAccountLogin(account)
+      const provider = login?.methodId
       if (!provider) {
         return {
           status: CHECKIN_RESULT_STATUS.FAILED,
@@ -142,6 +149,15 @@ export function createAgentRouterProvider(
         }
       }
 
+      if (
+        provider === ACCOUNT_LOGIN_METHODS.Password &&
+        !normalizePasswordCredentials(login?.credentials)
+      ) {
+        return createTerminalFailureResult({
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
+        })
+      }
+
       // agentrouter.org (verified 2026-09-13) grants the check-in benefit during
       // a fresh OAuth login. The content handler checks callback/self identity;
       // the browser context also compares it with this saved account.
@@ -149,6 +165,7 @@ export function createAgentRouterProvider(
         account,
         methodId: provider,
         requestId: deps.createRequestId(),
+        sessionMode: BROWSER_LOGIN_SESSION_MODES.Fresh,
         // Check-in uses the browser's existing identity, even when started
         // from a visible UI. Interactive sign-in belongs to the login flow.
         attended: false,
@@ -158,12 +175,19 @@ export function createAgentRouterProvider(
       // remembered as a rejection, or the account would lose its claim for a
       // reason unrelated to which identity the browser holds.
       const outcome = resolveProviderEvidenceOutcome(result.status)
-      if (outcome) {
+      if (outcome && isAccountLoginProvider(provider)) {
         await deps.recordLoginProviderEvidence({
           accountId: account.id,
           provider,
           outcome,
         })
+      }
+      if (result.status === BROWSER_OAUTH_STATUS.Uncertain) {
+        return {
+          status: CHECKIN_RESULT_STATUS.UNCERTAIN,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
+          messageKey: AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.unknownError,
+        }
       }
       if (result.status === BROWSER_OAUTH_STATUS.Authenticated) {
         return result.evidence?.checkedIn

@@ -129,6 +129,9 @@
     "unexpectedContent": "API 回應不是預期格式，可能回傳了站點驗證頁面。"
   },
   "notification": {
+    "loginAssistBody": "登入尚未完成。請開啟登入視窗完成驗證碼或兩步驗證，擴充功能會繼續核驗帳號與任務結果。",
+    "loginSessionBody": "此視窗已有登入工作階段。為避免登出其他視窗的帳號，請開啟登入視窗，確認後手動登出；擴充功能會繼續登入目標帳號。",
+    "openLogin": "開啟登入視窗",
     "openVerification": "開啟驗證視窗",
     "reminderSettings": "提醒設定",
     "turnstileAssistBody": "站點的人機驗證尚未完成。點擊「開啟驗證視窗」完成驗證碼，擴充套件會繼續檢查工作結果。",

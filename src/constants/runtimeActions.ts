@@ -45,6 +45,12 @@ export const RuntimeMessageTypes = {
 export const RuntimeActionIds = {
   ContentSyncDahlKeyNames: "contentSyncDahlKeyNames",
   ContentPrepareNewApiOAuth: "prepareNewApiOAuth",
+  ContentNewApiPasswordUi: "newApiPasswordUi",
+  ContentSub2ApiPasswordUi: "sub2ApiPasswordUi",
+  ContentNewApiPasswordLogin: "newApiPasswordLogin",
+  ContentClearNewApiPasswordLogin: "clearNewApiPasswordLogin",
+  ContentSub2ApiPasswordLogin: "sub2ApiPasswordLogin",
+  ContentClearSub2ApiPasswordLogin: "clearSub2ApiPasswordLogin",
   ContentCompleteNewApiOAuth: "completeNewApiOAuth",
   ContentClearNewApiOAuthEvidence: "clearNewApiOAuthEvidence",
   ContentPrepareSub2ApiOAuth: "prepareSub2ApiOAuth",

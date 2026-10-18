@@ -62,7 +62,10 @@ describe("adapter-owned account login", () => {
           ...account,
           site_url: "https://agentrouter.org",
         }),
-      ).toEqual([{ id: "github", label: "GitHub" }])
+      ).toEqual([
+        { id: "github", label: "GitHub" },
+        { id: "password", label: "Password" },
+      ])
     },
   )
 
@@ -92,7 +95,7 @@ describe("adapter-owned account login", () => {
   })
 
   it.each([
-    [SITE_TYPES.NEW_API, ["github", "discord", "oidc"]],
+    [SITE_TYPES.NEW_API, ["github", "discord", "oidc", "password"]],
     [SITE_TYPES.VELOERA, ["github", "oidc"]],
     [SITE_TYPES.V_API, ["github"]],
   ] as const)(
@@ -251,6 +254,7 @@ describe("adapter-owned account login", () => {
     })
     await expect(agentRouterAccountLogin.discover(target)).resolves.toEqual([
       { id: "github", label: "GitHub" },
+      { id: "password", label: "Password" },
     ])
     expect(dependencies.createBrowser).not.toHaveBeenCalled()
   })

@@ -40,6 +40,7 @@ export function AccountFormSection({
   if (isSmallScreen) {
     return (
       <div
+        className="scroll-mt-2 rounded-lg"
         data-testid={testId}
         id={id}
         data-default-open={defaultOpen ? "true" : "false"}
@@ -73,6 +74,7 @@ export function AccountFormSection({
 
   return (
     <div
+      className="scroll-mt-2 rounded-lg"
       data-testid={testId}
       id={id}
       data-default-open={defaultOpen ? "true" : "false"}

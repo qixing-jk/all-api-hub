@@ -130,6 +130,9 @@
     "unexpectedContent": "The response had an unexpected format and may have been a site verification page."
   },
   "notification": {
+    "loginAssistBody": "Sign-in is waiting. Open the login window to complete verification or two-factor authentication; the extension will then verify the account and task result.",
+    "loginSessionBody": "This window already has a signed-in session. To avoid signing out accounts in other windows, open the login window and sign out manually when ready; the extension will then sign in to the target account.",
+    "openLogin": "Open login window",
     "openVerification": "Open verification window",
     "reminderSettings": "Reminder settings",
     "turnstileAssistBody": "The site is waiting for human verification. Select “Open verification window” to finish the captcha. The extension will then check the task result.",

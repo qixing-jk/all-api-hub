@@ -1,3 +1,5 @@
+import { BROWSER_LOGIN_SESSION_KEYS } from "~/constants/browserLogin"
+import { BROWSER_OAUTH_COMPLETION_STATUS } from "~/constants/browserOAuth"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import type { AccountLoginEvidence } from "~/services/apiAdapters/contracts/accountLogin"
 import {
@@ -8,19 +10,13 @@ import {
   type BrowserOAuthCompletion,
   type BrowserOAuthFlow,
 } from "~/services/browserOAuth/browserOAuth"
-
-/** Narrows an unknown content-script response to a plain record. */
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null
-}
+import { isRecord } from "~/utils/core/object"
 
 /** Maps account login identity and optional evidence into the browser contract. */
 function parseCompletion(
   response: unknown,
 ): BrowserOAuthCompletion<AccountLoginEvidence> {
-  const record = asRecord(response)
+  const record = isRecord(response) ? response : null
   if (record?.reason === "identity_mismatch") {
     return { status: "identity_mismatch" as const }
   }
@@ -28,14 +24,14 @@ function parseCompletion(
     typeof record?.userId === "string" ? record.userId.trim() : ""
   if (record?.success !== true || !identity) {
     return {
-      status: "invalid" as const,
+      status: BROWSER_OAUTH_COMPLETION_STATUS.Invalid,
       ...(typeof record?.message === "string"
         ? { message: record.message }
         : {}),
     }
   }
   return {
-    status: "verified" as const,
+    status: BROWSER_OAUTH_COMPLETION_STATUS.Verified,
     identity,
     evidence:
       typeof record.checkedIn === "boolean"
@@ -54,7 +50,7 @@ export function createNewApiOAuthFlow(input: {
   const { provider } = input
   return {
     id: `new-api-${provider}`,
-    concurrencyKey: "new-api-session",
+    concurrencyKey: BROWSER_LOGIN_SESSION_KEYS.NewApi,
     displayName: "New API",
     loginPath: input.loginPath,
     prepareAction: RuntimeActionIds.ContentPrepareNewApiOAuth,
@@ -85,7 +81,7 @@ export function createNewApiOAuthFlow(input: {
         }
       : {}),
     parsePreparation(response) {
-      const record = asRecord(response)
+      const record = isRecord(response) ? response : null
       if (record?.reason === "unsupported" || record?.reason === "uncertain") {
         return { status: record.reason }
       }
