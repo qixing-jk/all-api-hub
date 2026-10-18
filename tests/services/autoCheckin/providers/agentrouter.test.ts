@@ -68,6 +68,16 @@ function setup() {
 }
 
 describe("AgentRouter login check-in", () => {
+  it("requires complete saved password credentials before starting login check-in", async () => {
+    const { provider, authenticate } = setup()
+    const saved = account()
+    saved.login = { methodId: ACCOUNT_LOGIN_METHODS.Password }
+    await expect(provider.checkIn(saved, context)).resolves.toMatchObject({
+      status: "failed",
+      reasonCode: "authentication_required",
+    })
+    expect(authenticate).not.toHaveBeenCalled()
+  })
   it("uses saved password credentials only when password was explicitly selected, without claiming an OAuth identity", async () => {
     const { provider, authenticate, recordLoginProviderEvidence } = setup()
     const saved = account()

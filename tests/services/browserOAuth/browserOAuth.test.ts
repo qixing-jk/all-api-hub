@@ -13,6 +13,7 @@ import {
 } from "~/services/accountLogin/passwordUiProtocol"
 import { createSub2ApiOAuthFlow } from "~/services/apiAdapters/sub2api/auth/browserOAuth"
 import { buildSub2ApiOAuthStartUrl } from "~/services/apiService/sub2api/oauth/protocol"
+import { getLoginVerificationContext } from "~/services/browserLogin/verificationContexts"
 import {
   createBrowserOAuthContext,
   type BrowserOAuthFlow,
@@ -212,6 +213,56 @@ describe("browser OAuth context", () => {
     },
   )
 
+  it("keeps the password operation registered until the native interaction completes", async () => {
+    let complete!: (value: unknown) => void
+    browserApi.sendTabMessageWithRetry
+      .mockReset()
+      .mockImplementation((_id, message) =>
+        message.action === "password-ui"
+          ? new Promise((resolve) => {
+              complete = resolve
+            })
+          : Promise.resolve({ status: "cancelled" }),
+      )
+    const result = createBrowserPasswordContext({
+      id: "reminder",
+      concurrencyKey: "reminder",
+      displayName: "Reminder",
+      loginPath: "/login",
+      uiAction: "password-ui",
+      loginAction: "password-api",
+      clearEvidenceAction: "password-clear",
+      credentials: { username: "alice", password: "secret" },
+    }).authenticate({
+      origin,
+      requestId: "reminder",
+      expectedIdentity: "user-1",
+    })
+    await vi.waitFor(() =>
+      expect(getLoginVerificationContext("reminder")).toBeDefined(),
+    )
+    const context = getLoginVerificationContext("reminder")!
+    expect(context.tabId).toBe(11)
+    context.onOpened?.()
+    context.onOpened?.()
+    complete({ status: "authenticated", identity: "user-1" })
+    await expect(result).resolves.toMatchObject({ status: "authenticated" })
+    expect(getLoginVerificationContext("reminder")).toBeUndefined()
+  })
+  it.each([null, undefined, "not a record"])(
+    "rejects malformed Sub2API OAuth completion %j",
+    (response) => {
+      const flow = createSub2ApiOAuthFlow({
+        origin,
+        requestId: "invalid",
+        provider: "google",
+        loginPath: "/login",
+      })
+      expect(flow.parseCompletion(response)).toEqual({
+        status: BROWSER_OAUTH_COMPLETION_STATUS.Invalid,
+      })
+    },
+  )
   it("bounds the wait for a user to sign out of a shared session", async () => {
     vi.useFakeTimers()
     browserApi.sendTabMessageWithRetry.mockReset()

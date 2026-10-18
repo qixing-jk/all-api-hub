@@ -855,4 +855,55 @@ describe("tempWindowPool Turnstile assist turns", () => {
       reason: "missing_notice",
     })
   })
+  it.each(["login-session", "login"] as const)(
+    "delivers the matching native login reminder for %s",
+    async (reason) => {
+      turnstileAssistPresentation = TURNSTILE_ASSIST_PRESENTATIONS.Notify
+      const { createTempContextTurnstileAssist: createAssist } = await import(
+        "~/services/browsingContext/tempPage/turnstileAssist"
+      )
+      const assist = createAssist({
+        getRequestContext: () => ({ tabId: 304, ownerWindowId: 999, reason }),
+        hasTab: () => true,
+      })
+      await expect(assist.present("login-reminder")).resolves.toMatchObject({
+        presented: true,
+      })
+      expect(notificationCreateMock).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          message:
+            reason === "login-session"
+              ? "shieldBypass:notification.loginSessionBody"
+              : "shieldBypass:notification.loginAssistBody",
+        }),
+      )
+    },
+  )
+  it.each([
+    [{ requestId: undefined }, {}],
+    [{ requestId: "missing" }, {}],
+    [{ requestId: "owned" }, { tab: { id: 999 } }],
+  ])("rejects unsolicited login assistance %j", (request, sender) => {
+    const assist = createTempContextTurnstileAssist({
+      getRequestContext: (id) => (id === "owned" ? { tabId: 304 } : undefined),
+      hasTab: () => true,
+    })
+    assist.setup()
+    const handler = runtimeMessageListeners[runtimeMessageListeners.length - 1]!
+    const reply = vi.fn()
+    expect(
+      handler(
+        { action: RuntimeActionIds.TurnstileRequestUserAssist, ...request },
+        sender,
+        reply,
+      ),
+    ).toBe(true)
+    expect(reply).toHaveBeenCalledExactlyOnceWith({
+      presented: false,
+      reason: "missing_context",
+    })
+    expect(notificationCreateMock).not.toHaveBeenCalled()
+    expect(windowsUpdateMock).not.toHaveBeenCalled()
+  })
 })

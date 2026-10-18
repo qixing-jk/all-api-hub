@@ -504,3 +504,70 @@ it.each([false, true])(
     )
   },
 )
+
+it("preserves legacy New API cached login when isolated logout fails", async () => {
+  localStorage.setItem("user", JSON.stringify({ id: 17 }))
+  fetchMock.mockImplementation(async (path) =>
+    Response.json(
+      path === "/api/user/self"
+        ? { success: true, data: { id: 17 } }
+        : { success: false },
+    ),
+  )
+  await expect(
+    invoke({
+      phase: PASSWORD_UI_PHASES.Prepare,
+      sessionMode: BROWSER_LOGIN_SESSION_MODES.Fresh,
+      canResetSession: true,
+    }),
+  ).resolves.toEqual({ status: "uncertain" })
+  expect(localStorage.getItem("user")).toBe(JSON.stringify({ id: 17 }))
+})
+it.each([false, true])(
+  "cleans only the unchanged Sub2API native session during logout (refresh changed=%s)",
+  async (changed) => {
+    localStorage.setItem(SUB2API_AUTH_STORAGE_KEYS.accessToken, "owned")
+    localStorage.setItem(
+      SUB2API_AUTH_STORAGE_KEYS.refreshToken,
+      "owned-refresh",
+    )
+    fetchMock.mockImplementation(async (path) => {
+      if (path === "/api/v1/auth/me")
+        return Response.json({ code: 0, data: { id: 17 } })
+      if (changed)
+        localStorage.setItem(
+          SUB2API_AUTH_STORAGE_KEYS.refreshToken,
+          "new-refresh",
+        )
+      return Response.json({ code: 0 })
+    })
+    await expect(
+      new Promise((resolve) =>
+        handleSub2ApiPasswordUi(
+          {
+            ...request,
+            phase: PASSWORD_UI_PHASES.Prepare,
+            sessionMode: BROWSER_LOGIN_SESSION_MODES.Fresh,
+            canResetSession: true,
+          },
+          resolve,
+        ),
+      ),
+    ).resolves.toEqual(changed ? { status: "uncertain" } : { kind: "reload" })
+    expect(localStorage.getItem(SUB2API_AUTH_STORAGE_KEYS.refreshToken)).toBe(
+      changed ? "new-refresh" : null,
+    )
+  },
+)
+it("does not proceed from invalid Sub2API public login settings", async () => {
+  fetchMock.mockResolvedValueOnce(Response.json({ code: 1 }))
+  await expect(
+    new Promise((resolve) =>
+      handleSub2ApiPasswordUi(
+        { ...request, phase: PASSWORD_UI_PHASES.Prepare },
+        resolve,
+      ),
+    ),
+  ).resolves.toEqual({ status: "uncertain" })
+  expect(fetchMock).toHaveBeenCalledTimes(1)
+})

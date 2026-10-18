@@ -209,25 +209,28 @@ describe("AccountDialog AccountForm", () => {
     expect(props.onCookieAuthSessionCookieChange).not.toHaveBeenCalled()
   })
 
-  it("only renders login settings when the selected check-in method uses account login", async () => {
-    const props = createAgentRouterProps()
-    props.draft.login = { methodId: "github" }
-    const { rerender } = render(<AccountForm {...withSitePolicy(props)} />)
-    expect(
-      await screen.findByRole("combobox", {
-        name: "accountDialog:login.method",
-      }),
-    ).toBeInTheDocument()
-    props.draft = {
-      ...props.draft,
-      checkIn: createCheckIn({ siteType: SITE_TYPES.NEW_API }),
-    }
-    rerender(<AccountForm {...withSitePolicy(props)} />)
-    expect(
-      screen.queryByRole("combobox", { name: "accountDialog:login.method" }),
-    ).not.toBeInTheDocument()
-    expect(props.onLoginChange).not.toHaveBeenCalled()
-  })
+  it.each(["github", "linuxdo"])(
+    "only renders login settings for a selected login check-in method (%s)",
+    async (method) => {
+      const props = createAgentRouterProps()
+      props.draft.login = { methodId: method }
+      const { rerender } = render(<AccountForm {...withSitePolicy(props)} />)
+      expect(
+        await screen.findByRole("combobox", {
+          name: "accountDialog:login.method",
+        }),
+      ).toBeInTheDocument()
+      props.draft = {
+        ...props.draft,
+        checkIn: createCheckIn({ siteType: SITE_TYPES.NEW_API }),
+      }
+      rerender(<AccountForm {...withSitePolicy(props)} />)
+      expect(
+        screen.queryByRole("combobox", { name: "accountDialog:login.method" }),
+      ).not.toBeInTheDocument()
+      expect(props.onLoginChange).not.toHaveBeenCalled()
+    },
+  )
 
   it("explains unfinished password edits when switching away hides the fields", async () => {
     const props = createAgentRouterProps()

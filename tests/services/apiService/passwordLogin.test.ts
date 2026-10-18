@@ -229,6 +229,33 @@ describe("password login content protocol", () => {
     expect(fetchMock).toHaveBeenCalledTimes(count)
   })
 
+  it("does not submit an AgentRouter password when its public identity no longer matches", async () => {
+    vi.stubGlobal("location", {
+      origin: "https://agentrouter.org",
+      href: "https://agentrouter.org/login",
+      protocol: "https:",
+    })
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ success: true, data: { system_name: "Other site" } }),
+    )
+    await expect(
+      invoke({ origin: "https://agentrouter.org" }),
+    ).resolves.toEqual({ status: "unsupported" })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+  it("does not accept an incomplete modern auth bundle", async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({ success: true, data: {} }))
+    fetchMock.mockResolvedValueOnce(
+      Response.json({
+        success: true,
+        data: { access_token: "incomplete", user: { id: 17 } },
+      }),
+    )
+    await expect(invoke()).resolves.toEqual({ status: "uncertain" })
+    expect(localStorage.getItem("user")).toBeNull()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
   it("logs in to legacy New API and verifies the server identity before publishing a browser session", async () => {
     fetchMock.mockResolvedValueOnce(Response.json({ success: true, data: {} }))
     fetchMock.mockResolvedValueOnce(

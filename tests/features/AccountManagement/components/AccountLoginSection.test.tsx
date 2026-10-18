@@ -306,4 +306,41 @@ describe("account password login guidance", () => {
       screen.queryByRole("button", { name: /open.*Settings/ }),
     ).not.toBeInTheDocument()
   })
+  it("refreshes unknown management status when the page becomes visible", async () => {
+    vi.mocked(isAllowedIncognitoAccess).mockResolvedValue(null)
+    render(<IncognitoAccessNotice management />)
+    expect(
+      await screen.findByText("settings:permissions.status.unavailable"),
+    ).toBeVisible()
+    vi.mocked(isAllowedIncognitoAccess).mockResolvedValue(true)
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible")
+    fireEvent(document, new Event("visibilitychange"))
+    expect(
+      await screen.findByText("settings:permissions.status.granted"),
+    ).toBeVisible()
+    vi.restoreAllMocks()
+  })
+  it.each(["button", "escape"])(
+    "closes manual browser guidance using %s",
+    async (action) => {
+      vi.mocked(detectBrowserFamily).mockReturnValue("unknown")
+      vi.mocked(isAllowedIncognitoAccess).mockResolvedValue(false)
+      render(<IncognitoAccessNotice management />)
+      await userEvent.click(
+        await screen.findByRole("button", {
+          name: /settings:permissions.incognito.(details|manualSteps)/,
+        }),
+      )
+      expect(screen.getByRole("dialog")).toBeVisible()
+      if (action === "button")
+        await userEvent.click(
+          screen
+            .getAllByRole("button", { name: "common:actions.close" })
+            .at(-1)!,
+        )
+      else await userEvent.keyboard("{Escape}")
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+      expect(createTab).not.toHaveBeenCalled()
+    },
+  )
 })
