@@ -421,6 +421,7 @@
       "excludeIpsPlaceholder": "Mỗi dòng một mục (hỗ trợ CIDR)",
       "expiryDays": "Hết hạn sau (ngày)",
       "feedback": {
+        "adminOnlyKeySettings": "Trang này chỉ cho quản trị viên đặt các tùy chọn khóa nâng cao như danh sách IP; hãy xóa các trường đó rồi thử lại.",
         "authenticationFailed": "Đăng nhập lại hoặc cập nhật thông tin xác thực của tài khoản này, rồi thử lại.",
         "error": "Làm theo chi tiết lỗi rồi thử lại.",
         "permissionDenied": "Sử dụng thông tin xác thực có quyền xem và quản lý khóa, rồi thử lại.",

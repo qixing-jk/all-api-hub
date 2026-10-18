@@ -432,6 +432,7 @@
       "excludeIpsPlaceholder": "One per line (CIDR supported)",
       "expiryDays": "Expires in (days)",
       "feedback": {
+        "adminOnlyKeySettings": "This site restricts advanced key options such as IP whitelists to administrators; clear those fields and retry.",
         "authenticationFailed": "Sign in again or update this account's credentials, then retry.",
         "error": "Follow the error details below, then retry.",
         "permissionDenied": "Use credentials that can view and manage keys, then retry.",

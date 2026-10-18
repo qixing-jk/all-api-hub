@@ -421,6 +421,7 @@
       "excludeIpsPlaceholder": "一行一個（支援 CIDR）",
       "expiryDays": "有效期限（天）",
       "feedback": {
+        "adminOnlyKeySettings": "該站點僅管理員可設定 IP 白名單等進階金鑰選項；請清除對應欄位後重試。",
         "authenticationFailed": "請重新登入或更新此帳號的憑證，然後重試。",
         "error": "請依照錯誤資訊處理後重試。",
         "permissionDenied": "請使用有權查看與管理金鑰的憑證，然後重試。",

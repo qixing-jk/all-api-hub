@@ -1349,7 +1349,7 @@ describe("newApiProvider", () => {
 
       expect(result.status).toBe("failed")
       expect(result.messageKey).toBe(
-        "autoCheckin:providerFallback.turnstileManualRequired",
+        "autoCheckin:providerFallback.nativePageVerificationRequired",
       )
       expect(result.messageParams?.checkInUrl).toBe(
         "https://site.example.invalid/console/personal",
@@ -1406,7 +1406,8 @@ describe("newApiProvider", () => {
 
       expect(result).toEqual({
         status: "failed",
-        messageKey: "autoCheckin:providerFallback.turnstileManualRequired",
+        messageKey:
+          "autoCheckin:providerFallback.nativePageVerificationRequired",
         messageParams: {
           checkInUrl: "https://site.example.invalid/console/personal",
         },
@@ -1664,7 +1665,8 @@ describe("newApiProvider", () => {
 
       expect(result).toEqual({
         status: "failed",
-        messageKey: "autoCheckin:providerFallback.turnstileManualRequired",
+        messageKey:
+          "autoCheckin:providerFallback.nativePageVerificationRequired",
         messageParams: {
           checkInUrl: "https://site.example.invalid/console/personal",
         },

@@ -37,6 +37,44 @@ describe("decodeSub2ApiResponseError", () => {
     })
   })
 
+  it("prefers the deployment machine reason over the numeric HTTP code", () => {
+    expect(
+      decodeSub2ApiResponseError(
+        response(
+          {
+            code: 403,
+            message:
+              "custom keys, IP restrictions, and rate limits are restricted to administrators",
+            reason: "API_KEY_ADVANCED_SETTINGS_ADMIN_ONLY",
+          },
+          403,
+        ),
+        { endpoint: "/api/v1/keys" },
+      ),
+    ).toEqual({
+      kind: "business",
+      message:
+        "custom keys, IP restrictions, and rate limits are restricted to administrators",
+      upstreamCode: "API_KEY_ADVANCED_SETTINGS_ADMIN_ONLY",
+    })
+  })
+
+  it.each(["invalid reason!", "line\nbreak", "A".repeat(65)])(
+    "preserves the numeric code when the deployment reason is invalid: %#",
+    (reason) => {
+      expect(
+        decodeSub2ApiResponseError(
+          response({ code: 403, message: "Rejected", reason }, 403),
+          { endpoint: "/api/v1/keys" },
+        ),
+      ).toEqual({
+        kind: "business",
+        message: "Rejected",
+        upstreamCode: "403",
+      })
+    },
+  )
+
   it("preserves the verified session-binding mismatch code", () => {
     expect(
       decodeSub2ApiResponseError(
@@ -68,6 +106,26 @@ describe("decodeSub2ApiResponseError", () => {
     ).toEqual({
       kind: "business",
       message: "Sub2API request failed: 401",
+      upstreamCode: SUB2API_SESSION_BINDING_MISMATCH_CODE,
+    })
+  })
+
+  it("keeps the authentication code authoritative when a deployment adds a reason", () => {
+    expect(
+      decodeSub2ApiResponseError(
+        response(
+          {
+            code: SUB2API_SESSION_BINDING_MISMATCH_CODE,
+            reason: "NETWORK_CHANGED",
+            message: "Session network fingerprint changed",
+          },
+          401,
+        ),
+        { endpoint: "/api/v1/auth/me" },
+      ),
+    ).toEqual({
+      kind: "business",
+      message: "Session network fingerprint changed",
       upstreamCode: SUB2API_SESSION_BINDING_MISMATCH_CODE,
     })
   })

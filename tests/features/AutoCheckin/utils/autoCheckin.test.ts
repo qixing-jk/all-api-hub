@@ -123,7 +123,6 @@ describe("autoCheckin utils", () => {
       "autoCheckin:providerFallback.nativePageTriggerFailed",
       "autoCheckin:providerFallback.sessionBusy",
       "autoCheckin:providerFallback.unknownError",
-      "autoCheckin:providerFallback.turnstileManualRequired",
       "autoCheckin:providerFallback.turnstileIncognitoAccessRequired",
       "autoCheckin:providerWong.checkinDisabled",
       "autoCheckin:skipReasons.account_data_missing",
@@ -207,10 +206,35 @@ describe("autoCheckin utils", () => {
         accountName: "Account",
         status: CHECKIN_RESULT_STATUS.FAILED,
         reasonCode: "manual_verification_required",
-        messageKey: "autoCheckin:providerFallback.turnstileManualRequired",
+        messageKey:
+          "autoCheckin:providerFallback.nativePageVerificationRequired",
         timestamp: 1,
       }),
-    ).toBe("translated:autoCheckin:providerFallback.turnstileManualRequired")
+    ).toBe(
+      "translated:autoCheckin:providerFallback.nativePageVerificationRequired",
+    )
+  })
+
+  it("shows generic verification copy for a persisted legacy Turnstile result", () => {
+    const t = vi.fn((key: string) => `translated:${key}`)
+
+    expect(
+      getAutoCheckinResultMessage(t as any, {
+        accountId: "account-1",
+        accountName: "Account",
+        status: CHECKIN_RESULT_STATUS.FAILED,
+        reasonCode: "manual_verification_required",
+        messageKey: "autoCheckin:providerFallback.turnstileManualRequired",
+        messageParams: { checkInUrl: "https://example.com/check-in" },
+        timestamp: 1,
+      }),
+    ).toBe(
+      "translated:autoCheckin:providerFallback.nativePageVerificationRequired",
+    )
+    expect(t).toHaveBeenCalledWith(
+      "autoCheckin:providerFallback.nativePageVerificationRequired",
+      { checkInUrl: "https://example.com/check-in" },
+    )
   })
 
   it("uses the localized unknown fallback when a result has no message", () => {
@@ -1006,6 +1030,37 @@ describe("autoCheckin utils", () => {
           message: "access token invalid",
         }),
       ).toBe("execution.hints.invalidAccessToken")
+    })
+
+    it.each([
+      "autoCheckin:providerFallback.nativePageVerificationRequired",
+      "autoCheckin:providerFallback.turnstileManualRequired",
+    ])(
+      "returns the manual verification hint from the message key: %s",
+      (messageKey) => {
+        // The localized copy no longer mentions a widget, so the key — not the
+        // message text — has to decide the hint in every locale.
+        expect(
+          resolveAutoCheckinTroubleshootingHintKey({
+            status: CHECKIN_RESULT_STATUS.FAILED,
+            reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
+            messageKey,
+            message: "Open the check-in page, finish it, then retry",
+          }),
+        ).toBe("execution.hints.manualVerificationRequired")
+      },
+    )
+
+    it("does not turn a skipped row with that key into a troubleshooting hint", () => {
+      expect(
+        resolveAutoCheckinTroubleshootingHintKey({
+          status: CHECKIN_RESULT_STATUS.SKIPPED,
+          reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
+          messageKey:
+            "autoCheckin:providerFallback.nativePageVerificationRequired",
+          message: "",
+        }),
+      ).toBeNull()
     })
 
     it.each([

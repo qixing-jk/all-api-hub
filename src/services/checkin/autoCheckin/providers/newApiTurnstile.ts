@@ -339,7 +339,8 @@ export async function resolveTurnstileAssistedCheckinResult(params: {
 
       return {
         status: CHECKIN_RESULT_STATUS.FAILED,
-        messageKey: NEW_API_MESSAGE_KEYS.turnstileManualRequired,
+        messageKey:
+          AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.nativePageVerificationRequired,
         messageParams: { checkInUrl },
         rawMessage: assisted.error || params.responseMessage || undefined,
         reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
@@ -390,7 +391,8 @@ export async function resolveTurnstileAssistedCheckinResult(params: {
 
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
-      messageKey: NEW_API_MESSAGE_KEYS.turnstileManualRequired,
+      messageKey:
+        AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.nativePageVerificationRequired,
       messageParams: { checkInUrl },
       rawMessage: params.responseMessage || assistedMessage || undefined,
       reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,

@@ -60,7 +60,7 @@ async function assistTurnstile(
   const manual = () => ({
     status: CHECKIN_RESULT_STATUS.FAILED,
     reasonCode: AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED,
-    messageKey: "autoCheckin:providerFallback.turnstileManualRequired",
+    messageKey: "autoCheckin:providerFallback.nativePageVerificationRequired",
     messageParams: { checkInUrl },
   })
   if (

@@ -54,7 +54,7 @@ describe("split-origin feedback status queries", () => {
     expect(clues.statusQueries.map((q) => q.path)).toContain(
       "/api/v1/user/daily-checkin",
     )
-    expect(clues.statusQueries).toHaveLength(10)
+    expect(clues.statusQueries).toHaveLength(11)
     expect(clues.statusQueries.map((q) => q.path)).toContain(
       "/api/v1/welfare/profile",
     )

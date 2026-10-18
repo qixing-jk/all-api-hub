@@ -61,7 +61,7 @@ const RESULT_CASES: {
     result: {
       status: "failed",
       reasonCode: "manual_verification_required",
-      messageKey: "autoCheckin:providerFallback.turnstileManualRequired",
+      messageKey: "autoCheckin:providerFallback.nativePageVerificationRequired",
       messageParams: { checkInUrl: "https://example.invalid/check-in" },
     },
   },

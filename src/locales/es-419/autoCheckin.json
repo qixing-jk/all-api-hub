@@ -172,7 +172,6 @@
     "nativePageVerificationRequired": "Una verificación humana bloqueó el check-in y no se detectó su finalización durante la espera. Abre la página, resuelve el captcha y confirma el check-in de hoy. Si el estado de la extensión no se actualiza, vuelve a intentarlo: {{checkInUrl}}",
     "sessionBusy": "Ya hay otro inicio de sesión en curso. Vuelve a intentarlo más tarde.",
     "turnstileIncognitoAccessRequired": "Ya hay otra cuenta con sesión en este sitio, así que la extensión necesita una ventana de incógnito para abrir la página de check-in de esta cuenta, pero no tiene permiso para ejecutarse en incógnito. Permite la extensión en incógnito desde los ajustes de extensiones del navegador y vuelve a intentarlo, o completa tú la verificación en la página de check-in: {{checkInUrl}}",
-    "turnstileManualRequired": "Este sitio exige una verificación humana (Cloudflare Turnstile) que debes completar en la página; la extensión no puede hacerlo por ti. Abre la página de check-in de abajo, complétala y vuelve a intentarlo: {{checkInUrl}}",
     "unknownError": "Ocurrió un error desconocido. Vuelve a intentarlo más tarde."
   },
   "providerWong": {

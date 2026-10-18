@@ -164,7 +164,6 @@
     "nativePageVerificationRequired": "簽到被人機驗證阻擋，等候期間未偵測到驗證完成。請開啟簽到頁面完成驗證碼，並確認今日已簽到；若擴充套件狀態未更新，再點擊「重新嘗試」：{{checkInUrl}}",
     "sessionBusy": "另一個登入流程正在進行中，請稍後重試。",
     "turnstileIncognitoAccessRequired": "該站點有其他帳號已登入，擴充套件需要用無痕視窗單獨開啟這個帳號的簽到頁面，但目前未獲准在無痕模式執行。請在瀏覽器擴充套件管理頁開啟「允許在無痕模式執行」後重試，或自行開啟簽到頁面完成驗證：{{checkInUrl}}",
-    "turnstileManualRequired": "站點要求完成人機驗證（Cloudflare Turnstile），需要你在頁面上手動通過，擴充套件無法代勞。請開啟下面的簽到頁面完成驗證後重試：{{checkInUrl}}",
     "unknownError": "發生未知錯誤。可稍後重試。"
   },
   "providerWong": {

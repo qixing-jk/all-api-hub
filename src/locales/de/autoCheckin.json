@@ -168,7 +168,6 @@
     "nativePageVerificationRequired": "Eine menschliche Verifizierung blockiert den Check-in. Ihr Abschluss wurde innerhalb der Wartezeit nicht erkannt. Öffnen Sie die Seite, lösen Sie das Captcha und prüfen Sie den heutigen Check-in. Wiederholen Sie den Vorgang, falls der Erweiterungsstatus nicht aktualisiert wird: {{checkInUrl}}",
     "sessionBusy": "Eine andere Anmeldung läuft bereits. Bitte später erneut versuchen.",
     "turnstileIncognitoAccessRequired": "Auf dieser Website ist bereits ein anderes Konto angemeldet. Die Erweiterung braucht ein Inkognito-Fenster, um die Check-in-Seite dieses Kontos zu öffnen, darf aber nicht im Inkognito-Modus laufen. Erlauben Sie die Erweiterung im Inkognito-Modus in den Erweiterungseinstellungen des Browsers und versuchen Sie es erneut, oder schließen Sie die Verifizierung selbst auf der Check-in-Seite ab: {{checkInUrl}}",
-    "turnstileManualRequired": "Diese Website verlangt eine menschliche Verifizierung (Cloudflare Turnstile), die Sie auf der Seite durchführen müssen; die Erweiterung kann das nicht übernehmen. Öffnen Sie die Check-in-Seite unten, schließen Sie sie ab und versuchen Sie es erneut: {{checkInUrl}}",
     "unknownError": "Unbekannter Fehler. Versuchen Sie es später erneut."
   },
   "providerWong": {

@@ -119,12 +119,12 @@ describe("registered check-in feedback status routes", () => {
     })
   })
 
-  it("retains all ten candidate protocols on AI Router without truncation", () => {
+  it("retains all eleven candidate protocols on AI Router without truncation", () => {
     const routes = getCheckInFeedbackStatusRoutes(
       SITE_TYPES.SUB2API,
       "https://ai-router.dev",
     )
-    expect(routes).toHaveLength(10)
+    expect(routes).toHaveLength(11)
     expect(routes).toContainEqual({ path: "/api/v1/welfare/profile" })
     expect(
       routes.some((route) =>

@@ -164,7 +164,6 @@
     "nativePageVerificationRequired": "Xác minh con người đã chặn điểm danh và chưa được ghi nhận hoàn tất trong thời gian chờ. Mở trang, hoàn thành captcha và xác nhận điểm danh hôm nay. Nếu trạng thái tiện ích chưa cập nhật, hãy thử lại: {{checkInUrl}}",
     "sessionBusy": "Một quy trình đăng nhập khác đang diễn ra. Vui lòng thử lại sau.",
     "turnstileIncognitoAccessRequired": "Site này đã có tài khoản khác đăng nhập, nên tiện ích cần cửa sổ ẩn danh để mở trang điểm danh của tài khoản này, nhưng tiện ích chưa được phép chạy ở chế độ ẩn danh. Hãy cho phép tiện ích chạy ẩn danh trong phần cài đặt tiện ích của trình duyệt rồi thử lại, hoặc tự mở trang điểm danh để hoàn tất xác minh: {{checkInUrl}}",
-    "turnstileManualRequired": "Site này yêu cầu xác minh thủ công (Cloudflare Turnstile) mà bạn phải tự làm trên trang; tiện ích không thể thay bạn. Hãy mở trang điểm danh bên dưới, hoàn tất rồi thử lại: {{checkInUrl}}",
     "unknownError": "Đã xảy ra lỗi không xác định. Hãy thử lại sau."
   },
   "providerWong": {

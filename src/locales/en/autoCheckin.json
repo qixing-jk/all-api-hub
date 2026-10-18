@@ -168,7 +168,6 @@
     "nativePageVerificationRequired": "Human verification blocked check-in and was not detected as completed before the wait ended. Open the check-in page, finish the captcha, and confirm today’s check-in. If the extension still shows the old status, retry: {{checkInUrl}}",
     "sessionBusy": "Another login is already in progress. Try again later.",
     "turnstileIncognitoAccessRequired": "Another account is already signed in to this site, so the extension needs an Incognito window to open this account's check-in page, but it is not allowed to run in Incognito. Allow the extension in Incognito from your browser's extension settings and retry, or complete the verification on the check-in page yourself: {{checkInUrl}}",
-    "turnstileManualRequired": "This site requires a human verification step (Cloudflare Turnstile) that you have to pass on the page; the extension cannot do it for you. Open the check-in page below, complete it, then retry: {{checkInUrl}}",
     "unknownError": "Something went wrong. Try again later."
   },
   "providerWong": {

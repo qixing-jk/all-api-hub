@@ -421,6 +421,7 @@
       "excludeIpsPlaceholder": "1 行に 1 件（CIDR 対応）",
       "expiryDays": "有効期間（日）",
       "feedback": {
+        "adminOnlyKeySettings": "このサイトでは IP ホワイトリストなどの高度なキー設定は管理者に限定されています。該当フィールドを消してから再試行してください。",
         "authenticationFailed": "再度ログインするか、このアカウントの認証情報を更新してから再試行してください。",
         "error": "エラーの詳細に従って対処してから再試行してください。",
         "permissionDenied": "キーを表示・管理できる権限を持つ認証情報を使用して、再試行してください。",

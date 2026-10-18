@@ -141,6 +141,18 @@ vi.mock(
   }),
 )
 
+vi.mock(
+  "~/services/apiService/sub2api/checkin/nexavlinksCheckIn",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/apiService/sub2api/checkin/nexavlinksCheckIn")
+    >()),
+    fetchNexaVlinksDailyCheckInStatus: vi
+      .fn()
+      .mockRejectedValue(new ApiError("unsupported NexaVlinks protocol", 404)),
+  }),
+)
+
 const createAccount = () =>
   buildSiteAccount({
     id: "sub2api-account",
