@@ -668,9 +668,17 @@ for (const destination of ["sidepanel", "unsupported", "rejected"] as const) {
           tab.url?.includes("/options.html"),
         ),
       ).toHaveLength(0)
-      const provider = context
-        .pages()
-        .find((candidate) => candidate.url() === `${sponsorSite}/register`)!
+      const findProvider = () =>
+        context
+          .pages()
+          .find((candidate) => candidate.url() === `${sponsorSite}/register`)
+      // chrome.tabs can report the destination before Playwright observes it.
+      await expect
+        .poll(findProvider, {
+          message: "Waiting for the provider registration page",
+        })
+        .toBeDefined()
+      const provider = findProvider()!
       await expect(
         provider.getByRole("heading", { name: "Provider registration" }),
       ).toBeVisible()
