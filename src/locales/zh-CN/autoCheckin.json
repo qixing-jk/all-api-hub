@@ -164,7 +164,6 @@
     "nativePageVerificationRequired": "签到被人机验证阻止，等待时间内未检测到验证完成。请打开签到页面完成验证码，并确认今日已签到；若扩展状态未更新，再点击“重新尝试”：{{checkInUrl}}",
     "sessionBusy": "另一个登录流程正在进行中，请稍后重试。",
     "turnstileIncognitoAccessRequired": "该站点有其他账号已登录，扩展需要用无痕窗口单独打开这个账号的签到页面，但当前未获准在无痕模式运行。请在浏览器扩展管理页开启“允许在无痕模式运行”后重试，或自行打开签到页面完成验证：{{checkInUrl}}",
-    "turnstileManualRequired": "站点要求完成人机验证（Cloudflare Turnstile），需要你在页面上手动通过，扩展无法代劳。请打开下面的签到页面完成验证后重试：{{checkInUrl}}",
     "unknownError": "发生未知错误。可稍后重试。"
   },
   "providerWong": {

@@ -21,6 +21,7 @@ export const AUTO_CHECKIN_METHOD_IDS = {
   XiaoenDailyCheckIn: "xiaoen:daily-checkin",
   SidruneDailyCheckIn: "sidrune:daily-checkin",
   FreeApiDailyCheckIn: "freeapi:daily-checkin",
+  NexaVlinksDailyCheckIn: "nexavlinks:daily-checkin",
 } as const
 
 export const CHECK_IN_METHOD_UNKNOWN_REASON_CODES = {

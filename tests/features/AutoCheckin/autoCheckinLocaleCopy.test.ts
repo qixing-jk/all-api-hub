@@ -198,7 +198,7 @@ describe("auto-checkin failure copy", () => {
       const { providerFallback } = getFamilies(locale)
 
       for (const message of [
-        providerFallback.turnstileManualRequired,
+        providerFallback.nativePageVerificationRequired,
         providerFallback.nativePageIdentityMissing,
         providerFallback.nativePageIdentityMismatch,
         providerFallback.nativePageTargetNotFound,
@@ -227,16 +227,21 @@ describe("auto-checkin failure copy", () => {
     }
   })
 
-  it("explains the manual verification step in the user's own words", () => {
-    expect(zhCnAutoCheckin.providerFallback.turnstileManualRequired).toContain(
-      "人机验证",
-    )
-    expect(zhCnAutoCheckin.providerFallback.turnstileManualRequired).toContain(
-      "Turnstile",
-    )
-    expect(enAutoCheckin.providerFallback.turnstileManualRequired).toMatch(
-      /human verification/i,
-    )
+  it("explains the manual verification step without naming the widget", () => {
+    expect(
+      zhCnAutoCheckin.providerFallback.nativePageVerificationRequired,
+    ).toContain("人机验证")
+    // The copy serves Turnstile, reCAPTCHA and site-built puzzles alike, so it
+    // must not promise a widget the other deployments do not use.
+    expect(
+      zhCnAutoCheckin.providerFallback.nativePageVerificationRequired,
+    ).not.toContain("Turnstile")
+    expect(
+      enAutoCheckin.providerFallback.nativePageVerificationRequired,
+    ).toMatch(/human verification/i)
+    expect(
+      enAutoCheckin.providerFallback.nativePageVerificationRequired,
+    ).not.toMatch(/turnstile|cloudflare/i)
     expect(zhCnAutoCheckin.skipReasons.manual_verification_required).toContain(
       "人机验证",
     )

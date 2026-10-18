@@ -16,6 +16,10 @@ import {
   resolveHiyoCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/hiyoCheckInProtocol"
 import {
+  createNexaVlinksCheckInStatusEndpoint,
+  resolveNexaVlinksCheckInTimezone,
+} from "~/services/apiService/sub2api/checkin/nexavlinksCheckInProtocol"
+import {
   createToolcodeCheckInStatusEndpoint,
   resolveToolcodeCheckInTimezone,
 } from "~/services/apiService/sub2api/checkin/toolcodeCheckInProtocol"
@@ -457,6 +461,28 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
       {
         path: createFreeApiDailyCheckInStatusEndpoint(
           resolveFreeApiCheckInTimezone(),
+        ),
+      },
+    ],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.NexaVlinksDailyCheckIn]: {
+    id: AUTO_CHECKIN_METHOD_IDS.NexaVlinksDailyCheckIn,
+    siteTypes: [SITE_TYPES.SUB2API],
+    // The dashboard reads and writes `/api/v1/check-in` itself, so the method
+    // is probed on every Sub2API candidate like its siblings; no origin gate is
+    // needed for a protocol served from the account's own origin.
+    // Verified at https://asia.nexavlinks.com/check-in, 2026-10-17.
+    source: {
+      kind: AUTO_CHECKIN_METHOD_SOURCE_KINDS.ThirdParty,
+      sourceName: "NexaVlinks",
+    },
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: (): FeedbackStatusRoutes => [
+      {
+        path: createNexaVlinksCheckInStatusEndpoint(
+          resolveNexaVlinksCheckInTimezone(),
         ),
       },
     ],

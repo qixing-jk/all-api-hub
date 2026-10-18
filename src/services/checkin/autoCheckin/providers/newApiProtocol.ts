@@ -30,22 +30,8 @@ import type { TurnstilePreTrigger } from "~/types/turnstile"
 import { formatLocalDayKey, formatLocalMonthKey } from "~/utils/core/dayKey"
 
 export const NEW_API_MESSAGE_KEYS = {
-  turnstileManualRequired:
-    "autoCheckin:providerFallback.turnstileManualRequired",
   turnstileIncognitoAccessRequired:
     "autoCheckin:providerFallback.turnstileIncognitoAccessRequired",
-  nativePageIdentityMissing:
-    "autoCheckin:providerFallback.nativePageIdentityMissing",
-  nativePageIdentityMismatch:
-    "autoCheckin:providerFallback.nativePageIdentityMismatch",
-  nativePageTargetNotFound:
-    "autoCheckin:providerFallback.nativePageTargetNotFound",
-  nativePageTriggerFailed:
-    "autoCheckin:providerFallback.nativePageTriggerFailed",
-  nativePageStatusUnconfirmed:
-    "autoCheckin:providerFallback.nativePageStatusUnconfirmed",
-  nativePageVerificationRequired:
-    "autoCheckin:providerFallback.nativePageVerificationRequired",
 } as const
 
 type CheckinResult = AutoCheckinProviderOutcome

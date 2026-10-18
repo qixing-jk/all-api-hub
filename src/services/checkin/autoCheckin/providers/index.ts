@@ -14,6 +14,7 @@ import { denxioProvider } from "./denxio"
 import { freeApiProvider } from "./freeApi"
 import { geniusProgrammerProvider } from "./geniusProgrammer"
 import { hiyoProvider } from "./hiyo"
+import { nexavlinksProvider } from "./nexavlinks"
 import {
   AUTO_CHECKIN_METHOD_DEFINITIONS,
   createAutoCheckinMethodRegistry,
@@ -45,6 +46,7 @@ const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.ClawhudDailyCheckIn]: clawhudProvider,
   [AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn]: daiguaProvider,
   [AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn]: freeApiProvider,
+  [AUTO_CHECKIN_METHOD_IDS.NexaVlinksDailyCheckIn]: nexavlinksProvider,
 } as const satisfies Record<CheckInMethodId, AutoCheckinProvider>
 
 export const autoCheckinMethodRegistry = createAutoCheckinMethodRegistry(

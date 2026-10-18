@@ -22,6 +22,7 @@ import {
   type AutoCheckinSkipReason,
   type CheckInReward,
 } from "~/types/autoCheckin"
+import type { TempWindowCheckinPageAction } from "~/types/tempWindowFetch"
 
 export const AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS = {
   alreadyCheckedToday: "autoCheckin:providerFallback.alreadyCheckedToday",
@@ -32,6 +33,18 @@ export const AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS = {
   /** A login-based provider was selected but its browser login method is unset. */
   loginProviderRequired: "autoCheckin:providerFallback.loginProviderRequired",
   endpointNotSupported: "autoCheckin:providerFallback.endpointNotSupported",
+  nativePageIdentityMissing:
+    "autoCheckin:providerFallback.nativePageIdentityMissing",
+  nativePageIdentityMismatch:
+    "autoCheckin:providerFallback.nativePageIdentityMismatch",
+  nativePageTargetNotFound:
+    "autoCheckin:providerFallback.nativePageTargetNotFound",
+  nativePageTriggerFailed:
+    "autoCheckin:providerFallback.nativePageTriggerFailed",
+  nativePageStatusUnconfirmed:
+    "autoCheckin:providerFallback.nativePageStatusUnconfirmed",
+  nativePageVerificationRequired:
+    "autoCheckin:providerFallback.nativePageVerificationRequired",
   unknownError: "autoCheckin:providerFallback.unknownError",
 } as const
 
@@ -396,6 +409,61 @@ export function resolveProviderErrorResult(params: {
     messageKey: errorMessage
       ? undefined
       : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.unknownError,
+  }
+}
+
+/**
+ * Map native page-action trigger failures to provider-facing fallback keys.
+ *
+ * Shared by every provider that drives the site's own check-in page: the
+ * identity, target and throttle reasons are transport facts, not New API
+ * specifics, so their user-facing keys live beside this mapping.
+ */
+export function resolveNativePageFailureResult(params: {
+  action: TempWindowCheckinPageAction
+  checkInUrl: string
+}): AutoCheckinProviderOutcome {
+  const identityReasonCode =
+    params.action.reason === "identity_missing" ||
+    params.action.reason === "identity_mismatch"
+      ? AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED
+      : AUTO_CHECKIN_SKIP_REASON.CHECKIN_PAGE_UNAVAILABLE
+  const base = {
+    status: CHECKIN_RESULT_STATUS.FAILED,
+    reasonCode: identityReasonCode,
+    messageParams: { checkInUrl: params.checkInUrl },
+    rawMessage: params.action.error || undefined,
+    data: params.action,
+  } satisfies Partial<AutoCheckinProviderOutcome>
+
+  if (params.action.reason === "identity_missing") {
+    return {
+      ...base,
+      messageKey:
+        AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.nativePageIdentityMissing,
+    }
+  }
+
+  if (params.action.reason === "identity_mismatch") {
+    return {
+      ...base,
+      messageKey:
+        AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.nativePageIdentityMismatch,
+    }
+  }
+
+  if (params.action.reason === "target_not_found") {
+    return {
+      ...base,
+      messageKey:
+        AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.nativePageTargetNotFound,
+    }
+  }
+
+  return {
+    ...base,
+    messageKey:
+      AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.nativePageTriggerFailed,
   }
 }
 

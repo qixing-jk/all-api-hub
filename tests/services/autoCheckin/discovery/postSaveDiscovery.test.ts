@@ -35,6 +35,7 @@ const { storageData, storageSet, detectors, checkIn } = vi.hoisted(() => ({
     vi.fn(),
     vi.fn(),
     vi.fn(),
+    vi.fn(),
   ],
   checkIn: vi.fn(),
 }))
@@ -56,6 +57,8 @@ vi.mock("~/services/checkin/autoCheckin/providers", async () => {
   const { createAutoCheckinMethodRegistry } = await import(
     "~/services/checkin/autoCheckin/providers/registry"
   )
+  // Candidate IDs come from the real registry, so this fixture has to mirror
+  // every Sub2API candidate or an unlisted one resolves with no detector.
   return {
     autoCheckinMethodRegistry: createAutoCheckinMethodRegistry(
       [
@@ -69,6 +72,7 @@ vi.mock("~/services/checkin/autoCheckin/providers", async () => {
         AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
         AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
+        AUTO_CHECKIN_METHOD_IDS.NexaVlinksDailyCheckIn,
       ].map((id, index) => ({
         id,
         siteTypes: [SITE_TYPES.SUB2API],

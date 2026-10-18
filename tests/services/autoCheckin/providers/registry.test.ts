@@ -7,6 +7,7 @@ import { aiRouterProvider } from "~/services/checkin/autoCheckin/providers/aiRou
 import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyrouter"
 import { denxioProvider } from "~/services/checkin/autoCheckin/providers/denxio"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
+import { nexavlinksProvider } from "~/services/checkin/autoCheckin/providers/nexavlinks"
 import {
   AUTO_CHECKIN_METHOD_DEFINITIONS,
   AUTO_CHECKIN_METHOD_SOURCE_KINDS,
@@ -67,7 +68,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(18)
+    expect(registrationContracts).toHaveLength(19)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -114,6 +115,11 @@ describe("autoCheckinMethodRegistry", () => {
           id: "ai-router:daily-checkin",
           candidateSiteTypes: [SITE_TYPES.SUB2API],
           provider: aiRouterProvider,
+        },
+        {
+          id: "nexavlinks:daily-checkin",
+          candidateSiteTypes: [SITE_TYPES.SUB2API],
+          provider: nexavlinksProvider,
         },
       ]),
     )
@@ -291,6 +297,7 @@ describe("autoCheckinMethodRegistry", () => {
       AUTO_CHECKIN_METHOD_IDS.DaiguaDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.SidruneDailyCheckIn,
       AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn,
+      AUTO_CHECKIN_METHOD_IDS.NexaVlinksDailyCheckIn,
     ])
     expect(
       autoCheckinMethodRegistry

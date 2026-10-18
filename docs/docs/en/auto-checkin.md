@@ -108,6 +108,7 @@ Sub2API operators may add their own check-in features. Keep the account type as 
 | Rewards are separate from the account balance (such as ToolCode) | Points and expiring bonus credit are not shown as a balance reward amount. View their details on the site. |
 | Daily and extra rewards coexist (such as Hiyo Free) | The extension handles daily check-in only and does not collect consumption-based extra rewards. Uncertain claims are not retried automatically; confirm the result on the site first. |
 | Ordinary and lucky check-in coexist (such as DaiGua) | The extension performs ordinary check-in only, avoiding lucky bets that can reduce your balance. It attempts to obtain Turnstile verification; if that fails, complete check-in manually on the site. |
+| Check-in is gated behind an image captcha (such as NexaVlinks) | The extension opens the site's check-in page and clicks its button, stopping at the captcha it cannot answer. Once you solve it in that page, the extension reads back the status to confirm; if you do not finish inside the wait, it points you at the site to check in manually. |
 | The site requires human verification | Complete check-in on the original site. |
 
 ### AgentRouter login check-in limits

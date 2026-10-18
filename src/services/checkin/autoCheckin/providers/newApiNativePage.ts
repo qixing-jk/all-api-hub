@@ -2,7 +2,6 @@ import { normalizeAccountIdentity } from "~/services/accounts/identity/accountId
 import {
   fetchCheckedInTodayStatus,
   getProviderErrorMessage,
-  NEW_API_MESSAGE_KEYS,
   resolveCheckInUrl,
   resolveTurnstilePreTrigger,
 } from "~/services/checkin/autoCheckin/providers/newApiProtocol"
@@ -10,6 +9,7 @@ import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
   getEffectiveAuthType,
   readQuotaReward,
+  resolveNativePageFailureResult,
 } from "~/services/checkin/autoCheckin/providers/shared"
 import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/providers/types"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
@@ -62,61 +62,6 @@ async function pollCheckedInTodayStatus(
 }
 
 /**
- * Map native page trigger failures to provider-facing fallback keys.
- */
-function resolveNativePageFailureResult(params: {
-  action: TempWindowCheckinPageAction
-  checkInUrl: string
-}): CheckinResult {
-  const identityReasonCode =
-    params.action.reason === "identity_missing" ||
-    params.action.reason === "identity_mismatch"
-      ? AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED
-      : null
-  const base = {
-    status: CHECKIN_RESULT_STATUS.FAILED,
-    reasonCode:
-      identityReasonCode ?? AUTO_CHECKIN_SKIP_REASON.CHECKIN_PAGE_UNAVAILABLE,
-    messageParams: { checkInUrl: params.checkInUrl },
-    rawMessage: params.action.error || undefined,
-    data: params.action,
-  } satisfies Partial<CheckinResult>
-
-  if (params.action.reason === "identity_missing") {
-    return {
-      ...base,
-      messageKey: NEW_API_MESSAGE_KEYS.nativePageIdentityMissing,
-    } as CheckinResult
-  }
-
-  if (params.action.reason === "identity_mismatch") {
-    return {
-      ...base,
-      messageKey: NEW_API_MESSAGE_KEYS.nativePageIdentityMismatch,
-    } as CheckinResult
-  }
-
-  if (params.action.reason === "target_not_found") {
-    return {
-      ...base,
-      messageKey: NEW_API_MESSAGE_KEYS.nativePageTargetNotFound,
-    } as CheckinResult
-  }
-
-  if (params.action.reason === "throttled") {
-    return {
-      ...base,
-      messageKey: NEW_API_MESSAGE_KEYS.nativePageTriggerFailed,
-    } as CheckinResult
-  }
-
-  return {
-    ...base,
-    messageKey: NEW_API_MESSAGE_KEYS.nativePageTriggerFailed,
-  } as CheckinResult
-}
-
-/**
  * Execute the site page's native check-in action and confirm it server-side.
  */
 export async function resolveNativePageCheckinResult(params: {
@@ -142,7 +87,8 @@ export async function resolveNativePageCheckinResult(params: {
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
       reasonCode: AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
-      messageKey: NEW_API_MESSAGE_KEYS.nativePageIdentityMissing,
+      messageKey:
+        AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.nativePageIdentityMissing,
       messageParams: { checkInUrl },
     }
   }
@@ -167,17 +113,15 @@ export async function resolveNativePageCheckinResult(params: {
     return {
       status: CHECKIN_RESULT_STATUS.FAILED,
       reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_PAGE_UNAVAILABLE,
-      messageKey: NEW_API_MESSAGE_KEYS.nativePageTriggerFailed,
+      messageKey:
+        AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.nativePageTriggerFailed,
       messageParams: { checkInUrl },
       rawMessage: errorMessage || undefined,
     }
   }
 
   if (!action.success || action.reason !== "clicked") {
-    return resolveNativePageFailureResult({
-      action,
-      checkInUrl,
-    })
+    return resolveNativePageFailureResult({ action, checkInUrl })
   }
 
   const observedAfterNativeAction = await pollCheckedInTodayStatus(
@@ -203,8 +147,8 @@ export async function resolveNativePageCheckinResult(params: {
       ? AUTO_CHECKIN_SKIP_REASON.MANUAL_VERIFICATION_REQUIRED
       : AUTO_CHECKIN_SKIP_REASON.CHECKIN_UNCONFIRMED,
     messageKey: verificationRequired
-      ? NEW_API_MESSAGE_KEYS.nativePageVerificationRequired
-      : NEW_API_MESSAGE_KEYS.nativePageStatusUnconfirmed,
+      ? AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.nativePageVerificationRequired
+      : AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.nativePageStatusUnconfirmed,
     messageParams: { checkInUrl },
     rawMessage: action.error || undefined,
     data: action,

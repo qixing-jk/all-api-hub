@@ -343,6 +343,8 @@ export function translateAutoCheckinMessageKey(
         "autoCheckin:providerFallback.nativePageStatusUnconfirmed",
         messageParams,
       )
+    // Older persisted results still carry the Turnstile-specific key.
+    case "autoCheckin:providerFallback.turnstileManualRequired":
     case "autoCheckin:providerFallback.nativePageVerificationRequired":
       return t(
         "autoCheckin:providerFallback.nativePageVerificationRequired",
@@ -362,11 +364,6 @@ export function translateAutoCheckinMessageKey(
       return t("autoCheckin:providerFallback.sessionBusy", messageParams)
     case "autoCheckin:providerFallback.unknownError":
       return t("autoCheckin:providerFallback.unknownError", messageParams)
-    case "autoCheckin:providerFallback.turnstileManualRequired":
-      return t(
-        "autoCheckin:providerFallback.turnstileManualRequired",
-        messageParams,
-      )
     case "autoCheckin:providerFallback.turnstileIncognitoAccessRequired":
       return t(
         "autoCheckin:providerFallback.turnstileIncognitoAccessRequired",
@@ -619,6 +616,16 @@ export function resolveAutoCheckinTroubleshootingHintKey(params: {
     params.status !== CHECKIN_RESULT_STATUS.UNCERTAIN
   ) {
     return null
+  }
+
+  // The generic manual-verification copy is stable across locales, so the key
+  // decides the hint; the regexes below only cover raw backend messages.
+  if (
+    params.messageKey ===
+      "autoCheckin:providerFallback.nativePageVerificationRequired" ||
+    params.messageKey === "autoCheckin:providerFallback.turnstileManualRequired"
+  ) {
+    return AUTO_CHECKIN_TROUBLESHOOTING_HINT_KEYS.manualVerificationRequired
   }
 
   if (isInvalidAccessTokenMessage(params.message)) {
