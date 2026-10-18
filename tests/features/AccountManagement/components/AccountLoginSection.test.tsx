@@ -1,5 +1,5 @@
 import userEvent from "@testing-library/user-event"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_PASSWORD_IDENTITIES } from "~/constants/accountLogin"
 import { AccountLoginSection } from "~/features/AccountManagement/components/AccountDialog/login/AccountLoginSection"
@@ -35,6 +35,7 @@ const props = {
 }
 
 describe("account password login guidance", () => {
+  afterEach(() => vi.restoreAllMocks())
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(detectBrowserFamily).mockReturnValue("chromium")
@@ -318,7 +319,6 @@ describe("account password login guidance", () => {
     expect(
       await screen.findByText("settings:permissions.status.granted"),
     ).toBeVisible()
-    vi.restoreAllMocks()
   })
   it.each(["button", "escape"])(
     "closes manual browser guidance using %s",

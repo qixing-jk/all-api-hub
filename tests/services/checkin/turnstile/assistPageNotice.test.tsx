@@ -92,7 +92,11 @@ it.each(["login-session", "login"] as const)(
       true,
     )
     const [body, options] = notify.info.mock.calls[0]!
-    expect(body).toBeTruthy()
-    expect(options.action.label).toBeTruthy()
+    expect(body).toBe(
+      reason === "login-session"
+        ? "shieldBypass:notification.loginSessionBody"
+        : "shieldBypass:notification.loginAssistBody",
+    )
+    expect(options.action.label).toBe("shieldBypass:notification.openLogin")
   },
 )
