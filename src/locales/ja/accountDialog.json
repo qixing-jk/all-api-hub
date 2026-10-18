@@ -170,7 +170,7 @@
     "openrouterManagementKey": "OpenRouter 管理キー",
     "openrouterManagementKeyGuidance": "OpenRouter の Management Keys ページで新しい管理キーを作成し、すぐにコピーしてここに貼り付けてください。既存の管理キーの平文は再表示できません。",
     "openrouterManagementKeyGuidanceTitle": "OpenRouter の管理キーを使用",
-    "redetectCheckInMethods": "チェックイン方法を再検出",
+    "redetectCheckInMethods": "チェックイン方法を検出",
     "redetectingCheckInMethods": "チェックイン方法を検出中...",
     "restoreAutomaticCheckInSelection": "自動選択に戻す",
     "showAccessToken": "Access Token を表示",

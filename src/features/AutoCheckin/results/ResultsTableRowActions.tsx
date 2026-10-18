@@ -1,10 +1,10 @@
 import {
   Ban,
-  CalendarCheck2,
   CalendarDays,
   Ellipsis,
   MessageSquarePlus,
   RefreshCw,
+  ScanSearch,
   Trash2,
 } from "lucide-react"
 import { useRef, type ComponentProps } from "react"
@@ -291,7 +291,7 @@ export default function ResultsTableRowActions({
               }
               disabled={isRedetecting}
             >
-              <CalendarCheck2 className="h-4 w-4" />
+              <ScanSearch className="h-4 w-4" />
               {t("accountDialog:form.redetectCheckInMethods")}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleFeedback}>

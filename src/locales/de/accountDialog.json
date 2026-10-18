@@ -170,7 +170,7 @@
     "openrouterManagementKey": "OpenRouter-Verwaltungsschlüssel",
     "openrouterManagementKeyGuidance": "Erstellen Sie einen neuen Verwaltungsschlüssel auf der Seite „Verwaltungsschlüssel“ von OpenRouter, kopieren Sie ihn sofort und fügen Sie ihn dann hier ein. Vorhandene Verwaltungsschlüssel können nicht erneut offengelegt werden.",
     "openrouterManagementKeyGuidanceTitle": "OpenRouter-Verwaltungsschlüssel verwenden",
-    "redetectCheckInMethods": "Check-in-Methode erneut erkennen",
+    "redetectCheckInMethods": "Check-in-Methode erkennen",
     "redetectingCheckInMethods": "Check-in-Methode wird erkannt...",
     "restoreAutomaticCheckInSelection": "Automatische Auswahl wiederherstellen",
     "showAccessToken": "Zugriffstoken anzeigen",

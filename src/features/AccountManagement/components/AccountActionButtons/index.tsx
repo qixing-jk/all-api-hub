@@ -13,6 +13,7 @@ import {
   PanelsTopLeft,
   Pencil,
   RefreshCw,
+  ScanSearch,
   Search,
   Share2,
   Trash2,
@@ -307,7 +308,7 @@ export default function AccountActionButtons({
                       setIsMoreActionsOpen(false)
                       void redetect(moreActionsTriggerRef.current ?? undefined)
                     }}
-                    icon={CalendarCheck2}
+                    icon={ScanSearch}
                     label={t("accountDialog:form.redetectCheckInMethods")}
                     loading={isRedetectingCheckIn}
                     loadingLabel={t(

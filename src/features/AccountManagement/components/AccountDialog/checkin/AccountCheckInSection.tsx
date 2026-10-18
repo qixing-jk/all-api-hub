@@ -1,8 +1,8 @@
 import {
   CalendarDays,
   MessageSquarePlus,
-  RefreshCw,
   RotateCcw,
+  ScanSearch,
   Ticket,
 } from "lucide-react"
 import { useTranslation } from "react-i18next"
@@ -186,7 +186,7 @@ export function AccountCheckInSection({
               onClick={onRedetectCheckInMethods}
               loading={isRedetectingCheckInMethods}
               id={ACCOUNT_CHECK_IN_TARGET_IDS.redetect}
-              leftIcon={<RefreshCw className="h-4 w-4" />}
+              leftIcon={<ScanSearch className="h-4 w-4" />}
               className="text-xs sm:text-sm"
             >
               {isRedetectingCheckInMethods

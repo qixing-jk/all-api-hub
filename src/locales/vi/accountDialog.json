@@ -170,7 +170,7 @@
     "openrouterManagementKey": "Khóa quản lý OpenRouter",
     "openrouterManagementKeyGuidance": "Hãy tạo một Management Key mới trên trang Management Keys của OpenRouter và sao chép ngay, rồi dán vào đây. Không thể hiển thị lại bản rõ của Management Key đã có.",
     "openrouterManagementKeyGuidanceTitle": "Sử dụng khóa quản lý OpenRouter",
-    "redetectCheckInMethods": "Phát hiện lại phương thức điểm danh",
+    "redetectCheckInMethods": "Phát hiện phương thức điểm danh",
     "redetectingCheckInMethods": "Đang phát hiện phương thức điểm danh...",
     "restoreAutomaticCheckInSelection": "Khôi phục chọn tự động",
     "showAccessToken": "Hiển thị Access Token",

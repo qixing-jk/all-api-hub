@@ -170,7 +170,7 @@
     "openrouterManagementKey": "Clave de administración de OpenRouter",
     "openrouterManagementKeyGuidance": "Crea una nueva clave de administración en la página Management Keys de OpenRouter y cópiala de inmediato; luego pégala aquí. Las claves de administración existentes no se pueden volver a mostrar.",
     "openrouterManagementKeyGuidanceTitle": "Usa una clave de administración de OpenRouter",
-    "redetectCheckInMethods": "Volver a detectar el método de check-in",
+    "redetectCheckInMethods": "Detectar el método de check-in",
     "redetectingCheckInMethods": "Detectando el método de check-in...",
     "restoreAutomaticCheckInSelection": "Restaurar selección automática",
     "showAccessToken": "Mostrar Access Token",

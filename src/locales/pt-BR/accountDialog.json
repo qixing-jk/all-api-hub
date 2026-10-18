@@ -170,7 +170,7 @@
     "openrouterManagementKey": "Chave de gerenciamento OpenRouter",
     "openrouterManagementKeyGuidance": "Crie uma nova chave de gerenciamento na página Chaves de gerenciamento do OpenRouter, copie-a imediatamente e cole-a aqui. As Chaves de Gerenciamento existentes não podem ser reveladas novamente.",
     "openrouterManagementKeyGuidanceTitle": "Use uma chave de gerenciamento OpenRouter",
-    "redetectCheckInMethods": "Detectar novamente o método de check-in",
+    "redetectCheckInMethods": "Detectar o método de check-in",
     "redetectingCheckInMethods": "Detectando método de check-in...",
     "restoreAutomaticCheckInSelection": "Restaurar seleção automática",
     "showAccessToken": "Mostrar token de acesso",

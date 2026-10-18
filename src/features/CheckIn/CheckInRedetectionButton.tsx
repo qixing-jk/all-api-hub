@@ -1,4 +1,4 @@
-import { CalendarCheck2 } from "lucide-react"
+import { ScanSearch } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "~/components/ui"
@@ -26,7 +26,7 @@ export function CheckInRedetectionButton({
         loading={isPending}
         disabled={isPending}
         onClick={() => void redetect()}
-        leftIcon={<CalendarCheck2 className="h-4 w-4" />}
+        leftIcon={<ScanSearch className="h-4 w-4" />}
       >
         {isPending
           ? t("form.redetectingCheckInMethods")

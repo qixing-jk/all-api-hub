@@ -170,7 +170,7 @@
     "openrouterManagementKey": "OpenRouter 管理密钥",
     "openrouterManagementKeyGuidance": "请在 OpenRouter 的 Management Keys 页面新建管理密钥并立即复制，然后粘贴到这里。现有管理密钥的明文无法再次显示。",
     "openrouterManagementKeyGuidanceTitle": "使用 OpenRouter 管理密钥",
-    "redetectCheckInMethods": "重新检测签到方式",
+    "redetectCheckInMethods": "检测签到方式",
     "redetectingCheckInMethods": "正在检测签到方式...",
     "restoreAutomaticCheckInSelection": "恢复自动选择",
     "showAccessToken": "显示访问令牌",
