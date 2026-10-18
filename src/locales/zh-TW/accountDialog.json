@@ -224,7 +224,7 @@
   },
   "login": {
     "change": "變更帳號登入",
-    "checkInConfigured": "目前使用：{{method}}。可在下方「帳號登入」中變更。",
+    "checkInConfigured": "目前登入方式：{{method}}。",
     "checkInExplanation": "執行簽到時會使用下方的帳號登入設定。遇到網站驗證時可能需要你操作。",
     "checkInMissing": "請在下方選擇登入方式。使用密碼登入時，需填寫登入使用者名稱或電子郵件及密碼。",
     "checkInTitle": "AgentRouter 透過重新登入觸發簽到",

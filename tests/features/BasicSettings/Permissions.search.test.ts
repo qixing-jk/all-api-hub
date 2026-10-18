@@ -9,6 +9,7 @@ describe("permissions settings search definitions", () => {
   it("registers every optional permission control with rendered target ids", () => {
     expect(permissionsSearchSections).toHaveLength(1)
     expect(permissionsSearchControls.map((control) => control.id)).toEqual([
+      "control:permissions-incognito",
       "control:permissions-refresh",
       "control:permissions-cookies",
       "control:permissions-dnr-host-access",

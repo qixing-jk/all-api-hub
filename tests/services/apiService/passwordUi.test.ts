@@ -400,3 +400,107 @@ it("does not use API fallback on an existing native second-factor screen", async
     kind: "manual",
   })
 })
+
+it.each([
+  [Response.json({ success: false }), false],
+  [Response.json({ success: true, data: { id: 17, checked_in: false } }), true],
+  [Response.json({ success: true, data: {} }), false],
+  [Response.json({ success: false }), true],
+  [new Response(null, { status: 503 }), false],
+])(
+  "does not trust malformed or unavailable New API native sessions (%j cached=%s)",
+  async (response, cached) => {
+    const body = response.ok ? await response.clone().json() : null
+    if (cached) localStorage.setItem("user", JSON.stringify({ id: 17 }))
+    fetchMock.mockImplementation(async () => response.clone())
+    const result = await invoke({ phase: PASSWORD_UI_PHASES.Prepare })
+    if (response.ok && cached && body?.success === true && body?.data?.id)
+      expect(result).toMatchObject({ status: "authenticated", identity: "17" })
+    else expect(result).toEqual({ status: "uncertain" })
+    expect(
+      fetchMock.mock.calls.some(([path]) => path === "/api/user/login"),
+    ).toBe(false)
+  },
+)
+
+it.each([
+  new Response(null, { status: 503 }),
+  Response.json({ code: 1 }),
+  Response.json({ code: 0, data: {} }),
+])(
+  "does not authenticate an invalid Sub2API native session (%j)",
+  async (response) => {
+    localStorage.setItem(SUB2API_AUTH_STORAGE_KEYS.accessToken, "existing")
+    fetchMock.mockResolvedValue(response)
+    await expect(
+      new Promise((resolve) =>
+        handleSub2ApiPasswordUi(
+          { ...request, phase: PASSWORD_UI_PHASES.Prepare },
+          resolve,
+        ),
+      ),
+    ).resolves.toEqual({ status: "uncertain" })
+    expect(localStorage.getItem(SUB2API_AUTH_STORAGE_KEYS.accessToken)).toBe(
+      "existing",
+    )
+  },
+)
+
+it.each([false, true])(
+  "adopts modern New API auth in memory and protects concurrent logout changes (changed=%s)",
+  async (changed) => {
+    vi.resetModules()
+    const { handleNewApiPasswordUi: isolatedHandler } = await import(
+      "~/services/apiService/newApiFamily/passwordUi"
+    )
+    let loggedOut = false
+    fetchMock.mockImplementation(async (path, init) => {
+      if (path === "/api/user/self") {
+        if (
+          (init?.headers as Record<string, string>)?.Authorization &&
+          !loggedOut
+        )
+          return Response.json({ success: true, data: { id: 17 } })
+        return new Response(null, { status: 401 })
+      }
+      if (path === "/api/user/auth/refresh")
+        return loggedOut
+          ? new Response(null, { status: 401 })
+          : Response.json({
+              success: true,
+              data: {
+                access_token: "native-bearer",
+                token_type: "Bearer",
+                access_expires_at: Date.now() / 1000 + 600,
+                session: { sid: "native-sid", current: true },
+                user: { id: 17 },
+              },
+            })
+      if (path === "/api/user/auth/logout") {
+        expect(init?.headers).toMatchObject({ "X-Auth-Session": "native-sid" })
+        loggedOut = true
+        if (changed) localStorage.setItem("user", JSON.stringify({ id: 18 }))
+        return Response.json({ success: true })
+      }
+      throw new Error("Unexpected endpoint")
+    })
+    const result = await new Promise((resolve) =>
+      isolatedHandler(
+        {
+          ...request,
+          phase: PASSWORD_UI_PHASES.Prepare,
+          sessionMode: BROWSER_LOGIN_SESSION_MODES.Fresh,
+          canResetSession: true,
+        },
+        resolve,
+      ),
+    )
+    expect(result).toEqual(
+      changed ? { status: "uncertain" } : { kind: "reload" },
+    )
+    expect(JSON.stringify(result)).not.toMatch(/native-bearer|native-sid/)
+    expect(localStorage.getItem("user")).toBe(
+      changed ? JSON.stringify({ id: 18 }) : null,
+    )
+  },
+)

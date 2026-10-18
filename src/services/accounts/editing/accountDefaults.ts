@@ -546,9 +546,10 @@ export function applySiteAccountUpdates(params: {
   }
   const result = normalizeSiteAccount(merged)
   if (
-    result.site_url !== normalized.site_url ||
-    result.site_type !== normalized.site_type ||
-    result.account_info.id !== normalized.account_info.id
+    !Object.prototype.hasOwnProperty.call(params.updates, "login") &&
+    (result.site_url !== normalized.site_url ||
+      result.site_type !== normalized.site_type ||
+      result.account_info.id !== normalized.account_info.id)
   ) {
     delete result.login
   }

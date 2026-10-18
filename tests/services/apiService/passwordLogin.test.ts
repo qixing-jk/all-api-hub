@@ -40,6 +40,195 @@ describe("password login content protocol", () => {
   })
   afterEach(() => vi.unstubAllGlobals())
 
+  it.each([
+    [{ success: false }, [], "failed"],
+    [{ success: true, data: {} }, [{ success: false }], "failed"],
+    [{ success: true, data: {} }, [{ success: true, data: {} }], "uncertain"],
+    [
+      { success: true, data: {} },
+      [{ success: true, data: { id: 17 } }, { success: false }],
+      "uncertain",
+    ],
+    [
+      { success: true, data: {} },
+      [
+        { success: true, data: { id: 17 } },
+        { success: true, data: { id: 18 } },
+      ],
+      "identity_mismatch",
+    ],
+  ])(
+    "rejects unverified New API responses without publishing a session (%j)",
+    async (status, responses, outcome) => {
+      fetchMock.mockResolvedValueOnce(Response.json(status))
+      for (const response of responses)
+        fetchMock.mockResolvedValueOnce(Response.json(response))
+      await expect(invoke()).resolves.toEqual({ status: outcome })
+      expect(localStorage.getItem("user")).toBeNull()
+      expect(fetchMock).toHaveBeenCalledTimes(1 + responses.length)
+    },
+  )
+
+  it.each([
+    [{ code: 1 }, [], "failed"],
+    [{ code: 0, data: {} }, [{ code: 1 }], "failed"],
+    [
+      { code: 0, data: {} },
+      [{ code: 0, data: { requires_2fa: true } }],
+      "interaction_required",
+    ],
+    [{ code: 0, data: {} }, [{ code: 0, data: {} }], "uncertain"],
+    [
+      { code: 0, data: {} },
+      [{ code: 0, data: { access_token: "unverified", user: { id: 18 } } }],
+      "identity_mismatch",
+    ],
+    [
+      { code: 0, data: {} },
+      [
+        { code: 0, data: { access_token: "unverified", user: { id: 17 } } },
+        { code: 1 },
+      ],
+      "uncertain",
+    ],
+    [
+      { code: 0, data: {} },
+      [
+        { code: 0, data: { access_token: "unverified", user: { id: 17 } } },
+        { code: 0, data: { id: 18 } },
+      ],
+      "identity_mismatch",
+    ],
+  ])(
+    "rejects unverified Sub2API responses without replacing the website session (%j)",
+    async (settings, responses, outcome) => {
+      localStorage.setItem(
+        SUB2API_AUTH_STORAGE_KEYS.accessToken,
+        "existing-token",
+      )
+      fetchMock.mockResolvedValueOnce(Response.json(settings))
+      for (const response of responses)
+        fetchMock.mockResolvedValueOnce(Response.json(response))
+      await expect(
+        new Promise((resolve) => handleSub2ApiPasswordLogin(request, resolve)),
+      ).resolves.toEqual({ status: outcome })
+      expect(localStorage.getItem(SUB2API_AUTH_STORAGE_KEYS.accessToken)).toBe(
+        "existing-token",
+      )
+      expect(fetchMock).toHaveBeenCalledTimes(1 + responses.length)
+    },
+  )
+
+  it("cleans up only its own legacy New API login and cached user", async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({ success: true, data: {} }))
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ success: true, data: { id: 17 } }),
+    )
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ success: true, data: { id: 17 } }),
+    )
+    await invoke()
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ success: true, data: { id: 17 } }),
+    )
+    fetchMock.mockResolvedValueOnce(Response.json({ success: true }))
+    await new Promise((resolve) =>
+      handleClearNewApiPasswordLogin(request, resolve),
+    )
+    expect(localStorage.getItem("user")).toBeNull()
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "/api/user/logout",
+      expect.anything(),
+    )
+    const count = fetchMock.mock.calls.length
+    await new Promise((resolve) =>
+      handleClearNewApiPasswordLogin(request, resolve),
+    )
+    expect(fetchMock).toHaveBeenCalledTimes(count)
+  })
+
+  it("preserves a newer legacy New API session during cleanup", async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({ success: true, data: {} }))
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ success: true, data: { id: 17 } }),
+    )
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ success: true, data: { id: 17 } }),
+    )
+    await invoke()
+    localStorage.setItem("user", JSON.stringify({ id: 18 }))
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ success: true, data: { id: 18 } }),
+    )
+    await new Promise((resolve) =>
+      handleClearNewApiPasswordLogin(request, resolve),
+    )
+    expect(JSON.parse(localStorage.getItem("user")!)).toEqual({ id: 18 })
+    expect(
+      fetchMock.mock.calls.some(([url]) => url === "/api/user/logout"),
+    ).toBe(false)
+  })
+
+  it("refuses malformed encryption keys without sending a plaintext password", async () => {
+    fetchMock.mockResolvedValueOnce(
+      Response.json({
+        success: true,
+        data: { password_login_encryption_enabled: true },
+      }),
+    )
+    fetchMock.mockResolvedValueOnce(
+      Response.json({
+        success: true,
+        data: { kid: "", public_key: "invalid" },
+      }),
+    )
+    await expect(invoke()).resolves.toEqual({ status: "failed" })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(
+      fetchMock.mock.calls.some(([path]) => path === "/api/user/login"),
+    ).toBe(false)
+  })
+
+  it("removes stale Sub2API refresh/expiry data and cleans up its own verified session", async () => {
+    localStorage.setItem(
+      SUB2API_AUTH_STORAGE_KEYS.refreshToken,
+      "stale-refresh",
+    )
+    localStorage.setItem(
+      SUB2API_AUTH_STORAGE_KEYS.tokenExpiresAt,
+      "stale-expiry",
+    )
+    fetchMock.mockResolvedValueOnce(Response.json({ code: 0, data: {} }))
+    fetchMock.mockResolvedValueOnce(
+      Response.json({
+        code: 0,
+        data: { access_token: "owned", user: { id: 17 } },
+      }),
+    )
+    fetchMock.mockResolvedValueOnce(
+      Response.json({ code: 0, data: { id: 17 } }),
+    )
+    await expect(
+      new Promise((resolve) => handleSub2ApiPasswordLogin(request, resolve)),
+    ).resolves.toEqual({ status: "authenticated", identity: "17" })
+    expect(
+      localStorage.getItem(SUB2API_AUTH_STORAGE_KEYS.refreshToken),
+    ).toBeNull()
+    expect(
+      localStorage.getItem(SUB2API_AUTH_STORAGE_KEYS.tokenExpiresAt),
+    ).toBeNull()
+    await new Promise((resolve) =>
+      handleClearSub2ApiPasswordLogin(request, resolve),
+    )
+    for (const key of Object.values(SUB2API_AUTH_STORAGE_KEYS))
+      expect(localStorage.getItem(key)).toBeNull()
+    const count = fetchMock.mock.calls.length
+    await new Promise((resolve) =>
+      handleClearSub2ApiPasswordLogin(request, resolve),
+    )
+    expect(fetchMock).toHaveBeenCalledTimes(count)
+  })
+
   it("logs in to legacy New API and verifies the server identity before publishing a browser session", async () => {
     fetchMock.mockResolvedValueOnce(Response.json({ success: true, data: {} }))
     fetchMock.mockResolvedValueOnce(

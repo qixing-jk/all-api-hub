@@ -225,7 +225,7 @@
   },
   "login": {
     "change": "Change account login",
-    "checkInConfigured": "Current method: {{method}}. You can change it under Account login below.",
+    "checkInConfigured": "Current login method: {{method}}.",
     "checkInExplanation": "Check-in uses the account login configured below. Website verification may require your action.",
     "checkInMissing": "Choose a login method below. For password login, enter both the username or email and password.",
     "checkInTitle": "AgentRouter checks in by signing in again",

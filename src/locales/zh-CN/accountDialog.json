@@ -224,7 +224,7 @@
   },
   "login": {
     "change": "更改账号登录",
-    "checkInConfigured": "当前使用：{{method}}。可在下方「账号登录」中更改。",
+    "checkInConfigured": "当前登录方式：{{method}}。",
     "checkInExplanation": "执行签到时会使用下方的账号登录配置。遇到网站验证时可能需要你操作。",
     "checkInMissing": "请在下方选择登录方式。使用密码登录时，需填写登录用户名或邮箱及密码。",
     "checkInTitle": "AgentRouter 通过重新登录触发签到",

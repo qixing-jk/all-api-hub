@@ -402,9 +402,7 @@ for (const method of ["linuxdo", "password"] as const) {
         " fixture password ",
       )
       await expect(
-        dialog.getByText(
-          "Current method: Password login. You can change it under Account login below.",
-        ),
+        dialog.getByText("Current login method: Password login."),
       ).toBeVisible()
       await expect(
         loginSection.getByText("Allow private browsing for isolated login", {

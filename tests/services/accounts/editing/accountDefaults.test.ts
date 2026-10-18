@@ -21,6 +21,31 @@ import {
 } from "~/types/accountTodayStats"
 
 describe("accountDefaults", () => {
+  it.each([
+    { site_url: "https://other.example" },
+    { account_info: { id: "2" } },
+    { site_type: SITE_TYPES.SUB2API },
+  ])(
+    "preserves an explicit replacement login when identity changes: %j",
+    (identity) => {
+      const login = {
+        methodId: ACCOUNT_LOGIN_METHODS.Password,
+        credentials: { username: "bob", password: " new secret " },
+      }
+      const changed = applySiteAccountUpdates({
+        account: createSiteAccount({
+          login: {
+            methodId: ACCOUNT_LOGIN_METHODS.Password,
+            credentials: { username: "alice", password: "old secret" },
+          },
+        }),
+        updates: { ...identity, login },
+        now: 20,
+        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+      })
+      expect(changed.login).toEqual(login)
+    },
+  )
   it("does not carry saved console passwords to a changed account origin or identity", () => {
     const saved = createSiteAccount({
       login: {

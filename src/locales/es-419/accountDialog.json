@@ -226,7 +226,7 @@
   },
   "login": {
     "change": "Cambiar inicio de sesión",
-    "checkInConfigured": "Método actual: {{method}}. Puedes cambiarlo abajo en Inicio de sesión de la cuenta.",
+    "checkInConfigured": "Método de inicio de sesión actual: {{method}}.",
     "checkInExplanation": "La asistencia usa la configuración de inicio de sesión de abajo. Es posible que el sitio requiera una verificación manual.",
     "checkInMissing": "Elige un método abajo. Para usar una contraseña, ingresa el usuario o correo y la contraseña.",
     "checkInTitle": "AgentRouter registra la asistencia al volver a iniciar sesión",

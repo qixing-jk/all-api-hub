@@ -81,6 +81,24 @@ describe("per-account login configuration", () => {
     expect(JSON.stringify(storage.value)).not.toContain("secret")
   })
 
+  it.each([
+    { methodId: ACCOUNT_LOGIN_METHODS.Password },
+    {
+      methodId: ACCOUNT_LOGIN_METHODS.Password,
+      credentials: { username: "alice", password: "" },
+    },
+    { methodId: "   " },
+  ])(
+    "rejects invalid login configuration before writing: %j",
+    async (value) => {
+      const before = structuredClone(storage.value)
+      await expect(
+        accountLoginConfiguration.configure(account, value as any),
+      ).rejects.toThrow("Invalid account login configuration")
+      expect(storage.value).toEqual(before)
+    },
+  )
+
   it("never writes over unknown storage after a failed read", async () => {
     const before = structuredClone(storage.value)
     storage.failRead = true

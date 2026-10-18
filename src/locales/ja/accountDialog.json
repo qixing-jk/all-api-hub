@@ -224,7 +224,7 @@
   },
   "login": {
     "change": "アカウントログインを変更",
-    "checkInConfigured": "現在の方法：{{method}}。下のアカウントログインで変更できます。",
+    "checkInConfigured": "現在のログイン方法：{{method}}。",
     "checkInExplanation": "チェックインには下のアカウントログイン設定を使用します。サイトの認証操作が必要な場合があります。",
     "checkInMissing": "下でログイン方法を選んでください。パスワードログインにはユーザー名またはメールアドレスとパスワードが必要です。",
     "checkInTitle": "AgentRouter は再ログインでチェックインします",

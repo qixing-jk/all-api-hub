@@ -168,6 +168,50 @@ describe("browser OAuth context", () => {
       })
   })
 
+  it.each([
+    [null, "uncertain"],
+    [{ status: "unexpected" }, "uncertain"],
+    [
+      { status: "authenticated", identity: "another-user" },
+      "identity_mismatch",
+    ],
+    [{ status: "unsupported" }, "unsupported"],
+    [{ status: "failed" }, "failed"],
+    [{ status: "interaction_required" }, "interaction_required"],
+    [{ status: "identity_mismatch" }, "identity_mismatch"],
+    [{ status: "uncertain" }, "uncertain"],
+  ] as const)(
+    "preserves safe password outcome %j without replaying credentials",
+    async (reply, outcome) => {
+      browserApi.sendTabMessageWithRetry.mockReset().mockResolvedValue(reply)
+      const result = await createBrowserPasswordContext({
+        id: "password-result",
+        concurrencyKey: "password-result",
+        displayName: "Password",
+        loginPath: "/login",
+        uiAction: "password-ui",
+        loginAction: "password-api",
+        clearEvidenceAction: "password-clear",
+        credentials: { username: "alice", password: "secret" },
+      }).authenticate({
+        origin,
+        requestId: "outcome",
+        expectedIdentity: "user-1",
+      })
+      expect(result).toEqual({ status: outcome })
+      expect(
+        browserApi.sendTabMessageWithRetry.mock.calls.filter(
+          ([, message]) => message.action === "password-ui",
+        ),
+      ).toHaveLength(1)
+      expect(
+        browserApi.sendTabMessageWithRetry.mock.calls.some(
+          ([, message]) => message.action === "password-api",
+        ),
+      ).toBe(false)
+    },
+  )
+
   it("bounds the wait for a user to sign out of a shared session", async () => {
     vi.useFakeTimers()
     browserApi.sendTabMessageWithRetry.mockReset()

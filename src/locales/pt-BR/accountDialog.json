@@ -226,7 +226,7 @@
   },
   "login": {
     "change": "Alterar login da conta",
-    "checkInConfigured": "Método atual: {{method}}. Você pode alterá-lo em Login da conta abaixo.",
+    "checkInConfigured": "Método de login atual: {{method}}.",
     "checkInExplanation": "O check-in usa o login da conta configurado abaixo. O site pode exigir verificação manual.",
     "checkInMissing": "Escolha um método abaixo. Para entrar com senha, informe o usuário ou e-mail e a senha.",
     "checkInTitle": "O AgentRouter faz check-in ao entrar novamente",

@@ -225,7 +225,7 @@
   },
   "login": {
     "change": "Kontoanmeldung ändern",
-    "checkInConfigured": "Aktuelle Methode: {{method}}. Sie können sie unten unter Kontoanmeldung ändern.",
+    "checkInConfigured": "Aktuelle Anmeldemethode: {{method}}.",
     "checkInExplanation": "Der Check-in verwendet die unten konfigurierte Kontoanmeldung. Die Website kann eine Bestätigung erfordern.",
     "checkInMissing": "Wählen Sie unten eine Anmeldemethode. Für die Passwortanmeldung sind Benutzername oder E-Mail und Passwort erforderlich.",
     "checkInTitle": "AgentRouter checkt durch erneutes Anmelden ein",

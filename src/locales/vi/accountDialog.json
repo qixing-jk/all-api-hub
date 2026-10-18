@@ -224,7 +224,7 @@
   },
   "login": {
     "change": "Đổi đăng nhập tài khoản",
-    "checkInConfigured": "Phương thức hiện tại: {{method}}. Có thể đổi trong phần Đăng nhập tài khoản bên dưới.",
+    "checkInConfigured": "Phương thức đăng nhập hiện tại: {{method}}.",
     "checkInExplanation": "Điểm danh dùng cấu hình đăng nhập tài khoản bên dưới. Bạn có thể cần hoàn tất xác minh của trang web.",
     "checkInMissing": "Chọn phương thức bên dưới. Đăng nhập bằng mật khẩu cần tên người dùng hoặc email và mật khẩu.",
     "checkInTitle": "AgentRouter điểm danh bằng cách đăng nhập lại",
