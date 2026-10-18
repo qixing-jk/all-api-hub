@@ -6,10 +6,10 @@ import {
   prepareTempContextFetchOptions,
   removeInstalledDownloadBlockRules,
   resolveTempContextPreferenceMode,
-  resolveTempWindowSize,
   showShieldBypassUiInTab,
   waitForTabComplete,
 } from "~/services/browsingContext/tempPage/browserAdapter"
+import { resolveTempWindowSize } from "~/services/browsingContext/tempPage/windowSize"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { AuthTypeEnum } from "~/types"
 import * as cookieHelper from "~/utils/browser/cookieHelper"

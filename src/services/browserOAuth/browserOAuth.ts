@@ -1,4 +1,5 @@
 import { BROWSER_OAUTH_STATUS } from "~/constants/browserOAuth"
+import { resolveTempWindowSize } from "~/services/browsingContext/tempPage/windowSize"
 import { createKeyedTaskQueue } from "~/services/core/keyedTaskQueue"
 import {
   isMessageReceiverUnavailableError,
@@ -66,6 +67,7 @@ interface BrowserOAuthInput {
   /**
    * Whether a person is expected to complete the provider sign-in in the popup.
    * Absent means one is: only a run nobody can interact with passes `false`.
+   * Unattended windows open without taking focus.
    */
   attended?: boolean
 }
@@ -142,10 +144,11 @@ export interface BrowserOAuthFlow<Evidence> {
 class AuthCancelledError extends Error {}
 class AuthTimeoutError extends Error {}
 
-/** Opens the user-visible popup used for the configured OAuth flow. */
-async function openVisibleAuthContext(
+/** Opens the OAuth popup, taking focus only for an attended login. */
+async function openAuthContext(
   origin: string,
   loginPath: string,
+  attended: boolean,
 ): Promise<OpenedAuthContext> {
   const loginUrl = new URL(loginPath, origin)
   if (loginUrl.origin !== origin) {
@@ -154,9 +157,8 @@ async function openVisibleAuthContext(
   const opened = await createWindow({
     url: loginUrl.href,
     type: "popup",
-    focused: true,
-    width: 520,
-    height: 720,
+    focused: attended,
+    ...(await resolveTempWindowSize()),
   })
   if (!opened) throw new Error("A visible browser window could not be opened.")
 
@@ -302,7 +304,11 @@ async function authenticateBrowserOAuth<Evidence>(
   let context: OpenedAuthContext | null = null
   let authenticated = false
   try {
-    context = await openVisibleAuthContext(input.origin, flow.loginPath)
+    context = await openAuthContext(
+      input.origin,
+      flow.loginPath,
+      input.attended !== false,
+    )
     await waitForTab(
       context,
       (tab) =>
