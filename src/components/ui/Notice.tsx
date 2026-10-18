@@ -57,6 +57,11 @@ const noticeToneStyles: Record<
   },
 }
 
+export const NOTICE_ACTION_LAYOUTS = {
+  Below: "below",
+  Inline: "inline",
+} as const
+
 export interface NoticeProps
   extends Omit<React.HTMLAttributes<HTMLDivElement>, "title"> {
   tone?: NoticeTone
@@ -66,6 +71,8 @@ export interface NoticeProps
   icon?: React.ReactNode
   iconWrapperClassName?: string
   actions?: React.ReactNode
+  /** Inline actions sit beside the copy when the notice itself has enough room. */
+  actionsLayout?: (typeof NOTICE_ACTION_LAYOUTS)[keyof typeof NOTICE_ACTION_LAYOUTS]
 }
 
 /**
@@ -82,6 +89,7 @@ export const Notice = React.forwardRef<HTMLDivElement, NoticeProps>(
       icon,
       iconWrapperClassName,
       actions,
+      actionsLayout = NOTICE_ACTION_LAYOUTS.Below,
       children,
       ...props
     },
@@ -110,9 +118,9 @@ export const Notice = React.forwardRef<HTMLDivElement, NoticeProps>(
         aria-labelledby={title ? titleId : undefined}
         aria-describedby={description ? descriptionId : undefined}
         className={cn(
-          "rounded-lg border px-3",
+          "@container/notice rounded-lg border px-3",
           isCompact
-            ? "py-density-2 text-xs leading-5"
+            ? "py-density-2 text-xs leading-normal"
             : "py-density-3 shadow-xs",
           toneStyles.surface,
           className,
@@ -129,10 +137,18 @@ export const Notice = React.forwardRef<HTMLDivElement, NoticeProps>(
             <div
               aria-hidden="true"
               className={cn(
+                "flex shrink-0 items-center justify-center",
+                title || !description
+                  ? "text-sm leading-normal"
+                  : isCompact
+                    ? "text-xs leading-normal"
+                    : "text-xs leading-[max(1.25rem,var(--font-size-xs--line-height))]",
+                // Align to the first text line, including when the title wraps
+                // or the user's text size changes.
                 isCompact
-                  ? "mt-0.5 flex shrink-0 items-center justify-center"
+                  ? "h-[1lh]"
                   : cn(
-                      "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full",
+                      "mt-[calc((1lh-1.5rem)/2)] size-6 rounded-full",
                       toneStyles.icon,
                     ),
                 iconWrapperClassName,
@@ -141,37 +157,47 @@ export const Notice = React.forwardRef<HTMLDivElement, NoticeProps>(
               {resolvedIcon}
             </div>
           ) : null}
-          <div className="min-w-0 flex-1">
-            {title ? (
-              <div
-                id={titleId}
-                className={cn(
-                  "text-foreground font-medium",
-                  isCompact ? "text-xs" : "text-sm",
-                )}
-              >
-                {title}
-              </div>
-            ) : null}
-            {description ? (
-              <p
-                id={descriptionId}
-                className={cn(
-                  "text-xs leading-[max(1.25rem,var(--font-size-xs--line-height))]",
-                  isCompact
-                    ? "text-muted-foreground"
-                    : "dark:text-secondary-foreground text-muted-foreground mt-0.5",
-                )}
-              >
-                {description}
-              </p>
-            ) : null}
-            {children}
+          <div
+            className={cn(
+              "min-w-0 flex-1",
+              actionsLayout === NOTICE_ACTION_LAYOUTS.Inline &&
+                "gap-density-1 flex flex-col @md/notice:flex-row @md/notice:gap-x-3",
+            )}
+          >
+            <div className="min-w-0 flex-1">
+              {title ? (
+                <div
+                  id={titleId}
+                  className="text-foreground text-sm leading-normal font-medium"
+                >
+                  {title}
+                </div>
+              ) : null}
+              {description ? (
+                <p
+                  id={descriptionId}
+                  className={cn(
+                    "text-xs",
+                    isCompact
+                      ? "text-muted-foreground leading-normal"
+                      : "dark:text-secondary-foreground text-muted-foreground leading-[max(1.25rem,var(--font-size-xs--line-height))]",
+                    !isCompact && title && "mt-0.5",
+                  )}
+                >
+                  {description}
+                </p>
+              ) : null}
+              {children}
+            </div>
             {actions ? (
               <ActionGroup
                 className={cn(
-                  "items-stretch justify-start",
-                  isCompact ? "mt-density-1-5" : "mt-density-2",
+                  "max-w-full min-w-0 items-stretch justify-start [&_[data-slot=button][data-size=sm]]:text-xs",
+                  actionsLayout === NOTICE_ACTION_LAYOUTS.Inline
+                    ? "self-start @md/notice:self-center"
+                    : isCompact
+                      ? "mt-density-1"
+                      : "mt-density-2",
                 )}
               >
                 {actions}
