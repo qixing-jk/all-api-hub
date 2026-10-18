@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="WEB_MODULE" version="4">
+  <component name="NewModuleRootManager">
+    <content url="file://$MODULE_DIR$/..">
+      <excludeFolder url="file://$MODULE_DIR$/../.output" />
+      <excludeFolder url="file://$MODULE_DIR$/../.wxt" />
+      <excludeFolder url="file://$MODULE_DIR$/../build" />
+      <excludeFolder url="file://$MODULE_DIR$/../dist" />
+      <excludeFolder url="file://$MODULE_DIR$/../out" />
+      <excludeFolder url="file://$MODULE_DIR$/../coverage" />
+      <excludeFolder url="file://$MODULE_DIR$/../test-results" />
+      <excludeFolder url="file://$MODULE_DIR$/../playwright-report" />
+      <excludeFolder url="file://$MODULE_DIR$/../diagnostics-results" />
+      <excludeFolder url="file://$MODULE_DIR$/../.vitest-reports" />
+      <excludeFolder url="file://$MODULE_DIR$/../.pnpm-store" />
+      <excludeFolder url="file://$MODULE_DIR$/../.playwright" />
+      <excludeFolder url="file://$MODULE_DIR$/../.playwright-cli" />
+      <excludeFolder url="file://$MODULE_DIR$/../.playwright-profiles" />
+      <excludeFolder url="file://$MODULE_DIR$/../docs/docs/.vuepress/.cache" />
+      <excludeFolder url="file://$MODULE_DIR$/../docs/docs/.vuepress/.temp" />
+      <excludeFolder url="file://$MODULE_DIR$/../docs/docs/.vuepress/dist" />
+      <excludeFolder url="file://$MODULE_DIR$/../.scratch/visual-captures" />
+      <excludeFolder url="file://$MODULE_DIR$/../.scratch/visual-comparisons" />
+      <excludeFolder url="file://$MODULE_DIR$/../logs" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>
