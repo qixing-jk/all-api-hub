@@ -432,6 +432,7 @@
       "excludeIpsPlaceholder": "Eine pro Zeile (CIDR unterstützt)",
       "expiryDays": "Gültigkeitsdauer (Tage)",
       "feedback": {
+        "adminOnlyKeySettings": "Diese Website beschränkt erweiterte Schlüsseloptionen wie IP-Whitelists auf Administratoren; entfernen Sie diese Felder und versuchen Sie es erneut.",
         "authenticationFailed": "Melden Sie sich erneut an oder aktualisieren Sie die Zugangsdaten dieses Kontos und versuchen Sie es erneut.",
         "error": "Befolgen Sie die Fehlerdetails unten und versuchen Sie es dann erneut.",
         "permissionDenied": "Verwenden Sie Zugangsdaten mit Berechtigung zum Anzeigen und Verwalten von Schlüsseln und versuchen Sie es erneut.",

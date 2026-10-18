@@ -9,6 +9,8 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 type Sub2ApiFailureEnvelope = {
   message?: string
   upstreamCode: string
+  /** Deployment-specific machine reason (e.g. API_KEY_ADVANCED_SETTINGS_ADMIN_ONLY). */
+  reason?: string
 }
 
 /** Reads only verified Sub2API failure envelopes and machine codes. */
@@ -28,7 +30,16 @@ export const readSub2ApiFailureEnvelope = (
   const message =
     typeof body.message === "string" ? body.message.trim() : undefined
   if (!message && !isSessionBindingMismatch) return null
-  return { ...(message ? { message } : {}), upstreamCode }
+  // Session-binding recovery depends on the primary authentication code.
+  const reason =
+    !isSessionBindingMismatch && typeof body.reason === "string"
+      ? readSafeUpstreamCode(body.reason)
+      : undefined
+  return {
+    ...(message ? { message } : {}),
+    upstreamCode,
+    ...(reason ? { reason } : {}),
+  }
 }
 
 /**
@@ -52,6 +63,8 @@ export const decodeSub2ApiResponseError: ApiResponseErrorDecoder = (
       failure?.message,
       `Sub2API request failed: ${response.status}`,
     ),
-    ...(failure ? { upstreamCode: failure.upstreamCode } : {}),
+    ...(failure
+      ? { upstreamCode: failure.reason ?? failure.upstreamCode }
+      : {}),
   }
 }

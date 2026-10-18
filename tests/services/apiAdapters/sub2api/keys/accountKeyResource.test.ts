@@ -228,6 +228,43 @@ describe("Sub2API account key resources", () => {
     },
   )
 
+  it("maps the admin-only advanced-settings rejection to an actionable hint", async () => {
+    const adminOnlyError = new ApiError(
+      "custom keys, IP restrictions, and rate limits are restricted to administrators",
+      403,
+      "/api/v1/keys",
+      API_ERROR_CODES.HTTP_403,
+      "API_KEY_ADVANCED_SETTINGS_ADMIN_ONLY",
+    )
+    mockFetchSub2ApiKeys.mockResolvedValueOnce([]).mockResolvedValueOnce([])
+    mockCreateSub2ApiKey.mockRejectedValueOnce(adminOnlyError)
+
+    const session = await sub2ApiAccountKeyResources.open({
+      account: {
+        id: "account-example",
+        name: "Example account",
+        siteType: SITE_TYPES.SUB2API,
+      },
+      request,
+    })
+
+    const editor = await session.openCreateEditor("account")
+    await expect(
+      editor.submit({
+        ...editor.initialValues,
+        name: "Whitelisted key",
+        ip_whitelist: "203.0.113.7",
+      }),
+    ).rejects.toMatchObject({
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.PermissionDenied,
+        // i18next's parseMissingKeyHandler echoes the key in the node test env.
+        message: "keyManagement:native.editor.feedback.adminOnlyKeySettings",
+        upstreamCode: "API_KEY_ADVANCED_SETTINGS_ADMIN_ONLY",
+      },
+    })
+  })
+
   it("maps structured inventory authorization failures at the session boundary", async () => {
     mockFetchSub2ApiGroupDescriptors.mockRejectedValueOnce(
       new ApiError(

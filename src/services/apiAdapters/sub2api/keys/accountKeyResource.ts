@@ -62,6 +62,7 @@ import type {
 } from "~/services/apiService/sub2api/type"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { maskSecretForDisplay, normalizeToMs } from "~/utils/core/formatters"
+import { t } from "~/utils/i18n/core"
 
 const ACCOUNT_SCOPE_KEY = "account"
 
@@ -489,7 +490,28 @@ const toFacts = (
   actions: { canUpdate: true, canDelete: true },
 })
 
-const mapFailure = mapAccountKeyResourceFailure
+/**
+ * This deployment restricts IP whitelists and similar advanced key settings to
+ * administrators (observed 2026-10-17: `reason: API_KEY_ADVANCED_SETTINGS_ADMIN_ONLY`).
+ * The generic permission copy does not name the remedy, so map the machine
+ * reason to an actionable line before it reaches the editor feedback.
+ */
+const API_KEY_ADMIN_ONLY_ADVANCED_SETTINGS_REASON =
+  "API_KEY_ADVANCED_SETTINGS_ADMIN_ONLY"
+
+const mapFailure = (error: unknown): ResourceFailure => {
+  const failure = mapAccountKeyResourceFailure(error)
+  if (
+    failure.code === ACCOUNT_KEY_RESOURCE_FAILURE_CODES.PermissionDenied &&
+    failure.upstreamCode === API_KEY_ADMIN_ONLY_ADVANCED_SETTINGS_REASON
+  ) {
+    return {
+      ...failure,
+      message: t("keyManagement:native.editor.feedback.adminOnlyKeySettings"),
+    }
+  }
+  return failure
+}
 
 /** Correlate native create responses or a unique new key without replaying writes. */
 async function createNativeKey(

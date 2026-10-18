@@ -421,6 +421,7 @@
       "excludeIpsPlaceholder": "一行一个（支持 CIDR）",
       "expiryDays": "有效期（天）",
       "feedback": {
+        "adminOnlyKeySettings": "该站点仅管理员可设置 IP 白名单等高级密钥选项；请清除对应字段后重试。",
         "authenticationFailed": "请重新登录或更新此账号的凭据，然后重试。",
         "error": "请根据错误信息处理后重试。",
         "permissionDenied": "请使用有权查看和管理密钥的凭据，然后重试。",

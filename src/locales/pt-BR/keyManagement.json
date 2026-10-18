@@ -443,6 +443,7 @@
       "excludeIpsPlaceholder": "Um por linha (com suporte a CIDR)",
       "expiryDays": "Expira em (dias)",
       "feedback": {
+        "adminOnlyKeySettings": "Este site restringe opções avançadas de chave, como listas de IP, a administradores; limpe esses campos e tente novamente.",
         "authenticationFailed": "Entre novamente ou atualize as credenciais desta conta e tente outra vez.",
         "error": "Siga os detalhes do erro e tente novamente.",
         "permissionDenied": "Use credenciais com permissão para visualizar e gerenciar chaves e tente novamente.",
