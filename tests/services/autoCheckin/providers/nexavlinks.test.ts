@@ -253,6 +253,23 @@ describe("NexaVlinks check-in integration", () => {
     expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
   })
 
+  it("rejects an invalid site URL before opening the page or reading status", async () => {
+    const account = createAccount()
+    account.site_url = "not a valid URL"
+
+    await expect(
+      nexavlinksProvider.checkIn(account, {
+        ...executionContext(),
+        statusProof: notCheckedStatusProof,
+      }),
+    ).resolves.toMatchObject({
+      status: CHECKIN_RESULT_STATUS.FAILED,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.CHECKIN_PAGE_UNAVAILABLE,
+    })
+    expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+    expect(fetchNexaVlinksDailyCheckInStatus).not.toHaveBeenCalled()
+  })
+
   it("opens the site's own check-in page with a scoped button trigger", async () => {
     vi.mocked(tempWindowTriggerCheckinPageAction).mockResolvedValue(
       clickedAction({ status: "completed", provider: "interactive" }) as never,
