@@ -174,9 +174,9 @@
     }
   },
   "changelogOnUpdate": {
-    "description": "Controla si All API Hub muestra un diálogo de Novedades la primera vez que abres la UI de la extensión después de actualizaciones.",
+    "description": "Controla si All API Hub muestra un diálogo de Novedades la primera vez que abres la página de configuración después de actualizaciones.",
     "title": "Changelog",
-    "toggleDesc": "Cuando está habilitado, el registro de actualización se muestra integrado al abrir la UI por primera vez después de una actualización (una vez por versión). Aún puedes abrir manualmente el changelog completo de la documentación.",
+    "toggleDesc": "Cuando está habilitado, el registro de actualización se muestra integrado al abrir la página de configuración por primera vez después de una actualización (una vez por versión). Aún puedes abrir manualmente el changelog completo de la documentación.",
     "toggleLabel": "Mostrar Novedades después de actualizaciones"
   },
   "claudeCodeHub": {

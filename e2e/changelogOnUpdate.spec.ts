@@ -1,6 +1,10 @@
 import type { BrowserContext, Page } from "@playwright/test"
 
-import { OPTIONS_PAGE_PATH, POPUP_PAGE_PATH } from "~/constants/extensionPages"
+import {
+  OPTIONS_PAGE_PATH,
+  POPUP_PAGE_PATH,
+  SIDEPANEL_PAGE_PATH,
+} from "~/constants/extensionPages"
 import { UPDATE_LOG_DIALOG_TEST_IDS } from "~/features/UpdateLog/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { CURRENT_PREFERENCES_VERSION } from "~/services/preferences/migrations/preferencesMigration"
@@ -16,7 +20,7 @@ import {
 const UPDATE_LOG_DIALOG_SELECTOR = `[data-testid="${UPDATE_LOG_DIALOG_TEST_IDS.root}"]`
 
 /**
- * search through open pages in the context to find one that has the update log dialog, which may be opened in either popup or options contexts, and return it for interaction in testing
+ * search through open pages in the context to find one that has the update log dialog, in the options page, and return it for interaction in testing
  */
 async function findPageWithUpdateLogDialog(
   context: BrowserContext,
@@ -37,7 +41,7 @@ async function findPageWithUpdateLogDialog(
 }
 
 /**
- * wait for a page with the update log dialog to appear in the context, which may be opened in either popup or options contexts, and return it for interaction in testing, throwing if it doesn't appear within the timeout
+ * wait for a page with the update log dialog to appear in the context, in the options page, and return it for interaction in testing, throwing if it doesn't appear within the timeout
  */
 async function waitForUpdateLogDialogPage(
   context: BrowserContext,
@@ -198,67 +202,100 @@ test("shows update log inline once on first UI open after update", async ({
   await expect(dialogPage.locator(UPDATE_LOG_DIALOG_SELECTOR)).toHaveCount(0)
 })
 
-test("shows update log inline in popup once on first UI open after update", async ({
-  page,
-  context,
-  extensionId,
-}) => {
-  await closeOtherPages(context, page)
-
-  const serviceWorker = await getServiceWorker(context)
-  const version = await serviceWorker.evaluate(() => {
-    const chromeApi = (globalThis as any).chrome
-    return chromeApi.runtime.getManifest().version as string
-  })
-
-  await closeOtherPages(context, page)
-  await removePlasmoStorageKey(serviceWorker, STORAGE_KEYS.USER_PREFERENCES)
-  await removePlasmoStorageKey(
-    serviceWorker,
-    STORAGE_KEYS.CHANGELOG_ON_UPDATE_PENDING_VERSION,
-  )
-  await setPlasmoStorageValue(
-    serviceWorker,
-    STORAGE_KEYS.CHANGELOG_ON_UPDATE_PENDING_VERSION,
-    version,
-  )
-
-  await context.route("**/changelog.html*", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "text/html",
-      body: "<!doctype html><title>Changelog</title><h1>Changelog</h1>",
+for (const compactPage of [POPUP_PAGE_PATH, SIDEPANEL_PAGE_PATH]) {
+  test(`preserves pending update in ${compactPage} until options opens`, async ({
+    page,
+    context,
+    extensionId,
+  }) => {
+    await closeOtherPages(context, page)
+    const serviceWorker = await getServiceWorker(context)
+    const version = "4.5.0"
+    await setPlasmoStorageValue(serviceWorker, STORAGE_KEYS.USER_PREFERENCES, {
+      openChangelogOnUpdate: true,
+      preferencesVersion: CURRENT_PREFERENCES_VERSION,
     })
-  })
-
-  await page.goto(`chrome-extension://${extensionId}/${POPUP_PAGE_PATH}`)
-
-  const dialogPage = await waitForUpdateLogDialogPage(context)
-  await expect(dialogPage.locator(UPDATE_LOG_DIALOG_SELECTOR)).toBeVisible()
-
-  await expect
-    .poll(() =>
-      getPlasmoStorageRawValue(
+    await setPlasmoStorageValue(
+      serviceWorker,
+      STORAGE_KEYS.CHANGELOG_ON_UPDATE_PENDING_VERSION,
+      version,
+    )
+    await context.route("**/changelog.html*", (route) =>
+      route.fulfill({
+        contentType: "text/html",
+        body: "<!doctype html><title>Changelog</title><h1>Changelog</h1>",
+      }),
+    )
+    await page.goto(`chrome-extension://${extensionId}/${compactPage}`)
+    await expect(page.getByRole("banner")).toBeVisible()
+    await expect(page.locator(UPDATE_LOG_DIALOG_SELECTOR)).toHaveCount(0)
+    expect(
+      await getPlasmoStorageRawValue(
         serviceWorker,
         STORAGE_KEYS.CHANGELOG_ON_UPDATE_PENDING_VERSION,
       ),
+    ).toBe(JSON.stringify(version))
+
+    await page.goto(`chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}`)
+    await expect(page.locator(UPDATE_LOG_DIALOG_SELECTOR)).toBeVisible()
+    await expect
+      .poll(() =>
+        getPlasmoStorageRawValue(
+          serviceWorker,
+          STORAGE_KEYS.CHANGELOG_ON_UPDATE_PENDING_VERSION,
+        ),
+      )
+      .toBeUndefined()
+  })
+}
+
+for (const viewport of [
+  { width: 390, height: 640 },
+  { width: 1280, height: 800 },
+]) {
+  test(`update log close controls at ${viewport.width}px`, async ({
+    page,
+    context,
+    extensionId,
+  }, testInfo) => {
+    await closeOtherPages(context, page)
+    await page.setViewportSize(viewport)
+    const serviceWorker = await getServiceWorker(context)
+    await setPlasmoStorageValue(serviceWorker, STORAGE_KEYS.USER_PREFERENCES, {
+      openChangelogOnUpdate: true,
+      preferencesVersion: CURRENT_PREFERENCES_VERSION,
+    })
+    await setPlasmoStorageValue(
+      serviceWorker,
+      STORAGE_KEYS.CHANGELOG_ON_UPDATE_PENDING_VERSION,
+      "4.5.0",
     )
-    .toBeUndefined()
-
-  await expect
-    .poll(
-      () =>
-        context.pages().filter((p) => p.url().includes("changelog.html"))
-          .length,
+    await context.route("**/changelog.html*", (route) =>
+      route.fulfill({
+        contentType: "text/html",
+        body: '<!doctype html><html lang="en"><title>Changelog</title><body style="font-family:system-ui;padding:20px"><h1>4.5.0</h1><h2>Updates</h2><p>Improved account management and browser compatibility.</p></body></html>',
+      }),
     )
-    .toBe(0)
-
-  await dialogPage.getByTestId(UPDATE_LOG_DIALOG_TEST_IDS.closeButton).click()
-  await expect(dialogPage.locator(UPDATE_LOG_DIALOG_SELECTOR)).toHaveCount(0)
-
-  await dialogPage.reload()
-  await expect(dialogPage.locator(UPDATE_LOG_DIALOG_SELECTOR)).toHaveCount(0)
-})
+    await page.goto(`chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}`)
+    const dialog = page.getByRole("dialog")
+    await expect(page.locator(UPDATE_LOG_DIALOG_SELECTOR)).toBeVisible()
+    await expect(dialog.locator("iframe")).toBeVisible()
+    await expect(dialog.getByText(/loading/i)).toHaveCount(0)
+    await page.screenshot({ path: testInfo.outputPath("update-log.png") })
+    const footerClose = page.getByTestId(UPDATE_LOG_DIALOG_TEST_IDS.closeButton)
+    if (viewport.width < 640) {
+      await expect(footerClose).toBeHidden()
+    } else {
+      await expect(footerClose).toBeVisible()
+    }
+    // The shared modal supplies a persistent, labelled icon-only close control.
+    await dialog
+      .getByRole("button", { name: "Close", exact: true })
+      .and(dialog.locator("[aria-label]"))
+      .click()
+    await expect(page.locator(UPDATE_LOG_DIALOG_SELECTOR)).toHaveCount(0)
+  })
+}
 
 test("does not show update log when disabled, but still consumes pending marker", async ({
   page,

@@ -174,9 +174,9 @@
     }
   },
   "changelogOnUpdate": {
-    "description": "Steuern Sie, ob All API Hub beim ersten Öffnen der Erweiterungs-Benutzeroberfläche nach Aktualisierungen ein Dialogfeld „Neuigkeiten“ anzeigt.",
+    "description": "Steuern Sie, ob All API Hub beim ersten Öffnen der Einstellungsseite nach Aktualisierungen ein Dialogfeld „Neuigkeiten“ anzeigt.",
     "title": "Änderungsprotokoll",
-    "toggleDesc": "Wenn aktiviert, wird das Update-Protokoll beim ersten Öffnen der Benutzeroberfläche nach einem Update inline angezeigt (einmal pro Version). Sie können das vollständige Änderungsprotokoll der Dokumentation weiterhin manuell öffnen.",
+    "toggleDesc": "Wenn aktiviert, wird das Update-Protokoll beim ersten Öffnen der Einstellungsseite nach einem Update inline angezeigt (einmal pro Version). Sie können das vollständige Änderungsprotokoll der Dokumentation weiterhin manuell öffnen.",
     "toggleLabel": "Zeigt, was nach Updates neu ist"
   },
   "claudeCodeHub": {

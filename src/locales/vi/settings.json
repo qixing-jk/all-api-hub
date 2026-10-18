@@ -174,9 +174,9 @@
     }
   },
   "changelogOnUpdate": {
-    "description": "Kiểm soát việc hiển thị nội dung cập nhật trong tiện ích khi mở giao diện tiện ích lần đầu sau khi cập nhật xong.",
+    "description": "Kiểm soát việc hiển thị nội dung cập nhật trong tiện ích khi mở trang cài đặt lần đầu sau khi cập nhật xong.",
     "title": "Nhật ký thay đổi",
-    "toggleDesc": "Sau khi bật, lần đầu mở giao diện tiện ích sau khi cập nhật xong, tiện ích sẽ hiển thị nội dung cập nhật trong app (mỗi phiên bản chỉ một lần), đồng thời có thể mở thủ công trang nhật ký thay đổi đầy đủ.",
+    "toggleDesc": "Sau khi bật, lần đầu mở trang cài đặt sau khi cập nhật xong, tiện ích sẽ hiển thị nội dung cập nhật trong app (mỗi phiên bản chỉ một lần), đồng thời có thể mở thủ công trang nhật ký thay đổi đầy đủ.",
     "toggleLabel": "Tự động hiển thị nội dung cập nhật sau khi cập nhật"
   },
   "claudeCodeHub": {

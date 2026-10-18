@@ -174,9 +174,9 @@
     }
   },
   "changelogOnUpdate": {
-    "description": "Controle se o All API Hub mostra a caixa de diálogo Novidades na primeira vez que você abre a interface da extensão após uma atualização.",
+    "description": "Controle se o All API Hub mostra a caixa de diálogo Novidades na primeira vez que você abre a página de configurações após uma atualização.",
     "title": "Registro de alterações",
-    "toggleDesc": "Quando ativado, o histórico de atualizações é exibido na interface na primeira abertura após uma atualização (uma vez por versão). Você ainda pode abrir manualmente o changelog completo na documentação.",
+    "toggleDesc": "Quando ativado, o histórico de atualizações é exibido na primeira abertura da página de configurações após uma atualização (uma vez por versão). Você ainda pode abrir manualmente o changelog completo na documentação.",
     "toggleLabel": "Mostrar novidades após atualizações"
   },
   "claudeCodeHub": {
