@@ -16,7 +16,7 @@ export async function discoverAccountLoginMethods(
   return capability ? capability.discover(account) : []
 }
 
-/** Starts a fresh account login. Callers own interpretation of optional side effects. */
+/** Authenticates an account under its requested session policy; callers interpret optional side effects. */
 export async function loginAccount(
   request: AccountLoginRequest,
 ): Promise<AccountLoginResult> {

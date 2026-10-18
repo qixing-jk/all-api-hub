@@ -8,6 +8,7 @@ import {
   User,
 } from "lucide-react"
 import {
+  useEffect,
   useImperativeHandle,
   useLayoutEffect,
   useRef,
@@ -21,6 +22,7 @@ import {
   Button,
   FormField,
   Input,
+  Notice,
   Select,
   SelectContent,
   SelectItem,
@@ -29,6 +31,11 @@ import {
   Switch,
   Textarea,
 } from "~/components/ui"
+import {
+  ACCOUNT_LOGIN_METHODS,
+  isAccountLoginProvider,
+} from "~/constants/accountLogin"
+import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { ACCOUNT_SITE_TYPES, SITE_TYPES } from "~/constants/siteType"
 import { AccountCheckInSection } from "~/features/AccountManagement/components/AccountDialog/checkin/AccountCheckInSection"
 import { AccountFormSection } from "~/features/AccountManagement/components/AccountDialog/form/AccountFormSection"
@@ -38,6 +45,10 @@ import {
   type CookieAuthPermissionRecommendationProps,
 } from "~/features/AccountManagement/components/AccountDialog/form/CookieAuthPermissionRecommendation"
 import type { AccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/form/sitePolicy"
+import {
+  ACCOUNT_LOGIN_SECTION_ID,
+  AccountLoginSection,
+} from "~/features/AccountManagement/components/AccountDialog/login/AccountLoginSection"
 import type {
   AccountCheckInRedetectionFeedback,
   AccountDialogDraft,
@@ -47,10 +58,15 @@ import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementSiteTypeOptionTestId,
 } from "~/features/AccountManagement/testIds"
+import { normalizePasswordCredentials } from "~/services/accountLogin/passwordCredentials"
 import type { LoginProviderClaimConflict } from "~/services/accountLogin/providerClaims"
 import { isValidExchangeRate } from "~/services/accounts/editing/accountFormValidation"
+import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
+import { resolveSelectedCheckInMethod } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
+import type { AccountLoginConfiguration } from "~/types/accountLogin"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
+import { temporarilyHighlight } from "~/utils/dom/temporaryHighlight"
 
 const ACCOUNT_FORM_SITE_TYPE_OPTIONS = ACCOUNT_SITE_TYPES.filter(
   (siteType) => siteType !== SITE_TYPES.UNKNOWN,
@@ -114,6 +130,7 @@ interface AccountFormProps {
   deleteTag: (tagId: string) => Promise<{ updatedAccounts: number }>
   onSiteTypeChange: (value: string) => void
   onAuthTypeChange: (value: AuthTypeEnum) => void
+  onLoginChange: (value: AccountLoginConfiguration | undefined) => void
   onCheckInChange: (value: CheckInConfig) => void
   onCheckInSelectionChange: (value: CheckInConfig) => void
   onRedetectCheckInMethods: () => void
@@ -162,6 +179,7 @@ export default function AccountForm({
   deleteTag,
   onSiteTypeChange,
   onAuthTypeChange,
+  onLoginChange,
   onCheckInChange,
   onCheckInSelectionChange,
   onRedetectCheckInMethods,
@@ -200,6 +218,18 @@ export default function AccountForm({
     credentialPresentation.accessTokenLabelKey ?? "form.accessToken",
   )
   const accessTokenInputRef = useRef<HTMLInputElement>(null)
+  const loginMethodRef = useRef<HTMLButtonElement>(null)
+  const clearLoginHighlightRef = useRef<(() => void) | undefined>(undefined)
+  const [isLoginSectionOpen, setIsLoginSectionOpen] = useState(true)
+  const [loginFocusRequested, setLoginFocusRequested] = useState(false)
+  const usesAccountLogin =
+    resolveSelectedCheckInMethod({ config: checkIn, siteType, siteUrl }) ===
+    AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn
+  const loginConfigured =
+    !!draft.login &&
+    (draft.login.methodId === ACCOUNT_LOGIN_METHODS.Password
+      ? !!normalizePasswordCredentials(draft.login.credentials)
+      : isAccountLoginProvider(draft.login.methodId))
   const [isAuthSectionOpen, setIsAuthSectionOpen] = useState(
     ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["account-auth"],
   )
@@ -225,6 +255,19 @@ export default function AccountForm({
     input?.scrollIntoView({ block: "center" })
     setAccessTokenFocusRequested(false)
   }, [accessTokenFocusRequested, isAuthSectionOpen])
+
+  useLayoutEffect(() => {
+    if (!loginFocusRequested) return
+    loginMethodRef.current?.focus({ preventScroll: true })
+    const section = document.getElementById(ACCOUNT_LOGIN_SECTION_ID)
+    if (section) {
+      section.scrollIntoView({ block: "start" })
+      clearLoginHighlightRef.current = temporarilyHighlight(section)
+    }
+    setLoginFocusRequested(false)
+  }, [loginFocusRequested, isLoginSectionOpen])
+
+  useEffect(() => () => clearLoginHighlightRef.current?.(), [usesAccountLogin])
 
   const hasFeedbackSiteChanged = Boolean(
     feedbackOriginalBaseUrl && feedbackOriginalBaseUrl !== feedbackBaseUrl,
@@ -585,6 +628,16 @@ export default function AccountForm({
       </AccountFormSection>
 
       <AccountCheckInSection
+        loginMethodId={draft.login?.methodId}
+        loginConfigured={loginConfigured}
+        onConfigureLogin={
+          usesAccountLogin
+            ? () => {
+                setIsLoginSectionOpen(true)
+                setLoginFocusRequested(true)
+              }
+            : undefined
+        }
         feedbackSource={{
           accountId: feedbackAccountId,
           snapshot: {
@@ -605,13 +658,35 @@ export default function AccountForm({
         checkIn={checkIn}
         siteType={siteType}
         siteUrl={siteUrl}
-        claimedLoginProviders={claimedLoginProviders}
         onCheckInChange={onCheckInChange}
         onCheckInSelectionChange={onCheckInSelectionChange}
         onRedetectCheckInMethods={onRedetectCheckInMethods}
         isRedetectingCheckInMethods={isRedetectingCheckInMethods}
         checkInRedetectionFeedback={checkInRedetectionFeedback}
       />
+
+      {!usesAccountLogin &&
+        draft.loginChanged &&
+        draft.login?.methodId === ACCOUNT_LOGIN_METHODS.Password &&
+        !loginConfigured && (
+          <Notice tone="warning" description={t("login.incompleteHidden")} />
+        )}
+
+      {usesAccountLogin && (
+        <AccountLoginSection
+          siteUrl={siteUrl}
+          passwordIdentity={
+            getAccountSiteDefinition(draft.siteType)?.accountLogin
+              ?.passwordIdentity
+          }
+          login={draft.login}
+          claimedLoginProviders={claimedLoginProviders}
+          onChange={onLoginChange}
+          methodRef={loginMethodRef}
+          open={isLoginSectionOpen}
+          onOpenChange={setIsLoginSectionOpen}
+        />
+      )}
 
       <AccountFormSection
         title={t("sections.balanceAndStats.title")}

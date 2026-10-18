@@ -1,6 +1,6 @@
 import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
 import {
-  canonicalizeV6Accounts,
+  canonicalizeLegacyAccountConfigs,
   normalizeV2BackupForMerge,
 } from "~/services/importExport/backupCodec"
 import {
@@ -45,7 +45,7 @@ export async function importV2AccountsWithReplace(data: BackupV2) {
       : []
 
   await accountDataTransfer.importData({
-    accounts: canonicalizeV6Accounts(accounts) as SiteAccount[],
+    accounts: canonicalizeLegacyAccountConfigs(accounts) as SiteAccount[],
     bookmarks,
     pinnedAccountIds,
     orderedAccountIds,

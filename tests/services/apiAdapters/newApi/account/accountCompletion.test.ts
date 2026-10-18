@@ -1062,9 +1062,9 @@ describe("newApiAccountCompletion", () => {
 
     expect(agentRouterCheckInConfig).toHaveBeenCalledWith({
       supported: true,
-      loginCheckInProvider: "linuxdo",
     })
-    expect(result.checkIn.loginCheckIn).toEqual({ provider: "linuxdo" })
+    expect(result.login).toEqual({ methodId: "linuxdo" })
+    expect(result.checkIn).not.toHaveProperty("loginCheckIn")
   })
 
   it.each([

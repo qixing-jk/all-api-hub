@@ -1,4 +1,7 @@
-import type { AccountLoginMethodId } from "~/constants/accountLogin"
+import type {
+  AccountLoginMethodId,
+  AccountPasswordIdentity,
+} from "~/constants/accountLogin"
 import type { AccountSiteProductProfileOverride } from "~/services/accounts/accountSiteProfile/contracts"
 
 import type { SiteType } from "./identifiers"
@@ -145,6 +148,8 @@ export interface AccountSiteDefinitionOnboardingMetadata {
 
 /** Static login adoption; methods and their execution semantics belong to the registered adapter. */
 export interface AccountSiteLoginConfig {
+  /** Accepted identifier for the native password protocol, independent of its JSON field name. */
+  passwordIdentity?: AccountPasswordIdentity
   methods: readonly AccountLoginMethodId[]
   /** Only protocols needing per-site overrides declare options here. */
   protocols?: {

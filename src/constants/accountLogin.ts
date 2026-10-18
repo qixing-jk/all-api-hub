@@ -1,6 +1,11 @@
 /** Adapter-owned login method identifier, including native and custom OAuth methods. */
 export type AccountLoginMethodId = string
 
+/** Native methods shared by account configuration and adapter dispatch. */
+export const ACCOUNT_LOGIN_METHODS = {
+  Password: "password",
+} as const
+
 /** Known OAuth providers used by existing integrations and saved check-in settings. */
 export const ACCOUNT_LOGIN_PROVIDERS = {
   Github: "github",
@@ -28,3 +33,12 @@ export function isAccountLoginProvider(
     value === ACCOUNT_LOGIN_PROVIDERS.LinuxDo
   )
 }
+
+/** Native login identifiers presented by account editors and adopted by site policies. */
+export const ACCOUNT_PASSWORD_IDENTITIES = {
+  Username: "username",
+  Email: "email",
+  UsernameOrEmail: "usernameOrEmail",
+} as const
+export type AccountPasswordIdentity =
+  (typeof ACCOUNT_PASSWORD_IDENTITIES)[keyof typeof ACCOUNT_PASSWORD_IDENTITIES]

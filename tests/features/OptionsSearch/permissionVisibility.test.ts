@@ -38,7 +38,11 @@ describe("optional permission search targets", () => {
       const targets = permissionsSearchControls
         .filter((item) => item.isVisible?.(context))
         .map((item) => item.targetId)
-      expect(targets).toEqual(["permissions-refresh-status", ...permissions])
+      expect(targets).toEqual([
+        "permissions-incognito",
+        "permissions-refresh-status",
+        ...permissions,
+      ])
     },
   )
 })

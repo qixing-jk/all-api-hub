@@ -10,12 +10,10 @@ import type { SiteAccount } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
 import { getLegacyAutoCheckinMethodIds } from "../../checkin/autoCheckin/providers/registry"
+import { migrateAccountLogin } from "./accountLoginMigration"
 import { migrateCheckInDualStatusConfig } from "./checkInDualStatusMigration"
 import { migrateCheckInConfig } from "./checkInMigration"
-import {
-  ACCOUNT_CONFIG_V7_VERSION,
-  migrateSiteAccountCheckInToV7,
-} from "./checkInV7Migration"
+import { migrateSiteAccountCheckInToV7 } from "./checkInV7Migration"
 import { migrateDisabledFlagConfig } from "./disabledFlagMigration"
 import { migrateExcludeFromTodayIncomeConfig } from "./excludeFromTodayIncomeMigration"
 import { migrateExcludeFromTotalBalanceConfig } from "./excludeFromTotalBalanceMigration"
@@ -24,7 +22,7 @@ import { migrateSub2ApiAuthConfig } from "./sub2apiAuthMigration"
 const logger = createLogger("AccountDataMigration")
 
 // Current version of the configuration schema
-export const CURRENT_CONFIG_VERSION = ACCOUNT_CONFIG_V7_VERSION
+export const CURRENT_CONFIG_VERSION = 8
 
 /**
  * Migration function type
@@ -85,6 +83,7 @@ const migrations: Record<number, MigrationFunction> = {
     migrateSiteAccountCheckInToV7(account, {
       getLegacyMethodIds: getLegacyAutoCheckinMethodIds,
     }),
+  8: (account) => ({ ...migrateAccountLogin(account), configVersion: 8 }),
 }
 
 /**

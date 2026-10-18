@@ -129,6 +129,9 @@
     "unexpectedContent": "Phản hồi có định dạng không mong đợi và có thể là trang xác minh của trang web."
   },
   "notification": {
+    "loginAssistBody": "Đang chờ đăng nhập. Mở cửa sổ đăng nhập để hoàn tất xác minh hoặc xác thực hai yếu tố; tiện ích sẽ kiểm tra tài khoản và kết quả tác vụ.",
+    "loginSessionBody": "Cửa sổ này đã có phiên đăng nhập. Để tránh đăng xuất tài khoản ở các cửa sổ khác, hãy mở cửa sổ đăng nhập và tự đăng xuất sau khi xác nhận; tiện ích sẽ đăng nhập tài khoản đích.",
+    "openLogin": "Mở cửa sổ đăng nhập",
     "openVerification": "Mở cửa sổ xác minh",
     "reminderSettings": "Cài đặt lời nhắc",
     "turnstileAssistBody": "Trang đang chờ xác minh con người. Mở cửa sổ xác minh để hoàn thành captcha. Tiện ích sẽ kiểm tra kết quả sau đó.",

@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
 import { BACKUP_VERSION } from "~/constants/importExport"
 import { importFromBackupObject } from "~/features/ImportExport/utils"
 import { accountDataTransfer } from "~/services/accounts/accountStorage/accountDataTransfer"
@@ -432,7 +433,7 @@ describe("importFromBackupObject", () => {
   })
 
   it.each(["1.0", "2.0", "3.0"])(
-    "imports V6 accounts from a V%s envelope as canonical V7",
+    "imports V6 accounts from a V%s envelope as canonical V8",
     async (version) => {
       await importFromBackupObject({
         version,
@@ -457,7 +458,7 @@ describe("importFromBackupObject", () => {
         .accounts[0] as any
       expect(imported).toMatchObject({
         id: `legacy-${version}`,
-        configVersion: 7,
+        configVersion: 8,
         checkIn: {
           automaticExecutionEnabled: false,
           selection: { methodId: "new-api:daily-checkin" },
@@ -1687,7 +1688,7 @@ describe("importFromBackupObject", () => {
 })
 
 describe("normalizeBackupForMerge", () => {
-  it("upgrades V6 accounts for WebDAV arbitration without rewriting V7 accounts", () => {
+  it("upgrades V6/V7 accounts for WebDAV arbitration without rewriting V8 accounts", () => {
     const currentCheckIn = {
       automaticExecutionEnabled: true,
       methodKnowledge: {
@@ -1707,7 +1708,7 @@ describe("normalizeBackupForMerge", () => {
     }
     const currentAccount = {
       id: "current-account",
-      configVersion: 7,
+      configVersion: 8,
       checkIn: currentCheckIn,
     }
 
@@ -1732,6 +1733,16 @@ describe("normalizeBackupForMerge", () => {
               },
             },
             currentAccount,
+            {
+              id: "v7-account",
+              configVersion: 7,
+              user_updated_at: 15,
+              checkIn: {
+                ...currentCheckIn,
+                loginCheckIn: { provider: ACCOUNT_LOGIN_METHODS.Password },
+              },
+              passwordAuth: { username: "alice", password: "secret" },
+            },
           ],
         },
       },
@@ -1740,7 +1751,7 @@ describe("normalizeBackupForMerge", () => {
 
     expect(result.accounts[0]).toMatchObject({
       id: "legacy-account",
-      configVersion: 7,
+      configVersion: 8,
       checkIn: {
         automaticExecutionEnabled: false,
         selection: {
@@ -1762,6 +1773,16 @@ describe("normalizeBackupForMerge", () => {
     expect(result.accounts[0]).not.toHaveProperty("checkIn.siteStatus")
     expect(result.accounts[1]).toBe(currentAccount)
     expect(result.accounts[1].checkIn).toBe(currentCheckIn)
+    expect(result.accounts[2]).toMatchObject({
+      configVersion: 8,
+      user_updated_at: 15,
+      login: {
+        methodId: ACCOUNT_LOGIN_METHODS.Password,
+        credentials: { username: "alice", password: "secret" },
+      },
+    })
+    expect(result.accounts[2]).not.toHaveProperty("passwordAuth")
+    expect(result.accounts[2].checkIn).not.toHaveProperty("loginCheckIn")
   })
 
   it("rejects future backup versions instead of normalizing them as V1", () => {

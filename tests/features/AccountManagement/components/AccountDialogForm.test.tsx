@@ -1,7 +1,9 @@
 import userEvent from "@testing-library/user-event"
 import type { ComponentProps } from "react"
+import { useState } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
 import {
   AUTO_CHECKIN_METHOD_IDS,
   CHECK_IN_METHOD_AVAILABILITIES,
@@ -145,6 +147,7 @@ describe("AccountDialog AccountForm", () => {
     deleteTag: vi.fn(),
     onSiteTypeChange: vi.fn(),
     onAuthTypeChange: vi.fn(),
+    onLoginChange: vi.fn(),
     onCheckInChange: vi.fn(),
     onCheckInSelectionChange: vi.fn(),
     onRedetectCheckInMethods: vi.fn(),
@@ -187,22 +190,147 @@ describe("AccountDialog AccountForm", () => {
     return props
   }
 
-  it("configures login check-in without changing access-token authentication", async () => {
+  it("configures account login independently of check-in and access-token authentication", async () => {
     const props = createAgentRouterProps()
     render(<AccountForm {...withSitePolicy(props)} />)
     const user = userEvent.setup()
     await user.click(
       await screen.findByRole("combobox", {
-        name: "accountDialog:form.loginCheckInProvider",
+        name: "accountDialog:login.method",
       }),
     )
     await user.click(screen.getByRole("option", { name: "Linux DO" }))
-    expect(props.onCheckInChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({ loginCheckIn: { provider: "linuxdo" } }),
-    )
+    expect(props.onLoginChange).toHaveBeenLastCalledWith({
+      methodId: "linuxdo",
+    })
+    expect(props.onCheckInChange).not.toHaveBeenCalled()
     expect(props.onAuthTypeChange).not.toHaveBeenCalled()
     expect(props.onAccessTokenChange).not.toHaveBeenCalled()
     expect(props.onCookieAuthSessionCookieChange).not.toHaveBeenCalled()
+  })
+
+  it("only renders login settings when the selected check-in method uses account login", async () => {
+    const props = createAgentRouterProps()
+    props.draft.login = { methodId: "github" }
+    const { rerender } = render(<AccountForm {...withSitePolicy(props)} />)
+    expect(
+      await screen.findByRole("combobox", {
+        name: "accountDialog:login.method",
+      }),
+    ).toBeInTheDocument()
+    props.draft = {
+      ...props.draft,
+      checkIn: createCheckIn({ siteType: SITE_TYPES.NEW_API }),
+    }
+    rerender(<AccountForm {...withSitePolicy(props)} />)
+    expect(
+      screen.queryByRole("combobox", { name: "accountDialog:login.method" }),
+    ).not.toBeInTheDocument()
+    expect(props.onLoginChange).not.toHaveBeenCalled()
+  })
+
+  it("explains unfinished password edits when switching away hides the fields", async () => {
+    const props = createAgentRouterProps()
+    props.draft.login = {
+      methodId: ACCOUNT_LOGIN_METHODS.Password,
+      credentials: { username: "member", password: "" },
+    }
+    props.draft.loginChanged = true
+    props.draft.checkIn = createCheckIn({ siteType: SITE_TYPES.NEW_API })
+    render(<AccountForm {...withSitePolicy(props)} />)
+    expect(
+      await screen.findByText("accountDialog:login.incompleteHidden"),
+    ).toBeVisible()
+    expect(
+      screen.queryByRole("combobox", { name: "accountDialog:login.method" }),
+    ).not.toBeInTheDocument()
+    expect(props.onLoginChange).not.toHaveBeenCalled()
+  })
+
+  it("explains login check-in and opens its account configuration on compact screens", async () => {
+    mediaQueryState.isSmallScreen = true
+    const props = createAgentRouterProps()
+    render(<AccountForm {...withSitePolicy(props)} />)
+    const user = userEvent.setup()
+    const checkInSection = await screen.findByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn,
+    )
+    expect(
+      within(checkInSection).getByText(
+        "accountDialog:login.checkInExplanation",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      within(checkInSection).getByText("accountDialog:login.checkInMissing"),
+    ).toBeInTheDocument()
+    const loginSection = screen.getByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionLogin,
+    )
+    await user.click(
+      within(loginSection).getByRole("button", { name: /login.title/ }),
+    )
+    await user.click(
+      within(checkInSection).getByRole("button", {
+        name: "accountDialog:login.configure",
+      }),
+    )
+    expect(
+      await screen.findByRole("combobox", {
+        name: "accountDialog:login.method",
+      }),
+    ).toHaveFocus()
+    expect(loginSection).toHaveClass("ring-2", "ring-theme-500")
+  })
+
+  it("edits native password credentials without changing API authentication and retains them across method switches", async () => {
+    const props = createAgentRouterProps()
+    function StatefulForm() {
+      const [login, setLogin] = useState(props.draft.login)
+      return (
+        <AccountForm
+          {...withSitePolicy(props)}
+          draft={{ ...props.draft, login }}
+          onLoginChange={setLogin}
+        />
+      )
+    }
+    render(<StatefulForm />)
+    const user = userEvent.setup()
+    const method = await screen.findByRole("combobox", {
+      name: "accountDialog:login.method",
+    })
+    await user.click(method)
+    await user.click(
+      screen.getByRole("option", {
+        name: "accountDialog:login.passwordMethod",
+      }),
+    )
+    await user.type(
+      screen.getByLabelText(/accountDialog:login.username/),
+      "native-member",
+    )
+    const password = screen.getByLabelText(/accountDialog:login.password\*/)
+    expect(password).toHaveAttribute("type", "password")
+    await user.type(password, " secret ")
+    await user.click(method)
+    await user.click(screen.getByRole("option", { name: "GitHub" }))
+    expect(
+      screen.queryByLabelText(/accountDialog:login.password\*/),
+    ).not.toBeInTheDocument()
+    await user.click(method)
+    await user.click(
+      screen.getByRole("option", {
+        name: "accountDialog:login.passwordMethod",
+      }),
+    )
+    expect(screen.getByLabelText(/accountDialog:login.username/)).toHaveValue(
+      "native-member",
+    )
+    expect(screen.getByLabelText(/accountDialog:login.password\*/)).toHaveValue(
+      " secret ",
+    )
+    expect(props.onAuthTypeChange).not.toHaveBeenCalled()
+    expect(props.onAccessTokenChange).not.toHaveBeenCalled()
   })
 
   it("does not offer login check-in on other New API sites", async () => {
@@ -215,7 +343,7 @@ describe("AccountDialog AccountForm", () => {
     )
     expect(
       screen.queryByRole("combobox", {
-        name: "accountDialog:form.loginCheckInProvider",
+        name: "accountDialog:login.method",
       }),
     ).not.toBeInTheDocument()
   })
@@ -235,7 +363,7 @@ describe("AccountDialog AccountForm", () => {
 
     await user.click(
       await screen.findByRole("combobox", {
-        name: "accountDialog:form.loginCheckInProvider",
+        name: "accountDialog:login.method",
       }),
     )
     expect(screen.getByRole("option", { name: "GitHub" })).toHaveAttribute(
@@ -249,7 +377,7 @@ describe("AccountDialog AccountForm", () => {
 
   it("keeps a claimed provider selectable while it is the stored selection", async () => {
     const props = createAgentRouterProps()
-    props.draft.checkIn.loginCheckIn = { provider: "github" }
+    props.draft.login = { methodId: "github" }
     props.claimedLoginProviders = [
       {
         provider: "github",
@@ -261,7 +389,7 @@ describe("AccountDialog AccountForm", () => {
 
     await user.click(
       await screen.findByRole("combobox", {
-        name: "accountDialog:form.loginCheckInProvider",
+        name: "accountDialog:login.method",
       }),
     )
     expect(screen.getByRole("option", { name: "GitHub" })).not.toHaveAttribute(
@@ -272,24 +400,22 @@ describe("AccountDialog AccountForm", () => {
 
   it("clears the stored login provider when the user selects none", async () => {
     const props = createAgentRouterProps()
-    props.draft.checkIn.loginCheckIn = { provider: "github" }
+    props.draft.login = { methodId: "github" }
     render(<AccountForm {...withSitePolicy(props)} />)
     const user = userEvent.setup()
 
     await user.click(
       await screen.findByRole("combobox", {
-        name: "accountDialog:form.loginCheckInProvider",
+        name: "accountDialog:login.method",
       }),
     )
     await user.click(
       screen.getByRole("option", {
-        name: "accountDialog:form.loginCheckInProviderNotSelected",
+        name: "accountDialog:login.notConfigured",
       }),
     )
 
-    expect(props.onCheckInChange).toHaveBeenLastCalledWith(
-      expect.not.objectContaining({ loginCheckIn: expect.anything() }),
-    )
+    expect(props.onLoginChange).toHaveBeenLastCalledWith(undefined)
   })
 
   it("presents optional editable identity with the protected OpenRouter management key", async () => {
@@ -1413,6 +1539,10 @@ describe("AccountDialog AccountForm", () => {
     ).toHaveTextContent(
       "accountDialog:form.automaticCheckInSelectionWithDetail",
     )
+
+    await user.click(screen.getByText("accountDialog:form.checkInMethod"))
+    expect(screen.getByRole("listbox")).toBeVisible()
+    await user.keyboard("{Escape}")
 
     await user.click(
       screen.getByRole("combobox", {

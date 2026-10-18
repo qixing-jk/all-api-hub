@@ -471,6 +471,7 @@ export default function AccountDialog({
                 createTag={createTag}
                 renameTag={renameTag}
                 deleteTag={deleteTag}
+                onLoginChange={setters.setLogin}
                 onCheckInChange={setters.setCheckIn}
                 onCheckInSelectionChange={setters.setCheckInSelection}
                 onRedetectCheckInMethods={handlers.handleRedetectCheckInMethods}

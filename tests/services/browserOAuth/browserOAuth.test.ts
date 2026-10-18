@@ -1,6 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { BROWSER_OAUTH_STATUS } from "~/constants/browserOAuth"
+import { BROWSER_LOGIN_SESSION_MODES } from "~/constants/browserLogin"
+import {
+  BROWSER_OAUTH_COMPLETION_STATUS,
+  BROWSER_OAUTH_STATUS,
+} from "~/constants/browserOAuth"
+import { createBrowserPasswordContext } from "~/services/accountLogin/browserPassword"
+import {
+  PASSWORD_UI_KINDS,
+  PASSWORD_UI_PHASES,
+  PASSWORD_UI_REASONS,
+} from "~/services/accountLogin/passwordUiProtocol"
 import { createSub2ApiOAuthFlow } from "~/services/apiAdapters/sub2api/auth/browserOAuth"
 import { buildSub2ApiOAuthStartUrl } from "~/services/apiService/sub2api/oauth/protocol"
 import {
@@ -17,6 +27,7 @@ const removalListeners = vi.hoisted(() => ({
 }))
 const browserApi = vi.hoisted(() => ({
   createWindow: vi.fn(),
+  isAllowedIncognitoAccess: vi.fn().mockResolvedValue(false),
   getBrowserCookie: vi.fn(),
   getTab: vi.fn(),
   onTabRemoved: vi.fn((listener: (id: number) => void) => {
@@ -48,6 +59,7 @@ vi.mock("~/services/preferences/userPreferences", () => ({
 
 vi.mock("~/utils/browser/tabs", () => browserApi)
 vi.mock("~/utils/browser/windows", () => browserApi)
+vi.mock("~/utils/browser/runtime", () => browserApi)
 vi.mock("~/utils/browser/runtimeMessages", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/utils/browser/runtimeMessages")>()
@@ -97,10 +109,10 @@ const testFlow = {
       typeof value.identity !== "string" ||
       typeof value.completed !== "boolean"
     ) {
-      return { status: "invalid" as const }
+      return { status: BROWSER_OAUTH_COMPLETION_STATUS.Invalid }
     }
     return {
-      status: "verified" as const,
+      status: BROWSER_OAUTH_COMPLETION_STATUS.Verified,
       identity: value.identity,
       evidence: { completed: value.completed },
     }
@@ -129,6 +141,7 @@ describe("browser OAuth context", () => {
     vi.clearAllMocks()
     getPreferences.mockReset()
     getPreferences.mockResolvedValue({})
+    browserApi.isAllowedIncognitoAccess.mockResolvedValue(false)
     browserApi.removeWindow.mockReset()
     browserApi.queryTabs.mockReset()
     tabUpdatedListeners.length = 0
@@ -155,7 +168,243 @@ describe("browser OAuth context", () => {
       })
   })
 
+  it("bounds the wait for a user to sign out of a shared session", async () => {
+    vi.useFakeTimers()
+    browserApi.sendTabMessageWithRetry.mockReset()
+    browserApi.sendTabMessageWithRetry.mockResolvedValue({
+      kind: PASSWORD_UI_KINDS.Manual,
+      reason: PASSWORD_UI_REASONS.Session,
+    })
+    let finished = false
+    const result = createBrowserPasswordContext({
+      id: "shared-timeout",
+      concurrencyKey: "shared-timeout",
+      displayName: "Shared",
+      loginPath: "/login",
+      uiAction: "password-ui",
+      loginAction: "password-api",
+      clearEvidenceAction: "password-clear",
+      credentials: { username: "alice", password: "secret" },
+    })
+      .authenticate({
+        origin,
+        requestId: "shared-timeout",
+        expectedIdentity: "user-1",
+      })
+      .then((value) => {
+        finished = true
+        return value
+      })
+    await vi.advanceTimersByTimeAsync(46_000)
+    expect(finished).toBe(true)
+    await expect(result).resolves.toMatchObject({
+      status: "interaction_required",
+    })
+  })
+
+  it.each([true, false, null])(
+    "executes password login with incognito access %s without an OAuth redirect",
+    async (allowed) => {
+      browserApi.isAllowedIncognitoAccess.mockResolvedValueOnce(allowed)
+      browserApi.sendTabMessageWithRetry.mockReset()
+      browserApi.sendTabMessageWithRetry.mockResolvedValue({
+        status: "authenticated",
+        identity: "user-1",
+      })
+      const result = await createBrowserPasswordContext({
+        id: "example-password",
+        concurrencyKey: "example-session",
+        displayName: "Example",
+        loginPath: "/login",
+        uiAction: "password-ui",
+        loginAction: "password-login",
+        clearEvidenceAction: "password-clear",
+        credentials: { username: "alice", password: "secret" },
+      }).authenticate({
+        origin,
+        requestId: "password-run",
+        expectedIdentity: "user-1",
+      })
+      expect(result).toEqual({
+        status: "authenticated",
+        identity: "user-1",
+        evidence: {},
+      })
+      expect(browserApi.sendTabMessageWithRetry).toHaveBeenCalledWith(
+        11,
+        expect.objectContaining({
+          action: "password-ui",
+          phase: PASSWORD_UI_PHASES.Prepare,
+          origin,
+          requestId: "password-run",
+          expectedIdentity: "user-1",
+        }),
+        expect.anything(),
+      )
+      expect(browserApi.createWindow).toHaveBeenCalledWith(
+        expect.objectContaining({ incognito: allowed === true }),
+      )
+      expect(browserApi.updateTab).not.toHaveBeenCalled()
+      expect(browserApi.removeWindow).toHaveBeenCalledWith(7)
+    },
+  )
+
+  it.each(["before", "after"] as const)(
+    "classifies native failure %s credential dispatch without exposing exception text",
+    async (stage) => {
+      const native = createBrowserPasswordContext({
+        id: "native-failure",
+        concurrencyKey: "example-session",
+        displayName: "Example",
+        loginPath: "/login",
+        uiAction: "password-ui",
+        loginAction: "password-login",
+        clearEvidenceAction: "password-clear",
+        credentials: { username: "alice", password: "secret" },
+      })
+      if (stage === "before")
+        browserApi.createWindow.mockRejectedValue(new Error("secret"))
+      else
+        browserApi.sendTabMessageWithRetry
+          .mockReset()
+          .mockRejectedValueOnce(new Error("secret"))
+          .mockResolvedValue({ status: "cancelled" })
+      await expect(
+        native.authenticate({
+          origin,
+          requestId: "failure-run",
+          expectedIdentity: "user-1",
+        }),
+      ).resolves.toEqual({
+        status: stage === "before" ? "failed" : "uncertain",
+      })
+      expect(
+        browserApi.sendTabMessageWithRetry.mock.calls.filter(
+          ([, message]) => message.action === "password-ui",
+        ),
+      ).toHaveLength(stage === "before" ? 0 : 1)
+    },
+  )
+
+  it.each([false, true])(
+    "only permits resetting an unshared private session (other same-origin tab=%s)",
+    async (shared) => {
+      browserApi.getTab.mockResolvedValue({ ...loginTab, incognito: true })
+      browserApi.queryTabs.mockResolvedValue(
+        shared ? [{ id: 99, incognito: true, url: origin + "/console" }] : [],
+      )
+      browserApi.sendTabMessageWithRetry.mockReset()
+      browserApi.sendTabMessageWithRetry.mockResolvedValue({
+        status: "authenticated",
+        identity: "user-1",
+      })
+      await createBrowserPasswordContext({
+        id: "isolation",
+        concurrencyKey: "isolation",
+        displayName: "Isolation",
+        loginPath: "/login",
+        uiAction: "password-ui",
+        loginAction: "password-api",
+        clearEvidenceAction: "password-clear",
+        credentials: { username: "alice", password: "secret" },
+      }).authenticate({
+        origin,
+        requestId: "isolation",
+        expectedIdentity: "user-1",
+        sessionMode: BROWSER_LOGIN_SESSION_MODES.Fresh,
+      })
+      expect(browserApi.sendTabMessageWithRetry).toHaveBeenCalledWith(
+        11,
+        expect.objectContaining({
+          phase: PASSWORD_UI_PHASES.Prepare,
+          sessionMode: BROWSER_LOGIN_SESSION_MODES.Fresh,
+          canResetSession: !shared,
+        }),
+        expect.anything(),
+      )
+    },
+  )
+
+  it("observes a native login after navigation loses its submit reply without API fallback", async () => {
+    browserApi.sendTabMessageWithRetry.mockReset()
+    browserApi.sendTabMessageWithRetry.mockImplementation(
+      async (_id, message) => {
+        if (message.phase === PASSWORD_UI_PHASES.Prepare)
+          return { kind: PASSWORD_UI_KINDS.Ready }
+        if (message.phase === PASSWORD_UI_PHASES.Submit)
+          throw new Error("Port closed during navigation")
+        if (message.phase === PASSWORD_UI_PHASES.Observe)
+          return { status: "authenticated", identity: "user-1" }
+        return { status: "cancelled" }
+      },
+    )
+    await expect(
+      createBrowserPasswordContext({
+        id: "ui",
+        concurrencyKey: "ui",
+        displayName: "UI",
+        loginPath: "/login",
+        uiAction: "password-ui",
+        loginAction: "password-api",
+        clearEvidenceAction: "password-clear",
+        credentials: { username: "alice", password: "secret" },
+      }).authenticate({ origin, requestId: "ui", expectedIdentity: "user-1" }),
+    ).resolves.toMatchObject({ status: "authenticated" })
+    expect(
+      browserApi.sendTabMessageWithRetry.mock.calls.filter(
+        ([, message]) => message.action === "password-api",
+      ),
+    ).toHaveLength(0)
+    expect(
+      browserApi.sendTabMessageWithRetry.mock.calls.filter(
+        ([, message]) => message.phase === PASSWORD_UI_PHASES.Submit,
+      ),
+    ).toHaveLength(1)
+  })
+
+  it("keeps a verification-required API fallback in the same UI session without another login", async () => {
+    browserApi.sendTabMessageWithRetry.mockReset()
+    browserApi.sendTabMessageWithRetry.mockImplementation(
+      async (_id, message) => {
+        if (message.phase === PASSWORD_UI_PHASES.Prepare)
+          return { kind: PASSWORD_UI_KINDS.Fallback }
+        if (message.action === "password-api")
+          return { status: "interaction_required" }
+        if (message.phase === PASSWORD_UI_PHASES.Observe)
+          return { status: "authenticated", identity: "user-1" }
+        return { status: "cancelled" }
+      },
+    )
+    await expect(
+      createBrowserPasswordContext({
+        id: "fallback",
+        concurrencyKey: "fallback",
+        displayName: "Fallback",
+        loginPath: "/login",
+        uiAction: "password-ui",
+        loginAction: "password-api",
+        clearEvidenceAction: "password-clear",
+        credentials: { username: "alice", password: "secret" },
+      }).authenticate({
+        origin,
+        requestId: "fallback",
+        expectedIdentity: "user-1",
+      }),
+    ).resolves.toMatchObject({ status: "authenticated" })
+    expect(
+      browserApi.sendTabMessageWithRetry.mock.calls.filter(
+        ([, message]) => message.action === "password-api",
+      ),
+    ).toHaveLength(1)
+    expect(
+      browserApi.sendTabMessageWithRetry.mock.calls.some(
+        ([, message]) => message.phase === PASSWORD_UI_PHASES.Submit,
+      ),
+    ).toBe(false)
+  })
+
   it("verifies login without cookie permissions or exporting credentials", async () => {
+    browserApi.isAllowedIncognitoAccess.mockResolvedValue(true)
     await expect(
       browserOAuthContext.authenticate({
         expectedIdentity: "user-1",

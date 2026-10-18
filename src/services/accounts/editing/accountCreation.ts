@@ -64,6 +64,7 @@ export async function validateAndSaveAccount(
   // 表单验证
   if (
     !isValidAccount({
+      loginChange: request.loginChange,
       siteName,
       username,
       userId,
@@ -136,6 +137,7 @@ export async function validateAndSaveAccount(
     notes,
     tagIds,
     checkInConfig,
+    loginChange: request.loginChange,
     siteType: normalizedSiteType,
     authType,
     cookieAuthSessionCookie,

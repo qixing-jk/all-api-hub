@@ -102,6 +102,12 @@ export function useAccountDialogDraft({
     },
     [updateDraft],
   )
+  const setLogin = useCallback(
+    (login: AccountDialogDraft["login"]) => {
+      updateDraft((prev) => ({ ...prev, login, loginChanged: true }))
+    },
+    [updateDraft],
+  )
   const setCheckIn = useCallback(
     (value: CheckInConfig) => {
       if (
@@ -201,6 +207,7 @@ export function useAccountDialogDraft({
     setTagIds,
     setExcludeFromTotalBalance,
     setExcludeFromTodayIncome,
+    setLogin,
     setCheckIn,
     changeSiteTypeDraft,
     setAuthTypeDraft,

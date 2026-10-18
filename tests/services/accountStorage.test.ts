@@ -1,6 +1,7 @@
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
 import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession"
@@ -168,7 +169,7 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
 
   return {
     id: overrides.id || "account-1",
-    configVersion: overrides.configVersion ?? 7,
+    configVersion: overrides.configVersion ?? 8,
     disabled: overrides.disabled === true,
     excludeFromTotalBalance: overrides.excludeFromTotalBalance === true,
     excludeFromTodayIncome: overrides.excludeFromTodayIncome === true,
@@ -202,6 +203,7 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
     created_at: overrides.created_at ?? Date.now(),
     notes: overrides.notes ?? "",
     manualBalanceUsd: overrides.manualBalanceUsd,
+    login: overrides.login,
     cookieAuth: overrides.cookieAuth,
     sub2apiAuth: overrides.sub2apiAuth,
     kimiOpenPlatformAuth: overrides.kimiOpenPlatformAuth,
@@ -230,6 +232,61 @@ const availabilityReplacementCases =
   buildTodayStatsAvailabilityReplacementCases()
 
 describe("accountStorage core behaviors", () => {
+  it("preserves newly configured credentials when saving an old check-in draft", async () => {
+    const login = {
+      methodId: ACCOUNT_LOGIN_METHODS.Password,
+      credentials: { username: "alice", password: "new-secret" },
+    }
+    const account = createAccount({ login })
+    seedStorage([account])
+    expect(
+      await accountMutations.updateAccountWithCheckInDraft(
+        account.id,
+        { notes: "edited note" },
+        { ...account.checkIn, loginCheckIn: { provider: "github" } },
+        { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+      ),
+    ).toBe(true)
+    const saved = await accountStorage.getAccountById(account.id)
+    expect(saved?.notes).toBe("edited note")
+    expect(saved?.login).toEqual(login)
+  })
+  it("preserves saved password login during unrelated check-in edits", async () => {
+    const login = {
+      methodId: ACCOUNT_LOGIN_METHODS.Password,
+      credentials: { username: "alice", password: "secret" },
+    }
+    const account = createAccount({ login })
+    seedStorage([account])
+    expect(
+      await accountMutations.updateAccountCheckInDraft(account.id, {
+        ...account.checkIn,
+        automaticExecutionEnabled: false,
+      }),
+    ).toBe(true)
+    expect((await accountStorage.getAccountById(account.id))?.login).toEqual(
+      login,
+    )
+  })
+
+  it("persists explicit account login edits independently of check-in", async () => {
+    const account = createAccount({ login: { methodId: "github" } })
+    seedStorage([account])
+    for (const login of [{ methodId: "linuxdo" }, undefined]) {
+      expect(
+        await accountMutations.updateAccountWithCheckInDraft(
+          account.id,
+          { login },
+          account.checkIn,
+          { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+        ),
+      ).toBe(true)
+      const changed = await accountStorage.getAccountById(account.id)
+      expect(changed?.login).toEqual(login)
+      expect(changed?.checkIn.loginCheckIn).toBeUndefined()
+    }
+  })
+
   it.each(
     [false, true].flatMap((replace) =>
       ["access", "refresh", "organization"].map((change) => ({
@@ -713,7 +770,7 @@ describe("accountStorage core behaviors", () => {
       expect(
         persistedConfig.accounts.find((account) => account.id === "legacy")
           ?.configVersion,
-      ).toBe(7)
+      ).toBe(8)
     } finally {
       storageHooks.afterGet = async () => {}
     }
@@ -737,7 +794,7 @@ describe("accountStorage core behaviors", () => {
       ACCOUNT_STORAGE_KEYS.ACCOUNTS,
     ) as AccountStorageConfig
     const persistedAccount = persistedConfig.accounts[0] as any
-    expect(persistedAccount.configVersion).toBe(7)
+    expect(persistedAccount.configVersion).toBe(8)
     expect(persistedAccount.checkIn).toMatchObject({
       automaticExecutionEnabled: false,
       selection: { mode: "automatic" as const },
@@ -5764,7 +5821,7 @@ describe("accountStorage bookmarks", () => {
       ) as AccountStorageConfig
       expect(persisted.accounts[0]).toMatchObject({
         id: legacyAccount.id,
-        configVersion: 7,
+        configVersion: 8,
         checkIn: expect.objectContaining({
           automaticExecutionEnabled: true,
           selection: expect.objectContaining({ mode: "automatic" }),

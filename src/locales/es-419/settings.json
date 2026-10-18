@@ -531,6 +531,28 @@
     },
     "description": "Concede permisos opcionales según los necesites para actualizar datos de cuentas, usar herramientas de ayuda, recibir notificaciones e importar sitios.",
     "helper": "Cada permiso se usa solo para su función correspondiente y puedes revocarlo cuando quieras. Las funciones sin permiso pueden quedar limitadas, pero las demás seguirán disponibles.",
+    "incognito": {
+      "checking": "Verificando acceso a ventanas privadas…",
+      "chromeInstructions": "En los detalles de esta extensión en Chrome, activa “Permitir en incógnito”.",
+      "denied": "Acceso privado no permitido",
+      "details": "Configurar",
+      "edgeInstructions": "En los detalles de esta extensión en Edge, activa “Permitir en InPrivate”.",
+      "enabled": "Acceso privado permitido",
+      "firefoxInstructions": "Abre Complementos y temas en Firefox, selecciona esta extensión y permite su ejecución en ventanas privadas.",
+      "firefoxMobileInstructions": "Firefox: Abre el administrador de extensiones desde el menú del navegador y revisa las opciones de navegación privada. Los menús y la compatibilidad varían según la versión.",
+      "genericInstructions": "Revisa el acceso privado de esta extensión en el administrador de extensiones del navegador.",
+      "manualSteps": "Ver instrucciones",
+      "mobileInstructions": "Abre el administrador de extensiones desde el menú del navegador y revisa las opciones de navegación privada. Los menús y la compatibilidad varían según la versión.",
+      "openChromeSettings": "Ajustes de Chrome",
+      "openEdgeSettings": "Ajustes de Edge",
+      "recommended": "Permite ventanas privadas para separar las sesiones",
+      "reloadWarning": "Cambiar este permiso puede recargar la extensión, cerrar sus páginas o interrumpir tareas. Guarda primero los cambios pendientes.",
+      "safariInstructions": "Selecciona esta extensión en la configuración de extensiones de Safari y permite la navegación privada. Las opciones dependen de la versión de Safari.",
+      "settingsFailed": "No se pudo abrir la configuración. Permite las ventanas privadas desde el administrador de extensiones del navegador.",
+      "summary": "Separa el inicio de sesión de las ventanas normales para evitar confundir cuentas o interferir con sesiones existentes.",
+      "title": "Acceso en modo incógnito o privado",
+      "unknown": "No se pudo verificar el acceso privado"
+    },
     "items": {
       "bookmarks": {
         "description": "Lee las URLs guardadas solo cuando eliges importar sitios desde los marcadores del navegador.",

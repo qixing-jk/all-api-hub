@@ -21,6 +21,7 @@ export type BasicSettingsTabId =
 
 export const BASIC_SETTINGS_ANCHOR_TO_TAB: Record<string, BasicSettingsTabId> =
   {
+    [SETTINGS_ANCHORS.INCOGNITO_ACCESS]: "permissions",
     [SETTINGS_ANCHORS.LOGGING]: "general",
     [SETTINGS_ANCHORS.SHIELD_TURNSTILE_ASSIST]: "refresh",
     [SETTINGS_ANCHORS.LOGGING_ENABLED]: "general",

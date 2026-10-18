@@ -321,3 +321,50 @@ export async function expectPermissionOnboardingHidden(page: Page) {
     page.getByTestId(OPTIONS_OVERVIEW_TEST_IDS.permissionOnboardingDialog),
   ).toHaveCount(0)
 }
+
+/**
+ * Lets Playwright attach before an extension-created window navigates to a
+ * routed site fixture. Chromium can otherwise bypass interception on its first
+ * navigation and accidentally load the live site. Only the next exact URL is held.
+ */
+export async function holdExtensionWindowNavigation(
+  context: BrowserContext,
+  worker: Worker,
+  url: string,
+) {
+  const existingPages = new Set(context.pages())
+  await worker.evaluate((targetUrl) => {
+    const chromeApi = (globalThis as any).chrome
+    const create = chromeApi.windows.create.bind(chromeApi.windows)
+    chromeApi.windows.create = async (options: Record<string, unknown>) => {
+      if (options.url !== targetUrl) return create(options)
+      chromeApi.windows.create = create
+      const opened = await create({ ...options, url: "about:blank" })
+      await new Promise<void>((resolve) => {
+        ;(globalThis as any).__releaseFixtureNavigation = resolve
+      })
+      delete (globalThis as any).__releaseFixtureNavigation
+      const tab = await chromeApi.tabs.update(opened.tabs[0].id, {
+        url: targetUrl,
+      })
+      return { ...opened, tabs: [tab] }
+    }
+  }, url)
+  return async () => {
+    await expect
+      .poll(() =>
+        worker.evaluate(
+          () =>
+            typeof (globalThis as any).__releaseFixtureNavigation ===
+            "function",
+        ),
+      )
+      .toBe(true)
+    await expect
+      .poll(() => context.pages().some((page) => !existingPages.has(page)))
+      .toBe(true)
+    await worker.evaluate(() =>
+      (globalThis as any).__releaseFixtureNavigation(),
+    )
+  }
+}

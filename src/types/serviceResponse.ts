@@ -32,6 +32,7 @@ export interface AccountValidationResponse
     accessToken: string
     userId: string
     exchangeRate: number | null
+    login?: import("~/types/accountLogin").AccountLoginConfiguration
     checkIn: CheckInConfig
     siteName: string
     siteType?: string

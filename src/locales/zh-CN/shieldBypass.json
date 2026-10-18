@@ -129,6 +129,9 @@
     "unexpectedContent": "接口响应不是预期格式，可能返回了站点验证页面。"
   },
   "notification": {
+    "loginAssistBody": "登录尚未完成。请打开登录窗口完成验证码或二次验证，扩展会继续核验账号与任务结果。",
+    "loginSessionBody": "此窗口已有登录会话。为避免退出其他窗口的账号，请打开登录窗口，确认后手动退出；扩展会继续登录目标账号。",
+    "openLogin": "打开登录窗口",
     "openVerification": "打开验证窗口",
     "reminderSettings": "提醒设置",
     "turnstileAssistBody": "站点的人机验证尚未完成。点击“打开验证窗口”完成验证码，扩展会继续检查任务结果。",

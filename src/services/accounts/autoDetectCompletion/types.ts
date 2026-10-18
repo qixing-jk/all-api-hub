@@ -49,6 +49,7 @@ export interface AutoDetectCompletionData {
   userId: string
   exchangeRate: number | null
   authType: AuthTypeEnum
+  login?: import("~/types/accountLogin").AccountLoginConfiguration
   checkIn: CheckInConfig
   siteType: AccountSiteType
   sub2apiAuth?: Sub2ApiAuthConfig

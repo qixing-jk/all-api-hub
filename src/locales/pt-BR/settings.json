@@ -531,6 +531,28 @@
     },
     "description": "Conceda permissões opcionais conforme necessário para atualizar dados de contas, usar ferramentas auxiliares, receber notificações e importar sites.",
     "helper": "Cada permissão é usada apenas pelo recurso correspondente e pode ser revogada a qualquer momento. Recursos sem permissão podem ficar limitados, enquanto os demais continuam funcionando.",
+    "incognito": {
+      "checking": "Verificando acesso a janelas privativas…",
+      "chromeInstructions": "Nos detalhes desta extensão no Chrome, ative “Permitir em modo anônimo”.",
+      "denied": "Acesso privativo não permitido",
+      "details": "Configurar",
+      "edgeInstructions": "Nos detalhes desta extensão no Edge, ative “Permitir em InPrivate”.",
+      "enabled": "Acesso privativo permitido",
+      "firefoxInstructions": "Abra Extensões e temas no Firefox, selecione esta extensão e permita sua execução em janelas privativas.",
+      "firefoxMobileInstructions": "Firefox: Abra o gerenciador de extensões pelo menu do navegador e confira as opções de navegação privada. Os menus e o suporte variam conforme a versão.",
+      "genericInstructions": "Confira o acesso privativo desta extensão no gerenciador de extensões do navegador.",
+      "manualSteps": "Ver instruções",
+      "mobileInstructions": "Abra o gerenciador de extensões pelo menu do navegador e confira as opções de navegação privada. Os menus e o suporte variam conforme a versão.",
+      "openChromeSettings": "Ajustes do Chrome",
+      "openEdgeSettings": "Ajustes do Edge",
+      "recommended": "Permita janelas privativas para separar as sessões",
+      "reloadWarning": "Alterar esta permissão pode recarregar a extensão, fechar suas páginas ou interromper tarefas. Salve primeiro as alterações pendentes.",
+      "safariInstructions": "Selecione esta extensão nas configurações de extensões do Safari e permita a navegação privada. As opções dependem da versão do Safari.",
+      "settingsFailed": "Não foi possível abrir as configurações. Permita janelas privativas pelo gerenciador de extensões do navegador.",
+      "summary": "Separe o login das janelas normais para evitar confusão entre contas ou interferência nas sessões existentes.",
+      "title": "Acesso a janelas anônimas ou privativas",
+      "unknown": "Não foi possível verificar o acesso privativo"
+    },
     "items": {
       "bookmarks": {
         "description": "Lê URLs salvas somente quando você escolhe importar sites dos favoritos do navegador.",

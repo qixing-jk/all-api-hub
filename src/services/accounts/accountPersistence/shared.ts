@@ -1,4 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import { normalizeAccountLogin } from "~/services/accountLogin/configCodec"
 import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accountSiteProfile/supplementalAuth"
 import { normalizeAccountSiteProfileUrlForStorage } from "~/services/accounts/accountSiteProfile/urls"
 import {
@@ -16,6 +17,7 @@ import {
   type SiteAccount,
   type Sub2ApiAuthConfig,
 } from "~/types"
+import type { AccountLoginConfiguration } from "~/types/accountLogin"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
@@ -32,6 +34,8 @@ interface AccountPersistenceInput {
   exchangeRate: string
   notes: string
   tagIds: TagIdsInput
+  /** Undefined preserves the current configuration; null explicitly clears it. */
+  loginChange?: AccountLoginConfiguration | null
   checkInConfig: CheckInConfig
   siteType: AccountSiteType
   authType: AuthTypeEnum
@@ -144,6 +148,9 @@ export function buildAccountPersistenceContext(
     requestBaseUrl: input.url.trim(),
     requestAccountIdentity: normalizeAccountIdentity(input.userId) ?? "",
     fields: {
+      ...(input.loginChange !== undefined
+        ? { login: normalizeAccountLogin(input.loginChange) }
+        : {}),
       site_name: input.siteName.trim(),
       site_url: normalizeAccountSiteProfileUrlForStorage({
         siteType: input.siteType,

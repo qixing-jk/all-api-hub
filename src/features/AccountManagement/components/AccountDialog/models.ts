@@ -39,6 +39,9 @@ export type AccountDialogFormSource =
   (typeof ACCOUNT_DIALOG_FORM_SOURCES)[keyof typeof ACCOUNT_DIALOG_FORM_SOURCES]
 
 export interface AccountDialogDraft {
+  login?: import("~/types/accountLogin").AccountLoginConfiguration
+  /** Only explicit user edits may replace the latest saved login configuration. */
+  loginChanged?: boolean
   siteName: string
   username: string
   accessToken: string

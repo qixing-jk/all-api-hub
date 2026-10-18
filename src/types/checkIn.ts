@@ -1,3 +1,4 @@
+import { type ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
 import type { AccountLoginProvider } from "~/constants/accountLogin"
 import type {
   AUTO_CHECKIN_METHOD_IDS,
@@ -119,9 +120,9 @@ export type CheckInMethodSelection =
     }
 
 export interface CheckInConfig {
-  /** Configuration for login-based check-in; never contains credentials. */
+  /** @deprecated Legacy read/migration only. New configuration belongs to SiteAccount.login. */
   loginCheckIn?: {
-    provider: AccountLoginProvider
+    provider: AccountLoginProvider | typeof ACCOUNT_LOGIN_METHODS.Password
   }
   automaticExecutionEnabled: boolean
   methodKnowledge: {

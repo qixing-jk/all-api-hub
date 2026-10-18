@@ -3,6 +3,7 @@ import {
   isAccountLoginProvider,
   type AccountLoginProvider,
 } from "~/constants/accountLogin"
+import { resolveAccountLogin } from "~/services/accountLogin/configCodec"
 import { isAgentRouterLoginUrl } from "~/services/accountLogin/providers/agentrouter/config"
 import {
   AccountWriteRejectedError,
@@ -36,39 +37,6 @@ export function getLoginProviderConflictMessageParams(
 }
 
 /**
- * Reads the login provider selected for login-based check-in.
- *
- * There is deliberately no GitHub fallback: the browser flow signs in with
- * whichever GitHub / Linux DO identity the browser currently holds, so guessing
- * a provider would run the wrong OAuth identity and report a misleading
- * `identity_mismatch` instead of asking the user to choose.
- */
-export function resolveLoginCheckInProvider(
-  config?: CheckInConfig,
-): AccountLoginProvider | null {
-  const provider = config?.loginCheckIn?.provider
-  return isAccountLoginProvider(provider) ? provider : null
-}
-
-/**
- * Sets or clears the login provider selection on a check-in configuration.
- *
- * Single write entrance for the stored selection: every UI or bootstrap writer
- * goes through here, so a future relocation of the field (for example into a
- * standalone login configuration) only touches this module plus the codec.
- */
-export function setLoginProviderSelection(
-  config: CheckInConfig,
-  provider: AccountLoginProvider | null,
-): CheckInConfig {
-  if (!provider) {
-    const { loginCheckIn: _cleared, ...rest } = config
-    return rest
-  }
-  return { ...config, loginCheckIn: { provider } }
-}
-
-/**
  * Reads the login provider one enabled login-based account claims.
  *
  * The browser flow signs in with whichever GitHub / Linux DO identity the
@@ -95,7 +63,8 @@ export function getLoginProviderClaim(
     return null
   }
 
-  const provider = resolveLoginCheckInProvider(account.checkIn)
+  const methodId = resolveAccountLogin(account)?.methodId
+  const provider = isAccountLoginProvider(methodId) ? methodId : null
   return provider
 }
 
@@ -206,6 +175,7 @@ export function findLoginProviderConflict(input: {
   accounts: readonly SiteAccount[]
   siteUrl?: string
   checkIn?: CheckInConfig
+  login?: SiteAccount["login"]
   /** The account being saved; it never conflicts with itself. */
   accountId?: string
   evidence?: LoginProviderEvidenceMap
@@ -213,7 +183,13 @@ export function findLoginProviderConflict(input: {
   if (!isAgentRouterLoginUrl(input.siteUrl)) return null
   if (input.checkIn?.automaticExecutionEnabled !== true) return null
 
-  const provider = resolveLoginCheckInProvider(input.checkIn)
+  const methodId = resolveAccountLogin({
+    checkIn: input.checkIn,
+    ...(Object.prototype.hasOwnProperty.call(input, "login")
+      ? { login: input.login }
+      : {}),
+  })?.methodId
+  const provider = isAccountLoginProvider(methodId) ? methodId : null
   if (!provider) return null
 
   const owner = resolveLoginProviderOwners(input.accounts, input.evidence).get(
@@ -283,6 +259,7 @@ function assertLoginProviderClaimAllowed(input: {
     accounts: input.accounts,
     siteUrl: input.candidate.site_url,
     checkIn: input.candidate.checkIn,
+    login: input.candidate.login,
     accountId: input.candidate.id,
     evidence: input.evidence,
   })

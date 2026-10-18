@@ -1,9 +1,11 @@
 import type { AccountLoginMethodId } from "~/constants/accountLogin"
+import type { BrowserLoginSessionMode } from "~/constants/browserLogin"
+import { type BROWSER_LOGIN_STATUS } from "~/constants/browserLogin"
 import type { SiteAccount } from "~/types"
 
 /** Adapters select their identity fields; login does not require saved API credentials. */
 export type AccountLoginTarget = Pick<SiteAccount, "site_url"> &
-  Partial<Pick<SiteAccount, "site_type">> & {
+  Partial<Pick<SiteAccount, "site_type" | "login">> & {
     account_info: Partial<Pick<SiteAccount["account_info"], "id" | "username">>
   }
 
@@ -22,6 +24,8 @@ export interface AccountLoginRequest {
    * one is; a run triggered by an alarm passes `false`.
    */
   attended?: boolean
+  /** Fresh login is required only when the task depends on the login action itself. */
+  sessionMode?: BrowserLoginSessionMode
 }
 
 export interface AccountLoginMethod {
@@ -32,20 +36,20 @@ export interface AccountLoginMethod {
 /** Domain outcome shared by browser, native and provider-specific login implementations. */
 export type AccountLoginResult =
   | {
-      status: "authenticated"
+      status: typeof BROWSER_LOGIN_STATUS.Authenticated
       /** Verified identity normalized by the adapter, not necessarily a numeric user ID. */
       identity: string
       evidence?: AccountLoginEvidence
     }
   | {
       status:
-        | "unsupported"
-        | "cancelled"
-        | "failed"
-        | "identity_mismatch"
-        | "interaction_required"
-        | "session_busy"
-        | "uncertain"
+        | typeof BROWSER_LOGIN_STATUS.Unsupported
+        | typeof BROWSER_LOGIN_STATUS.Cancelled
+        | typeof BROWSER_LOGIN_STATUS.Failed
+        | typeof BROWSER_LOGIN_STATUS.IdentityMismatch
+        | typeof BROWSER_LOGIN_STATUS.InteractionRequired
+        | typeof BROWSER_LOGIN_STATUS.SessionBusy
+        | typeof BROWSER_LOGIN_STATUS.Uncertain
       message?: string
     }
 

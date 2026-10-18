@@ -1,4 +1,5 @@
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { temporarilyHighlight } from "~/utils/dom/temporaryHighlight"
 import { replaceWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 import type { OptionsSearchItem } from "./types"
@@ -6,13 +7,6 @@ import type { OptionsSearchItem } from "./types"
 export const OPTIONS_SEARCH_HIGHLIGHT_PARAM = "highlight"
 export const OPTIONS_SEARCH_ANCHOR_PARAM = "anchor"
 const OPTIONS_SEARCH_TAB_PARAM = "tab"
-const OPTIONS_SEARCH_HIGHLIGHT_CLASSNAMES = [
-  "ring-2",
-  "ring-theme-500",
-  "ring-offset-2",
-  "ring-offset-background",
-  "dark:ring-offset-surface-subtle",
-]
 
 /**
  * Navigates to the page, tab, and target referenced by a selected search item.
@@ -70,10 +64,7 @@ export function highlightSearchTarget(targetId: string) {
   }
 
   element.scrollIntoView({ behavior: "smooth", block: "start" })
-  element.classList.add(...OPTIONS_SEARCH_HIGHLIGHT_CLASSNAMES)
-  window.setTimeout(() => {
-    element.classList.remove(...OPTIONS_SEARCH_HIGHLIGHT_CLASSNAMES)
-  }, 1800)
+  temporarilyHighlight(element)
 
   return true
 }

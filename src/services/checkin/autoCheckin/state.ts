@@ -148,7 +148,6 @@ export function mergeUserOwnedCheckInDraft(input: {
   return {
     ...input.latest,
     automaticExecutionEnabled: input.draft.automaticExecutionEnabled,
-    loginCheckIn: input.draft.loginCheckIn,
     selection: input.selectionChanged
       ? input.draft.selection
       : input.latest.selection,

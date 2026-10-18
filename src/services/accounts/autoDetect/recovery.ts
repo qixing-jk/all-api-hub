@@ -21,6 +21,7 @@ export interface AccountAutoDetectRecoveryData {
   userId?: string
   exchangeRate?: number | null
   authType?: AuthTypeEnum
+  login?: import("~/types/accountLogin").AccountLoginConfiguration
   checkIn?: CheckInConfig
   cookieAuthSessionCookie?: string
   transientAuth?: ContentSessionTransientAuth

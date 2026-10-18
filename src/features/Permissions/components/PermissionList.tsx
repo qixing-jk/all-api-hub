@@ -12,11 +12,8 @@ import type { ReactNode } from "react"
 import { Badge } from "~/components/ui/badge"
 import { CardItem } from "~/components/ui/CardItem"
 import { CardList } from "~/components/ui/CardList"
-import type { ManifestOptionalPermissions } from "~/services/permissions/permissionManager"
 
-const permissionIconMap: Partial<
-  Record<ManifestOptionalPermissions, ReactNode>
-> = {
+const permissionIconMap: Partial<Record<string, ReactNode>> = {
   cookies: <Cookie className="text-link h-5 w-5" />,
   declarativeNetRequestWithHostAccess: (
     <SlidersHorizontal className="text-link h-5 w-5" />
@@ -29,7 +26,8 @@ const permissionIconMap: Partial<
 }
 
 export interface PermissionListItem {
-  id: ManifestOptionalPermissions
+  id: string
+  icon?: ReactNode
   title: string
   titleContent?: ReactNode
   description: string
@@ -40,6 +38,7 @@ export interface PermissionListItem {
 
 interface PermissionListProps {
   items: PermissionListItem[]
+  children?: ReactNode
 }
 
 /**
@@ -51,29 +50,34 @@ function getStatusBadgeVariant(status: boolean | null | undefined) {
   return "info"
 }
 
-/**
- * Renders a list of optional permissions with icons, descriptions, and actions.
- */
-export function PermissionList({ items }: PermissionListProps) {
+/** Shared presentation for optional permissions and browser-owned access settings. */
+export function PermissionRow({ item }: { item: PermissionListItem }) {
+  return (
+    <CardItem
+      id={item.id}
+      icon={item.icon ?? permissionIconMap[item.id]}
+      title={item.title}
+      titleContent={
+        item.titleContent ??
+        (item.statusLabel ? (
+          <Badge variant={getStatusBadgeVariant(item.status)}>
+            {item.statusLabel}
+          </Badge>
+        ) : undefined)
+      }
+      description={item.description}
+      rightContent={item.rightContent}
+    />
+  )
+}
+
+/** Renders permission rows with shared icons, descriptions, badges and actions. */
+export function PermissionList({ items, children }: PermissionListProps) {
   return (
     <CardList>
+      {children}
       {items.map((item) => (
-        <CardItem
-          key={item.id}
-          id={item.id}
-          icon={permissionIconMap[item.id]}
-          title={item.title}
-          titleContent={
-            item.titleContent ??
-            (item.statusLabel ? (
-              <Badge variant={getStatusBadgeVariant(item.status)}>
-                {item.statusLabel}
-              </Badge>
-            ) : undefined)
-          }
-          description={item.description}
-          rightContent={item.rightContent}
-        />
+        <PermissionRow key={item.id} item={item} />
       ))}
     </CardList>
   )

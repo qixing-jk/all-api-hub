@@ -531,6 +531,28 @@
     },
     "description": "按需授予可選權限，用於帳號資料更新、輔助工具、任務通知和站點匯入等功能。",
     "helper": "每項權限只在對應功能需要時使用，並且可以隨時撤銷；未授權的功能可能受限，但不影響其他功能。",
+    "incognito": {
+      "checking": "正在檢查無痕存取權限…",
+      "chromeInstructions": "在本擴充功能詳細資料頁開啟「允許在無痕模式中執行」。",
+      "denied": "尚未允許在無痕／隱私視窗執行",
+      "details": "前往設定",
+      "edgeInstructions": "在本擴充功能詳細資料頁開啟「允許在 InPrivate 中使用」。",
+      "enabled": "已允許在無痕／隱私視窗執行",
+      "firefoxInstructions": "開啟 Firefox「附加元件與佈景主題」，選擇本擴充功能，允許在隱私視窗中執行。",
+      "firefoxMobileInstructions": "Firefox: 請從瀏覽器選單進入擴充功能管理，找到本擴充功能並查看是否支援無痕／隱私存取。選單與支援情況依版本而異。",
+      "genericInstructions": "請在瀏覽器的擴充功能管理中查看本擴充功能的無痕／隱私存取設定。",
+      "manualSteps": "查看設定步驟",
+      "mobileInstructions": "請從瀏覽器選單進入擴充功能管理，找到本擴充功能並查看是否支援無痕／隱私存取。選單與支援情況依版本而異。",
+      "openChromeSettings": "前往 Chrome 設定",
+      "openEdgeSettings": "前往 Edge 設定",
+      "recommended": "建議允許擴充功能在無痕視窗執行",
+      "reloadWarning": "變更此權限可能重新載入擴充功能、關閉擴充功能頁面或中斷工作。請先儲存尚未完成的編輯。",
+      "safariInstructions": "在 Safari 的擴充功能設定中選擇本擴充功能，允許在私密瀏覽中使用；選項依 Safari 版本而異。",
+      "settingsFailed": "無法開啟設定頁。請從瀏覽器選單開啟擴充功能管理，找到本擴充功能並允許在無痕視窗執行。",
+      "summary": "隔離一般視窗的登入狀態，避免密碼登入時混用帳號或影響已登入帳號。",
+      "title": "無痕／隱私視窗存取",
+      "unknown": "無法檢查無痕／隱私存取權限"
+    },
     "items": {
       "bookmarks": {
         "description": "僅在你選擇從瀏覽器書籤匯入站點時，讀取已儲存的網址。",

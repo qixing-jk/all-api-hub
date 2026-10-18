@@ -1,4 +1,5 @@
 export const SETTINGS_ANCHORS = {
+  INCOGNITO_ACCESS: "permissions-incognito",
   LOGGING: "logging",
   LOGGING_ENABLED: "logging-console-enabled",
   LOGGING_LEVEL: "logging-min-level",

@@ -10,7 +10,7 @@ import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configu
 import type { SiteAccount } from "~/types"
 import type { CheckInConfig, CheckInMethodId } from "~/types/checkIn"
 
-export const ACCOUNT_CONFIG_V7_VERSION = 7 as const
+const ACCOUNT_CONFIG_V7_VERSION = 7 as const
 
 type SiteAccountV7 = Omit<SiteAccount, "checkIn" | "configVersion"> & {
   checkIn: CheckInConfig

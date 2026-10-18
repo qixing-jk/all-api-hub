@@ -1,5 +1,7 @@
 import iconUrl from "~/assets/icon.png"
+import { LOGIN_VERIFICATION_REASONS } from "~/constants/browserLogin"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import type { VerificationContext } from "~/services/browserLogin/verificationContexts"
 import { deliverTurnstileAssistNotice } from "~/services/checkin/turnstile/assistDelivery"
 import { probeTurnstilePageApi } from "~/services/checkin/turnstile/pageApi"
 import { getBrowserNotificationAvailability } from "~/services/notifications/browserNotificationAvailability"
@@ -21,7 +23,6 @@ import { updateWindow } from "~/utils/browser/windows"
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
 
-import type { TempContext } from "./contracts"
 import { logTempWindow } from "./diagnostics"
 
 /** Owns Turnstile presentations for request leases in the temporary-page pool. */
@@ -29,7 +30,7 @@ export function createTempContextTurnstileAssist({
   getRequestContext,
   hasTab,
 }: {
-  getRequestContext: (requestId: string) => TempContext | undefined
+  getRequestContext: (requestId: string) => VerificationContext | undefined
   hasTab: (tabId: number) => boolean
 }) {
   const TURNSTILE_ASSIST_NOTIFICATION_PREFIX = "all-api-hub:turnstile-assist:"
@@ -41,6 +42,7 @@ export function createTempContextTurnstileAssist({
     const message = {
       action: RuntimeActionIds.TurnstileAssistPageNotice,
       requestId,
+      reason: getRequestContext(requestId)?.reason,
     }
     try {
       const response = await sendRuntimeMessage(message, { maxAttempts: 1 })
@@ -119,7 +121,14 @@ export function createTempContextTurnstileAssist({
         type: "basic",
         iconUrl,
         title: t("shieldBypass:notification.turnstileAssistTitle"),
-        message: t("shieldBypass:notification.turnstileAssistBody"),
+        message:
+          getRequestContext(requestId)?.reason ===
+          LOGIN_VERIFICATION_REASONS.Session
+            ? t("shieldBypass:notification.loginSessionBody")
+            : getRequestContext(requestId)?.reason ===
+                LOGIN_VERIFICATION_REASONS.Login
+              ? t("shieldBypass:notification.loginAssistBody")
+              : t("shieldBypass:notification.turnstileAssistBody"),
         isClickable: true,
       },
     )
@@ -127,7 +136,7 @@ export function createTempContextTurnstileAssist({
   }
 
   /** Restores and focuses the temp window that owns this Turnstile wait. */
-  async function focusTempContextForTurnstile(context: TempContext) {
+  async function focusTempContextForTurnstile(context: VerificationContext) {
     let windowId =
       "ownerWindowId" in context && typeof context.ownerWindowId === "number"
         ? context.ownerWindowId
@@ -203,6 +212,7 @@ export function createTempContextTurnstileAssist({
     try {
       windowId = await focusTempContextForTurnstile(context)
       focused = true
+      context.onOpened?.()
       // The active content wait owns the lease; opening a reminder starts its
       // fresh manual budget without creating a second tab or replaying actions.
       await sendTabMessageWithRetry(
@@ -264,6 +274,17 @@ export function createTempContextTurnstileAssist({
     sendResponse: (response?: unknown) => void,
   ) {
     if (request?.action === RuntimeActionIds.TurnstileRequestUserAssist) {
+      const context =
+        typeof request.requestId === "string"
+          ? getRequestContext(request.requestId)
+          : undefined
+      if (
+        !context ||
+        (typeof sender.tab?.id === "number" && sender.tab.id !== context.tabId)
+      ) {
+        sendResponse({ presented: false, reason: "missing_context" })
+        return true
+      }
       void presentTempContextForTurnstileAssist(request.requestId).then(
         sendResponse,
       )

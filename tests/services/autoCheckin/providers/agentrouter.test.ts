@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 
 import {
+  ACCOUNT_LOGIN_METHODS,
   ACCOUNT_LOGIN_PROVIDERS,
   type AccountLoginProvider,
 } from "~/constants/accountLogin"
@@ -67,6 +68,37 @@ function setup() {
 }
 
 describe("AgentRouter login check-in", () => {
+  it("uses saved password credentials only when password was explicitly selected, without claiming an OAuth identity", async () => {
+    const { provider, authenticate, recordLoginProviderEvidence } = setup()
+    const saved = account()
+    saved.login = {
+      methodId: ACCOUNT_LOGIN_METHODS.Password,
+      credentials: { username: "alice", password: "secret" },
+    }
+    await expect(provider.checkIn(saved, context)).resolves.toMatchObject({
+      status: "success",
+    })
+    expect(authenticate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        account: saved,
+        methodId: ACCOUNT_LOGIN_METHODS.Password,
+      }),
+    )
+    expect(recordLoginProviderEvidence).not.toHaveBeenCalled()
+  })
+
+  it("preserves an uncertain password login rather than reporting check-in success", async () => {
+    const { provider, authenticate } = setup()
+    const saved = account()
+    saved.login = {
+      methodId: ACCOUNT_LOGIN_METHODS.Password,
+      credentials: { username: "alice", password: "secret" },
+    }
+    authenticate.mockResolvedValue({ status: "uncertain" })
+    const result = await provider.checkIn(saved, context)
+    expect(result.status).toBe("uncertain")
+    expect(result.reasonCode).toBe("checkin_unconfirmed")
+  })
   it.each([SITE_TYPES.NEW_API, SITE_TYPES.ONE_API, SITE_TYPES.UNKNOWN])(
     "works on %s accounts without changing authentication",
     async (siteType) => {
@@ -83,6 +115,7 @@ describe("AgentRouter login check-in", () => {
         methodId: "github",
         requestId: "checkin-request",
         attended: false,
+        sessionMode: "fresh",
       })
     },
   )
@@ -95,6 +128,7 @@ describe("AgentRouter login check-in", () => {
       methodId: "linuxdo",
       requestId: "checkin-request",
       attended: false,
+      sessionMode: "fresh",
     })
   })
 

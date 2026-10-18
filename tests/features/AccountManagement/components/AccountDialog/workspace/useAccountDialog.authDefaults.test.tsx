@@ -72,6 +72,36 @@ describe("useAccountDialog auth defaults", () => {
     vi.clearAllMocks()
   })
 
+  it.each(["github", "linuxdo"] as const)(
+    "loads canonical %s login independently of check-in",
+    async (methodId) => {
+      const getAccountSpy = vi
+        .spyOn(accountQueries, "getAccountById")
+        .mockResolvedValue(
+          buildSiteAccount({
+            id: "edit-login",
+            site_type: SITE_TYPES.NEW_API,
+            site_url: "https://agentrouter.org",
+            login: { methodId },
+          }),
+        )
+      try {
+        const { result } = renderAccountDialogHook({
+          mode: DIALOG_MODES.EDIT,
+          account: buildDisplaySiteData({ id: "edit-login" }),
+          isOpen: true,
+          onClose: vi.fn(),
+        })
+        await waitFor(() => {
+          expect(result.current.state.login).toEqual({ methodId })
+          expect(result.current.state.checkIn.loginCheckIn).toBeUndefined()
+        })
+      } finally {
+        getAccountSpy.mockRestore()
+      }
+    },
+  )
+
   it.each([
     "https://api.laozhang.ai",
     "https://api2.laozhang.ai",

@@ -1,4 +1,7 @@
-import { ACCOUNT_LOGIN_PROVIDERS } from "~/constants/accountLogin"
+import {
+  ACCOUNT_LOGIN_METHODS,
+  ACCOUNT_LOGIN_PROVIDERS,
+} from "~/constants/accountLogin"
 import {
   CHECK_IN_METHOD_AVAILABILITIES,
   CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES,
@@ -377,7 +380,8 @@ export function normalizeCheckInConfigV7(value: unknown): CheckInConfig {
   const provider = isRecord(raw.loginCheckIn)
     ? raw.loginCheckIn.provider
     : undefined
-  const loginCheckIn =
+  const loginCheckIn: CheckInConfig["loginCheckIn"] =
+    provider === ACCOUNT_LOGIN_METHODS.Password ||
     provider === ACCOUNT_LOGIN_PROVIDERS.Github ||
     provider === ACCOUNT_LOGIN_PROVIDERS.LinuxDo
       ? { provider }

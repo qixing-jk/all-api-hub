@@ -131,6 +131,9 @@
     "unexpectedContent": "La respuesta tenía un formato inesperado y pudo haber sido una página de verificación del sitio."
   },
   "notification": {
+    "loginAssistBody": "El inicio de sesión está pendiente. Abre la ventana de acceso para completar la verificación o la autenticación de dos factores; la extensión verificará la cuenta y el resultado de la tarea.",
+    "loginSessionBody": "Esta ventana ya tiene una sesión iniciada. Para evitar cerrar cuentas en otras ventanas, abre la ventana de acceso y cierra la sesión manualmente cuando lo hayas confirmado; la extensión iniciará sesión en la cuenta de destino.",
+    "openLogin": "Abrir ventana de acceso",
     "openVerification": "Abrir ventana de verificación",
     "reminderSettings": "Configuración de avisos",
     "turnstileAssistBody": "El sitio espera una verificación humana. Abre la ventana de verificación para resolver el captcha. La extensión comprobará el resultado después.",

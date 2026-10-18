@@ -531,6 +531,28 @@
     },
     "description": "Gewähren Sie nach Bedarf optionale Berechtigungen für die Aktualisierung von Kontodaten, Hilfstools, Aufgabenbenachrichtigungen und Website-Importe.",
     "helper": "Jede Berechtigung wird nur von der zugehörigen Funktion verwendet und kann jederzeit widerrufen werden. Funktionen ohne Genehmigung können eingeschränkt sein, während andere weiterhin funktionieren.",
+    "incognito": {
+      "checking": "Zugriff auf private Fenster wird geprüft…",
+      "chromeInstructions": "Aktivieren Sie in den Chrome-Details dieser Erweiterung „Im Inkognitomodus zulassen“.",
+      "denied": "Zugriff auf private Fenster nicht erlaubt",
+      "details": "Einstellungen",
+      "edgeInstructions": "Aktivieren Sie in den Edge-Details dieser Erweiterung „In InPrivate zulassen“.",
+      "enabled": "Zugriff auf private Fenster erlaubt",
+      "firefoxInstructions": "Öffnen Sie in Firefox Add-ons und Themes, wählen Sie diese Erweiterung und erlauben Sie die Ausführung in privaten Fenstern.",
+      "firefoxMobileInstructions": "Firefox: Öffne die Erweiterungsverwaltung im Browsermenü und prüfe den privaten Zugriff. Menüs und Unterstützung hängen von der Version ab.",
+      "genericInstructions": "Prüfe den privaten Zugriff in der Erweiterungsverwaltung deines Browsers.",
+      "manualSteps": "Anleitung ansehen",
+      "mobileInstructions": "Öffne die Erweiterungsverwaltung im Browsermenü und prüfe den privaten Zugriff. Menüs und Unterstützung hängen von der Version ab.",
+      "openChromeSettings": "Chrome-Einstellungen",
+      "openEdgeSettings": "Edge-Einstellungen",
+      "recommended": "Private Fenster für getrennte Anmeldungen erlauben",
+      "reloadWarning": "Eine Änderung kann die Erweiterung neu laden, Erweiterungsseiten schließen oder Aufgaben unterbrechen. Speichere zuerst deine Änderungen.",
+      "safariInstructions": "Wähle diese Erweiterung in den Safari-Erweiterungseinstellungen und erlaube privates Surfen. Die Optionen hängen von der Safari-Version ab.",
+      "settingsFailed": "Die Einstellungen konnten nicht geöffnet werden. Erlaube private Fenster über die Erweiterungsverwaltung deines Browsers.",
+      "summary": "Trennen Sie die Passwortanmeldung von normalen Fenstern, um Kontoverwechslungen und Sitzungskonflikte zu vermeiden.",
+      "title": "Zugriff auf private Fenster",
+      "unknown": "Privater Zugriff konnte nicht geprüft werden"
+    },
     "items": {
       "bookmarks": {
         "description": "Lesen Sie gespeicherte URLs nur, wenn Sie Websites aus Browser-Lesezeichen importieren.",

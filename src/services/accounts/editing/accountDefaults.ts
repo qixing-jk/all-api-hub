@@ -1,6 +1,10 @@
 import { CHECK_IN_SELECTION_MODES } from "~/constants/checkIn"
 import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
+import {
+  normalizeAccountLogin,
+  resolveAccountLogin,
+} from "~/services/accountLogin/configCodec"
 import { normalizeAccountSiteProfileUrlForStorage } from "~/services/accounts/accountSiteProfile/urls"
 import { coerceAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
@@ -447,8 +451,11 @@ export function normalizeSiteAccount(raw: SiteAccount): SiteAccount {
       ? merged.authType
       : AuthTypeEnum.AccessToken,
     checkIn: normalizeCheckInConfig(merged.checkIn),
+    login: resolveAccountLogin(merged),
   }
 
+  delete normalized.passwordAuth
+  delete normalized.checkIn.loginCheckIn
   delete (normalized as SiteAccount & { can_check_in?: unknown }).can_check_in
   delete (normalized as SiteAccount & { supports_check_in?: unknown })
     .supports_check_in
@@ -533,7 +540,18 @@ export function applySiteAccountUpdates(params: {
       .todayStatsAvailability as AccountInfo["todayStatsAvailability"]
   }
 
+  // Login is one credential-bearing configuration, never a partial deep merge.
+  if (Object.prototype.hasOwnProperty.call(params.updates, "login")) {
+    merged.login = normalizeAccountLogin(params.updates.login)
+  }
   const result = normalizeSiteAccount(merged)
+  if (
+    result.site_url !== normalized.site_url ||
+    result.site_type !== normalized.site_type ||
+    result.account_info.id !== normalized.account_info.id
+  ) {
+    delete result.login
+  }
 
   if (
     params.updates.account_info &&

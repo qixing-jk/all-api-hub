@@ -510,7 +510,7 @@ describe("mergeWebdavBackupPayloadBySelection", () => {
     expect(payload.version).toBe("4.0")
     expect((payload.accounts as any).accounts[0]).toMatchObject({
       id: "remote-account",
-      configVersion: 7,
+      configVersion: 8,
       checkIn: {
         automaticExecutionEnabled: true,
         selection: { methodId: "new-api:daily-checkin" },

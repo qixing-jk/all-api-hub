@@ -237,7 +237,7 @@ describe("migrateSiteAccountCheckInToV7", () => {
     })
   })
 
-  it("is deterministic and idempotent while the runtime schema remains V6", () => {
+  it("is deterministic and idempotent for the V7 migration step", () => {
     const account = createSiteAccount({
       site_type: SITE_TYPES.VELOERA,
       checkIn: {
@@ -252,7 +252,7 @@ describe("migrateSiteAccountCheckInToV7", () => {
 
     expect(second).toEqual(first)
     expect(repeated).toEqual(first)
-    expect(CURRENT_CONFIG_VERSION).toBe(7)
+    expect(first.configVersion).toBe(7)
   })
 
   it("removes pre-V1 account flags from V7 normalization", () => {
@@ -273,7 +273,7 @@ describe("migrateSiteAccountCheckInToV7", () => {
     expect(normalized).not.toHaveProperty("supports_check_in")
   })
 
-  it("activates V7 through the public account migration chain", () => {
+  it("preserves V7 check-in data through the current account migration chain", () => {
     const migrated = migrateAccountConfig(
       createSiteAccount({
         site_type: SITE_TYPES.NEW_API,
@@ -285,7 +285,7 @@ describe("migrateSiteAccountCheckInToV7", () => {
       }) as unknown as SiteAccount,
     )
 
-    expect(migrated.configVersion).toBe(7)
+    expect(migrated.configVersion).toBe(CURRENT_CONFIG_VERSION)
     expect(migrated.checkIn).toMatchObject({
       automaticExecutionEnabled: false,
       selection: {

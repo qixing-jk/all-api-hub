@@ -130,6 +130,7 @@ export function useAccountDialog({
     setTagIds,
     setExcludeFromTotalBalance,
     setExcludeFromTodayIncome,
+    setLogin,
     setCheckIn,
     applyAuthDefaultForUrl,
   } = draftModel
@@ -596,6 +597,7 @@ export function useAccountDialog({
     ? siteType
     : SITE_TYPES.UNKNOWN
   const isFormValid = isValidAccount({
+    loginChange: draft.loginChanged ? draft.login : undefined,
     siteName,
     username,
     userId,
@@ -656,6 +658,7 @@ export function useAccountDialog({
       tagIds,
       excludeFromTotalBalance,
       excludeFromTodayIncome,
+      login: draft.login,
       checkIn,
       siteType,
       authType,
@@ -705,6 +708,7 @@ export function useAccountDialog({
       setTagIds,
       setExcludeFromTotalBalance,
       setExcludeFromTodayIncome,
+      setLogin,
       setCheckIn,
       setCheckInSelection: setCheckInSelectionDraft,
       setSiteType,
