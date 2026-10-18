@@ -9,12 +9,12 @@ import {
 } from "~/utils/browser/windows"
 import { getErrorMessage } from "~/utils/core/error"
 
-import { resolveTempWindowSize } from "./browserAdapter"
 import { logger, logTempWindow } from "./diagnostics"
 import {
   classifyWindowCreationFailure,
   createRecoverableWindowCreationError,
 } from "./failures"
+import { resolveTempWindowSize } from "./windowSize"
 
 type CompositeWindowCreationResult = { windowId: number; tabId: number }
 

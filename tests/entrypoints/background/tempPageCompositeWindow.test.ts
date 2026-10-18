@@ -10,7 +10,7 @@ import {
 import * as browserApi_tabs from "~/utils/browser/tabs"
 import * as browserApi_windows from "~/utils/browser/windows"
 
-vi.mock("~/services/browsingContext/tempPage/browserAdapter", () => ({
+vi.mock("~/services/browsingContext/tempPage/windowSize", () => ({
   resolveTempWindowSize: vi.fn().mockResolvedValue({ width: 800, height: 600 }),
 }))
 

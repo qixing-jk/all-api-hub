@@ -4,7 +4,6 @@ import { startAbortableTask } from "~/services/apiTransport/abortableTask"
 import { checkTempContextProtectionGuards } from "~/services/browsingContext/tempPage/tempContextProtectionGuards"
 import {
   DEFAULT_TEMP_CONTEXT_PREFERENCE,
-  normalizeTempWindowFallbackPreferences,
   type TempWindowFallbackPreferences,
 } from "~/services/preferences/tempWindowFallbackPreferences"
 import { userPreferences } from "~/services/preferences/userPreferences"
@@ -116,20 +115,6 @@ export async function resolveTempContextPreferenceMode(): Promise<
   } catch {
     return DEFAULT_TEMP_CONTEXT_PREFERENCE
   }
-}
-
-/** Reads window dimensions at creation time, including for legacy preferences. */
-export async function resolveTempWindowSize() {
-  let storedPreferences: unknown
-  try {
-    storedPreferences = (await userPreferences.getPreferences())
-      .tempWindowFallback
-  } catch {
-    // Window creation remains available when preference storage is unavailable.
-  }
-  const { windowWidth, windowHeight } =
-    normalizeTempWindowFallbackPreferences(storedPreferences)
-  return { width: windowWidth, height: windowHeight }
 }
 
 /**

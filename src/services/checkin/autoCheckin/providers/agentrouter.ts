@@ -29,7 +29,6 @@ import {
   LOGIN_PROVIDER_EVIDENCE_OUTCOMES,
   type LoginProviderEvidenceOutcome,
 } from "~/types/loginProviderEvidence"
-import { isUnattendedRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { safeRandomUUID } from "~/utils/core/identifier"
 
 import type {
@@ -116,7 +115,7 @@ export function createAgentRouterProvider(
         },
       }
     },
-    async checkIn(account, context) {
+    async checkIn(account) {
       if (
         !("site_type" in account) ||
         !account.account_info?.id ||
@@ -150,9 +149,9 @@ export function createAgentRouterProvider(
         account,
         methodId: provider,
         requestId: deps.createRequestId(),
-        // A scheduled or retry run opens a popup nobody is looking at, so it
-        // must not hold the shared session for the whole interactive budget.
-        attended: !isUnattendedRequestSource(context.tempWindowRequestSource),
+        // Check-in uses the browser's existing identity, even when started
+        // from a visible UI. Interactive sign-in belongs to the login flow.
+        attended: false,
       })
       // Record what this attempt proved about the browser identity, but only
       // when it proved anything: a cancelled or inconclusive login must not be

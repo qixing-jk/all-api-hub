@@ -10,7 +10,6 @@ import {
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
 
-import { resolveTempWindowSize } from "./browserAdapter"
 import {
   openTabInCompositeWindow,
   TEMP_CONTEXT_INITIAL_URL,
@@ -28,6 +27,7 @@ import {
   createUnsupportedTempContextError,
   isRecoverableWindowCreationError,
 } from "./failures"
+import { resolveTempWindowSize } from "./windowSize"
 
 /**
  * Opens a standard tab-backed temp context.

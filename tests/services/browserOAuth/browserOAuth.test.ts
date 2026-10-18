@@ -40,6 +40,11 @@ const browserApi = vi.hoisted(() => ({
   updateTab: vi.fn(),
 }))
 const hasCookieReadPermissionForUrl = vi.hoisted(() => vi.fn())
+const getPreferences = vi.hoisted(() => vi.fn())
+
+vi.mock("~/services/preferences/userPreferences", () => ({
+  userPreferences: { getPreferences },
+}))
 
 vi.mock("~/utils/browser/tabs", () => browserApi)
 vi.mock("~/utils/browser/windows", () => browserApi)
@@ -122,6 +127,8 @@ const completedTab = {
 describe("browser OAuth context", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    getPreferences.mockReset()
+    getPreferences.mockResolvedValue({})
     browserApi.removeWindow.mockReset()
     browserApi.queryTabs.mockReset()
     tabUpdatedListeners.length = 0
@@ -166,6 +173,47 @@ describe("browser OAuth context", () => {
     expect(browserApi.removeBrowserCookie).not.toHaveBeenCalled()
     expect(browserApi.removeWindow).toHaveBeenCalledWith(7)
   })
+
+  it.each([
+    { attended: false, focused: false },
+    { attended: true, focused: true },
+    { attended: undefined, focused: true },
+  ])(
+    "opens the OAuth window with focused=$focused when attended=$attended",
+    async ({ attended, focused }) => {
+      await expect(
+        browserOAuthContext.authenticate({
+          origin,
+          requestId: "window-focus",
+          attended,
+        }),
+      ).resolves.toMatchObject({ status: BROWSER_OAUTH_STATUS.Authenticated })
+      expect(browserApi.createWindow).toHaveBeenCalledWith(
+        expect.objectContaining({ focused }),
+      )
+      expect(browserApi.removeWindow).toHaveBeenCalledWith(7)
+    },
+  )
+
+  it.each([
+    { stored: {}, width: 600, height: 720 },
+    {
+      stored: { tempWindowFallback: { windowWidth: 900, windowHeight: 800 } },
+      width: 900,
+      height: 800,
+    },
+  ])(
+    "uses temporary-window dimensions $width x $height",
+    async ({ stored, width, height }) => {
+      getPreferences.mockResolvedValue(stored)
+      await expect(
+        browserOAuthContext.authenticate({ origin, requestId: "window-size" }),
+      ).resolves.toMatchObject({ status: BROWSER_OAUTH_STATUS.Authenticated })
+      expect(browserApi.createWindow).toHaveBeenCalledWith(
+        expect.objectContaining({ width, height }),
+      )
+    },
+  )
 
   it("supports first-time OAuth when no existing identity is expected", async () => {
     await expect(

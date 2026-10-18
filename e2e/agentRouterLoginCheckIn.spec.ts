@@ -4,6 +4,7 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
+import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { AuthTypeEnum, type AccountStorageConfig } from "~/types"
 import type { AutoCheckinStatus } from "~/types/autoCheckin"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
@@ -20,13 +21,41 @@ import {
 } from "~~/e2e/utils/extensionState"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
-for (const matchingIdentity of [true, false]) {
-  test(`login check-in ${matchingIdentity ? "succeeds" : "rejects another account"} without storing cookies`, async ({
+// Viewport emulation resizes popups too; keep native window sizing observable.
+test.use({ viewport: null })
+
+for (const { matchingIdentity, provider, unattended } of [
+  { matchingIdentity: true, provider: "linuxdo", unattended: false },
+  { matchingIdentity: false, provider: "linuxdo", unattended: false },
+  { matchingIdentity: true, provider: "github", unattended: false },
+  { matchingIdentity: true, provider: "linuxdo", unattended: true },
+  { matchingIdentity: true, provider: "github", unattended: true },
+] as const) {
+  test(`${unattended ? "background" : "manual"} ${provider} login check-in ${matchingIdentity ? "succeeds" : "rejects another account"} without storing cookies`, async ({
     context,
     page,
     extensionId,
   }) => {
     const worker = await getServiceWorker(context)
+    await worker.evaluate(() => {
+      const observation = {
+        popupIds: [] as number[],
+        focusedIds: [] as number[],
+      }
+      ;(
+        globalThis as typeof globalThis & {
+          checkinWindowFocus: typeof observation
+        }
+      ).checkinWindowFocus = observation
+      chrome.windows.onCreated.addListener((window) => {
+        if (window.type !== "popup" || window.id === undefined) return
+        observation.popupIds.push(window.id)
+        if (window.focused) observation.focusedIds.push(window.id)
+      })
+      chrome.windows.onFocusChanged.addListener((windowId) => {
+        observation.focusedIds.push(windowId)
+      })
+    })
     await stubLlmMetadataIndex(context)
     const calls: string[] = []
     let loggedOut = false
@@ -43,6 +72,8 @@ for (const matchingIdentity of [true, false]) {
             system_name: "Agent Router",
             linuxdo_oauth: true,
             linuxdo_client_id: "test-client",
+            github_oauth: true,
+            github_client_id: "test-client",
           },
         }
       else if (path === "/api/user/logout") {
@@ -56,7 +87,7 @@ for (const matchingIdentity of [true, false]) {
         await route.fulfill({ json: payload })
         return
       }
-      if (path === "/oauth/linuxdo") {
+      if (path === `/oauth/${provider}`) {
         expect(url.searchParams.get("state")).toBe("signed-test-state")
         await route.fulfill({
           contentType: "text/html; charset=utf-8",
@@ -74,14 +105,33 @@ for (const matchingIdentity of [true, false]) {
       })
     })
     await context.route(
-      "https://connect.linux.do/oauth2/authorize**",
+      provider === "linuxdo"
+        ? "https://connect.linux.do/oauth2/authorize**"
+        : "https://github.com/login/oauth/authorize**",
       async (route) => {
         const url = new URL(route.request().url())
         expect(url.searchParams.get("client_id")).toBe("test-client")
         expect(url.searchParams.get("state")).toBe("signed-test-state")
+        const authWindow = await worker.evaluate(async () => {
+          const windows = await chrome.windows.getAll()
+          const popup = windows.find((item) => item.type === "popup")
+          if (!popup) throw new Error("OAuth login window is missing")
+          return popup
+        })
+        expect(authWindow.focused).toBe(false)
+        expect(authWindow.width).toBe(700)
+        expect(authWindow.height).toBe(500)
+        if (provider === "github") {
+          // An already-authorized GitHub session returns without another click.
+          await route.fulfill({
+            contentType: "text/html; charset=utf-8",
+            body: "<script>location.replace('https://agentrouter.org/oauth/github?code=test-code&state=signed-test-state');</script>",
+          })
+          return
+        }
         await route.fulfill({
           contentType: "text/html; charset=utf-8",
-          body: '<html><body><a href="https://agentrouter.org/oauth/linuxdo?code=test-code&amp;state=signed-test-state">允许</a></body></html>',
+          body: `<html><body><a href="https://agentrouter.org/oauth/${provider}?code=test-code&amp;state=signed-test-state">允许</a></body></html>`,
         })
       },
     )
@@ -98,7 +148,7 @@ for (const matchingIdentity of [true, false]) {
       },
       checkIn: {
         automaticExecutionEnabled: true,
-        loginCheckIn: { provider: "linuxdo" },
+        loginCheckIn: { provider },
         selection: {
           mode: "automatic",
           methodId: AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn,
@@ -117,6 +167,12 @@ for (const matchingIdentity of [true, false]) {
     })
     await seedStoredAccounts(worker, [saved])
     await seedUserPreferences(worker, {
+      tempWindowFallback: {
+        ...DEFAULT_PREFERENCES.tempWindowFallback!,
+        // Keep the custom dimensions inside headless Chromium's 800x600 screen.
+        windowWidth: 700,
+        windowHeight: 500,
+      },
       autoCheckin: {
         ...DEFAULT_PREFERENCES.autoCheckin!,
         globalEnabled: true,
@@ -132,7 +188,20 @@ for (const matchingIdentity of [true, false]) {
     await page.goto(
       `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.AUTO_CHECKIN}`,
     )
-    await page.getByRole("button", { name: "Run now", exact: true }).click()
+    if (unattended) {
+      const result = await page.evaluate(
+        (type) =>
+          chrome.runtime.sendMessage({
+            id: "background-checkin",
+            type,
+            timestamp: Date.now(),
+          }),
+        AutoCheckinMessageTypes.DebugTriggerDailyAlarmNow,
+      )
+      expect(result.res?.success).toBe(true)
+    } else {
+      await page.getByRole("button", { name: "Run now", exact: true }).click()
+    }
     await expect
       .poll(
         async () =>
@@ -149,6 +218,20 @@ for (const matchingIdentity of [true, false]) {
       calls.indexOf("/api/oauth/state"),
     )
     expect(calls).toContain("/api/user/self")
+    const focusedPopups = await worker.evaluate(() => {
+      const observation = (
+        globalThis as typeof globalThis & {
+          checkinWindowFocus: { popupIds: number[]; focusedIds: number[] }
+        }
+      ).checkinWindowFocus
+      return {
+        opened: observation.popupIds.length,
+        focused: observation.focusedIds.filter((id) =>
+          observation.popupIds.includes(id),
+        ),
+      }
+    })
+    expect(focusedPopups).toEqual({ opened: 1, focused: [] })
     const stored = atIndex(
       (await getPlasmoStorageJsonValue<AccountStorageConfig>(
         worker,
