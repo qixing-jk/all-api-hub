@@ -8,7 +8,11 @@ import {
   type AutoRefreshStatusResponse,
   type AutoRefreshUpdateSettingsRequest,
 } from "~/services/accounts/refresh/autoRefreshMessaging"
-import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler"
+import {
+  ACCOUNT_AUTO_REFRESH_ALARM_NAME,
+  AUTO_REFRESH_UPDATE_MESSAGE_TYPE,
+  AUTO_REFRESH_UPDATE_TYPES,
+} from "~/services/accounts/refresh/constants"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
 import {
@@ -22,6 +26,13 @@ import { createRuntimeMessageFailure } from "~/services/runtimeMessaging/result"
 import { type AccountAutoRefresh } from "~/types/accountAutoRefresh"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import {
+  clearAlarm,
+  createAlarm,
+  getAlarm,
+  hasAlarmsAPI,
+  onAlarm,
+} from "~/utils/browser/alarms"
+import {
   isMessageReceiverUnavailableError,
   sendRuntimeMessage,
 } from "~/utils/browser/runtimeMessages"
@@ -30,16 +41,25 @@ import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("AutoRefresh")
 
+type AutoRefreshUpdateData = {
+  [AUTO_REFRESH_UPDATE_TYPES.Completed]: Awaited<
+    ReturnType<typeof accountRefresh.refreshAllAccounts>
+  >
+  [AUTO_REFRESH_UPDATE_TYPES.Error]: { error: string }
+}
+
 /**
  * Manages account auto-refresh in the background.
  * Responsibilities:
  * - Reads user preferences to decide whether and how often to refresh.
- * - Maintains a single interval timer to avoid duplicate refresh jobs.
+ * - Maintains a single alarm / interval timer to avoid duplicate refresh jobs.
  * - Broadcasts status/results to any connected frontends (popup/options).
  */
 class AutoRefreshService {
   private refreshTimer: NodeJS.Timeout | null = null
   private isInitialized = false
+  private isAlarmScheduled = false
+  private alarmListenerRegistered = false
 
   /**
    * Initialize auto refresh (idempotent).
@@ -53,6 +73,16 @@ class AutoRefreshService {
       return
     }
 
+    if (!this.alarmListenerRegistered) {
+      onAlarm(async (alarm) => {
+        if (alarm.name !== ACCOUNT_AUTO_REFRESH_ALARM_NAME) {
+          return
+        }
+        await this.performBackgroundRefresh()
+      })
+      this.alarmListenerRegistered = true
+    }
+
     try {
       await this.setupAutoRefresh()
       this.isInitialized = true
@@ -63,8 +93,8 @@ class AutoRefreshService {
   }
 
   /**
-   * Start or stop the interval based on current user preferences.
-   * Always clears any existing timer to prevent duplicate schedules.
+   * Reconcile the alarm or fallback timer with current user preferences.
+   * Preserve matching alarms so worker restarts do not postpone refreshes.
    *
    * Respects accountAutoRefresh.enabled/interval from user preferences.
    */
@@ -88,19 +118,42 @@ class AutoRefreshService {
     }
 
     if (!preferences.accountAutoRefresh?.enabled) {
+      if (hasAlarmsAPI()) {
+        await clearAlarm(ACCOUNT_AUTO_REFRESH_ALARM_NAME)
+      }
+      this.isAlarmScheduled = false
       logger.info("自动刷新已关闭")
       return
     }
 
-    // 启动定时刷新；使用 setInterval 保存引用以便后续清理
-    const intervalMs = preferences.accountAutoRefresh.interval * 1000
-    this.refreshTimer = setInterval(async () => {
-      await this.performBackgroundRefresh()
-    }, intervalMs)
+    if (hasAlarmsAPI()) {
+      const intervalMinutes = Math.max(
+        1,
+        preferences.accountAutoRefresh.interval / 60,
+      )
+      const existingAlarm = await getAlarm(ACCOUNT_AUTO_REFRESH_ALARM_NAME)
+      if (existingAlarm?.periodInMinutes !== intervalMinutes) {
+        await createAlarm(ACCOUNT_AUTO_REFRESH_ALARM_NAME, {
+          periodInMinutes: intervalMinutes,
+          delayInMinutes: intervalMinutes,
+        })
+      }
+      this.isAlarmScheduled = true
+      logger.info("自动刷新 Alarm 已启动", {
+        intervalSeconds: preferences.accountAutoRefresh.interval,
+        periodInMinutes: intervalMinutes,
+      })
+    } else {
+      // 启动定时刷新；使用 setInterval 保存引用以便后续清理
+      const intervalMs = preferences.accountAutoRefresh.interval * 1000
+      this.refreshTimer = setInterval(async () => {
+        await this.performBackgroundRefresh()
+      }, intervalMs)
 
-    logger.info("自动刷新已启动", {
-      intervalSeconds: preferences.accountAutoRefresh.interval,
-    })
+      logger.info("自动刷新已启动", {
+        intervalSeconds: preferences.accountAutoRefresh.interval,
+      })
+    }
   }
 
   /**
@@ -125,16 +178,13 @@ class AutoRefreshService {
         failed: result.failed,
       })
 
-      // Opportunistically trigger usage-history sync after refresh cycles when enabled and due.
-      void usageHistoryScheduler.runAfterRefreshSync().catch((error) => {
-        logger.warn("Usage-history sync after refresh failed", error)
-      })
-
       // 通知前端更新（如果popup是打开的）
-      this.notifyFrontend("refresh_completed", result)
+      this.notifyFrontend(AUTO_REFRESH_UPDATE_TYPES.Completed, result)
     } catch (error) {
       logger.error("后台刷新失败", error)
-      this.notifyFrontend("refresh_error", { error: getErrorMessage(error) })
+      this.notifyFrontend(AUTO_REFRESH_UPDATE_TYPES.Error, {
+        error: getErrorMessage(error),
+      })
     }
   }
 
@@ -169,9 +219,20 @@ class AutoRefreshService {
    * Idempotent; safe to call when not running.
    */
   stopAutoRefresh() {
+    let stopped = false
     if (this.refreshTimer) {
       clearInterval(this.refreshTimer)
       this.refreshTimer = null
+      stopped = true
+    }
+    if (hasAlarmsAPI()) {
+      void clearAlarm(ACCOUNT_AUTO_REFRESH_ALARM_NAME)
+      if (this.isAlarmScheduled) {
+        stopped = true
+      }
+      this.isAlarmScheduled = false
+    }
+    if (stopped) {
       logger.info("自动刷新已停止")
     }
   }
@@ -196,7 +257,7 @@ class AutoRefreshService {
    */
   getStatus() {
     return {
-      isRunning: this.refreshTimer !== null,
+      isRunning: this.refreshTimer !== null || this.isAlarmScheduled,
       isInitialized: this.isInitialized,
     }
   }
@@ -207,12 +268,15 @@ class AutoRefreshService {
    *
    * Best-effort; errors are logged without throwing to avoid breaking background flow.
    */
-  private notifyFrontend(type: string, data: any) {
+  private notifyFrontend<T extends keyof AutoRefreshUpdateData>(
+    type: T,
+    data: AutoRefreshUpdateData[T],
+  ) {
     try {
       // 向所有连接的客户端发送消息
       void sendRuntimeMessage(
         {
-          type: "AUTO_REFRESH_UPDATE",
+          type: AUTO_REFRESH_UPDATE_MESSAGE_TYPE,
           payload: { type, data },
         },
         { maxAttempts: 1 },
@@ -237,6 +301,7 @@ class AutoRefreshService {
   destroy() {
     this.stopAutoRefresh()
     this.isInitialized = false
+    this.isAlarmScheduled = false
     logger.info("服务已销毁")
   }
 }

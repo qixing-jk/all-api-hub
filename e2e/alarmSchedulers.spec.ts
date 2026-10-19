@@ -3,6 +3,8 @@ import type { BrowserContext, Page, Route, Worker } from "@playwright/test"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
+import { AutoRefreshMessageTypes } from "~/services/accounts/refresh/autoRefreshMessaging"
+import { ACCOUNT_AUTO_REFRESH_ALARM_NAME } from "~/services/accounts/refresh/constants"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { DAILY_BALANCE_HISTORY_ALARM_NAME } from "~/services/history/dailyBalanceHistory/constants"
@@ -65,6 +67,7 @@ const MANAGED_SITE_ALARM_USER_ID = "1"
 const AUTO_CHECKIN_STATUS_STORAGE_KEY = "autoCheckin_status"
 
 const EXPECTED_ENABLED_ALARMS = [
+  ACCOUNT_AUTO_REFRESH_ALARM_NAME,
   AUTO_CHECKIN_DAILY_ALARM_NAME,
   DAILY_BALANCE_HISTORY_ALARM_NAME,
   MANAGED_SITE_MODEL_SYNC_ALARM_NAME,
@@ -75,6 +78,7 @@ const EXPECTED_ENABLED_ALARMS = [
 ] as const
 
 const CONFIGURABLE_ALARMS = [
+  ACCOUNT_AUTO_REFRESH_ALARM_NAME,
   AUTO_CHECKIN_LEGACY_ALARM_NAME,
   AUTO_CHECKIN_DAILY_ALARM_NAME,
   AUTO_CHECKIN_RETRY_ALARM_NAME,
@@ -574,6 +578,11 @@ async function enableAlarmBackedFeatures(page: Page, serviceWorker: Worker) {
   const responses = [
     await sendTypedRuntimeMessageFromPage<{ success: boolean }>(
       page,
+      AutoRefreshMessageTypes.UpdateSettings,
+      { settings: { accountAutoRefresh: { enabled: true, interval: 900 } } },
+    ),
+    await sendTypedRuntimeMessageFromPage<{ success: boolean }>(
+      page,
       UsageHistoryMessageTypes.UpdateSettings,
       {
         settings: {
@@ -655,6 +664,11 @@ async function enableAlarmBackedFeatures(page: Page, serviceWorker: Worker) {
 
 async function disableConfigurableAlarmFeatures(page: Page) {
   const responses = [
+    await sendTypedRuntimeMessageFromPage<{ success: boolean }>(
+      page,
+      AutoRefreshMessageTypes.UpdateSettings,
+      { settings: { accountAutoRefresh: { enabled: false } } },
+    ),
     await sendTypedRuntimeMessageFromPage<{ success: boolean }>(
       page,
       UsageHistoryMessageTypes.UpdateSettings,
@@ -740,6 +754,10 @@ test("reconciles every enabled background scheduler into production MV3 alarms w
     })
     .toEqual(
       expect.objectContaining({
+        [ACCOUNT_AUTO_REFRESH_ALARM_NAME]: expect.objectContaining({
+          name: ACCOUNT_AUTO_REFRESH_ALARM_NAME,
+          periodInMinutes: 15,
+        }),
         [AUTO_CHECKIN_DAILY_ALARM_NAME]: expect.objectContaining({
           name: AUTO_CHECKIN_DAILY_ALARM_NAME,
         }),
@@ -826,6 +844,94 @@ test("clears scheduler-owned MV3 alarms when features are disabled", async ({
         message: `${alarmName} should be cleared by its owning scheduler`,
       })
       .toBeNull()
+  }
+})
+
+test("wakes a stopped MV3 worker to refresh saved accounts", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const worker = await getServiceWorker(context)
+  const baseUrl = "https://account-refresh-alarm.example.com"
+  const accountId = "account-refresh-alarm-account"
+  await stubNewApiSiteRoutes(context, { baseUrl, initialQuota: 9_876_543 })
+  await seedStoredAccounts(worker, [
+    createStoredAccount({
+      id: accountId,
+      site_url: baseUrl,
+      last_sync_time: 0,
+    }),
+  ])
+  await openExtensionPage(page, extensionId)
+  const response = await sendTypedRuntimeMessageFromPage<{ success: boolean }>(
+    page,
+    AutoRefreshMessageTypes.UpdateSettings,
+    {
+      settings: {
+        accountAutoRefresh: { enabled: true, interval: 60, minInterval: 0 },
+      },
+    },
+  )
+  expect(response.success).toBe(true)
+  // Remove UI consumers so only the alarm can wake the stopped background.
+  await page.goto(`chrome-extension://${extensionId}/manifest.json`)
+  const cdp = await context.newCDPSession(page)
+  const versions = new Map<
+    string,
+    { scriptURL: string; runningStatus: string }
+  >()
+  cdp.on("ServiceWorker.workerVersionUpdated", ({ versions: updated }) => {
+    for (const version of updated) versions.set(version.versionId, version)
+  })
+  try {
+    await cdp.send("ServiceWorker.enable")
+    await expect
+      .poll(() =>
+        [...versions.values()].some(
+          (version) => version.scriptURL === worker.url(),
+        ),
+      )
+      .toBe(true)
+    const versionId = [...versions.entries()].find(
+      ([, version]) => version.scriptURL === worker.url(),
+    )![0]
+    // Keep the configured repeating period so startup reconciliation must preserve it.
+    await worker.evaluate(async (name) => {
+      await (globalThis as any).chrome.alarms.create(name, {
+        when: Date.now() + 3_000,
+        periodInMinutes: 1,
+      })
+    }, ACCOUNT_AUTO_REFRESH_ALARM_NAME)
+    const refreshed = context.waitForEvent("request", {
+      predicate: (request) => request.url() === `${baseUrl}/api/user/self`,
+      timeout: 15_000,
+    })
+    await cdp.send("ServiceWorker.stopWorker", { versionId })
+    await expect
+      .poll(() => versions.get(versionId)?.runningStatus)
+      .toBe("stopped")
+    await refreshed
+
+    await page.goto(`chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}`)
+    await expect
+      .poll(() =>
+        page.evaluate(
+          async ({ storageKey, accountId }) => {
+            const stored = await (globalThis as any).chrome.storage.local.get(
+              storageKey,
+            )
+            const config = JSON.parse(stored[storageKey] ?? "{}")
+            return config.accounts?.find(
+              (account: { id: string }) => account.id === accountId,
+            )?.account_info?.quota
+          },
+          { storageKey: STORAGE_KEYS.ACCOUNTS, accountId },
+        ),
+      )
+      .toBe(9_876_543)
+  } finally {
+    await cdp.detach()
   }
 })
 

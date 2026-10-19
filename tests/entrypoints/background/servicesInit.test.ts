@@ -109,6 +109,7 @@ describe("initializeServices alarm bootstrap ordering", () => {
       releaseUpdate: false,
       productAnnouncement: false,
       newApiOwnedSession: false,
+      autoRefresh: false,
     }
 
     let i18nObservedAllAlarmInits = false
@@ -143,7 +144,9 @@ describe("initializeServices alarm bootstrap ordering", () => {
     })
 
     const modelMetadataInit: InitMock = vi.fn(async () => {})
-    const autoRefreshInit: InitMock = vi.fn(async () => {})
+    const autoRefreshInit: InitMock = vi.fn(async () => {
+      alarmInitCalled.autoRefresh = true
+    })
     const redemptionAssistInit: InitMock = vi.fn(async () => {})
     legacyChannelConfigMigrationInitMock.mockResolvedValue({
       status: "not-needed",
@@ -170,7 +173,8 @@ describe("initializeServices alarm bootstrap ordering", () => {
         alarmInitCalled.dailyBalance &&
         alarmInitCalled.releaseUpdate &&
         alarmInitCalled.productAnnouncement &&
-        alarmInitCalled.newApiOwnedSession
+        alarmInitCalled.newApiOwnedSession &&
+        alarmInitCalled.autoRefresh
       return i18nPromise
     })
 
@@ -184,6 +188,7 @@ describe("initializeServices alarm bootstrap ordering", () => {
     expect(releaseUpdateInit).toHaveBeenCalledTimes(1)
     expect(productAnnouncementInit).toHaveBeenCalledTimes(1)
     expect(newApiOwnedSessionInit).toHaveBeenCalledTimes(1)
+    expect(autoRefreshInit).toHaveBeenCalledTimes(1)
     expect(i18nObservedAllAlarmInits).toBe(true)
 
     resolveI18n?.()

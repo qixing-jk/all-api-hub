@@ -112,6 +112,14 @@ vi.mock("~/services/apiAdapters/registry", () => ({
   getSiteTypeCapabilities: mockgetSiteTypeCapabilities,
 }))
 
+// History coordination is covered at the refresh boundary; storage tests must
+// not leave detached log requests running against their account fixtures.
+vi.mock("~/services/history/usageHistory/scheduler", () => ({
+  usageHistoryScheduler: {
+    runAfterRefreshSync: vi.fn().mockResolvedValue(null),
+  },
+}))
+
 vi.mock("~/services/accountBrowserSession", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/services/accountBrowserSession")>()
@@ -4200,10 +4208,20 @@ describe("accountStorage core behaviors", () => {
     expect(updated?.account_info.access_token).toBe("rotated-token")
   })
 
-  it("refreshAccount should route adapter refreshes with normalized base URLs", async () => {
+  it.each([
+    [
+      "https://pathful.example.com/dashboard?tab=usage",
+      "https://pathful.example.com",
+    ],
+    [
+      "https://pathful.example.com:8443/dashboard?tab=usage#details",
+      "https://pathful.example.com:8443",
+    ],
+    ["http://localhost:3000/dashboard/", "http://localhost:3000"],
+  ])("refreshAccount routes %s to origin %s", async (siteUrl, origin) => {
     const account = createAccount({
       id: "pathful-refresh-url",
-      site_url: "https://pathful.example.com/dashboard?tab=usage",
+      site_url: siteUrl,
       site_type: SITE_TYPES.NEW_API,
       checkIn: {
         automaticExecutionEnabled: true,
@@ -4218,7 +4236,7 @@ describe("accountStorage core behaviors", () => {
     expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
     expect(mockRefreshAccountData).toHaveBeenCalledWith(
       expect.objectContaining({
-        baseUrl: "https://pathful.example.com",
+        baseUrl: origin,
         siteType: SITE_TYPES.NEW_API,
       }),
     )

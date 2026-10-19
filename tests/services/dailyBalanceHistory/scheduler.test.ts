@@ -41,6 +41,7 @@ const {
   mockHasAlarmsAPI,
   mockOnAlarm,
   mockNotifyTaskResult,
+  mockRunAfterRefreshSync,
 } = vi.hoisted(() => ({
   mockGetPreferences: vi.fn(),
   mockSavePreferences: vi.fn(),
@@ -56,6 +57,7 @@ const {
   mockHasAlarmsAPI: vi.fn(),
   mockOnAlarm: vi.fn(),
   mockNotifyTaskResult: vi.fn(),
+  mockRunAfterRefreshSync: vi.fn(),
 }))
 
 const balanceHistoryMessageHandlers = vi.hoisted(
@@ -107,6 +109,12 @@ vi.mock("~/services/history/dailyBalanceHistory/storage", () => ({
   dailyBalanceHistoryStorage: {
     upsertSnapshot: mockUpsertSnapshot,
     pruneAll: mockPruneAll,
+  },
+}))
+
+vi.mock("~/services/history/usageHistory/scheduler", () => ({
+  usageHistoryScheduler: {
+    runAfterRefreshSync: mockRunAfterRefreshSync,
   },
 }))
 
@@ -402,6 +410,7 @@ describe("dailyBalanceHistoryScheduler", () => {
         when: getExpectedEndOfDayCaptureTime(),
       },
     )
+    expect(mockRunAfterRefreshSync).not.toHaveBeenCalled()
   })
 
   it("returns null on capture failure and resets the running guard", async () => {

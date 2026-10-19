@@ -19,6 +19,10 @@ import {
   resolveAutoRefreshUpdateSettingsMessage,
   setupAutoRefreshMessagingListeners,
 } from "~/services/accounts/refresh/autoRefreshService"
+import {
+  ACCOUNT_AUTO_REFRESH_ALARM_NAME,
+  AUTO_REFRESH_UPDATE_TYPES,
+} from "~/services/accounts/refresh/constants"
 import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import type { UserPreferences } from "~/services/preferences/preferencesSchema"
@@ -251,10 +255,6 @@ describe("AutoRefreshService", () => {
         refreshedCount: 2,
         latestSyncTime: Date.now(),
       })
-      vi.mocked(usageHistoryScheduler.runAfterRefreshSync).mockResolvedValue({
-        totals: { success: 2, skipped: 0, error: 0, unsupported: 0 },
-        perAccount: [],
-      })
 
       await autoRefreshService.setupAutoRefresh()
 
@@ -267,13 +267,16 @@ describe("AutoRefreshService", () => {
           "scheduled",
         ),
       })
-      expect(usageHistoryScheduler.runAfterRefreshSync).toHaveBeenCalledTimes(1)
-      expect(notifyFrontendSpy).toHaveBeenCalledWith("refresh_completed", {
-        success: 2,
-        failed: 1,
-        refreshedCount: 2,
-        latestSyncTime: expect.any(Number),
-      })
+      expect(usageHistoryScheduler.runAfterRefreshSync).not.toHaveBeenCalled()
+      expect(notifyFrontendSpy).toHaveBeenCalledWith(
+        AUTO_REFRESH_UPDATE_TYPES.Completed,
+        {
+          success: 2,
+          failed: 1,
+          refreshedCount: 2,
+          latestSyncTime: expect.any(Number),
+        },
+      )
       notifyFrontendSpy.mockRestore()
 
       // Clean up timer to avoid hanging
@@ -306,9 +309,12 @@ describe("AutoRefreshService", () => {
       await vi.advanceTimersByTimeAsync(interval * 1000)
 
       expect(usageHistoryScheduler.runAfterRefreshSync).not.toHaveBeenCalled()
-      expect(notifyFrontendSpy).toHaveBeenCalledWith("refresh_error", {
-        error: "Error: background failed",
-      })
+      expect(notifyFrontendSpy).toHaveBeenCalledWith(
+        AUTO_REFRESH_UPDATE_TYPES.Error,
+        {
+          error: "Error: background failed",
+        },
+      )
       notifyFrontendSpy.mockRestore()
     })
 
@@ -394,6 +400,21 @@ describe("AutoRefreshService", () => {
         autoRefreshService.refreshNow(refreshAllExecution),
       ).rejects.toThrow(error)
     })
+
+    it("leaves usage-history coordination to the shared account refresh", async () => {
+      const mockResult = {
+        success: 2,
+        failed: 0,
+        refreshedCount: 2,
+        latestSyncTime: Date.now(),
+      }
+      vi.mocked(accountRefresh.refreshAllAccounts).mockResolvedValue(mockResult)
+      vi.mocked(usageHistoryScheduler.runAfterRefreshSync).mockClear()
+
+      await autoRefreshService.refreshNow(refreshAllExecution)
+
+      expect(usageHistoryScheduler.runAfterRefreshSync).not.toHaveBeenCalled()
+    })
   })
 
   describe("stopAutoRefresh", () => {
@@ -459,59 +480,65 @@ describe("AutoRefreshService", () => {
     })
   })
 
-  describe("notifyFrontend", () => {
+  describe("frontend notifications", () => {
+    const refreshResult = {
+      success: 2,
+      failed: 0,
+      refreshedCount: 2,
+      latestSyncTime: 123,
+    }
+
     beforeEach(() => {
-      mockSendMessage.mockClear()
+      vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+        ...DEFAULT_PREFERENCES,
+        accountAutoRefresh: {
+          ...DEFAULT_ACCOUNT_AUTO_REFRESH,
+          enabled: true,
+        },
+      })
+      vi.mocked(accountRefresh.refreshAllAccounts).mockResolvedValue(
+        refreshResult,
+      )
+      mockSendMessage.mockResolvedValue(undefined)
     })
 
-    it("should send message successfully", () => {
-      const testData = { type: "test", data: "result" }
+    const runBackgroundRefresh = async () => {
+      await autoRefreshService.setupAutoRefresh()
+      await vi.advanceTimersByTimeAsync(
+        DEFAULT_ACCOUNT_AUTO_REFRESH.interval * 1000,
+      )
+    }
 
-      mockSendMessage.mockResolvedValue(undefined)
+    it("broadcasts the refresh result using the existing wire protocol", async () => {
+      await runBackgroundRefresh()
 
-      // Access private method through prototype
-      const service = autoRefreshService as any
-      service.notifyFrontend("refresh_completed", testData)
-
-      expect(mockSendMessage).toHaveBeenCalledWith({
+      expect(mockSendMessage).toHaveBeenCalledExactlyOnceWith({
         type: "AUTO_REFRESH_UPDATE",
-        payload: { type: "refresh_completed", data: testData },
+        payload: { type: "refresh_completed", data: refreshResult },
       })
     })
 
-    it("should suppress receiving end does not exist error", () => {
-      const error = new Error("receiving end does not exist")
+    it.each(["receiving end does not exist", "Other runtime error"])(
+      "keeps the scheduler running when notification fails: %s",
+      async (message) => {
+        mockSendMessage.mockRejectedValue(new Error(message))
 
-      mockSendMessage.mockRejectedValue(error)
+        await expect(runBackgroundRefresh()).resolves.toBeUndefined()
 
-      const service = autoRefreshService as any
-      service.notifyFrontend("refresh_completed", {})
+        expect(mockSendMessage).toHaveBeenCalledTimes(1)
+        expect(autoRefreshService.getStatus().isRunning).toBe(true)
+      },
+    )
 
-      // The catch handler should suppress this specific error
-      expect(mockSendMessage).toHaveBeenCalled()
-    })
-
-    it("should log other runtime errors", () => {
-      const error = new Error("Other runtime error")
-
-      mockSendMessage.mockRejectedValue(error)
-
-      const service = autoRefreshService as any
-      service.notifyFrontend("refresh_completed", {})
-
-      expect(mockSendMessage).toHaveBeenCalled()
-    })
-
-    it("should handle try-catch errors gracefully", () => {
-      // Make sendMessage throw synchronously to trigger the outer catch
+    it("contains synchronous notification failures", async () => {
       mockSendMessage.mockImplementation(() => {
         throw new Error("Unexpected error")
       })
 
-      const service = autoRefreshService as any
-      expect(() =>
-        service.notifyFrontend("refresh_completed", {}),
-      ).not.toThrow()
+      await expect(runBackgroundRefresh()).resolves.toBeUndefined()
+
+      expect(mockSendMessage).toHaveBeenCalledTimes(1)
+      expect(autoRefreshService.getStatus().isRunning).toBe(true)
     })
   })
 
@@ -878,5 +905,159 @@ describe("auto-refresh typed message resolvers", () => {
       error: "Invalid protection bypass execution",
     })
     expect(accountRefresh.refreshAllAccounts).toHaveBeenCalledTimes(1)
+  })
+
+  describe("Alarms API scheduling", () => {
+    let originalAlarms: any
+
+    beforeEach(() => {
+      originalAlarms = (globalThis as any).browser?.alarms
+    })
+
+    afterEach(() => {
+      if (originalAlarms !== undefined) {
+        ;(globalThis as any).browser.alarms = originalAlarms
+      } else {
+        delete (globalThis as any).browser.alarms
+      }
+    })
+
+    it.each([30_000, -30_000])(
+      "preserves the refresh deadline at offset %i when a worker starts",
+      async (offset) => {
+        const existingAlarm = {
+          name: ACCOUNT_AUTO_REFRESH_ALARM_NAME,
+          periodInMinutes: 15,
+          scheduledTime: Date.now() + offset,
+        }
+        const mockCreate = vi.fn().mockResolvedValue(undefined)
+        const mockClear = vi.fn().mockResolvedValue(true)
+        ;(globalThis as any).browser.alarms = {
+          get: vi.fn().mockResolvedValue(existingAlarm),
+          create: mockCreate,
+          clear: mockClear,
+          onAlarm: { addListener: vi.fn(), removeListener: vi.fn() },
+        }
+        vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+          ...DEFAULT_PREFERENCES,
+          accountAutoRefresh: {
+            ...DEFAULT_ACCOUNT_AUTO_REFRESH,
+            enabled: true,
+            interval: 900,
+          },
+        })
+
+        await autoRefreshService.initialize()
+
+        expect(mockCreate).not.toHaveBeenCalled()
+        expect(mockClear).not.toHaveBeenCalled()
+        expect(autoRefreshService.getStatus()).toEqual({
+          isInitialized: true,
+          isRunning: true,
+        })
+      },
+    )
+
+    it.each([
+      ["missing", undefined],
+      [
+        "outdated period",
+        { periodInMinutes: 5, scheduledTime: Date.now() + 30_000 },
+      ],
+      ["one-shot", { scheduledTime: Date.now() + 30_000 }],
+    ])(
+      "reconciles a %s alarm with the configured refresh period",
+      async (_, existingAlarm) => {
+        const mockCreate = vi.fn().mockResolvedValue(undefined)
+        const mockClear = vi.fn().mockResolvedValue(true)
+        const mockOnAlarm = vi.fn()
+        ;(globalThis as any).browser.alarms = {
+          get: vi.fn().mockResolvedValue(existingAlarm),
+          create: mockCreate,
+          clear: mockClear,
+          onAlarm: { addListener: mockOnAlarm, removeListener: vi.fn() },
+        }
+
+        const mockPreferences: UserPreferences = {
+          accountAutoRefresh: {
+            ...DEFAULT_ACCOUNT_AUTO_REFRESH,
+            enabled: true,
+            interval: 900, // 15 minutes
+          },
+          preferencesVersion: 5,
+        } as UserPreferences
+
+        vi.mocked(userPreferences.getPreferences).mockResolvedValue(
+          mockPreferences,
+        )
+
+        await autoRefreshService.setupAutoRefresh()
+
+        expect(mockClear).not.toHaveBeenCalled()
+        expect(mockCreate).toHaveBeenCalledWith(
+          "all-api-hub:account-auto-refresh",
+          {
+            periodInMinutes: 15,
+            delayInMinutes: 15,
+          },
+        )
+        expect(autoRefreshService.getStatus().isRunning).toBe(true)
+
+        autoRefreshService.stopAutoRefresh()
+        expect(mockClear).toHaveBeenCalledWith(
+          "all-api-hub:account-auto-refresh",
+        )
+        expect(autoRefreshService.getStatus().isRunning).toBe(false)
+      },
+    )
+
+    it("clears an existing alarm when persisted preferences disable refresh", async () => {
+      const mockClear = vi.fn().mockResolvedValue(true)
+      const mockCreate = vi.fn()
+      ;(globalThis as any).browser.alarms = {
+        clear: mockClear,
+        create: mockCreate,
+      }
+      vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+        ...DEFAULT_PREFERENCES,
+        accountAutoRefresh: { ...DEFAULT_ACCOUNT_AUTO_REFRESH, enabled: false },
+      })
+
+      await autoRefreshService.initialize()
+
+      expect(mockClear).toHaveBeenCalledWith("all-api-hub:account-auto-refresh")
+      expect(mockCreate).not.toHaveBeenCalled()
+      expect(autoRefreshService.getStatus().isRunning).toBe(false)
+    })
+
+    it("does not remove a working alarm when reading its state fails", async () => {
+      const mockClear = vi.fn().mockResolvedValue(true)
+      const mockCreate = vi.fn()
+      ;(globalThis as any).browser.alarms = {
+        get: vi
+          .fn()
+          .mockResolvedValueOnce({ periodInMinutes: 15 })
+          .mockRejectedValueOnce(new Error("alarm unavailable")),
+        clear: mockClear,
+        create: mockCreate,
+      }
+      vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+        ...DEFAULT_PREFERENCES,
+        accountAutoRefresh: {
+          ...DEFAULT_ACCOUNT_AUTO_REFRESH,
+          enabled: true,
+          interval: 900,
+        },
+      })
+
+      await autoRefreshService.setupAutoRefresh()
+      await expect(autoRefreshService.setupAutoRefresh()).rejects.toThrow(
+        "alarm unavailable",
+      )
+
+      expect(mockClear).not.toHaveBeenCalled()
+      expect(mockCreate).not.toHaveBeenCalled()
+      expect(autoRefreshService.getStatus().isRunning).toBe(true)
+    })
   })
 })

@@ -52,6 +52,12 @@ interface UsageHistoryBatchSyncResult {
   perAccount: Array<Awaited<ReturnType<typeof syncUsageHistoryForAccount>>>
 }
 
+interface UsageHistorySyncRequest {
+  trigger: UsageHistorySyncTrigger
+  accountIds?: string[]
+  force?: boolean
+}
+
 /**
  * Clamp sync interval (minutes) to a safe bounded range.
  */
@@ -64,7 +70,7 @@ function clampSyncIntervalMinutes(value: unknown): number {
 
 class UsageHistoryScheduler {
   private isInitialized = false
-  private isRunning = false
+  private runningSync: Promise<UsageHistoryBatchSyncResult | null> | null = null
 
   async initialize() {
     if (this.isInitialized) {
@@ -176,9 +182,15 @@ class UsageHistoryScheduler {
     return { warning }
   }
 
-  async runAfterRefreshSync() {
+  async runAfterRefreshSync(accountIds?: string[]) {
+    // Refreshes finish independently. Wait rather than dropping accounts that
+    // finish while a previous automatic or manual sync is still running.
+    while (this.runningSync) {
+      await this.runningSync.catch(() => null)
+    }
     return await this.runSync({
       trigger: USAGE_HISTORY_SYNC_TRIGGERS.AfterRefresh,
+      accountIds,
     })
   }
 
@@ -190,44 +202,32 @@ class UsageHistoryScheduler {
     })
   }
 
-  private async runSync(params: {
-    trigger: UsageHistorySyncTrigger
-    accountIds?: string[]
-    force?: boolean
-  }): Promise<UsageHistoryBatchSyncResult | null> {
-    if (this.isRunning) {
-      return null
+  private runSync(
+    params: UsageHistorySyncRequest,
+  ): Promise<UsageHistoryBatchSyncResult | null> {
+    if (this.runningSync) {
+      return Promise.resolve(null)
     }
 
-    this.isRunning = true
+    this.runningSync = this.performSync(params).finally(() => {
+      this.runningSync = null
+    })
+    return this.runningSync
+  }
 
+  private async performSync(
+    params: UsageHistorySyncRequest,
+  ): Promise<UsageHistoryBatchSyncResult | null> {
     try {
       const prefs = await userPreferences.getPreferences()
       const config = prefs.usageHistory ?? DEFAULT_USAGE_HISTORY_PREFERENCES
 
-      if (!config.enabled && !params.force) {
-        return {
-          totals: { success: 0, skipped: 0, error: 0, unsupported: 0 },
-          perAccount: [],
-        }
-      }
-
-      if (
-        params.trigger === USAGE_HISTORY_SYNC_TRIGGERS.AfterRefresh &&
-        config.scheduleMode !== USAGE_HISTORY_SCHEDULE_MODE.AFTER_REFRESH &&
-        !params.force
-      ) {
-        return {
-          totals: { success: 0, skipped: 0, error: 0, unsupported: 0 },
-          perAccount: [],
-        }
-      }
-
-      if (
-        params.trigger === USAGE_HISTORY_SYNC_TRIGGERS.Alarm &&
-        config.scheduleMode !== USAGE_HISTORY_SCHEDULE_MODE.ALARM &&
-        !params.force
-      ) {
+      const scheduleMismatch =
+        (params.trigger === USAGE_HISTORY_SYNC_TRIGGERS.AfterRefresh &&
+          config.scheduleMode !== USAGE_HISTORY_SCHEDULE_MODE.AFTER_REFRESH) ||
+        (params.trigger === USAGE_HISTORY_SYNC_TRIGGERS.Alarm &&
+          config.scheduleMode !== USAGE_HISTORY_SCHEDULE_MODE.ALARM)
+      if ((!config.enabled || scheduleMismatch) && !params.force) {
         return {
           totals: { success: 0, skipped: 0, error: 0, unsupported: 0 },
           perAccount: [],
@@ -284,8 +284,6 @@ class UsageHistoryScheduler {
         })
       }
       return null
-    } finally {
-      this.isRunning = false
     }
   }
 

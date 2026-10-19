@@ -6,6 +6,10 @@ import { accountPresentation } from "~/services/accounts/accountStorage/accountP
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
 import { createEmptyAccountStats } from "~/services/accounts/metrics/accountTodayStats"
+import {
+  AUTO_REFRESH_UPDATE_MESSAGE_TYPE,
+  AUTO_REFRESH_UPDATE_TYPES,
+} from "~/services/accounts/refresh/constants"
 import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
 import {
   buildEstimatedTodayIncomeMoneyTotals,
@@ -410,8 +414,8 @@ export function useAccountSnapshot({
   useEffect(() => {
     return onRuntimeMessage((message: any) => {
       if (
-        message.type === "AUTO_REFRESH_UPDATE" &&
-        message.payload.type === "refresh_completed"
+        message.type === AUTO_REFRESH_UPDATE_MESSAGE_TYPE &&
+        message.payload.type === AUTO_REFRESH_UPDATE_TYPES.Completed
       ) {
         logger.debug("Background refresh completed, reloading data")
         loadAccountData()

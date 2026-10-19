@@ -298,7 +298,7 @@ const siteTypeImportOwners = [
   "src/services/accounts/editing/accountFormValidation.ts", // Unknown account identity validation.
   "src/services/accounts/accountSiteProfile/contentSessionHint.ts", // Unknown session identity validation.
   "src/services/accounts/accountSiteProfile/profiles.ts", // Default profile.
-  "src/services/accounts/accountStorage/accountRefresh.ts", // Unknown identity detection recovery.
+  "src/services/accounts/refresh/refreshStoredAccount.ts", // Unknown identity detection recovery.
   "src/services/accounts/autoDetect/recovery.ts", // Unknown detection recovery.
   "src/services/accounts/identity/siteName.ts", // Unknown site display name.
   "src/services/accounts/utils/siteRouteResolver.ts", // Unknown route fallback.
