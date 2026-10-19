@@ -7,11 +7,14 @@ import { useDeferredPreferenceField } from "~/hooks/preferences/useDeferredPrefe
 import toast from "~/lib/notify"
 import {
   ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,
+  ACCOUNT_AUTO_REFRESH_INTERVAL_WARNING_THRESHOLD_SECONDS,
   ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
   DEFAULT_ACCOUNT_AUTO_REFRESH,
 } from "~/types/accountAutoRefresh"
 import { showUpdateToast } from "~/utils/feedback/preferenceFeedback"
 import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
+
+const REFRESH_INTERVAL_HINT_ID = "refresh-interval-hint"
 
 /**
  * Settings section for auto-refresh behavior (intervals, toggle, refresh on open).
@@ -97,6 +100,14 @@ export default function RefreshSettings() {
     },
   })
 
+  const currentRefreshInterval = Number(refreshIntervalField.draft)
+  const isLowRefreshInterval =
+    autoRefresh &&
+    Number.isInteger(currentRefreshInterval) &&
+    currentRefreshInterval >= ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS &&
+    currentRefreshInterval <
+      ACCOUNT_AUTO_REFRESH_INTERVAL_WARNING_THRESHOLD_SECONDS
+
   return (
     <SettingSection
       id="auto-refresh"
@@ -145,6 +156,18 @@ export default function RefreshSettings() {
               description={t("refresh.refreshIntervalDesc", {
                 defaultInterval: DEFAULT_ACCOUNT_AUTO_REFRESH.interval,
               })}
+              leftContent={
+                isLowRefreshInterval ? (
+                  <p
+                    id={REFRESH_INTERVAL_HINT_ID}
+                    className="text-warning-soft-foreground text-sm"
+                  >
+                    {t("refresh.refreshIntervalHint", {
+                      minutes: DEFAULT_ACCOUNT_AUTO_REFRESH.interval / 60,
+                    })}
+                  </p>
+                ) : undefined
+              }
               rightContent={
                 <div className="flex items-center space-x-2">
                   <Input
@@ -159,6 +182,11 @@ export default function RefreshSettings() {
                     onKeyDown={refreshIntervalField.handleKeyDown}
                     placeholder={String(DEFAULT_ACCOUNT_AUTO_REFRESH.interval)}
                     aria-label={t("refresh.refreshInterval")}
+                    aria-describedby={
+                      isLowRefreshInterval
+                        ? REFRESH_INTERVAL_HINT_ID
+                        : undefined
+                    }
                     disabled={refreshIntervalField.isCommitting}
                     className="w-24"
                   />
