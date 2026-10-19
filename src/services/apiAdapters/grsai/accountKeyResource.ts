@@ -20,10 +20,7 @@ import {
   mergeResourceEdits,
   resourceValuesEqual,
 } from "~/services/apiAdapters/nativeResources/editableChanges"
-import {
-  isApiBusinessError,
-  runNativeResourceMutation,
-} from "~/services/apiAdapters/nativeResources/mutation"
+import { runNativeResourceMutation } from "~/services/apiAdapters/nativeResources/mutation"
 import {
   createGrsaiKey,
   deleteGrsaiKey,
@@ -236,8 +233,6 @@ export const grsaiAccountKeyResources = defineAccountKeyResourceCapability({
           expireTime: toGrsaiExpireTime(values.expiresAt),
         }),
       mapFailure: mapAccountKeyResourceFailure,
-      classifyError: (error) =>
-        isApiBusinessError(error) ? "not-applied" : undefined,
     })
     if (result.certainty !== "applied") return result
 
@@ -272,8 +267,6 @@ export const grsaiAccountKeyResources = defineAccountKeyResourceCapability({
       execute: (mutationRequest) =>
         updateGrsaiKey(mutationRequest, snapshotToWire(detail, merged)),
       mapFailure: mapAccountKeyResourceFailure,
-      classifyError: (error) =>
-        isApiBusinessError(error) ? "not-applied" : undefined,
     })
     if (result.certainty === "not-applied") return result
 
@@ -304,8 +297,6 @@ export const grsaiAccountKeyResources = defineAccountKeyResourceCapability({
       request: withOptions(config.request, options),
       execute: (request) => deleteGrsaiKey(request, id),
       mapFailure: mapAccountKeyResourceFailure,
-      classifyError: (error) =>
-        isApiBusinessError(error) ? "not-applied" : undefined,
     })
     return result.certainty === "applied"
       ? { certainty: "applied", value: undefined }

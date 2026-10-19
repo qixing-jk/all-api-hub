@@ -45,3 +45,23 @@ export const mapOperation = async <T>(
     throw toAccountKeyResourceError(error, mapFailure)
   }
 }
+
+/** A thrown mutation has no result contract proving that it is safe to replay. */
+export const mapMutationOperation = async <T>(
+  operation: () => Promise<T>,
+  mapFailure: (error: unknown) => ResourceFailure,
+): Promise<T> => {
+  try {
+    return await operation()
+  } catch (error) {
+    const mapped = toAccountKeyResourceError(error, mapFailure)
+    if (mapped.mutationCertainty === "not-applied") throw mapped
+    throw new AccountKeyResourceError(
+      {
+        ...mapped.failure,
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+      },
+      "possibly-applied",
+    )
+  }
+}

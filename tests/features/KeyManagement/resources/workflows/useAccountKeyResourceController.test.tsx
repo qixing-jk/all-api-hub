@@ -32,6 +32,7 @@ import {
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/contracts"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render, screen } from "~~/tests/test-utils/render"
 
@@ -40,14 +41,18 @@ const {
   startProductAnalyticsActionMock,
   trackCompleteMock,
   toastSuccessMock,
+  toastWarningMock,
 } = vi.hoisted(() => ({
   createDisplayAccountApiContextMock: vi.fn(),
   startProductAnalyticsActionMock: vi.fn(),
   trackCompleteMock: vi.fn(),
   toastSuccessMock: vi.fn(),
+  toastWarningMock: vi.fn(),
 }))
 
-vi.mock("~/lib/notify", () => ({ default: { success: toastSuccessMock } }))
+vi.mock("~/lib/notify", () => ({
+  default: { success: toastSuccessMock, warning: toastWarningMock },
+}))
 
 vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
   createDisplayAccountApiContext: (...args: unknown[]) =>
@@ -220,6 +225,72 @@ describe("useAccountKeyResourceController", () => {
     }),
     ...overrides,
   })
+
+  it("shows a validation exception without dispatching a mutation", async () => {
+    const editor = {
+      fields: [],
+      initialValues: {},
+      validate: vi.fn(() => {
+        throw new Error("validation unavailable")
+      }),
+      submit: vi.fn(),
+    }
+    const { result } = renderRecoveryController(
+      recoverySession({
+        openCreateEditor: vi.fn().mockResolvedValue(editor),
+      }),
+    )
+    await waitFor(() => expect(result.current.rows).toHaveLength(1))
+    await act(async () => result.current.openCreate())
+    await act(async () =>
+      result.current.submitEditor(result.current.editor!.editorId, {}),
+    )
+    expect(editor.submit).not.toHaveBeenCalled()
+    expect(result.current.editor?.feedback).toMatchObject({
+      code: "unexpected",
+    })
+    expect(toastWarningMock).not.toHaveBeenCalled()
+  })
+
+  it.each(["delete", "revoke"] as const)(
+    "retains an uncertain %s warning after reconciliation without replay",
+    async (operation) => {
+      const facts = {
+        ...createFacts(recoveryScope.scopeKey, "key-example"),
+        actions: { canUpdate: true, canDelete: true, canRevoke: true },
+      }
+      const mutation = vi.fn().mockRejectedValue(
+        new AccountKeyResourceError({
+          code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+          message: "write outcome unknown",
+        }),
+      )
+      const list = vi.fn().mockResolvedValue({ items: [facts] })
+      const { result } = renderRecoveryController(
+        recoverySession({
+          openCollection: vi
+            .fn()
+            .mockResolvedValue({ list, [operation]: mutation }),
+        }),
+      )
+      await waitFor(() => expect(result.current.rows).toHaveLength(1))
+      act(() => {
+        if (operation === "delete") result.current.openDelete(facts.ref)
+        else result.current.openRevoke(facts.ref)
+      })
+      await act(async () => {
+        await result.current.confirmDelete()
+      })
+      expect(list).toHaveBeenCalledTimes(2)
+      expect(result.current.freshReadRequired).toBe(false)
+      expect(toastWarningMock).toHaveBeenCalledWith(
+        expect.stringContaining("write outcome unknown"),
+        expect.objectContaining({ duration: Infinity }),
+      )
+      expect(mutation).toHaveBeenCalledTimes(1)
+      expect(toastSuccessMock).not.toHaveBeenCalled()
+    },
+  )
 
   it("closing a pending detail prevents a late response reopening the detail", async () => {
     const pending = deferred<any>()
@@ -566,6 +637,7 @@ describe("useAccountKeyResourceController", () => {
     startProductAnalyticsActionMock.mockReset()
     trackCompleteMock.mockReset()
     toastSuccessMock.mockReset()
+    toastWarningMock.mockReset()
     startProductAnalyticsActionMock.mockReturnValue({
       complete: trackCompleteMock,
     })
@@ -1746,6 +1818,108 @@ describe("useAccountKeyResourceController", () => {
     })
 
     expect(firstEditor.submit).not.toHaveBeenCalled()
+  })
+
+  it("keeps an open editor's save disabled while a later inventory read runs", async () => {
+    const secondCollection = deferred<any>()
+    const scope = {
+      scopeKey: "account",
+      routeKey: "account",
+      displayName: "Account",
+      isDefault: true,
+    }
+    const submit = vi.fn().mockResolvedValue({})
+    const editor = {
+      fields: [{ fieldId: "name", type: "text" as const, required: true }],
+      initialValues: { name: "" },
+      validate: vi.fn().mockReturnValue({ valid: true }),
+      resolveDestinationScopeKey: () => scope.scopeKey,
+      submit,
+    }
+    let collectionReads = 0
+    mockNativeResourceSession(
+      vi.fn().mockResolvedValue({
+        resolveDefaultScope: vi.fn().mockResolvedValue(scope),
+        listScopes: vi.fn().mockResolvedValue([scope]),
+        openCollection: vi.fn(() => {
+          collectionReads += 1
+          return collectionReads === 1
+            ? Promise.resolve({
+                list: vi.fn().mockResolvedValue({ items: [] }),
+              })
+            : secondCollection.promise
+        }),
+        openCreateEditor: vi.fn().mockResolvedValue(editor),
+      }),
+    )
+    const user = userEvent.setup()
+    const ReloadingHarness = () => {
+      const [workspace, setWorkspace] = useState<string | undefined>("account")
+      const controller = useAccountKeyResourceController({
+        accounts: [
+          buildDisplaySiteData({
+            id: "account-example",
+            name: "Name-only account",
+            siteType: SITE_TYPES.FREEMODEL,
+            baseUrl: "https://freemodel.dev",
+          }),
+        ],
+        selectedAccount: "account-example",
+        routeParams: {
+          accountId: "account-example",
+          ...(workspace ? { workspace } : {}),
+        },
+        replaceRoute: (params) => setWorkspace(params.workspace ?? "account"),
+      })
+      return (
+        <>
+          <button type="button" onClick={() => void controller.openCreate()}>
+            Open editor
+          </button>
+          <button type="button" onClick={() => setWorkspace(undefined)}>
+            Drop route
+          </button>
+          <AccountKeyResourceEditorDialog
+            isInventoryRefreshing={controller.isLoading}
+            editor={controller.editor}
+            onClose={controller.closeEditor}
+            onSubmit={controller.submitEditor}
+            onValuesChange={controller.setEditorValues}
+            onLoadOptions={controller.loadEditorOptions}
+          />
+        </>
+      )
+    }
+    render(<ReloadingHarness />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    const save = () =>
+      screen.getByRole("button", {
+        name: "keyManagement:native.editor.actions.save",
+      })
+
+    await waitFor(() => expect(collectionReads).toBe(1))
+    await user.click(screen.getByRole("button", { name: "Open editor" }))
+    await screen.findByRole("button", {
+      name: "keyManagement:native.editor.actions.save",
+    })
+    // A route observation restarts the inventory read while the editor is open.
+    await user.click(screen.getByRole("button", { name: "Drop route" }))
+    await waitFor(() => expect(collectionReads).toBeGreaterThan(1))
+    // Submitting into that read is dropped without feedback, so the control
+    // stays pressed until the inventory it reads from has settled.
+    expect(save()).toBeDisabled()
+    expect(submit).not.toHaveBeenCalled()
+
+    await act(async () =>
+      secondCollection.resolve({
+        list: vi.fn().mockResolvedValue({ items: [] }),
+      }),
+    )
+    await waitFor(() => expect(save()).toBeEnabled())
+    await user.click(save())
+    await waitFor(() => expect(submit).toHaveBeenCalled())
   })
 
   it("preserves edits made while a workspace transition is still loading", async () => {
@@ -4314,6 +4488,7 @@ describe("useAccountKeyResourceController", () => {
       submit: vi.fn().mockRejectedValue(
         new AccountKeyResourceError({
           code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+          message: "connection lost",
         }),
       ),
     }
@@ -4347,12 +4522,20 @@ describe("useAccountKeyResourceController", () => {
       void result.current.submitEditor(editorId, {})
     })
     await waitFor(() => expect(result.current.freshReadRequired).toBe(true))
+    expect(toastWarningMock).toHaveBeenCalledWith(
+      expect.stringContaining("connection lost"),
+      expect.objectContaining({
+        duration: Infinity,
+      }),
+    )
     act(() => {
       void result.current.submitEditor(editorId, {})
     })
     expect(editor.submit).toHaveBeenCalledTimes(1)
     refreshedList.resolve({ items: [] })
     await waitFor(() => expect(result.current.freshReadRequired).toBe(false))
+    expect(toastWarningMock).toHaveBeenCalledTimes(1)
+    expect(toastSuccessMock).not.toHaveBeenCalled()
   })
 
   it("keeps uncertain fresh-read locks scoped to their account and workspace", async () => {

@@ -58,11 +58,12 @@ describe("FoxCode console account contract", () => {
   it("rejects invalid console envelopes", async () => {
     server.use(
       http.get(`${origin}/api/auth/me`, () =>
-        HttpResponse.json({ success: false }),
+        HttpResponse.json({ success: false, message: "登录已过期" }),
       ),
     )
     await expect(fetchUserInfo(request)).rejects.toMatchObject({
-      code: "JSON_PARSE_ERROR",
+      code: "BUSINESS_ERROR",
+      message: "登录已过期",
     })
   })
 

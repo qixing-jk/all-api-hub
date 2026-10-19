@@ -471,6 +471,7 @@ export default function KeyManagement(props: {
         onValuesChange={nativeKeys.setEditorValues}
         onLoadOptions={nativeKeys.loadEditorOptions}
         focusWorkflowId={nativeKeys.focusWorkflowId ?? undefined}
+        isInventoryRefreshing={nativeKeys.isLoading}
       />
 
       <AccountKeyResourceDeleteDialog

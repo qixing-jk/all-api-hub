@@ -22,6 +22,7 @@ import {
   keyManagementAnalyticsContext,
   USER_KEY_MANAGEMENT_EXECUTION,
 } from "~/features/KeyManagement/resources/workflows/accountKeyResourceWorkflowSupport"
+import { useAccountKeyMutationRecovery } from "~/features/KeyManagement/resources/workflows/useAccountKeyMutationRecovery"
 import { useAccountKeyResourceDeletionWorkflow } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceDeletionWorkflow"
 import { useAccountKeyResourceDetailWorkflow } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceDetailWorkflow"
 import { useAccountKeyResourceEditorState } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceEditorState"
@@ -357,6 +358,10 @@ export function useAccountKeyResourceController({
       return false
     return await refreshAfterMutation(undefined, undefined, retryAccountIds)
   }, [failures, mode, refreshAfterMutation, requests, createdSecretRef])
+  const recoverMutationFailure = useAccountKeyMutationRecovery({
+    requireFreshRead,
+    reconcile: refreshAfterMutation,
+  })
   const { openDetail, closeDetail } = useAccountKeyResourceDetailWorkflow({
     runtime: { detailRequestEpoch },
     state: { mode, setDetail, setDetailFailure, setIsDetailLoading },
@@ -383,6 +388,7 @@ export function useAccountKeyResourceController({
       openSession,
       requireFreshRead,
       refreshAfterMutation,
+      recoverMutationFailure,
     },
     inventoryState,
     requests,
@@ -399,6 +405,7 @@ export function useAccountKeyResourceController({
         isCurrentResourceRef,
         resolveResourceActionContext,
         requireFreshRead,
+        recoverMutationFailure,
       },
       requests,
       inventoryState,

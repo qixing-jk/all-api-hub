@@ -1,6 +1,8 @@
 import { CUBENCE_WEB_ORIGIN } from "~/services/accountSiteDefinitions/identifiers"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { isSafeHttpMethod } from "~/services/apiTransport/httpMethods"
 import { fetchApi } from "~/services/apiTransport/request"
+import { notifyApiTransportObserver } from "~/services/apiTransport/requestExecution"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { isRecord } from "~/utils/core/object"
@@ -49,9 +51,7 @@ export async function readCubenceResponse(
         ...request,
         auth: { ...request.auth, accessToken: undefined },
         // Identity/inventory reads do not establish that a key mutation was sent.
-        observer: ["GET", "HEAD", "OPTIONS"].includes(method)
-          ? undefined
-          : request.observer,
+        observer: isSafeHttpMethod(method) ? undefined : request.observer,
         ...(direct
           ? {
               cookieSession: getCubenceCookieSession(
@@ -61,7 +61,7 @@ export async function readCubenceResponse(
               requestTimeoutMs: request.requestTimeoutMs ?? 15_000,
             }
           : {}),
-        ...(!direct && !["GET", "HEAD", "OPTIONS"].includes(method)
+        ...(!direct && !isSafeHttpMethod(method)
           ? { forceTempWindow: true }
           : {}),
       },
@@ -74,10 +74,32 @@ export async function readCubenceResponse(
       (body.code !== undefined && body.code !== 0 && body.code !== 200) ||
       typeof body.error === "string"
     ) {
-      return invalidCubenceResponse(endpoint)
+      // A failure envelope is the console refusing the request, not a
+      // malformed answer: keep its message so a dispatched write can be
+      // proven not-applied instead of guessed as state-uncertain.
+      const message =
+        readNonBlankString(body.message) ??
+        (typeof body.error === "string" ? body.error : undefined) ??
+        (isRecord(body.error)
+          ? readNonBlankString(body.error.message)
+          : undefined)
+      throw new ApiError(
+        message ?? "Cubence request failed",
+        undefined,
+        endpoint,
+        API_ERROR_CODES.BUSINESS_ERROR,
+        body.code !== undefined ? String(body.code) : undefined,
+      )
     }
+    if (!isSafeHttpMethod(method))
+      notifyApiTransportObserver(request.observer, "onMutationAccepted")
     return body
   })
+}
+
+/** Reads one non-blank string field off a failure envelope. */
+function readNonBlankString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined
 }
 
 /** Console amounts are numeric microcredits; string coercion hides bad data. */

@@ -1,7 +1,9 @@
 import { KRILL_WEB_ORIGIN } from "~/services/accountSiteDefinitions/identifiers"
 import { createCookieOperationSession } from "~/services/apiTransport/cookieOperationSession"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { isSafeHttpMethod } from "~/services/apiTransport/httpMethods"
 import { fetchApi } from "~/services/apiTransport/request"
+import { notifyApiTransportObserver } from "~/services/apiTransport/requestExecution"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { hasCookieInterceptorPermissions } from "~/services/permissions/permissionManager"
 import { AuthTypeEnum } from "~/types"
@@ -137,9 +139,7 @@ async function fetchKrillRaw(
             }
           : { cookieSession }),
         // Identity/inventory reads do not establish that a mutation was sent.
-        observer: ["GET", "HEAD", "OPTIONS"].includes(method)
-          ? undefined
-          : request.observer,
+        observer: isSafeHttpMethod(method) ? undefined : request.observer,
       },
       {
         endpoint,
@@ -183,6 +183,8 @@ export async function readKrillEnvelope(
       unauthorized ? API_ERROR_CODES.HTTP_401 : API_ERROR_CODES.BUSINESS_ERROR,
     )
   }
+  if (!isSafeHttpMethod((options.method ?? "GET").toUpperCase()))
+    notifyApiTransportObserver(request.observer, "onMutationAccepted")
   return body
 }
 

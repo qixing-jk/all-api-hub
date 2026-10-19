@@ -229,10 +229,20 @@ describe("Cubence protocol rejection and recovery boundaries", () => {
       http.get(`${origin}/api/test`, () =>
         HttpResponse.json({ success: false }),
       ),
+      http.post(`${origin}/api/test`, () =>
+        HttpResponse.json({ code: 409, message: "名称已存在" }),
+      ),
     )
     await expect(
       readCubenceResponse(request, "/api/test"),
-    ).rejects.toMatchObject({ code: "JSON_PARSE_ERROR" })
+    ).rejects.toMatchObject({ code: "BUSINESS_ERROR" })
+    await expect(
+      readCubenceResponse(request, "/api/test", { method: "POST" }),
+    ).rejects.toMatchObject({
+      code: "BUSINESS_ERROR",
+      message: "名称已存在",
+      upstreamCode: "409",
+    })
   })
   it("reports unavailable Cookie APIs instead of dispatching without credentials", async () => {
     vi.stubGlobal("browser", {

@@ -15,6 +15,7 @@ import {
   USER_KEY_MANAGEMENT_EXECUTION,
 } from "~/features/KeyManagement/resources/workflows/accountKeyResourceWorkflowSupport"
 import { useAccountKeyEditorSubmission } from "~/features/KeyManagement/resources/workflows/useAccountKeyEditorSubmission"
+import { useAccountKeyMutationRecovery } from "~/features/KeyManagement/resources/workflows/useAccountKeyMutationRecovery"
 import { useAccountKeyResourceEditorState } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceEditorState"
 import { useAccountKeyResourceRequestLifecycle } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceRequestLifecycle"
 import type { AccountKeyCreationResult } from "~/services/accounts/keys/accountKeyCreation"
@@ -279,6 +280,10 @@ export function useAccountKeyCreation({
     ],
   )
 
+  const recoverMutationFailure = useAccountKeyMutationRecovery({
+    requireFreshRead: markUncertain,
+    reconcile: recoverUncertain,
+  })
   const submit = useAccountKeyEditorSubmission({
     editorState,
     requests,
@@ -303,7 +308,7 @@ export function useAccountKeyCreation({
         },
       }
     },
-    onUncertain: recoverUncertain,
+    recoverMutationFailure,
     onSubmitted: async (result) => {
       finished.current = true
       createdSecretRef.current = result.createdSecret ?? null

@@ -12,7 +12,9 @@ import {
   type ResourceFailure,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import { isSafeHttpMethod } from "~/services/apiTransport/httpMethods"
 import { fetchApi } from "~/services/apiTransport/request"
+import { notifyApiTransportObserver } from "~/services/apiTransport/requestExecution"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { hasCookieInterceptorPermissions } from "~/services/permissions/permissionManager"
 import { AuthTypeEnum } from "~/types"
@@ -86,9 +88,7 @@ async function read(
             }
           : { cookieSession: session }),
         // Preflight and readback failures cannot establish mutation dispatch.
-        observer: ["GET", "HEAD", "OPTIONS"].includes(method)
-          ? undefined
-          : request.observer,
+        observer: isSafeHttpMethod(method) ? undefined : request.observer,
       },
       {
         endpoint,
@@ -99,6 +99,8 @@ async function read(
       true,
     )
     if (!isRecord(body)) throw invalid(endpoint)
+    if (!isSafeHttpMethod(method))
+      notifyApiTransportObserver(request.observer, "onMutationAccepted")
     return body
   })
 }

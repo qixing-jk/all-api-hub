@@ -7,10 +7,7 @@ import {
   mergeResourceEdits,
   resourceValuesEqual,
 } from "~/services/apiAdapters/nativeResources/editableChanges"
-import {
-  isApiBusinessError,
-  runNativeResourceMutation,
-} from "~/services/apiAdapters/nativeResources/mutation"
+import { runNativeResourceMutation } from "~/services/apiAdapters/nativeResources/mutation"
 import {
   collectValidatedInventoryTokens,
   readEditableToken,
@@ -55,8 +52,6 @@ export const createNewApiAccountToken: NewApiAccountTokenDefinition["create"] =
       execute: (request) =>
         config.transport.createApiToken(request, command.values),
       mapFailure,
-      classifyError: (error) =>
-        isApiBusinessError(error) ? "not-applied" : undefined,
     })
     if (result.certainty === "not-applied") return result
     if (result.certainty === "possibly-applied")
@@ -140,8 +135,6 @@ export const updateNewApiAccountToken: NewApiAccountTokenDefinition["update"] =
       execute: async (request) =>
         await config.transport.updateApiToken(request, detail.id, values),
       mapFailure,
-      classifyError: (error) =>
-        isApiBusinessError(error) ? "not-applied" : undefined,
     })
     if (updateResult.certainty === "not-applied") return updateResult
     if (updateResult.certainty === "applied" && updateResult.value === false) {
@@ -199,8 +192,6 @@ export const deleteNewApiAccountToken: NewApiAccountTokenDefinition["delete"] =
       execute: async (request) =>
         await config.transport.deleteApiToken(request, tokenId),
       mapFailure,
-      classifyError: (error) =>
-        isApiBusinessError(error) ? "not-applied" : undefined,
     })
     return result.certainty === "applied"
       ? result.value === false

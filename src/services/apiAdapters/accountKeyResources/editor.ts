@@ -18,6 +18,7 @@ import {
 
 import type { AccountKeyResourceEditorDefinition } from "./definition"
 import {
+  mapMutationOperation,
   mapOperation,
   toAccountKeyResourceError,
   unexpectedFailure,
@@ -54,7 +55,11 @@ export function createAccountKeyResourceEditor<
       if (!result.valid) throw validationFailure(result.issues)
     },
     buildCommand: editorDefinition.buildCommand,
-    mutate: options.mutate,
+    mutate: (command, submitOptions) =>
+      mapMutationOperation(
+        () => options.mutate(command, submitOptions),
+        mapFailure,
+      ),
     resolve: (result) => {
       const resolution = resolveNativeResourceMutation(result)
       if (resolution.status === "applied") {

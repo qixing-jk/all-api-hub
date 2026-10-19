@@ -10,6 +10,7 @@ import type {
   ControllerMode,
   DeleteState,
   MutationAnalyticsMode,
+  RecoverMutationFailure,
   ResolveResourceActionContext,
 } from "~/features/KeyManagement/resources/workflows/accountKeyResourceControllerTypes"
 import {
@@ -52,6 +53,7 @@ type WorkflowInputs = {
     isCurrentResourceRef: (ref: AccountKeyResourceRef) => boolean
     resolveResourceActionContext: ResolveResourceActionContext
     requireFreshRead: (boundary: ActiveResourceBoundary) => void
+    recoverMutationFailure: RecoverMutationFailure
   }
   requests: AccountKeyResourceRequestLifecycle
   inventoryState: AccountKeyResourceInventoryStateOwner
@@ -67,6 +69,7 @@ export function useAccountKeyResourceDeletionWorkflow({
     isCurrentResourceRef,
     resolveResourceActionContext,
     requireFreshRead,
+    recoverMutationFailure,
   },
   requests,
   inventoryState,
@@ -251,11 +254,7 @@ export function useAccountKeyResourceDeletionWorkflow({
         .catch(async (error: unknown) => {
           const failure = toFailure(error)
           if (current !== requests.version()) {
-            if (
-              failure.code ===
-              ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain
-            )
-              requireFreshRead(boundary)
+            await recoverMutationFailure(failure, boundary, false)
             completeKeyMutationAnalytics(
               tracker,
               PRODUCT_ANALYTICS_RESULTS.Failure,
@@ -265,12 +264,7 @@ export function useAccountKeyResourceDeletionWorkflow({
             return false
           }
           setDeleteState((state) => ({ ...state, isExecuting: false, failure }))
-          if (
-            failure.code ===
-            ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain
-          ) {
-            requireFreshRead(boundary)
-          }
+          await recoverMutationFailure(failure, boundary, true)
           completeKeyMutationAnalytics(
             tracker,
             PRODUCT_ANALYTICS_RESULTS.Failure,
@@ -301,6 +295,7 @@ export function useAccountKeyResourceDeletionWorkflow({
       acceptEditedResource,
       acceptActionContext,
       requireFreshRead,
+      recoverMutationFailure,
       resolveResourceActionContext,
       createdSecretRef,
       requests,

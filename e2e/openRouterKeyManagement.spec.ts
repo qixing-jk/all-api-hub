@@ -26,6 +26,7 @@ import {
   installOpenRouterKeyManagementRoutes,
   OPENROUTER_KEY_MANAGEMENT_E2E,
 } from "~~/e2e/utils/mockedSite/openRouterKeyManagementRoutes"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
 const CLIPBOARD_WRITES_KEY = "__aah_e2e_openrouter_key_clipboard_writes__"
 
@@ -93,6 +94,108 @@ async function chooseOption(page: Page, trigger: Locator, optionText: string) {
   const option = page.getByRole("option", { name: optionText, exact: true })
   await expect(option).toBeVisible()
   await option.click()
+}
+
+for (const status of [400, 409, 503]) {
+  test(`native key mutation handles ${status} through shared feedback`, async ({
+    context,
+    page,
+    extensionId,
+    extensionDir,
+  }) => {
+    installExtensionPageGuards(page, {
+      ignoreConsoleError: (message) =>
+        message.location().url === "https://openrouter.ai/api/v1/keys" &&
+        message
+          .text()
+          .startsWith(
+            `Failed to load resource: the server responded with a status of ${status} `,
+          ),
+    })
+    await forceExtensionLanguage(page, "en")
+    await stubLlmMetadataIndex(context)
+    const routeState = await installOpenRouterKeyManagementRoutes(context)
+    let writes = 0
+    await context.route("https://openrouter.ai/api/v1/keys", async (route) => {
+      if (route.request().method() !== "POST") return route.fallback()
+      writes += 1
+      await route.fulfill({
+        status,
+        contentType: "application/json",
+        body: JSON.stringify({
+          error: { message: "Fixture key refusal", code: status },
+        }),
+      })
+    })
+    await seedStoredAccounts(await getServiceWorker(context), [
+      createStoredAccount({
+        id: OPENROUTER_KEY_MANAGEMENT_E2E.accountId,
+        site_name: "Example OpenRouter account",
+        site_url: "https://openrouter.ai",
+        site_type: SITE_TYPES.OPENROUTER,
+        authType: AuthTypeEnum.AccessToken,
+        account_info: {
+          id: "user-example",
+          username: "Example user",
+          access_token: OPENROUTER_KEY_MANAGEMENT_E2E.managementKey,
+        },
+      }),
+    ])
+    await page.goto(
+      `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.KEYS}?accountId=${OPENROUTER_KEY_MANAGEMENT_E2E.accountId}&workspace=${OPENROUTER_KEY_MANAGEMENT_E2E.teamWorkspaceSlug}`,
+    )
+    await waitForExtensionRoot(page)
+    await expectPermissionOnboardingHidden(page)
+    await expect(
+      page.getByText("Paged active key 1", { exact: true }),
+    ).toBeVisible()
+    const listReads = () =>
+      routeState
+        .getSafeRequests()
+        .filter((request) => request.operation === "list-keys").length
+    const initialReads = listReads()
+    await page.getByTestId(KEY_MANAGEMENT_TEST_IDS.addTokenButton).click()
+    const editor = page.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditor)
+    await expect(editor).toBeVisible()
+    await editor.getByLabel("Key name").fill("Review failure")
+    await editor
+      .getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton)
+      .click()
+    if (status < 500) {
+      await expect(editor.getByText(/Fixture key refusal/)).toBeVisible()
+      await expect(editor.getByLabel("Key name")).toHaveValue("Review failure")
+      expect(listReads()).toBe(initialReads)
+      await captureVisualViews({
+        page,
+        ready: editor,
+        id: `key-rejection-${status}`,
+        extensionDir,
+      })
+    } else {
+      await expect(editor).toBeHidden()
+      await expect.poll(listReads).toBeGreaterThan(initialReads)
+      const warning = page
+        .getByRole("status")
+        .filter({ hasText: "The service may have applied this change" })
+      await expect(warning).toBeVisible()
+      // A second user refresh must not clear the unresolved mutation warning.
+      const readsBeforeRefresh = listReads()
+      await page
+        .getByRole("button", { name: "Refresh Key List", exact: true })
+        .click()
+      await expect.poll(listReads).toBeGreaterThan(readsBeforeRefresh)
+      await expect(warning).toBeVisible()
+      await captureVisualViews({
+        page,
+        ready: warning,
+        id: "key-uncertain-after-refresh",
+        extensionDir,
+      })
+      await page.getByRole("button", { name: "Close", exact: true }).click()
+      await expect(warning).toBeHidden()
+    }
+    expect(writes).toBe(1)
+  })
 }
 
 test("manages an OpenRouter key through its native one-time-secret lifecycle", async ({

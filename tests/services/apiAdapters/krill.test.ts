@@ -447,6 +447,41 @@ describe("Krill AI key editor", () => {
 })
 
 describe("Krill AI key resources", () => {
+  it.each(["second write", "readback"])(
+    "keeps a confirmed first write uncertain when %s is rejected",
+    async (stage) => {
+      const collection = await (await openSession()).openCollection("account")
+      const editor = await collection.openEditEditor(
+        (await collection.list()).items[0]!.ref,
+      )
+      let settingsApplied = false
+      server.use(
+        http.put(`${origin}/api/tokens/:id`, () => {
+          settingsApplied = true
+          return HttpResponse.json({ success: true })
+        }),
+        http.put(`${origin}/api/tokens/:id/channels`, () =>
+          HttpResponse.json(
+            stage === "second write"
+              ? { success: false, message: "channel rejected" }
+              : { success: true },
+          ),
+        ),
+        http.get(`${origin}/api/tokens`, () =>
+          HttpResponse.json(
+            settingsApplied && stage === "readback"
+              ? { success: false, message: "readback rejected" }
+              : { success: true, code: 0, data: tokens },
+          ),
+        ),
+      )
+      await expect(
+        editor.submit({ ...editor.initialValues, name: "changed" }),
+      ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+      expect(settingsApplied).toBe(true)
+    },
+  )
+
   it("updates a key with fresh detail and reads back its channel selection", async () => {
     const collection = await (await openSession()).openCollection("account")
     const editor = await collection.openEditEditor(
@@ -476,6 +511,22 @@ describe("Krill AI key resources", () => {
     await expect(
       collection.revoke!((await collection.list()).items[0]!.ref),
     ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+  })
+  it("surfaces a create business rejection instead of an uncertain state", async () => {
+    server.use(
+      http.post(`${origin}/api/tokens`, () =>
+        HttpResponse.json(
+          { success: false, code: 409, message: "名称已存在" },
+          { status: 200 },
+        ),
+      ),
+    )
+    const editor = await (await openSession()).openCreateEditor("account")
+    await expect(
+      editor.submit({ ...editor.initialValues, name: "duplicate" }),
+    ).rejects.toMatchObject({
+      failure: { code: "upstream_rejected", message: "名称已存在" },
+    })
   })
   it.each([undefined, { ...tokens[0], ip_whitelist: [] }, { id: 90001 }])(
     "delivers the confirmed secret when creation metadata drifts: %j",

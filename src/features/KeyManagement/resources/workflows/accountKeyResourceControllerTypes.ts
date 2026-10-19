@@ -85,6 +85,12 @@ export type RefreshAfterMutation = (
   retryAccountIds?: readonly string[],
 ) => Promise<boolean>
 
+export type RecoverMutationFailure = (
+  failure: ResourceFailure,
+  boundary: ActiveResourceBoundary,
+  current: boolean,
+) => Promise<void>
+
 export type DetailState = AccountKeyResourceFacts | null
 
 export type DeleteState = {
