@@ -50,15 +50,27 @@ for (const mode of [
     let passwordChoices = 0
     let agreementAcceptances = 0
     let logouts = 0
-    await context.route("https://agentrouter.org/api/user/self", (route) =>
-      route.fulfill(
+    let interruptedObservation = false
+    await context.route("https://agentrouter.org/api/user/self", (route) => {
+      if (
+        mode === "second-factor" &&
+        signedIn &&
+        !interruptedObservation &&
+        !route.request().headers().authorization
+      ) {
+        // A redirect can interrupt the first read after native verification.
+        // This read is safe to repeat; the login submission must remain single.
+        interruptedObservation = true
+        return route.abort("failed")
+      }
+      return route.fulfill(
         signedIn
           ? {
               json: { success: true, data: { id: signedIn, checked_in: true } },
             }
           : { status: 401, json: { success: false } },
-      ),
-    )
+      )
+    })
     await context.route(
       "https://agentrouter.org/api/fixture/accept-agreement",
       (route) => {
@@ -304,6 +316,7 @@ for (const mode of [
     expect(passwordChoices).toBe(mode === "password-choice" ? 1 : 0)
     expect(agreementAcceptances).toBe(mode.endsWith("-agreement") ? 1 : 0)
     expect(logouts).toBe(mode === "shared-session" ? 1 : 0)
+    expect(interruptedObservation).toBe(mode === "second-factor")
     await expect
       .poll(
         () =>

@@ -7,6 +7,7 @@ import {
   validatePasswordLoginContext,
   validatePasswordLoginRequest,
 } from "~/services/accountLogin/passwordContent"
+import { BrowserOAuthRequestError } from "~/services/browserOAuth/contentRequest"
 import {
   hasPageVerification,
   waitForPageVerification,
@@ -183,7 +184,20 @@ export function handlePasswordUi(
       return { kind: PASSWORD_UI_KINDS.Submitted }
     }
     if (request.phase === PASSWORD_UI_PHASES.Observe) {
-      const current = await provider.readSession()
+      let current: PasswordUiSession | null
+      try {
+        current = await provider.readSession()
+      } catch (error) {
+        if (
+          !(error instanceof BrowserOAuthRequestError) ||
+          error.reason !== "request_failed"
+        )
+          throw error
+        // Navigation or a transient request failure can interrupt this read.
+        // Keep the bounded browser observation loop running without replaying
+        // the native login submission or declaring its outcome prematurely.
+        return { kind: PASSWORD_UI_KINDS.Pending }
+      }
       if (!current) return { kind: PASSWORD_UI_KINDS.Pending }
       if (current.identity !== expectedIdentity)
         return { status: BROWSER_LOGIN_STATUS.IdentityMismatch }

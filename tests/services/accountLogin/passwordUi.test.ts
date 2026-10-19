@@ -3,6 +3,7 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest"
 
 import { handlePasswordUi } from "~/services/accountLogin/passwordUi"
+import { BrowserOAuthRequestError } from "~/services/browserOAuth/contentRequest"
 
 const deps = vi.hoisted(() => ({ verification: vi.fn(), send: vi.fn() }))
 vi.mock("~/services/checkin/pageVerification", () => ({
@@ -86,3 +87,38 @@ it("recognizes a user's native submission during verification and does not click
   await expect(invoke("submit")).resolves.toEqual({ kind: "submitted" })
   expect(submit).toHaveBeenCalledTimes(1)
 })
+
+it("keeps observing after an interrupted session read without resubmitting", async () => {
+  document.body.innerHTML =
+    '<form><input name="username"><input type="password"><button>Login</button></form>'
+  const submit = vi.fn((event: Event) => event.preventDefault())
+  document.querySelector("form")!.addEventListener("submit", submit)
+  await invoke("prepare")
+  await expect(invoke("submit")).resolves.toEqual({ kind: "submitted" })
+  provider.readSession
+    .mockRejectedValueOnce(new BrowserOAuthRequestError("request_failed"))
+    .mockResolvedValueOnce({ identity: "17", checkedIn: true })
+
+  await expect(invoke("observe")).resolves.toEqual({ kind: "pending" })
+  await expect(invoke("observe")).resolves.toEqual({
+    status: "authenticated",
+    identity: "17",
+    evidence: { checkedIn: true },
+  })
+  expect(submit).toHaveBeenCalledTimes(1)
+})
+
+it.each([
+  new BrowserOAuthRequestError("uncertain"),
+  new Error("Invalid session"),
+])(
+  "preserves uncertainty for a lost refresh mutation or invalid session (%#)",
+  async (error) => {
+    document.body.innerHTML =
+      '<form><input name="username"><input type="password"><button>Login</button></form>'
+    await invoke("prepare")
+    provider.readSession.mockRejectedValueOnce(error)
+
+    await expect(invoke("observe")).resolves.toEqual({ status: "uncertain" })
+  },
+)
