@@ -162,6 +162,35 @@ describe("accountRefresh usage-history coordination", () => {
     ).toHaveBeenCalledExactlyOnceWith(["acc-2"])
   })
 
+  it.each(["resolve", "reject"])(
+    "waits for opted-in batch history synchronization to %s without failing refresh",
+    async (outcome) => {
+      const sync = createDeferred<null>()
+      vi.mocked(usageHistoryScheduler.runAfterRefreshSync).mockReturnValueOnce(
+        sync.promise,
+      )
+      const settled = vi.fn()
+      const refresh = accountRefresh
+        .refreshAllAccounts(true, {
+          awaitUsageHistory: true,
+        })
+        .then((result) => {
+          settled()
+          return result
+        })
+      await vi.waitFor(() =>
+        expect(usageHistoryScheduler.runAfterRefreshSync).toHaveBeenCalledTimes(
+          2,
+        ),
+      )
+      expect(settled).not.toHaveBeenCalled()
+      if (outcome === "reject")
+        sync.reject(new Error("Log endpoint unavailable"))
+      else sync.resolve(null)
+      expect((await refresh).refreshedCount).toBe(2)
+    },
+  )
+
   it("does not wait for history sync or let its failure fail the refresh", async () => {
     const sync = createDeferred<null>()
     vi.mocked(usageHistoryScheduler.runAfterRefreshSync).mockReturnValueOnce(

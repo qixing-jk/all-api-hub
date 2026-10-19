@@ -12,7 +12,7 @@ const logger = createLogger("AccountRefresh")
 
 type RefreshAccountsOptions = Pick<
   RefreshAccountOptions,
-  "tempWindowRequestSource" | "protectionBypassExecution"
+  "tempWindowRequestSource" | "protectionBypassExecution" | "awaitUsageHistory"
 >
 
 class AccountRefresh {
@@ -104,6 +104,7 @@ class AccountRefresh {
       accounts.map((account) =>
         this.refreshAccount(account.id, force, {
           includeTodayCashflow,
+          ...(options?.awaitUsageHistory ? { awaitUsageHistory: true } : {}),
           ...additionalOptions,
           ...(options?.tempWindowRequestSource
             ? { tempWindowRequestSource: options.tempWindowRequestSource }

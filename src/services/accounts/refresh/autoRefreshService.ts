@@ -167,6 +167,7 @@ class AutoRefreshService {
       logger.info("开始执行后台刷新")
 
       const result = await accountRefresh.refreshAllAccounts(false, {
+        awaitUsageHistory: true,
         protectionBypassExecution: createAutomaticProtectionBypassExecution(
           PROTECTION_BYPASS_FEATURES.AccountRefresh,
           PROTECTION_BYPASS_AUTOMATIC_TRIGGERS.Scheduled,
@@ -226,7 +227,9 @@ class AutoRefreshService {
       stopped = true
     }
     if (hasAlarmsAPI()) {
-      void clearAlarm(ACCOUNT_AUTO_REFRESH_ALARM_NAME)
+      void clearAlarm(ACCOUNT_AUTO_REFRESH_ALARM_NAME).catch((error) => {
+        logger.warn("清除自动刷新 Alarm 失败", error)
+      })
       if (this.isAlarmScheduled) {
         stopped = true
       }

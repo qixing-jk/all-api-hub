@@ -33,6 +33,7 @@ import {
   automaticExecution,
   userCommandExecution,
 } from "~~/tests/services/protectionBypass/fixtures"
+import { createDeferred } from "~~/tests/test-utils/deferred"
 
 const preferenceWriteSuccess = (
   preferences: Partial<UserPreferences> = {},
@@ -262,6 +263,7 @@ describe("AutoRefreshService", () => {
       await vi.advanceTimersByTimeAsync(interval * 1000)
 
       expect(accountRefresh.refreshAllAccounts).toHaveBeenCalledWith(false, {
+        awaitUsageHistory: true,
         protectionBypassExecution: automaticExecution(
           "account_refresh",
           "scheduled",
@@ -1010,6 +1012,67 @@ describe("auto-refresh typed message resolvers", () => {
         expect(autoRefreshService.getStatus().isRunning).toBe(false)
       },
     )
+
+    it("dispatches only the account refresh alarm and awaits its background work", async () => {
+      vi.resetModules()
+      const { autoRefreshService: alarmService } = await import(
+        "~/services/accounts/refresh/autoRefreshService"
+      )
+      const addListener = vi.fn()
+      ;(globalThis as any).browser.alarms = {
+        clear: vi.fn().mockResolvedValue(true),
+        onAlarm: { addListener, removeListener: vi.fn() },
+      }
+      vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+        ...DEFAULT_PREFERENCES,
+        accountAutoRefresh: { ...DEFAULT_ACCOUNT_AUTO_REFRESH, enabled: false },
+      })
+      await alarmService.initialize()
+      const listener = addListener.mock.calls[0]![0]
+      await listener({ name: "unrelated-alarm" })
+      expect(accountRefresh.refreshAllAccounts).not.toHaveBeenCalled()
+      const refresh =
+        createDeferred<
+          Awaited<ReturnType<typeof accountRefresh.refreshAllAccounts>>
+        >()
+      vi.mocked(accountRefresh.refreshAllAccounts).mockReturnValueOnce(
+        refresh.promise,
+      )
+      const settled = vi.fn()
+      const alarm = listener({ name: ACCOUNT_AUTO_REFRESH_ALARM_NAME }).then(
+        settled,
+      )
+      await Promise.resolve()
+      expect(settled).not.toHaveBeenCalled()
+      expect(accountRefresh.refreshAllAccounts).toHaveBeenCalledWith(false, {
+        awaitUsageHistory: true,
+        protectionBypassExecution: automaticExecution(
+          "account_refresh",
+          "scheduled",
+        ),
+      })
+      refresh.resolve({
+        success: 1,
+        failed: 0,
+        refreshedCount: 1,
+        latestSyncTime: Date.now(),
+      })
+      await alarm
+      expect(settled).toHaveBeenCalledOnce()
+      alarmService.destroy()
+    })
+
+    it("handles a rejected alarm clear without an unhandled rejection", async () => {
+      ;(globalThis as any).browser.alarms = {
+        clear: vi
+          .fn()
+          .mockRejectedValueOnce(new Error("alarm unavailable"))
+          .mockResolvedValue(true),
+      }
+      autoRefreshService.stopAutoRefresh()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(autoRefreshService.getStatus().isRunning).toBe(false)
+    })
 
     it("clears an existing alarm when persisted preferences disable refresh", async () => {
       const mockClear = vi.fn().mockResolvedValue(true)

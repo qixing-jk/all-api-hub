@@ -55,6 +55,13 @@ test("Cubence defaults to Cookie, saves live identity and refreshes after the co
     }
     requests.push(pathname)
     expect(route.request().headers().authorization).toBeUndefined()
+    // Both save and the explicit row refresh start the history follow-up.
+    if (pathname === "/api/log/self") {
+      await route.fulfill({
+        json: { success: true, data: { items: [], total: 0 } },
+      })
+      return
+    }
     if (pathname === "/api/v1/auth/me") {
       await route.fulfill({
         json: {

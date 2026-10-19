@@ -42,6 +42,8 @@ export type RefreshAccountOptions = {
   /** Read-only discovery requested by a successful user save, never a periodic refresh. */
   discoverCheckInAfterSave?: boolean
   includeTodayCashflow?: boolean
+  /** Background callers wait for history follow-ups before reporting completion. */
+  awaitUsageHistory?: boolean
   balanceHistoryCaptureSource?: DailyBalanceHistoryCaptureSource
   allowDisabled?: boolean
   reEnableOnSuccess?: boolean
@@ -279,9 +281,14 @@ async function runRefreshFollowUps(
   // All refresh callers share this follow-up, after persistence and outside
   // refresh-token serialization. History failures never fail the refresh.
   if (shouldSyncUsageHistory) {
-    void usageHistoryScheduler.runAfterRefreshSync([id]).catch((error) => {
-      logger.warn("Usage-history sync after account refresh failed", error)
-    })
+    const historySync = usageHistoryScheduler
+      .runAfterRefreshSync([id])
+      .catch((error) => {
+        logger.warn("Usage-history sync after account refresh failed", error)
+      })
+    if (options?.awaitUsageHistory) {
+      await historySync
+    }
   }
   return refreshedResult
 }

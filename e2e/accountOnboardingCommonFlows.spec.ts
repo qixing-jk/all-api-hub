@@ -287,6 +287,14 @@ async function stubAIHubMixRoutes(context: BrowserContext) {
     const request = route.request()
     const url = new URL(request.url())
 
+    // The history follow-up uses the saved console URL.
+    if (request.method() === "GET" && url.pathname === "/api/log/self") {
+      await route.fulfill({
+        json: { success: true, data: { items: [], total: 0 } },
+      })
+      return
+    }
+
     if (request.method() === "GET" && url.pathname === "/") {
       await route.fulfill({
         status: 200,
@@ -543,6 +551,12 @@ async function stubRightCodeRoutes(context: BrowserContext) {
         contentType: "application/json",
         body: JSON.stringify(body),
       })
+
+    // Saving refreshes the account and starts the default usage-history follow-up.
+    if (method === "GET" && url.pathname === "/api/log/self") {
+      await json({ success: true, data: { items: [], total: 0 } })
+      return
+    }
 
     if (method === "GET" && url.pathname === "/auth/me") {
       await json({
