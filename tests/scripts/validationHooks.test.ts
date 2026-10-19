@@ -218,6 +218,7 @@ describe("permission warning validation", () => {
       "e2e/extensionPermissionWarnings.spec.ts",
       "--project=chromium",
       "--workers=1",
+      "--output=test-results/permission-warning-check",
     ],
   ]
   it.each([

@@ -72,4 +72,6 @@ runPnpm([
   "e2e/extensionPermissionWarnings.spec.ts",
   "--project=chromium",
   "--workers=1",
+  // Playwright clears its output directory; keep other task evidence intact.
+  "--output=test-results/permission-warning-check",
 ])
