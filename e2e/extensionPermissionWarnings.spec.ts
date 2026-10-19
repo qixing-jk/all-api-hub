@@ -62,6 +62,17 @@ test("the current manifest adds no browser permission warnings to the approved b
     const worker =
       context.serviceWorkers()[0] ??
       (await context.waitForEvent("serviceworker"))
+    // Playwright can discover the worker before Chrome binds its extension APIs.
+    // Wait for the inspector's actual capability without replaying inspection.
+    await expect
+      .poll(() =>
+        worker.evaluate(
+          () =>
+            typeof globalThis.chrome?.management
+              ?.getPermissionWarningsByManifest === "function",
+        ),
+      )
+      .toBe(true)
     const warnings = await worker.evaluate(
       async ({ baseline, candidate }) => {
         const inspect = (manifest: Record<string, unknown>) =>

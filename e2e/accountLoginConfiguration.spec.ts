@@ -138,6 +138,21 @@ for (const method of ["linuxdo", "password"] as const) {
     const loginSection = dialog.getByTestId(
       ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionLogin,
     )
+    const checkInSection = dialog.getByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn,
+    )
+    const setFormViewport = async (viewport: {
+      width: number
+      height: number
+    }) => {
+      await page.setViewportSize(viewport)
+      // Crossing the media-query breakpoint replaces each section's subtree.
+      // Browser viewport acknowledgement does not wait for React's replacement.
+      const layout =
+        viewport.width <= 639 ? "mobile-collapsible" : "desktop-card"
+      await expect(checkInSection).toHaveAttribute("data-layout", layout)
+      await expect(loginSection).toHaveAttribute("data-layout", layout)
+    }
     await expect(
       loginSection.getByRole("combobox", { name: "Login method", exact: true }),
     ).toHaveText("GitHub")
@@ -184,7 +199,7 @@ for (const method of ["linuxdo", "password"] as const) {
     expect(noticeGeometry.height).toBeLessThan(95)
     const originalViewport = page.viewportSize()!
     for (const width of [1280, 390]) {
-      await page.setViewportSize({ width, height: 900 })
+      await setFormViewport({ width, height: 900 })
       for (const textSize of ["default", "extra-large"]) {
         await page.evaluate((value) => {
           document.documentElement.setAttribute("data-theme-text-size", value)
@@ -227,7 +242,7 @@ for (const method of ["linuxdo", "password"] as const) {
         expect(width === 1280 ? layout.inline : layout.below).toBe(true)
       }
     }
-    await page.setViewportSize(originalViewport)
+    await setFormViewport(originalViewport)
     await page.evaluate(() => {
       document.documentElement.setAttribute("data-theme-text-size", "default")
     })
@@ -244,18 +259,22 @@ for (const method of ["linuxdo", "password"] as const) {
     })
     await expect(restoreAutomatic).toBeVisible()
     for (const width of [1280, 390]) {
-      await page.setViewportSize({ width, height: 900 })
-      const actionBounds = await restoreAutomatic.boundingBox()
-      const selectBounds = await checkInMethod.boundingBox()
-      expect(actionBounds!.y + actionBounds!.height).toBeLessThanOrEqual(
-        selectBounds!.y,
-      )
-      expect(actionBounds!.x).toBeGreaterThanOrEqual(selectBounds!.x)
-      expect(actionBounds!.x + actionBounds!.width).toBeLessThanOrEqual(
-        selectBounds!.x + selectBounds!.width + 1,
-      )
+      await setFormViewport({ width, height: 900 })
+      await expect(async () => {
+        const actionBounds = await restoreAutomatic.boundingBox()
+        const selectBounds = await checkInMethod.boundingBox()
+        expect(actionBounds).not.toBeNull()
+        expect(selectBounds).not.toBeNull()
+        expect(actionBounds!.y + actionBounds!.height).toBeLessThanOrEqual(
+          selectBounds!.y,
+        )
+        expect(actionBounds!.x).toBeGreaterThanOrEqual(selectBounds!.x)
+        expect(actionBounds!.x + actionBounds!.width).toBeLessThanOrEqual(
+          selectBounds!.x + selectBounds!.width + 1,
+        )
+      }).toPass({ timeout: 10_000 })
     }
-    await page.setViewportSize(originalViewport)
+    await setFormViewport(originalViewport)
     await captureVisualViews({
       page,
       ready: restoreAutomatic,
@@ -293,7 +312,7 @@ for (const method of ["linuxdo", "password"] as const) {
     await expect(loginSection).not.toHaveClass(/ring-theme-500/)
     if (method === "password") {
       const viewport = page.viewportSize()!
-      await page.setViewportSize({ width: 390, height: 844 })
+      await setFormViewport({ width: 390, height: 844 })
       await loginSection
         .getByRole("button", { name: "Account login", exact: true })
         .click()
@@ -321,7 +340,7 @@ for (const method of ["linuxdo", "password"] as const) {
       await loginSection.screenshot({
         path: testInfo.outputPath("mobile-login-guidance.png"),
       })
-      await page.setViewportSize(viewport)
+      await setFormViewport(viewport)
     }
     await loginSection
       .getByRole("combobox", { name: "Login method", exact: true })
@@ -447,14 +466,30 @@ for (const method of ["linuxdo", "password"] as const) {
       // profile in developer mode so Chromium does not disable the test build.
       await settings.locator("extensions-toolbar #devMode").click()
       const privateToggle = settings.locator("#allow-incognito cr-toggle")
-      await privateToggle.click()
-      await expect
-        .poll(async () =>
-          (await getServiceWorker(context)).evaluate(async () =>
-            (globalThis as any).chrome.extension.isAllowedIncognitoAccess(),
-          ),
-        )
-        .toBe(true)
+      const changePrivateAccess = async (allowed: boolean) => {
+        await expect(privateToggle).toHaveJSProperty("checked", !allowed)
+        // Register before clicking: changing access reloads the extension, and
+        // a cached worker can still report the previous permission meanwhile.
+        const reloaded = context.waitForEvent("serviceworker", {
+          predicate: (candidate) =>
+            candidate.url().startsWith(`chrome-extension://${extensionId}/`),
+        })
+        await privateToggle.click()
+        await expect(privateToggle).toHaveJSProperty("checked", allowed)
+        const reloadedWorker = await reloaded
+        await expect
+          .poll(() =>
+            reloadedWorker.evaluate(() => {
+              const api = (globalThis as any).chrome
+              if (!api?.extension?.isAllowedIncognitoAccess) return null
+              return new Promise<boolean>((resolve) =>
+                api.extension.isAllowedIncognitoAccess(resolve),
+              )
+            }),
+          )
+          .toBe(allowed)
+      }
+      await changePrivateAccess(true)
       // Changing private access closes existing extension pages.
       page = await context.newPage()
       installExtensionPageGuards(page)
@@ -533,14 +568,7 @@ for (const method of ["linuxdo", "password"] as const) {
         )
         .toBe("failed")
       await settings.bringToFront()
-      await privateToggle.click()
-      await expect
-        .poll(async () =>
-          (await getServiceWorker(context)).evaluate(async () =>
-            (globalThis as any).chrome.extension.isAllowedIncognitoAccess(),
-          ),
-        )
-        .toBe(false)
+      await changePrivateAccess(false)
       await settings.close()
       const regularWorker = await getServiceWorker(context)
       page = await context.newPage()
