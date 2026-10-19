@@ -4,6 +4,7 @@ import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { THEME_MODE } from "~/constants/theme"
 import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   forceExtensionLanguage,
@@ -125,6 +126,58 @@ test.beforeEach(async ({ context, page }) => {
   installExtensionPageGuards(page)
   await forceExtensionLanguage(page, "en")
   await stubLlmMetadataIndex(context)
+})
+
+test("shows gentle refresh interval guidance only for valid frequent intervals", async ({
+  context,
+  extensionId,
+  page,
+}, testInfo) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedUserPreferences(serviceWorker, {
+    accountAutoRefresh: {
+      ...DEFAULT_ACCOUNT_AUTO_REFRESH,
+      enabled: true,
+      interval: 300,
+    },
+  })
+  await forceExtensionLanguage(page, "zh-CN")
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}?tab=refresh&anchor=refresh-interval#${MENU_ITEM_IDS.BASIC}`,
+  )
+  await waitForExtensionRoot(page)
+  const input = page.getByRole("spinbutton", { name: "刷新间隔", exact: true })
+  await expect(input).toHaveValue("300")
+  const section = page
+    .locator('[data-slot="setting-section"]')
+    .filter({ has: input })
+  for (const [name, width] of [
+    ["desktop", 1280],
+    ["mobile", 390],
+  ] as const) {
+    await page.setViewportSize({ width, height: 900 })
+    await section.screenshot({
+      path: testInfo.outputPath(`refresh-guidance-${name}.png`),
+      animations: "disabled",
+    })
+  }
+  const hint =
+    "刷新较频繁，账号较多时可能触发站点限流，建议使用 15 分钟或更长间隔。"
+  await expect(input).toHaveAccessibleDescription(hint)
+  await expect(section.getByRole("alert")).toHaveCount(0)
+  await input.fill("")
+  await expect(section.getByText(hint)).toHaveCount(0)
+  await input.fill("60")
+  await expect(input).toHaveAccessibleDescription(hint)
+  await input.fill("600")
+  await expect(section.getByText(hint)).toHaveCount(0)
+  await input.blur()
+  await expect
+    .poll(async () => {
+      const prefs = await getStoredUserPreferences(serviceWorker)
+      return (prefs.accountAutoRefresh as { interval: number }).interval
+    })
+    .toBe(600)
 })
 
 test("persists an options setting through extension storage and reload", async ({

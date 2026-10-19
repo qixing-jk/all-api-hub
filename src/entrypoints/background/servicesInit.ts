@@ -55,6 +55,7 @@ export async function initializeServices() {
       // Start alarm-based schedulers first so their listeners are registered synchronously
       // during service worker startup (before any awaited work yields control).
       const alarmSchedulersInit = Promise.allSettled([
+        autoRefreshService.initialize(),
         usageHistoryScheduler.initialize(),
         webdavAutoSyncService.initialize(),
         modelSyncScheduler.initialize(),
@@ -92,7 +93,6 @@ export async function initializeServices() {
         logger.warn("Model metadata initialization failed", error)
       })
 
-      await autoRefreshService.initialize()
       await redemptionAssistService.initialize()
 
       servicesInitialized = true

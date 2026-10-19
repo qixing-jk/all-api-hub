@@ -4,6 +4,7 @@ import "~~/tests/services/autoCheckin/schedulerTestHarness"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { accountCheckinRunWorkflow } from "~/services/checkin/autoCheckin/execution/runAccountWorkflow"
+import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
 import {
   createDeferred,
@@ -11,6 +12,12 @@ import {
 } from "~~/tests/services/autoCheckin/schedulerTestHarness"
 import { type accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
+
+vi.mock("~/services/history/usageHistory/scheduler", () => ({
+  usageHistoryScheduler: {
+    runAfterRefreshSync: vi.fn(),
+  },
+}))
 
 describe("execution/postRunRefresh", () => {
   beforeEach(() => {
@@ -79,6 +86,7 @@ describe("execution/postRunRefresh", () => {
     atIndex(deferredRefreshes, 3).resolve({ refreshed: false })
 
     await expect(refreshPromise).resolves.toBeUndefined()
+    expect(usageHistoryScheduler.runAfterRefreshSync).not.toHaveBeenCalled()
   })
 
   it("defaults post-checkin refreshes to force=true when no force flag is provided", async () => {

@@ -1,295 +1,22 @@
-import { QUOTA_PER_USD } from "~/constants/money"
-import { SITE_TYPES } from "~/constants/siteType"
-import type { RefreshAccountResult } from "~/services/accounts/accountDataModel"
-import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accountSiteProfile/supplementalAuth"
-import { AccountUpdateUserTimestampMode } from "~/services/accounts/editing/accountDefaults"
-import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
-import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
-import { discoverSavedAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/postSaveDiscovery"
-import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
-import { maybeCaptureDailyBalanceSnapshot } from "~/services/history/dailyBalanceHistory/capture"
+import {
+  refreshStoredAccount,
+  type RefreshAccountOptions,
+} from "~/services/accounts/refresh/refreshStoredAccount"
 import { userPreferences } from "~/services/preferences/userPreferences"
-import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
-import { getAccountSiteType } from "~/services/siteDetection/detectSiteType"
-import { SiteHealthStatus, type SiteAccount } from "~/types"
-import type { DailyBalanceHistoryCaptureSource } from "~/types/dailyBalanceHistory"
-import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
-import type { DeepPartial } from "~/types/utils"
-import { deepOverride } from "~/utils"
-import { getErrorMessage } from "~/utils/core/error"
+import type { SiteAccount } from "~/types"
 import { createLogger } from "~/utils/core/logger"
-import { t } from "~/utils/i18n/core"
 
-import { accountMutations } from "./accountMutations"
 import { accountQueries } from "./accountQueries"
 
 const logger = createLogger("AccountRefresh")
 
-const createMissingAccountRefreshResult = (
-  siteType: string,
-): RefreshAccountResult => ({
-  success: false,
-  healthStatus: {
-    status: SiteHealthStatus.Unknown,
-    message: `accountRefresh is not implemented for ${siteType}`,
-    code: undefined,
-  },
-})
-
-type RefreshAccountOptions = {
-  /** Read-only discovery requested by a successful user save, never a periodic refresh. */
-  discoverCheckInAfterSave?: boolean
-  includeTodayCashflow?: boolean
-  balanceHistoryCaptureSource?: DailyBalanceHistoryCaptureSource
-  allowDisabled?: boolean
-  reEnableOnSuccess?: boolean
-  tempWindowRequestSource?: TempWindowRequestSource
-  protectionBypassExecution?: ProtectionBypassExecution
-}
-
 type RefreshAccountsOptions = Pick<
   RefreshAccountOptions,
-  "tempWindowRequestSource" | "protectionBypassExecution"
+  "tempWindowRequestSource" | "protectionBypassExecution" | "awaitUsageHistory"
 >
 
 class AccountRefresh {
-  async refreshAccount(
-    id: string,
-    force: boolean = false,
-    options?: RefreshAccountOptions,
-  ) {
-    let discoverAfterRefresh = false
-    const runRefresh = async () => {
-      let account = await accountQueries.getAccountById(id)
-      if (!account) {
-        throw new Error(t("messages:storage.accountNotFound", { id }))
-      }
-      if (account.disabled && options?.allowDisabled !== true) {
-        logger.debug("账号已禁用，跳过刷新", {
-          accountId: account.id,
-          siteName: account.site_name,
-        })
-        return { account, refreshed: false, skippedReason: "account_disabled" }
-      }
-
-      account = await this.refreshSiteMetadataIfNeeded(
-        account,
-        options?.protectionBypassExecution,
-      )
-      if (await this.shouldSkipRefresh(account, force)) {
-        logger.debug("账号刷新间隔未到，跳过刷新", {
-          accountId: account.id,
-          siteName: account.site_name,
-        })
-        return { account, refreshed: false }
-      }
-
-      const baseUrl =
-        this.normalizeBaseUrl(account.site_url) ?? account.site_url
-      const auth = {
-        authType: account.authType,
-        userId: account.account_info.id,
-        accessToken: account.account_info.access_token,
-        cookie: account.cookieAuth?.sessionCookie,
-        refreshToken: account.sub2apiAuth?.refreshToken,
-        tokenExpiresAt: account.sub2apiAuth?.tokenExpiresAt,
-      }
-      const accountRefresh = getSiteTypeCapabilities(account.site_type).account
-        ?.refresh
-      const prefs = await userPreferences.getPreferences()
-      const includeTodayCashflow =
-        options?.includeTodayCashflow ?? prefs.showTodayCashflow ?? true
-      const result = accountRefresh
-        ? await accountRefresh.refreshAccount({
-            baseUrl,
-            accountId: account.id,
-            checkIn: account.checkIn,
-            siteType: account.site_type,
-            exchangeRate: account.exchange_rate,
-            auth,
-            includeTodayCashflow,
-            ...(options?.tempWindowRequestSource
-              ? { tempWindowRequestSource: options.tempWindowRequestSource }
-              : {}),
-            ...(options?.protectionBypassExecution
-              ? { protectionBypassExecution: options.protectionBypassExecution }
-              : {}),
-          })
-        : createMissingAccountRefreshResult(account.site_type)
-
-      const updateData: DeepPartial<SiteAccount> = {
-        health: {
-          status: result.healthStatus.status,
-          reason: result.healthStatus.message,
-          code: result.healthStatus.code,
-        },
-        last_sync_time: Date.now(),
-      }
-      const shouldReEnable = Boolean(
-        options?.reEnableOnSuccess === true && result.success,
-      )
-      let refreshedCheckIn: SiteAccount["checkIn"] | undefined
-
-      if (result.success) {
-        const manualBalanceUsd = account.manualBalanceUsd?.trim()
-        const manualQuota =
-          manualBalanceUsd && manualBalanceUsd.length > 0
-            ? (() => {
-                const amount = Number.parseFloat(manualBalanceUsd)
-                if (!Number.isFinite(amount) || amount < 0) return undefined
-                return Math.round(amount * QUOTA_PER_USD)
-              })()
-            : undefined
-
-        refreshedCheckIn = result.data.checkIn
-        updateData.account_info = {
-          quota: manualQuota ?? result.data.quota,
-          today_prompt_tokens: result.data.today_prompt_tokens,
-          today_completion_tokens: result.data.today_completion_tokens,
-          today_quota_consumption: result.data.today_quota_consumption,
-          today_requests_count: result.data.today_requests_count,
-          today_income: result.data.today_income,
-          todayStatsAvailability: result.data.todayStatsAvailability,
-          usage: result.data.usage,
-          subscription: result.data.subscription,
-          nativeBalance: result.data.nativeBalance,
-          recentUsageRecords: result.data.recentUsageRecords,
-        }
-        if (shouldReEnable) updateData.disabled = false
-
-        const authUpdate = result.authUpdate
-        if (authUpdate) {
-          updateData.account_info = {
-            ...updateData.account_info,
-            ...(typeof authUpdate.accessToken === "string" &&
-            authUpdate.accessToken.trim()
-              ? { access_token: authUpdate.accessToken.trim() }
-              : {}),
-            ...(typeof authUpdate.userId === "string" &&
-            authUpdate.userId.trim()
-              ? { id: authUpdate.userId.trim() }
-              : {}),
-            ...(typeof authUpdate.username === "string" &&
-            authUpdate.username.trim()
-              ? { username: authUpdate.username.trim() }
-              : {}),
-          }
-          const supplementalAuth = normalizeAccountSiteSupplementalAuth({
-            siteType: account.site_type,
-            sub2apiAuth: authUpdate.sub2apiAuth,
-          })
-          if (supplementalAuth.sub2apiAuth) {
-            updateData.sub2apiAuth = supplementalAuth.sub2apiAuth
-          }
-          if (authUpdate.kimiOpenPlatformAuth) {
-            updateData.kimiOpenPlatformAuth = authUpdate.kimiOpenPlatformAuth
-          }
-        }
-
-        try {
-          await maybeCaptureDailyBalanceSnapshot({
-            config: prefs.balanceHistory,
-            accountId: account.id,
-            quota: manualQuota ?? result.data.quota,
-            nativeBalance: result.data.nativeBalance,
-            today_income: result.data.today_income,
-            today_quota_consumption: result.data.today_quota_consumption,
-            todayStatsAvailability: normalizeAccountTodayStatsAvailability(
-              result.data.todayStatsAvailability,
-            ),
-            source: options?.balanceHistoryCaptureSource ?? "refresh",
-          })
-        } catch (error) {
-          logger.debug("Failed to capture daily balance snapshot", {
-            accountId: account.id,
-            error,
-          })
-        }
-      }
-
-      const didPersist = await accountMutations.updateAccountFromRefresh(
-        id,
-        updateData,
-        refreshedCheckIn,
-        account,
-      )
-      const updatedAccount = didPersist
-        ? await accountQueries.getAccountById(id)
-        : account
-      discoverAfterRefresh = Boolean(
-        didPersist &&
-          result.success &&
-          updatedAccount &&
-          options?.discoverCheckInAfterSave,
-      )
-      const reEnabled =
-        didPersist && shouldReEnable && updatedAccount?.disabled === false
-
-      if (account.health?.status !== result.healthStatus.status) {
-        logger.info("账号健康状态变化", {
-          accountId: account.id,
-          siteName: account.site_name,
-          from: account.health?.status,
-          to: result.healthStatus.status,
-          detail: result.healthStatus.message,
-        })
-      }
-      return { account: updatedAccount, refreshed: true, reEnabled }
-    }
-
-    try {
-      const account = await accountQueries.getAccountById(id)
-      const shouldSerializeSub2ApiRefresh =
-        account &&
-        Boolean(
-          normalizeAccountSiteSupplementalAuth({
-            siteType: account.site_type,
-            sub2apiAuth: account.sub2apiAuth,
-          }).sub2apiAuth,
-        )
-      const refreshedResult = shouldSerializeSub2ApiRefresh
-        ? await withExtensionStorageWriteLock(
-            `all-api-hub:sub2api-refresh:${id}`,
-            runRefresh,
-          )
-        : await runRefresh()
-      // Release refresh-token serialization before optional, slow read-only discovery.
-      if (discoverAfterRefresh && refreshedResult.account) {
-        try {
-          refreshedResult.account =
-            (await discoverSavedAccountCheckIn(refreshedResult.account, {
-              tempWindowRequestSource: options?.tempWindowRequestSource,
-              protectionBypassExecution: options?.protectionBypassExecution,
-            })) ?? refreshedResult.account
-        } catch (error) {
-          logger.warn("Post-save discovery failed after a successful refresh", {
-            accountId: id,
-            error: getErrorMessage(error),
-          })
-        }
-      }
-      return refreshedResult
-    } catch (error) {
-      logger.error("刷新账号数据失败", { accountId: id, error })
-      try {
-        await accountMutations.updateAccount(
-          id,
-          {
-            health: {
-              status: SiteHealthStatus.Unknown,
-              reason: getErrorMessage(error),
-              code: undefined,
-            },
-            last_sync_time: Date.now(),
-          },
-          { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
-        )
-      } catch (updateError) {
-        logger.error("更新健康状态失败", { accountId: id, error: updateError })
-      }
-      return null
-    }
-  }
+  refreshAccount = refreshStoredAccount
 
   async refreshAllAccounts(
     force: boolean = false,
@@ -318,6 +45,7 @@ class AccountRefresh {
         })
       }
     })
+
     return {
       success: successCount,
       failed: failedCount,
@@ -376,6 +104,7 @@ class AccountRefresh {
       accounts.map((account) =>
         this.refreshAccount(account.id, force, {
           includeTodayCashflow,
+          ...(options?.awaitUsageHistory ? { awaitUsageHistory: true } : {}),
           ...additionalOptions,
           ...(options?.tempWindowRequestSource
             ? { tempWindowRequestSource: options.tempWindowRequestSource }
@@ -386,66 +115,6 @@ class AccountRefresh {
         }),
       ),
     )
-  }
-
-  private async shouldSkipRefresh(
-    account: SiteAccount,
-    force: boolean = false,
-  ): Promise<boolean> {
-    if (force) return false
-    const preferences = await userPreferences.getPreferences()
-    return (
-      Date.now() - (account.last_sync_time || 0) <
-      preferences.accountAutoRefresh.minInterval * 1000
-    )
-  }
-
-  private normalizeBaseUrl(url?: string): string | null {
-    if (!url) return null
-    try {
-      const parsed = new URL(url)
-      return `${parsed.protocol}//${parsed.host}`
-    } catch {
-      return null
-    }
-  }
-
-  private async refreshSiteMetadataIfNeeded(
-    account: SiteAccount,
-    protectionBypassExecution?: ProtectionBypassExecution,
-  ): Promise<SiteAccount> {
-    const normalizedUrl = this.normalizeBaseUrl(account.site_url)
-    if (
-      !normalizedUrl ||
-      (account.site_type && account.site_type !== SITE_TYPES.UNKNOWN)
-    ) {
-      return account
-    }
-    const updates: DeepPartial<SiteAccount> = {}
-    try {
-      const detectedType = await getAccountSiteType(
-        normalizedUrl,
-        protectionBypassExecution,
-      )
-      if (detectedType && detectedType !== SITE_TYPES.UNKNOWN) {
-        updates.site_type = detectedType
-      }
-    } catch (error) {
-      logger.warn("Failed to detect site type", {
-        baseUrl: normalizedUrl,
-        error,
-      })
-    }
-    if (Object.keys(updates).length === 0) return account
-
-    const success = await accountMutations.updateAccount(account.id, updates, {
-      userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
-    })
-    if (success) {
-      const refreshed = await accountQueries.getAccountById(account.id)
-      if (refreshed) return refreshed
-    }
-    return deepOverride<SiteAccount>(account, updates)
   }
 }
 

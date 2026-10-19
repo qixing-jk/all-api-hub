@@ -17,6 +17,7 @@ export interface AccountAutoRefresh {
  */
 export const ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS = 60
 export const ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS = 30
+export const ACCOUNT_AUTO_REFRESH_INTERVAL_WARNING_THRESHOLD_SECONDS = 600
 
 export const DEFAULT_ACCOUNT_AUTO_REFRESH: AccountAutoRefresh = {
   enabled: false,

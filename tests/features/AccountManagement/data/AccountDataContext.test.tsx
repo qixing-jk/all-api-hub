@@ -22,6 +22,10 @@ import {
 } from "~/features/AccountManagement/data/AccountDataContext"
 import type { AccountManagementSnapshot } from "~/services/accounts/accountStorage/accountReadModels"
 import { createEmptyAccountStats } from "~/services/accounts/metrics/accountTodayStats"
+import {
+  AUTO_REFRESH_UPDATE_MESSAGE_TYPE,
+  AUTO_REFRESH_UPDATE_TYPES,
+} from "~/services/accounts/refresh/constants"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { mergeCompatibilityCheckInStatus } from "~/services/checkin/autoCheckin/state"
@@ -2337,8 +2341,8 @@ describe("AccountDataContext refresh orchestration", () => {
 
     await act(async () => {
       listener!({
-        type: "AUTO_REFRESH_UPDATE",
-        payload: { type: "refresh_completed" },
+        type: AUTO_REFRESH_UPDATE_MESSAGE_TYPE,
+        payload: { type: AUTO_REFRESH_UPDATE_TYPES.Completed },
       })
       listener!({
         type: "TAG_STORE_UPDATE",
