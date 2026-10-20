@@ -26,7 +26,7 @@ An audit-only request ends with findings; it does not authorize implementation o
 - Switching type, collapsing sections or leaving a field untouched must preserve hidden values, secrets, unsupported settings and concurrent edits according to the resource owner's write contract. Do not infer protocol support, copy credentials across branches or reproduce native draft conversion without verifying its rules.
 - Display native defaults accurately, including empty and zero values. Validation must lead to a visible, actionable control even when the error belongs to a collapsed or inactive branch. Retain drafts on recoverable failure and follow existing partial/uncertain-write recovery rules.
 
-Match or improve task capability and ease, not pixels. Do not add provider-specific features to every editor or force multi-key controls onto a single-key resource.
+Use the native editor to understand tasks and constraints, then design for the extension's context. Aim to improve common task completion, clarity and recovery; equivalent outcomes may use different controls, grouping or steps. Do not reproduce native complexity merely for visual or control-by-control parity, add provider-specific features to every editor or force multi-key controls onto a single-key resource.
 
 ## Compare the implementation before handoff
 

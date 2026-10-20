@@ -63,7 +63,7 @@ An adapter object, page navigation or passing mock alone does not close implemen
 ### Models and pricing
 
 - [ ] **Model catalog and access**: distinguish account/key, personalized and provider-wide scopes, groups and availability. Reuse catalog/pricing seams; disclose scope-changing fallback. One key's list is not the provider catalog.
-- [ ] **Model pricing**: verify currency/units, token/request/media modes and group/plan effects against native display. Map understood prices; explain unsupported expressions instead of guessing.
+- [ ] **Model pricing**: verify currency/units, token/request/media modes and group/plan effects against native display. Follow [native meaning through shared workflows](account-sites.md#preserve-native-meaning-through-shared-workflows), including billing badges, filters, rates and offered model actions. Map understood prices; explain unsupported expressions instead of guessing.
 
 ### Invitations, announcements and grants
 
@@ -96,7 +96,7 @@ An adapter object, page navigation or passing mock alone does not close implemen
 
 ### Behavior and live validation
 
-- [ ] **Behavior tests**: start each feature/fix with a failing focused test; implement/refactor with tests green. Cover transport/envelope and affected consumers, not only parsing.
+- [ ] **Behavior tests**: start each feature/fix with a failing focused test; implement/refactor with tests green. Cover transport/envelope and affected consumers, including parent policy/render guards and result messages, not only parsing. Await the expected loaded state before asserting a missing element so initialization is not mistaken for the regression.
 - [ ] **Live protocol and UI**: run applicable hosted/self-hosted probes and current-worktree site-specific CDP for offered actions, including invitation copy and native fields. Explain each applicable skipped layer/path; mocks/source inspection are not live validation. Follow existing evidence and visual-preview references.
 - [ ] **Editor usability, when affected**: reconcile [the native workflow comparison](native-editor-parity.md) before the first handoff; report worse, missing or unverified common paths separately from passing tests and field preservation.
 

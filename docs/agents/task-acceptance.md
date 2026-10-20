@@ -12,6 +12,8 @@ Build a task-local acceptance table from the requested outcomes and the final ta
 
 Select applicable success, empty, failure, partial-success and retry/cancel scenarios from the changed flow. Test shared behavior at its public boundary and use representative callers for integration risk. Follow the existing TDD requirement for features and bug fixes. Screenshots alone do not verify persistence, request semantics, authentication, or resource cleanup; assert those outcomes through the appropriate public interface and readback.
 
+Choose samples that distinguish the intended contract from plausible incorrect implementations. For example, an upstream remaining-quota value that differs from total minus used detects an unauthorized derivation; an unlimited account cannot validate finite-quota behavior. Use verified contract fixtures for missing live variants and report that limit. Default-only or coincidentally equal values do not establish the unexercised branches.
+
 Run the selected checks automatically when prerequisites are available. If a promised path lacks reusable automation, extend the closest maintained test or runner within the authorized scope. Record any path that could not run and its missing prerequisite, then continue independent checks. A command listed in a report without being executed is not passing evidence.
 
 ## Compare changed UI

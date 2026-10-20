@@ -50,6 +50,17 @@ Inspect the console's navigation, relevant routes and existing application capab
 
 For aff/invite, retain the native code/link response, link construction/encoding, canonical host and login requirements. Reuse the existing invitation-link retrieval/copy workflow when compatible, then assert the returned link and visible copy feedback. Retrieving an invite link does not authorize referral enrollment, payout, or withdrawal automation. Read the check-in reference if check-in support is selected.
 
+## Preserve native meaning through shared workflows
+
+For each adapted user task, trace the authoritative response through the canonical model, capability/policy decisions and final visible result or action. Inspect shared consumers for currency-only, chat-only or legacy-family assumptions; supplying a native field does not prove those consumers use it.
+
+- Keep independent dimensions separate: billing mode, quota asset/unit, monetary conversion, quote completeness and comparison scope. An unavailable cash conversion or an incomplete quote must not suppress known billing metadata or native rates. Verify badges, filters and sorting against the same meaning, including zero-cost output and unknown adjustments where applicable.
+- Preserve authoritative facts used to make a decision, such as remaining versus total/used quota, model purpose, availability and specifications. Use existing shared facts/presentation seams; do not replace an upstream value with arithmetic or name-based inference when the authoritative value is available. Offered probes, examples and exports must fit the model purpose and credential scope.
+- Follow amounts into result assembly and feedback as well as balance cards: redemption, check-in and batch results must retain their asset and scale. Check whether generic success messages or display guards hide the known amount; missing is distinct from zero.
+- Use the upfront official-experience investigation to design the scoped list/detail, create/edit and relevant bulk paths around extension users' tasks. Before the first completion claim, compare the delivered task outcomes and effort with that baseline, recording improved, equivalent, worse, missing or unverified results in the existing task table. Extend a suitable shared seam for verified simple paths; explain substantial deferrals without treating an unrelated added feature as a replacement.
+
+Use focused tests at the final consumer for these contracts. If a parent policy or render guard can suppress the result, include that boundary rather than testing only the parser or an always-enabled child. Reuse the existing live and visual validation workflow for representative final states.
+
 ## Validate and hand off
 
 Use focused failing behavior tests for credential identity, transport/envelope, units, endpoint resolution, key semantics and each added capability. Exercise the requested add/save/refresh/recovery flow in the current-worktree extension; use disposable resources for writes and verify cleanup. Include the implemented simple features in site-specific CDP assertions and [visual previews](visual-previews.md).
