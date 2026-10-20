@@ -189,7 +189,9 @@ const readFetchProbe = async () => {
       await target
         .evaluate(() => globalThis.__aahFetchLog ?? [])
         .catch(() => [])
-    ).filter((entry) => entry.url.includes("/api/"))
+    ).filter(
+      (entry) => typeof entry.url !== "string" || entry.url.includes("/api/"),
+    )
   return { page: await read(ui), worker: await read(dev.serviceWorker) }
 }
 await ui.evaluate(installFetchProbe)

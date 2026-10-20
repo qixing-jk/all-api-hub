@@ -174,6 +174,24 @@ describe("EMRank console contract", () => {
     })
   })
 
+  it.each([
+    [401, "HTTP_401"],
+    [403, "HTTP_403"],
+    [429, "HTTP_429"],
+    [502, "HTTP_OTHER"],
+  ])("preserves HTTP %s for a non-JSON console error", async (status, code) => {
+    server.use(
+      http.get(
+        `${origin}/api/auth/session`,
+        () => new HttpResponse("<html>Gateway error</html>", { status }),
+      ),
+    )
+    await expect(fetchEmRankUserInfo(request)).rejects.toMatchObject({
+      statusCode: status,
+      code,
+    })
+  })
+
   it("reports the identity bound to another saved account as a mismatch", async () => {
     server.use(
       http.get(`${origin}/api/auth/session`, () => HttpResponse.json(session)),

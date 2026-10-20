@@ -163,7 +163,12 @@ async function readEmRankUncached(
       },
     )
     if (!response.ok) {
-      const parsed = parseJsonBody(response.body, endpoint)
+      let parsed: unknown
+      try {
+        parsed = parseJsonBody(response.body, endpoint)
+      } catch {
+        // Gateways may return HTML; the HTTP status still defines the failure.
+      }
       const envelope =
         isRecord(parsed) && isRecord(parsed.error) ? parsed.error : undefined
       const message =

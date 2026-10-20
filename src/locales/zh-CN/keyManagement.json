@@ -428,7 +428,7 @@
           "month": "一个月（30 天）",
           "never": "永不过期"
         },
-        "quotaHelp": "1 M = 1,000,000 Token，最多 6 位小数；留空表示无限额度。",
+        "quotaHelp": "1 M = 1,000,000 Token，最多 6 位小数；保持开启无限额度则不受限制。",
         "quotaMToken": "额度（M Token）"
       },
       "excludeIps": "排除 IP",
