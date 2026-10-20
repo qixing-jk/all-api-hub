@@ -125,6 +125,7 @@
     "summary": "自动签到运行概况"
   },
   "automation": {
+    "automaticEnabled": "自动执行已开启",
     "empty": {
       "autoCheckin": {
         "disabled": "想自动领取签到奖励时，先开启自动签到。之后这里会显示下次计划和执行结果。"
@@ -167,11 +168,28 @@
         "strategy": "同步策略"
       }
     },
+    "metrics": {
+      "failed": "失败",
+      "skipped": "跳过",
+      "success": "成功",
+      "unsupported": "不支持"
+    },
     "neverChecked": "尚未检查",
     "openItem": "打开 {{name}}",
     "status": {
-      "enabled": "已启用"
-    }
+      "disabled": "已停用",
+      "failed": "运行失败",
+      "limited": "部分不支持",
+      "notRun": "等待首次运行",
+      "partial": "部分失败",
+      "ready": "已就绪",
+      "running": "正在运行",
+      "skipped": "未执行",
+      "success": "运行成功",
+      "unknown": "状态未知",
+      "unsupported": "暂不支持"
+    },
+    "statusUnavailable": "暂时无法读取执行状态，请打开详情查看或刷新后重试。"
   },
   "configurationOverview": {
     "accountFoundation": {

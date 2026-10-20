@@ -134,6 +134,7 @@
     "summary": "Zusammenfassung des automatischen Check-in-Laufs"
   },
   "automation": {
+    "automaticEnabled": "Automatische Ausführung ist aktiviert",
     "empty": {
       "autoCheckin": {
         "disabled": "Aktivieren Sie den automatischen Check-in, wenn Sie Prämien automatisch einfordern möchten. Zukünftige Zeitpläne und Ergebnisse werden hier angezeigt."
@@ -176,11 +177,28 @@
         "strategy": "Synchronisierungsstrategie"
       }
     },
+    "metrics": {
+      "failed": "Fehlgeschlagen",
+      "skipped": "Übersprungen",
+      "success": "Erfolgreich",
+      "unsupported": "Nicht unterstützt"
+    },
     "neverChecked": "Noch nicht geprüft",
     "openItem": "Öffnen Sie {{name}}",
     "status": {
-      "enabled": "Aktiviert"
-    }
+      "disabled": "Deaktiviert",
+      "failed": "Ausführung fehlgeschlagen",
+      "limited": "Teilweise unterstützt",
+      "notRun": "Wartet auf erste Ausführung",
+      "partial": "Teilweise fehlgeschlagen",
+      "ready": "Bereit",
+      "running": "Wird ausgeführt",
+      "skipped": "Nicht ausgeführt",
+      "success": "Ausführung erfolgreich",
+      "unknown": "Status unbekannt",
+      "unsupported": "Nicht unterstützt"
+    },
+    "statusUnavailable": "Der Ausführungsstatus ist nicht verfügbar. Öffnen Sie die Details oder laden Sie die Seite erneut."
   },
   "configurationOverview": {
     "accountFoundation": {

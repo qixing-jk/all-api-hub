@@ -2,10 +2,12 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import type { ManagedSiteType } from "~/constants/siteType"
 import { WEBDAV_AUTO_SYNC_TARGET_IDS } from "~/features/ImportExport/searchTargets"
+import { resolveAutomationState } from "~/features/OptionsOverview/automation/automationState"
 import {
-  OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS as AUTOMATION_STATUS_LABELS,
+  OPTIONS_OVERVIEW_AUTO_CHECKIN_PANEL_STATUSES as CHECKIN_STATUSES,
   OPTIONS_OVERVIEW_AUTOMATION_ACTION_IDS,
   OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS,
+  OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS as STATUS_LABELS,
   OPTIONS_OVERVIEW_AUTOMATION_SUMMARY_ROW_IDS as SUMMARY_ROW_IDS,
   OPTIONS_OVERVIEW_AUTOMATION_SUMMARY_VALUE_TYPES as SUMMARY_VALUE_TYPES,
 } from "~/features/OptionsOverview/ids"
@@ -18,13 +20,16 @@ import type {
   OptionsOverviewAutomationAction,
   OptionsOverviewAutomationItem,
   OptionsOverviewAutomationOverview,
+  OptionsOverviewAutomationRunData,
+  OptionsOverviewAutomationStatusLabel,
   OptionsOverviewNavigationTarget,
 } from "~/features/OptionsOverview/types"
 import { supportsManagedSiteModelSync } from "~/services/managedSites/utils/managedSite"
 import type { UserPreferences } from "~/services/preferences/preferencesSchema"
-import type {
-  SiteAnnouncementRecord,
-  SiteAnnouncementSiteState,
+import {
+  SITE_ANNOUNCEMENT_STATUS,
+  type SiteAnnouncementRecord,
+  type SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
 import { resolveWebdavSyncDataSelection } from "~/types/webdav"
 
@@ -34,19 +39,26 @@ const SECONDS_PER_MINUTE = 60
 /**
  * Builds the automation execution overview from local run status and preferences.
  */
-export function buildAutomationOverview(input: {
-  autoCheckinPanel: OptionsOverviewAutoCheckinPanel
-  preferences: UserPreferences | null | undefined
-  managedSiteType: ManagedSiteType | undefined
-  siteAnnouncementRecords: SiteAnnouncementRecord[]
-  siteAnnouncementStatuses: SiteAnnouncementSiteState[]
-}): OptionsOverviewAutomationOverview {
+export function buildAutomationOverview(
+  input: OptionsOverviewAutomationRunData & {
+    autoCheckinPanel: OptionsOverviewAutoCheckinPanel
+    preferences: UserPreferences | null | undefined
+    managedSiteType: ManagedSiteType | undefined
+    siteAnnouncementRecords: SiteAnnouncementRecord[]
+    siteAnnouncementStatuses: SiteAnnouncementSiteState[]
+  },
+): OptionsOverviewAutomationOverview {
   const items: OptionsOverviewAutomationItem[] = [
-    buildAutoCheckinAutomationItem(input.autoCheckinPanel),
+    buildAutoCheckinAutomationItem(
+      input.autoCheckinPanel,
+      input.autoCheckinDataAvailable,
+      input.preferences != null,
+    ),
     buildSiteAnnouncementsAutomationItem({
       preferences: input.preferences,
       records: input.siteAnnouncementRecords,
       statuses: input.siteAnnouncementStatuses,
+      dataAvailable: input.announcementDataAvailable,
     }),
   ]
 
@@ -57,6 +69,7 @@ export function buildAutomationOverview(input: {
     items.push(
       buildManagedSiteModelSyncAutomationItem({
         preferences: input.preferences,
+        modelSyncExecution: input.modelSyncExecution,
       }),
     )
   }
@@ -64,6 +77,7 @@ export function buildAutomationOverview(input: {
   items.push(
     buildWebdavAutoSyncAutomationItem({
       preferences: input.preferences,
+      webdavStatus: input.webdavStatus,
     }),
   )
 
@@ -75,11 +89,17 @@ export function buildAutomationOverview(input: {
  */
 function buildAutoCheckinAutomationItem(
   panel: OptionsOverviewAutoCheckinPanel,
+  dataAvailable: boolean | undefined,
+  preferencesAvailable: boolean,
 ): OptionsOverviewAutomationItem {
   return {
     id: OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS.autoCheckin,
-    status: panel.severity,
-    statusLabel: AUTOMATION_STATUS_LABELS.enabled,
+    ...resolveAutomationState(
+      preferencesAvailable
+        ? panel.status !== CHECKIN_STATUSES.disabled
+        : undefined,
+      dataAvailable === false ? STATUS_LABELS.unknown : panel.status,
+    ),
     primaryTarget: { menuItemId: MENU_ITEM_IDS.AUTO_CHECKIN },
     summaryRows: [
       {
@@ -119,33 +139,32 @@ function buildSiteAnnouncementsAutomationItem(input: {
   preferences: UserPreferences | null | undefined
   records: SiteAnnouncementRecord[]
   statuses: SiteAnnouncementSiteState[]
+  dataAvailable?: boolean
 }): OptionsOverviewAutomationItem {
   const prefs = input.preferences?.siteAnnouncementNotifications
-  const enabled = prefs?.enabled === true
+  const enabled = input.preferences ? prefs?.enabled === true : undefined
   const latestStatus = input.statuses[0]
   const failedStatusCount = input.statuses.filter(
-    (status) => status.status === "error",
+    (status) => status.status === SITE_ANNOUNCEMENT_STATUS.Error,
   ).length
   const unsupportedStatusCount = input.statuses.filter(
-    (status) => status.status === "unsupported",
+    (status) => status.status === SITE_ANNOUNCEMENT_STATUS.Unsupported,
   ).length
   const unreadCount = input.records.filter((record) => !record.read).length
-  const readiness = resolveAutomationReadiness(enabled)
-  const status = enabled
-    ? failedStatusCount > 0
-      ? "error"
-      : unsupportedStatusCount > 0
-        ? "warning"
-        : readiness.status
-    : readiness.status
+  const successCount = input.statuses.filter(
+    (status) => status.status === SITE_ANNOUNCEMENT_STATUS.Success,
+  ).length
+  const runStatus = resolveAnnouncementRunStatus({
+    dataAvailable: input.dataAvailable,
+    failedStatusCount,
+    unsupportedStatusCount,
+    successCount,
+  })
 
   return {
     id: OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS.siteAnnouncements,
-    status,
-    statusLabel: readiness.statusLabel,
-    primaryTarget: buildBasicSettingsAnchorTarget(
-      SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
-    ),
+    ...resolveAutomationState(enabled, runStatus),
+    primaryTarget: { menuItemId: MENU_ITEM_IDS.SITE_ANNOUNCEMENTS },
     summaryRows: [
       {
         id: SUMMARY_ROW_IDS.interval,
@@ -163,6 +182,12 @@ function buildSiteAnnouncementsAutomationItem(input: {
         id: SUMMARY_ROW_IDS.lastChecked,
         value: formatTimestampValue(latestStatus?.lastCheckedAt),
         valueType: SUMMARY_VALUE_TYPES.datetime,
+      },
+      { id: SUMMARY_ROW_IDS.success, value: String(successCount) },
+      { id: SUMMARY_ROW_IDS.failed, value: String(failedStatusCount) },
+      {
+        id: SUMMARY_ROW_IDS.unsupported,
+        value: String(unsupportedStatusCount),
       },
     ],
     actions: [
@@ -185,16 +210,29 @@ function buildSiteAnnouncementsAutomationItem(input: {
 /**
  * Creates the managed-site model sync automation row from local settings.
  */
-function buildManagedSiteModelSyncAutomationItem(input: {
-  preferences: UserPreferences | null | undefined
-}): OptionsOverviewAutomationItem {
+function buildManagedSiteModelSyncAutomationItem(
+  input: Pick<OptionsOverviewAutomationRunData, "modelSyncExecution"> & {
+    preferences: UserPreferences | null | undefined
+  },
+): OptionsOverviewAutomationItem {
   const config = input.preferences?.managedSiteModelSync
+  const execution = input.modelSyncExecution
+  const stats = execution?.statistics
 
   return buildPreferenceAutomationItem({
     id: OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS.managedSiteModelSync,
-    enabled: config?.enabled === true,
+    enabled: input.preferences ? config?.enabled === true : undefined,
+    runStatus: resolveModelSyncRunStatus(execution),
     primaryTarget: { menuItemId: MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC },
     summaryRows: [
+      {
+        id: SUMMARY_ROW_IDS.lastRun,
+        value: formatTimestampValue(stats?.endedAt),
+        valueType: SUMMARY_VALUE_TYPES.datetime,
+      },
+      { id: SUMMARY_ROW_IDS.success, value: String(stats?.successCount ?? 0) },
+      { id: SUMMARY_ROW_IDS.failed, value: String(stats?.failureCount ?? 0) },
+      { id: SUMMARY_ROW_IDS.skipped, value: String(stats?.skippedCount ?? 0) },
       {
         id: SUMMARY_ROW_IDS.interval,
         value: String(
@@ -222,19 +260,28 @@ function buildManagedSiteModelSyncAutomationItem(input: {
 /**
  * Creates the WebDAV auto-sync automation row from local backup settings.
  */
-function buildWebdavAutoSyncAutomationItem(input: {
-  preferences: UserPreferences | null | undefined
-}): OptionsOverviewAutomationItem {
+function buildWebdavAutoSyncAutomationItem(
+  input: Pick<OptionsOverviewAutomationRunData, "webdavStatus"> & {
+    preferences: UserPreferences | null | undefined
+  },
+): OptionsOverviewAutomationItem {
   const webdav = input.preferences?.webdav
   const selectedDomains = resolveWebdavSyncDataSelection(webdav?.syncData)
+  const snapshot = input.webdavStatus
 
   return buildPreferenceAutomationItem({
     id: OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS.webdavAutoSync,
-    enabled: webdav?.autoSync === true,
+    enabled: input.preferences ? webdav?.autoSync === true : undefined,
+    runStatus: resolveWebdavRunStatus(snapshot),
     primaryTarget: buildImportExportAnchorTarget(
       WEBDAV_AUTO_SYNC_TARGET_IDS.root,
     ),
     summaryRows: [
+      {
+        id: SUMMARY_ROW_IDS.lastRun,
+        value: formatTimestampValue(snapshot?.lastSyncTime || undefined),
+        valueType: SUMMARY_VALUE_TYPES.datetime,
+      },
       {
         id: SUMMARY_ROW_IDS.interval,
         value: String(
@@ -264,14 +311,15 @@ function buildWebdavAutoSyncAutomationItem(input: {
  */
 function buildPreferenceAutomationItem(input: {
   id: OptionsOverviewAutomationItem["id"]
-  enabled: boolean
+  enabled: boolean | undefined
+  runStatus: OptionsOverviewAutomationItem["statusLabel"]
   primaryTarget: OptionsOverviewNavigationTarget
   summaryRows: OptionsOverviewAutomationItem["summaryRows"]
   actions: OptionsOverviewAutomationAction[]
 }): OptionsOverviewAutomationItem {
   return {
     id: input.id,
-    ...resolveAutomationReadiness(input.enabled),
+    ...resolveAutomationState(input.enabled, input.runStatus),
     primaryTarget: input.primaryTarget,
     summaryRows: input.summaryRows,
     actions: input.actions,
@@ -300,13 +348,54 @@ function countEnabledValues(values: Record<string, boolean>) {
   return Object.values(values).filter(Boolean).length
 }
 
-/**
- * Normalizes preference-enabled automation state into the row status contract.
- */
-function resolveAutomationReadiness(
-  enabled: boolean,
-): Pick<OptionsOverviewAutomationItem, "status" | "statusLabel"> {
-  return enabled
-    ? { status: "success", statusLabel: AUTOMATION_STATUS_LABELS.enabled }
-    : { status: "info", statusLabel: AUTOMATION_STATUS_LABELS.disabled }
+/** Resolves announcement outcomes with failures taking precedence over support gaps. */
+function resolveAnnouncementRunStatus(input: {
+  dataAvailable: boolean | undefined
+  failedStatusCount: number
+  unsupportedStatusCount: number
+  successCount: number
+}): OptionsOverviewAutomationStatusLabel {
+  if (input.dataAvailable === false) return STATUS_LABELS.unknown
+  if (input.failedStatusCount > 0) {
+    return input.successCount > 0 ? STATUS_LABELS.partial : STATUS_LABELS.failed
+  }
+  if (input.unsupportedStatusCount > 0) {
+    return input.successCount > 0
+      ? STATUS_LABELS.limited
+      : STATUS_LABELS.unsupported
+  }
+  return input.successCount > 0 ? STATUS_LABELS.success : STATUS_LABELS.notRun
+}
+
+/** Distinguishes unavailable history, empty history, and a recorded no-op. */
+function resolveModelSyncRunStatus(
+  execution: OptionsOverviewAutomationRunData["modelSyncExecution"],
+): OptionsOverviewAutomationStatusLabel {
+  if (execution === undefined) return STATUS_LABELS.unknown
+  const stats = execution?.statistics
+  if (!stats) return STATUS_LABELS.notRun
+  if (stats.failureCount > 0) {
+    return stats.successCount > 0 ? STATUS_LABELS.partial : STATUS_LABELS.failed
+  }
+  return stats.successCount > 0 ? STATUS_LABELS.success : STATUS_LABELS.skipped
+}
+
+const webdavRunStatusLabels = {
+  error: STATUS_LABELS.failed,
+  success: STATUS_LABELS.success,
+  idle: STATUS_LABELS.notRun,
+} as const satisfies Record<
+  NonNullable<
+    OptionsOverviewAutomationRunData["webdavStatus"]
+  >["lastSyncStatus"],
+  OptionsOverviewAutomationStatusLabel
+>
+
+/** A running sync takes precedence over the previous persisted outcome. */
+function resolveWebdavRunStatus(
+  snapshot: OptionsOverviewAutomationRunData["webdavStatus"],
+): OptionsOverviewAutomationStatusLabel {
+  if (!snapshot) return STATUS_LABELS.unknown
+  if (snapshot.isSyncing) return STATUS_LABELS.running
+  return webdavRunStatusLabels[snapshot.lastSyncStatus] ?? STATUS_LABELS.notRun
 }

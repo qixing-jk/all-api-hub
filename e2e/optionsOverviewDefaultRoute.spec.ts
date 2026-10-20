@@ -16,6 +16,7 @@ import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { OPTIONS_OVERVIEW_TEST_IDS } from "~/features/OptionsOverview/testIds"
 import { UNIFIED_API_GUIDANCE_TEST_IDS } from "~/features/UnifiedApiGuidance/testIds"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
+import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import {
   AUTO_CHECKIN_RUN_RESULT,
   AUTO_CHECKIN_SKIP_REASON,
@@ -28,6 +29,7 @@ import {
   forceExtensionLanguage,
   installExtensionPageGuards,
   seedAutoCheckinStatus,
+  seedSiteAnnouncementsStore,
   seedStoredAccounts,
   seedUserPreferences,
   stubLlmMetadataIndex,
@@ -36,10 +38,117 @@ import {
 import {
   expectPermissionOnboardingHidden,
   getServiceWorker,
+  setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
 const MANAGED_SITE_BASE_URL = "https://managed-gateway.example.invalid"
+
+test("overview automation explains mixed announcement and sync results", async ({
+  context,
+  page,
+  extensionId,
+  extensionDir,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedUserPreferences(serviceWorker, {
+    preferencesVersion: DEFAULT_PREFERENCES.preferencesVersion,
+    autoCheckin: { globalEnabled: true, pretriggerDailyOnUiOpen: false },
+    managedSiteType: SITE_TYPES.NEW_API,
+    managedSiteModelSync: { enabled: true },
+    siteAnnouncementNotifications: { enabled: true },
+    webdav: { autoSync: true },
+  })
+  const time = Date.parse("2026-10-20T01:00:00Z")
+  await seedSiteAnnouncementsStore(
+    serviceWorker,
+    Object.fromEntries(
+      (["success", "error", "unsupported"] as const).map((status) => [
+        status,
+        {
+          siteKey: status,
+          siteName: status,
+          siteType: SITE_TYPES.NEW_API,
+          baseUrl: `https://${status}.example.invalid`,
+          accountId: status,
+          sourceScope: "site" as const,
+          status,
+          lastCheckedAt: time,
+          records: [],
+        },
+      ]),
+    ),
+  )
+  await setPlasmoStorageValue(
+    serviceWorker,
+    "managedSiteModelSync_lastExecution",
+    {
+      items: [],
+      statistics: {
+        total: 2,
+        successCount: 0,
+        failureCount: 2,
+        durationMs: 1000,
+        startedAt: time - 1000,
+        endedAt: time,
+      },
+    },
+  )
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.OVERVIEW}`,
+  )
+  await waitForExtensionRoot(page)
+  const automation = page.getByTestId(
+    OPTIONS_OVERVIEW_TEST_IDS.automationOverview,
+  )
+  const announcements = automation.getByRole("button", {
+    name: /^Site announcement polling/,
+  })
+  await expect(
+    announcements.getByText("Partially failed", { exact: true }),
+  ).toHaveClass(/bg-warning-soft/)
+  await expect(
+    automation
+      .getByRole("button", { name: /^Auto check-in/ })
+      .getByText("Awaiting first run"),
+  ).toHaveClass(/bg-secondary/)
+  await expect(
+    automation
+      .getByRole("button", { name: /^Self-hosted AI gateway model sync/ })
+      .getByText("Run failed"),
+  ).toHaveClass(/bg-destructive-soft/)
+  await expect(
+    automation
+      .getByRole("button", { name: /^WebDAV/ })
+      .getByText("Awaiting first run"),
+  ).toHaveClass(/bg-secondary/)
+  await announcements.click()
+  await expect(
+    automation.getByText("Automatic execution is on", { exact: true }),
+  ).toBeVisible()
+  for (const label of ["Succeeded", "Failed", "Unsupported"]) {
+    await expect(
+      automation.getByText(label, { exact: true }).locator(".."),
+    ).toHaveText(`${label}1`)
+  }
+  await captureVisualViews({
+    page,
+    ready: automation,
+    id: "automation",
+    extensionDir,
+    views: [
+      { id: "light", width: 1280, height: 960, theme: "light" },
+      { id: "dark", width: 900, height: 900, theme: "dark" },
+    ],
+  })
+  await automation
+    .getByRole("button", { name: "View announcements", exact: true })
+    .click()
+  await expect(page).toHaveURL(
+    new RegExp(`#${MENU_ITEM_IDS.SITE_ANNOUNCEMENTS}$`),
+  )
+})
 
 function createStubApiToken(overrides: Partial<NewApiToken> = {}): NewApiToken {
   const nowSeconds = Math.floor(Date.now() / 1000)

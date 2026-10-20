@@ -4,7 +4,10 @@ import { buildAutoCheckinPanel } from "~/features/OptionsOverview/automation/aut
 import { buildAutomationOverview } from "~/features/OptionsOverview/automation/automationOverview"
 import { buildConfigurationOverviewItems } from "~/features/OptionsOverview/configuration/configurationOverviewItems"
 import { buildStatusCards } from "~/features/OptionsOverview/configuration/statusCards"
-import type { OptionsOverviewViewModel } from "~/features/OptionsOverview/types"
+import type {
+  OptionsOverviewAutomationRunData,
+  OptionsOverviewViewModel,
+} from "~/features/OptionsOverview/types"
 import { buildUsageSnapshot } from "~/features/OptionsOverview/usage/usageSnapshot"
 import { buildUnifiedApiGuidanceModel } from "~/features/UnifiedApiGuidance/model"
 import { getGatewayGuidanceImportableAccounts } from "~/features/UnifiedApiGuidance/sourceAccounts"
@@ -26,7 +29,8 @@ import type {
 } from "~/types/siteAnnouncements"
 import type { UsageHistoryStore } from "~/types/usageHistory"
 
-interface BuildOptionsOverviewViewModelInput {
+interface BuildOptionsOverviewViewModelInput
+  extends OptionsOverviewAutomationRunData {
   accounts: SiteAccount[]
   displayData: DisplaySiteData[]
   accountStats: AccountStats
@@ -136,6 +140,10 @@ export function buildOptionsOverviewViewModel(
       managedSiteType: input.managedSiteType,
       siteAnnouncementRecords: input.siteAnnouncementRecords,
       siteAnnouncementStatuses: input.siteAnnouncementStatuses,
+      modelSyncExecution: input.modelSyncExecution,
+      webdavStatus: input.webdavStatus,
+      autoCheckinDataAvailable: input.autoCheckinDataAvailable,
+      announcementDataAvailable: input.announcementDataAvailable,
     }),
     usageSnapshot,
     configurationOverviewItems: buildConfigurationOverviewItems({

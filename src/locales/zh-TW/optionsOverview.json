@@ -125,6 +125,7 @@
     "summary": "自動簽到執行概況"
   },
   "automation": {
+    "automaticEnabled": "自動執行已開啟",
     "empty": {
       "autoCheckin": {
         "disabled": "想自動領取簽到獎勵時，先開啟自動簽到。之後這裡會顯示下次計畫和執行結果。"
@@ -167,11 +168,28 @@
         "strategy": "同步策略"
       }
     },
+    "metrics": {
+      "failed": "失敗",
+      "skipped": "略過",
+      "success": "成功",
+      "unsupported": "不支援"
+    },
     "neverChecked": "尚未檢查",
     "openItem": "開啟 {{name}}",
     "status": {
-      "enabled": "已啟用"
-    }
+      "disabled": "已停用",
+      "failed": "執行失敗",
+      "limited": "部分不支援",
+      "notRun": "等待首次執行",
+      "partial": "部分失敗",
+      "ready": "已就緒",
+      "running": "正在執行",
+      "skipped": "未執行",
+      "success": "執行成功",
+      "unknown": "狀態未知",
+      "unsupported": "暫不支援"
+    },
+    "statusUnavailable": "暫時無法讀取執行狀態，請開啟詳情查看或重新整理後重試。"
   },
   "configurationOverview": {
     "accountFoundation": {

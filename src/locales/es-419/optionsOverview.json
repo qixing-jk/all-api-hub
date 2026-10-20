@@ -143,6 +143,7 @@
     "summary": "Resumen de ejecución de check-in automático"
   },
   "automation": {
+    "automaticEnabled": "La ejecución automática está activada",
     "empty": {
       "autoCheckin": {
         "disabled": "Activa el check-in automático cuando quieras reclamar recompensas automáticamente. Las programaciones y resultados futuros aparecerán aquí."
@@ -185,11 +186,28 @@
         "strategy": "Estrategia de sincronización"
       }
     },
+    "metrics": {
+      "failed": "Fallidos",
+      "skipped": "Omitidos",
+      "success": "Correctos",
+      "unsupported": "No compatibles"
+    },
     "neverChecked": "Aún no comprobado",
     "openItem": "Abrir {{name}}",
     "status": {
-      "enabled": "Habilitado"
-    }
+      "disabled": "Desactivado",
+      "failed": "Falló la ejecución",
+      "limited": "Compatibilidad parcial",
+      "notRun": "Esperando primera ejecución",
+      "partial": "Falló parcialmente",
+      "ready": "Listo",
+      "running": "En ejecución",
+      "skipped": "Sin ejecutar",
+      "success": "Ejecución correcta",
+      "unknown": "Estado desconocido",
+      "unsupported": "No compatible"
+    },
+    "statusUnavailable": "El estado de ejecución no está disponible. Abre los detalles o actualiza para volver a intentarlo."
   },
   "configurationOverview": {
     "accountFoundation": {

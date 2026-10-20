@@ -21,7 +21,6 @@ import {
 } from "~/features/OptionsOverview/automation/automationPanelText"
 import { OverviewAutoCheckinPanel } from "~/features/OptionsOverview/automation/OverviewAutoCheckinPanel"
 import {
-  OPTIONS_OVERVIEW_AUTO_CHECKIN_PANEL_STATUSES as AUTO_CHECKIN_PANEL_STATUSES,
   OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS as AUTOMATION_STATUS_LABELS,
   OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS,
 } from "~/features/OptionsOverview/ids"
@@ -89,8 +88,13 @@ function AutomationItemRow({
   const contentId = useId()
   const Icon = itemIcons[item.id]
   const label = getAutomationItemLabel(item.id, t)
-  const disabled = isAutomationItemDisabled(item)
-  const summaryLine = disabled ? "" : getAutomationItemSummaryLine(item, t)
+  const disabled = item.statusLabel === AUTOMATION_STATUS_LABELS.disabled
+  const unknown = item.statusLabel === AUTOMATION_STATUS_LABELS.unknown
+  const summaryLine = disabled
+    ? ""
+    : unknown
+      ? t("optionsOverview:automation.statusUnavailable")
+      : getAutomationItemSummaryLine(item, t)
   const statusLabel = getAutomationStatusLabel(item, t)
   const accessibleLabel = [label, statusLabel, summaryLine]
     .filter(Boolean)
@@ -135,7 +139,12 @@ function AutomationItemRow({
                     {label}
                   </span>
                   <Badge
-                    variant={OVERVIEW_SEVERITY_BADGE_VARIANTS[item.status]}
+                    variant={
+                      item.status === "info" &&
+                      item.statusLabel !== AUTOMATION_STATUS_LABELS.running
+                        ? "secondary"
+                        : OVERVIEW_SEVERITY_BADGE_VARIANTS[item.status]
+                    }
                     size="sm"
                     className="shrink-0"
                   >
@@ -173,7 +182,12 @@ function AutomationItemRow({
 
         <CollapsibleContent id={contentId}>
           <div className="pb-density-4 ps-3 pe-3">
-            {item.autoCheckinPanel ? (
+            {item.enabled === true ? (
+              <p className="text-muted-foreground mb-density-2 text-xs">
+                {t("optionsOverview:automation.automaticEnabled")}
+              </p>
+            ) : null}
+            {item.autoCheckinPanel && !unknown ? (
               <OverviewAutoCheckinPanel
                 panel={item.autoCheckinPanel}
                 t={t}
@@ -196,17 +210,6 @@ function AutomationItemRow({
 }
 
 /**
- * Resolves whether an automation domain is turned off entirely.
- */
-function isAutomationItemDisabled(item: OptionsOverviewAutomationItem) {
-  if (item.autoCheckinPanel) {
-    return item.autoCheckinPanel.status === AUTO_CHECKIN_PANEL_STATUSES.disabled
-  }
-
-  return item.statusLabel === AUTOMATION_STATUS_LABELS.disabled
-}
-
-/**
  * Renders summary facts and explicit actions for an expanded automation domain.
  */
 function AutomationSummary({
@@ -225,6 +228,10 @@ function AutomationSummary({
       {disabled ? (
         <p className="text-muted-foreground text-sm leading-6">
           {getAutomationDisabledDescription(item.id, t)}
+        </p>
+      ) : item.statusLabel === AUTOMATION_STATUS_LABELS.unknown ? (
+        <p className="text-muted-foreground text-sm leading-6">
+          {t("optionsOverview:automation.statusUnavailable")}
         </p>
       ) : (
         <div className="gap-y-density-2 grid grid-cols-1 gap-x-2 sm:grid-cols-2">

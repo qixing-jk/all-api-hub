@@ -54,7 +54,16 @@ export const OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS = {
 } as const
 
 export const OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS = {
-  enabled: "enabled",
+  ready: "ready",
+  success: "success",
+  partial: "partial",
+  failed: "failed",
+  skipped: "skipped",
+  notRun: "not_run",
+  running: "running",
+  unknown: "unknown",
+  unsupported: "unsupported",
+  limited: "limited",
   disabled: "disabled",
 } as const
 
@@ -70,6 +79,10 @@ export const OPTIONS_OVERVIEW_AUTOMATION_SUMMARY_ROW_IDS = {
   allowedModels: "allowedModels",
   strategy: "strategy",
   domains: "domains",
+  success: "success",
+  failed: "failed",
+  unsupported: "unsupported",
+  skipped: "skipped",
 } as const
 
 export const OPTIONS_OVERVIEW_AUTOMATION_ACTION_IDS = {

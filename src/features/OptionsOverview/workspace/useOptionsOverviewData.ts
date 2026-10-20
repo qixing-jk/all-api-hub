@@ -12,14 +12,17 @@ import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/s
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { featureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
+import { supportsManagedSiteModelSync } from "~/services/managedSites/utils/managedSite"
+import { sendModelSyncMessage } from "~/services/models/modelSync/messaging"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import {
+  ModelSyncMessageTypes,
+  WebdavAutoSyncMessageTypes,
+} from "~/services/runtimeMessaging/messageTypes"
 import { siteAnnouncementStorage } from "~/services/siteAnnouncements/storage"
 import { siteTypeObservations } from "~/services/siteDetection/siteTypeObservations"
+import { sendWebdavAutoSyncMessage } from "~/services/webdav/autoSync/webdavAutoSyncMessaging"
 import type { AccountStats } from "~/types"
-import type {
-  SiteAnnouncementRecord,
-  SiteAnnouncementSiteState,
-} from "~/types/siteAnnouncements"
 import {
   USAGE_HISTORY_STORE_SCHEMA_VERSION,
   type UsageHistoryStore,
@@ -58,6 +61,21 @@ const OPTIONS_OVERVIEW_DATA_SOURCES = [
 /** Returns a fulfilled local-store value or its presentation fallback. */
 function settledValue<T>(result: PromiseSettledResult<T>, fallback: T): T {
   return result.status === "fulfilled" ? result.value : fallback
+}
+
+/** Keeps an unavailable background status from blocking the overview. */
+async function readStatusWithTimeout<T>(promise: Promise<T>) {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<undefined>((resolve) => {
+        timer = setTimeout(() => resolve(undefined), 3000)
+      }),
+    ])
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 interface OptionsOverviewDataState {
@@ -170,6 +188,25 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
         const managedSiteType = isManagedSiteType(configuredManagedSiteType)
           ? configuredManagedSiteType
           : undefined
+
+        // Read existing results only. A failed status read remains unknown in its row.
+        const [modelSyncResult, webdavResult] = await Promise.allSettled([
+          managedSiteType &&
+          supportsManagedSiteModelSync(managedSiteType) &&
+          preferences?.managedSiteModelSync?.enabled
+            ? readStatusWithTimeout(
+                sendModelSyncMessage(ModelSyncMessageTypes.GetLastExecution),
+              )
+            : Promise.resolve(undefined),
+          preferences?.webdav?.autoSync
+            ? readStatusWithTimeout(
+                sendWebdavAutoSyncMessage(WebdavAutoSyncMessageTypes.GetStatus),
+              )
+            : Promise.resolve(undefined),
+        ])
+        if (!isCurrent) return
+        const modelSyncResponse = settledValue(modelSyncResult, undefined)
+        const webdavResponse = settledValue(webdavResult, undefined)
         const displayData = accountPresentation.convertToDisplayData(accounts)
         // Best-effort advice: a failed read reports none and never counts as a
         // failed source, so it cannot hide a broken environment. The store drops
@@ -189,11 +226,19 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
             guidanceState,
             managedSiteType,
             autoCheckinStatus,
+            modelSyncExecution: modelSyncResponse?.success
+              ? modelSyncResponse.data
+              : undefined,
+            webdavStatus: webdavResponse?.success
+              ? webdavResponse.data
+              : undefined,
+            autoCheckinDataAvailable:
+              autoCheckinStatusResult.status === "fulfilled",
+            announcementDataAvailable:
+              siteAnnouncementStatusesResult.status === "fulfilled",
             siteTypeMismatches,
-            siteAnnouncementRecords:
-              siteAnnouncementRecords as SiteAnnouncementRecord[],
-            siteAnnouncementStatuses:
-              siteAnnouncementStatuses as SiteAnnouncementSiteState[],
+            siteAnnouncementRecords,
+            siteAnnouncementStatuses,
             unifiedApiGuidanceDataAvailable,
             accountsDataAvailable: accountsResult.status === "fulfilled",
             profilesDataAvailable:
