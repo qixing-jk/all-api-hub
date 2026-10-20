@@ -370,8 +370,11 @@
   "native": {
     "actions": {
       "delete": "Schlüssel löschen",
+      "disable": "API-Schlüssel deaktivieren",
       "edit": "Schlüssel bearbeiten",
-      "revoke": "Schlüssel widerrufen"
+      "enable": "API-Schlüssel aktivieren",
+      "revoke": "Schlüssel widerrufen",
+      "rotate": "API-Schlüssel rotieren"
     },
     "delete": {
       "confirm": "Schlüssel löschen",
@@ -392,8 +395,18 @@
         "cancel": "Abbrechen",
         "save": "Schlüssel speichern"
       },
+      "allowlistHelp": "Durch Kommas oder Zeilenumbrüche trennen. Leer bedeutet keine Einschränkung.",
       "allowWallet": "Guthaben zulassen",
       "allowWalletHelp": "Lässt diesen Schlüssel nach Ausschöpfen des Kontingents weiter über das Kontoguthaben laufen.",
+      "budget5h": "5-Stunden-Budget (USD)",
+      "budgetDay": "Tagesbudget (USD)",
+      "budgetMonth": "Monatsbudget (USD)",
+      "budgetNextReset": "Zurücksetzung {{time}} (UTC+8)",
+      "budgetResetHelp": "0 bedeutet unbegrenzt. Das 5-Stunden-Budget ist gleitend; Tages-, Wochen- und Monatsbudgets werden nach Pekinger Zeit zurückgesetzt. Wochen beginnen montags.",
+      "budgetRolling": "Rollierendes Fenster",
+      "budgetsAndLimits": "Budgets und Zugriffslimits",
+      "budgetUsage": "Verbraucht ${{used}} / ${{limit}} · übrig ${{remaining}} · reserviert ${{reserved}}",
+      "budgetWeek": "Wochenbudget (USD)",
       "channel": "Kanal",
       "dahl": {
         "allocate": "Tokens zuweisen",
@@ -454,8 +467,12 @@
         "unavailable": "Der Dienst ist vorübergehend nicht verfügbar. Versuchen Sie es in Kürze noch einmal.",
         "uncertain": "Der Dienst hat diese Änderung möglicherweise übernommen. Aktualisieren Sie die Schlüssel, um den aktuellen Status zu bestätigen, bevor Sie entscheiden, ob Sie es erneut versuchen."
       },
+      "followAccountQuotaHelp": "-1 übernimmt das Kontingent des Kontos.",
+      "followsAccount": "Wie Konto",
       "groupOnly": "Nur die ausgewählte Gruppe verwenden",
       "groupOnlyHelp": "Hält den Schlüssel bei der ausgewählten Gruppe, statt auf andere auszuweichen.",
+      "independentQuotaUsd": "Eigenes Kontingent (USD)",
+      "ipCidrAllowlist": "IP/CIDR-Freigabeliste",
       "issues": {
         "inconsistentValue": "Überprüfen Sie diesen Wert und versuchen Sie es erneut.",
         "invalidValue": "Geben Sie einen gültigen Wert ein.",
@@ -463,6 +480,11 @@
         "required": "Dieses Feld ist erforderlich.",
         "unsupportedOption": "Wählen Sie eine verfügbare Option."
       },
+      "keyConcurrency": "Gleichzeitige Anfragen",
+      "keyRateHelp": "0 übernimmt das Kontolimit.",
+      "keyRpm": "Schlüssel-RPM",
+      "keyUnlimitedQuota": "Unbegrenztes Schlüsselkontingent",
+      "keyUnlimitedQuotaHelp": "Kontoguthaben und Abonnementkontingent gelten weiterhin.",
       "krill": {
         "allowAnyIp": "Jede IP zulassen",
         "allowAnyIpHelp": "Deaktiviert die gespeicherte IP-Whitelist. Anfragen von jeder IP sind erlaubt.",
@@ -496,6 +518,7 @@
         "retryOn": "Ein",
         "validDuration": "Gültigkeit nach Aktivierung (Tage)"
       },
+      "modelAllowlist": "Modell-Freigabeliste",
       "opening": {
         "failed": "Schlüsseleditor konnte nicht geöffnet werden",
         "loading": "Schlüsseleditor öffnen...",
@@ -526,6 +549,11 @@
       }
     },
     "heading": "API-Schlüssel",
+    "lifecycle": {
+      "disableDescription": "Vorübergehend deaktivieren. Sie können den Schlüssel später wieder aktivieren.",
+      "enableDescription": "Diesen Schlüssel mit seinen bestehenden Einstellungen wieder aktivieren.",
+      "rotateDescription": "Der alte Schlüssel wird sofort ungültig. Kopieren Sie den neuen Schlüssel und aktualisieren Sie Ihre Clients. Andere Einstellungen bleiben erhalten."
+    },
     "missing": "Nicht verfügbar",
     "revoke": {
       "description": "„{{name}}“ widerrufen? Der Schlüssel wird dauerhaft deaktiviert. Der Eintrag bleibt bis zur Löschung erhalten.",
@@ -575,8 +603,8 @@
     "copy": "Vollständigen Schlüssel kopieren",
     "copyFailed": "Fehler beim Kopieren des vollständigen Schlüssels",
     "keyLabel": "Vollständiger Schlüssel",
-    "subtitle": "Der vollständige Wert für Schlüssel {{name}} wird erst nach dieser Erstellung angezeigt.",
-    "subtitleUnnamed": "Der vollständige Schlüssel wird erst nach dieser Erstellung angezeigt.",
+    "subtitle": "Der vollständige Wert für Schlüssel {{name}} wird erst nach diesem Vorgang angezeigt.",
+    "subtitleUnnamed": "Der vollständige Schlüssel wird erst nach diesem Vorgang angezeigt.",
     "title": "Speichern Sie jetzt den vollständigen Schlüssel",
     "warningDescription": "Nach dem Schließen dieses Dialogs kann die Erweiterung den vollständigen Schlüssel nicht mehr anzeigen.",
     "warningTitle": "Dieser Schlüssel kann nur einmal angezeigt werden"

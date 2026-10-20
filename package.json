@@ -97,6 +97,7 @@
     "e2e:cdp:cubence": "node scripts/test-cubence-e2e-live.mjs",
     "e2e:cdp:dahl": "node scripts/test-dahl-e2e-live.mjs",
     "e2e:cdp:foxcode": "node scripts/test-foxcode-e2e-live.mjs",
+    "e2e:cdp:relayfor": "node scripts/test-relayfor-e2e-live.mjs",
     "e2e:cdp:emrank": "node scripts/test-emrank-e2e-live.mjs",
     "e2e:cdp:xiaoen": "node scripts/test-xiaoen-e2e-live.mjs",
     "e2e:cdp:krill": "node scripts/test-krill-e2e-live.mjs",

@@ -214,6 +214,23 @@ export type AccountKeyDisplayFact =
       readonly role: "remaining" | "used" | "total"
       readonly amountUsd: number
       readonly unlimited?: boolean
+      readonly followsAccount?: boolean
+    }
+  | {
+      readonly fieldId: string
+      readonly kind: "budget"
+      readonly window: "5h" | "day" | "week" | "month"
+      readonly limitUsd: number
+      readonly usedUsd: number
+      readonly remainingUsd: number
+      readonly reservedUsd: number
+      readonly nextResetAt?: string
+    }
+  | {
+      readonly fieldId: string
+      readonly kind: "rate-limit"
+      readonly rpm: number
+      readonly concurrency: number
     }
   | {
       readonly fieldId: string
@@ -307,7 +324,11 @@ export type AccountKeyResourceFacts = {
   readonly actions: Readonly<{
     canUpdate: boolean
     canDelete: boolean
+    /** Permanently invalidates the credential while retaining its record. */
     canRevoke?: boolean
+    canRotate?: boolean
+    canEnable?: boolean
+    canDisable?: boolean
   }>
 }
 
@@ -345,6 +366,7 @@ export class AccountKeyResourceError extends Error {
 }
 
 export interface AccountKeyResourceEditor {
+  readonly action?: AccountKeyResourceEditAction
   readonly fields: readonly ResourceFieldDescriptor[]
   readonly initialValues: EditableResourceProjection
   validate(values: EditableResourceProjection): ResourceValidationResult
@@ -362,6 +384,9 @@ export interface AccountKeyResourceEditor {
 }
 
 export const ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS = {
+  Rotate: "rotate",
+  Enable: "enable",
+  Disable: "disable",
   Rename: "rename",
   Allocate: "allocate",
   Return: "return",

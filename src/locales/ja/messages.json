@@ -108,6 +108,8 @@
       "failed": "操作に失敗しました: {{error}}",
       "saveFailed": "保存に失敗しました: {{error}}"
     },
+    "relayForRedemptionUnconfirmed": "交換結果を確認できません。再実行前に公式コンソールで確認してください。",
+    "relayForVerificationRequired": "この操作には確認コードが必要です。公式コンソールで完了し、ここで更新してください。",
     "unknown": "不明なエラー",
     "validation": {
       "bookmarkNameRequired": "ブックマーク名は空にできません",

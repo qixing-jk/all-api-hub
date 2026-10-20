@@ -12,10 +12,26 @@
   "actions": {
     "autoRedeem": "自動引き換え"
   },
+  "benefits": {
+    "burstCredits": "バーストクレジット",
+    "groupQuota": "グループ枠",
+    "groupTimedQuota": "期限付きグループ枠",
+    "quota": "永久枠",
+    "subscription": "プラン",
+    "subscriptionAdd": "プラン枠の追加",
+    "subscriptionExtension": "プラン延長",
+    "subscriptionReset": "プラン枠のリセット",
+    "subscriptionTrial": "試用プラン",
+    "timedBurstCredits": "期限付きバーストクレジット",
+    "timedQuota": "期限付き枠"
+  },
   "messages": {
     "batchResultSummary": "合計 {{total}} 件。成功 {{success}} 件。失敗 {{failed}} 件。",
     "batchResultTitle": "引き換え結果",
+    "benefitsRedeemed": "交換完了：{{details}}",
     "cancelled": "キャンセルしました",
+    "extensionDays": "{{days}} 日延長",
+    "fallbackBenefit": "代替特典を使用",
     "noAccountForUrl": "このサイトに一致するアカウントが見つかりません。All API Hub にこのサイトをアカウントとして追加してから、もう一度お試しください。",
     "promptConfirm": "このページで引き換えコード候補 {{code}} を検出しました。このサイトで自動引き換えを試しますか？",
     "promptConfirmBatch_other": "このページで {{count}} 件の引き換えコード候補を検出しました。このサイトで自動引き換えするコードを選択してください。",

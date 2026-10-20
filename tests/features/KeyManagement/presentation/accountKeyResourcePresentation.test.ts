@@ -15,6 +15,73 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const t = ((key: string) => key) as TFunction
 
+it("distinguishes account-following allowance, explicit rate limits and budget reset windows", () => {
+  const facts: NativeKeyManagementRow["facts"] = {
+    ref: {
+      accountId: "a",
+      siteType: SITE_TYPES.RELAYFOR,
+      scopeKey: "default",
+      resourceId: "1",
+    },
+    displayName: "Key",
+    maskedLabel: "masked",
+    status: "enabled",
+    fields: [],
+    actions: { canUpdate: true, canDelete: true },
+    displayFacts: [
+      {
+        fieldId: "quota",
+        kind: "money",
+        role: "remaining",
+        amountUsd: 0,
+        followsAccount: true,
+      },
+      { fieldId: "inherited", kind: "rate-limit", rpm: 0, concurrency: 0 },
+      { fieldId: "explicit", kind: "rate-limit", rpm: 20, concurrency: 3 },
+      ...(["5h", "day", "week", "month"] as const).map((window) => ({
+        fieldId: window,
+        kind: "budget" as const,
+        window,
+        limitUsd: 2,
+        usedUsd: 1,
+        remainingUsd: 0.8,
+        reservedUsd: 0.2,
+        nextResetAt: window === "day" ? "2027-01-01T16:00:00Z" : undefined,
+      })),
+    ],
+  }
+  const details = getAccountKeyResourceCardAdapter(
+    SITE_TYPES.RELAYFOR,
+  ).buildDetailFacts(facts, t)
+  expect(details[0]?.value).toBe("keyManagement:native.editor.followsAccount")
+  expect(details[1]?.value).toBe(
+    "RPM keyManagement:native.editor.followsAccount · keyManagement:native.editor.keyConcurrency: keyManagement:native.editor.followsAccount",
+  )
+  expect(details[2]?.value).toBe(
+    "RPM 20 · keyManagement:native.editor.keyConcurrency: 3",
+  )
+  expect(details.slice(3).map((f) => f.label)).toEqual([
+    "keyManagement:native.editor.budget5h",
+    "keyManagement:native.editor.budgetDay",
+    "keyManagement:native.editor.budgetWeek",
+    "keyManagement:native.editor.budgetMonth",
+  ])
+  expect(details[3]?.value).toContain(
+    "keyManagement:native.editor.budgetRolling",
+  )
+  expect(details[4]?.value).toContain(
+    "keyManagement:native.editor.budgetNextReset",
+  )
+  const timeLabel = ((key: string, options?: { time?: string }) =>
+    key === "keyManagement:native.editor.budgetNextReset"
+      ? options?.time
+      : key) as TFunction
+  const localized = getAccountKeyResourceCardAdapter(
+    SITE_TYPES.RELAYFOR,
+  ).buildDetailFacts(facts, timeLabel)
+  expect(localized[4]?.value).toMatch(/GMT\+8|UTC\+8|CST/)
+})
+
 it.each([true, false])(
   "renders billing channels independently of account groups (default=%s)",
   (usesDefault) => {

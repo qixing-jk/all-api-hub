@@ -1,12 +1,15 @@
-import { Ban, Pencil, Trash2 } from "lucide-react"
-import { useMemo } from "react"
+import { Ban, CheckCircle, Pencil, RefreshCw, Trash2 } from "lucide-react"
+import { useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { IconButton } from "~/components/ui"
 import type { DeeplinkExportTarget } from "~/features/CredentialExport/DeeplinkExportDialog"
 import { LinkedCredentialProfileActions } from "~/features/KeyManagement/associations/LinkedCredentialProfileActions"
 import { RuntimeKeyHeader } from "~/features/KeyManagement/components/RuntimeKeyActions/RuntimeKeyHeader"
-import { KeyResourceCard } from "~/features/KeyManagement/inventory/KeyResourceCard"
+import {
+  KeyResourceActionGroup,
+  KeyResourceCard,
+} from "~/features/KeyManagement/inventory/KeyResourceCard"
 import type { KeyResourceCredentialAssociation } from "~/features/KeyManagement/inventory/KeyResourceCard"
 import type { AccountKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/accountKeyResourceCardAdapter"
 import type { KeyResourceDetailState } from "~/features/KeyManagement/presentation/keyResourceCard"
@@ -18,7 +21,10 @@ import type {
 } from "~/features/KeyManagement/types"
 import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/keys/accountRuntimeKeys"
 import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keys/keyProductCapabilities"
-import { ACCOUNT_KEY_DETAIL_AVAILABILITIES } from "~/services/apiAdapters/contracts/accountKeyResource"
+import {
+  ACCOUNT_KEY_DETAIL_AVAILABILITIES,
+  ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import type {
   AccountKeyResourceFacts,
   ResourceFailure,
@@ -83,6 +89,29 @@ export function AccountKeyResourceListItem({
   ) => void | Promise<void>
   guidedManagedSiteImportRequest?: string
 }) {
+  const actionPendingRef = useRef(false)
+  const [pendingAction, setPendingAction] = useState<
+    | typeof editActions.Rotate
+    | typeof editActions.Enable
+    | typeof editActions.Disable
+    | null
+  >(null)
+  const runAction = async (
+    action:
+      | typeof editActions.Rotate
+      | typeof editActions.Enable
+      | typeof editActions.Disable,
+  ) => {
+    if (actionPendingRef.current) return
+    actionPendingRef.current = true
+    setPendingAction(action)
+    try {
+      await onEdit(row.facts.ref, action)
+    } finally {
+      actionPendingRef.current = false
+      setPendingAction(null)
+    }
+  }
   const { t } = useTranslation(["keyManagement", "common"])
   const runtimeKey = useMemo(
     () => buildAccountKeyResourceRuntimeKeyFromFacts(account, row.facts),
@@ -141,9 +170,54 @@ export function AccountKeyResourceListItem({
             status: "ready",
             facts: additionalFacts,
           }
+  const lifecycleActions = [
+    {
+      available: row.facts.actions.canRotate,
+      action: editActions.Rotate,
+      label: t("native.actions.rotate"),
+      Icon: RefreshCw,
+    },
+    {
+      available: row.facts.actions.canEnable,
+      action: editActions.Enable,
+      label: t("native.actions.enable"),
+      Icon: CheckCircle,
+    },
+    {
+      available: row.facts.actions.canDisable,
+      action: editActions.Disable,
+      label: t("native.actions.disable"),
+      Icon: Ban,
+    },
+  ].filter(({ available }) => available)
+  const renderLifecycleAction = ({
+    action,
+    label,
+    Icon,
+  }: (typeof lifecycleActions)[number]) => (
+    <IconButton
+      key={action}
+      type="button"
+      size="sm"
+      variant={
+        action === editActions.Rotate
+          ? "destructiveGhost"
+          : action === editActions.Disable
+            ? "warningGhost"
+            : "ghost"
+      }
+      aria-label={label}
+      disabled={pendingAction !== null}
+      loading={pendingAction === action}
+      onClick={() => void runAction(action)}
+    >
+      <Icon aria-hidden="true" className="h-4 w-4" />
+    </IconButton>
+  )
   const managementActions =
     presentation.actions.edit ||
     presentation.actions.delete ||
+    lifecycleActions.length > 0 ||
     (row.facts.actions.canRevoke && onRevoke) ? (
       <>
         {presentation.actions.edit ? (
@@ -152,6 +226,7 @@ export function AccountKeyResourceListItem({
             size="sm"
             variant="ghost"
             aria-label={t("native.actions.edit")}
+            disabled={pendingAction !== null}
             onClick={() => onEdit(row.facts.ref)}
           >
             <Pencil
@@ -160,6 +235,9 @@ export function AccountKeyResourceListItem({
             />
           </IconButton>
         ) : null}
+        {lifecycleActions
+          .filter(({ action }) => action !== editActions.Rotate)
+          .map(renderLifecycleAction)}
         {row.facts.actions.canRevoke && onRevoke ? (
           <IconButton
             type="button"
@@ -171,6 +249,9 @@ export function AccountKeyResourceListItem({
             <Ban aria-hidden="true" className="h-4 w-4" />
           </IconButton>
         ) : null}
+        {lifecycleActions
+          .filter(({ action }) => action === editActions.Rotate)
+          .map(renderLifecycleAction)}
         {presentation.actions.delete ? (
           <IconButton
             type="button"
@@ -184,14 +265,20 @@ export function AccountKeyResourceListItem({
         ) : null}
       </>
     ) : undefined
+  const showDetails = !completeInventory || presentation.detailFacts.length > 0
   const actions = associatedProfileWithSecret ? (
     <LinkedCredentialProfileActions
       profile={associatedProfileWithSecret}
       managementActions={managementActions}
     />
-  ) : (
-    managementActions
-  )
+  ) : managementActions ? (
+    <KeyResourceActionGroup
+      label={t("actionToolbar.management")}
+      separated={showDetails || Boolean(association)}
+    >
+      {managementActions}
+    </KeyResourceActionGroup>
+  ) : undefined
 
   return (
     <KeyResourceCard
@@ -226,7 +313,7 @@ export function AccountKeyResourceListItem({
           : undefined
       }
       details={detailState}
-      showDetails={!completeInventory || presentation.detailFacts.length > 0}
+      showDetails={showDetails}
       isDetailsExpanded={expanded}
       onDetailsExpandedChange={onExpandedChange}
       selectionDisabledReason={selectionDisabledReason}

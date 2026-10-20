@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next"
-import { useCallback } from "react"
+import { useCallback, useRef, useState } from "react"
 
 import {
   ACCOUNT_KEY_RESOURCE_CONTROLLER_MODES as controllerModes,
@@ -35,6 +35,7 @@ import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   ACCOUNT_KEY_RESOURCE_LOCAL_METADATA,
   AccountKeyResourceError,
+  ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions,
   type AccountKeyResourceEditor,
   type AccountKeyResourceRef,
   type EditableResourceProjection,
@@ -42,6 +43,7 @@ import {
 import type { AccountKeyResourceEditAction } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { createLogger } from "~/utils/core/logger"
 
+import { feedbackDescription } from "../accountKeyResourceEditorFeedback"
 import { useAccountKeyEditorSubmission } from "./useAccountKeyEditorSubmission"
 
 type WorkflowInputs = {
@@ -117,6 +119,114 @@ export function useAccountKeyResourceEditorWorkflow({
     transitionEditorOpening,
   } = editorState
 
+  const immediateActionRef = useRef(false)
+  const [immediateActionPending, setImmediateActionPending] = useState(false)
+
+  const submitEditor = useAccountKeyEditorSubmission({
+    editorState,
+    requests,
+    mutationAnalyticsMode,
+    requireFreshRead,
+    recoverMutationFailure,
+    onFailure: (failure) => {
+      if (immediateActionRef.current)
+        toast.error(feedbackDescription(failure, t))
+    },
+    resolveContext: () => {
+      const boundary = readNativeOwner().boundary
+      const state = readEditor()
+      if (
+        !boundary ||
+        mode === controllerModes.Idle ||
+        (state?.mode === editorModes.Create &&
+          mode !== controllerModes.Single) ||
+        createdSecretRef.current ||
+        requests.isInventoryLoading() ||
+        isFreshReadRequiredForBoundary(boundary)
+      )
+        return null
+      return {
+        boundary,
+        resolveDestination: (nativeEditor, values) =>
+          state?.mode === editorModes.Create
+            ? resolveCreateDestinationBoundary(
+                nativeEditor,
+                values,
+                boundary,
+                scopes,
+              )
+            : boundary,
+      }
+    },
+    onSubmitted: async (result, intendedBoundary, submitMode) => {
+      const returnedFacts = result.facts
+      const returnedScope = scopes.find(
+        (scope) => scope.scopeKey === returnedFacts?.ref.scopeKey,
+      )
+      const returnedBoundary =
+        returnedScope &&
+        returnedFacts &&
+        returnedFacts.ref.accountId === intendedBoundary.accountId &&
+        returnedFacts.ref.siteType === intendedBoundary.siteType
+          ? { ...returnedFacts.ref, routeKey: returnedScope.routeKey }
+          : intendedBoundary
+      if (submitMode === editorModes.Edit && returnedFacts)
+        acceptEditedResource(returnedFacts)
+      if (result.createdSecret) transitionCreatedSecret(result.createdSecret)
+      else if (submitMode === editorModes.Edit) {
+        toast.success(
+          returnedFacts?.displayName
+            ? t("keyManagement:messages.keyUpdated", {
+                name: returnedFacts.displayName,
+              })
+            : t("keyManagement:messages.keyUpdatedSimple"),
+        )
+      }
+      if (
+        result.refreshPolicy === ACCOUNT_KEY_RESOURCE_LOCAL_METADATA ||
+        (submitMode === editorModes.Edit &&
+          returnedFacts &&
+          !result.createdSecret)
+      )
+        return
+      const account = accountsRef.current.find(
+        (candidate) => candidate.id === intendedBoundary.accountId,
+      )
+      if (
+        submitMode === editorModes.Create &&
+        account &&
+        onCreatedRef.current
+      ) {
+        try {
+          await onCreatedRef.current(account, {
+            ...result,
+            ref: result.facts?.ref ?? null,
+          })
+        } catch (error) {
+          createLogger("AccountKeyResourceController").error(
+            "Created key handoff failed",
+            error,
+          )
+        }
+      }
+      const nativeBoundary = readNativeOwner().boundary
+      if (
+        submitMode === editorModes.Create &&
+        returnedFacts &&
+        nativeBoundary &&
+        boundariesMatch(nativeBoundary, returnedBoundary)
+      ) {
+        acceptCreatedResource(returnedFacts)
+        return
+      }
+      const accepted = await refreshAfterMutation(
+        returnedBoundary,
+        result.createdSecret ? nextTransitionId() : undefined,
+      )
+      if (!accepted) requireFreshRead(returnedBoundary)
+    },
+  })
+
   const openEditor = useCallback(
     async (
       editorMode: EditorMode,
@@ -129,6 +239,7 @@ export function useAccountKeyResourceEditorWorkflow({
           ? boundaryFromResourceRef(ref)
           : readNativeOwner().boundary
       if (
+        immediateActionRef.current ||
         mode === controllerModes.Idle ||
         (editorMode === editorModes.Create &&
           mode !== controllerModes.Single) ||
@@ -158,6 +269,12 @@ export function useAccountKeyResourceEditorWorkflow({
         retryAttemptId,
       )
       if (attemptId === null) return
+      const immediate =
+        intent === editActions.Enable || intent === editActions.Disable
+      if (immediate) {
+        immediateActionRef.current = true
+        setImmediateActionPending(true)
+      }
       const controller = new AbortController()
       requests.assign(requestSlots.Action, controller)
       const current = requests.version()
@@ -223,7 +340,24 @@ export function useAccountKeyResourceEditorWorkflow({
           !boundariesMatch(readNativeOwner().boundary ?? boundary, boundary)
         )
           return
+        if (
+          immediate &&
+          (nativeEditor.action !== intent || nativeEditor.fields.length !== 0)
+        ) {
+          throw new AccountKeyResourceError({
+            code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable,
+          })
+        }
         acceptOpening(attemptId, nativeEditor, boundary, editorMode)
+        if (immediate) {
+          const state = readEditor()
+          if (!state) return
+          await submitEditor(state.editorId, nativeEditor.initialValues)
+          const failed = readEditor()
+          if (failed?.editorId === state.editorId) {
+            close(state.editorId)
+          }
+        }
       } catch (error) {
         const failure = toFailure(error)
         if (
@@ -232,15 +366,31 @@ export function useAccountKeyResourceEditorWorkflow({
           !isOpeningCurrent(attemptId)
         )
           return
+        if (immediate) {
+          cancelOpening(attemptId, () => requests.cancel(requestSlots.Action))
+          toast.error(feedbackDescription(failure, t))
+          return
+        }
         transitionEditorOpening({
           attemptId,
           status: "failure",
           mode: editorMode,
+          ...(intent ? { action: intent } : {}),
           failure,
         })
+      } finally {
+        if (immediate) {
+          immediateActionRef.current = false
+          setImmediateActionPending(false)
+        }
       }
     },
     [
+      submitEditor,
+      readEditor,
+      close,
+      cancelOpening,
+      t,
       beginOpening,
       isOpeningCurrent,
       acceptOpening,
@@ -299,105 +449,8 @@ export function useAccountKeyResourceEditorWorkflow({
     [transitionEditor],
   )
 
-  const submitEditor = useAccountKeyEditorSubmission({
-    editorState,
-    requests,
-    mutationAnalyticsMode,
-    requireFreshRead,
-    recoverMutationFailure,
-    resolveContext: () => {
-      const boundary = readNativeOwner().boundary
-      const state = readEditor()
-      if (
-        !boundary ||
-        mode === controllerModes.Idle ||
-        (state?.mode === editorModes.Create &&
-          mode !== controllerModes.Single) ||
-        createdSecretRef.current ||
-        requests.isInventoryLoading() ||
-        isFreshReadRequiredForBoundary(boundary)
-      )
-        return null
-      return {
-        boundary,
-        resolveDestination: (nativeEditor, values) =>
-          state?.mode === editorModes.Create
-            ? resolveCreateDestinationBoundary(
-                nativeEditor,
-                values,
-                boundary,
-                scopes,
-              )
-            : boundary,
-      }
-    },
-    onSubmitted: async (result, intendedBoundary, submitMode) => {
-      const returnedFacts = result.facts
-      const returnedScope = scopes.find(
-        (scope) => scope.scopeKey === returnedFacts?.ref.scopeKey,
-      )
-      const returnedBoundary =
-        returnedScope &&
-        returnedFacts &&
-        returnedFacts.ref.accountId === intendedBoundary.accountId &&
-        returnedFacts.ref.siteType === intendedBoundary.siteType
-          ? { ...returnedFacts.ref, routeKey: returnedScope.routeKey }
-          : intendedBoundary
-      if (submitMode === editorModes.Edit && returnedFacts)
-        acceptEditedResource(returnedFacts)
-      if (result.createdSecret) transitionCreatedSecret(result.createdSecret)
-      else if (submitMode === editorModes.Edit) {
-        toast.success(
-          returnedFacts?.displayName
-            ? t("keyManagement:messages.keyUpdated", {
-                name: returnedFacts.displayName,
-              })
-            : t("keyManagement:messages.keyUpdatedSimple"),
-        )
-      }
-      if (
-        result.refreshPolicy === ACCOUNT_KEY_RESOURCE_LOCAL_METADATA ||
-        (submitMode === editorModes.Edit && returnedFacts)
-      )
-        return
-      const account = accountsRef.current.find(
-        (candidate) => candidate.id === intendedBoundary.accountId,
-      )
-      if (
-        submitMode === editorModes.Create &&
-        account &&
-        onCreatedRef.current
-      ) {
-        try {
-          await onCreatedRef.current(account, {
-            ...result,
-            ref: result.facts?.ref ?? null,
-          })
-        } catch (error) {
-          createLogger("AccountKeyResourceController").error(
-            "Created key handoff failed",
-            error,
-          )
-        }
-      }
-      const nativeBoundary = readNativeOwner().boundary
-      if (
-        submitMode === editorModes.Create &&
-        returnedFacts &&
-        nativeBoundary &&
-        boundariesMatch(nativeBoundary, returnedBoundary)
-      ) {
-        acceptCreatedResource(returnedFacts)
-        return
-      }
-      const accepted = await refreshAfterMutation(
-        returnedBoundary,
-        result.createdSecret ? nextTransitionId() : undefined,
-      )
-      if (!accepted) requireFreshRead(returnedBoundary)
-    },
-  })
   return {
+    immediateActionPending,
     openEditor,
     retryEditorOpening,
     cancelEditorOpening,

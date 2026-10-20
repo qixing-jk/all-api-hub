@@ -141,6 +141,9 @@
     "units": "計費單位分布"
   },
   "displayFacts": {
+    "accessReason": "存取條件",
+    "auditCharge": "風控拒絕審計費用",
+    "auditConsent": "需要提示詞審計授權",
     "benchmarkTable": {
       "arena": "競技場",
       "category": "類別",
@@ -154,6 +157,8 @@
     },
     "callExamples": "呼叫範例",
     "catalogOwner": "目錄歸屬",
+    "compactionCharge": "遠端壓縮費用",
+    "consoleSettings": "前往官網設定",
     "contextLimit": "上下文上限",
     "defaultDimensions": "預設維度",
     "inputModalities": "輸入模態",
@@ -264,14 +269,19 @@
       "request": "次請求",
       "webSearch": "次網路搜尋"
     },
+    "promptAudit": "已啟用提示詞審計",
     "providerAvailable": "站點可用",
     "releaseDate": "發布日期",
     "sections": {
       "specifications": "規格"
     },
+    "subscriptionMultiplier": "套餐倍率",
+    "subscriptionPlan": "適用套餐",
     "supportedDimensions": "支援維度",
     "supportsImages": "圖片支援",
     "tokenCount_other": "{{formattedCount}} Token",
+    "trainingChannels": "含資料訓練管道",
+    "trainingConsent": "需要資料訓練授權",
     "viewOnSite": "前往官網查看"
   },
   "displayOptions": "顯示內容",
@@ -450,6 +460,15 @@
     "badge": "站點完整目錄",
     "description": "未能確認此帳號的實際可用模型範圍，目前顯示站點完整模型目錄。部分模型可能無法透過此帳號呼叫，請以站點帳號權限和實際驗證結果為準。",
     "title": "已回退到站點完整模型目錄"
+  },
+  "providerGroup": {
+    "action": "切換官網路由分組",
+    "apply": "儲存至官網",
+    "description": "儲存後將修改官網中此模型的路由偏好，可能影響後續請求和價格。",
+    "label": "官網路由分組",
+    "locked": "目前工作階段鎖定了路由偏好，請先前往官網管理。",
+    "refreshRequired": "{{error}}。修改可能已生效，請重新整理模型清單確認後再操作。",
+    "saving": "正在儲存…"
   },
   "providerTabs": {
     "scrollLeft": "向左滾動廠商標籤",

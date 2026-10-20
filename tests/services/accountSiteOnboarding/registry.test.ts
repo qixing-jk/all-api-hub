@@ -9,6 +9,7 @@ import {
 } from "~/constants/siteType"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import {
+  getAccountBrowserIdentityCapability,
   getAccountSiteCompatUserIdHeaderRules,
   getAccountSiteDomainRules,
   getAccountSiteTitleRules,
@@ -168,6 +169,7 @@ describe("account site onboarding registry", () => {
       "voapi-v2",
       "kimi-open-platform",
       "right-code",
+      "relayfor",
       "grsai",
       "v-api",
       "apiyi",
@@ -182,5 +184,15 @@ describe("account site onboarding registry", () => {
       usagePath: "/console/log",
       redeemPath: "/console/topup",
     })
+  })
+
+  it("resolves RelayFor browser identity capability", () => {
+    expect(
+      getAccountBrowserIdentityCapability({
+        siteType: SITE_TYPES.RELAYFOR,
+        origin: "https://relayfor.xyz",
+        candidateUserIds: [],
+      }),
+    ).toBeDefined()
   })
 })

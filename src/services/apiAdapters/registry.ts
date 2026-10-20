@@ -40,6 +40,7 @@ import { sub2ApiManagedSiteCapabilities } from "./managedSites/sub2api"
 import { veloeraManagedSiteCapabilities } from "./managedSites/veloera"
 import { createNewApiCapabilities } from "./newApi"
 import { openRouterCapabilities } from "./openrouter"
+import { relayForCapabilities } from "./relayfor"
 import { rightCodeCapabilities } from "./rightcode"
 import { sharedChatCapabilities } from "./sharedchat"
 import { sub2ApiCapabilities } from "./sub2api"
@@ -97,6 +98,7 @@ const accountCapabilityFactories = {
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Krill]: () => krillCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Cubence]: () => cubenceCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.RightCode]: () => rightCodeCapabilities,
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.RelayFor]: () => relayForCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.OpenRouter]: () => openRouterCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.KimiOpenPlatform]: (siteType) =>
     createKimiOpenPlatformCapabilities(siteType as AccountSiteType),

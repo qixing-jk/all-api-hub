@@ -108,6 +108,8 @@
       "failed": "Thao tác thất bại: {{error}}",
       "saveFailed": "Lưu thất bại: {{error}}"
     },
+    "relayForRedemptionUnconfirmed": "Chưa xác nhận kết quả đổi mã. Hãy kiểm tra bảng điều khiển chính thức trước khi thử lại.",
+    "relayForVerificationRequired": "Thao tác này cần mã xác minh. Hoàn tất trên bảng điều khiển chính thức rồi làm mới tại đây.",
     "unknown": "Lỗi không xác định",
     "validation": {
       "bookmarkNameRequired": "Tên dấu trang không được để trống",

@@ -40,6 +40,7 @@ export type EditorState = {
   editorId: number
   siteType: AccountKeyResourceRef["siteType"]
   mode: EditorMode
+  action?: AccountKeyResourceEditor["action"]
   fields: AccountKeyResourceEditor["fields"]
   initialValues: EditableResourceProjection
   values: EditableResourceProjection
@@ -54,7 +55,7 @@ export type EditorState = {
 export type EditorOpeningState = NativeResourceEditorOpeningState<
   EditorMode,
   ResourceFailure
->
+> & { readonly action?: AccountKeyResourceEditAction }
 
 export type EditorOpenRequest = {
   mode: EditorMode

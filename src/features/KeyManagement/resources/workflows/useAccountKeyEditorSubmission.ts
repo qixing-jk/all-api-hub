@@ -23,6 +23,7 @@ import {
   type AccountKeyEditorSubmitResult,
   type AccountKeyResourceEditor,
   type EditableResourceProjection,
+  type ResourceFailure,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -47,6 +48,7 @@ export function useAccountKeyEditorSubmission({
   requireFreshRead,
   recoverMutationFailure,
   onSubmitted,
+  onFailure,
   mutationAnalyticsMode,
 }: {
   editorState: Pick<
@@ -62,6 +64,7 @@ export function useAccountKeyEditorSubmission({
     boundary: ActiveResourceBoundary,
     mode: "create" | "edit",
   ) => Promise<void>
+  onFailure?: (failure: ResourceFailure) => void
   mutationAnalyticsMode: MutationAnalyticsMode
 }) {
   const { captureSubmission, transitionEditor, completeSubmission } =
@@ -79,8 +82,16 @@ export function useAccountKeyEditorSubmission({
         !submission.boundary ||
         !context ||
         !boundariesMatch(context.boundary, submission.boundary)
-      )
+      ) {
+        if (
+          nativeEditor &&
+          state?.editorId === editorId &&
+          submission.boundary &&
+          !context
+        )
+          onFailure?.({ code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable })
         return
+      }
       const feedback = (error: Parameters<typeof toFailure>[0]) => {
         const failure = toFailure(error)
         transitionEditor((previous) =>
@@ -146,7 +157,10 @@ export function useAccountKeyEditorSubmission({
           const failure = toFailure(error)
           const current =
             version === requests.version() && submission.isCurrent()
-          if (current) feedback(error)
+          if (current) {
+            feedback(error)
+            onFailure?.(failure)
+          }
           await recoverMutationFailure(failure, boundary, current)
           completeKeyMutationAnalytics(
             tracker,
@@ -171,6 +185,7 @@ export function useAccountKeyEditorSubmission({
       requireFreshRead,
       recoverMutationFailure,
       onSubmitted,
+      onFailure,
       mutationAnalyticsMode,
     ],
   )

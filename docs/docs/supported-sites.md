@@ -47,6 +47,7 @@
 | WONG公益站    | 暂无稳定公开站点介绍。                                                                                                                                                                                                                                                                                                                                                                                    | 暂无稳定公开官方链接                                                                                                                                             |
 | Krill AI | 独立商业 AI 模型中转平台，提供模型接口与账号控制台。 | — |
 | EMRank | 嵌入与重排序模型的独立网关服务，提供模型 API、账号控制台与签到。 | [官网](https://emrank.tech/) / [文档](https://docs.emrank.tech) |
+| RelayFor      | 独立 AI 公益服务平台，提供模型接口与账号控制台。 | [官网](https://relayfor.xyz/) |
 
 ## ❤️ 推荐赞助站点
 

@@ -23,7 +23,9 @@ import {
   useNativeResourceEditorLoadingVisibility,
 } from "~/features/ResourceEditor"
 import type { NativeResourceEditorOpeningState } from "~/features/ResourceEditor/opening/nativeResourceEditorOpeningState"
+import { ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type {
+  AccountKeyResourceEditAction,
   EditableResourceProjection,
   ResourceFailure,
   ResourceFieldDescriptor,
@@ -34,6 +36,7 @@ export type AccountKeyResourceEditorDialogState = {
   editorId: number
   siteType: string
   mode: AccountKeyResourceEditorMode
+  action?: AccountKeyResourceEditAction
   fields: readonly ResourceFieldDescriptor[]
   initialValues: EditableResourceProjection
   values: EditableResourceProjection
@@ -51,7 +54,7 @@ export type AccountKeyResourceEditorOpeningState =
   NativeResourceEditorOpeningState<
     AccountKeyResourceEditorDialogState["mode"],
     ResourceFailure
-  >
+  > & { readonly action?: AccountKeyResourceEditAction }
 
 export type AccountKeyResourceEditorDialogProps = {
   notice?: string
@@ -143,7 +146,7 @@ export function AccountKeyResourceEditorDialog({
       ? getNativeKeyResourceEditorPresentation(
           activeEditor.siteType,
           activeEditor.mode,
-          { fields: activeEditor.fields },
+          { fields: activeEditor.fields, action: activeEditor.action },
         ).title?.(t, activeEditor.values)
       : undefined) ??
     (editorMode === editorModes.Create
@@ -174,6 +177,60 @@ export function AccountKeyResourceEditorDialog({
     } else {
       setCommittedCloseOpeningAttemptId(opening.attemptId)
     }
+  }
+
+  if (!activeEditor && activeOpening?.action === editActions.Rotate) {
+    const preparing = activeOpening.status === "loading"
+    return (
+      <ConfirmDialog
+        intent="destructive"
+        isOpen
+        title={t("keyManagement:native.actions.rotate")}
+        description={t("keyManagement:native.lifecycle.rotateDescription")}
+        confirmLabel={t(
+          preparing
+            ? "keyManagement:native.actions.rotate"
+            : "keyManagement:native.editor.opening.retry",
+        )}
+        confirmDisabled={preparing || !onRetryOpening}
+        cancelLabel={t("common:actions.cancel")}
+        onConfirm={() => onRetryOpening?.(opening.attemptId)}
+        onClose={requestClose}
+        focusWorkflowId={focusWorkflowId}
+        terminalCloseKey={
+          committedCloseOpeningAttemptId === opening.attemptId
+            ? `opening-${opening.attemptId}`
+            : null
+        }
+        panelTestId={KEY_MANAGEMENT_TEST_IDS.nativeEditor}
+        details={
+          preparing ? (
+            <p role="status" className="text-muted-foreground text-sm">
+              {t("common:status.loading")}
+            </p>
+          ) : (
+            <Alert
+              variant="destructive"
+              role="alert"
+              description={feedbackDescription(activeOpening.failure, t)}
+            />
+          )
+        }
+      />
+    )
+  }
+
+  if (activeEditor?.action === editActions.Rotate) {
+    return (
+      <KeyRotationConfirmation
+        key={activeEditor.editorId}
+        editor={activeEditor}
+        onSubmit={onSubmit}
+        onClose={onClose}
+        onTerminalCloseSettled={onTerminalCloseSettled}
+        focusWorkflowId={focusWorkflowId}
+      />
+    )
   }
 
   return (
@@ -436,5 +493,68 @@ function AccountKeyResourceEditorDialogSession({
         }
       />
     </>
+  )
+}
+
+/** Rotation invalidates a live credential and requires its own destructive confirmation. */
+function KeyRotationConfirmation({
+  editor,
+  onSubmit,
+  onClose,
+  onTerminalCloseSettled,
+  focusWorkflowId,
+}: Pick<
+  AccountKeyResourceEditorDialogProps,
+  "onSubmit" | "onClose" | "onTerminalCloseSettled" | "focusWorkflowId"
+> & {
+  editor: AccountKeyResourceEditorDialogState
+}) {
+  const { t } = useTranslation()
+  const workingRef = useRef(false)
+  const [isWorking, setIsWorking] = useState(false)
+  const [isClosing, setIsClosing] = useState(false)
+  const confirm = async () => {
+    if (workingRef.current || editor.terminalClose || isClosing) return
+    workingRef.current = true
+    setIsWorking(true)
+    try {
+      await onSubmit(editor.editorId, editor.values)
+    } finally {
+      workingRef.current = false
+      setIsWorking(false)
+    }
+  }
+  return (
+    <ConfirmDialog
+      intent="destructive"
+      isOpen
+      title={t("keyManagement:native.actions.rotate")}
+      description={t("keyManagement:native.lifecycle.rotateDescription")}
+      confirmLabel={t("keyManagement:native.actions.rotate")}
+      cancelLabel={t("common:actions.cancel")}
+      confirmButtonTestId={KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton}
+      panelTestId={KEY_MANAGEMENT_TEST_IDS.nativeEditor}
+      focusWorkflowId={focusWorkflowId}
+      terminalCloseKey={
+        editor.terminalClose || isClosing ? editor.editorId : null
+      }
+      isWorking={isWorking}
+      onConfirm={() => void confirm()}
+      onClose={() => {
+        if (editor.terminalClose)
+          (onTerminalCloseSettled ?? onClose)(editor.editorId)
+        else if (isClosing) onClose(editor.editorId)
+        else if (!workingRef.current) setIsClosing(true)
+      }}
+      details={
+        editor.feedback ? (
+          <Alert
+            variant="destructive"
+            role="alert"
+            description={feedbackDescription(editor.feedback, t)}
+          />
+        ) : undefined
+      }
+    />
   )
 }

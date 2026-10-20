@@ -381,8 +381,11 @@
   "native": {
     "actions": {
       "delete": "Excluir chave",
+      "disable": "Desativar chave API",
       "edit": "Editar chave",
-      "revoke": "Revogar chave"
+      "enable": "Ativar chave API",
+      "revoke": "Revogar chave",
+      "rotate": "Rotacionar chave API"
     },
     "delete": {
       "confirm": "Excluir chave",
@@ -403,8 +406,18 @@
         "cancel": "Cancelar",
         "save": "Salvar chave"
       },
+      "allowlistHelp": "Separe por vírgulas ou quebras de linha. Vazio significa sem restrições.",
       "allowWallet": "Permitir uso do saldo",
       "allowWalletHelp": "Mantém esta chave funcionando com o saldo da conta depois que a cota do plano acabar.",
+      "budget5h": "Orçamento de 5 horas (USD)",
+      "budgetDay": "Orçamento diário (USD)",
+      "budgetMonth": "Orçamento mensal (USD)",
+      "budgetNextReset": "Redefine {{time}} (UTC+8)",
+      "budgetResetHelp": "0 significa ilimitado. O orçamento de 5 horas é móvel; os demais são reiniciados no horário de Pequim. A semana começa na segunda-feira.",
+      "budgetRolling": "Janela móvel",
+      "budgetsAndLimits": "Orçamentos e limites de acesso",
+      "budgetUsage": "Usado ${{used}} / ${{limit}} · restante ${{remaining}} · reservado ${{reserved}}",
+      "budgetWeek": "Orçamento semanal (USD)",
       "channel": "Canal",
       "dahl": {
         "allocate": "Alocar tokens",
@@ -465,8 +478,12 @@
         "unavailable": "O serviço está temporariamente indisponível. Tente novamente em instantes.",
         "uncertain": "O serviço pode ter aplicado esta alteração. Atualize as chaves para confirmar o estado atual antes de decidir se deve tentar novamente."
       },
+      "followAccountQuotaHelp": "-1 segue a cota da conta.",
+      "followsAccount": "Conforme a conta",
       "groupOnly": "Usar somente o grupo selecionado",
       "groupOnlyHelp": "Mantém a chave no grupo selecionado em vez de alternar para outros.",
+      "independentQuotaUsd": "Cota independente (USD)",
+      "ipCidrAllowlist": "Lista de IP/CIDR permitidos",
       "issues": {
         "inconsistentValue": "Revise este valor e tente novamente.",
         "invalidValue": "Insira um valor válido.",
@@ -474,6 +491,11 @@
         "required": "Este campo é obrigatório.",
         "unsupportedOption": "Escolha uma opção disponível."
       },
+      "keyConcurrency": "Concorrência da chave",
+      "keyRateHelp": "0 segue o limite da conta.",
+      "keyRpm": "RPM da chave",
+      "keyUnlimitedQuota": "Chave sem limite de cota",
+      "keyUnlimitedQuotaHelp": "Ainda limitada pelo saldo da conta ou pela cota da assinatura.",
       "krill": {
         "allowAnyIp": "Permitir qualquer IP",
         "allowAnyIpHelp": "Desativa a lista de IPs permitidos salva. Solicitações de qualquer IP serão permitidas.",
@@ -507,6 +529,7 @@
         "retryOn": "Ativado",
         "validDuration": "Validade após ativação (dias)"
       },
+      "modelAllowlist": "Lista de modelos permitidos",
       "opening": {
         "failed": "Não foi possível abrir o editor de chaves",
         "loading": "Abrindo o editor de chaves...",
@@ -537,6 +560,11 @@
       }
     },
     "heading": "Chaves de API",
+    "lifecycle": {
+      "disableDescription": "Desativar temporariamente. Você pode reativá-la depois.",
+      "enableDescription": "Reativar esta chave com as configurações existentes.",
+      "rotateDescription": "A chave antiga deixará de funcionar imediatamente. Copie a nova chave e atualize seus clientes. As demais configurações serão mantidas."
+    },
     "missing": "Indisponível",
     "revoke": {
       "description": "Revogar “{{name}}”? A chave será desativada permanentemente. O registro permanecerá até ser excluído.",
@@ -586,8 +614,8 @@
     "copy": "Copiar chave completa",
     "copyFailed": "Falha ao copiar a chave completa",
     "keyLabel": "Chave completa",
-    "subtitle": "O valor completo da chave {{name}} só é exibido após esta criação.",
-    "subtitleUnnamed": "A chave completa só é exibida após esta criação.",
+    "subtitle": "O valor completo da chave {{name}} só é exibido após esta operação.",
+    "subtitleUnnamed": "A chave completa só é exibida após esta operação.",
     "title": "Salve a chave completa agora",
     "warningDescription": "Depois de fechar esta caixa de diálogo, a extensão não poderá exibir a chave completa novamente.",
     "warningTitle": "Esta chave só pode ser visualizada uma vez"

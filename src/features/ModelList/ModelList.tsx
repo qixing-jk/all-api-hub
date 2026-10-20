@@ -231,6 +231,7 @@ export default function ModelList(props: {
 
   const renderModelDisplay = () => (
     <ModelDisplay
+      onCatalogChanged={loadPricingData}
       models={displayedModels}
       verificationSummariesByKey={verificationSummariesByKey}
       onVerifyModel={handleVerifyModel}

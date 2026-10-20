@@ -155,6 +155,9 @@
     "units": "Unidades de cobrança"
   },
   "displayFacts": {
+    "accessReason": "Condição de acesso",
+    "auditCharge": "Taxa de auditoria por recusa de risco",
+    "auditConsent": "Exige consentimento de auditoria",
     "benchmarkTable": {
       "arena": "Arena",
       "category": "Categoria",
@@ -168,6 +171,8 @@
     },
     "callExamples": "Exemplos de chamadas",
     "catalogOwner": "Proprietário do catálogo",
+    "compactionCharge": "Compactação remota",
+    "consoleSettings": "Configurações oficiais",
     "contextLimit": "Limite de contexto",
     "defaultDimensions": "Dimensões padrão",
     "inputModalities": "Modalidades de entrada",
@@ -280,16 +285,21 @@
       "request": "solicitação",
       "webSearch": "busca na web"
     },
+    "promptAudit": "Auditoria de prompts ativa",
     "providerAvailable": "Disponível no site",
     "releaseDate": "Data de lançamento",
     "sections": {
       "specifications": "Especificações"
     },
+    "subscriptionMultiplier": "Multiplicador da assinatura",
+    "subscriptionPlan": "Assinatura",
     "supportedDimensions": "Dimensões compatíveis",
     "supportsImages": "Suporte a imagens",
     "tokenCount_one": "{{formattedCount}} token",
     "tokenCount_many": "{{formattedCount}} tokens",
     "tokenCount_other": "{{formattedCount}} tokens",
+    "trainingChannels": "Canais de treinamento disponíveis",
+    "trainingConsent": "Exige consentimento para treinamento",
     "viewOnSite": "Ver no site"
   },
   "displayOptions": "Exibição",
@@ -469,6 +479,15 @@
     "badge": "Catálogo completo do site",
     "description": "Não foi possível confirmar o conjunto de modelos realmente disponível para esta conta, por isso o catálogo completo do provedor é exibido. Alguns modelos talvez não possam ser usados por esta conta; considere as permissões da conta no site e os resultados de verificações reais como a fonte definitiva.",
     "title": "Usando o catálogo completo de modelos do provedor"
+  },
+  "providerGroup": {
+    "action": "Alterar grupo de roteamento do site",
+    "apply": "Salvar no site",
+    "description": "Salvar altera o roteamento deste modelo no site e pode afetar solicitações e preços futuros.",
+    "label": "Grupo de roteamento do site",
+    "locked": "Uma sessão ativa bloqueia esta opção. Gerencie-a primeiro no site oficial.",
+    "refreshRequired": "{{error}}. A alteração pode ter sido aplicada. Atualize a lista antes de tentar novamente.",
+    "saving": "Salvando…"
   },
   "providerTabs": {
     "scrollLeft": "Rolar as abas de provedores para a esquerda",

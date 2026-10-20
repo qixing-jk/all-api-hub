@@ -83,9 +83,15 @@ class RedeemService {
             : formatMoneyFixed(creditedAmount / QUOTA_PER_USD)
           : ""
 
-      const message = t("redemptionAssist:messages.redeemSuccess", {
-        amount: amountStr,
-      })
+      const message =
+        creditedAmount &&
+        typeof creditedAmount === "object" &&
+        "message" in creditedAmount &&
+        typeof creditedAmount.message === "string"
+          ? creditedAmount.message
+          : t("redemptionAssist:messages.redeemSuccess", {
+              amount: amountStr,
+            })
 
       return {
         success: true,

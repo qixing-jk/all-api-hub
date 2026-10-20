@@ -53,6 +53,7 @@ export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   Krill: "krill",
   Cubence: "cubence",
   RightCode: "rightcode",
+  RelayFor: "relayfor",
   OpenRouter: "openrouter",
   KimiOpenPlatform: "kimiOpenPlatform",
   Grsai: "grsai",

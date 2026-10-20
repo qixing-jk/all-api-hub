@@ -108,13 +108,51 @@ const nativeDetailFacts = (
                 : fact.kind === "quota"
                   ? t("keyManagement:keyDetails.totalQuota")
                   : t("keyManagement:native.editor.totalQuotaUsd"),
-        value: fact.unlimited
-          ? t("keyManagement:dialog.unlimitedQuota")
-          : fact.kind === "money"
-            ? `$${fact.amountUsd.toLocaleString(undefined, { maximumFractionDigits: 6 })}`
-            : fact.kind === "quota"
-              ? formatQuotaAmount(fact.value, fact.asset)
-              : fact.value.toLocaleString(),
+        value:
+          fact.kind === "money" && fact.followsAccount
+            ? t("keyManagement:native.editor.followsAccount")
+            : fact.unlimited
+              ? t("keyManagement:dialog.unlimitedQuota")
+              : fact.kind === "money"
+                ? `$${fact.amountUsd.toLocaleString(undefined, { maximumFractionDigits: 6 })}`
+                : fact.kind === "quota"
+                  ? formatQuotaAmount(fact.value, fact.asset)
+                  : fact.value.toLocaleString(),
+      })
+    } else if (fact.kind === "rate-limit") {
+      details.push({
+        id: fact.fieldId,
+        label: t("keyManagement:native.editor.budgetsAndLimits"),
+        value: `RPM ${fact.rpm || t("keyManagement:native.editor.followsAccount")} · ${t("keyManagement:native.editor.keyConcurrency")}: ${fact.concurrency || t("keyManagement:native.editor.followsAccount")}`,
+      })
+    } else if (fact.kind === "budget") {
+      const budgetLabel =
+        fact.window === "5h"
+          ? t("keyManagement:native.editor.budget5h")
+          : fact.window === "day"
+            ? t("keyManagement:native.editor.budgetDay")
+            : fact.window === "week"
+              ? t("keyManagement:native.editor.budgetWeek")
+              : t("keyManagement:native.editor.budgetMonth")
+      details.push({
+        id: fact.fieldId,
+        label: budgetLabel,
+        value:
+          t("keyManagement:native.editor.budgetUsage", {
+            used: fact.usedUsd,
+            limit: fact.limitUsd,
+            remaining: fact.remainingUsd,
+            reserved: fact.reservedUsd,
+          }) +
+          " · " +
+          (fact.nextResetAt
+            ? t("keyManagement:native.editor.budgetNextReset", {
+                time: new Date(fact.nextResetAt).toLocaleString(undefined, {
+                  timeZone: "Asia/Shanghai",
+                  timeZoneName: "short",
+                }),
+              })
+            : t("keyManagement:native.editor.budgetRolling")),
       })
     } else if (fact.kind === "expiry") {
       const date =

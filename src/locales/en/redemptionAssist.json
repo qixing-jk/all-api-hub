@@ -12,10 +12,26 @@
   "actions": {
     "autoRedeem": "Auto redeem"
   },
+  "benefits": {
+    "burstCredits": "Burst credits",
+    "groupQuota": "Group allowance",
+    "groupTimedQuota": "Timed group allowance",
+    "quota": "Permanent allowance",
+    "subscription": "Subscription",
+    "subscriptionAdd": "Subscription quota addition",
+    "subscriptionExtension": "Subscription extension",
+    "subscriptionReset": "Subscription quota reset",
+    "subscriptionTrial": "Trial subscription",
+    "timedBurstCredits": "Timed burst credits",
+    "timedQuota": "Timed allowance"
+  },
   "messages": {
     "batchResultSummary": "Total {{total}}. Succeeded {{success}}. Failed {{failed}}.",
     "batchResultTitle": "Redemption results",
+    "benefitsRedeemed": "Redeemed: {{details}}",
     "cancelled": "Cancelled",
+    "extensionDays": "Extended by {{days}} days",
+    "fallbackBenefit": "Fallback benefit used",
     "noAccountForUrl": "No matching account found for this site. Please add the site as an account in All API Hub, then try again.",
     "promptConfirm": "Detected a possible redemption code {{code}} on this page. Try auto redeem for this site?",
     "promptConfirmBatch_one": "Detected {{count}} possible redemption code on this page. Select codes to auto redeem for this site.",

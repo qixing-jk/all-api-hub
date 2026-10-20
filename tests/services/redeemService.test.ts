@@ -128,6 +128,31 @@ describe("redeemService.redeemCodeForAccount", () => {
     })
   })
 
+  it("preserves confirmed non-cash RelayFor benefits in shared redemption feedback", async () => {
+    const benefits = { message: "Monthly subscription · expires 2099-01-01" }
+    vi.mocked(accountStorage.getAccountById).mockResolvedValueOnce({
+      id: "relayfor",
+      site_type: SITE_TYPES.RELAYFOR,
+      site_url: "https://relayfor.xyz",
+      account_info: { id: "1", access_token: "test-token" },
+    } as any)
+    vi.mocked(accountStorage.getDisplayDataById).mockResolvedValueOnce({
+      id: "relayfor",
+    } as any)
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      account: {
+        redemption: { redeem: vi.fn().mockResolvedValue(benefits) },
+      },
+    } as any)
+    const result = await redeemService.redeemCodeForAccount(
+      "relayfor",
+      "SUBSCRIPTION",
+    )
+    expect(result.success).toBe(true)
+    expect(result.message).toBe(benefits.message)
+    expect(result.creditedAmount).toEqual(benefits)
+  })
+
   it("falls back to converted display data and supports non-numeric credited amounts", async () => {
     const account = {
       id: "account-2",

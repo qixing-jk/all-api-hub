@@ -381,8 +381,11 @@
   "native": {
     "actions": {
       "delete": "Eliminar clave",
+      "disable": "Deshabilitar clave API",
       "edit": "Editar clave",
-      "revoke": "Revocar clave"
+      "enable": "Habilitar clave API",
+      "revoke": "Revocar clave",
+      "rotate": "Rotar clave API"
     },
     "delete": {
       "confirm": "Eliminar clave",
@@ -403,8 +406,18 @@
         "cancel": "Cancelar",
         "save": "Guardar clave"
       },
+      "allowlistHelp": "Separa con comas o saltos de línea. Vacío significa sin restricciones.",
       "allowWallet": "Permitir uso del saldo",
       "allowWalletHelp": "Permite que esta clave siga funcionando con el saldo de la cuenta cuando se agote la cuota del plan.",
+      "budget5h": "Presupuesto de 5 horas (USD)",
+      "budgetDay": "Presupuesto diario (USD)",
+      "budgetMonth": "Presupuesto mensual (USD)",
+      "budgetNextReset": "Se restablece {{time}} (UTC+8)",
+      "budgetResetHelp": "0 significa sin límite. El presupuesto de 5 horas es móvil; los demás se reinician según la hora de Pekín. La semana empieza el lunes.",
+      "budgetRolling": "Ventana móvil",
+      "budgetsAndLimits": "Presupuestos y límites de acceso",
+      "budgetUsage": "Usado ${{used}} / ${{limit}} · restante ${{remaining}} · reservado ${{reserved}}",
+      "budgetWeek": "Presupuesto semanal (USD)",
       "channel": "Canal",
       "dahl": {
         "allocate": "Asignar tokens",
@@ -465,8 +478,12 @@
         "unavailable": "El servicio no está disponible temporalmente. Inténtalo pronto.",
         "uncertain": "El servicio pudo haber aplicado este cambio. Actualiza las claves para confirmar el estado actual antes de decidir si vuelves a intentarlo."
       },
+      "followAccountQuotaHelp": "-1 usa la cuota de la cuenta.",
+      "followsAccount": "Según la cuenta",
       "groupOnly": "Usar solo el grupo seleccionado",
       "groupOnlyHelp": "Mantiene la clave en el grupo seleccionado en lugar de cambiar a otros.",
+      "independentQuotaUsd": "Cuota independiente (USD)",
+      "ipCidrAllowlist": "Lista de IP/CIDR permitidos",
       "issues": {
         "inconsistentValue": "Revisa este valor e inténtalo de nuevo.",
         "invalidValue": "Introduce un valor válido.",
@@ -474,6 +491,11 @@
         "required": "Este campo es obligatorio.",
         "unsupportedOption": "Elige una opción disponible."
       },
+      "keyConcurrency": "Concurrencia de la clave",
+      "keyRateHelp": "0 usa el límite de la cuenta.",
+      "keyRpm": "RPM de la clave",
+      "keyUnlimitedQuota": "Clave sin límite de cuota",
+      "keyUnlimitedQuotaHelp": "Sigue limitada por el saldo de la cuenta o la cuota de suscripción.",
       "krill": {
         "allowAnyIp": "Permitir cualquier IP",
         "allowAnyIpHelp": "Desactiva la lista de IP permitidas guardada. Se permitirán solicitudes desde cualquier IP.",
@@ -507,6 +529,7 @@
         "retryOn": "Activado",
         "validDuration": "Validez tras la activación (días)"
       },
+      "modelAllowlist": "Lista de modelos permitidos",
       "opening": {
         "failed": "No se pudo abrir el editor de claves",
         "loading": "Abriendo el editor de claves...",
@@ -537,6 +560,11 @@
       }
     },
     "heading": "Claves API",
+    "lifecycle": {
+      "disableDescription": "Deshabilitar temporalmente. Puedes volver a habilitarla después.",
+      "enableDescription": "Volver a habilitar esta clave con su configuración actual.",
+      "rotateDescription": "La clave anterior dejará de funcionar de inmediato. Copia la nueva clave y actualiza tus clientes. Se conserva el resto de la configuración."
+    },
     "missing": "No disponible",
     "revoke": {
       "description": "¿Revocar “{{name}}”? La clave se desactivará permanentemente. Su registro permanecerá hasta que lo elimines.",
@@ -586,8 +614,8 @@
     "copy": "Copiar clave completa",
     "copyFailed": "No se pudo copiar la clave completa",
     "keyLabel": "Clave completa",
-    "subtitle": "El valor completo de la clave {{name}} solo se muestra después de esta creación.",
-    "subtitleUnnamed": "La clave completa solo se muestra después de esta creación.",
+    "subtitle": "El valor completo de la clave {{name}} solo se muestra después de esta operación.",
+    "subtitleUnnamed": "La clave completa solo se muestra después de esta operación.",
     "title": "Guarda la clave completa ahora",
     "warningDescription": "Después de cerrar este diálogo, la extensión no podrá volver a mostrar la clave completa.",
     "warningTitle": "Esta clave solo se puede ver una vez"

@@ -7,6 +7,7 @@ import { MODEL_GROUP_ACCESS_STATES } from "~/features/ModelList/groups/groupCont
 import ModelItem from "~/features/ModelList/presentation/ModelItem"
 import toast from "~/lib/notify"
 import { SITE_TYPES } from "~/services/accountSiteDefinitions/identifiers"
+import * as siteCapabilities from "~/services/apiAdapters/registry"
 import {
   createPersonalizedCatalogModelListSourceIdentity,
   createProviderCatalogModelListSourceIdentity,
@@ -25,6 +26,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { createTab } from "~/utils/browser/tabs"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { createLegacyAccountTokenSourceIdentity } from "~~/tests/test-utils/legacyModelListSourceIdentity"
 
 const { loggerWarnSpy } = vi.hoisted(() => ({
@@ -256,6 +258,57 @@ function createDefaultProps() {
 }
 
 describe("ModelItem", () => {
+  it("saves official routing for the selected account and refreshes the catalog", async () => {
+    const props = createDefaultProps()
+    const updateGroup = vi.fn().mockResolvedValue({})
+    const capabilitySpy = vi
+      .spyOn(siteCapabilities, "getSiteTypeCapabilities")
+      .mockReturnValue({
+        siteType: SITE_TYPES.RELAYFOR,
+        account: { modelPricing: { fetchPricing: vi.fn(), updateGroup } },
+      } as any)
+    const onCatalogChanged = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <ModelItem
+        {...props}
+        source={{
+          ...props.source,
+          account: buildDisplaySiteData({
+            id: "relayfor-account",
+            siteType: SITE_TYPES.RELAYFOR,
+            baseUrl: "https://relayfor.xyz",
+          }),
+        }}
+        model={{
+          ...props.model,
+          providerGroup: {
+            selected: "standard",
+            options: [
+              { value: "standard", available: true },
+              { value: "premium", available: true },
+            ],
+          },
+        }}
+        onCatalogChanged={onCatalogChanged}
+      />,
+    )
+    await user.click(
+      screen.getByRole("button", { name: "providerGroup.action" }),
+    )
+    await user.click(screen.getByRole("combobox"))
+    await user.click(screen.getByRole("option", { name: "premium" }))
+    await user.click(
+      screen.getByRole("button", { name: "providerGroup.apply" }),
+    )
+    expect(updateGroup).toHaveBeenCalledWith(
+      expect.objectContaining({ baseUrl: "https://relayfor.xyz" }),
+      props.model.model_name,
+      "premium",
+    )
+    expect(onCatalogChanged).toHaveBeenCalledOnce()
+    capabilitySpy.mockRestore()
+  })
   it("marks a full-site fallback catalog on its model row", () => {
     const props = createDefaultProps()
     props.source.capabilities.supportsPricing = false

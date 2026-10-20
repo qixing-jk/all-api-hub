@@ -170,6 +170,9 @@
     "nativePageTargetNotFound": "O botão de check-in não foi encontrado na página de check-in deste site (a página pode estar carregando ou o site mudou). Abra essa página e faça o check-in manual: {{checkInUrl}}",
     "nativePageTriggerFailed": "A extensão não conseguiu clicar no botão de check-in da página deste site (a página pode estar lenta ou a ação foi limitada temporariamente). Abra essa página e faça o check-in manual: {{checkInUrl}}",
     "nativePageVerificationRequired": "Uma verificação humana bloqueou o check-in e sua conclusão não foi detectada durante a espera. Abra a página, resolva o captcha e confirme o check-in de hoje. Se o status da extensão não atualizar, tente novamente: {{checkInUrl}}",
+    "relayForBenefits": "Benefícios recebidos: {{details}}",
+    "relayForMakeup": "Nada disponível hoje. Escolha datas anteriores no calendário oficial: {{url}}",
+    "relayForPartial": "Recebidas {{completed}} de {{total}} campanhas. Resultado restante: {{error}}",
     "sessionBusy": "Outro login já está em andamento. Tente novamente mais tarde.",
     "turnstileIncognitoAccessRequired": "Já há outra conta conectada a este site, então a extensão precisa de uma janela anônima para abrir a página de check-in desta conta, mas não tem permissão para rodar em modo anônimo. Permita a extensão em modo anônimo nas configurações de extensões do navegador e tente novamente, ou conclua você mesmo a verificação na página de check-in: {{checkInUrl}}",
     "unknownError": "Ocorreu um erro desconhecido. Tente novamente mais tarde."

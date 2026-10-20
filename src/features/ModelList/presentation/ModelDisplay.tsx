@@ -36,6 +36,7 @@ import {
 } from "~/services/verification/verificationResultHistory"
 
 interface ModelDisplayProps {
+  onCatalogChanged?: () => Promise<void>
   models: CalculatedModelItem[]
   verificationSummariesByKey: Record<string, ApiVerificationHistorySummary>
   onVerifyModel?: (
@@ -154,6 +155,7 @@ const ModelRowsItem = forwardRef<
 export function ModelDisplay(props: ModelDisplayProps) {
   const {
     models,
+    onCatalogChanged,
     verificationSummariesByKey,
     onVerifyModel,
     onVerifyCliSupport,
@@ -244,6 +246,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
 
     return (
       <ModelItem
+        onCatalogChanged={onCatalogChanged}
         model={item.model}
         resolvedVendor={item.resolvedVendor}
         modelMetadata={item.modelMetadata}

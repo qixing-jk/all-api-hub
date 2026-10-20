@@ -2261,3 +2261,172 @@ it("fills the group name when labels arrive and stops following after a manual n
   await user.click(await screen.findByRole("option", { name: "Backup" }))
   expect(name).toHaveValue("Priority group (auto)")
 })
+
+it("confirms key rotation explicitly without unrelated editable fields", async () => {
+  const user = userEvent.setup()
+  const onSubmit = vi.fn()
+  render(
+    <AccountKeyResourceEditorDialog
+      editor={{
+        editorId: 901,
+        siteType: SITE_TYPES.RELAYFOR,
+        mode: editorModes.Edit,
+        action: "rotate",
+        fields: [],
+        initialValues: {},
+        values: {},
+      }}
+      onSubmit={onSubmit}
+      onClose={vi.fn()}
+      onValuesChange={vi.fn()}
+    />,
+    { withUserPreferencesProvider: false, withThemeProvider: false },
+  )
+  expect(await screen.findByRole("dialog")).toHaveTextContent(
+    "keyManagement:native.lifecycle.rotateDescription",
+  )
+  expect(
+    screen.getByRole("button", { name: "keyManagement:native.actions.rotate" }),
+  ).toHaveAttribute("data-variant", "destructive")
+  expect(screen.queryByRole("textbox")).toBeNull()
+  expect(
+    screen.queryByText("keyManagement:serviceCredential.rotate"),
+  ).toBeNull()
+  await user.click(
+    screen.getByRole("button", { name: "keyManagement:native.actions.rotate" }),
+  )
+  expect(onSubmit).toHaveBeenCalledWith(901, {})
+})
+
+it("keeps failed rotation feedback visible with the destructive confirmation", async () => {
+  render(
+    <AccountKeyResourceEditorDialog
+      editor={{
+        editorId: 902,
+        siteType: SITE_TYPES.RELAYFOR,
+        mode: editorModes.Edit,
+        action: "rotate",
+        fields: [],
+        initialValues: {},
+        values: {},
+        feedback: { code: "mutation_state_uncertain" },
+      }}
+      onSubmit={vi.fn()}
+      onClose={vi.fn()}
+      onValuesChange={vi.fn()}
+    />,
+    { withUserPreferencesProvider: false, withThemeProvider: false },
+  )
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "keyManagement:native.editor.feedback.uncertain",
+  )
+  expect(screen.getByRole("dialog")).toHaveTextContent(
+    "keyManagement:native.lifecycle.rotateDescription",
+  )
+})
+
+it("cancels rotation without submitting or showing an unsaved-edits prompt", async () => {
+  const user = userEvent.setup()
+  const onSubmit = vi.fn()
+  const onClose = vi.fn()
+  render(
+    <AccountKeyResourceEditorDialog
+      editor={{
+        editorId: 902,
+        siteType: SITE_TYPES.RELAYFOR,
+        mode: editorModes.Edit,
+        action: "rotate",
+        fields: [],
+        initialValues: {},
+        values: {},
+      }}
+      onSubmit={onSubmit}
+      onClose={onClose}
+      onValuesChange={vi.fn()}
+    />,
+    { withUserPreferencesProvider: false, withThemeProvider: false },
+  )
+  await user.click(
+    screen.getByRole("button", { name: "common:actions.cancel" }),
+  )
+  await waitFor(() => expect(onClose).toHaveBeenCalledWith(902))
+  expect(onSubmit).not.toHaveBeenCalled()
+  expect(
+    screen.queryByText("keyManagement:native.editor.unsaved.title"),
+  ).toBeNull()
+})
+
+it.each(["loading", "failure"] as const)(
+  "keeps rotation-specific confirmation during %s preparation",
+  async (status) => {
+    const user = userEvent.setup()
+    const cancel = vi.fn()
+    const retry = vi.fn()
+    render(
+      <AccountKeyResourceEditorDialog
+        editor={null}
+        opening={
+          status === "loading"
+            ? {
+                attemptId: 11,
+                mode: editorModes.Edit,
+                action: "rotate",
+                status: "loading",
+                reveal: NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Immediate,
+              }
+            : {
+                attemptId: 11,
+                mode: editorModes.Edit,
+                action: "rotate",
+                status: "failure",
+                failure: { code: "permission_denied" },
+              }
+        }
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        onValuesChange={vi.fn()}
+        onCancelOpening={cancel}
+        onRetryOpening={retry}
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+    expect(
+      await screen.findByRole("dialog", {
+        name: "keyManagement:native.actions.rotate",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorLoading),
+    ).toBeNull()
+    expect(
+      screen.queryByText("keyManagement:native.editor.title.edit"),
+    ).toBeNull()
+    expect(
+      screen.getByText("keyManagement:native.lifecycle.rotateDescription"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("keyManagement:native.editor.opening.loading"),
+    ).toBeNull()
+    expect(
+      screen.queryByText("keyManagement:native.editor.opening.failed"),
+    ).toBeNull()
+    if (status === "loading") {
+      expect(
+        screen.getByRole("button", {
+          name: "keyManagement:native.actions.rotate",
+        }),
+      ).toBeDisabled()
+    } else {
+      await user.click(
+        screen.getByRole("button", {
+          name: "keyManagement:native.editor.opening.retry",
+        }),
+      )
+      expect(retry).toHaveBeenCalledWith(11)
+    }
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.cancel" }),
+    )
+    await waitFor(() => expect(cancel).toHaveBeenCalledWith(11))
+  },
+)

@@ -110,6 +110,8 @@
       "failed": "Operation failed: {{error}}",
       "saveFailed": "Save failed: {{error}}"
     },
+    "relayForRedemptionUnconfirmed": "The site did not confirm the redemption result. Check the official console before trying again.",
+    "relayForVerificationRequired": "This operation requires a verification code. Open the official console to complete it, then refresh here.",
     "unknown": "Unknown error",
     "validation": {
       "bookmarkNameRequired": "Bookmark name cannot be empty",

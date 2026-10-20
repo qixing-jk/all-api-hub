@@ -162,6 +162,9 @@
     "nativePageTargetNotFound": "该站点的签到页面上没有找到签到按钮（可能页面还没加载完，或站点改版了）。请打开该页面手动签到：{{checkInUrl}}",
     "nativePageTriggerFailed": "扩展没能点到该站点签到页面上的签到按钮（可能页面响应慢，或操作被暂时限制）。请打开该页面手动签到：{{checkInUrl}}",
     "nativePageVerificationRequired": "签到被人机验证阻止，等待时间内未检测到验证完成。请打开签到页面完成验证码，并确认今日已签到；若扩展状态未更新，再点击“重新尝试”：{{checkInUrl}}",
+    "relayForBenefits": "已领取权益：{{details}}",
+    "relayForMakeup": "今日没有可领取奖励。补签请前往官网日历主动选择日期：{{url}}",
+    "relayForPartial": "已领取 {{completed}} / {{total}} 个活动，剩余结果：{{error}}",
     "sessionBusy": "另一个登录流程正在进行中，请稍后重试。",
     "turnstileIncognitoAccessRequired": "该站点有其他账号已登录，扩展需要用无痕窗口单独打开这个账号的签到页面，但当前未获准在无痕模式运行。请在浏览器扩展管理页开启“允许在无痕模式运行”后重试，或自行打开签到页面完成验证：{{checkInUrl}}",
     "unknownError": "发生未知错误。可稍后重试。"

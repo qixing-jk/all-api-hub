@@ -53,7 +53,10 @@ import {
   MANAGED_SITE_TYPE_ORDER,
   SITE_TYPE_DEFINITIONS,
 } from "~/services/accountSiteDefinitions/definitions"
-import { RIGHTCODE_HOSTNAMES } from "~/services/accountSiteDefinitions/identifiers"
+import {
+  RELAYFOR_HOSTNAMES,
+  RIGHTCODE_HOSTNAMES,
+} from "~/services/accountSiteDefinitions/identifiers"
 import type { SiteType } from "~/services/accountSiteDefinitions/identifiers"
 import { getManagedResourceRegistration } from "~/services/apiAdapters/managedResources/registry"
 import { AuthTypeEnum } from "~/types"
@@ -151,6 +154,7 @@ type ExpectedAccountSiteType =
   | typeof SITE_TYPES.KIMI
   | typeof SITE_TYPES.KIMI_GLOBAL
   | typeof SITE_TYPES.GRSAI
+  | typeof SITE_TYPES.RELAYFOR
   | typeof SITE_TYPES.UNKNOWN
 
 type ExpectedManagedSiteType =
@@ -371,6 +375,42 @@ describe("account site definition registry", () => {
     )
   })
 
+  it("registers RelayFor as an account-only site with its verified console routes", () => {
+    const definition = getAccountSiteDefinition(SITE_TYPES.RELAYFOR)
+
+    expect(definition).toMatchObject({
+      scopes: [ACCOUNT_SITE_DEFINITION_SCOPES.Account],
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.RelayFor,
+      onboarding: {
+        displayName: "RelayFor",
+        detection: { hostnames: RELAYFOR_HOSTNAMES },
+        routes: {
+          loginPath: "/auth/?mode=login",
+          usagePath: "/console/#usage",
+          adminCredentialsPath: "/console/#tokens",
+          siteAnnouncementsPath: "/console/#overview",
+          pricingPath: "/console/#models",
+          checkInPath: "/console/#overview",
+          redeemPath: "/console/#redeem",
+          accessTokenPath: null,
+        },
+      },
+    })
+    expect(definition?.tokenKey).toBeUndefined()
+  })
+
+  it("keeps RelayFor's token-only auth and plan for unaided manual adds", () => {
+    const profile = getAccountSiteProductProfile(SITE_TYPES.RELAYFOR)
+
+    expect(profile.auth.allowedAuthTypes).toEqual([AuthTypeEnum.AccessToken])
+    expect(profile.auth.defaultAuthType).toBe(AuthTypeEnum.AccessToken)
+    expect(profile.identity.usernameRequired).toBe(true)
+    expect(profile.identity.userIdRequired).toBe(false)
+    expect(profile.modelList.groupSemantics).toBe(
+      ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+    )
+  })
+
   it("matches current product-profile behavior for overridden sites", () => {
     const anyrouterOverride = getAccountSiteProductProfileOverride(
       SITE_TYPES.ANYROUTER,
@@ -435,6 +475,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.KRILL,
       SITE_TYPES.CUBENCE,
       SITE_TYPES.RIGHT_CODE,
+      SITE_TYPES.RELAYFOR,
       SITE_TYPES.OPENROUTER,
       SITE_TYPES.KIMI,
       SITE_TYPES.KIMI_GLOBAL,

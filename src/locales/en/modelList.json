@@ -148,6 +148,9 @@
     "units": "Billing unit coverage"
   },
   "displayFacts": {
+    "accessReason": "Access condition",
+    "auditCharge": "Rejected-risk audit charge",
+    "auditConsent": "Audit consent required",
     "benchmarkTable": {
       "arena": "Arena",
       "category": "Category",
@@ -161,6 +164,8 @@
     },
     "callExamples": "Call examples",
     "catalogOwner": "Catalog owner",
+    "compactionCharge": "Remote compaction",
+    "consoleSettings": "Official settings",
     "contextLimit": "Context limit",
     "defaultDimensions": "Default dimensions",
     "inputModalities": "Input modalities",
@@ -272,15 +277,20 @@
       "request": "request",
       "webSearch": "web search"
     },
+    "promptAudit": "Prompt audit enabled",
     "providerAvailable": "Available on site",
     "releaseDate": "Release date",
     "sections": {
       "specifications": "Specifications"
     },
+    "subscriptionMultiplier": "Subscription multiplier",
+    "subscriptionPlan": "Subscription",
     "supportedDimensions": "Supported dimensions",
     "supportsImages": "Image support",
     "tokenCount_one": "{{formattedCount}} token",
     "tokenCount_other": "{{formattedCount}} tokens",
+    "trainingChannels": "Training channels available",
+    "trainingConsent": "Training consent required",
     "viewOnSite": "View on site"
   },
   "displayOptions": "Display",
@@ -459,6 +469,15 @@
     "badge": "Full site catalog",
     "description": "This account's actual available model scope could not be confirmed, so the provider’s full model catalog is shown. Some models may not be callable with this account; use the site's account permissions and real verification results as the final source of truth.",
     "title": "Fell back to the provider’s full model catalog"
+  },
+  "providerGroup": {
+    "action": "Change official routing group",
+    "apply": "Save to official site",
+    "description": "Saving changes this model’s routing preference on the official site and may affect subsequent requests and prices.",
+    "label": "Official routing group",
+    "locked": "An active session locks this routing preference. Manage the session on the official site first.",
+    "refreshRequired": "{{error}}. The change may have been applied. Refresh the catalog before trying again.",
+    "saving": "Saving…"
   },
   "providerTabs": {
     "scrollLeft": "Scroll vendor tabs left",

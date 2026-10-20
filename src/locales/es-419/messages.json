@@ -112,6 +112,8 @@
       "failed": "La operación falló: {{error}}",
       "saveFailed": "Error al guardar: {{error}}"
     },
+    "relayForRedemptionUnconfirmed": "No se confirmó el canje. Revisa la consola oficial antes de reintentar.",
+    "relayForVerificationRequired": "Esta operación requiere un código de verificación. Complétala en la consola oficial y actualiza aquí.",
     "unknown": "Error desconocido",
     "validation": {
       "bookmarkNameRequired": "El nombre del marcador no puede estar vacío",

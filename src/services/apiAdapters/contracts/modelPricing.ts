@@ -9,6 +9,12 @@ export const MODEL_PRICING_RUNTIME_KEY_FALLBACKS = {
 
 export type ModelPricingCapability = {
   fetchPricing(request: ModelPricingRequest): Promise<ModelCatalogSnapshot>
+  /** Persists a provider routing preference; the host refresh owns catalog readback. */
+  updateGroup?(
+    request: ModelPricingRequest,
+    model: string,
+    group: string,
+  ): Promise<void>
   /** Invalidates provider-owned shared snapshots before a manual refresh. */
   invalidateCache?(): void
   /** Uses account pricing for fallback when runtime key secrets cannot be revealed. */

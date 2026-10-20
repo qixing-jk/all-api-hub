@@ -12,10 +12,26 @@
   "actions": {
     "autoRedeem": "Canjear automáticamente"
   },
+  "benefits": {
+    "burstCredits": "Créditos de ráfaga",
+    "groupQuota": "Saldo del grupo",
+    "groupTimedQuota": "Saldo temporal del grupo",
+    "quota": "Saldo permanente",
+    "subscription": "Suscripción",
+    "subscriptionAdd": "Ampliación de saldo",
+    "subscriptionExtension": "Extensión de suscripción",
+    "subscriptionReset": "Restablecimiento de saldo",
+    "subscriptionTrial": "Suscripción de prueba",
+    "timedBurstCredits": "Créditos temporales de ráfaga",
+    "timedQuota": "Saldo temporal"
+  },
   "messages": {
     "batchResultSummary": "Total {{total}}. Correctos {{success}}. Fallidos {{failed}}.",
     "batchResultTitle": "Resultados del canje",
+    "benefitsRedeemed": "Canjeado: {{details}}",
     "cancelled": "Cancelado",
+    "extensionDays": "Extendida {{days}} días",
+    "fallbackBenefit": "Beneficio alternativo utilizado",
     "noAccountForUrl": "No se encontró ninguna cuenta coincidente para este sitio. Agrega el sitio como cuenta en All API Hub y vuelve a intentarlo.",
     "promptConfirm": "Se detectó un posible código de canje {{code}} en esta página. ¿Intentar canje automático para este sitio?",
     "promptConfirmBatch_one": "Se detectó {{count}} posible código de canje en esta página. Selecciona códigos para canjear automáticamente en este sitio.",

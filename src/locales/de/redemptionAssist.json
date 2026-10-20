@@ -12,10 +12,26 @@
   "actions": {
     "autoRedeem": "Automatisch einlösen"
   },
+  "benefits": {
+    "burstCredits": "Burst-Punkte",
+    "groupQuota": "Gruppenkontingent",
+    "groupTimedQuota": "Befristetes Gruppenkontingent",
+    "quota": "Dauerkontingent",
+    "subscription": "Abonnement",
+    "subscriptionAdd": "Abo-Kontingent erweitert",
+    "subscriptionExtension": "Abo-Verlängerung",
+    "subscriptionReset": "Abo-Kontingent zurückgesetzt",
+    "subscriptionTrial": "Probeabo",
+    "timedBurstCredits": "Befristete Burst-Punkte",
+    "timedQuota": "Befristetes Kontingent"
+  },
   "messages": {
     "batchResultSummary": "Gesamt {{total}}. Erfolgreich {{success}}. Fehlgeschlagen {{failed}}.",
     "batchResultTitle": "Einlösungsergebnisse",
+    "benefitsRedeemed": "Eingelöst: {{details}}",
     "cancelled": "Abgebrochen",
+    "extensionDays": "Um {{days}} Tage verlängert",
+    "fallbackBenefit": "Ersatzvorteil verwendet",
     "noAccountForUrl": "Für diese Website wurde kein passendes Konto gefunden. Bitte fügen Sie die Website als Konto in All API Hub hinzu und versuchen Sie es dann erneut.",
     "promptConfirm": "Auf dieser Seite wurde ein möglicher Einlösungscode {{code}} entdeckt. Versuchen Sie die automatische Einlösung für diese Website?",
     "promptConfirmBatch_one": "{{count}} möglicher Einlösungscode wurde auf dieser Seite erkannt. Wählen Sie die Codes aus, die für diese Website automatisch eingelöst werden sollen.",

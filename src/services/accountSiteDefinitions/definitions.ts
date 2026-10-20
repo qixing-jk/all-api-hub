@@ -114,6 +114,9 @@ import {
   OPENROUTER_DISPLAY_NAME,
   OPENROUTER_HOSTNAMES,
   OPENROUTER_WEB_ORIGIN,
+  RELAYFOR_DISPLAY_NAME,
+  RELAYFOR_HOSTNAMES,
+  RELAYFOR_LOGIN_PATH,
   RIGHTCODE_DISPLAY_NAME,
   RIGHTCODE_HOSTNAMES,
   RIGHTCODE_LOGIN_PATH,
@@ -217,6 +220,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.KRILL,
   SITE_TYPES.CUBENCE,
   SITE_TYPES.RIGHT_CODE,
+  SITE_TYPES.RELAYFOR,
   SITE_TYPES.OPENROUTER,
   SITE_TYPES.KIMI,
   SITE_TYPES.KIMI_GLOBAL,
@@ -1043,6 +1047,54 @@ const ACCOUNT_SITE_DEFINITIONS = [
       // they were detected on instead of being rewritten to a canonical origin.
       urls: {
         recognizedHostnames: RIGHTCODE_HOSTNAMES,
+        inferFromHostname: true,
+      },
+    },
+  },
+  {
+    siteType: SITE_TYPES.RELAYFOR,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.RelayFor,
+    onboarding: {
+      displayName: RELAYFOR_DISPLAY_NAME,
+      detection: {
+        hostnames: RELAYFOR_HOSTNAMES,
+        titlePatterns: [makeTitleRegex("RelayFor")],
+      },
+      routes: {
+        loginPath: RELAYFOR_LOGIN_PATH,
+        usagePath: "/console/#usage",
+        adminCredentialsPath: "/console/#tokens",
+        siteAnnouncementsPath: "/console/#overview",
+        pricingPath: "/console/#models",
+        checkInPath: "/console/#overview",
+        accessTokenPath: null,
+        redeemPath: "/console/#redeem",
+      },
+    },
+    productProfile: {
+      auth: {
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.AccessToken],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
+        defaultAuthHostnames: [],
+      },
+      identity: {
+        usernameRequired: true,
+        userIdRequired: false,
+        storedUserIdentityFields: ["id", "username"],
+      },
+      modelList: {
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Response,
+        groupSemantics: ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+      },
+      tokenForm: {
+        networkLimitPolicy:
+          ACCOUNT_SITE_TOKEN_FORM_NETWORK_LIMIT_POLICIES.IpList,
+      },
+      urls: {
+        recognizedHostnames: RELAYFOR_HOSTNAMES,
         inferFromHostname: true,
       },
     },

@@ -12,10 +12,26 @@
   "actions": {
     "autoRedeem": "Resgate automático"
   },
+  "benefits": {
+    "burstCredits": "Créditos de pico",
+    "groupQuota": "Cota do grupo",
+    "groupTimedQuota": "Cota temporária do grupo",
+    "quota": "Cota permanente",
+    "subscription": "Assinatura",
+    "subscriptionAdd": "Adição de cota",
+    "subscriptionExtension": "Extensão da assinatura",
+    "subscriptionReset": "Redefinição da cota",
+    "subscriptionTrial": "Assinatura de teste",
+    "timedBurstCredits": "Créditos temporários de pico",
+    "timedQuota": "Cota temporária"
+  },
   "messages": {
     "batchResultSummary": "Total: {{total}}. Sucesso: {{success}}. Falha: {{failed}}.",
     "batchResultTitle": "Resultados de resgate",
+    "benefitsRedeemed": "Resgatado: {{details}}",
     "cancelled": "Cancelado",
+    "extensionDays": "Estendida em {{days}} dias",
+    "fallbackBenefit": "Benefício alternativo utilizado",
     "noAccountForUrl": "Nenhuma conta correspondente encontrada para este site. Adicione o site como uma conta em All API Hub e tente novamente.",
     "promptConfirm": "Detectamos um possível código de resgate, {{code}}, nesta página. Deseja tentar resgatá-lo automaticamente neste site?",
     "promptConfirmBatch_one": "Detectamos {{count}} possível código de resgate nesta página. Selecione o código que deseja resgatar automaticamente neste site.",

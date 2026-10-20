@@ -34,6 +34,7 @@ export type AccountKeyResourceProviderFacts = AccountKeyResourceFacts & {
 }
 
 export type AccountKeyResourceEditorDefinition<TCommand> = {
+  action?: AccountKeyResourceEditor["action"]
   /** Local metadata commits do not read or mutate server resource state. */
   mutationKind?: typeof ACCOUNT_KEY_RESOURCE_LOCAL_METADATA
   fields: AccountKeyResourceEditor["fields"]
@@ -165,7 +166,12 @@ export type AccountKeyResourceDefinition<
     state: { readonly baseline: TDetail; readonly current: TDetail },
     command: TUpdateCommand,
     options?: ResourceOperationOptions,
-  ): Promise<NativeResourceMutationResult<TDetail, TFailure>>
+  ): Promise<
+    NativeResourceMutationResult<TDetail, TFailure> & {
+      /** A rotation may produce a response-only secret for the existing resource. */
+      createdSecret?: AccountKeyEditorSubmitResult["createdSecret"]
+    }
+  >
   delete(
     config: TConfig,
     scope: AccountKeyScope,

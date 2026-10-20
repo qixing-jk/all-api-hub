@@ -28,6 +28,10 @@ import {
 import { createFoxCodeKeyEditor } from "~/services/apiAdapters/foxcode/keyEditor"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keys/keyResourceEditor"
 import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
+import {
+  createRelayForKeyEditor,
+  editRelayForKeyEditor,
+} from "~/services/apiAdapters/relayfor/accountKeyResource"
 import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keys/keyResourceEditor"
 import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
 import { AuthTypeEnum } from "~/types"
@@ -40,6 +44,55 @@ const request = {
     userId: 1,
   },
 }
+
+it.each([
+  ["budget_5h", "budget5h", "budgetResetHelp"],
+  ["budget_day", "budgetDay", ""],
+  ["budget_week", "budgetWeek", ""],
+  ["budget_month", "budgetMonth", ""],
+  ["requests_per_minute", "keyRpm", "keyRateHelp"],
+  ["concurrent_requests", "keyConcurrency", "keyRateHelp"],
+  ["unlimited_quota", "keyUnlimitedQuota", "keyUnlimitedQuotaHelp"],
+  ["quota", "independentQuotaUsd", "followAccountQuotaHelp"],
+  ["model_limits", "modelAllowlist", "allowlistHelp"],
+  ["ip_limits", "ipCidrAllowlist", "allowlistHelp"],
+])("explains the native RelayFor setting %s", (id, label, help) => {
+  const presentation = getNativeKeyResourceEditorPresentation(
+    SITE_TYPES.RELAYFOR,
+    editorModes.Edit,
+  )
+  const field = presentation.policy.fields.find((f) => f.fieldId === id)!
+  const t = ((key: string) => key) as TFunction
+  expect(field.resolveLabel(t)).toBe(`keyManagement:native.editor.${label}`)
+  expect(field.resolveHelp?.(t)).toBe(
+    help ? `keyManagement:native.editor.${help}` : "",
+  )
+  expect(presentation.sectionLabelResolvers.limits?.(t)).toBe(
+    "keyManagement:native.editor.budgetsAndLimits",
+  )
+})
+
+it.each(["rotate", "enable", "disable"] as const)(
+  "explains the consequence of %s without editable settings",
+  (action) => {
+    const presentation = getNativeKeyResourceEditorPresentation(
+      SITE_TYPES.RELAYFOR,
+      editorModes.Edit,
+      { action },
+    )
+    const t = ((key: string) => key) as TFunction
+    expect(presentation.policy.fields).toEqual([])
+    expect(presentation.title?.(t, {})).toBe(
+      `keyManagement:native.actions.${action}`,
+    )
+    expect(presentation.submitLabel?.(t, {})).toBe(
+      `keyManagement:native.actions.${action}`,
+    )
+    expect(presentation.summary?.describe({}, t, "en")).toBe(
+      `keyManagement:native.lifecycle.${action}Description`,
+    )
+  },
+)
 
 /** Supplies the same editor facts that the dialog passes in production. */
 function getPresentation(
@@ -624,6 +677,44 @@ it("declares the grouping field or an explicit fixed naming policy", () => {
   expect(
     getPresentation(SITE_TYPES.GRSAI, editorModes.Create).automaticName,
   ).toEqual({ kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed })
+})
+
+it("presents RelayFor fields without mismatch in create and edit modes", () => {
+  const createEditor = createRelayForKeyEditor()
+  const createPresentation = getPresentation(
+    SITE_TYPES.RELAYFOR,
+    editorModes.Create,
+    { fields: createEditor.fields },
+  )
+  expect(() =>
+    resolveResourceFieldPolicy(
+      createEditor.fields,
+      createPresentation.policy,
+      createPresentation.sectionOrder,
+    ),
+  ).not.toThrow()
+
+  const editEditor = editRelayForKeyEditor({
+    id: 1,
+    name: "test",
+    key: "sk-...",
+    status: 1,
+    remain_quota: 500000,
+    used_quota: 0,
+    unlimited_quota: true,
+  })
+  const editPresentation = getPresentation(
+    SITE_TYPES.RELAYFOR,
+    editorModes.Edit,
+    { fields: editEditor.fields },
+  )
+  expect(() =>
+    resolveResourceFieldPolicy(
+      editEditor.fields,
+      editPresentation.policy,
+      editPresentation.sectionOrder,
+    ),
+  ).not.toThrow()
 })
 
 it("requires a naming decision in every editor presentation", () => {

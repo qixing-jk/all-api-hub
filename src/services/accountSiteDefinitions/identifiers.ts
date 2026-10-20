@@ -39,6 +39,7 @@ export const SITE_TYPES = {
   KRILL: "krill",
   CUBENCE: "cubence",
   RIGHT_CODE: "RightCode",
+  RELAYFOR: "relayfor",
   OPENROUTER: "openrouter",
   OMNIROUTE: "omniroute",
   GPT_LOAD: "gpt-load",
@@ -124,6 +125,10 @@ export const RIGHTCODE_HOSTNAMES = [
 ] as const
 export const RIGHTCODE_DISPLAY_NAME = "RightCode"
 export const RIGHTCODE_LOGIN_PATH = "/login"
+
+export const RELAYFOR_HOSTNAMES = ["relayfor.xyz"] as const
+export const RELAYFOR_DISPLAY_NAME = "RelayFor"
+export const RELAYFOR_LOGIN_PATH = "/auth/?mode=login"
 
 export const OPENROUTER_HOSTNAMES = ["openrouter.ai"] as const
 

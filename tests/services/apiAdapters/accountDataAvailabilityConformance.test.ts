@@ -49,6 +49,7 @@ const collectedRequests = {
   grsaiAccount: 0,
   freeModelAccount: 0,
   cubenceAccount: 0,
+  relayForAccount: 0,
 }
 
 const expectClassifiedAvailability = (data: AccountData) => {
@@ -700,6 +701,40 @@ const producerFixturesByFamily = {
       expect(collectedRequests.grsaiAccount).toBe(snapshotCount)
     },
   },
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.RelayFor]: {
+    baseUrl: "https://relayfor.example.invalid",
+    authType: AuthTypeEnum.AccessToken,
+    expectedAvailability: {
+      consumption: complete,
+      requests: complete,
+      tokens: complete,
+      income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
+    handlers: [
+      http.get("https://relayfor.example.invalid/api/user/overview", () => {
+        collectedRequests.relayForAccount += 1
+        return HttpResponse.json({
+          user: {
+            id: 1,
+            username: "relay-user",
+            quota: 500000,
+            role: 1,
+          },
+          today: {
+            requests: 5,
+            tokens: 100,
+            quota: 2500,
+          },
+          requests: 50,
+          token_count: 1000,
+          total_quota: 25000,
+        })
+      }),
+    ],
+    expectRequests: (snapshotCount: number) => {
+      expect(collectedRequests.relayForAccount).toBe(snapshotCount)
+    },
+  },
 } satisfies Record<ProducerFamily, ProducerFixture>
 
 const getProducerFixture = (siteType: AccountSiteType): ProducerFixture => {
@@ -820,6 +855,7 @@ describe("AccountData availability producer conformance", () => {
       grsaiAccount: 0,
       freeModelAccount: 0,
       cubenceAccount: 0,
+      relayForAccount: 0,
     })
     server.use(
       ...Object.values(producerFixturesByFamily).flatMap(

@@ -13,7 +13,10 @@ import { mergeEditorValuesForScopeChange } from "~/features/KeyManagement/resour
 import { useAccountKeyResourceEditorOptionsWorkflow } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceEditorOptionsWorkflow"
 import { NATIVE_RESOURCE_EDITOR_LOADING_REVEALS } from "~/features/ResourceEditor/opening/nativeResourceEditorOpeningState"
 import type { CreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
-import { type AccountKeyResourceEditor } from "~/services/apiAdapters/contracts/accountKeyResource"
+import {
+  ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions,
+  type AccountKeyResourceEditor,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 
 /** Owns editor state and its authoritative asynchronous projections. */
 export function useAccountKeyResourceEditorState(
@@ -147,6 +150,7 @@ export function useAccountKeyResourceEditorState(
         editorId: ++editorInstanceId.current,
         siteType: boundary.siteType,
         mode: editorModes.Create,
+        action: nativeEditor.action,
         fields: nativeEditor.fields,
         initialValues: nativeEditor.initialValues,
         values: mergeEditorValuesForScopeChange(current.values, nativeEditor),
@@ -198,6 +202,7 @@ export function useAccountKeyResourceEditorState(
         attemptId,
         status: "loading",
         mode: request.mode,
+        ...(request.intent ? { action: request.intent } : {}),
         reveal:
           retryAttemptId === undefined
             ? NATIVE_RESOURCE_EDITOR_LOADING_REVEALS.Delayed
@@ -232,6 +237,7 @@ export function useAccountKeyResourceEditorState(
         editorId: ++editorInstanceId.current,
         siteType: boundary.siteType,
         mode,
+        action: nativeEditor.action,
         fields: nativeEditor.fields,
         initialValues: nativeEditor.initialValues,
         values: nativeEditor.initialValues,
@@ -307,11 +313,16 @@ export function useAccountKeyResourceEditorState(
     (editorId: number, retainsFocus: boolean) => {
       const current = editorStateRef.current
       if (current?.editorId !== editorId) return
-      transitionTerminalCloseEditor({
-        ...current,
-        terminalClose: true,
-        terminalRetainsFocusWorkflow: retainsFocus,
-      })
+      transitionTerminalCloseEditor(
+        current.action === editActions.Enable ||
+          current.action === editActions.Disable
+          ? null
+          : {
+              ...current,
+              terminalClose: true,
+              terminalRetainsFocusWorkflow: retainsFocus,
+            },
+      )
       clearNativeOwner()
       transitionEditor(() => null)
       if (!retainsFocus) setFocusWorkflowId(null)

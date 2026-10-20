@@ -16,6 +16,13 @@ export interface ProductCanonicalModel {
   /** Provider-published descriptions; selected at render time, not cache time. */
   model_descriptions?: Partial<Record<"zh" | "en", string>>
   presentation?: ModelPresentation
+  availability?: { available: boolean; reason?: string }
+  /** Server-side routing preference, independent of local group filters. */
+  providerGroup?: {
+    selected: string
+    locked?: boolean
+    options: { value: string; available: boolean; multiplier?: number }[]
+  }
   quota_type: number // 0 = token billing, 1 = per-call billing
   model_ratio: number
   model_price: number | PerCallPrice

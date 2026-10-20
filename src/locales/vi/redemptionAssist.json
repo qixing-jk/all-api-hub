@@ -12,10 +12,26 @@
   "actions": {
     "autoRedeem": "Tự động đổi mã"
   },
+  "benefits": {
+    "burstCredits": "Điểm tăng tải",
+    "groupQuota": "Hạn mức nhóm",
+    "groupTimedQuota": "Hạn mức nhóm có thời hạn",
+    "quota": "Hạn mức vĩnh viễn",
+    "subscription": "Gói đăng ký",
+    "subscriptionAdd": "Thêm hạn mức gói",
+    "subscriptionExtension": "Gia hạn gói",
+    "subscriptionReset": "Đặt lại hạn mức gói",
+    "subscriptionTrial": "Gói dùng thử",
+    "timedBurstCredits": "Điểm tăng tải có thời hạn",
+    "timedQuota": "Hạn mức có thời hạn"
+  },
   "messages": {
     "batchResultSummary": "Tổng cộng {{total}}, thành công {{success}}, thất bại {{failed}}.",
     "batchResultTitle": "Kết quả đổi mã",
+    "benefitsRedeemed": "Đã đổi: {{details}}",
     "cancelled": "Đã hủy",
+    "extensionDays": "Gia hạn {{days}} ngày",
+    "fallbackBenefit": "Đã dùng quyền lợi thay thế",
     "noAccountForUrl": "Trang web hiện tại chưa được cấu hình tài khoản trong All API Hub, vui lòng thêm trang web này vào tiện ích mở rộng trước rồi thử lại.",
     "promptConfirm": "Phát hiện mã có thể là mã đổi thưởng {{code}}, bạn có muốn thử tự động đổi mã cho trang web hiện tại không?",
     "promptConfirmBatch_other": "Phát hiện {{count}} mã có thể là mã đổi thưởng. Vui lòng chọn mã bạn muốn thử tự động đổi cho trang hiện tại.",

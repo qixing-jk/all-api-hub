@@ -141,6 +141,9 @@
     "units": "課金単位の分布"
   },
   "displayFacts": {
+    "accessReason": "アクセス条件",
+    "auditCharge": "リスク拒否時の監査料",
+    "auditConsent": "監査への同意が必要",
     "benchmarkTable": {
       "arena": "アリーナ",
       "category": "カテゴリ",
@@ -154,6 +157,8 @@
     },
     "callExamples": "呼び出し例",
     "catalogOwner": "カタログの所有者",
+    "compactionCharge": "リモート圧縮料",
+    "consoleSettings": "公式設定を開く",
     "contextLimit": "コンテキスト上限",
     "defaultDimensions": "既定の次元数",
     "inputModalities": "入力モダリティ",
@@ -264,14 +269,19 @@
       "request": "リクエスト",
       "webSearch": "ウェブ検索"
     },
+    "promptAudit": "プロンプト監査有効",
     "providerAvailable": "サイトで利用可能",
     "releaseDate": "公開日",
     "sections": {
       "specifications": "仕様"
     },
+    "subscriptionMultiplier": "プラン倍率",
+    "subscriptionPlan": "対象プラン",
     "supportedDimensions": "対応次元数",
     "supportsImages": "画像対応",
     "tokenCount_other": "{{formattedCount}} トークン",
+    "trainingChannels": "学習チャネルあり",
+    "trainingConsent": "学習への同意が必要",
     "viewOnSite": "公式サイトで表示"
   },
   "displayOptions": "表示内容",
@@ -450,6 +460,15 @@
     "badge": "サイトの全モデル一覧",
     "description": "このアカウントで実際に利用できるモデル範囲を確認できなかったため、プロバイダーの完全なモデルカタログを表示しています。一部のモデルはこのアカウントでは呼び出せない可能性があります。サイト側のアカウント権限と実際の検証結果を最終的な判断基準にしてください。",
     "title": "プロバイダーの完全なモデルカタログへフォールバックしました"
+  },
+  "providerGroup": {
+    "action": "公式サイトのルーティンググループを変更",
+    "apply": "公式サイトに保存",
+    "description": "保存すると公式サイトのこのモデルのルーティング設定が変更され、以降のリクエストや料金に影響する場合があります。",
+    "label": "公式サイトのルーティンググループ",
+    "locked": "使用中のセッションで固定されています。先に公式サイトでセッションを管理してください。",
+    "refreshRequired": "{{error}}。反映済みの可能性があります。再操作前に一覧を更新してください。",
+    "saving": "保存中…"
   },
   "providerTabs": {
     "scrollLeft": "ベンダータブを左にスクロール",

@@ -1445,3 +1445,39 @@ it("rejects a revoke result attributed to another resource", async () => {
     failure: { code: "unexpected" },
   })
 })
+
+it.each([false, true])(
+  "delivers update secrets only for the same resource (mismatch=%s)",
+  async (mismatch) => {
+    const createdSecret = {
+      correlation: {
+        kind: correlationKinds.AccountKeyResource,
+        ref: { ...REF, accountId: mismatch ? "other-account" : REF.accountId },
+      },
+      displayName: "Rotated",
+      secret: "sk-rotated-example-secret",
+      secretAvailability: "create-response-only" as const,
+      credential: {
+        accountName: "Example",
+        apiType: "openai-compatible" as const,
+        baseUrl: "https://example.invalid",
+        tagIds: [],
+      },
+    }
+    const definition = createDefinition({
+      update: async () => ({
+        certainty: "applied",
+        value: { id: REF.resourceId, name: "Rotated" },
+        createdSecret,
+      }),
+    })
+    const session =
+      await defineAccountKeyResourceCapability(definition).open(OPEN_INPUT)
+    const collection = await session.openCollection(REF.scopeKey)
+    const editor = await collection.openEditEditor(REF)
+    const result = editor.submit({ name: "Rotated" })
+    if (mismatch)
+      await expect(result).rejects.toBeInstanceOf(AccountKeyResourceError)
+    else expect((await result).createdSecret?.secret).toBe(createdSecret.secret)
+  },
+)
