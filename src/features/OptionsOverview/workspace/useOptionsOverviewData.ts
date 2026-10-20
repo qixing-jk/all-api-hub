@@ -63,6 +63,21 @@ function settledValue<T>(result: PromiseSettledResult<T>, fallback: T): T {
   return result.status === "fulfilled" ? result.value : fallback
 }
 
+/** Keeps an unavailable background status from blocking the overview. */
+async function readStatusWithTimeout<T>(promise: Promise<T>) {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<undefined>((resolve) => {
+        timer = setTimeout(() => resolve(undefined), 3000)
+      }),
+    ])
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 interface OptionsOverviewDataState {
   isLoading: boolean
   error: string | null
@@ -179,10 +194,14 @@ export function useOptionsOverviewData(): OptionsOverviewDataState {
           managedSiteType &&
           supportsManagedSiteModelSync(managedSiteType) &&
           preferences?.managedSiteModelSync?.enabled
-            ? sendModelSyncMessage(ModelSyncMessageTypes.GetLastExecution)
+            ? readStatusWithTimeout(
+                sendModelSyncMessage(ModelSyncMessageTypes.GetLastExecution),
+              )
             : Promise.resolve(undefined),
           preferences?.webdav?.autoSync
-            ? sendWebdavAutoSyncMessage(WebdavAutoSyncMessageTypes.GetStatus)
+            ? readStatusWithTimeout(
+                sendWebdavAutoSyncMessage(WebdavAutoSyncMessageTypes.GetStatus),
+              )
             : Promise.resolve(undefined),
         ])
         if (!isCurrent) return

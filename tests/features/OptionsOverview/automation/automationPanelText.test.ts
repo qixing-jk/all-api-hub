@@ -30,6 +30,35 @@ const baseAutomationItem: OptionsOverviewAutomationItem = {
 }
 
 describe("automation panel text helpers", () => {
+  it.each([
+    ["ready", "ready"],
+    ["success", "success"],
+    ["partial", "partial"],
+    ["failed", "failed"],
+    ["skipped", "skipped"],
+    ["not_run", "notRun"],
+    ["running", "running"],
+    ["unknown", "unknown"],
+    ["unsupported", "unsupported"],
+    ["limited", "limited"],
+    ["disabled", "disabled"],
+  ] as const)("labels the %s execution outcome", (statusLabel, label) => {
+    expect(
+      getAutomationStatusLabel({ ...baseAutomationItem, statusLabel }, t),
+    ).toBe(`optionsOverview:automation.status.${label}`)
+  })
+
+  it.each(["success", "failed", "unsupported", "skipped"] as const)(
+    "uses the shared %s result count label across automations",
+    (rowId) => {
+      for (const itemId of Object.values(ITEM_IDS)) {
+        expect(getAutomationSummaryRowLabel(itemId, rowId, t)).toBe(
+          `optionsOverview:automation.metrics.${rowId}`,
+        )
+      }
+    },
+  )
+
   it.each(Object.values(ITEM_IDS))(
     "shares last-run labels and empty timestamp fallbacks for %s",
     (itemId) => {

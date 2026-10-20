@@ -147,6 +147,53 @@ const usageStore = {
 }
 
 describe("useOptionsOverviewData", () => {
+  it.each(["model", "webdav", "both"])(
+    "finishes loading when %s status messages never respond",
+    async (pending) => {
+      mockSuccessfulLoad()
+      vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+        ...DEFAULT_PREFERENCES,
+        managedSiteType: SITE_TYPES.NEW_API,
+        managedSiteModelSync: {
+          ...DEFAULT_PREFERENCES.managedSiteModelSync!,
+          enabled: true,
+        },
+        webdav: { ...DEFAULT_PREFERENCES.webdav, autoSync: true },
+      })
+      if (pending !== "webdav") {
+        vi.mocked(sendModelSyncMessage).mockReturnValue(new Promise(() => {}))
+      }
+      if (pending !== "model") {
+        vi.mocked(sendWebdavAutoSyncMessage).mockReturnValue(
+          new Promise(() => {}),
+        )
+      }
+      vi.useFakeTimers()
+      try {
+        const { result, unmount } = renderHook(() => useOptionsOverviewData(), {
+          withReleaseUpdateStatusProvider: false,
+          withThemeProvider: false,
+          withUserPreferencesProvider: false,
+        })
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(3000)
+        })
+        expect(result.current.isLoading).toBe(false)
+        expect(result.current.viewModel?.usageSnapshot.todayRequests).toBe(1)
+        const items = result.current.viewModel!.automationOverview.items
+        expect(
+          items.find((item) => item.id === "managedSiteModelSync")?.statusLabel,
+        ).toBe(pending === "webdav" ? "not_run" : "unknown")
+        expect(
+          items.find((item) => item.id === "webdavAutoSync")?.statusLabel,
+        ).toBe(pending === "model" ? "not_run" : "unknown")
+        unmount()
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
+
   it("keeps failed status reads unknown while preserving the rest of the overview", async () => {
     mockSuccessfulLoad()
     vi.mocked(userPreferences.getPreferences).mockResolvedValue({

@@ -19,7 +19,7 @@ import type {
   OptionsOverviewAutomationOverview,
 } from "~/features/OptionsOverview/types"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
-import { render, screen } from "~~/tests/test-utils/render"
+import { render, screen, within } from "~~/tests/test-utils/render"
 
 const t = ((key: string) => key) as TFunction
 
@@ -247,6 +247,38 @@ function renderPanel(
 }
 
 describe("OverviewAutomationPanel", () => {
+  it("explains unavailable status without showing stale check-in results and keeps navigation available", async () => {
+    const user = userEvent.setup()
+    const item: OptionsOverviewAutomationItem = {
+      ...createAutoCheckinItem(),
+      status: "info",
+      statusLabel: OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS.unknown,
+    }
+    const onNavigate = renderPanel(item)
+    const disclosure = screen.getByRole("button", {
+      name: /^optionsOverview:automation\.items\.autoCheckin\.label/,
+    })
+    expect(disclosure).toHaveTextContent(
+      "optionsOverview:automation.status.unknown",
+    )
+    await user.click(disclosure)
+    const details = document.getElementById(
+      disclosure.getAttribute("aria-controls")!,
+    )!
+    expect(
+      within(details).getByText("optionsOverview:automation.statusUnavailable"),
+    ).toBeVisible()
+    expect(
+      screen.queryByText("optionsOverview:autoCheckin.metrics.success"),
+    ).not.toBeInTheDocument()
+    await user.click(
+      within(details).getByRole("button", {
+        name: "optionsOverview:autoCheckin.actions.open",
+      }),
+    )
+    expect(onNavigate).toHaveBeenCalledWith(item.primaryTarget)
+  })
+
   it("shows a warning result badge and explains the enabled switch separately", async () => {
     const user = userEvent.setup()
     renderPanel({
