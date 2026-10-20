@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 
 import { cn } from "~/lib/utils"
+import api88Icon from "~~/resources/partners/icons/88api.jpg"
 import aicodemirrorIcon from "~~/resources/partners/icons/aicodemirror.png"
 import apimartIcon from "~~/resources/partners/icons/apimart.png"
 import defaultSponsorIcon from "~~/resources/partners/icons/default.png"
@@ -36,6 +37,7 @@ const LOCAL_SPONSOR_ICONS: Record<string, string> = {
   suixiang: suixiangIcon,
   "volcengine-coding-plan": volcengineIcon,
   apimart: apimartIcon,
+  "88api": api88Icon,
 }
 
 export const DEFAULT_SPONSOR_ICON = defaultSponsorIcon

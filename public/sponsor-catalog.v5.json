@@ -793,6 +793,119 @@
       }
     },
     {
+      "id": "88api",
+      "locales": {
+        "zh-CN": {
+          "enabled": true,
+          "rank": 119.5,
+          "supportStatus": "supported",
+          "name": "88API Token聚合平台",
+          "tagline": "由香港企业运营的一站式多模型 API 平台，面向开发者、创作者与 AI 应用用户，通过统一接口接入文本、图片、语音和视频模型，覆盖 AI 编程、智能翻译、内容创作、配音、图像生成、视频生成等常见工作流。可直接在 CC Switch 中添加并切换 Provider，支持国际主流付款方式、发票与企业级稳定服务。",
+          "links": {
+            "primary": "https://88api.ai/register?aff=XcTj"
+          },
+          "postClickNote": "通过专属链接注册可获取赠送额度！",
+          "actions": {
+            "addAccount": {
+              "siteType": "new-api",
+              "siteUrl": "https://88api.ai",
+              "authType": "access_token"
+            }
+          }
+        },
+        "zh-TW": {
+          "enabled": true,
+          "rank": 119.5,
+          "supportStatus": "supported",
+          "name": "88API Token聚合平台",
+          "tagline": "由香港企業營運的一站式多模型 API 平台，面向開發者、創作者與 AI 應用使用者，透過統一介面接入文字、圖片、語音和影片模型，涵蓋 AI 程式設計、智慧翻譯、內容創作、配音、圖像生成與影片生成等常見工作流程。可直接在 CC Switch 中新增並切換 Provider，支援國際主流付款方式、發票與企業級穩定服務。",
+          "links": {
+            "primary": "https://88api.ai/register?aff=XcTj"
+          },
+          "postClickNote": "透過專屬連結註冊可獲取贈送額度！",
+          "actions": {
+            "addAccount": {
+              "siteType": "new-api",
+              "siteUrl": "https://88api.ai",
+              "authType": "access_token"
+            }
+          }
+        },
+        "en": {
+          "enabled": true,
+          "rank": 119.5,
+          "supportStatus": "supported",
+          "name": "88API Token Aggregation Platform",
+          "tagline": "A one-stop multi-model API platform operated by a Hong Kong company for developers, creators, and AI application users. Its unified API connects text, image, speech, and video models for AI coding, translation, content creation, voiceovers, image generation, and video generation. Add and switch providers directly in CC Switch, with major international payment methods, invoicing, and stable enterprise services.",
+          "links": {
+            "primary": "https://88api.ai/register?aff=XcTj"
+          },
+          "postClickNote": "Register through the dedicated link to receive bonus credits!",
+          "actions": {
+            "addAccount": {
+              "siteType": "new-api",
+              "siteUrl": "https://88api.ai",
+              "authType": "access_token"
+            }
+          }
+        },
+        "pt-BR": {
+          "enabled": true,
+          "rank": 119.5,
+          "supportStatus": "supported",
+          "name": "88API Token Aggregation Platform",
+          "tagline": "Plataforma de API multimodelo operada por uma empresa de Hong Kong para desenvolvedores, criadores e usuários de IA. Uma interface unificada conecta modelos de texto, imagem, voz e vídeo para programação, tradução, criação de conteúdo, dublagem e geração de imagens e vídeos. Adicione e alterne provedores no CC Switch, com os principais meios de pagamento internacionais, emissão de faturas e serviços empresariais estáveis.",
+          "links": {
+            "primary": "https://88api.ai/register?aff=XcTj"
+          },
+          "postClickNote": "Cadastre-se pelo link exclusivo para receber créditos de bônus!",
+          "actions": {
+            "addAccount": {
+              "siteType": "new-api",
+              "siteUrl": "https://88api.ai",
+              "authType": "access_token"
+            }
+          }
+        },
+        "ja": {
+          "enabled": true,
+          "rank": 119.5,
+          "supportStatus": "supported",
+          "name": "88API Token集約プラットフォーム",
+          "tagline": "香港企業が運営する、開発者・クリエイター・AI アプリユーザー向けのマルチモデル API プラットフォームです。統一 API でテキスト・画像・音声・動画モデルに接続し、AI コーディング、翻訳、コンテンツ制作、ナレーション、画像生成、動画生成に対応します。CC Switch で直接 Provider を追加・切り替えでき、主要な国際決済、請求書発行、安定した企業向けサービスにも対応します。",
+          "links": {
+            "primary": "https://88api.ai/register?aff=XcTj"
+          },
+          "postClickNote": "専用リンクから登録すると、特典クレジットを受け取れます！",
+          "actions": {
+            "addAccount": {
+              "siteType": "new-api",
+              "siteUrl": "https://88api.ai",
+              "authType": "access_token"
+            }
+          }
+        },
+        "vi": {
+          "enabled": true,
+          "rank": 119.5,
+          "supportStatus": "supported",
+          "name": "88API Token Aggregation Platform",
+          "tagline": "Nền tảng API đa mô hình do doanh nghiệp Hồng Kông vận hành dành cho nhà phát triển, nhà sáng tạo và người dùng ứng dụng AI. API thống nhất kết nối các mô hình văn bản, hình ảnh, giọng nói và video cho lập trình AI, dịch thuật, sáng tạo nội dung, lồng tiếng và tạo hình ảnh, video. Thêm và chuyển đổi nhà cung cấp trực tiếp trong CC Switch, hỗ trợ các phương thức thanh toán quốc tế phổ biến, xuất hóa đơn và dịch vụ doanh nghiệp ổn định.",
+          "links": {
+            "primary": "https://88api.ai/register?aff=XcTj"
+          },
+          "postClickNote": "Đăng ký qua liên kết riêng để nhận tín dụng tặng thêm!",
+          "actions": {
+            "addAccount": {
+              "siteType": "new-api",
+              "siteUrl": "https://88api.ai",
+              "authType": "access_token"
+            }
+          }
+        }
+      }
+    },
+    {
       "id": "volcengine-coding-plan",
       "locales": {
         "zh-CN": {

@@ -141,6 +141,17 @@ If you are looking for stable, efficient, and highly compatible AI relay service
 
   <hr>
 
+  <section class="sponsor-item">
+    <a class="sponsor-logo" href="https://88api.ai/register?aff=XcTj">
+      <img src="../../../resources/partners/88api.jpg" alt="88API Token Aggregation Platform">
+    </a>
+    <p>
+      <strong>88API Token Aggregation Platform</strong> A one-stop multi-model API platform operated by a Hong Kong company for developers, creators, and AI application users. Its unified API connects text, image, speech, and video models for AI coding, translation, content creation, voiceovers, image generation, and video generation. Add and switch providers directly in CC Switch, with major international payment methods, invoicing, and stable enterprise services. <a href="https://88api.ai/register?aff=XcTj">Register through the dedicated link to receive bonus credits!</a>
+    </p>
+  </section>
+
+  <hr>
+
   <section class="sponsor-item sponsor-item-featured">
     <a href="https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub">
       <img src="../../../resources/partners/volcengine_en.jpg" alt="Dola Seed on BytePlus ModelArk">
@@ -151,6 +162,8 @@ If you are looking for stable, efficient, and highly compatible AI relay service
   </section>
 
   <hr>
+
+
 </div>
 
 ## Compatible Variants with Limited Public Information

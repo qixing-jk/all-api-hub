@@ -141,6 +141,17 @@
 
   <hr>
 
+  <section class="sponsor-item">
+    <a class="sponsor-logo" href="https://88api.ai/register?aff=XcTj">
+      <img src="../../resources/partners/88api.jpg" alt="88API Token聚合平台">
+    </a>
+    <p>
+      <strong>88API Token聚合平台</strong> 由香港企业运营的一站式多模型 API 平台，面向开发者、创作者与 AI 应用用户，通过统一接口接入文本、图片、语音和视频模型，覆盖 AI 编程、智能翻译、内容创作、配音、图像生成、视频生成等常见工作流。可直接在 CC Switch 中添加并切换 Provider，支持国际主流付款方式、发票与企业级稳定服务。 <a href="https://88api.ai/register?aff=XcTj">通过专属链接注册可获取赠送额度！</a>
+    </p>
+  </section>
+
+  <hr>
+
   <section class="sponsor-item sponsor-item-featured">
     <a href="https://dis.chatdesks.cn/chatdesk/hsyqallapihub.html">
       <img src="../../resources/partners/volcengine.png" alt="火山引擎方舟 Coding-Plan">
@@ -151,6 +162,8 @@
   </section>
 
   <hr>
+
+
 </div>
 
 ## 已兼容但公开资料较少的变体
