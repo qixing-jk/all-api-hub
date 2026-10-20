@@ -162,6 +162,7 @@ describe("account site onboarding registry", () => {
       "cubence",
       "freemodel",
       "dahl",
+      "emrank",
       "sub2api",
       "sharedchat",
       "voapi-v2",

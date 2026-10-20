@@ -82,6 +82,10 @@ import {
   CUBENCE_WEB_ORIGIN,
   DAHL_HOSTNAMES,
   DAHL_WEB_ORIGIN,
+  EMRANK_API_BASE_URL,
+  EMRANK_DISPLAY_NAME,
+  EMRANK_HOSTNAMES,
+  EMRANK_WEB_ORIGIN,
   FOXCODE_HOSTNAMES,
   FOXCODE_INFERENCE_ORIGIN,
   FOXCODE_WEB_ORIGIN,
@@ -209,6 +213,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.DAHL,
   SITE_TYPES.FOXCODE,
   SITE_TYPES.XIAOEN,
+  SITE_TYPES.EMRANK,
   SITE_TYPES.KRILL,
   SITE_TYPES.CUBENCE,
   SITE_TYPES.RIGHT_CODE,
@@ -289,6 +294,61 @@ const ACCOUNT_SITE_DEFINITIONS = [
         inferFromHostname: true,
         storageOrigin: XIAOEN_WEB_ORIGIN,
         duplicateOrigin: XIAOEN_WEB_ORIGIN,
+      },
+    },
+  },
+  {
+    siteType: SITE_TYPES.EMRANK,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Emrank,
+    onboarding: {
+      displayName: EMRANK_DISPLAY_NAME,
+      detection: { hostnames: EMRANK_HOSTNAMES },
+      routes: {
+        loginPath: "/login",
+        usagePath: "/requests",
+        adminCredentialsPath: "/api-keys",
+        pricingPath: "/models",
+        checkInPath: "/account",
+        accessTokenPath: null,
+        redeemPath: "/account",
+        siteAnnouncementsPath: null,
+      },
+    },
+    productProfile: {
+      metrics: {
+        deferredTodayStatsAvailability:
+          createUnsupportedTodayStatsAvailability(),
+        legacyTodayStatsAvailability: createUnsupportedTodayStatsAvailability(),
+      },
+      auth: {
+        // https://emrank.tech: only the HttpOnly `__Host-gateway_session`
+        // console session is verified; PAT/system-token auth stays out of scope.
+        usesBrowserCookieSession: true,
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.Cookie],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.Cookie,
+        defaultAuthHostnames: EMRANK_HOSTNAMES,
+      },
+      identity: {
+        usernameRequired: false,
+        storedUserIdentityFields: ["id", "username"],
+      },
+      createdToken: {
+        secretHandling:
+          ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING.OneTimeSecretDialog,
+      },
+      modelList: {
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+        groupSemantics: ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+      },
+      urls: {
+        recognizedHostnames: EMRANK_HOSTNAMES,
+        inferFromHostname: true,
+        storageOrigin: EMRANK_WEB_ORIGIN,
+        duplicateOrigin: EMRANK_WEB_ORIGIN,
+        inferenceApiBaseUrls: { openAiCompatible: EMRANK_API_BASE_URL },
       },
     },
   },

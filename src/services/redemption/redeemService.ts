@@ -3,6 +3,7 @@ import { accountPresentation } from "~/services/accounts/accountStorage/accountP
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { accountReadModels } from "~/services/accounts/accountStorage/accountReadModels"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
+import { formatQuotaAmount } from "~/services/quotaAssets/quotaAsset"
 import { resolveAutomaticRedemptionAvailability } from "~/services/redemption/accountSupport"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
@@ -74,7 +75,12 @@ class RedeemService {
 
       const amountStr =
         typeof creditedAmount === "number"
-          ? formatMoneyFixed(creditedAmount / QUOTA_PER_USD)
+          ? redemptionAvailability.capability.quotaAsset
+            ? formatQuotaAmount(
+                creditedAmount,
+                redemptionAvailability.capability.quotaAsset,
+              )
+            : formatMoneyFixed(creditedAmount / QUOTA_PER_USD)
           : ""
 
       const message = t("redemptionAssist:messages.redeemSuccess", {

@@ -76,6 +76,11 @@ export type AccountKeyResourceEditorDialogProps = {
   ) => void
   /** Kept stable by the controller across editor -> one-time-secret handoff. */
   focusWorkflowId?: string | number
+  /**
+   * A submit sent while the inventory is reloading is dropped without feedback,
+   * so the save control stays pressed until the read it depends on settles.
+   */
+  isInventoryRefreshing?: boolean
 }
 
 /** Renders the provider's native projection while its controller owns operations. */
@@ -92,6 +97,7 @@ export function AccountKeyResourceEditorDialog({
   onLoadOptions,
   focusWorkflowId,
   notice,
+  isInventoryRefreshing = false,
 }: AccountKeyResourceEditorDialogProps) {
   const { t } = useTranslation()
   const editorCloseRequestRef = useRef<(() => void) | null>(null)
@@ -235,6 +241,7 @@ export function AccountKeyResourceEditorDialog({
           onSubmit={onSubmit}
           onValuesChange={onValuesChange}
           onLoadOptions={onLoadOptions}
+          isInventoryRefreshing={isInventoryRefreshing}
           onRequestCloseRef={editorCloseRequestRef}
           onCommitClose={(editorId) => setCommittedCloseEditorId(editorId)}
           footerHost={editorFooterHost}
@@ -277,7 +284,7 @@ function AccountKeyResourceEditorOpeningContent({
 
 type AccountKeyResourceEditorDialogSessionProps = Pick<
   AccountKeyResourceEditorDialogProps,
-  "onSubmit" | "onValuesChange" | "onLoadOptions"
+  "onSubmit" | "onValuesChange" | "onLoadOptions" | "isInventoryRefreshing"
 > & {
   editor: AccountKeyResourceEditorDialogState
   onRequestCloseRef: { current: (() => void) | null }
@@ -291,6 +298,7 @@ function AccountKeyResourceEditorDialogSession({
   onSubmit,
   onValuesChange,
   onLoadOptions,
+  isInventoryRefreshing = false,
   onRequestCloseRef,
   onCommitClose,
   footerHost,
@@ -315,6 +323,7 @@ function AccountKeyResourceEditorDialogSession({
     onSubmit,
     onValuesChange,
     onLoadOptions,
+    isInventoryRefreshing,
     onCommitClose,
   })
   onRequestCloseRef.current = requestClose
@@ -338,6 +347,7 @@ function AccountKeyResourceEditorDialogSession({
                 loading={isSubmitting}
                 disabled={
                   hasUnresolvedDependentOptions ||
+                  isInventoryRefreshing ||
                   presentation.canSubmit?.(values) === false
                 }
                 onClick={() => void submit()}

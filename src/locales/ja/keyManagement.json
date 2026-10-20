@@ -248,6 +248,7 @@
     "neverExpires": "期限なし",
     "note": "メモ:",
     "remainingQuota": "残りクォータ:",
+    "totalQuota": "合計クォータ：",
     "ungrouped": "グループなし",
     "usedQuota": "使用済みクォータ:"
   },
@@ -417,6 +418,19 @@
         "transferAmount": "転送するトークン数"
       },
       "description": "説明（任意）",
+      "emrank": {
+        "expiration": "有効期限",
+        "expirationOptions": {
+          "custom": "日時を指定",
+          "day": "1日",
+          "hour": "1時間",
+          "keep": "現在の有効期限を維持",
+          "month": "1か月（30日）",
+          "never": "無期限"
+        },
+        "quotaHelp": "1 M = 1,000,000 Token。小数は最大 6 桁。",
+        "quotaMToken": "クォータ（M Token）"
+      },
       "excludeIps": "除外 IP",
       "excludeIpsPlaceholder": "1 行に 1 件（CIDR 対応）",
       "expiryDays": "有効期間（日）",

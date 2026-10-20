@@ -77,10 +77,11 @@ export function useAccountKeyResourceEditorDraft({
   onSubmit,
   onValuesChange,
   onLoadOptions,
+  isInventoryRefreshing = false,
   onCommitClose,
 }: Pick<
   AccountKeyResourceEditorDialogProps,
-  "onSubmit" | "onValuesChange" | "onLoadOptions"
+  "onSubmit" | "onValuesChange" | "onLoadOptions" | "isInventoryRefreshing"
 > & {
   editor: AccountKeyResourceEditorDialogState
   onCommitClose: (editorId: number) => void
@@ -299,7 +300,12 @@ export function useAccountKeyResourceEditorDraft({
     close()
   }
   const submit = async () => {
-    if (submittingRef.current || hasUnresolvedDependentOptions) return
+    if (
+      submittingRef.current ||
+      hasUnresolvedDependentOptions ||
+      isInventoryRefreshing
+    )
+      return
     submittingRef.current = true
     setIsSubmitting(true)
     try {

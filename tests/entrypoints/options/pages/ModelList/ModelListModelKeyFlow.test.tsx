@@ -29,6 +29,7 @@ vi.mock("~/lib/notify", () => ({
   default: {
     success: toastSuccessMock,
     error: toastErrorMock,
+    warning: vi.fn(),
   },
 }))
 
@@ -194,8 +195,8 @@ describe("Model List → ModelKeyDialog", () => {
     fetchUserGroupsMock.mockResolvedValue({
       vip: { desc: "vip", ratio: 1 },
     })
-    createApiTokenMock.mockImplementationOnce(async () => {
-      fetchAccountTokensMock.mockResolvedValue([{ ...TOKEN, group: "vip" }])
+    createApiTokenMock.mockImplementationOnce(async (_request, values) => {
+      fetchAccountTokensMock.mockResolvedValue([{ ...TOKEN, ...values }])
       return true
     })
 
@@ -233,5 +234,7 @@ describe("Model List → ModelKeyDialog", () => {
       model_limits: "",
       group: "vip",
     })
+    await waitFor(() => expect(submit).not.toBeInTheDocument())
+    expect(toastErrorMock).not.toHaveBeenCalled()
   })
 })

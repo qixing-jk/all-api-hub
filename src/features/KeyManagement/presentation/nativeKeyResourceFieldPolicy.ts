@@ -13,7 +13,15 @@ import {
   DEFAULT_AUTO_PROVISION_KEY_NAME,
   getDefaultAccountKeyName,
 } from "~/services/accounts/keys/accountKeyNames"
-import type { ResourceFieldDescriptor } from "~/services/apiAdapters/contracts/resourceNative"
+import {
+  RESOURCE_FIELD_TYPES,
+  type EditableResourceProjection,
+  type ResourceFieldDescriptor,
+} from "~/services/apiAdapters/contracts/resourceNative"
+import {
+  EMRANK_EXPIRATION_MODES,
+  emrankKeyFields,
+} from "~/services/apiAdapters/emrank/keyResourceFields"
 import { FOXCODE_KEY_EDITOR_FIELDS as foxCodeFields } from "~/services/apiAdapters/foxcode/keyEditorFields"
 import { krillKeyFields } from "~/services/apiAdapters/krill/keyResourceFields"
 
@@ -339,6 +347,66 @@ const buildNewApiFamilyFields = (
   }
 }
 
+const buildEmRankFields = (mode: AccountKeyResourceEditorMode) => ({
+  automaticName: { kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed } as const,
+  // Create has no enabled descriptor; presenting it crashes the dialog.
+  fields: [
+    name,
+    {
+      fieldId: emrankKeyFields.Unlimited,
+      section: "spending" as const,
+      order: 0,
+      renderer: RESOURCE_FIELD_TYPES.Boolean,
+      resolveLabel: (t: TFunction) => t("keyManagement:dialog.unlimitedQuota"),
+      issueLabelResolvers: issues,
+    },
+    {
+      fieldId: emrankKeyFields.Quota,
+      section: "spending" as const,
+      order: 10,
+      renderer: RESOURCE_FIELD_TYPES.Number,
+      resolveLabel: (t: TFunction) =>
+        t("keyManagement:native.editor.emrank.quotaMToken"),
+      resolveHelp: (t: TFunction) =>
+        t("keyManagement:native.editor.emrank.quotaHelp"),
+      visibleWhen: (values: EditableResourceProjection) =>
+        values[emrankKeyFields.Unlimited] !== true,
+      issueLabelResolvers: issues,
+    },
+    {
+      fieldId: emrankKeyFields.ExpirationMode,
+      section: "lifecycle" as const,
+      order: 0,
+      renderer: RESOURCE_FIELD_TYPES.Select,
+      resolveLabel: (t: TFunction) =>
+        t("keyManagement:native.editor.emrank.expiration"),
+      optionLabelResolvers: {
+        [EMRANK_EXPIRATION_MODES.Keep]: (t: TFunction) =>
+          t("keyManagement:native.editor.emrank.expirationOptions.keep"),
+        [EMRANK_EXPIRATION_MODES.Never]: (t: TFunction) =>
+          t("keyManagement:native.editor.emrank.expirationOptions.never"),
+        [EMRANK_EXPIRATION_MODES.Month]: (t: TFunction) =>
+          t("keyManagement:native.editor.emrank.expirationOptions.month"),
+        [EMRANK_EXPIRATION_MODES.Day]: (t: TFunction) =>
+          t("keyManagement:native.editor.emrank.expirationOptions.day"),
+        [EMRANK_EXPIRATION_MODES.Hour]: (t: TFunction) =>
+          t("keyManagement:native.editor.emrank.expirationOptions.hour"),
+        [EMRANK_EXPIRATION_MODES.Custom]: (t: TFunction) =>
+          t("keyManagement:native.editor.emrank.expirationOptions.custom"),
+      },
+      issueLabelResolvers: issues,
+    },
+    {
+      ...expiry,
+      fieldId: emrankKeyFields.ExpiresAt,
+      visibleWhen: (values: EditableResourceProjection) =>
+        values[emrankKeyFields.ExpirationMode] ===
+        EMRANK_EXPIRATION_MODES.Custom,
+    },
+    ...(mode === editorModes.Edit ? [enabled(emrankKeyFields.Enabled)] : []),
+  ],
+})
+
 const resolveSiteFields = (
   siteType: string | undefined,
   mode: AccountKeyResourceEditorMode,
@@ -399,6 +467,7 @@ const resolveSiteFields = (
       fields: [],
       automaticName: { kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed } as const,
     }),
+    [editorKinds.Emrank]: () => buildEmRankFields(mode),
     // Krill keys have no quota or expiry; permissions are channels, fallback and IPs.
     [editorKinds.Krill]: (): {
       fields: ResourceFieldPresentation[]

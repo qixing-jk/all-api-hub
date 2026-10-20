@@ -12,6 +12,7 @@ import type {
   EditorMode,
   MutationAnalyticsMode,
   OpenResourceSession,
+  RecoverMutationFailure,
   RefreshAfterMutation,
   ResolveResourceActionContext,
 } from "~/features/KeyManagement/resources/workflows/accountKeyResourceControllerTypes"
@@ -59,6 +60,7 @@ type WorkflowInputs = {
     openSession: OpenResourceSession
     requireFreshRead: (boundary: ActiveResourceBoundary) => void
     refreshAfterMutation: RefreshAfterMutation
+    recoverMutationFailure: RecoverMutationFailure
   }
   requests: AccountKeyResourceRequestLifecycle
   inventoryState: AccountKeyResourceInventoryStateOwner
@@ -77,6 +79,7 @@ export function useAccountKeyResourceEditorWorkflow({
     openSession,
     requireFreshRead,
     refreshAfterMutation,
+    recoverMutationFailure,
   },
   requests,
   inventoryState,
@@ -301,7 +304,7 @@ export function useAccountKeyResourceEditorWorkflow({
     requests,
     mutationAnalyticsMode,
     requireFreshRead,
-    onUncertain: refreshAfterMutation,
+    recoverMutationFailure,
     resolveContext: () => {
       const boundary = readNativeOwner().boundary
       const state = readEditor()

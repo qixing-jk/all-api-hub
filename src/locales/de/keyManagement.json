@@ -256,6 +256,7 @@
     "neverExpires": "Läuft nie ab",
     "note": "Hinweis:",
     "remainingQuota": "Verbleibendes Kontingent:",
+    "totalQuota": "Gesamtkontingent:",
     "ungrouped": "Nicht gruppiert",
     "usedQuota": "Verwendetes Kontingent:"
   },
@@ -428,6 +429,19 @@
         "transferAmount": "Zu übertragende Tokens"
       },
       "description": "Beschreibung (optional)",
+      "emrank": {
+        "expiration": "Ablauf",
+        "expirationOptions": {
+          "custom": "Benutzerdefinierter Zeitpunkt",
+          "day": "Ein Tag",
+          "hour": "Eine Stunde",
+          "keep": "Aktuelles Ablaufdatum beibehalten",
+          "month": "Ein Monat (30 Tage)",
+          "never": "Läuft nie ab"
+        },
+        "quotaHelp": "1 M = 1.000.000 Token, höchstens 6 Nachkommastellen.",
+        "quotaMToken": "Kontingent (M Token)"
+      },
       "excludeIps": "Ausgeschlossene IPs",
       "excludeIpsPlaceholder": "Eine pro Zeile (CIDR unterstützt)",
       "expiryDays": "Gültigkeitsdauer (Tage)",

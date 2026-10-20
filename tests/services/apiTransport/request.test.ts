@@ -395,6 +395,45 @@ describe("apiTransport request helpers", () => {
     expect(capturedAuthorization).toBe("Bearer token")
   })
 
+  it("sends a single Content-Type header when the caller also supplies it", async () => {
+    let capturedContentType: string | null = null
+
+    server.use(
+      http.post(API_URL, ({ request }) => {
+        capturedContentType = request.headers.get("content-type")
+        return HttpResponse.json({ success: true, data: { ok: true } })
+      }),
+    )
+
+    await expect(
+      fetchApiData<{ ok: boolean }>(
+        {
+          baseUrl: BASE_URL,
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: "token",
+          },
+        },
+        {
+          endpoint: ENDPOINT,
+          options: {
+            method: "POST",
+            // Headers instances normalize to lowercase keys, which collide with
+            // the capitalized transport default unless the merge is case-safe.
+            headers: new Headers({
+              "Content-Type": "application/json",
+              "X-Custom-Header": "1",
+            }),
+            body: JSON.stringify({ a: 1 }),
+          },
+        },
+      ),
+    ).resolves.toEqual({ ok: true })
+
+    // A comma-joined duplicate reads as an invalid body in strict gateways.
+    expect(capturedContentType).toBe("application/json")
+  })
+
   it("uses Bearer authorization for access tokens by default", async () => {
     let capturedAuthorization: string | null = null
 

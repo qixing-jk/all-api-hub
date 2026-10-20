@@ -36,10 +36,7 @@ import {
   mergeResourceEdits,
   resourceValuesEqual,
 } from "~/services/apiAdapters/nativeResources/editableChanges"
-import {
-  isApiBusinessError,
-  runNativeResourceMutation,
-} from "~/services/apiAdapters/nativeResources/mutation"
+import { runNativeResourceMutation } from "~/services/apiAdapters/nativeResources/mutation"
 import { fetchVoApiV2KeyGroupDescriptors } from "~/services/apiService/voapiV2/keyGroups"
 import {
   createVoApiV2Key,
@@ -396,8 +393,6 @@ const renameProvisionedResource = async (
     execute: async (mutationRequest) =>
       await renameVoApiV2Key(mutationRequest, keyId, targetDisplayName),
     mapFailure,
-    classifyError: (error) =>
-      isApiBusinessError(error) ? "not-applied" : undefined,
   })
   if (renameResult.certainty === "not-applied") return renameResult
   if (renameResult.certainty === "applied") {
@@ -451,8 +446,6 @@ const createNativeKey = async (
     execute: (mutationRequest) =>
       createVoApiV2Key(mutationRequest, command.values),
     mapFailure,
-    classifyError: (error) =>
-      isApiBusinessError(error) ? "not-applied" : undefined,
   })
   if (result.certainty === "not-applied") return result
   if (result.certainty === "possibly-applied")
@@ -623,8 +616,6 @@ export const voApiV2AccountKeyResources = defineAccountKeyResourceCapability({
       execute: (mutationRequest) =>
         updateVoApiV2Key(mutationRequest, detail.id, merged),
       mapFailure,
-      classifyError: (error) =>
-        isApiBusinessError(error) ? "not-applied" : undefined,
     })
     if (result.certainty === "not-applied") return result
     try {
@@ -652,8 +643,6 @@ export const voApiV2AccountKeyResources = defineAccountKeyResourceCapability({
       execute: async (mutationRequest) =>
         await deleteVoApiV2Token(mutationRequest, keyId),
       mapFailure,
-      classifyError: (error) =>
-        isApiBusinessError(error) ? "not-applied" : undefined,
     })
     return result.certainty === "applied"
       ? result.value === false

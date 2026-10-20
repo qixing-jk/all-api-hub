@@ -152,9 +152,18 @@
       "no": "Không",
       "yes": "Có"
     },
+    "callExamples": "Ví dụ gọi API",
+    "catalogOwner": "Chủ sở hữu danh mục",
     "contextLimit": "Giới hạn ngữ cảnh",
+    "defaultDimensions": "Số chiều mặc định",
     "inputModalities": "Phương thức đầu vào",
     "maximumOutputTokens": "Số token đầu ra tối đa",
+    "modelKind": "Loại mô hình",
+    "modelKinds": {
+      "decision": "Quyết định",
+      "embedding": "Nhúng",
+      "reranker": "Xếp hạng lại"
+    },
     "openRouter": {
       "architecture": {
         "instructType": "Định dạng hướng dẫn",
@@ -255,10 +264,15 @@
       "request": "yêu cầu",
       "webSearch": "lần tìm kiếm web"
     },
+    "providerAvailable": "Có sẵn trên trang",
+    "releaseDate": "Ngày phát hành",
     "sections": {
       "specifications": "Thông số kỹ thuật"
     },
-    "tokenCount_other": "{{formattedCount}} token"
+    "supportedDimensions": "Số chiều hỗ trợ",
+    "supportsImages": "Hỗ trợ hình ảnh",
+    "tokenCount_other": "{{formattedCount}} token",
+    "viewOnSite": "Xem trên trang"
   },
   "displayOptions": "Hiển thị",
   "endpointType": "Loại endpoint",
@@ -442,6 +456,15 @@
     "scrollRight": "Cuộn thẻ hãng sang phải",
     "unclassified": "Chưa phân loại",
     "unclassifiedDescription": "Không thể xác định nhà cung cấp; điều này không có nghĩa là mô hình không khả dụng."
+  },
+  "quotaBilling": {
+    "adjustments": "Các yếu tố tính phí bổ sung: {{names}}.",
+    "comparison": "{{amount}} trên một triệu token mô phỏng.",
+    "invalid": "Giá hạn mức hiện không khả dụng.",
+    "reference": "Chỉ gồm mức dùng cơ bản, chưa tính các hệ số bổ sung.",
+    "sortAsc": "Mức dùng hạn mức: tăng dần",
+    "sortDesc": "Mức dùng hạn mức: giảm dần",
+    "source": "Quy tắc tính phí"
   },
   "realAmount": "Số tiền nạp thực tế",
   "refreshData": "Làm mới dữ liệu",

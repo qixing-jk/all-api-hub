@@ -159,9 +159,18 @@
       "no": "Nein",
       "yes": "Ja"
     },
+    "callExamples": "Aufrufbeispiele",
+    "catalogOwner": "Kataloginhaber",
     "contextLimit": "Kontextlimit",
+    "defaultDimensions": "Standarddimensionen",
     "inputModalities": "Eingabemodalitäten",
     "maximumOutputTokens": "Maximale Ausgabe-Token",
+    "modelKind": "Modelltyp",
+    "modelKinds": {
+      "decision": "Entscheidung",
+      "embedding": "Embedding",
+      "reranker": "Reranker"
+    },
     "openRouter": {
       "architecture": {
         "instructType": "Anweisungsformat",
@@ -263,11 +272,16 @@
       "request": "Anfrage",
       "webSearch": "Websuche"
     },
+    "providerAvailable": "Auf der Website verfügbar",
+    "releaseDate": "Veröffentlichungsdatum",
     "sections": {
       "specifications": "Spezifikationen"
     },
+    "supportedDimensions": "Unterstützte Dimensionen",
+    "supportsImages": "Bildunterstützung",
     "tokenCount_one": "{{formattedCount}} Token",
-    "tokenCount_other": "{{formattedCount}} Token"
+    "tokenCount_other": "{{formattedCount}} Token",
+    "viewOnSite": "Auf Website anzeigen"
   },
   "displayOptions": "Anzeige",
   "endpointType": "Endpunkttyp",
@@ -451,6 +465,15 @@
     "scrollRight": "Anbieter-Tabs nach rechts scrollen",
     "unclassified": "Nicht klassifiziert",
     "unclassifiedDescription": "Der Anbieter konnte nicht identifiziert werden; Dies bedeutet nicht, dass das Modell nicht verfügbar ist."
+  },
+  "quotaBilling": {
+    "adjustments": "Zusätzliche Abrechnungsfaktoren: {{names}}.",
+    "comparison": "{{amount}} pro Million modellierter Token.",
+    "invalid": "Kontingentpreise sind nicht verfügbar.",
+    "reference": "Nur Basisverbrauch; zusätzliche Multiplikatoren sind nicht enthalten.",
+    "sortAsc": "Kontingentverbrauch: aufsteigend",
+    "sortDesc": "Kontingentverbrauch: absteigend",
+    "source": "Abrechnungsregeln"
   },
   "realAmount": "Echter Aufladebetrag",
   "refreshData": "Daten aktualisieren",

@@ -69,6 +69,12 @@ Price labels mean:
 > - Missing or invalid prices are **not comparable** and are never treated as `0` or a default value. When a site explicitly reports a zero price, the model may genuinely be free.
 > - Price sources can differ, such as site pricing endpoints, official catalogs, and estimates. The page displays source and precision where possible.
 
+**Native quota billing**: Model rows can display and estimate nonmonetary assets such as Token or points, with sorting restricted to the same asset and its declared source scope. Matching labels or balances on different sites do not imply equivalence. When additional multipliers are unknown, reference usage supports base-consumption sorting within a source; it does not represent final charges or the lowest cross-site price.
+
+EMRank uses Token quota, with `1 M Token = 1,000,000 Token`. Input and output use the same rate-row layout as monetary prices, per million model tokens; output is free. Browsing shows published rates. Price sorting additionally shows the reference consumption used for ranking and reuses the existing usage weights. The billing-rules hint lists additional factors such as account level and RPM. Unknown multipliers are not assumed to be 1, and reference usage is not the final charge. Native quota is not converted to USD or CNY. See [EMRank billing and quota](https://docs.emrank.tech/guide/billing.html).
+
+Model rows show purpose, availability on the site and any published context limit. Expanded details include catalog owner, supported and default vector dimensions, image support and release date when provided. Missing specifications are not inferred. Call-example links open the site's model page; embedding, reranker and decision models do not offer incompatible text-generation or CLI verification actions.
+
 ### 4. Switch Groups and Find the Best Group
 
 When a source supports multiple user groups, use the group filter to limit participating groups and expand a model to view group prices. Groups directly affect the actual unit price; confirm that the account can use a group before relying on its quote.

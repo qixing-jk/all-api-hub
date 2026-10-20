@@ -22,7 +22,10 @@ import {
   Switch,
 } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
-import { MODEL_LIST_GROUP_SEMANTICS } from "~/features/ModelList/catalog/modelManagementSources"
+import {
+  MODEL_LIST_GROUP_SEMANTICS,
+  supportsModelCurrencyPricing,
+} from "~/features/ModelList/catalog/modelManagementSources"
 import type { ControlPanelProps } from "~/features/ModelList/filtering/ControlPanel.types"
 import { isModelListPriceSortMode } from "~/features/ModelList/filtering/sortModes"
 import { useModelListFilterViewModel } from "~/features/ModelList/filtering/useModelListFilterViewModel"
@@ -376,7 +379,7 @@ export function ControlPanel({
                       </label>
                     </Tooltip>
                   )}
-                {sourceCapabilities.supportsPricing && (
+                {supportsModelCurrencyPricing(sourceCapabilities) && (
                   <label className="flex cursor-pointer items-center space-x-2">
                     <Switch
                       checked={showRealPrice}

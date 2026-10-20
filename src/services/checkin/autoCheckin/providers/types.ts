@@ -32,8 +32,8 @@ export interface AutoCheckinProviderResult<
   reconciliation?: CheckinReconciliationOutcome
   /**
    * The award the site itself reported for this check-in, already normalized to
-   * the extension's internal quota unit. Only methods whose response carries an
-   * authoritative amount set it; a method without one leaves it unset so the UI
+   * internal monetary quota or an explicitly identified native asset. Only
+   * methods whose response carries an authoritative amount set it; otherwise the UI
    * shows no amount instead of a guessed or zeroed value.
    */
   reward?: CheckInReward

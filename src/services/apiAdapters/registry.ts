@@ -27,6 +27,7 @@ import type {
 } from "./contracts/siteTypeCapabilities"
 import { cubenceCapabilities } from "./cubence"
 import { dahlCapabilities } from "./dahl"
+import { emRankCapabilities } from "./emrank"
 import { foxCodeCapabilities } from "./foxcode"
 import { freeModelCapabilities } from "./freemodel"
 import { grsaiCapabilities } from "./grsai"
@@ -100,6 +101,7 @@ const accountCapabilityFactories = {
   [ACCOUNT_SITE_ADAPTER_FAMILIES.KimiOpenPlatform]: (siteType) =>
     createKimiOpenPlatformCapabilities(siteType as AccountSiteType),
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Grsai]: () => grsaiCapabilities,
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Emrank]: () => emRankCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported]: (siteType) => ({ siteType }),
 } satisfies Record<
   AccountSiteBackendFamily,

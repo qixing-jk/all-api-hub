@@ -38,10 +38,7 @@ import {
   mergeResourceEdits,
   resourceValuesEqual,
 } from "~/services/apiAdapters/nativeResources/editableChanges"
-import {
-  isApiBusinessError,
-  runNativeResourceMutation,
-} from "~/services/apiAdapters/nativeResources/mutation"
+import { runNativeResourceMutation } from "~/services/apiAdapters/nativeResources/mutation"
 import {
   createSub2ApiKeyEditor,
   toSub2ApiKeyEditable,
@@ -271,8 +268,6 @@ const provisionRequirement = async (
         quota: 0,
       }),
     mapFailure,
-    classifyError: (error) =>
-      isApiBusinessError(error) ? "not-applied" : undefined,
   })
   if (createResult.certainty === "not-applied") return createResult
   if (createResult.certainty === "possibly-applied")
@@ -367,8 +362,6 @@ const renameProvisionedResource = async (
         name: targetDisplayName,
       }),
     mapFailure,
-    classifyError: (error) =>
-      isApiBusinessError(error) ? "not-applied" : undefined,
   })
   if (updateResult.certainty === "not-applied") return updateResult
 
@@ -530,8 +523,6 @@ async function createNativeKey(
     request,
     execute: (mutationRequest) => createSub2ApiKey(mutationRequest, payload),
     mapFailure,
-    classifyError: (error) =>
-      isApiBusinessError(error) ? "not-applied" : undefined,
   })
   if (result.certainty === "not-applied") return result
   if (result.certainty === "possibly-applied")
@@ -672,8 +663,6 @@ export const sub2ApiAccountKeyResources = defineAccountKeyResourceCapability({
       execute: (mutationRequest) =>
         updateSub2ApiKey(mutationRequest, detail.id, changed),
       mapFailure,
-      classifyError: (error) =>
-        isApiBusinessError(error) ? "not-applied" : undefined,
     })
     if (result.certainty === "not-applied") return result
     try {
@@ -704,8 +693,6 @@ export const sub2ApiAccountKeyResources = defineAccountKeyResourceCapability({
       execute: async (mutationRequest) =>
         await deleteApiToken(mutationRequest, tokenId),
       mapFailure,
-      classifyError: (error) =>
-        isApiBusinessError(error) ? "not-applied" : undefined,
     })
     return result.certainty === "applied"
       ? result.value === false

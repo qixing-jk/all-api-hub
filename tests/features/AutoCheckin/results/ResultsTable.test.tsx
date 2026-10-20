@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import ResultsTable from "~/features/AutoCheckin/results/ResultsTable"
+import { EMRANK_TOKEN_ASSET } from "~/services/apiService/emrank/constants"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -219,6 +220,33 @@ describe("AutoCheckin ResultsTable", () => {
     expect(
       screen.queryByText("autoCheckin:execution.pagination.summary"),
     ).not.toBeInTheDocument()
+  })
+
+  it.each([
+    CHECKIN_RESULT_STATUS.SUCCESS,
+    CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+  ])("shows a native reward without a cash exchange rate on %s", (status) => {
+    render(
+      <ResultsTable
+        results={[
+          {
+            accountId: "native",
+            accountName: "Native award",
+            status,
+            timestamp: 1,
+            reward: { amount: 2_000_000, asset: EMRANK_TOKEN_ASSET },
+          },
+        ]}
+        currencyType="CNY"
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+    expect(screen.getByText("+2 M Token")).toBeVisible()
+    expect(screen.queryByText(/¥|\$/)).not.toBeInTheDocument()
   })
 
   it("shows the reported reward in the selected currency", () => {

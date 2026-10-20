@@ -166,9 +166,18 @@
       "no": "Não",
       "yes": "Sim"
     },
+    "callExamples": "Exemplos de chamadas",
+    "catalogOwner": "Proprietário do catálogo",
     "contextLimit": "Limite de contexto",
+    "defaultDimensions": "Dimensões padrão",
     "inputModalities": "Modalidades de entrada",
     "maximumOutputTokens": "Máximo de tokens de saída",
+    "modelKind": "Tipo de modelo",
+    "modelKinds": {
+      "decision": "Decisão",
+      "embedding": "Embedding",
+      "reranker": "Reclassificação"
+    },
     "openRouter": {
       "architecture": {
         "instructType": "Formato de instrução",
@@ -271,12 +280,17 @@
       "request": "solicitação",
       "webSearch": "busca na web"
     },
+    "providerAvailable": "Disponível no site",
+    "releaseDate": "Data de lançamento",
     "sections": {
       "specifications": "Especificações"
     },
+    "supportedDimensions": "Dimensões compatíveis",
+    "supportsImages": "Suporte a imagens",
     "tokenCount_one": "{{formattedCount}} token",
     "tokenCount_many": "{{formattedCount}} tokens",
-    "tokenCount_other": "{{formattedCount}} tokens"
+    "tokenCount_other": "{{formattedCount}} tokens",
+    "viewOnSite": "Ver no site"
   },
   "displayOptions": "Exibição",
   "endpointType": "Tipo de endpoint",
@@ -461,6 +475,15 @@
     "scrollRight": "Rolar as abas de provedores para a direita",
     "unclassified": "Não classificado",
     "unclassifiedDescription": "Não foi possível identificar o provedor; isso não significa que o modelo esteja indisponível."
+  },
+  "quotaBilling": {
+    "adjustments": "Fatores adicionais de cobrança: {{names}}.",
+    "comparison": "{{amount}} por milhão de tokens simulados.",
+    "invalid": "O preço da cota não está disponível.",
+    "reference": "Apenas consumo base; multiplicadores adicionais não estão incluídos.",
+    "sortAsc": "Consumo de cota: crescente",
+    "sortDesc": "Consumo de cota: decrescente",
+    "source": "Regras de cobrança"
   },
   "realAmount": "Valor real da recarga",
   "refreshData": "Atualizar dados",

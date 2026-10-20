@@ -248,6 +248,7 @@
     "neverExpires": "Không bao giờ hết hạn",
     "note": "Ghi chú:",
     "remainingQuota": "Hạn ngạch còn lại:",
+    "totalQuota": "Tổng hạn mức:",
     "ungrouped": "Chưa phân nhóm",
     "usedQuota": "Hạn ngạch đã dùng:"
   },
@@ -417,6 +418,19 @@
         "transferAmount": "Số token cần chuyển"
       },
       "description": "Mô tả (không bắt buộc)",
+      "emrank": {
+        "expiration": "Hạn sử dụng",
+        "expirationOptions": {
+          "custom": "Thời gian tùy chỉnh",
+          "day": "Một ngày",
+          "hour": "Một giờ",
+          "keep": "Giữ thời hạn hiện tại",
+          "month": "Một tháng (30 ngày)",
+          "never": "Không hết hạn"
+        },
+        "quotaHelp": "1 M = 1.000.000 Token, tối đa 6 chữ số thập phân.",
+        "quotaMToken": "Hạn mức (M Token)"
+      },
       "excludeIps": "IP loại trừ",
       "excludeIpsPlaceholder": "Mỗi dòng một mục (hỗ trợ CIDR)",
       "expiryDays": "Hết hạn sau (ngày)",

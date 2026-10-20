@@ -21,7 +21,7 @@ Verify successful execution, duplicate/already-checked semantics and authoritati
 
 Keep points, expiring bonus credit, subscription allowance and cash balance distinct. Populate quota rewards only from a verified balance-equivalent amount and valid finite conversion. Preserve authoritative reward/status data through polling, retry and result-replacement paths; absence of a reward field is not zero reward. Include manual/automatic execution, feedback and result UI consumers affected by the method.
 
-Set `AutoCheckinProviderOutcome.reward` from the granted amount using the existing `readQuotaReward` or `readUsdReward` helper for the verified unit. Leave it unset when the response has no authoritative amount; do not substitute a usual award or estimated balance delta. Record the source field, unit and supporting evidence in the current task's spec/evidence index.
+Set `AutoCheckinProviderOutcome.reward` from the granted amount using the existing `readQuotaReward` or `readUsdReward` helper for verified monetary units. For a balance-equivalent native asset without a cash conversion, retain the atomic `amount` and explicit `asset` in the native reward variant. Leave it unset when the response has no authoritative amount; do not substitute a usual award or estimated balance delta. Record the source field, unit and supporting evidence in the current task's spec/evidence index.
 
 ## Validate and hand off
 

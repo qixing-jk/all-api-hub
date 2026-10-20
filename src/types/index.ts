@@ -11,6 +11,7 @@ import {
   DATA_TYPE_NAME,
 } from "~/constants"
 import type { AccountSiteType } from "~/constants/siteType"
+import type { QuotaAsset } from "~/services/quotaAssets/quotaAsset"
 import type {
   AccountMetricCoverage,
   AccountTodayStatsAvailability,
@@ -98,13 +99,19 @@ export interface AccountSubscriptionSummary {
   isActive?: boolean
 }
 
-/** Provider credits without a verified cash value, excluded from monetary totals. */
-export interface AccountNativeBalance {
-  unit: "credits"
-  total: number
-  permanent: number
-  daily: number
-}
+/** Native balances without a verified cash value, excluded from monetary totals. */
+export type AccountNativeBalance =
+  | {
+      unit: "credits"
+      total: number
+      permanent: number
+      daily: number
+    }
+  | {
+      unit: "quota"
+      asset: QuotaAsset
+      total: number
+    }
 
 export interface AccountUsageRecord {
   requestTime?: string

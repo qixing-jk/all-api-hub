@@ -124,6 +124,8 @@ export const summarizeApiServiceFetchContext = summarizeApiTransportFetchContext
 export interface ApiTransportRequestObserver {
   onDispatch(): void
   onResponse(): void
+  /** Provider protocol confirmed one mutating request succeeded, before any follow-up. */
+  onMutationAccepted?(): void
   /** Clears pre-handler evidence before a bounded recovered mutation attempt. */
   onPreHandlerUnauthorized?(): void
 }

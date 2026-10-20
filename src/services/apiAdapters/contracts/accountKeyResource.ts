@@ -3,6 +3,7 @@ import type { CreatedRuntimeSecret } from "~/services/accounts/keys/createdRunti
 import type { AccountRuntimeKeyModelAccess } from "~/services/accounts/keys/runtimeKeyModelAccess"
 import type { KeyMaskEvidence } from "~/services/accountTokens/keyMaskEvidence"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import type { QuotaAsset } from "~/services/quotaAssets/quotaAsset"
 
 import type { InventorySecretAvailability } from "./inventorySecret"
 import type {
@@ -212,6 +213,14 @@ export type AccountKeyDisplayFact =
       readonly kind: "money"
       readonly role: "remaining" | "used" | "total"
       readonly amountUsd: number
+      readonly unlimited?: boolean
+    }
+  | {
+      readonly fieldId: string
+      readonly kind: "quota"
+      readonly role: "remaining" | "used" | "total"
+      readonly value: number
+      readonly asset: QuotaAsset
       readonly unlimited?: boolean
     }
   | {

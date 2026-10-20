@@ -157,6 +157,29 @@ describe("Cubence account capabilities", () => {
     })
     expect(current.map((item) => item.name)).toEqual(["Created"])
   })
+  it("surfaces a create business rejection instead of an uncertain state", async () => {
+    server.use(
+      http.post(`${origin}/api/v1/user/apikeys`, () =>
+        HttpResponse.json(
+          { success: false, code: 409, message: "名称已存在" },
+          { status: 200 },
+        ),
+      ),
+    )
+    const session = await open()
+    const creator = await session.openCreateEditor("account")
+    await creator.loadOptions!("group", creator.initialValues)
+    await expect(
+      creator.submit({
+        ...creator.initialValues,
+        group: "72",
+        name: "Created",
+      }),
+    ).rejects.toMatchObject({
+      failure: { code: "upstream_rejected", message: "名称已存在" },
+    })
+  })
+
   it.each(["", "sk-***"])(
     "refuses unavailable inventory secrets %j",
     async (secret) => {
@@ -182,6 +205,40 @@ describe("Cubence account capabilities", () => {
     await expect(
       editor.submit({ ...editor.initialValues, unlimited: false, quota: 3 }),
     ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+  })
+
+  it("keeps a partially applied multi-route edit uncertain", async () => {
+    const collection = await (await open()).openCollection("account")
+    const editor = await collection.openEditEditor(
+      (await collection.list()).items[0]!.ref,
+    )
+    await editor.loadOptions!("group", editor.initialValues)
+    server.use(
+      http.patch(
+        `${origin}/api/v1/user/apikeys/:id/quota`,
+        async ({ request }) => {
+          const body = (await request.json()) as { quota_limit: number }
+          current = [{ ...key, quota_limit: body.quota_limit }]
+          return HttpResponse.json({ success: true })
+        },
+      ),
+      http.patch(`${origin}/api/v1/user/apikeys/:id/status`, () =>
+        HttpResponse.json({
+          success: false,
+          code: 409,
+          message: "status rejected",
+        }),
+      ),
+    )
+    await expect(
+      editor.submit({
+        ...editor.initialValues,
+        unlimited: false,
+        quota: 3,
+        enabled: false,
+      }),
+    ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+    expect(current[0]!.quota_limit).toBe(3_000_000)
   })
   it("rejects a concurrent quota edit through the public editor before writing", async () => {
     const collection = await (await open()).openCollection("account")

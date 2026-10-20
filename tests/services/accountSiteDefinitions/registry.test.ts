@@ -143,6 +143,7 @@ type ExpectedAccountSiteType =
   | typeof SITE_TYPES.DAHL
   | typeof SITE_TYPES.FOXCODE
   | typeof SITE_TYPES.XIAOEN
+  | typeof SITE_TYPES.EMRANK
   | typeof SITE_TYPES.KRILL
   | typeof SITE_TYPES.CUBENCE
   | typeof SITE_TYPES.RIGHT_CODE
@@ -430,6 +431,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.DAHL,
       SITE_TYPES.FOXCODE,
       SITE_TYPES.XIAOEN,
+      SITE_TYPES.EMRANK,
       SITE_TYPES.KRILL,
       SITE_TYPES.CUBENCE,
       SITE_TYPES.RIGHT_CODE,

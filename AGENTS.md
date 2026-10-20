@@ -30,6 +30,7 @@ Read only the guidance relevant to the current task; reuse unchanged material al
 ## Project boundaries
 
 - Keep `src/entrypoints/**` thin; feature UI belongs in `src/features/**`. Shared code must not import options-page entrypoints. Keep React state ownership outside `src/services/**`.
+- Prefer existing patterns and shared owners. When verified common behavior would otherwise be duplicated, extract or extend the smallest suitable shared layer and use it from the affected callers; keep provider-specific protocol and policy differences explicit. Base abstractions on concrete contracts and consumers rather than speculative future reuse.
 - Use `~/` for `src/` and `~~/` for repo-root imports. Tests belong under `tests/`, not colocated `src/**/__tests__/`; browser workflows live in `e2e/`.
 
 ## Development and validation
@@ -37,6 +38,7 @@ Read only the guidance relevant to the current task; reuse unchanged material al
 - Before non-trivial implementation on a feature branch, fetch and check its intended base; refresh the current branch before dependent work using `refresh-stale-branch` when needed. Reuse a current check within the task. Reviews and small edits need no refresh; report refresh blockers and continue independent work.
 - Keep incidental cleanup local and low-risk. Explicit cleanup is complete when the agreed surface has no further behavior-preserving improvements with concrete benefit and proportionate validation cost, including newly discovered qualifying work. Report changes requiring expanded scope separately.
 - Use targeted or related Vitest checks for affected behavior; use browser E2E when lower-level tests cannot establish the relevant risk. The commit hook does not replace affected-behavior tests. Full suites normally belong to CI; count only workflows that actually ran as validation evidence.
+- When introducing a provider-specific data representation or capability, trace it through normalization, shared policies, rendering conditions and offered actions. Verify the user-visible meaning and next action; a correct adapter payload alone does not establish a complete adaptation.
 - Before completing implementation, follow [automated task acceptance](docs/agents/task-acceptance.md): account for every task-owned behavior change, run the applicable checks, and provide linked evidence. Retain before/after evidence for developer review when a comparable baseline is available. Agents prioritize representative final results, reuse prior review, and open baseline/comparison/diff images only to answer a concrete question; do not reload images after every small edit. Report evidence gaps explicitly.
 - Let [Git hooks](CONTRIBUTING.md#git-hooks) run their gates once on unchanged relevant state; scripts own their trigger rules.
 - Requested PR reconciliation must account for checks and feedback on the current head. Pending remote evidence, including a waiting-cycle timeout, leaves that delivery incomplete.

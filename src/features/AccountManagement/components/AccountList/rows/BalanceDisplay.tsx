@@ -7,6 +7,7 @@ import { Button } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/actions/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
+import { formatQuotaAmount } from "~/services/quotaAssets/quotaAsset"
 import type { DisplaySiteData } from "~/types"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
 import {
@@ -20,6 +21,10 @@ const formatCompactNumber = (value: number) =>
     notation: Math.abs(value) >= 10000 ? "compact" : "standard",
     maximumFractionDigits: 1,
   }).format(value)
+
+/** Native and monetary balances share typography and intrinsic control sizing. */
+const BALANCE_AMOUNT_CLASS_NAME =
+  "text-foreground mb-0.5 h-auto min-h-0 justify-end truncate bg-transparent px-0 py-0 text-right text-sm font-semibold sm:text-base md:text-lg"
 
 const BALANCE_REFRESH_TARGETS = {
   BALANCE: "balance",
@@ -262,17 +267,23 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
                 ? undefined
                 : () => refreshMetric(BALANCE_REFRESH_TARGETS.BALANCE)
             }
-            className="text-sm font-semibold sm:text-base md:text-lg"
+            className={BALANCE_AMOUNT_CLASS_NAME}
           >
-            {new Intl.NumberFormat().format(site.nativeBalance.total)}{" "}
-            {t("stats.nativeCredits")}
+            {site.nativeBalance.unit === "quota"
+              ? formatQuotaAmount(
+                  site.nativeBalance.total,
+                  site.nativeBalance.asset,
+                )
+              : `${new Intl.NumberFormat().format(site.nativeBalance.total)} ${t("stats.nativeCredits")}`}
           </Button>
-          <div className="text-muted-foreground text-xs">
-            {t("stats.nativeCreditsDetail", {
-              permanent: site.nativeBalance.permanent,
-              daily: site.nativeBalance.daily,
-            })}
-          </div>
+          {site.nativeBalance.unit === "credits" && (
+            <div className="text-muted-foreground text-xs">
+              {t("stats.nativeCreditsDetail", {
+                permanent: site.nativeBalance.permanent,
+                daily: site.nativeBalance.daily,
+              })}
+            </div>
+          )}
         </div>
       ) : (
         <AnimatedValue
@@ -280,7 +291,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
           startValue={
             isInitialLoad ? 0 : prevBalances[site.id]?.[currencyType] || 0
           }
-          className="text-foreground mb-0.5 text-sm font-semibold sm:text-base md:text-lg"
+          className={BALANCE_AMOUNT_CLASS_NAME}
           title={refreshTitle}
           onClick={
             isAccountDisabled

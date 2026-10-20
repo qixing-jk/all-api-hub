@@ -719,7 +719,12 @@ describe("openRouterAccountKeyResources", () => {
     await expect(
       editor.submit({ ...editor.initialValues, name: "Created key" }),
     ).rejects.toMatchObject({
-      failure: { code: "unexpected" },
+      failure: { code: "mutation_state_uncertain" },
+    })
+    await expect(
+      editor.submit({ ...editor.initialValues, name: "Replay" }),
+    ).rejects.toMatchObject({
+      failure: { code: "validation_failed" },
     })
     expect(createOpenRouterKey).toHaveBeenCalledTimes(1)
     expect(fetchOpenRouterKeys).not.toHaveBeenCalled()
@@ -1959,7 +1964,7 @@ describe("openRouterAccountKeyResources", () => {
     )
 
     await expect(collection.delete(substitutedRef)).rejects.toMatchObject({
-      failure: { code: "unexpected" },
+      failure: { code: "mutation_state_uncertain" },
     })
     expect(fetchOpenRouterKey).toHaveBeenCalledTimes(1)
     expect(deleteOpenRouterKey).not.toHaveBeenCalled()
@@ -1987,7 +1992,9 @@ describe("openRouterAccountKeyResources", () => {
       deleteError = error
     }
 
-    expect(deleteError).toMatchObject({ failure: { code: "unexpected" } })
+    expect(deleteError).toMatchObject({
+      failure: { code: "mutation_state_uncertain" },
+    })
     expect(JSON.stringify(deleteError)).not.toContain(requestedHash)
     expect(JSON.stringify(deleteError)).not.toContain(returnedHash)
     expect(fetchOpenRouterKey).toHaveBeenCalledTimes(1)

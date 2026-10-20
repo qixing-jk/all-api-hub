@@ -22,10 +22,7 @@ import {
   mergeResourceEdits,
   resourceValuesEqual,
 } from "~/services/apiAdapters/nativeResources/editableChanges"
-import {
-  isApiBusinessError,
-  runNativeResourceMutation,
-} from "~/services/apiAdapters/nativeResources/mutation"
+import { runNativeResourceMutation } from "~/services/apiAdapters/nativeResources/mutation"
 import {
   toRightCodeChannelInfos,
   type RightCodeChannelInfo,
@@ -359,8 +356,6 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
           allowed_item_ids: null,
         }),
       mapFailure: mapAccountKeyResourceFailure,
-      classifyError: (error) =>
-        isApiBusinessError(error) ? "not-applied" : undefined,
     })
     if (result.certainty !== "applied") return result
 
@@ -426,8 +421,6 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
             snapshotToWire(merged),
           ),
         mapFailure: mapAccountKeyResourceFailure,
-        classifyError: (error) =>
-          isApiBusinessError(error) ? "not-applied" : undefined,
       })
       if (result.certainty === "not-applied") return result
     }
@@ -475,8 +468,6 @@ export const rightCodeAccountKeyResources = defineAccountKeyResourceCapability({
       request: withOptions(config.request, options),
       execute: (request) => deleteRightCodeKey(request, id),
       mapFailure: mapAccountKeyResourceFailure,
-      classifyError: (error) =>
-        isApiBusinessError(error) ? "not-applied" : undefined,
     })
     return result.certainty === "applied"
       ? { certainty: "applied", value: undefined }

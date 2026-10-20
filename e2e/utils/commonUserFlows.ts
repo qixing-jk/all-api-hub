@@ -1041,7 +1041,7 @@ export async function stubNewApiSiteRoutes(
           userId: Number(userId),
           name: payload.name?.trim() || `e2e-token-${nextTokenId}`,
           key: `sk-created-${nextTokenId}`,
-          group: payload.group?.trim() || "default",
+          group: payload.group ?? "",
           remainQuota: payload.remain_quota ?? -1,
           unlimitedQuota: payload.unlimited_quota !== false,
           expiredTime: payload.expired_time ?? -1,
@@ -1119,7 +1119,7 @@ export async function stubNewApiSiteRoutes(
           payload.model_limits_enabled ?? current.model_limits_enabled,
         model_limits: payload.model_limits ?? current.model_limits,
         allow_ips: payload.allow_ips ?? current.allow_ips,
-        group: payload.group?.trim() || current.group,
+        group: payload.group ?? current.group,
       }
 
       await route.fulfill({

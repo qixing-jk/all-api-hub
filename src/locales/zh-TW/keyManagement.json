@@ -248,6 +248,7 @@
     "neverExpires": "永不過期",
     "note": "備註：",
     "remainingQuota": "剩餘額度：",
+    "totalQuota": "總額度：",
     "ungrouped": "未分組",
     "usedQuota": "已用額度："
   },
@@ -417,6 +418,19 @@
         "transferAmount": "轉帳 Token 數量"
       },
       "description": "描述（選填）",
+      "emrank": {
+        "expiration": "有效期",
+        "expirationOptions": {
+          "custom": "自訂時間",
+          "day": "一天",
+          "hour": "一小時",
+          "keep": "保留目前有效期限",
+          "month": "一個月（30 天）",
+          "never": "永不過期"
+        },
+        "quotaHelp": "1 M = 1,000,000 Token，最多 6 位小數；維持無限額度則不受限制。",
+        "quotaMToken": "額度（M Token）"
+      },
       "excludeIps": "排除 IP",
       "excludeIpsPlaceholder": "一行一個（支援 CIDR）",
       "expiryDays": "有效期限（天）",

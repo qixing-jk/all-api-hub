@@ -15,6 +15,7 @@ import {
   fetchKeys,
   updateKey,
 } from "~/services/apiService/foxcode/keys"
+import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
 import { server } from "~~/tests/msw/server"
 import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
@@ -94,6 +95,27 @@ beforeEach(async () => {
     ),
   )
 })
+
+it("surfaces console business rejections as business errors", async () => {
+  server.use(
+    http.post(`${origin}/api/keys`, () =>
+      HttpResponse.json({ success: false, code: 409, message: "名称已存在" }),
+    ),
+  )
+  await expect(
+    createKey(request, {
+      name: "duplicate",
+      description: "",
+      channelKey: "anthropic",
+      quotaLimit: 10_000,
+    }),
+  ).rejects.toMatchObject({
+    code: API_ERROR_CODES.BUSINESS_ERROR,
+    message: "名称已存在",
+    upstreamCode: "409",
+  })
+})
+
 afterEach(() => vi.restoreAllMocks())
 
 it.each(["anthropic", null])(

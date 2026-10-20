@@ -7,6 +7,7 @@ import type { TFunction } from "i18next"
 
 import { type RuntimeActionIds } from "~/constants/runtimeActions"
 import type { AccountSiteType } from "~/constants/siteType"
+import type { QuotaAsset } from "~/services/quotaAssets/quotaAsset"
 
 /**
  * Check-in result status
@@ -214,15 +215,13 @@ interface CheckinAccountResultBase {
 /**
  * An award a site reported for one check-in.
  *
- * `quota` is always the extension's internal quota unit, so neither the UI nor
- * the storage layer has to know whether a deployment reports its award in quota
- * or in its own currency. Providers normalize before setting it; there is no
- * "unknown unit" state, and a missing field means "this method has no
- * authoritative amount", never zero.
+ * Monetary awards normalize to internal `quota`. Native awards retain their
+ * atomic `amount` and asset, without implying a cash conversion. An absent
+ * reward means the site supplied no authoritative amount, never zero.
  */
-export interface CheckInReward {
-  quota: number
-}
+export type CheckInReward =
+  | { quota: number; asset?: never; amount?: never }
+  | { asset: QuotaAsset; amount: number; quota?: never }
 
 /**
  * One account outcome with only valid retry/certainty combinations.

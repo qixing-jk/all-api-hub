@@ -1,5 +1,6 @@
 import type { AccountSiteType } from "~/constants/siteType"
 import type { PricingPlan } from "~/services/modelPricing/pricingPlan"
+import type { QuotaPricingPlan } from "~/services/modelPricing/quotaPricing"
 import type { ModelVendorEvidence } from "~/services/models/modelDescriptor"
 import type { ModelPresentation } from "~/services/models/modelDisplayFacts"
 
@@ -34,6 +35,8 @@ export interface ProductCanonicalModel {
     cache_write?: number
   }
   pricingPlan?: PricingPlan
+  /** Non-monetary pricing, evaluated in the provider's own quota asset. */
+  quotaPricing?: QuotaPricingPlan
   price_metadata?: ModelPriceMetadata
   owner_by?: string
   completion_ratio: number
@@ -119,7 +122,14 @@ export interface ModelPriceMetadata {
   unmatched_model_count?: number
 }
 
+export const MODEL_LIST_PRICING_KINDS = {
+  Currency: "currency",
+  Quota: "quota",
+} as const
+
 export interface ModelListSourceInfo {
+  /** Explicit pricing basis; omitted legacy sources retain currency semantics. */
+  pricingKind?: (typeof MODEL_LIST_PRICING_KINDS)[keyof typeof MODEL_LIST_PRICING_KINDS]
   /** Live models loaded using maintained routes after route discovery failed. */
   inferenceRouteFallback?: boolean
   kind: ModelListSourceKind

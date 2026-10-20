@@ -268,6 +268,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
   const {
     supportsRuntimeModelList,
     supportsPricing,
+    supportsCurrencyPricing,
     supportsGroupFiltering,
     supportsAccountSummary,
     supportsTokenCompatibility,
@@ -281,6 +282,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
         ? {}
         : { supportsRuntimeModelList }),
       supportsPricing,
+      supportsCurrencyPricing,
       supportsGroupFiltering,
       supportsAccountSummary,
       supportsTokenCompatibility,
@@ -291,6 +293,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
     [
       supportsRuntimeModelList,
       supportsPricing,
+      supportsCurrencyPricing,
       supportsGroupFiltering,
       supportsAccountSummary,
       supportsTokenCompatibility,

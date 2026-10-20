@@ -256,6 +256,7 @@
     "neverExpires": "Never Expires",
     "note": "Note:",
     "remainingQuota": "Remaining Quota:",
+    "totalQuota": "Total Quota:",
     "ungrouped": "Ungrouped",
     "usedQuota": "Used Quota:"
   },
@@ -428,6 +429,19 @@
         "transferAmount": "Tokens to transfer"
       },
       "description": "Description (optional)",
+      "emrank": {
+        "expiration": "Expiry",
+        "expirationOptions": {
+          "custom": "Custom time",
+          "day": "One day",
+          "hour": "One hour",
+          "keep": "Keep current expiry",
+          "month": "One month (30 days)",
+          "never": "Never expires"
+        },
+        "quotaHelp": "1 M = 1,000,000 Token, at most 6 decimals. Leave unlimited quota on for no cap.",
+        "quotaMToken": "Quota (M Token)"
+      },
       "excludeIps": "Excluded IPs",
       "excludeIpsPlaceholder": "One per line (CIDR supported)",
       "expiryDays": "Expires in (days)",

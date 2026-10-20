@@ -8,6 +8,7 @@ import {
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { formatQuotaAmount } from "~/services/quotaAssets/quotaAsset"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 
 import type { AccountKeyResourceCardAdapter } from "./accountKeyResourceCardAdapter"
@@ -90,7 +91,11 @@ const nativeDetailFacts = (
 ): KeyResourceFact[] => {
   const details: KeyResourceFact[] = []
   for (const fact of facts.displayFacts ?? []) {
-    if (fact.kind === "money" || fact.kind === "credits") {
+    if (
+      fact.kind === "money" ||
+      fact.kind === "credits" ||
+      fact.kind === "quota"
+    ) {
       details.push({
         id: fact.fieldId,
         label:
@@ -100,12 +105,16 @@ const nativeDetailFacts = (
               ? t("keyManagement:keyDetails.remainingQuota")
               : fact.role === "used"
                 ? t("keyManagement:keyDetails.usedQuota")
-                : t("keyManagement:native.editor.totalQuotaUsd"),
+                : fact.kind === "quota"
+                  ? t("keyManagement:keyDetails.totalQuota")
+                  : t("keyManagement:native.editor.totalQuotaUsd"),
         value: fact.unlimited
           ? t("keyManagement:dialog.unlimitedQuota")
           : fact.kind === "money"
             ? `$${fact.amountUsd.toLocaleString(undefined, { maximumFractionDigits: 6 })}`
-            : fact.value.toLocaleString(),
+            : fact.kind === "quota"
+              ? formatQuotaAmount(fact.value, fact.asset)
+              : fact.value.toLocaleString(),
       })
     } else if (fact.kind === "expiry") {
       const date =

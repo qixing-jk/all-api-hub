@@ -58,11 +58,35 @@ describe("FoxCode console account contract", () => {
   it("rejects invalid console envelopes", async () => {
     server.use(
       http.get(`${origin}/api/auth/me`, () =>
-        HttpResponse.json({ success: false }),
+        HttpResponse.json({ success: false, message: "登录已过期" }),
       ),
     )
     await expect(fetchUserInfo(request)).rejects.toMatchObject({
-      code: "JSON_PARSE_ERROR",
+      code: "BUSINESS_ERROR",
+      message: "登录已过期",
+    })
+  })
+
+  it("preserves a business rejection supplied through the error field", async () => {
+    server.use(
+      http.get(`${origin}/api/auth/me`, () =>
+        HttpResponse.json({ success: false, error: "session refused" }),
+      ),
+    )
+    await expect(fetchUserInfo(request)).rejects.toMatchObject({
+      code: "BUSINESS_ERROR",
+      message: "session refused",
+    })
+  })
+  it("supplies a useful fallback for a rejection without a message", async () => {
+    server.use(
+      http.get(`${origin}/api/auth/me`, () =>
+        HttpResponse.json({ success: false, error: {} }),
+      ),
+    )
+    await expect(fetchUserInfo(request)).rejects.toMatchObject({
+      code: "BUSINESS_ERROR",
+      message: "FoxCode request failed",
     })
   })
 

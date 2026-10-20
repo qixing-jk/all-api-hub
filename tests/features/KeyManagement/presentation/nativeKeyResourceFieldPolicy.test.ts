@@ -1,3 +1,4 @@
+import { createInstance } from "i18next"
 import type { TFunction } from "i18next"
 import { describe, expect, expectTypeOf, it } from "vitest"
 
@@ -15,10 +16,15 @@ import { ACCOUNT_KEY_AUTOMATIC_NAME_KINDS } from "~/features/KeyManagement/prese
 import type { AccountKeyResourceEditorPresentation } from "~/features/KeyManagement/presentation/accountKeyResourceEditorPresentation"
 import { getNativeKeyResourceEditorPresentation } from "~/features/KeyManagement/presentation/nativeKeyResourceFieldPolicy"
 import { resolveResourceFieldPolicy } from "~/features/ResourceEditor/model/resourceFieldPolicy"
+import zhKeyManagement from "~/locales/zh-CN/keyManagement.json"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import { createAIHubMixKeyEditor } from "~/services/apiAdapters/aihubmix/keys/keyResourceEditor"
 import type { ResourceFieldDescriptor } from "~/services/apiAdapters/contracts/resourceNative"
 import { createCubenceKeyEditor } from "~/services/apiAdapters/cubence/keyEditor"
+import {
+  EMRANK_EXPIRATION_MODES,
+  emrankKeyFields,
+} from "~/services/apiAdapters/emrank/keyResourceFields"
 import { createFoxCodeKeyEditor } from "~/services/apiAdapters/foxcode/keyEditor"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keys/keyResourceEditor"
 import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
@@ -54,6 +60,39 @@ function getPresentation(
 }
 
 describe("native key editor field policies", () => {
+  it("labels EMRank native quota and shows only the selected spending and expiry fields", () => {
+    const fields = getPresentation(SITE_TYPES.EMRANK, editorModes.Create).policy
+      .fields
+    const t = ((key: string) => key) as TFunction
+    const field = (id: string) => fields.find((item) => item.fieldId === id)!
+    expect(field(emrankKeyFields.Unlimited).resolveLabel(t)).toBe(
+      "keyManagement:dialog.unlimitedQuota",
+    )
+    expect(field(emrankKeyFields.Quota).resolveLabel(t)).toBe(
+      "keyManagement:native.editor.emrank.quotaMToken",
+    )
+    expect(field(emrankKeyFields.Quota).resolveHelp?.(t)).toBe(
+      "keyManagement:native.editor.emrank.quotaHelp",
+    )
+    expect(field(emrankKeyFields.ExpirationMode).resolveLabel(t)).toBe(
+      "keyManagement:native.editor.emrank.expiration",
+    )
+    for (const unlimited of [true, false])
+      expect(
+        field(emrankKeyFields.Quota).visibleWhen?.({
+          [emrankKeyFields.Unlimited]: unlimited,
+        }),
+      ).toBe(!unlimited)
+    for (const mode of [
+      EMRANK_EXPIRATION_MODES.Custom,
+      EMRANK_EXPIRATION_MODES.Never,
+    ])
+      expect(
+        field(emrankKeyFields.ExpiresAt).visibleWhen?.({
+          [emrankKeyFields.ExpirationMode]: mode,
+        }),
+      ).toBe(mode === EMRANK_EXPIRATION_MODES.Custom)
+  })
   it("presents FoxCode name, description, channel and quota without unrelated fields", () => {
     const editor = createFoxCodeKeyEditor(async () => [])
     const presentation = getPresentation(
@@ -596,4 +635,28 @@ it("requires a naming decision in every editor presentation", () => {
       ? true
       : false
   >().toEqualTypeOf<false>()
+})
+
+it("presents every EMRank expiry choice as readable localized text", async () => {
+  const i18n = createInstance()
+  await i18n.init({
+    lng: "zh-CN",
+    resources: { "zh-CN": { keyManagement: zhKeyManagement } },
+  })
+  const field = getPresentation(
+    SITE_TYPES.EMRANK,
+    editorModes.Edit,
+  ).policy.fields.find((f) => f.fieldId === emrankKeyFields.ExpirationMode)!
+  expect(
+    Object.values(EMRANK_EXPIRATION_MODES).map((value) =>
+      field.optionLabelResolvers?.[value]?.(i18n.t),
+    ),
+  ).toEqual([
+    "保持现有有效期",
+    "永不过期",
+    "一个月（30 天）",
+    "一天",
+    "一小时",
+    "自定义时间",
+  ])
 })

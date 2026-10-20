@@ -21,6 +21,51 @@ describe("Cubence direct Cookie transport", () => {
   })
   afterEach(() => vi.restoreAllMocks())
 
+  it("preserves the nested business rejection message", async () => {
+    server.use(
+      http.get("https://cubence.com/api/test", () =>
+        HttpResponse.json({
+          success: false,
+          error: { message: "quota refused" },
+        }),
+      ),
+    )
+    await expect(
+      readCubenceResponse(
+        {
+          baseUrl: "https://cubence.com",
+          auth: { authType: AuthTypeEnum.Cookie },
+        },
+        "/api/test",
+      ),
+    ).rejects.toMatchObject({
+      code: "BUSINESS_ERROR",
+      message: "quota refused",
+    })
+  })
+  it.each([undefined, {}])(
+    "supplies a useful fallback when a rejection has no message (%j)",
+    async (error) => {
+      server.use(
+        http.get("https://cubence.com/api/test", () =>
+          HttpResponse.json({ success: false, error }),
+        ),
+      )
+      await expect(
+        readCubenceResponse(
+          {
+            baseUrl: "https://cubence.com",
+            auth: { authType: AuthTypeEnum.Cookie },
+          },
+          "/api/test",
+        ),
+      ).rejects.toMatchObject({
+        code: "BUSINESS_ERROR",
+        message: "Cubence request failed",
+      })
+    },
+  )
+
   it("allows a prepared multi-request operation to finish after 60 seconds", async () => {
     vi.useFakeTimers()
     try {

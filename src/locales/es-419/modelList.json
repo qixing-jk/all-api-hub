@@ -166,9 +166,18 @@
       "no": "No",
       "yes": "Sí"
     },
+    "callExamples": "Ejemplos de llamadas",
+    "catalogOwner": "Propietario del catálogo",
     "contextLimit": "Límite de contexto",
+    "defaultDimensions": "Dimensiones predeterminadas",
     "inputModalities": "Modalidades de entrada",
     "maximumOutputTokens": "Máximo de tokens de salida",
+    "modelKind": "Tipo de modelo",
+    "modelKinds": {
+      "decision": "Decisión",
+      "embedding": "Embeddings",
+      "reranker": "Reordenamiento"
+    },
     "openRouter": {
       "architecture": {
         "instructType": "Formato de instrucciones",
@@ -271,12 +280,17 @@
       "request": "solicitud",
       "webSearch": "búsqueda web"
     },
+    "providerAvailable": "Disponible en el sitio",
+    "releaseDate": "Fecha de publicación",
     "sections": {
       "specifications": "Especificaciones"
     },
+    "supportedDimensions": "Dimensiones admitidas",
+    "supportsImages": "Compatibilidad con imágenes",
     "tokenCount_one": "{{formattedCount}} token",
     "tokenCount_many": "{{formattedCount}} tokens",
-    "tokenCount_other": "{{formattedCount}} tokens"
+    "tokenCount_other": "{{formattedCount}} tokens",
+    "viewOnSite": "Ver en el sitio"
   },
   "displayOptions": "Visualización",
   "endpointType": "Tipo de endpoint",
@@ -461,6 +475,15 @@
     "scrollRight": "Desplazar pestañas de fabricante a la derecha",
     "unclassified": "Sin clasificar",
     "unclassifiedDescription": "No se pudo identificar el proveedor; esto no significa que el modelo no esté disponible."
+  },
+  "quotaBilling": {
+    "adjustments": "Factores adicionales de facturación: {{names}}.",
+    "comparison": "{{amount}} por millón de tokens simulados.",
+    "invalid": "El precio de la cuota no está disponible.",
+    "reference": "Solo consumo base; no incluye multiplicadores adicionales.",
+    "sortAsc": "Consumo de cuota: de menor a mayor",
+    "sortDesc": "Consumo de cuota: de mayor a menor",
+    "source": "Reglas de facturación"
   },
   "realAmount": "Monto real de recarga",
   "refreshData": "Actualizar datos",

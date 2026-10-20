@@ -1304,6 +1304,38 @@ describe("defineAccountKeyResourceCapability", () => {
     expect(uncertainCreate).toHaveBeenCalledOnce()
   })
 
+  it("contains an unclassified adapter exception and prevents replay through the public editor", async () => {
+    const create = vi
+      .fn<Definition["create"]>()
+      .mockRejectedValue(new Error("connection lost"))
+    const editor = await (
+      await openSession(createDefinition({ create }))
+    ).openCreateEditor(SCOPE.scopeKey)
+    await expect(editor.submit({ name: "First" })).rejects.toMatchObject({
+      failure: {
+        code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+      },
+    })
+    await expect(editor.submit({ name: "Replay" })).rejects.toMatchObject({
+      failure: { code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed },
+    })
+    expect(create).toHaveBeenCalledOnce()
+  })
+
+  it.each(["delete", "revoke"] as const)(
+    "contains an unclassified %s exception at the public collection",
+    async (operation) => {
+      const mutation = vi.fn().mockRejectedValue(new Error("connection lost"))
+      const collection = await open(createDefinition({ [operation]: mutation }))
+      await expect(collection[operation]!(REF)).rejects.toMatchObject({
+        failure: {
+          code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+        },
+      })
+      expect(mutation).toHaveBeenCalledOnce()
+    },
+  )
+
   it("preserves the mapped upstream code for uncertain editor and delete mutations", async () => {
     const definition = createDefinition({
       create: vi.fn<Definition["create"]>(async () => ({

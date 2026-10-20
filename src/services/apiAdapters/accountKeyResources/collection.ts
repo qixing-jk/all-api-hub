@@ -22,6 +22,7 @@ import {
 import type { AccountKeyResourceDefinition } from "./definition"
 import { createAccountKeyResourceEditor } from "./editor"
 import {
+  mapMutationOperation,
   mapOperation,
   unexpectedFailure,
   validationFailure,
@@ -163,11 +164,15 @@ export function createAccountKeyResourceCollection<
             mapOperation(async () => {
               const decoded = decodeRef(ref)
               const resolution = resolveNativeResourceMutation(
-                await definition.revoke!(
-                  config,
-                  providerScope,
-                  decoded.locator,
-                  options,
+                await mapMutationOperation(
+                  () =>
+                    definition.revoke!(
+                      config,
+                      providerScope,
+                      decoded.locator,
+                      options,
+                    ),
+                  mapFailure,
                 ),
               )
               if (resolution.status === "not-applied")
@@ -289,11 +294,10 @@ export function createAccountKeyResourceCollection<
       mapOperation(async () => {
         const { locator } = decodeRef(ref)
         const resolution = resolveNativeResourceMutation(
-          await definition.delete(
-            config,
-            providerScope,
-            locator,
-            deleteOptions,
+          await mapMutationOperation(
+            () =>
+              definition.delete(config, providerScope, locator, deleteOptions),
+            mapFailure,
           ),
         )
         if (resolution.status === "not-applied") {

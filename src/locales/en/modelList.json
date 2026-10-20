@@ -159,9 +159,18 @@
       "no": "No",
       "yes": "Yes"
     },
+    "callExamples": "Call examples",
+    "catalogOwner": "Catalog owner",
     "contextLimit": "Context limit",
+    "defaultDimensions": "Default dimensions",
     "inputModalities": "Input modalities",
     "maximumOutputTokens": "Maximum output tokens",
+    "modelKind": "Model type",
+    "modelKinds": {
+      "decision": "Decision",
+      "embedding": "Embedding",
+      "reranker": "Reranker"
+    },
     "openRouter": {
       "architecture": {
         "instructType": "Instruction format",
@@ -263,11 +272,16 @@
       "request": "request",
       "webSearch": "web search"
     },
+    "providerAvailable": "Available on site",
+    "releaseDate": "Release date",
     "sections": {
       "specifications": "Specifications"
     },
+    "supportedDimensions": "Supported dimensions",
+    "supportsImages": "Image support",
     "tokenCount_one": "{{formattedCount}} token",
-    "tokenCount_other": "{{formattedCount}} tokens"
+    "tokenCount_other": "{{formattedCount}} tokens",
+    "viewOnSite": "View on site"
   },
   "displayOptions": "Display",
   "endpointType": "Endpoint Type",
@@ -451,6 +465,15 @@
     "scrollRight": "Scroll vendor tabs right",
     "unclassified": "Unclassified",
     "unclassifiedDescription": "The vendor could not be identified; this does not mean the model is unavailable."
+  },
+  "quotaBilling": {
+    "adjustments": "Additional billing factors: {{names}}.",
+    "comparison": "{{amount}} / million modeled tokens.",
+    "invalid": "Quota pricing is unavailable.",
+    "reference": "Base usage only; additional multipliers are not included.",
+    "sortAsc": "Quota usage: low to high",
+    "sortDesc": "Quota usage: high to low",
+    "source": "Billing rules"
   },
   "realAmount": "Real Recharge Amount",
   "refreshData": "Refresh Data",

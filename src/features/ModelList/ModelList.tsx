@@ -17,7 +17,10 @@ import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/verification/VerifyApiCredentialProfileDialog"
 import { AccountSelector } from "~/features/ModelList/catalog/AccountSelector"
 import { AccountSummaryBar } from "~/features/ModelList/catalog/AccountSummaryBar"
-import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/catalog/modelManagementSources"
+import {
+  MODEL_MANAGEMENT_SOURCE_KINDS,
+  supportsModelCurrencyPricing,
+} from "~/features/ModelList/catalog/modelManagementSources"
 import { PersonalizedCatalogFallbackNotice } from "~/features/ModelList/catalog/PersonalizedCatalogFallbackNotice"
 import { ProviderTabs } from "~/features/ModelList/catalog/ProviderTabs"
 import { useModelListData } from "~/features/ModelList/catalog/useModelListData"
@@ -613,7 +616,9 @@ export default function ModelList(props: {
             )}
           </ProviderTabs>
 
-          <Footer showPricingNote={sourceCapabilities.supportsPricing} />
+          <Footer
+            showPricingNote={supportsModelCurrencyPricing(sourceCapabilities)}
+          />
         </>
       )}
     </div>

@@ -7,6 +7,7 @@ import {
 import type {
   ActiveResourceBoundary,
   MutationAnalyticsMode,
+  RecoverMutationFailure,
 } from "~/features/KeyManagement/resources/workflows/accountKeyResourceControllerTypes"
 import {
   boundariesMatch,
@@ -44,7 +45,7 @@ export function useAccountKeyEditorSubmission({
   requests,
   resolveContext,
   requireFreshRead,
-  onUncertain,
+  recoverMutationFailure,
   onSubmitted,
   mutationAnalyticsMode,
 }: {
@@ -55,7 +56,7 @@ export function useAccountKeyEditorSubmission({
   requests: AccountKeyResourceRequestLifecycle
   resolveContext: () => SubmissionContext | null
   requireFreshRead: (boundary: ActiveResourceBoundary) => void
-  onUncertain: (boundary: ActiveResourceBoundary) => Promise<unknown>
+  recoverMutationFailure: RecoverMutationFailure
   onSubmitted: (
     result: AccountKeyEditorSubmitResult,
     boundary: ActiveResourceBoundary,
@@ -89,23 +90,23 @@ export function useAccountKeyEditorSubmission({
         )
         return failure
       }
-      const validation = nativeEditor.validate(values)
-      if (!validation.valid) {
-        transitionEditor((previous) =>
-          previous?.editorId === editorId
-            ? {
-                ...previous,
-                feedback: {
-                  code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed,
-                  fieldIssues: validation.issues,
-                },
-              }
-            : previous,
-        )
-        return
-      }
       let boundary: ActiveResourceBoundary
       try {
+        const validation = nativeEditor.validate(values)
+        if (!validation.valid) {
+          transitionEditor((previous) =>
+            previous?.editorId === editorId
+              ? {
+                  ...previous,
+                  feedback: {
+                    code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.ValidationFailed,
+                    fieldIssues: validation.issues,
+                  },
+                }
+              : previous,
+          )
+          return
+        }
         boundary = context.resolveDestination(nativeEditor, values)
       } catch (error) {
         feedback(error)
@@ -146,13 +147,7 @@ export function useAccountKeyEditorSubmission({
           const current =
             version === requests.version() && submission.isCurrent()
           if (current) feedback(error)
-          if (
-            failure.code ===
-            ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain
-          ) {
-            requireFreshRead(boundary)
-            if (current) await onUncertain(boundary)
-          }
+          await recoverMutationFailure(failure, boundary, current)
           completeKeyMutationAnalytics(
             tracker,
             PRODUCT_ANALYTICS_RESULTS.Failure,
@@ -174,7 +169,7 @@ export function useAccountKeyEditorSubmission({
       resolveContext,
       requests,
       requireFreshRead,
-      onUncertain,
+      recoverMutationFailure,
       onSubmitted,
       mutationAnalyticsMode,
     ],

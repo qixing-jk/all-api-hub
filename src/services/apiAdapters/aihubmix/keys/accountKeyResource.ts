@@ -32,10 +32,7 @@ import {
   mergeResourceEdits,
   resourceValuesEqual,
 } from "~/services/apiAdapters/nativeResources/editableChanges"
-import {
-  isApiBusinessError,
-  runNativeResourceMutation,
-} from "~/services/apiAdapters/nativeResources/mutation"
+import { runNativeResourceMutation } from "~/services/apiAdapters/nativeResources/mutation"
 import {
   createAIHubMixKey,
   deleteApiToken,
@@ -252,8 +249,6 @@ export const aihubmixAccountKeyResources = defineAccountKeyResourceCapability({
       execute: (mutationRequest) =>
         createAIHubMixKey(mutationRequest, command.values),
       mapFailure: mapAccountKeyResourceFailure,
-      classifyError: (error) =>
-        isApiBusinessError(error) ? "not-applied" : undefined,
     })
     if (result.certainty === "not-applied") return result
     if (result.certainty === "possibly-applied")
@@ -334,8 +329,6 @@ export const aihubmixAccountKeyResources = defineAccountKeyResourceCapability({
       execute: (mutationRequest) =>
         updateAIHubMixKey(mutationRequest, detail.id, merged),
       mapFailure: mapAccountKeyResourceFailure,
-      classifyError: (error) =>
-        isApiBusinessError(error) ? "not-applied" : undefined,
     })
     if (result.certainty === "not-applied") return result
     try {
@@ -374,8 +367,6 @@ export const aihubmixAccountKeyResources = defineAccountKeyResourceCapability({
       request: requestWithOptions(config, options),
       execute: (request) => deleteApiToken(request, id),
       mapFailure: mapAccountKeyResourceFailure,
-      classifyError: (error) =>
-        isApiBusinessError(error) ? "not-applied" : undefined,
     })
     return result.certainty === "applied"
       ? { certainty: "applied", value: undefined }

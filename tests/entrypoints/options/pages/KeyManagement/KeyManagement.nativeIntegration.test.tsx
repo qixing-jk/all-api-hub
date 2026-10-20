@@ -69,9 +69,11 @@ const {
   refreshServiceCredentialsSpy,
   legacyRetryFailedAccountsSpy,
   toastSuccessMock,
+  toastWarningMock,
 } = vi.hoisted(() => ({
   accountKeyResourceControllerOptionsSpy: vi.fn(),
   toastSuccessMock: vi.fn(),
+  toastWarningMock: vi.fn(),
   accountKeyResourceControllerReplaceRouteSpy: vi.fn(),
   accountKeyResourceEditorDialogPropsSpy: vi.fn(),
   accountSelectorPanelPropsSpy: vi.fn(),
@@ -93,7 +95,11 @@ const {
 }))
 
 vi.mock("~/lib/notify", () => ({
-  default: { success: toastSuccessMock, error: vi.fn() },
+  default: {
+    success: toastSuccessMock,
+    error: vi.fn(),
+    warning: toastWarningMock,
+  },
 }))
 
 vi.mock(
@@ -2775,7 +2781,7 @@ describe("KeyManagement native page integration", () => {
     await waitFor(() => expect(deleteResource).toHaveBeenCalledTimes(2))
   })
 
-  it("offers refresh first after an uncertain native delete and never blind-retries deletion", async () => {
+  it("reconciles an uncertain native delete and retains its warning without retrying deletion", async () => {
     const user = userEvent.setup()
     const account = createAccount({
       id: "native-account",
@@ -2827,27 +2833,23 @@ describe("KeyManagement native page integration", () => {
         name: "keyManagement:native.actions.delete",
       }),
     )
+    const openCountBeforeDelete = open.mock.calls.length
     await user.click(
       screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton),
     )
     await waitFor(() => expect(deleteResource).toHaveBeenCalledTimes(1))
-    expect(
-      await screen.findByText("The provider response was interrupted"),
-    ).toBeVisible()
-    expect(
-      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton),
-    ).toHaveTextContent("keyManagement:native.delete.refresh")
-    expect(
-      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton),
-    ).toHaveAttribute("data-variant", "warning")
-
-    const openCountAfterRecovery = open.mock.calls.length
-    await user.click(
-      screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton),
+    await waitFor(() =>
+      expect(open.mock.calls.length).toBeGreaterThan(openCountBeforeDelete),
     )
     await waitFor(() =>
-      expect(open.mock.calls.length).toBeGreaterThan(openCountAfterRecovery),
+      expect(
+        screen.queryByTestId(KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton),
+      ).not.toBeInTheDocument(),
     )
     expect(deleteResource).toHaveBeenCalledTimes(1)
+    expect(toastWarningMock).toHaveBeenCalledWith(
+      "keyManagement:native.editor.feedback.uncertain\nThe provider response was interrupted",
+      { duration: Infinity },
+    )
   })
 })

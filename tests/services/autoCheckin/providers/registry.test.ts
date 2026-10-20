@@ -59,6 +59,28 @@ describe("autoCheckinMethodRegistry", () => {
     expect(getLegacyAutoCheckinMethodIds(SITE_TYPES.XIAOEN)).toEqual([])
     expect(getNewAccountCompatibilityMethodIds(SITE_TYPES.XIAOEN)).toEqual([])
   })
+  it("uses EMRank's own daily method with authoritative status readback", () => {
+    expect(getAutoCheckinCandidateMethodIds(SITE_TYPES.EMRANK)).toEqual([
+      AUTO_CHECKIN_METHOD_IDS.EmrankDailyCheckIn,
+    ])
+    expect(
+      supportsCheckInStatusReadback(AUTO_CHECKIN_METHOD_IDS.EmrankDailyCheckIn),
+    ).toBe(true)
+    expect(getLegacyAutoCheckinMethodIds(SITE_TYPES.EMRANK)).toEqual([])
+    expect(getNewAccountCompatibilityMethodIds(SITE_TYPES.EMRANK)).toEqual([])
+    expect(
+      autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.EMRANK, "https://emrank.tech")
+        .map(({ id }) => id),
+    ).toEqual([AUTO_CHECKIN_METHOD_IDS.EmrankDailyCheckIn])
+    // The site's status route is its own; a sibling deployment never inherits
+    // this method, and an unknown type never discovers it.
+    expect(
+      autoCheckinMethodRegistry
+        .getCandidates(SITE_TYPES.UNKNOWN)
+        .map(({ id }) => id),
+    ).not.toContain(AUTO_CHECKIN_METHOD_IDS.EmrankDailyCheckIn)
+  })
   it("registers stable identities without changing legacy method mapping", () => {
     const registrationContracts = autoCheckinMethodRegistry.registrations.map(
       ({ id, siteTypes, provider }) => ({
@@ -68,7 +90,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(19)
+    expect(registrationContracts).toHaveLength(20)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {

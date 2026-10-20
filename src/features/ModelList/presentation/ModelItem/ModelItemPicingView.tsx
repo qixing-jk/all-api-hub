@@ -62,26 +62,42 @@ export const PriceView = ({
   ]
 
   return (
+    <PriceRateView
+      isAvailableForUser={isAvailableForUser}
+      items={priceItems.map((item) => ({
+        ...item,
+        value: `${formatPriceCompact(
+          sourceCurrency === currency
+            ? item.amount
+            : sourceCurrency === "CNY"
+              ? item.amount / exchangeRate
+              : resolvePriceAmount(item.amount, currency, exchangeRate),
+          currency,
+        )}${tokenBillingType ? "/M" : ""}`,
+      }))}
+    />
+  )
+}
+
+/** Shared rate-row layout for monetary and native quota assets. */
+export function PriceRateView({
+  items,
+  isAvailableForUser,
+}: {
+  items: { key: string; label: string; value: string; className: string }[]
+  isAvailableForUser: boolean
+}) {
+  return (
     <div className="gap-y-density-2 flex flex-wrap items-center gap-x-6">
-      {priceItems.map((item) => (
+      {items.map((item) => (
         <div key={item.key} className="flex items-center space-x-2">
           <span className="dark:text-foreground text-muted-foreground text-sm">
             {item.label}
           </span>
           <span
-            className={`text-sm ${
-              isAvailableForUser ? item.className : "text-muted-foreground"
-            }`}
+            className={`text-sm ${isAvailableForUser ? item.className : "text-muted-foreground"}`}
           >
-            {formatPriceCompact(
-              sourceCurrency === currency
-                ? item.amount
-                : sourceCurrency === "CNY"
-                  ? item.amount / exchangeRate
-                  : resolvePriceAmount(item.amount, currency, exchangeRate),
-              currency,
-            )}
-            {tokenBillingType ? "/M" : ""}
+            {item.value}
           </span>
         </div>
       ))}

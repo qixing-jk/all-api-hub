@@ -17,10 +17,7 @@ import {
   type ResourceOperationOptions,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { NativeResourceMutationResult } from "~/services/apiAdapters/contracts/resourceNative"
-import {
-  isApiBusinessError,
-  runNativeResourceMutation,
-} from "~/services/apiAdapters/nativeResources/mutation"
+import { runNativeResourceMutation } from "~/services/apiAdapters/nativeResources/mutation"
 import { tokenCoverage } from "~/services/apiAdapters/newApi/keys/accountKeyDisplayFacts"
 import {
   createRef,
@@ -148,8 +145,6 @@ export const provisionRequirement = async (
       )
     },
     mapFailure,
-    classifyError: (error) =>
-      isApiBusinessError(error) ? "not-applied" : undefined,
   })
   if (createResult.certainty === "not-applied") {
     return createResult
@@ -263,8 +258,6 @@ export const renameProvisionedResource = async (
         toTokenUpdateRequest(config.variant, current, targetDisplayName),
       ),
     mapFailure,
-    classifyError: (error) =>
-      isApiBusinessError(error) ? "not-applied" : undefined,
   })
   if (updateResult.certainty === "not-applied") return updateResult
   if (updateResult.certainty === "applied") {

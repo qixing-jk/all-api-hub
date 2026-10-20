@@ -112,6 +112,28 @@ afterAll(() => {
 })
 
 describe("generic model presentation facts", () => {
+  it("translates a structured text value using the owned display-facts namespace", () => {
+    render(
+      <ModelPresentationSummary
+        presentation={{
+          summaryFacts: [
+            {
+              type: MODEL_DISPLAY_FACT_TYPES.Text,
+              label: { fallback: "Model type" },
+              value: {
+                translationKey: "displayFacts.boolean.yes",
+                fallback: "Fallback",
+              },
+            },
+          ],
+        }}
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+    expect(screen.getByText("Yes")).toBeVisible()
+    expect(screen.queryByText("Fallback")).not.toBeInTheDocument()
+  })
+
   it("preserves each provider policy's selected fact order and structured lists", () => {
     const { rerender } = render(
       <ModelPresentationSummary presentation={firstProviderPresentation} />,

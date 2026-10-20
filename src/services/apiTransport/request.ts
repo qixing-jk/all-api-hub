@@ -202,17 +202,29 @@ const createBaseRequest = (
   delete requestOptions.headers
   delete requestOptions.method
 
-  const defaultHeaders: HeadersInit = {
-    ...headers,
+  const defaultHeaders: Record<string, string> = {
+    ...normalizeHeaderInit(headers),
     // 非 GET 请求自动加 Content-Type
     ...(method !== "GET" ? { "Content-Type": "application/json" } : {}),
   }
+  const callerHeaders = normalizeHeaderInit(options.headers)
+  const callerHeaderNames = new Set(
+    Object.keys(callerHeaders).map((name) => name.toLowerCase()),
+  )
+  // Header names are case-insensitive. A capitalized default next to a
+  // lowercased caller value reaches the network as one comma-joined header,
+  // which strict gateways reject as an unreadable body.
+  const mergedHeaders = Object.fromEntries(
+    Object.entries(defaultHeaders).filter(
+      ([name]) => !callerHeaderNames.has(name.toLowerCase()),
+    ),
+  )
 
   return {
     method,
     headers: {
-      ...defaultHeaders,
-      ...(options.headers || {}), // 用户自定义 headers 可覆盖默认值
+      ...mergedHeaders,
+      ...callerHeaders, // 用户自定义 headers 可覆盖默认值
     },
     credentials,
     ...requestOptions,

@@ -43,6 +43,11 @@ import type {
   PricingScenario,
   QuoteResult,
 } from "~/services/modelPricing/pricingPlan"
+import {
+  QUOTA_COMPARISON_SCOPES,
+  QUOTA_QUOTE_STATUSES,
+  quoteQuotaUsage,
+} from "~/services/modelPricing/quotaPricing"
 import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
 import { compareCodePoints } from "~/services/models/modelVendor"
 import {
@@ -56,6 +61,7 @@ type PricingBillingMode =
   | typeof MODEL_LIST_BILLING_MODES.PER_CALL
 
 interface ComparablePriceKey {
+  domain?: string
   unit?: QuoteResult["unit"]
   billingMode: PricingBillingMode
   primary: number | null
@@ -87,6 +93,30 @@ function getComparablePriceKey(
   showRealPrice: boolean,
   priceComparisonWeights: ModelPriceComparisonWeights,
 ): ComparablePriceKey {
+  if (item.model.quotaPricing) {
+    const plan = item.model.quotaPricing
+    const quote = item.calculatedPrice.quotaQuote
+    const sourceId =
+      item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
+        ? item.source.account.id
+        : item.source.profile.id
+    const scope =
+      plan.comparisonScope === QUOTA_COMPARISON_SCOPES.Unit &&
+      quote?.status === QUOTA_QUOTE_STATUSES.Complete
+        ? QUOTA_COMPARISON_SCOPES.Unit
+        : `${item.source.kind}:${sourceId}`
+    return {
+      domain: JSON.stringify(["quota", plan.unit.id, scope, quote?.status]),
+      billingMode: MODEL_LIST_BILLING_MODES.TOKEN_BASED,
+      primary:
+        quote?.status === QUOTA_QUOTE_STATUSES.Complete
+          ? quote.amount
+          : quote?.status === QUOTA_QUOTE_STATUSES.Reference
+            ? quote.baseAmount
+            : null,
+      secondary: null,
+    }
+  }
   const quote = item.calculatedPrice.quote
   if (quote)
     return {
@@ -226,6 +256,11 @@ function comparePriceKeys(
   b: ComparablePriceKey,
   direction: 1 | -1,
 ) {
+  const domainComparison = compareCodePoints(
+    a.domain ?? "currency",
+    b.domain ?? "currency",
+  )
+  if (domainComparison) return domainComparison
   const unitComparison = compareCodePoints(comparisonUnit(a), comparisonUnit(b))
   if (unitComparison) return unitComparison
   const primaryComparison = compareNullableNumber(
@@ -275,6 +310,16 @@ function resolveBestCalculatedItem(
     groupMultiplier: number,
   ) => {
     const price = calculateModelPrice(model, groupMultiplier)
+    if (model.quotaPricing)
+      return {
+        ...price,
+        quotaQuote: quoteQuotaUsage(
+          model.quotaPricing,
+          pricingScenario?.usage ?? priceComparisonWeights,
+          { comparison: true },
+        ),
+        isComparisonActive: isPriceComparisonActive,
+      }
     if (
       (price.kind === CALCULATED_PRICE_KINDS.UNAVAILABLE &&
         !model.pricingPlan) ||
@@ -497,7 +542,7 @@ export function rankModelListPrices(params: {
   const priceKeys = new Map<string, ComparablePriceKey>()
   items.forEach((item) => {
     if (!supportsPricingDerivedBehavior(item)) {
-      if (isModelPriceUnavailable(item.model)) {
+      if (!item.model.quotaPricing && isModelPriceUnavailable(item.model)) {
         priceKeys.set(
           getModelItemKey(item),
           getComparablePriceKey(item, showRealPrice, priceComparisonWeights),
@@ -526,6 +571,7 @@ export function rankModelListPrices(params: {
         item.comparableModelIdentity.key,
         priceKey.billingMode,
         comparisonUnit(priceKey),
+        priceKey.domain ?? "currency",
       ])
       const group = groups.get(groupKey) ?? []
       group.push(item)

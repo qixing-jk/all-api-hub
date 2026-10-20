@@ -264,6 +264,7 @@
     "neverExpires": "Nunca expira",
     "note": "Nota:",
     "remainingQuota": "Cuota restante:",
+    "totalQuota": "Cuota total:",
     "ungrouped": "Sin grupo",
     "usedQuota": "Cuota usada:"
   },
@@ -439,6 +440,19 @@
         "transferAmount": "Tokens a transferir"
       },
       "description": "Descripción (opcional)",
+      "emrank": {
+        "expiration": "Vencimiento",
+        "expirationOptions": {
+          "custom": "Fecha y hora personalizadas",
+          "day": "Un día",
+          "hour": "Una hora",
+          "keep": "Conservar vencimiento actual",
+          "month": "Un mes (30 días)",
+          "never": "Nunca vence"
+        },
+        "quotaHelp": "1 M = 1.000.000 Token, máximo 6 decimales.",
+        "quotaMToken": "Cuota (M Token)"
+      },
       "excludeIps": "IP excluidas",
       "excludeIpsPlaceholder": "Una por línea (compatible con CIDR)",
       "expiryDays": "Vence en (días)",

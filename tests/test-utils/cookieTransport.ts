@@ -3,16 +3,19 @@ import { vi } from "vitest"
 import { isolateWebLocks } from "./webLocks"
 
 /** Browser boundary fixture: apply active DNR rules before reaching MSW. */
-export function installCookieTransport() {
+export function installCookieTransport(
+  cookieName = "token",
+  cookieDomain = "cubence.com",
+) {
   isolateWebLocks()
   let rules: browser.declarativeNetRequest.Rule[] = []
   const nativeFetch = globalThis.fetch
   vi.spyOn(browser.permissions, "contains").mockResolvedValue(true)
   const cookies = vi.spyOn(browser.cookies, "getAll").mockResolvedValue([
     {
-      name: "token",
+      name: cookieName,
       value: "browser-account",
-      domain: "cubence.com",
+      domain: cookieDomain,
       path: "/",
       secure: true,
       httpOnly: true,
