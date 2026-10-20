@@ -17,6 +17,7 @@ import {
   isAccountTodayMetricAvailable,
   isAccountTodayMetricComplete,
 } from "~/services/accounts/metrics/accountTodayStats"
+import { supportsMonetaryBalance } from "~/services/accounts/metrics/monetaryBalancePolicy"
 import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
 import { getSelectedCheckInStatus } from "~/services/checkin/autoCheckin/discovery/inspection"
 import type {
@@ -255,11 +256,16 @@ function compareByUserSortField(
     }
     case DATA_TYPE_HEALTH_STATUS:
       return applySortDirection(compareHealthStatus(a, b), sortOrder)
-    case DATA_TYPE_BALANCE:
+    case DATA_TYPE_BALANCE: {
+      const aComparable = supportsMonetaryBalance(a.nativeBalance)
+      const bComparable = supportsMonetaryBalance(b.nativeBalance)
+      if (aComparable !== bComparable) return aComparable ? -1 : 1
+      if (!aComparable) return 0
       return applySortDirection(
         a.balance[currencyType] - b.balance[currencyType],
         sortOrder,
       )
+    }
     case DATA_TYPE_CONSUMPTION:
       return compareTodayMetric(
         a.todayConsumption[currencyType],

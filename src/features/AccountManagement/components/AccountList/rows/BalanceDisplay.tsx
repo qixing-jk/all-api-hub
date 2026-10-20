@@ -4,9 +4,11 @@ import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
 import { Button } from "~/components/ui"
+import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/actions/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
+import { supportsMonetaryBalance } from "~/services/accounts/metrics/monetaryBalancePolicy"
 import { formatQuotaAmount } from "~/services/quotaAssets/quotaAsset"
 import type { DisplaySiteData } from "~/types"
 import { ACCOUNT_TODAY_METRIC_STATUSES } from "~/types/accountTodayStats"
@@ -16,13 +18,14 @@ import {
 } from "~/utils/core/formatters"
 import { getDisplayMoneyValue, MONEY_DECIMAL_PLACES } from "~/utils/core/money"
 
+import { AccountAllowanceDetails } from "./AccountAllowanceDetails"
+
 const formatCompactNumber = (value: number) =>
   new Intl.NumberFormat(undefined, {
     notation: Math.abs(value) >= 10000 ? "compact" : "standard",
     maximumFractionDigits: 1,
   }).format(value)
 
-/** Native and monetary balances share typography and intrinsic control sizing. */
 const BALANCE_AMOUNT_CLASS_NAME =
   "text-foreground mb-0.5 h-auto min-h-0 justify-end truncate bg-transparent px-0 py-0 text-right text-sm font-semibold sm:text-base md:text-lg"
 
@@ -182,6 +185,7 @@ const AnimatedValue: React.FC<{
 )
 
 const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
+  const nativeBalance = site.nativeBalance
   const { t } = useTranslation("account")
   const { isInitialLoad, prevBalances } = useAccountDataContext()
   const { currencyType, showTodayCashflow, preferences } =
@@ -195,7 +199,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
   const isAccountDisabled = site.disabled === true
   const isSubscriptionInactive = site.subscription?.isActive === false
   const estimatedTodayIncomeEnabled =
-    !site.nativeBalance &&
+    supportsMonetaryBalance(nativeBalance) &&
     preferences?.balanceHistory?.estimatedTodayIncome?.enabled === true
   const estimatedTodayIncome = site.estimatedTodayIncome?.[currencyType]
   const consumptionPresentation = getTodayMetricPresentation(
@@ -251,39 +255,66 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
   return (
     <div className="flex w-full flex-col items-end overflow-hidden text-right">
       {/* Balance */}
-      {site.nativeBalance ? (
-        <div className="text-right">
-          <Button
-            variant="ghost"
-            size="sm"
-            title={refreshTitle}
-            disabled={isAccountDisabled || isRefreshLocked}
-            aria-busy={
-              isRefreshing ||
-              activeRefreshTarget === BALANCE_REFRESH_TARGETS.BALANCE
-            }
-            onClick={
-              isAccountDisabled
-                ? undefined
-                : () => refreshMetric(BALANCE_REFRESH_TARGETS.BALANCE)
-            }
-            className={BALANCE_AMOUNT_CLASS_NAME}
-          >
-            {site.nativeBalance.unit === "quota"
-              ? formatQuotaAmount(
-                  site.nativeBalance.total,
-                  site.nativeBalance.asset,
-                )
-              : `${new Intl.NumberFormat().format(site.nativeBalance.total)} ${t("stats.nativeCredits")}`}
-          </Button>
-          {site.nativeBalance.unit === "credits" && (
+      {nativeBalance ? (
+        <div
+          className={
+            nativeBalance.unit === "USD"
+              ? "flex max-w-full flex-row-reverse items-center gap-1"
+              : "text-right"
+          }
+        >
+          {nativeBalance.unit === "USD" ? (
+            <AnimatedValue
+              value={
+                nativeBalance.total *
+                (currencyType === "CNY"
+                  ? site.exchangeRate ?? DEFAULT_USD_TO_CNY_RATE
+                  : 1)
+              }
+              startValue={0}
+              className={BALANCE_AMOUNT_CLASS_NAME}
+              title={refreshTitle}
+              onClick={
+                isAccountDisabled
+                  ? undefined
+                  : () => refreshMetric(BALANCE_REFRESH_TARGETS.BALANCE)
+              }
+              isRefreshing={isRefreshing}
+              loading={activeRefreshTarget === BALANCE_REFRESH_TARGETS.BALANCE}
+              disabled={isRefreshLocked}
+            />
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              title={refreshTitle}
+              disabled={isAccountDisabled || isRefreshLocked}
+              aria-busy={
+                isRefreshing ||
+                activeRefreshTarget === BALANCE_REFRESH_TARGETS.BALANCE
+              }
+              onClick={
+                isAccountDisabled
+                  ? undefined
+                  : () => refreshMetric(BALANCE_REFRESH_TARGETS.BALANCE)
+              }
+              className={BALANCE_AMOUNT_CLASS_NAME}
+            >
+              {nativeBalance.unit === "quota"
+                ? formatQuotaAmount(nativeBalance.total, nativeBalance.asset)
+                : `${new Intl.NumberFormat(undefined, { maximumFractionDigits: 6 }).format(nativeBalance.total)} ${t("stats.nativeCredits")}`}
+            </Button>
+          )}
+          {nativeBalance.unit === "USD" ? (
+            <AccountAllowanceDetails nativeBalance={nativeBalance} />
+          ) : nativeBalance.unit === "credits" ? (
             <div className="text-muted-foreground text-xs">
               {t("stats.nativeCreditsDetail", {
-                permanent: site.nativeBalance.permanent,
-                daily: site.nativeBalance.daily,
+                permanent: nativeBalance.permanent,
+                daily: nativeBalance.daily,
               })}
             </div>
-          )}
+          ) : null}
         </div>
       ) : (
         <AnimatedValue

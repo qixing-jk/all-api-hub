@@ -53,6 +53,22 @@ const capture = (
   })
 
 describe("maybeCaptureDailyBalanceSnapshot", () => {
+  it("does not record native token assets as zero-dollar snapshots", async () => {
+    expect(
+      await capture(complete, {
+        unit: "quota",
+        total: 10,
+        asset: {
+          id: "https://emrank.tech/token",
+          label: "Token",
+          displayScale: 1000000,
+          displayLabel: "M Token",
+        },
+      }),
+    ).toBe(false)
+    expect(upsertSnapshotMock).not.toHaveBeenCalled()
+  })
+
   it("does not record native credits as monetary balance history", async () => {
     expect(
       await capture(complete, {
@@ -60,6 +76,17 @@ describe("maybeCaptureDailyBalanceSnapshot", () => {
         total: 36000,
         permanent: 34000,
         daily: 2000,
+      }),
+    ).toBe(false)
+    expect(upsertSnapshotMock).not.toHaveBeenCalled()
+  })
+  it("excludes scoped USD allowances instead of mixing permanent balance with all-pool spending", async () => {
+    expect(
+      await capture(complete, {
+        unit: "USD",
+        total: 8,
+        permanent: 2,
+        daily: 3,
       }),
     ).toBe(false)
     expect(upsertSnapshotMock).not.toHaveBeenCalled()

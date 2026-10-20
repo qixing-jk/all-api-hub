@@ -72,6 +72,23 @@ const beforePrune: DailyBalanceHistoryStore = {
 }
 
 describe("useBalanceHistoryData", () => {
+  it("keeps native allowance accounts out of the history selector even when old snapshots exist", async () => {
+    const scoped = buildSiteAccount({ id: "old" })
+    scoped.account_info.nativeBalance = {
+      unit: "USD",
+      total: 8,
+      permanent: 2,
+      daily: 3,
+    }
+    mocks.accounts.mockResolvedValue([buildSiteAccount({ id: "new" }), scoped])
+    mocks.store.mockResolvedValue(beforePrune)
+    const { result } = renderHook(() => useBalanceHistoryData([]))
+    await act(async () => {})
+    expect(result.current.accounts.map((account) => account.id)).toEqual([
+      "new",
+    ])
+  })
+
   beforeEach(() => {
     vi.resetAllMocks()
     mocks.accounts.mockResolvedValue([buildSiteAccount({ id: "new" })])

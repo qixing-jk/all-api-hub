@@ -49,6 +49,38 @@ const estimate = (
   })
 
 describe("today income estimate", () => {
+  it("ignores historical snapshots of scoped USD accounts in estimates and aggregate coverage", () => {
+    const account = {
+      id: "account",
+      exchange_rate: 7,
+      account_info: {
+        nativeBalance: {
+          unit: "USD" as const,
+          total: 8,
+          permanent: 2,
+          daily: 3,
+        },
+      },
+    }
+    expect(estimate({ account })).toMatchObject({
+      status: "disabled",
+      estimatedTodayIncome: null,
+    })
+    expect(
+      buildEstimatedTodayIncomeMoneyTotals({
+        enabled: true,
+        store,
+        accounts: [account],
+        currentDayKey: "2026-05-23",
+      }),
+    ).toEqual({
+      trusted: { USD: 0, CNY: 0 },
+      estimated: null,
+      availableAccounts: 0,
+      totalAccounts: 0,
+    })
+  })
+
   it("estimates today's income from the current and previous-day snapshots", () => {
     expect(estimate()).toEqual({
       reportedTodayIncome: 100_000,

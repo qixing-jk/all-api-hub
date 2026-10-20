@@ -357,6 +357,19 @@ describe("formatters utilities", () => {
   })
 
   describe("calculateTotalBalance", () => {
+    it("excludes native allowances even when a caller has not projected the exclusion flag", () => {
+      expect(
+        calculateTotalBalance([
+          buildDisplaySiteData({ balance: { USD: 2, CNY: 14 } }),
+          buildDisplaySiteData({
+            nativeBalance: { unit: "USD", total: 8, permanent: 2, daily: 3 },
+            balance: { USD: 2, CNY: 14 },
+            excludeFromTotalBalance: false,
+          }),
+        ]),
+      ).toEqual({ USD: 2, CNY: 14 })
+    })
+
     it("should sum balances across sites and round to 2 decimals", () => {
       const data = [
         { balance: { USD: 1.234, CNY: 7.89 } },

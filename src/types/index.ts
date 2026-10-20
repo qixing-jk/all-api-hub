@@ -99,19 +99,33 @@ export interface AccountSubscriptionSummary {
   isActive?: boolean
 }
 
-/** Native balances without a verified cash value, excluded from monetary totals. */
+/** Native assets and scoped allowances; excluded from fungible monetary balance features. */
 export type AccountNativeBalance =
   | {
-      unit: "credits"
+      unit: "credits" | "USD"
       total: number
       permanent: number
       daily: number
+      components?: AccountBalanceComponent[]
+      timedDetails?: AccountBalanceComponent[]
+      timedDetailsUnavailable?: boolean
     }
   | {
       unit: "quota"
       asset: QuotaAsset
       total: number
     }
+
+export interface AccountBalanceComponent {
+  kind: "permanent" | "timed" | "subscription" | "group"
+  name?: string
+  amount: number
+  scope?: string
+  unlockedModels?: string[]
+  unlimited?: boolean
+  expiresAt?: string
+  resetAt?: string
+}
 
 export interface AccountUsageRecord {
   requestTime?: string
@@ -466,7 +480,8 @@ export interface DisplaySiteData {
    */
   disabled?: boolean
   /**
-   * "Exclude from Total Balance" state projected from {@link SiteAccount.excludeFromTotalBalance}.
+   * Effective total-balance exclusion, combining the saved preference with
+   * native balance eligibility.
    *
    * This affects only the Total Balance aggregate; it must not be interpreted as
    * a disabled state for actions like refresh or check-in.
