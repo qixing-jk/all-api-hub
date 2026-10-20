@@ -8,6 +8,25 @@ This page records major updates for general users (feature changes / experience 
 - **Troubleshooting**: You can enable console logs in "Settings → General → Logs" and report reproduction steps to [Issues](https://github.com/qixing-jk/all-api-hub/issues).
 :::
 
+## 4.6.0
+This release highlights username and password login for AgentRouter check-in to unlock multi-account automated check-ins, adds RelayFor and EMRank account support, introduces channel-aware update checks, supports NexaVlinks daily check-in with clearer Sub2API key creation guidance, separates native allowances from monetary balances, and improves the settings overview and post-update changelog dialogs.
+
+- **New Features:**
+  - **`AgentRouter` password login and multi-account check-in**: Configure dedicated usernames and passwords under check-in settings to run login check-ins. This eliminates the previous restriction where a single browser GitHub or Linux DO OAuth session prevented running check-ins across multiple accounts, allowing multiple AgentRouter accounts to check in sequentially on the same device. The password is only submitted via native forms during check-in execution, and check-in windows run quietly in the background without stealing browser focus. See [Automatic Check-in](./auto-checkin.md).
+  - **`RelayFor` account support**: Add RelayFor accounts using browser login to view balances, usage, model pricing, and announcements, and redeem codes. Create, edit, toggle, or delete API keys with channels, groups, and quotas directly in the extension. The model list supports provider-group filtering and pricing display, and daily automatic check-in is supported. See [Supported Sites](./supported-sites.md) and [Automatic Check-in](./auto-checkin.md).
+  - **`EMRank` account support and native Token pricing**: Add EMRank accounts using browser login to view token balances, model listings, and public announcements. Create, rename, view, or delete API keys in the extension, with daily automatic check-in support. The model list supports native token quota pricing (per-million token rates) and within-asset price sorting without converting to regular currencies. See [Supported Sites](./supported-sites.md), [Model List](./model-list.md), and [Automatic Check-in](./auto-checkin.md).
+  - **Distribution channel-aware update checking**: Update checks in settings now adapt to the installation source: Firefox Add-ons checks AMO releases, GitHub releases check the latest Release, Nightly builds compare commit revisions, and Chrome / Edge store builds check browser readiness. Current status is clearly displayed (Up to date, New version found, Waiting for store push, Update ready, etc.), with options to view the changelog or navigate to the download page. See [Installation Channels and Updates](./extension-update-install.md).
+  - **`NexaVlinks` daily check-in**: Sub2API sites now support NexaVlinks daily automatic check-in, verifying today's check-in status beforehand. Graphical captchas prompt in-page manual completion. See [Automatic Check-in](./auto-checkin.md).
+
+- **Experience Improvements:**
+  - **Separate native allowance display**: Account cards now feature an allowance details popover that displays native token, point, or scoped package balances separately; these are not mixed into total monetary balances, balance history, or daily income estimates to prevent currency or unit confusion. See [Balance History](./balance-history.md).
+  - **Overview automation status and metrics**: The Overview tab in settings now displays clear, consistent status badges (Success, Failed, Partial, Waiting for first run, etc.) and execution metric counts for automated tasks such as check-in and model synchronization. See [Overview](./options-overview.md).
+  - **Update changelog dialog reserved for settings**: The in-extension changelog dialog shown after an extension update now only opens on the first visit to the options page, avoiding unexpected popups in compact popup surfaces.
+  - **Synchronize usage history on account refresh**: Account data refreshes now immediately trigger usage history synchronization, keeping records aligned with the latest account state. Clarified auto-refresh interval recommendations and background persistence in settings.
+
+- **Bug Fixes:**
+  - **Sub2API key creation permission guidance**: When a Sub2API site restricts advanced settings like IP allowlists to administrators, the extension now provides actionable guidance rather than a generic permission denied message. See [Key Management](./key-management.md).
+
 ## 4.5.0
 This release adds Dahl, FoxCode, Krill AI, and Xiaoen AI accounts, expands automatic check-in support, introduces account selection for key repairs and multi-key gateway imports, and improves verification handling and Firefox compatibility.
 
