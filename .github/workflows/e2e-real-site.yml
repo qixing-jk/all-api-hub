@@ -69,6 +69,12 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Download E2E extension
+        uses: actions/download-artifact@v7
+        with:
+          name: e2e-extension-default
+          path: .output/chrome-mv3-test
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v5
         with:
@@ -77,18 +83,12 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version-file: .nvmrc
+          node-version-file: .output/chrome-mv3-test/.node-version
           cache: "pnpm"
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --prefer-offline
-
-      - name: Download E2E extension
-        uses: actions/download-artifact@v7
-        with:
-          name: e2e-extension-default
-          path: .output/chrome-mv3-test
 
       - name: Get Playwright version
         id: playwright_version

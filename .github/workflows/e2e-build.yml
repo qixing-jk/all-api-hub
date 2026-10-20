@@ -87,6 +87,13 @@ jobs:
           path: .output/${{ steps.variant.outputs.extension_dir }}
           key: ${{ steps.cache.outputs.cache-primary-key }}
 
+      # Cache validation includes the exact Node version, so this also records
+      # the original build runtime on cache hits, including older cached builds.
+      - name: Record artifact Node version
+        env:
+          E2E_EXTENSION_DIR: .output/${{ steps.variant.outputs.extension_dir }}
+        run: node -p "process.versions.node" > "$E2E_EXTENSION_DIR/.node-version"
+
       # Test jobs consume their own run's artifact without cross-run lookup or
       # extra token permissions. Only the producer accesses the shared cache.
       - name: Upload E2E extension

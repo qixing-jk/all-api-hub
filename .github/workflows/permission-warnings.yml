@@ -39,19 +39,19 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v7
+        with:
+          name: e2e-extension-default
+          path: .output/chrome-mv3-test
       - uses: pnpm/action-setup@v5
         with:
           run_install: false
       - uses: actions/setup-node@v6
         with:
-          node-version-file: .nvmrc
+          node-version-file: .output/chrome-mv3-test/.node-version
           cache: pnpm
       - run: pnpm install --frozen-lockfile --prefer-offline
       - run: pnpm exec playwright install --with-deps chromium
-      - uses: actions/download-artifact@v7
-        with:
-          name: e2e-extension-default
-          path: .output/chrome-mv3-test
       - name: Compare warnings in the real browser
         # The current run's producer validated the default build fingerprint.
         env:

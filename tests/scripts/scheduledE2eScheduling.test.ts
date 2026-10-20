@@ -14,6 +14,54 @@ function job(source: string, name: string) {
 }
 
 describe("scheduled E2E build reuse", () => {
+  it("ships the resolved Node version on both fresh builds and cache hits", () => {
+    const build = job(workflow("e2e-build"), "build")
+    const record = build
+      .split("      - name: Record artifact Node version")[1]
+      ?.split("      - name:")[0]
+    expect(record).toBeDefined()
+    expect(record).not.toContain("if:")
+    expect(record).toContain('node -p "process.versions.node"')
+    expect(record).toContain('> "$E2E_EXTENSION_DIR/.node-version"')
+    expect(record).toContain(
+      "E2E_EXTENSION_DIR: .output/${{ steps.variant.outputs.extension_dir }}",
+    )
+    const recordIndex = build.indexOf("- name: Record artifact Node version")
+    expect(recordIndex).toBeGreaterThan(
+      build.indexOf("- name: Validate cached E2E build"),
+    )
+    expect(recordIndex).toBeGreaterThan(
+      build.indexOf("- name: Build E2E extension"),
+    )
+    expect(recordIndex).toBeLessThan(
+      build.indexOf("- name: Upload E2E extension"),
+    )
+  })
+
+  it.each([
+    ["e2e-browser-compat", "chrome-compat", "chrome-mv3-test"],
+    ["e2e-real-site", "real-site-e2e", "chrome-mv3-test"],
+    ["e2e-smoke", "e2e-smoke", "${{ matrix.extension_dir }}"],
+    ["permission-warnings", "warnings", "chrome-mv3-test"],
+  ])(
+    "%s installs the Node version from its own artifact before dependencies",
+    (name, jobName, directory) => {
+      const tests = job(workflow(name), jobName)
+      const setup = tests
+        .split(/uses: actions\/setup-node@[^\r\n]+/)[1]
+        ?.split(/\r?\n {6}- /)[0]
+      expect(setup).toContain(
+        `node-version-file: .output/${directory}/.node-version`,
+      )
+      expect(setup).not.toMatch(/\bnode-version:/)
+      const downloadIndex = tests.indexOf("uses: actions/download-artifact@")
+      const setupIndex = tests.indexOf("uses: actions/setup-node@")
+      expect(downloadIndex).toBeGreaterThan(-1)
+      expect(downloadIndex).toBeLessThan(setupIndex)
+      expect(setupIndex).toBeLessThan(tests.indexOf("run: pnpm install"))
+    },
+  )
+
   it("isolates performance measurements from concurrent browser contexts", () => {
     const source = workflow("e2e-browser-compat")
     expect(source).toContain('--grep-invert="major pages with"')
