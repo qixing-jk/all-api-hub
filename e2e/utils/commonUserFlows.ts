@@ -209,6 +209,15 @@ export async function stubSponsorRemoteCatalog(context: BrowserContext) {
       body: JSON.stringify(E2E_SPONSOR_CATALOG_PAYLOAD),
     }),
   )
+  await context.route(
+    "https://raw.githubusercontent.com/qixing-jk/all-api-hub/main/resources/partners/icons/**",
+    (route) =>
+      route.fulfill({
+        status: 404,
+        contentType: "text/plain",
+        body: "Not Found",
+      }),
+  )
 }
 
 /** Keeps community preloading independent of remote availability in unrelated E2E flows. */

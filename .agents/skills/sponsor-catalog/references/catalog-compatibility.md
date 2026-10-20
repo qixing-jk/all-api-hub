@@ -34,6 +34,30 @@ Treat schema versions as transport contracts, not content epochs. Update every s
 
 Do not infer intent from current catalog membership. A sponsor present only in the newest file may be a maintenance omission. Establish compatibility from the schema, old client code, provider contract, and Git history.
 
+## Logo Cloud-Control and Forward-Compatibility Strategy
+
+### 1. Logo Cloud-Control Policy (Current V5 Transition)
+
+Runtime clients support cloud-controlled logos through a multi-tier fallback:
+1. Explicit `iconUrl` (supported in code parser);
+2. Bundled static assets (`LOCAL_SPONSOR_ICONS`) for instant offline rendering;
+3. Remote convention URLs (`resources/partners/icons/${sponsorId}.png` / `.jpg`) hosted in the repository;
+4. Local `default.png` fallback.
+
+**Why Schema V6 is NOT published yet to `public/`:**
+- Creating `public/sponsor-catalog.v6.json` immediately forces maintaining four parallel catalogs (`v3`, `v4`, `v5`, `v6`).
+- Because convention fallback (Tier 3) already enables dynamic cloud logo delivery for new sponsors without modifying any JSON schema or adding new fields, existing V5 catalogs fulfill all production cloud-control requirements safely.
+- **Production constraint**: Do NOT add `iconUrl` directly into production `public/sponsor-catalog.v5.json` yet. Older released V5 clients (`v3.52+`) enforce strict unknown-key validation (`getUnknownKeys`) and will drop any campaign containing unrecognised fields.
+
+### 2. Tolerant Parsing ("Pick What is Needed") Evolution
+
+Historically, the catalog parser enforced strict closed-world validation (`getUnknownKeys`), failing closed when unknown fields appeared. While this guarded against accidental legacy V3 syntax, it created high schema rigidity where every optional field required a major schema bump.
+
+Moving forward:
+- Clients should migrate toward **lenient/tolerant parsing ("pick what is needed")**, extracting known fields (`name`, `tagline`, `links`, `actions`, `iconUrl`) and safely ignoring unrecognised future optional fields rather than failing the entire campaign.
+- **Strict in CI, Lenient at Runtime**: Keep strict shape linting in authoring/CI test suites via `validateStrictSponsorCatalogArtifact` in `publicCatalog.test.ts` to prevent typos and safeguard older released clients, while keeping runtime clients tolerant to safely ignore unexpected or future optional fields.
+- This ensures true forward compatibility: future optional metadata can be published without breaking older clients or necessitating subsequent `v7`, `v8`... schema forks.
+
 ## Coverage decision
 
 Start with the current runtime schema, then evaluate each older served schema separately.
@@ -82,6 +106,7 @@ Replace the example value and tag with the actual campaign and oldest client und
 | `actions.bookmarkFallback.url` | `fallbackHints.bookmarkManager` plus `urls.website` | Use only when the same URL is a correct bookmark destination |
 | `actions.apiCredentialProfileFallback` | `fallbackHints.apiCredentialProfiles`, `urls.website`, and optional `urls.apiKeyCreate` | Use only when the V3 website fallback is a correct API base URL and does not conflict with bookmark semantics |
 | `visibility` | No V3/V4 equivalent | Omit the older catalog if unconditional exposure is unsafe |
+| `iconUrl` | No V3/V4 equivalent | Optional cloud logo URL; older or offline clients fall back to bundled/convention/default icon |
 
 Never derive an action URL from the affiliate link. V3's shared `urls.website` is an old compatibility bridge, not a general replacement for every explicit V4/V5 action URL.
 

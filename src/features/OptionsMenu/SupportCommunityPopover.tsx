@@ -8,7 +8,10 @@ import {
   PopoverTrigger,
 } from "~/components/ui/popover"
 import { SPONSOR_RECOMMENDATION_SURFACES } from "~/features/AccountManagement/sponsors/constants"
-import { SponsorBrandIcon } from "~/features/AccountManagement/sponsors/SponsorBrandIcon"
+import {
+  SPONSOR_BRAND_ICON_SIZES,
+  SponsorBrandIcon,
+} from "~/features/AccountManagement/sponsors/SponsorBrandIcon"
 import { useSponsorRecommendations } from "~/features/AccountManagement/sponsors/useSponsorRecommendations"
 import { cn } from "~/lib/utils"
 import { createTab } from "~/utils/browser/tabs"
@@ -123,7 +126,8 @@ export function SupportCommunityPopover({
                   <SponsorBrandIcon
                     sponsorId={item.id}
                     name={item.name}
-                    size="md"
+                    iconUrl={item.iconUrl}
+                    size={SPONSOR_BRAND_ICON_SIZES.Md}
                   />
                   <div className="min-w-0 flex-1">
                     <div className="text-foreground truncate text-xs font-semibold">

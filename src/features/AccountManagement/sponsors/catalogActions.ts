@@ -9,44 +9,40 @@ import { isRecord } from "~/utils/core/object"
 import { isHttpUrl } from "~/utils/core/urlParsing"
 
 import {
-  SPONSOR_ADD_ACCOUNT_ACTION_FIELDS,
-  SPONSOR_API_CREDENTIAL_PROFILE_FALLBACK_ACTION_FIELDS,
-  SPONSOR_BOOKMARK_FALLBACK_ACTION_FIELDS,
-} from "./catalogSchema"
-import { trimNonEmptyString, validateObjectKeys } from "./catalogValidation"
+  normalizeOptionalHttpUrl,
+  trimNonEmptyString,
+} from "./catalogValidation"
 import type { SponsorRecommendationActions } from "./types"
 
-/** Validates the shape of every known action object. */
+/** Validates the container shape of known action objects while tolerating unknown action fields. */
 export function validateActionPayloadShapes(
   itemId: string,
   locale: string,
   actions: Record<string, unknown>,
 ): string[] {
-  const addAccountErrors = validateObjectKeys(
-    itemId,
-    locale,
-    actions.addAccount,
-    SPONSOR_ADD_ACCOUNT_ACTION_FIELDS,
-    "addAccount action",
-  )
-  if (addAccountErrors.length > 0) return addAccountErrors
+  if (actions.addAccount !== undefined && !isRecord(actions.addAccount)) {
+    return [`item ${itemId} locale ${locale} has invalid addAccount action`]
+  }
 
-  const bookmarkErrors = validateObjectKeys(
-    itemId,
-    locale,
-    actions.bookmarkFallback,
-    SPONSOR_BOOKMARK_FALLBACK_ACTION_FIELDS,
-    "bookmarkFallback action",
-  )
-  if (bookmarkErrors.length > 0) return bookmarkErrors
+  if (
+    actions.bookmarkFallback !== undefined &&
+    !isRecord(actions.bookmarkFallback)
+  ) {
+    return [
+      `item ${itemId} locale ${locale} has invalid bookmarkFallback action`,
+    ]
+  }
 
-  return validateObjectKeys(
-    itemId,
-    locale,
-    actions.apiCredentialProfileFallback,
-    SPONSOR_API_CREDENTIAL_PROFILE_FALLBACK_ACTION_FIELDS,
-    "apiCredentialProfileFallback action",
-  )
+  if (
+    actions.apiCredentialProfileFallback !== undefined &&
+    !isRecord(actions.apiCredentialProfileFallback)
+  ) {
+    return [
+      `item ${itemId} locale ${locale} has invalid apiCredentialProfileFallback action`,
+    ]
+  }
+
+  return []
 }
 
 /** Validates and normalizes every supported action payload. */
@@ -113,10 +109,12 @@ function normalizeBookmarkFallbackAction(
 ): SponsorRecommendationActions["bookmarkFallback"] | false | undefined {
   if (value === undefined) return undefined
   if (!isRecord(value)) return false
-  if (!isHttpUrl(value.url)) return false
+
+  const url = normalizeOptionalHttpUrl(value.url)
+  if (!url) return false
 
   return {
-    url: value.url.trim(),
+    url,
   }
 }
 
@@ -129,21 +127,18 @@ function normalizeApiCredentialProfileFallbackAction(
   | undefined {
   if (value === undefined) return undefined
   if (!isRecord(value)) return false
-  if (!isHttpUrl(value.baseUrl)) return false
-  if (
-    value.apiKeyCreateUrl !== undefined &&
-    !isHttpUrl(value.apiKeyCreateUrl)
-  ) {
-    return false
-  }
+
+  const baseUrl = normalizeOptionalHttpUrl(value.baseUrl)
+  if (!baseUrl) return false
+
+  const apiKeyCreateUrl = normalizeOptionalHttpUrl(value.apiKeyCreateUrl)
+  if (apiKeyCreateUrl === false) return false
 
   const apiKeyCreateHint = trimNonEmptyString(value.apiKeyCreateHint)
 
   return {
-    baseUrl: value.baseUrl.trim(),
-    ...(value.apiKeyCreateUrl
-      ? { apiKeyCreateUrl: value.apiKeyCreateUrl.trim() }
-      : {}),
+    baseUrl,
+    ...(apiKeyCreateUrl ? { apiKeyCreateUrl } : {}),
     ...(apiKeyCreateHint ? { apiKeyCreateHint } : {}),
   }
 }
