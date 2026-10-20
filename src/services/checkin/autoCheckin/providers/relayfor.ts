@@ -162,6 +162,10 @@ export const relayForProvider: AutoCheckinProvider = {
       let hasQuota = false
       for (const [index, { campaign, day }] of targets.entries()) {
         try {
+          if (context.mutationLifecycle) {
+            context.mutationLifecycle.dispatched = false
+            context.mutationLifecycle.responseReceived = false
+          }
           const claimResult = await claimRelayForCheckIn(
             {
               ...request,

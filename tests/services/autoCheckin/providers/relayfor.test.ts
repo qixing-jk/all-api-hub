@@ -409,40 +409,68 @@ describe("relayForProvider", () => {
     ).toMatchObject({ today: CHECK_IN_METHOD_TODAY_STATUSES.Checked })
   })
 
-  it("reports confirmed partial progress when a later campaign fails", async () => {
-    const campaign = {
-      name: "Monthly",
-      start_date: "2026-10-01",
-      end_date: "2026-10-31",
-      makeups_used: 0,
-      makeup_limit: 0,
-      days: [
-        {
-          date: "2026-10-19",
-          claimed: false,
-          can_claim: true,
-          can_makeup: false,
+  it.each([false, true])(
+    "classifies the current claim with confirmed partial progress (dispatched=%s)",
+    async (dispatched) => {
+      const campaign = {
+        name: "Monthly",
+        start_date: "2026-10-01",
+        end_date: "2026-10-31",
+        makeups_used: 0,
+        makeup_limit: 0,
+        days: [
+          {
+            date: "2026-10-19",
+            claimed: false,
+            can_claim: true,
+            can_makeup: false,
+          },
+        ],
+      }
+      vi.mocked(fetchRelayForCheckInCampaigns).mockResolvedValueOnce([
+        { ...campaign, id: 1 },
+        { ...campaign, id: 2 },
+      ])
+      const mutationLifecycle = {
+        dispatched: false,
+        responseReceived: false,
+        onDispatch() {
+          mutationLifecycle.dispatched = true
         },
-      ],
-    }
-    vi.mocked(fetchRelayForCheckInCampaigns).mockResolvedValueOnce([
-      { ...campaign, id: 1 },
-      { ...campaign, id: 2 },
-    ])
-    vi.mocked(claimRelayForCheckIn)
-      .mockResolvedValueOnce({
-        is_makeup: false,
-        reward_type: "quota",
-        quota_awarded: 50000,
-        subscription: { plan_name: "Monthly gift" },
-      })
-      .mockRejectedValueOnce(new Error("connection lost"))
-    const result = await relayForProvider.checkIn(mockAccount, {} as never)
-    expect(result.status).not.toBe(CHECKIN_RESULT_STATUS.SUCCESS)
-    expect(result.reward).toBeUndefined()
-    expect(result.rawMessage).toContain("1 of 2")
-    expect(result.rawMessage).toContain("Monthly gift")
-    expect(result.rawMessage).toContain("0.1 USD")
-    expect(claimRelayForCheckIn).toHaveBeenCalledTimes(2)
-  })
+        onResponse() {
+          mutationLifecycle.responseReceived = true
+        },
+      }
+      vi.mocked(claimRelayForCheckIn)
+        .mockImplementationOnce(async (request) => {
+          request.observer?.onDispatch()
+          request.observer?.onResponse()
+          return {
+            is_makeup: false,
+            reward_type: "quota",
+            quota_awarded: 50000,
+            subscription: { plan_name: "Monthly gift" },
+          }
+        })
+        .mockImplementationOnce(async (request) => {
+          if (dispatched) request.observer?.onDispatch()
+          throw new TypeError("Failed to fetch")
+        })
+      const result = await relayForProvider.checkIn(mockAccount, {
+        mutationLifecycle,
+      } as never)
+      expect(result.status).toBe(
+        dispatched
+          ? CHECKIN_RESULT_STATUS.UNCERTAIN
+          : CHECKIN_RESULT_STATUS.FAILED,
+      )
+      expect(mutationLifecycle.responseReceived).toBe(false)
+      expect(result.status).not.toBe(CHECKIN_RESULT_STATUS.SUCCESS)
+      expect(result.reward).toBeUndefined()
+      expect(result.rawMessage).toContain("1 of 2")
+      expect(result.rawMessage).toContain("Monthly gift")
+      expect(result.rawMessage).toContain("0.1 USD")
+      expect(claimRelayForCheckIn).toHaveBeenCalledTimes(2)
+    },
+  )
 })
