@@ -161,16 +161,56 @@ const normalizeNativeBalance = (
   }
   if (
     !raw ||
-    raw.unit !== "credits" ||
+    (raw.unit !== "credits" && raw.unit !== "USD") ||
     [raw.total, raw.permanent, raw.daily].some(
       (value) =>
-        typeof value !== "number" || !Number.isFinite(value) || value < 0,
+        typeof value !== "number" ||
+        !Number.isFinite(value) ||
+        (raw.unit === "credits" && value < 0),
     ) ||
-    raw.total !== raw.permanent + raw.daily
+    (raw.unit === "credits" && raw.total !== raw.permanent + raw.daily)
   )
     return undefined
   return {
-    unit: "credits",
+    unit: raw.unit,
+    ...(raw.unit === "USD"
+      ? {
+          timedDetails: Array.isArray(raw.timedDetails)
+            ? raw.timedDetails
+                .filter((item) => item && Number.isFinite(item.amount))
+                .map((item) => ({ ...item }))
+            : undefined,
+          timedDetailsUnavailable: raw.timedDetailsUnavailable === true,
+        }
+      : {}),
+    ...(raw.unit === "USD" && Array.isArray(raw.components)
+      ? {
+          components: raw.components
+            .filter(
+              (item) =>
+                item &&
+                ["permanent", "timed", "subscription", "group"].includes(
+                  item.kind,
+                ) &&
+                typeof item.amount === "number" &&
+                Number.isFinite(item.amount),
+            )
+            .map((item) => ({
+              kind: item.kind,
+              amount: item.amount,
+              name: coerceOptionalString(item.name),
+              scope: coerceOptionalString(item.scope),
+              unlockedModels: Array.isArray(item.unlockedModels)
+                ? item.unlockedModels.filter(
+                    (model): model is string => typeof model === "string",
+                  )
+                : undefined,
+              unlimited: coerceOptionalBoolean(item.unlimited),
+              expiresAt: coerceOptionalString(item.expiresAt),
+              resetAt: coerceOptionalString(item.resetAt),
+            })),
+        }
+      : {}),
     total: raw.total,
     permanent: raw.permanent,
     daily: raw.daily,

@@ -35,6 +35,35 @@ function config(
 }
 
 describe("createDynamicSortComparator", () => {
+  it.each<SortOrder>(["asc", "desc"])(
+    "keeps native allowances after comparable balances in %s order",
+    (order) => {
+      const accounts = [
+        buildDisplaySiteData({
+          id: "native",
+          balance: { USD: 5, CNY: 35 },
+          nativeBalance: { unit: "USD", total: 100, permanent: 5, daily: 95 },
+        }),
+        buildDisplaySiteData({ id: "low", balance: { USD: 1, CNY: 7 } }),
+        buildDisplaySiteData({ id: "high", balance: { USD: 10, CNY: 70 } }),
+      ]
+      accounts.sort(
+        createDynamicSortComparator(
+          config(),
+          null,
+          DATA_TYPE_BALANCE,
+          "USD",
+          order,
+          {},
+          [],
+        ),
+      )
+      expect(accounts.map(({ id }) => id)).toEqual(
+        order === "asc" ? ["low", "high", "native"] : ["high", "low", "native"],
+      )
+    },
+  )
+
   it("groups pinned, normal, and disabled accounts when no context boost applies", () => {
     const accounts = [
       buildDisplaySiteData({

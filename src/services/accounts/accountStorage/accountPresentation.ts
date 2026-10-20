@@ -1,5 +1,6 @@
 import { normalizeSiteAccount } from "~/services/accounts/editing/accountDefaults"
 import { resolveAccountTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStatsResolver"
+import { supportsMonetaryBalance } from "~/services/accounts/metrics/monetaryBalancePolicy"
 import {
   collectDuplicateAccountNameKeys,
   resolveAccountDisplayName,
@@ -43,7 +44,8 @@ class AccountPresentation {
       username: account.account_info.username,
       disabled: account.disabled,
       excludeFromTotalBalance:
-        !!account.account_info.nativeBalance || account.excludeFromTotalBalance,
+        !supportsMonetaryBalance(account.account_info.nativeBalance) ||
+        account.excludeFromTotalBalance,
       excludeFromTodayIncome: account.excludeFromTodayIncome,
       balance: convertQuotaToCurrencyAmounts(
         account.account_info.quota,

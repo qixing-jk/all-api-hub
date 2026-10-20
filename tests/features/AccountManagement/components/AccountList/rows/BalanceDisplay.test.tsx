@@ -10,6 +10,7 @@ import {
 import { getDisplayMoneyValue } from "~/utils/core/money"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
+import { testI18n } from "~~/tests/test-utils/i18n"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
@@ -96,6 +97,119 @@ describe("BalanceDisplay", () => {
     expect(screen.queryByText(/nativeCredits/)).not.toBeInTheDocument()
   })
 
+  it("shows monetary allowances with scoped subscription expiry and reset details", async () => {
+    testI18n.addResourceBundle(
+      "en",
+      "account",
+      {
+        stats: {
+          allowanceExpiry: "Expires: {{time}}",
+          allowanceReset: "Resets: {{time}}",
+          allowanceScope: "Quota group: {{scope}}",
+          unlockedModels: "Unlocked models: {{models}}",
+        },
+      },
+      true,
+      true,
+    )
+    render(
+      <BalanceDisplay
+        site={buildDisplaySiteData({
+          nativeBalance: {
+            unit: "USD",
+            total: 6,
+            permanent: 1,
+            daily: 2,
+            components: [
+              { kind: "permanent", amount: 1 },
+              { kind: "timed", amount: 2 },
+              {
+                kind: "subscription",
+                name: "Monthly",
+                amount: 3,
+                expiresAt: "2099-01-01",
+                resetAt: "2098-12-01",
+                scope: "premium-only",
+                unlockedModels: ["gpt-4o"],
+              },
+            ],
+          },
+        })}
+      />,
+    )
+    expect(screen.queryByText(/nativeCreditsDetail/)).not.toBeInTheDocument()
+    expect(
+      screen.getByTitle("account:list.balance.refreshBalance"),
+    ).toHaveTextContent("$6.00")
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    await userEvent.click(
+      screen.getByRole("button", { name: "account:stats.allowances" }),
+    )
+    expect(
+      screen.getByRole("dialog", { name: "account:stats.allowances" }),
+    ).toBeVisible()
+    expect(screen.getByText("Monthly")).toBeVisible()
+    expect(screen.getByText(/premium-only/)).toBeVisible()
+    expect(screen.getByText(/gpt-4o/)).toBeVisible()
+    expect(screen.getByText(/2099/)).toBeVisible()
+    expect(screen.getByText(/2098/)).toBeVisible()
+    const trigger = screen.getByRole("button", {
+      name: "account:stats.allowances",
+    })
+    await userEvent.unhover(trigger)
+    expect(screen.getByRole("dialog")).toBeVisible()
+    await userEvent.click(trigger)
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+  })
+  it("previews allowances on hover and keeps them open while reading the panel", async () => {
+    const user = userEvent.setup()
+    render(
+      <BalanceDisplay
+        site={buildDisplaySiteData({
+          nativeBalance: {
+            unit: "USD",
+            total: 6,
+            permanent: 1,
+            daily: 2,
+            components: [{ kind: "subscription", name: "Monthly", amount: 3 }],
+          },
+        })}
+      />,
+    )
+    const trigger = screen.getByRole("button", {
+      name: "account:stats.allowances",
+    })
+    await user.hover(trigger)
+    const details = await screen.findByRole("dialog", {
+      name: "account:stats.allowances",
+    })
+    expect(details).toHaveTextContent("Monthly")
+    expect(trigger).not.toHaveFocus()
+    await user.hover(details)
+    expect(details).toBeVisible()
+    await user.unhover(details)
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    )
+  })
+
+  it("formats dollar allowances in the selected account currency", () => {
+    mockUseUserPreferencesContext.mockReturnValue({
+      currencyType: "CNY",
+      showTodayCashflow: false,
+    })
+    render(
+      <BalanceDisplay
+        site={buildDisplaySiteData({
+          exchangeRate: 7,
+          nativeBalance: { unit: "USD", total: 6, permanent: 1, daily: 2 },
+        })}
+      />,
+    )
+    expect(
+      screen.getByTitle("account:list.balance.refreshBalance"),
+    ).toHaveTextContent("¥42.00")
+  })
   it("refreshes native credits through the balance action", async () => {
     const refreshAccount = vi.fn().mockResolvedValue(undefined)
     mockUseAccountActionsContext.mockReturnValue({
@@ -135,31 +249,34 @@ describe("BalanceDisplay", () => {
     await userEvent.click(balance)
     expect(handleRefreshAccount).not.toHaveBeenCalled()
   })
-  it("does not display cash estimates for native credits", () => {
-    mockUseUserPreferencesContext.mockReturnValue({
-      currencyType: "USD",
-      showTodayCashflow: true,
-      preferences: {
-        balanceHistory: { estimatedTodayIncome: { enabled: true } },
-      },
-    })
-    render(
-      <BalanceDisplay
-        site={buildDisplaySiteData({
-          nativeBalance: {
-            unit: "credits",
-            total: 36000,
-            permanent: 34000,
-            daily: 2000,
-          },
-          estimatedTodayIncome: { USD: 5, CNY: 35 },
-        })}
-      />,
-    )
-    expect(
-      screen.queryByTitle("account:stats.estimatedTodayIncome"),
-    ).not.toBeInTheDocument()
-  })
+  it.each(["credits", "USD"] as const)(
+    "does not display cash estimates for native %s balances",
+    (unit) => {
+      mockUseUserPreferencesContext.mockReturnValue({
+        currencyType: "USD",
+        showTodayCashflow: true,
+        preferences: {
+          balanceHistory: { estimatedTodayIncome: { enabled: true } },
+        },
+      })
+      render(
+        <BalanceDisplay
+          site={buildDisplaySiteData({
+            nativeBalance: {
+              unit,
+              total: 36000,
+              permanent: 34000,
+              daily: 2000,
+            },
+            estimatedTodayIncome: { USD: 5, CNY: 35 },
+          })}
+        />,
+      )
+      expect(
+        screen.queryByTitle("account:stats.estimatedTodayIncome"),
+      ).not.toBeInTheDocument()
+    },
+  )
   it("displays native credits and their expiry distinction without a cash balance", () => {
     render(
       <BalanceDisplay

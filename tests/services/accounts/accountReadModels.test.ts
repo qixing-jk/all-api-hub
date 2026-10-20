@@ -8,7 +8,7 @@ import {
   type AccountOverviewSnapshot,
 } from "~/services/accounts/accountStorage/accountReadModels"
 import { createDefaultAccountStorageConfig } from "~/services/accounts/editing/accountDefaults"
-import type { SiteAccount, SiteBookmark } from "~/types"
+import type { AccountNativeBalance, SiteAccount, SiteBookmark } from "~/types"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
 const buildNamedAccount = (
@@ -24,6 +24,41 @@ const buildNamedAccount = (
 }
 
 describe("accountReadModels", () => {
+  it.each<AccountNativeBalance>([
+    { unit: "USD", total: 8, permanent: 2, daily: 3 },
+    { unit: "credits", total: 10, permanent: 8, daily: 2 },
+    {
+      unit: "quota",
+      total: 10,
+      asset: {
+        id: "https://emrank.tech/token",
+        label: "Token",
+        displayScale: 1000000,
+        displayLabel: "M Token",
+      },
+    },
+  ])(
+    "excludes native $unit balances from both overview totals and display eligibility",
+    async (nativeBalance) => {
+      const ordinary = buildNamedAccount("ordinary", "ordinary", 500000)
+      const scoped = buildNamedAccount("scoped", "scoped", 1000000)
+      scoped.account_info.nativeBalance = nativeBalance
+      vi.spyOn(accountQueries, "getAllAccounts").mockResolvedValue([
+        ordinary,
+        scoped,
+      ])
+      const snapshot = await accountReadModels.getAccountOverviewSnapshot()
+      expect(snapshot.stats.total_quota).toBe(500000)
+      expect(
+        snapshot.displayAccounts.find((item) => item.id === "scoped"),
+      ).toMatchObject({
+        nativeBalance,
+        excludeFromTotalBalance: true,
+      })
+      expect(scoped.excludeFromTotalBalance).not.toBe(true)
+    },
+  )
+
   beforeEach(() => {
     vi.restoreAllMocks()
   })

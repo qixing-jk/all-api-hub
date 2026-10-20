@@ -3,6 +3,7 @@ import { accountQueries } from "~/services/accounts/accountStorage/accountQuerie
 import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
 import { isAccountTodayMetricComplete } from "~/services/accounts/metrics/accountTodayStats"
 import { resolveAccountTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStatsResolver"
+import { supportsMonetaryBalance } from "~/services/accounts/metrics/monetaryBalancePolicy"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { createAutomaticProtectionBypassExecution } from "~/services/protectionBypass/client"
@@ -292,6 +293,7 @@ class DailyBalanceHistoryScheduler {
 
     for (const account of accounts) {
       if (
+        !supportsMonetaryBalance(account.account_info.nativeBalance) ||
         account.excludeFromTodayIncome === true ||
         (typeof account.manualBalanceUsd === "string" &&
           account.manualBalanceUsd.trim() !== "")

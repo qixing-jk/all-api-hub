@@ -586,6 +586,15 @@ describe("dailyBalanceHistoryScheduler", () => {
   it("seeds development snapshots for enabled accounts that can be estimated", async () => {
     mockGetEnabledAccounts.mockResolvedValue([
       {
+        id: "native-allowances",
+        account_info: {
+          quota: 1000000,
+          today_income: 0,
+          today_quota_consumption: 250000,
+          nativeBalance: { unit: "USD", total: 8, permanent: 2, daily: 3 },
+        },
+      },
+      {
         id: "included",
         account_info: {
           quota: 12_000_000,
@@ -646,7 +655,7 @@ describe("dailyBalanceHistoryScheduler", () => {
     })
     expect(result).toEqual({
       seeded: 1,
-      skipped: 2,
+      skipped: 3,
       todayKey: "2026-03-28",
       yesterdayKey: "2026-03-27",
     })

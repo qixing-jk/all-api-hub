@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import toast from "~/lib/notify"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
+import { supportsMonetaryBalance } from "~/services/accounts/metrics/monetaryBalancePolicy"
 import { sendBalanceHistoryMessage } from "~/services/history/dailyBalanceHistory/messaging"
 import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
@@ -53,7 +54,11 @@ export function useBalanceHistoryData(selectedAccountIds: string[]) {
         tagStorage.getTagStore(),
       ])
       if (isCurrent()) {
-        setAccounts(nextAccounts)
+        setAccounts(
+          nextAccounts.filter((account) =>
+            supportsMonetaryBalance(account.account_info.nativeBalance),
+          ),
+        )
         setStore(nextStore)
         setTagStore(nextTagStore)
       }

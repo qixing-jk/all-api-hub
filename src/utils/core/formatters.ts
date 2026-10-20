@@ -7,6 +7,7 @@ import {
   isAccountTodayMetricAvailable,
   isAccountTodayMetricLegacyUnclassified,
 } from "~/services/accounts/metrics/accountTodayStats"
+import { supportsMonetaryBalance } from "~/services/accounts/metrics/monetaryBalancePolicy"
 import type {
   AccountMetricCoverage,
   AccountTodayMetricAvailability,
@@ -214,7 +215,10 @@ export const calculateTotalConsumption = (
  */
 export const calculateTotalBalance = (displayData: DisplaySiteData[]) => {
   const enabledSites = displayData.filter(
-    (site) => !site.disabled && site.excludeFromTotalBalance !== true,
+    (site) =>
+      !site.disabled &&
+      site.excludeFromTotalBalance !== true &&
+      supportsMonetaryBalance(site.nativeBalance),
   )
   return {
     USD: enabledSites.reduce((sum, site) => sum + site.balance.USD, 0),

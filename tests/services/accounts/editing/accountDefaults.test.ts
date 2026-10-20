@@ -257,6 +257,32 @@ describe("accountDefaults", () => {
       )
     })
 
+    it("retains scoped USD allowances through storage normalization", () => {
+      const source = createSiteAccount()
+      source.account_info.nativeBalance = {
+        unit: "USD",
+        total: 6,
+        permanent: 1,
+        daily: 2,
+        components: [
+          { kind: "permanent", amount: 1 },
+          { kind: "timed", amount: 2 },
+          {
+            kind: "subscription",
+            amount: 3,
+            name: "Monthly",
+            scope: "premium-only",
+            unlockedModels: ["gpt-4o"],
+            expiresAt: "2099-01-01",
+          },
+          { kind: "group", amount: 4, scope: "premium" },
+        ],
+      }
+      expect(
+        normalizeSiteAccount(source).account_info.nativeBalance,
+      ).toMatchObject(source.account_info.nativeBalance)
+    })
+
     it("retains native credits across storage normalization and refresh updates", () => {
       const source = createSiteAccount()
       source.account_info.nativeBalance = {

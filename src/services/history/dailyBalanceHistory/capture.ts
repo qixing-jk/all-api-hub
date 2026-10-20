@@ -1,4 +1,5 @@
 import { isAccountTodayMetricComplete } from "~/services/accounts/metrics/accountTodayStats"
+import { supportsMonetaryBalance } from "~/services/accounts/metrics/monetaryBalancePolicy"
 import type {
   AccountNativeBalance,
   AccountTodayStatsAvailability,
@@ -36,7 +37,7 @@ export async function maybeCaptureDailyBalanceSnapshot(params: {
   timeZone?: string
 }): Promise<boolean> {
   const config = params.config ?? DEFAULT_BALANCE_HISTORY_PREFERENCES
-  if (!config.enabled || params.nativeBalance) {
+  if (!config.enabled || !supportsMonetaryBalance(params.nativeBalance)) {
     return false
   }
 
