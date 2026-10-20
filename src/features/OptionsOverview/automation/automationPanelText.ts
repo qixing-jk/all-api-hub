@@ -1,9 +1,6 @@
 import type { TFunction } from "i18next"
 
-import {
-  getAutoCheckinActionLabel,
-  getAutoCheckinStatusLabel,
-} from "~/features/OptionsOverview/automation/autoCheckinPanelText"
+import { getAutoCheckinActionLabel } from "~/features/OptionsOverview/automation/autoCheckinPanelText"
 import {
   OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS as AUTOMATION_STATUS_LABELS,
   OPTIONS_OVERVIEW_AUTO_CHECKIN_ACTION_IDS,
@@ -43,13 +40,25 @@ const automationItemLabelResolvers = {
     t("optionsOverview:automation.items.webdavAutoSync.label"),
 } as const satisfies Record<AutomationItemId, (t: TFunction) => string>
 
+const sharedSummaryRowLabelResolvers: Partial<
+  Record<AutomationSummaryRowId, AutomationTextResolver>
+> = {
+  [SUMMARY_ROW_IDS.lastRun]: (t) => t("optionsOverview:autoCheckin.lastRun"),
+  [SUMMARY_ROW_IDS.success]: (t) =>
+    t("optionsOverview:automation.metrics.success"),
+  [SUMMARY_ROW_IDS.failed]: (t) =>
+    t("optionsOverview:automation.metrics.failed"),
+  [SUMMARY_ROW_IDS.unsupported]: (t) =>
+    t("optionsOverview:automation.metrics.unsupported"),
+  [SUMMARY_ROW_IDS.skipped]: (t) =>
+    t("optionsOverview:automation.metrics.skipped"),
+}
+
 const automationSummaryRowLabelResolvers: Record<
   AutomationItemId,
   Partial<Record<AutomationSummaryRowId, AutomationTextResolver>>
 > = {
   [OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS.autoCheckin]: {
-    [SUMMARY_ROW_IDS.lastRun]: (t: TFunction) =>
-      t("optionsOverview:autoCheckin.lastRun"),
     [SUMMARY_ROW_IDS.nextRun]: (t: TFunction) =>
       t("optionsOverview:autoCheckin.nextRun"),
     [SUMMARY_ROW_IDS.nextRetry]: (t: TFunction) =>
@@ -121,10 +130,28 @@ const automationActionLabelResolvers: Record<
 }
 
 const automationStatusLabelResolvers = {
-  [AUTOMATION_STATUS_LABELS.enabled]: (t: TFunction) =>
-    t("optionsOverview:automation.status.enabled"),
+  [AUTOMATION_STATUS_LABELS.ready]: (t: TFunction) =>
+    t("optionsOverview:automation.status.ready"),
+  [AUTOMATION_STATUS_LABELS.success]: (t: TFunction) =>
+    t("optionsOverview:automation.status.success"),
+  [AUTOMATION_STATUS_LABELS.partial]: (t: TFunction) =>
+    t("optionsOverview:automation.status.partial"),
+  [AUTOMATION_STATUS_LABELS.failed]: (t: TFunction) =>
+    t("optionsOverview:automation.status.failed"),
+  [AUTOMATION_STATUS_LABELS.skipped]: (t: TFunction) =>
+    t("optionsOverview:automation.status.skipped"),
+  [AUTOMATION_STATUS_LABELS.notRun]: (t: TFunction) =>
+    t("optionsOverview:automation.status.notRun"),
+  [AUTOMATION_STATUS_LABELS.running]: (t: TFunction) =>
+    t("optionsOverview:automation.status.running"),
+  [AUTOMATION_STATUS_LABELS.unknown]: (t: TFunction) =>
+    t("optionsOverview:automation.status.unknown"),
+  [AUTOMATION_STATUS_LABELS.unsupported]: (t: TFunction) =>
+    t("optionsOverview:automation.status.unsupported"),
+  [AUTOMATION_STATUS_LABELS.limited]: (t: TFunction) =>
+    t("optionsOverview:automation.status.limited"),
   [AUTOMATION_STATUS_LABELS.disabled]: (t: TFunction) =>
-    t("optionsOverview:coverageStatus.disabled"),
+    t("optionsOverview:automation.status.disabled"),
 } as const satisfies Record<AutomationStatusLabel, AutomationTextResolver>
 
 const automationSummaryFallbackResolvers: Record<
@@ -132,8 +159,6 @@ const automationSummaryFallbackResolvers: Record<
   Partial<Record<AutomationSummaryRowId, AutomationTextResolver>>
 > = {
   [OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS.autoCheckin]: {
-    [SUMMARY_ROW_IDS.lastRun]: (t: TFunction) =>
-      t("optionsOverview:autoCheckin.notRunYet"),
     [SUMMARY_ROW_IDS.nextRun]: (t: TFunction) =>
       t("optionsOverview:autoCheckin.notScheduled"),
     [SUMMARY_ROW_IDS.nextRetry]: (t: TFunction) =>
@@ -170,6 +195,7 @@ const automationSummaryLineResolvers = {
     joinSummaryRows(
       item,
       [
+        findSummaryRow(item, SUMMARY_ROW_IDS.lastRun),
         findSummaryRow(item, SUMMARY_ROW_IDS.interval),
         findSummaryRow(item, SUMMARY_ROW_IDS.concurrency),
       ],
@@ -179,6 +205,7 @@ const automationSummaryLineResolvers = {
     joinSummaryRows(
       item,
       [
+        findSummaryRow(item, SUMMARY_ROW_IDS.lastRun),
         findSummaryRow(item, SUMMARY_ROW_IDS.interval),
         findSummaryRow(item, SUMMARY_ROW_IDS.strategy),
       ],
@@ -232,13 +259,6 @@ export function getAutomationStatusLabel(
   item: OptionsOverviewAutomationItem,
   t: TFunction,
 ) {
-  if (
-    item.id === OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS.autoCheckin &&
-    item.autoCheckinPanel
-  ) {
-    return getAutoCheckinStatusLabel(item.autoCheckinPanel.status, t)
-  }
-
   return automationStatusLabelResolvers[item.statusLabel](t)
 }
 
@@ -250,7 +270,10 @@ export function getAutomationSummaryRowLabel(
   rowId: AutomationSummaryRowId,
   t: TFunction,
 ) {
-  return automationSummaryRowLabelResolvers[itemId][rowId]?.(t) ?? rowId
+  const resolve =
+    sharedSummaryRowLabelResolvers[rowId] ??
+    automationSummaryRowLabelResolvers[itemId][rowId]
+  return resolve?.(t) ?? rowId
 }
 
 /**
@@ -271,6 +294,9 @@ function getAutomationSummaryFallback(
   rowId: AutomationSummaryRowId,
   t: TFunction,
 ) {
+  if (rowId === SUMMARY_ROW_IDS.lastRun) {
+    return t("optionsOverview:autoCheckin.notRunYet")
+  }
   return automationSummaryFallbackResolvers[itemId][rowId]?.(t) ?? "-"
 }
 
@@ -296,7 +322,7 @@ function formatSummaryRow(
 }
 
 /**
- * Joins the meaningful rows of a compact two-fact summary line.
+ * Joins the meaningful rows of a compact summary line.
  */
 function joinSummaryRows(
   item: OptionsOverviewAutomationItem,

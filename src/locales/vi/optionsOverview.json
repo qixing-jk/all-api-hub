@@ -125,6 +125,7 @@
     "summary": "Tóm tắt chạy tự động điểm danh"
   },
   "automation": {
+    "automaticEnabled": "Đã bật thực thi tự động",
     "empty": {
       "autoCheckin": {
         "disabled": "Khi muốn tự động nhận phần thưởng điểm danh, hãy bật tự động điểm danh. Lịch kế tiếp và kết quả sẽ xuất hiện tại đây."
@@ -167,11 +168,28 @@
         "strategy": "Chiến lược đồng bộ"
       }
     },
+    "metrics": {
+      "failed": "Thất bại",
+      "skipped": "Bỏ qua",
+      "success": "Thành công",
+      "unsupported": "Không hỗ trợ"
+    },
     "neverChecked": "Chưa kiểm tra",
     "openItem": "Mở {{name}}",
     "status": {
-      "enabled": "Đã bật"
-    }
+      "disabled": "Đã tắt",
+      "failed": "Chạy thất bại",
+      "limited": "Hỗ trợ một phần",
+      "notRun": "Chờ lần chạy đầu tiên",
+      "partial": "Thất bại một phần",
+      "ready": "Sẵn sàng",
+      "running": "Đang chạy",
+      "skipped": "Chưa thực hiện",
+      "success": "Chạy thành công",
+      "unknown": "Không rõ trạng thái",
+      "unsupported": "Chưa hỗ trợ"
+    },
+    "statusUnavailable": "Không thể đọc trạng thái thực thi. Mở chi tiết hoặc tải lại để thử lại."
   },
   "configurationOverview": {
     "accountFoundation": {

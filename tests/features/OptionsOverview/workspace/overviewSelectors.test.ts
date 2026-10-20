@@ -436,18 +436,16 @@ describe("Options overview selectors", () => {
       ["records", "1"],
       ["unread", "1"],
       ["lastChecked", "2026-06-03T01:30:00.000Z"],
+      ["success", "1"],
+      ["failed", "0"],
+      ["unsupported", "0"],
     ])
     expect(
       view.automationOverview.items.find(
         (item) => item.id === "siteAnnouncements",
       )?.primaryTarget,
     ).toEqual({
-      menuItemId: MENU_ITEM_IDS.BASIC,
-      params: {
-        tab: "siteAnnouncements",
-        anchor: SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
-        highlight: SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
-      },
+      menuItemId: MENU_ITEM_IDS.SITE_ANNOUNCEMENTS,
     })
   })
 
