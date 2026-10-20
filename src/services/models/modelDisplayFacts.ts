@@ -122,7 +122,7 @@ export type ModelDisplayFact =
   | {
       type: typeof MODEL_DISPLAY_FACT_TYPES.Text
       label: ModelDisplayLabel
-      value: string
+      value: string | ModelDisplayLabel
     }
   | {
       type: typeof MODEL_DISPLAY_FACT_TYPES.TokenQuantity

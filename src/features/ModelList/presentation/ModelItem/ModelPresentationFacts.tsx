@@ -153,7 +153,13 @@ function ModelDisplayFactValue({ fact }: { fact: ModelDisplayFact }) {
 
   switch (fact.type) {
     case MODEL_DISPLAY_FACT_TYPES.Text:
-      return <span className="break-words">{fact.value}</span>
+      return (
+        <span className="break-words">
+          {typeof fact.value === "string"
+            ? fact.value
+            : resolveLabel(fact.value)}
+        </span>
+      )
     case MODEL_DISPLAY_FACT_TYPES.TokenQuantity:
       return (
         <span>

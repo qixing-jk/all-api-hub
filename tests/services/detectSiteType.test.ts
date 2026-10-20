@@ -339,6 +339,21 @@ describe("detectSiteType", () => {
         expect(titleFetched).toBe(false)
       })
 
+      it("detects EMRank from its hostname without any probe request", async () => {
+        let requested = false
+        server.use(
+          http.get("https://emrank.tech/**", () => {
+            requested = true
+            return HttpResponse.json({ unexpected: true }, { status: 500 })
+          }),
+        )
+
+        await expect(
+          getAccountSiteType("https://emrank.tech/account"),
+        ).resolves.toBe(SITE_TYPES.EMRANK)
+        expect(requested).toBe(false)
+      })
+
       it("detects Grsai on its second console domain", async () => {
         await expect(
           getAccountSiteType("https://grsai.ai/dashboard"),

@@ -1,6 +1,7 @@
 import {
   ALL_ACCOUNTS_SOURCE_VALUE,
   MODEL_MANAGEMENT_SOURCE_KINDS,
+  supportsModelCurrencyPricing,
   type ModelManagementSource,
   type ModelManagementSourceCapabilities,
 } from "~/features/ModelList/catalog/modelManagementSources"
@@ -50,6 +51,7 @@ export function canEnableModelPriceComparison(
 ): boolean {
   return (
     state.sourceCapabilities.supportsPricing &&
+    supportsModelCurrencyPricing(state.sourceCapabilities) &&
     state.selectedSource?.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE &&
     !isModelPriceComparisonActive(state)
   )

@@ -33,7 +33,10 @@ export function quoteCanonicalModelPrice(
 ) {
   const isUnitComparison = scenario.purpose === PRICING_PURPOSES.TOKEN_INDEX
   // Legacy flat-price metadata must not replace a structured plan or its diagnostics.
-  if (!model.pricingPlan && isModelPriceUnavailable(model))
+  if (
+    model.quotaPricing ||
+    (!model.pricingPlan && isModelPriceUnavailable(model))
+  )
     return quoteModelPrice(
       {
         rates: {},

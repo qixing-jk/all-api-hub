@@ -10,6 +10,7 @@ import {
   MODEL_LIST_GROUP_SEMANTICS,
 } from "~/features/ModelList/catalog/modelManagementSources"
 import { createProviderCatalogModelListSourceIdentity } from "~/services/modelCatalog/sourceIdentity"
+import { MODEL_LIST_PRICING_KINDS } from "~/services/modelList/pricingModel"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { buildModelListAccountFixture } from "~~/tests/test-utils/modelListSource"
@@ -27,6 +28,49 @@ const PROFILE_FIXTURE: ApiCredentialProfile = {
 }
 
 describe("modelManagementSources group semantics", () => {
+  it("declares quota pricing without enabling currency comparison controls", () => {
+    const capabilities = deriveModelListSourceCapabilities({
+      capabilities: createAccountSource(
+        buildModelListAccountFixture(SITE_TYPES.EMRANK),
+      ).capabilities,
+      modelListSource: {
+        supportsPricing: true,
+        pricingKind: MODEL_LIST_PRICING_KINDS.Quota,
+      },
+    })
+    expect(capabilities).toMatchObject({
+      supportsPricing: true,
+      supportsCurrencyPricing: false,
+    })
+  })
+  it("keeps currency controls for mixed sources and hides them for quota-only sources", () => {
+    const capabilities = createAllAccountsSource().capabilities
+    const quota = {
+      supportsPricing: true,
+      pricingKind: MODEL_LIST_PRICING_KINDS.Quota,
+    }
+    const project = (
+      modelListSources: Parameters<
+        typeof deriveAllAccountsModelListCapabilities
+      >[0]["modelListSources"],
+    ) =>
+      deriveAllAccountsModelListCapabilities({ capabilities, modelListSources })
+
+    expect(project([quota])).toMatchObject({
+      supportsPricing: true,
+      supportsCurrencyPricing: false,
+    })
+    expect(project([quota, { supportsPricing: false }])).toMatchObject({
+      supportsPricing: true,
+      supportsCurrencyPricing: false,
+    })
+    // An older provider's omitted pricing kind retains currency support.
+    expect(project([quota, {}])).toMatchObject({
+      supportsPricing: true,
+      supportsCurrencyPricing: true,
+    })
+  })
+
   it("marks account and aggregate sources as account-or-runtime-key scoped", () => {
     expect(
       createAccountSource(buildModelListAccountFixture(SITE_TYPES.NEW_API)),

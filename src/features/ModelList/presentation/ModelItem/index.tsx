@@ -274,7 +274,7 @@ export default function ModelItem(props: ModelItemProps) {
     (showEndpointTypes &&
       (effectiveCapabilities.supportsPricing ||
         effectiveCapabilities.supportsGroupFiltering)) ||
-    (showPricing && isTokenBillingType(model.quota_type))
+    (showPricing && !model.quotaPricing && isTokenBillingType(model.quota_type))
   const canExpand =
     source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
     (hasLegacyDetails || hasPresentationDetails)
@@ -520,7 +520,7 @@ export default function ModelItem(props: ModelItemProps) {
                     groupContext={groupContext}
                     effectiveGroup={effectiveGroup}
                     showGroupDetails={showGroupDetails}
-                    showPricingDetails={showPricing}
+                    showPricingDetails={showPricing && !model.quotaPricing}
                     onGroupClick={
                       isGroupSelectionInteractive ? onGroupClick : undefined
                     }

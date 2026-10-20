@@ -1,3 +1,4 @@
+import { createInstance } from "i18next"
 import type { TFunction } from "i18next"
 import { describe, expect, expectTypeOf, it } from "vitest"
 
@@ -15,10 +16,15 @@ import { ACCOUNT_KEY_AUTOMATIC_NAME_KINDS } from "~/features/KeyManagement/prese
 import type { AccountKeyResourceEditorPresentation } from "~/features/KeyManagement/presentation/accountKeyResourceEditorPresentation"
 import { getNativeKeyResourceEditorPresentation } from "~/features/KeyManagement/presentation/nativeKeyResourceFieldPolicy"
 import { resolveResourceFieldPolicy } from "~/features/ResourceEditor/model/resourceFieldPolicy"
+import zhKeyManagement from "~/locales/zh-CN/keyManagement.json"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import { createAIHubMixKeyEditor } from "~/services/apiAdapters/aihubmix/keys/keyResourceEditor"
 import type { ResourceFieldDescriptor } from "~/services/apiAdapters/contracts/resourceNative"
 import { createCubenceKeyEditor } from "~/services/apiAdapters/cubence/keyEditor"
+import {
+  EMRANK_EXPIRATION_MODES,
+  emrankKeyFields,
+} from "~/services/apiAdapters/emrank/keyResourceFields"
 import { createFoxCodeKeyEditor } from "~/services/apiAdapters/foxcode/keyEditor"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keys/keyResourceEditor"
 import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
@@ -596,4 +602,28 @@ it("requires a naming decision in every editor presentation", () => {
       ? true
       : false
   >().toEqualTypeOf<false>()
+})
+
+it("presents every EMRank expiry choice as readable localized text", async () => {
+  const i18n = createInstance()
+  await i18n.init({
+    lng: "zh-CN",
+    resources: { "zh-CN": { keyManagement: zhKeyManagement } },
+  })
+  const field = getPresentation(
+    SITE_TYPES.EMRANK,
+    editorModes.Edit,
+  ).policy.fields.find((f) => f.fieldId === emrankKeyFields.ExpirationMode)!
+  expect(
+    Object.values(EMRANK_EXPIRATION_MODES).map((value) =>
+      field.optionLabelResolvers?.[value]?.(i18n.t),
+    ),
+  ).toEqual([
+    "保持现有有效期",
+    "永不过期",
+    "一个月（30 天）",
+    "一天",
+    "一小时",
+    "自定义时间",
+  ])
 })

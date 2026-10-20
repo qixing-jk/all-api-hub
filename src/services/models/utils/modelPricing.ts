@@ -20,6 +20,7 @@ import type {
   PriceMeter,
   QuoteResult,
 } from "~/services/modelPricing/pricingPlan"
+import type { QuotaQuote } from "~/services/modelPricing/quotaPricing"
 import type { CurrencyType } from "~/types"
 import { t } from "~/utils/i18n/core"
 
@@ -29,6 +30,7 @@ export type CalculatedPrice = (
   | UnavailableCalculatedPrice
 ) & {
   quote?: QuoteResult
+  quotaQuote?: QuotaQuote
   isComparisonActive?: boolean
   /** Published flat per-million rates when they are not in the USD field. */
   perMillionTokens?: TokenPricesByCurrency
@@ -198,7 +200,7 @@ export const calculateModelPrice = (
       ? publishedTokenRates(plan)
       : undefined
 
-  if (isModelPriceUnavailable(model)) {
+  if (model.quotaPricing || isModelPriceUnavailable(model)) {
     return {
       kind: CALCULATED_PRICE_KINDS.UNAVAILABLE,
       billingMode,

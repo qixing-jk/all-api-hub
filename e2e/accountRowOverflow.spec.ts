@@ -117,3 +117,72 @@ test("pinned account rows never create an inner vertical scrollbar", async ({
   await pin.click()
   await expect(pin).toHaveCount(0)
 })
+
+test("native quota balances match monetary balance typography and control size", async ({
+  page,
+  context,
+  extensionId,
+}, testInfo) => {
+  await forceExtensionLanguage(page, "en")
+  await stubLlmMetadataIndex(context)
+  const worker = await getServiceWorker(context)
+  await seedUserPreferences(worker, { themeMode: "light", currencyType: "USD" })
+  await setPlasmoStorageValue(worker, STORAGE_KEYS.ACCOUNTS, {
+    ...createDefaultAccountStorageConfig(),
+    accounts: [
+      createStoredAccount({
+        id: "font-money",
+        site_name: "Money balance",
+        account_info: { quota: 11000000 },
+      }),
+      createStoredAccount({
+        id: "font-token",
+        site_name: "Token balance",
+        account_info: {
+          nativeBalance: {
+            unit: "quota",
+            total: 22000000,
+            asset: {
+              id: "test:token",
+              label: "Token",
+              displayScale: 1000000,
+              displayLabel: "M Token",
+            },
+          },
+        },
+      }),
+    ],
+  })
+  await page.goto(`chrome-extension://${extensionId}/options.html#account`)
+  await waitForExtensionRoot(page)
+  const money = page
+    .getByTestId(getAccountManagementListItemTestId("font-money"))
+    .getByRole("button", { name: "Click to refresh balance", exact: true })
+  const token = page
+    .getByTestId(getAccountManagementListItemTestId("font-token"))
+    .getByRole("button", { name: "22 M Token", exact: true })
+  await expect(money).toContainText("$22.00")
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 900 })
+    await page.mouse.move(0, 0)
+    const metrics = await Promise.all(
+      [money, token].map((el) =>
+        el.evaluate((node) => {
+          const style = getComputedStyle(node)
+          return {
+            fontSize: style.fontSize,
+            fontWeight: style.fontWeight,
+            lineHeight: style.lineHeight,
+            padding: style.padding,
+            height: node.getBoundingClientRect().height,
+          }
+        }),
+      ),
+    )
+    await page.screenshot({
+      path: testInfo.outputPath(`balance-font-${width}.png`),
+      animations: "disabled",
+    })
+    expect(metrics[1], `native balance at ${width}px`).toEqual(metrics[0])
+  }
+})

@@ -3,7 +3,10 @@ import {
   type AccountSiteModelListGroupSemantics,
 } from "~/services/accounts/accountSiteProfile/contracts"
 import { getAccountSiteModelListProfile } from "~/services/accounts/accountSiteProfile/modelList"
-import type { ModelListSourceInfo } from "~/services/modelList/pricingModel"
+import {
+  MODEL_LIST_PRICING_KINDS,
+  type ModelListSourceInfo,
+} from "~/services/modelList/pricingModel"
 import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
@@ -29,12 +32,24 @@ const MODEL_MANAGEMENT_SOURCE_VALUE_PREFIXES = {
 export type ModelManagementSourceCapabilities = {
   supportsRuntimeModelList?: boolean
   supportsPricing: boolean
+  /** Legacy omitted values inherit supportsPricing; quota-only sources set false. */
+  supportsCurrencyPricing?: boolean
   supportsGroupFiltering: boolean
   supportsAccountSummary: boolean
   supportsTokenCompatibility: boolean
   supportsCredentialVerification: boolean
   supportsBatchCredentialVerification: boolean
   supportsCliVerification: boolean
+}
+
+/** Omitted legacy currency capability inherits the source's pricing support. */
+export function supportsModelCurrencyPricing(
+  capabilities: Pick<
+    ModelManagementSourceCapabilities,
+    "supportsCurrencyPricing" | "supportsPricing"
+  >,
+): boolean {
+  return capabilities.supportsCurrencyPricing ?? capabilities.supportsPricing
 }
 
 export type ModelManagementSource =
@@ -76,6 +91,7 @@ export type ModelManagementItemSource =
 export const EMPTY_MODEL_MANAGEMENT_CAPABILITIES: ModelManagementSourceCapabilities =
   {
     supportsPricing: false,
+    supportsCurrencyPricing: false,
     supportsGroupFiltering: false,
     supportsAccountSummary: false,
     supportsTokenCompatibility: false,
@@ -124,6 +140,7 @@ export function toCatalogOnlyCapabilities(
   return {
     ...capabilities,
     supportsPricing: false,
+    supportsCurrencyPricing: false,
     supportsGroupFiltering: false,
     supportsAccountSummary: false,
   }
@@ -136,7 +153,10 @@ export function deriveModelListSourceCapabilities(params: {
   capabilities: ModelManagementSourceCapabilities
   modelListSource?: Pick<
     ModelListSourceInfo,
-    "supportsRuntimeModelList" | "supportsPricing" | "actionPolicy"
+    | "supportsRuntimeModelList"
+    | "supportsPricing"
+    | "pricingKind"
+    | "actionPolicy"
   >
 }): ModelManagementSourceCapabilities {
   const { capabilities, modelListSource } = params
@@ -154,6 +174,9 @@ export function deriveModelListSourceCapabilities(params: {
 
   return {
     ...pricingCapabilities,
+    ...(modelListSource.pricingKind === MODEL_LIST_PRICING_KINDS.Quota
+      ? { supportsCurrencyPricing: false }
+      : {}),
     supportsGroupFiltering: applyDowngrade(
       pricingCapabilities.supportsGroupFiltering,
       actionPolicy?.supportsGroupFiltering,
@@ -193,7 +216,10 @@ export function deriveAllAccountsModelListCapabilities(params: {
   capabilities: ModelManagementSourceCapabilities
   modelListSources: readonly Pick<
     ModelListSourceInfo,
-    "supportsRuntimeModelList" | "supportsPricing" | "actionPolicy"
+    | "supportsRuntimeModelList"
+    | "supportsPricing"
+    | "pricingKind"
+    | "actionPolicy"
   >[]
 }): ModelManagementSourceCapabilities {
   const { capabilities, modelListSources } = params
@@ -211,6 +237,9 @@ export function deriveAllAccountsModelListCapabilities(params: {
   return {
     ...capabilities,
     supportsPricing: supportsAny("supportsPricing"),
+    supportsCurrencyPricing: projectedCapabilities.some(
+      supportsModelCurrencyPricing,
+    ),
     supportsGroupFiltering: supportsAny("supportsGroupFiltering"),
     supportsAccountSummary: supportsAny("supportsAccountSummary"),
     supportsTokenCompatibility: supportsAny("supportsTokenCompatibility"),

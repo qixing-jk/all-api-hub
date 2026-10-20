@@ -152,9 +152,18 @@
       "no": "否",
       "yes": "是"
     },
+    "callExamples": "调用示例",
+    "catalogOwner": "目录归属",
     "contextLimit": "上下文上限",
+    "defaultDimensions": "默认维度",
     "inputModalities": "输入模态",
     "maximumOutputTokens": "最大输出 Token 数",
+    "modelKind": "模型用途",
+    "modelKinds": {
+      "decision": "决策",
+      "embedding": "嵌入",
+      "reranker": "重排"
+    },
     "openRouter": {
       "architecture": {
         "instructType": "指令格式",
@@ -254,10 +263,15 @@
       "request": "次请求",
       "webSearch": "次网络搜索"
     },
+    "providerAvailable": "站点可用",
+    "releaseDate": "发布日期",
     "sections": {
       "specifications": "规格"
     },
-    "tokenCount": "{{formattedCount}} Token"
+    "supportedDimensions": "支持维度",
+    "supportsImages": "图片支持",
+    "tokenCount": "{{formattedCount}} Token",
+    "viewOnSite": "前往官网查看"
   },
   "displayOptions": "显示内容",
   "endpointType": "端点类型",
@@ -440,6 +454,15 @@
     "scrollRight": "向右滚动厂商标签",
     "unclassified": "未分类",
     "unclassifiedDescription": "无法识别模型厂商；这并不表示该模型不可用。"
+  },
+  "quotaBilling": {
+    "adjustments": "额外计费因素：{{names}}。",
+    "comparison": "每百万模拟 Token 消耗 {{amount}}。",
+    "invalid": "额度价格暂不可用。",
+    "reference": "仅为基础消耗，未包含额外倍率。",
+    "sortAsc": "额度消耗：从低到高",
+    "sortDesc": "额度消耗：从高到低",
+    "source": "计费规则"
   },
   "realAmount": "真实充值金额",
   "refreshData": "刷新数据",

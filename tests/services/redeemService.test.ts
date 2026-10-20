@@ -6,7 +6,13 @@ import {
   redeemService,
   REDEMPTION_RESULT_CODES,
 } from "~/services/redemption/redeemService"
+import { AuthTypeEnum } from "~/types"
+import i18n from "~/utils/i18n/core"
 import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
+import {
+  buildDisplaySiteData,
+  buildSiteAccount,
+} from "~~/tests/test-utils/factories"
 
 vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
   accountQueries: { getAccountById: vi.fn() },
@@ -317,4 +323,46 @@ describe("redeemService.redeemCodeForAccount", () => {
       message: "redemptionAssist:messages.unsupportedSiteType",
     })
   })
+})
+
+it("shows a redeemed native asset in its own units rather than the monetary quota scale", async () => {
+  i18n.addResourceBundle("en", "redemptionAssist", {
+    messages: { redeemSuccess: "Credited: {{amount}}" },
+  })
+  try {
+    vi.mocked(accountStorage.getAccountById).mockResolvedValueOnce(
+      buildSiteAccount({
+        id: "points",
+        site_type: SITE_TYPES.EMRANK,
+        site_url: "https://emrank.tech",
+        account_info: { ...buildSiteAccount().account_info, id: "6088" },
+        authType: AuthTypeEnum.Cookie,
+      }),
+    )
+    vi.mocked(accountStorage.getDisplayDataById).mockResolvedValueOnce(
+      buildDisplaySiteData({ id: "points" }),
+    )
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.EMRANK,
+      account: {
+        redemption: {
+          quotaAsset: {
+            id: "test:points",
+            label: "Points",
+            displayScale: 1000,
+            displayLabel: "K Points",
+          },
+          redeem: vi.fn().mockResolvedValue(2000),
+        },
+      },
+    })
+    const result = await redeemService.redeemCodeForAccount("points", "CODE")
+    expect(result).toMatchObject({
+      success: true,
+      creditedAmount: 2000,
+      message: "Credited: 2 K Points",
+    })
+  } finally {
+    i18n.removeResourceBundle("en", "redemptionAssist")
+  }
 })

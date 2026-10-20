@@ -14,6 +14,7 @@ import {
 import { ModelItemPerCallPricingView } from "~/features/ModelList/presentation/ModelItem/ModelItemPerCallPricingView"
 import { PriceView } from "~/features/ModelList/presentation/ModelItem/ModelItemPicingView"
 import { ModelPriceQuote } from "~/features/ModelList/presentation/ModelItem/ModelPriceQuote"
+import { ModelQuotaPricing } from "~/features/ModelList/presentation/ModelItem/ModelQuotaPricing"
 import {
   isModelPriceUnavailable,
   MODEL_PRICE_PRECISION_KINDS,
@@ -193,6 +194,18 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
   sourceLabel,
 }) => {
   const { t } = useTranslation("modelList")
+  // Native quota multipliers remain useful when monetary pricing is disabled.
+  // Keep them outside currency conversion, estimated prices and price badges.
+  if (model.quotaPricing)
+    return (
+      <ModelQuotaPricing
+        key={model.model_name}
+        plan={model.quotaPricing}
+        quote={calculatedPrice.quotaQuote}
+        isComparisonActive={calculatedPrice.isComparisonActive === true}
+        isAvailableForUser={isAvailableForUser}
+      />
+    )
   if (!showPricing) {
     return null
   }

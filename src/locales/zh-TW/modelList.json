@@ -152,9 +152,18 @@
       "no": "否",
       "yes": "是"
     },
+    "callExamples": "呼叫範例",
+    "catalogOwner": "目錄歸屬",
     "contextLimit": "上下文上限",
+    "defaultDimensions": "預設維度",
     "inputModalities": "輸入模態",
     "maximumOutputTokens": "最大輸出 Token 數",
+    "modelKind": "模型用途",
+    "modelKinds": {
+      "decision": "決策",
+      "embedding": "嵌入",
+      "reranker": "重排"
+    },
     "openRouter": {
       "architecture": {
         "instructType": "指令格式",
@@ -255,10 +264,15 @@
       "request": "次請求",
       "webSearch": "次網路搜尋"
     },
+    "providerAvailable": "站點可用",
+    "releaseDate": "發布日期",
     "sections": {
       "specifications": "規格"
     },
-    "tokenCount_other": "{{formattedCount}} Token"
+    "supportedDimensions": "支援維度",
+    "supportsImages": "圖片支援",
+    "tokenCount_other": "{{formattedCount}} Token",
+    "viewOnSite": "前往官網查看"
   },
   "displayOptions": "顯示內容",
   "endpointType": "端點型別",
@@ -442,6 +456,15 @@
     "scrollRight": "向右滾動廠商標籤",
     "unclassified": "未分類",
     "unclassifiedDescription": "無法識別模型供應商；這不表示該模型無法使用。"
+  },
+  "quotaBilling": {
+    "adjustments": "額外計費因素：{{names}}。",
+    "comparison": "每百萬模擬 Token 消耗 {{amount}}。",
+    "invalid": "額度價格暫不可用。",
+    "reference": "僅為基礎消耗，未包含額外倍率。",
+    "sortAsc": "額度消耗：由低到高",
+    "sortDesc": "額度消耗：由高到低",
+    "source": "計費規則"
   },
   "realAmount": "真實充值金額",
   "refreshData": "重新整理資料",

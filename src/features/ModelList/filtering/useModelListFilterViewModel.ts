@@ -157,11 +157,17 @@ export function useModelListFilterViewModel({
       ? [
           {
             value: MODEL_LIST_SORT_MODES.PRICE_ASC,
-            label: t("sortOptions.priceAsc"),
+            label:
+              sourceCapabilities.supportsCurrencyPricing === false
+                ? t("quotaBilling.sortAsc")
+                : t("sortOptions.priceAsc"),
           },
           {
             value: MODEL_LIST_SORT_MODES.PRICE_DESC,
-            label: t("sortOptions.priceDesc"),
+            label:
+              sourceCapabilities.supportsCurrencyPricing === false
+                ? t("quotaBilling.sortDesc")
+                : t("sortOptions.priceDesc"),
           },
         ]
       : []),

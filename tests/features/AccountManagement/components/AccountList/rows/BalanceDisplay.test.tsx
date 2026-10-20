@@ -73,6 +73,29 @@ vi.mock("~/features/AccountManagement/data/AccountDataContext", () => ({
 }))
 
 describe("BalanceDisplay", () => {
+  it("shows atomic Token balances in the provider display unit without a credit breakdown", () => {
+    render(
+      <BalanceDisplay
+        site={buildDisplaySiteData({
+          nativeBalance: {
+            unit: "quota",
+            total: 1234567,
+            asset: {
+              id: "https://emrank.tech/token",
+              label: "Token",
+              displayScale: 1000000,
+              displayLabel: "M Token",
+            },
+          },
+        })}
+      />,
+    )
+    expect(
+      screen.getByRole("button", { name: "1.234567 M Token" }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/nativeCredits/)).not.toBeInTheDocument()
+  })
+
   it("refreshes native credits through the balance action", async () => {
     const refreshAccount = vi.fn().mockResolvedValue(undefined)
     mockUseAccountActionsContext.mockReturnValue({

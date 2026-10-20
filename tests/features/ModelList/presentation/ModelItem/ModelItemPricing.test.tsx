@@ -28,6 +28,10 @@ import {
   PRICING_USAGE_MODES,
   QUOTE_STATUSES,
 } from "~/services/modelPricing/pricingConstants"
+import {
+  QUOTA_COMPARISON_SCOPES,
+  QUOTA_ROUNDING_MODES,
+} from "~/services/modelPricing/quotaPricing"
 import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
 import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
 import { calculateModelPrice } from "~/services/models/utils/modelPricing"
@@ -270,6 +274,60 @@ const createModel = (overrides?: Record<string, unknown>) =>
     model_ratio: 3,
     ...overrides,
   }) as any
+
+it.each([
+  [true, 3],
+  [false, 3],
+  [true, 0],
+  [false, 0],
+  [true, 0.25],
+  [false, 0.25],
+] as const)(
+  "shows native input multipliers and free output without monetary pricing (CNY=%s, multiplier=%s)",
+  (showRealPrice, inputMultiplier) => {
+    const model = createModel({
+      quotaPricing: {
+        unit: {
+          id: "https://example.test/token",
+          label: "Token",
+          displayLabel: "M Token",
+          displayScale: 1e6,
+        },
+        rates: {
+          input: { amount: inputMultiplier, per: 1 },
+          output: { amount: 0, per: 1 },
+        },
+        adjustments: [],
+        comparisonScope: QUOTA_COMPARISON_SCOPES.Source,
+        rounding: QUOTA_ROUNDING_MODES.Floor,
+        sourceUrl: "https://example.test/pricing",
+      },
+      price_metadata: {
+        source: MODEL_PRICE_SOURCE_KINDS.PROVIDER_CATALOG,
+        precision: MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE,
+        unavailable_reason:
+          MODEL_UNAVAILABLE_PRICE_REASONS.OFFICIAL_PRICE_MISSING,
+      },
+    })
+    const { container } = render(
+      <ModelItemPricing
+        model={model}
+        calculatedPrice={calculateModelPrice(model, 1)}
+        exchangeRate={7}
+        showRealPrice={showRealPrice}
+        showPricing={false}
+        isAvailableForUser
+        groupRatios={{}}
+      />,
+    )
+    expect(screen.getAllByText(`${inputMultiplier} M Token/M`)[0]).toBeVisible()
+    expect(screen.getByText("output")).toBeVisible()
+    expect(container.textContent).not.toMatch(/USD|CNY|[$¥￥]/)
+    expect(
+      screen.queryByText("unavailablePriceReasons.officialPriceMissing"),
+    ).not.toBeInTheDocument()
+  },
+)
 
 describe("Model item pricing and description", () => {
   beforeEach(() => {

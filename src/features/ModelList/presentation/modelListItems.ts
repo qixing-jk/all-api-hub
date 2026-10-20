@@ -76,6 +76,7 @@ export interface ModelListItem extends PreparedModelListItem {
 export function supportsPricingDerivedBehavior(
   item: Pick<CalculatedModelItem, "model" | "source">,
 ) {
+  if (item.model.quotaPricing) return item.source.capabilities.supportsPricing
   if (isModelPriceUnavailable(item.model)) {
     return false
   }

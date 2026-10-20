@@ -658,3 +658,43 @@ it("keeps credit allowances distinct from dollars and preserves unlimited allowa
     },
   ])
 })
+
+it("formats native Token facts with their asset unit and quota role", () => {
+  const facts: NativeKeyManagementRow["facts"] = {
+    ref: {
+      accountId: "a",
+      siteType: SITE_TYPES.EMRANK,
+      scopeKey: "account",
+      resourceId: "1",
+    },
+    displayName: "Key",
+    maskedLabel: "masked",
+    status: "enabled",
+    fields: [],
+    actions: { canUpdate: true, canDelete: true },
+    displayFacts: [
+      {
+        fieldId: "used",
+        kind: "quota",
+        role: "used",
+        value: 1234567,
+        asset: {
+          id: "https://emrank.tech/token",
+          label: "Token",
+          displayScale: 1000000,
+          displayLabel: "M Token",
+        },
+      },
+    ],
+  }
+  expect(
+    getAccountKeyResourceCardAdapter(SITE_TYPES.EMRANK).buildDetailFacts(
+      facts,
+      t,
+    ),
+  ).toContainEqual({
+    id: "used",
+    label: "keyManagement:keyDetails.usedQuota",
+    value: "1.234567 M Token",
+  })
+})

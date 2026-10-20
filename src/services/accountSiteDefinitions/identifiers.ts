@@ -35,6 +35,7 @@ export const SITE_TYPES = {
   DAHL: "dahl",
   FOXCODE: "foxcode",
   XIAOEN: "xiaoen",
+  EMRANK: "emrank",
   KRILL: "krill",
   CUBENCE: "cubence",
   RIGHT_CODE: "RightCode",
@@ -92,6 +93,17 @@ export const FOXCODE_WEB_ORIGIN = "https://foxcode.rjj.cc"
 /** Cookie sessions remain bound to the requested console, not the public migration domain. */
 export const XIAOEN_HOSTNAMES = ["free.supxh.xin"] as const
 export const XIAOEN_WEB_ORIGIN = "https://free.supxh.xin"
+/**
+ * EMRank serves the console, its `/api/*` account routes and the `/v1`
+ * inference gateway from one origin; `docs.emrank.tech` and
+ * `status.emrank.tech` are documentation/status only and never console
+ * aliases. Verified 2026-10-16 on https://emrank.tech.
+ */
+export const EMRANK_HOSTNAMES = ["emrank.tech"] as const
+export const EMRANK_WEB_ORIGIN = "https://emrank.tech"
+export const EMRANK_DISPLAY_NAME = "EMRank"
+/** OpenAI-compatible mount used by native SDK examples in the docs. */
+export const EMRANK_API_BASE_URL = `${EMRANK_WEB_ORIGIN}/v1`
 export const FOXCODE_INFERENCE_ORIGIN = "https://code1.newcli.com"
 export const CUBENCE_HOSTNAMES = ["cubence.com"] as const
 export const CUBENCE_WEB_ORIGIN = "https://cubence.com"

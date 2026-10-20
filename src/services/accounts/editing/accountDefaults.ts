@@ -13,6 +13,7 @@ import {
   migrateAccountsConfig,
 } from "~/services/accounts/migrations/accountDataMigration"
 import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configuration/configCodec"
+import { quotaAssetSchema } from "~/services/quotaAssets/quotaAsset"
 import {
   ACCOUNT_USAGE_SUMMARY_SCOPES,
   AuthTypeEnum,
@@ -152,6 +153,12 @@ const normalizeAccountSubscriptionSummary = (
 const normalizeNativeBalance = (
   raw: AccountNativeBalance | undefined,
 ): AccountNativeBalance | undefined => {
+  if (raw?.unit === "quota") {
+    const asset = quotaAssetSchema.safeParse(raw.asset)
+    return asset.success && Number.isSafeInteger(raw.total)
+      ? { unit: "quota", asset: asset.data, total: raw.total }
+      : undefined
+  }
   if (
     !raw ||
     raw.unit !== "credits" ||

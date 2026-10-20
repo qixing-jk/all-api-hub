@@ -2,6 +2,7 @@ import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { AI_ROUTER_ORIGINS } from "~/constants/deploymentApiOrigins"
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { AGENT_ROUTER_ORIGINS } from "~/services/accountLogin/providers/agentrouter/config"
+import { EMRANK_ENDPOINTS } from "~/services/apiService/emrank/constants"
 import { createAiRouterCheckInStatusEndpoint } from "~/services/apiService/sub2api/checkin/aiRouterCheckInProtocol"
 import {
   createDaiguaCheckInStatusEndpoint,
@@ -486,6 +487,17 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
         ),
       },
     ],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.EmrankDailyCheckIn]: {
+    id: AUTO_CHECKIN_METHOD_IDS.EmrankDailyCheckIn,
+    siteTypes: [SITE_TYPES.EMRANK],
+    source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
+    // GET /api/account/check-ins is the console's own status read, verified
+    // 2026-10-16 on https://emrank.tech.
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: [{ path: EMRANK_ENDPOINTS.CheckIn }],
     legacy: false,
     newAccountCompatibility: false,
   },

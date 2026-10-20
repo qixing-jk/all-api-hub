@@ -25,6 +25,7 @@ export const KEY_RESOURCE_EDITOR_KINDS = {
   Krill: "krill",
   Dahl: "dahl",
   FoxCode: "foxcode",
+  Emrank: "emrank",
   OpenRouter: "openrouter",
   NameOnly: "name-only",
   Empty: "empty",
@@ -93,6 +94,7 @@ const policies = {
   [families.Cubence]: { ...native, editor: KEY_RESOURCE_EDITOR_KINDS.Cubence },
   [families.Krill]: { ...native, editor: KEY_RESOURCE_EDITOR_KINDS.Krill },
   [families.FoxCode]: { ...native, editor: KEY_RESOURCE_EDITOR_KINDS.FoxCode },
+  [families.Emrank]: { ...native, editor: KEY_RESOURCE_EDITOR_KINDS.Emrank },
   [families.Xiaoen]: generic,
   [families.OpenRouter]: {
     ...generic,

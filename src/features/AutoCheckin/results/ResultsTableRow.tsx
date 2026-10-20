@@ -15,6 +15,7 @@ import {
 } from "~/features/AutoCheckin/utils/autoCheckin"
 import { ProtectionBypassHistoryLink } from "~/features/ProtectionBypass/components/ProtectionBypassHistoryLink"
 import { cn } from "~/lib/utils"
+import { formatQuotaAmount } from "~/services/quotaAssets/quotaAsset"
 import type { SiteTypeMismatch } from "~/services/siteDetection/siteTypeMismatch"
 import type { CurrencyType } from "~/types"
 import {
@@ -58,6 +59,7 @@ export default function ResultsTableRow({
     (result.status === CHECKIN_RESULT_STATUS.SUCCESS ||
       result.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED) &&
     result.reward &&
+    typeof result.reward.quota === "number" &&
     Number.isFinite(result.reward.quota) &&
     result.reward.quota > 0 &&
     typeof exchangeRate === "number" &&
@@ -67,12 +69,20 @@ export default function ResultsTableRow({
           currencyType
         ]
       : undefined
-  const rewardText =
+  const monetaryRewardText =
     rewardAmount !== undefined &&
     Number.isFinite(rewardAmount) &&
     rewardAmount > 0
       ? `+${getCurrencySymbol(currencyType)}${formatMoneyFixed(rewardAmount)}`
       : null
+  const rewardText =
+    (result.status === CHECKIN_RESULT_STATUS.SUCCESS ||
+      result.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED) &&
+    result.reward?.asset &&
+    Number.isFinite(result.reward.amount) &&
+    result.reward.amount > 0
+      ? `+${formatQuotaAmount(result.reward.amount, result.reward.asset)}`
+      : monetaryRewardText
   const troubleshootingHintKey = resolveAutoCheckinTroubleshootingHintKey({
     status: result.status,
     reasonCode: result.reasonCode,

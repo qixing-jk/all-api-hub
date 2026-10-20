@@ -10,6 +10,7 @@ import type {
 } from "~/services/apiAdapters/contracts/accountBrowserIdentity"
 import { cubenceBrowserIdentity } from "~/services/apiAdapters/cubence/browserIdentity"
 import { dahlBrowserIdentity } from "~/services/apiAdapters/dahl/browserIdentity"
+import { emRankBrowserIdentity } from "~/services/apiAdapters/emrank/browserIdentity"
 import { foxCodeBrowserIdentity } from "~/services/apiAdapters/foxcode/browserIdentity"
 import { freeModelBrowserIdentity } from "~/services/apiAdapters/freemodel/browserIdentity"
 import { kimiOpenPlatformBrowserIdentity } from "~/services/apiAdapters/kimiOpenPlatform/browserIdentity"
@@ -27,6 +28,7 @@ import { apiyiContentSessionExtractor } from "./contentSession/apiyi"
 import { compatibleUserContentSessionExtractor } from "./contentSession/compatibleUser"
 import { cubenceContentSessionExtractor } from "./contentSession/cubence"
 import { dahlContentSessionExtractor } from "./contentSession/dahl"
+import { emRankContentSessionExtractor } from "./contentSession/emrank"
 import { foxCodeContentSessionExtractor } from "./contentSession/foxcode"
 import { freeModelContentSessionExtractor } from "./contentSession/freemodel"
 import { grsaiContentSessionExtractor } from "./contentSession/grsai"
@@ -74,6 +76,10 @@ const siteBrowserAdapters: readonly {
   {
     sessionExtractor: dahlContentSessionExtractor,
     identity: dahlBrowserIdentity,
+  },
+  {
+    sessionExtractor: emRankContentSessionExtractor,
+    identity: emRankBrowserIdentity,
   },
   {
     sessionExtractor: sub2ApiContentSessionExtractor,

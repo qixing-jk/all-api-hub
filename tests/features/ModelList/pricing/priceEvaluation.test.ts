@@ -12,6 +12,11 @@ import {
 } from "~/features/ModelList/pricing/priceEvaluation"
 import { MODEL_UNAVAILABLE_PRICE_REASONS } from "~/services/modelList/pricingModel"
 import { CALCULATED_PRICE_KINDS } from "~/services/modelPricing/pricingConstants"
+import {
+  QUOTA_COMPARISON_SCOPES,
+  QUOTA_QUOTE_STATUSES,
+  QUOTA_ROUNDING_MODES,
+} from "~/services/modelPricing/quotaPricing"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { buildModelListItemFixture } from "~~/tests/test-utils/modelListSource"
@@ -29,6 +34,121 @@ function calculate(rawItems: ModelListItem[], groups?: string[]) {
 }
 
 describe("model list price evaluation", () => {
+  it.each(["reference", "source", "different-asset", "unit", "display-only"])(
+    "limits cross-source quota minima to settled shared assets (%s)",
+    (scope) => {
+      const raw = [8, 2].map((amount, index) => {
+        const item = buildModelListItemFixture(`quota-source-${index}`, {})
+        if (scope === "display-only") {
+          item.source = {
+            ...item.source,
+            capabilities: {
+              ...item.source.capabilities,
+              supportsPricing: false,
+            },
+          }
+          item.model.price_metadata = {
+            source: "provider-catalog",
+            precision: "unavailable",
+          }
+        }
+        item.groupContext = {
+          ...item.groupContext,
+          accessState: "not-applicable",
+        }
+        item.model.quotaPricing = {
+          unit: {
+            id: scope === "different-asset" ? `asset-${index}` : "same-asset",
+            label: "Credit",
+            displayLabel: "M Credit",
+            displayScale: 1e6,
+          },
+          rates: { input: { amount, per: 1 }, output: { amount: 0, per: 1 } },
+          adjustments:
+            scope === "reference"
+              ? [{ id: "tier", label: { en: "Tier" } }]
+              : [],
+          comparisonScope: scope === "source" ? "source" : "unit",
+          rounding: QUOTA_ROUNDING_MODES.Floor,
+          sourceUrl: "https://quota.example/pricing",
+        }
+        return item
+      })
+      const result = rankModelListPrices({
+        ...options,
+        items: calculate(raw),
+        sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
+        compareAcrossSources: true,
+      })
+      expect(result.filter((item) => item.isLowestPrice).length).toBe(
+        scope === "unit" ? 1 : 0,
+      )
+      expect(result.every((item) => item.isPriceComparable)).toBe(
+        scope !== "display-only",
+      )
+    },
+  )
+  it("sorts native quota consumption within its own asset and source without money conversion", () => {
+    const raw = [6, 2, 0].map((amount, index) => {
+      const item = buildModelListItemFixture(`quota-${index}`, {})
+      if (item.source.kind === "account")
+        item.source.account.id = "same-account"
+      item.model.model_name = `model-${index}`
+      item.groupContext = {
+        ...item.groupContext,
+        accessState: "not-applicable",
+      }
+      item.model.price_metadata = {
+        source: "provider-catalog",
+        precision: "unavailable",
+      }
+      item.model.quotaPricing = {
+        unit: {
+          id: "https://quota.example/credit",
+          label: "Credit",
+          displayLabel: "M Credit",
+          displayScale: 1e6,
+        },
+        rates: { input: { amount, per: 1 }, output: { amount: 0, per: 1 } },
+        adjustments: [{ id: "tier", label: { en: "Account tier" } }],
+        comparisonScope: QUOTA_COMPARISON_SCOPES.Source,
+        rounding: QUOTA_ROUNDING_MODES.Floor,
+        sourceUrl: "https://quota.example/pricing",
+      }
+      return item
+    })
+    const items = calculateModelListPrices({
+      ...options,
+      rawItems: raw,
+      priceComparisonWeights: {
+        input: 1,
+        output: 0,
+        cacheRead: null,
+        cacheWrite: null,
+      },
+      getGroupCandidates: () => undefined,
+    })
+    expect(items[0]?.calculatedPrice.quotaQuote).toMatchObject({
+      status: QUOTA_QUOTE_STATUSES.Reference,
+      baseAmount: 6_000_000,
+      amount: null,
+    })
+    const ranked = rankModelListPrices({
+      ...options,
+      items,
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
+      compareAcrossSources: true,
+    })
+    expect(ranked.map((item) => item.model.model_name)).toEqual([
+      "model-2",
+      "model-1",
+      "model-0",
+    ])
+    expect(
+      ranked.every((item) => item.calculatedPrice.kind === "unavailable"),
+    ).toBe(true)
+    expect(ranked.every((item) => item.isPriceComparable)).toBe(true)
+  })
   it.each([false, true])(
     "sorts finite secondary prices before missing ones in either input order (reverse: %s)",
     (reverse) => {

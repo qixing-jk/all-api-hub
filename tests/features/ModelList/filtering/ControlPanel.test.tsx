@@ -273,6 +273,16 @@ function renderControlPanel(
 }
 
 describe("ControlPanel", () => {
+  it("keeps quota controls separate from currency conversion and one-click monetary comparison", () => {
+    renderControlPanel({
+      sourceCapabilities: { ...CAPABILITIES, supportsCurrencyPricing: false },
+    })
+    expect(screen.queryByText("realAmount")).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "comparison.cta" }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText("endpointTypes")).toBeInTheDocument()
+  })
   it("can reveal unavailable models even when the filtered list is empty", async () => {
     const user = userEvent.setup()
     const props = renderControlPanel({

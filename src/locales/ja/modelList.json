@@ -152,9 +152,18 @@
       "no": "いいえ",
       "yes": "はい"
     },
+    "callExamples": "呼び出し例",
+    "catalogOwner": "カタログの所有者",
     "contextLimit": "コンテキスト上限",
+    "defaultDimensions": "既定の次元数",
     "inputModalities": "入力モダリティ",
     "maximumOutputTokens": "最大出力トークン数",
+    "modelKind": "モデルの用途",
+    "modelKinds": {
+      "decision": "意思決定",
+      "embedding": "埋め込み",
+      "reranker": "再ランキング"
+    },
     "openRouter": {
       "architecture": {
         "instructType": "命令形式",
@@ -255,10 +264,15 @@
       "request": "リクエスト",
       "webSearch": "ウェブ検索"
     },
+    "providerAvailable": "サイトで利用可能",
+    "releaseDate": "公開日",
     "sections": {
       "specifications": "仕様"
     },
-    "tokenCount_other": "{{formattedCount}} トークン"
+    "supportedDimensions": "対応次元数",
+    "supportsImages": "画像対応",
+    "tokenCount_other": "{{formattedCount}} トークン",
+    "viewOnSite": "公式サイトで表示"
   },
   "displayOptions": "表示内容",
   "endpointType": "エンドポイント種別",
@@ -442,6 +456,15 @@
     "scrollRight": "ベンダータブを右にスクロール",
     "unclassified": "未分類",
     "unclassifiedDescription": "ベンダーを特定できませんでしたが、モデルが利用できないという意味ではありません。"
+  },
+  "quotaBilling": {
+    "adjustments": "追加の課金要素：{{names}}。",
+    "comparison": "想定トークン100万件あたり {{amount}}。",
+    "invalid": "利用枠の料金は利用できません。",
+    "reference": "基本消費量のみです。追加倍率は含まれていません。",
+    "sortAsc": "消費量：少ない順",
+    "sortDesc": "消費量：多い順",
+    "source": "課金ルール"
   },
   "realAmount": "実際のチャージ額",
   "refreshData": "データを更新",

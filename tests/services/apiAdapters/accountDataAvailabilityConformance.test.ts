@@ -12,6 +12,7 @@ import type { AccountData } from "~/services/accounts/accountDataModel"
 import { normalizeAccountTodayStatsAvailability } from "~/services/accounts/metrics/accountTodayStats"
 import type { SiteBackendFamily } from "~/services/apiAdapters/contracts/siteTypeCapabilities"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import { EMRANK_SESSION_COOKIE_NAME } from "~/services/apiService/emrank/constants"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
@@ -111,6 +112,28 @@ const producerFixturesByFamily = {
             hasSignedInToday: true,
           },
         }),
+      ),
+    ],
+    expectRequests: () => {},
+  },
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Emrank]: {
+    baseUrl: "https://emrank.tech",
+    authType: AuthTypeEnum.Cookie,
+    expectedAvailability: {
+      consumption: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
+    handlers: [
+      http.get("https://emrank.tech/api/auth/session", () =>
+        HttpResponse.json({
+          authenticated: true,
+          user: { id: 6088, username: "user", display_name: "User" },
+        }),
+      ),
+      http.get("https://emrank.tech/api/account", () =>
+        HttpResponse.json({ quota: "20000000", tokens_per_m: "1000000" }),
       ),
     ],
     expectRequests: () => {},
@@ -704,7 +727,9 @@ const createRequest = (siteType: AccountSiteType) => {
               siteType === SITE_TYPES.CUBENCE ||
               siteType === SITE_TYPES.KRILL
             ? "7"
-            : "user-1",
+            : siteType === SITE_TYPES.EMRANK
+              ? "6088"
+              : "user-1",
       accessToken: "account-token",
     },
     checkIn: buildCheckInConfig(),
@@ -984,6 +1009,9 @@ describe("AccountData availability producer conformance", () => {
         boundary.cookies.mockResolvedValue([
           { ...cookie, domain: "www.krill-code.com", name: "krill_jwt" },
         ])
+      }
+      if (capabilities.family === ACCOUNT_SITE_ADAPTER_FAMILIES.Emrank) {
+        installCookieTransport(EMRANK_SESSION_COOKIE_NAME, "emrank.tech")
       }
       if (capabilities.family === ACCOUNT_SITE_ADAPTER_FAMILIES.Dahl) {
         const boundary = installCookieTransport()
