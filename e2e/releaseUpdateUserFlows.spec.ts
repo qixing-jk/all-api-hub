@@ -190,24 +190,36 @@ test("keeps the up-to-date panel concise and responsive", async ({
   for (const width of [1280, 380]) {
     await page.setViewportSize({ width, height: 900 })
     await panel.scrollIntoViewIfNeeded()
-    const current = await panel
-      .getByText("Current version: v4.5.0")
-      .boundingBox()
-    const check = await panel
-      .getByRole("button", { name: "Check for updates" })
-      .boundingBox()
-    expect(current).not.toBeNull()
-    expect(check).not.toBeNull()
-    if (width < 640) {
-      expect(check!.y).toBeGreaterThanOrEqual(current!.y + current!.height)
-    } else {
-      expect(check!.x).toBeGreaterThanOrEqual(current!.x + current!.width)
-    }
-    expect(
-      await panel.evaluate(
-        (element) => element.scrollWidth <= element.clientWidth,
-      ),
-    ).toBe(true)
+    await expect(
+      panel.getByRole("button", { name: "Check for updates" }),
+    ).toBeVisible()
+    // Read one layout snapshot after resize, without separate CDP box-model
+    // requests that can stall even after the button resolves in older Chrome.
+    await expect(async () => {
+      const { current, check, fits } = await panel
+        .getByText("Current version: v4.5.0")
+        .evaluate((element, ids) => {
+          const panel = element.closest(`[data-testid="${ids.panel}"]`)!
+          const button = panel.querySelector(
+            `[data-testid="${ids.checkNowButton}"]`,
+          )!
+          return {
+            current: element.getBoundingClientRect().toJSON(),
+            check: button.getBoundingClientRect().toJSON(),
+            fits: panel.scrollWidth <= panel.clientWidth,
+          }
+        }, RELEASE_UPDATE_STATUS_PANEL_TEST_IDS)
+      expect(current.width).toBeGreaterThan(0)
+      expect(current.height).toBeGreaterThan(0)
+      expect(check.width).toBeGreaterThan(0)
+      expect(check.height).toBeGreaterThan(0)
+      if (width < 640) {
+        expect(check.y).toBeGreaterThanOrEqual(current.y + current.height)
+      } else {
+        expect(check.x).toBeGreaterThanOrEqual(current.x + current.width)
+      }
+      expect(fits).toBe(true)
+    }).toPass({ timeout: 10_000 })
     await expect(
       panel.getByRole("link", { name: "Changelog" }),
     ).toBeInViewport()
