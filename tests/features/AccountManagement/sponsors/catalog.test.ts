@@ -1041,6 +1041,152 @@ describe("sponsor catalog v5 normalization", () => {
     expect(result.items).toHaveLength(0)
     expect(result.errors.join("\n")).toContain("has invalid iconUrl")
   })
+
+  it("rejects invalid top-level item iconUrl with semantic error", () => {
+    const result = normalizeSponsorCatalog(
+      {
+        schemaVersion: 5,
+        items: [
+          {
+            id: "invalid-item-icon-sponsor",
+            iconUrl: "not-a-url",
+            locales: {
+              en: {
+                enabled: true,
+                rank: 1,
+                supportStatus: SPONSOR_SUPPORT_STATUS.Supported,
+                name: "Invalid Item Icon Sponsor",
+                tagline: "Has malformed item iconUrl",
+                links: { primary: "https://example.com" },
+              },
+            },
+          },
+        ],
+      },
+      {
+        locale: "en",
+        now,
+        source: SPONSOR_CATALOG_SOURCES.Remote,
+      },
+    )
+
+    expect(result.ok).toBe(false)
+    expect(result.items).toHaveLength(0)
+    expect(result.errors.join("\n")).toContain(
+      "item invalid-item-icon-sponsor has invalid iconUrl",
+    )
+  })
+
+  it("rejects campaigns with non-record links", () => {
+    const result = normalizeSponsorCatalog(
+      {
+        schemaVersion: 5,
+        items: [
+          {
+            id: "invalid-links-sponsor",
+            locales: {
+              en: {
+                enabled: true,
+                rank: 1,
+                supportStatus: SPONSOR_SUPPORT_STATUS.Supported,
+                name: "Invalid Links Sponsor",
+                tagline: "Has non-record links",
+                links: "invalid" as unknown as { primary: string },
+              },
+            },
+          },
+        ],
+      },
+      {
+        locale: "en",
+        now,
+        source: SPONSOR_CATALOG_SOURCES.Remote,
+      },
+    )
+
+    expect(result.ok).toBe(false)
+    expect(result.items).toHaveLength(0)
+    expect(result.errors.join("\n")).toContain(
+      "item invalid-links-sponsor locale en has invalid links",
+    )
+  })
+
+  it("rejects campaigns with non-record addAccount action", () => {
+    const result = normalizeSponsorCatalog(
+      {
+        schemaVersion: 5,
+        items: [
+          {
+            id: "invalid-add-account-action-sponsor",
+            locales: {
+              en: {
+                enabled: true,
+                rank: 1,
+                supportStatus: SPONSOR_SUPPORT_STATUS.Supported,
+                name: "Invalid Action Sponsor",
+                tagline: "Has non-record addAccount",
+                links: { primary: "https://example.com" },
+                actions: {
+                  addAccount: "invalid" as unknown as Record<string, unknown>,
+                },
+              },
+            },
+          },
+        ],
+      },
+      {
+        locale: "en",
+        now,
+        source: SPONSOR_CATALOG_SOURCES.Remote,
+      },
+    )
+
+    expect(result.ok).toBe(false)
+    expect(result.items).toHaveLength(0)
+    expect(result.errors.join("\n")).toContain(
+      "item invalid-add-account-action-sponsor locale en has invalid addAccount action",
+    )
+  })
+
+  it("rejects campaigns with non-record apiCredentialProfileFallback action", () => {
+    const result = normalizeSponsorCatalog(
+      {
+        schemaVersion: 5,
+        items: [
+          {
+            id: "invalid-api-cred-action-sponsor",
+            locales: {
+              en: {
+                enabled: true,
+                rank: 1,
+                supportStatus: SPONSOR_SUPPORT_STATUS.Supported,
+                name: "Invalid Action Sponsor",
+                tagline: "Has non-record apiCredentialProfileFallback",
+                links: { primary: "https://example.com" },
+                actions: {
+                  apiCredentialProfileFallback: "invalid" as unknown as Record<
+                    string,
+                    unknown
+                  >,
+                },
+              },
+            },
+          },
+        ],
+      },
+      {
+        locale: "en",
+        now,
+        source: SPONSOR_CATALOG_SOURCES.Remote,
+      },
+    )
+
+    expect(result.ok).toBe(false)
+    expect(result.items).toHaveLength(0)
+    expect(result.errors.join("\n")).toContain(
+      "item invalid-api-cred-action-sponsor locale en has invalid apiCredentialProfileFallback action",
+    )
+  })
 })
 
 describe("selectSponsorRecommendations", () => {

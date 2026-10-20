@@ -96,6 +96,10 @@ describe("SponsorBrandIcon component", () => {
     // Simulate .jpg 404 error -> falls back to default icon
     fireEvent.error(img)
     expect(img).toHaveAttribute("src", DEFAULT_SPONSOR_ICON)
+
+    // Further errors when already at default fallback keep the default icon
+    fireEvent.error(img)
+    expect(img).toHaveAttribute("src", DEFAULT_SPONSOR_ICON)
   })
 
   it("falls back to local default icon when sponsorId is omitted", () => {

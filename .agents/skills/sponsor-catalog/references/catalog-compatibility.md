@@ -55,7 +55,7 @@ Historically, the catalog parser enforced strict closed-world validation (`getUn
 
 Moving forward:
 - Clients should migrate toward **lenient/tolerant parsing ("pick what is needed")**, extracting known fields (`name`, `tagline`, `links`, `actions`, `iconUrl`) and safely ignoring unrecognised future optional fields rather than failing the entire campaign.
-- **Strict in CI, Lenient at Runtime**: Keep strict shape linting in authoring/CI test suites to prevent typos, while keeping runtime clients tolerant to safely ignore unexpected or future optional fields.
+- **Strict in CI, Lenient at Runtime**: Keep strict shape linting in authoring/CI test suites via `validateStrictSponsorCatalogArtifact` in `publicCatalog.test.ts` to prevent typos and safeguard older released clients, while keeping runtime clients tolerant to safely ignore unexpected or future optional fields.
 - This ensures true forward compatibility: future optional metadata can be published without breaking older clients or necessitating subsequent `v7`, `v8`... schema forks.
 
 ## Coverage decision

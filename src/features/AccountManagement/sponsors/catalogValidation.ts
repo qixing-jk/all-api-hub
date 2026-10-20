@@ -29,7 +29,7 @@ export function validateObjectKeys(
 }
 
 /** Returns object keys that are outside a strict allow-list. */
-function getUnknownKeys(
+export function getUnknownKeys(
   value: Record<string, unknown>,
   allowedKeys: ReadonlySet<string>,
 ): string[] {

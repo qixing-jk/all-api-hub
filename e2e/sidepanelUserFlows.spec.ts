@@ -111,7 +111,11 @@ async function getSponsorPending(
 }
 
 test.beforeEach(async ({ context, page }) => {
-  installExtensionPageGuards(page)
+  installExtensionPageGuards(page, {
+    ignoreConsoleErrorPatterns: [
+      /Failed to load resource: .*status of 404 .*resources\/partners\/icons/u,
+    ],
+  })
   await forceExtensionLanguage(page, "en")
   await stubLlmMetadataIndex(context)
 })

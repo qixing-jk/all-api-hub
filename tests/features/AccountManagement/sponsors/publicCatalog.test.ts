@@ -6,6 +6,7 @@ import { PORTUGUESE_BRAZIL_LANG } from "~/constants/i18n"
 import { SITE_TYPES } from "~/constants/siteType"
 import { bundledSponsorCatalog } from "~/features/AccountManagement/sponsors/bundledCatalog"
 import { normalizeSponsorCatalog } from "~/features/AccountManagement/sponsors/catalog"
+import { validateStrictSponsorCatalogArtifact } from "~/features/AccountManagement/sponsors/catalogSchema"
 import {
   SPONSOR_CATALOG_SCHEMA_VERSION,
   SPONSOR_REMOTE_CATALOG_V5_URL,
@@ -114,6 +115,47 @@ describe("public sponsor catalog artifacts", () => {
     })
 
     expect(bundledSponsorCatalog).toBe(publicSponsorCatalogV5)
+  })
+
+  it("strictly validates served V5 catalog artifacts against closed-world V5 schema", () => {
+    const errors = validateStrictSponsorCatalogArtifact(publicSponsorCatalogV5)
+    expect(errors).toEqual([])
+
+    const firstItem = publicSponsorCatalogV5.items[0]!
+    const locales = firstItem.locales as Record<string, Record<string, unknown>>
+    const firstLocale = locales.en ?? Object.values(locales)[0]!
+
+    const mutatedTopLevel = {
+      ...publicSponsorCatalogV5,
+      items: [
+        {
+          ...firstItem,
+          iconURL: "https://example.com/icon.png",
+        },
+      ],
+    }
+    expect(
+      validateStrictSponsorCatalogArtifact(mutatedTopLevel).join("\n"),
+    ).toContain("unsupported top-level fields: iconURL")
+
+    const mutatedCampaign = {
+      ...publicSponsorCatalogV5,
+      items: [
+        {
+          ...firstItem,
+          locales: {
+            ...locales,
+            en: {
+              ...firstLocale,
+              futureField: "unsupported-in-v5",
+            },
+          },
+        },
+      ],
+    }
+    expect(
+      validateStrictSponsorCatalogArtifact(mutatedCampaign).join("\n"),
+    ).toContain("unsupported campaign fields: futureField")
   })
 
   it("validates V5 development examples", () => {
