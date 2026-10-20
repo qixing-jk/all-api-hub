@@ -75,6 +75,7 @@ export interface RawSponsorCatalog {
 
 export interface RawSponsorCatalogItem {
   id: string
+  iconUrl?: string
   locales: Record<string, RawSponsorLocaleCampaign>
 }
 
@@ -90,6 +91,7 @@ export interface RawSponsorLocaleCampaign {
   }
   name: string
   tagline: string
+  iconUrl?: string
   postClickNote?: string
   links: {
     primary: string
@@ -121,6 +123,7 @@ export interface SponsorRecommendation {
   schemaVersion: number
   name: string
   tagline: string
+  iconUrl?: string
   postClickNote?: string
   source: SponsorCatalogSource
 }

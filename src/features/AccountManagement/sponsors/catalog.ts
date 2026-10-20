@@ -1,21 +1,13 @@
 import { parseOptionalDate } from "~/utils/core/date"
 import { isRecord } from "~/utils/core/object"
-import { isHttpUrl } from "~/utils/core/urlParsing"
 
 import { normalizeActions, validateActionPayloadShapes } from "./catalogActions"
+import { SPONSOR_SUPPORT_STATUS_VALUES } from "./catalogSchema"
 import {
-  SPONSOR_CAMPAIGN_ACTION_FIELDS,
-  SPONSOR_CAMPAIGN_LINK_FIELDS,
-  SPONSOR_CATALOG_ITEM_FIELDS,
-  SPONSOR_LOCALE_CAMPAIGN_FIELDS,
-  SPONSOR_SUPPORT_STATUS_VALUES,
-} from "./catalogSchema"
-import {
-  getUnknownKeys,
   isActiveInDateRange,
   isValidSponsorId,
+  normalizeOptionalHttpUrl,
   trimNonEmptyString,
-  validateObjectKeys,
 } from "./catalogValidation"
 import {
   getCampaignVisibilityState,
@@ -121,14 +113,14 @@ function normalizeSponsorItem(
     return undefined
   }
 
-  const extraItemKeys = getUnknownKeys(item, SPONSOR_CATALOG_ITEM_FIELDS)
-  if (extraItemKeys.length > 0) {
-    errors.push(
-      `item ${itemId} has unsupported top-level fields: ${extraItemKeys.join(
-        ", ",
-      )}`,
-    )
-    return undefined
+  let itemIconUrl: string | undefined
+  if (item.iconUrl !== undefined) {
+    const normalized = normalizeOptionalHttpUrl(item.iconUrl)
+    if (!normalized) {
+      errors.push(`item ${itemId} has invalid iconUrl`)
+      return undefined
+    }
+    itemIconUrl = normalized
   }
 
   if (!isRecord(item.locales)) {
@@ -160,9 +152,12 @@ function normalizeSponsorItem(
     return undefined
   }
 
+  const iconUrl = selected.recommendation.iconUrl ?? itemIconUrl
+
   return {
     ...selected.recommendation,
     id: itemId,
+    ...(iconUrl ? { iconUrl } : {}),
   }
 }
 
@@ -218,7 +213,7 @@ function validateAllLocaleCampaignShapes(
   )
 }
 
-/** Checks locale, link, visibility, and action objects for unknown fields. */
+/** Checks locale campaign container shapes before semantic selection, tolerating unknown forward-compatible fields. */
 function validateLocaleCampaignShape(
   itemId: string,
   locale: string,
@@ -226,18 +221,6 @@ function validateLocaleCampaignShape(
 ): string[] {
   if (!isRecord(campaign)) {
     return [`item ${itemId} locale ${locale} has invalid shape`]
-  }
-
-  const unknownLocaleKeys = getUnknownKeys(
-    campaign,
-    SPONSOR_LOCALE_CAMPAIGN_FIELDS,
-  )
-  if (unknownLocaleKeys.length > 0) {
-    return [
-      `item ${itemId} locale ${locale} has unsupported locale fields: ${unknownLocaleKeys.join(
-        ", ",
-      )}`,
-    ]
   }
 
   if (campaign.visibility !== undefined) {
@@ -249,32 +232,13 @@ function validateLocaleCampaignShape(
     if (visibilityShapeErrors.length > 0) return visibilityShapeErrors
   }
 
-  if (campaign.links !== undefined) {
-    const linkShapeErrors = validateObjectKeys(
-      itemId,
-      locale,
-      campaign.links,
-      SPONSOR_CAMPAIGN_LINK_FIELDS,
-      "link",
-    )
-    if (linkShapeErrors.length > 0) return linkShapeErrors
+  if (campaign.links !== undefined && !isRecord(campaign.links)) {
+    return [`item ${itemId} locale ${locale} has invalid links`]
   }
 
   if (campaign.actions !== undefined) {
     if (!isRecord(campaign.actions)) {
       return [`item ${itemId} locale ${locale} has invalid actions`]
-    }
-
-    const unknownActionKeys = getUnknownKeys(
-      campaign.actions,
-      SPONSOR_CAMPAIGN_ACTION_FIELDS,
-    )
-    if (unknownActionKeys.length > 0) {
-      return [
-        `item ${itemId} locale ${locale} has unsupported action fields: ${unknownActionKeys.join(
-          ", ",
-        )}`,
-      ]
     }
 
     const actionShapeErrors = validateActionPayloadShapes(
@@ -396,6 +360,17 @@ function normalizeLocaleCampaign(
     }
   }
 
+  let iconUrl: string | undefined
+  if (campaign.iconUrl !== undefined) {
+    const normalized = normalizeOptionalHttpUrl(campaign.iconUrl)
+    if (!normalized) {
+      return {
+        errors: [`item ${itemId} locale ${selectedLocale} has invalid iconUrl`],
+      }
+    }
+    iconUrl = normalized
+  }
+
   const postClickNote = trimNonEmptyString(campaign.postClickNote)
 
   return {
@@ -408,6 +383,7 @@ function normalizeLocaleCampaign(
       schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
       name,
       tagline,
+      ...(iconUrl ? { iconUrl } : {}),
       postClickNote,
       source: options.source,
     },
@@ -420,10 +396,11 @@ function normalizeLinks(
   value: unknown,
 ): SponsorRecommendation["links"] | false {
   if (!isRecord(value)) return false
-  if (!isHttpUrl(value.primary)) return false
+  const primary = normalizeOptionalHttpUrl(value.primary)
+  if (!primary) return false
 
   return {
-    primary: value.primary.trim(),
+    primary,
   }
 }
 

@@ -5,7 +5,7 @@ import {
   SPONSOR_CAMPAIGN_VISIBILITY_FIELDS,
   SPONSOR_VISIBILITY_BROWSER_FAMILY_VALUES,
 } from "./catalogSchema"
-import { getUnknownKeys } from "./catalogValidation"
+import { validateObjectKeys } from "./catalogValidation"
 import type { SponsorVisibilityBrowserFamily } from "./types"
 
 export interface SponsorVisibilityContext {
@@ -40,32 +40,26 @@ export function validateVisibilityShape(
   locale: string,
   value: unknown,
 ): string[] {
-  if (!isRecord(value)) {
-    return [`item ${itemId} locale ${locale} has invalid visibility`]
-  }
-
-  const unknownVisibilityKeys = getUnknownKeys(
+  const keyErrors = validateObjectKeys(
+    itemId,
+    locale,
     value,
     SPONSOR_CAMPAIGN_VISIBILITY_FIELDS,
+    "visibility",
   )
-  if (unknownVisibilityKeys.length > 0) {
-    return [
-      `item ${itemId} locale ${locale} has unsupported visibility fields: ${unknownVisibilityKeys.join(
-        ", ",
-      )}`,
-    ]
-  }
+  if (keyErrors.length > 0) return keyErrors
 
+  const visibility = value as Record<string, unknown>
   if (
-    value.extensionVersions !== undefined &&
-    typeof value.extensionVersions !== "string"
+    visibility.extensionVersions !== undefined &&
+    typeof visibility.extensionVersions !== "string"
   ) {
     return [`item ${itemId} locale ${locale} has invalid visibility`]
   }
 
   if (
-    value.excludedBrowserFamilies !== undefined &&
-    !isStringArray(value.excludedBrowserFamilies)
+    visibility.excludedBrowserFamilies !== undefined &&
+    !isStringArray(visibility.excludedBrowserFamilies)
   ) {
     return [`item ${itemId} locale ${locale} has invalid visibility`]
   }

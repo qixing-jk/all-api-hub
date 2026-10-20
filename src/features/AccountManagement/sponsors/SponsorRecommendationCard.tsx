@@ -16,7 +16,10 @@ import {
   SPONSOR_WORKFLOW_KINDS,
   type SponsorRecommendationSurface,
 } from "~/features/AccountManagement/sponsors/constants"
-import { SponsorBrandIcon } from "~/features/AccountManagement/sponsors/SponsorBrandIcon"
+import {
+  SPONSOR_BRAND_ICON_SIZES,
+  SponsorBrandIcon,
+} from "~/features/AccountManagement/sponsors/SponsorBrandIcon"
 import {
   SPONSOR_SUPPORT_STATUS,
   type AddAccountPrefill,
@@ -316,7 +319,12 @@ export function SponsorRecommendationCard({
         aria-label={`${mainActionLabel}: ${item.name}`}
         data-testid={getMainActionTestId(mainActionKind)}
       >
-        <SponsorBrandIcon sponsorId={item.id} name={item.name} size="sm" />
+        <SponsorBrandIcon
+          sponsorId={item.id}
+          name={item.name}
+          iconUrl={item.iconUrl}
+          size={SPONSOR_BRAND_ICON_SIZES.Sm}
+        />
         <span className="min-w-0 flex-1">
           <span className="gap-y-density-1-5 flex min-w-0 items-center gap-x-1.5">
             <span className="truncate text-sm leading-5 font-medium">

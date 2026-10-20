@@ -1,6 +1,7 @@
 import { parseOptionalDate } from "~/utils/core/date"
 import { isRecord } from "~/utils/core/object"
 import { trimToNull } from "~/utils/core/string"
+import { isHttpUrl } from "~/utils/core/urlParsing"
 
 import type { RawSponsorLocaleCampaign } from "./types"
 
@@ -28,7 +29,7 @@ export function validateObjectKeys(
 }
 
 /** Returns object keys that are outside a strict allow-list. */
-export function getUnknownKeys(
+function getUnknownKeys(
   value: Record<string, unknown>,
   allowedKeys: ReadonlySet<string>,
 ): string[] {
@@ -38,6 +39,15 @@ export function getUnknownKeys(
 /** Trims display copy and omits blanks or malformed values. */
 export function trimNonEmptyString(value: unknown): string | undefined {
   return trimToNull(value) ?? undefined
+}
+
+/** Validates and trims an optional HTTP/HTTPS URL string. Returns undefined if omitted, false if invalid, or the trimmed URL. */
+export function normalizeOptionalHttpUrl(
+  value: unknown,
+): string | false | undefined {
+  if (value === undefined) return undefined
+  if (!isHttpUrl(value)) return false
+  return value.trim()
 }
 
 /** Checks whether a sponsor id uses the supported stable slug format. */
