@@ -191,6 +191,11 @@ export const relayForProvider: AutoCheckinProvider = {
             error,
             mutationDispatched: context.mutationLifecycle?.dispatched,
           })
+          const failureDetail =
+            failure.rawMessage ??
+            (failure.messageKey
+              ? t(failure.messageKey, failure.messageParams ?? {})
+              : "")
           const confirmedBenefits = [
             ...(hasQuota
               ? [formatRelayForBenefit({ type: "quota", quota })]
@@ -203,7 +208,7 @@ export const relayForProvider: AutoCheckinProvider = {
               t("autoCheckin:providerFallback.relayForPartial", {
                 completed: index,
                 total: targets.length,
-                error: failure.rawMessage ?? "",
+                error: failureDetail,
               }),
               ...(confirmedBenefits.length
                 ? [

@@ -78,7 +78,7 @@ describe("relayForProvider", () => {
       expect.objectContaining({ abortSignal: controller.signal }),
     )
     vi.mocked(fetchRelayForCheckInCampaigns).mockRejectedValueOnce(
-      new Error("offline"),
+      new TypeError("Failed to fetch"),
     )
     await expect(relayForProvider.getStatus?.(context)).resolves.toBeUndefined()
     await expect(
@@ -88,7 +88,7 @@ describe("relayForProvider", () => {
 
   it("reports a campaign fetch failure without dispatching a claim", async () => {
     vi.mocked(fetchRelayForCheckInCampaigns).mockRejectedValueOnce(
-      new Error("offline"),
+      new TypeError("Failed to fetch"),
     )
     const result = await relayForProvider.checkIn(mockAccount, {} as never)
     expect(result.status).not.toBe(CHECKIN_RESULT_STATUS.SUCCESS)
@@ -118,7 +118,7 @@ describe("relayForProvider", () => {
       ])
       if (failure)
         vi.mocked(claimRelayForCheckIn).mockRejectedValueOnce(
-          new Error("offline"),
+          new TypeError("Failed to fetch"),
         )
       else
         vi.mocked(claimRelayForCheckIn).mockResolvedValueOnce({
@@ -132,6 +132,9 @@ describe("relayForProvider", () => {
       if (failure) {
         expect(result.status).not.toBe(CHECKIN_RESULT_STATUS.SUCCESS)
         expect(result.rawMessage).toContain("0 of 1")
+        expect(result.rawMessage).toContain(
+          autoCheckin.skipReasons.network_error,
+        )
       } else {
         expect(result.status).toBe(CHECKIN_RESULT_STATUS.SUCCESS)
         expect(result.rawMessage).toContain("10")
