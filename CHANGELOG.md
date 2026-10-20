@@ -1,5 +1,29 @@
 # Changelog
 
+## [4.6.0](https://github.com/qixing-jk/all-api-hub/compare/v4.5.0...v4.6.0) (2026-10-20)
+
+
+### Features
+
+* **account-login:** add password login for AgentRouter check-in ([#1724](https://github.com/qixing-jk/all-api-hub/issues/1724)) ([0955343](https://github.com/qixing-jk/all-api-hub/commit/0955343b80fd325b4d3d9fba55cf13c2335bc015))
+* **accounts:** add RelayFor account integration ([#1732](https://github.com/qixing-jk/all-api-hub/issues/1732)) ([ae0a3d2](https://github.com/qixing-jk/all-api-hub/commit/ae0a3d20621f17cc4ec5940adf48f92836c2d890))
+* **checkin:** support NexaVlinks daily check-in and fix Sub2API key creation ([#1722](https://github.com/qixing-jk/all-api-hub/issues/1722)) ([77c50fc](https://github.com/qixing-jk/all-api-hub/commit/77c50fc2b99af8471b6208591542138605791ec5))
+* **emrank:** support accounts, native Token pricing, keys and check-in ([#1729](https://github.com/qixing-jk/all-api-hub/issues/1729)) ([4484bfd](https://github.com/qixing-jk/all-api-hub/commit/4484bfd900eb9f191717695079d2b771caa49f32))
+* **sponsors:** support cloud-controlled logos and forward-compatible catalog parsing ([#1730](https://github.com/qixing-jk/all-api-hub/issues/1730)) ([3a5afd8](https://github.com/qixing-jk/all-api-hub/commit/3a5afd85d9ed0eb6c829f22eb4d1dce11e45aee5))
+* **updates:** check releases using each distribution channel ([#1715](https://github.com/qixing-jk/all-api-hub/issues/1715)) ([37fd99f](https://github.com/qixing-jk/all-api-hub/commit/37fd99f4ad59c891b29295d3b0d21fafccd3785d))
+
+
+### Bug Fixes
+
+* **account-login:** stabilize native login and browser compatibility checks ([#1725](https://github.com/qixing-jk/all-api-hub/issues/1725)) ([5a791ae](https://github.com/qixing-jk/all-api-hub/commit/5a791aec12736e11b21e98ca4cd01e5a5bdca5a6))
+* **accounts:** separate native allowances from monetary balances ([#1731](https://github.com/qixing-jk/all-api-hub/issues/1731)) ([c75894c](https://github.com/qixing-jk/all-api-hub/commit/c75894ca5c9ecf11a4534b6597a36886e046efc6))
+* **checkin:** keep AgentRouter OAuth windows in background ([#1721](https://github.com/qixing-jk/all-api-hub/issues/1721)) ([a67e8ed](https://github.com/qixing-jk/all-api-hub/commit/a67e8edbfe5184b98b75f3fe2eff0a85b6a9a73d))
+* **ci:** pass Node version with shared E2E artifacts ([#1727](https://github.com/qixing-jk/all-api-hub/issues/1727)) ([528ec79](https://github.com/qixing-jk/all-api-hub/commit/528ec792cfcb14a611827007fec8ef99181b4e75))
+* **ide:** keep search scope inside each worktree ([b5e1a44](https://github.com/qixing-jk/all-api-hub/commit/b5e1a4469d137e6449c41e9299e093cadb4945b6))
+* **overview:** show automation execution outcomes consistently ([#1728](https://github.com/qixing-jk/all-api-hub/issues/1728)) ([f656475](https://github.com/qixing-jk/all-api-hub/commit/f656475aa0a6356902ebe37aea9340cc06305f4c))
+* **updates:** reserve automatic changelog dialogs for options ([#1720](https://github.com/qixing-jk/all-api-hub/issues/1720)) ([669a4c2](https://github.com/qixing-jk/all-api-hub/commit/669a4c26d3123afe016342d4aafbb42bce6b68ee))
+* **usage-history:** synchronize history after account refreshes ([#1726](https://github.com/qixing-jk/all-api-hub/issues/1726)) ([29fadb2](https://github.com/qixing-jk/all-api-hub/commit/29fadb2b9bb453b22c5b1fa0f088cff3c22af429))
+
 ## [4.5.0](https://github.com/qixing-jk/all-api-hub/compare/v4.4.0...v4.5.0) (2026-10-16)
 
 
