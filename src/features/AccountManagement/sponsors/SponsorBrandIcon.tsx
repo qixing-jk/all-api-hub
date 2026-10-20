@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useMemo, useState } from "react"
 
 import { cn } from "~/lib/utils"
 import api88Icon from "~~/resources/partners/icons/88api.jpg"
@@ -13,12 +13,24 @@ import volcengineIcon from "~~/resources/partners/icons/volcengine-coding-plan.p
 import xingchenIcon from "~~/resources/partners/icons/xingchen-ai.png"
 import xuanshuIcon from "~~/resources/partners/icons/xuanshu-api.png"
 
-export type SponsorBrandIconSize = "xs" | "sm" | "md" | "lg" | "xl"
+import { SPONSOR_REMOTE_ICON_BASE_URL } from "./constants"
+
+export const SPONSOR_BRAND_ICON_SIZES = {
+  Xs: "xs",
+  Sm: "sm",
+  Md: "md",
+  Lg: "lg",
+  Xl: "xl",
+} as const
+
+export type SponsorBrandIconSize =
+  (typeof SPONSOR_BRAND_ICON_SIZES)[keyof typeof SPONSOR_BRAND_ICON_SIZES]
 
 export interface SponsorBrandIconProps {
   sponsorId?: string
   name: string
   websiteUrl?: string
+  iconUrl?: string
   size?: SponsorBrandIconSize
   className?: string
 }
@@ -42,45 +54,102 @@ const LOCAL_SPONSOR_ICONS: Record<string, string> = {
 
 export const DEFAULT_SPONSOR_ICON = defaultSponsorIcon
 
+const SPONSOR_REMOTE_ICON_EXTENSIONS = [".png", ".jpg"] as const
+
 const SIZE_CONTAINER_CLASSES: Record<SponsorBrandIconSize, string> = {
-  xs: "h-5 w-5 text-3xs",
-  sm: "h-6 w-6 text-xs",
-  md: "h-8 w-8 text-xs",
-  lg: "h-10 w-10 text-sm",
-  xl: "h-12 w-12 text-base",
+  [SPONSOR_BRAND_ICON_SIZES.Xs]: "h-5 w-5 text-3xs",
+  [SPONSOR_BRAND_ICON_SIZES.Sm]: "h-6 w-6 text-xs",
+  [SPONSOR_BRAND_ICON_SIZES.Md]: "h-8 w-8 text-xs",
+  [SPONSOR_BRAND_ICON_SIZES.Lg]: "h-10 w-10 text-sm",
+  [SPONSOR_BRAND_ICON_SIZES.Xl]: "h-12 w-12 text-base",
 }
 
 /**
- * SponsorBrandIcon displays a standardized local sponsor brand icon.
- * If a specific icon is unavailable or fails to load, it falls back
- * directly to the bundled local default sponsor icon (100% offline-capable).
+ * Builds an ordered list of candidate icon URLs to resolve:
+ * 1. Explicit cloud-controlled iconUrl (if specified)
+ * 2. Bundled local static asset (instant offline display)
+ * 3. Remote convention URLs from repository asset storage (.png, then .jpg)
+ * 4. Local bundled default fallback icon
+ */
+function getSponsorIconCandidates({
+  sponsorId,
+  iconUrl,
+}: {
+  sponsorId?: string
+  iconUrl?: string
+}): string[] {
+  const candidates: string[] = []
+
+  const trimmedIconUrl = iconUrl?.trim()
+  if (trimmedIconUrl) {
+    candidates.push(trimmedIconUrl)
+  }
+
+  const localSrc = sponsorId ? LOCAL_SPONSOR_ICONS[sponsorId] : undefined
+  if (localSrc) {
+    candidates.push(localSrc)
+  } else if (sponsorId) {
+    for (const extension of SPONSOR_REMOTE_ICON_EXTENSIONS) {
+      candidates.push(
+        `${SPONSOR_REMOTE_ICON_BASE_URL}/${sponsorId}${extension}`,
+      )
+    }
+  }
+
+  candidates.push(defaultSponsorIcon)
+
+  return Array.from(new Set(candidates))
+}
+
+/**
+ * SponsorBrandIcon displays a standardized sponsor brand icon with layered fallback:
+ * 1. Explicit cloud iconUrl (if provided)
+ * 2. Bundled local static asset (for verified offline display)
+ * 3. Remote convention URL (for unbundled cloud sponsors)
+ * 4. Bundled local default sponsor icon (guaranteed fallback)
  */
 export function SponsorBrandIcon({
   sponsorId,
   name: _name,
-  size = "md",
+  iconUrl,
+  size = SPONSOR_BRAND_ICON_SIZES.Md,
   className,
 }: SponsorBrandIconProps) {
-  const localSrc = sponsorId ? LOCAL_SPONSOR_ICONS[sponsorId] : undefined
-  const targetSrc = localSrc || defaultSponsorIcon
+  const candidates = useMemo(
+    () => getSponsorIconCandidates({ sponsorId, iconUrl }),
+    [sponsorId, iconUrl],
+  )
 
-  const [currentSrc, setCurrentSrc] = useState(targetSrc)
+  const sourceKey = `${sponsorId ?? ""}|${iconUrl ?? ""}`
+  const [prevSourceKey, setPrevSourceKey] = useState(sourceKey)
+  const [candidateIndex, setCandidateIndex] = useState(0)
 
-  useEffect(() => {
-    setCurrentSrc(targetSrc)
-  }, [targetSrc])
+  if (sourceKey !== prevSourceKey) {
+    setPrevSourceKey(sourceKey)
+    setCandidateIndex(0)
+  }
+
+  const currentSrc = candidates[candidateIndex] ?? defaultSponsorIcon
 
   const handleImageError = () => {
-    if (currentSrc !== defaultSponsorIcon) {
-      setCurrentSrc(defaultSponsorIcon)
-    }
+    setCandidateIndex((prevIndex) => {
+      if (prevIndex < candidates.length - 1) {
+        return prevIndex + 1
+      }
+      return prevIndex
+    })
   }
+
+  const roundedClass =
+    size === SPONSOR_BRAND_ICON_SIZES.Lg || size === SPONSOR_BRAND_ICON_SIZES.Xl
+      ? "rounded-lg"
+      : "rounded-md"
 
   return (
     <div
       className={cn(
         "relative flex shrink-0 items-center justify-center select-none",
-        size === "lg" || size === "xl" ? "rounded-lg" : "rounded-md",
+        roundedClass,
         SIZE_CONTAINER_CLASSES[size],
         className,
       )}
@@ -90,10 +159,7 @@ export function SponsorBrandIcon({
         src={currentSrc}
         alt=""
         aria-hidden="true"
-        className={cn(
-          "h-full w-full object-contain",
-          size === "lg" || size === "xl" ? "rounded-lg" : "rounded-md",
-        )}
+        className={cn("h-full w-full object-contain", roundedClass)}
         onError={handleImageError}
         loading="lazy"
         decoding="async"
