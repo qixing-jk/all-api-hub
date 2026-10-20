@@ -34,6 +34,59 @@ function calculate(rawItems: ModelListItem[], groups?: string[]) {
 }
 
 describe("model list price evaluation", () => {
+  it("keeps unquotable profile quota rows out of price minima", () => {
+    const item = buildModelListItemFixture("quota-profile", {})
+    item.source = createProfileSource({
+      id: "profile",
+      name: "Profile",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://profile.example/v1",
+      apiKey: "test",
+      tagIds: [],
+      notes: "",
+      createdAt: 1,
+      updatedAt: 1,
+    })
+    item.source.capabilities = {
+      ...item.source.capabilities,
+      supportsPricing: true,
+    }
+    item.groupContext = { ...item.groupContext, accessState: "not-applicable" }
+    item.model.quotaPricing = {
+      unit: {
+        id: "token",
+        label: "Token",
+        displayScale: 1000000,
+        displayLabel: "M Token",
+      },
+      rates: { input: { amount: 1, per: 1 } },
+      adjustments: [],
+      comparisonScope: QUOTA_COMPARISON_SCOPES.Source,
+      rounding: QUOTA_ROUNDING_MODES.Floor,
+      sourceUrl: "https://profile.example/pricing",
+    }
+    const result = rankModelListPrices({
+      ...options,
+      items: calculateModelListPrices({
+        ...options,
+        rawItems: [item],
+        priceComparisonWeights: {
+          input: 0,
+          output: 0,
+          cacheRead: 0,
+          cacheWrite: 0,
+        },
+        getGroupCandidates: () => undefined,
+      }),
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
+      compareAcrossSources: true,
+    })
+    expect(result[0]!.isPriceComparable).toBe(false)
+    expect(result[0]!.isLowestPrice).toBe(false)
+    expect(result[0]!.calculatedPrice.quotaQuote).toMatchObject({
+      status: QUOTA_QUOTE_STATUSES.Unavailable,
+    })
+  })
   it.each(["reference", "source", "different-asset", "unit", "display-only"])(
     "limits cross-source quota minima to settled shared assets (%s)",
     (scope) => {

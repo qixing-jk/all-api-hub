@@ -1,4 +1,4 @@
-import { act } from "@testing-library/react"
+import { act, renderHook } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { createInstance } from "i18next"
 import { StrictMode, useState } from "react"
@@ -15,6 +15,7 @@ import {
   type AccountKeyResourceEditorDialogProps,
   type AccountKeyResourceEditorDialogState,
 } from "~/features/KeyManagement/resources/AccountKeyResourceEditorDialog"
+import { useAccountKeyResourceEditorDraft } from "~/features/KeyManagement/resources/useAccountKeyResourceEditorDraft"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { NATIVE_RESOURCE_EDITOR_LOADING_REVEALS } from "~/features/ResourceEditor/opening/nativeResourceEditorOpeningState"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/secretDelivery/OneTimeSecretDialog"
@@ -269,6 +270,45 @@ const editor = (mode: AccountKeyResourceEditorMode = editorModes.Create) => ({
 })
 
 describe("AccountKeyResourceEditorDialog", () => {
+  it("drops duplicate draft submissions and submissions during inventory refresh", async () => {
+    let finish!: () => void
+    const submit = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve
+        }),
+    )
+    const currentEditor = editor()
+    const { result, rerender } = renderHook(
+      ({ refreshing }) =>
+        useAccountKeyResourceEditorDraft({
+          editor: currentEditor,
+          onSubmit: submit,
+          onValuesChange: vi.fn(),
+          onCommitClose: vi.fn(),
+          isInventoryRefreshing: refreshing,
+        }),
+      { initialProps: { refreshing: true } },
+    )
+    await act(async () => {
+      await result.current.submit()
+    })
+    expect(submit).not.toHaveBeenCalled()
+    rerender({ refreshing: false })
+    let pending!: Promise<void>
+    act(() => {
+      pending = result.current.submit()
+    })
+    await act(async () => {
+      await result.current.submit()
+    })
+    expect(submit).toHaveBeenCalledOnce()
+    await act(async () => {
+      finish()
+      await pending
+    })
+    expect(result.current.isSubmitting).toBe(false)
+  })
   it.each(["authentication_failed", "permission_denied"] as const)(
     "uses generic %s guidance for a New API editor",
     async (code) => {

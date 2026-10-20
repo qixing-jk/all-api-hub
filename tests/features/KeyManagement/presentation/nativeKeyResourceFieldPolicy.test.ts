@@ -60,6 +60,39 @@ function getPresentation(
 }
 
 describe("native key editor field policies", () => {
+  it("labels EMRank native quota and shows only the selected spending and expiry fields", () => {
+    const fields = getPresentation(SITE_TYPES.EMRANK, editorModes.Create).policy
+      .fields
+    const t = ((key: string) => key) as TFunction
+    const field = (id: string) => fields.find((item) => item.fieldId === id)!
+    expect(field(emrankKeyFields.Unlimited).resolveLabel(t)).toBe(
+      "keyManagement:dialog.unlimitedQuota",
+    )
+    expect(field(emrankKeyFields.Quota).resolveLabel(t)).toBe(
+      "keyManagement:native.editor.emrank.quotaMToken",
+    )
+    expect(field(emrankKeyFields.Quota).resolveHelp?.(t)).toBe(
+      "keyManagement:native.editor.emrank.quotaHelp",
+    )
+    expect(field(emrankKeyFields.ExpirationMode).resolveLabel(t)).toBe(
+      "keyManagement:native.editor.emrank.expiration",
+    )
+    for (const unlimited of [true, false])
+      expect(
+        field(emrankKeyFields.Quota).visibleWhen?.({
+          [emrankKeyFields.Unlimited]: unlimited,
+        }),
+      ).toBe(!unlimited)
+    for (const mode of [
+      EMRANK_EXPIRATION_MODES.Custom,
+      EMRANK_EXPIRATION_MODES.Never,
+    ])
+      expect(
+        field(emrankKeyFields.ExpiresAt).visibleWhen?.({
+          [emrankKeyFields.ExpirationMode]: mode,
+        }),
+      ).toBe(mode === EMRANK_EXPIRATION_MODES.Custom)
+  })
   it("presents FoxCode name, description, channel and quota without unrelated fields", () => {
     const editor = createFoxCodeKeyEditor(async () => [])
     const presentation = getPresentation(

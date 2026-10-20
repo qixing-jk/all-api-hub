@@ -67,6 +67,29 @@ describe("FoxCode console account contract", () => {
     })
   })
 
+  it("preserves a business rejection supplied through the error field", async () => {
+    server.use(
+      http.get(`${origin}/api/auth/me`, () =>
+        HttpResponse.json({ success: false, error: "session refused" }),
+      ),
+    )
+    await expect(fetchUserInfo(request)).rejects.toMatchObject({
+      code: "BUSINESS_ERROR",
+      message: "session refused",
+    })
+  })
+  it("supplies a useful fallback for a rejection without a message", async () => {
+    server.use(
+      http.get(`${origin}/api/auth/me`, () =>
+        HttpResponse.json({ success: false, error: {} }),
+      ),
+    )
+    await expect(fetchUserInfo(request)).rejects.toMatchObject({
+      code: "BUSINESS_ERROR",
+      message: "FoxCode request failed",
+    })
+  })
+
   it.each([
     { records: {} },
     { records: [{ model: "example", createdAt: "invalid" }] },

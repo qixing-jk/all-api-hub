@@ -60,6 +60,142 @@ const openSession = () =>
   })
 
 describe("EMRank key resources", () => {
+  const ref = {
+    accountId: "acc-emrank",
+    siteType: SITE_TYPES.EMRANK,
+    scopeKey: "account",
+    resourceId: String(keyRow.id),
+  }
+
+  it("keeps exhausted and migration-blocked statuses unknown", async () => {
+    server.use(
+      list([
+        { ...keyRow, status: EMRANK_KEY_STATUS.Exhausted },
+        { ...keyRow, id: 8, status: EMRANK_KEY_STATUS.MigrationBlocked },
+      ]),
+    )
+    const collection = await (await openSession()).openCollection("account")
+    const items = (await collection.list()).items
+    expect(items.map((item) => item.status)).toEqual(["unknown", "unknown"])
+    expect(items[1]!.actions.canUpdate).toBe(false)
+  })
+  it("reports unavailable secrets and missing keys without leaking plaintext", async () => {
+    server.use(
+      list(),
+      http.post(`${origin}/api/access-keys/secrets`, () =>
+        HttpResponse.json({ data: [] }),
+      ),
+    )
+    const session = await openSession()
+    await expect(session.resolveDefaultScope()).resolves.toMatchObject({
+      scopeKey: "account",
+    })
+    await expect(session.runtimeKey!.resolve(ref)).resolves.toMatchObject({
+      kind: "unavailable",
+    })
+    await expect(
+      session.runtimeKey!.resolve({ ...ref, resourceId: "99" }),
+    ).resolves.toMatchObject({
+      kind: "unavailable",
+      failure: { code: "not_found" },
+    })
+  })
+  it("keeps an explicitly refused update unapplied", async () => {
+    server.use(
+      list(),
+      http.put(`${origin}/api/access-keys/:id`, () =>
+        HttpResponse.json(
+          { error: { message: "duplicate name", code: "conflict" } },
+          { status: 409 },
+        ),
+      ),
+    )
+    const editor = await (
+      await (await openSession()).openCollection("account")
+    ).openEditEditor(ref)
+    await expect(
+      editor.submit({
+        ...editor.initialValues,
+        [emrankKeyFields.Name]: "duplicate",
+      }),
+    ).rejects.toMatchObject({
+      failure: { code: "upstream_rejected", message: "duplicate name" },
+    })
+  })
+  it("submits a status and custom-expiry update and confirms the native result", async () => {
+    let row: Omit<typeof keyRow, "expires_at" | "status"> & {
+      expires_at: number | null
+      status: string
+    } = { ...keyRow, expires_at: 1900000000 }
+    server.use(
+      http.get(`${origin}/api/access-keys`, () =>
+        HttpResponse.json({ data: [row], total: 1 }),
+      ),
+      http.put(`${origin}/api/access-keys/:id`, async ({ request }) => {
+        expect(await request.json()).toEqual({
+          enabled: false,
+          expiration: { mode: "custom", at: 1930000000 },
+        })
+        row = {
+          ...row,
+          enabled: false,
+          status: EMRANK_KEY_STATUS.Disabled,
+          expires_at: 1930000000,
+        }
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+    const collection = await (await openSession()).openCollection("account")
+    const editor = await collection.openEditEditor(ref)
+    expect(editor.initialValues[emrankKeyFields.ExpiresAt]).toBe(
+      new Date(1900000000 * 1000).toISOString(),
+    )
+    const result = await editor.submit({
+      ...editor.initialValues,
+      [emrankKeyFields.Enabled]: false,
+      [emrankKeyFields.ExpirationMode]: EMRANK_EXPIRATION_MODES.Custom,
+      [emrankKeyFields.ExpiresAt]: new Date(1930000000 * 1000).toISOString(),
+    })
+    expect(result.facts).toMatchObject({ status: "disabled" })
+  })
+  it("rejects invalid and elapsed expiry choices before mutation", () => {
+    const editor = createEmRankKeyEditor()
+    for (const changes of [
+      {
+        [emrankKeyFields.ExpirationMode]: "invalid",
+        [emrankKeyFields.ExpiresAt]: null,
+      },
+      {
+        [emrankKeyFields.ExpirationMode]: EMRANK_EXPIRATION_MODES.Custom,
+        [emrankKeyFields.ExpiresAt]: null,
+      },
+      {
+        [emrankKeyFields.ExpirationMode]: EMRANK_EXPIRATION_MODES.Custom,
+        [emrankKeyFields.ExpiresAt]: "2000-01-01T00:00:00Z",
+      },
+    ])
+      expect(
+        editor.validate({ ...editor.initialValues, ...changes }),
+      ).toMatchObject({ valid: false })
+  })
+  it("deletes a native key exactly once and refreshes the collection", async () => {
+    let rows = [keyRow]
+    const remove = vi.fn(async ({ request }: { request: Request }) => {
+      expect(await request.json()).toEqual({ ids: [keyRow.id] })
+      rows = []
+      return new HttpResponse(null, { status: 204 })
+    })
+    server.use(
+      http.get(`${origin}/api/access-keys`, () =>
+        HttpResponse.json({ data: rows, total: rows.length }),
+      ),
+      http.post(`${origin}/api/access-keys/batch-delete`, remove),
+    )
+    const collection = await (await openSession()).openCollection("account")
+    await collection.delete(ref)
+    expect(remove).toHaveBeenCalledTimes(1)
+    expect((await collection.list()).items).toEqual([])
+  })
   beforeEach(() => {
     installCookieTransport(EMRANK_SESSION_COOKIE_NAME, "emrank.tech")
     server.use(

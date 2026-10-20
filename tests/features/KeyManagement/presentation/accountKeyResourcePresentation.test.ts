@@ -697,4 +697,30 @@ it("formats native Token facts with their asset unit and quota role", () => {
     label: "keyManagement:keyDetails.usedQuota",
     value: "1.234567 M Token",
   })
+  expect(
+    getAccountKeyResourceCardAdapter(SITE_TYPES.EMRANK).buildDetailFacts(
+      {
+        ...facts,
+        displayFacts: [
+          {
+            fieldId: "total",
+            kind: "quota",
+            role: "total",
+            value: 1234567,
+            asset: {
+              id: "token",
+              label: "Token",
+              displayScale: 1000000,
+              displayLabel: "M Token",
+            },
+          },
+        ],
+      },
+      t,
+    ),
+  ).toContainEqual({
+    id: "total",
+    label: "keyManagement:keyDetails.totalQuota",
+    value: "1.234567 M Token",
+  })
 })

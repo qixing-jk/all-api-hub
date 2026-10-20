@@ -214,6 +214,31 @@ describe("accountDefaults", () => {
   })
 
   describe("normalizeSiteAccount", () => {
+    it.each([
+      { unit: "quota", total: 1, asset: {} },
+      {
+        unit: "quota",
+        total: Infinity,
+        asset: {
+          id: "token",
+          label: "Token",
+          displayScale: 1000000,
+          displayLabel: "M Token",
+        },
+      },
+    ])("drops malformed native quota balances %j", (nativeBalance) => {
+      const source = createSiteAccount()
+      expect(
+        normalizeSiteAccount({
+          ...source,
+          account_info: {
+            ...source.account_info,
+            nativeBalance:
+              nativeBalance as typeof source.account_info.nativeBalance,
+          },
+        }).account_info.nativeBalance,
+      ).toBeUndefined()
+    })
     it("preserves signed atomic token balances", () => {
       const asset = {
         id: "https://emrank.tech/token",

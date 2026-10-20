@@ -23,6 +23,32 @@ const plan: QuotaPricingPlan = {
 }
 
 describe("quota consumption", () => {
+  it.each([
+    {},
+    { input: 0 },
+    { input: Number.MAX_VALUE, output: Number.MAX_VALUE },
+  ])("rejects an empty or overflowing comparison quantity %j", (usage) => {
+    expect(quoteQuotaUsage(plan, usage, { comparison: true })).toMatchObject({
+      status: "unavailable",
+      reason: "invalid-usage",
+    })
+  })
+  it("rejects overflowing native rates before settlement", () => {
+    expect(
+      quoteQuotaUsage(
+        { ...plan, rates: { input: { amount: Number.MAX_VALUE, per: 1 } } },
+        { input: 2 },
+      ),
+    ).toMatchObject({ status: "unavailable", reason: "invalid-usage" })
+  })
+  it.each([-1, Infinity, NaN, Number.MAX_VALUE])(
+    "rejects an invalid or overflowing adjustment %s",
+    (tier) => {
+      expect(
+        quoteQuotaUsage(plan, { input: 4 }, { adjustments: { tier } }),
+      ).toMatchObject({ status: "unavailable", reason: "invalid-usage" })
+    },
+  )
   it("settles only after all adjustments, with one final floor", () => {
     expect(
       quoteQuotaUsage(plan, { input: 3 }, { adjustments: { tier: 2 } }),

@@ -21,15 +21,18 @@ import {
   EMRANK_SESSION_COOKIE_NAME,
   EMRANK_TOKEN_ASSET,
 } from "~/services/apiService/emrank/constants"
+import { fetchEmRankIdentity } from "~/services/apiService/emrank/identity"
 import { EMRANK_KEY_STATUS } from "~/services/apiService/emrank/keys"
 import {
   fetchCheckInSupport,
   redeemCode,
 } from "~/services/apiService/emrank/surfaces"
+import { readEmRank } from "~/services/apiService/emrank/transport"
 import { API_ERROR_CODES } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { emRankProvider } from "~/services/checkin/autoCheckin/providers/emrank"
 import { calculateModelPrice } from "~/services/models/utils/modelPricing"
+import * as permissions from "~/services/permissions/permissionManager"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
 import { TEMP_WINDOW_REQUEST_SOURCES } from "~/types/tempWindowFetch"
@@ -138,6 +141,413 @@ const handlers = (
     ),
   )
 }
+
+describe("EMRank response and capability boundaries", () => {
+  const storedAccount = () =>
+    buildSiteAccount({
+      site_url: origin,
+      site_type: SITE_TYPES.EMRANK,
+      authType: AuthTypeEnum.Cookie,
+      account_info: { ...buildSiteAccount().account_info, id: userId },
+    })
+  const claimContext = {
+    tempWindowRequestSource: TEMP_WINDOW_REQUEST_SOURCES.Background,
+    protectionBypassExecution: userCommandExecution(
+      PROTECTION_BYPASS_USER_COMMANDS.ManualCheckin,
+    ),
+  }
+  beforeEach(() => {
+    installCookieTransport(EMRANK_SESSION_COOKIE_NAME, "emrank.tech")
+    handlers()
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllEnvs()
+  })
+
+  it("requires Firefox interception permission and uses the captured cookie once granted", async () => {
+    vi.stubEnv("BROWSER", "firefox")
+    const permission = vi
+      .spyOn(permissions, "hasCookieInterceptorPermissions")
+      .mockResolvedValue(false)
+    await expect(fetchEmRankUserInfo(request)).rejects.toMatchObject({
+      code: API_ERROR_CODES.COOKIE_PERMISSION_REQUIRED,
+    })
+    permission.mockResolvedValue(true)
+    server.use(
+      http.get(`${origin}/api/auth/session`, ({ request }) => {
+        expect(request.headers.get("cookie")).toContain(
+          "__Host-gateway_session=browser-account",
+        )
+        return HttpResponse.json(session)
+      }),
+    )
+    await expect(fetchEmRankUserInfo(request)).resolves.toMatchObject({
+      id: userId,
+    })
+  })
+
+  it("reads announcements through the capability, omitting malformed rows", async () => {
+    server.use(
+      http.get(`${origin}/api/announcements`, ({ request }) => {
+        expect(new URL(request.url).searchParams.get("page")).toBe("0")
+        return HttpResponse.json({
+          data: [
+            null,
+            { id: 1 },
+            {
+              id: 9,
+              title: "Notice",
+              markdown: "**Hello**",
+              published_at: 123,
+            },
+          ],
+        })
+      }),
+    )
+    await expect(
+      getSiteTypeCapabilities(SITE_TYPES.EMRANK).site!.announcements!.fetch(
+        request,
+      ),
+    ).resolves.toEqual([
+      { id: "9", title: "Notice", content: "**Hello**", createdAt: 123000 },
+    ])
+    server.use(
+      http.get(`${origin}/api/announcements`, () =>
+        HttpResponse.json({ data: null }),
+      ),
+    )
+    await expect(
+      getSiteTypeCapabilities(SITE_TYPES.EMRANK).site!.announcements!.fetch(
+        request,
+      ),
+    ).rejects.toMatchObject({ code: API_ERROR_CODES.JSON_PARSE_ERROR })
+  })
+
+  it("redeems a trimmed code through the capability and rejects missing credit", async () => {
+    const write = vi.fn(async ({ request }: { request: Request }) => {
+      expect(await request.json()).toEqual({ code: "voucher" })
+      return HttpResponse.json({ delta: 2500000 })
+    })
+    server.use(http.post(`${origin}/api/user/topup`, write))
+    await expect(
+      getSiteTypeCapabilities(SITE_TYPES.EMRANK).account!.redemption!.redeem({
+        request,
+        code: " voucher ",
+      }),
+    ).resolves.toBe(2500000)
+    expect(write).toHaveBeenCalledTimes(1)
+    server.use(
+      http.post(`${origin}/api/user/topup`, () => HttpResponse.json({})),
+    )
+    await expect(redeemCode(request, "voucher")).rejects.toMatchObject({
+      code: API_ERROR_CODES.JSON_PARSE_ERROR,
+    })
+  })
+
+  it.each([undefined, null, "bad", 1.5])(
+    "rejects an invalid account balance %j",
+    async (quota) => {
+      handlers({ quota })
+      await expect(
+        fetchAccountData({
+          ...request,
+          checkIn: createCheckInConfig(SITE_TYPES.EMRANK),
+        }),
+      ).rejects.toMatchObject({ code: API_ERROR_CODES.JSON_PARSE_ERROR })
+    },
+  )
+  it("accepts a numeric signed balance and falls back to the login name", async () => {
+    handlers({ quota: -12 })
+    server.use(
+      http.get(`${origin}/api/auth/session`, () =>
+        HttpResponse.json({
+          ...session,
+          user: { id: 6088, username: "login" },
+        }),
+      ),
+    )
+    await expect(fetchEmRankIdentity(request)).resolves.toMatchObject({
+      displayName: "login",
+    })
+    await expect(
+      fetchAccountData({
+        ...request,
+        checkIn: createCheckInConfig(SITE_TYPES.EMRANK),
+      }),
+    ).resolves.toMatchObject({ nativeBalance: { total: -12 } })
+  })
+  it.each([null, {}, { check_in_available: "yes" }])(
+    "rejects malformed support capabilities %j",
+    async (capabilities) => {
+      handlers({ capabilities })
+      await expect(fetchCheckInSupport(request)).rejects.toMatchObject({
+        code: API_ERROR_CODES.JSON_PARSE_ERROR,
+      })
+    },
+  )
+  it("reports a refresh failure instead of fabricating a healthy balance", async () => {
+    server.use(
+      http.get(
+        `${origin}/api/account`,
+        () => new HttpResponse(null, { status: 401 }),
+      ),
+    )
+    await expect(
+      getSiteTypeCapabilities(
+        SITE_TYPES.EMRANK,
+      ).account!.refresh!.refreshAccount({
+        ...request,
+        checkIn: createCheckInConfig(SITE_TYPES.EMRANK),
+      }),
+    ).resolves.toMatchObject({
+      success: false,
+      healthStatus: { status: expect.any(String) },
+    })
+  })
+  it("rejects a non-console endpoint before dispatch", async () => {
+    const spy = vi.spyOn(globalThis, "fetch")
+    await expect(readEmRank(request, "/outside-api")).rejects.toMatchObject({
+      code: API_ERROR_CODES.FEATURE_UNSUPPORTED,
+    })
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { ...readyState, available: "yes" },
+    { ...readyState, state: { ...readyState.state, record: 5 } },
+    {
+      ...readyState,
+      state: { ...readyState.state, record: { day: "today", reward: "bad" } },
+    },
+    { ...readyState, state: { ...readyState.state, record: { reward: "2" } } },
+  ])("rejects malformed check-in state %#", async (state) => {
+    server.use(
+      http.get(`${origin}/api/account/check-ins`, () =>
+        HttpResponse.json(state),
+      ),
+    )
+    await expect(fetchCheckInState(request)).rejects.toMatchObject({
+      code: API_ERROR_CODES.JSON_PARSE_ERROR,
+    })
+  })
+  it.each([
+    [{ ...readyState, available: false }, API_ERROR_CODES.FEATURE_UNSUPPORTED],
+    [
+      { ...readyState, state: { can_claim: false, status: "before_open" } },
+      API_ERROR_CODES.BUSINESS_ERROR,
+    ],
+  ])(
+    "does not dispatch a claim for unavailable state %#",
+    async (state, code) => {
+      const write = vi.fn(() => HttpResponse.json({}))
+      server.use(
+        http.get(`${origin}/api/account/check-ins`, () =>
+          HttpResponse.json(state),
+        ),
+        http.post(`${origin}/api/account/check-ins`, write),
+      )
+      await expect(performCheckIn(request)).rejects.toMatchObject({ code })
+      expect(write).not.toHaveBeenCalled()
+    },
+  )
+  it("uses stored credentials for a disabled status and detects without claiming", async () => {
+    const write = vi.fn(() => HttpResponse.json({}))
+    server.use(
+      http.get(`${origin}/api/account/check-ins`, () =>
+        HttpResponse.json({ ...readyState, available: false }),
+      ),
+      http.post(`${origin}/api/account/check-ins`, write),
+    )
+    await expect(
+      emRankProvider.getStatus!({ observedAt: 1 }),
+    ).resolves.toBeUndefined()
+    await expect(
+      emRankProvider.getStatus!({ account: storedAccount(), observedAt: 1 }),
+    ).resolves.toMatchObject({ availability: "disabled" })
+    await emRankProvider.detect!({ request, observedAt: 1 })
+    expect(write).not.toHaveBeenCalled()
+    expect(emRankProvider.getReadiness!(storedAccount())).toEqual({
+      ready: true,
+    })
+    expect(
+      emRankProvider.getReadiness!({
+        ...storedAccount(),
+        authType: AuthTypeEnum.AccessToken,
+      }),
+    ).toMatchObject({ ready: false })
+    expect(
+      emRankProvider.getReadiness!({
+        ...storedAccount(),
+        account_info: { ...storedAccount().account_info, id: "" },
+      }),
+    ).toMatchObject({ ready: false })
+  })
+  it("maps a successful native claim and its reward", async () => {
+    server.use(
+      http.get(`${origin}/api/account/check-ins`, () =>
+        HttpResponse.json(readyState),
+      ),
+      http.post(`${origin}/api/account/check-ins`, () =>
+        HttpResponse.json({ record: claimedState.state.record }),
+      ),
+    )
+    await expect(
+      emRankProvider.checkIn(storedAccount(), claimContext),
+    ).resolves.toMatchObject({
+      status: "success",
+      reward: { amount: 2000000 },
+      rawMessage: undefined,
+    })
+  })
+  it("handles an already-claimed state without a reward and maps claim errors", async () => {
+    server.use(
+      http.get(`${origin}/api/account/check-ins`, () =>
+        HttpResponse.json({
+          ...claimedState,
+          state: { ...claimedState.state, record: null, message: "" },
+        }),
+      ),
+    )
+    await expect(
+      emRankProvider.checkIn(storedAccount(), claimContext),
+    ).resolves.toMatchObject({
+      status: "already_checked",
+      reward: undefined,
+      data: undefined,
+    })
+    server.use(
+      http.get(
+        `${origin}/api/account/check-ins`,
+        () => new HttpResponse(null, { status: 401 }),
+      ),
+    )
+    await expect(
+      emRankProvider.checkIn(storedAccount(), claimContext),
+    ).resolves.toMatchObject({ status: "uncertain" })
+  })
+  it.each([
+    { data: null, total: 1 },
+    { data: [null], total: 1 },
+    { data: [{ ...keyRow, used_quota: -1 }], total: 1 },
+  ])("rejects malformed inventory %#", async (body) => {
+    server.use(
+      http.get(`${origin}/api/access-keys`, () => HttpResponse.json(body)),
+    )
+    await expect(fetchKeys(request)).rejects.toMatchObject({
+      code: API_ERROR_CODES.JSON_PARSE_ERROR,
+    })
+  })
+  it("serializes quota and custom expiry changes while preserving explicit unlimited", async () => {
+    const bodies: unknown[] = []
+    server.use(
+      http.put(`${origin}/api/access-keys/:id`, async ({ request }) => {
+        bodies.push(await request.json())
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+    await updateKey(request, "9", {
+      totalQuotaTokens: 12,
+      expiration: { mode: EMRANK_KEY_EXPIRATION_MODES.Custom, at: 1900000000 },
+      enabled: false,
+    })
+    await updateKey(request, "9", { totalQuotaTokens: null })
+    expect(bodies).toEqual([
+      {
+        total_quota: "12",
+        expiration: { mode: "custom", at: 1900000000 },
+        enabled: false,
+      },
+      { total_quota: null },
+    ])
+  })
+  it("reconstructs disabled create status and rejects an invalid create response", async () => {
+    const input = {
+      name: "new",
+      totalQuotaTokens: null,
+      expiration: { mode: EMRANK_KEY_EXPIRATION_MODES.Never },
+    }
+    server.use(
+      http.post(`${origin}/api/access-keys`, () =>
+        HttpResponse.json({
+          key: { ...keyRow, enabled: false, status: undefined },
+          secret: "sk-emr-test",
+        }),
+      ),
+    )
+    await expect(createKey(request, input)).resolves.toMatchObject({
+      key: { status: "disabled", enabled: false },
+    })
+    server.use(
+      http.post(`${origin}/api/access-keys`, () =>
+        HttpResponse.json({ key: null, secret: "sk-emr-test" }),
+      ),
+    )
+    await expect(createKey(request, input)).rejects.toMatchObject({
+      code: API_ERROR_CODES.JSON_PARSE_ERROR,
+    })
+  })
+  it("rejects an unsafe numeric locator and malformed revealed secrets", async () => {
+    await expect(
+      revealKeySecrets(request, ["99999999999999999999"]),
+    ).rejects.toMatchObject({ failure: { code: "not_found" } })
+    server.use(
+      http.post(`${origin}/api/access-keys/secrets`, () =>
+        HttpResponse.json({ data: [{ id: 9, secret: " " }] }),
+      ),
+    )
+    await expect(revealKeySecrets(request, ["9"])).rejects.toMatchObject({
+      code: API_ERROR_CODES.JSON_PARSE_ERROR,
+    })
+  })
+  it("bounds inventory pagination without returning an incomplete snapshot", async () => {
+    let reads = 0
+    server.use(
+      http.get(`${origin}/api/access-keys`, ({ request }) => {
+        const page = Number(new URL(request.url).searchParams.get("page"))
+        reads++
+        return HttpResponse.json({
+          data: [{ ...keyRow, id: page }],
+          total: 1000,
+        })
+      }),
+    )
+    await expect(fetchKeys(request)).rejects.toMatchObject({
+      failure: { code: "unavailable" },
+    })
+    expect(reads).toBe(20)
+  })
+  it("omits unpublished model specifications and invalid dimensions", async () => {
+    server.use(
+      http.get(`${origin}/api/catalog/models`, () =>
+        HttpResponse.json({
+          data: [
+            {
+              id: "embed",
+              kind: "embedding",
+              owned_by: "test",
+              available: true,
+              modelratio: 1,
+              context_tokens: null,
+              supported_dimensions: [-1, "x", 1024],
+            },
+          ],
+        }),
+      ),
+    )
+    const result = await fetchEmRankPricing(request)
+    expect(result.data[0]!.presentation!.sections![0]!.facts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: "text", value: "1024" }),
+      ]),
+    )
+    expect(result.data[0]!.presentation!.summaryFacts).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: "token-quantity" }),
+      ]),
+    )
+  })
+})
 
 describe("EMRank console contract", () => {
   beforeEach(() => {

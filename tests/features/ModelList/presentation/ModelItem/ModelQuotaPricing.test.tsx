@@ -26,6 +26,30 @@ const plan: QuotaPricingPlan = {
   sourceUrl: "https://example.test/pricing",
 }
 
+it("falls back to the published English adjustment name in Chinese and explains invalid pricing", async () => {
+  const i18n = createInstance()
+  await i18n.init({
+    lng: "zh-CN",
+    resources: { "zh-CN": { modelList: en } },
+    interpolation: { escapeValue: false },
+  })
+  const { rerender } = render(
+    <I18nextProvider i18n={i18n}>
+      <ModelQuotaPricing plan={plan} />
+    </I18nextProvider>,
+  )
+  expect(
+    screen.getByRole("link", { name: "Billing rules" }),
+  ).toHaveAccessibleDescription(/Membership/)
+  rerender(
+    <I18nextProvider i18n={i18n}>
+      <ModelQuotaPricing plan={{ ...plan, rates: {} }} />
+    </I18nextProvider>,
+  )
+  expect(screen.getByText(en.quotaBilling.invalid)).toBeVisible()
+  expect(screen.queryByRole("link")).not.toBeInTheDocument()
+})
+
 it("uses the standard per-million rate rows without a separate calculator or default blended quote", async () => {
   const i18n = createInstance()
   await i18n.init({
