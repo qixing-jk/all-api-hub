@@ -1,5 +1,6 @@
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { createAccountApiRequestFromStoredAccount } from "~/services/accounts/utils/apiServiceRequest"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import { ApiError } from "~/services/apiTransport/errors"
@@ -69,8 +70,19 @@ async function fetchConsumeLogPage(params: {
   page: number
   startTimestamp: number
   endTimestamp: number
+  siteType?: import("~/constants/siteType").SiteType
 }): Promise<LogResponseData> {
   const { request, page, startTimestamp, endTimestamp } = params
+  const nativeHistory = params.siteType
+    ? getSiteTypeCapabilities(params.siteType).account?.usageHistory
+    : undefined
+  if (nativeHistory)
+    return nativeHistory.fetchPage(request, {
+      page,
+      pageSize: REQUEST_CONFIG.DEFAULT_PAGE_SIZE,
+      startTimestamp,
+      endTimestamp,
+    })
 
   const searchParams = new URLSearchParams({
     p: String(page),
@@ -257,6 +269,7 @@ export async function syncUsageHistoryForAccount(params: {
     const collectedItems: LogItem[] = []
 
     const firstPage = await fetchConsumeLogPage({
+      siteType: account.site_type,
       request: apiRequest,
       page: 1,
       startTimestamp,
@@ -293,6 +306,7 @@ export async function syncUsageHistoryForAccount(params: {
         page === 1
           ? firstPage
           : await fetchConsumeLogPage({
+              siteType: account.site_type,
               request: apiRequest,
               page,
               startTimestamp,

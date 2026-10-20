@@ -141,6 +141,9 @@
     "units": "Phân bố đơn vị tính phí"
   },
   "displayFacts": {
+    "accessReason": "Điều kiện truy cập",
+    "auditCharge": "Phí kiểm tra khi từ chối rủi ro",
+    "auditConsent": "Cần đồng ý kiểm tra",
     "benchmarkTable": {
       "arena": "Đấu trường",
       "category": "Danh mục",
@@ -154,6 +157,8 @@
     },
     "callExamples": "Ví dụ gọi API",
     "catalogOwner": "Chủ sở hữu danh mục",
+    "compactionCharge": "Nén từ xa",
+    "consoleSettings": "Cài đặt chính thức",
     "contextLimit": "Giới hạn ngữ cảnh",
     "defaultDimensions": "Số chiều mặc định",
     "inputModalities": "Phương thức đầu vào",
@@ -264,14 +269,19 @@
       "request": "yêu cầu",
       "webSearch": "lần tìm kiếm web"
     },
+    "promptAudit": "Đã bật kiểm tra prompt",
     "providerAvailable": "Có sẵn trên trang",
     "releaseDate": "Ngày phát hành",
     "sections": {
       "specifications": "Thông số kỹ thuật"
     },
+    "subscriptionMultiplier": "Hệ số gói",
+    "subscriptionPlan": "Gói đăng ký",
     "supportedDimensions": "Số chiều hỗ trợ",
     "supportsImages": "Hỗ trợ hình ảnh",
     "tokenCount_other": "{{formattedCount}} token",
+    "trainingChannels": "Có kênh huấn luyện",
+    "trainingConsent": "Cần đồng ý huấn luyện",
     "viewOnSite": "Xem trên trang"
   },
   "displayOptions": "Hiển thị",
@@ -450,6 +460,15 @@
     "badge": "Toàn bộ danh mục của trang",
     "description": "Chưa thể xác nhận phạm vi mô hình thực sự khả dụng của tài khoản này, nên toàn bộ danh mục mô hình của nhà cung cấp đang được hiển thị. Một số mô hình có thể không gọi được bằng tài khoản này; hãy lấy quyền của tài khoản trên trang và kết quả xác minh thực tế làm nguồn xác thực cuối cùng.",
     "title": "Đã chuyển về toàn bộ danh mục mô hình của nhà cung cấp"
+  },
+  "providerGroup": {
+    "action": "Đổi nhóm định tuyến trên trang chính thức",
+    "apply": "Lưu lên trang chính thức",
+    "description": "Việc lưu sẽ thay đổi định tuyến của mô hình này trên trang chính thức và có thể ảnh hưởng đến các yêu cầu và giá sau đó.",
+    "label": "Nhóm định tuyến trên trang chính thức",
+    "locked": "Phiên đang hoạt động khóa tùy chọn này. Hãy quản lý phiên trên trang chính thức trước.",
+    "refreshRequired": "{{error}}. Thay đổi có thể đã áp dụng. Hãy làm mới danh sách trước khi thử lại.",
+    "saving": "Đang lưu…"
   },
   "providerTabs": {
     "scrollLeft": "Cuộn thẻ hãng sang trái",

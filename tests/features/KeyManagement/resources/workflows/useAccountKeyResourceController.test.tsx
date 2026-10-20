@@ -42,16 +42,22 @@ const {
   trackCompleteMock,
   toastSuccessMock,
   toastWarningMock,
+  toastErrorMock,
 } = vi.hoisted(() => ({
   createDisplayAccountApiContextMock: vi.fn(),
   startProductAnalyticsActionMock: vi.fn(),
   trackCompleteMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastWarningMock: vi.fn(),
+  toastErrorMock: vi.fn(),
 }))
 
 vi.mock("~/lib/notify", () => ({
-  default: { success: toastSuccessMock, warning: toastWarningMock },
+  default: {
+    success: toastSuccessMock,
+    warning: toastWarningMock,
+    error: toastErrorMock,
+  },
 }))
 
 vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
@@ -119,6 +125,123 @@ const mockNativeResourceSession = (open: ReturnType<typeof vi.fn>) => {
 }
 
 describe("useAccountKeyResourceController", () => {
+  it.each(["enable", "disable"] as const)(
+    "executes %s directly once without opening an editor",
+    async (action) => {
+      const facts = createFacts("default", "key-example")
+      const scope = {
+        scopeKey: "default",
+        routeKey: "default",
+        displayName: "Default",
+        isDefault: true,
+      }
+      const pending = deferred<any>()
+      const submit = vi.fn(() => pending.promise)
+      const collection = {
+        list: vi.fn().mockResolvedValue({ items: [facts] }),
+        openEditEditor: vi.fn().mockResolvedValue({
+          action,
+          fields: [],
+          initialValues: {},
+          validate: () => ({ valid: true }),
+          submit,
+        }),
+      }
+      mockNativeResourceSession(
+        vi.fn().mockResolvedValue({
+          resolveDefaultScope: vi.fn().mockResolvedValue(scope),
+          listScopes: vi.fn().mockResolvedValue([scope]),
+          openCollection: vi.fn().mockResolvedValue(collection),
+        }),
+      )
+      const { result } = renderHook(() =>
+        useAccountKeyResourceController({
+          accounts: [createAccount("account-example")],
+          selectedAccount: "account-example",
+          routeParams: { accountId: "account-example" },
+        }),
+      )
+      await waitFor(() => expect(result.current.rows).toHaveLength(1))
+      let command!: Promise<void>
+      act(() => {
+        command = result.current.openEdit(facts.ref, action)
+      })
+      await waitFor(() => expect(submit).toHaveBeenCalledTimes(1))
+      expect(result.current.editor).toBeNull()
+      expect(result.current.editorOpening.status).toBe("idle")
+      await act(async () => {
+        await result.current.openEdit(facts.ref, action)
+      })
+      expect(submit).toHaveBeenCalledTimes(1)
+      await act(async () => {
+        pending.resolve({
+          facts: {
+            ...facts,
+            status: action === "enable" ? "enabled" : "disabled",
+          },
+        })
+        await command
+      })
+      expect(result.current.editor).toBeNull()
+      expect(result.current.terminalCloseEditor).toBeNull()
+      expect(result.current.rows[0]?.status).toBe(
+        action === "enable" ? "enabled" : "disabled",
+      )
+    },
+  )
+
+  it.each([
+    ACCOUNT_KEY_RESOURCE_FAILURE_CODES.PermissionDenied,
+    ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain,
+  ])(
+    "reports immediate action failure %s without leaving a hidden editor",
+    async (code) => {
+      const facts = createFacts("default", "key-example")
+      const scope = {
+        scopeKey: "default",
+        routeKey: "default",
+        displayName: "Default",
+        isDefault: true,
+      }
+      const submit = vi
+        .fn()
+        .mockRejectedValue(new AccountKeyResourceError({ code }))
+      const collection = {
+        list: vi.fn().mockResolvedValue({ items: [facts] }),
+        openEditEditor: vi.fn().mockResolvedValue({
+          action: "disable",
+          fields: [],
+          initialValues: {},
+          validate: () => ({ valid: true }),
+          submit,
+        }),
+      }
+      mockNativeResourceSession(
+        vi.fn().mockResolvedValue({
+          resolveDefaultScope: vi.fn().mockResolvedValue(scope),
+          listScopes: vi.fn().mockResolvedValue([scope]),
+          openCollection: vi.fn().mockResolvedValue(collection),
+        }),
+      )
+      const { result } = renderHook(() =>
+        useAccountKeyResourceController({
+          accounts: [createAccount("account-example")],
+          selectedAccount: "account-example",
+          routeParams: { accountId: "account-example" },
+        }),
+      )
+      await waitFor(() => expect(result.current.rows).toHaveLength(1))
+      await act(async () => {
+        await result.current.openEdit(facts.ref, "disable")
+      })
+      expect(submit).toHaveBeenCalledTimes(1)
+      expect(toastErrorMock).toHaveBeenCalled()
+      expect(result.current.editor).toBeNull()
+      expect(result.current.editorOpening.status).toBe("idle")
+      expect(result.current.rows[0]?.status).toBe("enabled")
+    },
+  )
+
   it("opens a direct rename with its own initial values rather than an unsaved transfer-mode change", async () => {
     const facts = {
       ...createFacts("default", "7"),

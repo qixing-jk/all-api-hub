@@ -359,8 +359,11 @@
   "native": {
     "actions": {
       "delete": "刪除金鑰",
+      "disable": "停用 API Key",
       "edit": "編輯金鑰",
-      "revoke": "撤銷金鑰"
+      "enable": "啟用 API Key",
+      "revoke": "撤銷金鑰",
+      "rotate": "輪換 API Key"
     },
     "delete": {
       "confirm": "刪除金鑰",
@@ -381,8 +384,18 @@
         "cancel": "取消",
         "save": "儲存金鑰"
       },
+      "allowlistHelp": "以逗號或換行分隔，留空不限制。",
       "allowWallet": "允許使用餘額",
       "allowWalletHelp": "套餐額度用完後，此金鑰仍可從帳戶餘額扣費繼續使用。",
+      "budget5h": "5 小時預算（USD）",
+      "budgetDay": "單日預算（USD）",
+      "budgetMonth": "每月預算（USD）",
+      "budgetNextReset": "重設 {{time}}（北京時間）",
+      "budgetResetHelp": "0 表示不限。5 小時滾動恢復；日、週、月按北京時間重設，每週從週一開始。",
+      "budgetRolling": "滾動視窗",
+      "budgetsAndLimits": "預算與存取限制",
+      "budgetUsage": "已用 ${{used}} / ${{limit}} · 剩餘 ${{remaining}} · 預留 ${{reserved}}",
+      "budgetWeek": "每週預算（USD）",
       "channel": "管道",
       "dahl": {
         "allocate": "分配 Token",
@@ -443,8 +456,12 @@
         "unavailable": "服務暫時無法使用，請稍後重試。",
         "uncertain": "服務可能已套用此變更。請先重新整理金鑰確認目前狀態，再決定是否重試。"
       },
+      "followAccountQuotaHelp": "-1 表示跟隨帳戶額度。",
+      "followsAccount": "跟隨帳戶",
       "groupOnly": "僅使用選定分組",
       "groupOnlyHelp": "開啟後此金鑰只在選定分組上呼叫，不再自動切換到其他分組。",
+      "independentQuotaUsd": "獨立額度（USD）",
+      "ipCidrAllowlist": "IP/CIDR 允許清單",
       "issues": {
         "inconsistentValue": "請檢查此值後重試。",
         "invalidValue": "請輸入有效值。",
@@ -452,6 +469,11 @@
         "required": "此項為必填項。",
         "unsupportedOption": "請選擇可用選項。"
       },
+      "keyConcurrency": "Key 並行數",
+      "keyRateHelp": "0 表示跟隨帳戶限制。",
+      "keyRpm": "Key RPM",
+      "keyUnlimitedQuota": "Key 不限額",
+      "keyUnlimitedQuotaHelp": "仍受帳戶餘額或訂閱額度限制。",
       "krill": {
         "allowAnyIp": "允許任意 IP",
         "allowAnyIpHelp": "停用已儲存的 IP 白名單，允許任意 IP 發起請求。",
@@ -485,6 +507,7 @@
         "retryOn": "開啟",
         "validDuration": "啟用後有效天數"
       },
+      "modelAllowlist": "模型允許清單",
       "opening": {
         "failed": "無法開啟金鑰編輯器",
         "loading": "正在開啟金鑰編輯器...",
@@ -515,6 +538,11 @@
       }
     },
     "heading": "API 金鑰",
+    "lifecycle": {
+      "disableDescription": "暫時停用此 Key，之後可以重新啟用。",
+      "enableDescription": "使用現有設定重新啟用此 Key。",
+      "rotateDescription": "輪換後舊 Key 將立即失效。請複製新 Key 並更新用戶端，其他設定保持不變。"
+    },
     "missing": "無可用資料",
     "revoke": {
       "description": "確定撤銷「{{name}}」嗎？金鑰將永久停用，記錄會保留，直到你將其刪除。",
@@ -564,8 +592,8 @@
     "copy": "複製完整金鑰",
     "copyFailed": "複製完整金鑰失敗",
     "keyLabel": "完整金鑰",
-    "subtitle": "金鑰 {{name}} 的完整值只會在本次建立後顯示。",
-    "subtitleUnnamed": "完整金鑰只會在本次建立後顯示。",
+    "subtitle": "金鑰 {{name}} 的完整值只會在本次操作後顯示。",
+    "subtitleUnnamed": "完整金鑰只會在本次操作後顯示。",
     "title": "立即儲存完整金鑰",
     "warningDescription": "關閉此對話框後，擴充功能將無法再次顯示完整金鑰。",
     "warningTitle": "該金鑰只能查看一次"

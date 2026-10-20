@@ -1,4 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import { CREATED_RUNTIME_SECRET_CORRELATION_KINDS as correlationKinds } from "~/services/accounts/keys/createdRuntimeSecret"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   ACCOUNT_KEY_RESOURCE_LOCAL_METADATA,
@@ -264,20 +265,40 @@ export function createAccountKeyResourceCollection<
               !definition.requiresFreshUpdateDetail(command, current.detail)
                 ? current
                 : await readDetail(current.ref, submitOptions)
-            return definition.update(
+            const result = await definition.update(
               config,
               providerScope,
               { baseline: current.detail, current: latest.detail },
               command,
               submitOptions,
             )
+            if (result.certainty !== "applied") return result
+            return {
+              certainty: "applied" as const,
+              value: {
+                detail: result.value,
+                createdSecret: result.createdSecret,
+              },
+            }
           },
-          projectApplied: (detail) => {
+          projectApplied: ({ detail, createdSecret }) => {
             const returnedRef = createRef(definition.locatorFromDetail(detail))
             if (!refBoundary.refsMatch(returnedRef, current.ref)) {
               throw unexpectedFailure()
             }
+            if (
+              createdSecret &&
+              (createdSecret.correlation.kind !==
+                correlationKinds.AccountKeyResource ||
+                !refBoundary.refsMatch(
+                  createdSecret.correlation.ref,
+                  returnedRef,
+                ))
+            ) {
+              throw unexpectedFailure()
+            }
             return {
+              ...(createdSecret ? { createdSecret } : {}),
               ...(editorDefinition.mutationKind ===
               ACCOUNT_KEY_RESOURCE_LOCAL_METADATA
                 ? { refreshPolicy: ACCOUNT_KEY_RESOURCE_LOCAL_METADATA }

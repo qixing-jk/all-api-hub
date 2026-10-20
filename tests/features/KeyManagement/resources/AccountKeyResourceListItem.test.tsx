@@ -335,6 +335,28 @@ describe("AccountKeyResourceListItem", () => {
     expect(screen.getByText("••••••")).toBeVisible()
   })
 
+  it("separates native key management from the detail action", () => {
+    render(
+      <AccountKeyResourceListItem
+        row={row}
+        onExpandedChange={vi.fn()}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+    const management = screen.getByRole("group", {
+      name: "keyManagement:actionToolbar.management",
+    })
+    expect(management).toContainElement(
+      screen.getByRole("button", { name: "keyManagement:native.actions.edit" }),
+    )
+    expect(management.previousElementSibling).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    )
+  })
+
   it("renders a native key with only detail, edit, and delete actions", async () => {
     const user = userEvent.setup()
     const setExpanded = vi.fn()
@@ -825,3 +847,56 @@ it.each(["foxcode", "dahl", "new-api", "sub2api"] as const)(
     expect(details).not.toHaveTextContent("keyManagement:keyDetails.usedQuota")
   },
 )
+
+it("offers independent rotation and re-enable actions for a disabled response-only key", async () => {
+  const user = userEvent.setup()
+  const onEdit = vi.fn()
+  const nativeRow: NativeKeyManagementRow = {
+    ...row,
+    facts: {
+      ...row.facts,
+      ref: { ...row.facts.ref, siteType: "relayfor" },
+      status: "disabled",
+      actions: {
+        canUpdate: true,
+        canDelete: true,
+        canRotate: true,
+        canEnable: true,
+      },
+    },
+  }
+  render(
+    <AccountKeyResourceListItem
+      row={nativeRow}
+      cardAdapter={getAccountKeyResourceCardAdapter("relayfor")}
+      onEdit={onEdit}
+      onDelete={vi.fn()}
+      onExpandedChange={vi.fn()}
+    />,
+  )
+  await user.click(
+    await screen.findByRole("button", {
+      name: "keyManagement:native.actions.rotate",
+    }),
+  )
+  expect(onEdit).toHaveBeenCalledWith(nativeRow.facts.ref, "rotate")
+  await user.click(
+    screen.getByRole("button", { name: "keyManagement:native.actions.enable" }),
+  )
+  expect(onEdit).toHaveBeenCalledWith(nativeRow.facts.ref, "enable")
+  const names = screen
+    .getAllByRole("button")
+    .map((button) => button.getAttribute("aria-label"))
+  expect(names.indexOf("keyManagement:native.actions.rotate")).toBe(
+    names.indexOf("keyManagement:native.actions.delete") - 1,
+  )
+  expect(names.indexOf("keyManagement:native.actions.enable")).toBeLessThan(
+    names.indexOf("keyManagement:native.actions.rotate"),
+  )
+
+  expect(
+    screen.queryByRole("button", {
+      name: "keyManagement:native.actions.disable",
+    }),
+  ).toBeNull()
+})

@@ -97,6 +97,7 @@
 | `wong-gongyi` | あり | Access Token または Cookie とアカウント ID |
 | `voapi-v2` | あり | 保存済みダッシュボード JWT（Access Token） |
 | `sub2api` | あり | 検出されたチェックイン方式に必要な有効なログイン情報 |
+| `relayfor` | あり | Access Token とアカウント ID |
 | AgentRouter | あり | ログインチェックインを選択し、下のアカウントログインで GitHub、Linux DO またはユーザー名とパスワードを設定します。保存時にはログインせず、チェックイン実行時に使用します。結果を確認してください。 |
 
 ### Sub2API サイトごとのチェックインの違い

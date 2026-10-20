@@ -359,8 +359,11 @@
   "native": {
     "actions": {
       "delete": "キーを削除",
+      "disable": "API キーを無効化",
       "edit": "キーを編集",
-      "revoke": "キーを失効"
+      "enable": "API キーを有効化",
+      "revoke": "キーを失効",
+      "rotate": "API キーをローテーション"
     },
     "delete": {
       "confirm": "キーを削除",
@@ -381,8 +384,18 @@
         "cancel": "キャンセル",
         "save": "キーを保存"
       },
+      "allowlistHelp": "カンマまたは改行で区切ります。空欄は制限なし。",
       "allowWallet": "残高の使用を許可",
       "allowWalletHelp": "プランのクォータを使い切った後も、このキーがアカウント残高から課金されて使い続けられます。",
+      "budget5h": "5 時間の予算（USD）",
+      "budgetDay": "1 日の予算（USD）",
+      "budgetMonth": "月間予算（USD）",
+      "budgetNextReset": "リセット {{time}}（UTC+8）",
+      "budgetResetHelp": "0 は無制限。5 時間枠はローリング方式、日・週・月は北京時間でリセットされ、週は月曜日に始まります。",
+      "budgetRolling": "ローリング期間",
+      "budgetsAndLimits": "予算とアクセス制限",
+      "budgetUsage": "使用 ${{used}} / ${{limit}} · 残り ${{remaining}} · 予約 ${{reserved}}",
+      "budgetWeek": "週間予算（USD）",
       "channel": "チャネル",
       "dahl": {
         "allocate": "トークンを割り当て",
@@ -443,8 +456,12 @@
         "unavailable": "サービスは一時的に利用できません。しばらくしてからお試しください。",
         "uncertain": "サービスが変更を適用した可能性があります。キーを更新して現在の状態を確認してから、再試行するか判断してください。"
       },
+      "followAccountQuotaHelp": "-1 はアカウントのクォータに従います。",
+      "followsAccount": "アカウント設定に従う",
       "groupOnly": "選択したグループのみ使用",
       "groupOnlyHelp": "他のグループへ自動的に切り替えず、選択したグループだけを使います。",
+      "independentQuotaUsd": "個別クォータ（USD）",
+      "ipCidrAllowlist": "IP/CIDR 許可リスト",
       "issues": {
         "inconsistentValue": "この値を確認して、もう一度お試しください。",
         "invalidValue": "有効な値を入力してください。",
@@ -452,6 +469,11 @@
         "required": "この項目は必須です。",
         "unsupportedOption": "利用可能な選択肢を選んでください。"
       },
+      "keyConcurrency": "キーの同時実行数",
+      "keyRateHelp": "0 はアカウントの制限に従います。",
+      "keyRpm": "キー RPM",
+      "keyUnlimitedQuota": "キーのクォータ無制限",
+      "keyUnlimitedQuotaHelp": "アカウント残高またはサブスクリプションの制限は適用されます。",
       "krill": {
         "allowAnyIp": "すべての IP を許可",
         "allowAnyIpHelp": "保存された IP ホワイトリストを無効にし、すべての IP からのリクエストを許可します。",
@@ -485,6 +507,7 @@
         "retryOn": "オン",
         "validDuration": "有効化後の有効日数"
       },
+      "modelAllowlist": "モデル許可リスト",
       "opening": {
         "failed": "キーエディターを開けませんでした",
         "loading": "キーエディターを開いています...",
@@ -515,6 +538,11 @@
       }
     },
     "heading": "API キー",
+    "lifecycle": {
+      "disableDescription": "一時的に無効にします。後から再び有効にできます。",
+      "enableDescription": "既存の設定でキーを再び有効にします。",
+      "rotateDescription": "古いキーは直ちに無効になります。新しいキーをコピーし、クライアントを更新してください。他の設定は保持されます。"
+    },
     "missing": "利用不可",
     "revoke": {
       "description": "「{{name}}」を失効しますか？キーは永久に無効になります。削除するまで記録は残ります。",
@@ -564,8 +592,8 @@
     "copy": "完全なキーをコピー",
     "copyFailed": "完全なキーのコピーに失敗しました",
     "keyLabel": "完全なキー",
-    "subtitle": "キー {{name}} の完全な値は、この作成直後にのみ表示されます。",
-    "subtitleUnnamed": "完全なキーは、この作成直後にのみ表示されます。",
+    "subtitle": "キー {{name}} の完全な値は、この操作直後にのみ表示されます。",
+    "subtitleUnnamed": "完全なキーは、この操作直後にのみ表示されます。",
     "title": "完全なキーを今すぐ保存してください",
     "warningDescription": "このダイアログを閉じると、拡張機能で完全なキーを再表示できません。",
     "warningTitle": "このキーは一度だけ表示できます"

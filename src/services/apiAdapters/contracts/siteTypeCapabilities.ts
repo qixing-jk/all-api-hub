@@ -17,6 +17,7 @@ import type { RedemptionCapability } from "./redemption"
 import type { ServiceCredentialCapability } from "./serviceCredential"
 import type { SiteAnnouncementsCapability } from "./siteAnnouncements"
 import type { SiteNoticeCapability } from "./siteNotice"
+import type { UsageHistoryCapability } from "./usageHistory"
 
 export type SiteType = AccountSiteType | ManagedSiteType
 
@@ -45,6 +46,7 @@ export type SiteTypeCapabilities = {
     serviceCredential?: ServiceCredentialCapability
     refresh?: AccountRefreshCapability
     redemption?: RedemptionCapability
+    usageHistory?: UsageHistoryCapability
   }
   managedSites?: Partial<ManagedSiteCapabilities>
 }

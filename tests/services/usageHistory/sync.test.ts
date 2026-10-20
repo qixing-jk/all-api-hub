@@ -56,7 +56,10 @@ function createConsumeLogItem(
 /**
  * Create and persist a minimal New-API test account, returning its generated id.
  */
-async function createTestAccount(baseUrl: string): Promise<string> {
+async function createTestAccount(
+  baseUrl: string,
+  siteType: SiteAccount["site_type"] = "new-api",
+): Promise<string> {
   const accountData: Omit<
     SiteAccount,
     "id" | "created_at" | "updated_at" | "user_updated_at"
@@ -64,7 +67,7 @@ async function createTestAccount(baseUrl: string): Promise<string> {
     site_name: "Example",
     site_url: baseUrl,
     health: { status: SiteHealthStatus.Healthy },
-    site_type: "new-api",
+    site_type: siteType,
     exchange_rate: 7.2,
     account_info: {
       id: "1",
@@ -92,6 +95,75 @@ async function createTestAccount(baseUrl: string): Promise<string> {
 
 describe("usageHistory sync (MSW)", () => {
   afterEach(() => vi.restoreAllMocks())
+
+  it("syncs RelayFor pagination into model, key and daily history without duplicate ingestion", async () => {
+    const now = Date.UTC(2026, 9, 20, 12)
+    vi.spyOn(Date, "now").mockReturnValue(now)
+    const accountId = await createTestAccount(
+      "https://relayfor.xyz",
+      "relayfor",
+    )
+    const pages: number[] = []
+    server.use(
+      http.get("https://relayfor.xyz/api/user/logs", ({ request }) => {
+        const url = new URL(request.url)
+        const page = Number(url.searchParams.get("page"))
+        pages.push(page)
+        expect(url.searchParams.get("start_timestamp")).toBeTruthy()
+        expect(url.searchParams.get("sort_order")).toBe("desc")
+        return HttpResponse.json({
+          total_pages: 2,
+          items: [
+            {
+              id: page,
+              created_at: new Date(now - page * 1000).toISOString(),
+              model: "gpt-4o",
+              quota: 500000,
+              billing_detail: { refund_quota: page === 1 ? 100000 : 200000 },
+              prompt_tokens: 10,
+              completion_tokens: 5,
+              token_id: 7,
+              token_name: "Work",
+              duration_ms: 1000,
+            },
+          ],
+        })
+      }),
+    )
+    const config = {
+      enabled: true,
+      retentionDays: 30,
+      scheduleMode: USAGE_HISTORY_SCHEDULE_MODE.MANUAL,
+      syncIntervalMinutes: 60,
+    }
+    const params = {
+      accountId,
+      trigger: "manual" as const,
+      force: true,
+      timeZone: "UTC",
+      config,
+    }
+    await expect(syncUsageHistoryForAccount(params)).resolves.toMatchObject({
+      status: "success",
+      pagesFetched: 2,
+      ingestedCount: 2,
+    })
+    const store = await usageHistoryStorage.getAccountStore(accountId)
+    expect(store.daily["2026-10-20"]).toMatchObject({
+      requests: 2,
+      quotaConsumed: 700000,
+      totalTokens: 30,
+    })
+    expect(store.dailyByModel["gpt-4o"]?.["2026-10-20"]).toMatchObject({
+      requests: 2,
+    })
+    expect(store.tokenNamesById["7"]).toBe("Work")
+    await expect(syncUsageHistoryForAccount(params)).resolves.toMatchObject({
+      status: "success",
+      ingestedCount: 0,
+    })
+    expect(pages).toEqual([1, 2, 1, 2])
+  })
 
   it.each([
     [Number.NaN, 1],

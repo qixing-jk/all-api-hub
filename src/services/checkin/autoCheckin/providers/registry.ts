@@ -501,6 +501,15 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     legacy: false,
     newAccountCompatibility: false,
   },
+  [AUTO_CHECKIN_METHOD_IDS.RelayForDailyCheckIn]: {
+    id: AUTO_CHECKIN_METHOD_IDS.RelayForDailyCheckIn,
+    siteTypes: [SITE_TYPES.RELAYFOR],
+    source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: [{ path: "/api/user/checkin-campaigns" }],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
 } as const satisfies Record<CheckInMethodId, AutoCheckinMethodDefinition>
 
 /** Returns whether the selected method can verify today without posting. */

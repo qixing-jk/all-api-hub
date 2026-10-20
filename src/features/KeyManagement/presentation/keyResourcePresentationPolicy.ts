@@ -27,6 +27,7 @@ export const KEY_RESOURCE_EDITOR_KINDS = {
   FoxCode: "foxcode",
   Emrank: "emrank",
   OpenRouter: "openrouter",
+  RelayFor: "relayfor",
   NameOnly: "name-only",
   Empty: "empty",
 } as const
@@ -144,6 +145,10 @@ const policies = {
     editor: KEY_RESOURCE_EDITOR_KINDS.NameOnly,
   },
   [families.SharedChat]: generic,
+  [families.RelayFor]: {
+    ...native,
+    editor: KEY_RESOURCE_EDITOR_KINDS.RelayFor,
+  },
   [families.Unsupported]: generic,
 } satisfies Record<AccountSiteBackendFamily, PresentationPolicy>
 

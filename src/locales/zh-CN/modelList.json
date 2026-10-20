@@ -141,6 +141,9 @@
     "units": "计费单位分布"
   },
   "displayFacts": {
+    "accessReason": "访问条件",
+    "auditCharge": "风控拒绝审计费用",
+    "auditConsent": "需要提示词审计授权",
     "benchmarkTable": {
       "arena": "竞技场",
       "category": "类别",
@@ -154,6 +157,8 @@
     },
     "callExamples": "调用示例",
     "catalogOwner": "目录归属",
+    "compactionCharge": "远程压缩费用",
+    "consoleSettings": "前往官网设置",
     "contextLimit": "上下文上限",
     "defaultDimensions": "默认维度",
     "inputModalities": "输入模态",
@@ -263,14 +268,19 @@
       "request": "次请求",
       "webSearch": "次网络搜索"
     },
+    "promptAudit": "已启用提示词审计",
     "providerAvailable": "站点可用",
     "releaseDate": "发布日期",
     "sections": {
       "specifications": "规格"
     },
+    "subscriptionMultiplier": "套餐倍率",
+    "subscriptionPlan": "适用套餐",
     "supportedDimensions": "支持维度",
     "supportsImages": "图片支持",
     "tokenCount": "{{formattedCount}} Token",
+    "trainingChannels": "含数据训练渠道",
+    "trainingConsent": "需要数据训练授权",
     "viewOnSite": "前往官网查看"
   },
   "displayOptions": "显示内容",
@@ -448,6 +458,15 @@
     "badge": "站点完整目录",
     "description": "未能确认该账号的实际可用模型范围，当前显示站点完整模型目录。部分模型可能无法通过此账号调用，请以站点账号权限和实际验证结果为准。",
     "title": "已回退到站点完整模型目录"
+  },
+  "providerGroup": {
+    "action": "切换官网路由分组",
+    "apply": "保存到官网",
+    "description": "保存后将修改官网中此模型的路由偏好，可能影响后续请求和价格。",
+    "label": "官网路由分组",
+    "locked": "当前会话锁定了路由偏好，请先前往官网管理会话。",
+    "refreshRequired": "{{error}}。修改可能已生效，请刷新模型列表确认后再操作。",
+    "saving": "正在保存…"
   },
   "providerTabs": {
     "scrollLeft": "向左滚动厂商标签",

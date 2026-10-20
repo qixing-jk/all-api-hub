@@ -108,6 +108,8 @@
       "failed": "操作失败：{{error}}",
       "saveFailed": "保存失败：{{error}}"
     },
+    "relayForRedemptionUnconfirmed": "官网未返回可确认的兑换结果，请先到官网核实，避免重复兑换。",
+    "relayForVerificationRequired": "此操作需要动态验证码。请前往官网控制台完成操作，然后返回刷新。",
     "unknown": "未知错误",
     "validation": {
       "bookmarkNameRequired": "书签名称不能为空",

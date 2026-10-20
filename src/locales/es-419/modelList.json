@@ -155,6 +155,9 @@
     "units": "Unidades de facturación"
   },
   "displayFacts": {
+    "accessReason": "Condición de acceso",
+    "auditCharge": "Cargo de auditoría por rechazo de riesgo",
+    "auditConsent": "Se requiere consentimiento de auditoría",
     "benchmarkTable": {
       "arena": "Arena",
       "category": "Categoría",
@@ -168,6 +171,8 @@
     },
     "callExamples": "Ejemplos de llamadas",
     "catalogOwner": "Propietario del catálogo",
+    "compactionCharge": "Compactación remota",
+    "consoleSettings": "Configuración oficial",
     "contextLimit": "Límite de contexto",
     "defaultDimensions": "Dimensiones predeterminadas",
     "inputModalities": "Modalidades de entrada",
@@ -280,16 +285,21 @@
       "request": "solicitud",
       "webSearch": "búsqueda web"
     },
+    "promptAudit": "Auditoría de prompts activa",
     "providerAvailable": "Disponible en el sitio",
     "releaseDate": "Fecha de publicación",
     "sections": {
       "specifications": "Especificaciones"
     },
+    "subscriptionMultiplier": "Multiplicador de suscripción",
+    "subscriptionPlan": "Suscripción",
     "supportedDimensions": "Dimensiones admitidas",
     "supportsImages": "Compatibilidad con imágenes",
     "tokenCount_one": "{{formattedCount}} token",
     "tokenCount_many": "{{formattedCount}} tokens",
     "tokenCount_other": "{{formattedCount}} tokens",
+    "trainingChannels": "Canales de entrenamiento disponibles",
+    "trainingConsent": "Se requiere consentimiento de entrenamiento",
     "viewOnSite": "Ver en el sitio"
   },
   "displayOptions": "Visualización",
@@ -469,6 +479,15 @@
     "badge": "Catálogo completo del sitio",
     "description": "No se pudo confirmar el alcance real de modelos disponibles de esta cuenta, por lo que se muestra el catálogo completo de modelos del proveedor. Es posible que algunos modelos no se puedan llamar con esta cuenta; usa los permisos de la cuenta del sitio y los resultados reales de verificación como fuente final de verdad.",
     "title": "Se recurrió al catálogo completo de modelos del proveedor"
+  },
+  "providerGroup": {
+    "action": "Cambiar grupo de enrutamiento del sitio",
+    "apply": "Guardar en el sitio",
+    "description": "Al guardar se cambia el enrutamiento de este modelo en el sitio y se pueden afectar las solicitudes y los precios posteriores.",
+    "label": "Grupo de enrutamiento del sitio",
+    "locked": "Una sesión activa bloquea esta opción. Adminístrala primero en el sitio oficial.",
+    "refreshRequired": "{{error}}. El cambio puede haberse aplicado. Actualiza la lista antes de reintentar.",
+    "saving": "Guardando…"
   },
   "providerTabs": {
     "scrollLeft": "Desplazar pestañas de fabricante a la izquierda",

@@ -20,6 +20,7 @@ import {
   AUTO_CHECKIN_METHOD_DEFINITIONS,
   createAutoCheckinMethodRegistry,
 } from "./registry"
+import { relayForProvider } from "./relayfor"
 import { sidruneProvider } from "./sidrune"
 import { toolcodeProvider } from "./toolcode"
 import { veloeraProvider } from "./veloera"
@@ -49,6 +50,7 @@ const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.FreeApiDailyCheckIn]: freeApiProvider,
   [AUTO_CHECKIN_METHOD_IDS.NexaVlinksDailyCheckIn]: nexavlinksProvider,
   [AUTO_CHECKIN_METHOD_IDS.EmrankDailyCheckIn]: emRankProvider,
+  [AUTO_CHECKIN_METHOD_IDS.RelayForDailyCheckIn]: relayForProvider,
 } as const satisfies Record<CheckInMethodId, AutoCheckinProvider>
 
 export const autoCheckinMethodRegistry = createAutoCheckinMethodRegistry(

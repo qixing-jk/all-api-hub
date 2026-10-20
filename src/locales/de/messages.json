@@ -110,6 +110,8 @@
       "failed": "Vorgang fehlgeschlagen: {{error}}",
       "saveFailed": "Speichern fehlgeschlagen: {{error}}"
     },
+    "relayForRedemptionUnconfirmed": "Das Einlöseergebnis ist unbestätigt. Prüfe vor einem erneuten Versuch die offizielle Konsole.",
+    "relayForVerificationRequired": "Dieser Vorgang erfordert einen Bestätigungscode. Schließe ihn in der offiziellen Konsole ab und aktualisiere hier.",
     "unknown": "Unbekannter Fehler",
     "validation": {
       "bookmarkNameRequired": "Lesezeichenname darf nicht leer sein",

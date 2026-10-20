@@ -18,6 +18,7 @@ import { krillBrowserIdentity } from "~/services/apiAdapters/krill/browserIdenti
 import { newApiBrowserIdentity } from "~/services/apiAdapters/newApi/account/browserIdentity"
 import { openRouterAccountDetectionPrivacy } from "~/services/apiAdapters/openrouter/account/accountDetection"
 import { openRouterBrowserIdentity } from "~/services/apiAdapters/openrouter/account/browserIdentity"
+import { relayForBrowserIdentity } from "~/services/apiAdapters/relayfor/browserIdentity"
 import { rightCodeBrowserIdentity } from "~/services/apiAdapters/rightcode/account/browserIdentity"
 import { sharedChatBrowserIdentity } from "~/services/apiAdapters/sharedchat/browserIdentity"
 import { sub2ApiBrowserIdentity } from "~/services/apiAdapters/sub2api/auth/browserIdentity"
@@ -35,6 +36,7 @@ import { grsaiContentSessionExtractor } from "./contentSession/grsai"
 import { kimiOpenPlatformContentSessionExtractor } from "./contentSession/kimiOpenPlatform"
 import { krillContentSessionExtractor } from "./contentSession/krill"
 import { newApiAuthBundleContentSessionExtractor } from "./contentSession/newApiAuthBundle"
+import { relayForContentSessionExtractor } from "./contentSession/relayfor"
 import { rightCodeContentSessionExtractor } from "./contentSession/rightcode"
 import { sharedChatContentSessionExtractor } from "./contentSession/sharedchat"
 import { sub2ApiContentSessionExtractor } from "./contentSession/sub2api"
@@ -100,6 +102,10 @@ const siteBrowserAdapters: readonly {
   {
     sessionExtractor: rightCodeContentSessionExtractor,
     identity: rightCodeBrowserIdentity,
+  },
+  {
+    sessionExtractor: relayForContentSessionExtractor,
+    identity: relayForBrowserIdentity,
   },
   { sessionExtractor: grsaiContentSessionExtractor },
   { sessionExtractor: vApiContentSessionExtractor },

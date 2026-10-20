@@ -112,6 +112,8 @@
       "failed": "Operação falhou: {{error}}",
       "saveFailed": "Falha ao salvar: {{error}}"
     },
+    "relayForRedemptionUnconfirmed": "O resgate não foi confirmado. Confira o console oficial antes de tentar novamente.",
+    "relayForVerificationRequired": "Esta operação exige um código de verificação. Conclua no console oficial e atualize aqui.",
     "unknown": "Erro desconhecido",
     "validation": {
       "bookmarkNameRequired": "O nome do favorito não pode estar vazio",

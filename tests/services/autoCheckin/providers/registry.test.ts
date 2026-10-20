@@ -24,6 +24,7 @@ import type {
   AutoCheckinMethodDefinition,
   AutoCheckinMethodRegistration,
 } from "~/services/checkin/autoCheckin/providers/registry"
+import { relayForProvider } from "~/services/checkin/autoCheckin/providers/relayfor"
 import { sub2apiProProvider } from "~/services/checkin/autoCheckin/providers/sub2apiPro"
 import { veloeraProvider } from "~/services/checkin/autoCheckin/providers/veloera"
 import { voApiV2Provider } from "~/services/checkin/autoCheckin/providers/voapiV2"
@@ -90,7 +91,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(20)
+    expect(registrationContracts).toHaveLength(21)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -142,6 +143,11 @@ describe("autoCheckinMethodRegistry", () => {
           id: "nexavlinks:daily-checkin",
           candidateSiteTypes: [SITE_TYPES.SUB2API],
           provider: nexavlinksProvider,
+        },
+        {
+          id: "relayfor:daily-checkin",
+          candidateSiteTypes: [SITE_TYPES.RELAYFOR],
+          provider: relayForProvider,
         },
       ]),
     )

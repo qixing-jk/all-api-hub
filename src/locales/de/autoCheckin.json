@@ -166,6 +166,9 @@
     "nativePageTargetNotFound": "Auf der Check-in-Seite dieser Website wurde kein Check-in-Button gefunden (die Seite lädt vielleicht noch, oder die Website hat sich geändert). Öffnen Sie die Seite und checken Sie manuell ein: {{checkInUrl}}",
     "nativePageTriggerFailed": "Die Erweiterung konnte den Check-in-Button auf der Seite dieser Website nicht anklicken (die Seite ist vielleicht langsam, oder die Aktion wurde vorübergehend begrenzt). Öffnen Sie die Seite und checken Sie manuell ein: {{checkInUrl}}",
     "nativePageVerificationRequired": "Eine menschliche Verifizierung blockiert den Check-in. Ihr Abschluss wurde innerhalb der Wartezeit nicht erkannt. Öffnen Sie die Seite, lösen Sie das Captcha und prüfen Sie den heutigen Check-in. Wiederholen Sie den Vorgang, falls der Erweiterungsstatus nicht aktualisiert wird: {{checkInUrl}}",
+    "relayForBenefits": "Erhaltene Vorteile: {{details}}",
+    "relayForMakeup": "Heute nichts verfügbar. Nachholtage im offiziellen Kalender wählen: {{url}}",
+    "relayForPartial": "{{completed}} von {{total}} Aktionen erhalten. Rest: {{error}}",
     "sessionBusy": "Eine andere Anmeldung läuft bereits. Bitte später erneut versuchen.",
     "turnstileIncognitoAccessRequired": "Auf dieser Website ist bereits ein anderes Konto angemeldet. Die Erweiterung braucht ein Inkognito-Fenster, um die Check-in-Seite dieses Kontos zu öffnen, darf aber nicht im Inkognito-Modus laufen. Erlauben Sie die Erweiterung im Inkognito-Modus in den Erweiterungseinstellungen des Browsers und versuchen Sie es erneut, oder schließen Sie die Verifizierung selbst auf der Check-in-Seite ab: {{checkInUrl}}",
     "unknownError": "Unbekannter Fehler. Versuchen Sie es später erneut."

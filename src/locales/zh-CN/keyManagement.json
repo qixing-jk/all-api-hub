@@ -359,8 +359,11 @@
   "native": {
     "actions": {
       "delete": "删除密钥",
+      "disable": "禁用 API Key",
       "edit": "编辑密钥",
-      "revoke": "撤销密钥"
+      "enable": "启用 API Key",
+      "revoke": "撤销密钥",
+      "rotate": "轮换 API Key"
     },
     "delete": {
       "confirm": "删除密钥",
@@ -381,8 +384,18 @@
         "cancel": "取消",
         "save": "保存密钥"
       },
+      "allowlistHelp": "逗号或换行分隔，留空不限。",
       "allowWallet": "允许使用余额",
       "allowWalletHelp": "套餐额度用完后，该密钥仍可从账户余额扣费继续使用。",
+      "budget5h": "5 小时预算（USD）",
+      "budgetDay": "单日预算（USD）",
+      "budgetMonth": "每月预算（USD）",
+      "budgetNextReset": "重置 {{time}}（北京时间）",
+      "budgetResetHelp": "0 表示不限。5 小时滚动恢复；日、周、月按北京时间重置，周一开始。",
+      "budgetRolling": "滚动窗口",
+      "budgetsAndLimits": "预算与访问限制",
+      "budgetUsage": "已用 ${{used}} / ${{limit}} · 剩余 ${{remaining}} · 预留 ${{reserved}}",
+      "budgetWeek": "每周预算（USD）",
       "channel": "渠道",
       "dahl": {
         "allocate": "分配 Token",
@@ -443,8 +456,12 @@
         "unavailable": "服务暂时不可用，请稍后重试。",
         "uncertain": "服务可能已应用此更改。请先刷新密钥确认当前状态，再决定是否重试。"
       },
+      "followAccountQuotaHelp": "-1 表示跟随账户额度。",
+      "followsAccount": "跟随账户",
       "groupOnly": "仅使用选定分组",
       "groupOnlyHelp": "开启后该密钥只在选定分组上调用，不再自动切换到其它分组。",
+      "independentQuotaUsd": "独立额度（USD）",
+      "ipCidrAllowlist": "IP/CIDR 白名单",
       "issues": {
         "inconsistentValue": "请检查此值后重试。",
         "invalidValue": "请输入有效值。",
@@ -452,6 +469,11 @@
         "required": "此项为必填项。",
         "unsupportedOption": "请选择可用选项。"
       },
+      "keyConcurrency": "Key 并发",
+      "keyRateHelp": "0 表示跟随账户限制。",
+      "keyRpm": "Key RPM",
+      "keyUnlimitedQuota": "Key 不限额",
+      "keyUnlimitedQuotaHelp": "仍受账户余额或订阅额度限制。",
       "krill": {
         "allowAnyIp": "允许任意 IP",
         "allowAnyIpHelp": "停用已保存的 IP 白名单，允许任意 IP 发起请求。",
@@ -485,6 +507,7 @@
         "retryOn": "开启",
         "validDuration": "激活后有效天数"
       },
+      "modelAllowlist": "模型白名单",
       "opening": {
         "failed": "无法打开密钥编辑器",
         "loading": "正在打开密钥编辑器...",
@@ -515,6 +538,11 @@
       }
     },
     "heading": "API 密钥",
+    "lifecycle": {
+      "disableDescription": "暂时禁用此 Key，之后可以重新启用。",
+      "enableDescription": "使用现有配置重新启用此 Key。",
+      "rotateDescription": "轮换后旧 Key 将立即失效。请复制新 Key 并及时更新客户端，其他配置保持不变。"
+    },
     "missing": "暂无数据",
     "revoke": {
       "description": "确定撤销“{{name}}”吗？密钥将永久停用，记录会保留，直到你将其删除。",
@@ -564,8 +592,8 @@
     "copy": "复制完整密钥",
     "copyFailed": "复制完整密钥失败",
     "keyLabel": "完整密钥",
-    "subtitle": "密钥 {{name}} 的完整值只会在本次创建后显示。",
-    "subtitleUnnamed": "完整密钥只会在本次创建后显示。",
+    "subtitle": "密钥 {{name}} 的完整值只会在本次操作后显示。",
+    "subtitleUnnamed": "完整密钥只会在本次操作后显示。",
     "title": "立即保存完整密钥",
     "warningDescription": "关闭此对话框后，扩展将无法再次显示完整密钥。",
     "warningTitle": "该密钥只能查看一次"

@@ -359,8 +359,11 @@
   "native": {
     "actions": {
       "delete": "Xóa khóa",
+      "disable": "Tắt khóa API",
       "edit": "Sửa khóa",
-      "revoke": "Thu hồi khóa"
+      "enable": "Bật khóa API",
+      "revoke": "Thu hồi khóa",
+      "rotate": "Luân chuyển khóa API"
     },
     "delete": {
       "confirm": "Xóa khóa",
@@ -381,8 +384,18 @@
         "cancel": "Hủy",
         "save": "Lưu khóa"
       },
+      "allowlistHelp": "Phân cách bằng dấu phẩy hoặc dòng mới. Để trống nếu không giới hạn.",
       "allowWallet": "Cho phép dùng số dư",
       "allowWalletHelp": "Giữ cho khóa này tiếp tục hoạt động bằng số dư tài khoản sau khi hết hạn ngạch gói.",
+      "budget5h": "Ngân sách 5 giờ (USD)",
+      "budgetDay": "Ngân sách hằng ngày (USD)",
+      "budgetMonth": "Ngân sách hằng tháng (USD)",
+      "budgetNextReset": "Đặt lại {{time}} (UTC+8)",
+      "budgetResetHelp": "0 là không giới hạn. Ngân sách 5 giờ dùng cửa sổ trượt; ngày, tuần và tháng đặt lại theo giờ Bắc Kinh, tuần bắt đầu từ thứ Hai.",
+      "budgetRolling": "Cửa sổ trượt",
+      "budgetsAndLimits": "Ngân sách và giới hạn truy cập",
+      "budgetUsage": "Đã dùng ${{used}} / ${{limit}} · còn ${{remaining}} · giữ chỗ ${{reserved}}",
+      "budgetWeek": "Ngân sách hằng tuần (USD)",
       "channel": "Kênh",
       "dahl": {
         "allocate": "Phân bổ token",
@@ -443,8 +456,12 @@
         "unavailable": "Dịch vụ tạm thời không khả dụng. Hãy thử lại sau.",
         "uncertain": "Dịch vụ có thể đã áp dụng thay đổi này. Hãy làm mới khóa để xác nhận trạng thái hiện tại trước khi quyết định có thử lại hay không."
       },
+      "followAccountQuotaHelp": "-1 dùng hạn mức của tài khoản.",
+      "followsAccount": "Theo tài khoản",
       "groupOnly": "Chỉ dùng nhóm đã chọn",
       "groupOnlyHelp": "Giữ khóa ở nhóm đã chọn thay vì tự chuyển sang nhóm khác.",
+      "independentQuotaUsd": "Hạn mức riêng (USD)",
+      "ipCidrAllowlist": "Danh sách IP/CIDR được phép",
       "issues": {
         "inconsistentValue": "Kiểm tra giá trị này rồi thử lại.",
         "invalidValue": "Nhập giá trị hợp lệ.",
@@ -452,6 +469,11 @@
         "required": "Trường này là bắt buộc.",
         "unsupportedOption": "Chọn một tùy chọn có sẵn."
       },
+      "keyConcurrency": "Số yêu cầu đồng thời",
+      "keyRateHelp": "0 dùng giới hạn tài khoản.",
+      "keyRpm": "RPM của khóa",
+      "keyUnlimitedQuota": "Khóa không giới hạn hạn mức",
+      "keyUnlimitedQuotaHelp": "Vẫn chịu giới hạn số dư tài khoản hoặc hạn mức gói đăng ký.",
       "krill": {
         "allowAnyIp": "Cho phép mọi IP",
         "allowAnyIpHelp": "Tắt danh sách IP được phép đã lưu. Yêu cầu từ mọi IP sẽ được cho phép.",
@@ -485,6 +507,7 @@
         "retryOn": "Bật",
         "validDuration": "Thời hạn sau khi kích hoạt (ngày)"
       },
+      "modelAllowlist": "Danh sách mô hình được phép",
       "opening": {
         "failed": "Không thể mở trình chỉnh sửa khóa",
         "loading": "Đang mở trình chỉnh sửa khóa...",
@@ -515,6 +538,11 @@
       }
     },
     "heading": "Khóa API",
+    "lifecycle": {
+      "disableDescription": "Tạm tắt khóa. Bạn có thể bật lại sau.",
+      "enableDescription": "Bật lại khóa này với cài đặt hiện có.",
+      "rotateDescription": "Khóa cũ sẽ ngừng hoạt động ngay. Sao chép khóa mới và cập nhật ứng dụng khách. Các cài đặt khác được giữ nguyên."
+    },
     "missing": "Không khả dụng",
     "revoke": {
       "description": "Thu hồi “{{name}}”? Khóa sẽ bị vô hiệu hóa vĩnh viễn. Bản ghi được giữ lại cho đến khi bạn xóa.",
@@ -564,8 +592,8 @@
     "copy": "Sao chép khóa đầy đủ",
     "copyFailed": "Sao chép khóa đầy đủ thất bại",
     "keyLabel": "Khóa đầy đủ",
-    "subtitle": "Giá trị đầy đủ của khóa {{name}} sẽ chỉ hiển thị sau lần tạo này.",
-    "subtitleUnnamed": "Khóa đầy đủ sẽ chỉ hiển thị sau lần tạo này.",
+    "subtitle": "Giá trị đầy đủ của khóa {{name}} sẽ chỉ hiển thị sau thao tác này.",
+    "subtitleUnnamed": "Khóa đầy đủ sẽ chỉ hiển thị sau thao tác này.",
     "title": "Lưu khóa đầy đủ ngay lập tức",
     "warningDescription": "Sau khi đóng hộp thoại này, tiện ích sẽ không thể hiển thị lại khóa đầy đủ.",
     "warningTitle": "Khóa này chỉ có thể được xem một lần"

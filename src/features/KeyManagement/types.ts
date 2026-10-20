@@ -60,7 +60,7 @@ export type KeyManagementDisplayRow =
 export type NativeKeyManagementRowAction = (
   ref: AccountKeyResourceRef,
   intent?: AccountKeyResourceEditAction,
-) => void
+) => void | Promise<void>
 
 /**
  * Counts are nullable because a failed or unresolved inventory cannot prove a

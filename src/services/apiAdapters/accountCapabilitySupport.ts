@@ -22,6 +22,7 @@ const ACCOUNT_SITE_CAPABILITY_INVENTORY = {
   serviceCredential: true,
   refresh: true,
   redemption: true,
+  usageHistory: true,
 } as const satisfies Record<AccountSiteCapabilityId, true>
 
 export const ACCOUNT_SITE_CAPABILITY_IDS = Object.keys(

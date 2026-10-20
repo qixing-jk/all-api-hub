@@ -370,8 +370,11 @@
   "native": {
     "actions": {
       "delete": "Delete key",
+      "disable": "Disable API key",
       "edit": "Edit key",
-      "revoke": "Revoke key"
+      "enable": "Enable API key",
+      "revoke": "Revoke key",
+      "rotate": "Rotate API key"
     },
     "delete": {
       "confirm": "Delete key",
@@ -392,8 +395,18 @@
         "cancel": "Cancel",
         "save": "Save key"
       },
+      "allowlistHelp": "Separate entries with commas or new lines. Leave empty for no restriction.",
       "allowWallet": "Allow using balance",
       "allowWalletHelp": "Keeps this key working from the account balance after its plan quota runs out.",
+      "budget5h": "5-hour budget (USD)",
+      "budgetDay": "Daily budget (USD)",
+      "budgetMonth": "Monthly budget (USD)",
+      "budgetNextReset": "Resets {{time}} (UTC+8)",
+      "budgetResetHelp": "0 means unlimited. The 5-hour budget rolls forward; daily, weekly and monthly budgets reset in Beijing time, with weeks starting Monday.",
+      "budgetRolling": "Rolling window",
+      "budgetsAndLimits": "Budgets and access limits",
+      "budgetUsage": "Used ${{used}} / ${{limit}} · remaining ${{remaining}} · reserved ${{reserved}}",
+      "budgetWeek": "Weekly budget (USD)",
       "channel": "Channel",
       "dahl": {
         "allocate": "Allocate tokens",
@@ -454,8 +467,12 @@
         "unavailable": "The service is temporarily unavailable. Try again shortly.",
         "uncertain": "The service may have applied this change. Refresh keys to confirm the current state before deciding whether to retry."
       },
+      "followAccountQuotaHelp": "Use -1 to follow the account quota.",
+      "followsAccount": "Follows account",
       "groupOnly": "Only use the selected group",
       "groupOnlyHelp": "Keeps this key on the selected group instead of failing over to others.",
+      "independentQuotaUsd": "Independent quota (USD)",
+      "ipCidrAllowlist": "IP/CIDR allowlist",
       "issues": {
         "inconsistentValue": "Review this value and try again.",
         "invalidValue": "Enter a valid value.",
@@ -463,6 +480,11 @@
         "required": "This field is required.",
         "unsupportedOption": "Choose an available option."
       },
+      "keyConcurrency": "Key concurrency",
+      "keyRateHelp": "0 follows the account limit.",
+      "keyRpm": "Key RPM",
+      "keyUnlimitedQuota": "Key unlimited quota",
+      "keyUnlimitedQuotaHelp": "Still limited by the account balance or subscription quota.",
       "krill": {
         "allowAnyIp": "Allow any IP",
         "allowAnyIpHelp": "Disables the saved IP whitelist. Requests from any IP will be allowed.",
@@ -496,6 +518,7 @@
         "retryOn": "On",
         "validDuration": "Validity after activation (days)"
       },
+      "modelAllowlist": "Model allowlist",
       "opening": {
         "failed": "Could not open key editor",
         "loading": "Opening key editor...",
@@ -526,6 +549,11 @@
       }
     },
     "heading": "API keys",
+    "lifecycle": {
+      "disableDescription": "Disable this key temporarily. You can enable it again later.",
+      "enableDescription": "Re-enable this key with its existing settings.",
+      "rotateDescription": "The old key will stop working immediately. Copy the new key after rotation and update your clients. Other settings are preserved."
+    },
     "missing": "Not available",
     "revoke": {
       "description": "Revoke “{{name}}”? This permanently disables the key. Its record remains until you delete it.",
@@ -575,8 +603,8 @@
     "copy": "Copy full key",
     "copyFailed": "Failed to copy full key",
     "keyLabel": "Full key",
-    "subtitle": "The full value for key {{name}} is shown only after this creation.",
-    "subtitleUnnamed": "The full key is shown only after this creation.",
+    "subtitle": "The full value for key {{name}} is shown only after this operation.",
+    "subtitleUnnamed": "The full key is shown only after this operation.",
     "title": "Save the full key now",
     "warningDescription": "After closing this dialog, the extension cannot display the full key again.",
     "warningTitle": "This key can only be viewed once"

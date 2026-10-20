@@ -94,6 +94,7 @@ export function createAccountKeyResourceEditor<
     closedError: validationFailure,
   })
   return {
+    action: editorDefinition.action,
     fields: editorDefinition.fields,
     initialValues: editorDefinition.initialValues,
     validate,

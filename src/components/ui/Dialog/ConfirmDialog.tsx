@@ -6,6 +6,10 @@ import { Button } from "~/components/ui/button"
 import { Modal } from "~/components/ui/Dialog/Modal"
 
 interface ConfirmDialogProps {
+  /** Preserve focus across a confirmed operation and its successor dialog. */
+  focusWorkflowId?: string | number
+  terminalCloseKey?: string | number | null
+  panelTestId?: string
   /**
    * Keeps the header and confirm button consistent; defaults to a general confirmation.
    */
@@ -35,6 +39,8 @@ interface ConfirmDialogProps {
    * Label for the confirm button.
    */
   confirmLabel: string
+  /** Preparation can block confirmation while cancellation remains available. */
+  confirmDisabled?: boolean
   /**
    * Optional label shown while the action is in progress.
    */
@@ -96,6 +102,9 @@ const intentPresentation = {
  * and consistent header and button presentation.
  */
 export function ConfirmDialog({
+  focusWorkflowId,
+  terminalCloseKey,
+  panelTestId,
   intent = "confirm",
   isOpen,
   onClose,
@@ -103,6 +112,7 @@ export function ConfirmDialog({
   description,
   warningTitle,
   confirmLabel,
+  confirmDisabled = false,
   workingLabel,
   cancelLabel,
   onConfirm,
@@ -120,6 +130,9 @@ export function ConfirmDialog({
 
   return (
     <Modal
+      focusWorkflowId={focusWorkflowId}
+      terminalCloseKey={terminalCloseKey}
+      panelTestId={panelTestId}
       isOpen={isOpen}
       onClose={onClose}
       title={title}
@@ -166,6 +179,7 @@ export function ConfirmDialog({
             onClick={onConfirm}
             variant={presentation.confirmVariant}
             className="flex-1"
+            disabled={confirmDisabled}
             loading={isWorking}
             data-testid={confirmButtonTestId}
             data-variant={presentation.confirmVariant}

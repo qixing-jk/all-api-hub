@@ -148,6 +148,9 @@
     "units": "Abrechnungseinheiten"
   },
   "displayFacts": {
+    "accessReason": "Zugriffsbedingung",
+    "auditCharge": "Prüfgebühr bei Risikoablehnung",
+    "auditConsent": "Prüfungszustimmung erforderlich",
     "benchmarkTable": {
       "arena": "Arena",
       "category": "Kategorie",
@@ -161,6 +164,8 @@
     },
     "callExamples": "Aufrufbeispiele",
     "catalogOwner": "Kataloginhaber",
+    "compactionCharge": "Remote-Komprimierung",
+    "consoleSettings": "Offizielle Einstellungen",
     "contextLimit": "Kontextlimit",
     "defaultDimensions": "Standarddimensionen",
     "inputModalities": "Eingabemodalitäten",
@@ -272,15 +277,20 @@
       "request": "Anfrage",
       "webSearch": "Websuche"
     },
+    "promptAudit": "Prompt-Prüfung aktiv",
     "providerAvailable": "Auf der Website verfügbar",
     "releaseDate": "Veröffentlichungsdatum",
     "sections": {
       "specifications": "Spezifikationen"
     },
+    "subscriptionMultiplier": "Abo-Faktor",
+    "subscriptionPlan": "Abonnement",
     "supportedDimensions": "Unterstützte Dimensionen",
     "supportsImages": "Bildunterstützung",
     "tokenCount_one": "{{formattedCount}} Token",
     "tokenCount_other": "{{formattedCount}} Token",
+    "trainingChannels": "Trainingskanäle verfügbar",
+    "trainingConsent": "Trainingszustimmung erforderlich",
     "viewOnSite": "Auf Website anzeigen"
   },
   "displayOptions": "Anzeige",
@@ -459,6 +469,15 @@
     "badge": "Vollständiger Website-Katalog",
     "description": "Der tatsächlich verfügbare Modellumfang dieses Kontos konnte nicht bestätigt werden, daher wird der vollständige Modellkatalog des Anbieters angezeigt. Einige Modelle können mit diesem Konto möglicherweise nicht aufgerufen werden. Maßgeblich sind die Kontoberechtigungen der Website und die tatsächlichen Verifizierungsergebnisse.",
     "title": "Zurück zum vollständigen Modellkatalog des Anbieters"
+  },
+  "providerGroup": {
+    "action": "Routinggruppe auf der Website ändern",
+    "apply": "Auf der Website speichern",
+    "description": "Speichern ändert das Routing dieses Modells auf der Website und kann spätere Anfragen und Preise beeinflussen.",
+    "label": "Routinggruppe der Website",
+    "locked": "Eine aktive Sitzung sperrt diese Auswahl. Verwalte sie zuerst auf der Website.",
+    "refreshRequired": "{{error}}. Die Änderung kann übernommen worden sein. Lade die Liste vor einem erneuten Versuch neu.",
+    "saving": "Speichern…"
   },
   "providerTabs": {
     "scrollLeft": "Anbieter-Tabs nach links scrollen",

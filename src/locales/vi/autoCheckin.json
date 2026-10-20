@@ -162,6 +162,9 @@
     "nativePageTargetNotFound": "Không tìm thấy nút điểm danh trên trang điểm danh của site này (trang có thể đang tải hoặc site đã thay đổi). Hãy mở trang đó và điểm danh thủ công: {{checkInUrl}}",
     "nativePageTriggerFailed": "Tiện ích không bấm được nút điểm danh trên trang của site này (trang có thể chậm hoặc thao tác bị giới hạn tạm thời). Hãy mở trang đó và điểm danh thủ công: {{checkInUrl}}",
     "nativePageVerificationRequired": "Xác minh con người đã chặn điểm danh và chưa được ghi nhận hoàn tất trong thời gian chờ. Mở trang, hoàn thành captcha và xác nhận điểm danh hôm nay. Nếu trạng thái tiện ích chưa cập nhật, hãy thử lại: {{checkInUrl}}",
+    "relayForBenefits": "Quyền lợi đã nhận: {{details}}",
+    "relayForMakeup": "Hôm nay không có phần thưởng. Chọn ngày nhận bù trên lịch chính thức: {{url}}",
+    "relayForPartial": "Đã nhận {{completed}} / {{total}} chương trình. Kết quả còn lại: {{error}}",
     "sessionBusy": "Một quy trình đăng nhập khác đang diễn ra. Vui lòng thử lại sau.",
     "turnstileIncognitoAccessRequired": "Site này đã có tài khoản khác đăng nhập, nên tiện ích cần cửa sổ ẩn danh để mở trang điểm danh của tài khoản này, nhưng tiện ích chưa được phép chạy ở chế độ ẩn danh. Hãy cho phép tiện ích chạy ẩn danh trong phần cài đặt tiện ích của trình duyệt rồi thử lại, hoặc tự mở trang điểm danh để hoàn tất xác minh: {{checkInUrl}}",
     "unknownError": "Đã xảy ra lỗi không xác định. Hãy thử lại sau."

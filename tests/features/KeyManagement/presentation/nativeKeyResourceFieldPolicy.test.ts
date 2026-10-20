@@ -28,6 +28,10 @@ import {
 import { createFoxCodeKeyEditor } from "~/services/apiAdapters/foxcode/keyEditor"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keys/keyResourceEditor"
 import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
+import {
+  createRelayForKeyEditor,
+  editRelayForKeyEditor,
+} from "~/services/apiAdapters/relayfor/accountKeyResource"
 import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keys/keyResourceEditor"
 import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
 import { AuthTypeEnum } from "~/types"
@@ -624,6 +628,44 @@ it("declares the grouping field or an explicit fixed naming policy", () => {
   expect(
     getPresentation(SITE_TYPES.GRSAI, editorModes.Create).automaticName,
   ).toEqual({ kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed })
+})
+
+it("presents RelayFor fields without mismatch in create and edit modes", () => {
+  const createEditor = createRelayForKeyEditor()
+  const createPresentation = getPresentation(
+    SITE_TYPES.RELAYFOR,
+    editorModes.Create,
+    { fields: createEditor.fields },
+  )
+  expect(() =>
+    resolveResourceFieldPolicy(
+      createEditor.fields,
+      createPresentation.policy,
+      createPresentation.sectionOrder,
+    ),
+  ).not.toThrow()
+
+  const editEditor = editRelayForKeyEditor({
+    id: 1,
+    name: "test",
+    key: "sk-...",
+    status: 1,
+    remain_quota: 500000,
+    used_quota: 0,
+    unlimited_quota: true,
+  })
+  const editPresentation = getPresentation(
+    SITE_TYPES.RELAYFOR,
+    editorModes.Edit,
+    { fields: editEditor.fields },
+  )
+  expect(() =>
+    resolveResourceFieldPolicy(
+      editEditor.fields,
+      editPresentation.policy,
+      editPresentation.sectionOrder,
+    ),
+  ).not.toThrow()
 })
 
 it("requires a naming decision in every editor presentation", () => {

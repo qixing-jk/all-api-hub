@@ -13,6 +13,8 @@ import {
   DEFAULT_AUTO_PROVISION_KEY_NAME,
   getDefaultAccountKeyName,
 } from "~/services/accounts/keys/accountKeyNames"
+import { ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions } from "~/services/apiAdapters/contracts/accountKeyResource"
+import type { AccountKeyResourceEditAction } from "~/services/apiAdapters/contracts/accountKeyResource"
 import {
   RESOURCE_FIELD_TYPES,
   type EditableResourceProjection,
@@ -24,6 +26,7 @@ import {
 } from "~/services/apiAdapters/emrank/keyResourceFields"
 import { FOXCODE_KEY_EDITOR_FIELDS as foxCodeFields } from "~/services/apiAdapters/foxcode/keyEditorFields"
 import { krillKeyFields } from "~/services/apiAdapters/krill/keyResourceFields"
+import { RELAYFOR_KEY_FIELDS as relayForFields } from "~/services/apiAdapters/relayfor/keyFields"
 
 import type { AccountKeyResourceEditorPresentation as EditorPresentation } from "./accountKeyResourceEditorPresentation"
 import { getDahlKeyResourceEditorPresentation } from "./dahlKeyResourceEditorPresentation"
@@ -55,15 +58,16 @@ const name: ResourceFieldPresentation = {
   resolveLabel: (t) => t("keyManagement:dialog.tokenName"),
   issueLabelResolvers: issues,
 }
-const expiry: ResourceFieldPresentation = {
-  fieldId: "expires_at",
+const expiryField = (fieldId = "expires_at"): ResourceFieldPresentation => ({
+  fieldId,
   section: "lifecycle",
   order: 0,
   renderer: "date-time",
   resolveLabel: (t) => t("keyManagement:dialog.expiration"),
   resolveHelp: (t) => t("keyManagement:dialog.expirationPlaceholder"),
   issueLabelResolvers: issues,
-}
+})
+const expiry = expiryField()
 const group = (
   fieldId: string,
   multiple = false,
@@ -252,6 +256,105 @@ const buildRightCodeFields = (
   ],
 })
 
+const buildRelayForFields = (): {
+  fields: ResourceFieldPresentation[]
+  automaticName: EditorPresentation["automaticName"]
+} => ({
+  automaticName: { kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed },
+  fields: [
+    name,
+    ...(
+      [
+        [
+          relayForFields.Budget5h,
+          (t: TFunction) => t("keyManagement:native.editor.budget5h"),
+        ],
+        [
+          relayForFields.BudgetDay,
+          (t: TFunction) => t("keyManagement:native.editor.budgetDay"),
+        ],
+        [
+          relayForFields.BudgetWeek,
+          (t: TFunction) => t("keyManagement:native.editor.budgetWeek"),
+        ],
+        [
+          relayForFields.BudgetMonth,
+          (t: TFunction) => t("keyManagement:native.editor.budgetMonth"),
+        ],
+        [
+          relayForFields.RequestsPerMinute,
+          (t: TFunction) => t("keyManagement:native.editor.keyRpm"),
+        ],
+        [
+          relayForFields.ConcurrentRequests,
+          (t: TFunction) => t("keyManagement:native.editor.keyConcurrency"),
+        ],
+      ] as const
+    ).map(([fieldId, resolveLabel], order) => ({
+      fieldId,
+      resolveLabel,
+      section: "limits",
+      width: "half" as const,
+      order,
+      renderer: "number" as const,
+      resolveHelp: (t: TFunction) =>
+        fieldId === relayForFields.Budget5h
+          ? t("keyManagement:native.editor.budgetResetHelp")
+          : fieldId.startsWith("budget_")
+            ? ""
+            : t("keyManagement:native.editor.keyRateHelp"),
+      issueLabelResolvers: issues,
+    })),
+    {
+      ...quota(relayForFields.QuotaUsd, relayForFields.UnlimitedQuota)[0]!,
+      section: "basic",
+      order: 10,
+      resolveLabel: (t: TFunction) =>
+        t("keyManagement:native.editor.keyUnlimitedQuota"),
+      resolveHelp: (t: TFunction) =>
+        t("keyManagement:native.editor.keyUnlimitedQuotaHelp"),
+    },
+    {
+      ...quota(relayForFields.QuotaUsd, relayForFields.UnlimitedQuota)[1]!,
+      section: "basic",
+      order: 20,
+      width: "half",
+      resolveLabel: (t: TFunction) =>
+        t("keyManagement:native.editor.independentQuotaUsd"),
+      resolveHelp: (t: TFunction) =>
+        t("keyManagement:native.editor.followAccountQuotaHelp"),
+    },
+    {
+      ...expiryField(relayForFields.ExpiredAt),
+      section: "basic",
+      order: 30,
+      width: "half",
+    },
+    {
+      fieldId: relayForFields.ModelLimits,
+      width: "half",
+      rows: 2,
+      section: "advanced" as const,
+      order: 10,
+      renderer: "textarea" as const,
+      resolveLabel: (t: TFunction) =>
+        t("keyManagement:native.editor.modelAllowlist"),
+      resolveHelp: (t: TFunction) =>
+        t("keyManagement:native.editor.allowlistHelp"),
+      issueLabelResolvers: issues,
+    },
+    {
+      ...ips(relayForFields.IpLimits),
+      width: "half",
+      rows: 2,
+      resolveLabel: (t: TFunction) =>
+        t("keyManagement:native.editor.ipCidrAllowlist"),
+      resolveHelp: (t: TFunction) =>
+        t("keyManagement:native.editor.allowlistHelp"),
+    },
+  ],
+})
+
 /**
  * Grsai keys are a name, a remaining credit budget and an optional expiry; the
  * console prices everything in its own credits rather than in currency.
@@ -418,6 +521,7 @@ const resolveSiteFields = (
 } => {
   const builders = {
     [editorKinds.Sub2Api]: () => buildSub2ApiFields(mode),
+    [editorKinds.RelayFor]: () => buildRelayForFields(),
     [editorKinds.VoApiV2]: buildVoApiV2Fields,
     [editorKinds.RightCode]: () => buildRightCodeFields(mode),
     [editorKinds.NameOnly]: () => ({
@@ -552,8 +656,46 @@ const resolveSiteFields = (
 export function getNativeKeyResourceEditorPresentation(
   siteType: string | undefined,
   mode: AccountKeyResourceEditorMode,
-  options?: { readonly fields?: readonly ResourceFieldDescriptor[] },
+  options?: {
+    readonly fields?: readonly ResourceFieldDescriptor[]
+    readonly action?: AccountKeyResourceEditAction
+  },
 ): EditorPresentation {
+  const action = options?.action
+  if (
+    action === editActions.Rotate ||
+    action === editActions.Enable ||
+    action === editActions.Disable
+  ) {
+    const labels = {
+      [editActions.Rotate]: (t: TFunction) =>
+        t("keyManagement:native.actions.rotate"),
+      [editActions.Enable]: (t: TFunction) =>
+        t("keyManagement:native.actions.enable"),
+      [editActions.Disable]: (t: TFunction) =>
+        t("keyManagement:native.actions.disable"),
+    }
+    const descriptions = {
+      [editActions.Rotate]: (t: TFunction) =>
+        t("keyManagement:native.lifecycle.rotateDescription"),
+      [editActions.Enable]: (t: TFunction) =>
+        t("keyManagement:native.lifecycle.enableDescription"),
+      [editActions.Disable]: (t: TFunction) =>
+        t("keyManagement:native.lifecycle.disableDescription"),
+    }
+    return {
+      automaticName: { kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed },
+      policy: defineResourceEditorFieldPolicy({ fields: [], hiddenFields: [] }),
+      sectionOrder: {},
+      sectionLabelResolvers: {},
+      title: labels[action],
+      submitLabel: labels[action],
+      summary: {
+        title: labels[action],
+        describe: (_values, t) => descriptions[action](t),
+      },
+    }
+  }
   if (getKeyResourcePresentationPolicy(siteType).editor === editorKinds.Dahl) {
     return getDahlKeyResourceEditorPresentation(mode, options?.fields)
   }
@@ -572,9 +714,29 @@ export function getNativeKeyResourceEditorPresentation(
   return {
     automaticName,
     requireFreshOptions,
-    policy: defineResourceEditorFieldPolicy({ fields, hiddenFields: [] }),
-    sectionOrder: { basic: 0, spending: 1, lifecycle: 2, advanced: 3 },
+    policy: defineResourceEditorFieldPolicy({
+      fields,
+      hiddenFields: [],
+      ...(getKeyResourcePresentationPolicy(siteType).editor ===
+      editorKinds.RelayFor
+        ? {
+            sections: {
+              basic: { columns: 2 as const, defaultOpen: true },
+              limits: { columns: 2 as const, defaultOpen: false },
+              advanced: { columns: 2 as const, defaultOpen: true },
+            },
+          }
+        : {}),
+    }),
+    sectionOrder: {
+      basic: 0,
+      spending: 1,
+      lifecycle: 2,
+      limits: 3,
+      advanced: 4,
+    },
     sectionLabelResolvers: {
+      limits: (t) => t("keyManagement:native.editor.budgetsAndLimits"),
       basic: (t) => t("keyManagement:dialog.basicInfo"),
       spending: (t) => t("keyManagement:dialog.quotaSettings"),
       lifecycle: (t) => t("keyManagement:dialog.expiration"),

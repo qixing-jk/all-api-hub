@@ -12,10 +12,26 @@
   "actions": {
     "autoRedeem": "自动兑换"
   },
+  "benefits": {
+    "burstCredits": "突发积分",
+    "groupQuota": "分组额度",
+    "groupTimedQuota": "分组限时额度",
+    "quota": "永久额度",
+    "subscription": "完整套餐",
+    "subscriptionAdd": "套餐额度添加",
+    "subscriptionExtension": "套餐展期",
+    "subscriptionReset": "套餐额度重置",
+    "subscriptionTrial": "试用套餐",
+    "timedBurstCredits": "限时突发积分",
+    "timedQuota": "限时额度"
+  },
   "messages": {
     "batchResultSummary": "共 {{total}} 个，成功 {{success}} 个，失败 {{failed}} 个。",
     "batchResultTitle": "兑换结果",
+    "benefitsRedeemed": "兑换成功：{{details}}",
     "cancelled": "已取消",
+    "extensionDays": "延长 {{days}} 天",
+    "fallbackBenefit": "已使用备用福利",
     "noAccountForUrl": "当前站点未在 All API Hub 中配置账号，请先在扩展中添加该站点后再试。",
     "promptConfirm": "检测到疑似兑换码 {{code}}，是否为当前站点尝试自动兑换？",
     "promptConfirmBatch": "检测到 {{count}} 个疑似兑换码，请选择要为当前站点尝试自动兑换的兑换码。",

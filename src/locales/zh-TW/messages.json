@@ -108,6 +108,8 @@
       "failed": "操作失敗：{{error}}",
       "saveFailed": "儲存失敗：{{error}}"
     },
+    "relayForRedemptionUnconfirmed": "官網未回傳可確認的兌換結果，請先到官網核實，避免重複兌換。",
+    "relayForVerificationRequired": "此操作需要動態驗證碼。請前往官網控制台完成操作，然後返回重新整理。",
     "unknown": "未知錯誤",
     "validation": {
       "bookmarkNameRequired": "書籤名稱不能為空",

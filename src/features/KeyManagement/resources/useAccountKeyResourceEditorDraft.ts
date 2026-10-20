@@ -90,7 +90,7 @@ export function useAccountKeyResourceEditorDraft({
   const presentation = getNativeKeyResourceEditorPresentation(
     editor.siteType,
     editor.mode,
-    { fields: editor.fields },
+    { fields: editor.fields, action: editor.action },
   )
   const [values, setValues] = useState<EditableResourceProjection>(() =>
     toEditorValues(editor.values, editor.fields),

@@ -166,6 +166,9 @@
     "nativePageTargetNotFound": "No check-in button was found on this site's check-in page (the page may still be loading, or the site has changed). Open that page and check in manually: {{checkInUrl}}",
     "nativePageTriggerFailed": "The extension could not click the check-in button on this site's check-in page (the page may be slow, or the action was temporarily limited). Open that page and check in manually: {{checkInUrl}}",
     "nativePageVerificationRequired": "Human verification blocked check-in and was not detected as completed before the wait ended. Open the check-in page, finish the captcha, and confirm today’s check-in. If the extension still shows the old status, retry: {{checkInUrl}}",
+    "relayForBenefits": "Benefits received: {{details}}",
+    "relayForMakeup": "Today has no claim available. Choose makeup dates on the official calendar: {{url}}",
+    "relayForPartial": "Claimed {{completed}} of {{total}} campaigns. Remaining result: {{error}}",
     "sessionBusy": "Another login is already in progress. Try again later.",
     "turnstileIncognitoAccessRequired": "Another account is already signed in to this site, so the extension needs an Incognito window to open this account's check-in page, but it is not allowed to run in Incognito. Allow the extension in Incognito from your browser's extension settings and retry, or complete the verification on the check-in page yourself: {{checkInUrl}}",
     "unknownError": "Something went wrong. Try again later."

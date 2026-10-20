@@ -371,6 +371,7 @@ export function useAccountKeyResourceController({
     routing,
   })
   const {
+    immediateActionPending,
     openEditor,
     retryEditorOpening,
     cancelEditorOpening,
@@ -471,9 +472,11 @@ export function useAccountKeyResourceController({
     detail,
     isDetailLoading,
     detailFailure,
-    editor,
+    editor: immediateActionPending ? null : editor,
     terminalCloseEditor,
-    editorOpening,
+    editorOpening: immediateActionPending
+      ? { attemptId: editorOpening.attemptId, status: "idle" as const }
+      : editorOpening,
     createdSecret,
     focusWorkflowId,
     deleteState,

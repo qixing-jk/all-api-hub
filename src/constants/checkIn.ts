@@ -23,6 +23,7 @@ export const AUTO_CHECKIN_METHOD_IDS = {
   FreeApiDailyCheckIn: "freeapi:daily-checkin",
   NexaVlinksDailyCheckIn: "nexavlinks:daily-checkin",
   EmrankDailyCheckIn: "emrank:daily-checkin",
+  RelayForDailyCheckIn: "relayfor:daily-checkin",
 } as const
 
 export const CHECK_IN_METHOD_UNKNOWN_REASON_CODES = {

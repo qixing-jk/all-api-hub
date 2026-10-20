@@ -30,8 +30,11 @@ import {
   ModelPresentationDetails,
   ModelPresentationSummary,
 } from "~/features/ModelList/presentation/ModelItem/ModelPresentationFacts"
+import { ProviderGroupSelector } from "~/features/ModelList/presentation/ModelItem/ProviderGroupSelector"
 import toast from "~/lib/notify"
 import { cn } from "~/lib/utils"
+import { createDisplayAccountRequestContext } from "~/services/accounts/utils/apiServiceRequest"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { ModelListSourceIdentity } from "~/services/modelCatalog/sourceIdentity"
 import { MODEL_LIST_SOURCE_IDENTITY_KINDS } from "~/services/modelCatalog/sourceIdentity"
 import {
@@ -63,6 +66,7 @@ const logger = createLogger("ModelItem")
 
 interface ModelItemProps {
   model: ModelPricing
+  onCatalogChanged?: () => Promise<void>
   resolvedVendor: ResolvedModelVendor
   modelMetadata?: ModelMetadata
   calculatedPrice: CalculatedPrice
@@ -112,6 +116,7 @@ interface ModelItemProps {
 export default function ModelItem(props: ModelItemProps) {
   const {
     model,
+    onCatalogChanged,
     resolvedVendor,
     modelMetadata,
     calculatedPrice,
@@ -285,14 +290,15 @@ export default function ModelItem(props: ModelItemProps) {
   const hasKnownNoUsableGroup =
     groupContext.accessState === MODEL_GROUP_ACCESS_STATES.KNOWN &&
     groupContext.usableGroups.length === 0
-  const isAvailableForUser = hasKnownNoUsableGroup
-    ? false
-    : hasRuntimeDiscoveredPricingGap ||
-        groupContext.accessState === MODEL_GROUP_ACCESS_STATES.UNKNOWN
-      ? true
-      : showGroupDetails
-        ? activeGroupContext.activeUsableGroups.length > 0
-        : true
+  const isAvailableForUser =
+    model.availability?.available === false || hasKnownNoUsableGroup
+      ? false
+      : hasRuntimeDiscoveredPricingGap ||
+          groupContext.accessState === MODEL_GROUP_ACCESS_STATES.UNKNOWN
+        ? true
+        : showGroupDetails
+          ? activeGroupContext.activeUsableGroups.length > 0
+          : true
   const usableGroupLabels = groupContext.usableGroups.map((group) =>
     formatGroupLabelFromRatios(group, groupRatios, model.groupDisplayNames),
   )
@@ -469,6 +475,28 @@ export default function ModelItem(props: ModelItemProps) {
           isAvailableForUser={isAvailableForUser}
         />
         <ModelPresentationSummary presentation={model.presentation} />
+        {model.providerGroup &&
+          source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
+          getSiteTypeCapabilities(source.account.siteType).account?.modelPricing
+            ?.updateGroup && (
+            <ProviderGroupSelector
+              key={`${source.account.id}:${model.model_name}`}
+              group={model.providerGroup}
+              onSave={async (group) => {
+                const capability = getSiteTypeCapabilities(
+                  source.account.siteType,
+                ).account?.modelPricing
+                if (!capability?.updateGroup) return
+                await capability.updateGroup(
+                  createDisplayAccountRequestContext(source.account).request,
+                  model.model_name,
+                  group,
+                )
+                await onCatalogChanged?.()
+              }}
+            />
+          )}
+
         <div className="gap-y-density-2 flex min-w-0 flex-col gap-x-2 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0 flex-1">
             <ModelItemPricing

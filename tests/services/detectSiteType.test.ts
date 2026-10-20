@@ -322,6 +322,40 @@ describe("detectSiteType", () => {
         ).resolves.toBe(SITE_TYPES.UNKNOWN)
       })
 
+      it("detects RelayFor from the console hostname without title fetch", async () => {
+        let titleFetched = false
+        server.use(
+          http.get("https://relayfor.xyz", () => {
+            titleFetched = true
+            return new HttpResponse("<html><title>new-api</title></html>", {
+              headers: { "Content-Type": "text/html" },
+            })
+          }),
+        )
+
+        await expect(
+          getAccountSiteType("https://relayfor.xyz/console/"),
+        ).resolves.toBe(SITE_TYPES.RELAYFOR)
+        expect(titleFetched).toBe(false)
+      })
+
+      it("detects RelayFor from HTML title on self-hosted or other domains", async () => {
+        server.use(
+          http.get("https://custom-relayfor.example.com", () => {
+            return new HttpResponse(
+              "<html><title>RelayFor 公益站</title></html>",
+              {
+                headers: { "Content-Type": "text/html" },
+              },
+            )
+          }),
+        )
+
+        await expect(
+          getAccountSiteType("https://custom-relayfor.example.com"),
+        ).resolves.toBe(SITE_TYPES.RELAYFOR)
+      })
+
       it("detects Grsai from the console hostname without title fetch", async () => {
         let titleFetched = false
         server.use(

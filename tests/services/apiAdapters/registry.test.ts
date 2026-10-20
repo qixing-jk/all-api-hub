@@ -283,6 +283,39 @@ describe("apiAdapters registry", () => {
     expect(capabilities.managedSites).toBeUndefined()
   })
 
+  it("returns RelayFor account capabilities without managed-site capabilities", () => {
+    const capabilities = getSiteTypeCapabilities(SITE_TYPES.RELAYFOR)
+
+    expect(capabilities).toMatchObject({
+      siteType: SITE_TYPES.RELAYFOR,
+      family: ACCOUNT_SITE_ADAPTER_FAMILIES.RelayFor,
+    })
+    expectAccountDataCapability(capabilities)
+    expectAccountBootstrapCapability(capabilities)
+    expectAccountCompletionCapability(capabilities)
+    expectKeyManagementCapability(capabilities)
+    expectTokenProvisioningCapability(capabilities)
+    expectAccountRefreshCapability(capabilities)
+    expect(capabilities.account?.modelPricing).toEqual(
+      expect.objectContaining({
+        fetchPricing: expect.any(Function),
+        updateGroup: expect.any(Function),
+        runtimeKeyFallback: "account-pricing",
+      }),
+    )
+    expect(capabilities.account?.inviteLink).toBeUndefined()
+    expect(capabilities.account?.redemption).toEqual({
+      redeem: expect.any(Function),
+    })
+    expect(capabilities.account?.usageHistory).toEqual({
+      fetchPage: expect.any(Function),
+    })
+    expect(capabilities.site?.announcements).toEqual({
+      fetch: expect.any(Function),
+    })
+    expect(capabilities.managedSites).toBeUndefined()
+  })
+
   it("keeps OpenRouter provisioning outside generic account capabilities", () => {
     const capabilities = getSiteTypeCapabilities(SITE_TYPES.OPENROUTER)
 
