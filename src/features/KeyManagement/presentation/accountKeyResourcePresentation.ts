@@ -149,6 +149,7 @@ const nativeDetailFacts = (
             ? t("keyManagement:native.editor.budgetNextReset", {
                 time: new Date(fact.nextResetAt).toLocaleString(undefined, {
                   timeZone: "Asia/Shanghai",
+                  timeZoneName: "short",
                 }),
               })
             : t("keyManagement:native.editor.budgetRolling")),

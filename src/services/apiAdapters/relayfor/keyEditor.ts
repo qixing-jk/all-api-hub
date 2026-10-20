@@ -87,6 +87,11 @@ const buildLimits = (
   ]),
 })
 
+/** An empty independent quota explicitly follows the account allowance. */
+const normalizeQuota = (
+  value: EditableResourceProjection[string] | undefined,
+) => (value === "" || value === null || value === undefined ? -1 : value)
+
 const validateKeyValues = (
   values: EditableResourceProjection,
 ): ResourceValidationResult => {
@@ -119,7 +124,7 @@ const validateKeyValues = (
           (Number.isInteger(n) && n <= (field.max ?? Infinity))),
     )
   }
-  const quota = Number(values[RELAYFOR_KEY_FIELDS.QuotaUsd] ?? -1)
+  const quota = Number(normalizeQuota(values[RELAYFOR_KEY_FIELDS.QuotaUsd]))
   check(
     RELAYFOR_KEY_FIELDS.QuotaUsd,
     Number.isFinite(quota) && (quota === -1 || quota >= 0),
@@ -170,9 +175,7 @@ const buildKeyPayload = (
   detail?: RelayForToken,
 ): RelayForTokenCreateRequest => {
   const quotaUsd = readNumber(
-    detail
-      ? values[RELAYFOR_KEY_FIELDS.QuotaUsd]
-      : values[RELAYFOR_KEY_FIELDS.QuotaUsd] ?? -1,
+    normalizeQuota(values[RELAYFOR_KEY_FIELDS.QuotaUsd]),
   )
   const expiry = readString(values[RELAYFOR_KEY_FIELDS.ExpiredAt])
   return {

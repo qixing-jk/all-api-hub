@@ -54,7 +54,9 @@ describe("provider routing group", () => {
     )
     await user.click(screen.getByRole("combobox"))
     await user.click(screen.getByRole("option", { name: "premium · ×1.5" }))
-    await user.keyboard("{Escape}")
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.cancel" }),
+    )
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     expect(onSave).not.toHaveBeenCalled()
     await user.click(

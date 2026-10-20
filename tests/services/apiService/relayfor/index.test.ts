@@ -26,6 +26,27 @@ const request = {
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token-abc" },
 }
 
+it.each([
+  ["profile", () => fetchRelayForUserInfo(request)],
+  ["overview", () => fetchRelayForOverview(request)],
+  ["keys", () => fetchRelayForTokens(request)],
+  ["creation", () => createRelayForToken(request, { name: "Key" })],
+  ["rotation", () => rotateRelayForToken(request, 1)],
+  ["models", () => fetchRelayForModels(request)],
+  ["campaigns", () => fetchRelayForCheckInCampaigns(request)],
+  ["claim", () => claimRelayForCheckIn(request, 1, "2026-10-20")],
+  ["announcement", () => fetchRelayForAnnouncement(request)],
+] as const)(
+  "rejects malformed %s responses without replaying requests",
+  async (_name, run) => {
+    vi.mocked(transport.fetchRelayForData)
+      .mockReset()
+      .mockResolvedValueOnce(null)
+    await expect(run()).rejects.toMatchObject({ code: "JSON_PARSE_ERROR" })
+    expect(transport.fetchRelayForData).toHaveBeenCalledOnce()
+  },
+)
+
 describe("relayfor api service", () => {
   beforeEach(() => {
     vi.clearAllMocks()

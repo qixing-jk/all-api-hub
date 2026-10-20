@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { relayForAccountData } from "~/services/apiAdapters/relayfor/accountData"
-import { fetchRelayForOverview } from "~/services/apiService/relayfor"
+import {
+  fetchRelayForOverview,
+  fetchRelayForTimedQuotas,
+} from "~/services/apiService/relayfor"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
@@ -30,6 +33,52 @@ const createRequest = (overrides = {}) => ({
 describe("relayForAccountData", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  it("filters invalid grants and sorts active scoped grants by expiry", async () => {
+    vi.mocked(fetchRelayForOverview).mockResolvedValueOnce({
+      user: { id: 1, username: "alice", quota: 0 },
+      timed_quota: 1000000,
+      group_quotas: [
+        null,
+        { quota: "bad" },
+        { quota: 500000, quota_group: "premium" },
+      ],
+    } as never)
+    vi.mocked(fetchRelayForTimedQuotas).mockResolvedValueOnce([
+      null,
+      { status: 2, quota_remaining: 500000, expires_at: "2099-01-01" },
+      { status: 1, quota_remaining: 1, expires_at: "invalid" },
+      {
+        status: 1,
+        quota_remaining: 500000,
+        expires_at: "2099-02-01",
+        quota_group: "premium",
+      },
+      { status: 1, quota_remaining: 250000, expires_at: "2099-01-01" },
+    ])
+    const data = await relayForAccountData.fetchData(createRequest())
+    expect(
+      data.nativeBalance?.unit === "USD"
+        ? data.nativeBalance.timedDetails
+        : undefined,
+    ).toEqual([
+      expect.objectContaining({
+        amount: 0.5,
+        expiresAt: "2099-01-01",
+        scope: undefined,
+      }),
+      expect.objectContaining({
+        amount: 1,
+        expiresAt: "2099-02-01",
+        scope: "premium",
+      }),
+    ])
+    expect(
+      data.nativeBalance?.unit === "USD"
+        ? data.nativeBalance.components?.filter((c) => c.kind === "group")
+        : undefined,
+    ).toEqual([expect.objectContaining({ amount: 1, scope: "premium" })])
   })
 
   it("maps balance, lifetime usage and today's activity from /api/user/overview", async () => {

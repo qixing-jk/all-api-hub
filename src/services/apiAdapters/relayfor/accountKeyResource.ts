@@ -1,6 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
 import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
-import { RELAYFOR_API_BASE_URL } from "~/services/accountSiteDefinitions/identifiers"
 import { toProtocolRoot } from "~/services/aiApi/protocolAddress"
 import type { AccountKeyResourceProviderFacts } from "~/services/apiAdapters/accountKeyResources/definition"
 import { keyExpiryDisplayFact } from "~/services/apiAdapters/accountKeyResources/displayFacts"
@@ -28,7 +27,7 @@ import { readRelayForStringList as readStringList } from "~/services/apiService/
 import type { RelayForToken } from "~/services/apiService/relayfor/type"
 import { ApiError } from "~/services/apiTransport/errors"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
-import { normalizeToMs } from "~/utils/core/formatters"
+import { maskSecretForDisplay, normalizeToMs } from "~/utils/core/formatters"
 
 import { createRelayForKeyEditor, editRelayForKeyEditor } from "./keyEditor"
 
@@ -43,6 +42,7 @@ const createdSecret = (
   account: AccountKeyResourceOpenInput["account"],
   scopeKey: string,
   token: Pick<RelayForToken, "id" | "name" | "key">,
+  baseUrl: string,
 ) =>
   createAccountKeyResourceCreatedRuntimeSecret({
     ref: {
@@ -56,10 +56,7 @@ const createdSecret = (
     credential: {
       accountName: account.name ?? "RelayFor",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
-      baseUrl: toProtocolRoot(
-        API_TYPES.OPENAI_COMPATIBLE,
-        RELAYFOR_API_BASE_URL,
-      )!,
+      baseUrl: toProtocolRoot(API_TYPES.OPENAI_COMPATIBLE, baseUrl)!,
       tagIds: [],
     },
   })
@@ -72,7 +69,7 @@ const facts = (
   return {
     ref,
     displayName: token.name,
-    maskedLabel: token.key,
+    maskedLabel: maskSecretForDisplay(token.key),
     status: isEnabled
       ? ACCOUNT_KEY_RESOURCE_STATUSES.Enabled
       : ACCOUNT_KEY_RESOURCE_STATUSES.Disabled,
@@ -129,7 +126,6 @@ const facts = (
         allowedModelIds: token.model_limits?.length ? token.model_limits : null,
         suggestedModelIds: [],
       },
-      baseUrl: RELAYFOR_API_BASE_URL,
       createdAt: normalizeToMs(token.created_at) ?? undefined,
     },
     fields: [
@@ -167,7 +163,7 @@ const facts = (
     searchValues: [
       String(token.id),
       token.name ?? "",
-      token.key ?? "",
+      maskSecretForDisplay(token.key ?? ""),
       ...(token.model_limits || []),
     ],
     actions: {
@@ -236,7 +232,12 @@ export const relayForAccountKeyResources = defineAccountKeyResourceCapability({
       certainty: "applied",
       value: {
         detail: token,
-        createdSecret: createdSecret(config.account, scope.scopeKey, token),
+        createdSecret: createdSecret(
+          config.account,
+          scope.scopeKey,
+          token,
+          request.baseUrl,
+        ),
       },
     }
   },
@@ -265,11 +266,16 @@ export const relayForAccountKeyResources = defineAccountKeyResourceCapability({
         value: updated,
         ...(rotated
           ? {
-              createdSecret: createdSecret(config.account, scope.scopeKey, {
-                id,
-                name: updated.name,
-                key: rotated.key,
-              }),
+              createdSecret: createdSecret(
+                config.account,
+                scope.scopeKey,
+                {
+                  id,
+                  name: updated.name,
+                  key: rotated.key,
+                },
+                request.baseUrl,
+              ),
             }
           : {}),
       }

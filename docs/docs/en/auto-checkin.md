@@ -97,7 +97,7 @@ The following sites have supported check-in methods. Availability still depends 
 | `wong-gongyi` | Yes | Access Token or Cookie, plus account ID |
 | `voapi-v2` | Yes | Saved dashboard JWT (Access Token) |
 | `sub2api` | Yes | Valid login credentials required by the detected check-in method |
-| `relayfor` | Yes | Access Token and account ID |
+| `relayfor` | Yes | Access Token |
 | AgentRouter | Yes | After selecting login check-in, configure GitHub, Linux DO or a username and password under Account login below. Saving does not sign in; check-in uses this configuration when executed. Confirm the execution result. |
 
 ### Check-in differences between Sub2API sites

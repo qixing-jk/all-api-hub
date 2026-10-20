@@ -23,6 +23,44 @@ const { helpers, captureRecoveryData } = createAccountCompletionHelpersMock(
   },
 )
 
+it.each([
+  ["", "token", AUTO_DETECT_FAILURE_REASONS.UsernameMissing],
+  ["alice", "", AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing],
+  ["alice", "token", AUTO_DETECT_FAILURE_REASONS.SiteStatusFetchFailed],
+])(
+  "retains recovery evidence when completion fails: %s %s",
+  async (username, access_token, reason) => {
+    vi.mocked(relayForAccountBootstrap.fetchUserInfo).mockResolvedValueOnce({
+      id: "5",
+      username,
+      access_token,
+    })
+    if (reason === AUTO_DETECT_FAILURE_REASONS.SiteStatusFetchFailed)
+      vi.mocked(
+        relayForAccountBootstrap.loadBootstrapFacts,
+      ).mockRejectedValueOnce(new Error("offline"))
+    await expect(
+      relayForAccountCompletion.complete(
+        {
+          url: "https://relayfor.xyz",
+          requestedAuthType: AuthTypeEnum.AccessToken,
+          detected: {
+            userId: "5",
+            user: {},
+            accessToken: "candidate",
+            siteType: SITE_TYPES.RELAYFOR,
+          },
+          context: {},
+        },
+        helpers,
+      ),
+    ).rejects.toMatchObject({ reason })
+    expect(captureRecoveryData).toHaveBeenCalledWith(
+      expect.objectContaining({ authType: AuthTypeEnum.AccessToken }),
+    )
+  },
+)
+
 describe("relayForAccountCompletion", () => {
   beforeEach(() => {
     vi.clearAllMocks()

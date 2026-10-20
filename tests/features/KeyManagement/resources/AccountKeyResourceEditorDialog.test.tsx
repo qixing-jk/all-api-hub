@@ -2298,6 +2298,33 @@ it("confirms key rotation explicitly without unrelated editable fields", async (
   expect(onSubmit).toHaveBeenCalledWith(901, {})
 })
 
+it("keeps failed rotation feedback visible with the destructive confirmation", async () => {
+  render(
+    <AccountKeyResourceEditorDialog
+      editor={{
+        editorId: 902,
+        siteType: SITE_TYPES.RELAYFOR,
+        mode: editorModes.Edit,
+        action: "rotate",
+        fields: [],
+        initialValues: {},
+        values: {},
+        feedback: { code: "mutation_state_uncertain" },
+      }}
+      onSubmit={vi.fn()}
+      onClose={vi.fn()}
+      onValuesChange={vi.fn()}
+    />,
+    { withUserPreferencesProvider: false, withThemeProvider: false },
+  )
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "keyManagement:native.editor.feedback.uncertain",
+  )
+  expect(screen.getByRole("dialog")).toHaveTextContent(
+    "keyManagement:native.lifecycle.rotateDescription",
+  )
+})
+
 it("cancels rotation without submitting or showing an unsaved-edits prompt", async () => {
   const user = userEvent.setup()
   const onSubmit = vi.fn()

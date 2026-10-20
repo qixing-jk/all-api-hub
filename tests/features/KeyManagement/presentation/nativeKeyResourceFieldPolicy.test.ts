@@ -45,6 +45,55 @@ const request = {
   },
 }
 
+it.each([
+  ["budget_5h", "budget5h", "budgetResetHelp"],
+  ["budget_day", "budgetDay", ""],
+  ["budget_week", "budgetWeek", ""],
+  ["budget_month", "budgetMonth", ""],
+  ["requests_per_minute", "keyRpm", "keyRateHelp"],
+  ["concurrent_requests", "keyConcurrency", "keyRateHelp"],
+  ["unlimited_quota", "keyUnlimitedQuota", "keyUnlimitedQuotaHelp"],
+  ["quota", "independentQuotaUsd", "followAccountQuotaHelp"],
+  ["model_limits", "modelAllowlist", "allowlistHelp"],
+  ["ip_limits", "ipCidrAllowlist", "allowlistHelp"],
+])("explains the native RelayFor setting %s", (id, label, help) => {
+  const presentation = getNativeKeyResourceEditorPresentation(
+    SITE_TYPES.RELAYFOR,
+    editorModes.Edit,
+  )
+  const field = presentation.policy.fields.find((f) => f.fieldId === id)!
+  const t = ((key: string) => key) as TFunction
+  expect(field.resolveLabel(t)).toBe(`keyManagement:native.editor.${label}`)
+  expect(field.resolveHelp?.(t)).toBe(
+    help ? `keyManagement:native.editor.${help}` : "",
+  )
+  expect(presentation.sectionLabelResolvers.limits?.(t)).toBe(
+    "keyManagement:native.editor.budgetsAndLimits",
+  )
+})
+
+it.each(["rotate", "enable", "disable"] as const)(
+  "explains the consequence of %s without editable settings",
+  (action) => {
+    const presentation = getNativeKeyResourceEditorPresentation(
+      SITE_TYPES.RELAYFOR,
+      editorModes.Edit,
+      { action },
+    )
+    const t = ((key: string) => key) as TFunction
+    expect(presentation.policy.fields).toEqual([])
+    expect(presentation.title?.(t, {})).toBe(
+      `keyManagement:native.actions.${action}`,
+    )
+    expect(presentation.submitLabel?.(t, {})).toBe(
+      `keyManagement:native.actions.${action}`,
+    )
+    expect(presentation.summary?.describe({}, t, "en")).toBe(
+      `keyManagement:native.lifecycle.${action}Description`,
+    )
+  },
+)
+
 /** Supplies the same editor facts that the dialog passes in production. */
 function getPresentation(
   siteType: string | undefined,

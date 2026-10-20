@@ -11,6 +11,27 @@ import {
 import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
 
 describe("siteUrlNormalization", () => {
+  it("preserves isolated RelayFor deployment origins for storage and duplicate detection", () => {
+    const url = "https://custom-relayfor.example.com"
+    expect(
+      normalizeAccountSiteProfileUrlForStorage({
+        siteType: SITE_TYPES.RELAYFOR,
+        url,
+      }),
+    ).toBe(url)
+    expect(
+      normalizeAccountSiteProfileUrlForDuplicateCheck({
+        siteType: SITE_TYPES.RELAYFOR,
+        url,
+      }),
+    ).toBe(url)
+    expect(
+      isSameAccountSiteOrigin(
+        { siteType: SITE_TYPES.RELAYFOR, url },
+        { siteType: SITE_TYPES.RELAYFOR, url: "https://relayfor.xyz" },
+      ),
+    ).toBe(false)
+  })
   it.each([
     "https://api.laozhang.ai",
     "https://api2.laozhang.ai",

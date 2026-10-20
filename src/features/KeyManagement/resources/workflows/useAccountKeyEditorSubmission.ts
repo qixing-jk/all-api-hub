@@ -82,8 +82,16 @@ export function useAccountKeyEditorSubmission({
         !submission.boundary ||
         !context ||
         !boundariesMatch(context.boundary, submission.boundary)
-      )
+      ) {
+        if (
+          nativeEditor &&
+          state?.editorId === editorId &&
+          submission.boundary &&
+          !context
+        )
+          onFailure?.({ code: ACCOUNT_KEY_RESOURCE_FAILURE_CODES.Unavailable })
         return
+      }
       const feedback = (error: Parameters<typeof toFailure>[0]) => {
         const failure = toFailure(error)
         transitionEditor((previous) =>

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   buildAccountKeyResourceRuntimeKey,
+  buildAccountKeyResourceRuntimeKeyFromFacts,
   isAccountRuntimeKeyCompatibleWithModel,
 } from "~/services/accounts/keys/accountRuntimeKeys"
 import type { EditableResourceProjection } from "~/services/apiAdapters/contracts/accountKeyResource"
@@ -14,6 +15,7 @@ import {
   rotateRelayForToken,
   updateRelayForToken,
 } from "~/services/apiService/relayfor"
+import { ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
@@ -37,6 +39,106 @@ const request = {
   accountId: "acc-1",
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token-abc" },
 }
+
+it("keeps created and associated runtime credentials on the account deployment", async () => {
+  const baseUrl = "https://private-relayfor.example.com"
+  const token = {
+    id: 1,
+    name: "Private",
+    key: "sk-private-response-secret",
+    status: 1,
+    remain_quota: -1,
+    used_quota: 0,
+    unlimited_quota: false,
+  }
+  vi.mocked(createRelayForToken).mockResolvedValueOnce(token)
+  const session = await relayForAccountKeyResources.open({
+    account,
+    request: { ...request, baseUrl },
+  })
+  const result = await (
+    await session.openCreateEditor("default")
+  ).submit({ name: "Private" })
+  expect(result.createdSecret?.credential.baseUrl).toBe(baseUrl)
+  const runtime = buildAccountKeyResourceRuntimeKeyFromFacts(
+    buildDisplaySiteData({
+      id: account.id,
+      siteType: SITE_TYPES.RELAYFOR,
+      baseUrl,
+    }),
+    result.facts!,
+  )
+  expect(runtime.baseUrl).toBe(baseUrl)
+})
+
+it.each([400, 403, 408, 499, 500])(
+  "classifies failed key updates without replay: HTTP %s",
+  async (status) => {
+    vi.mocked(fetchRelayForTokens).mockResolvedValue([
+      {
+        id: 1,
+        name: "Key",
+        key: "masked",
+        status: 1,
+        remain_quota: -1,
+        used_quota: 0,
+        unlimited_quota: false,
+      },
+    ])
+    vi.mocked(updateRelayForToken)
+      .mockReset()
+      .mockRejectedValue(new ApiError("rejected", status))
+    const session = await relayForAccountKeyResources.open({ account, request })
+    const collection = await session.openCollection("default")
+    const editor = await collection.openEditEditor(
+      {
+        accountId: account.id,
+        siteType: SITE_TYPES.RELAYFOR,
+        scopeKey: "default",
+        resourceId: "1",
+      },
+      undefined,
+      { action: "disable" },
+    )
+    await expect(editor.submit({})).rejects.toMatchObject({
+      failure: {
+        code:
+          status === 408 || status === 499 || status >= 500
+            ? "mutation_state_uncertain"
+            : expect.any(String),
+      },
+    })
+    expect(updateRelayForToken).toHaveBeenCalledOnce()
+    vi.mocked(updateRelayForToken).mockReset()
+  },
+)
+
+it("reports removed keys and rejects empty names before writes", async () => {
+  vi.mocked(fetchRelayForTokens).mockResolvedValue([])
+  const session = await relayForAccountKeyResources.open({ account, request })
+  const collection = await session.openCollection("default")
+  await expect(session.resolveDefaultScope()).resolves.toMatchObject({
+    scopeKey: "default",
+  })
+  await expect(
+    session.runtimeKey!.resolve({
+      accountId: account.id,
+      siteType: SITE_TYPES.RELAYFOR,
+      scopeKey: "default",
+      resourceId: "missing",
+    }),
+  ).resolves.toMatchObject({ kind: "unavailable" })
+  await expect(
+    collection.openEditEditor({
+      accountId: account.id,
+      siteType: SITE_TYPES.RELAYFOR,
+      scopeKey: "default",
+      resourceId: "missing",
+    }),
+  ).rejects.toMatchObject({ failure: { code: "not_found" } })
+  const editor = await session.openCreateEditor("default")
+  expect(editor.validate({ name: " " }).valid).toBe(false)
+})
 
 describe("relayForAccountKeyResources", () => {
   it.each([
@@ -93,7 +195,7 @@ describe("relayForAccountKeyResources", () => {
     expect(relayForAccountKeyResources.defaultCreation).toBe("editor-defaults")
   })
 
-  it("lists keys with masked labels and exports baseUrl https://relayfor.xyz/v1", async () => {
+  it("lists keys with masked labels and inherits the account origin", async () => {
     vi.mocked(fetchRelayForTokens).mockResolvedValueOnce([
       {
         id: 1,
@@ -113,8 +215,8 @@ describe("relayForAccountKeyResources", () => {
     expect(page.items).toHaveLength(1)
     const item = atIndex(page.items, 0)
     expect(item.displayName).toBe("My Key")
-    expect(item.maskedLabel).toBe("sk-masked...****")
-    expect(item.runtimeKey?.baseUrl).toBe("https://relayfor.xyz/v1")
+    expect(item.maskedLabel).toBe("sk-m••••••****")
+    expect(item.runtimeKey?.baseUrl).toBeUndefined()
   })
 
   it("creates key and returns createdSecret with plaintext key", async () => {
@@ -133,6 +235,10 @@ describe("relayForAccountKeyResources", () => {
     const result = await editor.submit({ name: "New Key" })
 
     expect(result.createdSecret?.secret).toBe("sk-plaintext-secret-123")
+    expect(JSON.stringify(result.facts)).not.toContain(
+      "sk-plaintext-secret-123",
+    )
+    expect(result.facts?.maskedLabel).toContain("sk-")
     expect(createRelayForToken).toHaveBeenCalledWith(
       expect.objectContaining({ baseUrl: "https://relayfor.xyz" }),
       expect.objectContaining({ name: "New Key" }),
@@ -292,6 +398,43 @@ describe("relayForAccountKeyResources", () => {
     )
   })
 })
+
+it.each(["", null, undefined])(
+  "clears the independent quota back to follow-account: %j",
+  async (quota) => {
+    vi.mocked(fetchRelayForTokens).mockResolvedValue([
+      {
+        id: 1,
+        name: "Key",
+        key: "masked",
+        status: 1,
+        remain_quota: 500000,
+        used_quota: 0,
+        unlimited_quota: false,
+      },
+    ])
+    vi.mocked(updateRelayForToken).mockReset().mockResolvedValue(undefined)
+    const session = await relayForAccountKeyResources.open({ account, request })
+    const editor = await (
+      await session.openCollection("default")
+    ).openEditEditor({
+      accountId: account.id,
+      siteType: SITE_TYPES.RELAYFOR,
+      scopeKey: "default",
+      resourceId: "1",
+    })
+    const values = { ...editor.initialValues }
+    if (quota === undefined) delete values.quota
+    else values.quota = quota
+    expect(editor.validate(values).valid).toBe(true)
+    await editor.submit(values)
+    expect(updateRelayForToken).toHaveBeenCalledWith(
+      expect.anything(),
+      1,
+      expect.objectContaining({ remain_quota: -1 }),
+    )
+  },
+)
 
 it("preserves follow-account quota and maps native IP and expiry fields on edit", async () => {
   const token = {

@@ -15,6 +15,24 @@ const request = {
   auth: { authType: AuthTypeEnum.AccessToken, accessToken: "test-token" },
 }
 
+it.each(["test-token", undefined])(
+  "obtains the verified username while preserving the existing credential: %s",
+  async (accessToken) => {
+    vi.mocked(fetchRelayForUserInfo).mockResolvedValueOnce({
+      id: 5,
+      username: "alice",
+      quota: 0,
+      role: 1,
+    })
+    await expect(
+      relayForAccountBootstrap.getOrCreateAccessToken({
+        ...request,
+        auth: { ...request.auth, accessToken },
+      }),
+    ).resolves.toEqual({ username: "alice", access_token: accessToken ?? "" })
+  },
+)
+
 describe("relayForAccountBootstrap", () => {
   it("fetches user info and formats access token", async () => {
     vi.mocked(fetchRelayForUserInfo).mockResolvedValueOnce({

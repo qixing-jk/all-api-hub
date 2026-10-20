@@ -29,7 +29,7 @@ import type { PricingPlan } from "~/services/modelPricing/pricingPlan"
 const ENDPOINT_LABELS: Record<string, string> = {
   "/v1/chat/completions": "Chat Completions",
   "/v1/responses": "Responses",
-  "/v1/responses/compact": "远程压缩 v2",
+  "/v1/responses/compact": "Responses Compact",
   "/v1/messages": "Messages",
   "/v1beta/models/{model}:generateContent": "Gemini",
   "/v1beta/models/{model}:streamGenerateContent": "Gemini Stream",
@@ -165,7 +165,7 @@ function buildRelayForPricingResponse(
         let pricingPlan: PricingPlan | undefined
 
         if (hasLongContext) {
-          const thresholdStr = longThreshold.toLocaleString("zh-CN")
+          const thresholdStr = longThreshold.toLocaleString("en-US")
           const pricingDescription = `长上下文 > ${thresholdStr} 输入 Token：整次请求 输入 $${longInput} · 输出 $${longOutput}${longCacheRead !== undefined ? ` · 缓存读 $${longCacheRead}` : ""}${longCacheWrite !== undefined ? ` · 缓存写 $${longCacheWrite}` : ""} / 1M`
           pricingPlan = {
             rates: tokenRates(input, output, cacheRead, cacheWrite),
@@ -177,6 +177,7 @@ function buildRelayForPricingResponse(
               url: new URL("/console/#models", baseUrl).href,
               pricingDescription: {
                 zh: pricingDescription,
+                en: `Long context > ${thresholdStr} input tokens: entire request input $${longInput} · output $${longOutput}${longCacheRead !== undefined ? ` · cache read $${longCacheRead}` : ""}${longCacheWrite !== undefined ? ` · cache write $${longCacheWrite}` : ""} / 1M`,
               },
             },
             rules: [
@@ -282,10 +283,6 @@ function buildRelayForPricingResponse(
 export const relayForModelPricing: ModelPricingCapability = {
   async updateGroup(request, model, group) {
     await updateRelayForModelGroup(request, model, group)
-    return buildRelayForPricingResponse(
-      await fetchRelayForModels(request),
-      request.baseUrl,
-    )
   },
   runtimeKeyFallback: MODEL_PRICING_RUNTIME_KEY_FALLBACKS.ACCOUNT_PRICING,
   fetchPricing: async (

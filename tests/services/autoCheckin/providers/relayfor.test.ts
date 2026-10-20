@@ -51,6 +51,95 @@ describe("relayForProvider", () => {
     i18n.addResourceBundle("en", "autoCheckin", autoCheckin, true, true)
   })
 
+  it.each([undefined, null])(
+    "skips campaigns with absent days without attempting makeup: %j",
+    async (days) => {
+      vi.mocked(fetchRelayForCheckInCampaigns).mockResolvedValueOnce([
+        { id: 1, days },
+      ] as never)
+      const result = await relayForProvider.checkIn(mockAccount, {} as never)
+      expect(result.status).toBe(CHECKIN_RESULT_STATUS.SKIPPED)
+      expect(claimRelayForCheckIn).not.toHaveBeenCalled()
+    },
+  )
+
+  it("distinguishes disabled campaigns from failed status discovery", async () => {
+    vi.mocked(fetchRelayForCheckInCampaigns).mockResolvedValueOnce([])
+    const controller = new AbortController()
+    const context = {
+      account: mockAccount,
+      observedAt: Date.now(),
+      signal: controller.signal,
+    }
+    await expect(relayForProvider.getStatus?.(context)).resolves.toMatchObject({
+      availability: CHECK_IN_METHOD_AVAILABILITIES.Disabled,
+    })
+    expect(fetchRelayForCheckInCampaigns).toHaveBeenLastCalledWith(
+      expect.objectContaining({ abortSignal: controller.signal }),
+    )
+    vi.mocked(fetchRelayForCheckInCampaigns).mockRejectedValueOnce(
+      new Error("offline"),
+    )
+    await expect(relayForProvider.getStatus?.(context)).resolves.toBeUndefined()
+    await expect(
+      relayForProvider.getStatus?.({ observedAt: Date.now() }),
+    ).resolves.toBeUndefined()
+  })
+
+  it("reports a campaign fetch failure without dispatching a claim", async () => {
+    vi.mocked(fetchRelayForCheckInCampaigns).mockRejectedValueOnce(
+      new Error("offline"),
+    )
+    const result = await relayForProvider.checkIn(mockAccount, {} as never)
+    expect(result.status).not.toBe(CHECKIN_RESULT_STATUS.SUCCESS)
+    expect(claimRelayForCheckIn).not.toHaveBeenCalled()
+  })
+
+  it.each([false, true])(
+    "retains reward-only results and first-claim failures (failure=%s)",
+    async (failure) => {
+      vi.mocked(fetchRelayForCheckInCampaigns).mockResolvedValueOnce([
+        {
+          id: 1,
+          name: "Monthly",
+          start_date: "2026-10-01",
+          end_date: "2026-10-31",
+          makeups_used: 0,
+          makeup_limit: 0,
+          days: [
+            {
+              date: "2026-10-19",
+              can_claim: true,
+              claimed: false,
+              can_makeup: false,
+            },
+          ],
+        },
+      ])
+      if (failure)
+        vi.mocked(claimRelayForCheckIn).mockRejectedValueOnce(
+          new Error("offline"),
+        )
+      else
+        vi.mocked(claimRelayForCheckIn).mockResolvedValueOnce({
+          is_makeup: false,
+          quota_awarded: 0,
+          reward_type: "benefit",
+          benefits: [{ type: "burst_credits", burst_credits: 10 }],
+        })
+      const result = await relayForProvider.checkIn(mockAccount, {} as never)
+      expect(result.reward).toBeUndefined()
+      if (failure) {
+        expect(result.status).not.toBe(CHECKIN_RESULT_STATUS.SUCCESS)
+        expect(result.rawMessage).toContain("0 of 1")
+      } else {
+        expect(result.status).toBe(CHECKIN_RESULT_STATUS.SUCCESS)
+        expect(result.rawMessage).toContain("10")
+      }
+      expect(claimRelayForCheckIn).toHaveBeenCalledOnce()
+    },
+  )
+
   it("checks readiness based on access token presence", () => {
     expect(relayForProvider.getReadiness(mockAccount)).toEqual({ ready: true })
 

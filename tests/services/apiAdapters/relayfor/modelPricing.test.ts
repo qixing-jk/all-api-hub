@@ -2,12 +2,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MODEL_PRICING_RUNTIME_KEY_FALLBACKS } from "~/services/apiAdapters/contracts/modelPricing"
 import { relayForModelPricing } from "~/services/apiAdapters/relayfor/modelPricing"
-import { fetchRelayForModels } from "~/services/apiService/relayfor"
+import {
+  fetchRelayForModels,
+  updateRelayForModelGroup,
+} from "~/services/apiService/relayfor"
 import { pricingPlanSchema } from "~/services/modelPricing/pricingPlan"
 import { AuthTypeEnum } from "~/types"
 
 vi.mock("~/services/apiService/relayfor", () => ({
   fetchRelayForModels: vi.fn(),
+  updateRelayForModelGroup: vi.fn(),
 }))
 
 const request = {
@@ -16,8 +20,53 @@ const request = {
 }
 
 describe("relayForModelPricing", () => {
+  it("leaves catalog readback to the host refresh after saving routing", async () => {
+    vi.mocked(fetchRelayForModels).mockClear()
+    await relayForModelPricing.updateGroup!(request, "gpt-4o", "premium")
+    expect(updateRelayForModelGroup).toHaveBeenCalledWith(
+      request,
+      "gpt-4o",
+      "premium",
+    )
+    expect(fetchRelayForModels).not.toHaveBeenCalled()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  it("retains subscription access facts and per-request prices", async () => {
+    vi.mocked(fetchRelayForModels).mockResolvedValueOnce({
+      items: [
+        {
+          model: "image",
+          billing_mode: "request",
+          effective_request_price: 0.05,
+          subscription_plan: "Pro",
+          subscription_multiplier: 0.5,
+        },
+        {
+          model: "free-image",
+          billing_mode: "request",
+          free_model: true,
+          base_request_price: 1,
+        },
+        {
+          model: "base-image",
+          billing_mode: "request",
+          base_request_price: 0.1,
+        },
+        { model: "unknown-image", billing_mode: "request" },
+      ],
+    })
+    const catalog = await relayForModelPricing.fetchPricing(request)
+    expect(catalog.data.map((m) => m.model_price)).toEqual([0.05, 0, 0.1, 0])
+    expect(catalog.data[0]?.presentation?.summaryFacts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: "text", value: "Pro" }),
+        expect.objectContaining({ type: "number", value: 0.5 }),
+      ]),
+    )
+    expect(catalog.data.every((m) => m.quota_type === 1)).toBe(true)
   })
 
   it("declares ACCOUNT_PRICING fallback", () => {
@@ -225,6 +274,9 @@ describe("relayForModelPricing", () => {
       )
       expect(item.pricingPlan?.source?.pricingDescription?.zh).toContain(
         "长上下文 > 200,000 输入 Token",
+      )
+      expect(item.pricingPlan?.source?.pricingDescription?.en).toContain(
+        "Long context > 200,000",
       )
       expect(pricingPlanSchema.safeParse(item.pricingPlan).success).toBe(true)
       expect(item.pricingPlan?.rules).toHaveLength(1)

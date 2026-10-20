@@ -17,6 +17,12 @@ const request = {
   checkIn: buildCheckInConfig(),
 }
 
+it("keeps native check-in discovery available during refresh", async () => {
+  await expect(
+    relayForAccountRefresh.fetchCheckInSupport!(request),
+  ).resolves.toBe(true)
+})
+
 describe("relayForAccountRefresh", () => {
   beforeEach(() => {
     vi.clearAllMocks()

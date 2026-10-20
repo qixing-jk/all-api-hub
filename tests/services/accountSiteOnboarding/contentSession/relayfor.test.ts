@@ -40,6 +40,19 @@ describe("relayForContentSessionExtractor", () => {
     }
   }
 
+  it("rejects invalid URLs and returns no identity after network failure", async () => {
+    expect(relayForContentSessionExtractor.canExtract({ url: "invalid" })).toBe(
+      false,
+    )
+    storeSession({ [TOKEN_KEY]: "token" })
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError("offline"))
+    vi.stubGlobal("fetch", fetchMock)
+    await expect(
+      relayForContentSessionExtractor.extract({ url: "https://relayfor.xyz" }),
+    ).resolves.toBeNull()
+    expect(fetchMock).toHaveBeenCalledOnce()
+  })
+
   it("extracts account token and verifies identity via /api/user/self", async () => {
     storeSession({
       [TOKEN_KEY]: "test-relayfor-token",

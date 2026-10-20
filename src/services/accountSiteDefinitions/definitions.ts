@@ -117,7 +117,6 @@ import {
   RELAYFOR_DISPLAY_NAME,
   RELAYFOR_HOSTNAMES,
   RELAYFOR_LOGIN_PATH,
-  RELAYFOR_WEB_ORIGIN,
   RIGHTCODE_DISPLAY_NAME,
   RIGHTCODE_HOSTNAMES,
   RIGHTCODE_LOGIN_PATH,
@@ -1097,8 +1096,6 @@ const ACCOUNT_SITE_DEFINITIONS = [
       urls: {
         recognizedHostnames: RELAYFOR_HOSTNAMES,
         inferFromHostname: true,
-        storageOrigin: RELAYFOR_WEB_ORIGIN,
-        duplicateOrigin: RELAYFOR_WEB_ORIGIN,
       },
     },
   },

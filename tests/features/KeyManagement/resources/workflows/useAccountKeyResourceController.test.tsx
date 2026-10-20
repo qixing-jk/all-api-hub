@@ -125,6 +125,55 @@ const mockNativeResourceSession = (open: ReturnType<typeof vi.fn>) => {
 }
 
 describe("useAccountKeyResourceController", () => {
+  it.each(["throw", "wrong-action", "editable-fields"])(
+    "rejects unsafe immediate-action preparation: %s",
+    async (scenario) => {
+      const facts = createFacts("default", "key-example")
+      const scope = {
+        scopeKey: "default",
+        routeKey: "default",
+        displayName: "Default",
+        isDefault: true,
+      }
+      const submit = vi.fn()
+      const openEditEditor =
+        scenario === "throw"
+          ? vi.fn().mockRejectedValue(new Error("offline"))
+          : vi.fn().mockResolvedValue({
+              action: scenario === "wrong-action" ? "enable" : "disable",
+              fields:
+                scenario === "editable-fields"
+                  ? [{ fieldId: "name", type: "text" }]
+                  : [],
+              initialValues: {},
+              validate: () => ({ valid: true }),
+              submit,
+            })
+      mockNativeResourceSession(
+        vi.fn().mockResolvedValue({
+          resolveDefaultScope: vi.fn().mockResolvedValue(scope),
+          listScopes: vi.fn().mockResolvedValue([scope]),
+          openCollection: vi.fn().mockResolvedValue({
+            list: vi.fn().mockResolvedValue({ items: [facts] }),
+            openEditEditor,
+          }),
+        }),
+      )
+      const { result } = renderHook(() =>
+        useAccountKeyResourceController({
+          accounts: [createAccount("account-example")],
+          selectedAccount: "account-example",
+          routeParams: { accountId: "account-example" },
+        }),
+      )
+      await waitFor(() => expect(result.current.rows).toHaveLength(1))
+      await act(async () => result.current.openEdit(facts.ref, "disable"))
+      expect(submit).not.toHaveBeenCalled()
+      expect(toastErrorMock).toHaveBeenCalled()
+      expect(result.current.editor).toBeNull()
+      expect(result.current.editorOpening.status).toBe("idle")
+    },
+  )
   it.each(["enable", "disable"] as const)(
     "executes %s directly once without opening an editor",
     async (action) => {

@@ -147,7 +147,7 @@ export const relayForProvider: AutoCheckinProvider = {
           messageKey:
             AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS.alreadyCheckedToday,
           ...(campaigns.some((campaign) =>
-            campaign.days.some((day) => day.can_makeup),
+            (campaign.days ?? []).some((day) => day.can_makeup),
           )
             ? {
                 rawMessage: t("autoCheckin:providerFallback.relayForMakeup", {

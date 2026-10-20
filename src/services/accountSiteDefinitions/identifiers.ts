@@ -128,9 +128,7 @@ export const RIGHTCODE_LOGIN_PATH = "/login"
 
 export const RELAYFOR_HOSTNAMES = ["relayfor.xyz"] as const
 export const RELAYFOR_DISPLAY_NAME = "RelayFor"
-export const RELAYFOR_WEB_ORIGIN = "https://relayfor.xyz"
 export const RELAYFOR_LOGIN_PATH = "/auth/?mode=login"
-export const RELAYFOR_API_BASE_URL = `${RELAYFOR_WEB_ORIGIN}/v1`
 
 export const OPENROUTER_HOSTNAMES = ["openrouter.ai"] as const
 

@@ -13,7 +13,6 @@ import {
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import * as requestExecution from "~/services/apiTransport/requestExecution"
 import { AuthTypeEnum } from "~/types"
-import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 vi.mock("~/services/apiTransport/requestExecution", () => ({
   fetchPreparedJsonResponse: vi.fn(),
@@ -27,6 +26,19 @@ const request = {
 describe("relayfor transport and constants", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  it("rejects unauthenticated requests without dispatch", async () => {
+    await expect(
+      fetchRelayForData(
+        {
+          baseUrl: request.baseUrl,
+          auth: { authType: AuthTypeEnum.AccessToken },
+        },
+        "/api/user/self",
+      ),
+    ).rejects.toMatchObject({ statusCode: 401 })
+    expect(requestExecution.fetchPreparedJsonResponse).not.toHaveBeenCalled()
   })
 
   it("builds dynamic endpoint URLs and provides correct currency conversion", () => {
@@ -128,11 +140,8 @@ describe("relayfor transport and constants", () => {
       body: { name: "new-key", remain_quota: 500000 },
     })
 
-    const callArgs = atIndex(
-      vi.mocked(requestExecution.fetchPreparedJsonResponse).mock.calls,
-      0,
-    )
-    const options = atIndex(callArgs, 1).options
+    const options = vi.mocked(requestExecution.fetchPreparedJsonResponse).mock
+      .calls[0]![1].options
     expect(options.method).toBe("POST")
     expect(options.body).toBe(
       JSON.stringify({ name: "new-key", remain_quota: 500000 }),

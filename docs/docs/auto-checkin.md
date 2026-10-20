@@ -97,7 +97,7 @@
 | `wong-gongyi` | 有 | Access Token 或 Cookie，以及账号 ID |
 | `voapi-v2` | 有 | 保存的仪表盘 JWT（Access Token） |
 | `sub2api` | 有 | 检测到的签到方式所需的有效登录凭据 |
-| `relayfor` | 有 | Access Token 与账号 ID |
+| `relayfor` | 有 | Access Token |
 | AgentRouter | 有 | 选择登录签到后，在下方「账号登录」配置 GitHub、Linux DO 或用户名和密码；保存不发起登录，执行签到时才使用该配置，并以执行结果确认签到状态 |
 
 ### Sub2API 站点的签到差异

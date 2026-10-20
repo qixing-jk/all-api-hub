@@ -42,6 +42,104 @@ describe("RelayFor native account workflows", () => {
     )
   })
 
+  it("omits empty announcements", async () => {
+    respond({ content: "" })
+    await expect(
+      relayForCapabilities.site!.announcements!.fetch(request),
+    ).resolves.toEqual([])
+  })
+
+  it.each([
+    null,
+    { items: [], total_pages: -1 },
+    { items: [null], total_pages: 1 },
+    {
+      items: [{ id: 1, model: "gpt-4o", quota: 1, created_at: "invalid" }],
+      total_pages: 1,
+    },
+  ])(
+    "rejects invalid usage pages before committing history: %j",
+    async (body) => {
+      respond(body)
+      await expect(
+        relayForCapabilities.account!.usageHistory!.fetchPage(request, {
+          page: 1,
+          pageSize: 10,
+          startTimestamp: 1,
+          endTimestamp: 2,
+        }),
+      ).rejects.toThrow(/Invalid RelayFor usage/)
+    },
+  )
+
+  it("retains sparse usage with unknown duration and page-derived totals", async () => {
+    respond({
+      items: [
+        {
+          id: 1,
+          model: "gpt-4o",
+          quota: 1,
+          created_at: 1792458000,
+          duration_ms: -1,
+        },
+      ],
+      total_pages: 2,
+    })
+    const page = await relayForCapabilities.account!.usageHistory!.fetchPage(
+      request,
+      { page: 1, pageSize: 10, startTimestamp: 1, endTimestamp: 2 },
+    )
+    expect(page.total).toBe(20)
+    expect(page.items[0]).toMatchObject({
+      use_time: -1,
+      quota: 1,
+      prompt_tokens: 0,
+    })
+  })
+
+  it.each([
+    { redeem_type: "prepaid", added_quota: 500000, expires_at: "2099-01-01" },
+    { redeem_type: "quota", added_quota: 500000, quota_group: "premium" },
+    {
+      redeem_type: "subscription",
+      subscription: { plan_name: "Pro", unlimited_quota: true },
+      subscription_extension_days: 7,
+    },
+    {
+      benefits: [
+        {
+          type: "quota",
+          quota: 500000,
+          extension_days: 7,
+          fallback_used: true,
+        },
+      ],
+    },
+  ])(
+    "preserves nonstandard redemption benefits without replay: %j",
+    async (body) => {
+      respond(body)
+      const result = await relayForCapabilities.account!.redemption!.redeem({
+        request,
+        code: "fixture",
+      })
+      expect(result).toEqual({ message: expect.any(String) })
+      const text = JSON.stringify(result)
+      if (body.redeem_type === "prepaid") expect(text).toContain("2099")
+      if (body.quota_group) expect(text).toContain("premium")
+      if (body.subscription) {
+        expect(text).toContain("Pro")
+        expect(text).toMatch(/unlimited/i)
+        expect(text).toContain("7")
+      }
+      if (body.benefits) {
+        expect(text).toContain("7")
+        expect(text).toMatch(/fallback/i)
+      }
+      expect(fetchPreparedJsonResponse).toHaveBeenCalledOnce()
+    },
+  )
+
   it("keeps permanent, timed, subscription and group allowances distinct", async () => {
     respond({
       user: { id: 1, username: "fixture", quota: 500000 },
@@ -284,8 +382,14 @@ describe("RelayFor native account workflows", () => {
         },
       ],
     })
-    const result = await relayForCapabilities.account!.modelPricing!
-      .updateGroup!(request, "gpt-4o", "standard")
+    await relayForCapabilities.account!.modelPricing!.updateGroup!(
+      request,
+      "gpt-4o",
+      "standard",
+    )
+    expect(fetchPreparedJsonResponse).toHaveBeenCalledTimes(1)
+    const result =
+      await relayForCapabilities.account!.modelPricing!.fetchPricing(request)
     expect(
       JSON.parse(
         String(
