@@ -4,6 +4,14 @@ import type { AccountNativeBalance } from "~/types"
 
 import { AllowanceDetailsPopover } from "./AllowanceDetailsPopover"
 
+/** Calendar dates retain their day; instants are shown in the user's timezone. */
+function formatAllowanceTime(value: string) {
+  const date = new Date(value)
+  return /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? date.toLocaleDateString(undefined, { timeZone: "UTC" })
+    : date.toLocaleString()
+}
+
 /** Read-only scoped USD allowance details, independent of account refresh state. */
 export function AccountAllowanceDetails({
   nativeBalance,
@@ -53,14 +61,14 @@ export function AccountAllowanceDetails({
             {component.expiresAt && (
               <dd>
                 {t("stats.allowanceExpiry", {
-                  time: new Date(component.expiresAt).toLocaleString(),
+                  time: formatAllowanceTime(component.expiresAt),
                 })}
               </dd>
             )}
             {component.resetAt && (
               <dd>
                 {t("stats.allowanceReset", {
-                  time: new Date(component.resetAt).toLocaleString(),
+                  time: formatAllowanceTime(component.resetAt),
                 })}
               </dd>
             )}
@@ -78,7 +86,7 @@ export function AccountAllowanceDetails({
                         {grant.expiresAt && (
                           <dd>
                             {t("stats.allowanceExpiry", {
-                              time: new Date(grant.expiresAt).toLocaleString(),
+                              time: formatAllowanceTime(grant.expiresAt),
                             })}
                           </dd>
                         )}

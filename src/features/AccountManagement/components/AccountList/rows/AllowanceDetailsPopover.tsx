@@ -13,6 +13,7 @@ export function AllowanceDetailsPopover({
   children: ReactNode
 }) {
   const contentId = useId()
+  const descriptionId = `${contentId}-description`
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -75,6 +76,7 @@ export function AllowanceDetailsPopover({
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-controls={open ? contentId : undefined}
+          aria-describedby={open ? descriptionId : undefined}
           onPointerEnter={(event) => {
             if (event.pointerType !== "touch") showPreview()
           }}
@@ -120,7 +122,7 @@ export function AllowanceDetailsPopover({
         onOpenAutoFocus={(event) => event.preventDefault()}
         onCloseAutoFocus={(event) => event.preventDefault()}
       >
-        {children}
+        <div id={descriptionId}>{children}</div>
       </PopoverContent>
     </Popover>
   )

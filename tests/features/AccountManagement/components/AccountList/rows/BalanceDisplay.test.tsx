@@ -1,6 +1,6 @@
 import userEvent from "@testing-library/user-event"
 import React from "react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest"
 
 import BalanceDisplay from "~/features/AccountManagement/components/AccountList/rows/BalanceDisplay"
 import {
@@ -98,6 +98,14 @@ describe("BalanceDisplay", () => {
   })
 
   it("shows monetary allowances with scoped subscription expiry and reset details", async () => {
+    const originalBundle = testI18n.hasResourceBundle("en", "account")
+      ? structuredClone(testI18n.getResourceBundle("en", "account"))
+      : undefined
+    onTestFinished(() => {
+      testI18n.removeResourceBundle("en", "account")
+      if (originalBundle)
+        testI18n.addResourceBundle("en", "account", originalBundle)
+    })
     testI18n.addResourceBundle(
       "en",
       "account",
@@ -210,21 +218,24 @@ describe("BalanceDisplay", () => {
       screen.getByTitle("account:list.balance.refreshBalance"),
     ).toHaveTextContent("¥42.00")
   })
-  it("refreshes native credits through the balance action", async () => {
-    const refreshAccount = vi.fn().mockResolvedValue(undefined)
-    mockUseAccountActionsContext.mockReturnValue({
-      handleRefreshAccount: refreshAccount,
-      refreshingAccountId: null,
-    })
-    const site = buildDisplaySiteData({
-      nativeBalance: { unit: "credits", total: 30, permanent: 20, daily: 10 },
-    })
-    render(<BalanceDisplay site={site} />)
-    await userEvent.click(
-      screen.getByTitle("account:list.balance.refreshBalance"),
-    )
-    expect(refreshAccount).toHaveBeenCalledExactlyOnceWith(site, true)
-  })
+  it.each(["credits", "USD"] as const)(
+    "refreshes native %s through the balance action",
+    async (unit) => {
+      const refreshAccount = vi.fn().mockResolvedValue(undefined)
+      mockUseAccountActionsContext.mockReturnValue({
+        handleRefreshAccount: refreshAccount,
+        refreshingAccountId: null,
+      })
+      const site = buildDisplaySiteData({
+        nativeBalance: { unit, total: 30, permanent: 20, daily: 10 },
+      })
+      render(<BalanceDisplay site={site} />)
+      await userEvent.click(
+        screen.getByTitle("account:list.balance.refreshBalance"),
+      )
+      expect(refreshAccount).toHaveBeenCalledExactlyOnceWith(site, true)
+    },
+  )
   it("keeps disabled native-credit accounts from triggering refresh", async () => {
     const handleRefreshAccount = vi.fn()
     mockUseAccountActionsContext.mockReturnValue({

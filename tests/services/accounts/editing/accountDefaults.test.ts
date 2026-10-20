@@ -257,6 +257,53 @@ describe("accountDefaults", () => {
       )
     })
 
+    it("normalizes timed allowance details with the same validation as components", () => {
+      const source = createSiteAccount()
+      const details = [
+        { amount: 2 },
+        null,
+        { kind: "unknown", amount: 2 },
+        { kind: "timed", amount: Infinity },
+        {
+          kind: "timed",
+          amount: 2,
+          name: 123,
+          scope: null,
+          unlockedModels: [null, "gpt-4o"],
+          unlimited: "true",
+          expiresAt: "2099-01-01",
+          resetAt: 123,
+        },
+      ]
+      source.account_info.nativeBalance = {
+        unit: "USD",
+        total: 2,
+        permanent: 0,
+        daily: 2,
+        timedDetails: details,
+        components: details,
+      } as unknown as NonNullable<SiteAccount["account_info"]["nativeBalance"]>
+      const normalized = normalizeSiteAccount(source).account_info.nativeBalance
+      expect(normalized).toMatchObject({
+        timedDetails: [
+          {
+            kind: "timed",
+            amount: 2,
+            unlockedModels: ["gpt-4o"],
+            expiresAt: "2099-01-01",
+          },
+        ],
+      })
+      if (normalized?.unit !== "USD") throw new Error("Expected USD allowances")
+      expect(normalized.timedDetails).toEqual(normalized.components)
+      expect(normalized.timedDetails?.[0]).toMatchObject({
+        name: undefined,
+        scope: undefined,
+        unlimited: undefined,
+        resetAt: undefined,
+      })
+    })
+
     it("retains scoped USD allowances through storage normalization", () => {
       const source = createSiteAccount()
       source.account_info.nativeBalance = {

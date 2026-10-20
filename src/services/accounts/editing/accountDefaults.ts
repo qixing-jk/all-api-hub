@@ -19,6 +19,7 @@ import {
   AuthTypeEnum,
   DELETED_ENTRY_KINDS,
   SiteHealthStatus,
+  type AccountBalanceComponent,
   type AccountInfo,
   type AccountNativeBalance,
   type AccountStorageConfig,
@@ -150,6 +151,35 @@ const normalizeAccountSubscriptionSummary = (
   }
 }
 
+/** Validate both allowance summaries and detailed grants at the storage boundary. */
+const normalizeBalanceComponents = (
+  raw: AccountBalanceComponent[] | undefined,
+): AccountBalanceComponent[] | undefined => {
+  if (!Array.isArray(raw)) return undefined
+  return raw
+    .filter(
+      (item) =>
+        item &&
+        ["permanent", "timed", "subscription", "group"].includes(item.kind) &&
+        typeof item.amount === "number" &&
+        Number.isFinite(item.amount),
+    )
+    .map((item) => ({
+      kind: item.kind,
+      amount: item.amount,
+      name: coerceOptionalString(item.name),
+      scope: coerceOptionalString(item.scope),
+      unlockedModels: Array.isArray(item.unlockedModels)
+        ? item.unlockedModels.filter(
+            (model): model is string => typeof model === "string",
+          )
+        : undefined,
+      unlimited: coerceOptionalBoolean(item.unlimited),
+      expiresAt: coerceOptionalString(item.expiresAt),
+      resetAt: coerceOptionalString(item.resetAt),
+    }))
+}
+
 const normalizeNativeBalance = (
   raw: AccountNativeBalance | undefined,
 ): AccountNativeBalance | undefined => {
@@ -175,40 +205,13 @@ const normalizeNativeBalance = (
     unit: raw.unit,
     ...(raw.unit === "USD"
       ? {
-          timedDetails: Array.isArray(raw.timedDetails)
-            ? raw.timedDetails
-                .filter((item) => item && Number.isFinite(item.amount))
-                .map((item) => ({ ...item }))
-            : undefined,
+          timedDetails: normalizeBalanceComponents(raw.timedDetails),
           timedDetailsUnavailable: raw.timedDetailsUnavailable === true,
         }
       : {}),
     ...(raw.unit === "USD" && Array.isArray(raw.components)
       ? {
-          components: raw.components
-            .filter(
-              (item) =>
-                item &&
-                ["permanent", "timed", "subscription", "group"].includes(
-                  item.kind,
-                ) &&
-                typeof item.amount === "number" &&
-                Number.isFinite(item.amount),
-            )
-            .map((item) => ({
-              kind: item.kind,
-              amount: item.amount,
-              name: coerceOptionalString(item.name),
-              scope: coerceOptionalString(item.scope),
-              unlockedModels: Array.isArray(item.unlockedModels)
-                ? item.unlockedModels.filter(
-                    (model): model is string => typeof model === "string",
-                  )
-                : undefined,
-              unlimited: coerceOptionalBoolean(item.unlimited),
-              expiresAt: coerceOptionalString(item.expiresAt),
-              resetAt: coerceOptionalString(item.resetAt),
-            })),
+          components: normalizeBalanceComponents(raw.components),
         }
       : {}),
     total: raw.total,
