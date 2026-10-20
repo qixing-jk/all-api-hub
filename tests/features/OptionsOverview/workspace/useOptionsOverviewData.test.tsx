@@ -9,9 +9,11 @@ import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/s
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { featureGuidanceState } from "~/services/featureGuidance/featureGuidanceState"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
+import { sendModelSyncMessage } from "~/services/models/modelSync/messaging"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { siteAnnouncementStorage } from "~/services/siteAnnouncements/storage"
+import { sendWebdavAutoSyncMessage } from "~/services/webdav/autoSync/webdavAutoSyncMessaging"
 import { SiteHealthStatus } from "~/types"
 import { accountStorageTestSurface as accountStorage } from "~~/tests/test-utils/accountStorageTestSurface"
 import { buildAccountStats } from "~~/tests/test-utils/accountTodayStats"
@@ -21,6 +23,13 @@ import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const { loggerErrorMock } = vi.hoisted(() => ({
   loggerErrorMock: vi.fn(),
+}))
+
+vi.mock("~/services/models/modelSync/messaging", () => ({
+  sendModelSyncMessage: vi.fn(),
+}))
+vi.mock("~/services/webdav/autoSync/webdavAutoSyncMessaging", () => ({
+  sendWebdavAutoSyncMessage: vi.fn(),
 }))
 
 vi.mock("~/utils/core/logger", async (importOriginal) => {
@@ -138,6 +147,107 @@ const usageStore = {
 }
 
 describe("useOptionsOverviewData", () => {
+  it("keeps failed status reads unknown while preserving the rest of the overview", async () => {
+    mockSuccessfulLoad()
+    vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+      ...DEFAULT_PREFERENCES,
+      managedSiteType: SITE_TYPES.NEW_API,
+      managedSiteModelSync: {
+        ...DEFAULT_PREFERENCES.managedSiteModelSync!,
+        enabled: true,
+      },
+      webdav: { ...DEFAULT_PREFERENCES.webdav, autoSync: true },
+    })
+    vi.mocked(autoCheckinStorage.getStatus).mockRejectedValueOnce(
+      new Error("unavailable"),
+    )
+    vi.mocked(siteAnnouncementStorage.getStatus).mockRejectedValueOnce(
+      new Error("unavailable"),
+    )
+    vi.mocked(sendModelSyncMessage).mockResolvedValueOnce({
+      success: false,
+      error: "unavailable",
+    })
+    vi.mocked(sendWebdavAutoSyncMessage).mockRejectedValueOnce(
+      new Error("unavailable"),
+    )
+    const { result } = renderHook(() => useOptionsOverviewData(), {
+      withReleaseUpdateStatusProvider: false,
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(
+      result.current.viewModel!.automationOverview.items.map((item) => [
+        item.id,
+        item.status,
+        item.statusLabel,
+      ]),
+    ).toEqual([
+      ["autoCheckin", "info", "unknown"],
+      ["siteAnnouncements", "info", "unknown"],
+      ["managedSiteModelSync", "info", "unknown"],
+      ["webdavAutoSync", "info", "unknown"],
+    ])
+  })
+
+  it("loads sync outcomes into the overview without triggering a sync", async () => {
+    mockSuccessfulLoad()
+    vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+      ...DEFAULT_PREFERENCES,
+      managedSiteType: SITE_TYPES.NEW_API,
+      managedSiteModelSync: {
+        ...DEFAULT_PREFERENCES.managedSiteModelSync!,
+        enabled: true,
+      },
+      webdav: { ...DEFAULT_PREFERENCES.webdav, autoSync: true },
+    })
+    vi.mocked(sendModelSyncMessage).mockResolvedValue({
+      success: true,
+      data: {
+        items: [],
+        statistics: {
+          total: 1,
+          successCount: 0,
+          failureCount: 1,
+          durationMs: 1,
+          startedAt: 1,
+          endedAt: 2,
+        },
+      },
+    })
+    vi.mocked(sendWebdavAutoSyncMessage).mockResolvedValue({
+      success: true,
+      data: {
+        isRunning: true,
+        isInitialized: true,
+        isSyncing: false,
+        lastSyncTime: 2,
+        lastSyncStatus: "error",
+        lastSyncError: "offline",
+      },
+    })
+    const { result } = renderHook(() => useOptionsOverviewData(), {
+      withReleaseUpdateStatusProvider: false,
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    const items = result.current.viewModel!.automationOverview.items
+    expect(
+      items.find((item) => item.id === "managedSiteModelSync"),
+    ).toMatchObject({ status: "error", statusLabel: "failed" })
+    expect(items.find((item) => item.id === "webdavAutoSync")).toMatchObject({
+      status: "error",
+      statusLabel: "failed",
+    })
+    expect(sendModelSyncMessage).toHaveBeenCalledWith(
+      "modelSync:getLastExecution",
+    )
+    expect(sendWebdavAutoSyncMessage).toHaveBeenCalledWith(
+      "webdavAutoSync:getStatus",
+    )
+  })
   it("retranslates partial-load feedback without reloading local stores or replacing the view model", async () => {
     mockSuccessfulLoad()
     vi.mocked(accountStorage.getAllAccounts).mockRejectedValueOnce(
@@ -310,6 +420,21 @@ describe("useOptionsOverviewData", () => {
 
 function mockSuccessfulLoad() {
   vi.clearAllMocks()
+  vi.mocked(sendModelSyncMessage).mockResolvedValue({
+    success: true,
+    data: null,
+  })
+  vi.mocked(sendWebdavAutoSyncMessage).mockResolvedValue({
+    success: true,
+    data: {
+      isRunning: false,
+      isInitialized: true,
+      isSyncing: false,
+      lastSyncTime: 0,
+      lastSyncStatus: "idle",
+      lastSyncError: null,
+    },
+  })
   vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([account])
   vi.mocked(accountStorage.getAccountStats).mockResolvedValue(accountStats)
   vi.mocked(featureGuidanceState.getState).mockResolvedValue({

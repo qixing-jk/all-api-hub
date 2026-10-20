@@ -125,6 +125,7 @@
     "summary": "自動チェックイン実行サマリー"
   },
   "automation": {
+    "automaticEnabled": "自動実行は有効です",
     "empty": {
       "autoCheckin": {
         "disabled": "チェックイン報酬を自動で受け取りたいときは、自動チェックインをオンにしてください。以後の予定と結果がここに表示されます。"
@@ -167,11 +168,28 @@
         "strategy": "同期戦略"
       }
     },
+    "metrics": {
+      "failed": "失敗",
+      "skipped": "スキップ",
+      "success": "成功",
+      "unsupported": "未対応"
+    },
     "neverChecked": "未チェック",
     "openItem": "{{name}}を開く",
     "status": {
-      "enabled": "有効"
-    }
+      "disabled": "無効",
+      "failed": "実行失敗",
+      "limited": "一部未対応",
+      "notRun": "初回実行待ち",
+      "partial": "一部失敗",
+      "ready": "準備完了",
+      "running": "実行中",
+      "skipped": "未実行",
+      "success": "実行成功",
+      "unknown": "状態不明",
+      "unsupported": "未対応"
+    },
+    "statusUnavailable": "実行状態を取得できません。詳細を開くか、再読み込みしてお試しください。"
   },
   "configurationOverview": {
     "accountFoundation": {

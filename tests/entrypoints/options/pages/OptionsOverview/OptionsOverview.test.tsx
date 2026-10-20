@@ -255,7 +255,7 @@ const setupViewModel: OptionsOverviewViewModel = {
       {
         id: "autoCheckin",
         status: "warning",
-        statusLabel: "enabled",
+        statusLabel: "partial",
         primaryTarget: { menuItemId: MENU_ITEM_IDS.AUTO_CHECKIN },
         summaryRows: [
           {
@@ -300,7 +300,7 @@ const setupViewModel: OptionsOverviewViewModel = {
       {
         id: "siteAnnouncements",
         status: "success",
-        statusLabel: "enabled",
+        statusLabel: "success",
         primaryTarget: {
           menuItemId: MENU_ITEM_IDS.BASIC,
           params: { anchor: "site-announcement-notifications-enabled" },
@@ -1597,7 +1597,7 @@ describe("OptionsOverview", () => {
             {
               id: "autoCheckin",
               status: "info",
-              statusLabel: "enabled",
+              statusLabel: "success",
               primaryTarget: { menuItemId: MENU_ITEM_IDS.AUTO_CHECKIN },
               summaryRows: [
                 { id: "lastRun", value: "", valueType: "datetime" },

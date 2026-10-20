@@ -1,6 +1,8 @@
 import type { OptionsMenuItemId } from "~/constants/optionsMenuIds"
 import type { UnifiedApiGuidanceModel } from "~/features/UnifiedApiGuidance/model"
+import type { WebdavAutoSyncStatusResponse } from "~/services/webdav/autoSync/webdavAutoSyncMessaging"
 import type { AccountMetricCoverage } from "~/types"
+import type { ExecutionHistoryResult } from "~/types/managedSiteModelSync"
 
 import type {
   OPTIONS_OVERVIEW_ACTION_CENTER_ITEM_IDS,
@@ -150,10 +152,22 @@ export type OptionsOverviewAutomationStatusLabel = ValueOf<
   typeof OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS
 >
 
+/** Undefined means unavailable; null means the model-sync history was read and is empty. */
+export interface OptionsOverviewAutomationRunData {
+  modelSyncExecution?: ExecutionHistoryResult | null
+  webdavStatus?: Extract<
+    WebdavAutoSyncStatusResponse,
+    { success: true }
+  >["data"]
+  autoCheckinDataAvailable?: boolean
+  announcementDataAvailable?: boolean
+}
+
 export interface OptionsOverviewAutomationItem {
   id: ValueOf<typeof OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS>
-  status: Exclude<OptionsOverviewSeverity, "error"> | "error"
+  status: OptionsOverviewSeverity
   statusLabel: OptionsOverviewAutomationStatusLabel
+  enabled?: boolean
   primaryTarget: OptionsOverviewNavigationTarget
   summaryRows: OptionsOverviewAutomationSummaryRow[]
   actions: OptionsOverviewAutomationAction[]

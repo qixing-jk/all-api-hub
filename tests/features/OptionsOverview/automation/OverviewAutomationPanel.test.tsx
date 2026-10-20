@@ -52,7 +52,7 @@ function createAutoCheckinItem(): OptionsOverviewAutomationItem {
   return {
     id: OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS.autoCheckin,
     status: "warning",
-    statusLabel: OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS.enabled,
+    statusLabel: OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS.partial,
     primaryTarget: { menuItemId: MENU_ITEM_IDS.AUTO_CHECKIN },
     summaryRows: [
       {
@@ -102,6 +102,7 @@ function createNotRunAutoCheckinItem(): OptionsOverviewAutomationItem {
 
   return {
     ...item,
+    statusLabel: OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS.notRun,
     status: "info",
     summaryRows: [
       {
@@ -160,7 +161,7 @@ function createSiteAnnouncementsItem(
   return {
     id: OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS.siteAnnouncements,
     status: "success",
-    statusLabel: OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS.enabled,
+    statusLabel: OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS.success,
     primaryTarget: { menuItemId: MENU_ITEM_IDS.BASIC },
     summaryRows: [
       {
@@ -182,7 +183,7 @@ function createManagedSiteModelSyncItem(): OptionsOverviewAutomationItem {
   return {
     id: OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS.managedSiteModelSync,
     status: "success",
-    statusLabel: OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS.enabled,
+    statusLabel: OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS.success,
     primaryTarget: { menuItemId: MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC },
     summaryRows: [
       {
@@ -203,7 +204,7 @@ function createWebdavAutoSyncItem(): OptionsOverviewAutomationItem {
   return {
     id: OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS.webdavAutoSync,
     status: "success",
-    statusLabel: OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS.enabled,
+    statusLabel: OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS.success,
     primaryTarget: { menuItemId: MENU_ITEM_IDS.IMPORT_EXPORT },
     summaryRows: [
       {
@@ -246,6 +247,27 @@ function renderPanel(
 }
 
 describe("OverviewAutomationPanel", () => {
+  it("shows a warning result badge and explains the enabled switch separately", async () => {
+    const user = userEvent.setup()
+    renderPanel({
+      ...createSiteAnnouncementsItem("0"),
+      enabled: true,
+      status: "warning",
+      statusLabel: OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS.partial,
+    })
+    expect(
+      screen.getByText("optionsOverview:automation.status.partial"),
+    ).toHaveClass("bg-warning-soft")
+    await user.click(
+      screen.getByRole("button", {
+        name: /^optionsOverview:automation\.items\.siteAnnouncements\.label/,
+      }),
+    )
+    expect(
+      screen.getByText("optionsOverview:automation.automaticEnabled"),
+    ).toBeInTheDocument()
+  })
+
   it("shows the latest run fact on the collapsed auto check-in row", () => {
     renderPanel(createAutoCheckinItem())
 
@@ -263,7 +285,7 @@ describe("OverviewAutomationPanel", () => {
         name: /^optionsOverview:automation\.items\.autoCheckin\.label/,
       }),
     ).toHaveAccessibleName(
-      `optionsOverview:automation.items.autoCheckin.label, optionsOverview:autoCheckin.status.partial, optionsOverview:autoCheckin.lastRun: ${new Date(
+      `optionsOverview:automation.items.autoCheckin.label, optionsOverview:automation.status.partial, optionsOverview:autoCheckin.lastRun: ${new Date(
         item.autoCheckinPanel!.lastRunAt!,
       ).toLocaleString()}`,
     )
@@ -393,7 +415,7 @@ describe("OverviewAutomationPanel", () => {
       screen.getByText("optionsOverview:autoCheckin.metrics.success"),
     ).toBeInTheDocument()
     expect(
-      screen.getAllByText("optionsOverview:autoCheckin.status.partial"),
+      screen.getAllByText("optionsOverview:automation.status.partial"),
     ).toHaveLength(1)
   })
 

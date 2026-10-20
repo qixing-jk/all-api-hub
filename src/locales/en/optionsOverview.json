@@ -134,6 +134,7 @@
     "summary": "Auto check-in run summary"
   },
   "automation": {
+    "automaticEnabled": "Automatic execution is on",
     "empty": {
       "autoCheckin": {
         "disabled": "Turn on auto check-in when you want rewards claimed automatically. Future schedules and results will appear here."
@@ -176,11 +177,28 @@
         "strategy": "Sync strategy"
       }
     },
+    "metrics": {
+      "failed": "Failed",
+      "skipped": "Skipped",
+      "success": "Succeeded",
+      "unsupported": "Unsupported"
+    },
     "neverChecked": "Not checked yet",
     "openItem": "Open {{name}}",
     "status": {
-      "enabled": "Enabled"
-    }
+      "disabled": "Disabled",
+      "failed": "Run failed",
+      "limited": "Partially supported",
+      "notRun": "Awaiting first run",
+      "partial": "Partially failed",
+      "ready": "Ready",
+      "running": "Running",
+      "skipped": "Not executed",
+      "success": "Run succeeded",
+      "unknown": "Status unknown",
+      "unsupported": "Not supported"
+    },
+    "statusUnavailable": "Execution status is unavailable. Open the details or refresh to try again."
   },
   "configurationOverview": {
     "accountFoundation": {

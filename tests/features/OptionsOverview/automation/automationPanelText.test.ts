@@ -9,7 +9,12 @@ import {
   getAutomationStatusLabel,
   getAutomationSummaryRowLabel,
 } from "~/features/OptionsOverview/automation/automationPanelText"
-import { OPTIONS_OVERVIEW_AUTOMATION_SUMMARY_VALUE_TYPES as SUMMARY_VALUE_TYPES } from "~/features/OptionsOverview/ids"
+import {
+  OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS as ITEM_IDS,
+  OPTIONS_OVERVIEW_AUTOMATION_SUMMARY_ROW_IDS as ROW_IDS,
+  OPTIONS_OVERVIEW_AUTOMATION_STATUS_LABELS as STATUS_LABELS,
+  OPTIONS_OVERVIEW_AUTOMATION_SUMMARY_VALUE_TYPES as SUMMARY_VALUE_TYPES,
+} from "~/features/OptionsOverview/ids"
 import type { OptionsOverviewAutomationItem } from "~/features/OptionsOverview/types"
 
 const t = ((key: string) => key) as TFunction
@@ -17,7 +22,7 @@ const t = ((key: string) => key) as TFunction
 const baseAutomationItem: OptionsOverviewAutomationItem = {
   id: "siteAnnouncements",
   status: "success",
-  statusLabel: "enabled",
+  statusLabel: STATUS_LABELS.success,
   primaryTarget: { menuItemId: "account" },
   summaryRows: [],
   actions: [],
@@ -25,6 +30,18 @@ const baseAutomationItem: OptionsOverviewAutomationItem = {
 }
 
 describe("automation panel text helpers", () => {
+  it.each(Object.values(ITEM_IDS))(
+    "shares last-run labels and empty timestamp fallbacks for %s",
+    (itemId) => {
+      expect(getAutomationSummaryRowLabel(itemId, ROW_IDS.lastRun, t)).toBe(
+        "optionsOverview:autoCheckin.lastRun",
+      )
+      expect(
+        formatSummaryValue(itemId, { id: ROW_IDS.lastRun, value: "" }, t),
+      ).toBe("optionsOverview:autoCheckin.notRunYet")
+    },
+  )
+
   it("resolves automation item labels and disabled descriptions from item ids", () => {
     expect(getAutomationItemLabel("autoCheckin", t)).toBe(
       "optionsOverview:automation.items.autoCheckin.label",
@@ -91,21 +108,22 @@ describe("automation panel text helpers", () => {
     )
   })
 
-  it("resolves status labels including auto check-in panel status overrides", () => {
+  it("resolves the shared operational status for every automation item", () => {
     expect(getAutomationStatusLabel(baseAutomationItem, t)).toBe(
-      "optionsOverview:automation.status.enabled",
+      "optionsOverview:automation.status.success",
     )
     expect(
       getAutomationStatusLabel(
-        { ...baseAutomationItem, statusLabel: "disabled" },
+        { ...baseAutomationItem, statusLabel: STATUS_LABELS.disabled },
         t,
       ),
-    ).toBe("optionsOverview:coverageStatus.disabled")
+    ).toBe("optionsOverview:automation.status.disabled")
     expect(
       getAutomationStatusLabel(
         {
           ...baseAutomationItem,
           id: "autoCheckin",
+          statusLabel: STATUS_LABELS.partial,
           autoCheckinPanel: {
             status: "partial",
             severity: "warning",
@@ -120,7 +138,7 @@ describe("automation panel text helpers", () => {
         },
         t,
       ),
-    ).toBe("optionsOverview:autoCheckin.status.partial")
+    ).toBe("optionsOverview:automation.status.partial")
   })
 
   it("formats summary values and empty fallbacks", () => {
