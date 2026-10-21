@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Plus, SquarePen, Trash2, X } from "lucide-react"
+import { Check, ChevronDown, Pencil, Plus, Trash2, X } from "lucide-react"
 import { useCallback, useEffect, useId, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -510,7 +510,7 @@ export function TagPicker({
                             aria-label={t("form.tagsRename")}
                             disabled={disabled || isWorking}
                           >
-                            <SquarePen className="h-4 w-4" />
+                            <Pencil className="h-4 w-4" />
                           </IconButton>
                           {allowDelete && onDeleteTag ? (
                             <IconButton

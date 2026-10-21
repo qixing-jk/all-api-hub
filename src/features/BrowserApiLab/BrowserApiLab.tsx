@@ -1,13 +1,13 @@
 import {
-  AlertCircle,
-  CheckCircle2,
+  CircleAlert,
+  CircleCheck,
+  CircleX,
   Code2,
   Copy,
   Layers,
+  Loader2,
   Play,
-  RotateCw,
   Terminal,
-  XCircle,
 } from "lucide-react"
 import { useState } from "react"
 
@@ -334,16 +334,16 @@ export default function BrowserApiLab() {
                       <div className="min-w-0 flex-1">
                         <CardTitle className="flex items-center gap-1.5 text-sm font-semibold">
                           {state?.status === "success" && (
-                            <CheckCircle2 className="text-success h-4 w-4 shrink-0" />
+                            <CircleCheck className="text-success h-4 w-4 shrink-0" />
                           )}
                           {state?.status === "error" && (
-                            <XCircle className="text-destructive h-4 w-4 shrink-0" />
+                            <CircleX className="text-destructive h-4 w-4 shrink-0" />
                           )}
                           {state?.status === "running" && (
-                            <RotateCw className="text-theme-500 h-4 w-4 shrink-0 animate-spin" />
+                            <Loader2 className="text-theme-500 h-4 w-4 shrink-0 animate-spin" />
                           )}
                           {!state && (
-                            <AlertCircle className="text-muted-foreground/50 h-4 w-4 shrink-0" />
+                            <CircleAlert className="text-muted-foreground/50 h-4 w-4 shrink-0" />
                           )}
                           <span className="truncate">{probe.title}</span>
                         </CardTitle>
@@ -509,9 +509,9 @@ export default function BrowserApiLab() {
               <CardHeader className="bg-muted/20 flex flex-row items-center justify-between border-b px-4 py-2">
                 <div className="flex items-center gap-2">
                   {consoleResult.success ? (
-                    <CheckCircle2 className="text-success h-4 w-4" />
+                    <CircleCheck className="text-success h-4 w-4" />
                   ) : (
-                    <XCircle className="text-destructive h-4 w-4" />
+                    <CircleX className="text-destructive h-4 w-4" />
                   )}
                   <span className="text-xs font-semibold">
                     {consoleResult.success ? "Success" : "Failed"}
@@ -671,9 +671,9 @@ export default function BrowserApiLab() {
               <CardHeader className="bg-muted/20 flex flex-row items-center justify-between border-b px-4 py-2">
                 <div className="flex items-center gap-2">
                   {invokerResult.success ? (
-                    <CheckCircle2 className="text-success h-4 w-4" />
+                    <CircleCheck className="text-success h-4 w-4" />
                   ) : (
-                    <XCircle className="text-destructive h-4 w-4" />
+                    <CircleX className="text-destructive h-4 w-4" />
                   )}
                   <span className="text-xs font-semibold">
                     {invokerResult.path} -{" "}

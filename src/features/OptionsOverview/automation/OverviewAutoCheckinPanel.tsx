@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next"
-import { RotateCcw } from "lucide-react"
+import { RefreshCw } from "lucide-react"
 
 import { Badge, Button, Card, WorkflowTransitionButton } from "~/components/ui"
 import {
@@ -69,7 +69,7 @@ export function OverviewAutoCheckinPanel({
           variant="outline"
           className="sm:flex-1"
           onClick={() => onNavigate(action.target)}
-          leftIcon={<RotateCcw className="h-4 w-4" />}
+          leftIcon={<RefreshCw className="h-4 w-4" />}
         >
           {getAutoCheckinActionLabel(action.id, t)}
         </Button>

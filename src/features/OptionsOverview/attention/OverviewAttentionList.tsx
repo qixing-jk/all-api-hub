@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next"
-import { CheckCircle2 } from "lucide-react"
+import { CircleCheck } from "lucide-react"
 import { useState } from "react"
 
 import { Badge, Card, WorkflowTransitionButton } from "~/components/ui"
@@ -172,7 +172,7 @@ export function OverviewAttentionList({
     return (
       <Card className="dark:bg-card/95 border-border/80 bg-card/90 shadow-border/50 dark:border-foreground/10 dark:shadow-shadow/20 p-density-6 flex h-full items-center justify-center shadow-sm">
         <div className="gap-density-3 flex max-w-sm flex-col items-center text-center">
-          <CheckCircle2 className="text-success-indicator h-5 w-5" />
+          <CircleCheck className="text-success-indicator h-5 w-5" />
           <div className="space-y-density-1">
             <div className="text-sm font-medium">
               {t("optionsOverview:states.allClear")}

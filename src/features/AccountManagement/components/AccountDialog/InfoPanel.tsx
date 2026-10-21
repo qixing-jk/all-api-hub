@@ -1,4 +1,4 @@
-import { Sparkles, Users } from "lucide-react"
+import { Sparkles, UserRound } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { LdohIcon } from "~/components/icons/LdohIcon"
@@ -83,7 +83,7 @@ export default function InfoPanel({
     )
   }
 
-  const Icon = isAddMode ? Sparkles : Users
+  const Icon = isAddMode ? Sparkles : UserRound
   const description = getDescription()
 
   return (

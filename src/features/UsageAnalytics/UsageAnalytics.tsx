@@ -1,4 +1,4 @@
-import { BarChart3, RefreshCcw, Settings } from "lucide-react"
+import { BarChart3, RefreshCw, Settings } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { EChart } from "~/components/charts/EChart"
@@ -123,7 +123,7 @@ export default function UsageAnalytics() {
                 size="sm"
                 variant="secondary"
                 onClick={() => void loadData({ trackAnalytics: true })}
-                leftIcon={<RefreshCcw className="h-4 w-4" />}
+                leftIcon={<RefreshCw className="h-4 w-4" />}
               >
                 {t("actions.refresh")}
               </Button>

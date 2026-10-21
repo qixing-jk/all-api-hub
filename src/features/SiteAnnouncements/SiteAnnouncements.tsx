@@ -1,4 +1,4 @@
-import { CheckCheck, Megaphone, RefreshCcw } from "lucide-react"
+import { CheckCheck, Megaphone, RefreshCw } from "lucide-react"
 import { useCallback } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -158,7 +158,7 @@ export default function SiteAnnouncementsPage({
                   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsSiteAnnouncementsPage,
                 )
               }
-              leftIcon={<RefreshCcw className="h-4 w-4" />}
+              leftIcon={<RefreshCw className="h-4 w-4" />}
             >
               {isChecking ? t("common:status.checking") : t("actions.checkNow")}
             </Button>
@@ -201,7 +201,7 @@ export default function SiteAnnouncementsPage({
 
       {isLoading ? (
         <EmptyState
-          icon={<RefreshCcw className="h-10 w-10 animate-spin" />}
+          icon={<RefreshCw className="h-10 w-10 animate-spin" />}
           title={t("loading")}
         />
       ) : loadError ? (
@@ -217,7 +217,7 @@ export default function SiteAnnouncementsPage({
               ),
             disabled: !canRunManualCheck,
             loading: isChecking,
-            leftIcon: <RefreshCcw className="h-4 w-4" />,
+            leftIcon: <RefreshCw className="h-4 w-4" />,
           }}
         />
       ) : filteredRecords.length === 0 ? (
@@ -273,7 +273,7 @@ export default function SiteAnnouncementsPage({
               disabled: showNoAccountsSetup ? false : !canRunManualCheck,
               loading: showNoAccountsSetup ? false : isChecking,
               leftIcon: showNoAccountsSetup ? undefined : (
-                <RefreshCcw className="h-4 w-4" />
+                <RefreshCw className="h-4 w-4" />
               ),
             }}
           />

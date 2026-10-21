@@ -1,4 +1,4 @@
-import { CheckCircle2, Download } from "lucide-react"
+import { CircleCheck, Download } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -250,10 +250,7 @@ const ImportSection = ({
                 className="gap-y-density-1 flex flex-wrap items-center gap-x-4 text-sm"
               >
                 <span className="text-success-text gap-y-density-2 flex items-center gap-x-2">
-                  <CheckCircle2
-                    className="size-4 shrink-0"
-                    aria-hidden="true"
-                  />
+                  <CircleCheck className="size-4 shrink-0" aria-hidden="true" />
                   {t("import.dataValid")}
                 </span>
                 {validation.timestamp && (

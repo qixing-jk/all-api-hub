@@ -1,7 +1,10 @@
-import { Bookmark, UserRound, type LucideIcon } from "lucide-react"
+import { Bookmark, type LucideIcon } from "lucide-react"
 import type { ComponentType } from "react"
 
-import { ApiCredentialLibraryIcon } from "~/components/icons/productIcons"
+import {
+  AccountManagementIcon,
+  ApiCredentialLibraryIcon,
+} from "~/components/icons/productIcons"
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs"
 import { ANIMATIONS, COLORS, CORNERS } from "~/constants/designTokens"
 import { useProductAnalyticsActionTracking } from "~/hooks/analytics/useProductAnalyticsActionTracking"
@@ -100,7 +103,7 @@ export default function PopupViewSwitchTabs({
     {
       value: POPUP_VIEW_TYPES.Accounts,
       label: accountsLabel,
-      icon: UserRound,
+      icon: AccountManagementIcon,
       testId: POPUP_TEST_IDS.accountsTab,
       fallbackActionId: PRODUCT_ANALYTICS_ACTION_IDS.SelectAccountsView,
     },

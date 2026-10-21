@@ -1,4 +1,4 @@
-import { KeyRound, Plus, SquarePen } from "lucide-react"
+import { KeyRound, Pencil, Plus } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { Alert, EmptyState } from "~/components/ui"
@@ -93,7 +93,7 @@ export function KeyInventoryList({
                   ),
                   loading: openingEditorAction === "custom",
                   onClick: onOpenAddTokenDialog,
-                  icon: <SquarePen className="h-4 w-4" />,
+                  icon: <Pencil className="h-4 w-4" />,
                   variant: "outline" as const,
                   disabled:
                     !canCreateDefaultKey || isCreating || isOpeningEditor,

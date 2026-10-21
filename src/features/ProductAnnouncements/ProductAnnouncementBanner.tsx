@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next"
-import { AlertTriangle } from "lucide-react"
+import { TriangleAlert } from "lucide-react"
 import type { ComponentProps } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -93,7 +93,7 @@ export function ProductAnnouncementBanner({
               severityStyles.icon,
             )}
           >
-            <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+            <TriangleAlert className="h-4 w-4" aria-hidden="true" />
           </span>
           <div className="space-y-density-1 min-w-0">
             <div className="gap-y-density-2 flex min-w-0 flex-wrap items-center gap-x-2">

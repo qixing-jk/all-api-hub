@@ -1,4 +1,4 @@
-import { RefreshCcw } from "lucide-react"
+import { RefreshCw } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
@@ -49,7 +49,7 @@ export default function ManagedSiteModelSync(props: ManagedSiteModelSyncProps) {
   return (
     <div className="py-density-4 sm:py-density-6 px-4 sm:px-6">
       <PageHeader
-        icon={RefreshCcw}
+        icon={RefreshCw}
         title={t("execution.title")}
         titleActions={
           <OptionsPageSettingsTitleAction
@@ -78,7 +78,7 @@ export default function ManagedSiteModelSync(props: ManagedSiteModelSyncProps) {
       {isModelSyncUnsupported ? (
         <EmptyState
           className="mt-density-6"
-          icon={<RefreshCcw className="text-faint-foreground h-12 w-12" />}
+          icon={<RefreshCw className="text-faint-foreground h-12 w-12" />}
           title={t("managedSiteModelSync:execution.unsupported.title")}
           description={getManagedSiteUnsupportedModelSyncMessage(
             t,

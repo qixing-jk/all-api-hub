@@ -1,4 +1,4 @@
-import { LineChart, RefreshCcw, Scissors, Settings } from "lucide-react"
+import { LineChart, RefreshCw, Scissors, Settings } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
@@ -76,7 +76,7 @@ export default function BalanceHistory() {
               size="sm"
               variant="secondary"
               onClick={() => void handleRefreshNow()}
-              leftIcon={<RefreshCcw className="h-4 w-4" />}
+              leftIcon={<RefreshCw className="h-4 w-4" />}
             >
               {t("actions.refreshNow")}
             </Button>

@@ -1,4 +1,4 @@
-import { ArrowRightLeft, Loader2, RefreshCcw } from "lucide-react"
+import { ArrowRightLeft, Loader2, RefreshCw } from "lucide-react"
 
 import Tooltip from "~/components/Tooltip"
 import {
@@ -219,7 +219,7 @@ export function ManagedSiteMigrationDialogView({
             <Button
               type="button"
               variant="outline"
-              leftIcon={<RefreshCcw className="h-4 w-4" />}
+              leftIcon={<RefreshCw className="h-4 w-4" />}
               loading={Boolean(preview?.isManualLoading)}
               disabled={
                 !selectedTarget ||

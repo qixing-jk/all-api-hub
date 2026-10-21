@@ -1,4 +1,4 @@
-import { AlertTriangle, LayoutDashboard } from "lucide-react"
+import { LayoutDashboard, TriangleAlert } from "lucide-react"
 import { useCallback, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -218,7 +218,7 @@ export default function OptionsOverview() {
                 variant="outline"
                 size="sm"
                 onClick={handleRetry}
-                leftIcon={<AlertTriangle className="h-4 w-4" />}
+                leftIcon={<TriangleAlert className="h-4 w-4" />}
               >
                 {t("common:actions.retry")}
               </Button>

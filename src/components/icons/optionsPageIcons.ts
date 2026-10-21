@@ -12,16 +12,16 @@ import {
   LineChart,
   Megaphone,
   Palette,
-  RefreshCcw,
+  RefreshCw,
   Settings,
   Star,
   Terminal,
-  UserRound,
   type LucideIcon,
 } from "lucide-react"
 
 import {
   AccountKeyIcon,
+  AccountManagementIcon,
   ApiCredentialLibraryIcon,
 } from "~/components/icons/productIcons"
 import { DEV_MENU_ITEM_IDS } from "~/constants/devOptionsMenuIds"
@@ -34,7 +34,7 @@ import {
 export const OPTIONS_MENU_ITEM_ICONS = {
   [MENU_ITEM_IDS.OVERVIEW]: LayoutDashboard,
   [MENU_ITEM_IDS.BASIC]: Settings,
-  [MENU_ITEM_IDS.ACCOUNT]: UserRound,
+  [MENU_ITEM_IDS.ACCOUNT]: AccountManagementIcon,
   [MENU_ITEM_IDS.API_CREDENTIAL_PROFILES]: ApiCredentialLibraryIcon,
   [MENU_ITEM_IDS.BOOKMARK]: Bookmark,
   [MENU_ITEM_IDS.MODELS]: Cpu,
@@ -44,7 +44,7 @@ export const OPTIONS_MENU_ITEM_ICONS = {
   [MENU_ITEM_IDS.BALANCE_HISTORY]: LineChart,
   [MENU_ITEM_IDS.USAGE_ANALYTICS]: BarChart3,
   [MENU_ITEM_IDS.MANAGED_SITE_CHANNELS]: Layers,
-  [MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC]: RefreshCcw,
+  [MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC]: RefreshCw,
   [MENU_ITEM_IDS.IMPORT_EXPORT]: ArrowLeftRight,
   [MENU_ITEM_IDS.ABOUT]: Info,
 } satisfies Record<OptionsMenuItemId, LucideIcon>

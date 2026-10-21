@@ -1,5 +1,5 @@
 import { cva, type VariantProps } from "class-variance-authority"
-import { AlertCircle, AlertTriangle, CheckCircle, Info } from "lucide-react"
+import { CircleAlert, CircleCheck, Info, TriangleAlert } from "lucide-react"
 import React from "react"
 
 import { Heading5 } from "~/components/ui/Typography"
@@ -63,11 +63,11 @@ const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
 
       switch (variant) {
         case "destructive":
-          return <AlertCircle className={iconClassName} />
+          return <CircleAlert className={iconClassName} />
         case "success":
-          return <CheckCircle className={iconClassName} />
+          return <CircleCheck className={iconClassName} />
         case "warning":
-          return <AlertTriangle className={iconClassName} />
+          return <TriangleAlert className={iconClassName} />
         case "info":
           return <Info className={iconClassName} />
         default:
