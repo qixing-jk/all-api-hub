@@ -146,3 +146,10 @@ export const CHECK_IN_METHOD_EXECUTION_RESULT_KINDS = {
   Skipped: "skipped",
   Blocked: "blocked",
 } as const
+
+export const CHECK_IN_STATUS_REFRESH_OUTCOMES = {
+  Read: "read",
+  Unavailable: "unavailable",
+  Unsupported: "unsupported",
+  NoSelection: "no_selection",
+} as const

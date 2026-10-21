@@ -22,6 +22,25 @@ export const isPersistableInitialCheckInDetection = (
   detection.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched ||
   detection.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Unsupported
 
+/** Keeps a single confirmed snapshot when a later query cannot establish status. */
+function retainLastKnownStatus(
+  status: CheckInMethodStatus,
+  previous?: CheckInMethodStatus,
+): CheckInMethodStatus {
+  if (status.outcome !== CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown) return status
+  const previousKnown =
+    previous?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
+      ? previous
+      : previous?.lastKnown
+  const lastKnown =
+    previousKnown &&
+    (getCheckInMethodStatusTimestamp(previousKnown) ?? 0) >
+      (getCheckInMethodStatusTimestamp(status.lastKnown) ?? 0)
+      ? previousKnown
+      : status.lastKnown ?? previousKnown
+  return lastKnown ? { ...status, lastKnown } : status
+}
+
 export const replaceCheckInMethodStatus = (input: {
   config: CheckInConfig
   methodId: CheckInMethodId
@@ -36,7 +55,10 @@ export const replaceCheckInMethodStatus = (input: {
       ...input.config.methodKnowledge,
       methods: {
         ...input.config.methodKnowledge.methods,
-        [input.methodId]: { ...previous, status: input.status },
+        [input.methodId]: {
+          ...previous,
+          status: retainLastKnownStatus(input.status, previous.status),
+        },
       },
     },
   }
@@ -289,7 +311,10 @@ export function mergeRefreshedCheckInStatus(input: {
     }
     methods[methodId] = {
       ...methods[methodId]!,
-      status: refreshedKnowledge.status,
+      status: retainLastKnownStatus(
+        refreshedKnowledge.status,
+        latestKnowledge.status,
+      ),
     }
     changed = true
   }

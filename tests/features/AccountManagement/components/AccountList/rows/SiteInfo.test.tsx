@@ -19,6 +19,17 @@ import { formatLocaleDateTime } from "~/utils/core/formatters"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
+vi.mock("~/features/AccountManagement/dialogs/useDialogStateContext", () => ({
+  useDialogStateContext: () => ({ openEditAccount: mockOpenEditAccount }),
+}))
+vi.mock("~/features/CheckIn/useCheckInRedetection", () => ({
+  useCheckInRedetection: () => ({
+    redetect: mockRedetect,
+    isPending: false,
+    selectionDialog: null,
+  }),
+}))
+
 const createDeferred = <T,>() => {
   let resolve!: (value: T) => void
   let reject!: (reason?: unknown) => void
@@ -53,6 +64,8 @@ const createCheckIn = (input?: {
     : config
 }
 
+const mockGlobalEnabled = vi.hoisted(() => ({ value: true }))
+
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/contexts/UserPreferencesContext")>()
@@ -62,6 +75,7 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
       children,
     useUserPreferencesContext: () => ({
       themeMode: "system",
+      preferences: { autoCheckin: { globalEnabled: mockGlobalEnabled.value } },
       updateThemeMode: vi.fn().mockResolvedValue(true),
     }),
   }
@@ -73,6 +87,8 @@ const {
   toastErrorMock,
   toastSuccessMock,
   mockOpenAccountBaseUrl,
+  mockOpenEditAccount,
+  mockRedetect,
   mockHandleRefreshAccount,
   mockHandleMarkCustomCheckInAsCheckedIn,
   mockOpenCheckInAndRedeem,
@@ -98,6 +114,8 @@ const {
   toastErrorMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   mockOpenAccountBaseUrl: vi.fn(),
+  mockOpenEditAccount: vi.fn(),
+  mockRedetect: vi.fn(),
   mockHandleRefreshAccount: vi.fn(),
   mockHandleMarkCustomCheckInAsCheckedIn: vi.fn(),
   mockOpenCheckInAndRedeem: vi.fn(),
@@ -268,6 +286,7 @@ describe("SiteInfo", () => {
   )
 
   beforeEach(() => {
+    mockGlobalEnabled.value = true
     vi.clearAllMocks()
     accountDataScenario.detectedSiteAccounts = []
     accountDataScenario.getAccountContextBoost.mockReturnValue(undefined)
@@ -465,7 +484,7 @@ describe("SiteInfo", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("shows a warning check-in indicator when the last check-in status detection is not today", async () => {
+  it("shows a neutral pending check-in indicator when the last check-in status detection is not today", async () => {
     const user = userEvent.setup()
     const dateNowSpy = vi
       .spyOn(Date, "now")
@@ -488,7 +507,9 @@ describe("SiteInfo", () => {
       const staleStatusButton = await screen.findByRole("button", {
         name: "account:list.site.checkInStatusOutdated",
       })
-      expect(staleStatusButton).toBeInTheDocument()
+      expect(staleStatusButton.querySelector("svg")).toHaveClass(
+        "text-neutral-indicator",
+      )
       expect(
         screen.queryByRole("button", {
           name: "account:list.site.checkedInToday",
@@ -511,20 +532,16 @@ describe("SiteInfo", () => {
     scenario: string
     supported: boolean
     status?: CheckInMethodStatus
+    expectedLabel: string
   }>([
-    { scenario: "unsupported site", supported: false },
-    { scenario: "selection without a status readback", supported: true },
     {
-      scenario: "permission-denied status readback",
-      supported: true,
-      status: {
-        outcome: "unknown",
-        reason: "permission_denied",
-        attemptedAt: Date.now(),
-      },
+      scenario: "unsupported site with automatic intent",
+      supported: false,
+      expectedLabel: "account:list.site.checkInNeedsConfiguration",
     },
     {
       scenario: "disabled check-in without today's status",
+      expectedLabel: "account:list.site.checkInSiteDisabled",
       supported: true,
       status: {
         outcome: "known",
@@ -534,6 +551,7 @@ describe("SiteInfo", () => {
     },
     {
       scenario: "disabled check-in with a not-checked status",
+      expectedLabel: "account:list.site.notCheckedInToday",
       supported: true,
       status: {
         outcome: "known",
@@ -544,6 +562,7 @@ describe("SiteInfo", () => {
     },
     {
       scenario: "disabled check-in with an outdated status",
+      expectedLabel: "account:list.site.checkInSiteDisabled",
       supported: true,
       status: {
         outcome: "known",
@@ -553,8 +572,8 @@ describe("SiteInfo", () => {
       },
     },
   ])(
-    "hides site check-in indicators for $scenario",
-    ({ supported, status }) => {
+    "explains site check-in state for $scenario",
+    ({ supported, status, expectedLabel }) => {
       const checkIn = createCheckIn({ supported })
       if (status) {
         checkIn.methodKnowledge.methods[
@@ -569,18 +588,113 @@ describe("SiteInfo", () => {
         />,
       )
 
-      expect(
-        screen.queryAllByRole("img", {
-          name: /account:list\.site\.(checkIn|checkedInToday|notCheckedInToday)/,
-        }),
-      ).toHaveLength(0)
-      expect(
-        screen.queryAllByRole("button", {
-          name: /account:list\.site\.(checkIn|checkedInToday|notCheckedInToday)/,
-        }),
-      ).toHaveLength(0)
+      expect(screen.getByRole("button", { name: expectedLabel })).toBeVisible()
     },
   )
+
+  it("shows a retry action for a failed query even when automatic check-in is off", async () => {
+    const checkIn = createCheckIn({ supported: true })
+    checkIn.automaticExecutionEnabled = false
+    checkIn.methodKnowledge.methods[
+      AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+    ]!.status = {
+      outcome: "unknown",
+      reason: "permission_denied",
+      attemptedAt: Date.now(),
+    }
+    render(<SiteInfo site={buildSite({ checkIn })} />)
+    const retry = screen.getByRole("button", {
+      name: "account:list.site.checkInStatusFailed",
+    })
+    expect(retry.querySelector("svg")).toHaveClass("text-warning-indicator")
+    await userEvent.setup().click(retry)
+    expect(mockHandleRefreshAccount).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "acc-1" }),
+      true,
+    )
+  })
+
+  it("opens the site instead of offering a futile refresh for methods without status readback", async () => {
+    const checkIn = createCompatibilityCheckInConfig({
+      siteType: SITE_TYPES.ANYROUTER,
+      supported: true,
+      automaticExecutionEnabled: false,
+    })
+    render(
+      <SiteInfo
+        site={buildSite({ siteType: SITE_TYPES.ANYROUTER, checkIn })}
+      />,
+    )
+    const action = screen.getByRole("button", {
+      name: "account:list.site.checkInStatusManual",
+    })
+    expect(action.querySelector("svg")).toHaveClass("text-neutral-indicator")
+    mockHandleRefreshAccount.mockClear()
+    await userEvent.setup().click(action)
+    expect(mockHandleRefreshAccount).not.toHaveBeenCalled()
+  })
+
+  it("opens configuration instead of refreshing an account with automation enabled but no selected method", async () => {
+    render(
+      <SiteInfo
+        site={buildSite({ checkIn: createCheckIn({ supported: false }) })}
+      />,
+    )
+    const action = screen.getByRole("button", {
+      name: "account:list.site.checkInNeedsConfiguration",
+    })
+    expect(action.querySelector("svg")).toHaveClass("text-warning-indicator")
+    await userEvent.setup().click(action)
+    expect(mockOpenEditAccount).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "acc-1" }),
+    )
+    expect(mockHandleRefreshAccount).not.toHaveBeenCalled()
+  })
+  it("redetects an invalid selected method instead of refreshing balance data", async () => {
+    const checkIn = createCheckIn({ supported: true })
+    checkIn.methodKnowledge.methods[
+      AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+    ]!.detection = {
+      outcome: "unsupported",
+      evidence: { source: "probe", observedAt: Date.now() },
+    }
+    render(<SiteInfo site={buildSite({ checkIn })} />)
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: "account:list.site.checkInNeedsRedetection",
+      }),
+    )
+    expect(mockRedetect).toHaveBeenCalledOnce()
+    expect(mockHandleRefreshAccount).not.toHaveBeenCalled()
+  })
+  it("keeps today's result primary and exposes the independent automation detail", () => {
+    const checkIn = createCheckIn({ checked: true })
+    checkIn.automaticExecutionEnabled = false
+    render(<SiteInfo site={buildSite({ checkIn })} />)
+    expect(
+      screen.getByRole("button", { name: "account:list.site.checkedInToday" }),
+    ).toHaveAttribute(
+      "aria-description",
+      "account:list.site.checkInAutomationDisabled",
+    )
+  })
+
+  it("shows globally paused automation as neutral configuration rather than an active execution failure", () => {
+    mockGlobalEnabled.value = false
+    render(
+      <SiteInfo
+        site={buildSite({ checkIn: createCheckIn({ supported: false }) })}
+      />,
+    )
+    const action = screen.getByRole("button", {
+      name: "account:list.site.checkInNeedsConfiguration",
+    })
+    expect(action.querySelector("svg")).toHaveClass("text-neutral-indicator")
+    expect(action).toHaveAttribute(
+      "aria-description",
+      "account:list.site.checkInAutomationGloballyDisabled",
+    )
+  })
 
   it("keeps custom check-in visible when the selected site method has no status", () => {
     render(
@@ -610,8 +724,10 @@ describe("SiteInfo", () => {
         .querySelector("svg"),
     ).toHaveClass("text-neutral-indicator")
     expect(
-      screen.queryByRole("img", { name: /account:list.site.checkInStatus/ }),
-    ).not.toBeInTheDocument()
+      screen.getByRole("button", {
+        name: "account:list.site.checkInStatusPending",
+      }),
+    ).toBeVisible()
   })
 
   it("shows the normal check-in indicator when status was detected today", async () => {
@@ -1041,7 +1157,7 @@ describe("SiteInfo", () => {
       screen.queryByRole("button", {
         name: "account:list.site.checkedInToday",
       }),
-    ).not.toBeInTheDocument()
+    ).toBeDisabled()
 
     const healthButton = screen.getByRole("button", {
       name: "account:list.site.refreshHealthStatus",

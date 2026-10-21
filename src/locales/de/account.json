@@ -117,10 +117,14 @@
     "checkIn": {
       "all": "Alle Check-in-Status",
       "checked-in": "Eingecheckt",
+      "configuration": "Einrichtung / Methode nicht verfügbar",
+      "manual": "Nicht abfragbar",
       "not-checked-in": "Nicht eingecheckt",
-      "outdated": "Status veraltet",
+      "outdated": "Aktualisierung ausstehend",
+      "pending": "Noch nicht abgefragt",
       "placeholder": "Check-in-Status",
-      "status-unavailable": "Status nicht verfügbar",
+      "query-failed": "Abfrage fehlgeschlagen",
+      "site-disabled": "Von Website deaktiviert",
       "unsupported": "Nicht unterstützt"
     },
     "disabled": {
@@ -234,7 +238,21 @@
     "resetSort": "Standardsortierung wiederherstellen",
     "site": {
       "checkedInToday": "Heute eingecheckt, zum Ansehen klicken",
-      "checkInStatusOutdated": "Der Check-in-Status wurde heute nicht erkannt (letzte Überprüfungszeit: {{time}}). Zum Aktualisieren klicken",
+      "checkInAccountDisabled": "Konto deaktiviert; automatischer Check-in pausiert",
+      "checkInAutomationBlocked": "Automatischer Check-in ist blockiert: {{reason}}",
+      "checkInAutomationDisabled": "Automatischer Check-in für das Konto ist ausgeschaltet",
+      "checkInAutomationEnabled": "Automatischer Check-in für das Konto ist aktiviert",
+      "checkInAutomationGloballyDisabled": "Automatischer Check-in für das Konto ist aktiviert, aber global ausgeschaltet",
+      "checkInLastKnownChecked": "Zuletzt als eingecheckt bestätigt: {{time}}",
+      "checkInLastKnownNotChecked": "Zuletzt als nicht eingecheckt bestätigt: {{time}}",
+      "checkInNeedsConfiguration": "Automatischer Check-in muss eingerichtet werden: {{reason}}. Zum Bearbeiten des Kontos klicken",
+      "checkInNeedsRedetection": "Check-in-Methode muss neu erkannt werden: {{reason}}. Zum erneuten Erkennen klicken",
+      "checkInRefreshPartial": "Kontodaten für {{accountName}} wurden aktualisiert, der Check-in-Status jedoch nicht. Bitte erneut versuchen",
+      "checkInSiteDisabled": "Die Website hat Check-in deaktiviert. Zum Öffnen der Website klicken",
+      "checkInStatusFailed": "Check-in-Status konnte nicht aktualisiert werden (Versuch: {{time}}). Zum Wiederholen klicken",
+      "checkInStatusManual": "Diese Methode unterstützt keine Statusabfrage. Zum Prüfen auf der Website klicken",
+      "checkInStatusOutdated": "Check-in-Status muss aktualisiert werden (zuletzt bestätigt: {{time}}). Zum Aktualisieren klicken",
+      "checkInStatusPending": "Check-in-Status wurde noch nicht abgefragt. Zum Aktualisieren klicken",
       "currentSite": "Aktuelle Website",
       "currentSiteBoostHint": "Entspricht dem angemeldeten Konto der aktuellen Website und erscheint vor anderen Konten. Deaktivierte Konten bleiben am Ende.",
       "currentSiteExists": "Dieselbe Website wie im aktuellen Tab",
@@ -257,6 +275,8 @@
     "signInHint": "Melde dich bei deiner API-Seite an und füge dann ein Konto per automatischer Erkennung oder manuell hinzu."
   },
   "refresh": {
+    "checkInStatusFailed_one": "Der Check-in-Status für {{count}} Konto/Konten konnte nicht aktualisiert werden. Bitte erneut versuchen",
+    "checkInStatusFailed_other": "Der Check-in-Status für {{count}} Konto/Konten konnte nicht aktualisiert werden. Bitte erneut versuchen",
     "refreshComplete": "Aktualisierung abgeschlossen: {{success}} erfolgreich, {{failed}} fehlgeschlagen",
     "refreshDisabledComplete": "Prüfung deaktivierter Konten abgeschlossen: {{restored}} wiederhergestellt, {{stillDisabled}} weiterhin deaktiviert",
     "refreshDisabledCompleteWithFailures": "Prüfung deaktivierter Konten abgeschlossen: {{restored}} wiederhergestellt, {{stillDisabled}} weiterhin deaktiviert, {{failed}} fehlgeschlagen",

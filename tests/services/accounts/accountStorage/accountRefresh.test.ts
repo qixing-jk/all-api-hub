@@ -47,6 +47,11 @@ const createAccount = (id: string): SiteAccount =>
     site_name: "Example",
     authType: AuthTypeEnum.AccessToken,
     account_info: { id: "1", access_token: "test-token" },
+    checkIn: {
+      automaticExecutionEnabled: false,
+      selection: { mode: "automatic" },
+      methodKnowledge: { methods: {} },
+    },
   }) as SiteAccount
 
 describe("accountRefresh usage-history coordination", () => {
@@ -72,6 +77,30 @@ describe("accountRefresh usage-history coordination", () => {
     vi.mocked(getSiteTypeCapabilities).mockReturnValue({
       account: { refresh: { refreshAccount: refreshFromSite } },
     } as unknown as ReturnType<typeof getSiteTypeCapabilities>)
+  })
+
+  it("reports check-in query failures separately from refreshed account data", async () => {
+    const refresh = vi.spyOn(accountRefresh, "refreshAccount")
+    refresh.mockResolvedValueOnce({
+      account: createAccount("acc-1"),
+      refreshed: true,
+      checkInStatusRefreshOutcome: "unavailable",
+    })
+    refresh.mockResolvedValueOnce({
+      account: createAccount("acc-2"),
+      refreshed: true,
+      checkInStatusRefreshOutcome: "unsupported",
+    })
+    try {
+      expect(await accountRefresh.refreshAllAccounts(true)).toMatchObject({
+        success: 2,
+        failed: 0,
+        refreshedCount: 2,
+        checkInStatusFailedCount: 1,
+      })
+    } finally {
+      refresh.mockRestore()
+    }
   })
 
   it("syncs only the refreshed account after its data is persisted", async () => {

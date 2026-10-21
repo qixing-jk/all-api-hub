@@ -1,5 +1,4 @@
 import { DEFAULT_USD_TO_CNY_RATE, QUOTA_PER_USD } from "~/constants/money"
-import { SITE_TYPES } from "~/constants/siteType"
 import type {
   AccountData,
   ApiServiceAccountRequest,
@@ -19,7 +18,6 @@ import {
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/scheduling/refresh"
 import { LogType } from "~/services/history/usageHistory/usageLogModel"
 import type {
   LogStatResponseData,
@@ -29,7 +27,6 @@ import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
   type AccountTodayMetricAvailability,
-  type CheckInConfig,
 } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
@@ -621,7 +618,6 @@ export async function fetchAccountData(
   request: ApiServiceAccountRequest,
   queryConfig?: TodayLogQueryConfig,
 ): Promise<AccountData> {
-  const resolvedCheckIn: CheckInConfig = request.checkIn
   const timestampRange = getTodayTimestampRange()
 
   const quotaPromise = fetchAccountQuota(request)
@@ -635,17 +631,11 @@ export async function fetchAccountData(
     queryConfig,
     timestampRange,
   )
-  const checkInPromise = refreshSelectedStatus({
-    config: resolvedCheckIn,
-    siteType: request.siteType ?? SITE_TYPES.NEW_API,
-    request,
-  })
 
-  const [quota, todayUsage, todayIncome, checkIn] = await Promise.all([
+  const [quota, todayUsage, todayIncome] = await Promise.all([
     quotaPromise,
     todayUsagePromise,
     todayIncomePromise,
-    checkInPromise,
   ])
 
   return {
@@ -656,7 +646,7 @@ export async function fetchAccountData(
       ...todayUsage.todayStatsAvailability,
       ...todayIncome.todayStatsAvailability,
     },
-    checkIn,
+    checkIn: request.checkIn,
   }
 }
 

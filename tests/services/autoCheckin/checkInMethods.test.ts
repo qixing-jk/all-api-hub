@@ -35,6 +35,7 @@ import {
   mergeDiscoveredCheckInDraft,
   mergeRefreshedCheckInStatus,
   mergeUserOwnedCheckInDraft,
+  replaceCheckInMethodStatus,
 } from "~/services/checkin/autoCheckin/state"
 import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { AuthTypeEnum } from "~/types"
@@ -626,6 +627,102 @@ describe("check-in methods compatibility activation", () => {
     })
   })
 
+  it("keeps the newer confirmed snapshot during a failed-query merge and clears the failure after success", () => {
+    const config = createCompatibilityCheckInConfig({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+      automaticExecutionEnabled: false,
+    })
+    const confirmed = (observedAt: number) =>
+      mergeCompatibilityCheckInStatus({
+        config,
+        methodId: "new-api:daily-checkin",
+        isCheckedInToday: true,
+        observedAt,
+      })
+    const failed = replaceCheckInMethodStatus({
+      config: confirmed(100),
+      methodId: "new-api:daily-checkin",
+      status: { outcome: "unknown", reason: "network", attemptedAt: 300 },
+    })
+    const merged = mergeRefreshedCheckInStatus({
+      latest: confirmed(200),
+      refreshed: failed,
+    })
+    expect(
+      merged.methodKnowledge.methods["new-api:daily-checkin"]?.status,
+    ).toMatchObject({
+      outcome: "unknown",
+      lastKnown: { evidence: { observedAt: 200 } },
+    })
+    const recovered = mergeRefreshedCheckInStatus({
+      latest: merged,
+      refreshed: confirmed(400),
+    })
+    expect(
+      recovered.methodKnowledge.methods["new-api:daily-checkin"]?.status,
+    ).toMatchObject({ outcome: "known", evidence: { observedAt: 400 } })
+    expect(
+      recovered.methodKnowledge.methods["new-api:daily-checkin"]?.status,
+    ).not.toHaveProperty("lastKnown")
+  })
+
+  it.each(["missing", "unknown", "throws"])(
+    "records a failed %s read without losing the last confirmed status",
+    async (failure) => {
+      const config = mergeCompatibilityCheckInStatus({
+        config: createCompatibilityCheckInConfig({
+          siteType: SITE_TYPES.NEW_API,
+          supported: true,
+          automaticExecutionEnabled: false,
+        }),
+        methodId: "new-api:daily-checkin",
+        isCheckedInToday: true,
+        observedAt: 100,
+      })
+      const registration = autoCheckinMethodRegistry.resolveById(
+        "new-api:daily-checkin",
+      )!
+      const original = registration.provider.getStatus
+      registration.provider.getStatus =
+        failure === "throws"
+          ? vi.fn().mockRejectedValue(new Error("offline"))
+          : vi.fn().mockResolvedValue(
+              failure === "missing"
+                ? undefined
+                : {
+                    outcome: "unknown",
+                    reason: "permission_denied",
+                    attemptedAt: 200,
+                  },
+            )
+      const onOutcome = vi.fn()
+      try {
+        const updated = await refreshSelectedStatus({
+          config,
+          siteType: SITE_TYPES.NEW_API,
+          account: buildSiteAccount({ checkIn: config }),
+          observedAt: 200,
+          onOutcome,
+        })
+        expect(onOutcome).toHaveBeenCalledWith("unavailable")
+        expect(
+          updated.methodKnowledge.methods["new-api:daily-checkin"]?.status,
+        ).toMatchObject({
+          outcome: "unknown",
+          attemptedAt: 200,
+          lastKnown: {
+            outcome: "known",
+            today: "checked",
+            evidence: { observedAt: 100 },
+          },
+        })
+      } finally {
+        registration.provider.getStatus = original
+      }
+    },
+  )
+
   it("leaves a matched method without status readback unchanged on refresh", async () => {
     const account = buildSiteAccount({
       site_type: SITE_TYPES.ANYROUTER,
@@ -717,7 +814,13 @@ describe("check-in methods compatibility activation", () => {
           account,
           onOutcome,
         }),
-      ).resolves.toEqual(account.checkIn)
+      ).resolves.toMatchObject({
+        methodKnowledge: {
+          methods: {
+            "new-api:daily-checkin": { status: { outcome: "unknown" } },
+          },
+        },
+      })
       expect(onOutcome).toHaveBeenCalledOnce()
       expect(onOutcome).toHaveBeenCalledWith("unavailable")
     } finally {
@@ -794,7 +897,13 @@ describe("check-in methods compatibility activation", () => {
           account,
           onOutcome,
         }),
-      ).resolves.toEqual(account.checkIn)
+      ).resolves.toMatchObject({
+        methodKnowledge: {
+          methods: {
+            "new-api:daily-checkin": { status: { outcome: "unknown" } },
+          },
+        },
+      })
       expect(onOutcome).toHaveBeenCalledOnce()
       expect(onOutcome).toHaveBeenCalledWith("unavailable")
     } finally {

@@ -92,7 +92,7 @@ test("account dots and check-in icons share readable colors across themes and wi
     {
       status: SiteHealthStatus.Warning,
       icon: row(SiteHealthStatus.Warning)
-        .getByRole("button", { name: /Check-in status wasn't detected today/ })
+        .getByRole("button", { name: /Check-in status needs updating/ })
         .locator("svg"),
     },
     {
@@ -119,14 +119,26 @@ test("account dots and check-in icons share readable colors across themes and wi
         expect(
           stroke.foreground,
           `${preset} ${dark} ${status} dot/icon`,
-        ).toEqual(fill.foreground)
+        ).toEqual(
+          status === SiteHealthStatus.Warning
+            ? (
+                await readColorContrast(
+                  dot(SiteHealthStatus.Unknown),
+                  "background",
+                )
+              ).foreground
+            : fill.foreground,
+        )
         expect(fill.ratio).toBeGreaterThanOrEqual(3)
         expect(stroke.ratio).toBeGreaterThanOrEqual(3)
         // Keep small status marks vivid rather than grayish or pastel.
         const brightest = Math.max(...stroke.foreground)
         const saturation =
           (brightest - Math.min(...stroke.foreground)) / brightest
-        if (status !== SiteHealthStatus.Unknown) {
+        if (
+          status !== SiteHealthStatus.Unknown &&
+          status !== SiteHealthStatus.Warning
+        ) {
           expect(saturation).toBeGreaterThanOrEqual(dark ? 0.7 : 0.88)
         }
       }

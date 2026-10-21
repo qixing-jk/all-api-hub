@@ -107,10 +107,14 @@
     "checkIn": {
       "all": "すべてのチェックイン状態",
       "checked-in": "チェックイン済み",
+      "configuration": "設定待ち／方法が無効",
+      "manual": "照会不可",
       "not-checked-in": "未チェックイン",
-      "outdated": "状態期限切れ",
+      "outdated": "更新待ち",
+      "pending": "未照会",
       "placeholder": "チェックイン状態",
-      "status-unavailable": "ステータス取得不可",
+      "query-failed": "照会失敗",
+      "site-disabled": "サイトで無効",
       "unsupported": "未対応"
     },
     "disabled": {
@@ -211,7 +215,21 @@
     "resetSort": "既定の並び順に戻す",
     "site": {
       "checkedInToday": "本日はチェックイン済み、クリックして表示",
-      "checkInStatusOutdated": "本日のチェックイン状態はまだ検出されていません（前回確認時刻: {{time}}）。クリックして更新",
+      "checkInAccountDisabled": "アカウントが無効のため、自動チェックインは停止中です",
+      "checkInAutomationBlocked": "自動チェックインを実行できません：{{reason}}",
+      "checkInAutomationDisabled": "アカウントの自動チェックインは無効です",
+      "checkInAutomationEnabled": "アカウントの自動チェックインは有効です",
+      "checkInAutomationGloballyDisabled": "アカウントの自動チェックインは有効ですが、全体設定は無効です",
+      "checkInLastKnownChecked": "前回チェックイン済みと確認：{{time}}",
+      "checkInLastKnownNotChecked": "前回未チェックインと確認：{{time}}",
+      "checkInNeedsConfiguration": "自動チェックインの設定が必要です：{{reason}}。クリックしてアカウントを編集",
+      "checkInNeedsRedetection": "チェックイン方法の再検出が必要です：{{reason}}。クリックして再検出",
+      "checkInRefreshPartial": "{{accountName}} のアカウント情報は更新されましたが、チェックイン状態は更新できませんでした。再試行してください",
+      "checkInSiteDisabled": "サイトでチェックインが無効です。クリックしてサイトを確認",
+      "checkInStatusFailed": "チェックイン状態の更新に失敗しました（試行：{{time}}）。クリックして再試行",
+      "checkInStatusManual": "この方法では状態を照会できません。クリックしてサイトで確認",
+      "checkInStatusOutdated": "チェックイン状態の更新が必要です（最終確認：{{time}}）。クリックして更新",
+      "checkInStatusPending": "チェックイン状態は未確認です。クリックして更新",
       "currentSite": "現在のサイト",
       "currentSiteBoostHint": "現在のサイトでログイン中のアカウントに一致するため、他のアカウントより先に表示されます。無効なアカウントは末尾に残ります。",
       "currentSiteExists": "現在のタブと同じサイトです",
@@ -234,6 +252,7 @@
     "signInHint": "API サイトにログインしてから、自動検出または手動入力でアカウントを追加してください。"
   },
   "refresh": {
+    "checkInStatusFailed_other": "{{count}} 件のアカウントのチェックイン状態を更新できませんでした。再試行してください",
     "refreshComplete": "更新完了: 成功 {{success}} 件、失敗 {{failed}} 件",
     "refreshDisabledComplete": "無効アカウントの再検出が完了しました: {{restored}} 件を復旧、{{stillDisabled}} 件は無効のまま",
     "refreshDisabledCompleteWithFailures": "無効アカウントの再検出が完了しました: {{restored}} 件を復旧、{{stillDisabled}} 件は無効のまま、{{failed}} 件失敗",

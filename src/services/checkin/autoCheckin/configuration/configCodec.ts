@@ -235,10 +235,19 @@ const normalizeStatus = (value: unknown): CheckInMethodStatus | undefined => {
   if (value.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown) {
     const attemptedAt = coerceTimestamp(value.attemptedAt)
     if (attemptedAt === undefined) return undefined
+    // Only a known snapshot is accepted, so malformed nested failures cannot recurse.
+    const lastKnown =
+      isRecord(value.lastKnown) &&
+      value.lastKnown.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
+        ? normalizeStatus(value.lastKnown)
+        : undefined
     return {
       outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown,
       reason: normalizeUnknownReason(value.reason),
       attemptedAt,
+      ...(lastKnown?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
+        ? { lastKnown }
+        : {}),
     }
   }
   if (

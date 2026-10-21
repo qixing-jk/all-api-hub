@@ -14,6 +14,7 @@ import type {
   CHECK_IN_SELECTION_MODES,
   CHECK_IN_SELECTION_STALE_REASONS,
   CHECK_IN_SELECTION_STATUSES,
+  CHECK_IN_STATUS_REFRESH_OUTCOMES,
 } from "~/constants/checkIn"
 import type { TurnstilePreTrigger } from "~/types/turnstile"
 
@@ -102,6 +103,11 @@ export type CheckInMethodStatus =
       outcome: typeof CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown
       reason: CheckInMethodUnknownReason
       attemptedAt: number
+      /** Last confirmed result; never treated as the latest successful query. */
+      lastKnown?: Extract<
+        CheckInMethodStatus,
+        { outcome: typeof CHECK_IN_METHOD_STATUS_OUTCOMES.Known }
+      >
     }
 
 export interface CheckInMethodKnowledge {
@@ -206,3 +212,6 @@ export interface CheckInAccountState {
   executionEligibility: CheckInExecutionEligibility
   rediscoveryRecommended: boolean
 }
+
+export type CheckInStatusRefreshOutcome =
+  (typeof CHECK_IN_STATUS_REFRESH_OUTCOMES)[keyof typeof CHECK_IN_STATUS_REFRESH_OUTCOMES]

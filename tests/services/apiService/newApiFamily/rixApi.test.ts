@@ -126,11 +126,9 @@ describe("Rix API account data variant", () => {
     expect(data.quota).toBe(0)
     expect(data.today_quota_consumption).toBe(1)
     expect(data.today_income).toBe(5)
-    expect(data.checkIn).toEqual({ enabled: false })
+    expect(data.checkIn).toEqual(buildCheckInConfig())
     expect(mockGetTodayTimestampRange).toHaveBeenCalledTimes(1)
-    expect(mockRefreshSelectedStatus).toHaveBeenCalledWith(
-      expect.objectContaining({ siteType: SITE_TYPES.RIX_API }),
-    )
+    expect(mockRefreshSelectedStatus).not.toHaveBeenCalled()
   })
 
   it("resolves the account identity from the username Rix still reports", async () => {

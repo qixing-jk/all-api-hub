@@ -1271,6 +1271,54 @@ describe("normalizeCheckInConfigV7", () => {
     ).toEqual({})
   })
 
+  it("round-trips the last confirmed result independently from the latest failed query", () => {
+    const lastKnown = {
+      outcome: "known",
+      today: "checked",
+      evidence: { source: "execution", observedAt: 100 },
+    }
+    const config = normalizeCheckInConfigV7({
+      methodKnowledge: {
+        methods: {
+          [NEW_API_METHOD_ID]: {
+            detection: matched,
+            status: {
+              outcome: "unknown",
+              reason: "network",
+              attemptedAt: 200,
+              lastKnown,
+            },
+          },
+        },
+      },
+    })
+    expect(config.methodKnowledge.methods[NEW_API_METHOD_ID]?.status).toEqual({
+      outcome: "unknown",
+      reason: "network",
+      attemptedAt: 200,
+      lastKnown,
+    })
+    expect(normalizeCheckInConfigV7(config)).toEqual(config)
+    const malformed = normalizeCheckInConfigV7({
+      methodKnowledge: {
+        methods: {
+          [NEW_API_METHOD_ID]: {
+            detection: matched,
+            status: {
+              outcome: "unknown",
+              reason: "network",
+              attemptedAt: 200,
+              lastKnown: { outcome: "unknown", attemptedAt: 100, lastKnown },
+            },
+          },
+        },
+      },
+    })
+    expect(
+      malformed.methodKnowledge.methods[NEW_API_METHOD_ID]?.status,
+    ).not.toHaveProperty("lastKnown")
+  })
+
   it("is deterministic and idempotent", () => {
     const input = {
       automaticExecutionEnabled: true,

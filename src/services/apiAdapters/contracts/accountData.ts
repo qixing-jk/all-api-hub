@@ -5,6 +5,7 @@ import type {
 
 export type AccountDataRequest = ApiServiceAccountRequest
 
+/** Dashboard data only. Shared account services own check-in status queries. */
 export type AccountDataCapability = {
   fetchData(request: AccountDataRequest): Promise<AccountData>
 }

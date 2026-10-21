@@ -1,4 +1,3 @@
-import { SITE_TYPES } from "~/constants/siteType"
 import type {
   AccountData,
   ApiServiceAccountRequest,
@@ -16,8 +15,7 @@ import { getTodayTimestampRange } from "~/services/apiService/newApiFamily/defau
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/scheduling/refresh"
-import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
+import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
@@ -136,7 +134,6 @@ export async function fetchCheckInStatus(
 export async function fetchAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<AccountData> {
-  const checkIn: CheckInConfig = request.checkIn
   const timestampRange = getTodayTimestampRange()
 
   const quotaPromise = fetchAccountQuota(request)
@@ -146,17 +143,11 @@ export async function fetchAccountData(
     undefined,
     timestampRange,
   )
-  const checkInPromise = refreshSelectedStatus({
-    config: checkIn,
-    siteType: request.siteType ?? SITE_TYPES.WONG_GONGYI,
-    request,
-  })
 
-  const [quota, todayUsage, todayIncome, refreshedCheckIn] = await Promise.all([
+  const [quota, todayUsage, todayIncome] = await Promise.all([
     quotaPromise,
     todayUsagePromise,
     todayIncomePromise,
-    checkInPromise,
   ])
 
   return {
@@ -167,7 +158,7 @@ export async function fetchAccountData(
       ...todayUsage.todayStatsAvailability,
       ...todayIncome.todayStatsAvailability,
     },
-    checkIn: refreshedCheckIn,
+    checkIn: request.checkIn,
   }
 }
 

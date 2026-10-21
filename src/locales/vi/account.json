@@ -107,10 +107,14 @@
     "checkIn": {
       "all": "Tất cả trạng thái điểm danh",
       "checked-in": "Đã điểm danh",
+      "configuration": "Cần cấu hình / phương thức không khả dụng",
+      "manual": "Không thể truy vấn",
       "not-checked-in": "Chưa điểm danh",
-      "outdated": "Trạng thái hết hạn",
+      "outdated": "Chờ cập nhật",
+      "pending": "Chưa truy vấn",
       "placeholder": "Trạng thái điểm danh",
-      "status-unavailable": "Không thể đọc trạng thái",
+      "query-failed": "Truy vấn thất bại",
+      "site-disabled": "Trang web đã tắt",
       "unsupported": "Không hỗ trợ"
     },
     "disabled": {
@@ -211,7 +215,21 @@
     "resetSort": "Đặt lại thứ tự mặc định",
     "site": {
       "checkedInToday": "Hôm nay đã điểm danh, nhấp vào tôi để xem",
-      "checkInStatusOutdated": "Trạng thái điểm danh không phải là kiểm tra hôm nay (lần kiểm tra cuối: {{time}}), nhấp vào tôi để làm mới",
+      "checkInAccountDisabled": "Tài khoản đã tắt; điểm danh tự động đang tạm dừng",
+      "checkInAutomationBlocked": "Không thể thực hiện điểm danh tự động: {{reason}}",
+      "checkInAutomationDisabled": "Điểm danh tự động của tài khoản đang tắt",
+      "checkInAutomationEnabled": "Điểm danh tự động của tài khoản đã bật",
+      "checkInAutomationGloballyDisabled": "Điểm danh tự động của tài khoản đã bật nhưng công tắc chung đang tắt",
+      "checkInLastKnownChecked": "Lần cuối xác nhận đã điểm danh: {{time}}",
+      "checkInLastKnownNotChecked": "Lần cuối xác nhận chưa điểm danh: {{time}}",
+      "checkInNeedsConfiguration": "Điểm danh tự động cần được cấu hình: {{reason}}. Nhấn để sửa tài khoản",
+      "checkInNeedsRedetection": "Cần phát hiện lại phương thức điểm danh: {{reason}}. Nhấn để phát hiện lại",
+      "checkInRefreshPartial": "Đã làm mới dữ liệu của {{accountName}} nhưng chưa cập nhật được trạng thái điểm danh. Vui lòng thử lại",
+      "checkInSiteDisabled": "Trang web đã tắt điểm danh. Nhấn để xem trang web",
+      "checkInStatusFailed": "Không thể cập nhật trạng thái điểm danh (lần thử: {{time}}). Nhấn để thử lại",
+      "checkInStatusManual": "Phương thức này không hỗ trợ truy vấn trạng thái. Nhấn để xem trên trang web",
+      "checkInStatusOutdated": "Trạng thái điểm danh cần cập nhật (xác nhận gần nhất: {{time}}). Nhấn để làm mới",
+      "checkInStatusPending": "Chưa truy vấn trạng thái điểm danh. Nhấn để làm mới",
       "currentSite": "Trang web hiện tại",
       "currentSiteBoostHint": "Khớp với tài khoản đang đăng nhập trên trang hiện tại và hiển thị trước các tài khoản khác. Tài khoản bị vô hiệu hóa vẫn ở cuối.",
       "currentSiteExists": "Giống với trang web ở tab hiện tại",
@@ -234,6 +252,7 @@
     "signInHint": "Đăng nhập vào trang API, sau đó thêm tài khoản bằng cách tự động nhận diện hoặc nhập thủ công."
   },
   "refresh": {
+    "checkInStatusFailed_other": "Không thể cập nhật trạng thái điểm danh cho {{count}} tài khoản. Vui lòng thử lại",
     "refreshComplete": "Làm mới hoàn tất: {{success}} thành công, {{failed}} thất bại",
     "refreshDisabledComplete": "Khám phá tài khoản đã vô hiệu hóa hoàn tất: khôi phục {{restored}}, vẫn vô hiệu hóa {{stillDisabled}}",
     "refreshDisabledCompleteWithFailures": "Khám phá tài khoản đã vô hiệu hóa hoàn tất: khôi phục {{restored}}, vẫn vô hiệu hóa {{stillDisabled}}, thất bại {{failed}}",

@@ -107,10 +107,14 @@
     "checkIn": {
       "all": "全部簽到狀態",
       "checked-in": "已簽到",
+      "configuration": "待設定／方式失效",
+      "manual": "無法查詢",
       "not-checked-in": "未簽到",
-      "outdated": "狀態過期",
+      "outdated": "待更新",
+      "pending": "尚未查詢",
       "placeholder": "簽到狀態",
-      "status-unavailable": "狀態無法讀取",
+      "query-failed": "查詢失敗",
+      "site-disabled": "站點未開啟",
       "unsupported": "不支援"
     },
     "disabled": {
@@ -211,7 +215,21 @@
     "resetSort": "重設預設排序",
     "site": {
       "checkedInToday": "今日已簽到，點我檢視",
-      "checkInStatusOutdated": "簽到狀態不是今日檢測（上次檢測時間：{{time}}），點我重新整理",
+      "checkInAccountDisabled": "帳號已停用，自動簽到已暫停",
+      "checkInAutomationBlocked": "自動簽到暫時無法執行：{{reason}}",
+      "checkInAutomationDisabled": "帳號自動簽到已關閉",
+      "checkInAutomationEnabled": "帳號自動簽到已開啟",
+      "checkInAutomationGloballyDisabled": "帳號自動簽到已開啟，但全域開關已關閉",
+      "checkInLastKnownChecked": "上次確認已簽到：{{time}}",
+      "checkInLastKnownNotChecked": "上次確認未簽到：{{time}}",
+      "checkInNeedsConfiguration": "自動簽到待設定：{{reason}}。點擊編輯帳號",
+      "checkInNeedsRedetection": "簽到方式需要重新偵測：{{reason}}。點擊重新偵測",
+      "checkInRefreshPartial": "{{accountName}} 的帳號資料已更新，但簽到狀態更新失敗，請重試",
+      "checkInSiteDisabled": "站點未開啟簽到，點擊前往站點查看",
+      "checkInStatusFailed": "簽到狀態更新失敗（嘗試時間：{{time}}），點擊重試",
+      "checkInStatusManual": "此簽到方式不支援狀態查詢，點擊前往站點查看",
+      "checkInStatusOutdated": "簽到狀態待更新（上次確認：{{time}}），點擊重新整理",
+      "checkInStatusPending": "尚未查詢簽到狀態，點擊重新整理",
       "currentSite": "當前站點",
       "currentSiteBoostHint": "符合目前站點的登入帳號，優先於其他帳號顯示；已停用帳號仍排在末尾。",
       "currentSiteExists": "與當前標籤頁站點相同",
@@ -234,6 +252,7 @@
     "signInHint": "先登入你的 API 站點，再新增帳號，可自動辨識或手動填寫。"
   },
   "refresh": {
+    "checkInStatusFailed_other": "其中 {{count}} 個帳號的簽到狀態更新失敗，請重試",
     "refreshComplete": "重新整理完成: {{success}} 成功, {{failed}} 失敗",
     "refreshDisabledComplete": "已停用帳號探測完成：恢復 {{restored}} 個，仍停用 {{stillDisabled}} 個",
     "refreshDisabledCompleteWithFailures": "已停用帳號探測完成：恢復 {{restored}} 個，仍停用 {{stillDisabled}} 個，失敗 {{failed}} 個",

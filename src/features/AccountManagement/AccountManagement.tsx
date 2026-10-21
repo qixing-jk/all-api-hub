@@ -30,6 +30,7 @@ import DedupeAccountsDialog from "~/features/AccountManagement/components/Dedupe
 import DelAccountDialog from "~/features/AccountManagement/components/DelAccountDialog"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import { useDialogStateContext } from "~/features/AccountManagement/dialogs/useDialogStateContext"
+import { getAccountRefreshFeedback } from "~/features/AccountManagement/refreshFeedback"
 import {
   ACCOUNT_MANAGEMENT_ROUTE_ACTIONS,
   ACCOUNT_MANAGEMENT_ROUTE_PARAMS,
@@ -229,29 +230,7 @@ function AccountManagementContent({
     try {
       const result = await toast.promise(handleRefresh(true), {
         loading: t("account:refresh.refreshingAll"),
-        success: (result) => {
-          if (result.failed > 0) {
-            return t("account:refresh.refreshComplete", {
-              success: result.success,
-              failed: result.failed,
-            })
-          }
-
-          const sum = result.success + result.failed
-          if (sum === 0) {
-            return null
-          }
-
-          const { refreshedCount } = result
-          if (refreshedCount < sum) {
-            return t("account:refresh.refreshPartialSkipped", {
-              success: refreshedCount,
-              skipped: sum - refreshedCount,
-            })
-          }
-
-          return t("account:refresh.refreshSuccess")
-        },
+        success: (result) => getAccountRefreshFeedback(result, t),
         error: t("account:refresh.refreshFailed"),
       })
       const refreshInsights = {

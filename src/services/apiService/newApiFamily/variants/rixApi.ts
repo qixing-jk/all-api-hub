@@ -22,8 +22,7 @@ import { getTodayTimestampRange } from "~/services/apiService/newApiFamily/defau
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/scheduling/refresh"
-import { SiteHealthStatus, type CheckInConfig } from "~/types"
+import { SiteHealthStatus } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
@@ -258,7 +257,6 @@ export async function getOrCreateAccessToken(
 export async function fetchAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<AccountData> {
-  const resolvedCheckIn: CheckInConfig = request.checkIn
   const timestampRange = getTodayTimestampRange()
 
   const quotaPromise = fetchAccountQuota(request)
@@ -268,17 +266,11 @@ export async function fetchAccountData(
     undefined,
     timestampRange,
   )
-  const checkInPromise = refreshSelectedStatus({
-    config: resolvedCheckIn,
-    siteType: request.siteType ?? SITE_TYPES.RIX_API,
-    request,
-  })
 
-  const [quota, todayUsage, todayIncome, checkIn] = await Promise.all([
+  const [quota, todayUsage, todayIncome] = await Promise.all([
     quotaPromise,
     todayUsagePromise,
     todayIncomePromise,
-    checkInPromise,
   ])
 
   return {
@@ -289,7 +281,7 @@ export async function fetchAccountData(
       ...todayUsage.todayStatsAvailability,
       ...todayIncome.todayStatsAvailability,
     },
-    checkIn,
+    checkIn: request.checkIn,
   }
 }
 

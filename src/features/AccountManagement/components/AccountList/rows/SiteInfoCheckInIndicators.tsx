@@ -2,32 +2,39 @@ import {
   Circle,
   CircleCheck,
   CircleDollarSign,
+  CircleHelp,
+  CircleMinus,
+  Clock3,
+  Settings2,
   TriangleAlert,
 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
 import { IconButton } from "~/components/ui"
-import {
-  CHECK_IN_METHOD_AVAILABILITIES,
-  CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
-  CHECK_IN_METHOD_STATUS_OUTCOMES,
-  CHECK_IN_METHOD_TODAY_STATUSES,
-  CHECK_IN_SELECTION_STATUSES,
-} from "~/constants/checkIn"
+import { CHECK_IN_METHOD_TODAY_STATUSES } from "~/constants/checkIn"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/actions/AccountActionsContext"
-import { isSelectedCheckInStatusCurrent } from "~/features/AccountManagement/components/AccountList/filtering/checkInFilter"
+import {
+  ACCOUNT_CHECK_IN_AUTOMATION_KINDS,
+  CHECK_IN_CONFIGURATION_ACTIONS,
+  getAccountCheckInAutomationState,
+  getCheckInObservationTime,
+  getSiteCheckInDisplayState,
+  SITE_CHECK_IN_DISPLAY_KINDS,
+} from "~/features/AccountManagement/checkInStatus"
+import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
+import { useDialogStateContext } from "~/features/AccountManagement/dialogs/useDialogStateContext"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import { useCheckInRedetection } from "~/features/CheckIn/useCheckInRedetection"
 import { cn } from "~/lib/utils"
 import {
   getStaticAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
-import {
-  getSelectedCheckInStatus,
-  inspectAccountCheckIn,
-} from "~/services/checkin/autoCheckin/discovery/inspection"
+import { toAutoCheckinSkipReason } from "~/services/checkin/autoCheckin/skipReasons"
 import type { DisplaySiteData } from "~/types"
+import { translateAutoCheckinSkipReason } from "~/types/autoCheckin"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"
 import {
@@ -43,6 +50,7 @@ interface CheckInStatusButtonProps {
   disabled?: boolean
   source: "site" | "custom"
   label: string
+  description?: string
   onClick: () => void
   testId: string
 }
@@ -53,6 +61,7 @@ function CheckInStatusButton({
   disabled,
   source,
   label,
+  description,
   onClick,
   testId,
 }: CheckInStatusButtonProps) {
@@ -61,7 +70,7 @@ function CheckInStatusButton({
   const isEmptyCircle = source === "site" && !checkedIn
   return (
     <Tooltip
-      content={label}
+      content={[label, description].filter(Boolean).join(" · ")}
       position="top"
       wrapperClassName="flex items-center"
     >
@@ -71,6 +80,7 @@ function CheckInStatusButton({
         variant="ghost"
         size="xs"
         aria-label={label}
+        aria-description={description}
         data-testid={testId}
       >
         <Icon
@@ -84,44 +94,6 @@ function CheckInStatusButton({
       </IconButton>
     </Tooltip>
   )
-}
-
-type SiteCheckInIndicatorState =
-  | { kind: "current"; checkedIn: boolean }
-  | { kind: "outdated"; observedAt?: number }
-
-/** Only known, enabled daily results can be displayed; unknown results stay hidden. */
-function getSiteCheckInIndicatorState(
-  site: DisplaySiteData,
-): SiteCheckInIndicatorState | null {
-  const input = {
-    config: site.checkIn,
-    siteType: site.siteType,
-    siteUrl: site.baseUrl,
-  }
-  const { selectionState } = inspectAccountCheckIn(input)
-  const status = getSelectedCheckInStatus(input)
-  if (
-    selectionState.status !== CHECK_IN_SELECTION_STATUSES.Selected ||
-    status?.outcome !== CHECK_IN_METHOD_STATUS_OUTCOMES.Known ||
-    status.availability === CHECK_IN_METHOD_AVAILABILITIES.Disabled ||
-    (status.today !== CHECK_IN_METHOD_TODAY_STATUSES.Checked &&
-      status.today !== CHECK_IN_METHOD_TODAY_STATUSES.NotChecked)
-  ) {
-    return null
-  }
-  if (isSelectedCheckInStatusCurrent(site)) {
-    return {
-      kind: "current",
-      checkedIn: status.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked,
-    }
-  }
-  const observedAt =
-    status.evidence.source ===
-    CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.LegacyMigration
-      ? status.evidence.legacyObservedAt
-      : status.evidence.observedAt
-  return { kind: "outdated", observedAt }
 }
 
 interface SiteInfoCheckInIndicatorsProps {
@@ -140,6 +112,36 @@ export function SiteInfoCheckInIndicators({
 }: SiteInfoCheckInIndicatorsProps) {
   const { t } = useTranslation(["account", "messages", "common"])
   const { handleMarkCustomCheckInAsCheckedIn } = useAccountActionsContext()
+  const { preferences } = useUserPreferencesContext()
+  const { openEditAccount } = useDialogStateContext()
+  const { loadAccountData } = useAccountDataContext()
+  const {
+    redetect,
+    isPending: isRedetecting,
+    selectionDialog,
+  } = useCheckInRedetection(site.id, loadAccountData)
+  const automation = getAccountCheckInAutomationState(
+    site,
+    preferences?.autoCheckin?.globalEnabled ?? true,
+  )
+  const reasonLabel = (reason: Parameters<typeof toAutoCheckinSkipReason>[0]) =>
+    translateAutoCheckinSkipReason(t, toAutoCheckinSkipReason(reason))
+  const automationDescription = (() => {
+    switch (automation.kind) {
+      case ACCOUNT_CHECK_IN_AUTOMATION_KINDS.AccountDisabled:
+        return t("list.site.checkInAccountDisabled")
+      case ACCOUNT_CHECK_IN_AUTOMATION_KINDS.GloballyDisabled:
+        return t("list.site.checkInAutomationGloballyDisabled")
+      case ACCOUNT_CHECK_IN_AUTOMATION_KINDS.Disabled:
+        return t("list.site.checkInAutomationDisabled")
+      case ACCOUNT_CHECK_IN_AUTOMATION_KINDS.Enabled:
+        return t("list.site.checkInAutomationEnabled")
+      case ACCOUNT_CHECK_IN_AUTOMATION_KINDS.Blocked:
+        return t("list.site.checkInAutomationBlocked", {
+          reason: reasonLabel(automation.reason),
+        })
+    }
+  })()
   const isAccountDisabled = site.disabled === true
 
   const handleCheckIn = async (source: "site" | "custom") => {
@@ -171,71 +173,158 @@ export function SiteInfoCheckInIndicators({
     }
   }
 
-  if (isAccountDisabled) {
-    return null
-  }
-
   const customCheckIn = site.checkIn?.customCheckIn
   const hasCustomUrl =
     typeof customCheckIn?.url === "string" && customCheckIn.url.trim() !== ""
-  const siteState = getSiteCheckInIndicatorState(site)
+  const siteState = getSiteCheckInDisplayState(site)
   if (!siteState && !hasCustomUrl) return null
 
-  const staleStatusLabel =
-    siteState?.kind === "outdated"
-      ? t("list.site.checkInStatusOutdated", {
-          time: formatLocaleDateTime(
-            siteState.observedAt,
-            t("list.site.notAvailable"),
-          ),
+  const formatTime = (time?: number) =>
+    formatLocaleDateTime(time, t("list.site.notAvailable"))
+  const statusLabel = (() => {
+    switch (siteState?.kind) {
+      case SITE_CHECK_IN_DISPLAY_KINDS.Configuration:
+        return siteState.action === CHECK_IN_CONFIGURATION_ACTIONS.Redetect
+          ? t("list.site.checkInNeedsRedetection", {
+              reason: reasonLabel(siteState.reason),
+            })
+          : t("list.site.checkInNeedsConfiguration", {
+              reason: reasonLabel(siteState.reason),
+            })
+      case SITE_CHECK_IN_DISPLAY_KINDS.SiteDisabled:
+        return t("list.site.checkInSiteDisabled")
+      case SITE_CHECK_IN_DISPLAY_KINDS.Outdated:
+        return t("list.site.checkInStatusOutdated", {
+          time: formatTime(siteState.observedAt),
         })
-      : ""
+      case SITE_CHECK_IN_DISPLAY_KINDS.Failed: {
+        const failure = t("list.site.checkInStatusFailed", {
+          time: formatTime(siteState.attemptedAt),
+        })
+        if (!siteState.lastKnown?.today) return failure
+        const time = formatTime(getCheckInObservationTime(siteState.lastKnown))
+        const previous =
+          siteState.lastKnown.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked
+            ? t("list.site.checkInLastKnownChecked", { time })
+            : t("list.site.checkInLastKnownNotChecked", { time })
+        return `${failure} · ${previous}`
+      }
+      case SITE_CHECK_IN_DISPLAY_KINDS.Manual:
+        return t("list.site.checkInStatusManual")
+      default:
+        return t("list.site.checkInStatusPending")
+    }
+  })()
+  const StatusIcon =
+    siteState?.kind === SITE_CHECK_IN_DISPLAY_KINDS.Configuration
+      ? Settings2
+      : siteState?.kind === SITE_CHECK_IN_DISPLAY_KINDS.SiteDisabled
+        ? CircleMinus
+        : siteState?.kind === SITE_CHECK_IN_DISPLAY_KINDS.Failed
+          ? TriangleAlert
+          : siteState?.kind === SITE_CHECK_IN_DISPLAY_KINDS.Manual
+            ? CircleHelp
+            : Clock3
+  const manual =
+    siteState?.kind === SITE_CHECK_IN_DISPLAY_KINDS.Manual ||
+    siteState?.kind === SITE_CHECK_IN_DISPLAY_KINDS.SiteDisabled
+  const configuration =
+    siteState?.kind === SITE_CHECK_IN_DISPLAY_KINDS.Configuration
+  const warning =
+    siteState?.kind === SITE_CHECK_IN_DISPLAY_KINDS.Failed ||
+    ((configuration ||
+      siteState?.kind === SITE_CHECK_IN_DISPLAY_KINDS.SiteDisabled) &&
+      automation.kind === ACCOUNT_CHECK_IN_AUTOMATION_KINDS.Blocked)
   const checkInLabel = (checkedIn: boolean) =>
     checkedIn ? t("list.site.checkedInToday") : t("list.site.notCheckedInToday")
 
   return (
-    <div className="flex shrink-0 items-center">
-      <div className="gap-y-density-1 flex items-center gap-x-1">
-        {siteState?.kind === "outdated" && (
-          <Tooltip
-            content={staleStatusLabel}
-            position="top"
-            wrapperClassName="flex items-center"
-          >
-            <IconButton
-              onClick={onRefresh}
-              variant="ghost"
-              size="xs"
-              loading={isRefreshing}
-              disabled={isRefreshLocked}
-              aria-label={staleStatusLabel}
-            >
-              <TriangleAlert className="text-warning-indicator h-4 w-4" />
-            </IconButton>
-          </Tooltip>
-        )}
-        {siteState?.kind === "current" && (
-          <CheckInStatusButton
-            source="site"
-            checkedIn={siteState.checkedIn}
-            label={checkInLabel(siteState.checkedIn)}
-            onClick={() => void handleCheckIn("site")}
-            disabled={
-              !getStaticAccountSiteRouteUrl(site, SITE_ROUTE_KINDS.CheckIn)
-            }
-            testId={ACCOUNT_MANAGEMENT_TEST_IDS.siteCheckInStatusButton}
-          />
-        )}
-        {hasCustomUrl && (
-          <CheckInStatusButton
-            source="custom"
-            checkedIn={Boolean(customCheckIn?.isCheckedInToday)}
-            label={checkInLabel(Boolean(customCheckIn?.isCheckedInToday))}
-            onClick={() => void handleCheckIn("custom")}
-            testId={ACCOUNT_MANAGEMENT_TEST_IDS.customCheckInStatusButton}
-          />
-        )}
+    <>
+      {selectionDialog}
+      <div className="flex shrink-0 items-center">
+        <div className="gap-y-density-1 flex items-center gap-x-1">
+          {siteState &&
+            siteState.kind !== SITE_CHECK_IN_DISPLAY_KINDS.Current && (
+              <Tooltip
+                content={[statusLabel, automationDescription].join(" · ")}
+                position="top"
+                wrapperClassName="flex items-center"
+              >
+                <IconButton
+                  onClick={(event) => {
+                    if (
+                      siteState.kind ===
+                      SITE_CHECK_IN_DISPLAY_KINDS.Configuration
+                    ) {
+                      if (
+                        siteState.action ===
+                        CHECK_IN_CONFIGURATION_ACTIONS.Redetect
+                      )
+                        void redetect(event.currentTarget)
+                      else openEditAccount(site)
+                    } else if (manual) void handleCheckIn("site")
+                    else onRefresh()
+                  }}
+                  variant="ghost"
+                  size="xs"
+                  loading={
+                    configuration ? isRedetecting : !manual && isRefreshing
+                  }
+                  disabled={
+                    configuration
+                      ? isRefreshLocked ||
+                        isRedetecting ||
+                        (isAccountDisabled &&
+                          siteState.action ===
+                            CHECK_IN_CONFIGURATION_ACTIONS.Redetect)
+                      : isAccountDisabled ||
+                        (manual
+                          ? !getStaticAccountSiteRouteUrl(
+                              site,
+                              SITE_ROUTE_KINDS.CheckIn,
+                            )
+                          : isRefreshLocked || isRedetecting)
+                  }
+                  aria-label={statusLabel}
+                  aria-description={automationDescription}
+                >
+                  <StatusIcon
+                    className={cn(
+                      "h-4 w-4",
+                      warning
+                        ? "text-warning-indicator"
+                        : "text-neutral-indicator",
+                    )}
+                  />
+                </IconButton>
+              </Tooltip>
+            )}
+          {siteState?.kind === SITE_CHECK_IN_DISPLAY_KINDS.Current && (
+            <CheckInStatusButton
+              source="site"
+              checkedIn={siteState.checkedIn}
+              label={checkInLabel(siteState.checkedIn)}
+              description={automationDescription}
+              onClick={() => void handleCheckIn("site")}
+              disabled={
+                isAccountDisabled ||
+                !getStaticAccountSiteRouteUrl(site, SITE_ROUTE_KINDS.CheckIn)
+              }
+              testId={ACCOUNT_MANAGEMENT_TEST_IDS.siteCheckInStatusButton}
+            />
+          )}
+          {hasCustomUrl && (
+            <CheckInStatusButton
+              source="custom"
+              disabled={isAccountDisabled}
+              checkedIn={Boolean(customCheckIn?.isCheckedInToday)}
+              label={checkInLabel(Boolean(customCheckIn?.isCheckedInToday))}
+              onClick={() => void handleCheckIn("custom")}
+              testId={ACCOUNT_MANAGEMENT_TEST_IDS.customCheckInStatusButton}
+            />
+          )}
+        </div>
       </div>
-    </div>
+    </>
   )
 }

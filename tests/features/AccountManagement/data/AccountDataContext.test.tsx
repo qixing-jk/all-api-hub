@@ -2237,6 +2237,15 @@ describe("AccountDataContext refresh orchestration", () => {
     const toastOptions = atIndex(atIndex(mockToastPromise.mock.calls, 0), 1)
     const t = testI18n.getFixedT(null, "account")
     expect(
+      toastOptions.success({
+        success: 2,
+        failed: 0,
+        refreshedCount: 2,
+        checkInStatusFailedCount: 1,
+      }),
+    ).toContain(t("refresh.checkInStatusFailed", { count: 1 }))
+
+    expect(
       toastOptions.success({ success: 2, failed: 0, refreshedCount: 1 }),
     ).toBe(
       t("refresh.refreshPartialSkipped", {

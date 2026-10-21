@@ -1,8 +1,12 @@
+// Initialize provider registrations before measuring the shared snapshot queries.
+import "~/services/checkin/autoCheckin/providers"
+
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ApiServiceAccountRequest } from "~/services/accounts/accountDataModel"
+import { fetchAccountDataWithCheckInStatus } from "~/services/accounts/refresh/fetchAccountData"
 import {
   fetchSupportCheckIn,
   fetchVoApiV2AccountData,
@@ -70,6 +74,25 @@ describe("apiService VoAPI v2", () => {
     mockResyncVoApiV2AuthToken.mockReset()
     mockResyncVoApiV2AuthToken.mockResolvedValue(null)
     server.resetHandlers()
+  })
+
+  it("reads account balances without querying the selected check-in method", async () => {
+    const readStatus = vi.fn(() =>
+      HttpResponse.json({ code: 0, data: { todaySigned: true } }),
+    )
+    server.use(
+      http.get("https://example.invalid/api/user/info", () =>
+        HttpResponse.json({
+          code: 0,
+          data: { id: 7, basicBalance: "2", bindBalance: "0" },
+        }),
+      ),
+      http.get("https://example.invalid/api/check_in/stats", readStatus),
+    )
+    const request = { ...createVoApiV2Request(), includeTodayCashflow: false }
+    const result = await fetchVoApiV2AccountData(request)
+    expect(readStatus).not.toHaveBeenCalled()
+    expect(result.checkIn).toEqual(request.checkIn)
   })
 
   it("fetches the canonical invite URL with raw dashboard authorization", async () => {
@@ -217,7 +240,10 @@ describe("apiService VoAPI v2", () => {
       ),
     )
 
-    const data = await fetchVoApiV2AccountData(createVoApiV2Request())
+    const data = await fetchAccountDataWithCheckInStatus(
+      { fetchData: fetchVoApiV2AccountData },
+      { ...createVoApiV2Request(), siteType: SITE_TYPES.VO_API_V2 },
+    )
 
     expect(data.quota).toBe(2500000)
     expect(data.today_quota_consumption).toBe(375000)
@@ -266,10 +292,14 @@ describe("apiService VoAPI v2", () => {
       ),
     )
 
-    const data = await fetchVoApiV2AccountData({
-      ...createVoApiV2Request(),
-      includeTodayCashflow: false,
-    })
+    const data = await fetchAccountDataWithCheckInStatus(
+      { fetchData: fetchVoApiV2AccountData },
+      {
+        siteType: SITE_TYPES.VO_API_V2,
+        ...createVoApiV2Request(),
+        includeTodayCashflow: false,
+      },
+    )
 
     expect(data.quota).toBe(1000000)
     expect(data.today_quota_consumption).toBe(0)

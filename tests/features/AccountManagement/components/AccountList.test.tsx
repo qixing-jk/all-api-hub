@@ -581,7 +581,7 @@ function createAccountDataContextValue(
     checkIn: createCompatibilityCheckInConfig({
       siteType: "one-api",
       supported: false,
-      automaticExecutionEnabled: true,
+      automaticExecutionEnabled: false,
       customCheckIn: {
         url: "https://check-in.example.invalid/gamma",
         isCheckedInToday: false,
@@ -2112,7 +2112,7 @@ describe("AccountList", () => {
 
     expect(
       screen.getByRole("button", {
-        name: "account:filter.checkIn.status-unavailable",
+        name: "account:filter.checkIn.manual",
       }),
     ).toBeInTheDocument()
   })

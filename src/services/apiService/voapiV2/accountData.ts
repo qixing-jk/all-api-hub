@@ -1,4 +1,3 @@
-import { SITE_TYPES } from "~/constants/siteType"
 import type {
   AccountData,
   ApiServiceAccountRequest,
@@ -18,7 +17,6 @@ import {
 } from "~/services/apiService/voapiV2/type"
 import { type ApiServiceRequest } from "~/services/apiTransport/type"
 import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configuration/configCodec"
-import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/scheduling/refresh"
 import {
   ACCOUNT_TODAY_METRIC_REASONS,
   ACCOUNT_TODAY_METRIC_STATUSES,
@@ -104,16 +102,10 @@ export async function fetchVoApiV2AccountData(
             return { kind: "failed" as const }
           })
       : Promise.resolve({ kind: "skipped" as const })
-  const checkInPromise = refreshSelectedStatus({
-    config: resolvedCheckIn,
-    siteType: request.siteType ?? SITE_TYPES.VO_API_V2,
-    request,
-  })
 
-  const [userInfo, statsResult, checkIn] = await Promise.all([
+  const [userInfo, statsResult] = await Promise.all([
     userInfoPromise,
     statsPromise,
-    checkInPromise,
   ])
 
   const quota =
@@ -169,7 +161,7 @@ export async function fetchVoApiV2AccountData(
       tokens: unavailableAvailability(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
       income: unavailableAvailability(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
     },
-    checkIn,
+    checkIn: resolvedCheckIn,
   }
 }
 

@@ -7,10 +7,10 @@ import {
   AUTO_CHECKIN_METHOD_IDS,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
+  CHECK_IN_STATUS_REFRESH_OUTCOMES,
 } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
 import { NON_REPEAT_SAFE_CHECKIN_METHOD_IDS } from "~/services/checkin/autoCheckin/providers/registry"
-import { CHECK_IN_STATUS_REFRESH_OUTCOMES } from "~/services/checkin/autoCheckin/scheduling/refresh"
 import { autoCheckinScheduler } from "~/services/checkin/autoCheckin/scheduling/schedulerCore"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
@@ -407,6 +407,45 @@ describe("execution/statusVerification", () => {
     expect(
       mockedAccountStorage.prepareAccountForSelectedCheckIn,
     ).not.toHaveBeenCalled()
+  })
+
+  it("persists a failed query before returning unavailable without changing execution results", async () => {
+    const failedConfig = structuredClone(verificationAccount.checkIn)
+    failedConfig.methodKnowledge.methods[
+      AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+    ] = {
+      detection: {
+        outcome: "matched",
+        evidence: { source: "compatibility_registration" },
+      },
+      status: {
+        outcome: "unknown",
+        reason: "network",
+        attemptedAt: Date.now(),
+      },
+    }
+    mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
+    mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValue({
+      ...verificationAccount,
+      checkIn: failedConfig,
+    })
+    mockedRefreshSelectedStatus.mockImplementation(
+      async ({ onOutcome }: any) => {
+        onOutcome(CHECK_IN_STATUS_REFRESH_OUTCOMES.Unavailable)
+        return failedConfig
+      },
+    )
+    await expect(
+      autoCheckinScheduler.verifyAccountStatus(verificationAccount.id),
+    ).resolves.toMatchObject({ outcome: "unavailable" })
+    expect(
+      mockedAccountStorage.prepareAccountForSelectedCheckIn,
+    ).toHaveBeenCalledWith(
+      verificationAccount.id,
+      failedConfig,
+      verificationAccount,
+    )
+    expect(mockedAutoCheckinStorage.updateStatus).not.toHaveBeenCalled()
   })
 
   it("reports unsupported when status readback is unsupported by the provider", async () => {

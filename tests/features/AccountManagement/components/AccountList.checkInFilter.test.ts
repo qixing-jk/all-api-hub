@@ -52,11 +52,66 @@ const unsupportedCheckIn = (
   customCheckIn?: CheckInConfig["customCheckIn"],
 ): CheckInConfig =>
   buildCheckInConfig({
-    automaticExecutionEnabled: true,
+    automaticExecutionEnabled: false,
     ...(customCheckIn ? { customCheckIn } : {}),
   })
 
 describe("getAccountCheckInFilterValue", () => {
+  it("does not classify a failed query as checked even if its last confirmation was today", () => {
+    const checkIn = buildCheckIn({ checked: true })
+    const method = checkIn.methodKnowledge.methods[methodId]!
+    method.status = {
+      outcome: "unknown",
+      reason: "network",
+      attemptedAt: todayMs + 1,
+      lastKnown: method.status as Extract<
+        NonNullable<typeof method.status>,
+        { outcome: "known" }
+      >,
+    }
+    expect(
+      getAccountCheckInFilterValue(
+        buildDisplaySiteData({ siteType: SITE_TYPES.NEW_API, checkIn }),
+      ),
+    ).toBe("query-failed")
+  })
+
+  it("routes an old execution result without readback to unavailable rather than a refreshable stale result", () => {
+    const checkIn = buildCheckInConfig({ automaticExecutionEnabled: false })
+    checkIn.selection = {
+      mode: "manual",
+      methodId: AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn,
+    }
+    checkIn.methodKnowledge.methods[
+      AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn
+    ] = {
+      detection: {
+        outcome: "matched",
+        evidence: { source: "compatibility_registration" },
+      },
+      status: {
+        outcome: "known",
+        today: "checked",
+        evidence: { source: "execution", observedAt: 1 },
+      },
+    }
+    expect(
+      getAccountCheckInFilterValue(
+        buildDisplaySiteData({ siteType: SITE_TYPES.ANYROUTER, checkIn }),
+      ),
+    ).toBe("manual")
+  })
+
+  it("distinguishes missing automation configuration from unsupported accounts", () => {
+    const checkIn = unsupportedCheckIn()
+    checkIn.automaticExecutionEnabled = true
+    expect(
+      getAccountCheckInFilterValue(
+        buildDisplaySiteData({ siteType: SITE_TYPES.NEW_API, checkIn }),
+      ),
+    ).toBe("configuration")
+  })
+
   it("classifies the selected method status into filter buckets", () => {
     vi.setSystemTime(todayMs)
     try {
@@ -106,7 +161,7 @@ describe("getAccountCheckInFilterValue", () => {
             checkIn: buildCheckIn(),
           }),
         ),
-      ).toBe("status-unavailable")
+      ).toBe("pending")
     } finally {
       vi.useRealTimers()
     }
@@ -186,7 +241,7 @@ describe("getAccountCheckInFilterValue", () => {
           }),
         }),
       ),
-    ).toBe("status-unavailable")
+    ).toBe("pending")
 
     expect(
       getAccountCheckInFilterValue(
@@ -200,6 +255,6 @@ describe("getAccountCheckInFilterValue", () => {
           }),
         }),
       ),
-    ).toBe("status-unavailable")
+    ).toBe("pending")
   })
 })

@@ -1,0 +1,55 @@
+import { CHECK_IN_EXECUTION_SKIP_REASONS } from "~/constants/checkIn"
+import {
+  AUTO_CHECKIN_SKIP_REASON,
+  type AutoCheckinSkipReason,
+} from "~/types/autoCheckin"
+import type { CheckInExecutionSkipReason } from "~/types/checkIn"
+
+/** Maps domain execution gates to their existing user-facing reason codes. */
+export const toAutoCheckinSkipReason = (
+  reason: CheckInExecutionSkipReason,
+): AutoCheckinSkipReason => {
+  switch (reason) {
+    case CHECK_IN_EXECUTION_SKIP_REASONS.LoginProviderInUse:
+      return AUTO_CHECKIN_SKIP_REASON.LOGIN_PROVIDER_IN_USE
+    case CHECK_IN_EXECUTION_SKIP_REASONS.AccountDisabled:
+      return AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED
+    case CHECK_IN_EXECUTION_SKIP_REASONS.GlobalAutomaticExecutionDisabled:
+    case CHECK_IN_EXECUTION_SKIP_REASONS.AutomaticExecutionDisabled:
+      return AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED
+    case CHECK_IN_EXECUTION_SKIP_REASONS.AlreadyChecked:
+      return AUTO_CHECKIN_SKIP_REASON.ALREADY_CHECKED_TODAY
+    case CHECK_IN_EXECUTION_SKIP_REASONS.MethodDisabled:
+      return AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED
+    case CHECK_IN_EXECUTION_SKIP_REASONS.StatusUnavailable:
+      return AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE
+    case CHECK_IN_EXECUTION_SKIP_REASONS.NoProvider:
+      return AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER
+    case CHECK_IN_EXECUTION_SKIP_REASONS.AccountDataMissing:
+      return AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DATA_MISSING
+    case CHECK_IN_EXECUTION_SKIP_REASONS.AuthenticationRequired:
+      return AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED
+    case CHECK_IN_EXECUTION_SKIP_REASONS.CredentialsMissing:
+      return AUTO_CHECKIN_SKIP_REASON.CREDENTIALS_MISSING
+    case CHECK_IN_EXECUTION_SKIP_REASONS.NetworkError:
+      return AUTO_CHECKIN_SKIP_REASON.NETWORK_ERROR
+    case CHECK_IN_EXECUTION_SKIP_REASONS.SourceUnavailable:
+      return AUTO_CHECKIN_SKIP_REASON.SOURCE_UNAVAILABLE
+    case CHECK_IN_EXECUTION_SKIP_REASONS.PermissionDenied:
+      return AUTO_CHECKIN_SKIP_REASON.PERMISSION_DENIED
+    case CHECK_IN_EXECUTION_SKIP_REASONS.Timeout:
+      return AUTO_CHECKIN_SKIP_REASON.TIMEOUT
+    case CHECK_IN_EXECUTION_SKIP_REASONS.AccountUnavailable:
+      return AUTO_CHECKIN_SKIP_REASON.ACCOUNT_UNAVAILABLE
+    case CHECK_IN_EXECUTION_SKIP_REASONS.NoSelectedMethod:
+      return AUTO_CHECKIN_SKIP_REASON.NO_SELECTED_METHOD
+    case CHECK_IN_EXECUTION_SKIP_REASONS.NoAvailableMethod:
+      return AUTO_CHECKIN_SKIP_REASON.NO_AVAILABLE_METHOD
+    case CHECK_IN_EXECUTION_SKIP_REASONS.MethodUnavailable:
+      return AUTO_CHECKIN_SKIP_REASON.METHOD_UNAVAILABLE
+    case CHECK_IN_EXECUTION_SKIP_REASONS.MethodNotMatched:
+      return AUTO_CHECKIN_SKIP_REASON.METHOD_NOT_MATCHED
+    case CHECK_IN_EXECUTION_SKIP_REASONS.MethodUnsupported:
+      return AUTO_CHECKIN_SKIP_REASON.METHOD_UNSUPPORTED
+  }
+}
