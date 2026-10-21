@@ -103,6 +103,7 @@
       "onlyJsonSupported": "JSON 応答のみサポートしています",
       "requestFailed": "リクエストに失敗しました: {{status}}"
     },
+    "dayaRedemptionUnconfirmed": "公式コンソールで交換結果を確認し、特典の付与状況の確認または割引コードの適用を完了してから再試行してください。",
     "operation": {
       "accountDataFetchTimeout": "アカウントデータの取得がタイムアウトしました（{{seconds}} 秒）",
       "failed": "操作に失敗しました: {{error}}",

@@ -22,6 +22,7 @@ import { OneTimeSecretDialog } from "~/features/TokenProvisioning/secretDelivery
 import zhKeyManagement from "~/locales/zh-CN/keyManagement.json"
 import { RESOURCE_FIELD_OPTION_LOAD_TRIGGERS } from "~/services/apiAdapters/contracts/resourceNative"
 import { createCubenceKeyEditor } from "~/services/apiAdapters/cubence/keyEditor"
+import { createDayaKeyEditor } from "~/services/apiAdapters/daya/keyEditor"
 import { createFoxCodeKeyEditor } from "~/services/apiAdapters/foxcode/keyEditor"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keys/keyResourceEditor"
 import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
@@ -38,6 +39,93 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const field = OPENROUTER_KEY_FIELD_IDS
+
+it("shows Daya routing context and Fast preference while keeping advanced drafts", async () => {
+  const user = userEvent.setup()
+  const loadOptions = vi.fn()
+  const definition = createDayaKeyEditor({
+    groups: [
+      {
+        id: 2,
+        name: "OpenAI",
+        platform: "openai",
+        rateMultiplier: 0.2,
+        description: "OpenAI routing description",
+      },
+    ],
+  })
+  render(
+    <AccountKeyResourceEditorDialog
+      editor={{
+        editorId: 1,
+        siteType: SITE_TYPES.DAYA,
+        mode: editorModes.Create,
+        fields: definition.fields,
+        initialValues: definition.initialValues,
+        values: definition.initialValues,
+      }}
+      onClose={vi.fn()}
+      onSubmit={vi.fn()}
+      onValuesChange={vi.fn()}
+      onLoadOptions={loadOptions}
+    />,
+    { withUserPreferencesProvider: false, withThemeProvider: false },
+  )
+  for (const section of ["basicInfo", "quotaSettings", "expiration"]) {
+    expect(
+      screen.getByRole("button", {
+        name: `keyManagement:dialog.${section}`,
+      }),
+    ).toHaveAttribute("aria-expanded", "true")
+  }
+  expect(screen.getByRole("checkbox", { name: "OpenAI" })).toBeVisible()
+  expect(loadOptions).not.toHaveBeenCalled()
+  expect(screen.getByText("OpenAI routing description")).toBeVisible()
+  expect(
+    screen.getByRole("checkbox", { name: "OpenAI" }),
+  ).toHaveAccessibleDescription("OpenAI routing description")
+  await user.click(screen.getByRole("checkbox", { name: "OpenAI" }))
+  expect(screen.getByRole("checkbox", { name: "OpenAI" })).toBeChecked()
+  await user.click(screen.getByRole("checkbox", { name: "OpenAI" }))
+  expect(screen.getByRole("checkbox", { name: "OpenAI" })).not.toBeChecked()
+  expect(screen.getByText("×0.2")).toBeVisible()
+  expect(
+    screen.getByRole("switch", {
+      name: "keyManagement:native.editor.daya.allowFast",
+    }),
+  ).toBeChecked()
+  expect(
+    screen.getByRole("button", {
+      name: "keyManagement:dialog.advancedSettings",
+    }),
+  ).toHaveAttribute("aria-expanded", "false")
+  const advanced = screen.getByRole("button", {
+    name: "keyManagement:dialog.advancedSettings",
+  })
+  await user.click(advanced)
+  const whitelist = screen.getByLabelText(
+    "keyManagement:native.editor.daya.ipWhitelist",
+  )
+  await user.type(whitelist, "192.0.2.0/24")
+  await user.click(advanced)
+  expect(whitelist).not.toBeVisible()
+  expect(advanced).toHaveTextContent(
+    "keyManagement:native.editor.daya.ipWhitelist",
+  )
+  await user.click(advanced)
+  expect(whitelist).toHaveValue("192.0.2.0/24")
+  const name = screen.getByLabelText("keyManagement:dialog.tokenName")
+  await user.clear(name)
+  await user.type(name, "Keep my draft")
+  const basic = screen.getByRole("button", {
+    name: "keyManagement:dialog.basicInfo",
+  })
+  await user.click(basic)
+  expect(name).not.toBeVisible()
+  await user.click(basic)
+  expect(name).toBeVisible()
+  expect(name).toHaveValue("Keep my draft")
+})
 
 it("keeps the native RightCode command valid after changing the model dependency", async () => {
   const user = userEvent.setup()

@@ -5,6 +5,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { autoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers"
 import { aiRouterProvider } from "~/services/checkin/autoCheckin/providers/aiRouter"
 import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyrouter"
+import { dayaProvider } from "~/services/checkin/autoCheckin/providers/daya"
 import { denxioProvider } from "~/services/checkin/autoCheckin/providers/denxio"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import { nexavlinksProvider } from "~/services/checkin/autoCheckin/providers/nexavlinks"
@@ -91,7 +92,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(21)
+    expect(registrationContracts).toHaveLength(22)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -143,6 +144,11 @@ describe("autoCheckinMethodRegistry", () => {
           id: "nexavlinks:daily-checkin",
           candidateSiteTypes: [SITE_TYPES.SUB2API],
           provider: nexavlinksProvider,
+        },
+        {
+          id: "daya:daily-checkin",
+          candidateSiteTypes: [SITE_TYPES.DAYA],
+          provider: dayaProvider,
         },
         {
           id: "relayfor:daily-checkin",

@@ -441,6 +441,17 @@
         "saveName": "Name speichern",
         "transferAmount": "Zu übertragende Tokens"
       },
+      "daya": {
+        "allowFast": "Fast-Modus erlauben",
+        "allowFastHelp": "Erlaubt OpenAI-Anfragen, den Fast-Modus anzufordern. Der Dienst entscheidet über die Anwendung. Bei Deaktivierung verwenden alle OpenAI-Anfragen, einschließlich Flex, den Standardmodus und Standardpreise.",
+        "budget7d": "7-Tage-Budget (USD)",
+        "budgetHelp": "Ausgabenlimit in USD pro Zeitfenster. 0 bedeutet unbegrenzt.",
+        "customKey": "Benutzerdefinierter Schlüssel (optional)",
+        "customKeyHelp": "Ohne Eingabe wird ein Schlüssel erzeugt. Mindestens 16 Buchstaben, Ziffern, Unterstriche oder Bindestriche.",
+        "groupOrderHelp": "Routen werden in dieser Reihenfolge versucht. Per Ziehen oder Pfeiltasten umordnen.",
+        "ipBlacklist": "IP-Sperrliste",
+        "ipWhitelist": "IP-Zulassungsliste"
+      },
       "description": "Beschreibung (optional)",
       "emrank": {
         "expiration": "Ablauf",

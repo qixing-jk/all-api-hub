@@ -103,6 +103,7 @@
       "onlyJsonSupported": "Chỉ hỗ trợ dữ liệu phản hồi JSON",
       "requestFailed": "Yêu cầu thất bại: {{status}}"
     },
+    "dayaRedemptionUnconfirmed": "Kiểm tra kết quả trong bảng điều khiển chính thức. Xác nhận việc cấp quyền lợi hoặc hoàn tất áp dụng mã giảm giá trước khi thử lại.",
     "operation": {
       "accountDataFetchTimeout": "Lấy dữ liệu tài khoản quá thời gian ({{seconds}} giây)",
       "failed": "Thao tác thất bại: {{error}}",

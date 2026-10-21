@@ -10,6 +10,7 @@ import { anyrouterProvider } from "./anyrouter"
 import { clawhudProvider } from "./clawhud"
 import type { AutoCheckinProvider } from "./contracts"
 import { daiguaProvider } from "./daigua"
+import { dayaProvider } from "./daya"
 import { denxioProvider } from "./denxio"
 import { emRankProvider } from "./emrank"
 import { freeApiProvider } from "./freeApi"
@@ -51,6 +52,7 @@ const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.NexaVlinksDailyCheckIn]: nexavlinksProvider,
   [AUTO_CHECKIN_METHOD_IDS.EmrankDailyCheckIn]: emRankProvider,
   [AUTO_CHECKIN_METHOD_IDS.RelayForDailyCheckIn]: relayForProvider,
+  [AUTO_CHECKIN_METHOD_IDS.DayaDailyCheckIn]: dayaProvider,
 } as const satisfies Record<CheckInMethodId, AutoCheckinProvider>
 
 export const autoCheckinMethodRegistry = createAutoCheckinMethodRegistry(

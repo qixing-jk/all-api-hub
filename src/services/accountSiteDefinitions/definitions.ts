@@ -82,6 +82,9 @@ import {
   CUBENCE_WEB_ORIGIN,
   DAHL_HOSTNAMES,
   DAHL_WEB_ORIGIN,
+  DAYA_API_BASE_URL,
+  DAYA_HOSTNAMES,
+  DAYA_WEB_ORIGIN,
   EMRANK_API_BASE_URL,
   EMRANK_DISPLAY_NAME,
   EMRANK_HOSTNAMES,
@@ -218,6 +221,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.XIAOEN,
   SITE_TYPES.EMRANK,
   SITE_TYPES.KRILL,
+  SITE_TYPES.DAYA,
   SITE_TYPES.CUBENCE,
   SITE_TYPES.RIGHT_CODE,
   SITE_TYPES.RELAYFOR,
@@ -397,6 +401,55 @@ const ACCOUNT_SITE_DEFINITIONS = [
         inferFromHostname: true,
         storageOrigin: KRILL_WEB_ORIGIN,
         duplicateOrigin: KRILL_WEB_ORIGIN,
+      },
+    },
+  },
+  {
+    siteType: SITE_TYPES.DAYA,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Daya,
+    onboarding: {
+      displayName: "Daya API",
+      detection: { hostnames: DAYA_HOSTNAMES },
+      routes: {
+        loginPath: "/login",
+        usagePath: "/console/usage",
+        adminCredentialsPath: "/keys",
+        pricingPath: "/catalog/models",
+        checkInPath: "/rewards",
+        accessTokenPath: null,
+        // The purchase page hosts the current unified code application form.
+        redeemPath: "/purchase",
+        siteAnnouncementsPath: null,
+      },
+    },
+    productProfile: {
+      auth: {
+        // Only the `daya_sid` console Cookie session is verified; the frontend
+        // client exposes no personal-access-token or refresh contract.
+        usesBrowserCookieSession: true,
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.Cookie],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.Cookie,
+        defaultAuthHostnames: DAYA_HOSTNAMES,
+      },
+      identity: {
+        usernameRequired: false,
+        storedUserIdentityFields: ["id", "username"],
+      },
+      modelList: {
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+        // Group selection changes billing multipliers, not the model list.
+        groupSemantics: ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+      },
+      urls: {
+        recognizedHostnames: DAYA_HOSTNAMES,
+        inferFromHostname: true,
+        storageOrigin: DAYA_WEB_ORIGIN,
+        duplicateOrigin: DAYA_WEB_ORIGIN,
+        managedChannelOrigin: DAYA_API_BASE_URL,
+        inferenceApiBaseUrls: { openAiCompatible: DAYA_API_BASE_URL },
       },
     },
   },

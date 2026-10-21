@@ -244,6 +244,15 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     legacy: false,
     newAccountCompatibility: false,
   },
+  [AUTO_CHECKIN_METHOD_IDS.DayaDailyCheckIn]: {
+    id: AUTO_CHECKIN_METHOD_IDS.DayaDailyCheckIn,
+    siteTypes: [SITE_TYPES.DAYA],
+    source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: [{ path: "/api/v1/rewards/overview" }],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
   [AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn]: {
     id: AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn,
     siteTypes: [SITE_TYPES.NEW_API, SITE_TYPES.ONE_API, SITE_TYPES.UNKNOWN],

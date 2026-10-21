@@ -430,6 +430,17 @@
         "saveName": "Lưu tên",
         "transferAmount": "Số token cần chuyển"
       },
+      "daya": {
+        "allowFast": "Cho phép chế độ Fast",
+        "allowFastHelp": "Cho phép yêu cầu OpenAI đề nghị chế độ Fast; dịch vụ quyết định có áp dụng Fast hay không. Khi tắt, mọi yêu cầu OpenAI, kể cả Flex, đều dùng chế độ và mức giá tiêu chuẩn.",
+        "budget7d": "Ngân sách 7 ngày (USD)",
+        "budgetHelp": "Giới hạn chi tiêu bằng USD cho mỗi khoảng thời gian. 0 nghĩa là không giới hạn.",
+        "customKey": "Khóa tùy chỉnh (không bắt buộc)",
+        "customKeyHelp": "Giữ nguyên để tạo khóa tự động. Khóa tùy chỉnh cần ít nhất 16 ký tự gồm chữ cái, chữ số, dấu gạch dưới hoặc gạch nối.",
+        "groupOrderHelp": "Thử các tuyến theo thứ tự này. Kéo hoặc dùng nút mũi tên để sắp xếp.",
+        "ipBlacklist": "Danh sách IP bị chặn",
+        "ipWhitelist": "Danh sách IP cho phép"
+      },
       "description": "Mô tả (không bắt buộc)",
       "emrank": {
         "expiration": "Hạn sử dụng",

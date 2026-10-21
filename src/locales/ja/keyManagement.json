@@ -430,6 +430,17 @@
         "saveName": "名前を保存",
         "transferAmount": "転送するトークン数"
       },
+      "daya": {
+        "allowFast": "Fast モードを許可",
+        "allowFastHelp": "OpenAI リクエストで Fast を要求できます。Fast の適用はサービス側のルールで決まります。無効にすると、Flex を含むすべての OpenAI リクエストが通常モードと通常料金になります。",
+        "budget7d": "7日間の予算（USD）",
+        "budgetHelp": "各期間の利用上限（USD）。0は無制限です。",
+        "customKey": "カスタムキー（任意）",
+        "customKeyHelp": "未入力の場合は自動生成します。英数字、アンダースコア、ハイフンで16文字以上入力してください。",
+        "groupOrderHelp": "この順序でルートを試行します。ドラッグまたは上下ボタンで並べ替えます。",
+        "ipBlacklist": "IP拒否リスト",
+        "ipWhitelist": "IP許可リスト"
+      },
       "description": "説明（任意）",
       "emrank": {
         "expiration": "有効期限",

@@ -105,6 +105,7 @@
       "onlyJsonSupported": "Only JSON responses are supported",
       "requestFailed": "Request failed: {{status}}"
     },
+    "dayaRedemptionUnconfirmed": "The redemption result needs review in the official console. Check delivery or finish applying the discount there before trying again.",
     "operation": {
       "accountDataFetchTimeout": "Timed out while fetching account data ({{seconds}}s)",
       "failed": "Operation failed: {{error}}",

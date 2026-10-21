@@ -158,6 +158,7 @@ describe("account site onboarding registry", () => {
       getContentSessionExtractors().map((extractor) => extractor.id),
     ).toEqual([
       "krill",
+      "daya",
       "xiaoen",
       "foxcode",
       "cubence",

@@ -107,6 +107,7 @@
       "onlyJsonSupported": "Solo se admiten respuestas JSON",
       "requestFailed": "La solicitud falló: {{status}}"
     },
+    "dayaRedemptionUnconfirmed": "Revisa el resultado en la consola oficial. Comprueba la entrega o termina de aplicar el descuento antes de volver a intentarlo.",
     "operation": {
       "accountDataFetchTimeout": "Se agotó el tiempo al obtener datos de la cuenta ({{seconds}}s)",
       "failed": "La operación falló: {{error}}",

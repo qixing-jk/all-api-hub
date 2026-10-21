@@ -62,6 +62,12 @@ import { getManagedResourceRegistration } from "~/services/apiAdapters/managedRe
 import { AuthTypeEnum } from "~/types"
 import { ACCOUNT_TODAY_METRIC_REASONS } from "~/types/accountTodayStats"
 
+it("routes Daya manual redemption to the current purchase form", () => {
+  expect(
+    getAccountSiteDefinition(SITE_TYPES.DAYA)?.onboarding?.routes.redeemPath,
+  ).toBe("/purchase")
+})
+
 describe("access-token verification guide metadata", () => {
   it.each([
     [SITE_TYPES.NEW_API, "security", true],
@@ -148,6 +154,7 @@ type ExpectedAccountSiteType =
   | typeof SITE_TYPES.XIAOEN
   | typeof SITE_TYPES.EMRANK
   | typeof SITE_TYPES.KRILL
+  | typeof SITE_TYPES.DAYA
   | typeof SITE_TYPES.CUBENCE
   | typeof SITE_TYPES.RIGHT_CODE
   | typeof SITE_TYPES.OPENROUTER
@@ -473,6 +480,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.XIAOEN,
       SITE_TYPES.EMRANK,
       SITE_TYPES.KRILL,
+      SITE_TYPES.DAYA,
       SITE_TYPES.CUBENCE,
       SITE_TYPES.RIGHT_CODE,
       SITE_TYPES.RELAYFOR,

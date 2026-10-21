@@ -105,6 +105,7 @@
       "onlyJsonSupported": "Nur JSON-Antworten werden unterstützt",
       "requestFailed": "Anfrage fehlgeschlagen: {{status}}"
     },
+    "dayaRedemptionUnconfirmed": "Prüfen Sie das Ergebnis in der offiziellen Konsole. Kontrollieren Sie die Bereitstellung oder schließen Sie die Anwendung des Rabattcodes ab, bevor Sie es erneut versuchen.",
     "operation": {
       "accountDataFetchTimeout": "Zeitüberschreitung beim Abrufen der Kontodaten ({{seconds}}s)",
       "failed": "Vorgang fehlgeschlagen: {{error}}",

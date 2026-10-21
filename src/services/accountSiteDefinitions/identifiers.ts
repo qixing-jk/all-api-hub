@@ -46,6 +46,7 @@ export const SITE_TYPES = {
   MAGPIE: "magpie",
   KIMI: "kimi",
   KIMI_GLOBAL: "kimi-global",
+  DAYA: "daya",
   GRSAI: "grsai",
   UNKNOWN: "unknown",
 } as const
@@ -201,3 +202,22 @@ export const KRILL_WEB_ORIGIN = "https://www.krill-code.com"
  * them automatically.
  */
 export const KRILL_API_BASE_URL = "https://api.krill-ai.net/v1"
+
+/**
+ * Daya API (答鸭API) serves the console, account API and session on one origin.
+ * The `.dayaai.com` Cookie domain also reaches the apex `dayaai.com` site ("去
+ * AI 站"), but that is a separate AI chat product with unverified account
+ * equivalence, so it stays out of console detection. `daya.to` and
+ * `api-us.dayaai.com` are inference-only endpoints from `/api/v1/settings/public`.
+ * Verified 2026-10-20.
+ */
+export const DAYA_HOSTNAMES = ["api.dayaai.com"] as const
+export const DAYA_DISPLAY_NAME = "Daya API"
+/** Console origin owning the `daya_sid` Cookie session and every `/api/v1/*` account route. */
+export const DAYA_WEB_ORIGIN = "https://api.dayaai.com"
+/**
+ * Default OpenAI-compatible export base URL: the site's own 默认端点. The
+ * 备用/回国 endpoints are equivalent alternatives the user picks in the native
+ * console; the extension never falls back across them automatically.
+ */
+export const DAYA_API_BASE_URL = "https://daya.to/v1"

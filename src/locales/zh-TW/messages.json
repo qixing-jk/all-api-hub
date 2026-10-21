@@ -103,6 +103,7 @@
       "onlyJsonSupported": "僅支援 JSON 響應資料",
       "requestFailed": "請求失敗：{{status}}"
     },
+    "dayaRedemptionUnconfirmed": "請到官方控制台核對兌換結果，確認權益發放狀態或完成優惠碼套用後再重試。",
     "operation": {
       "accountDataFetchTimeout": "取得帳號資料逾時（{{seconds}} 秒）",
       "failed": "操作失敗：{{error}}",

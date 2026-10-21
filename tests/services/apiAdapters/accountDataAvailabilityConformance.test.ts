@@ -213,6 +213,60 @@ const producerFixturesByFamily = {
     ],
     expectRequests: () => {},
   },
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Daya]: {
+    baseUrl: "https://api.dayaai.com",
+    authType: AuthTypeEnum.Cookie,
+    expectedAvailability: {
+      consumption: complete,
+      requests: complete,
+      tokens: complete,
+      income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
+    handlers: [
+      http.get("https://api.dayaai.com/api/v1/auth/me", () =>
+        HttpResponse.json({
+          code: 0,
+          message: "success",
+          data: {
+            id: 615,
+            username: "daya-test-user",
+            balance: 3.5,
+            status: "active",
+          },
+        }),
+      ),
+      http.get("https://api.dayaai.com/api/v1/usage/dashboard/stats", () =>
+        HttpResponse.json({
+          code: 0,
+          message: "success",
+          data: {
+            total_api_keys: 1,
+            active_api_keys: 1,
+            total_requests: 0,
+            total_input_tokens: 0,
+            total_output_tokens: 0,
+            total_cache_creation_tokens: 0,
+            total_cache_read_tokens: 0,
+            total_tokens: 0,
+            total_cost: 0,
+            total_actual_cost: 0,
+            today_requests: 0,
+            today_input_tokens: 0,
+            today_output_tokens: 0,
+            today_cache_creation_tokens: 0,
+            today_cache_read_tokens: 0,
+            today_tokens: 0,
+            today_cost: 0,
+            today_actual_cost: 0,
+            average_duration_ms: 0,
+            rpm: 0,
+            tpm: 0,
+          },
+        }),
+      ),
+    ],
+    expectRequests: () => {},
+  },
   [ACCOUNT_SITE_ADAPTER_FAMILIES.FoxCode]: {
     baseUrl: "https://foxcode.rjj.cc",
     authType: AuthTypeEnum.Cookie,
@@ -764,7 +818,9 @@ const createRequest = (siteType: AccountSiteType) => {
             ? "7"
             : siteType === SITE_TYPES.EMRANK
               ? "6088"
-              : "user-1",
+              : siteType === SITE_TYPES.DAYA
+                ? "615"
+                : "user-1",
       accessToken: "account-token",
     },
     checkIn: buildCheckInConfig(),
@@ -1048,6 +1104,9 @@ describe("AccountData availability producer conformance", () => {
       }
       if (capabilities.family === ACCOUNT_SITE_ADAPTER_FAMILIES.Emrank) {
         installCookieTransport(EMRANK_SESSION_COOKIE_NAME, "emrank.tech")
+      }
+      if (capabilities.family === ACCOUNT_SITE_ADAPTER_FAMILIES.Daya) {
+        installCookieTransport("daya_sid", "api.dayaai.com")
       }
       if (capabilities.family === ACCOUNT_SITE_ADAPTER_FAMILIES.Dahl) {
         const boundary = installCookieTransport()

@@ -10,6 +10,7 @@ import type {
 } from "~/services/apiAdapters/contracts/accountBrowserIdentity"
 import { cubenceBrowserIdentity } from "~/services/apiAdapters/cubence/browserIdentity"
 import { dahlBrowserIdentity } from "~/services/apiAdapters/dahl/browserIdentity"
+import { dayaBrowserIdentity } from "~/services/apiAdapters/daya/browserIdentity"
 import { emRankBrowserIdentity } from "~/services/apiAdapters/emrank/browserIdentity"
 import { foxCodeBrowserIdentity } from "~/services/apiAdapters/foxcode/browserIdentity"
 import { freeModelBrowserIdentity } from "~/services/apiAdapters/freemodel/browserIdentity"
@@ -29,6 +30,7 @@ import { apiyiContentSessionExtractor } from "./contentSession/apiyi"
 import { compatibleUserContentSessionExtractor } from "./contentSession/compatibleUser"
 import { cubenceContentSessionExtractor } from "./contentSession/cubence"
 import { dahlContentSessionExtractor } from "./contentSession/dahl"
+import { dayaContentSessionExtractor } from "./contentSession/daya"
 import { emRankContentSessionExtractor } from "./contentSession/emrank"
 import { foxCodeContentSessionExtractor } from "./contentSession/foxcode"
 import { freeModelContentSessionExtractor } from "./contentSession/freemodel"
@@ -58,6 +60,10 @@ const siteBrowserAdapters: readonly {
   {
     sessionExtractor: krillContentSessionExtractor,
     identity: krillBrowserIdentity,
+  },
+  {
+    sessionExtractor: dayaContentSessionExtractor,
+    identity: dayaBrowserIdentity,
   },
   {
     sessionExtractor: xiaoenContentSessionExtractor,
