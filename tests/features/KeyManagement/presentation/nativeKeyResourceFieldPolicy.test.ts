@@ -64,6 +64,72 @@ it("offers Daya expiry during creation", () => {
   )
 })
 
+it.each([editorModes.Create, editorModes.Edit])(
+  "presents Daya native controls and collapsed restriction summaries in %s mode",
+  (mode) => {
+    const presentation = getNativeKeyResourceEditorPresentation(
+      SITE_TYPES.DAYA,
+      mode,
+    )
+    const t = ((key: string) => key) as TFunction
+    const byId = (id: string) =>
+      presentation.policy.fields.find((field) => field.fieldId === id)!
+    expect(byId("allowFast").resolveLabel(t)).toBe(
+      "keyManagement:native.editor.daya.allowFast",
+    )
+    expect(byId("allowFast").resolveHelp?.(t)).toBe(
+      "keyManagement:native.editor.daya.allowFastHelp",
+    )
+    expect(byId("groupIds").resolveHelp?.(t)).toBe(
+      "keyManagement:native.editor.daya.groupOrderHelp",
+    )
+    expect(byId("rateLimit5h").resolveHelp?.(t)).toBe(
+      "keyManagement:native.editor.daya.budgetHelp",
+    )
+    expect(byId("rateLimit7d").resolveLabel(t)).toBe(
+      "keyManagement:native.editor.daya.budget7d",
+    )
+    expect(byId("ipBlacklist").resolveLabel(t)).toBe(
+      "keyManagement:native.editor.daya.ipBlacklist",
+    )
+    expect(byId("ipWhitelist").resolveHelp?.(t)).toBe(
+      "keyManagement:native.editor.allowlistHelp",
+    )
+    expect(byId("ipBlacklist").resolveHelp?.(t)).toBe(
+      "keyManagement:native.editor.allowlistHelp",
+    )
+    if (mode === editorModes.Create) {
+      expect(byId("customKey").resolveHelp?.(t)).toBe(
+        "keyManagement:native.editor.daya.customKeyHelp",
+      )
+    }
+    const expiry = byId(
+      mode === editorModes.Create ? "expiresInDays" : "expiresAt",
+    )
+    expect(expiry.resolveLabel(t)).toBe(
+      mode === editorModes.Create
+        ? "keyManagement:native.editor.expiryDays"
+        : "keyManagement:dialog.expiration",
+    )
+    expect(expiry.resolveHelp?.(t)).toBe(
+      mode === editorModes.Create
+        ? ""
+        : "keyManagement:dialog.expirationPlaceholder",
+    )
+    const summary = presentation.policy.sections!.advanced!.resolveSummary!
+    expect(summary(t, {})).toBe("")
+    expect(
+      summary(t, {
+        ipWhitelist: "192.0.2.1",
+        ipBlacklist: "203.0.113.0/24",
+        customKey: { kind: "replace", value: "secret" },
+      }),
+    ).toBe(
+      "keyManagement:native.editor.daya.ipWhitelist · keyManagement:native.editor.daya.ipBlacklist · keyManagement:native.editor.daya.customKey",
+    )
+  },
+)
+
 it.each([
   ["budget_5h", "budget5h", "budgetResetHelp"],
   ["budget_day", "budgetDay", ""],

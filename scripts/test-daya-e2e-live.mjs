@@ -827,6 +827,7 @@ try {
   evidence.error = String(error)
   throw error
 } finally {
+  const cleanupErrors = []
   try {
     if (createdKeyName) {
       const rows = (
@@ -853,6 +854,10 @@ try {
       )
       evidence.cleanup.finallyDeletedKeyIds = owned.map((item) => item.id)
     }
+  } catch (error) {
+    cleanupErrors.push(`keys: ${String(error)}`)
+  }
+  try {
     accountId ??= (await stored()).find(
       (account) => account.site_name === accountName,
     )?.id
@@ -873,7 +878,10 @@ try {
       evidence.cleanup.removedTemporaryAccount = true
     }
   } catch (error) {
-    evidence.cleanup.error = String(error)
+    cleanupErrors.push(`account: ${String(error)}`)
+  }
+  if (cleanupErrors.length) {
+    evidence.cleanup.error = cleanupErrors.join("; ")
     succeeded = false
     process.exitCode = 1
   }

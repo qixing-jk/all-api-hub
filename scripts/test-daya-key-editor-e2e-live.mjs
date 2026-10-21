@@ -314,30 +314,52 @@ try {
   await capture("failure").catch(() => {})
   throw error
 } finally {
-  if (mutate && originalIds) {
-    const current = (await read("/api/v1/keys?page=1&page_size=100")).items
-    for (const item of current.filter(
-      (k) =>
-        !originalIds.includes(k.id) &&
-        (k.name === runName || k.name === `${runName} renamed`),
-    )) {
-      const response = await dev.context.request.delete(
-        `${origin}/api/v1/keys/${item.id}`,
-      )
-      assert.equal((await response.json()).code, 0)
+  const cleanupErrors = []
+  try {
+    if (mutate && originalIds) {
+      const current = (await read("/api/v1/keys?page=1&page_size=100")).items
+      for (const item of current.filter(
+        (k) =>
+          !originalIds.includes(k.id) &&
+          (k.name === runName || k.name === `${runName} renamed`),
+      )) {
+        const response = await dev.context.request.delete(
+          `${origin}/api/v1/keys/${item.id}`,
+        )
+        assert.equal((await response.json()).code, 0)
+      }
+      const final = await read("/api/v1/keys?page=1&page_size=100")
+      evidence.cleanup.originalInventoryRestored =
+        JSON.stringify(final.items.map((k) => k.id).sort((a, b) => a - b)) ===
+        JSON.stringify(originalIds)
+      assert.equal(evidence.cleanup.originalInventoryRestored, true)
     }
-    const final = await read("/api/v1/keys?page=1&page_size=100")
-    evidence.cleanup.originalInventoryRestored =
-      JSON.stringify(final.items.map((k) => k.id).sort((a, b) => a - b)) ===
-      JSON.stringify(originalIds)
-    assert.equal(evidence.cleanup.originalInventoryRestored, true)
+  } catch (error) {
+    cleanupErrors.push(`keys: ${String(error)}`)
   }
-  await fs.writeFile(
-    path.join(dir, "evidence.json"),
-    JSON.stringify(evidence, null, 2),
-  )
-  await ui.close()
-  await site.close()
-  await dev.close()
+  for (const [label, close] of [
+    ["ui", () => ui.close()],
+    ["site", () => site.close()],
+    ["dev", () => dev.close()],
+  ]) {
+    try {
+      await close()
+    } catch (error) {
+      cleanupErrors.push(`${label}: ${String(error)}`)
+    }
+  }
+  if (cleanupErrors.length) {
+    evidence.cleanup.error = cleanupErrors.join("; ")
+    process.exitCode = 1
+  }
+  try {
+    await fs.writeFile(
+      path.join(dir, "evidence.json"),
+      JSON.stringify(evidence, null, 2),
+    )
+  } catch (error) {
+    console.error("Failed to write Daya editor evidence:", error)
+    process.exitCode = 1
+  }
   console.log(JSON.stringify(evidence))
 }

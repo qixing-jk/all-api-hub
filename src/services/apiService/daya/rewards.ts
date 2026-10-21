@@ -64,7 +64,6 @@ export async function performDayaCheckIn(
   request: Parameters<typeof fetchDayaIdentity>[0],
 ) {
   return withDayaSession(request, async (scoped) => {
-    await fetchDayaIdentity(scoped)
     const overview = await fetchDayaCheckInOverview(scoped)
     if (!overview.checkInClaimable) return { alreadyChecked: true as const }
     const envelope = await fetchDayaEnvelope(scoped, DAYA_ENDPOINTS.CheckIn, {

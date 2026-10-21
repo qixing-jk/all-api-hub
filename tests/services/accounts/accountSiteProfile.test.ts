@@ -5,6 +5,7 @@ import {
   getAccountSiteProductProfile,
   isAccountAuthTypeAllowed,
 } from "~/services/accounts/accountSiteProfile"
+import { resolveAccountSiteAddresses } from "~/services/accounts/accountSiteProfile/addresses"
 import { resolveAccountSiteDefaultAuthType } from "~/services/accounts/accountSiteProfile/auth"
 import { shouldDecorateAccountApiRequestWithAuthSession } from "~/services/accounts/accountSiteProfile/authSession"
 import { resolveAccountSiteContentSessionHintForOrigin } from "~/services/accounts/accountSiteProfile/contentSessionHint"
@@ -41,6 +42,28 @@ import {
 } from "~/types/accountTodayStats"
 
 describe("accountSiteProfile", () => {
+  it("keeps Daya console traffic separate from exported inference addresses", () => {
+    const input = {
+      siteType: SITE_TYPES.DAYA,
+      siteUrl: "https://api.dayaai.com",
+    }
+    expect(resolveAccountSiteAddresses(input)).toEqual({
+      browserBaseUrl: "https://api.dayaai.com",
+      managementApiBaseUrl: "https://api.dayaai.com",
+      inferenceApi: {
+        openAiCompatible: {
+          root: "https://daya.to",
+          mount: "https://daya.to/v1",
+        },
+      },
+    })
+    expect(
+      normalizeAccountSiteProfileUrlForManagedChannel({
+        siteType: input.siteType,
+        url: input.siteUrl,
+      }),
+    ).toBe("https://daya.to/v1")
+  })
   it("opens provider-owned pricing pages without leaking base URL credentials or queries", () => {
     expect(
       resolveAccountSitePricingUrl({

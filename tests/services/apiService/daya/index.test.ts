@@ -14,6 +14,7 @@ import type { DayaKey } from "~/services/apiService/daya/keys"
 import {
   createDayaKey,
   deleteDayaKey,
+  fetchDayaDefaultKeyGroups,
   fetchDayaGroups,
   fetchDayaKey,
   fetchDayaKeys,
@@ -346,6 +347,135 @@ describe("Daya API keys", () => {
   })
   afterEach(() => vi.restoreAllMocks())
 
+  it.each(["0", "../1303", "9007199254740992"])(
+    "rejects unsafe key locator %s",
+    async (id) => {
+      await mockIdentity()
+      await expect(fetchDayaKey(accountRequest(), id)).rejects.toThrow(
+        "Invalid Daya API response",
+      )
+    },
+  )
+
+  it.each([
+    { group_ids: [0] },
+    { ip_whitelist: [7] },
+    { rate_limit_5h: -1 },
+    { status: "unknown" },
+  ])(
+    "rejects malformed key records before projecting inventory (%j)",
+    async (bad) => {
+      await mockIdentity([
+        http.get(`${origin}/api/v1/keys/1303`, () =>
+          HttpResponse.json(envelope({ ...keyRow, ...bad })),
+        ),
+      ])
+      await expect(fetchDayaKey(accountRequest(), "1303")).rejects.toThrow(
+        "Invalid Daya API response",
+      )
+    },
+  )
+
+  it.each([null, { items: [], total: -1 }])(
+    "rejects invalid inventory page %j",
+    async (data) => {
+      await mockIdentity([
+        http.get(`${origin}/api/v1/keys`, () =>
+          HttpResponse.json(envelope(data)),
+        ),
+      ])
+      await expect(fetchDayaKeys(accountRequest())).rejects.toThrow(
+        "Invalid Daya API response",
+      )
+    },
+  )
+
+  it("collects all inventory pages in server order", async () => {
+    await mockIdentity([
+      http.get(`${origin}/api/v1/keys`, ({ request }) =>
+        HttpResponse.json(
+          envelope({
+            items: [
+              new URL(request.url).searchParams.get("page") === "1"
+                ? keyRow
+                : { ...keyRow, id: 1304 },
+            ],
+            total: 101,
+          }),
+        ),
+      ),
+    ])
+    expect(
+      (await fetchDayaKeys(accountRequest())).map((key) => key.id),
+    ).toEqual([1303, 1304])
+  })
+
+  it.each(["available", "default-api-key-groups"])(
+    "rejects non-array and malformed %s routing catalogues",
+    async (route) => {
+      const fetch =
+        route === "available" ? fetchDayaGroups : fetchDayaDefaultKeyGroups
+      await mockIdentity([
+        http.get(`${origin}/api/v1/groups/${route}`, () =>
+          HttpResponse.json(envelope({})),
+        ),
+      ])
+      await expect(fetch(accountRequest())).rejects.toThrow(
+        "Invalid Daya API response",
+      )
+      server.use(
+        http.get(`${origin}/api/v1/groups/${route}`, () =>
+          HttpResponse.json(envelope([{ id: 0 }])),
+        ),
+      )
+      await expect(fetch(accountRequest())).rejects.toThrow(
+        "Invalid Daya API response",
+      )
+    },
+  )
+
+  it("sends day-based expiry and rejects a create response without its secret", async () => {
+    await mockIdentity([
+      http.post(`${origin}/api/v1/keys`, async ({ request }) => {
+        expect(await request.json()).toMatchObject({ expires_in_days: 30 })
+        return HttpResponse.json(envelope({ ...keyRow, key: " " }))
+      }),
+    ])
+    await expect(
+      createDayaKey(accountRequest(), {
+        name: "",
+        groupIds: [2],
+        quotaUsd: null,
+        expiresInDays: 30,
+      }),
+    ).rejects.toThrow("Invalid Daya API response")
+  })
+
+  it("rejects update with no routes before dispatch and accepts an acknowledgment without an echo", async () => {
+    const put = vi.fn(() => HttpResponse.json(envelope(null)))
+    await mockIdentity([
+      http.get(`${origin}/api/v1/keys/1303`, () =>
+        HttpResponse.json(envelope(keyRow)),
+      ),
+      http.put(`${origin}/api/v1/keys/1303`, put),
+    ])
+    const baseline = await fetchDayaKey(accountRequest(), "1303")
+    const next = {
+      name: "",
+      groupIds: [],
+      quotaUsd: 0,
+      status: "active" as const,
+      expiresAt: null,
+    }
+    await expect(
+      updateDayaKey(accountRequest(), baseline, next),
+    ).rejects.toThrow("Invalid Daya API response")
+    expect(put).not.toHaveBeenCalled()
+    await expect(
+      updateDayaKey(accountRequest(), baseline, { ...next, groupIds: [2] }),
+    ).resolves.toEqual(baseline)
+  })
+
   it("lists keys with recoverable plaintext across pages", async () => {
     const page = (items: unknown[]) =>
       HttpResponse.json(envelope({ items, total: items.length, pages: 1 }))
@@ -561,6 +691,7 @@ describe("Daya API daily check-in", () => {
   })
 
   it("checks in once and reports an already-taken grant without a write", async () => {
+    let identityReads = 0
     const claimable = http.get(`${origin}/api/v1/rewards/overview`, () =>
       HttpResponse.json(
         envelope({
@@ -596,6 +727,12 @@ describe("Daya API daily check-in", () => {
         return HttpResponse.json(envelope({ amount: 0.5, currency: "USD" }))
       }),
     ])
+    server.use(
+      http.get(`${origin}/api/v1/auth/me`, () => {
+        identityReads += 1
+        return HttpResponse.json(envelope(identity))
+      }),
+    )
     const request = {
       baseUrl: origin,
       auth: { authType: AuthTypeEnum.Cookie, userId: "615" },
@@ -605,11 +742,13 @@ describe("Daya API daily check-in", () => {
       rewardUsd: 0.5,
     })
     expect(posted).toBe(1)
+    expect(identityReads).toBe(1)
     server.use(claimed)
     await expect(performDayaCheckIn(request)).resolves.toMatchObject({
       alreadyChecked: true,
     })
     expect(posted).toBe(1)
+    expect(identityReads).toBe(2)
   })
 
   it("never claims binding tasks through the check-in flow", async () => {

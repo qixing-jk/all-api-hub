@@ -53,6 +53,130 @@ const ref = {
   resourceId: "1303",
 }
 describe("Daya key resources", () => {
+  it("resolves runtime secrets with cancellation propagated to the detail read", async () => {
+    server.use(
+      http.get(`${origin}/api/v1/keys/1303`, () =>
+        HttpResponse.json(envelope(keyRow)),
+      ),
+    )
+    const session = await openSession()
+    await expect(session.resolveDefaultScope()).resolves.toMatchObject({
+      scopeKey: "account",
+    })
+    await expect(
+      session.runtimeKey!.resolve(ref, {
+        signal: new AbortController().signal,
+      }),
+    ).resolves.toMatchObject({ kind: "resolved", secret: "sk-daya-plaintext" })
+    const controller = new AbortController()
+    controller.abort()
+    await expect(
+      session.runtimeKey!.resolve(ref, { signal: controller.signal }),
+    ).rejects.toBeDefined()
+    server.use(
+      http.get(`${origin}/api/v1/keys/1303`, () =>
+        HttpResponse.json(envelope({ ...keyRow, key: "sk-****masked" })),
+      ),
+    )
+    await expect(session.runtimeKey!.resolve(ref)).resolves.toMatchObject({
+      kind: "unavailable",
+    })
+  })
+
+  it("reports an update transport failure through the native mutation contract", async () => {
+    server.use(
+      http.get(`${origin}/api/v1/keys/1303`, () =>
+        HttpResponse.json(envelope(keyRow)),
+      ),
+      http.put(
+        `${origin}/api/v1/keys/1303`,
+        () => new HttpResponse(null, { status: 503 }),
+      ),
+    )
+    const editor = await (await openCollection()).openEditEditor(ref)
+    await expect(
+      editor.submit({ ...editor.initialValues, name: "renamed" }),
+    ).rejects.toMatchObject({ failure: { code: expect.any(String) } })
+  })
+  it.each([
+    DAYA_KEY_STATUSES.Active,
+    DAYA_KEY_STATUSES.Inactive,
+    DAYA_KEY_STATUSES.Expired,
+  ])(
+    "projects native %s keys and revokes active keys without touching their restrictions",
+    async (status) => {
+      let row = {
+        ...keyRow,
+        status,
+        name: "",
+        expires_at: "2026-11-01T00:00:00Z",
+        ip_whitelist: ["192.0.2.1"],
+        ip_blacklist: ["203.0.113.0/24"],
+      }
+      const put = vi.fn(async ({ request }: { request: Request }) => {
+        const body = (await request.json()) as object
+        row = { ...row, ...body }
+        return HttpResponse.json(envelope(row))
+      })
+      server.use(
+        http.get(`${origin}/api/v1/keys`, () =>
+          HttpResponse.json(envelope({ items: [row], total: 1 })),
+        ),
+        http.get(`${origin}/api/v1/keys/1303`, () =>
+          HttpResponse.json(envelope(row)),
+        ),
+        http.put(`${origin}/api/v1/keys/1303`, put),
+      )
+      const collection = await openCollection()
+      const listed = (await collection.list()).items[0]!
+      expect(listed.displayName).toBe("Daya #1303")
+      expect(listed.status).toBe(
+        status === "active"
+          ? "enabled"
+          : status === "expired"
+            ? "expired"
+            : "disabled",
+      )
+      expect(listed.displayFacts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            kind: "restriction",
+            role: "ip",
+            value: ["192.0.2.1"],
+          }),
+          expect.objectContaining({
+            kind: "restriction",
+            role: "subnet",
+            value: ["203.0.113.0/24"],
+          }),
+        ]),
+      )
+      if (status !== DAYA_KEY_STATUSES.Expired) {
+        await collection.revoke!(ref)
+        expect(row.status).toBe(DAYA_KEY_STATUSES.Inactive)
+        expect(put).toHaveBeenCalledTimes(
+          status === DAYA_KEY_STATUSES.Active ? 1 : 0,
+        )
+        expect(row.ip_whitelist).toEqual(["192.0.2.1"])
+      }
+    },
+  )
+
+  it("deletes a key through the collection and reads the empty inventory", async () => {
+    let rows = [keyRow]
+    server.use(
+      http.get(`${origin}/api/v1/keys`, () =>
+        HttpResponse.json(envelope({ items: rows, total: rows.length })),
+      ),
+      http.delete(`${origin}/api/v1/keys/1303`, () => {
+        rows = []
+        return HttpResponse.json(envelope(null))
+      }),
+    )
+    const collection = await openCollection()
+    await collection.delete(ref)
+    expect((await collection.list()).items).toEqual([])
+  })
   it("fails opening instead of exposing an empty routing form when its catalogue cannot load", async () => {
     server.use(
       http.get(`${origin}/api/v1/keys/1303`, () =>

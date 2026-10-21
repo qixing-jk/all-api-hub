@@ -20,6 +20,54 @@ const claude = {
 }
 
 describe("Daya key editor", () => {
+  it.each([
+    ["allowFast", undefined, "invalid_value"],
+    ["ipWhitelist", [], "invalid_value"],
+    ["ipBlacklist", 7, "invalid_value"],
+    ["name", 42, "invalid_value"],
+    ["groupIds", [], "required"],
+    ["groupIds", [2], "unsupported_option"],
+    ["unlimited", null, "invalid_value"],
+    ["expiresAt", 42, "invalid_value"],
+    ["expiresInDays", 1.5, "out_of_range"],
+  ])(
+    "rejects malformed %s before a create command is sent",
+    (fieldId, value, code) => {
+      const editor = createDayaKeyEditor({
+        groups: [openai],
+        defaultGroupIds: [2],
+      })
+      expect(
+        editor.validate({ ...editor.initialValues, [fieldId]: value }),
+      ).toMatchObject({
+        valid: false,
+        issues: expect.arrayContaining([{ fieldId, code }]),
+      })
+    },
+  )
+
+  it("validates edit lifecycle values and builds enabled keys with ISO expiry", () => {
+    const editor = createDayaKeyEditor({
+      groups: [openai],
+      detail: {
+        name: "existing",
+        groupIds: [2],
+        status: DAYA_KEY_STATUSES.Inactive,
+        quotaUsd: 5,
+        expiresAt: null,
+      },
+    })
+    expect(
+      editor.validate({ ...editor.initialValues, enabled: "yes" }),
+    ).toMatchObject({ valid: false, issues: [{ fieldId: "enabled" }] })
+    expect(
+      editor.buildCommand({
+        ...editor.initialValues,
+        enabled: true,
+        expiresAt: "2026-11-01T08:00:00+08:00",
+      }),
+    ).toMatchObject({ status: "active", expiresAt: "2026-11-01T00:00:00.000Z" })
+  })
   it.each(["short", "invalid-key-with-space 123456"])(
     "rejects invalid custom secret %s",
     (customKey) => {

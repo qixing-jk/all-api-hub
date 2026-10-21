@@ -123,6 +123,39 @@ describe("Daya model pricing", () => {
         .data,
     ).toEqual([])
   })
+
+  it("keeps supported protocols while omitting unknown protocols and unavailable cache rates", async () => {
+    server.use(
+      http.get(`${origin}/api/v1/catalog/models`, () =>
+        HttpResponse.json(
+          envelope([
+            {
+              ...model,
+              protocols: ["OpenAI Responses", "unknown", "OpenAI Responses"],
+              cache_read_price_per_million: null,
+            },
+          ]),
+        ),
+      ),
+    )
+    const snapshot =
+      await dayaCapabilities.account!.modelPricing!.fetchPricing(request)
+    expect(snapshot.data[0]).toMatchObject({
+      supported_endpoint_types: ["/v1/responses"],
+      token_price_usd_per_million: { input: 2, output: 10 },
+    })
+    expect(snapshot.data[0]?.token_price_usd_per_million).not.toHaveProperty(
+      "cache_read",
+    )
+    server.use(
+      http.get(`${origin}/api/v1/catalog/models`, () =>
+        HttpResponse.json(envelope([{ ...model, model: " " }])),
+      ),
+    )
+    await expect(
+      dayaCapabilities.account!.modelPricing!.fetchPricing(request),
+    ).rejects.toThrow("Invalid Daya API response")
+  })
   it("rejects malformed catalogues and expired sessions", async () => {
     server.use(
       http.get(`${origin}/api/v1/catalog/models`, () =>
