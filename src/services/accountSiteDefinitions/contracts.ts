@@ -51,6 +51,7 @@ export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   Xiaoen: "xiaoen",
   Emrank: "emrank",
   Krill: "krill",
+  Daya: "daya",
   Cubence: "cubence",
   RightCode: "rightcode",
   RelayFor: "relayfor",

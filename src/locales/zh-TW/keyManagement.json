@@ -430,6 +430,17 @@
         "saveName": "儲存名稱",
         "transferAmount": "轉帳 Token 數量"
       },
+      "daya": {
+        "allowFast": "允許 Fast 模式",
+        "allowFastHelp": "允許 OpenAI 請求使用 Fast，是否計為 Fast 由系統規則決定。關閉後，所有 OpenAI 請求（包括 Flex）強制一般模式並按一般費率計費。",
+        "budget7d": "7 天額度（USD）",
+        "budgetHelp": "各時間視窗內的美元消費上限，0 表示不限制。",
+        "customKey": "自訂金鑰（選填）",
+        "customKeyHelp": "不填寫則自動產生。自訂金鑰至少 16 位，僅支援字母、數字、底線和連字號。",
+        "groupOrderHelp": "依此順序嘗試路由。可拖曳排序，或使用上下箭頭調整。",
+        "ipBlacklist": "IP 封鎖清單",
+        "ipWhitelist": "IP 允許清單"
+      },
       "description": "描述（選填）",
       "emrank": {
         "expiration": "有效期",

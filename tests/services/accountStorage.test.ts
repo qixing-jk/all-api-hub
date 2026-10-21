@@ -8,6 +8,7 @@ import { isSelectedCheckInStatusCurrent } from "~/features/AccountManagement/che
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/editing/accountDefaults"
+import { dayaCapabilities } from "~/services/apiAdapters/daya"
 import { refreshAccountData as refreshNewApiAccountData } from "~/services/apiService/newApiFamily/default/accountRefresh"
 import { refreshAccountData as refreshVoApiV2AccountData } from "~/services/apiService/voapiV2/accountData"
 import * as postSaveDiscovery from "~/services/checkin/autoCheckin/discovery/postSaveDiscovery"
@@ -48,6 +49,7 @@ import {
   buildCompleteTodayStatsAvailability,
   buildTodayStatsAvailabilityReplacementCases,
 } from "~~/tests/test-utils/accountTodayStats"
+import { installCookieTransport } from "~~/tests/test-utils/cookieTransport"
 import { createDeferred } from "~~/tests/test-utils/deferred"
 import { requireHistoryTarget } from "~~/tests/test-utils/history"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
@@ -4205,6 +4207,100 @@ describe("accountStorage core behaviors", () => {
       )
       expect(readStatus).toHaveBeenCalledOnce()
       expect(claim).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each([false, true])(
+    "refreshAccount reads Daya status once without automatic execution (read failure: %s)",
+    async (readFails) => {
+      installCookieTransport("daya_sid", "api.dayaai.com")
+      try {
+        const observedAt = Date.now() - 86_400_000
+        const account = createAccount({
+          id: "daya-common-refresh",
+          site_url: "https://api.dayaai.com",
+          site_type: SITE_TYPES.DAYA,
+          authType: AuthTypeEnum.Cookie,
+          checkIn: {
+            automaticExecutionEnabled: false,
+            selection: { mode: "automatic", methodId: "daya:daily-checkin" },
+            methodKnowledge: {
+              methods: {
+                "daya:daily-checkin": {
+                  detection: {
+                    outcome: "matched",
+                    evidence: { source: "probe", observedAt },
+                  },
+                  status: {
+                    outcome: "known",
+                    availability: "enabled",
+                    today: "not_checked",
+                    evidence: { source: "probe", observedAt },
+                  },
+                },
+              },
+            },
+          },
+        })
+        seedStorage([account])
+        mockgetSiteTypeCapabilities.mockReturnValue(dayaCapabilities)
+        const overview = vi.fn(() =>
+          readFails
+            ? HttpResponse.json({}, { status: 503 })
+            : HttpResponse.json({
+                code: 0,
+                data: { daily_check_in: { claimable: false } },
+              }),
+        )
+        const claim = vi.fn(() => HttpResponse.json({ code: 0, data: {} }))
+        server.use(
+          http.get(`${account.site_url}/api/v1/auth/me`, () =>
+            HttpResponse.json({
+              code: 0,
+              data: {
+                id: 1,
+                username: "tester",
+                balance: 3.5,
+                status: "active",
+              },
+            }),
+          ),
+          http.get(`${account.site_url}/api/v1/rewards/overview`, overview),
+          http.post(`${account.site_url}/api/v1/rewards/check-in`, claim),
+        )
+        const refreshResult = await accountStorage.refreshAccount(
+          account.id,
+          true,
+          {
+            includeTodayCashflow: false,
+          },
+        )
+        expect(refreshResult?.checkInStatusRefreshOutcome).toBe(
+          readFails ? "unavailable" : "read",
+        )
+        const updated = await accountStorage.getAccountById(account.id)
+        expect(
+          updated?.checkIn.methodKnowledge.methods["daya:daily-checkin"]
+            ?.status,
+        ).toMatchObject(
+          readFails
+            ? { outcome: "unknown", reason: "source_unavailable" }
+            : { outcome: "known", today: "checked" },
+        )
+        expect(
+          isSelectedCheckInStatusCurrent(
+            accountStorage.convertToDisplayData(updated!),
+          ),
+        ).toBe(!readFails)
+        expect(updated?.account_info.quota).toBe(3.5 * QUOTA_PER_USD)
+        expect(overview).toHaveBeenCalledOnce()
+        expect(claim).not.toHaveBeenCalled()
+        expect(updated?.checkIn.automaticExecutionEnabled).toBe(false)
+      } finally {
+        vi.restoreAllMocks()
+        // The cookie fixture spies on a mock; restore its default permission state too.
+        vi.mocked(browser.permissions.contains).mockResolvedValue(false)
+      }
     },
   )
 

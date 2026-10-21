@@ -45,6 +45,25 @@ const request = {
   },
 }
 
+it.each([SITE_TYPES.NEW_API, SITE_TYPES.SUB2API, SITE_TYPES.OPENROUTER])(
+  "keeps the existing section presentation for %s when styling Daya",
+  (siteType) => {
+    for (const mode of [editorModes.Create, editorModes.Edit]) {
+      expect(getPresentation(siteType, mode).policy.sections).toBeUndefined()
+    }
+  },
+)
+
+it("offers Daya expiry during creation", () => {
+  const presentation = getNativeKeyResourceEditorPresentation(
+    SITE_TYPES.DAYA,
+    editorModes.Create,
+  )
+  expect(presentation.policy.fields).toContainEqual(
+    expect.objectContaining({ fieldId: "expiresInDays", renderer: "number" }),
+  )
+})
+
 it.each([
   ["budget_5h", "budget5h", "budgetResetHelp"],
   ["budget_day", "budgetDay", ""],

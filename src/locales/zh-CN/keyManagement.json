@@ -430,6 +430,17 @@
         "saveName": "保存名称",
         "transferAmount": "转账 Token 数量"
       },
+      "daya": {
+        "allowFast": "允许 Fast 模式",
+        "allowFastHelp": "允许 OpenAI 请求使用 Fast，是否计为 Fast 由系统规则决定。关闭后，所有 OpenAI 请求（包括 Flex）强制普通模式并按普通档计费。",
+        "budget7d": "7 天额度（USD）",
+        "budgetHelp": "各时间窗口内的美元消费上限，0 表示不限制。",
+        "customKey": "自定义密钥（可选）",
+        "customKeyHelp": "不填写则自动生成。自定义密钥至少 16 位，仅支持字母、数字、下划线和连字符。",
+        "groupOrderHelp": "按此顺序尝试路由。可拖拽排序，或使用上下箭头调整。",
+        "ipBlacklist": "IP 黑名单",
+        "ipWhitelist": "IP 白名单"
+      },
       "description": "描述（可选）",
       "emrank": {
         "expiration": "有效期",

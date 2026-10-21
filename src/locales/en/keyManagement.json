@@ -441,6 +441,17 @@
         "saveName": "Save name",
         "transferAmount": "Tokens to transfer"
       },
+      "daya": {
+        "allowFast": "Allow Fast mode",
+        "allowFastHelp": "Allows OpenAI requests to ask for Fast mode; the service decides whether Fast applies. When disabled, all OpenAI requests, including Flex, use standard mode and standard pricing.",
+        "budget7d": "7-day budget (USD)",
+        "budgetHelp": "Spending caps in USD for each window. 0 means unlimited.",
+        "customKey": "Custom key (optional)",
+        "customKeyHelp": "Leave unchanged to generate a key. Custom keys need at least 16 letters, digits, underscores or hyphens.",
+        "groupOrderHelp": "Routes are tried in this order. Drag to reorder, or use the arrow buttons.",
+        "ipBlacklist": "IP blocklist",
+        "ipWhitelist": "IP allowlist"
+      },
       "description": "Description (optional)",
       "emrank": {
         "expiration": "Expiry",

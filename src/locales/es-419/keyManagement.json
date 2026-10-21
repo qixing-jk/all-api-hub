@@ -452,6 +452,17 @@
         "saveName": "Guardar nombre",
         "transferAmount": "Tokens a transferir"
       },
+      "daya": {
+        "allowFast": "Permitir modo Fast",
+        "allowFastHelp": "Permite solicitar el modo Fast en las solicitudes de OpenAI; el servicio determina si se aplica. Al desactivarlo, todas las solicitudes de OpenAI, incluidas las de Flex, usan el modo y los precios estándar.",
+        "budget7d": "Presupuesto de 7 días (USD)",
+        "budgetHelp": "Límites de gasto en USD por período. 0 significa ilimitado.",
+        "customKey": "Clave personalizada (opcional)",
+        "customKeyHelp": "Déjalo sin cambios para generar una clave. Usa al menos 16 letras, números, guiones bajos o guiones.",
+        "groupOrderHelp": "Las rutas se prueban en este orden. Arrastra o usa los botones de flecha para reordenar.",
+        "ipBlacklist": "Lista de IP bloqueadas",
+        "ipWhitelist": "Lista de IP permitidas"
+      },
       "description": "Descripción (opcional)",
       "emrank": {
         "expiration": "Vencimiento",
