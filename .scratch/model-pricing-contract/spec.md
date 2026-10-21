@@ -2,7 +2,7 @@
 
 Status: implemented with explicit unsupported and incomplete-price states
 
-核对日期：2026-09-10。本文描述当前代码的行为和边界；上游依据及维护入口见 [研究依据](research.md)。不保存开发过程、临时价格快照或尚未实现的界面方案。
+主体契约核对日期：2026-09-10；费率来源与展示取舍于 2026-10-21 补充核对。各节描述对应核对时的代码行为和边界；上游依据及维护入口见 [研究依据](research.md)。不保存开发过程、临时价格快照或尚未实现的界面方案。
 
 ## 目的与模块边界
 
@@ -11,7 +11,7 @@ Status: implemented with explicit unsupported and incomplete-price states
 - [pricingPlan.ts](../../src/services/modelPricing/pricingPlan.ts) 定义并校验 `PricingPlan`、费率、条件、场景及报价结果；[pricingConstants.ts](../../src/services/modelPricing/pricingConstants.ts) 统一运行时取值和单位。
 - Adapter 将上游事实转为公共契约，保留规则次序、缺失信息和倍率归属；不在 UI 中执行上游任意表达式。
 - [quoteModelPrice.ts](../../src/services/modelPricing/quoteModelPrice.ts) 求值；[quoteCanonicalModelPrice.ts](../../src/services/modelPricing/quoteCanonicalModelPrice.ts) 衔接旧平价数据与结构化方案。
-- [useFilteredModels.ts](../../src/features/ModelList/hooks/useFilteredModels.ts) 在来源及分组上下文中生成报价，并用于显示和比较；React 状态仍由功能层持有。
+- [useFilteredModels.ts](../../src/features/ModelList/filtering/useFilteredModels.ts) 在来源及分组上下文中生成报价，并用于显示和比较；React 状态仍由功能层持有。
 
 ## 报价不变量
 
@@ -25,7 +25,7 @@ Status: implemented with explicit unsupported and incomplete-price states
 
 ## 当前列表交互
 
-[pricingScenario.ts](../../src/features/ModelList/pricingScenario.ts) 的列表设置固定为 `token-index`，以使用场景预设和可调整权重进行日常比价。参考输入长度为 32,000、输出为 2,000，默认标准服务档次，参考时间在创建设置时取当前时间。这些是比较条件，不是个人实际用量预测；列表没有单次请求估价模式切换器。
+[pricingScenario.ts](../../src/features/ModelList/pricing/pricingScenario.ts) 的列表设置固定为 `token-index`，以使用场景预设和可调整权重进行日常比价。参考输入长度为 32,000、输出为 2,000，默认标准服务档次，参考时间在创建设置时取当前时间。这些是比较条件，不是个人实际用量预测；列表没有单次请求估价模式切换器。
 
 - 普通浏览保留紧凑的单项价格；比价显示当前条件下的结果。媒体及任务方案按自己的计量单位和任务数量报价。
 - 条件控件依据方案能力显示，按阶梯、图片、视频和其他条件分块。折叠摘要保留实际用量占比、相关任务数量、已设置的面积、参考时间及选择项。
@@ -34,7 +34,7 @@ Status: implemented with explicit unsupported and incomplete-price states
 - 缓存选档口径不明确时，可定位缓存权重。提示明确说明将读写权重设为 0 是改为不含缓存的比较；不会自动改写用量。
 - 摘要与详情都标明阶梯输入／输出／总长度口径。来源、倍率、分项、规则边界和限制放在计算详情中。
 - 账号摘要保留稳定顺序，并将不可用账号折叠展示。报价组与账号可用分组不能混用为同一个计数。
-- [PricingDiagnostics.tsx](../../src/features/ModelList/components/PricingDiagnostics.tsx) 仅在开发模式提供诊断，使用已加载报价；报告复制由用户主动触发。
+- [PricingDiagnosticsPanel.tsx](../../src/features/ModelList/pricing/PricingDiagnosticsPanel.tsx) 仅在开发模式提供诊断，使用已加载报价；报告复制由用户主动触发。
 
 ## 来源与跳转
 
@@ -52,6 +52,23 @@ Status: implemented with explicit unsupported and incomplete-price states
 
 没有已核实路由的站点不生成猜测链接。站点可以禁用广场或要求登录，链接存在不是当前访问权限或调用资格的保证。
 
+## 明确发布的费率与真正估算
+
+2026-10-21 的跨适配器审计最终采用以下取舍：明确发布的费率正常显示，不额外增加“参考价”可信度分类。`exact` 表示该费率由来源明确提供，不保证它适用于任意账号、请求或最终账单。上下文档位、路由、时间折扣及其他适用条件仍由结构化规则和说明表达，不能靠改为 Estimated 来代替。
+
+| 来源依据 | 展示与维护决策 |
+| --- | --- |
+| Daya、Cubence、FoxCode、Krill、Dahl 明确发布的费率 | 正常显示；保留各自倍率与计费条件，Daya 目录已含折扣，不能再次应用 |
+| RightCode 发布的基础档、Rix 的条件费率 | 正常显示费率，单独表达上下文长度或条件规则；条件数量本身不决定精度 |
+| Sub2API 以官方价格表乘 key/group 有效率的 fallback | 保留 Estimated，它是推算，不能因为输出来自目录而升级为精确费率 |
+| GRSAI 以积分除以基础积分/USD 换算 | 保留 Estimated；批量购买赠额可能改变实际 USD 成本 |
+| LiteLLM 外部价格表用于估价 | 保留估价来源；结构化报价为 estimate 时优先显示估算语义 |
+| 展示币种不同于来源币种 | 单独提示 Converted；币种转换不是 Sub2API 分组估算，也不改变原始费率依据 |
+
+旧实验曾添加 `reference` 精度，随后已撤回。缓存里残留该旧值时不再显示对应徽标；无需为清除展示标签写账号设置或强制迁移缓存。后续新增来源时，应分别回答“费率从哪里来”“当前条件是否足够”“模型是否可调用”，不要让一个标签代替三种事实。
+
+维护入口：[价格证据展示](../../src/features/ModelList/presentation/ModelItem/ModelPriceEvidenceBadge.tsx)、[结构化报价衔接](../../src/services/modelPricing/quoteCanonicalModelPrice.ts)。缺项、复杂规则和不可用价格仍遵守既有完整性诊断，不能用正常显示费率掩盖条件不全。
+
 ## 支持边界与维护
 
 已接入的 Adapter 及回归入口见 [研究依据](research.md)。公共契约能表达某种计量，不意味着每个站点和模型都提供足够规则，也不意味着列表提供所有请求参数编辑器。
@@ -63,8 +80,8 @@ Status: implemented with explicit unsupported and incomplete-price states
 ## 回归入口
 
 - [公共报价](../../tests/services/modelPricing/quoteModelPrice.test.ts)、[任务计量](../../tests/services/modelPricing/meteredQuote.test.ts)、[条件要求](../../tests/services/modelPricing/requirements.test.ts)：覆盖边界、单位、缺项、覆盖规则和倍率。
-- [列表报价及排序](../../tests/entrypoints/options/pages/ModelList/useFilteredModels.test.ts)：比较结果、来源及分组隔离、模型过滤。
-- [条件控件](../../tests/features/ModelList/components/PricingScenarioControls.test.tsx) 与 [报价 UI](../../tests/features/ModelList/components/ModelPriceQuote.test.tsx)：输入恢复、定位、折叠摘要和详情口径。
+- [列表报价及排序](../../tests/features/ModelList/filtering/useFilteredModels.test.tsx)：比较结果、来源及分组隔离、模型过滤。
+- [条件控件](../../tests/features/ModelList/pricing/PricingScenarioControls.test.tsx) 与 [报价 UI](../../tests/features/ModelList/presentation/ModelItem/ModelPriceQuote.test.tsx)：输入恢复、定位、折叠摘要和详情口径。
 - [浏览器流程](../../e2e/modelListCommonFlows.spec.ts)：账号和目录流程、窄屏布局、条件定位及来源链接。
 
 修改相关行为时运行对应测试；文档不以曾经通过的次数代替当前代码验证。
