@@ -103,6 +103,27 @@ function renderModelItemHeader(quotaType: number) {
 }
 
 describe("ModelItemHeader", () => {
+  it("omits a billing badge when the producer cannot establish its billing mode", () => {
+    render(
+      <ModelItemHeader
+        resolvedVendor={{ state: "unknown" }}
+        model={
+          {
+            model_name: "image-model",
+            quota_type: 0,
+            price_metadata: { billing_mode_known: false },
+          } as any
+        }
+        isAvailableForUser={true}
+        handleCopyModelName={vi.fn()}
+        showPricingMetadata={true}
+      />,
+    )
+    expect(screen.getByText("image-model")).toBeVisible()
+    expect(screen.queryByText("ui:billing.tokenBased")).not.toBeInTheDocument()
+    expect(screen.queryByText("ui:billing.perCall")).not.toBeInTheDocument()
+  })
+
   it("shows a readable display name and the exact request model id separately", () => {
     render(
       <ModelItemHeader

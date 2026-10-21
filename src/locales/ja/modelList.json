@@ -107,6 +107,8 @@
     "actions": "操作",
     "filters": "絞り込み条件"
   },
+  "convertedPrice": "換算済み",
+  "convertedPriceTitle": "現在の為替レートで表示しています。元の通貨の価格は変わりません。",
   "copyAllNames": "すべてのモデル名をコピー",
   "currentUsableGroups": "現在のアカウントで利用可能なグループ",
   "description": "アカウントや API 認証情報のモデルを一覧し、料金、機能、利用可否を確認します。",
@@ -144,6 +146,7 @@
     "accessReason": "アクセス条件",
     "auditCharge": "リスク拒否時の監査料",
     "auditConsent": "監査への同意が必要",
+    "baseContextTier": "基本料金を表示中。コンテキスト長に応じて料金が変わります",
     "benchmarkTable": {
       "arena": "アリーナ",
       "category": "カテゴリ",
@@ -157,6 +160,7 @@
     },
     "callExamples": "呼び出し例",
     "catalogOwner": "カタログの所有者",
+    "catalogScope": "カタログの範囲",
     "compactionCharge": "リモート圧縮料",
     "consoleSettings": "公式設定を開く",
     "contextLimit": "コンテキスト上限",
@@ -269,8 +273,10 @@
       "request": "リクエスト",
       "webSearch": "ウェブ検索"
     },
+    "pricingConditions": "料金条件",
     "promptAudit": "プロンプト監査有効",
     "providerAvailable": "サイトで利用可能",
+    "providerReferenceCatalog": "サイト全体のカタログ",
     "releaseDate": "公開日",
     "sections": {
       "specifications": "仕様"
@@ -288,7 +294,7 @@
   "endpointType": "エンドポイント種別",
   "endpointTypes": "エンドポイント種別",
   "estimatedPrice": "推定",
-  "estimatedPriceTitle": "公式価格表とこのキーの Sub2API グループ倍率から推定しています。",
+  "estimatedPriceTitle": "参考レートや料金の前提に基づく推算です。実際の料金は異なる場合があります。",
   "expandDetails": "詳細を展開",
   "fallbackSourceNotice": {
     "description": "このカタログは現在アカウントキーのフォールバック経由で読み込まれているため、モデル検出と検証のみ利用できます。[データを更新] を押すと直接のアカウント経路を再試行します。",

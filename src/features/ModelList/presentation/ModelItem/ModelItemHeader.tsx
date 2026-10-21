@@ -157,15 +157,16 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
         </ProductAnalyticsScope>
 
         <div className="gap-y-density-1-5 sm:gap-y-density-2 flex shrink-0 flex-wrap items-center gap-x-1.5 sm:gap-x-2">
-          {showPricingMetadata && (
-            <Badge
-              variant={getBillingVariant(model.quota_type)}
-              size="sm"
-              className="text-3xs sm:text-xs"
-            >
-              {getBillingModeText(model.quota_type)}
-            </Badge>
-          )}
+          {showPricingMetadata &&
+            model.price_metadata?.billing_mode_known !== false && (
+              <Badge
+                variant={getBillingVariant(model.quota_type)}
+                size="sm"
+                className="text-3xs sm:text-xs"
+              >
+                {getBillingModeText(model.quota_type)}
+              </Badge>
+            )}
 
           {groupSummary && (
             <Badge

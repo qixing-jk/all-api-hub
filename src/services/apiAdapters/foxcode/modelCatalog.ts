@@ -130,7 +130,7 @@ function buildCatalog(
         price_metadata: understood
           ? {
               source: "provider-catalog" as const,
-              precision: "estimated" as const,
+              precision: "exact" as const,
               source_url: priceUrl,
             }
           : {

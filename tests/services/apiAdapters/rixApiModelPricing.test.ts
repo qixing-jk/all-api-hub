@@ -313,7 +313,7 @@ describe("Rix API model pricing", () => {
     expect(model?.pricingPlan?.usageMode).toBe(PRICING_USAGE_MODES.REQUEST)
   })
 
-  it("maps per-second prices onto the video meter and marks tiers estimated", () => {
+  it("maps per-second prices onto the video meter and retains published tier prices as explicit published rates", () => {
     const snapshot = normalizeRixApiModelPricingResponse(
       buildEnvelope({ model_info: [cnyTimeRow] }),
     )
@@ -321,7 +321,7 @@ describe("Rix API model pricing", () => {
     const [model] = snapshot.data
     expect(model?.model_price).toBe(1.8)
     expect(model?.price_metadata?.precision).toBe(
-      MODEL_PRICE_PRECISION_KINDS.ESTIMATED,
+      MODEL_PRICE_PRECISION_KINDS.EXACT,
     )
     expect(model?.pricingPlan?.rates[PRICING_METERS.VIDEO_SECONDS]).toEqual({
       amount: 1.8,

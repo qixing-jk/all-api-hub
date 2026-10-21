@@ -207,34 +207,6 @@ const readPrimaryCondition = (
   return undefined
 }
 
-/** Counts the published price conditions, which is what bounds precision. */
-const countPublishedConditions = (row: Record<string, unknown>): number => {
-  const priceConfig = row.price_config
-  if (isPlainObject(priceConfig)) {
-    const originalPrice = priceConfig.original_price
-    if (isPlainObject(originalPrice)) {
-      const conditions = Array.isArray(originalPrice.conditions)
-        ? originalPrice.conditions
-        : []
-      const hasPromptTiers =
-        isPlainObject(conditions[0]) &&
-        Array.isArray(
-          (conditions[0] as Record<string, unknown>).prompt_tiers,
-        ) &&
-        ((conditions[0] as Record<string, unknown>).prompt_tiers as unknown[])
-          .length > 1
-
-      return conditions.length + (hasPromptTiers ? 1 : 0)
-    }
-  }
-
-  if (isPlainObject(row.price_info)) {
-    return Object.keys(row.price_info).length
-  }
-
-  return 0
-}
-
 /**
  * Builds the pricing plan for one Rix API price object.
  *
@@ -429,7 +401,6 @@ function buildCatalogModel(
   const outputPrice = readNonNegativeAmount(price.output_token_price)
   const description = readNonBlankString(row.description)
   const descriptionEn = readNonBlankString(row.description_en)
-  const conditionCount = countPublishedConditions(row)
   const vendorId = row.vendor_id
   const vendorName =
     typeof vendorId === "number" && Number.isInteger(vendorId)
@@ -473,9 +444,7 @@ function buildCatalogModel(
       precision:
         Object.keys(pricingPlan.rates).length === 0
           ? MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE
-          : conditionCount > 1
-            ? MODEL_PRICE_PRECISION_KINDS.ESTIMATED
-            : MODEL_PRICE_PRECISION_KINDS.EXACT,
+          : MODEL_PRICE_PRECISION_KINDS.EXACT,
     },
     enable_groups: normalizeGroupNames(
       Array.isArray(row.enable_groups)

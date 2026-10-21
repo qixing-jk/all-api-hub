@@ -107,6 +107,8 @@
     "actions": "Thao tác",
     "filters": "Bộ lọc"
   },
+  "convertedPrice": "Đã quy đổi",
+  "convertedPriceTitle": "Hiển thị theo tỷ giá hiện tại; giá bằng tiền tệ gốc không thay đổi.",
   "copyAllNames": "Sao chép tất cả tên mô hình",
   "currentUsableGroups": "Nhóm tài khoản hiện tại có thể dùng",
   "description": "Xem mô hình từ tài khoản và thông tin xác thực API, cùng giá, khả năng và tình trạng khả dụng.",
@@ -144,6 +146,7 @@
     "accessReason": "Điều kiện truy cập",
     "auditCharge": "Phí kiểm tra khi từ chối rủi ro",
     "auditConsent": "Cần đồng ý kiểm tra",
+    "baseContextTier": "Đang hiển thị mức cơ bản; giá thay đổi theo độ dài ngữ cảnh",
     "benchmarkTable": {
       "arena": "Đấu trường",
       "category": "Danh mục",
@@ -157,6 +160,7 @@
     },
     "callExamples": "Ví dụ gọi API",
     "catalogOwner": "Chủ sở hữu danh mục",
+    "catalogScope": "Phạm vi danh mục",
     "compactionCharge": "Nén từ xa",
     "consoleSettings": "Cài đặt chính thức",
     "contextLimit": "Giới hạn ngữ cảnh",
@@ -269,8 +273,10 @@
       "request": "yêu cầu",
       "webSearch": "lần tìm kiếm web"
     },
+    "pricingConditions": "Điều kiện tính giá",
     "promptAudit": "Đã bật kiểm tra prompt",
     "providerAvailable": "Có sẵn trên trang",
+    "providerReferenceCatalog": "Danh mục đầy đủ của trang web",
     "releaseDate": "Ngày phát hành",
     "sections": {
       "specifications": "Thông số kỹ thuật"
@@ -288,7 +294,7 @@
   "endpointType": "Loại endpoint",
   "endpointTypes": "Loại endpoint",
   "estimatedPrice": "Ước tính",
-  "estimatedPriceTitle": "Ước tính từ bảng giá chính thức và tỷ lệ nhóm Sub2API của khóa này.",
+  "estimatedPriceTitle": "Tính từ mức giá tham khảo hoặc giả định về giá; phí thực tế có thể khác.",
   "expandDetails": "Mở rộng chi tiết",
   "fallbackSourceNotice": {
     "description": "Thư mục mô hình hiện tại được tải dự phòng thông qua khóa tài khoản, chỉ hỗ trợ phát hiện và xác minh mô hình. Nhấp vào làm mới dữ liệu sẽ thử lại API của tài khoản.",

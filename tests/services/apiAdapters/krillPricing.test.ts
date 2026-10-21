@@ -88,6 +88,7 @@ afterEach(() => vi.restoreAllMocks())
 it("shows the native default route and channel price, including both cache lifetimes", async () => {
   const result = await krillModelPricing.fetchPricing(request as never)
   const row = result.data[0]!
+  expect(row.price_metadata?.precision).toBe("exact")
   const plan = pricingPlanSchema.parse(row.pricingPlan)
   expect(plan.rates.input?.amount).toBeCloseTo(3.7494)
   expect(plan.rates.output?.amount).toBeCloseTo(18.747)

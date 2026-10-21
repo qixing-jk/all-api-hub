@@ -114,6 +114,8 @@
     "actions": "Actions",
     "filters": "Filters"
   },
+  "convertedPrice": "Converted",
+  "convertedPriceTitle": "Displayed using the current exchange rate; the original currency price is unchanged.",
   "copyAllNames": "Copy All Model Names",
   "currentUsableGroups": "Current usable groups",
   "description": "Browse models from accounts and API credentials, including pricing, capabilities and availability.",
@@ -151,6 +153,7 @@
     "accessReason": "Access condition",
     "auditCharge": "Rejected-risk audit charge",
     "auditConsent": "Audit consent required",
+    "baseContextTier": "Base tier shown; rates vary by context length",
     "benchmarkTable": {
       "arena": "Arena",
       "category": "Category",
@@ -164,6 +167,7 @@
     },
     "callExamples": "Call examples",
     "catalogOwner": "Catalog owner",
+    "catalogScope": "Catalog scope",
     "compactionCharge": "Remote compaction",
     "consoleSettings": "Official settings",
     "contextLimit": "Context limit",
@@ -277,8 +281,10 @@
       "request": "request",
       "webSearch": "web search"
     },
+    "pricingConditions": "Pricing conditions",
     "promptAudit": "Prompt audit enabled",
     "providerAvailable": "Available on site",
+    "providerReferenceCatalog": "Full site catalogue",
     "releaseDate": "Release date",
     "sections": {
       "specifications": "Specifications"
@@ -297,7 +303,7 @@
   "endpointType": "Endpoint Type",
   "endpointTypes": "Endpoint Types",
   "estimatedPrice": "Estimated",
-  "estimatedPriceTitle": "Estimated from the official price table and this key's Sub2API group rate.",
+  "estimatedPriceTitle": "Calculated from reference rates or pricing assumptions; actual charges may vary.",
   "expandDetails": "Expand details",
   "fallbackSourceNotice": {
     "description": "This catalog is currently loaded through an account-key fallback, so it only supports model discovery and verification. Refresh Data will retry the direct account route.",

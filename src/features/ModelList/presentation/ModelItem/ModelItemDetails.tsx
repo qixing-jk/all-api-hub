@@ -88,6 +88,7 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
           details
           sourceLabel={sourceLabel}
           effectiveGroup={effectiveGroup}
+          pricePrecision={model.price_metadata?.precision}
           showSummary={
             calculatedPrice.isComparisonActive === false || !!unavailableReason
           }

@@ -110,7 +110,7 @@ describe("Cubence catalog and announcements", () => {
           },
           enable_groups: ["72"],
           groupDisplayNames: { "72": "openai-off" },
-          price_metadata: { precision: "estimated" },
+          price_metadata: { precision: "exact" },
         },
       ],
     })

@@ -26,8 +26,8 @@ export const dahlModelPricing: ModelPricingCapability = {
           cache_read: price,
         },
         price_metadata: {
-          source: "official-rate-estimate",
-          precision: "estimated",
+          source: "provider-catalog",
+          precision: "exact",
           source_date: "2026-10-11",
           source_url: "https://inference.dahl.global/pricing/",
         },

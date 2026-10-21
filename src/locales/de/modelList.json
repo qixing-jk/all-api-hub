@@ -114,6 +114,8 @@
     "actions": "Aktionen",
     "filters": "Filter"
   },
+  "convertedPrice": "Umgerechnet",
+  "convertedPriceTitle": "Anzeige zum aktuellen Wechselkurs; der Preis in der Originalwährung bleibt unverändert.",
   "copyAllNames": "Alle Modellnamen kopieren",
   "currentUsableGroups": "Aktuell nutzbare Gruppen",
   "description": "Modelle aus Konten und API-Zugangsdaten mit Preisen, Fähigkeiten und Verfügbarkeit durchsuchen.",
@@ -151,6 +153,7 @@
     "accessReason": "Zugriffsbedingung",
     "auditCharge": "Prüfgebühr bei Risikoablehnung",
     "auditConsent": "Prüfungszustimmung erforderlich",
+    "baseContextTier": "Basistarif angezeigt; Preise hängen von der Kontextlänge ab",
     "benchmarkTable": {
       "arena": "Arena",
       "category": "Kategorie",
@@ -164,6 +167,7 @@
     },
     "callExamples": "Aufrufbeispiele",
     "catalogOwner": "Kataloginhaber",
+    "catalogScope": "Katalogumfang",
     "compactionCharge": "Remote-Komprimierung",
     "consoleSettings": "Offizielle Einstellungen",
     "contextLimit": "Kontextlimit",
@@ -277,8 +281,10 @@
       "request": "Anfrage",
       "webSearch": "Websuche"
     },
+    "pricingConditions": "Preisbedingungen",
     "promptAudit": "Prompt-Prüfung aktiv",
     "providerAvailable": "Auf der Website verfügbar",
+    "providerReferenceCatalog": "Vollständiger Katalog des Anbieters",
     "releaseDate": "Veröffentlichungsdatum",
     "sections": {
       "specifications": "Spezifikationen"
@@ -297,7 +303,7 @@
   "endpointType": "Endpunkttyp",
   "endpointTypes": "Endpunkttypen",
   "estimatedPrice": "Geschätzte",
-  "estimatedPriceTitle": "Geschätzt anhand der offiziellen Preistabelle und dem Gruppenpreis Sub2API dieses Schlüssels.",
+  "estimatedPriceTitle": "Aus Referenztarifen oder Preisannahmen berechnet; tatsächliche Kosten können abweichen.",
   "expandDetails": "Details erweitern",
   "fallbackSourceNotice": {
     "description": "Dieser Katalog wird derzeit über einen Kontoschlüssel-Fallback geladen und unterstützt daher nur die Modellerkennung und -überprüfung. „Daten aktualisieren“ wird die direkte Kontoroute erneut versuchen.",

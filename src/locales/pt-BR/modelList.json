@@ -121,6 +121,8 @@
     "actions": "Ações",
     "filters": "Filtros"
   },
+  "convertedPrice": "Convertido",
+  "convertedPriceTitle": "Exibido com a taxa de câmbio atual; o preço na moeda original permanece inalterado.",
   "copyAllNames": "Copiar todos os nomes de modelos",
   "currentUsableGroups": "Grupos disponíveis no momento",
   "description": "Explore modelos de contas e credenciais de API, com preços, recursos e disponibilidade.",
@@ -158,6 +160,7 @@
     "accessReason": "Condição de acesso",
     "auditCharge": "Taxa de auditoria por recusa de risco",
     "auditConsent": "Exige consentimento de auditoria",
+    "baseContextTier": "Tarifa base exibida; os preços variam conforme o tamanho do contexto",
     "benchmarkTable": {
       "arena": "Arena",
       "category": "Categoria",
@@ -171,6 +174,7 @@
     },
     "callExamples": "Exemplos de chamadas",
     "catalogOwner": "Proprietário do catálogo",
+    "catalogScope": "Escopo do catálogo",
     "compactionCharge": "Compactação remota",
     "consoleSettings": "Configurações oficiais",
     "contextLimit": "Limite de contexto",
@@ -285,8 +289,10 @@
       "request": "solicitação",
       "webSearch": "busca na web"
     },
+    "pricingConditions": "Condições de preço",
     "promptAudit": "Auditoria de prompts ativa",
     "providerAvailable": "Disponível no site",
+    "providerReferenceCatalog": "Catálogo completo do site",
     "releaseDate": "Data de lançamento",
     "sections": {
       "specifications": "Especificações"
@@ -306,7 +312,7 @@
   "endpointType": "Tipo de endpoint",
   "endpointTypes": "Tipos de endpoint",
   "estimatedPrice": "Estimado",
-  "estimatedPriceTitle": "Estimado com base na tabela oficial de preços e na taxa de grupo desta chave no Sub2API.",
+  "estimatedPriceTitle": "Calculado com base em tarifas de referência ou premissas de preço; os custos reais podem variar.",
   "expandDetails": "Expandir detalhes",
   "fallbackSourceNotice": {
     "description": "Este catálogo foi carregado por uma alternativa baseada na chave da conta e, portanto, permite apenas descobrir e verificar modelos. A opção Atualizar dados tentará novamente o acesso direto pela conta.",

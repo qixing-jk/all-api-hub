@@ -173,7 +173,7 @@ function planFor(
   }
 }
 
-/** Route and channel multipliers change the charged rate, so prices stay estimates. */
+/** Published route/channel rates are references; actual requests may use other routes or discounts. */
 function buildKrillPricing(
   entries: readonly KrillModelPricingEntry[],
   baseUrl: string,
@@ -214,7 +214,7 @@ function buildKrillPricing(
     },
     price_metadata: {
       source: "provider-catalog" as const,
-      precision: "estimated" as const,
+      precision: "exact" as const,
       source_url: `${baseUrl}/app/pricing`,
     },
     enable_groups: [],
