@@ -50,6 +50,8 @@ describe("Dahl operation-bound Cookie transport", () => {
     server.use(
       http.get(`${origin}/v1/account`, ({ request }) => {
         expect(request.headers.get("cookie")).toBe("dahl_session=account-A")
+        // Only reads after identity verification would replace the bound session.
+        boundary.cookies.mockClear()
         boundary.cookies.mockResolvedValue([])
         return HttpResponse.json({ user: { user_id: userId, username: "A" } })
       }),
@@ -62,7 +64,7 @@ describe("Dahl operation-bound Cookie transport", () => {
       }),
     )
     await expect(createKey(request)).resolves.toMatchObject({ id: 7 })
-    expect(boundary.cookies).toHaveBeenCalledTimes(1)
+    expect(boundary.cookies).not.toHaveBeenCalled()
     expect(
       boundary.updateRules.mock.calls.every(
         ([update]) => !update.addRules?.length,
@@ -89,6 +91,8 @@ describe("Dahl operation-bound Cookie transport", () => {
       server.use(
         http.get(`${origin}/v1/account`, ({ request }) => {
           expect(request.headers.get("cookie")).toBe("dahl_session=account-A")
+          // Only reads after identity verification would replace the bound session.
+          boundary.cookies.mockClear()
           boundary.cookies.mockResolvedValue([])
           return HttpResponse.json({ user: { user_id: userId, username: "A" } })
         }),
@@ -104,7 +108,7 @@ describe("Dahl operation-bound Cookie transport", () => {
       if (operation === "create")
         await expect(createKey(request)).resolves.toMatchObject({ id: 7 })
       else await expect(fetchKeys(request)).resolves.toHaveLength(1)
-      expect(boundary.cookies).toHaveBeenCalledTimes(1)
+      expect(boundary.cookies).not.toHaveBeenCalled()
       expect(
         boundary.fetch.mock.calls.every(
           ([, options]) => options?.credentials === "omit",
