@@ -30,6 +30,8 @@ Mark an item complete only after recording an outcome:
 
 An adapter object, page navigation or passing mock alone does not close implementation/validation. Missing plugin code is a gap, not upstream absence; a guessed 404/401 or missing credentials does not prove unsupported behavior. Unknowns stay visible in the handoff.
 
+For a new provider-specific representation or capability, include the consumer trace and validation evidence required by step 6 of [Required for every integration](../SKILL.md#required-for-every-integration) before marking it adapted.
+
 ## Shared setup
 
 - [ ] **Type, family and domains**: discover official console/API/inference and alternate/regional domains; verify account/credential equivalence. Explain type/family choice and origin routing. Reuse registry/endpoint-role mechanisms; branding or inference-key sharing does not settle console identity.
