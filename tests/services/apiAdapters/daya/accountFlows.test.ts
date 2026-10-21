@@ -70,6 +70,16 @@ describe("Daya account workflows", () => {
     ).rejects.toMatchObject({ code: "COOKIE_PERMISSION_REQUIRED" })
   })
 
+  it("uses the saved console Cookie in Firefox after interception permission is granted", async () => {
+    vi.stubEnv("BROWSER", "firefox")
+    await expect(
+      fetchDayaUserInfo({
+        ...request,
+        cookieAuthSessionCookie: "daya_sid=saved-session",
+      }),
+    ).resolves.toMatchObject({ id: "615", username: "daya-user" })
+  })
+
   it("marks malformed dashboard amounts unavailable without inventing zero usage", async () => {
     server.use(
       http.get(`${origin}/api/v1/usage/dashboard/stats`, () =>

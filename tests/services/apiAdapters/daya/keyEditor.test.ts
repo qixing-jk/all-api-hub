@@ -38,7 +38,10 @@ describe("Daya key editor", () => {
         defaultGroupIds: [2],
       })
       expect(
-        editor.validate({ ...editor.initialValues, [fieldId]: value }),
+        editor.validate({
+          ...editor.initialValues,
+          [fieldId]: value,
+        } as unknown as Parameters<typeof editor.validate>[0]),
       ).toMatchObject({
         valid: false,
         issues: expect.arrayContaining([{ fieldId, code }]),

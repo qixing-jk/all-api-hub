@@ -98,6 +98,31 @@ describe("Daya key resources", () => {
       editor.submit({ ...editor.initialValues, name: "renamed" }),
     ).rejects.toMatchObject({ failure: { code: expect.any(String) } })
   })
+
+  it("saves a changed expiry as ISO while preserving untouched settings", async () => {
+    let written: unknown
+    server.use(
+      http.get(`${origin}/api/v1/keys/1303`, () =>
+        HttpResponse.json(envelope(keyRow)),
+      ),
+      http.put(`${origin}/api/v1/keys/1303`, async ({ request }) => {
+        written = await request.json()
+        return HttpResponse.json(
+          envelope({ ...keyRow, ...(written as object) }),
+        )
+      }),
+    )
+    const editor = await (await openCollection()).openEditEditor(ref)
+    await editor.submit({
+      ...editor.initialValues,
+      expiresAt: "2026-11-01T08:00:00+08:00",
+    })
+    expect(written).toMatchObject({
+      expires_at: "2026-11-01T00:00:00.000Z",
+      group_ids: [2, 21],
+      rate_limit_1d: 3,
+    })
+  })
   it.each([
     DAYA_KEY_STATUSES.Active,
     DAYA_KEY_STATUSES.Inactive,
