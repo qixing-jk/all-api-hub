@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next"
-import { RefreshCcw } from "lucide-react"
+import { RefreshCw } from "lucide-react"
 import { useId } from "react"
 
 import { Badge, Button, Checkbox, CompactMultiSelect } from "~/components/ui"
@@ -120,7 +120,7 @@ export function ManagedSiteTokenBatchExportPreviewRow({
       size="sm"
       variant="outline"
       loading={isCurrentItemVerifying}
-      leftIcon={<RefreshCcw className="h-4 w-4" />}
+      leftIcon={<RefreshCw className="h-4 w-4" />}
       disabled={
         isLoadingPreview ||
         isRunning ||

@@ -1,8 +1,8 @@
 import type { TFunction } from "i18next"
 import {
   BookmarkPlus,
-  CheckCircle2,
   CircleAlert,
+  CircleCheck,
   FolderOpen,
   ListChecks,
   Loader2,
@@ -421,7 +421,7 @@ export default function BookmarkAccountImportDialog({
                 <div className="space-y-density-1 min-w-0">
                   <div className="gap-y-density-2 flex items-center gap-x-2">
                     {row.status === "success" ? (
-                      <CheckCircle2
+                      <CircleCheck
                         className="text-success-text h-4 w-4"
                         aria-hidden="true"
                       />

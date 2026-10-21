@@ -1,4 +1,4 @@
-import { Info, RefreshCcw, Search } from "lucide-react"
+import { Info, RefreshCw, Search } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -228,7 +228,7 @@ export function ManagedSiteModelSyncTabs({
                 variant="ghost"
                 disabled={isChannelsLoading || isAnySyncPending}
                 loading={isManualChannelRefresh}
-                leftIcon={<RefreshCcw className="h-4 w-4" />}
+                leftIcon={<RefreshCw className="h-4 w-4" />}
               >
                 {isManualChannelRefresh
                   ? t("common:status.refreshing")

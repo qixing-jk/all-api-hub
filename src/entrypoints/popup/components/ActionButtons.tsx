@@ -1,5 +1,5 @@
 import {
-  CalendarDays,
+  CalendarCheck2,
   CircleDollarSign,
   Cpu,
   KeyRound,
@@ -176,7 +176,7 @@ export default function ActionButtons({
                       PRODUCT_ANALYTICS_ACTION_IDS.RunPopupQuickCheckin
                     }
                   >
-                    <CalendarDays className="h-4 w-4" />
+                    <CalendarCheck2 className="h-4 w-4" />
                   </IconButton>
                 </Tooltip>
 

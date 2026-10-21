@@ -8,10 +8,10 @@ import {
   CalendarClock,
   Check,
   ChevronDown,
+  Ellipsis,
   Link,
   ListChecks,
   ListOrdered,
-  MoreHorizontal,
   Settings2,
   TrendingDown,
   TrendingUp,
@@ -387,7 +387,7 @@ export function AccountListHeader({
                 className="size-(--density-control-tight)"
                 aria-label={t("common:actions.more")}
               >
-                <MoreHorizontal aria-hidden="true" className="size-4" />
+                <Ellipsis aria-hidden="true" className="size-4" />
               </IconButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent

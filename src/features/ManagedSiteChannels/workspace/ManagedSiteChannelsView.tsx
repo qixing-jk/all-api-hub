@@ -5,7 +5,7 @@ import {
   Layers,
   ListFilter,
   Plus,
-  RefreshCcw,
+  RefreshCw,
   Settings,
   Trash2,
 } from "lucide-react"
@@ -193,7 +193,7 @@ export function ManagedSiteChannelsView({
                       : MANAGED_SITE_CHANNELS_REFRESH_STATES.Idle,
                 }}
                 onClick={callbacks.onRefresh}
-                leftIcon={<RefreshCcw className="h-4 w-4" />}
+                leftIcon={<RefreshCw className="h-4 w-4" />}
               >
                 {state.isRefreshing ? labels.cancelRefresh : labels.refresh}
               </Button>
@@ -454,7 +454,7 @@ export function ManagedSiteChannelsView({
                           selectedRows.map((row) => row.original.rowKey),
                         )
                       }
-                      leftIcon={<RefreshCcw className="h-4 w-4" />}
+                      leftIcon={<RefreshCw className="h-4 w-4" />}
                     >
                       {isSelectedSyncing
                         ? labels.rowActions.syncing
@@ -471,7 +471,7 @@ export function ManagedSiteChannelsView({
                           variant="outline"
                           disabled
                           tabIndex={-1}
-                          leftIcon={<RefreshCcw className="h-4 w-4" />}
+                          leftIcon={<RefreshCw className="h-4 w-4" />}
                         >
                           {labels.syncSelected}
                         </Button>

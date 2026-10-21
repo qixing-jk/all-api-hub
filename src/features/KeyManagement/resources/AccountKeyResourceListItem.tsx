@@ -1,4 +1,4 @@
-import { Ban, CheckCircle, Pencil, RefreshCw, Trash2 } from "lucide-react"
+import { Ban, CircleCheck, Pencil, RefreshCw, Trash2 } from "lucide-react"
 import { useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -181,7 +181,7 @@ export function AccountKeyResourceListItem({
       available: row.facts.actions.canEnable,
       action: editActions.Enable,
       label: t("native.actions.enable"),
-      Icon: CheckCircle,
+      Icon: CircleCheck,
     },
     {
       available: row.facts.actions.canDisable,

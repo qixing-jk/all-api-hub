@@ -1,4 +1,4 @@
-import { ArrowRightLeft } from "lucide-react"
+import { ArrowLeftRight } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -30,7 +30,7 @@ export default function DataBackupTab() {
           as="h2"
           className="mb-density-2 gap-y-density-2 flex items-center gap-x-2 text-xl"
         >
-          <ArrowRightLeft
+          <ArrowLeftRight
             className="text-theme-600 dark:text-theme-400 size-5 shrink-0"
             aria-hidden="true"
           />
@@ -46,7 +46,7 @@ export default function DataBackupTab() {
                 onClick={handleNavigateToImportExport}
                 variant="default"
                 className="justify-center"
-                leftIcon={<ArrowRightLeft className="h-5 w-5" />}
+                leftIcon={<ArrowLeftRight className="h-5 w-5" />}
               >
                 {t("dataBackup.importExport.openPage")}
               </WorkflowTransitionButton>
@@ -58,6 +58,7 @@ export default function DataBackupTab() {
         </Card>
       </section>
 
+      {/* Cloud Sync Settings Section */}
       <CloudSyncSettings />
     </div>
   )

@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next"
-import { Loader2, RefreshCcw } from "lucide-react"
+import { Loader2, RefreshCw } from "lucide-react"
 
 import { Button } from "~/components/ui"
 
@@ -42,7 +42,7 @@ export function ManagedSiteTokenBatchExportStatusPanels({
             type="button"
             size="sm"
             variant="outline"
-            leftIcon={<RefreshCcw className="h-4 w-4" />}
+            leftIcon={<RefreshCw className="h-4 w-4" />}
             loading={isManualPreviewRefresh}
             disabled={isLoadingPreview || isRunning}
             onClick={onRefreshPreview}

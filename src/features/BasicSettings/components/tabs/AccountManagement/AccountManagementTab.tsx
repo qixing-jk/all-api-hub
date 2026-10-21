@@ -1,4 +1,4 @@
-import { Users } from "lucide-react"
+import { UserRound } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -30,7 +30,7 @@ export default function AccountManagementTab() {
     <div className="space-y-density-6">
       <section id="account-management">
         <Heading4 className="mb-density-2 gap-y-density-2 flex items-center gap-x-2">
-          <Users className="text-theme-600 dark:text-theme-400 h-5 w-5" />
+          <UserRound className="text-theme-600 dark:text-theme-400 h-5 w-5" />
           <span>{t("accountManagement.title")}</span>
         </Heading4>
         <Card>
@@ -42,7 +42,7 @@ export default function AccountManagementTab() {
               onClick={handleNavigate}
               variant="default"
               className="gap-y-density-2 flex items-center gap-x-2 self-start"
-              leftIcon={<Users className="h-5 w-5" />}
+              leftIcon={<UserRound className="h-5 w-5" />}
             >
               <span>{t("accountManagement.openPage")}</span>
             </WorkflowTransitionButton>
@@ -53,7 +53,6 @@ export default function AccountManagementTab() {
       <AutoProvisionKeyOnAccountAddSettings />
       <AutoFillCurrentSiteUrlOnAccountAddSettings />
       <DuplicateAccountWarningOnAddSettings />
-
       <SortingPrioritySettings />
     </div>
   )

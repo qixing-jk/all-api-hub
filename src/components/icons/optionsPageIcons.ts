@@ -12,7 +12,7 @@ import {
   LineChart,
   Megaphone,
   Palette,
-  RefreshCcw,
+  RefreshCw,
   Settings,
   Star,
   Terminal,
@@ -44,7 +44,7 @@ export const OPTIONS_MENU_ITEM_ICONS = {
   [MENU_ITEM_IDS.BALANCE_HISTORY]: LineChart,
   [MENU_ITEM_IDS.USAGE_ANALYTICS]: BarChart3,
   [MENU_ITEM_IDS.MANAGED_SITE_CHANNELS]: Layers,
-  [MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC]: RefreshCcw,
+  [MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC]: RefreshCw,
   [MENU_ITEM_IDS.IMPORT_EXPORT]: ArrowLeftRight,
   [MENU_ITEM_IDS.ABOUT]: Info,
 } satisfies Record<OptionsMenuItemId, LucideIcon>

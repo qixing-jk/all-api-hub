@@ -1,11 +1,11 @@
 import {
   CalendarDays,
+  FileText,
   Gift,
   Link,
   RefreshCw,
-  SquarePen,
   Tag,
-  User,
+  UserRound,
   type LucideIcon,
 } from "lucide-react"
 import type { ReactNode } from "react"
@@ -48,14 +48,17 @@ function SiteInfoDetailRow({
 interface SiteInfoDetailsProps {
   site: DisplaySiteData
   highlights?: SearchResultWithHighlight["highlights"]
-  showCreatedAt: boolean
+  showCreatedAt?: boolean
 }
 
-/** Renders account metadata and search matches beneath the site title. */
+/**
+ * Renders structured metadata rows under an account row:
+ * username, created at, base URL, custom check-in URL, notes, and tags.
+ */
 export function SiteInfoDetails({
   site,
   highlights,
-  showCreatedAt,
+  showCreatedAt = false,
 }: SiteInfoDetailsProps) {
   const { t } = useTranslation(["account", "messages", "common"])
   const customCheckInUrl = site.checkIn?.customCheckIn?.url
@@ -70,7 +73,7 @@ export function SiteInfoDetails({
 
   return (
     <>
-      <SiteInfoDetailRow icon={User} title={site.username}>
+      <SiteInfoDetailRow icon={UserRound} title={site.username}>
         {highlights?.username && site.username ? (
           <SiteInfoHighlightedText
             fragments={highlights.username}
@@ -119,7 +122,7 @@ export function SiteInfoDetails({
 
       {site.notes && (
         <SiteInfoDetailRow
-          icon={SquarePen}
+          icon={FileText}
           title={site.notes}
           className="sm:mt-density-1"
         >

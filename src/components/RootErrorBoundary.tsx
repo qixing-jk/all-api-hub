@@ -1,4 +1,4 @@
-import { AlertTriangle, RefreshCw } from "lucide-react"
+import { RefreshCw, TriangleAlert } from "lucide-react"
 import { Component, type ErrorInfo, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -61,7 +61,7 @@ function RootErrorFallback({
     <main className="bg-background text-foreground py-density-8 flex min-h-screen items-center justify-center px-4">
       <section className="bg-card py-density-6 w-full max-w-md rounded-lg border px-6 text-center shadow-sm">
         <div className="bg-destructive-soft text-destructive-soft-foreground mb-density-4 mx-auto flex size-12 items-center justify-center rounded-full">
-          <AlertTriangle className="size-6" aria-hidden="true" />
+          <TriangleAlert className="size-6" aria-hidden="true" />
         </div>
         <h1 className="text-lg font-semibold">
           {t("rootErrorBoundary.title")}
