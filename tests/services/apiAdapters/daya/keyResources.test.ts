@@ -53,6 +53,19 @@ const ref = {
   resourceId: "1303",
 }
 describe("Daya key resources", () => {
+  it("projects a present last-used timestamp from native detail", async () => {
+    server.use(
+      http.get(`${origin}/api/v1/keys/1303`, () =>
+        HttpResponse.json(envelope(keyRow)),
+      ),
+    )
+    const detail = await (await openCollection()).get(ref)
+    expect(detail.displayFacts).toContainEqual({
+      fieldId: "accessed_time",
+      kind: "last-used",
+      timestampMs: Date.parse("2026-10-19T02:00:00Z"),
+    })
+  })
   it("updates lifecycle through the editor and omits absent last-used facts", async () => {
     let written: unknown
     server.use(
