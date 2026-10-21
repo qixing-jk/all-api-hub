@@ -25,6 +25,9 @@ Local developer screenshots are **unmasked by default** and stay outside Git, fo
 Include capture at the meaningful checkpoints of the maintained site-specific CDP runner, with an explicit local evidence directory. Use stable state filenames and include run/build identity in the evidence index. For example, after asserting the intended dialog state:
 
 ```javascript
+// Stabilize Framer Motion animations across all surfaces
+await page.emulateMedia({ reducedMotion: "reduce" })
+await dialog.waitFor({ state: "visible", timeout: 8000 })
 await dialog.screenshot({
   path: path.join(evidenceDir, "02-key-dialog.png"),
   animations: "disabled",
@@ -35,6 +38,6 @@ Create and verify the local evidence directory before execution. Record the view
 
 ## Show the developer the result
 
-Inspect representative final images with the available local-image tool (`view_image` in Codex) when visual judgment is needed, following the task-level checkpoints in [task acceptance](../../../../docs/agents/task-acceptance.md#compare-changed-ui). Batch minor refinements; do not reopen images after every edit or inspect every captured artifact. Agents prioritize the after image; baseline, comparison and diff images primarily serve developer review and need agent inspection only for a concrete unresolved question. Return representative images through the tool's image output or inline Markdown images with absolute local paths. Include a short caption describing the observed state and a clickable artifact/index link; a path-only list is not a visual preview. Display during progress when it answers a current question, and reuse retained artifacts in the final handoff without another image-tool call. Do not claim to have inspected images merely retained for developer review.
+Inspect representative final images with the available local-image tool (`view_image` in Codex) when visual judgment is needed, following the task-level checkpoints in [task acceptance](../../../../docs/agents/task-acceptance.md#compare-changed-ui). Batch minor refinements; do not reopen images after every edit or inspect every captured artifact. Agents prioritize the after image; baseline, comparison and diff images primarily serve developer review and need agent inspection only for a concrete unresolved question. Prefer side-by-side composite images ([BEFORE | AFTER] via `pnpm visual:compare` or image compositing) with clear status labels so reviewers can verify changes immediately without switching tabs. Return representative images through the tool's image output or inline Markdown images with absolute local paths. Include a short caption describing the observed state and a clickable artifact/index link; a path-only list is not a visual preview. Display during progress when it answers a current question, and reuse retained artifacts in the final handoff without another image-tool call. Do not claim to have inspected images merely retained for developer review.
 
 If the client cannot render local images, provide clickable PNG links and state that display limitation. If live access was unavailable, say which screenshot could not be obtained; a fixture or mocked screenshot must be labelled as such. Pictures complement behavior assertions and live readback; they do not establish authentication correctness, write preservation or cleanup alone.

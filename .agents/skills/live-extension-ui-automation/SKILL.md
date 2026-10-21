@@ -98,12 +98,19 @@ await session.detach()
 
 // 2. Open any extension entrypoint
 const page = await context.newPage()
+// Stabilize Framer Motion animations and transitions
+await page.emulateMedia({ reducedMotion: "reduce" })
 await page.goto(`chrome-extension://${extensionId}/options.html#account`)
 await page.waitForLoadState("domcontentloaded")
 
 // 3. Interact with UI primitives via testId or role
 const root = page.locator('[data-testid="options-app"]')
 await root.waitFor({ state: "attached", timeout: 10000 })
+// Await explicit visibility for elements rather than static sleeps
+const target = page.locator('[data-testid="account-table-row"]').first()
+await target.waitFor({ state: "visible", timeout: 8000 })
+// Radix dialogs/popovers render into document.body portals; locate directly from page
+const dialog = page.locator('[role="dialog"]').first()
 
 // 4. Inspect or mutate extension storage directly via service worker
 // NOTE: Plasmo Storage serializes envelopes as JSON strings (e.g. { accounts: [...] })
@@ -129,6 +136,11 @@ When credentials require user interaction, assert that detection preserves the d
 For native resource editors, a visible modal may still contain only the opening/loading shell while fresh provider data is fetched. Wait for an always-present field from the accepted editor before reading values or asserting secret retention, with a bounded timeout suitable for live provider requests. Modal visibility alone and the default short DOM assertion timeout do not establish that the editor has loaded; avoid replacing this check with a fixed sleep. Once the editor is ready, a missing conditional control may indicate an incomplete detail projection or incorrect visibility state; compare the saved configuration and controlling value before increasing timeouts or forcing the control visible.
 
 ## Developer image previews
+
+For UI visual regression capture, stabilization, and side-by-side result presentation, follow [UI visual evidence and capture guidelines](references/ui-visual-evidence.md):
+- **Component focus with context**: Target the immediate semantic parent (e.g. table row `tr`, card `.card`, action group, or dialog section) at natural pixel scale instead of full-page viewports (which shrink details to unreadable thumbnails) or micro-cropped icons (which strip spatial context).
+- **Stabilization & waiting**: Never rely on static sleeps. Wait explicitly for element visibility (`waitFor({ state: "visible" })`). Freeze Framer Motion transitions (`emulateMedia({ reducedMotion: "reduce" })` and `animations: "disabled"`).
+- **Side-by-side composite stitching**: Stitch Before (left, amber/red label) and After (right, emerald/green label) into single composite images (`[BEFORE | AFTER]`) using `pnpm visual:compare` or image compositing, avoiding detached files. For multi-surface updates, provide consolidated Markdown reports or standalone HTML galleries.
 
 For deterministic Playwright workflows, use `pnpm visual:capture --help` and the [generic capture/comparison workflow](../../../CONTRIBUTING.md#local-screenshot-comparison). Select an existing test via `--spec --grep --fixture` and add opt-in `captureVisualViews` checkpoints; optional `--view` settings control dimensions/themes. No registry entry is needed for new surfaces; `--list` exposes maintained hotspot shortcuts. This runner handles current-worktree build validation, capture, metadata and optional baseline pairing in temporary browser profiles. It does not replace authenticated site-specific CDP workflows or add automatic image inspection.
 
