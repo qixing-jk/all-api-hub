@@ -137,9 +137,14 @@ describe("Daya key resources", () => {
         expires_at: "2026-11-01T00:00:00Z",
         ip_whitelist: ["192.0.2.1"],
         ip_blacklist: ["203.0.113.0/24"],
+        allow_fast: false,
+        rate_limit_5h: 1.25,
+        rate_limit_7d: 12,
       }
+      let written: unknown
       const put = vi.fn(async ({ request }: { request: Request }) => {
         const body = (await request.json()) as object
+        written = body
         row = { ...row, ...body }
         return HttpResponse.json(envelope(row))
       })
@@ -183,6 +188,17 @@ describe("Daya key resources", () => {
           status === DAYA_KEY_STATUSES.Active ? 1 : 0,
         )
         expect(row.ip_whitelist).toEqual(["192.0.2.1"])
+        if (status === DAYA_KEY_STATUSES.Active) {
+          expect(written).toMatchObject({
+            status: DAYA_KEY_STATUSES.Inactive,
+            allow_fast: false,
+            ip_whitelist: ["192.0.2.1"],
+            ip_blacklist: ["203.0.113.0/24"],
+            rate_limit_5h: 1.25,
+            rate_limit_1d: 3,
+            rate_limit_7d: 12,
+          })
+        }
       }
     },
   )
