@@ -16,12 +16,12 @@ import {
   Settings,
   Star,
   Terminal,
-  UserRound,
   type LucideIcon,
 } from "lucide-react"
 
 import {
   AccountKeyIcon,
+  AccountManagementIcon,
   ApiCredentialLibraryIcon,
 } from "~/components/icons/productIcons"
 import { DEV_MENU_ITEM_IDS } from "~/constants/devOptionsMenuIds"
@@ -34,7 +34,7 @@ import {
 export const OPTIONS_MENU_ITEM_ICONS = {
   [MENU_ITEM_IDS.OVERVIEW]: LayoutDashboard,
   [MENU_ITEM_IDS.BASIC]: Settings,
-  [MENU_ITEM_IDS.ACCOUNT]: UserRound,
+  [MENU_ITEM_IDS.ACCOUNT]: AccountManagementIcon,
   [MENU_ITEM_IDS.API_CREDENTIAL_PROFILES]: ApiCredentialLibraryIcon,
   [MENU_ITEM_IDS.BOOKMARK]: Bookmark,
   [MENU_ITEM_IDS.MODELS]: Cpu,

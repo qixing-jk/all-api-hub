@@ -67,7 +67,6 @@ All API Hub contains five distinct UI surfaces. Apply the appropriate capture st
 | **Sidepanel** | `sidepanel.html` | 380×700 / 320×700 | Panel card or drawer content | Test both light & dark themes (`--view light:380x700 --view dark:320x700`). |
 | **Modals & Drawers** | Radix Portal (`[role="dialog"]`) | Matches active surface | Dialog container (`[role="dialog"]`) | Escapes page container into `document.body`. Capture the modal box, not the dimmed background. |
 | **Injected Content** | Content scripts (Turnstile assist, floating bar) | Host page viewport | Injected container / Shadow host | Scoped inside host page or Shadow DOM. Wait for injection before capturing. |
-```
 
 ## Waiting and DOM stabilization (Anti-flake rules)
 

@@ -7,7 +7,7 @@ import {
   Pencil,
   RefreshCw,
   RotateCcw,
-  UserRound,
+  UsersRound,
 } from "lucide-react"
 import { describe, expect, it } from "vitest"
 
@@ -45,7 +45,7 @@ function getFiles(dir: string): string[] {
 
 describe("Icon consistency across features and shared interactions", () => {
   it("defines unified feature and action icon constants", () => {
-    expect(AccountManagementIcon).toBe(UserRound)
+    expect(AccountManagementIcon).toBe(UsersRound)
     expect(AutoCheckinIcon).toBe(CalendarCheck2)
     expect(ManagedSiteModelSyncIcon).toBe(RefreshCw)
     expect(ImportExportIcon).toBe(ArrowLeftRight)
@@ -57,7 +57,7 @@ describe("Icon consistency across features and shared interactions", () => {
   })
 
   it("unifies feature icons in optionsPageIcons", () => {
-    expect(OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.ACCOUNT]).toBe(UserRound)
+    expect(OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.ACCOUNT]).toBe(UsersRound)
     expect(OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.AUTO_CHECKIN]).toBe(
       CalendarCheck2,
     )

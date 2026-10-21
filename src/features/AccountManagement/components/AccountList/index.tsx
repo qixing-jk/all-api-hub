@@ -1,12 +1,7 @@
-import {
-  ChevronDown,
-  Inbox,
-  Info,
-  SlidersHorizontal,
-  UserRound,
-} from "lucide-react"
+import { ChevronDown, Inbox, Info, SlidersHorizontal } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { AccountManagementIcon } from "~/components/icons/productIcons"
 import { PopupTabOnboarding } from "~/components/PopupTabOnboarding"
 import {
   Button,
@@ -81,7 +76,7 @@ export default function AccountList({
         aria-label={t("account:emptyState")}
         className="mb-density-2"
         data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountListView}
-        icon={UserRound}
+        icon={AccountManagementIcon}
         role="region"
         title={t("account:emptyState")}
         titleId="account-empty-state-title"

@@ -1,10 +1,4 @@
-import {
-  BookmarkPlus,
-  CalendarCheck2,
-  RefreshCw,
-  Search,
-  UserRound,
-} from "lucide-react"
+import { BookmarkPlus, CalendarCheck2, RefreshCw, Search } from "lucide-react"
 import {
   useCallback,
   useEffect,
@@ -14,6 +8,7 @@ import {
 } from "react"
 import { useTranslation } from "react-i18next"
 
+import { AccountManagementIcon } from "~/components/icons/productIcons"
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageActions } from "~/components/PageActions"
 import { PageHeader } from "~/components/PageHeader"
@@ -356,7 +351,7 @@ function AccountManagementContent({
       }
     >
       <PageHeader
-        icon={UserRound}
+        icon={AccountManagementIcon}
         title={t("account:title")}
         titleActions={
           <OptionsPageSettingsTitleAction

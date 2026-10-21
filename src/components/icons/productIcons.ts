@@ -7,7 +7,7 @@ import {
   Pencil,
   RefreshCw,
   RotateCcw,
-  UserRound,
+  UsersRound,
 } from "lucide-react"
 
 export const AccountKeyIcon = KeyRound
@@ -15,7 +15,7 @@ export const ApiCredentialLibraryIcon = Library
 export const ApiCredentialLibraryAddIcon = BookPlus
 
 // Feature-level unified icons
-export const AccountManagementIcon = UserRound
+export const AccountManagementIcon = UsersRound
 export const AutoCheckinIcon = CalendarCheck2
 export const ManagedSiteModelSyncIcon = RefreshCw
 export const ImportExportIcon = ArrowLeftRight
