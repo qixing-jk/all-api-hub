@@ -4,7 +4,7 @@
 
 ### Issue tracker
 
-Issues and specs for this repo live as local Markdown files under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
+Issues and specs for this repo live as local Markdown files under `.scratch/<feature>/`. When creating scratch material or handing off a task that used it, follow the [retention and cleanup rules](docs/agents/issue-tracker.md#retention-and-cleanup).
 
 ### Triage labels
 
