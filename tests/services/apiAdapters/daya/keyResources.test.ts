@@ -53,6 +53,32 @@ const ref = {
   resourceId: "1303",
 }
 describe("Daya key resources", () => {
+  it("updates lifecycle through the editor and omits absent last-used facts", async () => {
+    let written: unknown
+    server.use(
+      http.get(`${origin}/api/v1/keys/1303`, () =>
+        HttpResponse.json(envelope({ ...keyRow, last_used_at: null })),
+      ),
+      http.put(`${origin}/api/v1/keys/1303`, async ({ request }) => {
+        written = await request.json()
+        return HttpResponse.json(
+          envelope({ ...keyRow, ...(written as object), last_used_at: null }),
+        )
+      }),
+    )
+    const collection = await openCollection()
+    const detail = await collection.get(ref)
+    expect(detail.displayFacts?.some((fact) => fact.kind === "last-used")).toBe(
+      false,
+    )
+    const editor = await collection.openEditEditor(ref)
+    const result = await editor.submit({
+      ...editor.initialValues,
+      enabled: false,
+    })
+    expect(written).toMatchObject({ status: "inactive" })
+    expect(result.facts?.status).toBe("disabled")
+  })
   it("resolves runtime secrets with cancellation propagated to the detail read", async () => {
     server.use(
       http.get(`${origin}/api/v1/keys/1303`, () =>
