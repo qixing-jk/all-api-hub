@@ -11,6 +11,8 @@
     "import": "匯入",
     "loadField": "取得{{field}}",
     "more": "更多",
+    "moveDown": "下移",
+    "moveUp": "上移",
     "openSidePanel": "在側邊欄中開啟",
     "refresh": "重新整理",
     "refreshField": "重新整理{{field}}",

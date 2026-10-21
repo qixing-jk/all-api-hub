@@ -44,6 +44,171 @@ const t = ((key: string, options?: { field?: string }) => {
 }) as TFunction
 
 describe("NativeResourceEditorBody", () => {
+  it.each([false, true])(
+    "preserves ordered routes and fallback labels with disabled=%s",
+    async (disabled) => {
+      const user = userEvent.setup()
+      const onValueChange = vi.fn()
+      render(
+        <NativeResourceEditorBody
+          t={t}
+          disabled={disabled}
+          descriptors={[
+            {
+              fieldId: "routes",
+              type: "multi-select",
+              options: [{ value: "2", displayLabel: "OpenAI" }],
+            },
+          ]}
+          policy={defineResourceEditorFieldPolicy({
+            fields: [
+              {
+                fieldId: "routes",
+                section: "basic",
+                order: 1,
+                renderer: "multi-select",
+                ordered: true,
+                resolveLabel: () => "Routes",
+              },
+            ],
+            hiddenFields: [],
+          })}
+          sectionOrder={{ basic: 0 }}
+          sectionLabelResolvers={{ basic: () => "Basic" }}
+          values={{ routes: ["retired-route", "2"] }}
+          onValueChange={onValueChange}
+        />,
+      )
+      const moveFirstUp = screen.getByRole("button", {
+        name: "common:actions.moveUp retired-route",
+      })
+      const moveLastDown = screen.getByRole("button", {
+        name: "common:actions.moveDown OpenAI",
+      })
+      const moveLastUp = screen.getByRole("button", {
+        name: "common:actions.moveUp OpenAI",
+      })
+      expect(moveFirstUp).toBeDisabled()
+      expect(moveLastDown).toBeDisabled()
+      if (disabled) {
+        expect(moveLastUp).toBeDisabled()
+        await user.click(moveLastUp)
+        expect(onValueChange).not.toHaveBeenCalled()
+      } else {
+        await user.click(moveLastUp)
+        expect(onValueChange).toHaveBeenLastCalledWith("routes", [
+          "2",
+          "retired-route",
+        ])
+      }
+    },
+  )
+  it("lets an ordered multi-select move a route up without changing membership", async () => {
+    const user = userEvent.setup()
+    const onValueChange = vi.fn()
+    render(
+      <NativeResourceEditorBody
+        t={t}
+        descriptors={[
+          {
+            fieldId: "groups",
+            type: "multi-select",
+            options: [
+              { value: "2", displayLabel: "OpenAI", secondaryLabel: "×0.2" },
+              { value: "21", displayLabel: "Claude" },
+            ],
+          },
+        ]}
+        policy={defineResourceEditorFieldPolicy({
+          fields: [
+            {
+              fieldId: "groups",
+              section: "basic",
+              order: 1,
+              renderer: "multi-select",
+              ordered: true,
+              resolveLabel: () => "Group",
+            },
+          ],
+          hiddenFields: [],
+        })}
+        sectionOrder={{ basic: 0 }}
+        sectionLabelResolvers={{ basic: () => "Basic" }}
+        values={{ groups: ["2", "21"] }}
+        onValueChange={onValueChange}
+      />,
+    )
+    expect(screen.getByText("×0.2")).toBeVisible()
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.moveUp Claude" }),
+    )
+    expect(onValueChange).toHaveBeenLastCalledWith("groups", ["21", "2"])
+  })
+  it.each([false, true])(
+    "preserves selected groups while labels load (cached: %s)",
+    async (cached) => {
+      const pending =
+        createDeferred<Array<{ value: string; displayLabel: string }>>()
+      const options = [
+        { value: "2", displayLabel: "OpenAI" },
+        { value: "21", displayLabel: "Claude" },
+        { value: "7", displayLabel: "Gemini" },
+      ]
+      const onValueChange = vi.fn()
+      render(
+        <NativeResourceEditorBody
+          t={t}
+          descriptors={[
+            {
+              fieldId: "groups",
+              type: "multi-select",
+              options: cached ? options : [],
+              optionLoader: { dependsOn: [] },
+            },
+          ]}
+          policy={defineResourceEditorFieldPolicy({
+            fields: [
+              {
+                fieldId: "groups",
+                section: "basic",
+                order: 1,
+                renderer: "multi-select",
+                resolveLabel: () => "Group",
+              },
+            ],
+            hiddenFields: [],
+          })}
+          sectionOrder={{ basic: 0 }}
+          sectionLabelResolvers={{ basic: () => "Basic" }}
+          values={{ groups: ["2", "21", "7"] }}
+          onValueChange={onValueChange}
+          onLoadOptions={() => pending.promise}
+        />,
+      )
+      const input = screen.getByRole("combobox", { name: "Group" })
+      expect(screen.queryByText("2")).not.toBeInTheDocument()
+      expect(screen.queryByText("21")).not.toBeInTheDocument()
+      expect(screen.queryByText("7")).not.toBeInTheDocument()
+      expect(input).toHaveAttribute("aria-busy", "true")
+      if (cached) {
+        for (const option of options)
+          expect(screen.getByText(option.displayLabel)).toBeVisible()
+        expect(input).toBeEnabled()
+      } else {
+        expect(input).toHaveAttribute("placeholder", "Loading Group...")
+        expect(input).toBeDisabled()
+      }
+
+      await act(async () => pending.resolve(options))
+      for (const name of ["OpenAI", "Claude", "Gemini"]) {
+        expect(screen.getByText(name)).toBeVisible()
+      }
+      expect(input).toBeEnabled()
+      expect(input).not.toHaveAttribute("aria-busy", "true")
+      expect(onValueChange).not.toHaveBeenCalled()
+    },
+  )
+
   it("keeps card selections visible and announces pending options until ready", async () => {
     const user = userEvent.setup()
     const onValueChange = vi.fn()

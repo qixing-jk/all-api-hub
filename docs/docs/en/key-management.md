@@ -72,6 +72,12 @@ Enter a key name in the search box. Search matches **names only** and does not i
 
 > When a site shows the key only once, an **`Save the Full Key Now`** dialog appears after creation. Copy or save the key before closing it.
 
+Native key fields and defaults depend on the site. Check the form guidance before creating a key:
+
+- **Routing groups**: When multiple groups have routing priority, drag them or use the up/down buttons to reorder. Descriptions and multipliers help you choose.
+- **Spending limits**: Configure total and time-window caps separately. Follow each field's guidance for units and unlimited values.
+- **Advanced settings**: Supported options may include IP allowlists/blocklists, custom keys or request modes. Collapsing a section preserves its draft values. Custom keys are generally available only at creation; follow the form's format requirements.
+
 ### 5. Edit a Key
 
 Click **`Edit Key`** to modify the name, quota, expiration, group, model restrictions, and other supported settings. **Editing does not change the key value itself.** If the site cannot update a key, the interface shows the reason.

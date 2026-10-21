@@ -11,6 +11,8 @@
     "import": "Nhập",
     "loadField": "Tải {{field}}",
     "more": "Thêm",
+    "moveDown": "Di chuyển xuống",
+    "moveUp": "Di chuyển lên",
     "openSidePanel": "Mở trong bảng điều khiển bên",
     "refresh": "Làm mới",
     "refreshField": "Làm mới {{field}}",
