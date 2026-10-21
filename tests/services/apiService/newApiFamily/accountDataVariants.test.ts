@@ -8,11 +8,13 @@ import { AuthTypeEnum } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 const {
+  mockRefreshSelectedStatus,
   mockFetchAccountQuota,
   mockFetchTodayIncome,
   mockFetchTodayUsage,
   mockGetTodayTimestampRange,
 } = vi.hoisted(() => ({
+  mockRefreshSelectedStatus: vi.fn(),
   mockFetchAccountQuota: vi.fn(),
   mockFetchTodayIncome: vi.fn(),
   mockFetchTodayUsage: vi.fn(),
@@ -28,6 +30,10 @@ vi.mock("~/services/apiService/newApiFamily/default/accountData", () => ({
 
 vi.mock("~/services/apiService/newApiFamily/default/accountDataUtils", () => ({
   getTodayTimestampRange: mockGetTodayTimestampRange,
+}))
+
+vi.mock("~/services/checkin/autoCheckin/scheduling/refresh", () => ({
+  refreshSelectedStatus: mockRefreshSelectedStatus,
 }))
 
 const request = {
@@ -74,6 +80,8 @@ describe("New API-family account-data variants", () => {
     async (_name, fetchData) => {
       const result = await fetchData(request)
 
+      expect(result.checkIn).toBe(request.checkIn)
+      expect(mockRefreshSelectedStatus).not.toHaveBeenCalled()
       expect(mockGetTodayTimestampRange).toHaveBeenCalledTimes(1)
       expect(mockFetchTodayUsage).toHaveBeenCalledWith(
         request,

@@ -23,6 +23,7 @@ import { accountMutations } from "~/services/accounts/accountStorage/accountMuta
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/editing/accountDefaults"
 import { isValidAccount } from "~/services/accounts/editing/accountFormValidation"
+import { fetchAccountDataWithCheckInStatus } from "~/services/accounts/refresh/fetchAccountData"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { SiteHealthStatus, type SiteAccount } from "~/types"
@@ -258,20 +259,23 @@ export async function validateAndUpdateAccount(
       normalizedSiteType,
       getSiteTypeCapabilities(normalizedSiteType).account?.data,
     )
-    const freshAccountData = await accountData.fetchData({
-      baseUrl: requestBaseUrl,
-      siteType: normalizedSiteType,
-      checkIn: checkInConfig,
-      accountId,
-      exchangeRate: fields.exchange_rate,
-      includeTodayCashflow,
-      auth: {
-        authType,
-        userId: requestAccountIdentity,
-        accessToken: fields.account_info.access_token,
-        cookie: fields.cookieAuth?.sessionCookie,
+    const freshAccountData = await fetchAccountDataWithCheckInStatus(
+      accountData,
+      {
+        baseUrl: requestBaseUrl,
+        siteType: normalizedSiteType,
+        checkIn: checkInConfig,
+        accountId,
+        exchangeRate: fields.exchange_rate,
+        includeTodayCashflow,
+        auth: {
+          authType,
+          userId: requestAccountIdentity,
+          accessToken: fields.account_info.access_token,
+          cookie: fields.cookieAuth?.sessionCookie,
+        },
       },
-    })
+    )
     const updateData: Partial<
       Omit<SiteAccount, "id" | "created_at" | "updated_at" | "user_updated_at">
     > = {

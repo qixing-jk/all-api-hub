@@ -4,9 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
 import { QUOTA_PER_USD } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
+import { isSelectedCheckInStatusCurrent } from "~/features/AccountManagement/checkInStatus"
 import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSession"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/editing/accountDefaults"
+import { refreshAccountData as refreshNewApiAccountData } from "~/services/apiService/newApiFamily/default/accountRefresh"
 import { refreshAccountData as refreshVoApiV2AccountData } from "~/services/apiService/voapiV2/accountData"
 import * as postSaveDiscovery from "~/services/checkin/autoCheckin/discovery/postSaveDiscovery"
 import { AccountWriteRejectedError } from "~/services/core/accountWriteGuard"
@@ -4053,6 +4055,16 @@ describe("accountStorage core behaviors", () => {
     account.configVersion = 7
     seedStorage([account])
 
+    // A failed readback must retain the adapter's observation and newer edits.
+    server.use(
+      http.get(`${account.site_url}/api/user/checkin`, () =>
+        HttpResponse.json({}, { status: 503 }),
+      ),
+      http.get(`${account.site_url}/api/status`, () =>
+        HttpResponse.json({ success: true, data: { checkin_enabled: true } }),
+      ),
+    )
+
     const deferred = createDeferred<any>()
     mockRefreshAccountData.mockReturnValueOnce(deferred.promise)
     const refreshPromise = accountStorage.refreshAccount(account.id, true)
@@ -4106,11 +4118,228 @@ describe("accountStorage core behaviors", () => {
     expect(
       updated?.checkIn.methodKnowledge.methods["new-api:daily-checkin"]?.status,
     ).toMatchObject({
-      outcome: "known",
-      today: "checked",
-      evidence: { observedAt: 300 },
+      outcome: "unknown",
+      lastKnown: {
+        outcome: "known",
+        today: "checked",
+        evidence: { observedAt: 300 },
+      },
     })
   })
+
+  it.each([
+    { automaticExecutionEnabled: false, adapterReadsStatus: false },
+    { automaticExecutionEnabled: true, adapterReadsStatus: false },
+    { automaticExecutionEnabled: false, adapterReadsStatus: true },
+  ])(
+    "refreshAccount persists today's selected status (automatic: $automaticExecutionEnabled, adapter readback: $adapterReadsStatus)",
+    async ({ automaticExecutionEnabled, adapterReadsStatus }) => {
+      const observedAt = Date.now() - 86_400_000
+      const account = createAccount({
+        id: "common-checkin-refresh",
+        site_type: SITE_TYPES.NEW_API,
+        checkIn: {
+          automaticExecutionEnabled,
+          selection: { mode: "automatic", methodId: "new-api:daily-checkin" },
+          methodKnowledge: {
+            methods: {
+              "new-api:daily-checkin": {
+                detection: {
+                  outcome: "matched",
+                  evidence: { source: "probe", observedAt },
+                },
+                status: {
+                  outcome: "known",
+                  availability: "enabled",
+                  today: "not_checked",
+                  evidence: { source: "probe", observedAt },
+                },
+              },
+            },
+          },
+        },
+      })
+      seedStorage([account])
+      if (adapterReadsStatus) {
+        mockgetSiteTypeCapabilities.mockReturnValue({
+          account: { refresh: { refreshAccount: refreshNewApiAccountData } },
+        })
+      }
+      const readStatus = vi.fn(() =>
+        HttpResponse.json({
+          success: true,
+          data: { enabled: true, stats: { checked_in_today: true } },
+        }),
+      )
+      const claim = vi.fn(() => HttpResponse.json({ success: true }))
+      server.use(
+        http.get(`${account.site_url}/api/user/self`, () =>
+          HttpResponse.json({ success: true, data: { quota: 123 } }),
+        ),
+        http.get(`${account.site_url}/api/user/checkin`, readStatus),
+        http.post(`${account.site_url}/api/user/checkin`, claim),
+      )
+      expect(
+        isSelectedCheckInStatusCurrent({
+          checkIn: account.checkIn,
+          siteType: account.site_type,
+        }),
+      ).toBe(false)
+      const result = await accountStorage.refreshAccount(account.id, true, {
+        includeTodayCashflow: false,
+      })
+      const updated = await accountStorage.getAccountById(account.id)
+      expect(result?.refreshed).toBe(true)
+      expect(
+        updated?.checkIn.methodKnowledge.methods["new-api:daily-checkin"]
+          ?.status,
+      ).toMatchObject({ outcome: "known", today: "checked" })
+      expect(
+        isSelectedCheckInStatusCurrent({
+          checkIn: updated!.checkIn,
+          siteType: account.site_type,
+        }),
+      ).toBe(true)
+      expect(updated?.checkIn.automaticExecutionEnabled).toBe(
+        automaticExecutionEnabled,
+      )
+      expect(readStatus).toHaveBeenCalledOnce()
+      expect(claim).not.toHaveBeenCalled()
+    },
+  )
+
+  it("refreshAccount reads a Sub2API method with the recovered credentials before persisting status", async () => {
+    const observedAt = Date.now() - 86_400_000
+    const account = createAccount({
+      id: "sub2api-status-recovery",
+      site_type: SITE_TYPES.SUB2API,
+      checkIn: {
+        automaticExecutionEnabled: false,
+        selection: {
+          mode: "manual",
+          methodId: "freeapi:daily-checkin",
+        },
+        methodKnowledge: {
+          methods: {
+            "freeapi:daily-checkin": {
+              detection: {
+                outcome: "matched",
+                evidence: { source: "probe", observedAt },
+              },
+              status: {
+                outcome: "known",
+                availability: "enabled",
+                today: "not_checked",
+                evidence: { source: "probe", observedAt },
+              },
+            },
+          },
+        },
+      },
+    })
+    seedStorage([account])
+    mockRefreshAccountData.mockImplementationOnce(async (request) => ({
+      success: true,
+      data: { quota: 123, checkIn: request.checkIn },
+      authUpdate: {
+        accessToken: "recovered-token",
+        sub2apiAuth: { refreshToken: "recovered-refresh" },
+      },
+      healthStatus: { status: SiteHealthStatus.Healthy, message: "" },
+    }))
+    let authorization: string | null = null
+    const readStatus = vi.fn(({ request }: { request: Request }) => {
+      authorization = request.headers.get("authorization")
+      return HttpResponse.json({
+        code: 0,
+        message: "success",
+        data: {
+          enabled: true,
+          checked_in_today: true,
+          min_amount: 0.01,
+          max_amount: 0.1,
+        },
+      })
+    })
+    const claim = vi.fn(() => HttpResponse.json({ code: 0, data: {} }))
+    server.use(
+      http.get(`${account.site_url}/api/v1/user/checkin`, readStatus),
+      http.post(`${account.site_url}/api/v1/user/checkin`, claim),
+    )
+    const refreshResult = await accountStorage.refreshAccount(account.id, true)
+    const updated = await accountStorage.getAccountById(account.id)
+    expect(updated?.health).toMatchObject({ status: SiteHealthStatus.Healthy })
+    expect(refreshResult?.refreshed).toBe(true)
+    expect(readStatus).toHaveBeenCalledOnce()
+    expect(authorization).toBe("Bearer recovered-token")
+    expect(
+      updated?.checkIn.methodKnowledge.methods["freeapi:daily-checkin"]?.status,
+    ).toMatchObject({ outcome: "known", today: "checked" })
+    expect(updated?.checkIn.selection).toEqual(account.checkIn.selection)
+    expect(updated?.checkIn.automaticExecutionEnabled).toBe(false)
+    expect(updated?.account_info.access_token).toBe("recovered-token")
+    expect(updated?.sub2apiAuth?.refreshToken).toBe("recovered-refresh")
+    expect(claim).not.toHaveBeenCalled()
+  })
+
+  it.each(["no-selection", "no-readback", "failed-account-refresh"])(
+    "refreshAccount does not issue a check-in request for %s",
+    async (scenario) => {
+      const observedAt = Date.now() - 86_400_000
+      const account = createAccount({
+        id: "unavailable-status-refresh",
+        site_type: SITE_TYPES.ANYROUTER,
+        checkIn: {
+          automaticExecutionEnabled: false,
+          selection: {
+            mode: "automatic",
+            ...(scenario === "no-selection"
+              ? {}
+              : { methodId: "anyrouter:daily-checkin" as const }),
+          },
+          methodKnowledge: {
+            methods:
+              scenario === "no-selection"
+                ? {}
+                : {
+                    "anyrouter:daily-checkin": {
+                      detection: {
+                        outcome: "matched",
+                        evidence: { source: "probe", observedAt },
+                      },
+                      status: {
+                        outcome: "known",
+                        availability: "enabled",
+                        today: "checked",
+                        evidence: { source: "probe", observedAt },
+                      },
+                    },
+                  },
+          },
+        },
+      })
+      seedStorage([account])
+      if (scenario === "failed-account-refresh") {
+        mockRefreshAccountData.mockResolvedValueOnce({
+          success: false,
+          healthStatus: { status: SiteHealthStatus.Error, message: "Failed" },
+        })
+      }
+      const unexpectedRequest = vi.fn(() =>
+        HttpResponse.json({}, { status: 500 }),
+      )
+      server.use(http.all("*", unexpectedRequest))
+      await accountStorage.refreshAccount(account.id, true)
+      const updated = await accountStorage.getAccountById(account.id)
+      expect(updated?.checkIn).toEqual(account.checkIn)
+      expect(
+        isSelectedCheckInStatusCurrent(
+          accountStorage.convertToDisplayData(updated!),
+        ),
+      ).toBe(false)
+      expect(unexpectedRequest).not.toHaveBeenCalled()
+    },
+  )
 
   it("refreshAccount should not invoke the legacy check-in support probe", async () => {
     const account = createAccount({

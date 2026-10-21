@@ -1,6 +1,10 @@
+// Initialize provider registrations before measuring the shared snapshot queries.
+import "~/services/checkin/autoCheckin/providers"
+
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { fetchAccountDataWithCheckInStatus } from "~/services/accounts/refresh/fetchAccountData"
 import { fetchSupportCheckIn } from "~/services/apiService/newApiFamily/variants/veloera"
 import {
   createChannel,
@@ -771,7 +775,10 @@ describe("apiService veloera channel APIs", () => {
 
     mockFetchApiData.mockResolvedValueOnce({ can_check_in: false })
 
-    const result = await fetchAccountData(request as any)
+    const result = await fetchAccountDataWithCheckInStatus(
+      { fetchData: fetchAccountData },
+      request as any,
+    )
 
     expect(result).toMatchObject({
       quota: 100,

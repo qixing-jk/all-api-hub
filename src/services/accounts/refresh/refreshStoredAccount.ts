@@ -1,5 +1,8 @@
 import { SITE_TYPES } from "~/constants/siteType"
-import type { RefreshAccountResult } from "~/services/accounts/accountDataModel"
+import type {
+  ApiServiceAccountRequest,
+  RefreshAccountResult,
+} from "~/services/accounts/accountDataModel"
 import { normalizeAccountSiteSupplementalAuth } from "~/services/accounts/accountSiteProfile/supplementalAuth"
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
@@ -9,6 +12,7 @@ import { buildAccountRefreshUpdate } from "~/services/accounts/refresh/accountRe
 import { ACCOUNT_REFRESH_SKIP_REASONS } from "~/services/accounts/refresh/constants"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { discoverSavedAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/postSaveDiscovery"
+import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/scheduling/refresh"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import { maybeCaptureDailyBalanceSnapshot } from "~/services/history/dailyBalanceHistory/capture"
 import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler"
@@ -16,6 +20,7 @@ import { userPreferences } from "~/services/preferences/userPreferences"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { getAccountSiteType } from "~/services/siteDetection/detectSiteType"
 import { SiteHealthStatus, type SiteAccount } from "~/types"
+import type { CheckInStatusRefreshOutcome } from "~/types/checkIn"
 import type { DailyBalanceHistoryCaptureSource } from "~/types/dailyBalanceHistory"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import type { DeepPartial } from "~/types/utils"
@@ -54,6 +59,7 @@ export type RefreshAccountOptions = {
 interface StoredAccountRefreshResult {
   account: SiteAccount | null
   refreshed: boolean
+  checkInStatusRefreshOutcome?: CheckInStatusRefreshOutcome
   reEnabled?: boolean
   skippedReason?: (typeof ACCOUNT_REFRESH_SKIP_REASONS)[keyof typeof ACCOUNT_REFRESH_SKIP_REASONS]
 }
@@ -161,7 +167,24 @@ async function runRefreshAttempt(
     result,
     options?.reEnableOnSuccess === true,
   )
+  let checkInStatusRefreshOutcome: CheckInStatusRefreshOutcome | undefined
   const shouldReEnable = updateData.disabled === false
+  if (result.success) {
+    const refreshedAccount = deepOverride<SiteAccount>(account, updateData)
+    result.data.checkIn = await refreshSelectedStatus({
+      onOutcome: (outcome) => {
+        checkInStatusRefreshOutcome = outcome
+      },
+      config: result.data.checkIn ?? account.checkIn,
+      siteType: refreshedAccount.site_type,
+      account: refreshedAccount,
+      request: createAccountRefreshRequest(
+        refreshedAccount,
+        includeTodayCashflow,
+        options,
+      ),
+    })
+  }
   const refreshedCheckIn = result.success ? result.data.checkIn : undefined
   if (result.success) {
     try {
@@ -208,7 +231,14 @@ async function runRefreshAttempt(
     })
   }
   return {
-    result: { account: updatedAccount, refreshed: true, reEnabled },
+    result: {
+      account: updatedAccount,
+      refreshed: true,
+      reEnabled,
+      ...(didPersist && checkInStatusRefreshOutcome
+        ? { checkInStatusRefreshOutcome }
+        : {}),
+    },
     followUpAccount,
   }
 }
@@ -219,6 +249,21 @@ async function fetchAccountRefresh(
   includeTodayCashflow: boolean,
   options?: RefreshAccountOptions,
 ): Promise<RefreshAccountResult> {
+  const accountRefresh = getSiteTypeCapabilities(account.site_type).account
+    ?.refresh
+  return accountRefresh
+    ? await accountRefresh.refreshAccount(
+        createAccountRefreshRequest(account, includeTodayCashflow, options),
+      )
+    : createMissingAccountRefreshResult(account.site_type)
+}
+
+/** Shares credentials and protection context between data and read-only status refreshes. */
+function createAccountRefreshRequest(
+  account: SiteAccount,
+  includeTodayCashflow: boolean,
+  options?: RefreshAccountOptions,
+): ApiServiceAccountRequest {
   const baseUrl = tryParseOrigin(account.site_url) ?? account.site_url
   const auth = {
     authType: account.authType,
@@ -228,25 +273,21 @@ async function fetchAccountRefresh(
     refreshToken: account.sub2apiAuth?.refreshToken,
     tokenExpiresAt: account.sub2apiAuth?.tokenExpiresAt,
   }
-  const accountRefresh = getSiteTypeCapabilities(account.site_type).account
-    ?.refresh
-  return accountRefresh
-    ? await accountRefresh.refreshAccount({
-        baseUrl,
-        accountId: account.id,
-        checkIn: account.checkIn,
-        siteType: account.site_type,
-        exchangeRate: account.exchange_rate,
-        auth,
-        includeTodayCashflow,
-        ...(options?.tempWindowRequestSource
-          ? { tempWindowRequestSource: options.tempWindowRequestSource }
-          : {}),
-        ...(options?.protectionBypassExecution
-          ? { protectionBypassExecution: options.protectionBypassExecution }
-          : {}),
-      })
-    : createMissingAccountRefreshResult(account.site_type)
+  return {
+    baseUrl,
+    accountId: account.id,
+    checkIn: account.checkIn,
+    siteType: account.site_type,
+    exchangeRate: account.exchange_rate,
+    auth,
+    includeTodayCashflow,
+    ...(options?.tempWindowRequestSource
+      ? { tempWindowRequestSource: options.tempWindowRequestSource }
+      : {}),
+    ...(options?.protectionBypassExecution
+      ? { protectionBypassExecution: options.protectionBypassExecution }
+      : {}),
+  }
 }
 
 /** Runs optional discovery and schedules history after the refresh lock is released. */

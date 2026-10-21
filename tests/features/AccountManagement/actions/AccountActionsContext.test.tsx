@@ -597,6 +597,25 @@ describe("AccountActionsContext", () => {
     )
   })
 
+  it("reports partial success when account data refreshed but the check-in query failed", async () => {
+    const { getContext } = await renderContext()
+    mockRefreshAccount.mockResolvedValueOnce({
+      refreshed: true,
+      checkInStatusRefreshOutcome: "unavailable",
+    })
+    await act(async () => {
+      await getContext().handleRefreshAccount(createAccount({ id: "partial" }))
+    })
+    await expect(atIndex(mockToast.promise.mock.calls, 0)[0]).resolves.toBe(
+      "account:list.site.checkInRefreshPartial",
+    )
+    expect(mockLoadAccountData).toHaveBeenCalledOnce()
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      expect.anything(),
+    )
+  })
+
   it("does not attempt to refresh disabled accounts", async () => {
     const { getContext } = await renderContext()
 

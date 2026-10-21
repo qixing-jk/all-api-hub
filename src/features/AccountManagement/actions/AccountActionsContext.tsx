@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react"
 
+import { CHECK_IN_STATUS_REFRESH_OUTCOMES } from "~/constants/checkIn"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import { openExternalCheckIns } from "~/features/AccountManagement/utils/openExternalCheckIns"
 import toast from "~/lib/notify"
@@ -154,6 +155,9 @@ export const AccountActionsProvider = ({
                     })
                     return t("messages:toast.success.refreshSkipped")
                   }
+                  const partial =
+                    result.checkInStatusRefreshOutcome ===
+                    CHECK_IN_STATUS_REFRESH_OUTCOMES.Unavailable
                   analyticsCompleted = true
                   tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
                     diagnostics: buildAccountRefreshDiagnostics({
@@ -167,6 +171,10 @@ export const AccountActionsProvider = ({
                       skippedCount: 0,
                     }),
                   })
+                  if (partial)
+                    return t("account:list.site.checkInRefreshPartial", {
+                      accountName: account.name,
+                    })
                   return t("messages:toast.success.refreshAccount", {
                     accountName: account.name,
                   })

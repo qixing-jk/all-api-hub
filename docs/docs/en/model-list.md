@@ -37,6 +37,10 @@ Available information differs by source:
 | Specific Account | Depends on its adapter | Some sources provide prices, multipliers, and groups; others provide only a model catalog |
 | API Credential | Usually unavailable | Primarily for model discovery and verification |
 
+A provider-wide catalogue describes published models and prices, without guaranteeing availability for a particular key or plan. Key matching and verification actions appear only when the source supports them.
+
+Catalogue prices may cover only some billing conditions. Use the official link to check group, long-context and image rules. Discounts already included in display prices are not applied twice; a zero value with unknown billing meaning is not treated as free.
+
 ### 2. Search, Filter, and Sort
 
 - **Search**: Matches model ID, display name, and description; it does not search site names.
@@ -61,7 +65,9 @@ Click **`One-click Price Comparison`** to clear current filters, switch to All A
 
 Price labels mean:
 
-- **Estimated Price**: Calculated from available price and group information for filtering. The provider's bill remains authoritative.
+- **Regular prices**: Explicit prices and billing rules from the site are shown directly without a precision badge. Group, tier and time conditions are explained separately.
+- **Converted**: Displayed in another currency using the current exchange rate; the original price is unchanged.
+- **Estimated Price**: Calculated using reference rates, group multipliers or credit-conversion assumptions. The provider's bill remains authoritative.
 - **Lowest Price**: The lowest comparable quote under the current filters and conditions.
 - **Best Group**: Shown only when exactly one comparable group has the lowest price. No group is selected when the lowest price is tied.
 

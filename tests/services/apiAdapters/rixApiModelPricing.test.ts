@@ -313,7 +313,7 @@ describe("Rix API model pricing", () => {
     expect(model?.pricingPlan?.usageMode).toBe(PRICING_USAGE_MODES.REQUEST)
   })
 
-  it("maps per-second prices onto the video meter and marks tiers estimated", () => {
+  it("maps per-second prices onto the video meter and qualifies incomplete conditional pricing", () => {
     const snapshot = normalizeRixApiModelPricingResponse(
       buildEnvelope({ model_info: [cnyTimeRow] }),
     )
@@ -613,7 +613,10 @@ describe("Rix API model pricing", () => {
     })
   })
 
-  it("handles prompt_tiers with multiple tiers", () => {
+  it.each([
+    { prompt_tiers: [{ max: 1000 }, { max: 2000 }] },
+    { rule: "context > 1000" },
+  ])("qualifies a conditional price as estimated: %j", (condition) => {
     const row = {
       id: 103,
       model_name: "test-tiers",
@@ -627,7 +630,7 @@ describe("Rix API model pricing", () => {
                 input_token_price: 1,
                 output_token_price: 2,
               },
-              prompt_tiers: [{ max: 1000 }, { max: 2000 }],
+              ...condition,
             },
           ],
         },
@@ -637,6 +640,9 @@ describe("Rix API model pricing", () => {
       buildEnvelope({ model_info: [row] }),
     )
     expect(snapshot.data[0]?.model_name).toBe("test-tiers")
+    expect(snapshot.data[0]?.price_metadata?.precision).toBe(
+      MODEL_PRICE_PRECISION_KINDS.ESTIMATED,
+    )
   })
 
   it("skips model when row has no pricing configuration", () => {

@@ -1,3 +1,4 @@
+import { CHECK_IN_STATUS_REFRESH_OUTCOMES } from "~/constants/checkIn"
 import {
   refreshStoredAccount,
   type RefreshAccountOptions,
@@ -27,6 +28,7 @@ class AccountRefresh {
     let successCount = 0
     let failedCount = 0
     let refreshedCount = 0
+    let checkInStatusFailedCount = 0
     let latestSyncTime = 0
     results.forEach((result, index) => {
       if (result.status === "fulfilled" && result.value) {
@@ -36,6 +38,11 @@ class AccountRefresh {
           latestSyncTime,
         )
         if (result.value.refreshed) refreshedCount += 1
+        if (
+          result.value.checkInStatusRefreshOutcome ===
+          CHECK_IN_STATUS_REFRESH_OUTCOMES.Unavailable
+        )
+          checkInStatusFailedCount += 1
       } else {
         failedCount += 1
         logger.error("刷新账号失败", {
@@ -51,6 +58,7 @@ class AccountRefresh {
       failed: failedCount,
       latestSyncTime,
       refreshedCount,
+      ...(checkInStatusFailedCount > 0 ? { checkInStatusFailedCount } : {}),
     }
   }
 

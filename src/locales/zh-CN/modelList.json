@@ -107,6 +107,8 @@
     "actions": "操作",
     "filters": "筛选条件"
   },
+  "convertedPrice": "已换算",
+  "convertedPriceTitle": "按当前汇率换算显示，原币种价格不变。",
   "copyAllNames": "复制所有模型名称",
   "currentUsableGroups": "当前账号可用分组",
   "description": "浏览账号与 API 凭据的模型，查看价格、能力和可用性。",
@@ -144,6 +146,7 @@
     "accessReason": "访问条件",
     "auditCharge": "风控拒绝审计费用",
     "auditConsent": "需要提示词审计授权",
+    "baseContextTier": "当前显示基础档，按上下文长度计费",
     "benchmarkTable": {
       "arena": "竞技场",
       "category": "类别",
@@ -157,6 +160,7 @@
     },
     "callExamples": "调用示例",
     "catalogOwner": "目录归属",
+    "catalogScope": "目录范围",
     "compactionCharge": "远程压缩费用",
     "consoleSettings": "前往官网设置",
     "contextLimit": "上下文上限",
@@ -268,8 +272,10 @@
       "request": "次请求",
       "webSearch": "次网络搜索"
     },
+    "pricingConditions": "计价条件",
     "promptAudit": "已启用提示词审计",
     "providerAvailable": "站点可用",
+    "providerReferenceCatalog": "站点公共目录",
     "releaseDate": "发布日期",
     "sections": {
       "specifications": "规格"
@@ -287,7 +293,7 @@
   "endpointType": "端点类型",
   "endpointTypes": "端点类型",
   "estimatedPrice": "估算价",
-  "estimatedPriceTitle": "基于官方价格表和此密钥的 Sub2API 分组倍率估算。",
+  "estimatedPriceTitle": "根据参考费率或计价假设推算；实际费用可能不同。",
   "expandDetails": "展开详细信息",
   "fallbackSourceNotice": {
     "description": "当前模型目录通过账号密钥回退加载，仅支持模型发现与验证。点击刷新数据会重新尝试账号接口。",

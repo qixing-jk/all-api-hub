@@ -92,7 +92,10 @@ describe("Cubence direct Cookie transport", () => {
   })
 
   it("preserves Cookie domain, path, expiry and partition boundaries", async () => {
-    const base = (await browser.cookies.getAll({}))[0]!
+    const base = {
+      ...(await browser.cookies.getAll({}))[0]!,
+      storeId: "private-store",
+    }
     browserBoundary.cookies.mockResolvedValue([
       base,
       { ...base, name: "scoped", value: "allowed", path: "/api/v1/user" },

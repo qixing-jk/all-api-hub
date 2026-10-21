@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import { Badge } from "~/components/ui"
 import { ModelPriceCalculationDetails } from "~/features/ModelList/presentation/ModelItem/ModelPriceCalculationDetails"
+import { ModelPriceEvidenceBadge } from "~/features/ModelList/presentation/ModelItem/ModelPriceEvidenceBadge"
 import { PricingConditionDetails } from "~/features/ModelList/pricing/PricingConditionDetails"
 import {
   getPricingConditionTarget,
@@ -14,6 +15,10 @@ import {
   pricingRangeLabel,
   pricingScenarioOptions,
 } from "~/features/ModelList/pricing/pricingScenarioOptions"
+import {
+  MODEL_PRICE_PRECISION_KINDS,
+  type ModelPricePrecisionKind,
+} from "~/services/modelList/pricingModel"
 import {
   PRICE_RATE_UNITS,
   PRICING_CONDITION_KINDS,
@@ -39,6 +44,7 @@ export function ModelPriceQuote({
   onShowDetails,
   sourceLabel,
   effectiveGroup,
+  pricePrecision,
 }: {
   quote: QuoteResult
   details?: boolean
@@ -47,6 +53,7 @@ export function ModelPriceQuote({
   onShowDetails?: () => void
   sourceLabel?: string
   effectiveGroup?: string
+  pricePrecision?: ModelPricePrecisionKind
 }) {
   const [showCalculation, setShowCalculation] = useState(false)
   const calculationId = useId()
@@ -326,9 +333,13 @@ export function ModelPriceQuote({
             !hasPublishedPrices && (
               <Badge variant="warning">{t("scenario.partial")}</Badge>
             )}
-          {quote.source.kind === PRICING_SOURCE_KINDS.ESTIMATE && (
-            <Badge variant="warning">{t("estimatedPrice")}</Badge>
-          )}
+          <ModelPriceEvidenceBadge
+            kind={
+              quote.source.kind === PRICING_SOURCE_KINDS.ESTIMATE
+                ? MODEL_PRICE_PRECISION_KINDS.ESTIMATED
+                : pricePrecision
+            }
+          />
           {isLowestPrice && quote.status === QUOTE_STATUSES.COMPLETE && (
             <Badge variant="success">{t("scenario.lowest")}</Badge>
           )}

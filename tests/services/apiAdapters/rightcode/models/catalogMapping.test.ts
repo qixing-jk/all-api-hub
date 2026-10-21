@@ -55,7 +55,7 @@ describe("buildRightCodePricingResponse", () => {
     ])
   })
 
-  it("marks tiered models as estimated and prices them from the base tier", () => {
+  it("qualifies base-tier prices while other context tiers are not modeled", () => {
     const snapshot = buildRightCodePricingResponse([
       upstream({
         models: [
@@ -85,6 +85,19 @@ describe("buildRightCodePricingResponse", () => {
     })
     expect(atIndex(snapshot.data, 0).price_metadata?.precision).toBe(
       "estimated",
+    )
+    expect(atIndex(snapshot.data, 0).presentation?.summaryFacts).toContainEqual(
+      {
+        type: "text",
+        label: {
+          translationKey: "displayFacts.pricingConditions",
+          fallback: "Pricing conditions",
+        },
+        value: {
+          translationKey: "displayFacts.baseContextTier",
+          fallback: "Base tier shown; rates vary by context length",
+        },
+      },
     )
   })
 

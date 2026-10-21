@@ -1,6 +1,7 @@
 import {
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
+  CHECK_IN_STATUS_REFRESH_OUTCOMES,
 } from "~/constants/checkIn"
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
@@ -18,10 +19,7 @@ import {
   updateSnapshotWithResult,
 } from "~/services/checkin/autoCheckin/execution/runResults"
 import { AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS } from "~/services/checkin/autoCheckin/providers/shared"
-import {
-  CHECK_IN_STATUS_REFRESH_OUTCOMES,
-  refreshSelectedStatus,
-} from "~/services/checkin/autoCheckin/scheduling/refresh"
+import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/scheduling/refresh"
 import { mergeRunResults } from "~/services/checkin/autoCheckin/scheduling/retryQueue"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
@@ -189,6 +187,18 @@ export async function verifyAccountStatus(
     }
   }
   if (refreshOutcome !== CHECK_IN_STATUS_REFRESH_OUTCOMES.Read) {
+    if (refreshedCheckIn !== account.checkIn) {
+      const saved = await accountCheckInState.prepareAccountForSelectedCheckIn(
+        account.id,
+        refreshedCheckIn,
+        account,
+      )
+      if (!saved)
+        return {
+          outcome: "not_saved" as const,
+          error: t("autoCheckin:messages.error.statusVerificationNotSaved"),
+        }
+    }
     return {
       outcome: "unavailable" as const,
       error: t("autoCheckin:messages.error.statusVerificationFailed"),

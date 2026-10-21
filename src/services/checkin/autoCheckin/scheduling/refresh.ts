@@ -1,8 +1,12 @@
 import {
   CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_DETECTION_OUTCOMES,
+  CHECK_IN_METHOD_STATUS_OUTCOMES,
+  CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
+  CHECK_IN_STATUS_REFRESH_OUTCOMES,
 } from "~/constants/checkIn"
 import type { AccountSiteType } from "~/constants/siteType"
+import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { resolveSelectedCheckInMethod } from "~/services/checkin/autoCheckin/discovery/inspection"
 import type { AutoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers/registry"
@@ -12,16 +16,11 @@ import {
   replaceCheckInMethodStatus,
 } from "~/services/checkin/autoCheckin/state"
 import type { SiteAccount } from "~/types"
-import type { CheckInConfig, CheckInMethodId } from "~/types/checkIn"
-
-export const CHECK_IN_STATUS_REFRESH_OUTCOMES = {
-  Read: "read",
-  Unavailable: "unavailable",
-  Unsupported: "unsupported",
-  NoSelection: "no_selection",
-} as const
-type CheckInStatusRefreshOutcome =
-  (typeof CHECK_IN_STATUS_REFRESH_OUTCOMES)[keyof typeof CHECK_IN_STATUS_REFRESH_OUTCOMES]
+import type {
+  CheckInConfig,
+  CheckInMethodId,
+  CheckInStatusRefreshOutcome,
+} from "~/types/checkIn"
 
 /** Refreshes only the selected method without exposing legacy config fields. */
 export async function refreshSelectedStatus(input: {
@@ -31,6 +30,7 @@ export async function refreshSelectedStatus(input: {
   request?: ApiServiceRequest
   readStatus?: (methodId: CheckInMethodId) => Promise<boolean | undefined>
   registry?: AutoCheckinMethodRegistry
+  timeoutMs?: number
   observedAt?: number
   onOutcome?: (outcome: CheckInStatusRefreshOutcome) => void
 }): Promise<CheckInConfig> {
@@ -44,12 +44,30 @@ export async function refreshSelectedStatus(input: {
   }
 
   const observedAt = input.observedAt ?? Date.now()
+  const failedStatus = () =>
+    replaceCheckInMethodStatus({
+      config: input.config,
+      methodId,
+      status: {
+        outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown,
+        reason: CHECK_IN_METHOD_UNKNOWN_REASON_CODES.SourceUnavailable,
+        attemptedAt: observedAt,
+      },
+    })
   let isCheckedInToday: boolean | undefined
   if (input.readStatus) {
-    isCheckedInToday = await input.readStatus(methodId)
+    try {
+      isCheckedInToday = await runAbortableTask(
+        () => input.readStatus!(methodId),
+        { timeoutMs: input.timeoutMs, signals: [input.request?.abortSignal] },
+      )
+    } catch {
+      input.onOutcome?.(CHECK_IN_STATUS_REFRESH_OUTCOMES.Unavailable)
+      return failedStatus()
+    }
   } else if (input.account || input.request) {
-    // Keep the legacy API-service refresh path free of the executable provider
-    // graph; loading it eagerly creates a cycle through managed-site adapters.
+    // Load executable providers only when the selected method needs a query.
+    // Discovery-only callers do not need the executable provider graph.
     const registry =
       input.registry ??
       (await import("~/services/checkin/autoCheckin/providers"))
@@ -60,13 +78,19 @@ export async function refreshSelectedStatus(input: {
       return input.config
     }
     try {
-      const status = await registration.provider.getStatus({
-        account: input.account,
-        request: input.request,
-        observedAt,
-      })
+      const status = await runAbortableTask(
+        (signal) =>
+          registration.provider.getStatus!({
+            account: input.account,
+            request: input.request
+              ? { ...input.request, abortSignal: signal }
+              : undefined,
+            observedAt,
+          }),
+        { timeoutMs: input.timeoutMs, signals: [input.request?.abortSignal] },
+      )
       input.onOutcome?.(
-        status
+        status?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
           ? CHECK_IN_STATUS_REFRESH_OUTCOMES.Read
           : CHECK_IN_STATUS_REFRESH_OUTCOMES.Unavailable,
       )
@@ -76,7 +100,7 @@ export async function refreshSelectedStatus(input: {
             methodId,
             status,
           })
-        : input.config
+        : failedStatus()
     } catch (error) {
       const statusCode = getHttpStatusCode(error)
       const unsupported = statusCode === 404 || statusCode === 405
@@ -97,12 +121,12 @@ export async function refreshSelectedStatus(input: {
               },
             },
           })
-        : input.config
+        : failedStatus()
     }
   }
   if (typeof isCheckedInToday !== "boolean") {
     input.onOutcome?.(CHECK_IN_STATUS_REFRESH_OUTCOMES.Unavailable)
-    return input.config
+    return failedStatus()
   }
 
   input.onOutcome?.(CHECK_IN_STATUS_REFRESH_OUTCOMES.Read)

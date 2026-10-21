@@ -27,6 +27,7 @@ import { getAccountSiteProductProfile } from "~/services/accounts/accountSitePro
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { withManualAccountDataFetchTimeout } from "~/services/accounts/editing/accountCreationTimeout"
 import { isValidAccount } from "~/services/accounts/editing/accountFormValidation"
+import { fetchAccountDataWithCheckInStatus } from "~/services/accounts/refresh/fetchAccountData"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { userPreferences } from "~/services/preferences/userPreferences"
@@ -248,8 +249,14 @@ export async function validateAndSaveAccount(
       normalizedSiteType,
       getSiteTypeCapabilities(normalizedSiteType).account?.data,
     )
-    const freshAccountData = await withManualAccountDataFetchTimeout(
-      accountDataCapability.fetchData({
+    const freshAccountData = await fetchAccountDataWithCheckInStatus(
+      {
+        fetchData: (request) =>
+          withManualAccountDataFetchTimeout(
+            accountDataCapability.fetchData(request),
+          ),
+      },
+      {
         baseUrl: requestBaseUrl,
         siteType: normalizedSiteType,
         checkIn: checkInConfig,
@@ -262,7 +269,7 @@ export async function validateAndSaveAccount(
           accessToken: fields.account_info.access_token,
           cookie: fields.cookieAuth?.sessionCookie,
         },
-      }),
+      },
     )
     const accountData: Omit<
       SiteAccount,

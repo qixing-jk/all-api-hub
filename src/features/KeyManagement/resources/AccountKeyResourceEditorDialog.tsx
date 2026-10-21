@@ -29,6 +29,7 @@ import type {
   EditableResourceProjection,
   ResourceFailure,
   ResourceFieldDescriptor,
+  ResourceFieldOption,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 
 export type AccountKeyResourceEditorDialogState = {
@@ -41,9 +42,7 @@ export type AccountKeyResourceEditorDialogState = {
   initialValues: EditableResourceProjection
   values: EditableResourceProjection
   feedback?: ResourceFailure | null
-  optionsByField?: Readonly<
-    Record<string, readonly { value: string; displayLabel?: string }[]>
-  >
+  optionsByField?: Readonly<Record<string, readonly ResourceFieldOption[]>>
   optionFailuresByField?: Readonly<Record<string, ResourceFailure | undefined>>
   loadingFieldIds?: readonly string[]
   /** A confirmed mutation keeps the shell mounted long enough for Modal to settle focus. */

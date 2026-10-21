@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -35,6 +35,63 @@ import {
 import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
 import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
 import { calculateModelPrice } from "~/services/models/utils/modelPricing"
+import { render as appRender } from "~~/tests/test-utils/render"
+
+it.each(["exact", "reference"])(
+  "shows published prices without a confidence badge, including legacy cache (%s)",
+  (precision) => {
+    isTokenBillingTypeMock.mockReturnValue(true)
+    const model = createModel({
+      token_price_usd_per_million: { input: 2, output: 10 },
+      price_metadata: { source: "provider-catalog", precision },
+    })
+    render(
+      <ModelItemPricing
+        model={model}
+        calculatedPrice={createCalculatedPrice({ inputUSD: 2, outputUSD: 10 })}
+        exchangeRate={7}
+        showRealPrice={false}
+        showPricing
+        isAvailableForUser
+        groupRatios={{}}
+      />,
+    )
+    expect(screen.queryByText("referencePrice")).not.toBeInTheDocument()
+    expect(screen.getByText("USD:2/M")).toBeVisible()
+    expect(screen.getByText("USD:10/M")).toBeVisible()
+    expect(screen.queryByText("estimatedPrice")).not.toBeInTheDocument()
+  },
+)
+
+it.each([true, false])(
+  "shows native published USD rates normally (CNY=%s)",
+  (showRealPrice) => {
+    const model = createModel({
+      price_metadata: { source: "provider-catalog", precision: "exact" },
+    })
+    render(
+      <ModelItemPricing
+        model={model}
+        calculatedPrice={{
+          ...createCalculatedPrice(),
+          perMillionTokens: {
+            input: { amount: 2, currency: "USD" },
+            output: { amount: 10, currency: "USD" },
+          },
+        }}
+        exchangeRate={7}
+        showRealPrice={showRealPrice}
+        showPricing
+        isAvailableForUser
+        groupRatios={{}}
+      />,
+    )
+    expect(screen.queryByText("referencePrice")).not.toBeInTheDocument()
+    expect(screen.queryByText("estimatedPrice")).not.toBeInTheDocument()
+    if (showRealPrice) expect(screen.getByText("convertedPrice")).toBeVisible()
+    else expect(screen.queryByText("convertedPrice")).not.toBeInTheDocument()
+  },
+)
 
 it.each([true, false])(
   "shows published CNY rates while browsing (CNY=%s)",
@@ -79,7 +136,13 @@ it.each([true, false])(
     expect(
       screen.queryByText("unavailablePriceReasons.pricingSourceUnavailable"),
     ).not.toBeInTheDocument()
-    if (!showRealPrice) expect(screen.getByText("estimatedPrice")).toBeVisible()
+    if (!showRealPrice) {
+      expect(screen.getByText("convertedPrice")).toHaveAttribute(
+        "title",
+        "convertedPriceTitle",
+      )
+      expect(screen.queryByText("estimatedPrice")).not.toBeInTheDocument()
+    }
   },
 )
 
@@ -203,6 +266,13 @@ const { formatPriceCompactMock, isTokenBillingTypeMock } = vi.hoisted(() => ({
   ),
   isTokenBillingTypeMock: vi.fn(),
 }))
+
+// These presentational components receive their state through props.
+const render = (ui: Parameters<typeof appRender>[0]) =>
+  appRender(ui, {
+    withUserPreferencesProvider: false,
+    withThemeProvider: false,
+  })
 
 vi.mock("~/services/apiService/kimiOpenPlatform", () => ({
   fetchKimiAccountModelCatalog: vi.fn(),

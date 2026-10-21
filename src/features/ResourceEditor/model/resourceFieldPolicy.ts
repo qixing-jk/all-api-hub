@@ -62,6 +62,10 @@ type ResourceFieldPresentationBase<TSection extends string = string> = {
   optionLabelResolvers?: Readonly<Record<string, ResourceFieldTextResolver>>
   /** Unknown option labels may depend on the native value, such as a provider slug. */
   resolveOptionFallback?: (t: TFunction, value?: string) => string
+  /** Selected values are an ordered routing list, not an unordered set. */
+  ordered?: boolean
+  /** Show decision-making information for a small provider-owned catalogue. */
+  multiSelectLayout?: "cards"
   optionSourceFieldIds?: readonly string[]
   customValuesMirrorFieldId?: string
   autoSelectFirstOption?: boolean

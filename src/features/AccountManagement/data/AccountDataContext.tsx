@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next" // 1. 定义 Context 的值类型
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountSnapshot } from "~/features/AccountManagement/data/useAccountSnapshot"
 import { useAccountBrowsingContext } from "~/features/AccountManagement/opening/useAccountBrowsingContext"
+import { getAccountRefreshFeedback } from "~/features/AccountManagement/refreshFeedback"
 import { useAccountEntryLayout } from "~/features/AccountManagement/workspace/useAccountEntryLayout"
 import toast from "~/lib/notify"
 import { accountRefresh } from "~/services/accounts/accountStorage/accountRefresh"
@@ -102,6 +103,7 @@ interface AccountDataContextType {
     failed: number
     latestSyncTime?: number
     refreshedCount: number
+    checkInStatusFailedCount?: number
   }>
   handleRefreshDisabledAccounts: (force?: boolean) => Promise<{
     processedCount: number
@@ -349,30 +351,7 @@ export const AccountDataProvider = ({
               refreshAccounts(execution, false, tempWindowRequestSource),
               {
                 loading: t("refresh.refreshingAll"),
-                success: (result) => {
-                  if (result.failed > 0) {
-                    return t("refresh.refreshComplete", {
-                      success: result.success,
-                      failed: result.failed,
-                    })
-                  }
-                  const sum = result.success + result.failed
-
-                  // 避免无账号时，进行成功提示
-                  if (sum === 0) {
-                    return null
-                  }
-
-                  const { refreshedCount } = result
-                  if (refreshedCount < sum) {
-                    return t("refresh.refreshPartialSkipped", {
-                      success: refreshedCount,
-                      skipped: sum - refreshedCount,
-                    })
-                  }
-                  logger.debug("打开插件时自动刷新完成")
-                  return t("refresh.refreshSuccess")
-                },
+                success: (result) => getAccountRefreshFeedback(result, t),
                 error: t("refresh.refreshFailed"),
               },
             )

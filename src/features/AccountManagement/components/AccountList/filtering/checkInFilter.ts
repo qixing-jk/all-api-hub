@@ -1,22 +1,18 @@
 import {
-  CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
-  CHECK_IN_METHOD_STATUS_OUTCOMES,
-  CHECK_IN_METHOD_TODAY_STATUSES,
-  CHECK_IN_SELECTION_STATUSES,
-} from "~/constants/checkIn"
-import { isCheckInStatusDetectedToday } from "~/features/AccountManagement/components/AccountList/rows/checkInStatus"
-import {
-  getSelectedCheckInStatus,
-  inspectAccountCheckIn,
-} from "~/services/checkin/autoCheckin/discovery/inspection"
+  getSiteCheckInDisplayState,
+  SITE_CHECK_IN_DISPLAY_KINDS,
+} from "~/features/AccountManagement/checkInStatus"
 import type { DisplaySiteData } from "~/types"
-import { getDayKeyFromUnixSeconds } from "~/utils/core/dayKey"
 
 export const ACCOUNT_CHECK_IN_FILTER_VALUES = {
   CheckedIn: "checked-in",
   NotCheckedIn: "not-checked-in",
   Outdated: "outdated",
-  StatusUnavailable: "status-unavailable",
+  Pending: "pending",
+  QueryFailed: "query-failed",
+  Manual: "manual",
+  Configuration: "configuration",
+  SiteDisabled: "site-disabled",
   Unsupported: "unsupported",
 } as const
 export type AccountCheckInFilterValue =
@@ -27,38 +23,13 @@ export const ACCOUNT_CHECK_IN_FILTER_OPTION_ORDER: AccountCheckInFilterValue[] =
     ACCOUNT_CHECK_IN_FILTER_VALUES.CheckedIn,
     ACCOUNT_CHECK_IN_FILTER_VALUES.NotCheckedIn,
     ACCOUNT_CHECK_IN_FILTER_VALUES.Outdated,
-    ACCOUNT_CHECK_IN_FILTER_VALUES.StatusUnavailable,
+    ACCOUNT_CHECK_IN_FILTER_VALUES.Pending,
+    ACCOUNT_CHECK_IN_FILTER_VALUES.QueryFailed,
+    ACCOUNT_CHECK_IN_FILTER_VALUES.Manual,
+    ACCOUNT_CHECK_IN_FILTER_VALUES.Configuration,
+    ACCOUNT_CHECK_IN_FILTER_VALUES.SiteDisabled,
     ACCOUNT_CHECK_IN_FILTER_VALUES.Unsupported,
   ]
-
-/** Returns whether the selected method status was observed for the current day. */
-export function isSelectedCheckInStatusCurrent(
-  account: Pick<DisplaySiteData, "checkIn" | "siteType"> &
-    Partial<Pick<DisplaySiteData, "baseUrl">>,
-): boolean {
-  const status = getSelectedCheckInStatus({
-    config: account.checkIn,
-    siteType: account.siteType,
-    siteUrl: account.baseUrl,
-  })
-  if (!status || status.outcome !== CHECK_IN_METHOD_STATUS_OUTCOMES.Known) {
-    return false
-  }
-
-  if (
-    status.evidence.source === CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe ||
-    status.evidence.source === CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Execution
-  ) {
-    return isCheckInStatusDetectedToday(status.evidence.observedAt)
-  }
-
-  if (status.evidence.legacyObservedAt !== undefined) {
-    return isCheckInStatusDetectedToday(status.evidence.legacyObservedAt)
-  }
-
-  const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
-  return status.evidence.legacyDayKey === todayKey
-}
 
 /**
  * Maps combined site/custom check-in state into one stable filter bucket.
@@ -69,44 +40,30 @@ export function getAccountCheckInFilterValue(
   const hasCustomCheckIn =
     typeof account.checkIn.customCheckIn?.url === "string" &&
     account.checkIn.customCheckIn.url.trim() !== ""
-  const selectedStatus = getSelectedCheckInStatus({
-    config: account.checkIn,
-    siteType: account.siteType,
-    siteUrl: account.baseUrl,
-  })
+  const siteState = getSiteCheckInDisplayState(account)
   const siteCheckedInToday =
-    selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
-      ? selectedStatus.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked
-        ? true
-        : selectedStatus.today === CHECK_IN_METHOD_TODAY_STATUSES.NotChecked
-          ? false
-          : undefined
+    siteState?.kind === SITE_CHECK_IN_DISPLAY_KINDS.Current
+      ? siteState.checkedIn
       : undefined
   const siteStatusKnown = siteCheckedInToday !== undefined
-  const siteStatusOutdated =
-    siteStatusKnown && !isSelectedCheckInStatusCurrent(account)
   const customCheckedIn =
     account.checkIn.customCheckIn?.isCheckedInToday === true
-
-  if (siteStatusOutdated) {
-    return ACCOUNT_CHECK_IN_FILTER_VALUES.Outdated
+  switch (siteState?.kind) {
+    case SITE_CHECK_IN_DISPLAY_KINDS.Outdated:
+      return ACCOUNT_CHECK_IN_FILTER_VALUES.Outdated
+    case SITE_CHECK_IN_DISPLAY_KINDS.Pending:
+      return ACCOUNT_CHECK_IN_FILTER_VALUES.Pending
+    case SITE_CHECK_IN_DISPLAY_KINDS.Failed:
+      return ACCOUNT_CHECK_IN_FILTER_VALUES.QueryFailed
+    case SITE_CHECK_IN_DISPLAY_KINDS.Manual:
+      return ACCOUNT_CHECK_IN_FILTER_VALUES.Manual
+    case SITE_CHECK_IN_DISPLAY_KINDS.Configuration:
+      return ACCOUNT_CHECK_IN_FILTER_VALUES.Configuration
+    case SITE_CHECK_IN_DISPLAY_KINDS.SiteDisabled:
+      return ACCOUNT_CHECK_IN_FILTER_VALUES.SiteDisabled
   }
-
-  if (!siteStatusKnown) {
-    const selectionState = inspectAccountCheckIn({
-      config: account.checkIn,
-      siteType: account.siteType,
-      siteUrl: account.baseUrl,
-    }).selectionState
-
-    if (selectionState.status === CHECK_IN_SELECTION_STATUSES.Selected) {
-      return ACCOUNT_CHECK_IN_FILTER_VALUES.StatusUnavailable
-    }
-
-    if (!hasCustomCheckIn) {
-      return ACCOUNT_CHECK_IN_FILTER_VALUES.Unsupported
-    }
-  }
+  if (!siteState && !hasCustomCheckIn)
+    return ACCOUNT_CHECK_IN_FILTER_VALUES.Unsupported
 
   const siteFlowChecked = !siteStatusKnown || siteCheckedInToday === true
   const customFlowChecked = !hasCustomCheckIn || customCheckedIn

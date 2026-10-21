@@ -1,4 +1,3 @@
-import { SITE_TYPES } from "~/constants/siteType"
 import type {
   AccountData,
   ApiServiceAccountRequest,
@@ -12,8 +11,7 @@ import {
 } from "~/services/apiService/newApiFamily/default/accountData"
 import { getTodayTimestampRange } from "~/services/apiService/newApiFamily/default/accountDataUtils"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import { refreshSelectedStatus } from "~/services/checkin/autoCheckin/scheduling/refresh"
-import { SiteHealthStatus, type CheckInConfig } from "~/types"
+import { SiteHealthStatus } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
@@ -34,7 +32,6 @@ export async function fetchSupportCheckIn(
 export async function fetchAccountData(
   request: ApiServiceAccountRequest,
 ): Promise<AccountData> {
-  const checkIn: CheckInConfig = request.checkIn
   const timestampRange = getTodayTimestampRange()
 
   const quotaPromise = fetchAccountQuota(request)
@@ -58,13 +55,7 @@ export async function fetchAccountData(
       ...todayUsage.todayStatsAvailability,
       ...todayIncome.todayStatsAvailability,
     },
-    // AnyRouter has no verified read-only status operation. Its apparent
-    // status endpoint mutates by signing in, so ordinary refresh is a no-op.
-    checkIn: await refreshSelectedStatus({
-      config: checkIn,
-      siteType: request.siteType ?? SITE_TYPES.ANYROUTER,
-      readStatus: async () => undefined,
-    }),
+    checkIn: request.checkIn,
   }
 }
 

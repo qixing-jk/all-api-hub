@@ -250,8 +250,16 @@ export function useAccountListViewModel({
           return t("filter.checkIn.not-checked-in")
         case ACCOUNT_CHECK_IN_FILTER_VALUES.Outdated:
           return t("filter.checkIn.outdated")
-        case ACCOUNT_CHECK_IN_FILTER_VALUES.StatusUnavailable:
-          return t("filter.checkIn.status-unavailable")
+        case ACCOUNT_CHECK_IN_FILTER_VALUES.Pending:
+          return t("filter.checkIn.pending")
+        case ACCOUNT_CHECK_IN_FILTER_VALUES.QueryFailed:
+          return t("filter.checkIn.query-failed")
+        case ACCOUNT_CHECK_IN_FILTER_VALUES.Manual:
+          return t("filter.checkIn.manual")
+        case ACCOUNT_CHECK_IN_FILTER_VALUES.Configuration:
+          return t("filter.checkIn.configuration")
+        case ACCOUNT_CHECK_IN_FILTER_VALUES.SiteDisabled:
+          return t("filter.checkIn.site-disabled")
         case ACCOUNT_CHECK_IN_FILTER_VALUES.Unsupported:
         default:
           return t("filter.checkIn.unsupported")

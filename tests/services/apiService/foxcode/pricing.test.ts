@@ -172,6 +172,7 @@ it("projects native USD token and request rates with channel multipliers through
   })
   expect(catalog.groupRatios).toEqual({ official: 8, discount: 0.25 })
   const model = catalog.data.find((model) => model.model_name === "claude")!
+  expect(model.price_metadata?.precision).toBe("exact")
   expect(
     calculateModelPrice(model, catalog.groupRatios.official!),
   ).toMatchObject({

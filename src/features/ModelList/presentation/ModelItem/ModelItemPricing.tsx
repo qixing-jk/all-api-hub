@@ -13,6 +13,10 @@ import {
 } from "~/features/ModelList/groups/groupSelectionScopes"
 import { ModelItemPerCallPricingView } from "~/features/ModelList/presentation/ModelItem/ModelItemPerCallPricingView"
 import { PriceView } from "~/features/ModelList/presentation/ModelItem/ModelItemPicingView"
+import {
+  MODEL_PRICE_EVIDENCE_KINDS,
+  ModelPriceEvidenceBadge,
+} from "~/features/ModelList/presentation/ModelItem/ModelPriceEvidenceBadge"
 import { ModelPriceQuote } from "~/features/ModelList/presentation/ModelItem/ModelPriceQuote"
 import { ModelQuotaPricing } from "~/features/ModelList/presentation/ModelItem/ModelQuotaPricing"
 import {
@@ -271,18 +275,11 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
       {priceMetaLabel}
     </Badge>
   ) : null
-  const estimatedPriceMeta =
-    model.price_metadata?.precision ===
-    MODEL_PRICE_PRECISION_KINDS.ESTIMATED ? (
-      <Badge
-        variant="warning"
-        size="sm"
-        className="text-3xs shrink-0 sm:text-xs"
-        title={t("estimatedPriceTitle")}
-      >
-        {t("estimatedPrice")}
-      </Badge>
-    ) : null
+  const priceEvidence = (
+    <ModelPriceEvidenceBadge kind={model.price_metadata?.precision} />
+  )
+  const hasPriceEvidence =
+    model.price_metadata?.precision === MODEL_PRICE_PRECISION_KINDS.ESTIMATED
 
   if (
     calculatedPrice.quote &&
@@ -296,6 +293,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
         onShowDetails={onShowDetails}
         sourceLabel={sourceLabel}
         effectiveGroup={effectiveGroup}
+        pricePrecision={model.price_metadata?.precision}
       />
     )
 
@@ -319,10 +317,11 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
           isAvailableForUser={isAvailableForUser}
           formatPriceCompact={formatPriceCompact}
         />
-        {!showRealPrice && (
-          <Badge variant="warning" size="sm" title={t("estimatedPriceTitle")}>
-            {t("estimatedPrice")}
-          </Badge>
+        {priceEvidence}
+        {nativePrices.currency !== (showRealPrice ? "CNY" : "USD") && (
+          <ModelPriceEvidenceBadge
+            kind={MODEL_PRICE_EVIDENCE_KINDS.CONVERTED}
+          />
         )}
       </div>
     )
@@ -361,7 +360,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
             formatPriceCompact={formatPriceCompact}
           />
 
-          {(priceMeta || estimatedPriceMeta || hasContextTiers) && (
+          {(priceMeta || hasPriceEvidence || hasContextTiers) && (
             <div className="gap-y-density-1-5 sm:gap-y-density-2 flex flex-wrap items-center gap-x-1.5 sm:gap-x-2">
               {hasContextTiers && (
                 <Badge
@@ -380,7 +379,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
                 </Badge>
               )}
               {priceMeta}
-              {estimatedPriceMeta}
+              {priceEvidence}
             </div>
           )}
         </div>
@@ -398,7 +397,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
               tokenBillingType={tokenBillingType}
             />
             {priceMeta}
-            {estimatedPriceMeta}
+            {priceEvidence}
           </div>
         )
       )}

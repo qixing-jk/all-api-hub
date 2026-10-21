@@ -11,6 +11,8 @@
     "import": "导入",
     "loadField": "获取{{field}}",
     "more": "更多",
+    "moveDownItem": "下移{{name}}",
+    "moveUpItem": "上移{{name}}",
     "openSidePanel": "在侧边栏中打开",
     "refresh": "刷新",
     "refreshField": "刷新{{field}}",

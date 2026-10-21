@@ -1,7 +1,11 @@
+// Initialize provider registrations before measuring the shared snapshot queries.
+import "~/services/checkin/autoCheckin/providers"
+
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { SITE_TYPES } from "~/constants/siteType"
+import { fetchAccountDataWithCheckInStatus } from "~/services/accounts/refresh/fetchAccountData"
 import {
   defaultAccountDataImplementation,
   fetchAccountData,
@@ -804,6 +808,18 @@ describe("newApiFamily accountData", () => {
     })
   })
 
+  it("fetchAccountData does not query a selected check-in method", async () => {
+    mockFetchApiData.mockResolvedValue({ quota: 321 })
+    const checkIn = createCheckInConfig(SITE_TYPES.NEW_API)
+    const result = await fetchAccountData({
+      ...baseRequest,
+      includeTodayCashflow: false,
+      checkIn,
+    })
+    expect(result.checkIn).toBe(checkIn)
+    expect(mockFetchApiData).toHaveBeenCalledTimes(1)
+  })
+
   it("fetchAccountData preserves check-in knowledge when no method is selected", async () => {
     mockFetchApiData.mockResolvedValueOnce({ quota: 321 })
 
@@ -829,7 +845,7 @@ describe("newApiFamily accountData", () => {
     })
   })
 
-  it("fetchAccountData maps refresh results into selected-method status", async () => {
+  it("public account snapshot maps refresh results into selected-method status", async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-03-28T12:00:00.000Z"))
     mockFetchApiData.mockImplementation((_request, { endpoint }) => {
@@ -859,10 +875,13 @@ describe("newApiFamily accountData", () => {
 
       return Promise.reject(new Error(`Unexpected endpoint: ${endpoint}`))
     })
-    const result = await fetchAccountData({
-      ...baseRequest,
-      checkIn: createCheckInConfig(SITE_TYPES.NEW_API),
-    })
+    const result = await fetchAccountDataWithCheckInStatus(
+      { fetchData: fetchAccountData },
+      {
+        ...baseRequest,
+        checkIn: createCheckInConfig(SITE_TYPES.NEW_API),
+      },
+    )
 
     expect(
       getSelectedCheckInStatus({
@@ -881,7 +900,7 @@ describe("newApiFamily accountData", () => {
     vi.useRealTimers()
   })
 
-  it("fetchAccountData marks only the selected method unsupported on 404", async () => {
+  it("public account snapshot marks only the selected method unsupported on 404", async () => {
     mockFetchApiData.mockImplementation((_request, { endpoint }) => {
       if (endpoint === "/api/user/self") {
         return Promise.resolve({ quota: 99 })
@@ -902,10 +921,13 @@ describe("newApiFamily accountData", () => {
       return Promise.reject(new Error(`Unexpected endpoint: ${endpoint}`))
     })
 
-    const result = await fetchAccountData({
-      ...baseRequest,
-      checkIn: createCheckInConfig(SITE_TYPES.NEW_API),
-    })
+    const result = await fetchAccountDataWithCheckInStatus(
+      { fetchData: fetchAccountData },
+      {
+        ...baseRequest,
+        checkIn: createCheckInConfig(SITE_TYPES.NEW_API),
+      },
+    )
     const methodId = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
 
     expect(result.checkIn?.methodKnowledge.methods[methodId]).toMatchObject({

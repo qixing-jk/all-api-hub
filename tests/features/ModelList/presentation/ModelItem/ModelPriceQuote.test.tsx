@@ -62,6 +62,34 @@ const plan: PricingPlan = {
   issues: [],
 }
 
+it.each([
+  ["exact", "catalog", null],
+  ["estimated", "catalog", "estimatedPrice"],
+  ["exact", "estimate", "estimatedPrice"],
+] as const)(
+  "retains %s evidence for a %s quote",
+  async (precision, source, label) => {
+    const quote = quoteModelPrice(
+      { ...plan, source: { kind: source } },
+      {
+        purpose: "token-index",
+        inputTokens: 1,
+        usage: { input: 1 },
+      },
+    )
+    render(<ModelPriceQuote quote={quote} pricePrecision={precision} />)
+    await screen.findByText("modelList:scenario.calculationDetails")
+    if (label) expect(screen.getByText(`modelList:${label}`)).toBeVisible()
+    else
+      expect(
+        screen.queryByText("modelList:estimatedPrice"),
+      ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("modelList:referencePrice"),
+    ).not.toBeInTheDocument()
+  },
+)
+
 it("omits a neutral group multiplier without a group while retaining currency conversion", async () => {
   const quote = quoteModelPrice(
     plan,

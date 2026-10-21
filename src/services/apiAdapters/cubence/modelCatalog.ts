@@ -82,7 +82,7 @@ export function buildCubenceCatalog(
         price_metadata: priced
           ? {
               source: "provider-catalog",
-              precision: "estimated",
+              precision: "exact",
               source_url: "https://docs.cubence.com/en/docs/guides/pricing",
             }
           : {

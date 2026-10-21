@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { useLocalDayChange } from "~/hooks/useLocalDayChange"
 import { accountCheckInState } from "~/services/accounts/accountStorage/accountCheckInState"
 import { accountPresentation } from "~/services/accounts/accountStorage/accountPresentation"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
@@ -409,6 +410,12 @@ export function useAccountSnapshot({
       tagStore,
     ],
   )
+
+  // Reload persisted observations so rows and memoized filters cross days together.
+  // This performs no provider requests and never executes a check-in.
+  useLocalDayChange(() => {
+    void loadAccountData()
+  })
 
   // 监听后台自动刷新的更新通知
   useEffect(() => {

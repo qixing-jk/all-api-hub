@@ -7,6 +7,7 @@ import {
   SelectValue,
   Spinner,
 } from "~/components/ui"
+import { OrderedResourceSelection } from "~/features/ResourceEditor/components/OrderedResourceSelection"
 import { ResourceFieldLabel } from "~/features/ResourceEditor/components/ResourceFieldLabel"
 import { ResourceAutomaticOptionFeedback } from "~/features/ResourceEditor/components/ResourceOptionLoadFeedback"
 import type {
@@ -284,29 +285,131 @@ export function NativeResourceChoiceField<TSection extends string>({
       </div>
     )
   }
+  const selectedValues = normalizeResourceList(
+    readResourceList(values, descriptor.fieldId),
+  )
+  // Before the first loader effect runs, options have no state yet. Keep the
+  // saved draft intact while withholding unresolved fallback labels from view.
+  const waitingForSelectedLabels =
+    !isManualOptionLoader &&
+    (isAutomaticallyLoadingOptions ||
+      (optionState === undefined &&
+        descriptor.optionLoader !== undefined &&
+        context.onLoadOptions !== undefined)) &&
+    selectedValues.some((value) => !optionsByValue.has(value))
+
   return (
     <div key={descriptor.fieldId}>
       <ResourceFieldLabel required={descriptor.required}>
         {label}
       </ResourceFieldLabel>
-      <CompactMultiSelect
-        loading={isAutomaticallyLoadingOptions}
-        options={loadedOptions.map((option) => ({
-          value: option.value,
-          label: option.displayLabel ?? option.value,
-        }))}
-        selected={readResourceList(values, descriptor.fieldId)}
-        onChange={(nextValue) =>
-          onValueChange(descriptor.fieldId, normalizeResourceList(nextValue))
-        }
-        disabled={fieldDisabled || controlledOptionUnavailable}
-        allowCustom
-        placeholder={presentation.resolvePlaceholder?.(t)}
-        aria-label={label}
-        aria-invalid={Boolean(errorMessage)}
-        aria-describedby={describedBy}
-        aria-required={descriptor.required}
-      />
+      {presentation.multiSelectLayout === "cards" ? (
+        <div
+          id={id}
+          role="group"
+          aria-label={label}
+          aria-describedby={describedBy}
+          aria-invalid={Boolean(errorMessage)}
+          aria-busy={isAutomaticallyLoadingOptions || waitingForSelectedLabels}
+          className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+        >
+          {[...optionsByValue.values()].map((option, index) => (
+            <label
+              key={option.value}
+              className="border-border bg-background text-foreground has-checked:border-primary has-checked:bg-accent has-checked:text-accent-foreground has-focus-visible:ring-ring flex min-w-0 cursor-pointer items-start gap-2 rounded-md border px-3 py-2 text-sm has-focus-visible:ring-2 has-disabled:cursor-not-allowed has-disabled:opacity-50"
+            >
+              <input
+                type="checkbox"
+                checked={selectedValues.includes(option.value)}
+                disabled={
+                  fieldDisabled ||
+                  controlledOptionUnavailable ||
+                  waitingForSelectedLabels
+                }
+                aria-label={option.displayLabel ?? option.value}
+                aria-describedby={
+                  option.description ? `${id}-option-${index}` : undefined
+                }
+                className="accent-primary mt-1 size-3.5 shrink-0"
+                onChange={(event) =>
+                  onValueChange(
+                    descriptor.fieldId,
+                    event.target.checked
+                      ? [...selectedValues, option.value]
+                      : selectedValues.filter(
+                          (value) => value !== option.value,
+                        ),
+                  )
+                }
+              />
+              <span className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-baseline gap-x-2">
+                  <span className="font-medium break-words">
+                    {option.displayLabel ?? option.value}
+                  </span>
+                  {option.secondaryLabel && (
+                    <span className="text-muted-foreground text-xs">
+                      {option.secondaryLabel}
+                    </span>
+                  )}
+                </span>
+                {option.description && (
+                  <span
+                    id={`${id}-option-${index}`}
+                    className="text-muted-foreground mt-1 block text-xs break-words"
+                  >
+                    {option.description}
+                  </span>
+                )}
+              </span>
+            </label>
+          ))}
+          {isAutomaticallyLoadingOptions && (
+            <Spinner
+              size="sm"
+              aria-label={t("common:status.loadingField", { field: label })}
+            />
+          )}
+        </div>
+      ) : (
+        <CompactMultiSelect
+          loading={isAutomaticallyLoadingOptions || waitingForSelectedLabels}
+          options={loadedOptions.map((option) => ({
+            value: option.value,
+            label: option.displayLabel ?? option.value,
+          }))}
+          selected={waitingForSelectedLabels ? [] : selectedValues}
+          onChange={(nextValue) =>
+            onValueChange(descriptor.fieldId, normalizeResourceList(nextValue))
+          }
+          disabled={
+            fieldDisabled ||
+            controlledOptionUnavailable ||
+            waitingForSelectedLabels
+          }
+          allowCustom
+          placeholder={
+            waitingForSelectedLabels
+              ? t("common:status.loadingField", { field: label })
+              : presentation.resolvePlaceholder?.(t)
+          }
+          aria-label={label}
+          aria-invalid={Boolean(errorMessage)}
+          aria-describedby={describedBy}
+          aria-required={descriptor.required}
+        />
+      )}
+      {presentation.ordered &&
+        !waitingForSelectedLabels &&
+        selectedValues.length > 0 && (
+          <OrderedResourceSelection
+            t={t}
+            selectedValues={selectedValues}
+            optionsByValue={optionsByValue}
+            disabled={fieldDisabled || controlledOptionUnavailable}
+            onChange={(next) => onValueChange(descriptor.fieldId, next)}
+          />
+        )}
       <ResourceAutomaticOptionFeedback
         t={t}
         label={label}

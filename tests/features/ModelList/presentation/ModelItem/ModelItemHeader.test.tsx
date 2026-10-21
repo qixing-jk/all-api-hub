@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import React from "react"
 import { describe, expect, it, vi } from "vitest"
 
@@ -11,6 +11,14 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { render as appRender } from "~~/tests/test-utils/render"
+
+// These presentational components receive their state through props.
+const render = (ui: Parameters<typeof appRender>[0]) =>
+  appRender(ui, {
+    withUserPreferencesProvider: false,
+    withThemeProvider: false,
+  })
 
 vi.mock("react-i18next", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-i18next")>()
@@ -103,6 +111,27 @@ function renderModelItemHeader(quotaType: number) {
 }
 
 describe("ModelItemHeader", () => {
+  it("omits a billing badge when the producer cannot establish its billing mode", () => {
+    render(
+      <ModelItemHeader
+        resolvedVendor={{ state: "unknown" }}
+        model={
+          {
+            model_name: "image-model",
+            quota_type: 0,
+            price_metadata: { billing_mode_known: false },
+          } as any
+        }
+        isAvailableForUser={true}
+        handleCopyModelName={vi.fn()}
+        showPricingMetadata={true}
+      />,
+    )
+    expect(screen.getByText("image-model")).toBeVisible()
+    expect(screen.queryByText("ui:billing.tokenBased")).not.toBeInTheDocument()
+    expect(screen.queryByText("ui:billing.perCall")).not.toBeInTheDocument()
+  })
+
   it("shows a readable display name and the exact request model id separately", () => {
     render(
       <ModelItemHeader

@@ -121,6 +121,8 @@
     "actions": "Acciones",
     "filters": "Filtros"
   },
+  "convertedPrice": "Convertido",
+  "convertedPriceTitle": "Se muestra con el tipo de cambio actual; el precio en la moneda original no cambia.",
   "copyAllNames": "Copiar todos los nombres de modelos",
   "currentUsableGroups": "Grupos utilizables por la cuenta actual",
   "description": "Explora modelos de cuentas y credenciales API, con sus precios, capacidades y disponibilidad.",
@@ -158,6 +160,7 @@
     "accessReason": "Condición de acceso",
     "auditCharge": "Cargo de auditoría por rechazo de riesgo",
     "auditConsent": "Se requiere consentimiento de auditoría",
+    "baseContextTier": "Se muestra la tarifa base; los precios varían según la longitud del contexto",
     "benchmarkTable": {
       "arena": "Arena",
       "category": "Categoría",
@@ -171,6 +174,7 @@
     },
     "callExamples": "Ejemplos de llamadas",
     "catalogOwner": "Propietario del catálogo",
+    "catalogScope": "Alcance del catálogo",
     "compactionCharge": "Compactación remota",
     "consoleSettings": "Configuración oficial",
     "contextLimit": "Límite de contexto",
@@ -285,8 +289,10 @@
       "request": "solicitud",
       "webSearch": "búsqueda web"
     },
+    "pricingConditions": "Condiciones de precio",
     "promptAudit": "Auditoría de prompts activa",
     "providerAvailable": "Disponible en el sitio",
+    "providerReferenceCatalog": "Catálogo completo del sitio",
     "releaseDate": "Fecha de publicación",
     "sections": {
       "specifications": "Especificaciones"
@@ -306,7 +312,7 @@
   "endpointType": "Tipo de endpoint",
   "endpointTypes": "Tipos de endpoint",
   "estimatedPrice": "Estimado",
-  "estimatedPriceTitle": "Estimado a partir de la tabla oficial de precios y la tarifa de grupo de Sub2API de esta clave.",
+  "estimatedPriceTitle": "Calculado a partir de tarifas de referencia o supuestos de precios; los cargos reales pueden variar.",
   "expandDetails": "Expandir detalles",
   "fallbackSourceNotice": {
     "description": "Este catálogo se carga actualmente mediante una alternativa con clave de cuenta, por lo que solo admite descubrimiento y verificación de modelos. Actualizar datos reintentará la ruta directa de la cuenta.",

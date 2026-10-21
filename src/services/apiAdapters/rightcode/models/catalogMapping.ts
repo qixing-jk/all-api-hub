@@ -16,6 +16,7 @@ import {
   MODEL_PRICE_SOURCE_KINDS,
   type ModelPricing,
 } from "~/services/modelList/pricingModel"
+import { createModelDisplayLabel } from "~/services/models/modelDisplayFacts"
 
 /** Right Code's own billing modes for a model entry. */
 const RIGHTCODE_BILLING_MODES = {
@@ -47,7 +48,7 @@ const readNonNegativeNumber = (value: unknown): number | undefined => {
  * `effective_price_config` already folds in the channel rate and the account's
  * own rate, so these are USD per million tokens and need no further scaling.
  * Tiered models bill by context length; the first (cheapest) tier is published
- * as the base price and marked estimated.
+ * as the base price; its context-length condition is displayed separately.
  */
 const readEffectiveTokenPrices = (
   model: RightCodeEffectiveModel,
@@ -129,6 +130,25 @@ const toModelPricing = (
     model_ratio: 0,
     model_price: 0,
     token_price_usd_per_million: tokenPrices,
+    ...(tiered
+      ? {
+          presentation: {
+            summaryFacts: [
+              {
+                type: "text" as const,
+                label: createModelDisplayLabel(
+                  "displayFacts.pricingConditions",
+                  "Pricing conditions",
+                ),
+                value: createModelDisplayLabel(
+                  "displayFacts.baseContextTier",
+                  "Base tier shown; rates vary by context length",
+                ),
+              },
+            ],
+          },
+        }
+      : {}),
     price_metadata: {
       source: MODEL_PRICE_SOURCE_KINDS.CHANNEL_PRICING,
       precision: tiered

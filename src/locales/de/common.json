@@ -11,6 +11,8 @@
     "import": "Importieren",
     "loadField": "{{field}} laden",
     "more": "Mehr",
+    "moveDownItem": "{{name}} nach unten verschieben",
+    "moveUpItem": "{{name}} nach oben verschieben",
     "openSidePanel": "In der Seitenleiste öffnen",
     "refresh": "Aktualisieren",
     "refreshField": "{{field}} aktualisieren",

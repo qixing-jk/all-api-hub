@@ -98,6 +98,7 @@ export type ModelPriceSourceKind =
   (typeof MODEL_PRICE_SOURCE_KINDS)[keyof typeof MODEL_PRICE_SOURCE_KINDS]
 
 export const MODEL_PRICE_PRECISION_KINDS = {
+  /** Explicitly supplied rates; applicability is expressed by pricing conditions. */
   EXACT: "exact",
   ESTIMATED: "estimated",
   UNAVAILABLE: "unavailable",
@@ -122,6 +123,8 @@ export type ModelUnavailablePriceReason =
 export interface ModelPriceMetadata {
   source: ModelPriceSourceKind
   precision: ModelPricePrecisionKind
+  /** False when quota_type is only a legacy placeholder, not billing evidence. */
+  billing_mode_known?: boolean
   unavailable_reason?: ModelUnavailablePriceReason
   source_date?: string
   /** Public reference for the price evidence, separate from the account site. */

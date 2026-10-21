@@ -117,10 +117,14 @@
     "checkIn": {
       "all": "All check-in states",
       "checked-in": "Checked in",
+      "configuration": "Configuration / method unavailable",
+      "manual": "Cannot query",
       "not-checked-in": "Not checked in",
-      "outdated": "Status outdated",
+      "outdated": "Needs updating",
+      "pending": "Not queried yet",
       "placeholder": "Check-in status",
-      "status-unavailable": "Status unavailable",
+      "query-failed": "Query failed",
+      "site-disabled": "Disabled by site",
       "unsupported": "Unsupported"
     },
     "disabled": {
@@ -234,7 +238,21 @@
     "resetSort": "Reset to default order",
     "site": {
       "checkedInToday": "Checked in today, click to view",
-      "checkInStatusOutdated": "Check-in status wasn't detected today (last check time: {{time}}). Click to refresh",
+      "checkInAccountDisabled": "Account disabled; automatic check-in is paused",
+      "checkInAutomationBlocked": "Automatic check-in is blocked: {{reason}}",
+      "checkInAutomationDisabled": "Account automatic check-in is off",
+      "checkInAutomationEnabled": "Account automatic check-in is enabled",
+      "checkInAutomationGloballyDisabled": "Account automatic check-in is enabled, but the global switch is off",
+      "checkInLastKnownChecked": "Last confirmed checked in: {{time}}",
+      "checkInLastKnownNotChecked": "Last confirmed not checked in: {{time}}",
+      "checkInNeedsConfiguration": "Automatic check-in needs configuration: {{reason}}. Click to edit the account",
+      "checkInNeedsRedetection": "Check-in method needs re-detection: {{reason}}. Click to re-detect",
+      "checkInRefreshPartial": "Account data for {{accountName}} was refreshed, but check-in status could not be updated. Please retry",
+      "checkInSiteDisabled": "The site has check-in disabled. Click to view the site",
+      "checkInStatusFailed": "Could not update check-in status (attempt: {{time}}). Click to retry",
+      "checkInStatusManual": "This method cannot query check-in status. Click to check on the site",
+      "checkInStatusOutdated": "Check-in status needs updating (last confirmed: {{time}}). Click to refresh",
+      "checkInStatusPending": "Check-in status has not been queried. Click to refresh",
       "currentSite": "Current Site",
       "currentSiteBoostHint": "Matches the signed-in account on the current site and appears before other accounts. Disabled accounts stay last.",
       "currentSiteExists": "Same site as the current tab",
@@ -257,6 +275,8 @@
     "signInHint": "Sign in to your API site, then add an account using automatic detection or manual entry."
   },
   "refresh": {
+    "checkInStatusFailed_one": "Check-in status could not be updated for {{count}} account. Please retry",
+    "checkInStatusFailed_other": "Check-in status could not be updated for {{count}} accounts. Please retry",
     "refreshComplete": "Refresh complete: {{success}} success, {{failed}} failed",
     "refreshDisabledComplete": "Disabled account probe complete: {{restored}} restored, {{stillDisabled}} still disabled",
     "refreshDisabledCompleteWithFailures": "Disabled account probe complete: {{restored}} restored, {{stillDisabled}} still disabled, {{failed}} failed",
