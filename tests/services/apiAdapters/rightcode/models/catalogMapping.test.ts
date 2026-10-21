@@ -55,7 +55,7 @@ describe("buildRightCodePricingResponse", () => {
     ])
   })
 
-  it("marks published base-tier prices as explicit rates and preserves the base-tier condition", () => {
+  it("qualifies base-tier prices while other context tiers are not modeled", () => {
     const snapshot = buildRightCodePricingResponse([
       upstream({
         models: [
@@ -83,7 +83,9 @@ describe("buildRightCodePricingResponse", () => {
       input: 2,
       output: 12,
     })
-    expect(atIndex(snapshot.data, 0).price_metadata?.precision).toBe("exact")
+    expect(atIndex(snapshot.data, 0).price_metadata?.precision).toBe(
+      "estimated",
+    )
     expect(atIndex(snapshot.data, 0).presentation?.summaryFacts).toContainEqual(
       {
         type: "text",

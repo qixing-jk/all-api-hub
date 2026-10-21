@@ -151,7 +151,9 @@ const toModelPricing = (
       : {}),
     price_metadata: {
       source: MODEL_PRICE_SOURCE_KINDS.CHANNEL_PRICING,
-      precision: MODEL_PRICE_PRECISION_KINDS.EXACT,
+      precision: tiered
+        ? MODEL_PRICE_PRECISION_KINDS.ESTIMATED
+        : MODEL_PRICE_PRECISION_KINDS.EXACT,
     },
     completion_ratio: input > 0 ? output / input : 1,
     enable_groups: [],

@@ -454,6 +454,32 @@ function createEmptyStats() {
 }
 
 describe("AccountDataContext initial statistics", () => {
+  it("reloads the persisted snapshot after a local day change without a provider refresh", async () => {
+    vi.setSystemTime(new Date(2026, 9, 20, 23, 59))
+    try {
+      mockGetAllAccounts.mockResolvedValue([
+        { id: "before-midnight", tagIds: [] },
+      ])
+      const getContext = await renderAccountDataProvider()
+      await waitFor(() =>
+        expect(getContext().displayData[0]?.id).toBe("before-midnight"),
+      )
+      mockGetAllAccounts.mockResolvedValue([
+        { id: "after-midnight", tagIds: [] },
+      ])
+      vi.setSystemTime(new Date(2026, 9, 21, 0, 1))
+      await act(async () => {
+        window.dispatchEvent(new Event("focus"))
+      })
+      await waitFor(() =>
+        expect(getContext().displayData[0]?.id).toBe("after-midnight"),
+      )
+      expect(mockRefreshAllAccounts).not.toHaveBeenCalled()
+      expect(mockRefreshDisabledAccounts).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
   it("publishes the loaded account snapshot with its persisted ordering and pins", async () => {
     let completeAccountRead!: () => void
     mockGetAllAccounts.mockReturnValue(

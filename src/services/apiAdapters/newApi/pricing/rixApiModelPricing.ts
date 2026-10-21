@@ -406,6 +406,23 @@ function buildCatalogModel(
     typeof vendorId === "number" && Number.isInteger(vendorId)
       ? vendorsById.get(vendorId)
       : undefined
+  const priceConfig = row.price_config
+  const originalPrice = isPlainObject(priceConfig)
+    ? priceConfig.original_price
+    : undefined
+  const conditions =
+    isPlainObject(originalPrice) && Array.isArray(originalPrice.conditions)
+      ? originalPrice.conditions
+      : []
+  const hasUnmodeledConditions =
+    conditions.length > 1 ||
+    conditions.some(
+      (condition) =>
+        isPlainObject(condition) &&
+        (readNonBlankString(condition.rule) !== undefined ||
+          (Array.isArray(condition.prompt_tiers) &&
+            condition.prompt_tiers.length > 0)),
+    )
   const pricingPlan = buildPricingPlan(price, quotaType)
   const directTokenPrices = buildDirectTokenPrices(price, currency)
 
@@ -444,7 +461,9 @@ function buildCatalogModel(
       precision:
         Object.keys(pricingPlan.rates).length === 0
           ? MODEL_PRICE_PRECISION_KINDS.UNAVAILABLE
-          : MODEL_PRICE_PRECISION_KINDS.EXACT,
+          : hasUnmodeledConditions
+            ? MODEL_PRICE_PRECISION_KINDS.ESTIMATED
+            : MODEL_PRICE_PRECISION_KINDS.EXACT,
     },
     enable_groups: normalizeGroupNames(
       Array.isArray(row.enable_groups)

@@ -102,6 +102,18 @@ describe("getAccountCheckInFilterValue", () => {
     ).toBe("manual")
   })
 
+  it("keeps a site-disabled method in its own filter bucket", () => {
+    const checkIn = buildCheckIn({ checked: true, observedAt: 1 })
+    const method = checkIn.methodKnowledge.methods[methodId]!
+    if (method.status?.outcome === "known")
+      method.status.availability = "disabled"
+    expect(
+      getAccountCheckInFilterValue(
+        buildDisplaySiteData({ siteType: SITE_TYPES.NEW_API, checkIn }),
+      ),
+    ).toBe("site-disabled")
+  })
+
   it("distinguishes missing automation configuration from unsupported accounts", () => {
     const checkIn = unsupportedCheckIn()
     checkIn.automaticExecutionEnabled = true

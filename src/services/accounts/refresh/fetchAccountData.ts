@@ -15,6 +15,7 @@ export async function fetchAccountDataWithCheckInStatus(
       config: data.checkIn,
       siteType: request.siteType,
       request,
+      timeoutMs: 20_000,
     }),
   }
 }

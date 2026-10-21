@@ -285,7 +285,9 @@ export function NativeResourceChoiceField<TSection extends string>({
       </div>
     )
   }
-  const selectedValues = readResourceList(values, descriptor.fieldId)
+  const selectedValues = normalizeResourceList(
+    readResourceList(values, descriptor.fieldId),
+  )
   // Before the first loader effect runs, options have no state yet. Keep the
   // saved draft intact while withholding unresolved fallback labels from view.
   const waitingForSelectedLabels =

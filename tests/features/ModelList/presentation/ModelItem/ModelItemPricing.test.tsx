@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -35,6 +35,7 @@ import {
 import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
 import { quoteModelPrice } from "~/services/modelPricing/quoteModelPrice"
 import { calculateModelPrice } from "~/services/models/utils/modelPricing"
+import { render as appRender } from "~~/tests/test-utils/render"
 
 it.each(["exact", "reference"])(
   "shows published prices without a confidence badge, including legacy cache (%s)",
@@ -265,6 +266,13 @@ const { formatPriceCompactMock, isTokenBillingTypeMock } = vi.hoisted(() => ({
   ),
   isTokenBillingTypeMock: vi.fn(),
 }))
+
+// These presentational components receive their state through props.
+const render = (ui: Parameters<typeof appRender>[0]) =>
+  appRender(ui, {
+    withUserPreferencesProvider: false,
+    withThemeProvider: false,
+  })
 
 vi.mock("~/services/apiService/kimiOpenPlatform", () => ({
   fetchKimiAccountModelCatalog: vi.fn(),

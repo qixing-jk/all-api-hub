@@ -592,6 +592,35 @@ describe("SiteInfo", () => {
     },
   )
 
+  it.each(["checked", "not_checked"] as const)(
+    "explains a failed query with a last confirmed %s result",
+    (today) => {
+      const checkIn = createCheckIn({ supported: true })
+      checkIn.methodKnowledge.methods[
+        AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+      ]!.status = {
+        outcome: "unknown",
+        reason: "network",
+        attemptedAt: Date.now(),
+        lastKnown: {
+          outcome: "known",
+          today,
+          evidence: { source: "probe", observedAt: 1 },
+        },
+      }
+      render(<SiteInfo site={buildSite({ checkIn })} />)
+      expect(
+        screen.getByRole("button", {
+          name: new RegExp(
+            today === "checked"
+              ? "checkInLastKnownChecked"
+              : "checkInLastKnownNotChecked",
+          ),
+        }),
+      ).toHaveAccessibleName(/checkInStatusFailed/)
+    },
+  )
+
   it("shows a retry action for a failed query even when automatic check-in is off", async () => {
     const checkIn = createCheckIn({ supported: true })
     checkIn.automaticExecutionEnabled = false

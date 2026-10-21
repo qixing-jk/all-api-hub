@@ -20,6 +20,25 @@ const cookie = {
 describe("getCookiesForDomain", () => {
   afterEach(() => vi.restoreAllMocks())
 
+  it.each([
+    ["api.example.co.uk", ["api.example.co.uk", "example.co.uk"]],
+    ["api.tenant.github.io", ["api.tenant.github.io", "tenant.github.io"]],
+    ["127.0.0.1", ["127.0.0.1"]],
+    ["localhost", ["localhost"]],
+  ])(
+    "limits cookie reads to the site boundary for %s",
+    async (hostname, expected) => {
+      const getAll = vi.spyOn(browser.cookies, "getAll").mockResolvedValue([])
+      await getCookiesForDomain(hostname as string, "container-1")
+      expect(getAll.mock.calls.map(([details]) => details)).toEqual(
+        (expected as string[]).map((domain) => ({
+          domain,
+          storeId: "container-1",
+        })),
+      )
+    },
+  )
+
   it("captures parent-domain session cookies", async () => {
     const getAll = vi
       .spyOn(browser.cookies, "getAll")

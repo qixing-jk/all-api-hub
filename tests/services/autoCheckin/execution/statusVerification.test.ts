@@ -468,22 +468,28 @@ describe("execution/statusVerification", () => {
     ).not.toHaveBeenCalled()
   })
 
-  it("does not report success when account-state persistence fails", async () => {
-    mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
-    mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValue(
-      null,
-    )
-    mockedRefreshSelectedStatus.mockImplementation(
-      async ({ onOutcome, config }: any) => {
-        onOutcome(CHECK_IN_STATUS_REFRESH_OUTCOMES.Read)
-        return config
-      },
-    )
+  it.each([
+    CHECK_IN_STATUS_REFRESH_OUTCOMES.Read,
+    CHECK_IN_STATUS_REFRESH_OUTCOMES.Unavailable,
+  ])(
+    "reports not_saved when persisting a %s query fails",
+    async (refreshOutcome) => {
+      mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)
+      mockedAccountStorage.prepareAccountForSelectedCheckIn.mockResolvedValue(
+        null,
+      )
+      mockedRefreshSelectedStatus.mockImplementation(
+        async ({ onOutcome, config }: any) => {
+          onOutcome(refreshOutcome)
+          return structuredClone(config)
+        },
+      )
 
-    await expect(
-      autoCheckinScheduler.verifyAccountStatus(verificationAccount.id),
-    ).resolves.toMatchObject({ outcome: "not_saved" })
-  })
+      await expect(
+        autoCheckinScheduler.verifyAccountStatus(verificationAccount.id),
+      ).resolves.toMatchObject({ outcome: "not_saved" })
+    },
+  )
 
   it("does not report success when scheduler-status persistence fails", async () => {
     mockedAccountStorage.getAccountById.mockResolvedValue(verificationAccount)

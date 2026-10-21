@@ -50,7 +50,7 @@ export function OrderedResourceSelection({
                 type="button"
                 size="sm"
                 variant="ghost"
-                aria-label={`${t("common:actions.moveUp")} ${name}`}
+                aria-label={t("common:actions.moveUpItem", { name })}
                 disabled={disabled || index === 0}
                 onClick={() => move(-1)}
               >
@@ -60,7 +60,7 @@ export function OrderedResourceSelection({
                 type="button"
                 size="sm"
                 variant="ghost"
-                aria-label={`${t("common:actions.moveDown")} ${name}`}
+                aria-label={t("common:actions.moveDownItem", { name })}
                 disabled={disabled || index === selectedValues.length - 1}
                 onClick={() => move(1)}
               >

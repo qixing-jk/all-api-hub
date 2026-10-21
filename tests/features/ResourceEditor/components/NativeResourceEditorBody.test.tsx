@@ -27,8 +27,10 @@ function createDeferred<T>() {
   return { promise, resolve }
 }
 
-const t = ((key: string, options?: { field?: string }) => {
+const t = ((key: string, options?: { field?: string; name?: string }) => {
   const value = {
+    "common:actions.moveUpItem": "Move {{name}} up",
+    "common:actions.moveDownItem": "Move {{name}} down",
     "example:creator": "Creator",
     "example:basic": "Basic",
     "common:status.loading": "Loading...",
@@ -40,10 +42,68 @@ const t = ((key: string, options?: { field?: string }) => {
     "common:actions.refreshField": "Refresh {{field}}",
     "ui:multiSelect.noOptions": "No options available",
   }[key]
-  return value?.replace("{{field}}", options?.field ?? "") ?? key
+  return (
+    value
+      ?.replace("{{field}}", options?.field ?? "")
+      .replace("{{name}}", options?.name ?? "") ?? key
+  )
 }) as TFunction
 
 describe("NativeResourceEditorBody", () => {
+  it("normalizes duplicate selections before reordering and card toggling", async () => {
+    const user = userEvent.setup()
+    const onValueChange = vi.fn()
+    render(
+      <NativeResourceEditorBody
+        t={t}
+        descriptors={[
+          {
+            fieldId: "routes",
+            type: "multi-select",
+            options: [
+              {
+                value: "a",
+                displayLabel: "Alpha",
+                secondaryLabel: "Priority",
+                description: "Primary route",
+              },
+              { value: "b", displayLabel: "Beta" },
+            ],
+          },
+        ]}
+        policy={defineResourceEditorFieldPolicy({
+          fields: [
+            {
+              fieldId: "routes",
+              section: "basic",
+              order: 1,
+              renderer: "multi-select",
+              multiSelectLayout: "cards",
+              ordered: true,
+              resolveLabel: () => "Routes",
+            },
+          ],
+          hiddenFields: [],
+        })}
+        sectionOrder={{ basic: 0 }}
+        sectionLabelResolvers={{ basic: () => "Basic" }}
+        values={{ routes: ["a", "a"] }}
+        onValueChange={onValueChange}
+      />,
+    )
+    expect(
+      screen.getAllByRole("button", { name: "Move Alpha up" }),
+    ).toHaveLength(1)
+    await user.click(screen.getByRole("checkbox", { name: "Beta" }))
+    expect(onValueChange).toHaveBeenLastCalledWith("routes", ["a", "b"])
+    expect(
+      screen.getByRole("checkbox", { name: "Alpha" }),
+    ).toHaveAccessibleDescription("Primary route")
+    expect(screen.getAllByText("Priority")).toHaveLength(2)
+    await user.click(screen.getByRole("checkbox", { name: "Alpha" }))
+    expect(onValueChange).toHaveBeenLastCalledWith("routes", [])
+  })
+
   it.each([false, true])(
     "preserves ordered routes and fallback labels with disabled=%s",
     async (disabled) => {
@@ -80,13 +140,13 @@ describe("NativeResourceEditorBody", () => {
         />,
       )
       const moveFirstUp = screen.getByRole("button", {
-        name: "common:actions.moveUp retired-route",
+        name: "Move retired-route up",
       })
       const moveLastDown = screen.getByRole("button", {
-        name: "common:actions.moveDown OpenAI",
+        name: "Move OpenAI down",
       })
       const moveLastUp = screen.getByRole("button", {
-        name: "common:actions.moveUp OpenAI",
+        name: "Move OpenAI up",
       })
       expect(moveFirstUp).toBeDisabled()
       expect(moveLastDown).toBeDisabled()
@@ -139,14 +199,21 @@ describe("NativeResourceEditorBody", () => {
       />,
     )
     expect(screen.getByText("×0.2")).toBeVisible()
-    await user.click(
-      screen.getByRole("button", { name: "common:actions.moveUp Claude" }),
-    )
+    await user.click(screen.getByRole("button", { name: "Move Claude up" }))
     expect(onValueChange).toHaveBeenLastCalledWith("groups", ["21", "2"])
+    await user.click(screen.getByRole("button", { name: "Move OpenAI down" }))
+    expect(onValueChange).toHaveBeenLastCalledWith("groups", ["21", "2"])
+    await user.click(screen.getAllByRole("button", { name: /remove/i })[0]!)
+    expect(onValueChange).toHaveBeenLastCalledWith("groups", ["21"])
   })
-  it.each([false, true])(
-    "preserves selected groups while labels load (cached: %s)",
-    async (cached) => {
+  it.each([
+    { cached: false, layout: "compact" as const },
+    { cached: true, layout: "compact" as const },
+    { cached: false, layout: "cards" as const },
+    { cached: true, layout: "cards" as const },
+  ])(
+    "preserves selected groups while labels load ($layout, cached: $cached)",
+    async ({ cached, layout }) => {
       const pending =
         createDeferred<Array<{ value: string; displayLabel: string }>>()
       const options = [
@@ -173,6 +240,7 @@ describe("NativeResourceEditorBody", () => {
                 section: "basic",
                 order: 1,
                 renderer: "multi-select",
+                multiSelectLayout: layout === "cards" ? "cards" : undefined,
                 resolveLabel: () => "Group",
               },
             ],
@@ -185,7 +253,10 @@ describe("NativeResourceEditorBody", () => {
           onLoadOptions={() => pending.promise}
         />,
       )
-      const input = screen.getByRole("combobox", { name: "Group" })
+      const input = screen.getByRole(
+        layout === "cards" ? "group" : "combobox",
+        { name: "Group" },
+      )
       expect(screen.queryByText("2")).not.toBeInTheDocument()
       expect(screen.queryByText("21")).not.toBeInTheDocument()
       expect(screen.queryByText("7")).not.toBeInTheDocument()
@@ -193,17 +264,24 @@ describe("NativeResourceEditorBody", () => {
       if (cached) {
         for (const option of options)
           expect(screen.getByText(option.displayLabel)).toBeVisible()
-        expect(input).toBeEnabled()
+        if (layout === "compact") expect(input).toBeEnabled()
       } else {
-        expect(input).toHaveAttribute("placeholder", "Loading Group...")
-        expect(input).toBeDisabled()
+        if (layout === "compact") {
+          expect(input).toHaveAttribute("placeholder", "Loading Group...")
+          expect(input).toBeDisabled()
+        } else {
+          expect(screen.getByLabelText("Loading Group...")).toBeVisible()
+        }
       }
 
       await act(async () => pending.resolve(options))
       for (const name of ["OpenAI", "Claude", "Gemini"]) {
         expect(screen.getByText(name)).toBeVisible()
       }
-      expect(input).toBeEnabled()
+      if (layout === "compact") expect(input).toBeEnabled()
+      else
+        for (const checkbox of screen.getAllByRole("checkbox"))
+          expect(checkbox).toBeEnabled()
       expect(input).not.toHaveAttribute("aria-busy", "true")
       expect(onValueChange).not.toHaveBeenCalled()
     },

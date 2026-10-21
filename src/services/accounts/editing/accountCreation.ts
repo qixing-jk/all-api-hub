@@ -249,8 +249,14 @@ export async function validateAndSaveAccount(
       normalizedSiteType,
       getSiteTypeCapabilities(normalizedSiteType).account?.data,
     )
-    const freshAccountData = await withManualAccountDataFetchTimeout(
-      fetchAccountDataWithCheckInStatus(accountDataCapability, {
+    const freshAccountData = await fetchAccountDataWithCheckInStatus(
+      {
+        fetchData: (request) =>
+          withManualAccountDataFetchTimeout(
+            accountDataCapability.fetchData(request),
+          ),
+      },
+      {
         baseUrl: requestBaseUrl,
         siteType: normalizedSiteType,
         checkIn: checkInConfig,
@@ -263,7 +269,7 @@ export async function validateAndSaveAccount(
           accessToken: fields.account_info.access_token,
           cookie: fields.cookieAuth?.sessionCookie,
         },
-      }),
+      },
     )
     const accountData: Omit<
       SiteAccount,

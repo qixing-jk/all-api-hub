@@ -723,6 +723,41 @@ describe("check-in methods compatibility activation", () => {
     },
   )
 
+  it.each(["missing", "throws"])(
+    "preserves confirmation after an injected %s status read",
+    async (failure) => {
+      const config = mergeCompatibilityCheckInStatus({
+        config: createCompatibilityCheckInConfig({
+          siteType: SITE_TYPES.NEW_API,
+          supported: true,
+          automaticExecutionEnabled: false,
+        }),
+        methodId: "new-api:daily-checkin",
+        isCheckedInToday: true,
+        observedAt: 100,
+      })
+      const onOutcome = vi.fn()
+      const updated = await refreshSelectedStatus({
+        config,
+        siteType: SITE_TYPES.NEW_API,
+        observedAt: 200,
+        onOutcome,
+        readStatus:
+          failure === "throws"
+            ? vi.fn().mockRejectedValue(new Error("offline"))
+            : vi.fn().mockResolvedValue(undefined),
+      })
+      expect(onOutcome).toHaveBeenCalledExactlyOnceWith("unavailable")
+      expect(
+        updated.methodKnowledge.methods["new-api:daily-checkin"]?.status,
+      ).toMatchObject({
+        outcome: "unknown",
+        attemptedAt: 200,
+        lastKnown: { today: "checked", evidence: { observedAt: 100 } },
+      })
+    },
+  )
+
   it("leaves a matched method without status readback unchanged on refresh", async () => {
     const account = buildSiteAccount({
       site_type: SITE_TYPES.ANYROUTER,

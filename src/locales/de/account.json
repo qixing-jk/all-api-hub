@@ -275,8 +275,8 @@
     "signInHint": "Melde dich bei deiner API-Seite an und füge dann ein Konto per automatischer Erkennung oder manuell hinzu."
   },
   "refresh": {
-    "checkInStatusFailed_one": "Der Check-in-Status für {{count}} Konto/Konten konnte nicht aktualisiert werden. Bitte erneut versuchen",
-    "checkInStatusFailed_other": "Der Check-in-Status für {{count}} Konto/Konten konnte nicht aktualisiert werden. Bitte erneut versuchen",
+    "checkInStatusFailed_one": "Der Check-in-Status für {{count}} Konto konnte nicht aktualisiert werden. Bitte erneut versuchen",
+    "checkInStatusFailed_other": "Der Check-in-Status für {{count}} Konten konnte nicht aktualisiert werden. Bitte erneut versuchen",
     "refreshComplete": "Aktualisierung abgeschlossen: {{success}} erfolgreich, {{failed}} fehlgeschlagen",
     "refreshDisabledComplete": "Prüfung deaktivierter Konten abgeschlossen: {{restored}} wiederhergestellt, {{stillDisabled}} weiterhin deaktiviert",
     "refreshDisabledCompleteWithFailures": "Prüfung deaktivierter Konten abgeschlossen: {{restored}} wiederhergestellt, {{stillDisabled}} weiterhin deaktiviert, {{failed}} fehlgeschlagen",

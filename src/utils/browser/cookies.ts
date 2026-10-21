@@ -1,5 +1,7 @@
 import "~/utils/browser/browserEnvironment"
 
+import { getRegistrableDomain } from "~/utils/core/domain"
+
 /** Read scoped Cookie metadata; failures must not become an empty session. */
 export async function getCookiesForDomain(
   domain: string,
@@ -14,8 +16,15 @@ export async function getCookiesForDomain(
   // retaining API-path cookies that a root-URL query would omit. Filter out
   // siblings returned by ancestor queries, and keep the requested store.
   const domains = [hostname]
-  for (let i = 1; i < labels.length - 1; i += 1)
-    domains.push(labels.slice(i).join("."))
+  const registrableDomain = getRegistrableDomain(hostname)
+  if (registrableDomain) {
+    for (
+      let i = 1;
+      i <= labels.length - registrableDomain.split(".").length;
+      i += 1
+    )
+      domains.push(labels.slice(i).join("."))
+  }
   const batches = await Promise.all(
     domains.map((domain) =>
       browser.cookies.getAll({

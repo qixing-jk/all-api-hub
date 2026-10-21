@@ -6,6 +6,7 @@ import {
   CHECK_IN_STATUS_REFRESH_OUTCOMES,
 } from "~/constants/checkIn"
 import type { AccountSiteType } from "~/constants/siteType"
+import { runAbortableTask } from "~/services/apiTransport/abortableTask"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { resolveSelectedCheckInMethod } from "~/services/checkin/autoCheckin/discovery/inspection"
 import type { AutoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers/registry"
@@ -29,6 +30,7 @@ export async function refreshSelectedStatus(input: {
   request?: ApiServiceRequest
   readStatus?: (methodId: CheckInMethodId) => Promise<boolean | undefined>
   registry?: AutoCheckinMethodRegistry
+  timeoutMs?: number
   observedAt?: number
   onOutcome?: (outcome: CheckInStatusRefreshOutcome) => void
 }): Promise<CheckInConfig> {
@@ -55,7 +57,10 @@ export async function refreshSelectedStatus(input: {
   let isCheckedInToday: boolean | undefined
   if (input.readStatus) {
     try {
-      isCheckedInToday = await input.readStatus(methodId)
+      isCheckedInToday = await runAbortableTask(
+        () => input.readStatus!(methodId),
+        { timeoutMs: input.timeoutMs, signals: [input.request?.abortSignal] },
+      )
     } catch {
       input.onOutcome?.(CHECK_IN_STATUS_REFRESH_OUTCOMES.Unavailable)
       return failedStatus()
@@ -73,11 +78,17 @@ export async function refreshSelectedStatus(input: {
       return input.config
     }
     try {
-      const status = await registration.provider.getStatus({
-        account: input.account,
-        request: input.request,
-        observedAt,
-      })
+      const status = await runAbortableTask(
+        (signal) =>
+          registration.provider.getStatus!({
+            account: input.account,
+            request: input.request
+              ? { ...input.request, abortSignal: signal }
+              : undefined,
+            observedAt,
+          }),
+        { timeoutMs: input.timeoutMs, signals: [input.request?.abortSignal] },
+      )
       input.onOutcome?.(
         status?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
           ? CHECK_IN_STATUS_REFRESH_OUTCOMES.Read

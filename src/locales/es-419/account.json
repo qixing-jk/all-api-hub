@@ -298,9 +298,9 @@
     "signInHint": "Inicia sesión en tu sitio de API y agrega una cuenta mediante detección automática o de forma manual."
   },
   "refresh": {
-    "checkInStatusFailed_one": "No se pudo actualizar el estado del registro diario de {{count}} cuenta(s). Inténtalo de nuevo",
-    "checkInStatusFailed_many": "No se pudo actualizar el estado del registro diario de {{count}} cuenta(s). Inténtalo de nuevo",
-    "checkInStatusFailed_other": "No se pudo actualizar el estado del registro diario de {{count}} cuenta(s). Inténtalo de nuevo",
+    "checkInStatusFailed_one": "No se pudo actualizar el estado del registro diario de {{count}} cuenta. Inténtalo de nuevo",
+    "checkInStatusFailed_many": "No se pudo actualizar el estado del registro diario de {{count}} cuentas. Inténtalo de nuevo",
+    "checkInStatusFailed_other": "No se pudo actualizar el estado del registro diario de {{count}} cuentas. Inténtalo de nuevo",
     "refreshComplete": "Actualización completa: {{success}} correctas, {{failed}} fallidas",
     "refreshDisabledComplete": "Sondeo de cuentas deshabilitadas completo: {{restored}} restauradas, {{stillDisabled}} aún deshabilitadas",
     "refreshDisabledCompleteWithFailures": "Sondeo de cuentas deshabilitadas completo: {{restored}} restauradas, {{stillDisabled}} aún deshabilitadas, {{failed}} fallidas",

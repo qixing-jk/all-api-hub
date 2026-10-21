@@ -298,9 +298,9 @@
     "signInHint": "Entre no seu site de API e adicione uma conta por detecção automática ou manualmente."
   },
   "refresh": {
-    "checkInStatusFailed_one": "Não foi possível atualizar o status de check-in de {{count}} conta(s). Tente novamente",
-    "checkInStatusFailed_many": "Não foi possível atualizar o status de check-in de {{count}} conta(s). Tente novamente",
-    "checkInStatusFailed_other": "Não foi possível atualizar o status de check-in de {{count}} conta(s). Tente novamente",
+    "checkInStatusFailed_one": "Não foi possível atualizar o status de check-in de {{count}} conta. Tente novamente",
+    "checkInStatusFailed_many": "Não foi possível atualizar o status de check-in de {{count}} contas. Tente novamente",
+    "checkInStatusFailed_other": "Não foi possível atualizar o status de check-in de {{count}} contas. Tente novamente",
     "refreshComplete": "Atualização concluída: {{success}} com sucesso, {{failed}} com falha",
     "refreshDisabledComplete": "Verificação de contas desativadas concluída: {{restored}} restauradas, {{stillDisabled}} ainda desativadas",
     "refreshDisabledCompleteWithFailures": "Verificação de contas desativadas concluída: {{restored}} restauradas, {{stillDisabled}} ainda desativadas, {{failed}} com falha",
