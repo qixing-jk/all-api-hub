@@ -36,7 +36,7 @@ async function chooseAccountSection(
 ) {
   if (page.viewportSize()!.width < 640) {
     await navigation
-      .getByRole("button", { name: "Account settings sections", exact: true })
+      .getByRole("button", { name: /, Account settings sections$/ })
       .click()
     await page.getByRole("menuitem", { name, exact: true }).click()
   } else {
@@ -52,7 +52,7 @@ async function expectAccountSection(
   if (page.viewportSize()!.width < 640) {
     await expect(
       navigation.getByRole("button", {
-        name: "Account settings sections",
+        name: `${name}, Account settings sections`,
         exact: true,
       }),
     ).toContainText(name)
@@ -1025,7 +1025,9 @@ test("account creation shared outline", async ({
         (element) => element.scrollWidth <= element.clientWidth,
       ),
     ).toBe(true)
-    await expect(dialog.getByRole("note")).toBeInViewport()
+    await expect(
+      dialog.getByRole("note", { name: "Manual Add", exact: true }),
+    ).toBeInViewport()
   }
   await dialog
     .getByPlaceholder("Optional, enter notes")

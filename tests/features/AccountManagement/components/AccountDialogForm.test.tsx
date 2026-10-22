@@ -178,7 +178,7 @@ describe("AccountDialog AccountForm", () => {
       name: "accountDialog:sections.navigation",
     })
     const trigger = within(navigation).getByRole("button", {
-      name: "accountDialog:sections.navigation",
+      name: "accountDialog:sections.siteInfo.title, accountDialog:sections.navigation",
     })
     await user.click(trigger)
     const links = await screen.findAllByRole("menuitem")
@@ -193,6 +193,12 @@ describe("AccountDialog AccountForm", () => {
     names.forEach((name, index) =>
       expect(atIndex(links, index)).toHaveAccessibleName(name),
     )
+    await user.keyboard("{Escape}")
+    expect(trigger).toHaveFocus()
+    expect(trigger).toHaveAccessibleName(
+      "accountDialog:sections.siteInfo.title, accountDialog:sections.navigation",
+    )
+    await user.click(trigger)
     expect(
       screen.getByPlaceholderText("accountDialog:form.exchangeRatePlaceholder"),
     ).toBeVisible()
@@ -209,6 +215,9 @@ describe("AccountDialog AccountForm", () => {
       }),
     )
     expect(screen.getByDisplayValue("existing note")).toBeVisible()
+    expect(trigger).toHaveAccessibleName(
+      "accountDialog:sections.tagsAndNotes.title, accountDialog:sections.navigation",
+    )
     expect(
       screen.getByRole("heading", {
         name: "accountDialog:sections.tagsAndNotes.title",
@@ -225,7 +234,7 @@ describe("AccountDialog AccountForm", () => {
     render(<AccountForm {...createProps()} continuous ref={ref} />)
     const navigation = await screen.findByRole("navigation")
     const trigger = within(navigation).getByRole("button", {
-      name: "accountDialog:sections.navigation",
+      name: "accountDialog:sections.siteInfo.title, accountDialog:sections.navigation",
     })
     await user.click(trigger)
     await user.click(
@@ -239,6 +248,9 @@ describe("AccountDialog AccountForm", () => {
     ).toHaveFocus()
     expect(trigger).toHaveTextContent(
       "accountDialog:sections.accountAuth.title",
+    )
+    expect(trigger).toHaveAccessibleName(
+      "accountDialog:sections.accountAuth.title, accountDialog:sections.navigation",
     )
   })
 

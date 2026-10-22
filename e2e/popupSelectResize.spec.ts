@@ -377,7 +377,7 @@ for (const zoomPercentage of POPUP_ZOOM_PERCENTAGES) {
     expect(popupState.sizes).toHaveLength(1)
     expect(popupState.documentOverflowing).toBe(false)
     expect(popupState.bodyOverflowing).toBe(false)
-    expect(popupState.formLayout).toBe("mobile-collapsible")
+    expect(popupState.formLayout).toBe("continuous")
     expect(popupState.formLayoutStable).toBe(true)
     expect(popupState.formSectionPreserved).toBe(true)
     expect(popupState.innerWidth).toBeGreaterThanOrEqual(200)

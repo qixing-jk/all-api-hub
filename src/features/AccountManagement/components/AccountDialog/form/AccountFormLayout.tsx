@@ -39,6 +39,7 @@ export function AccountFormLayout({
   const navigationRef = useRef<HTMLElement>(null)
   const directoryRef = useRef<HTMLDivElement>(null)
   const [activeId, setActiveId] = useState<string>(ACCOUNT_EDIT_SECTIONS[0].id)
+  const activeSection = ACCOUNT_EDIT_SECTIONS.find(({ id }) => id === activeId)
   const navigationSelection = useRef<string | null>(null)
   const pendingMenuDestination = useRef<string | null>(null)
   const destinationAnimation = useRef<Animation | null>(null)
@@ -185,7 +186,7 @@ export function AccountFormLayout({
                   <Button
                     variant="outline"
                     className="w-full justify-between"
-                    aria-label={t("sections.navigation")}
+                    aria-label={`${activeSection ? t(activeSection.title) : ""}, ${t("sections.navigation")}`}
                     rightIcon={<ChevronDown className="size-4" />}
                   >
                     {ACCOUNT_EDIT_SECTIONS.filter(
