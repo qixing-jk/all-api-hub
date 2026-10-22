@@ -190,53 +190,6 @@
       }
     },
     {
-      "id": "xuanshu-api",
-      "enabled": true,
-      "rank": 105,
-      "supportStatus": "supported",
-      "urls": {
-        "primaryAffiliate": "https://www.xuanshuapi.com/register?aff=ALL-API-HUB&promo=ALL-API-HUB",
-        "website": "https://www.xuanshuapi.com"
-      },
-      "locales": {
-        "zh-CN": {
-          "name": "玄枢API",
-          "tagline": "玄枢API是面向企业、技术团队和个人开发者的新一代 AI 模型路由网关，提供企业级稳定性的全球顶级模型（Claude, GPT, Grok等）一站式API 接入。",
-          "postClickNote": "模型一折到六折，通过此链接注册，充值额外加赠，首充送更多！企业支持对公转账和开票。"
-        },
-        "zh-TW": {
-          "name": "玄樞API",
-          "tagline": "玄樞API是面向企業、技術團隊和個人開發者的新一代 AI 模型路由閘道，提供具備企業級穩定性的全球頂級模型（Claude、GPT、Grok 等）一站式 API 接入。",
-          "postClickNote": "模型價格為原價一折至六折，透過此連結註冊可享額外儲值贈送，首次儲值加贈更多！企業支援對公轉帳及開立發票。"
-        },
-        "en": {
-          "name": "XuanShu API",
-          "tagline": "XuanShu API is a next-generation AI model routing gateway for enterprises, technical teams, and individual developers, providing one-stop API access to leading global models such as Claude, GPT, and Grok with enterprise-grade reliability.",
-          "postClickNote": "Model pricing ranges from 10% to 60% of standard rates. Register through this link to receive extra top-up bonuses, with more for your first top-up. Business customers can pay by corporate bank transfer and request invoices."
-        },
-        "pt-BR": {
-          "name": "XuanShu API",
-          "tagline": "O XuanShu API é um gateway de roteamento de modelos de IA de nova geração para empresas, equipes técnicas e desenvolvedores individuais, com acesso unificado via API a modelos globais de ponta, como Claude, GPT e Grok, e estabilidade de nível empresarial.",
-          "postClickNote": "Os modelos custam de 10% a 60% do preço padrão. Cadastre-se por este link para receber bônus extras nas recargas, com benefícios maiores na primeira recarga. Empresas podem pagar por transferência bancária corporativa e solicitar nota fiscal."
-        },
-        "ja": {
-          "name": "XuanShu API",
-          "tagline": "XuanShu API は、企業、技術チーム、個人開発者向けの次世代 AI モデルルーティングゲートウェイです。Claude、GPT、Grok など世界トップクラスのモデルへ、エンタープライズ級の安定性を備えた API で一括アクセスできます。",
-          "postClickNote": "モデル料金は通常価格の 10% から 60% まで。こちらのリンクから登録するとチャージ特典が追加され、初回チャージはさらにお得です。法人のお客様は法人銀行振込と請求書発行に対応しています。"
-        },
-        "vi": {
-          "name": "XuanShu API",
-          "tagline": "XuanShu API la cong dinh tuyen mo hinh AI the he moi danh cho doanh nghiep, doi ngu ky thuat va nha phat trien ca nhan, cung cap mot API duy nhat de truy cap cac mo hinh hang dau nhu Claude, GPT va Grok voi do on dinh cap doanh nghiep.",
-          "postClickNote": "Gia mo hinh tu 10% den 60% gia chuan. Dang ky qua lien ket nay de nhan them uu dai khi nap tien, nap tien lan dau duoc tang them nhieu hon. Ho tro doanh nghiep chuyen khoan ngan hang va xuat hoa don."
-        }
-      },
-      "accountPrefill": {
-        "siteType": "sub2api",
-        "siteUrl": "https://www.xuanshuapi.com",
-        "authType": "access_token"
-      }
-    },
-    {
       "id": "aicodemirror",
       "enabled": true,
       "rank": 108,

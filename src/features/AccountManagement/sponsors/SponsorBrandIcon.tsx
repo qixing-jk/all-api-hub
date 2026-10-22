@@ -11,7 +11,6 @@ import qiniuIcon from "~~/resources/partners/icons/qiniu-cloud-ai.png"
 import suixiangIcon from "~~/resources/partners/icons/suixiang.png"
 import volcengineIcon from "~~/resources/partners/icons/volcengine-coding-plan.png"
 import xingchenIcon from "~~/resources/partners/icons/xingchen-ai.png"
-import xuanshuIcon from "~~/resources/partners/icons/xuanshu-api.png"
 
 import { SPONSOR_REMOTE_ICON_BASE_URL } from "./constants"
 
@@ -44,7 +43,6 @@ const LOCAL_SPONSOR_ICONS: Record<string, string> = {
   "fenno-ai": fennoIcon,
   packycode: packycodeIcon,
   "xingchen-ai": xingchenIcon,
-  "xuanshu-api": xuanshuIcon,
   aicodemirror: aicodemirrorIcon,
   suixiang: suixiangIcon,
   "volcengine-coding-plan": volcengineIcon,

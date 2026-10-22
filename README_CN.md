@@ -184,17 +184,6 @@ GitHub Stable 和 Nightly 属于手动安装通道，不会自动更新；可 St
 <hr>
 
 <div>
-  <a href="https://www.xuanshuapi.com/register?aff=ALL-API-HUB&promo=ALL-API-HUB">
-    <img src="resources/partners/xuanshu-api.png" alt="玄枢API" width="180" align="left" hspace="10" vspace="4">
-  </a>
-  <p>
-    玄枢API是面向企业、技术团队和个人开发者的新一代 AI 模型路由网关，提供企业级稳定性的全球顶级模型（Claude, GPT, Grok等）一站式API 接入。模型一折到六折，通过<a href="https://www.xuanshuapi.com/register?aff=ALL-API-HUB&promo=ALL-API-HUB">此链接</a>注册，充值额外加赠，首充送更多！企业支持对公转账和开票（<a href="https://all-api-hub.qixing1217.top/service-guides/xuanshuapi.html">使用教程</a>）。
-  </p>
-</div>
-
-<hr>
-
-<div>
   <a href="https://www.aicodemirror.ai/register?invitecode=7IQNR8">
     <img src="resources/partners/aicodemirror.png" alt="AICodeMirror" width="128" align="left" hspace="10" vspace="4">
   </a>

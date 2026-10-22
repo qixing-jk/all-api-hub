@@ -100,17 +100,6 @@ If you are looking for stable, efficient, and highly compatible AI relay service
   <hr>
 
   <section class="sponsor-item">
-    <a class="sponsor-logo" href="https://www.xuanshuapi.com/register?aff=ALL-API-HUB&promo=ALL-API-HUB">
-      <img src="../../../resources/partners/xuanshu-api.png" alt="XuanShu API">
-    </a>
-    <p>
-      <strong>XuanShu API</strong> is a next-generation AI model routing gateway for enterprises, technical teams, and individual developers. It provides one-stop API access to leading global models including Claude, GPT, and Grok with enterprise-grade reliability. Model pricing ranges from 10% to 60% of standard rates. Register through <a href="https://www.xuanshuapi.com/register?aff=ALL-API-HUB&promo=ALL-API-HUB">this link</a> to receive extra top-up bonuses, with more for your first top-up. Business customers can pay by corporate bank transfer and request invoices (<a href="./service-guides/xuanshuapi.md">setup guide</a>).
-    </p>
-  </section>
-
-  <hr>
-
-  <section class="sponsor-item">
     <a class="sponsor-logo" href="https://www.aicodemirror.ai/register?invitecode=7IQNR8">
       <img src="../../../resources/partners/aicodemirror.png" alt="AICodeMirror">
     </a>

@@ -24,7 +24,6 @@ describe("SponsorBrandIcon component", () => {
       "fenno-ai",
       "packycode",
       "xingchen-ai",
-      "xuanshu-api",
       "aicodemirror",
       "suixiang",
       "volcengine-coding-plan",
