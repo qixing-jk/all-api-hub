@@ -101,6 +101,7 @@ describe("AccountFormLayout navigation", () => {
     await waitFor(() =>
       expect(active).toHaveAttribute("aria-current", "location"),
     )
+    navigation.scrollLeft = 100
     vi.spyOn(navigation, "getBoundingClientRect").mockReturnValue({
       left: 100,
       right: 300,
@@ -108,9 +109,9 @@ describe("AccountFormLayout navigation", () => {
     const bounds = vi.spyOn(active, "getBoundingClientRect")
     bounds.mockReturnValue({ left: 80, right: 180 } as DOMRect)
     fireEvent.resize(window)
-    expect(navigation.scrollLeft).toBe(-20)
+    expect(navigation.scrollLeft).toBe(80)
     bounds.mockReturnValue({ left: 250, right: 350 } as DOMRect)
     fireEvent.resize(window)
-    expect(navigation.scrollLeft).toBe(30)
+    expect(navigation.scrollLeft).toBe(130)
   })
 })
