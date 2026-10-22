@@ -213,7 +213,46 @@ const dynamicImportAllowlist = [
     imports: ["~/entrypoints/background/protectionBypassCoordinator"],
   },
 ]
-const workflowTransitionIconRestrictedImports = [
+const browserApiSyntaxRestrictions = [
+  {
+    selector: "MemberExpression[object.name=/^(browser|chrome)$/]",
+    message:
+      "Do not access global WebExtension APIs directly in app code. Add a guarded wrapper in the appropriate `~/utils/browser/**` adapter.",
+  },
+  {
+    selector:
+      "MemberExpression[object.type='TSAsExpression'][object.expression.name=/^(browser|chrome)$/]",
+    message:
+      "Do not access casted global WebExtension APIs directly in app code. Add a guarded wrapper in the appropriate `~/utils/browser/**` adapter.",
+  },
+  {
+    selector:
+      "MemberExpression[object.name=/^(globalThis|window)$/][property.name=/^(browser|chrome)$/]:not(MemberExpression[object.name=/^(globalThis|window)$/][property.name=/^(browser|chrome)$/] MemberExpression)",
+    message:
+      "Do not access global WebExtension APIs through `globalThis` or `window` in app code. Add a guarded wrapper in the appropriate `~/utils/browser/**` adapter.",
+  },
+  {
+    selector:
+      "MemberExpression[object.type='TSAsExpression'][object.expression.name=/^(globalThis|window)$/][property.name=/^(browser|chrome)$/]:not(MemberExpression[object.type='TSAsExpression'][object.expression.name=/^(globalThis|window)$/][property.name=/^(browser|chrome)$/] MemberExpression)",
+    message:
+      "Do not access casted global WebExtension APIs through `globalThis` or `window` in app code. Add a guarded wrapper in the appropriate `~/utils/browser/**` adapter.",
+  },
+]
+
+const lucideIconRestrictedImports = [
+  {
+    name: "lucide-react",
+    importNames: [
+      "AlertTriangle",
+      "AlertCircle",
+      "CheckCircle",
+      "CheckCircle2",
+      "XCircle",
+      "MoreHorizontal",
+    ],
+    message:
+      "Use canonical Lucide names such as TriangleAlert, CircleAlert, CircleCheck, CircleX and Ellipsis.",
+  },
   {
     name: "lucide-react",
     importNames: ["ExternalLink"],
@@ -226,7 +265,7 @@ function restrictedImports(...patterns) {
   return [
     "error",
     {
-      paths: workflowTransitionIconRestrictedImports,
+      paths: lucideIconRestrictedImports,
       patterns: [heroiconsImportRestrictionPattern, ...patterns],
     },
   ]
@@ -421,30 +460,20 @@ export default defineConfig([
             "Do not access the global Chrome extension API directly in app code. Add a guarded wrapper in the appropriate `~/utils/browser/**` adapter.",
         },
       ],
+      "no-restricted-syntax": ["error", ...browserApiSyntaxRestrictions],
+    },
+  },
+  {
+    files: ["src/features/**/*.{js,cjs,mjs,jsx,ts,tsx}"],
+    rules: {
       "no-restricted-syntax": [
         "error",
-        {
-          selector: "MemberExpression[object.name=/^(browser|chrome)$/]",
-          message:
-            "Do not access global WebExtension APIs directly in app code. Add a guarded wrapper in the appropriate `~/utils/browser/**` adapter.",
-        },
+        ...browserApiSyntaxRestrictions,
         {
           selector:
-            "MemberExpression[object.type='TSAsExpression'][object.expression.name=/^(browser|chrome)$/]",
+            "ImportDeclaration[source.value='lucide-react'] > ImportSpecifier[imported.name=/^(SquarePen|RefreshCcw)$/]",
           message:
-            "Do not access casted global WebExtension APIs directly in app code. Add a guarded wrapper in the appropriate `~/utils/browser/**` adapter.",
-        },
-        {
-          selector:
-            "MemberExpression[object.name=/^(globalThis|window)$/][property.name=/^(browser|chrome)$/]:not(MemberExpression[object.name=/^(globalThis|window)$/][property.name=/^(browser|chrome)$/] MemberExpression)",
-          message:
-            "Do not access global WebExtension APIs through `globalThis` or `window` in app code. Add a guarded wrapper in the appropriate `~/utils/browser/**` adapter.",
-        },
-        {
-          selector:
-            "MemberExpression[object.type='TSAsExpression'][object.expression.name=/^(globalThis|window)$/][property.name=/^(browser|chrome)$/]:not(MemberExpression[object.type='TSAsExpression'][object.expression.name=/^(globalThis|window)$/][property.name=/^(browser|chrome)$/] MemberExpression)",
-          message:
-            "Do not access casted global WebExtension APIs through `globalThis` or `window` in app code. Add a guarded wrapper in the appropriate `~/utils/browser/**` adapter.",
+            "Use Pencil for edit actions and RefreshCw for refresh/retry actions, preferably through ~/components/icons/productIcons.",
         },
       ],
     },

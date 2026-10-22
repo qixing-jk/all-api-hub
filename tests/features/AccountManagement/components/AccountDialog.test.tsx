@@ -419,6 +419,62 @@ vi.mock("~/utils/navigation/feedbackPages", () => ({
 }))
 
 describe("AccountDialog", () => {
+  it("detects the entered site instead of saving an incomplete account on Enter", async () => {
+    const user = userEvent.setup()
+    const onError = vi.fn()
+    mockState.isFormValid = false
+    mockHandlers.handleSaveAccount.mockRejectedValueOnce(
+      new Error("Please fill in all account information"),
+    )
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={onError}
+      />,
+    )
+
+    await user.click(screen.getByRole("textbox", { name: /siteInfo.siteUrl/ }))
+    await user.keyboard("{Enter}")
+
+    expect(onError).not.toHaveBeenCalled()
+    expect(mockHandlers.handleSaveAccount).not.toHaveBeenCalled()
+    expect(mockHandlers.handleAutoDetect).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    { scenario: "empty URL", url: "   ", isDetecting: false },
+    {
+      scenario: "detection in progress",
+      url: "https://example.com",
+      isDetecting: true,
+    },
+  ])("ignores Enter with $scenario", async ({ url, isDetecting }) => {
+    const user = userEvent.setup()
+    mockState.url = url
+    mockState.isDetecting = isDetecting
+    mockState.isFormValid = false
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole("textbox", { name: /siteInfo.siteUrl/ }))
+    await user.keyboard("{Enter}")
+
+    expect(mockHandlers.handleAutoDetect).not.toHaveBeenCalled()
+    expect(mockHandlers.handleSaveAccount).not.toHaveBeenCalled()
+  })
+
   it("lets the saved account provisioning dialog complete its owning workflow", async () => {
     mockState.postSaveKeyProvisioning = {
       account: buildDisplaySiteData({ name: "Saved account" }),
@@ -607,23 +663,66 @@ describe("AccountDialog", () => {
     ).toBeEnabled()
   })
 
-  it("renders the account form after entering the account-form phase", async () => {
-    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
-    mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
+  it.each([
+    ACCOUNT_DIALOG_FORM_SOURCES.MANUAL,
+    ACCOUNT_DIALOG_FORM_SOURCES.DETECTED,
+  ])(
+    "uses the shared outline when adding an account (%s)",
+    async (formSource) => {
+      mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+      mockState.formSource = formSource
 
+      render(
+        <AccountDialog
+          isOpen={true}
+          onClose={vi.fn()}
+          mode={DIALOG_MODES.ADD}
+          onSuccess={vi.fn()}
+          onError={vi.fn()}
+        />,
+      )
+
+      expect(
+        await screen.findByTestId("account-management-site-name-input"),
+      ).toBeInTheDocument()
+      expect(screen.getByRole("navigation")).toBeVisible()
+      expect(
+        screen.getByTestId(
+          ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionSiteInfo,
+        ),
+      ).toContainElement(
+        screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput),
+      )
+      expect(screen.getByRole("note")).toHaveTextContent(
+        formSource === ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
+          ? "accountDialog:infoPanel.confirmAddInfo"
+          : "accountDialog:infoPanel.manualInfo",
+      )
+    },
+  )
+
+  it("groups the site URL into the continuous edit form", async () => {
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
     render(
       <AccountDialog
-        isOpen={true}
+        isOpen
         onClose={vi.fn()}
-        mode={DIALOG_MODES.ADD}
+        mode={DIALOG_MODES.EDIT}
         onSuccess={vi.fn()}
         onError={vi.fn()}
       />,
     )
-
     expect(
-      await screen.findByTestId("account-management-site-name-input"),
-    ).toBeInTheDocument()
+      await screen.findByRole("navigation", {
+        name: "accountDialog:sections.navigation",
+      }),
+    ).toBeVisible()
+    const siteSection = screen.getByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionSiteInfo,
+    )
+    expect(siteSection).toContainElement(
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput),
+    )
   })
 
   it("does not show manual guidance for completed OpenRouter provisioning", async () => {
@@ -800,11 +899,9 @@ describe("AccountDialog", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("offers bookmark batch import in the add-account entry phase", async () => {
-    const user = userEvent.setup()
+  it("keeps bookmark batch import out of the add-account entry phase", async () => {
     mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT
     mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.MANUAL
-    const handleOpenBookmarkImport = vi.fn()
 
     render(
       <AccountDialog
@@ -813,31 +910,28 @@ describe("AccountDialog", () => {
         mode={DIALOG_MODES.ADD}
         onSuccess={vi.fn()}
         onError={vi.fn()}
-        onOpenBookmarkImport={handleOpenBookmarkImport}
       />,
     )
 
     expect(
-      await screen.findByText("accountDialog:bookmarkImportBatch.prompt"),
-    ).toBeVisible()
-    await user.click(
-      screen.getByRole("button", {
+      screen.queryByText("accountDialog:bookmarkImportBatch.prompt"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
         name: "accountDialog:bookmarkImportBatch.action",
       }),
-    )
-
-    expect(handleOpenBookmarkImport).toHaveBeenCalledTimes(1)
+    ).not.toBeInTheDocument()
   })
 
   it.each([false, true])(
-    "prepares the access-token input when opening site security settings (collapsed: %s)",
-    async (collapsed) => {
+    "prepares the visible access-token input when opening site security settings (narrow: %s)",
+    async (narrow) => {
       const user = userEvent.setup()
       const media = window.matchMedia("(max-width: 639px)")
       vi.mocked(window.matchMedia).mockImplementation((query) => ({
         ...media,
         media: query,
-        matches: collapsed && query === "(max-width: 639px)",
+        matches: narrow && query === "(max-width: 639px)",
       }))
       mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
       mockState.siteType = SITE_TYPES.NEW_API
@@ -858,16 +952,9 @@ describe("AccountDialog", () => {
         />,
       )
 
-      if (collapsed) {
-        await user.click(
-          await screen.findByRole("button", {
-            name: "accountDialog:sections.accountAuth.title",
-          }),
-        )
-        expect(
-          screen.queryByPlaceholderText("accountDialog:form.accessToken"),
-        ).not.toBeInTheDocument()
-      }
+      expect(
+        screen.getByPlaceholderText("accountDialog:form.accessToken"),
+      ).toBeVisible()
 
       const openSecurityButton = screen.getByRole("button", {
         name: "accountDialog:accessTokenVerification.openSecurity",

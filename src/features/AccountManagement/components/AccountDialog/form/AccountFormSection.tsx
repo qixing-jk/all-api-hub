@@ -7,7 +7,9 @@ import {
   CardHeader,
   CardTitle,
   CollapsibleSection,
+  Heading3,
 } from "~/components/ui"
+import { ACCOUNT_EDIT_SECTIONS } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
 import { useIsSmallScreen } from "~/hooks/useMediaQuery"
 
 interface AccountFormSectionProps {
@@ -19,11 +21,13 @@ interface AccountFormSectionProps {
   testId: string
   id?: string
   children: ReactNode
+  continuous?: boolean
+  contentClassName?: string
 }
 
 /**
  * Responsive section wrapper for the account form.
- * Desktop uses static cards while mobile uses collapsible panels.
+ * Continuous forms use flat sections; other callers retain responsive cards/panels.
  */
 export function AccountFormSection({
   title,
@@ -34,8 +38,51 @@ export function AccountFormSection({
   testId,
   id,
   children,
+  continuous = false,
+  contentClassName,
 }: AccountFormSectionProps) {
   const isSmallScreen = useIsSmallScreen()
+  const Icon = ACCOUNT_EDIT_SECTIONS.find((section) => section.id === id)?.icon
+
+  if (continuous) {
+    return (
+      <section
+        id={id}
+        aria-labelledby={`${id}-heading`}
+        data-account-form-section=""
+        data-testid={testId}
+        data-layout="continuous"
+        className="border-border pt-density-6 pb-density-6 relative -mx-3 min-w-0 scroll-mt-24 border-t px-3 first:border-t-0 first:pt-0 lg:scroll-mt-3"
+      >
+        <span
+          aria-hidden="true"
+          data-navigation-feedback=""
+          className="ring-theme-500 ring-offset-popover dark:ring-theme-400 pointer-events-none absolute inset-0 rounded-lg opacity-0 ring-2 ring-offset-2"
+        />
+        <div className="mb-density-4">
+          <Heading3
+            id={`${id}-heading`}
+            tabIndex={-1}
+            className="flex items-center gap-2.5 text-base outline-none"
+          >
+            {Icon && (
+              <Icon
+                aria-hidden="true"
+                className="text-muted-foreground size-4 shrink-0"
+              />
+            )}
+            {title}
+          </Heading3>
+          {description && (
+            <p className="text-muted-foreground mt-1 text-xs">{description}</p>
+          )}
+        </div>
+        <div className={contentClassName ?? "space-y-density-4"}>
+          {children}
+        </div>
+      </section>
+    )
+  }
 
   if (isSmallScreen) {
     return (

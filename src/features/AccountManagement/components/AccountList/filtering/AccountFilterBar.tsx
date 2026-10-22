@@ -1,7 +1,12 @@
-import { BadgeCheck, CirclePause, Globe2, RefreshCw } from "lucide-react"
+import { CirclePause } from "lucide-react"
 import type { ComponentType, SVGProps } from "react"
 import { useTranslation } from "react-i18next"
 
+import {
+  AccountSiteTypeIcon,
+  AutoCheckinIcon,
+  RefreshActionIcon,
+} from "~/components/icons/productIcons"
 import {
   Select,
   SelectContent,
@@ -120,7 +125,7 @@ export default function AccountFilterBar({
         siteTypeOptions,
         onSiteTypeChange,
         "account-filter-site-type",
-        Globe2,
+        AccountSiteTypeIcon,
       )}
       {renderSelect(
         checkInValue,
@@ -128,7 +133,7 @@ export default function AccountFilterBar({
         checkInOptions,
         onCheckInChange,
         "account-filter-check-in",
-        BadgeCheck,
+        AutoCheckinIcon,
       )}
       {renderSelect(
         refreshValue,
@@ -136,7 +141,7 @@ export default function AccountFilterBar({
         refreshOptions,
         onRefreshChange,
         "account-filter-refresh",
-        RefreshCw,
+        RefreshActionIcon,
       )}
       {renderSelect(
         disabledValue,

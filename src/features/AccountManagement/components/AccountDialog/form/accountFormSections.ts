@@ -1,3 +1,40 @@
+import { ShieldCheck } from "lucide-react"
+
+import {
+  AccountBalanceIcon,
+  AccountSiteIcon,
+  AccountTagIcon,
+  AutoCheckinIcon,
+} from "~/components/icons/productIcons"
+
+export const ACCOUNT_EDIT_SECTIONS = [
+  {
+    id: "account-form-site-info",
+    title: "sections.siteInfo.title",
+    icon: AccountSiteIcon,
+  },
+  {
+    id: "account-form-auth",
+    title: "sections.accountAuth.title",
+    icon: ShieldCheck,
+  },
+  {
+    id: "account-check-in-config",
+    title: "sections.checkInConfig.title",
+    icon: AutoCheckinIcon,
+  },
+  {
+    id: "account-form-balance",
+    title: "sections.balanceAndStats.title",
+    icon: AccountBalanceIcon,
+  },
+  {
+    id: "account-form-tags-notes",
+    title: "sections.tagsAndNotes.title",
+    icon: AccountTagIcon,
+  },
+] as const
+
 export const ACCOUNT_FORM_SECTION_IDS = [
   "site-info",
   "account-auth",

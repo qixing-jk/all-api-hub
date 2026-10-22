@@ -48,6 +48,13 @@ describe("AccountFilterBar", () => {
         </I18nextProvider>,
       )
       const trigger = screen.getByTestId(`account-filter-${filter}`)
+      const iconClasses: Record<string, string> = {
+        "site-type": "lucide-layers",
+        "check-in": "lucide-calendar-check-2",
+        refresh: "lucide-refresh-cw",
+        disabled: "lucide-circle-pause",
+      }
+      expect(trigger.querySelector("svg")).toHaveClass(iconClasses[filter]!)
       expect(trigger).toHaveAttribute("title", "All entries")
       await user.click(trigger)
       const listbox = screen.getByRole("listbox")

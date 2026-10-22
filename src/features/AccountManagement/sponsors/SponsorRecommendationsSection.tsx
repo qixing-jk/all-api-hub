@@ -14,6 +14,7 @@ import type {
   SponsorRecommendation,
 } from "~/features/AccountManagement/sponsors/types"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import { cn } from "~/lib/utils"
 
 import type { SponsorWorkflowStarter } from "./sponsorWorkflowIntent"
 
@@ -21,6 +22,7 @@ interface SponsorRecommendationsSectionProps {
   onStartWorkflow?: SponsorWorkflowStarter
   surface: SponsorRecommendationSurface
   items: SponsorRecommendation[]
+  layout?: "list" | "grid"
   onContinueAddAccount: (prefill: AddAccountPrefill) => void
   onOpenBookmarkManager: (prefill: SponsorBookmarkFallbackPrefill) => void
   onOpenApiCredentialProfiles: (
@@ -32,6 +34,7 @@ interface SponsorRecommendationsSectionProps {
 export function SponsorRecommendationsSection({
   surface,
   items,
+  layout = "list",
   onContinueAddAccount,
   onOpenBookmarkManager,
   onOpenApiCredentialProfiles,
@@ -44,8 +47,6 @@ export function SponsorRecommendationsSection({
     surface === SPONSOR_RECOMMENDATION_SURFACES.PopupApiCredentialProfiles
   const isPopupBookmarks =
     surface === SPONSOR_RECOMMENDATION_SURFACES.PopupBookmarks
-  const showVisibleHeader =
-    surface !== SPONSOR_RECOMMENDATION_SURFACES.AddAccountDialog
 
   const heading = isNewcomer
     ? t("sponsor.newcomer.title")
@@ -75,10 +76,10 @@ export function SponsorRecommendationsSection({
   return (
     <section
       aria-labelledby={headingId}
-      className={showVisibleHeader ? "space-y-density-3" : "space-y-density-2"}
+      className="space-y-density-3"
       data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.sponsorRecommendations}
     >
-      <div className={showVisibleHeader ? "space-y-density-1" : "sr-only"}>
+      <div className="space-y-density-1">
         <h3 id={headingId} className="text-foreground text-sm font-medium">
           {heading}
         </h3>
@@ -88,7 +89,12 @@ export function SponsorRecommendationsSection({
           </p>
         ) : null}
       </div>
-      <div className="gap-y-density-2 grid gap-x-2">
+      <div
+        className={cn(
+          "gap-density-2 grid min-w-0",
+          layout === "grid" && "lg:grid-cols-2",
+        )}
+      >
         {items.map((item) => (
           <SponsorRecommendationCard
             key={item.id}

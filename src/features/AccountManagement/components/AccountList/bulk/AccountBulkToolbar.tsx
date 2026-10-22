@@ -3,7 +3,6 @@ import {
   CheckCheck,
   ChevronDown,
   Eraser,
-  Globe2,
   ListChecks,
   SquareX,
   Trash2,
@@ -12,6 +11,7 @@ import {
 import { useLayoutEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { AccountSiteIcon } from "~/components/icons/productIcons"
 import { Button, Checkbox, Modal } from "~/components/ui"
 import {
   DropdownMenu,
@@ -290,7 +290,7 @@ export function AccountBulkToolbar({
               size="sm"
               className={controlClass}
               onClick={onCopySiteUrls}
-              leftIcon={<Globe2 className={inlineIconClass} />}
+              leftIcon={<AccountSiteIcon className={inlineIconClass} />}
               disabled={selectedCount === 0 || isBusy}
             >
               {t("account:bulk.copySiteUrls")}

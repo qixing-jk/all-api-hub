@@ -10,20 +10,15 @@ import { BookmarkDialogStateProvider } from "~/features/SiteBookmarks/editor/Boo
 export const AccountManagementProvider = ({
   children,
   refreshKey,
-  onOpenBookmarkImport,
   initialRecoveryId,
 }: {
   children: ReactNode
   refreshKey?: number
-  onOpenBookmarkImport?: () => void
   initialRecoveryId?: string
 }) => {
   return (
     <AccountDataProvider refreshKey={refreshKey}>
-      <DialogStateProvider
-        onOpenBookmarkImport={onOpenBookmarkImport}
-        initialRecoveryId={initialRecoveryId}
-      >
+      <DialogStateProvider initialRecoveryId={initialRecoveryId}>
         <BookmarkDialogStateProvider>
           <AccountActionsProvider>
             <LdohSiteLookupProvider>{children}</LdohSiteLookupProvider>

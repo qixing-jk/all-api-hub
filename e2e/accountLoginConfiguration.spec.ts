@@ -146,12 +146,8 @@ for (const method of ["linuxdo", "password"] as const) {
       height: number
     }) => {
       await page.setViewportSize(viewport)
-      // Crossing the media-query breakpoint replaces each section's subtree.
-      // Browser viewport acknowledgement does not wait for React's replacement.
-      const layout =
-        viewport.width <= 639 ? "mobile-collapsible" : "desktop-card"
-      await expect(checkInSection).toHaveAttribute("data-layout", layout)
-      await expect(loginSection).toHaveAttribute("data-layout", layout)
+      await expect(checkInSection).toHaveAttribute("data-layout", "continuous")
+      await expect(loginSection).toHaveAttribute("data-layout", "continuous")
     }
     await expect(
       loginSection.getByRole("combobox", { name: "Login method", exact: true }),
@@ -313,14 +309,11 @@ for (const method of ["linuxdo", "password"] as const) {
     if (method === "password") {
       const viewport = page.viewportSize()!
       await setFormViewport({ width: 390, height: 844 })
-      await loginSection
-        .getByRole("button", { name: "Account login", exact: true })
-        .click()
       const loginMethod = loginSection.getByRole("combobox", {
         name: "Login method",
         exact: true,
       })
-      await expect(loginMethod).toBeHidden()
+      await expect(loginMethod).toBeVisible()
       await loginNotice
         .getByRole("button", { name: "Change account login" })
         .click()

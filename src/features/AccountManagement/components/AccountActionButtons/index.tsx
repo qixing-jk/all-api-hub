@@ -1,18 +1,14 @@
 import {
   Ban,
   Banknote,
-  CalendarCheck2,
   ChartPie,
   CircleCheck,
   Cpu,
   Ellipsis,
-  KeyRound,
   Link,
   List,
   MessageSquarePlus,
   PanelsTopLeft,
-  Pencil,
-  RefreshCw,
   ScanSearch,
   Search,
   Share2,
@@ -21,6 +17,12 @@ import {
 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import {
+  AccountKeyIcon,
+  AutoCheckinIcon,
+  EditActionIcon,
+  RefreshActionIcon,
+} from "~/components/icons/productIcons"
 import { IconButton } from "~/components/ui"
 import {
   DropdownMenu,
@@ -143,7 +145,7 @@ export default function AccountActionButtons({
           data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.rowCopyKeyButton}
           title={primaryKeyActionLabel}
         >
-          <KeyRound className="h-4 w-4" />
+          <AccountKeyIcon className="h-4 w-4" />
         </IconButton>
 
         <IconButton
@@ -160,7 +162,7 @@ export default function AccountActionButtons({
           title={t("actions.edit")}
           analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.OpenUpdateAccountDialog}
         >
-          <Pencil className="h-4 w-4" />
+          <EditActionIcon className="h-4 w-4" />
         </IconButton>
 
         {/* Secondary Level - Dropdown menu */}
@@ -222,7 +224,7 @@ export default function AccountActionButtons({
 
                 <AccountActionMenuItem
                   onClick={handleNavigateToKeyManagement}
-                  icon={KeyRound}
+                  icon={AccountKeyIcon}
                   label={t("actions.keyManagement")}
                   testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowKeyManagementMenuItem}
                   analyticsAction={
@@ -293,7 +295,7 @@ export default function AccountActionButtons({
 
                 <AccountActionMenuItem
                   onClick={handleRefreshLocal}
-                  icon={RefreshCw}
+                  icon={RefreshActionIcon}
                   label={t("actions.refresh")}
                   loading={isRefreshMenuPending}
                   loadingLabel={t("common:status.refreshing")}
@@ -323,7 +325,7 @@ export default function AccountActionButtons({
                   >
                     <AccountActionMenuItem
                       onClick={handleQuickCheckin}
-                      icon={CalendarCheck2}
+                      icon={AutoCheckinIcon}
                       label={t("actions.quickCheckin")}
                       testId={
                         ACCOUNT_MANAGEMENT_TEST_IDS.rowQuickCheckinMenuItem

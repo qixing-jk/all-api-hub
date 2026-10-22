@@ -3,14 +3,16 @@ import {
   FileText,
   Gift,
   Link,
-  RefreshCw,
-  Tag,
-  UserRound,
   type LucideIcon,
 } from "lucide-react"
 import type { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
+import {
+  AccountTagIcon,
+  AccountUserIcon,
+  AutoCheckinIcon,
+} from "~/components/icons/productIcons"
 import { Caption } from "~/components/ui"
 import type { SearchResultWithHighlight } from "~/features/AccountManagement/components/AccountList/filtering/useAccountSearch"
 import { SiteInfoHighlightedText } from "~/features/AccountManagement/components/AccountList/rows/SiteInfoHighlightedText"
@@ -73,7 +75,7 @@ export function SiteInfoDetails({
 
   return (
     <>
-      <SiteInfoDetailRow icon={UserRound} title={site.username}>
+      <SiteInfoDetailRow icon={AccountUserIcon} title={site.username}>
         {highlights?.username && site.username ? (
           <SiteInfoHighlightedText
             fragments={highlights.username}
@@ -103,7 +105,7 @@ export function SiteInfoDetails({
       )}
 
       {highlights?.customCheckInUrl && customCheckInUrl && (
-        <SiteInfoDetailRow icon={RefreshCw} title={customCheckInUrl}>
+        <SiteInfoDetailRow icon={AutoCheckinIcon} title={customCheckInUrl}>
           <SiteInfoHighlightedText
             fragments={highlights.customCheckInUrl}
             fallback={customCheckInUrl}
@@ -132,7 +134,7 @@ export function SiteInfoDetails({
 
       {hasTags && (
         <SiteInfoDetailRow
-          icon={Tag}
+          icon={AccountTagIcon}
           title={tagLabel}
           className="sm:mt-density-1"
         >

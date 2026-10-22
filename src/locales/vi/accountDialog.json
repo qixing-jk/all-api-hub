@@ -69,10 +69,6 @@
     },
     "title": "Vẫn chưa nhận dạng được? Hãy thử các phương án thay thế"
   },
-  "bookmarkImportBatch": {
-    "action": "Nhập hàng loạt từ dấu trang",
-    "prompt": "Đã lưu nhiều trang trong dấu trang trình duyệt? Bạn có thể nhập hàng loạt từ dấu trang."
-  },
   "checkInFeedback": {
     "accounts": "Quay lại danh sách tài khoản",
     "accountUnavailable": "Không tìm thấy hoặc không đọc được tài khoản này. Hãy quay lại danh sách tài khoản.",
@@ -212,6 +208,7 @@
     "autoDetectInfo": "Vui lòng đăng nhập vào trang web đích trước, tiện ích mở rộng sẽ tự động nhận dạng và điền thông tin cần thiết để thêm tài khoản",
     "confirmAddInfo": "Vui lòng xác nhận thông tin tài khoản chính xác và nhấp vào nút \"Xác nhận thêm\"",
     "confirmation": "Xác nhận thông tin tài khoản",
+    "editHelp": "Hướng dẫn chỉnh sửa",
     "editInfo": "Chỉnh sửa thông tin tài khoản",
     "editInfoDesc": "Sau khi sửa đổi thông tin tài khoản, hệ thống sẽ xác minh lại và lấy dữ liệu số dư mới nhất",
     "ldohSiteListHint": "Không có trang web? LDOH cung cấp thư mục gồm một lượng lớn các trang web AI công ích trong cộng đồng Linux.do.",
@@ -314,6 +311,7 @@
     "checkInConfig": {
       "title": "Cấu hình điểm danh"
     },
+    "navigation": "Các phần cài đặt tài khoản",
     "siteInfo": {
       "title": "Thông tin trang web"
     },

@@ -29,9 +29,9 @@ export default function AutoDetectSlowHintAlert({
   }
 
   return (
-    <Alert variant="default" className="mb-density-4">
-      <div>
-        <p className="mb-density-2 text-xs">
+    <Alert variant="default" className="mb-density-4 sm:items-center">
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+        <p className="min-w-0 text-xs leading-5 sm:flex-1">
           {t("accountDialog:messages.autoDetectTakingTooLong")}
         </p>
         <Button
@@ -39,6 +39,7 @@ export default function AutoDetectSlowHintAlert({
           onClick={handleHelpClick}
           variant="secondary"
           size="sm"
+          className="shrink-0 self-start sm:self-center"
           leftIcon={<CircleHelp className="h-3 w-3" />}
         >
           {t("accountDialog:actions.helpDocument")}

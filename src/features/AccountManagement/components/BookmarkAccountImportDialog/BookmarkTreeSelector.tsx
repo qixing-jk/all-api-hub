@@ -5,13 +5,13 @@ import {
   ChevronsDownUp,
   ChevronsUpDown,
   Folder,
-  Globe2,
   Search,
 } from "lucide-react"
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { Tree, type NodeRendererProps, type TreeApi } from "react-arborist"
 import { useTranslation } from "react-i18next"
 
+import { AccountSiteIcon } from "~/components/icons/productIcons"
 import { Button } from "~/components/ui/button"
 import { Checkbox } from "~/components/ui/checkbox"
 import { Input } from "~/components/ui/input"
@@ -290,7 +290,10 @@ function BookmarkTreeNode({
       {isFolder ? (
         <Folder className="text-link size-4 shrink-0" aria-hidden="true" />
       ) : (
-        <Globe2 className="text-link size-4 shrink-0" aria-hidden="true" />
+        <AccountSiteIcon
+          className="text-link size-4 shrink-0"
+          aria-hidden="true"
+        />
       )}
       <div className="min-w-0 flex-1">
         <div className="gap-y-density-2 flex min-w-0 items-baseline gap-x-2">

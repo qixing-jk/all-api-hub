@@ -1,6 +1,6 @@
-import { UserRound } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { AccountUserIcon } from "~/components/icons/productIcons"
 import { PopupTabOnboarding } from "~/components/PopupTabOnboarding"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { NewcomerSponsorRecommendationsSection } from "~/features/AccountManagement/components/NewcomerSponsorRecommendationsSection"
@@ -34,7 +34,7 @@ export function PopupAccountOnboarding({ onAdd }: { onAdd: () => void }) {
     >
       <PopupTabOnboarding
         data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountListView}
-        icon={UserRound}
+        icon={AccountUserIcon}
         title={t("emptyState")}
         titleId="popup-account-onboarding-title"
         description={t("popupOnboarding.signInHint")}

@@ -1,8 +1,8 @@
 import { Combobox as ComboboxPrimitive } from "@base-ui/react"
-import { Globe2 } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { AccountSiteIcon } from "~/components/icons/productIcons"
 import { ClearableFieldButton } from "~/components/ui/clearableField"
 import {
   Combobox,
@@ -143,7 +143,7 @@ export function AccountSiteUrlInput({
         title={currentTabUrl ?? undefined}
         className="shrink-0 whitespace-nowrap"
       >
-        <Globe2 aria-hidden="true" />
+        <AccountSiteIcon aria-hidden="true" />
         <span className="hidden min-[360px]:inline">
           {t("siteInfo.useCurrent")}
         </span>

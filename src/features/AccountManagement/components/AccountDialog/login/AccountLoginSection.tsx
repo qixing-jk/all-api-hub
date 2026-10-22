@@ -30,6 +30,7 @@ const UNSET_LOGIN_METHOD = "unset"
 
 /** Existing login configuration, owned by the account rather than its consumers. */
 export function AccountLoginSection({
+  continuous,
   siteUrl,
   passwordIdentity = ACCOUNT_PASSWORD_IDENTITIES.UsernameOrEmail,
   login,
@@ -39,6 +40,7 @@ export function AccountLoginSection({
   open,
   onOpenChange,
 }: {
+  continuous?: boolean
   siteUrl?: string
   passwordIdentity?: AccountSiteLoginConfig["passwordIdentity"]
   login?: AccountLoginConfiguration
@@ -57,6 +59,7 @@ export function AccountLoginSection({
   if (!isAgentRouterLoginUrl(siteUrl)) return null
   return (
     <AccountFormSection
+      continuous={continuous}
       title={t("login.title")}
       defaultOpen
       open={open}

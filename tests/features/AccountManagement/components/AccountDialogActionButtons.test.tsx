@@ -42,9 +42,13 @@ describe("AccountDialog ActionButtons", () => {
 
     expect(autoDetectButton).toBeDisabled()
     expect(manualAddButton).toBeDisabled()
+    expect(screen.getAllByRole("button")).toEqual([
+      autoDetectButton,
+      manualAddButton,
+    ])
     expect(
       screen.queryByRole("button", { name: "common:actions.cancel" }),
-    ).toBeNull()
+    ).not.toBeInTheDocument()
 
     await user.click(autoDetectButton)
     await user.click(manualAddButton)
@@ -241,7 +245,11 @@ describe("AccountDialog ActionButtons", () => {
     expect(manualAddButton).toBeEnabled()
     expect(
       screen.queryByRole("button", { name: "common:actions.cancel" }),
-    ).toBeNull()
+    ).not.toBeInTheDocument()
+    expect(screen.getAllByRole("button")).toEqual([
+      autoDetectButton,
+      manualAddButton,
+    ])
     expect(
       screen.queryByRole("button", {
         name: "accountDialog:actions.autoConfigAriaLabel",

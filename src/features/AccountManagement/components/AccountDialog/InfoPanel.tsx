@@ -1,7 +1,8 @@
-import { Sparkles, UserRound } from "lucide-react"
+import { Info, Sparkles } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { LdohIcon } from "~/components/icons/LdohIcon"
+import { AccountUserIcon } from "~/components/icons/productIcons"
 import { Button } from "~/components/ui"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import type { AccountSiteManualAddGuideAnchor } from "~/services/accountSiteDefinitions"
@@ -17,6 +18,7 @@ import {
 } from "./models"
 
 interface InfoPanelProps {
+  presentation?: "panel" | "guidance" | "inline"
   mode: DialogMode
   phase: AccountDialogPhase
   formSource: AccountDialogFormSource
@@ -27,16 +29,42 @@ interface InfoPanelProps {
   manualAddGuideAnchor?: AccountSiteManualAddGuideAnchor
 }
 
+/** Secondary site discovery, kept after recommendations in the add dialog. */
+export function AccountSiteDiscoveryHint() {
+  const { t } = useTranslation("accountDialog")
+  return (
+    <div className="text-muted-foreground gap-density-1 flex flex-wrap items-center text-xs leading-5">
+      <span>{t("infoPanel.ldohSiteListHint")}</span>
+      <Button
+        type="button"
+        onClick={() => void createTab(LDOH_ORIGIN, true)}
+        variant="link"
+        size="sm"
+        className="h-auto min-h-0 justify-start p-0 text-left"
+        leftIcon={
+          <span aria-hidden="true">
+            <LdohIcon size="sm" />
+          </span>
+        }
+      >
+        {t("infoPanel.openLdohSiteList")}
+      </Button>
+    </div>
+  )
+}
+
 /**
  * Side panel describing automatic detection status and next steps per mode.
  * @param props Component props indicating mode and detection state.
  * @param props.mode Dialog mode used to determine copy and icon visuals.
+ * @param props.presentation Prominent panel or quiet visible form guidance.
  * @param props.phase Current dialog phase determining whether the form is shown.
  * @param props.formSource Source that led the dialog into form mode.
  * @param props.autoDetectPresentation Optional site-specific detection copy.
  * @param props.manualAddGuideAnchor Optional docs anchor for the selected site type.
  */
 export default function InfoPanel({
+  presentation = "panel",
   mode,
   phase,
   formSource,
@@ -53,10 +81,6 @@ export default function InfoPanel({
     isAddMode && phase === ACCOUNT_DIALOG_PHASES.SITE_INPUT
   const showManualAddGuideLink =
     isAddMode && isManualForm && manualAddGuideAnchor
-
-  const handleOpenLdohSiteList = () => {
-    void createTab(LDOH_ORIGIN, true)
-  }
 
   const getTitle = () => {
     if (isAddMode) {
@@ -83,8 +107,45 @@ export default function InfoPanel({
     )
   }
 
-  const Icon = isAddMode ? Sparkles : UserRound
+  const Icon = isAddMode ? Sparkles : AccountUserIcon
   const description = getDescription()
+
+  if (presentation === "inline") {
+    return (
+      <div
+        role="note"
+        aria-label={getTitle()}
+        className="text-muted-foreground flex items-start gap-2 text-xs leading-5"
+      >
+        <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+        <div className="min-w-0">{description}</div>
+      </div>
+    )
+  }
+
+  if (presentation === "guidance") {
+    return (
+      <div
+        role="note"
+        aria-label={isAddMode ? getTitle() : t("infoPanel.editHelp")}
+        className="text-muted-foreground space-y-density-2 px-3 text-xs leading-relaxed"
+      >
+        <p className="text-foreground flex items-center gap-2.5 font-medium">
+          <Info aria-hidden="true" className="size-4 shrink-0" />
+          {isAddMode ? getTitle() : t("infoPanel.editHelp")}
+        </p>
+        <div className="space-y-density-2">
+          {typeof description === "string" ? <p>{description}</p> : description}
+          {showManualAddGuideLink && (
+            <ManualAddGuideButton
+              anchor={manualAddGuideAnchor}
+              className="h-auto min-h-0 justify-start p-0 text-left"
+            />
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="bg-primary-soft text-primary-soft-foreground border-primary-soft-border py-density-3 rounded-lg border px-3">
@@ -103,23 +164,7 @@ export default function InfoPanel({
 
             {showLdohSiteListLink && (
               <div className="border-primary-soft-border mt-density-2 pt-density-2 border-t">
-                <p className="mb-density-1">
-                  {t("infoPanel.ldohSiteListHint")}
-                </p>
-                <Button
-                  type="button"
-                  onClick={handleOpenLdohSiteList}
-                  variant="link"
-                  size="sm"
-                  className="h-auto min-h-0 justify-start p-0 text-left"
-                  leftIcon={
-                    <span aria-hidden="true">
-                      <LdohIcon size="sm" />
-                    </span>
-                  }
-                >
-                  {t("infoPanel.openLdohSiteList")}
-                </Button>
+                <AccountSiteDiscoveryHint />
               </div>
             )}
 
