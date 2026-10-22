@@ -1,8 +1,6 @@
 import {
-  ArrowLeftRight,
   BarChart3,
   Bookmark,
-  CalendarCheck2,
   Cloud,
   Compass,
   Cpu,
@@ -12,7 +10,6 @@ import {
   LineChart,
   Megaphone,
   Palette,
-  RefreshCw,
   Settings,
   Star,
   Terminal,
@@ -23,6 +20,9 @@ import {
   AccountKeyIcon,
   AccountManagementIcon,
   ApiCredentialLibraryIcon,
+  AutoCheckinIcon,
+  ImportExportIcon,
+  ManagedSiteModelSyncIcon,
 } from "~/components/icons/productIcons"
 import { DEV_MENU_ITEM_IDS } from "~/constants/devOptionsMenuIds"
 import type { DevOptionsMenuItemId } from "~/constants/devOptionsMenuIds"
@@ -39,13 +39,13 @@ export const OPTIONS_MENU_ITEM_ICONS = {
   [MENU_ITEM_IDS.BOOKMARK]: Bookmark,
   [MENU_ITEM_IDS.MODELS]: Cpu,
   [MENU_ITEM_IDS.KEYS]: AccountKeyIcon,
-  [MENU_ITEM_IDS.AUTO_CHECKIN]: CalendarCheck2,
+  [MENU_ITEM_IDS.AUTO_CHECKIN]: AutoCheckinIcon,
   [MENU_ITEM_IDS.SITE_ANNOUNCEMENTS]: Megaphone,
   [MENU_ITEM_IDS.BALANCE_HISTORY]: LineChart,
   [MENU_ITEM_IDS.USAGE_ANALYTICS]: BarChart3,
   [MENU_ITEM_IDS.MANAGED_SITE_CHANNELS]: Layers,
-  [MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC]: RefreshCw,
-  [MENU_ITEM_IDS.IMPORT_EXPORT]: ArrowLeftRight,
+  [MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC]: ManagedSiteModelSyncIcon,
+  [MENU_ITEM_IDS.IMPORT_EXPORT]: ImportExportIcon,
   [MENU_ITEM_IDS.ABOUT]: Info,
 } satisfies Record<OptionsMenuItemId, LucideIcon>
 

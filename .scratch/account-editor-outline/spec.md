@@ -19,6 +19,10 @@ Decision record, finalized 2026-10-22. Apply one continuous layout to completed 
 - Identification and invalid-form detection recovery show two equal-width actions: Auto Detect, then Manual Add. Do not add a separate Cancel action to that state. Completed forms retain cancel/save actions. Submitting the initial URL form runs detection instead of saving an incomplete account.
 - Stack recovery text and actions on narrow screens so the message retains readable width.
 
+## Shared icon decisions
+
+Use shared semantic definitions across the form, account filters, sort menu, metadata and account actions. Site type uses Layers; site URL/info uses Globe2; user identity uses UserRound; check-in uses CalendarCheck2; balance uses Wallet; tags use Tag. Keep field-specific site-name, user-ID and exchange-rate icons distinct. Detection keeps ScanSearch where it represents method inspection rather than execution.
+
 ## Evidence retained locally
 
 Keep this decision record in Git. Review-only screenshots, comparisons, prior acceptance reports, failure logs and the superseded narrative stay local under the existing ignored `artifacts/` directory and `.scratch/visual-captures/`. They remain needed for review; no cleanup is proposed now.

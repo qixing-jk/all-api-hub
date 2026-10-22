@@ -8,8 +8,6 @@ import {
   Download,
   Hash,
   KeyRound,
-  Layers,
-  User,
 } from "lucide-react"
 import {
   useEffect,
@@ -22,6 +20,10 @@ import {
 } from "react"
 import { useTranslation } from "react-i18next"
 
+import {
+  AccountSiteTypeIcon,
+  AccountUserIcon,
+} from "~/components/icons/productIcons"
 import Tooltip from "~/components/Tooltip"
 import {
   Alert,
@@ -298,7 +300,7 @@ export default function AccountForm({
           value={username}
           onChange={(e) => onUsernameChange(e.target.value)}
           placeholder={t("form.username")}
-          leftIcon={<User className="h-5 w-5" />}
+          leftIcon={<AccountUserIcon className="h-5 w-5" />}
           data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.usernameInput}
           required={sitePolicy.requireUsername}
         />
@@ -412,7 +414,7 @@ export default function AccountForm({
               data-site-type={siteType ?? SITE_TYPES.UNKNOWN}
             >
               <div className="gap-y-density-2 flex items-center gap-x-2">
-                <Layers
+                <AccountSiteTypeIcon
                   className="text-muted-foreground h-5 w-5"
                   aria-hidden="true"
                 />

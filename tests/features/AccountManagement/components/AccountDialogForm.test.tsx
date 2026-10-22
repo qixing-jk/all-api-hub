@@ -41,7 +41,10 @@ const mediaQueryState = {
 
 vi.mock("~/hooks/useMediaQuery", () => ({
   useIsSmallScreen: () => mediaQueryState.isSmallScreen,
-  useMediaQuery: () => !mediaQueryState.isSmallScreen,
+  useMediaQuery: (query: string) =>
+    query === "(max-width: 639px)"
+      ? mediaQueryState.isSmallScreen
+      : !mediaQueryState.isSmallScreen,
 }))
 
 vi.mock("~/features/AccountManagement/components/TagPicker", () => ({
@@ -68,17 +71,26 @@ vi.mock("~/utils/core/formatters", () => ({
 }))
 
 describe("AccountDialog AccountForm", () => {
+  it("uses the shared site-type glyph for the platform selector", async () => {
+    render(<AccountForm {...createProps()} continuous />)
+    expect(
+      (
+        await screen.findByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteTypeTrigger)
+      ).querySelector("svg"),
+    ).toHaveClass("lucide-layers")
+  })
+
   it("pairs directory and section heading icons with distinct section meanings", async () => {
     render(<AccountForm {...createProps()} continuous />)
     const navigation = await screen.findByRole("navigation", {
       name: "accountDialog:sections.navigation",
     })
     for (const [title, icon] of [
-      ["siteInfo", "globe"],
+      ["siteInfo", "earth"],
       ["accountAuth", "shield-check"],
-      ["checkInConfig", "calendar-check"],
-      ["balanceAndStats", "chart-no-axes-combined"],
-      ["tagsAndNotes", "tags"],
+      ["checkInConfig", "calendar-check-2"],
+      ["balanceAndStats", "wallet"],
+      ["tagsAndNotes", "tag"],
     ]) {
       const name = `accountDialog:sections.${title}.title`
       const headingIcon = screen
@@ -165,7 +177,11 @@ describe("AccountDialog AccountForm", () => {
     const navigation = await screen.findByRole("navigation", {
       name: "accountDialog:sections.navigation",
     })
-    const links = within(navigation).getAllByRole("button")
+    const trigger = within(navigation).getByRole("button", {
+      name: "accountDialog:sections.navigation",
+    })
+    await user.click(trigger)
+    const links = await screen.findAllByRole("menuitem")
     expect(links).toHaveLength(5)
     const names = [
       "accountDialog:sections.siteInfo.title",
@@ -188,7 +204,7 @@ describe("AccountDialog AccountForm", () => {
       ).getByDisplayValue("alice"),
     ).toBeVisible()
     await user.click(
-      within(navigation).getByRole("button", {
+      screen.getByRole("menuitem", {
         name: "accountDialog:sections.tagsAndNotes.title",
       }),
     )
@@ -208,8 +224,12 @@ describe("AccountDialog AccountForm", () => {
     const ref = createRef<AccountFormHandle>()
     render(<AccountForm {...createProps()} continuous ref={ref} />)
     const navigation = await screen.findByRole("navigation")
+    const trigger = within(navigation).getByRole("button", {
+      name: "accountDialog:sections.navigation",
+    })
+    await user.click(trigger)
     await user.click(
-      within(navigation).getByRole("button", {
+      screen.getByRole("menuitem", {
         name: "accountDialog:sections.tagsAndNotes.title",
       }),
     )
@@ -217,11 +237,9 @@ describe("AccountDialog AccountForm", () => {
     expect(
       screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput),
     ).toHaveFocus()
-    expect(
-      within(navigation).getByRole("button", {
-        name: "accountDialog:sections.accountAuth.title",
-      }),
-    ).toHaveAttribute("aria-current", "location")
+    expect(trigger).toHaveTextContent(
+      "accountDialog:sections.accountAuth.title",
+    )
   })
 
   it("explains that Cubence uses the browser login session without requiring an imported Cookie", async () => {

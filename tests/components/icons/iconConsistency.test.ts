@@ -3,11 +3,17 @@ import path from "path"
 import {
   ArrowLeftRight,
   CalendarCheck2,
+  Globe2,
   KeyRound,
+  Layers,
   Pencil,
   RefreshCw,
   RotateCcw,
+  ShieldCheck,
+  Tag,
+  UserRound,
   UsersRound,
+  Wallet,
 } from "lucide-react"
 import { describe, expect, it } from "vitest"
 
@@ -16,8 +22,13 @@ import {
   OPTIONS_MENU_ITEM_ICONS,
 } from "~/components/icons/optionsPageIcons"
 import {
+  AccountBalanceIcon,
   AccountKeyIcon,
   AccountManagementIcon,
+  AccountSiteIcon,
+  AccountSiteTypeIcon,
+  AccountTagIcon,
+  AccountUserIcon,
   AutoCheckinIcon,
   EditActionIcon,
   ImportExportIcon,
@@ -26,6 +37,7 @@ import {
   ResetActionIcon,
 } from "~/components/icons/productIcons"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { ACCOUNT_EDIT_SECTIONS } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
 
 function getFiles(dir: string): string[] {
   let results: string[] = []
@@ -44,7 +56,22 @@ function getFiles(dir: string): string[] {
 }
 
 describe("Icon consistency across features and shared interactions", () => {
+  it("uses the same section icons in the account editor and surrounding product", () => {
+    expect(ACCOUNT_EDIT_SECTIONS.map(({ icon }) => icon)).toEqual([
+      Globe2,
+      ShieldCheck,
+      AutoCheckinIcon,
+      AccountBalanceIcon,
+      Tag,
+    ])
+  })
+
   it("defines unified feature and action icon constants", () => {
+    expect(AccountSiteIcon).toBe(Globe2)
+    expect(AccountSiteTypeIcon).toBe(Layers)
+    expect(AccountTagIcon).toBe(Tag)
+    expect(AccountUserIcon).toBe(UserRound)
+    expect(AccountBalanceIcon).toBe(Wallet)
     expect(AccountManagementIcon).toBe(UsersRound)
     expect(AutoCheckinIcon).toBe(CalendarCheck2)
     expect(ManagedSiteModelSyncIcon).toBe(RefreshCw)

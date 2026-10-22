@@ -1,16 +1,17 @@
+import { ShieldCheck } from "lucide-react"
+
 import {
-  CalendarCheck,
-  ChartNoAxesCombined,
-  Globe,
-  ShieldCheck,
-  Tags,
-} from "lucide-react"
+  AccountBalanceIcon,
+  AccountSiteIcon,
+  AccountTagIcon,
+  AutoCheckinIcon,
+} from "~/components/icons/productIcons"
 
 export const ACCOUNT_EDIT_SECTIONS = [
   {
     id: "account-form-site-info",
     title: "sections.siteInfo.title",
-    icon: Globe,
+    icon: AccountSiteIcon,
   },
   {
     id: "account-form-auth",
@@ -20,17 +21,17 @@ export const ACCOUNT_EDIT_SECTIONS = [
   {
     id: "account-check-in-config",
     title: "sections.checkInConfig.title",
-    icon: CalendarCheck,
+    icon: AutoCheckinIcon,
   },
   {
     id: "account-form-balance",
     title: "sections.balanceAndStats.title",
-    icon: ChartNoAxesCombined,
+    icon: AccountBalanceIcon,
   },
   {
     id: "account-form-tags-notes",
     title: "sections.tagsAndNotes.title",
-    icon: Tags,
+    icon: AccountTagIcon,
   },
 ] as const
 

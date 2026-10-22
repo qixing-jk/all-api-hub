@@ -1,7 +1,8 @@
-import { Info, Sparkles, UserRound } from "lucide-react"
+import { Info, Sparkles } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { LdohIcon } from "~/components/icons/LdohIcon"
+import { AccountUserIcon } from "~/components/icons/productIcons"
 import { Button } from "~/components/ui"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import type { AccountSiteManualAddGuideAnchor } from "~/services/accountSiteDefinitions"
@@ -106,7 +107,7 @@ export default function InfoPanel({
     )
   }
 
-  const Icon = isAddMode ? Sparkles : UserRound
+  const Icon = isAddMode ? Sparkles : AccountUserIcon
   const description = getDescription()
 
   if (presentation === "inline") {

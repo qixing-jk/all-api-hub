@@ -14,6 +14,7 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
 test.beforeEach(async ({ page, context }) => {
   installExtensionPageGuards(page)
@@ -251,6 +252,7 @@ test("bounds tag shortcuts across sizes and keeps hidden selections accessible",
 test("retains status filters when collapsed and when moving between mobile and desktop", async ({
   page,
   extensionId,
+  extensionDir,
 }) => {
   await page.setViewportSize({ width: 480, height: 960 })
   await page.goto(`chrome-extension://${extensionId}/options.html#account`)
@@ -261,6 +263,16 @@ test("retains status filters when collapsed and when moving between mobile and d
   const toggle = list.getByRole("button", { name: /^Filters/ })
   await expect(status).toBeHidden()
   await toggle.click()
+  await captureVisualViews({
+    page,
+    ready: status,
+    id: "account-status-filters",
+    extensionDir,
+    views: [
+      { id: "mobile", width: 480, height: 960, theme: "light" },
+      { id: "desktop", width: 1536, height: 960, theme: "light" },
+    ],
+  })
   await status.click()
   await page.getByRole("option", { name: /Disabled/ }).click()
   await toggle.click()
@@ -289,6 +301,11 @@ test("keeps sorting compact on the left and clears it without opening a menu", a
   const menu = page.getByTestId(ids.accountListSortMenuButton)
   const clear = page.getByTestId(ids.accountListClearSortButton)
   await menu.click()
+  await expect(
+    page
+      .getByRole("menuitemradio", { name: "Check-in Requirement", exact: true })
+      .locator("svg.lucide-calendar-check-2"),
+  ).toBeVisible()
   await page
     .getByRole("menuitemradio", { name: "Balance", exact: true })
     .click()

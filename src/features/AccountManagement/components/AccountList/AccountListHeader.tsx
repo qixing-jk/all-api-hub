@@ -4,7 +4,6 @@ import {
   ArrowDownAZ,
   ArrowUp,
   ArrowUpDown,
-  CalendarCheck,
   CalendarClock,
   Check,
   ChevronDown,
@@ -15,13 +14,16 @@ import {
   Settings2,
   TrendingDown,
   TrendingUp,
-  Wallet,
   X,
   type LucideIcon,
 } from "lucide-react"
 import { Fragment } from "react"
 import { useTranslation } from "react-i18next"
 
+import {
+  AccountBalanceIcon,
+  AutoCheckinIcon,
+} from "~/components/icons/productIcons"
 import Tooltip from "~/components/Tooltip"
 import { Button, IconButton } from "~/components/ui"
 import {
@@ -101,7 +103,7 @@ export function AccountListHeader({
     },
     {
       field: DATA_TYPE_BALANCE,
-      icon: Wallet,
+      icon: AccountBalanceIcon,
       label: t("account:list.header.balance"),
     },
   ]
@@ -122,7 +124,7 @@ export function AccountListHeader({
   sortOptions.push(
     {
       field: DATA_TYPE_CHECK_IN_REQUIREMENT,
-      icon: CalendarCheck,
+      icon: AutoCheckinIcon,
       label: t("account:list.header.checkInRequirement"),
     },
     {

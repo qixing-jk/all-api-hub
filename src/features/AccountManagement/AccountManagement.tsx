@@ -1,4 +1,4 @@
-import { BookmarkPlus, CalendarCheck2, RefreshCw, Search } from "lucide-react"
+import { BookmarkPlus, Search } from "lucide-react"
 import {
   useCallback,
   useEffect,
@@ -8,7 +8,11 @@ import {
 } from "react"
 import { useTranslation } from "react-i18next"
 
-import { AccountManagementIcon } from "~/components/icons/productIcons"
+import {
+  AccountManagementIcon,
+  AutoCheckinIcon,
+  RefreshActionIcon,
+} from "~/components/icons/productIcons"
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageActions } from "~/components/PageActions"
 import { PageHeader } from "~/components/PageHeader"
@@ -386,7 +390,7 @@ function AccountManagementContent({
                 size="sm"
                 onClick={() => void handleGlobalRefresh()}
                 variant="secondary"
-                leftIcon={<RefreshCw className="h-4 w-4" />}
+                leftIcon={<RefreshActionIcon className="h-4 w-4" />}
                 loading={isRefreshing}
                 disabled={isAnyRefreshRunning}
               >
@@ -399,7 +403,7 @@ function AccountManagementContent({
                   size="sm"
                   onClick={() => void handleDisabledRefresh()}
                   variant="secondary"
-                  leftIcon={<RefreshCw className="h-4 w-4" />}
+                  leftIcon={<RefreshActionIcon className="h-4 w-4" />}
                   loading={isRefreshingDisabledAccounts}
                   disabled={isAnyRefreshRunning}
                 >
@@ -415,7 +419,7 @@ function AccountManagementContent({
                   <Button
                     size="sm"
                     onClick={handleOpenExternalCheckInsClick}
-                    leftIcon={<CalendarCheck2 className="h-4 w-4" />}
+                    leftIcon={<AutoCheckinIcon className="h-4 w-4" />}
                     title={t("account:actions.openAllExternalCheckInHint")}
                     data-testid={
                       ACCOUNT_MANAGEMENT_TEST_IDS.externalCheckInButton
