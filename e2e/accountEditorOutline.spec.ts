@@ -330,6 +330,38 @@ for (const siteType of [SITE_TYPES.NEW_API, SITE_TYPES.CUBENCE]) {
     installExtensionPageGuards(page)
     await forceExtensionLanguage(page, "en")
     await stubLlmMetadataIndex(context)
+    await stubNewApiSiteRoutes(context)
+    if (siteType === SITE_TYPES.CUBENCE) {
+      await context.route("https://cubence.com/**", async (route) => {
+        const pathname = new URL(route.request().url()).pathname
+        if (pathname === "/api/v1/auth/me") {
+          await route.fulfill({
+            json: {
+              user: {
+                id: 1,
+                username: "e2e-user",
+                active: true,
+                normal_balance: 12_500_000,
+                charity_balance: 0,
+              },
+            },
+          })
+        } else if (pathname === "/api/v1/analytics/apikeys/hourly-usage") {
+          await route.fulfill({
+            json: {
+              code: 200,
+              summary: { cost: 0, calls: 0, tokens: 0, output_tokens: 0 },
+            },
+          })
+        } else if (pathname === "/api/log/self") {
+          await route.fulfill({
+            json: { success: true, data: { items: [], total: 0 } },
+          })
+        } else {
+          throw new Error(`Unhandled Cubence fixture endpoint: ${pathname}`)
+        }
+      })
+    }
     const worker = await getServiceWorker(context)
     await seedUserPreferences(worker, {
       preferencesVersion: DEFAULT_PREFERENCES.preferencesVersion,
@@ -404,9 +436,17 @@ for (const siteType of [SITE_TYPES.NEW_API, SITE_TYPES.CUBENCE]) {
       }
     }
     await cookie.fill("session=edited-cookie")
+    const refreshedIdentity = page.waitForResponse(
+      (response) =>
+        response.url() ===
+        (siteType === SITE_TYPES.CUBENCE
+          ? "https://cubence.com/api/v1/auth/me"
+          : "https://example.com/api/user/self"),
+    )
     await dialog
       .getByRole("button", { name: "Save Changes", exact: true })
       .click()
+    expect((await refreshedIdentity).status()).toBe(200)
     await expect(dialog).toBeHidden()
     await expect
       .poll(async () => {
