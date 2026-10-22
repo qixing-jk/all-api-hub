@@ -23,6 +23,8 @@ Decision record, finalized 2026-10-22. Apply one continuous layout to completed 
 
 Use shared semantic definitions across the form, account filters, sort menu, metadata and account actions. Site type uses Layers; site URL/info uses Globe2; user identity uses UserRound; check-in uses CalendarCheck2; balance uses Wallet; tags use Tag. Keep field-specific site-name, user-ID and exchange-rate icons distinct. Detection keeps ScanSearch where it represents method inspection rather than execution.
 
+Enforce forbidden/deprecated imports through ESLint. Tests check semantic mappings, rendered controls and interaction; lint policy tests exercise the real ESLint configuration. Preserve feature-only scope for SquarePen/RefreshCcw restrictions.
+
 ## Evidence retained locally
 
 Keep this decision record in Git. Review-only screenshots, comparisons, prior acceptance reports, failure logs and the superseded narrative stay local under the existing ignored `artifacts/` directory and `.scratch/visual-captures/`. They remain needed for review; no cleanup is proposed now.
