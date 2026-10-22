@@ -49,7 +49,7 @@ import {
 
 import ActionButtons from "./ActionButtons"
 import DialogHeader from "./DialogHeader"
-import InfoPanel from "./InfoPanel"
+import InfoPanel, { AccountSiteDiscoveryHint } from "./InfoPanel"
 import {
   ACCOUNT_DIALOG_PHASES,
   type AccountDialogRecoveryState,
@@ -66,7 +66,6 @@ interface AccountDialogProps {
   recoveryState?: AccountDialogRecoveryState | null
   onSuccess: (data: any) => void
   onError: (error: any) => void
-  onOpenBookmarkImport?: () => void
 }
 
 /**
@@ -80,7 +79,6 @@ interface AccountDialogProps {
  * @param props.recoveryState Form carried from the popup for token recovery.
  * @param props.onSuccess Callback fired with saved data.
  * @param props.onError Callback fired when submission fails.
- * @param props.onOpenBookmarkImport Optional handler for switching to batch bookmark import.
  */
 export default function AccountDialog({
   isOpen,
@@ -91,7 +89,6 @@ export default function AccountDialog({
   recoveryState,
   onSuccess,
   onError,
-  onOpenBookmarkImport,
 }: AccountDialogProps) {
   const { t } = useTranslation("messages")
   const { t: tAccountDialog } = useTranslation("accountDialog")
@@ -149,6 +146,15 @@ export default function AccountDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
+      if (
+        mode === DIALOG_MODES.ADD &&
+        state.phase === ACCOUNT_DIALOG_PHASES.SITE_INPUT
+      ) {
+        if (state.url.trim() && !state.isDetecting) {
+          await handlers.handleAutoDetect()
+        }
+        return
+      }
       const result = await handlers.handleSaveAccount()
       if (!result) return
       if (!handlers.shouldDeferAccountSaveSuccess(result)) {
@@ -277,7 +283,7 @@ export default function AccountDialog({
       <Modal
         isOpen={isOpen}
         onClose={handlers.handleClose}
-        size="lg"
+        size="xl"
         title={dialogTitle}
         panelTestId={ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog}
         header={<DialogHeader mode={mode} />}
@@ -363,70 +369,93 @@ export default function AccountDialog({
               <AutoDetectSlowHintAlert />
             )}
 
-            <div className="gap-y-density-3 grid gap-x-3">
-              <SiteInfoInput {...siteInfoInputProps} />
-              {showEntryAuthTypeSelector && onOpenBookmarkImport ? (
-                <div className="text-muted-foreground gap-y-density-1 flex flex-wrap items-center gap-x-1.5 text-xs">
-                  <span>{tAccountDialog("bookmarkImportBatch.prompt")}</span>
-                  <button
-                    type="button"
-                    className="text-theme-600 focus-visible:ring-ring dark:text-theme-300 text-xs font-medium underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
-                    onClick={onOpenBookmarkImport}
-                    data-testid={
-                      ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportFromAddDialogButton
-                    }
-                  >
-                    {tAccountDialog("bookmarkImportBatch.action")}
-                  </button>
+            {state.phase !== ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM && (
+              <div className="space-y-density-3 min-w-0">
+                <div className="space-y-density-4 min-w-0">
+                  <SiteInfoInput {...siteInfoInputProps} />
+                  {selectedSponsorPostClickNote ? (
+                    <div
+                      className="bg-primary-soft text-primary-soft-foreground gap-y-density-2 py-density-2 flex items-start gap-x-2 rounded-md px-2 text-xs leading-5"
+                      data-testid={
+                        ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPostClickNote
+                      }
+                    >
+                      <Info
+                        aria-hidden="true"
+                        className="mt-0.5 h-4 w-4 shrink-0"
+                      />
+                      <span>{selectedSponsorPostClickNote}</span>
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
-              {selectedSponsorPostClickNote ? (
-                <div
-                  className="bg-primary-soft text-primary-soft-foreground gap-y-density-2 py-density-2 flex items-start gap-x-2 rounded-md px-2 text-xs leading-5"
-                  data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPostClickNote}
-                >
-                  <Info
-                    aria-hidden="true"
-                    className="mt-0.5 h-4 w-4 shrink-0"
-                  />
-                  <span>{selectedSponsorPostClickNote}</span>
-                </div>
-              ) : null}
-              {showSponsorRecommendations ? (
-                <SponsorRecommendationsSection
-                  surface={SPONSOR_RECOMMENDATION_SURFACES.AddAccountDialog}
-                  items={sponsorRecommendations.items}
-                  onContinueAddAccount={(nextPrefill) => {
-                    const normalizedPrefill =
-                      normalizeSponsorAddAccountPrefill(nextPrefill)
-                    if (!normalizedPrefill) return
+                {showSponsorRecommendations ? (
+                  <div className="min-w-0">
+                    <SponsorRecommendationsSection
+                      layout="grid"
+                      surface={SPONSOR_RECOMMENDATION_SURFACES.AddAccountDialog}
+                      items={sponsorRecommendations.items}
+                      onContinueAddAccount={(nextPrefill) => {
+                        const normalizedPrefill =
+                          normalizeSponsorAddAccountPrefill(nextPrefill)
+                        if (!normalizedPrefill) return
 
-                    handlers.handleUrlChange(normalizedPrefill.siteUrl, {
-                      applyAuthDefault: false,
-                    })
-                    setters.setSiteType(normalizedPrefill.siteType)
-                    if (normalizedPrefill.authType) {
-                      setters.setAuthType(normalizedPrefill.authType)
-                    }
-                    const selectedSponsor = sponsorRecommendations.items.find(
-                      (item) => item.id === normalizedPrefill.sponsorId,
-                    )
-                    setSelectedSponsorPostClickNote(
-                      selectedSponsor?.postClickNote ?? null,
-                    )
-                  }}
-                  onOpenBookmarkManager={(prefill) => {
-                    void openFullBookmarkManagerPage({ create: prefill })
-                  }}
-                  onOpenApiCredentialProfiles={(prefill) => {
-                    void openApiCredentialProfilesPage({ create: prefill })
-                  }}
-                />
-              ) : null}
-            </div>
+                        handlers.handleUrlChange(normalizedPrefill.siteUrl, {
+                          applyAuthDefault: false,
+                        })
+                        setters.setSiteType(normalizedPrefill.siteType)
+                        if (normalizedPrefill.authType) {
+                          setters.setAuthType(normalizedPrefill.authType)
+                        }
+                        const selectedSponsor =
+                          sponsorRecommendations.items.find(
+                            (item) => item.id === normalizedPrefill.sponsorId,
+                          )
+                        setSelectedSponsorPostClickNote(
+                          selectedSponsor?.postClickNote ?? null,
+                        )
+                      }}
+                      onOpenBookmarkManager={(prefill) => {
+                        void openFullBookmarkManagerPage({ create: prefill })
+                      }}
+                      onOpenApiCredentialProfiles={(prefill) => {
+                        void openApiCredentialProfilesPage({ create: prefill })
+                      }}
+                    />
+                  </div>
+                ) : null}
+                {mode === DIALOG_MODES.ADD && (
+                  <div className="border-border space-y-density-3 pt-density-3 border-t">
+                    <InfoPanel
+                      mode={mode}
+                      phase={state.phase}
+                      formSource={state.formSource}
+                      presentation="inline"
+                      autoDetectPresentation={autoDetectPresentation?.info}
+                      manualAddGuideAnchor={
+                        state.detectionError ? undefined : manualAddGuideAnchor
+                      }
+                    />
+                    <AccountSiteDiscoveryHint />
+                  </div>
+                )}
+              </div>
+            )}
 
             {state.phase === ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM && (
               <AccountForm
+                continuous
+                guidance={
+                  <InfoPanel
+                    mode={mode}
+                    phase={state.phase}
+                    formSource={state.formSource}
+                    presentation="guidance"
+                    manualAddGuideAnchor={
+                      state.detectionError ? undefined : manualAddGuideAnchor
+                    }
+                  />
+                }
+                siteInfoInput={<SiteInfoInput {...siteInfoInputProps} />}
                 siteUrl={state.url}
                 ref={accountFormRef}
                 draft={state.draft}
@@ -503,16 +532,6 @@ export default function AccountDialog({
             )}
           </form>
         </div>
-
-        <InfoPanel
-          mode={mode}
-          phase={state.phase}
-          formSource={state.formSource}
-          autoDetectPresentation={autoDetectPresentation?.info}
-          manualAddGuideAnchor={
-            state.detectionError ? undefined : manualAddGuideAnchor
-          }
-        />
       </Modal>
 
       <DuplicateAccountWarningDialog

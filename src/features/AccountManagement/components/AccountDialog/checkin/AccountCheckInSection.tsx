@@ -68,6 +68,7 @@ const ACCOUNT_CHECK_IN_TARGET_IDS = {
 } as const
 
 interface AccountCheckInSectionProps {
+  continuous?: boolean
   loginMethodId?: string
   loginConfigured?: boolean
   onConfigureLogin?: () => void
@@ -84,6 +85,7 @@ interface AccountCheckInSectionProps {
 
 /** Renders method discovery, automatic intent, and custom check-in settings. */
 export function AccountCheckInSection({
+  continuous,
   loginMethodId,
   loginConfigured,
   onConfigureLogin,
@@ -153,6 +155,7 @@ export function AccountCheckInSection({
 
   return (
     <AccountFormSection
+      continuous={continuous}
       title={t("sections.checkInConfig.title")}
       defaultOpen={ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["check-in"]}
       testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn}

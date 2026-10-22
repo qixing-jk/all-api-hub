@@ -108,60 +108,55 @@ export default function ActionButtons({
     ? autoDetectPresentation?.pendingLabel ?? t("accountDialog:mode.detecting")
     : autoDetectPresentation?.idleLabel ?? t("accountDialog:mode.autoDetect")
 
+  const detectionActions = (
+    <>
+      <Button
+        type="button"
+        onClick={onAutoDetect}
+        disabled={!url.trim()}
+        loading={isDetecting}
+        className={
+          autoDetectPresentation?.multiline
+            ? "h-auto min-h-(--density-control) flex-1 whitespace-normal"
+            : "flex-1"
+        }
+        variant="default"
+        data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton}
+        leftIcon={!isDetecting ? <Sparkles className="h-4 w-4" /> : undefined}
+      >
+        {autoDetectLabel}
+      </Button>
+      <Button
+        type="button"
+        onClick={onShowManualForm}
+        disabled={!url.trim()}
+        className="flex-1"
+        variant="outline"
+        data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.manualAddButton}
+        leftIcon={<Pencil className="h-4 w-4" />}
+      >
+        {t("accountDialog:mode.manualAdd")}
+      </Button>
+    </>
+  )
+
   if (shouldShowAddDetectionActions) {
     return (
-      <ActionGroup className="items-stretch justify-start">
-        <Button
-          type="button"
-          onClick={onAutoDetect}
-          disabled={!url.trim()}
-          loading={isDetecting}
-          bleed
-          className={
-            autoDetectPresentation?.multiline
-              ? "h-auto min-h-(--density-control) flex-1 whitespace-normal"
-              : "flex-1"
-          }
-          variant="default"
-          data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton}
-          leftIcon={!isDetecting ? <Sparkles className="h-4 w-4" /> : undefined}
-        >
-          {autoDetectLabel}
-        </Button>
-        <Button
-          type="button"
-          onClick={onShowManualForm}
-          disabled={!url.trim()}
-          bleed
-          className="flex-1"
-          variant="outline"
-          data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.manualAddButton}
-          leftIcon={<Pencil className="h-4 w-4" />}
-        >
-          {t("accountDialog:mode.manualAdd")}
-        </Button>
+      <ActionGroup className="grid grid-cols-2 items-stretch">
+        {detectionActions}
       </ActionGroup>
     )
   }
 
-  return (
-    <ActionGroup className="items-stretch justify-start">
-      <Button type="button" onClick={onClose} variant="secondary">
-        {t("common:actions.cancel")}
-      </Button>
-
+  const actions = (
+    <>
       {mode === DIALOG_MODES.EDIT && !isDetected && (
         <Button
           type="button"
           onClick={onAutoDetect}
           disabled={!url.trim()}
           loading={isDetecting}
-          bleed
-          className={
-            autoDetectPresentation?.multiline
-              ? "h-auto min-h-(--density-control) flex-1 whitespace-normal"
-              : "flex-1"
-          }
+          className="w-full sm:w-auto"
           variant="outline"
           leftIcon={!isDetecting ? <Sparkles className="h-4 w-4" /> : undefined}
         >
@@ -178,14 +173,13 @@ export default function ActionButtons({
           onClick={onAutoConfig}
           disabled={!isFormValid || isSaving}
           loading={isAutoConfiguring}
-          bleed
-          className="flex-1"
+          className="w-full sm:w-auto"
           data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.autoConfigButton}
           aria-label={t("accountDialog:actions.autoConfigAriaLabel", {
             managedSite: managedSiteLabel,
           })}
           title={autoConfigTitle}
-          variant="default"
+          variant="outline"
           leftIcon={
             !isAutoConfiguring ? <Zap className="h-4 w-4" /> : undefined
           }
@@ -203,8 +197,7 @@ export default function ActionButtons({
         {...(formId ? { form: formId } : {})}
         disabled={!isFormValid || isAutoConfiguring}
         loading={isSaving}
-        bleed
-        className="flex-1"
+        className="w-full sm:w-auto"
         variant="default"
         data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton}
         leftIcon={!isSaving ? <Check className="h-4 w-4" /> : undefined}
@@ -217,6 +210,25 @@ export default function ActionButtons({
               : t("accountDialog:actions.saveAccount")
             : t("accountDialog:actions.saveChanges")}
       </Button>
-    </ActionGroup>
+    </>
+  )
+  const cancel = (
+    <Button
+      type="button"
+      onClick={onClose}
+      variant="secondary"
+      className="w-full sm:w-auto"
+    >
+      {t("common:actions.cancel")}
+    </Button>
+  )
+
+  return (
+    <div className="gap-density-2 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between">
+      {cancel}
+      <ActionGroup className="flex-col-reverse items-stretch sm:flex-row sm:items-center">
+        {actions}
+      </ActionGroup>
+    </div>
   )
 }

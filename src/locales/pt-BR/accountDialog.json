@@ -69,10 +69,6 @@
     },
     "title": "Ainda não é reconhecido? Experimente estas alternativas"
   },
-  "bookmarkImportBatch": {
-    "action": "Importação em lote de favoritos",
-    "prompt": "Vários sites salvos como favoritos do navegador?"
-  },
   "checkInFeedback": {
     "accounts": "Voltar às contas",
     "accountUnavailable": "Esta conta não foi encontrada ou não pôde ser lida. Volte à lista de contas.",
@@ -214,6 +210,7 @@
     "autoDetectInfo": "Faça login no site de destino primeiro. A extensão detectará e preencherá automaticamente as informações necessárias para adicionar a conta.",
     "confirmAddInfo": "Confira se as informações da conta estão corretas antes de clicar em \"Confirmar adição\".",
     "confirmation": "Confirmação de informações da conta",
+    "editHelp": "Ajuda de edição",
     "editInfo": "Editar informações da conta",
     "editInfoDesc": "Após modificar as informações da conta, o sistema verificará novamente e obterá os dados de saldo mais recentes",
     "ldohSiteListHint": "Ainda não tem um site? O LDOH oferece um diretório de vários serviços comunitários de IA da Linux.do.",
@@ -316,6 +313,7 @@
     "checkInConfig": {
       "title": "Configurações de check-in"
     },
+    "navigation": "Seções de configurações da conta",
     "siteInfo": {
       "title": "Informações do site"
     },

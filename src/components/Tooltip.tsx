@@ -32,6 +32,7 @@ interface TooltipProps {
     | "left-start"
     | "left-end"
   delay?: number
+  positionStrategy?: "absolute" | "fixed"
   className?: string
   wrapperClassName?: string
   anchorAsChild?: boolean
@@ -57,6 +58,7 @@ export default function Tooltip({
   children,
   position = "top",
   delay = 0,
+  positionStrategy = "absolute",
   className = "",
   wrapperClassName = "",
   anchorAsChild = false,
@@ -199,6 +201,7 @@ export default function Tooltip({
           id={tooltipId}
           anchorId={anchorId}
           place={position}
+          positionStrategy={positionStrategy}
           content={content}
           delayShow={delay}
           className={defaultClassName}
@@ -213,6 +216,7 @@ export default function Tooltip({
           id={popupId}
           anchorId={anchorId}
           place={position}
+          positionStrategy={positionStrategy}
           delayShow={delay}
           clickable
           className={defaultClassName}

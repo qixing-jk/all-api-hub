@@ -1,10 +1,14 @@
 import {
+  ArrowLeftRight,
+  Building2,
   CalendarDays,
+  CircleHelp,
   Cookie,
   DollarSign,
   Download,
-  Globe2,
+  Hash,
   KeyRound,
+  Layers,
   User,
 } from "lucide-react"
 import {
@@ -13,15 +17,18 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type ReactNode,
   type Ref,
 } from "react"
 import { useTranslation } from "react-i18next"
 
+import Tooltip from "~/components/Tooltip"
 import {
   Alert,
   Button,
   FormField,
   Input,
+  Label,
   Notice,
   Select,
   SelectContent,
@@ -38,6 +45,7 @@ import {
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { ACCOUNT_SITE_TYPES, SITE_TYPES } from "~/constants/siteType"
 import { AccountCheckInSection } from "~/features/AccountManagement/components/AccountDialog/checkin/AccountCheckInSection"
+import { AccountFormLayout } from "~/features/AccountManagement/components/AccountDialog/form/AccountFormLayout"
 import { AccountFormSection } from "~/features/AccountManagement/components/AccountDialog/form/AccountFormSection"
 import { ACCOUNT_FORM_MOBILE_DEFAULT_OPEN } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
 import {
@@ -88,6 +96,9 @@ export interface AccountFormHandle {
 }
 
 interface AccountFormProps {
+  continuous?: boolean
+  guidance?: ReactNode
+  siteInfoInput?: ReactNode
   feedbackAccountId?: string
   feedbackBaseUrl?: string
   feedbackOriginalBaseUrl?: string
@@ -142,6 +153,9 @@ interface AccountFormProps {
  * Account form body used inside the account dialog for creating/editing accounts.
  */
 export default function AccountForm({
+  continuous = false,
+  guidance,
+  siteInfoInput,
   ref,
   draft,
   sitePolicy,
@@ -273,20 +287,113 @@ export default function AccountForm({
     feedbackOriginalBaseUrl && feedbackOriginalBaseUrl !== feedbackBaseUrl,
   )
 
+  const identityFields = (
+    <>
+      <FormField
+        label={t("form.username")}
+        required={sitePolicy.requireUsername}
+      >
+        <Input
+          type="text"
+          value={username}
+          onChange={(e) => onUsernameChange(e.target.value)}
+          placeholder={t("form.username")}
+          leftIcon={<User className="h-5 w-5" />}
+          data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.usernameInput}
+          required={sitePolicy.requireUsername}
+        />
+      </FormField>
+
+      <FormField label={t("form.userId")} required={sitePolicy.requireUserId}>
+        <Input
+          // Compatible account sites may expose alphanumeric user IDs. Reference: https://github.com/qixing-jk/all-api-hub/issues/964
+          type="text"
+          autoComplete="off"
+          value={userId}
+          onChange={(e) => onUserIdChange(e.target.value)}
+          placeholder={t("form.userId")}
+          leftIcon={<Hash className="h-5 w-5" aria-hidden="true" />}
+          data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput}
+          required={sitePolicy.requireUserId}
+        />
+      </FormField>
+    </>
+  )
+
+  const cookieImportAction = (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      onClick={onImportCookieAuthSessionCookie}
+      loading={isImportingCookies}
+      leftIcon={<Download className="h-4 w-4" />}
+      className={continuous ? "shrink-0" : "w-full"}
+    >
+      {isImportingCookies
+        ? t("messages.importCookiesLoading")
+        : t("form.importCookieAuthSessionCookie")}
+    </Button>
+  )
+
+  const tagsAndNotes = (
+    <AccountFormSection
+      continuous={continuous}
+      id="account-form-tags-notes"
+      contentClassName={continuous ? "grid gap-4 sm:grid-cols-2" : undefined}
+      title={t("sections.tagsAndNotes.title")}
+      description={t("sections.tagsAndNotes.description")}
+      defaultOpen={ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["tags-notes"]}
+      testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionTagsNotes}
+    >
+      <FormField label={t("form.tags")} description={t("form.tagsDescription")}>
+        <TagPicker
+          tags={tags}
+          tagCountsById={tagCountsById}
+          selectedTagIds={tagIds}
+          onSelectedTagIdsChange={onSelectedTagIdsChange}
+          onCreateTag={createTag}
+          onRenameTag={renameTag}
+          onDeleteTag={deleteTag}
+          placeholder={t("form.tagsPlaceholder")}
+        />
+      </FormField>
+
+      <FormField label={t("form.notes")}>
+        <div className="relative">
+          <Textarea
+            value={notes}
+            onChange={(e) => onNotesChange(e.target.value)}
+            placeholder={t("form.notesPlaceholder")}
+            rows={2}
+          />
+        </div>
+      </FormField>
+    </AccountFormSection>
+  )
+
   return (
-    <div className="space-y-density-3">
+    <AccountFormLayout continuous={continuous} guidance={guidance}>
       <AccountFormSection
+        continuous={continuous}
+        id="account-form-site-info"
+        contentClassName={
+          continuous ? "grid gap-4 sm:grid-cols-2 xl:grid-cols-4" : undefined
+        }
         title={t("sections.siteInfo.title")}
         defaultOpen={ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["site-info"]}
         testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionSiteInfo}
       >
+        {siteInfoInput && (
+          <div className="space-y-density-2 col-span-full">{siteInfoInput}</div>
+        )}
         <FormField label={t("form.siteName")} required>
           <Input
             type="text"
             value={siteName}
             onChange={(e) => onSiteNameChange(e.target.value)}
             placeholder="example.com"
-            leftIcon={<Globe2 className="h-5 w-5" />}
+            leftIcon={<Building2 className="h-5 w-5" aria-hidden="true" />}
             data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput}
             required
           />
@@ -305,7 +412,10 @@ export default function AccountForm({
               data-site-type={siteType ?? SITE_TYPES.UNKNOWN}
             >
               <div className="gap-y-density-2 flex items-center gap-x-2">
-                <Globe2 className="text-muted-foreground h-5 w-5" />
+                <Layers
+                  className="text-muted-foreground h-5 w-5"
+                  aria-hidden="true"
+                />
                 <SelectValue placeholder={t("form.siteType")} />
               </div>
             </SelectTrigger>
@@ -324,9 +434,19 @@ export default function AccountForm({
             </SelectContent>
           </Select>
         </FormField>
+        {continuous && identityFields}
       </AccountFormSection>
 
       <AccountFormSection
+        continuous={continuous}
+        id="account-form-auth"
+        contentClassName={
+          continuous
+            ? authType === AuthTypeEnum.Cookie
+              ? "space-y-density-4"
+              : "grid gap-4 sm:grid-cols-2"
+            : undefined
+        }
         title={t("sections.accountAuth.title")}
         defaultOpen={ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["account-auth"]}
         open={isAuthSectionOpen}
@@ -334,15 +454,48 @@ export default function AccountForm({
         testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionAuth}
       >
         <FormField
-          label={t("siteInfo.authMethod")}
+          label={
+            continuous &&
+            !isAuthTypeLocked &&
+            !sitePolicy.usesBrowserCookieSession ? (
+              <span className="inline-flex items-center gap-1.5">
+                {t("siteInfo.authMethod")}
+                <Tooltip
+                  content={t("siteInfo.cookieWarning")}
+                  wrapperClassName="inline-flex"
+                  positionStrategy="fixed"
+                  className="max-w-[min(22rem,calc(100vw-2rem))]! text-left leading-relaxed font-normal whitespace-normal"
+                >
+                  <button
+                    type="button"
+                    aria-label={t("siteInfo.cookieWarning")}
+                    className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex size-4 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:outline-none"
+                  >
+                    <CircleHelp className="size-4" aria-hidden="true" />
+                  </button>
+                </Tooltip>
+              </span>
+            ) : (
+              t("siteInfo.authMethod")
+            )
+          }
+          className={
+            continuous && authType === AuthTypeEnum.Cookie
+              ? "sm:max-w-sm"
+              : undefined
+          }
           description={
-            isAuthTypeLocked
-              ? t("siteInfo.authMethodSelectedForSite", {
-                  siteType: sitePolicy.siteTypeLabel,
-                })
-              : sitePolicy.usesBrowserCookieSession
-                ? t("siteInfo.browserCookieSession")
-                : t("siteInfo.cookieWarning")
+            continuous && authType === AuthTypeEnum.Cookie
+              ? undefined
+              : isAuthTypeLocked
+                ? t("siteInfo.authMethodSelectedForSite", {
+                    siteType: sitePolicy.siteTypeLabel,
+                  })
+                : sitePolicy.usesBrowserCookieSession
+                  ? t("siteInfo.browserCookieSession")
+                  : continuous
+                    ? undefined
+                    : t("siteInfo.cookieWarning")
           }
         >
           <Select
@@ -377,34 +530,7 @@ export default function AccountForm({
           </Select>
         </FormField>
 
-        <FormField
-          label={t("form.username")}
-          required={sitePolicy.requireUsername}
-        >
-          <Input
-            type="text"
-            value={username}
-            onChange={(e) => onUsernameChange(e.target.value)}
-            placeholder={t("form.username")}
-            leftIcon={<User className="h-5 w-5" />}
-            data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.usernameInput}
-            required={sitePolicy.requireUsername}
-          />
-        </FormField>
-
-        <FormField label={t("form.userId")} required={sitePolicy.requireUserId}>
-          <Input
-            // Compatible account sites may expose alphanumeric user IDs. Reference: https://github.com/qixing-jk/all-api-hub/issues/964
-            type="text"
-            autoComplete="off"
-            value={userId}
-            onChange={(e) => onUserIdChange(e.target.value)}
-            placeholder={t("form.userId")}
-            leftIcon={<span className="font-mono text-sm">#</span>}
-            data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput}
-            required={sitePolicy.requireUserId}
-          />
-        </FormField>
+        {!continuous && identityFields}
 
         {authType === AuthTypeEnum.AccessToken && (
           <>
@@ -430,6 +556,7 @@ export default function AccountForm({
             {credentialPresentation.accessTokenGuidanceKey &&
               (!isDetected || accessToken.trim().length === 0) && (
                 <Alert
+                  className={continuous ? "col-span-full" : undefined}
                   variant="default"
                   title={
                     credentialPresentation.accessTokenGuidanceTitleKey
@@ -443,7 +570,7 @@ export default function AccountForm({
         )}
 
         {canUseSub2ApiRefreshToken && (
-          <div className="space-y-density-4">
+          <div className="space-y-density-4 col-span-full">
             <div className="gap-y-density-4 flex w-full items-center justify-between gap-x-4">
               <div className="flex-1">
                 <label
@@ -533,7 +660,9 @@ export default function AccountForm({
 
         {authType === AuthTypeEnum.Cookie && (
           <FormField
-            label={t("form.cookieAuthSessionCookie")}
+            className={continuous ? "col-span-full" : undefined}
+            label={continuous ? undefined : t("form.cookieAuthSessionCookie")}
+            htmlFor="account-session-cookie"
             description={
               sitePolicy.usesBrowserCookieSession
                 ? t("siteInfo.browserCookieSession")
@@ -541,27 +670,27 @@ export default function AccountForm({
             }
             required={!sitePolicy.usesBrowserCookieSession}
           >
+            {continuous && (
+              <div className="gap-y-density-2 flex flex-wrap items-center justify-between gap-x-3">
+                <Label
+                  htmlFor="account-session-cookie"
+                  required={!sitePolicy.usesBrowserCookieSession}
+                >
+                  {t("form.cookieAuthSessionCookie")}
+                </Label>
+                {cookieImportAction}
+              </div>
+            )}
             <div className="space-y-density-2">
               <CookieAuthPermissionRecommendation
+                inlineAction={continuous}
                 cookieAuthPermissionsGranted={cookieAuthPermissionsGranted}
                 isRequestingCookieAuthPermissions={
                   isRequestingCookieAuthPermissions
                 }
                 onRequestCookieAuthPermissions={onRequestCookieAuthPermissions}
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={onImportCookieAuthSessionCookie}
-                loading={isImportingCookies}
-                leftIcon={<Download className="h-4 w-4" />}
-                className="w-full"
-              >
-                {isImportingCookies
-                  ? t("messages.importCookiesLoading")
-                  : t("form.importCookieAuthSessionCookie")}
-              </Button>
+              {!continuous && cookieImportAction}
               {showCookiePermissionWarning && (
                 <Alert
                   variant="warning"
@@ -580,6 +709,8 @@ export default function AccountForm({
                 </Alert>
               )}
               <Textarea
+                id="account-session-cookie"
+                className={continuous ? "font-mono" : undefined}
                 value={cookieAuthSessionCookie}
                 onChange={(e) =>
                   onCookieAuthSessionCookieChange(e.target.value)
@@ -593,41 +724,10 @@ export default function AccountForm({
         )}
       </AccountFormSection>
 
-      <AccountFormSection
-        title={t("sections.tagsAndNotes.title")}
-        description={t("sections.tagsAndNotes.description")}
-        defaultOpen={ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["tags-notes"]}
-        testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionTagsNotes}
-      >
-        <FormField
-          label={t("form.tags")}
-          description={t("form.tagsDescription")}
-        >
-          <TagPicker
-            tags={tags}
-            tagCountsById={tagCountsById}
-            selectedTagIds={tagIds}
-            onSelectedTagIdsChange={onSelectedTagIdsChange}
-            onCreateTag={createTag}
-            onRenameTag={renameTag}
-            onDeleteTag={deleteTag}
-            placeholder={t("form.tagsPlaceholder")}
-          />
-        </FormField>
-
-        <FormField label={t("form.notes")}>
-          <div className="relative">
-            <Textarea
-              value={notes}
-              onChange={(e) => onNotesChange(e.target.value)}
-              placeholder={t("form.notesPlaceholder")}
-              rows={2}
-            />
-          </div>
-        </FormField>
-      </AccountFormSection>
+      {!continuous && tagsAndNotes}
 
       <AccountCheckInSection
+        continuous={continuous}
         loginMethodId={draft.login?.methodId}
         loginConfigured={loginConfigured}
         onConfigureLogin={
@@ -674,6 +774,7 @@ export default function AccountForm({
 
       {usesAccountLogin && (
         <AccountLoginSection
+          continuous={continuous}
           siteUrl={siteUrl}
           passwordIdentity={
             getAccountSiteDefinition(draft.siteType)?.accountLogin
@@ -689,6 +790,9 @@ export default function AccountForm({
       )}
 
       <AccountFormSection
+        continuous={continuous}
+        id="account-form-balance"
+        contentClassName={continuous ? "grid gap-4 sm:grid-cols-2" : undefined}
         title={t("sections.balanceAndStats.title")}
         defaultOpen={ACCOUNT_FORM_MOBILE_DEFAULT_OPEN.balance}
         testId={ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionBalance}
@@ -710,7 +814,7 @@ export default function AccountForm({
             value={exchangeRate}
             onChange={(e) => onExchangeRateChange(e.target.value)}
             placeholder={t("form.exchangeRatePlaceholder")}
-            leftIcon={<DollarSign className="h-5 w-5" />}
+            leftIcon={<ArrowLeftRight className="h-5 w-5" aria-hidden="true" />}
             rightIcon={
               <span className="dark:text-secondary-foreground text-muted-foreground text-sm">
                 CNY
@@ -789,6 +893,7 @@ export default function AccountForm({
           />
         </div>
       </AccountFormSection>
-    </div>
+      {continuous && tagsAndNotes}
+    </AccountFormLayout>
   )
 }

@@ -69,10 +69,6 @@
     },
     "title": "Immer noch nicht erkannt? Probieren Sie diese Alternativen aus"
   },
-  "bookmarkImportBatch": {
-    "action": "Stapelimport aus Lesezeichen",
-    "prompt": "Mehrere Websites als Browser-Lesezeichen gespeichert?"
-  },
   "checkInFeedback": {
     "accounts": "Zur Kontoliste",
     "accountUnavailable": "Dieses Konto wurde nicht gefunden oder konnte nicht gelesen werden. Kehren Sie zur Kontoliste zurück.",
@@ -213,6 +209,7 @@
     "autoDetectInfo": "Bitte melden Sie sich zuerst auf der Zielseite an. Die Erweiterung erkennt und füllt automatisch die zum Hinzufügen des Kontos erforderlichen Informationen aus.",
     "confirmAddInfo": "Bitte bestätigen Sie, dass die Kontoinformationen korrekt sind, bevor Sie auf die Schaltfläche „Hinzufügen bestätigen“ klicken",
     "confirmation": "Bestätigung der Kontoinformationen",
+    "editHelp": "Hinweise zum Bearbeiten",
     "editInfo": "Kontoinformationen bearbeiten",
     "editInfoDesc": "Nach der Änderung der Kontoinformationen führt das System eine erneute Überprüfung durch und ruft die neuesten Kontostanddaten ab",
     "ldohSiteListHint": "Noch keine Seite? LDOH bietet ein Verzeichnis vieler gemeinnütziger KI-Websites aus der Linux.do-Community.",
@@ -315,6 +312,7 @@
     "checkInConfig": {
       "title": "Check-in-Einstellungen"
     },
+    "navigation": "Abschnitte der Kontoeinstellungen",
     "siteInfo": {
       "title": "Website-Informationen"
     },

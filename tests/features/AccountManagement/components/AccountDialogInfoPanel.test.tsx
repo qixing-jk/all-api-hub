@@ -12,6 +12,39 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 describe("AccountDialog InfoPanel", () => {
+  it("shows both edit instructions directly without an extra action", async () => {
+    render(
+      <InfoPanel
+        mode={DIALOG_MODES.EDIT}
+        phase={ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM}
+        formSource={ACCOUNT_DIALOG_FORM_SOURCES.MANUAL}
+        presentation="guidance"
+      />,
+    )
+    const note = await screen.findByRole("note")
+    expect(note).toHaveTextContent("accountDialog:infoPanel.editInfoDesc")
+    expect(note).toHaveTextContent("accountDialog:infoPanel.reDetectInfo")
+    expect(screen.queryByRole("button")).not.toBeInTheDocument()
+  })
+
+  it("keeps inline identification guidance focused on the required login step", async () => {
+    render(
+      <InfoPanel
+        mode={DIALOG_MODES.ADD}
+        phase={ACCOUNT_DIALOG_PHASES.SITE_INPUT}
+        formSource={ACCOUNT_DIALOG_FORM_SOURCES.MANUAL}
+        presentation="inline"
+      />,
+    )
+    const note = await screen.findByRole("note")
+    expect(note).toHaveTextContent("accountDialog:infoPanel.autoDetectInfo")
+    expect(
+      screen.queryByRole("button", {
+        name: "accountDialog:infoPanel.openLdohSiteList",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
   it("describes the canonical OpenRouter action as remote Management Key creation", async () => {
     render(
       <InfoPanel

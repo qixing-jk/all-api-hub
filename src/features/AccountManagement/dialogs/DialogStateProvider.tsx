@@ -31,11 +31,9 @@ interface DialogState {
 
 export const DialogStateProvider = ({
   children,
-  onOpenBookmarkImport,
   initialRecoveryId,
 }: {
   children: ReactNode
-  onOpenBookmarkImport?: () => void
   initialRecoveryId?: string
 }) => {
   const { loadAccountData, displayData, isInitialLoad } =
@@ -95,11 +93,6 @@ export const DialogStateProvider = ({
     setDialogState((prev) => ({ ...prev, isOpen: false }))
     loadAccountData()
   }
-
-  const handleOpenBookmarkImport = useCallback(() => {
-    setDialogState((prev) => ({ ...prev, isOpen: false }))
-    onOpenBookmarkImport?.()
-  }, [onOpenBookmarkImport])
 
   const handleSuccess = (data: unknown) => {
     promiseRef.current?.resolve(data)
@@ -174,7 +167,6 @@ export const DialogStateProvider = ({
           recoveryState={dialogState.recoveryState}
           onSuccess={handleSuccess}
           onError={handleError}
-          onOpenBookmarkImport={handleOpenBookmarkImport}
         />
       )}
     </DialogStateContext.Provider>

@@ -69,10 +69,6 @@
     },
     "title": "仍无法识别？尝试以下备选方案"
   },
-  "bookmarkImportBatch": {
-    "action": "从书签批量导入",
-    "prompt": "收藏了多个站点？可以从书签批量导入。"
-  },
   "checkInFeedback": {
     "accounts": "返回账号列表",
     "accountUnavailable": "找不到此账号或无法读取账号信息，请返回账号列表。",
@@ -212,6 +208,7 @@
     "autoDetectInfo": "请先在目标站点登录，插件会自动识别并补全添加账号所需信息",
     "confirmAddInfo": "请确认账号信息无误后点击\"确认添加\"按钮",
     "confirmation": "账号信息确认",
+    "editHelp": "编辑说明",
     "editInfo": "编辑账号信息",
     "editInfoDesc": "修改账号信息后，系统会重新验证并获取最新的余额数据",
     "ldohSiteListHint": "没有站点？LDOH 提供了 Linux.do 社区内大量公益 AI 站点的目录。",
@@ -314,6 +311,7 @@
     "checkInConfig": {
       "title": "签到配置"
     },
+    "navigation": "账号设置目录",
     "siteInfo": {
       "title": "站点信息"
     },

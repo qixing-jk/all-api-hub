@@ -10,12 +10,14 @@ async function captureVisualCheckpoint({
   directory,
   id,
   extensionDir,
+  animations = "disabled",
 }: {
   page: Page
   ready: Locator
   directory: string
   id: string
   extensionDir: string
+  animations?: "disabled" | "allow"
 }) {
   if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/u.test(id))
     throw new Error("Visual checkpoint ID must be a safe filename")
@@ -41,7 +43,7 @@ async function captureVisualCheckpoint({
   await mkdir(directory, { recursive: true })
   const image = `${id}.png`
   const bytes = await page.screenshot({
-    animations: "disabled",
+    animations,
     caret: "hide",
     scale: "css",
   })
@@ -83,6 +85,7 @@ export async function captureVisualViews({
   extensionDir,
   directory = process.env.AAH_VISUAL_CAPTURE_DIR,
   views,
+  animations = "disabled",
 }: {
   page: Page
   ready: Locator
@@ -90,6 +93,7 @@ export async function captureVisualViews({
   extensionDir: string
   directory?: string
   views?: VisualView[]
+  animations?: "disabled" | "allow"
 }) {
   if (!directory) return
   const configured = process.env.AAH_VISUAL_CAPTURE_VIEWS
@@ -101,7 +105,14 @@ export async function captureVisualViews({
   )
   const selected = configured ?? views
   if (!selected) {
-    await captureVisualCheckpoint({ page, ready, directory, id, extensionDir })
+    await captureVisualCheckpoint({
+      page,
+      ready,
+      directory,
+      id,
+      extensionDir,
+      animations,
+    })
     return
   }
   if (
@@ -133,6 +144,7 @@ export async function captureVisualViews({
         directory,
         id: `${id}-${view.id}`,
         extensionDir,
+        animations,
       })
     }
   } finally {

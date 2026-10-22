@@ -156,7 +156,7 @@ export default function AutoDetectErrorAlert({
             : "destructive"
         }
       >
-        <div className="gap-y-density-3 flex flex-wrap items-start gap-x-3">
+        <div className="gap-y-density-3 flex min-w-0 flex-col items-start gap-x-3 sm:flex-row sm:flex-wrap">
           <p
             className="min-w-0 flex-1 text-sm leading-relaxed"
             data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage}
@@ -166,7 +166,7 @@ export default function AutoDetectErrorAlert({
 
           {/* 操作按钮区域 */}
           {hasRecoveryAction && (
-            <div className="gap-y-density-2 flex shrink-0 flex-wrap gap-x-2">
+            <div className="gap-y-density-2 flex max-w-full shrink-0 flex-wrap gap-x-2">
               {/* 主要操作按钮 */}
               {error.actionText && (
                 <Button

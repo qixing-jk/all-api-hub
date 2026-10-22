@@ -69,10 +69,6 @@
     },
     "title": "まだ検出できませんか？代替方法をお試しください"
   },
-  "bookmarkImportBatch": {
-    "action": "ブックマークから一括インポート",
-    "prompt": "複数のサイトをブラウザのブックマークに保存していますか？"
-  },
   "checkInFeedback": {
     "accounts": "アカウント一覧に戻る",
     "accountUnavailable": "アカウントが見つからないか読み取れません。アカウント一覧に戻ってください。",
@@ -212,6 +208,7 @@
     "autoDetectInfo": "まず対象サイトにログインしてください。拡張機能がアカウント追加に必要な情報を自動で判定し、補完します",
     "confirmAddInfo": "「追加を確認」ボタンを押す前に、アカウント情報が正しいことを確認してください",
     "confirmation": "アカウント情報の確認",
+    "editHelp": "編集のヒント",
     "editInfo": "アカウント情報を編集",
     "editInfoDesc": "アカウント情報を変更すると、システムが再検証して最新の残高データを取得します",
     "ldohSiteListHint": "まだサイトがありませんか？ LDOH では Linux.do コミュニティの多くの公益 AI サイトを一覧できます。",
@@ -314,6 +311,7 @@
     "checkInConfig": {
       "title": "チェックイン設定"
     },
+    "navigation": "アカウント設定のセクション",
     "siteInfo": {
       "title": "サイト情報"
     },

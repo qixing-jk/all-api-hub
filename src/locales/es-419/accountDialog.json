@@ -69,10 +69,6 @@
     },
     "title": "¿Aún no se reconoce? Prueba estas alternativas"
   },
-  "bookmarkImportBatch": {
-    "action": "Importación por lotes desde marcadores",
-    "prompt": "¿Guardaste varios sitios como marcadores del navegador?"
-  },
   "checkInFeedback": {
     "accounts": "Volver a las cuentas",
     "accountUnavailable": "No se encontró la cuenta o no se pudo leer. Regresa a la lista de cuentas.",
@@ -214,6 +210,7 @@
     "autoDetectInfo": "Primero inicia sesión en el sitio de destino. La extensión detectará y completará automáticamente la información necesaria para agregar la cuenta.",
     "confirmAddInfo": "Confirma que la información de la cuenta sea correcta antes de hacer clic en el botón 'Confirmar agregado'",
     "confirmation": "Confirmación de información de la cuenta",
+    "editHelp": "Ayuda de edición",
     "editInfo": "Editar información de cuenta",
     "editInfoDesc": "Después de modificar la información de la cuenta, el sistema volverá a verificarla y obtendrá los datos de saldo más recientes",
     "ldohSiteListHint": "¿Aún no tienes sitio? LDOH ofrece un directorio de muchos sitios de IA de beneficio público de la comunidad Linux.do.",
@@ -316,6 +313,7 @@
     "checkInConfig": {
       "title": "Configuración de check-in"
     },
+    "navigation": "Secciones de configuración de la cuenta",
     "siteInfo": {
       "title": "Información del sitio"
     },

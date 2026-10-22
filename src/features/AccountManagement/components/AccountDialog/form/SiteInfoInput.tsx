@@ -235,7 +235,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
           </div>
         </>
       )}
-      <div className="gap-y-density-2 flex flex-col justify-between text-xs">
+      <div className="gap-y-density-2 flex flex-col justify-between text-xs empty:hidden">
         {shouldShowCookiePermissionRecommendation && (
           <CookieAuthPermissionRecommendation
             cookieAuthPermissionsGranted={props.cookieAuthPermissionsGranted}

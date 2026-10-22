@@ -91,8 +91,6 @@ export const ACCOUNT_MANAGEMENT_TEST_IDS = {
   dedupePreviewDeleteButton: "account-management-dedupe-preview-delete-button",
   dedupeConfirmDeleteButton: "account-management-dedupe-confirm-delete-button",
   bookmarkImportButton: "account-management-bookmark-import-button",
-  bookmarkImportFromAddDialogButton:
-    "account-management-bookmark-import-from-add-dialog-button",
   bookmarkImportDialog: "account-management-bookmark-import-dialog",
   bookmarkImportAllowScanButton:
     "account-management-bookmark-import-allow-scan-button",

@@ -337,7 +337,7 @@ test.beforeEach(async ({ context, page }) => {
   await stubLlmMetadataIndex(context)
 })
 
-test("opens bookmark import from the add account dialog", async ({
+test("opens bookmark import from the account management header", async ({
   context,
   extensionId,
   page,
@@ -363,12 +363,11 @@ test("opens bookmark import from the add account dialog", async ({
       ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog,
     )
     await expect(accountDialog).toBeVisible()
-    await accountDialog
-      .getByTestId(
-        ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportFromAddDialogButton,
-      )
-      .click()
+    await page.keyboard.press("Escape")
     await expect(accountDialog).toHaveCount(0)
+    await page
+      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportButton)
+      .click()
 
     const importDialog = page.getByTestId(
       ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportDialog,

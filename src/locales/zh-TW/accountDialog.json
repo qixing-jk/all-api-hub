@@ -69,10 +69,6 @@
     },
     "title": "仍無法識別？嘗試以下備選方案"
   },
-  "bookmarkImportBatch": {
-    "action": "從書籤批量匯入",
-    "prompt": "收藏了多個站點？可以從書籤批量匯入。"
-  },
   "checkInFeedback": {
     "accounts": "返回帳號清單",
     "accountUnavailable": "找不到此帳號或無法讀取帳號資訊，請返回帳號清單。",
@@ -212,6 +208,7 @@
     "autoDetectInfo": "請先在目標站點登入，外掛會自動識別並補全新增帳號所需資訊",
     "confirmAddInfo": "請確認帳號資訊無誤後點擊\"確認新增\"按鈕",
     "confirmation": "帳號資訊確認",
+    "editHelp": "編輯說明",
     "editInfo": "編輯帳號資訊",
     "editInfoDesc": "修改帳號資訊後，系統會重新驗證並獲取最新的餘額資料",
     "ldohSiteListHint": "沒有站點？LDOH 提供了 Linux.do 社羣內大量公益 AI 站點的目錄。",
@@ -314,6 +311,7 @@
     "checkInConfig": {
       "title": "簽到設定"
     },
+    "navigation": "帳號設定目錄",
     "siteInfo": {
       "title": "站點資訊"
     },
