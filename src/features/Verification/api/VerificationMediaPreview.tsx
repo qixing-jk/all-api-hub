@@ -57,7 +57,7 @@ export function VerificationMediaPreview({
           className="border-border max-h-48 max-w-full rounded border object-contain"
         />
       )}
-      {external && (isVideo || failed) && (
+      {external && !media?.credentialed && (isVideo || failed) && (
         <a
           href={url}
           target="_blank"

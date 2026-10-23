@@ -263,7 +263,13 @@ export async function runVideoGenerationProbe(
             : videoUrl ?? null,
       },
       media: playable
-        ? { type: API_VERIFICATION_MEDIA_TYPES.Video, url: videoUrl! }
+        ? {
+            type: API_VERIFICATION_MEDIA_TYPES.Video,
+            url: videoUrl!,
+            ...(params.apiType === API_TYPES.GOOGLE
+              ? { credentialed: true }
+              : {}),
+          }
         : undefined,
       details: taskId ? { taskId } : undefined,
     }

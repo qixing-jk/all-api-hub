@@ -222,6 +222,42 @@ describe("modelModality resolution", () => {
     ).toBe(MODEL_TEST_MODALITIES.Embedding)
   })
 
+  it("uses remote metadata type and output limits to identify non-text models with text output modality", () => {
+    vi.spyOn(modelMetadataService, "resolveModelIdentity").mockReturnValueOnce({
+      state: "resolved",
+      metadata: {
+        id: "baai/bge-reranker-v2-m3",
+        name: "BGE Reranker V2 M3",
+        provider_id: "baai",
+        type: "reranking",
+        modalities: { input: ["text"], output: ["text"] },
+        limits: { context: 8192, output: 0 },
+      },
+      match: "exact",
+    })
+
+    expect(
+      resolveModelTestModality({ modelId: "baai/bge-reranker-v2-m3" }),
+    ).toBe(MODEL_TEST_MODALITIES.Rerank)
+
+    vi.spyOn(modelMetadataService, "resolveModelIdentity").mockReturnValueOnce({
+      state: "resolved",
+      metadata: {
+        id: "baai/bge-m3",
+        name: "BGE M3",
+        provider_id: "baai",
+        type: "embedding",
+        modalities: { input: ["text"], output: ["text"] },
+        limits: { context: 8192, output: 0 },
+      },
+      match: "exact",
+    })
+
+    expect(resolveModelTestModality({ modelId: "baai/bge-m3" })).toBe(
+      MODEL_TEST_MODALITIES.Embedding,
+    )
+  })
+
   it("resolves by modelId pattern heuristics", () => {
     // Embedding
     expect(

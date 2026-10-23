@@ -23,6 +23,7 @@ type AliasLookupMaps = {
 function cloneMetadata(metadata: ModelMetadata): ModelMetadata {
   return {
     ...metadata,
+    ...(metadata.type ? { type: metadata.type } : {}),
     ...(metadata.capabilities
       ? { capabilities: { ...metadata.capabilities } }
       : {}),

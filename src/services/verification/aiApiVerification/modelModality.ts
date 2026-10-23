@@ -135,11 +135,26 @@ export function resolveModelTestModality(
 
   // 3. Centralized modalities (explicit or models.dev metadata lookup)
   let effectiveModalities = modalities
+  let metadataType: string | undefined
+  let metadataOutputLimit: number | undefined
   if (!effectiveModalities && trimmed) {
     const lookup = metadataLookup(trimmed)
-    if (lookup.state === "resolved" && lookup.metadata.modalities) {
-      effectiveModalities = lookup.metadata.modalities
+    if (lookup.state === "resolved") {
+      if (lookup.metadata.modalities) {
+        effectiveModalities = lookup.metadata.modalities
+      }
+      metadataType = lookup.metadata.type
+      metadataOutputLimit = lookup.metadata.limits?.output
     }
+  }
+
+  if (metadataType) {
+    const type = metadataType.toLowerCase()
+    if (type.includes("embedding")) return MODEL_TEST_MODALITIES.Embedding
+    if (type.includes("rerank")) return MODEL_TEST_MODALITIES.Rerank
+    if (type.includes("image")) return MODEL_TEST_MODALITIES.Image
+    if (type.includes("video")) return MODEL_TEST_MODALITIES.Video
+    if (type.includes("decision")) return MODEL_TEST_MODALITIES.Decision
   }
 
   if (effectiveModalities?.output) {
@@ -152,7 +167,11 @@ export function resolveModelTestModality(
     if (outputs.includes("image")) {
       return MODEL_TEST_MODALITIES.Image
     }
-    if (outputs.includes("text")) return MODEL_TEST_MODALITIES.Text
+    if (outputs.includes("text") && (modalities || metadataOutputLimit !== 0)) {
+      if (modalities) {
+        return MODEL_TEST_MODALITIES.Text
+      }
+    }
   }
 
   // Generic text endpoints also serve multimodal generation; output facts win.

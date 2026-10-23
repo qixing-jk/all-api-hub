@@ -90,6 +90,7 @@ export type ApiVerificationProbeResult = {
   media?: {
     type: (typeof API_VERIFICATION_MEDIA_TYPES)[keyof typeof API_VERIFICATION_MEDIA_TYPES]
     url: string
+    credentialed?: boolean
   }
   details?: Record<string, unknown>
 }

@@ -4,6 +4,7 @@ export interface ModelMetadata {
   provider_id: string
   family?: string
   description?: string
+  type?: string
   capabilities?: ModelMetadataCapabilities
   modalities?: ModelMetadataModalities
   open_weights?: boolean

@@ -41,6 +41,30 @@ describe("VerificationMediaPreview", () => {
     expect(player).toHaveAttribute("controls")
     expect(player).not.toHaveAttribute("autoplay")
   })
+  it("omits the external media link when the media is marked credentialed", async () => {
+    render(
+      <VerificationMediaPreview
+        media={{
+          type: API_VERIFICATION_MEDIA_TYPES.Video,
+          url: "https://example.com/result.mp4?key=secret",
+          credentialed: true,
+        }}
+      />,
+    )
+    const player = await screen.findByLabelText("Generated video preview")
+    expect(player).toBeInTheDocument()
+    expect(
+      screen.queryByRole("link", { name: "Open generated media" }),
+    ).not.toBeInTheDocument()
+
+    fireEvent.error(player)
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The preview could not be loaded.",
+    )
+    expect(
+      screen.queryByRole("link", { name: "Open generated media" }),
+    ).not.toBeInTheDocument()
+  })
   it("displays inline generated images without dumping base64 into the output", async () => {
     render(
       <VerificationMediaPreview

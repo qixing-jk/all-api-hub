@@ -69,6 +69,7 @@ describe("Google SDK video generation verification", () => {
       media: {
         type: "video",
         url: "https://native-video.example.com/v1beta/files/video.mp4?alt=media&key=google-video-secret",
+        credentialed: true,
       },
       output: {
         taskId: "operations/video-1",
