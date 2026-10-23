@@ -221,11 +221,15 @@ for (const width of [1280, 390, 320]) {
       for (const view of [popup, sidepanel]) {
         await view.setViewportSize({ width: Math.min(width, 390), height: 900 })
         await view.bringToFront()
-        expect(
-          await view.evaluate(
-            () => document.documentElement.scrollWidth <= innerWidth,
-          ),
-        ).toBe(true)
+        // Resizing a background view can finish before its responsive layout
+        // updates. Require the same no-overflow geometry once layout settles.
+        await expect
+          .poll(() =>
+            view.evaluate(
+              () => document.documentElement.scrollWidth <= innerWidth,
+            ),
+          )
+          .toBe(true)
       }
       await page.bringToFront()
     }
