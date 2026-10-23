@@ -120,6 +120,25 @@ describe("display account API context and native runtime keys", () => {
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.unstubAllEnvs()
+  })
+
+  it("routes saved Safari Cookie accounts through private transport in ordinary Safari builds", () => {
+    vi.stubEnv("BROWSER", "safari")
+    const source = buildStoredAccount({
+      authType: AuthTypeEnum.Cookie,
+      cookieAuth: { sessionCookie: "session=fixture-A" },
+    })
+    expect(
+      createAccountApiRequestFromStoredAccount(source).request.cookieSession,
+    ).toEqual({
+      origin: "https://example.com",
+      cookieHeader: "session=fixture-A",
+    })
+    vi.stubEnv("BROWSER", "chrome")
+    expect(
+      createAccountApiRequestFromStoredAccount(source).request.cookieSession,
+    ).toBeUndefined()
   })
 
   it("loads native runtime policy without querying the secret resolution", async () => {

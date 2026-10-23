@@ -41,6 +41,7 @@ import {
   runAbortableTask,
 } from "~/services/apiTransport/abortableTask"
 import type { RequestScheduling } from "~/services/apiTransport/requestScheduling"
+import { isSafariNativeCookieEnabled } from "~/services/apiTransport/safariNativeCookie"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { normalizeInviteLinkError } from "~/services/inviteLinks/errors"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
@@ -178,6 +179,16 @@ const createAccountApiContextFromSource = (
     baseUrl: source.siteUrl,
     managementApiBaseUrl: resolveDeploymentApiOrigin(source.siteUrl),
     accountId: source.id,
+    ...(isSafariNativeCookieEnabled() &&
+    source.authType === AuthTypeEnum.Cookie &&
+    hasNonEmptyString(cookie)
+      ? {
+          cookieSession: {
+            origin: new URL(source.siteUrl).origin,
+            cookieHeader: cookie,
+          },
+        }
+      : {}),
     auth: {
       authType: source.authType,
       userId: source.userId,

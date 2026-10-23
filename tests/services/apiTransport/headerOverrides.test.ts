@@ -110,7 +110,7 @@ describe("credential request header overrides", () => {
     return updateSessionRules
   }
 
-  it("rejects unverified Safari private Cookie isolation before changing rules or sending credentials", async () => {
+  it("rejects Safari private Cookie requests without native permissions before changing rules or sending credentials", async () => {
     vi.stubEnv("BROWSER", "safari")
     const updateSessionRules = installDnr()
     await expect(
@@ -126,8 +126,8 @@ describe("credential request header overrides", () => {
         },
       ),
     ).rejects.toMatchObject({
-      code: "COOKIE_REQUEST_UNAVAILABLE",
-      message: "messages:cookieTransport.browserUnsupported",
+      code: "COOKIE_PERMISSION_REQUIRED",
+      message: "messages:cookieTransport.permissionRequired",
     })
     expect(updateSessionRules).not.toHaveBeenCalled()
     expect(nativeFetch).not.toHaveBeenCalled()

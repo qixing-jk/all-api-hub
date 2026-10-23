@@ -31,6 +31,9 @@ const config: KnipConfig = {
     // Playwright runs this through the build dependency project in
     // playwright.config.ts, which Knip does not discover as a static import.
     "e2e/setup/build.setup.ts",
+    // Invoked by the native Safari runner; Vite loads this config by CLI path.
+    "e2e/safariNativeCookie/probe.config.ts",
+    "e2e/safariNativeCookie/probe.ts",
   ],
   project: [
     "src/**/*.{ts,tsx}!",

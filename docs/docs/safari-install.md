@@ -17,7 +17,9 @@
 
 Safari 使用 WebKit 的 WebExtensions 权限机制，权限声明与 Chromium、Firefox 分开维护。Cookie 访问和网络请求规则仍按需授权，设置搜索只展示当前 Safari 构建实际声明的可选权限。
 
-账号独立 Cookie 直连请求目前尚未通过 Safari 实机隔离验证，因此会提示暂不支持并停止请求，不会改用其他账号的浏览器登录态。需要此功能时，请使用 Chrome 或 Edge。Safari 构建成功不代表全部功能均已通过实机验证。
+账号独立 Cookie 请求使用 Safari 扩展应用内置的原生通道，按保存账号的 Cookie 分别请求，不借用其他账号或普通网页的登录态。使用前需允许扩展访问目标网站，并授予 Cookie 权限；无需另装辅助程序。请使用包含该通道的新版 Safari Xcode 工程安装或更新扩展，仅替换网页资源不能更新原生处理器。
+
+该通道支持 HTTPS 站点，HTTP 仅用于本机 `127.0.0.1` 测试；重定向请求会被拒绝。权限不足或原生处理器不可用时，请求会停止，不会切换到浏览器登录态。权限撤销不能撤回已发送的请求；部分 Safari 环境的弹出窗口刷新仍有已知问题，可先使用选项页面刷新账号。
 
 ## 安装方式
 
@@ -98,7 +100,13 @@ pnpm run build:safari
 #### 2. 使用 Safari 转换器生成 Xcode 工程
 
 ```bash
-xcrun safari-web-extension-converter .output/safari-mv2/
+xcrun safari-web-extension-converter .output/safari-mv2/ \
+  --project-location .output/safari-project \
+  --app-name "All API Hub" \
+  --bundle-identifier "io.github.qixingjk.allapihub" \
+  --copy-resources --no-open
+python3 scripts/configure-safari-native-cookie-project.py \
+  .output/safari-project io.github.qixingjk.allapihub
 ```
 
 如果你想自定义输出目录、应用名和包标识符，也可以使用：
@@ -107,7 +115,10 @@ xcrun safari-web-extension-converter .output/safari-mv2/
 xcrun safari-web-extension-converter .output/safari-mv2/ \
   --project-location /path/to/all-api-hub-safari-project \
   --app-name "All API Hub" \
-  --bundle-identifier "io.github.qixingjk.allapihub"
+  --bundle-identifier "io.github.qixingjk.allapihub" \
+  --copy-resources --no-open
+python3 scripts/configure-safari-native-cookie-project.py \
+  /path/to/all-api-hub-safari-project io.github.qixingjk.allapihub
 ```
 
 这一步会生成一个 Xcode 工程，用来承载 Safari 扩展。
@@ -187,7 +198,7 @@ Safari 扩展需要打包成 macOS 应用才能安装和分发，这与 Chrome�
 请先确认：
 - Xcode 命令行工具已安装：`xcode-select --install`
 - 已同意 Xcode 许可：`sudo xcodebuild -license accept`
-- Node.js 版本 >= 18
+- Node.js 和 pnpm 版本符合仓库的 `.nvmrc` 与 `package.json` 要求
 
 ### 扩展功能与 Chrome 版本有差异吗？
 

@@ -17,7 +17,9 @@ This document describes how to install the All API Hub extension in the Safari b
 
 Safari uses WebKit's WebExtensions permission model. Its permissions are maintained separately from Chromium and Firefox. Cookie access and request rules remain optional, and settings search only lists optional permissions declared by the Safari build.
 
-Direct requests with an account's isolated Cookie have not yet passed native Safari isolation testing. These requests stop with an unsupported-feature message instead of falling back to another account's browser session. Use Chrome or Edge for this feature. A successful Safari build does not establish native compatibility for every feature.
+Isolated Cookie requests use the native transport bundled inside the Safari extension app. Each request uses the saved account's Cookie without borrowing another account's or a normal browser tab's session. Allow the extension to access the target website and grant Cookie permission first; no separate helper installation is required. Install or update using a Safari Xcode project that includes this transport. Replacing web resources alone does not update the native handler.
+
+The transport supports HTTPS sites; HTTP is limited to local `127.0.0.1` tests, and redirects are rejected. Requests stop when permissions or the native handler are unavailable, without falling back to the browser session. Revoking permission cannot retract a request already sent. Popup refresh has known issues in some Safari environments; use the Options page to refresh accounts if needed.
 
 ## Installation Methods
 
@@ -98,7 +100,13 @@ After the build is complete, the compiled artifacts will be output to `.output/s
 #### 2. Use Safari Web Extension Converter to Generate Xcode Project
 
 ```bash
-xcrun safari-web-extension-converter .output/safari-mv2/
+xcrun safari-web-extension-converter .output/safari-mv2/ \
+  --project-location .output/safari-project \
+  --app-name "All API Hub" \
+  --bundle-identifier "io.github.qixingjk.allapihub" \
+  --copy-resources --no-open
+python3 scripts/configure-safari-native-cookie-project.py \
+  .output/safari-project io.github.qixingjk.allapihub
 ```
 
 If you want to customize the output directory, app name, and bundle identifier, you can also use:
@@ -107,7 +115,10 @@ If you want to customize the output directory, app name, and bundle identifier, 
 xcrun safari-web-extension-converter .output/safari-mv2/ \
   --project-location /path/to/all-api-hub-safari-project \
   --app-name "All API Hub" \
-  --bundle-identifier "io.github.qixingjk.allapihub"
+  --bundle-identifier "io.github.qixingjk.allapihub" \
+  --copy-resources --no-open
+python3 scripts/configure-safari-native-cookie-project.py \
+  /path/to/all-api-hub-safari-project io.github.qixingjk.allapihub
 ```
 
 This step will generate an Xcode project to host the Safari extension.
@@ -187,7 +198,7 @@ No. Safari cannot be directly unpacked and loaded for formal installation like C
 Please confirm the following first:
 - Xcode command-line tools are installed: `xcode-select --install`
 - Xcode license has been accepted: `sudo xcodebuild -license accept`
-- Node.js version is >= 18.
+- Node.js and pnpm versions match the repository's `.nvmrc` and `package.json` requirements.
 
 ### Are there functional differences compared to the Chrome version?
 

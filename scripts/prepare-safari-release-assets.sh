@@ -59,6 +59,8 @@ xcrun safari-web-extension-converter "$EXTENSION_BUNDLE_DIR" \
   --no-prompt \
   --force
 
+python3 scripts/configure-safari-native-cookie-project.py "$PROJECT_DIR" "$BUNDLE_IDENTIFIER"
+
 if [ -n "$ZIP_TARGET_NAME" ]; then
   cp "$SAFARI_ZIP_PATH" "$RELEASE_ASSETS_DIR/$ZIP_TARGET_NAME"
 fi
