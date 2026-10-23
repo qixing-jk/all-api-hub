@@ -5,35 +5,35 @@ import { request } from "@playwright/test"
 
 import { loadLocalEnv } from "../../scripts/utils/local-env.mjs"
 
-/** Create only run-owned, ordinary users; never delete an existing account. */
-export async function prepareSameSite() {
-  loadLocalEnv({ envFile: process.env.AAH_SAFARI_REAL_ENV_FILE })
-  const baseUrl = process.env.AAH_E2E_DONE_HUB_BASE_URL
-  assert(baseUrl && new URL(baseUrl).protocol === "https:")
-  const admin = await request.newContext({
-    baseURL: baseUrl,
-    extraHTTPHeaders: {
-      Authorization: "Bearer " + process.env.AAH_E2E_DONE_HUB_ADMIN_TOKEN,
-      "User-Id": process.env.AAH_E2E_DONE_HUB_ADMIN_USER_ID,
-    },
-  })
-  const owned = []
-  const accounts = []
-  const journal = ".scratch/safari-native-cookie/owned-real-users.json"
-  assert(
-    !fs.existsSync(journal),
-    "Resolve previous owned fixture cleanup first",
-  )
-  const save = () =>
-    fs.writeFileSync(journal, JSON.stringify(owned), { mode: 0o600 })
-  const cleanup = async () => {
+/** Done Hub exposes GORM's exact not-found error as an HTTP 200 API failure. */
+async function lookupOwnedFixture(admin, id) {
+  const response = await admin.get(`/api/user/${id}`)
+  if (response.status() === 404) return null
+  assert(response.ok(), "Owned fixture lookup not confirmed")
+  const body = await response.json()
+  // GetUser: https://github.com/deanxv/done-hub/blob/cf6805e94582f40fc1f7e4e1413cb403385b65b6/controller/user.go#L358-L387
+  if (body.success === false && body.message === "record not found") return null
+  assert(body.success === true, "Owned fixture lookup not confirmed")
+  assert(body.data?.id === id, "Owned fixture lookup not confirmed")
+  return body.data
+}
+
+/** Delete only owned fixture users and retain recovery data until confirmed. */
+export async function cleanupOwnedFixtureUsers({
+  admin,
+  owned,
+  journal,
+  save,
+}) {
+  try {
     for (const user of owned) {
       if (!user.id) {
-        const result = await (
-          await admin.get("/api/user/", {
-            params: { keyword: user.username, page: 1, size: 1000 },
-          })
-        ).json()
+        const response = await admin.get("/api/user/", {
+          params: { keyword: user.username, page: 1, size: 1000 },
+        })
+        assert(response.ok(), "Owned fixture lookup not confirmed")
+        const result = await response.json()
+        assert(result.success === true, "Owned fixture lookup not confirmed")
         const rows = Array.isArray(result.data)
           ? result.data
           : result.data?.items ?? result.data?.data
@@ -44,23 +44,47 @@ export async function prepareSameSite() {
         user.id = matches[0].id
         save()
       }
-      const before = await admin.get(`/api/user/${user.id}`)
-      const body = await before.json()
-      if (!body.success) continue
+      const userRecord = await lookupOwnedFixture(admin, user.id)
+      if (userRecord === null) continue
       assert(
-        body.data?.username === user.username && body.data.role < 10,
+        userRecord.username === user.username && userRecord.role < 10,
         "Owned fixture deletion scope mismatch",
       )
       await admin.delete(`/api/user/${user.id}`)
-      const after = await admin.get(`/api/user/${user.id}`)
       assert(
-        after.status() === 404 || !(await after.json()).success,
+        (await lookupOwnedFixture(admin, user.id)) === null,
         "Owned fixture deletion not confirmed",
       )
     }
     fs.unlinkSync(journal)
+  } finally {
     await admin.dispose()
   }
+}
+
+/** Create only run-owned, ordinary users; never delete an existing account. */
+export async function prepareSameSite() {
+  loadLocalEnv({ envFile: process.env.AAH_SAFARI_REAL_ENV_FILE })
+  const baseUrl = process.env.AAH_E2E_DONE_HUB_BASE_URL
+  assert(baseUrl && new URL(baseUrl).protocol === "https:")
+  const journal = ".scratch/safari-native-cookie/owned-real-users.json"
+  assert(
+    !fs.existsSync(journal),
+    "Resolve previous owned fixture cleanup first",
+  )
+  const admin = await request.newContext({
+    baseURL: baseUrl,
+    extraHTTPHeaders: {
+      Authorization: "Bearer " + process.env.AAH_E2E_DONE_HUB_ADMIN_TOKEN,
+      "User-Id": process.env.AAH_E2E_DONE_HUB_ADMIN_USER_ID,
+    },
+  })
+  const owned = []
+  const accounts = []
+  const save = () =>
+    fs.writeFileSync(journal, JSON.stringify(owned), { mode: 0o600 })
+  const cleanup = () =>
+    cleanupOwnedFixtureUsers({ admin, owned, journal, save })
   try {
     const self = await (await admin.get("/api/user/self")).json()
     assert(self.success && self.data?.role >= 10, "Fixture admin unavailable")
