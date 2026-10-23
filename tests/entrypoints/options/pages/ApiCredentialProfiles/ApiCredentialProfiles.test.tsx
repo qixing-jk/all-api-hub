@@ -618,6 +618,7 @@ describe("ApiCredentialProfiles page", () => {
     await waitFor(() => expect(targetRow).toHaveFocus())
     expect(screen.queryByText("First Profile")).not.toBeInTheDocument()
     expect(scrollIntoViewSpy).toHaveBeenCalledWith({
+      behavior: "auto",
       block: "center",
       inline: "nearest",
     })

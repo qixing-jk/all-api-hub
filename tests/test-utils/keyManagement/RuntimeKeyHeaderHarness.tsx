@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next"
-import { StrictMode, type ComponentProps } from "react"
+import type { ComponentProps } from "react"
 import { vi } from "vitest"
 
 import { RuntimeKeyHeader } from "~/features/KeyManagement/components/RuntimeKeyActions/RuntimeKeyHeader"
@@ -127,9 +127,10 @@ export function renderRuntimeKeyHeader(
         {...nextProps}
       />
     )
-    return options.strictMode ? <StrictMode>{harness}</StrictMode> : harness
+    return harness
   }
   const rendered = render(renderHarness(props), {
+    reactStrictMode: options.strictMode,
     withReleaseUpdateStatusProvider: false,
     withThemeProvider: false,
     withUserPreferencesProvider: false,

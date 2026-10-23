@@ -85,7 +85,7 @@ export function useRuntimeKeyIntegrationActions({
   const [isManagedSiteImportHighlighted, setIsManagedSiteImportHighlighted] =
     useState(false)
   const managedSiteImportButtonRef = useRef<HTMLButtonElement>(null)
-  const handledGuidedManagedSiteImportRequestRef = useRef<string | undefined>(
+  const revokedGuidedManagedSiteImportRequestRef = useRef<string | undefined>(
     undefined,
   )
   const kelivoExportEpochRef = useRef(0)
@@ -131,17 +131,20 @@ export function useRuntimeKeyIntegrationActions({
   ])
 
   useEffect(() => {
+    // Revocation consumes the request, but an effect replay must restore its highlight.
+    if (!enabled) {
+      revokedGuidedManagedSiteImportRequestRef.current =
+        guidedManagedSiteImportRequest
+      return
+    }
     if (
-      !enabled ||
       !guidedManagedSiteImportRequest ||
-      handledGuidedManagedSiteImportRequestRef.current ===
+      revokedGuidedManagedSiteImportRequestRef.current ===
         guidedManagedSiteImportRequest
     ) {
       return
     }
 
-    handledGuidedManagedSiteImportRequestRef.current =
-      guidedManagedSiteImportRequest
     const button = managedSiteImportButtonRef.current
     if (!button) return
     return revealNavigationTarget(button, {
