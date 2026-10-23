@@ -206,10 +206,9 @@ test("RelayFor shows scoped allowances, access conditions, accepted routing and 
   await expect(allowances).not.toBeVisible()
   await allowanceTrigger.click()
   await expect(allowances).toBeVisible()
-  // Content growth can move the panel over the heading or left gutter.
-  // The lower-right viewport edge remains outside the bounded popover.
-  const viewport = page.viewportSize()!
-  await page.mouse.click(viewport.width - 2, viewport.height - 2)
+  // The panel can cover the page heading. The header's outer padding is outside
+  // the panel and its controls; locator actionability also checks the hit target.
+  await page.getByRole("banner").click({ position: { x: 2, y: 2 } })
   await expect(allowances).not.toBeVisible()
   await page.setViewportSize({ width: 1280, height: 800 })
   await page.reload()
