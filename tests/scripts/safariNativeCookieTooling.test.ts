@@ -7,9 +7,9 @@ import { fileURLToPath } from "node:url"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 // @ts-expect-error Native validation tooling is authored as executable JS.
-import { startOwnedFixture } from "../../e2e/safariNativeCookie/fixtureLifecycle.mjs"
+import { startOwnedFixture } from "~~/e2e/safariNativeCookie/fixtureLifecycle.mjs"
 // @ts-expect-error Native validation tooling is authored as executable JS.
-import { prepareInstrumentedExtension } from "../../e2e/safariNativeCookie/prepare.mjs"
+import { prepareInstrumentedExtension } from "~~/e2e/safariNativeCookie/prepare.mjs"
 
 const temporaryRoots: string[] = []
 const temporaryRoot = () => {
@@ -184,15 +184,24 @@ describe("converter project configuration", () => {
 
   it("configures both app identities and outbound network entitlements", () => {
     const fixture = projectFixture(
-      'PRODUCT_BUNDLE_IDENTIFIER = old.app;\nPRODUCT_BUNDLE_IDENTIFIER = "old.app.Extension";\nENABLE_APP_SANDBOX = YES;\n',
+      '// 独立 Cookie 扩展 — 测试\nPRODUCT_BUNDLE_IDENTIFIER = old.app;\nPRODUCT_BUNDLE_IDENTIFIER = "old.app.Extension";\nENABLE_APP_SANDBOX = YES;\n',
     )
     const result = spawnSync(
       "python3",
       [script, fixture.root, "test.independent.safari"],
-      { encoding: "utf8" },
+      {
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          LC_ALL: "C",
+          PYTHONUTF8: "0",
+          PYTHONCOERCECLOCALE: "0",
+        },
+      },
     )
     expect(result.status, result.stderr).toBe(0)
     const configured = fs.readFileSync(fixture.project, "utf8")
+    expect(configured).toContain("// 独立 Cookie 扩展 — 测试")
     expect(configured).toContain(
       'PRODUCT_BUNDLE_IDENTIFIER = "test.independent.safari";',
     )
