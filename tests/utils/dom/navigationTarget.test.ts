@@ -142,4 +142,23 @@ describe("navigation target scrolling", () => {
       block: "start",
     })
   })
+
+  it("provides a safe cleanup when a target is revealed without a highlight", () => {
+    vi.useFakeTimers()
+    const target = document.createElement("button")
+    target.scrollIntoView = vi.fn()
+    target.focus = vi.fn()
+
+    const cleanup = revealNavigationTarget(target)
+    cleanup()
+    cleanup()
+
+    expect(target.scrollIntoView).toHaveBeenCalledExactlyOnceWith({
+      behavior: "auto",
+      block: "start",
+    })
+    expect(target.focus).not.toHaveBeenCalled()
+    expect(target.className).toBe("")
+    expect(vi.getTimerCount()).toBe(0)
+  })
 })

@@ -1438,6 +1438,27 @@ describe("RuntimeKeyHeader analytics", () => {
     },
   )
 
+  it("reveals a guided import first received before export permission is enabled", async () => {
+    const { rerenderRuntimeKeyHeader } = renderRuntimeKeyHeader(
+      {
+        actionPolicy: { ...RECOVERABLE_ACTION_POLICY, exportSecret: false },
+        guidedManagedSiteImportRequest: "request-1",
+      },
+      { strictMode: true },
+    )
+
+    rerenderRuntimeKeyHeader({ guidedManagedSiteImportRequest: "request-1" })
+
+    const importButton = screen.getByTestId(
+      KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton,
+    )
+    await waitFor(() =>
+      expect(importButton).toHaveAttribute("data-guidance-highlight", "true"),
+    )
+    expect(importButton).toHaveFocus()
+    expect(openWithAccountMock).not.toHaveBeenCalled()
+  })
+
   it("clears export dialogs and consumes guided requests when export permission is revoked", async () => {
     const user = userEvent.setup()
     const { rerenderRuntimeKeyHeader } = renderRuntimeKeyHeader({

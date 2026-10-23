@@ -88,6 +88,7 @@ export function useRuntimeKeyIntegrationActions({
   const revokedGuidedManagedSiteImportRequestRef = useRef<string | undefined>(
     undefined,
   )
+  const wasGuidedManagedSiteImportEnabledRef = useRef(false)
   const kelivoExportEpochRef = useRef(0)
 
   useEffect(() => {
@@ -132,9 +133,13 @@ export function useRuntimeKeyIntegrationActions({
 
   useEffect(() => {
     // Revocation consumes the request, but an effect replay must restore its highlight.
+    const wasEnabled = wasGuidedManagedSiteImportEnabledRef.current
+    wasGuidedManagedSiteImportEnabledRef.current = enabled
     if (!enabled) {
-      revokedGuidedManagedSiteImportRequestRef.current =
-        guidedManagedSiteImportRequest
+      if (wasEnabled) {
+        revokedGuidedManagedSiteImportRequestRef.current =
+          guidedManagedSiteImportRequest
+      }
       return
     }
     if (
