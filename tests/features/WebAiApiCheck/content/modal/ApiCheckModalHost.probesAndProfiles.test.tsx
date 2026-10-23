@@ -2985,4 +2985,53 @@ describe("ApiCheckModalHost", () => {
       reason: API_CHECK_MODAL_CLOSE_REASONS.Completed,
     })
   })
+
+  it("renders embedding probe and executes embedding verification for embedding models", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, message: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: ["text-embedding-3-small"] }
+        }
+        if (type === WebAiApiCheckMessageTypes.RunProbe) {
+          return {
+            success: true,
+            result: {
+              id: message.probeId,
+              status: "pass",
+              latencyMs: 15,
+              summary: "Embedding succeeded",
+            },
+          }
+        }
+        return { success: false }
+      },
+    )
+
+    await openModal()
+
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+
+    await user.click(baseUrlInput)
+    await user.paste("https://proxy.example.com/api")
+    await user.click(apiKeyInput)
+    await user.paste("sk-test-secret-fixture")
+    await waitForSelectedModelId("text-embedding-3-small")
+
+    expect(
+      await screen.findByTestId(getWebAiApiCheckProbeTestId("embedding")),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByTestId(getWebAiApiCheckProbeTestId("text-generation")),
+    ).not.toBeInTheDocument()
+
+    expect(
+      screen.queryByRole("combobox", {
+        name: "aiApiVerification:verifyDialog.meta.mode",
+      }),
+    ).not.toBeInTheDocument()
+  })
 })

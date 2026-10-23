@@ -37,7 +37,19 @@ export async function runApiVerificationProbe(
   const resolvedModelId =
     params.modelId?.trim() || params.fallbackModelId?.trim() || undefined
 
-  if (registryEntry.requiresModelId && !resolvedModelId?.trim()) {
+  const runnerParams = {
+    baseUrl: params.baseUrl,
+    apiKey: params.apiKey,
+    ...(params.requestHeaders ? { requestHeaders: params.requestHeaders } : {}),
+    apiType: params.apiType,
+    modelId: resolvedModelId,
+    mode: params.mode,
+    abortSignal: params.abortSignal,
+  }
+
+  if (!registryEntry.requiresModelId) return registryEntry.run(runnerParams)
+
+  if (!resolvedModelId) {
     return {
       id: params.probeId,
       mode: params.mode ?? API_VERIFICATION_MODES.Streaming,
@@ -53,12 +65,7 @@ export async function runApiVerificationProbe(
   }
 
   return registryEntry.run({
-    baseUrl: params.baseUrl,
-    apiKey: params.apiKey,
-    ...(params.requestHeaders ? { requestHeaders: params.requestHeaders } : {}),
-    apiType: params.apiType,
+    ...runnerParams,
     modelId: resolvedModelId,
-    mode: params.mode,
-    abortSignal: params.abortSignal,
   })
 }

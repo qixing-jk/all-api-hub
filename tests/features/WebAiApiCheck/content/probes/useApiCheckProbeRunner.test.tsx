@@ -1,7 +1,10 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
+import { http, HttpResponse } from "msw"
 import { describe, expect, it, vi } from "vitest"
 
 import { useApiCheckProbeRunner } from "~/features/WebAiApiCheck/content/probes/useApiCheckProbeRunner"
+import { modelMetadataService } from "~/services/models/modelMetadata"
+import { MODEL_METADATA_URL } from "~/services/models/modelMetadata/constants"
 import {
   API_VERIFICATION_MODES,
   type ApiVerificationProbeResult,
@@ -10,6 +13,7 @@ import {
   sendWebAiApiCheckMessage,
   WebAiApiCheckMessageTypes,
 } from "~/services/verification/webAiApiCheck/messaging"
+import { server } from "~~/tests/msw/server"
 
 vi.mock(
   "~/services/verification/webAiApiCheck/messaging",
@@ -25,23 +29,60 @@ vi.mock("~/services/productAnalytics/actions", () => ({
   resolveProductAnalyticsErrorCategoryFromError: () => "unknown",
 }))
 
-function renderProbeRunner() {
-  return renderHook(() =>
-    useApiCheckProbeRunner({
-      t: ((key: string) => key) as never,
-      apiType: "openai-compatible",
-      verificationMode: API_VERIFICATION_MODES.Streaming,
-      trigger: "contextMenu",
-      baseUrl: "https://proxy.example.com",
-      apiKey: "sk-test-key",
-      modelId: "test-model",
-      setValidationError: vi.fn(),
-      recordBaseUrlHistory: vi.fn(),
-    }),
+function renderProbeRunner(
+  overrides: Partial<Parameters<typeof useApiCheckProbeRunner>[0]> = {},
+) {
+  return renderHook(
+    (props) =>
+      useApiCheckProbeRunner({
+        t: ((key: string) => key) as never,
+        apiType: "openai-compatible",
+        verificationMode: API_VERIFICATION_MODES.Streaming,
+        trigger: "contextMenu",
+        baseUrl: "https://proxy.example.com",
+        apiKey: "sk-test-key",
+        modelId: "test-model",
+        setValidationError: vi.fn(),
+        recordBaseUrlHistory: vi.fn(),
+        ...props,
+      }),
+    { initialProps: overrides },
   )
 }
 
 describe("API check probe session", () => {
+  it("loads remote capabilities before relying on names for an unknown model", async () => {
+    modelMetadataService.clearCache()
+    server.use(
+      http.get(MODEL_METADATA_URL, () =>
+        HttpResponse.json({
+          models: [
+            {
+              id: "future-deployment",
+              name: "Future deployment",
+              provider_id: "future",
+              modalities: { input: ["text"], output: ["image"] },
+            },
+          ],
+        }),
+      ),
+    )
+    const { result, unmount } = renderProbeRunner({
+      modelId: "future-deployment",
+    })
+    try {
+      await waitFor(() =>
+        expect(result.current.probes.map((probe) => probe.id)).toEqual([
+          "models",
+          "image-generation",
+        ]),
+      )
+    } finally {
+      unmount()
+      modelMetadataService.clearCache()
+    }
+  })
+
   it("does not dispatch cancellation or change results when stopping an idle probe", () => {
     vi.mocked(sendWebAiApiCheckMessage).mockClear()
     const { result } = renderProbeRunner()
@@ -51,6 +92,7 @@ describe("API check probe session", () => {
     expect(result.current.probes).toBe(probes)
     expect(result.current.isAnyProbeRunning).toBe(false)
   })
+
   it("keeps a new probe running when a reset batch finishes late", async () => {
     const pending: ((value: unknown) => void)[] = []
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
@@ -76,6 +118,7 @@ describe("API check probe session", () => {
     })
     expect(result.current.isAnyProbeRunning).toBe(false)
   })
+
   it("cancels and ignores a pending result when a new modal session resets the probes", async () => {
     let resolve!: (value: {
       success: true
@@ -119,6 +162,7 @@ describe("API check probe session", () => {
       { runId: expect.any(String) },
     )
   })
+
   it("cancels a superseded single probe and keeps the newer result", async () => {
     const pending: {
       resolve: (value: unknown) => void
@@ -168,5 +212,58 @@ describe("API check probe session", () => {
       WebAiApiCheckMessageTypes.CancelRunProbe,
       { runId: expect.any(String) },
     )
+  })
+
+  it("dynamically adapts probes for embedding models and runs embedding probe during runAll", async () => {
+    vi.mocked(sendWebAiApiCheckMessage)
+      .mockClear()
+      .mockResolvedValue({
+        success: true,
+        result: {
+          id: "embedding",
+          status: "pass",
+          latencyMs: 10,
+          summary: "Embedding passed",
+        },
+      } as never)
+    const hook = renderProbeRunner({ modelId: "text-embedding-3-small" })
+    expect(hook.result.current.modelModality).toBe("embedding")
+    expect(hook.result.current.probes.map((p) => p.id)).toEqual([
+      "models",
+      "embedding",
+    ])
+
+    await act(async () => {
+      await hook.result.current.runAll()
+    })
+
+    const probeCalls = vi
+      .mocked(sendWebAiApiCheckMessage)
+      .mock.calls.filter(
+        ([type]) => type === WebAiApiCheckMessageTypes.RunProbe,
+      )
+    expect(probeCalls.map(([, payload]: any) => payload.probeId)).toEqual([
+      "models",
+      "embedding",
+    ])
+  })
+
+  it("reconciles probes when modelId changes between modalities", () => {
+    const hook = renderProbeRunner({ modelId: "gpt-4o" })
+    expect(hook.result.current.modelModality).toBe("text")
+    expect(hook.result.current.probes.map((p) => p.id)).toEqual([
+      "models",
+      "text-generation",
+      "tool-calling",
+      "structured-output",
+      "web-search",
+    ])
+
+    hook.rerender({ modelId: "dall-e-3" })
+    expect(hook.result.current.modelModality).toBe("image")
+    expect(hook.result.current.probes.map((p) => p.id)).toEqual([
+      "models",
+      "image-generation",
+    ])
   })
 })

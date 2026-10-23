@@ -132,7 +132,9 @@ export async function runWebSearchProbe(
           tools: {
             google_search: google.tools.googleSearch({}),
           },
-          toolChoice: { type: "tool", toolName: "google_search" },
+          // Google reports grounding as sources rather than a function call.
+          // SDK 7 enforces forced tool calls; validate the search evidence below.
+          toolChoice: "auto",
           abortSignal: params.abortSignal,
         },
         mode,

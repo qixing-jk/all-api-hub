@@ -1123,7 +1123,8 @@ describe("EMRank console contract", () => {
       supportsPricing: true,
       pricingKind: "quota",
       actionPolicy: {
-        supportsCredentialVerification: false,
+        supportsCredentialVerification: true,
+        supportsBatchCredentialVerification: true,
         supportsCliVerification: false,
       },
     })

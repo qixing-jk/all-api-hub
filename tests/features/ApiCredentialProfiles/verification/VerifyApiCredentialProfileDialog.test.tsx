@@ -1,5 +1,6 @@
 import { renderHook } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { http, HttpResponse } from "msw"
 import { useState } from "react"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -13,6 +14,8 @@ import {
   type VerifyApiCredentialProfileDialogProps,
 } from "~/features/ApiCredentialProfiles/verification/useProfileVerification"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/verification/VerifyApiCredentialProfileDialog"
+import { modelMetadataService } from "~/services/models/modelMetadata"
+import { MODEL_METADATA_URL } from "~/services/models/modelMetadata/constants"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -32,6 +35,7 @@ import {
   createVerificationHistorySummary,
   verificationResultHistoryStorage,
 } from "~/services/verification/verificationResultHistory"
+import { server } from "~~/tests/msw/server"
 import { requireHistoryTarget } from "~~/tests/test-utils/history"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 import {
@@ -46,13 +50,13 @@ import { stubVerificationOwnerStoresUnavailable } from "~~/tests/test-utils/veri
 
 const {
   loggerErrorMock,
-  mockGetApiVerificationProbeDefinitions,
+  mockProbeDefinitions,
   mockRunApiVerificationProbe,
   mockStartProductAnalyticsAction,
   mockCompleteProductAnalyticsAction,
 } = vi.hoisted(() => ({
   loggerErrorMock: vi.fn(),
-  mockGetApiVerificationProbeDefinitions: vi.fn(),
+  mockProbeDefinitions: vi.fn(),
   mockRunApiVerificationProbe: vi.fn(),
   mockStartProductAnalyticsAction: vi.fn(),
   mockCompleteProductAnalyticsAction: vi.fn(),
@@ -99,13 +103,14 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
     >()
   return {
     ...original,
-    getApiVerificationProbeDefinitions: (...args: unknown[]) =>
-      mockGetApiVerificationProbeDefinitions(...args) ??
-      original.getApiVerificationProbeDefinitions(
-        ...(args as Parameters<
-          typeof original.getApiVerificationProbeDefinitions
-        >),
-      ),
+    getProbesForModality: (
+      modality: Parameters<typeof original.getProbesForModality>[0],
+      apiType: Parameters<typeof original.getProbesForModality>[1],
+    ) =>
+      (modality === undefined ||
+      modality === original.MODEL_TEST_MODALITIES.Text
+        ? mockProbeDefinitions(apiType)
+        : undefined) ?? original.getProbesForModality(modality, apiType),
     runApiVerificationProbe: (...args: unknown[]) =>
       mockRunApiVerificationProbe(...args),
   }
@@ -243,7 +248,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
     // orphan sweep must not read the empty owner stores as "every owner is gone".
     stubVerificationOwnerStoresUnavailable()
     loggerErrorMock.mockReset()
-    mockGetApiVerificationProbeDefinitions.mockReset()
+    mockProbeDefinitions.mockReset()
     mockRunApiVerificationProbe.mockReset()
     mockStartProductAnalyticsAction.mockReset()
     mockCompleteProductAnalyticsAction.mockReset()
@@ -282,6 +287,127 @@ describe("VerifyApiCredentialProfileDialog", () => {
     latencyMs: 1,
     summary: "Accepted",
   }
+
+  it("keeps the selected model when switching to a different modality", async () => {
+    const { result } = renderHook(useProfileVerification, {
+      initialProps: sessionProps,
+    })
+    await waitFor(() => expect(result.current.isFetchingModels).toBe(false))
+
+    act(() => result.current.setModelId("text-embedding-3-small"))
+
+    await waitFor(() =>
+      expect(result.current.modelId).toBe("text-embedding-3-small"),
+    )
+    expect(result.current.probes.map((probe) => probe.definition.id)).toEqual([
+      "models",
+      "embedding",
+    ])
+    expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledTimes(1)
+  })
+
+  it("keeps the user's selected model when remote capability metadata arrives", async () => {
+    await modelMetadataService.initialize()
+    modelMetadataService.clearCache()
+    const response = createDeferred<Response>()
+    server.use(http.get(MODEL_METADATA_URL, () => response.promise))
+    const { result, unmount } = renderHook(useProfileVerification, {
+      initialProps: { ...sessionProps, initialModelId: "initial-deployment" },
+    })
+    try {
+      await waitFor(() => expect(result.current.isFetchingModels).toBe(false))
+      act(() => result.current.setModelId("user-choice"))
+      await act(async () =>
+        response.resolve(
+          HttpResponse.json({
+            models: [
+              {
+                id: "initial-deployment",
+                name: "Initial",
+                provider_id: "test",
+                modalities: { input: ["text"], output: ["image"] },
+              },
+              {
+                id: "user-choice",
+                name: "Choice",
+                provider_id: "test",
+                modalities: { input: ["text"], output: ["video"] },
+              },
+            ],
+          }),
+        ),
+      )
+      await waitFor(() => expect(result.current.modelModality).toBe("video"))
+      expect(result.current.modelId).toBe("user-choice")
+      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledTimes(1)
+    } finally {
+      unmount()
+      modelMetadataService.clearCache()
+    }
+  })
+
+  it("defers remote capability updates until an active probe finishes", async () => {
+    await modelMetadataService.initialize()
+    modelMetadataService.clearCache()
+    const response = createDeferred<Response>()
+    const probe = createDeferred<ApiVerificationProbeResult>()
+    server.use(http.get(MODEL_METADATA_URL, () => response.promise))
+    mockRunApiVerificationProbe.mockReturnValueOnce(probe.promise)
+    const { result, unmount } = renderHook(useProfileVerification, {
+      initialProps: { ...sessionProps, initialModelId: "deferred-deployment" },
+    })
+    try {
+      await waitFor(() => expect(result.current.isFetchingModels).toBe(false))
+      act(() => {
+        void result.current.runSingleProbe("text-generation")
+      })
+      await waitFor(() => expect(result.current.isAnyProbeRunning).toBe(true))
+      await act(async () => {
+        response.resolve(
+          HttpResponse.json({
+            models: [
+              {
+                id: "deferred-deployment",
+                name: "Deferred",
+                provider_id: "test",
+                modalities: { input: ["text"], output: ["image"] },
+              },
+            ],
+          }),
+        )
+        await modelMetadataService.initialize()
+      })
+      expect(result.current.isAnyProbeRunning).toBe(true)
+      expect(result.current.modelModality).toBe("text")
+      await act(async () => probe.resolve(acceptedProbe))
+      await waitFor(() => expect(result.current.modelModality).toBe("image"))
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1)
+    } finally {
+      unmount()
+      modelMetadataService.clearCache()
+    }
+  })
+
+  it("uses endpoint facts only for the model they describe", async () => {
+    const { result } = renderHook(useProfileVerification, {
+      initialProps: {
+        ...sessionProps,
+        initialModelId: "custom-vector-model",
+        initialSupportedEndpointTypes: ["/v1/embeddings"],
+      },
+    })
+    await waitFor(() => expect(result.current.isFetchingModels).toBe(false))
+    expect(result.current.modelModality).toBe("embedding")
+
+    act(() => result.current.setModelId("bge-reranker-v2-m3"))
+
+    await waitFor(() => expect(result.current.modelModality).toBe("rerank"))
+    expect(result.current.modelId).toBe("bge-reranker-v2-m3")
+    expect(result.current.probes.map((probe) => probe.definition.id)).toEqual([
+      "models",
+      "rerank",
+    ])
+  })
 
   it.each([
     { transition: "target", outcome: "response" },
@@ -785,7 +911,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
 
   it("tracks an empty verification suite as skipped", async () => {
     const user = userEvent.setup()
-    mockGetApiVerificationProbeDefinitions.mockReturnValue([])
+    mockProbeDefinitions.mockReturnValue([])
 
     render(
       <VerifyApiCredentialProfileDialog
@@ -938,7 +1064,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
     })
   })
 
-  it("auto-fetches model ids on open", async () => {
+  it("auto-fetches models in upstream order without a brand preference", async () => {
     mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([
       "ada-1",
       "gpt-4o-mini",
@@ -976,7 +1102,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
     await waitFor(() => {
       expect(
         screen.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId),
-      ).toHaveTextContent("gpt-4o-mini")
+      ).toHaveTextContent("ada-1")
     })
   })
 
@@ -1779,7 +1905,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
   it("uses the first known failed probe category for suite analytics", async () => {
     const user = userEvent.setup()
 
-    mockGetApiVerificationProbeDefinitions.mockReturnValueOnce([
+    mockProbeDefinitions.mockReturnValueOnce([
       { id: "models", requiresModelId: false },
       { id: "text-generation", requiresModelId: false },
     ])
@@ -1950,7 +2076,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
     const footer = closeButton.parentElement
     if (!footer) throw new Error("Missing modal footer")
 
-    mockGetApiVerificationProbeDefinitions.mockImplementationOnce(() => {
+    mockProbeDefinitions.mockImplementationOnce(() => {
       throw new Error("definitions failed")
     })
 
@@ -2332,5 +2458,80 @@ describe("VerifyApiCredentialProfileDialog", () => {
       "Failed to persist verification history",
       { error: expect.any(Error) },
     )
+  })
+
+  it("dynamically adapts probes and notices for embedding and image modalities", async () => {
+    mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([
+      "text-embedding-3-small",
+      "dall-e-3",
+    ])
+
+    const { rerender } = render(
+      <VerifyApiCredentialProfileDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "p-1",
+          name: "Profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://example.com",
+          apiKey: "sk-test",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+        initialModelId="text-embedding-3-small"
+      />,
+    )
+
+    // Embedding model: renders models and embeddings probes, hides streaming/non-streaming mode selector
+    expect(
+      await screen.findByTestId(
+        getApiCredentialProfileVerifyProbeTestId("models"),
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByTestId(getApiCredentialProfileVerifyProbeTestId("embedding")),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByTestId(
+        getApiCredentialProfileVerifyProbeTestId("text-generation"),
+      ),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("combobox", {
+        name: "aiApiVerification:verifyDialog.meta.mode",
+      }),
+    ).not.toBeInTheDocument()
+
+    // Switch to image model: shows image probe and cost notice
+    rerender(
+      <VerifyApiCredentialProfileDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "p-1",
+          name: "Profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://example.com",
+          apiKey: "sk-test",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+        initialModelId="dall-e-3"
+      />,
+    )
+
+    expect(
+      await screen.findByTestId(
+        getApiCredentialProfileVerifyProbeTestId("image-generation"),
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("aiApiVerification:verifyDialog.modalityNotice.image"),
+    ).toBeInTheDocument()
   })
 })

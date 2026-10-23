@@ -254,6 +254,25 @@ describe("OpenAI Responses verification HTTP behavior", () => {
   it("preserves sources returned by a streaming web-search test", async () => {
     const textEvents = textResponseEvents("AI SDK news")
     const requestBodies = requireStreamingResponses([
+      {
+        type: "response.output_item.added",
+        output_index: 1,
+        item: {
+          id: "search-test",
+          type: "web_search_call",
+          status: "in_progress",
+        },
+      },
+      {
+        type: "response.output_item.done",
+        output_index: 1,
+        item: {
+          id: "search-test",
+          type: "web_search_call",
+          status: "completed",
+          action: { type: "search", query: "AI SDK news" },
+        },
+      },
       ...textEvents.slice(0, -2),
       {
         type: "response.output_text.annotation.added",

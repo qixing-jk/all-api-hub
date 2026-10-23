@@ -1,23 +1,25 @@
 import type { ProbeItemState } from "~/features/Verification/api/types"
 import {
   buildStoppedProbeResult,
-  getApiVerificationProbeDefinitions,
+  getProbesForModality,
   type ApiVerificationApiType,
   type ApiVerificationMode,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
+  type ModelTestModality,
 } from "~/services/verification/aiApiVerification"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
 
 /**
- * Build the probe list state for the selected API type.
+ * Build the probe list state for the selected API type and model modality.
  * The list is shown immediately so users can run/retry individual items.
  */
 export function buildProbeState(
   apiType: ApiVerificationApiType,
   persistedSummary?: ApiVerificationHistorySummary | null,
+  modality?: ModelTestModality,
 ): ProbeItemState[] {
-  const defs = getApiVerificationProbeDefinitions(apiType)
+  const defs = getProbesForModality(modality, apiType)
   const persistedById = new Map(
     (persistedSummary?.probes ?? []).map((probe) => [probe.id, probe]),
   )

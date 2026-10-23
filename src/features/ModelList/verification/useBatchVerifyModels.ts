@@ -9,8 +9,8 @@ import {
   BATCH_VERIFY_ROW_STATUSES,
   BATCH_VERIFY_ROW_SUMMARIES,
   buildRows,
-  DEFAULT_SELECTED_PROBE_IDS,
   getDefaultApiTypeMode,
+  getDefaultSelectedProbeIds,
   isCompletedStatus,
   type BatchVerifyRow,
   type BatchVerifyRowStatus,
@@ -51,7 +51,7 @@ export function useBatchVerifyModels({
   )
   const [selectedProbeIds, setSelectedProbeIds] = useState<
     ApiVerificationProbeId[]
-  >(DEFAULT_SELECTED_PROBE_IDS)
+  >(() => getDefaultSelectedProbeIds(items))
   const [selectedModelKeys, setSelectedModelKeys] = useState<string[]>(() =>
     items.map((item) => item.key),
   )
@@ -91,7 +91,7 @@ export function useBatchVerifyModels({
     setRows(buildRows(items))
     setApiTypeMode(getDefaultApiTypeMode(items))
     setVerificationMode(API_VERIFICATION_MODES.Streaming)
-    setSelectedProbeIds(DEFAULT_SELECTED_PROBE_IDS)
+    setSelectedProbeIds(getDefaultSelectedProbeIds(items))
     setSelectedModelKeys(items.map((item) => item.key))
     setIsRunning(false)
     setHasStarted(false)

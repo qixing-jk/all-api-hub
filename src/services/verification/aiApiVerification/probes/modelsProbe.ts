@@ -3,6 +3,7 @@ import { fetchGoogleModelIds } from "~/services/aiApi/google"
 import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
 import { toVersionedProtocolMount } from "~/services/aiApi/protocolAddress"
 
+import { pickDefaultVerificationModelId } from "../modelModality"
 import { nowMs, okLatency } from "../probeTiming"
 import type {
   ApiVerificationApiType,
@@ -25,35 +26,6 @@ type RunModelsProbeParams = {
   requestHeaders?: Record<string, string>
   apiType: ApiVerificationApiType
   abortSignal?: AbortSignal
-}
-
-/**
- * Best-effort model id suggestion derived from returned model ids.
- */
-function pickSuggestedModelId(
-  apiType: ApiVerificationApiType,
-  modelIds: string[],
-): string | undefined {
-  const normalized = modelIds
-    .filter((id) => typeof id === "string" && id.trim())
-    .map((id) => id.trim())
-
-  if (normalized.length === 0) return undefined
-
-  const preferredPrefixes = (() => {
-    if (apiType === API_TYPES.GOOGLE) return ["gemini"]
-    if (apiType === API_TYPES.ANTHROPIC) return ["claude"]
-    return ["gpt", "o"]
-  })()
-
-  const preferred = normalized.find((id) => {
-    const lower = id.toLowerCase()
-    return preferredPrefixes.some((prefix) =>
-      prefix === "o" ? /^o\d/i.test(id) : lower.startsWith(prefix),
-    )
-  })
-
-  return preferred ?? normalized[0]
 }
 
 /**
@@ -111,7 +83,7 @@ export async function runModelsProbe(
       throw new Error("Unsupported apiType")
     })()
 
-    const suggestedModelId = pickSuggestedModelId(params.apiType, modelIds)
+    const suggestedModelId = pickDefaultVerificationModelId(modelIds)
 
     return {
       modelId: suggestedModelId,

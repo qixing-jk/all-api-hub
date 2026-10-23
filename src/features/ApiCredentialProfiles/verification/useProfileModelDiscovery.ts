@@ -8,7 +8,7 @@ import {
   normalizeApiCredentialModelIds,
 } from "~/services/apiCredentialProfiles/modelCatalog"
 import {
-  API_TYPES,
+  pickDefaultVerificationModelId,
   type ApiVerificationApiType,
 } from "~/services/verification/aiApiVerification"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
@@ -16,33 +16,6 @@ import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("VerifyApiCredentialProfileDialog")
-/** Choose a best-effort model suggestion for the selected protocol. */
-function pickSuggestedModelId(
-  apiType: ApiVerificationApiType,
-  modelIds: string[],
-): string | undefined {
-  const normalized = modelIds
-    .filter((id) => typeof id === "string" && id.trim())
-    .map((id) => id.trim())
-
-  if (normalized.length === 0) return undefined
-
-  const preferredPrefixes = (() => {
-    if (apiType === API_TYPES.GOOGLE) return ["gemini"]
-    if (apiType === API_TYPES.ANTHROPIC) return ["claude"]
-    return ["gpt", "o"]
-  })()
-
-  const preferred = normalized.find((id) => {
-    const lower = id.toLowerCase()
-    return preferredPrefixes.some((prefix) =>
-      prefix === "o" ? /^o\d/i.test(id) : lower.startsWith(prefix),
-    )
-  })
-
-  return preferred ?? normalized[0]
-}
-
 /** Discover models within the active profile and API-type request, discarding cancelled results. */
 export function useProfileModelDiscovery({
   profile,
@@ -98,7 +71,7 @@ export function useProfileModelDiscovery({
         if (fetchModelsRequestIdRef.current !== requestId) return
 
         setModelOptions(normalized)
-        const suggestedModelId = pickSuggestedModelId(nextApiType, normalized)
+        const suggestedModelId = pickDefaultVerificationModelId(normalized)
         if (suggestedModelId) {
           setModelId((current) => {
             if (current.trim()) return current

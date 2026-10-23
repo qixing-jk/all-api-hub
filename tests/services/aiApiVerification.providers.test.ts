@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 const mocks = vi.hoisted(() => ({
   createAnthropic: vi.fn(),
-  createGoogleGenerativeAI: vi.fn(),
+  createGoogle: vi.fn(),
   createOpenAI: vi.fn(),
   createOpenAICompatible: vi.fn(),
 }))
@@ -12,7 +12,7 @@ vi.mock("@ai-sdk/anthropic", () => ({
 }))
 
 vi.mock("@ai-sdk/google", () => ({
-  createGoogleGenerativeAI: mocks.createGoogleGenerativeAI,
+  createGoogle: mocks.createGoogle,
 }))
 
 vi.mock("@ai-sdk/openai", () => ({
@@ -83,7 +83,7 @@ describe("aiApiVerification providers", () => {
       })
     })
 
-    mocks.createGoogleGenerativeAI.mockImplementation((config) => {
+    mocks.createGoogle.mockImplementation((config) => {
       return (modelId: string) => ({
         provider: "google",
         config,

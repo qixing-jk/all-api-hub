@@ -33,6 +33,7 @@ import {
 } from "~/features/ModelList/verification/batchVerificationState"
 import { useBatchVerifyModels } from "~/features/ModelList/verification/useBatchVerifyModels"
 import { formatLatency } from "~/features/Verification/api/utils"
+import { VerificationMediaPreview } from "~/features/Verification/api/VerificationMediaPreview"
 import { VerificationModeSelect } from "~/features/Verification/api/VerificationMode"
 import { cn } from "~/lib/utils"
 import {
@@ -43,8 +44,11 @@ import {
 } from "~/services/productAnalytics/contracts"
 import {
   API_TYPES,
+  API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
   getApiVerificationProbeDefinitions,
+  getProbesForModality,
+  MODEL_TEST_MODALITIES,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
@@ -210,18 +214,30 @@ export function BatchVerifyModelsDialog({
 
   const probeOptions = useMemo(() => {
     const seenProbeIds = new Set<ApiVerificationProbeId>()
-    return Object.values(API_TYPES).flatMap((apiType) =>
-      getApiVerificationProbeDefinitions(apiType).flatMap((probe) => {
-        if (seenProbeIds.has(probe.id)) return []
-        seenProbeIds.add(probe.id)
-        return [
-          {
-            id: probe.id,
-            label: getApiVerificationProbeLabel(t, probe.id),
-          },
-        ]
-      }),
-    )
+    const options: { id: ApiVerificationProbeId; label: string }[] = []
+
+    const addProbe = (probeId: ApiVerificationProbeId) => {
+      if (seenProbeIds.has(probeId)) return
+      seenProbeIds.add(probeId)
+      options.push({
+        id: probeId,
+        label: getApiVerificationProbeLabel(t, probeId),
+      })
+    }
+
+    for (const apiType of Object.values(API_TYPES)) {
+      for (const probe of getApiVerificationProbeDefinitions(apiType)) {
+        addProbe(probe.id)
+      }
+    }
+
+    for (const modality of Object.values(MODEL_TEST_MODALITIES)) {
+      for (const probe of getProbesForModality(modality)) {
+        addProbe(probe.id)
+      }
+    }
+
+    return options
   }, [t])
 
   const statusVariant = (status: BatchVerifyRowStatus) => {
@@ -338,6 +354,14 @@ export function BatchVerifyModelsDialog({
                     </Badge>
                   ))}
                 </div>
+                {row.results
+                  .filter((result) => result.media)
+                  .map((result) => (
+                    <VerificationMediaPreview
+                      key={result.id}
+                      media={result.media}
+                    />
+                  ))}
                 {row.results
                   .filter(
                     (result) =>
@@ -498,6 +522,19 @@ export function BatchVerifyModelsDialog({
                     disabled={isRunning}
                   />
                   <span>{probe.label}</span>
+                  {probe.id === API_VERIFICATION_PROBE_IDS.ImageGeneration ||
+                  probe.id === API_VERIFICATION_PROBE_IDS.VideoGeneration ? (
+                    <span className="text-warning-text text-xs">
+                      (
+                      {t(
+                        "aiApiVerification:verifyDialog.modalityNotice.quotaCost",
+                        {
+                          defaultValue: "按次计费",
+                        },
+                      )}
+                      )
+                    </span>
+                  ) : null}
                 </label>
               ))}
             </div>

@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import type { ApiCheckOpenModalDetail } from "~/features/WebAiApiCheck/content/events"
 import {
@@ -12,6 +12,7 @@ import type {
   ProbeItemState,
 } from "~/features/WebAiApiCheck/content/modal/apiCheckModalTypes"
 import { createApiCheckProbeSession } from "~/features/WebAiApiCheck/content/probes/apiCheckProbeSession"
+import { useModelMetadataLookup } from "~/hooks/verification/useModelMetadataLookup"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,
@@ -28,11 +29,13 @@ import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/
 import {
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
-  getApiVerificationProbeDefinitions,
+  getProbesForModality,
+  resolveModelTestModality,
   type ApiVerificationApiType,
   type ApiVerificationMode,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
+  type ModelTestModality,
 } from "~/services/verification/aiApiVerification"
 import {
   sendWebAiApiCheckMessage,
@@ -74,8 +77,11 @@ interface VerificationResultsSnapshot {
 /**
  * Build the initial probe UI state for the selected API type.
  */
-function buildProbeState(apiType: ApiVerificationApiType): ProbeItemState[] {
-  return getApiVerificationProbeDefinitions(apiType).map(
+function buildProbeState(
+  apiType: ApiVerificationApiType,
+  modality?: ModelTestModality,
+): ProbeItemState[] {
+  return getProbesForModality(modality, apiType).map(
     (def): ProbeItemState => ({
       id: def.id,
       requiresModelId: def.requiresModelId,
@@ -136,10 +142,45 @@ export function useApiCheckProbeRunner({
   setValidationError,
   recordBaseUrlHistory,
 }: UseApiCheckProbeRunnerOptions) {
-  const [probes, setProbes] = useState<ProbeItemState[]>(() =>
-    buildProbeState(apiType),
-  )
   const [isRunningAll, setIsRunningAll] = useState(false)
+  const [probes, setProbes] = useState<ProbeItemState[]>(() =>
+    buildProbeState(apiType, resolveModelTestModality({ modelId })),
+  )
+  const isAnyProbeRunning = probes.some((probe) => probe.isRunning)
+  const metadataLookup = useModelMetadataLookup(
+    !isRunningAll && !isAnyProbeRunning,
+  )
+  const modelModality = useMemo(
+    () => resolveModelTestModality({ modelId }, metadataLookup),
+    [modelId, metadataLookup],
+  )
+
+  const probeDefinitions = useMemo(
+    () => getProbesForModality(modelModality, apiType),
+    [apiType, modelModality],
+  )
+
+  useEffect(() => {
+    setProbes((prev) => {
+      const existingById = new Map(prev.map((p) => [p.id, p]))
+      return probeDefinitions.map((def): ProbeItemState => {
+        const existing = existingById.get(def.id)
+        if (existing) {
+          return {
+            ...existing,
+            requiresModelId: def.requiresModelId,
+          }
+        }
+        return {
+          id: def.id,
+          requiresModelId: def.requiresModelId,
+          isRunning: false,
+          attempts: 0,
+          result: null,
+        }
+      })
+    })
+  }, [probeDefinitions])
   const [isStoppingRunAll, setIsStoppingRunAll] = useState(false)
   const [testStopPhase, setTestStopPhase] = useState<
     "stopping" | "stopped" | null
@@ -160,22 +201,18 @@ export function useApiCheckProbeRunner({
   )
   useEffect(() => () => session.reset(), [session])
 
-  const probeDefinitions = useMemo(
-    () => getApiVerificationProbeDefinitions(apiType),
-    [apiType],
-  )
+  const modelModalityRef = useRef(modelModality)
+  modelModalityRef.current = modelModality
 
   const hasAnyResult = useMemo(
     () => probes.some((probe) => probe.result !== null),
     [probes],
   )
 
-  const isAnyProbeRunning = probes.some((probe) => probe.isRunning)
-
   const resetProbeState = useCallback(
     (nextApiType: ApiVerificationApiType) => {
       session.reset()
-      setProbes(buildProbeState(nextApiType))
+      setProbes(buildProbeState(nextApiType, modelModalityRef.current))
       setTestStopPhase(null)
       setIsRunningAll(false)
       setIsStoppingRunAll(false)
@@ -618,6 +655,7 @@ export function useApiCheckProbeRunner({
   ])
 
   return {
+    modelModality,
     probes,
     isRunningAll,
     isStoppingRunAll,

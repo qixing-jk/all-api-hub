@@ -23,12 +23,15 @@
     "errors": {
       "unexpected": "Error inesperado"
     },
+    "generatedImagePreview": "Vista previa de la imagen generada",
+    "generatedVideoPreview": "Vista previa del video generado",
     "history": {
       "clear": "Borrar historial",
       "lastVerified": "Última verificación"
     },
     "idleHint": "Selecciona una clave para iniciar la verificación. El id del modelo es obligatorio para pruebas dependientes del modelo.",
     "loadingRuntimeKeysHint": "Cargando claves...",
+    "mediaPreviewUnavailable": "No se pudo cargar la vista previa.",
     "meta": {
       "apiType": "Tipo de API",
       "apiTypePlaceholder": "Seleccionar tipo de API",
@@ -39,17 +42,28 @@
       "runtimeKeyIncompatible": "No disponible para este modelo",
       "runtimeKeyPlaceholder": "Seleccionar clave"
     },
+    "modalityNotice": {
+      "image": "Este es un modelo de generación de imágenes; las llamadas de prueba consumen cuota por solicitud.",
+      "quotaCost": "Por llamada",
+      "video": "Crea un video y espera hasta dos minutos para reproducirlo. Detener solo interrumpe la espera local; la tarea del servidor puede continuar y generar cargos."
+    },
     "modes": {
       "nonStreaming": "Sin streaming",
       "streaming": "Con streaming"
     },
     "noCompatibleRuntimeKeyHint": "No hay ninguna clave disponible para el grupo de este modelo. Crea o elige una clave para un grupo habilitado en Administración de claves.",
     "notRunYet": "Aún no ejecutado",
+    "openGeneratedMedia": "Abrir contenido generado",
     "probes": {
+      "decision": "Modelo de decisión",
+      "embedding": "Embeddings",
+      "image-generation": "Generación de imágenes",
       "models": "Lista de modelos",
+      "rerank": "Reclasificador",
       "structured-output": "Salida estructurada (schema JSON)",
       "text-generation": "Generación de texto",
       "tool-calling": "Llamadas a herramientas/funciones",
+      "video-generation": "Tarea de video",
       "web-search": "Búsqueda web / grounding"
     },
     "requiresModelId": "Ingresa un id de modelo para ejecutar esta prueba.",
@@ -62,9 +76,16 @@
       "unverified": "Sin verificar"
     },
     "summaries": {
+      "decisionSucceeded": "La prueba de decisión se realizó con éxito.",
+      "decisionUnexpectedResponse": "Respuesta inesperada de la interfaz de decisión.",
+      "embeddingSucceeded": "Embedding generado con éxito (dimensión: {{dimension}}).",
+      "embeddingUnexpectedResponse": "Respuesta inesperada de embedding.",
+      "embeddingUnsupportedAnthropic": "Anthropic no admite modelos nativos de embeddings.",
       "endpointNotFound": "Endpoint no encontrado (404): es posible que esta API no sea compatible",
       "forbidden": "Prohibido (403): acceso denegado",
       "httpError": "Error HTTP ({{status}})",
+      "imageGenerationNoData": "No se devolvieron datos de imagen.",
+      "imageGenerationSucceeded": "Generación de imagen exitosa.",
       "modelsFetched": "Se obtuvieron {{count}} modelos.",
       "modelsFetched_one": "Se obtuvo {{count}} modelo.",
       "modelsFetched_many": "Se obtuvieron {{count}} modelos.",
@@ -76,6 +97,9 @@
       "noModelIdProvidedToRunProbes": "No se proporcionó id de modelo para ejecutar las pruebas.",
       "noModelsReturned": "No se devolvieron modelos.",
       "noToolCallDetected": "No se detectó llamada a herramienta (es posible que el modelo no admita herramientas).",
+      "probeRequiresOpenAiProtocol": "Esta prueba requiere un endpoint de API compatible con OpenAI. Selecciona ese protocolo solo si tu servicio lo ofrece.",
+      "rerankSucceeded": "Reclasificación exitosa.",
+      "rerankUnexpectedResponse": "Respuesta inesperada de reclasificación.",
       "stopped": "Detenido por el usuario.",
       "structuredOutputInvalid": "Salida no válida.",
       "structuredOutputSucceeded": "Salida estructurada correcta.",
@@ -83,6 +107,12 @@
       "textGenerationUnexpectedResponse": "Texto de respuesta inesperado.",
       "toolCallSucceeded": "Llamada a herramienta correcta.",
       "unauthorized": "No autorizado (401): clave inválida o autenticación faltante",
+      "videoGenerationSucceeded": "Video generado correctamente.",
+      "videoGenerationTimedOut": "El video no terminó en dos minutos. La tarea del servidor puede seguir ejecutándose.",
+      "videoNoPlayableResult": "La tarea de video terminó sin una URL reproducible.",
+      "videoNoTaskReturned": "No se devolvió ID de tarea de video.",
+      "videoTaskAccepted": "Tarea de video aceptada.",
+      "videoUnexpectedResponse": "La tarea de video falló o devolvió una respuesta no válida.",
       "webSearchGroundingNoResults": "Sin resultados de búsqueda web/grounding.",
       "webSearchGroundingSucceeded": "Búsqueda web/grounding correcta.",
       "webSearchNoResults": "Sin resultados de búsqueda web.",

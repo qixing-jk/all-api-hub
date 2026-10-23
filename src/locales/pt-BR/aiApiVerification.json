@@ -23,12 +23,15 @@
     "errors": {
       "unexpected": "Erro inesperado"
     },
+    "generatedImagePreview": "Prévia da imagem gerada",
+    "generatedVideoPreview": "Prévia do vídeo gerado",
     "history": {
       "clear": "Limpar histórico",
       "lastVerified": "Última verificação"
     },
     "idleHint": "Selecione uma chave para iniciar a verificação. O ID do modelo é obrigatório para testes que dependem de um modelo.",
     "loadingRuntimeKeysHint": "Carregando chaves...",
+    "mediaPreviewUnavailable": "Não foi possível carregar a prévia.",
     "meta": {
       "apiType": "Tipo de API",
       "apiTypePlaceholder": "Selecione o tipo de API",
@@ -39,17 +42,28 @@
       "runtimeKeyIncompatible": "Indisponível para este modelo",
       "runtimeKeyPlaceholder": "Selecione uma chave"
     },
+    "modalityNotice": {
+      "image": "Este é um modelo de geração de imagem; chamadas de teste consomem cota por requisição.",
+      "quotaCost": "Por chamada",
+      "video": "Cria um vídeo e aguarda até dois minutos para reproduzi-lo. Parar interrompe apenas a espera local; a tarefa no servidor pode continuar e gerar cobranças."
+    },
     "modes": {
       "nonStreaming": "Sem streaming",
       "streaming": "Com streaming"
     },
     "noCompatibleRuntimeKeyHint": "Nenhuma chave está disponível para o grupo deste modelo. Crie ou escolha uma chave de um grupo habilitado no Gerenciamento de Chaves.",
     "notRunYet": "Ainda não executado",
+    "openGeneratedMedia": "Abrir mídia gerada",
     "probes": {
+      "decision": "Modelo de decisão",
+      "embedding": "Embedding",
+      "image-generation": "Geração de imagens",
       "models": "Lista de modelos",
+      "rerank": "Reclassificador",
       "structured-output": "Saída estruturada (esquema JSON)",
       "text-generation": "Geração de texto",
       "tool-calling": "Chamada de ferramenta/função",
+      "video-generation": "Tarefa de vídeo",
       "web-search": "Pesquisa na web / grounding"
     },
     "requiresModelId": "Insira um ID de modelo para executar este teste.",
@@ -62,9 +76,16 @@
       "unverified": "Não verificado"
     },
     "summaries": {
+      "decisionSucceeded": "A verificação de decisão foi bem-sucedida.",
+      "decisionUnexpectedResponse": "Resposta inesperada da interface de decisão.",
+      "embeddingSucceeded": "Embedding gerado com sucesso (dimensão: {{dimension}}).",
+      "embeddingUnexpectedResponse": "Resposta inesperada de embedding.",
+      "embeddingUnsupportedAnthropic": "O Anthropic não oferece modelos nativos de embedding.",
       "endpointNotFound": "Endpoint não encontrado (404): esta API pode não ser compatível",
       "forbidden": "Proibido (403): acesso negado",
       "httpError": "Erro HTTP ({{status}})",
+      "imageGenerationNoData": "Nenhum dado de imagem retornado.",
+      "imageGenerationSucceeded": "Geração de imagem bem-sucedida.",
       "modelsFetched": "{{count}} modelos obtidos.",
       "modelsFetched_one": "{{count}} modelo obtido.",
       "modelsFetched_other": "{{count}} modelos obtidos.",
@@ -75,6 +96,9 @@
       "noModelIdProvidedToRunProbes": "Nenhum ID de modelo informado para executar os testes.",
       "noModelsReturned": "Nenhum modelo retornado.",
       "noToolCallDetected": "Nenhuma chamada de ferramenta detectada (o modelo pode não ser compatível com ferramentas).",
+      "probeRequiresOpenAiProtocol": "Este teste requer um endpoint de API compatível com OpenAI. Selecione esse protocolo apenas se o serviço oferecer suporte.",
+      "rerankSucceeded": "Reclassificação bem-sucedida.",
+      "rerankUnexpectedResponse": "Resposta inesperada de reclassificação.",
       "stopped": "Interrompido pelo usuário.",
       "structuredOutputInvalid": "Saída inválida.",
       "structuredOutputSucceeded": "Saída estruturada concluída com sucesso.",
@@ -82,6 +106,12 @@
       "textGenerationUnexpectedResponse": "Texto de resposta inesperado.",
       "toolCallSucceeded": "Chamada de ferramenta concluída com sucesso.",
       "unauthorized": "Não autorizado (401): chave inválida ou autenticação ausente",
+      "videoGenerationSucceeded": "Vídeo gerado com sucesso.",
+      "videoGenerationTimedOut": "O vídeo não terminou em dois minutos. A tarefa no servidor pode continuar em execução.",
+      "videoNoPlayableResult": "A tarefa de vídeo terminou sem uma URL reproduzível.",
+      "videoNoTaskReturned": "Nenhum ID de tarefa de vídeo retornado.",
+      "videoTaskAccepted": "Tarefa de vídeo aceita.",
+      "videoUnexpectedResponse": "A tarefa de vídeo falhou ou retornou uma resposta inválida.",
       "webSearchGroundingNoResults": "Nenhum resultado de pesquisa na web/grounding.",
       "webSearchGroundingSucceeded": "Pesquisa na web/grounding concluída com sucesso.",
       "webSearchNoResults": "Nenhum resultado de pesquisa na web.",

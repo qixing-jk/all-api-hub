@@ -23,12 +23,15 @@
     "errors": {
       "unexpected": "发生未知错误"
     },
+    "generatedImagePreview": "生成图像预览",
+    "generatedVideoPreview": "生成的视频预览",
     "history": {
       "clear": "清除历史",
       "lastVerified": "最近验证"
     },
     "idleHint": "请选择密钥开始验证；模型相关探测需要填写模型 ID。",
     "loadingRuntimeKeysHint": "正在加载密钥...",
+    "mediaPreviewUnavailable": "无法加载预览。",
     "meta": {
       "apiType": "接口类型",
       "apiTypePlaceholder": "选择接口类型",
@@ -39,17 +42,28 @@
       "runtimeKeyIncompatible": "不适用于该模型",
       "runtimeKeyPlaceholder": "选择密钥"
     },
+    "modalityNotice": {
+      "image": "此模型为图像生成模型，测试调用将按次产生额度消耗。",
+      "quotaCost": "按次计费",
+      "video": "生成视频并等待最多两分钟以供播放。停止只会结束本地等待；服务端任务可能继续并产生费用。"
+    },
     "modes": {
       "nonStreaming": "非流式",
       "streaming": "流式"
     },
     "noCompatibleRuntimeKeyHint": "当前没有适用于该模型分组的密钥。请在密钥管理中创建或选择可用分组的密钥。",
     "notRunYet": "尚未运行",
+    "openGeneratedMedia": "打开生成的媒体",
     "probes": {
+      "decision": "决策模型",
+      "embedding": "向量嵌入",
+      "image-generation": "图像生成",
       "models": "模型列表",
+      "rerank": "文档重排",
       "structured-output": "结构化输出（JSON Schema）",
       "text-generation": "文本生成",
       "tool-calling": "工具/函数调用",
+      "video-generation": "视频生成任务",
       "web-search": "联网搜索 / Grounding"
     },
     "requiresModelId": "请输入模型 ID 后运行该测试。",
@@ -62,9 +76,16 @@
       "unverified": "未验证"
     },
     "summaries": {
+      "decisionSucceeded": "决策模型探测测试成功。",
+      "decisionUnexpectedResponse": "决策接口返回内容不符合预期。",
+      "embeddingSucceeded": "向量生成成功（维度：{{dimension}}）。",
+      "embeddingUnexpectedResponse": "向量接口返回内容不符合预期。",
+      "embeddingUnsupportedAnthropic": "Anthropic 接口不支持向量嵌入探测。",
       "endpointNotFound": "端点不存在（404）：此 API 可能不受支持",
       "forbidden": "禁止访问（403）：访问被拒绝",
       "httpError": "HTTP 错误（{{status}}）",
+      "imageGenerationNoData": "未返回图像数据。",
+      "imageGenerationSucceeded": "图像生成成功。",
       "modelsFetched": "成功获取 {{count}} 个模型。",
       "modelsProbeUnsupportedForApiType": "当前接口类型不支持模型列表探测。",
       "noModelAvailableToRunProbes": "没有可用模型，无法运行探测。",
@@ -73,6 +94,9 @@
       "noModelIdProvidedToRunProbes": "未提供模型 ID，无法运行探测。",
       "noModelsReturned": "未返回任何模型。",
       "noToolCallDetected": "未检测到工具调用（模型可能不支持工具）。",
+      "probeRequiresOpenAiProtocol": "此测试需要 OpenAI 兼容 API 端点。仅当服务提供该端点时，请切换到对应协议。",
+      "rerankSucceeded": "文档重排测试成功。",
+      "rerankUnexpectedResponse": "重排接口返回内容不符合预期。",
       "stopped": "已停止。",
       "structuredOutputInvalid": "输出内容无效。",
       "structuredOutputSucceeded": "结构化输出成功。",
@@ -80,6 +104,12 @@
       "textGenerationUnexpectedResponse": "返回内容不符合预期。",
       "toolCallSucceeded": "工具调用成功。",
       "unauthorized": "未授权（401）：密钥无效或缺少认证",
+      "videoGenerationSucceeded": "视频生成成功。",
+      "videoGenerationTimedOut": "视频未在两分钟内完成，服务端任务可能仍在运行。",
+      "videoNoPlayableResult": "视频任务已完成，但未返回可播放的地址。",
+      "videoNoTaskReturned": "未返回视频任务标识。",
+      "videoTaskAccepted": "视频生成任务已提交接收。",
+      "videoUnexpectedResponse": "视频任务失败或返回了无效响应。",
       "webSearchGroundingNoResults": "未获取到联网搜索 / Grounding 结果。",
       "webSearchGroundingSucceeded": "联网搜索 / Grounding 成功。",
       "webSearchNoResults": "未获取到联网搜索结果。",

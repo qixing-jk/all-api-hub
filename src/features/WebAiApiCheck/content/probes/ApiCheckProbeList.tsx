@@ -2,6 +2,7 @@ import type { TFunction } from "i18next"
 
 import { Button, BUTTON_LOADING_BEHAVIORS } from "~/components/ui"
 import { ProbeStatusBadge } from "~/features/Verification/api/ProbeStatusBadge"
+import { VerificationMediaPreview } from "~/features/Verification/api/VerificationMediaPreview"
 import type { ProbeItemState } from "~/features/WebAiApiCheck/content/modal/apiCheckModalTypes"
 import { getWebAiApiCheckProbeTestId } from "~/features/WebAiApiCheck/content/testIds"
 import type { ApiVerificationProbeId } from "~/services/verification/aiApiVerification"
@@ -64,6 +65,12 @@ export function ApiCheckProbeList({
                 <div className="text-muted-foreground mt-density-1 text-xs">
                   {result ? summary : notRunYet}
                 </div>
+                {result && (
+                  <VerificationMediaPreview
+                    output={result.output}
+                    media={result.media}
+                  />
+                )}
               </div>
 
               <Button

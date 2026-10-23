@@ -21,11 +21,13 @@ import {
   safeJsonStringify,
 } from "~/features/Verification/api/utils"
 import { VerificationHistorySummary } from "~/features/Verification/api/VerificationHistorySummary"
+import { VerificationMediaPreview } from "~/features/Verification/api/VerificationMediaPreview"
 import { VerificationModeSelect } from "~/features/Verification/api/VerificationMode"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import {
   API_TYPES,
   API_VERIFICATION_PROBE_STATUSES,
+  MODEL_TEST_MODALITIES,
 } from "~/services/verification/aiApiVerification"
 import {
   getApiVerificationApiTypeLabel,
@@ -42,6 +44,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     onClose,
     account,
     initialModelId,
+    initialSupportedEndpointTypes,
     modelEnableGroups,
     onManageModelKey,
   } = props
@@ -75,10 +78,12 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     stopRun,
     stopProbe,
     runSingleProbe,
+    modelModality,
   } = useVerifyApiDialogViewModel({
     isOpen,
     account,
     initialModelId,
+    initialSupportedEndpointTypes,
     modelEnableGroups,
   })
 
@@ -224,11 +229,13 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
             />
           </div>
 
-          <VerificationModeSelect
-            value={verificationMode}
-            onChange={setVerificationMode}
-            disabled={!canClose}
-          />
+          {modelModality === MODEL_TEST_MODALITIES.Text && (
+            <VerificationModeSelect
+              value={verificationMode}
+              onChange={setVerificationMode}
+              disabled={!canClose}
+            />
+          )}
 
           <div className="space-y-density-1-5">
             <div className="text-muted-foreground text-xs">
@@ -242,6 +249,17 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
             />
           </div>
         </div>
+
+        {(modelModality === MODEL_TEST_MODALITIES.Image ||
+          modelModality === MODEL_TEST_MODALITIES.Video) && (
+          <Alert variant="info">
+            <p>
+              {modelModality === MODEL_TEST_MODALITIES.Image
+                ? t("verifyDialog.modalityNotice.image")
+                : t("verifyDialog.modalityNotice.video")}
+            </p>
+          </Alert>
+        )}
 
         {!hasAnyResult && (
           <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
@@ -369,6 +387,10 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
                           <pre className="text-secondary-foreground overflow-auto text-xs break-words whitespace-pre-wrap">
                             {safeJsonStringify(result.output)}
                           </pre>
+                          <VerificationMediaPreview
+                            output={result.output}
+                            media={result.media}
+                          />
                         </CollapsibleSection>
                       )}
                     </div>
