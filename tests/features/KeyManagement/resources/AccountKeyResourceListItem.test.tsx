@@ -500,111 +500,143 @@ describe("AccountKeyResourceListItem", () => {
     ).toBeNull()
   })
 
-  it.each([true, false])(
-    "exposes complete-key actions from a linked credential profile (native mask=%s)",
-    async (nativeMask) => {
-      const user = userEvent.setup()
-      server.use(
-        http.get("https://api.example.invalid/v1/models", () =>
-          HttpResponse.json({ data: { object: "list", data: [] } }),
-        ),
-      )
-      const writeText = vi
-        .spyOn(navigator.clipboard, "writeText")
-        .mockResolvedValue(undefined)
+  describe.each([true, false])(
+    "linked credential profile (native mask=%s)",
+    (nativeMask) => {
+      const setup = () => {
+        const user = userEvent.setup()
+        const writeText = vi
+          .spyOn(navigator.clipboard, "writeText")
+          .mockResolvedValue(undefined)
+        render(
+          <AccountKeyResourceListItem
+            row={{
+              ...row,
+              facts: {
+                ...row.facts,
+                maskedLabel: nativeMask ? row.facts.maskedLabel : undefined,
+              },
+            }}
+            onExpandedChange={vi.fn()}
+            onEdit={vi.fn()}
+            onDelete={vi.fn()}
+            associatedProfile={{
+              id: "profile-example",
+              name: "Example credential",
+              apiType: "openai-compatible",
+              baseUrl: "https://api.example.invalid/v1",
+              apiKey: "complete-example-secret",
+              tagIds: [],
+              notes: "",
+              createdAt: 1,
+              updatedAt: 1,
+            }}
+          />,
+          { withUserPreferencesProvider: true, withThemeProvider: false },
+        )
 
-      render(
-        <AccountKeyResourceListItem
-          row={{
-            ...row,
-            facts: {
-              ...row.facts,
-              maskedLabel: nativeMask ? row.facts.maskedLabel : undefined,
-            },
-          }}
-          onExpandedChange={vi.fn()}
-          onEdit={vi.fn()}
-          onDelete={vi.fn()}
-          associatedProfile={{
-            id: "profile-example",
-            name: "Example credential",
-            apiType: "openai-compatible",
-            baseUrl: "https://api.example.invalid/v1",
-            apiKey: "complete-example-secret",
-            tagIds: [],
-            notes: "",
-            createdAt: 1,
-            updatedAt: 1,
-          }}
-        />,
-        { withUserPreferencesProvider: true, withThemeProvider: false },
-      )
+        return { user, writeText }
+      }
 
-      expect(
-        await screen.findByText(
-          nativeMask ? "sk-o••••••mple" : "comp••••••cret",
-        ),
-      ).toBeVisible()
-      const showButton = await screen.findByRole("button", {
-        name: "keyManagement:actions.showKey",
+      it("exposes complete-key actions and keeps the secret masked", async () => {
+        setup()
+        expect(
+          await screen.findByText(
+            nativeMask ? "sk-o••••••mple" : "comp••••••cret",
+          ),
+        ).toBeVisible()
+        const showButton = await screen.findByRole("button", {
+          name: "keyManagement:actions.showKey",
+        })
+        expect(showButton).toBeVisible()
+        expect(
+          await screen.findByRole("button", { name: "common:actions.copyKey" }),
+        ).toBeVisible()
+        const exportButton = await screen.findByRole("button", {
+          name: "common:actions.export",
+        })
+        expect(exportButton).toBeVisible()
+        expect(
+          screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton),
+        ).toBeVisible()
+        const verifyApiButton = await screen.findByRole("button", {
+          name: "keyManagement:actions.verifyApi",
+        })
+        expect(verifyApiButton).toBeVisible()
+        expect(
+          await screen.findByRole("button", {
+            name: "keyManagement:actions.verifyCliSupport",
+          }),
+        ).toBeVisible()
       })
-      expect(showButton).toBeVisible()
-      expect(
-        await screen.findByRole("button", { name: "common:actions.copyKey" }),
-      ).toBeVisible()
-      const exportButton = await screen.findByRole("button", {
-        name: "common:actions.export",
+
+      it("reveals and hides the complete linked key", async () => {
+        const { user } = setup()
+        await user.click(
+          await screen.findByRole("button", {
+            name: "keyManagement:actions.showKey",
+          }),
+        )
+        expect(screen.getByText("complete-example-secret")).toBeVisible()
+        await user.click(
+          screen.getByRole("button", { name: "keyManagement:actions.hideKey" }),
+        )
+        expect(
+          screen.queryByText("complete-example-secret"),
+        ).not.toBeInTheDocument()
       })
-      expect(exportButton).toBeVisible()
-      expect(
-        screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton),
-      ).toBeVisible()
-      const verifyApiButton = await screen.findByRole("button", {
-        name: "keyManagement:actions.verifyApi",
+
+      it("copies the complete linked key and reports clipboard failures", async () => {
+        const { user, writeText } = setup()
+        await user.click(
+          await screen.findByRole("button", { name: "common:actions.copyKey" }),
+        )
+        await waitFor(() =>
+          expect(writeText).toHaveBeenCalledWith("complete-example-secret"),
+        )
+
+        const errorToast = vi.spyOn(toast, "error")
+        writeText.mockRejectedValueOnce(new Error("clipboard denied"))
+        await user.click(
+          screen.getByRole("button", { name: "common:actions.copyKey" }),
+        )
+        await waitFor(() =>
+          expect(errorToast).toHaveBeenCalledWith(
+            "keyManagement:messages.copyFailed",
+          ),
+        )
       })
-      expect(verifyApiButton).toBeVisible()
-      expect(
-        await screen.findByRole("button", {
-          name: "keyManagement:actions.verifyCliSupport",
-        }),
-      ).toBeVisible()
 
-      await user.click(showButton)
-      expect(screen.getByText("complete-example-secret")).toBeVisible()
+      it("opens export actions and dismisses them with Escape", async () => {
+        const { user } = setup()
+        await user.click(
+          await screen.findByRole("button", { name: "common:actions.export" }),
+        )
+        expect(
+          await screen.findByText("keyManagement:actions.useInCherry"),
+        ).toBeVisible()
+        await user.keyboard("{Escape}")
+        await waitFor(() =>
+          expect(
+            screen.queryByText("keyManagement:actions.useInCherry"),
+          ).not.toBeInTheDocument(),
+        )
+      })
 
-      await user.click(
-        screen.getByRole("button", { name: "keyManagement:actions.hideKey" }),
-      )
-      expect(
-        screen.queryByText("complete-example-secret"),
-      ).not.toBeInTheDocument()
-
-      await user.click(
-        screen.getByRole("button", { name: "common:actions.copyKey" }),
-      )
-      await waitFor(() =>
-        expect(writeText).toHaveBeenCalledWith("complete-example-secret"),
-      )
-
-      const errorToast = vi.spyOn(toast, "error")
-      writeText.mockRejectedValueOnce(new Error("clipboard denied"))
-      await user.click(
-        screen.getByRole("button", { name: "common:actions.copyKey" }),
-      )
-      await waitFor(() =>
-        expect(errorToast).toHaveBeenCalledWith(
-          "keyManagement:messages.copyFailed",
-        ),
-      )
-
-      await user.click(exportButton)
-      expect(
-        await screen.findByText("keyManagement:actions.useInCherry"),
-      ).toBeVisible()
-      await user.keyboard("{Escape}")
-
-      await user.click(verifyApiButton)
-      expect(await screen.findByRole("dialog")).toBeVisible()
+      it("opens API verification for the complete linked key", async () => {
+        server.use(
+          http.get("https://api.example.invalid/v1/models", () =>
+            HttpResponse.json({ data: { object: "list", data: [] } }),
+          ),
+        )
+        const { user } = setup()
+        await user.click(
+          await screen.findByRole("button", {
+            name: "keyManagement:actions.verifyApi",
+          }),
+        )
+        expect(await screen.findByRole("dialog")).toBeVisible()
+      })
     },
   )
 
