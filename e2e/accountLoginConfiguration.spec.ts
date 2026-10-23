@@ -515,10 +515,20 @@ test("password login uses an isolated window when private access is allowed and 
   const privateToggle = settings.locator("#allow-incognito cr-toggle")
   const changePrivateAccess = async (allowed: boolean) => {
     await expect(privateToggle).toHaveJSProperty("checked", !allowed)
-    // Permission changes can reload the extension. Check the current worker's
-    // permission rather than requiring a new serviceworker event.
+    const previousWorker = await getServiceWorker(context)
+    let previousWorkerClosed = false
+    previousWorker.once("close", () => {
+      previousWorkerClosed = true
+    })
+    // Permission changes reload the extension. Wait for the old worker to
+    // close so a permission read cannot succeed on the worker being discarded.
     await privateToggle.click()
     await expect(privateToggle).toHaveJSProperty("checked", allowed)
+    await expect
+      .poll(() => previousWorkerClosed, {
+        message: "pre-permission-change service worker closes",
+      })
+      .toBe(true)
     await expect
       .poll(async () => {
         const currentWorker = await getServiceWorker(context)
