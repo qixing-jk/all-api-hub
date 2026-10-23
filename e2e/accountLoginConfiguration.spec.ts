@@ -622,6 +622,7 @@ test("password login uses an isolated window when private access is allowed and 
         )?.perAccount?.["login-config-account"]?.status,
     )
     .toBe("failed")
+  expect(loginBodies).toHaveLength(0)
   await settings.bringToFront()
   await changePrivateAccess(false)
   await settings.close()
