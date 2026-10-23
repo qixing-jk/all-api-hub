@@ -19,8 +19,6 @@ const output =
 fs.mkdirSync(path.dirname(output), { recursive: true })
 const save = () =>
   fs.writeFileSync(output, JSON.stringify(observations, null, 2))
-// Reject an unwritable evidence path before any backend accounts are created.
-save()
 const classify = (raw) => {
   const match = (raw ?? "")
     .split(";")
@@ -290,18 +288,25 @@ const server = http.createServer((req, res) => {
   res.writeHead(404)
   res.end()
 })
+let fixturesStarted = false
 const lifecycle = startOwnedFixture(server, {
   port: 41672,
-  prepare: () =>
-    process.env.AAH_SAFARI_REAL_TOKEN
+  prepare: () => {
+    // The port is ours now. Validate evidence output before creating any users,
+    // without overwriting another running fixture's evidence on a bind failure.
+    save()
+    fixturesStarted = true
+    return process.env.AAH_SAFARI_REAL_TOKEN
       ? process.env.AAH_SAFARI_SAME_SITE === "1"
         ? prepareSameSite()
         : prepareRealSite()
-      : null,
+      : null
+  },
   onPrepared: (config) => {
     realConfig = config
   },
   onCleanup: (confirmed) => {
+    if (!fixturesStarted) return
     observations.events.push({ stage: "owned-backend-cleanup", confirmed })
     save()
   },

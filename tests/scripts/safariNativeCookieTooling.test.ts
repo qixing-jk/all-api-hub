@@ -68,6 +68,45 @@ it("instruments a run copy without contaminating the release build", () => {
 })
 
 describe("owned fixture lifecycle", () => {
+  it("leaves existing CLI evidence untouched when its port cannot be acquired", async () => {
+    const occupied = http.createServer()
+    await new Promise<void>((resolve, reject) => {
+      occupied.once("error", (error: NodeJS.ErrnoException) =>
+        error.code === "EADDRINUSE" ? resolve() : reject(error),
+      )
+      occupied.listen(41672, "127.0.0.1", resolve)
+    })
+    const output = path.join(temporaryRoot(), "observations.json")
+    const previous = JSON.stringify({ priorEvidence: true })
+    fs.writeFileSync(output, previous)
+    try {
+      const result = spawnSync(
+        process.execPath,
+        [
+          fileURLToPath(
+            new URL("../../e2e/safariNativeCookie/server.mjs", import.meta.url),
+          ),
+        ],
+        {
+          env: {
+            ...process.env,
+            AAH_SAFARI_REAL_TOKEN: "",
+            SAFARI_NATIVE_OBSERVATIONS: output,
+          },
+          encoding: "utf8",
+          timeout: 5000,
+        },
+      )
+      expect(result.error).toBeUndefined()
+      expect(result.status).toBe(1)
+      expect(result.stderr).toContain("Fixture startup failed")
+      expect(fs.readFileSync(output, "utf8")).toBe(previous)
+    } finally {
+      if (occupied.listening)
+        await new Promise<void>((resolve) => occupied.close(() => resolve()))
+    }
+  })
+
   it("does not provision users when the local port is occupied", async () => {
     const occupied = http.createServer()
     await new Promise<void>((resolve) =>

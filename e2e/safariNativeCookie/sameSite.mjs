@@ -63,11 +63,12 @@ export async function cleanupOwnedFixtureUsers({
 }
 
 /** Create only run-owned, ordinary users; never delete an existing account. */
-export async function prepareSameSite() {
+export async function prepareSameSite({
+  journal = ".scratch/safari-native-cookie/owned-real-users.json",
+} = {}) {
   loadLocalEnv({ envFile: process.env.AAH_SAFARI_REAL_ENV_FILE })
   const baseUrl = process.env.AAH_E2E_DONE_HUB_BASE_URL
   assert(baseUrl && new URL(baseUrl).protocol === "https:")
-  const journal = ".scratch/safari-native-cookie/owned-real-users.json"
   assert(
     !fs.existsSync(journal),
     "Resolve previous owned fixture cleanup first",
@@ -138,8 +139,17 @@ export async function prepareSameSite() {
     }
     return { accounts, cleanup }
   } catch (error) {
-    if (owned.length) await cleanup()
-    else await admin.dispose()
+    try {
+      if (owned.length) await cleanup()
+      else await admin.dispose()
+    } catch (cleanupError) {
+      // Retain diagnostics in memory; the CLI reports only a classified error.
+      throw new AggregateError(
+        [error, cleanupError],
+        "Fixture preparation and cleanup failed",
+        { cause: error },
+      )
+    }
     throw error
   }
 }
