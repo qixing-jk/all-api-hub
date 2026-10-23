@@ -89,6 +89,17 @@ function omitGoogleApiKey(
   }
 }
 
+/** Verify that a returned video URL is a valid web-accessible address. */
+function isPlayableVideoUrl(url: string | undefined): url is string {
+  if (!url) return false
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === "http:" || parsed.protocol === "https:"
+  } catch {
+    return false
+  }
+}
+
 /** Wait between status reads, releasing both the timer and listener on cancellation. */
 function waitForNextPoll(signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -233,7 +244,7 @@ export async function runVideoGenerationProbe(
 
     controller.signal.throwIfAborted()
     const completed = !taskFailed && COMPLETED_STATUSES.has(taskStatus ?? "")
-    const playable = completed && Boolean(videoUrl)
+    const playable = completed && isPlayableVideoUrl(videoUrl)
 
     return {
       id: API_VERIFICATION_PROBE_IDS.VideoGeneration,

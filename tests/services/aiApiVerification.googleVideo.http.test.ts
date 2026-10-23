@@ -166,7 +166,10 @@ describe("Google SDK video generation verification", () => {
     )
 
     const result = await runApiVerificationProbe(params)
-    expect(result.status).toBe("pass")
+    expect(result.status).toBe("fail")
+    expect(result.summaryKey).toBe(
+      "verifyDialog.summaries.videoNoPlayableResult",
+    )
     expect(result.output).toMatchObject({
       url: null,
     })
