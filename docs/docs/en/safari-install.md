@@ -19,7 +19,7 @@ If the extension is missing from the list, run the companion macOS app from Xcod
 
 ## When you reopen Safari
 
-Safari resets “Allow Unsigned Extensions” when it quits. Each time you reopen Safari, enable this option again and launch the `All API Hub` macOS app installed through Xcode. Keeping the app somewhere easy to find, such as `~/Applications`, makes this easier. This only affects whether the extension can run; it does not erase extension data.
+Safari resets “Allow Unsigned Extensions” when it quits. Each time you reopen Safari, enable this option again. You normally do not need to relaunch the `All API Hub` macOS app; launch it for initial installation, reinstallation, or if Safari cannot find the extension. This only affects whether the extension can run; it does not erase extension data.
 
 ## Where your data is stored
 
@@ -51,7 +51,7 @@ Safari installs the extension inside a companion macOS app. The downloaded archi
 
 ### The extension stopped working after Safari restarted. Was my data lost?
 
-Usually not. Safari resets “Allow Unsigned Extensions” when it quits, so enable it again and launch the companion app. Accounts and settings are stored in Safari’s local extension storage and are not deleted when this switch resets.
+Usually not. Safari resets “Allow Unsigned Extensions” when it quits, so enable it again. If Safari cannot find the extension, launch the companion app. Accounts and settings are stored in Safari’s local extension storage and are not deleted when this switch resets.
 
 ### How do I restore accounts on a new device?
 

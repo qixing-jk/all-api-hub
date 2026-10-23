@@ -79,6 +79,7 @@ export async function hasCookieInterceptorPermissions(): Promise<boolean> {
 export async function hasPermission(
   id: ManifestOptionalPermissions,
 ): Promise<boolean> {
+  if (!isPermissionDeclared(id)) return false
   return await containsPermissions({
     permissions: [id as unknown as browser._manifest.OptionalPermission],
   })
@@ -102,6 +103,7 @@ export async function hasPermissions(
 export async function requestPermissionDetailed(
   id: ManifestOptionalPermissions,
 ): Promise<PermissionOperationResult> {
+  if (!isPermissionDeclared(id)) return { success: false }
   return await requestPermissionsDetailed({
     permissions: [id as unknown as browser._manifest.OptionalPermission],
   })

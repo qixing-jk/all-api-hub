@@ -132,6 +132,49 @@ describe("permissionManager", () => {
     })
   })
 
+  it.each(["check", "request"] as const)(
+    "skips the browser %s for undeclared permissions",
+    async (operation) => {
+      const manifest: ReturnType<typeof getManifest> = {
+        manifest_version: 2,
+        name: "Safari",
+        version: "1.0.0",
+        permissions: ["cookies"],
+      }
+      vi.mocked(getManifest).mockReturnValueOnce(manifest)
+      if (operation === "check") {
+        await expect(hasPermission("notifications")).resolves.toBe(false)
+      } else {
+        await expect(
+          requestPermissionDetailed("notifications"),
+        ).resolves.toEqual({
+          success: false,
+        })
+      }
+      expect(containsPermissionsMock).not.toHaveBeenCalled()
+      expect(requestPermissionsDetailedMock).not.toHaveBeenCalled()
+    },
+  )
+
+  it("preserves declared required permission calls and the request user gesture", async () => {
+    const manifest: ReturnType<typeof getManifest> = {
+      manifest_version: 3,
+      name: "Required permissions variant",
+      version: "1.0.0",
+      permissions: ["notifications"],
+    }
+    containsPermissionsMock.mockResolvedValueOnce(true)
+    requestPermissionsDetailedMock.mockResolvedValueOnce({ success: true })
+    vi.mocked(getManifest).mockReturnValueOnce(manifest)
+    await expect(hasPermission("notifications")).resolves.toBe(true)
+    vi.mocked(getManifest).mockReturnValueOnce(manifest)
+    const result = requestPermissionDetailed("notifications")
+    expect(requestPermissionsDetailedMock).toHaveBeenCalledWith({
+      permissions: ["notifications"],
+    })
+    await expect(result).resolves.toEqual({ success: true })
+  })
+
   it("short-circuits empty permission arrays and reuses the cookie-interceptor helper", async () => {
     containsPermissionsMock.mockResolvedValueOnce(true)
 
