@@ -6,7 +6,8 @@ import { useEffect, useState } from "react"
  * @returns boolean - 是否匹配媒体查询
  */
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(false)
+  // Navigation effects must see the final responsive layout on the first mount.
+  const [matches, setMatches] = useState(() => window.matchMedia(query).matches)
 
   useEffect(() => {
     const media = window.matchMedia(query)

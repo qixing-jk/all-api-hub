@@ -283,6 +283,7 @@ describe("ApiCredentialProfileListItem", () => {
 
   afterEach(() => {
     vi.useRealTimers()
+    vi.unstubAllGlobals()
   })
 
   beforeEach(() => {
@@ -356,10 +357,41 @@ describe("ApiCredentialProfileListItem", () => {
     expect(row).toHaveAttribute("tabindex", "-1")
     expect(row).toHaveFocus()
     expect(scrollIntoViewSpy).toHaveBeenCalledWith({
+      behavior: "auto",
       block: "center",
       inline: "nearest",
     })
     expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true })
+  })
+
+  it("reveals the guided import action without a second focus scroll or reduced-motion animation", () => {
+    const focus = vi.spyOn(HTMLElement.prototype, "focus")
+    const scroll = vi.spyOn(HTMLElement.prototype, "scrollIntoView")
+    const mediaDefaults = window.matchMedia("(prefers-reduced-motion: reduce)")
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((query: string) => ({
+        ...mediaDefaults,
+        media: query,
+        matches: query === "(prefers-reduced-motion: reduce)",
+      })),
+    )
+
+    renderListItem(buildProfile(), { guidedImportEntryRequest: 1 })
+
+    expect(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.importToManagedSite",
+      }),
+    ).toHaveFocus()
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true })
+    expect(scroll).toHaveBeenCalledWith({
+      behavior: "instant",
+      block: "center",
+      inline: "nearest",
+    })
+    focus.mockRestore()
+    scroll.mockRestore()
   })
 
   it("drops the card highlight once the focus request is withdrawn", () => {

@@ -5,6 +5,7 @@ import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import {
   API_CREDENTIAL_PROFILES_TEST_IDS,
+  getApiCredentialProfileRowTestId,
   getApiCredentialProfileVerifyProbeTestId,
 } from "~/features/ApiCredentialProfiles/testIds"
 import { KILO_CODE_EXPORT_TEST_IDS } from "~/features/KiloCodeExport/kiloCodeExportTestIds"
@@ -191,6 +192,45 @@ test("creates an API credential profile from the options page and persists it", 
       notes: "Created from options E2E",
     })
 })
+
+for (const width of [1280, 420]) {
+  test(`reveals a targeted credential and expires its highlight at ${width}px`, async ({
+    context,
+    extensionId,
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 })
+    await page.emulateMedia({ reducedMotion: "reduce" })
+    await seedApiCredentialProfiles(
+      await getServiceWorker(context),
+      Array.from({ length: 6 }, (_, index) =>
+        createStoredApiCredentialProfile({
+          id: `navigation-profile-${index}`,
+          name: `Navigation Profile ${index}`,
+          baseUrl: "https://navigation.example.com",
+          apiKey: `synthetic-navigation-key-${index}`,
+        }),
+      ),
+    )
+    await page.goto(
+      `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}?profileId=navigation-profile-5#${MENU_ITEM_IDS.API_CREDENTIAL_PROFILES}`,
+    )
+    await waitForExtensionRoot(page)
+    await expectPermissionOnboardingHidden(page)
+    const target = page.getByTestId(
+      getApiCredentialProfileRowTestId("navigation-profile-5"),
+    )
+    await expect(target).toBeFocused()
+    await expect(target).toBeInViewport()
+    await expect(target).toHaveClass(/ring-theme-500/)
+    await page.screenshot({
+      path: testInfo.outputPath("profile-target.png"),
+      animations: "disabled",
+    })
+    await expect(target).not.toHaveClass(/ring-theme-500/)
+    await expect(target).toBeFocused()
+  })
+}
 
 test("filters options-page profiles and copies reusable credentials", async ({
   context,

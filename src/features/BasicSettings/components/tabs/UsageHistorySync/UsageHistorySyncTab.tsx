@@ -23,6 +23,7 @@ import { hasAlarmsAPI } from "~/utils/browser/alarms"
 import { getErrorMessage } from "~/utils/core/error"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"
+import { revealNavigationTarget } from "~/utils/dom/navigationTarget"
 import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
 
 import UsageHistorySyncSettingsSection from "./UsageHistorySyncSettingsSection"
@@ -46,9 +47,8 @@ const hasNonSuccessUsageHistoryTotals = (totals: {
   (totals.unsupported ?? 0) > 0
 
 const scrollToUsageHistoryStateSection = () => {
-  document
-    .getElementById(USAGE_HISTORY_STATE_SECTION_ID)
-    ?.scrollIntoView({ behavior: "smooth", block: "start" })
+  const target = document.getElementById(USAGE_HISTORY_STATE_SECTION_ID)
+  if (target) revealNavigationTarget(target, { behavior: "smooth" })
 }
 
 /**

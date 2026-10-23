@@ -1,6 +1,4 @@
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { temporarilyHighlight } from "~/utils/dom/temporaryHighlight"
-import { replaceWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
 import type { OptionsSearchItem } from "./types"
 
@@ -48,23 +46,7 @@ export function clearHighlightSearchParam() {
   }
 
   url.searchParams.delete(OPTIONS_SEARCH_HIGHLIGHT_PARAM)
-  replaceWithinOptionsPage(
-    url.hash || `#${MENU_ITEM_IDS.OVERVIEW}`,
-    Object.fromEntries(url.searchParams.entries()),
-  )
-}
-
-/**
- * Scrolls to and temporarily highlights the target element for a search result.
- */
-export function highlightSearchTarget(targetId: string) {
-  const element = document.getElementById(targetId)
-  if (!element) {
-    return false
-  }
-
-  element.scrollIntoView({ behavior: "smooth", block: "start" })
-  temporarilyHighlight(element)
-
-  return true
+  url.hash ||= `#${MENU_ITEM_IDS.OVERVIEW}`
+  // Consuming a one-shot marker is not another navigation request.
+  window.history.replaceState(window.history.state, "", url.toString())
 }

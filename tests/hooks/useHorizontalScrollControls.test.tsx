@@ -363,6 +363,20 @@ describe("useHorizontalScrollControls", () => {
       left: 220,
       behavior: "smooth",
     })
+
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn((query: string) => ({
+        matches: query === "(prefers-reduced-motion: reduce)",
+      })),
+    )
+    act(() => {
+      controls.scrollChildIntoCenter(1)
+    })
+    expect(scrollTo).toHaveBeenLastCalledWith({
+      left: 220,
+      behavior: "instant",
+    })
   })
 
   it("falls back to mutating scrollLeft directly when scroll APIs are unavailable", () => {

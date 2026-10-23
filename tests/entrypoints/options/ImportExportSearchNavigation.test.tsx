@@ -1,5 +1,6 @@
-import type { ReactNode } from "react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { act } from "@testing-library/react"
+import { useEffect, useState, type ReactNode } from "react"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import ImportExport from "~/features/ImportExport/ImportExport"
 import { WEBDAV_TARGET_IDS } from "~/features/ImportExport/searchTargets"
@@ -9,8 +10,9 @@ import {
 } from "~/features/OptionsSearch/navigation"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
-const { mockedUseImportExport } = vi.hoisted(() => ({
+const { mockedUseImportExport, mockedWebDAVSettings } = vi.hoisted(() => ({
   mockedUseImportExport: vi.fn(),
+  mockedWebDAVSettings: vi.fn(),
 }))
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
@@ -28,11 +30,6 @@ vi.mock("~/components/PageHeader", () => ({
   PageHeader: ({ title }: { title: string }) => <div>{title}</div>,
 }))
 
-vi.mock("~/utils/core/url", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/utils/core/url")>()),
-  navigateToAnchor: vi.fn(),
-}))
-
 vi.mock("~/features/ImportExport/backup/useImportExport", () => ({
   useImportExport: () => mockedUseImportExport(),
 }))
@@ -46,7 +43,7 @@ vi.mock("~/features/ImportExport/backup/ImportSection", () => ({
 }))
 
 vi.mock("~/features/ImportExport/webdav/WebDAVSettings", () => ({
-  default: () => <section id="webdav-url">webdav section</section>,
+  default: () => mockedWebDAVSettings(),
 }))
 
 vi.mock("~/features/ImportExport/cloudSync/WebDAVAutoSyncSettings", () => ({
@@ -54,7 +51,12 @@ vi.mock("~/features/ImportExport/cloudSync/WebDAVAutoSyncSettings", () => ({
 }))
 
 describe("ImportExport search navigation", () => {
+  afterEach(() => vi.useRealTimers())
+
   beforeEach(() => {
+    mockedWebDAVSettings.mockReturnValue(
+      <section id="webdav-url">webdav section</section>,
+    )
     mockedUseImportExport.mockReset()
     mockedUseImportExport.mockReturnValue({
       isExporting: false,
@@ -106,10 +108,108 @@ describe("ImportExport search navigation", () => {
       withThemeProvider: false,
     })
 
-    await waitFor(() => {
-      expect(window.location.search).not.toContain("highlight=")
-    })
+    await waitFor(
+      () => {
+        expect(window.location.search).not.toContain("highlight=")
+      },
+      { timeout: 3000 },
+    )
 
     expect(screen.getByText("webdav section")).toBeInTheDocument()
+  })
+
+  it("scrolls only once when anchor and highlight share a destination", async () => {
+    vi.useFakeTimers()
+    render(<ImportExport />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    const target = screen.getByText("webdav section")
+    const scroll = vi.spyOn(target, "scrollIntoView")
+    scroll.mockClear()
+
+    await act(() => vi.advanceTimersByTimeAsync(1000))
+
+    expect(scroll).toHaveBeenCalledTimes(1)
+    expect(target).toHaveClass("ring-theme-500")
+    expect(new URLSearchParams(window.location.search).get("anchor")).toBe(
+      "webdav-url",
+    )
+    expect(window.location.search).not.toContain("highlight=")
+    scroll.mockRestore()
+  })
+
+  it("highlights a destination that mounts after the old fixed delay", async () => {
+    vi.useFakeTimers()
+    function DelayedSettings() {
+      const [ready, setReady] = useState(false)
+      useEffect(() => {
+        const timer = window.setTimeout(() => setReady(true), 400)
+        return () => window.clearTimeout(timer)
+      }, [])
+      return ready ? <section id="webdav-url">delayed webdav</section> : null
+    }
+    mockedWebDAVSettings.mockImplementation(() => <DelayedSettings />)
+    render(<ImportExport />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    await act(() => vi.advanceTimersByTimeAsync(500))
+    await act(() => vi.advanceTimersByTimeAsync(100))
+
+    expect(screen.getByText("delayed webdav")).toHaveClass("ring-theme-500")
+    expect(window.location.search).not.toContain("highlight=")
+  })
+
+  it("cancels the old destination when a newer request arrives", async () => {
+    vi.useFakeTimers()
+    render(<ImportExport />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    act(() => {
+      window.history.replaceState(
+        null,
+        "",
+        "/options.html?anchor=import-section&highlight=import-section#importExport",
+      )
+      window.dispatchEvent(new Event("hashchange"))
+    })
+    await act(() => vi.advanceTimersByTimeAsync(1000))
+
+    expect(screen.getByText("import section")).toHaveClass("ring-theme-500")
+    expect(screen.getByText("webdav section")).not.toHaveClass("ring-theme-500")
+  })
+
+  it("cleans up an active highlight on unmount", async () => {
+    vi.useFakeTimers()
+    const view = render(<ImportExport />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    await act(() => vi.advanceTimersByTimeAsync(100))
+    const target = screen.getByText("webdav section")
+    expect(target).toHaveClass("ring-theme-500")
+
+    view.unmount()
+
+    expect(target).not.toHaveClass("ring-theme-500")
+  })
+
+  it("does not scroll after the page unmounts before its landing frame", async () => {
+    vi.useFakeTimers()
+    const view = render(<ImportExport />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    const target = screen.getByText("webdav section")
+    const scroll = vi.spyOn(target, "scrollIntoView")
+    scroll.mockClear()
+
+    view.unmount()
+    await act(() => vi.advanceTimersByTimeAsync(2500))
+
+    expect(scroll).not.toHaveBeenCalled()
+    scroll.mockRestore()
   })
 })

@@ -76,7 +76,7 @@ import { resolveSelectedCheckInMethod } from "~/services/checkin/autoCheckin/dis
 import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
 import type { AccountLoginConfiguration } from "~/types/accountLogin"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
-import { temporarilyHighlight } from "~/utils/dom/temporaryHighlight"
+import { revealNavigationTarget } from "~/utils/dom/navigationTarget"
 
 const ACCOUNT_FORM_SITE_TYPE_OPTIONS = ACCOUNT_SITE_TYPES.filter(
   (siteType) => siteType !== SITE_TYPES.UNKNOWN,
@@ -267,8 +267,7 @@ export default function AccountForm({
     if (!accessTokenFocusRequested) return
 
     const input = accessTokenInputRef.current
-    input?.focus({ preventScroll: true })
-    input?.scrollIntoView({ block: "center" })
+    if (input) revealNavigationTarget(input, { block: "center", focus: true })
     setAccessTokenFocusRequested(false)
   }, [accessTokenFocusRequested, isAuthSectionOpen])
 
@@ -277,8 +276,9 @@ export default function AccountForm({
     loginMethodRef.current?.focus({ preventScroll: true })
     const section = document.getElementById(ACCOUNT_LOGIN_SECTION_ID)
     if (section) {
-      section.scrollIntoView({ block: "start" })
-      clearLoginHighlightRef.current = temporarilyHighlight(section)
+      clearLoginHighlightRef.current = revealNavigationTarget(section, {
+        highlight: true,
+      })
     }
     setLoginFocusRequested(false)
   }, [loginFocusRequested, isLoginSectionOpen])

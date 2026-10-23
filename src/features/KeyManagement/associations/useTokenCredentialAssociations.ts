@@ -25,6 +25,7 @@ import {
   type AccountRuntimeKeyLocator,
 } from "~/services/accounts/keys/accountRuntimeKeys"
 import type { ApiCredentialProfileLink } from "~/types/apiCredentialProfiles"
+import { revealNavigationTarget } from "~/utils/dom/navigationTarget"
 import { openApiCredentialProfilesPage } from "~/utils/navigation"
 
 interface UseTokenCredentialAssociationsParams {
@@ -205,8 +206,11 @@ export function useTokenCredentialAssociations({
       return
     }
 
-    target.scrollIntoView?.({ behavior: "smooth", block: "center" })
-    target.focus({ preventScroll: true })
+    revealNavigationTarget(target, {
+      behavior: "smooth",
+      block: "center",
+      focus: true,
+    })
     focusedAssociationSignatureRef.current = associationTargetSignature
     onAssociationTargetStatusChange?.(
       KEY_MANAGEMENT_ASSOCIATION_TARGET_STATES.Found,

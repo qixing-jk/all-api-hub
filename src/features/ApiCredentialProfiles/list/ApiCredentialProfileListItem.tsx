@@ -66,6 +66,7 @@ import {
   formatLocaleDateTime,
   maskSecretForDisplay,
 } from "~/utils/core/formatters"
+import { revealNavigationTarget } from "~/utils/dom/navigationTarget"
 import {
   getHealthStatusDisplay,
   getStatusIndicatorColor,
@@ -323,15 +324,16 @@ export function ApiCredentialProfileListItem({
     }
 
     const card = cardRef.current
-    card?.scrollIntoView?.({ block: "center", inline: "nearest" })
-    card?.focus({ preventScroll: true })
-    setIsTargetHighlighted(true)
-
-    const timeoutId = window.setTimeout(() => {
-      setIsTargetHighlighted(false)
-    }, TARGET_PROFILE_HIGHLIGHT_DURATION_MS)
-
-    return () => window.clearTimeout(timeoutId)
+    if (!card) return
+    return revealNavigationTarget(card, {
+      block: "center",
+      inline: "nearest",
+      focus: true,
+      highlight: {
+        durationMs: TARGET_PROFILE_HIGHLIGHT_DURATION_MS,
+        onChange: setIsTargetHighlighted,
+      },
+    })
   }, [focusRequest])
 
   useEffect(() => {
@@ -342,17 +344,17 @@ export function ApiCredentialProfileListItem({
       return
     }
 
-    setIsImportEntryHighlighted(true)
-
     const button = managedSiteImportButtonRef.current
-    button?.scrollIntoView?.({ block: "center", inline: "nearest" })
-    button?.focus()
-
-    const timeoutId = window.setTimeout(() => {
-      setIsImportEntryHighlighted(false)
-    }, GUIDED_IMPORT_HIGHLIGHT_DURATION_MS)
-
-    return () => window.clearTimeout(timeoutId)
+    if (!button) return
+    return revealNavigationTarget(button, {
+      block: "center",
+      inline: "nearest",
+      focus: true,
+      highlight: {
+        durationMs: GUIDED_IMPORT_HIGHLIGHT_DURATION_MS,
+        onChange: setIsImportEntryHighlighted,
+      },
+    })
   }, [guidedImportEntryRequest])
 
   useEffect(() => {

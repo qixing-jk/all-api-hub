@@ -7,6 +7,7 @@
  * @returns 连接后的 URL
  */
 import { createLogger } from "~/utils/core/logger"
+import { scrollToNavigationTarget } from "~/utils/dom/navigationTarget"
 
 /**
  * Unified logger scoped to URL utility helpers.
@@ -47,7 +48,7 @@ function scrollToAnchorWhenAvailable(
 
     const element = document.getElementById(anchor)
     if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" })
+      scrollToNavigationTarget(element)
       return
     }
 

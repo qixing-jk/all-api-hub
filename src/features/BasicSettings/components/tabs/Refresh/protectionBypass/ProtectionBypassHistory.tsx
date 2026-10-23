@@ -103,7 +103,6 @@ export default function ProtectionBypassHistory() {
           })
           window.requestAnimationFrame(() => {
             const target = document.getElementById(targetId)
-            target?.scrollIntoView({ block: "center" })
             target
               ?.querySelector<HTMLElement>("button, input, [tabindex]")
               ?.focus({ preventScroll: true })

@@ -529,29 +529,32 @@ for (const width of [1280, 420]) {
     context,
     extensionId,
     page,
-  }) => {
+  }, testInfo) => {
     await page.setViewportSize({ width, height: 800 })
+    await page.emulateMedia({ reducedMotion: "reduce" })
     await seedUserPreferences(await getServiceWorker(context), {
       managedSiteType: "new-api",
     })
-    // Disable scroll animation so assertions measure the final landing position.
+    // Observe native scrolling while the application honors reduced motion.
     await page.addInitScript(() => {
+      const navigationScrolls: { id: string; behavior?: ScrollBehavior }[] = []
+      Object.assign(window, { navigationScrolls })
       const scrollIntoView = Element.prototype.scrollIntoView
       Element.prototype.scrollIntoView = function (options) {
-        scrollIntoView.call(
-          this,
-          typeof options === "object"
-            ? { ...options, behavior: "instant" }
-            : options,
-        )
+        navigationScrolls.push({
+          id: this.id,
+          behavior: typeof options === "object" ? options.behavior : undefined,
+        })
+        scrollIntoView.call(this, options)
       }
     })
     await page.goto(
-      `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}?tab=managedSite&anchor=${SETTINGS_ANCHORS.NEW_API_TOTP_SECRET}#${MENU_ITEM_IDS.BASIC}`,
+      `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}?tab=managedSite&anchor=${SETTINGS_ANCHORS.NEW_API_TOTP_SECRET}&highlight=${SETTINGS_ANCHORS.NEW_API_TOTP_SECRET}#${MENU_ITEM_IDS.BASIC}`,
     )
     await waitForExtensionRoot(page)
     await expectPermissionOnboardingHidden(page)
     const target = page.locator(`#${SETTINGS_ANCHORS.NEW_API_TOTP_SECRET}`)
+    await expect(target).toHaveClass(/ring-theme-500/)
     await expect
       .poll(() =>
         target.evaluate((element) => {
@@ -563,5 +566,20 @@ for (const width of [1280, 420]) {
         }),
       )
       .toBe(true)
+    await page.screenshot({
+      path: testInfo.outputPath("navigation-target.png"),
+      animations: "disabled",
+    })
+    await expect(target).not.toHaveClass(/ring-theme-500/)
+    expect(
+      await page.evaluate((targetId) => {
+        const { navigationScrolls } = window as unknown as {
+          navigationScrolls: { id: string; behavior?: ScrollBehavior }[]
+        }
+        return navigationScrolls.filter((call) => call.id === targetId)
+      }, SETTINGS_ANCHORS.NEW_API_TOTP_SECRET),
+    ).toEqual([
+      { id: SETTINGS_ANCHORS.NEW_API_TOTP_SECRET, behavior: "instant" },
+    ])
   })
 }
