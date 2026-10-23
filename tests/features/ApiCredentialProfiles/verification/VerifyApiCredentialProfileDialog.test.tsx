@@ -2534,4 +2534,34 @@ describe("VerifyApiCredentialProfileDialog", () => {
       screen.getByText("aiApiVerification:verifyDialog.modalityNotice.image"),
     ).toBeInTheDocument()
   })
+
+  it("displays video modality notice when configured for a video model", async () => {
+    render(
+      <VerifyApiCredentialProfileDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "p-1",
+          name: "Profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://example.com",
+          apiKey: "sk-test",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+        initialModelId="sora-1"
+      />,
+    )
+
+    expect(
+      await screen.findByTestId(
+        getApiCredentialProfileVerifyProbeTestId("video-generation"),
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("aiApiVerification:verifyDialog.modalityNotice.video"),
+    ).toBeInTheDocument()
+  })
 })

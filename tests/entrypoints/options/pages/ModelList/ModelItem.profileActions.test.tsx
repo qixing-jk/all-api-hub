@@ -162,6 +162,63 @@ describe("ModelItem profile actions", () => {
     )
   })
 
+  it("passes supported_endpoint_types to onVerifyModel when present", async () => {
+    const user = userEvent.setup()
+    const onVerifyModel = vi.fn()
+
+    const profileSource = createProfileSource({
+      id: "profile-endpoint-types",
+      name: "Reusable Key",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://profile.example.com",
+      apiKey: "sk-secret",
+      tagIds: [],
+      notes: "",
+      createdAt: 1,
+      updatedAt: 2,
+    })
+
+    render(
+      <ModelItem
+        resolvedVendor={{ state: "unknown" }}
+        model={{
+          model_name: "custom-embed-model",
+          quota_type: 0,
+          model_ratio: 0,
+          model_price: 0,
+          completion_ratio: 1,
+          enable_groups: [],
+          supported_endpoint_types: [":embedContent"],
+        }}
+        calculatedPrice={{
+          kind: CALCULATED_PRICE_KINDS.TOKEN,
+          usdPerMillionTokens: { input: 0, output: 0 },
+        }}
+        exchangeRate={1}
+        showRealPrice={false}
+        showEndpointTypes={true}
+        groupRatios={{}}
+        groupContext={NOT_APPLICABLE_GROUP_CONTEXT}
+        activeGroupContext={EMPTY_ACTIVE_GROUP_CONTEXT}
+        source={profileSource}
+        onVerifyModel={onVerifyModel}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "modelList:actions.verifyApi",
+      }),
+    )
+
+    expect(onVerifyModel).toHaveBeenCalledWith(
+      profileSource,
+      "custom-embed-model",
+      undefined,
+      [":embedContent"],
+    )
+  })
+
   it("shows persisted verification status for a profile-backed row", async () => {
     const profileSource = createProfileSource({
       id: "profile-1",

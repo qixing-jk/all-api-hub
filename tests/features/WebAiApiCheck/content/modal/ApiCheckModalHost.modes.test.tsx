@@ -5,7 +5,10 @@ import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import { dispatchOpenApiCheckModal } from "~/features/WebAiApiCheck/content/events"
-import { getWebAiApiCheckProbeTestId } from "~/features/WebAiApiCheck/content/testIds"
+import {
+  getWebAiApiCheckProbeTestId,
+  WEB_AI_API_CHECK_TEST_IDS,
+} from "~/features/WebAiApiCheck/content/testIds"
 import {
   sendWebAiApiCheckMessage,
   WebAiApiCheckMessageTypes,
@@ -257,4 +260,40 @@ describe("web API verification modes", () => {
       ).toHaveTextContent("aiApiVerification:verifyDialog.modes.streaming")
     },
   )
+
+  it("displays modality notices for image and video models", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: ["flux-schnell", "sora-1"] }
+        }
+        return { success: false }
+      },
+    )
+
+    await openModal()
+    await pasteIntoField(
+      user,
+      screen.getByPlaceholderText("https://example.com/api"),
+      "https://proxy.example.com/api",
+    )
+    await pasteIntoField(
+      user,
+      screen.getByPlaceholderText("sk-..."),
+      "sk-test-mode-modality",
+    )
+    await waitForSelectedModelId("flux-schnell")
+    expect(
+      screen.getByText("aiApiVerification:verifyDialog.modalityNotice.image"),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId))
+    await user.click(await screen.findByText("sora-1"))
+    await waitForSelectedModelId("sora-1")
+
+    expect(
+      screen.getByText("aiApiVerification:verifyDialog.modalityNotice.video"),
+    ).toBeInTheDocument()
+  })
 })

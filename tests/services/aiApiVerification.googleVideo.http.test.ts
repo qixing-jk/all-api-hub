@@ -140,4 +140,46 @@ describe("Google SDK video generation verification", () => {
     expect(requests).toHaveLength(1)
     expect(vi.getTimerCount()).toBe(0)
   })
+
+  it("handles unparseable video URL from Google SDK", async () => {
+    server.use(
+      http.post("https://native-video.example.com/*", () =>
+        HttpResponse.json({ name: "operations/video-unparseable" }),
+      ),
+      http.get("https://native-video.example.com/*", () =>
+        HttpResponse.json({
+          name: "operations/video-unparseable",
+          done: true,
+          response: {
+            generateVideoResponse: {
+              generatedSamples: [
+                {
+                  video: {
+                    uri: "not a valid url",
+                  },
+                },
+              ],
+            },
+          },
+        }),
+      ),
+    )
+
+    const result = await runApiVerificationProbe(params)
+    expect(result.status).toBe("pass")
+    expect(result.output).toMatchObject({
+      url: null,
+    })
+  })
+
+  it("handles missing operation name from Google startVideo", async () => {
+    server.use(
+      http.post("https://native-video.example.com/*", () =>
+        HttpResponse.json({}),
+      ),
+    )
+
+    const result = await runApiVerificationProbe(params)
+    expect(result.status).toBe("fail")
+  })
 })

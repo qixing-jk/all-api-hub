@@ -256,6 +256,53 @@ describe("modelModality resolution", () => {
     expect(resolveModelTestModality({ modelId: "baai/bge-m3" })).toBe(
       MODEL_TEST_MODALITIES.Embedding,
     )
+    vi.spyOn(modelMetadataService, "resolveModelIdentity").mockReturnValueOnce({
+      state: "resolved",
+      metadata: {
+        id: "custom/image-gen",
+        name: "Image Gen",
+        provider_id: "custom",
+        type: "image_generation",
+        modalities: { input: ["text"], output: ["text"] },
+      },
+      match: "exact",
+    })
+
+    expect(resolveModelTestModality({ modelId: "custom/image-gen" })).toBe(
+      MODEL_TEST_MODALITIES.Image,
+    )
+
+    vi.spyOn(modelMetadataService, "resolveModelIdentity").mockReturnValueOnce({
+      state: "resolved",
+      metadata: {
+        id: "custom/video-gen",
+        name: "Video Gen",
+        provider_id: "custom",
+        type: "video_generation",
+        modalities: { input: ["text"], output: ["text"] },
+      },
+      match: "exact",
+    })
+
+    expect(resolveModelTestModality({ modelId: "custom/video-gen" })).toBe(
+      MODEL_TEST_MODALITIES.Video,
+    )
+
+    vi.spyOn(modelMetadataService, "resolveModelIdentity").mockReturnValueOnce({
+      state: "resolved",
+      metadata: {
+        id: "custom/decision-model",
+        name: "Decision Model",
+        provider_id: "custom",
+        type: "decision",
+        modalities: { input: ["text"], output: ["text"] },
+      },
+      match: "exact",
+    })
+
+    expect(resolveModelTestModality({ modelId: "custom/decision-model" })).toBe(
+      MODEL_TEST_MODALITIES.Decision,
+    )
   })
 
   it("resolves by modelId pattern heuristics", () => {

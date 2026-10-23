@@ -1932,4 +1932,94 @@ describe("VerifyApiDialog", () => {
     })
     expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
   })
+
+  it("displays modality notices for image and video models", async () => {
+    const account = buildDisplaySiteData({ id: "modality-notice-account" })
+    const key = buildServiceCredentialRuntimeKey(account, {
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Codex",
+      key: "credential",
+      isAuthenticated: true,
+      baseUrl: account.baseUrl,
+    })
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValue([key])
+    mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValue(key)
+
+    const { rerender } = render(
+      <VerifyApiDialog
+        isOpen
+        onClose={() => {}}
+        initialModelId="flux-schnell"
+        account={account}
+      />,
+    )
+    expect(
+      await screen.findByText(
+        "aiApiVerification:verifyDialog.modalityNotice.image",
+      ),
+    ).toBeInTheDocument()
+
+    rerender(
+      <VerifyApiDialog
+        isOpen
+        onClose={() => {}}
+        initialModelId="sora-1"
+        account={account}
+      />,
+    )
+    expect(
+      await screen.findByText(
+        "aiApiVerification:verifyDialog.modalityNotice.video",
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it("stops unfinished probes and records failure when suite execution throws unexpectedly", async () => {
+    const account = buildDisplaySiteData({ id: "suite-crash-account" })
+    const key = buildServiceCredentialRuntimeKey(account, {
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Codex",
+      key: "credential",
+      isAuthenticated: true,
+      baseUrl: account.baseUrl,
+    })
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValue([key])
+    mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValue(key)
+    mockRunApiVerificationProbe.mockResolvedValue({
+      id: "models",
+      status: "pass",
+      latencyMs: 1,
+      summary: "Models pass",
+    })
+
+    const { result } = renderHook(useVerifyApiDialogViewModel, {
+      initialProps: { isOpen: true, account, initialModelId: "gpt-4o" },
+    })
+    await waitFor(() => expect(result.current.selectedRuntimeKey).toBeTruthy())
+
+    const historyModule = await import(
+      "~/services/verification/verificationResultHistory"
+    )
+    vi.spyOn(
+      historyModule,
+      "createVerificationHistorySummary",
+    ).mockImplementationOnce(() => {
+      throw new Error("Simulated storage crash")
+    })
+
+    await act(async () => {
+      await result.current.runAll()
+    })
+
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        insights: expect.objectContaining({
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+        }),
+      }),
+    )
+  })
 })

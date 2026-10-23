@@ -33,7 +33,6 @@ import {
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
-  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
@@ -384,7 +383,7 @@ export function useVerifyApiDialogViewModel({
                 errorCategory:
                   resolveProductAnalyticsErrorCategoryFromProbeResult(
                     failedProbeResult,
-                  ) ?? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+                  ),
               }
             : {}),
           insights: {

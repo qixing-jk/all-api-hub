@@ -60,19 +60,41 @@ describe("aiApiVerification providers", () => {
     vi.clearAllMocks()
 
     mocks.createOpenAICompatible.mockImplementation((config) => {
-      return (modelId: string) => ({
+      const fn: any = (modelId: string) => ({
         provider: "openai-compatible",
         config,
         modelId,
       })
+      fn.imageModel = (modelId: string) => ({
+        provider: "openai-compatible-image",
+        config,
+        modelId,
+      })
+      fn.textEmbeddingModel = (modelId: string) => ({
+        provider: "openai-compatible-embedding",
+        config,
+        modelId,
+      })
+      return fn
     })
 
     mocks.createOpenAI.mockImplementation((config) => {
-      return (modelId: string) => ({
+      const fn: any = (modelId: string) => ({
         provider: "openai",
         config,
         modelId,
       })
+      fn.imageModel = (modelId: string) => ({
+        provider: "openai-image",
+        config,
+        modelId,
+      })
+      fn.textEmbeddingModel = (modelId: string) => ({
+        provider: "openai-embedding",
+        config,
+        modelId,
+      })
+      return fn
     })
 
     mocks.createAnthropic.mockImplementation((config) => {
@@ -84,11 +106,17 @@ describe("aiApiVerification providers", () => {
     })
 
     mocks.createGoogle.mockImplementation((config) => {
-      return (modelId: string) => ({
+      const fn: any = (modelId: string) => ({
         provider: "google",
         config,
         modelId,
       })
+      fn.textEmbeddingModel = (modelId: string) => ({
+        provider: "google-embedding",
+        config,
+        modelId,
+      })
+      return fn
     })
   })
 
@@ -350,5 +378,49 @@ describe("aiApiVerification providers", () => {
         fetch: expect.any(Function),
       },
     })
+  })
+
+  it("rejects unsupported image models for non-OpenAI-compatible APIs", async () => {
+    const { createImageModel } = await import(
+      "~/services/verification/aiApiVerification/providers"
+    )
+
+    expect(() =>
+      createImageModel({
+        apiType: "anthropic",
+        baseUrl: "https://anthropic.example",
+        apiKey: "sk-ant",
+        modelId: "claude-3-7-sonnet",
+      }),
+    ).toThrow("Image model is not supported for anthropic")
+  })
+
+  it("creates text embedding models for OpenAI and rejects unsupported APIs", async () => {
+    const { createEmbeddingModel } = await import(
+      "~/services/verification/aiApiVerification/providers"
+    )
+
+    const model = createEmbeddingModel({
+      apiType: "openai",
+      baseUrl: "https://openai.example",
+      apiKey: "sk-openai",
+      modelId: "text-embedding-3-small",
+    })
+    expect(model).toEqual({
+      provider: "openai-embedding",
+      modelId: "text-embedding-3-small",
+      config: expect.objectContaining({
+        apiKey: "sk-openai",
+      }),
+    })
+
+    expect(() =>
+      createEmbeddingModel({
+        apiType: "anthropic",
+        baseUrl: "https://anthropic.example",
+        apiKey: "sk-ant",
+        modelId: "voyage-3",
+      }),
+    ).toThrow("Embedding model is not supported for anthropic")
   })
 })

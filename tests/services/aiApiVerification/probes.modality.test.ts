@@ -108,6 +108,40 @@ describe("Embedding probe", () => {
   })
 })
 
+it("fails when embedding is empty", async () => {
+  mockEmbed.mockResolvedValueOnce({
+    embedding: [],
+    usage: { tokens: 0 },
+  })
+
+  const result = await runEmbeddingProbe({
+    baseUrl: "https://example.com/v1",
+    apiKey: "sk-test",
+    apiType: API_TYPES.OPENAI_COMPATIBLE,
+    modelId: "bge-empty",
+  })
+
+  expect(result.status).toBe(API_VERIFICATION_PROBE_STATUSES.Fail)
+  expect(result.summaryKey).toBe(
+    "verifyDialog.summaries.embeddingUnexpectedResponse",
+  )
+})
+
+it("rethrows when abort signal is aborted", async () => {
+  const controller = new AbortController()
+  controller.abort()
+  mockEmbed.mockRejectedValueOnce(new DOMException("Aborted", "AbortError"))
+
+  await expect(
+    runEmbeddingProbe({
+      baseUrl: "https://example.com/v1",
+      apiKey: "sk-test",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      modelId: "bge-abort",
+      abortSignal: controller.signal,
+    }),
+  ).rejects.toThrow()
+})
 describe("Rerank probe", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
@@ -146,6 +180,41 @@ describe("Rerank probe", () => {
   })
 })
 
+it("fails when rerank returns empty results", async () => {
+  vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+    new Response(JSON.stringify({ results: [] }), { status: 200 }),
+  )
+
+  const result = await runRerankProbe({
+    baseUrl: "https://example.com/v1",
+    apiKey: "sk-test",
+    apiType: API_TYPES.OPENAI_COMPATIBLE,
+    modelId: "bge-rerank-empty",
+  })
+
+  expect(result.status).toBe(API_VERIFICATION_PROBE_STATUSES.Fail)
+  expect(result.summaryKey).toBe(
+    "verifyDialog.summaries.rerankUnexpectedResponse",
+  )
+})
+
+it("rethrows when abort signal is aborted", async () => {
+  const controller = new AbortController()
+  controller.abort()
+  vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(
+    new DOMException("Aborted", "AbortError"),
+  )
+
+  await expect(
+    runRerankProbe({
+      baseUrl: "https://example.com/v1",
+      apiKey: "sk-test",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      modelId: "bge-rerank-abort",
+      abortSignal: controller.signal,
+    }),
+  ).rejects.toThrow()
+})
 describe("Image generation probe", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
@@ -339,6 +408,69 @@ describe("Video generation probe", () => {
   })
 })
 
+it("applies custom request headers when polling video status", async () => {
+  const fetchSpy = vi
+    .spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(
+      new Response(JSON.stringify({ id: "task_hdr", status: "submitted" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    )
+    .mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          task_id: "task_hdr",
+          status: "completed",
+          url: "https://example.com/v.mp4",
+        }),
+        { status: 200 },
+      ),
+    )
+
+  const result = await runVideoGenerationProbe({
+    baseUrl: "https://example.com/v1",
+    apiKey: "sk-test",
+    apiType: API_TYPES.OPENAI_COMPATIBLE,
+    modelId: "sora-hdr",
+    requestHeaders: { "x-custom-poll": "yes" },
+  })
+
+  expect(result.status).toBe(API_VERIFICATION_PROBE_STATUSES.Pass)
+  expect(fetchSpy.mock.calls[1]![0]).toBe(
+    "https://example.com/v1/video/generations/task_hdr",
+  )
+  const pollHeaders = new Headers(
+    fetchSpy.mock.calls[1]![1]!.headers as HeadersInit,
+  )
+  expect(pollHeaders.get("x-custom-poll")).toBe("yes")
+})
+
+it("handles HTTP error during task status polling", async () => {
+  vi.spyOn(globalThis, "fetch")
+    .mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ id: "task_poll_err", status: "submitted" }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    )
+    .mockResolvedValueOnce(
+      new Response("Internal Server Error", {
+        status: 500,
+        statusText: "Internal Server Error",
+      }),
+    )
+
+  const result = await runVideoGenerationProbe({
+    baseUrl: "https://example.com/v1",
+    apiKey: "sk-test",
+    apiType: API_TYPES.OPENAI_COMPATIBLE,
+    modelId: "sora-err",
+  })
+
+  expect(result.status).toBe(API_VERIFICATION_PROBE_STATUSES.Fail)
+  expect(result.summary).toContain("500")
+})
 describe("Decision probe", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
@@ -459,5 +591,23 @@ describe("Decision probe", () => {
 
     expect(result.status).toBe(API_VERIFICATION_PROBE_STATUSES.Fail)
     expect(result.summary).not.toContain("sk-super-secret")
+  })
+
+  it("rethrows when abort signal is aborted", async () => {
+    const controller = new AbortController()
+    controller.abort()
+    vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(
+      new DOMException("Aborted", "AbortError"),
+    )
+
+    await expect(
+      runDecisionProbe({
+        baseUrl: "https://example.com/v1",
+        apiKey: "sk-test",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        modelId: "clef-abort",
+        abortSignal: controller.signal,
+      }),
+    ).rejects.toThrow()
   })
 })

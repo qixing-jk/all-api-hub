@@ -79,4 +79,36 @@ describe("VerificationMediaPreview", () => {
     ).toHaveAttribute("src", "data:image/png;base64,aW1hZ2U=")
     expect(screen.queryByText(/aW1hZ2U/)).not.toBeInTheDocument()
   })
+
+  it("falls back to output.url when media property is omitted", async () => {
+    render(
+      <VerificationMediaPreview
+        output={{ url: "https://example.com/fallback-image.png" }}
+      />,
+    )
+    expect(
+      await screen.findByRole("img", { name: "Generated image preview" }),
+    ).toHaveAttribute("src", "https://example.com/fallback-image.png")
+  })
+
+  it("handles image load failure gracefully", async () => {
+    render(
+      <VerificationMediaPreview
+        media={{
+          type: API_VERIFICATION_MEDIA_TYPES.Image,
+          url: "https://example.com/broken-image.png",
+        }}
+      />,
+    )
+    const img = await screen.findByRole("img", {
+      name: "Generated image preview",
+    })
+    fireEvent.error(img)
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "The preview could not be loaded.",
+    )
+    expect(
+      screen.getByRole("link", { name: "Open generated media" }),
+    ).toHaveAttribute("href", "https://example.com/broken-image.png")
+  })
 })
