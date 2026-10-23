@@ -6,12 +6,14 @@ import {
   hasCookieInterceptorPermissions,
   hasPermission,
   hasPermissions,
+  isPermissionDeclared,
   onOptionalPermissionsChanged,
   OPTIONAL_PERMISSION_IDS,
   OPTIONAL_PERMISSIONS,
   removePermissionDetailed,
   requestPermissionDetailed,
 } from "~/services/permissions/permissionManager"
+import { getManifest } from "~/utils/browser/runtime"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const {
@@ -62,6 +64,26 @@ describe("permissionManager", () => {
     vi.clearAllMocks()
     permissionsAddedCallbacks.length = 0
     permissionsRemovedCallbacks.length = 0
+  })
+
+  it("distinguishes declared permissions from unsupported build capabilities", () => {
+    expect(isPermissionDeclared("bookmarks")).toBe(true)
+    expect(containsPermissionsMock).not.toHaveBeenCalled()
+    vi.mocked(getManifest).mockReturnValueOnce({
+      manifest_version: 2,
+      name: "Safari",
+      version: "1.0.0",
+      permissions: ["cookies"],
+      optional_permissions: [],
+    })
+    expect(isPermissionDeclared("notifications")).toBe(false)
+    vi.mocked(getManifest).mockReturnValueOnce({
+      manifest_version: 3,
+      name: "Required permissions variant",
+      version: "1.0.0",
+      permissions: ["bookmarks"],
+    })
+    expect(isPermissionDeclared("bookmarks")).toBe(true)
   })
 
   it("reads optional permissions from the manifest and builds cookie interceptor defaults", () => {

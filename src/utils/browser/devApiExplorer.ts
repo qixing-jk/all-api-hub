@@ -384,6 +384,17 @@ export async function evaluateJsSnippet(
   const startTime = performance.now()
   const timestamp = Date.now()
 
+  if (import.meta.env.BROWSER === "safari") {
+    return {
+      success: false,
+      error:
+        "Safari does not support WebExtension sandbox pages. Use structured API invocation instead.",
+      durationMs: Math.round(performance.now() - startTime),
+      context,
+      timestamp,
+    }
+  }
+
   if (context === "background") {
     return {
       success: false,

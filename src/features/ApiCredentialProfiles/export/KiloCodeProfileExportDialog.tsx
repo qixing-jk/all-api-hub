@@ -47,6 +47,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import { downloadBlob } from "~/utils/browser/download"
 import { createLogger } from "~/utils/core/logger"
 
 /** Unified logger scoped to the Kilo Code export dialog for API credential profiles. */
@@ -306,8 +307,6 @@ export function KiloCodeProfileExportDialog({
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialSettingsFile,
     })
     let actionInsights = fallbackExportInsights
-    let url: string | null = null
-    let link: HTMLAnchorElement | null = null
     setIsDownloadTooLarge(false)
 
     try {
@@ -330,12 +329,7 @@ export function KiloCodeProfileExportDialog({
       const blob = new Blob([output.downloadJson], {
         type: "application/json",
       })
-      url = URL.createObjectURL(blob)
-      link = document.createElement("a")
-      link.href = url
-      link.download = output.filename
-      document.body.appendChild(link)
-      link.click()
+      downloadBlob(blob, output.filename)
 
       toast.success(t("ui:dialog.kiloCode.messages.downloadedSettings"))
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
@@ -348,11 +342,6 @@ export function KiloCodeProfileExportDialog({
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: actionInsights,
       })
-    } finally {
-      if (link && document.body.contains(link)) {
-        document.body.removeChild(link)
-      }
-      if (url) URL.revokeObjectURL(url)
     }
   }
 

@@ -782,7 +782,10 @@ describe("KiloCodeProfileExportDialog", () => {
       reader.readAsText(createObjectURLSpy.mock.calls[0]![0] as Blob)
     })
     expect(blobPayload).toBe('{"exact":"policy-json"}')
-    expect(revokeObjectURLSpy).toHaveBeenCalledWith("blob:test")
+    await waitFor(
+      () => expect(revokeObjectURLSpy).toHaveBeenCalledWith("blob:test"),
+      { timeout: 2000 },
+    )
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
       {

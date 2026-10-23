@@ -25,6 +25,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { downloadBlob } from "~/utils/browser/download"
 import { getErrorMessage } from "~/utils/core/error"
 
 const kiloCodeAccountExportAnalyticsContext = {
@@ -353,8 +354,6 @@ export function useKiloCodeExportActions({
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportKiloCodeAccountSettingsFile,
     })
 
-    let url: string | null = null
-    let link: HTMLAnchorElement | null = null
     let actionInsights = exportInsights
     setIsDownloadTooLarge(false)
 
@@ -387,15 +386,7 @@ export function useKiloCodeExportActions({
       if (!action.isCurrent()) {
         return
       }
-      url = URL.createObjectURL(blob)
-      link = document.createElement("a")
-      link.href = url
-      link.download = output.filename
-      document.body.appendChild(link)
-      if (!action.isCurrent()) {
-        return
-      }
-      link.click()
+      downloadBlob(blob, output.filename)
 
       if (!action.isCurrent()) {
         return
@@ -416,12 +407,6 @@ export function useKiloCodeExportActions({
         insights: actionInsights,
       })
     } finally {
-      if (link && document.body.contains(link)) {
-        document.body.removeChild(link)
-      }
-      if (url) {
-        URL.revokeObjectURL(url)
-      }
       action.finish()
     }
   }

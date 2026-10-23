@@ -1,229 +1,64 @@
-# Safari Extension Installation Guide
+# Install the Safari Extension
 
-This document describes how to install the All API Hub extension in the Safari browser.
+This guide explains how to install and keep using the All API Hub Safari extension on your Mac. Safari installs extensions through a companion macOS app. After setup, your accounts and settings are stored locally.
 
-## Understanding the Differences First
+## Verified environment
 
-- **Without a paid Apple Developer Program account:** You can still build and enable the extension on your own Mac using Xcode. This is suitable for development, debugging, or personal use. Generally, you cannot distribute it to ordinary users. For locally built versions not officially distributed, you might need to enable `Allow Unsigned Extensions` in Safari's Developer menu.
-- **With a paid Apple Developer Program account:** You can create a formal signature and distribute it via TestFlight / App Store. This is suitable for installation by other users and provides an installation experience closer to ordinary Safari extensions.
+This installation flow was verified on macOS 26.6.2 and Safari 26.6.2. This describes the environment actually tested; it is not a statement of minimum system requirements.
 
-## System Requirements
+## Install
 
-- macOS 11.0 Big Sur or later
-- Safari 14.0 or later
-- Xcode 13.0 or later (for building)
+1. Open the [latest All API Hub release](https://github.com/qixing-jk/all-api-hub/releases/latest) and download `all-api-hub-<version>-safari-xcode-bundle.zip`. Do not download the attachment named only `-safari.zip`.
+2. Extract the archive, find the Xcode project, and open it in Xcode.
+3. Select the macOS app and your Mac as the run destination in Xcode, then choose `Product > Run`. If Xcode asks about signing, choose the option for running locally as prompted.
+4. In Safari, open `Safari > Settings > Developer` and enable “Allow Unsigned Extensions.” Safari may ask for your Mac login password.
+5. Open `Safari > Settings > Extensions`, enable `All API Hub`, and allow access to websites as needed.
+6. Click the extension icon in Safari’s toolbar to use it.
 
-## Feature Compatibility
+If the extension is missing from the list, run the companion macOS app from Xcode once more, then reopen Safari’s Extensions settings.
 
-Safari uses WebKit's WebExtensions permission model. Its permissions are maintained separately from Chromium and Firefox. Cookie access and request rules remain optional, and settings search only lists optional permissions declared by the Safari build.
+## When you reopen Safari
 
-Isolated Cookie requests use the native transport bundled inside the Safari extension app. Each request uses the saved account's Cookie without borrowing another account's or a normal browser tab's session. Allow the extension to access the target website and grant Cookie permission first; no separate helper installation is required. Install or update using a Safari Xcode project that includes this transport. Replacing web resources alone does not update the native handler.
+Safari resets “Allow Unsigned Extensions” when it quits. Each time you reopen Safari, enable this option again and launch the `All API Hub` macOS app installed through Xcode. Keeping the app somewhere easy to find, such as `~/Applications`, makes this easier. This only affects whether the extension can run; it does not erase extension data.
 
-The transport supports HTTPS sites; HTTP is limited to local `127.0.0.1` tests, and redirects are rejected. Requests stop when permissions or the native handler are unavailable, without falling back to the browser session. Revoking permission cannot retract a request already sent. Popup refresh has known issues in some Safari environments; use the Options page to refresh accounts if needed.
+## Where your data is stored
 
-## Installation Methods
+Accounts, settings, and other extension data are stored in the current Safari extension’s local storage. Quitting or reopening Safari normally does not clear them. Safari, Chrome, Firefox, and other devices do not sync this data automatically. To move data to another browser or device, use [data import and export](./data-management.md) or configure WebDAV backup. Export a backup before uninstalling the extension or clearing Safari extension data.
 
-There are two installation methods:
+## Safari feature differences
 
-1. Download the pre-built Safari Xcode project zip from the latest GitHub Release, then open it directly with Xcode after extraction.
-2. Build from source code yourself, then run it with Xcode.
+Safari does not provide some extension APIs available in other browsers:
 
-### Method 1: Download Safari Bundle from Latest GitHub Release
+- The side panel API is unavailable; use the toolbar popup or options page.
+- Safari’s bookmarks API cannot import accounts. Add accounts manually or import a backup.
+- The extension notifications API is unavailable; check task results in the extension.
+- The extension `clipboardRead` permission is unavailable. Select text or paste it manually when you need to inspect content.
+- Safari’s separate Cookie requests are provided by the companion macOS app. Allow the extension to access the target website and grant the required Cookie permission. These requests support HTTPS; HTTP is limited to local `127.0.0.1` testing. If permission is missing or the native app is unavailable, the request stops instead of using the website’s current login session. If refreshing an account in the popup does not update it, refresh from the options page.
 
-The Safari bundle will be uploaded to the latest version's Release page:
+Individual sites may have their own limitations; installing the extension does not mean every feature is available on every site.
 
-- [Latest Release](https://github.com/qixing-jk/all-api-hub/releases/latest)
+## Update or uninstall
 
-#### 1. Open the Release Page for the Corresponding Version
+**Update:** Download the latest Safari Xcode project archive from Releases, open and run the new app in Xcode, then confirm that `All API Hub` is enabled in Safari’s Extensions settings. Updating the same extension installation keeps its local data; backing up important data first is still recommended.
 
-Simply open the "Latest Release" link above.
+**Uninstall:** Uncheck `All API Hub` in `Safari > Settings > Extensions`, then delete the installed `All API Hub` macOS app. To also remove locally stored data, remove the corresponding data in Safari’s website and extension data settings.
 
-#### 2. Download the Correct Safari Bundle
+## FAQ
 
-In the attachments on the page, download the following file:
+### Why do I need to open an Xcode project?
 
-```text
-all-api-hub-<version>-safari-xcode-bundle.zip
-```
+Safari installs the extension inside a companion macOS app. The downloaded archive includes the project and required files; run it once with Xcode, then enable the extension in Safari settings.
 
-For example:
+### The extension stopped working after Safari restarted. Was my data lost?
 
-```text
-all-api-hub-3.29.0-safari-xcode-bundle.zip
-```
+Usually not. Safari resets “Allow Unsigned Extensions” when it quits, so enable it again and launch the companion app. Accounts and settings are stored in Safari’s local extension storage and are not deleted when this switch resets.
 
-This zip file already contains the Xcode project that can be opened directly and the necessary Safari files.
+### How do I restore accounts on a new device?
 
-Please download this file, not `all-api-hub-<version>-safari.zip`.
+Export the data from the original device or configure WebDAV backup. Then install the extension on the new device and import the data or restore the backup. Browsers do not sync extension data automatically.
 
-<details>
-<summary>Why download this file?</summary>
+## References
 
-The `all-api-hub-<version>-safari-xcode-bundle.zip` typically includes:
-
-- `all-api-hub-<version>-safari.zip`
-- `safari-mv2/`
-- The Xcode project directory generated by the converter
-
-This allows you to open the project directly with Xcode after extraction, without needing to manually add the Safari files referenced by the project.
-
-</details>
-
-#### 3. Extract and Open the Project Directly with Xcode
-
-1. Locate the Xcode project within the extracted directory.
-2. Double-click the project file or open it with Xcode.
-3. Ensure that your Mac is selected as the target device.
-4. Click `Product > Run`.
-5. After Safari prompts you, enable the extension in `Safari > Settings > Extensions`.
-
-The bundle already contains the files needed to run. You can usually open the project directly after extraction without needing to move directories separately.
-
-### Method 2: Build and Install from Source Code
-
-#### 1. Get the Source Code and Build Safari Artifacts
-
-```bash
-# Clone or download the project source code
-git clone https://github.com/qixing-jk/all-api-hub.git
-cd all-api-hub
-
-# Install dependencies
-pnpm install
-
-# Build the Safari version
-pnpm run build:safari
-```
-
-After the build is complete, the compiled artifacts will be output to `.output/safari-mv2/`.
-
-#### 2. Use Safari Web Extension Converter to Generate Xcode Project
-
-```bash
-xcrun safari-web-extension-converter .output/safari-mv2/ \
-  --project-location .output/safari-project \
-  --app-name "All API Hub" \
-  --bundle-identifier "io.github.qixingjk.allapihub" \
-  --copy-resources --no-open
-python3 scripts/configure-safari-native-cookie-project.py \
-  .output/safari-project io.github.qixingjk.allapihub
-```
-
-If you want to customize the output directory, app name, and bundle identifier, you can also use:
-
-```bash
-xcrun safari-web-extension-converter .output/safari-mv2/ \
-  --project-location /path/to/all-api-hub-safari-project \
-  --app-name "All API Hub" \
-  --bundle-identifier "io.github.qixingjk.allapihub" \
-  --copy-resources --no-open
-python3 scripts/configure-safari-native-cookie-project.py \
-  /path/to/all-api-hub-safari-project io.github.qixingjk.allapihub
-```
-
-This step will generate an Xcode project to host the Safari extension.
-
-#### 3. Build and Run in Xcode
-
-1. Open the newly generated Xcode project.
-2. Ensure that your Mac is selected as the target device.
-3. Click `Product > Run`, or press `Cmd + R`.
-4. On the first run, Xcode will ask you to handle signing. If you don't have a paid account, you can usually use `Personal Team` for local debugging.
-5. After a successful build, Safari will prompt you to enable the extension.
-
-#### 4. Enable the Extension in Safari
-
-1. Open Safari.
-2. Click `Safari > Settings` in the menu bar.
-3. If this is a locally built version not officially distributed, enable `Allow Unsigned Extensions` in the `Develop` menu.
-4. Open the `Extensions` tab.
-5. Find `All API Hub` and enable it.
-6. Grant permissions as needed.
-
-### Method 3: Temporary Debugging (Development Use Only)
-
-Some macOS/Safari versions support temporary debugging loading, but this is not suitable for formal installation or distribution:
-
-```bash
-pnpm run build:safari
-```
-
-Then, enable developer mode in Safari:
-
-1. Open `Safari > Settings > Advanced`.
-2. Check "Show Develop menu in menu bar".
-3. In the menu bar, click `Develop > Allow Unsigned Extensions`.
-4. In `Safari > Settings > Extensions`, enable the extension.
-
-> **Note**
-> If this method is unavailable, please revert to the Xcode process above. For official releases, signing and distribution should still be used.
-
-## Development Mode Debugging
-
-### Development Build
-
-```bash
-# Development build (hot reloading)
-pnpm run dev -- -b safari
-```
-
-### Debugging the Extension
-
-1. **Debugging Background Scripts/Popups**:
-   - In Safari, right-click the extension icon.
-   - Select `Inspect` or open the Web Inspector.
-
-2. **Debugging Content Scripts**:
-   - On any webpage, right-click the page.
-   - Select `Inspect Element`.
-   - View extension-related logs in the console.
-
-## Frequently Asked Questions
-
-### Why does Safari require special handling?
-
-Safari extensions need to be packaged as macOS applications for installation and distribution, which differs from Chrome, Edge, and Firefox directly installing `.crx` or `.xpi` files.
-
-### What's the difference between having and not having a developer account?
-
-- **Without an account:** You can build and use it locally, but it's more for development/debugging/personal use and generally cannot be directly distributed to ordinary users.
-- **With an account:** You can create a formal signature and distribute via TestFlight / App Store, which is suitable for long-term maintenance and official releases.
-
-### Can I install it directly like Chrome?
-
-No. Safari cannot be directly unpacked and loaded for formal installation like Chrome. Local usage typically goes through Xcode, while official distribution uses TestFlight / App Store.
-
-### What if I encounter errors during the build?
-
-Please confirm the following first:
-- Xcode command-line tools are installed: `xcode-select --install`
-- Xcode license has been accepted: `sudo xcodebuild -license accept`
-- Node.js and pnpm versions match the repository's `.nvmrc` and `package.json` requirements.
-
-### Are there functional differences compared to the Chrome version?
-
-The basic functionalities are identical. However, due to some limitations in Safari's WebExtensions API, there might be minor differences:
-- The `sidePanel` API is not available in Safari (a popup window is used instead).
-- Certain permission request methods might differ.
-
-### How do I update the extension?
-
-- **If you installed from source:** Rebuild the Safari artifacts and rerun the Xcode project.
-- **If you installed from the latest Release:** Re-download the latest `all-api-hub-<version>-safari-xcode-bundle.zip`, extract it, and open the new Xcode project again to run it.
-
-## Uninstall
-
-1. Open Safari.
-2. Go to `Safari > Settings > Extensions`.
-3. Uncheck `All API Hub`.
-4. Delete the macOS application generated by Xcode.
-
-## Resources
-
-- [Apple Safari Web Extensions Official Documentation](https://developer.apple.com/documentation/safari-extensions/safari-web-extensions)
-- [Safari Web Extension Converter Usage Guide](https://developer.apple.com/documentation/safari-extensions/converting-a-web-extension-for-safari)
-- [WXT Framework Safari Support Documentation](https://wxt.dev/guide/browsers/safari.html)
-
----
-
-If you have any issues, please report them in [GitHub Issues](https://github.com/qixing-jk/all-api-hub/issues).
+- [Apple: Running your Safari web extension](https://developer.apple.com/documentation/safariservices/running-your-safari-web-extension)
+- [Apple Safari Web Extensions documentation](https://developer.apple.com/documentation/safari-extensions/safari-web-extensions)
+- [Report an issue on GitHub](https://github.com/qixing-jk/all-api-hub/issues)

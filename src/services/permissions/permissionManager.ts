@@ -48,6 +48,15 @@ function readOptionalPermissions(): ManifestOptionalPermissions[] {
 export const OPTIONAL_PERMISSIONS: ManifestOptionalPermissions[] =
   readOptionalPermissions()
 
+/** API namespaces can be hidden until an optional permission is granted. */
+export function isPermissionDeclared(id: ManifestOptionalPermissions): boolean {
+  const manifest = getManifest()
+  return [
+    ...(manifest.permissions ?? []),
+    ...(manifest.optional_permissions ?? []),
+  ].some((permission) => permission === id)
+}
+
 /**
  * Optional permissions required for cookie interception flows.
  */

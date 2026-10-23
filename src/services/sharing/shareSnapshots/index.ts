@@ -17,6 +17,7 @@ import {
   formatSignedCurrencyAmount,
 } from "~/services/sharing/shareSnapshots/utils"
 import type { CurrencyType } from "~/types"
+import { downloadBlob } from "~/utils/browser/download"
 import { createLogger } from "~/utils/core/logger"
 import i18n, { t } from "~/utils/i18n/core"
 
@@ -300,24 +301,6 @@ const renderShareSnapshotToPng = async (
   })
 
   return blob
-}
-
-/**
- * Triggers a file download and defers Blob URL cleanup so the browser has time
- * to start the download before the URL is revoked.
- */
-const downloadBlob = (blob: Blob, filename: string) => {
-  const REVOKE_DELAY_MS = 1000
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement("a")
-  link.href = url
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  setTimeout(() => {
-    link.remove()
-    URL.revokeObjectURL(url)
-  }, REVOKE_DELAY_MS)
 }
 
 const tryCopyImageToClipboard = async (

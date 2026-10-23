@@ -18,6 +18,7 @@ import type {
   UsageHistoryExportSelection,
   UsageHistoryStore,
 } from "~/types/usageHistory"
+import { downloadBlob } from "~/utils/browser/download"
 import { formatUtcDayKey } from "~/utils/core/dayKey"
 import { getErrorMessage } from "~/utils/core/error"
 
@@ -97,14 +98,7 @@ export const useUsageAnalyticsExport = (params: {
       const blob = new Blob([JSON.stringify(exportData, null, 2)], {
         type: "application/json",
       })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement("a")
-      link.href = url
-      link.download = `all-api-hub-usage-history-${formatUtcDayKey()}.json`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
+      downloadBlob(blob, `all-api-hub-usage-history-${formatUtcDayKey()}.json`)
       toast.success(t("messages.success.exported"))
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
         insights: {

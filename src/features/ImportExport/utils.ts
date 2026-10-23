@@ -21,6 +21,7 @@ import {
 } from "~/services/managedSites/configuration/legacyChannelConfigMigration"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
+import { downloadBlob } from "~/utils/browser/download"
 import { formatUtcDayKey } from "~/utils/core/dayKey"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
@@ -115,14 +116,7 @@ export const handleExportAll = async (
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
       type: "application/json",
     })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = `all-api-hub-backup-${formatUtcDayKey()}.json`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    downloadBlob(blob, `all-api-hub-backup-${formatUtcDayKey()}.json`)
 
     toast.success(t("importExport:export.dataExported"))
   } catch (error) {
@@ -160,14 +154,7 @@ export const handleExportAccounts = async (
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
       type: "application/json",
     })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = `accounts-backup-${formatUtcDayKey()}.json`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    downloadBlob(blob, `accounts-backup-${formatUtcDayKey()}.json`)
 
     toast.success(t("importExport:export.accountsExported"))
   } catch (error) {
@@ -205,14 +192,7 @@ export const handleExportPreferences = async (
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {
       type: "application/json",
     })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = `preferences-backup-${formatUtcDayKey()}.json`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    downloadBlob(blob, `preferences-backup-${formatUtcDayKey()}.json`)
 
     toast.success(t("importExport:export.settingsExported"))
   } catch (error) {

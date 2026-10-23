@@ -17,6 +17,7 @@ import { useDialogStateContext } from "~/features/AccountManagement/dialogs/useD
 import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
 import {
   ensurePermissionsDetailed,
+  isPermissionDeclared,
   OPTIONAL_PERMISSION_IDS,
 } from "~/services/permissions/permissionManager"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
@@ -213,6 +214,27 @@ export function useBookmarkAccountImportDialog(
     })
 
     try {
+      // Check the native capability before prompting: Safari cannot grant a
+      // bookmarks permission, and that is not a user denial. Dev fixtures
+      // provide their own reader without using the native browser API.
+      if (
+        !runtime &&
+        !isPermissionDeclared(OPTIONAL_PERMISSION_IDS.Bookmarks)
+      ) {
+        setError("api-unavailable")
+        setStage("permission-needed")
+        completeFailure({
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
+          failureReason:
+            PRODUCT_ANALYTICS_FAILURE_REASONS.PermissionUnavailable,
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Permission,
+          itemCount: 0,
+          selectedCount: 0,
+          readyCount: 0,
+          blockedCount: 0,
+        })
+        return
+      }
       const permissionResult = await requestPermissions([
         OPTIONAL_PERMISSION_IDS.Bookmarks,
       ])
@@ -295,7 +317,13 @@ export function useBookmarkAccountImportDialog(
         blockedCount: 0,
       })
     }
-  }, [completeFailure, requestPermissions, readBookmarks, replaceBookmarkTree])
+  }, [
+    completeFailure,
+    requestPermissions,
+    readBookmarks,
+    replaceBookmarkTree,
+    runtime,
+  ])
 
   const scanSelectedBookmarks = useCallback(() => {
     if (!canScanSelectedBookmarks) return
