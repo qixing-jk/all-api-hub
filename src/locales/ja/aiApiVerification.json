@@ -23,12 +23,15 @@
     "errors": {
       "unexpected": "予期しないエラー"
     },
+    "generatedImagePreview": "生成画像のプレビュー",
+    "generatedVideoPreview": "生成された動画のプレビュー",
     "history": {
       "clear": "履歴をクリア",
       "lastVerified": "前回の検証"
     },
     "idleHint": "検証を開始するにはキーを選択してください。モデル依存のプローブにはモデル ID が必要です。",
     "loadingRuntimeKeysHint": "キーを読み込み中...",
+    "mediaPreviewUnavailable": "プレビューを読み込めませんでした。",
     "meta": {
       "apiType": "API 種別",
       "apiTypePlaceholder": "API 種別を選択",
@@ -39,17 +42,28 @@
       "runtimeKeyIncompatible": "このモデルでは使用不可",
       "runtimeKeyPlaceholder": "キーを選択"
     },
+    "modalityNotice": {
+      "image": "画像生成モデルです。テスト呼び出しは都度クォータを消費します。",
+      "quotaCost": "都度課金",
+      "video": "動画を生成し、再生まで最大2分待機します。停止はローカルの待機のみを終了します。サーバーのタスクは継続し、料金が発生する場合があります。"
+    },
     "modes": {
       "nonStreaming": "非ストリーミング",
       "streaming": "ストリーミング"
     },
     "noCompatibleRuntimeKeyHint": "このモデルのグループで使用できるキーがありません。キー管理で有効なグループのキーを作成するか選択してください。",
     "notRunYet": "未実行",
+    "openGeneratedMedia": "生成されたメディアを開く",
     "probes": {
+      "decision": "ディシジョン",
+      "embedding": "埋め込み",
+      "image-generation": "画像生成",
       "models": "モデル一覧",
+      "rerank": "リランカー",
       "structured-output": "構造化出力（スキーマ JSON）",
       "text-generation": "テキスト生成",
       "tool-calling": "ツール / 関数呼び出し",
+      "video-generation": "動画生成タスク",
       "web-search": "Web 検索 / grounding"
     },
     "requiresModelId": "このテストを実行するにはモデル ID を入力してください。",
@@ -62,9 +76,16 @@
       "unverified": "未検証"
     },
     "summaries": {
+      "decisionSucceeded": "ディシジョン検証に成功しました。",
+      "decisionUnexpectedResponse": "ディシジョン API の応答が予期されない形式です。",
+      "embeddingSucceeded": "埋め込みの生成に成功しました（次元: {{dimension}}）。",
+      "embeddingUnexpectedResponse": "埋め込みレスポンスが予期しない形式です。",
+      "embeddingUnsupportedAnthropic": "Anthropic はネイティブの埋め込みモデルに対応していません。",
       "endpointNotFound": "エンドポイントが見つかりません (404): この API は未対応の可能性があります",
       "forbidden": "禁止されています (403): アクセスが拒否されました",
       "httpError": "HTTP エラー ({{status}})",
+      "imageGenerationNoData": "画像データが返されませんでした。",
+      "imageGenerationSucceeded": "画像生成に成功しました。",
       "modelsFetched": "{{count}} 件のモデルを取得しました。",
       "modelsFetched_other": "{{count}} 件のモデルを取得しました。",
       "modelsProbeUnsupportedForApiType": "この API 種別では models プローブはサポートされていません。",
@@ -74,6 +95,9 @@
       "noModelIdProvidedToRunProbes": "プローブを実行するためのモデル ID が指定されていません。",
       "noModelsReturned": "モデルが返されませんでした。",
       "noToolCallDetected": "ツール呼び出しが検出されませんでした（モデルがツールに対応していない可能性があります）。",
+      "probeRequiresOpenAiProtocol": "このテストには OpenAI 互換 API エンドポイントが必要です。サービスが対応している場合のみ、そのプロトコルを選択してください。",
+      "rerankSucceeded": "リランクテストに成功しました。",
+      "rerankUnexpectedResponse": "リランカーレスポンスが予期しない形式です。",
       "stopped": "ユーザーが停止しました。",
       "structuredOutputInvalid": "出力が不正です。",
       "structuredOutputSucceeded": "構造化出力に成功しました。",
@@ -81,6 +105,12 @@
       "textGenerationUnexpectedResponse": "予期しない応答テキストです。",
       "toolCallSucceeded": "ツール呼び出しに成功しました。",
       "unauthorized": "認証されていません (401): 無効なキーまたは認証不足です",
+      "videoGenerationSucceeded": "動画を生成しました。",
+      "videoGenerationTimedOut": "動画の生成が2分以内に完了しませんでした。サーバーのタスクは実行中の可能性があります。",
+      "videoNoPlayableResult": "動画タスクは完了しましたが、再生可能な URL が返されませんでした。",
+      "videoNoTaskReturned": "動画タスク ID が返されませんでした。",
+      "videoTaskAccepted": "動画生成タスクが受付されました。",
+      "videoUnexpectedResponse": "動画タスクが失敗したか、無効な応答が返されました。",
       "webSearchGroundingNoResults": "Web 検索 / grounding の結果がありません。",
       "webSearchGroundingSucceeded": "Web 検索 / grounding に成功しました。",
       "webSearchNoResults": "Web 検索結果がありません。",

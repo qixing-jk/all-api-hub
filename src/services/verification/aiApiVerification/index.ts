@@ -1,4 +1,6 @@
 export * from "./apiVerificationService"
+export * from "./apiTypeResolution"
+export * from "./modelModality"
 export * from "./probes"
 export * from "./types"
 export * from "./utils"

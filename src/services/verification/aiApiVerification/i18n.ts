@@ -2,13 +2,15 @@ import type { TFunction } from "i18next"
 
 import { assertNever } from "~/utils/core/assert"
 
+import type {
+  ApiVerificationApiType,
+  ApiVerificationMode,
+  ApiVerificationProbeId,
+} from "./types"
 import {
   API_TYPES,
   API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_IDS,
-  type ApiVerificationApiType,
-  type ApiVerificationMode,
-  type ApiVerificationProbeId,
 } from "./types"
 
 /** Returns the localized label for the explicitly selected generation mode. */
@@ -27,7 +29,7 @@ export function getApiVerificationModeLabel(
 }
 
 /**
- * Returns the localized label for a supported API verification API type.
+ * Returns the localized label for a supported API verification type.
  */
 export function getApiVerificationApiTypeLabel(
   t: TFunction,
@@ -45,7 +47,7 @@ export function getApiVerificationApiTypeLabel(
     default:
       return assertNever(
         apiType,
-        `Unexpected API verification type: ${apiType}`,
+        `Unexpected API verification apiType: ${apiType}`,
       )
   }
 }
@@ -68,6 +70,16 @@ export function getApiVerificationProbeLabel(
       return t("aiApiVerification:verifyDialog.probes.structured-output")
     case API_VERIFICATION_PROBE_IDS.WebSearch:
       return t("aiApiVerification:verifyDialog.probes.web-search")
+    case API_VERIFICATION_PROBE_IDS.Embedding:
+      return t("aiApiVerification:verifyDialog.probes.embedding")
+    case API_VERIFICATION_PROBE_IDS.Rerank:
+      return t("aiApiVerification:verifyDialog.probes.rerank")
+    case API_VERIFICATION_PROBE_IDS.ImageGeneration:
+      return t("aiApiVerification:verifyDialog.probes.image-generation")
+    case API_VERIFICATION_PROBE_IDS.VideoGeneration:
+      return t("aiApiVerification:verifyDialog.probes.video-generation")
+    case API_VERIFICATION_PROBE_IDS.Decision:
+      return t("aiApiVerification:verifyDialog.probes.decision")
     default:
       return assertNever(
         probeId,
@@ -217,6 +229,86 @@ export function translateApiVerificationSummary(
     case "verifyDialog.summaries.httpError":
       return t(
         "aiApiVerification:verifyDialog.summaries.httpError",
+        summaryParams,
+      )
+    case "verifyDialog.summaries.embeddingSucceeded":
+      return t(
+        "aiApiVerification:verifyDialog.summaries.embeddingSucceeded",
+        summaryParams,
+      )
+    case "verifyDialog.summaries.embeddingUnexpectedResponse":
+      return t(
+        "aiApiVerification:verifyDialog.summaries.embeddingUnexpectedResponse",
+        summaryParams,
+      )
+    case "verifyDialog.summaries.embeddingUnsupportedAnthropic":
+      return t(
+        "aiApiVerification:verifyDialog.summaries.embeddingUnsupportedAnthropic",
+        summaryParams,
+      )
+    case "verifyDialog.summaries.rerankSucceeded":
+      return t(
+        "aiApiVerification:verifyDialog.summaries.rerankSucceeded",
+        summaryParams,
+      )
+    case "verifyDialog.summaries.rerankUnexpectedResponse":
+      return t(
+        "aiApiVerification:verifyDialog.summaries.rerankUnexpectedResponse",
+        summaryParams,
+      )
+    case "verifyDialog.summaries.imageGenerationSucceeded":
+      return t(
+        "aiApiVerification:verifyDialog.summaries.imageGenerationSucceeded",
+        summaryParams,
+      )
+    case "verifyDialog.summaries.imageGenerationNoData":
+      return t(
+        "aiApiVerification:verifyDialog.summaries.imageGenerationNoData",
+        summaryParams,
+      )
+    case "verifyDialog.summaries.videoGenerationTimedOut":
+      return t(
+        "aiApiVerification:verifyDialog.summaries.videoGenerationTimedOut",
+        summaryParams,
+      )
+    case "verifyDialog.summaries.videoNoPlayableResult":
+      return t(
+        "aiApiVerification:verifyDialog.summaries.videoNoPlayableResult",
+        summaryParams,
+      )
+    case "verifyDialog.summaries.videoGenerationSucceeded":
+      return t(
+        "aiApiVerification:verifyDialog.summaries.videoGenerationSucceeded",
+        summaryParams,
+      )
+    case "verifyDialog.summaries.videoTaskAccepted":
+      return t(
+        "aiApiVerification:verifyDialog.summaries.videoTaskAccepted",
+        summaryParams,
+      )
+    case "verifyDialog.summaries.videoUnexpectedResponse":
+      return t(
+        "aiApiVerification:verifyDialog.summaries.videoUnexpectedResponse",
+        summaryParams,
+      )
+    case "verifyDialog.summaries.probeRequiresOpenAiProtocol":
+      return t(
+        "aiApiVerification:verifyDialog.summaries.probeRequiresOpenAiProtocol",
+        summaryParams,
+      )
+    case "verifyDialog.summaries.videoNoTaskReturned":
+      return t(
+        "aiApiVerification:verifyDialog.summaries.videoNoTaskReturned",
+        summaryParams,
+      )
+    case "verifyDialog.summaries.decisionSucceeded":
+      return t(
+        "aiApiVerification:verifyDialog.summaries.decisionSucceeded",
+        summaryParams,
+      )
+    case "verifyDialog.summaries.decisionUnexpectedResponse":
+      return t(
+        "aiApiVerification:verifyDialog.summaries.decisionUnexpectedResponse",
         summaryParams,
       )
     default:

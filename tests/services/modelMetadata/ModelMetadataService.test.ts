@@ -21,6 +21,33 @@ describe("ModelMetadataService", () => {
     }) as unknown as typeof fetch
   })
 
+  it("normalizes and retains model type from the remote metadata payload", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        models: [
+          {
+            id: "baai/bge-reranker-v2-m3",
+            provider_id: "baai",
+            type: "reranking",
+          },
+        ],
+      }),
+    }) as unknown as typeof fetch
+
+    const modelMetadataService = await loadService()
+    await modelMetadataService.initialize()
+
+    expect(modelMetadataService.getAllMetadata()).toEqual([
+      {
+        id: "baai/bge-reranker-v2-m3",
+        name: "baai/bge-reranker-v2-m3",
+        provider_id: "baai",
+        type: "reranking",
+      },
+    ])
+  })
+
   it("initializes without errors", async () => {
     const modelMetadataService = await loadService()
     await modelMetadataService.initialize()

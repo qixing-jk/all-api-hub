@@ -12,6 +12,7 @@ import {
   filterVerificationRedactions as filterRedactions,
   isVerificationAbortError,
 } from "~/features/Verification/verificationDialogUtils"
+import { useModelMetadataLookup } from "~/hooks/verification/useModelMetadataLookup"
 import { useVerificationRunLifecycle } from "~/hooks/verification/useVerificationRunLifecycle"
 import {
   collectAccountRuntimeKeySecrets,
@@ -25,7 +26,6 @@ import {
   fetchDisplayAccountRuntimeKeys,
   resolveDisplayAccountRuntimeKeySecret,
 } from "~/services/accounts/utils/apiServiceRequest"
-import { identifyProvider } from "~/services/models/utils/modelProviders"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,
@@ -44,11 +44,14 @@ import type {
   ApiVerificationMode,
   ApiVerificationProbeId,
   ApiVerificationProbeResult,
+  ModelTestModality,
 } from "~/services/verification/aiApiVerification"
 import {
   API_TYPES,
   API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_STATUSES,
+  resolveModelTestModality,
+  resolveVerificationApiType,
   runApiVerificationProbe,
 } from "~/services/verification/aiApiVerification"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
@@ -86,10 +89,15 @@ export function useVerifyApiDialogViewModel({
   isOpen,
   account,
   initialModelId,
+  initialSupportedEndpointTypes,
   modelEnableGroups,
 }: Pick<
   VerifyApiDialogProps,
-  "isOpen" | "account" | "initialModelId" | "modelEnableGroups"
+  | "isOpen"
+  | "account"
+  | "initialModelId"
+  | "initialSupportedEndpointTypes"
+  | "modelEnableGroups"
 >) {
   const { t } = useTranslation("aiApiVerification")
   const {
@@ -116,6 +124,29 @@ export function useVerifyApiDialogViewModel({
   const [verificationMode, setVerificationMode] = useState<ApiVerificationMode>(
     API_VERIFICATION_MODES.Streaming,
   )
+  const requestedModelId = modelId.trim() || initialModelId?.trim() || ""
+  const metadataLookup = useModelMetadataLookup(isOpen && !isRunning, () =>
+    probesRef.current.some((probe) => probe.isRunning),
+  )
+  const modelModality: ModelTestModality = useMemo(
+    () =>
+      resolveModelTestModality(
+        {
+          modelId: requestedModelId,
+          supportedEndpointTypes:
+            requestedModelId === initialModelId?.trim()
+              ? initialSupportedEndpointTypes
+              : undefined,
+        },
+        metadataLookup,
+      ),
+    [
+      requestedModelId,
+      initialModelId,
+      initialSupportedEndpointTypes,
+      metadataLookup,
+    ],
+  )
   const historyTarget = useMemo(() => {
     const trimmedModelId = initialModelId?.trim()
     return trimmedModelId
@@ -128,17 +159,18 @@ export function useVerifyApiDialogViewModel({
     probesRef,
     persistedSummary,
     setPersistedSummary: applyPersistedSummary,
-    persistedSummaryRef,
     persistCurrentResults,
     clearVerificationHistory,
     loadVerificationHistory,
-  } = useVerificationDialogState(historyTarget)
+  } = useVerificationDialogState(historyTarget, modelModality, {
+    apiType,
+    isOpen,
+  })
 
   const selectedRuntimeKey = accountRuntimeKeys.find(
     (runtimeKey) => runtimeKey.id === selectedRuntimeKeyId,
   )
 
-  const requestedModelId = initialModelId?.trim() || modelId.trim()
   const hasModelGroupContext =
     requestedModelId.length > 0 && Array.isArray(modelEnableGroups)
   const compatibleRuntimeKeys = useMemo(() => {
@@ -304,7 +336,7 @@ export function useVerifyApiDialogViewModel({
       let failureCount = 0
       let hasExecutedProbe = false
       let failedProbeResult: ApiVerificationProbeResult | undefined
-      replaceProbes(buildProbeState(apiType))
+      replaceProbes(buildProbeState(apiType, null, modelModality))
       try {
         // Run sequentially so each probe updates independently (and can be retried individually).
         await runSequentialProbes(
@@ -325,6 +357,7 @@ export function useVerifyApiDialogViewModel({
             }
           },
           signal,
+          modelModality,
         )
         if (isStopped(signal)) {
           if (isCurrent(signal))
@@ -354,17 +387,17 @@ export function useVerifyApiDialogViewModel({
               }
             : {}),
           insights: {
-            ...(completionResult === PRODUCT_ANALYTICS_RESULTS.Failure
-              ? { failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute }
-              : {}),
+            failureStage:
+              completionResult === PRODUCT_ANALYTICS_RESULTS.Failure
+                ? PRODUCT_ANALYTICS_FAILURE_STAGES.Execute
+                : undefined,
             successCount,
             failureCount,
           },
         })
       } catch (error) {
-        logger.error("Model verification run failed", {
-          message: toSanitizedErrorSummary(error, []),
-        })
+        if (isCurrent(signal))
+          replaceProbes(withUnfinishedProbesStopped(probesRef.current))
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
           insights: {
@@ -389,20 +422,13 @@ export function useVerifyApiDialogViewModel({
     setVerificationMode(API_VERIFICATION_MODES.Streaming)
     applyPersistedSummary(null)
 
-    const providerType = trimmedModelId
-      ? identifyProvider(trimmedModelId)
-      : null
-
-    // Map detected provider to the closest verification API type.
-    const initialApiType: ApiVerificationApiType =
-      providerType === "Claude"
-        ? API_TYPES.ANTHROPIC
-        : providerType === "Gemini"
-          ? API_TYPES.GOOGLE
-          : API_TYPES.OPENAI_COMPATIBLE
+    const initialApiType = resolveVerificationApiType({
+      modelId: trimmedModelId,
+      supportedEndpointTypes: initialSupportedEndpointTypes,
+    })
 
     setApiType(initialApiType)
-    replaceProbes(buildProbeState(initialApiType))
+    replaceProbes(buildProbeState(initialApiType, null, modelModality))
 
     void loadVerificationHistory({
       apiType: initialApiType,
@@ -419,20 +445,13 @@ export function useVerifyApiDialogViewModel({
       reset()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [account.id, historyTarget, initialModelId, isOpen])
-
-  useEffect(() => {
-    if (!isOpen) return
-    replaceProbes(
-      buildProbeState(
-        apiType,
-        apiType === persistedSummaryRef.current?.apiType
-          ? persistedSummaryRef.current
-          : null,
-      ),
-      false,
-    )
-  }, [apiType, isOpen, persistedSummaryRef, replaceProbes])
+  }, [
+    account.id,
+    historyTarget,
+    initialModelId,
+    initialSupportedEndpointTypes,
+    isOpen,
+  ])
 
   const runSingleProbe = (probeId: ApiVerificationProbeId) => {
     void runProbeTask(probeId, (signal) => runProbe(probeId, signal))
@@ -466,5 +485,6 @@ export function useVerifyApiDialogViewModel({
     stopRun,
     stopProbe,
     runSingleProbe,
+    modelModality,
   }
 }

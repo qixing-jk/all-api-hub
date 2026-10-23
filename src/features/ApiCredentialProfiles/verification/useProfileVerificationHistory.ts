@@ -8,7 +8,10 @@ import {
 
 import { buildProbeState } from "~/features/Verification/api/probeState"
 import { useVerificationDialogState } from "~/features/Verification/api/useVerificationDialogState"
-import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
+import type {
+  ApiVerificationApiType,
+  ModelTestModality,
+} from "~/services/verification/aiApiVerification"
 import {
   createProfileModelVerificationHistoryTarget,
   createProfileVerificationHistoryTarget,
@@ -48,6 +51,7 @@ export function useProfileVerificationHistory({
   isOpen,
   isRunning,
   isPersisting,
+  modelModality,
 }: {
   profile: ApiCredentialProfile | null
   apiType: ApiVerificationApiType
@@ -56,6 +60,7 @@ export function useProfileVerificationHistory({
   isOpen: boolean
   isRunning: boolean
   isPersisting: boolean
+  modelModality?: ModelTestModality
 }) {
   const pendingHistoryContextKeyRef = useRef<string | null>(null)
   const lastLoadedHistoryContextKeyRef = useRef<string | null>(null)
@@ -88,7 +93,10 @@ export function useProfileVerificationHistory({
     persistCurrentResults,
     clearVerificationHistory,
     loadVerificationHistory,
-  } = useVerificationDialogState(historyTarget)
+  } = useVerificationDialogState(historyTarget, modelModality, {
+    apiType,
+    isOpen,
+  })
 
   const getHistoryTargetForModel = useCallback(
     (nextModelId?: string) => {
@@ -163,7 +171,7 @@ export function useProfileVerificationHistory({
 
     let cancelled = false
     setPersistedSummary(null)
-    replaceProbes(buildProbeState(apiType))
+    replaceProbes(buildProbeState(apiType, null, modelModality))
 
     void loadVerificationHistory({
       apiType,
@@ -192,6 +200,7 @@ export function useProfileVerificationHistory({
     isPersisting,
     isRunning,
     loadVerificationHistory,
+    modelModality,
     setModelId,
     profile,
     replaceProbes,

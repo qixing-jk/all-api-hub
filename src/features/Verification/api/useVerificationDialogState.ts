@@ -1,11 +1,14 @@
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 import {
   buildProbeState,
   extractProbeResults,
 } from "~/features/Verification/api/probeState"
 import type { ProbeItemState } from "~/features/Verification/api/types"
-import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
+import type {
+  ApiVerificationApiType,
+  ModelTestModality,
+} from "~/services/verification/aiApiVerification"
 import {
   createVerificationHistorySummary,
   verificationResultHistoryStorage,
@@ -29,6 +32,8 @@ type LoadVerificationHistoryParams = {
  */
 export function useVerificationDialogState(
   historyTarget: ApiVerificationHistoryTarget | null,
+  modelModality?: ModelTestModality,
+  context?: { apiType: ApiVerificationApiType; isOpen: boolean },
 ) {
   const [probes, setProbeState] = useState<ProbeItemState[]>([])
   const [persistedSummary, setPersistedSummaryState] =
@@ -37,6 +42,8 @@ export function useVerificationDialogState(
   const probesRef = useRef<ProbeItemState[]>([])
   const persistedSummaryRef = useRef<ApiVerificationHistorySummary | null>(null)
   const loadTokenRef = useRef(0)
+  const modalityRef = useRef(modelModality)
+  modalityRef.current = modelModality
 
   const applyProbes = useCallback(
     (next: ProbeItemState[], invalidatePendingLoad = true) => {
@@ -81,6 +88,42 @@ export function useVerificationDialogState(
     },
     [applyPersistedSummary],
   )
+
+  const previousContextRef = useRef({
+    apiType: context?.apiType,
+    modelModality,
+  })
+  const contextApiType = context?.apiType
+  const isOpen = context?.isOpen
+  useEffect(() => {
+    const previous = previousContextRef.current
+    previousContextRef.current = { apiType: contextApiType, modelModality }
+    if (!isOpen || !contextApiType) return
+    if (
+      previous.apiType === contextApiType &&
+      previous.modelModality === modelModality
+    )
+      return
+
+    const protocolChanged = previous.apiType !== contextApiType
+    const summary = persistedSummaryRef.current
+    const next = buildProbeState(
+      contextApiType,
+      protocolChanged && summary?.apiType === contextApiType ? summary : null,
+      modelModality,
+    )
+    const existing = new Map(
+      probesRef.current.map((probe) => [probe.definition.id, probe]),
+    )
+    applyProbes(
+      next.map((probe) => {
+        const retained = !protocolChanged
+          ? existing.get(probe.definition.id)
+          : undefined
+        return retained ? { ...retained, definition: probe.definition } : probe
+      }),
+    )
+  }, [contextApiType, isOpen, modelModality, applyProbes])
 
   const persistCurrentResults = useCallback(
     async (
@@ -131,7 +174,7 @@ export function useVerificationDialogState(
       await verificationResultHistoryStorage.clearTarget(target)
       if (loadTokenRef.current !== requestToken) return
       applyPersistedSummary(null, false)
-      applyProbes(buildProbeState(apiType), false)
+      applyProbes(buildProbeState(apiType, null, modalityRef.current), false)
     },
     [applyPersistedSummary, applyProbes, historyTarget],
   )
@@ -159,7 +202,11 @@ export function useVerificationDialogState(
 
         applyPersistedSummary(summary, false)
         applyProbes(
-          buildProbeState(apiType, shouldApplySummary ? summary : null),
+          buildProbeState(
+            apiType,
+            shouldApplySummary ? summary : null,
+            modalityRef.current,
+          ),
           false,
         )
 
@@ -173,7 +220,7 @@ export function useVerificationDialogState(
           return null
 
         applyPersistedSummary(null, false)
-        applyProbes(buildProbeState(apiType), false)
+        applyProbes(buildProbeState(apiType, null, modalityRef.current), false)
         return null
       }
     },

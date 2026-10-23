@@ -473,7 +473,79 @@ describe("model list batch verification helpers", () => {
     ])
   })
 
-  it("keeps batch AUTO protocol defaults based on the model id", () => {
+  it.each([
+    {
+      modelId: "custom-deployment",
+      supportedEndpointTypes: ["responses"],
+      expected: API_TYPES.OPENAI,
+    },
+    {
+      modelId: "claude-alias",
+      supportedEndpointTypes: ["/v1/responses"],
+      expected: API_TYPES.OPENAI,
+    },
+    {
+      modelId: "custom-deployment",
+      supportedEndpointTypes: ["/v1beta/models/custom:embedContent"],
+      expected: API_TYPES.GOOGLE,
+    },
+    {
+      modelId: "claude-alias",
+      supportedEndpointTypes: ["openai"],
+      expected: API_TYPES.OPENAI_COMPATIBLE,
+    },
+    {
+      modelId: "gemini-alias",
+      supportedEndpointTypes: ["/v1/chat/completions"],
+      expected: API_TYPES.OPENAI_COMPATIBLE,
+    },
+    {
+      modelId: "custom-deployment",
+      supportedEndpointTypes: ["anthropic"],
+      expected: API_TYPES.ANTHROPIC,
+    },
+    {
+      modelId: "custom-deployment",
+      supportedEndpointTypes: ["gemini"],
+      expected: API_TYPES.GOOGLE,
+    },
+    {
+      modelId: "claude-alias",
+      supportedEndpointTypes: ["anthropic", "chat"],
+      expected: API_TYPES.OPENAI_COMPATIBLE,
+    },
+  ])(
+    "uses declared endpoints before model names for $modelId",
+    ({ modelId, supportedEndpointTypes, expected }) => {
+      expect(
+        resolveBatchVerifyApiType(
+          MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES.AUTO,
+          modelId,
+          { supportedEndpointTypes },
+        ),
+      ).toBe(expected)
+    },
+  )
+
+  it("keeps explicit profile and user protocol choices ahead of inferred defaults", () => {
+    expect(
+      resolveBatchVerifyApiType(
+        MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES.AUTO,
+        "claude-alias",
+        {
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          supportedEndpointTypes: ["anthropic"],
+        },
+      ),
+    ).toBe(API_TYPES.OPENAI_COMPATIBLE)
+    expect(
+      resolveBatchVerifyApiType(API_TYPES.GOOGLE, "claude-alias", {
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+      }),
+    ).toBe(API_TYPES.GOOGLE)
+  })
+
+  it("uses model names only when no protocol facts are supplied", () => {
     expect(
       resolveBatchVerifyApiType(
         MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES.AUTO,

@@ -132,7 +132,7 @@ vi.mock("~/services/productAnalytics/actions", () => ({
 }))
 
 const mockRunApiVerificationProbe = vi.fn()
-const mockGetApiVerificationProbeDefinitions = vi.fn()
+const mockProbeDefinitions = vi.fn()
 
 vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
   const original =
@@ -141,13 +141,14 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
     >()
   return {
     ...original,
-    getApiVerificationProbeDefinitions: (
-      apiType: Parameters<
-        typeof original.getApiVerificationProbeDefinitions
-      >[0],
+    getProbesForModality: (
+      modality: Parameters<typeof original.getProbesForModality>[0],
+      apiType: Parameters<typeof original.getProbesForModality>[1],
     ) =>
-      mockGetApiVerificationProbeDefinitions(apiType) ??
-      original.getApiVerificationProbeDefinitions(apiType),
+      (modality === undefined ||
+      modality === original.MODEL_TEST_MODALITIES.Text
+        ? mockProbeDefinitions(apiType)
+        : undefined) ?? original.getProbesForModality(modality, apiType),
     runApiVerificationProbe: (...args: any[]) =>
       mockRunApiVerificationProbe(...args),
   }
@@ -172,13 +173,83 @@ describe("VerifyApiDialog", () => {
       async ({ token }: { token: { key: string } }) => token.key,
     )
     mockRunApiVerificationProbe.mockReset()
-    mockGetApiVerificationProbeDefinitions.mockReset()
+    mockProbeDefinitions.mockReset()
     mockStartProductAnalyticsAction.mockReset()
     mockCompleteProductAnalyticsAction.mockReset()
     mockStartProductAnalyticsAction.mockReturnValue({
       complete: mockCompleteProductAnalyticsAction,
     })
     await verificationResultHistoryStorage.clearAllData()
+  })
+
+  it("dynamically updates modality and probe definitions when modelId changes in input", async () => {
+    const account = buildDisplaySiteData({ id: "session-a" })
+    const key = buildServiceCredentialRuntimeKey(account, {
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Codex",
+      key: "credential",
+      isAuthenticated: true,
+      baseUrl: account.baseUrl,
+    })
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValue([key])
+    mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValue(key)
+    const props = { isOpen: true, account, initialModelId: "gpt-4o" }
+    const { result } = renderHook(useVerifyApiDialogViewModel, {
+      initialProps: props,
+    })
+    await waitFor(() => expect(result.current.selectedRuntimeKey).toBeTruthy())
+    expect(result.current.modelModality).toBe("text")
+    expect(result.current.probes.map((p) => p.definition.id)).toEqual([
+      "models",
+      "text-generation",
+      "tool-calling",
+      "structured-output",
+      "web-search",
+    ])
+
+    act(() => {
+      result.current.setModelId("text-embedding-3-small")
+    })
+
+    await waitFor(() => {
+      expect(result.current.modelModality).toBe("embedding")
+    })
+    expect(result.current.probes.map((p) => p.definition.id)).toEqual([
+      "models",
+      "embedding",
+    ])
+  })
+
+  it("clears outcomes from another API protocol without changing the model", async () => {
+    const account = buildDisplaySiteData({ id: "protocol-switch" })
+    const key = buildServiceCredentialRuntimeKey(account, {
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Codex",
+      key: "credential",
+      isAuthenticated: true,
+      baseUrl: account.baseUrl,
+    })
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValue([key])
+    mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValue(key)
+    mockRunApiVerificationProbe.mockResolvedValue({
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 1,
+      summary: "Old protocol",
+    })
+    const { result } = renderHook(useVerifyApiDialogViewModel, {
+      initialProps: { isOpen: true, account, initialModelId: "gpt-4o" },
+    })
+    await waitFor(() => expect(result.current.selectedRuntimeKey).toBeTruthy())
+    act(() => result.current.runSingleProbe("text-generation"))
+    await waitFor(() => expect(result.current.hasAnyResult).toBe(true))
+
+    act(() => result.current.setApiType(API_TYPES.ANTHROPIC))
+
+    await waitFor(() => expect(result.current.hasAnyResult).toBe(false))
+    expect(result.current.modelId).toBe("gpt-4o")
   })
 
   it.each(["target", "reopen"] as const)(
@@ -1124,7 +1195,7 @@ describe("VerifyApiDialog", () => {
   })
 
   it("restores persisted history and clears it", async () => {
-    mockGetApiVerificationProbeDefinitions.mockReturnValue([
+    mockProbeDefinitions.mockReturnValue([
       { id: "text-generation", requiresModelId: true },
     ])
     mockFetchAccountTokens.mockResolvedValueOnce([
@@ -1222,7 +1293,7 @@ describe("VerifyApiDialog", () => {
   })
 
   it("completes run-all analytics as success when probes pass", async () => {
-    mockGetApiVerificationProbeDefinitions.mockReturnValue([
+    mockProbeDefinitions.mockReturnValue([
       { id: "models", requiresModelId: false },
       { id: "text-generation", requiresModelId: true },
     ])
@@ -1307,7 +1378,7 @@ describe("VerifyApiDialog", () => {
 
   it("stops a running verification suite and aborts the active probe", async () => {
     let receivedSignal: AbortSignal | undefined
-    mockGetApiVerificationProbeDefinitions.mockReturnValue([
+    mockProbeDefinitions.mockReturnValue([
       { id: "models", requiresModelId: false },
       { id: "text-generation", requiresModelId: true },
     ])
@@ -1402,7 +1473,7 @@ describe("VerifyApiDialog", () => {
 
   it("stops while resolving the full token key before starting a probe", async () => {
     let receivedSignal: AbortSignal | undefined
-    mockGetApiVerificationProbeDefinitions.mockReturnValue([
+    mockProbeDefinitions.mockReturnValue([
       { id: "models", requiresModelId: false },
       { id: "text-generation", requiresModelId: true },
     ])
@@ -1608,7 +1679,7 @@ describe("VerifyApiDialog", () => {
   })
 
   it("completes run-all analytics as failure when any probe fails", async () => {
-    mockGetApiVerificationProbeDefinitions.mockReturnValue([
+    mockProbeDefinitions.mockReturnValue([
       { id: "models", requiresModelId: false },
       { id: "text-generation", requiresModelId: true },
     ])
@@ -1689,7 +1760,7 @@ describe("VerifyApiDialog", () => {
 
   it("maps structured thrown probe status to an auth analytics failure", async () => {
     const user = userEvent.setup()
-    mockGetApiVerificationProbeDefinitions.mockReturnValue([
+    mockProbeDefinitions.mockReturnValue([
       { id: "models", requiresModelId: false },
       { id: "text-generation", requiresModelId: true },
     ])
@@ -1796,7 +1867,7 @@ describe("VerifyApiDialog", () => {
   })
 
   it("completes run-all analytics as skipped when no probes execute", async () => {
-    mockGetApiVerificationProbeDefinitions.mockReturnValue([
+    mockProbeDefinitions.mockReturnValue([
       { id: "text-generation", requiresModelId: true },
     ])
     mockFetchAccountTokens.mockResolvedValueOnce([
@@ -1860,5 +1931,95 @@ describe("VerifyApiDialog", () => {
       )
     })
     expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
+  })
+
+  it("displays modality notices for image and video models", async () => {
+    const account = buildDisplaySiteData({ id: "modality-notice-account" })
+    const key = buildServiceCredentialRuntimeKey(account, {
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Codex",
+      key: "credential",
+      isAuthenticated: true,
+      baseUrl: account.baseUrl,
+    })
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValue([key])
+    mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValue(key)
+
+    const { rerender } = render(
+      <VerifyApiDialog
+        isOpen
+        onClose={() => {}}
+        initialModelId="flux-schnell"
+        account={account}
+      />,
+    )
+    expect(
+      await screen.findByText(
+        "aiApiVerification:verifyDialog.modalityNotice.image",
+      ),
+    ).toBeInTheDocument()
+
+    rerender(
+      <VerifyApiDialog
+        isOpen
+        onClose={() => {}}
+        initialModelId="sora-1"
+        account={account}
+      />,
+    )
+    expect(
+      await screen.findByText(
+        "aiApiVerification:verifyDialog.modalityNotice.video",
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it("stops unfinished probes and records failure when suite execution throws unexpectedly", async () => {
+    const account = buildDisplaySiteData({ id: "suite-crash-account" })
+    const key = buildServiceCredentialRuntimeKey(account, {
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Codex",
+      key: "credential",
+      isAuthenticated: true,
+      baseUrl: account.baseUrl,
+    })
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValue([key])
+    mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValue(key)
+    mockRunApiVerificationProbe.mockResolvedValue({
+      id: "models",
+      status: "pass",
+      latencyMs: 1,
+      summary: "Models pass",
+    })
+
+    const { result } = renderHook(useVerifyApiDialogViewModel, {
+      initialProps: { isOpen: true, account, initialModelId: "gpt-4o" },
+    })
+    await waitFor(() => expect(result.current.selectedRuntimeKey).toBeTruthy())
+
+    const historyModule = await import(
+      "~/services/verification/verificationResultHistory"
+    )
+    vi.spyOn(
+      historyModule,
+      "createVerificationHistorySummary",
+    ).mockImplementationOnce(() => {
+      throw new Error("Simulated storage crash")
+    })
+
+    await act(async () => {
+      await result.current.runAll()
+    })
+
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        insights: expect.objectContaining({
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+        }),
+      }),
+    )
   })
 })

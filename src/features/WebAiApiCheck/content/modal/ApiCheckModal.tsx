@@ -35,6 +35,7 @@ import { WEB_AI_API_CHECK_TEST_IDS } from "~/features/WebAiApiCheck/content/test
 import { cn } from "~/lib/utils"
 import {
   API_VERIFICATION_MODES,
+  MODEL_TEST_MODALITIES,
   type ApiVerificationApiType,
   type ApiVerificationMode,
 } from "~/services/verification/aiApiVerification"
@@ -232,30 +233,34 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                   />
                 </div>
 
-                <div className="space-y-density-1-5">
-                  <label
-                    htmlFor="api-check-verification-mode"
-                    className="text-muted-foreground block text-xs"
-                  >
-                    {t("aiApiVerification:verifyDialog.meta.mode")}
-                  </label>
-                  <SearchableSelect
-                    id="api-check-verification-mode"
-                    aria-label={t("aiApiVerification:verifyDialog.meta.mode")}
-                    options={Object.values(API_VERIFICATION_MODES).map(
-                      (mode) => ({
-                        value: mode,
-                        label: getApiVerificationModeLabel(t, mode),
-                      }),
-                    )}
-                    value={view.verificationMode}
-                    onChange={(value) =>
-                      actions.setVerificationMode(value as ApiVerificationMode)
-                    }
-                    disabled={!view.canClose}
-                    portalContainer={view.popoverPortalContainer ?? undefined}
-                  />
-                </div>
+                {view.modelModality === MODEL_TEST_MODALITIES.Text ? (
+                  <div className="space-y-density-1-5">
+                    <label
+                      htmlFor="api-check-verification-mode"
+                      className="text-muted-foreground block text-xs"
+                    >
+                      {t("aiApiVerification:verifyDialog.meta.mode")}
+                    </label>
+                    <SearchableSelect
+                      id="api-check-verification-mode"
+                      aria-label={t("aiApiVerification:verifyDialog.meta.mode")}
+                      options={Object.values(API_VERIFICATION_MODES).map(
+                        (mode) => ({
+                          value: mode,
+                          label: getApiVerificationModeLabel(t, mode),
+                        }),
+                      )}
+                      value={view.verificationMode}
+                      onChange={(value) =>
+                        actions.setVerificationMode(
+                          value as ApiVerificationMode,
+                        )
+                      }
+                      disabled={!view.canClose}
+                      portalContainer={view.popoverPortalContainer ?? undefined}
+                    />
+                  </div>
+                ) : null}
 
                 <div className="space-y-density-1-5 md:col-span-2">
                   <label
@@ -278,6 +283,17 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                     allowCustomValue
                   />
                 </div>
+
+                {(view.modelModality === MODEL_TEST_MODALITIES.Image ||
+                  view.modelModality === MODEL_TEST_MODALITIES.Video) && (
+                  <div className="border-warning-border bg-warning-soft text-warning-soft-foreground py-density-2 rounded-md border px-3 text-xs md:col-span-2">
+                    {view.modelModality === MODEL_TEST_MODALITIES.Image
+                      ? t("aiApiVerification:verifyDialog.modalityNotice.image")
+                      : t(
+                          "aiApiVerification:verifyDialog.modalityNotice.video",
+                        )}
+                  </div>
+                )}
               </div>
 
               <Collapsible

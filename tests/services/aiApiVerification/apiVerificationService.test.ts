@@ -55,7 +55,7 @@ vi.mock("@ai-sdk/anthropic", () => ({
 }))
 
 vi.mock("@ai-sdk/google", () => ({
-  createGoogleGenerativeAI: () => {
+  createGoogle: () => {
     const provider = (modelId: string) => ({ modelId })
     provider.tools = {
       googleSearch: () => ({ tool: "googleSearch" }),

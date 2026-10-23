@@ -8,10 +8,12 @@ import { type ProductAnalyticsErrorCategory } from "~/services/productAnalytics/
 import {
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
-  getApiVerificationProbeDefinitions,
+  getProbesForModality,
+  resolveModelTestModality,
   type ApiVerificationApiType,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
+  type ModelTestModality,
 } from "~/services/verification/aiApiVerification"
 
 export const BATCH_VERIFY_ROW_STATUSES = {
@@ -154,8 +156,9 @@ export function getRowLatency(results: ApiVerificationProbeResult[]) {
 export function getFirstApplicableProbeId(
   apiType: ApiVerificationApiType,
   selectedProbeIds: ApiVerificationProbeId[],
+  modality?: ModelTestModality,
 ): ApiVerificationProbeId {
-  const probeDefinitions = getApiVerificationProbeDefinitions(apiType)
+  const probeDefinitions = getProbesForModality(modality, apiType)
   const availableProbeIds = new Set(probeDefinitions.map((probe) => probe.id))
   return (
     selectedProbeIds.find((probeId) => availableProbeIds.has(probeId)) ??
@@ -164,6 +167,22 @@ export function getFirstApplicableProbeId(
   )
 }
 
-export const DEFAULT_SELECTED_PROBE_IDS: ApiVerificationProbeId[] = [
-  API_VERIFICATION_PROBE_IDS.TextGeneration,
-]
+/** Select one inference probe per model modality in the opening snapshot. */
+export function getDefaultSelectedProbeIds(
+  items: BatchVerifyModelItem[],
+): ApiVerificationProbeId[] {
+  return [
+    ...new Set(
+      items.map((item) => {
+        const modality = resolveModelTestModality({
+          modelId: item.modelId,
+          supportedEndpointTypes: item.supportedEndpointTypes,
+        })
+        return (
+          getProbesForModality(modality).find((probe) => probe.requiresModelId)
+            ?.id ?? API_VERIFICATION_PROBE_IDS.TextGeneration
+        )
+      }),
+    ),
+  ]
+}

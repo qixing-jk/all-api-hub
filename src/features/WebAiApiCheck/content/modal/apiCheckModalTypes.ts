@@ -3,6 +3,7 @@ import {
   type ApiVerificationApiType,
   type ApiVerificationMode,
   type ApiVerificationProbeId,
+  type ModelTestModality,
 } from "~/services/verification/aiApiVerification"
 import type { ApiVerificationProbeResult } from "~/services/verification/aiApiVerification"
 import type { WebAiApiCheckBaseUrlSuggestion } from "~/services/verification/webAiApiCheck/baseUrlHistory"
@@ -29,6 +30,7 @@ export interface ApiCheckModalViewModel {
   apiType: ApiVerificationApiType
   verificationMode: ApiVerificationMode
   modelId: string
+  modelModality: ModelTestModality
   modelIdsOptions: Array<{ value: string; label: string }>
   tags: Tag[]
   selectedTagIds: string[]

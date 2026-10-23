@@ -12,7 +12,7 @@ type ProbeGenerationResult<
   TOOLS extends ToolSet,
   OUTPUT extends Output.Output,
 > = Pick<
-  GenerateTextResult<TOOLS, OUTPUT>,
+  GenerateTextResult<TOOLS, Record<string, unknown>, OUTPUT>,
   "output" | "text" | "toolCalls" | "toolResults" | "sources"
 >
 
@@ -24,7 +24,9 @@ export async function runProbeGeneration<
   TOOLS extends ToolSet,
   OUTPUT extends Output.Output,
 >(
-  options: Parameters<typeof generateText<TOOLS, OUTPUT>>[0],
+  options: Parameters<
+    typeof generateText<TOOLS, Record<string, unknown>, OUTPUT>
+  >[0],
   mode: ApiVerificationMode = API_VERIFICATION_MODES.Streaming,
 ): Promise<ProbeGenerationResult<TOOLS, OUTPUT>> {
   options.abortSignal?.throwIfAborted()

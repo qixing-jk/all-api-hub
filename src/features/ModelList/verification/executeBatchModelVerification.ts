@@ -21,15 +21,13 @@ import type { AccountBatchVerifyModelItem } from "~/features/ModelList/verificat
 import { collectAccountRuntimeKeySecrets } from "~/services/accounts/keys/accountRuntimeKeys"
 import type { AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import { resolveProductAnalyticsErrorCategoryFromError } from "~/services/productAnalytics/actions"
-import {
-  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
-  type ProductAnalyticsErrorCategory,
-} from "~/services/productAnalytics/contracts"
+import { type ProductAnalyticsErrorCategory } from "~/services/productAnalytics/contracts"
 import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/facts/verification"
 import {
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
-  getApiVerificationProbeDefinitions,
+  getProbesForModality,
+  resolveModelTestModality,
   runApiVerificationProbe,
   type ApiVerificationMode,
   type ApiVerificationProbeId,
@@ -98,13 +96,28 @@ export async function executeBatchModelVerification(
     errorCategory: undefined,
   })
 
-  let apiKey = ""
   let accountRuntimeKeySecretsToRedact: string[] = []
-  const apiType = resolveBatchVerifyApiType(apiTypeMode, item.modelId)
+  let credentials: {
+    baseUrl: string
+    apiKey: string
+    requestHeaders?: Record<string, string>
+    runtimeKeyName?: string
+  } | null = null
+  const apiType = resolveBatchVerifyApiType(apiTypeMode, item.modelId, {
+    supportedEndpointTypes: item.supportedEndpointTypes,
+    apiType:
+      item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
+        ? item.source.profile.apiType
+        : undefined,
+  })
   const selectedProbeIdSet = new Set(selectedProbeIds)
+  const modality = resolveModelTestModality({
+    modelId: item.modelId,
+    supportedEndpointTypes: item.supportedEndpointTypes,
+  })
 
   try {
-    const credentials =
+    credentials =
       item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
         ? {
             baseUrl: item.source.profile.baseUrl,
@@ -157,8 +170,8 @@ export async function executeBatchModelVerification(
       return isStopped() ? undefined : BATCH_VERIFY_ROW_STATUSES.SKIPPED
     }
 
-    apiKey = credentials.apiKey
-    const probesToRun = getApiVerificationProbeDefinitions(apiType).filter(
+    const applicableProbes = getProbesForModality(modality, apiType)
+    const probesToRun = applicableProbes.filter(
       (probe) =>
         selectedProbeIdSet.has(probe.id) &&
         (!probe.requiresModelId || item.modelId.trim()),
@@ -202,7 +215,17 @@ export async function executeBatchModelVerification(
           break
         }
         results.push(result)
-      } catch (error) {
+        publish({
+          results: [...results],
+          latencyMs: getRowLatency(results),
+        })
+
+        if (result.status === API_VERIFICATION_PROBE_STATUSES.Fail) {
+          const category =
+            resolveProductAnalyticsErrorCategoryFromProbeResult(result)
+          recordFailureCategory(category)
+        }
+      } catch (probeError) {
         if (isStopped()) {
           stoppedBeforeCompletingProbes = true
           break
@@ -210,88 +233,89 @@ export async function executeBatchModelVerification(
 
         const redactions =
           item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
-            ? filterRedactions([
-                item.source.profile.apiKey,
+            ? [
+                credentials.apiKey,
                 ...Object.values(item.source.profile.requestHeaders ?? {}),
-                item.source.profile.baseUrl,
-              ])
+              ]
             : filterRedactions([
                 item.source.account.token,
                 item.source.account.cookieAuthSessionCookie,
-                apiKey,
+                ...accountRuntimeKeySecretsToRedact,
               ])
+        const message = toSanitizedErrorSummary(probeError, redactions)
 
-        const sanitizedMessage = toSanitizedErrorSummary(error, redactions)
+        logger.error("Batch model verification probe failed", {
+          ...getBatchVerifyFailureLogIds(item),
+          modelId: item.modelId,
+          probeId: probe.id,
+          message,
+        })
+
         const diagnostics = buildSafeProbeFailureDiagnostics(
-          error,
-          sanitizedMessage,
+          probeError,
+          message,
         )
-        results.push({
+        const failureResult: ApiVerificationProbeResult = {
           id: probe.id,
           mode:
             probe.id === API_VERIFICATION_PROBE_IDS.Models
               ? undefined
               : verificationMode,
-          status: API_VERIFICATION_PROBE_STATUSES.Fail,
+          status: BATCH_VERIFY_ROW_STATUSES.FAIL,
           latencyMs: 0,
-          summary: sanitizedMessage || "Unexpected error",
+          summary: message || "Unexpected error",
           ...diagnostics,
           summaryKey:
             diagnostics.summaryKey ??
-            (sanitizedMessage ? undefined : "verifyDialog.errors.unexpected"),
+            (message ? undefined : "verifyDialog.errors.unexpected"),
+        }
+        results.push(failureResult)
+        publish({
+          results: [...results],
+          latencyMs: getRowLatency(results),
         })
+
+        const category =
+          resolveProductAnalyticsErrorCategoryFromError(probeError)
+        recordFailureCategory(category)
       }
     }
 
-    if (stoppedBeforeCompletingProbes || isStopped()) return undefined
-
-    await persistResult(item, apiType, results).catch((persistError) => {
-      logger.error("Failed to persist batch verification result", {
-        modelId: item.modelId,
-        message: toSanitizedErrorSummary(persistError, [apiKey]),
-      })
-    })
+    if (stoppedBeforeCompletingProbes || isStopped()) {
+      return undefined
+    }
 
     const status = deriveBatchVerifyRowStatus(results)
-    const errorCategory =
-      status === BATCH_VERIFY_ROW_STATUSES.FAIL
-        ? results
-            .filter(
-              (result) =>
-                result.status === API_VERIFICATION_PROBE_STATUSES.Fail,
-            )
-            .map((result) =>
-              resolveProductAnalyticsErrorCategoryFromProbeResult(result),
-            )
-            .find(
-              (category) =>
-                category !== PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-            ) ?? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
-        : undefined
-    recordFailureCategory(errorCategory)
+    const latencyMs = getRowLatency(results)
+
     publish({
       status,
-      latencyMs: getRowLatency(results),
+      latencyMs,
       summary: BATCH_VERIFY_ROW_SUMMARIES.Results,
       results,
       runtimeKeyName: credentials.runtimeKeyName,
-      errorCategory,
     })
+
+    await persistResult(item, apiType, results).catch((error) => {
+      logger.error("Failed to persist batch verification result", {
+        modelId: item.modelId,
+        error,
+      })
+    })
+
     return status
   } catch (error) {
     if (isStopped()) return undefined
 
     const redactions =
       item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
-        ? filterRedactions([
+        ? [
             item.source.profile.apiKey,
             ...Object.values(item.source.profile.requestHeaders ?? {}),
-            item.source.profile.baseUrl,
-          ])
+          ]
         : filterRedactions([
             item.source.account.token,
             item.source.account.cookieAuthSessionCookie,
-            apiKey,
             ...accountRuntimeKeySecretsToRedact,
           ])
     const message = toSanitizedErrorSummary(error, redactions)
@@ -303,7 +327,11 @@ export async function executeBatchModelVerification(
     })
 
     const diagnostics = buildSafeProbeFailureDiagnostics(error, message)
-    const probeId = getFirstApplicableProbeId(apiType, selectedProbeIds)
+    const probeId = getFirstApplicableProbeId(
+      apiType,
+      selectedProbeIds,
+      modality,
+    )
     const result: ApiVerificationProbeResult = {
       id: probeId,
       mode:
@@ -323,16 +351,19 @@ export async function executeBatchModelVerification(
     await persistResult(item, apiType, [result]).catch((persistError) => {
       logger.error("Failed to persist batch verification failure", {
         modelId: item.modelId,
-        message: toSanitizedErrorSummary(persistError, redactions),
+        error: persistError,
       })
     })
+
     publish({
       status: BATCH_VERIFY_ROW_STATUSES.FAIL,
-      latencyMs: result.latencyMs,
-      summary: BATCH_VERIFY_ROW_SUMMARIES.Failed,
+      latencyMs: Date.now() - startedAt,
+      summary: message || BATCH_VERIFY_ROW_SUMMARIES.Failed,
       results: [result],
+      runtimeKeyName: credentials?.runtimeKeyName,
       errorCategory,
     })
+
     return BATCH_VERIFY_ROW_STATUSES.FAIL
   }
 }

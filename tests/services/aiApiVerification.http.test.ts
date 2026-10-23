@@ -12,6 +12,29 @@ function anthropicEventStream(events: unknown[]) {
 }
 
 describe("AI API verification HTTP routing", () => {
+  it("keeps the upstream model order instead of preferring known model brands", async () => {
+    server.use(
+      http.get("https://model-order.example.com/v1/models", () =>
+        HttpResponse.json({
+          data: [{ id: "custom-deployment" }, { id: "gpt-4o" }],
+        }),
+      ),
+    )
+    const result = await runApiVerificationProbe({
+      baseUrl: "https://model-order.example.com",
+      apiKey: "test",
+      apiType: "openai-compatible",
+      probeId: "models",
+    })
+    expect(result).toMatchObject({
+      status: "pass",
+      output: {
+        suggestedModelId: "custom-deployment",
+        modelIdsPreview: ["custom-deployment", "gpt-4o"],
+      },
+    })
+  })
+
   it("uses streaming directly when a Chat Completions endpoint requires it", async () => {
     const requestBodies: unknown[] = []
     server.use(

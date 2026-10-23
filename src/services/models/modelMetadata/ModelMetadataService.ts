@@ -236,6 +236,7 @@ function normalizeModelMetadataItem(
   }
   const description = normalizeOptionalString(item.description)
   const family = normalizeOptionalString(item.family)
+  const type = normalizeOptionalString(item.type)
   const capabilities = normalizeCapabilities(item)
   const modalities = normalizeModalities(item.modalities)
   const openWeights = normalizeOptionalBoolean(item.open_weights)
@@ -250,6 +251,9 @@ function normalizeModelMetadataItem(
   }
   if (family) {
     metadata.family = family
+  }
+  if (type) {
+    metadata.type = type
   }
   if (capabilities) {
     metadata.capabilities = capabilities
@@ -319,6 +323,7 @@ function normalizeMetadataPayload(data: any): ModelMetadata[] {
 function cloneMetadata(model: ModelMetadata): ModelMetadata {
   return {
     ...model,
+    ...(model.type ? { type: model.type } : {}),
     ...(model.capabilities ? { capabilities: { ...model.capabilities } } : {}),
     ...(model.modalities
       ? {

@@ -93,6 +93,7 @@ interface ModelItemProps {
     source: ModelManagementItemSource,
     modelId: string,
     modelEnableGroups?: string[],
+    supportedEndpointTypes?: string[],
   ) => void
   onVerifyCliSupport?: (
     source: ModelManagementItemSource,
@@ -421,12 +422,25 @@ export default function ModelItem(props: ModelItemProps) {
             onVerifyApi={
               effectiveCapabilities.supportsCredentialVerification &&
               onVerifyModel
-                ? () =>
-                    onVerifyModel(
-                      source,
-                      model.model_name,
-                      modelActionEnableGroups,
-                    )
+                ? () => {
+                    if (
+                      Array.isArray(model.supported_endpoint_types) &&
+                      model.supported_endpoint_types.length > 0
+                    ) {
+                      onVerifyModel(
+                        source,
+                        model.model_name,
+                        modelActionEnableGroups,
+                        model.supported_endpoint_types,
+                      )
+                    } else {
+                      onVerifyModel(
+                        source,
+                        model.model_name,
+                        modelActionEnableGroups,
+                      )
+                    }
+                  }
                 : undefined
             }
             onVerifyCliSupport={

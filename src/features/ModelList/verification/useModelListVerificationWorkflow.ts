@@ -30,6 +30,7 @@ export function useModelListVerificationWorkflow({
     account: DisplaySiteData
     modelId: string
     modelEnableGroups?: string[]
+    supportedEndpointTypes?: string[]
   } | null>(null)
 
   const [verifyCliContext, setVerifyCliContext] = useState<{
@@ -40,6 +41,7 @@ export function useModelListVerificationWorkflow({
   const [verifyProfileContext, setVerifyProfileContext] = useState<{
     profile: ApiCredentialProfile
     modelId: string
+    supportedEndpointTypes?: string[]
   } | null>(null)
 
   const [modelKeyContext, setModelKeyContext] = useState<{
@@ -73,16 +75,23 @@ export function useModelListVerificationWorkflow({
     source: ModelManagementItemSource,
     modelId: string,
     modelEnableGroups?: string[],
+    supportedEndpointTypes?: string[],
   ) => {
     if (source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE) {
       setVerifyProfileContext({
         profile: source.profile,
         modelId,
+        supportedEndpointTypes,
       })
       return
     }
 
-    setVerifyContext({ account: source.account, modelId, modelEnableGroups })
+    setVerifyContext({
+      account: source.account,
+      modelId,
+      modelEnableGroups,
+      supportedEndpointTypes,
+    })
   }
 
   const handleVerifyCliSupport = (

@@ -1,7 +1,8 @@
 import type { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import { PRODUCT_ANALYTICS_RESULTS } from "~/services/productAnalytics/contracts"
 import {
-  getApiVerificationProbeDefinitions,
+  getProbesForModality,
+  resolveModelTestModality,
   type ApiVerificationApiType,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
@@ -93,7 +94,8 @@ export function createApiCheckProbeSession({
     },
     resultsForContext(context: ProbeContext): ApiVerificationProbeResult[] {
       const key = contextKey(context)
-      return getApiVerificationProbeDefinitions(context.apiType)
+      const modality = resolveModelTestModality({ modelId: context.modelId })
+      return getProbesForModality(modality, context.apiType)
         .map((definition) => results.get(definition.id))
         .filter(
           (entry): entry is NonNullable<typeof entry> =>

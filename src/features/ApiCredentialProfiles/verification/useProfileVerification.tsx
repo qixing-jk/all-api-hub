@@ -11,6 +11,7 @@ import {
   withUnfinishedProbesStopped,
 } from "~/features/Verification/api/probeState"
 import type { ProbeItemState } from "~/features/Verification/api/types"
+import { useModelMetadataLookup } from "~/hooks/verification/useModelMetadataLookup"
 import { useVerificationRunLifecycle } from "~/hooks/verification/useVerificationRunLifecycle"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
@@ -29,11 +30,13 @@ import {
   API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
+  resolveModelTestModality,
   runApiVerificationProbe,
   type ApiVerificationApiType,
   type ApiVerificationMode,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
+  type ModelTestModality,
 } from "~/services/verification/aiApiVerification"
 import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVerification/i18n"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
@@ -56,6 +59,7 @@ export interface VerifyApiCredentialProfileDialogProps {
   onClose: () => void
   profile: ApiCredentialProfile | null
   initialModelId?: string
+  initialSupportedEndpointTypes?: string[]
 }
 
 type ModelsProbeOutput = {
@@ -99,6 +103,7 @@ export function useProfileVerification({
   isOpen,
   profile,
   initialModelId,
+  initialSupportedEndpointTypes,
 }: VerifyApiCredentialProfileDialogProps) {
   const { t } = useTranslation(["aiApiVerification", "apiCredentialProfiles"])
 
@@ -119,6 +124,29 @@ export function useProfileVerification({
   const [modelId, setModelId] = useState("")
   const [verificationMode, setVerificationMode] = useState<ApiVerificationMode>(
     API_VERIFICATION_MODES.Streaming,
+  )
+  const requestedModelId = modelId.trim() || initialModelId?.trim() || ""
+  const metadataLookup = useModelMetadataLookup(isOpen && !isRunning, () =>
+    probesRef.current.some((probe) => probe.isRunning),
+  )
+  const modelModality: ModelTestModality = useMemo(
+    () =>
+      resolveModelTestModality(
+        {
+          modelId: requestedModelId,
+          supportedEndpointTypes:
+            requestedModelId === initialModelId?.trim()
+              ? initialSupportedEndpointTypes
+              : undefined,
+        },
+        metadataLookup,
+      ),
+    [
+      requestedModelId,
+      initialModelId,
+      initialSupportedEndpointTypes,
+      metadataLookup,
+    ],
   )
   const [isPersisting, setIsPersisting] = useState(false)
   const persistenceLeases = useRef(new Set<symbol>())
@@ -148,6 +176,7 @@ export function useProfileVerification({
     isOpen,
     isRunning,
     isPersisting,
+    modelModality,
   })
 
   const isAnyProbeRunning = probes.some((p) => p.isRunning)
@@ -215,7 +244,16 @@ export function useProfileVerification({
     setVerificationMode(API_VERIFICATION_MODES.Streaming)
     resetModelDiscovery()
     setPersistedSummary(null)
-    replaceProbes(buildProbeState(nextApiType))
+    replaceProbes(
+      buildProbeState(
+        nextApiType,
+        null,
+        resolveModelTestModality({
+          modelId: nextModelId,
+          supportedEndpointTypes: initialSupportedEndpointTypes,
+        }),
+      ),
+    )
     void fetchModels(nextApiType)
   }, [
     beginHistoryContext,
@@ -225,6 +263,7 @@ export function useProfileVerification({
     resetModelDiscovery,
     initialModelId,
     isOpen,
+    initialSupportedEndpointTypes,
     profile,
     replaceProbes,
     setPersistedSummary,
@@ -392,7 +431,7 @@ export function useProfileVerification({
       setPersistedSummary(null)
 
       try {
-        replaceProbes(buildProbeState(apiType))
+        replaceProbes(buildProbeState(apiType, null, modelModality))
         let modelIdForSuite = modelId.trim()
 
         await runSequentialProbes(
@@ -433,6 +472,7 @@ export function useProfileVerification({
             if (result) results.push(result)
           },
           signal,
+          modelModality,
         )
 
         const stopped = isStopped(signal)
@@ -489,5 +529,6 @@ export function useProfileVerification({
     stopProbe,
     stopRun,
     runAll,
+    modelModality,
   }
 }

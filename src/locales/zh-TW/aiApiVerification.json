@@ -23,12 +23,15 @@
     "errors": {
       "unexpected": "發生未知錯誤"
     },
+    "generatedImagePreview": "生成圖像預覽",
+    "generatedVideoPreview": "生成的影片預覽",
     "history": {
       "clear": "清除歷史",
       "lastVerified": "最近驗證"
     },
     "idleHint": "請選擇金鑰開始驗證；模型相關探測需要填寫模型 ID。",
     "loadingRuntimeKeysHint": "正在載入金鑰...",
+    "mediaPreviewUnavailable": "無法載入預覽。",
     "meta": {
       "apiType": "介面型別",
       "apiTypePlaceholder": "選擇介面型別",
@@ -39,17 +42,28 @@
       "runtimeKeyIncompatible": "不適用於此模型",
       "runtimeKeyPlaceholder": "選擇金鑰"
     },
+    "modalityNotice": {
+      "image": "此模型為圖像生成模型，測試調用將按次產生額度消耗。",
+      "quotaCost": "按次計費",
+      "video": "生成影片並等待最多兩分鐘以供播放。停止只會結束本地等待；伺服器任務可能繼續並產生費用。"
+    },
     "modes": {
       "nonStreaming": "非串流",
       "streaming": "串流"
     },
     "noCompatibleRuntimeKeyHint": "目前沒有適用於此模型分組的金鑰。請在金鑰管理中建立或選擇可用分組的金鑰。",
     "notRunYet": "尚未執行",
+    "openGeneratedMedia": "開啟生成的媒體",
     "probes": {
+      "decision": "決策模型",
+      "embedding": "向量嵌入",
+      "image-generation": "圖像生成",
       "models": "模型列表",
+      "rerank": "文檔重排",
       "structured-output": "結構化輸出（JSON Schema）",
       "text-generation": "文字生成",
       "tool-calling": "工具/函式呼叫",
+      "video-generation": "影片生成任務",
       "web-search": "聯網搜尋 / Grounding"
     },
     "requiresModelId": "請輸入模型 ID 後執行該測試。",
@@ -62,9 +76,16 @@
       "unverified": "未驗證"
     },
     "summaries": {
+      "decisionSucceeded": "決策模型探測測試成功。",
+      "decisionUnexpectedResponse": "決策介面返回內容不符合預期。",
+      "embeddingSucceeded": "向量生成成功（維度：{{dimension}}）。",
+      "embeddingUnexpectedResponse": "向量介面返回內容不符合預期。",
+      "embeddingUnsupportedAnthropic": "Anthropic 介面不支援向量嵌入探測。",
       "endpointNotFound": "端點不存在（404）：此 API 可能不受支援",
       "forbidden": "禁止訪問（403）：訪問被拒絕",
       "httpError": "HTTP 錯誤（{{status}}）",
+      "imageGenerationNoData": "未返回圖像資料。",
+      "imageGenerationSucceeded": "圖像生成成功。",
       "modelsFetched": "成功獲取 {{count}} 個模型。",
       "modelsFetched_other": "成功獲取 {{count}} 個模型。",
       "modelsProbeUnsupportedForApiType": "當前介面型別不支援模型列表探測。",
@@ -74,6 +95,9 @@
       "noModelIdProvidedToRunProbes": "未提供模型 ID，無法執行探測。",
       "noModelsReturned": "未返回任何模型。",
       "noToolCallDetected": "未檢測到工具呼叫（模型可能不支援工具）。",
+      "probeRequiresOpenAiProtocol": "此測試需要 OpenAI 相容 API 端點。僅當服務提供該端點時，請切換至對應協定。",
+      "rerankSucceeded": "文檔重排測試成功。",
+      "rerankUnexpectedResponse": "重排介面返回內容不符合預期。",
       "stopped": "已停止。",
       "structuredOutputInvalid": "輸出內容無效。",
       "structuredOutputSucceeded": "結構化輸出成功。",
@@ -81,6 +105,12 @@
       "textGenerationUnexpectedResponse": "返回內容不符合預期。",
       "toolCallSucceeded": "工具呼叫成功。",
       "unauthorized": "未授權（401）：金鑰無效或缺少認證",
+      "videoGenerationSucceeded": "影片生成成功。",
+      "videoGenerationTimedOut": "影片未在兩分鐘內完成，伺服器任務可能仍在執行。",
+      "videoNoPlayableResult": "影片任務已完成，但未傳回可播放的網址。",
+      "videoNoTaskReturned": "未返回影片任務識別碼。",
+      "videoTaskAccepted": "影片生成任務已提交接收。",
+      "videoUnexpectedResponse": "影片任務失敗或傳回了無效回應。",
       "webSearchGroundingNoResults": "未獲取到聯網搜尋 / Grounding 結果。",
       "webSearchGroundingSucceeded": "聯網搜尋 / Grounding 成功。",
       "webSearchNoResults": "未獲取到聯網搜尋結果。",

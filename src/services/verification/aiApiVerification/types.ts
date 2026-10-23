@@ -24,6 +24,11 @@ export const API_VERIFICATION_PROBE_IDS = {
   ToolCalling: "tool-calling",
   StructuredOutput: "structured-output",
   WebSearch: "web-search",
+  Embedding: "embedding",
+  Rerank: "rerank",
+  ImageGeneration: "image-generation",
+  VideoGeneration: "video-generation",
+  Decision: "decision",
 } as const
 
 export type ApiVerificationProbeId =
@@ -37,6 +42,11 @@ export const API_VERIFICATION_PROBE_STATUSES = {
 
 export type ApiVerificationProbeStatus =
   (typeof API_VERIFICATION_PROBE_STATUSES)[keyof typeof API_VERIFICATION_PROBE_STATUSES]
+
+export const API_VERIFICATION_MEDIA_TYPES = {
+  Image: "image",
+  Video: "video",
+} as const
 
 export type ApiVerificationProbeResult = {
   id: ApiVerificationProbeId
@@ -76,5 +86,11 @@ export type ApiVerificationProbeResult = {
    * Must never include secrets (e.g., apiKey).
    */
   output?: unknown
+  /** Transient media for previews. Kept out of diagnostic JSON and persisted history. */
+  media?: {
+    type: (typeof API_VERIFICATION_MEDIA_TYPES)[keyof typeof API_VERIFICATION_MEDIA_TYPES]
+    url: string
+    credentialed?: boolean
+  }
   details?: Record<string, unknown>
 }

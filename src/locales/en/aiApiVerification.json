@@ -23,12 +23,15 @@
     "errors": {
       "unexpected": "Unexpected error"
     },
+    "generatedImagePreview": "Generated image preview",
+    "generatedVideoPreview": "Generated video preview",
     "history": {
       "clear": "Clear history",
       "lastVerified": "Last verified"
     },
     "idleHint": "Select a key to start verification. Model id is required for model-dependent probes.",
     "loadingRuntimeKeysHint": "Loading keys...",
+    "mediaPreviewUnavailable": "The preview could not be loaded.",
     "meta": {
       "apiType": "API type",
       "apiTypePlaceholder": "Select API type",
@@ -39,17 +42,28 @@
       "runtimeKeyIncompatible": "Not available for this model",
       "runtimeKeyPlaceholder": "Select key"
     },
+    "modalityNotice": {
+      "image": "This is an image generation model; test calls incur per-request quota consumption.",
+      "quotaCost": "Per-call",
+      "video": "Creates a video and waits up to two minutes for playback. Stopping only ends local waiting; the server task may continue and incur charges."
+    },
     "modes": {
       "nonStreaming": "Non-streaming",
       "streaming": "Streaming"
     },
     "noCompatibleRuntimeKeyHint": "No key is available for this model's group. Create or choose a key for an enabled group in Key Management.",
     "notRunYet": "Not run yet",
+    "openGeneratedMedia": "Open generated media",
     "probes": {
+      "decision": "Decision",
+      "embedding": "Embedding",
+      "image-generation": "Image generation",
       "models": "Model list",
+      "rerank": "Reranker",
       "structured-output": "Structured output (schema JSON)",
       "text-generation": "Text generation",
       "tool-calling": "Tool/function calling",
+      "video-generation": "Video task",
       "web-search": "Web search / grounding"
     },
     "requiresModelId": "Enter a model id to run this test.",
@@ -62,9 +76,16 @@
       "unverified": "Unverified"
     },
     "summaries": {
+      "decisionSucceeded": "Decision probe succeeded.",
+      "decisionUnexpectedResponse": "Unexpected decision response.",
+      "embeddingSucceeded": "Embedding generated successfully (dimension: {{dimension}}).",
+      "embeddingUnexpectedResponse": "Unexpected embedding response.",
+      "embeddingUnsupportedAnthropic": "Anthropic does not provide native embedding models.",
       "endpointNotFound": "Endpoint not found (404): this API may not be supported",
       "forbidden": "Forbidden (403): access denied",
       "httpError": "HTTP error ({{status}})",
+      "imageGenerationNoData": "No image data returned.",
+      "imageGenerationSucceeded": "Image generation succeeded.",
       "modelsFetched": "Fetched {{count}} models.",
       "modelsFetched_one": "Fetched {{count}} model.",
       "modelsFetched_other": "Fetched {{count}} models.",
@@ -75,6 +96,9 @@
       "noModelIdProvidedToRunProbes": "No model id provided to run probes.",
       "noModelsReturned": "No models returned.",
       "noToolCallDetected": "No tool call detected (model may not support tools).",
+      "probeRequiresOpenAiProtocol": "This test requires an OpenAI-compatible API endpoint. Select that protocol only if your service provides it.",
+      "rerankSucceeded": "Rerank succeeded.",
+      "rerankUnexpectedResponse": "Unexpected rerank response.",
       "stopped": "Stopped by user.",
       "structuredOutputInvalid": "Invalid output.",
       "structuredOutputSucceeded": "Structured output succeeded.",
@@ -82,6 +106,12 @@
       "textGenerationUnexpectedResponse": "Unexpected response text.",
       "toolCallSucceeded": "Tool call succeeded.",
       "unauthorized": "Unauthorized (401): invalid key or missing auth",
+      "videoGenerationSucceeded": "Video generated successfully.",
+      "videoGenerationTimedOut": "Video generation did not finish within two minutes. The server task may still be running.",
+      "videoNoPlayableResult": "The video task completed without a playable URL.",
+      "videoNoTaskReturned": "No video task id returned.",
+      "videoTaskAccepted": "Video task accepted.",
+      "videoUnexpectedResponse": "Video task failed or returned an invalid response.",
       "webSearchGroundingNoResults": "No web search/grounding results.",
       "webSearchGroundingSucceeded": "Web search/grounding succeeded.",
       "webSearchNoResults": "No web search results.",

@@ -39,7 +39,7 @@ import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 const {
   mockFetchDisplayAccountRuntimeKeys,
   mockNewApiInventory,
-  mockGetApiVerificationProbeDefinitions,
+  mockProbeDefinitions,
   mockResolveDisplayAccountRuntimeKeySecret,
   mockNewApiSecret,
   mockRunApiVerificationProbe,
@@ -53,7 +53,7 @@ const {
 } = vi.hoisted(() => ({
   mockFetchDisplayAccountRuntimeKeys: vi.fn(),
   mockNewApiInventory: vi.fn(),
-  mockGetApiVerificationProbeDefinitions: vi.fn(),
+  mockProbeDefinitions: vi.fn(),
   mockResolveDisplayAccountRuntimeKeySecret: vi.fn(),
   mockNewApiSecret: vi.fn(),
   mockRunApiVerificationProbe: vi.fn(),
@@ -163,11 +163,13 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
     >()
   return {
     ...actual,
-    getApiVerificationProbeDefinitions: (
-      apiType: Parameters<typeof actual.getApiVerificationProbeDefinitions>[0],
+    getProbesForModality: (
+      modality: Parameters<typeof actual.getProbesForModality>[0],
+      apiType: Parameters<typeof actual.getProbesForModality>[1],
     ) =>
-      mockGetApiVerificationProbeDefinitions(apiType) ??
-      actual.getApiVerificationProbeDefinitions(apiType),
+      (modality === undefined || modality === actual.MODEL_TEST_MODALITIES.Text
+        ? mockProbeDefinitions(apiType)
+        : undefined) ?? actual.getProbesForModality(modality, apiType),
     runApiVerificationProbe: (...args: any[]) =>
       mockRunApiVerificationProbe(...args),
   }
@@ -234,7 +236,7 @@ describe("BatchVerifyModelsDialog", () => {
   beforeEach(() => {
     mockFetchDisplayAccountRuntimeKeys.mockReset()
     mockNewApiInventory.mockReset()
-    mockGetApiVerificationProbeDefinitions.mockReset()
+    mockProbeDefinitions.mockReset()
     mockResolveDisplayAccountRuntimeKeySecret.mockReset()
     mockNewApiSecret.mockReset()
     mockRunApiVerificationProbe.mockReset()
@@ -319,6 +321,70 @@ describe("BatchVerifyModelsDialog", () => {
         ),
       ).toHaveTextContent("aiApiVerification:verifyDialog.modes.nonStreaming")
     }
+  })
+
+  it("runs matching probes for mixed modalities and displays generated media", async () => {
+    const user = userEvent.setup()
+    const profile = {
+      id: "profile-modalities",
+      name: "Profile",
+      baseUrl: "https://example.invalid",
+      apiKey: "synthetic",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      tagIds: [],
+      notes: "",
+      createdAt: 1,
+      updatedAt: 1,
+    }
+    mockRunApiVerificationProbe.mockImplementation(async ({ probeId }) => ({
+      id: probeId,
+      status: "pass",
+      latencyMs: 1,
+      summary: "Verified",
+      ...(probeId === "image-generation"
+        ? {
+            media: {
+              type: "image",
+              url: "https://example.invalid/generated.png",
+            },
+          }
+        : {}),
+    }))
+    renderDialog(
+      ["gpt-4o", "custom-vector", "gpt-image-1"].map((modelId) => ({
+        key: modelId,
+        modelId,
+        enableGroups: [],
+        supportedEndpointTypes:
+          modelId === "custom-vector" ? ["/v1/embeddings"] : undefined,
+        source: { kind: "profile", profile },
+      })),
+    )
+    await user.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() =>
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          modelId: "custom-vector",
+          probeId: "embedding",
+        }),
+      ),
+    )
+    expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+      expect.objectContaining({
+        modelId: "gpt-4o",
+        probeId: "text-generation",
+      }),
+    )
+    expect(await screen.findByRole("img")).toHaveAttribute(
+      "src",
+      "https://example.invalid/generated.png",
+    )
+    expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(3)
   })
 
   it("derives skipped status for empty probe results", () => {
@@ -1151,7 +1217,7 @@ describe("BatchVerifyModelsDialog", () => {
   })
 
   it("uses the first known failed probe category for batch analytics", async () => {
-    mockGetApiVerificationProbeDefinitions.mockReturnValue([
+    mockProbeDefinitions.mockReturnValue([
       { id: "models", requiresModelId: false },
       { id: "text-generation", requiresModelId: false },
     ])
@@ -1903,7 +1969,7 @@ describe("BatchVerifyModelsDialog", () => {
   })
 
   it("skips a model when selected probes do not apply", async () => {
-    mockGetApiVerificationProbeDefinitions.mockReturnValue([
+    mockProbeDefinitions.mockReturnValue([
       { id: "models", requiresModelId: false },
     ])
     mockNewApiInventory.mockResolvedValueOnce([
@@ -1954,7 +2020,7 @@ describe("BatchVerifyModelsDialog", () => {
   })
 
   it("persists setup failures with a probe id from the resolved API definitions", async () => {
-    mockGetApiVerificationProbeDefinitions.mockReturnValue([
+    mockProbeDefinitions.mockReturnValue([
       { id: "models", requiresModelId: false },
     ])
     mockNewApiInventory.mockRejectedValueOnce(
@@ -2000,7 +2066,7 @@ describe("BatchVerifyModelsDialog", () => {
   })
 
   it("uses text generation for setup failures when no probe definition is available", async () => {
-    mockGetApiVerificationProbeDefinitions.mockReturnValue([])
+    mockProbeDefinitions.mockReturnValue([])
     mockNewApiInventory.mockRejectedValueOnce(
       new Error("temporary token failure"),
     )
@@ -2335,7 +2401,7 @@ describe("BatchVerifyModelsDialog", () => {
       )
 
       if (failure === "setup") {
-        mockGetApiVerificationProbeDefinitions.mockImplementationOnce(() => {
+        mockProbeDefinitions.mockImplementationOnce(() => {
           throw new Error("Setup rejected header-sensitive-value")
         })
       }

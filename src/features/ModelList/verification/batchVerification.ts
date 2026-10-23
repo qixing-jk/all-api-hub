@@ -13,10 +13,10 @@ import {
   MODEL_LIST_SOURCE_IDENTITY_KINDS,
   type ModelListSourceIdentity,
 } from "~/services/modelCatalog/sourceIdentity"
-import { identifyProvider } from "~/services/models/utils/modelProviders"
 import {
-  API_TYPES,
+  resolveVerificationApiType,
   type ApiVerificationApiType,
+  type VerificationApiTypeContext,
 } from "~/services/verification/aiApiVerification"
 
 export const MODEL_LIST_BATCH_VERIFY_CONCURRENCY = 5
@@ -45,6 +45,7 @@ export type BatchVerifyModelItem = {
   enableGroups: string[] | null
   source: ModelManagementItemSource
   sourceIdentity?: ModelListSourceIdentity
+  supportedEndpointTypes?: string[]
 }
 
 /**
@@ -80,6 +81,7 @@ export function createBatchVerifyModelItems(
           : item.activeGroupContext.actionGroups,
       source: item.source,
       sourceIdentity: item.sourceIdentity,
+      supportedEndpointTypes: item.model.supported_endpoint_types,
     })
   }
 
@@ -87,19 +89,16 @@ export function createBatchVerifyModelItems(
 }
 
 /**
- * Resolve the API family for a batch row. `auto` mirrors the single-model
- * verification dialog's model-name based default.
+ * Resolve a batch row from its configured protocol and endpoint facts first.
  */
 export function resolveBatchVerifyApiType(
   mode: BatchVerifyApiTypeMode,
   modelId: string,
+  context: VerificationApiTypeContext = {},
 ): ApiVerificationApiType {
   if (mode !== MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES.AUTO) return mode
 
-  const providerType = modelId.trim() ? identifyProvider(modelId) : null
-  if (providerType === "Claude") return API_TYPES.ANTHROPIC
-  if (providerType === "Gemini") return API_TYPES.GOOGLE
-  return API_TYPES.OPENAI_COMPATIBLE
+  return resolveVerificationApiType({ ...context, modelId })
 }
 
 /**

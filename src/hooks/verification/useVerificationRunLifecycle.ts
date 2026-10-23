@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import {
-  getApiVerificationProbeDefinitions,
+  getProbesForModality,
   type ApiVerificationApiType,
+  type ApiVerificationProbeDefinition,
   type ApiVerificationProbeId,
+  type ModelTestModality,
 } from "~/services/verification/aiApiVerification"
 
 /** Owns controllers and queue interruption for account and profile verification. */
@@ -79,12 +81,14 @@ export function useVerificationRunLifecycle() {
     async (
       apiType: ApiVerificationApiType,
       execute: (
-        probe: ReturnType<typeof getApiVerificationProbeDefinitions>[number],
+        probe: ApiVerificationProbeDefinition,
         signal: AbortSignal,
       ) => Promise<void>,
       signal: AbortSignal,
+      modality?: ModelTestModality,
     ) => {
-      for (const probe of getApiVerificationProbeDefinitions(apiType)) {
+      const probes = getProbesForModality(modality, apiType)
+      for (const probe of probes) {
         if (isStopped(signal)) break
         await execute(probe, signal)
       }

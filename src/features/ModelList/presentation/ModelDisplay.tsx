@@ -43,6 +43,7 @@ interface ModelDisplayProps {
     source: ModelManagementItemSource,
     modelId: string,
     modelEnableGroups?: string[],
+    supportedEndpointTypes?: string[],
   ) => void
   onVerifyCliSupport?: (
     source: ModelManagementItemSource,

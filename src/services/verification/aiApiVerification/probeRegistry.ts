@@ -1,7 +1,12 @@
+import { runDecisionProbe } from "./probes/decisionProbe"
+import { runEmbeddingProbe } from "./probes/embeddingProbe"
+import { runImageGenerationProbe } from "./probes/imageGenerationProbe"
 import { runModelsProbe } from "./probes/modelsProbe"
+import { runRerankProbe } from "./probes/rerankProbe"
 import { runStructuredOutputProbe } from "./probes/structuredOutputProbe"
 import { runTextGenerationProbe } from "./probes/textGenerationProbe"
 import { runToolCallingProbe } from "./probes/toolCallingProbe"
+import { runVideoGenerationProbe } from "./probes/videoGenerationProbe"
 import { runWebSearchProbe } from "./probes/webSearchProbe"
 import {
   API_VERIFICATION_PROBE_IDS,
@@ -27,10 +32,17 @@ type ProbeRunnerParams = {
 /**
  * Registry entry for a probe runner with metadata about inputs.
  */
-type ProbeRegistryEntry = {
-  requiresModelId: boolean
-  run: (params: ProbeRunnerParams) => Promise<ApiVerificationProbeResult>
-}
+type ProbeRegistryEntry =
+  | {
+      requiresModelId: false
+      run: (params: ProbeRunnerParams) => Promise<ApiVerificationProbeResult>
+    }
+  | {
+      requiresModelId: true
+      run: (
+        params: ProbeRunnerParams & { modelId: string },
+      ) => Promise<ApiVerificationProbeResult>
+    }
 
 /**
  * Typed registry for dispatching probe execution without conditional chains.
@@ -57,62 +69,38 @@ export const apiVerificationProbeRegistry: Record<
   },
   [API_VERIFICATION_PROBE_IDS.TextGeneration]: {
     requiresModelId: true,
-    run: async (params) =>
-      runTextGenerationProbe({
-        baseUrl: params.baseUrl,
-        apiKey: params.apiKey,
-        ...(params.requestHeaders
-          ? { requestHeaders: params.requestHeaders }
-          : {}),
-        apiType: params.apiType,
-        modelId: params.modelId as string,
-        mode: params.mode,
-        abortSignal: params.abortSignal,
-      }),
+    run: runTextGenerationProbe,
   },
   [API_VERIFICATION_PROBE_IDS.ToolCalling]: {
     requiresModelId: true,
-    run: async (params) =>
-      runToolCallingProbe({
-        baseUrl: params.baseUrl,
-        apiKey: params.apiKey,
-        ...(params.requestHeaders
-          ? { requestHeaders: params.requestHeaders }
-          : {}),
-        apiType: params.apiType,
-        modelId: params.modelId as string,
-        mode: params.mode,
-        abortSignal: params.abortSignal,
-      }),
+    run: runToolCallingProbe,
   },
   [API_VERIFICATION_PROBE_IDS.StructuredOutput]: {
     requiresModelId: true,
-    run: async (params) =>
-      runStructuredOutputProbe({
-        baseUrl: params.baseUrl,
-        apiKey: params.apiKey,
-        ...(params.requestHeaders
-          ? { requestHeaders: params.requestHeaders }
-          : {}),
-        apiType: params.apiType,
-        modelId: params.modelId as string,
-        mode: params.mode,
-        abortSignal: params.abortSignal,
-      }),
+    run: runStructuredOutputProbe,
   },
   [API_VERIFICATION_PROBE_IDS.WebSearch]: {
     requiresModelId: true,
-    run: async (params) =>
-      runWebSearchProbe({
-        baseUrl: params.baseUrl,
-        apiKey: params.apiKey,
-        ...(params.requestHeaders
-          ? { requestHeaders: params.requestHeaders }
-          : {}),
-        apiType: params.apiType,
-        modelId: params.modelId as string,
-        mode: params.mode,
-        abortSignal: params.abortSignal,
-      }),
+    run: runWebSearchProbe,
+  },
+  [API_VERIFICATION_PROBE_IDS.Embedding]: {
+    requiresModelId: true,
+    run: runEmbeddingProbe,
+  },
+  [API_VERIFICATION_PROBE_IDS.Rerank]: {
+    requiresModelId: true,
+    run: runRerankProbe,
+  },
+  [API_VERIFICATION_PROBE_IDS.ImageGeneration]: {
+    requiresModelId: true,
+    run: runImageGenerationProbe,
+  },
+  [API_VERIFICATION_PROBE_IDS.VideoGeneration]: {
+    requiresModelId: true,
+    run: runVideoGenerationProbe,
+  },
+  [API_VERIFICATION_PROBE_IDS.Decision]: {
+    requiresModelId: true,
+    run: runDecisionProbe,
   },
 }

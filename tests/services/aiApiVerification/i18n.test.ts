@@ -37,6 +37,17 @@ describe("aiApiVerification i18n", () => {
       "aiApiVerification:verifyDialog.probes.structured-output",
     ],
     ["web-search", "aiApiVerification:verifyDialog.probes.web-search"],
+    ["embedding", "aiApiVerification:verifyDialog.probes.embedding"],
+    ["rerank", "aiApiVerification:verifyDialog.probes.rerank"],
+    [
+      "image-generation",
+      "aiApiVerification:verifyDialog.probes.image-generation",
+    ],
+    [
+      "video-generation",
+      "aiApiVerification:verifyDialog.probes.video-generation",
+    ],
+    ["decision", "aiApiVerification:verifyDialog.probes.decision"],
   ])("returns the correct label key for probe %s", (probeId, expectedKey) => {
     const t = vi.fn((key: string) => key)
 
@@ -48,6 +59,11 @@ describe("aiApiVerification i18n", () => {
 
   it.each([
     "verifyDialog.summaries.modelsFetched",
+    "verifyDialog.summaries.videoUnexpectedResponse",
+    "verifyDialog.summaries.videoGenerationSucceeded",
+    "verifyDialog.summaries.videoGenerationTimedOut",
+    "verifyDialog.summaries.videoNoPlayableResult",
+    "verifyDialog.summaries.probeRequiresOpenAiProtocol",
     "verifyDialog.summaries.noModelsReturned",
     "verifyDialog.summaries.textGenerationSucceeded",
     "verifyDialog.summaries.textGenerationUnexpectedResponse",
@@ -71,6 +87,17 @@ describe("aiApiVerification i18n", () => {
     "verifyDialog.summaries.forbidden",
     "verifyDialog.summaries.endpointNotFound",
     "verifyDialog.summaries.httpError",
+    "verifyDialog.summaries.embeddingSucceeded",
+    "verifyDialog.summaries.embeddingUnexpectedResponse",
+    "verifyDialog.summaries.embeddingUnsupportedAnthropic",
+    "verifyDialog.summaries.rerankSucceeded",
+    "verifyDialog.summaries.rerankUnexpectedResponse",
+    "verifyDialog.summaries.imageGenerationSucceeded",
+    "verifyDialog.summaries.imageGenerationNoData",
+    "verifyDialog.summaries.videoTaskAccepted",
+    "verifyDialog.summaries.videoNoTaskReturned",
+    "verifyDialog.summaries.decisionSucceeded",
+    "verifyDialog.summaries.decisionUnexpectedResponse",
   ])("translates known summary key %s with forwarded params", (summaryKey) => {
     const params = { count: 2, modelId: "gpt-test" }
     const expectedKey = `aiApiVerification:${summaryKey}`
@@ -91,22 +118,25 @@ describe("aiApiVerification i18n", () => {
 
     const result = translateApiVerificationSummary(
       t as any,
-      "verifyDialog.summaries.unknown",
-      { count: 1 },
+      "unknown.summary.key",
     )
 
     expect(result).toBeUndefined()
     expect(t).not.toHaveBeenCalled()
   })
 
-  it("throws for unsupported api types and probe ids", () => {
-    const t = vi.fn((key: string) => key)
+  it("translates webAiApiCheck runProbeFailed with forwarded params", () => {
+    const summaryKey = "webAiApiCheck:modal.errors.runProbeFailed"
+    const params = { message: "Network error" }
+    const t = vi.fn((key: string, forwardedParams?: Record<string, unknown>) =>
+      JSON.stringify({ key, forwardedParams }),
+    )
 
-    expect(() =>
-      getApiVerificationApiTypeLabel(t as any, "custom" as any),
-    ).toThrow("Unexpected API verification type: custom")
-    expect(() =>
-      getApiVerificationProbeLabel(t as any, "invalid-probe" as any),
-    ).toThrow("Unexpected API verification probe id: invalid-probe")
+    const result = translateApiVerificationSummary(t as any, summaryKey, params)
+
+    expect(result).toBe(
+      JSON.stringify({ key: summaryKey, forwardedParams: params }),
+    )
+    expect(t).toHaveBeenCalledWith(summaryKey, params)
   })
 })

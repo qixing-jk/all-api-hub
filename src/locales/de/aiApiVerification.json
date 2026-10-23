@@ -23,12 +23,15 @@
     "errors": {
       "unexpected": "Unerwarteter Fehler"
     },
+    "generatedImagePreview": "Vorschau des generierten Bildes",
+    "generatedVideoPreview": "Vorschau des generierten Videos",
     "history": {
       "clear": "Verlauf löschen",
       "lastVerified": "Zuletzt überprüft"
     },
     "idleHint": "Wählen Sie einen Schlüssel aus, um die Überprüfung zu starten. Für modellabhängige Sonden ist eine Modell-ID erforderlich.",
     "loadingRuntimeKeysHint": "Schlüssel werden geladen...",
+    "mediaPreviewUnavailable": "Die Vorschau konnte nicht geladen werden.",
     "meta": {
       "apiType": "API-Typ",
       "apiTypePlaceholder": "API-Typ auswählen",
@@ -39,17 +42,28 @@
       "runtimeKeyIncompatible": "Für dieses Modell nicht verfügbar",
       "runtimeKeyPlaceholder": "Schlüssel auswählen"
     },
+    "modalityNotice": {
+      "image": "Dies ist ein Bildgenerierungsmodell; Testaufrufe verbrauchen Kontingent pro Anfrage.",
+      "quotaCost": "Pro Aufruf",
+      "video": "Erstellt ein Video und wartet bis zu zwei Minuten auf die Wiedergabe. Stoppen beendet nur das lokale Warten; die Serveraufgabe kann weiterlaufen und Kosten verursachen."
+    },
     "modes": {
       "nonStreaming": "Ohne Streaming",
       "streaming": "Streaming"
     },
     "noCompatibleRuntimeKeyHint": "Für die Gruppe dieses Modells ist kein Schlüssel verfügbar. Erstellen oder wählen Sie einen Schlüssel für eine aktivierte Gruppe in der Schlüsselverwaltung aus.",
     "notRunYet": "Noch nicht ausgeführt",
+    "openGeneratedMedia": "Generierte Medien öffnen",
     "probes": {
+      "decision": "Entscheidungsmodell",
+      "embedding": "Embedding",
+      "image-generation": "Bildgenerierung",
       "models": "Modellliste",
+      "rerank": "Reranker",
       "structured-output": "Strukturierte Ausgabe (JSON-Schema)",
       "text-generation": "Textgenerierung",
       "tool-calling": "Werkzeug-/Funktionsaufruf",
+      "video-generation": "Videoaufgabe",
       "web-search": "Websuche / Grounding"
     },
     "requiresModelId": "Geben Sie eine Modell-ID ein, um diesen Test auszuführen.",
@@ -62,9 +76,16 @@
       "unverified": "Nicht bestätigt"
     },
     "summaries": {
+      "decisionSucceeded": "Entscheidungsüberprüfung erfolgreich.",
+      "decisionUnexpectedResponse": "Unerwartete Antwort der Entscheidungsschnittstelle.",
+      "embeddingSucceeded": "Embedding erfolgreich generiert (Dimension: {{dimension}}).",
+      "embeddingUnexpectedResponse": "Unerwartete Embedding-Antwort.",
+      "embeddingUnsupportedAnthropic": "Anthropic unterstützt keine nativen Embedding-Modelle.",
       "endpointNotFound": "Endpunkt nicht gefunden (404): Diese API wird möglicherweise nicht unterstützt",
       "forbidden": "Verboten (403): Zugriff verweigert",
       "httpError": "HTTP-Fehler ({{status}})",
+      "imageGenerationNoData": "Keine Bilddaten zurückgegeben.",
+      "imageGenerationSucceeded": "Bildgenerierung erfolgreich.",
       "modelsFetched": "{{count}} Modelle abgerufen.",
       "modelsFetched_one": "{{count}} Modell abgerufen.",
       "modelsFetched_other": "{{count}} Modelle abgerufen.",
@@ -75,6 +96,9 @@
       "noModelIdProvidedToRunProbes": "Keine Modell-ID zum Ausführen von Sonden angegeben.",
       "noModelsReturned": "Keine Modelle zurückgegeben.",
       "noToolCallDetected": "Kein Werkzeugaufruf erkannt (Modell unterstützt möglicherweise keine Werkzeuge).",
+      "probeRequiresOpenAiProtocol": "Dieser Test erfordert einen OpenAI-kompatiblen API-Endpunkt. Wählen Sie dieses Protokoll nur, wenn Ihr Dienst es unterstützt.",
+      "rerankSucceeded": "Rerank erfolgreich.",
+      "rerankUnexpectedResponse": "Unerwartete Rerank-Antwort.",
       "stopped": "Vom Benutzer gestoppt.",
       "structuredOutputInvalid": "Ungültige Ausgabe.",
       "structuredOutputSucceeded": "Strukturierte Ausgabe erfolgreich.",
@@ -82,6 +106,12 @@
       "textGenerationUnexpectedResponse": "Unerwarteter Antworttext.",
       "toolCallSucceeded": "Werkzeugaufruf erfolgreich.",
       "unauthorized": "Nicht autorisiert (401): ungültiger Schlüssel oder fehlende Authentifizierung",
+      "videoGenerationSucceeded": "Video erfolgreich generiert.",
+      "videoGenerationTimedOut": "Die Videogenerierung wurde nicht innerhalb von zwei Minuten abgeschlossen. Die Serveraufgabe läuft möglicherweise weiter.",
+      "videoNoPlayableResult": "Die Videoaufgabe wurde ohne abspielbare URL abgeschlossen.",
+      "videoNoTaskReturned": "Keine Videoaufgaben-ID zurückgegeben.",
+      "videoTaskAccepted": "Videoaufgabe akzeptiert.",
+      "videoUnexpectedResponse": "Der Videoauftrag ist fehlgeschlagen oder hat eine ungültige Antwort zurückgegeben.",
       "webSearchGroundingNoResults": "Keine Ergebnisse für Websuche/Grounding.",
       "webSearchGroundingSucceeded": "Websuche/Grounding erfolgreich.",
       "webSearchNoResults": "Keine Web-Suchergebnisse.",

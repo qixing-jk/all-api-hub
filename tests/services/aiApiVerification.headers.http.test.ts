@@ -23,6 +23,12 @@ describe("verification credential header propagation", () => {
     { apiType: "openai", probeId: "structured-output" },
     { apiType: "openai", probeId: "web-search" },
     { apiType: "google", probeId: "web-search" },
+    { apiType: "openai-compatible", probeId: "embedding" },
+    { apiType: "google", probeId: "embedding" },
+    { apiType: "openai-compatible", probeId: "image-generation" },
+    { apiType: "openai-compatible", probeId: "video-generation" },
+    { apiType: "openai-compatible", probeId: "rerank" },
+    { apiType: "openai-compatible", probeId: "decision" },
   ] as const)(
     "sends configured headers for $apiType $probeId",
     async ({ apiType, probeId }) => {

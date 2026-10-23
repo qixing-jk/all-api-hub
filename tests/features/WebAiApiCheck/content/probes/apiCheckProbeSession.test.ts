@@ -62,4 +62,36 @@ describe("API check result admission", () => {
     expect(cancelRun).not.toHaveBeenCalled()
     expect(independent.acceptResult(result)).toBe(true)
   })
+
+  it("admits and returns embedding probe results for embedding model context", () => {
+    const session = createApiCheckProbeSession({
+      cancelRun: vi.fn(async () => undefined),
+    })
+    const embeddingContext = {
+      apiType: "openai-compatible" as const,
+      baseUrl: "https://proxy.example.com",
+      apiKey: "test-key",
+      modelId: "text-embedding-3-small",
+    }
+    const embeddingResult: ApiVerificationProbeResult = {
+      id: "embedding",
+      status: "pass",
+      latencyMs: 15,
+      summary: "embedding pass",
+      input: {
+        apiType: embeddingContext.apiType,
+        baseUrl: embeddingContext.baseUrl,
+      },
+    }
+    const run = session.beginProbe(
+      embeddingResult.id,
+      "run-embedding",
+      null,
+      embeddingContext,
+    )
+    expect(run.acceptResult(embeddingResult)).toBe(true)
+    expect(session.resultsForContext(embeddingContext)).toEqual([
+      embeddingResult,
+    ])
+  })
 })

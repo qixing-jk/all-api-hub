@@ -494,6 +494,9 @@ export default function ModelList(props: {
               onClose={handleCloseModelVerification}
               account={verifyContext.account}
               initialModelId={verifyContext.modelId}
+              initialSupportedEndpointTypes={
+                verifyContext.supportedEndpointTypes
+              }
               modelEnableGroups={verifyContext.modelEnableGroups}
               onManageModelKey={handleManageVerifyModelKey}
             />
@@ -526,6 +529,9 @@ export default function ModelList(props: {
               onClose={handleCloseProfileVerification}
               profile={verifyProfileContext.profile}
               initialModelId={verifyProfileContext.modelId}
+              initialSupportedEndpointTypes={
+                verifyProfileContext.supportedEndpointTypes
+              }
             />
           )}
 

@@ -237,4 +237,28 @@ describe("useVerificationDialogState", () => {
       expect.objectContaining({ id: "text-generation", status: "pass" }),
     ])
   })
+
+  it("resets probes and persisted summary when loading history fails", async () => {
+    const target = requireHistoryTarget(
+      createProfileVerificationHistoryTarget("profile-load-err"),
+    )
+    vi.spyOn(
+      verificationResultHistoryStorage,
+      "getLatestSummary",
+    ).mockRejectedValueOnce(new Error("Disk error"))
+
+    const { result } = renderHook(() => useVerificationDialogState(target))
+
+    let loaded: any
+    await act(async () => {
+      loaded = await result.current.loadVerificationHistory({
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+      })
+    })
+
+    expect(loaded).toBeNull()
+    expect(result.current.persistedSummary).toBeNull()
+    expect(result.current.probes.length).toBeGreaterThan(0)
+    expect(result.current.probes.every((p) => p.result === null)).toBe(true)
+  })
 })

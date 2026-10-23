@@ -25,10 +25,12 @@ import {
   safeJsonStringify,
 } from "~/features/Verification/api/utils"
 import { VerificationHistorySummary } from "~/features/Verification/api/VerificationHistorySummary"
+import { VerificationMediaPreview } from "~/features/Verification/api/VerificationMediaPreview"
 import { VerificationModeSelect } from "~/features/Verification/api/VerificationMode"
 import {
   API_TYPES,
   API_VERIFICATION_PROBE_STATUSES,
+  MODEL_TEST_MODALITIES,
   type ApiVerificationApiType,
 } from "~/services/verification/aiApiVerification"
 import {
@@ -38,12 +40,10 @@ import {
 } from "~/services/verification/aiApiVerification/i18n"
 
 /** Render the feature through its state and command owner. */
-export function VerifyApiCredentialProfileDialog({
-  isOpen,
-  onClose,
-  profile,
-  initialModelId,
-}: VerifyApiCredentialProfileDialogProps) {
+export function VerifyApiCredentialProfileDialog(
+  props: VerifyApiCredentialProfileDialogProps,
+) {
+  const { isOpen, onClose, profile } = props
   const { t } = useTranslation(["aiApiVerification", "apiCredentialProfiles"])
   const {
     isRunning,
@@ -78,7 +78,8 @@ export function VerifyApiCredentialProfileDialog({
     stopProbe,
     stopRun,
     runAll,
-  } = useProfileVerification({ isOpen, onClose, profile, initialModelId })
+    modelModality,
+  } = useProfileVerification(props)
   const footer = (
     <div className="gap-y-density-2 flex flex-col gap-x-2 sm:flex-row sm:items-center sm:justify-between">
       <div>
@@ -177,19 +178,23 @@ export function VerifyApiCredentialProfileDialog({
                   setModelOptions([])
                   setFetchModelsDiagnostic(null)
                   setPersistedSummary(null)
-                  replaceProbes(buildProbeState(nextApiType))
+                  replaceProbes(
+                    buildProbeState(nextApiType, null, modelModality),
+                  )
                   void fetchModels(nextApiType)
                 }}
                 disabled={!canClose}
               />
             </div>
 
-            <VerificationModeSelect
-              value={verificationMode}
-              onChange={setVerificationMode}
-              disabled={!canClose}
-              labelRowClassName="min-h-(--density-control-tight)"
-            />
+            {modelModality === MODEL_TEST_MODALITIES.Text ? (
+              <VerificationModeSelect
+                value={verificationMode}
+                onChange={setVerificationMode}
+                disabled={!canClose}
+                labelRowClassName="min-h-(--density-control-tight)"
+              />
+            ) : null}
 
             <div className="space-y-density-1-5 sm:col-span-2">
               <div className="flex min-h-(--density-control-tight) items-center">
@@ -221,6 +226,15 @@ export function VerifyApiCredentialProfileDialog({
                 </div>
               ) : null}
             </div>
+
+            {(modelModality === MODEL_TEST_MODALITIES.Image ||
+              modelModality === MODEL_TEST_MODALITIES.Video) && (
+              <div className="border-warning-border bg-warning-soft text-warning-soft-foreground py-density-2 rounded-md border px-3 text-xs sm:col-span-2">
+                {modelModality === MODEL_TEST_MODALITIES.Image
+                  ? t("aiApiVerification:verifyDialog.modalityNotice.image")
+                  : t("aiApiVerification:verifyDialog.modalityNotice.video")}
+              </div>
+            )}
           </div>
 
           {hasApiTypeOverride ? (
@@ -391,6 +405,10 @@ export function VerifyApiCredentialProfileDialog({
                             <pre className="text-secondary-foreground overflow-auto text-xs break-words whitespace-pre-wrap">
                               {safeJsonStringify(result.output)}
                             </pre>
+                            <VerificationMediaPreview
+                              output={result.output}
+                              media={result.media}
+                            />
                           </CollapsibleSection>
                         )}
                       </div>

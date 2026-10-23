@@ -89,7 +89,7 @@ export function useApiCheckModalViewModel() {
       : validationFailure === "missing-model"
         ? t("aiApiVerification:verifyDialog.requiresModelId")
         : null
-  const hasInitializedApiTypeRef = useRef(false)
+  const prevApiTypeRef = useRef(apiType)
 
   const { popoverPortalContainer, refs: modalShellRefs } =
     useApiCheckModalShell(isOpen)
@@ -160,6 +160,7 @@ export function useApiCheckModalViewModel() {
   })
 
   const {
+    modelModality,
     probes,
     isRunningAll,
     isStoppingRunAll,
@@ -226,10 +227,8 @@ export function useApiCheckModalViewModel() {
   }, [])
 
   useEffect(() => {
-    if (!hasInitializedApiTypeRef.current) {
-      hasInitializedApiTypeRef.current = true
-      return
-    }
+    if (prevApiTypeRef.current === apiType) return
+    prevApiTypeRef.current = apiType
     resetProbeState(apiType)
     resetModelList({ clearSelection: true })
     setValidationError(null)
@@ -433,6 +432,7 @@ export function useApiCheckModalViewModel() {
       apiType,
       verificationMode,
       modelId,
+      modelModality,
       modelIdsOptions,
       tags,
       selectedTagIds,
