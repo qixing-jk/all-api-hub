@@ -270,6 +270,9 @@ describe("tempWindowPool Turnstile assist turns", () => {
     ;(globalThis as any).browser = {
       storage: originalBrowser.storage,
       runtime: {
+        getManifest: vi.fn(() => ({
+          optional_permissions: ["notifications"],
+        })),
         getURL: vi.fn((path: string) => `chrome-extension://test/${path}`),
         sendMessage: vi.fn().mockResolvedValue(undefined),
         onMessage: {

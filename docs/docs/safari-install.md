@@ -11,7 +11,7 @@
 1. 打开 [All API Hub 最新 Release](https://github.com/qixing-jk/all-api-hub/releases/latest)，下载 `all-api-hub-<版本号>-safari-xcode-bundle.zip`。不要下载名称中只有 `-safari.zip` 的附件。
 2. 解压文件，找到其中的 Xcode 工程并用 Xcode 打开。
 3. 在 Xcode 顶部选择 macOS 应用和这台 Mac 作为运行目标，点击 `Product > Run`。如果 Xcode 提示签名，按提示选择本机运行的签名选项。
-4. 打开 Safari，在 `Safari > 设置 > 开发者` 中启用“允许未签名的扩展”。Safari 可能会要求输入 Mac 登录密码。
+4. 打开 Safari，先在 `Safari > 设置 > 高级` 中启用“显示网页开发者功能”，再到 `Safari > 设置 > 开发者` 中启用“允许未签名的扩展”。Safari 可能会要求输入 Mac 登录密码。
 5. 在 `Safari > 设置 > 扩展` 中勾选 `All API Hub`，并按需允许访问目标网站。
 6. 点击 Safari 工具栏中的扩展图标即可使用。
 

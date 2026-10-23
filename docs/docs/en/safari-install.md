@@ -11,7 +11,7 @@ This installation flow was verified on macOS 26.6.2 and Safari 26.6.2. This desc
 1. Open the [latest All API Hub release](https://github.com/qixing-jk/all-api-hub/releases/latest) and download `all-api-hub-<version>-safari-xcode-bundle.zip`. Do not download the attachment named only `-safari.zip`.
 2. Extract the archive, find the Xcode project, and open it in Xcode.
 3. Select the macOS app and your Mac as the run destination in Xcode, then choose `Product > Run`. If Xcode asks about signing, choose the option for running locally as prompted.
-4. In Safari, open `Safari > Settings > Developer` and enable “Allow Unsigned Extensions.” Safari may ask for your Mac login password.
+4. In Safari, open `Safari > Settings > Advanced` and enable “Show features for web developers,” then open `Safari > Settings > Developer` and enable “Allow Unsigned Extensions.” Safari may ask for your Mac login password.
 5. Open `Safari > Settings > Extensions`, enable `All API Hub`, and allow access to websites as needed.
 6. Click the extension icon in Safari’s toolbar to use it.
 
