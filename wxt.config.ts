@@ -241,6 +241,7 @@ function getManifestRequiredPermissions(browser: BrowserTarget) {
     permissions.push(...getE2eRequiredChromiumPermissions(e2eBuildVariant))
   }
 
+  if (browser === "safari") permissions.push("nativeMessaging")
   return [...new Set(permissions)]
 }
 

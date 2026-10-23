@@ -1,4 +1,8 @@
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
+import {
+  fetchSafariNativeCookie,
+  isSafariNativeCookieEnabled,
+} from "~/services/apiTransport/safariNativeCookie"
 import { getChromiumRequestHeaderApi } from "~/utils/browser/requestHeaderApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -126,14 +130,15 @@ export async function fetchWithHeaderOverrides(
   )
   for (const [name, value] of Object.entries(custom)) headers.set(name, value)
   const session = execution?.cookieSession
-  // Safari's DNR condition support differs from Chromium. API presence alone
-  // cannot establish account isolation; enable this only after native validation.
-  if (session && import.meta.env.BROWSER === "safari")
-    throw new ApiError(
-      t("messages:cookieTransport.browserUnsupported"),
-      undefined,
-      undefined,
-      API_ERROR_CODES.COOKIE_REQUEST_UNAVAILABLE,
+  // Safari private Cookies use the bundled native session, never browser-wide
+  // DNR rules or ambient browser credentials. The bridge fails closed.
+  if (session && isSafariNativeCookieEnabled())
+    return fetchSafariNativeCookie(
+      input,
+      init,
+      headers,
+      session,
+      execution?.onDispatch,
     )
   if (session) {
     const url = new URL(input instanceof Request ? input.url : String(input))

@@ -1,0 +1,7 @@
+# Generated probe bundles and independent converter projects.
+/bundle/
+/runs/
+/observations.json
+
+# Keep fixture ownership recovery data local.
+/owned-real-users.json

@@ -10,6 +10,7 @@ import {
   extractDataFromApiResponseBody,
   isApiResponseBody,
 } from "~/services/apiTransport/response"
+import { withSafariNativeCookieSession } from "~/services/apiTransport/safariNativeCookie"
 import type {
   ApiAuthTokenMode,
   ApiResponse,
@@ -358,6 +359,7 @@ const _fetchApiWithMapper = async <T, TResult>(
   mapResponse: TransportResponseMapper<T, TResult>,
   mapTempWindowResponse: MessageResponseMapper<TResult>,
 ): Promise<TResult> => {
+  request = withSafariNativeCookieSession(request)
   const responseType = options.responseType ?? "json"
   const { baseUrl, accountId } = request
   const userId = request.auth?.userId

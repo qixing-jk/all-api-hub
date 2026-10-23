@@ -17,7 +17,9 @@
 
 Safari は WebKit の WebExtensions 権限機構を使用し、権限の宣言は Chromium、Firefox と分けて管理しています。Cookie アクセスとネットワークリクエストのルールは引き続き必要に応じて許可します。設定の検索には、Safari ビルドで宣言されたオプションの権限だけが表示されます。
 
-アカウントの Cookie を分離した直接リクエストは、Safari 実機での分離検証が完了していません。そのため、他のアカウントのブラウザセッションに切り替えることなく、未対応のメッセージを表示して停止します。この機能には Chrome または Edge を使用してください。Safari 向けのビルド成功だけでは、すべての機能の実機互換性を確認したことにはなりません。
+アカウントごとの Cookie リクエストには、Safari 拡張機能アプリに同梱されたネイティブ通信を使用します。保存した各アカウントの Cookie を使い、別のアカウントや通常のブラウザタブのログイン状態は利用しません。対象サイトへのアクセスと Cookie 権限を許可してください。別の補助プログラムをインストールする必要はありません。この通信機能を含む新しい Safari Xcode プロジェクトでインストールまたは更新してください。Web リソースの置き換えだけではネイティブハンドラーは更新されません。
+
+HTTPS サイトに対応し、HTTP はローカルの `127.0.0.1` テストに限定されます。リダイレクトは拒否します。権限やネイティブハンドラーが利用できない場合は、ブラウザのログイン状態へ切り替えずにリクエストを停止します。権限を取り消しても送信済みのリクエストは取り消せません。一部の Safari 環境ではポップアップの更新に既知の問題があるため、必要に応じてオプションページからアカウントを更新してください。
 
 ## インストール方法
 
@@ -98,7 +100,13 @@ pnpm run build:safari
 #### 2. Safari コンバーターを使用して Xcode プロジェクトを生成する
 
 ```bash
-xcrun safari-web-extension-converter .output/safari-mv2/
+xcrun safari-web-extension-converter .output/safari-mv2/ \
+  --project-location .output/safari-project \
+  --app-name "All API Hub" \
+  --bundle-identifier "io.github.qixingjk.allapihub" \
+  --copy-resources --no-open
+python3 scripts/configure-safari-native-cookie-project.py \
+  .output/safari-project io.github.qixingjk.allapihub
 ```
 
 出力ディレクトリ、アプリケーション名、バンドル識別子をカスタマイズしたい場合は、次のように使用することもできます。
@@ -107,7 +115,10 @@ xcrun safari-web-extension-converter .output/safari-mv2/
 xcrun safari-web-extension-converter .output/safari-mv2/ \
   --project-location /path/to/all-api-hub-safari-project \
   --app-name "All API Hub" \
-  --bundle-identifier "io.github.qixingjk.allapihub"
+  --bundle-identifier "io.github.qixingjk.allapihub" \
+  --copy-resources --no-open
+python3 scripts/configure-safari-native-cookie-project.py \
+  /path/to/all-api-hub-safari-project io.github.qixingjk.allapihub
 ```
 
 この手順により、Safari 拡張機能を格納するための Xcode プロジェクトが生成されます。
@@ -187,7 +198,7 @@ Safari 拡張機能は、macOS アプリケーションとしてパッケージ�
 まず、以下を確認してください。
 - Xcode コマンドラインツールがインストールされていること：`xcode-select --install`
 - Xcode のライセンスに同意していること：`sudo xcodebuild -license accept`
-- Node.js のバージョンが 18 以上であること
+- Node.js と pnpm のバージョンが、リポジトリの `.nvmrc` と `package.json` の要件を満たすこと
 
 ### 拡張機能の機能は Chrome バージョンと異なりますか？
 
