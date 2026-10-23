@@ -393,7 +393,7 @@ describe("Safari native Cookie transport boundaries", () => {
     },
   )
 
-  it("sends cancellation and waits for native completion before settling", async () => {
+  it("waits for native completion even when the cancellation message rejects", async () => {
     let finish!: (value: unknown) => void
     let message: any
     api.send.mockImplementation((_, input) => {
@@ -407,7 +407,8 @@ describe("Safari native Cookie transport boundaries", () => {
           deadline: true,
           urlPolicy: "https-or-loopback-http",
         })
-      if (input.command === "cancel") return Promise.resolve({ ok: false })
+      if (input.command === "cancel")
+        return Promise.reject(new Error("session=fixture-secret"))
       message = input
       return new Promise((resolve) => {
         finish = resolve
