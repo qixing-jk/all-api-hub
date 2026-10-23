@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { fetchWithHeaderOverrides } from "~/services/apiTransport/headerOverrides"
 import { fetchApiResponse } from "~/services/apiTransport/request"
+import { fetchSafariNativeCookie } from "~/services/apiTransport/safariNativeCookie"
 import { AuthTypeEnum } from "~/types"
 
 const api = vi.hoisted(() => ({
@@ -10,6 +11,7 @@ const api = vi.hoisted(() => ({
   add: vi.fn(),
   remove: vi.fn(),
   removeCookie: vi.fn(),
+  cookieApiAvailable: true,
 }))
 vi.mock("wxt/browser", () => ({
   browser: {
@@ -18,7 +20,11 @@ vi.mock("wxt/browser", () => ({
       onRemoved: { addListener: api.add, removeListener: api.remove },
     },
     runtime: { sendNativeMessage: api.send },
-    cookies: { remove: api.removeCookie },
+    cookies: {
+      get remove() {
+        return api.cookieApiAvailable ? api.removeCookie : undefined
+      },
+    },
   },
 }))
 
@@ -36,6 +42,7 @@ describe("Safari native Cookie transport boundaries", () => {
     vi.stubGlobal("fetch", vi.fn())
     api.contains.mockResolvedValue(true)
     api.removeCookie.mockResolvedValue(null)
+    api.cookieApiAvailable = true
     api.send.mockImplementation(async (_, message) => ({
       version: 3,
       id: message.id,
@@ -122,6 +129,34 @@ describe("Safari native Cookie transport boundaries", () => {
     expect(api.send).not.toHaveBeenCalled()
   })
 
+  it("refuses to send credentials when the URL permission probe API is missing", async () => {
+    api.cookieApiAvailable = false
+    await expect(dispatch()).rejects.toThrow(
+      "messages:cookieTransport.permissionRequired",
+    )
+    expect(api.send).not.toHaveBeenCalled()
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ["Request input", new Request(url), undefined],
+    ["binary body", url, { method: "POST", body: new Uint8Array([1, 2]) }],
+    [
+      "oversized UTF-8 body",
+      url,
+      { method: "POST", body: "é".repeat(256 * 1024 + 1) },
+    ],
+  ] as const)(
+    "rejects %s before uploading credentials",
+    async (_, input, init) => {
+      await expect(
+        fetchSafariNativeCookie(input, init, new Headers(), session),
+      ).rejects.toThrow("messages:cookieTransport.scopeUnavailable")
+      expect(api.send).not.toHaveBeenCalled()
+      expect(fetch).not.toHaveBeenCalled()
+    },
+  )
+
   it("detects URL denial without an onRemoved event and cancels the real request lease", async () => {
     vi.useFakeTimers()
     const realSend = api.send.getMockImplementation()!
@@ -145,6 +180,10 @@ describe("Safari native Cookie transport boundaries", () => {
       command: "cancel",
       id: request.id,
     })
+    await vi.advanceTimersByTimeAsync(500)
+    expect(
+      api.send.mock.calls.filter((call) => call[1].command === "cancel"),
+    ).toHaveLength(1)
     finish({ version: 3, id: request.id, ok: false })
     expect(await outcome).toContain(
       "messages:cookieTransport.permissionRequired",
@@ -152,6 +191,45 @@ describe("Safari native Cookie transport boundaries", () => {
     const calls = api.removeCookie.mock.calls.length
     await vi.advanceTimersByTimeAsync(1000)
     expect(api.removeCookie).toHaveBeenCalledTimes(calls)
+  })
+
+  it("coalesces overlapping permission checks and ignores late checks after completion", async () => {
+    vi.useFakeTimers()
+    const realSend = api.send.getMockImplementation()!
+    let finish!: (value: unknown) => void
+    api.send.mockImplementation((app, message) =>
+      message.command === "request"
+        ? new Promise((resolve) => {
+            finish = resolve
+          })
+        : realSend(app, message),
+    )
+    const pending = dispatch()
+    await vi.advanceTimersByTimeAsync(0)
+    const removed = api.add.mock.calls[0]![0]
+    let check!: (value: boolean) => void
+    api.contains.mockReturnValue(
+      new Promise((resolve) => {
+        check = resolve
+      }),
+    )
+    const before = api.contains.mock.calls.length
+    removed()
+    removed()
+    expect(api.contains).toHaveBeenCalledTimes(before + 1)
+    const request = api.send.mock.calls.find(
+      (call) => call[1].command === "request",
+    )![1]
+    finish({ version: 3, id: request.id, ok: true, status: 200, body: "ok" })
+    expect(await (await pending).text()).toBe("ok")
+    removed()
+    check(false)
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(api.contains).toHaveBeenCalledTimes(before + 1)
+    expect(
+      api.send.mock.calls.filter((call) => call[1].command === "cancel"),
+    ).toHaveLength(0)
+    expect(api.remove).toHaveBeenCalledWith(removed)
   })
 
   it("rejects remote plain HTTP destinations, scope mismatch and missing grants before dispatch", async () => {
@@ -219,6 +297,101 @@ describe("Safari native Cookie transport boundaries", () => {
     expect(fetch).not.toHaveBeenCalled()
     expect(api.remove).toHaveBeenCalled()
   })
+
+  it("forwards a bounded POST body and removes internal interception markers", async () => {
+    const onDispatch = vi.fn()
+    await fetchSafariNativeCookie(
+      url,
+      { method: "POST", body: "owned fixture body" },
+      new Headers({
+        "all-api-hub": "private",
+        "all-api-hub-cookie": "private",
+        "content-type": "text/plain",
+      }),
+      session,
+      onDispatch,
+    )
+    expect(onDispatch).toHaveBeenCalledOnce()
+    const message = api.send.mock.calls.find(
+      (call) => call[1].command === "request",
+    )![1]
+    expect(message).toMatchObject({
+      method: "POST",
+      body: "owned fixture body",
+      headers: {
+        cookie: session.cookieHeader,
+        origin: session.origin,
+        "content-type": "text/plain",
+      },
+    })
+    expect(
+      Object.keys(message.headers).some((key) => key.startsWith("all-api-hub")),
+    ).toBe(false)
+  })
+
+  it.each([
+    ["missing reply", null],
+    ["old protocol", { version: 2 }],
+    ["mismatched request ID", { id: "another-request" }],
+    ["native failure", { ok: false, body: "session=fixture-secret" }],
+    ["non-integer status", { status: 200.5 }],
+    ["informational status", { status: 199 }],
+    ["invalid status", { status: 600 }],
+    ["non-string body", { body: {} }],
+    ["oversized UTF-8 reply", { body: "é".repeat(256 * 1024 + 1) }],
+  ])(
+    "rejects %s without exposing the reply or falling back",
+    async (_, invalid) => {
+      const realSend = api.send.getMockImplementation()!
+      api.send.mockImplementation((app, message) =>
+        message.command === "request"
+          ? Promise.resolve(
+              invalid === null
+                ? null
+                : {
+                    version: 3,
+                    id: message.id,
+                    ok: true,
+                    status: 200,
+                    body: "ok",
+                    ...invalid,
+                  },
+            )
+          : realSend(app, message),
+      )
+      await expect(dispatch()).rejects.toThrow(
+        "messages:cookieTransport.requestUnavailable",
+      )
+      expect(fetch).not.toHaveBeenCalled()
+      expect(api.remove).toHaveBeenCalled()
+    },
+  )
+
+  it.each([204, 205, 304])(
+    "accepts bodyless HTTP %s replies without constructing an invalid Response",
+    async (status) => {
+      const realSend = api.send.getMockImplementation()!
+      api.send.mockImplementation(async (app, message) => ({
+        ...(await realSend(app, message)),
+        ...(message.command === "request"
+          ? {
+              status,
+              body: "ignored body",
+              headers: {
+                "set-cookie": "ignored=1",
+                "set-cookie2": "ignored=2",
+              },
+            }
+          : {}),
+      }))
+      const response = await dispatch()
+      expect(response.status).toBe(status)
+      expect(response.body).toBeNull()
+      expect(await response.text()).toBe("")
+      expect(response.headers.has("set-cookie")).toBe(false)
+      expect(response.headers.has("set-cookie2")).toBe(false)
+    },
+  )
 
   it("sends cancellation and waits for native completion before settling", async () => {
     let finish!: (value: unknown) => void
