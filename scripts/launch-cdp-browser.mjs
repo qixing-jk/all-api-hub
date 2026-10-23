@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-/* global chrome */
 import { execFileSync, execSync, spawn } from "node:child_process"
 import fs from "node:fs"
 import net from "node:net"
@@ -17,6 +16,7 @@ import {
   resolveCdpPort,
   resolveDevProfileDir,
 } from "./cdp/dev-profile.mjs"
+import { reloadRunningExtension } from "./cdp/reload.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
 loadLocalEnv()
@@ -507,63 +507,6 @@ function executeBuild(root) {
 }
 
 /**
- * 9. 通过 CDP 热重载已在运行浏览器中的扩展
- */
-async function reloadRunningExtension(cdpPort) {
-  try {
-    const { chromium } = await import("@playwright/test")
-    const browser = await chromium.connectOverCDP(`http://127.0.0.1:${cdpPort}`)
-    const context = browser.contexts()[0]
-    const session = await browser.newBrowserCDPSession()
-    let { targetInfos } = await session.send("Target.getTargets")
-    let extTargets = targetInfos.filter((t) =>
-      t.url?.startsWith("chrome-extension://"),
-    )
-
-    if (extTargets.length === 0) {
-      // 打开扩展管理页唤醒休眠的 Service Worker
-      const p = await context.newPage()
-      await p.goto("edge://extensions").catch(() => {})
-      await p.waitForTimeout(600)
-      await p.close().catch(() => {})
-
-      const updated = await session.send("Target.getTargets")
-      extTargets = updated.targetInfos.filter((t) =>
-        t.url?.startsWith("chrome-extension://"),
-      )
-    }
-
-    if (extTargets.length > 0) {
-      const extId = new URL(extTargets[0].url).hostname
-      let sw = context.serviceWorkers().find((w) => w.url().includes(extId))
-      if (!sw) {
-        const dummy = await context.newPage()
-        await dummy
-          .goto(`chrome-extension://${extId}/options.html`)
-          .catch(() => {})
-        await dummy.waitForTimeout(400)
-        await dummy.close().catch(() => {})
-        sw = context.serviceWorkers().find((w) => w.url().includes(extId))
-      }
-      if (sw) {
-        await sw.evaluate(() => chrome.runtime.reload())
-        console.log(`🔄 扩展 [${extId}] 已成功在运行中的调试浏览器中触发重载！`)
-      }
-      // 自动刷新任何当前开启的扩展设置页
-      for (const p of context.pages()) {
-        if (p.url().startsWith(`chrome-extension://${extId}`)) {
-          await p.reload().catch(() => {})
-        }
-      }
-    }
-    await session.detach()
-    await browser.close()
-  } catch (err) {
-    console.warn(`⚠️ 自动重载扩展提示: ${err.message}`)
-  }
-}
-
-/**
  * 10. 通过 CDP 关闭现存的调试浏览器
  */
 async function closeDevBrowserViaCdp(cdpPort) {
@@ -640,7 +583,14 @@ async function main() {
     if (isRunning) {
       await verifyRunningProfile()
       console.log(`正在向 127.0.0.1:${CDP_PORT} 发送扩展热重载信号...`)
-      await reloadRunningExtension(CDP_PORT)
+      await reloadRunningExtension(
+        CDP_PORT,
+        path.join(
+          rootDir,
+          ".output",
+          forceProd ? "chrome-mv3" : "chrome-mv3-dev",
+        ),
+      )
       process.exit(0)
     } else {
       console.error(
@@ -738,7 +688,7 @@ async function main() {
       await verifyExtensionReady(extDir)
       console.log(`\n✅ 端口 ${CDP_PORT} 已经在监听中！调试浏览器已就绪。`)
       console.log(`🔄 正在通过 CDP 唤醒运行中的浏览器刷新扩展...`)
-      await reloadRunningExtension(CDP_PORT)
+      await reloadRunningExtension(CDP_PORT, extDir)
       console.log(
         `👉 现存调试窗口可以直接复用（加 --reload 可直接刷新扩展，加 --restart 可重启浏览器）。`,
       )

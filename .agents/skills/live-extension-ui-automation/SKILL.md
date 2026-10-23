@@ -44,26 +44,33 @@ All commands are cross-platform (Windows, macOS, Linux) and runnable directly vi
 
 ## Workflow
 
-### 1. Build Current Worktree Output
-Always ensure the extension is built for the current branch:
-```bash
-pnpm build
-```
+### 1. Choose the build mode
 
-### 2. Launch or Reuse the CDP Browser
+Use **dev for interactive UI debugging and repeated edits**. Start with `pnpm browser:cdp -- --dev`; the launcher starts WXT in the background and prepares `.output/chrome-mv3-dev`, so a separate `pnpm build` is unnecessary. Explicit `--dev` fails if the development server cannot become ready, preserving the failure for diagnosis instead of automatically falling back to production.
+
+Use **production for final release-like acceptance, production-only failures, or an existing runner that requires `.output/chrome-mv3`**. Launch with `pnpm browser:cdp -- --prod`; reuse an already verified production build when its inputs have not changed. The launcher checks staleness; add `--build` only when a forced rebuild is needed. Switching modes does not itself require rebuilding or restarting the browser. Some site runners hard-code the production path: inspect the selected runner before launching. For repeated UI edits, use exact-path dev discovery as shown below; keep a required production runner as a separate acceptance step.
+
+### 2. Launch, verify, and iterate
+
 ```bash
-pnpm browser:cdp
+pnpm browser:cdp -- --dev
 ```
-- **Prioritize Dev Mode (Auto-Spawn)**: By default, the launcher prioritizes the HMR dev mode (`.output/chrome-mv3-dev`). If WXT dev server is not running, it automatically and silently launches it in the background, waits for the initial pre-rendering to finish, and mounts the hot dev extension.
+For concurrent worktrees use `pnpm browser:cdp:isolate -- --dev`, and pass `--isolate` to the CDP runner as well.
+
+- **Prioritize Dev Mode (Auto-Spawn)**: By default, the launcher prioritizes the HMR dev mode (`.output/chrome-mv3-dev`). If WXT dev server is not running, it launches it in the background and waits for a server response before loading the extension. Require the rendered Options app separately before driving UI.
 - **Actively Suppress Duplicate Browser Windows**: WXT defaults to opening an unconfigured Chrome instance upon launch. To avoid desktop clutter and preserve the shared profile with real accounts, `wxt.config.ts` disables the built-in runner (`webExt.disabled = true` unless `WXT_OPEN_BROWSER=1`), and the launcher passes environment guards. Dev server logs stream silently to `.scratch/wxt-dev.log`.
 - **Dynamic Port & Multi-Worktree**: When multiple worktrees run dev servers concurrently, WXT assigns dynamic ports (`3000`, `3001`, `3002`...). The launcher inspects `.output/chrome-mv3-dev/options.html` and probes the Vite client to bind cleanly to the current worktree's assigned port over IPv4 (`127.0.0.1`).
-- **Live Extension Hot-Reload**: If the debug browser on port 9222 is already open, running `pnpm browser:cdp` instantly triggers `chrome.runtime.reload()` over CDP and refreshes open extension tabs without restarting the browser.
+- **Verify the actual target**: Read the launch log's profile, CDP port, extension path, and dev-server URL. Resolve the extension ID from the expected absolute output path with `findInstalledDevExtension`, then require the Options app to render. A listening port, a Vite response, or the first extension target alone does not prove that the current worktree's UI is ready. The launcher can probe other dev-server ports; verify the server URL embedded in this worktree's `options.html` and that edits reach the selected UI before relying on HMR.
+- **Iterate in dev**: Keep WXT running and let UI HMR apply edits; wait for the affected UI state before capturing evidence. For background, content-script, or manifest changes, verify the affected context has reloaded and exercise its behavior. When explicit reload is needed, `pnpm browser:cdp -- --dev --reload` targets the current worktree's installed dev output by exact path, verifies the replacement worker identity and a read-only background message response, and refreshes or restores only that extension's open pages. See [background reload verification](references/desktop-dev-recovery.md#reload-the-selected-background). Reloading the browser extension is not proof that every existing site tab has received updated content scripts.
+- **Mode switches**: Verify the newly loaded path and ID after changing modes. Dev and production output paths can receive different extension IDs and therefore separate extension storage even in one browser profile. Inspect the chosen extension's saved accounts and the site's authenticated identity independently; use the normal onboarding or authorized session-reuse flow when needed. An empty dev account list does not establish that website login was lost.
 - **Convenience Flags**:
-  - `pnpm browser:cdp -- --reload`: Instantly trigger `chrome.runtime.reload()` in the running browser.
+  - `pnpm browser:cdp -- --reload`: Reload the current worktree's installed dev extension. Use `--prod --reload` for its installed production extension. Reload does not build, start WXT, or install a missing extension; use the full launch command when the chosen mode is not installed. A missing target or reload failure exits with an error.
   - `pnpm browser:cdp -- --stop-dev`: Terminate the background WXT dev server process.
   - `pnpm browser:cdp -- --prod`: Force standalone production build mode (`.output/chrome-mv3`).
-  - `pnpm browser:cdp -- --build`: Force a full production rebuild before launching.
+  - `pnpm browser:cdp -- --prod --build`: Force a full production rebuild before launching. Pair `--build` with `--prod`; `--build` alone still prefers dev.
   - `pnpm browser:cdp -- --restart`: Terminate the running debug browser and start a fresh instance.
+
+If dev startup fails or the loaded UI does not receive edits, follow [desktop dev recovery](references/desktop-dev-recovery.md). Switch to production only for a diagnosed remaining blocker or the acceptance cases above, and report that reason and the loaded path rather than claiming dev/HMR verification.
 
 ### 3. Verify Session Readiness Before Authenticated Flows
 
@@ -74,55 +81,80 @@ If the target is unauthenticated, inspect task-authorized source sessions and se
 Read [session assessment and reuse](references/session-reuse.md) for the shared preflight helper, origin-scoped live transfer and offline sync commands. After transfer, re-read the target identity and compare it with the source. Request manual login only after authorized sources and applicable transfer methods have been checked and found unusable; report missing evidence as uninspected, not unavailable. Do not replace an authenticated but mismatched account silently.
 
 ### 4. Automate and Verify the Extension UI
-Run the default smoke runner:
+For an optional general connectivity check, run the default smoke runner (include `-- --isolate` when launched with an isolated profile):
 ```bash
 pnpm e2e:cdp
 ```
+
+This smoke runner uses title-based discovery. Use the exact-path pattern below for mode-specific evidence, especially when dev and production extensions coexist; it replaces this optional smoke step rather than requiring both.
 
 ### 5. Authoring Custom Automated E2E/CDP Tests
 When implementing a new feature or reproducing UI bugs, author or extend a CDP automation script following this pattern:
 
 ```javascript
 import path from "node:path"
-import { chromium } from "@playwright/test"
 
-const browser = await chromium.connectOverCDP("http://127.0.0.1:9222")
-const context = browser.contexts()[0]
+import { findInstalledDevExtension } from "./scripts/cdp/browser-runtime.mjs"
+import {
+  connectDevBrowser,
+  connectExtensionById,
+} from "./scripts/cdp/client.mjs"
+import { applyIsolateFlag } from "./scripts/cdp/dev-profile.mjs"
+import { loadLocalEnv } from "./scripts/utils/local-env.mjs"
 
-// 1. Locate the extension (CDP Target inspection works even if the service worker is dormant)
-const session = await browser.newBrowserCDPSession()
-const { targetInfos } = await session.send("Target.getTargets")
-const extTarget = targetInfos.find((t) => t.url?.startsWith("chrome-extension://"))
-const extensionId = new URL(extTarget.url).hostname
-await session.detach()
+// Imports assume a repo-root script; adjust relative paths for a runner under scripts/.
+await loadLocalEnv()
+applyIsolateFlag(process.argv)
 
-// 2. Open any extension entrypoint
-const page = await context.newPage()
-// Stabilize Framer Motion animations and transitions
-await page.emulateMedia({ reducedMotion: "reduce" })
-await page.goto(`chrome-extension://${extensionId}/options.html#account`)
-await page.waitForLoadState("domcontentloaded")
+// 1. Pin the current worktree's chosen mode, even with multiple extensions installed.
+const extensionDir = path.resolve(".output/chrome-mv3-dev")
+const discovery = await connectDevBrowser()
+let extensionId
+try {
+  extensionId = await findInstalledDevExtension(discovery.browser, extensionDir)
+} finally {
+  await discovery.close()
+}
+const dev = await connectExtensionById({ extensionId })
+let page
+try {
+  const { context, serviceWorker: sw } = dev
 
-// 3. Interact with UI primitives via testId or role
-const root = page.locator('[data-testid="options-app"]')
-await root.waitFor({ state: "attached", timeout: 10000 })
-// Await explicit visibility for elements rather than static sleeps
-const target = page.locator('[data-testid="account-table-row"]').first()
-await target.waitFor({ state: "visible", timeout: 8000 })
-// Radix dialogs/popovers render into document.body portals; locate directly from page
-const dialog = page.locator('[role="dialog"]').first()
+  // 2. Open any extension entrypoint
+  page = await context.newPage()
+  // Stabilize Framer Motion animations and transitions
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await page.goto(`chrome-extension://${extensionId}/options.html#account`)
+  await page.waitForLoadState("domcontentloaded")
 
-// 4. Inspect or mutate extension storage directly via service worker
-// NOTE: Plasmo Storage serializes envelopes as JSON strings (e.g. { accounts: [...] })
-const sw = context.serviceWorkers().find((w) => w.url().includes(extensionId))
-const accounts = await sw.evaluate(() => {
-  return new Promise((resolve) => {
-    chrome.storage.local.get("site_accounts", (res) => {
-      const data = typeof res.site_accounts === "string" ? JSON.parse(res.site_accounts) : res.site_accounts
-      resolve(data?.accounts || [])
+  // 3. Interact with UI primitives via testId or role
+  const root = page.locator('[data-testid="options-app"]')
+  await root.waitFor({ state: "visible", timeout: 10000 })
+  // Await explicit visibility for elements rather than static sleeps
+  const target = page.getByTestId("account-management-add-account-button")
+  await target.waitFor({ state: "visible", timeout: 8000 })
+  await target.click()
+  // Radix dialogs/popovers render into document.body portals; locate directly from page
+  const dialog = page.getByTestId("account-management-account-dialog")
+  await dialog.waitFor({ state: "visible", timeout: 10000 })
+
+  // 4. Inspect extension storage without changing it
+  // NOTE: Plasmo Storage serializes envelopes as JSON strings (e.g. { accounts: [...] })
+  const accounts = await sw.evaluate(() => {
+    return new Promise((resolve) => {
+      chrome.storage.local.get("site_accounts", (res) => {
+        const data =
+          typeof res.site_accounts === "string"
+            ? JSON.parse(res.site_accounts)
+            : res.site_accounts
+        resolve(data?.accounts || [])
+      })
     })
   })
-})
+} finally {
+  await page?.close().catch(() => {})
+  await dev.close()
+}
 ```
 
 ## Account onboarding validation
@@ -149,4 +181,4 @@ For site adaptation or a requested visual handoff, follow [visual previews](../a
 ## Multi-Worktree Conventions
 
 1. **Shared Profile**: All worktrees resolve to the same OS-level data folder (`%LOCALAPPDATA%\AllApiHub\dev-browser` on Windows, `~/Library/Application Support/AllApiHub/dev-browser` on macOS). Accounts and cookies persist across branch switches.
-2. **Current Branch Targeting**: `scripts/e2e-cdp-control.mjs` checks `process.cwd()` against extension manifest titles to ensure it controls the extension belonging to the active worktree when multiple branches are mounted.
+2. **Current Branch Targeting**: The default smoke runner's title matching is a best-effort discovery heuristic. Exact-path discovery followed by ID-pinned connection establishes the selected worktree and mode when multiple extensions are mounted.
