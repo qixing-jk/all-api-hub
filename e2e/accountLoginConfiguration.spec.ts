@@ -1,3 +1,5 @@
+import type { BrowserContext, Page } from "@playwright/test"
+
 import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
@@ -28,6 +30,114 @@ import {
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
+async function setupLoginFixture({
+  context,
+  page,
+  method,
+  savedPassword = false,
+}: {
+  context: BrowserContext
+  page: Page
+  method: "linuxdo" | "password"
+  savedPassword?: boolean
+}) {
+  installExtensionPageGuards(page)
+  await forceExtensionLanguage(page, "en")
+  await stubLlmMetadataIndex(context)
+  await stubNewApiSiteRoutes(context, {
+    baseUrl: "https://agentrouter.org",
+    userId: 17,
+    systemName: "Agent Router",
+  })
+  const loginBodies: unknown[] = []
+  let signedIn = false
+  await context.route("https://agentrouter.org/api/user/self", (route) => {
+    const savedCredential = route.request().headers().authorization
+    return route.fulfill(
+      signedIn || savedCredential
+        ? { json: { success: true, data: { id: 17 } } }
+        : { status: 401, json: { success: false } },
+    )
+  })
+  await context.route(
+    "https://agentrouter.org/api/user/auth/refresh",
+    (route) => route.fulfill({ status: 401, json: { success: false } }),
+  )
+  await context.route(
+    "https://agentrouter.org/api/user/login",
+    async (route) => {
+      loginBodies.push(route.request().postDataJSON())
+      signedIn = true
+      await route.fulfill({
+        json: { success: true, data: { id: 17, checked_in: true } },
+      })
+    },
+  )
+  await context.route("https://agentrouter.org/login", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: `<!doctype html><title>Agent Router native login fixture</title>
+        <form><input name="username" autocomplete="username"><input type="password" autocomplete="current-password"><button type="submit">Login</button></form>
+        <script>document.querySelector('form').addEventListener('submit', async event => {
+          event.preventDefault();
+          const result = await fetch('/api/user/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:document.querySelector('[name=username]').value,password:document.querySelector('[type=password]').value})}).then(response=>response.json());
+          localStorage.setItem('user',JSON.stringify(result.data));
+          location.assign('/console');
+        });</script>`,
+    }),
+  )
+  const worker = await getServiceWorker(context)
+  await seedUserPreferences(worker, {
+    preferencesVersion: DEFAULT_PREFERENCES.preferencesVersion,
+    openChangelogOnUpdate: false,
+    autoCheckin: {
+      ...DEFAULT_PREFERENCES.autoCheckin!,
+      globalEnabled: method === "password",
+      pretriggerDailyOnUiOpen: false,
+    },
+  })
+  await seedStoredAccounts(worker, [
+    createStoredAccount({
+      id: "login-config-account",
+      site_name: "AgentRouter",
+      site_type: SITE_TYPES.NEW_API,
+      site_url: "https://agentrouter.org",
+      login: savedPassword
+        ? {
+            methodId: ACCOUNT_LOGIN_METHODS.Password,
+            credentials: {
+              username: "native-member",
+              password: " fixture password ",
+            },
+          }
+        : { methodId: "github" },
+      account_info: {
+        id: "17",
+        username: "member",
+        access_token: "e2e-token",
+      },
+      checkIn: {
+        automaticExecutionEnabled: method === "password",
+        selection: {
+          mode: "automatic",
+          methodId: AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn,
+        },
+        methodKnowledge: {
+          methods: {
+            [AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn]: {
+              detection: {
+                outcome: "matched",
+                evidence: { source: "probe", observedAt: Date.now() },
+              },
+            },
+          },
+        },
+      },
+    }),
+  ])
+  return { worker, loginBodies }
+}
+
 for (const method of ["linuxdo", "password"] as const) {
   test(`account login configuration saves ${method} for login check-in`, async ({
     context,
@@ -35,102 +145,21 @@ for (const method of ["linuxdo", "password"] as const) {
     extensionId,
     extensionDir,
   }, testInfo) => {
-    installExtensionPageGuards(page)
-    await forceExtensionLanguage(page, "en")
-    await stubLlmMetadataIndex(context)
-    await stubNewApiSiteRoutes(context, {
-      baseUrl: "https://agentrouter.org",
-      userId: 17,
-      systemName: "Agent Router",
+    const { worker, loginBodies } = await setupLoginFixture({
+      context,
+      page,
+      method,
     })
-    const loginBodies: unknown[] = []
-    let signedIn = false
-    await context.route("https://agentrouter.org/api/user/self", (route) => {
-      const savedCredential = route.request().headers().authorization
-      return route.fulfill(
-        signedIn || savedCredential
-          ? { json: { success: true, data: { id: 17 } } }
-          : { status: 401, json: { success: false } },
-      )
-    })
-    await context.route(
-      "https://agentrouter.org/api/user/auth/refresh",
-      (route) => route.fulfill({ status: 401, json: { success: false } }),
-    )
-    await context.route(
-      "https://agentrouter.org/api/user/login",
-      async (route) => {
-        loginBodies.push(route.request().postDataJSON())
-        signedIn = true
-        await route.fulfill({
-          json: { success: true, data: { id: 17, checked_in: true } },
-        })
-      },
-    )
-    await context.route("https://agentrouter.org/login", (route) =>
-      route.fulfill({
-        contentType: "text/html",
-        body: `<!doctype html><title>Agent Router native login fixture</title>
-          <form><input name="username" autocomplete="username"><input type="password" autocomplete="current-password"><button type="submit">Login</button></form>
-          <script>document.querySelector('form').addEventListener('submit', async event => {
-            event.preventDefault();
-            const result = await fetch('/api/user/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:document.querySelector('[name=username]').value,password:document.querySelector('[type=password]').value})}).then(response=>response.json());
-            localStorage.setItem('user',JSON.stringify(result.data));
-            location.assign('/console');
-          });</script>`,
-      }),
-    )
-    const worker = await getServiceWorker(context)
-    await seedUserPreferences(worker, {
-      preferencesVersion: DEFAULT_PREFERENCES.preferencesVersion,
-      openChangelogOnUpdate: false,
-      autoCheckin: {
-        ...DEFAULT_PREFERENCES.autoCheckin!,
-        globalEnabled: method === "password",
-        pretriggerDailyOnUiOpen: false,
-      },
-    })
-    await seedStoredAccounts(worker, [
-      createStoredAccount({
-        id: "login-config-account",
-        site_name: "AgentRouter",
-        site_type: SITE_TYPES.NEW_API,
-        site_url: "https://agentrouter.org",
-        login: { methodId: "github" },
-        account_info: {
-          id: "17",
-          username: "member",
-          access_token: "e2e-token",
-        },
-        checkIn: {
-          automaticExecutionEnabled: method === "password",
-          selection: {
-            mode: "automatic",
-            methodId: AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn,
-          },
-          methodKnowledge: {
-            methods: {
-              [AUTO_CHECKIN_METHOD_IDS.AgentRouterLoginCheckIn]: {
-                detection: {
-                  outcome: "matched",
-                  evidence: { source: "probe", observedAt: Date.now() },
-                },
-              },
-            },
-          },
-        },
-      }),
-    ])
     await page.goto(
       `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
     )
     await waitForExtensionRoot(page)
-    let row = page.getByTestId(
+    const row = page.getByTestId(
       getAccountManagementListItemTestId("login-config-account"),
     )
     await row.hover()
     await row.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton).click()
-    let dialog = page.getByRole("dialog")
+    const dialog = page.getByRole("dialog")
     await expect(dialog).toBeVisible()
     await expect(
       dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn),
@@ -404,193 +433,225 @@ for (const method of ["linuxdo", "password"] as const) {
         legacy: undefined,
       })
     expect(loginBodies).toHaveLength(0)
-    if (method === "password") {
-      await row.hover()
-      await row.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton).click()
-      await expect(dialog.locator("#account-login-username")).toHaveValue(
-        "native-member",
-      )
-      await expect(dialog.locator("#account-login-password")).toHaveValue(
-        " fixture password ",
-      )
-      await expect(
-        dialog.getByText("Current login method: Password login."),
-      ).toBeVisible()
-      await expect(
-        loginSection.getByText("Allow private browsing for isolated login", {
-          exact: true,
-        }),
-      ).toBeVisible()
-      await loginSection
-        .getByRole("button", { name: "Settings", exact: true })
-        .click()
-      const accessDialog = page.getByRole("dialog", {
-        name: "Incognito / private browsing access",
-        exact: true,
-      })
-      await expect(
-        accessDialog.getByText(
-          "Changing this permission may reload the extension, close extension pages or interrupt tasks. Save unfinished edits first.",
-          { exact: true },
-        ),
-      ).toBeVisible()
-      await accessDialog
-        .getByRole("button", { name: "Cancel", exact: true })
-        .click()
-      await expect(loginSection.locator("#account-login-username")).toHaveValue(
-        "native-member",
-      )
-      await expect(loginSection.locator("#account-login-password")).toHaveValue(
-        " fixture password ",
-      )
-      await loginSection
-        .getByRole("button", { name: "Settings", exact: true })
-        .click()
-      const settingsOpened = context.waitForEvent("page")
-      await accessDialog
-        .getByRole("button", {
-          name: "Chrome settings",
-          exact: true,
-        })
-        .click()
-      const settings = await settingsOpened
-      await expect(settings).toHaveURL(`chrome://extensions/?id=${extensionId}`)
-      // Permission changes reload unpacked extensions; keep this isolated test
-      // profile in developer mode so Chromium does not disable the test build.
-      await settings.locator("extensions-toolbar #devMode").click()
-      const privateToggle = settings.locator("#allow-incognito cr-toggle")
-      const changePrivateAccess = async (allowed: boolean) => {
-        await expect(privateToggle).toHaveJSProperty("checked", !allowed)
-        // Register before clicking: changing access reloads the extension, and
-        // a cached worker can still report the previous permission meanwhile.
-        const reloaded = context.waitForEvent("serviceworker", {
-          predicate: (candidate) =>
-            candidate.url().startsWith(`chrome-extension://${extensionId}/`),
-        })
-        await privateToggle.click()
-        await expect(privateToggle).toHaveJSProperty("checked", allowed)
-        const reloadedWorker = await reloaded
-        await expect
-          .poll(() =>
-            reloadedWorker.evaluate(() => {
-              const api = (globalThis as any).chrome
-              if (!api?.extension?.isAllowedIncognitoAccess) return null
-              return new Promise<boolean>((resolve) =>
-                api.extension.isAllowedIncognitoAccess(resolve),
-              )
-            }),
-          )
-          .toBe(allowed)
-      }
-      await changePrivateAccess(true)
-      // Changing private access closes existing extension pages.
-      page = await context.newPage()
-      installExtensionPageGuards(page)
-      row = page.getByTestId(
-        getAccountManagementListItemTestId("login-config-account"),
-      )
-      dialog = page.getByRole("dialog")
-      await page.goto(
-        `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
-      )
-      await waitForExtensionRoot(page)
-      await row.hover()
-      await row.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton).click()
-      await expect(
-        dialog.getByText("Private browsing access allowed", { exact: true }),
-      ).toHaveCount(0)
-      await expect(
-        dialog.getByText("Allow private browsing for isolated login", {
-          exact: true,
-        }),
-      ).toHaveCount(0)
-      await expect(
-        dialog.getByText(
-          "Keep password login separate from regular windows to avoid account mix-ups and session interference.",
-          { exact: true },
-        ),
-      ).toHaveCount(0)
-      await captureVisualViews({
-        page,
-        ready: dialog.locator("#account-login-password"),
-        id: "account-login-private-access-granted",
-        extensionDir,
-      })
-      await dialog.getByRole("button", { name: "Cancel", exact: true }).click()
-      const privateWorker = await getServiceWorker(context)
-      await privateWorker.evaluate(() => {
-        const chromeApi = (globalThis as any).chrome
-        const create = chromeApi.windows.create.bind(chromeApi.windows)
-        // Keep this browser-boundary check offline: observe the real private
-        // window chosen by password login before any site credentials dispatch.
-        chromeApi.windows.create = async (options: Record<string, unknown>) => {
-          chromeApi.windows.create = create
-          const opened = await create({ ...options, url: "about:blank" })
-          ;(globalThis as any).__passwordLoginWindow = {
-            id: opened.id,
-            incognito: opened.incognito,
-          }
-          return opened
-        }
-      })
-      await page.goto(
-        `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#autoCheckin`,
-      )
-      await page.getByRole("button", { name: "Run now", exact: true }).click()
-      await expect
-        .poll(() =>
-          privateWorker.evaluate(
-            () => (globalThis as any).__passwordLoginWindow?.incognito,
-          ),
-        )
-        .toBe(true)
-      await privateWorker.evaluate(async () => {
-        await (globalThis as any).chrome.windows.remove(
-          (globalThis as any).__passwordLoginWindow.id,
-        )
-      })
-      await expect
-        .poll(
-          async () =>
-            (
-              await getPlasmoStorageJsonValue<AutoCheckinStatus>(
-                privateWorker,
-                "autoCheckin_status",
-              )
-            )?.perAccount?.["login-config-account"]?.status,
-        )
-        .toBe("failed")
-      await settings.bringToFront()
-      await changePrivateAccess(false)
-      await settings.close()
-      const regularWorker = await getServiceWorker(context)
-      page = await context.newPage()
-      installExtensionPageGuards(page)
-      await page.goto(
-        `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#autoCheckin`,
-      )
-      const releaseNavigation = await holdExtensionWindowNavigation(
-        context,
-        regularWorker,
-        "https://agentrouter.org/login",
-      )
-      await page.getByRole("button", { name: "Run now", exact: true }).click()
-      await releaseNavigation()
-      await expect
-        .poll(
-          async () =>
-            (
-              await getPlasmoStorageJsonValue<AutoCheckinStatus>(
-                regularWorker,
-                "autoCheckin_status",
-              )
-            )?.perAccount?.["login-config-account"]?.status,
-          { timeout: 30_000 },
-        )
-        .toBe("success")
-      expect(loginBodies).toEqual([
-        { username: "native-member", password: " fixture password " },
-      ])
-    }
   })
 }
+
+test("password login uses an isolated window when private access is allowed and regular login otherwise", async ({
+  context,
+  page,
+  extensionId,
+  extensionDir,
+}) => {
+  const { loginBodies } = await setupLoginFixture({
+    context,
+    page,
+    method: "password",
+    savedPassword: true,
+  })
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
+  )
+  await waitForExtensionRoot(page)
+  let row = page.getByTestId(
+    getAccountManagementListItemTestId("login-config-account"),
+  )
+  let dialog = page.getByRole("dialog")
+  const loginSection = dialog.getByTestId(
+    ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionLogin,
+  )
+  await row.hover()
+  await row.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton).click()
+  await expect(dialog.locator("#account-login-username")).toHaveValue(
+    "native-member",
+  )
+  await expect(dialog.locator("#account-login-password")).toHaveValue(
+    " fixture password ",
+  )
+  await expect(
+    dialog.getByText("Current login method: Password login."),
+  ).toBeVisible()
+  await expect(
+    loginSection.getByText("Allow private browsing for isolated login", {
+      exact: true,
+    }),
+  ).toBeVisible()
+  await loginSection
+    .getByRole("button", { name: "Settings", exact: true })
+    .click()
+  const accessDialog = page.getByRole("dialog", {
+    name: "Incognito / private browsing access",
+    exact: true,
+  })
+  await expect(
+    accessDialog.getByText(
+      "Changing this permission may reload the extension, close extension pages or interrupt tasks. Save unfinished edits first.",
+      { exact: true },
+    ),
+  ).toBeVisible()
+  await accessDialog
+    .getByRole("button", { name: "Cancel", exact: true })
+    .click()
+  await expect(loginSection.locator("#account-login-username")).toHaveValue(
+    "native-member",
+  )
+  await expect(loginSection.locator("#account-login-password")).toHaveValue(
+    " fixture password ",
+  )
+  await loginSection
+    .getByRole("button", { name: "Settings", exact: true })
+    .click()
+  const settingsOpened = context.waitForEvent("page")
+  await accessDialog
+    .getByRole("button", {
+      name: "Chrome settings",
+      exact: true,
+    })
+    .click()
+  const settings = await settingsOpened
+  await expect(settings).toHaveURL(`chrome://extensions/?id=${extensionId}`)
+  // Permission changes reload unpacked extensions; keep this isolated test
+  // profile in developer mode so Chromium does not disable the test build.
+  await settings.locator("extensions-toolbar #devMode").click()
+  const privateToggle = settings.locator("#allow-incognito cr-toggle")
+  const changePrivateAccess = async (allowed: boolean) => {
+    await expect(privateToggle).toHaveJSProperty("checked", !allowed)
+    const previousWorker = await getServiceWorker(context)
+    let previousWorkerClosed = false
+    previousWorker.once("close", () => {
+      previousWorkerClosed = true
+    })
+    // Permission changes reload the extension. Wait for the old worker to
+    // close so a permission read cannot succeed on the worker being discarded.
+    await privateToggle.click()
+    await expect(privateToggle).toHaveJSProperty("checked", allowed)
+    await expect
+      .poll(() => previousWorkerClosed, {
+        message: "pre-permission-change service worker closes",
+      })
+      .toBe(true)
+    await expect
+      .poll(async () => {
+        const currentWorker = await getServiceWorker(context)
+        return currentWorker
+          .evaluate(() => {
+            const api = (globalThis as any).chrome
+            if (!api?.extension?.isAllowedIncognitoAccess) return null
+            return new Promise<boolean>((resolve) =>
+              api.extension.isAllowedIncognitoAccess(resolve),
+            )
+          })
+          .catch(() => null)
+      })
+      .toBe(allowed)
+  }
+  await changePrivateAccess(true)
+  // Changing private access closes existing extension pages.
+  page = await context.newPage()
+  installExtensionPageGuards(page)
+  row = page.getByTestId(
+    getAccountManagementListItemTestId("login-config-account"),
+  )
+  dialog = page.getByRole("dialog")
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
+  )
+  await waitForExtensionRoot(page)
+  await row.hover()
+  await row.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton).click()
+  await expect(
+    dialog.getByText("Private browsing access allowed", { exact: true }),
+  ).toHaveCount(0)
+  await expect(
+    dialog.getByText("Allow private browsing for isolated login", {
+      exact: true,
+    }),
+  ).toHaveCount(0)
+  await expect(
+    dialog.getByText(
+      "Keep password login separate from regular windows to avoid account mix-ups and session interference.",
+      { exact: true },
+    ),
+  ).toHaveCount(0)
+  await captureVisualViews({
+    page,
+    ready: dialog.locator("#account-login-password"),
+    id: "account-login-private-access-granted",
+    extensionDir,
+  })
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click()
+  const privateWorker = await getServiceWorker(context)
+  await privateWorker.evaluate(() => {
+    const chromeApi = (globalThis as any).chrome
+    const create = chromeApi.windows.create.bind(chromeApi.windows)
+    // Keep this browser-boundary check offline: observe the real private
+    // window chosen by password login before any site credentials dispatch.
+    chromeApi.windows.create = async (options: Record<string, unknown>) => {
+      chromeApi.windows.create = create
+      const opened = await create({ ...options, url: "about:blank" })
+      ;(globalThis as any).__passwordLoginWindow = {
+        id: opened.id,
+        incognito: opened.incognito,
+      }
+      return opened
+    }
+  })
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#autoCheckin`,
+  )
+  await page.getByRole("button", { name: "Run now", exact: true }).click()
+  await expect
+    .poll(() =>
+      privateWorker.evaluate(
+        () => (globalThis as any).__passwordLoginWindow?.incognito,
+      ),
+    )
+    .toBe(true)
+  await privateWorker.evaluate(async () => {
+    await (globalThis as any).chrome.windows.remove(
+      (globalThis as any).__passwordLoginWindow.id,
+    )
+  })
+  await expect
+    .poll(
+      async () =>
+        (
+          await getPlasmoStorageJsonValue<AutoCheckinStatus>(
+            privateWorker,
+            "autoCheckin_status",
+          )
+        )?.perAccount?.["login-config-account"]?.status,
+    )
+    .toBe("failed")
+  expect(loginBodies).toHaveLength(0)
+  await settings.bringToFront()
+  await changePrivateAccess(false)
+  await settings.close()
+  const regularWorker = await getServiceWorker(context)
+  page = await context.newPage()
+  installExtensionPageGuards(page)
+  await page.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#autoCheckin`,
+  )
+  const releaseNavigation = await holdExtensionWindowNavigation(
+    context,
+    regularWorker,
+    "https://agentrouter.org/login",
+  )
+  await page.getByRole("button", { name: "Run now", exact: true }).click()
+  await releaseNavigation()
+  await expect
+    .poll(
+      async () =>
+        (
+          await getPlasmoStorageJsonValue<AutoCheckinStatus>(
+            regularWorker,
+            "autoCheckin_status",
+          )
+        )?.perAccount?.["login-config-account"]?.status,
+      { timeout: 30_000 },
+    )
+    .toBe("success")
+  expect(loginBodies).toEqual([
+    { username: "native-member", password: " fixture password " },
+  ])
+})

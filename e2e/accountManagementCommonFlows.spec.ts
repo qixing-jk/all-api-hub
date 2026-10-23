@@ -622,14 +622,23 @@ test("keeps the full account list stable when an account moves to the disabled g
     getAccountManagementListItemTestId(targetId),
   )
   await expect(movedRow).toBeVisible()
-  const movedRowBox = await movedRow.boundingBox()
   const viewport = page.viewportSize()
-  expect(movedRowBox).not.toBeNull()
   expect(viewport).not.toBeNull()
-  expect(movedRowBox?.y ?? -1).toBeGreaterThanOrEqual(0)
-  expect(
-    (movedRowBox?.y ?? 0) + (movedRowBox?.height ?? 0),
-  ).toBeLessThanOrEqual(viewport?.height ?? 0)
+  // Scrolling can remount virtualized rows between visibility and geometry
+  // reads. Check the complete viewport condition against one current box.
+  await expect
+    .poll(
+      async () => {
+        const box = await movedRow.boundingBox()
+        return (
+          box !== null &&
+          box.y >= 0 &&
+          box.y + box.height <= (viewport?.height ?? 0)
+        )
+      },
+      { message: "disabled account row is fully inside the viewport" },
+    )
+    .toBe(true)
 
   await openAccountActionsMenu(page, "AAA Move To Disabled Target")
   await page
