@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { revealNavigationTarget } from "~/utils/dom/navigationTarget"
 
 import {
   GATEWAY_GUIDANCE_OVERVIEW_ID,
@@ -67,8 +68,7 @@ export function useGatewayGuidancePresentation(
     if (!previewRequested || !ready) return
     const guide = document.getElementById(GATEWAY_GUIDANCE_OVERVIEW_ID)
     if (!guide) return
-    guide.scrollIntoView({ block: "start" })
-    guide.focus({ preventScroll: true })
+    revealNavigationTarget(guide, { focus: true })
     const next = { completed, expanded: true }
     setChoice(next)
     saveChoice(next)

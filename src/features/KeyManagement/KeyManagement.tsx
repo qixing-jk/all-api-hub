@@ -29,6 +29,7 @@ import { OneTimeSecretDialog } from "~/features/TokenProvisioning/secretDelivery
 import { CREATED_RUNTIME_SECRET_CORRELATION_KINDS as correlationKinds } from "~/services/accounts/keys/createdRuntimeSecret"
 import { ACCOUNT_KEY_RESOURCE_FAILURE_CODES } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES as secretAvailability } from "~/services/apiAdapters/contracts/inventorySecret"
+import { revealNavigationTarget } from "~/utils/dom/navigationTarget"
 import {
   openApiCredentialProfilesPage,
   openSettingsTab,
@@ -163,13 +164,8 @@ export default function KeyManagement(props: {
   const handleRequestAccountSelection = useCallback(() => {
     const selectorTrigger = accountSelectorTriggerRef.current
 
-    if (selectorTrigger) {
-      if (typeof selectorTrigger.scrollIntoView === "function") {
-        selectorTrigger.scrollIntoView({
-          block: "nearest",
-        })
-      }
-    }
+    if (selectorTrigger)
+      revealNavigationTarget(selectorTrigger, { block: "nearest" })
 
     setIsAccountSelectorOpen(true)
   }, [setIsAccountSelectorOpen])

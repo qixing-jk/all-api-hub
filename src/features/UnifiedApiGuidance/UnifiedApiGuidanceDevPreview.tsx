@@ -26,6 +26,7 @@ import {
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { type UserPreferences } from "~/services/preferences/preferencesSchema"
 import { assertNever } from "~/utils/core/assert"
+import { revealNavigationTarget } from "~/utils/dom/navigationTarget"
 
 import {
   UNIFIED_API_GUIDANCE_SURFACES,
@@ -355,9 +356,10 @@ function CurrentStatePreview({
   const handleJumpToMatchedScenario = () => {
     if (!matchedScenario) return
 
-    document
-      .getElementById(buildScenarioElementId(matchedScenario.scenario.id))
-      ?.scrollIntoView({ behavior: "smooth", block: "start" })
+    const target = document.getElementById(
+      buildScenarioElementId(matchedScenario.scenario.id),
+    )
+    if (target) revealNavigationTarget(target, { behavior: "smooth" })
   }
 
   return (

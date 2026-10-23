@@ -1,5 +1,6 @@
 import { act } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import type { Ref } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -155,13 +156,19 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
 vi.mock("~/features/KeyManagement/inventory/AccountSelectorPanel", () => {
   function MockAccountSelectorPanel(props: {
     selectorOpen?: boolean
+    selectorTriggerRef?: Ref<HTMLButtonElement>
     setSelectedAccount: (value: string) => void
   }) {
-    const { selectorOpen, setSelectedAccount } = props
+    const { selectorOpen, selectorTriggerRef, setSelectedAccount } = props
 
     return (
       <div>
-        <button type="button" role="combobox" aria-expanded={selectorOpen}>
+        <button
+          ref={selectorTriggerRef}
+          type="button"
+          role="combobox"
+          aria-expanded={selectorOpen}
+        >
           Mock account selector
         </button>
         <button
@@ -686,6 +693,7 @@ describe("KeyManagement empty-state actions", () => {
   })
 
   it("opens the account selector when the user needs to choose an account first", async () => {
+    const scrollIntoView = vi.spyOn(HTMLElement.prototype, "scrollIntoView")
     const user = userEvent.setup()
     const account = createAccount({
       id: "acc-1",
@@ -713,6 +721,11 @@ describe("KeyManagement empty-state actions", () => {
     await waitFor(() =>
       expect(selectorTrigger).toHaveAttribute("aria-expanded", "true"),
     )
+    expect(scrollIntoView).toHaveBeenCalledWith({
+      behavior: "auto",
+      block: "nearest",
+    })
+    expect(scrollIntoView.mock.instances).toContain(selectorTrigger)
   })
 
   it("omits the model shortcut when the selected account has no supported model route", () => {

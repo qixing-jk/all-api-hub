@@ -5,19 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import {
   clearHighlightSearchParam,
-  highlightSearchTarget,
   navigateFromSearchItem,
   OPTIONS_SEARCH_HIGHLIGHT_PARAM,
 } from "~/features/OptionsSearch/navigation"
 import type { OptionsSearchItem } from "~/features/OptionsSearch/types"
-import { replaceWithinOptionsPage } from "~/utils/navigation/optionsPage"
-
-vi.mock("~/utils/navigation/optionsPage", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/navigation/optionsPage")>()
-
-  return { ...actual, replaceWithinOptionsPage: vi.fn() }
-})
 
 describe("options search navigation helpers", () => {
   beforeEach(() => {
@@ -40,9 +31,21 @@ describe("options search navigation helpers", () => {
   })
 
   it("removes the highlight search param when it is present", () => {
+    const state = { source: "settings-search" }
+    window.history.replaceState(
+      state,
+      "",
+      "/options.html?anchor=target&highlight=target#basic",
+    )
+    const onNavigate = vi.fn()
+    window.addEventListener("hashchange", onNavigate)
+
     clearHighlightSearchParam()
 
-    expect(replaceWithinOptionsPage).toHaveBeenCalledWith("#basic", {})
+    expect(window.location.search).toBe("?anchor=target")
+    expect(window.history.state).toEqual(state)
+    expect(onNavigate).not.toHaveBeenCalled()
+    window.removeEventListener("hashchange", onNavigate)
   })
 
   it("falls back to overview when clearing highlights from a URL without a hash", () => {
@@ -54,12 +57,8 @@ describe("options search navigation helpers", () => {
 
     clearHighlightSearchParam()
 
-    expect(replaceWithinOptionsPage).toHaveBeenCalledWith(
-      `#${MENU_ITEM_IDS.OVERVIEW}`,
-      {
-        anchor: "x",
-      },
-    )
+    expect(window.location.hash).toBe(`#${MENU_ITEM_IDS.OVERVIEW}`)
+    expect(window.location.search).toBe("?anchor=x")
   })
 
   it("navigates non-basic control results with anchor and highlight params", () => {
@@ -83,24 +82,6 @@ describe("options search navigation helpers", () => {
       anchor: "webdav-url",
       highlight: "webdav-url",
     })
-  })
-
-  it("returns false when the highlight target does not exist", () => {
-    expect(highlightSearchTarget("missing-target")).toBe(false)
-  })
-
-  it("removes the temporary highlight classes after the timeout elapses", () => {
-    const target = document.createElement("div")
-    target.id = "target"
-    target.scrollIntoView = vi.fn()
-    document.body.appendChild(target)
-
-    expect(highlightSearchTarget("target")).toBe(true)
-    expect(target.className).toContain("ring-2")
-
-    vi.runAllTimers()
-
-    expect(target.className).toBe("")
   })
 
   afterEach(() => {

@@ -48,6 +48,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
+import { revealNavigationTarget } from "~/utils/dom/navigationTarget"
 import { openKeysPage } from "~/utils/navigation"
 import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
 
@@ -218,13 +219,8 @@ export default function ModelList(props: {
   const handleRequestSourceSelection = useCallback(() => {
     const selectorTrigger = sourceSelectorTriggerRef.current
 
-    if (selectorTrigger) {
-      if (typeof selectorTrigger.scrollIntoView === "function") {
-        selectorTrigger.scrollIntoView({
-          block: "nearest",
-        })
-      }
-    }
+    if (selectorTrigger)
+      revealNavigationTarget(selectorTrigger, { block: "nearest" })
 
     setIsSourceSelectorOpen(true)
   }, [])

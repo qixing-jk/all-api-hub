@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import ProtectionBypassHistory from "~/features/BasicSettings/components/tabs/Refresh/protectionBypass/ProtectionBypassHistory"
 import { SHIELD_SETTINGS_TARGET_IDS } from "~/features/BasicSettings/components/tabs/Refresh/searchTargets"
+import { useOptionsTargetNavigation } from "~/features/OptionsMenu/useOptionsTargetNavigation"
 import toast from "~/lib/notify"
 import enShieldBypass from "~/locales/en/shieldBypass.json"
 import zhCnShieldBypass from "~/locales/zh-CN/shieldBypass.json"
@@ -548,23 +549,29 @@ describe("protection bypass history settings", () => {
         "",
         "/?tab=refresh&anchor=shield-history&highlight=shield-history#basic",
       )
-      render(
-        <>
-          <div id={targetId}>
-            <button onClick={enableSetting}>Automatic setting</button>
-          </div>
-          <ProtectionBypassHistory />
-        </>,
-        {
-          withUserPreferencesProvider: false,
-          withThemeProvider: false,
-        },
-      )
+      function SettingsHistory() {
+        useOptionsTargetNavigation({ pageId: "basic" })
+        return (
+          <>
+            <div id={targetId}>
+              <button onClick={enableSetting}>Automatic setting</button>
+            </div>
+            <ProtectionBypassHistory />
+          </>
+        )
+      }
+      render(<SettingsHistory />, {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+      })
       const dialog = within(
         await screen.findByRole("dialog", {
           name: "shieldBypass:history.title",
         }),
       )
+      const target = document.getElementById(targetId)!
+      const scroll = vi.fn()
+      target.scrollIntoView = scroll
       await user.click(
         await dialog.findByRole("button", {
           name: /https:\/\/settings\.example/,
@@ -596,9 +603,10 @@ describe("protection bypass history settings", () => {
       expect(new URLSearchParams(window.location.search).get("anchor")).toBe(
         targetId,
       )
-      expect(new URLSearchParams(window.location.search).get("highlight")).toBe(
-        targetId,
-      )
+      expect(
+        new URLSearchParams(window.location.search).get("highlight"),
+      ).toBeNull()
+      expect(scroll).toHaveBeenCalledTimes(1)
       expect(enableSetting).not.toHaveBeenCalled()
 
       await user.click(

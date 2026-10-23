@@ -21,6 +21,9 @@ import {
   PRICING_RANGE_AXES,
 } from "~/services/modelPricing/pricingConstants"
 import type { QuoteResult } from "~/services/modelPricing/pricingPlan"
+import { revealNavigationTarget } from "~/utils/dom/navigationTarget"
+
+const PRICING_CONDITION_HIGHLIGHT_DURATION_MS = 4000
 
 /** Identify a single actionable field from affected meters and published rules. */
 export function getPricingConditionTarget(
@@ -127,23 +130,25 @@ export function PricingScenarioNavigation({
           if (ancestor instanceof HTMLDetailsElement) ancestor.open = true
           ancestor = ancestor.parentElement
         }
-        target.dataset.pricingHighlight = "true"
       }
       if (!targets.length) {
         const customization = controls.querySelector("details")
         if (customization) customization.open = true
       }
       const destination = targets[0] ?? controls
-      destination.scrollIntoView?.({ block: "center" })
-      destination.focus({ preventScroll: true })
-      const clear = () => {
-        for (const target of targets) delete target.dataset.pricingHighlight
-      }
-      const timeout = setTimeout(clear, 4000)
-      return () => {
-        clearTimeout(timeout)
-        clear()
-      }
+      return revealNavigationTarget(destination, {
+        block: "center",
+        focus: true,
+        highlight: {
+          durationMs: PRICING_CONDITION_HIGHLIGHT_DURATION_MS,
+          onChange: (active) => {
+            for (const target of targets) {
+              if (active) target.dataset.pricingHighlight = "true"
+              else delete target.dataset.pricingHighlight
+            }
+          },
+        },
+      })
     }
   }, [requested])
   return (

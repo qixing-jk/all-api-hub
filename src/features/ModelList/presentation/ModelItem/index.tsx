@@ -61,6 +61,7 @@ import { createTab } from "~/utils/browser/tabs"
 import { isProdBuild } from "~/utils/core/environment"
 import { createLogger } from "~/utils/core/logger"
 import { tryParseUrl } from "~/utils/core/urlParsing"
+import { revealNavigationTarget } from "~/utils/dom/navigationTarget"
 
 const logger = createLogger("ModelItem")
 
@@ -159,8 +160,10 @@ export default function ModelItem(props: ModelItemProps) {
     : uncontrolledIsExpanded
   useEffect(() => {
     if (calculationRequested && isExpanded && detailsRef.current) {
-      detailsRef.current.scrollIntoView?.({ block: "nearest" })
-      detailsRef.current.focus({ preventScroll: true })
+      revealNavigationTarget(detailsRef.current, {
+        block: "nearest",
+        focus: true,
+      })
       setCalculationRequested(false)
     }
   }, [calculationRequested, isExpanded])

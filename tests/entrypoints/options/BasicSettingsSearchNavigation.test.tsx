@@ -1,5 +1,6 @@
+import { act } from "@testing-library/react"
 import type { ReactNode } from "react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import BasicSettings from "~/features/BasicSettings/BasicSettings"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -117,6 +118,8 @@ vi.mock(
 )
 
 describe("BasicSettings search navigation", () => {
+  afterEach(() => vi.useRealTimers())
+
   beforeEach(() => {
     mockedUseUserPreferencesContext.mockReset()
     mockedUseUserPreferencesContext.mockReturnValue({
@@ -139,6 +142,38 @@ describe("BasicSettings search navigation", () => {
     expect(screen.getByText("general content")).toBeInTheDocument()
   })
 
+  it("waits for preferences to load before consuming and highlighting the destination", async () => {
+    vi.useFakeTimers()
+    mockedUseUserPreferencesContext.mockReturnValue({ isLoading: true })
+    const view = render(<BasicSettings />, {
+      withReleaseUpdateStatusProvider: false,
+    })
+
+    await act(() => vi.advanceTimersByTimeAsync(500))
+    expect(window.location.search).toContain("highlight=")
+
+    mockedUseUserPreferencesContext.mockReturnValue({ isLoading: false })
+    view.rerender(<BasicSettings />)
+    await act(() => vi.advanceTimersByTimeAsync(350))
+
+    expect(screen.getByText("general content")).toHaveClass("ring-theme-500")
+    expect(window.location.search).not.toContain("highlight=")
+  })
+
+  it("still scrolls legacy heading links", async () => {
+    vi.useFakeTimers()
+    window.history.replaceState(null, "", "/options.html#display-currency-unit")
+    render(<BasicSettings />, { withReleaseUpdateStatusProvider: false })
+    const target = screen.getByText("general content")
+    const scroll = vi.spyOn(target, "scrollIntoView")
+    scroll.mockClear()
+
+    await act(() => vi.advanceTimersByTimeAsync(350))
+
+    expect(scroll).toHaveBeenCalledTimes(1)
+    scroll.mockRestore()
+  })
+
   it("clears the highlight param when the target element is missing", async () => {
     window.history.replaceState(
       null,
@@ -148,9 +183,12 @@ describe("BasicSettings search navigation", () => {
 
     render(<BasicSettings />, { withReleaseUpdateStatusProvider: false })
 
-    await waitFor(() => {
-      expect(window.location.search).not.toContain("highlight=")
-    })
+    await waitFor(
+      () => {
+        expect(window.location.search).not.toContain("highlight=")
+      },
+      { timeout: 3000 },
+    )
 
     expect(screen.getByText("general content")).toBeInTheDocument()
   })

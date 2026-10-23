@@ -29,9 +29,11 @@ import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
+import { revealNavigationTarget } from "~/utils/dom/navigationTarget"
 import { showResultToast } from "~/utils/feedback/operationFeedback"
 
 const logger = createLogger("RuntimeKeyIntegrationActions")
+const GUIDED_IMPORT_HIGHLIGHT_DURATION_MS = 5000
 
 /** Shared analytics context for opening and completing a Kelivo key export. */
 export const RUNTIME_KEY_KELIVO_EXPORT_ANALYTICS_CONTEXT = {
@@ -83,9 +85,10 @@ export function useRuntimeKeyIntegrationActions({
   const [isManagedSiteImportHighlighted, setIsManagedSiteImportHighlighted] =
     useState(false)
   const managedSiteImportButtonRef = useRef<HTMLButtonElement>(null)
-  const handledGuidedManagedSiteImportRequestRef = useRef<string | undefined>(
+  const revokedGuidedManagedSiteImportRequestRef = useRef<string | undefined>(
     undefined,
   )
+  const wasGuidedManagedSiteImportEnabledRef = useRef(false)
   const kelivoExportEpochRef = useRef(0)
 
   useEffect(() => {
@@ -129,29 +132,35 @@ export function useRuntimeKeyIntegrationActions({
   ])
 
   useEffect(() => {
+    // Revocation consumes the request, but an effect replay must restore its highlight.
+    const wasEnabled = wasGuidedManagedSiteImportEnabledRef.current
+    wasGuidedManagedSiteImportEnabledRef.current = enabled
+    if (!enabled) {
+      if (wasEnabled) {
+        revokedGuidedManagedSiteImportRequestRef.current =
+          guidedManagedSiteImportRequest
+      }
+      return
+    }
     if (
-      !enabled ||
       !guidedManagedSiteImportRequest ||
-      handledGuidedManagedSiteImportRequestRef.current ===
+      revokedGuidedManagedSiteImportRequestRef.current ===
         guidedManagedSiteImportRequest
     ) {
       return
     }
 
-    handledGuidedManagedSiteImportRequestRef.current =
-      guidedManagedSiteImportRequest
-    setIsManagedSiteImportHighlighted(true)
-    managedSiteImportButtonRef.current?.scrollIntoView?.({
+    const button = managedSiteImportButtonRef.current
+    if (!button) return
+    return revealNavigationTarget(button, {
       block: "center",
       inline: "nearest",
+      focus: true,
+      highlight: {
+        durationMs: GUIDED_IMPORT_HIGHLIGHT_DURATION_MS,
+        onChange: setIsManagedSiteImportHighlighted,
+      },
     })
-    managedSiteImportButtonRef.current?.focus()
-
-    const timeoutId = window.setTimeout(() => {
-      setIsManagedSiteImportHighlighted(false)
-    }, 5000)
-
-    return () => window.clearTimeout(timeoutId)
   }, [enabled, guidedManagedSiteImportRequest])
 
   const handleImportToManagedSite = async () => {

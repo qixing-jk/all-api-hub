@@ -57,6 +57,21 @@ describe("useMediaQuery", () => {
     expect(result.current).toBe(true)
   })
 
+  it("uses the actual match on the first render before navigation effects run", () => {
+    const media = matchMediaMock("(min-width: 1024px)")
+    matchMediaMock.mockReturnValue({ ...media, matches: true })
+    const renderedMatches: boolean[] = []
+
+    renderHook(() => {
+      const matches = useIsDesktop()
+      renderedMatches.push(matches)
+      return matches
+    })
+
+    expect(renderedMatches[0]).toBe(true)
+    expect(renderedMatches).not.toContain(false)
+  })
+
   it("registers event listener on mount", () => {
     renderHook(() => useMediaQuery("(max-width: 1px)"))
     expect(addEventListenerMock).toHaveBeenCalledWith(

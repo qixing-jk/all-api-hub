@@ -1,6 +1,6 @@
 import { render as rtlRender, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type { ReactElement, ReactNode } from "react"
+import type { ReactElement, ReactNode, Ref } from "react"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -62,11 +62,17 @@ vi.mock(
 vi.mock("~/features/ModelList/catalog/AccountSelector", () => ({
   AccountSelector: ({
     setSelectedSourceValue,
+    selectorTriggerRef,
+    selectorOpen,
   }: {
     setSelectedSourceValue: (value: string) => void
+    selectorTriggerRef?: Ref<HTMLButtonElement>
+    selectorOpen?: boolean
   }) => (
     <div data-testid="account-selector">
       <button
+        ref={selectorTriggerRef}
+        aria-expanded={selectorOpen}
         type="button"
         onClick={() => setSelectedSourceValue("account:account-1")}
       >
@@ -382,6 +388,35 @@ function createModelListData() {
 }
 
 describe("ModelList", () => {
+  it("reveals and opens the source selector when models have no selected source", async () => {
+    const scrollIntoView = vi.spyOn(HTMLElement.prototype, "scrollIntoView")
+    const user = userEvent.setup()
+    mockUseModelListData.mockReturnValue({
+      ...createModelListData(),
+      selectedSource: null,
+      selectedSourceValue: "",
+      currentAccount: null,
+    })
+    render(<ModelList />)
+
+    await user.click(
+      screen.getByRole("button", {
+        name: testI18n.t("modelList:selectSource"),
+      }),
+    )
+
+    expect(scrollIntoView).toHaveBeenCalledWith({
+      behavior: "auto",
+      block: "nearest",
+    })
+    expect(scrollIntoView.mock.instances).toContain(
+      screen.getByRole("button", { name: "select-account-source" }),
+    )
+    expect(
+      screen.getByRole("button", { name: "select-account-source" }),
+    ).toHaveAttribute("aria-expanded", "true")
+  })
+
   it.each([true, false])(
     "shows one notice for local route fallback with catalog-only status %s",
     (catalogOnly) => {

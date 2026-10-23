@@ -1405,26 +1405,58 @@ describe("RuntimeKeyHeader analytics", () => {
     expect(showResultToastMock).toHaveBeenCalledWith({ success: true })
   })
 
-  it("highlights managed-site import without opening the import dialog", async () => {
-    vi.useFakeTimers()
-    try {
-      renderRuntimeKeyHeader({ guidedManagedSiteImportRequest: "request-1" })
-      await act(async () => {
-        vi.advanceTimersByTime(0)
-      })
+  it.each([false, true])(
+    "highlights managed-site import without opening the import dialog (strictMode=%s)",
+    async (strictMode) => {
+      vi.useFakeTimers()
+      try {
+        renderRuntimeKeyHeader(
+          { guidedManagedSiteImportRequest: "request-1" },
+          { strictMode },
+        )
+        await act(async () => {
+          vi.advanceTimersByTime(0)
+        })
 
-      const importButton = screen.getByTestId(
-        KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton,
-      )
-      expect(importButton).toHaveAttribute("data-guidance-highlight", "true")
-      act(() => {
-        vi.advanceTimersByTime(5000)
-      })
-      expect(importButton).not.toHaveAttribute("data-guidance-highlight")
-      expect(openWithAccountMock).not.toHaveBeenCalled()
-    } finally {
-      vi.useRealTimers()
-    }
+        const importButton = screen.getByTestId(
+          KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton,
+        )
+        expect(importButton).toHaveAttribute("data-guidance-highlight", "true")
+        expect(importButton).toHaveFocus()
+        act(() => {
+          vi.advanceTimersByTime(4999)
+        })
+        expect(importButton).toHaveAttribute("data-guidance-highlight", "true")
+        act(() => {
+          vi.advanceTimersByTime(1)
+        })
+        expect(importButton).not.toHaveAttribute("data-guidance-highlight")
+        expect(openWithAccountMock).not.toHaveBeenCalled()
+      } finally {
+        vi.useRealTimers()
+      }
+    },
+  )
+
+  it("reveals a guided import first received before export permission is enabled", async () => {
+    const { rerenderRuntimeKeyHeader } = renderRuntimeKeyHeader(
+      {
+        actionPolicy: { ...RECOVERABLE_ACTION_POLICY, exportSecret: false },
+        guidedManagedSiteImportRequest: "request-1",
+      },
+      { strictMode: true },
+    )
+
+    rerenderRuntimeKeyHeader({ guidedManagedSiteImportRequest: "request-1" })
+
+    const importButton = screen.getByTestId(
+      KEY_MANAGEMENT_TEST_IDS.importToManagedSiteButton,
+    )
+    await waitFor(() =>
+      expect(importButton).toHaveAttribute("data-guidance-highlight", "true"),
+    )
+    expect(importButton).toHaveFocus()
+    expect(openWithAccountMock).not.toHaveBeenCalled()
   })
 
   it("clears export dialogs and consumes guided requests when export permission is revoked", async () => {

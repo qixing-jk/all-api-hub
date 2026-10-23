@@ -6,9 +6,14 @@ import {
   useState,
 } from "react"
 
+import { resolveNavigationScrollBehavior } from "~/utils/dom/scrollBehavior"
+
 const SCROLL_EDGE_EPSILON_PX = 2
 const DEFAULT_SCROLL_STEP_RATIO = 0.75
 const MIN_SCROLL_STEP_PX = 160
+const SCROLL_DIRECTIONS = { Left: "left", Right: "right" } as const
+type ScrollDirection =
+  (typeof SCROLL_DIRECTIONS)[keyof typeof SCROLL_DIRECTIONS]
 
 export interface HorizontalScrollControlsOptions {
   /**
@@ -134,7 +139,7 @@ export function useHorizontalScrollControls<TElement extends HTMLElement>(
   }, [enableWheelScroll])
 
   const scrollByStep = useCallback(
-    (direction: "left" | "right") => {
+    (direction: ScrollDirection) => {
       const el = scrollRef.current
       if (!el) return
 
@@ -145,7 +150,7 @@ export function useHorizontalScrollControls<TElement extends HTMLElement>(
         ),
       )
       const step = scrollStepPx ?? computedStep
-      const delta = direction === "left" ? -step : step
+      const delta = direction === SCROLL_DIRECTIONS.Left ? -step : step
       const targetLeft = el.scrollLeft + delta
       if (typeof el.scrollBy === "function") {
         el.scrollBy({ left: delta, behavior: "auto" })
@@ -159,8 +164,14 @@ export function useHorizontalScrollControls<TElement extends HTMLElement>(
     [scrollStepPx, scrollStepRatio, updateScrollState],
   )
 
-  const scrollLeft = useCallback(() => scrollByStep("left"), [scrollByStep])
-  const scrollRight = useCallback(() => scrollByStep("right"), [scrollByStep])
+  const scrollLeft = useCallback(
+    () => scrollByStep(SCROLL_DIRECTIONS.Left),
+    [scrollByStep],
+  )
+  const scrollRight = useCallback(
+    () => scrollByStep(SCROLL_DIRECTIONS.Right),
+    [scrollByStep],
+  )
 
   const scrollChildIntoCenter = useCallback(
     (childIndex: number) => {
@@ -179,7 +190,10 @@ export function useHorizontalScrollControls<TElement extends HTMLElement>(
         childLeft - el.clientWidth / 2 + childRect.width / 2
       const resolvedLeft = Math.max(0, targetScrollLeft)
       if (typeof el.scrollTo === "function") {
-        el.scrollTo({ left: resolvedLeft, behavior: "smooth" })
+        el.scrollTo({
+          left: resolvedLeft,
+          behavior: resolveNavigationScrollBehavior(),
+        })
       } else {
         el.scrollLeft = resolvedLeft
         updateScrollState()
