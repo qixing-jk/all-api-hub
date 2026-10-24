@@ -3,6 +3,8 @@
     "body": "¿Quieres abrir el panel de prueba de AI API para comprobar y probar la disponibilidad de la AI API?",
     "enhancedInfo": "Activado por la autodetección mejorada. Si esto parece incorrecto, repórtalo o desactiva la autodetección mejorada en ajustes.",
     "feedback": "Reportar problema",
+    "keyOnlyBody": "Se decodificó una posible clave API, pero no se encontró la URL de la API. ¿Abrir el panel de pruebas para agregar la URL antes de probar?",
+    "keyOnlyTitle": "Se detectó una clave API",
     "open": "Abrir",
     "settings": "Abrir ajustes",
     "title": "URL de AI API y clave de API detectadas"

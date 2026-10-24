@@ -36,6 +36,7 @@ async function loadApiCheckToastModules() {
  */
 export async function showApiCheckConfirmToast(options?: {
   usesEnhancedResult?: boolean
+  missingBaseUrl?: boolean
 }): Promise<boolean> {
   await ensureRedemptionToastUi()
   const { createElement, ApiCheckConfirmToast } =
@@ -80,6 +81,7 @@ export async function showApiCheckConfirmToast(options?: {
             finish(action === "confirm", toastInstance.id)
           },
           usesEnhancedResult: !!options?.usesEnhancedResult,
+          missingBaseUrl: !!options?.missingBaseUrl,
         }),
       {
         duration: Infinity,

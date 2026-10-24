@@ -3,6 +3,8 @@
     "body": "AI API の可用性を確認・テストするために、AI API テストパネルを開きますか？",
     "enhancedInfo": "この通知は拡張自動検出によって表示されました。誤検出の場合は問題を報告するか、設定で拡張自動検出を無効にできます。",
     "feedback": "問題を報告",
+    "keyOnlyBody": "API キーと思われる値をデコードしましたが、API URL が見つかりませんでした。テストパネルを開いて URL を入力しますか？",
+    "keyOnlyTitle": "API Key を検出しました",
     "open": "開く",
     "settings": "設定を開く",
     "title": "AI API の URL と API キーを検出しました"

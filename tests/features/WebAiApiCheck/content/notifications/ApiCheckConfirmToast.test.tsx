@@ -83,6 +83,25 @@ describe("ApiCheckConfirmToast", () => {
     expect(parentClick).not.toHaveBeenCalled()
   })
 
+  it("asks the user to supply a missing URL without claiming a URL was detected", () => {
+    render(
+      <ApiCheckConfirmToast
+        onAction={vi.fn()}
+        missingBaseUrl
+        usesEnhancedResult
+      />,
+    )
+    expect(
+      screen.getByText("webAiApiCheck:confirmToast.keyOnlyTitle"),
+    ).toBeVisible()
+    expect(
+      screen.getByText("webAiApiCheck:confirmToast.keyOnlyBody"),
+    ).toBeVisible()
+    expect(
+      screen.queryByText("AI API URL and API Key Detected"),
+    ).not.toBeInTheDocument()
+  })
+
   it("does not show enhanced auto-detect info for standard matches", () => {
     render(<ApiCheckConfirmToast onAction={vi.fn()} />)
 

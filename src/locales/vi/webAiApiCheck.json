@@ -3,6 +3,8 @@
     "body": "Bạn có muốn mở bảng kiểm tra AI API để kiểm tra và dùng thử khả năng khả dụng của AI API không?",
     "enhancedInfo": "Thông báo này được kích hoạt bởi tự động phát hiện nâng cao. Nếu kết quả sai, hãy báo lỗi hoặc tắt tự động phát hiện nâng cao trong cài đặt.",
     "feedback": "Báo lỗi",
+    "keyOnlyBody": "Đã giải mã một giá trị có thể là khóa API nhưng chưa tìm thấy URL API. Mở bảng kiểm tra để thêm URL trước khi kiểm tra?",
+    "keyOnlyTitle": "Đã phát hiện khóa API",
     "open": "Mở",
     "settings": "Mở cài đặt",
     "title": "Đã phát hiện URL AI API và API Key hợp lệ"

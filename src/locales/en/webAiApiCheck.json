@@ -3,6 +3,8 @@
     "body": "Do you want to open the AI API test Panel to check and test the AI API's availability?",
     "enhancedInfo": "Triggered by enhanced auto-detect. If this looks wrong, report it or turn off enhanced auto-detect in settings.",
     "feedback": "Report issue",
+    "keyOnlyBody": "A likely API key was decoded, but no API URL was found. Open the test panel to add the URL before testing?",
+    "keyOnlyTitle": "API Key Detected",
     "open": "Open",
     "settings": "Open settings",
     "title": "AI API URL and API Key Detected"

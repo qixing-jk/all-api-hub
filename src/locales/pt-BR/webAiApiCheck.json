@@ -3,6 +3,8 @@
     "body": "Deseja abrir o painel de testes da AI API para verificar sua disponibilidade?",
     "enhancedInfo": "Acionado por detecção automática aprimorada. Se isso parecer errado, denuncie ou desative a detecção automática aprimorada nas configurações.",
     "feedback": "Relatar problema",
+    "keyOnlyBody": "Uma possível chave de API foi decodificada, mas nenhuma URL de API foi encontrada. Abrir o painel de testes para adicionar a URL antes de testar?",
+    "keyOnlyTitle": "Chave de API detectada",
     "open": "Abrir",
     "settings": "Abrir configurações",
     "title": "URL e chave da AI API detectadas"

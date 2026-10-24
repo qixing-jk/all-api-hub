@@ -309,6 +309,92 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
   })
 })
 
+for (const includeLink of [true, false]) {
+  test(`reviews a decoded web key ${includeLink ? "with a selected API link" : "without a URL"}`, async ({
+    context,
+    page,
+  }, testInfo) => {
+    const serviceWorker = await getServiceWorker(context)
+    await seedUserPreferences(serviceWorker, {
+      language: "en",
+      webAiApiCheck: {
+        enabled: true,
+        autoDetect: {
+          enabled: true,
+          enhanced: { enabled: true },
+          urlWhitelist: {
+            patterns: ["^https://api-console\\.example\\.test/console"],
+          },
+        },
+      },
+    })
+    const requests: string[] = []
+    context.on("request", (request) => requests.push(request.url()))
+    await page.goto(TEST_PAGE_URL)
+    const selectionPoints = await page.locator("#copy-credentials").evaluate(
+      (target, { includeLink, apiKey, baseUrl }) => {
+        const post = document.createElement("article")
+        post.id = "credential-post"
+        post.innerHTML = `${includeLink ? `<p>API URL：<br><a href="${baseUrl}">AI API Gateway</a></p>` : ""}<p>API KEY(base64加密)： <span>${btoa(apiKey)}</span></p>`
+        target.replaceWith(post)
+        const firstText = post.querySelector("p")!.firstChild!
+        const lastText = post.querySelector("span")!.firstChild!
+        const startRange = document.createRange()
+        startRange.setStart(firstText, 0)
+        startRange.setEnd(firstText, 1)
+        const endRange = document.createRange()
+        endRange.selectNodeContents(lastText)
+        const start = startRange.getBoundingClientRect()
+        const end = endRange.getBoundingClientRect()
+        return {
+          start: { x: start.left, y: start.top + start.height / 2 },
+          end: { x: end.right + 1, y: end.top + end.height / 2 },
+        }
+      },
+      { includeLink, apiKey: API_KEY, baseUrl: API_BASE_URL },
+    )
+    await page.mouse.move(selectionPoints.start.x, selectionPoints.start.y)
+    await page.mouse.down()
+    await page.mouse.move(selectionPoints.end.x, selectionPoints.end.y, {
+      steps: 12,
+    })
+    await page.mouse.up()
+    expect(
+      await page.evaluate(() => window.getSelection()?.toString()),
+    ).toContain(Buffer.from(API_KEY).toString("base64"))
+    const host = page.locator("all-api-hub-redemption-toast")
+    if (!includeLink) {
+      await expect(
+        host.getByText("API Key Detected", { exact: true }),
+      ).toBeVisible()
+      await expect(
+        host.getByText(
+          "A likely API key was decoded, but no API URL was found. Open the test panel to add the URL before testing?",
+        ),
+      ).toBeVisible()
+      await expect(host).not.toContainText(API_KEY)
+      await host
+        .locator("section")
+        .screenshot({ path: testInfo.outputPath("key-only-toast.png") })
+    }
+    await host.getByRole("button", { name: "Open", exact: true }).click()
+    const modal = host.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modal)
+    await expect(modal).toBeVisible()
+    await expect(
+      modal.getByRole("textbox", { name: /^API key$/i }),
+    ).toHaveValue(API_KEY)
+    await expect(
+      modal.getByRole("textbox", { name: "Base URL", exact: true }),
+    ).toHaveValue(includeLink ? API_BASE_URL : "")
+    if (!includeLink) {
+      await expect(
+        modal.getByTestId(WEB_AI_API_CHECK_TEST_IDS.saveToProfilesButton),
+      ).toBeDisabled()
+      expect(requests.filter((url) => url.includes("/v1/models"))).toEqual([])
+    }
+  })
+}
+
 test("turns selected web API credentials into a verified profile and model catalog source", async ({
   context,
   extensionId,

@@ -3,6 +3,8 @@
     "body": "Möchten Sie den KI-API-Testbereich öffnen, um die Verfügbarkeit der KI-API zu prüfen?",
     "enhancedInfo": "Ausgelöst durch verbesserte automatische Erkennung. Wenn dies falsch aussieht, melden Sie es oder deaktivieren Sie die erweiterte automatische Erkennung in den Einstellungen.",
     "feedback": "Problem melden",
+    "keyOnlyBody": "Ein möglicher API-Schlüssel wurde dekodiert, aber keine API-URL gefunden. Testpanel öffnen, um vor dem Testen die URL einzutragen?",
+    "keyOnlyTitle": "API-Schlüssel erkannt",
     "open": "Öffnen",
     "settings": "Einstellungen öffnen",
     "title": "AI-API-URL und API-Schlüssel erkannt"

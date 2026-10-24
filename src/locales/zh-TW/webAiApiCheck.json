@@ -3,6 +3,8 @@
     "body": "是否開啟 AI API 測試面板，以檢查並測試 AI API 可用性？",
     "enhancedInfo": "此提示由增強自動檢測觸發。若判斷有誤，建議回報問題；也可在設定中關閉增強自動檢測。",
     "feedback": "回報問題",
+    "keyOnlyBody": "已解碼出疑似 API 金鑰，尚未辨識到 API 網址。是否開啟測試面板，補充網址後再測試？",
+    "keyOnlyTitle": "偵測到 API Key",
     "open": "開啟",
     "settings": "開啟設定",
     "title": "檢測到有效 AI API 網址和API Key"

@@ -29,7 +29,8 @@ export type ApiCheckConfirmToastAction =
 export const ApiCheckConfirmToast: React.FC<{
   onAction: (action: ApiCheckConfirmToastAction) => void
   usesEnhancedResult?: boolean
-}> = ({ onAction, usesEnhancedResult = false }) => {
+  missingBaseUrl?: boolean
+}> = ({ onAction, usesEnhancedResult = false, missingBaseUrl = false }) => {
   const { t } = useTranslation(["webAiApiCheck", "common"])
 
   return (
@@ -39,7 +40,11 @@ export const ApiCheckConfirmToast: React.FC<{
       surfaceId={PRODUCT_ANALYTICS_SURFACE_IDS.ContentApiCheckConfirmToast}
     >
       <ContentNotice
-        title={t("webAiApiCheck:confirmToast.title")}
+        title={
+          missingBaseUrl
+            ? t("webAiApiCheck:confirmToast.keyOnlyTitle")
+            : t("webAiApiCheck:confirmToast.title")
+        }
         onClose={() => onAction("cancel")}
         closeAnalyticsAction={
           PRODUCT_ANALYTICS_ACTION_IDS.DetectedApiCredentialCheckDismissed
@@ -72,7 +77,11 @@ export const ApiCheckConfirmToast: React.FC<{
           </>
         }
       >
-        <p>{t("webAiApiCheck:confirmToast.body")}</p>
+        <p>
+          {missingBaseUrl
+            ? t("webAiApiCheck:confirmToast.keyOnlyBody")
+            : t("webAiApiCheck:confirmToast.body")}
+        </p>
         {usesEnhancedResult ? (
           <div className="bg-muted/50 text-muted-foreground gap-y-density-2 py-density-2 flex items-start gap-x-2 rounded-md px-2 text-sm">
             <Info className="mt-0.5 h-4 w-4 shrink-0" />
