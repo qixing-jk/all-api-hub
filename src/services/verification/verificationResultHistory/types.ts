@@ -3,6 +3,7 @@ import type {
   ApiVerificationMode,
   ApiVerificationProbeId,
   ApiVerificationProbeStatus,
+  ApiVerificationRequestProfile,
 } from "~/services/verification/aiApiVerification/types"
 import { API_VERIFICATION_PROBE_STATUSES } from "~/services/verification/aiApiVerification/types"
 
@@ -64,6 +65,8 @@ export type PersistedApiVerificationProbeSummary = {
   status: ApiVerificationProbeStatus
   latencyMs: number
   mode?: ApiVerificationMode
+  requestProfileEnhanced?: boolean
+  requestProfile?: ApiVerificationRequestProfile
   summary: string
   summaryKey?: string
   summaryParams?: PersistedApiVerificationSummaryParams

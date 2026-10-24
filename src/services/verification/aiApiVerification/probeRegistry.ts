@@ -14,6 +14,7 @@ import {
   type ApiVerificationMode,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
+  type ApiVerificationRequestProfile,
 } from "./types"
 
 /**
@@ -23,6 +24,8 @@ type ProbeRunnerParams = {
   baseUrl: string
   apiKey: string
   requestHeaders?: Record<string, string>
+  requestProfile?: ApiVerificationRequestProfile
+  requestProfileEnhanced?: boolean
   apiType: ApiVerificationApiType
   mode?: ApiVerificationMode
   modelId?: string

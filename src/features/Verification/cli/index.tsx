@@ -17,6 +17,10 @@ import {
   VerificationModeBadge,
   VerificationModeSelect,
 } from "~/features/Verification/api/VerificationMode"
+import {
+  VerificationRequestProfileBadge,
+  VerificationRequestProfileEnhancement,
+} from "~/features/Verification/api/VerificationRequestProfile"
 import { useCliSupportVerification } from "~/features/Verification/cli/hooks/useCliSupportVerification"
 import { ToolStatusBadge } from "~/features/Verification/cli/ToolStatusBadge"
 import type { VerifyCliSupportDialogProps } from "~/features/Verification/cli/types"
@@ -55,6 +59,8 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     tokenModelHint,
     resolvedModelId,
     canClose,
+    requestProfileEnhanced,
+    setRequestProfileEnhanced,
     hasAnyResult,
     stopSingleTool,
     runSingleToolCheck,
@@ -185,6 +191,12 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
           </div>
         </div>
 
+        <VerificationRequestProfileEnhancement
+          value={requestProfileEnhanced}
+          onChange={setRequestProfileEnhanced}
+          disabled={!canClose}
+        />
+
         {!hasAnyResult && (
           <div className="dark:text-secondary-foreground text-muted-foreground text-sm">
             {isProfileSource
@@ -238,6 +250,12 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
                           <>
                             <ToolStatusBadge result={result} />
                             <VerificationModeBadge mode={result.mode} />
+                            {result.requestProfileEnhanced && (
+                              <VerificationRequestProfileBadge
+                                profile={result.requestProfile}
+                                enhanced
+                              />
+                            )}
                           </>
                         ) : (
                           <Badge variant="outline" size="sm">

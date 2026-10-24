@@ -1,6 +1,8 @@
+import { isVerificationRequestProfile } from "~/services/verification/aiApiVerification/requestProfiles"
 import {
   API_TYPES,
   API_VERIFICATION_PROBE_IDS,
+  API_VERIFICATION_REQUEST_PROFILES,
   type ApiVerificationApiType,
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification/types"
@@ -19,6 +21,24 @@ import {
 
 const FALLBACK_SUMMARY_MAX_LENGTH = 240
 const FALLBACK_PARAM_STRING_MAX_LENGTH = 120
+
+/** Keep the same validated request identity on history writes and reads. */
+export function sanitizeVerificationRequestProfile(value: {
+  requestProfile?: unknown
+  requestProfileEnhanced?: unknown
+}): Pick<
+  PersistedApiVerificationProbeSummary,
+  "requestProfile" | "requestProfileEnhanced"
+> {
+  if (!isVerificationRequestProfile(value.requestProfile)) return {}
+  return {
+    requestProfile: value.requestProfile,
+    ...(value.requestProfile !== API_VERIFICATION_REQUEST_PROFILES.Default &&
+    value.requestProfileEnhanced === true
+      ? { requestProfileEnhanced: true }
+      : {}),
+  }
+}
 
 /**
  * Normalizes free-form summary text and bounds the stored length.
@@ -235,6 +255,7 @@ export function toPersistedProbeSummary(
   return {
     id: result.id,
     ...(result.mode ? { mode: result.mode } : {}),
+    ...sanitizeVerificationRequestProfile(result),
     status: result.status,
     latencyMs:
       typeof result.latencyMs === "number" && Number.isFinite(result.latencyMs)

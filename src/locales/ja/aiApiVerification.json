@@ -38,6 +38,7 @@
       "mode": "テスト方式",
       "model": "モデル",
       "modelPlaceholder": "モデル ID を入力",
+      "requestProfile": "クライアントの模擬",
       "runtimeKey": "キー",
       "runtimeKeyIncompatible": "このモデルでは使用不可",
       "runtimeKeyPlaceholder": "キーを選択"
@@ -65,6 +66,16 @@
       "tool-calling": "ツール / 関数呼び出し",
       "video-generation": "動画生成タスク",
       "web-search": "Web 検索 / grounding"
+    },
+    "requestProfiles": {
+      "claude": "Claude Code",
+      "codex": "Codex CLI",
+      "default": "なし（通常のリクエスト）",
+      "enhancedBadge": "強化",
+      "enhancedHint": "既知の識別プロンプト、SDK ヘッダー、キャッシュ、セッション情報を追加します。入力使用量が増える場合があり、サイトでの許可は保証されません。",
+      "enhancedLabel": "CLI シミュレーションの強化",
+      "gemini": "Gemini CLI",
+      "hint": "クライアントのリクエスト形式を模擬し、対応する API プロトコルに切り替えます。テスト内容は変わりません。"
     },
     "requiresModelId": "このテストを実行するにはモデル ID を入力してください。",
     "selectedRuntimeKeyIncompatibleHint": "選択中のキーはこのモデルのグループでは使用できません。互換性のあるキーを選択してから検証してください。",
@@ -96,6 +107,7 @@
       "noModelsReturned": "モデルが返されませんでした。",
       "noToolCallDetected": "ツール呼び出しが検出されませんでした（モデルがツールに対応していない可能性があります）。",
       "probeRequiresOpenAiProtocol": "このテストには OpenAI 互換 API エンドポイントが必要です。サービスが対応している場合のみ、そのプロトコルを選択してください。",
+      "requestProfileIncompatible": "選択したクライアントの模擬は、この API プロトコルまたはテストに対応していません。",
       "rerankSucceeded": "リランクテストに成功しました。",
       "rerankUnexpectedResponse": "リランカーレスポンスが予期しない形式です。",
       "stopped": "ユーザーが停止しました。",

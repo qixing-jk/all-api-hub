@@ -44,16 +44,20 @@ import type {
   ApiVerificationMode,
   ApiVerificationProbeId,
   ApiVerificationProbeResult,
+  ApiVerificationRequestProfile,
   ModelTestModality,
 } from "~/services/verification/aiApiVerification"
 import {
   API_TYPES,
   API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_STATUSES,
+  getVerificationRequestProfileApiType,
   resolveModelTestModality,
   resolveVerificationApiType,
   runApiVerificationProbe,
 } from "~/services/verification/aiApiVerification"
+import { getVerificationRequestProfileOptions } from "~/services/verification/aiApiVerification/requestProfiles"
+import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import { createAccountModelVerificationHistoryTarget } from "~/services/verification/verificationResultHistory"
 import { createLogger } from "~/utils/core/logger"
@@ -124,6 +128,11 @@ export function useVerifyApiDialogViewModel({
   const [verificationMode, setVerificationMode] = useState<ApiVerificationMode>(
     API_VERIFICATION_MODES.Streaming,
   )
+  const [requestProfileEnhanced, setRequestProfileEnhanced] = useState(false)
+  const [requestProfile, setRequestProfile] =
+    useState<ApiVerificationRequestProfile>(
+      API_VERIFICATION_REQUEST_PROFILES.Default,
+    )
   const requestedModelId = modelId.trim() || initialModelId?.trim() || ""
   const metadataLookup = useModelMetadataLookup(isOpen && !isRunning, () =>
     probesRef.current.some((probe) => probe.isRunning),
@@ -286,6 +295,10 @@ export function useVerifyApiDialogViewModel({
           throw new DOMException("Aborted", "AbortError")
         executedMode = verificationMode
         return runApiVerificationProbe({
+          ...getVerificationRequestProfileOptions(
+            requestProfile,
+            requestProfileEnhanced,
+          ),
           baseUrl: resolvedRuntimeKey.baseUrl,
           apiKey: resolvedRuntimeKey.secret,
           apiType,
@@ -420,6 +433,8 @@ export function useVerifyApiDialogViewModel({
     setSelectedRuntimeKeyId("")
     setModelId(trimmedModelId)
     setVerificationMode(API_VERIFICATION_MODES.Streaming)
+    setRequestProfileEnhanced(false)
+    setRequestProfile(API_VERIFICATION_REQUEST_PROFILES.Default)
     applyPersistedSummary(null)
 
     const initialApiType = resolveVerificationApiType({
@@ -464,7 +479,28 @@ export function useVerifyApiDialogViewModel({
     selectedRuntimeKeyId,
     setSelectedRuntimeKeyId,
     apiType,
-    setApiType,
+    setApiType: (next: ApiVerificationApiType) => {
+      setRequestProfileEnhanced(false)
+      setRequestProfile(API_VERIFICATION_REQUEST_PROFILES.Default)
+      setApiType(next)
+    },
+    requestProfile,
+    requestProfileEnhanced,
+    setRequestProfileEnhanced: (value: boolean) => {
+      if (!canClose) return
+      setRequestProfileEnhanced(value)
+      applyPersistedSummary(null)
+      replaceProbes(buildProbeState(apiType, null, modelModality))
+    },
+    setRequestProfile: (next: ApiVerificationRequestProfile) => {
+      if (!canClose) return
+      const nextApiType = getVerificationRequestProfileApiType(next) ?? apiType
+      setApiType(nextApiType)
+      setRequestProfileEnhanced(false)
+      setRequestProfile(next)
+      applyPersistedSummary(null)
+      replaceProbes(buildProbeState(nextApiType, null, modelModality))
+    },
     modelId,
     setModelId,
     verificationMode,

@@ -8,6 +8,7 @@ import { accountConfigStore } from "~/services/accounts/accountStorage/accountCo
 import * as profileConfigReader from "~/services/apiCredentialProfiles/storage/configReader"
 import { API_VERIFICATION_HISTORY_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
+import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
 import {
   createAccountModelVerificationHistoryTarget,
@@ -51,6 +52,32 @@ describe("verificationResultHistoryStorage", () => {
     listProfileIdsSpy = vi
       .spyOn(profileConfigReader, "listApiCredentialProfileIdsOrThrow")
       .mockRejectedValue(new Error("profiles unavailable"))
+  })
+
+  it("retains the request profile after saving and reloading a verification summary", async () => {
+    const target = createProfileVerificationHistoryTarget("request-profile")!
+    const summary = createVerificationHistorySummary({
+      target,
+      apiType: API_TYPES.OPENAI,
+      results: [
+        {
+          id: "text-generation",
+          status: "pass",
+          latencyMs: 1,
+          summary: "OK",
+          requestProfile: API_VERIFICATION_REQUEST_PROFILES.Codex,
+          requestProfileEnhanced: true,
+        },
+      ],
+    })!
+    await verificationResultHistoryStorage.upsertLatestSummary(summary)
+    expect(
+      (await verificationResultHistoryStorage.getLatestSummary(target))
+        ?.probes[0],
+    ).toMatchObject({
+      requestProfile: API_VERIFICATION_REQUEST_PROFILES.Codex,
+      requestProfileEnhanced: true,
+    })
   })
 
   it("retains every target now that the entry cap is gone", async () => {

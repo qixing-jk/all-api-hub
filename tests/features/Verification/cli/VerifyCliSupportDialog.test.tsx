@@ -300,17 +300,21 @@ describe("VerifyCliSupportDialog", () => {
   it("locks the selected mode during CLI verification and labels each recorded result", async () => {
     const user = userEvent.setup()
     const probeGate = createDeferred<void>()
-    mockRunCliSupportTool.mockImplementation(async ({ toolId, mode }) => {
-      await probeGate.promise
-      return {
-        id: toolId,
-        probeId: "tool-calling",
-        mode,
-        status: "pass",
-        latencyMs: 1,
-        summary: "Mode fixture passed",
-      }
-    })
+    mockRunCliSupportTool.mockImplementation(
+      async ({ toolId, mode, requestProfileEnhanced }) => {
+        await probeGate.promise
+        return {
+          id: toolId,
+          probeId: "tool-calling",
+          mode,
+          requestProfile: toolId,
+          requestProfileEnhanced,
+          status: "pass",
+          latencyMs: 1,
+          summary: "Mode fixture passed",
+        }
+      },
+    )
 
     render(
       <VerifyCliSupportDialog
@@ -331,6 +335,11 @@ describe("VerifyCliSupportDialog", () => {
       />,
     )
 
+    const enhanced = await screen.findByRole("switch", {
+      name: /enhancedLabel/,
+    })
+    expect(enhanced).not.toBeChecked()
+    await user.click(enhanced)
     const modeSelect = await screen.findByRole("combobox", {
       name: "aiApiVerification:verifyDialog.meta.mode",
     })
@@ -351,6 +360,7 @@ describe("VerifyCliSupportDialog", () => {
     await user.click(runButton)
     await waitFor(() => expect(mockRunCliSupportTool).toHaveBeenCalledTimes(1))
     expect(modeSelect).toBeDisabled()
+    expect(enhanced).toBeDisabled()
 
     await act(async () => {
       probeGate.resolve()
@@ -360,7 +370,10 @@ describe("VerifyCliSupportDialog", () => {
       expect(modeSelect).toBeEnabled()
     })
     for (const [request] of mockRunCliSupportTool.mock.calls) {
-      expect(request).toMatchObject({ mode: "non-streaming" })
+      expect(request).toMatchObject({
+        mode: "non-streaming",
+        requestProfileEnhanced: true,
+      })
     }
 
     await user.click(modeSelect)
@@ -370,6 +383,11 @@ describe("VerifyCliSupportDialog", () => {
       }),
     )
     for (const toolId of ["claude", "codex", "gemini"]) {
+      expect(
+        within(screen.getByTestId(getCliToolCardTestId(toolId))).getByText(
+          `aiApiVerification:verifyDialog.requestProfiles.${toolId} · aiApiVerification:verifyDialog.requestProfiles.enhancedBadge`,
+        ),
+      ).toBeVisible()
       expect(
         within(screen.getByTestId(getCliToolCardTestId(toolId))).getByText(
           "aiApiVerification:verifyDialog.modes.nonStreaming",

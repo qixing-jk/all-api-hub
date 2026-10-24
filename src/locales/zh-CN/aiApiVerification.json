@@ -38,6 +38,7 @@
       "mode": "测试方式",
       "model": "模型",
       "modelPlaceholder": "输入模型 ID",
+      "requestProfile": "客户端模拟",
       "runtimeKey": "密钥",
       "runtimeKeyIncompatible": "不适用于该模型",
       "runtimeKeyPlaceholder": "选择密钥"
@@ -65,6 +66,16 @@
       "tool-calling": "工具/函数调用",
       "video-generation": "视频生成任务",
       "web-search": "联网搜索 / Grounding"
+    },
+    "requestProfiles": {
+      "claude": "Claude Code",
+      "codex": "Codex CLI",
+      "default": "不模拟（普通请求）",
+      "enhancedBadge": "增强",
+      "enhancedHint": "补充已知的身份提示词、SDK 请求头、缓存和会话特征。可能增加输入用量；不保证所有站点放行。",
+      "enhancedLabel": "增强 CLI 模拟",
+      "gemini": "Gemini CLI",
+      "hint": "模拟客户端请求特征，并切换到对应 API 协议；测试内容保持不变。"
     },
     "requiresModelId": "请输入模型 ID 后运行该测试。",
     "selectedRuntimeKeyIncompatibleHint": "当前选择的密钥不适用于该模型分组。请先选择适用的密钥后再测试。",
@@ -95,6 +106,7 @@
       "noModelsReturned": "未返回任何模型。",
       "noToolCallDetected": "未检测到工具调用（模型可能不支持工具）。",
       "probeRequiresOpenAiProtocol": "此测试需要 OpenAI 兼容 API 端点。仅当服务提供该端点时，请切换到对应协议。",
+      "requestProfileIncompatible": "所选客户端模拟不支持当前 API 协议或测试项目。",
       "rerankSucceeded": "文档重排测试成功。",
       "rerankUnexpectedResponse": "重排接口返回内容不符合预期。",
       "stopped": "已停止。",

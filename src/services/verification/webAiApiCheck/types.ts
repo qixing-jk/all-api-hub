@@ -4,6 +4,7 @@ import type {
   ApiVerificationMode,
   ApiVerificationProbeId,
   ApiVerificationProbeResult,
+  ApiVerificationRequestProfile,
 } from "~/services/verification/aiApiVerification"
 import type { WebAiApiCheckBaseUrlSuggestion } from "~/services/verification/webAiApiCheck/baseUrlHistory"
 import type { Tag } from "~/types"
@@ -142,6 +143,8 @@ export type ApiCheckFetchModelsResponse =
  * The returned result must never include secrets (apiKey), and error summaries must be sanitized.
  */
 export type ApiCheckRunProbeRequest = {
+  requestProfileEnhanced?: boolean
+  requestProfile?: ApiVerificationRequestProfile
   runId?: string
   apiType: ApiVerificationApiType
   mode?: ApiVerificationMode

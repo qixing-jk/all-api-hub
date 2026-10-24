@@ -28,10 +28,13 @@ import {
 import {
   API_TYPES,
   API_VERIFICATION_MODES,
+  getVerificationRequestProfileApiType,
   type ApiVerificationApiType,
   type ApiVerificationMode,
   type ApiVerificationProbeId,
+  type ApiVerificationRequestProfile,
 } from "~/services/verification/aiApiVerification"
+import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
 import { extractApiCheckCredentialsFromText } from "~/services/verification/webAiApiCheck/extractCredentials"
 import {
   sendWebAiApiCheckMessage,
@@ -69,6 +72,11 @@ export function useApiCheckModalViewModel() {
   const [verificationMode, setVerificationMode] = useState<ApiVerificationMode>(
     API_VERIFICATION_MODES.Streaming,
   )
+  const [requestProfileEnhanced, setRequestProfileEnhanced] = useState(false)
+  const [requestProfile, setRequestProfile] =
+    useState<ApiVerificationRequestProfile>(
+      API_VERIFICATION_REQUEST_PROFILES.Default,
+    )
   const [tags, setTags] = useState<Tag[]>([])
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
   const [notes, setNotes] = useState("")
@@ -151,6 +159,8 @@ export function useApiCheckModalViewModel() {
     t,
     apiType,
     verificationMode,
+    requestProfile,
+    requestProfileEnhanced,
     trigger,
     baseUrl,
     apiKey,
@@ -271,6 +281,8 @@ export function useApiCheckModalViewModel() {
       updateBaseUrl(nextBaseUrl)
       setApiKey(nextApiKey)
       setVerificationMode(API_VERIFICATION_MODES.Streaming)
+      setRequestProfileEnhanced(false)
+      setRequestProfile(API_VERIFICATION_REQUEST_PROFILES.Default)
       setSelectedTagIds([])
       setNotes("")
       setExpiresAtInput("")
@@ -431,6 +443,8 @@ export function useApiCheckModalViewModel() {
       apiKeyVisible,
       apiType,
       verificationMode,
+      requestProfile,
+      requestProfileEnhanced,
       modelId,
       modelModality,
       modelIdsOptions,
@@ -469,7 +483,26 @@ export function useApiCheckModalViewModel() {
       removeBaseUrlHistory,
       setApiKey,
       setApiKeyVisible,
-      setApiType,
+      setApiType: (next: ApiVerificationApiType) => {
+        setRequestProfileEnhanced(false)
+        setRequestProfile(API_VERIFICATION_REQUEST_PROFILES.Default)
+        setApiType(next)
+      },
+      setRequestProfileEnhanced: (value: boolean) => {
+        if (!canClose) return
+        setRequestProfileEnhanced(value)
+        resetProbeState(apiType)
+      },
+      setRequestProfile: (next: ApiVerificationRequestProfile) => {
+        if (!canClose) return
+        const nextApiType =
+          getVerificationRequestProfileApiType(next) ?? apiType
+        prevApiTypeRef.current = nextApiType
+        setApiType(nextApiType)
+        setRequestProfileEnhanced(false)
+        setRequestProfile(next)
+        resetProbeState(nextApiType)
+      },
       setVerificationMode,
       setModelId,
       setSelectedTagIds,

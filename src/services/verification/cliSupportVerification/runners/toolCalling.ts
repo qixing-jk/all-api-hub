@@ -12,6 +12,7 @@ interface RunCliToolCallingSimulationParams {
   toolId: CliToolId
   baseUrl: string
   apiKey: string
+  requestProfileEnhanced?: boolean
   requestHeaders?: Record<string, string>
   apiType: ApiVerificationApiType
   mode?: ApiVerificationMode
@@ -42,6 +43,8 @@ export async function runCliToolCallingSimulation(
     apiKey: params.apiKey,
     ...(params.requestHeaders ? { requestHeaders: params.requestHeaders } : {}),
     apiType: params.apiType,
+    requestProfile: params.toolId,
+    ...(params.requestProfileEnhanced ? { requestProfileEnhanced: true } : {}),
     mode: params.mode,
     modelId: params.modelId,
     probeId: API_VERIFICATION_PROBE_IDS.ToolCalling,

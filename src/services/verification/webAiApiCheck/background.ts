@@ -19,6 +19,10 @@ import {
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
 import {
+  getVerificationRequestProfileOptions,
+  isVerificationRequestProfile,
+} from "~/services/verification/aiApiVerification/requestProfiles"
+import {
   buildSafeProbeFailureDiagnostics,
   inferStructuredHttpStatus,
   toSanitizedErrorSummary,
@@ -418,6 +422,8 @@ export async function resolveWebAiApiCheckRunProbeMessage(
       modelId,
       probeId,
       mode = API_VERIFICATION_MODES.Streaming,
+      requestProfile,
+      requestProfileEnhanced,
     } = request
 
     if (!apiType || !baseUrl?.trim() || !apiKey?.trim() || !probeId) {
@@ -439,6 +445,17 @@ export async function resolveWebAiApiCheckRunProbeMessage(
       }
     }
 
+    if (
+      requestProfile !== undefined &&
+      !isVerificationRequestProfile(requestProfile)
+    ) {
+      return {
+        success: false,
+        error: "Invalid request profile",
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+      }
+    }
+
     const normalizedBaseUrl = normalizeProbeBaseUrl({ apiType, baseUrl })
     if (!normalizedBaseUrl) {
       return {
@@ -451,6 +468,10 @@ export async function resolveWebAiApiCheckRunProbeMessage(
     try {
       const result = await probeRuns.run(runId, (signal) =>
         runApiVerificationProbe({
+          ...(requestProfile ? { requestProfile } : {}),
+          ...(requestProfileEnhanced === true
+            ? { requestProfileEnhanced: true }
+            : {}),
           baseUrl: normalizedBaseUrl,
           apiKey,
           apiType,
@@ -476,6 +497,12 @@ export async function resolveWebAiApiCheckRunProbeMessage(
 
       const result: ApiVerificationProbeResult = {
         id: probeId as ApiVerificationProbeId,
+        ...(isVerificationRequestProfile(requestProfile)
+          ? getVerificationRequestProfileOptions(
+              requestProfile,
+              requestProfileEnhanced === true,
+            )
+          : {}),
         mode: probeId === API_VERIFICATION_PROBE_IDS.Models ? undefined : mode,
         status: API_VERIFICATION_PROBE_STATUSES.Fail,
         latencyMs: 0,

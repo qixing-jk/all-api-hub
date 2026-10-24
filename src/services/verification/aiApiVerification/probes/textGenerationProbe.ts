@@ -9,6 +9,7 @@ import type {
   ApiVerificationApiType,
   ApiVerificationMode,
   ApiVerificationProbeResult,
+  ApiVerificationRequestProfile,
 } from "../types"
 import {
   buildSafeProbeFailureDiagnostics,
@@ -21,6 +22,8 @@ type RunTextGenerationProbeParams = {
   baseUrl: string
   apiKey: string
   requestHeaders?: Record<string, string>
+  requestProfile?: ApiVerificationRequestProfile
+  requestProfileEnhanced?: boolean
   apiType: ApiVerificationApiType
   modelId: string
   mode?: ApiVerificationMode
@@ -51,6 +54,8 @@ export async function runTextGenerationProbe(
         ? { requestHeaders: params.requestHeaders }
         : {}),
       apiType: params.apiType,
+      requestProfile: params.requestProfile,
+      requestProfileEnhanced: params.requestProfileEnhanced,
       modelId: params.modelId,
     })
 

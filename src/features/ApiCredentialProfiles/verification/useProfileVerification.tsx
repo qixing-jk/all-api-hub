@@ -30,15 +30,19 @@ import {
   API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
+  getVerificationRequestProfileApiType,
   resolveModelTestModality,
   runApiVerificationProbe,
   type ApiVerificationApiType,
   type ApiVerificationMode,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
+  type ApiVerificationRequestProfile,
   type ModelTestModality,
 } from "~/services/verification/aiApiVerification"
 import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVerification/i18n"
+import { getVerificationRequestProfileOptions } from "~/services/verification/aiApiVerification/requestProfiles"
+import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/core/logger"
@@ -125,6 +129,11 @@ export function useProfileVerification({
   const [verificationMode, setVerificationMode] = useState<ApiVerificationMode>(
     API_VERIFICATION_MODES.Streaming,
   )
+  const [requestProfile, setRequestProfile] =
+    useState<ApiVerificationRequestProfile>(
+      API_VERIFICATION_REQUEST_PROFILES.Default,
+    )
+  const [requestProfileEnhanced, setRequestProfileEnhanced] = useState(false)
   const requestedModelId = modelId.trim() || initialModelId?.trim() || ""
   const metadataLookup = useModelMetadataLookup(isOpen && !isRunning, () =>
     probesRef.current.some((probe) => probe.isRunning),
@@ -242,6 +251,8 @@ export function useProfileVerification({
     setApiType(nextApiType)
     setModelId(nextModelId)
     setVerificationMode(API_VERIFICATION_MODES.Streaming)
+    setRequestProfile(API_VERIFICATION_REQUEST_PROFILES.Default)
+    setRequestProfileEnhanced(false)
     resetModelDiscovery()
     setPersistedSummary(null)
     replaceProbes(
@@ -331,6 +342,10 @@ export function useProfileVerification({
       replaceProbes,
       execute: () =>
         runApiVerificationProbe({
+          ...getVerificationRequestProfileOptions(
+            requestProfile,
+            requestProfileEnhanced,
+          ),
           baseUrl: profile.baseUrl,
           apiKey: profile.apiKey,
           requestHeaders: profile.requestHeaders,
@@ -499,7 +514,37 @@ export function useProfileVerification({
   return {
     isRunning,
     apiType,
-    setApiType,
+    setApiType: (next: ApiVerificationApiType) => {
+      setRequestProfile(API_VERIFICATION_REQUEST_PROFILES.Default)
+      setRequestProfileEnhanced(false)
+      setApiType(next)
+    },
+    requestProfile,
+    requestProfileEnhanced,
+    setRequestProfileEnhanced: (next: boolean) => {
+      if (
+        !canClose ||
+        requestProfile === API_VERIFICATION_REQUEST_PROFILES.Default
+      )
+        return
+      setRequestProfileEnhanced(next)
+      setPersistedSummary(null)
+      replaceProbes(buildProbeState(apiType, null, modelModality))
+    },
+    setRequestProfile: (next: ApiVerificationRequestProfile) => {
+      if (!canClose) return
+      const nextApiType = getVerificationRequestProfileApiType(next) ?? apiType
+      if (nextApiType !== apiType) {
+        setModelId("")
+        resetModelDiscovery()
+        void fetchModels(nextApiType)
+      }
+      setApiType(nextApiType)
+      setRequestProfile(next)
+      setRequestProfileEnhanced(false)
+      setPersistedSummary(null)
+      replaceProbes(buildProbeState(nextApiType, null, modelModality))
+    },
     modelId,
     setModelId,
     verificationMode,

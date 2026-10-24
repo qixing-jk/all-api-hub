@@ -18,6 +18,17 @@ export const API_VERIFICATION_MODES = {
 export type ApiVerificationMode =
   (typeof API_VERIFICATION_MODES)[keyof typeof API_VERIFICATION_MODES]
 
+/** Request identity is independent of the capability being verified. */
+export const API_VERIFICATION_REQUEST_PROFILES = {
+  Default: "default",
+  Codex: "codex",
+  Claude: "claude",
+  Gemini: "gemini",
+} as const
+
+export type ApiVerificationRequestProfile =
+  (typeof API_VERIFICATION_REQUEST_PROFILES)[keyof typeof API_VERIFICATION_REQUEST_PROFILES]
+
 export const API_VERIFICATION_PROBE_IDS = {
   Models: "models",
   TextGeneration: "text-generation",
@@ -57,6 +68,8 @@ export type ApiVerificationProbeResult = {
    * and historical results that did not record their mode.
    */
   mode?: ApiVerificationMode
+  requestProfile?: ApiVerificationRequestProfile
+  requestProfileEnhanced?: boolean
   /**
    * Human-readable summary of the probe result.
    *

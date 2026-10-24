@@ -23,6 +23,7 @@ import {
 import { VerificationHistorySummary } from "~/features/Verification/api/VerificationHistorySummary"
 import { VerificationMediaPreview } from "~/features/Verification/api/VerificationMediaPreview"
 import { VerificationModeSelect } from "~/features/Verification/api/VerificationMode"
+import { VerificationRequestProfileSelect } from "~/features/Verification/api/VerificationRequestProfile"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import {
   API_TYPES,
@@ -62,6 +63,10 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     setModelId,
     verificationMode,
     setVerificationMode,
+    requestProfile,
+    requestProfileEnhanced,
+    setRequestProfileEnhanced,
+    setRequestProfile,
     historyTarget,
     probes,
     persistedSummary,
@@ -236,6 +241,16 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
               disabled={!canClose}
             />
           )}
+
+          <div className="sm:col-span-2">
+            <VerificationRequestProfileSelect
+              value={requestProfile}
+              enhanced={requestProfileEnhanced}
+              onEnhancedChange={setRequestProfileEnhanced}
+              onChange={setRequestProfile}
+              disabled={!canClose}
+            />
+          </div>
 
           <div className="space-y-density-1-5">
             <div className="text-muted-foreground text-xs">

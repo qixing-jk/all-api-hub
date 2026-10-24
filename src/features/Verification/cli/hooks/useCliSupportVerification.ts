@@ -108,6 +108,7 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
   const [verificationMode, setVerificationMode] = useState<ApiVerificationMode>(
     API_VERIFICATION_MODES.Streaming,
   )
+  const [requestProfileEnhanced, setRequestProfileEnhanced] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
   const [isLoadingRuntimeKeys, setIsLoadingRuntimeKeys] = useState(false)
   const [accountRuntimeKeys, setAccountRuntimeKeys] = useState<
@@ -373,6 +374,7 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
       const result = await runCliSupportTool({
         toolId,
         mode: executedMode,
+        ...(requestProfileEnhanced ? { requestProfileEnhanced: true } : {}),
         baseUrl: resolvedBaseUrl,
         apiKey: resolvedApiKey,
         requestHeaders: profile?.requestHeaders,
@@ -608,6 +610,7 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
       void loadRuntimeKeys()
     }
     setModelId(initialModelId?.trim() ?? "")
+    setRequestProfileEnhanced(false)
     setVerificationMode(API_VERIFICATION_MODES.Streaming)
   }, [
     initialModelId,
@@ -637,6 +640,10 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
     setModelId,
     verificationMode,
     setVerificationMode,
+    requestProfileEnhanced,
+    setRequestProfileEnhanced: (value: boolean) => {
+      if (canClose) setRequestProfileEnhanced(value)
+    },
     isRunning,
     isLoadingRuntimeKeys,
     accountRuntimeKeys,

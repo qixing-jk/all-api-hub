@@ -38,6 +38,7 @@
       "mode": "Modo de prueba",
       "model": "Modelo",
       "modelPlaceholder": "Ingresa id de modelo",
+      "requestProfile": "Simulación de cliente",
       "runtimeKey": "Clave",
       "runtimeKeyIncompatible": "No disponible para este modelo",
       "runtimeKeyPlaceholder": "Seleccionar clave"
@@ -65,6 +66,16 @@
       "tool-calling": "Llamadas a herramientas/funciones",
       "video-generation": "Tarea de video",
       "web-search": "Búsqueda web / grounding"
+    },
+    "requestProfiles": {
+      "claude": "Claude Code",
+      "codex": "Codex CLI",
+      "default": "Ninguna (solicitud normal)",
+      "enhancedBadge": "Mejorada",
+      "enhancedHint": "Agrega prompts de identidad, encabezados SDK y características conocidas de caché y sesión. Puede aumentar el uso de entrada; la aceptación depende del sitio.",
+      "enhancedLabel": "Simulación CLI mejorada",
+      "gemini": "Gemini CLI",
+      "hint": "Simula las solicitudes del cliente y cambia al protocolo de API correspondiente. Conserva la prueba seleccionada."
     },
     "requiresModelId": "Ingresa un id de modelo para ejecutar esta prueba.",
     "selectedRuntimeKeyIncompatibleHint": "La clave seleccionada no está disponible para el grupo de este modelo. Elige una clave compatible antes de ejecutar la verificación.",
@@ -98,6 +109,7 @@
       "noModelsReturned": "No se devolvieron modelos.",
       "noToolCallDetected": "No se detectó llamada a herramienta (es posible que el modelo no admita herramientas).",
       "probeRequiresOpenAiProtocol": "Esta prueba requiere un endpoint de API compatible con OpenAI. Selecciona ese protocolo solo si tu servicio lo ofrece.",
+      "requestProfileIncompatible": "Esta simulación de cliente no admite el protocolo de API o la prueba seleccionados.",
       "rerankSucceeded": "Reclasificación exitosa.",
       "rerankUnexpectedResponse": "Respuesta inesperada de reclasificación.",
       "stopped": "Detenido por el usuario.",

@@ -1,10 +1,14 @@
 import { http, HttpResponse } from "msw"
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { runCliSupportToolFromRegistry } from "~/services/verification/cliSupportVerification"
 import { server } from "~~/tests/msw/server"
 
 describe("cliSupportVerification", () => {
+  // Node's receiving-server tests use the Fetch-supported UA path. Chromium's
+  // actual DNR rewriting is covered by the browser request-profile workflow.
+  beforeEach(() => vi.stubEnv("BROWSER", "firefox"))
+  afterEach(() => vi.unstubAllEnvs())
   it("sends the Codex probe below the complete Volcengine Ark Coding Plan prefix", async () => {
     const hit = vi.fn()
     server.use(

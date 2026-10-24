@@ -1,10 +1,19 @@
+import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
+
 import "./apiCheckModalHostMocks"
 
-import { act, screen, waitFor, within } from "@testing-library/react"
+import {
+  act,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import { dispatchOpenApiCheckModal } from "~/features/WebAiApiCheck/content/events"
+import { useApiCheckModalViewModel } from "~/features/WebAiApiCheck/content/modal/useApiCheckModalViewModel"
 import {
   getWebAiApiCheckProbeTestId,
   WEB_AI_API_CHECK_TEST_IDS,
@@ -26,6 +35,121 @@ import {
 
 describe("web API verification modes", () => {
   setupApiCheckModalHostTest()
+
+  it("ignores enhanced simulation changes while a page probe is active", async () => {
+    const pending = createDeferred<any>()
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels)
+          return { success: true, modelIds: ["model"] }
+        if (type === WebAiApiCheckMessageTypes.RunProbe) return pending.promise
+        return { success: false }
+      },
+    )
+    const { result } = renderHook(useApiCheckModalViewModel)
+    act(() =>
+      dispatchOpenApiCheckModal({
+        trigger: "contextMenu",
+        pageUrl: "https://example.invalid",
+        sourceText: "",
+      }),
+    )
+    act(() => {
+      result.current.actions.updateBaseUrl("https://example.invalid")
+      result.current.actions.setApiKey("synthetic-key")
+      result.current.actions.setRequestProfile(
+        API_VERIFICATION_REQUEST_PROFILES.Codex,
+      )
+      result.current.actions.setModelId("model")
+    })
+    act(() => result.current.actions.runProbe("models"))
+    await waitFor(() => expect(result.current.view.canClose).toBe(false))
+    act(() => result.current.actions.setRequestProfileEnhanced(true))
+    expect(result.current.view.requestProfileEnhanced).toBe(false)
+    await act(async () => {
+      pending.resolve({
+        success: true,
+        result: {
+          id: "models",
+          status: "pass",
+          latencyMs: 1,
+          summary: "OK",
+        },
+      })
+    })
+    await waitFor(() => expect(result.current.view.canClose).toBe(true))
+    act(() =>
+      result.current.actions.setRequestProfile(
+        API_VERIFICATION_REQUEST_PROFILES.Default,
+      ),
+    )
+    expect(result.current.view.apiType).toBe("openai")
+    expect(result.current.view.requestProfileEnhanced).toBe(false)
+  })
+
+  it("lets a page text test select a CLI request profile through the modal portal", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, request: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels)
+          return { success: true, modelIds: ["gpt-test"] }
+        if (type === WebAiApiCheckMessageTypes.RunProbe)
+          return {
+            success: true,
+            result: {
+              id: request.probeId,
+              status: "pass",
+              latencyMs: 1,
+              summary: "OK",
+              requestProfile: request.requestProfile,
+            },
+          }
+        return { success: false }
+      },
+    )
+    await openModal()
+    await pasteIntoField(
+      user,
+      screen.getByPlaceholderText("https://example.com/api"),
+      "https://proxy.example.com/api",
+    )
+    await pasteIntoField(
+      user,
+      screen.getByPlaceholderText("sk-..."),
+      "sk-page-test",
+    )
+    await waitForSelectedModelId("gpt-test")
+    await user.click(screen.getByRole("combobox", { name: /requestProfile/ }))
+    const option = await screen.findByRole("option", { name: /codex/ })
+    expect(
+      document.querySelector('[data-slot="api-check-portal-container"]'),
+    ).toContainElement(option)
+    await user.click(option)
+    const enhanced = screen.getByRole("switch", { name: /enhancedLabel/ })
+    expect(enhanced).not.toBeChecked()
+    await user.click(enhanced)
+    const probe = screen.getByTestId(
+      getWebAiApiCheckProbeTestId("text-generation"),
+    )
+    await user.click(
+      within(probe).getByRole("button", {
+        name: "webAiApiCheck:modal.actions.runOne",
+      }),
+    )
+    await waitFor(() =>
+      expect(
+        getApiCheckMessageCalls(WebAiApiCheckMessageTypes.RunProbe),
+      ).toContainEqual([
+        WebAiApiCheckMessageTypes.RunProbe,
+        expect.objectContaining({
+          apiType: "openai",
+          requestProfile: API_VERIFICATION_REQUEST_PROFILES.Codex,
+          requestProfileEnhanced: true,
+          probeId: "text-generation",
+        }),
+      ]),
+    )
+  })
 
   it.each(["failed response", "rejected message"])(
     "retains generation modes after a %s without labeling model-list results",

@@ -38,6 +38,7 @@
       "mode": "測試方式",
       "model": "模型",
       "modelPlaceholder": "輸入模型 ID",
+      "requestProfile": "用戶端模擬",
       "runtimeKey": "金鑰",
       "runtimeKeyIncompatible": "不適用於此模型",
       "runtimeKeyPlaceholder": "選擇金鑰"
@@ -65,6 +66,16 @@
       "tool-calling": "工具/函式呼叫",
       "video-generation": "影片生成任務",
       "web-search": "聯網搜尋 / Grounding"
+    },
+    "requestProfiles": {
+      "claude": "Claude Code",
+      "codex": "Codex CLI",
+      "default": "不模擬（一般請求）",
+      "enhancedBadge": "增強",
+      "enhancedHint": "補充已知的身分提示詞、SDK 請求標頭、快取和工作階段特徵。可能增加輸入用量；不保證所有站點放行。",
+      "enhancedLabel": "增強 CLI 模擬",
+      "gemini": "Gemini CLI",
+      "hint": "模擬用戶端請求特徵，並切換至對應 API 協定；測試內容保持不變。"
     },
     "requiresModelId": "請輸入模型 ID 後執行該測試。",
     "selectedRuntimeKeyIncompatibleHint": "目前選擇的金鑰不適用於此模型分組。請先選擇適用的金鑰後再測試。",
@@ -96,6 +107,7 @@
       "noModelsReturned": "未返回任何模型。",
       "noToolCallDetected": "未檢測到工具呼叫（模型可能不支援工具）。",
       "probeRequiresOpenAiProtocol": "此測試需要 OpenAI 相容 API 端點。僅當服務提供該端點時，請切換至對應協定。",
+      "requestProfileIncompatible": "所選用戶端模擬不支援目前的 API 協定或測試項目。",
       "rerankSucceeded": "文檔重排測試成功。",
       "rerankUnexpectedResponse": "重排介面返回內容不符合預期。",
       "stopped": "已停止。",
