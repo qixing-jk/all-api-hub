@@ -48,6 +48,15 @@ function readOptionalPermissions(): ManifestOptionalPermissions[] {
 export const OPTIONAL_PERMISSIONS: ManifestOptionalPermissions[] =
   readOptionalPermissions()
 
+/** API namespaces can be hidden until an optional permission is granted. */
+export function isPermissionDeclared(id: ManifestOptionalPermissions): boolean {
+  const manifest = getManifest()
+  return [
+    ...(manifest.permissions ?? []),
+    ...(manifest.optional_permissions ?? []),
+  ].some((permission) => permission === id)
+}
+
 /**
  * Optional permissions required for cookie interception flows.
  */
@@ -70,6 +79,7 @@ export async function hasCookieInterceptorPermissions(): Promise<boolean> {
 export async function hasPermission(
   id: ManifestOptionalPermissions,
 ): Promise<boolean> {
+  if (!isPermissionDeclared(id)) return false
   return await containsPermissions({
     permissions: [id as unknown as browser._manifest.OptionalPermission],
   })
@@ -93,6 +103,7 @@ export async function hasPermissions(
 export async function requestPermissionDetailed(
   id: ManifestOptionalPermissions,
 ): Promise<PermissionOperationResult> {
+  if (!isPermissionDeclared(id)) return { success: false }
   return await requestPermissionsDetailed({
     permissions: [id as unknown as browser._manifest.OptionalPermission],
   })

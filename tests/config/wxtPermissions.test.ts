@@ -64,6 +64,12 @@ describe("request-header permission lifecycle", () => {
   it("keeps Safari optional permissions separate from Chromium requirements", async () => {
     const manifest = await permissionsFor("safari")
     expect(manifest.browser_specific_settings).toBeUndefined()
+    expect(manifest.sandbox).toBeUndefined()
+    expect(manifest.permissions).toContain("nativeMessaging")
+    expect(manifest.permissions).not.toContain("sidePanel")
+    for (const permission of ["bookmarks", "notifications", "clipboardRead"]) {
+      expect(manifest.optional_permissions).not.toContain(permission)
+    }
     expect(manifest.permissions).not.toContain(
       "declarativeNetRequestWithHostAccess",
     )
@@ -74,4 +80,14 @@ describe("request-header permission lifecycle", () => {
       ]),
     )
   })
+  it.each(["chrome", "firefox"])(
+    "retains supported features for %s",
+    async (browser) => {
+      const manifest = await permissionsFor(browser)
+      expect(manifest.sandbox).toEqual({ pages: ["sandbox.html"] })
+      expect(manifest.optional_permissions).toEqual(
+        expect.arrayContaining(["bookmarks", "notifications", "clipboardRead"]),
+      )
+    },
+  )
 })

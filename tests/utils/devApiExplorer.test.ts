@@ -14,6 +14,7 @@ vi.mock("~/utils/browser/runtimeMessages", () => ({
 
 describe("devApiExplorer", () => {
   beforeEach(() => {
+    vi.unstubAllEnvs()
     vi.restoreAllMocks()
     delete (globalThis as any).chrome
     delete (globalThis as any).browser
@@ -123,6 +124,16 @@ describe("devApiExplorer", () => {
   })
 
   describe("evaluateJsSnippet", () => {
+    it("returns an immediate actionable error for Safari sandbox evaluation", async () => {
+      vi.stubEnv("BROWSER", "safari")
+      try {
+        const result = await evaluateJsSnippet("1 + 1", "ui")
+        expect(result.success).toBe(false)
+        expect(result.error).toContain("structured API invocation")
+      } finally {
+        vi.unstubAllEnvs()
+      }
+    })
     it("returns error message when evaluating in background context without SW eval support", async () => {
       const res = await evaluateJsSnippet("1 + 1", "background")
 

@@ -329,7 +329,11 @@ describe("unified logger runtime/bootstrap behavior", () => {
     )
   })
 
-  it("detects side panel context when only the chrome extension API is available", async () => {
+  it.each([
+    ["ms-browser-extension:", "/sidepanel/index.html", "SidePanel"],
+    ["safari-web-extension:", "/options.html", "Options"],
+    ["safari-web-extension:", "/popup.html", "Popup"],
+  ])("detects %s %s context", async (protocol, pathname, context) => {
     const storage = createPromiseStorageApi({
       logging: {
         consoleEnabled: true,
@@ -343,15 +347,15 @@ describe("unified logger runtime/bootstrap behavior", () => {
       chromeApi: storage.api,
       document: {},
       location: {
-        protocol: "ms-browser-extension:",
-        pathname: "/sidepanel/index.html",
+        protocol,
+        pathname,
       },
     })
 
     createLogger("Panel").debug("side panel boot")
 
     expect(debugSpy).toHaveBeenCalledWith(
-      expect.stringContaining("[SidePanel][Panel] side panel boot"),
+      expect.stringContaining(`[${context}][Panel] side panel boot`),
     )
   })
 

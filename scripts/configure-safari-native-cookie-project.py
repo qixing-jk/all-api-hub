@@ -31,6 +31,14 @@ def configure_project(project_root: Path, bundle_identifier: str) -> None:
         r"\1\n\t\t\t\tENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;",
         contents,
     )
+    # New Xcode converters default the containing app to the build machine's
+    # macOS version (for example 26.6), even when the extension targets 12.0.
+    # Pin both targets so a newly packaged app still installs on supported Macs.
+    contents = re.sub(
+        r"MACOSX_DEPLOYMENT_TARGET = [^;]+;",
+        "MACOSX_DEPLOYMENT_TARGET = 12.0;",
+        contents,
+    )
     if bundle_count == 0 or sandbox_count == 0:
         raise RuntimeError(
             "Safari converter project lacks expected bundle identifier or sandbox settings"

@@ -179,9 +179,12 @@ export default defineConfig({
           description: "__MSG_manifest_commands_browser_action__",
         },
       },
-      sandbox: {
-        pages: ["sandbox.html"],
-      },
+      sandbox:
+        env.browser === "safari"
+          ? undefined
+          : {
+              pages: ["sandbox.html"],
+            },
       content_security_policy: {
         extension_pages:
           "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';",
@@ -249,6 +252,12 @@ function getManifestOptionalPermissions(browser: BrowserTarget) {
   const browserOptionalPermissions =
     getBrowserCookieOptionalPermissions(browser)
   const requiredPermissions = getManifestRequiredPermissions(browser)
+
+  // Safari has no WebExtension bookmarks/notifications APIs or clipboardRead
+  // permission. Declaring them produces grant controls that cannot succeed.
+  if (browser === MANIFEST_BROWSER_TARGETS.Safari) {
+    return [...browserOptionalPermissions]
+  }
 
   return [
     ...browserOptionalPermissions,

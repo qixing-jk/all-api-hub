@@ -3162,7 +3162,11 @@ describe("KiloCodeExportDialog", () => {
     })
     expect(payload).toBe(JSON.stringify({ format: "v7-download" }, null, 2))
     expect(clickSpy).toHaveBeenCalledTimes(1)
-    expect(revokeObjectUrl).toHaveBeenCalledWith("blob:kilo-code-settings")
+    await waitFor(
+      () =>
+        expect(revokeObjectUrl).toHaveBeenCalledWith("blob:kilo-code-settings"),
+      { timeout: 2000 },
+    )
     expect(toastSuccessMock).toHaveBeenCalledWith(
       "ui:dialog.kiloCode.messages.downloadedSettings",
     )

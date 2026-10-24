@@ -251,6 +251,30 @@ describe("converter project configuration", () => {
     expect(fs.readFileSync(fixture.handler, "utf8")).toContain("URLSession")
   })
 
+  it("keeps the host and extension installable on supported macOS versions", () => {
+    const fixture = projectFixture(
+      [
+        "PRODUCT_BUNDLE_IDENTIFIER = old.app;",
+        "ENABLE_APP_SANDBOX = YES;",
+        "MACOSX_DEPLOYMENT_TARGET = 26.6;",
+        "MACOSX_DEPLOYMENT_TARGET = 12.0;",
+        "IPHONEOS_DEPLOYMENT_TARGET = 18.0;",
+      ].join("\n"),
+    )
+    const result = spawnSync(
+      "python3",
+      [script, fixture.root, "test.independent.safari"],
+      { encoding: "utf8" },
+    )
+    expect(result.status, result.stderr).toBe(0)
+    const configured = fs.readFileSync(fixture.project, "utf8")
+    expect(configured.match(/MACOSX_DEPLOYMENT_TARGET = 12\.0;/g)).toHaveLength(
+      2,
+    )
+    expect(configured).not.toContain("MACOSX_DEPLOYMENT_TARGET = 26.6;")
+    expect(configured).toContain("IPHONEOS_DEPLOYMENT_TARGET = 18.0;")
+  })
+
   it.each([
     "PRODUCT_BUNDLE_IDENTIFIER = old.app;",
     "ENABLE_APP_SANDBOX = YES;",

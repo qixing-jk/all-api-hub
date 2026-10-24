@@ -504,6 +504,7 @@ function detectExtensionContext(): ExtensionLogContext {
     const isExtensionPage =
       protocol === "chrome-extension:" ||
       protocol === "moz-extension:" ||
+      protocol === "safari-web-extension:" ||
       protocol === "ms-browser-extension:"
 
     if (!hasRuntime) return "Unknown"

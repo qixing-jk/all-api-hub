@@ -106,7 +106,6 @@ describe("useUsageAnalyticsExport", () => {
     document.createElement = vi.fn(() => anchor) as any
 
     const appendChildSpy = vi.spyOn(document.body, "appendChild")
-    const removeChildSpy = vi.spyOn(document.body, "removeChild")
 
     const { result } = renderHook(() =>
       useUsageAnalyticsExport({
@@ -145,7 +144,11 @@ describe("useUsageAnalyticsExport", () => {
     )
     expect(clickSpy).toHaveBeenCalledTimes(1)
     expect(appendChildSpy).toHaveBeenCalledWith(anchor)
-    expect(removeChildSpy).toHaveBeenCalledWith(anchor)
+    expect(anchor.isConnected).toBe(true)
+    expect(URL.revokeObjectURL).not.toHaveBeenCalled()
+    await waitFor(() => expect(anchor.isConnected).toBe(false), {
+      timeout: 2000,
+    })
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:usage-export")
     expect(toast.success).toHaveBeenCalledWith(
       "usageAnalytics:messages.success.exported",

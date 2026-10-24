@@ -23,6 +23,7 @@ import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 const {
   ensurePermissionsDetailedMock,
   getBrowserBookmarkTreeMock,
+  isPermissionDeclaredMock,
   runBookmarkAccountImportMock,
   loadAccountDataMock,
   openAddAccountMock,
@@ -33,6 +34,7 @@ const {
 } = vi.hoisted(() => ({
   ensurePermissionsDetailedMock: vi.fn(),
   getBrowserBookmarkTreeMock: vi.fn(),
+  isPermissionDeclaredMock: vi.fn(),
   runBookmarkAccountImportMock: vi.fn(),
   loadAccountDataMock: vi.fn(),
   openAddAccountMock: vi.fn(),
@@ -49,6 +51,7 @@ vi.mock("~/services/permissions/permissionManager", async (importOriginal) => {
     >()
   return {
     ...actual,
+    isPermissionDeclared: () => isPermissionDeclaredMock(),
     ensurePermissionsDetailed: (...args: unknown[]) =>
       ensurePermissionsDetailedMock(...args),
   }
@@ -249,6 +252,7 @@ function bookmarkTreeWithFolderOnlySearchMatch() {
 describe("BookmarkAccountImportDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    isPermissionDeclaredMock.mockReturnValue(true)
     accounts.splice(0)
     ensurePermissionsDetailedMock.mockResolvedValue({
       success: true,
@@ -291,6 +295,30 @@ describe("BookmarkAccountImportDialog", () => {
           command,
           surface,
         }),
+    )
+  })
+
+  it("reports unsupported bookmark APIs without prompting for permission", async () => {
+    isPermissionDeclaredMock.mockReturnValue(false)
+    const user = userEvent.setup()
+    renderDialog()
+    await user.click(
+      await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.bookmarkImportAllowScanButton,
+      ),
+    )
+    expect(ensurePermissionsDetailedMock).not.toHaveBeenCalled()
+    expect(getBrowserBookmarkTreeMock).not.toHaveBeenCalled()
+    expect(
+      await screen.findByText(
+        testI18n.t("ui:dialog.bookmarkAccountImport.apiUnavailable"),
+      ),
+    ).toBeVisible()
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
+      }),
     )
   })
 

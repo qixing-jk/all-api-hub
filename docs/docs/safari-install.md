@@ -1,229 +1,64 @@
 # Safari 扩展安装指南
 
-本文档介绍如何在 Safari 浏览器中安装 All API Hub 扩展。
+本文说明如何在自己的 Mac 上安装并持续使用 All API Hub Safari 扩展。Safari 扩展需要通过配套的 macOS 应用安装；按下面步骤完成后，账号和设置会保存在本机。
 
-## 先看区别
+## 已验证环境
 
-- 没有 Apple Developer Program 付费账号：仍可用 Xcode 在自己的 Mac 上构建并启用扩展，适合开发调试或自用；通常不能面向普通用户分发，本地未正式分发版本可能需要在 Safari 开发者菜单里打开 `允许未签名的扩展`。
-- 有 Apple Developer Program 付费账号：可以做正式签名，并通过 TestFlight / App Store 分发，适合给其他用户安装，安装体验也更接近普通 Safari 扩展。
+本指南的安装流程已在 macOS 26.6.2、Safari 26.6.2 上实际验证。这里记录的是实际测试环境，不代表最低系统要求。
 
-## 系统要求
+## 安装
 
-- macOS 11.0 Big Sur 或更高版本
-- Safari 14.0 或更高版本
-- Xcode 13.0 或更高版本（用于构建）
+1. 打开 [All API Hub 最新 Release](https://github.com/qixing-jk/all-api-hub/releases/latest)，下载 `all-api-hub-<版本号>-safari-xcode-bundle.zip`。不要下载名称中只有 `-safari.zip` 的附件。
+2. 解压文件，找到其中的 Xcode 工程并用 Xcode 打开。
+3. 在 Xcode 顶部选择 macOS 应用和这台 Mac 作为运行目标，点击 `Product > Run`。如果 Xcode 提示签名，按提示选择本机运行的签名选项。
+4. 打开 Safari，先在 `Safari > 设置 > 高级` 中启用“显示网页开发者功能”，再到 `Safari > 设置 > 开发者` 中启用“允许未签名的扩展”。Safari 可能会要求输入 Mac 登录密码。
+5. 在 `Safari > 设置 > 扩展` 中勾选 `All API Hub`，并按需允许访问目标网站。
+6. 点击 Safari 工具栏中的扩展图标即可使用。
 
-## 功能兼容性
+如果扩展没有出现在列表中，先回到 Xcode 再运行一次配套的 macOS 应用，然后重新打开 Safari 的扩展设置。
 
-Safari 使用 WebKit 的 WebExtensions 权限机制，权限声明与 Chromium、Firefox 分开维护。Cookie 访问和网络请求规则仍按需授权，设置搜索只展示当前 Safari 构建实际声明的可选权限。
+## 下次打开 Safari
 
-账号独立 Cookie 请求使用 Safari 扩展应用内置的原生通道，按保存账号的 Cookie 分别请求，不借用其他账号或普通网页的登录态。使用前需允许扩展访问目标网站，并授予 Cookie 权限；无需另装辅助程序。请使用包含该通道的新版 Safari Xcode 工程安装或更新扩展，仅替换网页资源不能更新原生处理器。
+Safari 退出后会重置“允许未签名的扩展”。每次重新打开 Safari 时，需要再次启用该选项。通常不需要重新启动 `All API Hub` macOS 应用；首次安装、重新安装或 Safari 找不到扩展时，再启动该应用。这个步骤只影响扩展是否能运行，不会清除扩展数据。
 
-该通道支持 HTTPS 站点，HTTP 仅用于本机 `127.0.0.1` 测试；重定向请求会被拒绝。权限不足或原生处理器不可用时，请求会停止，不会切换到浏览器登录态。权限撤销不能撤回已发送的请求；部分 Safari 环境的弹出窗口刷新仍有已知问题，可先使用选项页面刷新账号。
+## 数据保存在哪里
 
-## 安装方式
+账号、设置等扩展数据保存在当前 Safari 扩展的本机存储中。正常退出或重新打开 Safari 不会清除这些数据。Safari、Chrome、Firefox 以及其他设备之间不会自动同步；换浏览器或设备时，请使用[数据导入与导出](./data-management.md)或配置 WebDAV 备份。卸载扩展或清除 Safari 扩展数据前，建议先导出备份。
 
-有两种安装方式：
+## Safari 中的功能差异
 
-1. 从 GitHub 最新 Release 下载已经打好的 Safari Xcode 工程压缩包，解压后直接用 Xcode 打开
-2. 从源码自己构建，再用 Xcode 运行
+Safari 不提供部分其他浏览器扩展接口：
 
-### 方式一：从 GitHub 最新 Release 下载 Safari 附件
+- 没有侧边栏 API，可使用工具栏弹窗或设置页面。
+- 无法通过 Safari 书签 API 导入账号；可以手动添加账号或导入备份。
+- 扩展通知 API 不可用；任务结果可在扩展中查看。
+- 不支持扩展的 `clipboardRead` 权限；需要识别内容时，可以选中文本或手动粘贴。
+- Safari 的独立 Cookie 请求由随扩展安装的 macOS 应用提供。请允许扩展访问目标网站并授予所需 Cookie 权限。该请求支持 HTTPS；HTTP 仅用于本机 `127.0.0.1` 测试。权限不足或原生应用未运行时，请求会停止，不会改用网页当前登录态。若弹窗中的账号刷新没有更新，可在设置页面刷新。
 
-Safari 附件会上传到最新版本 Release 页面：
+不同站点仍可能有各自的功能限制；扩展已安装不代表每个站点的所有功能都可用。
 
-- [最新版本 Release](https://github.com/qixing-jk/all-api-hub/releases/latest)
+## 更新与卸载
 
-#### 1. 打开对应版本的 Release 页面
+**更新：** 下载最新 Release 中的 Safari Xcode 工程压缩包，用 Xcode 打开并运行新版应用，然后在 Safari 扩展设置中确认 `All API Hub` 已启用。使用同一扩展安装更新时，本机扩展数据会保留；更新前仍建议备份重要数据。
 
-直接打开上面的“最新版本 Release”即可。
-
-#### 2. 下载正确的 Safari 附件
-
-在页面附件里，下载下面这个文件：
-
-```text
-all-api-hub-<version>-safari-xcode-bundle.zip
-```
-
-例如：
-
-```text
-all-api-hub-3.29.0-safari-xcode-bundle.zip
-```
-
-这个压缩包已经包含可直接打开的 Xcode 工程和所需的 Safari 文件。
-
-请下载这个文件，不要下载 `all-api-hub-<version>-safari.zip`。
-
-<details>
-<summary>为什么要下载这个文件？</summary>
-
-`all-api-hub-<version>-safari-xcode-bundle.zip` 里通常会同时包含：
-
-- `all-api-hub-<version>-safari.zip`
-- `safari-mv2/`
-- 转换器生成的 Xcode 工程目录
-
-这样解压后就可以直接用 Xcode 打开工程，不需要自己再补齐工程引用的 Safari 文件。
-
-</details>
-
-#### 3. 解压后直接用 Xcode 打开工程
-
-1. 在解压目录中找到 Xcode 工程
-2. 双击工程文件，或用 Xcode 打开它
-3. 确保目标设备选择的是你的 Mac
-4. 点击 `Product > Run`
-5. Safari 提示后，在 `Safari > 设置 > 扩展` 中启用扩展
-
-压缩包里已经包含运行所需文件，解压后直接打开即可，通常不需要单独移动其中的目录。
-
-### 方式二：从源码构建安装
-
-#### 1. 获取源码并构建 Safari 产物
-
-```bash
-# 克隆或下载项目源码
-git clone https://github.com/qixing-jk/all-api-hub.git
-cd all-api-hub
-
-# 安装依赖
-pnpm install
-
-# 构建 Safari 版本
-pnpm run build:safari
-```
-
-构建完成后，编译产物会输出到 `.output/safari-mv2/`。
-
-#### 2. 使用 Safari 转换器生成 Xcode 工程
-
-```bash
-xcrun safari-web-extension-converter .output/safari-mv2/ \
-  --project-location .output/safari-project \
-  --app-name "All API Hub" \
-  --bundle-identifier "io.github.qixingjk.allapihub" \
-  --copy-resources --no-open
-python3 scripts/configure-safari-native-cookie-project.py \
-  .output/safari-project io.github.qixingjk.allapihub
-```
-
-如果你想自定义输出目录、应用名和包标识符，也可以使用：
-
-```bash
-xcrun safari-web-extension-converter .output/safari-mv2/ \
-  --project-location /path/to/all-api-hub-safari-project \
-  --app-name "All API Hub" \
-  --bundle-identifier "io.github.qixingjk.allapihub" \
-  --copy-resources --no-open
-python3 scripts/configure-safari-native-cookie-project.py \
-  /path/to/all-api-hub-safari-project io.github.qixingjk.allapihub
-```
-
-这一步会生成一个 Xcode 工程，用来承载 Safari 扩展。
-
-#### 3. 在 Xcode 中构建并运行
-
-1. 打开刚生成的 Xcode 工程
-2. 确保目标设备选择的是你的 Mac
-3. 点击 `Product > Run`，或按 `Cmd + R`
-4. 首次运行时，Xcode 会要求你处理签名；没有付费账号时通常可使用 `Personal Team` 做本机调试
-5. 构建成功后，Safari 会提示你启用扩展
-
-#### 4. 在 Safari 中启用扩展
-
-1. 打开 Safari
-2. 在菜单栏点击 `Safari > 设置`
-3. 如果是本地未正式分发版本，再到 `开发` 菜单打开 `允许未签名的扩展`
-4. 打开 `扩展` 标签页
-5. 找到 `All API Hub` 并启用
-6. 根据需要授予权限
-
-### 方式三：临时调试（仅开发用途）
-
-部分 macOS / Safari 版本支持临时调试加载，但不适合作为正式安装或分发方式：
-
-```bash
-pnpm run build:safari
-```
-
-然后在 Safari 中启用开发者模式：
-
-1. 打开 `Safari > 设置 > 高级`
-2. 勾选“在菜单栏中显示开发菜单”
-3. 在菜单栏点击 `开发 > 允许未签名的扩展`
-4. 在 `Safari > 设置 > 扩展` 中启用扩展
-
-> **注意**
-> 如果该方式不可用，请回到上面的 Xcode 流程；正式发布仍应使用签名分发。
-
-## 开发模式调试
-
-### 开发构建
-
-```bash
-# 开发模式构建（热重载）
-pnpm run dev -- -b safari
-```
-
-### 调试扩展
-
-1. **调试背景脚本/弹出窗口**：
-   - 在 Safari 中，右键点击扩展图标
-   - 选择 `检查` 或打开 Web Inspector
-
-2. **调试内容脚本**：
-   - 在任意网页上，右键点击页面
-   - 选择 `检查元素`
-   - 在控制台中查看扩展相关日志
+**卸载：** 在 `Safari > 设置 > 扩展` 中取消勾选 `All API Hub`，然后删除安装的 `All API Hub` macOS 应用。若还要清除本机保存的数据，请在 Safari 的网站与扩展数据设置中移除对应数据。
 
 ## 常见问题
 
-### 为什么 Safari 需要特殊处理？
+### 为什么需要打开 Xcode 工程？
 
-Safari 扩展需要打包成 macOS 应用才能安装和分发，这与 Chrome、Edge、Firefox 直接安装 `.crx` 或 `.xpi` 文件不同。
+Safari 将扩展放在配套的 macOS 应用中安装。本指南下载的压缩包已包含工程和所需文件；用 Xcode 运行一次后，再到 Safari 设置中启用扩展即可。
 
-### 有开发者账号和没有，有什么区别？
+### Safari 重启后扩展不能用了，是数据丢了吗？
 
-- 没有账号：可以本机构建并使用，但更偏开发调试/自用，通常不能直接分发给普通用户。
-- 有账号：可以正式签名，并通过 TestFlight / App Store 分发，适合长期维护和正式发布。
+通常不是。Safari 会在退出时重置“允许未签名的扩展”，所以通常重新启用该选项即可；如果 Safari 找不到扩展，再启动配套应用。账号和设置保存在 Safari 的本机扩展存储中，不会因为这项开关重置而删除。
 
-### 能否像 Chrome 一样直接安装？
+### 如何在新设备上恢复账号？
 
-不可以。Safari 不能像 Chrome 一样直接解压加载做正式安装；本地使用通常走 Xcode，正式分发则走 TestFlight / App Store。
-
-### 构建时出现错误怎么办？
-
-请先确认：
-- Xcode 命令行工具已安装：`xcode-select --install`
-- 已同意 Xcode 许可：`sudo xcodebuild -license accept`
-- Node.js 和 pnpm 版本符合仓库的 `.nvmrc` 与 `package.json` 要求
-
-### 扩展功能与 Chrome 版本有差异吗？
-
-基本功能完全一致。但由于 Safari WebExtensions API 的一些限制，部分功能可能略有差异：
-- `sidePanel` API 在 Safari 中不可用（使用弹出窗口代替）
-- 某些权限请求方式可能不同
-
-### 如何更新扩展？
-
-- 如果你是从源码安装：重新构建 Safari 产物并重新运行 Xcode 工程
-- 如果你是从最新 Release 安装：重新下载最新的 `all-api-hub-<version>-safari-xcode-bundle.zip`，解压后重新打开新的 Xcode 工程运行
-
-## 卸载
-
-1. 打开 Safari
-2. 进入 `Safari > 设置 > 扩展`
-3. 取消勾选 `All API Hub`
-4. 删除 Xcode 生成的 macOS 应用
+在原设备先导出数据，或配置 WebDAV 备份；再在新设备安装扩展后导入数据或恢复备份。浏览器之间不会自动同步。
 
 ## 参考资源
 
-- [Apple Safari Web Extensions 官方文档](https://developer.apple.com/documentation/safari-extensions/safari-web-extensions)
-- [Safari Web Extension Converter 使用说明](https://developer.apple.com/documentation/safari-extensions/converting-a-web-extension-for-safari)
-- [WXT 框架 Safari 支持文档](https://wxt.dev/guide/browsers/safari.html)
-
----
-
-如有问题，请在 [GitHub Issues](https://github.com/qixing-jk/all-api-hub/issues) 中反馈。
+- [Apple：运行 Safari Web 扩展](https://developer.apple.com/documentation/safariservices/running-your-safari-web-extension)
+- [Apple Safari Web Extensions 文档](https://developer.apple.com/documentation/safari-extensions/safari-web-extensions)
+- [GitHub Issues 反馈问题](https://github.com/qixing-jk/all-api-hub/issues)
