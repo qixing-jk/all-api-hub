@@ -24,6 +24,7 @@ import {
   CollapsibleTrigger,
 } from "~/components/ui/collapsible"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
+import { VerificationRequestProfileSelect } from "~/features/Verification/api/VerificationRequestProfile"
 import { ApiCheckBaseUrlHistoryPicker } from "~/features/WebAiApiCheck/content/history/ApiCheckBaseUrlHistoryPicker"
 import { ApiCheckCandidateButtons } from "~/features/WebAiApiCheck/content/modal/ApiCheckCandidateButtons"
 import type {
@@ -261,6 +262,17 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                     />
                   </div>
                 ) : null}
+
+                <div className="md:col-span-2">
+                  <VerificationRequestProfileSelect
+                    value={view.requestProfile}
+                    enhanced={view.requestProfileEnhanced}
+                    onEnhancedChange={actions.setRequestProfileEnhanced}
+                    onChange={actions.setRequestProfile}
+                    disabled={!view.canClose}
+                    portalContainer={view.popoverPortalContainer ?? undefined}
+                  />
+                </div>
 
                 <div className="space-y-density-1-5 md:col-span-2">
                   <label

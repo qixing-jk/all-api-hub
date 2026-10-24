@@ -3,7 +3,40 @@ import { describe, expect, it, vi } from "vitest"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { PRODUCT_ANALYTICS_ERROR_CATEGORIES } from "~/services/productAnalytics/contracts"
 import type { ApiVerificationProbeResult } from "~/services/verification/aiApiVerification"
+import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
 import { WEB_AI_API_CHECK_BASE_URL_HISTORY_SUGGESTION_LIMIT } from "~/services/verification/webAiApiCheck/constants"
+
+it("preserves a selected CLI request profile through background probe dispatch", async () => {
+  const background = await import(
+    "~/services/verification/webAiApiCheck/background"
+  )
+  const { runApiVerificationProbe } = await import(
+    "~/services/verification/aiApiVerification"
+  )
+  vi.mocked(runApiVerificationProbe).mockResolvedValue({
+    id: "text-generation",
+    status: "pass",
+    latencyMs: 1,
+    summary: "OK",
+    requestProfile: API_VERIFICATION_REQUEST_PROFILES.Codex,
+    requestProfileEnhanced: true,
+  })
+  await background.resolveWebAiApiCheckRunProbeMessage({
+    baseUrl: "https://example.invalid",
+    apiKey: "sk-test",
+    apiType: "openai",
+    modelId: "test",
+    probeId: "text-generation",
+    requestProfile: API_VERIFICATION_REQUEST_PROFILES.Codex,
+    requestProfileEnhanced: true,
+  })
+  expect(runApiVerificationProbe).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      requestProfile: API_VERIFICATION_REQUEST_PROFILES.Codex,
+      requestProfileEnhanced: true,
+    }),
+  )
+})
 
 const { onWebAiApiCheckMessageMock, webAiApiCheckMessageHandlers } = vi.hoisted(
   () => ({

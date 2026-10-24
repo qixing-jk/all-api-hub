@@ -8,7 +8,11 @@ import { createGoogleSdkAuth } from "~/services/aiApi/google/auth"
 import { toVersionedProtocolMount } from "~/services/aiApi/protocolAddress"
 import { createHeaderOverrideFetch } from "~/services/apiTransport/headerOverrides"
 
-import type { ApiVerificationApiType } from "./types"
+import { createVerificationProfileFetch } from "./requestProfiles"
+import type {
+  ApiVerificationApiType,
+  ApiVerificationRequestProfile,
+} from "./types"
 import { API_TYPES } from "./types"
 
 export const COMPATIBLE_PROVIDER_OPTIONS_KEY = "allApiHub"
@@ -34,6 +38,8 @@ type CreateModelParams = {
   baseUrl: string
   apiKey: string
   requestHeaders?: Record<string, string>
+  requestProfile?: ApiVerificationRequestProfile
+  requestProfileEnhanced?: boolean
   apiType: ApiVerificationApiType
   modelId: string
 }
@@ -84,13 +90,15 @@ export function createModel(params: CreateModelParams) {
   }
 
   if (params.apiType === API_TYPES.ANTHROPIC) {
+    const auth = createAnthropicSdkAuth(
+      params.baseUrl,
+      params.apiKey,
+      params.requestHeaders,
+    )
     return createAnthropic({
       baseURL: requireProtocolApiBaseUrl(params.apiType, params.baseUrl),
-      ...createAnthropicSdkAuth(
-        params.baseUrl,
-        params.apiKey,
-        params.requestHeaders,
-      ),
+      ...auth,
+      fetch: createVerificationProfileFetch(auth.fetch, params),
     })(params.modelId)
   }
 
@@ -123,11 +131,16 @@ export function createOpenAIProvider(params: {
   baseUrl: string
   apiKey: string
   requestHeaders?: Record<string, string>
+  requestProfile?: ApiVerificationRequestProfile
+  requestProfileEnhanced?: boolean
 }) {
   return createOpenAI({
     baseURL: requireProtocolApiBaseUrl(API_TYPES.OPENAI, params.baseUrl),
     apiKey: params.apiKey,
-    fetch: createHeaderOverrideFetch(params.requestHeaders),
+    fetch: createVerificationProfileFetch(
+      createHeaderOverrideFetch(params.requestHeaders),
+      params,
+    ),
   })
 }
 
@@ -135,16 +148,20 @@ export function createOpenAIProvider(params: {
  * Create a Google/Gemini provider instance with proxy/baseUrl override.
  */
 export function createGoogleProvider(params: {
+  requestProfile?: ApiVerificationRequestProfile
+  requestProfileEnhanced?: boolean
   baseUrl: string
   apiKey: string
   requestHeaders?: Record<string, string>
 }) {
+  const auth = createGoogleSdkAuth(
+    params.baseUrl,
+    params.apiKey,
+    params.requestHeaders,
+  )
   return createGoogle({
     baseURL: requireProtocolApiBaseUrl(API_TYPES.GOOGLE, params.baseUrl),
-    ...createGoogleSdkAuth(
-      params.baseUrl,
-      params.apiKey,
-      params.requestHeaders,
-    ),
+    ...auth,
+    fetch: createVerificationProfileFetch(auth.fetch, params),
   })
 }

@@ -418,6 +418,8 @@ export async function resolveWebAiApiCheckRunProbeMessage(
       modelId,
       probeId,
       mode = API_VERIFICATION_MODES.Streaming,
+      requestProfile,
+      requestProfileEnhanced,
     } = request
 
     if (!apiType || !baseUrl?.trim() || !apiKey?.trim() || !probeId) {
@@ -451,6 +453,10 @@ export async function resolveWebAiApiCheckRunProbeMessage(
     try {
       const result = await probeRuns.run(runId, (signal) =>
         runApiVerificationProbe({
+          ...(requestProfile ? { requestProfile } : {}),
+          ...(requestProfileEnhanced === true
+            ? { requestProfileEnhanced: true }
+            : {}),
           baseUrl: normalizedBaseUrl,
           apiKey,
           apiType,

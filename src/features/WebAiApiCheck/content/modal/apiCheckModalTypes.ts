@@ -3,6 +3,7 @@ import {
   type ApiVerificationApiType,
   type ApiVerificationMode,
   type ApiVerificationProbeId,
+  type ApiVerificationRequestProfile,
   type ModelTestModality,
 } from "~/services/verification/aiApiVerification"
 import type { ApiVerificationProbeResult } from "~/services/verification/aiApiVerification"
@@ -29,6 +30,8 @@ export interface ApiCheckModalViewModel {
   apiKeyVisible: boolean
   apiType: ApiVerificationApiType
   verificationMode: ApiVerificationMode
+  requestProfileEnhanced: boolean
+  requestProfile: ApiVerificationRequestProfile
   modelId: string
   modelModality: ModelTestModality
   modelIdsOptions: Array<{ value: string; label: string }>
@@ -70,6 +73,8 @@ export interface ApiCheckModalActions {
   setApiKeyVisible: (isVisible: boolean) => void
   setApiType: (apiType: ApiVerificationApiType) => void
   setVerificationMode: (mode: ApiVerificationMode) => void
+  setRequestProfileEnhanced: (value: boolean) => void
+  setRequestProfile: (profile: ApiVerificationRequestProfile) => void
   setModelId: (modelId: string) => void
   setSelectedTagIds: (tagIds: string[]) => void
   setNotes: (notes: string) => void

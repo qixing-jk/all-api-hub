@@ -1,6 +1,13 @@
+import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
+
 import { apiVerificationProbeRegistry } from "./probeRegistry"
 import {
+  createVerificationProfileHeaders,
+  getVerificationRequestProfileApiType,
+} from "./requestProfiles"
+import {
   API_VERIFICATION_MODES,
+  API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
 } from "./types"
 import type {
@@ -8,6 +15,7 @@ import type {
   ApiVerificationMode,
   ApiVerificationProbeId,
   ApiVerificationProbeResult,
+  ApiVerificationRequestProfile,
 } from "./types"
 
 /**
@@ -18,6 +26,8 @@ type RunApiVerificationProbeParams = {
   baseUrl: string
   apiKey: string
   requestHeaders?: Record<string, string>
+  requestProfile?: ApiVerificationRequestProfile
+  requestProfileEnhanced?: boolean
   apiType: ApiVerificationApiType
   mode?: ApiVerificationMode
   modelId?: string
@@ -37,21 +47,65 @@ export async function runApiVerificationProbe(
   const resolvedModelId =
     params.modelId?.trim() || params.fallbackModelId?.trim() || undefined
 
+  const enhanced =
+    params.requestProfile &&
+    params.requestProfile !== API_VERIFICATION_REQUEST_PROFILES.Default &&
+    params.requestProfileEnhanced
+      ? { requestProfileEnhanced: true as const }
+      : {}
+  const profile = params.requestProfile
+  if (
+    profile &&
+    profile !== API_VERIFICATION_REQUEST_PROFILES.Default &&
+    (getVerificationRequestProfileApiType(profile) !== params.apiType ||
+      ![
+        API_VERIFICATION_PROBE_IDS.Models,
+        API_VERIFICATION_PROBE_IDS.TextGeneration,
+        API_VERIFICATION_PROBE_IDS.ToolCalling,
+        API_VERIFICATION_PROBE_IDS.StructuredOutput,
+        API_VERIFICATION_PROBE_IDS.WebSearch,
+      ].some((id) => id === params.probeId))
+  ) {
+    return {
+      id: params.probeId,
+      mode: params.mode ?? API_VERIFICATION_MODES.Streaming,
+      requestProfile: profile,
+      status: API_VERIFICATION_PROBE_STATUSES.Unsupported,
+      latencyMs: 0,
+      summary:
+        "This CLI request profile does not support the selected protocol or probe",
+      summaryKey: "verifyDialog.summaries.requestProfileIncompatible",
+    }
+  }
+
   const runnerParams = {
     baseUrl: params.baseUrl,
     apiKey: params.apiKey,
-    ...(params.requestHeaders ? { requestHeaders: params.requestHeaders } : {}),
+    requestHeaders: createVerificationProfileHeaders(
+      params.requestProfile,
+      params.requestHeaders,
+      resolvedModelId,
+      params.requestProfileEnhanced,
+    ),
+    requestProfile: params.requestProfile,
+    requestProfileEnhanced: params.requestProfileEnhanced,
     apiType: params.apiType,
     modelId: resolvedModelId,
     mode: params.mode,
     abortSignal: params.abortSignal,
   }
 
-  if (!registryEntry.requiresModelId) return registryEntry.run(runnerParams)
+  if (!registryEntry.requiresModelId) {
+    const result = await registryEntry.run(runnerParams)
+    return profile
+      ? { ...result, requestProfile: profile, ...enhanced }
+      : result
+  }
 
   if (!resolvedModelId) {
     return {
       id: params.probeId,
+      ...(profile ? { requestProfile: profile } : {}),
       mode: params.mode ?? API_VERIFICATION_MODES.Streaming,
       status: API_VERIFICATION_PROBE_STATUSES.Fail,
       latencyMs: 0,
@@ -64,8 +118,11 @@ export async function runApiVerificationProbe(
     }
   }
 
-  return registryEntry.run({
+  const result = await registryEntry.run({
     ...runnerParams,
     modelId: resolvedModelId,
   })
+  return params.requestProfile
+    ? { ...result, requestProfile: params.requestProfile, ...enhanced }
+    : result
 }

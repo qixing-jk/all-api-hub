@@ -19,6 +19,7 @@ import {
 import {
   deriveVerificationHistoryStatus,
   isApiVerificationApiType,
+  sanitizeVerificationRequestProfile,
   serializeVerificationHistoryTarget,
 } from "~/services/verification/verificationResultHistory/utils"
 
@@ -197,6 +198,7 @@ function coerceProbeSummary(
 
   return {
     id: id as ApiVerificationProbeId,
+    ...sanitizeVerificationRequestProfile(value),
     ...(value.mode === API_VERIFICATION_MODES.Streaming ||
     value.mode === API_VERIFICATION_MODES.NonStreaming
       ? { mode: value.mode }

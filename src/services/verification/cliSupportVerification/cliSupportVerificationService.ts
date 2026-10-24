@@ -10,6 +10,7 @@ type RunCliSupportToolParams = {
   toolId: CliToolId
   baseUrl: string
   apiKey: string
+  requestProfileEnhanced?: boolean
   requestHeaders?: Record<string, string>
   mode?: ApiVerificationMode
   /**
@@ -34,6 +35,7 @@ export async function runCliSupportTool(
     baseUrl: params.baseUrl,
     apiKey: params.apiKey,
     ...(params.requestHeaders ? { requestHeaders: params.requestHeaders } : {}),
+    ...(params.requestProfileEnhanced ? { requestProfileEnhanced: true } : {}),
     mode: params.mode,
     modelId: params.modelId,
     abortSignal: params.abortSignal,

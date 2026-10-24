@@ -13,14 +13,11 @@ import type { CliSupportResult, CliToolId } from "./types"
 type CliToolRunnerParams = {
   baseUrl: string
   apiKey: string
+  requestProfileEnhanced?: boolean
   requestHeaders?: Record<string, string>
   mode?: ApiVerificationMode
   modelId?: string
   abortSignal?: AbortSignal
-}
-
-type CliToolRegistryEntry = {
-  run: (params: CliToolRunnerParams) => Promise<CliSupportResult>
 }
 
 /**
@@ -33,9 +30,23 @@ export async function runCliSupportToolFromRegistry(
   toolId: CliToolId,
   params: CliToolRunnerParams,
 ): Promise<CliSupportResult> {
-  const entry = cliSupportToolRegistry[toolId]
-
-  return entry.run(params)
+  const config = CLI_TOOL_CONFIG[toolId]
+  return runCliToolCallingSimulation({
+    toolId,
+    baseUrl: params.baseUrl,
+    apiKey: params.apiKey,
+    ...(params.requestHeaders ? { requestHeaders: params.requestHeaders } : {}),
+    ...(params.requestProfileEnhanced ? { requestProfileEnhanced: true } : {}),
+    mode: params.mode,
+    apiType: config.apiType,
+    modelId: params.modelId,
+    abortSignal: params.abortSignal,
+    endpointPath:
+      "streamingEndpointPath" in config &&
+      params.mode !== API_VERIFICATION_MODES.NonStreaming
+        ? config.streamingEndpointPath
+        : config.endpointPath,
+  })
 }
 
 const CLI_TOOL_CONFIG = {
@@ -57,67 +68,3 @@ const CLI_TOOL_CONFIG = {
     streamingEndpointPath?: string
   }
 >
-
-/**
- * Typed registry for dispatching tool simulation execution without conditional chains.
- *
- * Each entry enforces:
- * - API family compatibility (unsupported => no request sent)
- * - Whether a model id is required
- */
-const cliSupportToolRegistry: Record<CliToolId, CliToolRegistryEntry> = {
-  claude: {
-    run: async (params) => {
-      return runCliToolCallingSimulation({
-        toolId: "claude",
-        baseUrl: params.baseUrl,
-        apiKey: params.apiKey,
-        ...(params.requestHeaders
-          ? { requestHeaders: params.requestHeaders }
-          : {}),
-        mode: params.mode,
-        apiType: CLI_TOOL_CONFIG.claude.apiType,
-        modelId: params.modelId,
-        abortSignal: params.abortSignal,
-        endpointPath: CLI_TOOL_CONFIG.claude.endpointPath,
-      })
-    },
-  },
-  codex: {
-    run: async (params) => {
-      return runCliToolCallingSimulation({
-        toolId: "codex",
-        baseUrl: params.baseUrl,
-        apiKey: params.apiKey,
-        ...(params.requestHeaders
-          ? { requestHeaders: params.requestHeaders }
-          : {}),
-        mode: params.mode,
-        apiType: CLI_TOOL_CONFIG.codex.apiType,
-        modelId: params.modelId,
-        abortSignal: params.abortSignal,
-        endpointPath: CLI_TOOL_CONFIG.codex.endpointPath,
-      })
-    },
-  },
-  gemini: {
-    run: async (params) => {
-      return runCliToolCallingSimulation({
-        toolId: "gemini",
-        baseUrl: params.baseUrl,
-        apiKey: params.apiKey,
-        ...(params.requestHeaders
-          ? { requestHeaders: params.requestHeaders }
-          : {}),
-        mode: params.mode,
-        apiType: CLI_TOOL_CONFIG.gemini.apiType,
-        modelId: params.modelId,
-        abortSignal: params.abortSignal,
-        endpointPath:
-          params.mode === API_VERIFICATION_MODES.NonStreaming
-            ? CLI_TOOL_CONFIG.gemini.endpointPath
-            : CLI_TOOL_CONFIG.gemini.streamingEndpointPath,
-      })
-    },
-  },
-}

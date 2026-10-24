@@ -1,4 +1,5 @@
 import { VerificationModeBadge } from "~/features/Verification/api/VerificationMode"
+import { VerificationRequestProfileBadge } from "~/features/Verification/api/VerificationRequestProfile"
 import { VerificationStatusBadge } from "~/features/Verification/api/VerificationStatusBadge"
 import type { ApiVerificationProbeResult } from "~/services/verification/aiApiVerification"
 
@@ -14,6 +15,10 @@ export function ProbeStatusBadge({
     <>
       <VerificationStatusBadge status={result.status} />
       <VerificationModeBadge mode={result.mode} />
+      <VerificationRequestProfileBadge
+        profile={result.requestProfile}
+        enhanced={result.requestProfileEnhanced}
+      />
     </>
   )
 }

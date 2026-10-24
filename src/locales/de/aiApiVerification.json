@@ -38,6 +38,7 @@
       "mode": "Testmodus",
       "model": "Modell",
       "modelPlaceholder": "Geben Sie die Modell-ID ein",
+      "requestProfile": "Client-Simulation",
       "runtimeKey": "Schlüssel",
       "runtimeKeyIncompatible": "Für dieses Modell nicht verfügbar",
       "runtimeKeyPlaceholder": "Schlüssel auswählen"
@@ -65,6 +66,16 @@
       "tool-calling": "Werkzeug-/Funktionsaufruf",
       "video-generation": "Videoaufgabe",
       "web-search": "Websuche / Grounding"
+    },
+    "requestProfiles": {
+      "claude": "Claude Code",
+      "codex": "Codex CLI",
+      "default": "Keine (normale Anfrage)",
+      "enhancedBadge": "Erweitert",
+      "enhancedHint": "Ergänzt bekannte Identitätsprompts, SDK-Header, Cache- und Sitzungsmerkmale. Kann die Eingabenutzung erhöhen; die Zulassung hängt von der Website ab.",
+      "enhancedLabel": "Erweiterte CLI-Simulation",
+      "gemini": "Gemini CLI",
+      "hint": "Simuliert Client-Anfragen und wechselt zum passenden API-Protokoll. Der gewählte Test bleibt gleich."
     },
     "requiresModelId": "Geben Sie eine Modell-ID ein, um diesen Test auszuführen.",
     "selectedRuntimeKeyIncompatibleHint": "Der ausgewählte Schlüssel ist für die Gruppe dieses Modells nicht verfügbar. Wählen Sie einen kompatiblen Schlüssel, bevor Sie die Überprüfung durchführen.",
@@ -97,6 +108,7 @@
       "noModelsReturned": "Keine Modelle zurückgegeben.",
       "noToolCallDetected": "Kein Werkzeugaufruf erkannt (Modell unterstützt möglicherweise keine Werkzeuge).",
       "probeRequiresOpenAiProtocol": "Dieser Test erfordert einen OpenAI-kompatiblen API-Endpunkt. Wählen Sie dieses Protokoll nur, wenn Ihr Dienst es unterstützt.",
+      "requestProfileIncompatible": "Diese Client-Simulation unterstützt das gewählte API-Protokoll oder den Test nicht.",
       "rerankSucceeded": "Rerank erfolgreich.",
       "rerankUnexpectedResponse": "Unerwartete Rerank-Antwort.",
       "stopped": "Vom Benutzer gestoppt.",

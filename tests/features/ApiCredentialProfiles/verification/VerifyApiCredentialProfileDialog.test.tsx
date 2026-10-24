@@ -29,6 +29,7 @@ import {
   API_TYPES,
   API_VERIFICATION_PROBE_STATUSES,
 } from "~/services/verification/aiApiVerification"
+import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
 import {
   createProfileModelVerificationHistoryTarget,
   createProfileVerificationHistoryTarget,
@@ -287,6 +288,99 @@ describe("VerifyApiCredentialProfileDialog", () => {
     latencyMs: 1,
     summary: "Accepted",
   }
+
+  it("keeps ordinary requests as default and lets a text test select a CLI request profile", async () => {
+    const user = userEvent.setup()
+    mockProbeDefinitions.mockReturnValue([
+      { id: "text-generation", requiresModelId: true },
+    ])
+    mockRunApiVerificationProbe.mockResolvedValue({
+      ...acceptedProbe,
+      status: "unsupported",
+      summary: "Untranslated fallback",
+      summaryKey: "verifyDialog.summaries.requestProfileIncompatible",
+      requestProfile: API_VERIFICATION_REQUEST_PROFILES.Codex,
+    })
+    render(<VerifyApiCredentialProfileDialog {...sessionProps} />)
+    const selector = await screen.findByRole("combobox", {
+      name: /requestProfile/,
+    })
+    expect(selector).toHaveTextContent(/default/)
+    await user.click(selector)
+    await user.click(screen.getByRole("option", { name: /codex/ }))
+    expect(getApiTypeSelect()).toHaveValue(API_TYPES.OPENAI)
+    const probe = screen.getByTestId(
+      getApiCredentialProfileVerifyProbeTestId("text-generation"),
+    )
+    await user.click(
+      within(probe).getByTestId(
+        API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton,
+      ),
+    )
+    await waitFor(() =>
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestProfile: API_VERIFICATION_REQUEST_PROFILES.Codex,
+          apiType: "openai",
+          probeId: "text-generation",
+        }),
+      ),
+    )
+    await waitFor(() =>
+      expect(probe).toHaveTextContent(
+        "aiApiVerification:verifyDialog.summaries.requestProfileIncompatible",
+      ),
+    )
+    await user.selectOptions(getApiTypeSelect(), API_TYPES.ANTHROPIC)
+    expect(selector).toHaveTextContent(/default/)
+  })
+
+  it("keeps enhanced simulation opt-in and resets it when returning to ordinary requests", async () => {
+    const user = userEvent.setup()
+    mockProbeDefinitions.mockReturnValue([
+      { id: "text-generation", requiresModelId: true },
+    ])
+    mockRunApiVerificationProbe.mockResolvedValue(acceptedProbe)
+    render(<VerifyApiCredentialProfileDialog {...sessionProps} />)
+    expect(
+      screen.queryByRole("switch", { name: /enhancedLabel/ }),
+    ).not.toBeInTheDocument()
+    const selector = await screen.findByRole("combobox", {
+      name: /requestProfile/,
+    })
+    await user.click(selector)
+    await user.click(screen.getByRole("option", { name: /claude/ }))
+    const enhanced = screen.getByRole("switch", { name: /enhancedLabel/ })
+    expect(enhanced).not.toBeChecked()
+    await user.click(enhanced)
+    const probe = screen.getByTestId(
+      getApiCredentialProfileVerifyProbeTestId("text-generation"),
+    )
+    await user.click(
+      within(probe).getByTestId(
+        API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton,
+      ),
+    )
+    await waitFor(() =>
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestProfile: API_VERIFICATION_REQUEST_PROFILES.Claude,
+          requestProfileEnhanced: true,
+        }),
+      ),
+    )
+    await waitFor(() => expect(enhanced).toBeEnabled())
+    await user.click(selector)
+    await user.click(screen.getByRole("option", { name: /default/ }))
+    expect(
+      screen.queryByRole("switch", { name: /enhancedLabel/ }),
+    ).not.toBeInTheDocument()
+    await user.click(selector)
+    await user.click(screen.getByRole("option", { name: /claude/ }))
+    expect(
+      screen.getByRole("switch", { name: /enhancedLabel/ }),
+    ).not.toBeChecked()
+  })
 
   it("keeps the selected model when switching to a different modality", async () => {
     const { result } = renderHook(useProfileVerification, {

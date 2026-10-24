@@ -1,10 +1,12 @@
 import { http, HttpResponse } from "msw"
-import { describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { runCliSupportTool } from "~/services/verification/cliSupportVerification"
 import { server } from "~~/tests/msw/server"
 
 const baseUrl = "https://cli-modes.example.invalid"
+beforeEach(() => vi.stubEnv("BROWSER", "firefox"))
+afterEach(() => vi.unstubAllEnvs())
 const cliFixtures = [
   { toolId: "claude", path: "/v1/messages" },
   { toolId: "codex", path: "/v1/responses" },

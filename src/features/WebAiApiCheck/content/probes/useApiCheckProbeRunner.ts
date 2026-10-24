@@ -35,8 +35,11 @@ import {
   type ApiVerificationMode,
   type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
+  type ApiVerificationRequestProfile,
   type ModelTestModality,
 } from "~/services/verification/aiApiVerification"
+import { getVerificationRequestProfileOptions } from "~/services/verification/aiApiVerification/requestProfiles"
+import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
 import {
   sendWebAiApiCheckMessage,
   WebAiApiCheckMessageTypes,
@@ -51,6 +54,8 @@ type UseApiCheckProbeRunnerOptions = {
   t: TFunction<["webAiApiCheck", "common", "aiApiVerification"]>
   apiType: ApiVerificationApiType
   verificationMode: ApiVerificationMode
+  requestProfileEnhanced?: boolean
+  requestProfile?: ApiVerificationRequestProfile
   trigger: ApiCheckOpenModalDetail["trigger"]
   baseUrl: string
   apiKey: string
@@ -135,6 +140,8 @@ export function useApiCheckProbeRunner({
   t,
   apiType,
   verificationMode,
+  requestProfile = API_VERIFICATION_REQUEST_PROFILES.Default,
+  requestProfileEnhanced = false,
   trigger,
   baseUrl,
   apiKey,
@@ -347,6 +354,10 @@ export function useApiCheckProbeRunner({
             runId,
             apiType,
             mode: verificationMode,
+            ...getVerificationRequestProfileOptions(
+              requestProfile,
+              requestProfileEnhanced,
+            ),
             baseUrl: trimmedBaseUrl,
             apiKey: trimmedApiKey,
             modelId: modelId.trim() || undefined,
@@ -467,6 +478,8 @@ export function useApiCheckProbeRunner({
       updateProbeResult,
       session,
       verificationMode,
+      requestProfile,
+      requestProfileEnhanced,
     ],
   )
 

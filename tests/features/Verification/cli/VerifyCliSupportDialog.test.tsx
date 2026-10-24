@@ -331,6 +331,11 @@ describe("VerifyCliSupportDialog", () => {
       />,
     )
 
+    const enhanced = await screen.findByRole("switch", {
+      name: /enhancedLabel/,
+    })
+    expect(enhanced).not.toBeChecked()
+    await user.click(enhanced)
     const modeSelect = await screen.findByRole("combobox", {
       name: "aiApiVerification:verifyDialog.meta.mode",
     })
@@ -351,6 +356,7 @@ describe("VerifyCliSupportDialog", () => {
     await user.click(runButton)
     await waitFor(() => expect(mockRunCliSupportTool).toHaveBeenCalledTimes(1))
     expect(modeSelect).toBeDisabled()
+    expect(enhanced).toBeDisabled()
 
     await act(async () => {
       probeGate.resolve()
@@ -360,7 +366,10 @@ describe("VerifyCliSupportDialog", () => {
       expect(modeSelect).toBeEnabled()
     })
     for (const [request] of mockRunCliSupportTool.mock.calls) {
-      expect(request).toMatchObject({ mode: "non-streaming" })
+      expect(request).toMatchObject({
+        mode: "non-streaming",
+        requestProfileEnhanced: true,
+      })
     }
 
     await user.click(modeSelect)

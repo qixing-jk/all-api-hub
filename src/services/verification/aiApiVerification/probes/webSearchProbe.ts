@@ -10,6 +10,7 @@ import type {
   ApiVerificationApiType,
   ApiVerificationMode,
   ApiVerificationProbeResult,
+  ApiVerificationRequestProfile,
 } from "../types"
 import {
   buildSafeProbeFailureDiagnostics,
@@ -22,6 +23,8 @@ type RunWebSearchProbeParams = {
   baseUrl: string
   apiKey: string
   requestHeaders?: Record<string, string>
+  requestProfile?: ApiVerificationRequestProfile
+  requestProfileEnhanced?: boolean
   apiType: ApiVerificationApiType
   modelId: string
   mode?: ApiVerificationMode
@@ -59,6 +62,8 @@ export async function runWebSearchProbe(
   try {
     if (params.apiType === API_TYPES.OPENAI) {
       const provider = createOpenAIProvider({
+        requestProfile: params.requestProfile,
+        requestProfileEnhanced: params.requestProfileEnhanced,
         baseUrl: params.baseUrl,
         apiKey: params.apiKey,
         ...(params.requestHeaders
@@ -116,6 +121,8 @@ export async function runWebSearchProbe(
 
     if (params.apiType === API_TYPES.GOOGLE) {
       const google = createGoogleProvider({
+        requestProfile: params.requestProfile,
+        requestProfileEnhanced: params.requestProfileEnhanced,
         baseUrl: params.baseUrl,
         apiKey: params.apiKey,
         ...(params.requestHeaders

@@ -22,6 +22,7 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const TEST_PAGE_URL = "https://api-console.example.test/console"
@@ -265,6 +266,46 @@ test.beforeEach(async ({ context, page }) => {
         data: [{ id: "gpt-4o-mini" }],
       }),
     })
+  })
+})
+
+test("selects CLI simulation inside the page API check shadow portal", async ({
+  context,
+  page,
+  extensionDir,
+}) => {
+  await seedAutoDetectApiCheckPreferences(await getServiceWorker(context))
+  const { contentHost, modal } =
+    await openApiCheckModalFromCopiedCredentials(page)
+  const selector = modal.getByRole("combobox", {
+    name: "Client simulation",
+    exact: true,
+  })
+  await expect(selector).toContainText("None (ordinary request)")
+  await selector.click()
+  await contentHost
+    .getByRole("option", { name: "Codex CLI", exact: true })
+    .click()
+  await expect(selector).toContainText("Codex CLI")
+  await expect(
+    modal.getByRole("combobox", { name: "API type", exact: true }),
+  ).toContainText("OpenAI")
+  await expect(
+    modal.getByRole("combobox", { name: "Model ID", exact: true }),
+  ).toContainText("gpt-4o-mini")
+  const enhanced = modal.getByRole("switch", {
+    name: "Enhanced CLI simulation",
+    exact: true,
+  })
+  await expect(enhanced).not.toBeChecked()
+  await enhanced.click()
+  await expect(enhanced).toBeChecked()
+  await selector.scrollIntoViewIfNeeded()
+  await captureVisualViews({
+    page,
+    ready: selector,
+    id: "page-client-simulation",
+    extensionDir,
   })
 })
 

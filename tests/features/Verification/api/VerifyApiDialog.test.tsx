@@ -17,6 +17,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
+import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
 import {
   createAccountModelVerificationHistoryTarget,
   createVerificationHistorySummary,
@@ -180,6 +181,53 @@ describe("VerifyApiDialog", () => {
       complete: mockCompleteProductAnalyticsAction,
     })
     await verificationResultHistoryStorage.clearAllData()
+  })
+
+  it("lets an account text test opt into a CLI profile and resets it on reopening", async () => {
+    const account = buildDisplaySiteData({ id: "profile-selection" })
+    const key = buildServiceCredentialRuntimeKey(account, {
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Codex",
+      key: "credential",
+      isAuthenticated: true,
+      baseUrl: account.baseUrl,
+    })
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValue([key])
+    mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValue(key)
+    mockRunApiVerificationProbe.mockResolvedValue({
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 1,
+      summary: "OK",
+    })
+    const props = { isOpen: true, account, initialModelId: "gpt-4o" }
+    const { result, rerender } = renderHook(useVerifyApiDialogViewModel, {
+      initialProps: props,
+    })
+    await waitFor(() => expect(result.current.selectedRuntimeKey).toBeTruthy())
+    expect(result.current.requestProfile).toBe("default")
+    act(() =>
+      result.current.setRequestProfile(API_VERIFICATION_REQUEST_PROFILES.Codex),
+    )
+    expect(result.current.apiType).toBe("openai")
+    expect(result.current.requestProfileEnhanced).toBe(false)
+    act(() => result.current.setRequestProfileEnhanced(true))
+    act(() => result.current.runSingleProbe("text-generation"))
+    await waitFor(() =>
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          requestProfile: API_VERIFICATION_REQUEST_PROFILES.Codex,
+          requestProfileEnhanced: true,
+          probeId: "text-generation",
+        }),
+      ),
+    )
+    await waitFor(() => expect(result.current.canClose).toBe(true))
+    rerender({ ...props, isOpen: false })
+    rerender(props)
+    expect(result.current.requestProfile).toBe("default")
+    await waitFor(() => expect(result.current.selectedRuntimeKey).toBeTruthy())
   })
 
   it("dynamically updates modality and probe definitions when modelId changes in input", async () => {

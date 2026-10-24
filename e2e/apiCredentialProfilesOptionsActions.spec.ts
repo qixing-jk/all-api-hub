@@ -1001,6 +1001,7 @@ test("imports an API credential profile into Claude Code Router", async ({
 test("aligns the credential verification meta fields across the paired row", async ({
   context,
   extensionId,
+  extensionDir,
   page,
 }) => {
   await context.route("https://aligned-api.example.com/v1/models", (route) =>
@@ -1041,6 +1042,49 @@ test("aligns the credential verification meta fields across the paired row", asy
   expect(modeTriggerBox?.y).toBe(apiTypeTriggerBox?.y)
   expect(modeTriggerBox?.width).toBe(apiTypeTriggerBox?.width)
   expect(modeTriggerBox?.height).toBe(apiTypeTriggerBox?.height)
+  await captureVisualViews({
+    page,
+    ready: page.getByRole("dialog"),
+    extensionDir,
+    id: "verification-request-profile",
+  })
+  const selector = page.getByRole("combobox", {
+    name: "Client simulation",
+    exact: true,
+  })
+  await selector.click()
+  await page.getByRole("option", { name: "Claude Code", exact: true }).click()
+  const enhanced = page.getByRole("switch", {
+    name: "Enhanced CLI simulation",
+    exact: true,
+  })
+  await expect(enhanced).not.toBeChecked()
+  await enhanced.click()
+  await captureVisualViews({
+    page,
+    ready: page.getByRole("dialog"),
+    extensionDir,
+    id: "verification-enhanced-profile",
+  })
+  await page
+    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyDialogCloseButton)
+    .click()
+  await page
+    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyCliSupportButton)
+    .click()
+  const cliEnhanced = page.getByRole("switch", {
+    name: "Enhanced CLI simulation",
+    exact: true,
+  })
+  await expect(cliEnhanced).not.toBeChecked()
+  await cliEnhanced.click()
+  await expect(cliEnhanced).toBeChecked()
+  await captureVisualViews({
+    page,
+    ready: page.getByRole("dialog"),
+    extensionDir,
+    id: "verification-enhanced-cli",
+  })
 })
 
 test("verifies embedding and image models after changing the selected modality", async ({

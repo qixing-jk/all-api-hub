@@ -38,6 +38,7 @@
       "mode": "Chế độ kiểm tra",
       "model": "Mô hình",
       "modelPlaceholder": "Nhập ID mô hình",
+      "requestProfile": "Mô phỏng ứng dụng",
       "runtimeKey": "Khóa",
       "runtimeKeyIncompatible": "Không dùng được cho mô hình này",
       "runtimeKeyPlaceholder": "Chọn khóa"
@@ -65,6 +66,16 @@
       "tool-calling": "Gọi công cụ/hàm",
       "video-generation": "Tác vụ video",
       "web-search": "Tìm kiếm web / Grounding"
+    },
+    "requestProfiles": {
+      "claude": "Claude Code",
+      "codex": "Codex CLI",
+      "default": "Không (yêu cầu thông thường)",
+      "enhancedBadge": "Nâng cao",
+      "enhancedHint": "Thêm lời nhắc nhận dạng, tiêu đề SDK, bộ nhớ đệm và đặc điểm phiên đã biết. Có thể tăng mức sử dụng đầu vào; việc chấp nhận tùy thuộc trang web.",
+      "enhancedLabel": "Mô phỏng CLI nâng cao",
+      "gemini": "Gemini CLI",
+      "hint": "Mô phỏng yêu cầu của ứng dụng và chuyển sang giao thức API tương ứng. Giữ nguyên bài kiểm tra đã chọn."
     },
     "requiresModelId": "Vui lòng nhập ID mô hình trước khi chạy bài kiểm tra này.",
     "selectedRuntimeKeyIncompatibleHint": "Khóa đang chọn không dùng được cho nhóm của mô hình này. Hãy chọn khóa tương thích trước khi xác minh.",
@@ -96,6 +107,7 @@
       "noModelsReturned": "Không trả về mô hình nào.",
       "noToolCallDetected": "Không phát hiện thấy lệnh gọi công cụ (mô hình có thể không hỗ trợ công cụ).",
       "probeRequiresOpenAiProtocol": "Phép kiểm tra này yêu cầu điểm cuối API tương thích OpenAI. Chỉ chọn giao thức đó nếu dịch vụ có hỗ trợ.",
+      "requestProfileIncompatible": "Mô phỏng ứng dụng này không hỗ trợ giao thức API hoặc bài kiểm tra đã chọn.",
       "rerankSucceeded": "Xếp hạng lại thành công.",
       "rerankUnexpectedResponse": "Phản hồi xếp hạng lại không như mong đợi.",
       "stopped": "Đã dừng bởi người dùng.",

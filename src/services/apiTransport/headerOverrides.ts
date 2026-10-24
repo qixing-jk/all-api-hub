@@ -125,8 +125,11 @@ export async function fetchWithHeaderOverrides(
 ): Promise<Response> {
   const custom = normalizeHeaderOverrides(overrides)
   const hasOverrides = Object.keys(custom).length > 0
+  // Read the current entries after auth replacement, including when SDK/Fetch
+  // adapters retain a different internal header list on a cloned Request.
   const headers = new Headers(
-    init?.headers ?? (input instanceof Request ? input.headers : undefined),
+    init?.headers ??
+      (input instanceof Request ? [...input.headers] : undefined),
   )
   for (const [name, value] of Object.entries(custom)) headers.set(name, value)
   const session = execution?.cookieSession

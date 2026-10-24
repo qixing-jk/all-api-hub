@@ -27,6 +27,7 @@ import {
 import { VerificationHistorySummary } from "~/features/Verification/api/VerificationHistorySummary"
 import { VerificationMediaPreview } from "~/features/Verification/api/VerificationMediaPreview"
 import { VerificationModeSelect } from "~/features/Verification/api/VerificationMode"
+import { VerificationRequestProfileSelect } from "~/features/Verification/api/VerificationRequestProfile"
 import {
   API_TYPES,
   API_VERIFICATION_PROBE_STATUSES,
@@ -53,6 +54,10 @@ export function VerifyApiCredentialProfileDialog(
     setModelId,
     verificationMode,
     setVerificationMode,
+    requestProfile,
+    setRequestProfile,
+    requestProfileEnhanced,
+    setRequestProfileEnhanced,
     modelOptions,
     setModelOptions,
     isFetchingModels,
@@ -195,6 +200,17 @@ export function VerifyApiCredentialProfileDialog(
                 labelRowClassName="min-h-(--density-control-tight)"
               />
             ) : null}
+
+            <div className="sm:col-span-2">
+              <VerificationRequestProfileSelect
+                value={requestProfile}
+                enhanced={requestProfileEnhanced}
+                onEnhancedChange={setRequestProfileEnhanced}
+                onChange={setRequestProfile}
+                disabled={!canClose}
+                labelRowClassName="min-h-(--density-control-tight)"
+              />
+            </div>
 
             <div className="space-y-density-1-5 sm:col-span-2">
               <div className="flex min-h-(--density-control-tight) items-center">

@@ -38,6 +38,7 @@
       "mode": "Test mode",
       "model": "Model",
       "modelPlaceholder": "Enter model id",
+      "requestProfile": "Client simulation",
       "runtimeKey": "Key",
       "runtimeKeyIncompatible": "Not available for this model",
       "runtimeKeyPlaceholder": "Select key"
@@ -65,6 +66,16 @@
       "tool-calling": "Tool/function calling",
       "video-generation": "Video task",
       "web-search": "Web search / grounding"
+    },
+    "requestProfiles": {
+      "claude": "Claude Code",
+      "codex": "Codex CLI",
+      "default": "None (ordinary request)",
+      "enhancedBadge": "Enhanced",
+      "enhancedHint": "Add known identity prompts, SDK headers, cache and session features. May increase input usage; acceptance depends on the site.",
+      "enhancedLabel": "Enhanced CLI simulation",
+      "gemini": "Gemini CLI",
+      "hint": "Simulates client request features and switches to the matching API protocol. Keeps the selected test."
     },
     "requiresModelId": "Enter a model id to run this test.",
     "selectedRuntimeKeyIncompatibleHint": "The selected key is not available for this model's group. Choose a compatible key before running verification.",
@@ -97,6 +108,7 @@
       "noModelsReturned": "No models returned.",
       "noToolCallDetected": "No tool call detected (model may not support tools).",
       "probeRequiresOpenAiProtocol": "This test requires an OpenAI-compatible API endpoint. Select that protocol only if your service provides it.",
+      "requestProfileIncompatible": "This client simulation does not support the selected API protocol or test.",
       "rerankSucceeded": "Rerank succeeded.",
       "rerankUnexpectedResponse": "Unexpected rerank response.",
       "stopped": "Stopped by user.",

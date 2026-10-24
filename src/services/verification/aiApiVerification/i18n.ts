@@ -116,6 +116,11 @@ export function translateApiVerificationSummary(
         "aiApiVerification:verifyDialog.summaries.noModelsReturned",
         summaryParams,
       )
+    case "verifyDialog.summaries.requestProfileIncompatible":
+      return t(
+        "aiApiVerification:verifyDialog.summaries.requestProfileIncompatible",
+        summaryParams,
+      )
     case "verifyDialog.summaries.textGenerationSucceeded":
       return t(
         "aiApiVerification:verifyDialog.summaries.textGenerationSucceeded",
