@@ -9,11 +9,6 @@
     "settings": "Open settings",
     "title": "AI API URL and API Key Detected"
   },
-  "messages": {
-    "success": {
-      "settingsSaved": "AI API Check settings have been saved."
-    }
-  },
   "modal": {
     "actions": {
       "fetchingModels": "Fetching…",
@@ -89,32 +84,85 @@
   "settings": {
     "autoDetect": {
       "enable": "Enable auto-detect",
-      "enableDesc": "When enabled, the extension may detect credentials from copy actions and will ask for confirmation before opening the modal.",
+      "enableDesc": "Show a confirmation when selected or copied content contains API credentials.",
       "enhanced": {
         "enable": "Enable enhanced auto-detect",
         "enableDesc": "Recognize bare domains, non-standard key formats, and keys mixed with invalid characters in copied content. Enhanced matches show a prompt in the modal and can be quickly turned off."
-      },
-      "whitelist": {
-        "invalidMore": "…and more",
-        "invalidTitle": "Invalid patterns",
-        "patterns": "URL whitelist patterns",
-        "patternsDesc": "One JavaScript RegExp pattern per line. Case-insensitive match is applied. Invalid patterns are ignored (treated as non-matching).",
-        "patternsPlaceholder": "^https://example\\.com/console"
       }
     },
+    "autoSaveHint": "Saved automatically when you leave the field. Invalid input keeps the last saved rules.",
     "contextMenu": {
       "enable": "Show in browser right-click menu",
       "enableDesc": "Adds an “AI API Check” item to the browser context menu."
     },
-    "description": "Manual context-menu trigger is always available. Auto-detect is opt-in and only runs on whitelisted pages. Extracted API keys are not saved by default.",
+    "description": "Check API credentials selected or copied on webpages.",
     "keyCleanup": {
       "invalidMore": "…and more",
       "invalidTitle": "Invalid cleanup patterns",
       "patterns": "API key cleanup patterns",
-      "patternsDesc": "Use this when copied keys include extra labels, brackets, or separators. Add one regular expression per line; invalid rules are shown before saving.",
-      "patternsPlaceholder": "\\[\\[remove-this\\]\\]\n【remove-this】\n<remove-this>\n(?:separator|noise)\n[\\s\\-_.]+",
-      "save": "Save cleanup patterns"
+      "patternsDesc": "Use this when copied keys include extra labels, brackets, or separators. Add one regular expression per line; invalid rules are shown before saving. Saved automatically when you leave the field. Invalid input keeps the last saved rules.",
+      "patternsPlaceholder": "\\[\\[remove-this\\]\\]\n【remove-this】\n<remove-this>\n(?:separator|noise)\n[\\s\\-_.]+"
+    },
+    "siteAccess": {
+      "disabledHint": "Auto-detect is off. These scope settings apply once you enable it."
+    },
+    "siteRules": {
+      "addBlacklist": "Add to blacklist",
+      "addRow": "Add another rule",
+      "addWhitelist": "Add to whitelist",
+      "allowed": "Prompts allowed",
+      "autoDetectOff": "Auto-detect is off",
+      "blacklist": "Blacklist",
+      "blacklistFirst": "Blacklist first",
+      "blacklistHint": "Suppress prompts on matching pages.",
+      "blackMatch": "Matches the blacklist",
+      "blackPriorityMatch": "Matches both lists; blacklist takes priority",
+      "blocked": "No prompts",
+      "content": "Rule content",
+      "currentPage": "This page only",
+      "defaultHint": "An empty whitelist allows all websites except blacklist matches.",
+      "defaultMatch": "Empty whitelist; allowed by default",
+      "description": "Choose where auto-detection prompts appear. Manual testing is unaffected.",
+      "edit": "Edit rule",
+      "emptyBlacklist": "No websites blocked.",
+      "emptyWhitelist": "No rules; all websites are allowed by default.",
+      "exact": "Exact URL",
+      "exactHint": "Matches the full URL, including path, query and fragment.",
+      "invalid": "Check the rules. Add at least one valid rule; editing accepts one rule at a time.",
+      "legacy": "Existing website rule",
+      "legacyHint": "Preserves the previous domain, subdomain and path-prefix matching behavior.",
+      "noTabs": "No readable web tabs; enter a URL manually.",
+      "placeholder": "Enter a domain or URL; paste multiple lines to add in bulk.",
+      "preview": "Try a URL",
+      "priority": "When both lists match",
+      "priorityHint": "Used only when a URL matches both lists.",
+      "regex": "Regular expression",
+      "regexHint": "One JavaScript regular expression per line, case-insensitive. Invalid or unsafe expressions cannot be saved.",
+      "restrictedHint": "Only whitelist matches can prompt. Overlaps follow the selected priority.",
+      "saveFailed": "Could not save. Your input is retained; retry when ready.",
+      "showAll": "Show all",
+      "showLess": "Show less",
+      "subdomains": "Include subdomains",
+      "syntax": "Rule syntax",
+      "tabPicker": "Choose from open tabs",
+      "title": "Website black/white lists",
+      "unlisted": "No whitelist match",
+      "unsupported": "Enter an HTTP or HTTPS URL.",
+      "whitelist": "Whitelist",
+      "whitelistFirst": "Whitelist first",
+      "whitelistHint": "Allow prompts on matching pages.",
+      "whiteMatch": "Matches the whitelist",
+      "whitePriorityMatch": "Matches both lists; whitelist takes priority",
+      "wholeSite": "Whole website",
+      "wildcard": "Wildcard (default)",
+      "wildcardHint": "* matches any text. A bare domain becomes *://domain/*; use *.example.com for subdomains."
     },
     "title": "Web AI API Functionality Availability Test"
+  },
+  "siteControl": {
+    "disable": "Stop auto-detect on this website",
+    "failed": "Could not apply this choice. Check the black/white lists and their priority, or retry.",
+    "globalDisabled": "Global auto-detect is off. Enable it in settings.",
+    "label": "Auto-detect on this website"
   }
 }

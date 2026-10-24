@@ -20,6 +20,7 @@ export interface ProbeItemState {
   result: ApiVerificationProbeResult | null
 }
 export interface ApiCheckModalViewModel {
+  pageUrl: string
   isOpen: boolean
   sourceText: string
   baseUrl: string

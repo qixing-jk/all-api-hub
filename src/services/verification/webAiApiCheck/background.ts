@@ -37,9 +37,9 @@ import {
 import { createApiCheckProbeRunRegistry } from "~/services/verification/webAiApiCheck/probeRunRegistry"
 import { createLogger } from "~/utils/core/logger"
 import { isHttpUrl } from "~/utils/core/urlParsing"
-import { isUrlAllowedByRegexList } from "~/utils/core/urlWhitelist"
 
 import { onWebAiApiCheckMessage, WebAiApiCheckMessageTypes } from "./messaging"
+import { isWebAiApiCheckPageAllowed } from "./siteAccess"
 import type {
   ApiCheckCancelRunProbeRequest,
   ApiCheckCancelRunProbeResponse,
@@ -173,11 +173,10 @@ export async function resolveWebAiApiCheckShouldPromptMessage(
       }
     }
 
-    const prefs = await userPreferences.getPreferences()
+    const prefs = await userPreferences.getPreferencesStrict()
     const config = getWebAiApiCheckPreferences(prefs)
-    const patterns = config.autoDetect?.urlWhitelist?.patterns ?? []
     const autoDetectEnabled = config.enabled && !!config.autoDetect?.enabled
-    const urlAllowed = isUrlAllowedByRegexList(pageUrl, patterns)
+    const urlAllowed = isWebAiApiCheckPageAllowed(pageUrl, config.autoDetect)
     const shouldPrompt = autoDetectEnabled && urlAllowed
     const enhancedShouldPrompt =
       shouldPrompt && !!config.autoDetect?.enhanced?.enabled
@@ -186,6 +185,8 @@ export async function resolveWebAiApiCheckShouldPromptMessage(
       success: true,
       shouldPrompt,
       enhancedShouldPrompt,
+      siteAllowed: urlAllowed,
+      autoDetectEnabled,
       apiKeyCleanupPatterns: config.keyCleanup?.removalPatterns ?? [],
     }
   } catch (error) {
@@ -637,6 +638,25 @@ export function setupWebAiApiCheckMessagingListeners() {
     onWebAiApiCheckMessage(
       WebAiApiCheckMessageTypes.ShouldPrompt,
       async ({ data }) => resolveWebAiApiCheckShouldPromptMessage(data),
+    ),
+    onWebAiApiCheckMessage(
+      WebAiApiCheckMessageTypes.SetSiteAccess,
+      async ({ data }) => {
+        try {
+          if (!isHttpUrl(data.pageUrl) || typeof data.enabled !== "boolean")
+            return toGenericFailureResponse()
+          const result = await userPreferences.setWebAiApiCheckSiteEnabled(
+            data.pageUrl,
+            data.enabled,
+          )
+          if (!result.ok) return toGenericFailureResponse()
+          return resolveWebAiApiCheckShouldPromptMessage({
+            pageUrl: data.pageUrl,
+          })
+        } catch {
+          return toGenericFailureResponse()
+        }
+      },
     ),
     onWebAiApiCheckMessage(
       WebAiApiCheckMessageTypes.FetchModels,

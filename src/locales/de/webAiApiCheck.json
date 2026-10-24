@@ -9,11 +9,6 @@
     "settings": "Einstellungen öffnen",
     "title": "AI-API-URL und API-Schlüssel erkannt"
   },
-  "messages": {
-    "success": {
-      "settingsSaved": "Die Einstellungen für den AI-API-Check wurden gespeichert."
-    }
-  },
   "modal": {
     "actions": {
       "fetchingModels": "Wird abgerufen…",
@@ -89,32 +84,85 @@
   "settings": {
     "autoDetect": {
       "enable": "Automatische Erkennung aktivieren",
-      "enableDesc": "Wenn diese Option aktiviert ist, erkennt die Erweiterung möglicherweise Anmeldeinformationen aus Kopieraktionen und fragt vor dem Öffnen des Dialogs nach einer Bestätigung.",
+      "enableDesc": "Bestätigung anzeigen, wenn ausgewählte oder kopierte Inhalte API-Zugangsdaten enthalten.",
       "enhanced": {
         "enable": "Erweiterte automatische Erkennung aktivieren",
         "enableDesc": "Erkennen Sie reine Domains, nicht standardmäßige Schlüsselformate und Schlüssel, die mit ungültigen Zeichen in kopierten Inhalten gemischt sind. Erweiterte Übereinstimmungen zeigen einen Hinweis im Dialog an und können schnell deaktiviert werden."
-      },
-      "whitelist": {
-        "invalidMore": "…und mehr",
-        "invalidTitle": "Ungültige Muster",
-        "patterns": "URL-Whitelist-Muster",
-        "patternsDesc": "Ein JavaScript RegExp-Muster pro Zeile. Es wird eine Übereinstimmung ohne Berücksichtigung der Groß- und Kleinschreibung angewendet. Ungültige Muster werden ignoriert (als nicht übereinstimmend behandelt).",
-        "patternsPlaceholder": "^https://example\\.com/console"
       }
     },
+    "autoSaveHint": "Beim Verlassen des Felds automatisch gespeichert. Ungültige Eingaben ersetzen keine gespeicherten Regeln.",
     "contextMenu": {
       "enable": "Im Kontextmenü des Browsers anzeigen",
       "enableDesc": "Fügt dem Browser-Kontextmenü ein Element „AI API Check“ hinzu."
     },
-    "description": "Der manuelle Kontextmenü-Auslöser ist immer verfügbar. Die automatische Erkennung ist optional und wird nur auf Seiten auf der Whitelist ausgeführt. Extrahierte API-Schlüssel werden standardmäßig nicht gespeichert.",
+    "description": "API-Zugangsdaten erkennen, die auf Webseiten ausgewählt oder kopiert werden.",
     "keyCleanup": {
       "invalidMore": "…und mehr",
       "invalidTitle": "Ungültige Bereinigungsmuster",
       "patterns": "Bereinigungsmuster für API-Schlüssel",
-      "patternsDesc": "Verwenden Sie dies, wenn kopierte Schlüssel zusätzliche Beschriftungen, Klammern oder Trennzeichen enthalten. Fügen Sie einen regulären Ausdruck pro Zeile hinzu. Ungültige Regeln werden vor dem Speichern angezeigt.",
-      "patternsPlaceholder": "\\[\\[remove-this\\]\\]\n【remove-this】\n<remove-this>\n(?:separator|noise)\n[\\s\\-_.]+",
-      "save": "Bereinigungsmuster speichern"
+      "patternsDesc": "Verwenden Sie dies, wenn kopierte Schlüssel zusätzliche Beschriftungen, Klammern oder Trennzeichen enthalten. Fügen Sie einen regulären Ausdruck pro Zeile hinzu. Ungültige Regeln werden vor dem Speichern angezeigt. Beim Verlassen des Felds automatisch gespeichert. Ungültige Eingaben ersetzen keine gespeicherten Regeln.",
+      "patternsPlaceholder": "\\[\\[remove-this\\]\\]\n【remove-this】\n<remove-this>\n(?:separator|noise)\n[\\s\\-_.]+"
+    },
+    "siteAccess": {
+      "disabledHint": "Die automatische Erkennung ist aus. Dieser Umfang gilt, sobald du sie aktivierst."
+    },
+    "siteRules": {
+      "addBlacklist": "Zur Sperrliste hinzufügen",
+      "addRow": "Weitere Regel hinzufügen",
+      "addWhitelist": "Zur Freigabeliste hinzufügen",
+      "allowed": "Hinweise erlaubt",
+      "autoDetectOff": "Automatische Erkennung ist aus",
+      "blacklist": "Sperrliste",
+      "blacklistFirst": "Sperrliste zuerst",
+      "blacklistHint": "Hinweise auf passenden Seiten unterdrücken.",
+      "blackMatch": "Treffer der Sperrliste",
+      "blackPriorityMatch": "Beide Listen treffen zu; Sperrliste hat Vorrang",
+      "blocked": "Keine Hinweise",
+      "content": "Regelinhalt",
+      "currentPage": "Nur diese Seite",
+      "defaultHint": "Eine leere Freigabeliste erlaubt alle Websites außer Treffern der Sperrliste.",
+      "defaultMatch": "Leere Freigabeliste; standardmäßig erlaubt",
+      "description": "Legt fest, wo Hinweise zur automatischen Erkennung erscheinen. Manuelle Tests bleiben unverändert.",
+      "edit": "Regel bearbeiten",
+      "emptyBlacklist": "Keine Websites gesperrt.",
+      "emptyWhitelist": "Keine Regeln; standardmäßig sind alle Websites erlaubt.",
+      "exact": "Exakte URL",
+      "exactHint": "Vergleicht die vollständige URL einschließlich Pfad, Abfrage und Fragment.",
+      "invalid": "Regeln prüfen. Mindestens eine gültige Regel; beim Bearbeiten jeweils nur eine.",
+      "legacy": "Bestehende Website-Regel",
+      "legacyHint": "Behält die bisherige Domain-, Subdomain- und Pfadpräfixsuche bei.",
+      "noTabs": "Keine lesbaren Web-Tabs; URL manuell eingeben.",
+      "placeholder": "Domain oder URL eingeben; mehrere Zeilen zum Sammelhinzufügen einfügen.",
+      "preview": "URL testen",
+      "priority": "Wenn beide Listen passen",
+      "priorityHint": "Gilt nur, wenn eine URL auf beide Listen zutrifft.",
+      "regex": "Regulärer Ausdruck",
+      "regexHint": "Ein JavaScript-RegExp pro Zeile, ohne Beachtung der Großschreibung. Ungültige oder unsichere Ausdrücke werden nicht gespeichert.",
+      "restrictedHint": "Nur Treffer der Freigabeliste zeigen Hinweise. Überschneidungen folgen der Priorität.",
+      "saveFailed": "Speichern fehlgeschlagen. Die Eingabe bleibt erhalten; erneut versuchen.",
+      "showAll": "Alle anzeigen",
+      "showLess": "Weniger anzeigen",
+      "subdomains": "Subdomains einschließen",
+      "syntax": "Regelsyntax",
+      "tabPicker": "Aus offenen Tabs wählen",
+      "title": "Website-Freigabe- und Sperrlisten",
+      "unlisted": "Kein Treffer der Freigabeliste",
+      "unsupported": "HTTP- oder HTTPS-URL eingeben.",
+      "whitelist": "Freigabeliste",
+      "whitelistFirst": "Freigabeliste zuerst",
+      "whitelistHint": "Hinweise auf passenden Seiten erlauben.",
+      "whiteMatch": "Treffer der Freigabeliste",
+      "whitePriorityMatch": "Beide Listen treffen zu; Freigabeliste hat Vorrang",
+      "wholeSite": "Gesamte Website",
+      "wildcard": "Platzhalter (Standard)",
+      "wildcardHint": "* ersetzt beliebigen Text. Domains werden zu *://Domain/*; für Subdomains *.example.com verwenden."
     },
     "title": "Funktions- und Verfügbarkeitstest für Web-KI-APIs"
+  },
+  "siteControl": {
+    "disable": "Automatische Erkennung auf dieser Website beenden",
+    "failed": "Auswahl nicht angewendet. Listen und Priorität prüfen oder erneut versuchen.",
+    "globalDisabled": "Globale automatische Erkennung ist aus. In den Einstellungen aktivieren.",
+    "label": "Automatisch auf dieser Website erkennen"
   }
 }

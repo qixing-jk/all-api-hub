@@ -9,11 +9,6 @@
     "settings": "Abrir configurações",
     "title": "URL e chave da AI API detectadas"
   },
-  "messages": {
-    "success": {
-      "settingsSaved": "As configurações de verificação da AI API foram salvas."
-    }
-  },
   "modal": {
     "actions": {
       "fetchingModels": "Buscando…",
@@ -89,32 +84,85 @@
   "settings": {
     "autoDetect": {
       "enable": "Ativar detecção automática",
-      "enableDesc": "Quando habilitada, a extensão pode detectar credenciais de ações de cópia e solicitará confirmação antes de abrir o modal.",
+      "enableDesc": "Mostre uma confirmação quando o conteúdo selecionado ou copiado contiver credenciais de API.",
       "enhanced": {
         "enable": "Ativar detecção automática aprimorada",
         "enableDesc": "Reconhece domínios sem protocolo, formatos de chave não padrão e chaves misturadas com caracteres inválidos no conteúdo copiado. As correspondências aprimoradas exibem um aviso no modal e podem ser desativadas rapidamente."
-      },
-      "whitelist": {
-        "invalidMore": "…e mais",
-        "invalidTitle": "Padrões inválidos",
-        "patterns": "Padrões da lista de URLs permitidas",
-        "patternsDesc": "Um padrão JavaScript RegExp por linha. A correspondência sem distinção entre maiúsculas e minúsculas é aplicada. Padrões inválidos são ignorados (tratados como não correspondentes).",
-        "patternsPlaceholder": "^https://example\\.com/console"
       }
     },
+    "autoSaveHint": "Salvo ao sair do campo. Entradas inválidas mantêm as regras salvas.",
     "contextMenu": {
       "enable": "Mostrar no menu do botão direito do navegador",
       "enableDesc": "Adiciona o item “Verificação de AI API” ao menu de contexto do navegador."
     },
-    "description": "O acionamento manual pelo menu de contexto está sempre disponível. A detecção automática é opcional e só é executada em páginas da lista de URLs permitidas. As chaves de API extraídas não são salvas por padrão.",
+    "description": "Detecte credenciais de API selecionadas ou copiadas em páginas da web.",
     "keyCleanup": {
       "invalidMore": "…e mais",
       "invalidTitle": "Padrões de limpeza inválidos",
       "patterns": "Padrões de limpeza de chaves de API",
-      "patternsDesc": "Use isto quando as chaves copiadas incluem rótulos, colchetes ou separadores extras. Adicione uma expressão regular por linha; regras inválidas são mostradas antes de salvar.",
-      "patternsPlaceholder": "\\[\\[remove-this\\]\\]\n【remove-this】\n<remove-this>\n(?:separator|noise)\n[\\s\\-_.]+",
-      "save": "Salvar padrões de limpeza"
+      "patternsDesc": "Use isto quando as chaves copiadas incluem rótulos, colchetes ou separadores extras. Adicione uma expressão regular por linha; regras inválidas são mostradas antes de salvar. Salvo ao sair do campo. Entradas inválidas mantêm as regras salvas.",
+      "patternsPlaceholder": "\\[\\[remove-this\\]\\]\n【remove-this】\n<remove-this>\n(?:separator|noise)\n[\\s\\-_.]+"
+    },
+    "siteAccess": {
+      "disabledHint": "A detecção automática está desligada. Este escopo vale quando você a ativar."
+    },
+    "siteRules": {
+      "addBlacklist": "Adicionar à lista de bloqueio",
+      "addRow": "Adicionar outra regra",
+      "addWhitelist": "Adicionar à lista de permissão",
+      "allowed": "Avisos permitidos",
+      "autoDetectOff": "Detecção automática desativada",
+      "blacklist": "Lista de bloqueio",
+      "blacklistFirst": "Priorizar lista de bloqueio",
+      "blacklistHint": "Ocultar avisos nas páginas correspondentes.",
+      "blackMatch": "Corresponde à lista de bloqueio",
+      "blackPriorityMatch": "Corresponde às duas listas; a de bloqueio tem prioridade",
+      "blocked": "Sem avisos",
+      "content": "Conteúdo da regra",
+      "currentPage": "Somente esta página",
+      "defaultHint": "Uma lista de permissão vazia permite todos os sites, exceto os bloqueados.",
+      "defaultMatch": "Lista de permissão vazia; permitido por padrão",
+      "description": "Escolha onde aparecem os avisos de detecção automática. Os testes manuais não são afetados.",
+      "edit": "Editar regra",
+      "emptyBlacklist": "Nenhum site bloqueado.",
+      "emptyWhitelist": "Sem regras; todos os sites são permitidos por padrão.",
+      "exact": "URL exata",
+      "exactHint": "Corresponde à URL completa, incluindo caminho, consulta e fragmento.",
+      "invalid": "Verifique as regras. Adicione ao menos uma válida; edite uma por vez.",
+      "legacy": "Regra de site existente",
+      "legacyHint": "Preserva a correspondência anterior de domínio, subdomínio e prefixo de caminho.",
+      "noTabs": "Nenhuma aba web disponível; digite uma URL manualmente.",
+      "placeholder": "Digite um domínio ou URL; cole várias linhas para adicionar em lote.",
+      "preview": "Testar uma URL",
+      "priority": "Quando ambas as listas correspondem",
+      "priorityHint": "Aplica-se apenas se uma URL corresponder às duas listas.",
+      "regex": "Expressão regular",
+      "regexHint": "Uma expressão JavaScript por linha, sem diferenciar maiúsculas. Expressões inválidas ou inseguras não podem ser salvas.",
+      "restrictedHint": "Apenas sites permitidos mostram avisos. Conflitos seguem a prioridade.",
+      "saveFailed": "Não foi possível salvar. A entrada foi mantida; tente novamente.",
+      "showAll": "Mostrar tudo",
+      "showLess": "Mostrar menos",
+      "subdomains": "Incluir subdomínios",
+      "syntax": "Sintaxe",
+      "tabPicker": "Escolher entre abas abertas",
+      "title": "Listas de permissão e bloqueio de sites",
+      "unlisted": "Sem correspondência na lista de permissão",
+      "unsupported": "Digite uma URL HTTP ou HTTPS.",
+      "whitelist": "Lista de permissão",
+      "whitelistFirst": "Priorizar lista de permissão",
+      "whitelistHint": "Permitir avisos nas páginas correspondentes.",
+      "whiteMatch": "Corresponde à lista de permissão",
+      "whitePriorityMatch": "Corresponde às duas listas; a de permissão tem prioridade",
+      "wholeSite": "Site inteiro",
+      "wildcard": "Curinga (padrão)",
+      "wildcardHint": "* corresponde a qualquer texto. Domínios viram *://domínio/*; use *.example.com para subdomínios."
     },
     "title": "Teste de disponibilidade da Web AI API"
+  },
+  "siteControl": {
+    "disable": "Desativar a detecção automática neste site",
+    "failed": "Não foi possível aplicar. Verifique as listas e a prioridade ou tente novamente.",
+    "globalDisabled": "A detecção automática global está desativada. Ative nas configurações.",
+    "label": "Detectar automaticamente neste site"
   }
 }

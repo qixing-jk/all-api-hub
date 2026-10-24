@@ -9,11 +9,6 @@
     "settings": "設定を開く",
     "title": "AI API の URL と API キーを検出しました"
   },
-  "messages": {
-    "success": {
-      "settingsSaved": "AI API Check の設定を保存しました。"
-    }
-  },
   "modal": {
     "actions": {
       "fetchingModels": "取得中…",
@@ -89,32 +84,85 @@
   "settings": {
     "autoDetect": {
       "enable": "自動検出を有効化",
-      "enableDesc": "有効にすると、拡張機能はコピー操作から認証情報を検出する場合があり、モーダルを開く前に確認を求めます。",
+      "enableDesc": "選択・コピーした内容に API 認証情報が含まれると確認を表示します。",
       "enhanced": {
         "enable": "拡張自動検出を有効化",
         "enableDesc": "裸のドメイン、非標準のキー形式、コピー内容に不正な文字が混在したキーを識別します。拡張検出に一致するとモーダルで通知され、すばやく無効化できます。"
-      },
-      "whitelist": {
-        "invalidMore": "…他",
-        "invalidTitle": "無効なパターン",
-        "patterns": "URL ホワイトリストパターン",
-        "patternsDesc": "1 行につき 1 つの JavaScript RegExp パターンを入力します。大文字小文字を区別しない一致が適用されます。無効なパターンは無視されます（常に不一致扱い）。",
-        "patternsPlaceholder": "^https://example\\.com/console"
       }
     },
+    "autoSaveHint": "入力欄から離れると自動保存します。無効な入力では保存済みのルールを維持します。",
     "contextMenu": {
       "enable": "ブラウザの右クリックメニューに表示",
       "enableDesc": "ブラウザのコンテキストメニューに「AI API Check」を追加します。"
     },
-    "description": "手動のコンテキストメニュー起動は常に利用可能です。自動検出はオプトイン方式で、ホワイトリスト対象ページでのみ動作します。抽出した API キーは既定では保存されません。",
+    "description": "ウェブページで選択・コピーした API 認証情報を検出して確認できます。",
     "keyCleanup": {
       "invalidMore": "…他",
       "invalidTitle": "無効なクリーンアップパターン",
       "patterns": "API キーのクリーンアップパターン",
-      "patternsDesc": "コピーしたキーに不要なラベル、括弧、区切り文字が混ざる場合に使います。削除したい正規表現を 1 行に 1 つ入力してください。無効なルールは保存前に表示されます。",
-      "patternsPlaceholder": "\\[\\[削除\\]\\]\n【削除】\n<remove-this>\n(?:separator|noise)\n[\\s\\-_.]+",
-      "save": "クリーンアップパターンを保存"
+      "patternsDesc": "コピーしたキーに不要なラベル、括弧、区切り文字が混ざる場合に使います。削除したい正規表現を 1 行に 1 つ入力してください。無効なルールは保存前に表示されます。 入力欄から離れると自動保存します。無効な入力では保存済みのルールを維持します。",
+      "patternsPlaceholder": "\\[\\[削除\\]\\]\n【削除】\n<remove-this>\n(?:separator|noise)\n[\\s\\-_.]+"
+    },
+    "siteAccess": {
+      "disabledHint": "自動検出は無効です。この範囲は有効にした後に適用されます。"
+    },
+    "siteRules": {
+      "addBlacklist": "ブロックリストに追加",
+      "addRow": "ルールを追加",
+      "addWhitelist": "許可リストに追加",
+      "allowed": "通知を許可",
+      "autoDetectOff": "自動検出は無効です",
+      "blacklist": "ブロックリスト",
+      "blacklistFirst": "ブロックリスト優先",
+      "blacklistHint": "一致したページで通知を抑止します。",
+      "blackMatch": "ブロックリストに一致",
+      "blackPriorityMatch": "両方に一致したため、ブロックリストを優先",
+      "blocked": "通知しない",
+      "content": "ルールの内容",
+      "currentPage": "このページのみ",
+      "defaultHint": "許可リストが空の場合、ブロックリスト以外のすべてのサイトを許可します。",
+      "defaultMatch": "許可リストが空のため既定で許可",
+      "description": "自動検出の通知を表示するサイトを設定します。手動テストには影響しません。",
+      "edit": "ルールを編集",
+      "emptyBlacklist": "ブロックするサイトは未設定です。",
+      "emptyWhitelist": "未設定の場合、すべてのサイトを許可します。",
+      "exact": "完全一致 URL",
+      "exactHint": "パス、クエリ、フラグメントを含む URL 全体に一致します。",
+      "invalid": "有効なルールを入力してください。編集は一度に 1 件です。",
+      "legacy": "従来のサイトルール",
+      "legacyHint": "従来のドメイン、サブドメイン、パス接頭辞の動作を維持します。",
+      "noTabs": "読み取れるタブがありません。URL を手動で入力できます。",
+      "placeholder": "ドメインや URL を入力。複数行を貼り付けて一括追加できます。",
+      "preview": "URL の動作を確認",
+      "priority": "両方に一致した場合",
+      "priorityHint": "同じ URL が両方に一致する場合のみ適用します。",
+      "regex": "正規表現",
+      "regexHint": "1 行に 1 つの JavaScript 正規表現（大文字小文字を区別しません）。無効または危険な式は保存できません。",
+      "restrictedHint": "許可リストに一致するサイトのみ通知します。重複時は優先設定を適用します。",
+      "saveFailed": "保存できませんでした。入力内容は保持されています。再試行できます。",
+      "showAll": "すべて表示",
+      "showLess": "折りたたむ",
+      "subdomains": "サブドメインを含む",
+      "syntax": "構文",
+      "tabPicker": "開いているタブから選択",
+      "title": "サイトの許可・ブロックリスト",
+      "unlisted": "許可リストに一致なし",
+      "unsupported": "HTTP または HTTPS URL を入力してください。",
+      "whitelist": "許可リスト",
+      "whitelistFirst": "許可リスト優先",
+      "whitelistHint": "一致したページで通知を許可します。",
+      "whiteMatch": "許可リストに一致",
+      "whitePriorityMatch": "両方に一致したため、許可リストを優先",
+      "wholeSite": "サイト全体",
+      "wildcard": "ワイルドカード（既定）",
+      "wildcardHint": "* は任意の文字列に一致します。ドメインは *://ドメイン/* に補完。サブドメインは *.example.com。"
     },
     "title": "Web AI API 機能可用性テスト"
+  },
+  "siteControl": {
+    "disable": "このサイトで自動検出を停止",
+    "failed": "変更を適用できませんでした。許可・ブロックリストと優先設定を確認するか、再試行してください。",
+    "globalDisabled": "全体の自動検出が無効です。設定で有効にできます。",
+    "label": "このサイトで自動検出"
   }
 }

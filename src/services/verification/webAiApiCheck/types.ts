@@ -26,6 +26,8 @@ export type ApiCheckShouldPromptResponse =
       success: true
       shouldPrompt: boolean
       enhancedShouldPrompt?: boolean
+      siteAllowed?: boolean
+      autoDetectEnabled?: boolean
       apiKeyCleanupPatterns?: string[]
     }
   | {

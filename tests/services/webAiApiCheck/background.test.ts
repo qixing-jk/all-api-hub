@@ -69,10 +69,13 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
     await importOriginal<
       typeof import("~/services/preferences/userPreferences")
     >()
+  const getPreferences = vi.fn()
   return {
     ...actual,
     userPreferences: {
-      getPreferences: vi.fn(),
+      getPreferences,
+      getPreferencesStrict: getPreferences,
+      setWebAiApiCheckSiteEnabled: vi.fn(),
     },
   }
 })
@@ -125,6 +128,66 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
 })
 
 describe("webAiApiCheck background handlers", () => {
+  it("fails closed when reading the saved detection scope fails", async () => {
+    vi.resetModules()
+    const { userPreferences } = await import(
+      "~/services/preferences/userPreferences"
+    )
+    vi.mocked(userPreferences.getPreferencesStrict).mockRejectedValueOnce(
+      new Error("read failed"),
+    )
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    await expect(
+      background.resolveWebAiApiCheckShouldPromptMessage({
+        pageUrl: "https://example.com",
+      }),
+    ).resolves.toMatchObject({ success: false })
+  })
+
+  it("saves a website choice and returns its actual effective scope", async () => {
+    vi.resetModules()
+    const { userPreferences } = await import(
+      "~/services/preferences/userPreferences"
+    )
+    vi.mocked(userPreferences.setWebAiApiCheckSiteEnabled).mockResolvedValue({
+      ok: true,
+      preferences: DEFAULT_PREFERENCES,
+    })
+    vi.mocked(userPreferences.getPreferencesStrict).mockResolvedValue(
+      DEFAULT_PREFERENCES,
+    )
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const { WebAiApiCheckMessageTypes } = await import(
+      "~/services/verification/webAiApiCheck/messaging"
+    )
+    background.setupWebAiApiCheckMessagingListeners()
+    const handler = webAiApiCheckMessageHandlers.get(
+      WebAiApiCheckMessageTypes.SetSiteAccess,
+    )!
+    await expect(
+      handler({ data: { pageUrl: "https://example.com/docs", enabled: true } }),
+    ).resolves.toMatchObject({ success: true, siteAllowed: true })
+    expect(userPreferences.setWebAiApiCheckSiteEnabled).toHaveBeenCalledWith(
+      "https://example.com/docs",
+      true,
+    )
+    await expect(
+      handler({ data: { pageUrl: "file:///test", enabled: true } }),
+    ).resolves.toMatchObject({ success: false })
+    vi.mocked(
+      userPreferences.setWebAiApiCheckSiteEnabled,
+    ).mockRejectedValueOnce(new Error("write failed"))
+    await expect(
+      handler({
+        data: { pageUrl: "https://example.com/docs", enabled: false },
+      }),
+    ).resolves.toMatchObject({ success: false })
+  })
+
   it("shouldPrompt rejects missing page urls", async () => {
     vi.resetModules()
 
@@ -177,6 +240,8 @@ describe("webAiApiCheck background handlers", () => {
       success: true,
       shouldPrompt: false,
       enhancedShouldPrompt: false,
+      siteAllowed: true,
+      autoDetectEnabled: false,
       apiKeyCleanupPatterns: [],
     })
   })
@@ -216,6 +281,8 @@ describe("webAiApiCheck background handlers", () => {
       success: true,
       shouldPrompt: true,
       enhancedShouldPrompt: true,
+      siteAllowed: true,
+      autoDetectEnabled: true,
       apiKeyCleanupPatterns: ["\\[\\[remove-me\\]\\]"],
     })
   })
@@ -240,8 +307,10 @@ describe("webAiApiCheck background handlers", () => {
 
     expect(response).toEqual({
       success: true,
-      shouldPrompt: false,
-      enhancedShouldPrompt: false,
+      shouldPrompt: true,
+      enhancedShouldPrompt: true,
+      siteAllowed: true,
+      autoDetectEnabled: true,
       apiKeyCleanupPatterns: [],
     })
   })
@@ -1507,11 +1576,12 @@ describe("webAiApiCheck background handlers", () => {
     background.setupWebAiApiCheckMessagingListeners()
     background.setupWebAiApiCheckMessagingListeners()
 
-    expect(onWebAiApiCheckMessageMock).toHaveBeenCalledTimes(11)
+    expect(onWebAiApiCheckMessageMock).toHaveBeenCalledTimes(12)
     expect(
       onWebAiApiCheckMessageMock.mock.calls.map((call) => call[0]),
     ).toEqual([
       WebAiApiCheckMessageTypes.ShouldPrompt,
+      WebAiApiCheckMessageTypes.SetSiteAccess,
       WebAiApiCheckMessageTypes.FetchModels,
       WebAiApiCheckMessageTypes.GetBaseUrlHistorySuggestions,
       WebAiApiCheckMessageTypes.RecordBaseUrlHistory,

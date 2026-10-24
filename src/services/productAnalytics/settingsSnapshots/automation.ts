@@ -159,8 +159,11 @@ function buildWebAiApiCheckSnapshot(
     context_menu_enabled: config.contextMenu?.enabled === true,
     auto_detect_enabled: config.autoDetect?.enabled === true,
     auto_detect_enhanced_enabled: config.autoDetect?.enhanced?.enabled === true,
-    auto_detect_url_patterns_configured:
-      (config.autoDetect?.urlWhitelist?.patterns ?? []).length > 0,
+    auto_detect_url_patterns_configured: config.autoDetect?.siteRules
+      ? config.autoDetect.siteRules.whitelist.length +
+          config.autoDetect.siteRules.blacklist.length >
+        0
+      : (config.autoDetect?.urlWhitelist?.patterns ?? []).length > 0,
     api_key_cleanup_patterns_configured:
       (config.keyCleanup?.removalPatterns ?? []).length > 0,
   }

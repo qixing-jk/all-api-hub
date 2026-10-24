@@ -1,5 +1,6 @@
 {
   "actions": {
+    "add": "追加",
     "cancel": "キャンセル",
     "clear": "クリア",
     "close": "閉じる",
@@ -16,6 +17,7 @@
     "openSidePanel": "サイドパネルで開く",
     "refresh": "更新",
     "refreshField": "{{field}}を更新",
+    "remove": "削除",
     "reset": "リセット",
     "retry": "再試行",
     "save": "保存"

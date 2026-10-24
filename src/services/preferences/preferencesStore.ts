@@ -189,6 +189,14 @@ export class PreferencesStore {
       expectedLastUpdated?: number
     },
   ): Promise<PreferenceWriteResult> {
+    return this.mutatePreferencesWithResult(() => preferences, options)
+  }
+
+  /** Derive a partial update from the current snapshot while holding its write lock. */
+  protected async mutatePreferencesWithResult(
+    mutate: (current: UserPreferences) => DeepPartial<UserPreferences>,
+    options?: { expectedLastUpdated?: number },
+  ): Promise<PreferenceWriteResult> {
     try {
       const writeResult = await this.withStorageWriteLock(async () => {
         const currentPreferences = await this.readPreferencesSnapshot()
@@ -207,6 +215,7 @@ export class PreferencesStore {
           } satisfies PreferenceWriteResult
         }
 
+        const preferences = mutate(currentPreferences)
         const timestamp = Date.now()
         const sharedPreferencesLastUpdated = patchTouchesSharedPreferences(
           preferences,

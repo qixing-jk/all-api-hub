@@ -23,6 +23,10 @@ import {
   PRODUCT_ANALYTICS_SORT_FIELDS,
 } from "~/services/productAnalytics/contracts"
 import { trackProductAnalyticsEvent } from "~/services/productAnalytics/runtime/dispatch"
+import {
+  WEB_AI_API_CHECK_RULE_LIST,
+  WEB_AI_API_CHECK_RULE_SYNTAX,
+} from "~/services/verification/webAiApiCheck/siteRuleConstants"
 import { ACCOUNT_KEY_AUTO_PROVISION_MODES } from "~/types/accountKeyAutoProvisioning"
 import { AUTO_CHECKIN_SCHEDULE_MODE } from "~/types/autoCheckin"
 import { SortingCriteriaType } from "~/types/sorting"
@@ -56,6 +60,40 @@ function createPreferences(
 }
 
 describe("settings product analytics snapshots", () => {
+  it("reports typed rule configuration without leaking website patterns", () => {
+    const prefs = createDefaultPreferences()
+    prefs.webAiApiCheck!.autoDetect.siteRules = {
+      priority: WEB_AI_API_CHECK_RULE_LIST.BLACKLIST,
+      whitelist: [],
+      blacklist: [],
+    }
+    const events = buildSettingsSnapshotEvents(prefs, "options", {
+      webAiApiCheck: {},
+    })
+    const event = events.find(
+      (item) =>
+        item.setting_id ===
+        PRODUCT_ANALYTICS_SETTING_IDS.WebAiApiCheckConfigSnapshot,
+    )
+    expect(event).toMatchObject({ auto_detect_url_patterns_configured: false })
+    prefs.webAiApiCheck!.autoDetect.siteRules.blacklist = [
+      {
+        syntax: WEB_AI_API_CHECK_RULE_SYNTAX.EXACT,
+        pattern: "https://private.example/secret",
+      },
+    ]
+    const configured = buildSettingsSnapshotEvents(prefs, "options", {
+      webAiApiCheck: {},
+    })
+    expect(
+      configured.find(
+        (item) =>
+          item.setting_id ===
+          PRODUCT_ANALYTICS_SETTING_IDS.WebAiApiCheckConfigSnapshot,
+      ),
+    ).toMatchObject({ auto_detect_url_patterns_configured: true })
+    expect(JSON.stringify(configured)).not.toContain("private.example")
+  })
   it("tracks Magpie configuration changes without its URL or Web key", () => {
     const magpie = {
       baseUrl: "https://private-magpie.invalid",

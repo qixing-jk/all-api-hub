@@ -31,6 +31,7 @@ import type {
 
 export const WebAiApiCheckMessageTypes = {
   ShouldPrompt: "webAiApiCheck:shouldPrompt",
+  SetSiteAccess: "webAiApiCheck:setSiteAccess",
   FetchModels: "webAiApiCheck:fetchModels",
   GetBaseUrlHistorySuggestions: "webAiApiCheck:getBaseUrlHistorySuggestions",
   RecordBaseUrlHistory: "webAiApiCheck:recordBaseUrlHistory",
@@ -61,6 +62,10 @@ function createWebAiApiCheckMessagingLogger(): Logger {
 }
 
 interface WebAiApiCheckProtocolMap {
+  [WebAiApiCheckMessageTypes.SetSiteAccess](data: {
+    pageUrl: string
+    enabled: boolean
+  }): ApiCheckShouldPromptResponse
   [WebAiApiCheckMessageTypes.ShouldPrompt](
     data: ApiCheckShouldPromptRequest,
   ): ApiCheckShouldPromptResponse

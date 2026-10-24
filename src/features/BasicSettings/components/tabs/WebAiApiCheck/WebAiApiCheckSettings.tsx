@@ -1,8 +1,7 @@
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
-  Button,
   Card,
   CardContent,
   CardItem,
@@ -17,11 +16,13 @@ import { useSingleFlightActions } from "~/hooks/useSingleFlightActions"
 import toast from "~/lib/notify"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { createLogger } from "~/utils/core/logger"
-import { isSafeRegexPattern } from "~/utils/core/regex"
 import { getPreferenceWriteFailureMessage } from "~/utils/feedback/preferenceFeedback"
 import { matchesDefaultSettings } from "~/utils/preferences/matchesDefaultSettings"
 
+import { validateSafeRegexPatterns } from "./regexPatterns"
+import { RegexPatternWarning } from "./RegexPatternWarning"
 import { WEB_AI_API_CHECK_TARGET_IDS } from "./searchTargets"
+import { WebAiApiCheckSiteAccessSettings } from "./WebAiApiCheckSiteAccessSettings"
 
 /**
  * Unified logger scoped to the Basic Settings Web AI API Check section.
@@ -31,7 +32,6 @@ const SETTINGS_SAVE_ACTIONS = {
   CONTEXT_MENU: "context_menu",
   AUTO_DETECT: "auto_detect",
   ENHANCED_AUTO_DETECT: "enhanced_auto_detect",
-  URL_PATTERNS: "url_patterns",
   KEY_CLEANUP_PATTERNS: "key_cleanup_patterns",
 } as const
 
@@ -39,84 +39,7 @@ type SettingsSaveAction =
   (typeof SETTINGS_SAVE_ACTIONS)[keyof typeof SETTINGS_SAVE_ACTIONS]
 
 /**
- * Parse a newline-separated list of RegExp pattern strings and report invalid items.
- *
- * This mirrors runtime behavior: patterns are compiled with the `i` flag and invalid
- * patterns are treated as non-matching.
- */
-function validateRegexPatterns(lines: string[]): {
-  patterns: string[]
-  invalid: string[]
-} {
-  const patterns = lines.map((line) => (line ?? "").trim()).filter(Boolean)
-
-  const invalid: string[] = []
-  for (const pattern of patterns) {
-    try {
-      // Match runtime behavior: compile with case-insensitive flag.
-      // Invalid patterns are treated as non-matching in runtime gating logic.
-      new RegExp(pattern, "i")
-    } catch {
-      invalid.push(pattern)
-    }
-  }
-
-  return { patterns, invalid }
-}
-
-/**
- * Separate cleanup patterns that are safe to persist from invalid entries.
- */
-function validateSafeRegexPatterns(lines: string[]): {
-  patterns: string[]
-  invalid: string[]
-} {
-  const result = validateRegexPatterns(lines)
-  const unsafe = result.patterns.filter(
-    (pattern) =>
-      !result.invalid.includes(pattern) && !isSafeRegexPattern(pattern, "i"),
-  )
-  const invalid = [...result.invalid, ...unsafe]
-  const invalidPatterns = new Set(invalid)
-  return {
-    patterns: result.patterns.filter(
-      (pattern) => !invalidPatterns.has(pattern),
-    ),
-    invalid,
-  }
-}
-
-/**
- * Renders invalid RegExp patterns in the settings panels.
- */
-function RegexPatternWarning({
-  invalid,
-  title,
-  more,
-}: {
-  invalid: string[]
-  title: string
-  more: string
-}) {
-  if (invalid.length === 0) return null
-
-  return (
-    <div className="border-warning-border bg-warning-soft text-warning-soft-foreground py-density-3 rounded-md border px-3 text-xs">
-      <div className="font-medium">{title}</div>
-      <ul className="mt-density-1 list-disc space-y-0.5 pl-4">
-        {invalid.slice(0, 10).map((pattern) => (
-          <li key={pattern}>
-            <code className="font-mono">{pattern}</code>
-          </li>
-        ))}
-      </ul>
-      {invalid.length > 10 ? <div className="mt-density-1">{more}</div> : null}
-    </div>
-  )
-}
-
-/**
- * Settings section for Web AI API Check auto-detect whitelist.
+ * Settings for manual entry, automatic detection and typed website rules.
  */
 export default function WebAiApiCheckSettings() {
   const { t } = useTranslation(["webAiApiCheck", "settings", "common"])
@@ -126,6 +49,7 @@ export default function WebAiApiCheckSettings() {
     resetWebAiApiCheckConfig,
   } = useUserPreferencesContext()
 
+  const [scopeResetKey, setScopeResetKey] = useState(0)
   const saveActions = useSingleFlightActions<SettingsSaveAction>()
 
   const config = userPrefs.webAiApiCheck ?? DEFAULT_PREFERENCES.webAiApiCheck!
@@ -139,21 +63,9 @@ export default function WebAiApiCheckSettings() {
   const enhancedAutoDetect =
     autoDetect.enhanced ??
     DEFAULT_PREFERENCES.webAiApiCheck!.autoDetect.enhanced
-  const whitelist =
-    autoDetect.urlWhitelist ??
-    DEFAULT_PREFERENCES.webAiApiCheck!.autoDetect.urlWhitelist
   const keyCleanup =
     config.keyCleanup ?? DEFAULT_PREFERENCES.webAiApiCheck!.keyCleanup
 
-  const {
-    draft: patternsDraft,
-    setDraft: setPatternsDraft,
-    acceptDraft: acceptPatternsDraft,
-    isDirty: patternsDirty,
-  } = usePreferenceDraft({
-    savedValue: (whitelist.patterns ?? []).join("\n"),
-    savedVersion: userPrefs.lastUpdated ?? 0,
-  })
   const {
     draft: keyCleanupPatternsDraft,
     setDraft: setKeyCleanupPatternsDraft,
@@ -164,16 +76,16 @@ export default function WebAiApiCheckSettings() {
     savedVersion: userPrefs.lastUpdated ?? 0,
   })
 
-  const { patterns, invalid } = useMemo(
-    () => validateRegexPatterns(patternsDraft.split(/\r?\n/)),
-    [patternsDraft],
-  )
   const { patterns: keyCleanupPatterns, invalid: invalidKeyCleanupPatterns } =
     useMemo(
       () => validateSafeRegexPatterns(keyCleanupPatternsDraft.split(/\r?\n/)),
       [keyCleanupPatternsDraft],
     )
 
+  /**
+   * Immediate controls report only failures: the control itself shows the state,
+   * and text fields report only pending or unsaved changes.
+   */
   const saveSettings = (
     action: SettingsSaveAction,
     updates: Parameters<typeof updateWebAiApiCheck>[0],
@@ -182,10 +94,7 @@ export default function WebAiApiCheckSettings() {
       try {
         const writeResult = await updateWebAiApiCheck(updates)
 
-        if (writeResult.ok) {
-          toast.success(t("webAiApiCheck:messages.success.settingsSaved"))
-          return true
-        }
+        if (writeResult.ok) return true
         toast.error(
           getPreferenceWriteFailureMessage(writeResult.reason, {
             fallback: t("settings:messages.saveSettingsFailed"),
@@ -199,20 +108,8 @@ export default function WebAiApiCheckSettings() {
       }
     })
 
-  const handleSaveUrlPatterns = async () => {
-    const saved = await saveSettings(SETTINGS_SAVE_ACTIONS.URL_PATTERNS, {
-      autoDetect: {
-        urlWhitelist: {
-          patterns,
-        },
-      },
-    })
-    if (saved) {
-      acceptPatternsDraft(patterns.join("\n"))
-    }
-  }
-
   const handleSaveKeyCleanupPatterns = async () => {
+    if (!keyCleanupPatternsDirty || invalidKeyCleanupPatterns.length) return
     const saved = await saveSettings(
       SETTINGS_SAVE_ACTIONS.KEY_CLEANUP_PATTERNS,
       {
@@ -231,7 +128,7 @@ export default function WebAiApiCheckSettings() {
       resetRequiresConfirmation
       resetDisabled={
         matchesDefaultSettings(config, DEFAULT_PREFERENCES.webAiApiCheck) &&
-        !(patternsDirty || keyCleanupPatternsDirty)
+        !keyCleanupPatternsDirty
       }
       id="web-ai-api-check"
       title={t("webAiApiCheck:settings.title")}
@@ -239,12 +136,7 @@ export default function WebAiApiCheckSettings() {
       onReset={async () => {
         const result = await resetWebAiApiCheckConfig()
         if (result.ok) {
-          acceptPatternsDraft(
-            (
-              DEFAULT_PREFERENCES.webAiApiCheck!.autoDetect.urlWhitelist
-                .patterns ?? []
-            ).join("\n"),
-          )
+          setScopeResetKey((value) => value + 1)
           acceptKeyCleanupPatternsDraft(
             (
               DEFAULT_PREFERENCES.webAiApiCheck!.keyCleanup.removalPatterns ??
@@ -332,61 +224,10 @@ export default function WebAiApiCheckSettings() {
             }
           />
         </CardList>
-
-        <CardContent className="border-border border-t" spacing="sm">
-          <div className="space-y-density-2">
-            <div className="text-sm font-medium">
-              {t("webAiApiCheck:settings.autoDetect.whitelist.patterns")}
-            </div>
-            <div className="text-muted-foreground text-xs">
-              {t("webAiApiCheck:settings.autoDetect.whitelist.patternsDesc")}
-            </div>
-
-            <Textarea
-              id={WEB_AI_API_CHECK_TARGET_IDS.whitelistPatterns}
-              value={patternsDraft}
-              onChange={(event) => setPatternsDraft(event.target.value)}
-              placeholder={t(
-                "webAiApiCheck:settings.autoDetect.whitelist.patternsPlaceholder",
-              )}
-              rows={6}
-              disabled={saveActions.isPending(
-                SETTINGS_SAVE_ACTIONS.URL_PATTERNS,
-              )}
-            />
-
-            <RegexPatternWarning
-              invalid={invalid}
-              title={t(
-                "webAiApiCheck:settings.autoDetect.whitelist.invalidTitle",
-              )}
-              more={t(
-                "webAiApiCheck:settings.autoDetect.whitelist.invalidMore",
-              )}
-            />
-
-            <div className="flex justify-end">
-              <Button
-                id={WEB_AI_API_CHECK_TARGET_IDS.savePatterns}
-                type="button"
-                variant="outline"
-                disabled={
-                  !patternsDirty ||
-                  saveActions.isPending(SETTINGS_SAVE_ACTIONS.URL_PATTERNS)
-                }
-                loading={saveActions.isPending(
-                  SETTINGS_SAVE_ACTIONS.URL_PATTERNS,
-                )}
-                onClick={() => void handleSaveUrlPatterns()}
-              >
-                {saveActions.isPending(SETTINGS_SAVE_ACTIONS.URL_PATTERNS)
-                  ? t("common:status.saving")
-                  : t("common:actions.save")}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-
+        <WebAiApiCheckSiteAccessSettings
+          key={scopeResetKey}
+          autoDetectEnabled={!!autoDetect.enabled}
+        />
         <CardContent className="border-border border-t" spacing="sm">
           <div className="space-y-density-2">
             <div className="text-sm font-medium">
@@ -402,6 +243,7 @@ export default function WebAiApiCheckSettings() {
               onChange={(event) =>
                 setKeyCleanupPatternsDraft(event.target.value)
               }
+              onBlur={() => void handleSaveKeyCleanupPatterns()}
               placeholder={t(
                 "webAiApiCheck:settings.keyCleanup.patternsPlaceholder",
               )}
@@ -417,29 +259,17 @@ export default function WebAiApiCheckSettings() {
               more={t("webAiApiCheck:settings.keyCleanup.invalidMore")}
             />
 
-            <div className="flex justify-end">
-              <Button
-                id={WEB_AI_API_CHECK_TARGET_IDS.saveKeyCleanupPatterns}
-                type="button"
-                variant="outline"
-                disabled={
-                  !keyCleanupPatternsDirty ||
-                  saveActions.isPending(
-                    SETTINGS_SAVE_ACTIONS.KEY_CLEANUP_PATTERNS,
-                  )
-                }
-                loading={saveActions.isPending(
-                  SETTINGS_SAVE_ACTIONS.KEY_CLEANUP_PATTERNS,
-                )}
-                onClick={() => void handleSaveKeyCleanupPatterns()}
-              >
+            {saveActions.isPending(
+              SETTINGS_SAVE_ACTIONS.KEY_CLEANUP_PATTERNS,
+            ) || keyCleanupPatternsDirty ? (
+              <p role="status" className="text-muted-foreground text-xs">
                 {saveActions.isPending(
                   SETTINGS_SAVE_ACTIONS.KEY_CLEANUP_PATTERNS,
                 )
                   ? t("common:status.saving")
-                  : t("webAiApiCheck:settings.keyCleanup.save")}
-              </Button>
-            </div>
+                  : t("webAiApiCheck:settings.autoSaveHint")}
+              </p>
+            ) : null}
           </div>
         </CardContent>
       </Card>

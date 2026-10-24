@@ -1,5 +1,6 @@
 {
   "actions": {
+    "add": "新增",
     "cancel": "取消",
     "clear": "清空",
     "close": "關閉",
@@ -16,6 +17,7 @@
     "openSidePanel": "在側邊欄中開啟",
     "refresh": "重新整理",
     "refreshField": "重新整理{{field}}",
+    "remove": "移除",
     "reset": "重置",
     "retry": "重試",
     "save": "儲存"

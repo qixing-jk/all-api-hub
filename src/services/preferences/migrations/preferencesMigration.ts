@@ -10,6 +10,7 @@ import { migrateAutoRefreshConfig } from "~/services/preferences/migrations/auto
 import { migrateNewApiConfig } from "~/services/preferences/migrations/newApiConfigMigration"
 import { migrateWebDavConfig } from "~/services/preferences/migrations/webDavConfigMigration"
 import type { UserPreferences } from "~/services/preferences/preferencesSchema"
+import { resolveWebAiApiCheckSiteAccess } from "~/services/verification/webAiApiCheck/legacySiteAccess"
 import {
   ACCOUNT_AUTO_REFRESH_INTERVAL_MIN_SECONDS,
   ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
@@ -46,7 +47,7 @@ const AUTOMATIC_FEATURE_BYPASS_PREFERENCES_VERSION = 27
 /**
  * Current version of the preferences schema.
  */
-export const CURRENT_PREFERENCES_VERSION = 29
+export const CURRENT_PREFERENCES_VERSION = 30
 
 /**
  * Migration function type
@@ -60,6 +61,33 @@ type PreferencesMigrationFunction = (prefs: UserPreferences) => UserPreferences
  * Value: migration function to upgrade to that version
  */
 const migrations: Record<number, PreferencesMigrationFunction> = {
+  // Version 29 -> 30: make the enabled web API detector usable without setup.
+  30: (prefs) => {
+    const config = prefs.webAiApiCheck ?? DEFAULT_WEB_AI_API_CHECK_PREFERENCES
+    const autoDetect =
+      config.autoDetect ?? DEFAULT_WEB_AI_API_CHECK_PREFERENCES.autoDetect
+    const patterns = autoDetect.urlWhitelist?.patterns ?? []
+    return {
+      ...prefs,
+      webAiApiCheck: {
+        ...config,
+        autoDetect: {
+          ...autoDetect,
+          siteAccess: resolveWebAiApiCheckSiteAccess(autoDetect),
+          urlWhitelist: {
+            ...autoDetect.urlWhitelist,
+            patterns: patterns.some((pattern) => pattern.trim())
+              ? patterns
+              : [
+                  ...DEFAULT_WEB_AI_API_CHECK_PREFERENCES.autoDetect
+                    .urlWhitelist.patterns,
+                ],
+          },
+        },
+      },
+      preferencesVersion: 30,
+    }
+  },
   // Version 28 -> 29: migrate directly to the final grouped sorting schema.
   // This unreleased migration also removes link rules moved to user-selected sorting.
   29: (prefs) => ({
@@ -611,6 +639,8 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
         autoDetect: {
           ...DEFAULT_WEB_AI_API_CHECK_PREFERENCES.autoDetect,
           ...(storedAutoDetect ?? {}),
+          // Preserve absence until v30 infers scope from the user's legacy rules.
+          siteAccess: storedAutoDetect?.siteAccess,
           enhanced: {
             ...DEFAULT_WEB_AI_API_CHECK_PREFERENCES.autoDetect.enhanced,
             ...(storedAutoDetect?.enhanced ?? {}),

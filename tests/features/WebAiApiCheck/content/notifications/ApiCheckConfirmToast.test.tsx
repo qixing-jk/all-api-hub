@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ApiCheckConfirmToast } from "~/features/WebAiApiCheck/content/notifications/ApiCheckConfirmToast"
+import { API_CHECK_CONFIRM_TOAST_ACTIONS } from "~/features/WebAiApiCheck/content/notifications/confirmToastActions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -43,6 +44,29 @@ vi.mock("react-i18next", async (importOriginal) => {
 })
 
 describe("ApiCheckConfirmToast", () => {
+  it("keeps the website action retryable when saving fails", async () => {
+    const user = userEvent.setup()
+    const onAction = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("write failed"))
+      .mockResolvedValueOnce(undefined)
+    render(<ApiCheckConfirmToast onAction={onAction} />)
+    const button = screen.getByRole("button", {
+      name: "webAiApiCheck:siteControl.disable",
+    })
+    await user.click(button)
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "webAiApiCheck:siteControl.failed",
+    )
+    expect(button).toBeEnabled()
+    await user.click(button)
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    expect(onAction).toHaveBeenCalledTimes(2)
+    expect(onAction).toHaveBeenLastCalledWith(
+      API_CHECK_CONFIRM_TOAST_ACTIONS.DISABLE_SITE,
+    )
+  })
+
   beforeEach(() => {
     vi.clearAllMocks()
     trackStartedMock.mockResolvedValue(undefined)
@@ -78,8 +102,14 @@ describe("ApiCheckConfirmToast", () => {
       }),
     )
 
-    expect(onAction).toHaveBeenNthCalledWith(1, "cancel")
-    expect(onAction).toHaveBeenNthCalledWith(2, "confirm")
+    expect(onAction).toHaveBeenNthCalledWith(
+      1,
+      API_CHECK_CONFIRM_TOAST_ACTIONS.CANCEL,
+    )
+    expect(onAction).toHaveBeenNthCalledWith(
+      2,
+      API_CHECK_CONFIRM_TOAST_ACTIONS.CONFIRM,
+    )
     expect(parentClick).not.toHaveBeenCalled()
   })
 
@@ -130,8 +160,14 @@ describe("ApiCheckConfirmToast", () => {
     await user.click(screen.getByRole("button", { name: "Report issue" }))
     await user.click(screen.getByRole("button", { name: "Settings" }))
 
-    expect(onAction).toHaveBeenNthCalledWith(1, "feedback")
-    expect(onAction).toHaveBeenNthCalledWith(2, "settings")
+    expect(onAction).toHaveBeenNthCalledWith(
+      1,
+      API_CHECK_CONFIRM_TOAST_ACTIONS.FEEDBACK,
+    )
+    expect(onAction).toHaveBeenNthCalledWith(
+      2,
+      API_CHECK_CONFIRM_TOAST_ACTIONS.SETTINGS,
+    )
   })
 
   it("emits settings actions without closing the confirmation flow", async () => {
@@ -142,7 +178,9 @@ describe("ApiCheckConfirmToast", () => {
 
     await user.click(screen.getByRole("button", { name: "Settings" }))
 
-    expect(onAction).toHaveBeenCalledExactlyOnceWith("settings")
+    expect(onAction).toHaveBeenCalledExactlyOnceWith(
+      API_CHECK_CONFIRM_TOAST_ACTIONS.SETTINGS,
+    )
   })
 
   it("tracks fixed analytics metadata for confirmation actions", async () => {

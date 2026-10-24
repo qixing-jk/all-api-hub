@@ -1,5 +1,6 @@
 {
   "actions": {
+    "add": "Adicionar",
     "cancel": "Cancelar",
     "clear": "Limpar",
     "close": "Fechar",
@@ -16,6 +17,7 @@
     "openSidePanel": "Abrir no Painel Lateral",
     "refresh": "Atualizar",
     "refreshField": "Atualizar {{field}}",
+    "remove": "Remover",
     "reset": "Redefinir",
     "retry": "Tentar novamente",
     "save": "Salvar"

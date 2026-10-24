@@ -2,6 +2,7 @@ import type {
   RedemptionAssistPreferences,
   WebAiApiCheckPreferences,
 } from "~/services/preferences/preferencesSchema"
+import { WEB_AI_API_CHECK_SITE_ACCESS_MODE } from "~/services/verification/webAiApiCheck/siteRuleConstants"
 
 export type ContentFeaturePreferenceSource = {
   redemptionAssist?: {
@@ -57,12 +58,18 @@ export const DEFAULT_WEB_AI_API_CHECK_PREFERENCES: WebAiApiCheckPreferences = {
     enabled: true,
   },
   autoDetect: {
+    siteRules: null,
+    siteAccess: {
+      mode: WEB_AI_API_CHECK_SITE_ACCESS_MODE.ALL,
+      include: [],
+      exclude: [],
+    },
     enabled: true,
     enhanced: {
       enabled: true,
     },
     urlWhitelist: {
-      patterns: [],
+      patterns: ["^https?://"],
     },
   },
   keyCleanup: {

@@ -297,6 +297,7 @@ export interface UserPreferencesContextType {
   updateWebAiApiCheck: (
     updates: DeepPartial<WebAiApiCheckPreferences>,
   ) => PreferenceWritePromise
+  mutateWebAiApiCheckSiteRules: typeof userPreferences.mutateWebAiApiCheckSiteRules
   updateWebdavSettings: (
     updates: DeepPartial<WebDAVSettings>,
     options?: PreferenceSaveOptions,

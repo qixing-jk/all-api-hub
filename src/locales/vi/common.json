@@ -1,5 +1,6 @@
 {
   "actions": {
+    "add": "Thêm",
     "cancel": "Hủy",
     "clear": "Xóa sạch",
     "close": "Đóng",
@@ -16,6 +17,7 @@
     "openSidePanel": "Mở trong bảng điều khiển bên",
     "refresh": "Làm mới",
     "refreshField": "Làm mới {{field}}",
+    "remove": "Xóa",
     "reset": "Đặt lại",
     "retry": "Thử lại",
     "save": "Lưu"

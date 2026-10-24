@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import type { ApiCheckConfirmToastAction } from "~/features/WebAiApiCheck/content/notifications/ApiCheckConfirmToast"
+import { API_CHECK_CONFIRM_TOAST_ACTIONS } from "~/features/WebAiApiCheck/content/notifications/confirmToastActions"
 
 type ApiCheckConfirmToastProps = {
   onAction: (action: ApiCheckConfirmToastAction) => void
@@ -97,8 +98,8 @@ describe("apiCheckToasts", () => {
       expect(renderedElement).toBeTruthy()
     })
 
-    renderedElement!.props.onAction("confirm")
-    renderedElement!.props.onAction("cancel")
+    renderedElement!.props.onAction(API_CHECK_CONFIRM_TOAST_ACTIONS.CONFIRM)
+    renderedElement!.props.onAction(API_CHECK_CONFIRM_TOAST_ACTIONS.CANCEL)
 
     await expect(toastPromise).resolves.toBe(true)
     expect(toastDismissMock).toHaveBeenCalledTimes(1)
@@ -136,7 +137,7 @@ describe("apiCheckToasts", () => {
       )
     })
 
-    renderedElement!.props.onAction("confirm")
+    renderedElement!.props.onAction(API_CHECK_CONFIRM_TOAST_ACTIONS.CONFIRM)
     await expect(toastPromise).resolves.toBe(true)
   })
 
@@ -158,8 +159,8 @@ describe("apiCheckToasts", () => {
     ) => React.ReactElement<ApiCheckConfirmToastProps>
     const element = renderer({ id: "api-check-toast-id" })
 
-    element.props.onAction("cancel")
-    element.props.onAction("confirm")
+    element.props.onAction(API_CHECK_CONFIRM_TOAST_ACTIONS.CANCEL)
+    element.props.onAction(API_CHECK_CONFIRM_TOAST_ACTIONS.CONFIRM)
 
     await expect(toastPromise).resolves.toBe(false)
     expect(toastDismissMock).toHaveBeenCalledTimes(1)
@@ -182,7 +183,7 @@ describe("apiCheckToasts", () => {
     ) => React.ReactElement<ApiCheckConfirmToastProps>
     const element = renderer({ id: "api-check-toast-id" })
 
-    element.props.onAction("settings")
+    element.props.onAction(API_CHECK_CONFIRM_TOAST_ACTIONS.SETTINGS)
 
     await waitFor(() => {
       expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
@@ -191,7 +192,7 @@ describe("apiCheckToasts", () => {
     })
     expect(toastDismissMock).not.toHaveBeenCalled()
 
-    element.props.onAction("confirm")
+    element.props.onAction(API_CHECK_CONFIRM_TOAST_ACTIONS.CONFIRM)
     await expect(toastPromise).resolves.toBe(true)
   })
 
@@ -211,7 +212,7 @@ describe("apiCheckToasts", () => {
     ) => React.ReactElement<ApiCheckConfirmToastProps>
     const element = renderer({ id: "api-check-toast-id" })
 
-    element.props.onAction("feedback")
+    element.props.onAction(API_CHECK_CONFIRM_TOAST_ACTIONS.FEEDBACK)
 
     await waitFor(() => {
       expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
@@ -220,7 +221,7 @@ describe("apiCheckToasts", () => {
     })
     expect(toastDismissMock).not.toHaveBeenCalled()
 
-    element.props.onAction("cancel")
+    element.props.onAction(API_CHECK_CONFIRM_TOAST_ACTIONS.CANCEL)
     await expect(toastPromise).resolves.toBe(false)
   })
 
@@ -243,7 +244,7 @@ describe("apiCheckToasts", () => {
     ) => React.ReactElement<ApiCheckConfirmToastProps>
     const element = renderer({ id: "api-check-toast-id" })
 
-    element.props.onAction("settings")
+    element.props.onAction(API_CHECK_CONFIRM_TOAST_ACTIONS.SETTINGS)
 
     await waitFor(() => {
       expect(loggerErrorMock).toHaveBeenCalledWith(
@@ -253,7 +254,7 @@ describe("apiCheckToasts", () => {
     })
     expect(toastDismissMock).not.toHaveBeenCalled()
 
-    element.props.onAction("cancel")
+    element.props.onAction(API_CHECK_CONFIRM_TOAST_ACTIONS.CANCEL)
     await expect(toastPromise).resolves.toBe(false)
   })
 
@@ -276,7 +277,7 @@ describe("apiCheckToasts", () => {
     ) => React.ReactElement<ApiCheckConfirmToastProps>
     const element = renderer({ id: "api-check-toast-id" })
 
-    element.props.onAction("feedback")
+    element.props.onAction(API_CHECK_CONFIRM_TOAST_ACTIONS.FEEDBACK)
 
     await waitFor(() => {
       expect(loggerErrorMock).toHaveBeenCalledWith(
@@ -286,7 +287,7 @@ describe("apiCheckToasts", () => {
     })
     expect(toastDismissMock).not.toHaveBeenCalled()
 
-    element.props.onAction("confirm")
+    element.props.onAction(API_CHECK_CONFIRM_TOAST_ACTIONS.CONFIRM)
     await expect(toastPromise).resolves.toBe(true)
   })
 })

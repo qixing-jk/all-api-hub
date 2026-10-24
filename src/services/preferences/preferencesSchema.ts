@@ -1,5 +1,10 @@
 import { type ManagedSiteType } from "~/constants/siteType"
 import { type TempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
+import type {
+  WEB_AI_API_CHECK_RULE_LIST,
+  WEB_AI_API_CHECK_RULE_SYNTAX,
+  WEB_AI_API_CHECK_SITE_ACCESS_MODE,
+} from "~/services/verification/webAiApiCheck/siteRuleConstants"
 import {
   type ActiveSortField,
   type CurrencyType,
@@ -110,13 +115,34 @@ export interface WebAiApiCheckEnhancedAutoDetectPreferences {
 }
 
 export interface WebAiApiCheckAutoDetectPreferences {
+  /** Typed black/white lists; absent values retain the previous matching contract. */
+  siteRules?: WebAiApiCheckSiteRules | null
+  /** Friendly site rules; absent values retain legacy regexp configuration. */
+  siteAccess?: WebAiApiCheckSiteAccessPreferences
   /**
    * When enabled, the content script may attempt to detect API credentials
-   * from user actions (e.g., copy) on whitelisted pages.
+   * from user actions (e.g., copy) on participating pages.
    */
   enabled: boolean
   enhanced: WebAiApiCheckEnhancedAutoDetectPreferences
   urlWhitelist: WebAiApiCheckUrlWhitelistPreferences
+}
+
+export interface WebAiApiCheckSiteRule {
+  syntax: (typeof WEB_AI_API_CHECK_RULE_SYNTAX)[keyof typeof WEB_AI_API_CHECK_RULE_SYNTAX]
+  pattern: string
+}
+
+export interface WebAiApiCheckSiteRules {
+  priority: (typeof WEB_AI_API_CHECK_RULE_LIST)[keyof typeof WEB_AI_API_CHECK_RULE_LIST]
+  whitelist: WebAiApiCheckSiteRule[]
+  blacklist: WebAiApiCheckSiteRule[]
+}
+
+export interface WebAiApiCheckSiteAccessPreferences {
+  mode: (typeof WEB_AI_API_CHECK_SITE_ACCESS_MODE)[keyof typeof WEB_AI_API_CHECK_SITE_ACCESS_MODE]
+  include: string[]
+  exclude: string[]
 }
 
 export interface WebAiApiCheckPreferences {
