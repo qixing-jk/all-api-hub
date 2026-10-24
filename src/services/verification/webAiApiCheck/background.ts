@@ -19,6 +19,10 @@ import {
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
 import {
+  getVerificationRequestProfileOptions,
+  isVerificationRequestProfile,
+} from "~/services/verification/aiApiVerification/requestProfiles"
+import {
   buildSafeProbeFailureDiagnostics,
   inferStructuredHttpStatus,
   toSanitizedErrorSummary,
@@ -482,6 +486,12 @@ export async function resolveWebAiApiCheckRunProbeMessage(
 
       const result: ApiVerificationProbeResult = {
         id: probeId as ApiVerificationProbeId,
+        ...(isVerificationRequestProfile(requestProfile)
+          ? getVerificationRequestProfileOptions(
+              requestProfile,
+              requestProfileEnhanced === true,
+            )
+          : {}),
         mode: probeId === API_VERIFICATION_PROBE_IDS.Models ? undefined : mode,
         status: API_VERIFICATION_PROBE_STATUSES.Fail,
         latencyMs: 0,

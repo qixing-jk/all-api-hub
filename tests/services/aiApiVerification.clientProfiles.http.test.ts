@@ -29,6 +29,28 @@ function textResponse() {
 }
 
 describe("verification CLI request profiles", () => {
+  it("retains client identity on an enhanced model-list result", async () => {
+    server.use(
+      http.get(`${baseUrl}/v1/models`, () =>
+        HttpResponse.json({ data: [{ id: "model" }] }),
+      ),
+    )
+    const result = await runApiVerificationProbe({
+      apiType: "openai",
+      baseUrl,
+      apiKey: "synthetic-key",
+      probeId: "models",
+      requestProfile: API_VERIFICATION_REQUEST_PROFILES.Codex,
+      requestProfileEnhanced: true,
+    })
+    expect(result).toMatchObject({
+      id: "models",
+      status: "pass",
+      requestProfile: "codex",
+      requestProfileEnhanced: true,
+    })
+  })
+
   beforeEach(() => {
     // Exercise real HTTP through the public service. Receiving-server browser
     // coverage separately verifies Chromium's DNR-backed User-Agent transport.

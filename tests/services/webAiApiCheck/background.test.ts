@@ -825,6 +825,36 @@ describe("webAiApiCheck background handlers", () => {
     },
   )
 
+  it("retains enhanced client identity when the probe throws", async () => {
+    vi.resetModules()
+    const { runApiVerificationProbe } = await import(
+      "~/services/verification/aiApiVerification"
+    )
+    vi.mocked(runApiVerificationProbe).mockRejectedValue(
+      new Error("Network failed"),
+    )
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const response = await background.resolveWebAiApiCheckRunProbeMessage({
+      apiType: "openai",
+      baseUrl: "https://example.invalid/v1",
+      apiKey: "synthetic-key",
+      modelId: "model",
+      probeId: "text-generation",
+      requestProfile: API_VERIFICATION_REQUEST_PROFILES.Codex,
+      requestProfileEnhanced: true,
+    })
+    expect(response).toMatchObject({
+      success: true,
+      result: {
+        status: "fail",
+        requestProfile: API_VERIFICATION_REQUEST_PROFILES.Codex,
+        requestProfileEnhanced: true,
+      },
+    })
+  })
+
   it("runProbe omits analytics HTTP status when status is message-derived", async () => {
     vi.resetModules()
     const { runApiVerificationProbe } = await import(

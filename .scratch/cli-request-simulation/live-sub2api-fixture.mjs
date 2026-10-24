@@ -336,6 +336,12 @@ async function probe() {
 }
 
 async function cleanup() {
+  if (state.cleanedAt) {
+    console.log(
+      JSON.stringify({ action: "cleanup", cleanedAt: state.cleanedAt }),
+    )
+    return
+  }
   if (state.ids.bridgeUpstream) {
     const path = `/api/v1/admin/accounts/${state.ids.bridgeUpstream}`
     if ((await getGone(path)) !== 404) await api(path, { method: "DELETE" })

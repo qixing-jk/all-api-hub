@@ -534,6 +534,11 @@ export function useProfileVerification({
     setRequestProfile: (next: ApiVerificationRequestProfile) => {
       if (!canClose) return
       const nextApiType = getVerificationRequestProfileApiType(next) ?? apiType
+      if (nextApiType !== apiType) {
+        setModelId("")
+        resetModelDiscovery()
+        void fetchModels(nextApiType)
+      }
       setApiType(nextApiType)
       setRequestProfile(next)
       setRequestProfileEnhanced(false)

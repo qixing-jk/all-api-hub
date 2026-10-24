@@ -2,11 +2,18 @@ import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApi
 
 import "./apiCheckModalHostMocks"
 
-import { act, screen, waitFor, within } from "@testing-library/react"
+import {
+  act,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import { dispatchOpenApiCheckModal } from "~/features/WebAiApiCheck/content/events"
+import { useApiCheckModalViewModel } from "~/features/WebAiApiCheck/content/modal/useApiCheckModalViewModel"
 import {
   getWebAiApiCheckProbeTestId,
   WEB_AI_API_CHECK_TEST_IDS,
@@ -28,6 +35,57 @@ import {
 
 describe("web API verification modes", () => {
   setupApiCheckModalHostTest()
+
+  it("ignores enhanced simulation changes while a page probe is active", async () => {
+    const pending = createDeferred<any>()
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels)
+          return { success: true, modelIds: ["model"] }
+        if (type === WebAiApiCheckMessageTypes.RunProbe) return pending.promise
+        return { success: false }
+      },
+    )
+    const { result } = renderHook(useApiCheckModalViewModel)
+    act(() =>
+      dispatchOpenApiCheckModal({
+        trigger: "contextMenu",
+        pageUrl: "https://example.invalid",
+        sourceText: "",
+      }),
+    )
+    act(() => {
+      result.current.actions.updateBaseUrl("https://example.invalid")
+      result.current.actions.setApiKey("synthetic-key")
+      result.current.actions.setRequestProfile(
+        API_VERIFICATION_REQUEST_PROFILES.Codex,
+      )
+      result.current.actions.setModelId("model")
+    })
+    act(() => result.current.actions.runProbe("models"))
+    await waitFor(() => expect(result.current.view.canClose).toBe(false))
+    act(() => result.current.actions.setRequestProfileEnhanced(true))
+    expect(result.current.view.requestProfileEnhanced).toBe(false)
+    await act(async () => {
+      pending.resolve({
+        success: true,
+        result: {
+          id: "models",
+          status: "pass",
+          latencyMs: 1,
+          summary: "OK",
+        },
+      })
+    })
+    await waitFor(() => expect(result.current.view.canClose).toBe(true))
+    act(() =>
+      result.current.actions.setRequestProfile(
+        API_VERIFICATION_REQUEST_PROFILES.Default,
+      ),
+    )
+    expect(result.current.view.apiType).toBe("openai")
+    expect(result.current.view.requestProfileEnhanced).toBe(false)
+  })
 
   it("lets a page text test select a CLI request profile through the modal portal", async () => {
     const user = userEvent.setup()

@@ -300,17 +300,21 @@ describe("VerifyCliSupportDialog", () => {
   it("locks the selected mode during CLI verification and labels each recorded result", async () => {
     const user = userEvent.setup()
     const probeGate = createDeferred<void>()
-    mockRunCliSupportTool.mockImplementation(async ({ toolId, mode }) => {
-      await probeGate.promise
-      return {
-        id: toolId,
-        probeId: "tool-calling",
-        mode,
-        status: "pass",
-        latencyMs: 1,
-        summary: "Mode fixture passed",
-      }
-    })
+    mockRunCliSupportTool.mockImplementation(
+      async ({ toolId, mode, requestProfileEnhanced }) => {
+        await probeGate.promise
+        return {
+          id: toolId,
+          probeId: "tool-calling",
+          mode,
+          requestProfile: toolId,
+          requestProfileEnhanced,
+          status: "pass",
+          latencyMs: 1,
+          summary: "Mode fixture passed",
+        }
+      },
+    )
 
     render(
       <VerifyCliSupportDialog
@@ -379,6 +383,11 @@ describe("VerifyCliSupportDialog", () => {
       }),
     )
     for (const toolId of ["claude", "codex", "gemini"]) {
+      expect(
+        within(screen.getByTestId(getCliToolCardTestId(toolId))).getByText(
+          `aiApiVerification:verifyDialog.requestProfiles.${toolId} · aiApiVerification:verifyDialog.requestProfiles.enhancedBadge`,
+        ),
+      ).toBeVisible()
       expect(
         within(screen.getByTestId(getCliToolCardTestId(toolId))).getByText(
           "aiApiVerification:verifyDialog.modes.nonStreaming",

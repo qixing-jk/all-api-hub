@@ -289,8 +289,70 @@ describe("VerifyApiCredentialProfileDialog", () => {
     summary: "Accepted",
   }
 
+  it("locks enhanced simulation and identity during an active probe", async () => {
+    const pending = createDeferred<ApiVerificationProbeResult>()
+    mockRunApiVerificationProbe.mockReturnValue(pending.promise)
+    const { result } = renderHook(useProfileVerification, {
+      initialProps: sessionProps,
+    })
+    await waitFor(() => expect(result.current.isFetchingModels).toBe(false))
+    act(() => result.current.setRequestProfileEnhanced(true))
+    expect(result.current.requestProfileEnhanced).toBe(false)
+    act(() =>
+      result.current.setRequestProfile(API_VERIFICATION_REQUEST_PROFILES.Codex),
+    )
+    act(() => result.current.setModelId("model"))
+    let running!: Promise<void>
+    act(() => {
+      running = result.current.runSingleProbe("text-generation")
+    })
+    await waitFor(() => expect(result.current.canClose).toBe(false))
+    act(() => {
+      result.current.setRequestProfileEnhanced(true)
+      result.current.setRequestProfile(API_VERIFICATION_REQUEST_PROFILES.Claude)
+    })
+    expect(result.current.requestProfileEnhanced).toBe(false)
+    expect(result.current.requestProfile).toBe(
+      API_VERIFICATION_REQUEST_PROFILES.Codex,
+    )
+    await act(async () => {
+      pending.resolve(acceptedProbe)
+      await running
+    })
+  })
+
+  it("refreshes model discovery when client simulation changes the protocol", async () => {
+    mockFetchOpenAICompatibleModelIds.mockResolvedValue(["openai-model"])
+    mockFetchAnthropicModelIds.mockResolvedValue(["claude-model"])
+    const { result } = renderHook(useProfileVerification, {
+      initialProps: sessionProps,
+    })
+    await waitFor(() =>
+      expect(result.current.modelOptions).toEqual(["openai-model"]),
+    )
+    act(() =>
+      result.current.setRequestProfile(
+        API_VERIFICATION_REQUEST_PROFILES.Claude,
+      ),
+    )
+    expect(result.current.modelId).toBe("")
+    expect(result.current.modelOptions).toEqual([])
+    await waitFor(() =>
+      expect(result.current.modelOptions).toEqual(["claude-model"]),
+    )
+    expect(result.current.modelId).toBe("claude-model")
+    act(() =>
+      result.current.setRequestProfile(
+        API_VERIFICATION_REQUEST_PROFILES.Default,
+      ),
+    )
+    expect(result.current.modelId).toBe("claude-model")
+    expect(mockFetchAnthropicModelIds).toHaveBeenCalledTimes(1)
+  })
+
   it("keeps ordinary requests as default and lets a text test select a CLI request profile", async () => {
     const user = userEvent.setup()
+    mockFetchOpenAICompatibleModelIds.mockResolvedValue(["model"])
     mockProbeDefinitions.mockReturnValue([
       { id: "text-generation", requiresModelId: true },
     ])
@@ -337,6 +399,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
 
   it("keeps enhanced simulation opt-in and resets it when returning to ordinary requests", async () => {
     const user = userEvent.setup()
+    mockFetchAnthropicModelIds.mockResolvedValue(["model"])
     mockProbeDefinitions.mockReturnValue([
       { id: "text-generation", requiresModelId: true },
     ])

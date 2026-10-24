@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { buildProbeState } from "~/features/Verification/api/probeState"
 import {
   API_TYPES,
   API_VERIFICATION_REQUEST_PROFILES,
@@ -13,6 +14,30 @@ import {
 } from "~/services/verification/verificationResultHistory/utils"
 
 describe("request profile history contracts", () => {
+  it.each([false, true])(
+    "restores the enhanced flag only for enhanced history (%s)",
+    (enhanced) => {
+      const summary = createVerificationHistorySummary({
+        target: createProfileVerificationHistoryTarget("profile-history")!,
+        apiType: API_TYPES.OPENAI,
+        results: [
+          {
+            ...probe,
+            requestProfile: API_VERIFICATION_REQUEST_PROFILES.Codex,
+            ...(enhanced ? { requestProfileEnhanced: true } : {}),
+          },
+        ],
+      })!
+      const result = buildProbeState(API_TYPES.OPENAI, summary).find(
+        (item) => item.definition.id === "text-generation",
+      )!.result!
+      expect(result.requestProfile).toBe(
+        API_VERIFICATION_REQUEST_PROFILES.Codex,
+      )
+      expect(result.requestProfileEnhanced).toBe(enhanced || undefined)
+    },
+  )
+
   const probe: ApiVerificationProbeResult = {
     id: "text-generation",
     status: "pass",

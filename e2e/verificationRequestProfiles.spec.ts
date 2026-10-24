@@ -273,9 +273,11 @@ test("owned Sub2API rejects ordinary requests and admits simulated Claude reques
   )
   await run.click()
   const ordinaryResponse = await ordinaryDispatched
-  expect(await ordinaryResponse.text()).toContain(
-    "only allows Claude Code clients",
-  )
+  const ordinaryStatus = ordinaryResponse.status()
+  const ordinaryBody = await ordinaryResponse.text()
+  const restriction = "only allows Claude Code clients"
+  expect(ordinaryStatus).toBe(503)
+  expect(ordinaryBody).toContain(restriction)
   await expect(probe).toContainText("Fail")
   await page
     .getByRole("combobox", { name: "Client simulation", exact: true })
@@ -292,16 +294,21 @@ test("owned Sub2API rejects ordinary requests and admits simulated Claude reques
   await run.click()
   const response = await dispatched
   expect([200, 502]).toContain(response.status())
+  const passedClientRestriction = [200, 502].includes(response.status())
+  expect(passedClientRestriction).toBe(true)
   // Admission is the agreed live boundary. Stop here instead of waiting for
   // SDK retries against this fixture's unconfigured inference upstream.
   await run.click()
   await expect(run).not.toHaveText("Stop")
   const evidence = {
-    ordinary: "503: only allows Claude Code clients",
+    ordinary: {
+      status: ordinaryStatus,
+      restrictionRejected: ordinaryBody.includes(restriction),
+    },
     simulated: {
       status: response.status(),
       enhanced: true,
-      passedClientRestriction: true,
+      passedClientRestriction,
     },
     inferenceSuccessRequired: false,
   }
