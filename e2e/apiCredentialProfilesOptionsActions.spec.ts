@@ -1004,12 +1004,19 @@ test("aligns the credential verification meta fields across the paired row", asy
   extensionDir,
   page,
 }) => {
-  await context.route("https://aligned-api.example.com/v1/models", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ data: [] }),
-    }),
+  const modelRequestUrls: string[] = []
+  await context.route(
+    (url) =>
+      url.origin === "https://aligned-api.example.com" &&
+      url.pathname === "/v1/models",
+    (route) => {
+      modelRequestUrls.push(route.request().url())
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: [] }),
+      })
+    },
   )
   const serviceWorker = await getServiceWorker(context)
   await seedApiCredentialProfiles(serviceWorker, [
@@ -1054,6 +1061,9 @@ test("aligns the credential verification meta fields across the paired row", asy
   })
   await selector.click()
   await page.getByRole("option", { name: "Claude Code", exact: true }).click()
+  await expect
+    .poll(() => modelRequestUrls)
+    .toContain("https://aligned-api.example.com/v1/models?limit=200")
   const enhanced = page.getByRole("switch", {
     name: "Enhanced CLI simulation",
     exact: true,
