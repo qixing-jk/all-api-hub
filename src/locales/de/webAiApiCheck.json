@@ -104,7 +104,7 @@
       "patternsPlaceholder": "\\[\\[remove-this\\]\\]\n【remove-this】\n<remove-this>\n(?:separator|noise)\n[\\s\\-_.]+"
     },
     "siteAccess": {
-      "disabledHint": "Die automatische Erkennung ist aus. Dieser Umfang gilt, sobald du sie aktivierst."
+      "disabledHint": "Die automatische Erkennung ist aus. Dieser Umfang gilt, sobald Sie sie aktivieren."
     },
     "siteRules": {
       "addBlacklist": "Zur Sperrliste hinzufügen",

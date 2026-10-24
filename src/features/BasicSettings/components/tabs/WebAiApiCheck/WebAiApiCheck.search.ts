@@ -95,23 +95,6 @@ export const webAiApiCheckSearchControls: OptionsSearchItemDefinition[] = [
     },
   ),
   buildControlDefinition(
-    "control:web-ai-api-check-whitelist-patterns",
-    "webAiApiCheck",
-    WEB_AI_API_CHECK_TARGET_IDS.whitelistPatterns,
-    "webAiApiCheck:settings.siteRules.syntax",
-    623,
-    {
-      descriptionKey: "webAiApiCheck:settings.siteRules.wildcardHint",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.webAiApiCheck",
-        "webAiApiCheck:settings.title",
-      ],
-      keywords: ["api check", "whitelist", "patterns", "regex"],
-    },
-  ),
-
-  buildControlDefinition(
     "control:web-ai-api-check-key-cleanup-patterns",
     "webAiApiCheck",
     WEB_AI_API_CHECK_TARGET_IDS.keyCleanupPatterns,

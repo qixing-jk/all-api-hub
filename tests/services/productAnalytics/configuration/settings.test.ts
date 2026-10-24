@@ -60,6 +60,22 @@ function createPreferences(
 }
 
 describe("settings product analytics snapshots", () => {
+  it("does not report default website access as configured rules", () => {
+    const events = buildSettingsSnapshotEvents(
+      createDefaultPreferences(),
+      "options",
+      {
+        webAiApiCheck: {},
+      },
+    )
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.WebAiApiCheckConfigSnapshot,
+        auto_detect_url_patterns_configured: false,
+      }),
+    )
+  })
+
   it("reports typed rule configuration without leaking website patterns", () => {
     const prefs = createDefaultPreferences()
     prefs.webAiApiCheck!.autoDetect.siteRules = {

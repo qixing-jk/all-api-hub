@@ -108,7 +108,6 @@ export function WebAiApiCheckSiteAccessSettings({
               {t("webAiApiCheck:settings.siteRules.description")}
             </p>
           </div>
-          <span id={WEB_AI_API_CHECK_TARGET_IDS.whitelistPatterns} />
           {!autoDetectEnabled ? (
             <p className="text-muted-foreground text-xs">
               {t("webAiApiCheck:settings.siteAccess.disabledHint")}

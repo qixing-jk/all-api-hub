@@ -2056,6 +2056,7 @@ describe("UserPreferencesContext", () => {
     preferences.webAiApiCheck = {
       ...DEFAULT_WEB_AI_API_CHECK_PREFERENCES,
       autoDetect: {
+        ...DEFAULT_WEB_AI_API_CHECK_PREFERENCES.autoDetect,
         enabled: true,
         enhanced: { enabled: true },
         urlWhitelist: {

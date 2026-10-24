@@ -29,7 +29,6 @@ describe("web AI API check settings search definitions", () => {
       WEB_AI_API_CHECK_TARGET_IDS.contextMenu,
       WEB_AI_API_CHECK_TARGET_IDS.autoDetect,
       WEB_AI_API_CHECK_TARGET_IDS.enhancedAutoDetect,
-      WEB_AI_API_CHECK_TARGET_IDS.whitelistPatterns,
       WEB_AI_API_CHECK_TARGET_IDS.keyCleanupPatterns,
     ])
   })

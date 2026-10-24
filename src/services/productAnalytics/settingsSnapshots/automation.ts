@@ -9,6 +9,7 @@ import {
   PRODUCT_ANALYTICS_SETTING_IDS,
   type ProductAnalyticsEntrypoint,
 } from "~/services/productAnalytics/contracts"
+import { resolveWebAiApiCheckSiteRules } from "~/services/verification/webAiApiCheck/siteRules"
 import type { BalanceHistoryPreferences } from "~/types/dailyBalanceHistory"
 import type { ModelRedirectPreferences } from "~/types/managedSiteModelRedirect"
 import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
@@ -152,6 +153,7 @@ function buildWebAiApiCheckSnapshot(
   entrypoint: ProductAnalyticsEntrypoint,
 ): SettingChangedPayload {
   const config = getWebAiApiCheckPreferences(preferences)
+  const rules = resolveWebAiApiCheckSiteRules(config.autoDetect ?? {})
   return {
     setting_id: PRODUCT_ANALYTICS_SETTING_IDS.WebAiApiCheckConfigSnapshot,
     entrypoint,
@@ -159,11 +161,8 @@ function buildWebAiApiCheckSnapshot(
     context_menu_enabled: config.contextMenu?.enabled === true,
     auto_detect_enabled: config.autoDetect?.enabled === true,
     auto_detect_enhanced_enabled: config.autoDetect?.enhanced?.enabled === true,
-    auto_detect_url_patterns_configured: config.autoDetect?.siteRules
-      ? config.autoDetect.siteRules.whitelist.length +
-          config.autoDetect.siteRules.blacklist.length >
-        0
-      : (config.autoDetect?.urlWhitelist?.patterns ?? []).length > 0,
+    auto_detect_url_patterns_configured:
+      rules.whitelist.length + rules.blacklist.length > 0,
     api_key_cleanup_patterns_configured:
       (config.keyCleanup?.removalPatterns ?? []).length > 0,
   }
