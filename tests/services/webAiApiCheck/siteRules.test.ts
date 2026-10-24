@@ -13,6 +13,49 @@ import {
 } from "~/services/verification/webAiApiCheck/siteRules"
 
 describe("web API site rules", () => {
+  it("validates legacy and regex rules and rejects malformed authorities and unknown syntax", () => {
+    expect(
+      normalizeWebAiApiCheckSiteRules(["^https://example\\.com/"], "regex")
+        .rules,
+    ).toEqual([{ syntax: "regex", pattern: "^https://example\\.com/" }])
+    expect(
+      normalizeWebAiApiCheckSiteRules(["example.com/path"], "legacy").rules,
+    ).toEqual([{ syntax: "legacy", pattern: "example.com/path" }])
+    expect(
+      normalizeWebAiApiCheckSiteRules(
+        ["https://user@example.com/", "https:///"],
+        "wildcard",
+      ).invalid,
+    ).toHaveLength(2)
+    expect(
+      normalizeWebAiApiCheckSiteRules(["bad rule"], "legacy").invalid,
+    ).toEqual(["bad rule"])
+    expect(
+      normalizeWebAiApiCheckSiteRules(["example.com"], "unknown" as never)
+        .invalid,
+    ).toEqual(["example.com"])
+  })
+
+  it.each([
+    { syntax: "wildcard", pattern: "http://example.com/*" },
+    { syntax: "wildcard", pattern: "*://example.com:invalid/*" },
+    { syntax: "regex", pattern: "[" },
+    { syntax: "exact", pattern: "not a URL" },
+    { syntax: "unknown", pattern: "https://example.com/" },
+  ])(
+    "fails closed for a nonmatching or malformed stored rule: $pattern",
+    (rule) => {
+      expect(
+        isWebAiApiCheckPageAllowed("https://example.com/", {
+          siteRules: {
+            priority: "blacklist",
+            whitelist: [rule as never],
+            blacklist: [],
+          },
+        }),
+      ).toBe(false)
+    },
+  )
   it("explains a single-list match separately from an overlap priority decision", () => {
     const siteRules = {
       priority: WEB_AI_API_CHECK_RULE_LIST.WHITELIST,

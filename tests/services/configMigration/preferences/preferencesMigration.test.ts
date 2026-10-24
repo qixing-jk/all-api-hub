@@ -41,6 +41,19 @@ const buildModelRedirectFixture = () => ({
   pruneMissingTargetsOnModelSync: false,
 })
 
+it("loads v29 imports that omit the legacy website patterns array", () => {
+  const prefs = buildUserPreferences()
+  prefs.preferencesVersion = 29
+  delete prefs.webAiApiCheck!.autoDetect.siteAccess
+  prefs.webAiApiCheck!.autoDetect.urlWhitelist = {} as { patterns: string[] }
+  const migrated = migratePreferences(prefs)
+  expect(migrated.preferencesVersion).toBe(30)
+  expect(migrated.webAiApiCheck!.autoDetect.siteAccess?.mode).toBe("all")
+  expect(migrated.webAiApiCheck!.autoDetect.urlWhitelist.patterns).toEqual([
+    "^https?://",
+  ])
+})
+
 it.each([
   { version: 25, patterns: [], expected: ["^https?://"] },
   {

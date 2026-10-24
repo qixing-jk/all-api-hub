@@ -387,7 +387,7 @@ describe("setupWebAiApiCheckContent", () => {
 
   it("includes only selected link targets when detecting encoded credentials", async () => {
     const apiKey = `${OPENAI_KEY_PREFIX}${"a1b2c3d4".repeat(8)}`
-    document.body.innerHTML = `<a href="https://unrelated.example.com">Other post</a><article><p>API URL：<br><a href="https://proxy.example.com/v1">虾蹬王 - AI API Gateway</a></p><p>API KEY(base64加密)： ${btoa(apiKey)}</p></article>`
+    document.body.innerHTML = `<a href="https://unrelated.example.com">Other post</a><article><p>Discussion: https://discussion.example.com/topic</p><p>API URL：<br><a href="https://proxy.example.com/v1">虾蹬王 - AI API Gateway</a></p><p>API KEY(base64加密)： ${btoa(apiKey)}</p></article>`
     const range = document.createRange()
     range.selectNodeContents(document.querySelector("article")!)
     const selection = document.getSelection()!

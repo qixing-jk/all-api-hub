@@ -7,6 +7,11 @@ import {
   sendWebAiApiCheckMessage,
   WebAiApiCheckMessageTypes,
 } from "~/services/verification/webAiApiCheck/messaging"
+import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
+
+vi.mock("~/utils/browser/runtimeMessages", () => ({
+  sendRuntimeMessage: vi.fn(),
+}))
 
 vi.mock(
   "~/services/verification/webAiApiCheck/messaging",
@@ -23,7 +28,56 @@ vi.mock("react-i18next", () => ({
 
 describe("website participation control", () => {
   const pageUrl = "https://example.com/post"
-  beforeEach(() => vi.mocked(sendWebAiApiCheckMessage).mockReset())
+  beforeEach(() => {
+    vi.mocked(sendWebAiApiCheckMessage).mockReset()
+    vi.mocked(sendRuntimeMessage).mockReset()
+  })
+
+  it("hides the control when loading its site state fails", async () => {
+    vi.mocked(sendWebAiApiCheckMessage).mockRejectedValue(new Error("offline"))
+    render(<ApiCheckSiteAccessControl pageUrl={pageUrl} />)
+    await waitFor(() => expect(sendWebAiApiCheckMessage).toHaveBeenCalledOnce())
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument()
+  })
+
+  it.each(["rejected", "unsuccessful"])(
+    "retains the saved state after a %s site write and supports retry",
+    async (failure) => {
+      const user = userEvent.setup()
+      const message = vi.mocked(sendWebAiApiCheckMessage)
+      message.mockResolvedValue({ success: true, siteAllowed: true })
+      render(<ApiCheckSiteAccessControl pageUrl={pageUrl} />)
+      const control = await screen.findByRole("switch")
+      if (failure === "rejected")
+        message.mockRejectedValueOnce(new Error("offline"))
+      else message.mockResolvedValueOnce({ success: false })
+      await user.click(control)
+      expect(await screen.findByRole("alert")).toBeVisible()
+      expect(control).toBeChecked()
+      expect(control).toBeEnabled()
+      message.mockResolvedValueOnce({ success: true, siteAllowed: false })
+      await user.click(control)
+      await waitFor(() => expect(control).not.toBeChecked())
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+    },
+  )
+
+  it("reports a settings navigation failure", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
+      success: true,
+      siteAllowed: true,
+    })
+    vi.mocked(sendRuntimeMessage).mockRejectedValueOnce(new Error("closed"))
+    render(<ApiCheckSiteAccessControl pageUrl={pageUrl} />)
+    await screen.findByRole("switch")
+    await user.click(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:confirmToast.settings",
+      }),
+    )
+    expect(await screen.findByRole("alert")).toBeVisible()
+  })
 
   it("reenables an excluded website and reflects persisted state", async () => {
     vi.mocked(sendWebAiApiCheckMessage)

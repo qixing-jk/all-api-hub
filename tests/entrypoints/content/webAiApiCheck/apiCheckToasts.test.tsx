@@ -5,9 +5,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import type { ApiCheckConfirmToastAction } from "~/features/WebAiApiCheck/content/notifications/ApiCheckConfirmToast"
 import { API_CHECK_CONFIRM_TOAST_ACTIONS } from "~/features/WebAiApiCheck/content/notifications/confirmToastActions"
+import {
+  sendWebAiApiCheckMessage,
+  WebAiApiCheckMessageTypes,
+} from "~/services/verification/webAiApiCheck/messaging"
+
+vi.mock(
+  "~/services/verification/webAiApiCheck/messaging",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("~/services/verification/webAiApiCheck/messaging")
+    >()),
+    sendWebAiApiCheckMessage: vi.fn(),
+  }),
+)
 
 type ApiCheckConfirmToastProps = {
-  onAction: (action: ApiCheckConfirmToastAction) => void
+  onAction: (action: ApiCheckConfirmToastAction) => void | Promise<void>
   usesEnhancedResult?: boolean
 }
 
@@ -61,6 +75,34 @@ vi.mock(
 )
 
 describe("apiCheckToasts", () => {
+  it("keeps confirmation open on a failed site-disable write and dismisses only after retry succeeds", async () => {
+    const { showApiCheckConfirmToast } = await import(
+      "~/entrypoints/content/webAiApiCheck/utils/apiCheckToasts"
+    )
+    const result = showApiCheckConfirmToast()
+    await waitFor(() => expect(toastCustomMock).toHaveBeenCalledOnce())
+    const renderer = toastCustomMock.mock.calls[0]![0] as (
+      instance: ToastInstance,
+    ) => React.ReactElement<ApiCheckConfirmToastProps>
+    const element = renderer({ id: "site-disable-toast" })
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValueOnce({
+      success: false,
+    })
+    await expect(
+      element.props.onAction(API_CHECK_CONFIRM_TOAST_ACTIONS.DISABLE_SITE),
+    ).rejects.toThrow("Website preference write failed")
+    expect(toastDismissMock).not.toHaveBeenCalled()
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValueOnce({ success: true })
+    await element.props.onAction(API_CHECK_CONFIRM_TOAST_ACTIONS.DISABLE_SITE)
+    await expect(result).resolves.toBe(false)
+    expect(sendWebAiApiCheckMessage).toHaveBeenLastCalledWith(
+      WebAiApiCheckMessageTypes.SetSiteAccess,
+      { pageUrl: window.location.href, enabled: false },
+    )
+    expect(toastDismissMock).toHaveBeenCalledExactlyOnceWith(
+      "site-disable-toast",
+    )
+  })
   beforeEach(() => {
     vi.resetModules()
     vi.resetAllMocks()

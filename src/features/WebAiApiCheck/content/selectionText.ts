@@ -30,5 +30,5 @@ export function getApiCheckSelectedText(): string {
     if (enclosingLink) addLink(enclosingLink)
   }
 
-  return [text, ...urls].join("\n")
+  return [...urls, text].join("\n")
 }

@@ -12,7 +12,7 @@ export function resolveWebAiApiCheckSiteAccess(
 ): WebAiApiCheckSiteAccessPreferences {
   return (
     config.siteAccess ?? {
-      mode: config.urlWhitelist?.patterns.some(
+      mode: config.urlWhitelist?.patterns?.some(
         (pattern) => pattern.trim() && pattern !== "^https?://",
       )
         ? WEB_AI_API_CHECK_SITE_ACCESS_MODE.REGEX

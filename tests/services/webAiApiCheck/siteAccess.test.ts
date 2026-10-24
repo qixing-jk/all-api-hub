@@ -2,12 +2,38 @@ import { describe, expect, it } from "vitest"
 
 import {
   isWebAiApiCheckPageAllowed,
+  matchesSitePattern,
   summarizeWebAiApiCheckSiteAccess,
   validateSitePatterns,
 } from "~/services/verification/webAiApiCheck/siteAccess"
 import { WEB_AI_API_CHECK_SITE_ACCESS_MODE } from "~/services/verification/webAiApiCheck/siteRuleConstants"
 
 describe("web API detection site access", () => {
+  it("rejects query-bearing, fragment-bearing, wildcard-only and invalid URL legacy patterns", () => {
+    expect(
+      validateSitePatterns([
+        "https://example.com/?q=1",
+        "https://example.com/#key",
+        "*",
+        "https://[invalid",
+        "https://%.com",
+      ]).invalid,
+    ).toEqual([
+      "https://example.com/?q=1",
+      "https://example.com/#key",
+      "*",
+      "https://[invalid",
+      "https://%.com",
+    ])
+    expect(matchesSitePattern("not a URL", "example.com")).toBe(false)
+  })
+  it("accepts imported legacy settings with a missing patterns array", () => {
+    expect(
+      isWebAiApiCheckPageAllowed("https://example.com/", {
+        urlWhitelist: {} as { patterns: string[] },
+      }),
+    ).toBe(true)
+  })
   it("allows HTTP pages by default and rejects other schemes", () => {
     expect(isWebAiApiCheckPageAllowed("https://linux.do/t/topic/123", {})).toBe(
       true,

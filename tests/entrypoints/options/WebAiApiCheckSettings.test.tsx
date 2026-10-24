@@ -32,6 +32,24 @@ beforeEach(() => {
   })
 })
 
+it("summarizes many malformed cleanup expressions without saving them", () => {
+  render(<WebAiApiCheckSettings />)
+  const input = screen.getByPlaceholderText(
+    "webAiApiCheck:settings.keyCleanup.patternsPlaceholder",
+  )
+  fireEvent.change(input, {
+    target: {
+      value: Array.from({ length: 11 }, (_, i) => `[broken${i}`).join("\n"),
+    },
+  })
+  fireEvent.blur(input)
+  expect(screen.getAllByRole("listitem")).toHaveLength(10)
+  expect(
+    screen.getByText("webAiApiCheck:settings.keyCleanup.invalidMore"),
+  ).toBeVisible()
+  expect(update).not.toHaveBeenCalled()
+})
+
 it("keeps primary settings directly visible without an idle saved label", () => {
   render(<WebAiApiCheckSettings />)
   expect(

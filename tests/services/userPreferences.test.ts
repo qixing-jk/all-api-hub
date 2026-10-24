@@ -31,6 +31,99 @@ import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import { DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES } from "~/types/siteAnnouncements"
 
 describe("userPreferences", () => {
+  it("persists a rule replacement, rejects invalid edits and reenables only the chosen origin", async () => {
+    await userPreferences.resetWebAiApiCheck()
+    const original = {
+      syntax: WEB_AI_API_CHECK_RULE_SYNTAX.WILDCARD,
+      pattern: "https://old.example/*",
+    }
+    const rule = {
+      syntax: WEB_AI_API_CHECK_RULE_SYNTAX.EXACT,
+      pattern: "https://new.example/page",
+    }
+    await userPreferences.mutateWebAiApiCheckSiteRules({
+      type: "add",
+      list: "whitelist",
+      rules: [original],
+    })
+    expect(
+      (
+        await userPreferences.mutateWebAiApiCheckSiteRules({
+          type: "edit",
+          list: "whitelist",
+          original,
+          rule,
+        })
+      ).ok,
+    ).toBe(true)
+    expect(
+      (
+        await userPreferences.mutateWebAiApiCheckSiteRules({
+          type: "add",
+          list: "blacklist",
+          rules: [{ syntax: "regex", pattern: "[" }],
+        })
+      ).ok,
+    ).toBe(false)
+    expect(
+      (
+        await userPreferences.setWebAiApiCheckSiteEnabled(
+          "file:///tmp/key",
+          true,
+        )
+      ).ok,
+    ).toBe(false)
+    await userPreferences.setWebAiApiCheckSiteEnabled(
+      "https://chosen.example/post",
+      false,
+    )
+    await userPreferences.setWebAiApiCheckSiteEnabled(
+      "https://chosen.example/post",
+      true,
+    )
+    await userPreferences.setWebAiApiCheckSiteEnabled(
+      "https://chosen.example/post",
+      true,
+    )
+    const saved = (await userPreferences.getPreferences()).webAiApiCheck!
+      .autoDetect.siteRules!
+    expect(saved.whitelist).toEqual([
+      rule,
+      { syntax: "wildcard", pattern: "https://chosen.example/*" },
+    ])
+    expect(saved.blacklist).toEqual([])
+    await userPreferences.resetWebAiApiCheck()
+  })
+
+  it("adds an origin to a legacy regex scope without replacing existing patterns", async () => {
+    await userPreferences.resetWebAiApiCheck()
+    await userPreferences.savePreferences({
+      webAiApiCheck: {
+        autoDetect: {
+          siteRules: null,
+          siteAccess: { mode: "regex", include: [], exclude: [] },
+          urlWhitelist: { patterns: ["^https://old\\.example/"] },
+        },
+      },
+    })
+    expect(
+      (
+        await userPreferences.setWebAiApiCheckSiteEnabled(
+          "https://new.example/page",
+          true,
+        )
+      ).ok,
+    ).toBe(true)
+    const patterns = (await userPreferences.getPreferences()).webAiApiCheck!
+      .autoDetect.urlWhitelist.patterns
+    expect(patterns).toHaveLength(2)
+    expect(patterns[0]).toBe("^https://old\\.example/")
+    expect(new RegExp(patterns[1]!).test("https://new.example/page")).toBe(true)
+    expect(new RegExp(patterns[1]!).test("https://new.example.evil/page")).toBe(
+      false,
+    )
+    await userPreferences.resetWebAiApiCheck()
+  })
   it("does not widen a populated whitelist when a quick site choice conflicts with white priority", async () => {
     const rule = {
       syntax: WEB_AI_API_CHECK_RULE_SYNTAX.WILDCARD,

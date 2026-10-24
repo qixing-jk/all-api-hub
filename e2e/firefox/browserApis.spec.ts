@@ -142,13 +142,11 @@ test("Firefox copies a credential with native activation and recovers from clipb
     .toBe(false)
   // Firefox headless keeps its clipboard in memory. Replace the value so a
   // successful retry cannot pass by reading the earlier successful copy.
-  // Read the browser-owned sentinel in the same privileged context that writes
-  // it. Reading another principal's clipboard through the popup can require a
-  // new activation on Linux; the native copy below still uses the real UI.
-  expect(
-    await popup.driver.executeScript<string>(`
-      Cc['@mozilla.org/widget/clipboardhelper;1'].getService(Ci.nsIClipboardHelper)
-        .copyString('Firefox clipboard retry sentinel')
+  // Read both the browser-owned sentinel and the retry from the privileged
+  // context. A popup read after the sentinel can require a new activation on
+  // Linux, independently of whether the real native copy succeeded.
+  const readClipboard = () =>
+    popup.driver.executeScript<string>(`
       const transferable = Cc['@mozilla.org/widget/transferable;1'].createInstance(Ci.nsITransferable)
       transferable.init(null)
       transferable.addDataFlavor('text/plain')
@@ -156,10 +154,12 @@ test("Firefox copies a credential with native activation and recovers from clipb
       const data = {}
       transferable.getTransferData('text/plain', data)
       return data.value.QueryInterface(Ci.nsISupportsString).data
-    `),
-  ).toBe("Firefox clipboard retry sentinel")
+    `)
+  await popup.driver.executeScript(`
+    Cc['@mozilla.org/widget/clipboardhelper;1'].getService(Ci.nsIClipboardHelper)
+      .copyString('Firefox clipboard retry sentinel')
+  `)
+  expect(await readClipboard()).toBe("Firefox clipboard retry sentinel")
   await popup.nativeClickSelector(copyButton)
-  await expect
-    .poll(() => popup.evaluateAsync<string>("navigator.clipboard.readText()"))
-    .toBe("sk-firefox-synthetic-copy")
+  await expect.poll(readClipboard).toBe("sk-firefox-synthetic-copy")
 })
