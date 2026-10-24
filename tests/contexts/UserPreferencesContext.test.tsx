@@ -177,6 +177,7 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
       resetAutoCheckinConfig: vi.fn(),
       resetRedemptionAssist: vi.fn(),
       resetWebAiApiCheck: vi.fn(),
+      mutateWebAiApiCheckSiteRules: vi.fn(),
       resetModelRedirectConfig: vi.fn(),
       resetWebdavConfig: vi.fn(),
       resetSortingPriorityConfig: vi.fn(),
@@ -267,6 +268,39 @@ const renderProvider = async (
 }
 
 describe("UserPreferencesContext", () => {
+  it("publishes rule edits only after persistence succeeds", async () => {
+    const context = await renderProvider()
+    const before = latestContext!.preferences
+    const command = { type: "priority", priority: "whitelist" } as const
+    mockedUserPreferences.mutateWebAiApiCheckSiteRules.mockResolvedValueOnce(
+      preferenceWriteFailure,
+    )
+    await act(async () => {
+      expectFailedWrite(await context.mutateWebAiApiCheckSiteRules(command))
+    })
+    expect(latestContext!.preferences).toBe(before)
+    const saved = clonePreferences()
+    saved.webAiApiCheck!.autoDetect.siteRules = {
+      priority: "whitelist",
+      whitelist: [],
+      blacklist: [],
+    }
+    mockedUserPreferences.mutateWebAiApiCheckSiteRules.mockResolvedValueOnce({
+      ok: true,
+      preferences: saved,
+    })
+    await act(async () => {
+      expect((await context.mutateWebAiApiCheckSiteRules(command)).ok).toBe(
+        true,
+      )
+    })
+    expect(
+      latestContext!.preferences.webAiApiCheck!.autoDetect.siteRules,
+    ).toEqual(saved.webAiApiCheck!.autoDetect.siteRules)
+    expect(
+      mockedUserPreferences.mutateWebAiApiCheckSiteRules,
+    ).toHaveBeenLastCalledWith(command)
+  })
   it("reloads a Magpie reset only after its credential write succeeds", async () => {
     const context = await renderProvider()
     await act(async () => {
@@ -2056,6 +2090,7 @@ describe("UserPreferencesContext", () => {
     preferences.webAiApiCheck = {
       ...DEFAULT_WEB_AI_API_CHECK_PREFERENCES,
       autoDetect: {
+        ...DEFAULT_WEB_AI_API_CHECK_PREFERENCES.autoDetect,
         enabled: true,
         enhanced: { enabled: true },
         urlWhitelist: {

@@ -25,6 +25,7 @@ import {
 } from "~/components/ui/collapsible"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import { VerificationRequestProfileSelect } from "~/features/Verification/api/VerificationRequestProfile"
+import { ApiCheckSiteAccessControl } from "~/features/WebAiApiCheck/content/ApiCheckSiteAccessControl"
 import { ApiCheckBaseUrlHistoryPicker } from "~/features/WebAiApiCheck/content/history/ApiCheckBaseUrlHistoryPicker"
 import { ApiCheckCandidateButtons } from "~/features/WebAiApiCheck/content/modal/ApiCheckCandidateButtons"
 import type {
@@ -129,6 +130,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
             className="py-density-4 max-h-[calc(90vh-64px)] overflow-y-auto overscroll-contain px-4"
           >
             <div className="space-y-density-4">
+              <ApiCheckSiteAccessControl pageUrl={view.pageUrl} />
               <div className="space-y-density-2">
                 <label
                   htmlFor="api-check-source-text"

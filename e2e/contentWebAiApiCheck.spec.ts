@@ -309,6 +309,231 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
   })
 })
 
+for (const includeLink of [true, false]) {
+  test(`reviews a decoded web key ${includeLink ? "with a selected API link" : "without a URL"}`, async ({
+    context,
+    page,
+  }, testInfo) => {
+    const serviceWorker = await getServiceWorker(context)
+    await seedUserPreferences(serviceWorker, {
+      language: "en",
+      webAiApiCheck: {
+        enabled: true,
+        autoDetect: {
+          enabled: true,
+          enhanced: { enabled: true },
+          urlWhitelist: {
+            patterns: ["^https://api-console\\.example\\.test/console"],
+          },
+        },
+      },
+    })
+    const requests: string[] = []
+    context.on("request", (request) => requests.push(request.url()))
+    await page.goto(TEST_PAGE_URL)
+    const selectionPoints = await page.locator("#copy-credentials").evaluate(
+      (target, { includeLink, apiKey, baseUrl }) => {
+        const post = document.createElement("article")
+        post.id = "credential-post"
+        post.innerHTML = `${includeLink ? `<p>API URL：<br><a href="${baseUrl}">AI API Gateway</a></p>` : ""}<p>API KEY(base64加密)： <span>${btoa(apiKey)}</span></p>`
+        target.replaceWith(post)
+        const firstText = post.querySelector("p")!.firstChild!
+        const lastText = post.querySelector("span")!.firstChild!
+        const startRange = document.createRange()
+        startRange.setStart(firstText, 0)
+        startRange.setEnd(firstText, 1)
+        const endRange = document.createRange()
+        endRange.selectNodeContents(lastText)
+        const start = startRange.getBoundingClientRect()
+        const end = endRange.getBoundingClientRect()
+        return {
+          start: { x: start.left, y: start.top + start.height / 2 },
+          end: { x: end.right + 1, y: end.top + end.height / 2 },
+        }
+      },
+      { includeLink, apiKey: API_KEY, baseUrl: API_BASE_URL },
+    )
+    await page.mouse.move(selectionPoints.start.x, selectionPoints.start.y)
+    await page.mouse.down()
+    await page.mouse.move(selectionPoints.end.x, selectionPoints.end.y, {
+      steps: 12,
+    })
+    await page.mouse.up()
+    expect(
+      await page.evaluate(() => window.getSelection()?.toString()),
+    ).toContain(Buffer.from(API_KEY).toString("base64"))
+    const host = page.locator("all-api-hub-redemption-toast")
+    if (!includeLink) {
+      await expect(
+        host.getByText("API Key Detected", { exact: true }),
+      ).toBeVisible()
+      await expect(
+        host.getByText(
+          "A likely API key was decoded, but no API URL was found. Open the test panel to add the URL before testing?",
+        ),
+      ).toBeVisible()
+      await expect(host).not.toContainText(API_KEY)
+      await host
+        .locator("section")
+        .screenshot({ path: testInfo.outputPath("key-only-toast.png") })
+    }
+    await host.getByRole("button", { name: "Open", exact: true }).click()
+    const modal = host.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modal)
+    await expect(modal).toBeVisible()
+    await expect(
+      modal.getByRole("textbox", { name: /^API key$/i }),
+    ).toHaveValue(API_KEY)
+    await expect(
+      modal.getByRole("textbox", { name: "Base URL", exact: true }),
+    ).toHaveValue(includeLink ? API_BASE_URL : "")
+    if (!includeLink) {
+      await expect(
+        modal.getByTestId(WEB_AI_API_CHECK_TEST_IDS.saveToProfilesButton),
+      ).toBeDisabled()
+      expect(requests.filter((url) => url.includes("/v1/models"))).toEqual([])
+    }
+  })
+}
+
+test("controls website participation from the webpage and autosaving settings", async ({
+  context,
+  page,
+  extensionId,
+}, testInfo) => {
+  const serviceWorker = await getServiceWorker(context)
+  await seedUserPreferences(serviceWorker, { language: "en" })
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  const { contentHost, modal } =
+    await openApiCheckModalFromCopiedCredentials(page)
+  const siteSwitch = modal.getByRole("switch", {
+    name: "Auto-detect on this website",
+  })
+  await expect(siteSwitch).toBeChecked()
+  await modal.getByTestId(WEB_AI_API_CHECK_TEST_IDS.closeButton).click()
+  await sendApiCheckContextMenuTrigger(serviceWorker, {
+    pageUrl: TEST_PAGE_URL,
+    selectionText: `base_url=${API_BASE_URL}\napi_key=${API_KEY}`,
+  })
+  await expect(siteSwitch).toBeChecked()
+  await siteSwitch.click()
+  await expect(siteSwitch).not.toBeChecked()
+  const readScope = async () => {
+    const raw = await getPlasmoStorageRawValue<string>(
+      serviceWorker,
+      STORAGE_KEYS.USER_PREFERENCES,
+    )
+    return JSON.parse(raw).webAiApiCheck.autoDetect.siteAccess
+  }
+  await expect
+    .poll(async () => (await readScope()).exclude)
+    .toEqual([TEST_PAGE_ORIGIN])
+  await modal.screenshot({
+    path: testInfo.outputPath("website-control-disabled.png"),
+    animations: "disabled",
+  })
+  await modal.getByTestId(WEB_AI_API_CHECK_TEST_IDS.closeButton).click()
+  await page.reload()
+  await sendApiCheckContextMenuTrigger(serviceWorker, {
+    pageUrl: TEST_PAGE_URL,
+    selectionText: `base_url=${API_BASE_URL}\napi_key=${API_KEY}`,
+  })
+  await expect(siteSwitch).not.toBeChecked()
+  await siteSwitch.click()
+  await expect(siteSwitch).toBeChecked()
+  await expect.poll(async () => (await readScope()).exclude).toEqual([])
+  await modal.getByTestId(WEB_AI_API_CHECK_TEST_IDS.closeButton).click()
+  // The notice also provides a one-click way to exclude this website.
+  await page.reload()
+  await page.locator("#copy-credentials").evaluate((target) => {
+    const range = document.createRange()
+    range.selectNodeContents(target)
+    const selection = window.getSelection()
+    selection?.removeAllRanges()
+    selection?.addRange(range)
+    target.dispatchEvent(new ClipboardEvent("copy", { bubbles: true }))
+  })
+  await expect(
+    contentHost.getByRole("button", {
+      name: "Stop auto-detect on this website",
+    }),
+  ).toBeVisible()
+  await contentHost.locator("section").screenshot({
+    path: testInfo.outputPath("website-pause-toast.png"),
+    animations: "disabled",
+  })
+  await contentHost
+    .getByRole("button", { name: "Stop auto-detect on this website" })
+    .click()
+  await expect
+    .poll(async () => (await readScope()).exclude)
+    .toEqual([TEST_PAGE_ORIGIN])
+  await expect(
+    contentHost.getByRole("button", { name: "Open", exact: true }),
+  ).toHaveCount(0)
+
+  const settings = await context.newPage()
+  await settings.setViewportSize({ width: 1920, height: 1080 })
+  await settings.emulateMedia({ reducedMotion: "reduce" })
+  installExtensionPageGuards(settings)
+  await forceExtensionLanguage(settings, "en")
+  await settings.goto(
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}?tab=webAiApiCheck#basic`,
+  )
+  await waitForExtensionRoot(settings)
+  const section = settings.locator("#web-ai-api-check")
+  await expect(
+    section.getByText(TEST_PAGE_ORIGIN, { exact: true }),
+  ).toBeVisible()
+  await settings
+    .getByRole("button", { name: "Add to blacklist", exact: true })
+    .click()
+  const editor = settings.getByRole("dialog", {
+    name: "Add to blacklist",
+    exact: true,
+  })
+  await editor
+    .getByRole("textbox", { name: "Rule content", exact: true })
+    .fill("*.example.org\nhttps://example.com/private")
+  await editor.getByRole("button", { name: "Add", exact: true }).click()
+  await expect(editor).toHaveCount(0)
+  const readRules = async () => {
+    const raw = await getPlasmoStorageRawValue<string>(
+      serviceWorker,
+      STORAGE_KEYS.USER_PREFERENCES,
+    )
+    return JSON.parse(raw).webAiApiCheck.autoDetect.siteRules
+  }
+  await expect
+    .poll(async () => (await readRules()).blacklist)
+    .toEqual([
+      { syntax: "legacy", pattern: TEST_PAGE_ORIGIN },
+      { syntax: "wildcard", pattern: "*://*.example.org/*" },
+      { syntax: "wildcard", pattern: "https://example.com/private" },
+    ])
+  await settings.reload()
+  await expect(
+    section.getByText("*://*.example.org/*", { exact: true }),
+  ).toBeVisible()
+  await settings
+    .getByRole("button", { name: "Add to whitelist", exact: true })
+    .click()
+  const whiteEditor = settings.getByRole("dialog", {
+    name: "Add to whitelist",
+    exact: true,
+  })
+  await whiteEditor
+    .getByRole("textbox", { name: "Rule content", exact: true })
+    .fill("linux.do")
+  await whiteEditor.getByRole("button", { name: "Add", exact: true }).click()
+  await expect
+    .poll(async () => (await readRules()).whitelist)
+    .toEqual([{ syntax: "wildcard", pattern: "*://linux.do/*" }])
+  await settings.locator("#web-ai-api-check").screenshot({
+    path: testInfo.outputPath("website-scope-settings.png"),
+    animations: "disabled",
+  })
+})
+
 test("turns selected web API credentials into a verified profile and model catalog source", async ({
   context,
   extensionId,

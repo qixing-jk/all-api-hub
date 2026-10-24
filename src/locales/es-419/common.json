@@ -1,5 +1,6 @@
 {
   "actions": {
+    "add": "Agregar",
     "cancel": "Cancelar",
     "clear": "Limpiar",
     "close": "Cerrar",
@@ -16,6 +17,7 @@
     "openSidePanel": "Abrir en SidePanel",
     "refresh": "Actualizar",
     "refreshField": "Actualizar {{field}}",
+    "remove": "Quitar",
     "reset": "Restablecer",
     "retry": "Reintentar",
     "save": "Guardar"

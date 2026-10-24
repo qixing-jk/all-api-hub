@@ -21,10 +21,286 @@ import {
 } from "~/services/preferences/preferencesDefaults"
 import { normalizeTempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import {
+  WEB_AI_API_CHECK_RULE_LIST,
+  WEB_AI_API_CHECK_RULE_MUTATION,
+  WEB_AI_API_CHECK_RULE_SYNTAX,
+  WEB_AI_API_CHECK_SITE_ACCESS_MODE,
+} from "~/services/verification/webAiApiCheck/siteRuleConstants"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import { DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES } from "~/types/siteAnnouncements"
 
 describe("userPreferences", () => {
+  it("persists a rule replacement, rejects invalid edits and reenables only the chosen origin", async () => {
+    await userPreferences.resetWebAiApiCheck()
+    const original = {
+      syntax: WEB_AI_API_CHECK_RULE_SYNTAX.WILDCARD,
+      pattern: "https://old.example/*",
+    }
+    const rule = {
+      syntax: WEB_AI_API_CHECK_RULE_SYNTAX.EXACT,
+      pattern: "https://new.example/page",
+    }
+    await userPreferences.mutateWebAiApiCheckSiteRules({
+      type: "add",
+      list: "whitelist",
+      rules: [original],
+    })
+    expect(
+      (
+        await userPreferences.mutateWebAiApiCheckSiteRules({
+          type: "edit",
+          list: "whitelist",
+          original,
+          rule,
+        })
+      ).ok,
+    ).toBe(true)
+    expect(
+      (
+        await userPreferences.mutateWebAiApiCheckSiteRules({
+          type: "add",
+          list: "blacklist",
+          rules: [{ syntax: "regex", pattern: "[" }],
+        })
+      ).ok,
+    ).toBe(false)
+    expect(
+      (
+        await userPreferences.setWebAiApiCheckSiteEnabled(
+          "file:///tmp/key",
+          true,
+        )
+      ).ok,
+    ).toBe(false)
+    await userPreferences.setWebAiApiCheckSiteEnabled(
+      "https://chosen.example/post",
+      false,
+    )
+    await userPreferences.setWebAiApiCheckSiteEnabled(
+      "https://chosen.example/post",
+      true,
+    )
+    await userPreferences.setWebAiApiCheckSiteEnabled(
+      "https://chosen.example/post",
+      true,
+    )
+    const saved = (await userPreferences.getPreferences()).webAiApiCheck!
+      .autoDetect.siteRules!
+    expect(saved.whitelist).toEqual([
+      rule,
+      { syntax: "wildcard", pattern: "https://chosen.example/*" },
+    ])
+    expect(saved.blacklist).toEqual([])
+    await userPreferences.resetWebAiApiCheck()
+  })
+
+  it("adds an origin to a legacy regex scope without replacing existing patterns", async () => {
+    await userPreferences.resetWebAiApiCheck()
+    await userPreferences.savePreferences({
+      webAiApiCheck: {
+        autoDetect: {
+          siteRules: null,
+          siteAccess: { mode: "regex", include: [], exclude: [] },
+          urlWhitelist: { patterns: ["^https://old\\.example/"] },
+        },
+      },
+    })
+    expect(
+      (
+        await userPreferences.setWebAiApiCheckSiteEnabled(
+          "https://new.example/page",
+          true,
+        )
+      ).ok,
+    ).toBe(true)
+    const patterns = (await userPreferences.getPreferences()).webAiApiCheck!
+      .autoDetect.urlWhitelist.patterns
+    expect(patterns).toHaveLength(2)
+    expect(patterns[0]).toBe("^https://old\\.example/")
+    expect(new RegExp(patterns[1]!).test("https://new.example/page")).toBe(true)
+    expect(new RegExp(patterns[1]!).test("https://new.example.evil/page")).toBe(
+      false,
+    )
+    await userPreferences.resetWebAiApiCheck()
+  })
+  it("does not widen a populated whitelist when a quick site choice conflicts with white priority", async () => {
+    const rule = {
+      syntax: WEB_AI_API_CHECK_RULE_SYNTAX.WILDCARD,
+      pattern: "https://one.example/*",
+    }
+    await userPreferences.savePreferences({
+      webAiApiCheck: {
+        autoDetect: {
+          siteRules: {
+            priority: WEB_AI_API_CHECK_RULE_LIST.WHITELIST,
+            whitelist: [rule],
+            blacklist: [],
+          },
+        },
+      },
+    })
+    await userPreferences.setWebAiApiCheckSiteEnabled(
+      "https://one.example/page",
+      false,
+    )
+    const rules = (await userPreferences.getPreferences()).webAiApiCheck!
+      .autoDetect.siteRules!
+    expect(rules.whitelist).toEqual([rule])
+    expect(rules.blacklist).toEqual([rule])
+    await userPreferences.resetWebAiApiCheck()
+    expect(
+      (await userPreferences.getPreferences()).webAiApiCheck!.autoDetect
+        .siteRules,
+    ).toBeNull()
+  })
+  it("rejects a stale rule edit without replacing another context's rules", async () => {
+    await userPreferences.resetWebAiApiCheck()
+    const original = {
+      syntax: WEB_AI_API_CHECK_RULE_SYNTAX.WILDCARD,
+      pattern: "*://one.example/*",
+    }
+    const replacement = {
+      syntax: WEB_AI_API_CHECK_RULE_SYNTAX.WILDCARD,
+      pattern: "*://two.example/*",
+    }
+    await userPreferences.mutateWebAiApiCheckSiteRules({
+      type: WEB_AI_API_CHECK_RULE_MUTATION.ADD,
+      list: WEB_AI_API_CHECK_RULE_LIST.WHITELIST,
+      rules: [original],
+    })
+    await userPreferences.mutateWebAiApiCheckSiteRules({
+      type: WEB_AI_API_CHECK_RULE_MUTATION.REMOVE,
+      list: WEB_AI_API_CHECK_RULE_LIST.WHITELIST,
+      rule: original,
+    })
+    const result = await userPreferences.mutateWebAiApiCheckSiteRules({
+      type: WEB_AI_API_CHECK_RULE_MUTATION.EDIT,
+      list: WEB_AI_API_CHECK_RULE_LIST.WHITELIST,
+      original,
+      rule: replacement,
+    })
+    expect(result.ok).toBe(false)
+    expect(
+      (await userPreferences.getPreferences()).webAiApiCheck!.autoDetect
+        .siteRules!.whitelist,
+    ).toEqual([])
+    await userPreferences.resetWebAiApiCheck()
+  })
+  it("keeps concurrent rule additions and priority changes in one preferences transaction", async () => {
+    await userPreferences.resetWebAiApiCheck()
+    await Promise.all([
+      userPreferences.mutateWebAiApiCheckSiteRules({
+        type: WEB_AI_API_CHECK_RULE_MUTATION.ADD,
+        list: WEB_AI_API_CHECK_RULE_LIST.WHITELIST,
+        rules: [
+          {
+            syntax: WEB_AI_API_CHECK_RULE_SYNTAX.WILDCARD,
+            pattern: "*://one.example/*",
+          },
+        ],
+      }),
+      userPreferences.mutateWebAiApiCheckSiteRules({
+        type: WEB_AI_API_CHECK_RULE_MUTATION.ADD,
+        list: WEB_AI_API_CHECK_RULE_LIST.BLACKLIST,
+        rules: [
+          {
+            syntax: WEB_AI_API_CHECK_RULE_SYNTAX.EXACT,
+            pattern: "https://one.example/private",
+          },
+        ],
+      }),
+      userPreferences.mutateWebAiApiCheckSiteRules({
+        type: WEB_AI_API_CHECK_RULE_MUTATION.PRIORITY,
+        priority: WEB_AI_API_CHECK_RULE_LIST.WHITELIST,
+      }),
+    ])
+    expect(
+      (await userPreferences.getPreferences()).webAiApiCheck!.autoDetect
+        .siteRules,
+    ).toEqual({
+      priority: WEB_AI_API_CHECK_RULE_LIST.WHITELIST,
+      whitelist: [
+        {
+          syntax: WEB_AI_API_CHECK_RULE_SYNTAX.WILDCARD,
+          pattern: "*://one.example/*",
+        },
+      ],
+      blacklist: [
+        {
+          syntax: WEB_AI_API_CHECK_RULE_SYNTAX.EXACT,
+          pattern: "https://one.example/private",
+        },
+      ],
+    })
+    await userPreferences.resetWebAiApiCheck()
+  })
+  it("reenables a plain excluded domain while preserving broader exclusions", async () => {
+    await userPreferences.savePreferences({
+      webAiApiCheck: {
+        autoDetect: {
+          siteAccess: {
+            mode: WEB_AI_API_CHECK_SITE_ACCESS_MODE.INCLUDE,
+            include: [],
+            exclude: ["example.com", "*.other.test"],
+          },
+        },
+      },
+    })
+    await userPreferences.setWebAiApiCheckSiteEnabled(
+      "https://example.com/post",
+      true,
+    )
+    expect(
+      (await userPreferences.getPreferences()).webAiApiCheck!.autoDetect
+        .siteAccess,
+    ).toEqual({
+      mode: WEB_AI_API_CHECK_SITE_ACCESS_MODE.INCLUDE,
+      include: ["https://example.com"],
+      exclude: ["*.other.test"],
+    })
+  })
+
+  it("preserves concurrent per-site detection choices and only changes the requested origin", async () => {
+    await userPreferences.savePreferences({
+      webAiApiCheck: {
+        autoDetect: {
+          siteAccess: {
+            mode: WEB_AI_API_CHECK_SITE_ACCESS_MODE.ALL,
+            include: [],
+            exclude: [],
+          },
+        },
+      },
+    })
+    await Promise.all([
+      userPreferences.setWebAiApiCheckSiteEnabled(
+        "https://one.example.com/post",
+        false,
+      ),
+      userPreferences.setWebAiApiCheckSiteEnabled(
+        "https://two.example.com/post",
+        false,
+      ),
+    ])
+    expect(
+      (await userPreferences.getPreferences()).webAiApiCheck!.autoDetect
+        .siteAccess!.exclude,
+    ).toEqual(
+      expect.arrayContaining([
+        "https://one.example.com",
+        "https://two.example.com",
+      ]),
+    )
+    await userPreferences.setWebAiApiCheckSiteEnabled(
+      "https://one.example.com/post",
+      true,
+    )
+    expect(
+      (await userPreferences.getPreferences()).webAiApiCheck!.autoDetect
+        .siteAccess!.exclude,
+    ).toEqual(["https://two.example.com"])
+  })
   it("merges gpt-load connection fields and resets only its own config", async () => {
     await userPreferences.savePreferences({
       gptLoad: { baseUrl: "http://gateway.lan", managementKey: "old" },

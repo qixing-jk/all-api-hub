@@ -1,6 +1,11 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { ensureRedemptionToastUi } from "~/entrypoints/content/shared/uiRoot"
+import { API_CHECK_CONFIRM_TOAST_ACTIONS } from "~/features/WebAiApiCheck/content/notifications/confirmToastActions"
 import toast from "~/lib/notify/content"
+import {
+  sendWebAiApiCheckMessage,
+  WebAiApiCheckMessageTypes,
+} from "~/services/verification/webAiApiCheck/messaging"
 import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { createLogger } from "~/utils/core/logger"
 
@@ -36,6 +41,7 @@ async function loadApiCheckToastModules() {
  */
 export async function showApiCheckConfirmToast(options?: {
   usesEnhancedResult?: boolean
+  missingBaseUrl?: boolean
 }): Promise<boolean> {
   await ensureRedemptionToastUi()
   const { createElement, ApiCheckConfirmToast } =
@@ -54,8 +60,18 @@ export async function showApiCheckConfirmToast(options?: {
     toast.custom(
       (toastInstance) =>
         createElement(ApiCheckConfirmToast, {
-          onAction: (action) => {
-            if (action === "settings") {
+          onAction: async (action) => {
+            if (action === API_CHECK_CONFIRM_TOAST_ACTIONS.DISABLE_SITE) {
+              const result = await sendWebAiApiCheckMessage(
+                WebAiApiCheckMessageTypes.SetSiteAccess,
+                { pageUrl: window.location.href, enabled: false },
+              )
+              if (!result.success)
+                throw new Error("Website preference write failed")
+              finish(false, toastInstance.id)
+              return
+            }
+            if (action === API_CHECK_CONFIRM_TOAST_ACTIONS.SETTINGS) {
               void sendRuntimeMessage({
                 action: RuntimeActionIds.OpenSettingsWebAiApiCheck,
               }).catch((error) => {
@@ -66,7 +82,7 @@ export async function showApiCheckConfirmToast(options?: {
               })
               return
             }
-            if (action === "feedback") {
+            if (action === API_CHECK_CONFIRM_TOAST_ACTIONS.FEEDBACK) {
               void sendRuntimeMessage({
                 action: RuntimeActionIds.OpenFeedbackBugReport,
               }).catch((error) => {
@@ -77,9 +93,13 @@ export async function showApiCheckConfirmToast(options?: {
               })
               return
             }
-            finish(action === "confirm", toastInstance.id)
+            finish(
+              action === API_CHECK_CONFIRM_TOAST_ACTIONS.CONFIRM,
+              toastInstance.id,
+            )
           },
           usesEnhancedResult: !!options?.usesEnhancedResult,
+          missingBaseUrl: !!options?.missingBaseUrl,
         }),
       {
         duration: Infinity,

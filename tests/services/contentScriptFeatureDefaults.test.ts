@@ -14,6 +14,9 @@ describe("resolveContentFeaturePreferences", () => {
   })
 
   it("defaults Web AI API Check automatic and enhanced automatic detection to enabled", () => {
+    expect(
+      DEFAULT_WEB_AI_API_CHECK_PREFERENCES.autoDetect.urlWhitelist.patterns,
+    ).toEqual(["^https?://"])
     expect(DEFAULT_WEB_AI_API_CHECK_PREFERENCES.autoDetect.enabled).toBe(true)
     expect(
       DEFAULT_WEB_AI_API_CHECK_PREFERENCES.autoDetect.enhanced.enabled,

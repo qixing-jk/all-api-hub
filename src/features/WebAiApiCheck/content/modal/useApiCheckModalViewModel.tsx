@@ -433,6 +433,7 @@ export function useApiCheckModalViewModel() {
   )
   return {
     view: {
+      pageUrl,
       isOpen,
       sourceText,
       baseUrl,

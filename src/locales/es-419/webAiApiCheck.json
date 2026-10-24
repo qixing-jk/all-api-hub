@@ -3,14 +3,11 @@
     "body": "¿Quieres abrir el panel de prueba de AI API para comprobar y probar la disponibilidad de la AI API?",
     "enhancedInfo": "Activado por la autodetección mejorada. Si esto parece incorrecto, repórtalo o desactiva la autodetección mejorada en ajustes.",
     "feedback": "Reportar problema",
+    "keyOnlyBody": "Se decodificó una posible clave API, pero no se encontró la URL de la API. ¿Abrir el panel de pruebas para agregar la URL antes de probar?",
+    "keyOnlyTitle": "Se detectó una clave API",
     "open": "Abrir",
     "settings": "Abrir ajustes",
     "title": "URL de AI API y clave de API detectadas"
-  },
-  "messages": {
-    "success": {
-      "settingsSaved": "Los ajustes de AI API Check se guardaron."
-    }
   },
   "modal": {
     "actions": {
@@ -87,32 +84,85 @@
   "settings": {
     "autoDetect": {
       "enable": "Habilitar autodetección",
-      "enableDesc": "Cuando está habilitada, la extensión puede detectar credenciales a partir de acciones de copiado y pedirá confirmación antes de abrir el modal.",
+      "enableDesc": "Muestra una confirmación cuando el contenido seleccionado o copiado contiene credenciales de API.",
       "enhanced": {
         "enable": "Habilitar autodetección mejorada",
         "enableDesc": "Reconoce dominios sueltos, formatos de clave no estándar y claves mezcladas con caracteres inválidos en contenido copiado. Las coincidencias mejoradas muestran un aviso en el modal y se pueden desactivar rápidamente."
-      },
-      "whitelist": {
-        "invalidMore": "…y más",
-        "invalidTitle": "Patrones inválidos",
-        "patterns": "Patrones de lista permitida de URL",
-        "patternsDesc": "Un patrón RegExp de JavaScript por línea. Se aplica coincidencia sin distinguir mayúsculas/minúsculas. Los patrones inválidos se ignoran (se tratan como no coincidentes).",
-        "patternsPlaceholder": "^https://example\\.com/console"
       }
     },
+    "autoSaveHint": "Se guarda al salir del campo. Las entradas no válidas conservan las reglas guardadas.",
     "contextMenu": {
       "enable": "Mostrar en el menú contextual del navegador",
       "enableDesc": "Agrega un elemento “AI API Check” al menú contextual del navegador."
     },
-    "description": "El disparador manual del menú contextual siempre está disponible. La autodetección es opcional y solo se ejecuta en páginas permitidas. Las API keys extraídas no se guardan de forma predeterminada.",
+    "description": "Detecta credenciales de API seleccionadas o copiadas en páginas web.",
     "keyCleanup": {
       "invalidMore": "…y más",
       "invalidTitle": "Patrones de limpieza inválidos",
       "patterns": "Patrones de limpieza de API key",
-      "patternsDesc": "Usa esto cuando las claves copiadas incluyan etiquetas, corchetes o separadores adicionales. Agrega una expresión regular por línea; las reglas inválidas se muestran antes de guardar.",
-      "patternsPlaceholder": "\\[\\[remove-this\\]\\]\n【remove-this】\n<remove-this>\n(?:separator|noise)\n[\\s\\-_.]+",
-      "save": "Guardar patrones de limpieza"
+      "patternsDesc": "Usa esto cuando las claves copiadas incluyan etiquetas, corchetes o separadores adicionales. Agrega una expresión regular por línea; las reglas inválidas se muestran antes de guardar. Se guarda al salir del campo. Las entradas no válidas conservan las reglas guardadas.",
+      "patternsPlaceholder": "\\[\\[remove-this\\]\\]\n【remove-this】\n<remove-this>\n(?:separator|noise)\n[\\s\\-_.]+"
+    },
+    "siteAccess": {
+      "disabledHint": "La detección automática está desactivada. Este alcance se aplica al activarla."
+    },
+    "siteRules": {
+      "addBlacklist": "Agregar a bloqueo",
+      "addRow": "Agregar otra regla",
+      "addWhitelist": "Agregar a permisos",
+      "allowed": "Avisos permitidos",
+      "autoDetectOff": "Detección automática desactivada",
+      "blacklist": "Lista de bloqueo",
+      "blacklistFirst": "Priorizar lista de bloqueo",
+      "blacklistHint": "Ocultar avisos en páginas coincidentes.",
+      "blackMatch": "Coincide con la lista de bloqueo",
+      "blackPriorityMatch": "Coincide con ambas listas; se prioriza la de bloqueo",
+      "blocked": "Sin avisos",
+      "content": "Contenido de la regla",
+      "currentPage": "Solo esta página",
+      "defaultHint": "Una lista de permisos vacía permite todos los sitios salvo los bloqueados.",
+      "defaultMatch": "Lista de permisos vacía; permitido por defecto",
+      "description": "Elige dónde aparecen los avisos de detección automática. Las pruebas manuales no se ven afectadas.",
+      "edit": "Editar regla",
+      "emptyBlacklist": "No hay sitios bloqueados.",
+      "emptyWhitelist": "Sin reglas; se permiten todos los sitios por defecto.",
+      "exact": "URL exacta",
+      "exactHint": "Coincide con la URL completa, incluidos ruta, consulta y fragmento.",
+      "invalid": "Revisa las reglas. Agrega al menos una válida; edita una a la vez.",
+      "legacy": "Regla de sitio existente",
+      "legacyHint": "Conserva la coincidencia anterior de dominio, subdominio y prefijo de ruta.",
+      "noTabs": "No hay pestañas web disponibles; ingresa una URL manualmente.",
+      "placeholder": "Ingresa un dominio o URL; pega varias líneas para agregar en lote.",
+      "preview": "Probar una URL",
+      "priority": "Cuando coinciden ambas listas",
+      "priorityHint": "Se aplica solo si una URL coincide con ambas listas.",
+      "regex": "Expresión regular",
+      "regexHint": "Una expresión JavaScript por línea, sin distinguir mayúsculas. No se guardan expresiones inválidas o inseguras.",
+      "restrictedHint": "Solo los sitios permitidos muestran avisos. Los conflictos siguen la prioridad.",
+      "saveFailed": "No se pudo guardar. Se conservó la entrada; vuelve a intentarlo.",
+      "showAll": "Mostrar todo",
+      "showLess": "Mostrar menos",
+      "subdomains": "Incluir subdominios",
+      "syntax": "Sintaxis",
+      "tabPicker": "Elegir entre pestañas abiertas",
+      "title": "Listas de permisos y bloqueo de sitios",
+      "unlisted": "Sin coincidencia en permisos",
+      "unsupported": "Ingresa una URL HTTP o HTTPS.",
+      "whitelist": "Lista de permisos",
+      "whitelistFirst": "Priorizar lista de permisos",
+      "whitelistHint": "Permitir avisos en páginas coincidentes.",
+      "whiteMatch": "Coincide con la lista de permisos",
+      "whitePriorityMatch": "Coincide con ambas listas; se prioriza la de permisos",
+      "wholeSite": "Todo el sitio",
+      "wildcard": "Comodín (predeterminado)",
+      "wildcardHint": "* coincide con cualquier texto. Los dominios pasan a *://dominio/*; usa *.example.com para subdominios."
     },
     "title": "Prueba de disponibilidad de funcionalidad de Web AI API"
+  },
+  "siteControl": {
+    "disable": "Desactivar la detección automática en este sitio",
+    "failed": "No se aplicó la elección. Revisa las listas y su prioridad, o reintenta.",
+    "globalDisabled": "La detección automática global está desactivada. Actívala en ajustes.",
+    "label": "Detectar automáticamente en este sitio"
   }
 }

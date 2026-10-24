@@ -3,14 +3,11 @@
     "body": "是否開啟 AI API 測試面板，以檢查並測試 AI API 可用性？",
     "enhancedInfo": "此提示由增強自動檢測觸發。若判斷有誤，建議回報問題；也可在設定中關閉增強自動檢測。",
     "feedback": "回報問題",
+    "keyOnlyBody": "已解碼出疑似 API 金鑰，尚未辨識到 API 網址。是否開啟測試面板，補充網址後再測試？",
+    "keyOnlyTitle": "偵測到 API Key",
     "open": "開啟",
     "settings": "開啟設定",
     "title": "檢測到有效 AI API 網址和API Key"
-  },
-  "messages": {
-    "success": {
-      "settingsSaved": "AI API 檢測設定已儲存。"
-    }
   },
   "modal": {
     "actions": {
@@ -87,32 +84,85 @@
   "settings": {
     "autoDetect": {
       "enable": "啟用自動檢測",
-      "enableDesc": "啟用後，擴充套件可能從複製操作中識別憑據，並在開啟彈窗前請求確認。",
+      "enableDesc": "選取或複製包含 API 憑證的內容時，提示開啟偵測面板。",
       "enhanced": {
         "enable": "啟用增強自動檢測",
         "enableDesc": "識別裸網域、非標準金鑰格式，以及複製內容中夾雜非法字元的金鑰。增強命中會在彈窗中提示並可快速關閉。"
-      },
-      "whitelist": {
-        "invalidMore": "…以及更多",
-        "invalidTitle": "無效規則",
-        "patterns": "URL 白名單規則",
-        "patternsDesc": "每行一個 JavaScript RegExp。匹配時預設使用不區分大小寫。無效規則會被忽略（視為不匹配）。",
-        "patternsPlaceholder": "^https://example\\.com/console"
       }
     },
+    "autoSaveHint": "離開輸入框後自動儲存；無效內容不會覆蓋已儲存規則。",
     "contextMenu": {
       "enable": "在瀏覽器右鍵選單中顯示",
       "enableDesc": "啟用後，在網頁右鍵選單中顯示“AI API 檢測”入口。"
     },
-    "description": "手動右鍵選單始終可用。自動檢測為可選功能，僅在白名單頁面執行，並在開啟彈窗前請求確認。預設不會儲存提取到的 API Key。",
+    "description": "偵測網頁中選取或複製的 API 憑證，並可開啟面板檢查。",
     "keyCleanup": {
       "invalidMore": "…以及更多",
       "invalidTitle": "無效清理規則",
       "patterns": "API Key 清理規則",
-      "patternsDesc": "如果複製到的 Key 夾帶提示詞、括號或分隔符，可以在這裡填寫要刪除的正規表示式規則。每行一條，儲存前會提示無效規則。",
-      "patternsPlaceholder": "\\[\\[刪除這裡\\]\\]\n【刪除這裡】\n<remove-this>\n(?:分隔符|separator|noise)\n[\\s\\-_.]+",
-      "save": "儲存清理規則"
+      "patternsDesc": "如果複製到的 Key 夾帶提示詞、括號或分隔符，可以在這裡填寫要刪除的正規表示式規則。每行一條，儲存前會提示無效規則。 離開輸入框後自動儲存；無效內容不會覆蓋已儲存規則。",
+      "patternsPlaceholder": "\\[\\[刪除這裡\\]\\]\n【刪除這裡】\n<remove-this>\n(?:分隔符|separator|noise)\n[\\s\\-_.]+"
+    },
+    "siteAccess": {
+      "disabledHint": "自動偵測已關閉，以下範圍在開啟後生效。"
+    },
+    "siteRules": {
+      "addBlacklist": "新增至黑名單",
+      "addRow": "新增一條規則",
+      "addWhitelist": "新增至白名單",
+      "allowed": "允許提示",
+      "autoDetectOff": "自動偵測已關閉",
+      "blacklist": "黑名單",
+      "blacklistFirst": "黑名單優先",
+      "blacklistHint": "不在符合的網頁中提示。",
+      "blackMatch": "符合黑名單",
+      "blackPriorityMatch": "同時符合黑白名單，依黑名單優先處理",
+      "blocked": "不提示",
+      "content": "規則內容",
+      "currentPage": "目前頁面",
+      "defaultHint": "白名單為空：預設允許所有網站，黑名單符合的網站除外。",
+      "defaultMatch": "白名單為空，預設允許",
+      "description": "設定哪些網站可以出現自動偵測提示，不影響手動測試。",
+      "edit": "編輯規則",
+      "emptyBlacklist": "尚未新增，沒有額外封鎖的網站。",
+      "emptyWhitelist": "尚未新增，預設允許所有網站。",
+      "exact": "精確網址",
+      "exactHint": "符合完整網址，包含路徑、查詢參數與片段。",
+      "invalid": "請修正規則；至少填寫一條有效規則，編輯時每次限一條。",
+      "legacy": "原有網站規則",
+      "legacyHint": "保留原有網域、子網域與路徑前綴的符合行為。",
+      "noTabs": "沒有可讀取的網頁分頁，可手動輸入網址。",
+      "placeholder": "輸入網域或網址，可一次貼上多行。",
+      "preview": "試試網址是否會提示",
+      "priority": "同時符合時，誰優先？",
+      "priorityHint": "僅在同一網址同時符合兩份名單時使用。",
+      "regex": "正規表示式",
+      "regexHint": "每行一條 JavaScript 正規表示式，不區分大小寫；無效或不安全的表示式無法儲存。",
+      "restrictedHint": "已設定白名單：僅符合的網站可提示，重疊時依優先順序處理。",
+      "saveFailed": "儲存失敗，已保留輸入內容，可重試。",
+      "showAll": "展開全部",
+      "showLess": "收合",
+      "subdomains": "包含子網域",
+      "syntax": "語法類型",
+      "tabPicker": "從已開啟的分頁選擇",
+      "title": "網站黑白名單",
+      "unlisted": "未符合白名單",
+      "unsupported": "請輸入 HTTP 或 HTTPS 網址。",
+      "whitelist": "白名單",
+      "whitelistFirst": "白名單優先",
+      "whitelistHint": "允許在符合的網頁中提示。",
+      "whiteMatch": "符合白名單",
+      "whitePriorityMatch": "同時符合黑白名單，依白名單優先處理",
+      "wholeSite": "整個網站",
+      "wildcard": "萬用字元（預設）",
+      "wildcardHint": "* 符合任意字元。網域會補為 *://網域/*；子網域請寫 *.example.com。"
     },
     "title": "網頁 AI API 功能可用性測試"
+  },
+  "siteControl": {
+    "disable": "在此網站關閉自動偵測",
+    "failed": "操作未生效，請檢查黑白名單與優先順序設定，或重試。",
+    "globalDisabled": "全域自動偵測已關閉；可在設定中開啟。",
+    "label": "在此網站自動偵測"
   }
 }

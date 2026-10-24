@@ -18,6 +18,7 @@ import {
   InputGroupInput,
 } from "~/components/ui/input-group"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import { getRecentBrowserTabSites } from "~/utils/browser/recentTabSites"
 import { getAllTabs } from "~/utils/browser/tabs"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
@@ -69,28 +70,7 @@ export function AccountSiteUrlInput({
     async function loadRecentSites() {
       try {
         const tabs = await getAllTabs()
-        const sites = new Map<string, RecentTabSite>()
-        for (const tab of [...tabs].sort(
-          (a, b) => (b.lastAccessed ?? 0) - (a.lastAccessed ?? 0),
-        )) {
-          if (!tab.url) continue
-          try {
-            const parsed = new URL(tab.url)
-            if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-              continue
-            }
-            const origin = parsed.origin
-            if (sites.has(origin)) continue
-            const title = tab.title?.trim()
-            sites.set(origin, {
-              value: origin,
-              label: title ? `${title} — ${origin}` : origin,
-            })
-          } catch {
-            // A tab can have an unavailable or incomplete URL during navigation.
-          }
-        }
-        if (!cancelled) setOptions([...sites.values()])
+        if (!cancelled) setOptions(getRecentBrowserTabSites(tabs))
       } catch (error) {
         logger.warn("Could not load recent tab sites", { error })
         if (!cancelled) {

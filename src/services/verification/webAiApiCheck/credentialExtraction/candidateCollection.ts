@@ -214,11 +214,17 @@ export function buildSummary(params: {
       ))
 
   const enhancedAutoPromptEligible =
-    !!params.selectedBaseUrl &&
     !!params.selectedApiKey &&
     usesEnhancedResult &&
-    !!params.selectedBaseUrl.autoPromptEligible &&
-    selectedKeyAllowsAuto
+    (params.selectedBaseUrl
+      ? !!params.selectedBaseUrl.autoPromptEligible && selectedKeyAllowsAuto
+      : !!params.selectedApiKey.autoPromptEligible &&
+        params.selectedApiKey.reasons.includes(
+          API_CHECK_CANDIDATE_REASONS.BASE64_DECODED,
+        ) &&
+        params.selectedApiKey.reasons.includes(
+          API_CHECK_CANDIDATE_REASONS.KNOWN_PREFIX,
+        ))
 
   return {
     hasEnhancedBaseUrl,

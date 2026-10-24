@@ -108,6 +108,24 @@ export function useContentScriptPreferenceActions({
     [applySuccessfulPreferenceWrite],
   )
 
+  const mutateWebAiApiCheckSiteRules = useCallback<
+    typeof userPreferences.mutateWebAiApiCheckSiteRules
+  >(
+    async (command) => {
+      const result = await userPreferences.mutateWebAiApiCheckSiteRules(command)
+      if (result.ok)
+        applySuccessfulPreferenceWrite(result, {
+          webAiApiCheck: {
+            autoDetect: {
+              siteRules: result.preferences.webAiApiCheck!.autoDetect.siteRules,
+            },
+          },
+        })
+      return result
+    },
+    [applySuccessfulPreferenceWrite],
+  )
+
   const updateTempWindowFallback = useCallback(
     async (updates: Partial<TempWindowFallbackPreferences>) => {
       const preferenceUpdates = {
@@ -152,6 +170,7 @@ export function useContentScriptPreferenceActions({
     updateTempWindowFallbackReminder,
     updateRedemptionAssist,
     updateWebAiApiCheck,
+    mutateWebAiApiCheckSiteRules,
     updateTempWindowFallback,
     resetRedemptionAssistConfig,
     resetWebAiApiCheckConfig,

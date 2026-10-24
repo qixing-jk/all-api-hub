@@ -3,14 +3,11 @@
     "body": "Bạn có muốn mở bảng kiểm tra AI API để kiểm tra và dùng thử khả năng khả dụng của AI API không?",
     "enhancedInfo": "Thông báo này được kích hoạt bởi tự động phát hiện nâng cao. Nếu kết quả sai, hãy báo lỗi hoặc tắt tự động phát hiện nâng cao trong cài đặt.",
     "feedback": "Báo lỗi",
+    "keyOnlyBody": "Đã giải mã một giá trị có thể là khóa API nhưng chưa tìm thấy URL API. Mở bảng kiểm tra để thêm URL trước khi kiểm tra?",
+    "keyOnlyTitle": "Đã phát hiện khóa API",
     "open": "Mở",
     "settings": "Mở cài đặt",
     "title": "Đã phát hiện URL AI API và API Key hợp lệ"
-  },
-  "messages": {
-    "success": {
-      "settingsSaved": "Đã lưu cài đặt phát hiện AI API."
-    }
   },
   "modal": {
     "actions": {
@@ -87,32 +84,85 @@
   "settings": {
     "autoDetect": {
       "enable": "Bật tự động phát hiện",
-      "enableDesc": "Sau khi bật, tiện ích có thể nhận diện thông tin xác thực từ thao tác sao chép và yêu cầu xác nhận trước khi mở cửa sổ bật lên.",
+      "enableDesc": "Hiển thị xác nhận khi nội dung được chọn hoặc sao chép chứa thông tin xác thực API.",
       "enhanced": {
         "enable": "Bật tự động phát hiện nâng cao",
         "enableDesc": "Nhận diện miền trần, định dạng khóa không chuẩn và khóa lẫn ký tự không hợp lệ trong nội dung đã sao chép. Kết quả nâng cao sẽ hiển thị nhắc nhở trong cửa sổ bật lên và có thể tắt nhanh."
-      },
-      "whitelist": {
-        "invalidMore": "...và nhiều hơn nữa",
-        "invalidTitle": "Quy tắc không hợp lệ",
-        "patterns": "Quy tắc danh sách trắng URL",
-        "patternsDesc": "Một JavaScript RegExp mỗi dòng. Mặc định không phân biệt chữ hoa chữ thường khi khớp. Các quy tắc không hợp lệ sẽ bị bỏ qua (coi như không khớp).",
-        "patternsPlaceholder": "^https://example\\.com/console"
       }
     },
+    "autoSaveHint": "Tự lưu khi rời ô nhập. Nội dung không hợp lệ không thay thế quy tắc đã lưu.",
     "contextMenu": {
       "enable": "Hiển thị trong menu chuột phải của trình duyệt",
       "enableDesc": "Sau khi bật, mục \"Phát hiện AI API\" sẽ hiển thị trong menu chuột phải của trang web."
     },
-    "description": "Menu chuột phải thủ công luôn khả dụng. Tự động phát hiện là một tính năng tùy chọn, chỉ chạy trên các trang trong danh sách trắng và yêu cầu xác nhận trước khi mở cửa sổ bật lên. API Key được trích xuất sẽ không được lưu theo mặc định.",
+    "description": "Phát hiện thông tin xác thực API được chọn hoặc sao chép trên trang web.",
     "keyCleanup": {
       "invalidMore": "...và nhiều hơn nữa",
       "invalidTitle": "Quy tắc làm sạch không hợp lệ",
       "patterns": "Quy tắc làm sạch API Key",
-      "patternsDesc": "Dùng khi Key sao chép có kèm nhãn, dấu ngoặc hoặc ký tự phân tách thừa. Mỗi dòng là một biểu thức chính quy; quy tắc không hợp lệ sẽ được báo trước khi lưu.",
-      "patternsPlaceholder": "\\[\\[xóa phần này\\]\\]\n【xóa phần này】\n<remove-this>\n(?:separator|noise)\n[\\s\\-_.]+",
-      "save": "Lưu quy tắc làm sạch"
+      "patternsDesc": "Dùng khi Key sao chép có kèm nhãn, dấu ngoặc hoặc ký tự phân tách thừa. Mỗi dòng là một biểu thức chính quy; quy tắc không hợp lệ sẽ được báo trước khi lưu. Tự lưu khi rời ô nhập. Nội dung không hợp lệ không thay thế quy tắc đã lưu.",
+      "patternsPlaceholder": "\\[\\[xóa phần này\\]\\]\n【xóa phần này】\n<remove-this>\n(?:separator|noise)\n[\\s\\-_.]+"
+    },
+    "siteAccess": {
+      "disabledHint": "Phát hiện tự động đang tắt. Phạm vi này áp dụng sau khi bạn bật."
+    },
+    "siteRules": {
+      "addBlacklist": "Thêm vào danh sách chặn",
+      "addRow": "Thêm quy tắc khác",
+      "addWhitelist": "Thêm vào danh sách cho phép",
+      "allowed": "Cho phép thông báo",
+      "autoDetectOff": "Tự động phát hiện đã tắt",
+      "blacklist": "Danh sách chặn",
+      "blacklistFirst": "Ưu tiên danh sách chặn",
+      "blacklistHint": "Ẩn thông báo trên trang khớp.",
+      "blackMatch": "Khớp danh sách chặn",
+      "blackPriorityMatch": "Khớp cả hai danh sách; ưu tiên danh sách chặn",
+      "blocked": "Không thông báo",
+      "content": "Nội dung quy tắc",
+      "currentPage": "Chỉ trang này",
+      "defaultHint": "Danh sách cho phép trống cho phép mọi trang, trừ trang bị chặn.",
+      "defaultMatch": "Danh sách cho phép trống; mặc định cho phép",
+      "description": "Chọn nơi hiển thị thông báo tự động phát hiện. Không ảnh hưởng đến kiểm tra thủ công.",
+      "edit": "Sửa quy tắc",
+      "emptyBlacklist": "Chưa chặn trang nào.",
+      "emptyWhitelist": "Chưa có quy tắc; mặc định cho phép mọi trang.",
+      "exact": "URL chính xác",
+      "exactHint": "Khớp URL đầy đủ, gồm đường dẫn, truy vấn và phân đoạn.",
+      "invalid": "Kiểm tra quy tắc. Cần ít nhất một quy tắc hợp lệ; mỗi lần sửa một quy tắc.",
+      "legacy": "Quy tắc trang hiện có",
+      "legacyHint": "Giữ cách khớp tên miền, tên miền phụ và tiền tố đường dẫn cũ.",
+      "noTabs": "Không có thẻ web đọc được; hãy nhập URL thủ công.",
+      "placeholder": "Nhập tên miền hoặc URL; dán nhiều dòng để thêm hàng loạt.",
+      "preview": "Thử một URL",
+      "priority": "Khi khớp cả hai danh sách",
+      "priorityHint": "Chỉ áp dụng khi một URL khớp cả hai danh sách.",
+      "regex": "Biểu thức chính quy",
+      "regexHint": "Mỗi dòng một biểu thức JavaScript, không phân biệt hoa thường. Không lưu biểu thức không hợp lệ hoặc không an toàn.",
+      "restrictedHint": "Chỉ trang khớp danh sách cho phép mới hiện thông báo; xung đột theo mức ưu tiên.",
+      "saveFailed": "Không lưu được. Nội dung nhập được giữ lại; hãy thử lại.",
+      "showAll": "Hiện tất cả",
+      "showLess": "Thu gọn",
+      "subdomains": "Gồm tên miền phụ",
+      "syntax": "Cú pháp",
+      "tabPicker": "Chọn từ các thẻ đang mở",
+      "title": "Danh sách cho phép và chặn trang web",
+      "unlisted": "Không khớp danh sách cho phép",
+      "unsupported": "Nhập URL HTTP hoặc HTTPS.",
+      "whitelist": "Danh sách cho phép",
+      "whitelistFirst": "Ưu tiên danh sách cho phép",
+      "whitelistHint": "Cho phép thông báo trên trang khớp.",
+      "whiteMatch": "Khớp danh sách cho phép",
+      "whitePriorityMatch": "Khớp cả hai danh sách; ưu tiên danh sách cho phép",
+      "wholeSite": "Toàn bộ trang web",
+      "wildcard": "Ký tự đại diện (mặc định)",
+      "wildcardHint": "* khớp mọi ký tự. Tên miền thành *://tên-miền/*; dùng *.example.com cho tên miền phụ."
     },
     "title": "Kiểm tra khả năng khả dụng của AI API trên trang web"
+  },
+  "siteControl": {
+    "disable": "Tắt phát hiện tự động trên trang web này",
+    "failed": "Không áp dụng được lựa chọn. Kiểm tra hai danh sách và mức ưu tiên hoặc thử lại.",
+    "globalDisabled": "Tự phát hiện toàn cục đang tắt. Có thể bật trong cài đặt.",
+    "label": "Tự phát hiện trên trang này"
   }
 }

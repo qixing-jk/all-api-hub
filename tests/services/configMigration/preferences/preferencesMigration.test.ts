@@ -41,6 +41,52 @@ const buildModelRedirectFixture = () => ({
   pruneMissingTargetsOnModelSync: false,
 })
 
+it("loads v29 imports that omit the legacy website patterns array", () => {
+  const prefs = buildUserPreferences()
+  prefs.preferencesVersion = 29
+  delete prefs.webAiApiCheck!.autoDetect.siteAccess
+  prefs.webAiApiCheck!.autoDetect.urlWhitelist = {} as { patterns: string[] }
+  const migrated = migratePreferences(prefs)
+  expect(migrated.preferencesVersion).toBe(30)
+  expect(migrated.webAiApiCheck!.autoDetect.siteAccess?.mode).toBe("all")
+  expect(migrated.webAiApiCheck!.autoDetect.urlWhitelist.patterns).toEqual([
+    "^https?://",
+  ])
+})
+
+it.each([
+  { version: 25, patterns: [], expected: ["^https?://"] },
+  {
+    version: 25,
+    patterns: ["^https://linux\\.do/"],
+    expected: ["^https://linux\\.do/"],
+  },
+  { version: 29, patterns: [], expected: ["^https?://"] },
+  {
+    version: 29,
+    patterns: ["^https://linux\\.do/"],
+    expected: ["^https://linux\\.do/"],
+  },
+])(
+  "migrates v$version web API detection without replacing configured rules: $patterns",
+  ({ version, patterns, expected }) => {
+    const prefs = buildUserPreferences()
+    prefs.preferencesVersion = version
+    delete prefs.webAiApiCheck!.autoDetect.siteAccess
+    prefs.webAiApiCheck!.autoDetect.urlWhitelist.patterns = patterns
+    prefs.webAiApiCheck!.autoDetect.enabled = false
+    const migrated = migratePreferences(prefs)
+    expect(migrated.webAiApiCheck!.autoDetect.urlWhitelist.patterns).toEqual(
+      expected,
+    )
+    expect(migrated.webAiApiCheck!.autoDetect.enabled).toBe(false)
+    expect(migrated.webAiApiCheck!.autoDetect.siteAccess?.mode).toBe(
+      patterns.length ? "regex" : "all",
+    )
+    expect(migrated.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
+  },
+)
+
 const buildChannelModelFilterRule = (
   overrides: Partial<ChannelModelPatternFilterRule> = {},
 ): ChannelModelFilterRule => ({
@@ -118,7 +164,7 @@ function createV0Preferences(
 
 describe("preferencesMigration", () => {
   it("tracks the current preferences schema version", () => {
-    expect(CURRENT_PREFERENCES_VERSION).toBe(29)
+    expect(CURRENT_PREFERENCES_VERSION).toBe(30)
   })
 
   describe("getPreferencesVersion", () => {
@@ -455,7 +501,7 @@ describe("preferencesMigration", () => {
         },
       })
       const migrated = migratePreferences(prefs)
-      expect(migrated.preferencesVersion).toBe(29)
+      expect(migrated.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
       expect(migrated.sortField).toBe(DATA_TYPE_CONSUMPTION)
       expect(migrated.sortOrder).toBe("asc")
       expect(migrated.sortingPriorityConfig?.criteria).toEqual([

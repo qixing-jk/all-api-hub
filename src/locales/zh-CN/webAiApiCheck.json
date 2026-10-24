@@ -3,14 +3,11 @@
     "body": "是否打开 AI API 测试面板，以检查并测试 AI API 可用性？",
     "enhancedInfo": "此提示由增强自动检测触发。若判断有误，建议反馈问题；也可在设置中关闭增强自动检测。",
     "feedback": "反馈问题",
+    "keyOnlyBody": "已解码出疑似 API 密钥，尚未识别到 API 地址。是否打开测试面板，补充地址后再测试？",
+    "keyOnlyTitle": "检测到 API Key",
     "open": "打开",
     "settings": "打开设置",
     "title": "检测到有效 AI API 网址和API Key"
-  },
-  "messages": {
-    "success": {
-      "settingsSaved": "AI API 检测设置已保存。"
-    }
   },
   "modal": {
     "actions": {
@@ -87,32 +84,85 @@
   "settings": {
     "autoDetect": {
       "enable": "启用自动检测",
-      "enableDesc": "启用后，扩展可能从复制操作中识别凭据，并在打开弹窗前请求确认。",
+      "enableDesc": "选中或复制包含 API 凭据的内容时，提示打开检测面板。",
       "enhanced": {
         "enable": "启用增强自动检测",
         "enableDesc": "识别裸域名、非标准密钥格式，以及复制内容中夹杂非法字符的密钥。增强命中会在弹窗中提示并可快速关闭。"
-      },
-      "whitelist": {
-        "invalidMore": "…以及更多",
-        "invalidTitle": "无效规则",
-        "patterns": "URL 白名单规则",
-        "patternsDesc": "每行一个 JavaScript RegExp。匹配时默认使用不区分大小写。无效规则会被忽略（视为不匹配）。",
-        "patternsPlaceholder": "^https://example\\.com/console"
       }
     },
+    "autoSaveHint": "离开输入框后自动保存；无效内容不会覆盖已保存规则。",
     "contextMenu": {
       "enable": "在浏览器右键菜单中显示",
       "enableDesc": "启用后，在网页右键菜单中显示“AI API 检测”入口。"
     },
-    "description": "手动右键菜单始终可用。自动检测为可选功能，仅在白名单页面运行，并在打开弹窗前请求确认。默认不会保存提取到的 API Key。",
+    "description": "检测网页中选中或复制的 API 凭据，并可打开面板检查。",
     "keyCleanup": {
       "invalidMore": "…以及更多",
       "invalidTitle": "无效清理规则",
       "patterns": "API Key 清理规则",
-      "patternsDesc": "如果复制到的 Key 里夹着提示词、括号或分隔符，可以在这里填写要删除的正则规则。每行一条，保存前会提示无效规则。",
-      "patternsPlaceholder": "\\[\\[删除这里\\]\\]\n【删除这里】\n<remove-this>\n(?:分隔符|separator|noise)\n[\\s\\-_.]+",
-      "save": "保存清理规则"
+      "patternsDesc": "如果复制到的 Key 里夹着提示词、括号或分隔符，可以在这里填写要删除的正则规则。每行一条，保存前会提示无效规则。 离开输入框后自动保存；无效内容不会覆盖已保存规则。",
+      "patternsPlaceholder": "\\[\\[删除这里\\]\\]\n【删除这里】\n<remove-this>\n(?:分隔符|separator|noise)\n[\\s\\-_.]+"
+    },
+    "siteAccess": {
+      "disabledHint": "自动检测已关闭，以下范围在开启后生效。"
+    },
+    "siteRules": {
+      "addBlacklist": "添加到黑名单",
+      "addRow": "添加一条规则",
+      "addWhitelist": "添加到白名单",
+      "allowed": "允许提示",
+      "autoDetectOff": "自动检测已关闭",
+      "blacklist": "黑名单",
+      "blacklistFirst": "黑名单优先",
+      "blacklistHint": "不在匹配的网页中提示。",
+      "blackMatch": "命中黑名单",
+      "blackPriorityMatch": "同时命中黑白名单，按黑名单优先处理",
+      "blocked": "不提示",
+      "content": "规则内容",
+      "currentPage": "当前页面",
+      "defaultHint": "白名单为空：默认允许所有网站，黑名单命中的网站除外。",
+      "defaultMatch": "白名单为空，默认允许",
+      "description": "设置哪些网站可以出现自动检测提示，不影响手动测试。",
+      "edit": "编辑规则",
+      "emptyBlacklist": "尚未添加，没有额外拦截的网站。",
+      "emptyWhitelist": "尚未添加，默认允许所有网站。",
+      "exact": "精确网址",
+      "exactHint": "匹配完整网址，包含路径、查询参数和片段。",
+      "invalid": "请修正规则；至少填写一条有效规则，编辑时每次限一条。",
+      "legacy": "原有网站规则",
+      "legacyHint": "保留原有域名、子域名和路径前缀的匹配行为。",
+      "noTabs": "没有可读取的网页标签，可手动输入网址。",
+      "placeholder": "输入域名或网址，可一次粘贴多行。",
+      "preview": "试一试网址是否会提示",
+      "priority": "同时命中时，谁优先？",
+      "priorityHint": "仅在同一网址同时命中两份名单时使用。",
+      "regex": "正则表达式",
+      "regexHint": "每行一条 JavaScript 正则，不区分大小写；无效或不安全的表达式不能保存。",
+      "restrictedHint": "已设置白名单：仅命中的网站可提示，重叠时按优先级处理。",
+      "saveFailed": "保存失败，已保留输入内容，可重试。",
+      "showAll": "展开全部",
+      "showLess": "收起",
+      "subdomains": "包含子域名",
+      "syntax": "语法类型",
+      "tabPicker": "从已打开的标签页选择",
+      "title": "网站黑白名单",
+      "unlisted": "未命中白名单",
+      "unsupported": "请输入 HTTP 或 HTTPS 网址。",
+      "whitelist": "白名单",
+      "whitelistFirst": "白名单优先",
+      "whitelistHint": "允许在匹配的网页中提示。",
+      "whiteMatch": "命中白名单",
+      "whitePriorityMatch": "同时命中黑白名单，按白名单优先处理",
+      "wholeSite": "整个网站",
+      "wildcard": "通配符（默认）",
+      "wildcardHint": "* 匹配任意字符。域名会补为 *://域名/*；子域名请写 *.example.com。"
     },
     "title": "网页 AI API 功能可用性测试"
+  },
+  "siteControl": {
+    "disable": "在此网站关闭自动检测",
+    "failed": "操作未生效，请检查黑白名单及优先级设置，或重试。",
+    "globalDisabled": "全局自动检测已关闭；可在设置中开启。",
+    "label": "在此网站自动检测"
   }
 }

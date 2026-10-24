@@ -5,6 +5,20 @@ import {
   DEFAULT_SORTING_PRIORITY_CONFIG,
 } from "~/services/preferences/utils/sortingPriority"
 import {
+  matchesSitePattern,
+  resolveWebAiApiCheckSiteAccess,
+} from "~/services/verification/webAiApiCheck/siteAccess"
+import {
+  WEB_AI_API_CHECK_RULE_SYNTAX,
+  WEB_AI_API_CHECK_SITE_ACCESS_MODE,
+} from "~/services/verification/webAiApiCheck/siteRuleConstants"
+import { applyWebAiApiCheckRuleMutation } from "~/services/verification/webAiApiCheck/siteRuleMutations"
+import type { WebAiApiCheckRuleMutation } from "~/services/verification/webAiApiCheck/siteRules"
+import {
+  resolveWebAiApiCheckSiteRules,
+  sameWebAiApiCheckSiteRule,
+} from "~/services/verification/webAiApiCheck/siteRules"
+import {
   type ActiveSortField,
   type CurrencyType,
   type DashboardTabType,
@@ -31,6 +45,7 @@ import { type TaskNotificationPreferences } from "~/types/taskNotifications"
 import { type DeepPartial } from "~/types/utils"
 import { type VeloeraConfig } from "~/types/veloeraConfig"
 import { type WebDAVSettings } from "~/types/webdav"
+import { buildOriginWhitelistPattern } from "~/utils/core/urlWhitelist"
 import { normalizeAppLanguage } from "~/utils/i18n/language"
 
 import { DEFAULT_PREFERENCES } from "./preferencesDefaults"
@@ -506,6 +521,93 @@ class UserPreferencesService extends PreferencesStore {
   ): Promise<PreferenceWriteResult> {
     return this.savePreferences({
       webAiApiCheck: updates,
+    })
+  }
+
+  /** Rule edits derive from the latest snapshot under the preferences write lock. */
+  async mutateWebAiApiCheckSiteRules(
+    command: WebAiApiCheckRuleMutation,
+  ): Promise<PreferenceWriteResult> {
+    return this.mutatePreferencesWithResult((current) => {
+      const config =
+        current.webAiApiCheck?.autoDetect ??
+        DEFAULT_PREFERENCES.webAiApiCheck!.autoDetect
+      const rules = applyWebAiApiCheckRuleMutation(config, command)
+      return { webAiApiCheck: { autoDetect: { siteRules: rules } } }
+    })
+  }
+
+  /** Apply a website choice without losing another tab's simultaneous choice. */
+  async setWebAiApiCheckSiteEnabled(
+    pageUrl: string,
+    enabled: boolean,
+  ): Promise<PreferenceWriteResult> {
+    return this.mutatePreferencesWithResult((current) => {
+      const url = new URL(pageUrl)
+      if (!/^https?:$/.test(url.protocol))
+        throw new Error("Unsupported website URL")
+      const origin = url.origin
+      const config =
+        current.webAiApiCheck?.autoDetect ??
+        DEFAULT_PREFERENCES.webAiApiCheck!.autoDetect
+      if (config.siteRules) {
+        const rules = resolveWebAiApiCheckSiteRules(config)
+        const originRule = {
+          syntax: WEB_AI_API_CHECK_RULE_SYNTAX.WILDCARD,
+          pattern: `${origin}/*`,
+        }
+        const blacklist = rules.blacklist.filter(
+          (rule) => !sameWebAiApiCheckSiteRule(rule, originRule),
+        )
+        const whitelist = [...rules.whitelist]
+        if (!enabled) blacklist.push(originRule)
+        else if (
+          whitelist.length &&
+          !whitelist.some((rule) => sameWebAiApiCheckSiteRule(rule, originRule))
+        )
+          whitelist.push(originRule)
+        return {
+          webAiApiCheck: {
+            autoDetect: { siteRules: { ...rules, whitelist, blacklist } },
+          },
+        }
+      }
+      const access = resolveWebAiApiCheckSiteAccess(config)
+      const exclude = access.exclude.filter(
+        (value) =>
+          value !== origin &&
+          !(
+            enabled &&
+            !value.includes("*") &&
+            matchesSitePattern(origin, value)
+          ),
+      )
+      if (!enabled) exclude.push(origin)
+      const include =
+        enabled && access.mode === WEB_AI_API_CHECK_SITE_ACCESS_MODE.INCLUDE
+          ? [...new Set([...access.include, origin])]
+          : access.include
+      const pattern = buildOriginWhitelistPattern(origin)!
+      return {
+        webAiApiCheck: {
+          autoDetect: {
+            siteAccess: { ...access, include, exclude },
+            ...(enabled &&
+            access.mode === WEB_AI_API_CHECK_SITE_ACCESS_MODE.REGEX
+              ? {
+                  urlWhitelist: {
+                    patterns: [
+                      ...new Set([
+                        ...(config.urlWhitelist?.patterns ?? []),
+                        pattern,
+                      ]),
+                    ],
+                  },
+                }
+              : {}),
+          },
+        },
+      }
     })
   }
 

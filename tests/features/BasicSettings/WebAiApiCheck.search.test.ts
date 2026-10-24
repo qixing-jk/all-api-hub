@@ -23,13 +23,13 @@ describe("web AI API check settings search definitions", () => {
     expect(
       webAiApiCheckSearchControls.map((control) => control.targetId),
     ).toEqual([
+      WEB_AI_API_CHECK_TARGET_IDS.siteScope,
+      WEB_AI_API_CHECK_TARGET_IDS.includedSites,
+      WEB_AI_API_CHECK_TARGET_IDS.excludedSites,
       WEB_AI_API_CHECK_TARGET_IDS.contextMenu,
       WEB_AI_API_CHECK_TARGET_IDS.autoDetect,
       WEB_AI_API_CHECK_TARGET_IDS.enhancedAutoDetect,
-      WEB_AI_API_CHECK_TARGET_IDS.whitelistPatterns,
-      WEB_AI_API_CHECK_TARGET_IDS.savePatterns,
       WEB_AI_API_CHECK_TARGET_IDS.keyCleanupPatterns,
-      WEB_AI_API_CHECK_TARGET_IDS.saveKeyCleanupPatterns,
     ])
   })
 })
