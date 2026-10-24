@@ -1,5 +1,23 @@
 # Changelog
 
+## [4.7.0](https://github.com/qixing-jk/all-api-hub/compare/v4.6.0...v4.7.0) (2026-10-24)
+
+
+### Features
+
+* **accounts:** add Daya API account integration ([#1735](https://github.com/qixing-jk/all-api-hub/issues/1735)) ([06dbdaf](https://github.com/qixing-jk/all-api-hub/commit/06dbdaf22e62ada629f9d862f5870d5f72948369))
+* **accounts:** improve the add and edit account UI ([#1738](https://github.com/qixing-jk/all-api-hub/issues/1738)) ([0ccf4a6](https://github.com/qixing-jk/all-api-hub/commit/0ccf4a6d201c434dc397eb1b864d88fa8da65e34))
+* **safari:** support isolated Cookie account requests ([#1744](https://github.com/qixing-jk/all-api-hub/issues/1744)) ([eb422e9](https://github.com/qixing-jk/all-api-hub/commit/eb422e9ba4275bc6c3bad9032e3274b1d1a97feb))
+* **verification:** add CLI request simulation profiles ([#1750](https://github.com/qixing-jk/all-api-hub/issues/1750)) ([fa8a675](https://github.com/qixing-jk/all-api-hub/commit/fa8a675922f8aebd63e7bbf8d4b709818376b41f))
+* **verification:** support image, video, embedding, rerank, and decision model verification ([#1741](https://github.com/qixing-jk/all-api-hub/issues/1741)) ([cbe9c97](https://github.com/qixing-jk/all-api-hub/commit/cbe9c9729d4b39b1c401c1fbd3060326d38dc637))
+
+
+### Bug Fixes
+
+* **accounts:** improve refresh and provider presentation ([#1733](https://github.com/qixing-jk/all-api-hub/issues/1733)) ([0bb6a74](https://github.com/qixing-jk/all-api-hub/commit/0bb6a749fa045cd472112fedef8cbc45c480e6f9))
+* **navigation:** unify target reveal and respect reduced motion ([#1745](https://github.com/qixing-jk/all-api-hub/issues/1745)) ([d577989](https://github.com/qixing-jk/all-api-hub/commit/d577989676f6cae6c9820351afa77832504a00a4))
+* **safari:** improve WebExtension compatibility ([#1747](https://github.com/qixing-jk/all-api-hub/issues/1747)) ([5a8a09d](https://github.com/qixing-jk/all-api-hub/commit/5a8a09dc205ff8c9b7a56f3865d85a65bd2b4bae))
+
 ## [4.6.0](https://github.com/qixing-jk/all-api-hub/compare/v4.5.0...v4.6.0) (2026-10-20)
 
 
