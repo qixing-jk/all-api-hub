@@ -6,37 +6,40 @@ import type { ApiVerificationProbeResult } from "~/services/verification/aiApiVe
 import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
 import { WEB_AI_API_CHECK_BASE_URL_HISTORY_SUGGESTION_LIMIT } from "~/services/verification/webAiApiCheck/constants"
 
-it("preserves a selected CLI request profile through background probe dispatch", async () => {
-  const background = await import(
-    "~/services/verification/webAiApiCheck/background"
-  )
-  const { runApiVerificationProbe } = await import(
-    "~/services/verification/aiApiVerification"
-  )
-  vi.mocked(runApiVerificationProbe).mockResolvedValue({
-    id: "text-generation",
-    status: "pass",
-    latencyMs: 1,
-    summary: "OK",
-    requestProfile: API_VERIFICATION_REQUEST_PROFILES.Codex,
-    requestProfileEnhanced: true,
-  })
-  await background.resolveWebAiApiCheckRunProbeMessage({
-    baseUrl: "https://example.invalid",
-    apiKey: "sk-test",
-    apiType: "openai",
-    modelId: "test",
-    probeId: "text-generation",
-    requestProfile: API_VERIFICATION_REQUEST_PROFILES.Codex,
-    requestProfileEnhanced: true,
-  })
-  expect(runApiVerificationProbe).toHaveBeenLastCalledWith(
-    expect.objectContaining({
-      requestProfile: API_VERIFICATION_REQUEST_PROFILES.Codex,
+it.each(Object.values(API_VERIFICATION_REQUEST_PROFILES))(
+  "preserves valid %s client identity through background probe dispatch",
+  async (requestProfile) => {
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const { runApiVerificationProbe } = await import(
+      "~/services/verification/aiApiVerification"
+    )
+    vi.mocked(runApiVerificationProbe).mockResolvedValue({
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 1,
+      summary: "OK",
+      requestProfile,
       requestProfileEnhanced: true,
-    }),
-  )
-})
+    })
+    await background.resolveWebAiApiCheckRunProbeMessage({
+      baseUrl: "https://example.invalid",
+      apiKey: "sk-test",
+      apiType: "openai",
+      modelId: "test",
+      probeId: "text-generation",
+      requestProfile,
+      requestProfileEnhanced: true,
+    })
+    expect(runApiVerificationProbe).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        requestProfile,
+        requestProfileEnhanced: true,
+      }),
+    )
+  },
+)
 
 const { onWebAiApiCheckMessageMock, webAiApiCheckMessageHandlers } = vi.hoisted(
   () => ({
@@ -822,6 +825,35 @@ describe("webAiApiCheck background handlers", () => {
       expect(responsePayload?.result?.status).toBe("fail")
       expect(responsePayload?.result?.summary).toBe("Forbidden: [REDACTED]")
       expect(responsePayload?.result?.mode).toBe(expectedMode)
+    },
+  )
+
+  it.each(["unknown", null, 7, {}])(
+    "rejects malformed client identity %j before probe dispatch",
+    async (requestProfile) => {
+      vi.resetModules()
+      const { runApiVerificationProbe } = await import(
+        "~/services/verification/aiApiVerification"
+      )
+      vi.mocked(runApiVerificationProbe).mockClear()
+      const background = await import(
+        "~/services/verification/webAiApiCheck/background"
+      )
+      const response = await background.resolveWebAiApiCheckRunProbeMessage({
+        apiType: "openai",
+        baseUrl: "https://example.invalid/v1",
+        apiKey: "synthetic-key",
+        modelId: "model",
+        probeId: "text-generation",
+        // Runtime messages can contain values outside their TypeScript contract.
+        requestProfile: requestProfile as never,
+      })
+      expect(response).toEqual({
+        success: false,
+        error: "Invalid request profile",
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+      })
+      expect(runApiVerificationProbe).not.toHaveBeenCalled()
     },
   )
 

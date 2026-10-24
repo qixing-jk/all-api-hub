@@ -445,6 +445,17 @@ export async function resolveWebAiApiCheckRunProbeMessage(
       }
     }
 
+    if (
+      requestProfile !== undefined &&
+      !isVerificationRequestProfile(requestProfile)
+    ) {
+      return {
+        success: false,
+        error: "Invalid request profile",
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+      }
+    }
+
     const normalizedBaseUrl = normalizeProbeBaseUrl({ apiType, baseUrl })
     if (!normalizedBaseUrl) {
       return {
