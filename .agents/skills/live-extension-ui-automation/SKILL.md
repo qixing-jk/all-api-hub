@@ -54,10 +54,10 @@ All commands are cross-platform (Windows, macOS, Linux) and runnable directly vi
 | :--- | :--- | :--- |
 | `pnpm browser:sync` | `scripts/sync-extension-profile.mjs` | Discovers extension storage sources (`--list`); copies databases only with browsers closed. Website sessions require `--cookies`. |
 | `pnpm browser:cdp` | `scripts/launch-cdp-browser.mjs` | Launches (or connects to) the dedicated debug browser on port `9222` with the current worktree extension mounted. |
-| `pnpm browser:cdp -- --list` | `scripts/cdp/dev-browser-registry.mjs` | Inventories every running debug browser (port, profile, PID, mounted worktrees) and every dev profile with its size and whether its checkout still exists. |
+| `pnpm browser:cdp -- --list` | `scripts/launch-cdp-browser.mjs` | Inventories every running debug browser (port, profile, PID, mounted worktrees) and every dev profile with its size and whether its checkout still exists. |
 | `pnpm browser:cdp -- --stop-browsers` | `scripts/launch-cdp-browser.mjs` | Asks every running debug browser to exit through CDP and waits for it to release its profile. |
-| `pnpm browser:cdp -- --clean` | `scripts/cdp/dev-browser-registry.mjs` | Reports the same inventory, then deletes only regenerable caches (`component_crx_cache`, `ProvenanceData`, shader caches) from profiles that are closed. |
-| `pnpm browser:cdp -- --prune-profiles` | `scripts/cdp/dev-browser-registry.mjs` | Adds to `--clean` the deletion of *orphaned* profiles — profiles this tooling named whose recorded checkouts have all been deleted. Implies `--clean`. |
+| `pnpm browser:cdp -- --clean` | `scripts/launch-cdp-browser.mjs` | Reports the same inventory, then deletes only regenerable caches (`component_crx_cache`, `ProvenanceData`, shader caches) from profiles that are closed. |
+| `pnpm browser:cdp -- --prune-profiles` | `scripts/launch-cdp-browser.mjs` | Adds to `--clean` the deletion of *orphaned* profiles — profiles this tooling named whose recorded checkouts have all been deleted. Implies `--clean`. |
 | `pnpm e2e:cdp` | `scripts/e2e-cdp-control.mjs` | Connects via CDP, detects the current worktree extension, opens its UI, and automates interactions. |
 
 ## Workflow

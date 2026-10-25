@@ -101,16 +101,81 @@ function tokenizeCommandLine(commandLine) {
 }
 
 /** Value of a repeated `--flag=value` or `--flag value` switch. */
-function readFlagValues(tokens, flag) {
+/**
+ * Cross-platform path resolution: preserves Windows drive-letter paths (e.g. C:\...)
+ * when evaluated on POSIX hosts (such as Linux CI runners), and resolves relative
+ * paths against the current working directory.
+ */
+function normalizePathValue(value) {
+  if (typeof value !== "string" || !value) return value
+  if (path.win32.isAbsolute(value) && !path.posix.isAbsolute(value)) {
+    return path.win32.resolve(value)
+  }
+  return path.resolve(value)
+}
+
+/** Value of a repeated `--flag=value` or `--flag value` switch. */
+function readFlagValues(tokens, flag, options = {}) {
+  const { isPath = false, exists = (target) => fs.existsSync(target) } = options
   const values = []
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index]
+    let initialValue = null
+    let nextIndex = index + 1
+
     if (token === flag) {
       const next = tokens[index + 1]
-      if (next && !next.startsWith("--")) values.push(next)
+      if (next && !next.startsWith("--")) {
+        initialValue = next
+        nextIndex = index + 2
+      }
     } else if (token.startsWith(`${flag}=`)) {
-      values.push(token.slice(flag.length + 1))
+      initialValue = token.slice(flag.length + 1)
+      nextIndex = index + 1
     }
+
+    if (initialValue === null) continue
+
+    if (!isPath) {
+      values.push(initialValue)
+      continue
+    }
+
+    // Path-valued switches (--user-data-dir, --load-extension): Darwin `ps` or
+    // unquoted arguments split space-containing paths into separate tokens.
+    // Reassemble consecutive non-flag tokens only when path validation confirms
+    // where the path ends, stopping before trailing positional arguments (e.g. URLs).
+    const isPathValid = (target) => {
+      const parts = target
+        .split(/[,;]/u)
+        .map((p) => p.trim())
+        .filter(Boolean)
+      return parts.length > 0 && parts.every((p) => exists(p))
+    }
+
+    let candidate = initialValue
+    let bestValue = initialValue
+    let bestConsumed = 0
+
+    if (isPathValid(candidate)) {
+      bestValue = candidate
+      bestConsumed = 0
+    }
+
+    for (let j = nextIndex; j < tokens.length; j += 1) {
+      const follow = tokens[j]
+      if (follow.startsWith("--")) break
+      if (/^(?:https?|about|chrome|data|file):/iu.test(follow)) break
+
+      candidate = `${candidate} ${follow}`
+      if (isPathValid(candidate)) {
+        bestValue = candidate
+        bestConsumed = j - nextIndex + 1
+      }
+    }
+
+    values.push(bestValue)
+    index = nextIndex - 1 + bestConsumed
   }
 
   return values
@@ -121,7 +186,8 @@ function readFlagValues(tokens, flag) {
  * not one: a renderer child inherits the switches but serves no CDP endpoint,
  * and a browser without both a port and a profile cannot be identified.
  */
-export function parseDebugBrowserProcessCommandLine(commandLine) {
+export function parseDebugBrowserProcessCommandLine(commandLine, deps = {}) {
+  const exists = deps.exists ?? ((target) => fs.existsSync(target))
   const tokens = tokenizeCommandLine(commandLine)
   if (tokens.length === 0) return null
   if (readFlagValues(tokens, "--type").length > 0) return null
@@ -130,14 +196,23 @@ export function parseDebugBrowserProcessCommandLine(commandLine) {
   const port = Number(portValue)
   if (!Number.isInteger(port) || port <= 0) return null
 
-  const [userDataDir] = readFlagValues(tokens, "--user-data-dir")
+  const [userDataDir] = readFlagValues(tokens, "--user-data-dir", {
+    isPath: true,
+    exists,
+  })
   if (!userDataDir) return null
 
   return {
     port,
-    userDataDir: path.resolve(userDataDir),
-    extensionDirs: readFlagValues(tokens, "--load-extension").flatMap((value) =>
-      value.split(path.delimiter).filter(Boolean),
+    userDataDir: normalizePathValue(userDataDir),
+    extensionDirs: readFlagValues(tokens, "--load-extension", {
+      isPath: true,
+      exists,
+    }).flatMap((value) =>
+      value
+        .split(/[,;]/u)
+        .map((entry) => entry.trim())
+        .filter(Boolean),
     ),
   }
 }
@@ -145,10 +220,13 @@ export function parseDebugBrowserProcessCommandLine(commandLine) {
 /** Browser processes launched with CDP, largest port first. */
 export async function listDebugBrowserProcesses(deps = {}) {
   const readProcesses = deps.readProcesses ?? readHostProcesses
+  const exists = deps.exists ?? ((target) => fs.existsSync(target))
   const processes = await readProcesses()
   return processes
     .map((entry) => {
-      const parsed = parseDebugBrowserProcessCommandLine(entry.commandLine)
+      const parsed = parseDebugBrowserProcessCommandLine(entry.commandLine, {
+        exists,
+      })
       return parsed ? { pid: entry.pid, ...parsed } : null
     })
     .filter(Boolean)
@@ -471,7 +549,7 @@ function safeStat(target) {
 
 /** Case- and separator-insensitive comparison, since paths arrive from a CLI. */
 function samePath(value) {
-  const resolved = path.resolve(value)
+  const resolved = normalizePathValue(value)
   return process.platform === "win32" ? resolved.toLowerCase() : resolved
 }
 

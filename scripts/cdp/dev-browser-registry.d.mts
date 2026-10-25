@@ -32,9 +32,11 @@ export interface ProfileCleanupPlan {
 export function describeBytes(bytes: number): string
 export function parseDebugBrowserProcessCommandLine(
   commandLine: string,
+  deps?: { exists?: (target: string) => boolean },
 ): Omit<DebugBrowserProcess, "pid"> | null
 export function listDebugBrowserProcesses(deps?: {
   readProcesses?: () => Promise<{ pid: number; commandLine: string }[]>
+  exists?: (target: string) => boolean
 }): Promise<DebugBrowserProcess[]>
 export function collectProfileWorktrees(profileDir: string): string[]
 export function classifyDevProfiles(options?: {

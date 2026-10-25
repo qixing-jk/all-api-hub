@@ -633,17 +633,27 @@ async function runProfileMaintenance({ clean, pruneProfiles }) {
 
 /** Ask every running debug browser to exit through CDP, then wait for release. */
 async function stopRunningDebugBrowsers(processes) {
-  for (const process of processes) {
+  let allStopped = true
+  for (const processEntry of processes) {
     try {
-      await closeDevBrowserViaCdp(process.port)
+      await closeDevBrowserViaCdp(processEntry.port)
+      const released = await waitForUserDataDirRelease(processEntry.userDataDir)
+      if (!released) {
+        allStopped = false
+        console.warn(
+          `⚠️ 关闭 :${processEntry.port} 失败: profile lock 在超时前未释放`,
+        )
+        continue
+      }
       console.log(
-        `🛑 已关闭 :${process.port} (${path.basename(process.userDataDir)})`,
+        `🛑 已关闭 :${processEntry.port} (${path.basename(processEntry.userDataDir)})`,
       )
-      await waitForUserDataDirRelease(process.userDataDir)
     } catch (error) {
-      console.warn(`⚠️ 关闭 :${process.port} 失败: ${error.message}`)
+      allStopped = false
+      console.warn(`⚠️ 关闭 :${processEntry.port} 失败: ${error.message}`)
     }
   }
+  return allStopped
 }
 
 /** Whether `child` sits below `parent`, used to scope processes to a base. */
@@ -728,7 +738,10 @@ async function main() {
 
   if (listProfilesOnly || cleanProfiles || pruneProfiles || stopBrowsersOnly) {
     if (stopBrowsersOnly) {
-      await stopRunningDebugBrowsers(await listDebugBrowserProcesses())
+      const allStopped = await stopRunningDebugBrowsers(
+        await listDebugBrowserProcesses(),
+      )
+      process.exit(allStopped ? 0 : 1)
     } else {
       await runProfileMaintenance({
         clean: cleanProfiles || pruneProfiles,
@@ -855,7 +868,12 @@ async function main() {
     if (forceRestart) {
       console.log(`\n🔄 检测到 --restart 参数，正在关闭旧调试实例并重新启动...`)
       await closeDevBrowserViaCdp(CDP_PORT)
-      await waitForUserDataDirRelease(devProfileDir)
+      const released = await waitForUserDataDirRelease(devProfileDir)
+      if (!released) {
+        throw new Error(
+          `旧调试浏览器仍占用 Profile 目录，请关闭该浏览器后重试: ${devProfileDir}`,
+        )
+      }
     } else {
       await verifyExtensionReady(extDir)
       console.log(`\n✅ 端口 ${CDP_PORT} 已经在监听中！调试浏览器已就绪。`)

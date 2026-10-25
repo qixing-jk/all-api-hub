@@ -102,6 +102,38 @@ describe("debug browser discovery", () => {
     })
   })
 
+  it("reassembles unquoted space-containing paths on POSIX using path validation", () => {
+    const root = fixtureRoot()
+    const profileDir = path.join(root, "my debug profile")
+    fs.mkdirSync(profileDir, { recursive: true })
+
+    const parsed = parseDebugBrowserProcessCommandLine(
+      `msedge --remote-debugging-port 9222 --user-data-dir=${profileDir} https://example.com`,
+    )
+    expect(parsed).toMatchObject({
+      port: 9222,
+      userDataDir: profileDir,
+    })
+  })
+
+  it("stops before trailing positional arguments when path cannot be reassembled", () => {
+    const parsed = parseDebugBrowserProcessCommandLine(
+      "msedge --remote-debugging-port 9222 --user-data-dir=/nonexistent/path/profile https://example.com",
+    )
+    expect(parsed?.userDataDir).not.toContain("https://example.com")
+  })
+
+  it("reassembles unquoted space-containing extension paths and stops before next switch", () => {
+    const root = fixtureRoot()
+    const extDir = path.join(root, "my unpacked extension")
+    fs.mkdirSync(extDir, { recursive: true })
+
+    const parsed = parseDebugBrowserProcessCommandLine(
+      `msedge --remote-debugging-port 9222 --user-data-dir=C:\\p --load-extension=${extDir} --enable-automation`,
+    )
+    expect(parsed?.extensionDirs).toEqual([extDir])
+  })
+
   it.each([
     [
       "a renderer child of a debug browser",
@@ -356,7 +388,7 @@ describe("debug profile cleanup", () => {
     // Windows can stamp a directory slightly ahead of Date.now(), so the clock
     // is explicit instead of relying on "age is never negative".
     const result = pruneProfileCaches(profileDir, {
-      now: () => Date.now() + 60_000,
+      now: () => Date.now() + 120_000,
       olderThanMs: 60_000,
     })
     expect(result.removed.map((entry) => entry.name)).toEqual([
