@@ -97,6 +97,7 @@ describe("VersionBadge", () => {
         currentVersion: "1.2.3",
         latestVersion: "1.3.0",
         updateAvailable: true,
+        selfUpdate: false,
         releaseUrl: "https://github.com/qixing-jk/all-api-hub/releases/latest",
         checkedAt: 0,
         lastError: null,
@@ -142,6 +143,7 @@ describe("VersionBadge", () => {
         currentVersion: "3.50.0",
         latestVersion: "3.51.0",
         updateAvailable: true,
+        selfUpdate: false,
         releaseUrl:
           "https://github.com/qixing-jk/all-api-hub/releases/tag/v3.51.0",
         checkedAt: 0,

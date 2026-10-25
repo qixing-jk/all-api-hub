@@ -14,7 +14,7 @@
 - 移动端浏览器：不同浏览器对扩展能力支持差异较大，移动端说明请查看 [常见问题中的移动端使用](./faq.md#mobile-browser-support)。
 
 ::: warning 提示
-手动加载的扩展通常不会自动更新。后续升级需要重新下载新版 Chrome 压缩包，并在扩展管理页点击“重新加载”或重新安装。
+手动加载的扩展通常不会自动更新。后续升级需要重新下载新版 Chrome 压缩包，并在扩展管理页点击“重新加载”或重新安装；Chromium 用户也可以改用 [自更新 `.crx` 安装](./chromium-crx-self-update.md)。
 :::
 
 ## 适用浏览器
@@ -194,7 +194,7 @@ liebao://extensions/
 
 ## 更新扩展
 
-手动加载版本不会自动更新。关于商店版、GitHub Stable 和 Nightly 的区别，请先查看 [安装渠道与更新说明](./extension-update-install.md)。手动加载版本更新时请按下面流程处理：
+手动加载版本不会自动更新；想免去每次换包，可改用 [自更新 `.crx` 安装](./chromium-crx-self-update.md)。关于商店版、GitHub Stable 和 Nightly 的区别，请先查看 [安装渠道与更新说明](./extension-update-install.md)。手动加载版本更新时请按下面流程处理：
 
 1. 打开 [最新版本 Release](https://github.com/qixing-jk/all-api-hub/releases/latest)。
 2. 下载新的 `all-api-hub-<version>-chrome.zip`。

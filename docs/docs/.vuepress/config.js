@@ -55,6 +55,7 @@ export default defineUserConfig({
               '/options-overview',
               '/permissions',
               '/extension-update-install',
+              '/chromium-crx-self-update',
               '/safari-install',
               '/other-browser-install',
             ]
@@ -153,6 +154,7 @@ export default defineUserConfig({
               '/en/options-overview',
               '/en/permissions',
               '/en/extension-update-install',
+              '/en/chromium-crx-self-update',
               '/en/safari-install',
               '/en/other-browser-install',
             ]
@@ -251,6 +253,7 @@ export default defineUserConfig({
               '/ja/options-overview',
               '/ja/permissions',
               '/ja/extension-update-install',
+              '/ja/chromium-crx-self-update',
               '/ja/safari-install',
               '/ja/other-browser-install',
             ]

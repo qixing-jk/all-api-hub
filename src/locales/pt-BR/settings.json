@@ -747,6 +747,7 @@
       "checkFailed": "Tente buscar atualizações novamente.",
       "manualUpdate": "Esta instalação é atualizada manualmente. Abra a página de lançamento para obter a nova versão.",
       "manualUpdateGeneric": "Atualize através do seu canal de instalação atual ou abra a página de lançamento se precisar atualizar manualmente.",
+      "selfUpdate": "Esta instalação se atualiza sozinha. O navegador busca novas versões na página de lançamentos, sem necessidade de download manual.",
       "storeUpdate": "O navegador atualiza automaticamente a versão da loja. Aguarde a disponibilização na loja.",
       "storeUpdateReady": "O navegador encontrou uma atualização da loja. Recarregue a extensão para começar a usar a nova versão.",
       "unavailable": "Tente buscar atualizações novamente."
@@ -757,6 +758,7 @@
     "states": {
       "checkFailed": "Não foi possível buscar atualizações",
       "notChecked": "A versão estável mais recente ainda não foi verificada. Execute uma verificação manual para comparar versões",
+      "selfUpdatePending": "Existe uma versão mais nova. O navegador a instalará automaticamente",
       "storeUpdatePending": "Aguardando atualização da loja",
       "storeUpdateReady": "Atualização pronta",
       "unavailable": "Status da atualização indisponível",
@@ -766,7 +768,8 @@
     "versionBadge": {
       "changelogAriaLabel": "Registro de alterações da versão {{version}}",
       "updateAvailableAriaLabel": "Atualização da versão {{version}} disponível"
-    }
+    },
+    "viewReleaseNotes": "Ver notas da versão"
   },
   "siteAnnouncementNotifications": {
     "description": "Controla se sites de contas ativadas são verificados quanto a anúncios de sites em segundo plano.",

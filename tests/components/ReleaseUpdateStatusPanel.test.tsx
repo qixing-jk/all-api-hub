@@ -67,6 +67,7 @@ function buildStatus(
     releaseUrl: "https://github.com/qixing-jk/all-api-hub/releases/latest",
     checkedAt: null,
     lastError: null,
+    selfUpdate: false,
     storeUpdate: {
       supported: false,
       status: "unsupported",
@@ -301,6 +302,50 @@ describe("ReleaseUpdateStatusPanel", () => {
       "href",
       "https://github.com/qixing-jk/all-api-hub/releases/tag/v3.32.0",
     )
+  })
+
+  it("points a self-updating build at the browser update controls instead of a download", async () => {
+    const user = userEvent.setup()
+    const checkNow = mockInteractiveHook({
+      initialStatus: buildStatus(),
+      nextStatus: buildStatus({
+        reason: "github-release",
+        selfUpdate: true,
+        latestVersion: "3.32.0",
+        updateAvailable: true,
+        checkedAt: Date.now(),
+      }),
+    })
+
+    renderSubject()
+    await user.click(
+      screen.getByRole("button", { name: "settings:releaseUpdate.checkNow" }),
+    )
+
+    await waitFor(() => {
+      expect(checkNow).toHaveBeenCalled()
+      // The browser installs the update itself; a manual check only reports it.
+      expect(toastMocks.success).toHaveBeenCalledWith(
+        "settings:releaseUpdate.states.selfUpdatePending",
+      )
+      expect(
+        screen.getByText("settings:releaseUpdate.helpers.selfUpdate"),
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByRole("link", {
+          name: "settings:releaseUpdate.downloadUpdate",
+        }),
+      ).not.toBeInTheDocument()
+      // The release page stays reachable, but only to read what changed.
+      expect(
+        screen.getByRole("link", {
+          name: "settings:releaseUpdate.viewReleaseNotes",
+        }),
+      ).toHaveAttribute(
+        "href",
+        "https://github.com/qixing-jk/all-api-hub/releases/latest",
+      )
+    })
   })
 
   it("shows store rollout pending copy when GitHub is newer but the store has no update yet", () => {

@@ -103,6 +103,8 @@ jobs:
         with:
           working-directory: source
           distribution-channel: github-nightly
+          crx-signing-key: ${{ secrets.CRX_SIGNING_KEY }}
+          require-crx-self-update: ${{ vars.CRX_SELF_UPDATE_REQUIRED || 'false' }}
 
       - name: Collect build metadata
         id: metadata
@@ -174,6 +176,15 @@ jobs:
           cp "${{ steps.package.outputs.chrome-zip }}" "source/.output/nightly/all-api-hub-nightly-chrome.zip"
           cp "${{ steps.package.outputs.firefox-zip }}" "source/.output/nightly/all-api-hub-nightly-firefox.zip"
           cp "${{ steps.package.outputs.sources-zip }}" "source/.output/nightly/all-api-hub-nightly-sources.zip"
+
+          # The self-update CRX and its manifest already use fixed names that
+          # `releases/download/nightly/...` resolves to on every build.
+          crx_files=(source/.output/*.crx)
+          if [ "${#crx_files[@]}" -gt 0 ]; then
+            cp source/.output/*.crx source/.output/updates.xml source/.output/nightly/
+          else
+            echo "::warning::No self-update CRX produced; nightly keeps its ZIP-only assets."
+          fi
 
       - name: Validate Safari build inputs
         working-directory: source
@@ -265,7 +276,13 @@ jobs:
       - name: Upload nightly assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload nightly source/.output/nightly/*.zip --clobber
+        run: |
+          shopt -s nullglob
+          # Self-update assets are overwritten each build, so the fixed
+          # `releases/download/nightly/` URLs always serve the newest one.
+          assets=(source/.output/nightly/*.zip source/.output/nightly/*.crx)
+          if [ -f source/.output/nightly/updates.xml ]; then assets+=(source/.output/nightly/updates.xml); fi
+          gh release upload nightly "${assets[@]}" --clobber
 
       - name: Append nightly release usage notes
         working-directory: source

@@ -19,10 +19,12 @@ export const RELEASE_UPDATE_PRESENTATION_STATES = {
 type ReleaseUpdatePresentationState =
   (typeof RELEASE_UPDATE_PRESENTATION_STATES)[keyof typeof RELEASE_UPDATE_PRESENTATION_STATES]
 
-const RELEASE_UPDATE_ACTION_KINDS = {
+export const RELEASE_UPDATE_ACTION_KINDS = {
   DownloadUpdate: "download-update",
   OpenLatest: "open-latest",
   ReloadToUpdate: "reload-to-update",
+  /** The browser applies the update; only the release notes are actionable. */
+  ViewReleaseNotes: "view-release-notes",
 } as const
 
 type ReleaseUpdateActionKind =
@@ -33,6 +35,7 @@ export const RELEASE_UPDATE_CHECK_OUTCOMES = {
   StoreUpdateReady: "store-update-ready",
   StoreUpdatePending: "store-update-pending",
   UpdateAvailable: "update-available",
+  SelfUpdatePending: "self-update-pending",
   UpToDate: "up-to-date",
 } as const
 
@@ -140,7 +143,9 @@ export function deriveReleaseUpdatePresentation(options: {
 
   if (hasUpdate) {
     return {
-      actionKind: RELEASE_UPDATE_ACTION_KINDS.DownloadUpdate,
+      actionKind: status.selfUpdate
+        ? RELEASE_UPDATE_ACTION_KINDS.ViewReleaseNotes
+        : RELEASE_UPDATE_ACTION_KINDS.DownloadUpdate,
       hasUpdate,
       latestVersion,
       state: RELEASE_UPDATE_PRESENTATION_STATES.UpdateAvailable,
@@ -206,7 +211,14 @@ export function deriveReleaseUpdateCheckOutcome(
     return RELEASE_UPDATE_CHECK_OUTCOMES.CheckFailed
   }
 
-  return hasAvailableReleaseUpdate(status)
-    ? RELEASE_UPDATE_CHECK_OUTCOMES.UpdateAvailable
-    : RELEASE_UPDATE_CHECK_OUTCOMES.UpToDate
+  if (!hasAvailableReleaseUpdate(status)) {
+    return RELEASE_UPDATE_CHECK_OUTCOMES.UpToDate
+  }
+
+  // A self-updating build cannot install anything from here: the browser reads
+  // `update_url` on its own schedule, so the manual check only learned that a
+  // newer version exists.
+  return status.selfUpdate
+    ? RELEASE_UPDATE_CHECK_OUTCOMES.SelfUpdatePending
+    : RELEASE_UPDATE_CHECK_OUTCOMES.UpdateAvailable
 }

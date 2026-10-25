@@ -31,7 +31,7 @@ const {
     const getSelf = (globalThis as any).browser?.management?.getSelf
     return typeof getSelf === "function" ? await getSelf() : null
   }),
-  getManifestMock: vi.fn(() => ({
+  getManifestMock: vi.fn<() => Record<string, unknown>>(() => ({
     manifest_version: 3,
     version: "3.32.0",
     optional_permissions: [],
@@ -89,6 +89,12 @@ describe("releaseUpdateService", () => {
     vi.stubGlobal("__AAH_DISTRIBUTION_CHANNEL__", DISTRIBUTION_CHANNEL.Unknown)
     vi.resetModules()
     vi.clearAllMocks()
+    // A plain packaged ZIP has no update_url; tests that need one override it.
+    getManifestMock.mockReturnValue({
+      manifest_version: 3,
+      version: "3.32.0",
+      optional_permissions: [],
+    })
 
     const { Storage } = await import("@plasmohq/storage")
     ;(Storage as any).__store.clear()
@@ -826,5 +832,44 @@ describe("releaseUpdateService", () => {
       lastError: "release lookup failed",
     })
     expect(status.checkedAt).toEqual(expect.any(Number))
+  })
+
+  it("reports self-update only when the packaged manifest advertises update_url", async () => {
+    vi.stubGlobal(
+      "__AAH_DISTRIBUTION_CHANNEL__",
+      DISTRIBUTION_CHANNEL.GithubRelease,
+    )
+    getManifestMock.mockReturnValue({
+      manifest_version: 3,
+      version: "3.32.0",
+      optional_permissions: [],
+      update_url:
+        "https://github.com/qixing-jk/all-api-hub/releases/latest/download/updates.xml",
+    })
+
+    const { releaseUpdateService } = await import(
+      "~/services/updates/releaseUpdateService"
+    )
+
+    expect(await releaseUpdateService.getStatus()).toMatchObject({
+      reason: "github-release",
+      selfUpdate: true,
+    })
+  })
+
+  it("keeps a plain GitHub ZIP install on manual updates", async () => {
+    vi.stubGlobal(
+      "__AAH_DISTRIBUTION_CHANNEL__",
+      DISTRIBUTION_CHANNEL.GithubRelease,
+    )
+
+    const { releaseUpdateService } = await import(
+      "~/services/updates/releaseUpdateService"
+    )
+
+    expect(await releaseUpdateService.getStatus()).toMatchObject({
+      reason: "github-release",
+      selfUpdate: false,
+    })
   })
 })

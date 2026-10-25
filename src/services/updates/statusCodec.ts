@@ -130,6 +130,10 @@ export function parseReleaseUpdateStatus(
         ? record.checkedAt
         : null,
     lastError: trimToNull(record.lastError),
+    selfUpdate:
+      typeof record.selfUpdate === "boolean"
+        ? record.selfUpdate
+        : fallback.selfUpdate,
     ...(record.githubLatestVersion !== undefined
       ? { githubLatestVersion: trimToNull(record.githubLatestVersion) }
       : {}),

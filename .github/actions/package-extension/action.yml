@@ -8,6 +8,14 @@ inputs:
   build-stores:
     description: Produce separate archives for store submission
     default: "false"
+  crx-signing-key:
+    description: Base64-encoded PKCS#8 PEM key used to sign the self-update CRX; empty skips the CRX artifacts
+    required: false
+    default: ""
+  require-crx-self-update:
+    description: Fail the build instead of skipping when no CRX signing key is configured
+    required: false
+    default: "false"
   node-version-file:
     description: Path to the Node.js version file relative to the repository root
     required: false
@@ -21,6 +29,9 @@ outputs:
   artifact-files:
     description: Newline-delimited list of built archive file names
     value: ${{ steps.collect.outputs.artifact_files }}
+  crx-files:
+    description: Newline-delimited list of signed CRX and update-manifest file names
+    value: ${{ steps.collect.outputs.crx_files }}
   chrome-zip:
     description: Path to the Chrome archive relative to the repository root
     value: ${{ steps.collect.outputs.chrome_zip }}
@@ -62,6 +73,8 @@ runs:
         NODE_OPTIONS: --max-old-space-size=6144
         AAH_DISTRIBUTION_CHANNEL: ${{ inputs.distribution-channel }}
         BUILD_STORES: ${{ inputs.build-stores }}
+        AAH_CRX_PRIVATE_KEY_BASE64: ${{ inputs.crx-signing-key }}
+        AAH_REQUIRE_CRX_SELF_UPDATE: ${{ inputs.require-crx-self-update }}
       run: |
         args=()
         if [ "$BUILD_STORES" = "true" ]; then args+=(--stores); fi
@@ -78,6 +91,8 @@ runs:
         chrome=(.output/*-chrome.zip)
         firefox=(.output/*-firefox.zip)
         sources=(.output/*-sources.zip)
+        crx=(.output/*.crx)
+        if [ -f .output/updates.xml ]; then crx+=(.output/updates.xml); fi
 
         if [ "${#files[@]}" -eq 0 ]; then
           echo "No zip artifacts found in .output."
@@ -100,6 +115,14 @@ runs:
         {
           echo "artifact_files<<EOF"
           for file in "${files[@]}"; do
+            basename "$file"
+          done
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
+
+        {
+          echo "crx_files<<EOF"
+          for file in "${crx[@]}"; do
             basename "$file"
           done
           echo "EOF"

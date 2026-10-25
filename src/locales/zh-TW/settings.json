@@ -745,6 +745,7 @@
       "checkFailed": "請重新檢查更新。",
       "manualUpdate": "目前安裝為手動更新管道，請前往發布頁取得新版本。",
       "manualUpdateGeneric": "請依目前安裝管道完成更新，必要時可前往發布頁手動取得新版本。",
+      "selfUpdate": "此安裝包會自動更新。瀏覽器會從發布頁取得新版本，無需手動下載。",
       "storeUpdate": "商店版由瀏覽器自動更新，請等待商店推送。",
       "storeUpdateReady": "瀏覽器已發現可用的商店更新，重新載入擴充套件後即可使用新版本。",
       "unavailable": "請重新檢查更新。"
@@ -755,6 +756,7 @@
     "states": {
       "checkFailed": "檢查更新失敗",
       "notChecked": "尚未檢查最新正式版，可手動檢查",
+      "selfUpdatePending": "發現新版本，瀏覽器將自動安裝",
       "storeUpdatePending": "等待商店推送更新",
       "storeUpdateReady": "更新已就緒",
       "unavailable": "暫時無法取得更新狀態",
@@ -764,7 +766,8 @@
     "versionBadge": {
       "changelogAriaLabel": "版本 {{version}} 更新日誌",
       "updateAvailableAriaLabel": "版本 {{version}} 有可用更新"
-    }
+    },
+    "viewReleaseNotes": "查看更新說明"
   },
   "siteAnnouncementNotifications": {
     "description": "控制是否在背景定時抓取已啟用帳號所屬站點的網站公告。",

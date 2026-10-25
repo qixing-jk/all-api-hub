@@ -35,6 +35,9 @@ const config: KnipConfig = {
     // Invoked by the native Safari runner; Vite loads this config by CLI path.
     "e2e/safariNativeCookie/probe.config.ts",
     "e2e/safariNativeCookie/probe.ts",
+    // Manual signing tool for a packaged ZIP into a CRX; package-distribution
+    // signs in-process, so no static import reaches this entry.
+    "scripts/sign-crx.mjs",
   ],
   project: [
     "src/**/*.{ts,tsx}!",
