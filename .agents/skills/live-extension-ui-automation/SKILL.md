@@ -38,6 +38,14 @@ When concurrent worktrees must not interfere (multi-agent runs), mount a **per-w
 
 Live suites (`e2e:cdp:*`) compute their default CDP URL from the same resolver, so launching and driving under `--isolate` need no extra flags. The trade-off: each isolated profile needs its own first login or sync, and each buys an extra resident browser process. The shared-profile default is unchanged.
 
+### Reclaiming debug profiles
+
+Each isolated profile keeps a full Chromium user data directory — on this machine 12 of them held about 10.7 GB, over 4 GB of it rebuildable caches — and a forgotten browser keeps its port, window and memory. `pnpm browser:cdp -- --list` shows what exists; the maintenance commands above reclaim it.
+
+Nothing is ever chosen for deletion by heuristics alone. A profile is reported as an orphan only when all three hold: this tooling generated its name (`dev-browser-<worktree>-<16 hex>`), no browser is using it, and every checkout it recorded mounting no longer exists. Deleting a profile also discards the site logins and extension data inside it, so that step needs `--prune-profiles`; cache pruning is automatic for closed profiles under `--clean` because the browser rebuilds those entries on its next start, and entries younger than a day are left alone.
+
+A deleted profile is partly recoverable: account data comes back from `pnpm browser:sync`, and website sessions plus Local Storage from adding `--cookies`, because both copy out of a still-logged-in daily browser. What does not come back is that profile's browsing history, its installed extensions, and any data that was never synced out of it.
+
 ## Available Tooling & Commands
 
 All commands are cross-platform (Windows, macOS, Linux) and runnable directly via `pnpm`:
@@ -46,6 +54,10 @@ All commands are cross-platform (Windows, macOS, Linux) and runnable directly vi
 | :--- | :--- | :--- |
 | `pnpm browser:sync` | `scripts/sync-extension-profile.mjs` | Discovers extension storage sources (`--list`); copies databases only with browsers closed. Website sessions require `--cookies`. |
 | `pnpm browser:cdp` | `scripts/launch-cdp-browser.mjs` | Launches (or connects to) the dedicated debug browser on port `9222` with the current worktree extension mounted. |
+| `pnpm browser:cdp -- --list` | `scripts/cdp/dev-browser-registry.mjs` | Inventories every running debug browser (port, profile, PID, mounted worktrees) and every dev profile with its size and whether its checkout still exists. |
+| `pnpm browser:cdp -- --stop-browsers` | `scripts/launch-cdp-browser.mjs` | Asks every running debug browser to exit through CDP and waits for it to release its profile. |
+| `pnpm browser:cdp -- --clean` | `scripts/cdp/dev-browser-registry.mjs` | Reports the same inventory, then deletes only regenerable caches (`component_crx_cache`, `ProvenanceData`, shader caches) from profiles that are closed. |
+| `pnpm browser:cdp -- --prune-profiles` | `scripts/cdp/dev-browser-registry.mjs` | Adds to `--clean` the deletion of *orphaned* profiles — profiles this tooling named whose recorded checkouts have all been deleted. Implies `--clean`. |
 | `pnpm e2e:cdp` | `scripts/e2e-cdp-control.mjs` | Connects via CDP, detects the current worktree extension, opens its UI, and automates interactions. |
 
 ## Workflow

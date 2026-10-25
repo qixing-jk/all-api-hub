@@ -18,6 +18,16 @@ import {
   waitForUserDataDirRelease,
 } from "./cdp/dev-browser-identity.mjs"
 import {
+  classifyDevProfiles,
+  describeBytes,
+  devProfilesBaseDir,
+  formatDebugBrowserReport,
+  listDebugBrowserProcesses,
+  planProfileCleanup,
+  pruneProfileCaches,
+  removeProfileDir,
+} from "./cdp/dev-browser-registry.mjs"
+import {
   applyIsolateFlag,
   isIsolatedDevProfile,
   resolveCdpPort,
@@ -552,6 +562,101 @@ async function verifyExtensionReady(extensionDir) {
 }
 
 /**
+ * Inventory of debug browsers and profiles. `--clean` prunes caches;
+ * `--prune-profiles` additionally deletes profiles no checkout owns any more.
+ */
+async function runProfileMaintenance({ clean, pruneProfiles }) {
+  const profilesBaseDir = devProfilesBaseDir()
+  // Only browsers reading this base directory hold profiles here; an instance of
+  // another base (a scratch directory) is reported but does not block cleanup.
+  const processes = (await listDebugBrowserProcesses()).filter((process) =>
+    isInside(profilesBaseDir, process.userDataDir),
+  )
+  const profiles = classifyDevProfiles({
+    profilesBaseDir,
+    runningUserDataDirs: processes.map((process) => process.userDataDir),
+  })
+  console.log(formatDebugBrowserReport({ processes, profiles }))
+
+  if (processes.length > 0) {
+    console.log(
+      `\n🛑 ${processes.length} 个调试浏览器仍在运行；关闭后再清理（或先 pnpm browser:cdp -- --stop-browsers）。`,
+    )
+  }
+
+  const plan = planProfileCleanup(profiles, { pruneProfiles })
+  const deletable = new Set(plan.deleteProfiles.map((profile) => profile.dir))
+  let freedBytes = 0
+  for (const profile of plan.orphans) {
+    if (!deletable.has(profile.dir)) {
+      console.log(
+        `⚠️ 孤立 profile: ${profile.name} (${describeBytes(profile.sizeBytes)})，加 --prune-profiles 才会删除`,
+      )
+      continue
+    }
+    const before = profile.sizeBytes
+    if (!removeProfileDir(profile.dir)) {
+      console.warn(`⚠️ 删除失败，已跳过: ${profile.dir}`)
+      continue
+    }
+    freedBytes += before
+    console.log(
+      `🧹 已删除孤立 profile: ${profile.name} (${describeBytes(before)})`,
+    )
+  }
+
+  const closed = plan.pruneCacheTargets
+  if (closed.length > 0 && clean) {
+    for (const profile of closed) {
+      const { removed, freedBytes: freed } = pruneProfileCaches(profile.dir)
+      if (removed.length === 0) continue
+      freedBytes += freed
+      console.log(
+        `🧽 ${profile.name}: 清理 ${removed.length} 项可再生缓存 (${describeBytes(freed)})`,
+      )
+    }
+  } else if (closed.length > 0) {
+    const potential = closed.reduce(
+      (sum, profile) =>
+        sum +
+        (profile.sizeBytes < 1024 ? 0 : Math.round(profile.sizeBytes / 2)),
+      0,
+    )
+    console.log(
+      `🧽 加 --clean 可清理已关闭 profile 的可再生缓存（component_crx_cache、ProvenanceData、着色器缓存等），约 ${describeBytes(potential)}。`,
+    )
+  }
+
+  if (freedBytes > 0) console.log(`✅ 共释放 ${describeBytes(freedBytes)}`)
+  return freedBytes
+}
+
+/** Ask every running debug browser to exit through CDP, then wait for release. */
+async function stopRunningDebugBrowsers(processes) {
+  for (const process of processes) {
+    try {
+      await closeDevBrowserViaCdp(process.port)
+      console.log(
+        `🛑 已关闭 :${process.port} (${path.basename(process.userDataDir)})`,
+      )
+      await waitForUserDataDirRelease(process.userDataDir)
+    } catch (error) {
+      console.warn(`⚠️ 关闭 :${process.port} 失败: ${error.message}`)
+    }
+  }
+}
+
+/** Whether `child` sits below `parent`, used to scope processes to a base. */
+function isInside(parent, child) {
+  const relative = path.relative(path.resolve(parent), path.resolve(child))
+  return (
+    Boolean(relative) &&
+    !relative.startsWith("..") &&
+    !path.isAbsolute(relative)
+  )
+}
+
+/**
  * Report what the window will look like, so the operator can tell this browser
  * apart from the daily one — and from other worktrees' debug browsers — without
  * opening the profile picker.
@@ -613,6 +718,25 @@ async function main() {
   // Profile name, frame tint and toolbar pin are written into the profile, so
   // they need the browser to be closed; opt out for a pristine shared profile.
   const skipIdentity = cliArgs.includes("--no-identity")
+  const listProfilesOnly =
+    cliArgs.includes("--list") || cliArgs.includes("--list-profiles")
+  const cleanProfiles = cliArgs.includes("--clean")
+  // Deleting a whole profile throws away logins and extension data, so it needs
+  // its own switch rather than riding along with the cache cleanup.
+  const pruneProfiles = cliArgs.includes("--prune-profiles")
+  const stopBrowsersOnly = cliArgs.includes("--stop-browsers")
+
+  if (listProfilesOnly || cleanProfiles || pruneProfiles || stopBrowsersOnly) {
+    if (stopBrowsersOnly) {
+      await stopRunningDebugBrowsers(await listDebugBrowserProcesses())
+    } else {
+      await runProfileMaintenance({
+        clean: cleanProfiles || pruneProfiles,
+        pruneProfiles,
+      })
+    }
+    process.exit(0)
+  }
 
   if (stopDevOnly) {
     stopDevServer(rootDir)
