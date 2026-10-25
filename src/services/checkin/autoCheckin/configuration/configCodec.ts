@@ -273,6 +273,8 @@ const normalizeStatus = (value: unknown): CheckInMethodStatus | undefined => {
       ? value.today
       : undefined
   if (!availability && !today) return undefined
+  const requiresManualVerification =
+    value.requiresManualVerification === true ? true : undefined
 
   let evidence: Extract<
     CheckInMethodStatus,
@@ -304,6 +306,7 @@ const normalizeStatus = (value: unknown): CheckInMethodStatus | undefined => {
     outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
     ...(availability ? { availability } : {}),
     ...(today ? { today } : {}),
+    ...(requiresManualVerification ? { requiresManualVerification } : {}),
     evidence,
   }
 }
@@ -437,6 +440,12 @@ export function normalizeCheckInConfigV7(value: unknown): CheckInConfig {
 
   return {
     automaticExecutionEnabled: raw.automaticExecutionEnabled !== false,
+    ...(typeof raw.continueWhenVerificationRequired === "boolean"
+      ? {
+          continueWhenVerificationRequired:
+            raw.continueWhenVerificationRequired,
+        }
+      : {}),
     methodKnowledge: {
       methods,
       ...(lastFullDiscoveryAt !== undefined ? { lastFullDiscoveryAt } : {}),

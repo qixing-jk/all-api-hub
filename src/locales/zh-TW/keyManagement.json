@@ -524,6 +524,10 @@
         "loading": "正在開啟金鑰編輯器...",
         "retry": "重試"
       },
+      "pmapi": {
+        "rpm": "每分鐘請求上限",
+        "rpmHelp": "權杖每分鐘最多允許的請求數，0 表示不限制。"
+      },
       "quotaCredits": "剩餘積分",
       "quotaCreditsHelp": "額度用完後該金鑰將無法繼續使用。",
       "quotaUsd": "額度（美元）",

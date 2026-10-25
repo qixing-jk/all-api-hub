@@ -17,6 +17,7 @@ import { freeApiProvider } from "./freeApi"
 import { geniusProgrammerProvider } from "./geniusProgrammer"
 import { hiyoProvider } from "./hiyo"
 import { nexavlinksProvider } from "./nexavlinks"
+import { pmApiProvider } from "./pmapi"
 import {
   AUTO_CHECKIN_METHOD_DEFINITIONS,
   createAutoCheckinMethodRegistry,
@@ -53,6 +54,7 @@ const PROVIDER_BY_METHOD_ID = {
   [AUTO_CHECKIN_METHOD_IDS.EmrankDailyCheckIn]: emRankProvider,
   [AUTO_CHECKIN_METHOD_IDS.RelayForDailyCheckIn]: relayForProvider,
   [AUTO_CHECKIN_METHOD_IDS.DayaDailyCheckIn]: dayaProvider,
+  [AUTO_CHECKIN_METHOD_IDS.PmApiDailyCheckIn]: pmApiProvider,
 } as const satisfies Record<CheckInMethodId, AutoCheckinProvider>
 
 export const autoCheckinMethodRegistry = createAutoCheckinMethodRegistry(

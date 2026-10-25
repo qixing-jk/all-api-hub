@@ -268,6 +268,12 @@ const _openSettingsTab = (
 interface OpenSettingsTabInNewTabOptions {
   anchor?: string
   /**
+   * Also flag the anchor for the options page's temporary ring highlight.
+   * Without it the page only scrolls to the anchor, matching the quieter
+   * behavior of plain section links. Defaults to no highlight.
+   */
+  highlight?: boolean
+  /**
    * Leaves the current window as it is: the settings tab opens in the
    * background and the popup is not closed, so an in-progress form there keeps
    * its focus. A page-action popup is dismissed as soon as focus moves, so
@@ -287,6 +293,9 @@ const _openSettingsTabInNewTab = async (
   const searchString = buildSearchString({
     tab: tabId,
     anchor: options?.anchor,
+    ...(options?.highlight && options.anchor
+      ? { highlight: options.anchor }
+      : {}),
   })
   const url = `${OPTIONS_PAGE_URL}${searchString}${getBasicSettingsHash()}`
 

@@ -130,6 +130,41 @@ it.each([editorModes.Create, editorModes.Edit])(
   },
 )
 
+it.each([editorModes.Create, editorModes.Edit])(
+  "presents PM-API native controls in %s mode",
+  (mode) => {
+    const presentation = getNativeKeyResourceEditorPresentation(
+      SITE_TYPES.PMAPI,
+      mode,
+    )
+    const t = ((key: string) => key) as TFunction
+    const byId = (id: string) =>
+      presentation.policy.fields.find((field) => field.fieldId === id)!
+    expect(byId("grp").resolveLabel(t)).toBe("keyManagement:dialog.groupLabel")
+    expect(byId("rpm").resolveLabel(t)).toBe(
+      "keyManagement:native.editor.pmapi.rpm",
+    )
+    expect(byId("rpm").resolveHelp?.(t)).toBe(
+      "keyManagement:native.editor.pmapi.rpmHelp",
+    )
+    expect(byId("models").resolveLabel(t)).toBe(
+      "keyManagement:dialog.availableModels",
+    )
+    expect(byId("subnet").resolveLabel(t)).toBe("keyManagement:dialog.ipLimits")
+    expect(byId("quotaUsd").resolveLabel(t)).toBe(
+      "keyManagement:native.editor.totalQuotaUsd",
+    )
+    expect(byId("expiresAt").resolveLabel(t)).toBe(
+      "keyManagement:dialog.expiration",
+    )
+    // Lifecycle lives in row actions; the dialog never carries a status
+    // field, matching the console edit form.
+    expect(
+      presentation.policy.fields.some((field) => field.fieldId === "enabled"),
+    ).toBe(false)
+  },
+)
+
 it.each([
   ["budget_5h", "budget5h", "budgetResetHelp"],
   ["budget_day", "budgetDay", ""],

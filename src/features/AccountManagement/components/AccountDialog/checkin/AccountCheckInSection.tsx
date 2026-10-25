@@ -57,6 +57,8 @@ import { setCheckInSelection } from "~/services/checkin/autoCheckin/discovery/di
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import type { CheckInConfig } from "~/types"
 
+import { AccountVerificationContinuation } from "./AccountVerificationContinuation"
+
 const AUTOMATIC_CHECK_IN_SELECTION_VALUE = "automatic"
 const CHECK_IN_METHOD_HELPER_ID = "check-in-method-helper"
 const OPEN_REDEEM_WITH_CHECKIN_CONTROL_ID = "open-redeem-with-checkin"
@@ -66,6 +68,7 @@ const ACCOUNT_CHECK_IN_TARGET_IDS = {
   feedback: "account-check-in-feedback",
   method: "account-check-in-method",
   automaticExecution: "account-check-in-automatic-execution",
+  verificationContinuation: "account-check-in-verification-continuation",
   redetect: "account-check-in-redetect",
   customUrl: "account-custom-check-in-url",
   redeemUrl: "account-custom-redeem-url",
@@ -143,6 +146,11 @@ export function AccountCheckInSection({
     )
   const isSelectedStatusUnavailable =
     selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown
+  // The deployment's own gate: the site asks for human verification when the
+  // grant is claimed, so unattended execution cannot complete on its own.
+  const selectedRequiresManualVerification =
+    selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
+    selectedStatus.requiresManualVerification === true
   const redetectionFeedbackPresentation =
     getCheckInRedetectionFeedbackPresentation(t, checkInRedetectionFeedback)
   const setAutomaticSelection = () => {
@@ -365,6 +373,26 @@ export function AccountCheckInSection({
         />
       )}
 
+      {hasCandidates && selectedRequiresManualVerification && (
+        <Notice
+          tone="info"
+          size="sm"
+          title={t("form.manualVerificationRequiredTitle")}
+          description={
+            checkIn.automaticExecutionEnabled ? (
+              t("form.manualVerificationRequiredDesc")
+            ) : (
+              <>
+                {t("form.manualVerificationRequiredDesc")}
+                <span className="block">
+                  {t("form.manualVerificationRequiredSwitchOffDesc")}
+                </span>
+              </>
+            )
+          }
+        />
+      )}
+
       {hasCandidates && (
         <div className="gap-y-density-4 flex w-full items-center justify-between gap-x-4">
           <div className="flex-1">
@@ -394,6 +422,19 @@ export function AccountCheckInSection({
           />
         </div>
       )}
+
+      {/* The continuation preference is only consulted once a run reaches the
+          claim, so the choice appears with the switch that puts the account
+          into the run. */}
+      {hasCandidates &&
+        selectedRequiresManualVerification &&
+        checkIn.automaticExecutionEnabled && (
+          <AccountVerificationContinuation
+            controlId={ACCOUNT_CHECK_IN_TARGET_IDS.verificationContinuation}
+            checkIn={checkIn}
+            onCheckInChange={onCheckInChange}
+          />
+        )}
 
       <AccountCheckInRouteFields
         checkIn={checkIn}

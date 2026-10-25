@@ -31,6 +31,7 @@ import {
   OPENROUTER_KEY_LIMIT_MODES,
   OPENROUTER_KEY_LIMIT_RESETS,
 } from "~/services/apiAdapters/openrouter/keys/keyResourceFields"
+import { createPmApiKeyEditor } from "~/services/apiAdapters/pmapi/keyEditor"
 import { createRightCodeKeyEditor } from "~/services/apiAdapters/rightcode/keys/keyResourceEditor"
 import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keys/keyResourceEditor"
 import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
@@ -39,6 +40,32 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const field = OPENROUTER_KEY_FIELD_IDS
+
+it("shows the account-group choice for a PM-API token without an explicit group", () => {
+  const definition = createPmApiKeyEditor({
+    groups: [{ name: "Free", ratio: 0 }],
+    models: [],
+  })
+  render(
+    <AccountKeyResourceEditorDialog
+      editor={{
+        editorId: 1,
+        siteType: SITE_TYPES.PMAPI,
+        mode: editorModes.Create,
+        fields: definition.fields,
+        initialValues: definition.initialValues,
+        values: definition.initialValues,
+      }}
+      onClose={vi.fn()}
+      onSubmit={vi.fn()}
+      onValuesChange={vi.fn()}
+    />,
+    { withUserPreferencesProvider: false, withThemeProvider: false },
+  )
+  expect(
+    screen.getByRole("combobox", { name: "keyManagement:dialog.groupLabel" }),
+  ).toHaveTextContent("keyManagement:keyDetails.followsAccountGroup")
+})
 
 it("shows Daya routing context and Fast preference while keeping advanced drafts", async () => {
   const user = userEvent.setup()

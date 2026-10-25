@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { CHECKIN_PAGE_ACTION_TARGET_MAX_WAIT_MS } from "~/constants/turnstile"
 import { handleTriggerCheckinPageAction } from "~/entrypoints/content/messageHandlers/handlers/turnstileGuard"
 import { showTurnstileManualAssistToast } from "~/entrypoints/content/shieldBypassAssist/utils/shieldBypassToasts"
+import { TURNSTILE_PRE_TRIGGER_KINDS } from "~/types/turnstile"
 import {
   onRuntimeMessage,
   sendRuntimeMessage,
@@ -26,6 +28,111 @@ describe("native check-in verification", () => {
   })
   afterEach(() => vi.useRealTimers())
 
+  it("waits for the PM-API wallet button to render before dispatching one click", async () => {
+    document.body.innerHTML = '<main id="wallet"></main>'
+    const response = vi.fn()
+    const click = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "pmapi-loading-wallet",
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#ckBtn:not(:disabled)",
+          targetWaitMs: CHECKIN_PAGE_ACTION_TARGET_MAX_WAIT_MS,
+          throttle: { maxAttempts: 1 },
+        },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(response).not.toHaveBeenCalled()
+    document.querySelector("main")!.innerHTML =
+      '<button id="ckBtn" disabled>加载中</button>'
+    document.querySelector("button")!.addEventListener("click", click)
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(click).not.toHaveBeenCalled()
+    const button = document.querySelector("button")!
+    button.textContent = "立即签到"
+    button.disabled = false
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(click).toHaveBeenCalledOnce()
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "clicked", clicked: true }),
+    )
+    await vi.advanceTimersByTimeAsync(20_000)
+    expect(click).toHaveBeenCalledOnce()
+  })
+
+  it("ends the target wait without clicking if the wallet never becomes ready", async () => {
+    document.body.innerHTML = '<button id="ckBtn" disabled>加载中</button>'
+    const click = vi.fn()
+    document.querySelector("button")!.addEventListener("click", click)
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "pmapi-wallet-timeout",
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#ckBtn:not(:disabled)",
+          targetWaitMs: CHECKIN_PAGE_ACTION_TARGET_MAX_WAIT_MS,
+          throttle: { maxAttempts: 1 },
+        },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(9_999)
+    expect(response).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "target_not_found", clicked: false }),
+    )
+    document.querySelector("button")!.disabled = false
+    await vi.advanceTimersByTimeAsync(20_000)
+    expect(click).not.toHaveBeenCalled()
+    expect(sendRuntimeMessage).not.toHaveBeenCalled()
+  })
+
+  it("uses the existing verification reminder after clicking a delayed wallet button", async () => {
+    document.body.innerHTML = "<main></main>"
+    const response = vi.fn()
+    handleTriggerCheckinPageAction(
+      {
+        requestId: "pmapi-delayed-captcha",
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#ckBtn:not(:disabled)",
+          targetWaitMs: CHECKIN_PAGE_ACTION_TARGET_MAX_WAIT_MS,
+          throttle: { maxAttempts: 1 },
+        },
+      },
+      response,
+    )
+    await vi.advanceTimersByTimeAsync(1_000)
+    document.querySelector("main")!.innerHTML =
+      '<button id="ckBtn">立即签到</button>'
+    const click = vi.fn(() => {
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        '<div class="captcha-panel"><canvas></canvas><input type="range"></div>',
+      )
+    })
+    document.querySelector("button")!.addEventListener("click", click)
+    await vi.advanceTimersByTimeAsync(6_000)
+    expect(click).toHaveBeenCalledOnce()
+    expect(sendRuntimeMessage).toHaveBeenCalledWith({
+      action: RuntimeActionIds.TurnstileRequestUserAssist,
+      requestId: "pmapi-delayed-captcha",
+    })
+    expect(response).not.toHaveBeenCalled()
+    document.querySelector(".captcha-panel")!.remove()
+    await vi.advanceTimersByTimeAsync(500)
+    expect(response).toHaveBeenCalledWith(
+      expect.objectContaining({
+        verification: { status: "completed", provider: "interactive" },
+      }),
+    )
+  })
+
   it.each([
     '<section><div id="new-widget" class="cf-turnstile"><input id="new-response" name="cf-turnstile-response"></div></section>',
     '<section><iframe id="new-widget" src="https://challenges.cloudflare.com/widget"></iframe><input id="new-response" name="cf-turnstile-response"></section>',
@@ -44,7 +151,10 @@ describe("native check-in verification", () => {
       handleTriggerCheckinPageAction(
         {
           requestId: "scoped-token",
-          trigger: { kind: "clickSelector", selector: "#checkin" },
+          trigger: {
+            kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+            selector: "#checkin",
+          },
         },
         response,
       )
@@ -78,7 +188,10 @@ describe("native check-in verification", () => {
     handleTriggerCheckinPageAction(
       {
         requestId: "failed-reminder",
-        trigger: { kind: "clickSelector", selector: "#checkin" },
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
       },
       response,
     )
@@ -104,7 +217,10 @@ describe("native check-in verification", () => {
     handleTriggerCheckinPageAction(
       {
         requestId: "revealed-vendor",
-        trigger: { kind: "clickSelector", selector: "#checkin" },
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
       },
       response,
     )
@@ -128,7 +244,10 @@ describe("native check-in verification", () => {
     handleTriggerCheckinPageAction(
       {
         requestId: "existing-vendor",
-        trigger: { kind: "clickSelector", selector: "#checkin" },
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
       },
       response,
     )
@@ -157,7 +276,10 @@ describe("native check-in verification", () => {
     handleTriggerCheckinPageAction(
       {
         requestId: "closed-vendor",
-        trigger: { kind: "clickSelector", selector: "#checkin" },
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
       },
       response,
     )
@@ -184,7 +306,10 @@ describe("native check-in verification", () => {
     handleTriggerCheckinPageAction(
       {
         requestId: "hidden-vendor",
-        trigger: { kind: "clickSelector", selector: "#checkin" },
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
       },
       response,
     )
@@ -209,7 +334,10 @@ describe("native check-in verification", () => {
       handleTriggerCheckinPageAction(
         {
           requestId: "bounded-open",
-          trigger: { kind: "clickSelector", selector: "#checkin" },
+          trigger: {
+            kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+            selector: "#checkin",
+          },
         },
         response,
       )
@@ -257,7 +385,10 @@ describe("native check-in verification", () => {
     handleTriggerCheckinPageAction(
       {
         requestId: "late-open",
-        trigger: { kind: "clickSelector", selector: "#checkin" },
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
       },
       response,
     )
@@ -304,7 +435,10 @@ describe("native check-in verification", () => {
       handleTriggerCheckinPageAction(
         {
           requestId: "native-generic",
-          trigger: { kind: "clickSelector", selector: "#checkin" },
+          trigger: {
+            kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+            selector: "#checkin",
+          },
         },
         response,
       )
@@ -339,7 +473,10 @@ describe("native check-in verification", () => {
       handleTriggerCheckinPageAction(
         {
           requestId: "native-no-challenge",
-          trigger: { kind: "clickSelector", selector: "#checkin" },
+          trigger: {
+            kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+            selector: "#checkin",
+          },
         },
         response,
       )
@@ -370,7 +507,10 @@ describe("native check-in verification", () => {
       handleTriggerCheckinPageAction(
         {
           requestId: "native-interactive",
-          trigger: { kind: "clickSelector", selector: "#checkin" },
+          trigger: {
+            kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+            selector: "#checkin",
+          },
         },
         response,
       )
@@ -396,7 +536,10 @@ describe("native check-in verification", () => {
     handleTriggerCheckinPageAction(
       {
         requestId: "native-image",
-        trigger: { kind: "clickSelector", selector: "#checkin" },
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
       },
       response,
     )
@@ -430,7 +573,10 @@ describe("native check-in verification", () => {
     handleTriggerCheckinPageAction(
       {
         requestId: "native-delayed",
-        trigger: { kind: "clickSelector", selector: "#checkin" },
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
       },
       response,
     )
@@ -471,7 +617,10 @@ describe("native check-in verification", () => {
       handleTriggerCheckinPageAction(
         {
           requestId: `native-${provider}`,
-          trigger: { kind: "clickSelector", selector: "#checkin" },
+          trigger: {
+            kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+            selector: "#checkin",
+          },
         },
         response,
       )
@@ -496,7 +645,10 @@ describe("native check-in verification", () => {
     handleTriggerCheckinPageAction(
       {
         requestId: "native-script-only",
-        trigger: { kind: "clickSelector", selector: "#checkin" },
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
       },
       response,
     )
@@ -519,7 +671,10 @@ describe("native check-in verification", () => {
     handleTriggerCheckinPageAction(
       {
         requestId: "native-callback",
-        trigger: { kind: "clickSelector", selector: "#checkin" },
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
       },
       response,
     )
@@ -549,7 +704,10 @@ describe("native check-in verification", () => {
     handleTriggerCheckinPageAction(
       {
         requestId: "native-queued",
-        trigger: { kind: "clickSelector", selector: "#checkin" },
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
       },
       response,
     )
@@ -577,7 +735,10 @@ describe("native check-in verification", () => {
     handleTriggerCheckinPageAction(
       {
         requestId: "native-quiet",
-        trigger: { kind: "clickSelector", selector: "#checkin" },
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
       },
       response,
     )
@@ -600,7 +761,10 @@ describe("native check-in verification", () => {
     handleTriggerCheckinPageAction(
       {
         requestId: "native-late-poll",
-        trigger: { kind: "clickSelector", selector: "#checkin" },
+        trigger: {
+          kind: TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector,
+          selector: "#checkin",
+        },
       },
       response,
     )

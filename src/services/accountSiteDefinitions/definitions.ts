@@ -117,6 +117,8 @@ import {
   OPENROUTER_DISPLAY_NAME,
   OPENROUTER_HOSTNAMES,
   OPENROUTER_WEB_ORIGIN,
+  PMAPI_DISPLAY_NAME,
+  PMAPI_HOSTNAMES,
   RELAYFOR_DISPLAY_NAME,
   RELAYFOR_HOSTNAMES,
   RELAYFOR_LOGIN_PATH,
@@ -222,6 +224,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.EMRANK,
   SITE_TYPES.KRILL,
   SITE_TYPES.DAYA,
+  SITE_TYPES.PMAPI,
   SITE_TYPES.CUBENCE,
   SITE_TYPES.RIGHT_CODE,
   SITE_TYPES.RELAYFOR,
@@ -450,6 +453,56 @@ const ACCOUNT_SITE_DEFINITIONS = [
         duplicateOrigin: DAYA_WEB_ORIGIN,
         managedChannelOrigin: DAYA_API_BASE_URL,
         inferenceApiBaseUrls: { openAiCompatible: DAYA_API_BASE_URL },
+      },
+    },
+  },
+  {
+    siteType: SITE_TYPES.PMAPI,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Pmapi,
+    onboarding: {
+      displayName: PMAPI_DISPLAY_NAME,
+      detection: { hostnames: PMAPI_HOSTNAMES },
+      routes: {
+        // PM-API (pmcat.top, pap.pmcat.top) is one program with independent
+        // deployments. Its SPA routes on the hash (verified live: the plain
+        // `/console` paths render the public landing page), so every page
+        // route keeps the `/#/` prefix.
+        loginPath: "/#/login",
+        usagePath: "/#/console",
+        checkInPath: "/#/console/wallet",
+        adminCredentialsPath: "/#/console/tokens",
+        pricingPath: "/#/pricing",
+        accessTokenPath: null,
+        redeemPath: "/#/console/wallet",
+        siteAnnouncementsPath: "/",
+      },
+    },
+    productProfile: {
+      auth: {
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.AccessToken],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
+        defaultAuthHostnames: [],
+      },
+      identity: {
+        usernameRequired: false,
+        storedUserIdentityFields: ["id", "username"],
+      },
+      modelList: {
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+        // Groups are a real billing/routing dimension for PM-API (a token
+        // group selects routing, the group ratio multiplies prices), like
+        // the New API family.
+        groupSemantics:
+          ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
+      },
+      urls: {
+        // Both deployments are enumerated; each install keeps its own saved
+        // URL, so no storage origin is pinned.
+        recognizedHostnames: PMAPI_HOSTNAMES,
+        inferFromHostname: true,
       },
     },
   },

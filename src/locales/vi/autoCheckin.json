@@ -177,6 +177,8 @@
     "label": "Lưu ý rủi ro khi tự động điểm danh"
   },
   "settings": {
+    "continueWhenVerificationRequired": "Thử trên trang khi xác minh chặn điểm danh",
+    "continueWhenVerificationRequiredDesc": "Mặc định tắt. Khi bật, tiện ích chỉ thử mở trang và nhấp nút điểm danh. Thông thường bạn vẫn cần tự hoàn tất CAPTCHA; không bảo đảm thành công. Hãy bật lời nhắc tại “Hỗ trợ xác minh trang web → Khi cần bạn xác minh”. Khi tắt, lần điểm danh này kết thúc mà không mở trang. Mỗi tài khoản có thể thay đổi cài đặt này.",
     "deterministicTimeDesc": "Khi bật chế độ cố định, hãy chọn thời gian cụ thể (HH:mm) để bắt đầu điểm danh.",
     "deterministicTimeTitle": "Thời gian cố định",
     "enable": "Bật điểm danh tự động",

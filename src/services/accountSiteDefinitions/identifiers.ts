@@ -47,6 +47,7 @@ export const SITE_TYPES = {
   KIMI: "kimi",
   KIMI_GLOBAL: "kimi-global",
   DAYA: "daya",
+  PMAPI: "pmapi",
   GRSAI: "grsai",
   UNKNOWN: "unknown",
 } as const
@@ -221,3 +222,14 @@ export const DAYA_WEB_ORIGIN = "https://api.dayaai.com"
  * console; the extension never falls back across them automatically.
  */
 export const DAYA_API_BASE_URL = "https://daya.to/v1"
+
+/**
+ * PM-API is one program with two deployments run by the same operator:
+ * https://pmcat.top/ (开放注册) and https://pap.pmcat.top/ (注册码内测版).
+ * Both hostnames serve the identical contract (`/api/status`, `/api/me`,
+ * `/api/tokens`) but keep independent account stores, so each deployment is
+ * its own login origin and the saved account URL identifies the install.
+ * Verified 2026-10-22.
+ */
+export const PMAPI_HOSTNAMES = ["pmcat.top", "pap.pmcat.top"] as const
+export const PMAPI_DISPLAY_NAME = "PM-API"

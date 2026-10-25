@@ -208,6 +208,7 @@ export function buildDraftFromAutoDetectResult(params: {
             ? draft.checkIn.automaticExecutionEnabled
             : mergedCheckIn.automaticExecutionEnabled,
           userPreferenceChanged: automaticExecutionPreferenceChanged,
+          automaticExecutionDefault: mergedCheckIn.automaticExecutionEnabled,
           checkIn: mergedCheckIn,
         }),
       }

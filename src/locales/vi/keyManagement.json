@@ -524,6 +524,10 @@
         "loading": "Đang mở trình chỉnh sửa khóa...",
         "retry": "Thử lại"
       },
+      "pmapi": {
+        "rpm": "Yêu cầu mỗi phút",
+        "rpmHelp": "Số yêu cầu tối đa mỗi phút của token này; 0 nghĩa là không giới hạn."
+      },
       "quotaCredits": "Tín dụng còn lại",
       "quotaCreditsHelp": "Khóa sẽ ngừng hoạt động khi số tín dụng này hết.",
       "quotaUsd": "Hạn mức (USD)",

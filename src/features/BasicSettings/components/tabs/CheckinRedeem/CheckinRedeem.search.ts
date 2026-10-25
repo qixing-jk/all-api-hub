@@ -28,6 +28,30 @@ export const checkinRedeemSearchSections: OptionsSearchItemDefinition[] = [
 
 export const checkinRedeemSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
+    "control:auto-checkin-continue-when-verification-required",
+    "checkinRedeem",
+    AUTO_CHECKIN_TARGET_IDS.continueWhenVerificationRequired,
+    "autoCheckin:settings.continueWhenVerificationRequired",
+    560.5,
+    {
+      descriptionKey:
+        "autoCheckin:settings.continueWhenVerificationRequiredDesc",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.checkinRedeem",
+        "autoCheckin:settings.title",
+      ],
+      keywords: [
+        "auto checkin",
+        "captcha",
+        "verification",
+        "click",
+        "模拟点击",
+        "验证码",
+      ],
+    },
+  ),
+  buildControlDefinition(
     "control:auto-checkin-global-enabled",
     "checkinRedeem",
     AUTO_CHECKIN_TARGET_IDS.enable,

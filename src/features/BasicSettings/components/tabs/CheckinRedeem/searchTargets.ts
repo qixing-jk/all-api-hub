@@ -3,6 +3,8 @@ export const AUTO_CHECKIN_TARGET_IDS = {
   enable: "auto-checkin-enable",
   pretriggerUiOpen: "auto-checkin-pretrigger-ui-open",
   notifyUiOnCompletion: "auto-checkin-notify-ui-on-completion",
+  continueWhenVerificationRequired:
+    "auto-checkin-continue-when-verification-required",
   windowStart: "auto-checkin-window-start",
   windowEnd: "auto-checkin-window-end",
   scheduleMode: "auto-checkin-schedule-mode",

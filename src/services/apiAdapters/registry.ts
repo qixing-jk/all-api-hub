@@ -41,6 +41,7 @@ import { sub2ApiManagedSiteCapabilities } from "./managedSites/sub2api"
 import { veloeraManagedSiteCapabilities } from "./managedSites/veloera"
 import { createNewApiCapabilities } from "./newApi"
 import { openRouterCapabilities } from "./openrouter"
+import { pmApiCapabilities } from "./pmapi"
 import { relayForCapabilities } from "./relayfor"
 import { rightCodeCapabilities } from "./rightcode"
 import { sharedChatCapabilities } from "./sharedchat"
@@ -98,6 +99,7 @@ const accountCapabilityFactories = {
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Xiaoen]: () => xiaoenCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Krill]: () => krillCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Daya]: () => dayaCapabilities,
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Pmapi]: () => pmApiCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Cubence]: () => cubenceCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.RightCode]: () => rightCodeCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.RelayFor]: () => relayForCapabilities,

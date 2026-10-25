@@ -102,6 +102,7 @@
     "e2e:cdp:xiaoen": "node scripts/test-xiaoen-e2e-live.mjs",
     "e2e:cdp:krill": "node scripts/test-krill-e2e-live.mjs",
     "e2e:cdp:daya": "node scripts/test-daya-e2e-live.mjs",
+    "e2e:cdp:pmapi": "node scripts/test-pmapi-e2e-live.mjs",
     "e2e:cdp:daya:keys": "node scripts/test-daya-key-editor-e2e-live.mjs",
     "e2e:cdp:daya:redemption": "node scripts/test-daya-redemption-e2e-live.mjs",
     "e2e:cdp:daya:prices": "node scripts/test-daya-model-prices-e2e-live.mjs",

@@ -190,6 +190,8 @@ const AUTO_CHECKIN_METHOD_CATEGORY_BY_ID = {
     PRODUCT_ANALYTICS_AUTO_CHECKIN_METHOD_CATEGORIES.StrictReadback,
   [AUTO_CHECKIN_METHOD_IDS.DayaDailyCheckIn]:
     PRODUCT_ANALYTICS_AUTO_CHECKIN_METHOD_CATEGORIES.StrictReadback,
+  [AUTO_CHECKIN_METHOD_IDS.PmApiDailyCheckIn]:
+    PRODUCT_ANALYTICS_AUTO_CHECKIN_METHOD_CATEGORIES.StrictReadback,
 } as const satisfies Record<
   CheckInMethodId,
   ProductAnalyticsAutoCheckinMethodCategory

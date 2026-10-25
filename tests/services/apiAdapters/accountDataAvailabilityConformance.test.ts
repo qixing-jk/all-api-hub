@@ -267,6 +267,45 @@ const producerFixturesByFamily = {
     ],
     expectRequests: () => {},
   },
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Pmapi]: {
+    baseUrl: "https://pmcat.top",
+    authType: AuthTypeEnum.AccessToken,
+    expectedAvailability: {
+      consumption: complete,
+      requests: complete,
+      tokens: complete,
+      income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
+    handlers: [
+      http.get("https://pmcat.top/api/me", () =>
+        HttpResponse.json({
+          success: true,
+          message: "",
+          data: {
+            id: 10171,
+            username: "pm-test-user",
+            quota: 0,
+            used_quota: 0,
+            checked_in_today: false,
+          },
+        }),
+      ),
+      http.get("https://pmcat.top/api/me/stats", () =>
+        HttpResponse.json({
+          success: true,
+          message: "",
+          data: {
+            models: [],
+            rpm: 0,
+            series: [],
+            today: { latency: 0, quota: 0, requests: 0, tokens: 0 },
+            token_count: 0,
+          },
+        }),
+      ),
+    ],
+    expectRequests: () => {},
+  },
   [ACCOUNT_SITE_ADAPTER_FAMILIES.FoxCode]: {
     baseUrl: "https://foxcode.rjj.cc",
     authType: AuthTypeEnum.Cookie,
@@ -820,7 +859,9 @@ const createRequest = (siteType: AccountSiteType) => {
               ? "6088"
               : siteType === SITE_TYPES.DAYA
                 ? "615"
-                : "user-1",
+                : siteType === SITE_TYPES.PMAPI
+                  ? "10171"
+                  : "user-1",
       accessToken: "account-token",
     },
     checkIn: buildCheckInConfig(),

@@ -77,6 +77,7 @@ These backends have distinct account contracts. Compatible inference APIs do not
 | `emrank` | Account / [emrank](../../src/services/apiAdapters/emrank/) | Provider-owned embedding/reranker gateway, not a New API derivative. One origin `emrank.tech` serves the console, its `/api/*` account routes and the `/v1` inference mount; `docs.emrank.tech` and `status.emrank.tech` are documentation and status pages, not console aliases. | [Console](https://emrank.tech/) · [Documentation](https://docs.emrank.tech/) |
 | `relayfor` | Account / [relayfor](../../src/services/apiAdapters/relayfor/) | Independent AI public welfare service platform with Bearer token authentication, daily check-in campaigns, masked token listings, and ratio pricing; not a New API/One API derivative. | [Website](https://relayfor.xyz/) |
 | `daya` | Account / [daya](../../src/services/apiAdapters/daya/) | Provider-owned account backend with Cookie-session authentication, ordered key routing and a public model catalog; not a New API/One API derivative. Console and inference origins are registered separately. | [Console](https://api.dayaai.com/) |
+| `pmapi` | Account / [pmapi](../../src/services/apiAdapters/pmapi/) | Provider-owned account backend with a Bearer console token (localStorage `pm_token`) and a New API-style quota unit; not a New API/One API derivative. Two deployments of one program keep independent account stores. | [Console](https://pmcat.top/) / [Mirror](https://pap.pmcat.top/) |
 
 ### Managed-only backend types
 

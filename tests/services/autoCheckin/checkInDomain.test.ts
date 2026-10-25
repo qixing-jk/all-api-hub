@@ -922,6 +922,49 @@ describe("normalizeCheckInConfigV7", () => {
     expect(normalized.customCheckIn).toBeUndefined()
   })
 
+  it("keeps the account-level page-assistance override and the verification metadata", () => {
+    const normalized = normalizeCheckInConfigV7({
+      automaticExecutionEnabled: false,
+      continueWhenVerificationRequired: true,
+      methodKnowledge: {
+        methods: {
+          [NEW_API_METHOD_ID]: {
+            detection: matched,
+            status: {
+              outcome: "known",
+              availability: "enabled",
+              today: "not_checked",
+              requiresManualVerification: true,
+              evidence: { source: "probe", observedAt: 200 },
+            },
+          },
+        },
+      },
+      selection: { mode: "automatic" },
+    })
+
+    expect(normalized.continueWhenVerificationRequired).toBe(true)
+    expect(
+      normalized.methodKnowledge.methods[NEW_API_METHOD_ID]?.status,
+    ).toEqual({
+      outcome: "known",
+      availability: "enabled",
+      today: "not_checked",
+      requiresManualVerification: true,
+      evidence: { source: "probe", observedAt: 200 },
+    })
+  })
+
+  it("ignores a non-boolean page-assistance override", () => {
+    const normalized = normalizeCheckInConfigV7({
+      continueWhenVerificationRequired: "yes",
+      methodKnowledge: { methods: {} },
+      selection: { mode: "automatic" },
+    })
+
+    expect(normalized.continueWhenVerificationRequired).toBeUndefined()
+  })
+
   it.each([
     {
       turnstilePreTrigger: { kind: "none" },
