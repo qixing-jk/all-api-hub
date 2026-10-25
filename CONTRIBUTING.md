@@ -187,6 +187,8 @@ During normal development, run the smallest relevant test set and let the pull r
 
 CI splits the unit suite across six runners in [the test workflow](.github/workflows/test.yml). [The shard sequencer](vitest.shardSequencer.ts) balances files using measured durations from previous runs.
 
+Failed assertions do not prevent coverage analysis: when all shard reports contain test and coverage data, the merge job uploads the generated LCOV to Codecov even if the merge command exits with test failures. Tests keep their failing status. Missing reports, missing coverage, unhandled worker errors, or mixed Vitest versions block coverage publication; available merged coverage and JUnit reports remain in workflow artifacts for diagnosis. The job summary records report completeness. Run `node --test tests/scripts/check-unit-test-reports.test.mjs` to check these guards and reproduce a real failed two-shard merge locally without uploading anything.
+
 The merge job generates `.vitest-durations/shard-durations.json` from blob reports and caches it for later runs. No manual weight maintenance is needed. If no usable manifest exists, the sequencer falls back to Vitest's default file-count slices. See [the duration-report generator](scripts/write-unit-test-durations.mjs) for load correction and incomplete-report handling.
 
 To see a duration-balanced split locally, publish a manifest from your own run and shard against it:
