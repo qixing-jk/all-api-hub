@@ -16,7 +16,7 @@
 <summary>📦 手動インストール、Safari、またはモバイルデバイスが必要ですか？（クリックして展開）</summary>
 
 - **GitHub Stable**：ストア版または Chrome ウェブストア互換版をインストールできない場合、または公開済みの修正を一時的に手動インストールしたい場合は、[GitHub Releases](https://github.com/qixing-jk/all-api-hub/releases) から正式版をダウンロードできます。手動インストール版はストア版のように自動更新されません。新しいバージョンの通知を受け取るには、リポジトリを Star / Watch してください。
-- **Nightly プレリリース**：新機能を早く試してテストに協力したいユーザー向けです。ストアの安定版より不安定な場合があります。Nightly も手動インストール経路で、自動更新されません。
+- **Nightly プレリリース**：新機能を早く試してテストに協力したいユーザー向けです。ストアの安定版より不安定な場合があります。Nightly も手動インストール経路です。Chromium ユーザーは[自己更新 `.crx`](./chromium-crx-self-update.md)で自動更新できます。
 - **Safari (Mac)**：Xcode を介してインストールする必要があります。詳細は [Safari インストールガイド](./safari-install.md) を参照してください。
 - **QQ / 360 / Brave / Vivaldi / Opera など**：Chromium 系ブラウザでもインストール経路は異なります。Brave、Vivaldi、Opera は通常まず Chrome ウェブストアを試せます。ストア経路を使えない場合は手動読み込みを使ってください。詳細は [その他のブラウザへのインストールガイド](./other-browser-install.md) を参照してください。
 - **モバイルデバイス**：Edge モバイル版、Firefox Android、Kiwi などに対応しています。詳細は [モバイル FAQ](./faq.md#mobile-browser-support) を参照してください。

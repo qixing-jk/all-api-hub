@@ -17,6 +17,7 @@ import {
   getExtensionURL,
   getExtensionVersion,
   getManagementSelf,
+  getManifest,
   getRuntimeId,
 } from "~/utils/browser/runtime"
 import { requestRuntimeUpdateCheck } from "~/utils/browser/runtimeUpdateCheck"
@@ -245,6 +246,7 @@ class ReleaseUpdateService {
   ): Promise<ReleaseUpdateStatus> {
     const currentVersion = getExtensionVersion()
     const distributionChannel = getDistributionChannel()
+    const selfUpdate = isSelfUpdatingBuild()
     const detected = await detectInstallEligibility()
     const fallback = createDefaultReleaseUpdateStatus(currentVersion)
     if (detected.reason === RELEASE_UPDATE_REASONS.FirefoxAmo)
@@ -255,6 +257,7 @@ class ReleaseUpdateService {
     const canReuseStoredReleaseFields =
       isSameVersion &&
       stored?.reason === detected.reason &&
+      stored?.selfUpdate === selfUpdate &&
       (stored?.distributionChannel ?? DISTRIBUTION_CHANNEL.Unknown) ===
         distributionChannel &&
       (detected.reason !== RELEASE_UPDATE_REASONS.GithubNightly ||
@@ -268,6 +271,7 @@ class ReleaseUpdateService {
     return {
       ...fallback,
       distributionChannel,
+      selfUpdate,
       ...(detected.reason === RELEASE_UPDATE_REASONS.GithubNightly
         ? { buildRevision: getBuildRevision() }
         : {}),
@@ -454,6 +458,17 @@ function getRuntimeBaseUrl(): string {
 }
 
 /**
+ * Check whether the packaged manifest advertises a self-hosted update URL.
+ *
+ * Only the dedicated CRX build carries `update_url`; the unpacked ZIP from the
+ * same channel does not, and the two need different guidance.
+ */
+function isSelfUpdatingBuild(): boolean {
+  const updateUrl = (getManifest() as { update_url?: unknown }).update_url
+  return typeof updateUrl === "string" && updateUrl.trim().length > 0
+}
+
+/**
  * Check whether the current Chromium runtime ID matches a known store build.
  */
 function isKnownChromiumStoreBuild(): boolean {
@@ -580,6 +595,7 @@ function areStatusesEquivalent(
     left.releaseUrl === right.releaseUrl &&
     left.checkedAt === right.checkedAt &&
     left.lastError === right.lastError &&
+    left.selfUpdate === right.selfUpdate &&
     left.githubLatestVersion === right.githubLatestVersion &&
     left.storeUpdate.supported === right.storeUpdate.supported &&
     left.storeUpdate.status === right.storeUpdate.status &&

@@ -51,16 +51,26 @@ const assetNames = Array.isArray(release.assets)
 
 const assetOrder = (name) => {
   if (/chrome\.zip$/i.test(name)) return 10
+  if (/chrome\.crx$/i.test(name)) return 15
   if (/firefox\.zip$/i.test(name)) return 20
   if (/sources\.zip$/i.test(name)) return 30
   if (/safari-xcode-bundle\.zip$/i.test(name)) return 40
   if (/safari\.zip$/i.test(name)) return 50
+  if (/^updates\.xml$/i.test(name)) return 60
   return 100
 }
 
 const describeAsset = (name) => {
   if (/chrome\.zip$/i.test(name)) {
     return "Chromium 内核浏览器手动安装包。普通用户请优先安装 Chrome 商店或 Edge 商店版本；仅在无法使用商店版、需要临时验证修复或调试时下载此文件。"
+  }
+
+  if (/chrome\.crx$/i.test(name)) {
+    return "Chromium 自更新安装包。安装后浏览器会按 `updates.xml` 自动获取新版本；stock Chrome / Edge 需要先按文档配置扩展白名单策略，否则会被浏览器拦截。"
+  }
+
+  if (/^updates\.xml$/i.test(name)) {
+    return "自更新清单，供已安装的 `.crx` 版本检查新版本；普通用户无需直接下载。"
   }
 
   if (/firefox\.zip$/i.test(name)) {

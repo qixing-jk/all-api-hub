@@ -16,7 +16,7 @@ For the best experience (including automatic updates), we **strongly recommend i
 <summary>📦 Manual Installation, Safari, or Mobile? (Click to expand)</summary>
 
 - **GitHub Stable**: Use [GitHub Releases](https://github.com/qixing-jk/all-api-hub/releases) when you cannot install a store build or Chrome Web Store compatible build, or need to temporarily install a published fix manually. Manual installations do not auto-update like the store build. You can Star / Watch the repository to receive new version notifications.
-- **Nightly pre-release**: For early access and testing. It may be less stable than the store build. Nightly is also a manual installation channel and does not auto-update.
+- **Nightly pre-release**: For early access and testing. It may be less stable than the store build. Nightly is also a manual installation channel; Chromium users can get automatic updates through the [self-updating `.crx`](./chromium-crx-self-update.md).
 - **Safari (Mac)**: Requires installation via Xcode. See the [Safari Installation Guide](./safari-install.md).
 - **QQ / 360 / Brave / Vivaldi / Opera, etc.**: Installation paths differ across Chromium browsers. Brave, Vivaldi, and Opera can usually try Chrome Web Store first; if a store path is unavailable, use manual loading. See the [Other Browser Installation Guide](./other-browser-install.md).
 - **Mobile**: Supports Edge mobile, Firefox Android, Kiwi, etc. See [Mobile FAQ](./faq.md#mobile-browser-support).

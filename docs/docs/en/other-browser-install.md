@@ -14,7 +14,7 @@ Most of these browsers are based on Chromium, but their available installation p
 - **Mobile Browsers:** Support for extensions varies significantly across mobile browsers. For mobile usage instructions, please see [Mobile Browser Support in FAQ](./faq.md#mobile-browser-support).
 
 ::: warning Tip
-Extensions loaded manually are typically not updated automatically. For future updates, you will need to re-download the new Chrome package and click "Reload" or reinstall from the extension management page.
+Extensions loaded manually are typically not updated automatically. For future updates, you will need to re-download the new Chrome package and click "Reload" or reinstall from the extension management page; Chromium users can also switch to the [self-updating `.crx` install](./chromium-crx-self-update.md).
 :::
 
 ## Supported Browsers
@@ -194,7 +194,7 @@ Once on the extension management page, follow the [manual loading procedure](#de
 
 ## Updating the Extension
 
-Manually loaded versions do not update automatically. For the differences between store versions, GitHub Stable, and Nightly, read [Installation Channels and Updates](./extension-update-install.md) first. To update a manually loaded version, follow these steps:
+Manually loaded versions do not update automatically; to avoid replacing the package yourself, switch to the [self-updating `.crx` install](./chromium-crx-self-update.md). For the differences between store versions, GitHub Stable, and Nightly, read [Installation Channels and Updates](./extension-update-install.md) first. To update a manually loaded version, follow these steps:
 
 1. Open the [Latest Release](https://github.com/qixing-jk/all-api-hub/releases/latest).
 2. Download the new `all-api-hub-<version>-chrome.zip`.

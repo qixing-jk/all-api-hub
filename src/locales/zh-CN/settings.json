@@ -745,6 +745,7 @@
       "checkFailed": "请重新检查更新。",
       "manualUpdate": "当前安装为手动更新渠道，请前往发布页获取新版本。",
       "manualUpdateGeneric": "请按当前安装渠道完成更新，必要时可前往发布页手动获取新版本。",
+      "selfUpdate": "此安装包会自动更新。浏览器会从发布页获取新版本，无需手动下载。",
       "storeUpdate": "商店版由浏览器自动更新，请等待商店推送。",
       "storeUpdateReady": "浏览器已发现可用的商店更新，重新加载扩展后即可使用新版本。",
       "unavailable": "请重新检查更新。"
@@ -755,6 +756,7 @@
     "states": {
       "checkFailed": "检查更新失败",
       "notChecked": "尚未检查最新正式版，可手动检查",
+      "selfUpdatePending": "发现新版本，浏览器将自动安装",
       "storeUpdatePending": "等待商店推送更新",
       "storeUpdateReady": "更新已就绪",
       "unavailable": "暂时无法获取更新状态",
@@ -764,7 +766,8 @@
     "versionBadge": {
       "changelogAriaLabel": "版本 {{version}} 更新日志",
       "updateAvailableAriaLabel": "版本 {{version}} 有可用更新"
-    }
+    },
+    "viewReleaseNotes": "查看更新说明"
   },
   "siteAnnouncementNotifications": {
     "description": "控制是否在后台定时抓取已启用账号所属站点的网站公告。",

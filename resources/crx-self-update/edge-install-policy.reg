@@ -1,0 +1,20 @@
+Windows Registry Editor Version 5.00
+
+; Allow the self-updating All API Hub CRX to install and update itself in Microsoft Edge.
+; Requires an AD domain-joined Windows device (Entra-only is insufficient).
+; Trust scope: release-assets.githubusercontent.com serves other repositories.
+; Both CRX and referrer must match; this does not restrict installs to one ID.
+; Read README.md before importing and merge existing policies with your admin.
+; The id below is the All API Hub self-update CRX id; it must match the
+; "appid" in the release's updates.xml. Verify it on edge://extensions after
+; installing.
+;
+; HKEY_LOCAL_MACHINE requires an administrator shell. These are mandatory
+; policies: user-level edits (HKCU) are ignored by policy-aware Edge.
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\ExtensionInstallAllowlist]
+"1"="oligofghjlogjhmnhnhccnobbginfgmp"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge\ExtensionInstallSources]
+"1"="https://github.com/qixing-jk/all-api-hub/*"
+"2"="https://release-assets.githubusercontent.com/*"

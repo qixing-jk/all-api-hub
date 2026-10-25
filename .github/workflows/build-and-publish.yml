@@ -45,6 +45,7 @@ jobs:
       package_version: ${{ steps.package.outputs.package-version }}
       checkout_ref: ${{ steps.get_ref.outputs.checkout_ref }}
       release_tag: ${{ steps.get_ref.outputs.release_tag }}
+      crx_files: ${{ steps.package.outputs.crx-files }}
 
     steps:
       # 先 checkout 完整仓库，后面要用 git 命令找 tag
@@ -128,6 +129,10 @@ jobs:
         with:
           working-directory: source
           build-stores: "true"
+          crx-signing-key: ${{ secrets.CRX_SIGNING_KEY }}
+          # Opt-in: releases keep publishing their normal archives until the
+          # signing key exists, then the variable makes a missing CRX fail loudly.
+          require-crx-self-update: ${{ vars.CRX_SELF_UPDATE_REQUIRED || 'false' }}
 
       - name: Validate Safari build inputs
         if: ${{ steps.get_ref.outputs.checkout_ref != '' }}
@@ -176,6 +181,17 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
 
+      - name: Upload self-update artifacts
+        if: ${{ steps.get_ref.outputs.checkout_ref != '' && steps.package.outputs.crx-files != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: self-update-artifacts
+          path: |
+            source/.output/*.crx
+            source/.output/updates.xml
+          include-hidden-files: true
+          if-no-files-found: error
+
   release-artifacts:
     needs: build
     if: ${{ needs.build.outputs.checkout_ref != '' }}
@@ -196,20 +212,45 @@ jobs:
           name: packaged-archives
           path: .output
 
+      - name: Download self-update artifacts
+        if: ${{ needs.build.outputs.crx_files != '' }}
+        uses: actions/download-artifact@v7
+        with:
+          name: self-update-artifacts
+          path: .output
+
       - name: Upload release artifacts dry-run preview
         if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: release-artifacts-dry-run
-          path: .output/*.zip
+          path: |
+            .output/*.zip
+            .output/*.crx
+            .output/updates.xml
           include-hidden-files: true
           if-no-files-found: error
+
+      - name: Validate stable CRX identity
+        if: ${{ needs.build.outputs.release_tag != '' && (github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true') }}
+        run: |
+          if [ ! -f .output/updates.xml ]; then exit 0; fi
+
+          # Pin the identity already distributed in the install policy templates.
+          # This also protects the first release and avoids trusting a mutable
+          # latest-release pointer when detecting an accidental signing-key change.
+          appid="$(sed -n 's/.*<app appid="\([a-p]*\)">.*/\1/p' .output/updates.xml)"
+          if [ "$appid" != "oligofghjlogjhmnhnhccnobbginfgmp" ]; then
+            echo "::error::Stable CRX identity differs from the published install policy ID. Restore the original CRX_SIGNING_KEY."
+            exit 1
+          fi
 
       - name: Upload release artifacts
         if: ${{ needs.build.outputs.release_tag != '' && (github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true') }}
         run: |
           shopt -s nullglob
-          assets=(.output/*.zip)
+          assets=(.output/*.zip .output/*.crx)
+          if [ -f .output/updates.xml ]; then assets+=(.output/updates.xml); fi
 
           if [ "${#assets[@]}" -eq 0 ]; then
             echo "No packaged archives found under .output."

@@ -746,6 +746,7 @@
       "checkFailed": "Bitte erneut nach Updates suchen.",
       "manualUpdate": "Diese Installation wird manuell aktualisiert. Öffnen Sie die Release-Seite, um die neue Version zu erhalten.",
       "manualUpdateGeneric": "Aktualisieren Sie über Ihren aktuellen Installationskanal oder öffnen Sie die Release-Seite, wenn Sie manuell aktualisieren müssen.",
+      "selfUpdate": "Diese Installation aktualisiert sich selbst. Der Browser ruft neue Versionen von der Release-Seite ab, ein manueller Download ist nicht nötig.",
       "storeUpdate": "Store-Versionen werden automatisch vom Browser aktualisiert. Bitte auf die Bereitstellung im Store warten.",
       "storeUpdateReady": "Der Browser hat ein Store-Update gefunden. Laden Sie die Erweiterung neu, um die neue Version zu verwenden.",
       "unavailable": "Bitte erneut nach Updates suchen."
@@ -756,6 +757,7 @@
     "states": {
       "checkFailed": "Updates konnten nicht geprüft werden",
       "notChecked": "Die neueste stabile Version wurde noch nicht überprüft. Führen Sie eine manuelle Prüfung durch, um Versionen zu vergleichen",
+      "selfUpdatePending": "Eine neuere Version ist verfügbar. Der Browser installiert sie automatisch",
       "storeUpdatePending": "Store-Update steht noch aus",
       "storeUpdateReady": "Update bereit",
       "unavailable": "Update-Status nicht verfügbar",
@@ -765,7 +767,8 @@
     "versionBadge": {
       "changelogAriaLabel": "Änderungsprotokoll für Version {{version}}",
       "updateAvailableAriaLabel": "Update für Version {{version}} verfügbar"
-    }
+    },
+    "viewReleaseNotes": "Versionshinweise anzeigen"
   },
   "siteAnnouncementNotifications": {
     "description": "Steuert, ob aktivierte Kontoseiten im Hintergrund auf Seitenankündigungen überprüft werden.",

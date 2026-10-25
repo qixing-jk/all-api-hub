@@ -745,6 +745,7 @@
       "checkFailed": "Hãy kiểm tra cập nhật lại.",
       "manualUpdate": "Bản cài đặt hiện tại là kênh cập nhật thủ công. Vui lòng vào trang phát hành để lấy phiên bản mới.",
       "manualUpdateGeneric": "Vui lòng cập nhật theo kênh cài đặt hiện tại; khi cần có thể vào trang phát hành để lấy phiên bản mới thủ công.",
+      "selfUpdate": "Bản cài đặt này tự cập nhật. Trình duyệt sẽ tải phiên bản mới từ trang phát hành, không cần tải xuống thủ công.",
       "storeUpdate": "Trình duyệt tự động cập nhật bản cài từ cửa hàng. Vui lòng chờ cửa hàng phát hành.",
       "storeUpdateReady": "Trình duyệt đã tìm thấy bản cập nhật từ cửa hàng. Hãy tải lại tiện ích để dùng phiên bản mới.",
       "unavailable": "Hãy kiểm tra cập nhật lại."
@@ -755,6 +756,7 @@
     "states": {
       "checkFailed": "Không thể kiểm tra cập nhật",
       "notChecked": "Chưa kiểm tra bản chính thức mới nhất, có thể kiểm tra thủ công",
+      "selfUpdatePending": "Có phiên bản mới hơn. Trình duyệt sẽ tự động cài đặt",
       "storeUpdatePending": "Đang chờ bản cập nhật từ cửa hàng",
       "storeUpdateReady": "Bản cập nhật đã sẵn sàng",
       "unavailable": "Không thể xem trạng thái cập nhật",
@@ -764,7 +766,8 @@
     "versionBadge": {
       "changelogAriaLabel": "Nhật ký thay đổi phiên bản {{version}}",
       "updateAvailableAriaLabel": "Phiên bản {{version}} có bản cập nhật khả dụng"
-    }
+    },
+    "viewReleaseNotes": "Xem ghi chú phát hành"
   },
   "siteAnnouncementNotifications": {
     "description": "Kiểm soát việc nền có định kỳ lấy thông báo website của các trang thuộc tài khoản đã bật hay không.",

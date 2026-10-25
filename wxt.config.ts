@@ -8,7 +8,12 @@ import {
   getE2eTestOutDirTemplate,
   readE2eBuildVariant,
 } from "./e2e/utils/e2eBuildVariants"
+import packageJson from "./package.json"
 import { reactDevToolsAuto } from "./plugins/react-devtools-auto"
+import {
+  CRX_ENV_VARS,
+  SELF_UPDATE_CHANNELS,
+} from "./scripts/crx-self-update.mjs"
 import { APP_SHORT_NAME } from "./src/constants/branding"
 import { APP_LOCALE_ASSET_GLOB } from "./src/constants/i18n"
 import {
@@ -74,6 +79,7 @@ const BOOKMARK_IMPORT_OPTIONAL_PERMISSIONS = ["bookmarks"] as const
 const requestedMode = readWxtCliMode()
 const isTestBuild = requestedMode === "test"
 const e2eBuildVariant = readE2eBuildVariant()
+const defaultCrxBuildTime = new Date().toISOString()
 
 // See https://wxt.dev/api/config.html
 export default defineConfig({
@@ -130,6 +136,7 @@ export default defineConfig({
       : "__MSG_manifest_description__"
     const requiredPermissions = getManifestRequiredPermissions(env.browser)
     const optionalPermissions = getManifestOptionalPermissions(env.browser)
+    const selfUpdateUrl = getSelfUpdateUrl(env)
 
     return {
       // Local builds share a display name, so the dev name carries the project
@@ -144,6 +151,18 @@ export default defineConfig({
           )
         : "__MSG_manifest_name__",
       description,
+      // Only the dedicated self-update CRX build carries `update_url`; baking it
+      // into the unpacked ZIP makes Chrome reject the package unless an
+      // administrator allowlists the extension.
+      update_url: selfUpdateUrl,
+      ...(selfUpdateUrl &&
+      process.env.AAH_DISTRIBUTION_CHANNEL ===
+        DISTRIBUTION_CHANNEL.GithubNightly
+        ? {
+            version: getNightlyCrxVersion(),
+            version_name: `${packageJson.version} nightly`,
+          }
+        : {}),
       default_locale: "en",
       permissions: requiredPermissions,
       optional_permissions: optionalPermissions,
@@ -286,6 +305,52 @@ function getBrowserCookieOptionalPermissions(browser: BrowserTarget) {
 
 function isFirefoxManifestTarget(browser: BrowserTarget) {
   return browser === MANIFEST_BROWSER_TARGETS.Firefox
+}
+
+/**
+ * Resolve the self-hosted update manifest for this build.
+ *
+ * Chromium is the only target with a self-hosted update mechanism here, and a
+ * dev-serve build must never advertise one: the browser would try to replace
+ * the live dev install with a packaged release.
+ */
+function getSelfUpdateUrl(env: ConfigEnv): string | undefined {
+  if (env.command === "serve" || !isChromiumManifestTarget(env.browser)) {
+    return undefined
+  }
+
+  // Store submissions must keep the store's own update channel; a leaked
+  // self-update URL there would be rejected or route updates to the wrong
+  // source, so the build refuses it instead of trusting the caller.
+  const channel = resolveDistributionChannel(
+    process.env.AAH_DISTRIBUTION_CHANNEL,
+    env.browser,
+    env.command,
+  )
+  if (!SELF_UPDATE_CHANNELS.has(channel)) return undefined
+
+  return process.env[CRX_ENV_VARS.SelfUpdateUrl]?.trim() || undefined
+}
+
+/**
+ * Native updates compare numeric versions, not our baked Git revision.
+ * UTC YYYY.MMDD.HHMM.SSmmm is ordered to the millisecond; every component is
+ * below Chromium's 65536 limit and version_name keeps the package version.
+ */
+function getNightlyCrxVersion(): string {
+  const date = new Date(
+    process.env[CRX_ENV_VARS.BuildTime] || defaultCrxBuildTime,
+  )
+  const year = date.getUTCFullYear()
+  if (!Number.isFinite(date.getTime()) || year < 2000 || year > 65535) {
+    throw new Error(`Invalid ${CRX_ENV_VARS.BuildTime} for the nightly CRX`)
+  }
+  return [
+    year,
+    (date.getUTCMonth() + 1) * 100 + date.getUTCDate(),
+    date.getUTCHours() * 100 + date.getUTCMinutes(),
+    date.getUTCSeconds() * 1000 + date.getUTCMilliseconds(),
+  ].join(".")
 }
 
 function isChromiumManifestTarget(browser: BrowserTarget) {

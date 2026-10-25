@@ -85,7 +85,7 @@ Manual installation from GitHub is best used temporarily:
 
 Before installing manually, note that:
 
-- Manually installed versions usually do not update automatically.
+- ZIP-based manual installs do not update automatically; Chromium users can switch to the [self-updating `.crx` install](./chromium-crx-self-update.md).
 - Future upgrades require downloading the new package again. You can Star / Watch the GitHub repository so it is easier to notice new releases.
 - Before switching from the store version to a manually installed version, it is recommended to export a backup of your data.
 - It is not recommended to keep multiple All API Hub installations from different sources for long-term use, unless you are intentionally testing.
