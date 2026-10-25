@@ -333,4 +333,25 @@ describe("inference capability", () => {
       plainKey,
     )
   })
+
+  it("never falls back to a management key for default selection", () => {
+    // A management key that is the only, or only-active, credential must not be
+    // proposed as the default inference key by any fallback branch.
+    const inactiveInferenceKey = buildAccountKeyResourceRuntimeKey(account, {
+      ref: { ...ref, resourceId: "inactive" },
+      label: "Inactive",
+      secret: "sk-inactive",
+      status: "inactive",
+      inference: true,
+    })
+    expect(findDefaultSelectableAccountRuntimeKey([inferenceKey(false)])).toBe(
+      null,
+    )
+    expect(
+      findDefaultSelectableAccountRuntimeKey([
+        inferenceKey(false, "first"),
+        inactiveInferenceKey,
+      ]),
+    ).toBe(inactiveInferenceKey)
+  })
 })

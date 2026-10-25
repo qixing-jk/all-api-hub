@@ -322,6 +322,8 @@ export const sortAccountRuntimeKeysActiveFirst = <
 export const findDefaultSelectableAccountRuntimeKey = (
   runtimeKeys: AccountRuntimeKey[],
 ) =>
+  // Inference capability gates every branch: a management key must never be
+  // proposed as the default inference credential, even when it is the only one.
   runtimeKeys.find(
     (runtimeKey) =>
       isActiveAccountRuntimeKey(runtimeKey) &&
@@ -330,10 +332,9 @@ export const findDefaultSelectableAccountRuntimeKey = (
   ) ??
   runtimeKeys.find(
     (runtimeKey) =>
-      isActiveAccountRuntimeKey(runtimeKey) &&
-      isSelectableAccountRuntimeKey(runtimeKey),
+      isInferenceCapableAccountRuntimeKey(runtimeKey) &&
+      isAccountKeyResourceRuntimeKey(runtimeKey),
   ) ??
-  runtimeKeys.find((key) => isAccountKeyResourceRuntimeKey(key)) ??
   null
 
 export const appendOrReplaceAccountRuntimeKey = (
