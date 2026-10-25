@@ -117,6 +117,18 @@ describe("provider-neutral bootstrap facts", () => {
           },
         })
       }
+      if (siteType === SITE_TYPES.PMAPI) {
+        // PM-API's own envelope (`{data, message, success}`) on its status route.
+        fetchApi.mockResolvedValue({
+          success: true,
+          message: "",
+          data: {
+            name: "Portal",
+            checkin_enabled: false,
+            private_field: "ignored",
+          },
+        })
+      }
       const bootstrap = getSiteTypeCapabilities(siteType).account!.bootstrap!
       const facts = await bootstrap.loadBootstrapFacts(bootstrapRequest)
       if (siteType === SITE_TYPES.XIAOEN) {

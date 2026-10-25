@@ -822,6 +822,26 @@ describe("accountDefaults", () => {
       expect(updated.checkIn.customCheckIn).toBeUndefined()
     })
 
+    it("removes the account page-assistance override when the update clears it", () => {
+      // "Follow the global setting" must persist as absent, not as the previous
+      // boolean a deep merge would keep.
+      const current = createSiteAccount({
+        checkIn: {
+          ...createSiteAccount().checkIn,
+          continueWhenVerificationRequired: true,
+        },
+      })
+
+      const updated = applySiteAccountUpdates({
+        account: current,
+        updates: { checkIn: { continueWhenVerificationRequired: undefined } },
+        now: 999,
+        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+      })
+
+      expect(updated.checkIn.continueWhenVerificationRequired).toBeUndefined()
+    })
+
     it("advances user update timestamp when requested", () => {
       const current = createSiteAccount({
         updated_at: 111,

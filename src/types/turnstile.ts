@@ -44,6 +44,8 @@ export type TurnstilePreTrigger =
       kind: typeof TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector
       /** CSS selector for the element to click. */
       selector: string
+      /** Read-only target wait before a native page click; capped at 10 seconds. */
+      targetWaitMs?: number
       /** Optional label for logging/debugging. */
       label?: string
       throttle?: TurnstilePreTriggerThrottle

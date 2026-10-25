@@ -500,6 +500,22 @@ export interface AutoCheckinPreferences {
    * auto check-in execution so open UI surfaces can refresh the affected accounts immediately.
    */
   notifyUiOnCompletion: boolean
+
+  /**
+   * When enabled, a check-in whose site asks for its own human verification
+   * still runs instead of stopping at the refusal: the site's check-in page is
+   * opened through the existing page assistance and the account is reported in
+   * the verification reminders, so every gated account can be finished in one
+   * pass. The extension never solves the verification, and the result is only
+   * accepted after reading the account's own check-in state. Off by default.
+   *
+   * This is the user-level default; `CheckInConfig.continueWhenVerificationRequired`
+   * lets one account override it.
+   *
+   * Optional so stored preferences and test fixtures written before this
+   * switch keep their meaning; the default snapshot supplies `false`.
+   */
+  continueWhenVerificationRequired?: boolean
   windowStart: string // HH:mm format (e.g., "09:00")
   windowEnd: string // HH:mm format (e.g., "18:00")
   scheduleMode: AutoCheckinScheduleMode

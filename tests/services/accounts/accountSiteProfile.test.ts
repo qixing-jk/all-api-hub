@@ -64,6 +64,28 @@ describe("accountSiteProfile", () => {
       }),
     ).toBe("https://daya.to/v1")
   })
+  it("keeps each PM-API deployment on its own origin for console and inference", () => {
+    const input = {
+      siteType: SITE_TYPES.PMAPI,
+      siteUrl: "https://pmcat.top",
+    }
+    expect(resolveAccountSiteAddresses(input)).toEqual({
+      browserBaseUrl: "https://pmcat.top",
+      managementApiBaseUrl: "https://pmcat.top",
+      inferenceApi: {
+        openAiCompatible: {
+          root: "https://pmcat.top",
+          mount: "https://pmcat.top/v1",
+        },
+      },
+    })
+    expect(
+      normalizeAccountSiteProfileUrlForStorage({
+        siteType: input.siteType,
+        url: "https://pap.pmcat.top/#/console",
+      }),
+    ).toBe("https://pap.pmcat.top/#/console")
+  })
   it("opens provider-owned pricing pages without leaking base URL credentials or queries", () => {
     expect(
       resolveAccountSitePricingUrl({

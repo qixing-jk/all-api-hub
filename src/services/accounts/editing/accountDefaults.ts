@@ -644,6 +644,19 @@ export function applySiteAccountUpdates(params: {
     delete result.checkIn.customCheckIn
   }
 
+  // Choosing "follow the global preference" clears the account override, and a
+  // deep merge would otherwise keep the previous boolean.
+  if (
+    params.updates.checkIn &&
+    Object.prototype.hasOwnProperty.call(
+      params.updates.checkIn,
+      "continueWhenVerificationRequired",
+    ) &&
+    params.updates.checkIn.continueWhenVerificationRequired === undefined
+  ) {
+    delete result.checkIn.continueWhenVerificationRequired
+  }
+
   if (
     params.updates.health &&
     Object.prototype.hasOwnProperty.call(params.updates.health, "code") &&

@@ -547,6 +547,10 @@
         "loading": "Opening key editor...",
         "retry": "Try again"
       },
+      "pmapi": {
+        "rpm": "Requests per minute",
+        "rpmHelp": "Maximum requests per minute for this token; 0 means unlimited."
+      },
       "quotaCredits": "Remaining credits",
       "quotaCreditsHelp": "The key stops working once these credits run out.",
       "quotaUsd": "Quota (USD)",

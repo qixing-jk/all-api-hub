@@ -37,3 +37,6 @@ export const TURNSTILE_ASSIST_TURN_WAIT_MS = 90_000
 
 /** Minimum interval between official Turnstile page-API reads during a wait. */
 export const TURNSTILE_PAGE_API_POLL_MS = 750
+
+/** Maximum read-only wait for an explicitly selected native check-in action. */
+export const CHECKIN_PAGE_ACTION_TARGET_MAX_WAIT_MS = 10_000

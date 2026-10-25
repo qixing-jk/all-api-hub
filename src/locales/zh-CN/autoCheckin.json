@@ -177,6 +177,8 @@
     "label": "自动签到风险提示"
   },
   "settings": {
+    "continueWhenVerificationRequired": "被人机验证拦住后，打开网页尝试签到",
+    "continueWhenVerificationRequiredDesc": "默认关闭。开启后，仅尝试打开网页并点击签到，通常仍需你手动完成验证码，不能保证成功。建议在「网站验证辅助 → 需要手动验证时」开启提醒。关闭时直接结束本次签到，不再打开网页。各账号可单独设置。",
     "deterministicTimeDesc": "启用固定模式时，选择开始签到的具体时间（HH:mm）。",
     "deterministicTimeTitle": "固定时间",
     "enable": "启用自动签到",

@@ -159,6 +159,7 @@ describe("account site onboarding registry", () => {
     ).toEqual([
       "krill",
       "daya",
+      "pmapi",
       "xiaoen",
       "foxcode",
       "cubence",

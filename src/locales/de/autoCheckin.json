@@ -181,6 +181,8 @@
     "label": "Risikohinweis zum automatischen Check-in"
   },
   "settings": {
+    "continueWhenVerificationRequired": "Bei blockierender Verifizierung Check-in auf der Seite versuchen",
+    "continueWhenVerificationRequiredDesc": "Standardmäßig aus. Wenn aktiviert, wird nur versucht, die Seite zu öffnen und die Check-in-Schaltfläche anzuklicken. Meist musst du ein CAPTCHA selbst lösen; Erfolg ist nicht garantiert. Aktiviere Erinnerungen unter „Unterstützung bei der Website-Verifizierung → Wenn die Prüfung Sie braucht“. Wenn deaktiviert, endet dieser Versuch, ohne die Seite zu öffnen. Jedes Konto kann diese Einstellung überschreiben.",
     "deterministicTimeDesc": "Wählen Sie den genauen Zeitpunkt (HH:mm), um mit dem Check-in zu beginnen, wenn der deterministische Modus aktiviert ist.",
     "deterministicTimeTitle": "Deterministische Zeit",
     "enable": "Automatisches Einchecken aktivieren",

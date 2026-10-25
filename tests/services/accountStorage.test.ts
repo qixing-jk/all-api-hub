@@ -9,6 +9,7 @@ import { ACCOUNT_BROWSER_SESSION_SOURCES } from "~/services/accountBrowserSessio
 import { accountMutations } from "~/services/accounts/accountStorage/accountMutations"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/editing/accountDefaults"
 import { dayaCapabilities } from "~/services/apiAdapters/daya"
+import { pmApiCapabilities } from "~/services/apiAdapters/pmapi"
 import { refreshAccountData as refreshNewApiAccountData } from "~/services/apiService/newApiFamily/default/accountRefresh"
 import { refreshAccountData as refreshVoApiV2AccountData } from "~/services/apiService/voapiV2/accountData"
 import * as postSaveDiscovery from "~/services/checkin/autoCheckin/discovery/postSaveDiscovery"
@@ -4429,6 +4430,112 @@ describe("accountStorage core behaviors", () => {
         vi.restoreAllMocks()
         // The cookie fixture spies on a mock; restore its default permission state too.
         vi.mocked(browser.permissions.contains).mockResolvedValue(false)
+      }
+    },
+  )
+
+  it.each([false, true])(
+    "refreshAccount reads PM-API status once without automatic execution (read failure: %s)",
+    async (readFails) => {
+      try {
+        const observedAt = Date.now() - 86_400_000
+        const account = createAccount({
+          id: "pmapi-common-refresh",
+          site_url: "https://pmcat.top",
+          site_type: SITE_TYPES.PMAPI,
+          authType: AuthTypeEnum.AccessToken,
+          account_info: {
+            ...createAccount().account_info,
+            id: "10171",
+            access_token: "pm-console-token",
+          },
+          checkIn: {
+            automaticExecutionEnabled: false,
+            selection: { mode: "automatic", methodId: "pmapi:daily-checkin" },
+            methodKnowledge: {
+              methods: {
+                "pmapi:daily-checkin": {
+                  detection: {
+                    outcome: "matched",
+                    evidence: { source: "probe", observedAt },
+                  },
+                  status: {
+                    outcome: "known",
+                    availability: "enabled",
+                    today: "not_checked",
+                    evidence: { source: "probe", observedAt },
+                  },
+                },
+              },
+            },
+          },
+        })
+        seedStorage([account])
+        mockgetSiteTypeCapabilities.mockReturnValue(pmApiCapabilities)
+        // The identity route serves both account data and the status readback;
+        // a read failure is injected only from the status probe onward.
+        let identityCalls = 0
+        const identity = vi.fn(() => {
+          identityCalls += 1
+          return readFails && identityCalls > 1
+            ? HttpResponse.json({}, { status: 503 })
+            : HttpResponse.json({
+                success: true,
+                message: "",
+                data: {
+                  id: 10171,
+                  username: "tester",
+                  quota: 1_250_000,
+                  used_quota: 0,
+                  checked_in_today: false,
+                },
+              })
+        })
+        const claim = vi.fn(() =>
+          HttpResponse.json({ success: true, data: { quota: 50_000 } }),
+        )
+        server.use(
+          // The status readback is a two-step probe: the deployment's status
+          // first, then the account's own identity.
+          http.get(`${account.site_url}/api/status`, () =>
+            HttpResponse.json({
+              success: true,
+              data: { checkin_enabled: true },
+            }),
+          ),
+          http.get(`${account.site_url}/api/me`, identity),
+          http.post(`${account.site_url}/api/me/checkin`, claim),
+        )
+        const refreshResult = await accountStorage.refreshAccount(
+          account.id,
+          true,
+          {
+            includeTodayCashflow: false,
+          },
+        )
+        expect(refreshResult?.checkInStatusRefreshOutcome).toBe(
+          readFails ? "unavailable" : "read",
+        )
+        const updated = await accountStorage.getAccountById(account.id)
+        expect(
+          updated?.checkIn.methodKnowledge.methods["pmapi:daily-checkin"]
+            ?.status,
+        ).toMatchObject(
+          readFails
+            ? { outcome: "unknown", reason: "source_unavailable" }
+            : { outcome: "known", today: "not_checked" },
+        )
+        expect(
+          isSelectedCheckInStatusCurrent(
+            accountStorage.convertToDisplayData(updated!),
+          ),
+        ).toBe(!readFails)
+        // PM-API keeps the console's own New API quota unit untouched.
+        expect(updated?.account_info.quota).toBe(1_250_000)
+        expect(claim).not.toHaveBeenCalled()
+        expect(updated?.checkIn.automaticExecutionEnabled).toBe(false)
+      } finally {
+        vi.restoreAllMocks()
       }
     },
   )

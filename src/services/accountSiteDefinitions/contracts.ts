@@ -52,6 +52,7 @@ export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   Emrank: "emrank",
   Krill: "krill",
   Daya: "daya",
+  Pmapi: "pmapi",
   Cubence: "cubence",
   RightCode: "rightcode",
   RelayFor: "relayfor",

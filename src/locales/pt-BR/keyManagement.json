@@ -557,6 +557,10 @@
         "loading": "Abrindo o editor de chaves...",
         "retry": "Tentar novamente"
       },
+      "pmapi": {
+        "rpm": "Requisições por minuto",
+        "rpmHelp": "Máximo de requisições por minuto para este token; 0 significa ilimitado."
+      },
       "quotaCredits": "Créditos restantes",
       "quotaCreditsHelp": "A chave para de funcionar quando esses créditos acabam.",
       "quotaUsd": "Cota (USD)",

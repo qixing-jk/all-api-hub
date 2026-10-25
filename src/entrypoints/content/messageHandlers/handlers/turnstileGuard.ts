@@ -6,6 +6,7 @@ import {
 } from "~/constants/turnstile"
 import {
   triggerCheckinPageAction,
+  waitForCheckinPageActionTarget,
   waitForTurnstileToken,
   type TurnstileUserAssist,
 } from "~/entrypoints/content/messageHandlers/utils/turnstileGuard"
@@ -18,6 +19,7 @@ import type {
   TurnstilePreTrigger,
   TurnstileTokenWaitResult,
 } from "~/types/turnstile"
+import { TURNSTILE_PRE_TRIGGER_KINDS } from "~/types/turnstile"
 import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -167,6 +169,9 @@ export function handleTriggerCheckinPageAction(
 ) {
   const perform = async () => {
     try {
+      if (request.trigger?.kind === TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector) {
+        await waitForCheckinPageActionTarget(request.trigger)
+      }
       const existingWidgets = capturePageVerificationWidgets()
       const result = triggerCheckinPageAction({
         requestId: request.requestId,

@@ -27,6 +27,7 @@ import {
 } from "~/services/apiAdapters/emrank/keyResourceFields"
 import { FOXCODE_KEY_EDITOR_FIELDS as foxCodeFields } from "~/services/apiAdapters/foxcode/keyEditorFields"
 import { krillKeyFields } from "~/services/apiAdapters/krill/keyResourceFields"
+import { PMAPI_KEY_EDITOR_FIELDS as pmFields } from "~/services/apiAdapters/pmapi/keyResourceFields"
 import { RELAYFOR_KEY_FIELDS as relayForFields } from "~/services/apiAdapters/relayfor/keyFields"
 import { REQUESTY_KEY_FIELDS as requestyFields } from "~/services/apiAdapters/requesty/keys/keyResourceFields"
 
@@ -779,6 +780,37 @@ const resolveSiteFields = (
               : "",
           issueLabelResolvers: issues,
         },
+      ],
+    }),
+    // PM-API tokens cap spending in the console quota unit; the group follows
+    // the account when unset, and the model whitelist/IP limits restrict use.
+    [editorKinds.Pmapi]: (): {
+      fields: ResourceFieldPresentation[]
+      requireFreshOptions: boolean
+      automaticName: EditorPresentation["automaticName"]
+    } => ({
+      requireFreshOptions: true,
+      automaticName: { kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed } as const,
+      fields: [
+        name,
+        group(pmFields.Group, false, true),
+        ...quota(pmFields.Quota, pmFields.Unlimited, true),
+        {
+          fieldId: pmFields.Rpm,
+          section: "spending",
+          order: 20,
+          renderer: "number",
+          resolveLabel: (t: TFunction) =>
+            t("keyManagement:native.editor.pmapi.rpm"),
+          resolveHelp: (t: TFunction) =>
+            t("keyManagement:native.editor.pmapi.rpmHelp"),
+          issueLabelResolvers: issues,
+        },
+        expiryField(pmFields.ExpiresAt),
+        // Lifecycle is a row action (rotate / enable / disable); the dialog
+        // mirrors the console edit form, which never carries a status field.
+        models(pmFields.Models),
+        ips(pmFields.Subnet),
       ],
     }),
     [editorKinds.Cubence]: () => ({

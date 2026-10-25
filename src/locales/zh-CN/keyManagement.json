@@ -537,6 +537,10 @@
         "loading": "正在打开密钥编辑器...",
         "retry": "重试"
       },
+      "pmapi": {
+        "rpm": "每分钟请求上限",
+        "rpmHelp": "令牌每分钟最多允许的请求数，0 表示不限制。"
+      },
       "quotaCredits": "剩余积分",
       "quotaCreditsHelp": "额度用完后该密钥将无法继续使用。",
       "quotaUsd": "额度（美元）",

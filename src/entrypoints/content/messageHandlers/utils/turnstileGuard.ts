@@ -1,4 +1,5 @@
 import {
+  CHECKIN_PAGE_ACTION_TARGET_MAX_WAIT_MS,
   TURNSTILE_ASSIST_TURN_WAIT_MS,
   TURNSTILE_AUTO_ASSIST_MS,
   TURNSTILE_CONTAINER_SELECTOR,
@@ -10,6 +11,7 @@ import {
   TURNSTILE_SCRIPT_SELECTOR,
 } from "~/constants/turnstile"
 import { createVerificationManualWindow } from "~/services/checkin/verificationManualWindow"
+import { TURNSTILE_PRE_TRIGGER_KINDS } from "~/types/turnstile"
 import type {
   CheckinPageActionTriggerResult,
   TurnstilePreTrigger,
@@ -485,7 +487,7 @@ function toActionTriggerResult(params: {
 function resolveCheckinPageActionTarget(
   trigger: TurnstilePreTrigger,
 ): HTMLElement | null {
-  if (trigger.kind === "clickSelector") {
+  if (trigger.kind === TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector) {
     const selector = String(trigger.selector ?? "").trim()
     if (!selector) return null
     try {
@@ -496,7 +498,7 @@ function resolveCheckinPageActionTarget(
     }
   }
 
-  if (trigger.kind === "clickText") {
+  if (trigger.kind === TURNSTILE_PRE_TRIGGER_KINDS.ClickText) {
     const positive = compileCaseInsensitiveRegex(trigger.positivePattern, /$^/)
     const negative = compileOptionalCaseInsensitiveRegex(
       trigger.negativePattern,
@@ -510,7 +512,7 @@ function resolveCheckinPageActionTarget(
     return findClickableByText({ candidateSelector, positive, negative })
   }
 
-  if (trigger.kind === "checkinButton") {
+  if (trigger.kind === TURNSTILE_PRE_TRIGGER_KINDS.CheckinButton) {
     const positive = compileCaseInsensitiveRegex(
       trigger.positivePattern,
       new RegExp(DEFAULT_CHECKIN_TRIGGER_POSITIVE_PATTERN, "i"),
@@ -529,6 +531,29 @@ function resolveCheckinPageActionTarget(
   }
 
   return null
+}
+
+/** Waits for an explicitly selected native action to render without clicking it. */
+export async function waitForCheckinPageActionTarget(
+  trigger: Extract<
+    TurnstilePreTrigger,
+    { kind: typeof TURNSTILE_PRE_TRIGGER_KINDS.ClickSelector }
+  >,
+): Promise<void> {
+  const requested = trigger.targetWaitMs
+  const timeout =
+    typeof requested === "number" && Number.isFinite(requested)
+      ? Math.min(CHECKIN_PAGE_ACTION_TARGET_MAX_WAIT_MS, Math.max(0, requested))
+      : 0
+  const deadline = Date.now() + timeout
+  while (!resolveCheckinPageActionTarget(trigger) && Date.now() < deadline) {
+    await new Promise((resolve) =>
+      setTimeout(
+        resolve,
+        Math.min(WAIT_POLL_INTERVAL_MS, deadline - Date.now()),
+      ),
+    )
+  }
 }
 
 /**
@@ -553,7 +578,7 @@ export function triggerCheckinPageAction(params: {
   }
 
   const trigger = params.trigger
-  if (!trigger || trigger.kind === "none") {
+  if (!trigger || trigger.kind === TURNSTILE_PRE_TRIGGER_KINDS.None) {
     return toActionTriggerResult({
       status: "target_not_found",
       clicked: false,
@@ -607,7 +632,8 @@ export function triggerCheckinPageAction(params: {
   })
 
   try {
-    simulateClick(target)
+    // A native check-in is a mutation: dispatch exactly one click event.
+    target.click()
     logger.debug("Check-in page action via click()", {
       requestId,
       kind: trigger.kind,

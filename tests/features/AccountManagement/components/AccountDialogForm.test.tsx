@@ -4,6 +4,7 @@ import { createRef, useState } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
+import { BASIC_SETTINGS_TAB_IDS } from "~/constants/basicSettingsTabs"
 import {
   AUTO_CHECKIN_METHOD_IDS,
   CHECK_IN_METHOD_AVAILABILITIES,
@@ -21,6 +22,7 @@ import { ACCOUNT_FORM_MOBILE_DEFAULT_OPEN } from "~/features/AccountManagement/c
 import { getAccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/form/sitePolicy"
 import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import { AUTO_CHECKIN_TARGET_IDS } from "~/features/BasicSettings/components/tabs/CheckinRedeem/searchTargets"
 import enAccountDialog from "~/locales/en/accountDialog.json"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { mergeCheckInDiscoveryResults } from "~/services/checkin/autoCheckin/domain"
@@ -69,6 +71,13 @@ vi.mock("~/features/AccountManagement/components/TagPicker", () => ({
 vi.mock("~/utils/core/formatters", () => ({
   formatLocaleDateTime: vi.fn(() => "formatted-expiry"),
 }))
+
+vi.mock("~/utils/navigation", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/navigation")>()),
+  openSettingsTabInNewTab: vi.fn(),
+}))
+
+const { openSettingsTabInNewTab } = await import("~/utils/navigation")
 
 describe("AccountDialog AccountForm", () => {
   it("uses the shared site-type glyph for the platform selector", async () => {
@@ -288,6 +297,37 @@ describe("AccountDialog AccountForm", () => {
       automaticExecutionEnabled: input?.automaticExecutionEnabled ?? true,
       customCheckIn: input?.customCheckIn,
     })
+
+  /** A selected PM-API method whose deployment enforces its own checkin captcha. */
+  const createVerificationGatedCheckIn = (input?: {
+    automaticExecutionEnabled?: boolean
+  }): CheckInConfig => {
+    const checkIn = createEmptyAccountDialogDraft(SITE_TYPES.PMAPI).checkIn
+    checkIn.automaticExecutionEnabled =
+      input?.automaticExecutionEnabled ?? false
+    checkIn.selection = {
+      mode: "manual",
+      methodId: AUTO_CHECKIN_METHOD_IDS.PmApiDailyCheckIn,
+    }
+    checkIn.methodKnowledge.methods[AUTO_CHECKIN_METHOD_IDS.PmApiDailyCheckIn] =
+      {
+        detection: {
+          outcome: CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched,
+          evidence: {
+            source: CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.Probe,
+            observedAt: 1,
+          },
+        },
+        status: {
+          outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+          availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
+          today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+          requiresManualVerification: true,
+          evidence: { source: "probe", observedAt: 1 },
+        },
+      }
+    return checkIn
+  }
 
   const createProps = (): ComponentProps<typeof AccountForm> => ({
     draft: {
@@ -1620,6 +1660,148 @@ describe("AccountDialog AccountForm", () => {
     expect(props.onCheckInChange).toHaveBeenCalledWith({
       ...props.draft.checkIn,
       automaticExecutionEnabled: true,
+    })
+  })
+
+  it("hides the continuation choice while the account stays out of automatic check-in", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.PMAPI
+    props.draft.checkIn = createVerificationGatedCheckIn()
+
+    render(<AccountForm {...withSitePolicy(props)} />)
+
+    // The deployment fact is always stated, and with the switch off it also
+    // explains why the account starts out of the run.
+    expect(
+      await screen.findByText(
+        "accountDialog:form.manualVerificationRequiredTitle",
+      ),
+    ).toBeVisible()
+    expect(
+      screen.getByText("accountDialog:form.manualVerificationRequiredDesc"),
+    ).toBeVisible()
+    expect(
+      screen.getByText(
+        "accountDialog:form.manualVerificationRequiredSwitchOffDesc",
+      ),
+    ).toBeVisible()
+    // The continuation preference is only consulted once a run reaches the
+    // claim, so the choice stays hidden until the account takes part.
+    expect(
+      screen.queryByRole("combobox", {
+        name: "accountDialog:form.continueWhenVerificationRequired",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "accountDialog:form.continueWhenVerificationRequiredOpenSettings",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows the resolved global value and links to the setting that owns it", async () => {
+    const user = userEvent.setup()
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.PMAPI
+    props.draft.checkIn = createVerificationGatedCheckIn({
+      automaticExecutionEnabled: true,
+    })
+
+    render(<AccountForm {...withSitePolicy(props)} />)
+
+    const assist = await screen.findByRole("combobox", {
+      name: "accountDialog:form.continueWhenVerificationRequired",
+    })
+    // Inheriting is not an answer on its own: the account shows what it
+    // resolves to so the operator does not have to open settings to find out.
+    // The default global preference is off.
+    expect(assist).toHaveTextContent(
+      "accountDialog:form.continueWhenVerificationRequiredInheritOff",
+    )
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "accountDialog:form.continueWhenVerificationRequiredOpenSettings",
+      }),
+    )
+
+    expect(openSettingsTabInNewTab).toHaveBeenCalledWith(
+      BASIC_SETTINGS_TAB_IDS.CheckinRedeem,
+      {
+        anchor: AUTO_CHECKIN_TARGET_IDS.continueWhenVerificationRequired,
+        highlight: true,
+        keepCurrentWindow: true,
+      },
+    )
+  })
+
+  it.each([
+    [true, "accountDialog:form.continueWhenVerificationRequiredOff", false],
+    [
+      false,
+      "accountDialog:form.continueWhenVerificationRequiredInheritOff",
+      undefined,
+    ],
+  ] as const)(
+    "changes an explicit continuation override %s using %s",
+    async (initial, option, expected) => {
+      const user = userEvent.setup()
+      const props = createProps()
+      props.draft.siteType = SITE_TYPES.PMAPI
+      props.draft.checkIn = {
+        ...createVerificationGatedCheckIn({ automaticExecutionEnabled: true }),
+        continueWhenVerificationRequired: initial,
+      }
+      render(<AccountForm {...withSitePolicy(props)} />)
+      await user.click(
+        await screen.findByRole("combobox", {
+          name: "accountDialog:form.continueWhenVerificationRequired",
+        }),
+      )
+      await user.click(await screen.findByRole("option", { name: option }))
+      expect(props.onCheckInChange).toHaveBeenCalledWith({
+        ...props.draft.checkIn,
+        continueWhenVerificationRequired: expected,
+      })
+    },
+  )
+
+  it("explains a verification-gated check-in and stores the account-level assist override", async () => {
+    const user = userEvent.setup()
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.PMAPI
+    props.draft.checkIn = createVerificationGatedCheckIn({
+      automaticExecutionEnabled: true,
+    })
+
+    render(<AccountForm {...withSitePolicy(props)} />)
+
+    expect(
+      await screen.findByText(
+        "accountDialog:form.manualVerificationRequiredTitle",
+      ),
+    ).toBeVisible()
+    expect(
+      screen.getByText("accountDialog:form.manualVerificationRequiredDesc"),
+    ).toBeVisible()
+
+    const assist = screen.getByRole("combobox", {
+      name: "accountDialog:form.continueWhenVerificationRequired",
+    })
+    expect(assist).toHaveTextContent(
+      "accountDialog:form.continueWhenVerificationRequiredInheritOff",
+    )
+
+    await user.click(assist)
+    await user.click(
+      await screen.findByRole("option", {
+        name: "accountDialog:form.continueWhenVerificationRequiredOn",
+      }),
+    )
+
+    expect(props.onCheckInChange).toHaveBeenCalledWith({
+      ...props.draft.checkIn,
+      continueWhenVerificationRequired: true,
     })
   })
 

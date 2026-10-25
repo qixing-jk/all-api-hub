@@ -690,13 +690,11 @@ describe("AccountDialog", () => {
         onError={vi.fn()}
       />,
     )
-    await userEvent
-      .setup()
-      .click(
-        await screen.findByRole("button", {
-          name: "accountDialog:form.autoCreateAccessToken",
-        }),
-      )
+    await userEvent.setup().click(
+      await screen.findByRole("button", {
+        name: "accountDialog:form.autoCreateAccessToken",
+      }),
+    )
     expect(mockHandlers.handleAutoDetect).toHaveBeenCalledOnce()
   })
 

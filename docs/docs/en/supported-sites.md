@@ -49,6 +49,7 @@ AI model platforms and relay services with independent account systems, dedicate
 | EMRank | An independent gateway for embedding and reranker models with model APIs, an account console and daily check-in. | [Site](https://emrank.tech/) / [Docs](https://docs.emrank.tech) |
 | RelayFor                 | An independent AI public welfare service platform offering model APIs and an account console.                                                                                                                                                                                                                                                                                                 | [Official Website](https://relayfor.xyz/)                                                                                                                                |
 | Daya API | A unified AI API access platform aggregating multiple model providers, with model APIs, standalone keys, and credit management. | — |
+| PM-API | A community AI relay with model APIs, token key management, redemption codes, and daily check-in; pmcat.top and pap.pmcat.top are two deployments of one program. | [Site](https://pmcat.top/) |
 | Requesty | A hosted LLM gateway with unified model routing, prepaid credits and key management. | [Site](https://app.requesty.ai/) / [Docs](https://docs.requesty.ai/) |
 
 ## ❤️ Recommended Sponsored Sites

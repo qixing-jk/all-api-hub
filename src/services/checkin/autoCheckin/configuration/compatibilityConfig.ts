@@ -37,6 +37,8 @@ export function resolveNewAccountAutomaticExecutionEnabled(input: {
   siteUrl?: string
   currentAutomaticExecutionEnabled: boolean
   userPreferenceChanged: boolean
+  /** Deployment evidence may override the candidate-backed default. */
+  automaticExecutionDefault?: boolean
   decisionOutcome?: CheckInDiscoveryDecision["outcome"]
   checkIn?: CheckInConfig
 }): boolean {
@@ -55,7 +57,8 @@ export function resolveNewAccountAutomaticExecutionEnabled(input: {
       : undefined)
   const isUnsupported =
     decisionOutcome === CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Unsupported
-  const defaultEnabled = hasCandidates && !isUnsupported
+  const defaultEnabled =
+    hasCandidates && !isUnsupported && (input.automaticExecutionDefault ?? true)
 
   return input.userPreferenceChanged && hasCandidates
     ? input.currentAutomaticExecutionEnabled

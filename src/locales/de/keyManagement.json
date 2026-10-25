@@ -547,6 +547,10 @@
         "loading": "Schlüsseleditor öffnen...",
         "retry": "Versuchen Sie es erneut"
       },
+      "pmapi": {
+        "rpm": "Anfragen pro Minute",
+        "rpmHelp": "Maximale Anfragen pro Minute für dieses Token; 0 bedeutet unbegrenzt."
+      },
       "quotaCredits": "Verbleibende Credits",
       "quotaCreditsHelp": "Sobald diese Credits aufgebraucht sind, funktioniert der Schlüssel nicht mehr.",
       "quotaUsd": "Kontingent (USD)",

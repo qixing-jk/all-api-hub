@@ -3,6 +3,7 @@ import { AI_ROUTER_ORIGINS } from "~/constants/deploymentApiOrigins"
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { AGENT_ROUTER_ORIGINS } from "~/services/accountLogin/providers/agentrouter/config"
 import { EMRANK_ENDPOINTS } from "~/services/apiService/emrank/constants"
+import { PMAPI_ENDPOINTS } from "~/services/apiService/pmapi/constants"
 import { createAiRouterCheckInStatusEndpoint } from "~/services/apiService/sub2api/checkin/aiRouterCheckInProtocol"
 import {
   createDaiguaCheckInStatusEndpoint,
@@ -256,6 +257,18 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
     supportsStatusReadback: true,
     feedbackStatusRoutes: [{ path: "/api/v1/rewards/overview" }],
+    legacy: false,
+    newAccountCompatibility: false,
+  },
+  [AUTO_CHECKIN_METHOD_IDS.PmApiDailyCheckIn]: {
+    id: AUTO_CHECKIN_METHOD_IDS.PmApiDailyCheckIn,
+    siteTypes: [SITE_TYPES.PMAPI],
+    source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
+    supportsStatusReadback: true,
+    feedbackStatusRoutes: [
+      { path: PMAPI_ENDPOINTS.Identity },
+      { path: PMAPI_ENDPOINTS.CheckIn },
+    ],
     legacy: false,
     newAccountCompatibility: false,
   },

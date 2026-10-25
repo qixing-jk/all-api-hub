@@ -129,6 +129,21 @@ describe("AutoCheckinSettings", () => {
     })
   })
 
+  it("keeps native-page clicking off for old preferences and saves explicit opt-in", async () => {
+    render(<AutoCheckinSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    const toggle = screen.getByRole("switch", {
+      name: "autoCheckin:settings.continueWhenVerificationRequired",
+    })
+    expect(toggle).not.toBeChecked()
+    await userEvent.setup().click(toggle)
+    expect(updateAutoCheckin).toHaveBeenCalledWith({
+      continueWhenVerificationRequired: true,
+    })
+  })
+
   it("allows discarding an invalid draft even when stored settings are default", async () => {
     useUserPreferencesContextMock.mockReturnValue({
       preferences: {

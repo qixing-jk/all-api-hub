@@ -177,6 +177,8 @@
     "label": "自動チェックインのリスクについて"
   },
   "settings": {
+    "continueWhenVerificationRequired": "認証で止まった場合にページでチェックインを試す",
+    "continueWhenVerificationRequiredDesc": "既定ではオフです。オンにしてもページを開いてチェックインボタンを押してみるだけです。通常は CAPTCHA の手動操作が必要で、成功は保証されません。「サイト認証の補助 → 手動確認が必要なとき」で通知を有効にしてください。オフではページを開かずに今回のチェックインを終了します。アカウントごとに変更できます。",
     "deterministicTimeDesc": "固定モード有効時にチェックインを開始する正確な時刻（HH:mm）を指定します。",
     "deterministicTimeTitle": "固定時刻",
     "enable": "自動チェックインを有効化",
