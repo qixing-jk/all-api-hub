@@ -156,8 +156,14 @@ export function editRequestyKeyEditor(
       }
       const expiry = readString(values[REQUESTY_KEY_FIELDS.ExpiresAt])
       if (expiry) {
-        const normalized = new Date(expiry).toISOString()
-        if (normalized !== detail.expiresAt) command.expiresAt = normalized
+        // An untouched field restores the raw provider value, so compare
+        // instants rather than ISO strings: fractional seconds or an equivalent
+        // format must not read as an edit that calls the expiry endpoint.
+        const next = new Date(expiry)
+        const current = detail.expiresAt
+          ? new Date(detail.expiresAt).getTime()
+          : null
+        if (next.getTime() !== current) command.expiresAt = next.toISOString()
       } else if (detail.expiresAt) {
         command.expiresAt = ""
       }

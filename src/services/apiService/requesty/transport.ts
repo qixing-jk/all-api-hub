@@ -72,6 +72,9 @@ export const fetchRequestyManageData = async <T>(
         method,
         headers,
         credentials: "omit",
+        // The manage key is attached manually, so a followed redirect would
+        // forward it to whatever origin answers.
+        redirect: "error" as const,
         ...(options.body === undefined
           ? {}
           : { body: JSON.stringify(options.body) }),

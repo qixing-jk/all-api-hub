@@ -302,6 +302,22 @@ describe("requestyAccountRefresh", () => {
     const result = await requestyAccountRefresh.refreshAccount(request)
     expect(result.success).toBe(false)
   })
+
+  it("refuses to follow a redirect on the credentialed management request", async () => {
+    let redirectMode: RequestRedirect | undefined
+    server.use(
+      http.get(ORG_URL, ({ request: fetchRequest }) => {
+        redirectMode = fetchRequest.redirect
+        return HttpResponse.json({ name: "example-org", balance: "7.25" })
+      }),
+    )
+
+    await requestyAccountRefresh.refreshAccount(request)
+
+    // The manage key travels in `Authorization`; following a redirect would
+    // hand it to whatever origin the provider answers with.
+    expect(redirectMode).toBe("error")
+  })
 })
 
 describe("requestyAccountKeyResources", () => {
@@ -418,6 +434,38 @@ describe("requestyAccountKeyResources", () => {
     expect(result.valid).toBe(true)
     expect(editor.buildCommand({ monthly_limit: 7, expires_at: "" })).toEqual({
       monthlyLimit: 7,
+    })
+  })
+
+  it("does not rewrite an unchanged expiry that only differs in formatting", () => {
+    // The editor restores the raw provider value when the field is untouched, so
+    // an instant comparison keeps a fractional-second value from looking edited
+    // and calling the expiry endpoint during a limit-only change.
+    const editor = editRequestyKeyEditor({
+      id: "key-1",
+      name: "existing",
+      monthlyLimit: 5,
+      monthlySpend: 0,
+      expiresAt: "2099-01-01T00:00:00.123456Z",
+      permissions: { manage: "none", completions: "write" },
+      labels: {},
+      createdAt: "2026-10-21T12:21:41.958098Z",
+    })
+    expect(
+      editor.buildCommand({
+        monthly_limit: 7,
+        expires_at: "2099-01-01T00:00:00.123456Z",
+      }),
+    ).toEqual({ monthlyLimit: 7 })
+    // A real change still writes the normalized instant.
+    expect(
+      editor.buildCommand({
+        monthly_limit: 7,
+        expires_at: "2099-02-01T00:00:00Z",
+      }),
+    ).toEqual({
+      monthlyLimit: 7,
+      expiresAt: "2099-02-01T00:00:00.000Z",
     })
   })
 
