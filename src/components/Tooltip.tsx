@@ -185,7 +185,8 @@ export default function Tooltip({
     </div>
   )
 
-  const defaultClassName = `${Z_INDEX.tooltip} max-w-[90vw] rounded-sm bg-surface-inverse px-3 py-density-2 text-xs text-inverse-foreground shadow-lg dark:bg-secondary dark:text-foreground ${className}`
+  // Keep library positioning styles; project tokens own all visual styling.
+  const defaultClassName = `${Z_INDEX.tooltip} w-max max-w-[90vw] rounded-sm bg-surface-inverse px-3 py-density-2 text-xs text-inverse-foreground shadow-lg dark:bg-secondary dark:text-foreground ${className}`
   return (
     <TooltipContext.Provider value={anchorId}>
       {anchor}
@@ -204,6 +205,8 @@ export default function Tooltip({
           positionStrategy={positionStrategy}
           content={content}
           delayShow={delay}
+          disableStyleInjection
+          classNameArrow="size-[var(--rt-arrow-size)] rotate-45"
           className={defaultClassName}
           isOpen={isOpen}
           setIsOpen={setIsOpen}
@@ -219,6 +222,8 @@ export default function Tooltip({
           positionStrategy={positionStrategy}
           delayShow={delay}
           clickable
+          disableStyleInjection
+          classNameArrow="size-[var(--rt-arrow-size)] rotate-45"
           className={defaultClassName}
           isOpen={isOpen}
           setIsOpen={setIsOpen}

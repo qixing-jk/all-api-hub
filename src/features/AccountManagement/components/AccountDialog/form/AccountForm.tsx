@@ -2,7 +2,6 @@ import {
   ArrowLeftRight,
   Building2,
   CalendarDays,
-  CircleHelp,
   Cookie,
   DollarSign,
   Download,
@@ -23,6 +22,7 @@ import { useTranslation } from "react-i18next"
 import {
   AccountSiteTypeIcon,
   AccountUserIcon,
+  HelpHintIcon,
 } from "~/components/icons/productIcons"
 import Tooltip from "~/components/Tooltip"
 import {
@@ -484,7 +484,7 @@ export default function AccountForm({
                     aria-label={t("siteInfo.cookieWarning")}
                     className="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex size-4 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:outline-none"
                   >
-                    <CircleHelp className="size-4" aria-hidden="true" />
+                    <HelpHintIcon className="size-4" aria-hidden="true" />
                   </button>
                 </Tooltip>
               </span>

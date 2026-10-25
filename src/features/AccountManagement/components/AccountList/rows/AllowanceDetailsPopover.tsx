@@ -1,6 +1,6 @@
-import { Info } from "lucide-react"
 import { useEffect, useId, useRef, useState, type ReactNode } from "react"
 
+import { HelpHintIcon } from "~/components/icons/productIcons"
 import { Button } from "~/components/ui"
 import { Popover, PopoverAnchor, PopoverContent } from "~/components/ui/popover"
 
@@ -94,7 +94,7 @@ export function AllowanceDetailsPopover({
             setOpen(pinnedRef.current)
           }}
         >
-          <Info className="size-3.5" aria-hidden="true" />
+          <HelpHintIcon className="size-3.5" aria-hidden="true" />
         </Button>
       </PopoverAnchor>
       <PopoverContent

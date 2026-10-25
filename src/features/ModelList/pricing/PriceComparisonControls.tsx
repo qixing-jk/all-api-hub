@@ -1,7 +1,8 @@
-import { ChevronDown, CircleHelp, SlidersHorizontal } from "lucide-react"
+import { ChevronDown, SlidersHorizontal } from "lucide-react"
 import { useEffect, useState, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
+import { HelpHintIcon } from "~/components/icons/productIcons"
 import Tooltip from "~/components/Tooltip"
 import { FormField, Input, SearchableSelect } from "~/components/ui"
 import {
@@ -287,7 +288,7 @@ export function PriceComparisonControls({
                   aria-label={sourceDetails}
                   className="dark:text-muted-foreground text-faint-foreground hover:text-muted-foreground focus-visible:ring-ring dark:hover:text-secondary-foreground inline-flex h-4 w-4 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
                 >
-                  <CircleHelp className="h-4 w-4" aria-hidden="true" />
+                  <HelpHintIcon className="h-4 w-4" aria-hidden="true" />
                 </button>
               </Tooltip>
             )}

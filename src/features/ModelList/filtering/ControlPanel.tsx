@@ -1,13 +1,7 @@
-import {
-  CircleHelp,
-  Copy,
-  Cpu,
-  FlaskConical,
-  Search,
-  TrendingDown,
-} from "lucide-react"
+import { Copy, Cpu, FlaskConical, Search, TrendingDown } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { HelpHintIcon } from "~/components/icons/productIcons"
 import Tooltip from "~/components/Tooltip"
 import {
   Alert,
@@ -265,7 +259,10 @@ export function ControlPanel({
                           aria-label={t("groupSelectionHint")}
                           className="dark:text-muted-foreground text-faint-foreground hover:text-muted-foreground focus-visible:ring-ring dark:hover:text-secondary-foreground inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
                         >
-                          <CircleHelp className="h-4 w-4" aria-hidden="true" />
+                          <HelpHintIcon
+                            className="h-4 w-4"
+                            aria-hidden="true"
+                          />
                         </button>
                       </Tooltip>
                     </div>
@@ -291,7 +288,7 @@ export function ControlPanel({
                         aria-label={modelCapabilityHint}
                         className="dark:text-muted-foreground text-faint-foreground hover:text-muted-foreground focus-visible:ring-ring dark:hover:text-secondary-foreground inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
                       >
-                        <CircleHelp className="h-4 w-4" aria-hidden="true" />
+                        <HelpHintIcon className="h-4 w-4" aria-hidden="true" />
                       </button>
                     </Tooltip>
                   </div>

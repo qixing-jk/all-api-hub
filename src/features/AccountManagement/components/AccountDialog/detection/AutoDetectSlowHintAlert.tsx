@@ -1,6 +1,6 @@
-import { CircleHelp } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { HelpHintIcon } from "~/components/icons/productIcons"
 import { Alert, Button } from "~/components/ui"
 import { createTab } from "~/utils/browser/tabs"
 import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
@@ -40,7 +40,7 @@ export default function AutoDetectSlowHintAlert({
           variant="secondary"
           size="sm"
           className="shrink-0 self-start sm:self-center"
-          leftIcon={<CircleHelp className="h-3 w-3" />}
+          leftIcon={<HelpHintIcon className="h-3 w-3" />}
         >
           {t("accountDialog:actions.helpDocument")}
         </Button>
