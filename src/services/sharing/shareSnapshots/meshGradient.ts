@@ -1,10 +1,10 @@
 import {
   clamp,
   clampByte,
-  mulberry32,
   relativeLuminanceFromRgb,
   type Rgb,
 } from "~/services/sharing/shareSnapshots/utils"
+import { mulberry32 } from "~/utils/core/random"
 
 export const MESH_GRADIENT_NOISE_TILE_SIZE = 128
 

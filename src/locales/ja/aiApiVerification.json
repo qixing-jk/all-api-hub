@@ -18,7 +18,8 @@
     },
     "details": {
       "input": "入力",
-      "output": "出力"
+      "output": "出力",
+      "result": "実行結果"
     },
     "errors": {
       "unexpected": "予期しないエラー"
@@ -35,6 +36,7 @@
     "meta": {
       "apiType": "API 種別",
       "apiTypePlaceholder": "API 種別を選択",
+      "configuration": "リクエスト設定",
       "mode": "テスト方式",
       "model": "モデル",
       "modelPlaceholder": "モデル ID を入力",
@@ -61,11 +63,11 @@
       "image-generation": "画像生成",
       "models": "モデル一覧",
       "rerank": "リランカー",
-      "structured-output": "構造化出力（スキーマ JSON）",
+      "structured-output": "構造化出力",
       "text-generation": "テキスト生成",
       "tool-calling": "ツール / 関数呼び出し",
       "video-generation": "動画生成タスク",
-      "web-search": "Web 検索 / grounding"
+      "web-search": "Web 検索"
     },
     "requestProfiles": {
       "claude": "Claude Code",
@@ -132,7 +134,47 @@
       "webSearchUnsupportedForApiType": "この API 種別では Web 検索プローブはサポートされていません。"
     },
     "title": "API 検証",
+    "tools": {
+      "agent": {
+        "calls": "ツール実行履歴",
+        "completed": "SVG ファイルを生成しました。描画の品質はご自身で判断してください。",
+        "files": "ワークスペースのファイル",
+        "hint": "モデルが描画を確認・改善します。利用量が増える場合があります。",
+        "label": "Agent テストモード",
+        "noArtifact": "モデルは pelican.svg に完全な SVG を書き込みませんでした。最終回答は成果物として使用しません。",
+        "summary": "ターン数: {{steps}} · ツール呼び出し: {{calls}} · {{seconds}} 秒"
+      },
+      "errors": {
+        "unexpected": "リクエストに失敗しました：{{message}}"
+      },
+      "manualBadge": "任意実行",
+      "pelican": {
+        "analysis": "図形 {{shapes}} 個 · 円/楕円 {{wheels}} 個 · viewBox {{viewBox}}",
+        "description": "自転車に乗ったペリカンの SVG を描かせ、見比べられるようにします。判定は目視で行います。",
+        "historyOnly": "実行概要のみ保存されています。作品と実行の詳細を確認するには再実行してください。",
+        "noSvg": "モデルは SVG を返しませんでした。",
+        "outcomes": {
+          "error": "実行失敗",
+          "generated": "描画を生成済み",
+          "no-artifact": "描画成果物なし"
+        },
+        "previewAlt": "生成された描画",
+        "previewFailed": "SVG を表示できません。属性の重複など、XML 形式に誤りがある可能性があります。元の回答またはワークスペースのファイルを開いて確認してください。",
+        "raw": "生の回答",
+        "run": "描画テストを実行",
+        "title": "描画テスト",
+        "unsafe": "回答にスクリプトや外部参照が含まれていたため、描画しませんでした。"
+      },
+      "prompts": {
+        "editorLabel": "{{probe}} のプロンプト",
+        "resetOne": "この項目を既定に戻す",
+        "saveFailed": "プロンプトを保存できませんでした：{{message}}",
+        "sharedHint": "保存したプロンプトはすべての検証入口で共有されます。"
+      },
+      "stop": "停止",
+      "stopped": "途中で停止したため、結果は保存していません。"
+    },
     "unsupportedProbeForApiType": "{{probe}} プローブはこの API 種別ではサポートされていません。",
-    "warning": "対応が検出された場合は実際に対応している可能性が高いですが、未検出でも実際には対応している場合があります。結果は参考情報として扱い、最終的には実際のツール利用結果を優先してください。"
+    "warning": "結果は現在の API、モデル、リクエスト設定に対するものです。成功しても完全な互換性は保証されません。失敗した場合は実行結果を確認してください。"
   }
 }

@@ -2,7 +2,6 @@ import { useId } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
-  Badge,
   Select,
   SelectContent,
   SelectItem,
@@ -62,18 +61,4 @@ export function VerificationModeSelect({
       </Select>
     </div>
   )
-}
-
-/** Display recorded modes without guessing the mode of older results. */
-export function VerificationModeBadge({
-  mode,
-}: {
-  mode?: ApiVerificationMode
-}) {
-  const { t } = useTranslation("aiApiVerification")
-  return mode ? (
-    <Badge variant="outline" size="sm">
-      {getApiVerificationModeLabel(t, mode)}
-    </Badge>
-  ) : null
 }

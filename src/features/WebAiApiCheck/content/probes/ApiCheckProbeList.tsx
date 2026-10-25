@@ -1,8 +1,11 @@
 import type { TFunction } from "i18next"
 
-import { Button, BUTTON_LOADING_BEHAVIORS } from "~/components/ui"
+import { Badge } from "~/components/ui"
 import { ProbeStatusBadge } from "~/features/Verification/api/ProbeStatusBadge"
-import { VerificationMediaPreview } from "~/features/Verification/api/VerificationMediaPreview"
+import type { VerificationToolsController } from "~/features/Verification/api/useVerificationTools"
+import { VerificationProbeDetails } from "~/features/Verification/api/VerificationProbeDetails"
+import { VerificationRunButton } from "~/features/Verification/api/VerificationRunButton"
+import { VerificationTestLabel } from "~/features/Verification/api/VerificationTestLabel"
 import type { ProbeItemState } from "~/features/WebAiApiCheck/content/modal/apiCheckModalTypes"
 import { getWebAiApiCheckProbeTestId } from "~/features/WebAiApiCheck/content/testIds"
 import type { ApiVerificationProbeId } from "~/services/verification/aiApiVerification"
@@ -13,6 +16,7 @@ import {
 
 type ApiCheckProbeListProps = {
   t: TFunction<["webAiApiCheck", "common", "aiApiVerification"]>
+  tools?: VerificationToolsController
   probes: ProbeItemState[]
   isRunningAll: boolean
   isFetchingModels: boolean
@@ -26,6 +30,7 @@ type ApiCheckProbeListProps = {
 export function ApiCheckProbeList({
   t,
   probes,
+  tools,
   isRunningAll,
   isFetchingModels,
   onRunProbe,
@@ -34,7 +39,7 @@ export function ApiCheckProbeList({
   const notRunYet = t("webAiApiCheck:modal.probes.notRunYet")
 
   return (
-    <div className="space-y-density-2">
+    <>
       {probes.map((probe) => {
         const result = probe.result
         const summary = result?.summaryKey
@@ -49,55 +54,60 @@ export function ApiCheckProbeList({
           <div
             key={probe.id}
             data-testid={getWebAiApiCheckProbeTestId(probe.id)}
-            className="border-border py-density-3 rounded-md border px-3"
           >
-            <div className="gap-y-density-2 flex items-start justify-between gap-x-2">
-              <div className="min-w-0 flex-1">
-                <div className="gap-y-density-2 flex flex-wrap items-center gap-x-2">
-                  <div className="text-foreground min-w-0 truncate text-sm font-medium">
-                    {getApiVerificationProbeLabel(t, probe.id)}
+            <VerificationProbeDetails
+              controller={tools}
+              probeId={probe.id}
+              result={result}
+              heading={
+                <div className="min-w-0 flex-1">
+                  <div className="gap-y-density-2 flex flex-wrap items-center gap-x-2">
+                    <div className="text-foreground min-w-0 truncate text-sm font-medium">
+                      <VerificationTestLabel testId={probe.id}>
+                        {getApiVerificationProbeLabel(t, probe.id)}
+                      </VerificationTestLabel>
+                    </div>
+                    <div className="gap-y-density-2 flex flex-wrap items-center gap-x-2">
+                      {result ? (
+                        <ProbeStatusBadge result={result} />
+                      ) : (
+                        <Badge variant="outline" size="sm">
+                          {t("aiApiVerification:verifyDialog.status.pending")}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                  {result ? <ProbeStatusBadge result={result} /> : null}
-                  <div className="text-muted-foreground text-xs">
-                    {result ? `${Math.round(result.latencyMs)}ms` : " "}
+                  <div className="text-muted-foreground mt-density-1 text-xs">
+                    {result ? summary : notRunYet}
                   </div>
                 </div>
-                <div className="text-muted-foreground mt-density-1 text-xs">
-                  {result ? summary : notRunYet}
-                </div>
-                {result && (
-                  <VerificationMediaPreview
-                    output={result.output}
-                    media={result.media}
-                  />
-                )}
-              </div>
-
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={() =>
-                  probe.isRunning ? onStopProbe(probe.id) : onRunProbe(probe.id)
-                }
-                loading={probe.isRunning}
-                loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}
-                disabled={
-                  isRunningAll || (!probe.isRunning && isFetchingModels)
-                }
-              >
-                {probe.isRunning
-                  ? isRunningAll
-                    ? t("webAiApiCheck:modal.actions.running")
-                    : t("webAiApiCheck:modal.actions.stopTest")
-                  : probe.attempts > 0
-                    ? t("webAiApiCheck:modal.actions.retry")
-                    : t("webAiApiCheck:modal.actions.runOne")}
-              </Button>
-            </div>
+              }
+              action={
+                <VerificationRunButton
+                  type="button"
+                  onClick={() =>
+                    probe.isRunning
+                      ? onStopProbe(probe.id)
+                      : onRunProbe(probe.id)
+                  }
+                  loading={probe.isRunning}
+                  disabled={
+                    isRunningAll || (!probe.isRunning && isFetchingModels)
+                  }
+                >
+                  {probe.isRunning
+                    ? isRunningAll
+                      ? t("webAiApiCheck:modal.actions.running")
+                      : t("webAiApiCheck:modal.actions.stopTest")
+                    : probe.attempts > 0
+                      ? t("webAiApiCheck:modal.actions.retry")
+                      : t("webAiApiCheck:modal.actions.runOne")}
+                </VerificationRunButton>
+              }
+            />
           </div>
         )
       })}
-    </div>
+    </>
   )
 }

@@ -10,6 +10,7 @@ import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import {
   cloneConfig,
   cloneSummaries,
+  coerceDrawingSummary,
   coerceHistorySummary,
   coerceTrustedConfig,
   createDefaultConfig,
@@ -30,6 +31,7 @@ import {
   type ApiVerificationHistoryConfig,
   type ApiVerificationHistorySummary,
   type ApiVerificationHistoryTarget,
+  type DrawingVerificationSummary,
 } from "~/services/verification/verificationResultHistory/types"
 import { serializeVerificationHistoryTarget } from "~/services/verification/verificationResultHistory/utils"
 import { onStorageChanged } from "~/utils/browser/storage"
@@ -311,6 +313,59 @@ class VerificationResultHistoryStorageService {
     return nextSummary
   }
 
+  async getDrawingSummary(
+    target: ApiVerificationHistoryTarget,
+  ): Promise<DrawingVerificationSummary | null> {
+    const config = await this.readConfigForRead()
+    const key = serializeVerificationHistoryTarget(target)
+    const summary = config.drawingSummaries?.find(
+      (item) => item.targetKey === key,
+    )
+    if (summary) return structuredClone(summary)
+
+    if (target.kind === API_VERIFICATION_HISTORY_TARGET_KINDS.Profile) {
+      const match = config.drawingSummaries
+        ?.filter(
+          (item) =>
+            item.target.kind ===
+              API_VERIFICATION_HISTORY_TARGET_KINDS.ProfileModel &&
+            item.target.profileId === target.profileId,
+        )
+        .sort((a, b) => b.verifiedAt - a.verifiedAt)[0]
+      if (match) return structuredClone(match)
+    }
+
+    return null
+  }
+
+  async upsertDrawingSummary(
+    summary: DrawingVerificationSummary,
+  ): Promise<void> {
+    const incoming = coerceDrawingSummary(summary)
+    if (!incoming) throw new Error("Invalid drawing verification summary")
+    await this.mutateConfig((config) => {
+      const retained = applyVerificationRetention(
+        [
+          incoming,
+          ...(config.drawingSummaries ?? []).filter(
+            (item) => item.targetKey !== incoming.targetKey,
+          ),
+        ],
+        { now: Date.now() },
+      )
+      return {
+        result: undefined,
+        changed: true,
+        next: {
+          ...config,
+          drawingSummaries: retained.summaries,
+          lastUpdated: Date.now(),
+        },
+      }
+    })
+    await this.sweepOrphans()
+  }
+
   async clearTarget(target: ApiVerificationHistoryTarget): Promise<boolean> {
     const targetKey = serializeVerificationHistoryTarget(target)
 
@@ -318,10 +373,21 @@ class VerificationResultHistoryStorageService {
       const summaries = config.summaries.filter(
         (summary) => summary.targetKey !== targetKey,
       )
+      const drawingSummaries = config.drawingSummaries?.filter(
+        (item) => item.targetKey !== targetKey,
+      )
+      const changed =
+        summaries.length !== config.summaries.length ||
+        drawingSummaries?.length !== config.drawingSummaries?.length
       return {
-        result: summaries.length !== config.summaries.length,
-        next: { ...config, summaries, lastUpdated: Date.now() },
-        changed: summaries.length !== config.summaries.length,
+        result: changed,
+        next: {
+          ...config,
+          summaries,
+          ...(drawingSummaries ? { drawingSummaries } : {}),
+          lastUpdated: Date.now(),
+        },
+        changed,
       }
     })
   }
@@ -348,11 +414,28 @@ class VerificationResultHistoryStorageService {
 
     return this.mutateConfig((config) => {
       const outcome = applyOwnerReconcile(config.summaries, normalized)
-      const changed = outcome.removed > 0 || outcome.remapped > 0
+      const drawings = applyOwnerReconcile(
+        config.drawingSummaries ?? [],
+        normalized,
+      )
+      const changed =
+        outcome.removed > 0 ||
+        outcome.remapped > 0 ||
+        drawings.removed > 0 ||
+        drawings.remapped > 0
 
       return {
-        result: { removed: outcome.removed, remapped: outcome.remapped },
-        next: { ...config, summaries: outcome.summaries },
+        result: {
+          removed: outcome.removed + drawings.removed,
+          remapped: outcome.remapped + drawings.remapped,
+        },
+        next: {
+          ...config,
+          summaries: outcome.summaries,
+          ...(config.drawingSummaries
+            ? { drawingSummaries: drawings.summaries }
+            : {}),
+        },
         changed,
       }
     })
@@ -423,21 +506,31 @@ class VerificationResultHistoryStorageService {
         liveAccountIds,
       })
 
+      const drawings = applyVerificationRetention(
+        config.drawingSummaries ?? [],
+        { now, liveProfileIds, liveAccountIds },
+      )
+
       return {
         result: {
-          removed: retention.changed
-            ? config.summaries.length - retention.summaries.length
-            : 0,
+          removed:
+            config.summaries.length -
+            retention.summaries.length +
+            (config.drawingSummaries?.length ?? 0) -
+            drawings.summaries.length,
           swept: completed,
         },
         next: {
           ...config,
           summaries: retention.summaries,
+          ...(config.drawingSummaries
+            ? { drawingSummaries: drawings.summaries }
+            : {}),
           // Only a complete sweep may advance the marker, so a failed owner read
           // retries on the next write instead of stalling for a full interval.
           lastOrphanSweepAt: completed ? now : config.lastOrphanSweepAt,
         },
-        changed: retention.changed || completed,
+        changed: retention.changed || drawings.changed || completed,
       }
     })
   }

@@ -389,7 +389,8 @@ describe("Video generation probe", () => {
         method: "POST",
         body: JSON.stringify({
           model: "sora-1",
-          prompt: "test",
+          prompt:
+            "A simple geometric shape rotates slowly on a plain background.",
         }),
       }),
     )

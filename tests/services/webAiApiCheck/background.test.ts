@@ -4,6 +4,7 @@ import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { PRODUCT_ANALYTICS_ERROR_CATEGORIES } from "~/services/productAnalytics/contracts"
 import type { ApiVerificationProbeResult } from "~/services/verification/aiApiVerification"
 import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
+import { PELICAN_EXECUTION_MODES } from "~/services/verification/modelQuality/constants"
 import { WEB_AI_API_CHECK_BASE_URL_HISTORY_SUGGESTION_LIMIT } from "~/services/verification/webAiApiCheck/constants"
 
 it.each(Object.values(API_VERIFICATION_REQUEST_PROFILES))(
@@ -128,6 +129,61 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
 })
 
 describe("webAiApiCheck background handlers", () => {
+  it("forwards agent mode and client identity and cancels the actual background drawing run", async () => {
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const pelican = await import("~/services/verification/modelQuality/pelican")
+    const { WebAiApiCheckMessageTypes } = await import(
+      "~/services/verification/webAiApiCheck/messaging"
+    )
+    let runSignal: AbortSignal | undefined
+    const spy = vi
+      .spyOn(pelican, "runPelicanTest")
+      .mockImplementation(async (params) => {
+        runSignal = params.abortSignal
+        return new Promise((_, reject) =>
+          params.abortSignal?.addEventListener("abort", () =>
+            reject(new DOMException("Aborted", "AbortError")),
+          ),
+        )
+      })
+    try {
+      background.setupWebAiApiCheckMessagingListeners()
+      const pending = webAiApiCheckMessageHandlers.get(
+        WebAiApiCheckMessageTypes.RunPelican,
+      )!({
+        data: {
+          runId: "agent-run",
+          apiType: "openai",
+          baseUrl: "https://example.invalid",
+          apiKey: "sk-test",
+          modelId: "test",
+          executionMode: PELICAN_EXECUTION_MODES.Agent,
+          requestProfile: "codex",
+          requestProfileEnhanced: true,
+        },
+      })
+      expect(spy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          executionMode: PELICAN_EXECUTION_MODES.Agent,
+          requestProfile: "codex",
+          requestProfileEnhanced: true,
+          abortSignal: expect.any(AbortSignal),
+        }),
+      )
+      expect(
+        await background.resolveWebAiApiCheckCancelRunProbeMessage({
+          runId: "agent-run",
+        }),
+      ).toEqual({ success: true, cancelled: true })
+      expect(runSignal?.aborted).toBe(true)
+      await expect(pending).resolves.toMatchObject({ success: false })
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
   it("fails closed when reading the saved detection scope fails", async () => {
     vi.resetModules()
     const { userPreferences } = await import(
@@ -1576,7 +1632,7 @@ describe("webAiApiCheck background handlers", () => {
     background.setupWebAiApiCheckMessagingListeners()
     background.setupWebAiApiCheckMessagingListeners()
 
-    expect(onWebAiApiCheckMessageMock).toHaveBeenCalledTimes(12)
+    expect(onWebAiApiCheckMessageMock).toHaveBeenCalledTimes(13)
     expect(
       onWebAiApiCheckMessageMock.mock.calls.map((call) => call[0]),
     ).toEqual([
@@ -1590,6 +1646,7 @@ describe("webAiApiCheck background handlers", () => {
       WebAiApiCheckMessageTypes.CreateTag,
       WebAiApiCheckMessageTypes.RenameTag,
       WebAiApiCheckMessageTypes.RunProbe,
+      WebAiApiCheckMessageTypes.RunPelican,
       WebAiApiCheckMessageTypes.CancelRunProbe,
       WebAiApiCheckMessageTypes.SaveProfile,
     ])

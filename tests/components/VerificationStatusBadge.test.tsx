@@ -54,6 +54,20 @@ describe("VerificationStatusBadge", () => {
     expect(passBadge).toHaveAttribute("data-size", "sm")
   })
 
+  it("renders latency directly in the badge when provided", () => {
+    render(<VerificationStatusBadge status="pass" latencyMs={1200} />)
+
+    expect(screen.getByText("1.2s")).toBeInTheDocument()
+    expect(screen.getByText("verifyDialog.status.pass")).toHaveClass("sr-only")
+  })
+
+  it("formats sub-second latency in milliseconds", () => {
+    render(<VerificationStatusBadge status="pass" latencyMs={350} />)
+
+    expect(screen.getByText("350ms")).toBeInTheDocument()
+    expect(screen.getByText("verifyDialog.status.pass")).toHaveClass("sr-only")
+  })
+
   it.each([
     ["unsupported", "verifyDialog.status.unsupported"],
     ["unverified", "verifyDialog.status.unverified"],
@@ -86,6 +100,29 @@ describe("VerificationStatusBadge", () => {
 })
 
 describe("ProbeStatusBadge", () => {
+  it.each(["streaming", "non-streaming"] as const)(
+    "keeps the recorded %s mode inside the result badge",
+    (mode) => {
+      render(
+        <ProbeStatusBadge
+          result={{
+            id: "text-generation",
+            status: "pass",
+            latencyMs: 1200,
+            summary: "Completed",
+            mode,
+          }}
+        />,
+      )
+      const latencyBadge = screen.getByText("1.2s").closest("[data-variant]")
+      expect(latencyBadge).toHaveTextContent(
+        mode === "streaming"
+          ? "aiApiVerification:verifyDialog.modes.streaming"
+          : "aiApiVerification:verifyDialog.modes.nonStreaming",
+      )
+    },
+  )
+
   it("forwards the probe result status to the shared badge", () => {
     render(
       <ProbeStatusBadge

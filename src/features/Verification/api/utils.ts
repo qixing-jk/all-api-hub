@@ -1,9 +1,24 @@
 /**
  * Format probe latency for display.
+ * Renders in milliseconds below 1000ms (e.g. 150ms), and in seconds with
+ * one decimal point for larger durations (e.g. 1.2s, 15s).
  */
-export function formatLatency(latencyMs: number) {
-  if (!Number.isFinite(latencyMs) || latencyMs <= 0) return "-"
-  return `${Math.round(latencyMs)}ms`
+export function formatLatency(latencyMs: number | null | undefined): string {
+  if (
+    typeof latencyMs !== "number" ||
+    !Number.isFinite(latencyMs) ||
+    latencyMs <= 0
+  ) {
+    return "-"
+  }
+  if (latencyMs < 1000) {
+    return `${Math.round(latencyMs)}ms`
+  }
+  const seconds = latencyMs / 1000
+  if (seconds < 10) {
+    return `${parseFloat(seconds.toFixed(1))}s`
+  }
+  return `${Math.round(seconds)}s`
 }
 
 /**

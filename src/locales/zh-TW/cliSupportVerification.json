@@ -8,10 +8,6 @@
       "stop": "停止",
       "stopTool": "停止 {{tool}}"
     },
-    "details": {
-      "input": "輸入",
-      "output": "輸出"
-    },
     "idleHint": "請選擇金鑰後開始驗證。如無法從金鑰推測模型，請手動填寫模型 ID。",
     "loadingModelsHint": "正在載入模型...",
     "loadingRuntimeKeysHint": "正在載入金鑰...",
@@ -28,10 +24,7 @@
     "profileIdleHint": "請選擇模型後開始驗證。如果獲取到的列表不完整，也可以手動輸入模型 ID。",
     "requiresModelId": "請輸入模型 ID 後執行該測試。",
     "status": {
-      "fail": "失敗",
-      "pass": "透過",
-      "pending": "待執行",
-      "unsupported": "不支援"
+      "pending": "待執行"
     },
     "summaries": {
       "endpointNotFound": "端點不存在（404）：可能不支援該介面",
@@ -55,7 +48,6 @@
       "claude": "Claude Code",
       "codex": "Codex（Codex CLI）",
       "gemini": "Gemini CLI"
-    },
-    "warning": "檢測到透過時，高機率為真實支援；檢測失敗時，也可能實際可用。結果僅供參考，請以工具的實際使用情況為準。"
+    }
   }
 }

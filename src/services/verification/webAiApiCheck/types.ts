@@ -6,6 +6,10 @@ import type {
   ApiVerificationProbeResult,
   ApiVerificationRequestProfile,
 } from "~/services/verification/aiApiVerification"
+import type {
+  PelicanExecutionMode,
+  PelicanTestResult,
+} from "~/services/verification/modelQuality/pelican"
 import type { WebAiApiCheckBaseUrlSuggestion } from "~/services/verification/webAiApiCheck/baseUrlHistory"
 import type { Tag } from "~/types"
 
@@ -155,6 +159,35 @@ export type ApiCheckRunProbeRequest = {
   modelId?: string
   probeId: ApiVerificationProbeId
 }
+
+/**
+ * Runtime data from content -> background to run the pelican drawing test.
+ *
+ * Kept as its own message because the drawing test returns SVG markup rather
+ * than a probe result, and the content script cannot call the provider directly.
+ */
+export type ApiCheckRunPelicanRequest = {
+  runId?: string
+  apiType: ApiVerificationApiType
+  mode?: ApiVerificationMode
+  baseUrl: string
+  apiKey: string
+  modelId?: string
+  prompt?: string
+  executionMode?: PelicanExecutionMode
+  requestProfile?: ApiVerificationRequestProfile
+  requestProfileEnhanced?: boolean
+}
+
+/**
+ * Runtime response for {@link ApiCheckRunPelicanRequest}.
+ */
+export type ApiCheckRunPelicanResponse =
+  | {
+      success: true
+      result: PelicanTestResult
+    }
+  | { success: false; error?: string }
 
 /**
  * Runtime response for {@link ApiCheckRunProbeRequest}.

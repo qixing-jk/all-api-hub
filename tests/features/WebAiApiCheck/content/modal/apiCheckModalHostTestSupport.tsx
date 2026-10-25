@@ -152,7 +152,9 @@ export const openModal = async (
     })
   })
 
-  renderSubject()
+  await act(async () => {
+    renderSubject()
+  })
   await hostReady
 
   await act(async () => {

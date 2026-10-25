@@ -98,6 +98,14 @@ const newApiAdapterLegacyApiServiceImportPattern = {
 // Each entry also lists the allowed import targets as prefix matches, so a
 // new dynamic import inside an allowlisted file still needs a config diff.
 const dynamicImportAllowlist = [
+  // Optional code execution loads the WASM interpreter only when a test uses JS.
+  {
+    file: "src/services/verification/agentTest/environment.ts",
+    imports: [
+      "quickjs-emscripten-core",
+      "@jitl/quickjs-singlefile-browser-release-sync",
+    ],
+  },
   // Turnstile waits load content UI only when the user is asked to assist.
   {
     file: "src/entrypoints/content/messageHandlers/handlers/turnstileGuard.ts",

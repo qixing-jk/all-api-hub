@@ -21,6 +21,8 @@ import {
 } from "~/services/preferences/preferencesDefaults"
 import { normalizeTempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import { API_VERIFICATION_PROBE_IDS } from "~/services/verification/aiApiVerification/types"
+import { saveProbePromptOverrides } from "~/services/verification/promptOverrides"
 import {
   WEB_AI_API_CHECK_RULE_LIST,
   WEB_AI_API_CHECK_RULE_MUTATION,
@@ -785,6 +787,59 @@ describe("userPreferences", () => {
       })
 
       expect(setSpy).toHaveBeenCalled()
+    })
+  })
+
+  describe("verification prompt overrides", () => {
+    it("persists a reset as deletion instead of merging over the stored prompt", async () => {
+      const textGeneration = API_VERIFICATION_PROBE_IDS.TextGeneration
+
+      await expect(
+        userPreferences.setVerificationProbePrompts({
+          [textGeneration]: "Say YES",
+        }),
+      ).resolves.toMatchObject({ ok: true })
+      await expect(
+        saveProbePromptOverrides({ [textGeneration]: "Say YES" }),
+      ).resolves.toBeUndefined()
+      expect(
+        (await userPreferences.getPreferences()).verificationProbePrompts,
+      ).toEqual({ [textGeneration]: "Say YES" })
+
+      await saveProbePromptOverrides({})
+
+      expect(
+        (await userPreferences.getPreferences()).verificationProbePrompts,
+      ).toEqual({})
+    })
+
+    it("replaces only the prompt subtree when other preference writes land beside it", async () => {
+      const structuredOutput = API_VERIFICATION_PROBE_IDS.StructuredOutput
+
+      await userPreferences.savePreferences({ currencyType: "CNY" })
+      await saveProbePromptOverrides({
+        [structuredOutput]: "Return JSON.",
+      })
+      await saveProbePromptOverrides({})
+
+      const preferences = await userPreferences.getPreferences()
+      expect(preferences.currencyType).toBe("CNY")
+      expect(preferences.verificationProbePrompts).toEqual({})
+    })
+
+    it("reports a typed preference write failure instead of dropping it", async () => {
+      const storage = (userPreferences as any).storage as {
+        set: ReturnType<typeof vi.fn>
+      }
+      const setError = new Error("prompt write failed")
+
+      vi.spyOn(storage, "set").mockRejectedValueOnce(setError)
+
+      await expect(
+        saveProbePromptOverrides({
+          [API_VERIFICATION_PROBE_IDS.TextGeneration]: "Say YES",
+        }),
+      ).rejects.toThrow("prompt write failed")
     })
   })
 

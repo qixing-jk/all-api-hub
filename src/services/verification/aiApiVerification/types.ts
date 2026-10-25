@@ -51,6 +51,11 @@ export const API_VERIFICATION_PROBE_STATUSES = {
   Unsupported: "unsupported",
 } as const
 
+/** Per-probe prompt overrides; blank entries fall back to the built-in prompt. */
+export type ApiVerificationProbePromptOverrides = Partial<
+  Record<ApiVerificationProbeId, string>
+>
+
 export type ApiVerificationProbeStatus =
   (typeof API_VERIFICATION_PROBE_STATUSES)[keyof typeof API_VERIFICATION_PROBE_STATUSES]
 

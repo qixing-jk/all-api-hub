@@ -18,7 +18,8 @@
     },
     "details": {
       "input": "Input",
-      "output": "Output"
+      "output": "Output",
+      "result": "Execution result"
     },
     "errors": {
       "unexpected": "Unexpected error"
@@ -35,6 +36,7 @@
     "meta": {
       "apiType": "API type",
       "apiTypePlaceholder": "Select API type",
+      "configuration": "Request configuration",
       "mode": "Test mode",
       "model": "Model",
       "modelPlaceholder": "Enter model id",
@@ -61,11 +63,11 @@
       "image-generation": "Image generation",
       "models": "Model list",
       "rerank": "Reranker",
-      "structured-output": "Structured output (schema JSON)",
+      "structured-output": "Structured output",
       "text-generation": "Text generation",
       "tool-calling": "Tool/function calling",
       "video-generation": "Video task",
-      "web-search": "Web search / grounding"
+      "web-search": "Web search"
     },
     "requestProfiles": {
       "claude": "Claude Code",
@@ -133,7 +135,47 @@
       "webSearchUnsupportedForApiType": "Web search probe is not supported for this API type."
     },
     "title": "API Verification",
+    "tools": {
+      "agent": {
+        "calls": "Tool activity",
+        "completed": "An SVG file was generated. Judge the drawing yourself.",
+        "files": "Workspace files",
+        "hint": "Let the model check and improve its drawing. This may increase usage.",
+        "label": "Agent test mode",
+        "noArtifact": "The model did not create pelican.svg with complete SVG markup. Its final reply is not used as the artifact.",
+        "summary": "Turns: {{steps}} · Tool calls: {{calls}} · {{seconds}} s"
+      },
+      "errors": {
+        "unexpected": "Request failed: {{message}}"
+      },
+      "manualBadge": "On demand",
+      "pelican": {
+        "analysis": "{{shapes}} shapes · {{wheels}} circles/ellipses · viewBox {{viewBox}}",
+        "description": "Asks the model to draw a pelican riding a bicycle as SVG for a side-by-side look. Judgement stays manual.",
+        "historyOnly": "Only the run summary was saved. Run again to view the drawing and execution details.",
+        "noSvg": "The model returned no SVG markup.",
+        "outcomes": {
+          "error": "Execution failed",
+          "generated": "Drawing generated",
+          "no-artifact": "No drawing artifact"
+        },
+        "previewAlt": "Generated drawing",
+        "previewFailed": "The SVG could not be displayed. It may contain invalid XML, such as duplicate attributes. Expand the raw answer or workspace files to inspect it.",
+        "raw": "Raw answer",
+        "run": "Run drawing test",
+        "title": "Drawing test",
+        "unsafe": "The answer contained script or external references, so it was not rendered."
+      },
+      "prompts": {
+        "editorLabel": "{{probe}} prompt",
+        "resetOne": "Reset this prompt",
+        "saveFailed": "Could not save prompts: {{message}}",
+        "sharedHint": "Saved prompts are shared by every verification entry point."
+      },
+      "stop": "Stop",
+      "stopped": "Stopped before finishing; nothing was recorded."
+    },
     "unsupportedProbeForApiType": "{{probe}} probe is not supported for this API type.",
-    "warning": "When support is detected, it is highly likely to be genuine. When support is not detected, it may still be supported. Results are for reference only; rely on actual tool usage."
+    "warning": "Tests apply to the current API, model and request settings. Passing does not guarantee full compatibility; inspect execution results when a test fails."
   }
 }

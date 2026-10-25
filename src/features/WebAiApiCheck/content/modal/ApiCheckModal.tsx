@@ -24,7 +24,13 @@ import {
   CollapsibleTrigger,
 } from "~/components/ui/collapsible"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
+import {
+  VerificationConfigSection,
+  VerificationDialogHeader,
+  VerificationTestSection,
+} from "~/features/Verification/api/VerificationLayout"
 import { VerificationRequestProfileSelect } from "~/features/Verification/api/VerificationRequestProfile"
+import { VerificationToolsPanel } from "~/features/Verification/api/VerificationToolsPanel"
 import { ApiCheckSiteAccessControl } from "~/features/WebAiApiCheck/content/ApiCheckSiteAccessControl"
 import { ApiCheckBaseUrlHistoryPicker } from "~/features/WebAiApiCheck/content/history/ApiCheckBaseUrlHistoryPicker"
 import { ApiCheckCandidateButtons } from "~/features/WebAiApiCheck/content/modal/ApiCheckCandidateButtons"
@@ -94,24 +100,28 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
           aria-modal="true"
           aria-labelledby="api-check-modal-title"
           tabIndex={-1}
-          className="border-border bg-background pointer-events-auto max-h-[90vh] w-full max-w-[860px] overflow-hidden rounded-2xl border shadow-xl"
+          className="border-border bg-background pointer-events-auto flex max-h-[90vh] w-full max-w-[860px] flex-col overflow-hidden rounded-2xl border shadow-xl"
           onKeyDown={stopHostPageKeyboardShortcuts}
           onKeyUp={stopHostPageKeyboardShortcuts}
         >
-          <div className="border-border gap-y-density-3 py-density-4 flex items-start justify-between gap-x-3 border-b px-4">
-            <div className="min-w-0">
-              <div
-                id="api-check-modal-title"
-                className="text-foreground text-base font-semibold"
-              >
-                {t("webAiApiCheck:modal.title")}
-              </div>
-              <div className="text-muted-foreground truncate text-xs">
-                {t("webAiApiCheck:modal.privacyHint")}
-              </div>
-            </div>
+          <div
+            data-testid="verification-header"
+            className="border-border py-density-4 relative shrink-0 border-b px-4"
+          >
+            <VerificationDialogHeader
+              title={
+                <h2
+                  id="api-check-modal-title"
+                  className="text-foreground truncate text-base font-semibold"
+                >
+                  {t("webAiApiCheck:modal.title")}
+                </h2>
+              }
+              subtitle={t("webAiApiCheck:modal.privacyHint")}
+            />
             {/* Focus-opened react-tooltip can consume the first dismiss click in Edge's content ShadowRoot. */}
             <IconButton
+              className="absolute top-4 right-4"
               data-testid={WEB_AI_API_CHECK_TEST_IDS.closeButton}
               aria-label={t("common:actions.close")}
               variant="ghost"
@@ -127,392 +137,415 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
           <div
             ref={refs.scrollContainerRef}
             data-testid={WEB_AI_API_CHECK_TEST_IDS.scrollContainer}
-            className="py-density-4 max-h-[calc(90vh-64px)] overflow-y-auto overscroll-contain px-4"
+            className="py-density-4 min-h-0 flex-1 overflow-y-auto overscroll-contain px-4"
           >
-            <div className="space-y-density-4">
-              <ApiCheckSiteAccessControl pageUrl={view.pageUrl} />
-              <div className="space-y-density-2">
-                <label
-                  htmlFor="api-check-source-text"
-                  className="text-foreground block text-sm font-medium"
-                >
-                  {t("webAiApiCheck:modal.sourceText.label")}
-                </label>
-                <Textarea
-                  id="api-check-source-text"
-                  value={view.sourceText}
-                  onChange={(e) => actions.setSourceText(e.target.value)}
-                  rows={4}
-                  placeholder={t("webAiApiCheck:modal.sourceText.placeholder")}
-                />
-              </div>
-
-              <div className="gap-y-density-3 grid gap-x-3 md:grid-cols-2">
-                <div className="space-y-density-1-5">
+            <div className="space-y-density-6">
+              <div className="space-y-density-4">
+                <ApiCheckSiteAccessControl pageUrl={view.pageUrl} />
+                <div className="space-y-density-2">
                   <label
-                    htmlFor="api-check-base-url"
-                    className="text-muted-foreground block text-xs"
+                    htmlFor="api-check-source-text"
+                    className="text-foreground block text-sm font-medium"
                   >
-                    {t("webAiApiCheck:modal.fields.baseUrl")}
+                    {t("webAiApiCheck:modal.sourceText.label")}
                   </label>
-                  <Input
-                    id="api-check-base-url"
-                    value={view.baseUrl}
-                    onChange={(e) => actions.updateBaseUrl(e.target.value)}
-                    placeholder="https://example.com/api"
-                    rightIcon={
-                      <ApiCheckBaseUrlHistoryPicker
-                        t={t}
-                        isOpen={view.isBaseUrlHistoryPickerOpen}
-                        onOpenChange={actions.setIsBaseUrlHistoryPickerOpen}
-                        suggestions={view.baseUrlHistorySuggestions}
-                        selectedBaseUrl={view.baseUrl}
-                        portalContainer={view.popoverPortalContainer}
-                        onSelect={actions.selectBaseUrlHistory}
-                        onRemove={actions.removeBaseUrlHistory}
+                  <Textarea
+                    id="api-check-source-text"
+                    value={view.sourceText}
+                    onChange={(e) => actions.setSourceText(e.target.value)}
+                    rows={4}
+                    placeholder={t(
+                      "webAiApiCheck:modal.sourceText.placeholder",
+                    )}
+                  />
+                </div>
+
+                <VerificationConfigSection>
+                  <div className="gap-y-density-3 grid gap-x-3 md:grid-cols-2">
+                    <div className="space-y-density-1-5">
+                      <label
+                        htmlFor="api-check-base-url"
+                        className="text-muted-foreground block text-xs"
+                      >
+                        {t("webAiApiCheck:modal.fields.baseUrl")}
+                      </label>
+                      <Input
+                        id="api-check-base-url"
+                        value={view.baseUrl}
+                        onChange={(e) => actions.updateBaseUrl(e.target.value)}
+                        placeholder="https://example.com/api"
+                        rightIcon={
+                          <ApiCheckBaseUrlHistoryPicker
+                            t={t}
+                            isOpen={view.isBaseUrlHistoryPickerOpen}
+                            onOpenChange={actions.setIsBaseUrlHistoryPickerOpen}
+                            suggestions={view.baseUrlHistorySuggestions}
+                            selectedBaseUrl={view.baseUrl}
+                            portalContainer={view.popoverPortalContainer}
+                            onSelect={actions.selectBaseUrlHistory}
+                            onRemove={actions.removeBaseUrlHistory}
+                          />
+                        }
                       />
-                    }
-                  />
-                  <ApiCheckCandidateButtons
-                    t={t}
-                    kind="baseUrl"
-                    candidates={
-                      view.extractionMetadata?.candidates.baseUrls ?? []
-                    }
-                    currentValue={view.baseUrl}
-                    onSelect={actions.updateBaseUrl}
-                  />
-                </div>
+                      <ApiCheckCandidateButtons
+                        t={t}
+                        kind="baseUrl"
+                        candidates={
+                          view.extractionMetadata?.candidates.baseUrls ?? []
+                        }
+                        currentValue={view.baseUrl}
+                        onSelect={actions.updateBaseUrl}
+                      />
+                    </div>
 
-                <div className="space-y-density-1-5">
-                  <label
-                    htmlFor="api-check-api-key"
-                    className="text-muted-foreground block text-xs"
+                    <div className="space-y-density-1-5">
+                      <label
+                        htmlFor="api-check-api-key"
+                        className="text-muted-foreground block text-xs"
+                      >
+                        {t("webAiApiCheck:modal.fields.apiKey")}
+                      </label>
+                      <Input
+                        id="api-check-api-key"
+                        type="password"
+                        revealable
+                        revealed={view.apiKeyVisible}
+                        onRevealedChange={actions.setApiKeyVisible}
+                        revealLabels={{
+                          show: t("webAiApiCheck:modal.actions.showKey"),
+                          hide: t("webAiApiCheck:modal.actions.hideKey"),
+                        }}
+                        value={view.apiKey}
+                        onChange={(e) => actions.setApiKey(e.target.value)}
+                        placeholder="sk-..."
+                      />
+                      <ApiCheckCandidateButtons
+                        t={t}
+                        kind="apiKey"
+                        candidates={
+                          view.extractionMetadata?.candidates.apiKeys ?? []
+                        }
+                        currentValue={view.apiKey}
+                        onSelect={actions.setApiKey}
+                      />
+                    </div>
+
+                    <div className="space-y-density-1-5">
+                      <label
+                        htmlFor="api-check-api-type"
+                        className="text-muted-foreground block text-xs"
+                      >
+                        {t("webAiApiCheck:modal.fields.apiType")}
+                      </label>
+                      <SearchableSelect
+                        id="api-check-api-type"
+                        aria-label={t("webAiApiCheck:modal.fields.apiType")}
+                        options={view.apiTypeOptions}
+                        value={view.apiType}
+                        onChange={(value) =>
+                          actions.setApiType(value as ApiVerificationApiType)
+                        }
+                        disabled={!view.canClose}
+                        portalContainer={
+                          view.popoverPortalContainer ?? undefined
+                        }
+                      />
+                    </div>
+
+                    <div className="space-y-density-1-5 md:col-span-2">
+                      <label
+                        htmlFor="api-check-model-id"
+                        className="text-muted-foreground block text-xs"
+                      >
+                        {t("webAiApiCheck:modal.fields.modelId")}
+                      </label>
+
+                      <SearchableSelect
+                        id="api-check-model-id"
+                        aria-label={t("webAiApiCheck:modal.fields.modelId")}
+                        data-testid={WEB_AI_API_CHECK_TEST_IDS.modelId}
+                        options={view.modelIdsOptions}
+                        value={view.modelId}
+                        onChange={actions.setModelId}
+                        portalContainer={
+                          view.popoverPortalContainer ?? undefined
+                        }
+                        placeholder="gpt-4o-mini"
+                        loading={view.isFetchingModels}
+                        allowCustomValue
+                      />
+                    </div>
+                    {view.modelModality === MODEL_TEST_MODALITIES.Text ? (
+                      <div className="space-y-density-1-5">
+                        <label
+                          htmlFor="api-check-verification-mode"
+                          className="text-muted-foreground block text-xs"
+                        >
+                          {t("aiApiVerification:verifyDialog.meta.mode")}
+                        </label>
+                        <SearchableSelect
+                          id="api-check-verification-mode"
+                          aria-label={t(
+                            "aiApiVerification:verifyDialog.meta.mode",
+                          )}
+                          options={Object.values(API_VERIFICATION_MODES).map(
+                            (mode) => ({
+                              value: mode,
+                              label: getApiVerificationModeLabel(t, mode),
+                            }),
+                          )}
+                          value={view.verificationMode}
+                          onChange={(value) =>
+                            actions.setVerificationMode(
+                              value as ApiVerificationMode,
+                            )
+                          }
+                          disabled={!view.canClose}
+                          portalContainer={
+                            view.popoverPortalContainer ?? undefined
+                          }
+                        />
+                      </div>
+                    ) : null}
+
+                    <div>
+                      <VerificationRequestProfileSelect
+                        value={view.requestProfile}
+                        enhanced={view.requestProfileEnhanced}
+                        onEnhancedChange={actions.setRequestProfileEnhanced}
+                        onChange={actions.setRequestProfile}
+                        disabled={!view.canClose}
+                        portalContainer={
+                          view.popoverPortalContainer ?? undefined
+                        }
+                      />
+                    </div>
+
+                    {(view.modelModality === MODEL_TEST_MODALITIES.Image ||
+                      view.modelModality === MODEL_TEST_MODALITIES.Video) && (
+                      <div className="border-warning-border bg-warning-soft text-warning-soft-foreground py-density-2 rounded-md border px-3 text-xs md:col-span-2">
+                        {view.modelModality === MODEL_TEST_MODALITIES.Image
+                          ? t(
+                              "aiApiVerification:verifyDialog.modalityNotice.image",
+                            )
+                          : t(
+                              "aiApiVerification:verifyDialog.modalityNotice.video",
+                            )}
+                      </div>
+                    )}
+                  </div>
+                </VerificationConfigSection>
+
+                <Collapsible
+                  open={view.isProfileOptionsOpen}
+                  onOpenChange={actions.setIsProfileOptionsOpen}
+                  className="border-border/70 bg-muted/20 rounded-md border"
+                >
+                  <CollapsibleTrigger
+                    type="button"
+                    aria-label={t(
+                      "webAiApiCheck:modal.optionalProfileFields.title",
+                    )}
+                    className="hover:bg-muted/40 gap-y-density-3 py-density-2 flex w-full items-center justify-between gap-x-3 rounded-md px-3 text-left transition-colors"
                   >
-                    {t("webAiApiCheck:modal.fields.apiKey")}
-                  </label>
-                  <Input
-                    id="api-check-api-key"
-                    type="password"
-                    revealable
-                    revealed={view.apiKeyVisible}
-                    onRevealedChange={actions.setApiKeyVisible}
-                    revealLabels={{
-                      show: t("webAiApiCheck:modal.actions.showKey"),
-                      hide: t("webAiApiCheck:modal.actions.hideKey"),
-                    }}
-                    value={view.apiKey}
-                    onChange={(e) => actions.setApiKey(e.target.value)}
-                    placeholder="sk-..."
-                  />
-                  <ApiCheckCandidateButtons
-                    t={t}
-                    kind="apiKey"
-                    candidates={
-                      view.extractionMetadata?.candidates.apiKeys ?? []
-                    }
-                    currentValue={view.apiKey}
-                    onSelect={actions.setApiKey}
-                  />
-                </div>
-
-                <div className="space-y-density-1-5">
-                  <label
-                    htmlFor="api-check-api-type"
-                    className="text-muted-foreground block text-xs"
-                  >
-                    {t("webAiApiCheck:modal.fields.apiType")}
-                  </label>
-                  <SearchableSelect
-                    id="api-check-api-type"
-                    aria-label={t("webAiApiCheck:modal.fields.apiType")}
-                    options={view.apiTypeOptions}
-                    value={view.apiType}
-                    onChange={(value) =>
-                      actions.setApiType(value as ApiVerificationApiType)
-                    }
-                    disabled={!view.canClose}
-                    portalContainer={view.popoverPortalContainer ?? undefined}
-                  />
-                </div>
-
-                {view.modelModality === MODEL_TEST_MODALITIES.Text ? (
-                  <div className="space-y-density-1-5">
-                    <label
-                      htmlFor="api-check-verification-mode"
-                      className="text-muted-foreground block text-xs"
-                    >
-                      {t("aiApiVerification:verifyDialog.meta.mode")}
-                    </label>
-                    <SearchableSelect
-                      id="api-check-verification-mode"
-                      aria-label={t("aiApiVerification:verifyDialog.meta.mode")}
-                      options={Object.values(API_VERIFICATION_MODES).map(
-                        (mode) => ({
-                          value: mode,
-                          label: getApiVerificationModeLabel(t, mode),
-                        }),
+                    <div className="min-w-0">
+                      <div className="text-foreground text-sm font-medium">
+                        {t("webAiApiCheck:modal.optionalProfileFields.title")}
+                      </div>
+                      <div className="text-muted-foreground truncate text-xs">
+                        {t(
+                          view.hasProfileMetadataInput
+                            ? "webAiApiCheck:modal.optionalProfileFields.hasInput"
+                            : "webAiApiCheck:modal.optionalProfileFields.hint",
+                        )}
+                      </div>
+                    </div>
+                    <ChevronDown
+                      className={cn(
+                        "text-muted-foreground h-4 w-4 shrink-0 transition-transform",
+                        view.isProfileOptionsOpen ? "rotate-180" : "rotate-0",
                       )}
-                      value={view.verificationMode}
-                      onChange={(value) =>
-                        actions.setVerificationMode(
-                          value as ApiVerificationMode,
-                        )
-                      }
-                      disabled={!view.canClose}
-                      portalContainer={view.popoverPortalContainer ?? undefined}
                     />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="border-border/60 py-density-3 border-t px-3">
+                    <div className="gap-y-density-3 grid gap-x-3 md:grid-cols-2">
+                      <FormField
+                        label={t("webAiApiCheck:modal.fields.tags")}
+                        description={t("webAiApiCheck:modal.hints.tags")}
+                      >
+                        <TagPicker
+                          tags={view.tags}
+                          selectedTagIds={view.selectedTagIds}
+                          onSelectedTagIdsChange={actions.setSelectedTagIds}
+                          onCreateTag={actions.createTag}
+                          onRenameTag={actions.renameTag}
+                          allowDelete={false}
+                          placeholder={t(
+                            "webAiApiCheck:modal.placeholders.tags",
+                          )}
+                          disabled={view.isSavingProfile}
+                          portalContainer={view.popoverPortalContainer}
+                        />
+                      </FormField>
+
+                      <FormField
+                        label={t("webAiApiCheck:modal.fields.expiresAt")}
+                        description={t("webAiApiCheck:modal.hints.expiresAt")}
+                        htmlFor="api-check-expires-at"
+                      >
+                        <DatePicker
+                          id="api-check-expires-at"
+                          value={view.expiresAtInput}
+                          onChange={actions.setExpiresAtInput}
+                          labels={{
+                            trigger: t("webAiApiCheck:modal.fields.expiresAt"),
+                            placeholder: t("common:datePicker.placeholder"),
+                            noExpiration: t("common:datePicker.noExpiration"),
+                            in7Days: t("common:datePicker.in7Days"),
+                            in30Days: t("common:datePicker.in30Days"),
+                            in90Days: t("common:datePicker.in90Days"),
+                            in1Year: t("common:datePicker.in1Year"),
+                            naturalInput: {
+                              invalid: t(
+                                "common:datePicker.naturalInput.invalid",
+                              ),
+                              label: t("common:datePicker.naturalInput.label"),
+                              openCalendar: t(
+                                "common:datePicker.naturalInput.openCalendar",
+                              ),
+                              placeholder: t(
+                                "common:datePicker.naturalInput.placeholder",
+                              ),
+                              preview: t(
+                                "common:datePicker.naturalInput.preview",
+                              ),
+                            },
+                          }}
+                          language={view.datePickerLanguage}
+                          portalContainer={view.popoverPortalContainer}
+                          disabled={view.isSavingProfile}
+                          naturalInput
+                        />
+                      </FormField>
+
+                      <FormField
+                        className="md:col-span-2"
+                        label={t("webAiApiCheck:modal.fields.notes")}
+                        htmlFor="api-check-notes"
+                      >
+                        <Textarea
+                          id="api-check-notes"
+                          value={view.notes}
+                          onChange={(e) => actions.setNotes(e.target.value)}
+                          rows={2}
+                          placeholder={t(
+                            "webAiApiCheck:modal.placeholders.notes",
+                          )}
+                          disabled={view.isSavingProfile}
+                        />
+                      </FormField>
+
+                      <FormField
+                        className="md:col-span-2"
+                        label={t("webAiApiCheck:modal.fields.sourceUrl")}
+                        description={t("webAiApiCheck:modal.hints.sourceUrl")}
+                        htmlFor="api-check-source-url"
+                      >
+                        <Input
+                          id="api-check-source-url"
+                          value={view.sourceUrl}
+                          onChange={(e) => actions.setSourceUrl(e.target.value)}
+                          placeholder={t(
+                            "webAiApiCheck:modal.placeholders.sourceUrl",
+                          )}
+                          disabled={view.isSavingProfile}
+                        />
+                      </FormField>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                {view.validationError ? (
+                  <div className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground py-density-3 rounded-md border px-3 text-sm">
+                    {view.validationError}
                   </div>
                 ) : null}
 
-                <div className="md:col-span-2">
-                  <VerificationRequestProfileSelect
-                    value={view.requestProfile}
-                    enhanced={view.requestProfileEnhanced}
-                    onEnhancedChange={actions.setRequestProfileEnhanced}
-                    onChange={actions.setRequestProfile}
-                    disabled={!view.canClose}
-                    portalContainer={view.popoverPortalContainer ?? undefined}
-                  />
-                </div>
+                {!view.hasAnyResult ? (
+                  <div className="text-muted-foreground text-xs">
+                    {t("webAiApiCheck:modal.hints.saveWithoutTest")}
+                  </div>
+                ) : null}
 
-                <div className="space-y-density-1-5 md:col-span-2">
-                  <label
-                    htmlFor="api-check-model-id"
-                    className="text-muted-foreground block text-xs"
+                <ActionGroup>
+                  {view.modelListSupported ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={actions.fetchModels}
+                      disabled={!view.canFetchModels}
+                      loading={view.isFetchingModels}
+                    >
+                      {view.isFetchingModels
+                        ? t("webAiApiCheck:modal.actions.fetchingModels")
+                        : t("webAiApiCheck:modal.actions.fetchModels")}
+                    </Button>
+                  ) : null}
+
+                  <Button
+                    type="button"
+                    variant={view.isRunningAll ? "outline" : "default"}
+                    onClick={
+                      view.isRunningAll ? actions.stopRunAll : actions.runAll
+                    }
+                    disabled={view.isRunAllActionDisabled}
+                    loading={view.isRunningAll}
+                    loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}
                   >
-                    {t("webAiApiCheck:modal.fields.modelId")}
-                  </label>
+                    {view.isRunningAll
+                      ? view.isStoppingRunAll
+                        ? t("webAiApiCheck:modal.actions.stopping")
+                        : t("webAiApiCheck:modal.actions.stopTest")
+                      : t("webAiApiCheck:modal.actions.test")}
+                  </Button>
 
-                  <SearchableSelect
-                    id="api-check-model-id"
-                    aria-label={t("webAiApiCheck:modal.fields.modelId")}
-                    data-testid={WEB_AI_API_CHECK_TEST_IDS.modelId}
-                    options={view.modelIdsOptions}
-                    value={view.modelId}
-                    onChange={actions.setModelId}
-                    portalContainer={view.popoverPortalContainer ?? undefined}
-                    placeholder="gpt-4o-mini"
-                    loading={view.isFetchingModels}
-                    allowCustomValue
-                  />
-                </div>
-
-                {(view.modelModality === MODEL_TEST_MODALITIES.Image ||
-                  view.modelModality === MODEL_TEST_MODALITIES.Video) && (
-                  <div className="border-warning-border bg-warning-soft text-warning-soft-foreground py-density-2 rounded-md border px-3 text-xs md:col-span-2">
-                    {view.modelModality === MODEL_TEST_MODALITIES.Image
-                      ? t("aiApiVerification:verifyDialog.modalityNotice.image")
-                      : t(
-                          "aiApiVerification:verifyDialog.modalityNotice.video",
-                        )}
-                  </div>
-                )}
-              </div>
-
-              <Collapsible
-                open={view.isProfileOptionsOpen}
-                onOpenChange={actions.setIsProfileOptionsOpen}
-                className="border-border/70 bg-muted/20 rounded-md border"
-              >
-                <CollapsibleTrigger
-                  type="button"
-                  aria-label={t(
-                    "webAiApiCheck:modal.optionalProfileFields.title",
-                  )}
-                  className="hover:bg-muted/40 gap-y-density-3 py-density-2 flex w-full items-center justify-between gap-x-3 rounded-md px-3 text-left transition-colors"
-                >
-                  <div className="min-w-0">
-                    <div className="text-foreground text-sm font-medium">
-                      {t("webAiApiCheck:modal.optionalProfileFields.title")}
-                    </div>
-                    <div className="text-muted-foreground truncate text-xs">
-                      {t(
-                        view.hasProfileMetadataInput
-                          ? "webAiApiCheck:modal.optionalProfileFields.hasInput"
-                          : "webAiApiCheck:modal.optionalProfileFields.hint",
-                      )}
-                    </div>
-                  </div>
-                  <ChevronDown
-                    className={cn(
-                      "text-muted-foreground h-4 w-4 shrink-0 transition-transform",
-                      view.isProfileOptionsOpen ? "rotate-180" : "rotate-0",
-                    )}
-                  />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="border-border/60 py-density-3 border-t px-3">
-                  <div className="gap-y-density-3 grid gap-x-3 md:grid-cols-2">
-                    <FormField
-                      label={t("webAiApiCheck:modal.fields.tags")}
-                      description={t("webAiApiCheck:modal.hints.tags")}
-                    >
-                      <TagPicker
-                        tags={view.tags}
-                        selectedTagIds={view.selectedTagIds}
-                        onSelectedTagIdsChange={actions.setSelectedTagIds}
-                        onCreateTag={actions.createTag}
-                        onRenameTag={actions.renameTag}
-                        allowDelete={false}
-                        placeholder={t("webAiApiCheck:modal.placeholders.tags")}
-                        disabled={view.isSavingProfile}
-                        portalContainer={view.popoverPortalContainer}
-                      />
-                    </FormField>
-
-                    <FormField
-                      label={t("webAiApiCheck:modal.fields.expiresAt")}
-                      description={t("webAiApiCheck:modal.hints.expiresAt")}
-                      htmlFor="api-check-expires-at"
-                    >
-                      <DatePicker
-                        id="api-check-expires-at"
-                        value={view.expiresAtInput}
-                        onChange={actions.setExpiresAtInput}
-                        labels={{
-                          trigger: t("webAiApiCheck:modal.fields.expiresAt"),
-                          placeholder: t("common:datePicker.placeholder"),
-                          noExpiration: t("common:datePicker.noExpiration"),
-                          in7Days: t("common:datePicker.in7Days"),
-                          in30Days: t("common:datePicker.in30Days"),
-                          in90Days: t("common:datePicker.in90Days"),
-                          in1Year: t("common:datePicker.in1Year"),
-                          naturalInput: {
-                            invalid: t(
-                              "common:datePicker.naturalInput.invalid",
-                            ),
-                            label: t("common:datePicker.naturalInput.label"),
-                            openCalendar: t(
-                              "common:datePicker.naturalInput.openCalendar",
-                            ),
-                            placeholder: t(
-                              "common:datePicker.naturalInput.placeholder",
-                            ),
-                            preview: t(
-                              "common:datePicker.naturalInput.preview",
-                            ),
-                          },
-                        }}
-                        language={view.datePickerLanguage}
-                        portalContainer={view.popoverPortalContainer}
-                        disabled={view.isSavingProfile}
-                        naturalInput
-                      />
-                    </FormField>
-
-                    <FormField
-                      className="md:col-span-2"
-                      label={t("webAiApiCheck:modal.fields.notes")}
-                      htmlFor="api-check-notes"
-                    >
-                      <Textarea
-                        id="api-check-notes"
-                        value={view.notes}
-                        onChange={(e) => actions.setNotes(e.target.value)}
-                        rows={2}
-                        placeholder={t(
-                          "webAiApiCheck:modal.placeholders.notes",
-                        )}
-                        disabled={view.isSavingProfile}
-                      />
-                    </FormField>
-
-                    <FormField
-                      className="md:col-span-2"
-                      label={t("webAiApiCheck:modal.fields.sourceUrl")}
-                      description={t("webAiApiCheck:modal.hints.sourceUrl")}
-                      htmlFor="api-check-source-url"
-                    >
-                      <Input
-                        id="api-check-source-url"
-                        value={view.sourceUrl}
-                        onChange={(e) => actions.setSourceUrl(e.target.value)}
-                        placeholder={t(
-                          "webAiApiCheck:modal.placeholders.sourceUrl",
-                        )}
-                        disabled={view.isSavingProfile}
-                      />
-                    </FormField>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-
-              {view.validationError ? (
-                <div className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground py-density-3 rounded-md border px-3 text-sm">
-                  {view.validationError}
-                </div>
-              ) : null}
-
-              {!view.hasAnyResult ? (
-                <div className="text-muted-foreground text-xs">
-                  {t("webAiApiCheck:modal.hints.saveWithoutTest")}
-                </div>
-              ) : null}
-
-              <ActionGroup>
-                {view.modelListSupported ? (
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={actions.fetchModels}
-                    disabled={!view.canFetchModels}
-                    loading={view.isFetchingModels}
+                    data-testid={WEB_AI_API_CHECK_TEST_IDS.saveToProfilesButton}
+                    onClick={actions.saveProfile}
+                    disabled={!view.canSaveProfile}
+                    loading={view.isSavingProfile}
                   >
-                    {view.isFetchingModels
-                      ? t("webAiApiCheck:modal.actions.fetchingModels")
-                      : t("webAiApiCheck:modal.actions.fetchModels")}
+                    {view.isSavingProfile
+                      ? t("webAiApiCheck:modal.actions.saving")
+                      : t("webAiApiCheck:modal.actions.saveToProfiles")}
                   </Button>
+                </ActionGroup>
+
+                {view.fetchModelsError ? (
+                  <div className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground py-density-3 rounded-md border px-3 text-sm">
+                    {view.fetchModelsError}
+                  </div>
                 ) : null}
 
-                <Button
-                  type="button"
-                  variant={view.isRunningAll ? "outline" : "default"}
-                  onClick={
-                    view.isRunningAll ? actions.stopRunAll : actions.runAll
-                  }
-                  disabled={view.isRunAllActionDisabled}
-                  loading={view.isRunningAll}
-                  loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}
-                >
-                  {view.isRunningAll
-                    ? view.isStoppingRunAll
-                      ? t("webAiApiCheck:modal.actions.stopping")
-                      : t("webAiApiCheck:modal.actions.stopTest")
-                    : t("webAiApiCheck:modal.actions.test")}
-                </Button>
+                {view.testStoppedMessage ? (
+                  <Notice tone="info" description={view.testStoppedMessage} />
+                ) : null}
+              </div>
+              <VerificationTestSection>
+                <VerificationToolsPanel controller={view.verificationTools} />
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  data-testid={WEB_AI_API_CHECK_TEST_IDS.saveToProfilesButton}
-                  onClick={actions.saveProfile}
-                  disabled={!view.canSaveProfile}
-                  loading={view.isSavingProfile}
-                >
-                  {view.isSavingProfile
-                    ? t("webAiApiCheck:modal.actions.saving")
-                    : t("webAiApiCheck:modal.actions.saveToProfiles")}
-                </Button>
-              </ActionGroup>
-
-              {view.fetchModelsError ? (
-                <div className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground py-density-3 rounded-md border px-3 text-sm">
-                  {view.fetchModelsError}
-                </div>
-              ) : null}
-
-              {view.testStoppedMessage ? (
-                <Notice tone="info" description={view.testStoppedMessage} />
-              ) : null}
-
-              <ApiCheckProbeList
-                t={t}
-                probes={view.probes}
-                isRunningAll={view.isRunningAll}
-                isFetchingModels={view.isFetchingModels}
-                onRunProbe={actions.runProbe}
-                onStopProbe={actions.stopProbe}
-              />
+                <ApiCheckProbeList
+                  t={t}
+                  probes={view.probes}
+                  tools={view.verificationTools}
+                  isRunningAll={view.isRunningAll}
+                  isFetchingModels={view.isFetchingModels}
+                  onRunProbe={actions.runProbe}
+                  onStopProbe={actions.stopProbe}
+                />
+              </VerificationTestSection>
             </div>
           </div>
         </div>

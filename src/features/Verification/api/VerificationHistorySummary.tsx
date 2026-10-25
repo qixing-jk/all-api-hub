@@ -1,35 +1,35 @@
 import { useTranslation } from "react-i18next"
 
-import { formatLatency } from "~/features/Verification/api/utils"
 import { VerificationStatusBadge } from "~/features/Verification/api/VerificationStatusBadge"
 import {
   API_VERIFICATION_HISTORY_STATUSES,
   getVerificationSummaryLatencyMs,
   type ApiVerificationHistorySummary,
 } from "~/services/verification/verificationResultHistory"
-import { formatLocaleDateTime } from "~/utils/core/formatters"
+import { formatFullTime, formatRelativeTime } from "~/utils/core/formatters"
 
-type VerificationHistorySummaryProps = {
+export type VerificationHistorySummaryProps = {
   summary?: ApiVerificationHistorySummary | null
   className?: string
+  hideTimestamp?: boolean
 }
 
 /**
  * Compact verification history summary that avoids repeating equivalent
  * "last verified / unverified" copy next to the status badge.
+ * Formats relative time (e.g. "5 minutes ago") with absolute time in tooltip.
  */
 export function VerificationHistorySummary({
   summary,
   className,
+  hideTimestamp = false,
 }: VerificationHistorySummaryProps) {
   const { t } = useTranslation("aiApiVerification")
-  const verificationTimestamp = summary
-    ? formatLocaleDateTime(summary.verifiedAt)
-    : null
-  const verificationTimestampIso = summary
-    ? new Date(summary.verifiedAt).toISOString()
-    : undefined
   const latencyMs = getVerificationSummaryLatencyMs(summary)
+  const date = summary?.verifiedAt ? new Date(summary.verifiedAt) : undefined
+  const relativeTimestamp = date ? formatRelativeTime(date) : null
+  const fullTimestamp = date ? formatFullTime(date) : undefined
+  const verificationTimestampIso = date ? date.toISOString() : undefined
 
   return (
     <div
@@ -41,13 +41,9 @@ export function VerificationHistorySummary({
       <span className="sr-only">{t("verifyDialog.history.lastVerified")}</span>
       <VerificationStatusBadge
         status={summary?.status ?? API_VERIFICATION_HISTORY_STATUSES.Unverified}
+        latencyMs={latencyMs}
       />
-      {latencyMs !== null ? (
-        <span className="text-muted-foreground text-2xs truncate sm:text-xs">
-          {formatLatency(latencyMs)}
-        </span>
-      ) : null}
-      {verificationTimestamp ? (
+      {!hideTimestamp && relativeTimestamp ? (
         <span className="gap-y-density-1-5 inline-flex min-w-0 items-center gap-x-1.5">
           <span
             aria-hidden="true"
@@ -55,10 +51,10 @@ export function VerificationHistorySummary({
           />
           <time
             dateTime={verificationTimestampIso}
-            title={t("verifyDialog.history.lastVerified")}
-            className="text-muted-foreground text-2xs truncate sm:text-xs"
+            title={fullTimestamp}
+            className="text-muted-foreground text-2xs cursor-default truncate sm:text-xs"
           >
-            {verificationTimestamp}
+            {relativeTimestamp}
           </time>
         </span>
       ) : null}

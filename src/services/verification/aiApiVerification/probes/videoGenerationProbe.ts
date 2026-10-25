@@ -18,6 +18,7 @@ import {
   isAbortError,
   toSanitizedErrorSummary,
 } from "../utils"
+import { resolveProbePrompt } from "./probePrompts"
 import {
   getProbeUrl,
   postProbeJson,
@@ -161,8 +162,10 @@ export async function runVideoGenerationProbe(
       const model = provider.videoModel(params.modelId)
       const { operation } = await experimental_startVideo({
         model,
-        prompt:
-          "A simple geometric shape rotates slowly on a plain background.",
+        prompt: resolveProbePrompt(
+          API_VERIFICATION_PROBE_IDS.VideoGeneration,
+          params.probePromptOverrides,
+        )!,
         n: 1,
         maxRetries: 0,
         abortSignal: controller.signal,
@@ -199,7 +202,10 @@ export async function runVideoGenerationProbe(
       const url = getProbeUrl(params, PROBE_PATHS.Video)
       const body = {
         model: params.modelId,
-        prompt: "test",
+        prompt: resolveProbePrompt(
+          API_VERIFICATION_PROBE_IDS.VideoGeneration,
+          params.probePromptOverrides,
+        ),
       }
 
       const customFetch =

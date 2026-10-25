@@ -27,6 +27,8 @@ import {
   inferStructuredHttpStatus,
   toSanitizedErrorSummary,
 } from "~/services/verification/aiApiVerification/utils"
+import { PELICAN_EXECUTION_MODES } from "~/services/verification/modelQuality/constants"
+import { runPelicanTest } from "~/services/verification/modelQuality/pelican"
 import { webAiApiCheckBaseUrlHistoryStorage } from "~/services/verification/webAiApiCheck/baseUrlHistory"
 import { WEB_AI_API_CHECK_BASE_URL_HISTORY_SUGGESTION_LIMIT } from "~/services/verification/webAiApiCheck/constants"
 import {
@@ -57,6 +59,8 @@ import type {
   ApiCheckRemoveBaseUrlHistoryResponse,
   ApiCheckRenameTagRequest,
   ApiCheckRenameTagResponse,
+  ApiCheckRunPelicanRequest,
+  ApiCheckRunPelicanResponse,
   ApiCheckRunProbeRequest,
   ApiCheckRunProbeResponse,
   ApiCheckSaveProfileRequest,
@@ -526,6 +530,80 @@ export async function resolveWebAiApiCheckRunProbeMessage(
 }
 
 /**
+ * Run the pelican drawing test for the content-script dialog.
+ *
+ * The content script cannot reach the provider directly, so the request runs in
+ * the background and only the SVG analysis crosses the message boundary.
+ */
+async function resolveWebAiApiCheckRunPelicanMessage(
+  request: ApiCheckRunPelicanRequest,
+): Promise<ApiCheckRunPelicanResponse> {
+  const {
+    apiType,
+    baseUrl,
+    apiKey,
+    modelId,
+    mode,
+    prompt,
+    runId,
+    executionMode,
+    requestProfile,
+    requestProfileEnhanced,
+  } = request
+
+  if (!apiType || !baseUrl?.trim() || !apiKey?.trim() || !modelId?.trim()) {
+    return {
+      success: false,
+      error: "Missing apiType, baseUrl, apiKey, or modelId",
+    }
+  }
+
+  if (
+    executionMode !== undefined &&
+    executionMode !== PELICAN_EXECUTION_MODES.Reply &&
+    executionMode !== PELICAN_EXECUTION_MODES.Agent
+  ) {
+    return { success: false, error: "Invalid drawing execution mode" }
+  }
+  if (
+    requestProfile !== undefined &&
+    !isVerificationRequestProfile(requestProfile)
+  ) {
+    return { success: false, error: "Invalid request profile" }
+  }
+  const normalizedBaseUrl = normalizeProbeBaseUrl({ apiType, baseUrl })
+  if (!normalizedBaseUrl) {
+    return { success: false, error: "Invalid baseUrl" }
+  }
+
+  try {
+    const result = await probeRuns.run(runId, (signal) =>
+      runPelicanTest({
+        baseUrl: normalizedBaseUrl,
+        apiKey,
+        apiType,
+        modelId: modelId.trim(),
+        ...(mode ? { mode } : {}),
+        ...(prompt?.trim() ? { prompt: prompt.trim() } : {}),
+        executionMode,
+        requestProfile,
+        requestProfileEnhanced,
+        abortSignal: signal,
+      }),
+    )
+    return { success: true, result }
+  } catch (error) {
+    const message = toSanitizedErrorSummary(error, [apiKey])
+    logger.error("Pelican test failed", {
+      apiType,
+      baseUrl: normalizedBaseUrl,
+      message,
+    })
+    return { success: false, error: message }
+  }
+}
+
+/**
  * Abort a single in-flight API verification probe.
  */
 export async function resolveWebAiApiCheckCancelRunProbeMessage(
@@ -690,6 +768,10 @@ export function setupWebAiApiCheckMessagingListeners() {
     onWebAiApiCheckMessage(
       WebAiApiCheckMessageTypes.RunProbe,
       async ({ data }) => resolveWebAiApiCheckRunProbeMessage(data),
+    ),
+    onWebAiApiCheckMessage(
+      WebAiApiCheckMessageTypes.RunPelican,
+      async ({ data }) => resolveWebAiApiCheckRunPelicanMessage(data),
     ),
     onWebAiApiCheckMessage(
       WebAiApiCheckMessageTypes.CancelRunProbe,
