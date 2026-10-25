@@ -116,6 +116,20 @@ describe("debug browser discovery", () => {
     })
   })
 
+  it("reassembles unquoted space-containing paths with commas on POSIX", () => {
+    const root = fixtureRoot()
+    const profileDir = path.join(root, "my, debug profile")
+    fs.mkdirSync(profileDir, { recursive: true })
+
+    const parsed = parseDebugBrowserProcessCommandLine(
+      `msedge --remote-debugging-port 9222 --user-data-dir=${profileDir} https://example.com`,
+    )
+    expect(parsed).toMatchObject({
+      port: 9222,
+      userDataDir: profileDir,
+    })
+  })
+
   it("stops before trailing positional arguments when path cannot be reassembled", () => {
     const parsed = parseDebugBrowserProcessCommandLine(
       "msedge --remote-debugging-port 9222 --user-data-dir=/nonexistent/path/profile https://example.com",

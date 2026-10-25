@@ -116,7 +116,11 @@ function normalizePathValue(value) {
 
 /** Value of a repeated `--flag=value` or `--flag value` switch. */
 function readFlagValues(tokens, flag, options = {}) {
-  const { isPath = false, exists = (target) => fs.existsSync(target) } = options
+  const {
+    isPath = false,
+    isPathList = false,
+    exists = (target) => fs.existsSync(target),
+  } = options
   const values = []
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index]
@@ -136,7 +140,7 @@ function readFlagValues(tokens, flag, options = {}) {
 
     if (initialValue === null) continue
 
-    if (!isPath) {
+    if (!isPath && !isPathList) {
       values.push(initialValue)
       continue
     }
@@ -146,10 +150,12 @@ function readFlagValues(tokens, flag, options = {}) {
     // Reassemble consecutive non-flag tokens only when path validation confirms
     // where the path ends, stopping before trailing positional arguments (e.g. URLs).
     const isPathValid = (target) => {
-      const parts = target
-        .split(/[,;]/u)
-        .map((p) => p.trim())
-        .filter(Boolean)
+      const parts = isPathList
+        ? target
+            .split(/[,;]/u)
+            .map((p) => p.trim())
+            .filter(Boolean)
+        : [target]
       return parts.length > 0 && parts.every((p) => exists(p))
     }
 
@@ -206,7 +212,7 @@ export function parseDebugBrowserProcessCommandLine(commandLine, deps = {}) {
     port,
     userDataDir: normalizePathValue(userDataDir),
     extensionDirs: readFlagValues(tokens, "--load-extension", {
-      isPath: true,
+      isPathList: true,
       exists,
     }).flatMap((value) =>
       value
