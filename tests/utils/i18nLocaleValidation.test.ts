@@ -348,7 +348,12 @@ describe("i18n locale validation", () => {
   })
 
   it("keeps batch eligibility copy provider-neutral and user-facing in every locale", async () => {
-    const placeholder = "keyManagement:batchSelection.eligibilityNotice"
+    const requiredKeys = [
+      "accountUnavailableReason",
+      "eligibilityHint",
+      "helpLabel",
+      "unavailableReason",
+    ] as const
 
     for (const language of SUPPORTED_UI_LANGUAGES) {
       const resource = JSON.parse(
@@ -358,31 +363,21 @@ describe("i18n locale validation", () => {
         ),
       )
       const batchSelection = resource.batchSelection as Record<string, unknown>
-      for (const key of ["accountUnavailableReason", "unavailableReason"]) {
+      for (const key of requiredKeys) {
+        const value = batchSelection[key]
         expect(
-          typeof batchSelection[key] === "string" &&
-            batchSelection[key].trim().length > 0,
+          typeof value === "string" && value.trim().length > 0,
           `${language}:${key}`,
         ).toBe(true)
-      }
-      const values = Object.entries(batchSelection)
-        .filter(
-          ([key]) =>
-            key === "eligibilityNotice" || key.startsWith("eligibilityNotice_"),
+        // A locale that never translated the key leaves its path as the value.
+        expect(value, `${language}:${key}`).not.toBe(
+          `keyManagement:batchSelection.${key}`,
         )
-        .map(([, value]) => value)
-
-      expect(values.length, language).toBeGreaterThan(0)
-      expect(values, language).not.toContain(placeholder)
-      expect(values, language).not.toEqual(
-        expect.arrayContaining([expect.stringMatching(/OpenRouter|AIHubMix/i)]),
-      )
-      expect(
-        values.every(
-          (value) => typeof value === "string" && value.trim().length > 0,
-        ),
-        language,
-      ).toBe(true)
+        expect(
+          typeof value === "string" && /OpenRouter|AIHubMix/i.test(value),
+          `${language}:${key}`,
+        ).toBe(false)
+      }
     }
   })
 

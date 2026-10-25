@@ -209,7 +209,9 @@ describe("TokenList grouped all-accounts UX", () => {
     )
 
     expect(
-      await screen.findByText(/batchSelection\.eligibilityNotice/),
+      await screen.findByRole("button", {
+        name: "keyManagement:batchSelection.helpLabel",
+      }),
     ).toBeVisible()
     await user.click(
       await screen.findByRole("button", {
@@ -263,7 +265,9 @@ describe("TokenList grouped all-accounts UX", () => {
 
     expect(await screen.findByText("Native key")).toBeVisible()
     expect(
-      screen.queryByText(/batchSelection\.eligibilityNotice/),
+      screen.queryByRole("button", {
+        name: "keyManagement:batchSelection.helpLabel",
+      }),
     ).not.toBeInTheDocument()
     expect(screen.getAllByRole("checkbox")).toSatisfy(
       (checkboxes: HTMLElement[]) =>
