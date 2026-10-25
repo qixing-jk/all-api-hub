@@ -690,13 +690,25 @@ export async function runRequestyUiTest({
       context,
       createdConsoleKeys.map((entry) => entry.id),
     )
-    if (cleanup.deleted?.length) {
-      console.log(
-        `  🧹 已删除自动创建的密钥: ${cleanup.deleted.map((entry) => entry.id).join(", ")}`,
-      )
-    } else {
+    // Every delete reports its own status, so a 401/403/5xx must not be logged
+    // as a revocation: the key would silently outlive the run.
+    const revokedIds = new Set(
+      (cleanup.deleted ?? [])
+        .filter(
+          (entry) =>
+            (entry.status >= 200 && entry.status < 300) || entry.status === 404,
+        )
+        .map((entry) => entry.id),
+    )
+    const leftIds = createdConsoleKeys
+      .map((entry) => entry.id)
+      .filter((id) => !revokedIds.has(id))
+    if (revokedIds.size) {
+      console.log(`  🧹 已删除自动创建的密钥: ${[...revokedIds].join(", ")}`)
+    }
+    if (leftIds.length) {
       console.warn(
-        `  ⚠️ 未能删除自动创建的密钥${cleanup.error ? ` (${cleanup.error})` : ""}；请在控制台手动删除。`,
+        `  ⚠️ 未能删除自动创建的密钥: ${leftIds.join(", ")}${cleanup.error ? ` (${cleanup.error})` : ""}；请在控制台手动删除。`,
       )
     }
   }

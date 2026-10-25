@@ -88,7 +88,7 @@ function isMatchingResponse(
  * cache. The page response is an untrusted hint: the caller still validates the
  * credential against the management API before storing it.
  */
-function createRequestyManagementKeyReader(
+export function createRequestyManagementKeyReader(
   environment: ReaderEnvironment = defaultReaderEnvironment(),
 ) {
   let injectionPromise: Promise<void> | undefined

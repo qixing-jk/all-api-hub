@@ -51,8 +51,11 @@ function buildFailure(
     | typeof REQUESTY_PROVISIONING_STATES.DispatchedUnconfirmed,
   reason: RequestyProvisioningFailureReason,
 ): TempWindowRequestyManagementKeyActionResult {
+  // The payload is untrusted, so a rejected request can still carry a name that
+  // is not a string; only a string may reach normalization.
+  const rawName = request?.operation?.name
   const name = normalizeRequestyManagementKeyName(
-    request?.operation?.name ?? "",
+    typeof rawName === "string" ? rawName : "",
   )
   const requestId =
     typeof request?.requestId === "string" ? request.requestId : ""
