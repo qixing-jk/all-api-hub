@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { createRequestyManagementKeyInPage } from "~/entrypoints/content/messageHandlers/requesty/managementKeyBridge"
+import {
+  createRequestyManagementKeyInPage,
+  REQUESTY_MANAGEMENT_KEY_CHANNEL,
+  setupRequestyManagementKeyBridge,
+} from "~/entrypoints/content/messageHandlers/requesty/managementKeyBridge"
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -8,6 +12,45 @@ afterEach(() => {
 })
 
 describe("Requesty management key creation", () => {
+  it("keeps token and organization transport failures before dispatch", async () => {
+    const getToken = vi.fn().mockRejectedValue(new Error("session expired"))
+    vi.stubGlobal("window", { Clerk: { loaded: true, session: { getToken } } })
+    const fetch = vi.fn().mockRejectedValue(new Error("offline"))
+    vi.stubGlobal("fetch", fetch)
+    await expect(createRequestyManagementKeyInPage("test")).resolves.toEqual({
+      ok: false,
+      reason: "session_unavailable",
+    })
+    expect(fetch).not.toHaveBeenCalled()
+    getToken.mockResolvedValue("console-token")
+    await expect(createRequestyManagementKeyInPage("test")).resolves.toEqual({
+      ok: false,
+      reason: "organization_unavailable",
+    })
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it("preserves uncertainty when the create response cannot be parsed", async () => {
+    vi.stubGlobal("window", {
+      Clerk: { loaded: true, session: { getToken: async () => "token" } },
+    })
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce({ status: 200, json: async () => ({}) })
+        .mockResolvedValueOnce({
+          status: 200,
+          json: async () => {
+            throw new Error("invalid JSON")
+          },
+        }),
+    )
+    await expect(createRequestyManagementKeyInPage("test")).resolves.toEqual({
+      ok: false,
+      reason: "plaintext_missing",
+    })
+  })
   it("does not send requests when Clerk confirms the console is signed out", async () => {
     vi.stubGlobal("window", { Clerk: { loaded: true, session: null } })
     const fetch = vi.fn()
@@ -158,4 +201,110 @@ describe("Requesty management key creation", () => {
       reason: "plaintext_missing",
     })
   })
+})
+
+describe("Requesty main-world bridge", () => {
+  const origin = "https://app.requesty.ai"
+  const request = {
+    channel: REQUESTY_MANAGEMENT_KEY_CHANNEL,
+    kind: "request",
+    correlationId: "op-1",
+    name: "test",
+  }
+
+  function page(pathname = "/api-keys", pageOrigin = origin, install = true) {
+    const addEventListener = vi.fn()
+    const postMessage = vi.fn()
+    const window = {
+      location: { origin: pageOrigin, pathname },
+      addEventListener,
+      postMessage,
+      Clerk: { loaded: true, session: { getToken: async () => "token" } },
+    }
+    vi.stubGlobal("window", window)
+    if (install) setupRequestyManagementKeyBridge()
+    return { window, addEventListener, postMessage }
+  }
+
+  it("boots the bridge through the unlisted-script entrypoint", async () => {
+    const p = page("/api-keys", origin, false)
+    const entrypoint = await import("~/entrypoints/requesty-management-key")
+    entrypoint.default.main?.()
+    expect(p.addEventListener).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ["/", origin],
+    ["/api-keys", "https://other.example"],
+  ])("does not install on %s at %s", (path, host) => {
+    expect(page(path, host).addEventListener).not.toHaveBeenCalled()
+  })
+
+  it("installs once and rejects foreign or malformed messages without sending requests", () => {
+    const p = page()
+    setupRequestyManagementKeyBridge()
+    expect(p.addEventListener).toHaveBeenCalledTimes(1)
+    const receive = p.addEventListener.mock.calls[0]![1]
+    const fetch = vi.fn()
+    vi.stubGlobal("fetch", fetch)
+    receive({ source: {}, origin, data: request })
+    receive({
+      source: p.window,
+      origin: "https://other.example",
+      data: request,
+    })
+    for (const data of [
+      null,
+      "request",
+      {},
+      { ...request, channel: "other" },
+      { ...request, kind: "response" },
+      { ...request, correlationId: 1 },
+      { ...request, correlationId: "" },
+      { ...request, correlationId: "a".repeat(129) },
+      { ...request, name: null },
+    ]) {
+      receive({ source: p.window, origin, data })
+    }
+    expect(fetch).not.toHaveBeenCalled()
+    expect(p.postMessage).not.toHaveBeenCalled()
+  })
+
+  it.each([true, false])(
+    "replies with a correlated, origin-scoped result (created: %s)",
+    async (created) => {
+      const p = page()
+      vi.stubGlobal(
+        "fetch",
+        vi
+          .fn()
+          .mockResolvedValueOnce({ status: 200, json: async () => ({}) })
+          .mockResolvedValueOnce({
+            status: 200,
+            json: async () =>
+              created
+                ? { api_key_id: "new-key", api_key: "one-time-secret" }
+                : {},
+          }),
+      )
+      p.addEventListener.mock.calls[0]![1]({
+        source: p.window,
+        origin,
+        data: request,
+      })
+      await vi.waitFor(() =>
+        expect(p.postMessage).toHaveBeenCalledExactlyOnceWith(
+          {
+            channel: REQUESTY_MANAGEMENT_KEY_CHANNEL,
+            kind: "response",
+            correlationId: "op-1",
+            ...(created
+              ? { ok: true, keyId: "new-key", accessToken: "one-time-secret" }
+              : { ok: false, reason: "plaintext_missing" }),
+          },
+          origin,
+        ),
+      )
+    },
+  )
 })

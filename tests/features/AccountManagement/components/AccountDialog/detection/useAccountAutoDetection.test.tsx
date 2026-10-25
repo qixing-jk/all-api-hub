@@ -57,13 +57,16 @@ describe("account detection onboarding outcomes", () => {
       onManagementKeyCredentialCreated: vi.fn(),
       setAuthType: vi.fn(),
     }
-    const run = (url = "https://openrouter.ai") =>
+    const run = (
+      url = "https://openrouter.ai",
+      credentialScope: { url: string; siteType: string } | null = null,
+    ) =>
       hook.result.current.run({
         url,
         mode: DIALOG_MODES.ADD,
         isDetected: false,
         draft: createEmptyAccountDialogDraft(),
-        credentialScope: null,
+        credentialScope: credentialScope as never,
         form,
         onboarding: {
           tryPrepareForStart: () => ({
@@ -90,6 +93,36 @@ describe("account detection onboarding outcomes", () => {
     expect(form.enterManual).not.toHaveBeenCalled()
     expect(result.current.state.detectionError).toBeNull()
   })
+
+  it.each(["requesty", "openrouter"])(
+    "forwards only a credential owned by the Requesty draft (%s)",
+    async (siteType) => {
+      onboardRequestyAccount.mockImplementationOnce(
+        async ({ accessToken, onCredentialCreated }) => {
+          expect(accessToken).toBe(siteType === "requesty" ? "" : undefined)
+          onCredentialCreated("new-key")
+          return {
+            success: true,
+            data: { siteType: "requesty", accessToken: "new-key" },
+          }
+        },
+      )
+      const { run, form } = setup(vi.fn())
+      await act(() =>
+        run("https://app.requesty.ai", {
+          url: "https://app.requesty.ai",
+          siteType,
+        }),
+      )
+      expect(
+        form.onManagementKeyCredentialCreated,
+      ).toHaveBeenCalledExactlyOnceWith(
+        "new-key",
+        "https://app.requesty.ai",
+        "requesty",
+      )
+    },
+  )
 
   it("keeps Requesty recovery and its actionable failure in the manual form", async () => {
     const recoveryData = { siteType: "requesty", accessToken: "one-time-key" }

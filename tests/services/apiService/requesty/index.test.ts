@@ -465,3 +465,12 @@ describe("manage transport boundaries", () => {
     )
   })
 })
+
+it("rejects absent credentials before contacting the management host", async () => {
+  await expect(
+    fetchRequestyOrg({
+      ...request,
+      auth: { authType: AuthTypeEnum.AccessToken },
+    }),
+  ).rejects.toMatchObject({ statusCode: 401 })
+})

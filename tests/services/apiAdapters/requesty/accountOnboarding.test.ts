@@ -264,4 +264,21 @@ describe("Requesty automatic onboarding", () => {
   ])("does not create for %s", (url) => {
     expect(isCanonicalRequestyUrl(url)).toBe(false)
   })
+  it("preserves the supplied credential when account completion fails", async () => {
+    server.use(
+      http.get("https://api-v2.requesty.ai/v1/manage/org", () =>
+        HttpResponse.json({}, { status: 500 }),
+      ),
+    )
+    const result = await onboardRequestyAccount({
+      accessToken: "rqsty-existing",
+      protectionBypassExecution: execution,
+      onCredentialCreated: vi.fn(),
+    })
+    expect(result).toMatchObject({
+      success: false,
+      recoveryData: { accessToken: "rqsty-existing" },
+    })
+    expect(pageAction).not.toHaveBeenCalled()
+  })
 })

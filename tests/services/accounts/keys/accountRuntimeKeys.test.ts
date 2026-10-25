@@ -355,3 +355,16 @@ describe("inference capability", () => {
     ).toBe(inactiveInferenceKey)
   })
 })
+
+it("preserves the account-credential marker when projecting provider facts", () => {
+  const key = buildAccountKeyResourceRuntimeKeyFromFacts(account, {
+    ref,
+    displayName: "Management key",
+    maskedLabel: "***",
+    status: "enabled",
+    credentialRole: "account",
+    fields: [],
+    actions: { canUpdate: false, canDelete: true },
+  })
+  expect(key.accountCredential).toBe(true)
+})

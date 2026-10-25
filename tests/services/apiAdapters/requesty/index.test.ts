@@ -927,3 +927,128 @@ describe("requestyProviderModelCatalog pricing variants", () => {
     expect(model.token_price_usd_per_million?.input).toBeCloseTo(0.2, 12)
   })
 })
+
+describe("Requesty key lifecycle through resource sessions", () => {
+  const ref = {
+    accountId: "account-1",
+    siteType: SITE_TYPES.REQUESTY,
+    scopeKey: "default",
+    resourceId: "created-key",
+  } as const
+  const detail = {
+    id: "created-key",
+    name: "Client",
+    monthly_limit: "7",
+    monthly_spend: "0",
+    permissions: { manage: "none", completions: "write" },
+    created_at: "2026-10-21T12:00:00Z",
+  }
+  const open = () =>
+    requestyAccountKeyResources.open({
+      account: { id: "account-1", siteType: SITE_TYPES.REQUESTY },
+      request,
+    })
+
+  it.each([false, true])(
+    "creates a key with explicit management permission %s and a one-time secret",
+    async (manage) => {
+      let body: unknown
+      server.use(
+        http.post(KEYS_URL, async ({ request }) => {
+          body = await request.json()
+          return HttpResponse.json({
+            api_key_id: "created-key",
+            api_key: "one-time-secret",
+          })
+        }),
+      )
+      const session = await open()
+      expect(await session.resolveDefaultScope()).toMatchObject({
+        scopeKey: "default",
+      })
+      const editor = await session.openCreateEditor("default", undefined, {
+        nameHint: "Client",
+      })
+      expect(editor.initialValues.name).toBe("Client")
+      const result = await editor.submit({
+        ...editor.initialValues,
+        monthly_limit: 7,
+        manage_permission: manage,
+      })
+      expect(body).toEqual({
+        name: "Client",
+        monthly_limit: 7,
+        permissions: {
+          manage: manage ? "write" : "none",
+          completions: "write",
+        },
+      })
+      expect(result.createdSecret).toMatchObject({
+        secret: "one-time-secret",
+        credential: { accountName: "Requesty" },
+      })
+    },
+  )
+
+  it.each([403, 500])(
+    "preserves create failure certainty for HTTP %s",
+    async (status) => {
+      server.use(http.post(KEYS_URL, () => HttpResponse.json({}, { status })))
+      const editor = await (await open()).openCreateEditor("default")
+      await expect(
+        editor.submit({ ...editor.initialValues, name: "Client" }),
+      ).rejects.toMatchObject({
+        failure: {
+          code:
+            status === 403 ? "permission_denied" : "mutation_state_uncertain",
+        },
+      })
+    },
+  )
+
+  it("reads detail and confirms a limit edit through readback", async () => {
+    let limit = "7"
+    server.use(
+      http.get(`${KEYS_URL}/created-key`, () =>
+        HttpResponse.json({ ...detail, monthly_limit: limit }),
+      ),
+      http.post(`${KEYS_URL}/created-key/limit`, () => {
+        limit = "9"
+        return new HttpResponse(null, { status: 200 })
+      }),
+    )
+    const collection = await (await open()).openCollection("default")
+    expect(await collection.get(ref)).toMatchObject({ displayName: "Client" })
+    const editor = await collection.openEditEditor(ref)
+    await editor.submit({ ...editor.initialValues, monthly_limit: 9 })
+    expect(await collection.get(ref)).toMatchObject({
+      fields: expect.arrayContaining([
+        { fieldId: "monthly_limit", kind: "number", value: 9 },
+      ]),
+    })
+  })
+
+  it.each([200, 403, 500])(
+    "handles delete HTTP %s without claiming an uncertain write failed safely",
+    async (status) => {
+      server.use(
+        http.delete(
+          `${KEYS_URL}/created-key`,
+          () => new HttpResponse(null, { status }),
+        ),
+      )
+      const collection = await (await open()).openCollection("default")
+      const result = collection.delete(ref, {
+        signal: new AbortController().signal,
+      })
+      if (status === 200) await expect(result).resolves.toBeUndefined()
+      else
+        await expect(result).rejects.toMatchObject({
+          failure: {
+            code:
+              status === 403 ? "permission_denied" : "mutation_state_uncertain",
+          },
+        })
+    },
+  )
+})

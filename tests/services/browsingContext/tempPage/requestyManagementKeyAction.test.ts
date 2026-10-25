@@ -341,13 +341,19 @@ describe("Requesty management-key temp-page action", () => {
     // The message is delivered, then the deadline rejects the race.
     mocks.sendTabMessage.mockImplementation(() => new Promise(() => {}))
     const sendResponse = vi.fn()
-
-    await handleTempWindowRequestyManagementKeyAction(
-      request,
-      false,
-      sendResponse,
-      async () => ({ kind: "allowed" }) as never,
-    )
+    vi.useFakeTimers()
+    try {
+      const pending = handleTempWindowRequestyManagementKeyAction(
+        request,
+        false,
+        sendResponse,
+        async () => ({ kind: "allowed" }) as never,
+      )
+      await vi.advanceTimersByTimeAsync(25_000)
+      await pending
+    } finally {
+      vi.useRealTimers()
+    }
 
     expect(sendResponse).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({
@@ -355,7 +361,7 @@ describe("Requesty management-key temp-page action", () => {
         reason: REQUESTY_PROVISIONING_FAILURE_REASONS.PlaintextMissing,
       }),
     )
-  }, 40_000)
+  })
 
   it("reports a scheduler rejection as possibly dispatched", async () => {
     const sendResponse = await runAction({ runRejects: true })
@@ -375,7 +381,19 @@ describe("Requesty management-key temp-page action", () => {
   })
 
   it("keeps the deny reason machine-readable when authorization denies", async () => {
-    mocks.acquire.mockResolvedValue(contextAt())
+    mocks.acquire.mockImplementation(
+      async (
+        _url: string,
+        _requestId: string,
+        _suppressMinimize: boolean,
+        _options: unknown,
+        authorizeAtAcquire?: () => Promise<{ kind: string }>,
+      ) => {
+        const decision = await authorizeAtAcquire?.()
+        if (decision?.kind !== "allowed") throw new Error("acquisition denied")
+        return contextAt()
+      },
+    )
     mocks.run.mockImplementation(
       async (_url: string, _options: unknown, task: () => Promise<void>) =>
         task(),
@@ -393,7 +411,13 @@ describe("Requesty management-key temp-page action", () => {
         }) as never,
     )
 
-    expect(sendResponse).toHaveBeenCalledTimes(1)
+    expect(sendResponse).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        state: REQUESTY_PROVISIONING_STATES.NotDispatched,
+        reason: REQUESTY_PROVISIONING_FAILURE_REASONS.SessionUnavailable,
+      }),
+    )
+    expect(mocks.sendTabMessage).not.toHaveBeenCalled()
   })
 
   it("normalizes the echoed key name in a failure envelope", async () => {

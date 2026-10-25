@@ -106,4 +106,43 @@ describe("Requesty management key action handler", () => {
       )
     },
   )
+  it("normalizes invalid request names without dispatching", () => {
+    const reply = vi.fn()
+    handleRequestyManagementKeyAction(
+      { requestId: "bad", operation: { kind: "delete", name: "  test  " } },
+      reply,
+    )
+    expect(reply).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ name: "test", state: "not_dispatched" }),
+    )
+  })
+
+  it("returns the correlated one-time credential after a successful create", async () => {
+    vi.mocked(readRequestyManagementKey).mockResolvedValue({
+      kind: REQUESTY_MANAGEMENT_KEY_READ_KINDS.Response,
+      response: {
+        channel: REQUESTY_MANAGEMENT_KEY_CHANNEL,
+        kind: REQUESTY_MANAGEMENT_KEY_RESPONSE_KIND,
+        correlationId: "correlation-1",
+        ok: true,
+        keyId: "created",
+        accessToken: "one-time-secret",
+      },
+    })
+    const reply = vi.fn()
+    handleRequestyManagementKeyAction(
+      { requestId: "request-1", operation: { kind: "create", name: "test" } },
+      reply,
+    )
+    await vi.waitFor(() =>
+      expect(reply).toHaveBeenCalledExactlyOnceWith({
+        requestId: "request-1",
+        operation: "create",
+        state: "created",
+        name: "test",
+        keyId: "created",
+        accessToken: "one-time-secret",
+      }),
+    )
+  })
 })

@@ -134,4 +134,35 @@ describe("provisionRequestyManagementKey", () => {
       possiblyCreated: true,
     })
   })
+  it("aborts a stalled credential validation and preserves the created key for recovery", async () => {
+    vi.useFakeTimers()
+    try {
+      tempWindowAction.mockResolvedValue({
+        state: "created",
+        accessToken: "rqsty-stalled",
+        keyId: "stalled",
+        name: "test",
+      })
+      let signal: AbortSignal | undefined
+      selfKeyInfo.mockImplementation(({ abortSignal }) => {
+        signal = abortSignal
+        return new Promise((_resolve, reject) =>
+          abortSignal.addEventListener(
+            "abort",
+            () => reject(new Error("aborted")),
+            { once: true },
+          ),
+        )
+      })
+      const pending = provisionRequestyManagementKey({ name: "test" })
+      await vi.advanceTimersByTimeAsync(20_000)
+      expect(signal?.aborted).toBe(true)
+      await expect(pending).resolves.toMatchObject({
+        status: "unavailable",
+        possiblyCreated: true,
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })
