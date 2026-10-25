@@ -32,7 +32,7 @@ export async function fetchPmApiAff(
   const origin = new URL(request.baseUrl).origin
   return {
     code: data.code.trim(),
-    inviteUrl: `${origin}/register?aff=${encodeURIComponent(data.code.trim())}`,
+    inviteUrl: `${origin}/#/register?aff=${encodeURIComponent(data.code.trim())}`,
     invitedCount: typeof data.count === "number" ? data.count : 0,
     reward:
       typeof data.reward === "number" && Number.isFinite(data.reward)

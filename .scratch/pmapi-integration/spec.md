@@ -66,16 +66,16 @@ The native action now calls `HTMLElement.click()` once. The existing widget-wake
 | Wallet button renders late or is initially disabled | Immediate `target_not_found` | Wait for an enabled site button and click exactly once | Handler regression observed red, then green |
 | Wallet button never becomes usable | Immediate failure | End after the bounded wait; no later click or reminder | Handler timeout regression |
 | Native click opens verification | Existing verification machinery | Continue using the existing configured reminder and completion observation | Delayed-button/reminder integration regression |
-| Real Pro wallet | Prior native-action history reported missing target | Production content handler clicked “立即签到” exactly once and opened the real interactive puzzle | Local report and screenshot under `.scratch/verification-copy/` |
+| Real Pro wallet | Prior native-action history reported missing target | Production content handler clicked “立即签到” exactly once and opened the real interactive puzzle | Local report and screenshot |
 
 Validation: 109 provider, content-handler, trigger and background tests passed; `pnpm compile` and `pnpm build` passed; implementation commit hooks passed, including two permission-warning browser checks.
 
 The live target check used a fresh Chromium profile loaded from this checkout's production build, reused only the verified Pro-origin session from the dedicated dev profile, and confirmed the same account was not checked in today. It blocked any check-in POST; none was attempted. The returned action was `clicked`, the event count was 1, and verification was `required` / `interactive`. No CAPTCHA was solved and a successful grant was not validated. This establishes the real native control and challenge, not the complete background reminder workflow in the original dev browser; that browser's generated dev manifest lacked content-script registration. A separate ordinary-UI attempt ended in page-load failure and was not automatically replayed.
 
-Local review entry: [verification-copy/spec.md](../verification-copy/spec.md). Raw logs, challenge screenshot and probes remain local for review; they contain no persisted session tokens. The maintained live runner's assertions were updated to the revised application copy and syntax-checked; its complete account/key suite was not rerun for this focused click fix.
+Raw logs, challenge screenshot and probes remain local for review; they contain no persisted session tokens. The maintained live runner's assertions were updated to the revised application copy and syntax-checked; its complete account/key suite was not rerun for this focused click fix.
 
 ## Scout review follow-ups (2026-10-26)
 
 - The account continuation menu computes its “Use global” option label from the resolved account override. When the override differs from the global preference, the label describes the override rather than the value selecting that option will use. Correcting the visible label is a behavior change, kept separate from the behavior-preserving refactor.
-- The maintained live runner reads only `/api/tokens?p=1&size=100` for baseline, readback and cleanup, while the extension reads every inventory page. More than 100 live keys can cause a false parity failure or hide a run-owned key from cleanup. Extending the runner's pagination is a separate validation-behavior correction; never delete existing user keys to satisfy that assumption.
-- Acceptance and validation logs: `artifacts/scout-refactor-20261026/`. Existing `evidence/`, `cdp-*.mjs`, logs and `../verification-copy/` remain local for pending review.
+- PR feedback correction (2026-10-26): the maintained live runner now paginates baseline, readback and cleanup token reads. A 101-key fixture reproduces the former first-page truncation. Cleanup remains restricted to this run's generated names; existing user keys are preserved.
+- Acceptance and validation logs: feature-local `artifacts/scout-refactor-20261026/`. Existing `evidence/`, `cdp-*.mjs`, logs remain local for pending review.

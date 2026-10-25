@@ -63,9 +63,10 @@ import {
   ACCOUNT_LOGIN_SECTION_ID,
   AccountLoginSection,
 } from "~/features/AccountManagement/components/AccountDialog/login/AccountLoginSection"
-import type {
-  AccountCheckInRedetectionFeedback,
-  AccountDialogDraft,
+import {
+  AUTO_CREATE_ACCESS_TOKEN_STATUSES,
+  type AccountCheckInRedetectionFeedback,
+  type AccountDialogDraft,
 } from "~/features/AccountManagement/components/AccountDialog/models"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import {
@@ -126,6 +127,13 @@ interface AccountFormProps {
   onUsernameChange: (value: string) => void
   onUserIdChange: (value: string) => void
   onAccessTokenChange: (value: string) => void
+  /** Optional console-session credential creation for supported sites. */
+  autoCreateAccessToken?: {
+    enabled: boolean
+    status: (typeof AUTO_CREATE_ACCESS_TOKEN_STATUSES)[keyof typeof AUTO_CREATE_ACCESS_TOKEN_STATUSES]
+    message?: string
+    onCreate: () => void
+  }
   onExchangeRateChange: (value: string) => void
   onManualBalanceUsdChange: (value: string) => void
   onShowAccessTokenChange: (value: boolean) => void
@@ -179,6 +187,7 @@ export default function AccountForm({
   onUsernameChange,
   onUserIdChange,
   onAccessTokenChange,
+  autoCreateAccessToken,
   onExchangeRateChange,
   onManualBalanceUsdChange,
   onShowAccessTokenChange,
@@ -566,6 +575,41 @@ export default function AccountForm({
                 required
               />
             </FormField>
+            {autoCreateAccessToken?.enabled &&
+              accessToken.trim().length === 0 && (
+                <div className="gap-y-density-2 flex flex-col">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    loading={
+                      autoCreateAccessToken.status ===
+                      AUTO_CREATE_ACCESS_TOKEN_STATUSES.Working
+                    }
+                    disabled={
+                      autoCreateAccessToken.status ===
+                      AUTO_CREATE_ACCESS_TOKEN_STATUSES.Working
+                    }
+                    onClick={autoCreateAccessToken.onCreate}
+                    data-testid={
+                      ACCOUNT_MANAGEMENT_TEST_IDS.autoCreateAccessTokenButton
+                    }
+                  >
+                    {t("form.autoCreateAccessToken")}
+                  </Button>
+                  {autoCreateAccessToken.status ===
+                    AUTO_CREATE_ACCESS_TOKEN_STATUSES.Failed &&
+                    autoCreateAccessToken.message && (
+                      <p
+                        className="text-muted-foreground text-xs"
+                        data-testid={
+                          ACCOUNT_MANAGEMENT_TEST_IDS.autoCreateAccessTokenError
+                        }
+                      >
+                        {autoCreateAccessToken.message}
+                      </p>
+                    )}
+                </div>
+              )}
             {credentialPresentation.accessTokenGuidanceKey &&
               (!isDetected || accessToken.trim().length === 0) && (
                 <Alert

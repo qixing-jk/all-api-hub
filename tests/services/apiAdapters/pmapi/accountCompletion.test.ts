@@ -52,4 +52,13 @@ describe("PM-API account completion", () => {
       ).toBe("matched")
     },
   )
+  it("requires the console token before completing the detected identity", async () => {
+    await expect(
+      completeAutoDetectedAccount({
+        url: origin,
+        requestedAuthType: AuthTypeEnum.AccessToken,
+        detected: { siteType: SITE_TYPES.PMAPI, userId: "7" },
+      }),
+    ).rejects.toMatchObject({ reason: "access_token_missing" })
+  })
 })

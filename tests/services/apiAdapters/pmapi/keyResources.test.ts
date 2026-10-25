@@ -121,7 +121,11 @@ describe("PM-API key resources", () => {
   afterEach(() => vi.restoreAllMocks())
 
   it("opens the create editor with the console's own group metadata", async () => {
-    const editor = await (await openSession()).openCreateEditor("account")
+    const session = await openSession()
+    expect(await session.resolveDefaultScope()).toMatchObject({
+      scopeKey: "account",
+    })
+    const editor = await session.openCreateEditor("account")
     const groupField = editor.fields.find(
       (field): field is Extract<typeof field, { options: unknown }> =>
         "options" in field && field.fieldId === pmFields.Group,
@@ -312,6 +316,44 @@ describe("PM-API key resources", () => {
     const collection = await openCollection()
     await collection.delete(ref)
     expect(deleted).toHaveBeenCalled()
+  })
+  it("keeps model, subnet and RPM restrictions in inventory facts", async () => {
+    mockTokens([{ models: "glm-5.3,grok-4.7", subnet: "1.2.3.4,::1", rpm: 7 }])
+    const key = await (
+      await openCollection()
+    ).get(ref, { signal: new AbortController().signal })
+    expect(key.displayFacts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          role: "models",
+          value: ["glm-5.3", "grok-4.7"],
+        }),
+        expect.objectContaining({ role: "subnet", value: ["1.2.3.4", "::1"] }),
+        expect.objectContaining({ kind: "rate-limit", rpm: 7 }),
+      ]),
+    )
+  })
+  it("keeps native group selection usable when optional pricing metadata fails", async () => {
+    server.use(
+      http.get(`${origin}/api/pricing`, () =>
+        HttpResponse.json({}, { status: 503 }),
+      ),
+    )
+    const editor = await (await openSession()).openCreateEditor("account")
+    expect(
+      editor.fields.find((field) => field.fieldId === pmFields.Group),
+    ).toMatchObject({
+      options: [
+        { value: "default", displayLabel: "default", secondaryLabel: "×1" },
+        { value: "Free", displayLabel: "Free", secondaryLabel: "×0" },
+      ],
+    })
+  })
+  it("does not offer a masked upstream secret for runtime requests", async () => {
+    mockTokens([{ key: "sk-****" }])
+    expect(await (await openSession()).runtimeKey!.resolve(ref)).toMatchObject({
+      kind: "unavailable",
+    })
   })
 })
 

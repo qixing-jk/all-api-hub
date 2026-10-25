@@ -40,8 +40,9 @@ import { resolveVerificationContinuation } from "./verificationContinuationPrefe
  * answered 请先完成人机验证 after the POST, and a deployment without the grant
  * answers 签到功能未开启; both are determinate refusals, not transport errors.
  */
-const CAPTCHA_REFUSAL = /人机验证|captcha|verify/i
-const DISABLED_REFUSAL = /未开启|not enabled|disabled/i
+const CAPTCHA_REFUSAL = /人机验证|captcha/i
+const DISABLED_REFUSAL =
+  /签到功能未开启|check-?in(?: is)? (?:not enabled|disabled)/i
 
 const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async (
   context,

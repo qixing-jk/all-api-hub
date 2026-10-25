@@ -171,7 +171,8 @@
   },
   "batchSelection": {
     "accountUnavailableReason": "该账号没有支持批量操作的密钥。",
-    "eligibilityNotice": "当前有 {{count}} 个密钥支持批量操作；其他密钥不会参与。",
+    "eligibilityHint": "批量操作仅选择可导出的推理密钥。管理密钥及无法获取明文的密钥不会参与。",
+    "helpLabel": "批量选择说明",
     "unavailableReason": "此密钥不支持批量操作。"
   },
   "createdKey": {
@@ -365,7 +366,18 @@
       "revoke": "撤销密钥",
       "rotate": "轮换 API Key"
     },
+    "badges": {
+      "accountCredential": "当前账号使用",
+      "accountManagePermission": "当前账号管理密钥",
+      "managePermission": "管理密钥"
+    },
+    "credentialRole": {
+      "badgeTitle": "All API Hub 使用此密钥连接该账号，用于查询余额和管理密钥。更换后，请在账号设置中更新密钥。"
+    },
     "delete": {
+      "accountCredentialAcknowledge": "我了解这会中断当前账号的管理接口访问",
+      "accountCredentialWarningDescription": "删除后该账号将无法再调用 Requesty 管理接口，密钥清单、余额和刷新都会失败，且密钥无法在此恢复。",
+      "accountCredentialWarningTitle": "删除当前账号的凭据",
       "confirm": "删除密钥",
       "description": "要永久删除密钥 {{name}} 吗？删除后无法恢复。",
       "feedback": {
@@ -375,6 +387,7 @@
         "unavailable": "服务暂时不可用，请刷新后再试。",
         "uncertain": "密钥状态可能已变化。请先刷新密钥，再决定是否重试。"
       },
+      "manageKeyWarning": "该密钥拥有管理权限，删除后依赖它的管理操作都会失效。",
       "refresh": "刷新密钥",
       "title": "删除 API 密钥？"
     },
@@ -533,6 +546,10 @@
       "quotaUsd": "额度（美元）",
       "remainingCount": "剩余次数",
       "remainingCountPlaceholder": "该密钥还能调用多少次",
+      "requestyManagePermission": "管理权限",
+      "requestyManagePermissionHelp": "该密钥可调用管理接口并管理其他密钥。",
+      "requestyMonthlyLimit": "每月限额（USD）",
+      "requestyMonthlyLimitPlaceholder": "0 或留空表示不限",
       "storageLocation": "存储地域",
       "storageLocationGlobal": "全球节点",
       "storageLocationHelp": "该密钥生成的图片、视频等内容的存放节点。",
@@ -559,6 +576,13 @@
       "rotateDescription": "轮换后旧 Key 将立即失效。请复制新 Key 并及时更新客户端，其他配置保持不变。"
     },
     "missing": "暂无数据",
+    "permission": {
+      "accountManageBadgeTitle": "All API Hub 正使用此密钥查询该账号余额和管理密钥。它还可创建、删除组织内的其他密钥。更换或删除后，请在账号设置中更新密钥。",
+      "manage": "管理权限",
+      "manageBadgeTitle": "该密钥可调用管理接口，并能创建、删除组织内的其他密钥。",
+      "manageGranted": "可管理其他密钥",
+      "manageNotGranted": "仅调用推理接口"
+    },
     "revoke": {
       "description": "确定撤销“{{name}}”吗？密钥将永久停用，记录会保留，直到你将其删除。",
       "feedback": {

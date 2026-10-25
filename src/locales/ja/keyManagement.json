@@ -171,7 +171,8 @@
   },
   "batchSelection": {
     "accountUnavailableReason": "このアカウントには一括操作に対応するキーがありません。",
-    "eligibilityNotice_other": "現在 {{count}} 件のキーが一括操作に対応しています。その他のキーは対象外です。",
+    "eligibilityHint": "一括操作では、エクスポート可能な推論用キーのみを選択します。管理キーや完全な値を取得できないキーは対象外です。",
+    "helpLabel": "一括選択について",
     "unavailableReason": "このキーは一括操作に対応していません。"
   },
   "createdKey": {
@@ -365,7 +366,18 @@
       "revoke": "キーを失効",
       "rotate": "API キーをローテーション"
     },
+    "badges": {
+      "accountCredential": "このアカウントで使用中",
+      "accountManagePermission": "現在のアカウントの管理キー",
+      "managePermission": "管理キー"
+    },
+    "credentialRole": {
+      "badgeTitle": "All API Hub はこのキーでアカウントに接続し、残高の取得とキーの管理を行います。キーを変更した場合は、アカウント設定のキーも更新してください。"
+    },
     "delete": {
+      "accountCredentialAcknowledge": "アカウントの管理アクセスが失われることを理解しました",
+      "accountCredentialWarningDescription": "このキーを削除すると、このアカウントは Requesty の管理 API を呼び出せなくなり、キー一覧・残高・更新が失敗します。キーはここでは復元できません。",
+      "accountCredentialWarningTitle": "アカウントの認証情報を削除します",
       "confirm": "キーを削除",
       "description": "API キー {{name}} を完全に削除しますか？この操作は取り消せません。",
       "feedback": {
@@ -375,6 +387,7 @@
         "unavailable": "サービスは一時的に利用できません。再試行前に更新してください。",
         "uncertain": "キーの状態が変わった可能性があります。キーを更新してから、再試行するか判断してください。"
       },
+      "manageKeyWarning": "このキーには管理権限があります。削除すると、それを利用する管理操作が失敗します。",
       "refresh": "キーを更新",
       "title": "API キーを削除しますか？"
     },
@@ -533,6 +546,10 @@
       "quotaUsd": "クォータ（米ドル）",
       "remainingCount": "残り回数",
       "remainingCountPlaceholder": "このキーであと何回呼び出せるか",
+      "requestyManagePermission": "管理権限",
+      "requestyManagePermissionHelp": "このキーは管理エンドポイントを呼び出し、他のキーを管理できます。",
+      "requestyMonthlyLimit": "月次上限（USD）",
+      "requestyMonthlyLimitPlaceholder": "0 または空欄で無制限",
       "storageLocation": "ストレージ地域",
       "storageLocationGlobal": "グローバルノード",
       "storageLocationHelp": "このキーが生成した画像や動画などの保存先。",
@@ -559,6 +576,13 @@
       "rotateDescription": "古いキーは直ちに無効になります。新しいキーをコピーし、クライアントを更新してください。他の設定は保持されます。"
     },
     "missing": "利用不可",
+    "permission": {
+      "accountManageBadgeTitle": "All API Hub はこのキーを使用してアカウントの残高を取得し、キーを管理します。組織内の他のキーの作成・削除も可能です。変更または削除した場合は、アカウント設定のキーを更新してください。",
+      "manage": "管理権限",
+      "manageBadgeTitle": "このキーは管理エンドポイントを呼び出し、組織内の他のキーを作成・削除できます。",
+      "manageGranted": "他のキーを管理できます",
+      "manageNotGranted": "推論のみ"
+    },
     "revoke": {
       "description": "「{{name}}」を失効しますか？キーは永久に無効になります。削除するまで記録は残ります。",
       "feedback": {

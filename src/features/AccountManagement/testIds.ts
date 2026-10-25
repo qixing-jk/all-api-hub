@@ -34,6 +34,10 @@ export const ACCOUNT_MANAGEMENT_TEST_IDS = {
   usernameInput: "account-management-username-input",
   userIdInput: "account-management-user-id-input",
   accessTokenInput: "account-management-access-token-input",
+  autoCreateAccessTokenButton:
+    "account-management-auto-create-access-token-button",
+  autoCreateAccessTokenError:
+    "account-management-auto-create-access-token-error",
   accountFormSectionSiteInfo:
     "account-management-account-form-section-site-info",
   accountFormSectionLogin: "account-management-account-form-section-login",

@@ -171,7 +171,8 @@
   },
   "batchSelection": {
     "accountUnavailableReason": "此帳號沒有支援批次操作的金鑰。",
-    "eligibilityNotice_other": "目前有 {{count}} 個金鑰支援批次操作；其他金鑰不會參與。",
+    "eligibilityHint": "批次操作僅選取可匯出的推論金鑰。管理金鑰及無法取得明文的金鑰不會參與。",
+    "helpLabel": "批次選取說明",
     "unavailableReason": "此金鑰不支援批次操作。"
   },
   "createdKey": {
@@ -365,7 +366,18 @@
       "revoke": "撤銷金鑰",
       "rotate": "輪換 API Key"
     },
+    "badges": {
+      "accountCredential": "目前帳號使用",
+      "accountManagePermission": "目前帳號管理金鑰",
+      "managePermission": "管理金鑰"
+    },
+    "credentialRole": {
+      "badgeTitle": "All API Hub 使用此金鑰連線至該帳號，以查詢餘額及管理金鑰。更換後，請在帳號設定中更新金鑰。"
+    },
     "delete": {
+      "accountCredentialAcknowledge": "我了解這會中斷目前帳號的管理介面存取",
+      "accountCredentialWarningDescription": "刪除後該帳號將無法再呼叫 Requesty 管理介面，金鑰清單、餘額與重新整理都會失敗，且金鑰無法在此還原。",
+      "accountCredentialWarningTitle": "刪除目前帳號的憑證",
       "confirm": "刪除金鑰",
       "description": "要永久刪除金鑰 {{name}} 嗎？刪除後無法復原。",
       "feedback": {
@@ -375,6 +387,7 @@
         "unavailable": "服務暫時無法使用，請先重新整理再試。",
         "uncertain": "金鑰狀態可能已變更。請先重新整理金鑰，再決定是否重試。"
       },
+      "manageKeyWarning": "該金鑰擁有管理權限，刪除後依賴它的管理操作都會失效。",
       "refresh": "重新整理金鑰",
       "title": "刪除 API 金鑰？"
     },
@@ -533,6 +546,10 @@
       "quotaUsd": "額度（美元）",
       "remainingCount": "剩餘次數",
       "remainingCountPlaceholder": "此金鑰還能呼叫多少次",
+      "requestyManagePermission": "管理權限",
+      "requestyManagePermissionHelp": "該金鑰可呼叫管理介面並管理其他金鑰。",
+      "requestyMonthlyLimit": "每月限額（USD）",
+      "requestyMonthlyLimitPlaceholder": "0 或留空表示不限",
       "storageLocation": "儲存地域",
       "storageLocationGlobal": "全球節點",
       "storageLocationHelp": "此金鑰生成的圖片、影片等內容的存放節點。",
@@ -559,6 +576,13 @@
       "rotateDescription": "輪換後舊 Key 將立即失效。請複製新 Key 並更新用戶端，其他設定保持不變。"
     },
     "missing": "無可用資料",
+    "permission": {
+      "accountManageBadgeTitle": "All API Hub 正使用此金鑰查詢該帳號餘額及管理金鑰。它也可建立、刪除組織內的其他金鑰。更換或刪除後，請在帳號設定中更新金鑰。",
+      "manage": "管理權限",
+      "manageBadgeTitle": "該金鑰可呼叫管理介面，並能建立、刪除組織內的其他金鑰。",
+      "manageGranted": "可管理其他金鑰",
+      "manageNotGranted": "僅呼叫推理介面"
+    },
     "revoke": {
       "description": "確定撤銷「{{name}}」嗎？金鑰將永久停用，記錄會保留，直到你將其刪除。",
       "feedback": {

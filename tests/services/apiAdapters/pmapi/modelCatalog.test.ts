@@ -254,4 +254,17 @@ describe("PM-API model pricing", () => {
       { code: "JSON_PARSE_ERROR" },
     )
   })
+  it.each([null, { models: [], groups: [null] }])(
+    "rejects malformed catalog envelopes: %j",
+    async (data) => {
+      server.use(
+        http.get(`${origin}/api/pricing`, () =>
+          HttpResponse.json(envelope(data)),
+        ),
+      )
+      await expect(
+        pmApiModelPricing.fetchPricing(request),
+      ).rejects.toMatchObject({ code: "JSON_PARSE_ERROR" })
+    },
+  )
 })

@@ -12,6 +12,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import autoCheckin from "~/locales/en/autoCheckin.json"
 import { canAutomaticallyRetryCheckinResult } from "~/services/checkin/autoCheckin/execution/resultPolicy"
 import { pmApiProvider } from "~/services/checkin/autoCheckin/providers/pmapi"
+import { clickNativeCheckInPage } from "~/services/checkin/autoCheckin/providers/pmapiNativePageClick"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { AuthTypeEnum } from "~/types"
 import {
@@ -462,6 +463,35 @@ describe("pmApiProvider", () => {
     expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
   })
 
+  it.each([
+    "Please verify your account",
+    "Account disabled",
+    "Account not enabled",
+  ])(
+    "keeps unrelated account refusals in the shared error policy: %s",
+    async (message) => {
+      server.use(
+        http.get(`${origin}/api/me`, () =>
+          HttpResponse.json(envelope(identity(false))),
+        ),
+        http.post(`${origin}/api/me/checkin`, () =>
+          HttpResponse.json(
+            { success: false, message, data: null },
+            { status: 400 },
+          ),
+        ),
+      )
+      await expect(
+        pmApiProvider.checkIn(account, executionContext()),
+      ).resolves.toMatchObject({
+        status: CHECKIN_RESULT_STATUS.FAILED,
+        reasonCode: AUTO_CHECKIN_SKIP_REASON.UPSTREAM_REJECTED,
+        rawMessage: message,
+      })
+      expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+    },
+  )
+
   it("classifies the site's disabled refusal as a disabled method", async () => {
     server.use(
       http.get(`${origin}/api/status`, () =>
@@ -486,6 +516,29 @@ describe("pmApiProvider", () => {
       status: CHECKIN_RESULT_STATUS.FAILED,
       reasonCode: AUTO_CHECKIN_SKIP_REASON.METHOD_DISABLED,
     })
+  })
+  it("does not dispatch a native click without an account identity", async () => {
+    expect(
+      await clickNativeCheckInPage(
+        { ...account, account_info: { ...account.account_info, id: "" } },
+        executionContext(),
+      ),
+    ).toMatchObject({
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.AUTHENTICATION_REQUIRED,
+    })
+    expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
+  })
+  it("rechecks admission before dispatching the native action", async () => {
+    expect(
+      await clickNativeCheckInPage(account, {
+        ...executionContext(),
+        beforeRecoveredMutation: async () => false,
+      }),
+    ).toMatchObject({
+      status: CHECKIN_RESULT_STATUS.SKIPPED,
+      reasonCode: AUTO_CHECKIN_SKIP_REASON.STATUS_UNAVAILABLE,
+    })
+    expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
   })
 })
 

@@ -11,6 +11,7 @@ import {
 } from "~/services/accountTokens/apiTokenKey"
 import type { KeyMaskEvidence } from "~/services/accountTokens/keyMaskEvidence"
 import {
+  ACCOUNT_KEY_CREDENTIAL_ROLES,
   ACCOUNT_KEY_RESOURCE_STATUSES,
   type AccountKeyResourceFacts,
   type AccountKeyResourceRef,
@@ -144,6 +145,14 @@ type AccountRuntimeKeyCapabilities = {
   rotate: boolean
   updateToken: boolean
   deleteToken: boolean
+  /**
+   * Whether the provider treats this credential as an inference key.
+   *
+   * Management keys can often call inference endpoints too, but they carry
+   * authority over other credentials. Excluding them keeps selection, export
+   * and default provisioning on ordinary inference keys.
+   */
+  inference: boolean
 }
 
 type AccountRuntimeKeyBase = {
@@ -174,6 +183,8 @@ export type AccountKeyResourceRuntimeKey = AccountRuntimeKeyBase & {
   source: typeof ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource
   resourceRef: AccountKeyResourceRef
   legacyTokenId?: number
+  /** True when this resource is the credential the account itself uses. */
+  accountCredential?: boolean
 }
 
 export type AccountRuntimeKey =
@@ -268,6 +279,11 @@ export const isSelectableAccountRuntimeKey = (runtimeKey: AccountRuntimeKey) =>
   isAccountKeyResourceRuntimeKey(runtimeKey) ||
   hasUsableAccountRuntimeKeySecret(runtimeKey)
 
+/** Whether the credential may serve inference requests, not only management. */
+export const isInferenceCapableAccountRuntimeKey = (runtimeKey: {
+  capabilities?: Partial<Pick<AccountRuntimeKeyCapabilities, "inference">>
+}) => runtimeKey.capabilities?.inference !== false
+
 /** Apply the owner-projected model policy to every runtime credential. */
 export const isAccountRuntimeKeyCompatibleWithModel = (
   runtimeKey: AccountRuntimeKey,
@@ -306,12 +322,19 @@ export const sortAccountRuntimeKeysActiveFirst = <
 export const findDefaultSelectableAccountRuntimeKey = (
   runtimeKeys: AccountRuntimeKey[],
 ) =>
+  // Inference capability gates every branch: a management key must never be
+  // proposed as the default inference credential, even when it is the only one.
   runtimeKeys.find(
     (runtimeKey) =>
       isActiveAccountRuntimeKey(runtimeKey) &&
+      isInferenceCapableAccountRuntimeKey(runtimeKey) &&
       isSelectableAccountRuntimeKey(runtimeKey),
   ) ??
-  runtimeKeys.find((key) => isAccountKeyResourceRuntimeKey(key)) ??
+  runtimeKeys.find(
+    (runtimeKey) =>
+      isInferenceCapableAccountRuntimeKey(runtimeKey) &&
+      isAccountKeyResourceRuntimeKey(runtimeKey),
+  ) ??
   null
 
 export const appendOrReplaceAccountRuntimeKey = (
@@ -344,6 +367,7 @@ const ACCOUNT_RUNTIME_KEY_BASE_CAPABILITIES = {
   export: true,
   verify: true,
   fetchRuntimeModels: true,
+  inference: true,
 } as const
 
 export const buildServiceCredentialRuntimeKey = (
@@ -381,6 +405,10 @@ export const buildAccountKeyResourceRuntimeKey = (
     createdAt?: number
     notes?: string
     legacyTokenId?: number
+    /** Provider-declared inference eligibility; omitted keeps the base default. */
+    inference?: boolean
+    /** True when this resource is the credential the account itself stores. */
+    accountCredential?: boolean
   },
 ): AccountKeyResourceRuntimeKey => {
   const runtimeKeyAccount = buildAccountRuntimeKeyAccount(account)
@@ -401,6 +429,9 @@ export const buildAccountKeyResourceRuntimeKey = (
           : ACCOUNT_RUNTIME_KEY_STATUSES.Inactive),
       capabilities: {
         ...ACCOUNT_RUNTIME_KEY_BASE_CAPABILITIES,
+        ...(resource.inference === undefined
+          ? {}
+          : { inference: resource.inference }),
         rotate: false,
         updateToken: false,
         deleteToken: false,
@@ -409,6 +440,7 @@ export const buildAccountKeyResourceRuntimeKey = (
     source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource,
     resourceRef: resource.ref,
     legacyTokenId: resource.legacyTokenId,
+    ...(resource.accountCredential ? { accountCredential: true } : {}),
   }
 }
 
@@ -424,6 +456,9 @@ export const buildAccountKeyResourceRuntimeKeyFromFacts = (
     label: facts.displayName,
     secret,
     keyMask: facts.keyMask,
+    ...(facts.credentialRole === ACCOUNT_KEY_CREDENTIAL_ROLES.Account
+      ? { accountCredential: true }
+      : {}),
     status:
       facts.status === ACCOUNT_KEY_RESOURCE_STATUSES.Enabled
         ? ACCOUNT_RUNTIME_KEY_STATUSES.Active

@@ -871,3 +871,33 @@ it("presents every EMRank expiry choice as readable localized text", async () =>
     "自定义时间",
   ])
 })
+
+it.each([editorModes.Create, editorModes.Edit] as const)(
+  "presents Requesty %s fields with management and spending guidance",
+  (mode) => {
+    const presentation = getPresentation(SITE_TYPES.REQUESTY, mode)
+    const translate = ((key: string) => key) as TFunction
+    const fields = presentation.policy.fields
+    expect(fields.map((f) => f.fieldId)).toEqual(
+      mode === editorModes.Create
+        ? ["name", "manage_permission", "monthly_limit"]
+        : ["monthly_limit", "expires_at"],
+    )
+    const limit = fields.find((f) => f.fieldId === "monthly_limit")!
+    expect(limit.resolveLabel?.(translate)).toBe(
+      "keyManagement:native.editor.requestyMonthlyLimit",
+    )
+    expect(limit.resolvePlaceholder?.(translate)).toBe(
+      "keyManagement:native.editor.requestyMonthlyLimitPlaceholder",
+    )
+    if (mode === editorModes.Create) {
+      const manage = fields.find((f) => f.fieldId === "manage_permission")!
+      expect(manage.resolveLabel?.(translate)).toBe(
+        "keyManagement:native.editor.requestyManagePermission",
+      )
+      expect(manage.resolveHelp?.(translate)).toBe(
+        "keyManagement:native.editor.requestyManagePermissionHelp",
+      )
+    }
+  },
+)

@@ -2,6 +2,16 @@
 
 This page helps troubleshoot issues encountered when clicking **Auto-Identify** in the plugin's "Add/Edit Account" section, such as: excessively long identification time, infinite waiting, identification failure (401/403/format errors, etc.), and inability to submit.
 
+## Requesty: create a management key and detect
+
+Enter `https://app.requesty.ai` and click **Create Requesty Management Key & Detect**. The extension uses the Requesty session in this browser to create a management key, verifies it and fills in the account details. When the form already contains a key, detection reuses it.
+
+When an account for this site is already saved and its management key still works, adding again reuses that key instead of creating another, and says so. Created keys are named `All API Hub - Account Connection (xxxxxxxx)` so they are recognizable on the API Keys page; Requesty cannot rename keys, so delete ones you no longer need.
+
+The management key is the account credential, not the key you hand to clients. Key Management shows it as the account's own credential: you can reveal and copy it, but it is never exported, batch-exported or used as the default key, because it can create and delete every other key in the organization. Use a separate ordinary key for inference; auto-provisioning creates one whenever the account has no such key yet.
+
+If signed out, sign in to Requesty and retry. If automatic creation is unavailable, create a key with **Admin Permissions** on the API Keys page and paste it into the form. If the creation outcome is uncertain, check API Keys before creating another key. A retrieved key that fails verification stays in the form for retry.
+
 ## Excessively Long Identification Time (Stuck on "Identifying...")
 
 Auto-identification requires opening a temporary page and reading site information. It will noticeably slow down in the following situations:

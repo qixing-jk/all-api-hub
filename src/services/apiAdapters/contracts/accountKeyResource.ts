@@ -264,6 +264,13 @@ export type AccountKeyDisplayFact =
     }
   | {
       readonly fieldId: string
+      /** Key capability, not a restriction on models, networks or groups. */
+      readonly kind: "permission"
+      readonly role: "manage"
+      readonly granted: boolean
+    }
+  | {
+      readonly fieldId: string
       /** Billing-route permissions, independent of account/model access groups. */
       readonly kind: "channels"
       readonly value: readonly string[]
@@ -284,6 +291,15 @@ export const ACCOUNT_KEY_RESOURCE_STATUSES = {
   Unknown: "unknown",
 } as const
 
+/** Correlation between one listed key and the account's own stored credential. */
+export const ACCOUNT_KEY_CREDENTIAL_ROLES = {
+  /** The key this account authenticates with; losing it breaks management access. */
+  Account: "account",
+} as const
+
+export type AccountKeyCredentialRole =
+  (typeof ACCOUNT_KEY_CREDENTIAL_ROLES)[keyof typeof ACCOUNT_KEY_CREDENTIAL_ROLES]
+
 export type AccountKeyResourceStatus =
   (typeof ACCOUNT_KEY_RESOURCE_STATUSES)[keyof typeof ACCOUNT_KEY_RESOURCE_STATUSES]
 
@@ -299,6 +315,8 @@ export type AccountKeyResourceFacts = {
   readonly displayName: string
   readonly maskedLabel: string
   readonly status: AccountKeyResourceStatus
+  /** Present only when the provider can identify the account's own credential. */
+  readonly credentialRole?: AccountKeyCredentialRole
   /** Verified inventory plaintext for the current snapshot only; never persist as display metadata. */
   readonly runtimeSecret?: string
   /** Provider-confirmed inventory evidence; never derive this from maskedLabel. */
@@ -306,6 +324,14 @@ export type AccountKeyResourceFacts = {
   /** Safe machine policy projected by the provider, never parsed from display fields. */
   readonly runtimeKey?: {
     readonly modelAccess: AccountRuntimeKeyModelAccess
+    /**
+     * Whether the provider treats this key as an inference credential.
+     *
+     * Omitted when the provider has no such distinction; false excludes the
+     * key from default selection and export even though it may still answer
+     * completions requests.
+     */
+    readonly inference?: boolean
     /** Canonical Unix epoch milliseconds. */
     readonly createdAt?: number
     readonly notes?: string

@@ -1735,6 +1735,37 @@ describe("AccountDialog AccountForm", () => {
     )
   })
 
+  it.each([
+    [true, "accountDialog:form.continueWhenVerificationRequiredOff", false],
+    [
+      false,
+      "accountDialog:form.continueWhenVerificationRequiredInheritOff",
+      undefined,
+    ],
+  ] as const)(
+    "changes an explicit continuation override %s using %s",
+    async (initial, option, expected) => {
+      const user = userEvent.setup()
+      const props = createProps()
+      props.draft.siteType = SITE_TYPES.PMAPI
+      props.draft.checkIn = {
+        ...createVerificationGatedCheckIn({ automaticExecutionEnabled: true }),
+        continueWhenVerificationRequired: initial,
+      }
+      render(<AccountForm {...withSitePolicy(props)} />)
+      await user.click(
+        await screen.findByRole("combobox", {
+          name: "accountDialog:form.continueWhenVerificationRequired",
+        }),
+      )
+      await user.click(await screen.findByRole("option", { name: option }))
+      expect(props.onCheckInChange).toHaveBeenCalledWith({
+        ...props.draft.checkIn,
+        continueWhenVerificationRequired: expected,
+      })
+    },
+  )
+
   it("explains a verification-gated check-in and stores the account-level assist override", async () => {
     const user = userEvent.setup()
     const props = createProps()
@@ -2419,4 +2450,40 @@ describe("AccountDialog AccountForm", () => {
       }),
     ).not.toBeInTheDocument()
   })
+  it.each(["idle", "working", "failed"] as const)(
+    "supports management-key creation state %s and preserves recovery guidance",
+    async (status) => {
+      const props = createProps()
+      props.draft.siteType = SITE_TYPES.REQUESTY
+      props.draft.accessToken = ""
+      const onCreate = vi.fn()
+      render(
+        <AccountForm
+          {...withSitePolicy(props)}
+          autoCreateAccessToken={{
+            enabled: true,
+            status,
+            onCreate,
+            message: "Check the console before retrying",
+          }}
+        />,
+      )
+      const button = await screen.findByRole("button", {
+        name: "accountDialog:form.autoCreateAccessToken",
+      })
+      if (status === "working") expect(button).toBeDisabled()
+      else {
+        await userEvent.setup().click(button)
+        expect(onCreate).toHaveBeenCalledOnce()
+      }
+      if (status === "failed")
+        expect(
+          screen.getByText("Check the console before retrying"),
+        ).toBeVisible()
+      else
+        expect(
+          screen.queryByText("Check the console before retrying"),
+        ).not.toBeInTheDocument()
+    },
+  )
 })

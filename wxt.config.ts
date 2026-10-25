@@ -11,7 +11,10 @@ import {
 import { reactDevToolsAuto } from "./plugins/react-devtools-auto"
 import { APP_SHORT_NAME } from "./src/constants/branding"
 import { APP_LOCALE_ASSET_GLOB } from "./src/constants/i18n"
-import { OPENROUTER_WEB_ORIGIN } from "./src/services/accountSiteDefinitions/identifiers"
+import {
+  OPENROUTER_WEB_ORIGIN,
+  REQUESTY_WEB_ORIGIN,
+} from "./src/services/accountSiteDefinitions/identifiers"
 import {
   formatDevManifestName,
   type BakedDevIdentity,
@@ -152,6 +155,10 @@ export default defineConfig({
         {
           resources: ["openrouter-clerk-session.js"],
           matches: [`${OPENROUTER_WEB_ORIGIN}/*`],
+        },
+        {
+          resources: ["requesty-management-key.js"],
+          matches: [`${REQUESTY_WEB_ORIGIN}/*`],
         },
         {
           resources: [APP_LOCALE_ASSET_GLOB],

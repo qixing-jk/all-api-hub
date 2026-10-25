@@ -18,6 +18,7 @@ import { findInstalledDevExtension } from "./cdp/browser-runtime.mjs"
 import { connectDevBrowser, connectExtensionById } from "./cdp/client.mjs"
 import { getAccounts } from "./cdp/sandbox.mjs"
 import { dismissModals } from "./cdp/ui-driver.mjs"
+import { readAllPmApiTokens } from "./suites/pmapi/tokens.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
 await loadLocalEnv()
@@ -132,10 +133,9 @@ try {
       assert.equal(j.success, true)
       return j.data
     }
-    const baselineTokens = await siteRead("/api/tokens?p=1&size=100")
-    const baselineIds = baselineTokens.items
-      .map((k) => k.id)
-      .sort((a, b) => a - b)
+    const readTokens = () => readAllPmApiTokens(siteRead)
+    const baselineTokens = await readTokens()
+    const baselineIds = baselineTokens.map((k) => k.id).sort((a, b) => a - b)
 
     await ui.goto(
       `chrome-extension://${extensionId}/options.html?accountId=${pmcat.account.id}&workspace=account#keys`,
@@ -152,7 +152,7 @@ try {
 
     const runName = `extension-cdp-disposable-${Date.now()}`
     cleanupRunKey = async () => {
-      for (const key of (await siteRead("/api/tokens?p=1&size=100")).items) {
+      for (const key of await readTokens()) {
         if (key.name === runName || key.name === `${runName} r`) {
           const res = await sitePage.request.delete(
             `https://pmcat.top/api/tokens/${key.id}`,
@@ -184,16 +184,14 @@ try {
     await expect
       .poll(
         async () => {
-          const items = (await siteRead("/api/tokens?p=1&size=100")).items
+          const items = await readTokens()
           createdId = items.find((k) => k.name === runName)?.id
           return createdId
         },
         { timeout: 30000 },
       )
       .toBeTruthy()
-    const created = (await siteRead("/api/tokens?p=1&size=100")).items.find(
-      (k) => k.id === createdId,
-    )
+    const created = (await readTokens()).find((k) => k.id === createdId)
     assert.equal(created.unlimited, true)
     assert.match(created.key, /^sk-/)
     check("disposable key created through the extension editor", {
@@ -214,10 +212,7 @@ try {
     await expect(editor).toBeHidden({ timeout: 30000 })
     await expect
       .poll(
-        async () =>
-          (await siteRead("/api/tokens?p=1&size=100")).items.find(
-            (k) => k.id === createdId,
-          )?.name,
+        async () => (await readTokens()).find((k) => k.id === createdId)?.name,
       )
       .toBe(`${runName} r`)
     check(
@@ -229,20 +224,14 @@ try {
       .click()
     await ui.getByTestId(keys.nativeDeleteConfirmButton).click()
     await expect
-      .poll(
-        async () =>
-          (await siteRead("/api/tokens?p=1&size=100")).items.some(
-            (k) => k.id === createdId,
-          ),
-        { timeout: 30000 },
-      )
+      .poll(async () => (await readTokens()).some((k) => k.id === createdId), {
+        timeout: 30000,
+      })
       .toBe(false)
     check("disposable key deleted through the extension UI")
 
     assert.deepEqual(
-      (await siteRead("/api/tokens?p=1&size=100")).items
-        .map((k) => k.id)
-        .sort((a, b) => a - b),
+      (await readTokens()).map((k) => k.id).sort((a, b) => a - b),
       baselineIds,
     )
     check("live token inventory restored to its baseline")

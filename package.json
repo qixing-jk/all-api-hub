@@ -106,7 +106,8 @@
     "e2e:cdp:daya:keys": "node scripts/test-daya-key-editor-e2e-live.mjs",
     "e2e:cdp:daya:redemption": "node scripts/test-daya-redemption-e2e-live.mjs",
     "e2e:cdp:daya:prices": "node scripts/test-daya-model-prices-e2e-live.mjs",
-    "prepare": "husky"
+    "prepare": "husky",
+    "e2e:cdp:requesty": "node scripts/test-requesty-e2e-live.mjs"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
@@ -229,6 +230,7 @@
     "tailwindcss": "^4.1.17",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.45.0",
+    "undici": "7.29.0",
     "vite": "^7.3.2",
     "vitest": "^4.0.3",
     "web-ext": "^9.4.0",

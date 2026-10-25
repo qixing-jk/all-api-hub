@@ -388,6 +388,37 @@ describe("native account key creation", () => {
     expect(submit).toHaveBeenCalledOnce()
   })
 
+  it("creates an inference key when only a management key exists", async () => {
+    const owner = account()
+    const { submit } = setup(owner)
+    const valid = getCreatedAccountRuntimeKey(owner, {
+      ref: facts(owner).ref,
+      facts: facts(owner),
+    })!
+    // A manage key answers completions but must not stand in for the account's
+    // inference credential, or the save flow would never mint a usable key.
+    inventory.mockResolvedValue([
+      { ...valid, capabilities: { ...valid.capabilities, inference: false } },
+    ])
+    expect((await ensureAccountKey(owner)).kind).toBe("created")
+    expect(submit).toHaveBeenCalledOnce()
+  })
+
+  it("reuses an existing inference key without creating another", async () => {
+    const owner = account()
+    const { submit } = setup(owner)
+    const valid = getCreatedAccountRuntimeKey(owner, {
+      ref: facts(owner).ref,
+      facts: facts(owner),
+    })!
+    inventory.mockResolvedValue([valid])
+    expect(await ensureAccountKey(owner)).toEqual({
+      kind: "ready",
+      runtimeKey: valid,
+    })
+    expect(submit).not.toHaveBeenCalled()
+  })
+
   it("shares concurrent ensure operations across inventory and dispatch", async () => {
     const owner = account()
     const { submit } = setup(owner)

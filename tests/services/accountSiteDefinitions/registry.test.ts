@@ -163,6 +163,7 @@ type ExpectedAccountSiteType =
   | typeof SITE_TYPES.KIMI_GLOBAL
   | typeof SITE_TYPES.GRSAI
   | typeof SITE_TYPES.RELAYFOR
+  | typeof SITE_TYPES.REQUESTY
   | typeof SITE_TYPES.UNKNOWN
 
 type ExpectedManagedSiteType =
@@ -486,6 +487,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.CUBENCE,
       SITE_TYPES.RIGHT_CODE,
       SITE_TYPES.RELAYFOR,
+      SITE_TYPES.REQUESTY,
       SITE_TYPES.OPENROUTER,
       SITE_TYPES.KIMI,
       SITE_TYPES.KIMI_GLOBAL,

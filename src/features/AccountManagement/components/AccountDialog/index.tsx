@@ -40,6 +40,7 @@ import { OneTimeSecretDialog } from "~/features/TokenProvisioning/secretDelivery
 import { resolveLoginProviderClaims } from "~/services/accountLogin/providerClaims"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
+import { isCanonicalRequestyUrl } from "~/services/apiAdapters/requesty/account/accountOnboarding"
 import type { DisplaySiteData } from "~/types"
 import { isExtensionPopup } from "~/utils/browser"
 import { createLogger } from "~/utils/core/logger"
@@ -53,6 +54,7 @@ import DialogHeader from "./DialogHeader"
 import InfoPanel, { AccountSiteDiscoveryHint } from "./InfoPanel"
 import {
   ACCOUNT_DIALOG_PHASES,
+  AUTO_CREATE_ACCESS_TOKEN_STATUSES,
   type AccountDialogRecoveryState,
 } from "./models"
 
@@ -205,23 +207,47 @@ export default function AccountDialog({
     onRequestCookieAuthPermissions: handlers.handleRequestCookieAuthPermissions,
   }
   const currentSitePolicy = getAccountDialogSitePolicy(state.siteType)
+
   const manualAddGuideAnchor = getAccountSiteDefinition(state.siteType)
     ?.onboarding?.manualAddGuideAnchor
   const isOpenRouterBootstrap = isCanonicalOpenRouterUrl(state.url)
-  const autoDetectPresentation = isOpenRouterBootstrap
-    ? {
-        action: {
-          idleLabel: tAccountDialog("mode.createOpenRouterManagementKey"),
-          pendingLabel: tAccountDialog("mode.creatingOpenRouterManagementKey"),
-          reDetectLabel: tAccountDialog("mode.createOpenRouterManagementKey"),
-          multiline: true,
-        },
-        info: {
-          title: tAccountDialog("infoPanel.openrouterBootstrap"),
-          description: tAccountDialog("infoPanel.openrouterBootstrapInfo"),
-        },
-      }
-    : undefined
+  const isRequestyBootstrap =
+    isCanonicalRequestyUrl(state.url) && !state.accessToken.trim()
+  const autoDetectPresentation =
+    isOpenRouterBootstrap || isRequestyBootstrap
+      ? {
+          action: {
+            idleLabel: isRequestyBootstrap
+              ? tAccountDialog("mode.createManagementKey", {
+                  siteName: "Requesty",
+                })
+              : tAccountDialog("mode.createOpenRouterManagementKey"),
+            pendingLabel: isRequestyBootstrap
+              ? tAccountDialog("mode.creatingManagementKey", {
+                  siteName: "Requesty",
+                })
+              : tAccountDialog("mode.creatingOpenRouterManagementKey"),
+            reDetectLabel: isRequestyBootstrap
+              ? tAccountDialog("mode.createManagementKey", {
+                  siteName: "Requesty",
+                })
+              : tAccountDialog("mode.createOpenRouterManagementKey"),
+            multiline: true,
+          },
+          info: {
+            title: isRequestyBootstrap
+              ? tAccountDialog("infoPanel.managementKeyBootstrap", {
+                  siteName: "Requesty",
+                })
+              : tAccountDialog("infoPanel.openrouterBootstrap"),
+            description: isRequestyBootstrap
+              ? tAccountDialog("infoPanel.managementKeyBootstrapInfo", {
+                  siteName: "Requesty",
+                })
+              : tAccountDialog("infoPanel.openrouterBootstrapInfo"),
+          },
+        }
+      : undefined
   const dialogTitle =
     mode === DIALOG_MODES.ADD
       ? tAccountDialog("title.add")
@@ -484,6 +510,19 @@ export default function AccountDialog({
                 onUsernameChange={setters.setUsername}
                 onUserIdChange={setters.setUserId}
                 onAccessTokenChange={setters.setAccessToken}
+                autoCreateAccessToken={
+                  currentSitePolicy.canAutoCreateAccessToken
+                    ? {
+                        enabled: true,
+                        status: state.isDetecting
+                          ? AUTO_CREATE_ACCESS_TOKEN_STATUSES.Working
+                          : AUTO_CREATE_ACCESS_TOKEN_STATUSES.Idle,
+                        onCreate: () => {
+                          void handlers.handleAutoDetect()
+                        },
+                      }
+                    : undefined
+                }
                 onSub2apiUseRefreshTokenChange={
                   handlers.handleSub2apiUseRefreshTokenChange
                 }

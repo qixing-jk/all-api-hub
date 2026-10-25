@@ -504,6 +504,11 @@ export function normalizeSiteAccount(raw: SiteAccount): SiteAccount {
     login: resolveAccountLogin(merged),
   }
 
+  // Older Requesty adapters duplicated the organization's monetary balance as
+  // a scoped allowance. Discard that projection on read as well as refresh.
+  if (normalized.site_type === SITE_TYPES.REQUESTY) {
+    delete normalized.account_info.nativeBalance
+  }
   delete normalized.passwordAuth
   delete normalized.checkIn.loginCheckIn
   delete (normalized as SiteAccount & { can_check_in?: unknown }).can_check_in

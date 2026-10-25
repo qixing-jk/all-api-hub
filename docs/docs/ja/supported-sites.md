@@ -50,6 +50,7 @@
 | RelayFor                      | モデル API とアカウントコンソールを提供する独立した AI 公益サービスプラットフォーム。                                                                                                                                                                                                                                                                                                 | [公式サイト](https://relayfor.xyz/)                                                                                                                         |
 | Daya API | 複数モデルプロバイダーを集約する統合 AI API アクセスプラットフォーム。モデル API、独立キー、クレジット管理を提供します。 | — |
 | PM-API | コミュニティ AI 中継サービス。モデル API、トークンキー管理、引き換えコード、毎日チェックインを提供します。pmcat.top と pap.pmcat.top は同一プログラムの 2 つのデプロイです。 | [サイト](https://pmcat.top/) |
+| Requesty | 統一モデルルーティング、プリペイド残高、キー管理を提供するホスト型 LLM ゲートウェイ。 | [サイト](https://app.requesty.ai/) / [ドキュメント](https://docs.requesty.ai/) |
 
 ## ❤️ 推奨スポンサーサイト
 

@@ -40,6 +40,7 @@ export const SITE_TYPES = {
   CUBENCE: "cubence",
   RIGHT_CODE: "RightCode",
   RELAYFOR: "relayfor",
+  REQUESTY: "requesty",
   OPENROUTER: "openrouter",
   OMNIROUTE: "omniroute",
   GPT_LOAD: "gpt-load",
@@ -131,6 +132,23 @@ export const RIGHTCODE_LOGIN_PATH = "/login"
 export const RELAYFOR_HOSTNAMES = ["relayfor.xyz"] as const
 export const RELAYFOR_DISPLAY_NAME = "RelayFor"
 export const RELAYFOR_LOGIN_PATH = "/auth/?mode=login"
+
+/**
+ * Requesty is a closed-source hosted LLM gateway. `app.requesty.ai` is the only
+ * console (Clerk login); `api-v2.requesty.ai` serves the documented management
+ * API under `/v1/manage/*` (Bearer manage key) and undocumented Clerk-session
+ * console routes under `/v1/*`; `router.requesty.ai` is the OpenAI-compatible
+ * inference gateway. `router.eu.requesty.ai` is a data-residency inference
+ * variant, not an account alias. Domain roles: docs.requesty.ai/llms.txt,
+ * verified 2026-10-21.
+ */
+export const REQUESTY_HOSTNAMES = ["app.requesty.ai"] as const
+export const REQUESTY_DISPLAY_NAME = "Requesty"
+export const REQUESTY_WEB_ORIGIN = "https://app.requesty.ai"
+/** Management API host; requests must use absolute URLs against this origin. */
+export const REQUESTY_MANAGE_API_ORIGIN = "https://api-v2.requesty.ai"
+/** Public OpenAI-compatible inference gateway and model catalog origin. */
+export const REQUESTY_API_BASE_URL = "https://router.requesty.ai/v1"
 
 export const OPENROUTER_HOSTNAMES = ["openrouter.ai"] as const
 

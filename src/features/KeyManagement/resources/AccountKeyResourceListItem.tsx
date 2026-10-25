@@ -117,9 +117,11 @@ export function AccountKeyResourceListItem({
     () => buildAccountKeyResourceRuntimeKeyFromFacts(account, row.facts),
     [account, row.facts],
   )
-  const recoverable = supportsRecoverableAccountRuntimeKeySecrets(
-    account.siteType,
-  )
+  // The account's own credential resolves from the stored token, so its
+  // plaintext is readable even when the provider only returns it at creation.
+  const recoverable =
+    supportsRecoverableAccountRuntimeKeySecrets(account.siteType) ||
+    runtimeKey.accountCredential === true
   const {
     secret,
     secretControls,

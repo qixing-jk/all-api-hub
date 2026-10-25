@@ -5,6 +5,7 @@ import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import type { ApiServiceAccountRequest } from "~/services/accounts/accountDataModel"
+import { pmApiCapabilities } from "~/services/apiAdapters/pmapi"
 import { fetchAccountData } from "~/services/apiService/pmapi"
 import { fetchPmApiAff } from "~/services/apiService/pmapi/aff"
 import { fetchPmApiAnnouncements } from "~/services/apiService/pmapi/announcements"
@@ -15,12 +16,14 @@ import {
 import {
   createPmApiKey,
   deletePmApiKey,
+  fetchPmApiGroupCatalog,
   fetchPmApiKeys,
   fetchPmApiTokenGroups,
   regeneratePmApiKey,
   setPmApiKeyStatus,
   updatePmApiKey,
 } from "~/services/apiService/pmapi/keys"
+import { fetchPmApiModels } from "~/services/apiService/pmapi/models"
 import { redeemPmApiCode } from "~/services/apiService/pmapi/redemption"
 import {
   fetchPmApiCheckInOverview,
@@ -433,7 +436,7 @@ describe("PM-API aff", () => {
       ),
     ])
     const aff = await fetchPmApiAff(accountRequest())
-    expect(aff.inviteUrl).toBe(`${origin}/register?aff=ABCD`)
+    expect(aff.inviteUrl).toBe(`${origin}/#/register?aff=ABCD`)
     expect(aff.code).toBe("ABCD")
   })
 })
@@ -520,5 +523,261 @@ describe("PM-API token groups", () => {
       { name: "Free", ratio: 1 },
       { name: "Nvidia", ratio: 1 },
     ])
+  })
+})
+
+describe("PM-API reported error and capability coverage", () => {
+  beforeEach(() => mockIdentity())
+  it.each([
+    ["/api/me/aff", null],
+    ["/api/me/models", {}],
+    ["/api/tokens", { items: [], total: -1 }],
+    ["/api/pricing", {}],
+    ["/api/pricing", { groups: [null] }],
+    ["/api/token-groups", {}],
+    ["/api/token-groups", [null]],
+    ["/api/me/checkin", { streak: -1, total: 0 }],
+  ])("rejects malformed %s payloads: %j", async (path, data) => {
+    server.use(
+      http.get(`${origin}${path}`, () => HttpResponse.json(envelope(data))),
+    )
+    const read =
+      path === "/api/me/aff"
+        ? fetchPmApiAff
+        : path === "/api/me/models"
+          ? fetchPmApiModels
+          : path === "/api/tokens"
+            ? fetchPmApiKeys
+            : path === "/api/pricing"
+              ? fetchPmApiGroupCatalog
+              : path === "/api/token-groups"
+                ? fetchPmApiTokenGroups
+                : fetchPmApiCheckInOverview
+    await expect(read(accountRequest())).rejects.toMatchObject({
+      code: "JSON_PARSE_ERROR",
+    })
+  })
+  it("rejects malformed rotation and redemption grants", async () => {
+    server.use(
+      http.post(`${origin}/api/tokens/1/regenerate`, () =>
+        HttpResponse.json(envelope(null)),
+      ),
+      http.post(`${origin}/api/me/redeem`, () =>
+        HttpResponse.json(envelope(null)),
+      ),
+      http.post(`${origin}/api/me/checkin`, () =>
+        HttpResponse.json(envelope(null)),
+      ),
+    )
+    await expect(
+      regeneratePmApiKey(accountRequest(), "1"),
+    ).rejects.toMatchObject({ code: "JSON_PARSE_ERROR" })
+    await expect(
+      redeemPmApiCode(accountRequest(), "CODE"),
+    ).rejects.toMatchObject({ code: "JSON_PARSE_ERROR" })
+    await expect(performPmApiCheckIn(accountRequest())).rejects.toMatchObject({
+      code: "JSON_PARSE_ERROR",
+    })
+  })
+  it("rejects a create response without its promised secret", async () => {
+    server.use(
+      http.post(`${origin}/api/tokens`, () =>
+        HttpResponse.json(envelope({ keys: [] })),
+      ),
+    )
+    await expect(
+      createPmApiKey(accountRequest(), {
+        name: "x",
+        unlimited: true,
+        remainQuota: 0,
+        expiredAt: -1,
+        models: "",
+        subnet: "",
+        rpm: 0,
+        grp: "",
+      }),
+    ).rejects.toMatchObject({ code: "JSON_PARSE_ERROR" })
+  })
+  it("reads keys across every inventory page", async () => {
+    const pages: string[] = []
+    server.use(
+      http.get(`${origin}/api/tokens`, ({ request }) => {
+        const page = new URL(request.url).searchParams.get("p")!
+        pages.push(page)
+        return HttpResponse.json(
+          envelope({
+            items: [{ ...keyRow, id: page === "1" ? 1 : 101 }],
+            total: 101,
+          }),
+        )
+      }),
+    )
+    expect(
+      (await fetchPmApiKeys(accountRequest())).map((key) => key.id),
+    ).toEqual([1, 101])
+    expect(pages).toEqual(["1", "2"])
+  })
+  it("reads described group objects from the native editor endpoint", async () => {
+    server.use(
+      http.get(`${origin}/api/token-groups`, () =>
+        HttpResponse.json(
+          envelope([{ name: " Free ", ratio: 0, description: " Free group " }]),
+        ),
+      ),
+    )
+    expect(await fetchPmApiTokenGroups(accountRequest())).toEqual([
+      { name: "Free", ratio: 0, description: "Free group" },
+    ])
+  })
+  it("uses adapter-owned invite, redemption and announcement capabilities", async () => {
+    server.use(
+      http.get(`${origin}/api/me/aff`, () =>
+        HttpResponse.json(envelope({ code: "A / B" })),
+      ),
+      http.post(`${origin}/api/me/redeem`, () =>
+        HttpResponse.json(envelope({ quota: 123 })),
+      ),
+      http.get(`${origin}/api/status`, () =>
+        HttpResponse.json(envelope({ notice: "hello" })),
+      ),
+    )
+    expect(
+      await pmApiCapabilities.account!.inviteLink!.fetchInviteLink({
+        request: accountRequest(),
+      } as never),
+    ).toBe(`${origin}/#/register?aff=A%20%2F%20B`)
+    expect(
+      await pmApiCapabilities.account!.redemption!.redeem({
+        request: accountRequest(),
+        code: "CODE",
+      } as never),
+    ).toBe(123)
+    expect(
+      await pmApiCapabilities.site!.announcements!.fetch(accountRequest()),
+    ).toBeDefined()
+    await expect(
+      pmApiCapabilities.account!.bootstrap!.getOrCreateAccessToken(
+        accountRequest(),
+      ),
+    ).rejects.toMatchObject({ code: "FEATURE_UNSUPPORTED" })
+  })
+  it("fails refresh with a health result when the session expires", async () => {
+    server.use(
+      http.get(`${origin}/api/me`, () =>
+        HttpResponse.json({}, { status: 401 }),
+      ),
+    )
+    expect(
+      await pmApiCapabilities.account!.refresh!.refreshAccount(
+        accountRequest(),
+      ),
+    ).toMatchObject({ success: false })
+  })
+  it("returns a healthy refresh with available statistics", async () => {
+    server.use(
+      http.get(`${origin}/api/me/stats`, () =>
+        HttpResponse.json(
+          envelope({ today: { quota: 0, requests: 0, tokens: 0 } }),
+        ),
+      ),
+    )
+    expect(
+      await pmApiCapabilities.account!.refresh!.refreshAccount(
+        accountRequest(),
+      ),
+    ).toMatchObject({ success: true })
+  })
+  it("preserves invalid stats availability without discarding balance", async () => {
+    server.use(
+      http.get(`${origin}/api/me/stats`, () =>
+        HttpResponse.json(envelope({ today: null })),
+      ),
+    )
+    expect(await fetchAccountData(accountRequest())).toMatchObject({
+      quota: 1250000,
+    })
+  })
+  it("loads fallback bootstrap names and exchange rates and probes support when uncached", async () => {
+    server.use(
+      http.get(`${origin}/api/status`, () =>
+        HttpResponse.json(
+          envelope({ name: "", usd_rate: 0, checkin_enabled: true }),
+        ),
+      ),
+    )
+    const bootstrap = pmApiCapabilities.account!.bootstrap!
+    expect(await bootstrap.loadBootstrapFacts!(accountRequest())).toMatchObject(
+      { displayName: "PM-API", checkInSupported: true },
+    )
+    expect(await bootstrap.fetchCheckInSupport!(accountRequest(), {})).toBe(
+      true,
+    )
+  })
+  it("ignores unreadable announcement rows", async () => {
+    server.use(
+      http.get(`${origin}/api/status`, () =>
+        HttpResponse.json(
+          envelope({
+            announcements: [null, { title: "" }, { title: "Valid" }],
+          }),
+        ),
+      ),
+    )
+    expect(await fetchPmApiAnnouncements(accountRequest())).toEqual([
+      { id: "announcement-3", title: "Valid", content: "" },
+    ])
+  })
+  it("rejects a key page without an inventory", async () => {
+    server.use(
+      http.get(`${origin}/api/tokens`, () => HttpResponse.json(envelope({}))),
+    )
+    await expect(fetchPmApiKeys(accountRequest())).rejects.toMatchObject({
+      code: "JSON_PARSE_ERROR",
+    })
+  })
+  it("keeps successful envelopes mandatory", async () => {
+    server.use(
+      http.get(`${origin}/api/me/aff`, () => HttpResponse.json({ data: {} })),
+    )
+    await expect(fetchPmApiAff(accountRequest())).rejects.toMatchObject({
+      code: "JSON_PARSE_ERROR",
+    })
+  })
+  it("classifies absent stats and invalid JSON stats separately from balance", async () => {
+    server.use(
+      http.get(`${origin}/api/me/stats`, () =>
+        HttpResponse.json(envelope(null)),
+      ),
+    )
+    const absent = await fetchAccountData(accountRequest())
+    expect(absent.todayStatsAvailability!.consumption).toMatchObject({
+      status: "unavailable",
+    })
+    server.use(
+      http.get(`${origin}/api/me/stats`, () => new HttpResponse("bad json")),
+    )
+    expect(
+      (await fetchAccountData(accountRequest())).todayStatsAvailability!
+        .consumption,
+    ).toMatchObject({ status: "unavailable" })
+  })
+  it("propagates stats authentication failures without returning partial account data", async () => {
+    server.use(
+      http.get(`${origin}/api/me/stats`, () =>
+        HttpResponse.json({}, { status: 401 }),
+      ),
+    )
+    await expect(fetchAccountData(accountRequest())).rejects.toMatchObject({
+      statusCode: 401,
+    })
+  })
+  it("keeps balance when a stats payload lacks its today object", async () => {
+    server.use(
+      http.get(`${origin}/api/me/stats`, () => HttpResponse.json(envelope({}))),
+    )
+    expect(
+      (await fetchAccountData(accountRequest())).todayStatsAvailability!
+        .consumption,
+    ).toMatchObject({ status: "unavailable" })
   })
 })

@@ -540,6 +540,17 @@ export async function resolveDisplayAccountRuntimeKeySecret<
       return projectResolvedRuntimeKey(runtimeKey.secret)
     }
 
+    // The account's own credential is the stored token, so its plaintext needs
+    // no provider read or profile association. Export eligibility still decides
+    // whether it may leave the extension.
+    if (
+      source === ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.Auto &&
+      runtimeKey.accountCredential &&
+      account.token.trim()
+    ) {
+      return projectResolvedRuntimeKey(account.token.trim())
+    }
+
     if (
       source === ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.AssociatedProfile ||
       (source === ACCOUNT_RUNTIME_KEY_SECRET_SOURCES.Auto &&
