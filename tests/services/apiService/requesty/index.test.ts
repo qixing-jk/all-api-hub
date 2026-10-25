@@ -359,3 +359,109 @@ describe("key management", () => {
     expect(deleteCalled).toBe(true)
   })
 })
+
+describe("key readback and creation drift", () => {
+  it("refuses to report a malformed key detail as a key", async () => {
+    server.use(
+      http.get("https://api-v2.requesty.ai/v1/manage/apikey/01089d27", () =>
+        HttpResponse.json({ id: "01089d27" }),
+      ),
+    )
+    await expect(fetchRequestyApiKey(request, "01089d27")).rejects.toThrow(
+      /invalid_requesty_apikey$/,
+    )
+  })
+
+  it("defaults a key row without permissions or labels instead of dropping it", async () => {
+    server.use(
+      http.get("https://api-v2.requesty.ai/v1/manage/apikey/01089d27", () =>
+        HttpResponse.json({
+          id: "01089d27",
+          name: "probe",
+          monthly_limit: "0",
+          monthly_spend: "0",
+          created_at: "2026-10-21T12:36:42.765502Z",
+        }),
+      ),
+    )
+    await expect(
+      fetchRequestyApiKey(request, "01089d27"),
+    ).resolves.toMatchObject({
+      permissions: { manage: "none", completions: "none" },
+      labels: {},
+    })
+  })
+
+  it("creates a management key without a limit and reports its own permissions", async () => {
+    let createdBody: Record<string, unknown> | undefined
+    server.use(
+      http.post(KEYS_URL, async ({ request: req }) => {
+        createdBody = (await req.json()) as Record<string, unknown>
+        return HttpResponse.json({
+          api_key_id: "01089d27-2d4c-4146-8d6a-1c3e608f359f",
+          api_key: "rqsty-sk-created-plaintext",
+        })
+      }),
+    )
+
+    const { key } = await createRequestyApiKey(request, {
+      name: "hub-manage-probe",
+      managePermission: true,
+    })
+
+    // An unlimited key must omit the cap rather than send zero.
+    expect(createdBody).toEqual({
+      name: "hub-manage-probe",
+      permissions: { manage: "write", completions: "write" },
+    })
+    expect(key.permissions.manage).toBe("write")
+    expect(key.monthlyLimit).toBe(0)
+  })
+
+  it("rejects a create acknowledgement without one-time plaintext", async () => {
+    server.use(
+      http.post(KEYS_URL, () => HttpResponse.json({ api_key_id: "01089d27" })),
+    )
+    await expect(
+      createRequestyApiKey(request, { name: "hub-probe" }),
+    ).rejects.toThrow(/invalid_requesty_apikey_create$/)
+  })
+})
+
+describe("manage transport boundaries", () => {
+  it("never sends an unauthenticated management request", async () => {
+    let reached = false
+    server.use(
+      http.get(ORG_URL, () => {
+        reached = true
+        return HttpResponse.json({ name: "org", balance: "1" })
+      }),
+    )
+
+    await expect(
+      fetchRequestyOrg({
+        ...request,
+        auth: { authType: AuthTypeEnum.AccessToken, accessToken: "   " },
+      }),
+    ).rejects.toMatchObject({ statusCode: 401 })
+    expect(reached).toBe(false)
+  })
+
+  it("rejects a non-record envelope instead of returning it", async () => {
+    server.use(http.get(ORG_URL, () => HttpResponse.json(["not", "a", "org"])))
+    await expect(fetchRequestyOrg(request)).rejects.toMatchObject({
+      message: expect.stringMatching(/invalid/i),
+    })
+  })
+
+  it("reports a self-key payload without identity as unreadable", async () => {
+    server.use(
+      http.get("https://api-v2.requesty.ai/v1/manage/apikey/self", () =>
+        HttpResponse.json({ name: "only-a-name" }),
+      ),
+    )
+    await expect(fetchRequestySelfKeyInfo(request)).rejects.toThrow(
+      /invalid_requesty_apikey_self/,
+    )
+  })
+})

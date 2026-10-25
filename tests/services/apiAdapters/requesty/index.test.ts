@@ -815,3 +815,115 @@ describe("requesty inference eligibility", () => {
     expect(item.status).toBe("expired")
   })
 })
+
+describe("requesty key editor fields", () => {
+  const detail = {
+    id: "key-1",
+    name: "existing",
+    monthlyLimit: 5,
+    monthlySpend: 0,
+    permissions: { manage: "none", completions: "write" },
+    labels: {},
+    createdAt: "2026-10-21T12:21:41.958098Z",
+  }
+
+  it("requires a name before validating the rest of a create", () => {
+    const editor = createRequestyKeyEditor("  ")
+    // A blank hint falls back to the shared auto-provision name.
+    expect(editor.initialValues).toMatchObject({
+      name: "default key (auto)",
+      monthly_limit: "",
+      manage_permission: false,
+    })
+    expect(
+      editor.validate({ name: "", monthly_limit: "", expires_at: "" }),
+    ).toEqual({
+      valid: false,
+      issues: [{ fieldId: "name", code: "required" }],
+    })
+    expect(
+      editor.validate({ name: "key", monthly_limit: "5", expires_at: "" }),
+    ).toEqual({ valid: true })
+  })
+
+  it("reports an unusable limit and expiry together", () => {
+    const editor = createRequestyKeyEditor("hint")
+    expect(
+      editor.validate({
+        name: "key",
+        monthly_limit: "not-a-number",
+        expires_at: "not-a-date",
+      }),
+    ).toEqual({
+      valid: false,
+      issues: [
+        { fieldId: "monthly_limit", code: "invalid_value" },
+        { fieldId: "expires_at", code: "invalid_value" },
+      ],
+    })
+  })
+
+  it("treats an empty cap as unlimited and a non-boolean permission as false", () => {
+    const editor = createRequestyKeyEditor("hint")
+    // An empty field is "no cap": 0 is Requesty's unlimited value, and the
+    // request builder omits the field for 0.
+    expect(
+      editor.buildCommand({
+        name: "  created  ",
+        monthly_limit: "",
+        manage_permission: "yes",
+      }),
+    ).toEqual({ name: "created", monthlyLimit: 0, managePermission: false })
+    expect(
+      editor.buildCommand({
+        name: "created",
+        monthly_limit: "5",
+        manage_permission: true,
+      }),
+    ).toEqual({ name: "created", monthlyLimit: 5, managePermission: true })
+  })
+
+  it("clears an expiry the user emptied", () => {
+    const editor = editRequestyKeyEditor({
+      ...detail,
+      expiresAt: "2099-01-01T00:00:00Z",
+    })
+    expect(editor.buildCommand({ monthly_limit: 5, expires_at: "" })).toEqual({
+      expiresAt: "",
+    })
+  })
+
+  it("keeps an unexpiring key unexpiring when the field stays empty", () => {
+    const editor = editRequestyKeyEditor(detail)
+    expect(editor.buildCommand({ monthly_limit: 5, expires_at: "" })).toEqual(
+      {},
+    )
+  })
+})
+
+describe("requestyProviderModelCatalog pricing variants", () => {
+  it("omits cache and window facts when the provider does not quote them", async () => {
+    server.use(
+      http.get("https://router.requesty.ai/v1/models", () =>
+        HttpResponse.json({
+          object: "list",
+          data: [
+            {
+              // No cached quote and no context window: neither must be invented.
+              id: "vendor/plain-model",
+              input_price: 2e-7,
+              output_price: 8e-7,
+            },
+          ],
+        }),
+      ),
+    )
+
+    const response = await requestyProviderModelCatalog.fetchPricing({})
+    const model = atIndex(response.data, 0)
+    expect(model.pricingPlan?.rates.cacheRead).toBeUndefined()
+    expect(model.pricingPlan?.limits).toBeUndefined()
+    expect(model.token_price_usd_per_million?.cache_read).toBeUndefined()
+    expect(model.token_price_usd_per_million?.input).toBeCloseTo(0.2, 12)
+  })
+})

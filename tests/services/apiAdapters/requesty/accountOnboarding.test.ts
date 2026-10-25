@@ -197,6 +197,64 @@ describe("Requesty automatic onboarding", () => {
     expect(pageAction).toHaveBeenCalledOnce()
   })
 
+  it("skips a stored Requesty account that carries no credential", async () => {
+    getAllAccounts.mockResolvedValue([
+      {
+        id: "acct-no-credential",
+        site_url: "https://app.requesty.ai",
+        site_type: "requesty",
+        site_name: "Requesty",
+        account_info: { id: "org-123" },
+      },
+    ])
+    pageAction.mockResolvedValue(created)
+
+    const result = await onboardRequestyAccount({
+      protectionBypassExecution: execution,
+      onCredentialCreated: vi.fn(),
+    })
+
+    expect(pageAction).toHaveBeenCalledOnce()
+    expect(result).toMatchObject({
+      success: true,
+      data: { accessToken: "rqsty-test-key" },
+    })
+  })
+
+  it("reports a generic create failure that is not a sign-out", async () => {
+    pageAction.mockResolvedValue({
+      state: "not_dispatched",
+      reason: "organization_unavailable",
+      name: "All API Hub",
+    })
+
+    const result = await onboardRequestyAccount({
+      protectionBypassExecution: execution,
+      onCredentialCreated: vi.fn(),
+    })
+
+    expect(result).toMatchObject({
+      success: false,
+      message: "accountDialog:form.autoCreateAccessTokenFailed",
+    })
+  })
+
+  it("fails the detection instead of throwing when completion breaks", async () => {
+    pageAction.mockResolvedValue(created)
+    server.use(
+      http.get("https://api-v2.requesty.ai/v1/manage/org", () =>
+        HttpResponse.json({ name: 42, balance: "not-a-number" }),
+      ),
+    )
+
+    const result = await onboardRequestyAccount({
+      protectionBypassExecution: execution,
+      onCredentialCreated: vi.fn(),
+    })
+
+    expect(result).toMatchObject({ success: false })
+  })
+
   it.each([
     "https://requesty.ai",
     "http://app.requesty.ai",
