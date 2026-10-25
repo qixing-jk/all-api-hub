@@ -3933,6 +3933,58 @@ describe("accountStorage core behaviors", () => {
     expect(updated?.checkIn.customCheckIn).toBeUndefined()
   })
 
+  it.each(["clear", "manual"] as const)(
+    "preserves a route %s made after saved-account discovery started",
+    async (edit) => {
+      const methodId = "new-api:daily-checkin" as const
+      const account = createAccount({
+        site_type: SITE_TYPES.NEW_API,
+        checkIn: {
+          automaticExecutionEnabled: true,
+          selection: { mode: "automatic" },
+          methodKnowledge: { methods: {}, lastFullDiscoveryAt: 100 },
+          routeOverrides: {
+            [methodId]: {
+              path: "/api/user/old",
+              source: "discovery",
+              observedAt: 1,
+            },
+          },
+        },
+      })
+      seedStorage([account])
+      const routes =
+        edit === "clear"
+          ? undefined
+          : {
+              [methodId]: {
+                path: "/api/user/manual",
+                source: "manual" as const,
+                observedAt: 3,
+              },
+            }
+      await accountStorage.updateAccountCheckInDraft(account.id, {
+        ...account.checkIn,
+        routeOverrides: routes,
+      })
+      await accountStorage.completeUserCheckInDiscovery(account, {
+        ...account.checkIn,
+        methodKnowledge: { methods: {}, lastFullDiscoveryAt: 200 },
+        routeOverrides: {
+          [methodId]: {
+            path: "/api/user/new",
+            source: "discovery",
+            observedAt: 2,
+          },
+        },
+      })
+      expect(
+        (await accountStorage.getAccountById(account.id))?.checkIn
+          .routeOverrides,
+      ).toEqual(routes)
+    },
+  )
+
   it("keeps account fields and the check-in draft unchanged when their atomic save fails", async () => {
     const account = createAccount({
       id: "atomic-dialog-save",

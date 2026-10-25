@@ -50,9 +50,11 @@ export function handlePageFeedbackScan(
   window.addEventListener("pagehide", cancel, { once: true })
   const statusOrigin = new URL(resolveDeploymentApiOrigin(originUrl)).origin
   const statusPaths = new Set(
-    getCheckInFeedbackStatusRoutes(input.siteType, originUrl).map(
-      (route) => new URL(route.path, statusOrigin).pathname,
-    ),
+    getCheckInFeedbackStatusRoutes(
+      input.siteType,
+      originUrl,
+      input.routePaths,
+    ).map((route) => new URL(route.path, statusOrigin).pathname),
   )
   const scanFetch: typeof fetch = async (url, init) => {
     if (controller.signal.aborted || location.origin !== originUrl)

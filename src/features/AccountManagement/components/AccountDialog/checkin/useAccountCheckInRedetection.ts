@@ -167,6 +167,10 @@ export function useAccountCheckInRedetection({
             latest: discovery.config,
             draft: currentDraft.checkIn,
             selectionChanged,
+            routeDiscoveryBase: draft.checkIn,
+            ...(discovery.config.routeOverrides
+              ? { learnedRouteOverrides: discovery.config.routeOverrides }
+              : {}),
           }),
         }
       })

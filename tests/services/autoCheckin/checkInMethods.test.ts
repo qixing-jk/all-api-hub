@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
+  AUTO_CHECKIN_METHOD_IDS,
   CHECK_IN_METHOD_AVAILABILITIES,
   CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
@@ -988,6 +989,118 @@ describe("check-in methods compatibility activation", () => {
       openRedeemWithCheckIn: undefined,
       turnstilePreTrigger: undefined,
     })
+  })
+
+  it("clears a previously saved route when the draft removes it", () => {
+    const latest = createCompatibilityCheckInConfig({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+      automaticExecutionEnabled: true,
+    })
+    latest.routeOverrides = {
+      [AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn]: {
+        path: "/api/user/old",
+        source: "manual",
+        observedAt: 1,
+      },
+    }
+    const draft = { ...latest, routeOverrides: undefined }
+
+    expect(
+      mergeUserOwnedCheckInDraft({ latest, draft }).routeOverrides,
+    ).toBeUndefined()
+    expect(latest.routeOverrides).toBeDefined()
+  })
+
+  it("accepts a relearned route when the draft path was not edited during discovery", () => {
+    const base = createCompatibilityCheckInConfig({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+      automaticExecutionEnabled: true,
+    })
+    base.routeOverrides = {
+      [AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn]: {
+        path: "/api/user/old",
+        source: "discovery",
+        observedAt: 1,
+      },
+    }
+    const learnedRouteOverrides = {
+      [AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn]: {
+        path: "/api/user/new",
+        source: "discovery" as const,
+        observedAt: 2,
+      },
+    }
+    const merged = mergeUserOwnedCheckInDraft({
+      latest: { ...base, routeOverrides: learnedRouteOverrides },
+      draft: base,
+      learnedRouteOverrides,
+      routeDiscoveryBase: base,
+    })
+    expect(merged.routeOverrides).toEqual(learnedRouteOverrides)
+  })
+
+  it("keeps a route the user entered instead of the stored one", () => {
+    const latest = createCompatibilityCheckInConfig({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+      automaticExecutionEnabled: true,
+    })
+    latest.routeOverrides = {
+      "new-api:daily-checkin": {
+        path: "/api/user/learned-earlier",
+        source: "discovery",
+        observedAt: 1,
+      },
+    }
+    const draft = {
+      ...latest,
+      routeOverrides: {
+        "new-api:daily-checkin": {
+          path: "/api/user/daily-9f3k",
+          source: "manual" as const,
+          observedAt: 2,
+        },
+      },
+    }
+
+    const merged = mergeUserOwnedCheckInDraft({ latest, draft })
+
+    expect(merged.routeOverrides).toEqual(draft.routeOverrides)
+  })
+
+  it("keeps a cleared route cleared while a learned one fills other methods", () => {
+    const latest = createCompatibilityCheckInConfig({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+      automaticExecutionEnabled: true,
+    })
+    const draft = {
+      ...latest,
+      routeOverrides: undefined,
+    }
+
+    const merged = mergeUserOwnedCheckInDraft({
+      latest,
+      draft,
+      learnedRouteOverrides: {
+        "new-api:daily-checkin": {
+          path: "/api/user/daily-9f3k",
+          source: "discovery",
+          observedAt: 3,
+        },
+      },
+    })
+
+    expect(merged.routeOverrides).toEqual({
+      "new-api:daily-checkin": {
+        path: "/api/user/daily-9f3k",
+        source: "discovery",
+        observedAt: 3,
+      },
+    })
+    expect(latest.routeOverrides).toBeUndefined()
   })
 
   it("does not apply an older discovery round with the same timestamp", () => {

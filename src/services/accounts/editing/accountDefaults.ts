@@ -594,6 +594,19 @@ export function applySiteAccountUpdates(params: {
   if (Object.prototype.hasOwnProperty.call(params.updates, "login")) {
     merged.login = normalizeAccountLogin(params.updates.login)
   }
+  // Route overrides are a complete map owned by the draft. Deep-merging it
+  // resurrects deleted method entries (and ignores an explicit clear).
+  if (
+    params.updates.checkIn &&
+    Object.prototype.hasOwnProperty.call(
+      params.updates.checkIn,
+      "routeOverrides",
+    )
+  ) {
+    merged.checkIn.routeOverrides = normalizeCheckInConfigV7(
+      params.updates.checkIn,
+    ).routeOverrides
+  }
   const result = normalizeSiteAccount(merged)
   if (
     !Object.prototype.hasOwnProperty.call(params.updates, "login") &&

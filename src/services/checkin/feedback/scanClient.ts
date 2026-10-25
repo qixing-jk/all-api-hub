@@ -66,6 +66,9 @@ export async function collectFeedbackCluesInBrowser(
               baseUrl: origin,
               siteType: input.siteType,
               ...(auth ? { auth } : {}),
+              ...(input.routePaths?.length
+                ? { routePaths: input.routePaths }
+                : {}),
             },
           },
         },

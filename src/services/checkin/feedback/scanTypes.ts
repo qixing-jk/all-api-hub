@@ -10,6 +10,11 @@ export interface CheckInFeedbackScanInput {
   baseUrl: string
   siteType: AccountSiteType
   auth?: AuthConfig
+  /**
+   * Route paths this account actually uses when its deployment renamed one.
+   * They are probed first so the report shows what the account really calls.
+   */
+  routePaths?: string[]
 }
 
 export interface CheckInFeedbackClues {

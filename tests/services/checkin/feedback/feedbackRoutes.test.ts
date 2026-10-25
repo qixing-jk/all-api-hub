@@ -142,6 +142,17 @@ describe("registered check-in feedback status routes", () => {
     expect(routes).toContainEqual({ path: "/checkin/api/status" })
   })
 
+  it("reads the account's own route before the declared defaults", () => {
+    const routes = getCheckInFeedbackStatusRoutes(
+      SITE_TYPES.NEW_API,
+      "https://example.com",
+      ["/api/user/daily-9f3k"],
+    )
+
+    expect(routes[0]).toEqual({ path: "/api/user/daily-9f3k" })
+    expect(routes).toContainEqual({ path: "/api/status", public: true })
+  })
+
   it("requires feedback coverage for every method with status readback", () => {
     for (const definition of Object.values(AUTO_CHECKIN_METHOD_DEFINITIONS)) {
       if (!definition.supportsStatusReadback) continue

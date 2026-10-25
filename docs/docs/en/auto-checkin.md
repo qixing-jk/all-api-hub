@@ -24,6 +24,7 @@
 - Accounts with a built-in provider show:
   - **Check-in Method**: Automatic Selection re-detects as needed when no method is selected or the current method is confirmed unavailable. It selects or switches only when a suitable method can be uniquely determined. A manual choice stays fixed. If it still belongs to the current site but has no detection record, execution confirms only that method and keeps that choice whether the result matches, is unsupported, or is uncertain.
   - **Enable Daily Auto Check-in**: Enabled by default. When disabled, the account does not participate even if the global schedule is enabled.
+  - **Check-in API Path** (optional): Enter it when the site changed its built-in check-in endpoint (some New API forks do). Leave it empty to use the default path; **Re-detect Check-in Methods** tries to read it automatically first, and a successful read lets that same detection finish on the new path. Detection preserves manually entered paths and can relearn an automatically discovered path after it stops working. Clear the field and save to restore the default path.
   - **External Check-in Site URL** (optional): Enter it when the page is not at the standard path. Every account can configure an external entry point.
   - **Custom Recharge/Redemption Page URL** (optional) and "Open the recharge page when using external check-in".
 - The account form has no "check-in detection" switch. Status is read automatically during account refresh or detection.

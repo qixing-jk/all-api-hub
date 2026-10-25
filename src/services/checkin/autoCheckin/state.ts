@@ -154,6 +154,14 @@ export function mergeUserOwnedCheckInDraft(input: {
   latest: CheckInConfig
   draft: CheckInConfig
   selectionChanged?: boolean
+  /**
+   * Routes a redetection round just verified. Without a discovery snapshot,
+   * explicit draft entries take precedence. With one, concurrent edits and
+   * deletions take precedence over newly learned paths.
+   */
+  learnedRouteOverrides?: CheckInConfig["routeOverrides"]
+  /** Snapshot before discovery, used to distinguish concurrent edits from stale paths. */
+  routeDiscoveryBase?: Pick<CheckInConfig, "routeOverrides">
 }): CheckInConfig {
   const latestCustom = input.latest.customCheckIn
   const draftCustom = input.draft.customCheckIn
@@ -166,6 +174,13 @@ export function mergeUserOwnedCheckInDraft(input: {
         turnstilePreTrigger: draftCustom.turnstilePreTrigger,
       }
     : undefined
+  // Route paths are edited in this dialog and learned into it by redetection, so
+  // the dialog is authoritative and a cleared field stays cleared.
+  const routeOverrides = mergeCheckInRouteOverrides(
+    input.draft.routeOverrides,
+    input.learnedRouteOverrides,
+    input.routeDiscoveryBase,
+  )
 
   return {
     ...input.latest,
@@ -173,10 +188,39 @@ export function mergeUserOwnedCheckInDraft(input: {
     selection: input.selectionChanged
       ? input.draft.selection
       : input.latest.selection,
+    routeOverrides,
     ...(customCheckIn ? { customCheckIn } : { customCheckIn: undefined }),
   }
 }
 
+/** Accepts learned paths while preserving edits made since a discovery snapshot. */
+export function mergeCheckInRouteOverrides(
+  user: CheckInConfig["routeOverrides"],
+  learned: CheckInConfig["routeOverrides"],
+  base?: Pick<CheckInConfig, "routeOverrides">,
+): CheckInConfig["routeOverrides"] {
+  if (!user && !learned) return undefined
+  if (!base) return { ...learned, ...user }
+  const routes = { ...learned }
+  const methodIds = Object.keys({
+    ...base.routeOverrides,
+    ...user,
+  }) as CheckInMethodId[]
+  for (const methodId of methodIds) {
+    const before = base.routeOverrides?.[methodId]
+    const current = user?.[methodId]
+    if (
+      before?.path === current?.path &&
+      before?.source === current?.source &&
+      before?.observedAt === current?.observedAt
+    )
+      continue
+    // A deletion is an edit too; never resurrect a path cleared during discovery.
+    if (current) routes[methodId] = current
+    else delete routes[methodId]
+  }
+  return Object.keys(routes).length ? routes : undefined
+}
 const selectionsEqual = (
   left: CheckInMethodSelection,
   right: CheckInMethodSelection,
@@ -188,6 +232,9 @@ export function invalidateCheckInDiscovery(
 ): CheckInConfig {
   return {
     ...config,
+    // A route path belongs to one deployment. A different site URL or credential
+    // scope must not carry a path learned from the previous one.
+    routeOverrides: undefined,
     methodKnowledge: {
       ...config.methodKnowledge,
       lastFullDiscoveryAt: undefined,

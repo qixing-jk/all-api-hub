@@ -14,6 +14,10 @@ import {
   CHECK_IN_SELECTION_MODES,
 } from "~/constants/checkIn"
 import {
+  CHECK_IN_ROUTE_OVERRIDE_SOURCES,
+  normalizeCheckInRoutePath,
+} from "~/services/checkin/autoCheckin/configuration/routeOverrides"
+import {
   decodePersistedCheckInMethodId,
   isCheckInMethodId,
 } from "~/services/checkin/autoCheckin/providers/registry"
@@ -24,6 +28,7 @@ import type {
   CheckInMethodStatus,
   CheckInMethodUnknownAttempt,
   CheckInMethodUnknownReason,
+  CheckInRouteOverride,
 } from "~/types/checkIn"
 import {
   TURNSTILE_PRE_TRIGGER_KINDS,
@@ -329,6 +334,39 @@ const normalizeCustomCheckIn = (
   return Object.keys(normalized).length > 0 ? normalized : undefined
 }
 
+const normalizeRouteOverride = (
+  value: unknown,
+): CheckInRouteOverride | undefined => {
+  if (!isRecord(value)) return undefined
+  if (
+    value.source !== CHECK_IN_ROUTE_OVERRIDE_SOURCES.Manual &&
+    value.source !== CHECK_IN_ROUTE_OVERRIDE_SOURCES.Discovery
+  ) {
+    return undefined
+  }
+  const path = normalizeCheckInRoutePath(value.path)
+  const observedAt = coerceTimestamp(value.observedAt)
+  return path && observedAt !== undefined
+    ? { path, source: value.source, observedAt }
+    : undefined
+}
+
+const normalizeRouteOverrides = (
+  value: unknown,
+): CheckInConfig["routeOverrides"] => {
+  if (!isRecord(value)) return undefined
+  const overrides = Object.create(null) as NonNullable<
+    CheckInConfig["routeOverrides"]
+  >
+  for (const [rawMethodId, rawOverride] of Object.entries(value)) {
+    const methodId = decodePersistedCheckInMethodId(rawMethodId)
+    if (!methodId || !isCheckInMethodId(methodId)) continue
+    const override = normalizeRouteOverride(rawOverride)
+    if (override) overrides[methodId] = override
+  }
+  return Object.keys(overrides).length > 0 ? overrides : undefined
+}
+
 /**
  * Strictly normalizes persisted V7 check-in state without making any method executable.
  */
@@ -386,6 +424,7 @@ export function normalizeCheckInConfigV7(value: unknown): CheckInConfig {
     rawMethodKnowledge.lastAutomaticDiscoveryAttemptAt,
   )
   const customCheckIn = normalizeCustomCheckIn(raw.customCheckIn)
+  const routeOverrides = normalizeRouteOverrides(raw.routeOverrides)
   const provider = isRecord(raw.loginCheckIn)
     ? raw.loginCheckIn.provider
     : undefined
@@ -407,6 +446,7 @@ export function normalizeCheckInConfigV7(value: unknown): CheckInConfig {
     },
     selection,
     ...(customCheckIn ? { customCheckIn } : {}),
+    ...(routeOverrides ? { routeOverrides } : {}),
     ...(loginCheckIn ? { loginCheckIn } : {}),
   }
 }

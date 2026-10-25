@@ -24,6 +24,8 @@ import {
   fetchCheckedInTodayStatus,
   getProviderErrorMessage,
   isCheckInDisabled,
+  probeCheckInRoute,
+  resolveCheckInEndpoint,
   resolveStandardCheckinResult,
 } from "~/services/checkin/autoCheckin/providers/newApiProtocol"
 import {
@@ -53,7 +55,6 @@ import {
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import { normalizeTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 
-const ENDPOINT = AUTO_CHECKIN_USER_CHECKIN_ENDPOINT
 type CheckinResult = AutoCheckinProviderOutcome
 /**
  * Extract a numeric HTTP status code from provider errors when present.
@@ -155,7 +156,7 @@ function shouldAttemptNativePageCheckinFallback(params: {
 }
 
 /**
- * Call POST /api/user/checkin to perform the daily check-in.
+ * Call the account's check-in route to perform the daily check-in.
  */
 async function performCheckin(
   account: SiteAccount,
@@ -171,7 +172,7 @@ async function performCheckin(
       mutationLifecycle,
     ),
     {
-      endpoint: ENDPOINT,
+      endpoint: resolveCheckInEndpoint(account),
       options: {
         method: "POST",
         body: "{}",
@@ -390,9 +391,13 @@ const getStatus: NonNullable<AutoCheckinProvider["getStatus"]> = async ({
   return observation
     ? {
         outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
-        availability: observation.enabled
-          ? CHECK_IN_METHOD_AVAILABILITIES.Enabled
-          : CHECK_IN_METHOD_AVAILABILITIES.Disabled,
+        ...(typeof observation.enabled === "boolean"
+          ? {
+              availability: observation.enabled
+                ? CHECK_IN_METHOD_AVAILABILITIES.Enabled
+                : CHECK_IN_METHOD_AVAILABILITIES.Disabled,
+            }
+          : {}),
         ...(typeof observation.checkedInToday === "boolean"
           ? {
               today: observation.checkedInToday
@@ -428,6 +433,15 @@ function classifyStatusError(error: unknown) {
 
 export const newApiProvider: AutoCheckinProvider = {
   requiresAuthoritativeStatusBeforeMutation: true,
+  supportsRouteOverride: true,
+  canonicalRoutePath: AUTO_CHECKIN_USER_CHECKIN_ENDPOINT,
+  probeRouteOverride: ({ account, path, signal }) =>
+    probeCheckInRoute({
+      account,
+      path,
+      ...(signal ? { signal } : {}),
+      observedAt: Date.now(),
+    }),
   classifyStatusError,
   getReadiness,
   detect: (context) =>

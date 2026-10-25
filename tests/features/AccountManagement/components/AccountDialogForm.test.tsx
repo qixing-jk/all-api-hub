@@ -1291,6 +1291,176 @@ describe("AccountDialog AccountForm", () => {
     },
   )
 
+  it("stores a deployment's renamed check-in route for the selected method", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NEW_API
+    props.draft.checkIn = createCheckIn({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+    })
+    props.draft.checkIn.selection = {
+      mode: "manual",
+      methodId: AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+    }
+    props.draft.checkIn.methodKnowledge.methods[
+      AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
+    ] = {
+      detection: {
+        outcome: CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched,
+        evidence: { source: "probe", observedAt: 10 },
+      },
+    }
+    const onCheckInChange = vi.mocked(props.onCheckInChange)
+
+    render(<AccountForm {...withSitePolicy(props)} />)
+
+    const field = await screen.findByLabelText(
+      "accountDialog:form.checkInRoutePath",
+    )
+    expect(field).toHaveAttribute("placeholder", "/api/user/checkin")
+
+    fireEvent.change(field, { target: { value: "/api/user/daily-9f3k" } })
+
+    expect(onCheckInChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        routeOverrides: {
+          [AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn]: expect.objectContaining(
+            { path: "/api/user/daily-9f3k" },
+          ),
+        },
+      }),
+    )
+  })
+
+  it("retains invalid route text and blocks form submission until corrected", async () => {
+    const user = userEvent.setup()
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NEW_API
+    props.draft.checkIn = createCheckIn({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+    })
+    render(
+      <form aria-label="Account editor">
+        <AccountForm {...withSitePolicy(props)} />
+      </form>,
+    )
+    const field = await screen.findByLabelText(
+      "accountDialog:form.checkInRoutePath",
+    )
+    await user.click(field)
+    await user.paste("https://example.com/api/user/daily")
+
+    expect(field).toHaveValue("https://example.com/api/user/daily")
+    expect(
+      screen.getByText("accountDialog:form.checkInRoutePathInvalid"),
+    ).toBeVisible()
+    expect(field).toBeInvalid()
+    expect(
+      (
+        screen.getByRole("form", { name: "Account editor" }) as HTMLFormElement
+      ).checkValidity(),
+    ).toBe(false)
+    expect(props.onCheckInChange).not.toHaveBeenCalled()
+
+    await user.clear(field)
+    await user.type(field, "/api/user/daily")
+    expect(field).toHaveValue("/api/user/daily")
+    expect(field).toBeValid()
+    expect(
+      screen.queryByText("accountDialog:form.checkInRoutePathInvalid"),
+    ).not.toBeInTheDocument()
+    expect(props.onCheckInChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        routeOverrides: {
+          [AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn]: expect.objectContaining(
+            { path: "/api/user/daily" },
+          ),
+        },
+      }),
+    )
+  })
+
+  it("records manual provenance and a fresh timestamp after editing a discovered route", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NEW_API
+    props.draft.checkIn = createCheckIn({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+    })
+    props.draft.checkIn.routeOverrides = {
+      [AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn]: {
+        path: "/api/user/old",
+        source: "discovery",
+        observedAt: 1,
+      },
+    }
+    render(<AccountForm {...withSitePolicy(props)} />)
+    const field = await screen.findByLabelText(
+      "accountDialog:form.checkInRoutePath",
+    )
+    const before = Date.now()
+    fireEvent.change(field, { target: { value: "/api/user/manual" } })
+
+    const updated = vi.mocked(props.onCheckInChange).mock.lastCall?.[0]
+    expect(
+      updated?.routeOverrides?.[AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn],
+    ).toEqual({
+      path: "/api/user/manual",
+      source: "manual",
+      observedAt: expect.any(Number),
+    })
+    expect(
+      updated?.routeOverrides?.[AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn]
+        ?.observedAt,
+    ).toBeGreaterThanOrEqual(before)
+  })
+
+  it("does not offer a route path for a site whose methods have no route override", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.SUB2API
+    props.draft.checkIn = createCheckIn({
+      siteType: SITE_TYPES.SUB2API,
+      supported: true,
+    })
+
+    render(<AccountForm {...withSitePolicy(props)} />)
+
+    await screen.findByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.accountFormSectionCheckIn,
+    )
+    expect(
+      screen.queryByLabelText("accountDialog:form.checkInRoutePath"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("offers a route path before any method is confirmed", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NEW_API
+    props.draft.checkIn = createCheckIn({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+    })
+    const onCheckInChange = vi.mocked(props.onCheckInChange)
+
+    render(<AccountForm {...withSitePolicy(props)} />)
+
+    const field = await screen.findByLabelText(
+      "accountDialog:form.checkInRoutePath",
+    )
+    fireEvent.change(field, { target: { value: "/api/user/daily-9f3k" } })
+
+    expect(onCheckInChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        routeOverrides: {
+          [AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn]: expect.objectContaining(
+            { path: "/api/user/daily-9f3k" },
+          ),
+        },
+      }),
+    )
+  })
+
   it("updates auto check-in and custom check-in config with the expected fallback defaults", async () => {
     const user = userEvent.setup()
     const props = createProps()

@@ -72,7 +72,11 @@ export async function collectCheckInFeedbackClues(
   >()
 
   try {
-    const paths = getCheckInFeedbackStatusRoutes(input.siteType, input.baseUrl)
+    const paths = getCheckInFeedbackStatusRoutes(
+      input.siteType,
+      input.baseUrl,
+      input.routePaths,
+    )
     // Never substitute a browser's ambient session for a selected account's cookie.
     // Cookie isolation/temp-window recovery and token refresh can mutate session state;
     // this optional scan instead discloses the unavailable query and scans public assets.

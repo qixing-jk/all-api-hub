@@ -5,13 +5,13 @@ import { REQUEST_CONFIG } from "~/services/apiTransport/constant"
 import {
   fetchCheckedInTodayStatus,
   NEW_API_MESSAGE_KEYS,
+  resolveCheckInEndpoint,
   resolveCheckInUrl,
   resolveStandardCheckinResult,
   resolveTurnstilePreTrigger,
 } from "~/services/checkin/autoCheckin/providers/newApiProtocol"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
-  AUTO_CHECKIN_USER_CHECKIN_ENDPOINT,
   getEffectiveAuthType,
   normalizeCheckinMessage,
   readQuotaReward,
@@ -33,7 +33,6 @@ import { tempWindowTurnstileFetch } from "~/utils/browser/tempWindowFetch"
 import { joinUrl } from "~/utils/core/url"
 
 type CheckinResult = AutoCheckinProviderOutcome
-const ENDPOINT = AUTO_CHECKIN_USER_CHECKIN_ENDPOINT
 const TURNSTILE_ASSIST_TIMEOUT_MS = TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS
 /**
  * Determine whether a check-in failure message indicates Turnstile verification is required.
@@ -61,7 +60,7 @@ export function isTurnstileRelatedMessage(message: string): boolean {
 }
 
 /**
- * Fetch options used for the Turnstile-assisted POST /api/user/checkin replay.
+ * Fetch options used for the Turnstile-assisted replay of the account's check-in route.
  */
 function getTurnstileAssistedFetchOptions(account: SiteAccount): RequestInit {
   const authType = getEffectiveAuthType(account)
@@ -96,7 +95,7 @@ function buildTurnstileAssistedParams(
   tempWindowRequestSource: TempWindowRequestSource,
   protectionBypassExecution: ProtectionBypassExecution,
 ) {
-  const fetchUrl = joinUrl(account.site_url, ENDPOINT)
+  const fetchUrl = joinUrl(account.site_url, resolveCheckInEndpoint(account))
 
   return {
     originUrl: account.site_url,

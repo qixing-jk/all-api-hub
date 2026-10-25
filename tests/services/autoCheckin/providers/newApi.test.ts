@@ -375,6 +375,159 @@ describe("newApiProvider", () => {
     })
   })
 
+  describe("deployment-renamed route", () => {
+    const accountWithRoute = buildSiteAccount({
+      ...mockAccount,
+      checkIn: buildCheckInConfig({
+        automaticExecutionEnabled: true,
+        routeOverrides: {
+          "new-api:daily-checkin": {
+            path: "/api/user/daily-9f3k",
+            source: "manual",
+            observedAt: 1,
+          },
+        },
+      }),
+    })
+
+    it("reads status from the account's own path", async () => {
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
+        stats: { checked_in_today: false },
+      })
+      mockFetchSupportCheckIn.mockResolvedValueOnce(true)
+
+      await expect(
+        newApiProvider.detect!({ account: accountWithRoute, observedAt: 700 }),
+      ).resolves.toEqual({
+        detection: {
+          outcome: "matched",
+          evidence: { source: "probe", observedAt: 700 },
+        },
+        status: {
+          outcome: "known",
+          availability: "enabled",
+          today: "not_checked",
+          evidence: { source: "probe", observedAt: 700 },
+        },
+      })
+      expect(vi.mocked(newApiFamilyRequests.data).mock.calls[0]?.[1]).toEqual({
+        endpoint: expect.stringMatching(/^\/api\/user\/daily-9f3k\?month=/),
+      })
+    })
+
+    it("reports no availability when neither the body nor the public switch answers", async () => {
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
+        stats: { checked_in_today: true },
+      })
+      mockFetchSupportCheckIn.mockResolvedValueOnce(undefined)
+
+      await expect(
+        newApiProvider.detect!({ account: accountWithRoute, observedAt: 702 }),
+      ).resolves.toEqual({
+        detection: {
+          outcome: "matched",
+          evidence: { source: "probe", observedAt: 702 },
+        },
+        status: {
+          outcome: "known",
+          today: "checked",
+          evidence: { source: "probe", observedAt: 702 },
+        },
+      })
+    })
+
+    it("posts the mutation to the account's own path", async () => {
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
+        enabled: true,
+        stats: { checked_in_today: false },
+      })
+      vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
+        success: true,
+        message: "ok",
+        data: { quota_awarded: 10, checkin_date: formatLocalDayKey() },
+      })
+
+      await newApiProvider.checkIn(accountWithRoute, DEFAULT_PROVIDER_CONTEXT)
+
+      expect(
+        vi.mocked(newApiFamilyRequests.envelope).mock.calls[0]?.[1],
+      ).toEqual({
+        endpoint: "/api/user/daily-9f3k",
+        options: { method: "POST", body: "{}" },
+      })
+    })
+
+    it("keeps the canonical path and its strict payload for other accounts", async () => {
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
+        stats: { checked_in_today: false },
+      })
+      mockFetchSupportCheckIn.mockResolvedValueOnce(true)
+
+      await expect(
+        newApiProvider.detect!({ account: mockAccount, observedAt: 701 }),
+      ).resolves.toEqual({
+        outcome: "unknown",
+        reason: "invalid_response",
+        attemptedAt: 701,
+      })
+      expect(vi.mocked(newApiFamilyRequests.data).mock.calls[0]?.[1]).toEqual({
+        endpoint: expect.stringMatching(/^\/api\/user\/checkin\?month=/),
+      })
+    })
+
+    it("probes a candidate path without mutating", async () => {
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
+        stats: { checked_in_today: true, records: [] },
+      })
+
+      await expect(
+        newApiProvider.probeRouteOverride!({
+          account: mockAccount,
+          path: "/api/user/daily-9f3k",
+        }),
+      ).resolves.toEqual({
+        outcome: "known",
+        today: "checked",
+        evidence: { source: "probe", observedAt: expect.any(Number) },
+      })
+      expect(newApiFamilyRequests.envelope).not.toHaveBeenCalled()
+      expect(vi.mocked(newApiFamilyRequests.data).mock.calls[0]?.[1]).toEqual({
+        endpoint: expect.stringMatching(/^\/api\/user\/daily-9f3k\?month=/),
+      })
+    })
+
+    it.each([
+      { payload: { success: true, data: null } },
+      { payload: { stats: {} } },
+      { payload: { data: { checked_in_today: true } } },
+    ])(
+      "rejects a candidate path without a status body",
+      async ({ payload }) => {
+        vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce(payload)
+
+        await expect(
+          newApiProvider.probeRouteOverride!({
+            account: mockAccount,
+            path: "/api/user/decoy",
+          }),
+        ).resolves.toBeUndefined()
+      },
+    )
+
+    it("treats a failed candidate probe as no evidence", async () => {
+      vi.mocked(newApiFamilyRequests.data).mockRejectedValueOnce(
+        new ApiError("not found", 404, "/api/user/decoy"),
+      )
+
+      await expect(
+        newApiProvider.probeRouteOverride!({
+          account: mockAccount,
+          path: "/api/user/decoy",
+        }),
+      ).resolves.toBeUndefined()
+    })
+  })
+
   describe("checkIn", () => {
     it("preserves the popup source through native page check-in and status polling", async () => {
       vi.mocked(newApiFamilyRequests.envelope).mockResolvedValueOnce({
