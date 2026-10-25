@@ -681,6 +681,66 @@ describe("verificationResultHistoryStorage", () => {
     })
   })
 
+  it("migrates a legacy payload's drawing entries and drops malformed ones", async () => {
+    const storage = new Storage({ area: "local" })
+    await storage.set(
+      API_VERIFICATION_HISTORY_STORAGE_KEYS.VERIFICATION_RESULT_HISTORY,
+      // Version 0 predates drawing summaries, so this is the boundary check for
+      // a payload a previous build produced.
+      {
+        version: 0,
+        lastUpdated: 0,
+        summaries: [],
+        drawingSummaries: [
+          {
+            target: {
+              kind: "profile-model",
+              profileId: " profile-1 ",
+              modelId: " gpt-4.1 ",
+            },
+            verifiedAt: 12.6,
+            apiType: API_TYPES.OPENAI,
+            modelId: " gpt-4.1 ",
+            latencyMs: 120.4,
+            executionMode: "unknown-mode",
+            outcome: DRAWING_VERIFICATION_OUTCOMES.Generated,
+            steps: 3.2,
+            calls: -1,
+            files: "nope",
+          },
+          { target: { kind: "profile" }, outcome: "not-a-real-outcome" },
+          { target: { kind: "profile-model", profileId: "p", modelId: "m" } },
+          "not-an-object",
+        ],
+      },
+    )
+
+    const target = createProfileModelVerificationHistoryTarget(
+      "profile-1",
+      "gpt-4.1",
+    )!
+    const migrated =
+      await verificationResultHistoryStorage.getDrawingSummary(target)
+
+    expect(migrated).toEqual({
+      target: {
+        kind: "profile-model",
+        profileId: "profile-1",
+        modelId: "gpt-4.1",
+      },
+      targetKey: "profile:profile-1:model:gpt-4.1",
+      verifiedAt: 13,
+      apiType: API_TYPES.OPENAI,
+      modelId: "gpt-4.1",
+      latencyMs: 120,
+      executionMode: PELICAN_EXECUTION_MODES.Reply,
+      outcome: DRAWING_VERIFICATION_OUTCOMES.Generated,
+      steps: 3,
+      calls: 0,
+      files: 0,
+    })
+  })
+
   it("returns keyed summaries for requested targets and an empty map for no targets", async () => {
     const profileTarget = createProfileModelVerificationHistoryTarget(
       "profile-9",
@@ -854,6 +914,70 @@ describe("verificationResultHistoryStorage", () => {
         probes: [],
       } as any),
     ).rejects.toThrow("Invalid verification history summary")
+    await expect(
+      verificationResultHistoryStorage.upsertDrawingSummary({
+        target: { kind: "profile", profileId: "profile-1" },
+        targetKey: "profile:profile-1",
+        verifiedAt: Date.now(),
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        modelId: "gpt-test",
+        latencyMs: 1,
+        executionMode: PELICAN_EXECUTION_MODES.Reply,
+        outcome: "not-a-real-outcome",
+        steps: 1,
+        calls: 0,
+        files: 0,
+      } as any),
+    ).rejects.toThrow("Invalid drawing verification summary")
+  })
+
+  it("resolves a profile-target drawing to its newest model run", async () => {
+    const older = createProfileModelVerificationHistoryTarget("p", "old")!
+    const newer = createProfileModelVerificationHistoryTarget("p", "new")!
+    const drawing = (
+      target: typeof older,
+      verifiedAt: number,
+      modelId: string,
+    ) =>
+      ({
+        target,
+        targetKey: "ignored",
+        verifiedAt,
+        apiType: API_TYPES.OPENAI,
+        modelId,
+        latencyMs: 10,
+        executionMode: PELICAN_EXECUTION_MODES.Reply,
+        outcome: DRAWING_VERIFICATION_OUTCOMES.Generated,
+        steps: 1,
+        calls: 0,
+        files: 0,
+      }) as const
+
+    await verificationResultHistoryStorage.upsertDrawingSummary(
+      drawing(older, Date.now() - 1000, "old"),
+    )
+    // An unrelated profile must not satisfy the lookup.
+    await verificationResultHistoryStorage.upsertDrawingSummary(
+      drawing(
+        createProfileModelVerificationHistoryTarget("other", "x")!,
+        Date.now(),
+        "x",
+      ),
+    )
+    await verificationResultHistoryStorage.upsertDrawingSummary(
+      drawing(newer, Date.now(), "new"),
+    )
+
+    expect(
+      await verificationResultHistoryStorage.getDrawingSummary(
+        createProfileVerificationHistoryTarget("p")!,
+      ),
+    ).toMatchObject({ modelId: "new" })
+    expect(
+      await verificationResultHistoryStorage.getDrawingSummary(
+        createProfileVerificationHistoryTarget("missing")!,
+      ),
+    ).toBeNull()
   })
 
   it("writes one batch with a single storage write", async () => {

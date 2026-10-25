@@ -541,4 +541,25 @@ describe("runPelicanTest", () => {
       runPelicanTest({ ...BASE_PARAMS, abortSignal: controller.signal }),
     ).rejects.toMatchObject({ name: "AbortError" })
   })
+
+  it("keeps an HTTP status and redacts the credential from a provider failure", async () => {
+    server.use(
+      http.post(`${baseUrl}/v1/chat/completions`, () =>
+        HttpResponse.json(
+          { error: { message: `bad key ${BASE_PARAMS.apiKey}` } },
+          { status: 401 },
+        ),
+      ),
+    )
+
+    // The caller needs the status to say "auth failed", but never the key.
+    const failure = await runPelicanTest(BASE_PARAMS).catch(
+      (error: unknown) => error,
+    )
+
+    expect(failure).toBeInstanceOf(Error)
+    expect((failure as Error).message).toContain("HTTP 401")
+    expect((failure as Error).message).not.toContain(BASE_PARAMS.apiKey)
+    expect((failure as Error & { status?: number }).status).toBe(401)
+  })
 })

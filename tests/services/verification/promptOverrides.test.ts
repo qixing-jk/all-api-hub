@@ -112,4 +112,17 @@ describe("prompt override persistence", () => {
 
     await expect(saveProbePromptOverrides({})).rejects.toThrow("storage locked")
   })
+
+  it("reports a conflicted write with both timestamps instead of a bare failure", async () => {
+    mockSetVerificationProbePrompts.mockResolvedValue({
+      ok: false,
+      reason: { type: "stale", expectedLastUpdated: 7, actualLastUpdated: 9 },
+    })
+
+    // Prompt saving has no concurrency contract, so the caller must be able to
+    // tell a lost update from a storage fault.
+    await expect(saveProbePromptOverrides({})).rejects.toThrow(
+      "probe prompt write rejected (stale): expected lastUpdated 7, found 9",
+    )
+  })
 })

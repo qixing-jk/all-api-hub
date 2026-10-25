@@ -249,6 +249,40 @@ describe("useVerificationTools", () => {
     }
   })
 
+  it("keeps the drawing usable when restored history cannot be read or written", async () => {
+    mockGetDrawing.mockRejectedValue(new Error("history read failed"))
+    const { result } = renderHook(() =>
+      useVerificationTools({
+        resolveRequest: async () => buildRequest(),
+        isSupported: true,
+        isBlocked: false,
+        historyTarget: { kind: "profile", profileId: "profile-1" },
+        historyApiType: "openai-compatible",
+      }),
+    )
+
+    // A broken history store degrades to "no history"; it must not block the run.
+    await waitFor(() =>
+      expect(result.current.pelicanErrorMessage).toContain(
+        "history read failed",
+      ),
+    )
+    expect(result.current.canRunPelican).toBe(true)
+
+    mockRunPelicanTest.mockResolvedValue(buildPelicanResult())
+    mockSaveDrawing.mockRejectedValue(new Error("history write failed"))
+    act(() => result.current.runPelican())
+
+    await waitFor(() =>
+      expect(result.current.pelicanStatus).toBe(
+        VERIFICATION_TOOL_STATUSES.Done,
+      ),
+    )
+    // The drawing still renders; only the persisted summary is reported as lost.
+    expect(result.current.pelican?.svg).toBe("<svg/>")
+    expect(result.current.pelicanErrorMessage).toContain("history write failed")
+  })
+
   it("runs the drawing test and stores the result", async () => {
     mockRunPelicanTest.mockResolvedValue(buildPelicanResult())
 
