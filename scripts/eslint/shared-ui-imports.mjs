@@ -14,6 +14,21 @@ const workflowNames =
 const helpNames =
   /^(?:CircleHelp|HelpCircle|CircleQuestionMark|CircleQuestion)(?:Icon)?$/
 
+/**
+ * Resolve the module source of an import/export node.
+ * `import(\`react-tooltip\`)` parses to a TemplateLiteral, which has no `.value`,
+ * so a constant template literal is read through its cooked quasis instead.
+ */
+const resolveSource = (node) => {
+  const source = node.source
+  if (typeof source?.value === "string") return source.value
+  if (source?.type !== "TemplateLiteral" || source.expressions.length > 0) {
+    return null
+  }
+  const cooked = source.quasis[0]?.value?.cooked
+  return cooked ?? null
+}
+
 /** Enforce shared UI owners without guessing the meaning of generic Info icons. */
 export const sharedUiImportsRule = {
   meta: {
@@ -32,7 +47,7 @@ export const sharedUiImportsRule = {
   create(context) {
     const file = relative(context.cwd, context.filename).replaceAll("\\", "/")
     const check = (node) => {
-      const source = node.source?.value
+      const source = resolveSource(node)
       if (typeof source !== "string") return
       if (/^react-tooltip(?:\/|$)/.test(source)) {
         if (file !== "src/components/Tooltip.tsx") {

@@ -108,6 +108,7 @@ describe("shared help and tooltip boundaries", () => {
     'export * from "lucide-react"',
     'export * as Icons from "lucide-react"',
     'const icons = import("lucide-react")',
+    "const icons = import(`lucide-react`)",
   ])(
     "rejects namespace access that hides restricted glyphs: %s",
     async (code) => {
@@ -127,11 +128,19 @@ describe("shared help and tooltip boundaries", () => {
     'import { Tooltip as Hint } from "react-tooltip"',
     'export { Tooltip } from "react-tooltip"',
     'const tooltips = import("react-tooltip")',
+    "const tooltips = import(`react-tooltip`)",
     'import { Tooltip } from "react-tooltip/dist/react-tooltip"',
   ])("rejects direct third-party tooltip access: %s", async (code) => {
     const messages = await check(code)
     expect(messages).toHaveLength(1)
     expect(messages[0]?.message).toContain("~/components/Tooltip")
+  })
+
+  it("ignores dynamic import sources it cannot resolve statically", async () => {
+    expect(await check("const mod = import(`react-tooltip/${kind}`)")).toEqual(
+      [],
+    )
+    expect(await check("const mod = import(name)")).toEqual([])
   })
 
   it.each([
