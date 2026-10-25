@@ -540,6 +540,25 @@ describe("pmApiProvider", () => {
     })
     expect(tempWindowTriggerCheckinPageAction).not.toHaveBeenCalled()
   })
+  it("reads status using the stored account when no explicit request was supplied", async () => {
+    server.use(
+      http.get(`${origin}/api/status`, () =>
+        HttpResponse.json(envelope({ checkin_enabled: true })),
+      ),
+      http.get(`${origin}/api/me`, () =>
+        HttpResponse.json(envelope(identity(false))),
+      ),
+    )
+    expect(
+      await pmApiProvider.getStatus!({ account, observedAt: 1 }),
+    ).toMatchObject({
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+      today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+    })
+  })
+  it("does not probe without either account or request", async () => {
+    expect(await pmApiProvider.getStatus!({ observedAt: 1 })).toBeUndefined()
+  })
 })
 
 function executionContext() {

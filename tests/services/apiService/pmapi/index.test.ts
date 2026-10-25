@@ -780,4 +780,28 @@ describe("PM-API reported error and capability coverage", () => {
         .consumption,
     ).toMatchObject({ status: "unavailable" })
   })
+  it("keeps malformed numeric stats unavailable while retaining account balance", async () => {
+    server.use(
+      http.get(`${origin}/api/me/stats`, () =>
+        HttpResponse.json(
+          envelope({ today: { quota: -1, requests: 0, tokens: 0 } }),
+        ),
+      ),
+    )
+    const result = await fetchAccountData(accountRequest())
+    expect(result.quota).toBe(1250000)
+    expect(result.todayStatsAvailability!.consumption).toMatchObject({
+      status: "unavailable",
+    })
+  })
+  it("retains bare pricing groups without manufacturing descriptions", async () => {
+    server.use(
+      http.get(`${origin}/api/pricing`, () =>
+        HttpResponse.json(envelope({ groups: [{ name: "Free", ratio: 0 }] })),
+      ),
+    )
+    expect(await fetchPmApiGroupCatalog(accountRequest())).toEqual([
+      { name: "Free", ratio: 0 },
+    ])
+  })
 })

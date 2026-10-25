@@ -267,4 +267,33 @@ describe("PM-API model pricing", () => {
       ).rejects.toMatchObject({ code: "JSON_PARSE_ERROR" })
     },
   )
+  it("keeps an empty authoritative group list and default completion ratio without usable metadata", async () => {
+    server.use(
+      http.get(`${origin}/api/pricing`, () =>
+        HttpResponse.json(
+          envelope({
+            models: [
+              {
+                model: "model-a",
+                available: true,
+                billing: "per_request",
+                price: 1,
+                vendor: "test",
+                groups: [],
+              },
+            ],
+          }),
+        ),
+      ),
+      http.get(`${origin}/api/me`, () =>
+        HttpResponse.json({}, { status: 401 }),
+      ),
+    )
+    const result = await pmApiModelPricing.fetchPricing(request)
+    expect(result.groupAccess).toEqual({
+      kind: "authoritative",
+      usableGroups: [],
+    })
+    expect(result.data[0]?.completion_ratio).toBe(1)
+  })
 })

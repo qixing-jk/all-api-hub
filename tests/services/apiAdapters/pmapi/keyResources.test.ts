@@ -355,6 +355,39 @@ describe("PM-API key resources", () => {
       kind: "unavailable",
     })
   })
+  it("preserves a key's expiry and retired group while editing", async () => {
+    mockTokens([{ grp: "retired", expired_at: 1893456000 }])
+    const editor = await (await openCollection()).openEditEditor(ref)
+    expect(editor.initialValues).toMatchObject({
+      [pmFields.Group]: "retired",
+      [pmFields.ExpiresAt]: "2030-01-01T00:00:00.000Z",
+    })
+    expect(
+      editor.fields.find((field) => field.fieldId === pmFields.Group),
+    ).toMatchObject({
+      options: expect.arrayContaining([
+        { value: "retired", displayLabel: "retired", secondaryLabel: "×1" },
+      ]),
+    })
+  })
+  it("surfaces an upstream update rejection instead of reporting a saved key", async () => {
+    mockTokens([{}])
+    server.use(
+      http.put(`${origin}/api/tokens/6741`, () =>
+        HttpResponse.json({
+          success: false,
+          message: "update refused",
+          data: null,
+        }),
+      ),
+    )
+    const editor = await (await openCollection()).openEditEditor(ref)
+    await expect(
+      editor.submit({ ...editor.initialValues, name: "updated" }),
+    ).rejects.toMatchObject({
+      failure: { code: "upstream_rejected" },
+    })
+  })
 })
 
 function mockIdentityForCreate() {
