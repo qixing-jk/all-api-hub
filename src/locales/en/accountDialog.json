@@ -226,7 +226,7 @@
     "editInfo": "Edit Account Information",
     "editInfoDesc": "After modifying the account information, the system will re-verify and get the latest balance data",
     "ldohSiteListHint": "No site yet? LDOH provides a directory of many public-benefit AI sites from the Linux.do community.",
-    "managementKeyBootstrap": "Create an {{siteName}} Management Key",
+    "managementKeyBootstrap": "Create {{siteName}} Management Key",
     "managementKeyBootstrapInfo": "This action creates a new Management Key in {{siteName}}, then uses it to detect and fill in the account details.",
     "manualAdd": "Manual Add",
     "manualInfo": "Manually fill in the account information. The account will be saved securely in local storage",

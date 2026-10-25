@@ -176,7 +176,7 @@
     "redetectCheckInMethods": "Detectar o método de check-in",
     "redetectingCheckInMethods": "Detectando método de check-in...",
     "requestyManageKey": "Chave de gerenciamento do Requesty",
-    "requestyManageKeyGuidance": "Crie uma nova chave de gerenciamento com permissoes de administrador ativadas na pagina API Keys do Requesty, copie-a imediatamente e cole aqui. Chaves existentes nao podem ser reveladas novamente.",
+    "requestyManageKeyGuidance": "Crie uma nova chave de gerenciamento com permissões de administrador ativadas na página API Keys do Requesty, copie-a imediatamente e cole aqui. Chaves existentes não podem ser reveladas novamente.",
     "requestyManageKeyGuidanceTitle": "Usar uma chave de gerenciamento do Requesty",
     "requestyManageKeyValidationFailed": "A chave de gerenciamento foi mantida no formulário, mas não pôde ser verificada. Confira suas Admin Permissions e tente novamente. A tentativa usará esta chave sem criar outra.",
     "requestyReusedManageKey": "Este site já tem uma conta com chave de gerenciamento salva, então ela foi reutilizada e nenhuma nova foi criada. Para adicionar outra organização Requesty, entre no console dela, crie uma chave com Admin Permissions e cole abaixo.",
