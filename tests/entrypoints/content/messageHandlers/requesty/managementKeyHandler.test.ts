@@ -62,6 +62,21 @@ describe("Requesty management key action handler", () => {
       "not_dispatched",
       "organization_unavailable",
     ],
+    [
+      {
+        kind: REQUESTY_MANAGEMENT_KEY_READ_KINDS.Response,
+        response: {
+          channel: REQUESTY_MANAGEMENT_KEY_CHANNEL,
+          kind: REQUESTY_MANAGEMENT_KEY_RESPONSE_KIND,
+          correlationId: "correlation-1",
+          ok: false,
+          reason: "plaintext_missing",
+        },
+      },
+      // The create POST was already sent, so the account may hold a key.
+      "dispatched_unconfirmed",
+      "plaintext_missing",
+    ],
   ] as const)(
     "preserves the failure envelope for %j",
     async (outcome, state, reason) => {

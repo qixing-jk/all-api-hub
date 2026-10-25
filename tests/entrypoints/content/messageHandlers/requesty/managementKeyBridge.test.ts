@@ -81,4 +81,81 @@ describe("Requesty management key creation", () => {
       expect(fetch).toHaveBeenCalledTimes(2)
     },
   )
+
+  it("keeps a rejected organization read as not dispatched", async () => {
+    vi.stubGlobal("window", {
+      Clerk: {
+        loaded: true,
+        session: { getToken: vi.fn().mockResolvedValue("console-token") },
+      },
+    })
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce({ status: 403, json: async () => ({}) })
+      .mockResolvedValueOnce({
+        status: 200,
+        json: async () => ({ api_key_id: "key-created", api_key: "rqsty" }),
+      })
+    vi.stubGlobal("fetch", fetch)
+
+    await expect(
+      createRequestyManagementKeyInPage("All API Hub"),
+    ).resolves.toEqual({
+      ok: false,
+      reason: "organization_unavailable",
+    })
+    // The create POST must not run before the organization read succeeds.
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ["a rejected create", { status: 500, json: async () => ({}) }],
+    [
+      "a create whose one-time plaintext is unreadable",
+      { status: 200, json: async () => ({ api_key_id: "key-created" }) },
+    ],
+  ])("reports %s as possibly dispatched", async (_label, createResponse) => {
+    vi.stubGlobal("window", {
+      Clerk: {
+        loaded: true,
+        session: { getToken: vi.fn().mockResolvedValue("console-token") },
+      },
+    })
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce({ status: 200, json: async () => ({}) })
+      .mockResolvedValueOnce(createResponse)
+    vi.stubGlobal("fetch", fetch)
+
+    // The POST already left the extension, so the provider may hold a key that
+    // no response can prove; only a pre-dispatch refusal is `create_rejected`.
+    await expect(
+      createRequestyManagementKeyInPage("All API Hub"),
+    ).resolves.toEqual({
+      ok: false,
+      reason: "plaintext_missing",
+    })
+    expect(fetch).toHaveBeenCalledTimes(2)
+  })
+
+  it("reports a create that failed in flight as possibly dispatched", async () => {
+    vi.stubGlobal("window", {
+      Clerk: {
+        loaded: true,
+        session: { getToken: vi.fn().mockResolvedValue("console-token") },
+      },
+    })
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce({ status: 200, json: async () => ({}) })
+      .mockRejectedValueOnce(new Error("network reset"))
+    vi.stubGlobal("fetch", fetch)
+
+    await expect(
+      createRequestyManagementKeyInPage("All API Hub"),
+    ).resolves.toEqual({
+      ok: false,
+      reason: "plaintext_missing",
+    })
+  })
 })

@@ -175,9 +175,11 @@ export async function createRequestyManagementKeyInPage(
     )
     const credential = readRequestyCreatedKey(created.payload)
     if (created.status !== 200 || !credential) {
+      // The POST already reached the provider, so a rejection or an unreadable
+      // body cannot prove that no key was created.
       return {
         ok: false,
-        reason: REQUESTY_PROVISIONING_FAILURE_REASONS.CreateRejected,
+        reason: REQUESTY_PROVISIONING_FAILURE_REASONS.PlaintextMissing,
       }
     }
     return {
@@ -188,7 +190,7 @@ export async function createRequestyManagementKeyInPage(
   } catch {
     return {
       ok: false,
-      reason: REQUESTY_PROVISIONING_FAILURE_REASONS.CreateRejected,
+      reason: REQUESTY_PROVISIONING_FAILURE_REASONS.PlaintextMissing,
     }
   }
 }

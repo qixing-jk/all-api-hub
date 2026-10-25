@@ -81,7 +81,13 @@ export function handleRequestyManagementKeyAction(
         createRequestyManagementKeyFailure(
           request.requestId,
           name,
-          REQUESTY_PROVISIONING_STATES.NotDispatched,
+          // The create POST is only sent by the page before a create failure, so
+          // a dispatched-but-unreadable outcome must not be reported as a
+          // refusal that never reached the provider.
+          response.reason ===
+            REQUESTY_PROVISIONING_FAILURE_REASONS.PlaintextMissing
+            ? REQUESTY_PROVISIONING_STATES.DispatchedUnconfirmed
+            : REQUESTY_PROVISIONING_STATES.NotDispatched,
           response.reason,
         ),
       )
