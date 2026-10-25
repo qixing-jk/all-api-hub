@@ -10,6 +10,7 @@ import {
   Input,
   Modal,
 } from "~/components/ui"
+import { useCredentialExportDisplayName } from "~/features/CredentialExport/useCredentialExportDisplayName"
 import { fetchOpenAICompatibleModels } from "~/services/aiApi/openaiCompatible"
 import { sanitizeHeaderOverrideError } from "~/services/apiTransport/headerOverrides"
 import { importToClaudeCodeRouter } from "~/services/integrations/claudeCodeRouterService"
@@ -91,6 +92,7 @@ export function ClaudeCodeRouterImportDialog(
 
   const { t } = useTranslation(["ui", "common"])
 
+  const defaultProviderName = useCredentialExportDisplayName(source)
   const [providerName, setProviderName] = useState("")
   const [providerApiBaseUrl, setProviderApiBaseUrl] = useState("")
   const [restartAfterSave, setRestartAfterSave] = useState(true)
@@ -102,12 +104,12 @@ export function ClaudeCodeRouterImportDialog(
 
   useEffect(() => {
     if (!isOpen) return
-    setProviderName(source.providerName || source.baseUrl)
+    setProviderName(defaultProviderName || source.baseUrl)
     setProviderApiBaseUrl(
       buildDefaultProviderApiBaseUrlFromBaseUrl(source.baseUrl),
     )
     setRestartAfterSave(true)
-  }, [isOpen, source.providerName, source.baseUrl])
+  }, [defaultProviderName, isOpen, source.baseUrl])
 
   const [selectedModels, setSelectedModels] = useState<string[]>([])
 

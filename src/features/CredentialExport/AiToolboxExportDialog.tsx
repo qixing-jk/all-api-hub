@@ -25,6 +25,7 @@ import {
 } from "~/components/ui"
 import { AI_TOOLBOX_EXPORT_TEST_IDS } from "~/features/CredentialExport/AiToolboxExportDialog.testIds"
 import { UPSTREAM_MODEL_FETCH_DEBOUNCE_MS } from "~/features/CredentialExport/ClaudeCodeRouterImportDialog"
+import { useCredentialExportDisplayName } from "~/features/CredentialExport/useCredentialExportDisplayName"
 import {
   buildProviderModelDiscoveryCacheKey,
   PROVIDER_MODEL_DISCOVERY_STATUSES,
@@ -182,7 +183,8 @@ export function AiToolboxExportDialog(props: AiToolboxExportDialogProps) {
     useState<ApiFormatOption>(AUTOMATIC_API_FORMAT)
   const [model, setModel] = useState("")
   const [notes, setNotes] = useState("")
-  const [providerName, setProviderName] = useState(source.providerName)
+  const defaultProviderName = useCredentialExportDisplayName(source)
+  const [providerName, setProviderName] = useState(defaultProviderName)
   const [homepage, setHomepage] = useState(source.baseUrl)
   // AI Toolbox writes this straight into each target's own config and only
   // adapts the address when the link claims a `sourceApp` plus `baseUrlStyle`,
@@ -292,7 +294,7 @@ export function AiToolboxExportDialog(props: AiToolboxExportDialogProps) {
       setApiFormat(AUTOMATIC_API_FORMAT)
       setModel("")
       setNotes(source.notes ?? "")
-      setProviderName(source.providerName)
+      setProviderName(defaultProviderName)
       setHomepage(source.baseUrl)
       setBaseUrl(
         getAppDefaultBaseUrl(
@@ -304,12 +306,12 @@ export function AiToolboxExportDialog(props: AiToolboxExportDialogProps) {
       setIsBaseUrlCustomized(false)
     }
   }, [
+    defaultProviderName,
     isOpen,
     source.anthropicBaseUrl,
     source.baseUrl,
     source.id,
     source.notes,
-    source.providerName,
   ])
 
   // Follow the app's own address shape until the user edits the field, so an

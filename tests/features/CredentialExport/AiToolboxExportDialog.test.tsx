@@ -4,9 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { AiToolboxExportDialog } from "~/features/CredentialExport/AiToolboxExportDialog"
 import { AI_TOOLBOX_EXPORT_TEST_IDS } from "~/features/CredentialExport/AiToolboxExportDialog.testIds"
-import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
-import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
-import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
+import { createProfileCredentialExportSource } from "~/services/apiCredentialProfiles/credentialExport"
 import { AI_TOOLBOX_API_FORMATS } from "~/services/integrations/aiToolbox"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -16,12 +14,11 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import type { DisplaySiteData } from "~/types"
-import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
 import {
-  buildDisplaySiteData,
-  buildNewApiToken,
-} from "~~/tests/test-utils/factories"
+  createAccountExportSource,
+  createKimiExportSource,
+} from "~~/tests/test-utils/credentialExportSources"
+import { buildApiCredentialProfile } from "~~/tests/test-utils/factories"
 import {
   act,
   fireEvent,
@@ -29,65 +26,6 @@ import {
   screen,
   waitFor,
 } from "~~/tests/test-utils/render"
-
-/** Keep export fixtures valid while making each test's credential inputs explicit. */
-function createAccountExportSource(
-  accountOverrides: Partial<DisplaySiteData>,
-  tokenOverrides: Partial<NewApiToken>,
-) {
-  const account = buildDisplaySiteData({
-    siteType: SITE_TYPES.NEW_API,
-    ...accountOverrides,
-  })
-  return createAccountRuntimeKeyExportSource(
-    account,
-    buildNewApiRuntimeKey(account, buildNewApiToken(tokenOverrides)),
-    { preferCurrentSecret: true },
-  )
-}
-
-/**
- * Source whose Anthropic and OpenAI-compatible inference addresses differ
- * (Kimi Global), so the Claude export field is Anthropic-shaped while model
- * discovery must keep searching the OpenAI-compatible route.
- */
-function createKimiExportSource() {
-  const account = buildDisplaySiteData({
-    id: "kimi-account",
-    name: "Kimi",
-    siteType: SITE_TYPES.KIMI_GLOBAL,
-    baseUrl: "https://platform.kimi.ai",
-  })
-  const key = buildAccountKeyResourceRuntimeKey(account, {
-    ref: {
-      accountId: account.id,
-      siteType: account.siteType,
-      scopeKey: "organization:test",
-      resourceId: "key:test",
-    },
-    label: "Kimi key",
-    secret: "sk-test",
-  })
-  return createAccountRuntimeKeyExportSource(account, key, {
-    preferCurrentSecret: true,
-  })
-}
-
-/** Source whose secret always resolves through the mocked async account read. */
-function createDeferredAccountExportSource(
-  accountOverrides: Partial<DisplaySiteData>,
-  tokenOverrides: Partial<NewApiToken>,
-) {
-  const account = buildDisplaySiteData({
-    siteType: SITE_TYPES.NEW_API,
-    ...accountOverrides,
-  })
-  return createAccountRuntimeKeyExportSource(
-    account,
-    buildNewApiRuntimeKey(account, buildNewApiToken(tokenOverrides)),
-    { preferCurrentSecret: false },
-  )
-}
 
 const mockFetchModelIds = vi.fn()
 const mockOpenInAiToolbox = vi.fn()
@@ -274,6 +212,39 @@ describe("AiToolboxExportDialog", () => {
     expect(await screen.findByText("gpt-4")).toBeInTheDocument()
   })
 
+  it("prefills the provider name with the site and key", async () => {
+    render(
+      <AiToolboxExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createAccountExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" },
+          { key: "sk-test" },
+        )}
+      />,
+    )
+
+    expect(
+      await screen.findByLabelText("ui:dialog.aiToolbox.fields.name"),
+    ).toHaveValue("Example - Test Token")
+  })
+
+  it("does not repeat a profile name that already carries its key", async () => {
+    render(
+      <AiToolboxExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createProfileCredentialExportSource(
+          buildApiCredentialProfile({ name: "Example - Key A" }),
+        )}
+      />,
+    )
+
+    expect(
+      await screen.findByLabelText("ui:dialog.aiToolbox.fields.name"),
+    ).toHaveValue("Example - Key A")
+  })
+
   it("prefills the base URL with the stored credential URL", async () => {
     render(
       <AiToolboxExportDialog
@@ -332,7 +303,7 @@ describe("AiToolboxExportDialog", () => {
         app: "opencode",
         model: undefined,
         notes: "token note",
-        name: "Profile Provider",
+        name: "Profile Provider - Test Token",
         homepage: "https://x.test",
         endpoint: "https://x.test/v1",
         apiFormat: undefined,
@@ -968,9 +939,10 @@ describe("AiToolboxExportDialog", () => {
       <AiToolboxExportDialog
         isOpen={true}
         onClose={onClose}
-        source={createDeferredAccountExportSource(
+        source={createAccountExportSource(
           { id: "acc", name: "Example", baseUrl: "https://x.test/v1" },
           { key: "sk-test" },
+          { preferCurrentSecret: false },
         )}
       />,
     )
@@ -1008,9 +980,10 @@ describe("AiToolboxExportDialog", () => {
       <AiToolboxExportDialog
         isOpen={true}
         onClose={() => {}}
-        source={createDeferredAccountExportSource(
+        source={createAccountExportSource(
           { id: "acc", name: "Example", baseUrl: "https://x.test/v1" },
           { key: "sk-test" },
+          { preferCurrentSecret: false },
         )}
       />,
     )

@@ -4,10 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { CCSwitchExportDialog } from "~/features/CredentialExport/CCSwitchExportDialog"
 import { CC_SWITCH_EXPORT_TEST_IDS } from "~/features/CredentialExport/CCSwitchExportDialog.testIds"
-import { buildAccountKeyResourceRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
-import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
 import { createProfileCredentialExportSource } from "~/services/apiCredentialProfiles/credentialExport"
-import type { NewApiToken } from "~/services/apiService/newApiFamily/tokenTypes"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -16,58 +13,14 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
-import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
-import { buildNewApiRuntimeKey } from "~~/tests/test-utils/accountKeyFixtures"
-import { createDeferred } from "~~/tests/test-utils/deferred"
 import {
-  buildDisplaySiteData,
-  buildNewApiToken,
-} from "~~/tests/test-utils/factories"
+  createAccountExportSource,
+  createKimiExportSource,
+} from "~~/tests/test-utils/credentialExportSources"
+import { createDeferred } from "~~/tests/test-utils/deferred"
+import { buildApiCredentialProfile } from "~~/tests/test-utils/factories"
 import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
-
-/** Keep export fixtures valid while making each test's credential inputs explicit. */
-function createAccountExportSource(
-  accountOverrides: Partial<DisplaySiteData>,
-  tokenOverrides: Partial<NewApiToken>,
-) {
-  const account = buildDisplaySiteData({
-    siteType: SITE_TYPES.NEW_API,
-    ...accountOverrides,
-  })
-  return createAccountRuntimeKeyExportSource(
-    account,
-    buildNewApiRuntimeKey(account, buildNewApiToken(tokenOverrides)),
-    { preferCurrentSecret: true },
-  )
-}
-
-/**
- * Source whose Anthropic and OpenAI-compatible inference addresses differ
- * (Kimi Global), so the Claude export endpoint is Anthropic-shaped while model
- * discovery must keep searching the OpenAI-compatible route.
- */
-function createKimiExportSource() {
-  const account = buildDisplaySiteData({
-    id: "kimi-account",
-    name: "Kimi",
-    siteType: SITE_TYPES.KIMI_GLOBAL,
-    baseUrl: "https://platform.kimi.ai",
-  })
-  const key = buildAccountKeyResourceRuntimeKey(account, {
-    ref: {
-      accountId: account.id,
-      siteType: account.siteType,
-      scopeKey: "organization:test",
-      resourceId: "key:test",
-    },
-    label: "Kimi key",
-    secret: "sk-test",
-  })
-  return createAccountRuntimeKeyExportSource(account, key, {
-    preferCurrentSecret: true,
-  })
-}
 
 const mockDiscoverOpenAICompatibleModels = vi.fn()
 const mockOpenInCCSwitch = vi.fn()
@@ -221,6 +174,43 @@ describe("CCSwitchExportDialog", () => {
       appSelect.compareDocumentPosition(nameInput) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).not.toBe(0)
+  })
+
+  it("prefills the provider name with the site and key", async () => {
+    mockDiscoverOpenAICompatibleModels.mockResolvedValue(createModelDiscovery())
+
+    render(
+      <CCSwitchExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createAccountExportSource(
+          { id: "acc", name: "Example", baseUrl: "https://x.test/v1" },
+          { key: "sk-test" },
+        )}
+      />,
+    )
+
+    expect(
+      await screen.findByLabelText("ui:dialog.ccswitch.fields.name"),
+    ).toHaveValue("Example - Test Token")
+  })
+
+  it("does not repeat a profile name that already carries its key", async () => {
+    mockDiscoverOpenAICompatibleModels.mockResolvedValue(createModelDiscovery())
+
+    render(
+      <CCSwitchExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        source={createProfileCredentialExportSource(
+          buildApiCredentialProfile({ name: "Example - Key A" }),
+        )}
+      />,
+    )
+
+    expect(
+      await screen.findByLabelText("ui:dialog.ccswitch.fields.name"),
+    ).toHaveValue("Example - Key A")
   })
 
   it("loads upstream model ids and exposes them as a selectable default model", async () => {
