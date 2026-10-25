@@ -4,6 +4,7 @@ import {
   CHECK_IN_ROUTE_OVERRIDE_SOURCES,
 } from "~/constants/checkIn"
 import {
+  normalizeCheckInRoutePath,
   readCheckInRouteOverride,
   withCheckInRouteOverride,
 } from "~/services/checkin/autoCheckin/configuration/routeOverrides"
@@ -68,7 +69,7 @@ function selectCandidatePaths(input: {
   const seen = new Set<string>()
   const candidates: string[] = []
   for (const route of input.routes) {
-    if (route === input.excludedPath) {
+    if (route === input.excludedPath || !normalizeCheckInRoutePath(route)) {
       continue
     }
     if (seen.has(route)) continue

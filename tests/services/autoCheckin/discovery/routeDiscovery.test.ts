@@ -50,6 +50,21 @@ describe("check-in route discovery", () => {
     )
   })
 
+  it("retains configuration when the asset scan fails", async () => {
+    mockCollectFeedbackCluesInBrowser.mockRejectedValueOnce(
+      new Error("unavailable"),
+    )
+    await expect(
+      discoverCheckInRouteOverrides({
+        account,
+        config: account.checkIn,
+        detections: { [METHOD_ID]: detection("invalid_response") },
+        context: {},
+      }),
+    ).resolves.toBe(account.checkIn)
+    expect(probe).not.toHaveBeenCalled()
+  })
+
   it.each([
     ["permission_denied", detection("permission_denied")],
     ["invalid_response", detection("invalid_response")],
@@ -225,5 +240,35 @@ describe("check-in route discovery", () => {
 
     expect(config).toBe(account.checkIn)
     expect(probe).not.toHaveBeenCalled()
+  })
+
+  it("skips malformed paths before spending the probe budget", async () => {
+    mockCollectFeedbackCluesInBrowser.mockResolvedValue(
+      clues([
+        "/api/checkin?month=bad",
+        "/api/checkin#fragment",
+        "/api/check\\in",
+        "/api/daily invalid",
+        "//other.invalid/checkin",
+        FORK_PATH,
+      ]),
+    )
+    probe.mockImplementation(async ({ path }) =>
+      path === FORK_PATH
+        ? {
+            outcome: "known",
+            today: "not_checked",
+            evidence: { source: "probe", observedAt: 10 },
+          }
+        : undefined,
+    )
+    const result = await discoverCheckInRouteOverrides({
+      account,
+      config: account.checkIn,
+      detections: { [METHOD_ID]: detection("invalid_response") },
+      context: {},
+    })
+    expect(result.routeOverrides?.[METHOD_ID]?.path).toBe(FORK_PATH)
+    expect(probe).toHaveBeenCalledTimes(1)
   })
 })

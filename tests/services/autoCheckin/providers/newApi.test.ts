@@ -475,6 +475,67 @@ describe("newApiProvider", () => {
       })
     })
 
+    it.each([true, false])(
+      "preserves candidate availability %s and cancellation without mutating",
+      async (enabled) => {
+        const signal = new AbortController().signal
+        vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
+          enabled,
+          stats: { checked_in_today: false },
+        })
+        await expect(
+          newApiProvider.probeRouteOverride!({
+            account: mockAccount,
+            path: "/api/user/custom",
+            signal,
+          }),
+        ).resolves.toMatchObject({
+          outcome: "known",
+          availability: enabled ? "enabled" : "disabled",
+          today: "not_checked",
+        })
+        expect(newApiFamilyRequests.data).toHaveBeenCalledWith(
+          expect.anything(),
+          {
+            endpoint: expect.stringMatching(/^\/api\/user\/custom\?month=/),
+            options: { signal },
+          },
+        )
+        expect(newApiFamilyRequests.envelope).not.toHaveBeenCalled()
+      },
+    )
+
+    it("keeps status evidence when the public availability switch cannot be read", async () => {
+      vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
+        stats: { checked_in_today: false },
+      })
+      mockFetchSupportCheckIn.mockRejectedValueOnce(new Error("offline"))
+      await expect(
+        newApiProvider.detect!({ account: accountWithRoute, observedAt: 703 }),
+      ).resolves.toMatchObject({
+        status: { outcome: "known", today: "not_checked" },
+      })
+    })
+
+    it("does not fetch availability after the status request is cancelled", async () => {
+      const controller = new AbortController()
+      vi.mocked(newApiFamilyRequests.data).mockImplementationOnce(async () => {
+        controller.abort()
+        return { stats: { checked_in_today: false } }
+      })
+      await expect(
+        newApiProvider.getStatus!({
+          account: accountWithRoute,
+          observedAt: 704,
+          signal: controller.signal,
+        }),
+      ).resolves.toMatchObject({
+        outcome: "known",
+        today: "not_checked",
+      })
+      expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
+    })
+
     it("probes a candidate path without mutating", async () => {
       vi.mocked(newApiFamilyRequests.data).mockResolvedValueOnce({
         stats: { checked_in_today: true, records: [] },

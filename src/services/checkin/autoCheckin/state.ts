@@ -4,6 +4,7 @@ import {
   CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
+  CHECK_IN_ROUTE_OVERRIDE_SOURCES,
   CHECK_IN_SELECTION_MODES,
 } from "~/constants/checkIn"
 import type {
@@ -229,12 +230,21 @@ const selectionsEqual = (
 /** Keeps established facts while requiring discovery for a new credential scope. */
 export function invalidateCheckInDiscovery(
   config: CheckInConfig,
+  options: { siteUrlChanged?: boolean } = {},
 ): CheckInConfig {
+  const manualRoutes = Object.fromEntries(
+    Object.entries(config.routeOverrides ?? {}).filter(
+      ([, override]) =>
+        override?.source === CHECK_IN_ROUTE_OVERRIDE_SOURCES.Manual,
+    ),
+  )
   return {
     ...config,
-    // A route path belongs to one deployment. A different site URL or credential
-    // scope must not carry a path learned from the previous one.
-    routeOverrides: undefined,
+    // Manual paths belong to the deployment; learned paths require fresh evidence.
+    routeOverrides:
+      !options.siteUrlChanged && Object.keys(manualRoutes).length
+        ? manualRoutes
+        : undefined,
     methodKnowledge: {
       ...config.methodKnowledge,
       lastFullDiscoveryAt: undefined,

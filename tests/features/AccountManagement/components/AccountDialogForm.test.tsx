@@ -1416,6 +1416,35 @@ describe("AccountDialog AccountForm", () => {
     ).toBeGreaterThanOrEqual(before)
   })
 
+  it("clears a configured deployment path using the field's clear button", async () => {
+    const user = userEvent.setup()
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NEW_API
+    props.draft.checkIn = createCheckIn({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+    })
+    props.draft.checkIn.routeOverrides = {
+      [AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn]: {
+        path: "/api/user/custom",
+        source: "manual",
+        observedAt: 1,
+      },
+    }
+    render(<AccountForm {...withSitePolicy(props)} />)
+    const field = await screen.findByLabelText(
+      "accountDialog:form.checkInRoutePath",
+    )
+    const clear = within(field.parentElement!).getByRole("button", {
+      name: "Clear",
+    })
+    await user.click(clear)
+    expect(field).toHaveValue("")
+    expect(props.onCheckInChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ routeOverrides: undefined }),
+    )
+  })
+
   it("does not offer a route path for a site whose methods have no route override", async () => {
     const props = createProps()
     props.draft.siteType = SITE_TYPES.SUB2API

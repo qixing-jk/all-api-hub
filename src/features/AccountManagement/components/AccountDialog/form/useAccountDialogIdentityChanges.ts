@@ -103,7 +103,9 @@ export function useAccountDialogIdentityChanges({
       if (selectedSiteUrlRef.current.trim() !== value.trim()) {
         setDraft((prev) => ({
           ...prev,
-          checkIn: invalidateCheckInDiscovery(prev.checkIn),
+          checkIn: invalidateCheckInDiscovery(prev.checkIn, {
+            siteUrlChanged: true,
+          }),
         }))
       }
       selectedSiteUrlRef.current = value

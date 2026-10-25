@@ -690,6 +690,36 @@ describe("protection bypass runtime contracts", () => {
     ).toBe(false)
   })
 
+  it.each([
+    { paths: ["/api/user/daily"], accepted: true },
+    { paths: [], accepted: true },
+    { paths: "/api/user/daily", accepted: false },
+    { paths: Array(9).fill("/api/user/daily"), accepted: false },
+    ...[
+      42,
+      "relative",
+      "//other.invalid",
+      "/api/daily?query",
+      "/api/daily#fragment",
+      "/api/back\\slash",
+    ].map((path) => ({ paths: [path], accepted: false })),
+  ])("validates diagnostic route authority: $paths", ({ paths, accepted }) => {
+    expect(
+      isTempContextTask({
+        kind: TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan,
+        params: {
+          originUrl: "https://example.invalid",
+          requestId: "routes",
+          input: {
+            baseUrl: "https://example.invalid",
+            siteType: "new-api",
+            routePaths: paths,
+          },
+        },
+      }),
+    ).toBe(accepted)
+  })
+
   it.each(canonicalTasks)("accepts HTTP for $kind", (task) => {
     const params = Object.fromEntries(
       Object.entries(task.params).map(([key, value]) => [

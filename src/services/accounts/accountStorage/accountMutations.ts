@@ -175,6 +175,7 @@ class AccountMutations {
             // must establish its own completed discovery after this save.
             nextAccount.checkIn = invalidateCheckInDiscovery(
               nextAccount.checkIn,
+              { siteUrlChanged: nextAccount.site_url !== account.site_url },
             )
           }
           return {

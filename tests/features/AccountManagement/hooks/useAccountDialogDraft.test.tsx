@@ -3,6 +3,52 @@ import { expect, it } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { useAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/form/useAccountDialogDraft"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+
+it("retains manual routes while invalidating learned routes after credential edits", () => {
+  const { result } = renderHook(() =>
+    useAccountDialogDraft({
+      mode: DIALOG_MODES.EDIT,
+      url: "https://example.com",
+    }),
+  )
+  act(() =>
+    result.current.setDraft((prev) => ({
+      ...prev,
+      checkIn: buildCheckInConfig({
+        routeOverrides: {
+          "new-api:daily-checkin": {
+            path: "/api/manual",
+            source: "manual",
+            observedAt: 1,
+          },
+          "veloera:daily-checkin": {
+            path: "/api/learned",
+            source: "discovery",
+            observedAt: 1,
+          },
+        },
+        methodKnowledge: { methods: {}, lastFullDiscoveryAt: 100 },
+      }),
+    })),
+  )
+  act(() =>
+    result.current.updateDraft((prev) => ({
+      ...prev,
+      accessToken: "replacement",
+    })),
+  )
+  expect(result.current.draft.checkIn.routeOverrides).toEqual({
+    "new-api:daily-checkin": {
+      path: "/api/manual",
+      source: "manual",
+      observedAt: 1,
+    },
+  })
+  expect(
+    result.current.draft.checkIn.methodKnowledge.lastFullDiscoveryAt,
+  ).toBeUndefined()
+})
 
 it("keeps manually edited balance independent from other account fields", () => {
   const { result } = renderHook(() =>

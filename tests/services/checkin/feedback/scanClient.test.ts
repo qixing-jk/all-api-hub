@@ -40,6 +40,29 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers())
 
 describe("feedback browser scan", () => {
+  it("forwards configured routes to the protected diagnostic scan", async () => {
+    vi.mocked(executeProtectionBypassTask).mockResolvedValue({
+      success: true,
+      data: clues,
+    })
+    await collectFeedbackCluesInBrowser(
+      { ...input, routePaths: ["/api/user/daily-custom"] },
+      new AbortController().signal,
+    )
+    expect(executeProtectionBypassTask).toHaveBeenCalledWith(
+      expect.objectContaining({
+        task: expect.objectContaining({
+          params: expect.objectContaining({
+            input: {
+              baseUrl: "https://example.com",
+              siteType: SITE_TYPES.NEW_API,
+              routePaths: ["/api/user/daily-custom"],
+            },
+          }),
+        }),
+      }),
+    )
+  })
   it("avoids a browser task for an invalid origin", async () => {
     expect(
       await collectFeedbackCluesInBrowser(

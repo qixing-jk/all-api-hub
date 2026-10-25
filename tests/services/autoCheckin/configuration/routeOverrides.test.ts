@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { AUTO_CHECKIN_METHOD_IDS } from "~/constants/checkIn"
 import {
+  listCheckInRoutePaths,
   normalizeCheckInRoutePath,
   readCheckInRouteOverride,
   readCheckInRoutePath,
@@ -89,5 +90,25 @@ describe("check-in route overrides", () => {
     }
     expect(readCheckInRoutePath(config, METHOD_ID, CANONICAL)).toBe(CANONICAL)
     expect(readCheckInRouteOverride(config, METHOD_ID)).toBeUndefined()
+  })
+
+  it("lists unique usable diagnostic routes and excludes invalid stored values", () => {
+    expect(listCheckInRoutePaths(buildCheckInConfig())).toEqual([])
+    const config = buildCheckInConfig({
+      routeOverrides: {
+        [METHOD_ID]: { path: FORK_PATH, source: "manual", observedAt: 1 },
+        [AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn]: {
+          path: FORK_PATH,
+          source: "discovery",
+          observedAt: 2,
+        },
+        [AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn]: {
+          path: "//unsafe.invalid",
+          source: "manual",
+          observedAt: 3,
+        },
+      },
+    })
+    expect(listCheckInRoutePaths(config)).toEqual([FORK_PATH])
   })
 })

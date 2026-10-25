@@ -3985,6 +3985,60 @@ describe("accountStorage core behaviors", () => {
     },
   )
 
+  it("commits a verified route from foreground discovery and rejects obsolete route observations", async () => {
+    const account = createAccount({
+      site_type: SITE_TYPES.NEW_API,
+      configVersion: 7,
+      checkIn: {
+        automaticExecutionEnabled: true,
+        selection: { mode: "automatic" },
+        methodKnowledge: { methods: {}, lastFullDiscoveryAt: 100 },
+      },
+    })
+    seedStorage([account])
+    const discovered = {
+      ...account.checkIn,
+      methodKnowledge: { methods: {}, lastFullDiscoveryAt: 200 },
+      routeOverrides: {
+        "new-api:daily-checkin": {
+          path: "/api/learned",
+          source: "discovery" as const,
+          observedAt: 2,
+        },
+      },
+    }
+    const completed = await accountStorage.completeUserCheckInDiscovery(
+      account,
+      discovered,
+    )
+    expect(completed?.applied).toBe(true)
+    expect(
+      (await accountStorage.getAccountById(account.id))?.checkIn.routeOverrides,
+    ).toEqual(discovered.routeOverrides)
+    const snapshot = completed!.account
+    for (const edit of [
+      { path: "/api/learned", source: "manual" as const, observedAt: 2 },
+      { path: "/api/learned", source: "discovery" as const, observedAt: 3 },
+    ]) {
+      await accountStorage.updateAccountCheckInDraft(account.id, {
+        ...snapshot.checkIn,
+        routeOverrides: { "new-api:daily-checkin": edit },
+      })
+      expect(
+        (
+          await accountStorage.completeUserCheckInDiscovery(snapshot, {
+            ...discovered,
+            methodKnowledge: { methods: {}, lastFullDiscoveryAt: 300 },
+          })
+        )?.applied,
+      ).toBe(false)
+      expect(
+        (await accountStorage.getAccountById(account.id))?.checkIn
+          .routeOverrides?.["new-api:daily-checkin"],
+      ).toEqual(edit)
+    }
+  })
+
   it("keeps account fields and the check-in draft unchanged when their atomic save fails", async () => {
     const account = createAccount({
       id: "atomic-dialog-save",
@@ -4053,6 +4107,18 @@ describe("accountStorage core behaviors", () => {
         checkIn: {
           automaticExecutionEnabled: true,
           selection: { mode: "manual", methodId: "new-api:daily-checkin" },
+          routeOverrides: {
+            "new-api:daily-checkin": {
+              path: "/api/manual",
+              source: "manual",
+              observedAt: 1,
+            },
+            "veloera:daily-checkin": {
+              path: "/api/learned",
+              source: "discovery",
+              observedAt: 1,
+            },
+          },
           methodKnowledge: {
             methods: {},
             lastFullDiscoveryAt: 100,
@@ -4075,6 +4141,17 @@ describe("accountStorage core behaviors", () => {
         updated?.checkIn.methodKnowledge.lastAutomaticDiscoveryAttemptAt,
       ).toBeUndefined()
       expect(updated?.checkIn.selection).toEqual(account.checkIn.selection)
+      expect(updated?.checkIn.routeOverrides).toEqual(
+        "site_url" in updates
+          ? undefined
+          : {
+              "new-api:daily-checkin": {
+                path: "/api/manual",
+                source: "manual",
+                observedAt: 1,
+              },
+            },
+      )
     },
   )
 
