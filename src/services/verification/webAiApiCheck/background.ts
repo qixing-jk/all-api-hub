@@ -37,6 +37,7 @@ import {
   normalizeOpenAiFamilyBaseUrl,
 } from "~/services/verification/webAiApiCheck/credentialExtraction/baseUrlCandidates"
 import { createApiCheckProbeRunRegistry } from "~/services/verification/webAiApiCheck/probeRunRegistry"
+import { onTabRemoved, onTabUpdated } from "~/utils/browser/tabs"
 import { createLogger } from "~/utils/core/logger"
 import { isHttpUrl } from "~/utils/core/urlParsing"
 
@@ -417,6 +418,7 @@ export async function resolveWebAiApiCheckFetchModelsMessage(
  */
 export async function resolveWebAiApiCheckRunProbeMessage(
   request: ApiCheckRunProbeRequest,
+  ownerTabId?: number,
 ): Promise<ApiCheckRunProbeResponse> {
   try {
     const {
@@ -471,20 +473,23 @@ export async function resolveWebAiApiCheckRunProbeMessage(
     }
 
     try {
-      const result = await probeRuns.run(runId, (signal) =>
-        runApiVerificationProbe({
-          ...(requestProfile ? { requestProfile } : {}),
-          ...(requestProfileEnhanced === true
-            ? { requestProfileEnhanced: true }
-            : {}),
-          baseUrl: normalizedBaseUrl,
-          apiKey,
-          apiType,
-          modelId: modelId?.trim() || undefined,
-          probeId: probeId as ApiVerificationProbeId,
-          mode,
-          abortSignal: signal,
-        }),
+      const result = await probeRuns.run(
+        runId,
+        (signal) =>
+          runApiVerificationProbe({
+            ...(requestProfile ? { requestProfile } : {}),
+            ...(requestProfileEnhanced === true
+              ? { requestProfileEnhanced: true }
+              : {}),
+            baseUrl: normalizedBaseUrl,
+            apiKey,
+            apiType,
+            modelId: modelId?.trim() || undefined,
+            probeId: probeId as ApiVerificationProbeId,
+            mode,
+            abortSignal: signal,
+          }),
+        ownerTabId,
       )
 
       return { success: true, result }
@@ -537,6 +542,7 @@ export async function resolveWebAiApiCheckRunProbeMessage(
  */
 async function resolveWebAiApiCheckRunPelicanMessage(
   request: ApiCheckRunPelicanRequest,
+  ownerTabId?: number,
 ): Promise<ApiCheckRunPelicanResponse> {
   const {
     apiType,
@@ -577,19 +583,22 @@ async function resolveWebAiApiCheckRunPelicanMessage(
   }
 
   try {
-    const result = await probeRuns.run(runId, (signal) =>
-      runPelicanTest({
-        baseUrl: normalizedBaseUrl,
-        apiKey,
-        apiType,
-        modelId: modelId.trim(),
-        ...(mode ? { mode } : {}),
-        ...(prompt?.trim() ? { prompt: prompt.trim() } : {}),
-        executionMode,
-        requestProfile,
-        requestProfileEnhanced,
-        abortSignal: signal,
-      }),
+    const result = await probeRuns.run(
+      runId,
+      (signal) =>
+        runPelicanTest({
+          baseUrl: normalizedBaseUrl,
+          apiKey,
+          apiType,
+          modelId: modelId.trim(),
+          ...(mode ? { mode } : {}),
+          ...(prompt?.trim() ? { prompt: prompt.trim() } : {}),
+          executionMode,
+          requestProfile,
+          requestProfileEnhanced,
+          abortSignal: signal,
+        }),
+      ownerTabId,
     )
     return { success: true, result }
   } catch (error) {
@@ -767,11 +776,13 @@ export function setupWebAiApiCheckMessagingListeners() {
     ),
     onWebAiApiCheckMessage(
       WebAiApiCheckMessageTypes.RunProbe,
-      async ({ data }) => resolveWebAiApiCheckRunProbeMessage(data),
+      async ({ data, sender }) =>
+        resolveWebAiApiCheckRunProbeMessage(data, sender?.tab?.id),
     ),
     onWebAiApiCheckMessage(
       WebAiApiCheckMessageTypes.RunPelican,
-      async ({ data }) => resolveWebAiApiCheckRunPelicanMessage(data),
+      async ({ data, sender }) =>
+        resolveWebAiApiCheckRunPelicanMessage(data, sender?.tab?.id),
     ),
     onWebAiApiCheckMessage(
       WebAiApiCheckMessageTypes.CancelRunProbe,
@@ -781,5 +792,13 @@ export function setupWebAiApiCheckMessagingListeners() {
       WebAiApiCheckMessageTypes.SaveProfile,
       async ({ data }) => resolveWebAiApiCheckSaveProfileMessage(data),
     ),
+    // A removed tab or a navigation tears the content script down before it can
+    // cancel its own runs, so the background aborts them on its side.
+    onTabRemoved((tabId) => {
+      probeRuns.cancelForTab(tabId)
+    }),
+    onTabUpdated((tabId, changeInfo) => {
+      if (changeInfo.status === "loading") probeRuns.cancelForTab(tabId)
+    }),
   ]
 }

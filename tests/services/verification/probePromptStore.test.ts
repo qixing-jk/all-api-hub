@@ -92,6 +92,69 @@ describe("probe prompt store", () => {
     expect(mockLoadOverrides).toHaveBeenCalledTimes(1)
   })
 
+  it("does not cache a read that an invalidation superseded", async () => {
+    let resolveStale!: (overrides: Record<string, string>) => void
+    mockLoadOverrides.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveStale = resolve
+      }),
+    )
+    const store = await importStore()
+
+    const pendingRead = store.getProbePromptOverrides()
+    mockLoadOverrides.mockResolvedValue({
+      [API_VERIFICATION_PROBE_IDS.Embedding]: "ping now",
+    })
+    storageListener!(
+      { user_preferences: { oldValue: 1, newValue: 2 } },
+      "local",
+    )
+    resolveStale({ [API_VERIFICATION_PROBE_IDS.TextGeneration]: "stale" })
+    await expect(pendingRead).resolves.toEqual({
+      [API_VERIFICATION_PROBE_IDS.TextGeneration]: "stale",
+    })
+
+    await expect(store.getProbePromptOverrides()).resolves.toEqual({
+      [API_VERIFICATION_PROBE_IDS.Embedding]: "ping now",
+    })
+    expect(mockLoadOverrides).toHaveBeenCalledTimes(2)
+  })
+
+  it("keeps a newer in-flight read shared after a superseded one settles", async () => {
+    let resolveStale!: (overrides: Record<string, string>) => void
+    let resolveFresh!: (overrides: Record<string, string>) => void
+    mockLoadOverrides
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveStale = resolve
+        }),
+      )
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveFresh = resolve
+        }),
+      )
+    const store = await importStore()
+
+    const staleRead = store.getProbePromptOverrides()
+    storageListener!(
+      { user_preferences: { oldValue: 1, newValue: 2 } },
+      "local",
+    )
+    const freshRead = store.getProbePromptOverrides()
+    resolveStale({ [API_VERIFICATION_PROBE_IDS.TextGeneration]: "stale" })
+    await staleRead
+
+    const joinedRead = store.getProbePromptOverrides()
+    expect(mockLoadOverrides).toHaveBeenCalledTimes(2)
+
+    resolveFresh({ [API_VERIFICATION_PROBE_IDS.Embedding]: "ping now" })
+    await expect(Promise.all([freshRead, joinedRead])).resolves.toEqual([
+      { [API_VERIFICATION_PROBE_IDS.Embedding]: "ping now" },
+      { [API_VERIFICATION_PROBE_IDS.Embedding]: "ping now" },
+    ])
+  })
+
   it("does not cache a failed read as an empty override set", async () => {
     mockLoadOverrides.mockRejectedValueOnce(new Error("unreadable"))
     const store = await importStore()

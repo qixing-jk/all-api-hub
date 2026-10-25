@@ -16,9 +16,15 @@ import { loadProbePromptOverrides } from "./promptOverrides"
 let cachedOverrides: ProbePromptOverrides | null = null
 let inflightLoad: Promise<ProbePromptOverrides> | null = null
 let isSubscribed = false
+/**
+ * Bumped on every invalidation so a read that started earlier cannot write the
+ * cache or clear the newer in-flight read.
+ */
+let cacheGeneration = 0
 
 /** Drop the cache so the next read sees the newest saved value. */
 function invalidateProbePromptOverridesCache(): void {
+  cacheGeneration += 1
   cachedOverrides = null
   inflightLoad = null
 }
@@ -43,19 +49,23 @@ function ensureInvalidationSubscription(): void {
 export async function getProbePromptOverrides(): Promise<ProbePromptOverrides> {
   ensureInvalidationSubscription()
   if (cachedOverrides) return cachedOverrides
+  if (inflightLoad) return inflightLoad
 
-  inflightLoad ??= loadProbePromptOverrides()
+  const generation = cacheGeneration
+  const load = loadProbePromptOverrides()
     .then((overrides) => {
-      cachedOverrides = overrides
+      if (generation === cacheGeneration) cachedOverrides = overrides
       return overrides
     })
     .finally(() => {
       // Clear on failure too: caching a rejected promise would make every later
-      // probe reuse the same error instead of retrying the read.
-      inflightLoad = null
+      // probe reuse the same error instead of retrying the read. Only clear our
+      // own entry so a newer read stays shared.
+      if (inflightLoad === load) inflightLoad = null
     })
+  inflightLoad = load
 
-  return inflightLoad
+  return load
 }
 
 /** Test-only reset of the module cache and subscription flag. */

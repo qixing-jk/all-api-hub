@@ -37,6 +37,11 @@ export function useVerificationPrompts() {
   // an edit must not clobber the draft.
   const [hasLoadedOverrides, setHasLoadedOverrides] = useState(false)
   const hasEditedDraftRef = useRef(false)
+  // The debounce can still be running when the dialog closes, so the cleanup
+  // below needs both the newest draft and whether a write is still owed.
+  const latestDraftRef = useRef<ProbePromptDraft>({})
+  latestDraftRef.current = promptDraft
+  const hasPendingSaveRef = useRef(false)
   useEffect(() => {
     let cancelled = false
     void loadProbePromptOverrides().then((overrides) => {
@@ -52,7 +57,21 @@ export function useVerificationPrompts() {
 
   useEffect(
     () => () => {
-      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current)
+        autoSaveTimerRef.current = null
+      }
+      if (!hasPendingSaveRef.current) return
+      hasPendingSaveRef.current = false
+      // Closing inside the debounce window must not drop the edit, and there is
+      // no dialog left to report a failure to.
+      try {
+        void Promise.resolve(
+          saveProbePromptOverrides(latestDraftRef.current),
+        ).catch(() => undefined)
+      } catch {
+        // A synchronous write failure is as unreportable as an async one.
+      }
     },
     [],
   )
@@ -80,6 +99,7 @@ export function useVerificationPrompts() {
 
   const persistPrompts = useCallback(
     async (normalizeDraft: boolean) => {
+      hasPendingSaveRef.current = false
       setIsSavingPrompts(true)
       setPromptSaveError(null)
       try {
@@ -119,12 +139,17 @@ export function useVerificationPrompts() {
   // Automatically save debounced prompt edits after the user stops typing.
   useEffect(() => {
     if (!hasLoadedOverrides || !hasEditedDraftRef.current) return
-    if (!isPromptsDirty) return
+    if (!isPromptsDirty) {
+      // A draft edited back to the defaults leaves nothing owed on unmount.
+      hasPendingSaveRef.current = false
+      return
+    }
 
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current)
     }
 
+    hasPendingSaveRef.current = true
     autoSaveTimerRef.current = setTimeout(() => {
       autoSaveTimerRef.current = null
       void persistPrompts(false)

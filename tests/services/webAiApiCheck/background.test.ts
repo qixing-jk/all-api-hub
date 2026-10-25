@@ -42,20 +42,50 @@ it.each(Object.values(API_VERIFICATION_REQUEST_PROFILES))(
   },
 )
 
-const { onWebAiApiCheckMessageMock, webAiApiCheckMessageHandlers } = vi.hoisted(
-  () => ({
-    webAiApiCheckMessageHandlers: new Map<
-      string,
-      (payload: { data: any }) => unknown
-    >(),
-    onWebAiApiCheckMessageMock: vi.fn(
-      (type: string, handler: (payload: { data: any }) => unknown) => {
-        webAiApiCheckMessageHandlers.set(type, handler)
-        return vi.fn()
-      },
-    ),
-  }),
-)
+const {
+  onWebAiApiCheckMessageMock,
+  webAiApiCheckMessageHandlers,
+  tabRemovedListeners,
+  tabUpdatedListeners,
+} = vi.hoisted(() => ({
+  webAiApiCheckMessageHandlers: new Map<
+    string,
+    (payload: { data: any; sender?: { tab?: { id?: number } } }) => unknown
+  >(),
+  onWebAiApiCheckMessageMock: vi.fn(
+    (type: string, handler: (payload: { data: any }) => unknown) => {
+      webAiApiCheckMessageHandlers.set(type, handler)
+      return vi.fn()
+    },
+  ),
+  tabRemovedListeners: [] as Array<(tabId: number) => void>,
+  tabUpdatedListeners: [] as Array<
+    (tabId: number, changeInfo: { status?: string }) => void
+  >,
+}))
+
+vi.mock("~/utils/browser/tabs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/tabs")>()
+  return {
+    ...actual,
+    onTabRemoved: (listener: (tabId: number) => void) => {
+      tabRemovedListeners.push(listener)
+      return () => {
+        const index = tabRemovedListeners.indexOf(listener)
+        if (index >= 0) tabRemovedListeners.splice(index, 1)
+      }
+    },
+    onTabUpdated: (
+      listener: (tabId: number, changeInfo: { status?: string }) => void,
+    ) => {
+      tabUpdatedListeners.push(listener)
+      return () => {
+        const index = tabUpdatedListeners.indexOf(listener)
+        if (index >= 0) tabUpdatedListeners.splice(index, 1)
+      }
+    },
+  }
+})
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void
@@ -182,6 +212,107 @@ describe("webAiApiCheck background handlers", () => {
     } finally {
       spy.mockRestore()
     }
+  })
+
+  it("cancels a drawing run when its sender tab is torn down", async () => {
+    vi.resetModules()
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const pelican = await import("~/services/verification/modelQuality/pelican")
+    const { WebAiApiCheckMessageTypes } = await import(
+      "~/services/verification/webAiApiCheck/messaging"
+    )
+    const runSignals = new Map<string, AbortSignal | undefined>()
+    const spy = vi
+      .spyOn(pelican, "runPelicanTest")
+      .mockImplementation(async (params) => {
+        runSignals.set(params.modelId, params.abortSignal)
+        return new Promise((_, reject) =>
+          params.abortSignal?.addEventListener("abort", () =>
+            reject(new DOMException("Aborted", "AbortError")),
+          ),
+        )
+      })
+    try {
+      background.setupWebAiApiCheckMessagingListeners()
+      const handler = webAiApiCheckMessageHandlers.get(
+        WebAiApiCheckMessageTypes.RunPelican,
+      )!
+      const startRun = (runId: string, tabId: number, modelId: string) =>
+        handler({
+          data: {
+            runId,
+            apiType: "openai",
+            baseUrl: "https://example.invalid",
+            apiKey: "sk-test",
+            modelId,
+            executionMode: PELICAN_EXECUTION_MODES.Agent,
+          },
+          sender: { tab: { id: tabId } },
+        })
+
+      const closingTabRun = startRun("closing-tab-run", 42, "closing-model")
+      const otherTabRun = startRun("other-tab-run", 7, "other-model")
+
+      tabRemovedListeners.forEach((listener) => listener(42))
+      expect(runSignals.get("closing-model")?.aborted).toBe(true)
+      expect(runSignals.get("other-model")?.aborted).toBe(false)
+      await expect(closingTabRun).resolves.toMatchObject({ success: false })
+
+      tabUpdatedListeners.forEach((listener) =>
+        listener(7, { status: "loading" }),
+      )
+      expect(runSignals.get("other-model")?.aborted).toBe(true)
+      await expect(otherTabRun).resolves.toMatchObject({ success: false })
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it("rejects a drawing run whose execution mode or client identity is invalid", async () => {
+    vi.resetModules()
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const { WebAiApiCheckMessageTypes } = await import(
+      "~/services/verification/webAiApiCheck/messaging"
+    )
+    background.setupWebAiApiCheckMessagingListeners()
+    const handler = webAiApiCheckMessageHandlers.get(
+      WebAiApiCheckMessageTypes.RunPelican,
+    )!
+    const validRun = {
+      runId: "invalid-mode-run",
+      apiType: "openai",
+      baseUrl: "https://example.invalid",
+      apiKey: "sk-test",
+      modelId: "test",
+    }
+
+    // The content script cannot be trusted to send a known execution mode, and a
+    // wrong value must not silently fall back to the reply-only path.
+    await expect(
+      handler({ data: { ...validRun, executionMode: "turbo" } }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Invalid drawing execution mode",
+    })
+    await expect(
+      handler({ data: { ...validRun, requestProfile: "not-a-profile" } }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Invalid request profile",
+    })
+    await expect(
+      handler({ data: { ...validRun, baseUrl: "://" } }),
+    ).resolves.toEqual({ success: false, error: "Invalid baseUrl" })
+    await expect(
+      handler({ data: { ...validRun, modelId: "  " } }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Missing apiType, baseUrl, apiKey, or modelId",
+    })
   })
 
   it("fails closed when reading the saved detection scope fails", async () => {
