@@ -35,13 +35,17 @@ import {
   CHECK_IN_SELECTION_STATUSES,
 } from "~/constants/checkIn"
 import type { AccountSiteType } from "~/constants/siteType"
+import { AccountCheckInRouteFields } from "~/features/AccountManagement/components/AccountDialog/checkin/AccountCheckInRouteFields"
 import {
   getCheckInMethodPresentation,
   getCheckInRedetectionFeedbackPresentation,
   getCheckInSelectionPresentation,
 } from "~/features/AccountManagement/components/AccountDialog/checkin/checkInPresentation"
 import { AccountFormSection } from "~/features/AccountManagement/components/AccountDialog/form/AccountFormSection"
-import { ACCOUNT_FORM_MOBILE_DEFAULT_OPEN } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
+import {
+  ACCOUNT_FORM_MOBILE_DEFAULT_OPEN,
+  ACCOUNT_FORM_SECTION_ELEMENT_IDS,
+} from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
 import type { AccountCheckInRedetectionFeedback } from "~/features/AccountManagement/components/AccountDialog/models"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { AutoCheckinRiskHint } from "~/features/AutoCheckin/pretrigger/AutoCheckinRiskHint"
@@ -58,7 +62,7 @@ const CHECK_IN_METHOD_HELPER_ID = "check-in-method-helper"
 const OPEN_REDEEM_WITH_CHECKIN_CONTROL_ID = "open-redeem-with-checkin"
 
 const ACCOUNT_CHECK_IN_TARGET_IDS = {
-  section: "account-check-in-config",
+  section: ACCOUNT_FORM_SECTION_ELEMENT_IDS["check-in"],
   feedback: "account-check-in-feedback",
   method: "account-check-in-method",
   automaticExecution: "account-check-in-automatic-execution",
@@ -141,7 +145,6 @@ export function AccountCheckInSection({
     selectedStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown
   const redetectionFeedbackPresentation =
     getCheckInRedetectionFeedbackPresentation(t, checkInRedetectionFeedback)
-
   const setAutomaticSelection = () => {
     onCheckInSelectionChange(
       setCheckInSelection({
@@ -392,6 +395,11 @@ export function AccountCheckInSection({
         </div>
       )}
 
+      <AccountCheckInRouteFields
+        checkIn={checkIn}
+        candidateMethodIds={candidateMethodIds}
+        onCheckInChange={onCheckInChange}
+      />
       <FormField
         label={t("form.customCheckInUrl")}
         description={t("form.customCheckInDesc")}

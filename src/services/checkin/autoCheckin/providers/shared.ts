@@ -71,6 +71,9 @@ export function createUpstreamFailureResult(params: {
 
 /**
  * Common daily check-in endpoint used by many One-API/New-API family deployments.
+ *
+ * The account dialog shows it as the placeholder for a renamed route, so the
+ * dialog, the provider and the route discovery all describe the same default.
  */
 export const AUTO_CHECKIN_USER_CHECKIN_ENDPOINT = "/api/user/checkin" as const
 

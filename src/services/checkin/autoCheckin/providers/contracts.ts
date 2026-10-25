@@ -80,6 +80,24 @@ export interface AutoCheckinProvider {
    * with `getStatus` can honour it; a method without readback submits directly.
    */
   readonly requiresAuthoritativeStatusBeforeMutation?: boolean
+  /**
+   * This protocol has one canonical route the account may replace with its
+   * deployment's own path. Declared only where the operations behind that route
+   * are otherwise identical, so an override never invents a new protocol.
+   */
+  readonly supportsRouteOverride?: boolean
+  /** The route's default path, so route discovery can skip it. */
+  readonly canonicalRoutePath?: string
+  /**
+   * Read-only probe for one candidate path offered by the deployment's own
+   * assets. Returns a verified status, or `undefined` when the path is not this
+   * method's contract; it never mutates and never falls back to a mutation.
+   */
+  probeRouteOverride?: (input: {
+    account: SiteAccount
+    path: string
+    signal?: AbortSignal
+  }) => Promise<CheckInMethodStatus | undefined>
   getReadiness(account: SiteAccount): AutoCheckinProviderReadiness
   /** Optional read-only protocol probe used by full discovery. */
   detect?: (

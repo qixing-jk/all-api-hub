@@ -261,7 +261,10 @@ export function SiteInfoCheckInIndicators({
                         CHECK_IN_CONFIGURATION_ACTIONS.Redetect
                       )
                         void redetect(event.currentTarget)
-                      else openEditAccount(site)
+                      else
+                        openEditAccount(site, {
+                          focusSection: "check-in",
+                        })
                     } else if (manual) void handleCheckIn("site")
                     else onRefresh()
                   }}

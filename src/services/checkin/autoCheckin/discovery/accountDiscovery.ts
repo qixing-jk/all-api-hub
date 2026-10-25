@@ -9,6 +9,8 @@ import { accountQueries } from "~/services/accounts/accountStorage/accountQuerie
 import { getDevCheckInFixtureScenario } from "~/services/checkin/autoCheckin/discovery/devDiscoveryFixtureIdentity"
 import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery/discovery"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
+import { discoverCheckInRouteOverrides } from "~/services/checkin/autoCheckin/discovery/routeDiscovery"
+import type { AutoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers/registry"
 import { getEffectiveAuthType } from "~/services/checkin/autoCheckin/providers/shared"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { SiteAccount } from "~/types"
@@ -18,26 +20,26 @@ export interface CheckInDiscoveryContext {
   tempWindowRequestSource?: TempWindowRequestSource
   protectionBypassExecution?: ProtectionBypassExecution
   signal?: AbortSignal
+  /**
+   * Whether this round may learn a deployment's renamed routes from the site's
+   * own assets. Explicit user redetection sets it; unattended discovery never
+   * does, so a background run stays a bounded, side-effect-free set of probes.
+   */
+  allowRouteDiscovery?: boolean
 }
 
-/** Uses the same authenticated, bounded read-only probe for drafts and saved accounts. */
-export async function discoverAccountCheckInMethods(
+/** Runs one read-only detection round against the configuration it was given. */
+function runCheckInDiscovery(
   account: SiteAccount,
+  config: SiteAccount["checkIn"],
   context: CheckInDiscoveryContext,
-  observedAt?: number,
+  observedAt: number | undefined,
+  registry: AutoCheckinMethodRegistry | undefined,
 ) {
-  const registry =
-    import.meta.env.DEV && getDevCheckInFixtureScenario(account)
-      ? await (
-          await import(
-            "~/services/checkin/autoCheckin/discovery/devDiscoveryFixtures"
-          )
-        ).resolveDevCheckInDiscoveryRegistry(account)
-      : undefined
   return discoverCheckInMethods({
     registry,
     account,
-    config: account.checkIn,
+    config,
     observedAt,
     signal: context.signal,
     deadlineMs: FULL_CHECK_IN_DISCOVERY_TIMEOUT_MS,
@@ -55,6 +57,51 @@ export async function discoverAccountCheckInMethods(
       protectionBypassExecution: context.protectionBypassExecution,
     },
   })
+}
+
+/** Uses the same authenticated, bounded read-only probe for drafts and saved accounts. */
+export async function discoverAccountCheckInMethods(
+  account: SiteAccount,
+  context: CheckInDiscoveryContext,
+  observedAt?: number,
+) {
+  const registry =
+    import.meta.env.DEV && getDevCheckInFixtureScenario(account)
+      ? await (
+          await import(
+            "~/services/checkin/autoCheckin/discovery/devDiscoveryFixtures"
+          )
+        ).resolveDevCheckInDiscoveryRegistry(account)
+      : undefined
+  const discovery = await runCheckInDiscovery(
+    account,
+    account.checkIn,
+    context,
+    observedAt,
+    registry,
+  )
+  if (!context.allowRouteDiscovery || context.signal?.aborted) return discovery
+
+  // A route learned here changes what the next round probes, so the same user
+  // action reports the method's real outcome instead of a second click.
+  const withRoutes = await discoverCheckInRouteOverrides({
+    account,
+    config: discovery.config,
+    detections: discovery.detections,
+    context,
+  })
+  if (withRoutes === discovery.config || context.signal?.aborted) {
+    return discovery
+  }
+  // Providers resolve their own endpoint from `account.checkIn`, so the learned
+  // route has to reach the account, not just this round's configuration.
+  return await runCheckInDiscovery(
+    { ...account, checkIn: withRoutes },
+    withRoutes,
+    context,
+    observedAt,
+    registry,
+  )
 }
 
 /** Leaves a still-valid manual choice intact even when discovery finds alternatives. */
@@ -82,7 +129,7 @@ export async function redetectSavedAccountCheckIn(
   if (!account || account.disabled || context.signal?.aborted) return null
   const discovery = await discoverAccountCheckInMethods(
     account,
-    context,
+    { ...context, allowRouteDiscovery: true },
     Math.max(
       Date.now(),
       (account.checkIn.methodKnowledge.lastFullDiscoveryAt ?? 0) + 1,

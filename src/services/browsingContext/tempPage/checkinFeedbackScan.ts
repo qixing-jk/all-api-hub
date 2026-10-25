@@ -92,6 +92,7 @@ export async function executeTempCheckinFeedbackScan(
         for (const route of getCheckInFeedbackStatusRoutes(
           input.siteType,
           originUrl,
+          input.routePaths,
         )) {
           controller.signal.throwIfAborted()
           const url = new URL(route.path, resolveDeploymentApiOrigin(originUrl))

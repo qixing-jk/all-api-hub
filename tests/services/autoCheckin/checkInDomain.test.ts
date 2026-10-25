@@ -1337,4 +1337,81 @@ describe("normalizeCheckInConfigV7", () => {
     expect(second).toEqual(first)
     expect(normalizeCheckInConfigV7(first)).toEqual(first)
   })
+
+  it("retains a usable route override for a registered method", () => {
+    const normalized = normalizeCheckInConfigV7({
+      methodKnowledge: { methods: {} },
+      selection: { mode: "automatic" as const },
+      routeOverrides: {
+        [NEW_API_METHOD_ID]: {
+          path: "/api/user/daily-9f3k",
+          source: "manual",
+          observedAt: 300,
+        },
+      },
+    })
+
+    expect(normalized.routeOverrides).toEqual({
+      [NEW_API_METHOD_ID]: {
+        path: "/api/user/daily-9f3k",
+        source: "manual",
+        observedAt: 300,
+      },
+    })
+  })
+
+  it.each([
+    {
+      name: "an absolute URL",
+      override: {
+        path: "https://evil.example.invalid/checkin",
+        source: "manual",
+        observedAt: 300,
+      },
+    },
+    {
+      name: "a relative path",
+      override: {
+        path: "api/user/checkin",
+        source: "manual",
+        observedAt: 300,
+      },
+    },
+    {
+      name: "an unknown source",
+      override: {
+        path: "/api/user/checkin",
+        source: "imported",
+        observedAt: 300,
+      },
+    },
+    {
+      name: "a missing timestamp",
+      override: { path: "/api/user/checkin", source: "manual" },
+    },
+  ])("drops a route override with $name", ({ override }) => {
+    const normalized = normalizeCheckInConfigV7({
+      methodKnowledge: { methods: {} },
+      selection: { mode: "automatic" as const },
+      routeOverrides: { [NEW_API_METHOD_ID]: override },
+    })
+
+    expect(normalized.routeOverrides).toBeUndefined()
+  })
+
+  it("drops route overrides for methods this build does not register", () => {
+    const normalized = normalizeCheckInConfigV7({
+      methodKnowledge: { methods: {} },
+      selection: { mode: "automatic" as const },
+      routeOverrides: {
+        "future-method:daily-checkin": {
+          path: "/api/user/checkin",
+          source: "manual",
+          observedAt: 300,
+        },
+      },
+    })
+
+    expect(normalized.routeOverrides).toBeUndefined()
+  })
 })

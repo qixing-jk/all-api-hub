@@ -622,6 +622,81 @@ describe("useAccountDialog re-detect preservation", () => {
     return result
   }
 
+  it.each(["unchanged", "clear", "manual"] as const)(
+    "merges a relearned route while the draft route is %s",
+    async (edit) => {
+      const methodId = "new-api:daily-checkin" as const
+      const pending = createDeferred<CheckInDiscoveryResult>()
+      mockDiscoverCheckInMethods.mockReturnValueOnce(pending.promise)
+      const { result } = renderHook(() =>
+        useAccountDialog({
+          mode: DIALOG_MODES.ADD,
+          isOpen: true,
+          onClose: vi.fn(),
+          onSuccess: vi.fn(),
+        }),
+      )
+      await waitFor(() => expect(result.current).toBeTruthy())
+      await act(async () => {
+        result.current.setters.setUrl("https://new-api.example.invalid")
+        result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+      })
+      await act(async () => {
+        result.current.setters.setCheckIn({
+          ...result.current.state.checkIn,
+          routeOverrides: {
+            [methodId]: {
+              path: "/api/user/old",
+              source: "discovery",
+              observedAt: 1,
+            },
+          },
+        })
+      })
+      let detection!: Promise<void>
+      await act(async () => {
+        detection = result.current.handlers.handleRedetectCheckInMethods()
+        await Promise.resolve()
+      })
+      const editedRoutes =
+        edit === "clear"
+          ? undefined
+          : {
+              [methodId]: {
+                path: "/api/user/manual",
+                source: "manual" as const,
+                observedAt: 3,
+              },
+            }
+      if (edit !== "unchanged")
+        await act(async () => {
+          result.current.setters.setCheckIn({
+            ...result.current.state.checkIn,
+            routeOverrides: editedRoutes,
+          })
+        })
+      const learnedRoutes = {
+        [methodId]: {
+          path: "/api/user/new",
+          source: "discovery" as const,
+          observedAt: 2,
+        },
+      }
+      pending.resolve({
+        config: buildCheckInConfig({ routeOverrides: learnedRoutes }),
+        decision: { outcome: "resolved", methodId },
+        detections: {},
+        timedOutMethodIds: [],
+      })
+      await act(async () => {
+        await detection
+      })
+      expect(result.current.state.checkIn.routeOverrides).toEqual(
+        edit === "unchanged" ? learnedRoutes : editedRoutes,
+      )
+    },
+  )
+
   it("keeps redetection local when the account URL is missing", async () => {
     const { result } = renderHook(() =>
       useAccountDialog({

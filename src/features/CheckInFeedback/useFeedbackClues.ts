@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 
 import type { AuthConfig } from "~/services/apiTransport/type"
+import { listCheckInRoutePaths } from "~/services/checkin/autoCheckin/configuration/routeOverrides"
 import {
   getFeedbackOrigin,
   type CheckInFeedbackSnapshot,
@@ -29,7 +30,14 @@ export function useFeedbackClues(
     const collect = async () => {
       try {
         const result = await collectFeedbackCluesInBrowser(
-          { ...snapshot, auth },
+          {
+            baseUrl: snapshot.baseUrl,
+            siteType: snapshot.siteType,
+            ...(auth ? { auth } : {}),
+            // A deployment's own path is what this account actually calls, so
+            // the report reads it first instead of only the canonical route.
+            routePaths: listCheckInRoutePaths(snapshot.checkIn),
+          },
           run.signal,
         )
         if (run.signal.aborted) return

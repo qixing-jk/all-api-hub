@@ -18,6 +18,7 @@ import {
 } from "~/services/checkin/autoCheckin/providers/registry"
 import {
   markCheckInMethodExecuted,
+  mergeCheckInRouteOverrides,
   mergeDiscoveredCheckInDraft,
   mergeRefreshedCheckInStatus,
 } from "~/services/checkin/autoCheckin/state"
@@ -30,12 +31,29 @@ import { accountConfigStore } from "./accountConfigStore"
 
 const logger = createLogger("AccountCheckInState")
 
+/** A route edit invalidates observations collected against the previous request path. */
+const hasSameCheckInRoutes = (account: SiteAccount, snapshot: SiteAccount) => {
+  const current = account.checkIn.routeOverrides
+  const previous = snapshot.checkIn.routeOverrides
+  const methodIds = Object.keys({
+    ...current,
+    ...previous,
+  }) as CheckInMethodId[]
+  return methodIds.every(
+    (methodId) =>
+      current?.[methodId]?.path === previous?.[methodId]?.path &&
+      current?.[methodId]?.source === previous?.[methodId]?.source &&
+      current?.[methodId]?.observedAt === previous?.[methodId]?.observedAt,
+  )
+}
+
 /** A foreground probe or choice must still refer to the same request and discovery. */
 const isUserCheckInDiscoveryCurrent = (
   account: SiteAccount,
   snapshot: SiteAccount,
 ) =>
   hasSameCheckInRequestCredentials(account, snapshot) &&
+  hasSameCheckInRoutes(account, snapshot) &&
   !account.disabled &&
   account.checkIn.selection.mode === snapshot.checkIn.selection.mode &&
   account.checkIn.selection.methodId === snapshot.checkIn.selection.methodId &&
@@ -50,6 +68,7 @@ export const isAutomaticCheckInDiscoveryCurrent = (
   snapshot: SiteAccount,
 ): boolean =>
   hasSameCheckInRequestCredentials(account, snapshot) &&
+  hasSameCheckInRoutes(account, snapshot) &&
   !account.disabled &&
   account.checkIn.automaticExecutionEnabled &&
   account.checkIn.selection.mode === snapshot.checkIn.selection.mode &&
@@ -210,11 +229,20 @@ class AccountCheckInState {
         const applied =
           (merged.methodKnowledge.lastFullDiscoveryAt ?? 0) >
           (account.checkIn.methodKnowledge.lastFullDiscoveryAt ?? 0)
-        // Discovery owns facts and automatic selection, never the form's fields.
+        // Discovery owns facts, automatic selection and verified route paths,
+        // never the form's fields.
         const checkIn = {
           ...account.checkIn,
           methodKnowledge: merged.methodKnowledge,
           selection: merged.selection,
+          ...(merged.routeOverrides || account.checkIn.routeOverrides
+            ? {
+                routeOverrides: mergeCheckInRouteOverrides(
+                  merged.routeOverrides,
+                  account.checkIn.routeOverrides,
+                ),
+              }
+            : {}),
         }
         const nextAccount = applySiteAccountUpdates({
           account,

@@ -13,8 +13,17 @@ import type {
 export function getCheckInFeedbackStatusRoutes(
   siteType: AccountSiteType,
   siteUrl: string,
+  /**
+   * The account's own route paths. A deployment that renamed a method's route
+   * needs its real path read first; the declared routes stay as the baseline so
+   * a report still shows what the default contract answered.
+   */
+  accountRoutePaths: readonly string[] = [],
 ): CheckInFeedbackStatusRoute[] {
   const routes = new Map<string, CheckInFeedbackStatusRoute>()
+  for (const path of accountRoutePaths) {
+    routes.set(path, { path })
+  }
   const now = new Date()
   const definitions = getAutoCheckinCandidateMethodIds(siteType, siteUrl).map(
     (method): AutoCheckinMethodDefinition =>

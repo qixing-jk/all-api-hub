@@ -9,6 +9,7 @@ import {
 
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import AccountDialog from "~/features/AccountManagement/components/AccountDialog"
+import type { AccountFormSectionId } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
 import type { AccountDialogRecoveryState } from "~/features/AccountManagement/components/AccountDialog/models"
 import { useAccountDataContext } from "~/features/AccountManagement/data/AccountDataContext"
 import { useAccountDialogRecoveryReceiver } from "~/features/AccountManagement/dialogs/useAccountDialogRecoveryReceiver"
@@ -27,6 +28,7 @@ interface DialogState {
   account: DisplaySiteData | null
   prefill: AddAccountPrefill | null
   recoveryState?: AccountDialogRecoveryState | null
+  focusSection?: AccountFormSectionId
 }
 
 export const DialogStateProvider = ({
@@ -58,6 +60,7 @@ export const DialogStateProvider = ({
         account: options.account || null,
         prefill: options.prefill ?? null,
         recoveryState: options.recoveryState ?? null,
+        focusSection: options.focusSection,
       })
       promiseRef.current = { resolve, reject }
     })
@@ -125,8 +128,17 @@ export const DialogStateProvider = ({
 
   const closeAddAccount = useCallback(handleClose, [loadAccountData])
   const openEditAccount = useCallback(
-    (account: DisplaySiteData) =>
-      openAccountDialog({ mode: DIALOG_MODES.EDIT, account }),
+    (
+      account: DisplaySiteData,
+      options?: { focusSection?: AccountFormSectionId },
+    ) =>
+      openAccountDialog({
+        mode: DIALOG_MODES.EDIT,
+        account,
+        ...(options?.focusSection
+          ? { focusSection: options.focusSection }
+          : {}),
+      }),
     [openAccountDialog],
   )
   const closeEditAccount = useCallback(handleClose, [loadAccountData])
@@ -165,6 +177,7 @@ export const DialogStateProvider = ({
           account={dialogState.account}
           prefill={dialogState.prefill}
           recoveryState={dialogState.recoveryState}
+          focusSection={dialogState.focusSection}
           onSuccess={handleSuccess}
           onError={handleError}
         />

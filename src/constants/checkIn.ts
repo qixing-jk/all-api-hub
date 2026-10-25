@@ -2,6 +2,13 @@
  * Persisted backup and synchronization contracts. Protocol splits add a new
  * ID instead of renaming an existing value.
  */
+export const CHECK_IN_ROUTE_OVERRIDE_SOURCES = {
+  /** Entered in the account dialog by the user. */
+  Manual: "manual",
+  /** Verified by a redetection probe against the deployment's own assets. */
+  Discovery: "discovery",
+} as const
+
 export const AUTO_CHECKIN_METHOD_IDS = {
   NewApiDailyCheckIn: "new-api:daily-checkin",
   VeloeraDailyCheckIn: "veloera:daily-checkin",

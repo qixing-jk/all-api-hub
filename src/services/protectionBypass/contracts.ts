@@ -972,8 +972,21 @@ function isCheckinFeedbackScanParams(params: Record<string, unknown>): boolean {
     return false
   if (
     Object.keys(input).some(
-      (key) => !["baseUrl", "siteType", "auth"].includes(key),
+      (key) => !["baseUrl", "siteType", "auth", "routePaths"].includes(key),
     )
+  )
+    return false
+  if (
+    input.routePaths !== undefined &&
+    (!Array.isArray(input.routePaths) ||
+      input.routePaths.length > 8 ||
+      input.routePaths.some(
+        (path) =>
+          typeof path !== "string" ||
+          !path.startsWith("/") ||
+          path.startsWith("//") ||
+          /[\\?#\s<>"`]/.test(path),
+      ))
   )
     return false
   if (input.auth === undefined) return true

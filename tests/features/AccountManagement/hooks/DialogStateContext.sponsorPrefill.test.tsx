@@ -6,6 +6,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { DialogStateProvider } from "~/features/AccountManagement/dialogs/DialogStateProvider"
 import { useDialogStateContext } from "~/features/AccountManagement/dialogs/useDialogStateContext"
 import { BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE } from "~/features/AccountManagement/sponsors/types"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const accountDialogProps = vi.hoisted(() => ({
@@ -95,6 +96,42 @@ function Harness() {
 }
 
 describe("DialogStateContext sponsor prefill", () => {
+  it.each([undefined, "check-in"] as const)(
+    "opens the account editor with focus %s",
+    async (focusSection) => {
+      const user = userEvent.setup()
+      const account = buildDisplaySiteData()
+      function EditHarness() {
+        const { openEditAccount } = useDialogStateContext()
+        return (
+          <button
+            onClick={() =>
+              openEditAccount(
+                account,
+                focusSection ? { focusSection } : undefined,
+              )
+            }
+          >
+            edit account
+          </button>
+        )
+      }
+      render(
+        <DialogStateProvider>
+          <EditHarness />
+        </DialogStateProvider>,
+        {
+          withUserPreferencesProvider: false,
+          withThemeProvider: false,
+          withReleaseUpdateStatusProvider: false,
+        },
+      )
+      await user.click(screen.getByRole("button", { name: "edit account" }))
+      expect(accountDialogProps.current.mode).toBe(DIALOG_MODES.EDIT)
+      expect(accountDialogProps.current.account).toEqual(account)
+      expect(accountDialogProps.current.focusSection).toBe(focusSection)
+    },
+  )
   beforeEach(() => {
     accountDialogProps.current = null
     accountDialogProps.renderCount = 0

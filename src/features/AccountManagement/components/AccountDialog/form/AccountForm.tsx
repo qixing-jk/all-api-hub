@@ -49,7 +49,11 @@ import { ACCOUNT_SITE_TYPES, SITE_TYPES } from "~/constants/siteType"
 import { AccountCheckInSection } from "~/features/AccountManagement/components/AccountDialog/checkin/AccountCheckInSection"
 import { AccountFormLayout } from "~/features/AccountManagement/components/AccountDialog/form/AccountFormLayout"
 import { AccountFormSection } from "~/features/AccountManagement/components/AccountDialog/form/AccountFormSection"
-import { ACCOUNT_FORM_MOBILE_DEFAULT_OPEN } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
+import {
+  ACCOUNT_FORM_MOBILE_DEFAULT_OPEN,
+  ACCOUNT_FORM_SECTION_ELEMENT_IDS,
+  type AccountFormSectionId,
+} from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
 import {
   CookieAuthPermissionRecommendation,
   type CookieAuthPermissionRecommendationProps,
@@ -99,6 +103,8 @@ export interface AccountFormHandle {
 
 interface AccountFormProps {
   continuous?: boolean
+  /** Section this form opens on, forwarded from a guidance action. */
+  focusSection?: AccountFormSectionId
   guidance?: ReactNode
   siteInfoInput?: ReactNode
   feedbackAccountId?: string
@@ -156,6 +162,7 @@ interface AccountFormProps {
  */
 export default function AccountForm({
   continuous = false,
+  focusSection,
   guidance,
   siteInfoInput,
   ref,
@@ -341,7 +348,7 @@ export default function AccountForm({
   const tagsAndNotes = (
     <AccountFormSection
       continuous={continuous}
-      id="account-form-tags-notes"
+      id={ACCOUNT_FORM_SECTION_ELEMENT_IDS["tags-notes"]}
       contentClassName={continuous ? "grid gap-4 sm:grid-cols-2" : undefined}
       title={t("sections.tagsAndNotes.title")}
       description={t("sections.tagsAndNotes.description")}
@@ -375,10 +382,14 @@ export default function AccountForm({
   )
 
   return (
-    <AccountFormLayout continuous={continuous} guidance={guidance}>
+    <AccountFormLayout
+      continuous={continuous}
+      focusSection={focusSection}
+      guidance={guidance}
+    >
       <AccountFormSection
         continuous={continuous}
-        id="account-form-site-info"
+        id={ACCOUNT_FORM_SECTION_ELEMENT_IDS["site-info"]}
         contentClassName={
           continuous ? "grid gap-4 sm:grid-cols-2 xl:grid-cols-4" : undefined
         }
@@ -441,7 +452,7 @@ export default function AccountForm({
 
       <AccountFormSection
         continuous={continuous}
-        id="account-form-auth"
+        id={ACCOUNT_FORM_SECTION_ELEMENT_IDS["account-auth"]}
         contentClassName={
           continuous
             ? authType === AuthTypeEnum.Cookie
@@ -793,7 +804,7 @@ export default function AccountForm({
 
       <AccountFormSection
         continuous={continuous}
-        id="account-form-balance"
+        id={ACCOUNT_FORM_SECTION_ELEMENT_IDS["balance"]}
         contentClassName={continuous ? "grid gap-4 sm:grid-cols-2" : undefined}
         title={t("sections.balanceAndStats.title")}
         defaultOpen={ACCOUNT_FORM_MOBILE_DEFAULT_OPEN.balance}

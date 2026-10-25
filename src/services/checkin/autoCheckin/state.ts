@@ -4,6 +4,7 @@ import {
   CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
+  CHECK_IN_ROUTE_OVERRIDE_SOURCES,
   CHECK_IN_SELECTION_MODES,
 } from "~/constants/checkIn"
 import type {
@@ -154,6 +155,14 @@ export function mergeUserOwnedCheckInDraft(input: {
   latest: CheckInConfig
   draft: CheckInConfig
   selectionChanged?: boolean
+  /**
+   * Routes a redetection round just verified. Without a discovery snapshot,
+   * explicit draft entries take precedence. With one, concurrent edits and
+   * deletions take precedence over newly learned paths.
+   */
+  learnedRouteOverrides?: CheckInConfig["routeOverrides"]
+  /** Snapshot before discovery, used to distinguish concurrent edits from stale paths. */
+  routeDiscoveryBase?: Pick<CheckInConfig, "routeOverrides">
 }): CheckInConfig {
   const latestCustom = input.latest.customCheckIn
   const draftCustom = input.draft.customCheckIn
@@ -166,6 +175,13 @@ export function mergeUserOwnedCheckInDraft(input: {
         turnstilePreTrigger: draftCustom.turnstilePreTrigger,
       }
     : undefined
+  // Route paths are edited in this dialog and learned into it by redetection, so
+  // the dialog is authoritative and a cleared field stays cleared.
+  const routeOverrides = mergeCheckInRouteOverrides(
+    input.draft.routeOverrides,
+    input.learnedRouteOverrides,
+    input.routeDiscoveryBase,
+  )
 
   return {
     ...input.latest,
@@ -173,10 +189,39 @@ export function mergeUserOwnedCheckInDraft(input: {
     selection: input.selectionChanged
       ? input.draft.selection
       : input.latest.selection,
+    routeOverrides,
     ...(customCheckIn ? { customCheckIn } : { customCheckIn: undefined }),
   }
 }
 
+/** Accepts learned paths while preserving edits made since a discovery snapshot. */
+export function mergeCheckInRouteOverrides(
+  user: CheckInConfig["routeOverrides"],
+  learned: CheckInConfig["routeOverrides"],
+  base?: Pick<CheckInConfig, "routeOverrides">,
+): CheckInConfig["routeOverrides"] {
+  if (!user && !learned) return undefined
+  if (!base) return { ...learned, ...user }
+  const routes = { ...learned }
+  const methodIds = Object.keys({
+    ...base.routeOverrides,
+    ...user,
+  }) as CheckInMethodId[]
+  for (const methodId of methodIds) {
+    const before = base.routeOverrides?.[methodId]
+    const current = user?.[methodId]
+    if (
+      before?.path === current?.path &&
+      before?.source === current?.source &&
+      before?.observedAt === current?.observedAt
+    )
+      continue
+    // A deletion is an edit too; never resurrect a path cleared during discovery.
+    if (current) routes[methodId] = current
+    else delete routes[methodId]
+  }
+  return Object.keys(routes).length ? routes : undefined
+}
 const selectionsEqual = (
   left: CheckInMethodSelection,
   right: CheckInMethodSelection,
@@ -185,9 +230,21 @@ const selectionsEqual = (
 /** Keeps established facts while requiring discovery for a new credential scope. */
 export function invalidateCheckInDiscovery(
   config: CheckInConfig,
+  options: { siteUrlChanged?: boolean } = {},
 ): CheckInConfig {
+  const manualRoutes = Object.fromEntries(
+    Object.entries(config.routeOverrides ?? {}).filter(
+      ([, override]) =>
+        override?.source === CHECK_IN_ROUTE_OVERRIDE_SOURCES.Manual,
+    ),
+  )
   return {
     ...config,
+    // Manual paths belong to the deployment; learned paths require fresh evidence.
+    routeOverrides:
+      !options.siteUrlChanged && Object.keys(manualRoutes).length
+        ? manualRoutes
+        : undefined,
     methodKnowledge: {
       ...config.methodKnowledge,
       lastFullDiscoveryAt: undefined,

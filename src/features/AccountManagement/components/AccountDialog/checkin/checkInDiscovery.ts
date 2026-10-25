@@ -73,9 +73,12 @@ export function discoverAccountDialogCheckInMethods(params: {
     params.tempWindowRequestSource,
     async (protectionBypassExecution) => {
       const account = createAccountDialogCheckInDiscoveryAccount(params)
+      // This click is an explicit user request, so it may also learn a renamed
+      // route from the site's own assets. Unattended discovery never does.
       const discovery = await discoverAccountCheckInMethods(account, {
         tempWindowRequestSource: params.tempWindowRequestSource,
         protectionBypassExecution,
+        allowRouteDiscovery: true,
       })
 
       return { discovery, protectionBypassExecution }

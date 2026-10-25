@@ -1,4 +1,11 @@
 import {
+  AUTO_CHECKIN_METHOD_IDS,
+  CHECK_IN_METHOD_AVAILABILITIES,
+  CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES,
+  CHECK_IN_METHOD_STATUS_OUTCOMES,
+  CHECK_IN_METHOD_TODAY_STATUSES,
+} from "~/constants/checkIn"
+import {
   resolveAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
@@ -11,6 +18,7 @@ import { fetchSupportCheckIn } from "~/services/apiService/newApiFamily/default/
 import { newApiFamilyRequests } from "~/services/apiService/newApiFamily/request"
 import { ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import { readCheckInRoutePath } from "~/services/checkin/autoCheckin/configuration/routeOverrides"
 import type { AutoCheckinProviderContext } from "~/services/checkin/autoCheckin/providers/contracts"
 import {
   AUTO_CHECKIN_PROVIDER_FALLBACK_MESSAGE_KEYS,
@@ -25,6 +33,7 @@ import type { AutoCheckinProviderOutcome } from "~/services/checkin/autoCheckin/
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { SiteAccount } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import type { CheckInMethodStatus } from "~/types/checkIn"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 import type { TurnstilePreTrigger } from "~/types/turnstile"
 import { formatLocalDayKey, formatLocalMonthKey } from "~/utils/core/dayKey"
@@ -36,6 +45,23 @@ export const NEW_API_MESSAGE_KEYS = {
 
 type CheckinResult = AutoCheckinProviderOutcome
 const ENDPOINT = AUTO_CHECKIN_USER_CHECKIN_ENDPOINT
+
+/**
+ * Resolve this account's check-in request path.
+ *
+ * Most New API deployments serve the canonical `/api/user/checkin`; a fork that
+ * renamed the route stores its own path as an account-level override, and every
+ * operation (status, mutation, Turnstile replay) must use that same path.
+ */
+export function resolveCheckInEndpoint(account?: SiteAccount): string {
+  return account
+    ? readCheckInRoutePath(
+        account.checkIn,
+        AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn,
+        ENDPOINT,
+      )
+    : ENDPOINT
+}
 /** Build the authenticated request shared by New API check-in operations. */
 export function createCheckInRequest(
   account: SiteAccount,
@@ -148,6 +174,31 @@ export function resolveStandardCheckinResult(params: {
 }
 
 /**
+ * Resolve the availability reported alongside a status body.
+ *
+ * The canonical contract answers `enabled` itself. A renamed route may omit it;
+ * that deployment's console reads the public `checkin_enabled` switch instead,
+ * so the same switch answers here. A non-strict read keeps its historical
+ * "enabled unless proven otherwise" answer when neither source exists.
+ */
+async function resolveAvailability(
+  reported: boolean | undefined,
+  request: ApiServiceRequest,
+  signal: AbortSignal | undefined,
+  usesRouteOverride: boolean,
+): Promise<boolean | undefined> {
+  if (typeof reported === "boolean") return reported
+  if (!usesRouteOverride) return true
+  if (signal?.aborted) return undefined
+  try {
+    const supported = await fetchSupportCheckIn(request, signal)
+    return typeof supported === "boolean" ? supported : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/**
  * Defensive verification: resolve whether the user is already checked in today.
  *
  * Some deployments only render Turnstile after clicking a "check-in" button.
@@ -165,7 +216,8 @@ export async function fetchCheckedInTodayStatus(
 ): Promise<
   | {
       checkedInToday?: boolean
-      enabled: boolean
+      /** Absent when neither the body nor the public switch answers. */
+      enabled?: boolean
       /**
        * The quota this day's check-in awarded, read from the same month record
        * set this call already fetched. Absent when the deployment returns no
@@ -186,25 +238,39 @@ export async function fetchCheckedInTodayStatus(
         )
       : undefined)
   if (!request) return undefined
+  const endpoint = resolveCheckInEndpoint(account)
+  // A deployment that renamed the route may stop reporting `enabled` inside the
+  // status body; its own console reads the public `checkin_enabled` switch
+  // instead. Only an overridden route consults that switch, so a default
+  // deployment's missing field still counts as an invalid response.
+  const usesRouteOverride = endpoint !== ENDPOINT
 
   try {
     const checkInData = await newApiFamilyRequests.data<NewApiCheckInStatus>(
       request,
       {
-        endpoint: `${ENDPOINT}?month=${currentMonth}`,
+        endpoint: `${endpoint}?month=${currentMonth}`,
         ...(signal ? { options: { signal } } : {}),
       },
     )
 
     if (
       typeof checkInData?.stats?.checked_in_today === "boolean" &&
-      (!strictResponse || typeof checkInData?.enabled === "boolean")
+      (!strictResponse ||
+        typeof checkInData?.enabled === "boolean" ||
+        usesRouteOverride)
     ) {
       const todayQuotaAwarded = resolveTodayQuotaAwarded(
         checkInData.stats.records,
       )
+      const enabled = await resolveAvailability(
+        checkInData.enabled,
+        request,
+        signal,
+        usesRouteOverride,
+      )
       return {
-        enabled: checkInData.enabled !== false,
+        ...(enabled !== undefined ? { enabled } : {}),
         checkedInToday: checkInData.stats.checked_in_today,
         ...(todayQuotaAwarded !== undefined ? { todayQuotaAwarded } : {}),
       }
@@ -232,6 +298,54 @@ export async function fetchCheckedInTodayStatus(
       return undefined
     }
 
+    return undefined
+  }
+}
+
+/**
+ * Read one candidate route a deployment's own assets exposed.
+ *
+ * This is the same strict read detection performs, against a path the caller
+ * supplies instead of the account's current one. Only a complete
+ * `stats.checked_in_today` answer counts, so a decoy or an unrelated endpoint
+ * that happens to accept the request cannot be adopted as this method's route.
+ */
+export async function probeCheckInRoute(input: {
+  account: SiteAccount
+  path: string
+  request?: ApiServiceRequest
+  signal?: AbortSignal
+  observedAt: number
+}): Promise<CheckInMethodStatus | undefined> {
+  const request =
+    input.request ?? createCheckInRequest(input.account, undefined, undefined)
+  try {
+    const status = await newApiFamilyRequests.data<NewApiCheckInStatus>(
+      request,
+      {
+        endpoint: `${input.path}?month=${formatLocalMonthKey()}`,
+        ...(input.signal ? { options: { signal: input.signal } } : {}),
+      },
+    )
+    if (typeof status?.stats?.checked_in_today !== "boolean") return undefined
+    return {
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+      ...(typeof status.enabled === "boolean"
+        ? {
+            availability: status.enabled
+              ? CHECK_IN_METHOD_AVAILABILITIES.Enabled
+              : CHECK_IN_METHOD_AVAILABILITIES.Disabled,
+          }
+        : {}),
+      today: status.stats.checked_in_today
+        ? CHECK_IN_METHOD_TODAY_STATUSES.Checked
+        : CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+      evidence: {
+        source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe,
+        observedAt: input.observedAt,
+      },
+    }
+  } catch {
     return undefined
   }
 }

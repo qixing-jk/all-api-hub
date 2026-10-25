@@ -11,6 +11,7 @@ import type {
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
   CHECK_IN_METHOD_UNKNOWN_REASONS,
+  CHECK_IN_ROUTE_OVERRIDE_SOURCES,
   CHECK_IN_SELECTION_MODES,
   CHECK_IN_SELECTION_STALE_REASONS,
   CHECK_IN_SELECTION_STATUSES,
@@ -125,6 +126,20 @@ export type CheckInMethodSelection =
       methodId: PersistedCheckInMethodId
     }
 
+/**
+ * A deployment's own request path for one method's operations.
+ *
+ * Only deployments that rename an otherwise identical route need this; the
+ * method's canonical path remains the default everywhere else.
+ */
+export interface CheckInRouteOverride {
+  /** Same-origin request path, without query or fragment. */
+  path: string
+  /** Whether the user entered the path or a redetection probe verified it. */
+  source: (typeof CHECK_IN_ROUTE_OVERRIDE_SOURCES)[keyof typeof CHECK_IN_ROUTE_OVERRIDE_SOURCES]
+  observedAt: number
+}
+
 export interface CheckInConfig {
   /** @deprecated Legacy read/migration only. New configuration belongs to SiteAccount.login. */
   loginCheckIn?: {
@@ -139,6 +154,8 @@ export interface CheckInConfig {
   }
   selection: CheckInMethodSelection
   customCheckIn?: CustomCheckInConfig
+  /** Per-method route paths for deployments whose own console renamed them. */
+  routeOverrides?: Partial<Record<CheckInMethodId, CheckInRouteOverride>>
 }
 
 export type CheckInDiscoveryDecision =

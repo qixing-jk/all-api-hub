@@ -676,6 +676,7 @@ describe("SiteInfo", () => {
     await userEvent.setup().click(action)
     expect(mockOpenEditAccount).toHaveBeenCalledWith(
       expect.objectContaining({ id: "acc-1" }),
+      { focusSection: "check-in" },
     )
     expect(mockHandleRefreshAccount).not.toHaveBeenCalled()
   })

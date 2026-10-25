@@ -86,6 +86,12 @@ interface AutoCheckinMethodDefinitionBase {
   readonly origins?: readonly string[]
   readonly excludedOrigins?: readonly string[]
   readonly source: AutoCheckinMethodSource
+  /**
+   * The deployment may serve this method's otherwise identical operations under
+   * its own route. Declared here so presentation and discovery agree without
+   * loading executable providers.
+   */
+  readonly supportsRouteOverride?: boolean
 }
 
 /** Hiyo can award again; DaiGua/Sidrune/FreeAPI duplicate guarantees are unverified. Never queue replays. */
@@ -297,6 +303,9 @@ export const AUTO_CHECKIN_METHOD_DEFINITIONS = {
     excludedOrigins: AGENT_ROUTER_ORIGINS,
     source: OFFICIAL_CHECK_IN_METHOD_SOURCE,
     supportsStatusReadback: true,
+    // Forks keep the operations but rename the route (ultrarouter.org serves
+    // `/api/user/daily-9f3k`), so the account may store its own path.
+    supportsRouteOverride: true,
     feedbackStatusRoutes: newApiFeedbackStatusRoutes,
     legacy: true,
     newAccountCompatibility: true,
@@ -529,6 +538,20 @@ export function supportsCheckInStatusReadback(
   return (
     AUTO_CHECKIN_METHOD_DEFINITIONS[methodId].supportsStatusReadback === true
   )
+}
+
+/**
+ * Returns whether this method's route may be replaced by the deployment's own
+ * path. Uses the declarative definition so presentation code never loads a
+ * provider module.
+ */
+export function supportsCheckInRouteOverride(
+  methodId: string | undefined,
+): boolean {
+  if (!isCheckInMethodId(methodId)) return false
+  const definition: AutoCheckinMethodDefinition =
+    AUTO_CHECKIN_METHOD_DEFINITIONS[methodId]
+  return definition.supportsRouteOverride === true
 }
 
 /** Returns the product source used to present a registered method. */

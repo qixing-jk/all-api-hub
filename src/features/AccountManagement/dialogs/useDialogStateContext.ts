@@ -1,6 +1,7 @@
 import { createContext, useContext, type MouseEvent } from "react"
 
 import { type DialogMode } from "~/constants/dialogModes"
+import type { AccountFormSectionId } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
 import type { AccountDialogRecoveryState } from "~/features/AccountManagement/components/AccountDialog/models"
 import type { AddAccountPrefill } from "~/features/AccountManagement/sponsors/types"
 import type { DisplaySiteData } from "~/types"
@@ -10,6 +11,8 @@ export interface DialogOptions {
   account?: DisplaySiteData | null
   prefill?: AddAccountPrefill | null
   recoveryState?: AccountDialogRecoveryState | null
+  /** Section the dialog opens on, for a guidance action with one target. */
+  focusSection?: AccountFormSectionId
 }
 
 interface DialogStateContextType {
@@ -22,7 +25,10 @@ interface DialogStateContextType {
     prefillOrEvent?: AddAccountPrefill | MouseEvent | null,
   ) => void
   closeAddAccount: () => void
-  openEditAccount: (account: DisplaySiteData) => void
+  openEditAccount: (
+    account: DisplaySiteData,
+    options?: { focusSection?: AccountFormSectionId },
+  ) => void
   closeEditAccount: () => void
 }
 
