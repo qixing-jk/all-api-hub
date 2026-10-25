@@ -28,6 +28,7 @@ import {
 import { FOXCODE_KEY_EDITOR_FIELDS as foxCodeFields } from "~/services/apiAdapters/foxcode/keyEditorFields"
 import { krillKeyFields } from "~/services/apiAdapters/krill/keyResourceFields"
 import { RELAYFOR_KEY_FIELDS as relayForFields } from "~/services/apiAdapters/relayfor/keyFields"
+import { REQUESTY_KEY_FIELDS as requestyFields } from "~/services/apiAdapters/requesty/keys/keyResourceFields"
 
 import type { AccountKeyResourceEditorPresentation as EditorPresentation } from "./accountKeyResourceEditorPresentation"
 import { getDahlKeyResourceEditorPresentation } from "./dahlKeyResourceEditorPresentation"
@@ -199,6 +200,48 @@ const buildSub2ApiFields = (
         },
     ...(mode === editorModes.Edit ? [enabled("enabled")] : []),
     ips("ip_whitelist"),
+  ],
+})
+
+const buildRequestyFields = (
+  mode: AccountKeyResourceEditorMode,
+): {
+  fields: ResourceFieldPresentation[]
+  automaticName: EditorPresentation["automaticName"]
+} => ({
+  automaticName: { kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed },
+  fields: [
+    // Requesty has no name-update endpoint, so the name is create-only.
+    ...(mode === editorModes.Create
+      ? ([
+          name,
+          {
+            fieldId: requestyFields.ManagePermission,
+            section: "advanced",
+            order: 10,
+            renderer: "boolean",
+            resolveLabel: (t: TFunction) =>
+              t("keyManagement:native.editor.requestyManagePermission"),
+            resolveHelp: (t: TFunction) =>
+              t("keyManagement:native.editor.requestyManagePermissionHelp"),
+            issueLabelResolvers: issues,
+          },
+        ] as ResourceFieldPresentation[])
+      : []),
+    {
+      fieldId: requestyFields.MonthlyLimit,
+      section: "spending",
+      order: 10,
+      renderer: "number",
+      resolveLabel: (t) =>
+        t("keyManagement:native.editor.requestyMonthlyLimit"),
+      resolvePlaceholder: (t) =>
+        t("keyManagement:native.editor.requestyMonthlyLimitPlaceholder"),
+      issueLabelResolvers: issues,
+    },
+    ...(mode === editorModes.Edit
+      ? [expiryField(requestyFields.ExpiresAt)]
+      : []),
   ],
 })
 
@@ -523,6 +566,7 @@ const resolveSiteFields = (
   const builders = {
     [editorKinds.Sub2Api]: () => buildSub2ApiFields(mode),
     [editorKinds.RelayFor]: () => buildRelayForFields(),
+    [editorKinds.Requesty]: () => buildRequestyFields(mode),
     [editorKinds.VoApiV2]: buildVoApiV2Fields,
     [editorKinds.RightCode]: () => buildRightCodeFields(mode),
     [editorKinds.NameOnly]: () => ({

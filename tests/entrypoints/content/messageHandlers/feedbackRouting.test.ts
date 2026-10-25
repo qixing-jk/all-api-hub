@@ -6,6 +6,7 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mocks = vi.hoisted(() => ({
   register: vi.fn(),
+  requesty: vi.fn(),
   newApiPasswordUi: vi.fn(),
   sub2ApiPasswordUi: vi.fn(),
   newApiPasswordLogin: vi.fn(),
@@ -39,7 +40,9 @@ vi.mock("~/services/apiService/sub2api/auth/passwordLogin", () => ({
 vi.mock("~/utils/browser/runtimeMessages", () => ({
   onRuntimeMessage: mocks.register,
 }))
-vi.mock("~/entrypoints/content/messageHandlers/handlers", () => ({}))
+vi.mock("~/entrypoints/content/messageHandlers/handlers", () => ({
+  handleRequestyManagementKeyAction: mocks.requesty,
+}))
 vi.mock("~/services/apiService/sub2api/oauth/content", () => ({
   handlePrepareSub2ApiOAuth: mocks.prepareSub2Api,
   handleCompleteSub2ApiOAuth: mocks.completeSub2Api,
@@ -63,6 +66,18 @@ vi.mock("~/lib/notify/content", () => ({
   default: { info: vi.fn(), dismiss: vi.fn() },
 }))
 beforeEach(() => vi.resetAllMocks())
+
+it("routes Requesty creation to its content handler and preserves the asynchronous reply contract", () => {
+  mocks.requesty.mockReturnValue(true)
+  setupContentMessageHandlers()
+  const request = {
+    action: RuntimeActionIds.ContentRequestyManagementKeyAction,
+    requestId: "create",
+  }
+  const reply = vi.fn()
+  expect(mocks.register.mock.calls[0]![0](request, {}, reply)).toBe(true)
+  expect(mocks.requesty).toHaveBeenCalledExactlyOnceWith(request, reply)
+})
 
 describe("feedback content routing", () => {
   it.each([

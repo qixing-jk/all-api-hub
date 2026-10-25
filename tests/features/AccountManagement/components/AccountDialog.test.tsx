@@ -642,6 +642,64 @@ describe("AccountDialog", () => {
     ).toBeInTheDocument()
   })
 
+  it.each([false, true])(
+    "presents Requesty creation and pending labels (working: %s)",
+    async (working) => {
+      mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT
+      mockState.url = "https://app.requesty.ai/api-keys"
+      mockState.accessToken = ""
+      mockState.isDetecting = working
+      render(
+        <AccountDialog
+          isOpen
+          onClose={vi.fn()}
+          mode={DIALOG_MODES.ADD}
+          onSuccess={vi.fn()}
+          onError={vi.fn()}
+        />,
+      )
+      const button = await screen.findByRole("button", {
+        name: working
+          ? "accountDialog:mode.creatingManagementKey"
+          : "accountDialog:mode.createManagementKey",
+      })
+      if (working) expect(button).toBeDisabled()
+      else {
+        await userEvent.setup().click(button)
+        expect(mockHandlers.handleAutoDetect).toHaveBeenCalledOnce()
+      }
+      expect(
+        screen.getByText("accountDialog:infoPanel.managementKeyBootstrapInfo"),
+      ).toBeVisible()
+    },
+  )
+
+  it("creates a Requesty key from the manual account form", async () => {
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+    mockState.siteType = SITE_TYPES.REQUESTY
+    mockState.url = "https://app.requesty.ai/api-keys"
+    mockState.accessToken = ""
+    mockState.draft.siteType = SITE_TYPES.REQUESTY
+    mockState.draft.accessToken = ""
+    render(
+      <AccountDialog
+        isOpen
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+    await userEvent
+      .setup()
+      .click(
+        await screen.findByRole("button", {
+          name: "accountDialog:form.autoCreateAccessToken",
+        }),
+      )
+    expect(mockHandlers.handleAutoDetect).toHaveBeenCalledOnce()
+  })
+
   it("presents canonical OpenRouter detection as Management Key creation", async () => {
     mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT
     mockState.url = "https://openrouter.ai/settings/management-keys"

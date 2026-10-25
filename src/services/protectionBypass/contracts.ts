@@ -6,6 +6,11 @@ import {
   type TempWindowOpenRouterManagementKeyActionParams,
   type TempWindowOpenRouterManagementKeyActionResult,
 } from "~/services/apiAdapters/openrouter/keys/managementKeyPageContract"
+import { REQUESTY_MANAGEMENT_KEY_NAME_MAX_LENGTH } from "~/services/apiAdapters/requesty/keys/managementKeyPageContract"
+import type {
+  TempWindowRequestyManagementKeyActionParams,
+  TempWindowRequestyManagementKeyActionResult,
+} from "~/services/apiAdapters/requesty/keys/managementKeyPageContract"
 import type {
   CheckInFeedbackClues,
   CheckInFeedbackScanInput,
@@ -402,6 +407,7 @@ export const TEMP_CONTEXT_TASK_KINDS = {
   TurnstileFetch: "turnstile_fetch",
   NativePageAction: "native_page_action",
   OpenRouterManagementKeyAction: "openrouter_management_key_action",
+  RequestyManagementKeyAction: "requesty_management_key_action",
   RenderedTitle: "rendered_title",
   CheckinFeedbackScan: "checkin_feedback_scan",
   SessionRead: "session_read",
@@ -461,6 +467,10 @@ export type TempContextTask =
       params: WithoutProtectionBypassIntent<TempWindowOpenRouterManagementKeyActionParams>
     }
   | {
+      kind: typeof TEMP_CONTEXT_TASK_KINDS.RequestyManagementKeyAction
+      params: WithoutProtectionBypassIntent<TempWindowRequestyManagementKeyActionParams>
+    }
+  | {
       kind: typeof TEMP_CONTEXT_TASK_KINDS.RenderedTitle
       params: WithoutProtectionBypassIntent<TempWindowRenderedTitleParams>
     }
@@ -499,6 +509,7 @@ type TempContextTaskResultMap = {
   [TEMP_CONTEXT_TASK_KINDS.TurnstileFetch]: TempWindowTurnstileFetch
   [TEMP_CONTEXT_TASK_KINDS.NativePageAction]: TempWindowCheckinPageAction
   [TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction]: TempWindowOpenRouterManagementKeyActionResult
+  [TEMP_CONTEXT_TASK_KINDS.RequestyManagementKeyAction]: TempWindowRequestyManagementKeyActionResult
   [TEMP_CONTEXT_TASK_KINDS.RenderedTitle]: TempWindowRenderedTitleResponse
   [TEMP_CONTEXT_TASK_KINDS.SessionRead]: TempWindowFetch
   [TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead]: TempWindowFetch
@@ -614,6 +625,20 @@ function isOpenRouterManagementKeyActionParams(
     isNonEmptyString(value.operation.label) &&
     value.operation.label.length <=
       OPENROUTER_MANAGEMENT_KEY_LABEL_MAX_LENGTH &&
+    isOptionalBoolean(value.suppressMinimize)
+  )
+}
+
+/** Checks the Requesty task fields read before page-action dispatch. */
+function isRequestyManagementKeyActionParams(
+  value: Record<string, unknown>,
+): boolean {
+  if (!isPlainObject(value.operation)) return false
+  return (
+    isNonEmptyString(value.requestId) &&
+    value.operation.kind === "create" &&
+    isNonEmptyString(value.operation.name) &&
+    value.operation.name.length <= REQUESTY_MANAGEMENT_KEY_NAME_MAX_LENGTH &&
     isOptionalBoolean(value.suppressMinimize)
   )
 }
@@ -792,6 +817,8 @@ export function isTempContextTask(value: unknown): value is TempContextTask {
       return isNativePageActionParams(params)
     case TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction:
       return isOpenRouterManagementKeyActionParams(params)
+    case TEMP_CONTEXT_TASK_KINDS.RequestyManagementKeyAction:
+      return isRequestyManagementKeyActionParams(params)
     case TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan:
       return isCheckinFeedbackScanParams(params)
     case TEMP_CONTEXT_TASK_KINDS.RenderedTitle:
@@ -856,6 +883,10 @@ const TEMP_CONTEXT_TASK_METADATA = {
     cause: PROTECTION_BYPASS_CAUSES.VerificationRequired,
   },
   [TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction]: {
+    operation: PROTECTION_BYPASS_OPERATIONS.NativePageAction,
+    cause: PROTECTION_BYPASS_CAUSES.ExplicitContext,
+  },
+  [TEMP_CONTEXT_TASK_KINDS.RequestyManagementKeyAction]: {
     operation: PROTECTION_BYPASS_OPERATIONS.NativePageAction,
     cause: PROTECTION_BYPASS_CAUSES.ExplicitContext,
   },
@@ -936,6 +967,7 @@ export const PROTECTION_BYPASS_FEATURE_TASK_KINDS = {
     TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch,
     TEMP_CONTEXT_TASK_KINDS.SessionRead,
     TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction,
+    TEMP_CONTEXT_TASK_KINDS.RequestyManagementKeyAction,
   ],
 } as const satisfies Record<
   ProtectionBypassFeature,

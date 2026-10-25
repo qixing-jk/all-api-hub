@@ -1174,3 +1174,82 @@ describe("display account API context and native runtime keys", () => {
     ).toBe(false)
   })
 })
+
+describe("account credential secret resolution", () => {
+  it("resolves the account's own credential from the stored token", async () => {
+    const open = vi.fn()
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.REQUESTY,
+      account: {
+        keyResourceManagement: {
+          inventorySecretAvailability:
+            INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
+          open,
+        },
+      },
+    } as any)
+    vi.mocked(resolveAssociatedProfileSecret).mockResolvedValue({
+      status: "unavailable",
+    } as any)
+    const account = {
+      ...ACCOUNT,
+      siteType: SITE_TYPES.REQUESTY,
+      token: "rqsty-account-credential",
+    }
+    const runtimeKey = buildAccountKeyResourceRuntimeKey(account as any, {
+      ref: {
+        accountId: account.id,
+        siteType: SITE_TYPES.REQUESTY,
+        scopeKey: "default",
+        resourceId: "self",
+      },
+      label: "account credential",
+      secret: "",
+      accountCredential: true,
+    })
+
+    await expect(
+      resolveDisplayAccountRuntimeKeySecret(account as any, runtimeKey),
+    ).resolves.toMatchObject({
+      secret: "rqsty-account-credential",
+      status: "active",
+    })
+    // The stored token is the same credential; no provider or profile read is needed.
+    expect(open).not.toHaveBeenCalled()
+    expect(resolveAssociatedProfileSecret).not.toHaveBeenCalled()
+  })
+
+  it("keeps other create-response-only keys on the associated-profile path", async () => {
+    const open = vi.fn()
+    vi.mocked(getSiteTypeCapabilities).mockReturnValue({
+      siteType: SITE_TYPES.REQUESTY,
+      account: {
+        keyResourceManagement: {
+          inventorySecretAvailability:
+            INVENTORY_SECRET_AVAILABILITIES.CreateResponseOnly,
+          open,
+        },
+      },
+    } as any)
+    const account = {
+      ...ACCOUNT,
+      siteType: SITE_TYPES.REQUESTY,
+      token: "rqsty-account-credential",
+    }
+    const runtimeKey = buildAccountKeyResourceRuntimeKey(account as any, {
+      ref: {
+        accountId: account.id,
+        siteType: SITE_TYPES.REQUESTY,
+        scopeKey: "default",
+        resourceId: "other-key",
+      },
+      label: "other key",
+      secret: "",
+    })
+
+    await expect(
+      resolveDisplayAccountRuntimeKeySecret(account as any, runtimeKey),
+    ).rejects.toThrow()
+    expect(resolveAssociatedProfileSecret).toHaveBeenCalled()
+  })
+})

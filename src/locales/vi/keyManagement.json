@@ -171,7 +171,8 @@
   },
   "batchSelection": {
     "accountUnavailableReason": "Tài khoản này không có khóa nào hỗ trợ thao tác hàng loạt.",
-    "eligibilityNotice_other": "Hiện có {{count}} khóa hỗ trợ thao tác hàng loạt; các khóa khác sẽ không được áp dụng.",
+    "eligibilityHint": "Thao tác hàng loạt chỉ chọn các khóa suy luận có thể xuất. Khóa quản lý và khóa không thể lấy được giá trị đầy đủ sẽ không được chọn.",
+    "helpLabel": "Về việc chọn hàng loạt",
     "unavailableReason": "Khóa này không hỗ trợ thao tác hàng loạt."
   },
   "createdKey": {
@@ -365,7 +366,18 @@
       "revoke": "Thu hồi khóa",
       "rotate": "Luân chuyển khóa API"
     },
+    "badges": {
+      "accountCredential": "Đang dùng cho tài khoản này",
+      "accountManagePermission": "Khóa quản lý của tài khoản hiện tại",
+      "managePermission": "Khóa quản lý"
+    },
+    "credentialRole": {
+      "badgeTitle": "All API Hub dùng khóa này để kết nối với tài khoản, đọc số dư và quản lý khóa. Nếu thay khóa, hãy cập nhật khóa trong phần cài đặt tài khoản."
+    },
     "delete": {
+      "accountCredentialAcknowledge": "Tôi hiểu việc này sẽ cắt quyền truy cập quản lý của tài khoản",
+      "accountCredentialWarningDescription": "Tài khoản sẽ mất quyền truy cập quản lý Requesty: danh sách khóa, số dư và làm mới sẽ thất bại. Không thể khôi phục khóa tại đây.",
+      "accountCredentialWarningTitle": "Xóa thông tin xác thực của tài khoản",
       "confirm": "Xóa khóa",
       "description": "Xóa vĩnh viễn khóa API {{name}}? Không thể hoàn tác thao tác này.",
       "feedback": {
@@ -375,6 +387,7 @@
         "unavailable": "Dịch vụ tạm thời không khả dụng. Hãy làm mới trước khi thử lại.",
         "uncertain": "Trạng thái khóa có thể đã thay đổi. Hãy làm mới khóa trước khi quyết định có thử lại hay không."
       },
+      "manageKeyWarning": "Khóa này có quyền quản lý. Các luồng phụ thuộc vào nó sẽ mất quyền quản lý sau khi xóa.",
       "refresh": "Làm mới khóa",
       "title": "Xóa khóa API?"
     },
@@ -529,6 +542,10 @@
       "quotaUsd": "Hạn mức (USD)",
       "remainingCount": "Số lượt còn lại",
       "remainingCountPlaceholder": "Khóa này còn gọi được bao nhiêu lượt",
+      "requestyManagePermission": "Quyền quản lý",
+      "requestyManagePermissionHelp": "Khóa này có thể gọi các endpoint quản lý và quản lý các khóa khác.",
+      "requestyMonthlyLimit": "Hạn mức hàng tháng (USD)",
+      "requestyMonthlyLimitPlaceholder": "0 hoặc để trống nghĩa là không giới hạn",
       "storageLocation": "Vị trí lưu trữ",
       "storageLocationGlobal": "Nút toàn cầu",
       "storageLocationHelp": "Nơi lưu nội dung do khóa này tạo ra.",
@@ -555,6 +572,13 @@
       "rotateDescription": "Khóa cũ sẽ ngừng hoạt động ngay. Sao chép khóa mới và cập nhật ứng dụng khách. Các cài đặt khác được giữ nguyên."
     },
     "missing": "Không khả dụng",
+    "permission": {
+      "accountManageBadgeTitle": "All API Hub dùng khóa này để đọc số dư tài khoản và quản lý khóa. Khóa này cũng có thể tạo và xóa các khóa khác trong tổ chức. Sau khi thay hoặc xóa khóa, hãy cập nhật khóa trong phần cài đặt tài khoản.",
+      "manage": "Quyền quản lý",
+      "manageBadgeTitle": "Khóa này có thể gọi các endpoint quản lý và quản lý các khóa khác trong tổ chức.",
+      "manageGranted": "Có thể quản lý khóa khác",
+      "manageNotGranted": "Chỉ suy luận"
+    },
     "revoke": {
       "description": "Thu hồi “{{name}}”? Khóa sẽ bị vô hiệu hóa vĩnh viễn. Bản ghi được giữ lại cho đến khi bạn xóa.",
       "feedback": {

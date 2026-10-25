@@ -177,8 +177,8 @@
   },
   "batchSelection": {
     "accountUnavailableReason": "Dieses Konto verfügt über keine Schlüssel, die Batch-Aktionen unterstützen.",
-    "eligibilityNotice_one": "{{count}} Schlüssel unterstützt derzeit Batch-Aktionen; andere Schlüssel werden nicht einbezogen.",
-    "eligibilityNotice_other": "{{count}} Schlüssel unterstützen derzeit Batch-Aktionen; andere Schlüssel werden nicht einbezogen.",
+    "eligibilityHint": "Stapelaktionen wählen nur exportierbare Inferenzschlüssel aus. Verwaltungsschlüssel und Schlüssel, deren vollständiger Wert nicht verfügbar ist, sind ausgeschlossen.",
+    "helpLabel": "Hinweise zur Mehrfachauswahl",
     "unavailableReason": "Dieser Schlüssel unterstützt keine Batch-Aktionen."
   },
   "createdKey": {
@@ -376,7 +376,18 @@
       "revoke": "Schlüssel widerrufen",
       "rotate": "API-Schlüssel rotieren"
     },
+    "badges": {
+      "accountCredential": "Von diesem Konto verwendet",
+      "accountManagePermission": "Verwaltungsschlüssel dieses Kontos",
+      "managePermission": "Verwaltungsschlüssel"
+    },
+    "credentialRole": {
+      "badgeTitle": "All API Hub verbindet sich mit diesem Schlüssel mit dem Konto, um den Kontostand abzurufen und Schlüssel zu verwalten. Wenn Sie ihn ersetzen, aktualisieren Sie den Schlüssel in den Kontoeinstellungen."
+    },
     "delete": {
+      "accountCredentialAcknowledge": "Mir ist klar, dass der Verwaltungszugriff des Kontos damit endet",
+      "accountCredentialWarningDescription": "Dieses Konto verliert den Requesty-Verwaltungszugriff: Schlüssellisten, Guthaben und Aktualisierungen schlagen fehl. Der Schlüssel kann hier nicht wiederhergestellt werden.",
+      "accountCredentialWarningTitle": "Eigenen Zugang des Kontos löschen",
       "confirm": "Schlüssel löschen",
       "description": "Den API-Schlüssel {{name}} dauerhaft löschen? Dies kann nicht rückgängig gemacht werden.",
       "feedback": {
@@ -386,6 +397,7 @@
         "unavailable": "Der Dienst ist vorübergehend nicht verfügbar. Aktualisieren Sie die Schlüssel, bevor Sie es erneut versuchen.",
         "uncertain": "Der Schlüsselstatus hat sich möglicherweise geändert. Aktualisieren Sie die Schlüssel, bevor Sie entscheiden, ob Sie es erneut versuchen möchten."
       },
+      "manageKeyWarning": "Dieser Schlüssel hat Verwaltungsberechtigungen. Abläufe, die ihn nutzen, verlieren nach dem Löschen den Verwaltungszugriff.",
       "refresh": "Schlüssel aktualisieren",
       "title": "API-Schlüssel löschen?"
     },
@@ -540,6 +552,10 @@
       "quotaUsd": "Kontingent (USD)",
       "remainingCount": "Verbleibende Aufrufe",
       "remainingCountPlaceholder": "Wie viele Aufrufe dieser Schlüssel noch erlaubt",
+      "requestyManagePermission": "Verwaltungsberechtigung",
+      "requestyManagePermissionHelp": "Dieser Schlüssel kann Verwaltungsendpunkte aufrufen und andere Schlüssel verwalten.",
+      "requestyMonthlyLimit": "Monatslimit (USD)",
+      "requestyMonthlyLimitPlaceholder": "0 oder leer = unbegrenzt",
       "storageLocation": "Speicherort",
       "storageLocationGlobal": "Globaler Knoten",
       "storageLocationHelp": "Wo die von diesem Schlüssel erzeugten Medien abgelegt werden.",
@@ -566,6 +582,13 @@
       "rotateDescription": "Der alte Schlüssel wird sofort ungültig. Kopieren Sie den neuen Schlüssel und aktualisieren Sie Ihre Clients. Andere Einstellungen bleiben erhalten."
     },
     "missing": "Nicht verfügbar",
+    "permission": {
+      "accountManageBadgeTitle": "All API Hub verwendet diesen Schlüssel, um den Kontostand abzurufen und Schlüssel zu verwalten. Er kann auch andere Schlüssel der Organisation erstellen und löschen. Aktualisieren Sie nach dem Ersetzen oder Löschen den Schlüssel in den Kontoeinstellungen.",
+      "manage": "Verwaltungsberechtigung",
+      "manageBadgeTitle": "Dieser Schlüssel darf Verwaltungsendpunkte aufrufen und andere Schlüssel der Organisation verwalten.",
+      "manageGranted": "Kann andere Schlüssel verwalten",
+      "manageNotGranted": "Nur Inferenz"
+    },
     "revoke": {
       "description": "„{{name}}“ widerrufen? Der Schlüssel wird dauerhaft deaktiviert. Der Eintrag bleibt bis zur Löschung erhalten.",
       "feedback": {

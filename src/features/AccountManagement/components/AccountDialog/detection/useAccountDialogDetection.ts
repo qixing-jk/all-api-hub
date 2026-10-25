@@ -248,10 +248,14 @@ export function useAccountDialogDetection({
         setAuthType,
         beforeDetect: () => rememberCookieStore(undefined),
         onOpenRouterStarted: () => setSiteType(SITE_TYPES.OPENROUTER),
-        onOpenRouterCredentialCreated: (credential, requestedUrl) =>
+        onManagementKeyCredentialCreated: (
+          credential,
+          requestedUrl,
+          credentialSiteType = SITE_TYPES.OPENROUTER,
+        ) =>
           updateAccessToken(credential, {
             url: requestedUrl,
-            siteType: SITE_TYPES.OPENROUTER,
+            siteType: credentialSiteType,
           }),
       },
       onboarding: {

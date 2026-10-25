@@ -2,6 +2,7 @@ import {
   buildAccountKeyResourceRuntimeKeyFromFacts,
   buildAccountKeyResourceRuntimeKeyId,
   isAccountRuntimeKeyCompatibleWithModel,
+  isInferenceCapableAccountRuntimeKey,
   type AccountRuntimeKey,
 } from "~/services/accounts/keys/accountRuntimeKeys"
 import type { CreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
@@ -280,6 +281,9 @@ export async function ensureAccountKey(
     options.signal?.throwIfAborted()
     const existing = [...inventory].reverse().find((key) => {
       if (key.status !== "active") return false
+      // A management key is not the account's inference credential; counting it
+      // as coverage would leave the account without a key clients may use.
+      if (!isInferenceCapableAccountRuntimeKey(key)) return false
       const intent = options.intent
       if (
         intent?.modelContext &&

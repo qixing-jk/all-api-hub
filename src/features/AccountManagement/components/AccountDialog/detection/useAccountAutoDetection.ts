@@ -18,6 +18,7 @@ import {
   type useOpenRouterAccountOnboarding,
 } from "~/features/AccountManagement/components/AccountDialog/form/useOpenRouterAccountOnboarding"
 import { type AccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
+import notify from "~/lib/notify"
 import { autoDetectAccount } from "~/services/accounts/accountAutoDetection"
 import type { AccountAutoDetectRecoveryData } from "~/services/accounts/autoDetect/recovery"
 import {
@@ -27,6 +28,11 @@ import {
   type AutoDetectError,
 } from "~/services/accounts/utils/autoDetectUtils"
 import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
+import {
+  isCanonicalRequestyUrl,
+  onboardRequestyAccount,
+  requestyOnboardingDefaults,
+} from "~/services/apiAdapters/requesty/account/accountOnboarding"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
 import {
@@ -74,9 +80,10 @@ interface DetectionInvocation {
     setAccessToken: (value: string) => void
     beforeDetect: () => void
     onOpenRouterStarted: () => void
-    onOpenRouterCredentialCreated: (
+    onManagementKeyCredentialCreated: (
       credential: string,
       requestedUrl: string,
+      siteType?: AccountSiteType,
     ) => void
     setAuthType: (value: AuthTypeEnum) => void
   }
@@ -321,7 +328,7 @@ export function useAccountAutoDetection({
                       attempt.acceptNormalization()
                     },
                     onCredentialCreated: (credential) => {
-                      form.onOpenRouterCredentialCreated(
+                      form.onManagementKeyCredentialCreated(
                         credential,
                         requestedUrl,
                       )
@@ -394,32 +401,67 @@ export function useAccountAutoDetection({
               return
             }
 
+            const requestyOnboarding = isCanonicalRequestyUrl(requestedUrl)
+            if (requestyOnboarding) {
+              form.applyRecovery(
+                {
+                  siteType: requestyOnboardingDefaults.siteType,
+                  authType: AuthTypeEnum.AccessToken,
+                },
+                requestyOnboardingDefaults.siteType,
+              )
+              attempt.acceptNormalization()
+            }
             const result = await withProtectionBypassUserCommand(
               PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
               getCurrentTempWindowRequestSource(),
               (protectionBypassExecution) =>
-                autoDetectAccount(
-                  requestedUrl,
-                  authType,
-                  protectionBypassExecution,
-                  cookieAuthSessionCookie.trim() || undefined,
-                  ...(userId.trim() &&
-                  (mode === DIALOG_MODES.EDIT ||
-                    accessToken.trim() ||
-                    cookieAuthSessionCookie.trim() ||
-                    sub2apiRefreshToken.trim())
-                    ? [
-                        {
-                          existingAccount: {
-                            url: credentialScope?.url || requestedUrl,
-                            siteType: credentialScope?.siteType ?? siteType,
-                            userId: userId.trim(),
-                            accessToken,
-                          },
-                        },
-                      ]
-                    : []),
-                ),
+                requestyOnboarding
+                  ? onboardRequestyAccount({
+                      accessToken:
+                        !credentialScope ||
+                        (isCanonicalRequestyUrl(credentialScope.url) &&
+                          credentialScope.siteType ===
+                            requestyOnboardingDefaults.siteType)
+                          ? accessToken
+                          : undefined,
+                      protectionBypassExecution,
+                      onCredentialCreated: (credential) => {
+                        if (!isCurrentAutoDetectRun()) {
+                          notify.warning(
+                            t("form.autoCreateAccessTokenUnconfirmed"),
+                          )
+                          return
+                        }
+                        form.onManagementKeyCredentialCreated(
+                          credential,
+                          requestedUrl,
+                          requestyOnboardingDefaults.siteType,
+                        )
+                      },
+                    })
+                  : autoDetectAccount(
+                      requestedUrl,
+                      authType,
+                      protectionBypassExecution,
+                      cookieAuthSessionCookie.trim() || undefined,
+                      ...(userId.trim() &&
+                      (mode === DIALOG_MODES.EDIT ||
+                        accessToken.trim() ||
+                        cookieAuthSessionCookie.trim() ||
+                        sub2apiRefreshToken.trim())
+                        ? [
+                            {
+                              existingAccount: {
+                                url: credentialScope?.url || requestedUrl,
+                                siteType: credentialScope?.siteType ?? siteType,
+                                userId: userId.trim(),
+                                accessToken,
+                              },
+                            },
+                          ]
+                        : []),
+                    ),
             )
             if (!isCurrentAutoDetectRun()) {
               analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
@@ -482,6 +524,15 @@ export function useAccountAutoDetection({
                   insights: createAutoDetectAnalyticsInsights(result, false),
                 })
                 return
+              }
+              // Requesty onboarding reports credential reuse instead of a plain
+              // detection success; surface that so the extra key is explained.
+              if (
+                requestyOnboarding &&
+                typeof result.message === "string" &&
+                result.message !== t("messages.autoDetectSuccess")
+              ) {
+                notify.info(result.message)
               }
               analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
                 insights: createAutoDetectAnalyticsInsights(result, false),

@@ -473,6 +473,9 @@ importers:
       typescript-eslint:
         specifier: ^8.45.0
         version: 8.45.0(eslint@9.38.0(jiti@2.6.1))(typescript@5.9.3)
+      undici:
+        specifier: 7.29.0
+        version: 7.29.0
       vite:
         specifier: ^7.3.2
         version: 7.3.2(@types/node@24.12.0)(jiti@2.6.1)(lightningcss@1.32.0)(yaml@2.8.2)

@@ -19,6 +19,12 @@ import type {
   CheckInMethodUnknownReason,
 } from "~/types/checkIn"
 
+export const AUTO_CREATE_ACCESS_TOKEN_STATUSES = {
+  Idle: "idle",
+  Working: "working",
+  Failed: "failed",
+} as const
+
 export const ACCOUNT_DIALOG_PHASES = {
   SITE_INPUT: "site-input",
   ACCOUNT_FORM: "account-form",

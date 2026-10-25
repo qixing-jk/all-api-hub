@@ -592,3 +592,51 @@ describe("KeyResourceCard", () => {
     expect(document.getElementById(secondPanelId!)).toBeVisible()
   })
 })
+
+describe("KeyResourceCard highlights", () => {
+  beforeAll(() => {
+    testI18n.addResourceBundle(
+      "en",
+      "keyManagement",
+      enKeyManagement,
+      true,
+      true,
+    )
+    testI18n.addResourceBundle("en", "common", enCommon, true, true)
+  })
+
+  afterAll(() => {
+    testI18n.removeResourceBundle("en", "keyManagement")
+    testI18n.removeResourceBundle("en", "common")
+  })
+
+  it("renders provider badges beside the status", () => {
+    renderKeyResourceCard(
+      <KeyResourceCard
+        presentation={{
+          ...presentation,
+          badges: [
+            {
+              id: "manage-permission",
+              label: "Manage key",
+              variant: "warning",
+              title: "Can manage other keys",
+            },
+            { id: "account-credential", label: "Account credential" },
+          ],
+        }}
+        showDetails={false}
+        isDetailsExpanded={false}
+        onDetailsExpandedChange={() => {}}
+      />,
+    )
+    const badges = screen.getAllByTestId(
+      KEY_MANAGEMENT_TEST_IDS.keyResourceBadge,
+    )
+    expect(badges.map((badge) => badge.getAttribute("data-badge"))).toEqual([
+      "manage-permission",
+      "account-credential",
+    ])
+    expect(screen.getByText("Manage key")).toBeVisible()
+  })
+})

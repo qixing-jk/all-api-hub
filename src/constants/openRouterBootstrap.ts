@@ -1,3 +1,5 @@
+import { createAccountConnectionLabel } from "~/constants/accountConnectionLabel"
+
 export const OPENROUTER_BOOTSTRAP_MUTATION_STATES = {
   NotDispatched: "not_dispatched",
   DispatchedUnconfirmed: "dispatched_unconfirmed",
@@ -21,22 +23,8 @@ export const OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES = {
   ValidationFailed: "validation_failed",
 } as const
 
-const createRequestShortCode = (requestId: string) => {
-  const uuidPrefix = requestId.match(
-    /\b([0-9a-f]{8})-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i,
-  )?.[1]
-  if (uuidPrefix) return uuidPrefix.toLowerCase()
-
-  let hash = 2166136261
-  for (const character of requestId) {
-    hash ^= character.codePointAt(0)!
-    hash = Math.imul(hash, 16777619)
-  }
-  return (hash >>> 0).toString(16).padStart(8, "0")
-}
-
-export const createOpenRouterBootstrapLabel = (requestId: string) =>
-  `All API Hub - Account Connection (${createRequestShortCode(requestId)})`
+/** OpenRouter shares the account-connection label format with every bootstrap. */
+export const createOpenRouterBootstrapLabel = createAccountConnectionLabel
 
 export const OPENROUTER_BOOTSTRAP_VALIDATION_TIMEOUT_MS = 15_000
 export const OPENROUTER_BOOTSTRAP_CANCEL_TIMEOUT_MS = 5_000

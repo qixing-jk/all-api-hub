@@ -1,7 +1,9 @@
 import type { TFunction } from "i18next"
 
 import { ACCOUNT_RUNTIME_KEY_STATUSES } from "~/services/accounts/keys/accountRuntimeKeys"
+import { hasAccountKeyManagementPermission } from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import {
+  ACCOUNT_KEY_CREDENTIAL_ROLES,
   ACCOUNT_KEY_DETAIL_AVAILABILITIES,
   ACCOUNT_KEY_RESOURCE_STATUSES,
   type AccountKeyResourceFacts,
@@ -12,13 +14,79 @@ import { formatQuotaAmount } from "~/services/quotaAssets/quotaAsset"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 
 import type { AccountKeyResourceCardAdapter } from "./accountKeyResourceCardAdapter"
-import type { KeyResourceFact } from "./keyResourceCard"
+import type {
+  KeyResourceActionPolicy,
+  KeyResourceBadge,
+  KeyResourceFact,
+} from "./keyResourceCard"
 import {
   KEY_RESOURCE_CARD_KINDS as cardKinds,
   getKeyResourcePresentationPolicy,
   KEY_RESOURCE_SCOPE_KINDS as scopeKinds,
 } from "./keyResourcePresentationPolicy"
 import { openRouterKeyResourceCardAdapter } from "./openRouterKeyResourceCard"
+
+/** Highlights derived from provider-declared facts; raw fields never qualify. */
+const keyBadges = (
+  facts: AccountKeyResourceFacts,
+  t: TFunction,
+): KeyResourceBadge[] => {
+  const manageGranted = hasAccountKeyManagementPermission(facts)
+  const isAccountCredential =
+    facts.credentialRole === ACCOUNT_KEY_CREDENTIAL_ROLES.Account
+  const badges: KeyResourceBadge[] = []
+  if (manageGranted) {
+    badges.push({
+      id: "manage-permission",
+      label: isAccountCredential
+        ? t("keyManagement:native.badges.accountManagePermission")
+        : t("keyManagement:native.badges.managePermission"),
+      variant: "warning",
+      title: isAccountCredential
+        ? t("keyManagement:native.permission.accountManageBadgeTitle")
+        : t("keyManagement:native.permission.manageBadgeTitle"),
+    })
+  }
+  if (isAccountCredential && !manageGranted) {
+    badges.push({
+      id: "account-credential",
+      label: t("keyManagement:native.badges.accountCredential"),
+      variant: "outline",
+      title: t("keyManagement:native.credentialRole.badgeTitle"),
+    })
+  }
+  return badges
+}
+
+/** Omit the field entirely so cards without highlights keep no empty array. */
+const badgesProp = (badges: KeyResourceBadge[]) =>
+  badges.length ? { badges } : {}
+
+/**
+ * Secret actions follow the credential's role, not only its secret source.
+ *
+ * The account's own credential is readable because the extension already stores
+ * it. Export stays limited to inference keys: a management key can answer
+ * completions, but exporting it would hand every client authority over the
+ * organization's other credentials.
+ */
+const secretActionPolicy = (params: {
+  hasAssociatedSecret: boolean
+  recoverable: boolean
+  accountCredential: boolean
+  inferenceCapable: boolean
+}): Omit<KeyResourceActionPolicy, "edit" | "delete"> => {
+  const readable =
+    params.hasAssociatedSecret || params.recoverable || params.accountCredential
+  const exportable = readable && params.inferenceCapable
+  return {
+    copySecret: readable,
+    revealSecret: readable,
+    verifySecret: readable,
+    exportSecret: exportable,
+    batchSelect: exportable,
+  }
+}
 
 /** Common facts remain usable without interpreting an unregistered provider's fields. */
 const genericKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
@@ -64,6 +132,7 @@ const genericKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
       contextFact,
       summaryFacts: [contextFact],
       detailFacts: [],
+      ...badgesProp(keyBadges(row.facts, t)),
       actions: {
         copySecret: hasAssociatedSecret,
         revealSecret: hasAssociatedSecret,
@@ -99,7 +168,10 @@ const nativeDetailFacts = (
       details.push({
         id: fact.fieldId,
         label:
-          fact.kind === "credits"
+          getKeyResourcePresentationPolicy(facts.ref.siteType).factLabels?.[
+            fact.fieldId
+          ]?.(t) ??
+          (fact.kind === "credits"
             ? t("keyManagement:native.editor.quotaCredits")
             : fact.role === "remaining"
               ? t("keyManagement:keyDetails.remainingQuota")
@@ -107,7 +179,7 @@ const nativeDetailFacts = (
                 ? t("keyManagement:keyDetails.usedQuota")
                 : fact.kind === "quota"
                   ? t("keyManagement:keyDetails.totalQuota")
-                  : t("keyManagement:native.editor.totalQuotaUsd"),
+                  : t("keyManagement:native.editor.totalQuotaUsd")),
         value:
           fact.kind === "money" && fact.followsAccount
             ? t("keyManagement:native.editor.followsAccount")
@@ -179,7 +251,15 @@ const nativeDetailFacts = (
     }
   }
   for (const fact of facts.displayFacts ?? []) {
-    if (fact.kind === "restriction") {
+    if (fact.kind === "permission") {
+      details.push({
+        id: fact.fieldId,
+        label: t("keyManagement:native.permission.manage"),
+        value: fact.granted
+          ? t("keyManagement:native.permission.manageGranted")
+          : t("keyManagement:native.permission.manageNotGranted"),
+      })
+    } else if (fact.kind === "restriction") {
       const value = displayText(fact.value)
       if (value)
         details.push({
@@ -219,9 +299,6 @@ const nativeKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
       t,
       options,
     )
-    const usableSecret =
-      options.hasAssociatedSecret ||
-      base.secretAvailability === INVENTORY_SECRET_AVAILABILITIES.Recoverable
     const group = row.facts.displayFacts?.find(
       (fact) => fact.kind === "group" || fact.kind === "channels",
     )
@@ -246,6 +323,14 @@ const nativeKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
       : undefined
     const details = nativeDetailFacts(row.facts, t)
     const summaryDetailCount = 4 - (contextFact ? 1 : 0)
+    const secretActions = secretActionPolicy({
+      hasAssociatedSecret: options.hasAssociatedSecret,
+      recoverable:
+        base.secretAvailability === INVENTORY_SECRET_AVAILABILITIES.Recoverable,
+      accountCredential:
+        row.facts.credentialRole === ACCOUNT_KEY_CREDENTIAL_ROLES.Account,
+      inferenceCapable: row.facts.runtimeKey?.inference !== false,
+    })
     return {
       ...base,
       contextFact,
@@ -260,11 +345,7 @@ const nativeKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
           : details,
       actions: {
         ...base.actions,
-        copySecret: usableSecret,
-        revealSecret: usableSecret,
-        verifySecret: usableSecret,
-        exportSecret: usableSecret,
-        batchSelect: usableSecret,
+        ...secretActions,
       },
     }
   },
