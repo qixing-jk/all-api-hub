@@ -69,6 +69,36 @@ function readStep(file: string, name: string): string {
     .replace(/\$\{\{.*?\}\}/g, ".")
 }
 
+it.each([
+  [null, true],
+  ["oligofghjlogjhmnhnhccnobbginfgmp", true],
+  ["abcdefghijklmnopabcdefghijklmnop", false],
+  ["", false],
+] as const)("validates stable CRX identity (%s)", (appid, allowed) => {
+  const fixture = mkdtempSync(path.join(tmpdir(), "aah-crx-identity-"))
+  if (path.dirname(fixture) !== path.resolve(tmpdir()))
+    throw new Error("Unexpected fixture directory")
+  try {
+    mkdirSync(path.join(fixture, ".output"))
+    if (appid !== null) {
+      writeFileSync(
+        path.join(fixture, ".output/updates.xml"),
+        `<gupdate><app appid="${appid}"></app></gupdate>`,
+      )
+    }
+    const script = readStep(
+      ".github/workflows/build-and-publish.yml",
+      "Validate stable CRX identity",
+    )
+    const run = () =>
+      execFileSync(bash, ["-e", "-c", script], { cwd: fixture, stdio: "pipe" })
+    if (allowed) expect(run).not.toThrow()
+    else expect(run).toThrow()
+  } finally {
+    rmSync(fixture, { recursive: true, force: true })
+  }
+})
+
 it.each([false, true])(
   "collects only existing self-update artifacts (signed: %s)",
   (signed) => {

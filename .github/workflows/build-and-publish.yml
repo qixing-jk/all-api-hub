@@ -231,6 +231,20 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
 
+      - name: Validate stable CRX identity
+        if: ${{ needs.build.outputs.release_tag != '' && (github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true') }}
+        run: |
+          if [ ! -f .output/updates.xml ]; then exit 0; fi
+
+          # Pin the identity already distributed in the install policy templates.
+          # This also protects the first release and avoids trusting a mutable
+          # latest-release pointer when detecting an accidental signing-key change.
+          appid="$(sed -n 's/.*<app appid="\([a-p]*\)">.*/\1/p' .output/updates.xml)"
+          if [ "$appid" != "oligofghjlogjhmnhnhccnobbginfgmp" ]; then
+            echo "::error::Stable CRX identity differs from the published install policy ID. Restore the original CRX_SIGNING_KEY."
+            exit 1
+          fi
+
       - name: Upload release artifacts
         if: ${{ needs.build.outputs.release_tag != '' && (github.event_name != 'workflow_dispatch' || github.event.inputs.dry_run != 'true') }}
         run: |
