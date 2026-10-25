@@ -177,8 +177,8 @@
   },
   "batchSelection": {
     "accountUnavailableReason": "This account has no keys that support batch actions.",
-    "eligibilityNotice_one": "{{count}} key currently supports batch actions; other keys will not be included.",
-    "eligibilityNotice_other": "{{count}} keys currently support batch actions; other keys will not be included.",
+    "eligibilityHint": "Batch actions select only exportable inference keys. Management keys and keys whose full value is unavailable are excluded.",
+    "helpLabel": "About batch selection",
     "unavailableReason": "This key does not support batch actions."
   },
   "createdKey": {
@@ -376,7 +376,18 @@
       "revoke": "Revoke key",
       "rotate": "Rotate API key"
     },
+    "badges": {
+      "accountCredential": "Used by this account",
+      "accountManagePermission": "Current account management key",
+      "managePermission": "Manage key"
+    },
+    "credentialRole": {
+      "badgeTitle": "All API Hub uses this key to connect to this account, read its balance and manage keys. If you replace it, update the key in account settings."
+    },
     "delete": {
+      "accountCredentialAcknowledge": "I understand this breaks the account's management access",
+      "accountCredentialWarningDescription": "This account will lose Requesty management access: key lists, balance and refreshes will fail. The secret cannot be recovered here.",
+      "accountCredentialWarningTitle": "Delete the account's own credential",
       "confirm": "Delete key",
       "description": "Permanently delete the API key {{name}}? This cannot be undone.",
       "feedback": {
@@ -386,6 +397,7 @@
         "unavailable": "The service is temporarily unavailable. Refresh before trying again.",
         "uncertain": "The key state may have changed. Refresh keys before deciding whether to retry."
       },
+      "manageKeyWarning": "This key has management permission. Workflows that rely on it lose management access after deletion.",
       "refresh": "Refresh keys",
       "title": "Delete API key?"
     },
@@ -540,6 +552,10 @@
       "quotaUsd": "Quota (USD)",
       "remainingCount": "Remaining calls",
       "remainingCountPlaceholder": "How many calls this key can still make",
+      "requestyManagePermission": "Management permission",
+      "requestyManagePermissionHelp": "This key can call management endpoints and manage other keys.",
+      "requestyMonthlyLimit": "Monthly limit (USD)",
+      "requestyMonthlyLimitPlaceholder": "0 or empty means unlimited",
       "storageLocation": "Storage location",
       "storageLocationGlobal": "Global node",
       "storageLocationHelp": "Where the media this key generates is stored.",
@@ -566,6 +582,13 @@
       "rotateDescription": "The old key will stop working immediately. Copy the new key after rotation and update your clients. Other settings are preserved."
     },
     "missing": "Not available",
+    "permission": {
+      "accountManageBadgeTitle": "All API Hub uses this key to read this account’s balance and manage keys. It can also create and delete other keys in the organization. After replacing or deleting it, update the key in account settings.",
+      "manage": "Management permission",
+      "manageBadgeTitle": "This key can call management endpoints and manage other keys in the organization.",
+      "manageGranted": "Can manage other keys",
+      "manageNotGranted": "Inference only"
+    },
     "revoke": {
       "description": "Revoke “{{name}}”? This permanently disables the key. Its record remains until you delete it.",
       "feedback": {

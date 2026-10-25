@@ -16,6 +16,7 @@ import {
   getAccountRuntimeKeyLocatorAccountId,
   hasUsableAccountRuntimeKeySecret,
   isAccountRuntimeKeyLocatorEqual,
+  isInferenceCapableAccountRuntimeKey,
   isSelectableAccountRuntimeKey,
   sortAccountRuntimeKeysActiveFirst,
 } from "~/services/accounts/keys/accountRuntimeKeys"
@@ -301,6 +302,35 @@ describe("account runtime keys", () => {
         "access-secret",
         "session=cookie",
       ]),
+    )
+  })
+})
+
+describe("inference capability", () => {
+  const inferenceKey = (inference: boolean | undefined, id = "native") =>
+    buildAccountKeyResourceRuntimeKey(account, {
+      ref: { ...ref, resourceId: id },
+      label: "Native key",
+      secret: "sk-native",
+      ...(inference === undefined ? {} : { inference }),
+    })
+
+  it("treats a key without a provider opinion as an inference credential", () => {
+    expect(inferenceKey(undefined).capabilities.inference).toBe(true)
+  })
+
+  it("excludes a management key from inference selection", () => {
+    const manageKey = inferenceKey(false)
+    expect(manageKey.capabilities.inference).toBe(false)
+    expect(isInferenceCapableAccountRuntimeKey(manageKey)).toBe(false)
+    expect(isInferenceCapableAccountRuntimeKey(inferenceKey(true))).toBe(true)
+  })
+
+  it("prefers an inference key over a management key for default selection", () => {
+    const manageKey = inferenceKey(false, "manage")
+    const plainKey = inferenceKey(true, "plain")
+    expect(findDefaultSelectableAccountRuntimeKey([manageKey, plainKey])).toBe(
+      plainKey,
     )
   })
 })

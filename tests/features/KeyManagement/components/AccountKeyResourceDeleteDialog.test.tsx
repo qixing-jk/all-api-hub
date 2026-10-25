@@ -1,10 +1,13 @@
 import userEvent from "@testing-library/user-event"
 import type { ComponentProps } from "react"
-import { beforeEach, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { AccountKeyResourceDeleteDialog } from "~/features/KeyManagement/resources/AccountKeyResourceDeleteDialog"
-import { ACCOUNT_KEY_RESOURCE_FAILURE_CODES } from "~/services/apiAdapters/contracts/accountKeyResource"
+import {
+  ACCOUNT_KEY_CREDENTIAL_ROLES,
+  ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const mocks = vi.hoisted(() => ({ config: vi.fn() }))
@@ -176,4 +179,93 @@ it.each([
   expect(
     await screen.findByText(`keyManagement:native.delete.feedback.${message}`),
   ).toBeInTheDocument()
+})
+
+describe("account credential deletion guard", () => {
+  const createRequestyCredentialProps = (): Props => {
+    const props = createProps()
+    props.nativeKeys.deleteState.ref = {
+      ...props.nativeKeys.deleteState.ref!,
+      siteType: SITE_TYPES.REQUESTY,
+    }
+    props.accounts[0]!.siteType = SITE_TYPES.REQUESTY
+    props.nativeKeys.allRows = [
+      {
+        ref: props.nativeKeys.deleteState.ref!,
+        displayName: "account-credential",
+        maskedLabel: "masked",
+        status: "enabled",
+        credentialRole: ACCOUNT_KEY_CREDENTIAL_ROLES.Account,
+        fields: [],
+        actions: { canUpdate: true, canDelete: true },
+        displayFacts: [
+          {
+            fieldId: "permissions",
+            kind: "permission",
+            role: "manage",
+            granted: true,
+          },
+        ],
+      },
+    ]
+    return props
+  }
+
+  it("blocks confirmation until the account-credential warning is acknowledged", async () => {
+    const user = userEvent.setup()
+    const props = createRequestyCredentialProps()
+    render(<AccountKeyResourceDeleteDialog {...props} />)
+    const confirm = await screen.findByRole("button", {
+      name: "keyManagement:native.delete.confirm",
+    })
+    expect(confirm).toBeDisabled()
+    expect(
+      screen.getByTestId("key-management-native-delete-credential-warning"),
+    ).toBeVisible()
+    const checkbox = screen.getByTestId(
+      "key-management-native-delete-credential-acknowledge",
+    )
+    await user.click(checkbox)
+    expect(confirm).toBeEnabled()
+    await user.click(confirm)
+    expect(props.nativeKeys.confirmDelete).toHaveBeenCalled()
+  })
+
+  it("shows a warning without a gate for manage keys that are not the account credential", async () => {
+    const props = createRequestyCredentialProps()
+    props.nativeKeys.allRows = [
+      {
+        ...props.nativeKeys.allRows[0]!,
+        credentialRole: undefined,
+      },
+    ]
+    render(<AccountKeyResourceDeleteDialog {...props} />)
+    expect(
+      await screen.findByTestId(
+        "key-management-native-delete-credential-warning",
+      ),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", {
+        name: "keyManagement:native.delete.confirm",
+      }),
+    ).toBeEnabled()
+    expect(
+      screen.queryByRole("checkbox", {
+        name: "keyManagement:native.delete.accountCredentialAcknowledge",
+      }),
+    ).toBeNull()
+  })
+
+  it("keeps revocation of the account credential free of the delete gate", async () => {
+    const props = createRequestyCredentialProps()
+    props.nativeKeys.deleteState.operation = "revoke"
+    render(<AccountKeyResourceDeleteDialog {...props} />)
+    expect(
+      await screen.findByText("keyManagement:native.revoke.description"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByTestId("key-management-native-delete-credential-warning"),
+    ).toBeNull()
+  })
 })

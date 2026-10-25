@@ -192,6 +192,7 @@ export const RuntimeActionIds = {
   ContentVerificationAssistOpened: "verificationAssistOpened",
   ContentTriggerCheckinPageAction: "triggerCheckinPageAction",
   ContentOpenRouterManagementKeyAction: "openRouterManagementKeyAction",
+  ContentRequestyManagementKeyAction: "requestyManagementKeyAction",
   ContentWaitAndGetUserInfo: "waitAndGetUserInfo",
   ContentPerformTempWindowFetch: "performTempWindowFetch",
   ContentGetRenderedTitle: "getRenderedTitle",

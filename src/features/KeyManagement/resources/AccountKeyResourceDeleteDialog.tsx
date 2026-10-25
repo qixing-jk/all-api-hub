@@ -1,9 +1,9 @@
 import type { TFunction } from "i18next"
 import { RefreshCw } from "lucide-react"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useId, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Alert, ConfirmDialog } from "~/components/ui"
+import { Alert, Checkbox, ConfirmDialog, Label } from "~/components/ui"
 import type { useKeyCredentialAssociations } from "~/features/KeyManagement/associations/useKeyCredentialAssociations"
 import { LinkedChannelCleanupOption } from "~/features/KeyManagement/managedSite/LinkedChannelCleanup"
 import { getKeyResourcePresentationPolicy } from "~/features/KeyManagement/presentation/keyResourcePresentationPolicy"
@@ -12,7 +12,11 @@ import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import toast from "~/lib/notify"
 import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/keys/accountRuntimeKeys"
 import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keys/keyProductCapabilities"
-import { ACCOUNT_KEY_RESOURCE_FAILURE_CODES } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { hasAccountKeyManagementPermission } from "~/services/apiAdapters/accountKeyResources/displayFacts"
+import {
+  ACCOUNT_KEY_CREDENTIAL_ROLES,
+  ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { DisplaySiteData } from "~/types"
 
 const nativeDeleteFailureMessage = (
@@ -78,6 +82,11 @@ function AccountKeyResourceDeleteSession({
   const isRevoke = nativeKeys.deleteState.operation === "revoke"
   const [nativeCleanupLinkedChannels, setNativeCleanupLinkedChannels] =
     useState(false)
+  const [
+    accountCredentialWarningAcknowledged,
+    setAccountCredentialWarningAcknowledged,
+  ] = useState(false)
+  const accountCredentialAcknowledgeId = useId()
   const labels = getKeyResourcePresentationPolicy(
     nativeKeys.deleteState.ref?.siteType,
   ).actions
@@ -118,6 +127,15 @@ function AccountKeyResourceDeleteSession({
   const nativeDeleteIsUncertain =
     nativeKeys.deleteState.failure?.code ===
     ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain
+  // Deleting the account's own credential cuts the extension off from every
+  // management endpoint; losing other manage keys only affects their users.
+  const deletesAccountCredential =
+    !isRevoke &&
+    nativeDeleteFacts?.credentialRole === ACCOUNT_KEY_CREDENTIAL_ROLES.Account
+  const deletesManageKey =
+    !isRevoke && hasAccountKeyManagementPermission(nativeDeleteFacts)
+  const confirmBlockedByCredentialWarning =
+    deletesAccountCredential && !accountCredentialWarningAcknowledged
   const handleConfirmDeleteNativeKey = useCallback(async () => {
     if (nativeDeleteIsUncertain) {
       await nativeKeys.refresh()
@@ -186,9 +204,52 @@ function AccountKeyResourceDeleteSession({
       }
       confirmButtonTestId={KEY_MANAGEMENT_TEST_IDS.nativeDeleteConfirmButton}
       isWorking={nativeKeys.deleteState.isExecuting}
+      confirmDisabled={confirmBlockedByCredentialWarning}
       onConfirm={() => void handleConfirmDeleteNativeKey()}
       details={
         <>
+          {deletesAccountCredential ? (
+            <Alert
+              variant="destructive"
+              role="alert"
+              title={t(
+                "keyManagement:native.delete.accountCredentialWarningTitle",
+              )}
+              description={t(
+                "keyManagement:native.delete.accountCredentialWarningDescription",
+              )}
+              data-testid={
+                KEY_MANAGEMENT_TEST_IDS.nativeDeleteCredentialWarning
+              }
+            />
+          ) : deletesManageKey ? (
+            <Alert
+              variant="warning"
+              role="alert"
+              description={t("keyManagement:native.delete.manageKeyWarning")}
+              data-testid={
+                KEY_MANAGEMENT_TEST_IDS.nativeDeleteCredentialWarning
+              }
+            />
+          ) : null}
+          {deletesAccountCredential ? (
+            <div className="gap-y-density-2 flex items-start gap-x-2">
+              <Checkbox
+                id={accountCredentialAcknowledgeId}
+                checked={accountCredentialWarningAcknowledged}
+                disabled={nativeKeys.deleteState.isExecuting}
+                onCheckedChange={(value) =>
+                  setAccountCredentialWarningAcknowledged(value === true)
+                }
+                data-testid={
+                  KEY_MANAGEMENT_TEST_IDS.nativeDeleteCredentialAcknowledge
+                }
+              />
+              <Label htmlFor={accountCredentialAcknowledgeId}>
+                {t("keyManagement:native.delete.accountCredentialAcknowledge")}
+              </Label>
+            </div>
+          ) : null}
           {canResolveDeleteKeySecret ? (
             <LinkedChannelCleanupOption
               checked={nativeCleanupLinkedChannels}

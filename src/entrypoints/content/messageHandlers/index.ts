@@ -11,6 +11,7 @@ import {
   handleOpenRouterManagementKeyAction,
   handlePerformTempWindowFetch,
   handlePrepareAgentRouterOAuth,
+  handleRequestyManagementKeyAction,
   handleShowShieldBypassUi,
   handleTriggerCheckinPageAction,
   handleWaitAndGetUserInfo,
@@ -170,6 +171,12 @@ export function setupContentMessageHandlers() {
       request.action === RuntimeActionIds.ContentOpenRouterManagementKeyAction
     ) {
       return handleOpenRouterManagementKeyAction(request, sendResponse)
+    }
+
+    if (
+      request.action === RuntimeActionIds.ContentRequestyManagementKeyAction
+    ) {
+      return handleRequestyManagementKeyAction(request, sendResponse)
     }
   })
 }

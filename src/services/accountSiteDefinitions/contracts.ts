@@ -55,6 +55,7 @@ export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   Cubence: "cubence",
   RightCode: "rightcode",
   RelayFor: "relayfor",
+  Requesty: "requesty",
   OpenRouter: "openrouter",
   KimiOpenPlatform: "kimiOpenPlatform",
   Grsai: "grsai",
@@ -137,9 +138,20 @@ export interface AccountSiteDefinitionOnboardingMetadata {
   accountForm?: {
     fixedSiteUrl?: string
     defaultSiteName?: string
-    accessTokenLabelKey?: "form.openrouterManagementKey"
-    accessTokenGuidanceTitleKey?: "form.openrouterManagementKeyGuidanceTitle"
-    accessTokenGuidanceKey?: "form.openrouterManagementKeyGuidance"
+    accessTokenLabelKey?:
+      | "form.openrouterManagementKey"
+      | "form.requestyManageKey"
+    accessTokenGuidanceTitleKey?:
+      | "form.openrouterManagementKeyGuidanceTitle"
+      | "form.requestyManageKeyGuidanceTitle"
+    accessTokenGuidanceKey?:
+      | "form.openrouterManagementKeyGuidance"
+      | "form.requestyManageKeyGuidance"
+    /**
+     * Opt-in automatic credential creation from the site's own console
+     * session. The action must degrade to the manual guidance path.
+     */
+    autoCreateAccessToken?: boolean
   }
   detection?: AccountSiteDetectionMetadata
   routes: AccountSiteRouteConfig

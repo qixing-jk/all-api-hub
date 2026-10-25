@@ -19,6 +19,7 @@ const config: KnipConfig = {
     "src/entrypoints/content/index.ts!",
     // Injected by URL as a web-accessible resource, not a static import.
     "src/entrypoints/openrouter-clerk-session.ts!",
+    "src/entrypoints/requesty-management-key.ts!",
     "src/entrypoints/options/main.tsx!",
     "src/entrypoints/popup/main.tsx!",
     "src/entrypoints/sidepanel/main.tsx!",

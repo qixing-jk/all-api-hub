@@ -42,6 +42,7 @@ const collectedRequests = {
   sharedChatUsage: 0,
   voApiV2Stats: 0,
   openRouterCredits: 0,
+  requestyOrg: 0,
   rightCodeAccount: 0,
   rightCodeTodayStats: 0,
   rightCodeOverall: 0,
@@ -604,6 +605,25 @@ const producerFixturesByFamily = {
       expect(collectedRequests.openRouterCredits).toBe(snapshotCount)
     },
   },
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Requesty]: {
+    baseUrl: "https://app.requesty.ai",
+    authType: AuthTypeEnum.AccessToken,
+    expectedAvailability: {
+      consumption: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
+    handlers: [
+      http.get("https://api-v2.requesty.ai/v1/manage/org", () => {
+        collectedRequests.requestyOrg += 1
+        return HttpResponse.json({ name: "example-org", balance: "12.5" })
+      }),
+    ],
+    expectRequests: (snapshotCount: number) => {
+      expect(collectedRequests.requestyOrg).toBe(snapshotCount)
+    },
+  },
   [ACCOUNT_SITE_ADAPTER_FAMILIES.RightCode]: {
     baseUrl: "https://right-code.example.invalid",
     authType: AuthTypeEnum.AccessToken,
@@ -904,6 +924,7 @@ describe("AccountData availability producer conformance", () => {
       sharedChatUsage: 0,
       voApiV2Stats: 0,
       openRouterCredits: 0,
+      requestyOrg: 0,
       rightCodeAccount: 0,
       rightCodeTodayStats: 0,
       rightCodeOverall: 0,

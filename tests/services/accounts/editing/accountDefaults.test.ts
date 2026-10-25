@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
 import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
+import { calculateAccountStats } from "~/services/accounts/accountStorage/accountStatistics"
 import {
   AccountUpdateUserTimestampMode,
   applySiteAccountUpdates,
@@ -21,6 +22,22 @@ import {
 } from "~/types/accountTodayStats"
 
 describe("accountDefaults", () => {
+  it("drops Requesty's legacy allowance projection while preserving its monetary balance", () => {
+    const saved = createSiteAccount({ site_type: SITE_TYPES.REQUESTY })
+    saved.account_info.quota = 6_250_000
+    saved.account_info.nativeBalance = {
+      unit: "USD",
+      total: 12.5,
+      permanent: 12.5,
+      daily: 0,
+      components: [{ kind: "permanent", amount: 12.5 }],
+    }
+    const normalized = normalizeSiteAccount(saved)
+    expect(normalized.account_info.nativeBalance).toBeUndefined()
+    expect(normalized.account_info.quota).toBe(6_250_000)
+    expect(calculateAccountStats([normalized]).total_quota).toBe(6_250_000)
+    expect(saved.account_info.nativeBalance?.total).toBe(12.5)
+  })
   it.each([
     { site_url: "https://other.example" },
     { account_info: { id: "2" } },

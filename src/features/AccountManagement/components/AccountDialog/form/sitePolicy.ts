@@ -22,6 +22,8 @@ export interface AccountDialogSitePolicy {
     | "accessTokenGuidanceTitleKey"
     | "accessTokenGuidanceKey"
   >
+  /** The site can mint its own credential from a browser console session. */
+  canAutoCreateAccessToken: boolean
   canonicalSiteUrl?: string
   defaultSiteName?: string
   lockSiteUrl: boolean
@@ -61,6 +63,9 @@ export function getAccountDialogSitePolicy(
         onboarding?.accountForm?.accessTokenGuidanceTitleKey,
       accessTokenGuidanceKey: onboarding?.accountForm?.accessTokenGuidanceKey,
     },
+    canAutoCreateAccessToken: Boolean(
+      onboarding?.accountForm?.autoCreateAccessToken,
+    ),
     canonicalSiteUrl: onboarding?.accountForm?.fixedSiteUrl,
     defaultSiteName: onboarding?.accountForm?.defaultSiteName,
     lockSiteUrl: Boolean(onboarding?.accountForm?.fixedSiteUrl),

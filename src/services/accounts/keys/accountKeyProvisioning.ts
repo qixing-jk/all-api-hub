@@ -5,6 +5,7 @@ import {
   type AccountKeyCreationResult,
 } from "~/services/accounts/keys/accountKeyCreation"
 import { analyzeAccountKeyProvisioningSnapshot } from "~/services/accounts/keys/accountKeyInventoryReconciliation"
+import { isInferenceCapableAccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   createDisplayAccountApiContext,
   fetchDisplayAccountRuntimeKeys,
@@ -149,7 +150,10 @@ export async function prepareAccountKeyProvisioning(
             ...options,
             ...operationOptions,
           })
-        ).some((key) => key.status === "active"),
+        ).some(
+          (key) =>
+            key.status === "active" && isInferenceCapableAccountRuntimeKey(key),
+        ),
       prepareDefaultCreation: (operationOptions) =>
         prepareDefaultAccountKeyCreation(account, {
           ...options,

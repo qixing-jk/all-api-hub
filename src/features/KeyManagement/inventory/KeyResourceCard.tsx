@@ -143,6 +143,28 @@ export function KeyResourceCardHeader({
         >
           {presentation.accountLabel}
         </Badge>
+        {presentation.badges?.map((badge) => {
+          const badgeNode = (
+            <Badge
+              variant={badge.variant ?? "outline"}
+              size="sm"
+              data-testid={KEY_MANAGEMENT_TEST_IDS.keyResourceBadge}
+              data-badge={badge.id}
+            >
+              {badge.label}
+            </Badge>
+          )
+          return badge.title ? (
+            // The tooltip anchors on a native span: Badge does not forward refs.
+            <Tooltip key={badge.id} content={badge.title} anchorAsChild>
+              <span className="inline-flex">{badgeNode}</span>
+            </Tooltip>
+          ) : (
+            <span key={badge.id} className="inline-flex">
+              {badgeNode}
+            </span>
+          )
+        })}
         {providerBadges}
       </div>
       <div className="gap-y-density-1-5 flex min-w-0 flex-wrap items-center gap-x-1.5">

@@ -8,8 +8,14 @@ import {
   shouldShowAccountKeyScopeSelector,
 } from "~/features/KeyManagement/presentation/accountKeyResourcePresentation"
 import { openRouterKeyResourceCardAdapter } from "~/features/KeyManagement/presentation/openRouterKeyResourceCard"
-import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
-import { ACCOUNT_KEY_DETAIL_AVAILABILITIES } from "~/services/apiAdapters/contracts/accountKeyResource"
+import {
+  KEY_MANAGEMENT_DISPLAY_ROW_KINDS,
+  type NativeKeyManagementRow,
+} from "~/features/KeyManagement/types"
+import {
+  ACCOUNT_KEY_CREDENTIAL_ROLES,
+  ACCOUNT_KEY_DETAIL_AVAILABILITIES,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
@@ -789,5 +795,238 @@ it("formats native Token facts with their asset unit and quota role", () => {
     id: "total",
     label: "keyManagement:keyDetails.totalQuota",
     value: "1.234567 M Token",
+  })
+})
+
+describe("Requesty key highlights", () => {
+  const requestyRow = (
+    overrides: Partial<NativeKeyManagementRow["facts"]> = {},
+  ): NativeKeyManagementRow => ({
+    kind: KEY_MANAGEMENT_DISPLAY_ROW_KINDS.AccountKeyResource,
+    rowKey: "row-1",
+    accountId: "account-1",
+    accountName: "Requesty",
+    scopeName: "Requesty",
+    facts: {
+      ref: {
+        accountId: "account-1",
+        siteType: SITE_TYPES.REQUESTY,
+        scopeKey: "default",
+        resourceId: "key-1",
+      },
+      displayName: "hub-probe",
+      maskedLabel: "masked",
+      status: "enabled",
+      detailAvailability: ACCOUNT_KEY_DETAIL_AVAILABILITIES.Complete,
+      fields: [],
+      actions: { canUpdate: true, canDelete: true },
+      displayFacts: [
+        {
+          fieldId: "permissions",
+          kind: "permission",
+          role: "manage",
+          granted: true,
+        },
+      ],
+      ...overrides,
+    },
+  })
+  const adapter = getAccountKeyResourceCardAdapter(SITE_TYPES.REQUESTY)
+
+  it("labels Requesty's cap with its monthly window", () => {
+    const details = adapter.buildDetailFacts(
+      requestyRow({
+        displayFacts: [
+          {
+            fieldId: "monthly_limit",
+            kind: "money",
+            role: "total",
+            amountUsd: 10,
+          },
+        ],
+      }).facts,
+      t,
+    )
+    expect(details).toContainEqual({
+      id: "monthly_limit",
+      label: "keyManagement:native.editor.requestyMonthlyLimit",
+      value: "$10",
+    })
+  })
+
+  it("labels management access as a permission instead of a model restriction", () => {
+    const details = adapter.buildDetailFacts(requestyRow().facts, t)
+    expect(details).toContainEqual({
+      id: "permissions",
+      label: "keyManagement:native.permission.manage",
+      value: "keyManagement:native.permission.manageGranted",
+    })
+  })
+
+  it("combines current account usage and management permission in a single badge", () => {
+    const manageOnly = adapter.buildPresentation(requestyRow(), t, {
+      hasAssociatedSecret: false,
+    })
+    expect(manageOnly.badges).toEqual([
+      {
+        id: "manage-permission",
+        label: "keyManagement:native.badges.managePermission",
+        variant: "warning",
+        title: "keyManagement:native.permission.manageBadgeTitle",
+      },
+    ])
+
+    const credential = adapter.buildPresentation(
+      requestyRow({ credentialRole: ACCOUNT_KEY_CREDENTIAL_ROLES.Account }),
+      t,
+      { hasAssociatedSecret: false },
+    )
+    expect(credential.badges).toEqual([
+      {
+        id: "manage-permission",
+        label: "keyManagement:native.badges.accountManagePermission",
+        variant: "warning",
+        title: "keyManagement:native.permission.accountManageBadgeTitle",
+      },
+    ])
+  })
+
+  it("does not infer management permission from current account usage alone", () => {
+    const presentation = adapter.buildPresentation(
+      requestyRow({
+        credentialRole: ACCOUNT_KEY_CREDENTIAL_ROLES.Account,
+        displayFacts: [],
+      }),
+      t,
+      { hasAssociatedSecret: false },
+    )
+    expect(presentation.badges).toEqual([
+      {
+        id: "account-credential",
+        label: "keyManagement:native.badges.accountCredential",
+        variant: "outline",
+        title: "keyManagement:native.credentialRole.badgeTitle",
+      },
+    ])
+  })
+
+  it("leaves inference-only keys without highlights", () => {
+    const presentation = adapter.buildPresentation(
+      requestyRow({
+        displayFacts: [
+          {
+            fieldId: "permissions",
+            kind: "permission",
+            role: "manage",
+            granted: false,
+          },
+        ],
+      }),
+      t,
+      { hasAssociatedSecret: false },
+    )
+    expect(presentation.badges).toBeUndefined()
+  })
+})
+
+describe("Requesty credential action policy", () => {
+  const row = (
+    overrides: Partial<NativeKeyManagementRow["facts"]> = {},
+  ): NativeKeyManagementRow => ({
+    kind: KEY_MANAGEMENT_DISPLAY_ROW_KINDS.AccountKeyResource,
+    rowKey: "row-1",
+    accountId: "account-1",
+    accountName: "Requesty",
+    scopeName: "Requesty",
+    facts: {
+      ref: {
+        accountId: "account-1",
+        siteType: SITE_TYPES.REQUESTY,
+        scopeKey: "default",
+        resourceId: "key-1",
+      },
+      displayName: "hub-probe",
+      maskedLabel: "masked",
+      status: "enabled",
+      detailAvailability: ACCOUNT_KEY_DETAIL_AVAILABILITIES.Complete,
+      fields: [],
+      actions: { canUpdate: true, canDelete: true },
+      runtimeKey: {
+        modelAccess: {
+          groups: null,
+          allowedModelIds: null,
+          suggestedModelIds: [],
+        },
+        ...overrides.runtimeKey,
+      },
+      ...overrides,
+    },
+  })
+  const adapter = getAccountKeyResourceCardAdapter(SITE_TYPES.REQUESTY)
+  const build = (target: NativeKeyManagementRow) =>
+    adapter.buildPresentation(target, t, { hasAssociatedSecret: false })
+
+  it("lets the account's own credential be read but never exported", () => {
+    const actions = build(
+      row({
+        credentialRole: ACCOUNT_KEY_CREDENTIAL_ROLES.Account,
+        runtimeKey: {
+          modelAccess: {
+            groups: null,
+            allowedModelIds: null,
+            suggestedModelIds: [],
+          },
+          inference: false,
+        },
+      }),
+    ).actions
+    expect(actions).toMatchObject({
+      copySecret: true,
+      revealSecret: true,
+      verifySecret: true,
+      exportSecret: false,
+      batchSelect: false,
+    })
+  })
+
+  it("keeps an ordinary inference key exportable once its secret is known", () => {
+    const target = row({
+      runtimeKey: {
+        modelAccess: {
+          groups: null,
+          allowedModelIds: null,
+          suggestedModelIds: [],
+        },
+        inference: true,
+      },
+    })
+    const withSecret = adapter.buildPresentation(target, t, {
+      hasAssociatedSecret: true,
+    })
+    expect(withSecret.actions).toMatchObject({
+      copySecret: true,
+      exportSecret: true,
+      batchSelect: true,
+    })
+
+    // A management key with the same known secret still stays inside the extension.
+    const manageTarget = row({
+      runtimeKey: {
+        modelAccess: {
+          groups: null,
+          allowedModelIds: null,
+          suggestedModelIds: [],
+        },
+        inference: false,
+      },
+    })
+    expect(
+      adapter.buildPresentation(manageTarget, t, { hasAssociatedSecret: true })
+        .actions,
+    ).toMatchObject({
+      copySecret: true,
+      exportSecret: false,
+      batchSelect: false,
+    })
   })
 })

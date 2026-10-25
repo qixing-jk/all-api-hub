@@ -120,6 +120,10 @@ import {
   RELAYFOR_DISPLAY_NAME,
   RELAYFOR_HOSTNAMES,
   RELAYFOR_LOGIN_PATH,
+  REQUESTY_API_BASE_URL,
+  REQUESTY_DISPLAY_NAME,
+  REQUESTY_HOSTNAMES,
+  REQUESTY_WEB_ORIGIN,
   RIGHTCODE_DISPLAY_NAME,
   RIGHTCODE_HOSTNAMES,
   RIGHTCODE_LOGIN_PATH,
@@ -225,6 +229,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.CUBENCE,
   SITE_TYPES.RIGHT_CODE,
   SITE_TYPES.RELAYFOR,
+  SITE_TYPES.REQUESTY,
   SITE_TYPES.OPENROUTER,
   SITE_TYPES.KIMI,
   SITE_TYPES.KIMI_GLOBAL,
@@ -1149,6 +1154,72 @@ const ACCOUNT_SITE_DEFINITIONS = [
       urls: {
         recognizedHostnames: RELAYFOR_HOSTNAMES,
         inferFromHostname: true,
+      },
+    },
+  },
+  {
+    siteType: SITE_TYPES.REQUESTY,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Requesty,
+    onboarding: {
+      displayName: REQUESTY_DISPLAY_NAME,
+      // The manage key is the only credential; the Clerk console session is
+      // not API-accessible, so the form guides manual key creation.
+      accountForm: {
+        defaultSiteName: REQUESTY_DISPLAY_NAME,
+        accessTokenLabelKey: "form.requestyManageKey",
+        accessTokenGuidanceTitleKey: "form.requestyManageKeyGuidanceTitle",
+        accessTokenGuidanceKey: "form.requestyManageKeyGuidance",
+        // The console's Clerk session can mint a manage key from a temp
+        // window; failures fall back to the guidance above.
+        autoCreateAccessToken: true,
+      },
+      detection: { hostnames: REQUESTY_HOSTNAMES },
+      // Console routes observed on app.requesty.ai, 2026-10-21. The management
+      // API lives on api-v2.requesty.ai, not the console origin.
+      routes: {
+        loginPath: "/sign-in",
+        usagePath: "/analytics",
+        adminCredentialsPath: "/api-keys",
+        pricingPath: "/model-library",
+        checkInPath: null,
+        accessTokenPath: "/api-keys",
+        redeemPath: "/billing",
+        siteAnnouncementsPath: null,
+      },
+    },
+    productProfile: {
+      auth: {
+        // Only the manage API key is a verified background credential; the
+        // console's Clerk session is not documented for API use.
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.AccessToken],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
+        defaultAuthHostnames: [],
+      },
+      identity: {
+        usernameRequired: false,
+        userIdRequired: false,
+        storedUserIdentityFields: [],
+      },
+      metrics: {
+        deferredTodayStatsAvailability:
+          createUnsupportedTodayStatsAvailability(),
+        legacyTodayStatsAvailability: createUnsupportedTodayStatsAvailability(),
+      },
+      modelList: {
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+        groupSemantics: ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+      },
+      urls: {
+        recognizedHostnames: REQUESTY_HOSTNAMES,
+        storageOrigin: REQUESTY_WEB_ORIGIN,
+        duplicateOrigin: REQUESTY_WEB_ORIGIN,
+        managedChannelOrigin: REQUESTY_API_BASE_URL,
+        inferenceApiBaseUrls: {
+          openAiCompatible: REQUESTY_API_BASE_URL,
+        },
       },
     },
   },

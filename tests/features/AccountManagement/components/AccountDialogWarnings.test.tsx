@@ -94,6 +94,23 @@ vi.mock("~/utils/navigation/feedbackPages", async (importOriginal) => {
 })
 
 describe("AccountDialog warnings", () => {
+  it("keeps supported account credential recovery separate from unsupported-site suggestions", () => {
+    render(
+      <AutoDetectErrorAlert
+        error={{
+          type: AutoDetectErrorType.INVALID_RESPONSE,
+          message: "The key is kept in the form",
+          canUseApiCredentialFallback: false,
+        }}
+        siteUrl="https://app.requesty.ai"
+        siteType={SITE_TYPES.REQUESTY}
+      />,
+    )
+    expect(screen.getByText("The key is kept in the form")).toBeVisible()
+    expect(
+      screen.queryByText("apiCredentialFallback.title"),
+    ).not.toBeInTheDocument()
+  })
   it("renders the registered verification guide instead of inferring it from the site type", () => {
     const definition = accountSiteDefinitions.getAccountSiteDefinition(
       SITE_TYPES.MODELFLARE,

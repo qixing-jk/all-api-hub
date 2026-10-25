@@ -49,6 +49,7 @@
 | EMRank | 埋め込み・リランカーモデル向けの独立ゲートウェイ。モデル API、アカウントコンソール、デイリーチェックインを提供します。 | [サイト](https://emrank.tech/) / [ドキュメント](https://docs.emrank.tech) |
 | RelayFor                      | モデル API とアカウントコンソールを提供する独立した AI 公益サービスプラットフォーム。                                                                                                                                                                                                                                                                                                 | [公式サイト](https://relayfor.xyz/)                                                                                                                         |
 | Daya API | 複数モデルプロバイダーを集約する統合 AI API アクセスプラットフォーム。モデル API、独立キー、クレジット管理を提供します。 | — |
+| Requesty | 統一モデルルーティング、プリペイド残高、キー管理を提供するホスト型 LLM ゲートウェイ。 | [サイト](https://app.requesty.ai/) / [ドキュメント](https://docs.requesty.ai/) |
 
 ## ❤️ 推奨スポンサーサイト
 
