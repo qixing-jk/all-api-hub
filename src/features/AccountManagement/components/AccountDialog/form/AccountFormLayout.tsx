@@ -9,9 +9,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
-import { ACCOUNT_EDIT_SECTIONS } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
+import {
+  ACCOUNT_EDIT_SECTIONS,
+  ACCOUNT_FORM_SECTION_ELEMENT_IDS,
+  type AccountFormSectionId,
+} from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
 import { useMediaQuery } from "~/hooks/useMediaQuery"
 import { cn } from "~/lib/utils"
+import { resolveNavigationScrollBehavior } from "~/utils/dom/scrollBehavior"
+import { temporarilyHighlight } from "~/utils/dom/temporaryHighlight"
 
 /** Leave space below the horizontal directory, which meets the modal header. */
 function getTopInset(navigation: HTMLElement | null) {
@@ -25,10 +31,17 @@ export function AccountFormLayout({
   continuous,
   children,
   guidance,
+  focusSection,
 }: {
   continuous: boolean
   children: ReactNode
   guidance?: ReactNode
+  /**
+   * Section the dialog was opened for. It becomes the initial destination and
+   * its navigation entry stays selected, so a guidance button that opened the
+   * dialog lands on the control it is asking the user to fix.
+   */
+  focusSection?: AccountFormSectionId
 }) {
   const { t } = useTranslation("accountDialog")
   const isCompact = useMediaQuery("(max-width: 639px)")
@@ -38,7 +51,12 @@ export function AccountFormLayout({
   const rootRef = useRef<HTMLDivElement>(null)
   const navigationRef = useRef<HTMLElement>(null)
   const directoryRef = useRef<HTMLDivElement>(null)
-  const [activeId, setActiveId] = useState<string>(ACCOUNT_EDIT_SECTIONS[0].id)
+  const requestedSectionId = focusSection
+    ? ACCOUNT_FORM_SECTION_ELEMENT_IDS[focusSection]
+    : undefined
+  const [activeId, setActiveId] = useState<string>(
+    requestedSectionId ?? ACCOUNT_EDIT_SECTIONS[0].id,
+  )
   const activeSection = ACCOUNT_EDIT_SECTIONS.find(({ id }) => id === activeId)
   const navigationSelection = useRef<string | null>(null)
   const pendingMenuDestination = useRef<string | null>(null)
@@ -128,9 +146,7 @@ export function AccountFormLayout({
           0,
           Math.min(destination, scroller.scrollHeight - scroller.clientHeight),
         ),
-        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-          ? "instant"
-          : "smooth",
+        behavior: resolveNavigationScrollBehavior(),
       })
     }
     setActiveId(id)
@@ -149,6 +165,24 @@ export function AccountFormLayout({
         ) ?? null
   }
 
+  /**
+   * Land on the section the dialog was opened for.
+   *
+   * A guidance button that opens the editor is asking for one specific field, so
+   * the request has to survive the modal's own scroll and focus setup instead of
+   * leaving the user at the top of a long form. It reuses the directory's own
+   * destination logic and adds the highlight the user follows.
+   */
+  useEffect(() => {
+    if (!requestedSectionId) return
+    const target = rootRef.current?.querySelector<HTMLElement>(
+      `#${requestedSectionId}`,
+    )
+    if (!target) return
+    navigate(requestedSectionId)
+    return temporarilyHighlight(target)
+  }, [requestedSectionId])
+
   if (!continuous) return <div className="space-y-density-3">{children}</div>
 
   return (
@@ -162,7 +196,7 @@ export function AccountFormLayout({
         if (!section) return
         const id =
           section.id === "account-login-config"
-            ? "account-check-in-config"
+            ? ACCOUNT_FORM_SECTION_ELEMENT_IDS["check-in"]
             : section.id
         if (ACCOUNT_EDIT_SECTIONS.some((entry) => entry.id === id)) {
           navigationSelection.current = id

@@ -17,6 +17,7 @@ import { useLoginProviderEvidence } from "~/features/AccountManagement/component
 import AccountForm, {
   type AccountFormHandle,
 } from "~/features/AccountManagement/components/AccountDialog/form/AccountForm"
+import type { AccountFormSectionId } from "~/features/AccountManagement/components/AccountDialog/form/accountFormSections"
 import SiteInfoInput from "~/features/AccountManagement/components/AccountDialog/form/SiteInfoInput"
 import { getAccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/form/sitePolicy"
 import { AihubmixDefaultKeyPromptDialog } from "~/features/AccountManagement/components/AccountDialog/postSave/AihubmixDefaultKeyPromptDialog"
@@ -64,6 +65,7 @@ interface AccountDialogProps {
   account?: DisplaySiteData | null
   prefill?: AddAccountPrefill | null
   recoveryState?: AccountDialogRecoveryState | null
+  focusSection?: AccountFormSectionId
   onSuccess: (data: any) => void
   onError: (error: any) => void
 }
@@ -77,6 +79,7 @@ interface AccountDialogProps {
  * @param props.account Account data to prefill the form when editing.
  * @param props.prefill Optional add-mode account prefill.
  * @param props.recoveryState Form carried from the popup for token recovery.
+ * @param props.focusSection Section the dialog opens on.
  * @param props.onSuccess Callback fired with saved data.
  * @param props.onError Callback fired when submission fails.
  */
@@ -87,6 +90,7 @@ export default function AccountDialog({
   account,
   prefill,
   recoveryState,
+  focusSection,
   onSuccess,
   onError,
 }: AccountDialogProps) {
@@ -444,6 +448,7 @@ export default function AccountDialog({
             {state.phase === ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM && (
               <AccountForm
                 continuous
+                focusSection={focusSection}
                 guidance={
                   <InfoPanel
                     mode={mode}

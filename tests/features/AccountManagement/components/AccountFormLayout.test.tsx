@@ -15,10 +15,13 @@ vi.mock("~/hooks/useMediaQuery", () => ({
   useMediaQuery: () => false,
 }))
 
-async function renderScrollableForm() {
+async function renderScrollableForm(options?: { focusSection?: "check-in" }) {
+  // jsdom has no Element.scrollTo; the form's own navigation calls it.
+  const scrollTo = vi.fn()
+  Element.prototype.scrollTo = scrollTo
   render(
     <div data-slot="modal-body">
-      <AccountFormLayout continuous>
+      <AccountFormLayout continuous focusSection={options?.focusSection}>
         {ACCOUNT_EDIT_SECTIONS.map(({ id, title }) => (
           <section key={id} id={id} data-account-form-section>
             <h3 tabIndex={-1}>{title}</h3>
@@ -33,8 +36,6 @@ async function renderScrollableForm() {
     clientHeight: { value: 300 },
     scrollHeight: { value: 1000 },
   })
-  const scrollTo = vi.fn()
-  scroller.scrollTo = scrollTo
   return { scroller, scrollTo }
 }
 
@@ -91,6 +92,27 @@ describe("AccountFormLayout navigation", () => {
       ).toHaveAttribute("aria-current", "location")
     },
   )
+
+  it("opens on a requested section and marks it as the destination", async () => {
+    const { scrollTo } = await renderScrollableForm({
+      focusSection: "check-in",
+    })
+
+    const navigation = screen.getByRole("navigation")
+    await waitFor(() =>
+      expect(
+        within(navigation).getByRole("button", {
+          name: "accountDialog:sections.checkInConfig.title",
+        }),
+      ).toHaveAttribute("aria-current", "location"),
+    )
+    expect(scrollTo).toHaveBeenCalled()
+    expect(
+      screen.getByRole("heading", {
+        name: "sections.checkInConfig.title",
+      }),
+    ).toHaveFocus()
+  })
 
   it("reveals the active directory button when it is clipped on either side", async () => {
     await renderScrollableForm()
