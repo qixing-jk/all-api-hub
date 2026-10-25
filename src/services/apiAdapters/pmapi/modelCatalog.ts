@@ -124,7 +124,7 @@ export const pmApiModelPricing: ModelPricingCapability = {
       const candidateGroups = Object.keys(groupRatios)
       groupAccess = candidateGroups.length
         ? { kind: "compatible-priced-fallback", candidateGroups }
-        : { kind: "authoritative", usableGroups: [] }
+        : { kind: "unavailable" }
     }
     return {
       success: true,

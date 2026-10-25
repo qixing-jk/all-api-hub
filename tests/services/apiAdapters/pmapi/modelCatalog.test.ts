@@ -267,7 +267,7 @@ describe("PM-API model pricing", () => {
       ).rejects.toMatchObject({ code: "JSON_PARSE_ERROR" })
     },
   )
-  it("keeps an empty authoritative group list and default completion ratio without usable metadata", async () => {
+  it("keeps access unknown and the default completion ratio when group metadata is unavailable", async () => {
     server.use(
       http.get(`${origin}/api/pricing`, () =>
         HttpResponse.json(
@@ -279,7 +279,7 @@ describe("PM-API model pricing", () => {
                 billing: "per_request",
                 price: 1,
                 vendor: "test",
-                groups: [],
+                groups: ["Free"],
               },
             ],
           }),
@@ -290,10 +290,8 @@ describe("PM-API model pricing", () => {
       ),
     )
     const result = await pmApiModelPricing.fetchPricing(request)
-    expect(result.groupAccess).toEqual({
-      kind: "authoritative",
-      usableGroups: [],
-    })
+    expect(result.groupAccess).toEqual({ kind: "unavailable" })
+    expect(result.data[0]?.enable_groups).toEqual(["Free"])
     expect(result.data[0]?.completion_ratio).toBe(1)
   })
 })
