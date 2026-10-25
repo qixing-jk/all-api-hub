@@ -2,6 +2,7 @@ import {
   ArrowLeftRight,
   BookPlus,
   CalendarCheck2,
+  CircleHelp,
   Globe2,
   KeyRound,
   Layers,
@@ -34,3 +35,6 @@ export const ImportExportIcon = ArrowLeftRight
 export const RefreshActionIcon = RefreshCw
 export const EditActionIcon = Pencil
 export const ResetActionIcon = RotateCcw
+
+/** Shared glyph for help affordances; status notices keep their Info icon. */
+export const HelpHintIcon = CircleHelp

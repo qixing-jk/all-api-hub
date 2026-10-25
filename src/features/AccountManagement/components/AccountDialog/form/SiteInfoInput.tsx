@@ -1,13 +1,7 @@
-import {
-  CircleHelp,
-  Cookie,
-  Info,
-  KeyRound,
-  Pencil,
-  TriangleAlert,
-} from "lucide-react"
+import { Cookie, Info, KeyRound, Pencil, TriangleAlert } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { HelpHintIcon } from "~/components/icons/productIcons"
 import Tooltip from "~/components/Tooltip"
 import {
   Button,
@@ -149,7 +143,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
                     aria-label={authTypeHelpText}
                     className="dark:text-muted-foreground text-faint-foreground hover:text-muted-foreground focus-visible:ring-ring dark:hover:text-secondary-foreground inline-flex h-4 w-4 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
                   >
-                    <CircleHelp className="h-4 w-4" aria-hidden="true" />
+                    <HelpHintIcon className="h-4 w-4" aria-hidden="true" />
                   </button>
                 </Tooltip>
               </div>

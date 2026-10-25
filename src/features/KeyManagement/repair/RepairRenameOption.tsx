@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next"
-import { Info } from "lucide-react"
 
+import { HelpHintIcon } from "~/components/icons/productIcons"
 import Tooltip from "~/components/Tooltip"
 import { Checkbox, Label } from "~/components/ui"
 
@@ -50,7 +50,7 @@ export function RepairRenameOption({
                   "keyManagement:repairMissingKeys.renameOption.infoLabel",
                 )}
               >
-                <Info className="h-3.5 w-3.5" aria-hidden="true" />
+                <HelpHintIcon className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             </Tooltip>
           </div>

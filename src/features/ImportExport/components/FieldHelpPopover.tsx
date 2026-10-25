@@ -1,4 +1,3 @@
-import { CircleHelp } from "lucide-react"
 import {
   useCallback,
   useEffect,
@@ -8,6 +7,7 @@ import {
   type ReactNode,
 } from "react"
 
+import { HelpHintIcon } from "~/components/icons/productIcons"
 import { Popover, PopoverAnchor, PopoverContent } from "~/components/ui/popover"
 
 /**
@@ -91,7 +91,7 @@ export function FieldHelpPopover({
             setOpen(pinnedRef.current)
           }}
         >
-          <CircleHelp className="size-4" aria-hidden="true" />
+          <HelpHintIcon className="size-4" aria-hidden="true" />
         </button>
       </PopoverAnchor>
       <PopoverContent

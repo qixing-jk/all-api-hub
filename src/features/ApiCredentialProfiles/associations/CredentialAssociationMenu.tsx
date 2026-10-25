@@ -1,14 +1,8 @@
-import {
-  ArrowUpRight,
-  Check,
-  ChevronDown,
-  CircleAlert,
-  Link2,
-  Link2Off,
-} from "lucide-react"
+import { Check, ChevronDown, CircleAlert, Link2, Link2Off } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { ApiCredentialLibraryAddIcon } from "~/components/icons/productIcons"
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import Tooltip from "~/components/Tooltip"
 import { Button } from "~/components/ui"
 import {
@@ -192,7 +186,7 @@ export function CredentialAssociationMenu({
             ) : null}
             {item.onOpen && status === "linked" ? (
               <DropdownMenuItem onSelect={item.onOpen}>
-                <ArrowUpRight />
+                <WorkflowTransitionIcon />
                 {labels.open}
               </DropdownMenuItem>
             ) : null}
@@ -223,7 +217,7 @@ export function CredentialAssociationMenu({
             ) : null}
             {item.onOpen && status !== "linked" ? (
               <DropdownMenuItem onSelect={item.onOpen}>
-                <ArrowUpRight />
+                <WorkflowTransitionIcon />
                 {labels.open}
               </DropdownMenuItem>
             ) : null}

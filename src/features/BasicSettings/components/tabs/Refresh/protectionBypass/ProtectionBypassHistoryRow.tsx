@@ -1,7 +1,8 @@
-import { ArrowUpRight, ChevronDown, Clock3, Copy } from "lucide-react"
+import { ChevronDown, Clock3, Copy } from "lucide-react"
 import { useEffect, useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { Badge, Button, Card } from "~/components/ui"
 import type {
   describeProtectionBypassHistory,
@@ -100,7 +101,7 @@ function HistoryDetails({
               variant="outline"
               size="sm"
               onClick={() => onNavigateToSettings(settingsTarget)}
-              rightIcon={<ArrowUpRight className="size-4" />}
+              rightIcon={<WorkflowTransitionIcon className="size-4" />}
             >
               {t("shieldBypass:history.openSettings")}
             </Button>

@@ -1,6 +1,6 @@
-import { CircleHelp } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { HelpHintIcon } from "~/components/icons/productIcons"
 import { IconButton } from "~/components/ui"
 
 /** Shared, compact risk disclosure beside check-in controls. */
@@ -16,7 +16,7 @@ export function AutoCheckinRiskHint() {
       tooltip={t("riskNotice.description")}
       className="text-faint-foreground shrink-0"
     >
-      <CircleHelp className="h-4 w-4" aria-hidden="true" />
+      <HelpHintIcon className="h-4 w-4" aria-hidden="true" />
     </IconButton>
   )
 }
