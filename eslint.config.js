@@ -8,6 +8,8 @@ import { defineConfig } from "eslint/config"
 import globals from "globals"
 import tseslint from "typescript-eslint"
 
+import { sharedUiImportsRule } from "./scripts/eslint/shared-ui-imports.mjs"
+
 const autoImportsConfigUrl = new URL(
   "./.wxt/eslint-auto-imports.mjs",
   import.meta.url,
@@ -253,12 +255,6 @@ const lucideIconRestrictedImports = [
     message:
       "Use canonical Lucide names such as TriangleAlert, CircleAlert, CircleCheck, CircleX and Ellipsis.",
   },
-  {
-    name: "lucide-react",
-    importNames: ["ExternalLink"],
-    message:
-      "Use `~/components/icons/WorkflowTransitionIcon` for arrow-up-right workflow/link affordances so the app keeps a single transition glyph.",
-  },
 ]
 
 function restrictedImports(...patterns) {
@@ -477,6 +473,14 @@ export default defineConfig([
         },
       ],
     },
+  },
+  // Keep shared UI ownership independent of narrower import-policy overrides.
+  {
+    files: [srcJsFamilyFilePattern],
+    plugins: {
+      "shared-ui": { rules: { "use-shared-imports": sharedUiImportsRule } },
+    },
+    rules: { "shared-ui/use-shared-imports": "error" },
   },
   // Guardrails: prevent non-entrypoint code from depending on options page internals.
   {
