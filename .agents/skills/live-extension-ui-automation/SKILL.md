@@ -18,6 +18,12 @@ Automate and test the development browser extension UI against real accounts and
 
 Chromium blocks `--remote-debugging-port` on the system default user data directory. To preserve daily browser workflows while enabling CDP automation, tests run in a dedicated dev profile (`AllApiHub/dev-browser`) that shares accounts and sessions across all Git worktrees.
 
+## Window identity
+
+Several debug browsers can be open at once, so the launcher brands the window it starts: the profile name (`AAH <worktree>`, or `AAH dev-browser` for the shared profile) and a per-profile avatar identify it in the window title, profile card and profile picker, the frame gets a stable per-profile tint, and the extension about to be mounted is pinned to the toolbar. A name the user set themselves is kept, and an already installed theme is not replaced.
+
+Chromium reads these files only while starting and rewrites them on exit, so the launcher writes them while the profile is free and pins `--profile-directory` to the profile it branded. Reusing a running browser keeps its existing identity, `--restart` re-applies it, and `--no-identity` skips the branding entirely.
+
 ## Shared vs isolated dev profiles
 
 By default every worktree mounts the single shared profile (`AllApiHub/dev-browser`) on CDP port 9222. This reuses one account login across worktrees but couples their browser instances: a `--restart` mounts a different worktree's build and closes another session's tabs, and discovery by title can target the wrong extension.
@@ -68,7 +74,8 @@ For concurrent worktrees use `pnpm browser:cdp:isolate -- --dev`, and pass `--is
   - `pnpm browser:cdp -- --stop-dev`: Terminate the background WXT dev server process.
   - `pnpm browser:cdp -- --prod`: Force standalone production build mode (`.output/chrome-mv3`).
   - `pnpm browser:cdp -- --prod --build`: Force a full production rebuild before launching. Pair `--build` with `--prod`; `--build` alone still prefers dev.
-  - `pnpm browser:cdp -- --restart`: Terminate the running debug browser and start a fresh instance.
+  - `pnpm browser:cdp -- --restart`: Terminate the running debug browser and start a fresh instance. Restarting is also what re-applies a window identity that the current instance still lacks.
+  - `pnpm browser:cdp -- --no-identity`: Leave the profile name, frame tint and toolbar pin untouched, e.g. when inspecting a profile someone else branded.
 
 If dev startup fails or the loaded UI does not receive edits, follow [desktop dev recovery](references/desktop-dev-recovery.md). Switch to production only for a diagnosed remaining blocker or the acceptance cases above, and report that reason and the loaded path rather than claiming dev/HMR verification.
 
