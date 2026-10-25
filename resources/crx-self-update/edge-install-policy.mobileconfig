@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
+<!-- The shared release-assets.githubusercontent.com host serves other projects.
+     Matching CRX and referrer URLs are required; the allowlist does not limit
+     installation to this extension ID. Read README.md before importing. -->
 <dict>
 	<key>PayloadContent</key>
 	<array>

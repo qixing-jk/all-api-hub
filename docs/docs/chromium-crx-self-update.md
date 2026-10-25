@@ -19,7 +19,13 @@ Google 从 Chrome 33（Windows）和 Chrome 44（macOS）起，逐步禁止浏�
 - 拒绝安装来源不明的 `.crx`，报 `CRX_REQUIRED_PROOF_MISSING`；
 - 或安装后以「不是来自 Chrome Web Store」为由自动停用，且无法长期重新启用。
 
-配置白名单策略后，这两个限制都会解除，`.crx` 也能通过发布页上的清单正常自更新。这也是其他 Chromium 扩展分发自更新版本时的通行做法。
+在浏览器支持自托管安装且满足设备管理前提时，配置所需策略后，`.crx` 可通过发布页上的清单自更新。Windows Edge 另有下文所述的域加入要求，仅导入策略不足以满足该要求。
+
+::: warning 安装来源策略的信任范围
+模板中的 `ExtensionInstallSources` 同时允许本项目的 GitHub 页面和 GitHub 共享下载域名 `release-assets.githubusercontent.com`，后者承载其他仓库的附件。CRX 下载地址与发起下载的页面（referrer）都必须匹配允许的来源；但本项目路径下的页面仍可能链接到共享域名上的其他 CRX。
+
+`ExtensionInstallAllowlist` 只为列出的扩展提供阻止列表豁免，并不限制只能安装本扩展。模板未设置全局 `ExtensionInstallBlocklist`，因此这些来源规则的信任范围不限于本扩展 ID。仅在接受这一范围时导入模板，并核对下载来源及安装后的扩展 ID。已有组织策略请由管理员合并，不要直接覆盖。
+:::
 
 ## 安装步骤
 
@@ -44,6 +50,8 @@ all-api-hub-chrome.crx
 无需配置。Chromium 与 Chrome 在 Linux 上允许安装自托管扩展。
 
 #### Windows
+
+**Edge 设备前提：** [Microsoft 官方文档](https://learn.microsoft.com/en-us/deployedge/microsoft-edge-manage-extensions-webstore#prerequisites)要求 Windows 设备加入 Microsoft Active Directory 域；仅加入 Microsoft Entra 不满足要求，除非是 Microsoft Entra 混合加入。普通未入域电脑仅导入 `edge-install-policy.reg` 无法满足自托管安装条件，请使用 Edge 商店版。
 
 需要写入管理员级注册表策略。仓库提供了现成的模板（`resources/crx-self-update/`）：Chrome 用 `chrome-install-policy.reg`，Edge 用 `edge-install-policy.reg`。模板里已填入本扩展的 ID，用管理员身份双击导入，然后完全退出并重启浏览器。
 

@@ -18,6 +18,43 @@ const bash =
       )
     : "bash"
 
+it.each([
+  ["", "all-api-hub-nightly-chrome.crx", 0, false],
+  ["", "updates.xml", 0, false],
+  ["", "old-chrome.zip", 0, true],
+  ["", "", 0, true],
+  ["", "", 1, false],
+  ["configured", "updates.xml", 1, true],
+])(
+  "guards nightly signing (key: %s, assets: %s, API status: %s)",
+  (key, assets, apiStatus, allowed) => {
+    const script = readStep(
+      ".github/workflows/nightly-release.yml",
+      "Check active nightly self-update channel",
+    )
+    const run = () =>
+      execFileSync(
+        bash,
+        [
+          "-e",
+          "-c",
+          `gh() { printf '%s\\n' "$TEST_ASSETS"; return "$TEST_API_STATUS"; };\n${script}`,
+        ],
+        {
+          env: {
+            ...process.env,
+            CRX_SIGNING_KEY: String(key),
+            TEST_ASSETS: String(assets),
+            TEST_API_STATUS: String(apiStatus),
+          },
+          stdio: "pipe",
+        },
+      )
+    if (allowed) expect(run).not.toThrow()
+    else expect(run).toThrow()
+  },
+)
+
 /** Exercise the actual workflow shell, replacing only GitHub inputs and uploads. */
 function readStep(file: string, name: string): string {
   const source = readFileSync(file, "utf8").replace(/\r\n/g, "\n")

@@ -94,6 +94,27 @@ jobs:
           echo "ref=$RESOLVED_SHA" >> "$GITHUB_OUTPUT"
           echo "short_sha=$(git rev-parse --short "$RESOLVED_SHA")" >> "$GITHUB_OUTPUT"
 
+      - name: Check active nightly self-update channel
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          CRX_SIGNING_KEY: ${{ secrets.CRX_SIGNING_KEY }}
+        run: |
+          if [ -n "$CRX_SIGNING_KEY" ]; then exit 0; fi
+
+          # Listing releases treats an absent nightly as inactive while still
+          # failing closed on authentication, network, or API errors.
+          assets="$(gh api --paginate "repos/$GH_REPO/releases" \
+            --jq '.[] | select(.tag_name == "nightly") | .assets[].name')"
+          while IFS= read -r asset; do
+            case "$asset" in
+              *.crx|updates.xml)
+                echo "::error::Nightly self-update is active; CRX_SIGNING_KEY is required to replace its CRX and updates.xml."
+                exit 1
+                ;;
+            esac
+          done <<< "$assets"
+
       - name: Package extension
         id: package
         uses: ./.github/actions/package-extension

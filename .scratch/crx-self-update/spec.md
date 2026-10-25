@@ -9,7 +9,7 @@ Issue: https://github.com/qixing-jk/all-api-hub/issues/190
 
 ## 已确认的约束
 
-- **Chromium 自托管更新（CRX + `update_url`）在 stock Chrome/Edge 上需要管理员级策略**：`ExtensionInstallAllowlist`（放行扩展 ID）与 `ExtensionInstallSources`（放行 CRX 与 updates.xml 来源），且策略必须是 mandatory（HKLM 注册表 / MDM）。Linux 无此限制，QQ/360 等分支浏览器行为不一。这是 issue 引用方案（PT-Plugin-Plus）同样要求用户做的事。
+- **Chromium 自托管更新（CRX + `update_url`）在 stock Chrome/Edge 上需要管理员级策略**：`ExtensionInstallAllowlist` 提供阻止列表豁免，`ExtensionInstallSources` 允许匹配的 CRX 下载地址及 referrer，并不限制只能安装本扩展。GitHub 附件共享域名的信任范围已在三语安装文档和模板旁说明。Windows Edge 另要求 AD 域加入（Entra-only 不足，混合加入可以）；HKLM / MDM 策略不能代替设备前提。Linux 无此限制，QQ/360 等分支浏览器行为不一。
 - **Firefox unlisted 通道本次不做**：AMO 的版本号命名空间按 add-on ID 共享且不可复用，复用 `{bc73541a-…}` 会占用商店版的版本号；Nightly 每次滚动构建都需唯一版本号。商店版更新速度已足够。
 - **manifest 内的 `update_url` 在 stock Chrome 上会导致 `CRX_REQUIRED_PROOF_MISSING`**，除非配套策略。因此只有明确标注为「自更新」的构建才写入该字段。
 - **稳定的 manifest URL** 用 GitHub Releases 固定资产名实现：`releases/latest/download/updates.xml`（stable）与 `releases/download/nightly/updates.xml`（nightly，tag 本来就 force-move），不需要改动 gh-pages。
@@ -113,3 +113,5 @@ Issue: https://github.com/qixing-jk/all-api-hub/issues/190
 - Edge 的 macOS 策略配置使用独立标识和 UUID，避免替换 Chrome 配置。Chrome 原标识保留。
 - 回归入口：`tests/config/crxReleaseArtifacts.test.ts` 执行实际 workflow shell（远端上传使用本地验证替身），`wxtSelfUpdate.test.ts` 验证版本边界和渠道隔离，`distributionPackaging.test.ts` 验证继承环境隔离，`crxPolicyProfiles.test.tsx` 解析策略 XML 并验证身份互不冲突。
 - 本地验收入口与保留证据：`artifacts/acceptance.md`、`artifacts/pack-acceptance.mjs`、`artifacts/package-nightly*.log`。首次实际打包因 Windows PATH 没有 `unzip` 失败，保留失败日志；验收脚本随后只为自身进程补充 Git 的 `usr/bin`。测试签名密钥仅在内存生成，不使用正式密钥。浏览器原生安装和真实 macOS/MDM 下发未在本次修复重跑。
+
+- PR #1761 后续反馈：Nightly 打包前在缺密钥时查询发布附件；已有 CRX 或 `updates.xml` 则失败，尚未启用的渠道仍可仅发布 ZIP，API 失败也阻止继续。回归测试执行真实步骤 Shell，覆盖 CRX/XML、未启用、查询失败及已配置密钥。三语文档、四个策略模板与模板 README 同步设备前提及共享来源信任说明；未改变托管源或全局阻止策略。本轮本地及远端验收保留在 `artifacts/pr-1761-feedback.md`。

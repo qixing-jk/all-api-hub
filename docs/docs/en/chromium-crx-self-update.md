@@ -19,7 +19,13 @@ Since Chrome 33 (Windows) and Chrome 44 (macOS), Google has progressively blocke
 - refuse the `.crx` with `CRX_REQUIRED_PROOF_MISSING`, or
 - install it and then disable it as "not from the Chrome Web Store", with no durable way to re-enable it.
 
-An allowlist policy lifts both restrictions, and the `.crx` then updates itself through the manifest on the release page. This is also how other Chromium extensions distribute self-updating builds.
+When the browser supports self-hosted installation and its device management prerequisites are met, the required policies allow the `.crx` to update through the release manifest. Windows Edge also requires domain membership as described below; importing a policy alone does not meet that requirement.
+
+::: warning Installation source trust
+The templates' `ExtensionInstallSources` permits both this project's GitHub pages and GitHub's shared download host, `release-assets.githubusercontent.com`, which also serves assets from other repositories. Both the CRX download URL and the referring page must match an allowed source, but a page under this project's path could still link to another CRX on the shared host.
+
+`ExtensionInstallAllowlist` only exempts listed extensions from a blocklist; it does not restrict installation to this extension. The templates do not set a global `ExtensionInstallBlocklist`, so these source rules grant trust beyond this extension ID. Import only if you accept that scope, and verify the download source and installed extension ID. Ask your administrator to merge existing organizational policies rather than overwriting them.
+:::
 
 ## Installation
 
@@ -44,6 +50,8 @@ The `.crx` build and the unpacked ZIP build have different extension ids, so the
 No configuration needed. Chromium and Chrome allow self-hosted extensions on Linux.
 
 #### Windows
+
+**Edge device prerequisite:** [Microsoft's documentation](https://learn.microsoft.com/en-us/deployedge/microsoft-edge-manage-extensions-webstore#prerequisites) requires Windows devices to be joined to a Microsoft Active Directory domain. Microsoft Entra joined devices are insufficient unless they are Microsoft Entra hybrid joined. Importing `edge-install-policy.reg` on an ordinary non-domain device does not meet the self-hosted installation requirements; use the Edge Add-ons build instead.
 
 Write an administrator-level registry policy. Ready-made templates live in `resources/crx-self-update/`: `chrome-install-policy.reg` for Chrome, `edge-install-policy.reg` for Edge. The templates already carry this extension's id; import the file from an administrator shell, then fully quit and restart the browser.
 

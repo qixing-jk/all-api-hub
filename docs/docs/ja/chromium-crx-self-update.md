@@ -19,7 +19,13 @@ Google は Chrome 33（Windows）と Chrome 44（macOS）以降、ストア外�
 - `CRX_REQUIRED_PROOF_MISSING` で `.crx` のインストールを拒否するか、
 - 「Chrome ウェブストア以外から提供されています」として無効化し、恒久的な再有効化を許しません。
 
-許可リストポリシーを設定すると両方の制限が解除され、`.crx` はリリースページのマニフェスト経由で自己更新できます。これは他の Chromium 拡張機能が自己更新ビルドを配布する一般的な方法でもあります。
+ブラウザーが自己ホストインストールに対応し、デバイス管理の前提条件を満たしている場合、必要なポリシーを設定すると `.crx` がリリースのマニフェスト経由で自己更新できます。Windows Edge には下記のドメイン参加要件もあり、ポリシーのインポートだけでは満たせません。
+
+::: warning インストール元ポリシーの信頼範囲
+テンプレートの `ExtensionInstallSources` は本プロジェクトの GitHub ページと、他のリポジトリの添付ファイルも配信する共有ホスト `release-assets.githubusercontent.com` を許可します。CRX のダウンロード URL とダウンロード元ページ（referrer）の両方が許可パターンに一致する必要がありますが、本プロジェクトのパス内のページから共有ホスト上の別の CRX へリンクすることも可能です。
+
+`ExtensionInstallAllowlist` は指定した拡張機能をブロックリストの対象外にするだけで、インストールを本拡張機能だけに制限しません。テンプレートはグローバルな `ExtensionInstallBlocklist` を設定しないため、これらのインストール元の信頼範囲は本拡張機能の ID に限定されません。この範囲を受け入れる場合のみインポートし、ダウンロード元とインストール後の拡張機能 ID を確認してください。既存の組織ポリシーは上書きせず、管理者に統合を依頼してください。
+:::
 
 ## インストール手順
 
@@ -44,6 +50,8 @@ all-api-hub-chrome.crx
 設定は不要です。Linux の Chromium / Chrome は自己ホスト拡張機能を許可しています。
 
 #### Windows
+
+**Edge のデバイス要件：** [Microsoft の公式文書](https://learn.microsoft.com/en-us/deployedge/microsoft-edge-manage-extensions-webstore#prerequisites)では Windows デバイスの Microsoft Active Directory ドメインへの参加が必要です。Microsoft Entra への参加のみでは不十分で、Microsoft Entra ハイブリッド参加が必要です。ドメイン未参加の通常の PC に `edge-install-policy.reg` をインポートするだけでは自己ホストインストールの条件を満たせないため、Edge アドオン版を使用してください。
 
 管理者レベルのレジストリポリシーが必要です。すぐ使えるテンプレートが `resources/crx-self-update/` にあります（Chrome は `chrome-install-policy.reg`、Edge は `edge-install-policy.reg`）。テンプレートにはこの拡張機能の ID が入力済みです。管理者権限でインポートしてから、ブラウザーを完全に終了して再起動します。
 
