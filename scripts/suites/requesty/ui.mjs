@@ -8,6 +8,7 @@ import { ACCOUNT_MANAGEMENT_TEST_IDS as accounts } from "../../../src/features/A
 import { KEY_MANAGEMENT_TEST_IDS as keys } from "../../../src/features/KeyManagement/testIds.ts"
 import { TOKEN_PROVISIONING_TEST_IDS } from "../../../src/features/TokenProvisioning/testIds.ts"
 import {
+  REQUESTY_MANAGE_API_ORIGIN,
   REQUESTY_WEB_ORIGIN,
   SITE_TYPES,
 } from "../../../src/services/accountSiteDefinitions/identifiers.ts"
@@ -41,7 +42,9 @@ const KEY_PAGE_LOAD_ERROR_MARKERS = [
  * key create/edit/delete and provider model-catalog verification.
  *
  * The saved account and the throwaway key are both removed in `finally`; the
- * one-time plaintext of the created key is never printed.
+ * one-time plaintext of the created key is never printed. Console keys are
+ * revoked by id and only when the pre-run inventory did not already contain
+ * them, so a saved management credential reused by onboarding survives the run.
  */
 
 /** Wait until the site-type trigger carries the expected `data-site-type`. */
@@ -123,36 +126,68 @@ async function saveScreenshot(page, evidenceDir, name) {
 }
 
 /**
- * Opens the console in the dev profile and reports whether its Clerk session is
- * signed in. The auto-create action needs that session; a signed-out console is
- * the fallback case, not a failure.
+ * Page-side: reads the console session plus the key inventory that proves
+ * cleanup ownership, using the console's own Clerk token. `keys` is null
+ * whenever the inventory cannot be established, which callers must treat as
+ * "ownership unknown", never as "no keys".
+ * @param manageApiOrigin Management API origin.
+ * @returns The console path, the signed-in flag and the key inventory.
  */
-async function readConsoleSessionState(context) {
-  const consolePage = await context.newPage()
-  try {
-    await consolePage.goto(`${REQUESTY_CONSOLE_URL}/api-keys`, {
-      waitUntil: "domcontentloaded",
-      timeout: 45_000,
-    })
-    await consolePage.waitForFunction(
-      () =>
-        Boolean(window.Clerk?.loaded) || location.pathname.includes("sign-in"),
-      undefined,
-      { timeout: 20_000 },
-    )
-    return await consolePage.evaluate(() => ({
-      path: window.location.pathname,
-      signedIn: Boolean(window.Clerk?.session),
-    }))
-  } catch {
-    return { path: "", signedIn: false }
-  } finally {
-    await consolePage.close().catch(() => {})
+async function readConsoleStateInPage(manageApiOrigin) {
+  const path = window.location.pathname
+  const signedIn = Boolean(window.Clerk?.session)
+  if (!signedIn) return { path, signedIn, keys: null }
+  const token = await window.Clerk.session.getToken?.()
+  if (!token) return { path, signedIn, keys: null }
+  const response = await fetch(`${manageApiOrigin}/v1/apikey`, {
+    headers: { Authorization: `Bearer ${token}` },
+    credentials: "omit",
+  })
+  if (!response.ok) return { path, signedIn, keys: null }
+  const payload = await response.json()
+  // The console collection answers `{ apis: [...] }`.
+  const list = Array.isArray(payload)
+    ? payload
+    : payload.apis || payload.api_keys || payload.keys || []
+  return {
+    path,
+    signedIn,
+    keys: list
+      .map((key) => ({
+        id: String(key.api_key_id ?? key.id ?? ""),
+        name: String(key.name ?? ""),
+      }))
+      .filter((key) => key.id && key.name),
   }
 }
 
-/** Deletes only the exact, unique test key name through the signed-in console. */
-async function deleteConsoleKeysByName(context, namePrefix) {
+/**
+ * Page-side: deletes exactly the given console key ids.
+ * @param params Deletion input.
+ * @param params.manageApiOrigin Management API origin.
+ * @param params.keyIds Console key ids to revoke.
+ * @returns Per-id deletion status, or the reason the pass did not run.
+ */
+async function deleteConsoleKeysInPage({ manageApiOrigin, keyIds }) {
+  const token = await window.Clerk?.session?.getToken?.()
+  if (!token) return { error: "signed_out", deleted: [] }
+  const deleted = []
+  for (const id of keyIds) {
+    const response = await fetch(`${manageApiOrigin}/v1/apikey/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "omit",
+    })
+    deleted.push({ id, status: response.status })
+  }
+  return { deleted }
+}
+
+/**
+ * Opens `/api-keys` in the dev profile and runs `read` on the Clerk-ready page.
+ * Returns null when the console could not be opened in time.
+ */
+async function withConsolePage(context, read) {
   const consolePage = await context.newPage()
   try {
     await consolePage.goto(`${REQUESTY_CONSOLE_URL}/api-keys`, {
@@ -165,52 +200,77 @@ async function deleteConsoleKeysByName(context, namePrefix) {
       undefined,
       { timeout: 20_000 },
     )
-    return await consolePage.evaluate(async (prefix) => {
-      const token = await window.Clerk?.session?.getToken?.()
-      if (!token) return { error: "signed_out", deleted: [] }
-      const payload = await fetch("https://api-v2.requesty.ai/v1/apikey", {
-        headers: { Authorization: `Bearer ${token}` },
-        credentials: "omit",
-      }).then((response) => response.json())
-      // The console collection answers `{ apis: [...] }`.
-      const keys = Array.isArray(payload)
-        ? payload
-        : payload.apis || payload.api_keys || payload.keys || []
-      const deleted = []
-      for (const key of keys) {
-        if (String(key.name ?? "") !== prefix) continue
-        const id = key.api_key_id ?? key.id
-        const response = await fetch(
-          `https://api-v2.requesty.ai/v1/apikey/${id}`,
-          {
-            method: "DELETE",
-            headers: { Authorization: `Bearer ${token}` },
-            credentials: "omit",
-          },
-        )
-        deleted.push({ name: key.name, status: response.status })
-      }
-      return { deleted }
-    }, namePrefix)
-  } catch (error) {
-    return { error: String(error?.message ?? error), deleted: [] }
+    return await read(consolePage)
+  } catch {
+    return null
   } finally {
     await consolePage.close().catch(() => {})
   }
 }
 
 /**
+ * Opens the console in the dev profile and reports whether its Clerk session is
+ * signed in, plus the key inventory that proves cleanup ownership.
+ */
+async function readConsoleSessionState(context) {
+  const state = await withConsolePage(context, (consolePage) =>
+    consolePage.evaluate(readConsoleStateInPage, REQUESTY_MANAGE_API_ORIGIN),
+  )
+  return state ?? { path: "", signedIn: false, keys: null }
+}
+
+/** Reads the console key inventory, or null when it cannot be established. */
+async function readConsoleKeys(context) {
+  return (await readConsoleSessionState(context)).keys
+}
+
+/** Deletes only the console key ids this run created. */
+async function deleteConsoleKeysByIds(context, keyIds) {
+  const result = await withConsolePage(context, (consolePage) =>
+    consolePage.evaluate(deleteConsoleKeysInPage, {
+      manageApiOrigin: REQUESTY_MANAGE_API_ORIGIN,
+      keyIds,
+    }),
+  )
+  return result ?? { error: "console_unavailable", deleted: [] }
+}
+
+/**
+ * Decides whether the credential onboarding resolved to belongs to this run.
+ * Ownership is provable only against an inventory read before any console write,
+ * so a key the pre-run inventory already contained — a saved credential reused
+ * by onboarding — is never owned, and an unreadable inventory proves nothing.
+ * @param onboardingKey Key the onboarding credential resolved to.
+ * @param preRunConsoleKeyIds Console key ids present before the run, or null when
+ *   the inventory could not be read.
+ * @returns True only when this run created the key.
+ */
+export function consoleKeyBelongsToRun(onboardingKey, preRunConsoleKeyIds) {
+  if (!preRunConsoleKeyIds) return false
+  return !preRunConsoleKeyIds.has(onboardingKey.id)
+}
+
+/**
  * Stage 1: the credential-free detection + guidance flow.
+ * @param params Stage parameters.
+ * @param params.page Options page.
+ * @param params.evidenceDir Evidence screenshot directory.
+ * @param params.session Console session read before any write; its inventory
+ *   also proves cleanup ownership.
+ * @param params.createdConsoleKeys Receives only the console keys this run
+ *   created.
+ * @param params.preRunConsoleKeyIds Console key ids that existed before the
+ *   run; null when the inventory could not be read.
  * @returns The open dialog page (positioned at the manual form) so the
  *   credentialed stage can continue in it; caller closes it.
  */
 async function runDetectionStage({
   page,
-  context,
   evidenceDir,
-  autoCreatedKeyNames,
+  session,
+  createdConsoleKeys,
+  preRunConsoleKeyIds,
 }) {
-  const session = await readConsoleSessionState(context)
   console.log("  [UI 步骤 1] 自动识别 app.requesty.ai 并校验管理密钥引导...")
 
   await page
@@ -293,7 +353,7 @@ async function runDetectionStage({
     // Account display names describe the organization. Credential metadata
     // must come from the calling key itself, including recovery after a
     // partially successful onboarding that retained its one-time plaintext.
-    const keyName = await page.evaluate(async (credential) => {
+    const onboardingKey = await page.evaluate(async (credential) => {
       const response = await fetch(
         "https://api-v2.requesty.ai/v1/manage/apikey/self",
         {
@@ -304,12 +364,25 @@ async function runDetectionStage({
       if (!response.ok)
         throw new Error("cannot identify the onboarding key for cleanup")
       const body = await response.json()
+      if (typeof body.id !== "string" || !body.id) {
+        throw new Error("onboarding key has no cleanup id")
+      }
       if (typeof body.name !== "string" || !body.name.trim()) {
         throw new Error("onboarding key has no cleanup name")
       }
-      return body.name
+      return { id: body.id, name: body.name }
     }, token)
-    autoCreatedKeyNames.add(keyName)
+    // The dialog also prefills a saved account credential, so a non-empty token
+    // proves nothing about ownership. Only a key absent from the pre-run
+    // inventory was created by this run; revoking by name would delete whatever
+    // credential the operator already had.
+    if (!consoleKeyBelongsToRun(onboardingKey, preRunConsoleKeyIds)) {
+      console.log(
+        `  ℹ️ 未确认密钥归属，跳过控制台清理: ${onboardingKey.name}（运行前清单${preRunConsoleKeyIds ? "已包含该密钥" : "不可读"}）`,
+      )
+    } else {
+      createdConsoleKeys.push(onboardingKey)
+    }
   }
   await saveScreenshot(page, evidenceDir, "requesty-detection.png")
   if (siteTypeAttribute !== REQUESTY_SITE_TYPE || !tokenLabel) {
@@ -370,7 +443,14 @@ export async function runRequestyUiTest({
     (await getAccounts(serviceWorker)).map((account) => account.id),
   )
   const ownedKeyNames = new Set()
-  const autoCreatedKeyNames = new Set()
+  /** Console keys this run created; owned by id, never by name. */
+  const createdConsoleKeys = []
+  // Snapshot ownership before any console write: a saved credential reused by
+  // onboarding must survive the suite, so only ids absent here are ours to revoke.
+  const consoleSession = await readConsoleSessionState(context)
+  const preRunConsoleKeyIds = consoleSession.keys
+    ? new Set(consoleSession.keys.map((entry) => entry.id))
+    : null
   let createdAccountId = null
   const page = await openExtensionPage({
     context,
@@ -387,19 +467,17 @@ export async function runRequestyUiTest({
     // ---------------------------------------------------------------
     const { dialog, autoCreate } = await runDetectionStage({
       page,
-      context,
       evidenceDir,
-      autoCreatedKeyNames,
+      session: consoleSession,
+      createdConsoleKeys,
+      preRunConsoleKeyIds,
     })
 
     if (!autoCreate.created && !key) {
       console.log(
         "  ℹ️ 未提供管理密钥 (REQUESTY_MANAGE_KEY)，跳过保存/刷新/密钥 CRUD/模型目录验证。",
       )
-      return
-    }
-
-    {
+    } else {
       // ---------------------------------------------------------------
       // Stage 2: complete onboarding with an available credential.
       // ---------------------------------------------------------------
@@ -604,23 +682,49 @@ export async function runRequestyUiTest({
     await page.close().catch(() => {})
   }
   // A key created by the console session is not owned by the key inventory, so
-  // it is revoked separately; a signed-out console leaves it for the operator.
-  if (autoCreatedKeyNames.size) {
-    for (const name of autoCreatedKeyNames) {
-      const cleanup = await deleteConsoleKeysByName(context, name)
-      if (cleanup.deleted?.length) {
-        console.log(
-          `  🧹 已删除自动创建的密钥: ${cleanup.deleted.map((entry) => entry.name).join(", ")}`,
+  // it is revoked separately, by id only; a console that cannot be read leaves
+  // the key for the operator.
+  let consoleKeyCleanupError = null
+  if (createdConsoleKeys.length) {
+    const cleanup = await deleteConsoleKeysByIds(
+      context,
+      createdConsoleKeys.map((entry) => entry.id),
+    )
+    if (cleanup.deleted?.length) {
+      console.log(
+        `  🧹 已删除自动创建的密钥: ${cleanup.deleted.map((entry) => entry.id).join(", ")}`,
+      )
+    } else {
+      console.warn(
+        `  ⚠️ 未能删除自动创建的密钥${cleanup.error ? ` (${cleanup.error})` : ""}；请在控制台手动删除。`,
+      )
+    }
+  }
+  if (preRunConsoleKeyIds?.size) {
+    // The ownership rule above must hold end to end: every key that predated the
+    // run, including a saved credential that onboarding reused, still exists.
+    const remainingKeys = await readConsoleKeys(context)
+    if (!remainingKeys) {
+      console.warn("  ⚠️ 无法复核运行前的控制台密钥是否仍然存在，请手动确认。")
+    } else {
+      const survivingIds = new Set(remainingKeys.map((entry) => entry.id))
+      const lost = [...preRunConsoleKeyIds].filter(
+        (id) => !survivingIds.has(id),
+      )
+      if (lost.length) {
+        consoleKeyCleanupError = new Error(
+          `the suite no longer finds console keys that predated the run: ${lost.join(", ")}`,
         )
       } else {
-        console.warn(
-          `  ⚠️ 未能删除自动创建的密钥 "${name}"${cleanup.error ? ` (${cleanup.error})` : ""}；请在控制台手动删除。`,
-        )
+        console.log("  ✅ 运行前的控制台密钥未被触碰")
       }
     }
   }
   if (accountCleanupError) {
     throw accountCleanupError
+  }
+  if (consoleKeyCleanupError) {
+    throw consoleKeyCleanupError
   }
   if (stageError) {
     throw stageError
@@ -643,23 +747,26 @@ function keyRowButton(row, name) {
 }
 
 /**
- * Submits the native editor. Opening the editor triggers an inventory reload,
- * and a submit raced against that reload is dropped without feedback, so the
- * click is retried until the editor actually closes.
+ * Submits the native editor exactly once. Opening the editor triggers an
+ * inventory reload and the save button stays disabled until it settles, so the
+ * click waits for an enabled button instead of racing the reload. A retry after
+ * a dispatched write could create a second key, so an editor that stays open is
+ * a failure rather than a reason to click again.
  */
 async function submitNativeEditor(page, submitBtn) {
   // Let the post-open inventory reload settle before the first submit.
   await page.waitForTimeout(2000)
-  for (let attempt = 0; attempt < 5; attempt++) {
-    if (!(await submitBtn.isVisible().catch(() => false))) return
-    await submitBtn.click()
-    const closed = await submitBtn
-      .waitFor({ state: "hidden", timeout: 5000 })
-      .then(() => true)
-      .catch(() => false)
-    if (closed) return
+  if (!(await submitBtn.isVisible().catch(() => false))) return
+  await submitBtn.click()
+  const closed = await submitBtn
+    .waitFor({ state: "hidden", timeout: 30_000 })
+    .then(() => true)
+    .catch(() => false)
+  if (!closed) {
+    throw new Error(
+      "the native editor submit never closed the dialog; never resubmit a dispatched write",
+    )
   }
-  throw new Error("the native editor submit never closed the dialog")
 }
 
 /**
