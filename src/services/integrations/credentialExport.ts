@@ -1,3 +1,5 @@
+import { normalizeList } from "~/utils/core/string"
+
 /** Provider metadata and a resolved API key required by external integrations. */
 export interface CredentialExportData {
   providerId: string
@@ -40,4 +42,18 @@ export async function resolveCredentialExport(
     baseUrl: source.baseUrl,
     apiKey: await source.resolveApiKey(),
   }
+}
+
+/**
+ * Default provider name every desktop export target prefills.
+ *
+ * Account-token sources name the site and the key separately, so the default
+ * says which of that site's keys is being exported. A stored profile already
+ * names itself after its site and key, so its two labels are identical and
+ * collapse into one instead of repeating the whole name.
+ */
+export function buildCredentialExportDisplayName(
+  source: Pick<CredentialExportSource, "providerName" | "credentialName">,
+): string {
+  return normalizeList([source.providerName, source.credentialName]).join(" - ")
 }

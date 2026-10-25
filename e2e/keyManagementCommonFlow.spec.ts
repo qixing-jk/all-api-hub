@@ -606,7 +606,7 @@ test("opens the CC Switch model picker for an account API key", async ({
     modelName: "gpt-cc-switch-smoke",
     expectedCcSwitchDeepLink: {
       app: "claude",
-      name: "CC Switch Source",
+      name: "CC Switch Source - E2E CC Switch Key",
       homepage: "https://cc-switch-source.example.com",
       endpoint: "https://cc-switch-source.example.com",
       apiKey: "sk-created-1",

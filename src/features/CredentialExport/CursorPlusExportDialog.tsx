@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "~/components/ui"
 import { CURSOR_PLUS_EXPORT_TEST_IDS } from "~/features/CredentialExport/CursorPlusExportDialog.testIds"
+import { useCredentialExportDisplayName } from "~/features/CredentialExport/useCredentialExportDisplayName"
 import {
   PROVIDER_MODEL_DISCOVERY_STATUSES,
   useProviderModelDiscovery,
@@ -125,7 +126,7 @@ export function CursorPlusExportDialog({
         return t("ui:dialog.cursorPlus.protocols.openAIChat")
     }
   }
-  const defaultProviderName = `${source.providerName} - ${source.credentialName}`
+  const defaultProviderName = useCredentialExportDisplayName(source)
   const [providerName, setProviderName] = useState(defaultProviderName)
   const [protocol, setProtocol] = useState<CursorPlusProviderType>(
     CURSOR_PLUS_PROVIDER_TYPES.OpenAIChat,
