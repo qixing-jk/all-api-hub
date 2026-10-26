@@ -996,9 +996,10 @@ test("imports an API credential profile into Claude Code Router", async ({
   ).toBeVisible()
 })
 
-// The API type and test mode fields share one grid row, so their label rows and
-// controls must render at the same offsets.
-test("aligns the credential verification meta fields across the paired row", async ({
+// Each configuration field shares a grid row with one sibling, so both label
+// rows and both controls must render at the same offsets: API type pairs with
+// Model, and Test mode pairs with Client simulation.
+test("aligns the credential verification meta fields across the paired rows", async ({
   context,
   extensionId,
   extensionDir,
@@ -1033,22 +1034,40 @@ test("aligns the credential verification meta fields across the paired row", asy
     page.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId),
   ).toBeVisible()
 
-  const apiTypeLabel = page.getByText("API type", { exact: true })
-  const modeLabel = page.getByText("Test mode", { exact: true })
-  const apiTypeTrigger = page.locator(
+  const config = page.getByTestId("verification-config")
+  const apiTypeLabel = config.getByText("API type", { exact: true })
+  const modelLabel = config.getByText("Model", { exact: true })
+  const modeLabel = config.getByText("Test mode", { exact: true })
+  const profileLabel = config.getByText("Client simulation", { exact: true })
+  const apiTypeTrigger = config.locator(
     '[data-slot="searchable-select-trigger"][aria-label="API type"]',
   )
-  const modeTrigger = page.getByRole("combobox", { name: "Test mode" })
+  const modelTrigger = config.getByTestId(
+    API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId,
+  )
+  const modeTrigger = config.getByRole("combobox", { name: "Test mode" })
+  const profileTrigger = config.getByRole("combobox", {
+    name: "Client simulation",
+    exact: true,
+  })
 
   const apiTypeLabelBox = await apiTypeLabel.boundingBox()
+  const modelLabelBox = await modelLabel.boundingBox()
   const modeLabelBox = await modeLabel.boundingBox()
+  const profileLabelBox = await profileLabel.boundingBox()
   const apiTypeTriggerBox = await apiTypeTrigger.boundingBox()
+  const modelTriggerBox = await modelTrigger.boundingBox()
   const modeTriggerBox = await modeTrigger.boundingBox()
+  const profileTriggerBox = await profileTrigger.boundingBox()
 
-  expect(modeLabelBox?.y).toBe(apiTypeLabelBox?.y)
-  expect(modeTriggerBox?.y).toBe(apiTypeTriggerBox?.y)
-  expect(modeTriggerBox?.width).toBe(apiTypeTriggerBox?.width)
-  expect(modeTriggerBox?.height).toBe(apiTypeTriggerBox?.height)
+  expect(modelLabelBox?.y).toBe(apiTypeLabelBox?.y)
+  expect(modelTriggerBox?.y).toBe(apiTypeTriggerBox?.y)
+  expect(modelTriggerBox?.width).toBe(apiTypeTriggerBox?.width)
+  expect(modelTriggerBox?.height).toBe(apiTypeTriggerBox?.height)
+  expect(profileLabelBox?.y).toBe(modeLabelBox?.y)
+  expect(profileTriggerBox?.y).toBe(modeTriggerBox?.y)
+  expect(profileTriggerBox?.width).toBe(modeTriggerBox?.width)
+  expect(profileTriggerBox?.height).toBe(modeTriggerBox?.height)
   await captureVisualViews({
     page,
     ready: page.getByRole("dialog"),

@@ -827,6 +827,9 @@ describe("TaskNotificationSettings", () => {
     expect(ntfyDocsLink.parentElement).toBe(ntfyHelperCopy)
   })
 
+  // Toggles seven channels and commits nine channel drafts in one case. CI measures
+  // this at 8.8-15.9s depending on runner contention, so it needs more than the
+  // global 15s budget; the ceiling is still low enough to catch a real hang.
   it("updates channel switches and saves trimmed third-party channel drafts", async () => {
     hasPermissionMock.mockResolvedValue(true)
     taskNotificationsMock.current = {
@@ -1131,7 +1134,7 @@ describe("TaskNotificationSettings", () => {
         }),
       })
     })
-  })
+  }, 30_000)
 
   it("saves the current webhook draft before sending a test notification", async () => {
     taskNotificationsMock.current = {

@@ -1,4 +1,5 @@
 import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
+import { getProbePromptOverrides } from "~/services/verification/probePromptStore"
 
 import { apiVerificationProbeRegistry } from "./probeRegistry"
 import {
@@ -14,6 +15,7 @@ import type {
   ApiVerificationApiType,
   ApiVerificationMode,
   ApiVerificationProbeId,
+  ApiVerificationProbePromptOverrides,
   ApiVerificationProbeResult,
   ApiVerificationRequestProfile,
 } from "./types"
@@ -32,6 +34,11 @@ type RunApiVerificationProbeParams = {
   mode?: ApiVerificationMode
   modelId?: string
   fallbackModelId?: string
+  /**
+   * Per-probe prompt overrides. Omitted entries fall back to the saved
+   * preferences, then to the built-in prompt.
+   */
+  probePromptOverrides?: ApiVerificationProbePromptOverrides
   abortSignal?: AbortSignal
 }
 
@@ -78,6 +85,11 @@ export async function runApiVerificationProbe(
     }
   }
 
+  // Resolve prompts once per call: the saved preference is the shared source,
+  // and an explicit parameter still wins for tests and one-off callers.
+  const probePromptOverrides: ApiVerificationProbePromptOverrides =
+    params.probePromptOverrides ?? (await getProbePromptOverrides())
+
   const runnerParams = {
     baseUrl: params.baseUrl,
     apiKey: params.apiKey,
@@ -92,6 +104,7 @@ export async function runApiVerificationProbe(
     apiType: params.apiType,
     modelId: resolvedModelId,
     mode: params.mode,
+    probePromptOverrides,
     abortSignal: params.abortSignal,
   }
 

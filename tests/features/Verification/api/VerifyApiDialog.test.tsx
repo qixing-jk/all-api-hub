@@ -88,9 +88,9 @@ vi.mock(
 
     return {
       ...actual,
-      fetchDisplayAccountRuntimeKeys: (...args: any[]) =>
+      fetchDisplayAccountRuntimeKeys: (...args: unknown[]) =>
         toRuntimeKeys(args[0]),
-      resolveDisplayAccountRuntimeKeySecret: async (...args: any[]) => {
+      resolveDisplayAccountRuntimeKeySecret: async (...args: unknown[]) => {
         const resolvedRuntimeKey =
           await mockResolveDisplayAccountRuntimeKeySecret(...args)
         if (resolvedRuntimeKey !== undefined) return resolvedRuntimeKey
@@ -128,12 +128,18 @@ vi.mock("~/services/productAnalytics/actions", () => ({
     (error as { statusCode?: unknown }).statusCode === 401
       ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth
       : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-  startProductAnalyticsAction: (...args: any[]) =>
+  startProductAnalyticsAction: (...args: unknown[]) =>
     mockStartProductAnalyticsAction(...args),
 }))
 
 const mockRunApiVerificationProbe = vi.fn()
 const mockProbeDefinitions = vi.fn()
+const mockRunPelicanTest = vi.fn()
+
+vi.mock("~/services/verification/modelQuality/pelican", () => ({
+  PELICAN_TEST_PROMPT: "pelican",
+  runPelicanTest: (...args: unknown[]) => mockRunPelicanTest(...args),
+}))
 
 vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
   const original =
@@ -150,7 +156,7 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
       modality === original.MODEL_TEST_MODALITIES.Text
         ? mockProbeDefinitions(apiType)
         : undefined) ?? original.getProbesForModality(modality, apiType),
-    runApiVerificationProbe: (...args: any[]) =>
+    runApiVerificationProbe: (...args: unknown[]) =>
       mockRunApiVerificationProbe(...args),
   }
 })
@@ -181,6 +187,56 @@ describe("VerifyApiDialog", () => {
       complete: mockCompleteProductAnalyticsAction,
     })
     await verificationResultHistoryStorage.clearAllData()
+    mockRunPelicanTest.mockReset()
+  })
+
+  it("shows key loading inside the key select and restores selection when loaded", async () => {
+    const pending = createDeferred<AccountRuntimeKey[]>()
+    const account = buildDisplaySiteData({ siteType: SITE_TYPES.NEW_API })
+    const key = buildServiceCredentialRuntimeKey(account, {
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Loaded key",
+      key: "synthetic-key",
+      isAuthenticated: true,
+      baseUrl: account.baseUrl,
+    })
+    mockFetchDisplayAccountRuntimeKeys.mockReturnValueOnce(pending.promise)
+    render(
+      <VerifyApiDialog
+        isOpen
+        onClose={() => {}}
+        account={account}
+        initialModelId="gpt-test"
+      />,
+    )
+    const select = await screen.findByRole("combobox", {
+      name: "aiApiVerification:verifyDialog.meta.runtimeKey",
+    })
+    await waitFor(() =>
+      expect(select).toHaveTextContent(
+        "aiApiVerification:verifyDialog.loadingRuntimeKeysHint",
+      ),
+    )
+    expect(select).toHaveAttribute("aria-busy", "true")
+    expect(select).toBeDisabled()
+    expect(
+      screen.getAllByText(
+        "aiApiVerification:verifyDialog.loadingRuntimeKeysHint",
+      ),
+    ).toHaveLength(1)
+    await act(async () => {
+      pending.resolve([key])
+      await pending.promise
+    })
+    await waitFor(() => expect(select).toHaveTextContent("Loaded key"))
+    expect(select).toBeEnabled()
+    expect(select).not.toHaveAttribute("aria-busy", "true")
+    expect(
+      screen.queryByText(
+        "aiApiVerification:verifyDialog.loadingRuntimeKeysHint",
+      ),
+    ).not.toBeInTheDocument()
   })
 
   it("lets an account text test opt into a CLI profile and resets it on reopening", async () => {
@@ -567,6 +623,11 @@ describe("VerifyApiDialog", () => {
       />,
     )
 
+    const sourceLink = await screen.findByRole("link", {
+      name: "https://example.com",
+    })
+    expect(sourceLink).toHaveAttribute("href", "https://example.com")
+    expect(sourceLink).toHaveAttribute("target", "_blank")
     expect(
       await screen.findByText(
         "aiApiVerification:verifyDialog.probes.text-generation",
@@ -669,10 +730,6 @@ describe("VerifyApiDialog", () => {
     fireEvent.click(inputToggle)
     expect(await within(probeCard).findByText(/"foo": 1/)).toBeInTheDocument()
 
-    const outputToggle = within(probeCard).getByRole("button", {
-      name: "aiApiVerification:verifyDialog.details.output",
-    })
-    fireEvent.click(outputToggle)
     expect(await within(probeCard).findByText(/"bar": 2/)).toBeInTheDocument()
   })
 
@@ -2069,5 +2126,135 @@ describe("VerifyApiDialog", () => {
         }),
       }),
     )
+  })
+
+  it("runs the drawing test for a text model and blocks closing while it runs", async () => {
+    const account = buildDisplaySiteData({ id: "quality-run" })
+    const key = buildServiceCredentialRuntimeKey(account, {
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Codex",
+      key: "credential",
+      isAuthenticated: true,
+      baseUrl: account.baseUrl,
+    })
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValue([key])
+    mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValue(key)
+
+    let finishPelican!: (
+      value: import("~/services/verification/modelQuality/pelican").PelicanTestResult,
+    ) => void
+    mockRunPelicanTest.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishPelican = resolve
+        }),
+    )
+
+    const { result } = renderHook(useVerifyApiDialogViewModel, {
+      initialProps: { isOpen: true, account, initialModelId: "gpt-4o" },
+    })
+    await waitFor(() => expect(result.current.selectedRuntimeKey).toBeTruthy())
+    expect(result.current.tools.canRunPelican).toBe(true)
+
+    act(() => result.current.tools.runPelican())
+
+    await waitFor(() =>
+      expect(mockRunPelicanTest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          modelId: "gpt-4o",
+          apiType: "openai-compatible",
+          requestProfile: API_VERIFICATION_REQUEST_PROFILES.Default,
+        }),
+      ),
+    )
+    await waitFor(() => expect(result.current.tools.isRunning).toBe(true))
+    expect(result.current.canClose).toBe(false)
+
+    await act(async () => {
+      finishPelican({
+        runAt: 0,
+        latencyMs: 1,
+        text: "<svg/>",
+        svg: "<svg/>",
+        analysis: {
+          hasSvg: true,
+          safe: true,
+          viewBox: null,
+          byteSize: 6,
+          counts: {
+            path: 0,
+            circle: 0,
+            ellipse: 0,
+            rect: 0,
+            polygon: 0,
+            polyline: 0,
+            line: 0,
+            text: 0,
+            group: 0,
+          },
+          shapeCount: 0,
+          wheelClues: 0,
+        },
+      })
+    })
+
+    await waitFor(() => expect(result.current.tools.isRunning).toBe(false))
+    expect(result.current.canClose).toBe(true)
+  })
+
+  it("does not offer the drawing test for non-text models", async () => {
+    const account = buildDisplaySiteData({ id: "quality-embedding" })
+    const key = buildServiceCredentialRuntimeKey(account, {
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Codex",
+      key: "credential",
+      isAuthenticated: true,
+      baseUrl: account.baseUrl,
+    })
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValue([key])
+    mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValue(key)
+
+    const { result } = renderHook(useVerifyApiDialogViewModel, {
+      initialProps: {
+        isOpen: true,
+        account,
+        initialModelId: "text-embedding-3-small",
+      },
+    })
+    await waitFor(() => expect(result.current.selectedRuntimeKey).toBeTruthy())
+
+    expect(result.current.modelModality).toBe("embedding")
+    expect(result.current.tools.canRunPelican).toBe(false)
+  })
+
+  it("renders the shared verification tools in the dialog", async () => {
+    const account = buildDisplaySiteData({ id: "quality-panel" })
+    const key = buildServiceCredentialRuntimeKey(account, {
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Codex",
+      key: "credential",
+      isAuthenticated: true,
+      baseUrl: account.baseUrl,
+    })
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValue([key])
+    mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValue(key)
+
+    render(
+      <VerifyApiDialog
+        isOpen
+        onClose={() => {}}
+        initialModelId="gpt-4o"
+        account={account}
+      />,
+    )
+
+    expect(
+      await screen.findByRole("region", {
+        name: "aiApiVerification:verifyDialog.tools.pelican.title",
+      }),
+    ).toBeInTheDocument()
   })
 })

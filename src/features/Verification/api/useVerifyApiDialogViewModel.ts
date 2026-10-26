@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { executeDialogProbe } from "~/features/Verification/api/probeExecution"
@@ -8,6 +8,10 @@ import {
 } from "~/features/Verification/api/probeState"
 import type { VerifyApiDialogProps } from "~/features/Verification/api/types"
 import { useVerificationDialogState } from "~/features/Verification/api/useVerificationDialogState"
+import {
+  useVerificationTools,
+  type VerificationToolRequestParams,
+} from "~/features/Verification/api/useVerificationTools"
 import {
   filterVerificationRedactions as filterRedactions,
   isVerificationAbortError,
@@ -52,6 +56,7 @@ import {
   API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_STATUSES,
   getVerificationRequestProfileApiType,
+  MODEL_TEST_MODALITIES,
   resolveModelTestModality,
   resolveVerificationApiType,
   runApiVerificationProbe,
@@ -221,7 +226,73 @@ export function useVerifyApiDialogViewModel({
   const tokenModelHint = selectedRuntimeKey?.modelAccess.suggestedModelIds[0]
 
   const isAnyProbeRunning = probes.some((p) => p.isRunning)
-  const canClose = !isRunning && !isAnyProbeRunning
+
+  /** Resolves the same credentials the probe suite would use for one action. */
+  const resolveToolRequest = useCallback(
+    async (
+      signal: AbortSignal,
+    ): Promise<VerificationToolRequestParams | null> => {
+      if (!selectedRuntimeKey || !selectedRuntimeKeyIsCompatible) return null
+
+      const resolvedRuntimeKey = await resolveDisplayAccountRuntimeKeySecret(
+        account,
+        selectedRuntimeKey,
+        { abortSignal: signal },
+      )
+      const requestedQualityModelId =
+        requestedModelId ||
+        resolvedRuntimeKey.modelAccess.suggestedModelIds[0] ||
+        ""
+      if (!requestedQualityModelId) return null
+
+      return {
+        baseUrl: resolvedRuntimeKey.baseUrl,
+        apiKey: resolvedRuntimeKey.secret,
+        apiType,
+        modelId: requestedQualityModelId,
+        mode: verificationMode,
+        requestProfile,
+        requestProfileEnhanced,
+        secrets: filterRedactions([
+          account.token,
+          account.cookieAuthSessionCookie,
+          ...collectAccountRuntimeKeySecrets([
+            selectedRuntimeKey,
+            resolvedRuntimeKey,
+          ]),
+        ]),
+      }
+    },
+    [
+      account,
+      apiType,
+      requestProfile,
+      requestProfileEnhanced,
+      requestedModelId,
+      selectedRuntimeKey,
+      selectedRuntimeKeyIsCompatible,
+      verificationMode,
+    ],
+  )
+
+  const tools = useVerificationTools({
+    historyTarget:
+      requestedModelId.trim() ||
+      selectedRuntimeKey?.modelAccess.suggestedModelIds[0]?.trim()
+        ? createAccountModelVerificationHistoryTarget(
+            account.id,
+            requestedModelId.trim() ||
+              selectedRuntimeKey?.modelAccess.suggestedModelIds[0]?.trim() ||
+              "",
+          )
+        : null,
+    historyApiType: apiType,
+    resolveRequest: resolveToolRequest,
+    isSupported: modelModality === MODEL_TEST_MODALITIES.Text,
+    isBlocked: isRunning || isAnyProbeRunning,
+  })
+
+  const canClose = !isRunning && !isAnyProbeRunning && !tools.isRunning
 
   const hasAnyResult = probes.some((p) => p.result !== null)
   const analyticsContext = {
@@ -335,6 +406,7 @@ export function useVerifyApiDialogViewModel({
   const clearHistory = async () => {
     if (!historyTarget) return
     await clearVerificationHistory(apiType)
+    tools.clearPelicanHistory?.()
   }
 
   // The suite can always run the models probe without a model id.
@@ -522,5 +594,6 @@ export function useVerifyApiDialogViewModel({
     stopProbe,
     runSingleProbe,
     modelModality,
+    tools,
   }
 }

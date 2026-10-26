@@ -9,6 +9,7 @@ import {
 import type {
   ApiVerificationApiType,
   ApiVerificationMode,
+  ApiVerificationProbePromptOverrides,
   ApiVerificationProbeResult,
   ApiVerificationRequestProfile,
 } from "../types"
@@ -18,6 +19,7 @@ import {
   toSanitizedErrorSummary,
 } from "../utils"
 import { runProbeGeneration } from "./probeGeneration"
+import { resolveProbePrompt } from "./probePrompts"
 
 type RunWebSearchProbeParams = {
   baseUrl: string
@@ -28,6 +30,7 @@ type RunWebSearchProbeParams = {
   apiType: ApiVerificationApiType
   modelId: string
   mode?: ApiVerificationMode
+  probePromptOverrides?: ApiVerificationProbePromptOverrides
   abortSignal?: AbortSignal
 }
 
@@ -71,7 +74,10 @@ export async function runWebSearchProbe(
           : {}),
       })
 
-      const prompt = "Use web search to find one recent headline about AI SDK."
+      const prompt = resolveProbePrompt(
+        API_VERIFICATION_PROBE_IDS.WebSearch,
+        params.probePromptOverrides,
+      )!
       const result = await runProbeGeneration(
         {
           model: provider(params.modelId),
@@ -130,8 +136,10 @@ export async function runWebSearchProbe(
           : {}),
       })
 
-      const prompt =
-        "Use Google search grounding to find one recent AI headline."
+      const prompt = resolveProbePrompt(
+        API_VERIFICATION_PROBE_IDS.WebSearch,
+        params.probePromptOverrides,
+      )!
       const result = await runProbeGeneration(
         {
           model: google(params.modelId),

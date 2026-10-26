@@ -13,9 +13,8 @@ import {
   isAbortError,
   toSanitizedErrorSummary,
 } from "../utils"
+import { resolveProbePrompt } from "./probePrompts"
 import type { ModelProbeParams } from "./probeTransport"
-
-const EMBEDDING_PROMPT = "ping"
 
 /**
  * Baseline embedding vector probe for the selected API type and model.
@@ -55,7 +54,10 @@ export async function runEmbeddingProbe(
 
     const { embedding, usage } = await embed({
       model,
-      value: EMBEDDING_PROMPT,
+      value: resolveProbePrompt(
+        API_VERIFICATION_PROBE_IDS.Embedding,
+        params.probePromptOverrides,
+      )!,
       abortSignal: params.abortSignal,
     })
 
@@ -79,7 +81,10 @@ export async function runEmbeddingProbe(
         apiType: params.apiType,
         baseUrl: params.baseUrl,
         modelId: params.modelId,
-        input: EMBEDDING_PROMPT,
+        input: resolveProbePrompt(
+          API_VERIFICATION_PROBE_IDS.Embedding,
+          params.probePromptOverrides,
+        ),
       },
       output: {
         dimension,

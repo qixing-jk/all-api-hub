@@ -13,8 +13,10 @@ type ProbeGenerationResult<
   OUTPUT extends Output.Output,
 > = Pick<
   GenerateTextResult<TOOLS, Record<string, unknown>, OUTPUT>,
-  "output" | "text" | "toolCalls" | "toolResults" | "sources"
->
+  "text" | "toolCalls" | "toolResults" | "sources"
+> & {
+  output?: GenerateTextResult<TOOLS, Record<string, unknown>, OUTPUT>["output"]
+}
 
 /**
  * Run exactly the selected generation mode and aggregate streaming results.
@@ -36,7 +38,9 @@ export async function runProbeGeneration<
       const result = await generateText(options)
       options.abortSignal?.throwIfAborted()
       return {
-        output: result.output,
+        // The SDK's default output getter throws for a tool-only final turn.
+        // Only structured-output probes require that getter to be evaluated.
+        output: options.output ? result.output : undefined,
         text: result.text,
         toolCalls: result.toolCalls,
         toolResults: result.toolResults,
@@ -61,7 +65,7 @@ export async function runProbeGeneration<
   try {
     const [output, text, toolCalls, toolResults, sources, finishReason] =
       await Promise.all([
-        result.output,
+        options.output ? result.output : undefined,
         result.text,
         result.toolCalls,
         result.toolResults,

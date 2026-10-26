@@ -21,6 +21,8 @@ import type {
   ApiCheckRemoveBaseUrlHistoryResponse,
   ApiCheckRenameTagRequest,
   ApiCheckRenameTagResponse,
+  ApiCheckRunPelicanRequest,
+  ApiCheckRunPelicanResponse,
   ApiCheckRunProbeRequest,
   ApiCheckRunProbeResponse,
   ApiCheckSaveProfileRequest,
@@ -40,6 +42,7 @@ export const WebAiApiCheckMessageTypes = {
   CreateTag: "webAiApiCheck:createTag",
   RenameTag: "webAiApiCheck:renameTag",
   RunProbe: "webAiApiCheck:runProbe",
+  RunPelican: "webAiApiCheck:runPelican",
   CancelRunProbe: "webAiApiCheck:cancelRunProbe",
   SaveProfile: "webAiApiCheck:saveProfile",
 } as const
@@ -93,6 +96,9 @@ interface WebAiApiCheckProtocolMap {
   [WebAiApiCheckMessageTypes.RunProbe](
     data: ApiCheckRunProbeRequest,
   ): ApiCheckRunProbeResponse
+  [WebAiApiCheckMessageTypes.RunPelican](
+    data: ApiCheckRunPelicanRequest,
+  ): ApiCheckRunPelicanResponse
   [WebAiApiCheckMessageTypes.CancelRunProbe](
     data: ApiCheckCancelRunProbeRequest,
   ): ApiCheckCancelRunProbeResponse

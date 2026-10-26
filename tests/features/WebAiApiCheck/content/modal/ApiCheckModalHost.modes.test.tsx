@@ -36,6 +36,61 @@ import {
 describe("web API verification modes", () => {
   setupApiCheckModalHostTest()
 
+  it("sends the agent workspace mode and cancels the same background run", async () => {
+    const pending = createDeferred<any>()
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.RunPelican)
+          return pending.promise
+        if (type === WebAiApiCheckMessageTypes.FetchModels)
+          return { success: true, modelIds: ["model"] }
+        return { success: true }
+      },
+    )
+    const { result } = renderHook(useApiCheckModalViewModel)
+    act(() =>
+      dispatchOpenApiCheckModal({
+        trigger: "contextMenu",
+        pageUrl: "https://example.invalid",
+        sourceText: "",
+      }),
+    )
+    act(() => {
+      result.current.actions.updateBaseUrl("https://example.invalid")
+      result.current.actions.setApiKey("synthetic-key")
+      result.current.actions.setModelId("model")
+    })
+    await waitFor(() => expect(result.current.view.modelId).toBe("model"))
+    act(() =>
+      result.current.view.verificationTools.setPelicanExecutionMode("agent"),
+    )
+    act(() => result.current.view.verificationTools.runPelican())
+    await waitFor(() =>
+      expect(
+        getApiCheckMessageCalls(WebAiApiCheckMessageTypes.RunPelican),
+      ).toHaveLength(1),
+    )
+    const request = getApiCheckMessageCalls(
+      WebAiApiCheckMessageTypes.RunPelican,
+    )[0]![1] as any
+    expect(request).toMatchObject({
+      executionMode: "agent",
+      runId: expect.any(String),
+      requestProfile: "default",
+    })
+    act(() => result.current.view.verificationTools.stopPelican())
+    await waitFor(() =>
+      expect(
+        getApiCheckMessageCalls(WebAiApiCheckMessageTypes.CancelRunProbe),
+      ).toContainEqual([
+        WebAiApiCheckMessageTypes.CancelRunProbe,
+        { runId: request.runId },
+      ]),
+    )
+    await act(async () => pending.resolve({ success: false, error: "Aborted" }))
+    await waitFor(() => expect(result.current.view.canClose).toBe(true))
+  })
+
   it("ignores enhanced simulation changes while a page probe is active", async () => {
     const pending = createDeferred<any>()
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(

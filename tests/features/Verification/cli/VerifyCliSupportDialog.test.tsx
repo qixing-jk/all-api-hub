@@ -21,6 +21,7 @@ import {
 import type { CliSupportResult } from "~/services/verification/cliSupportVerification"
 import { buildCompleteTodayStatsAvailability } from "~~/tests/test-utils/accountTodayStats"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 import {
   act,
@@ -141,6 +142,22 @@ vi.mock("~/services/apiCredentialProfiles/modelCatalog", async () => {
 })
 
 const mockRunCliSupportTool = vi.fn()
+const mockRunPelicanTest = vi.fn()
+
+vi.mock(
+  "~/services/verification/modelQuality/pelican",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/verification/modelQuality/pelican")
+      >()
+
+    return {
+      ...actual,
+      runPelicanTest: (...args: unknown[]) => mockRunPelicanTest(...args),
+    }
+  },
+)
 
 vi.mock("~/services/verification/cliSupportVerification", () => ({
   CLI_TOOL_IDS: ["claude", "codex", "gemini"],
@@ -161,6 +178,7 @@ describe("VerifyCliSupportDialog", () => {
       async (_account, token) => token,
     )
     mockRunCliSupportTool.mockReset()
+    mockRunPelicanTest.mockReset()
     mockStartProductAnalyticsAction.mockReset()
     mockCompleteProductAnalyticsAction.mockReset()
     mockStartProductAnalyticsAction.mockReturnValue({
@@ -252,6 +270,130 @@ describe("VerifyCliSupportDialog", () => {
       ).toBe("New result")
     },
   )
+
+  it("sends the profile's custom request headers to the drawing test", async () => {
+    mockRunPelicanTest.mockReturnValue(new Promise(() => {}))
+    const { result } = renderHook(
+      (nextProps) => useCliSupportVerification(nextProps),
+      {
+        initialProps: {
+          isOpen: true,
+          onClose: vi.fn(),
+          profile: {
+            ...profileFixture,
+            requestHeaders: { "X-Tenant": "acme" },
+          },
+          initialModelId: "model",
+        } satisfies VerifyCliSupportDialogProps,
+      },
+    )
+
+    act(() => result.current.sharedTools.runPelican())
+
+    await waitFor(() =>
+      expect(mockRunPelicanTest).toHaveBeenCalledWith(
+        expect.objectContaining({ requestHeaders: { "X-Tenant": "acme" } }),
+      ),
+    )
+  })
+
+  it.each(["resolved-service-secret", ""])(
+    "resolves the account drawing credential before dispatch (secret: %j)",
+    async (secret) => {
+      const account = buildDisplaySiteData({ siteType: SITE_TYPES.NEW_API })
+      const key = buildServiceCredentialRuntimeKey(account, {
+        kind: "singleton_service_key",
+        service: "codex",
+        label: "Drawing key",
+        key: "stored-key",
+        isAuthenticated: true,
+        baseUrl: account.baseUrl,
+      })
+      mockFetchDisplayAccountRuntimeKeys.mockResolvedValue([key])
+      mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValue({
+        ...key,
+        secret,
+        baseUrl: "https://resolved.example.com",
+      })
+      mockRunPelicanTest.mockReturnValue(new Promise(() => {}))
+      const { result } = renderHook(() =>
+        useCliSupportVerification({
+          isOpen: true,
+          onClose: vi.fn(),
+          account,
+          initialModelId: "gpt-test",
+        }),
+      )
+      await waitFor(() => expect(result.current.hasRunnableSource).toBe(true))
+      act(() => result.current.sharedTools.runPelican())
+      await waitFor(() =>
+        expect(mockResolveDisplayAccountRuntimeKeySecret).toHaveBeenCalled(),
+      )
+      if (secret) {
+        await waitFor(() =>
+          expect(mockRunPelicanTest).toHaveBeenCalledWith(
+            expect.objectContaining({
+              apiKey: secret,
+              baseUrl: "https://resolved.example.com",
+              modelId: "gpt-test",
+            }),
+          ),
+        )
+      } else {
+        await waitFor(() =>
+          expect(result.current.sharedTools.isRunning).toBe(false),
+        )
+        expect(mockRunPelicanTest).not.toHaveBeenCalled()
+      }
+    },
+  )
+
+  it("shows key loading inside the key select and restores selection when loaded", async () => {
+    const pending = createDeferred<AccountRuntimeKey[]>()
+    const account = buildDisplaySiteData({ siteType: SITE_TYPES.NEW_API })
+    const key = buildServiceCredentialRuntimeKey(account, {
+      kind: "singleton_service_key",
+      service: "codex",
+      label: "Loaded key",
+      key: "synthetic-key",
+      isAuthenticated: true,
+      baseUrl: account.baseUrl,
+    })
+    mockFetchDisplayAccountRuntimeKeys.mockReturnValueOnce(pending.promise)
+    render(
+      <VerifyCliSupportDialog
+        isOpen
+        onClose={() => {}}
+        account={account}
+        initialModelId="gpt-test"
+      />,
+    )
+    const select = await screen.findByTestId(VERIFY_CLI_RUNTIME_KEY_TEST_ID)
+    await waitFor(() =>
+      expect(select).toHaveTextContent(
+        "cliSupportVerification:verifyDialog.loadingRuntimeKeysHint",
+      ),
+    )
+    expect(select).toHaveAttribute("aria-busy", "true")
+    expect(select).toBeDisabled()
+    expect(
+      screen.getAllByText(
+        "cliSupportVerification:verifyDialog.loadingRuntimeKeysHint",
+      ),
+    ).toHaveLength(1)
+    await act(async () => {
+      pending.resolve([key])
+      await pending.promise
+    })
+    await waitFor(() => expect(select).toHaveTextContent("Loaded key"))
+    expect(select).toBeEnabled()
+    expect(select).not.toHaveAttribute("aria-busy", "true")
+    expect(
+      screen.queryByText(
+        "cliSupportVerification:verifyDialog.loadingRuntimeKeysHint",
+      ),
+    ).not.toBeInTheDocument()
+  })
 
   it("does not let an obsolete batch completion clear a new batch", async () => {
     const oldRequest = createDeferred<CliSupportResult>()
@@ -402,6 +544,7 @@ describe("VerifyCliSupportDialog", () => {
       probeId: "tool-calling",
       status: "pass",
       latencyMs: 12,
+      mode: "streaming",
       summary: "Supported",
       summaryKey: "verifyDialog.summaries.supported",
       input: { foo: 1 },
@@ -427,6 +570,11 @@ describe("VerifyCliSupportDialog", () => {
       />,
     )
 
+    const sourceLink = await screen.findByRole("link", {
+      name: "https://example.com",
+    })
+    expect(sourceLink).toHaveAttribute("href", "https://example.com")
+    expect(sourceLink).toHaveAttribute("target", "_blank")
     const toolCard = await screen.findByTestId(getCliToolCardTestId("claude"))
     const runButton = within(toolCard).getByRole("button", {
       name: "cliSupportVerification:verifyDialog.actions.runOne",
@@ -446,6 +594,10 @@ describe("VerifyCliSupportDialog", () => {
     })
 
     expect(mockFetchAccountTokens).not.toHaveBeenCalled()
+    expect(await within(toolCard).findAllByText("12ms")).toHaveLength(1)
+    expect(
+      within(toolCard).getByText("12ms").closest('[data-slot="badge"]'),
+    ).toHaveTextContent("aiApiVerification:verifyDialog.modes.streaming")
   })
 
   it("keeps account-mode tools disabled when the account is unavailable", async () => {
@@ -1041,15 +1193,11 @@ describe("VerifyCliSupportDialog", () => {
     ).toBeInTheDocument()
 
     const inputToggle = within(toolCard).getByRole("button", {
-      name: "cliSupportVerification:verifyDialog.details.input",
+      name: "aiApiVerification:verifyDialog.details.input",
     })
     fireEvent.click(inputToggle)
     expect(await within(toolCard).findByText(/"foo": 1/)).toBeInTheDocument()
 
-    const outputToggle = within(toolCard).getByRole("button", {
-      name: "cliSupportVerification:verifyDialog.details.output",
-    })
-    fireEvent.click(outputToggle)
     expect(await within(toolCard).findByText(/"bar": 2/)).toBeInTheDocument()
   })
 
@@ -1117,12 +1265,12 @@ describe("VerifyCliSupportDialog", () => {
     ).toBeInTheDocument()
     expect(
       within(toolCard).getByRole("button", {
-        name: "cliSupportVerification:verifyDialog.details.input",
+        name: "aiApiVerification:verifyDialog.details.input",
       }),
     ).toBeInTheDocument()
     expect(
       within(toolCard).queryByRole("button", {
-        name: "cliSupportVerification:verifyDialog.details.output",
+        name: "aiApiVerification:verifyDialog.details.output",
       }),
     ).not.toBeInTheDocument()
   })
@@ -2027,10 +2175,6 @@ describe("VerifyCliSupportDialog", () => {
         }),
       ).toBeInTheDocument()
 
-      const outputToggle = within(toolCard).getByRole("button", {
-        name: "cliSupportVerification:verifyDialog.details.output",
-      })
-      fireEvent.click(outputToggle)
       expect(
         await within(toolCard).findByText(new RegExp(String(statusCode))),
       ).toBeInTheDocument()
@@ -2227,7 +2371,7 @@ describe("VerifyCliSupportDialog", () => {
     ).toBeEnabled()
     fireEvent.click(
       within(card).getByRole("button", {
-        name: "cliSupportVerification:verifyDialog.details.input",
+        name: "aiApiVerification:verifyDialog.details.input",
       }),
     )
     expect(within(card).getByText(/https:\/\/example.com/)).toBeInTheDocument()

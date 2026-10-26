@@ -8,7 +8,10 @@ import {
   API_CREDENTIAL_PROFILES_TEST_IDS,
   getApiCredentialProfileVerifyProbeTestId,
 } from "~/features/ApiCredentialProfiles/testIds"
-import { WEB_AI_API_CHECK_TEST_IDS } from "~/features/WebAiApiCheck/content/testIds"
+import {
+  getWebAiApiCheckProbeTestId,
+  WEB_AI_API_CHECK_TEST_IDS,
+} from "~/features/WebAiApiCheck/content/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
@@ -275,8 +278,20 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
   extensionDir,
 }) => {
   await seedAutoDetectApiCheckPreferences(await getServiceWorker(context))
+  await page.emulateMedia({ reducedMotion: "reduce" })
   const { contentHost, modal } =
     await openApiCheckModalFromCopiedCredentials(page)
+  const header = modal.getByTestId("verification-header")
+  await expect(
+    header.getByRole("heading", {
+      name: "AI API Functionality Availability Test",
+      exact: true,
+    }),
+  ).toBeVisible()
+  await expect(header.getByRole("note")).toContainText(
+    "Tests apply to the current API",
+  )
+  await expect(header.getByTestId("verification-config")).toHaveCount(0)
   const selector = modal.getByRole("combobox", {
     name: "Client simulation",
     exact: true,
@@ -301,11 +316,142 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
   await enhanced.click()
   await expect(enhanced).toBeChecked()
   await selector.scrollIntoViewIfNeeded()
+  await modal.screenshot({
+    path: test.info().outputPath("page-verification-header.png"),
+    animations: "disabled",
+  })
   await captureVisualViews({
     page,
     ready: selector,
     id: "page-client-simulation",
     extensionDir,
+  })
+  const modelsProbe = modal.getByTestId(getWebAiApiCheckProbeTestId("models"))
+  await expect(modelsProbe.getByText("Pending", { exact: true })).toBeVisible()
+  await modelsProbe.getByRole("button", { name: "Test", exact: true }).click()
+  await expect(modelsProbe).toContainText("Fetched 1 model.")
+  const duration = modelsProbe.getByText(/^\d+(?:\.\d+)?(?:ms|s)$/)
+  await expect(duration).toHaveCount(1)
+  await expect(
+    modelsProbe
+      .locator('[data-slot="badge"]')
+      .getByText(/^\d+(?:\.\d+)?(?:ms|s)$/),
+  ).toHaveCount(1)
+  await modelsProbe.screenshot({
+    path: test.info().outputPath("page-models-result.png"),
+    animations: "disabled",
+  })
+
+  await context.route(`${API_BASE_URL}/v1/chat/completions`, (route) => {
+    const request = route.request().postDataJSON()
+    const completion = {
+      id: "chatcmpl-ui-fixture",
+      created: 0,
+      model: "gpt-4o-mini",
+    }
+    return request.stream
+      ? route.fulfill({
+          contentType: "text/event-stream",
+          body:
+            [
+              {
+                ...completion,
+                object: "chat.completion.chunk",
+                choices: [
+                  {
+                    index: 0,
+                    delta: { role: "assistant", content: "OK" },
+                    finish_reason: null,
+                  },
+                ],
+              },
+              {
+                ...completion,
+                object: "chat.completion.chunk",
+                choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+              },
+            ]
+              .map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`)
+              .join("") + "data: [DONE]\n\n",
+        })
+      : route.fulfill({
+          json: {
+            ...completion,
+            object: "chat.completion",
+            choices: [
+              {
+                index: 0,
+                message: { role: "assistant", content: "OK" },
+                finish_reason: "stop",
+              },
+            ],
+            usage: { prompt_tokens: 2, completion_tokens: 1, total_tokens: 3 },
+          },
+        })
+  })
+  await selector.click()
+  await contentHost
+    .getByRole("option", { name: "None (ordinary request)", exact: true })
+    .click()
+  const apiType = modal.getByRole("combobox", { name: "API type", exact: true })
+  await apiType.click()
+  await contentHost
+    .getByRole("option", { name: "OpenAI-compatible", exact: true })
+    .click()
+  const textProbe = modal.getByTestId(
+    getWebAiApiCheckProbeTestId("text-generation"),
+  )
+  for (const mode of ["Streaming", "Non-streaming"]) {
+    await modal
+      .getByRole("combobox", { name: "Test mode", exact: true })
+      .click()
+    await contentHost.getByRole("option", { name: mode, exact: true }).click()
+    await textProbe.getByRole("button", { name: /^(Test|Retry)$/ }).click()
+    const badge = textProbe
+      .locator('[data-slot="badge"]')
+      .filter({ hasText: mode })
+    await expect(badge).toContainText("Pass")
+    await expect(badge.getByText(/^\d+(?:\.\d+)?(?:ms|s)$/)).toHaveCount(1)
+    const disclosure = textProbe.getByRole("button", {
+      name: "Execution result",
+      exact: true,
+    })
+    await expect(disclosure).toHaveAttribute("aria-expanded", "true")
+    await disclosure.click()
+    await expect(disclosure).toHaveAttribute("aria-expanded", "false")
+    await disclosure.click()
+    await textProbe.screenshot({
+      path: test.info().outputPath(`page-${mode.toLowerCase()}-result.png`),
+      animations: "disabled",
+    })
+  }
+  await apiType.click()
+  await contentHost
+    .getByRole("option", { name: "Anthropic", exact: true })
+    .click()
+  await expect(apiType).toContainText("Anthropic")
+  const modelPicker = modal.getByRole("combobox", {
+    name: "Model ID",
+    exact: true,
+  })
+  await modelPicker.click()
+  await contentHost
+    .getByPlaceholder("Search...", { exact: true })
+    .fill("claude-ui-fixture")
+  await contentHost
+    .getByRole("option", { name: 'Use "claude-ui-fixture"', exact: true })
+    .click()
+  await expect(modelPicker).toContainText("claude-ui-fixture")
+  const searchProbe = modal.getByTestId(
+    getWebAiApiCheckProbeTestId("web-search"),
+  )
+  await searchProbe.getByRole("button", { name: "Test", exact: true }).click()
+  await expect(
+    searchProbe.getByText("Unsupported", { exact: true }),
+  ).toBeVisible()
+  await searchProbe.screenshot({
+    path: test.info().outputPath("page-unsupported-result.png"),
+    animations: "disabled",
   })
 })
 

@@ -1,3 +1,4 @@
+import type { VerificationToolsController } from "~/features/Verification/api/useVerificationTools"
 import { type ApiCheckOpenModalDetail } from "~/features/WebAiApiCheck/content/events"
 import {
   type ApiVerificationApiType,
@@ -55,6 +56,8 @@ export interface ApiCheckModalViewModel {
   validationError: string | null
   hasAnyResult: boolean
   isAnyProbeRunning: boolean
+  /** Shared drawing test + editable probe prompts. */
+  verificationTools: VerificationToolsController
   modelListSupported: boolean
   canClose: boolean
   canFetchModels: boolean

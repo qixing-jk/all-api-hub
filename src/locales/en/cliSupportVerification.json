@@ -8,10 +8,6 @@
       "stop": "Stop",
       "stopTool": "Stop {{tool}}"
     },
-    "details": {
-      "input": "Input",
-      "output": "Output"
-    },
     "idleHint": "Select a key, then run the simulation. Provide a model id if the key cannot be used to infer one.",
     "loadingModelsHint": "Loading models...",
     "loadingRuntimeKeysHint": "Loading keys...",
@@ -28,10 +24,7 @@
     "profileIdleHint": "Choose a model, then run the simulation. You can still enter a model id manually if the fetched list misses it.",
     "requiresModelId": "Provide a model id before running this check.",
     "status": {
-      "fail": "Fail",
-      "pass": "Pass",
-      "pending": "Pending",
-      "unsupported": "Unsupported"
+      "pending": "Pending"
     },
     "summaries": {
       "endpointNotFound": "Endpoint not found (404): this API may not be supported",
@@ -55,7 +48,6 @@
       "claude": "Claude Code",
       "codex": "Codex (Codex CLI)",
       "gemini": "Gemini CLI"
-    },
-    "warning": "A detected pass is likely real; a fail may still work in some clients. Treat the result as guidance and verify with the actual CLI when possible."
+    }
   }
 }

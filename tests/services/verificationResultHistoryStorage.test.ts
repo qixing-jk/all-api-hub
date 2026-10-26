@@ -9,6 +9,10 @@ import * as profileConfigReader from "~/services/apiCredentialProfiles/storage/c
 import { API_VERIFICATION_HISTORY_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
+import {
+  DRAWING_VERIFICATION_OUTCOMES,
+  PELICAN_EXECUTION_MODES,
+} from "~/services/verification/modelQuality/constants"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
 import {
   createAccountModelVerificationHistoryTarget,
@@ -52,6 +56,140 @@ describe("verificationResultHistoryStorage", () => {
     listProfileIdsSpy = vi
       .spyOn(profileConfigReader, "listApiCredentialProfileIdsOrThrow")
       .mockRejectedValue(new Error("profiles unavailable"))
+  })
+
+  it("stores a drawing summary separately from API compatibility and clears both for the target", async () => {
+    const target = createProfileModelVerificationHistoryTarget(
+      "drawing-profile",
+      "gpt-test",
+    )!
+    const drawing = {
+      target,
+      targetKey: "ignored",
+      verifiedAt: Date.now(),
+      apiType: API_TYPES.OPENAI,
+      modelId: "gpt-test",
+      latencyMs: 120,
+      executionMode: PELICAN_EXECUTION_MODES.Agent,
+      outcome: DRAWING_VERIFICATION_OUTCOMES.Generated,
+      steps: 3,
+      calls: 2,
+      files: 1,
+    }
+    await verificationResultHistoryStorage.upsertDrawingSummary(drawing)
+    expect(
+      await verificationResultHistoryStorage.getDrawingSummary(target),
+    ).toMatchObject({
+      outcome: DRAWING_VERIFICATION_OUTCOMES.Generated,
+      steps: 3,
+      calls: 2,
+    })
+    expect(
+      await verificationResultHistoryStorage.getLatestSummary(target),
+    ).toBeNull()
+    await verificationResultHistoryStorage.clearTarget(target)
+    expect(
+      await verificationResultHistoryStorage.getDrawingSummary(target),
+    ).toBeNull()
+  })
+
+  it("keeps drawings when ordinary results are updated, strips raw content, and reconciles their owners", async () => {
+    const target = createProfileModelVerificationHistoryTarget(
+      "source",
+      "model",
+    )!
+    const drawing = {
+      target,
+      targetKey: "ignored",
+      verifiedAt: Date.now(),
+      apiType: API_TYPES.OPENAI,
+      modelId: "model",
+      latencyMs: 10,
+      executionMode: PELICAN_EXECUTION_MODES.Reply,
+      outcome: DRAWING_VERIFICATION_OUTCOMES.Generated,
+      steps: 1,
+      calls: 0,
+      files: 0,
+      svg: "private SVG",
+      text: "private prompt",
+      apiKey: "secret",
+    }
+    await verificationResultHistoryStorage.upsertDrawingSummary(drawing)
+    await verificationResultHistoryStorage.upsertLatestSummary(
+      createVerificationHistorySummary({
+        target,
+        apiType: API_TYPES.OPENAI,
+        results: [
+          {
+            id: "text-generation",
+            status: "pass",
+            summary: "OK",
+            latencyMs: 1,
+          },
+        ],
+      })!,
+    )
+    const restored =
+      await verificationResultHistoryStorage.getDrawingSummary(target)
+    expect(restored).toMatchObject({
+      outcome: DRAWING_VERIFICATION_OUTCOMES.Generated,
+    })
+    expect(restored).not.toHaveProperty("svg")
+    expect(restored).not.toHaveProperty("apiKey")
+    expect(restored).not.toHaveProperty("text")
+    await verificationResultHistoryStorage.reconcileOwners({
+      remapProfileIds: new Map([["source", "destination"]]),
+    })
+    const destination = createProfileModelVerificationHistoryTarget(
+      "destination",
+      "model",
+    )!
+    expect(
+      await verificationResultHistoryStorage.getDrawingSummary(target),
+    ).toBeNull()
+    expect(
+      await verificationResultHistoryStorage.getDrawingSummary(destination),
+    ).toMatchObject({ outcome: DRAWING_VERIFICATION_OUTCOMES.Generated })
+    await verificationResultHistoryStorage.reconcileOwners({
+      removeProfileIds: ["destination"],
+    })
+    expect(
+      await verificationResultHistoryStorage.getDrawingSummary(destination),
+    ).toBeNull()
+  })
+
+  it("removes expired drawing summaries and drawing owners absent from a complete sweep", async () => {
+    stubLiveOwners({ profileIds: ["live"] })
+    const target = createProfileModelVerificationHistoryTarget("live", "model")!
+    const summary = {
+      target,
+      targetKey: "ignored",
+      verifiedAt: Date.now() - VERIFICATION_SUMMARY_MAX_AGE_MS - 1,
+      apiType: API_TYPES.OPENAI,
+      modelId: "model",
+      latencyMs: 10,
+      executionMode: PELICAN_EXECUTION_MODES.Reply,
+      outcome: DRAWING_VERIFICATION_OUTCOMES.Generated,
+      steps: 1,
+      calls: 0,
+      files: 0,
+    }
+    await verificationResultHistoryStorage.upsertDrawingSummary(summary)
+    expect(
+      await verificationResultHistoryStorage.getDrawingSummary(target),
+    ).toBeNull()
+    await verificationResultHistoryStorage.upsertDrawingSummary({
+      ...summary,
+      verifiedAt: Date.now(),
+    })
+    stubLiveOwners({})
+    const swept = await verificationResultHistoryStorage.sweepOrphans({
+      now: Date.now() + ORPHAN_SWEEP_INTERVAL_MS + 1,
+    })
+    expect(swept.removed).toBe(1)
+    expect(
+      await verificationResultHistoryStorage.getDrawingSummary(target),
+    ).toBeNull()
   })
 
   it("retains the request profile after saving and reloading a verification summary", async () => {
@@ -543,6 +681,66 @@ describe("verificationResultHistoryStorage", () => {
     })
   })
 
+  it("migrates a legacy payload's drawing entries and drops malformed ones", async () => {
+    const storage = new Storage({ area: "local" })
+    await storage.set(
+      API_VERIFICATION_HISTORY_STORAGE_KEYS.VERIFICATION_RESULT_HISTORY,
+      // Version 0 predates drawing summaries, so this is the boundary check for
+      // a payload a previous build produced.
+      {
+        version: 0,
+        lastUpdated: 0,
+        summaries: [],
+        drawingSummaries: [
+          {
+            target: {
+              kind: "profile-model",
+              profileId: " profile-1 ",
+              modelId: " gpt-4.1 ",
+            },
+            verifiedAt: 12.6,
+            apiType: API_TYPES.OPENAI,
+            modelId: " gpt-4.1 ",
+            latencyMs: 120.4,
+            executionMode: "unknown-mode",
+            outcome: DRAWING_VERIFICATION_OUTCOMES.Generated,
+            steps: 3.2,
+            calls: -1,
+            files: "nope",
+          },
+          { target: { kind: "profile" }, outcome: "not-a-real-outcome" },
+          { target: { kind: "profile-model", profileId: "p", modelId: "m" } },
+          "not-an-object",
+        ],
+      },
+    )
+
+    const target = createProfileModelVerificationHistoryTarget(
+      "profile-1",
+      "gpt-4.1",
+    )!
+    const migrated =
+      await verificationResultHistoryStorage.getDrawingSummary(target)
+
+    expect(migrated).toEqual({
+      target: {
+        kind: "profile-model",
+        profileId: "profile-1",
+        modelId: "gpt-4.1",
+      },
+      targetKey: "profile:profile-1:model:gpt-4.1",
+      verifiedAt: 13,
+      apiType: API_TYPES.OPENAI,
+      modelId: "gpt-4.1",
+      latencyMs: 120,
+      executionMode: PELICAN_EXECUTION_MODES.Reply,
+      outcome: DRAWING_VERIFICATION_OUTCOMES.Generated,
+      steps: 3,
+      calls: 0,
+      files: 0,
+    })
+  })
+
   it("returns keyed summaries for requested targets and an empty map for no targets", async () => {
     const profileTarget = createProfileModelVerificationHistoryTarget(
       "profile-9",
@@ -716,6 +914,70 @@ describe("verificationResultHistoryStorage", () => {
         probes: [],
       } as any),
     ).rejects.toThrow("Invalid verification history summary")
+    await expect(
+      verificationResultHistoryStorage.upsertDrawingSummary({
+        target: { kind: "profile", profileId: "profile-1" },
+        targetKey: "profile:profile-1",
+        verifiedAt: Date.now(),
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        modelId: "gpt-test",
+        latencyMs: 1,
+        executionMode: PELICAN_EXECUTION_MODES.Reply,
+        outcome: "not-a-real-outcome",
+        steps: 1,
+        calls: 0,
+        files: 0,
+      } as any),
+    ).rejects.toThrow("Invalid drawing verification summary")
+  })
+
+  it("resolves a profile-target drawing to its newest model run", async () => {
+    const older = createProfileModelVerificationHistoryTarget("p", "old")!
+    const newer = createProfileModelVerificationHistoryTarget("p", "new")!
+    const drawing = (
+      target: typeof older,
+      verifiedAt: number,
+      modelId: string,
+    ) =>
+      ({
+        target,
+        targetKey: "ignored",
+        verifiedAt,
+        apiType: API_TYPES.OPENAI,
+        modelId,
+        latencyMs: 10,
+        executionMode: PELICAN_EXECUTION_MODES.Reply,
+        outcome: DRAWING_VERIFICATION_OUTCOMES.Generated,
+        steps: 1,
+        calls: 0,
+        files: 0,
+      }) as const
+
+    await verificationResultHistoryStorage.upsertDrawingSummary(
+      drawing(older, Date.now() - 1000, "old"),
+    )
+    // An unrelated profile must not satisfy the lookup.
+    await verificationResultHistoryStorage.upsertDrawingSummary(
+      drawing(
+        createProfileModelVerificationHistoryTarget("other", "x")!,
+        Date.now(),
+        "x",
+      ),
+    )
+    await verificationResultHistoryStorage.upsertDrawingSummary(
+      drawing(newer, Date.now(), "new"),
+    )
+
+    expect(
+      await verificationResultHistoryStorage.getDrawingSummary(
+        createProfileVerificationHistoryTarget("p")!,
+      ),
+    ).toMatchObject({ modelId: "new" })
+    expect(
+      await verificationResultHistoryStorage.getDrawingSummary(
+        createProfileVerificationHistoryTarget("missing")!,
+      ),
+    ).toBeNull()
   })
 
   it("writes one batch with a single storage write", async () => {
@@ -937,6 +1199,26 @@ describe("verificationResultHistoryStorage", () => {
       }),
     ).resolves.toEqual({ removed: 0, remapped: 0 })
     expect(setSpy).not.toHaveBeenCalled()
+  })
+
+  it("discards malformed drawing collections when migrating history", async () => {
+    const storage = new Storage({ area: "local" })
+    await storage.set(
+      API_VERIFICATION_HISTORY_STORAGE_KEYS.VERIFICATION_RESULT_HISTORY,
+      {
+        version: 0,
+        summaries: [],
+        drawingSummaries: { unexpected: "object" },
+        lastUpdated: 1,
+      },
+    )
+    await expect(
+      verificationResultHistoryStorage.listSummaries(),
+    ).resolves.toEqual([])
+    const persisted = await storage.get<{ drawingSummaries?: unknown }>(
+      API_VERIFICATION_HISTORY_STORAGE_KEYS.VERIFICATION_RESULT_HISTORY,
+    )
+    expect(persisted?.drawingSummaries).toBeUndefined()
   })
 
   it("trusts a payload written at the current schema version", async () => {

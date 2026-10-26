@@ -1,5 +1,7 @@
 import { type ManagedSiteType } from "~/constants/siteType"
 import { type TempWindowFallbackPreferences } from "~/services/preferences/tempWindowFallbackPreferences"
+import type { ApiVerificationProbeId } from "~/services/verification/aiApiVerification/types"
+import type { PELICAN_PROMPT_ID } from "~/services/verification/modelQuality/constants"
 import type {
   WEB_AI_API_CHECK_RULE_LIST,
   WEB_AI_API_CHECK_RULE_SYNTAX,
@@ -144,6 +146,16 @@ export interface WebAiApiCheckSiteAccessPreferences {
   include: string[]
   exclude: string[]
 }
+/**
+ * User-editable probe prompts for API verification, keyed by probe id.
+ *
+ * Blank or missing entries fall back to the built-in prompt at run time, so a
+ * probe always sends something. Applies wherever a probe runs: account dialog,
+ * credential profile dialog, Web AI API Check and batch verification.
+ */
+export type VerificationProbePromptPreferences = Partial<
+  Record<ApiVerificationProbeId | typeof PELICAN_PROMPT_ID, string>
+>
 
 export interface WebAiApiCheckPreferences {
   /**
@@ -357,6 +369,12 @@ export interface UserPreferences {
 
   // Web AI API Check 配置
   webAiApiCheck?: WebAiApiCheckPreferences
+
+  /**
+   * User-edited probe prompts, shared by every verification entry point.
+   * Missing or blank entries fall back to the built-in prompt.
+   */
+  verificationProbePrompts?: VerificationProbePromptPreferences
 
   /**
    * 临时窗口过盾相关设置

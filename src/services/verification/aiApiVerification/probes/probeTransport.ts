@@ -1,7 +1,10 @@
 import { toVersionedProtocolMount } from "~/services/aiApi/protocolAddress"
 import { createHeaderOverrideFetch } from "~/services/apiTransport/headerOverrides"
 
-import type { ApiVerificationApiType } from "../types"
+import type {
+  ApiVerificationApiType,
+  ApiVerificationProbePromptOverrides,
+} from "../types"
 
 export type ModelProbeParams = {
   baseUrl: string
@@ -9,6 +12,7 @@ export type ModelProbeParams = {
   requestHeaders?: Record<string, string>
   apiType: ApiVerificationApiType
   modelId: string
+  probePromptOverrides?: ApiVerificationProbePromptOverrides
   abortSignal?: AbortSignal
 }
 

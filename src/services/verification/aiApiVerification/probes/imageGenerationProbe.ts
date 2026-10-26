@@ -16,6 +16,7 @@ import {
   isAbortError,
   toSanitizedErrorSummary,
 } from "../utils"
+import { resolveProbePrompt } from "./probePrompts"
 import type { ModelProbeParams } from "./probeTransport"
 
 /**
@@ -50,7 +51,10 @@ export async function runImageGenerationProbe(
     const options = quality ? { quality } : {}
     const { image } = await generateImage({
       model: createImageModel(params),
-      prompt: "a red dot",
+      prompt: resolveProbePrompt(
+        API_VERIFICATION_PROBE_IDS.ImageGeneration,
+        params.probePromptOverrides,
+      )!,
       n: 1,
       size,
       providerOptions: {

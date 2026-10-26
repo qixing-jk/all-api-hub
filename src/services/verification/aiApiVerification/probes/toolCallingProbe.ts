@@ -10,6 +10,7 @@ import {
 import type {
   ApiVerificationApiType,
   ApiVerificationMode,
+  ApiVerificationProbePromptOverrides,
   ApiVerificationProbeResult,
   ApiVerificationRequestProfile,
 } from "../types"
@@ -19,6 +20,7 @@ import {
   toSanitizedErrorSummary,
 } from "../utils"
 import { runProbeGeneration } from "./probeGeneration"
+import { resolveProbePrompt } from "./probePrompts"
 
 type RunToolCallingProbeParams = {
   baseUrl: string
@@ -29,14 +31,12 @@ type RunToolCallingProbeParams = {
   apiType: ApiVerificationApiType
   modelId: string
   mode?: ApiVerificationMode
+  probePromptOverrides?: ApiVerificationProbePromptOverrides
   abortSignal?: AbortSignal
 }
 
 const VERIFY_TOOL_NAME = "verify_tool"
 const VERIFY_TOOL_DESCRIPTION = "Return a timestamp string."
-const TOOL_CALLING_PROMPT =
-  `Call the ${VERIFY_TOOL_NAME} tool once. ` +
-  "Reply with a short sentence that includes the returned time."
 const VERIFY_TOOL_INPUT_SCHEMA = {
   type: "object",
   properties: {},
@@ -71,7 +71,10 @@ export async function runToolCallingProbe(
     params.apiKey,
     ...Object.values(params.requestHeaders ?? {}),
   ]
-  const prompt = TOOL_CALLING_PROMPT
+  const prompt = resolveProbePrompt(
+    API_VERIFICATION_PROBE_IDS.ToolCalling,
+    params.probePromptOverrides,
+  )!
 
   try {
     const model = createModel({

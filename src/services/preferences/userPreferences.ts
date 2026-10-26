@@ -49,7 +49,10 @@ import { buildOriginWhitelistPattern } from "~/utils/core/urlWhitelist"
 import { normalizeAppLanguage } from "~/utils/i18n/language"
 
 import { DEFAULT_PREFERENCES } from "./preferencesDefaults"
-import { type WebAiApiCheckPreferences } from "./preferencesSchema"
+import {
+  type VerificationProbePromptPreferences,
+  type WebAiApiCheckPreferences,
+} from "./preferencesSchema"
 import {
   PreferencesStore,
   type PreferenceWriteResult,
@@ -511,6 +514,22 @@ class UserPreferencesService extends PreferencesStore {
     return this.savePreferences({
       webAiApiCheck: DEFAULT_PREFERENCES.webAiApiCheck,
     })
+  }
+
+  /**
+   * Replace the user's probe prompt overrides.
+   *
+   * The stored object is keyed by probe id, so "reset to default" arrives here as
+   * an absent key. Replacing the whole subtree is what makes that a deletion; a
+   * deep merge would keep the stored prompt the user just cleared.
+   */
+  async setVerificationProbePrompts(
+    overrides: VerificationProbePromptPreferences,
+  ): Promise<PreferenceWriteResult> {
+    return this.savePreferencesWithResult(
+      { verificationProbePrompts: overrides },
+      { replaceKeys: ["verificationProbePrompts"] },
+    )
   }
 
   /**

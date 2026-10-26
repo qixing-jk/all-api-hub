@@ -8,10 +8,6 @@
       "stop": "Detener",
       "stopTool": "Detener {{tool}}"
     },
-    "details": {
-      "input": "Entrada",
-      "output": "Salida"
-    },
     "idleHint": "Selecciona una clave y luego ejecuta la simulación. Proporciona un ID de modelo si la clave no permite inferir uno.",
     "loadingModelsHint": "Cargando modelos...",
     "loadingRuntimeKeysHint": "Cargando claves...",
@@ -28,10 +24,7 @@
     "profileIdleHint": "Elige un modelo y luego ejecuta la simulación. También puedes ingresar manualmente un ID de modelo si no aparece en la lista obtenida.",
     "requiresModelId": "Proporciona un ID de modelo antes de ejecutar esta comprobación.",
     "status": {
-      "fail": "Falla",
-      "pass": "Pasa",
-      "pending": "Pendiente",
-      "unsupported": "No compatible"
+      "pending": "Pendiente"
     },
     "summaries": {
       "endpointNotFound": "Endpoint no encontrado (404): es posible que esta API no sea compatible",
@@ -55,7 +48,6 @@
       "claude": "Claude Code",
       "codex": "Codex (Codex CLI)",
       "gemini": "Gemini CLI"
-    },
-    "warning": "Una aprobación detectada probablemente es real; una falla aún puede funcionar en algunos clientes. Usa el resultado como orientación y verifica con la CLI real cuando sea posible."
+    }
   }
 }
