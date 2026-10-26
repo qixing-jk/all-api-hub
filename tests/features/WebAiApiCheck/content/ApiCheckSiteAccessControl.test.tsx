@@ -33,6 +33,23 @@ describe("website participation control", () => {
     vi.mocked(sendRuntimeMessage).mockReset()
   })
 
+  it("identifies the current website separately from the full settings action", async () => {
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
+      success: true,
+      siteAllowed: true,
+    })
+    render(<ApiCheckSiteAccessControl pageUrl={pageUrl} />)
+    expect(
+      await screen.findByRole("heading", { name: "common:labels.settings" }),
+    ).toBeVisible()
+    expect(screen.getByText("example.com")).toBeVisible()
+    expect(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:confirmToast.settings",
+      }),
+    ).toBeEnabled()
+  })
+
   it("hides the control when loading its site state fails", async () => {
     vi.mocked(sendWebAiApiCheckMessage).mockRejectedValue(new Error("offline"))
     render(<ApiCheckSiteAccessControl pageUrl={pageUrl} />)

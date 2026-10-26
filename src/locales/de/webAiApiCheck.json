@@ -61,6 +61,9 @@
       "stoppingTest": "Stoppen des Tests. Die aktuelle Anfrage wird schnellstmöglich unterbrochen.",
       "testStopped": "Test gestoppt. Abgeschlossene Ergebnisse wurden beibehalten und Elemente, die nicht gestartet wurden, werden nicht fortgesetzt."
     },
+    "modelPicker": {
+      "emptyHint": "Modell-ID eingeben oder Liste abrufen."
+    },
     "optionalProfileFields": {
       "hasInput": "Optionale Speicherdetails hinzugefügt",
       "hint": "Tags, Notizen und Ablaufdatum haben keinen Einfluss auf die Testergebnisse.",

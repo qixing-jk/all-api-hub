@@ -67,10 +67,15 @@ export interface SearchableSelectProps
   /**
    * Custom message shown when no options match the current search.
    * Falls back to the i18n key `ui:searchableSelect.empty`.
+   * Set null when the footer supplies its own recovery state.
    */
-  emptyMessage?: string
+  emptyMessage?: string | null
   /** Indicates pending options without preventing custom input or selection. */
   loading?: boolean
+  /** Persistent dropdown content for actions or status, outside the filtered options. */
+  footer?: React.ReactNode
+  /** Compact actions displayed beside the dropdown search input. */
+  searchActions?: React.ReactNode
 
   /**
    * Allow selecting a custom value not present in `options`.
@@ -137,6 +142,8 @@ export const SearchableSelect = React.forwardRef<
     searchPlaceholder,
     emptyMessage,
     loading = false,
+    footer,
+    searchActions,
     allowCustomValue = false,
     open,
     onOpenChange,
@@ -177,7 +184,8 @@ export const SearchableSelect = React.forwardRef<
         : t("searchableSelect.noOptions")
       : t("searchableSelect.empty")
 
-  const resolvedEmptyMessage = emptyMessage ?? defaultEmptyMessage
+  const resolvedEmptyMessage =
+    emptyMessage === undefined ? defaultEmptyMessage : emptyMessage
 
   const isDisabled = disabled ?? false
 
@@ -233,11 +241,14 @@ export const SearchableSelect = React.forwardRef<
             value={searchTerm}
             onValueChange={setSearchTerm}
             data-testid={searchInputTestId}
+            trailingContent={searchActions}
           />
           <CommandList
             className={cn("max-h-none min-h-0 flex-1", listClassName)}
           >
-            {options.length === 0 && !canUseCustomValue ? (
+            {options.length === 0 &&
+            !canUseCustomValue &&
+            emptyMessage !== null ? (
               <div
                 data-slot="searchable-select-empty"
                 className="py-density-6 text-center text-sm"
@@ -250,7 +261,7 @@ export const SearchableSelect = React.forwardRef<
               </div>
             ) : null}
 
-            {options.length > 0 ? (
+            {options.length > 0 && emptyMessage !== null ? (
               <CommandEmpty>
                 {loading ? (
                   <Spinner size="sm" className="mx-auto" />
@@ -259,51 +270,66 @@ export const SearchableSelect = React.forwardRef<
                 )}
               </CommandEmpty>
             ) : null}
-            <CommandGroup>
-              {canUseCustomValue ? (
-                <CommandItem
-                  key={`__custom__:${normalizedSearchTerm}`}
-                  value={normalizedSearchTerm}
-                  onSelect={() => {
-                    onChange(normalizedSearchTerm)
-                    setResolvedOpen(false)
-                  }}
-                >
-                  <span className="truncate">
-                    {t("searchableSelect.useValue", {
-                      value: normalizedSearchTerm,
-                    })}
-                  </span>
-                </CommandItem>
-              ) : null}
-              {options.map((option) => (
-                <CommandItem
-                  key={option.value}
-                  value={option.value}
-                  keywords={[option.label]}
-                  data-testid={getOptionTestId?.(option)}
-                  disabled={option.disabled}
-                  onSelect={() => {
-                    if (option.disabled) return
-                    onChange(option.value)
-                    setResolvedOpen(false)
-                  }}
-                >
-                  <CheckIcon
-                    className={cn(
-                      "size-4",
-                      value === option.value ? "opacity-100" : "opacity-0",
-                    )}
-                  />
-                  <span className="min-w-0 flex-1 truncate">
-                    {option.label}
-                  </span>
-                  {option.suffix}
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            {options.length > 0 || canUseCustomValue ? (
+              <CommandGroup>
+                {canUseCustomValue ? (
+                  <CommandItem
+                    key={`__custom__:${normalizedSearchTerm}`}
+                    value={normalizedSearchTerm}
+                    onSelect={() => {
+                      onChange(normalizedSearchTerm)
+                      setResolvedOpen(false)
+                    }}
+                  >
+                    <span className="truncate">
+                      {t("searchableSelect.useValue", {
+                        value: normalizedSearchTerm,
+                      })}
+                    </span>
+                  </CommandItem>
+                ) : null}
+                {options.map((option) => (
+                  <CommandItem
+                    key={option.value}
+                    value={option.value}
+                    keywords={[option.label]}
+                    data-testid={getOptionTestId?.(option)}
+                    disabled={option.disabled}
+                    onSelect={() => {
+                      if (option.disabled) return
+                      onChange(option.value)
+                      setResolvedOpen(false)
+                    }}
+                  >
+                    <CheckIcon
+                      className={cn(
+                        "size-4",
+                        value === option.value ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                    <span className="min-w-0 flex-1 truncate">
+                      {option.label}
+                    </span>
+                    {option.suffix}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ) : null}
           </CommandList>
         </Command>
+        {footer ? (
+          <div
+            className={cn(
+              "shrink-0 p-2",
+              (options.length > 0 ||
+                canUseCustomValue ||
+                emptyMessage !== null) &&
+                "border-border-subtle border-t",
+            )}
+          >
+            {footer}
+          </div>
+        ) : null}
       </PopoverContent>
     </Popover>
   )

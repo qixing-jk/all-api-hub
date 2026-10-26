@@ -61,6 +61,9 @@
       "stoppingTest": "Deteniendo la prueba. La solicitud actual se interrumpirá tan pronto como sea posible.",
       "testStopped": "Prueba detenida. Se conservaron los resultados completados y los elementos no iniciados no continuarán."
     },
+    "modelPicker": {
+      "emptyHint": "Escribe un ID de modelo u obtén la lista."
+    },
     "optionalProfileFields": {
       "hasInput": "Detalles opcionales de guardado agregados",
       "hint": "Las etiquetas, notas y fecha de expiración no afectan los resultados de prueba.",

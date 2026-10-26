@@ -10,6 +10,87 @@ import {
 } from "~~/tests/test-utils/render"
 
 describe("SearchableSelect", () => {
+  it("keeps search actions separate from option activation", async () => {
+    const onChange = vi.fn()
+    const refresh = vi.fn()
+    render(
+      <SearchableSelect
+        open
+        options={[{ value: "saved", label: "Saved model" }]}
+        value="saved"
+        onChange={onChange}
+        searchActions={<button onClick={refresh}>Refresh models</button>}
+      />,
+    )
+    const action = await screen.findByRole("button", { name: "Refresh models" })
+    action.focus()
+    fireEvent.keyDown(action, { key: "Enter" })
+    fireEvent.click(action)
+    expect(refresh).toHaveBeenCalledOnce()
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.getByRole("option", { name: "Saved model" })).toBeVisible()
+  })
+
+  it("lets a recovery footer replace the default empty message while retaining custom input", async () => {
+    const onChange = vi.fn()
+    render(
+      <SearchableSelect
+        options={[]}
+        value=""
+        onChange={onChange}
+        allowCustomValue
+        emptyMessage={null}
+        footer={<button>Fetch models</button>}
+      />,
+    )
+    fireEvent.click(await screen.findByRole("combobox"))
+    expect(
+      screen.queryByText("ui:searchableSelect.noOptionsAllowCustom"),
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Fetch models" })).toBeVisible()
+    fireEvent.change(
+      screen.getByPlaceholderText("ui:searchableSelect.searchPlaceholder"),
+      { target: { value: "manual-model" } },
+    )
+    fireEvent.click(
+      screen.getByRole("option", { name: "ui:searchableSelect.useValue" }),
+    )
+    expect(onChange).toHaveBeenCalledWith("manual-model")
+  })
+
+  it("keeps footer actions available during search without selecting a value or closing", async () => {
+    const onChange = vi.fn()
+    const refresh = vi.fn()
+    render(
+      <SearchableSelect
+        options={[{ value: "saved", label: "Saved model" }]}
+        value="saved"
+        onChange={onChange}
+        footer={
+          <>
+            <button onClick={refresh}>Refresh models</button>
+            <button>Manage models</button>
+          </>
+        }
+      />,
+    )
+    const trigger = await screen.findByRole("combobox")
+    expect(
+      screen.queryByRole("button", { name: "Refresh models" }),
+    ).not.toBeInTheDocument()
+    fireEvent.click(trigger)
+    fireEvent.change(
+      screen.getByPlaceholderText("ui:searchableSelect.searchPlaceholder"),
+      { target: { value: "no match" } },
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Refresh models" }))
+    expect(refresh).toHaveBeenCalledOnce()
+    expect(screen.getByRole("button", { name: "Manage models" })).toBeVisible()
+    expect(onChange).not.toHaveBeenCalled()
+    expect(trigger).toHaveAttribute("aria-expanded", "true")
+    expect(trigger).toHaveTextContent("Saved model")
+  })
+
   it("shows pending feedback instead of an empty result before options arrive", async () => {
     const props = { options: [], value: "", onChange: vi.fn(), open: true }
     const { rerender } = render(<SearchableSelect {...props} loading />)

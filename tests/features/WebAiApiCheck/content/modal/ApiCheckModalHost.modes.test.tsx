@@ -180,6 +180,10 @@ describe("web API verification modes", () => {
       document.querySelector('[data-slot="api-check-portal-container"]'),
     ).toContainElement(option)
     await user.click(option)
+    expect(
+      screen.queryByRole("switch", { name: /enhancedLabel/ }),
+    ).not.toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: /enhancedLabel/ }))
     const enhanced = screen.getByRole("switch", { name: /enhancedLabel/ })
     expect(enhanced).not.toBeChecked()
     await user.click(enhanced)

@@ -61,6 +61,9 @@
       "stoppingTest": "Interrompendo o teste. A solicitação atual será interrompida o mais rápido possível.",
       "testStopped": "Teste interrompido. Os resultados concluídos foram mantidos e os itens que não foram iniciados não continuarão."
     },
+    "modelPicker": {
+      "emptyHint": "Digite um ID de modelo ou busque a lista."
+    },
     "optionalProfileFields": {
       "hasInput": "Detalhes opcionais de salvamento adicionados",
       "hint": "Etiquetas, notas e data de validade não afetam os resultados dos testes.",

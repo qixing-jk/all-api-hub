@@ -61,6 +61,9 @@
       "stoppingTest": "Stopping the test. The current request will be interrupted as soon as possible.",
       "testStopped": "Test stopped. Completed results were kept, and items that had not started will not continue."
     },
+    "modelPicker": {
+      "emptyHint": "Type a model ID, or fetch the list."
+    },
     "optionalProfileFields": {
       "hasInput": "Optional save details added",
       "hint": "Tags, notes, and expiration date do not affect test results.",

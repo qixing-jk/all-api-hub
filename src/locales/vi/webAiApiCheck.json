@@ -61,6 +61,9 @@
       "stoppingTest": "Đang dừng kiểm tra. Yêu cầu hiện tại sẽ được ngắt sớm nhất có thể.",
       "testStopped": "Đã dừng kiểm tra. Các kết quả đã hoàn tất được giữ lại, và các mục chưa bắt đầu sẽ không chạy tiếp."
     },
+    "modelPicker": {
+      "emptyHint": "Nhập ID mô hình hoặc tải danh sách."
+    },
     "optionalProfileFields": {
       "hasInput": "Đã thêm thông tin lưu tùy chọn",
       "hint": "Thẻ, ghi chú và ngày hết hạn không ảnh hưởng đến kết quả kiểm tra.",

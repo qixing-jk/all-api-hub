@@ -61,6 +61,9 @@
       "stoppingTest": "正在停止測試，目前請求會盡快中斷。",
       "testStopped": "測試已停止，已完成的結果已保留，未開始的項目不會繼續執行。"
     },
+    "modelPicker": {
+      "emptyHint": "輸入模型 ID，或取得模型清單。"
+    },
     "optionalProfileFields": {
       "hasInput": "已填寫可選儲存資訊",
       "hint": "標籤、備註和到期日不會影響測試結果。",

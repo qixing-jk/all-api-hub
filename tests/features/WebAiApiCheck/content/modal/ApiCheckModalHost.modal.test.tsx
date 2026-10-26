@@ -40,6 +40,37 @@ import {
 describe("ApiCheckModalHost", () => {
   setupApiCheckModalHostTest()
 
+  it("keeps model actions inside the dropdown rather than the footer", async () => {
+    await openModal()
+    expect(
+      screen.queryByRole("button", {
+        name: "webAiApiCheck:modal.actions.fetchModels",
+      }),
+    ).not.toBeInTheDocument()
+    await userEvent.click(screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId))
+    expect(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:modal.actions.fetchModels",
+      }),
+    ).toBeEnabled()
+    expect(
+      screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId),
+    ).toHaveAttribute("aria-expanded", "true")
+  })
+
+  it("places the manual drawing test after every API probe", async () => {
+    await openModal()
+    const drawing = await screen.findByTestId("verification-tools-panel")
+    const probes = screen.getAllByTestId(/^api-check-probe-/)
+    expect(probes.length).toBeGreaterThan(0)
+    for (const probe of probes) {
+      expect(
+        probe.compareDocumentPosition(drawing) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy()
+    }
+  })
+
   it("exposes the shared dialog title as a heading and keeps close accessible", async () => {
     await openModal()
     const dialog = await screen.findByRole("dialog")
