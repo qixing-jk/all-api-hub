@@ -1,5 +1,36 @@
 # Changelog
 
+## [4.7.0](https://github.com/qixing-jk/all-api-hub/compare/v4.6.0...v4.7.0) (2026-10-26)
+
+
+### Features
+
+* **accounts:** adapt Vercel AI Gateway as an account site ([#1768](https://github.com/qixing-jk/all-api-hub/issues/1768)) ([d555608](https://github.com/qixing-jk/all-api-hub/commit/d55560808ee2bcb8775ee6d4555735a858955d9c))
+* **accounts:** add Daya API account integration ([#1735](https://github.com/qixing-jk/all-api-hub/issues/1735)) ([06dbdaf](https://github.com/qixing-jk/all-api-hub/commit/06dbdaf22e62ada629f9d862f5870d5f72948369))
+* **accounts:** add PM-API integration and verification-aware check-in ([#1759](https://github.com/qixing-jk/all-api-hub/issues/1759)) ([824ba35](https://github.com/qixing-jk/all-api-hub/commit/824ba353b973eae6ef6ede8b91523a6dc0765714))
+* **accounts:** add Requesty account integration ([#1757](https://github.com/qixing-jk/all-api-hub/issues/1757)) ([63f11c0](https://github.com/qixing-jk/all-api-hub/commit/63f11c08f42775b1d82c9bccdfed7c1942bb8c31))
+* **accounts:** improve the add and edit account UI ([#1738](https://github.com/qixing-jk/all-api-hub/issues/1738)) ([0ccf4a6](https://github.com/qixing-jk/all-api-hub/commit/0ccf4a6d201c434dc397eb1b864d88fa8da65e34))
+* **checkin:** support deployment-specific check-in routes ([#1754](https://github.com/qixing-jk/all-api-hub/issues/1754)) ([f1b7e79](https://github.com/qixing-jk/all-api-hub/commit/f1b7e79fb2107762e8f2f72c2dd860ce0e5f4781))
+* **release:** self-updating Chromium CRX channel for GitHub releases ([#1761](https://github.com/qixing-jk/all-api-hub/issues/1761)) ([c069fcc](https://github.com/qixing-jk/all-api-hub/commit/c069fccab474a5541f71f9edec3751edb712391e))
+* **safari:** support isolated Cookie account requests ([#1744](https://github.com/qixing-jk/all-api-hub/issues/1744)) ([eb422e9](https://github.com/qixing-jk/all-api-hub/commit/eb422e9ba4275bc6c3bad9032e3274b1d1a97feb))
+* **tooling:** brand CDP debug windows and reclaim debug profiles ([#1762](https://github.com/qixing-jk/all-api-hub/issues/1762)) ([8fc1569](https://github.com/qixing-jk/all-api-hub/commit/8fc15693503616e8ec9caa9e858e813cb422f222))
+* **verification:** add a drawing test and editable probe prompts to every verification entry point ([#1758](https://github.com/qixing-jk/all-api-hub/issues/1758)) ([c346c7b](https://github.com/qixing-jk/all-api-hub/commit/c346c7be5d262333fd9a9133f0a2d3db575db3bd))
+* **verification:** add CLI request simulation profiles ([#1750](https://github.com/qixing-jk/all-api-hub/issues/1750)) ([fa8a675](https://github.com/qixing-jk/all-api-hub/commit/fa8a675922f8aebd63e7bbf8d4b709818376b41f))
+* **verification:** support image, video, embedding, rerank, and decision model verification ([#1741](https://github.com/qixing-jk/all-api-hub/issues/1741)) ([cbe9c97](https://github.com/qixing-jk/all-api-hub/commit/cbe9c9729d4b39b1c401c1fbd3060326d38dc637))
+* **web-ai-api-check:** add website rules and improve selection detection ([#1751](https://github.com/qixing-jk/all-api-hub/issues/1751)) ([6ae5cbf](https://github.com/qixing-jk/all-api-hub/commit/6ae5cbf37de793706dc819d96dced3c5eae3e828))
+
+
+### Bug Fixes
+
+* **accounts:** improve refresh and provider presentation ([#1733](https://github.com/qixing-jk/all-api-hub/issues/1733)) ([0bb6a74](https://github.com/qixing-jk/all-api-hub/commit/0bb6a749fa045cd472112fedef8cbc45c480e6f9))
+* **ci:** upload coverage when tests fail ([#1763](https://github.com/qixing-jk/all-api-hub/issues/1763)) ([3c2bf79](https://github.com/qixing-jk/all-api-hub/commit/3c2bf797edfa605f6f55aa5aad0000efa44bda7c))
+* **credential-export:** default provider names to the site and key ([#1760](https://github.com/qixing-jk/all-api-hub/issues/1760)) ([ca21bea](https://github.com/qixing-jk/all-api-hub/commit/ca21bea86d5f90cdc18caa0f7d3e3dc5549db87f))
+* **e2e:** stabilize login tests after private access changes ([#1765](https://github.com/qixing-jk/all-api-hub/issues/1765)) ([91ebb36](https://github.com/qixing-jk/all-api-hub/commit/91ebb36b662bbac3bec21b53f35861e74db984e8))
+* **navigation:** unify target reveal and respect reduced motion ([#1745](https://github.com/qixing-jk/all-api-hub/issues/1745)) ([d577989](https://github.com/qixing-jk/all-api-hub/commit/d577989676f6cae6c9820351afa77832504a00a4))
+* **safari:** improve WebExtension compatibility ([#1747](https://github.com/qixing-jk/all-api-hub/issues/1747)) ([5a8a09d](https://github.com/qixing-jk/all-api-hub/commit/5a8a09dc205ff8c9b7a56f3865d85a65bd2b4bae))
+* **ui:** respect tooltip theme settings and standardize help icons ([#1756](https://github.com/qixing-jk/all-api-hub/issues/1756)) ([bbf6ef0](https://github.com/qixing-jk/all-api-hub/commit/bbf6ef00156e7b9f5584a4eb846ceb22105b1931))
+* **web-ai-api-check:** responsive verification modal layout and embedded model actions ([#1767](https://github.com/qixing-jk/all-api-hub/issues/1767)) ([8565549](https://github.com/qixing-jk/all-api-hub/commit/85655491452758b9706f22c2c67c4b41a18fc51f))
+
 ## [4.6.0](https://github.com/qixing-jk/all-api-hub/compare/v4.5.0...v4.6.0) (2026-10-20)
 
 
