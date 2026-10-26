@@ -11,6 +11,23 @@ import {
   ensureDevExtensionReady,
 } from "./cdp/browser-runtime.mjs"
 import {
+  buildDevBrowserIdentity,
+  deriveUnpackedExtensionId,
+  prepareDevBrowserProfile,
+  skippedDevBrowserPreparation,
+  waitForUserDataDirRelease,
+} from "./cdp/dev-browser-identity.mjs"
+import {
+  classifyDevProfiles,
+  describeBytes,
+  devProfilesBaseDir,
+  formatDebugBrowserReport,
+  listDebugBrowserProcesses,
+  planProfileCleanup,
+  pruneProfileCaches,
+  removeProfileDir,
+} from "./cdp/dev-browser-registry.mjs"
+import {
   applyIsolateFlag,
   isIsolatedDevProfile,
   resolveCdpPort,
@@ -544,6 +561,149 @@ async function verifyExtensionReady(extensionDir) {
   }
 }
 
+/**
+ * Inventory of debug browsers and profiles. `--clean` prunes caches;
+ * `--prune-profiles` additionally deletes profiles no checkout owns any more.
+ */
+async function runProfileMaintenance({ clean, pruneProfiles }) {
+  const profilesBaseDir = devProfilesBaseDir()
+  // Only browsers reading this base directory hold profiles here; an instance of
+  // another base (a scratch directory) is reported but does not block cleanup.
+  const processes = (await listDebugBrowserProcesses()).filter((process) =>
+    isInside(profilesBaseDir, process.userDataDir),
+  )
+  const profiles = classifyDevProfiles({
+    profilesBaseDir,
+    runningUserDataDirs: processes.map((process) => process.userDataDir),
+  })
+  console.log(formatDebugBrowserReport({ processes, profiles }))
+
+  if (processes.length > 0) {
+    console.log(
+      `\n🛑 ${processes.length} 个调试浏览器仍在运行；关闭后再清理（或先 pnpm browser:cdp -- --stop-browsers）。`,
+    )
+  }
+
+  const plan = planProfileCleanup(profiles, { pruneProfiles })
+  const deletable = new Set(plan.deleteProfiles.map((profile) => profile.dir))
+  let freedBytes = 0
+  for (const profile of plan.orphans) {
+    if (!deletable.has(profile.dir)) {
+      console.log(
+        `⚠️ 孤立 profile: ${profile.name} (${describeBytes(profile.sizeBytes)})，加 --prune-profiles 才会删除`,
+      )
+      continue
+    }
+    const before = profile.sizeBytes
+    if (!removeProfileDir(profile.dir)) {
+      console.warn(`⚠️ 删除失败，已跳过: ${profile.dir}`)
+      continue
+    }
+    freedBytes += before
+    console.log(
+      `🧹 已删除孤立 profile: ${profile.name} (${describeBytes(before)})`,
+    )
+  }
+
+  const closed = plan.pruneCacheTargets
+  if (closed.length > 0 && clean) {
+    for (const profile of closed) {
+      const { removed, freedBytes: freed } = pruneProfileCaches(profile.dir)
+      if (removed.length === 0) continue
+      freedBytes += freed
+      console.log(
+        `🧽 ${profile.name}: 清理 ${removed.length} 项可再生缓存 (${describeBytes(freed)})`,
+      )
+    }
+  } else if (closed.length > 0) {
+    const potential = closed.reduce(
+      (sum, profile) =>
+        sum +
+        (profile.sizeBytes < 1024 ? 0 : Math.round(profile.sizeBytes / 2)),
+      0,
+    )
+    console.log(
+      `🧽 加 --clean 可清理已关闭 profile 的可再生缓存（component_crx_cache、ProvenanceData、着色器缓存等），约 ${describeBytes(potential)}。`,
+    )
+  }
+
+  if (freedBytes > 0) console.log(`✅ 共释放 ${describeBytes(freedBytes)}`)
+  return freedBytes
+}
+
+/** Ask every running debug browser to exit through CDP, then wait for release. */
+async function stopRunningDebugBrowsers(processes) {
+  let allStopped = true
+  for (const processEntry of processes) {
+    try {
+      await closeDevBrowserViaCdp(processEntry.port)
+      const released = await waitForUserDataDirRelease(processEntry.userDataDir)
+      if (!released) {
+        allStopped = false
+        console.warn(
+          `⚠️ 关闭 :${processEntry.port} 失败: profile lock 在超时前未释放`,
+        )
+        continue
+      }
+      console.log(
+        `🛑 已关闭 :${processEntry.port} (${path.basename(processEntry.userDataDir)})`,
+      )
+    } catch (error) {
+      allStopped = false
+      console.warn(`⚠️ 关闭 :${processEntry.port} 失败: ${error.message}`)
+    }
+  }
+  return allStopped
+}
+
+/** Whether `child` sits below `parent`, used to scope processes to a base. */
+function isInside(parent, child) {
+  const relative = path.relative(path.resolve(parent), path.resolve(child))
+  return (
+    Boolean(relative) &&
+    !relative.startsWith("..") &&
+    !path.isAbsolute(relative)
+  )
+}
+
+/**
+ * Report what the window will look like, so the operator can tell this browser
+ * apart from the daily one — and from other worktrees' debug browsers — without
+ * opening the profile picker.
+ */
+function reportBrowserIdentity(identity, preparation) {
+  if (!preparation.applied) {
+    const reason =
+      preparation.reason === "disabled"
+        ? "已通过 --no-identity 关闭"
+        : preparation.reason === "profile_in_use"
+          ? "profile 仍被浏览器占用，重启后再写入"
+          : `写入失败: ${preparation.reason}`
+    console.log(`🏷️  跳过窗口标识 (${reason})`)
+    return
+  }
+
+  const avatar =
+    typeof preparation.avatarIndex === "number"
+      ? `，头像 #${preparation.avatarIndex}`
+      : ""
+  console.log(
+    preparation.namePreserved
+      ? `🏷️  保留 profile 中已有的自定义名称${avatar}`
+      : `🏷️  浏览器窗口标识: ${identity.displayName}${avatar}（窗口标题与配置卡片可见）`,
+  )
+  console.log(
+    preparation.themeReserved
+      ? `🎨 保留 profile 内已安装的主题，未套用调试配色`
+      : `🎨 窗口配色: rgb(${identity.accentColor})，与日常浏览器一眼可分`,
+  )
+  if (preparation.pinnedExtensionIds.length > 0) {
+    console.log(
+      `📌 已固定到工具栏: ${preparation.pinnedExtensionIds.join(", ")}`,
+    )
+  }
+}
+
 async function main() {
   console.log("==========================================")
   console.log("   All API Hub 自动化 CDP 调试环境启动器   ")
@@ -565,6 +725,31 @@ async function main() {
   const forceRestart = cliArgs.includes("--restart")
   const forceReloadOnly = cliArgs.includes("--reload")
   const stopDevOnly = cliArgs.includes("--stop-dev")
+  // Profile name, frame tint and toolbar pin are written into the profile, so
+  // they need the browser to be closed; opt out for a pristine shared profile.
+  const skipIdentity = cliArgs.includes("--no-identity")
+  const listProfilesOnly =
+    cliArgs.includes("--list") || cliArgs.includes("--list-profiles")
+  const cleanProfiles = cliArgs.includes("--clean")
+  // Deleting a whole profile throws away logins and extension data, so it needs
+  // its own switch rather than riding along with the cache cleanup.
+  const pruneProfiles = cliArgs.includes("--prune-profiles")
+  const stopBrowsersOnly = cliArgs.includes("--stop-browsers")
+
+  if (listProfilesOnly || cleanProfiles || pruneProfiles || stopBrowsersOnly) {
+    if (stopBrowsersOnly) {
+      const allStopped = await stopRunningDebugBrowsers(
+        await listDebugBrowserProcesses(),
+      )
+      process.exit(allStopped ? 0 : 1)
+    } else {
+      await runProfileMaintenance({
+        clean: cleanProfiles || pruneProfiles,
+        pruneProfiles,
+      })
+    }
+    process.exit(0)
+  }
 
   if (stopDevOnly) {
     stopDevServer(rootDir)
@@ -683,7 +868,12 @@ async function main() {
     if (forceRestart) {
       console.log(`\n🔄 检测到 --restart 参数，正在关闭旧调试实例并重新启动...`)
       await closeDevBrowserViaCdp(CDP_PORT)
-      await new Promise((r) => setTimeout(r, 1200))
+      const released = await waitForUserDataDirRelease(devProfileDir)
+      if (!released) {
+        throw new Error(
+          `旧调试浏览器仍占用 Profile 目录，请关闭该浏览器后重试: ${devProfileDir}`,
+        )
+      }
     } else {
       await verifyExtensionReady(extDir)
       console.log(`\n✅ 端口 ${CDP_PORT} 已经在监听中！调试浏览器已就绪。`)
@@ -691,6 +881,9 @@ async function main() {
       await reloadRunningExtension(CDP_PORT, extDir)
       console.log(
         `👉 现存调试窗口可以直接复用（加 --reload 可直接刷新扩展，加 --restart 可重启浏览器）。`,
+      )
+      console.log(
+        `🏷️  窗口标识（配置名 / 窗口配色 / 工具栏固定）只在启动时写入，需要最新标识请加 --restart。`,
       )
       process.exit(0)
     }
@@ -700,9 +893,27 @@ async function main() {
   console.log(
     `\n正在启动独立调试浏览器（挂载当前分支扩展，不干扰日常主浏览器）...`,
   )
+  // A running browser owns the profile and would overwrite these files on exit.
+  const identity = buildDevBrowserIdentity({
+    profileDir: devProfileDir,
+    worktreeName: WORKTREE_NAME,
+    isolated: isIsolatedDevProfile(),
+  })
+  const preparation = skipIdentity
+    ? skippedDevBrowserPreparation(devProfileDir, "disabled")
+    : prepareDevBrowserProfile({
+        userDataDir: devProfileDir,
+        identity,
+        extensionIds: [deriveUnpackedExtensionId(extDir)],
+      })
+  reportBrowserIdentity(identity, preparation)
+
   const args = [
     `--remote-debugging-port=${CDP_PORT}`,
     `--user-data-dir=${devProfileDir}`,
+    // Pin the profile the identity above was written for, instead of whichever
+    // profile this user data directory opened last.
+    `--profile-directory=${preparation.profileDirectory}`,
     `--load-extension=${extDir}`,
     `--disable-extensions-except=${extDir}`,
     // Enable the supported CDP unpacked installer; readiness is verified below.
@@ -711,6 +922,9 @@ async function main() {
     "--no-first-run",
     "--no-default-browser-check",
   ]
+  if (preparation.applied && !preparation.themeReserved) {
+    args.push(`--install-autogenerated-theme=${identity.accentColor}`)
+  }
 
   if (os.platform() === "win32") {
     const helperScript = path.join(__dirname, "spawn-browser-windows.ps1")
