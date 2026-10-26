@@ -1,5 +1,4 @@
 import { execFileSync } from "node:child_process"
-import { readFileSync } from "node:fs"
 
 import { runPnpm } from "./utils/run-pnpm.mjs"
 
@@ -52,11 +51,66 @@ function needsValidation(input) {
   return false
 }
 
+/**
+ * Read standard input up to a short timeout when not running interactively.
+ * In Git pre-push hooks, Git pipes ref updates immediately and closes stdin.
+ * In non-interactive environments without piped input, stdin remains open with no EOF;
+ * timing out avoids hanging indefinitely and falls back to full validation.
+ * @param timeoutMs Initial milliseconds to wait for stdin data or EOF.
+ * @returns Standard input contents, or empty string on timeout/TTY.
+ */
+function readStdin(timeoutMs = 200) {
+  if (process.stdin.isTTY) return Promise.resolve("")
+
+  return new Promise((resolve) => {
+    let data = ""
+    let settled = false
+
+    const cleanup = () => {
+      clearTimeout(timer)
+      process.stdin.removeListener("data", onData)
+      process.stdin.removeListener("end", onEnd)
+      process.stdin.removeListener("error", onError)
+      process.stdin.pause()
+    }
+
+    const finish = (result) => {
+      if (settled) return
+      settled = true
+      cleanup()
+      resolve(result)
+    }
+
+    const timer = setTimeout(() => {
+      finish(data)
+    }, timeoutMs)
+    timer.unref()
+
+    const onData = (chunk) => {
+      data += chunk
+      timer.refresh()
+    }
+
+    const onEnd = () => {
+      finish(data)
+    }
+
+    const onError = () => {
+      finish(data)
+    }
+
+    process.stdin.setEncoding("utf8")
+    process.stdin.on("data", onData)
+    process.stdin.on("end", onEnd)
+    process.stdin.on("error", onError)
+    process.stdin.resume()
+  })
+}
+
 let shouldValidate = true
 try {
-  // Direct interactive invocation also falls back to the full gate.
-  if (!process.stdin.isTTY)
-    shouldValidate = needsValidation(readFileSync(0, "utf8"))
+  const input = await readStdin()
+  if (input) shouldValidate = needsValidation(input)
 } catch {
   console.log("Push range unavailable; running full validation.")
 }

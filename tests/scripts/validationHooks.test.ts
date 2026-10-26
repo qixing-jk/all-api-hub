@@ -133,9 +133,30 @@ function createRepository() {
   git("config", "user.email", "validation@example.invalid")
   git("config", "core.autocrlf", "false")
   git("config", "core.hooksPath", path.join(root, "disabled-hooks"))
+  const runWithOpenPipe = (script: string, args: string[] = []) => {
+    const result = spawnSync(
+      process.execPath,
+      [path.join(scriptsRoot, script), ...args],
+      {
+        cwd,
+        env,
+        encoding: "utf8",
+        timeout: 2000,
+        stdio: ["pipe", "pipe", "pipe"],
+      },
+    )
+    const calls = existsSync(callsPath)
+      ? readFileSync(callsPath, "utf8")
+          .trim()
+          .split("\n")
+          .map((line) => JSON.parse(line))
+      : []
+    return { ...result, calls }
+  }
+
   write("README.md")
   const base = commit()
-  return { git, write, commit, run, base }
+  return { git, write, commit, run, runWithOpenPipe, base }
 }
 
 afterEach(() => {
@@ -388,6 +409,14 @@ describe("push validation", () => {
     const repo = createRepository()
     const result = repo.run("run-push-check-if-needed.mjs", "", 1)
     expect(result.status).not.toBe(0)
+    expect(result.calls).toEqual([["run", "validate:push"]])
+  })
+
+  it("runs the full gate without hanging when stdin is an open pipe with no input", () => {
+    const repo = createRepository()
+    const result = repo.runWithOpenPipe("run-push-check-if-needed.mjs")
+    expect(result.error).toBeUndefined()
+    expect(result.status).toBe(0)
     expect(result.calls).toEqual([["run", "validate:push"]])
   })
 })
