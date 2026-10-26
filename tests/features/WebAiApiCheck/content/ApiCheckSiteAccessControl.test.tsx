@@ -151,4 +151,49 @@ describe("website participation control", () => {
       screen.getByText("webAiApiCheck:siteControl.globalDisabled"),
     ).toBeInTheDocument()
   })
+
+  it("hides the control when initial loading returns an unsuccessful response", async () => {
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({ success: false })
+    render(<ApiCheckSiteAccessControl pageUrl={pageUrl} />)
+    await waitFor(() => expect(sendWebAiApiCheckMessage).toHaveBeenCalledOnce())
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument()
+  })
+
+  it("omits the site host when pageUrl is an opaque or non-hierarchical URL", async () => {
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
+      success: true,
+      siteAllowed: true,
+    })
+    render(<ApiCheckSiteAccessControl pageUrl="about:blank" />)
+    expect(
+      await screen.findByRole("heading", { name: "common:labels.settings" }),
+    ).toBeVisible()
+    expect(screen.queryByTitle("example.com")).not.toBeInTheDocument()
+  })
+
+  it("ignores background response after unmount", async () => {
+    let resolveMessage!: (val: any) => void
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveMessage = resolve
+        }),
+    )
+    const { unmount } = render(<ApiCheckSiteAccessControl pageUrl={pageUrl} />)
+    unmount()
+    resolveMessage({ success: true, siteAllowed: true })
+  })
+
+  it("ignores background error after unmount", async () => {
+    let rejectMessage!: (err: any) => void
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      () =>
+        new Promise((_resolve, reject) => {
+          rejectMessage = reject
+        }),
+    )
+    const { unmount } = render(<ApiCheckSiteAccessControl pageUrl={pageUrl} />)
+    unmount()
+    rejectMessage(new Error("aborted"))
+  })
 })

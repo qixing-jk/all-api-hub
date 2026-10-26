@@ -296,7 +296,6 @@ export const SearchableSelect = React.forwardRef<
                     data-testid={getOptionTestId?.(option)}
                     disabled={option.disabled}
                     onSelect={() => {
-                      if (option.disabled) return
                       onChange(option.value)
                       setResolvedOpen(false)
                     }}

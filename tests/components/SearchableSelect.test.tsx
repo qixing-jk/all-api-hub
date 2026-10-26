@@ -279,4 +279,29 @@ describe("SearchableSelect", () => {
       "flex-1",
     )
   })
+
+  it("does not select a disabled option when clicked", async () => {
+    const onChange = vi.fn()
+    render(
+      <SearchableSelect
+        options={[
+          {
+            value: "disabled-option",
+            label: "Disabled Option",
+            disabled: true,
+          },
+        ]}
+        value=""
+        onChange={onChange}
+        open={true}
+        onOpenChange={() => {}}
+      />,
+    )
+
+    const option = await screen.findByRole("option", {
+      name: "Disabled Option",
+    })
+    fireEvent.click(option)
+    expect(onChange).not.toHaveBeenCalled()
+  })
 })
