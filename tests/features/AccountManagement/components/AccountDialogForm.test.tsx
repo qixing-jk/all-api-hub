@@ -82,6 +82,7 @@ vi.mock("~/utils/navigation", async (importOriginal) => ({
 const { openSettingsTabInNewTab } = await import("~/utils/navigation")
 
 describe("AccountDialog AccountForm", () => {
+  afterEach(() => server.resetHandlers())
   it("binds the Vercel team selector to the draft's account identity", async () => {
     server.use(
       http.get("https://api.vercel.com/v2/teams", () =>
@@ -99,7 +100,6 @@ describe("AccountDialog AccountForm", () => {
     await vi.waitFor(() =>
       expect(props.onUserIdChange).toHaveBeenCalledWith("team_a"),
     )
-    server.resetHandlers()
   })
   it("uses the shared site-type glyph for the platform selector", async () => {
     render(<AccountForm {...createProps()} continuous />)

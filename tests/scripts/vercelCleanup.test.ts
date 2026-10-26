@@ -60,6 +60,14 @@ it("finds the run's disposable key after creation succeeds but its first read fa
     "/v1/api-keys/existing",
     "DELETE",
   )
+  expect(context.api).toHaveBeenNthCalledWith(
+    3,
+    "/v1/api-keys?purpose=ai-gateway",
+  )
+  expect(context.api).toHaveBeenCalledTimes(3)
+  expect(context.result.checks).toContain(
+    "disposable key deleted and absence confirmed",
+  )
   expect(context.fs.writeFile).toHaveBeenCalled()
   expect(context.browser.close).toHaveBeenCalled()
 })

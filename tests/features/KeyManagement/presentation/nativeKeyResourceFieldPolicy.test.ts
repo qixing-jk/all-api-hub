@@ -954,6 +954,7 @@ it("resolves translated Vercel field labels and native options", async () => {
   await i18n.init({
     lng: "zh-CN",
     resources: { "zh-CN": { keyManagement: zhKeyManagement } },
+    parseMissingKeyHandler: (key) => `__MISSING__${key}`,
   })
   const editor = createVercelKeyEditor()
   const presentation = getNativeKeyResourceEditorPresentation(
@@ -965,11 +966,11 @@ it("resolves translated Vercel field labels and native options", async () => {
   const translated = fields.map((field) => field.resolveLabel(i18n.t))
   expect(translated).toContain("消费归属")
   for (const field of fields) {
-    expect(field.resolveLabel(i18n.t)).not.toContain("keyManagement:")
+    expect(field.resolveLabel(i18n.t)).not.toContain("__MISSING__")
     if (field.resolveHelp)
-      expect(field.resolveHelp(i18n.t)).not.toContain("keyManagement:")
+      expect(field.resolveHelp(i18n.t)).not.toContain("__MISSING__")
     for (const resolve of Object.values(field.optionLabelResolvers ?? {}))
-      expect(resolve(i18n.t)).not.toContain("keyManagement:")
+      expect(resolve(i18n.t)).not.toContain("__MISSING__")
     if (field.visibleWhen)
       expect(field.visibleWhen({ budget_enabled: true })).toBe(true)
   }

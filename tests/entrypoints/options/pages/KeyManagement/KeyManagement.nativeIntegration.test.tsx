@@ -915,6 +915,7 @@ describe("KeyManagement native page integration", () => {
   it.each(["success", "missing", "failed"])(
     "opens the selected Vercel console or reports recovery failure (%s)",
     async (outcome) => {
+      vi.mocked(notify.error).mockClear()
       const route = vi.spyOn(siteRouteResolver, "resolveAccountSiteRouteUrl")
       const createTab = vi
         .spyOn(browserTabs, "createTab")
@@ -949,14 +950,22 @@ describe("KeyManagement native page integration", () => {
           name: /openConsole|Open Vercel console/i,
         }),
       )
-      if (outcome === "success")
+      if (outcome === "success") {
         await waitFor(() =>
           expect(createTab).toHaveBeenCalledWith(
             "https://vercel.com/team/~/ai-gateway/api-keys",
             true,
           ),
         )
-      else await waitFor(() => expect(notify.error).toHaveBeenCalled())
+        expect(notify.error).not.toHaveBeenCalled()
+      } else {
+        await waitFor(() =>
+          expect(notify.error).toHaveBeenCalledExactlyOnceWith(
+            "keyManagement:native.editor.vercelAiGateway.consoleFailed",
+          ),
+        )
+        expect(createTab).not.toHaveBeenCalled()
+      }
       route.mockRestore()
       createTab.mockRestore()
     },
