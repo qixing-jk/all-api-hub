@@ -558,9 +558,8 @@ describe("ApiCheckModalHost", () => {
       "webAiApiCheck:modal.fields.apiKey",
     )
 
-    await user.type(baseUrlInput, "https://new.example.com/api")
-    await user.click(apiKeyInput)
-    await user.paste("sk-test-history-record-fixture")
+    await pasteIntoField(user, baseUrlInput, "https://new.example.com/api")
+    await pasteIntoField(user, apiKeyInput, "sk-test-history-record-fixture")
     await user.click(
       screen.getByRole("button", {
         name: "webAiApiCheck:modal.actions.saveToProfiles",

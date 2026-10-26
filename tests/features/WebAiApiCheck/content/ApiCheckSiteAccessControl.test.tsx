@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { act, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -155,7 +155,7 @@ describe("website participation control", () => {
   it("hides the control when initial loading returns an unsuccessful response", async () => {
     vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({ success: false })
     render(<ApiCheckSiteAccessControl pageUrl={pageUrl} />)
-    await waitFor(() => expect(sendWebAiApiCheckMessage).toHaveBeenCalledOnce())
+    await screen.findByRole("alert")
     expect(screen.queryByRole("switch")).not.toBeInTheDocument()
   })
 
@@ -171,29 +171,43 @@ describe("website participation control", () => {
     expect(screen.queryByTitle("example.com")).not.toBeInTheDocument()
   })
 
-  it("ignores background response after unmount", async () => {
-    let resolveMessage!: (val: any) => void
+  it("ignores a response for the previous page after pageUrl changes", async () => {
+    const resolveMessages: Array<(val: any) => void> = []
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       () =>
         new Promise((resolve) => {
-          resolveMessage = resolve
+          resolveMessages.push(resolve)
         }),
     )
-    const { unmount } = render(<ApiCheckSiteAccessControl pageUrl={pageUrl} />)
-    unmount()
-    resolveMessage({ success: true, siteAllowed: true })
+    const { rerender } = render(<ApiCheckSiteAccessControl pageUrl={pageUrl} />)
+    await waitFor(() => expect(sendWebAiApiCheckMessage).toHaveBeenCalledOnce())
+    rerender(<ApiCheckSiteAccessControl pageUrl="https://other.example/post" />)
+    await waitFor(() =>
+      expect(sendWebAiApiCheckMessage).toHaveBeenCalledTimes(2),
+    )
+    await act(async () => {
+      resolveMessages[0]!({ success: true, siteAllowed: true })
+    })
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument()
   })
 
-  it("ignores background error after unmount", async () => {
-    let rejectMessage!: (err: any) => void
+  it("ignores an error for the previous page after pageUrl changes", async () => {
+    const rejectMessages: Array<(err: any) => void> = []
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
       () =>
         new Promise((_resolve, reject) => {
-          rejectMessage = reject
+          rejectMessages.push(reject)
         }),
     )
-    const { unmount } = render(<ApiCheckSiteAccessControl pageUrl={pageUrl} />)
-    unmount()
-    rejectMessage(new Error("aborted"))
+    const { rerender } = render(<ApiCheckSiteAccessControl pageUrl={pageUrl} />)
+    await waitFor(() => expect(sendWebAiApiCheckMessage).toHaveBeenCalledOnce())
+    rerender(<ApiCheckSiteAccessControl pageUrl="https://other.example/post" />)
+    await waitFor(() =>
+      expect(sendWebAiApiCheckMessage).toHaveBeenCalledTimes(2),
+    )
+    await act(async () => {
+      rejectMessages[0]!(new Error("offline"))
+    })
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
 })
