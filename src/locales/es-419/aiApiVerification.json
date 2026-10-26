@@ -18,7 +18,8 @@
     },
     "details": {
       "input": "Entrada",
-      "output": "Salida"
+      "output": "Salida",
+      "result": "Resultado de ejecución"
     },
     "errors": {
       "unexpected": "Error inesperado"
@@ -35,6 +36,7 @@
     "meta": {
       "apiType": "Tipo de API",
       "apiTypePlaceholder": "Seleccionar tipo de API",
+      "configuration": "Configuración de la solicitud",
       "mode": "Modo de prueba",
       "model": "Modelo",
       "modelPlaceholder": "Ingresa id de modelo",
@@ -61,11 +63,11 @@
       "image-generation": "Generación de imágenes",
       "models": "Lista de modelos",
       "rerank": "Reclasificador",
-      "structured-output": "Salida estructurada (schema JSON)",
+      "structured-output": "Salida estructurada",
       "text-generation": "Generación de texto",
       "tool-calling": "Llamadas a herramientas/funciones",
       "video-generation": "Tarea de video",
-      "web-search": "Búsqueda web / grounding"
+      "web-search": "Búsqueda web"
     },
     "requestProfiles": {
       "claude": "Claude Code",
@@ -134,7 +136,47 @@
       "webSearchUnsupportedForApiType": "La prueba de búsqueda web no es compatible con este tipo de API."
     },
     "title": "Verificación de API",
+    "tools": {
+      "agent": {
+        "calls": "Actividad de herramientas",
+        "completed": "Se generó un archivo SVG. Evalúa el dibujo por tu cuenta.",
+        "files": "Archivos del espacio de trabajo",
+        "hint": "El modelo revisa y mejora el dibujo. Esto puede aumentar el consumo.",
+        "label": "Modo de prueba de agente",
+        "noArtifact": "El modelo no escribió un SVG completo en pelican.svg. La respuesta final no se usa como archivo resultante.",
+        "summary": "Turnos: {{steps}} · Llamadas a herramientas: {{calls}} · {{seconds}} s"
+      },
+      "errors": {
+        "unexpected": "La solicitud falló: {{message}}"
+      },
+      "manualBadge": "Bajo demanda",
+      "pelican": {
+        "analysis": "{{shapes}} formas · {{wheels}} círculos/elipses · viewBox {{viewBox}}",
+        "description": "Pide al modelo un SVG de un pelícano en bicicleta para compararlo a simple vista. La valoración sigue siendo manual.",
+        "historyOnly": "Solo se guardó el resumen. Ejecuta de nuevo para ver el dibujo y los detalles.",
+        "noSvg": "El modelo no devolvió ningún SVG.",
+        "outcomes": {
+          "error": "Error de ejecución",
+          "generated": "Dibujo generado",
+          "no-artifact": "Sin dibujo generado"
+        },
+        "previewAlt": "Dibujo generado",
+        "previewFailed": "No se pudo mostrar el SVG. Puede contener XML no válido, como atributos duplicados. Expande la respuesta original o los archivos del espacio de trabajo para revisarlo.",
+        "raw": "Respuesta sin procesar",
+        "run": "Ejecutar prueba de dibujo",
+        "title": "Prueba de dibujo",
+        "unsafe": "La respuesta contenía scripts o referencias externas, por lo que no se mostró."
+      },
+      "prompts": {
+        "editorLabel": "Prompt de {{probe}}",
+        "resetOne": "Restablecer este prompt",
+        "saveFailed": "No se pudieron guardar los prompts: {{message}}",
+        "sharedHint": "Los prompts guardados se comparten entre todos los accesos de verificación."
+      },
+      "stop": "Detener",
+      "stopped": "Detenido antes de terminar; no se guardó nada."
+    },
     "unsupportedProbeForApiType": "La prueba {{probe}} no es compatible con este tipo de API.",
-    "warning": "Cuando se detecta soporte, es muy probable que sea real. Cuando no se detecta soporte, aun así puede estar disponible. Los resultados son solo de referencia; confía en el uso real de la herramienta."
+    "warning": "Las pruebas corresponden a la API, el modelo y la configuración actuales. Aprobar no garantiza compatibilidad total; revisa los resultados de ejecución si una prueba falla."
   }
 }

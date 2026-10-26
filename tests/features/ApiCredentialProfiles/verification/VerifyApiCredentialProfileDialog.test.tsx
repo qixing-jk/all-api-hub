@@ -146,6 +146,15 @@ vi.mock("~/services/aiApi/google", () => ({
   fetchGoogleModelIds: (...args: unknown[]) => mockFetchGoogleModelIds(...args),
 }))
 
+const { mockRunPelicanTest } = vi.hoisted(() => ({
+  mockRunPelicanTest: vi.fn(),
+}))
+
+vi.mock("~/services/verification/modelQuality/pelican", () => ({
+  PELICAN_TEST_PROMPT: "pelican",
+  runPelicanTest: (...args: unknown[]) => mockRunPelicanTest(...args),
+}))
+
 vi.mock("~/utils/core/logger", async (importOriginal) => {
   const original = await importOriginal<typeof import("~/utils/core/logger")>()
 
@@ -259,6 +268,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
     mockFetchOpenAICompatibleModelIds.mockReset()
     mockFetchAnthropicModelIds.mockReset()
     mockFetchGoogleModelIds.mockReset()
+    mockRunPelicanTest.mockReset()
     mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
     mockFetchAnthropicModelIds.mockResolvedValue([])
     mockFetchGoogleModelIds.mockResolvedValue([])
@@ -828,6 +838,11 @@ describe("VerifyApiCredentialProfileDialog", () => {
       />,
     )
 
+    const sourceLink = await screen.findByRole("link", {
+      name: "https://example.com",
+    })
+    expect(sourceLink).toHaveAttribute("href", "https://example.com")
+    expect(sourceLink).toHaveAttribute("target", "_blank")
     expect(
       await screen.findByText("aiApiVerification:verifyDialog.probes.models"),
     ).toBeInTheDocument()
@@ -1511,11 +1526,6 @@ describe("VerifyApiCredentialProfileDialog", () => {
       await within(probeCard).findByText(/"endpoint":/),
     ).toBeInTheDocument()
 
-    await user.click(
-      within(probeCard).getByRole("button", {
-        name: "aiApiVerification:verifyDialog.details.output",
-      }),
-    )
     expect(
       await within(probeCard).findByText(/"modelCount": 1/),
     ).toBeInTheDocument()
@@ -2719,6 +2729,67 @@ describe("VerifyApiCredentialProfileDialog", () => {
     ).toBeInTheDocument()
     expect(
       screen.getByText("aiApiVerification:verifyDialog.modalityNotice.video"),
+    ).toBeInTheDocument()
+  })
+
+  it("offers the drawing test for a text profile and hides it for embedding models", async () => {
+    const { result } = renderHook(useProfileVerification, {
+      initialProps: sessionProps,
+    })
+    await waitFor(() => expect(result.current.isFetchingModels).toBe(false))
+
+    expect(result.current.modelModality).toBe("text")
+    expect(result.current.tools.canRunPelican).toBe(true)
+
+    act(() => result.current.setModelId("text-embedding-3-small"))
+
+    await waitFor(() => expect(result.current.modelModality).toBe("embedding"))
+    expect(result.current.tools.canRunPelican).toBe(false)
+  })
+
+  it("blocks closing the profile dialog while a drawing test runs", async () => {
+    mockRunPelicanTest.mockReturnValue(new Promise(() => {}))
+    const { result } = renderHook(useProfileVerification, {
+      initialProps: sessionProps,
+    })
+    await waitFor(() => expect(result.current.isFetchingModels).toBe(false))
+    expect(result.current.canClose).toBe(true)
+
+    act(() => result.current.tools.runPelican())
+
+    await waitFor(() => expect(result.current.tools.isRunning).toBe(true))
+    expect(result.current.canClose).toBe(false)
+  })
+
+  it("sends the profile's custom request headers to the drawing test", async () => {
+    mockRunPelicanTest.mockReturnValue(new Promise(() => {}))
+    const { result } = renderHook(useProfileVerification, {
+      initialProps: {
+        ...sessionProps,
+        profile: {
+          ...sessionProfile,
+          requestHeaders: { "X-Tenant": "acme" },
+        },
+      },
+    })
+    await waitFor(() => expect(result.current.isFetchingModels).toBe(false))
+
+    act(() => result.current.tools.runPelican())
+
+    await waitFor(() =>
+      expect(mockRunPelicanTest).toHaveBeenCalledWith(
+        expect.objectContaining({ requestHeaders: { "X-Tenant": "acme" } }),
+      ),
+    )
+  })
+
+  it("renders the shared verification tools in the profile dialog", async () => {
+    render(<VerifyApiCredentialProfileDialog {...sessionProps} />)
+
+    expect(
+      await screen.findByRole("region", {
+        name: "aiApiVerification:verifyDialog.tools.pelican.title",
+      }),
     ).toBeInTheDocument()
   })
 })

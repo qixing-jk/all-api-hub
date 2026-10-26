@@ -8,12 +8,17 @@ import {
   API_VERIFICATION_PROBE_STATUSES,
 } from "~/services/verification/aiApiVerification"
 import {
+  DRAWING_VERIFICATION_OUTCOMES,
+  PELICAN_EXECUTION_MODES,
+} from "~/services/verification/modelQuality/constants"
+import {
   API_VERIFICATION_HISTORY_STATUSES,
   API_VERIFICATION_HISTORY_TARGET_KINDS,
   API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION,
   type ApiVerificationHistoryConfig,
   type ApiVerificationHistorySummary,
   type ApiVerificationHistoryTarget,
+  type DrawingVerificationSummary,
   type PersistedApiVerificationProbeSummary,
 } from "~/services/verification/verificationResultHistory/types"
 import {
@@ -248,6 +253,52 @@ export function coerceHistorySummary(
   }
 }
 
+/** Drops raw model content and secrets; only compact drawing metadata survives. */
+export function coerceDrawingSummary(
+  raw: unknown,
+): DrawingVerificationSummary | null {
+  if (!raw || typeof raw !== "object") return null
+  const value = raw as Record<string, unknown>
+  const target = coerceTarget(value.target)
+  if (
+    !target ||
+    !isApiVerificationApiType(value.apiType) ||
+    !(
+      Object.values(DRAWING_VERIFICATION_OUTCOMES) as readonly unknown[]
+    ).includes(String(value.outcome))
+  )
+    return null
+  const count = (input: unknown) =>
+    typeof input === "number" && Number.isFinite(input) && input >= 0
+      ? Math.round(input)
+      : 0
+  return {
+    target,
+    targetKey: serializeVerificationHistoryTarget(target),
+    verifiedAt: normalizeTimestamp(value.verifiedAt),
+    apiType: value.apiType,
+    modelId: sanitizeText(value.modelId),
+    latencyMs: count(value.latencyMs),
+    executionMode:
+      value.executionMode === PELICAN_EXECUTION_MODES.Agent
+        ? PELICAN_EXECUTION_MODES.Agent
+        : PELICAN_EXECUTION_MODES.Reply,
+    outcome: value.outcome as DrawingVerificationSummary["outcome"],
+    steps: count(value.steps),
+    calls: count(value.calls),
+    files: count(value.files),
+  }
+}
+
+/** Normalize drawing metadata when migrating an older history payload. */
+function coerceDrawings(raw: unknown) {
+  return Array.isArray(raw)
+    ? raw
+        .map(coerceDrawingSummary)
+        .filter((item): item is DrawingVerificationSummary => item !== null)
+    : undefined
+}
+
 /**
  * Sanitize an unrecognized payload into the current config shape.
  *
@@ -272,6 +323,9 @@ export function sanitizeConfig(
   return {
     version: API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION,
     summaries,
+    ...(value.drawingSummaries
+      ? { drawingSummaries: coerceDrawings(value.drawingSummaries) }
+      : {}),
     lastUpdated: normalizeTimestamp(value.lastUpdated),
     lastOrphanSweepAt: coercePositiveTimestamp(value.lastOrphanSweepAt),
   }
@@ -307,6 +361,12 @@ export function coerceTrustedConfig(
   return {
     version: API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION,
     summaries: value.summaries as ApiVerificationHistorySummary[],
+    ...(value.drawingSummaries
+      ? {
+          drawingSummaries:
+            value.drawingSummaries as DrawingVerificationSummary[],
+        }
+      : {}),
     lastUpdated: value.lastUpdated,
     lastOrphanSweepAt: coercePositiveTimestamp(value.lastOrphanSweepAt),
   }

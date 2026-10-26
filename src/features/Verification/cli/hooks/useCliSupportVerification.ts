@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  useVerificationTools,
+  type VerificationToolRequestParams,
+} from "~/features/Verification/api/useVerificationTools"
+import {
   createCliVerificationSession,
   type CliVerificationBatch,
 } from "~/features/Verification/cli/hooks/cliVerificationSession"
@@ -44,8 +48,10 @@ import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/
 import {
   API_VERIFICATION_MODES,
   API_VERIFICATION_PROBE_STATUSES,
+  resolveVerificationApiType,
   type ApiVerificationMode,
 } from "~/services/verification/aiApiVerification"
+import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
 import {
   inferHttpStatus,
   inferStructuredHttpStatus,
@@ -57,6 +63,10 @@ import {
   CLI_TOOL_IDS,
   runCliSupportTool,
 } from "~/services/verification/cliSupportVerification"
+import {
+  createAccountModelVerificationHistoryTarget,
+  createProfileModelVerificationHistoryTarget,
+} from "~/services/verification/verificationResultHistory"
 import { createLogger } from "~/utils/core/logger"
 
 /**
@@ -154,7 +164,89 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
   const resolvedModelId = (modelId.trim() || tokenModelHint.trim() || "").trim()
 
   const isAnyToolRunning = tools.some((t) => t.isRunning)
-  const canClose = !isRunning && !isAnyToolRunning
+
+  /** Resolves the same credentials a tool check would use, for the shared tools. */
+  const resolveToolRequest = useCallback(
+    async (
+      signal: AbortSignal,
+    ): Promise<VerificationToolRequestParams | null> => {
+      if (!resolvedModelId.trim()) return null
+
+      if (isProfileSource) {
+        if (!profile?.apiKey) return null
+        return {
+          baseUrl: profile.baseUrl,
+          apiKey: profile.apiKey,
+          apiType: profile.apiType,
+          modelId: resolvedModelId,
+          mode: verificationMode,
+          requestProfile: API_VERIFICATION_REQUEST_PROFILES.Default,
+          requestProfileEnhanced,
+          requestHeaders: profile.requestHeaders,
+          secrets: [
+            profile.apiKey,
+            ...Object.values(profile.requestHeaders ?? {}),
+            profile.baseUrl,
+          ],
+        }
+      }
+
+      if (!account || !selectedRuntimeKeyIsRunnable) return null
+      const resolvedRuntimeKey = await resolveDisplayAccountRuntimeKeySecret(
+        account,
+        selectedRuntimeKey!,
+        { abortSignal: signal },
+      )
+      if (!resolvedRuntimeKey.secret) return null
+
+      return {
+        baseUrl: resolvedRuntimeKey.baseUrl,
+        apiKey: resolvedRuntimeKey.secret,
+        apiType: resolveVerificationApiType({ modelId: resolvedModelId }),
+        modelId: resolvedModelId,
+        mode: verificationMode,
+        requestProfile: API_VERIFICATION_REQUEST_PROFILES.Default,
+        requestProfileEnhanced,
+        secrets: filterRedactions([
+          account.token,
+          account.cookieAuthSessionCookie,
+          ...collectAccountRuntimeKeySecrets([
+            selectedRuntimeKey!,
+            resolvedRuntimeKey,
+          ]),
+        ]),
+      }
+    },
+    [
+      account,
+      isProfileSource,
+      profile,
+      requestProfileEnhanced,
+      resolvedModelId,
+      selectedRuntimeKey,
+      selectedRuntimeKeyIsRunnable,
+      verificationMode,
+    ],
+  )
+
+  const sharedTools = useVerificationTools({
+    historyTarget: profile
+      ? createProfileModelVerificationHistoryTarget(profile.id, resolvedModelId)
+      : account
+        ? createAccountModelVerificationHistoryTarget(
+            account.id,
+            resolvedModelId,
+          )
+        : null,
+    historyApiType:
+      profile?.apiType ??
+      resolveVerificationApiType({ modelId: resolvedModelId }),
+    resolveRequest: resolveToolRequest,
+    isSupported: true,
+    isBlocked: isRunning || isAnyToolRunning,
+  })
+
+  const canClose = !isRunning && !isAnyToolRunning && !sharedTools.isRunning
 
   const hasAnyResult = tools.some((t) => t.result !== null)
   const analyticsContext = {
@@ -662,6 +754,7 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
     runSingleToolCheck,
     runAll,
     stopRun,
+    sharedTools,
     canRunAll,
   }
 }

@@ -18,7 +18,8 @@
     },
     "details": {
       "input": "输入",
-      "output": "输出"
+      "output": "输出",
+      "result": "执行结果"
     },
     "errors": {
       "unexpected": "发生未知错误"
@@ -35,6 +36,7 @@
     "meta": {
       "apiType": "接口类型",
       "apiTypePlaceholder": "选择接口类型",
+      "configuration": "请求配置",
       "mode": "测试方式",
       "model": "模型",
       "modelPlaceholder": "输入模型 ID",
@@ -61,11 +63,11 @@
       "image-generation": "图像生成",
       "models": "模型列表",
       "rerank": "文档重排",
-      "structured-output": "结构化输出（JSON Schema）",
+      "structured-output": "结构化输出",
       "text-generation": "文本生成",
       "tool-calling": "工具/函数调用",
       "video-generation": "视频生成任务",
-      "web-search": "联网搜索 / Grounding"
+      "web-search": "联网搜索"
     },
     "requestProfiles": {
       "claude": "Claude Code",
@@ -131,7 +133,47 @@
       "webSearchUnsupportedForApiType": "当前接口类型不支持联网搜索探测。"
     },
     "title": "接口验证",
+    "tools": {
+      "agent": {
+        "calls": "工具调用记录",
+        "completed": "已生成 SVG 文件，绘图质量由你判断。",
+        "files": "工作区文件",
+        "hint": "让模型自行检查并改进绘图，可能增加额度消耗。",
+        "label": "Agent 测试模式",
+        "noArtifact": "模型未在 pelican.svg 中写入完整 SVG，不会将最终回复当作产物。",
+        "summary": "轮次：{{steps}} · 工具调用：{{calls}} 次 · {{seconds}} 秒"
+      },
+      "errors": {
+        "unexpected": "请求失败：{{message}}"
+      },
+      "manualBadge": "按需运行",
+      "pelican": {
+        "analysis": "{{shapes}} 个形状 · {{wheels}} 个圆形/椭圆 · viewBox {{viewBox}}",
+        "description": "让模型画一只骑自行车的鹈鹕 SVG，方便你直接比对画风与结构；结论由人工判断。",
+        "historyOnly": "仅保存了本次运行摘要。重新运行可查看作品和执行明细。",
+        "noSvg": "模型没有返回 SVG。",
+        "outcomes": {
+          "error": "执行失败",
+          "generated": "已生成绘图",
+          "no-artifact": "未生成绘图产物"
+        },
+        "previewAlt": "模型生成的绘图",
+        "previewFailed": "SVG 无法显示，可能包含重复属性等 XML 格式错误。可展开原始回复或工作区文件查看内容。",
+        "raw": "原始回答",
+        "run": "生成绘图",
+        "title": "绘图测试",
+        "unsafe": "回答包含脚本或外部引用，已阻止渲染。"
+      },
+      "prompts": {
+        "editorLabel": "{{probe}} 提示词",
+        "resetOne": "恢复此项默认",
+        "saveFailed": "保存提示词失败：{{message}}",
+        "sharedHint": "已保存的提示词对所有验证入口生效。"
+      },
+      "stop": "停止",
+      "stopped": "已停止，本次结果未记录。"
+    },
     "unsupportedProbeForApiType": "当前接口类型不支持 {{probe}} 探测。",
-    "warning": "检测到支持时，高概率为真实支持；未检测到支持时，也可能实际支持。结果仅供参考，请以工具的实际使用情况为准。"
+    "warning": "测试仅反映当前接口、模型和请求配置；通过不代表完整兼容，失败请查看执行结果。"
   }
 }

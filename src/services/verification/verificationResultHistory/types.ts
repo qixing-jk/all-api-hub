@@ -6,6 +6,10 @@ import type {
   ApiVerificationRequestProfile,
 } from "~/services/verification/aiApiVerification/types"
 import { API_VERIFICATION_PROBE_STATUSES } from "~/services/verification/aiApiVerification/types"
+import {
+  type DrawingVerificationOutcome,
+  type PelicanExecutionMode,
+} from "~/services/verification/modelQuality/constants"
 
 /**
  * Stored schema version.
@@ -17,7 +21,7 @@ import { API_VERIFICATION_PROBE_STATUSES } from "~/services/verification/aiApiVe
  * existing payload is then re-sanitized once on read and rewritten under the new
  * version before it is trusted.
  */
-export const API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION = 2
+export const API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION = 3
 
 export const API_VERIFICATION_HISTORY_STATUSES = {
   Pass: API_VERIFICATION_PROBE_STATUSES.Pass,
@@ -82,9 +86,25 @@ export type ApiVerificationHistorySummary = {
   probes: PersistedApiVerificationProbeSummary[]
 }
 
+/** Drawing completion is an artifact outcome, never a compatibility pass/fail. */
+export type DrawingVerificationSummary = {
+  target: ApiVerificationHistoryTarget
+  targetKey: string
+  verifiedAt: number
+  apiType: ApiVerificationApiType
+  modelId: string
+  latencyMs: number
+  executionMode: PelicanExecutionMode
+  outcome: DrawingVerificationOutcome
+  steps: number
+  calls: number
+  files: number
+}
+
 export type ApiVerificationHistoryConfig = {
   version: number
   summaries: ApiVerificationHistorySummary[]
+  drawingSummaries?: DrawingVerificationSummary[]
   lastUpdated: number
   /**
    * When the last complete orphan sweep finished. `0` means "never swept", which

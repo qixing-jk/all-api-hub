@@ -4,6 +4,7 @@ import { DEFAULT_PREFERENCES } from "~/services/preferences/preferencesDefaults"
 import { PRODUCT_ANALYTICS_ERROR_CATEGORIES } from "~/services/productAnalytics/contracts"
 import type { ApiVerificationProbeResult } from "~/services/verification/aiApiVerification"
 import { API_VERIFICATION_REQUEST_PROFILES } from "~/services/verification/aiApiVerification/types"
+import { PELICAN_EXECUTION_MODES } from "~/services/verification/modelQuality/constants"
 import { WEB_AI_API_CHECK_BASE_URL_HISTORY_SUGGESTION_LIMIT } from "~/services/verification/webAiApiCheck/constants"
 
 it.each(Object.values(API_VERIFICATION_REQUEST_PROFILES))(
@@ -41,20 +42,50 @@ it.each(Object.values(API_VERIFICATION_REQUEST_PROFILES))(
   },
 )
 
-const { onWebAiApiCheckMessageMock, webAiApiCheckMessageHandlers } = vi.hoisted(
-  () => ({
-    webAiApiCheckMessageHandlers: new Map<
-      string,
-      (payload: { data: any }) => unknown
-    >(),
-    onWebAiApiCheckMessageMock: vi.fn(
-      (type: string, handler: (payload: { data: any }) => unknown) => {
-        webAiApiCheckMessageHandlers.set(type, handler)
-        return vi.fn()
-      },
-    ),
-  }),
-)
+const {
+  onWebAiApiCheckMessageMock,
+  webAiApiCheckMessageHandlers,
+  tabRemovedListeners,
+  tabUpdatedListeners,
+} = vi.hoisted(() => ({
+  webAiApiCheckMessageHandlers: new Map<
+    string,
+    (payload: { data: any; sender?: { tab?: { id?: number } } }) => unknown
+  >(),
+  onWebAiApiCheckMessageMock: vi.fn(
+    (type: string, handler: (payload: { data: any }) => unknown) => {
+      webAiApiCheckMessageHandlers.set(type, handler)
+      return vi.fn()
+    },
+  ),
+  tabRemovedListeners: [] as Array<(tabId: number) => void>,
+  tabUpdatedListeners: [] as Array<
+    (tabId: number, changeInfo: { status?: string }) => void
+  >,
+}))
+
+vi.mock("~/utils/browser/tabs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/browser/tabs")>()
+  return {
+    ...actual,
+    onTabRemoved: (listener: (tabId: number) => void) => {
+      tabRemovedListeners.push(listener)
+      return () => {
+        const index = tabRemovedListeners.indexOf(listener)
+        if (index >= 0) tabRemovedListeners.splice(index, 1)
+      }
+    },
+    onTabUpdated: (
+      listener: (tabId: number, changeInfo: { status?: string }) => void,
+    ) => {
+      tabUpdatedListeners.push(listener)
+      return () => {
+        const index = tabUpdatedListeners.indexOf(listener)
+        if (index >= 0) tabUpdatedListeners.splice(index, 1)
+      }
+    },
+  }
+})
 
 function createDeferred<T>() {
   let resolve!: (value: T) => void
@@ -128,6 +159,207 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
 })
 
 describe("webAiApiCheck background handlers", () => {
+  it("returns a completed drawing result through the background message boundary", async () => {
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const pelican = await import("~/services/verification/modelQuality/pelican")
+    const drawing = {
+      runAt: 1,
+      latencyMs: 2,
+      text: "No SVG",
+      svg: null,
+      analysis: pelican.analyzePelicanSvg(null),
+    }
+    const spy = vi.spyOn(pelican, "runPelicanTest").mockResolvedValue(drawing)
+    try {
+      const { WebAiApiCheckMessageTypes } = await import(
+        "~/services/verification/webAiApiCheck/messaging"
+      )
+      background.setupWebAiApiCheckMessagingListeners()
+      const handler = webAiApiCheckMessageHandlers.get(
+        WebAiApiCheckMessageTypes.RunPelican,
+      )!
+      await expect(
+        handler({
+          data: {
+            runId: "completed-drawing",
+            apiType: "openai",
+            baseUrl: "https://example.invalid",
+            apiKey: "sk-test",
+            modelId: "test",
+          },
+        }),
+      ).resolves.toEqual({ success: true, result: drawing })
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it("forwards agent mode and client identity and cancels the actual background drawing run", async () => {
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const pelican = await import("~/services/verification/modelQuality/pelican")
+    const { WebAiApiCheckMessageTypes } = await import(
+      "~/services/verification/webAiApiCheck/messaging"
+    )
+    let runSignal: AbortSignal | undefined
+    const spy = vi
+      .spyOn(pelican, "runPelicanTest")
+      .mockImplementation(async (params) => {
+        runSignal = params.abortSignal
+        return new Promise((_, reject) =>
+          params.abortSignal?.addEventListener("abort", () =>
+            reject(new DOMException("Aborted", "AbortError")),
+          ),
+        )
+      })
+    try {
+      background.setupWebAiApiCheckMessagingListeners()
+      const pending = webAiApiCheckMessageHandlers.get(
+        WebAiApiCheckMessageTypes.RunPelican,
+      )!({
+        data: {
+          runId: "agent-run",
+          apiType: "openai",
+          baseUrl: "https://example.invalid",
+          apiKey: "sk-test",
+          modelId: "test",
+          executionMode: PELICAN_EXECUTION_MODES.Agent,
+          requestProfile: "codex",
+          requestProfileEnhanced: true,
+        },
+      })
+      expect(spy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          executionMode: PELICAN_EXECUTION_MODES.Agent,
+          requestProfile: "codex",
+          requestProfileEnhanced: true,
+          abortSignal: expect.any(AbortSignal),
+        }),
+      )
+      expect(
+        await background.resolveWebAiApiCheckCancelRunProbeMessage({
+          runId: "agent-run",
+        }),
+      ).toEqual({ success: true, cancelled: true })
+      expect(runSignal?.aborted).toBe(true)
+      await expect(pending).resolves.toMatchObject({ success: false })
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it("cancels a drawing run when its sender tab is torn down", async () => {
+    vi.resetModules()
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const pelican = await import("~/services/verification/modelQuality/pelican")
+    const { WebAiApiCheckMessageTypes } = await import(
+      "~/services/verification/webAiApiCheck/messaging"
+    )
+    const runSignals = new Map<string, AbortSignal | undefined>()
+    const spy = vi
+      .spyOn(pelican, "runPelicanTest")
+      .mockImplementation(async (params) => {
+        runSignals.set(params.modelId, params.abortSignal)
+        return new Promise((_, reject) =>
+          params.abortSignal?.addEventListener("abort", () =>
+            reject(new DOMException("Aborted", "AbortError")),
+          ),
+        )
+      })
+    try {
+      background.setupWebAiApiCheckMessagingListeners()
+      const handler = webAiApiCheckMessageHandlers.get(
+        WebAiApiCheckMessageTypes.RunPelican,
+      )!
+      const startRun = (runId: string, tabId: number, modelId: string) =>
+        handler({
+          data: {
+            runId,
+            apiType: "openai",
+            baseUrl: "https://example.invalid",
+            apiKey: "sk-test",
+            modelId,
+            executionMode: PELICAN_EXECUTION_MODES.Agent,
+          },
+          sender: { tab: { id: tabId } },
+        })
+
+      const closingTabRun = startRun("closing-tab-run", 42, "closing-model")
+      const otherTabRun = startRun("other-tab-run", 7, "other-model")
+
+      tabRemovedListeners.forEach((listener) => listener(42))
+      expect(runSignals.get("closing-model")?.aborted).toBe(true)
+      expect(runSignals.get("other-model")?.aborted).toBe(false)
+      await expect(closingTabRun).resolves.toMatchObject({ success: false })
+
+      tabUpdatedListeners.forEach((listener) =>
+        listener(7, { status: "loading" }),
+      )
+      expect(runSignals.get("other-model")?.aborted).toBe(true)
+      await expect(otherTabRun).resolves.toMatchObject({ success: false })
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
+  it("rejects a drawing run whose execution mode or client identity is invalid", async () => {
+    vi.resetModules()
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const { WebAiApiCheckMessageTypes } = await import(
+      "~/services/verification/webAiApiCheck/messaging"
+    )
+    background.setupWebAiApiCheckMessagingListeners()
+    const handler = webAiApiCheckMessageHandlers.get(
+      WebAiApiCheckMessageTypes.RunPelican,
+    )!
+    const validRun = {
+      runId: "invalid-mode-run",
+      apiType: "openai",
+      baseUrl: "https://example.invalid",
+      apiKey: "sk-test",
+      modelId: "test",
+    }
+
+    // The content script cannot be trusted to send a known execution mode, and a
+    // wrong value must not silently fall back to the reply-only path.
+    await expect(
+      handler({ data: { ...validRun, executionMode: "turbo" } }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Invalid drawing execution mode",
+    })
+    await expect(
+      handler({ data: { ...validRun, requestProfile: "not-a-profile" } }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Invalid request profile",
+    })
+    // Every mode but non-streaming takes the streaming branch downstream, so an
+    // unknown value would silently change how the request is sent.
+    await expect(
+      handler({ data: { ...validRun, mode: "not-a-mode" } }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Invalid verification mode",
+    })
+    await expect(
+      handler({ data: { ...validRun, baseUrl: "://" } }),
+    ).resolves.toEqual({ success: false, error: "Invalid baseUrl" })
+    await expect(
+      handler({ data: { ...validRun, modelId: "  " } }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Missing apiType, baseUrl, apiKey, or modelId",
+    })
+  })
+
   it("fails closed when reading the saved detection scope fails", async () => {
     vi.resetModules()
     const { userPreferences } = await import(
@@ -558,6 +790,91 @@ describe("webAiApiCheck background handlers", () => {
       error: "Missing apiType, baseUrl, apiKey, or probeId",
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
     })
+  })
+
+  it("attributes a probe run to its sender tab, and accepts a sender-less one", async () => {
+    vi.resetModules()
+    const { runApiVerificationProbe } = await import(
+      "~/services/verification/aiApiVerification"
+    )
+    let probeSignal: AbortSignal | undefined
+    const probeDeferred = createDeferred<ApiVerificationProbeResult>()
+    vi.mocked(runApiVerificationProbe).mockImplementation(
+      async ({ abortSignal }: { abortSignal?: AbortSignal }) => {
+        probeSignal = abortSignal
+        return await probeDeferred.promise
+      },
+    )
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const pelican = await import("~/services/verification/modelQuality/pelican")
+    const { WebAiApiCheckMessageTypes } = await import(
+      "~/services/verification/webAiApiCheck/messaging"
+    )
+    background.setupWebAiApiCheckMessagingListeners()
+    const probeHandler = webAiApiCheckMessageHandlers.get(
+      WebAiApiCheckMessageTypes.RunProbe,
+    )!
+    const pelicanHandler = webAiApiCheckMessageHandlers.get(
+      WebAiApiCheckMessageTypes.RunPelican,
+    )!
+
+    const probeRun = probeHandler({
+      data: {
+        runId: "probe-run",
+        apiType: "openai",
+        baseUrl: "https://example.invalid",
+        apiKey: "sk-test",
+        probeId: "text-generation",
+      },
+      sender: { tab: { id: 99 } },
+    })
+    await vi.waitFor(() => expect(probeSignal).toBeInstanceOf(AbortSignal))
+
+    // The message handler must pass the sender tab through, or a probe still in
+    // flight when its page is torn down would never be cancelled.
+    tabRemovedListeners.forEach((listener) => listener(99))
+    expect(probeSignal?.aborted).toBe(true)
+
+    probeDeferred.resolve({
+      id: "text-generation",
+      status: "fail",
+      latencyMs: 0,
+      summary: "Stopped",
+    })
+    await expect(probeRun).resolves.toMatchObject({ success: true })
+
+    const spy = vi
+      .spyOn(pelican, "runPelicanTest")
+      .mockImplementation(
+        async (params) =>
+          new Promise((_, reject) =>
+            params.abortSignal?.addEventListener("abort", () =>
+              reject(new DOMException("Aborted", "AbortError")),
+            ),
+          ),
+      )
+    try {
+      // A run with no sender tab must still be cancellable by its run id.
+      const senderlessRun = pelicanHandler({
+        data: {
+          runId: "senderless-run",
+          apiType: "openai",
+          baseUrl: "https://example.invalid",
+          apiKey: "sk-test",
+          modelId: "test",
+        },
+      })
+      await expect(
+        background.resolveWebAiApiCheckCancelRunProbeMessage({
+          runId: "senderless-run",
+        }),
+      ).resolves.toEqual({ success: true, cancelled: true })
+      await expect(senderlessRun).resolves.toMatchObject({ success: false })
+    } finally {
+      spy.mockRestore()
+    }
   })
 
   it("runProbe rejects invalid base urls before dispatching a probe", async () => {
@@ -1576,7 +1893,7 @@ describe("webAiApiCheck background handlers", () => {
     background.setupWebAiApiCheckMessagingListeners()
     background.setupWebAiApiCheckMessagingListeners()
 
-    expect(onWebAiApiCheckMessageMock).toHaveBeenCalledTimes(12)
+    expect(onWebAiApiCheckMessageMock).toHaveBeenCalledTimes(13)
     expect(
       onWebAiApiCheckMessageMock.mock.calls.map((call) => call[0]),
     ).toEqual([
@@ -1590,6 +1907,7 @@ describe("webAiApiCheck background handlers", () => {
       WebAiApiCheckMessageTypes.CreateTag,
       WebAiApiCheckMessageTypes.RenameTag,
       WebAiApiCheckMessageTypes.RunProbe,
+      WebAiApiCheckMessageTypes.RunPelican,
       WebAiApiCheckMessageTypes.CancelRunProbe,
       WebAiApiCheckMessageTypes.SaveProfile,
     ])

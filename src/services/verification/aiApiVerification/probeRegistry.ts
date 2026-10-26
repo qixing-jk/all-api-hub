@@ -13,6 +13,7 @@ import {
   type ApiVerificationApiType,
   type ApiVerificationMode,
   type ApiVerificationProbeId,
+  type ApiVerificationProbePromptOverrides,
   type ApiVerificationProbeResult,
   type ApiVerificationRequestProfile,
 } from "./types"
@@ -29,6 +30,7 @@ type ProbeRunnerParams = {
   apiType: ApiVerificationApiType
   mode?: ApiVerificationMode
   modelId?: string
+  probePromptOverrides?: ApiVerificationProbePromptOverrides
   abortSignal?: AbortSignal
 }
 

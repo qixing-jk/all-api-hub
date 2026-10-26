@@ -17,6 +17,8 @@ export type CollapsibleSectionProps = {
   className?: string
   buttonClassName?: string
   panelClassName?: string
+  /** Test hook forwarded to the wrapping Collapsible container. */
+  "data-testid"?: string
   children: ReactNode
 }
 
@@ -31,6 +33,7 @@ export function CollapsibleSection({
   className,
   buttonClassName,
   panelClassName,
+  "data-testid": dataTestId,
   children,
 }: CollapsibleSectionProps) {
   const [internalOpen, setInternalOpen] = useState(defaultOpen)
@@ -45,6 +48,7 @@ export function CollapsibleSection({
       open={open}
       onOpenChange={handleOpenChange}
       className={className}
+      data-testid={dataTestId}
     >
       <CollapsibleTrigger
         className={cn(

@@ -18,7 +18,8 @@
     },
     "details": {
       "input": "Đầu vào",
-      "output": "Đầu ra"
+      "output": "Đầu ra",
+      "result": "Kết quả thực thi"
     },
     "errors": {
       "unexpected": "Đã xảy ra lỗi không xác định"
@@ -35,6 +36,7 @@
     "meta": {
       "apiType": "Loại API",
       "apiTypePlaceholder": "Chọn loại API",
+      "configuration": "Cấu hình yêu cầu",
       "mode": "Chế độ kiểm tra",
       "model": "Mô hình",
       "modelPlaceholder": "Nhập ID mô hình",
@@ -61,11 +63,11 @@
       "image-generation": "Tạo hình ảnh",
       "models": "Danh sách mô hình",
       "rerank": "Xếp hạng lại",
-      "structured-output": "Đầu ra có cấu trúc (JSON Schema)",
+      "structured-output": "Đầu ra có cấu trúc",
       "text-generation": "Tạo văn bản",
       "tool-calling": "Gọi công cụ/hàm",
       "video-generation": "Tác vụ video",
-      "web-search": "Tìm kiếm web / Grounding"
+      "web-search": "Tìm kiếm web"
     },
     "requestProfiles": {
       "claude": "Claude Code",
@@ -132,7 +134,47 @@
       "webSearchUnsupportedForApiType": "Loại API hiện tại không hỗ trợ thăm dò tìm kiếm web."
     },
     "title": "Xác minh API",
+    "tools": {
+      "agent": {
+        "calls": "Lịch sử gọi công cụ",
+        "completed": "Đã tạo tệp SVG. Bạn tự đánh giá chất lượng hình vẽ.",
+        "files": "Tệp trong không gian làm việc",
+        "hint": "Mô hình tự kiểm tra và cải thiện hình vẽ. Quá trình này có thể làm tăng mức sử dụng.",
+        "label": "Chế độ kiểm thử Agent",
+        "noArtifact": "Mô hình chưa ghi SVG hoàn chỉnh vào pelican.svg. Câu trả lời cuối không được dùng làm tệp kết quả.",
+        "summary": "Số lượt: {{steps}} · Lần gọi công cụ: {{calls}} · {{seconds}} giây"
+      },
+      "errors": {
+        "unexpected": "Yêu cầu thất bại: {{message}}"
+      },
+      "manualBadge": "Chạy khi cần",
+      "pelican": {
+        "analysis": "{{shapes}} hình · {{wheels}} hình tròn/elip · viewBox {{viewBox}}",
+        "description": "Yêu cầu mô hình vẽ SVG một con bồ nông đi xe đạp để bạn so sánh trực tiếp. Việc đánh giá vẫn do người xem.",
+        "historyOnly": "Chỉ lưu bản tóm tắt. Chạy lại để xem bản vẽ và chi tiết thực thi.",
+        "noSvg": "Mô hình không trả về SVG.",
+        "outcomes": {
+          "error": "Thực thi thất bại",
+          "generated": "Đã tạo bản vẽ",
+          "no-artifact": "Chưa tạo bản vẽ"
+        },
+        "previewAlt": "Hình được tạo",
+        "previewFailed": "Không thể hiển thị SVG. Nội dung có thể chứa XML không hợp lệ, chẳng hạn thuộc tính trùng lặp. Mở phản hồi gốc hoặc tệp trong không gian làm việc để kiểm tra.",
+        "raw": "Phản hồi gốc",
+        "run": "Chạy thử vẽ",
+        "title": "Thử vẽ hình",
+        "unsafe": "Phản hồi chứa script hoặc tham chiếu bên ngoài nên không được hiển thị."
+      },
+      "prompts": {
+        "editorLabel": "Lời nhắc cho {{probe}}",
+        "resetOne": "Khôi phục mục này",
+        "saveFailed": "Không lưu được lời nhắc: {{message}}",
+        "sharedHint": "Lời nhắc đã lưu dùng chung cho mọi lối vào xác minh."
+      },
+      "stop": "Dừng",
+      "stopped": "Đã dừng trước khi hoàn tất; không lưu kết quả."
+    },
     "unsupportedProbeForApiType": "Loại API hiện tại không hỗ trợ thăm dò {{probe}}.",
-    "warning": "Khi phát hiện có hỗ trợ, xác suất cao là hỗ trợ thực sự; khi không phát hiện thấy hỗ trợ, cũng có thể thực tế được hỗ trợ. Kết quả chỉ mang tính tham khảo, vui lòng dựa vào tình hình sử dụng thực tế của công cụ."
+    "warning": "Bài kiểm tra áp dụng cho API, mô hình và cấu hình yêu cầu hiện tại. Thành công không đảm bảo tương thích hoàn toàn; hãy xem kết quả thực thi khi kiểm tra thất bại."
   }
 }

@@ -40,6 +40,20 @@ import {
 describe("ApiCheckModalHost", () => {
   setupApiCheckModalHostTest()
 
+  it("exposes the shared dialog title as a heading and keeps close accessible", async () => {
+    await openModal()
+    const dialog = await screen.findByRole("dialog")
+    expect(
+      within(dialog).getByRole("heading", {
+        name: "webAiApiCheck:modal.title",
+      }),
+    ).toBeVisible()
+    expect(
+      within(dialog).getByRole("button", { name: "common:actions.close" }),
+    ).toBeEnabled()
+    expect(dialog).toHaveAccessibleName("webAiApiCheck:modal.title")
+  })
+
   it("opens with empty inputs for manual trigger without selection", async () => {
     await openModal()
 

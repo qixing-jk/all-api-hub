@@ -5,6 +5,11 @@ import {
 } from "./types"
 import { serializeVerificationHistoryTarget } from "./utils"
 
+type OwnedVerificationSummary = Pick<
+  ApiVerificationHistorySummary,
+  "target" | "targetKey" | "verifiedAt"
+>
+
 /**
  * How long a persisted verification result stays meaningful.
  *
@@ -73,10 +78,10 @@ function isLiveOwner(
  * @param source - Current time and the live owner ids that could be read.
  * @returns The retained summaries, and whether anything was dropped.
  */
-export function applyVerificationRetention(
-  summaries: ApiVerificationHistorySummary[],
+export function applyVerificationRetention<T extends OwnedVerificationSummary>(
+  summaries: T[],
   source: VerificationRetentionSource,
-): { summaries: ApiVerificationHistorySummary[]; changed: boolean } {
+): { summaries: T[]; changed: boolean } {
   const cutoff = source.now - VERIFICATION_SUMMARY_MAX_AGE_MS
 
   const retained = summaries.filter(
@@ -105,10 +110,10 @@ function isRemovedOwner(
  * Rewrites a profile-scoped target onto its surviving profile id.
  * @returns The rewritten summary, or the original when no remap applies.
  */
-function remapProfileOwner(
-  summary: ApiVerificationHistorySummary,
+function remapProfileOwner<T extends OwnedVerificationSummary>(
+  summary: T,
   remapProfileIds: ReadonlyMap<string, string> | undefined,
-): ApiVerificationHistorySummary {
+): T {
   if (
     !remapProfileIds ||
     summary.target.kind === API_VERIFICATION_HISTORY_TARGET_KINDS.AccountModel
@@ -146,18 +151,18 @@ function remapProfileOwner(
  * @param reconcile - Owners to drop and profile ids to rewrite.
  * @returns The reconciled summaries, plus removal and remap counts.
  */
-export function applyOwnerReconcile(
-  summaries: ApiVerificationHistorySummary[],
+export function applyOwnerReconcile<T extends OwnedVerificationSummary>(
+  summaries: T[],
   reconcile: VerificationOwnerReconcile,
 ): {
-  summaries: ApiVerificationHistorySummary[]
+  summaries: T[]
   removed: number
   remapped: number
 } {
   let removed = 0
   let remapped = 0
 
-  const reconciled: ApiVerificationHistorySummary[] = []
+  const reconciled: T[] = []
   for (const summary of summaries) {
     if (isRemovedOwner(summary.target, reconcile)) {
       removed += 1
@@ -172,7 +177,7 @@ export function applyOwnerReconcile(
   // Remapping can collide two targets onto one key. Keep the most recently
   // verified result; a tie keeps the first stored one for a stable outcome.
   const indexByKey = new Map<string, number>()
-  const deduped: ApiVerificationHistorySummary[] = []
+  const deduped: T[] = []
   for (const summary of reconciled) {
     const existingIndex = indexByKey.get(summary.targetKey)
     if (existingIndex === undefined) {

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Heading5 } from "~/components/ui"
 import { resolveProfileProbeSuiteReport } from "~/features/ApiCredentialProfiles/verification/profileProbeSuiteReport"
 import { useProfileModelDiscovery } from "~/features/ApiCredentialProfiles/verification/useProfileModelDiscovery"
 import { useProfileVerificationHistory } from "~/features/ApiCredentialProfiles/verification/useProfileVerificationHistory"
@@ -11,6 +10,10 @@ import {
   withUnfinishedProbesStopped,
 } from "~/features/Verification/api/probeState"
 import type { ProbeItemState } from "~/features/Verification/api/types"
+import {
+  useVerificationTools,
+  type VerificationToolRequestParams,
+} from "~/features/Verification/api/useVerificationTools"
 import { useModelMetadataLookup } from "~/hooks/verification/useModelMetadataLookup"
 import { useVerificationRunLifecycle } from "~/hooks/verification/useVerificationRunLifecycle"
 import {
@@ -31,6 +34,7 @@ import {
   API_VERIFICATION_PROBE_IDS,
   API_VERIFICATION_PROBE_STATUSES,
   getVerificationRequestProfileApiType,
+  MODEL_TEST_MODALITIES,
   resolveModelTestModality,
   runApiVerificationProbe,
   type ApiVerificationApiType,
@@ -189,7 +193,48 @@ export function useProfileVerification({
   })
 
   const isAnyProbeRunning = probes.some((p) => p.isRunning)
-  const canClose = !isRunning && !isAnyProbeRunning && !isPersisting
+
+  const resolveToolRequest =
+    useCallback(async (): Promise<VerificationToolRequestParams | null> => {
+      if (!profile) return null
+      const requestedToolModelId =
+        modelId.trim() || initialModelId?.trim() || ""
+      if (!requestedToolModelId) return null
+
+      return {
+        baseUrl: profile.baseUrl,
+        apiKey: profile.apiKey,
+        apiType,
+        modelId: requestedToolModelId,
+        mode: verificationMode,
+        requestProfile,
+        requestProfileEnhanced,
+        requestHeaders: profile.requestHeaders,
+        secrets: [
+          profile.apiKey,
+          ...Object.values(profile.requestHeaders ?? {}),
+          profile.baseUrl,
+        ],
+      }
+    }, [
+      apiType,
+      initialModelId,
+      modelId,
+      profile,
+      requestProfile,
+      requestProfileEnhanced,
+      verificationMode,
+    ])
+  const tools = useVerificationTools({
+    historyTarget: getHistoryTargetForModel(requestedModelId),
+    historyApiType: apiType,
+    resolveRequest: resolveToolRequest,
+    isSupported: modelModality === MODEL_TEST_MODALITIES.Text,
+    isBlocked: isRunning || isAnyProbeRunning || isPersisting,
+  })
+
+  const canClose =
+    !isRunning && !isAnyProbeRunning && !isPersisting && !tools.isRunning
 
   useEffect(() => {
     apiTypeRef.current = apiType
@@ -201,20 +246,6 @@ export function useProfileVerification({
     ? getApiVerificationApiTypeLabel(t, profile.apiType)
     : ""
   const currentApiTypeLabel = getApiVerificationApiTypeLabel(t, apiType)
-
-  const header = useMemo(() => {
-    if (!profile) return null
-    return (
-      <div className="min-w-0">
-        <Heading5 className="truncate">
-          {t("aiApiVerification:verifyDialog.title")}
-        </Heading5>
-        <div className="text-muted-foreground mt-density-1 truncate text-xs">
-          {profile.baseUrl} · {profile.name}
-        </div>
-      </div>
-    )
-  }, [profile, t])
 
   const {
     modelOptions,
@@ -414,6 +445,7 @@ export function useProfileVerification({
 
     try {
       await clearVerificationHistory(apiType, targetToClear)
+      tools.clearPelicanHistory?.()
     } catch (error) {
       logger.error("Failed to clear verification history", { error })
     }
@@ -567,7 +599,6 @@ export function useProfileVerification({
     hasApiTypeOverride,
     savedApiTypeLabel,
     currentApiTypeLabel,
-    header,
     fetchModels,
     clearHistory,
     runSingleProbe,
@@ -575,5 +606,6 @@ export function useProfileVerification({
     stopRun,
     runAll,
     modelModality,
+    tools,
   }
 }

@@ -59,6 +59,33 @@ export type PreferenceWriteResult =
       reason: PreferenceWriteFailure
     }
 
+export type PreferenceWriteOptions = {
+  expectedLastUpdated?: number
+  /**
+   * Top-level keys whose patch value replaces the stored value instead of
+   * merging into it. Needed where a removed entry must disappear: a deep merge
+   * keeps stored keys the patch omits, so an emptied subtree would never reset.
+   */
+  replaceKeys?: readonly (keyof UserPreferences)[]
+}
+
+/**
+ * Applies a patch's replacement keys on top of the deep-merged result, so the
+ * patch value becomes the stored one and keys it omits are gone.
+ */
+function applyPreferenceReplacements(
+  mergedPreferences: UserPreferences,
+  patch: DeepPartial<UserPreferences>,
+  replaceKeys: PreferenceWriteOptions["replaceKeys"],
+): UserPreferences {
+  const replacements = (replaceKeys ?? [])
+    .filter((key) => key in patch)
+    .map((key) => [key, patch[key]] as const)
+  if (!replacements.length) return mergedPreferences
+
+  return Object.assign({}, mergedPreferences, Object.fromEntries(replacements))
+}
+
 /**
  * Creates a read-only default preferences object with timestamps set to the last updated time of the default preferences.
  */
@@ -185,9 +212,7 @@ export class PreferencesStore {
    */
   async savePreferencesWithResult(
     preferences: DeepPartial<UserPreferences>,
-    options?: {
-      expectedLastUpdated?: number
-    },
+    options?: PreferenceWriteOptions,
   ): Promise<PreferenceWriteResult> {
     return this.mutatePreferencesWithResult(() => preferences, options)
   }
@@ -195,7 +220,7 @@ export class PreferencesStore {
   /** Derive a partial update from the current snapshot while holding its write lock. */
   protected async mutatePreferencesWithResult(
     mutate: (current: UserPreferences) => DeepPartial<UserPreferences>,
-    options?: { expectedLastUpdated?: number },
+    options?: PreferenceWriteOptions,
   ): Promise<PreferenceWriteResult> {
     try {
       const writeResult = await this.withStorageWriteLock(async () => {
@@ -224,7 +249,11 @@ export class PreferencesStore {
           : getSharedPreferencesLastUpdated(currentPreferences)
 
         const nextPreferences = stampPreferencesMetadata(
-          deepOverride(currentPreferences, preferences),
+          applyPreferenceReplacements(
+            deepOverride(currentPreferences, preferences),
+            preferences,
+            options?.replaceKeys,
+          ),
           {
             lastUpdated: timestamp,
             sharedPreferencesLastUpdated,
@@ -277,9 +306,7 @@ export class PreferencesStore {
    */
   async savePreferences(
     preferences: DeepPartial<UserPreferences>,
-    options?: {
-      expectedLastUpdated?: number
-    },
+    options?: PreferenceWriteOptions,
   ): Promise<PreferenceWriteResult> {
     return this.savePreferencesWithResult(preferences, options)
   }

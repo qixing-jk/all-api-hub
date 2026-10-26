@@ -2,6 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
+  useVerificationTools,
+  type PelicanRunner,
+  type VerificationToolRequestParams,
+} from "~/features/Verification/api/useVerificationTools"
+import {
   API_CHECK_MODAL_CLOSE_REASONS,
   API_CHECK_OPEN_MODAL_EVENT,
   dispatchApiCheckModalClosed,
@@ -29,6 +34,7 @@ import {
   API_TYPES,
   API_VERIFICATION_MODES,
   getVerificationRequestProfileApiType,
+  MODEL_TEST_MODALITIES,
   type ApiVerificationApiType,
   type ApiVerificationMode,
   type ApiVerificationProbeId,
@@ -41,6 +47,7 @@ import {
   WebAiApiCheckMessageTypes,
 } from "~/services/verification/webAiApiCheck/messaging"
 import type { Tag } from "~/types"
+import { safeRandomUUID } from "~/utils/core/identifier"
 
 /**
  * Builds the state and action contract for the content API check modal UI.
@@ -185,7 +192,87 @@ export function useApiCheckModalViewModel() {
     getCurrentVerificationResultsSnapshot,
   } = probeRunner
 
-  const canClose = !isRunningAll && !isAnyProbeRunning
+  /**
+   * The content script delegates provider access and cancellation to background.
+   */
+  const runPelicanInBackground: PelicanRunner = async ({
+    baseUrl: pelicanBaseUrl,
+    apiKey: pelicanApiKey,
+    apiType: pelicanApiType,
+    modelId: pelicanModelId,
+    mode: pelicanMode,
+    prompt: pelicanPromptText,
+    executionMode,
+    requestProfile: pelicanRequestProfile,
+    requestProfileEnhanced: pelicanRequestProfileEnhanced,
+    abortSignal: pelicanSignal,
+  }) => {
+    pelicanSignal.throwIfAborted()
+    const runId = safeRandomUUID()
+    const cancel = () => {
+      void sendWebAiApiCheckMessage(WebAiApiCheckMessageTypes.CancelRunProbe, {
+        runId,
+      }).catch(() => undefined)
+    }
+    pelicanSignal.addEventListener("abort", cancel, { once: true })
+    try {
+      const response = await sendWebAiApiCheckMessage(
+        WebAiApiCheckMessageTypes.RunPelican,
+        {
+          runId,
+          executionMode,
+          requestProfile: pelicanRequestProfile,
+          requestProfileEnhanced: pelicanRequestProfileEnhanced,
+          apiType: pelicanApiType,
+          mode: pelicanMode,
+          baseUrl: pelicanBaseUrl,
+          apiKey: pelicanApiKey,
+          modelId: pelicanModelId,
+          ...(pelicanPromptText ? { prompt: pelicanPromptText } : {}),
+        },
+      )
+      pelicanSignal.throwIfAborted()
+      if (!response.success) {
+        throw new Error(response.error ?? "Pelican test failed")
+      }
+      return response.result
+    } finally {
+      pelicanSignal.removeEventListener("abort", cancel)
+    }
+  }
+
+  const resolveToolRequest =
+    useCallback(async (): Promise<VerificationToolRequestParams | null> => {
+      if (!baseUrl.trim() || !apiKey.trim() || !modelId.trim()) return null
+      return {
+        baseUrl,
+        apiKey,
+        apiType,
+        modelId: modelId.trim(),
+        mode: verificationMode,
+        requestProfile,
+        requestProfileEnhanced,
+        secrets: [apiKey],
+      }
+    }, [
+      apiKey,
+      apiType,
+      baseUrl,
+      modelId,
+      requestProfile,
+      requestProfileEnhanced,
+      verificationMode,
+    ])
+
+  const verificationTools = useVerificationTools({
+    resolveRequest: resolveToolRequest,
+    isSupported: modelModality === MODEL_TEST_MODALITIES.Text,
+    isBlocked: isRunningAll || isAnyProbeRunning,
+    runPelicanRequest: runPelicanInBackground,
+  })
+
+  const canClose =
+    !isRunningAll && !isAnyProbeRunning && !verificationTools.isRunning
   const canFetchModels = canFetchModelsFromModelDiscovery && !isRunningAll
   const isRunAllActionDisabled =
     isStoppingRunAll ||
@@ -468,6 +555,7 @@ export function useApiCheckModalViewModel() {
       validationError,
       hasAnyResult,
       isAnyProbeRunning,
+      verificationTools,
       modelListSupported,
       canClose,
       canFetchModels,

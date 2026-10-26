@@ -8,10 +8,6 @@
       "stop": "Stopp",
       "stopTool": "Stopp {{tool}}"
     },
-    "details": {
-      "input": "Eingabe",
-      "output": "Ausgabe"
-    },
     "idleHint": "Wählen Sie einen Schlüssel aus und führen Sie dann die Simulation aus. Geben Sie eine Modell-ID an, wenn der Schlüssel nicht zum Ableiten einer solchen verwendet werden kann.",
     "loadingModelsHint": "Modelle werden geladen...",
     "loadingRuntimeKeysHint": "Schlüssel werden geladen...",
@@ -28,10 +24,7 @@
     "profileIdleHint": "Wählen Sie ein Modell und führen Sie dann die Simulation aus. Sie können eine Modell-ID weiterhin manuell eingeben, wenn sie in der abgerufenen Liste fehlt.",
     "requiresModelId": "Geben Sie eine Modell-ID an, bevor Sie diese Prüfung durchführen.",
     "status": {
-      "fail": "Fehlgeschlagen",
-      "pass": "Bestanden",
-      "pending": "Ausstehend",
-      "unsupported": "Nicht unterstützt"
+      "pending": "Ausstehend"
     },
     "summaries": {
       "endpointNotFound": "Endpunkt nicht gefunden (404): Diese API wird möglicherweise nicht unterstützt",
@@ -55,7 +48,6 @@
       "claude": "Claude Code",
       "codex": "Codex (Codex CLI)",
       "gemini": "Gemini CLI"
-    },
-    "warning": "Ein erkannter Pass ist wahrscheinlich echt; bei einigen Clients kann es trotz eines Fehlers dennoch funktionieren. Betrachten Sie das Ergebnis als Orientierung und überprüfen Sie es nach Möglichkeit mit der tatsächlichen CLI."
+    }
   }
 }

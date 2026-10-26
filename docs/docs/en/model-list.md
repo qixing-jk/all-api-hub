@@ -101,7 +101,30 @@ The **`Verify CLI Compatibility`** dialog also offers **`Streaming`** (the defau
 > - Verification is a **one-time probe**. It does not guarantee long-term availability or permanent failure.
 > - CLI compatibility verification **does not launch a real external CLI**. It performs a protocol-level simulation only.
 
-### 6. Bulk Test
+### 6. Advanced Verification: Drawing Test and Prompts
+
+Ordinary verification history retains status, summary and latency, without raw input/output after reopening. Drawing tests for saved accounts/profiles retain a per-model run summary (artifact outcome, time, latency and counts) under the existing history cleanup rules. SVGs, Agent files and detailed tool activity remain session-only; reopening explicitly reports that only a summary was restored. Web tests without a saved credential remain session-only.
+
+Verification parameters stay in the body in a compact grid. Test scope guidance and existing verification summaries appear in the dialog header without a separate colored notice. Each test separates **`Edit prompt`** from **`Execution result`**, which opens automatically when a run completes. Text responses are shown directly; input parameters and raw output can be expanded. The editor shows the current prompt, and switching to results preserves unsaved edits. Tests apply to the current API, model and request settings and do not guarantee full compatibility.
+
+The **`Verify API`**, **`Verify CLI compatibility`** and web API check dialogs show a visible **`Drawing test`** card. It runs only when you press its run button, never with **`Start verification`** or bulk testing, because each action spends real model calls.
+
+**`Drawing test`** asks the model to draw a pelican riding a bicycle as SVG, so you can compare style and structure directly; the judgement is yours. The dialog only extracts the SVG, counts shapes, and refuses to render answers containing scripts or external references.
+
+Single-reply and Agent modes share the default user prompt `Generate an SVG of a pelican riding a bicycle`, as well as any custom prompt. Agent mode supplies workspace capabilities and the task's file delivery contract through separate system instructions, without adding drawing requirements to the user prompt.
+
+The default is a single reply. Enable **`Agent test mode`** to let the model list, read, write and edit virtual files and execute JavaScript, including top-level `await` and Promises, to check and revise its work. There is no fixed turn or tool-call limit: the model finishes the run, or you stop it. Multiple calls may use more tokens. The artifact is read from `pelican.svg`; the dialog shows turns, tool activity, workspace files and elapsed time. A missing artifact does not fall back to the final reply.
+
+This is a basic test environment. Files are shared only within one run, with no access to real files, browser, network or Node APIs. Absolute virtual paths, relative paths and Unicode file names work; file count and code length have no fixed caps. JS defaults to 5 seconds and 128 MiB, adjustable through `timeout_ms` (up to 60 seconds) and `memory_mb` (up to 1024 MiB). A 64 MiB workspace budget protects browser memory. Logs and return values over their respective 64 Ki character budgets are truncated and marked, without failing the task or discarding files. Each JS execution has fresh globals; file changes commit only on success. There is no terminal, npm or full CLI environment, and drawing quality remains a manual judgement.
+
+**`Edit prompt`** inside each test card lets you edit the text that test sends (text generation, structured output, tool calling, web search, embedding, image generation, video task). Expand the editor to see the default and reset that prompt:
+
+- Prompts save automatically after editing pauses and apply to **every** verification entry point: account verification, API credential verification, web API check and bulk testing. Drawing tests use the current draft; other tests use saved prompts. Failed saves keep the draft and display an error.
+- An empty value means "use the built-in default". Reset removes the key rather than storing an empty string, so future default changes still reach you.
+
+> Prompts are stored in preferences and excluded from telemetry. Exporting or syncing preferences may include these prompts.
+
+### 7. Bulk Test
 
 Click **`Bulk Test`** in the toolbar to open **`Bulk Test Models`**:
 
@@ -114,7 +137,7 @@ Click **`Bulk Test`** in the toolbar to open **`Bulk Test Models`**:
 
 > Inapplicable test items are skipped automatically. Results reflect that probe only and are for reference.
 
-### 7. Keys for a Model
+### 8. Keys for a Model
 
 Click the key button on a model card to open **`Keys for Model`**:
 
@@ -123,7 +146,7 @@ Click the key button on a model card to open **`Keys for Model`**:
 
 > This changes a key or Token. It does not edit the model catalog itself.
 
-### 8. Refresh Data
+### 9. Refresh Data
 
 Click **`Refresh Data`** to request the current source again and invalidate related local caches. Refresh behavior differs by source; refreshed data is determined by the source response.
 

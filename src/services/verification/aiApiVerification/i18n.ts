@@ -1,5 +1,6 @@
 import type { TFunction } from "i18next"
 
+import { PELICAN_PROMPT_ID } from "~/services/verification/modelQuality/constants"
 import { assertNever } from "~/utils/core/assert"
 
 import type {
@@ -57,8 +58,11 @@ export function getApiVerificationApiTypeLabel(
  */
 export function getApiVerificationProbeLabel(
   t: TFunction,
-  probeId: ApiVerificationProbeId,
+  probeId: ApiVerificationProbeId | typeof PELICAN_PROMPT_ID,
 ): string {
+  if (probeId === PELICAN_PROMPT_ID) {
+    return t("aiApiVerification:verifyDialog.tools.pelican.title")
+  }
   switch (probeId) {
     case API_VERIFICATION_PROBE_IDS.Models:
       return t("aiApiVerification:verifyDialog.probes.models")
