@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw"
-import { afterEach, expect, it } from "vitest"
+import { afterEach, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { vercelAiGatewayCapabilities } from "~/services/apiAdapters/vercelAiGateway"
@@ -55,9 +55,15 @@ afterEach(() => server.resetHandlers())
 it("forwards credit-read cancellation without fetching after cancellation", async () => {
   const controller = new AbortController()
   controller.abort()
-  await expect(
-    fetchVercelCredits(request, "team_test", { signal: controller.signal }),
-  ).rejects.toBeDefined()
+  const fetchSpy = vi.spyOn(globalThis, "fetch")
+  try {
+    await expect(
+      fetchVercelCredits(request, "team_test", { signal: controller.signal }),
+    ).rejects.toBeDefined()
+    expect(fetchSpy).not.toHaveBeenCalled()
+  } finally {
+    fetchSpy.mockRestore()
+  }
 })
 
 it("rejects saving a team absent from the token's membership", async () => {
