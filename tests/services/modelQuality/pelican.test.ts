@@ -48,6 +48,22 @@ const BASE_PARAMS = {
 }
 
 describe("drawing prompt delivery", () => {
+  it("delivers custom request headers to the drawing provider", async () => {
+    let tenant: string | null = null
+    server.use(
+      http.post(`${baseUrl}/v1/chat/completions`, ({ request }) => {
+        tenant = request.headers.get("x-tenant")
+        return completion(SVG)
+      }),
+    )
+    const result = await runPelicanTest({
+      ...BASE_PARAMS,
+      requestHeaders: { "X-Tenant": "drawing-workspace" },
+    })
+    expect(tenant).toBe("drawing-workspace")
+    expect(result.svg).toBe(SVG)
+  })
+
   it.each([
     PELICAN_EXECUTION_MODES.Reply,
     PELICAN_EXECUTION_MODES.Agent,

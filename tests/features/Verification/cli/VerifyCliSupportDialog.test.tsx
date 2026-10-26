@@ -297,6 +297,57 @@ describe("VerifyCliSupportDialog", () => {
     )
   })
 
+  it.each(["resolved-service-secret", ""])(
+    "resolves the account drawing credential before dispatch (secret: %j)",
+    async (secret) => {
+      const account = buildDisplaySiteData({ siteType: SITE_TYPES.NEW_API })
+      const key = buildServiceCredentialRuntimeKey(account, {
+        kind: "singleton_service_key",
+        service: "codex",
+        label: "Drawing key",
+        key: "stored-key",
+        isAuthenticated: true,
+        baseUrl: account.baseUrl,
+      })
+      mockFetchDisplayAccountRuntimeKeys.mockResolvedValue([key])
+      mockResolveDisplayAccountRuntimeKeySecret.mockResolvedValue({
+        ...key,
+        secret,
+        baseUrl: "https://resolved.example.com",
+      })
+      mockRunPelicanTest.mockReturnValue(new Promise(() => {}))
+      const { result } = renderHook(() =>
+        useCliSupportVerification({
+          isOpen: true,
+          onClose: vi.fn(),
+          account,
+          initialModelId: "gpt-test",
+        }),
+      )
+      await waitFor(() => expect(result.current.hasRunnableSource).toBe(true))
+      act(() => result.current.sharedTools.runPelican())
+      await waitFor(() =>
+        expect(mockResolveDisplayAccountRuntimeKeySecret).toHaveBeenCalled(),
+      )
+      if (secret) {
+        await waitFor(() =>
+          expect(mockRunPelicanTest).toHaveBeenCalledWith(
+            expect.objectContaining({
+              apiKey: secret,
+              baseUrl: "https://resolved.example.com",
+              modelId: "gpt-test",
+            }),
+          ),
+        )
+      } else {
+        await waitFor(() =>
+          expect(result.current.sharedTools.isRunning).toBe(false),
+        )
+        expect(mockRunPelicanTest).not.toHaveBeenCalled()
+      }
+    },
+  )
+
   it("shows key loading inside the key select and restores selection when loaded", async () => {
     const pending = createDeferred<AccountRuntimeKey[]>()
     const account = buildDisplaySiteData({ siteType: SITE_TYPES.NEW_API })

@@ -82,6 +82,34 @@ const buildPelicanResult = () => ({
 })
 
 describe("useVerificationTools", () => {
+  it("persists a no-artifact outcome when a completed drawing has no SVG", async () => {
+    mockRunPelicanTest.mockResolvedValue({ ...buildPelicanResult(), svg: null })
+    const { result } = renderHook(() =>
+      useVerificationTools({
+        resolveRequest: async () => buildRequest(),
+        isSupported: true,
+        isBlocked: false,
+        historyTarget: {
+          kind: "profile-model",
+          profileId: "profile",
+          modelId: "gpt-test",
+        },
+        historyApiType: "openai-compatible",
+      }),
+    )
+    act(() => result.current.runPelican())
+    await waitFor(() =>
+      expect(mockSaveDrawing).toHaveBeenCalledWith(
+        expect.objectContaining({
+          outcome: DRAWING_VERIFICATION_OUTCOMES.NoArtifact,
+        }),
+      ),
+    )
+    expect(result.current.pelicanSummary?.outcome).toBe(
+      DRAWING_VERIFICATION_OUTCOMES.NoArtifact,
+    )
+  })
+
   it("saves and restores the drawing summary without restoring raw artifacts", async () => {
     mockRunPelicanTest.mockResolvedValue(buildPelicanResult())
     mockSaveDrawing.mockImplementation(async (summary) => {

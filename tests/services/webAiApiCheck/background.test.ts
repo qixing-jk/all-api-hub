@@ -159,6 +159,43 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
 })
 
 describe("webAiApiCheck background handlers", () => {
+  it("returns a completed drawing result through the background message boundary", async () => {
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const pelican = await import("~/services/verification/modelQuality/pelican")
+    const drawing = {
+      runAt: 1,
+      latencyMs: 2,
+      text: "No SVG",
+      svg: null,
+      analysis: pelican.analyzePelicanSvg(null),
+    }
+    const spy = vi.spyOn(pelican, "runPelicanTest").mockResolvedValue(drawing)
+    try {
+      const { WebAiApiCheckMessageTypes } = await import(
+        "~/services/verification/webAiApiCheck/messaging"
+      )
+      background.setupWebAiApiCheckMessagingListeners()
+      const handler = webAiApiCheckMessageHandlers.get(
+        WebAiApiCheckMessageTypes.RunPelican,
+      )!
+      await expect(
+        handler({
+          data: {
+            runId: "completed-drawing",
+            apiType: "openai",
+            baseUrl: "https://example.invalid",
+            apiKey: "sk-test",
+            modelId: "test",
+          },
+        }),
+      ).resolves.toEqual({ success: true, result: drawing })
+    } finally {
+      spy.mockRestore()
+    }
+  })
+
   it("forwards agent mode and client identity and cancels the actual background drawing run", async () => {
     const background = await import(
       "~/services/verification/webAiApiCheck/background"

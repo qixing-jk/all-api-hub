@@ -1201,6 +1201,26 @@ describe("verificationResultHistoryStorage", () => {
     expect(setSpy).not.toHaveBeenCalled()
   })
 
+  it("discards malformed drawing collections when migrating history", async () => {
+    const storage = new Storage({ area: "local" })
+    await storage.set(
+      API_VERIFICATION_HISTORY_STORAGE_KEYS.VERIFICATION_RESULT_HISTORY,
+      {
+        version: 0,
+        summaries: [],
+        drawingSummaries: { unexpected: "object" },
+        lastUpdated: 1,
+      },
+    )
+    await expect(
+      verificationResultHistoryStorage.listSummaries(),
+    ).resolves.toEqual([])
+    const persisted = await storage.get<{ drawingSummaries?: unknown }>(
+      API_VERIFICATION_HISTORY_STORAGE_KEYS.VERIFICATION_RESULT_HISTORY,
+    )
+    expect(persisted?.drawingSummaries).toBeUndefined()
+  })
+
   it("trusts a payload written at the current schema version", async () => {
     const storage = new Storage({ area: "local" })
     // Deliberately unsanitized: a payload this store wrote itself is read back
