@@ -98,11 +98,12 @@ it("runs smoke performance cases once in isolation, including after functional f
 it("runs release-diff regression checks once when ordinary preflight jobs are skipped", () => {
   const workflow = readFileSync(".github/workflows/test.yml", "utf8")
   const step = workflow
-    .split("      - name: Test release change detection")[1]
+    .split("      - name: Test CI report and release guards")[1]
     ?.split("      - name:")[0]
   const guard = step?.match(/^ {8}if: (.+)$/m)?.[1]?.trim()
   expect(guard).toBeDefined()
   expect(step).toContain("node --test tests/scripts/release-pr-check.test.mjs")
+  expect(step).toContain("tests/scripts/check-unit-test-reports.test.mjs")
   for (let shard = 1; shard <= 6; shard++) {
     expect(runInNewContext(guard ?? "true", { matrix: { shard } })).toBe(
       shard === 1,

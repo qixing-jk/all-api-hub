@@ -18,6 +18,7 @@ on:
       - ".github/workflows/commitlint-title.yml"
       - ".github/workflows/translate-docs.yml"
       - "scripts/release-pr-check.mjs"
+      - "scripts/check-unit-test-reports.mjs"
       - "tests/scripts/release-pr-check.test.mjs"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -45,6 +46,7 @@ on:
       - ".github/workflows/commitlint-title.yml"
       - ".github/workflows/translate-docs.yml"
       - "scripts/release-pr-check.mjs"
+      - "scripts/check-unit-test-reports.mjs"
       - "tests/scripts/release-pr-check.test.mjs"
       - "package.json"
       - "pnpm-lock.yaml"
@@ -64,6 +66,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+env:
+  UNIT_TEST_SHARD_TOTAL: 6
+
 jobs:
   release-changes:
     # Ordinary changes need no diff exemption, so avoid a serial runner allocation.
@@ -74,8 +79,6 @@ jobs:
     needs: release-changes
     if: ${{ !cancelled() && needs.release-changes.result != 'failure' && needs.release-changes.outputs.release-only != 'true' }}
     runs-on: ubuntu-latest
-    env:
-      UNIT_TEST_SHARD_TOTAL: 6
     strategy:
       fail-fast: false
       matrix:
@@ -94,11 +97,11 @@ jobs:
       - name: Setup Node.js and pnpm
         uses: ./.github/actions/setup
 
-      - name: Test release change detection
+      - name: Test CI report and release guards
         # Keep guard regressions covered on ordinary changes without four
-        # preflight runners; only one shard needs these dependency-free tests.
+        # preflight runners; only one shard needs these tooling tests.
         if: matrix.shard == 1
-        run: node --test tests/scripts/release-pr-check.test.mjs
+        run: node --test tests/scripts/release-pr-check.test.mjs tests/scripts/check-unit-test-reports.test.mjs
 
       - name: Restore unit test durations
         uses: actions/cache/restore@v5
@@ -113,15 +116,15 @@ jobs:
       - name: Run test shard with coverage
         env:
           UNIT_TEST_SHARD_DURATIONS: .vitest-durations/shard-durations.json
-        run: >
-          pnpm exec vitest --run --coverage
-          --coverage.thresholds.statements=0
-          --coverage.thresholds.branches=0
-          --coverage.thresholds.functions=0
-          --coverage.thresholds.lines=0
-          --reporter=default
-          --reporter=blob
-          --shard=${{ matrix.shard }}/${{ env.UNIT_TEST_SHARD_TOTAL }}
+        run: |
+          pnpm exec vitest --run --coverage \
+            --coverage.thresholds.statements=0 \
+            --coverage.thresholds.branches=0 \
+            --coverage.thresholds.functions=0 \
+            --coverage.thresholds.lines=0 \
+            --reporter=default \
+            --reporter=blob \
+            --shard=${{ matrix.shard }}/${{ env.UNIT_TEST_SHARD_TOTAL }}
 
       - name: Upload Vitest blob report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -130,6 +133,7 @@ jobs:
           name: vitest-blob-report-${{ matrix.shard }}
           path: .vitest-reports/*.json
           include-hidden-files: true
+          if-no-files-found: error
           retention-days: 1
           # The merge job downloads this by name. A rerun must replace the
           # previous attempt's blob instead of adding a second artifact.
@@ -156,18 +160,28 @@ jobs:
           pattern: vitest-blob-report-*
           merge-multiple: true
 
+      - name: Check shard report completeness
+        id: reports
+        run: node scripts/check-unit-test-reports.mjs
+
       - name: Merge test and coverage reports
-        run: >
-          pnpm exec vitest --merge-reports=.vitest-reports --coverage
-          --reporter=default
-          --reporter=junit
-          --outputFile.junit=test-report.junit.xml
+        # Keep partial reports available as artifacts when the completeness gate fails.
+        if: ${{ !cancelled() && hashFiles('.vitest-reports/*.json') != '' }}
+        run: |
+          pnpm exec vitest --merge-reports=.vitest-reports --coverage \
+            --reporter=default \
+            --reporter=junit \
+            --outputFile.junit=test-report.junit.xml
 
       - name: Upload coverage to Codecov
+        # A failed assertion makes the merge command fail, but its coverage is usable.
+        if: ${{ !cancelled() && steps.reports.outputs.complete == 'true' && hashFiles('coverage/lcov.info') != '' }}
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage/lcov.info
+          disable_search: true
+          fail_ci_if_error: true
 
       - name: Generate unit test durations
         # Per-file timings for the next run's shard sequencer, derived from the blob
@@ -186,7 +200,7 @@ jobs:
           key: unit-test-durations-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Upload test results to Codecov
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && hashFiles('test-report.junit.xml') != '' }}
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
