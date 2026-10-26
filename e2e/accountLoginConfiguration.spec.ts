@@ -27,6 +27,7 @@ import {
   getServiceWorker,
   holdExtensionWindowNavigation,
 } from "~~/e2e/utils/extensionState"
+import { createExtensionWorkerEvaluator } from "~~/e2e/utils/extensionWorkerEvaluator"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 
@@ -517,9 +518,26 @@ test("password login uses an isolated window when private access is allowed and 
     await expect(privateToggle).toHaveJSProperty("checked", !allowed)
     await privateToggle.click()
     await expect(privateToggle).toHaveJSProperty("checked", allowed)
-    // A permission change can stop the worker without an observed close event
-    // on older Chrome. Open the next extension page to wake the background,
-    // then read the effective permission from that fresh page context.
+    // The toggle updates before Chrome finishes reloading the extension.
+    // Wait for that browser-owned state before attaching a replacement page.
+    await expect
+      .poll(
+        () =>
+          settings.evaluate(
+            (id) =>
+              new Promise<boolean>((resolve) => {
+                ;(globalThis as any).chrome.developerPrivate.getExtensionInfo(
+                  id,
+                  (info: { state?: string } | undefined) =>
+                    resolve(info?.state === "ENABLED"),
+                )
+              }),
+            extensionId,
+          ),
+        { message: "extension finishes reloading after permission change" },
+      )
+      .toBe(true)
+    // Read permission from a fresh extension page after Chrome finishes reloading.
     page = await context.newPage()
     installExtensionPageGuards(page)
     await page.goto(
@@ -570,7 +588,10 @@ test("password login uses an isolated window when private access is allowed and 
     extensionDir,
   })
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click()
-  const privateWorker = await getServiceWorker(context)
+  const privateWorker = await createExtensionWorkerEvaluator(
+    context,
+    extensionId,
+  )
   await privateWorker.evaluate(() => {
     const chromeApi = (globalThis as any).chrome
     const create = chromeApi.windows.create.bind(chromeApi.windows)
@@ -617,7 +638,10 @@ test("password login uses an isolated window when private access is allowed and 
   await settings.bringToFront()
   await changePrivateAccess(false)
   await settings.close()
-  const regularWorker = await getServiceWorker(context)
+  const regularWorker = await createExtensionWorkerEvaluator(
+    context,
+    extensionId,
+  )
   const releaseNavigation = await holdExtensionWindowNavigation(
     context,
     regularWorker,

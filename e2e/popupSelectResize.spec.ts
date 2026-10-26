@@ -6,6 +6,10 @@ import {
   getAccountManagementSiteTypeOptionTestId,
 } from "~/features/AccountManagement/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
+import {
+  createTargetCommandSender,
+  evaluateInTarget,
+} from "~~/e2e/utils/cdpTarget"
 import { stubLlmMetadataIndex } from "~~/e2e/utils/commonUserFlows"
 import { getExtensionServiceWorker } from "~~/e2e/utils/extension"
 
@@ -13,8 +17,6 @@ type CdpTargetInfo = {
   targetId: string
   url: string
 }
-
-type CdpCommandResult = Record<string, unknown>
 
 async function attachToActionPopup(
   session: CDPSession,
@@ -40,95 +42,6 @@ async function attachToActionPopup(
   }
 
   throw new Error(`Timed out waiting for action popup target '${popupUrl}'`)
-}
-
-function createTargetCommandSender(
-  session: CDPSession,
-  sessionId: string,
-): (
-  method: string,
-  params?: Record<string, unknown>,
-) => Promise<CdpCommandResult> {
-  let nextId = 0
-
-  return async (method, params = {}) => {
-    nextId += 1
-    const commandId = nextId
-    let handleMessage:
-      | ((event: { message: string; sessionId: string }) => void)
-      | undefined
-    let handleDetach: ((event: { sessionId: string }) => void) | undefined
-    let rejectResponse: ((reason?: unknown) => void) | undefined
-    let timeoutId: ReturnType<typeof setTimeout> | undefined
-    const response = new Promise<CdpCommandResult>((resolve, reject) => {
-      rejectResponse = reject
-      handleMessage = (event) => {
-        if (event.sessionId !== sessionId) return
-
-        const message = JSON.parse(event.message) as {
-          id?: number
-          error?: { message: string }
-          result?: CdpCommandResult
-        }
-        if (message.id !== commandId) return
-
-        if (message.error) {
-          reject(new Error(message.error.message))
-        } else {
-          resolve(message.result ?? {})
-        }
-      }
-      handleDetach = (event) => {
-        if (event.sessionId !== sessionId) return
-        reject(new Error(`Action popup target detached during CDP '${method}'`))
-      }
-      timeoutId = setTimeout(() => {
-        reject(new Error(`Timed out waiting for CDP '${method}'`))
-      }, 10_000)
-
-      session.on("Target.receivedMessageFromTarget", handleMessage)
-      session.on("Target.detachedFromTarget", handleDetach)
-    })
-
-    void session
-      .send("Target.sendMessageToTarget", {
-        message: JSON.stringify({ id: commandId, method, params }),
-        sessionId,
-      })
-      .catch((error) => rejectResponse?.(error))
-
-    try {
-      return await response
-    } finally {
-      if (timeoutId !== undefined) clearTimeout(timeoutId)
-      if (handleMessage) {
-        session.off("Target.receivedMessageFromTarget", handleMessage)
-      }
-      if (handleDetach) {
-        session.off("Target.detachedFromTarget", handleDetach)
-      }
-    }
-  }
-}
-
-async function evaluateInTarget<T>(
-  send: ReturnType<typeof createTargetCommandSender>,
-  expression: string,
-): Promise<T> {
-  const response = await send("Runtime.evaluate", {
-    awaitPromise: true,
-    expression,
-    returnByValue: true,
-  })
-  const exceptionDetails = response["exceptionDetails"] as
-    | { text?: string }
-    | undefined
-  if (exceptionDetails) {
-    throw new Error(exceptionDetails.text ?? "Action popup evaluation failed")
-  }
-
-  const result = response["result"] as { value?: T } | undefined
-  return result?.value as T
 }
 
 async function waitForTargetCondition(

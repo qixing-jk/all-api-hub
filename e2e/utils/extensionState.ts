@@ -107,7 +107,7 @@ export async function removePlasmoStorageKey(
  * Read a raw value from chrome.storage.local without local deserialization.
  */
 export async function getPlasmoStorageRawValue<T>(
-  serviceWorker: Worker,
+  serviceWorker: Pick<Worker, "evaluate">,
   key: string,
 ): Promise<T> {
   return await serviceWorker.evaluate(async (storageKey) => {
@@ -149,7 +149,7 @@ export function normalizePlasmoStorageJsonValue<T>(raw: unknown): T | null {
  * Read and JSON-normalize a Plasmo-backed storage value.
  */
 export async function getPlasmoStorageJsonValue<T>(
-  serviceWorker: Worker,
+  serviceWorker: Pick<Worker, "evaluate">,
   key: string,
 ): Promise<T | null> {
   const raw = await getPlasmoStorageRawValue<unknown>(serviceWorker, key)
@@ -329,7 +329,7 @@ export async function expectPermissionOnboardingHidden(page: Page) {
  */
 export async function holdExtensionWindowNavigation(
   context: BrowserContext,
-  worker: Worker,
+  worker: Pick<Worker, "evaluate">,
   url: string,
 ) {
   const existingPages = new Set(context.pages())
