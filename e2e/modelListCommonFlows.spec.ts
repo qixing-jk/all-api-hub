@@ -634,6 +634,7 @@ test("loads personalized OpenRouter catalogs with visible provider fallback and 
   extensionId,
   page,
 }) => {
+  await page.setViewportSize({ width: 1280, height: 480 })
   const { personalizedCatalogRequests, publicCatalogRequests } =
     await seedMixedOpenRouterModelList(context)
 
@@ -736,9 +737,17 @@ test("loads personalized OpenRouter catalogs with visible provider fallback and 
       exact: true,
     }),
   ).toHaveCount(1)
+  // Source rows are virtualized; the provider catalog can be below the rendered
+  // range while the previously expanded personalized model remains above it.
+  const modelScroller = page
+    .getByTestId(MODEL_LIST_TEST_IDS.modelDisplay)
+    .locator("[data-virtuoso-scroller]")
+  await modelScroller.evaluate((element) => {
+    element.scrollTop = element.scrollHeight
+  })
   await expect(
     page.getByText("OpenRouter · Provider Model Catalog", { exact: true }),
-  ).toHaveCount(1)
+  ).toBeVisible()
   await expect(page.getByText("Using the provider-wide catalog")).toBeVisible()
   await expect(page.getByText(/^Total 3 models$/)).toBeVisible()
   await expect(page.getByText(/^Showing 3 models$/)).toBeVisible()
@@ -764,6 +773,9 @@ test("loads personalized OpenRouter catalogs with visible provider fallback and 
     }),
   ).toBeVisible()
   await expect(page.getByText("Using the provider-wide catalog")).toHaveCount(0)
+  await modelScroller.evaluate((element) => {
+    element.scrollTop = 0
+  })
   await expect(
     page.getByRole("heading", {
       name: OPENROUTER_PERSONALIZED_MODEL_A_NAME,
