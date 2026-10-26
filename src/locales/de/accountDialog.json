@@ -25,7 +25,12 @@
     "prepareFailed": "Das Formular konnte nicht zwischengespeichert werden. Kopieren Sie wichtige Angaben und öffnen Sie das Kontoformular auf der vollständigen Seite erneut.",
     "restoreFailed": "Das unvollständige Formular konnte nicht wiederhergestellt werden. Es ist möglicherweise abgelaufen. Öffne das Kontoformular erneut.",
     "rotationWarning": "Nur auf älteren Sites mit Generate / Regenerate: Die Neugenerierung macht das alte Token ungültig. Aktualisiere andere Tools, die es nutzen. Ein neues Zugriffstoken mit Berechtigungen macht vorhandene Tokens nicht ungültig.",
-    "title": "Access Token manuell eingeben"
+    "title": "Access Token manuell eingeben",
+    "vercel": {
+      "generateStep": "Öffne in deinem Vercel-Konto die Seite „Tokens“, erstelle ein Token für das Team, dem AI Gateway gehört, und schließe die von Vercel verlangte E-Mail-Bestätigung ab. Kopiere das Token sofort, denn es wird nur einmal angezeigt.",
+      "openPage": "Vercel-Tokens öffnen",
+      "openPageFailed": "Die Seite konnte nicht geöffnet werden. Öffne die Seite „Tokens“ in deinem Vercel-Konto manuell, erstelle ein Token für das AI-Gateway-Team und füge es anschließend hier ein."
+    }
   },
   "actions": {
     "autoConfigAriaLabel": "Konto speichern und Kanaleinrichtung {{managedSite}} öffnen",
@@ -225,7 +230,14 @@
     "thirdPartyDailyCheckInMethod": "Täglicher Check-in über {{source}}",
     "userId": "Benutzer-ID",
     "username": "Benutzername",
-    "validRateError": "Bitte geben Sie einen gültigen Wechselkurs ein, der größer als 0 ist"
+    "validRateError": "Bitte geben Sie einen gültigen Wechselkurs ein, der größer als 0 ist",
+    "vercelAccessToken": "Vercel-Zugriffstoken",
+    "vercelAccessTokenGuidance": "Öffne in deinem Vercel-Konto die Seite „Tokens“, erstelle ein Token für das Team, dem AI Gateway gehört, und füge es hier ein. Vercel kann vorher einen Code per E-Mail verlangen; das Token wird nur einmal angezeigt.",
+    "vercelAccessTokenGuidanceTitle": "Vercel-Zugriffstoken verwenden",
+    "vercelTeam": "Vercel-Team",
+    "vercelTeamHelp": "Das Team mit dem AI Gateway Guthaben und den Schlüsseln auswählen. Jedes Team wird als separates Konto gespeichert.",
+    "vercelTeamLoadFailed": "Teams konnten nicht geladen werden. Zugriffstoken prüfen und erneut versuchen.",
+    "vercelTeamPlaceholder": "Team auswählen"
   },
   "infoPanel": {
     "autoDetect": "Automatische Erkennung",

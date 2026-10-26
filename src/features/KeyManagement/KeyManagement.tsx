@@ -183,6 +183,7 @@ export default function KeyManagement(props: {
         onRepairMissingKeys={handleRepairMissingKeys}
         onRefresh={handleRefreshTokens}
         onOpenSelectedAccountModels={headerState.onOpenSelectedAccountModels}
+        onOpenSelectedAccountConsole={headerState.onOpenSelectedAccountConsole}
         onRefreshManagedSiteStatus={
           isManagedSiteChannelStatusSupported
             ? () => void handleRefreshManagedSiteStatuses()

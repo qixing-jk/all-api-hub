@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw"
 import { describe, expect, it, vi } from "vitest"
 
 import { runApiVerificationProbe } from "~/services/verification/aiApiVerification"
+import { translateApiVerificationSummary } from "~/services/verification/aiApiVerification/i18n"
 import { server } from "~~/tests/msw/server"
 
 function anthropicEventStream(events: unknown[]) {
@@ -12,6 +13,47 @@ function anthropicEventStream(events: unknown[]) {
 }
 
 describe("AI API verification HTTP routing", () => {
+  it.each(["streaming", "non-streaming"] as const)(
+    "preserves Vercel credit-card recovery details in the displayed %s failure",
+    async (mode) => {
+      const message =
+        "AI Gateway requires a valid credit card on file to service requests. Please visit https://vercel.com/d?to=%2F%5Bteam%5D%2F%7E%2Fai%3Fmodal%3Dadd-credit-card to add a card and unlock your free credits."
+      const safeMessage =
+        "AI Gateway requires a valid credit card on file to service requests. Please visit https://vercel.com/d to add a card and unlock your free credits."
+      server.use(
+        http.post(
+          "https://vercel-gateway.example.invalid/v1/chat/completions",
+          () =>
+            HttpResponse.json(
+              { error: { message, type: "customer_verification_required" } },
+              { status: 403 },
+            ),
+        ),
+      )
+      const result = await runApiVerificationProbe({
+        baseUrl: "https://vercel-gateway.example.invalid",
+        apiKey: "sk-synthetic",
+        apiType: "openai-compatible",
+        modelId: "openai/gpt-test",
+        probeId: "text-generation",
+        mode,
+      })
+      expect(result).toMatchObject({
+        status: "fail",
+        summary: safeMessage,
+        summaryKey: "verifyDialog.summaries.forbidden",
+        output: { inferredHttpStatus: 403 },
+      })
+      const displayed = translateApiVerificationSummary(
+        (() => "Forbidden (403): access denied") as any,
+        result.summaryKey!,
+        result.summaryParams,
+        result.summary,
+      )
+      expect(displayed).toContain(safeMessage)
+    },
+  )
+
   it("keeps the upstream model order instead of preferring known model brands", async () => {
     server.use(
       http.get("https://model-order.example.com/v1/models", () =>

@@ -16,6 +16,7 @@
       "openai": "OpenAI",
       "openaiCompatible": "OpenAI 兼容"
     },
+    "associatedCredentialHint": "此站点不支持重新读取完整密钥。测试会使用 API 凭据库中与所选密钥关联的完整 Key；若尚未关联，请先前往密钥管理保存或关联密钥。",
     "details": {
       "input": "输入",
       "output": "输出",

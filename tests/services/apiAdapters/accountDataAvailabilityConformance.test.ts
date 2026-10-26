@@ -51,6 +51,7 @@ const collectedRequests = {
   freeModelAccount: 0,
   cubenceAccount: 0,
   relayForAccount: 0,
+  vercelAiGatewayCredits: 0,
 }
 
 const expectClassifiedAvailability = (data: AccountData) => {
@@ -663,6 +664,30 @@ const producerFixturesByFamily = {
       expect(collectedRequests.requestyOrg).toBe(snapshotCount)
     },
   },
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.VercelAiGateway]: {
+    // The saved URL stays the console origin; credits answer on the gateway.
+    baseUrl: "https://vercel.com",
+    authType: AuthTypeEnum.AccessToken,
+    expectedAvailability: {
+      // Spend reports are plan-gated, so no today window is published.
+      consumption: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
+    handlers: [
+      http.get("https://ai-gateway.vercel.sh/v1/credits", ({ request }) => {
+        collectedRequests.vercelAiGatewayCredits += 1
+        // The team must be named on the request; the access token alone is
+        // rejected by the deployment.
+        expect(new URL(request.url).searchParams.get("teamId")).toBe("user-1")
+        return HttpResponse.json({ balance: "12.5", total_used: "3" })
+      }),
+    ],
+    expectRequests: (snapshotCount: number) => {
+      expect(collectedRequests.vercelAiGatewayCredits).toBe(snapshotCount)
+    },
+  },
   [ACCOUNT_SITE_ADAPTER_FAMILIES.RightCode]: {
     baseUrl: "https://right-code.example.invalid",
     authType: AuthTypeEnum.AccessToken,
@@ -974,6 +999,7 @@ describe("AccountData availability producer conformance", () => {
       freeModelAccount: 0,
       cubenceAccount: 0,
       relayForAccount: 0,
+      vercelAiGatewayCredits: 0,
     })
     server.use(
       ...Object.values(producerFixturesByFamily).flatMap(

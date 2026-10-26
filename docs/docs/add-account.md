@@ -234,6 +234,20 @@ OpenRouter 固定使用 **Management Key（访问令牌）** 认证，用户 ID 
 Management Key 属于敏感信息。请勿将完整内容发给他人，也不要在公开截图或问题反馈中暴露。
 :::
 
+<a id="manual-vercel-ai-gateway"></a>
+### 2.4 Vercel AI Gateway
+
+1. 登录 [Vercel 控制台](https://vercel.com/)，进入使用 AI Gateway 的团队。
+2. 在插件中选择“新增账号 → 手动添加”，网站 URL 填写 `https://vercel.com`，站点类型选择 `vercel-ai-gateway`。
+3. 在 [Vercel Tokens](https://vercel.com/account/settings/tokens) 创建可访问目标团队的访问令牌，完成控制台要求的邮箱验证，并立即将完整令牌复制到插件的“访问令牌”字段。这里使用的是 Vercel 账号访问令牌，不是调用模型的 AI Gateway API Key。
+4. 等待团队列表加载，选择拥有 AI Gateway 余额和密钥的团队。保存时会再次验证令牌能否访问所选团队；同一人的不同团队可分别保存为账号。
+5. 填写网站名称及充值金额比例（`CNY/USD`，大于 0）后保存。余额以美元读取，比例只影响换算显示。令牌失效后请在控制台重新创建并更新插件中的凭据。
+
+::: warning 保护访问令牌
+不要在公开截图或反馈中暴露完整令牌。Cookie 登录态不能代替此处的访问令牌，插件不会在后台创建或续期 Vercel 令牌。
+:::
+
+
 ## 3. Cookie 模式
 
 对于某些对接口保护较严或经过特殊定制的站点，如果 Access Token 模式无法工作，可以尝试切换到 **“Cookie 模式”**。在此模式下，插件将利用你当前的登录会话（Cookie）来请求数据。

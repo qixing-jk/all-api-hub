@@ -7,6 +7,7 @@ import { fetchOpenRouterPersonalizedModelCatalog } from "~/services/apiService/o
 import { fetchOpenRouterPublicModelCatalog } from "~/services/apiService/openrouter/publicModelCatalog"
 import type { OpenRouterPublicModel } from "~/services/apiService/openrouter/publicModelCatalogSchemas"
 import { ApiError } from "~/services/apiTransport/errors"
+import { createAccountBoundCatalogActionPolicy } from "~/services/modelList/catalogActionPolicy"
 import {
   MODEL_CATALOG_SCOPES,
   MODEL_LIST_SOURCE_KINDS,
@@ -152,14 +153,9 @@ function createOpenRouterCatalogPricingResponse(
       catalogScope,
       supportsRuntimeModelList: false,
       supportsPricing: true,
-      actionPolicy: {
-        supportsGroupFiltering: false,
-        supportsAccountSummary: false,
-        supportsTokenCompatibility: false,
-        supportsCredentialVerification: false,
-        supportsBatchCredentialVerification: false,
-        supportsCliVerification: false,
-      },
+      actionPolicy: createAccountBoundCatalogActionPolicy({
+        hasAccountContext: catalogScope === MODEL_CATALOG_SCOPES.PERSONALIZED,
+      }),
     },
   } as const
 }

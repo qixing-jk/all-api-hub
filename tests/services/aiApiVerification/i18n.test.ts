@@ -8,6 +8,49 @@ import {
 import { API_TYPES } from "~/services/verification/aiApiVerification/types"
 
 describe("aiApiVerification i18n", () => {
+  it("does not append the English forbidden fallback to a translated summary", () => {
+    const t = vi.fn((_key: string, options?: { lng?: string }) =>
+      options?.lng === "en" ? "Forbidden (403): access denied" : "权限不足",
+    )
+    expect(
+      translateApiVerificationSummary(
+        t as any,
+        "verifyDialog.summaries.forbidden",
+        undefined,
+        "Forbidden (403): access denied",
+      ),
+    ).toBe("权限不足")
+  })
+  it.each([
+    "verifyDialog.summaries.unauthorized",
+    "verifyDialog.summaries.forbidden",
+    "verifyDialog.summaries.endpointNotFound",
+  ])(
+    "retains HTTP diagnostics and falls back to localized copy for %s",
+    (key) => {
+      const t = vi.fn(() => "Localized HTTP failure")
+      expect(
+        translateApiVerificationSummary(
+          t as any,
+          key,
+          undefined,
+          "Provider recovery guidance",
+        ),
+      ).toBe("Localized HTTP failure\nProvider recovery guidance")
+      expect(
+        translateApiVerificationSummary(t as any, key, undefined, "  "),
+      ).toBe("Localized HTTP failure")
+      expect(
+        translateApiVerificationSummary(
+          t as any,
+          key,
+          undefined,
+          "Localized HTTP failure",
+        ),
+      ).toBe("Localized HTTP failure")
+    },
+  )
+
   it.each([
     [
       API_TYPES.OPENAI_COMPATIBLE,

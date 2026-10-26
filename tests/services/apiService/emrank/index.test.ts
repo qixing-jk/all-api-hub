@@ -1053,6 +1053,7 @@ describe("EMRank console contract", () => {
     )
     const snapshot = await fetchEmRankPricing(request)
     expect(snapshot.data[0]).toMatchObject({
+      availability: { available: false },
       supported_endpoint_types: ["/v1/decisions"],
       presentation: {
         summaryFacts: expect.arrayContaining([
@@ -1060,7 +1061,6 @@ describe("EMRank console contract", () => {
             type: "text",
             value: expect.objectContaining({ fallback: "Decision" }),
           }),
-          expect.objectContaining({ type: "boolean", value: false }),
           expect.objectContaining({ type: "token-quantity", value: 65536 }),
         ]),
         sections: expect.arrayContaining([
@@ -1077,6 +1077,7 @@ describe("EMRank console contract", () => {
         ]),
       },
     })
+    expect(snapshot.data[1]?.availability).toEqual({ available: true })
     expect(snapshot.data[1]?.presentation?.sections?.[0]?.facts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ type: "text", value: "1–4, 8" }),

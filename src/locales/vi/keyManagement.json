@@ -567,6 +567,31 @@
         "discard": "Bỏ thay đổi",
         "keepEditing": "Tiếp tục chỉnh sửa",
         "title": "Bỏ thay đổi?"
+      },
+      "vercelAiGateway": {
+        "attribution": {
+          "team": "Nhóm",
+          "user": "Thành viên nhóm"
+        },
+        "budgetAlerts": "Gửi email cho người tạo khóa khi đạt các ngưỡng này",
+        "budgetEnabled": "Ngân sách chi tiêu",
+        "budgetHelp": "Đặt giới hạn bằng USD. Khi tắt, áp dụng ngân sách mặc định của nhóm nếu có. Ngân sách mới không tính chi tiêu BYOK.",
+        "budgetInactive": "Ngân sách chưa bật",
+        "budgetLimit": "Giới hạn chi tiêu (USD, tối thiểu $1)",
+        "budgetPeriod": "Chu kỳ làm mới ngân sách",
+        "budgetUnavailable": "Không thể đọc ngân sách. Hãy thử lại trước khi chỉnh sửa.",
+        "consoleFailed": "Không thể mở bảng điều khiển nhóm. Kiểm tra token truy cập rồi thử lại.",
+        "inheritedBudget": "Ngân sách mặc định của nhóm",
+        "noBudget": "Không có ngân sách riêng cho khóa",
+        "openConsole": "Mở bảng điều khiển Vercel",
+        "period": {
+          "daily": "Hằng ngày",
+          "monthly": "Hằng tháng",
+          "none": "Không làm mới",
+          "weekly": "Hằng tuần"
+        },
+        "spendAttribution": "Phân bổ chi tiêu",
+        "spendAttributionHelp": "Chọn ngân sách chịu chi tiêu của khóa. Chỉ chủ nhóm và người quản lý ngân sách AI Gateway có thể thay đổi."
       }
     },
     "heading": "Khóa API",

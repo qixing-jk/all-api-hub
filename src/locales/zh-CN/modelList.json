@@ -39,6 +39,13 @@
   "allBillingModes": "所有计费方式",
   "allGroups": "所有分组",
   "allProviders": "所有厂商",
+  "availability": {
+    "details": "查看访问限制详情",
+    "restrictedHint": "站点当前将此模型标记为不可用。",
+    "unavailable": "当前不可用",
+    "unknown": "可用性待确认",
+    "unknownHint": "站点尚未确认此模型的可用性。"
+  },
   "batchVerify": {
     "actions": {
       "open": "批量测试",
@@ -252,6 +259,7 @@
       }
     },
     "outputModalities": "输出模态",
+    "planRestricted": "当前套餐不支持此模型",
     "priceConditions": {
       "minimumPromptTokens": "提示词超过 {{formattedCount}} 个 Token",
       "utcWindow": "UTC {{start}}–{{end}}"
@@ -287,6 +295,7 @@
     "tokenCount": "{{formattedCount}} Token",
     "trainingChannels": "含数据训练渠道",
     "trainingConsent": "需要数据训练授权",
+    "vercelVerificationRequired": "请先在 Vercel AI Gateway 控制台完成客户验证，再发送请求",
     "viewOnSite": "前往官网查看"
   },
   "displayOptions": "显示内容",
@@ -695,7 +704,6 @@
   },
   "title": "模型列表",
   "totalModels": "总计 {{count}} 个模型",
-  "unavailable": "不可用",
   "unavailableModelsHint": "额外显示已获取数据中，当前账号明确没有可用分组的模型。这些模型不受分组选择限制，但仍受其他筛选条件限制；不会额外获取全站模型。仅当前页面会话有效。",
   "unavailablePriceReasons": {
     "groupRatioUnavailable": "价格不可用，因为当前可用分组没有分组倍率。",

@@ -65,6 +65,11 @@ export function AccessTokenVerificationGuide({
       openPage: t("accessTokenVerification.laozhang.openProfile"),
       openPageFailed: t("accessTokenVerification.laozhang.openProfileFailed"),
     },
+    vercel: {
+      generateStep: t("accessTokenVerification.vercel.generateStep"),
+      openPage: t("accessTokenVerification.vercel.openPage"),
+      openPageFailed: t("accessTokenVerification.vercel.openPageFailed"),
+    },
   } satisfies Record<
     AccountSiteAccessTokenVerificationGuide["copy"],
     { generateStep: string; openPage: string; openPageFailed: string }

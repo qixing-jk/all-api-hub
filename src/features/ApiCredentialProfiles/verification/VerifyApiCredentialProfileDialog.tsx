@@ -325,6 +325,7 @@ export function VerifyApiCredentialProfileDialog(
                       t,
                       result.summaryKey,
                       result.summaryParams,
+                      result.summary,
                     ) ?? result.summary
                   : result?.status ===
                       API_VERIFICATION_PROBE_STATUSES.Unsupported

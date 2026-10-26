@@ -34,6 +34,7 @@ export const ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS = {
   NewApi: "manual-new-api",
   Sub2Api: "manual-sub2api",
   OpenRouter: "manual-openrouter",
+  VercelAiGateway: "manual-vercel-ai-gateway",
 } as const
 
 export type AccountSiteManualAddGuideAnchor =
@@ -60,6 +61,7 @@ export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   OpenRouter: "openrouter",
   KimiOpenPlatform: "kimiOpenPlatform",
   Grsai: "grsai",
+  VercelAiGateway: "vercelAiGateway",
   Unsupported: "unsupported",
 } as const
 
@@ -130,7 +132,7 @@ export interface ManagedResourceProductPolicy {
 
 /** Presentation choices for completing site-owned account credential verification. */
 export interface AccountSiteAccessTokenVerificationGuide {
-  copy: "security" | "apiyi" | "laozhang"
+  copy: "security" | "apiyi" | "laozhang" | "vercel"
   showRotationWarning: boolean
 }
 
@@ -142,12 +144,15 @@ export interface AccountSiteDefinitionOnboardingMetadata {
     accessTokenLabelKey?:
       | "form.openrouterManagementKey"
       | "form.requestyManageKey"
+      | "form.vercelAccessToken"
     accessTokenGuidanceTitleKey?:
       | "form.openrouterManagementKeyGuidanceTitle"
       | "form.requestyManageKeyGuidanceTitle"
+      | "form.vercelAccessTokenGuidanceTitle"
     accessTokenGuidanceKey?:
       | "form.openrouterManagementKeyGuidance"
       | "form.requestyManageKeyGuidance"
+      | "form.vercelAccessTokenGuidance"
     /**
      * Opt-in automatic credential creation from the site's own console
      * session. The action must degrade to the manual guidance path.

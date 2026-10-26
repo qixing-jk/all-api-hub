@@ -173,6 +173,7 @@ describe("account site onboarding registry", () => {
       "right-code",
       "relayfor",
       "grsai",
+      "vercel",
       "v-api",
       "apiyi",
       "new-api-auth-bundle",

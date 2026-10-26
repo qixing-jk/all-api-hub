@@ -16,6 +16,7 @@
       "openai": "OpenAI",
       "openaiCompatible": "OpenAI 互換"
     },
+    "associatedCredentialHint": "このサイトから完全なキーを再取得することはできません。テストには API 認証情報ライブラリで選択したキーに関連付けた完全なキーを使用します。未関連付けの場合は、キー管理で保存または関連付けてください。",
     "details": {
       "input": "入力",
       "output": "出力",

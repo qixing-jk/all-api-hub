@@ -1,4 +1,5 @@
 import userEvent from "@testing-library/user-event"
+import { http, HttpResponse } from "msw"
 import type { ComponentProps } from "react"
 import { createRef, useState } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -27,6 +28,7 @@ import enAccountDialog from "~/locales/en/accountDialog.json"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
 import { mergeCheckInDiscoveryResults } from "~/services/checkin/autoCheckin/domain"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
+import { server } from "~~/tests/msw/server"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import {
@@ -80,6 +82,25 @@ vi.mock("~/utils/navigation", async (importOriginal) => ({
 const { openSettingsTabInNewTab } = await import("~/utils/navigation")
 
 describe("AccountDialog AccountForm", () => {
+  afterEach(() => server.resetHandlers())
+  it("binds the Vercel team selector to the draft's account identity", async () => {
+    server.use(
+      http.get("https://api.vercel.com/v2/teams", () =>
+        HttpResponse.json({ teams: [{ id: "team_a", slug: "alpha" }] }),
+      ),
+    )
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.VERCEL_AI_GATEWAY
+    props.draft.accessToken = "pat"
+    props.draft.userId = ""
+    render(<AccountForm {...withSitePolicy(props)} continuous />)
+    expect(
+      await screen.findByTestId("account-management-vercel-team-select"),
+    ).toBeVisible()
+    await vi.waitFor(() =>
+      expect(props.onUserIdChange).toHaveBeenCalledWith("team_a"),
+    )
+  })
   it("uses the shared site-type glyph for the platform selector", async () => {
     render(<AccountForm {...createProps()} continuous />)
     expect(

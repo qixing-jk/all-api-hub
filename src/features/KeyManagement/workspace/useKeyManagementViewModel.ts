@@ -22,11 +22,16 @@ import { useKeyManagementRouteCoordinator } from "~/features/KeyManagement/works
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import { useAccountKeyProvisioning } from "~/features/TokenProvisioning/creation/useAccountKeyProvisioning"
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/TokenProvisioning/secretDelivery/apiCredentialProfileSaveAction"
+import notify from "~/lib/notify"
 import {
   AccountKeyRepairMessageTypes,
   sendAccountKeyRepairMessage,
 } from "~/services/accounts/accountKeyAutoProvisioning/messaging"
 import { canCreateAccountKeyResources } from "~/services/accounts/keys/keyProductCapabilities"
+import {
+  resolveAccountSiteRouteUrl,
+  SITE_ROUTE_KINDS,
+} from "~/services/accounts/utils/siteRouteResolver"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/configuration/runtimeConfig"
 import {
@@ -39,6 +44,7 @@ import {
   PROTECTION_BYPASS_USER_COMMANDS,
 } from "~/services/protectionBypass/contracts"
 import { ACCOUNT_KEY_REPAIR_JOB_STATES } from "~/types/accountKeyAutoProvisioning"
+import { createTab } from "~/utils/browser/tabs"
 import { createLogger } from "~/utils/core/logger"
 import { openModelsPage } from "~/utils/navigation"
 import { pushWithinOptionsPage } from "~/utils/navigation/optionsPage"
@@ -425,6 +431,31 @@ export function useKeyManagementViewModel(
 
   // The view consumes availability facts without coordinating both inventories.
   const headerState = {
+    onOpenSelectedAccountConsole:
+      selectedAddTokenScopeAccount &&
+      getSiteTypeCapabilities(
+        selectedAddTokenScopeAccount.siteType,
+      ).account?.bootstrap?.dynamicRoutes?.includes(
+        SITE_ROUTE_KINDS.AdminCredentials,
+      )
+        ? () => {
+            void resolveAccountSiteRouteUrl(
+              selectedAddTokenScopeAccount,
+              SITE_ROUTE_KINDS.AdminCredentials,
+            )
+              .then((url) => {
+                if (url) return createTab(url, true)
+                throw new Error("console route unavailable")
+              })
+              .catch(() =>
+                notify.error(
+                  t(
+                    "keyManagement:native.editor.vercelAiGateway.consoleFailed",
+                  ),
+                ),
+              )
+          }
+        : undefined,
     isLoading: isLoading || nativeKeys.isLoading || !selectedAccount,
     isAddTokenDisabled: isSelectedNativeKeyAccount
       ? !canCreateNativeKey

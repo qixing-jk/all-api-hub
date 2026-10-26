@@ -258,6 +258,9 @@
     "configMissing": "Bitte konfigurieren Sie zuerst die Veloera-Adresse, das Admin-Token und die Benutzer-ID in den Grundeinstellungen",
     "noChannelsToSync": "Keine Kanäle zum Synchronisieren"
   },
+  "vercelAiGateway": {
+    "accessTokenRequired": "Vercel AI Gateway benötigt ein Vercel-Zugriffstoken für das Team, dem das Gateway gehört."
+  },
   "warnings": {
     "accountSavedWithoutDataRefresh": "Konto gespeichert, aber der aktuelle Kontostand, das Kontingent und die heutige Nutzung konnten nicht abgerufen werden. Die aktuellen Werte können Platzhalter sein. Aktualisieren Sie dieses Konto später über die Kontoliste.",
     "accountUpdatedWithoutDataRefresh": "Kontoeinstellungen wurden gespeichert, aber der aktuelle Kontostand, das Kontingent und die heutige Nutzung konnten nicht aktualisiert werden. Die aktuellen Werte sind möglicherweise noch veraltet. Aktualisieren Sie dieses Konto später über die Kontoliste."

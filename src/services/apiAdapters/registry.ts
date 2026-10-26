@@ -47,6 +47,7 @@ import { requestyCapabilities } from "./requesty"
 import { rightCodeCapabilities } from "./rightcode"
 import { sharedChatCapabilities } from "./sharedchat"
 import { sub2ApiCapabilities } from "./sub2api"
+import { vercelAiGatewayCapabilities } from "./vercelAiGateway"
 import { voApiV2Capabilities } from "./voapiV2"
 import { xiaoenCapabilities } from "./xiaoen"
 
@@ -110,6 +111,8 @@ const accountCapabilityFactories = {
     createKimiOpenPlatformCapabilities(siteType as AccountSiteType),
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Grsai]: () => grsaiCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Emrank]: () => emRankCapabilities,
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.VercelAiGateway]: () =>
+    vercelAiGatewayCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Unsupported]: (siteType) => ({ siteType }),
 } satisfies Record<
   AccountSiteBackendFamily,

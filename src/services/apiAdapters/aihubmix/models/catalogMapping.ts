@@ -19,6 +19,7 @@ import type {
   AIHubMixWebsiteModel,
 } from "~/services/apiService/aihubmix/modelCatalog"
 import type { ModelCatalogSnapshot } from "~/services/modelCatalog/snapshot"
+import { createAccountBoundCatalogActionPolicy } from "~/services/modelList/catalogActionPolicy"
 import {
   MODEL_CATALOG_SCOPES,
   MODEL_LIST_SOURCE_KINDS,
@@ -289,16 +290,10 @@ export const buildAIHubMixPricingResponse = (params: {
           ? MODEL_CATALOG_SCOPES.PROVIDER
           : MODEL_CATALOG_SCOPES.PERSONALIZED,
       supportsPricing: true,
-      // Saved AIHubMix keys may be masked (https://docs.aihubmix.com/en/api/Cli).
-      // Publish this restriction here so display code never infers it from a site name.
-      actionPolicy: {
-        supportsGroupFiltering: false,
+      actionPolicy: createAccountBoundCatalogActionPolicy({
+        hasAccountContext: params.userScopedModelIds !== null,
         supportsAccountSummary: params.userScopedModelIds !== null,
-        supportsTokenCompatibility: false,
-        supportsCredentialVerification: false,
-        supportsBatchCredentialVerification: false,
-        supportsCliVerification: false,
-      },
+      }),
     },
     data: modelIds.map((modelId) =>
       buildAIHubMixModelPricing(

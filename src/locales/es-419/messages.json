@@ -265,6 +265,9 @@
     "configMissing": "Primero configura la dirección de Veloera, el token de administrador y el ID de usuario en la configuración básica",
     "noChannelsToSync": "No hay canales para sincronizar"
   },
+  "vercelAiGateway": {
+    "accessTokenRequired": "Vercel AI Gateway requiere un token de acceso de Vercel para el equipo propietario de la puerta de enlace."
+  },
   "warnings": {
     "accountSavedWithoutDataRefresh": "La cuenta se guardó, pero no se pudieron obtener el saldo, la cuota y el uso de hoy más recientes. Los valores actuales pueden ser marcadores de posición. Actualiza esta cuenta más tarde desde la lista de cuentas.",
     "accountUpdatedWithoutDataRefresh": "La configuración de la cuenta se guardó, pero no se pudieron actualizar el saldo, la cuota y el uso de hoy más recientes. Los valores actuales podrían seguir desactualizados. Actualiza esta cuenta más tarde desde la lista de cuentas."

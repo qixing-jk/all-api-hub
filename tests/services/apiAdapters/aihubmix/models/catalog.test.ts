@@ -163,10 +163,10 @@ describe("AIHubMix catalog adapter", () => {
         actionPolicy: {
           supportsGroupFiltering: false,
           supportsAccountSummary: hasAccountScope,
-          supportsTokenCompatibility: false,
-          supportsCredentialVerification: false,
-          supportsBatchCredentialVerification: false,
-          supportsCliVerification: false,
+          supportsTokenCompatibility: hasAccountScope,
+          supportsCredentialVerification: hasAccountScope,
+          supportsBatchCredentialVerification: hasAccountScope,
+          supportsCliVerification: hasAccountScope,
         },
       })
     },

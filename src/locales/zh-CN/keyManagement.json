@@ -567,6 +567,31 @@
         "discard": "放弃更改",
         "keepEditing": "继续编辑",
         "title": "放弃更改？"
+      },
+      "vercelAiGateway": {
+        "attribution": {
+          "team": "团队",
+          "user": "团队成员"
+        },
+        "budgetAlerts": "达到以下比例时向密钥创建者发送邮件",
+        "budgetEnabled": "消费预算",
+        "budgetHelp": "设置美元消费上限。关闭后使用团队默认预算（如有）。新预算不计入 BYOK 消费。",
+        "budgetInactive": "预算未启用",
+        "budgetLimit": "消费上限（美元，最低 $1）",
+        "budgetPeriod": "预算刷新周期",
+        "budgetUnavailable": "无法读取预算，请重试后再编辑。",
+        "consoleFailed": "无法打开团队控制台，请检查访问令牌后重试。",
+        "inheritedBudget": "团队默认预算",
+        "noBudget": "未设置密钥专属预算",
+        "openConsole": "打开 Vercel 控制台",
+        "period": {
+          "daily": "每天",
+          "monthly": "每月",
+          "none": "不刷新",
+          "weekly": "每周"
+        },
+        "spendAttribution": "消费归属",
+        "spendAttributionHelp": "选择此密钥计入谁的预算。只有团队所有者和 AI Gateway 预算管理员可以修改。"
       }
     },
     "heading": "API 密钥",

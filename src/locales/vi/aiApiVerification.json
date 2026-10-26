@@ -16,6 +16,7 @@
       "openai": "OpenAI",
       "openaiCompatible": "Tương thích OpenAI"
     },
+    "associatedCredentialHint": "Trang web này không cho phép đọc lại khóa đầy đủ. Các bài kiểm tra dùng khóa đầy đủ được lưu trong Thư viện thông tin xác thực API và liên kết với khóa đã chọn. Nếu chưa liên kết, hãy lưu hoặc liên kết khóa trong phần quản lý khóa trước.",
     "details": {
       "input": "Đầu vào",
       "output": "Đầu ra",

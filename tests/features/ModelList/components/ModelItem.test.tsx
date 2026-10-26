@@ -9,6 +9,10 @@ import toast from "~/lib/notify"
 import { SITE_TYPES } from "~/services/accountSiteDefinitions/identifiers"
 import * as siteCapabilities from "~/services/apiAdapters/registry"
 import {
+  createVercelCatalogSnapshot,
+  parseVercelCatalogModel,
+} from "~/services/apiService/vercelAiGateway/models"
+import {
   createPersonalizedCatalogModelListSourceIdentity,
   createProviderCatalogModelListSourceIdentity,
 } from "~/services/modelCatalog/sourceIdentity"
@@ -453,6 +457,125 @@ describe("ModelItem", () => {
         "Account One / VIP runtime key · account.example.invalid",
       ),
     ).toBeInTheDocument()
+  })
+
+  it("explains Vercel plan restrictions without expanding the model card", () => {
+    const model = parseVercelCatalogModel({
+      id: "deepseek/deepseek-v4.1-flash-1017",
+      type: "language",
+      model_eligibility: {
+        status: "ineligible",
+        category: "policy",
+        reason: "plan_restricted",
+        evaluated_runtime: "http",
+      },
+    })!
+    const snapshot = createVercelCatalogSnapshot([model])
+
+    const { container } = render(
+      <ModelItem {...createDefaultProps()} model={snapshot.data[0]!} />,
+    )
+
+    expect(screen.getByText("availability.unavailable")).toBeVisible()
+    expect(screen.getByText("displayFacts.planRestricted")).toBeVisible()
+    expect(container.firstElementChild).not.toHaveClass("opacity-75")
+  })
+
+  it.each([
+    { status: "eligible", reason: "plan_restricted", shownReason: null },
+    { status: "ineligible", reason: undefined, shownReason: null },
+    {
+      status: "ineligible",
+      reason: "provider_policy_changed",
+      shownReason: "provider_policy_changed",
+    },
+  ])(
+    "handles Vercel eligibility $status with reason $reason",
+    ({ status, reason, shownReason }) => {
+      const model = parseVercelCatalogModel({
+        id: "vercel/test",
+        model_eligibility: { status, reason },
+      })!
+      const snapshot = createVercelCatalogSnapshot([model])
+
+      render(<ModelItem {...createDefaultProps()} model={snapshot.data[0]!} />)
+
+      if (shownReason) {
+        expect(screen.getByText("availability.unavailable")).toBeVisible()
+        expect(screen.getByText("availability.restrictedHint")).toBeVisible()
+        expect(
+          screen.getByRole("button", { name: "availability.details" }),
+        ).toBeEnabled()
+        expect(screen.queryByRole("tooltip")).not.toBeInTheDocument()
+      } else {
+        expect(screen.queryByText("displayFacts.unavailableReason")).toBeNull()
+        expect(screen.queryByText("displayFacts.planRestricted")).toBeNull()
+      }
+    },
+  )
+
+  it("keeps explicitly unknown Vercel eligibility unconfirmed and preserves manual verification", async () => {
+    const props = createDefaultProps()
+    const onVerifyModel = vi.fn()
+    const model = parseVercelCatalogModel({
+      id: "vercel/unknown-model",
+      model_eligibility: { status: "unknown" },
+    })!
+    const snapshot = createVercelCatalogSnapshot([model])
+    expect(snapshot.data[0]!.availability?.available).toBeNull()
+    const { container } = render(
+      <ModelItem
+        {...props}
+        model={snapshot.data[0]!}
+        source={{
+          ...props.source,
+          capabilities: {
+            ...props.source.capabilities,
+            supportsCredentialVerification: true,
+          },
+        }}
+        onVerifyModel={onVerifyModel}
+      />,
+    )
+    expect(screen.getByText("availability.unknown")).toBeVisible()
+    expect(screen.queryByText("availability.unavailable")).toBeNull()
+    expect(container.firstElementChild).not.toHaveClass("opacity-75")
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "verify-api" }))
+    expect(onVerifyModel).toHaveBeenCalled()
+  })
+
+  it("keeps manual verification usable when the provider explicitly denies access", async () => {
+    const props = createDefaultProps()
+    const onVerifyModel = vi.fn()
+    render(
+      <ModelItem
+        {...props}
+        model={{
+          ...props.model,
+          availability: { available: false, reason: "policy_changed" },
+        }}
+        source={{
+          ...props.source,
+          capabilities: {
+            ...props.source.capabilities,
+            supportsCredentialVerification: true,
+          },
+        }}
+        onVerifyModel={onVerifyModel}
+      />,
+    )
+    expect(screen.getByText("availability.unavailable")).toBeVisible()
+    const user = userEvent.setup()
+    await user.click(screen.getByRole("button", { name: "verify-api" }))
+    expect(onVerifyModel).toHaveBeenCalled()
+    await user.hover(
+      screen.getByRole("button", { name: "availability.details" }),
+    )
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "policy_changed",
+    )
   })
 
   it("renders provider-selected facts and keeps unsupported actions absent during keyboard expansion", async () => {

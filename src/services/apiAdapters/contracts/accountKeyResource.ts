@@ -210,6 +210,15 @@ export type AccountKeyGroupEmptyValue =
 export type AccountKeyDisplayFact =
   | {
       readonly fieldId: string
+      readonly kind: "spend-budget"
+      readonly source: "custom" | "inherited" | "none" | "unavailable"
+      readonly limitUsd?: number
+      readonly usedUsd?: number
+      readonly active?: boolean
+      readonly period?: "none" | "daily" | "weekly" | "monthly"
+    }
+  | {
+      readonly fieldId: string
       readonly kind: "money"
       readonly role: "remaining" | "used" | "total"
       readonly amountUsd: number
@@ -282,6 +291,13 @@ export type AccountKeyDisplayFact =
       readonly value: string | readonly string[]
       /** The provider decides whether an empty group inherits the account group. */
       readonly emptyValue: AccountKeyGroupEmptyValue
+    }
+  | {
+      readonly fieldId: string
+      /** Billing attribution target; independent of account/model access groups. */
+      readonly kind: "attribution"
+      /** Provider-declared attribution key, resolved through the provider's copy. */
+      readonly value: string
     }
 
 export const ACCOUNT_KEY_RESOURCE_STATUSES = {

@@ -11,6 +11,7 @@ import {
   type KimiOpenPlatformDeployment,
 } from "~/services/kimiOpenPlatform/deployments"
 import type { KimiPricingDocEntry } from "~/services/kimiOpenPlatform/pricingDoc"
+import { createAccountBoundCatalogActionPolicy } from "~/services/modelList/catalogActionPolicy"
 import {
   MODEL_CATALOG_SCOPES,
   MODEL_LIST_SOURCE_KINDS,
@@ -185,14 +186,9 @@ function createKimiCatalogResponse(
       catalogScope,
       supportsRuntimeModelList: false,
       supportsPricing: rows.some((row) => row.entry !== undefined),
-      actionPolicy: {
-        supportsGroupFiltering: false,
-        supportsAccountSummary: false,
-        supportsTokenCompatibility: false,
-        supportsCredentialVerification: false,
-        supportsBatchCredentialVerification: false,
-        supportsCliVerification: false,
-      },
+      actionPolicy: createAccountBoundCatalogActionPolicy({
+        hasAccountContext: catalogScope === MODEL_CATALOG_SCOPES.PERSONALIZED,
+      }),
     },
   }
 }

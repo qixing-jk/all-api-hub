@@ -25,7 +25,12 @@
     "prepareFailed": "Không thể lưu tạm biểu mẫu. Sao chép thông tin cần giữ rồi mở lại biểu mẫu tài khoản ở trang đầy đủ.",
     "restoreFailed": "Không khôi phục được biểu mẫu chưa hoàn tất. Biểu mẫu có thể đã hết hạn. Hãy mở lại biểu mẫu tài khoản.",
     "rotationWarning": "Chỉ áp dụng cho trang cũ có Generate / Regenerate: tạo lại sẽ làm mã cũ mất hiệu lực; hãy cập nhật các công cụ đang dùng mã đó. Tạo mã truy cập có phạm vi quyền không làm các mã hiện có mất hiệu lực.",
-    "title": "Nhập Access Token thủ công"
+    "title": "Nhập Access Token thủ công",
+    "vercel": {
+      "generateStep": "Mở trang mã truy cập trong tài khoản Vercel, tạo mã cho nhóm sở hữu AI Gateway và hoàn tất bước xác minh email mà Vercel yêu cầu. Sao chép mã ngay vì mã chỉ hiển thị một lần.",
+      "openPage": "Mở mã truy cập Vercel",
+      "openPageFailed": "Không mở được trang. Hãy tự mở trang mã truy cập trong tài khoản Vercel, tạo mã cho nhóm AI Gateway rồi quay lại đây để dán."
+    }
   },
   "actions": {
     "autoConfigAriaLabel": "Lưu tài khoản và đi đến cấu hình kênh {{managedSite}}",
@@ -224,7 +229,14 @@
     "thirdPartyDailyCheckInMethod": "Điểm danh hằng ngày qua {{source}}",
     "userId": "User ID",
     "username": "Tên người dùng",
-    "validRateError": "Vui lòng nhập tỷ giá hợp lệ, lớn hơn 0"
+    "validRateError": "Vui lòng nhập tỷ giá hợp lệ, lớn hơn 0",
+    "vercelAccessToken": "Mã truy cập Vercel",
+    "vercelAccessTokenGuidance": "Mở trang mã truy cập trong tài khoản Vercel, tạo mã cho nhóm sở hữu AI Gateway rồi dán vào đây. Vercel có thể yêu cầu mã xác minh gửi qua email trước, và mã chỉ hiển thị một lần.",
+    "vercelAccessTokenGuidanceTitle": "Dùng mã truy cập Vercel",
+    "vercelTeam": "Nhóm Vercel",
+    "vercelTeamHelp": "Chọn nhóm sở hữu số dư và khóa AI Gateway. Mỗi nhóm được lưu thành một tài khoản riêng.",
+    "vercelTeamLoadFailed": "Không thể tải nhóm. Kiểm tra token truy cập rồi thử lại.",
+    "vercelTeamPlaceholder": "Chọn nhóm"
   },
   "infoPanel": {
     "autoDetect": "Tự động nhận dạng",

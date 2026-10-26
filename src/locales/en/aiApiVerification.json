@@ -16,6 +16,7 @@
       "openai": "OpenAI",
       "openaiCompatible": "OpenAI-compatible"
     },
+    "associatedCredentialHint": "This site cannot return the full key again. Tests use the full key saved in the API Credential Library and linked to the selected key. If none is linked, open key management to save or associate the key first.",
     "details": {
       "input": "Input",
       "output": "Output",

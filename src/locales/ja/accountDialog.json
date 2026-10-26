@@ -25,7 +25,12 @@
     "prepareFailed": "現在のフォームを一時保存できません。必要な情報をコピーしてから、全画面ページでアカウントフォームを開き直してください。",
     "restoreFailed": "未完了のフォームを復元できませんでした。有効期限が切れた可能性があります。アカウントフォームを開き直してください。",
     "rotationWarning": "Generate / Regenerate が表示される旧式サイトのみ：再生成すると古いトークンが無効になるため、他のツールも更新してください。スコープ付きアクセストークンを作成しても既存のトークンは無効になりません。",
-    "title": "Access Token を手動で入力"
+    "title": "Access Token を手動で入力",
+    "vercel": {
+      "generateStep": "Vercel アカウントのトークンページを開き、AI Gateway を所有するチームのトークンを作成し、Vercel が求めるメール確認を完了してください。トークンは一度しか表示されないため、すぐにコピーしてください。",
+      "openPage": "Vercel のトークンを開く",
+      "openPageFailed": "ページを開けませんでした。Vercel アカウントのトークンページを手動で開き、AI Gateway のチーム用のトークンを作成してから、ここに戻って貼り付けてください。"
+    }
   },
   "actions": {
     "autoConfigAriaLabel": "アカウントを保存して {{managedSite}} のチャネル設定を開く",
@@ -224,7 +229,14 @@
     "thirdPartyDailyCheckInMethod": "{{source}} のデイリーチェックイン",
     "userId": "ユーザー ID",
     "username": "ユーザー名",
-    "validRateError": "0 より大きい有効な為替レートを入力してください"
+    "validRateError": "0 より大きい有効な為替レートを入力してください",
+    "vercelAccessToken": "Vercel アクセストークン",
+    "vercelAccessTokenGuidance": "Vercel アカウントのトークンページを開き、AI Gateway を所有するチームのトークンを作成してここに貼り付けてください。先にメール宛ての確認コードを求められる場合があり、トークンは一度しか表示されません。",
+    "vercelAccessTokenGuidanceTitle": "Vercel アクセストークンを使用する",
+    "vercelTeam": "Vercel チーム",
+    "vercelTeamHelp": "AI Gateway の残高とキーを所有するチームを選択します。チームごとに別のアカウントとして保存されます。",
+    "vercelTeamLoadFailed": "チームを読み込めませんでした。アクセストークンを確認して再試行してください。",
+    "vercelTeamPlaceholder": "チームを選択"
   },
   "infoPanel": {
     "autoDetect": "自動検出",

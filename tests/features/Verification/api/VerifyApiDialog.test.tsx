@@ -7,6 +7,7 @@ import { VerifyApiDialog } from "~/features/Verification/api"
 import { useVerifyApiDialogViewModel } from "~/features/Verification/api/useVerifyApiDialogViewModel"
 import { buildServiceCredentialRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import type { AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
+import * as siteCapabilities from "~/services/apiAdapters/registry"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -188,6 +189,42 @@ describe("VerifyApiDialog", () => {
     })
     await verificationResultHistoryStorage.clearAllData()
     mockRunPelicanTest.mockReset()
+  })
+
+  it("explains credential-library recovery for keys only revealed at creation", async () => {
+    vi.spyOn(siteCapabilities, "getSiteTypeCapabilities").mockReturnValue({
+      siteType: SITE_TYPES.VERCEL_AI_GATEWAY,
+      account: {
+        keyResourceManagement: {
+          inventorySecretAvailability: "create-response-only",
+        },
+      },
+    } as any)
+    mockFetchAccountTokens.mockResolvedValue([])
+    const onManageModelKey = vi.fn()
+    render(
+      <VerifyApiDialog
+        isOpen
+        onClose={() => {}}
+        account={buildDisplaySiteData({
+          siteType: SITE_TYPES.VERCEL_AI_GATEWAY,
+        })}
+        onManageModelKey={onManageModelKey}
+        initialModelId="deepseek/deepseek-v4.1-flash-1017"
+      />,
+    )
+    expect(
+      await screen.findByText(
+        "aiApiVerification:verifyDialog.associatedCredentialHint",
+      ),
+    ).toBeVisible()
+    await userEvent.setup().click(
+      screen.getByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.manageModelKey",
+      }),
+    )
+    expect(onManageModelKey).toHaveBeenCalledOnce()
+    expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
   })
 
   it("shows key loading inside the key select and restores selection when loaded", async () => {

@@ -25,7 +25,12 @@
     "prepareFailed": "Não foi possível salvar o formulário temporariamente. Copie as informações que precisa manter e reabra o formulário na página completa.",
     "restoreFailed": "Não foi possível restaurar o formulário incompleto. Ele pode ter expirado. Reabra o formulário de conta.",
     "rotationWarning": "Somente em sites antigos com Generate / Regenerate: gerar novamente invalida o token anterior; atualize as ferramentas que o utilizam. Criar um token de acesso com permissões não invalida os tokens existentes.",
-    "title": "Insira um Access Token manualmente"
+    "title": "Insira um Access Token manualmente",
+    "vercel": {
+      "generateStep": "Abra a página de tokens da sua conta Vercel, crie um token para a equipe proprietária do AI Gateway e conclua a verificação por e-mail solicitada pela Vercel. Copie o token imediatamente, pois ele é exibido apenas uma vez.",
+      "openPage": "Abrir tokens da Vercel",
+      "openPageFailed": "Não foi possível abrir a página. Abra manualmente a página de tokens da sua conta Vercel, crie um token para a equipe do AI Gateway e volte aqui para colá-lo."
+    }
   },
   "actions": {
     "autoConfigAriaLabel": "Salve a conta e abra a configuração do canal {{managedSite}}",
@@ -226,7 +231,14 @@
     "thirdPartyDailyCheckInMethod": "Check-in diário do {{source}}",
     "userId": "ID do usuário",
     "username": "Nome de usuário",
-    "validRateError": "Insira uma taxa de câmbio válida, maior que 0"
+    "validRateError": "Insira uma taxa de câmbio válida, maior que 0",
+    "vercelAccessToken": "Token de acesso da Vercel",
+    "vercelAccessTokenGuidance": "Abra a página de tokens da sua conta Vercel, crie um token para a equipe proprietária do AI Gateway e cole aqui. A Vercel pode pedir antes um código enviado por e-mail, e o token é exibido apenas uma vez.",
+    "vercelAccessTokenGuidanceTitle": "Usar um token de acesso da Vercel",
+    "vercelTeam": "Equipe Vercel",
+    "vercelTeamHelp": "Escolha a equipe que possui o saldo e as chaves do AI Gateway. Cada equipe é salva como uma conta separada.",
+    "vercelTeamLoadFailed": "Não foi possível carregar as equipes. Confira o token de acesso e tente novamente.",
+    "vercelTeamPlaceholder": "Selecione uma equipe"
   },
   "infoPanel": {
     "autoDetect": "Detecção automática",

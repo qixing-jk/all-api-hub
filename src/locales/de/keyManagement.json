@@ -577,6 +577,31 @@
         "discard": "Änderungen verwerfen",
         "keepEditing": "Weiter bearbeiten",
         "title": "Änderungen verwerfen?"
+      },
+      "vercelAiGateway": {
+        "attribution": {
+          "team": "Team",
+          "user": "Teammitglied"
+        },
+        "budgetAlerts": "E-Mail an den Schlüsselersteller bei diesen Schwellen",
+        "budgetEnabled": "Ausgabenbudget",
+        "budgetHelp": "Eigenes Limit in USD festlegen. Ohne eigenes Budget gilt das Team-Standardbudget, falls vorhanden. Neue Budgets schließen BYOK-Ausgaben aus.",
+        "budgetInactive": "Budget inaktiv",
+        "budgetLimit": "Ausgabenlimit (USD, mindestens $1)",
+        "budgetPeriod": "Budget erneuern",
+        "budgetUnavailable": "Budget konnte nicht gelesen werden. Vor dem Bearbeiten erneut versuchen.",
+        "consoleFailed": "Teamkonsole konnte nicht geöffnet werden. Zugriffstoken prüfen und erneut versuchen.",
+        "inheritedBudget": "Team-Standardbudget",
+        "noBudget": "Kein eigenes Schlüsselbudget",
+        "openConsole": "Vercel-Konsole öffnen",
+        "period": {
+          "daily": "Täglich",
+          "monthly": "Monatlich",
+          "none": "Nie",
+          "weekly": "Wöchentlich"
+        },
+        "spendAttribution": "Ausgabenzuordnung",
+        "spendAttributionHelp": "Wessen Budget dieser Schlüssel belastet. Nur Teambesitzer und AI Gateway Budget Managers können die Zuordnung ändern."
       }
     },
     "heading": "API-Schlüssel",

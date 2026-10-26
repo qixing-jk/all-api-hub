@@ -31,6 +31,21 @@ function renderProbe(result: ApiVerificationProbeResult | null) {
 }
 
 describe("ApiCheckProbeList", () => {
+  it("renders upstream recovery guidance alongside the localized HTTP failure", async () => {
+    renderProbe({
+      id: "text-generation",
+      status: "fail",
+      latencyMs: 12,
+      summary:
+        "AI Gateway requires a valid credit card on file to service requests.",
+      summaryKey: "verifyDialog.summaries.forbidden",
+      summaryParams: { status: 403 },
+    })
+    expect(
+      await screen.findByText(/AI Gateway requires a valid credit card/),
+    ).toBeVisible()
+  })
+
   it.each(["fail", "unsupported"] as const)(
     "keeps the %s status without showing a separate duration",
     async (status) => {

@@ -25,7 +25,12 @@
     "prepareFailed": "Unable to stage the current form. Copy any information you need to keep, then reopen the account form in the full page.",
     "restoreFailed": "Could not restore the unfinished form. It may have expired. Please reopen the account form.",
     "rotationWarning": "Only on legacy sites with Generate / Regenerate: regenerating invalidates the old token, so update other tools that use it. Creating a scoped access token does not invalidate existing tokens.",
-    "title": "Enter an Access Token manually"
+    "title": "Enter an Access Token manually",
+    "vercel": {
+      "generateStep": "Open your Vercel account Tokens page, create a token for the team that owns AI Gateway, and complete the email verification Vercel asks for. Copy the token immediately, because it is shown only once.",
+      "openPage": "Open Vercel tokens",
+      "openPageFailed": "Could not open the page. Open your Vercel account Tokens page manually, create a token for the AI Gateway team, then return here to paste it."
+    }
   },
   "actions": {
     "autoConfigAriaLabel": "Save account and open {{managedSite}} channel setup",
@@ -225,7 +230,14 @@
     "thirdPartyDailyCheckInMethod": "{{source}} daily check-in",
     "userId": "User ID",
     "username": "Username",
-    "validRateError": "Please enter a valid exchange rate, greater than 0"
+    "validRateError": "Please enter a valid exchange rate, greater than 0",
+    "vercelAccessToken": "Vercel Access Token",
+    "vercelAccessTokenGuidance": "Open your Vercel account Tokens page, create a token for the team that owns AI Gateway, and paste it here. Vercel may ask for a code sent to your email first, and the token is shown only once.",
+    "vercelAccessTokenGuidanceTitle": "Use a Vercel access token",
+    "vercelTeam": "Vercel team",
+    "vercelTeamHelp": "Choose the team that owns the AI Gateway balance and keys. Each team is saved as a separate account.",
+    "vercelTeamLoadFailed": "Could not load teams. Check the access token and retry.",
+    "vercelTeamPlaceholder": "Select a team"
   },
   "infoPanel": {
     "autoDetect": "Auto Detect",

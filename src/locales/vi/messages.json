@@ -252,6 +252,9 @@
     "configMissing": "Vui lòng cấu hình địa chỉ Veloera, token quản trị viên và ID người dùng trong phần Cài đặt trước",
     "noChannelsToSync": "Không có kênh nào để đồng bộ"
   },
+  "vercelAiGateway": {
+    "accessTokenRequired": "Vercel AI Gateway cần mã truy cập Vercel của nhóm sở hữu gateway."
+  },
   "warnings": {
     "accountSavedWithoutDataRefresh": "Tài khoản đã được lưu, nhưng không thể lấy số dư, hạn mức và lượng sử dụng hôm nay, các giá trị hiển thị hiện tại có thể là giá trị giữ chỗ. Vui lòng làm mới trong danh sách tài khoản sau.",
     "accountUpdatedWithoutDataRefresh": "Cấu hình tài khoản đã được lưu, nhưng không thể làm mới số dư, hạn mức và lượng sử dụng hôm nay mới nhất, dữ liệu hiển thị hiện tại có thể vẫn là dữ liệu cũ. Vui lòng làm mới trong danh sách tài khoản sau."

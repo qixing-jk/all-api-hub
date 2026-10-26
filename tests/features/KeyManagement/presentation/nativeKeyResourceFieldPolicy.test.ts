@@ -33,6 +33,7 @@ import {
   editRelayForKeyEditor,
 } from "~/services/apiAdapters/relayfor/accountKeyResource"
 import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keys/keyResourceEditor"
+import { createVercelKeyEditor } from "~/services/apiAdapters/vercelAiGateway/keyEditor"
 import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
 import { AuthTypeEnum } from "~/types"
 
@@ -44,6 +45,52 @@ const request = {
     userId: 1,
   },
 }
+
+it("presents Vercel budget editing when attribution is unavailable", () => {
+  const editor = createVercelKeyEditor(undefined, { canSetAttribution: false })
+  const presentation = getNativeKeyResourceEditorPresentation(
+    SITE_TYPES.VERCEL_AI_GATEWAY,
+    editorModes.Create,
+    { fields: editor.fields },
+  )
+  expect(() =>
+    resolveResourceFieldPolicy(
+      editor.fields,
+      presentation.policy,
+      presentation.sectionOrder,
+    ),
+  ).not.toThrow()
+  expect(
+    presentation.policy.fields.map((field) => field.fieldId),
+  ).not.toContain("spend_attribution")
+})
+
+it("shows Vercel budget controls only after enabling a custom budget", () => {
+  const editor = createVercelKeyEditor()
+  const presentation = getNativeKeyResourceEditorPresentation(
+    SITE_TYPES.VERCEL_AI_GATEWAY,
+    editorModes.Create,
+    { fields: editor.fields },
+  )
+  const fields = presentation.policy.fields
+  expect(
+    fields.find((field) => field.fieldId === "budget_enabled")?.renderer,
+  ).toBe("boolean")
+  expect(
+    fields.find((field) => field.fieldId === "budget_alerts")
+      ?.multiSelectLayout,
+  ).toBe("cards")
+  expect(
+    fields
+      .find((field) => field.fieldId === "budget_limit")
+      ?.visibleWhen?.(editor.initialValues),
+  ).toBe(false)
+  expect(
+    fields
+      .find((field) => field.fieldId === "budget_limit")
+      ?.visibleWhen?.({ ...editor.initialValues, budget_enabled: true }),
+  ).toBe(true)
+})
 
 it.each([SITE_TYPES.NEW_API, SITE_TYPES.SUB2API, SITE_TYPES.OPENROUTER])(
   "keeps the existing section presentation for %s when styling Daya",
@@ -901,3 +948,30 @@ it.each([editorModes.Create, editorModes.Edit] as const)(
     }
   },
 )
+
+it("resolves translated Vercel field labels and native options", async () => {
+  const i18n = createInstance()
+  await i18n.init({
+    lng: "zh-CN",
+    resources: { "zh-CN": { keyManagement: zhKeyManagement } },
+    parseMissingKeyHandler: (key) => `__MISSING__${key}`,
+  })
+  const editor = createVercelKeyEditor()
+  const presentation = getNativeKeyResourceEditorPresentation(
+    SITE_TYPES.VERCEL_AI_GATEWAY,
+    editorModes.Create,
+    { fields: editor.fields },
+  )
+  const fields = presentation.policy.fields
+  const translated = fields.map((field) => field.resolveLabel(i18n.t))
+  expect(translated).toContain("消费归属")
+  for (const field of fields) {
+    expect(field.resolveLabel(i18n.t)).not.toContain("__MISSING__")
+    if (field.resolveHelp)
+      expect(field.resolveHelp(i18n.t)).not.toContain("__MISSING__")
+    for (const resolve of Object.values(field.optionLabelResolvers ?? {}))
+      expect(resolve(i18n.t)).not.toContain("__MISSING__")
+    if (field.visibleWhen)
+      expect(field.visibleWhen({ budget_enabled: true })).toBe(true)
+  }
+})

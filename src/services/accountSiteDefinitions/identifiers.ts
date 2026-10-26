@@ -50,6 +50,7 @@ export const SITE_TYPES = {
   DAYA: "daya",
   PMAPI: "pmapi",
   GRSAI: "grsai",
+  VERCEL_AI_GATEWAY: "vercel-ai-gateway",
   UNKNOWN: "unknown",
 } as const
 
@@ -251,3 +252,36 @@ export const DAYA_API_BASE_URL = "https://daya.to/v1"
  */
 export const PMAPI_HOSTNAMES = ["pmcat.top", "pap.pmcat.top"] as const
 export const PMAPI_DISPLAY_NAME = "PM-API"
+
+/**
+ * Vercel AI Gateway splits three roles across hosts, verified 2026-10-24:
+ * the console and its session live on `vercel.com`, AI Gateway key management
+ * and account identity answer on `api.vercel.com` with a Vercel access token,
+ * and inference plus credits answer on `ai-gateway.vercel.sh/v1`. Credits also
+ * accept the Vercel access token when the request names the team; inference
+ * credentials remain distinct from the console credential.
+ *
+ * `vercel.com` also serves every other Vercel product, so detection stays
+ * hostname-scoped while the account form pins the AI Gateway dashboard.
+ */
+export const VERCEL_AI_GATEWAY_HOSTNAMES = ["vercel.com"] as const
+export const VERCEL_AI_GATEWAY_DISPLAY_NAME = "Vercel AI Gateway"
+/** Console origin owning the login session and `/account/settings/tokens`. */
+export const VERCEL_WEB_ORIGIN = "https://vercel.com"
+/** Account API (identity, teams, AI Gateway key management). */
+export const VERCEL_API_ORIGIN = "https://api.vercel.com"
+/** Inference API; `/v1/models` is public, `/v1/credits` also accepts a token plus team. */
+export const VERCEL_AI_GATEWAY_API_ORIGIN = "https://ai-gateway.vercel.sh"
+export const VERCEL_AI_GATEWAY_API_BASE_URL = `${VERCEL_AI_GATEWAY_API_ORIGIN}/v1`
+/** Console page that issues Vercel access tokens (email re-auth is expected). */
+export const VERCEL_ACCESS_TOKENS_PATH = "/account/settings/tokens"
+
+/** Returns whether the supplied URL belongs to the Vercel console origin. */
+export function isCanonicalVercelUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value.trim())
+    return parsed.protocol === "https:" && parsed.origin === VERCEL_WEB_ORIGIN
+  } catch {
+    return false
+  }
+}

@@ -265,6 +265,9 @@
     "configMissing": "Configure o endereço do Veloera, token do administrador e ID do usuário nas configurações básicas primeiro",
     "noChannelsToSync": "Nenhum canal para sincronizar"
   },
+  "vercelAiGateway": {
+    "accessTokenRequired": "O Vercel AI Gateway exige um token de acesso da Vercel para a equipe proprietária do gateway."
+  },
   "warnings": {
     "accountSavedWithoutDataRefresh": "Conta salva, mas não foi possível obter o saldo, a cota e o uso de hoje mais recentes. Os valores atuais podem ser provisórios. Atualize esta conta mais tarde na lista de contas.",
     "accountUpdatedWithoutDataRefresh": "Configurações da conta salvas, mas não foi possível atualizar o saldo, a cota e o uso de hoje mais recentes. Os valores atuais ainda podem estar desatualizados. Atualize esta conta mais tarde na lista de contas."

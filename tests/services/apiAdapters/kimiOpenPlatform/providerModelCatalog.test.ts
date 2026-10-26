@@ -159,6 +159,12 @@ describe("kimiOpenPlatform provider model catalog", () => {
     expect(response.model_list_source.catalogScope).toBe(
       MODEL_CATALOG_SCOPES.PERSONALIZED,
     )
+    expect(response.model_list_source.actionPolicy).toMatchObject({
+      supportsTokenCompatibility: true,
+      supportsCredentialVerification: true,
+      supportsBatchCredentialVerification: true,
+      supportsCliVerification: true,
+    })
     expect(response.model_list_source.supportsPricing).toBe(true)
     expect(response.data).toEqual([
       expect.objectContaining({

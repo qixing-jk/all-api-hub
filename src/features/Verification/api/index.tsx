@@ -25,6 +25,11 @@ import { VerificationRequestProfileSelect } from "~/features/Verification/api/Ve
 import { VerificationRunButton } from "~/features/Verification/api/VerificationRunButton"
 import { VerificationTestLabel } from "~/features/Verification/api/VerificationTestLabel"
 import { VerificationToolsPanel } from "~/features/Verification/api/VerificationToolsPanel"
+import {
+  getInventorySecretAvailability,
+  INVENTORY_SECRET_AVAILABILITIES,
+} from "~/services/apiAdapters/contracts/inventorySecret"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import {
   API_TYPES,
@@ -97,6 +102,13 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
   const runtimeKeyPlaceholder = isLoadingRuntimeKeys
     ? t("verifyDialog.loadingRuntimeKeysHint")
     : t("verifyDialog.meta.runtimeKeyPlaceholder")
+  const keyResources = getSiteTypeCapabilities(account.siteType).account
+    ?.keyResourceManagement
+  const usesAssociatedCredential =
+    keyResources &&
+    getInventorySecretAvailability(keyResources) !==
+      INVENTORY_SECRET_AVAILABILITIES.Recoverable &&
+    !selectedRuntimeKey?.secret.trim()
 
   const footer = (
     <div className="gap-y-density-2 flex flex-col gap-x-2 sm:flex-row sm:items-center sm:justify-between">
@@ -185,11 +197,21 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
                   disabled={isLoadingRuntimeKeys}
                   placeholder={runtimeKeyPlaceholder}
                 />
-                {runtimeKeyCompatibilityHint ? (
+                {runtimeKeyCompatibilityHint || usesAssociatedCredential ? (
                   <div className="space-y-density-1-5">
-                    <div className="text-destructive-text text-xs" role="alert">
-                      {runtimeKeyCompatibilityHint}
-                    </div>
+                    {runtimeKeyCompatibilityHint && (
+                      <div
+                        className="text-destructive-text text-xs"
+                        role="alert"
+                      >
+                        {runtimeKeyCompatibilityHint}
+                      </div>
+                    )}
+                    {usesAssociatedCredential && (
+                      <p className="text-muted-foreground text-xs" role="note">
+                        {t("verifyDialog.associatedCredentialHint")}
+                      </p>
+                    )}
                     {onManageModelKey ? (
                       <Button
                         type="button"
@@ -316,6 +338,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
                     t,
                     result.summaryKey,
                     result.summaryParams,
+                    result.summary,
                   ) ?? result.summary
                 : result?.status === API_VERIFICATION_PROBE_STATUSES.Unsupported
                   ? t("verifyDialog.unsupportedProbeForApiType", {

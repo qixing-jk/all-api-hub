@@ -106,8 +106,9 @@
     "e2e:cdp:daya:keys": "node scripts/test-daya-key-editor-e2e-live.mjs",
     "e2e:cdp:daya:redemption": "node scripts/test-daya-redemption-e2e-live.mjs",
     "e2e:cdp:daya:prices": "node scripts/test-daya-model-prices-e2e-live.mjs",
-    "prepare": "husky",
-    "e2e:cdp:requesty": "node scripts/test-requesty-e2e-live.mjs"
+    "e2e:cdp:requesty": "node scripts/test-requesty-e2e-live.mjs",
+    "e2e:cdp:vercel-ai-gateway": "node scripts/test-vercel-ai-gateway-e2e-live.mjs",
+    "prepare": "husky"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

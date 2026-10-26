@@ -51,6 +51,7 @@
 | Daya API | 複数モデルプロバイダーを集約する統合 AI API アクセスプラットフォーム。モデル API、独立キー、クレジット管理を提供します。 | — |
 | PM-API | コミュニティ AI 中継サービス。モデル API、トークンキー管理、引き換えコード、毎日チェックインを提供します。pmcat.top と pap.pmcat.top は同一プログラムの 2 つのデプロイです。 | [サイト](https://pmcat.top/) |
 | Requesty | 統一モデルルーティング、プリペイド残高、キー管理を提供するホスト型 LLM ゲートウェイ。 | [サイト](https://app.requesty.ai/) / [ドキュメント](https://docs.requesty.ai/) |
+| Vercel AI Gateway | 複数のモデルプロバイダーを 1 つの API キーで呼び出せる Vercel 公式の AI モデルゲートウェイ。クレジット、リクエストログ、予算管理を提供します。 | [公式サイト](https://vercel.com/ai-gateway) / [ドキュメント](https://vercel.com/docs/ai-gateway) |
 
 ## ❤️ 推奨スポンサーサイト
 
