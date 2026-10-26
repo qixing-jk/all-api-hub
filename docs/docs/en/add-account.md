@@ -234,6 +234,20 @@ OpenRouter always uses a **Management Key (Access Token)**. You do not need to e
 Management Keys are sensitive information. Do not share their full contents or expose them in public screenshots or issue reports.
 :::
 
+<a id="manual-vercel-ai-gateway"></a>
+### 2.4 Vercel AI Gateway
+
+1. Sign in to the [Vercel console](https://vercel.com/) and open the team that uses AI Gateway.
+2. Choose **Add account → Manual addition** in the extension, enter `https://vercel.com`, and select the `vercel-ai-gateway` site type.
+3. Create an access token with access to the target team on [Vercel Tokens](https://vercel.com/account/settings/tokens), complete any email verification, and immediately paste the complete token into the extension's **Access Token** field. This is a Vercel account access token, distinct from an AI Gateway inference API key.
+4. Wait for the team list and select the team that owns the credits and keys. Saving verifies token membership again. Different teams can be saved as separate accounts.
+5. Enter a website name and a positive `CNY/USD` conversion rate, then save. Balances are read in USD; the rate only affects display conversion. If the token expires, create a replacement in the console and update the saved credential.
+
+::: warning Protect access tokens
+Keep complete tokens out of public screenshots and feedback. Console cookies cannot replace this access token, and the extension cannot create or renew Vercel tokens in the background.
+:::
+
+
 ## 3. Cookie Mode
 
 For some sites with strict API protection or extensive customization, try **"Cookie Mode"** if Access Token mode does not work. In this mode, the extension uses your current signed-in session (Cookie) to request data.

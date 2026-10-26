@@ -21,6 +21,7 @@ const page = await browser.contexts()[0].newPage()
 page.setDefaultTimeout(30000)
 page.setDefaultNavigationTimeout(30000)
 const result = { output: out, extensionPath: extension.path, checks: [] }
+let creationAttempted = false
 let disposableId
 let accountId
 const keyName = `AAH parity ${Date.now()}`
@@ -107,6 +108,7 @@ try {
     if (!process.argv.includes("--mutate")) {
       result.editor = await editor.innerText()
     } else {
+      creationAttempted = true
       await page
         .getByTestId("key-management-native-editor-submit-button")
         .click()
@@ -259,20 +261,48 @@ try {
   ).slice(-3500)
   throw error
 } finally {
-  if (disposableId) {
-    const deleted = await api(
-      `/v1/api-keys/${encodeURIComponent(disposableId)}`,
-      "DELETE",
-    )
-    assert.equal(deleted.status, 204)
-    const after = await api("/v1/api-keys?purpose=ai-gateway")
-    assert(!after.payload.apiKeys.some((k) => k.id === disposableId))
-    result.checks.push("disposable key deleted and absence confirmed")
+  try {
+    if (accountId && creationAttempted) {
+      const listed = await api("/v1/api-keys?purpose=ai-gateway")
+      assert.equal(listed.status, 200)
+      const owned = listed.payload.apiKeys.filter((key) =>
+        disposableId ? key.id === disposableId : key.name === keyName,
+      )
+      for (const key of owned) {
+        const deleted = await api(
+          `/v1/api-keys/${encodeURIComponent(key.id)}`,
+          "DELETE",
+        )
+        assert.equal(deleted.status, 204)
+      }
+      const after = await api("/v1/api-keys?purpose=ai-gateway")
+      assert.equal(after.status, 200)
+      assert(
+        !after.payload.apiKeys.some((key) =>
+          disposableId ? key.id === disposableId : key.name === keyName,
+        ),
+      )
+      result.checks.push("disposable key deleted and absence confirmed")
+    }
+  } catch (error) {
+    result.cleanupError = error.message
+    process.exitCode = 1
   }
-  await fs.writeFile(`${out}/result.json`, JSON.stringify(result, null, 2))
-  console.log(
-    JSON.stringify({ output: out, checks: result.checks, error: result.error }),
-  )
-  await page.close().catch(() => {})
-  await browser.close()
+  try {
+    await fs.writeFile(`${out}/result.json`, JSON.stringify(result, null, 2))
+    console.log(
+      JSON.stringify({
+        output: out,
+        checks: result.checks,
+        error: result.error,
+        cleanupError: result.cleanupError,
+      }),
+    )
+  } finally {
+    try {
+      await page.close().catch(() => {})
+    } finally {
+      await browser.close()
+    }
+  }
 }

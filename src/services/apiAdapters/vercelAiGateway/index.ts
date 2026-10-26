@@ -1,7 +1,6 @@
 import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
 import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { ACCOUNT_SITE_ADAPTER_FAMILIES, SITE_TYPES } from "~/constants/siteType"
-import { determineHealthStatus } from "~/services/accounts/accountHealth"
 import {
   VERCEL_ACCESS_TOKENS_PATH,
   VERCEL_AI_GATEWAY_DISPLAY_NAME,
@@ -14,11 +13,12 @@ import {
   fetchVercelModelCatalog,
   fetchVercelTeams,
   fetchVercelUser,
+  refreshAccountData,
   resolveVercelAccountScope,
 } from "~/services/apiService/vercelAiGateway"
 import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
-import { AuthTypeEnum, SiteHealthStatus } from "~/types"
+import { AuthTypeEnum } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
 
@@ -166,22 +166,7 @@ export const vercelAiGatewayCapabilities: SiteTypeCapabilities = {
       },
     },
     data: { fetchData: fetchAccountData },
-    refresh: {
-      async refreshAccount(request) {
-        try {
-          return {
-            success: true,
-            data: await fetchAccountData(request),
-            healthStatus: {
-              status: SiteHealthStatus.Healthy,
-              message: t("account:healthStatus.normal"),
-            },
-          }
-        } catch (error) {
-          return { success: false, healthStatus: determineHealthStatus(error) }
-        }
-      },
-    },
+    refresh: { refreshAccount: refreshAccountData },
     keyResourceManagement: vercelAiGatewayKeyResources,
     modelPricing: {
       async fetchPricing(request) {

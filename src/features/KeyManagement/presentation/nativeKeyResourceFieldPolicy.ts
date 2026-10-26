@@ -565,12 +565,13 @@ const buildEmRankFields = (mode: AccountKeyResourceEditorMode) => ({
  * attribution (User default). Existing keys edit their budget and attribution;
  * immutable identity and expiry remain read-only.
  */
-const buildVercelAiGatewayFields = (): {
+const buildVercelAiGatewayFields = (
+  descriptors?: readonly ResourceFieldDescriptor[],
+): {
   automaticName: EditorPresentation["automaticName"]
   fields: ResourceFieldPresentation[]
-} => ({
-  automaticName: { kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed } as const,
-  fields: [
+} => {
+  const fields: ResourceFieldPresentation[] = [
     name,
     {
       ...expiry,
@@ -649,8 +650,16 @@ const buildVercelAiGatewayFields = (): {
         values[vercelKeyFields.BudgetEnabled] === true,
       issueLabelResolvers: issues,
     },
-  ] satisfies ResourceFieldPresentation[],
-})
+  ]
+  return {
+    automaticName: { kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed },
+    fields: fields.filter(
+      (field) =>
+        !descriptors ||
+        descriptors.some((descriptor) => descriptor.fieldId === field.fieldId),
+    ),
+  }
+}
 
 const resolveSiteFields = (
   siteType: string | undefined,
@@ -715,7 +724,8 @@ const resolveSiteFields = (
       automaticName: { kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed } as const,
     }),
     [editorKinds.Emrank]: () => buildEmRankFields(mode),
-    [editorKinds.VercelAiGateway]: () => buildVercelAiGatewayFields(),
+    [editorKinds.VercelAiGateway]: () =>
+      buildVercelAiGatewayFields(descriptors),
     // Krill keys have no quota or expiry; permissions are channels, fallback and IPs.
     [editorKinds.Krill]: (): {
       fields: ResourceFieldPresentation[]

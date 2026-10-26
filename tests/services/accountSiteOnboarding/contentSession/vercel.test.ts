@@ -42,6 +42,64 @@ const stubFetch = (responses: Record<string, unknown>) =>
 afterEach(() => vi.unstubAllGlobals())
 
 describe("Vercel AI Gateway content session", () => {
+  it.each([null, {}, { user: null }, { user: { uid: 42, id: " " } }])(
+    "does not trust an unreadable console identity %j",
+    async (body) => {
+      vi.stubGlobal(
+        "fetch",
+        stubFetch({ "/api/user": body, "/api/teams": teamsBody }),
+      )
+      expect(await vercelContentSessionExtractor.extract(context)).toBeNull()
+    },
+  )
+  it("tolerates unreadable team rows and optional display names", async () => {
+    vi.stubGlobal(
+      "fetch",
+      stubFetch({
+        "/api/user": { user: { uid: "u" } },
+        "/api/teams": { teams: [null, 1, { id: " " }, { id: "team_a" }] },
+      }),
+    )
+    expect(
+      await vercelContentSessionExtractor.extract({
+        ...context,
+        url: "https://vercel.com/dashboard",
+      }),
+    ).toEqual({
+      userId: "team_a",
+      siteTypeHint: "vercel-ai-gateway",
+      user: { id: "u", username: "" },
+    })
+  })
+  it("does not guess among teams outside a team console route", async () => {
+    vi.stubGlobal(
+      "fetch",
+      stubFetch({
+        "/api/user": userBody,
+        "/api/teams": { teams: [{ id: "a" }, { id: "b" }] },
+      }),
+    )
+    expect(
+      await vercelContentSessionExtractor.extract({
+        ...context,
+        url: "https://vercel.com/dashboard",
+      }),
+    ).toBeNull()
+  })
+  it("returns no session when the team request fails or a route is malformed", async () => {
+    vi.stubGlobal("fetch", stubFetch({ "/api/user": userBody }))
+    expect(await vercelContentSessionExtractor.extract(context)).toBeNull()
+    vi.stubGlobal(
+      "fetch",
+      stubFetch({ "/api/user": userBody, "/api/teams": teamsBody }),
+    )
+    expect(
+      await vercelContentSessionExtractor.extract({
+        ...context,
+        url: "https://vercel.com/%ZZ/~/ai-gateway",
+      }),
+    ).toBeNull()
+  })
   it("explains the required team access token in Chinese instead of showing a translation key", async () => {
     const i18n = await createResourceTestI18n(
       { "zh-CN": { messages: zhMessages } },

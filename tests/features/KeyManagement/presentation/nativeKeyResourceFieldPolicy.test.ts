@@ -46,6 +46,25 @@ const request = {
   },
 }
 
+it("presents Vercel budget editing when attribution is unavailable", () => {
+  const editor = createVercelKeyEditor(undefined, { canSetAttribution: false })
+  const presentation = getNativeKeyResourceEditorPresentation(
+    SITE_TYPES.VERCEL_AI_GATEWAY,
+    editorModes.Create,
+    { fields: editor.fields },
+  )
+  expect(() =>
+    resolveResourceFieldPolicy(
+      editor.fields,
+      presentation.policy,
+      presentation.sectionOrder,
+    ),
+  ).not.toThrow()
+  expect(
+    presentation.policy.fields.map((field) => field.fieldId),
+  ).not.toContain("spend_attribution")
+})
+
 it("shows Vercel budget controls only after enabling a custom budget", () => {
   const editor = createVercelKeyEditor()
   const presentation = getNativeKeyResourceEditorPresentation(
@@ -929,3 +948,29 @@ it.each([editorModes.Create, editorModes.Edit] as const)(
     }
   },
 )
+
+it("resolves translated Vercel field labels and native options", async () => {
+  const i18n = createInstance()
+  await i18n.init({
+    lng: "zh-CN",
+    resources: { "zh-CN": { keyManagement: zhKeyManagement } },
+  })
+  const editor = createVercelKeyEditor()
+  const presentation = getNativeKeyResourceEditorPresentation(
+    SITE_TYPES.VERCEL_AI_GATEWAY,
+    editorModes.Create,
+    { fields: editor.fields },
+  )
+  const fields = presentation.policy.fields
+  const translated = fields.map((field) => field.resolveLabel(i18n.t))
+  expect(translated).toContain("消费归属")
+  for (const field of fields) {
+    expect(field.resolveLabel(i18n.t)).not.toContain("keyManagement:")
+    if (field.resolveHelp)
+      expect(field.resolveHelp(i18n.t)).not.toContain("keyManagement:")
+    for (const resolve of Object.values(field.optionLabelResolvers ?? {}))
+      expect(resolve(i18n.t)).not.toContain("keyManagement:")
+    if (field.visibleWhen)
+      expect(field.visibleWhen({ budget_enabled: true })).toBe(true)
+  }
+})

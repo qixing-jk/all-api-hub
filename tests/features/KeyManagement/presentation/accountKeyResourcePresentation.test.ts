@@ -51,12 +51,28 @@ it("explains custom, inherited and unavailable Vercel spending budgets", () => {
         period: "weekly",
       },
       { fieldId: "unknown", kind: "spend-budget", source: "unavailable" },
+      { fieldId: "none", kind: "spend-budget", source: "none" },
+      {
+        fieldId: "daily",
+        kind: "spend-budget",
+        source: "custom",
+        limitUsd: 5,
+        period: "daily",
+        active: false,
+      },
+      { fieldId: "user", kind: "attribution", value: "user" },
+      { fieldId: "team", kind: "attribution", value: "team" },
+      {
+        fieldId: "custom-attribution",
+        kind: "attribution",
+        value: "future-value",
+      },
     ],
   }
   const details = getAccountKeyResourceCardAdapter(
     SITE_TYPES.VERCEL_AI_GATEWAY,
   ).buildDetailFacts(facts, t)
-  expect(details).toHaveLength(3)
+  expect(details).toHaveLength(8)
   expect(details[0]?.value).toContain("$3 / $10")
   expect(details[1]?.value).toContain(
     "keyManagement:native.editor.vercelAiGateway.inheritedBudget",
@@ -64,6 +80,22 @@ it("explains custom, inherited and unavailable Vercel spending budgets", () => {
   expect(details[2]?.value).toBe(
     "keyManagement:native.editor.vercelAiGateway.budgetUnavailable",
   )
+  expect(details[3]?.value).toBe(
+    "keyManagement:native.editor.vercelAiGateway.noBudget",
+  )
+  expect(details[4]?.value).toContain(
+    "keyManagement:native.editor.vercelAiGateway.budgetInactive",
+  )
+  expect(details[4]?.value).toContain(
+    "keyManagement:native.editor.vercelAiGateway.period.daily",
+  )
+  expect(details[5]?.value).toBe(
+    "keyManagement:native.editor.vercelAiGateway.attribution.user",
+  )
+  expect(details[6]?.value).toBe(
+    "keyManagement:native.editor.vercelAiGateway.attribution.team",
+  )
+  expect(details[7]?.value).toBe("future-value")
 })
 
 it("distinguishes account-following allowance, explicit rate limits and budget reset windows", () => {

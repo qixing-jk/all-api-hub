@@ -663,16 +663,16 @@ test("loads personalized OpenRouter catalogs with visible provider fallback and 
   ).toBeVisible()
   await expect(
     page.getByTestId(MODEL_LIST_TEST_IDS.modelKeyDialogButton),
-  ).toHaveCount(0)
+  ).toBeVisible()
   await expect(
     page.getByTestId(MODEL_LIST_TEST_IDS.verifyApiButton),
-  ).toHaveCount(0)
+  ).toBeVisible()
   await expect(
     page.getByTestId(MODEL_LIST_TEST_IDS.verifyCliSupportButton),
-  ).toHaveCount(0)
+  ).toBeVisible()
   await expect(
     page.getByTestId(MODEL_LIST_TEST_IDS.batchVerifyButton),
-  ).toHaveCount(0)
+  ).toBeVisible()
 
   await page.getByTestId(MODEL_LIST_TEST_IDS.modelExpandButton).click()
   await expect(

@@ -342,13 +342,13 @@ try {
           .getByTestId(keys.nativeKeyRow)
           .and(page.locator(`[data-resource-id="${createdKeyId}"]`))
         await expect(createdRow).toContainText(runName, { timeout: 30000 })
-        // No update route exists, so the row must not offer an editor.
+        // Existing keys support native budget and attribution editing.
         assert.equal(
           await createdRow
             .getByRole("button", { name: /Edit Key|Edit key/ })
             .count(),
-          0,
-          "a key with no update route must not offer editing",
+          1,
+          "a key must offer native budget and attribution editing",
         )
         // Spend attribution is billing metadata: it must render under its own
         // label, never as a model-access "Group".
@@ -362,7 +362,9 @@ try {
         )
         await expect(createdRow).toContainText("Team", { timeout: 15000 })
         await capture("04-created-key", createdRow)
-        evidence.checks.push("created key inventoried; editing is unavailable")
+        evidence.checks.push(
+          "created key inventoried; native editing is available",
+        )
 
         await createdRow.getByRole("button", { name: /delete key/i }).click()
         await capture("05-delete-confirm")

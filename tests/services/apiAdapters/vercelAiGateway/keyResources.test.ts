@@ -11,6 +11,7 @@ import {
   ACCOUNT_KEY_RESOURCE_STATUSES,
   type AccountKeyResourceCapability,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
+import type { EditableResourceProjection } from "~/services/apiAdapters/contracts/resourceNative"
 import { vercelAiGatewayCapabilities } from "~/services/apiAdapters/vercelAiGateway"
 import {
   createVercelKeyEditor,
@@ -93,6 +94,198 @@ describe("Vercel AI Gateway key resources", () => {
   })
   afterEach(() => server.resetHandlers())
 
+  it("keeps inventory and one-time delivery usable when the independent budget read fails", async () => {
+    server.use(
+      listHandler([keyRow]),
+      http.get(
+        "https://api.vercel.com/ai-gateway/budgets/list",
+        () => new HttpResponse(null, { status: 503 }),
+      ),
+      http.post("https://api.vercel.com/v1/api-keys", () =>
+        HttpResponse.json({ apiKey: keyRow, apiKeyString: "vck_once" }),
+      ),
+    )
+    const session = await openSession()
+    const collection = await session.openCollection("account")
+    const listed = await collection.list(undefined, {
+      signal: new AbortController().signal,
+    })
+    expect(listed.items[0]?.displayFacts).toContainEqual(
+      expect.objectContaining({ kind: "spend-budget", source: "unavailable" }),
+    )
+    const editor = await session.openCreateEditor("account")
+    const created = await editor.submit(editor.initialValues)
+    expect(created.createdSecret?.secret).toBe("vck_once")
+  })
+
+  it("uses budget-manager permission and checks it again immediately before changing attribution", async () => {
+    let authorized = true
+    let writes = 0
+    server.use(
+      http.get("https://api.vercel.com/v1/api-keys/key_1", () =>
+        HttpResponse.json({ apiKey: keyRow }),
+      ),
+      http.get("https://api.vercel.com/v2/teams", () =>
+        HttpResponse.json({
+          teams: [
+            {
+              id: TEAM_ID,
+              slug: "test",
+              membership: {
+                role: "MEMBER",
+                teamRoles: authorized ? ["AI_GATEWAY_BUDGET_MANAGER"] : [],
+              },
+            },
+          ],
+        }),
+      ),
+      http.patch("https://api.vercel.com/v1/api-keys/key_1", () => {
+        writes++
+        return HttpResponse.json({ apiKey: keyRow })
+      }),
+    )
+    const session = await openSession()
+    const collection = await session.openCollection("account")
+    const editor = await collection.openEditEditor({
+      accountId: "acc-vercel",
+      siteType: SITE_TYPES.VERCEL_AI_GATEWAY,
+      scopeKey: "account",
+      resourceId: "key_1",
+    })
+    expect(editor.fields.map((field) => field.fieldId)).toContain(
+      vercelKeyFields.SpendAttribution,
+    )
+    authorized = false
+    await expect(
+      editor.submit({ ...editor.initialValues, spend_attribution: "team" }),
+    ).rejects.toMatchObject({ failure: { code: "permission_denied" } })
+    expect(writes).toBe(0)
+  })
+
+  it("does not write an unchanged key", async () => {
+    let writes = 0
+    server.use(
+      http.get("https://api.vercel.com/v1/api-keys/key_1", () =>
+        HttpResponse.json({ apiKey: keyRow }),
+      ),
+      http.patch("https://api.vercel.com/v1/api-keys/key_1", () => {
+        writes++
+        return HttpResponse.json({ apiKey: keyRow })
+      }),
+      http.patch("https://api.vercel.com/v1/api-keys/key_1/quota", () => {
+        writes++
+        return HttpResponse.json({})
+      }),
+    )
+    const session = await openSession()
+    const collection = await session.openCollection("account")
+    const editor = await collection.openEditEditor({
+      accountId: "acc-vercel",
+      siteType: SITE_TYPES.VERCEL_AI_GATEWAY,
+      scopeKey: "account",
+      resourceId: "key_1",
+    })
+    await editor.submit(editor.initialValues)
+    expect(writes).toBe(0)
+  })
+
+  it("rejects an attribution edit when another client changed it after opening", async () => {
+    let attribution = "user"
+    let writes = 0
+    server.use(
+      http.get("https://api.vercel.com/v1/api-keys/key_1", () =>
+        HttpResponse.json({
+          apiKey: { ...keyRow, metadata: { spendAttribution: attribution } },
+        }),
+      ),
+      http.patch("https://api.vercel.com/v1/api-keys/key_1", () => {
+        writes++
+        return HttpResponse.json({})
+      }),
+    )
+    const session = await openSession()
+    const collection = await session.openCollection("account")
+    const editor = await collection.openEditEditor({
+      accountId: "acc-vercel",
+      siteType: SITE_TYPES.VERCEL_AI_GATEWAY,
+      scopeKey: "account",
+      resourceId: "key_1",
+    })
+    attribution = "team"
+    await expect(
+      editor.submit({ ...editor.initialValues, spend_attribution: "team" }),
+    ).rejects.toMatchObject({ failure: { code: "resource_changed" } })
+    expect(writes).toBe(0)
+  })
+
+  it("treats accepted attribution with stale readback as uncertain", async () => {
+    server.use(
+      http.get("https://api.vercel.com/v1/api-keys/key_1", () =>
+        HttpResponse.json({ apiKey: keyRow }),
+      ),
+      http.patch("https://api.vercel.com/v1/api-keys/key_1", () =>
+        HttpResponse.json({ apiKey: keyRow }),
+      ),
+    )
+    const session = await openSession()
+    const collection = await session.openCollection("account")
+    const editor = await collection.openEditEditor({
+      accountId: "acc-vercel",
+      siteType: SITE_TYPES.VERCEL_AI_GATEWAY,
+      scopeKey: "account",
+      resourceId: "key_1",
+    })
+    await expect(
+      editor.submit({ ...editor.initialValues, spend_attribution: "team" }),
+    ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+  })
+
+  it.each<EditableResourceProjection>([
+    { expires_at: "invalid-date" },
+    { expires_at: 42 },
+    {
+      budget_enabled: true,
+      budget_limit: 5,
+      budget_period: "yearly",
+      budget_alerts: [],
+    },
+    {
+      budget_enabled: true,
+      budget_limit: 5,
+      budget_period: "daily",
+      budget_alerts: "50",
+    },
+    {
+      budget_enabled: true,
+      budget_limit: 5,
+      budget_period: "daily",
+      budget_alerts: ["30"],
+    },
+    {
+      budget_enabled: true,
+      budget_limit: null,
+      budget_period: "daily",
+      budget_alerts: [],
+    },
+  ])("rejects invalid key configuration %j before mutation", (patch) => {
+    const editor = createVercelKeyEditor()
+    expect(
+      editor.validate({ ...editor.initialValues, ...patch }),
+    ).toMatchObject({ valid: false })
+  })
+
+  it.each([undefined, 42, " "])(
+    "rejects a key workspace without a saved team (%s)",
+    async (userId) => {
+      await expect(
+        vercelAiGatewayKeyResources.open({
+          account: { id: "a", siteType: SITE_TYPES.VERCEL_AI_GATEWAY },
+          request: { ...request, auth: { ...request.auth, userId } },
+        }),
+      ).rejects.toMatchObject({ failure: { code: "validation_failed" } })
+    },
+  )
+
   it("recovers a team's one-time key through its exact credential-library association", async () => {
     server.use(listHandler([keyRow]))
     const account = buildDisplaySiteData({
@@ -141,6 +334,69 @@ describe("Vercel AI Gateway key resources", () => {
     } finally {
       await apiCredentialProfilesStorage.clearAllData()
     }
+  })
+
+  it("opens budget editing when the attribution permission lookup fails", async () => {
+    server.use(
+      http.get("https://api.vercel.com/v1/api-keys/key_1", () =>
+        HttpResponse.json({ apiKey: keyRow }),
+      ),
+      http.get("https://api.vercel.com/v2/teams", () =>
+        HttpResponse.json(
+          { error: { message: "Unavailable" } },
+          { status: 503 },
+        ),
+      ),
+    )
+    const session = await openSession()
+    const collection = await session.openCollection("account")
+    const editor = await collection.openEditEditor({
+      accountId: "acc-vercel",
+      siteType: SITE_TYPES.VERCEL_AI_GATEWAY,
+      scopeKey: "account",
+      resourceId: "key_1",
+    })
+    expect(editor.fields.map((field) => field.fieldId)).toContain(
+      vercelKeyFields.BudgetLimit,
+    )
+    expect(editor.fields.map((field) => field.fieldId)).not.toContain(
+      vercelKeyFields.SpendAttribution,
+    )
+  })
+
+  it("opens creation without attribution controls when team permissions cannot be read", async () => {
+    server.use(
+      http.get(
+        "https://api.vercel.com/v2/teams",
+        () => new HttpResponse(null, { status: 503 }),
+      ),
+    )
+    const session = await openSession()
+    const editor = await session.openCreateEditor("account")
+    expect(editor.fields.map((field) => field.fieldId)).not.toContain(
+      vercelKeyFields.SpendAttribution,
+    )
+    expect(editor.validate(editor.initialValues)).toMatchObject({ valid: true })
+  })
+
+  it("uses a safe fallback name and omits attribution for keys without optional metadata", async () => {
+    server.use(
+      listHandler([
+        {
+          ...keyRow,
+          name: undefined,
+          createdBy: undefined,
+          metadata: undefined,
+        },
+      ]),
+    )
+    const session = await openSession()
+    const collection = await session.openCollection("account")
+    const page = await collection.list()
+    expect(page.items[0]?.displayName).toBe("Key abc123")
+    expect(
+      page.items[0]?.displayFacts?.some((fact) => fact.kind === "attribution"),
+    ).toBe(false)
   })
 
   it("maps the team's keys into native inventory facts", async () => {

@@ -278,7 +278,7 @@ export const vercelAiGatewayKeyResources = defineAccountKeyResourceCapability({
     }),
   getEditDetail: async (config, _scope, id, options) => ({
     ...(await findKey(config, id, options)),
-    canSetAttribution: await canSetAttribution(config),
+    canSetAttribution: await canSetAttribution(config).catch(() => false),
   }),
   editEditor: (_config, _scope, key) =>
     createVercelKeyEditor(undefined, {

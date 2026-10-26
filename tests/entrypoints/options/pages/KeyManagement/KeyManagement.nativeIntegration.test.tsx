@@ -12,10 +12,12 @@ import type { AccountKeyResourceRouteTransition } from "~/features/KeyManagement
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import * as provisioningUi from "~/features/TokenProvisioning/creation/AccountKeyProvisioningDialog"
 import { TOKEN_PROVISIONING_TEST_IDS } from "~/features/TokenProvisioning/testIds"
+import notify from "~/lib/notify"
 import enKeyManagement from "~/locales/en/keyManagement.json"
 import zhKeyManagement from "~/locales/zh-CN/keyManagement.json"
 import { buildServiceCredentialRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import { CREATED_RUNTIME_SECRET_CORRELATION_KINDS as correlationKinds } from "~/services/accounts/keys/createdRuntimeSecret"
+import * as siteRouteResolver from "~/services/accounts/utils/siteRouteResolver"
 import {
   ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
   AccountKeyResourceError,
@@ -40,6 +42,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/contracts"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
+import * as browserTabs from "~/utils/browser/tabs"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -906,6 +909,56 @@ describe("KeyManagement native page integration", () => {
       } finally {
         window.history.replaceState(null, "", originalUrl)
       }
+    },
+  )
+
+  it.each(["success", "missing", "failed"])(
+    "opens the selected Vercel console or reports recovery failure (%s)",
+    async (outcome) => {
+      const route = vi.spyOn(siteRouteResolver, "resolveAccountSiteRouteUrl")
+      const createTab = vi
+        .spyOn(browserTabs, "createTab")
+        .mockResolvedValue({} as never)
+      if (outcome === "failed") route.mockRejectedValue(new Error("offline"))
+      else
+        route.mockResolvedValue(
+          outcome === "success"
+            ? "https://vercel.com/team/~/ai-gateway/api-keys"
+            : null,
+        )
+      const account = createAccount({
+        id: "vercel",
+        siteType: SITE_TYPES.VERCEL_AI_GATEWAY,
+        baseUrl: "https://vercel.com",
+      })
+      const { session } = createNativeSession({
+        scopes: [createScope("account", "account", "Account", true)],
+      })
+      createDisplayAccountApiContextMock.mockReturnValue({
+        accountKeyResources: { open: vi.fn().mockResolvedValue(session) },
+        request: {},
+      })
+      legacyHarnessConfig = {
+        accounts: [account],
+        initialSelectedAccount: account.id,
+      }
+      render(<KeyManagement routeParams={{ accountId: account.id }} />)
+      const user = userEvent.setup()
+      await user.click(
+        await screen.findByRole("button", {
+          name: /openConsole|Open Vercel console/i,
+        }),
+      )
+      if (outcome === "success")
+        await waitFor(() =>
+          expect(createTab).toHaveBeenCalledWith(
+            "https://vercel.com/team/~/ai-gateway/api-keys",
+            true,
+          ),
+        )
+      else await waitFor(() => expect(notify.error).toHaveBeenCalled())
+      route.mockRestore()
+      createTab.mockRestore()
     },
   )
 

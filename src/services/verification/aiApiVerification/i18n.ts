@@ -104,7 +104,11 @@ export function translateApiVerificationSummary(
 ): string | undefined {
   const withHttpDetails = (localized: string): string => {
     const detail = sanitizedSummary?.trim()
-    return detail && detail !== localized
+    const fallback = t(`aiApiVerification:${summaryKey}`, {
+      ...summaryParams,
+      lng: "en",
+    })
+    return detail && detail !== localized && detail !== fallback
       ? `${localized}\n${detail}`
       : localized
   }
