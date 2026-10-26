@@ -2408,6 +2408,7 @@ describe("ApiCheckModalHost", () => {
 
     await openModal()
 
+    await user.click(screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId))
     await user.click(
       screen.getByRole("button", {
         name: "webAiApiCheck:modal.actions.fetchModels",

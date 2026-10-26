@@ -1,4 +1,4 @@
-import { execFileSync, spawnSync } from "node:child_process"
+import { execFileSync, spawn, spawnSync } from "node:child_process"
 import {
   existsSync,
   mkdirSync,
@@ -133,9 +133,67 @@ function createRepository() {
   git("config", "user.email", "validation@example.invalid")
   git("config", "core.autocrlf", "false")
   git("config", "core.hooksPath", path.join(root, "disabled-hooks"))
+  const runWithOpenPipe = (script: string, args: string[] = []) => {
+    const result = spawnSync(
+      process.execPath,
+      [path.join(scriptsRoot, script), ...args],
+      {
+        cwd,
+        env,
+        encoding: "utf8",
+        timeout: 2000,
+        stdio: ["pipe", "pipe", "pipe"],
+      },
+    )
+    const calls = existsSync(callsPath)
+      ? readFileSync(callsPath, "utf8")
+          .trim()
+          .split("\n")
+          .map((line) => JSON.parse(line))
+      : []
+    return { ...result, calls }
+  }
+
   write("README.md")
   const base = commit()
-  return { git, write, commit, run, base }
+  const runWithPartialOpenPipe = async (
+    script: string,
+    partialInput = "",
+    args: string[] = [],
+  ) => {
+    const child = spawn(
+      process.execPath,
+      [path.join(scriptsRoot, script), ...args],
+      {
+        cwd,
+        env,
+        stdio: ["pipe", "pipe", "pipe"],
+      },
+    )
+    if (partialInput) {
+      child.stdin.write(partialInput)
+    }
+    const status = await new Promise<number | null>((resolve) => {
+      child.on("close", resolve)
+    })
+    const calls: string[][] = existsSync(callsPath)
+      ? readFileSync(callsPath, "utf8")
+          .trim()
+          .split("\n")
+          .map((line) => JSON.parse(line))
+      : []
+    return { status, calls }
+  }
+
+  return {
+    git,
+    write,
+    commit,
+    run,
+    runWithOpenPipe,
+    runWithPartialOpenPipe,
+    base,
+  }
 }
 
 afterEach(() => {
@@ -388,6 +446,27 @@ describe("push validation", () => {
     const repo = createRepository()
     const result = repo.run("run-push-check-if-needed.mjs", "", 1)
     expect(result.status).not.toBe(0)
+    expect(result.calls).toEqual([["run", "validate:push"]])
+  })
+
+  it("runs the full gate without hanging when stdin is an open pipe with no input", () => {
+    const repo = createRepository()
+    const result = repo.runWithOpenPipe("run-push-check-if-needed.mjs")
+    expect(result.error).toBeUndefined()
+    expect(result.status).toBe(0)
+    expect(result.calls).toEqual([["run", "validate:push"]])
+  })
+
+  it("runs the full gate when stdin times out after partial documentation input", async () => {
+    const repo = createRepository()
+    repo.write("docs/docs/guide.md")
+    const head = repo.commit()
+    const docUpdate = update(head, repo.base)
+    const result = await repo.runWithPartialOpenPipe(
+      "run-push-check-if-needed.mjs",
+      docUpdate,
+    )
+    expect(result.status).toBe(0)
     expect(result.calls).toEqual([["run", "validate:push"]])
   })
 })

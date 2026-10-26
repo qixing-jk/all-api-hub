@@ -272,6 +272,247 @@ test.beforeEach(async ({ context, page }) => {
   })
 })
 
+test("keeps page verification actions visible while scrolling at desktop and narrow widths", async ({
+  context,
+  page,
+}) => {
+  await seedAutoDetectApiCheckPreferences(await getServiceWorker(context))
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  const { modal } = await openApiCheckModalFromCopiedCredentials(page)
+  const sourceEditor = modal.getByRole("textbox", {
+    name: "Text to extract from",
+    exact: true,
+  })
+  await expect(sourceEditor).toBeVisible()
+  const originalText = await sourceEditor.inputValue()
+  const initialHeight = (await sourceEditor.boundingBox())!.height
+  await sourceEditor.fill(
+    Array.from({ length: 6 }, (_, i) => `Source note ${i}`).join("\n"),
+  )
+  expect((await sourceEditor.boundingBox())!.height).toBeGreaterThan(
+    initialHeight,
+  )
+  await sourceEditor.fill(
+    Array.from({ length: 30 }, (_, i) => `Source note ${i}`).join("\n"),
+  )
+  expect((await sourceEditor.boundingBox())!.height).toBeLessThanOrEqual(192)
+  await sourceEditor.fill(originalText)
+  expect((await sourceEditor.boundingBox())!.height).toBe(initialHeight)
+  for (const width of [1920, 1280, 900, 380]) {
+    await page.setViewportSize({ width, height: 800 })
+    const scroll = modal.getByTestId(WEB_AI_API_CHECK_TEST_IDS.scrollContainer)
+    await scroll.evaluate((element) => {
+      element.scrollTop = 0
+      for (const child of element.querySelectorAll<HTMLElement>("*")) {
+        if (child.scrollTop) child.scrollTop = 0
+      }
+    })
+    await modal.getByRole("dialog").screenshot({
+      path: test.info().outputPath(`layout-${width}.png`),
+      animations: "disabled",
+    })
+    const config = await modal.getByTestId("verification-config").boundingBox()
+    const models = await modal
+      .getByTestId(getWebAiApiCheckProbeTestId("models"))
+      .boundingBox()
+    expect(config).not.toBeNull()
+    expect(models).not.toBeNull()
+    expect(models!.y).toBeGreaterThan(config!.y + config!.height)
+    const textProbe = await modal
+      .getByTestId(getWebAiApiCheckProbeTestId("text-generation"))
+      .boundingBox()
+    expect(textProbe).not.toBeNull()
+    if (width >= 1024) {
+      expect(Math.abs(textProbe!.y - models!.y)).toBeLessThanOrEqual(2)
+      expect(Math.abs(textProbe!.height - models!.height)).toBeLessThanOrEqual(
+        2,
+      )
+      expect(textProbe!.x).toBeGreaterThan(models!.x + models!.width)
+      const controls = await Promise.all(
+        ["API type", "Model ID", "Test mode", "Client simulation"].map((name) =>
+          modal.getByRole("combobox", { name, exact: true }).boundingBox(),
+        ),
+      )
+      expect(
+        Math.max(...controls.map((box) => box!.y)) -
+          Math.min(...controls.map((box) => box!.y)),
+      ).toBeLessThanOrEqual(2)
+    } else {
+      expect(textProbe!.y).toBeGreaterThan(models!.y + models!.height)
+    }
+    const source = modal.getByRole("textbox", {
+      name: "Text to extract from",
+      exact: true,
+    })
+    await expect(source).toBeInViewport()
+    const sourceBounds = await source.boundingBox()
+    expect(sourceBounds!.y + sourceBounds!.height).toBeLessThanOrEqual(
+      config!.y,
+    )
+    const dialogBounds = await modal.getByRole("dialog").boundingBox()
+    if (width >= 1280) expect(dialogBounds!.width).toBeGreaterThanOrEqual(1000)
+    const drawing = modal.getByRole("button", {
+      name: "Run drawing test",
+      exact: true,
+    })
+    await drawing.scrollIntoViewIfNeeded()
+    await expect(drawing).toBeInViewport()
+    const drawingBounds = await modal
+      .getByTestId("verification-tools-panel")
+      .boundingBox()
+    expect(drawingBounds!.width).toBeGreaterThanOrEqual(config!.width - 2)
+    await modal.getByRole("dialog").screenshot({
+      path: test.info().outputPath(`layout-${width}-drawing.png`),
+      animations: "disabled",
+    })
+    const save = modal.getByTestId(
+      WEB_AI_API_CHECK_TEST_IDS.saveToProfilesButton,
+    )
+    const before = await save.boundingBox()
+    await scroll.evaluate((element) => {
+      element.scrollTop = element.scrollHeight
+    })
+    const after = await save.boundingBox()
+    expect(before).not.toBeNull()
+    expect(after).not.toBeNull()
+    expect(Math.abs(after!.y - before!.y)).toBeLessThanOrEqual(1)
+    await expect(save).toBeInViewport()
+    expect(
+      await modal
+        .getByRole("dialog")
+        .evaluate((element) => element.scrollWidth <= element.clientWidth),
+    ).toBe(true)
+  }
+})
+
+test("keeps empty model recovery compact and allows a manual model", async ({
+  context,
+  page,
+}) => {
+  await seedAutoDetectApiCheckPreferences(await getServiceWorker(context))
+  let fetched = false
+  await context.route(`${API_BASE_URL}/v1/models`, async (route) => {
+    fetched = true
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({ data: [] }),
+    })
+  })
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  const { contentHost, modal } =
+    await openApiCheckModalFromCopiedCredentials(page)
+  const selector = modal.getByRole("combobox", {
+    name: "Model ID",
+    exact: true,
+  })
+  await expect.poll(() => fetched).toBe(true)
+  await expect(selector).not.toHaveAttribute("aria-busy", "true")
+  await selector.click()
+  const dropdown = contentHost.locator('[data-slot="popover-content"]')
+  const refresh = dropdown.getByRole("button", {
+    name: "Fetch models",
+    exact: true,
+  })
+  const searchBounds = await dropdown
+    .getByPlaceholder("Search...")
+    .boundingBox()
+  const refreshBounds = await refresh.boundingBox()
+  expect(
+    Math.abs(
+      refreshBounds!.y +
+        refreshBounds!.height / 2 -
+        searchBounds!.y -
+        searchBounds!.height / 2,
+    ),
+  ).toBeLessThanOrEqual(2)
+  expect(refreshBounds!.x).toBeGreaterThanOrEqual(
+    searchBounds!.x + searchBounds!.width,
+  )
+  await dropdown.screenshot({
+    path: test.info().outputPath("empty-model-picker.png"),
+    animations: "disabled",
+  })
+  expect((await dropdown.boundingBox())!.height).toBeLessThanOrEqual(120)
+  await expect(dropdown).not.toContainText("Type to create one")
+  const search = dropdown.getByPlaceholder("Search...")
+  await search.fill("custom-empty-model")
+  await dropdown
+    .getByRole("option", { name: 'Use "custom-empty-model"', exact: true })
+    .click()
+  await expect(selector).toContainText("custom-empty-model")
+})
+
+test("refreshes models inside the dropdown without changing the selection", async ({
+  context,
+  page,
+}) => {
+  await seedAutoDetectApiCheckPreferences(await getServiceWorker(context))
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  const { contentHost, modal } =
+    await openApiCheckModalFromCopiedCredentials(page)
+  const selector = modal.getByRole("combobox", {
+    name: "Model ID",
+    exact: true,
+  })
+  await expect(selector).toContainText("gpt-4o-mini")
+  await expect(
+    modal.getByRole("button", { name: "Fetch models", exact: true }),
+  ).toHaveCount(0)
+  let finishFetch!: () => void
+  const fetchGate = new Promise<void>((resolve) => {
+    finishFetch = resolve
+  })
+  await context.route(`${API_BASE_URL}/v1/models`, async (route) => {
+    await fetchGate
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        data: [{ id: "gpt-4o-mini" }, { id: "new-model" }],
+      }),
+    })
+  })
+  await selector.click()
+  const refresh = contentHost.getByRole("button", {
+    name: "Fetch models",
+    exact: true,
+  })
+  const search = contentHost.getByPlaceholder("Search...")
+  await search.click()
+  const searchBox = await search.boundingBox()
+  const actionBox = await refresh.boundingBox()
+  expect(
+    Math.abs(
+      actionBox!.y +
+        actionBox!.height / 2 -
+        searchBox!.y -
+        searchBox!.height / 2,
+    ),
+  ).toBeLessThanOrEqual(2)
+  await expect(search).toBeFocused()
+  await page.keyboard.press("Tab")
+  await expect(refresh).toBeFocused()
+  await page.keyboard.press("Enter")
+  await expect(
+    contentHost.getByRole("button", { name: "Fetching…", exact: true }),
+  ).toBeDisabled()
+  await expect(selector).toHaveAttribute("aria-expanded", "true")
+  await expect(selector).toHaveAttribute("aria-busy", "true")
+  finishFetch()
+  await expect(
+    contentHost.getByRole("option", { name: "new-model", exact: true }),
+  ).toBeVisible()
+  await expect(selector).toContainText("gpt-4o-mini")
+  await page.screenshot({
+    path: test.info().outputPath("model-select-actions.png"),
+    animations: "disabled",
+  })
+  await contentHost
+    .getByRole("option", { name: "new-model", exact: true })
+    .click()
+  await expect(selector).toContainText("new-model")
+  await expect(selector).toHaveAttribute("aria-expanded", "false")
+})
+
 test("selects CLI simulation inside the page API check shadow portal", async ({
   context,
   page,
@@ -312,6 +553,10 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
     name: "Enhanced CLI simulation",
     exact: true,
   })
+  await expect(enhanced).toHaveCount(0)
+  await modal
+    .getByRole("button", { name: "Enhanced CLI simulation", exact: true })
+    .click()
   await expect(enhanced).not.toBeChecked()
   await enhanced.click()
   await expect(enhanced).toBeChecked()
@@ -330,6 +575,31 @@ test("selects CLI simulation inside the page API check shadow portal", async ({
   await expect(modelsProbe.getByText("Pending", { exact: true })).toBeVisible()
   await modelsProbe.getByRole("button", { name: "Test", exact: true }).click()
   await expect(modelsProbe).toContainText("Fetched 1 model.")
+  const configBounds = await modal
+    .getByTestId("verification-config")
+    .boundingBox()
+  await expect
+    .poll(async () => (await modelsProbe.boundingBox())!.width)
+    .toBeGreaterThanOrEqual(configBounds!.width - 2)
+  const resultToggle = modelsProbe.getByRole("button", {
+    name: "Execution result",
+    exact: true,
+  })
+  await resultToggle.click()
+  await expect
+    .poll(async () => (await modelsProbe.boundingBox())!.width)
+    .toBeLessThan(configBounds!.width * 0.6)
+  await modelsProbe.scrollIntoViewIfNeeded()
+  await modal.getByRole("dialog").screenshot({
+    path: test.info().outputPath("page-models-collapsed-grid.png"),
+    animations: "disabled",
+  })
+  await resultToggle.click()
+  await modelsProbe.scrollIntoViewIfNeeded()
+  await modal.getByRole("dialog").screenshot({
+    path: test.info().outputPath("page-models-expanded-grid.png"),
+    animations: "disabled",
+  })
   const duration = modelsProbe.getByText(/^\d+(?:\.\d+)?(?:ms|s)$/)
   await expect(duration).toHaveCount(1)
   await expect(
@@ -554,12 +824,29 @@ test("controls website participation from the webpage and autosaving settings", 
   const siteSwitch = modal.getByRole("switch", {
     name: "Auto-detect on this website",
   })
+  await expect(siteSwitch).toHaveCount(0)
+  await modal.getByRole("button", { name: "Settings", exact: true }).click()
+  const siteSettings = contentHost.getByRole("region", {
+    name: "Settings",
+    exact: true,
+  })
+  await expect(
+    siteSettings.getByRole("heading", { name: "Settings", exact: true }),
+  ).toBeVisible()
+  await expect(
+    siteSettings.getByText("api-console.example.test", { exact: true }),
+  ).toBeVisible()
+  await siteSettings.screenshot({
+    path: testInfo.outputPath("website-settings-panel.png"),
+    animations: "disabled",
+  })
   await expect(siteSwitch).toBeChecked()
   await modal.getByTestId(WEB_AI_API_CHECK_TEST_IDS.closeButton).click()
   await sendApiCheckContextMenuTrigger(serviceWorker, {
     pageUrl: TEST_PAGE_URL,
     selectionText: `base_url=${API_BASE_URL}\napi_key=${API_KEY}`,
   })
+  await modal.getByRole("button", { name: "Settings", exact: true }).click()
   await expect(siteSwitch).toBeChecked()
   await siteSwitch.click()
   await expect(siteSwitch).not.toBeChecked()
@@ -583,6 +870,7 @@ test("controls website participation from the webpage and autosaving settings", 
     pageUrl: TEST_PAGE_URL,
     selectionText: `base_url=${API_BASE_URL}\napi_key=${API_KEY}`,
   })
+  await modal.getByRole("button", { name: "Settings", exact: true }).click()
   await expect(siteSwitch).not.toBeChecked()
   await siteSwitch.click()
   await expect(siteSwitch).toBeChecked()

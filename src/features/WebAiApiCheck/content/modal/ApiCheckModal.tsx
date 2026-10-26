@@ -1,15 +1,17 @@
 import type { TFunction } from "i18next"
-import { ChevronDown, X } from "lucide-react"
+import { ChevronDown, Settings, X } from "lucide-react"
 import type {
   KeyboardEvent as ReactKeyboardEvent,
   RefCallback,
   RefObject,
 } from "react"
 
+import { RefreshActionIcon } from "~/components/icons/productIcons"
 import {
   ActionGroup,
   Button,
   BUTTON_LOADING_BEHAVIORS,
+  CollapsibleSection,
   DatePicker,
   FormField,
   IconButton,
@@ -23,13 +25,21 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "~/components/ui/collapsible"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import {
   VerificationConfigSection,
   VerificationDialogHeader,
   VerificationTestSection,
 } from "~/features/Verification/api/VerificationLayout"
-import { VerificationRequestProfileSelect } from "~/features/Verification/api/VerificationRequestProfile"
+import {
+  VerificationRequestProfileEnhancement,
+  VerificationRequestProfileSelect,
+} from "~/features/Verification/api/VerificationRequestProfile"
 import { VerificationToolsPanel } from "~/features/Verification/api/VerificationToolsPanel"
 import { ApiCheckSiteAccessControl } from "~/features/WebAiApiCheck/content/ApiCheckSiteAccessControl"
 import { ApiCheckBaseUrlHistoryPicker } from "~/features/WebAiApiCheck/content/history/ApiCheckBaseUrlHistoryPicker"
@@ -43,6 +53,7 @@ import { WEB_AI_API_CHECK_TEST_IDS } from "~/features/WebAiApiCheck/content/test
 import { cn } from "~/lib/utils"
 import {
   API_VERIFICATION_MODES,
+  API_VERIFICATION_REQUEST_PROFILES,
   MODEL_TEST_MODALITIES,
   type ApiVerificationApiType,
   type ApiVerificationMode,
@@ -100,25 +111,48 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
           aria-modal="true"
           aria-labelledby="api-check-modal-title"
           tabIndex={-1}
-          className="border-border bg-background pointer-events-auto flex max-h-[90vh] w-full max-w-[860px] flex-col overflow-hidden rounded-2xl border shadow-xl"
+          className="border-border bg-background pointer-events-auto flex max-h-[90dvh] w-full max-w-6xl flex-col overflow-hidden rounded-xl border shadow-xl"
           onKeyDown={stopHostPageKeyboardShortcuts}
           onKeyUp={stopHostPageKeyboardShortcuts}
         >
           <div
             data-testid="verification-header"
-            className="border-border py-density-4 relative shrink-0 border-b px-4"
+            className="border-border py-density-4 relative shrink-0 border-b px-4 sm:px-6"
           >
-            <VerificationDialogHeader
-              title={
-                <h2
-                  id="api-check-modal-title"
-                  className="text-foreground truncate text-base font-semibold"
+            <div className="pr-8">
+              <VerificationDialogHeader
+                title={
+                  <h2
+                    id="api-check-modal-title"
+                    className="text-foreground text-base font-semibold"
+                  >
+                    {t("webAiApiCheck:modal.title")}
+                  </h2>
+                }
+                subtitle={t("webAiApiCheck:modal.privacyHint")}
+              />
+            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <IconButton
+                  className="absolute top-4 right-12"
+                  aria-label={t("common:labels.settings")}
+                  variant="ghost"
+                  size="sm"
+                  disableAutoTooltip
                 >
-                  {t("webAiApiCheck:modal.title")}
-                </h2>
-              }
-              subtitle={t("webAiApiCheck:modal.privacyHint")}
-            />
+                  <Settings className="h-4 w-4" />
+                </IconButton>
+              </PopoverTrigger>
+              <PopoverContent
+                align="end"
+                container={view.popoverPortalContainer ?? undefined}
+                aria-label={t("common:labels.settings")}
+                className="w-80 max-w-[calc(100vw-2rem)] p-0"
+              >
+                <ApiCheckSiteAccessControl pageUrl={view.pageUrl} />
+              </PopoverContent>
+            </Popover>
             {/* Focus-opened react-tooltip can consume the first dismiss click in Edge's content ShadowRoot. */}
             <IconButton
               className="absolute top-4 right-4"
@@ -137,11 +171,10 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
           <div
             ref={refs.scrollContainerRef}
             data-testid={WEB_AI_API_CHECK_TEST_IDS.scrollContainer}
-            className="py-density-4 min-h-0 flex-1 overflow-y-auto overscroll-contain px-4"
+            className="py-density-4 min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 sm:px-6"
           >
             <div className="space-y-density-6">
-              <div className="space-y-density-4">
-                <ApiCheckSiteAccessControl pageUrl={view.pageUrl} />
+              <div className="space-y-density-4 min-w-0">
                 <div className="space-y-density-2">
                   <label
                     htmlFor="api-check-source-text"
@@ -153,7 +186,8 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                     id="api-check-source-text"
                     value={view.sourceText}
                     onChange={(e) => actions.setSourceText(e.target.value)}
-                    rows={4}
+                    rows={2}
+                    className="field-sizing-content max-h-48 resize-none"
                     placeholder={t(
                       "webAiApiCheck:modal.sourceText.placeholder",
                     )}
@@ -161,8 +195,8 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                 </div>
 
                 <VerificationConfigSection>
-                  <div className="gap-y-density-3 grid gap-x-3 md:grid-cols-2">
-                    <div className="space-y-density-1-5">
+                  <div className="gap-y-density-3 grid grid-cols-1 gap-x-3 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="space-y-density-1-5 lg:col-span-2">
                       <label
                         htmlFor="api-check-base-url"
                         className="text-muted-foreground block text-xs"
@@ -198,7 +232,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                       />
                     </div>
 
-                    <div className="space-y-density-1-5">
+                    <div className="space-y-density-1-5 lg:col-span-2">
                       <label
                         htmlFor="api-check-api-key"
                         className="text-muted-foreground block text-xs"
@@ -252,7 +286,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                       />
                     </div>
 
-                    <div className="space-y-density-1-5 md:col-span-2">
+                    <div className="space-y-density-1-5">
                       <label
                         htmlFor="api-check-model-id"
                         className="text-muted-foreground block text-xs"
@@ -272,6 +306,42 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                         }
                         placeholder="gpt-4o-mini"
                         loading={view.isFetchingModels}
+                        emptyMessage={
+                          view.modelListSupported &&
+                          view.modelIdsOptions.length === 0
+                            ? null
+                            : undefined
+                        }
+                        searchActions={
+                          view.modelListSupported ? (
+                            <IconButton
+                              type="button"
+                              variant="ghost"
+                              size="xs"
+                              aria-label={
+                                view.isFetchingModels
+                                  ? t(
+                                      "webAiApiCheck:modal.actions.fetchingModels",
+                                    )
+                                  : t("webAiApiCheck:modal.actions.fetchModels")
+                              }
+                              onClick={actions.fetchModels}
+                              disabled={!view.canFetchModels}
+                              loading={view.isFetchingModels}
+                              disableAutoTooltip
+                            >
+                              <RefreshActionIcon className="size-4" />
+                            </IconButton>
+                          ) : null
+                        }
+                        footer={
+                          view.modelListSupported &&
+                          view.modelIdsOptions.length === 0 ? (
+                            <p className="text-muted-foreground px-1 text-xs leading-relaxed">
+                              {t("webAiApiCheck:modal.modelPicker.emptyHint")}
+                            </p>
+                          ) : null
+                        }
                         allowCustomValue
                       />
                     </div>
@@ -312,7 +382,6 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                       <VerificationRequestProfileSelect
                         value={view.requestProfile}
                         enhanced={view.requestProfileEnhanced}
-                        onEnhancedChange={actions.setRequestProfileEnhanced}
                         onChange={actions.setRequestProfile}
                         disabled={!view.canClose}
                         portalContainer={
@@ -321,9 +390,27 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                       />
                     </div>
 
+                    {view.requestProfile !==
+                    API_VERIFICATION_REQUEST_PROFILES.Default ? (
+                      <CollapsibleSection
+                        title={t(
+                          "aiApiVerification:verifyDialog.requestProfiles.enhancedLabel",
+                        )}
+                        defaultOpen={view.requestProfileEnhanced}
+                        className="sm:col-span-2 lg:col-span-4"
+                        buttonClassName="border-border-subtle border px-3 py-2"
+                      >
+                        <VerificationRequestProfileEnhancement
+                          value={view.requestProfileEnhanced}
+                          onChange={actions.setRequestProfileEnhanced}
+                          disabled={!view.canClose}
+                        />
+                      </CollapsibleSection>
+                    ) : null}
+
                     {(view.modelModality === MODEL_TEST_MODALITIES.Image ||
                       view.modelModality === MODEL_TEST_MODALITIES.Video) && (
-                      <div className="border-warning-border bg-warning-soft text-warning-soft-foreground py-density-2 rounded-md border px-3 text-xs md:col-span-2">
+                      <div className="border-warning-border bg-warning-soft text-warning-soft-foreground py-density-2 rounded-md border px-3 text-xs sm:col-span-2 lg:col-span-4">
                         {view.modelModality === MODEL_TEST_MODALITIES.Image
                           ? t(
                               "aiApiVerification:verifyDialog.modalityNotice.image",
@@ -368,7 +455,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                     />
                   </CollapsibleTrigger>
                   <CollapsibleContent className="border-border/60 py-density-3 border-t px-3">
-                    <div className="gap-y-density-3 grid gap-x-3 md:grid-cols-2">
+                    <div className="gap-y-density-3 grid grid-cols-1 gap-x-3 sm:grid-cols-2">
                       <FormField
                         label={t("webAiApiCheck:modal.fields.tags")}
                         description={t("webAiApiCheck:modal.hints.tags")}
@@ -429,7 +516,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                       </FormField>
 
                       <FormField
-                        className="md:col-span-2"
+                        className="sm:col-span-2"
                         label={t("webAiApiCheck:modal.fields.notes")}
                         htmlFor="api-check-notes"
                       >
@@ -446,7 +533,7 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                       </FormField>
 
                       <FormField
-                        className="md:col-span-2"
+                        className="sm:col-span-2"
                         label={t("webAiApiCheck:modal.fields.sourceUrl")}
                         description={t("webAiApiCheck:modal.hints.sourceUrl")}
                         htmlFor="api-check-source-url"
@@ -477,52 +564,6 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                   </div>
                 ) : null}
 
-                <ActionGroup>
-                  {view.modelListSupported ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={actions.fetchModels}
-                      disabled={!view.canFetchModels}
-                      loading={view.isFetchingModels}
-                    >
-                      {view.isFetchingModels
-                        ? t("webAiApiCheck:modal.actions.fetchingModels")
-                        : t("webAiApiCheck:modal.actions.fetchModels")}
-                    </Button>
-                  ) : null}
-
-                  <Button
-                    type="button"
-                    variant={view.isRunningAll ? "outline" : "default"}
-                    onClick={
-                      view.isRunningAll ? actions.stopRunAll : actions.runAll
-                    }
-                    disabled={view.isRunAllActionDisabled}
-                    loading={view.isRunningAll}
-                    loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}
-                  >
-                    {view.isRunningAll
-                      ? view.isStoppingRunAll
-                        ? t("webAiApiCheck:modal.actions.stopping")
-                        : t("webAiApiCheck:modal.actions.stopTest")
-                      : t("webAiApiCheck:modal.actions.test")}
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    data-testid={WEB_AI_API_CHECK_TEST_IDS.saveToProfilesButton}
-                    onClick={actions.saveProfile}
-                    disabled={!view.canSaveProfile}
-                    loading={view.isSavingProfile}
-                  >
-                    {view.isSavingProfile
-                      ? t("webAiApiCheck:modal.actions.saving")
-                      : t("webAiApiCheck:modal.actions.saveToProfiles")}
-                  </Button>
-                </ActionGroup>
-
                 {view.fetchModelsError ? (
                   <div className="border-destructive-border bg-destructive-soft text-destructive-soft-foreground py-density-3 rounded-md border px-3 text-sm">
                     {view.fetchModelsError}
@@ -534,8 +575,6 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                 ) : null}
               </div>
               <VerificationTestSection>
-                <VerificationToolsPanel controller={view.verificationTools} />
-
                 <ApiCheckProbeList
                   t={t}
                   probes={view.probes}
@@ -545,8 +584,41 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                   onRunProbe={actions.runProbe}
                   onStopProbe={actions.stopProbe}
                 />
+                <VerificationToolsPanel controller={view.verificationTools} />
               </VerificationTestSection>
             </div>
+          </div>
+          <div className="border-border-subtle py-density-3 sm:py-density-4 shrink-0 border-t px-4 sm:px-6">
+            <ActionGroup>
+              <Button
+                type="button"
+                variant="outline"
+                data-testid={WEB_AI_API_CHECK_TEST_IDS.saveToProfilesButton}
+                onClick={actions.saveProfile}
+                disabled={!view.canSaveProfile}
+                loading={view.isSavingProfile}
+              >
+                {view.isSavingProfile
+                  ? t("webAiApiCheck:modal.actions.saving")
+                  : t("webAiApiCheck:modal.actions.saveToProfiles")}
+              </Button>
+              <Button
+                type="button"
+                variant={view.isRunningAll ? "outline" : "default"}
+                onClick={
+                  view.isRunningAll ? actions.stopRunAll : actions.runAll
+                }
+                disabled={view.isRunAllActionDisabled}
+                loading={view.isRunningAll}
+                loadingBehavior={BUTTON_LOADING_BEHAVIORS.Interactive}
+              >
+                {view.isRunningAll
+                  ? view.isStoppingRunAll
+                    ? t("webAiApiCheck:modal.actions.stopping")
+                    : t("webAiApiCheck:modal.actions.stopTest")
+                  : t("webAiApiCheck:modal.actions.test")}
+              </Button>
+            </ActionGroup>
           </div>
         </div>
       </div>

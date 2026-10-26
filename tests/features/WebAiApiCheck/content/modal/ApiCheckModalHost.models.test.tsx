@@ -267,6 +267,7 @@ describe("ApiCheckModalHost", () => {
     await pasteIntoField(user, baseUrlInput, "https://proxy.example.com/api")
     await pasteIntoField(user, apiKeyInput, "sk-test-secret-fixture")
 
+    await user.click(screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId))
     await user.click(
       screen.getByRole("button", {
         name: "webAiApiCheck:modal.actions.fetchModels",
@@ -321,6 +322,7 @@ describe("ApiCheckModalHost", () => {
     fireEvent.change(await screen.findByPlaceholderText("sk-..."), {
       target: { value: "sk-test-dedupe-fixture" },
     })
+    fireEvent.click(screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId))
     fireEvent.click(
       screen.getByRole("button", {
         name: "webAiApiCheck:modal.actions.fetchModels",
@@ -369,6 +371,7 @@ describe("ApiCheckModalHost", () => {
     fireEvent.change(await screen.findByPlaceholderText("sk-..."), {
       target: { value: "sk-test-busy-fetch-fixture" },
     })
+    fireEvent.click(screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId))
     fireEvent.click(
       screen.getByRole("button", {
         name: "webAiApiCheck:modal.actions.fetchModels",
@@ -721,6 +724,7 @@ describe("ApiCheckModalHost", () => {
         expect.any(Object),
       )
     })
+    await user.click(screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId))
     expect(
       screen.getByRole("button", {
         name: "webAiApiCheck:modal.actions.fetchingModels",
@@ -728,6 +732,7 @@ describe("ApiCheckModalHost", () => {
     ).toBeDisabled()
 
     await user.clear(apiKeyInput)
+    await user.click(screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId))
 
     await waitFor(() => {
       expect(
@@ -755,6 +760,7 @@ describe("ApiCheckModalHost", () => {
     })
     expect(screen.queryByText("stale-private-model")).not.toBeInTheDocument()
 
+    await user.click(apiKeyInput)
     await user.paste("sk-test-secret-fixture")
 
     await waitFor(() => {

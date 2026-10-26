@@ -1,6 +1,12 @@
 import "./apiCheckModalHostMocks"
 
-import { act, screen, waitFor, within } from "@testing-library/react"
+import {
+  act,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
@@ -8,6 +14,8 @@ import {
   API_CHECK_MODAL_CLOSE_REASONS,
   API_CHECK_MODAL_CLOSED_EVENT,
 } from "~/features/WebAiApiCheck/content/events"
+import { ApiCheckModal } from "~/features/WebAiApiCheck/content/modal/ApiCheckModal"
+import { useApiCheckModalViewModel } from "~/features/WebAiApiCheck/content/modal/useApiCheckModalViewModel"
 import { WEB_AI_API_CHECK_TEST_IDS } from "~/features/WebAiApiCheck/content/testIds"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -22,6 +30,7 @@ import {
   sendWebAiApiCheckMessage,
   WebAiApiCheckMessageTypes,
 } from "~/services/verification/webAiApiCheck/messaging"
+import { render } from "~~/tests/test-utils/render"
 
 import {
   completeProductAnalyticsActionMock,
@@ -39,6 +48,37 @@ import {
 
 describe("ApiCheckModalHost", () => {
   setupApiCheckModalHostTest()
+
+  it("keeps model actions inside the dropdown rather than the footer", async () => {
+    await openModal()
+    expect(
+      screen.queryByRole("button", {
+        name: "webAiApiCheck:modal.actions.fetchModels",
+      }),
+    ).not.toBeInTheDocument()
+    await userEvent.click(screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId))
+    expect(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:modal.actions.fetchModels",
+      }),
+    ).toBeEnabled()
+    expect(
+      screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId),
+    ).toHaveAttribute("aria-expanded", "true")
+  })
+
+  it("places the manual drawing test after every API probe", async () => {
+    await openModal()
+    const drawing = await screen.findByTestId("verification-tools-panel")
+    const probes = screen.getAllByTestId(/^api-check-probe-/)
+    expect(probes.length).toBeGreaterThan(0)
+    for (const probe of probes) {
+      expect(
+        probe.compareDocumentPosition(drawing) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy()
+    }
+  })
 
   it("exposes the shared dialog title as a heading and keeps close accessible", async () => {
     await openModal()
@@ -518,9 +558,8 @@ describe("ApiCheckModalHost", () => {
       "webAiApiCheck:modal.fields.apiKey",
     )
 
-    await user.type(baseUrlInput, "https://new.example.com/api")
-    await user.click(apiKeyInput)
-    await user.paste("sk-test-history-record-fixture")
+    await pasteIntoField(user, baseUrlInput, "https://new.example.com/api")
+    await pasteIntoField(user, apiKeyInput, "sk-test-history-record-fixture")
     await user.click(
       screen.getByRole("button", {
         name: "webAiApiCheck:modal.actions.saveToProfiles",
@@ -919,5 +958,59 @@ describe("ApiCheckModalHost", () => {
       "https://proxy.example.com/api",
       pageUrl,
     ])
+  })
+
+  it("omits the embedded model fetch action when model listing is unsupported", async () => {
+    const { result } = renderHook(useApiCheckModalViewModel)
+    render(
+      <ApiCheckModal
+        t={((key: string) => key) as any}
+        view={{
+          ...result.current.view,
+          isOpen: true,
+          modelListSupported: false,
+        }}
+        actions={result.current.actions}
+        refs={result.current.refs}
+      />,
+      {
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+    await userEvent.click(screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId))
+    expect(
+      screen.queryByRole("button", {
+        name: "webAiApiCheck:modal.actions.fetchModels",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("reflects model fetching progress in the embedded search action", async () => {
+    const { result } = renderHook(useApiCheckModalViewModel)
+    render(
+      <ApiCheckModal
+        t={((key: string) => key) as any}
+        view={{
+          ...result.current.view,
+          isOpen: true,
+          modelListSupported: true,
+          isFetchingModels: true,
+          canFetchModels: false,
+        }}
+        actions={result.current.actions}
+        refs={result.current.refs}
+      />,
+      {
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+    await userEvent.click(screen.getByTestId(WEB_AI_API_CHECK_TEST_IDS.modelId))
+    expect(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:modal.actions.fetchingModels",
+      }),
+    ).toBeDisabled()
   })
 })

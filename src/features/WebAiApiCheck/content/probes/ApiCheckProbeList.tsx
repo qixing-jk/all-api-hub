@@ -39,7 +39,7 @@ export function ApiCheckProbeList({
   const notRunYet = t("webAiApiCheck:modal.probes.notRunYet")
 
   return (
-    <>
+    <div className="gap-density-4 grid grid-cols-1 lg:grid-cols-2">
       {probes.map((probe) => {
         const result = probe.result
         const summary = result?.summaryKey
@@ -54,6 +54,7 @@ export function ApiCheckProbeList({
           <div
             key={probe.id}
             data-testid={getWebAiApiCheckProbeTestId(probe.id)}
+            className="border-border-subtle min-w-0 rounded-lg border p-4 lg:has-[[aria-controls$=-result][aria-expanded=true]]:col-span-2"
           >
             <VerificationProbeDetails
               controller={tools}
@@ -108,6 +109,6 @@ export function ApiCheckProbeList({
           </div>
         )
       })}
-    </>
+    </div>
   )
 }

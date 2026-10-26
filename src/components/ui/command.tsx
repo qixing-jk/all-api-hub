@@ -92,6 +92,8 @@ function CommandDialog({
 type CommandInputProps = React.ComponentProps<typeof CommandPrimitive.Input> & {
   onClear?: () => void
   clearButtonLabel?: string
+  /** Actions next to search, isolated from command option activation. */
+  trailingContent?: React.ReactNode
 }
 
 /**
@@ -101,6 +103,7 @@ function CommandInput({
   className,
   onClear,
   clearButtonLabel = "Clear",
+  trailingContent,
   onKeyDown,
   ...props
 }: CommandInputProps) {
@@ -144,6 +147,14 @@ function CommandInput({
           <XIcon className="pointer-events-none size-4" />
         </button>
       )}
+      {trailingContent ? (
+        <div
+          className="gap-density-1 flex shrink-0 items-center"
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          {trailingContent}
+        </div>
+      ) : null}
     </div>
   )
 }

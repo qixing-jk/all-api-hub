@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Button, Switch } from "~/components/ui"
+import { Button, Spinner, Switch } from "~/components/ui"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   sendWebAiApiCheckMessage,
@@ -19,79 +19,115 @@ export function ApiCheckSiteAccessControl({ pageUrl }: { pageUrl: string }) {
   useEffect(() => {
     let active = true
     setAllowed(null)
+    setError(false)
     void sendWebAiApiCheckMessage(WebAiApiCheckMessageTypes.ShouldPrompt, {
       pageUrl,
     })
       .then((result) => {
-        if (
-          !active ||
-          !result.success ||
-          typeof result.siteAllowed !== "boolean"
-        )
+        if (!active) return
+        if (!result.success || typeof result.siteAllowed !== "boolean") {
+          setError(true)
           return
+        }
         setAllowed(result.siteAllowed)
         setGloballyEnabled(result.autoDetectEnabled ?? true)
       })
-      .catch(() => {})
+      .catch(() => {
+        if (active) setError(true)
+      })
     return () => {
       active = false
     }
   }, [pageUrl])
-  if (allowed === null) return null
+  let siteHost = ""
+  try {
+    siteHost = new URL(pageUrl).host
+  } catch {
+    /* An unavailable page identity does not block settings navigation. */
+  }
   return (
-    <div className="border-border space-y-density-2 rounded-md border p-3 text-xs">
-      <div className="flex items-center justify-between gap-3">
-        <label htmlFor="api-check-site-enabled">
-          {t("webAiApiCheck:siteControl.label")}
-        </label>
-        <Switch
-          id="api-check-site-enabled"
-          checked={allowed}
-          disabled={saving}
-          aria-label={t("webAiApiCheck:siteControl.label")}
-          onChange={async (enabled) => {
-            setSaving(true)
-            setError(false)
-            try {
-              const result = await sendWebAiApiCheckMessage(
-                WebAiApiCheckMessageTypes.SetSiteAccess,
-                { pageUrl, enabled },
-              )
-              if (!result.success || typeof result.siteAllowed !== "boolean") {
-                setError(true)
-                return
-              }
-              setAllowed(result.siteAllowed)
-              if (result.siteAllowed !== enabled) setError(true)
-            } catch {
-              setError(true)
-            } finally {
-              setSaving(false)
-            }
-          }}
-        />
+    <section className="text-sm" aria-label={t("common:labels.settings")}>
+      <div className="space-y-density-1 border-border-subtle border-b p-4">
+        <h3 className="text-foreground font-semibold">
+          {t("common:labels.settings")}
+        </h3>
+        {siteHost ? (
+          <p
+            className="text-muted-foreground truncate text-xs"
+            title={siteHost}
+          >
+            {siteHost}
+          </p>
+        ) : null}
       </div>
-      {!globallyEnabled ? (
-        <p className="text-muted-foreground">
-          {t("webAiApiCheck:siteControl.globalDisabled")}
-        </p>
-      ) : null}
-      {error ? (
-        <p role="alert" className="text-destructive-soft-foreground">
-          {t("webAiApiCheck:siteControl.failed")}
-        </p>
-      ) : null}
-      <Button
-        size="sm"
-        variant="link"
-        onClick={() =>
-          void sendRuntimeMessage({
-            action: RuntimeActionIds.OpenSettingsWebAiApiCheck,
-          }).catch(() => setError(true))
-        }
-      >
-        {t("webAiApiCheck:confirmToast.settings")}
-      </Button>
-    </div>
+      <div className="space-y-density-2 p-4">
+        {allowed === null && !error ? <Spinner size="sm" /> : null}
+        {allowed !== null ? (
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <label htmlFor="api-check-site-enabled">
+                {t("webAiApiCheck:siteControl.label")}
+              </label>
+              <Switch
+                id="api-check-site-enabled"
+                checked={allowed}
+                disabled={saving}
+                aria-label={t("webAiApiCheck:siteControl.label")}
+                onChange={async (enabled) => {
+                  setSaving(true)
+                  setError(false)
+                  try {
+                    const result = await sendWebAiApiCheckMessage(
+                      WebAiApiCheckMessageTypes.SetSiteAccess,
+                      { pageUrl, enabled },
+                    )
+                    if (
+                      !result.success ||
+                      typeof result.siteAllowed !== "boolean"
+                    ) {
+                      setError(true)
+                      return
+                    }
+                    setAllowed(result.siteAllowed)
+                    if (result.siteAllowed !== enabled) setError(true)
+                  } catch {
+                    setError(true)
+                  } finally {
+                    setSaving(false)
+                  }
+                }}
+              />
+            </div>
+            <p className="text-muted-foreground text-xs leading-relaxed">
+              {t("webAiApiCheck:settings.autoDetect.enableDesc")}
+            </p>
+            {!globallyEnabled ? (
+              <p className="text-muted-foreground">
+                {t("webAiApiCheck:siteControl.globalDisabled")}
+              </p>
+            ) : null}
+          </>
+        ) : null}
+        {error ? (
+          <p role="alert" className="text-destructive-soft-foreground">
+            {t("webAiApiCheck:siteControl.failed")}
+          </p>
+        ) : null}
+      </div>
+      <div className="border-border-subtle border-t p-3">
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full"
+          onClick={() =>
+            void sendRuntimeMessage({
+              action: RuntimeActionIds.OpenSettingsWebAiApiCheck,
+            }).catch(() => setError(true))
+          }
+        >
+          {t("webAiApiCheck:confirmToast.settings")}
+        </Button>
+      </div>
+    </section>
   )
 }

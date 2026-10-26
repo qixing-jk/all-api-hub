@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { act, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -31,6 +31,23 @@ describe("website participation control", () => {
   beforeEach(() => {
     vi.mocked(sendWebAiApiCheckMessage).mockReset()
     vi.mocked(sendRuntimeMessage).mockReset()
+  })
+
+  it("identifies the current website separately from the full settings action", async () => {
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
+      success: true,
+      siteAllowed: true,
+    })
+    render(<ApiCheckSiteAccessControl pageUrl={pageUrl} />)
+    expect(
+      await screen.findByRole("heading", { name: "common:labels.settings" }),
+    ).toBeVisible()
+    expect(screen.getByText("example.com")).toBeVisible()
+    expect(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:confirmToast.settings",
+      }),
+    ).toBeEnabled()
   })
 
   it("hides the control when loading its site state fails", async () => {
@@ -133,5 +150,64 @@ describe("website participation control", () => {
     expect(
       screen.getByText("webAiApiCheck:siteControl.globalDisabled"),
     ).toBeInTheDocument()
+  })
+
+  it("hides the control when initial loading returns an unsuccessful response", async () => {
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({ success: false })
+    render(<ApiCheckSiteAccessControl pageUrl={pageUrl} />)
+    await screen.findByRole("alert")
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument()
+  })
+
+  it("omits the site host when pageUrl is an opaque or non-hierarchical URL", async () => {
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
+      success: true,
+      siteAllowed: true,
+    })
+    render(<ApiCheckSiteAccessControl pageUrl="about:blank" />)
+    expect(
+      await screen.findByRole("heading", { name: "common:labels.settings" }),
+    ).toBeVisible()
+    expect(screen.queryByTitle("example.com")).not.toBeInTheDocument()
+  })
+
+  it("ignores a response for the previous page after pageUrl changes", async () => {
+    const resolveMessages: Array<(val: any) => void> = []
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveMessages.push(resolve)
+        }),
+    )
+    const { rerender } = render(<ApiCheckSiteAccessControl pageUrl={pageUrl} />)
+    await waitFor(() => expect(sendWebAiApiCheckMessage).toHaveBeenCalledOnce())
+    rerender(<ApiCheckSiteAccessControl pageUrl="https://other.example/post" />)
+    await waitFor(() =>
+      expect(sendWebAiApiCheckMessage).toHaveBeenCalledTimes(2),
+    )
+    await act(async () => {
+      resolveMessages[0]!({ success: true, siteAllowed: true })
+    })
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument()
+  })
+
+  it("ignores an error for the previous page after pageUrl changes", async () => {
+    const rejectMessages: Array<(err: any) => void> = []
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      () =>
+        new Promise((_resolve, reject) => {
+          rejectMessages.push(reject)
+        }),
+    )
+    const { rerender } = render(<ApiCheckSiteAccessControl pageUrl={pageUrl} />)
+    await waitFor(() => expect(sendWebAiApiCheckMessage).toHaveBeenCalledOnce())
+    rerender(<ApiCheckSiteAccessControl pageUrl="https://other.example/post" />)
+    await waitFor(() =>
+      expect(sendWebAiApiCheckMessage).toHaveBeenCalledTimes(2),
+    )
+    await act(async () => {
+      rejectMessages[0]!(new Error("offline"))
+    })
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
 })
