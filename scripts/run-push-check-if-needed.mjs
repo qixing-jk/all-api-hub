@@ -82,7 +82,7 @@ function readStdin(timeoutMs = 200) {
     }
 
     const timer = setTimeout(() => {
-      finish(data)
+      finish("")
     }, timeoutMs)
     timer.unref()
 
@@ -96,7 +96,7 @@ function readStdin(timeoutMs = 200) {
     }
 
     const onError = () => {
-      finish(data)
+      finish("")
     }
 
     process.stdin.setEncoding("utf8")
