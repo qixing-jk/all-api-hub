@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { ActionMenu } from "~/components/ActionMenu"
 import { AccountKeyIcon } from "~/components/icons/productIcons"
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { PageActions } from "~/components/PageActions"
 import { PageHeader } from "~/components/PageHeader"
 import Tooltip from "~/components/Tooltip"
@@ -27,6 +28,7 @@ interface HeaderProps {
   onRepairMissingKeys?: () => void
   onRefresh: () => void
   onOpenSelectedAccountModels?: () => void
+  onOpenSelectedAccountConsole?: () => void
   onRefreshManagedSiteStatus?: () => void
   managedSiteStatusHint?: string
   isLoading: boolean
@@ -47,6 +49,7 @@ export function Header({
   onRepairMissingKeys,
   onRefresh,
   onOpenSelectedAccountModels,
+  onOpenSelectedAccountConsole,
   onRefreshManagedSiteStatus,
   managedSiteStatusHint,
   isLoading,
@@ -162,6 +165,17 @@ export function Header({
                 )
               }
             >
+              {onOpenSelectedAccountConsole ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={onOpenSelectedAccountConsole}
+                  leftIcon={<WorkflowTransitionIcon className="h-4 w-4" />}
+                >
+                  {t("native.editor.vercelAiGateway.openConsole")}
+                </Button>
+              ) : null}
               <ActionMenu
                 label={t("keyManagement:tools.title")}
                 icon={Wrench}

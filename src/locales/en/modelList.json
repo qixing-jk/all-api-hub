@@ -42,6 +42,13 @@
   "allBillingModes": "All Billing Modes",
   "allGroups": "All Groups",
   "allProviders": "All Providers",
+  "availability": {
+    "details": "View access details",
+    "restrictedHint": "The site currently marks this model as unavailable.",
+    "unavailable": "Currently unavailable",
+    "unknown": "Availability unconfirmed",
+    "unknownHint": "The site has not confirmed whether this model is available."
+  },
   "batchVerify": {
     "actions": {
       "open": "Batch test",
@@ -259,6 +266,7 @@
       }
     },
     "outputModalities": "Output modalities",
+    "planRestricted": "Your current plan does not support this model",
     "priceConditions": {
       "minimumPromptTokens": "More than {{formattedCount}} prompt tokens",
       "minimumPromptTokens_one": "More than {{formattedCount}} prompt token",
@@ -297,6 +305,7 @@
     "tokenCount_other": "{{formattedCount}} tokens",
     "trainingChannels": "Training channels available",
     "trainingConsent": "Training consent required",
+    "vercelVerificationRequired": "Complete customer verification in the Vercel AI Gateway console before sending requests",
     "viewOnSite": "View on site"
   },
   "displayOptions": "Display",
@@ -708,7 +717,6 @@
   "title": "Model List",
   "totalModels_one": "Total {{count}} model",
   "totalModels_other": "Total {{count}} models",
-  "unavailable": "Unavailable",
   "unavailableModelsHint": "Include already loaded models with no usable groups for this account. These models bypass group selection but still follow other filters. This does not fetch additional site-wide models. Applies to this page session only.",
   "unavailablePriceReasons": {
     "groupRatioUnavailable": "Prices are unavailable because this usable group has no multiplier.",

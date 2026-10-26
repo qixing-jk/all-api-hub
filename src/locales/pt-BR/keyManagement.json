@@ -587,6 +587,31 @@
         "discard": "Descartar alterações",
         "keepEditing": "Continuar editando",
         "title": "Descartar alterações?"
+      },
+      "vercelAiGateway": {
+        "attribution": {
+          "team": "Equipe",
+          "user": "Membro da equipe"
+        },
+        "budgetAlerts": "Enviar e-mail ao criador da chave nestes limites",
+        "budgetEnabled": "Orçamento de gastos",
+        "budgetHelp": "Defina um limite em USD. Ao desativar, vale o orçamento padrão da equipe, se houver. Novos orçamentos excluem gastos de BYOK.",
+        "budgetInactive": "Orçamento inativo",
+        "budgetLimit": "Limite de gastos (USD, mínimo $1)",
+        "budgetPeriod": "Renovação do orçamento",
+        "budgetUnavailable": "Não foi possível ler o orçamento. Tente novamente antes de editar.",
+        "consoleFailed": "Não foi possível abrir o console da equipe. Confira o token de acesso e tente novamente.",
+        "inheritedBudget": "Orçamento padrão da equipe",
+        "noBudget": "Sem orçamento próprio da chave",
+        "openConsole": "Abrir console Vercel",
+        "period": {
+          "daily": "Diária",
+          "monthly": "Mensal",
+          "none": "Nunca",
+          "weekly": "Semanal"
+        },
+        "spendAttribution": "Atribuição dos gastos",
+        "spendAttributionHelp": "Escolha qual orçamento recebe os gastos desta chave. Somente proprietários da equipe e administradores de orçamento do AI Gateway podem alterar."
       }
     },
     "heading": "Chaves de API",

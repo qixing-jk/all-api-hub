@@ -251,6 +251,9 @@
     "configMissing": "请先在设置中配置 Veloera 地址、管理员令牌和用户 ID",
     "noChannelsToSync": "没有可同步的渠道"
   },
+  "vercelAiGateway": {
+    "accessTokenRequired": "Vercel AI Gateway 需要拥有该网关的团队的 Vercel 访问令牌。"
+  },
   "warnings": {
     "accountSavedWithoutDataRefresh": "账号已保存，但未能获取余额、额度和今日用量，当前显示可能为占位值。请稍后在账号列表中刷新。",
     "accountUpdatedWithoutDataRefresh": "账号配置已保存，但未能刷新最新余额、额度和今日用量，当前显示可能仍是旧数据。请稍后在账号列表中刷新。"

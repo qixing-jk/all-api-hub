@@ -21,6 +21,51 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const t = ((key: string) => key) as TFunction
 
+it("explains custom, inherited and unavailable Vercel spending budgets", () => {
+  const facts: NativeKeyManagementRow["facts"] = {
+    ref: {
+      accountId: "a",
+      siteType: SITE_TYPES.VERCEL_AI_GATEWAY,
+      scopeKey: "account",
+      resourceId: "k",
+    },
+    displayName: "Key",
+    maskedLabel: "masked",
+    status: "enabled",
+    fields: [],
+    actions: { canUpdate: true, canDelete: true },
+    displayFacts: [
+      {
+        fieldId: "custom",
+        kind: "spend-budget",
+        source: "custom",
+        limitUsd: 10,
+        usedUsd: 3,
+        period: "monthly",
+      },
+      {
+        fieldId: "default",
+        kind: "spend-budget",
+        source: "inherited",
+        limitUsd: 20,
+        period: "weekly",
+      },
+      { fieldId: "unknown", kind: "spend-budget", source: "unavailable" },
+    ],
+  }
+  const details = getAccountKeyResourceCardAdapter(
+    SITE_TYPES.VERCEL_AI_GATEWAY,
+  ).buildDetailFacts(facts, t)
+  expect(details).toHaveLength(3)
+  expect(details[0]?.value).toContain("$3 / $10")
+  expect(details[1]?.value).toContain(
+    "keyManagement:native.editor.vercelAiGateway.inheritedBudget",
+  )
+  expect(details[2]?.value).toBe(
+    "keyManagement:native.editor.vercelAiGateway.budgetUnavailable",
+  )
+})
+
 it("distinguishes account-following allowance, explicit rate limits and budget reset windows", () => {
   const facts: NativeKeyManagementRow["facts"] = {
     ref: {
@@ -132,6 +177,52 @@ it.each([true, false])(
     expect(JSON.stringify(card)).not.toContain("followsAccountGroup")
   },
 )
+
+it("renders spend attribution as a billing fact without inventing a group", () => {
+  const row: NativeKeyManagementRow = {
+    kind: "account-key-resource",
+    rowKey: "vercel",
+    accountId: "a",
+    accountName: "Vercel AI Gateway",
+    scopeName: "Account",
+    facts: {
+      ref: {
+        accountId: "a",
+        siteType: SITE_TYPES.VERCEL_AI_GATEWAY,
+        scopeKey: "account",
+        resourceId: "key_1",
+      },
+      displayName: "Production",
+      maskedLabel: "vck_••••••••abc123",
+      status: "enabled",
+      fields: [],
+      actions: { canUpdate: false, canDelete: true },
+      displayFacts: [
+        {
+          fieldId: "spend_attribution",
+          kind: "attribution",
+          value: "team",
+        },
+      ],
+    },
+  }
+  const card = getAccountKeyResourceCardAdapter(
+    SITE_TYPES.VERCEL_AI_GATEWAY,
+  ).buildPresentation(row, t, { hasAssociatedSecret: false })
+  // Attribution is billing metadata, not a model-access group.
+  expect(card.contextFact).toBeUndefined()
+  expect(card.summaryFacts).not.toContainEqual(
+    expect.objectContaining({ id: "group" }),
+  )
+  const attribution = getAccountKeyResourceCardAdapter(
+    SITE_TYPES.VERCEL_AI_GATEWAY,
+  ).buildDetailFacts(row.facts, t)
+  expect(attribution).toContainEqual({
+    id: "spend_attribution",
+    label: "keyManagement:native.editor.vercelAiGateway.spendAttribution",
+    value: "keyManagement:native.editor.vercelAiGateway.attribution.team",
+  })
+})
 
 it("allocates complete inventory facts to summary or additional detail without overlap", () => {
   const facts: NativeKeyManagementRow["facts"] = {

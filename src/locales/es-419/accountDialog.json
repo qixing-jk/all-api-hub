@@ -25,7 +25,12 @@
     "prepareFailed": "No se pudo guardar temporalmente el formulario. Copia la información que necesites conservar y vuelve a abrir el formulario en la página completa.",
     "restoreFailed": "No se pudo recuperar el formulario sin terminar. Es posible que haya vencido. Vuelve a abrir el formulario de cuenta.",
     "rotationWarning": "Solo en sitios antiguos con Generate / Regenerate: regenerar invalida el token anterior; actualiza las herramientas que lo usen. Crear un token de acceso con permisos no invalida los tokens existentes.",
-    "title": "Ingresa un Access Token manualmente"
+    "title": "Ingresa un Access Token manualmente",
+    "vercel": {
+      "generateStep": "Abre la página de tokens de tu cuenta de Vercel, crea un token para el equipo propietario de AI Gateway y completa la verificación por correo que pida Vercel. Copia el token de inmediato, porque solo se muestra una vez.",
+      "openPage": "Abrir tokens de Vercel",
+      "openPageFailed": "No se pudo abrir la página. Abre manualmente la página de tokens de tu cuenta de Vercel, crea un token para el equipo de AI Gateway y vuelve aquí para pegarlo."
+    }
   },
   "actions": {
     "autoConfigAriaLabel": "Guardar cuenta y abrir configuración de canal de {{managedSite}}",
@@ -226,7 +231,14 @@
     "thirdPartyDailyCheckInMethod": "Check-in diario de {{source}}",
     "userId": "ID de usuario",
     "username": "Nombre de usuario",
-    "validRateError": "Ingresa un tipo de cambio válido, mayor que 0"
+    "validRateError": "Ingresa un tipo de cambio válido, mayor que 0",
+    "vercelAccessToken": "Token de acceso de Vercel",
+    "vercelAccessTokenGuidance": "Abre la página de tokens de tu cuenta de Vercel, crea un token para el equipo propietario de AI Gateway y pégalo aquí. Vercel puede pedir primero un código enviado a tu correo, y el token solo se muestra una vez.",
+    "vercelAccessTokenGuidanceTitle": "Usar un token de acceso de Vercel",
+    "vercelTeam": "Equipo de Vercel",
+    "vercelTeamHelp": "Elige el equipo que posee el saldo y las claves de AI Gateway. Cada equipo se guarda como una cuenta separada.",
+    "vercelTeamLoadFailed": "No se pudieron cargar los equipos. Revisa el token de acceso y reintenta.",
+    "vercelTeamPlaceholder": "Selecciona un equipo"
   },
   "infoPanel": {
     "autoDetect": "Detección automática",

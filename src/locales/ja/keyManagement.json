@@ -567,6 +567,31 @@
         "discard": "変更を破棄",
         "keepEditing": "編集を続ける",
         "title": "変更を破棄しますか？"
+      },
+      "vercelAiGateway": {
+        "attribution": {
+          "team": "チーム",
+          "user": "チームメンバー"
+        },
+        "budgetAlerts": "以下の割合に達したらキー作成者にメール通知",
+        "budgetEnabled": "利用予算",
+        "budgetHelp": "米ドルで上限を設定します。無効にするとチームの既定予算が適用されます（設定済みの場合）。新規予算に BYOK 利用額は含まれません。",
+        "budgetInactive": "予算は無効",
+        "budgetLimit": "利用上限（米ドル、最低 $1）",
+        "budgetPeriod": "予算の更新周期",
+        "budgetUnavailable": "予算を読み取れませんでした。再試行してから編集してください。",
+        "consoleFailed": "チームコンソールを開けませんでした。アクセストークンを確認して再試行してください。",
+        "inheritedBudget": "チームの既定予算",
+        "noBudget": "キー固有の予算なし",
+        "openConsole": "Vercel コンソールを開く",
+        "period": {
+          "daily": "毎日",
+          "monthly": "毎月",
+          "none": "更新しない",
+          "weekly": "毎週"
+        },
+        "spendAttribution": "利用額の帰属先",
+        "spendAttributionHelp": "このキーの利用額を計上する予算を選択します。変更できるのはチーム所有者と AI Gateway 予算管理者のみです。"
       }
     },
     "heading": "API キー",

@@ -252,6 +252,9 @@
     "configMissing": "先に設定で Veloera のアドレス、管理者トークン、ユーザー ID を設定してください",
     "noChannelsToSync": "同期するチャネルがありません"
   },
+  "vercelAiGateway": {
+    "accessTokenRequired": "Vercel AI Gateway には、ゲートウェイを所有するチームの Vercel アクセストークンが必要です。"
+  },
   "warnings": {
     "accountSavedWithoutDataRefresh": "アカウントは保存されましたが、最新の残高・クォータ・本日の使用量を取得できませんでした。現在の表示は仮の値の可能性があります。後でアカウント一覧から更新してください。",
     "accountUpdatedWithoutDataRefresh": "アカウント設定は保存されましたが、最新の残高・クォータ・本日の使用量を更新できませんでした。現在の表示は古いままの可能性があります。後でアカウント一覧から更新してください。"

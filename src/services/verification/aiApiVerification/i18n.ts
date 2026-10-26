@@ -93,13 +93,21 @@ export function getApiVerificationProbeLabel(
 }
 
 /**
- * Returns the localized summary text for a known API verification summary key.
+ * Returns localized summary text, retaining sanitized upstream HTTP diagnostics.
+ * `sanitizedSummary` must already have credentials and sensitive URL data removed.
  */
 export function translateApiVerificationSummary(
   t: TFunction,
   summaryKey: string,
   summaryParams?: Record<string, unknown>,
+  sanitizedSummary?: string,
 ): string | undefined {
+  const withHttpDetails = (localized: string): string => {
+    const detail = sanitizedSummary?.trim()
+    return detail && detail !== localized
+      ? `${localized}\n${detail}`
+      : localized
+  }
   switch (summaryKey) {
     case "verifyDialog.errors.unexpected":
       return t(
@@ -221,19 +229,22 @@ export function translateApiVerificationSummary(
         summaryParams,
       )
     case "verifyDialog.summaries.unauthorized":
-      return t(
-        "aiApiVerification:verifyDialog.summaries.unauthorized",
-        summaryParams,
+      return withHttpDetails(
+        t(
+          "aiApiVerification:verifyDialog.summaries.unauthorized",
+          summaryParams,
+        ),
       )
     case "verifyDialog.summaries.forbidden":
-      return t(
-        "aiApiVerification:verifyDialog.summaries.forbidden",
-        summaryParams,
+      return withHttpDetails(
+        t("aiApiVerification:verifyDialog.summaries.forbidden", summaryParams),
       )
     case "verifyDialog.summaries.endpointNotFound":
-      return t(
-        "aiApiVerification:verifyDialog.summaries.endpointNotFound",
-        summaryParams,
+      return withHttpDetails(
+        t(
+          "aiApiVerification:verifyDialog.summaries.endpointNotFound",
+          summaryParams,
+        ),
       )
     case "verifyDialog.summaries.httpError":
       return t(

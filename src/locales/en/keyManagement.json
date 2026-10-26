@@ -577,6 +577,31 @@
         "discard": "Discard changes",
         "keepEditing": "Keep editing",
         "title": "Discard changes?"
+      },
+      "vercelAiGateway": {
+        "attribution": {
+          "team": "Team",
+          "user": "Team member"
+        },
+        "budgetAlerts": "Email the key creator at these thresholds",
+        "budgetEnabled": "Spend budget",
+        "budgetHelp": "Set a custom cap in USD. Turning this off uses the team default, if one exists. BYOK spend is excluded from new budgets.",
+        "budgetInactive": "Budget inactive",
+        "budgetLimit": "Spending limit (USD, minimum $1)",
+        "budgetPeriod": "Budget refresh",
+        "budgetUnavailable": "Budget could not be read. Retry before editing.",
+        "consoleFailed": "Could not open the team console. Check your access token and try again.",
+        "inheritedBudget": "Team default budget",
+        "noBudget": "No key-specific budget",
+        "openConsole": "Open Vercel console",
+        "period": {
+          "daily": "Daily",
+          "monthly": "Monthly",
+          "none": "Never",
+          "weekly": "Weekly"
+        },
+        "spendAttribution": "Spend attribution",
+        "spendAttributionHelp": "Choose whose budget this key counts against. Only team Owners and AI Gateway Budget Managers can change attribution."
       }
     },
     "heading": "API keys",

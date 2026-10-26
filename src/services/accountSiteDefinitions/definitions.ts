@@ -132,6 +132,11 @@ import {
   SHAREDCHAT_HOSTNAMES,
   SHAREDCHAT_WEB_ORIGIN,
   SITE_TYPES,
+  VERCEL_ACCESS_TOKENS_PATH,
+  VERCEL_AI_GATEWAY_API_BASE_URL,
+  VERCEL_AI_GATEWAY_DISPLAY_NAME,
+  VERCEL_AI_GATEWAY_HOSTNAMES,
+  VERCEL_WEB_ORIGIN,
   XIAOEN_HOSTNAMES,
   XIAOEN_WEB_ORIGIN,
 } from "./identifiers"
@@ -237,6 +242,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.KIMI,
   SITE_TYPES.KIMI_GLOBAL,
   SITE_TYPES.GRSAI,
+  SITE_TYPES.VERCEL_AI_GATEWAY,
   SITE_TYPES.UNKNOWN,
 ] as const
 
@@ -1545,6 +1551,83 @@ const ACCOUNT_SITE_DEFINITIONS = [
         inferFromHostname: true,
         inferenceApiBaseUrls: {
           openAiCompatible: GRSAI_API_BASE_URL,
+        },
+      },
+    },
+  },
+  {
+    siteType: SITE_TYPES.VERCEL_AI_GATEWAY,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.VercelAiGateway,
+    onboarding: {
+      displayName: VERCEL_AI_GATEWAY_DISPLAY_NAME,
+      accountForm: {
+        fixedSiteUrl: VERCEL_WEB_ORIGIN,
+        defaultSiteName: VERCEL_AI_GATEWAY_DISPLAY_NAME,
+        accessTokenLabelKey: "form.vercelAccessToken",
+        accessTokenGuidanceTitleKey: "form.vercelAccessTokenGuidanceTitle",
+        accessTokenGuidanceKey: "form.vercelAccessTokenGuidance",
+      },
+      // `vercel.com` serves every Vercel product; only the AI Gateway account
+      // surface is adapted, so detection stays hostname-scoped and the account
+      // form pins the AI Gateway dashboard.
+      manualAddGuideAnchor:
+        ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS.VercelAiGateway,
+      // The token page issues a fresh token; it never rotates an existing one.
+      accessTokenVerificationGuide: {
+        copy: "vercel",
+        showRotationWarning: false,
+      },
+      detection: { hostnames: VERCEL_AI_GATEWAY_HOSTNAMES },
+      routes: {
+        // `/ai-gateway` console routes are team-scoped (`/<team>/~/ai-gateway`);
+        // the saved account URL cannot carry a slug. The adapter resolves usage
+        // and key-management routes from the saved team identity.
+        loginPath: "/login",
+        usagePath: null,
+        adminCredentialsPath: null,
+        pricingPath: "/ai-gateway/models",
+        checkInPath: null,
+        accessTokenPath: VERCEL_ACCESS_TOKENS_PATH,
+        redeemPath: null,
+        siteAnnouncementsPath: null,
+      },
+    },
+    productProfile: {
+      metrics: {
+        deferredTodayStatsAvailability:
+          createUnsupportedTodayStatsAvailability(),
+        legacyTodayStatsAvailability: createUnsupportedTodayStatsAvailability(),
+      },
+      auth: {
+        // A Vercel access token is the only credential that can manage AI
+        // Gateway keys; credits also accept it when the request names the team.
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.AccessToken],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
+        defaultAuthHostnames: [],
+      },
+      identity: {
+        usernameRequired: false,
+        userIdRequired: true,
+        storedUserIdentityFields: ["id", "username"],
+      },
+      createdToken: {
+        secretHandling:
+          ACCOUNT_SITE_CREATED_TOKEN_SECRET_HANDLING.OneTimeSecretDialog,
+      },
+      modelList: {
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+        groupSemantics: ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+      },
+      urls: {
+        recognizedHostnames: VERCEL_AI_GATEWAY_HOSTNAMES,
+        inferFromHostname: true,
+        storageOrigin: VERCEL_WEB_ORIGIN,
+        duplicateOrigin: VERCEL_WEB_ORIGIN,
+        inferenceApiBaseUrls: {
+          openAiCompatible: VERCEL_AI_GATEWAY_API_BASE_URL,
         },
       },
     },

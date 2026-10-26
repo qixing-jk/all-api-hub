@@ -39,6 +39,13 @@
   "allBillingModes": "所有計費方式",
   "allGroups": "所有分組",
   "allProviders": "所有廠商",
+  "availability": {
+    "details": "查看存取限制詳情",
+    "restrictedHint": "網站目前將此模型標記為無法使用。",
+    "unavailable": "目前無法使用",
+    "unknown": "可用性待確認",
+    "unknownHint": "網站尚未確認此模型的可用性。"
+  },
   "batchVerify": {
     "actions": {
       "open": "批量測試",
@@ -252,6 +259,7 @@
       }
     },
     "outputModalities": "輸出模態",
+    "planRestricted": "目前方案不支援此模型",
     "priceConditions": {
       "minimumPromptTokens": "提示詞超過 {{formattedCount}} 個 Token",
       "minimumPromptTokens_other": "提示詞超過 {{formattedCount}} 個 Token",
@@ -288,6 +296,7 @@
     "tokenCount_other": "{{formattedCount}} Token",
     "trainingChannels": "含資料訓練管道",
     "trainingConsent": "需要資料訓練授權",
+    "vercelVerificationRequired": "請先在 Vercel AI Gateway 控制台完成客戶驗證，再傳送請求",
     "viewOnSite": "前往官網查看"
   },
   "displayOptions": "顯示內容",
@@ -697,7 +706,6 @@
   },
   "title": "模型列表",
   "totalModels_other": "總計 {{count}} 個模型",
-  "unavailable": "不可用",
   "unavailableModelsHint": "額外顯示已取得資料中，目前帳號明確沒有可用群組的模型。這些模型不受群組選擇限制，但仍受其他篩選條件限制；不會額外取得全站模型。僅目前頁面工作階段有效。",
   "unavailablePriceReasons": {
     "groupRatioUnavailable": "價格不可用，因為目前可用分組沒有分組倍率。",

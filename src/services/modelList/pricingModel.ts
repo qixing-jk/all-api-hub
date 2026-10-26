@@ -2,7 +2,10 @@ import type { AccountSiteType } from "~/constants/siteType"
 import type { PricingPlan } from "~/services/modelPricing/pricingPlan"
 import type { QuotaPricingPlan } from "~/services/modelPricing/quotaPricing"
 import type { ModelVendorEvidence } from "~/services/models/modelDescriptor"
-import type { ModelPresentation } from "~/services/models/modelDisplayFacts"
+import type {
+  ModelDisplayLabel,
+  ModelPresentation,
+} from "~/services/models/modelDisplayFacts"
 
 export type PerCallPrice = number | { input: number; output: number }
 
@@ -16,7 +19,12 @@ export interface ProductCanonicalModel {
   /** Provider-published descriptions; selected at render time, not cache time. */
   model_descriptions?: Partial<Record<"zh" | "en", string>>
   presentation?: ModelPresentation
-  availability?: { available: boolean; reason?: string }
+  availability?: {
+    /** Null means the upstream explicitly could not establish eligibility. */
+    available: boolean | null
+    reason?: string
+    reasonLabel?: ModelDisplayLabel
+  }
   /** Server-side routing preference, independent of local group filters. */
   providerGroup?: {
     selected: string

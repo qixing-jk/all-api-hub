@@ -42,6 +42,13 @@
   "allBillingModes": "Alle Abrechnungsmodi",
   "allGroups": "Alle Gruppen",
   "allProviders": "Alle Anbieter",
+  "availability": {
+    "details": "Zugriffsdetails anzeigen",
+    "restrictedHint": "Die Website kennzeichnet dieses Modell derzeit als nicht verfügbar.",
+    "unavailable": "Derzeit nicht verfügbar",
+    "unknown": "Verfügbarkeit unbestätigt",
+    "unknownHint": "Die Website hat die Verfügbarkeit dieses Modells nicht bestätigt."
+  },
   "batchVerify": {
     "actions": {
       "open": "Batch-Test",
@@ -259,6 +266,7 @@
       }
     },
     "outputModalities": "Ausgabemodalitäten",
+    "planRestricted": "Dein aktueller Tarif unterstützt dieses Modell nicht",
     "priceConditions": {
       "minimumPromptTokens": "Mehr als {{formattedCount}} Eingabe-Token",
       "minimumPromptTokens_one": "Mehr als {{formattedCount}} Eingabe-Token",
@@ -297,6 +305,7 @@
     "tokenCount_other": "{{formattedCount}} Token",
     "trainingChannels": "Trainingskanäle verfügbar",
     "trainingConsent": "Trainingszustimmung erforderlich",
+    "vercelVerificationRequired": "Vor Anfragen die Kundenverifizierung in der Vercel AI Gateway Konsole abschließen",
     "viewOnSite": "Auf Website anzeigen"
   },
   "displayOptions": "Anzeige",
@@ -708,7 +717,6 @@
   "title": "Modellliste",
   "totalModels_one": "Gesamt {{count}} Modell",
   "totalModels_other": "Insgesamt {{count}} Modelle",
-  "unavailable": "Nicht verfügbar",
   "unavailableModelsHint": "Bereits geladene Modelle ohne nutzbare Gruppen für dieses Konto einbeziehen. Diese Modelle umgehen die Gruppenauswahl, unterliegen aber weiterhin anderen Filtern. Es werden keine zusätzlichen Modelle der gesamten Website abgerufen. Gilt nur für diese Seitensitzung.",
   "unavailablePriceReasons": {
     "groupRatioUnavailable": "Preise sind nicht verfügbar, da diese verwendbare Gruppe keinen Multiplikator hat.",

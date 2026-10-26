@@ -18,6 +18,9 @@ export type AccountBootstrapRouteKind =
 export type AccountBootstrapRouteTarget = {
   baseUrl: string
   siteType: AccountSiteType
+  /** Saved identity/credential for providers whose console routes are team-scoped. */
+  userId?: AccountIdentity
+  token?: string
 }
 
 export interface UserInfo {
@@ -48,6 +51,8 @@ export type AccountBootstrapFacts = {
 }
 
 export type AccountBootstrapCapability = {
+  /** Named console destinations whose paths require saved-account identity. */
+  dynamicRoutes?: readonly AccountBootstrapRouteKind[]
   fetchUserInfo(request: ApiServiceRequest): Promise<UserInfo>
   getOrCreateAccessToken(request: ApiServiceRequest): Promise<AccessTokenInfo>
   loadBootstrapFacts(request: ApiServiceRequest): Promise<AccountBootstrapFacts>

@@ -25,7 +25,12 @@
     "prepareFailed": "无法暂存当前表单。请先复制需要保留的信息，再从完整页面重新打开账号表单。",
     "restoreFailed": "无法恢复未完成的表单，可能已过期。请重新打开账号表单。",
     "rotationWarning": "仅适用于显示 Generate / Regenerate 的旧版站点：重新生成会使旧令牌失效，其他使用旧令牌的工具也需要更新。创建带权限的访问令牌不会使已有令牌失效。",
-    "title": "手动填写 Access Token"
+    "title": "手动填写 Access Token",
+    "vercel": {
+      "generateStep": "在 Vercel 账户的令牌页面创建令牌，作用域选择拥有 AI Gateway 的团队，并按 Vercel 要求完成邮箱验证。令牌只显示一次，请立即复制。",
+      "openPage": "打开 Vercel 令牌页面",
+      "openPageFailed": "无法打开页面。请手动打开 Vercel 账户的令牌页面，为 AI Gateway 团队创建令牌，然后回到这里粘贴。"
+    }
   },
   "actions": {
     "autoConfigAriaLabel": "保存账号并前往 {{managedSite}} 渠道配置",
@@ -224,7 +229,14 @@
     "thirdPartyDailyCheckInMethod": "{{source}} 签到",
     "userId": "用户 ID",
     "username": "用户名",
-    "validRateError": "请输入有效的汇率，大于 0"
+    "validRateError": "请输入有效的汇率，大于 0",
+    "vercelAccessToken": "Vercel 访问令牌",
+    "vercelAccessTokenGuidance": "在 Vercel 账户的令牌页面创建一个令牌，作用域选择拥有 AI Gateway 的团队，然后粘贴到这里。Vercel 可能先要求输入邮箱验证码，且令牌只显示一次。",
+    "vercelAccessTokenGuidanceTitle": "使用 Vercel 访问令牌",
+    "vercelTeam": "Vercel 团队",
+    "vercelTeamHelp": "选择拥有 AI Gateway 余额和密钥的团队。每个团队保存为独立账号。",
+    "vercelTeamLoadFailed": "无法加载团队，请检查访问令牌后重试。",
+    "vercelTeamPlaceholder": "选择团队"
   },
   "infoPanel": {
     "autoDetect": "自动识别",

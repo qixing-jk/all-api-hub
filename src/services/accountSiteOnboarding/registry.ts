@@ -24,6 +24,10 @@ import { relayForBrowserIdentity } from "~/services/apiAdapters/relayfor/browser
 import { rightCodeBrowserIdentity } from "~/services/apiAdapters/rightcode/account/browserIdentity"
 import { sharedChatBrowserIdentity } from "~/services/apiAdapters/sharedchat/browserIdentity"
 import { sub2ApiBrowserIdentity } from "~/services/apiAdapters/sub2api/auth/browserIdentity"
+import {
+  vercelAccountDetectionPrivacy,
+  vercelBrowserIdentity,
+} from "~/services/apiAdapters/vercelAiGateway/browserIdentity"
 import { voApiV2BrowserIdentity } from "~/services/apiAdapters/voapiV2/browserIdentity"
 import { xiaoenBrowserIdentity } from "~/services/apiAdapters/xiaoen/browserIdentity"
 
@@ -45,6 +49,7 @@ import { rightCodeContentSessionExtractor } from "./contentSession/rightcode"
 import { sharedChatContentSessionExtractor } from "./contentSession/sharedchat"
 import { sub2ApiContentSessionExtractor } from "./contentSession/sub2api"
 import { vApiContentSessionExtractor } from "./contentSession/vApi"
+import { vercelContentSessionExtractor } from "./contentSession/vercel"
 import { voApiV2ContentSessionExtractor } from "./contentSession/voapiV2"
 import { xiaoenContentSessionExtractor } from "./contentSession/xiaoen"
 import type {
@@ -119,7 +124,14 @@ const siteBrowserAdapters: readonly {
     sessionExtractor: relayForContentSessionExtractor,
     identity: relayForBrowserIdentity,
   },
-  { sessionExtractor: grsaiContentSessionExtractor },
+  {
+    sessionExtractor: grsaiContentSessionExtractor,
+  },
+  {
+    sessionExtractor: vercelContentSessionExtractor,
+    identity: vercelBrowserIdentity,
+    detectionPrivacy: vercelAccountDetectionPrivacy,
+  },
   { sessionExtractor: vApiContentSessionExtractor },
   { sessionExtractor: apiyiContentSessionExtractor },
   { sessionExtractor: newApiAuthBundleContentSessionExtractor },

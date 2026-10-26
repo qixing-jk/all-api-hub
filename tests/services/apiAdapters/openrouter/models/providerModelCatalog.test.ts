@@ -246,6 +246,12 @@ describe("OpenRouter provider model catalog Adapter", () => {
     expect(response.model_list_source.catalogScope).toBe(
       MODEL_CATALOG_SCOPES.PERSONALIZED,
     )
+    expect(response.model_list_source.actionPolicy).toMatchObject({
+      supportsTokenCompatibility: true,
+      supportsCredentialVerification: true,
+      supportsBatchCredentialVerification: true,
+      supportsCliVerification: true,
+    })
     expect(publicRequestCount).toBe(0)
   })
 

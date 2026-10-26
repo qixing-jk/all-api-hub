@@ -20,6 +20,7 @@ import {
   MODEL_LIST_GROUP_SELECTION_SCOPES,
   type ModelListGroupSelectionScope,
 } from "~/features/ModelList/groups/groupSelectionScopes"
+import { ModelAvailabilityNotice } from "~/features/ModelList/presentation/ModelItem/ModelAvailabilityNotice"
 import { ModelCapabilityBadges } from "~/features/ModelList/presentation/ModelItem/ModelCapabilityBadges"
 import { ModelItemDescription } from "~/features/ModelList/presentation/ModelItem/ModelItemDescription"
 import { ModelItemDetails } from "~/features/ModelList/presentation/ModelItem/ModelItemDetails"
@@ -397,7 +398,7 @@ export default function ModelItem(props: ModelItemProps) {
           ? "hover:bg-surface-subtle/80 dark:hover:bg-foreground/[0.025] rounded-none border-0 bg-transparent shadow-none transition-colors hover:shadow-none"
           : isAvailableForUser &&
               "hover:border-theme-300 dark:hover:border-theme-500/50",
-        !isAvailableForUser && "bg-surface-subtle dark:bg-card/50 opacity-75",
+        !isAvailableForUser && "bg-surface-subtle dark:bg-card/50",
       )}
     >
       <CardContent padding="default" spacing="default">
@@ -487,6 +488,33 @@ export default function ModelItem(props: ModelItemProps) {
             }
           />
         </div>
+        <ModelAvailabilityNotice
+          availability={model.availability}
+          unavailable={!isAvailableForUser}
+          unknown={
+            model.availability?.available === null ||
+            groupContext.accessState === MODEL_GROUP_ACCESS_STATES.UNKNOWN
+          }
+          groupHint={
+            showGroupDetails && !isAvailableForUser
+              ? hasKnownNoUsableGroup || !switchableGroup
+                ? t("noUsableGroupsForModel")
+                : t("clickSwitchGroup", {
+                    group: formatGroupLabelFromRatios(
+                      switchableGroup,
+                      groupRatios,
+                    ),
+                  })
+              : undefined
+          }
+          groupDetails={
+            showGroupDetails &&
+            !hasKnownNoUsableGroup &&
+            usableGroupLabels.length > 0
+              ? `${t("currentUsableGroups")}: ${usableGroupLabels.join(", ")}`
+              : undefined
+          }
+        />
         <ModelItemDescription
           model={model}
           isAvailableForUser={isAvailableForUser}
@@ -575,31 +603,6 @@ export default function ModelItem(props: ModelItemProps) {
               </div>
             </div>
           )}
-
-        {!isAvailableForUser && showGroupDetails && (
-          <div className="border-warning-border bg-warning-soft mt-density-3 py-density-3 rounded-lg border px-3">
-            <div className="text-warning-text gap-y-density-2 flex items-center gap-x-2 text-sm">
-              <Badge variant="warning" size="sm">
-                {t("unavailable")}
-              </Badge>
-              <span>
-                {hasKnownNoUsableGroup || !switchableGroup
-                  ? t("noUsableGroupsForModel")
-                  : t("clickSwitchGroup", {
-                      group: formatGroupLabelFromRatios(
-                        switchableGroup,
-                        groupRatios,
-                      ),
-                    })}
-              </span>
-            </div>
-            {!hasKnownNoUsableGroup && usableGroupLabels.length > 0 && (
-              <div className="text-warning-text mt-density-2 text-sm">
-                {t("currentUsableGroups")}: {usableGroupLabels.join(", ")}
-              </div>
-            )}
-          </div>
-        )}
       </CardContent>
     </Card>
   )

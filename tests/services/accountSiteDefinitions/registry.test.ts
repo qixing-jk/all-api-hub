@@ -164,6 +164,7 @@ type ExpectedAccountSiteType =
   | typeof SITE_TYPES.GRSAI
   | typeof SITE_TYPES.RELAYFOR
   | typeof SITE_TYPES.REQUESTY
+  | typeof SITE_TYPES.VERCEL_AI_GATEWAY
   | typeof SITE_TYPES.UNKNOWN
 
 type ExpectedManagedSiteType =
@@ -492,6 +493,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.KIMI,
       SITE_TYPES.KIMI_GLOBAL,
       SITE_TYPES.GRSAI,
+      SITE_TYPES.VERCEL_AI_GATEWAY,
       SITE_TYPES.UNKNOWN,
     ])
   })
@@ -812,6 +814,10 @@ describe("account site definition registry", () => {
       {
         siteType: SITE_TYPES.OPENROUTER,
         anchor: "manual-openrouter",
+      },
+      {
+        siteType: SITE_TYPES.VERCEL_AI_GATEWAY,
+        anchor: "manual-vercel-ai-gateway",
       },
     ])
   })

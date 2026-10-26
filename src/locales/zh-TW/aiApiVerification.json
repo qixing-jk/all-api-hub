@@ -16,6 +16,7 @@
       "openai": "OpenAI",
       "openaiCompatible": "OpenAI 相容"
     },
+    "associatedCredentialHint": "此網站不支援重新讀取完整金鑰。測試會使用 API 憑據庫中與所選金鑰關聯的完整 Key；若尚未關聯，請先前往金鑰管理儲存或關聯金鑰。",
     "details": {
       "input": "輸入",
       "output": "輸出",

@@ -59,6 +59,7 @@ import {
   type CookieAuthPermissionRecommendationProps,
 } from "~/features/AccountManagement/components/AccountDialog/form/CookieAuthPermissionRecommendation"
 import type { AccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/form/sitePolicy"
+import { VercelTeamSelector } from "~/features/AccountManagement/components/AccountDialog/form/VercelTeamSelector"
 import {
   ACCOUNT_LOGIN_SECTION_ID,
   AccountLoginSection,
@@ -322,19 +323,27 @@ export default function AccountForm({
         />
       </FormField>
 
-      <FormField label={t("form.userId")} required={sitePolicy.requireUserId}>
-        <Input
-          // Compatible account sites may expose alphanumeric user IDs. Reference: https://github.com/qixing-jk/all-api-hub/issues/964
-          type="text"
-          autoComplete="off"
+      {siteType === SITE_TYPES.VERCEL_AI_GATEWAY ? (
+        <VercelTeamSelector
+          accessToken={accessToken}
           value={userId}
-          onChange={(e) => onUserIdChange(e.target.value)}
-          placeholder={t("form.userId")}
-          leftIcon={<Hash className="h-5 w-5" aria-hidden="true" />}
-          data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput}
-          required={sitePolicy.requireUserId}
+          onChange={onUserIdChange}
         />
-      </FormField>
+      ) : (
+        <FormField label={t("form.userId")} required={sitePolicy.requireUserId}>
+          <Input
+            // Compatible account sites may expose alphanumeric user IDs. Reference: https://github.com/qixing-jk/all-api-hub/issues/964
+            type="text"
+            autoComplete="off"
+            value={userId}
+            onChange={(e) => onUserIdChange(e.target.value)}
+            placeholder={t("form.userId")}
+            leftIcon={<Hash className="h-5 w-5" aria-hidden="true" />}
+            data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput}
+            required={sitePolicy.requireUserId}
+          />
+        </FormField>
+      )}
     </>
   )
 

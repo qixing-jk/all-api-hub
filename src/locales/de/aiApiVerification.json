@@ -16,6 +16,7 @@
       "openai": "OpenAI",
       "openaiCompatible": "OpenAI-kompatibel"
     },
+    "associatedCredentialHint": "Diese Website kann den vollständigen Schlüssel nicht erneut ausgeben. Tests verwenden den vollständigen Schlüssel aus der API-Zugangsdatenbibliothek, der mit dem ausgewählten Schlüssel verknüpft ist. Fehlt die Verknüpfung, speichere oder verknüpfe den Schlüssel zuerst in der Schlüsselverwaltung.",
     "details": {
       "input": "Eingabe",
       "output": "Ausgabe",

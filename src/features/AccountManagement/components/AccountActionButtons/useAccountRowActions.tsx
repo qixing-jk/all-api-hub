@@ -26,6 +26,7 @@ import {
   getStaticAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/configuration/runtimeConfig"
 import {
   getManagedSiteType,
@@ -278,7 +279,10 @@ export function useAccountRowActions({
   }
 
   const canOpenUsagePage = Boolean(
-    getStaticAccountSiteRouteUrl(site, SITE_ROUTE_KINDS.Usage),
+    getStaticAccountSiteRouteUrl(site, SITE_ROUTE_KINDS.Usage) ||
+      getSiteTypeCapabilities(
+        site.siteType,
+      ).account?.bootstrap?.dynamicRoutes?.includes(SITE_ROUTE_KINDS.Usage),
   )
   const canOpenRedeemPage = Boolean(
     getStaticAccountSiteRouteUrl(

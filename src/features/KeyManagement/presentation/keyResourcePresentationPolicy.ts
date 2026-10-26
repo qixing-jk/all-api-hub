@@ -29,6 +29,7 @@ export const KEY_RESOURCE_EDITOR_KINDS = {
   Dahl: "dahl",
   FoxCode: "foxcode",
   Emrank: "emrank",
+  VercelAiGateway: "vercel-ai-gateway",
   OpenRouter: "openrouter",
   RelayFor: "relayfor",
   Requesty: "requesty",
@@ -103,6 +104,11 @@ const policies = {
   [families.Pmapi]: { ...native, editor: KEY_RESOURCE_EDITOR_KINDS.Pmapi },
   [families.FoxCode]: { ...native, editor: KEY_RESOURCE_EDITOR_KINDS.FoxCode },
   [families.Emrank]: { ...native, editor: KEY_RESOURCE_EDITOR_KINDS.Emrank },
+  // Native budget and attribution edits retain the existing key identity.
+  [families.VercelAiGateway]: {
+    ...native,
+    editor: KEY_RESOURCE_EDITOR_KINDS.VercelAiGateway,
+  },
   [families.Xiaoen]: generic,
   [families.OpenRouter]: {
     ...generic,

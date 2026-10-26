@@ -108,6 +108,7 @@ describe("account bootstrap adapters", () => {
 
   it("keeps the bootstrap capability as provider-neutral bootstrap contract", () => {
     expectTypeOf<AccountBootstrapCapability>().toEqualTypeOf<{
+      dynamicRoutes?: readonly AccountBootstrapRouteKind[]
       fetchUserInfo(request: ApiServiceRequest): Promise<UserInfo>
       getOrCreateAccessToken(
         request: ApiServiceRequest,

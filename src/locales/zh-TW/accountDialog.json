@@ -25,7 +25,12 @@
     "prepareFailed": "無法暫存目前表單。請先複製需要保留的資訊，再從完整頁面重新開啟帳號表單。",
     "restoreFailed": "無法還原未完成的表單，可能已過期。請重新開啟帳號表單。",
     "rotationWarning": "僅適用於顯示 Generate / Regenerate 的舊版站點：重新產生會使舊權杖失效，其他使用舊權杖的工具也需要更新。建立帶權限的存取權杖不會使現有權杖失效。",
-    "title": "手動填寫 Access Token"
+    "title": "手動填寫 Access Token",
+    "vercel": {
+      "generateStep": "在 Vercel 帳戶的權杖頁面建立權杖，作用域選擇擁有 AI Gateway 的團隊，並依 Vercel 要求完成電子郵件驗證。權杖只顯示一次，請立即複製。",
+      "openPage": "開啟 Vercel 權杖頁面",
+      "openPageFailed": "無法開啟頁面。請手動開啟 Vercel 帳戶的權杖頁面，為 AI Gateway 團隊建立權杖，然後回到這裡貼上。"
+    }
   },
   "actions": {
     "autoConfigAriaLabel": "儲存帳號並前往 {{managedSite}} 渠道設定",
@@ -224,7 +229,14 @@
     "thirdPartyDailyCheckInMethod": "{{source}} 簽到",
     "userId": "使用者 ID",
     "username": "使用者名稱",
-    "validRateError": "請輸入有效的匯率，大於 0"
+    "validRateError": "請輸入有效的匯率，大於 0",
+    "vercelAccessToken": "Vercel 存取權杖",
+    "vercelAccessTokenGuidance": "在 Vercel 帳戶的權杖頁面建立權杖，作用域選擇擁有 AI Gateway 的團隊，然後貼到這裡。Vercel 可能先要求輸入電子郵件驗證碼，且權杖只顯示一次。",
+    "vercelAccessTokenGuidanceTitle": "使用 Vercel 存取權杖",
+    "vercelTeam": "Vercel 團隊",
+    "vercelTeamHelp": "選擇擁有 AI Gateway 餘額和金鑰的團隊。每個團隊儲存為獨立帳號。",
+    "vercelTeamLoadFailed": "無法載入團隊，請檢查存取權杖後重試。",
+    "vercelTeamPlaceholder": "選擇團隊"
   },
   "infoPanel": {
     "autoDetect": "自動識別",

@@ -60,11 +60,6 @@ function presentation(
       label: label("displayFacts.modelKind", "Model type"),
       value: modelKinds[model.kind].label,
     },
-    {
-      type: MODEL_DISPLAY_FACT_TYPES.Boolean,
-      label: label("displayFacts.providerAvailable", "Available on site"),
-      value: model.available,
-    },
     ...(model.contextTokens !== null && model.contextTokens > 0
       ? [
           {
@@ -161,6 +156,7 @@ export async function fetchEmRankPricing(
     data: models.map((model) => ({
       model_name: model.id,
       owner_by: model.ownedBy,
+      availability: { available: model.available },
       presentation: presentation(model, origin),
       quotaPricing: {
         unit: EMRANK_TOKEN_ASSET,

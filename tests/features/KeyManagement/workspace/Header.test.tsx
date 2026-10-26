@@ -14,6 +14,28 @@ const createDeferred = <T,>() => {
 }
 
 describe("KeyManagement Header", () => {
+  it("offers the selected account's native console as a direct recovery action", async () => {
+    const user = userEvent.setup()
+    const open = vi.fn()
+    render(
+      <Header
+        selectedAccount="a"
+        onAddToken={vi.fn()}
+        onRefresh={vi.fn()}
+        onOpenSelectedAccountConsole={open}
+        isLoading={false}
+        isAddTokenDisabled={false}
+        isRepairDisabled={false}
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:native.editor.vercelAiGateway.openConsole",
+      }),
+    )
+    expect(open).toHaveBeenCalledOnce()
+  })
   it("keeps checks accessible while completion is busy and disables its shortcuts", async () => {
     const user = userEvent.setup()
     const onProvisionKeys = vi.fn()

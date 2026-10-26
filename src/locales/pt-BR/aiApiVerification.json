@@ -16,6 +16,7 @@
       "openai": "OpenAI",
       "openaiCompatible": "Compatível com OpenAI"
     },
+    "associatedCredentialHint": "Este site não permite recuperar a chave completa. Os testes usam a chave completa salva na biblioteca de credenciais de API e vinculada à chave selecionada. Se não houver vínculo, primeiro salve ou vincule a chave no gerenciamento de chaves.",
     "details": {
       "input": "Entrada",
       "output": "Saída",

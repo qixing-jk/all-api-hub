@@ -47,6 +47,7 @@ export function ApiCheckProbeList({
               t,
               result.summaryKey,
               result.summaryParams,
+              result.summary,
             ) ?? result.summary
           : result?.summary
 

@@ -33,6 +33,7 @@ import {
   editRelayForKeyEditor,
 } from "~/services/apiAdapters/relayfor/accountKeyResource"
 import { createSub2ApiKeyEditor } from "~/services/apiAdapters/sub2api/keys/keyResourceEditor"
+import { createVercelKeyEditor } from "~/services/apiAdapters/vercelAiGateway/keyEditor"
 import { createVoApiV2KeyEditor } from "~/services/apiAdapters/voapiV2/keyResourceEditor"
 import { AuthTypeEnum } from "~/types"
 
@@ -44,6 +45,33 @@ const request = {
     userId: 1,
   },
 }
+
+it("shows Vercel budget controls only after enabling a custom budget", () => {
+  const editor = createVercelKeyEditor()
+  const presentation = getNativeKeyResourceEditorPresentation(
+    SITE_TYPES.VERCEL_AI_GATEWAY,
+    editorModes.Create,
+    { fields: editor.fields },
+  )
+  const fields = presentation.policy.fields
+  expect(
+    fields.find((field) => field.fieldId === "budget_enabled")?.renderer,
+  ).toBe("boolean")
+  expect(
+    fields.find((field) => field.fieldId === "budget_alerts")
+      ?.multiSelectLayout,
+  ).toBe("cards")
+  expect(
+    fields
+      .find((field) => field.fieldId === "budget_limit")
+      ?.visibleWhen?.(editor.initialValues),
+  ).toBe(false)
+  expect(
+    fields
+      .find((field) => field.fieldId === "budget_limit")
+      ?.visibleWhen?.({ ...editor.initialValues, budget_enabled: true }),
+  ).toBe(true)
+})
 
 it.each([SITE_TYPES.NEW_API, SITE_TYPES.SUB2API, SITE_TYPES.OPENROUTER])(
   "keeps the existing section presentation for %s when styling Daya",

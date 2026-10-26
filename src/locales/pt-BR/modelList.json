@@ -45,6 +45,13 @@
   "allBillingModes": "Todos os modos de cobrança",
   "allGroups": "Todos os grupos",
   "allProviders": "Todos os provedores",
+  "availability": {
+    "details": "Ver detalhes de acesso",
+    "restrictedHint": "O site indica que este modelo está indisponível no momento.",
+    "unavailable": "Indisponível no momento",
+    "unknown": "Disponibilidade não confirmada",
+    "unknownHint": "O site não confirmou a disponibilidade deste modelo."
+  },
   "batchVerify": {
     "actions": {
       "open": "Teste em lote",
@@ -266,6 +273,7 @@
       }
     },
     "outputModalities": "Modalidades de saída",
+    "planRestricted": "Seu plano atual não oferece suporte a este modelo",
     "priceConditions": {
       "minimumPromptTokens": "Mais de {{formattedCount}} tokens de entrada",
       "minimumPromptTokens_one": "Mais de {{formattedCount}} token de entrada",
@@ -306,6 +314,7 @@
     "tokenCount_other": "{{formattedCount}} tokens",
     "trainingChannels": "Canais de treinamento disponíveis",
     "trainingConsent": "Exige consentimento para treinamento",
+    "vercelVerificationRequired": "Conclua a verificação de cliente no console do Vercel AI Gateway antes de enviar solicitações",
     "viewOnSite": "Ver no site"
   },
   "displayOptions": "Exibição",
@@ -720,7 +729,6 @@
   "totalModels_one": "Total de {{count}} modelo",
   "totalModels_many": "Total de {{count}} modelos",
   "totalModels_other": "Total de {{count}} modelos",
-  "unavailable": "Indisponível",
   "unavailableModelsHint": "Incluir modelos já carregados sem grupos utilizáveis para esta conta. Esses modelos ignoram a seleção de grupos, mas continuam sujeitos aos outros filtros. Nenhum modelo adicional de todo o site será buscado. Vale apenas durante esta sessão da página.",
   "unavailablePriceReasons": {
     "groupRatioUnavailable": "Os preços estão indisponíveis porque este grupo utilizável não tem multiplicador.",

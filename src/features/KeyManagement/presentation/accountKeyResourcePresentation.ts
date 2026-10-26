@@ -10,6 +10,10 @@ import {
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { INVENTORY_SECRET_AVAILABILITIES } from "~/services/apiAdapters/contracts/inventorySecret"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import {
+  VERCEL_KEY_SPEND_ATTRIBUTIONS as attributions,
+  VERCEL_BUDGET_REFRESH_PERIODS as budgetPeriods,
+} from "~/services/apiService/vercelAiGateway/keys"
 import { formatQuotaAmount } from "~/services/quotaAssets/quotaAsset"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 
@@ -197,6 +201,42 @@ const nativeDetailFacts = (
         label: t("keyManagement:native.editor.budgetsAndLimits"),
         value: `RPM ${fact.rpm || t("keyManagement:native.editor.followsAccount")} · ${t("keyManagement:native.editor.keyConcurrency")}: ${fact.concurrency || t("keyManagement:native.editor.followsAccount")}`,
       })
+    } else if (fact.kind === "spend-budget") {
+      const period =
+        fact.period === budgetPeriods.Daily
+          ? t("keyManagement:native.editor.vercelAiGateway.period.daily")
+          : fact.period === budgetPeriods.Weekly
+            ? t("keyManagement:native.editor.vercelAiGateway.period.weekly")
+            : fact.period === budgetPeriods.Monthly
+              ? t("keyManagement:native.editor.vercelAiGateway.period.monthly")
+              : t("keyManagement:native.editor.vercelAiGateway.period.none")
+      details.push({
+        id: fact.fieldId,
+        label: t("keyManagement:native.editor.vercelAiGateway.budgetEnabled"),
+        value:
+          fact.source === "unavailable"
+            ? t("keyManagement:native.editor.vercelAiGateway.budgetUnavailable")
+            : fact.source === "none"
+              ? t("keyManagement:native.editor.vercelAiGateway.noBudget")
+              : [
+                  fact.source === "inherited"
+                    ? t(
+                        "keyManagement:native.editor.vercelAiGateway.inheritedBudget",
+                      )
+                    : undefined,
+                  typeof fact.usedUsd === "number"
+                    ? `$${fact.usedUsd} / $${fact.limitUsd}`
+                    : `$${fact.limitUsd}`,
+                  period,
+                  fact.active === false
+                    ? t(
+                        "keyManagement:native.editor.vercelAiGateway.budgetInactive",
+                      )
+                    : undefined,
+                ]
+                  .filter(Boolean)
+                  .join(" · "),
+      })
     } else if (fact.kind === "budget") {
       const budgetLabel =
         fact.window === "5h"
@@ -238,6 +278,22 @@ const nativeDetailFacts = (
             : date && Number.isFinite(date.getTime())
               ? date.toLocaleDateString()
               : t("common:labels.notAvailable"),
+      })
+    } else if (fact.kind === "attribution") {
+      details.push({
+        id: fact.fieldId,
+        label: t(
+          "keyManagement:native.editor.vercelAiGateway.spendAttribution",
+        ),
+        // Provider-declared keys only; unknown values stay verbatim.
+        value:
+          fact.value === attributions.User
+            ? t("keyManagement:native.editor.vercelAiGateway.attribution.user")
+            : fact.value === attributions.Team
+              ? t(
+                  "keyManagement:native.editor.vercelAiGateway.attribution.team",
+                )
+              : fact.value,
       })
     } else if (fact.kind === "last-used") {
       details.push({

@@ -567,6 +567,31 @@
         "discard": "捨棄變更",
         "keepEditing": "繼續編輯",
         "title": "捨棄變更？"
+      },
+      "vercelAiGateway": {
+        "attribution": {
+          "team": "團隊",
+          "user": "團隊成員"
+        },
+        "budgetAlerts": "達到以下比例時寄信給金鑰建立者",
+        "budgetEnabled": "消費預算",
+        "budgetHelp": "設定美元消費上限。關閉後使用團隊預設預算（如有）。新預算不計入 BYOK 消費。",
+        "budgetInactive": "預算未啟用",
+        "budgetLimit": "消費上限（美元，最低 $1）",
+        "budgetPeriod": "預算重設週期",
+        "budgetUnavailable": "無法讀取預算，請重試後再編輯。",
+        "consoleFailed": "無法開啟團隊控制台，請檢查存取權杖後重試。",
+        "inheritedBudget": "團隊預設預算",
+        "noBudget": "未設定金鑰專屬預算",
+        "openConsole": "開啟 Vercel 控制台",
+        "period": {
+          "daily": "每天",
+          "monthly": "每月",
+          "none": "不重設",
+          "weekly": "每週"
+        },
+        "spendAttribution": "消費歸屬",
+        "spendAttributionHelp": "選擇此金鑰計入誰的預算。只有團隊擁有者和 AI Gateway 預算管理員可以修改。"
       }
     },
     "heading": "API 金鑰",

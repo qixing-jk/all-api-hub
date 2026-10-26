@@ -32,6 +32,7 @@ export default defineConfig({
       "accountDialog:form.openrouterManagementKey*",
       "accountDialog:form.requestyManageKey*",
       "accountDialog:form.autoCreateAccessToken*",
+      "accountDialog:form.vercelAccessToken*",
       "productTour:search.keywords.*",
     ],
     primaryLanguage: DEFAULT_LANG,
