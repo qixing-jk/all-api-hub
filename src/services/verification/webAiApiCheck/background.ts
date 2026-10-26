@@ -565,6 +565,13 @@ async function resolveWebAiApiCheckRunPelicanMessage(
   }
 
   if (
+    mode !== undefined &&
+    mode !== API_VERIFICATION_MODES.Streaming &&
+    mode !== API_VERIFICATION_MODES.NonStreaming
+  ) {
+    return { success: false, error: "Invalid verification mode" }
+  }
+  if (
     executionMode !== undefined &&
     executionMode !== PELICAN_EXECUTION_MODES.Reply &&
     executionMode !== PELICAN_EXECUTION_MODES.Agent

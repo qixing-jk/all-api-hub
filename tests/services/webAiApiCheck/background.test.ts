@@ -304,6 +304,14 @@ describe("webAiApiCheck background handlers", () => {
       success: false,
       error: "Invalid request profile",
     })
+    // Every mode but non-streaming takes the streaming branch downstream, so an
+    // unknown value would silently change how the request is sent.
+    await expect(
+      handler({ data: { ...validRun, mode: "not-a-mode" } }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Invalid verification mode",
+    })
     await expect(
       handler({ data: { ...validRun, baseUrl: "://" } }),
     ).resolves.toEqual({ success: false, error: "Invalid baseUrl" })
@@ -745,6 +753,79 @@ describe("webAiApiCheck background handlers", () => {
       error: "Missing apiType, baseUrl, apiKey, or probeId",
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
     })
+  })
+
+  it("attributes a probe run to its sender tab, and accepts a sender-less one", async () => {
+    vi.resetModules()
+    const { runApiVerificationProbe } = await import(
+      "~/services/verification/aiApiVerification"
+    )
+    vi.mocked(runApiVerificationProbe).mockResolvedValue({
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 1,
+      summary: "OK",
+    })
+    const background = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+    const pelican = await import("~/services/verification/modelQuality/pelican")
+    const { WebAiApiCheckMessageTypes } = await import(
+      "~/services/verification/webAiApiCheck/messaging"
+    )
+    background.setupWebAiApiCheckMessagingListeners()
+    const probeHandler = webAiApiCheckMessageHandlers.get(
+      WebAiApiCheckMessageTypes.RunProbe,
+    )!
+    const pelicanHandler = webAiApiCheckMessageHandlers.get(
+      WebAiApiCheckMessageTypes.RunPelican,
+    )!
+
+    const probeRun = probeHandler({
+      data: {
+        runId: "probe-run",
+        apiType: "openai",
+        baseUrl: "https://example.invalid",
+        apiKey: "sk-test",
+        probeId: "text-generation",
+      },
+      sender: { tab: { id: 99 } },
+    })
+    // The message handler must pass the sender tab through, or a probe left
+    // running after its page is gone would never be cancelled on teardown.
+    await probeRun
+    tabRemovedListeners.forEach((listener) => listener(99))
+
+    const spy = vi
+      .spyOn(pelican, "runPelicanTest")
+      .mockImplementation(
+        async (params) =>
+          new Promise((_, reject) =>
+            params.abortSignal?.addEventListener("abort", () =>
+              reject(new DOMException("Aborted", "AbortError")),
+            ),
+          ),
+      )
+    try {
+      // A run with no sender tab must still be cancellable by its run id.
+      const senderlessRun = pelicanHandler({
+        data: {
+          runId: "senderless-run",
+          apiType: "openai",
+          baseUrl: "https://example.invalid",
+          apiKey: "sk-test",
+          modelId: "test",
+        },
+      })
+      await expect(
+        background.resolveWebAiApiCheckCancelRunProbeMessage({
+          runId: "senderless-run",
+        }),
+      ).resolves.toEqual({ success: true, cancelled: true })
+      await expect(senderlessRun).resolves.toMatchObject({ success: false })
+    } finally {
+      spy.mockRestore()
+    }
   })
 
   it("runProbe rejects invalid base urls before dispatching a probe", async () => {

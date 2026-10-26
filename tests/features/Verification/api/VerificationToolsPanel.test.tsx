@@ -260,6 +260,51 @@ describe("VerificationToolsPanel", () => {
     expect(stopPelican).toHaveBeenCalledTimes(1)
   })
 
+  it("reports a stopped drawing run without an error", async () => {
+    const user = userEvent.setup()
+    const setPelicanExecutionMode = vi.fn()
+    renderPanel(
+      buildController({
+        pelicanStatus: VERIFICATION_TOOL_STATUSES.Stopped,
+        setPelicanExecutionMode,
+      }),
+    )
+
+    expect(
+      screen.getByText("aiApiVerification:verifyDialog.tools.stopped"),
+    ).toBeVisible()
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+
+    // The run is over, so the agent opt-in is usable again.
+    await user.click(
+      screen.getByRole("switch", {
+        name: "aiApiVerification:verifyDialog.tools.agent.label",
+      }),
+    )
+    expect(setPelicanExecutionMode).toHaveBeenCalledWith(
+      PELICAN_EXECUTION_MODES.Agent,
+    )
+  })
+
+  it("offers a recent run summary for a restored agent drawing", () => {
+    renderPanel(
+      buildController({
+        pelican: buildPelican({
+          agent: {
+            steps: 2,
+            outcome: AGENT_TEST_OUTCOMES.Completed,
+            files: [{ path: "pelican.svg", content: "<svg/>" }],
+            calls: [],
+          },
+        }),
+      }),
+    )
+
+    expect(screen.getByTestId("agent-test-result")).toHaveTextContent(
+      "aiApiVerification:verifyDialog.tools.agent.completed",
+    )
+  })
+
   it("disables the drawing test when the model cannot run it", () => {
     renderPanel(buildController({ canRunPelican: false }))
 

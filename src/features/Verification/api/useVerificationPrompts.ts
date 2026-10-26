@@ -22,6 +22,19 @@ const EDITABLE_VERIFICATION_PROMPT_IDS: readonly VerificationPromptId[] = [
 ]
 const PROMPT_AUTO_SAVE_DELAY_MS = 250
 
+/** Compare normalized override maps without depending on key order. */
+function isSameProbePromptOverrides(
+  left: ProbePromptOverrides,
+  right: ProbePromptOverrides,
+): boolean {
+  const leftKeys = Object.keys(left)
+  if (leftKeys.length !== Object.keys(right).length) return false
+  return leftKeys.every(
+    (key) =>
+      left[key as VerificationPromptId] === right[key as VerificationPromptId],
+  )
+}
+
 /** Owns shared prompt drafts, resets and persistence independently of drawing runs. */
 export function useVerificationPrompts() {
   const [storedOverrides, setStoredOverrides] = useState<ProbePromptOverrides>(
@@ -37,17 +50,25 @@ export function useVerificationPrompts() {
   // an edit must not clobber the draft.
   const [hasLoadedOverrides, setHasLoadedOverrides] = useState(false)
   const hasEditedDraftRef = useRef(false)
-  // The debounce can still be running when the dialog closes, so the cleanup
-  // below needs both the newest draft and whether a write is still owed.
+  // Read when the dialog closes, which can happen while the debounce is still
+  // running. Assigned from an effect rather than during render so a render React
+  // discards cannot leave a draft here that was never shown.
   const latestDraftRef = useRef<ProbePromptDraft>({})
-  latestDraftRef.current = promptDraft
-  const hasPendingSaveRef = useRef(false)
+  // Normalized overrides the last successful write persisted. `null` means the
+  // stored value is still unknown, so closing must not write over it.
+  const persistedOverridesRef = useRef<ProbePromptOverrides | null>(null)
+  // The write in flight, so a closing save can queue behind it instead of racing.
+  const inFlightWriteRef = useRef<Promise<void> | null>(null)
+  useEffect(() => {
+    latestDraftRef.current = promptDraft
+  }, [promptDraft])
   useEffect(() => {
     let cancelled = false
     void loadProbePromptOverrides().then((overrides) => {
       if (cancelled) return
       setHasLoadedOverrides(true)
       setStoredOverrides(overrides)
+      persistedOverridesRef.current = overrides
       if (!hasEditedDraftRef.current) setPromptDraft(overrides)
     })
     return () => {
@@ -61,17 +82,24 @@ export function useVerificationPrompts() {
         clearTimeout(autoSaveTimerRef.current)
         autoSaveTimerRef.current = null
       }
-      if (!hasPendingSaveRef.current) return
-      hasPendingSaveRef.current = false
-      // Closing inside the debounce window must not drop the edit, and there is
-      // no dialog left to report a failure to.
-      try {
-        void Promise.resolve(
-          saveProbePromptOverrides(latestDraftRef.current),
-        ).catch(() => undefined)
-      } catch {
-        // A synchronous write failure is as unreportable as an async one.
-      }
+      if (!persistedOverridesRef.current) return
+      // A pending write of an older draft would otherwise land after this one and
+      // win, so the closing save waits for it and re-checks what it persisted.
+      void (inFlightWriteRef.current ?? Promise.resolve())
+        .catch(() => undefined)
+        .then(async () => {
+          const persisted = persistedOverridesRef.current
+          const latest = latestDraftRef.current
+          if (!persisted) return
+          const normalized = normalizeProbePromptDraft(latest)
+          if (isSameProbePromptOverrides(normalized, persisted)) return
+          try {
+            await saveProbePromptOverrides(latest)
+            persistedOverridesRef.current = normalized
+          } catch {
+            // There is no dialog left to report a failure to.
+          }
+        })
     },
     [],
   )
@@ -99,19 +127,29 @@ export function useVerificationPrompts() {
 
   const persistPrompts = useCallback(
     async (normalizeDraft: boolean) => {
-      hasPendingSaveRef.current = false
       setIsSavingPrompts(true)
       setPromptSaveError(null)
-      try {
-        const normalized = normalizeProbePromptDraft(promptDraft)
-        await saveProbePromptOverrides(promptDraft)
-        setStoredOverrides(normalized)
-        if (normalizeDraft) setPromptDraft(normalized)
-      } catch (error) {
-        setPromptSaveError(toSanitizedErrorSummary(error, []))
-      } finally {
-        setIsSavingPrompts(false)
-      }
+      const draftToSave = promptDraft
+      const normalized = normalizeProbePromptDraft(draftToSave)
+      // Started in a microtask so a synchronous failure becomes a rejection
+      // rather than escaping the caller that only tracks the returned promise.
+      const write = Promise.resolve()
+        .then(() => saveProbePromptOverrides(draftToSave))
+        .then(() => {
+          persistedOverridesRef.current = normalized
+          setStoredOverrides(normalized)
+          if (normalizeDraft) setPromptDraft(normalized)
+        })
+        .catch((error: unknown) => {
+          setPromptSaveError(toSanitizedErrorSummary(error, []))
+        })
+        .finally(() => {
+          if (inFlightWriteRef.current === write)
+            inFlightWriteRef.current = null
+          setIsSavingPrompts(false)
+        })
+      inFlightWriteRef.current = write
+      await write
     },
     [promptDraft],
   )
@@ -139,17 +177,12 @@ export function useVerificationPrompts() {
   // Automatically save debounced prompt edits after the user stops typing.
   useEffect(() => {
     if (!hasLoadedOverrides || !hasEditedDraftRef.current) return
-    if (!isPromptsDirty) {
-      // A draft edited back to the defaults leaves nothing owed on unmount.
-      hasPendingSaveRef.current = false
-      return
-    }
+    if (!isPromptsDirty) return
 
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current)
     }
 
-    hasPendingSaveRef.current = true
     autoSaveTimerRef.current = setTimeout(() => {
       autoSaveTimerRef.current = null
       void persistPrompts(false)
