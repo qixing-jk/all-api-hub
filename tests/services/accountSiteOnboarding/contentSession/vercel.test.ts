@@ -42,6 +42,28 @@ const stubFetch = (responses: Record<string, unknown>) =>
 afterEach(() => vi.unstubAllGlobals())
 
 describe("Vercel AI Gateway content session", () => {
+  it.each([null, {}, { teams: null }])(
+    "does not infer a session from an unreadable team inventory %j",
+    async (body) => {
+      vi.stubGlobal(
+        "fetch",
+        stubFetch({ "/api/user": userBody, "/api/teams": body }),
+      )
+      expect(await vercelContentSessionExtractor.extract(context)).toBeNull()
+    },
+  )
+  it("ignores malformed passive team identities while preserving a valid saved-team match", async () => {
+    const observation = vercelBrowserIdentity.observe({
+      origin: "https://vercel.com",
+      siteType: "vercel-ai-gateway",
+      candidateUserIds: ["team_valid"],
+    })!
+    expect(
+      await observation.verify(async () => ({
+        teams: [null, {}, { id: 42 }, { id: " " }, { id: "team_valid" }],
+      })),
+    ).toBe("team_valid")
+  })
   it.each([null, {}, { user: null }, { user: { uid: 42, id: " " } }])(
     "does not trust an unreadable console identity %j",
     async (body) => {

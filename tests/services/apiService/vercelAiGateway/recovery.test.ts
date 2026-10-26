@@ -52,6 +52,14 @@ const budget = {
 }
 afterEach(() => server.resetHandlers())
 
+it("forwards credit-read cancellation without fetching after cancellation", async () => {
+  const controller = new AbortController()
+  controller.abort()
+  await expect(
+    fetchVercelCredits(request, "team_test", { signal: controller.signal }),
+  ).rejects.toBeDefined()
+})
+
 it("rejects saving a team absent from the token's membership", async () => {
   server.use(
     http.get("https://api.vercel.com/v2/teams", () =>
