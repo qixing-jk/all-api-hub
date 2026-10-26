@@ -583,6 +583,72 @@ describe("VerificationPromptEditor", () => {
     )
   })
 
+  it("keeps the reset action out while a save is in flight", () => {
+    renderPrompt(
+      buildController({
+        promptDraft: { [API_VERIFICATION_PROBE_IDS.TextGeneration]: "Edited" },
+        isSavingPrompts: true,
+      }),
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: "aiApiVerification:verifyDialog.tools.prompts.resetOne",
+      }),
+    ).toBeDisabled()
+  })
+
+  it("re-fits the editor when the textarea is resized", () => {
+    const observations: Array<() => void> = []
+    const disconnect = vi.fn()
+    class RecordingResizeObserver {
+      constructor(callback: () => void) {
+        observations.push(callback)
+      }
+      observe() {}
+      unobserve() {}
+      disconnect = disconnect
+    }
+    vi.stubGlobal("ResizeObserver", RecordingResizeObserver)
+
+    const { unmount } = renderPrompt(buildController())
+    const textarea = screen.getByRole("textbox", {
+      name: "aiApiVerification:verifyDialog.tools.prompts.editorLabel",
+    }) as HTMLTextAreaElement
+    expect(observations).toHaveLength(1)
+
+    // jsdom reports zero measurements, so give the element real ones to stand in
+    // for a viewport change and for the content that has to fit inside it.
+    let clientWidth = 120
+    let scrollHeight = 40
+    Object.defineProperty(textarea, "clientWidth", {
+      configurable: true,
+      get: () => clientWidth,
+    })
+    Object.defineProperty(textarea, "scrollHeight", {
+      configurable: true,
+      get: () => scrollHeight,
+    })
+
+    observations[0]!()
+    expect(textarea.style.height).toBe("40px")
+
+    // A resize that leaves the width alone must not re-measure the content.
+    scrollHeight = 99
+    observations[0]!()
+    expect(textarea.style.height).toBe("40px")
+
+    clientWidth = 200
+    scrollHeight = 64
+    observations[0]!()
+    expect(textarea.style.height).toBe("64px")
+
+    unmount()
+    expect(disconnect).toHaveBeenCalled()
+
+    vi.unstubAllGlobals()
+  })
+
   it("shows a saving indicator when prompt is persisting", () => {
     renderPrompt(
       buildController({

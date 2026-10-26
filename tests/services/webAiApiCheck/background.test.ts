@@ -760,12 +760,14 @@ describe("webAiApiCheck background handlers", () => {
     const { runApiVerificationProbe } = await import(
       "~/services/verification/aiApiVerification"
     )
-    vi.mocked(runApiVerificationProbe).mockResolvedValue({
-      id: "text-generation",
-      status: "pass",
-      latencyMs: 1,
-      summary: "OK",
-    })
+    let probeSignal: AbortSignal | undefined
+    const probeDeferred = createDeferred<ApiVerificationProbeResult>()
+    vi.mocked(runApiVerificationProbe).mockImplementation(
+      async ({ abortSignal }: { abortSignal?: AbortSignal }) => {
+        probeSignal = abortSignal
+        return await probeDeferred.promise
+      },
+    )
     const background = await import(
       "~/services/verification/webAiApiCheck/background"
     )
@@ -791,10 +793,20 @@ describe("webAiApiCheck background handlers", () => {
       },
       sender: { tab: { id: 99 } },
     })
-    // The message handler must pass the sender tab through, or a probe left
-    // running after its page is gone would never be cancelled on teardown.
-    await probeRun
+    await vi.waitFor(() => expect(probeSignal).toBeInstanceOf(AbortSignal))
+
+    // The message handler must pass the sender tab through, or a probe still in
+    // flight when its page is torn down would never be cancelled.
     tabRemovedListeners.forEach((listener) => listener(99))
+    expect(probeSignal?.aborted).toBe(true)
+
+    probeDeferred.resolve({
+      id: "text-generation",
+      status: "fail",
+      latencyMs: 0,
+      summary: "Stopped",
+    })
+    await expect(probeRun).resolves.toMatchObject({ success: true })
 
     const spy = vi
       .spyOn(pelican, "runPelicanTest")
