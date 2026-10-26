@@ -52,6 +52,12 @@ export type ReleaseUpdateStatus = {
   releaseUrl: string
   checkedAt: number | null
   lastError: string | null
+  /**
+   * Whether this build advertises `update_url`, so the browser installs new
+   * versions on its own. The install channel alone cannot answer this: the same
+   * channel also ships plain ZIPs that must be updated by hand.
+   */
+  selfUpdate: boolean
   /** Informational only for AMO builds; latestVersion remains the AMO version. */
   githubLatestVersion?: string | null
   storeUpdate: BrowserStoreUpdateState
@@ -85,6 +91,7 @@ export function createDefaultReleaseUpdateStatus(
     releaseUrl: LATEST_STABLE_RELEASE_URL,
     checkedAt: null,
     lastError: null,
+    selfUpdate: false,
     storeUpdate: createDefaultBrowserStoreUpdateState(),
   }
 }

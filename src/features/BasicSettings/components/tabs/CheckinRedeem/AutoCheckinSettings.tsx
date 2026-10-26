@@ -80,6 +80,26 @@ export default function AutoCheckinSettings() {
             }
           />
 
+          {/* Click the site's own action when verification is required */}
+          <CardItem
+            id={AUTO_CHECKIN_TARGET_IDS.continueWhenVerificationRequired}
+            title={t("autoCheckin:settings.continueWhenVerificationRequired")}
+            description={t(
+              "autoCheckin:settings.continueWhenVerificationRequiredDesc",
+            )}
+            rightContent={
+              <Switch
+                aria-label={t(
+                  "autoCheckin:settings.continueWhenVerificationRequired",
+                )}
+                checked={preferences.continueWhenVerificationRequired === true}
+                onChange={(checked) =>
+                  savePreferences({ continueWhenVerificationRequired: checked })
+                }
+              />
+            }
+          />
+
           {/* Post-run UI refresh notification */}
           <CardItem
             id={AUTO_CHECKIN_TARGET_IDS.notifyUiOnCompletion}

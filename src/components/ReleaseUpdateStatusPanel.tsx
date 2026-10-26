@@ -25,6 +25,7 @@ import { cn } from "~/lib/utils"
 import {
   deriveReleaseUpdateCheckOutcome,
   deriveReleaseUpdatePresentation,
+  RELEASE_UPDATE_ACTION_KINDS,
   RELEASE_UPDATE_CHECK_OUTCOMES,
   RELEASE_UPDATE_PRESENTATION_STATES,
 } from "~/services/updates/presentation"
@@ -75,8 +76,9 @@ function getStatusHelper(options: {
   state: ReturnType<typeof deriveReleaseUpdatePresentation>["state"]
   t: TFunction
   reason: ReleaseUpdateReason
+  selfUpdate: boolean
 }): string | undefined {
-  const { state, t, reason } = options
+  const { state, t, reason, selfUpdate } = options
 
   switch (state) {
     case RELEASE_UPDATE_PRESENTATION_STATES.Loading:
@@ -88,7 +90,12 @@ function getStatusHelper(options: {
     case RELEASE_UPDATE_PRESENTATION_STATES.StoreUpdatePending:
       return t("settings:releaseUpdate.helpers.storeUpdate")
     case RELEASE_UPDATE_PRESENTATION_STATES.UpdateAvailable:
+      if (selfUpdate) {
+        return t("settings:releaseUpdate.helpers.selfUpdate")
+      }
       switch (reason) {
+        case RELEASE_UPDATE_REASONS.FirefoxAmo:
+          return t("settings:releaseUpdate.helpers.amoUpdate")
         case RELEASE_UPDATE_REASONS.StoreBuild:
           return t("settings:releaseUpdate.helpers.storeUpdate")
         case RELEASE_UPDATE_REASONS.ChromiumDevelopment:
@@ -137,6 +144,44 @@ function getLatestVersionLine(options: {
 }
 
 /**
+ * Map the derived release-update action kind to the action button label.
+ */
+function getActionLabel(
+  actionKind: ReturnType<typeof deriveReleaseUpdatePresentation>["actionKind"],
+  t: TFunction,
+): string {
+  switch (actionKind) {
+    case RELEASE_UPDATE_ACTION_KINDS.ReloadToUpdate:
+      return t("settings:releaseUpdate.reloadToUpdate")
+    case RELEASE_UPDATE_ACTION_KINDS.ViewReleaseNotes:
+      return t("settings:releaseUpdate.viewReleaseNotes")
+    case RELEASE_UPDATE_ACTION_KINDS.DownloadUpdate:
+      return t("settings:releaseUpdate.downloadUpdate")
+    case RELEASE_UPDATE_ACTION_KINDS.OpenLatest:
+    default:
+      return t("settings:releaseUpdate.changelog")
+  }
+}
+
+/**
+ * Map the derived release-update action kind to the action button icon.
+ */
+function getActionIcon(
+  actionKind: ReturnType<typeof deriveReleaseUpdatePresentation>["actionKind"],
+) {
+  switch (actionKind) {
+    case RELEASE_UPDATE_ACTION_KINDS.ReloadToUpdate:
+      return <RefreshCw className="h-4 w-4" />
+    case RELEASE_UPDATE_ACTION_KINDS.ViewReleaseNotes:
+    case RELEASE_UPDATE_ACTION_KINDS.DownloadUpdate:
+      return <Download className="h-4 w-4" />
+    case RELEASE_UPDATE_ACTION_KINDS.OpenLatest:
+    default:
+      return <WorkflowTransitionIcon className="h-4 w-4" />
+  }
+}
+
+/**
  * Shared release-update status panel rendered in About and Settings surfaces.
  */
 export function ReleaseUpdateStatusPanel() {
@@ -169,35 +214,20 @@ export function ReleaseUpdateStatusPanel() {
           state: presentation.state,
           t,
         })
-  const statusDescription = getStatusHelper({
+  const helper = getStatusHelper({
     state: presentation.state,
     t,
     reason: statusReason,
+    selfUpdate: status?.selfUpdate ?? false,
   })
-  const helper =
-    statusReason === RELEASE_UPDATE_REASONS.FirefoxAmo && presentation.hasUpdate
-      ? t("settings:releaseUpdate.helpers.amoUpdate")
-      : statusDescription
   const hasUpdate = presentation.hasUpdate
+  const isStoreUpdateReady =
+    presentation.actionKind === RELEASE_UPDATE_ACTION_KINDS.ReloadToUpdate
   const actionHref = hasUpdate
     ? status?.releaseUrl ?? LATEST_STABLE_RELEASE_URL
     : getDocsChangelogUrl(status?.currentVersion)
-  const isStoreUpdateReady =
-    presentation.state === RELEASE_UPDATE_PRESENTATION_STATES.StoreUpdateReady
-  const actionLabel = hasUpdate
-    ? isStoreUpdateReady
-      ? t("settings:releaseUpdate.reloadToUpdate")
-      : t("settings:releaseUpdate.downloadUpdate")
-    : t("settings:releaseUpdate.changelog")
-  const actionIcon = hasUpdate ? (
-    isStoreUpdateReady ? (
-      <RefreshCw className="h-4 w-4" />
-    ) : (
-      <Download className="h-4 w-4" />
-    )
-  ) : (
-    <WorkflowTransitionIcon className="h-4 w-4" />
-  )
+  const actionLabel = getActionLabel(presentation.actionKind, t)
+  const actionIcon = getActionIcon(presentation.actionKind)
 
   const handleCheckNow = async () => {
     const next = await checkNow()
@@ -215,6 +245,9 @@ export function ReleaseUpdateStatusPanel() {
         return
       case RELEASE_UPDATE_CHECK_OUTCOMES.UpdateAvailable:
         toast.success(t("settings:releaseUpdate.states.updateAvailable"))
+        return
+      case RELEASE_UPDATE_CHECK_OUTCOMES.SelfUpdatePending:
+        toast.success(t("settings:releaseUpdate.states.selfUpdatePending"))
         return
       case RELEASE_UPDATE_CHECK_OUTCOMES.UpToDate:
       default:

@@ -213,8 +213,8 @@ describe("CursorPlusExportDialog", () => {
 
     await waitFor(() => expect(writeText).toHaveBeenCalledOnce())
     expect(JSON.parse(atIndex(writeText.mock.calls, 0)[0])).toMatchObject({
-      id: "profile-provider-profile-provider-1aaa1c25",
-      name: "Profile Provider - Profile Provider",
+      id: "profile-provider-1aaa1c25",
+      name: "Profile Provider",
       baseUrl: "https://profile.example.invalid/v1",
       auth: { kind: "apiKey", value: "profile-test-key" },
     })

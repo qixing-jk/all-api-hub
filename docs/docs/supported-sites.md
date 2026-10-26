@@ -49,6 +49,8 @@
 | EMRank | 嵌入与重排序模型的独立网关服务，提供模型 API、账号控制台与签到。 | [官网](https://emrank.tech/) / [文档](https://docs.emrank.tech) |
 | RelayFor      | 独立 AI 公益服务平台，提供模型接口与账号控制台。 | [官网](https://relayfor.xyz/) |
 | Daya API | 统一 AI API 接入平台，聚合多家模型供应商，提供模型接口、独立密钥与额度管理。 | — |
+| PM-API | 公益 AI 模型中转站（PM-API），提供模型接口、令牌密钥管理、兑换码与每日签到；pmcat.top 与 pap.pmcat.top 为同一程序的两个部署。 | [主站](https://pmcat.top/) |
+| Requesty | 托管式 LLM 网关，提供统一模型路由、预付余额与密钥管理。 | [官网](https://app.requesty.ai/) / [文档](https://docs.requesty.ai/) |
 
 ## ❤️ 推荐赞助站点
 

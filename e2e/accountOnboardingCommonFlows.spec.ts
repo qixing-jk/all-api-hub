@@ -1300,7 +1300,7 @@ test("exports an account key from the copy-key dialog to CC Switch", async ({
     modelName: "gpt-copy-dialog-cc",
     expected: {
       app: "claude",
-      name: "Copy Dialog CC Source",
+      name: "Copy Dialog CC Source - Copy Dialog CC Key",
       homepage: "https://copy-dialog-cc.example.com",
       endpoint: "https://copy-dialog-cc.example.com",
       apiKey: "sk-copy-dialog-cc",

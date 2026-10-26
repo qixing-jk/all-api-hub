@@ -181,6 +181,8 @@
     "label": "Automatic check-in risk notice"
   },
   "settings": {
+    "continueWhenVerificationRequired": "Try check-in on the page when verification blocks it",
+    "continueWhenVerificationRequiredDesc": "Off by default. When enabled, this only tries opening the page and clicking check-in. You will usually still need to complete a CAPTCHA yourself; success is not guaranteed. Enable reminders under “Website verification assistance → When verification needs you”. When off, this check-in attempt ends without opening the page. Each account can override this setting.",
     "deterministicTimeDesc": "Pick the exact time (HH:mm) to start check-in when deterministic mode is enabled.",
     "deterministicTimeTitle": "Deterministic time",
     "enable": "Enable auto check-in",

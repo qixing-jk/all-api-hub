@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import { ACCOUNT_LOGIN_METHODS } from "~/constants/accountLogin"
 import { DEFAULT_USD_TO_CNY_RATE } from "~/constants/money"
 import { SITE_TYPES } from "~/constants/siteType"
+import { calculateAccountStats } from "~/services/accounts/accountStorage/accountStatistics"
 import {
   AccountUpdateUserTimestampMode,
   applySiteAccountUpdates,
@@ -21,6 +22,22 @@ import {
 } from "~/types/accountTodayStats"
 
 describe("accountDefaults", () => {
+  it("drops Requesty's legacy allowance projection while preserving its monetary balance", () => {
+    const saved = createSiteAccount({ site_type: SITE_TYPES.REQUESTY })
+    saved.account_info.quota = 6_250_000
+    saved.account_info.nativeBalance = {
+      unit: "USD",
+      total: 12.5,
+      permanent: 12.5,
+      daily: 0,
+      components: [{ kind: "permanent", amount: 12.5 }],
+    }
+    const normalized = normalizeSiteAccount(saved)
+    expect(normalized.account_info.nativeBalance).toBeUndefined()
+    expect(normalized.account_info.quota).toBe(6_250_000)
+    expect(calculateAccountStats([normalized]).total_quota).toBe(6_250_000)
+    expect(saved.account_info.nativeBalance?.total).toBe(12.5)
+  })
   it.each([
     { site_url: "https://other.example" },
     { account_info: { id: "2" } },
@@ -803,6 +820,26 @@ describe("accountDefaults", () => {
       })
 
       expect(updated.checkIn.customCheckIn).toBeUndefined()
+    })
+
+    it("removes the account page-assistance override when the update clears it", () => {
+      // "Follow the global setting" must persist as absent, not as the previous
+      // boolean a deep merge would keep.
+      const current = createSiteAccount({
+        checkIn: {
+          ...createSiteAccount().checkIn,
+          continueWhenVerificationRequired: true,
+        },
+      })
+
+      const updated = applySiteAccountUpdates({
+        account: current,
+        updates: { checkIn: { continueWhenVerificationRequired: undefined } },
+        now: 999,
+        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+      })
+
+      expect(updated.checkIn.continueWhenVerificationRequired).toBeUndefined()
     })
 
     it("advances user update timestamp when requested", () => {

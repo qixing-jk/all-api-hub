@@ -2,8 +2,14 @@ import {
   OPENROUTER_BOOTSTRAP_ATTEMPT_OUTCOMES,
   OPENROUTER_BOOTSTRAP_MUTATION_STATES,
 } from "~/constants/openRouterBootstrap"
+import {
+  createRequestyManagementKeyFailure,
+  REQUESTY_PROVISIONING_FAILURE_REASONS,
+  REQUESTY_PROVISIONING_STATES,
+} from "~/services/apiAdapters/requesty/keys/managementKeyPageContract"
 import { executeTempCheckinFeedbackScan } from "~/services/browsingContext/tempPage/checkinFeedbackScan"
 import { handleTempWindowOpenRouterManagementKeyAction } from "~/services/browsingContext/tempPage/openrouterManagementKeyAction"
+import { handleTempWindowRequestyManagementKeyAction } from "~/services/browsingContext/tempPage/requestyManagementKeyAction"
 import {
   TEMP_CONTEXT_TASK_KINDS,
   type ProtectionBypassSurface,
@@ -99,6 +105,14 @@ function buildPresentationFailure(task: TempContextTask, error: string) {
       label: task.params.operation.label,
     } as const
   }
+  if (task.kind === TEMP_CONTEXT_TASK_KINDS.RequestyManagementKeyAction) {
+    return createRequestyManagementKeyFailure(
+      task.params.requestId,
+      task.params.operation.name,
+      REQUESTY_PROVISIONING_STATES.NotDispatched,
+      REQUESTY_PROVISIONING_FAILURE_REASONS.SessionUnavailable,
+    )
+  }
   return { success: false, error }
 }
 
@@ -141,6 +155,15 @@ export async function executeAuthorizedTempContextTask(
   }
   if (task.kind === TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction) {
     await handleTempWindowOpenRouterManagementKeyAction(
+      task.params,
+      suppressMinimize,
+      sendResponse,
+      authorizeAtAcquire,
+    )
+    return
+  }
+  if (task.kind === TEMP_CONTEXT_TASK_KINDS.RequestyManagementKeyAction) {
+    await handleTempWindowRequestyManagementKeyAction(
       task.params,
       suppressMinimize,
       sendResponse,

@@ -56,6 +56,28 @@ record_existing_asset() {
   fi
 }
 
+# A rerun must never combine an existing pair member with a new build's other
+# member. Inspect the complete input before uploading even unrelated ZIPs.
+crx_name=""
+has_updates_manifest=0
+for file_path in "${files[@]}"; do
+  case "$(basename "$file_path")" in
+    *.crx) crx_name="$(basename "$file_path")" ;;
+    updates.xml) has_updates_manifest=1 ;;
+  esac
+done
+
+if [ -n "$crx_name" ] && [ "$has_updates_manifest" -eq 1 ]; then
+  crx_exists=0
+  manifest_exists=0
+  if asset_exists_in_list "$crx_name"; then crx_exists=1; fi
+  if asset_exists_in_list "updates.xml"; then manifest_exists=1; fi
+  if [ "$crx_exists" -ne "$manifest_exists" ]; then
+    echo "CRX and updates.xml must already exist as a complete pair on $RELEASE_TAG; repair the partial release before retrying." >&2
+    exit 1
+  fi
+fi
+
 uploaded_count=0
 
 for file_path in "${files[@]}"; do

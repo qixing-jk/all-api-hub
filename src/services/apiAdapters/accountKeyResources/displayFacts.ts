@@ -1,5 +1,20 @@
-import type { AccountKeyDisplayFact } from "~/services/apiAdapters/contracts/accountKeyResource"
+import type {
+  AccountKeyDisplayFact,
+  AccountKeyResourceFacts,
+} from "~/services/apiAdapters/contracts/accountKeyResource"
 import { normalizeToMs } from "~/utils/core/formatters"
+
+/** Reads explicit management permission without guessing from credential role. */
+export function hasAccountKeyManagementPermission(
+  facts: Pick<AccountKeyResourceFacts, "displayFacts"> | null | undefined,
+): boolean {
+  return Boolean(
+    facts?.displayFacts?.some(
+      (fact) =>
+        fact.kind === "permission" && fact.role === "manage" && fact.granted,
+    ),
+  )
+}
 
 /** Normalize provider-compatible epoch seconds/ms or ISO expiry at the adapter boundary. */
 export function keyExpiryDisplayFact(

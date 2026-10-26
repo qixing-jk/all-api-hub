@@ -78,6 +78,8 @@ export function isIdentityKnownAutoDetectFailureReason(
 export interface AutoDetectError {
   type: AutoDetectErrorType
   message: string
+  /** False when a supported account workflow already owns credential recovery. */
+  canUseApiCredentialFallback?: boolean
   actionText?: string
   actionUrl?: string
   helpDocUrl?: string

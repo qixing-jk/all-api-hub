@@ -17,6 +17,36 @@ import { AuthTypeEnum } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 describe("account dialog auto-detect draft mapping", () => {
+  it.each([false, true])(
+    "keeps a captcha deployment off unless the user opted in: %s",
+    (optedIn) => {
+      const nextCheckIn = buildCheckInConfig({
+        automaticExecutionEnabled: false,
+      })
+      const draft = createEmptyAccountDialogDraft(SITE_TYPES.PMAPI)
+      draft.checkIn.automaticExecutionEnabled = true
+      const merged = buildDraftFromAutoDetectResult({
+        draft,
+        resultData: {
+          username: "pm-user",
+          siteName: "PM-API",
+          accessToken: "token",
+          userId: "7",
+          exchangeRate: null,
+          authType: AuthTypeEnum.AccessToken,
+          checkIn: nextCheckIn,
+          siteType: SITE_TYPES.PMAPI,
+        },
+        nextSiteType: SITE_TYPES.PMAPI,
+        nextCheckIn,
+        preserveExistingCheckIn: false,
+        automaticExecutionPreferenceChanged: optedIn,
+        mode: DIALOG_MODES.ADD,
+        policy: getAccountDialogSitePolicy(SITE_TYPES.PMAPI),
+      })
+      expect(merged.checkIn.automaticExecutionEnabled).toBe(optedIn)
+    },
+  )
   it.each([
     { changed: true, enabled: true, expected: true },
     { changed: true, enabled: false, expected: false },

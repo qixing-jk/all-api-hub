@@ -1,8 +1,15 @@
-import { ChevronDown, ChevronUp, Library } from "lucide-react"
+import { ChevronDown, ChevronUp, Info, Library } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
-import { Badge, Button, Card, Checkbox, Spinner } from "~/components/ui"
+import {
+  Badge,
+  Button,
+  Card,
+  Checkbox,
+  IconButton,
+  Spinner,
+} from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { DeeplinkExportDialog } from "~/features/CredentialExport/DeeplinkExportDialog"
 import { useTokenCredentialAssociations } from "~/features/KeyManagement/associations/useTokenCredentialAssociations"
@@ -156,7 +163,6 @@ export function TokenList(props: TokenListProps) {
     isBatchApiProfilesSaving,
     selectedEntryIds,
     filteredEligibleEntries,
-    hasFilteredIneligibleEntries,
     selectedVisibleCount,
     visibleSelectionChecked,
     selectedEntries,
@@ -298,23 +304,32 @@ export function TokenList(props: TokenListProps) {
     <>
       {filteredEligibleEntries.length > 0 ? (
         <div className="gap-density-2 py-density-3 mb-density-4 flex flex-wrap items-center justify-between rounded-md border px-3">
-          {hasFilteredIneligibleEntries ? (
-            <p className="text-muted-foreground w-full text-sm" role="status">
-              {t("keyManagement:batchSelection.eligibilityNotice", {
-                count: filteredEligibleEntries.length,
+          <div className="gap-density-1 flex items-center">
+            <label className="gap-density-2 flex items-center text-sm">
+              <Checkbox
+                checked={visibleSelectionChecked}
+                onCheckedChange={toggleFilteredSelection}
+              />
+              {t("batchManagedSiteExport.selection.visible", {
+                selected: selectedVisibleCount,
+                total: filteredEligibleEntries.length,
               })}
-            </p>
-          ) : null}
-          <label className="gap-density-2 flex items-center text-sm">
-            <Checkbox
-              checked={visibleSelectionChecked}
-              onCheckedChange={toggleFilteredSelection}
-            />
-            {t("batchManagedSiteExport.selection.visible", {
-              selected: selectedVisibleCount,
-              total: filteredEligibleEntries.length,
-            })}
-          </label>
+            </label>
+            {filteredEligibleEntries.length < filteredActionEntries.length ? (
+              <IconButton
+                type="button"
+                size="sm"
+                variant="ghost"
+                aria-label={t("batchSelection.helpLabel")}
+                tooltip={t("batchSelection.eligibilityHint")}
+              >
+                <Info
+                  className="text-muted-foreground h-4 w-4"
+                  aria-hidden="true"
+                />
+              </IconButton>
+            ) : null}
+          </div>
           <div className="gap-density-2 flex flex-wrap items-center">
             <Button
               size="sm"

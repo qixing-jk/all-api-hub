@@ -169,7 +169,7 @@ describe("ClaudeCodeRouterImportDialog", () => {
       "ui:dialog.claudeCodeRouter.placeholders.providerApiBaseUrl",
     )
 
-    expect(providerNameInput).toHaveValue("Example")
+    expect(providerNameInput).toHaveValue("Example - Test Token")
     expect(providerApiBaseUrlInput).toHaveValue(
       "https://x.test/v1/chat/completions",
     )

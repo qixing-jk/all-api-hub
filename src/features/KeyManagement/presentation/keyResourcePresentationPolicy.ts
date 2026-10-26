@@ -13,6 +13,7 @@ import {
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions/registry"
 import { ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { AccountKeyResourceEditAction } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { REQUESTY_KEY_FIELDS } from "~/services/apiAdapters/requesty/keys/keyResourceFields"
 
 export const KEY_RESOURCE_EDITOR_KINDS = {
   NewApi: "new-api",
@@ -24,11 +25,13 @@ export const KEY_RESOURCE_EDITOR_KINDS = {
   Cubence: "cubence",
   Krill: "krill",
   Daya: "daya",
+  Pmapi: "pmapi",
   Dahl: "dahl",
   FoxCode: "foxcode",
   Emrank: "emrank",
   OpenRouter: "openrouter",
   RelayFor: "relayfor",
+  Requesty: "requesty",
   NameOnly: "name-only",
   Empty: "empty",
 } as const
@@ -45,6 +48,7 @@ export const KEY_RESOURCE_SCOPE_KINDS = {
 } as const
 
 type PresentationPolicy = {
+  readonly factLabels?: Readonly<Record<string, (t: TFunction) => string>>
   readonly editor: (typeof KEY_RESOURCE_EDITOR_KINDS)[keyof typeof KEY_RESOURCE_EDITOR_KINDS]
   readonly card: (typeof KEY_RESOURCE_CARD_KINDS)[keyof typeof KEY_RESOURCE_CARD_KINDS]
   readonly scope: (typeof KEY_RESOURCE_SCOPE_KINDS)[keyof typeof KEY_RESOURCE_SCOPE_KINDS]
@@ -96,6 +100,7 @@ const policies = {
   [families.Cubence]: { ...native, editor: KEY_RESOURCE_EDITOR_KINDS.Cubence },
   [families.Krill]: { ...native, editor: KEY_RESOURCE_EDITOR_KINDS.Krill },
   [families.Daya]: { ...native, editor: KEY_RESOURCE_EDITOR_KINDS.Daya },
+  [families.Pmapi]: { ...native, editor: KEY_RESOURCE_EDITOR_KINDS.Pmapi },
   [families.FoxCode]: { ...native, editor: KEY_RESOURCE_EDITOR_KINDS.FoxCode },
   [families.Emrank]: { ...native, editor: KEY_RESOURCE_EDITOR_KINDS.Emrank },
   [families.Xiaoen]: generic,
@@ -150,6 +155,14 @@ const policies = {
   [families.RelayFor]: {
     ...native,
     editor: KEY_RESOURCE_EDITOR_KINDS.RelayFor,
+  },
+  [families.Requesty]: {
+    ...native,
+    editor: KEY_RESOURCE_EDITOR_KINDS.Requesty,
+    factLabels: {
+      [REQUESTY_KEY_FIELDS.MonthlyLimit]: (t) =>
+        t("keyManagement:native.editor.requestyMonthlyLimit"),
+    },
   },
   [families.Unsupported]: generic,
 } satisfies Record<AccountSiteBackendFamily, PresentationPolicy>

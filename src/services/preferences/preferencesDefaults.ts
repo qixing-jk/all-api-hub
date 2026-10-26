@@ -94,6 +94,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     globalEnabled: true,
     pretriggerDailyOnUiOpen: true,
     notifyUiOnCompletion: true,
+    continueWhenVerificationRequired: false,
     windowStart: "09:00",
     windowEnd: "23:00",
     scheduleMode: AUTO_CHECKIN_SCHEDULE_MODE.RANDOM,

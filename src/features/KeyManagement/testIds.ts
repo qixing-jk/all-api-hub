@@ -22,6 +22,7 @@ export const KEY_MANAGEMENT_TEST_IDS = {
   batchSaveToApiProfilesButton:
     "key-management-batch-save-to-api-profiles-button",
   keyResourceSecretDisplay: "key-management-key-resource-secret-display",
+  keyResourceBadge: "key-management-key-resource-badge",
   keyResourceSummaryFacts: "key-management-key-resource-summary-facts",
   tokenRowActions: "key-management-token-row-actions",
   managedSiteStatusBadge: "key-management-managed-site-status-badge",
@@ -70,6 +71,10 @@ export const KEY_MANAGEMENT_TEST_IDS = {
   nativeEditorSubmitButton: "key-management-native-editor-submit-button",
   nativeKeyRow: "key-management-native-key-row",
   nativeDeleteConfirmButton: "key-management-native-delete-confirm-button",
+  nativeDeleteCredentialWarning:
+    "key-management-native-delete-credential-warning",
+  nativeDeleteCredentialAcknowledge:
+    "key-management-native-delete-credential-acknowledge",
   associateCredentialDialog: "key-management-associate-credential-dialog",
   associateCredentialProfileSelect:
     "key-management-associate-credential-profile-select",

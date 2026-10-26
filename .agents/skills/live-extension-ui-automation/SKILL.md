@@ -18,6 +18,12 @@ Automate and test the development browser extension UI against real accounts and
 
 Chromium blocks `--remote-debugging-port` on the system default user data directory. To preserve daily browser workflows while enabling CDP automation, tests run in a dedicated dev profile (`AllApiHub/dev-browser`) that shares accounts and sessions across all Git worktrees.
 
+## Window identity
+
+Several debug browsers can be open at once, so the launcher brands the window it starts: the profile name (`AAH <worktree>`, or `AAH dev-browser` for the shared profile) and a per-profile avatar identify it in the window title, profile card and profile picker, the frame gets a stable per-profile tint, and the extension about to be mounted is pinned to the toolbar. A name the user set themselves is kept, and an already installed theme is not replaced.
+
+Chromium reads these files only while starting and rewrites them on exit, so the launcher writes them while the profile is free and pins `--profile-directory` to the profile it branded. Reusing a running browser keeps its existing identity, `--restart` re-applies it, and `--no-identity` skips the branding entirely.
+
 ## Shared vs isolated dev profiles
 
 By default every worktree mounts the single shared profile (`AllApiHub/dev-browser`) on CDP port 9222. This reuses one account login across worktrees but couples their browser instances: a `--restart` mounts a different worktree's build and closes another session's tabs, and discovery by title can target the wrong extension.
@@ -32,6 +38,14 @@ When concurrent worktrees must not interfere (multi-agent runs), mount a **per-w
 
 Live suites (`e2e:cdp:*`) compute their default CDP URL from the same resolver, so launching and driving under `--isolate` need no extra flags. The trade-off: each isolated profile needs its own first login or sync, and each buys an extra resident browser process. The shared-profile default is unchanged.
 
+### Reclaiming debug profiles
+
+Each isolated profile keeps a full Chromium user data directory — on this machine 12 of them held about 10.7 GB, over 4 GB of it rebuildable caches — and a forgotten browser keeps its port, window and memory. `pnpm browser:cdp -- --list` shows what exists; the maintenance commands above reclaim it.
+
+Nothing is ever chosen for deletion by heuristics alone. A profile is reported as an orphan only when all three hold: this tooling generated its name (`dev-browser-<worktree>-<16 hex>`), no browser is using it, and every checkout it recorded mounting no longer exists. Deleting a profile also discards the site logins and extension data inside it, so that step needs `--prune-profiles`; cache pruning is automatic for closed profiles under `--clean` because the browser rebuilds those entries on its next start, and entries younger than a day are left alone.
+
+A deleted profile is partly recoverable: account data comes back from `pnpm browser:sync`, and website sessions plus Local Storage from adding `--cookies`, because both copy out of a still-logged-in daily browser. What does not come back is that profile's browsing history, its installed extensions, and any data that was never synced out of it.
+
 ## Available Tooling & Commands
 
 All commands are cross-platform (Windows, macOS, Linux) and runnable directly via `pnpm`:
@@ -40,6 +54,10 @@ All commands are cross-platform (Windows, macOS, Linux) and runnable directly vi
 | :--- | :--- | :--- |
 | `pnpm browser:sync` | `scripts/sync-extension-profile.mjs` | Discovers extension storage sources (`--list`); copies databases only with browsers closed. Website sessions require `--cookies`. |
 | `pnpm browser:cdp` | `scripts/launch-cdp-browser.mjs` | Launches (or connects to) the dedicated debug browser on port `9222` with the current worktree extension mounted. |
+| `pnpm browser:cdp -- --list` | `scripts/launch-cdp-browser.mjs` | Inventories every running debug browser (port, profile, PID, mounted worktrees) and every dev profile with its size and whether its checkout still exists. |
+| `pnpm browser:cdp -- --stop-browsers` | `scripts/launch-cdp-browser.mjs` | Asks every running debug browser to exit through CDP and waits for it to release its profile. |
+| `pnpm browser:cdp -- --clean` | `scripts/launch-cdp-browser.mjs` | Reports the same inventory, then deletes only regenerable caches (`component_crx_cache`, `ProvenanceData`, shader caches) from profiles that are closed. |
+| `pnpm browser:cdp -- --prune-profiles` | `scripts/launch-cdp-browser.mjs` | Adds to `--clean` the deletion of *orphaned* profiles — profiles this tooling named whose recorded checkouts have all been deleted. Implies `--clean`. |
 | `pnpm e2e:cdp` | `scripts/e2e-cdp-control.mjs` | Connects via CDP, detects the current worktree extension, opens its UI, and automates interactions. |
 
 ## Workflow
@@ -68,7 +86,8 @@ For concurrent worktrees use `pnpm browser:cdp:isolate -- --dev`, and pass `--is
   - `pnpm browser:cdp -- --stop-dev`: Terminate the background WXT dev server process.
   - `pnpm browser:cdp -- --prod`: Force standalone production build mode (`.output/chrome-mv3`).
   - `pnpm browser:cdp -- --prod --build`: Force a full production rebuild before launching. Pair `--build` with `--prod`; `--build` alone still prefers dev.
-  - `pnpm browser:cdp -- --restart`: Terminate the running debug browser and start a fresh instance.
+  - `pnpm browser:cdp -- --restart`: Terminate the running debug browser and start a fresh instance. Restarting is also what re-applies a window identity that the current instance still lacks.
+  - `pnpm browser:cdp -- --no-identity`: Leave the profile name, frame tint and toolbar pin untouched, e.g. when inspecting a profile someone else branded.
 
 If dev startup fails or the loaded UI does not receive edits, follow [desktop dev recovery](references/desktop-dev-recovery.md). Switch to production only for a diagnosed remaining blocker or the acceptance cases above, and report that reason and the loaded path rather than claiming dev/HMR verification.
 

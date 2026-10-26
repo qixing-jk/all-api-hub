@@ -1,9 +1,10 @@
+import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
 import { TokenList } from "~/features/KeyManagement/inventory/TokenList"
 import { buildServiceCredentialKeyManagementEntry } from "~/features/KeyManagement/utils"
 import { nativeRowFromSeed } from "~~/tests/test-utils/keyManagement/TokenListHarness"
-import { render, screen } from "~~/tests/test-utils/render"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
 import {
   createAccount,
   createToken,
@@ -131,4 +132,96 @@ describe("TokenList secondary reloading state", () => {
     // Skeleton cards are rendered with animate-pulse
     expect(screen.queryByRole("status")).toBeNull()
   })
+})
+
+it("explains mixed batch eligibility on demand while keeping selection usable", async () => {
+  const user = userEvent.setup()
+  const eligible = createRow("Inference key")
+  const managementAccount = createAccount({
+    id: "requesty-account",
+    name: "Requesty",
+    siteType: "requesty",
+  })
+  const ineligible = nativeRowFromSeed(
+    managementAccount,
+    createToken({ name: "Management key", accountId: managementAccount.id }),
+  )
+  ineligible.rowKey = "management-key"
+  ineligible.facts = {
+    ...ineligible.facts,
+    displayFacts: [
+      {
+        fieldId: "permissions",
+        kind: "permission",
+        role: "manage",
+        granted: true,
+      },
+    ],
+  }
+  render(
+    <TokenList
+      isLoading={false}
+      entries={[]}
+      filteredEntries={[]}
+      nativeRows={[eligible, ineligible]}
+      displayData={[account, managementAccount]}
+      selectedAccount="all"
+      handleAddToken={vi.fn()}
+    />,
+  )
+  const selectVisible = await screen.findByRole("checkbox", {
+    name: "keyManagement:batchManagedSiteExport.selection.visible",
+  })
+  expect(
+    screen.queryByText("keyManagement:batchSelection.eligibilityNotice"),
+  ).not.toBeInTheDocument()
+  const help = screen.getByRole("button", {
+    name: "keyManagement:batchSelection.helpLabel",
+  })
+  expect(screen.queryByRole("tooltip")).not.toBeInTheDocument()
+  await user.hover(help)
+  expect(await screen.findByRole("tooltip")).toHaveTextContent(
+    "keyManagement:batchSelection.eligibilityHint",
+  )
+  await user.unhover(help)
+  await waitFor(() =>
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument(),
+  )
+  await user.tab()
+  await user.tab()
+  expect(help).toHaveFocus()
+  expect(await screen.findByRole("tooltip")).toHaveTextContent(
+    "keyManagement:batchSelection.eligibilityHint",
+  )
+  await user.click(selectVisible)
+  expect(selectVisible).toBeChecked()
+  expect(
+    screen.getByRole("button", {
+      name: "keyManagement:batchApiCredentialProfiles.actions.open",
+    }),
+  ).toBeEnabled()
+})
+
+it("omits batch eligibility help when all visible keys can be selected", async () => {
+  render(
+    <TokenList
+      isLoading={false}
+      entries={[]}
+      filteredEntries={[]}
+      nativeRows={[createRow("Inference key")]}
+      displayData={[account]}
+      selectedAccount={account.id}
+      handleAddToken={vi.fn()}
+    />,
+  )
+  expect(
+    await screen.findByRole("checkbox", {
+      name: "keyManagement:batchManagedSiteExport.selection.visible",
+    }),
+  ).toBeVisible()
+  expect(
+    screen.queryByRole("button", {
+      name: "keyManagement:batchSelection.helpLabel",
+    }),
+  ).not.toBeInTheDocument()
 })

@@ -283,6 +283,29 @@ describe("apiAdapters registry", () => {
     expect(capabilities.managedSites).toBeUndefined()
   })
 
+  it("returns Requesty account capabilities without managed-site capabilities", () => {
+    const capabilities = getSiteTypeCapabilities(SITE_TYPES.REQUESTY)
+
+    expect(capabilities).toMatchObject({
+      siteType: SITE_TYPES.REQUESTY,
+      family: ACCOUNT_SITE_ADAPTER_FAMILIES.Requesty,
+    })
+    expectAccountDataCapability(capabilities)
+    expectAccountBootstrapCapability(capabilities)
+    expectAccountCompletionCapability(capabilities)
+    expectKeyManagementCapability(capabilities)
+    expectTokenProvisioningCapability(capabilities)
+    expectAccountRefreshCapability(capabilities)
+    expect(capabilities.account?.providerModelCatalog?.source.provider).toBe(
+      SITE_TYPES.REQUESTY,
+    )
+    // Referral links live only on the Clerk-session console API, and Requesty
+    // has no check-in, announcements or redemption concept.
+    expect(capabilities.account?.inviteLink).toBeUndefined()
+    expect(capabilities.site).toBeUndefined()
+    expect(capabilities.managedSites).toBeUndefined()
+  })
+
   it("returns RelayFor account capabilities without managed-site capabilities", () => {
     const capabilities = getSiteTypeCapabilities(SITE_TYPES.RELAYFOR)
 

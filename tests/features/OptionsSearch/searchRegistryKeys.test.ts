@@ -68,6 +68,18 @@ function resolveKeyPath(
 }
 
 describe("OptionsSearch registry i18n keys integrity", () => {
+  it("indexes the native check-in click preference at its settings anchor", () => {
+    expect(
+      OPTIONS_SEARCH_REGISTRY.find(
+        (item) =>
+          item.titleKey ===
+          "autoCheckin:settings.continueWhenVerificationRequired",
+      ),
+    ).toMatchObject({
+      tabId: "checkinRedeem",
+      targetId: "auto-checkin-continue-when-verification-required",
+    })
+  })
   const locales = loadZhCnLocales()
 
   it("verifies that all search item keys exist in the primary locale (zh-CN)", () => {

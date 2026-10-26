@@ -183,9 +183,8 @@
   },
   "batchSelection": {
     "accountUnavailableReason": "Esta cuenta no tiene claves compatibles con acciones por lotes.",
-    "eligibilityNotice_one": "Actualmente, {{count}} clave admite acciones por lotes; las demás no se incluirán.",
-    "eligibilityNotice_many": "Actualmente, {{count}} claves admiten acciones por lotes; las demás no se incluirán.",
-    "eligibilityNotice_other": "Actualmente, {{count}} claves admiten acciones por lotes; las demás no se incluirán.",
+    "eligibilityHint": "Las acciones por lotes solo seleccionan claves de inferencia exportables. Se excluyen las claves de administración y aquellas cuyo valor completo no está disponible.",
+    "helpLabel": "Acerca de la selección por lotes",
     "unavailableReason": "Esta clave no admite acciones por lotes."
   },
   "createdKey": {
@@ -387,7 +386,18 @@
       "revoke": "Revocar clave",
       "rotate": "Rotar clave API"
     },
+    "badges": {
+      "accountCredential": "Usada por esta cuenta",
+      "accountManagePermission": "Clave de administración de esta cuenta",
+      "managePermission": "Clave de gestión"
+    },
+    "credentialRole": {
+      "badgeTitle": "All API Hub usa esta clave para conectarse a esta cuenta, consultar su saldo y administrar claves. Si la reemplazas, actualiza la clave en la configuración de la cuenta."
+    },
     "delete": {
+      "accountCredentialAcknowledge": "Entiendo que esto interrumpe el acceso de gestión de la cuenta",
+      "accountCredentialWarningDescription": "La cuenta perderá el acceso de gestión de Requesty: fallarán la lista de claves, el saldo y las actualizaciones. La clave no se puede recuperar aquí.",
+      "accountCredentialWarningTitle": "Eliminar la credencial de la cuenta",
       "confirm": "Eliminar clave",
       "description": "¿Eliminar permanentemente la clave API {{name}}? Esta acción no se puede deshacer.",
       "feedback": {
@@ -397,6 +407,7 @@
         "unavailable": "El servicio no está disponible temporalmente. Actualiza antes de volver a intentarlo.",
         "uncertain": "El estado de la clave puede haber cambiado. Actualiza las claves antes de decidir si vuelves a intentarlo."
       },
+      "manageKeyWarning": "Esta clave tiene permiso de gestión. Los flujos que dependen de ella pierden el acceso de gestión al eliminarla.",
       "refresh": "Actualizar claves",
       "title": "¿Eliminar clave API?"
     },
@@ -546,11 +557,19 @@
         "loading": "Abriendo el editor de claves...",
         "retry": "Intentar de nuevo"
       },
+      "pmapi": {
+        "rpm": "Solicitudes por minuto",
+        "rpmHelp": "Máximo de solicitudes por minuto para este token; 0 significa ilimitado."
+      },
       "quotaCredits": "Créditos restantes",
       "quotaCreditsHelp": "La clave deja de funcionar cuando se agotan estos créditos.",
       "quotaUsd": "Cuota (USD)",
       "remainingCount": "Llamadas restantes",
       "remainingCountPlaceholder": "Cuántas llamadas más permite esta clave",
+      "requestyManagePermission": "Permiso de administración",
+      "requestyManagePermissionHelp": "Esta clave puede llamar a endpoints de administración y gestionar otras claves.",
+      "requestyMonthlyLimit": "Límite mensual (USD)",
+      "requestyMonthlyLimitPlaceholder": "0 o vacío significa ilimitado",
       "storageLocation": "Ubicación de almacenamiento",
       "storageLocationGlobal": "Nodo global",
       "storageLocationHelp": "Dónde se guardan los medios que genera esta clave.",
@@ -577,6 +596,13 @@
       "rotateDescription": "La clave anterior dejará de funcionar de inmediato. Copia la nueva clave y actualiza tus clientes. Se conserva el resto de la configuración."
     },
     "missing": "No disponible",
+    "permission": {
+      "accountManageBadgeTitle": "All API Hub usa esta clave para consultar el saldo de esta cuenta y administrar claves. También puede crear y eliminar otras claves de la organización. Si la reemplazas o eliminas, actualiza la clave en la configuración de la cuenta.",
+      "manage": "Permiso de gestión",
+      "manageBadgeTitle": "Esta clave puede llamar a los endpoints de gestión y administrar otras claves de la organización.",
+      "manageGranted": "Puede gestionar otras claves",
+      "manageNotGranted": "Solo inferencia"
+    },
     "revoke": {
       "description": "¿Revocar “{{name}}”? La clave se desactivará permanentemente. Su registro permanecerá hasta que lo elimines.",
       "feedback": {

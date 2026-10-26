@@ -504,6 +504,11 @@ export function normalizeSiteAccount(raw: SiteAccount): SiteAccount {
     login: resolveAccountLogin(merged),
   }
 
+  // Older Requesty adapters duplicated the organization's monetary balance as
+  // a scoped allowance. Discard that projection on read as well as refresh.
+  if (normalized.site_type === SITE_TYPES.REQUESTY) {
+    delete normalized.account_info.nativeBalance
+  }
   delete normalized.passwordAuth
   delete normalized.checkIn.loginCheckIn
   delete (normalized as SiteAccount & { can_check_in?: unknown }).can_check_in
@@ -637,6 +642,19 @@ export function applySiteAccountUpdates(params: {
     params.updates.checkIn.customCheckIn === undefined
   ) {
     delete result.checkIn.customCheckIn
+  }
+
+  // Choosing "follow the global preference" clears the account override, and a
+  // deep merge would otherwise keep the previous boolean.
+  if (
+    params.updates.checkIn &&
+    Object.prototype.hasOwnProperty.call(
+      params.updates.checkIn,
+      "continueWhenVerificationRequired",
+    ) &&
+    params.updates.checkIn.continueWhenVerificationRequired === undefined
+  ) {
+    delete result.checkIn.continueWhenVerificationRequired
   }
 
   if (

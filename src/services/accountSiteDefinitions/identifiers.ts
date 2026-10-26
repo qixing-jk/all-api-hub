@@ -40,6 +40,7 @@ export const SITE_TYPES = {
   CUBENCE: "cubence",
   RIGHT_CODE: "RightCode",
   RELAYFOR: "relayfor",
+  REQUESTY: "requesty",
   OPENROUTER: "openrouter",
   OMNIROUTE: "omniroute",
   GPT_LOAD: "gpt-load",
@@ -47,6 +48,7 @@ export const SITE_TYPES = {
   KIMI: "kimi",
   KIMI_GLOBAL: "kimi-global",
   DAYA: "daya",
+  PMAPI: "pmapi",
   GRSAI: "grsai",
   UNKNOWN: "unknown",
 } as const
@@ -130,6 +132,23 @@ export const RIGHTCODE_LOGIN_PATH = "/login"
 export const RELAYFOR_HOSTNAMES = ["relayfor.xyz"] as const
 export const RELAYFOR_DISPLAY_NAME = "RelayFor"
 export const RELAYFOR_LOGIN_PATH = "/auth/?mode=login"
+
+/**
+ * Requesty is a closed-source hosted LLM gateway. `app.requesty.ai` is the only
+ * console (Clerk login); `api-v2.requesty.ai` serves the documented management
+ * API under `/v1/manage/*` (Bearer manage key) and undocumented Clerk-session
+ * console routes under `/v1/*`; `router.requesty.ai` is the OpenAI-compatible
+ * inference gateway. `router.eu.requesty.ai` is a data-residency inference
+ * variant, not an account alias. Domain roles: docs.requesty.ai/llms.txt,
+ * verified 2026-10-21.
+ */
+export const REQUESTY_HOSTNAMES = ["app.requesty.ai"] as const
+export const REQUESTY_DISPLAY_NAME = "Requesty"
+export const REQUESTY_WEB_ORIGIN = "https://app.requesty.ai"
+/** Management API host; requests must use absolute URLs against this origin. */
+export const REQUESTY_MANAGE_API_ORIGIN = "https://api-v2.requesty.ai"
+/** Public OpenAI-compatible inference gateway and model catalog origin. */
+export const REQUESTY_API_BASE_URL = "https://router.requesty.ai/v1"
 
 export const OPENROUTER_HOSTNAMES = ["openrouter.ai"] as const
 
@@ -221,3 +240,14 @@ export const DAYA_WEB_ORIGIN = "https://api.dayaai.com"
  * console; the extension never falls back across them automatically.
  */
 export const DAYA_API_BASE_URL = "https://daya.to/v1"
+
+/**
+ * PM-API is one program with two deployments run by the same operator:
+ * https://pmcat.top/ (开放注册) and https://pap.pmcat.top/ (注册码内测版).
+ * Both hostnames serve the identical contract (`/api/status`, `/api/me`,
+ * `/api/tokens`) but keep independent account stores, so each deployment is
+ * its own login origin and the saved account URL identifies the install.
+ * Verified 2026-10-22.
+ */
+export const PMAPI_HOSTNAMES = ["pmcat.top", "pap.pmcat.top"] as const
+export const PMAPI_DISPLAY_NAME = "PM-API"

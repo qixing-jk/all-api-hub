@@ -117,9 +117,15 @@ import {
   OPENROUTER_DISPLAY_NAME,
   OPENROUTER_HOSTNAMES,
   OPENROUTER_WEB_ORIGIN,
+  PMAPI_DISPLAY_NAME,
+  PMAPI_HOSTNAMES,
   RELAYFOR_DISPLAY_NAME,
   RELAYFOR_HOSTNAMES,
   RELAYFOR_LOGIN_PATH,
+  REQUESTY_API_BASE_URL,
+  REQUESTY_DISPLAY_NAME,
+  REQUESTY_HOSTNAMES,
+  REQUESTY_WEB_ORIGIN,
   RIGHTCODE_DISPLAY_NAME,
   RIGHTCODE_HOSTNAMES,
   RIGHTCODE_LOGIN_PATH,
@@ -222,9 +228,11 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.EMRANK,
   SITE_TYPES.KRILL,
   SITE_TYPES.DAYA,
+  SITE_TYPES.PMAPI,
   SITE_TYPES.CUBENCE,
   SITE_TYPES.RIGHT_CODE,
   SITE_TYPES.RELAYFOR,
+  SITE_TYPES.REQUESTY,
   SITE_TYPES.OPENROUTER,
   SITE_TYPES.KIMI,
   SITE_TYPES.KIMI_GLOBAL,
@@ -450,6 +458,56 @@ const ACCOUNT_SITE_DEFINITIONS = [
         duplicateOrigin: DAYA_WEB_ORIGIN,
         managedChannelOrigin: DAYA_API_BASE_URL,
         inferenceApiBaseUrls: { openAiCompatible: DAYA_API_BASE_URL },
+      },
+    },
+  },
+  {
+    siteType: SITE_TYPES.PMAPI,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Pmapi,
+    onboarding: {
+      displayName: PMAPI_DISPLAY_NAME,
+      detection: { hostnames: PMAPI_HOSTNAMES },
+      routes: {
+        // PM-API (pmcat.top, pap.pmcat.top) is one program with independent
+        // deployments. Its SPA routes on the hash (verified live: the plain
+        // `/console` paths render the public landing page), so every page
+        // route keeps the `/#/` prefix.
+        loginPath: "/#/login",
+        usagePath: "/#/console",
+        checkInPath: "/#/console/wallet",
+        adminCredentialsPath: "/#/console/tokens",
+        pricingPath: "/#/pricing",
+        accessTokenPath: null,
+        redeemPath: "/#/console/wallet",
+        siteAnnouncementsPath: "/",
+      },
+    },
+    productProfile: {
+      auth: {
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.AccessToken],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
+        defaultAuthHostnames: [],
+      },
+      identity: {
+        usernameRequired: false,
+        storedUserIdentityFields: ["id", "username"],
+      },
+      modelList: {
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+        // Groups are a real billing/routing dimension for PM-API (a token
+        // group selects routing, the group ratio multiplies prices), like
+        // the New API family.
+        groupSemantics:
+          ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.ACCOUNT_OR_RUNTIME_KEY,
+      },
+      urls: {
+        // Both deployments are enumerated; each install keeps its own saved
+        // URL, so no storage origin is pinned.
+        recognizedHostnames: PMAPI_HOSTNAMES,
+        inferFromHostname: true,
       },
     },
   },
@@ -1149,6 +1207,72 @@ const ACCOUNT_SITE_DEFINITIONS = [
       urls: {
         recognizedHostnames: RELAYFOR_HOSTNAMES,
         inferFromHostname: true,
+      },
+    },
+  },
+  {
+    siteType: SITE_TYPES.REQUESTY,
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Requesty,
+    onboarding: {
+      displayName: REQUESTY_DISPLAY_NAME,
+      // The manage key is the only credential; the Clerk console session is
+      // not API-accessible, so the form guides manual key creation.
+      accountForm: {
+        defaultSiteName: REQUESTY_DISPLAY_NAME,
+        accessTokenLabelKey: "form.requestyManageKey",
+        accessTokenGuidanceTitleKey: "form.requestyManageKeyGuidanceTitle",
+        accessTokenGuidanceKey: "form.requestyManageKeyGuidance",
+        // The console's Clerk session can mint a manage key from a temp
+        // window; failures fall back to the guidance above.
+        autoCreateAccessToken: true,
+      },
+      detection: { hostnames: REQUESTY_HOSTNAMES },
+      // Console routes observed on app.requesty.ai, 2026-10-21. The management
+      // API lives on api-v2.requesty.ai, not the console origin.
+      routes: {
+        loginPath: "/sign-in",
+        usagePath: "/analytics",
+        adminCredentialsPath: "/api-keys",
+        pricingPath: "/model-library",
+        checkInPath: null,
+        accessTokenPath: "/api-keys",
+        redeemPath: "/billing",
+        siteAnnouncementsPath: null,
+      },
+    },
+    productProfile: {
+      auth: {
+        // Only the manage API key is a verified background credential; the
+        // console's Clerk session is not documented for API use.
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.AccessToken],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
+        defaultAuthHostnames: [],
+      },
+      identity: {
+        usernameRequired: false,
+        userIdRequired: false,
+        storedUserIdentityFields: [],
+      },
+      metrics: {
+        deferredTodayStatsAvailability:
+          createUnsupportedTodayStatsAvailability(),
+        legacyTodayStatsAvailability: createUnsupportedTodayStatsAvailability(),
+      },
+      modelList: {
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+        groupSemantics: ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+      },
+      urls: {
+        recognizedHostnames: REQUESTY_HOSTNAMES,
+        storageOrigin: REQUESTY_WEB_ORIGIN,
+        duplicateOrigin: REQUESTY_WEB_ORIGIN,
+        managedChannelOrigin: REQUESTY_API_BASE_URL,
+        inferenceApiBaseUrls: {
+          openAiCompatible: REQUESTY_API_BASE_URL,
+        },
       },
     },
   },

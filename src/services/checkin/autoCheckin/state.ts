@@ -106,19 +106,16 @@ export function mergeCompatibilityCheckInStatus(input: {
   isCheckedInToday: boolean
   observedAt: number
 }): CheckInConfig {
-  const previousStatus =
-    input.config.methodKnowledge.methods[input.methodId]?.status
-  const availability =
-    previousStatus?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
-      ? previousStatus.availability
-      : undefined
+  const retainedFacts = getRetainedKnownStatusFacts(
+    input.config.methodKnowledge.methods[input.methodId]?.status,
+  )
 
   return replaceCheckInMethodStatus({
     config: input.config,
     methodId: input.methodId,
     status: {
       outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
-      ...(availability ? { availability } : {}),
+      ...retainedFacts,
       today: input.isCheckedInToday
         ? CHECK_IN_METHOD_TODAY_STATUSES.Checked
         : CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
@@ -130,17 +127,40 @@ export function mergeCompatibilityCheckInStatus(input: {
   })
 }
 
+/** Fields of the last known status that describe the deployment rather than today. */
+const getRetainedKnownStatusFacts = (
+  status: CheckInMethodStatus | undefined,
+): Pick<
+  Extract<
+    CheckInMethodStatus,
+    { outcome: typeof CHECK_IN_METHOD_STATUS_OUTCOMES.Known }
+  >,
+  "availability" | "requiresManualVerification"
+> => {
+  if (status?.outcome !== CHECK_IN_METHOD_STATUS_OUTCOMES.Known) return {}
+  return {
+    ...(status.availability ? { availability: status.availability } : {}),
+    ...(status.requiresManualVerification
+      ? { requiresManualVerification: status.requiresManualVerification }
+      : {}),
+  }
+}
+
 /** Marks one registered method checked using execution evidence. */
 export function markCheckInMethodExecuted(input: {
   config: CheckInConfig
   methodId: CheckInMethodId
   observedAt: number
 }): CheckInConfig {
+  const retainedFacts = getRetainedKnownStatusFacts(
+    input.config.methodKnowledge.methods[input.methodId]?.status,
+  )
   return replaceCheckInMethodStatus({
     config: input.config,
     methodId: input.methodId,
     status: {
       outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+      ...retainedFacts,
       today: CHECK_IN_METHOD_TODAY_STATUSES.Checked,
       evidence: {
         source: CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Execution,
@@ -186,6 +206,12 @@ export function mergeUserOwnedCheckInDraft(input: {
   return {
     ...input.latest,
     automaticExecutionEnabled: input.draft.automaticExecutionEnabled,
+    ...(typeof input.draft.continueWhenVerificationRequired === "boolean"
+      ? {
+          continueWhenVerificationRequired:
+            input.draft.continueWhenVerificationRequired,
+        }
+      : { continueWhenVerificationRequired: undefined }),
     selection: input.selectionChanged
       ? input.draft.selection
       : input.latest.selection,

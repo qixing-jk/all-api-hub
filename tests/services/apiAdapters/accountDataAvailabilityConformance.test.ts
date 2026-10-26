@@ -42,6 +42,7 @@ const collectedRequests = {
   sharedChatUsage: 0,
   voApiV2Stats: 0,
   openRouterCredits: 0,
+  requestyOrg: 0,
   rightCodeAccount: 0,
   rightCodeTodayStats: 0,
   rightCodeOverall: 0,
@@ -261,6 +262,45 @@ const producerFixturesByFamily = {
             average_duration_ms: 0,
             rpm: 0,
             tpm: 0,
+          },
+        }),
+      ),
+    ],
+    expectRequests: () => {},
+  },
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Pmapi]: {
+    baseUrl: "https://pmcat.top",
+    authType: AuthTypeEnum.AccessToken,
+    expectedAvailability: {
+      consumption: complete,
+      requests: complete,
+      tokens: complete,
+      income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
+    handlers: [
+      http.get("https://pmcat.top/api/me", () =>
+        HttpResponse.json({
+          success: true,
+          message: "",
+          data: {
+            id: 10171,
+            username: "pm-test-user",
+            quota: 0,
+            used_quota: 0,
+            checked_in_today: false,
+          },
+        }),
+      ),
+      http.get("https://pmcat.top/api/me/stats", () =>
+        HttpResponse.json({
+          success: true,
+          message: "",
+          data: {
+            models: [],
+            rpm: 0,
+            series: [],
+            today: { latency: 0, quota: 0, requests: 0, tokens: 0 },
+            token_count: 0,
           },
         }),
       ),
@@ -604,6 +644,25 @@ const producerFixturesByFamily = {
       expect(collectedRequests.openRouterCredits).toBe(snapshotCount)
     },
   },
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Requesty]: {
+    baseUrl: "https://app.requesty.ai",
+    authType: AuthTypeEnum.AccessToken,
+    expectedAvailability: {
+      consumption: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
+    handlers: [
+      http.get("https://api-v2.requesty.ai/v1/manage/org", () => {
+        collectedRequests.requestyOrg += 1
+        return HttpResponse.json({ name: "example-org", balance: "12.5" })
+      }),
+    ],
+    expectRequests: (snapshotCount: number) => {
+      expect(collectedRequests.requestyOrg).toBe(snapshotCount)
+    },
+  },
   [ACCOUNT_SITE_ADAPTER_FAMILIES.RightCode]: {
     baseUrl: "https://right-code.example.invalid",
     authType: AuthTypeEnum.AccessToken,
@@ -820,7 +879,9 @@ const createRequest = (siteType: AccountSiteType) => {
               ? "6088"
               : siteType === SITE_TYPES.DAYA
                 ? "615"
-                : "user-1",
+                : siteType === SITE_TYPES.PMAPI
+                  ? "10171"
+                  : "user-1",
       accessToken: "account-token",
     },
     checkIn: buildCheckInConfig(),
@@ -904,6 +965,7 @@ describe("AccountData availability producer conformance", () => {
       sharedChatUsage: 0,
       voApiV2Stats: 0,
       openRouterCredits: 0,
+      requestyOrg: 0,
       rightCodeAccount: 0,
       rightCodeTodayStats: 0,
       rightCodeOverall: 0,

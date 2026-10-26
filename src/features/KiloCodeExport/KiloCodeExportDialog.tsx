@@ -37,6 +37,7 @@ import AddTokenDialog from "~/features/TokenProvisioning/creation/AddTokenDialog
 import { getAccountRuntimeKeyExportId } from "~/services/accounts/keys/accountRuntimeKeys"
 import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
 import { createAccountRuntimeKeyExportSource } from "~/services/accounts/utils/credentialExport"
+import { buildCredentialExportDisplayName } from "~/services/integrations/credentialExport"
 import {
   KILO_CODE_EXPORT_TARGET_OPTIONS,
   KILO_CODE_EXPORT_TARGETS,
@@ -221,7 +222,10 @@ export function KiloCodeExportDialog({
           selectionId,
           credential,
           sourceSnapshots: [site, token],
-          providerName: `${siteName} - ${tokenName}`,
+          providerName: buildCredentialExportDisplayName({
+            providerName: siteName,
+            credentialName: tokenName,
+          }),
           runtimeKey: {
             accountId: siteId,
             siteName,

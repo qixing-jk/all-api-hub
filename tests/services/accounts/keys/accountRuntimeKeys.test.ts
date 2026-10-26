@@ -16,6 +16,7 @@ import {
   getAccountRuntimeKeyLocatorAccountId,
   hasUsableAccountRuntimeKeySecret,
   isAccountRuntimeKeyLocatorEqual,
+  isInferenceCapableAccountRuntimeKey,
   isSelectableAccountRuntimeKey,
   sortAccountRuntimeKeysActiveFirst,
 } from "~/services/accounts/keys/accountRuntimeKeys"
@@ -303,4 +304,67 @@ describe("account runtime keys", () => {
       ]),
     )
   })
+})
+
+describe("inference capability", () => {
+  const inferenceKey = (inference: boolean | undefined, id = "native") =>
+    buildAccountKeyResourceRuntimeKey(account, {
+      ref: { ...ref, resourceId: id },
+      label: "Native key",
+      secret: "sk-native",
+      ...(inference === undefined ? {} : { inference }),
+    })
+
+  it("treats a key without a provider opinion as an inference credential", () => {
+    expect(inferenceKey(undefined).capabilities.inference).toBe(true)
+  })
+
+  it("excludes a management key from inference selection", () => {
+    const manageKey = inferenceKey(false)
+    expect(manageKey.capabilities.inference).toBe(false)
+    expect(isInferenceCapableAccountRuntimeKey(manageKey)).toBe(false)
+    expect(isInferenceCapableAccountRuntimeKey(inferenceKey(true))).toBe(true)
+  })
+
+  it("prefers an inference key over a management key for default selection", () => {
+    const manageKey = inferenceKey(false, "manage")
+    const plainKey = inferenceKey(true, "plain")
+    expect(findDefaultSelectableAccountRuntimeKey([manageKey, plainKey])).toBe(
+      plainKey,
+    )
+  })
+
+  it("never falls back to a management key for default selection", () => {
+    // A management key that is the only, or only-active, credential must not be
+    // proposed as the default inference key by any fallback branch.
+    const inactiveInferenceKey = buildAccountKeyResourceRuntimeKey(account, {
+      ref: { ...ref, resourceId: "inactive" },
+      label: "Inactive",
+      secret: "sk-inactive",
+      status: "inactive",
+      inference: true,
+    })
+    expect(findDefaultSelectableAccountRuntimeKey([inferenceKey(false)])).toBe(
+      null,
+    )
+    expect(
+      findDefaultSelectableAccountRuntimeKey([
+        inferenceKey(false, "first"),
+        inactiveInferenceKey,
+      ]),
+    ).toBe(inactiveInferenceKey)
+  })
+})
+
+it("preserves the account-credential marker when projecting provider facts", () => {
+  const key = buildAccountKeyResourceRuntimeKeyFromFacts(account, {
+    ref,
+    displayName: "Management key",
+    maskedLabel: "***",
+    status: "enabled",
+    credentialRole: "account",
+    fields: [],
+    actions: { canUpdate: false, canDelete: true },
+  })
+  expect(key.accountCredential).toBe(true)
 })

@@ -74,8 +74,6 @@ export function useBatchTokenActions({
       filteredActionEntries.filter((entry) => eligibleEntryIds.has(entry.id)),
     [eligibleEntryIds, filteredActionEntries],
   )
-  const hasFilteredIneligibleEntries =
-    filteredEligibleEntries.length < filteredActionEntries.length
   const filteredEligibleEntryIds = useMemo(
     () => new Set(filteredEligibleEntries.map((entry) => entry.id)),
     [filteredEligibleEntries],
@@ -278,7 +276,6 @@ export function useBatchTokenActions({
     isBatchApiProfilesSaving,
     selectedEntryIds,
     filteredEligibleEntries,
-    hasFilteredIneligibleEntries,
     selectedVisibleCount,
     visibleSelectionChecked,
     selectedEntries,

@@ -130,6 +130,41 @@ it.each([editorModes.Create, editorModes.Edit])(
   },
 )
 
+it.each([editorModes.Create, editorModes.Edit])(
+  "presents PM-API native controls in %s mode",
+  (mode) => {
+    const presentation = getNativeKeyResourceEditorPresentation(
+      SITE_TYPES.PMAPI,
+      mode,
+    )
+    const t = ((key: string) => key) as TFunction
+    const byId = (id: string) =>
+      presentation.policy.fields.find((field) => field.fieldId === id)!
+    expect(byId("grp").resolveLabel(t)).toBe("keyManagement:dialog.groupLabel")
+    expect(byId("rpm").resolveLabel(t)).toBe(
+      "keyManagement:native.editor.pmapi.rpm",
+    )
+    expect(byId("rpm").resolveHelp?.(t)).toBe(
+      "keyManagement:native.editor.pmapi.rpmHelp",
+    )
+    expect(byId("models").resolveLabel(t)).toBe(
+      "keyManagement:dialog.availableModels",
+    )
+    expect(byId("subnet").resolveLabel(t)).toBe("keyManagement:dialog.ipLimits")
+    expect(byId("quotaUsd").resolveLabel(t)).toBe(
+      "keyManagement:native.editor.totalQuotaUsd",
+    )
+    expect(byId("expiresAt").resolveLabel(t)).toBe(
+      "keyManagement:dialog.expiration",
+    )
+    // Lifecycle lives in row actions; the dialog never carries a status
+    // field, matching the console edit form.
+    expect(
+      presentation.policy.fields.some((field) => field.fieldId === "enabled"),
+    ).toBe(false)
+  },
+)
+
 it.each([
   ["budget_5h", "budget5h", "budgetResetHelp"],
   ["budget_day", "budgetDay", ""],
@@ -836,3 +871,33 @@ it("presents every EMRank expiry choice as readable localized text", async () =>
     "自定义时间",
   ])
 })
+
+it.each([editorModes.Create, editorModes.Edit] as const)(
+  "presents Requesty %s fields with management and spending guidance",
+  (mode) => {
+    const presentation = getPresentation(SITE_TYPES.REQUESTY, mode)
+    const translate = ((key: string) => key) as TFunction
+    const fields = presentation.policy.fields
+    expect(fields.map((f) => f.fieldId)).toEqual(
+      mode === editorModes.Create
+        ? ["name", "manage_permission", "monthly_limit"]
+        : ["monthly_limit", "expires_at"],
+    )
+    const limit = fields.find((f) => f.fieldId === "monthly_limit")!
+    expect(limit.resolveLabel?.(translate)).toBe(
+      "keyManagement:native.editor.requestyMonthlyLimit",
+    )
+    expect(limit.resolvePlaceholder?.(translate)).toBe(
+      "keyManagement:native.editor.requestyMonthlyLimitPlaceholder",
+    )
+    if (mode === editorModes.Create) {
+      const manage = fields.find((f) => f.fieldId === "manage_permission")!
+      expect(manage.resolveLabel?.(translate)).toBe(
+        "keyManagement:native.editor.requestyManagePermission",
+      )
+      expect(manage.resolveHelp?.(translate)).toBe(
+        "keyManagement:native.editor.requestyManagePermissionHelp",
+      )
+    }
+  },
+)

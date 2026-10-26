@@ -94,6 +94,27 @@ jobs:
           echo "ref=$RESOLVED_SHA" >> "$GITHUB_OUTPUT"
           echo "short_sha=$(git rev-parse --short "$RESOLVED_SHA")" >> "$GITHUB_OUTPUT"
 
+      - name: Check active nightly self-update channel
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          CRX_SIGNING_KEY: ${{ secrets.CRX_SIGNING_KEY }}
+        run: |
+          if [ -n "$CRX_SIGNING_KEY" ]; then exit 0; fi
+
+          # Listing releases treats an absent nightly as inactive while still
+          # failing closed on authentication, network, or API errors.
+          assets="$(gh api --paginate "repos/$GH_REPO/releases" \
+            --jq '.[] | select(.tag_name == "nightly") | .assets[].name')"
+          while IFS= read -r asset; do
+            case "$asset" in
+              *.crx|updates.xml)
+                echo "::error::Nightly self-update is active; CRX_SIGNING_KEY is required to replace its CRX and updates.xml."
+                exit 1
+                ;;
+            esac
+          done <<< "$assets"
+
       - name: Package extension
         id: package
         uses: ./.github/actions/package-extension
@@ -103,6 +124,8 @@ jobs:
         with:
           working-directory: source
           distribution-channel: github-nightly
+          crx-signing-key: ${{ secrets.CRX_SIGNING_KEY }}
+          require-crx-self-update: ${{ vars.CRX_SELF_UPDATE_REQUIRED || 'false' }}
 
       - name: Collect build metadata
         id: metadata
@@ -174,6 +197,15 @@ jobs:
           cp "${{ steps.package.outputs.chrome-zip }}" "source/.output/nightly/all-api-hub-nightly-chrome.zip"
           cp "${{ steps.package.outputs.firefox-zip }}" "source/.output/nightly/all-api-hub-nightly-firefox.zip"
           cp "${{ steps.package.outputs.sources-zip }}" "source/.output/nightly/all-api-hub-nightly-sources.zip"
+
+          # The self-update CRX and its manifest already use fixed names that
+          # `releases/download/nightly/...` resolves to on every build.
+          crx_files=(source/.output/*.crx)
+          if [ "${#crx_files[@]}" -gt 0 ]; then
+            cp source/.output/*.crx source/.output/updates.xml source/.output/nightly/
+          else
+            echo "::warning::No self-update CRX produced; nightly keeps its ZIP-only assets."
+          fi
 
       - name: Validate Safari build inputs
         working-directory: source
@@ -265,7 +297,13 @@ jobs:
       - name: Upload nightly assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release upload nightly source/.output/nightly/*.zip --clobber
+        run: |
+          shopt -s nullglob
+          # Self-update assets are overwritten each build, so the fixed
+          # `releases/download/nightly/` URLs always serve the newest one.
+          assets=(source/.output/nightly/*.zip source/.output/nightly/*.crx)
+          if [ -f source/.output/nightly/updates.xml ]; then assets+=(source/.output/nightly/updates.xml); fi
+          gh release upload nightly "${assets[@]}" --clobber
 
       - name: Append nightly release usage notes
         working-directory: source

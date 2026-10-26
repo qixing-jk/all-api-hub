@@ -365,7 +365,9 @@ describe("TokenList batch export selection", () => {
       ),
     ).toHaveLength(1)
     expect(
-      screen.getByText(/keyManagement:batchSelection\.eligibilityNotice/),
+      screen.getByRole("button", {
+        name: "keyManagement:batchSelection.helpLabel",
+      }),
     ).toBeVisible()
   })
 
@@ -416,7 +418,9 @@ describe("TokenList batch export selection", () => {
       }),
     ).toBeNull()
     expect(
-      screen.queryByText(/keyManagement:batchSelection\.eligibilityNotice/),
+      screen.queryByRole("button", {
+        name: "keyManagement:batchSelection.helpLabel",
+      }),
     ).toBeNull()
   })
 

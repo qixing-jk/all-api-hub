@@ -19,6 +19,7 @@ const config: KnipConfig = {
     "src/entrypoints/content/index.ts!",
     // Injected by URL as a web-accessible resource, not a static import.
     "src/entrypoints/openrouter-clerk-session.ts!",
+    "src/entrypoints/requesty-management-key.ts!",
     "src/entrypoints/options/main.tsx!",
     "src/entrypoints/popup/main.tsx!",
     "src/entrypoints/sidepanel/main.tsx!",
@@ -34,6 +35,9 @@ const config: KnipConfig = {
     // Invoked by the native Safari runner; Vite loads this config by CLI path.
     "e2e/safariNativeCookie/probe.config.ts",
     "e2e/safariNativeCookie/probe.ts",
+    // Manual signing tool for a packaged ZIP into a CRX; package-distribution
+    // signs in-process, so no static import reaches this entry.
+    "scripts/sign-crx.mjs",
   ],
   project: [
     "src/**/*.{ts,tsx}!",

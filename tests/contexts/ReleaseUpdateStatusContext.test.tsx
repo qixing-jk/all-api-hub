@@ -33,6 +33,7 @@ function buildStatus(
     releaseUrl: "https://github.com/qixing-jk/all-api-hub/releases/latest",
     checkedAt: null,
     lastError: null,
+    selfUpdate: false,
     storeUpdate: {
       supported: false,
       status: "unsupported",

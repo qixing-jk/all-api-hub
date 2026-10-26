@@ -66,6 +66,15 @@ export const SPLIT_ORIGIN_DEPLOYMENTS = {
     browserHostnames: ["ai-router.dev", "www.ai-router.dev"],
     apiOrigin: "https://api.ai-router.dev",
   },
+  requesty: {
+    // The Clerk console on app.requesty.ai never proxies the management API;
+    // /v1/manage/* answers only on api-v2.requesty.ai (verified 2026-10-21,
+    // docs.requesty.ai/api-reference/management-apis). Credential is a manage
+    // key, not a cookie session, so losing current-tab eligibility is correct.
+    browserHostnames: ["app.requesty.ai"],
+    apiOrigin: "https://api-v2.requesty.ai",
+    inferenceApiOrigin: "https://router.requesty.ai",
+  },
 } as const satisfies Record<string, SplitOriginDeployment>
 
 /**

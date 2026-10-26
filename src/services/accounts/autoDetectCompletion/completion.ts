@@ -121,14 +121,14 @@ function createInitialCheckInConfig(input: {
   supported: boolean
   siteType: AccountSiteType
   siteUrl: string
+  automaticExecutionEnabled?: boolean
 }) {
   return createCompatibilityCheckInConfig({
     siteType: input.siteType,
     supported: input.supported,
-    automaticExecutionEnabled: getNewAccountAutomaticExecutionDefault(
-      input.siteType,
-      input.siteUrl,
-    ),
+    automaticExecutionEnabled:
+      input.automaticExecutionEnabled ??
+      getNewAccountAutomaticExecutionDefault(input.siteType, input.siteUrl),
     customCheckIn: {
       url: "",
       redeemUrl: "",

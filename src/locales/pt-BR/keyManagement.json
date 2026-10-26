@@ -183,9 +183,8 @@
   },
   "batchSelection": {
     "accountUnavailableReason": "Esta conta não tem chaves compatíveis com ações em lote.",
-    "eligibilityNotice_one": "Atualmente, {{count}} chave é compatível com ações em lote; as demais não serão incluídas.",
-    "eligibilityNotice_many": "Atualmente, {{count}} chaves são compatíveis com ações em lote; as demais não serão incluídas.",
-    "eligibilityNotice_other": "Atualmente, {{count}} chaves são compatíveis com ações em lote; as demais não serão incluídas.",
+    "eligibilityHint": "As ações em lote selecionam apenas chaves de inferência exportáveis. Chaves de gerenciamento e chaves cujo valor completo não está disponível são excluídas.",
+    "helpLabel": "Sobre a seleção em lote",
     "unavailableReason": "Esta chave não é compatível com ações em lote."
   },
   "createdKey": {
@@ -387,7 +386,18 @@
       "revoke": "Revogar chave",
       "rotate": "Rotacionar chave API"
     },
+    "badges": {
+      "accountCredential": "Usada por esta conta",
+      "accountManagePermission": "Chave de gerenciamento desta conta",
+      "managePermission": "Chave de gerenciamento"
+    },
+    "credentialRole": {
+      "badgeTitle": "O All API Hub usa esta chave para se conectar à conta, consultar o saldo e gerenciar chaves. Se você substituí-la, atualize a chave nas configurações da conta."
+    },
     "delete": {
+      "accountCredentialAcknowledge": "Entendo que isso interrompe o acesso de gerenciamento da conta",
+      "accountCredentialWarningDescription": "A conta perderá o acesso de gerenciamento do Requesty: listar chaves, saldo e atualizações vão falhar. A chave não pode ser recuperada aqui.",
+      "accountCredentialWarningTitle": "Excluir a credencial da conta",
       "confirm": "Excluir chave",
       "description": "Excluir permanentemente a chave de API {{name}}? Esta ação não pode ser desfeita.",
       "feedback": {
@@ -397,6 +407,7 @@
         "unavailable": "O serviço está temporariamente indisponível. Atualize antes de tentar novamente.",
         "uncertain": "O estado da chave pode ter mudado. Atualize as chaves antes de decidir se deve tentar novamente."
       },
+      "manageKeyWarning": "Esta chave tem permissão de gerenciamento. Fluxos que dependem dela perdem o acesso de gerenciamento após a exclusão.",
       "refresh": "Atualizar chaves",
       "title": "Excluir chave de API?"
     },
@@ -546,11 +557,19 @@
         "loading": "Abrindo o editor de chaves...",
         "retry": "Tentar novamente"
       },
+      "pmapi": {
+        "rpm": "Requisições por minuto",
+        "rpmHelp": "Máximo de requisições por minuto para este token; 0 significa ilimitado."
+      },
       "quotaCredits": "Créditos restantes",
       "quotaCreditsHelp": "A chave para de funcionar quando esses créditos acabam.",
       "quotaUsd": "Cota (USD)",
       "remainingCount": "Chamadas restantes",
       "remainingCountPlaceholder": "Quantas chamadas esta chave ainda permite",
+      "requestyManagePermission": "Permissão de gerenciamento",
+      "requestyManagePermissionHelp": "Esta chave pode chamar endpoints de gerenciamento e gerenciar outras chaves.",
+      "requestyMonthlyLimit": "Limite mensal (USD)",
+      "requestyMonthlyLimitPlaceholder": "0 ou vazio significa ilimitado",
       "storageLocation": "Local de armazenamento",
       "storageLocationGlobal": "Nó global",
       "storageLocationHelp": "Onde ficam as mídias geradas por esta chave.",
@@ -577,6 +596,13 @@
       "rotateDescription": "A chave antiga deixará de funcionar imediatamente. Copie a nova chave e atualize seus clientes. As demais configurações serão mantidas."
     },
     "missing": "Indisponível",
+    "permission": {
+      "accountManageBadgeTitle": "O All API Hub usa esta chave para consultar o saldo da conta e gerenciar chaves. Ela também pode criar e excluir outras chaves da organização. Após substituí-la ou excluí-la, atualize a chave nas configurações da conta.",
+      "manage": "Permissão de gerenciamento",
+      "manageBadgeTitle": "Esta chave pode chamar endpoints de gerenciamento e administrar outras chaves da organização.",
+      "manageGranted": "Pode gerenciar outras chaves",
+      "manageNotGranted": "Somente inferência"
+    },
     "revoke": {
       "description": "Revogar “{{name}}”? A chave será desativada permanentemente. O registro permanecerá até ser excluído.",
       "feedback": {

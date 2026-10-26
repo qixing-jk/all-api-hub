@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "~/components/ui"
 import { CC_SWITCH_EXPORT_TEST_IDS } from "~/features/CredentialExport/CCSwitchExportDialog.testIds"
+import { useCredentialExportDisplayName } from "~/features/CredentialExport/useCredentialExportDisplayName"
 import toast from "~/lib/notify"
 import { discoverOpenAICompatibleModels } from "~/services/aiApi/openaiCompatible"
 import {
@@ -148,7 +149,8 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
   const [app, setApp] = useState<CCSwitchApp>(DEFAULT_APP)
   const [model, setModel] = useState("")
   const [notes, setNotes] = useState("")
-  const [providerName, setProviderName] = useState(source.providerName)
+  const defaultProviderName = useCredentialExportDisplayName(source)
+  const [providerName, setProviderName] = useState(defaultProviderName)
   const [homepage, setHomepage] = useState(source.baseUrl)
   // CC Switch writes this directly to Codex's provider base_url. Model discovery
   // confirms whether the compatible route uses `/v1`; provider paths remain intact.
@@ -188,7 +190,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
       setApp(DEFAULT_APP)
       setModel("")
       setNotes(source.notes ?? "")
-      setProviderName(source.providerName)
+      setProviderName(defaultProviderName)
       setHomepage(source.baseUrl)
       setEndpoint(source.baseUrl)
       setIsEndpointCustomized(false)
@@ -196,7 +198,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
       setUpstreamModelOptions([])
       setIsLoadingModels(false)
     }
-  }, [source.baseUrl, source.id, source.providerName, source.notes, isOpen])
+  }, [defaultProviderName, isOpen, source.baseUrl, source.id, source.notes])
 
   useEffect(() => {
     if (!isOpen) return

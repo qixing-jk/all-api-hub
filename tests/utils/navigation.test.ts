@@ -1179,6 +1179,32 @@ describe("navigation utilities", () => {
     closeSpy.mockRestore()
   })
 
+  it("highlights a settings target opened in a new tab when asked to", async () => {
+    await openSettingsTabInNewTab("checkinRedeem", {
+      anchor: "auto-checkin-continue-when-verification-required",
+      highlight: true,
+      keepCurrentWindow: true,
+    })
+
+    // The receiving options page scrolls to the anchor and briefly rings the
+    // exact control, so the operator can find it without hunting.
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      `${OPTIONS_PAGE_URL}?tab=checkinRedeem&anchor=auto-checkin-continue-when-verification-required&highlight=auto-checkin-continue-when-verification-required#basic`,
+      false,
+    )
+  })
+
+  it("does not highlight a settings target opened in a new tab by default", async () => {
+    await openSettingsTabInNewTab("managedSite", {
+      anchor: "managed-site-selector",
+    })
+
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      `${OPTIONS_PAGE_URL}?tab=managedSite&anchor=managed-site-selector#basic`,
+      true,
+    )
+  })
+
   it("opens shield history in the current options page and keeps a return path", async () => {
     mockedIsExtensionPopup.mockReturnValue(false)
     window.history.replaceState(null, "", `${OPTIONS_PAGE_URL}#autoCheckin`)

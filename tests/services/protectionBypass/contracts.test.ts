@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { OPENROUTER_MANAGEMENT_KEY_LABEL_MAX_LENGTH } from "~/services/apiAdapters/openrouter/keys/managementKeyPageContract"
+import { REQUESTY_MANAGEMENT_KEY_NAME_MAX_LENGTH } from "~/services/apiAdapters/requesty/keys/managementKeyPageContract"
 import {
   getTempContextTaskMetadata,
   isAutoRefreshProtectionBypassExecution,
@@ -81,6 +82,13 @@ const canonicalTasks = [
     params: {
       requestId: "request-openrouter",
       operation: { kind: "create", label: "Example label" },
+    },
+  },
+  {
+    kind: TEMP_CONTEXT_TASK_KINDS.RequestyManagementKeyAction,
+    params: {
+      requestId: "request-requesty",
+      operation: { kind: "create", name: "Example connection" },
     },
   },
   {
@@ -345,6 +353,7 @@ describe("protection bypass runtime contracts", () => {
         "turnstile_fetch",
         "native_page_action",
         "openrouter_management_key_action",
+        "requesty_management_key_action",
         "rendered_title",
         "checkin_feedback_scan",
         "session_read",
@@ -366,6 +375,24 @@ describe("protection bypass runtime contracts", () => {
 
   it.each(canonicalTasks)("accepts canonical $kind params", (task) => {
     expect(isTempContextTask(task)).toBe(true)
+  })
+
+  it.each([
+    ["", false],
+    ["   ", false],
+    [42, false],
+    ["x".repeat(REQUESTY_MANAGEMENT_KEY_NAME_MAX_LENGTH), true],
+    ["x".repeat(REQUESTY_MANAGEMENT_KEY_NAME_MAX_LENGTH + 1), false],
+  ])("validates Requesty key name %j", (name, valid) => {
+    expect(
+      isTempContextTask({
+        kind: TEMP_CONTEXT_TASK_KINDS.RequestyManagementKeyAction,
+        params: {
+          requestId: "request-requesty",
+          operation: { kind: "create", name },
+        },
+      }),
+    ).toBe(valid)
   })
 
   it.each([

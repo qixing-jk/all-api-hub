@@ -1,0 +1,1054 @@
+import { http, HttpResponse } from "msw"
+import { describe, expect, it } from "vitest"
+
+import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
+import { SITE_TYPES } from "~/constants/siteType"
+import type { ApiServiceAccountRequest } from "~/services/accounts/accountDataModel"
+import { ACCOUNT_KEY_CREDENTIAL_ROLES } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { requestyAccountBootstrap } from "~/services/apiAdapters/requesty/account/accountBootstrap"
+import { requestyAccountCompletion } from "~/services/apiAdapters/requesty/account/accountCompletion"
+import { requestyAccountPersistence } from "~/services/apiAdapters/requesty/account/accountPersistence"
+import { requestyAccountRefresh } from "~/services/apiAdapters/requesty/account/accountRefresh"
+import { requestyCapabilities } from "~/services/apiAdapters/requesty/index"
+import { requestyAccountKeyResources } from "~/services/apiAdapters/requesty/keys/accountKeyResource"
+import {
+  createRequestyKeyEditor,
+  editRequestyKeyEditor,
+} from "~/services/apiAdapters/requesty/keys/keyEditor"
+import { requestyProviderModelCatalog } from "~/services/apiAdapters/requesty/models/providerModelCatalog"
+import { isValidProviderModelCatalogPricing } from "~/services/modelList/providerCatalogAdmission"
+import { AuthTypeEnum } from "~/types"
+import { server } from "~~/tests/msw/server"
+import { createAccountCompletionHelpersMock } from "~~/tests/services/apiAdapters/checkInFixtures"
+import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+import { atIndex } from "~~/tests/test-utils/indexedAccess"
+
+const request: ApiServiceAccountRequest = {
+  baseUrl: "https://app.requesty.ai",
+  accountId: "account-1",
+  auth: { authType: AuthTypeEnum.AccessToken, accessToken: "manage-key" },
+  checkIn: buildCheckInConfig(),
+}
+
+const ORG_URL = "https://api-v2.requesty.ai/v1/manage/org"
+const SELF_URL = "https://api-v2.requesty.ai/v1/manage/apikey/self"
+const KEYS_URL = "https://api-v2.requesty.ai/v1/manage/apikey"
+
+const EMPTY_ACCOUNT_INFO = {
+  access_token: "",
+  username: "",
+  id: "",
+  quota: 0,
+  today_prompt_tokens: 0,
+  today_completion_tokens: 0,
+  today_quota_consumption: 0,
+  today_requests_count: 0,
+  today_income: 0,
+}
+
+describe("requestyAccountBootstrap", () => {
+  it("does not mistake a numeric request hint for organization identity", async () => {
+    server.use(
+      http.get(ORG_URL, () =>
+        HttpResponse.json({ name: "Engineering", balance: "1" }),
+      ),
+      http.get("https://api-v2.requesty.ai/v1/manage/group", () =>
+        HttpResponse.json({ groups: [] }),
+      ),
+    )
+    await expect(
+      requestyAccountBootstrap.fetchUserInfo({
+        ...request,
+        auth: { ...request.auth, userId: 123 },
+      }),
+    ).resolves.toMatchObject({ id: expect.stringMatching(/^requesty:.+/) })
+  })
+  it.each([200, 403])(
+    "keeps an unknown organization local through detect and save (%s)",
+    async (status) => {
+      server.use(
+        http.get(ORG_URL, () =>
+          HttpResponse.json({ name: "Engineering", balance: "1" }),
+        ),
+        http.get("https://api-v2.requesty.ai/v1/manage/group", () =>
+          HttpResponse.json({ groups: [] }, { status }),
+        ),
+      )
+      const detected = await requestyAccountBootstrap.fetchUserInfo(request)
+      expect(detected.username).toBe("Engineering")
+      expect(detected.id).toMatch(/^requesty:.+/)
+      await expect(
+        requestyAccountPersistence.prepareIdentity({
+          accessToken: "manage-key",
+          userId: detected.id,
+        }),
+      ).resolves.toBe(detected.id)
+      await expect(
+        requestyAccountBootstrap.fetchUserInfo({
+          ...request,
+          auth: { ...request.auth, userId: detected.id },
+        }),
+      ).resolves.toMatchObject({ id: detected.id })
+      // Another independent account cannot inherit identity just from its name.
+      const independent = await requestyAccountBootstrap.fetchUserInfo(request)
+      expect(independent.id).not.toBe(detected.id)
+    },
+  )
+  it("keeps organization identity and display name stable across different keys", async () => {
+    server.use(
+      http.get(SELF_URL, () =>
+        HttpResponse.json({
+          id: "6f09e3c5-9bbc-4fe4-aa14-d6cfcba92f24",
+          name: "hub-probe",
+          monthly_limit: "0",
+          monthly_spend: "0",
+          permissions: { manage: "write", completions: "write" },
+        }),
+      ),
+      http.get(ORG_URL, () =>
+        HttpResponse.json({ name: "example-org", balance: "1" }),
+      ),
+      http.get("https://api-v2.requesty.ai/v1/manage/group", () =>
+        HttpResponse.json({ groups: [{ organization_id: "org-123" }] }),
+      ),
+    )
+    await expect(
+      requestyAccountBootstrap.fetchUserInfo(request),
+    ).resolves.toMatchObject({
+      username: "example-org",
+      id: "org-123",
+      access_token: "manage-key",
+    })
+    await expect(
+      requestyAccountBootstrap.fetchUserInfo({
+        ...request,
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "rotated-key",
+        },
+      }),
+    ).resolves.toMatchObject({
+      username: "example-org",
+      id: "org-123",
+      access_token: "rotated-key",
+    })
+  })
+
+  it("declares check-in unsupported", async () => {
+    await expect(
+      requestyAccountBootstrap.fetchCheckInSupport(request, {}),
+    ).resolves.toBe(false)
+    await expect(
+      requestyAccountBootstrap.loadBootstrapFacts(request),
+    ).resolves.toMatchObject({
+      displayName: "Requesty",
+      checkInSupported: false,
+    })
+  })
+})
+
+describe("requestyAccountPersistence", () => {
+  it("does not carry an unknown identity across credential replacement", async () => {
+    server.use(
+      http.get(ORG_URL, () =>
+        HttpResponse.json({ name: "Engineering", balance: "1" }),
+      ),
+      http.get("https://api-v2.requesty.ai/v1/manage/group", () =>
+        HttpResponse.json({ groups: [] }),
+      ),
+    )
+    const id = await requestyAccountPersistence.prepareIdentity({
+      accessToken: "rotated-key",
+      userId: "requesty:previous",
+      existingAccount: {
+        site_type: SITE_TYPES.REQUESTY,
+        account_info: {
+          ...EMPTY_ACCOUNT_INFO,
+          id: "requesty:previous",
+          access_token: "manage-key",
+        },
+      },
+    })
+    expect(id).toMatch(/^requesty:.+/)
+    expect(id).not.toBe("requesty:previous")
+  })
+  it("derives the stored identity from the credential's organization", async () => {
+    server.use(
+      http.get(ORG_URL, () =>
+        HttpResponse.json({ name: "Engineering", balance: "1" }),
+      ),
+      http.get("https://api-v2.requesty.ai/v1/manage/group", () =>
+        HttpResponse.json({ groups: [{ organization_id: "org-123" }] }),
+      ),
+    )
+    await expect(
+      requestyAccountPersistence.prepareIdentity({
+        accessToken: "manage-key",
+        userId: "",
+      }),
+    ).resolves.toBe("org-123")
+  })
+
+  it("keeps identity stable when editing without replacing the credential", async () => {
+    await expect(
+      requestyAccountPersistence.prepareIdentity({
+        accessToken: " manage-key ",
+        userId: "",
+        existingAccount: {
+          site_type: SITE_TYPES.REQUESTY,
+          account_info: {
+            ...EMPTY_ACCOUNT_INFO,
+            id: "org-123",
+            access_token: "manage-key",
+          },
+        },
+      }),
+    ).resolves.toBe("org-123")
+  })
+
+  it.each(["org-123", "org-other"])(
+    "resolves the replacement credential's organization (%s) despite stale form identity",
+    async (orgId) => {
+      server.use(
+        http.get(ORG_URL, () =>
+          HttpResponse.json({ name: "Engineering", balance: "1" }),
+        ),
+        http.get(
+          "https://api-v2.requesty.ai/v1/manage/group",
+          ({ request }) => {
+            expect(request.headers.get("Authorization")).toBe(
+              "Bearer rotated-key",
+            )
+            return HttpResponse.json({ groups: [{ organization_id: orgId }] })
+          },
+        ),
+      )
+      await expect(
+        requestyAccountPersistence.prepareIdentity({
+          accessToken: "rotated-key",
+          userId: "org-123",
+          existingAccount: {
+            site_type: SITE_TYPES.REQUESTY,
+            account_info: {
+              ...EMPTY_ACCOUNT_INFO,
+              id: "org-123",
+              access_token: "manage-key",
+            },
+          },
+        }),
+      ).resolves.toBe(orgId)
+    },
+  )
+
+  it("is registered on the site capabilities", () => {
+    expect(requestyCapabilities.account?.persistence).toBe(
+      requestyAccountPersistence,
+    )
+  })
+})
+
+describe("requestyAccountCompletion", () => {
+  const { helpers } = createAccountCompletionHelpersMock(SITE_TYPES.REQUESTY, {
+    automaticExecutionEnabled: false,
+  })
+
+  it("fails with the documented reason when no token is available", async () => {
+    await expect(
+      requestyAccountCompletion.complete(
+        {
+          url: "https://app.requesty.ai",
+          requestedAuthType: AuthTypeEnum.AccessToken,
+          detected: {
+            userId: "",
+            user: {},
+            siteType: SITE_TYPES.REQUESTY,
+          },
+          context: {},
+        },
+        helpers,
+      ),
+    ).rejects.toMatchObject({
+      reason: AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing,
+    })
+  })
+})
+
+describe("requestyAccountRefresh", () => {
+  it("returns healthy data for a valid key", async () => {
+    server.use(
+      http.get(ORG_URL, () =>
+        HttpResponse.json({ name: "example-org", balance: "7.25" }),
+      ),
+    )
+    const result = await requestyAccountRefresh.refreshAccount(request)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.quota).toBe(3_625_000)
+      expect(result.data.nativeBalance).toBeUndefined()
+    }
+  })
+
+  it("classifies an invalid token failure", async () => {
+    server.use(
+      http.get(ORG_URL, () =>
+        HttpResponse.json(
+          {
+            error: { origin: "api-v2", message: "Invalid authorization token" },
+          },
+          { status: 401 },
+        ),
+      ),
+    )
+    const result = await requestyAccountRefresh.refreshAccount(request)
+    expect(result.success).toBe(false)
+  })
+
+  it("refuses to follow a redirect on the credentialed management request", async () => {
+    let redirectMode: RequestRedirect | undefined
+    server.use(
+      http.get(ORG_URL, ({ request: fetchRequest }) => {
+        redirectMode = fetchRequest.redirect
+        return HttpResponse.json({ name: "example-org", balance: "7.25" })
+      }),
+    )
+
+    await requestyAccountRefresh.refreshAccount(request)
+
+    // The manage key travels in `Authorization`; following a redirect would
+    // hand it to whatever origin the provider answers with.
+    expect(redirectMode).toBe("error")
+  })
+})
+
+describe("requestyAccountKeyResources", () => {
+  it.each(["readback", "second write"])(
+    "does not claim an edit was unapplied after a successful write and failed %s",
+    async (failureStage) => {
+      let monthlyLimit = 5
+      let detailReads = 0
+      const detail = () => ({
+        id: "example",
+        name: "example",
+        monthly_limit: String(monthlyLimit),
+        monthly_spend: "0",
+        created_at: "2026-10-21T12:21:41.958098Z",
+        permissions: { manage: "none", completions: "write" },
+      })
+      server.use(
+        http.get(`${KEYS_URL}/example`, () => {
+          detailReads++
+          return failureStage === "readback" && detailReads > 1
+            ? HttpResponse.json(
+                { error: { message: "read denied" } },
+                { status: 403 },
+              )
+            : HttpResponse.json(detail())
+        }),
+        http.post(`${KEYS_URL}/example/limit`, () => {
+          monthlyLimit = 7
+          return new HttpResponse(null, { status: 200 })
+        }),
+        http.post(`${KEYS_URL}/example/expiry`, () =>
+          HttpResponse.json(
+            { error: { message: "expiry rejected" } },
+            { status: 400 },
+          ),
+        ),
+      )
+      const session = await requestyAccountKeyResources.open({
+        account: { id: "account-1", siteType: SITE_TYPES.REQUESTY },
+        request,
+      })
+      const collection = await session.openCollection("default")
+      const editor = await collection.openEditEditor({
+        accountId: "account-1",
+        siteType: SITE_TYPES.REQUESTY,
+        scopeKey: "default",
+        resourceId: "example",
+      })
+      await expect(
+        editor.submit({ monthly_limit: 7, expires_at: "2099-01-01T00:00:00Z" }),
+      ).rejects.toMatchObject({
+        failure: { code: "mutation_state_uncertain" },
+      })
+      expect(monthlyLimit).toBe(7)
+    },
+  )
+  it.each([
+    [401, "authentication_failed"],
+    [403, "permission_denied"],
+    [404, "not_found"],
+    [500, "unavailable"],
+  ])(
+    "preserves a detail lookup failure (%s) instead of claiming the key disappeared",
+    async (status, code) => {
+      server.use(
+        http.get(`${KEYS_URL}/example`, () =>
+          HttpResponse.json(
+            { error: { message: "upstream failure" } },
+            { status: Number(status) },
+          ),
+        ),
+      )
+      const session = await requestyAccountKeyResources.open({
+        account: {
+          id: "account-1",
+          name: "example-org",
+          siteType: SITE_TYPES.REQUESTY,
+        },
+        request,
+      })
+      const collection = await session.openCollection("default")
+      await expect(
+        collection.get({
+          accountId: "account-1",
+          siteType: SITE_TYPES.REQUESTY,
+          scopeKey: "default",
+          resourceId: "example",
+        }),
+      ).rejects.toMatchObject({ failure: { code } })
+    },
+  )
+  it("only offers expiry through editing, where the upstream expiry update is implemented", () => {
+    const editor = createRequestyKeyEditor()
+    expect(editor.fields.some((field) => field.fieldId === "expires_at")).toBe(
+      false,
+    )
+  })
+  it("validates edit values without the create-only name field", () => {
+    const editor = editRequestyKeyEditor({
+      id: "key-1",
+      name: "existing",
+      monthlyLimit: 5,
+      monthlySpend: 0,
+      permissions: { manage: "none", completions: "write" },
+      labels: {},
+      createdAt: "2026-10-21T12:21:41.958098Z",
+    })
+    // The edit editor renders only the limit and expiry; the name is not
+    // editable and must not fail validation by being absent.
+    const result = editor.validate({
+      monthly_limit: 7,
+      expires_at: "",
+    })
+    expect(result.valid).toBe(true)
+    expect(editor.buildCommand({ monthly_limit: 7, expires_at: "" })).toEqual({
+      monthlyLimit: 7,
+    })
+  })
+
+  it("does not rewrite an unchanged expiry that only differs in formatting", () => {
+    // The editor restores the raw provider value when the field is untouched, so
+    // an instant comparison keeps a fractional-second value from looking edited
+    // and calling the expiry endpoint during a limit-only change.
+    const editor = editRequestyKeyEditor({
+      id: "key-1",
+      name: "existing",
+      monthlyLimit: 5,
+      monthlySpend: 0,
+      expiresAt: "2099-01-01T00:00:00.123456Z",
+      permissions: { manage: "none", completions: "write" },
+      labels: {},
+      createdAt: "2026-10-21T12:21:41.958098Z",
+    })
+    expect(
+      editor.buildCommand({
+        monthly_limit: 7,
+        expires_at: "2099-01-01T00:00:00.123456Z",
+      }),
+    ).toEqual({ monthlyLimit: 7 })
+    // A real change still writes the normalized instant.
+    expect(
+      editor.buildCommand({
+        monthly_limit: 7,
+        expires_at: "2099-02-01T00:00:00Z",
+      }),
+    ).toEqual({
+      monthlyLimit: 7,
+      expiresAt: "2099-02-01T00:00:00.000Z",
+    })
+  })
+
+  it("lists keys with unlimited limit facts", async () => {
+    server.use(
+      http.get(KEYS_URL, () =>
+        HttpResponse.json({
+          keys: [
+            {
+              id: "6f09e3c5-9bbc-4fe4-aa14-d6cfcba92f24",
+              name: "hub-probe",
+              monthly_limit: "0",
+              monthly_spend: "1.25",
+              created_at: "2026-10-21T12:21:41.958098Z",
+              permissions: { manage: "write", completions: "write" },
+            },
+          ],
+        }),
+      ),
+      http.get(SELF_URL, () =>
+        HttpResponse.json({
+          id: "6f09e3c5-9bbc-4fe4-aa14-d6cfcba92f24",
+          name: "hub-probe",
+          monthly_limit: "0",
+          monthly_spend: "1.25",
+          created_at: "2026-10-21T12:21:41.958098Z",
+          permissions: { manage: "write", completions: "write" },
+        }),
+      ),
+    )
+    const session = await requestyAccountKeyResources.open({
+      account: {
+        id: "account-1",
+        name: "example-org",
+        siteType: SITE_TYPES.REQUESTY,
+      },
+      request,
+    })
+    const scopes = await session.listScopes()
+    expect(scopes).toEqual([
+      {
+        scopeKey: "default",
+        routeKey: "default",
+        displayName: "Requesty",
+        isDefault: true,
+      },
+    ])
+    const collection = await session.openCollection("default")
+    const page = await collection.list()
+    expect(page.items).toHaveLength(1)
+    const item = atIndex(page.items, 0)
+    expect(item.displayName).toBe("hub-probe")
+    expect(item.actions.canRotate).toBe(false)
+    // `self` resolves to the calling key: that row is the account's own
+    // credential and a manage key, both surfaced as provider facts.
+    expect(item.credentialRole).toBe(ACCOUNT_KEY_CREDENTIAL_ROLES.Account)
+    expect(
+      item.displayFacts?.find((fact) => fact.kind === "permission"),
+    ).toEqual({
+      fieldId: "permissions",
+      kind: "permission",
+      role: "manage",
+      granted: true,
+    })
+  })
+
+  it("marks only the calling key and reports keys without management access", async () => {
+    server.use(
+      http.get(KEYS_URL, () =>
+        HttpResponse.json({
+          keys: [
+            {
+              id: "11111111-1111-4111-8111-111111111111",
+              name: "other-tool",
+              monthly_limit: "10",
+              monthly_spend: "0",
+              created_at: "2026-10-21T12:21:41.958098Z",
+              permissions: { manage: "none", completions: "write" },
+            },
+            {
+              id: "22222222-2222-4222-8222-222222222222",
+              name: "account-credential",
+              monthly_limit: "0",
+              monthly_spend: "0",
+              created_at: "2026-10-21T12:21:41.958098Z",
+              permissions: { manage: "write", completions: "write" },
+            },
+          ],
+        }),
+      ),
+      http.get(SELF_URL, () =>
+        HttpResponse.json({
+          id: "22222222-2222-4222-8222-222222222222",
+          name: "account-credential",
+          monthly_limit: "0",
+          monthly_spend: "0",
+          created_at: "2026-10-21T12:21:41.958098Z",
+          permissions: { manage: "write", completions: "write" },
+        }),
+      ),
+    )
+    const session = await requestyAccountKeyResources.open({
+      account: {
+        id: "account-1",
+        name: "example-org",
+        siteType: SITE_TYPES.REQUESTY,
+      },
+      request,
+    })
+    const collection = await session.openCollection("default")
+    const page = await collection.list()
+    const [otherKey, credentialKey] = page.items
+    expect(otherKey?.credentialRole).toBeUndefined()
+    expect(
+      otherKey?.displayFacts?.find((fact) => fact.kind === "permission"),
+    ).toMatchObject({ granted: false })
+    expect(credentialKey?.credentialRole).toBe(
+      ACCOUNT_KEY_CREDENTIAL_ROLES.Account,
+    )
+  })
+
+  it("still lists keys when the self route is unavailable", async () => {
+    server.use(
+      http.get(KEYS_URL, () =>
+        HttpResponse.json({
+          keys: [
+            {
+              id: "33333333-3333-4333-8333-333333333333",
+              name: "hub-probe",
+              monthly_limit: "0",
+              monthly_spend: "0",
+              created_at: "2026-10-21T12:21:41.958098Z",
+              permissions: { manage: "write", completions: "write" },
+            },
+          ],
+        }),
+      ),
+      http.get(SELF_URL, () => HttpResponse.json({}, { status: 403 })),
+    )
+    const session = await requestyAccountKeyResources.open({
+      account: {
+        id: "account-1",
+        name: "example-org",
+        siteType: SITE_TYPES.REQUESTY,
+      },
+      request,
+    })
+    const collection = await session.openCollection("default")
+    const page = await collection.list()
+    expect(page.items).toHaveLength(1)
+    expect(atIndex(page.items, 0).credentialRole).toBeUndefined()
+  })
+})
+
+describe("requestyProviderModelCatalog", () => {
+  it("adapts per-token prices and marks the catalog provider-wide", async () => {
+    server.use(
+      http.get("https://router.requesty.ai/v1/models", () =>
+        HttpResponse.json({
+          object: "list",
+          data: [
+            {
+              id: "minimaxi/minimax-m3.1-flash",
+              input_price: 1.5e-7,
+              output_price: 6e-7,
+              cached_price: 1.5e-8,
+              context_window: 1000000,
+              supports_caching: true,
+              supports_vision: true,
+              supports_reasoning: true,
+              supports_tool_calling: true,
+            },
+          ],
+        }),
+      ),
+    )
+    const response = await requestyProviderModelCatalog.fetchPricing({})
+    expect(response.data).toHaveLength(1)
+    const model = atIndex(response.data, 0)
+    expect(model.model_name).toBe("minimaxi/minimax-m3.1-flash")
+    // Per-token quotes stay in token units; the engine scales them.
+    expect(model.pricingPlan?.rates.input?.amount).toBe(1.5e-7)
+    expect(model.pricingPlan?.rates.output?.amount).toBe(6e-7)
+    expect(model.pricingPlan?.rates.cacheRead?.amount).toBe(1.5e-8)
+    expect(model.price_metadata.precision).toBe("exact")
+    expect(response.model_list_source.supportsPricing).toBe(true)
+  })
+
+  it("satisfies the provider catalog admission boundary for live-shaped rows", async () => {
+    server.use(
+      http.get("https://router.requesty.ai/v1/models", () =>
+        HttpResponse.json({
+          object: "list",
+          data: [
+            {
+              // A cached price exercises the cache meter; the trailing
+              // whitespace in the description mirrors the live catalog.
+              id: "deepinfra/Qwen/Qwen3-Coder-480B-A35B-Instruct",
+              description: "Flagship open-weight coding model. ",
+              input_price: 4e-7,
+              output_price: 1.6e-6,
+              cached_price: 4e-7,
+              context_window: 1000000,
+              supports_caching: true,
+              supports_vision: false,
+              supports_reasoning: false,
+              supports_tool_calling: true,
+            },
+            {
+              id: "unknown/model",
+              input_price: -1,
+              output_price: -1,
+            },
+          ],
+        }),
+      ),
+    )
+    const response = await requestyProviderModelCatalog.fetchPricing({})
+    expect(
+      isValidProviderModelCatalogPricing(response, SITE_TYPES.REQUESTY),
+    ).toBe(true)
+    const priced = atIndex(response.data, 0)
+    // Exact quotes carry the canonical per-million-token prices.
+    const tokenPrices = priced.token_price_usd_per_million
+    expect(tokenPrices?.input).toBeCloseTo(0.4, 12)
+    expect(tokenPrices?.output).toBeCloseTo(1.6, 12)
+    expect(tokenPrices?.cache_read).toBeCloseTo(0.4, 12)
+  })
+
+  it("marks missing prices unavailable instead of guessing", async () => {
+    server.use(
+      http.get("https://router.requesty.ai/v1/models", () =>
+        HttpResponse.json({
+          object: "list",
+          data: [
+            {
+              id: "unknown/model",
+              input_price: -1,
+              output_price: -1,
+            },
+          ],
+        }),
+      ),
+    )
+    const response = await requestyProviderModelCatalog.fetchPricing({})
+    const model = atIndex(response.data, 0)
+    expect(model.price_metadata.unavailable_reason).toBeDefined()
+  })
+
+  it.each([null, "", undefined])(
+    "does not turn an absent primary price (%s) into a free model",
+    async (price) => {
+      server.use(
+        http.get("https://router.requesty.ai/v1/models", () =>
+          HttpResponse.json({
+            data: [
+              { id: "unknown/model", input_price: price, output_price: 0 },
+            ],
+          }),
+        ),
+      )
+      const response = await requestyProviderModelCatalog.fetchPricing({})
+      const model = atIndex(response.data, 0)
+      expect(model.price_metadata.precision).toBe("unavailable")
+      expect(model.pricingPlan?.rates).toEqual({})
+    },
+  )
+})
+
+describe("requesty inference eligibility", () => {
+  const listWith = async (
+    manage: string,
+    completions: string | null = "write",
+    expiresAt?: string,
+  ) => {
+    server.use(
+      http.get(KEYS_URL, () =>
+        HttpResponse.json({
+          keys: [
+            {
+              id: "44444444-4444-4444-8444-444444444444",
+              name: "example",
+              monthly_limit: "10",
+              monthly_spend: "4",
+              created_at: "2026-10-21T12:21:41.958098Z",
+              permissions: { manage, completions },
+              expires_at: expiresAt,
+            },
+          ],
+        }),
+      ),
+      http.get(SELF_URL, () =>
+        HttpResponse.json({
+          id: "55555555-5555-4555-8555-555555555555",
+          name: "other",
+          monthly_limit: "0",
+          monthly_spend: "0",
+          created_at: "2026-10-21T12:21:41.958098Z",
+          permissions: { manage: "write", completions: "write" },
+        }),
+      ),
+    )
+    const session = await requestyAccountKeyResources.open({
+      account: {
+        id: "account-1",
+        name: "example-org",
+        siteType: SITE_TYPES.REQUESTY,
+      },
+      request,
+    })
+    const collection = await session.openCollection("default")
+    const page = await collection.list()
+    return atIndex(page.items, 0)
+  }
+
+  it("marks a manage key as non-inference even though it may answer completions", async () => {
+    const item = await listWith("write")
+    expect(item.runtimeKey?.inference).toBe(false)
+  })
+
+  it("keeps an ordinary key eligible for inference", async () => {
+    const item = await listWith("none")
+    expect(item.runtimeKey?.inference).toBe(true)
+  })
+
+  it.each(["none", "read", "unknown", null])(
+    "does not offer inference when completions permission is %s",
+    async (permission) => {
+      const item = await listWith("none", permission)
+      expect(item.runtimeKey?.inference).toBe(false)
+    },
+  )
+
+  it("reports the monthly cap as a total instead of a remaining balance", async () => {
+    const item = await listWith("none")
+    expect(item.displayFacts).toContainEqual({
+      fieldId: "monthly_limit",
+      kind: "money",
+      role: "total",
+      amountUsd: 10,
+      unlimited: false,
+    })
+  })
+
+  it("reports a key with an elapsed expiry as expired", async () => {
+    const item = await listWith("none", "write", "2000-01-01T00:00:00Z")
+    expect(item.status).toBe("expired")
+  })
+})
+
+describe("requesty key editor fields", () => {
+  const detail = {
+    id: "key-1",
+    name: "existing",
+    monthlyLimit: 5,
+    monthlySpend: 0,
+    permissions: { manage: "none", completions: "write" },
+    labels: {},
+    createdAt: "2026-10-21T12:21:41.958098Z",
+  }
+
+  it("requires a name before validating the rest of a create", () => {
+    const editor = createRequestyKeyEditor("  ")
+    // A blank hint falls back to the shared auto-provision name.
+    expect(editor.initialValues).toMatchObject({
+      name: "default key (auto)",
+      monthly_limit: "",
+      manage_permission: false,
+    })
+    expect(
+      editor.validate({ name: "", monthly_limit: "", expires_at: "" }),
+    ).toEqual({
+      valid: false,
+      issues: [{ fieldId: "name", code: "required" }],
+    })
+    expect(
+      editor.validate({ name: "key", monthly_limit: "5", expires_at: "" }),
+    ).toEqual({ valid: true })
+  })
+
+  it("reports an unusable limit and expiry together", () => {
+    const editor = createRequestyKeyEditor("hint")
+    expect(
+      editor.validate({
+        name: "key",
+        monthly_limit: "not-a-number",
+        expires_at: "not-a-date",
+      }),
+    ).toEqual({
+      valid: false,
+      issues: [
+        { fieldId: "monthly_limit", code: "invalid_value" },
+        { fieldId: "expires_at", code: "invalid_value" },
+      ],
+    })
+  })
+
+  it("treats an empty cap as unlimited and a non-boolean permission as false", () => {
+    const editor = createRequestyKeyEditor("hint")
+    // An empty field is "no cap": 0 is Requesty's unlimited value, and the
+    // request builder omits the field for 0.
+    expect(
+      editor.buildCommand({
+        name: "  created  ",
+        monthly_limit: "",
+        manage_permission: "yes",
+      }),
+    ).toEqual({ name: "created", monthlyLimit: 0, managePermission: false })
+    expect(
+      editor.buildCommand({
+        name: "created",
+        monthly_limit: "5",
+        manage_permission: true,
+      }),
+    ).toEqual({ name: "created", monthlyLimit: 5, managePermission: true })
+  })
+
+  it("clears an expiry the user emptied", () => {
+    const editor = editRequestyKeyEditor({
+      ...detail,
+      expiresAt: "2099-01-01T00:00:00Z",
+    })
+    expect(editor.buildCommand({ monthly_limit: 5, expires_at: "" })).toEqual({
+      expiresAt: "",
+    })
+  })
+
+  it("keeps an unexpiring key unexpiring when the field stays empty", () => {
+    const editor = editRequestyKeyEditor(detail)
+    expect(editor.buildCommand({ monthly_limit: 5, expires_at: "" })).toEqual(
+      {},
+    )
+  })
+})
+
+describe("requestyProviderModelCatalog pricing variants", () => {
+  it("omits cache and window facts when the provider does not quote them", async () => {
+    server.use(
+      http.get("https://router.requesty.ai/v1/models", () =>
+        HttpResponse.json({
+          object: "list",
+          data: [
+            {
+              // No cached quote and no context window: neither must be invented.
+              id: "vendor/plain-model",
+              input_price: 2e-7,
+              output_price: 8e-7,
+            },
+          ],
+        }),
+      ),
+    )
+
+    const response = await requestyProviderModelCatalog.fetchPricing({})
+    const model = atIndex(response.data, 0)
+    expect(model.pricingPlan?.rates.cacheRead).toBeUndefined()
+    expect(model.pricingPlan?.limits).toBeUndefined()
+    expect(model.token_price_usd_per_million?.cache_read).toBeUndefined()
+    expect(model.token_price_usd_per_million?.input).toBeCloseTo(0.2, 12)
+  })
+})
+
+describe("Requesty key lifecycle through resource sessions", () => {
+  const ref = {
+    accountId: "account-1",
+    siteType: SITE_TYPES.REQUESTY,
+    scopeKey: "default",
+    resourceId: "created-key",
+  } as const
+  const detail = {
+    id: "created-key",
+    name: "Client",
+    monthly_limit: "7",
+    monthly_spend: "0",
+    permissions: { manage: "none", completions: "write" },
+    created_at: "2026-10-21T12:00:00Z",
+  }
+  const open = () =>
+    requestyAccountKeyResources.open({
+      account: { id: "account-1", siteType: SITE_TYPES.REQUESTY },
+      request,
+    })
+
+  it.each([false, true])(
+    "creates a key with explicit management permission %s and a one-time secret",
+    async (manage) => {
+      let body: unknown
+      server.use(
+        http.post(KEYS_URL, async ({ request }) => {
+          body = await request.json()
+          return HttpResponse.json({
+            api_key_id: "created-key",
+            api_key: "one-time-secret",
+          })
+        }),
+      )
+      const session = await open()
+      expect(await session.resolveDefaultScope()).toMatchObject({
+        scopeKey: "default",
+      })
+      const editor = await session.openCreateEditor("default", undefined, {
+        nameHint: "Client",
+      })
+      expect(editor.initialValues.name).toBe("Client")
+      const result = await editor.submit({
+        ...editor.initialValues,
+        monthly_limit: 7,
+        manage_permission: manage,
+      })
+      expect(body).toEqual({
+        name: "Client",
+        monthly_limit: 7,
+        permissions: {
+          manage: manage ? "write" : "none",
+          completions: "write",
+        },
+      })
+      expect(result.createdSecret).toMatchObject({
+        secret: "one-time-secret",
+        credential: { accountName: "Requesty" },
+      })
+    },
+  )
+
+  it.each([403, 500])(
+    "preserves create failure certainty for HTTP %s",
+    async (status) => {
+      server.use(http.post(KEYS_URL, () => HttpResponse.json({}, { status })))
+      const editor = await (await open()).openCreateEditor("default")
+      await expect(
+        editor.submit({ ...editor.initialValues, name: "Client" }),
+      ).rejects.toMatchObject({
+        failure: {
+          code:
+            status === 403 ? "permission_denied" : "mutation_state_uncertain",
+        },
+      })
+    },
+  )
+
+  it("reads detail and confirms a limit edit through readback", async () => {
+    let limit = "7"
+    server.use(
+      http.get(`${KEYS_URL}/created-key`, () =>
+        HttpResponse.json({ ...detail, monthly_limit: limit }),
+      ),
+      http.post(`${KEYS_URL}/created-key/limit`, () => {
+        limit = "9"
+        return new HttpResponse(null, { status: 200 })
+      }),
+    )
+    const collection = await (await open()).openCollection("default")
+    expect(await collection.get(ref)).toMatchObject({ displayName: "Client" })
+    const editor = await collection.openEditEditor(ref)
+    await editor.submit({ ...editor.initialValues, monthly_limit: 9 })
+    expect(await collection.get(ref)).toMatchObject({
+      fields: expect.arrayContaining([
+        { fieldId: "monthly_limit", kind: "number", value: 9 },
+      ]),
+    })
+  })
+
+  it.each([200, 403, 500])(
+    "handles delete HTTP %s without claiming an uncertain write failed safely",
+    async (status) => {
+      server.use(
+        http.delete(
+          `${KEYS_URL}/created-key`,
+          () => new HttpResponse(null, { status }),
+        ),
+      )
+      const collection = await (await open()).openCollection("default")
+      const result = collection.delete(ref, {
+        signal: new AbortController().signal,
+      })
+      if (status === 200) await expect(result).resolves.toBeUndefined()
+      else
+        await expect(result).rejects.toMatchObject({
+          failure: {
+            code:
+              status === 403 ? "permission_denied" : "mutation_state_uncertain",
+          },
+        })
+    },
+  )
+})

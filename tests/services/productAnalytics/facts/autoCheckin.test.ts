@@ -179,6 +179,7 @@ describe("auto-checkin product analytics", () => {
         globalEnabled: true,
         pretriggerDailyOnUiOpen: true,
         notifyUiOnCompletion: true,
+        continueWhenVerificationRequired: false,
         windowStart: "23:45",
         windowEnd: "00:15",
         scheduleMode: AUTO_CHECKIN_SCHEDULE_MODE.DETERMINISTIC,

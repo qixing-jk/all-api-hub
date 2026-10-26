@@ -746,6 +746,7 @@
       "checkFailed": "Try checking for updates again.",
       "manualUpdate": "This install is updated manually. Open the release page to get the new version.",
       "manualUpdateGeneric": "Update through your current install channel, or open the release page if you need to update manually.",
+      "selfUpdate": "This install updates itself. The browser fetches new versions from the release page, so no download is needed.",
       "storeUpdate": "Store installs update automatically through the browser. Wait for the store rollout.",
       "storeUpdateReady": "The browser found a store update. Reload the extension to start using the new version.",
       "unavailable": "Try checking for updates again."
@@ -756,6 +757,7 @@
     "states": {
       "checkFailed": "Could not check for updates",
       "notChecked": "The latest stable release has not been checked yet. Run a manual check to compare versions",
+      "selfUpdatePending": "A newer version exists. The browser will install it automatically",
       "storeUpdatePending": "Waiting for the store update",
       "storeUpdateReady": "Update ready to apply",
       "unavailable": "Update status unavailable",
@@ -765,7 +767,8 @@
     "versionBadge": {
       "changelogAriaLabel": "Version {{version}} changelog",
       "updateAvailableAriaLabel": "Version {{version}} update available"
-    }
+    },
+    "viewReleaseNotes": "View release notes"
   },
   "siteAnnouncementNotifications": {
     "description": "Controls whether enabled account sites are checked for site announcements in the background.",

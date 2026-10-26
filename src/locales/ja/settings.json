@@ -745,6 +745,7 @@
       "checkFailed": "もう一度更新を確認してください。",
       "manualUpdate": "現在のインストールは手動更新です。リリースページから新しいバージョンを取得してください。",
       "manualUpdateGeneric": "現在のインストール経路で更新してください。必要ならリリースページから手動更新してください。",
+      "selfUpdate": "このインストールは自動更新されます。ブラウザーがリリースページから新しいバージョンを取得するため、手動ダウンロードは不要です。",
       "storeUpdate": "ストア版はブラウザーが自動更新します。ストアでの配信をお待ちください。",
       "storeUpdateReady": "ブラウザがストア更新を検出しました。拡張機能を再読み込みすると新しいバージョンを使用できます。",
       "unavailable": "もう一度更新を確認してください。"
@@ -755,6 +756,7 @@
     "states": {
       "checkFailed": "更新を確認できませんでした",
       "notChecked": "最新安定版はまだ確認していません。手動チェックで比較できます",
+      "selfUpdatePending": "新しいバージョンがあります。ブラウザーが自動的にインストールします",
       "storeUpdatePending": "ストアでの更新を待っています",
       "storeUpdateReady": "更新の準備ができました",
       "unavailable": "更新状況を取得できません",
@@ -764,7 +766,8 @@
     "versionBadge": {
       "changelogAriaLabel": "バージョン {{version}} の更新履歴",
       "updateAvailableAriaLabel": "バージョン {{version}} に更新があります"
-    }
+    },
+    "viewReleaseNotes": "リリースノートを見る"
   },
   "siteAnnouncementNotifications": {
     "description": "有効なアカウントのサイト公告をバックグラウンドで定期取得するかどうかを制御します。",

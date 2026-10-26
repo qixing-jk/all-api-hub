@@ -185,6 +185,8 @@
     "label": "Aviso de riscos do check-in automático"
   },
   "settings": {
+    "continueWhenVerificationRequired": "Tentar na página se a verificação bloquear o check-in",
+    "continueWhenVerificationRequiredDesc": "Desativado por padrão. Quando ativado, apenas tenta abrir a página e clicar no botão de check-in. Geralmente você ainda precisa resolver um CAPTCHA; o sucesso não é garantido. Ative lembretes em “Assistência para verificação de site → Quando a verificação precisa de você”. Quando desativado, esta tentativa termina sem abrir a página. Cada conta pode alterar este ajuste.",
     "deterministicTimeDesc": "Escolha o horário exato (HH:mm) para iniciar o check-in quando o modo determinístico estiver habilitado.",
     "deterministicTimeTitle": "Horário fixo",
     "enable": "Habilitar check-in automático",

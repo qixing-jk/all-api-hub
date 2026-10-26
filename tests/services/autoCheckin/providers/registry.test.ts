@@ -9,6 +9,7 @@ import { dayaProvider } from "~/services/checkin/autoCheckin/providers/daya"
 import { denxioProvider } from "~/services/checkin/autoCheckin/providers/denxio"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import { nexavlinksProvider } from "~/services/checkin/autoCheckin/providers/nexavlinks"
+import { pmApiProvider } from "~/services/checkin/autoCheckin/providers/pmapi"
 import {
   AUTO_CHECKIN_METHOD_DEFINITIONS,
   AUTO_CHECKIN_METHOD_SOURCE_KINDS,
@@ -92,7 +93,7 @@ describe("autoCheckinMethodRegistry", () => {
       }),
     )
 
-    expect(registrationContracts).toHaveLength(22)
+    expect(registrationContracts).toHaveLength(23)
     expect(registrationContracts).toEqual(
       expect.arrayContaining([
         {
@@ -149,6 +150,11 @@ describe("autoCheckinMethodRegistry", () => {
           id: "daya:daily-checkin",
           candidateSiteTypes: [SITE_TYPES.DAYA],
           provider: dayaProvider,
+        },
+        {
+          id: "pmapi:daily-checkin",
+          candidateSiteTypes: [SITE_TYPES.PMAPI],
+          provider: pmApiProvider,
         },
         {
           id: "relayfor:daily-checkin",

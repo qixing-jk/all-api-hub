@@ -560,6 +560,7 @@ describe("evaluateProtectionBypassPolicy", () => {
         "profile_isolated_fetch",
         "session_read",
         "openrouter_management_key_action",
+        "requesty_management_key_action",
       ],
     }
     const taskForKind = (kind: TempContextTask["kind"]): TempContextTask => {
@@ -582,6 +583,14 @@ describe("evaluateProtectionBypassPolicy", () => {
             params: {
               requestId: "request-1",
               operation: { kind: "create", label: "Example" },
+            },
+          }
+        case "requesty_management_key_action":
+          return {
+            kind,
+            params: {
+              requestId: "request-1",
+              operation: { kind: "create", name: "Example" },
             },
           }
         case "checkin_feedback_scan":

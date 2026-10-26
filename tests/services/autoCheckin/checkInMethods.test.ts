@@ -279,6 +279,40 @@ describe("check-in methods compatibility activation", () => {
     expect(updated).not.toBe(config)
   })
 
+  it("preserves the verification metadata recorded by the last probe when an execution completes", () => {
+    const config = createCompatibilityCheckInConfig({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+      automaticExecutionEnabled: true,
+    })
+    config.methodKnowledge.methods["new-api:daily-checkin"]!.status = {
+      outcome: CHECK_IN_METHOD_STATUS_OUTCOMES.Known,
+      availability: CHECK_IN_METHOD_AVAILABILITIES.Enabled,
+      today: CHECK_IN_METHOD_TODAY_STATUSES.NotChecked,
+      requiresManualVerification: true,
+      evidence: { source: "probe", observedAt: 100 },
+    }
+
+    const updated = markSelectedCheckInExecuted({
+      config,
+      siteType: SITE_TYPES.NEW_API,
+      observedAt: 456,
+    })
+
+    expect(
+      getSelectedCheckInStatus({
+        config: updated,
+        siteType: SITE_TYPES.NEW_API,
+      }),
+    ).toEqual({
+      outcome: "known",
+      availability: "enabled",
+      today: "checked",
+      requiresManualVerification: true,
+      evidence: { source: "execution", observedAt: 456 },
+    })
+  })
+
   it("preserves known method availability when refreshing boolean daily status", () => {
     const config = createCompatibilityCheckInConfig({
       siteType: SITE_TYPES.NEW_API,
@@ -989,6 +1023,30 @@ describe("check-in methods compatibility activation", () => {
       openRedeemWithCheckIn: undefined,
       turnstilePreTrigger: undefined,
     })
+  })
+
+  it("applies the account-level page-assistance override from the draft", () => {
+    const latest = createCompatibilityCheckInConfig({
+      siteType: SITE_TYPES.NEW_API,
+      supported: true,
+      automaticExecutionEnabled: true,
+    })
+
+    expect(
+      mergeUserOwnedCheckInDraft({
+        latest,
+        draft: { ...latest, continueWhenVerificationRequired: true },
+      }).continueWhenVerificationRequired,
+    ).toBe(true)
+    expect(
+      mergeUserOwnedCheckInDraft({
+        latest: { ...latest, continueWhenVerificationRequired: true },
+        draft: {
+          ...latest,
+          continueWhenVerificationRequired: undefined,
+        },
+      }).continueWhenVerificationRequired,
+    ).toBeUndefined()
   })
 
   it("clears a previously saved route when the draft removes it", () => {

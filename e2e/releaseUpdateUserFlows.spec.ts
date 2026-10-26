@@ -66,6 +66,7 @@ test("shows an unchecked release in a deterministic transport fixture", async ({
     updateAvailable: false,
     checkedAt: null,
     lastError: null,
+    selfUpdate: false,
     releaseUrl: LATEST_RELEASE_URL,
     storeUpdate: { supported: false, status: "unsupported", version: null },
   })
@@ -126,6 +127,7 @@ test("shows AMO availability without unrelated metadata in a deterministic trans
     updateAvailable: true,
     checkedAt: 1792141200000,
     lastError: null,
+    selfUpdate: false,
     releaseUrl:
       "https://addons.mozilla.org/firefox/addon/%7Bbc73541a-133d-4b50-b261-36ea20df0d24%7D",
     storeUpdate: { supported: false, status: "unsupported", version: null },
@@ -171,6 +173,7 @@ test("keeps the up-to-date panel concise and responsive", async ({
     updateAvailable: false,
     checkedAt: 1792168800000,
     lastError: null,
+    selfUpdate: false,
     releaseUrl: "https://github.com/qixing-jk/all-api-hub/releases/latest",
     storeUpdate: { supported: false, status: "unsupported", version: null },
   }

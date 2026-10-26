@@ -127,7 +127,9 @@ export default function AutoDetectErrorAlert({
   const canRecoverWithApiCredentialProfile =
     apiCredentialRecoveryErrorTypes.has(error.type)
   const canShowApiCredentialFallback =
-    Boolean(siteUrl) && canRecoverWithApiCredentialProfile
+    Boolean(siteUrl) &&
+    canRecoverWithApiCredentialProfile &&
+    error.canUseApiCredentialFallback !== false
 
   if (error.type === AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED) {
     return (

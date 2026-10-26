@@ -85,6 +85,14 @@ export type CheckInMethodStatus =
       outcome: typeof CHECK_IN_METHOD_STATUS_OUTCOMES.Known
       availability?: (typeof CHECK_IN_METHOD_AVAILABILITIES)[keyof typeof CHECK_IN_METHOD_AVAILABILITIES]
       today?: (typeof CHECK_IN_METHOD_TODAY_STATUSES)[keyof typeof CHECK_IN_METHOD_TODAY_STATUSES]
+      /**
+       * Claiming the grant on this deployment requires the site's own human
+       * verification (for example a slider). Probe-sourced: it explains why
+       * automatic execution cannot finish unattended and feeds the account's
+       * page-assistance choice. Optional so older knowledge and other providers
+       * keep their meaning.
+       */
+      requiresManualVerification?: boolean
       evidence:
         | {
             source: typeof CHECK_IN_METHOD_STATUS_EVIDENCE_SOURCES.Probe
@@ -146,6 +154,14 @@ export interface CheckInConfig {
     provider: AccountLoginProvider | typeof ACCOUNT_LOGIN_METHODS.Password
   }
   automaticExecutionEnabled: boolean
+  /**
+   * Account-level override for continuing a check-in whose site requires human
+   * verification. Continuing opens the site's check-in page through page
+   * assistance and reports the account in the verification reminders. Absent
+   * (the default) follows the global `autoCheckin.continueWhenVerificationRequired`
+   * preference. Only providers with a page-assistance path consult it.
+   */
+  continueWhenVerificationRequired?: boolean
   methodKnowledge: {
     methods: Partial<Record<CheckInMethodId, CheckInMethodKnowledge>>
     lastFullDiscoveryAt?: number
