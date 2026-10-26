@@ -515,47 +515,38 @@ test("password login uses an isolated window when private access is allowed and 
   const privateToggle = settings.locator("#allow-incognito cr-toggle")
   const changePrivateAccess = async (allowed: boolean) => {
     await expect(privateToggle).toHaveJSProperty("checked", !allowed)
-    const previousWorker = await getServiceWorker(context)
-    let previousWorkerClosed = false
-    previousWorker.once("close", () => {
-      previousWorkerClosed = true
-    })
-    // Permission changes reload the extension. Wait for the old worker to
-    // close so a permission read cannot succeed on the worker being discarded.
     await privateToggle.click()
     await expect(privateToggle).toHaveJSProperty("checked", allowed)
+    // A permission change can stop the worker without an observed close event
+    // on older Chrome. Open the next extension page to wake the background,
+    // then read the effective permission from that fresh page context.
+    page = await context.newPage()
+    installExtensionPageGuards(page)
+    await page.goto(
+      `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${allowed ? "account" : "autoCheckin"}`,
+    )
+    await waitForExtensionRoot(page)
     await expect
-      .poll(() => previousWorkerClosed, {
-        message: "pre-permission-change service worker closes",
-      })
-      .toBe(true)
-    await expect
-      .poll(async () => {
-        const currentWorker = await getServiceWorker(context)
-        return currentWorker
-          .evaluate(() => {
-            const api = (globalThis as any).chrome
-            if (!api?.extension?.isAllowedIncognitoAccess) return null
-            return new Promise<boolean>((resolve) =>
-              api.extension.isAllowedIncognitoAccess(resolve),
-            )
-          })
-          .catch(() => null)
-      })
+      .poll(
+        () =>
+          page
+            .evaluate(() => {
+              const api = (globalThis as any).chrome
+              if (!api?.extension?.isAllowedIncognitoAccess) return null
+              return new Promise<boolean>((resolve) =>
+                api.extension.isAllowedIncognitoAccess(resolve),
+              )
+            })
+            .catch(() => null),
+        { message: `extension private browsing access becomes ${allowed}` },
+      )
       .toBe(allowed)
   }
   await changePrivateAccess(true)
-  // Changing private access closes existing extension pages.
-  page = await context.newPage()
-  installExtensionPageGuards(page)
   row = page.getByTestId(
     getAccountManagementListItemTestId("login-config-account"),
   )
   dialog = page.getByRole("dialog")
-  await page.goto(
-    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
-  )
-  await waitForExtensionRoot(page)
   await row.hover()
   await row.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton).click()
   await expect(
@@ -627,11 +618,6 @@ test("password login uses an isolated window when private access is allowed and 
   await changePrivateAccess(false)
   await settings.close()
   const regularWorker = await getServiceWorker(context)
-  page = await context.newPage()
-  installExtensionPageGuards(page)
-  await page.goto(
-    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#autoCheckin`,
-  )
   const releaseNavigation = await holdExtensionWindowNavigation(
     context,
     regularWorker,
