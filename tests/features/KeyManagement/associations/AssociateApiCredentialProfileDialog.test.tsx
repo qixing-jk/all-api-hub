@@ -28,6 +28,41 @@ const profile: ApiCredentialProfile = {
 }
 
 describe("AssociateApiCredentialProfileDialog", () => {
+  it.each([
+    ["key-example", "exact"],
+    ["key-••••ample", "masked"],
+    ["different-key", "mismatch"],
+    [undefined, "unknown"],
+  ])("shows %s comparison before selection", async (targetSecret, match) => {
+    const onAssociate = vi.fn()
+    render(
+      <AssociateApiCredentialProfileDialog
+        isOpen
+        locator={locator}
+        targetSecret={targetSecret}
+        profiles={[profile]}
+        isProfilesLoading={false}
+        existingProfileNames={[]}
+        isWorking={false}
+        onClose={vi.fn()}
+        onAssociate={onAssociate}
+        onOpenProfiles={vi.fn()}
+      />,
+    )
+    fireEvent.click(await screen.findByRole("combobox"))
+    expect(
+      await screen.findByRole("option", { name: /Example credential/ }),
+    ).toHaveTextContent(
+      `apiCredentialProfiles:association.secretComparison.${match}Label`,
+    )
+    expect(
+      screen.getByTestId(
+        KEY_MANAGEMENT_TEST_IDS.associateCredentialConfirmButton,
+      ),
+    ).toBeDisabled()
+    expect(onAssociate).not.toHaveBeenCalled()
+  })
+
   it("submits the selected existing profile for the current key", async () => {
     const onAssociate = vi.fn().mockResolvedValue(undefined)
 
@@ -60,6 +95,33 @@ describe("AssociateApiCredentialProfileDialog", () => {
     )
 
     await waitFor(() => expect(onAssociate).toHaveBeenCalledWith("profile-1"))
+  })
+
+  it("prioritizes exact matches and shows masked key fragments without exposing secrets", async () => {
+    render(
+      <AssociateApiCredentialProfileDialog
+        isOpen
+        locator={locator}
+        targetSecret="sk-production-12345678"
+        profiles={[
+          { ...profile, id: "other", name: "Other credential" },
+          { ...profile, apiKey: "sk-production-12345678" },
+        ]}
+        isProfilesLoading={false}
+        existingProfileNames={[]}
+        isWorking={false}
+        onClose={vi.fn()}
+        onAssociate={vi.fn()}
+        onOpenProfiles={vi.fn()}
+      />,
+    )
+    fireEvent.click(await screen.findByRole("combobox"))
+    const options = await screen.findAllByRole("option")
+    expect(options[0]).toHaveTextContent("Example credential")
+    expect(options[0]).toHaveTextContent("https://api.example.invalid")
+    expect(options[0]).toHaveTextContent("sk-p••••••5678")
+    expect(options[1]).toHaveTextContent("••••••")
+    expect(screen.queryByText(/sk-production-12345678/)).not.toBeInTheDocument()
   })
 
   it("offers a path to create a profile when none are saved", async () => {
