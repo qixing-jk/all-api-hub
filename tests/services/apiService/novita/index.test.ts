@@ -19,13 +19,13 @@ vi.mock("~/services/apiTransport/requestExecution", () => ({
   fetchPreparedJsonResponse: vi.fn(),
 }))
 
-// Wire fixtures captured live on 2026-10-25 against
+// Sanitized wire fixtures captured live on 2026-10-25 against
 // https://api.novita.ai/openapi with a real (since deleted) sk_ key.
 const USER_INFO_FIXTURE = {
-  email: "qihang131417@gmail.com",
-  uid: "569665",
-  uuid: "076903e3-6ddc-45f3-9dec-d79bc60bcaf8",
-  username: "qihang131417@gmail.com",
+  email: "novita-fixture@example.com",
+  uid: "100001",
+  uuid: "00000000-0000-4000-8000-000000000001",
+  username: "novita-fixture@example.com",
   country: "United States",
 } as Record<string, unknown>
 
@@ -47,7 +47,7 @@ const KEYS_FIXTURE = {
       createTime: "2026-10-25 00:52:12",
       stringId: "key_dec88048c9a343fdb089114885e13768",
       memberId: "",
-      uuid: "076903e3-6ddc-45f3-9dec-d79bc60bcaf8",
+      uuid: "00000000-0000-4000-8000-000000000001",
       maskedKey: "sk_1Av3****VaCk",
       lastUsedAt: "-1",
       modelAccessPolicy: {
@@ -80,6 +80,28 @@ describe("novita constants and units", () => {
 })
 
 describe("novita api service", () => {
+  it.each([
+    ["1793000000", 1793000000],
+    [1793000000, 1793000000],
+    ["-1", -1],
+    ["invalid", -1],
+    ["", -1],
+    ["1.5", -1],
+    [null, -1],
+  ])(
+    "preserves valid last-used timestamps and rejects malformed values: %s",
+    async (lastUsedAt, expected) => {
+      const row = (KEYS_FIXTURE.keys as Record<string, unknown>[])[0]
+      vi.mocked(
+        requestExecution.fetchPreparedJsonResponse,
+      ).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        body: { keys: [{ ...row, lastUsedAt }] },
+      } as never)
+      expect((await fetchNovitaKeys(request))[0]?.lastUsedAt).toBe(expected)
+    },
+  )
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -319,8 +341,8 @@ describe("novita api service", () => {
     const user = await fetchNovitaUserInfo(request)
 
     expect(user).toEqual({
-      id: "076903e3-6ddc-45f3-9dec-d79bc60bcaf8",
-      username: "qihang131417@gmail.com",
+      id: "00000000-0000-4000-8000-000000000001",
+      username: "novita-fixture@example.com",
       access_token: null,
     })
     expect(requestExecution.fetchPreparedJsonResponse).toHaveBeenCalledWith(

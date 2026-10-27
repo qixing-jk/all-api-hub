@@ -20,8 +20,8 @@ const request = {
 const existingAccount = {
   site_type: SITE_TYPES.NOVITA,
   account_info: {
-    id: "076903e3-6ddc-45f3-9dec-d79bc60bcaf8",
-    username: "qihang131417@gmail.com",
+    id: "00000000-0000-4000-8000-000000000001",
+    username: "novita-fixture@example.com",
     access_token: "sk_test-key",
   },
 } as unknown as Pick<SiteAccount, "site_type" | "account_info">
@@ -121,6 +121,29 @@ describe("novita account data", () => {
 })
 
 describe("novita account persistence", () => {
+  it("retains saved identity when an unchanged credential is saved without a draft identity", async () => {
+    await expect(
+      novitaAccountPersistence.prepareIdentity({
+        accessToken: "sk_test-key",
+        userId: "",
+        existingAccount,
+      }),
+    ).resolves.toBe("00000000-0000-4000-8000-000000000001")
+    await expect(
+      novitaAccountPersistence.prepareIdentity({
+        accessToken: "",
+        userId: "",
+        existingAccount: {
+          ...existingAccount,
+          account_info: {
+            ...existingAccount.account_info,
+            id: "",
+            access_token: undefined,
+          },
+        },
+      }),
+    ).resolves.toBe("")
+  })
   beforeEach(() => {
     server.resetHandlers()
   })
@@ -129,9 +152,9 @@ describe("novita account persistence", () => {
     server.use(
       http.get("https://api.novita.ai/openapi/v1/user/info", () =>
         HttpResponse.json({
-          email: "qihang131417@gmail.com",
-          uid: "569665",
-          uuid: "076903e3-6ddc-45f3-9dec-d79bc60bcaf8",
+          email: "novita-fixture@example.com",
+          uid: "100001",
+          uuid: "00000000-0000-4000-8000-000000000001",
         }),
       ),
     )
@@ -141,7 +164,7 @@ describe("novita account persistence", () => {
       userId: "",
       existingAccount: undefined,
     })
-    expect(identity).toBe("076903e3-6ddc-45f3-9dec-d79bc60bcaf8")
+    expect(identity).toBe("00000000-0000-4000-8000-000000000001")
   })
 
   it("rejects a pasted key when it does not match the detected browser identity", async () => {
@@ -173,10 +196,10 @@ describe("novita account persistence", () => {
 
     const identity = await novitaAccountPersistence.prepareIdentity({
       accessToken: "sk_test-key",
-      userId: "076903e3-6ddc-45f3-9dec-d79bc60bcaf8",
+      userId: "00000000-0000-4000-8000-000000000001",
       existingAccount,
     })
-    expect(identity).toBe("076903e3-6ddc-45f3-9dec-d79bc60bcaf8")
+    expect(identity).toBe("00000000-0000-4000-8000-000000000001")
     expect(identityReads).toBe(0)
   })
 
@@ -231,9 +254,9 @@ describe("novita account completion", () => {
     server.use(
       http.get("https://api.novita.ai/openapi/v1/user/info", () =>
         HttpResponse.json({
-          email: "qihang131417@gmail.com",
-          uid: "569665",
-          uuid: "076903e3-6ddc-45f3-9dec-d79bc60bcaf8",
+          email: "novita-fixture@example.com",
+          uid: "100001",
+          uuid: "00000000-0000-4000-8000-000000000001",
         }),
       ),
     )
@@ -272,8 +295,8 @@ describe("novita account completion", () => {
     )
 
     expect(result).toMatchObject({
-      userId: "076903e3-6ddc-45f3-9dec-d79bc60bcaf8",
-      username: "qihang131417@gmail.com",
+      userId: "00000000-0000-4000-8000-000000000001",
+      username: "novita-fixture@example.com",
       accessToken: "sk_test-key",
       siteName: "Novita AI",
       authType: AuthTypeEnum.AccessToken,

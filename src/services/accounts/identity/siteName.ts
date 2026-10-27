@@ -96,8 +96,7 @@ export async function getSiteName(
       urlObj.hostname.toLowerCase(),
     ),
   )?.onboarding
-  const registeredName =
-    onboarding?.accountForm?.defaultSiteName ?? onboarding?.displayName
+  const registeredName = onboarding?.accountForm?.defaultSiteName
   if (registeredName) return registeredName
 
   if (tabTitle && isNotDefaultSiteName(tabTitle)) return tabTitle

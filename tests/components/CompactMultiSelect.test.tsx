@@ -23,6 +23,29 @@ const renderCompact = (ui: ReactElement) =>
   })
 
 describe("CompactMultiSelect", () => {
+  it.each([
+    { isComposing: true, keyCode: 13 },
+    { isComposing: false, keyCode: 229 },
+  ])("keeps IME confirmation out of custom selections: %j", async (event) => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    renderCompact(
+      <CompactMultiSelect
+        options={[]}
+        selected={[]}
+        onChange={onChange}
+        allowCustom
+        aria-label="Models"
+      />,
+    )
+    const input = screen.getByRole("combobox", { name: "Models" })
+    await user.type(input, "example/model")
+    fireEvent.keyDown(input, { key: "Enter", ...event })
+    expect(onChange).not.toHaveBeenCalled()
+    expect(input).toHaveValue("example/model")
+    await user.keyboard("{Enter}")
+    expect(onChange).toHaveBeenCalledWith(["example/model"])
+  })
   it("retains a selected suggestion when adding a custom value with Enter", async () => {
     const user = userEvent.setup()
     function Harness() {

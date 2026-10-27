@@ -17,6 +17,81 @@ vi.mock("~/services/apiTransport/requestExecution", () => ({
 }))
 
 describe("Novita account detection", () => {
+  it("rejects a browser credential whose verified identity changes", async () => {
+    browserDetect.mockResolvedValueOnce({
+      success: true,
+      data: {
+        siteType: SITE_TYPES.NOVITA,
+        userId: "browser-user",
+        user: { username: "user@example.com" },
+        accessToken: "novita-console:session",
+      },
+    })
+    fetchPreparedJsonResponse.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      body: { uuid: "other-user", email: "other@example.com" },
+    })
+    const result = await autoDetectAccount(
+      "https://novita.ai",
+      AuthTypeEnum.AccessToken,
+    )
+    expect(result).toMatchObject({
+      success: false,
+      autoDetectFailureReason: "account_identity_mismatch",
+    })
+  })
+  it("reports console acquisition errors without replacing them with missing-key guidance", async () => {
+    browserDetect.mockRejectedValueOnce(new Error("private upstream detail"))
+    const result = await autoDetectAccount(
+      "https://novita.ai",
+      AuthTypeEnum.AccessToken,
+      undefined,
+      undefined,
+      {
+        existingAccount: {
+          url: "https://novita.ai",
+          siteType: SITE_TYPES.NOVITA,
+          userId: "",
+          accessToken: "novita-console:session",
+          novitaCredentialMode: "console",
+        },
+      },
+    )
+    expect(result).toMatchObject({
+      success: false,
+      message: "messages:novita.networkFallback",
+      detailedError: { type: "invalid_response" },
+    })
+    expect(JSON.stringify(result)).not.toContain("private upstream detail")
+  })
+  it("reports API-key rejection for paired credentials in explicit API-key mode", async () => {
+    fetchPreparedJsonResponse.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      body: { reason: "UNAUTHORIZED" },
+    })
+    const result = await autoDetectAccount(
+      "https://novita.ai",
+      AuthTypeEnum.AccessToken,
+      undefined,
+      undefined,
+      {
+        existingAccount: {
+          url: "https://novita.ai",
+          siteType: SITE_TYPES.NOVITA,
+          userId: "",
+          novitaCredentialMode: "api-key",
+          accessToken:
+            'novita-credentials:{"apiKey":"sk_invalid","consoleToken":"console-session"}',
+        },
+      },
+    )
+    expect(result.message).toBe("messages:novita.credentialInvalid")
+    expect(result.detailedError?.type).toBe("invalid_response")
+    expect(browserDetect).not.toHaveBeenCalled()
+    expect(fetchPreparedJsonResponse).toHaveBeenCalledOnce()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     browserDetect.mockResolvedValue({ success: false })

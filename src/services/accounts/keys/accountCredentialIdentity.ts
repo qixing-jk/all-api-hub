@@ -6,25 +6,17 @@ import {
 } from "~/services/accountTokens/credentialSecretMatch"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 
-export const ACCOUNT_CREDENTIAL_IDENTITY_STATUSES = {
-  Confirmed: "confirmed",
-  Possible: "possible",
-  Mismatch: "mismatch",
-  Unknown: "unknown",
-} as const
+import {
+  ACCOUNT_CREDENTIAL_EVIDENCE_SOURCES,
+  ACCOUNT_CREDENTIAL_IDENTITY_STATUSES,
+  type AccountCredentialIdentity,
+} from "./accountCredentialIdentityFacts"
 
-const ACCOUNT_CREDENTIAL_EVIDENCE_SOURCES = {
-  Provider: "provider",
-  LinkedSecret: "linked-secret",
-  MaskedKey: "masked-key",
-  None: "none",
-} as const
-
-/** Transient correlation evidence. It never retains credential bytes. */
-export type AccountCredentialIdentity = Readonly<{
-  status: (typeof ACCOUNT_CREDENTIAL_IDENTITY_STATUSES)[keyof typeof ACCOUNT_CREDENTIAL_IDENTITY_STATUSES]
-  source: (typeof ACCOUNT_CREDENTIAL_EVIDENCE_SOURCES)[keyof typeof ACCOUNT_CREDENTIAL_EVIDENCE_SOURCES]
-}>
+export {
+  ACCOUNT_CREDENTIAL_IDENTITY_STATUSES,
+  isProviderConfirmedAccountCredential,
+  type AccountCredentialIdentity,
+} from "./accountCredentialIdentityFacts"
 
 /**
  * Provider self identity outranks local links; full linked keys outrank masks.
@@ -86,14 +78,4 @@ export function resolveAccountCredentialIdentity({
       return { status: statuses.Mismatch, source: sources.MaskedKey }
   }
   return provider ?? { status: statuses.Unknown, source: sources.None }
-}
-
-/** Stored account-secret recovery requires provider identity, not a local hint/link. */
-export function isProviderConfirmedAccountCredential(
-  identity?: AccountCredentialIdentity,
-): boolean {
-  return (
-    identity?.status === ACCOUNT_CREDENTIAL_IDENTITY_STATUSES.Confirmed &&
-    identity.source === ACCOUNT_CREDENTIAL_EVIDENCE_SOURCES.Provider
-  )
 }

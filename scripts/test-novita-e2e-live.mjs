@@ -49,7 +49,7 @@ const detectOnly = process.argv.includes("--detect-only")
 const mutate = process.argv.includes("--mutate")
 const evidenceDir = path.resolve(
   process.env.NOVITA_EVIDENCE_DIR ||
-    `.scratch/novita-adaptation/evidence/cdp-${Date.now()}`,
+    `.scratch/novita-adaptation/artifacts/cdp-${Date.now()}`,
 )
 await fs.mkdir(evidenceDir, { recursive: true })
 

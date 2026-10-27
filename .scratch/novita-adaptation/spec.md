@@ -97,29 +97,29 @@ from ordinary automatic detection and its same-account session recovery.
 ## Evidence and remaining gaps
 
 Raw responses, website bundles, authenticated screenshots, failed runs and local
-probes remain ignored under `evidence/`. They may contain account data and must
+probes remain ignored under `artifacts/`. They may contain account data and must
 be reviewed separately before sharing. The historical development journal is
-retained locally as `evidence/finish-original-spec.md`; it is not a delivery
+retained locally as `artifacts/finish-original-spec.md`; it is not a delivery
 companion. Do not delete local evidence while review or acceptance needs it.
 
-- Native hosted roundtrip: `evidence/cdp-1793095588684/evidence.json` records
+- Native hosted roundtrip: `artifacts/cdp-1793095588684/evidence.json` records
   console detection/save/refresh, live API-key policy writes and full console
   create/edit/delete. Disposable keys and the temporary account were removed;
   the original inventory was restored. This predates later form refinements,
   so it establishes the retained protocol rather than final paired live UI.
-- Later field/recovery acceptance: `evidence/acquire-acceptance.md`,
-  `evidence/auto-mode-acceptance.md`, `evidence/feedback-acceptance.md`.
+- Later field/recovery acceptance: `artifacts/acquire-acceptance.md`,
+  `artifacts/auto-mode-acceptance.md`, `artifacts/feedback-acceptance.md`.
   Pair validation, expired-console fallback, acquisition isolation and failure
   handling have automated coverage. A new full paired-credential live roundtrip
   and real server expiry/renewal were not independently repeated.
-- Final model suggestions: `evidence/public-hints-acceptance.md`, including
+- Final model suggestions: `artifacts/public-hints-acceptance.md`, including
   the retained failing custom-Enter browser run and its regression repair.
 - Representative earlier comparisons remain under
-  `evidence/credential-comparison/`, `evidence/identity-visual/` and
+  `artifacts/credential-comparison/`, `artifacts/identity-visual/` and
   `.scratch/visual-comparisons/`. Fixture/data differences and missing baselines
   are described in their reports; comparisons are not pixel-equality claims.
 - Final branch-finish acceptance and reproducible commands:
-  `evidence/finish-acceptance.md`. It records current affected tests,
+  `artifacts/finish-acceptance.md`. It records current affected tests,
   extension E2E, static checks, visual review and delivery exclusions.
 
 Production-extension CDP evidence is available. Development/HMR loading remains

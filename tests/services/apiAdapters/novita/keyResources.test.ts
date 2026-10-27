@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { prepareDefaultAccountKeyCreation } from "~/services/accounts/keys/accountKeyCreation"
 import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "~/services/accounts/keys/accountKeyNames"
+import type { EditableResourceProjection } from "~/services/apiAdapters/contracts/resourceNative"
 import { novitaKeyEditor } from "~/services/apiAdapters/novita/keyEditor"
 import { novitaAccountKeyResources } from "~/services/apiAdapters/novita/keyResources"
 import { encodeNovitaCredentials } from "~/services/apiService/novita/constants"
@@ -19,7 +20,7 @@ const keyRow = {
   createTime: "2026-10-25 00:52:12",
   stringId: "key_dec88048c9a343fdb089114885e13768",
   memberId: "",
-  uuid: "076903e3-6ddc-45f3-9dec-d79bc60bcaf8",
+  uuid: "00000000-0000-4000-8000-000000000001",
   maskedKey: "sk_1Av3****VaCk",
   lastUsedAt: "-1",
   modelAccessPolicy: {
@@ -58,6 +59,13 @@ const ref = {
 }
 
 describe("Novita key resources", () => {
+  it("does not recover plaintext from a masked inventory resource", async () => {
+    const session = await openSession()
+    await expect(session.runtimeKey?.resolve(ref)).resolves.toMatchObject({
+      kind: "unavailable",
+    })
+  })
+
   it("offers public full-ID hints with saved policy IDs when only an API key is available", async () => {
     let hintReads = 0
     server.use(
@@ -879,4 +887,251 @@ describe("Novita key resources", () => {
       collection.get({ ...ref, resourceId: "key_missing" }),
     ).rejects.toMatchObject({ failure: { code: "not_found" } })
   })
+  it.each(["name", "models", "ips"])(
+    "rejects concurrent %s changes before updating",
+    async (field) => {
+      let name = keyRow.name
+      let models = {
+        schemaVersion: 1,
+        productScope: "model_api",
+        mode: "all_enabled",
+        allowedModels: [] as { type: string; id: string }[],
+        excludedModels: [],
+      }
+      let ips: string[] = []
+      let writes = 0
+      server.use(
+        http.get("https://api-server.novita.ai/v1/user/info", () =>
+          HttpResponse.json({
+            uuid: "account-uuid",
+            email: "user@example.com",
+          }),
+        ),
+        http.get("https://api-server.novita.ai/v2/user/key", () =>
+          HttpResponse.json({ keys: [{ ...keyRow, name }] }),
+        ),
+        http.get(
+          "https://api-server.novita.ai/v2/user/key/:id/model-access-policy",
+          () =>
+            HttpResponse.json({ stringId: keyRow.stringId, policy: models }),
+        ),
+        http.get(
+          "https://api-server.novita.ai/v2/user/key/:id/ip-access-policy",
+          () =>
+            HttpResponse.json({
+              stringId: keyRow.stringId,
+              policy: { allowedIps: ips },
+            }),
+        ),
+        http.put("https://api-server.novita.ai/v2/user/key", () => {
+          writes++
+          return HttpResponse.json({})
+        }),
+        http.put(
+          "https://api-server.novita.ai/v2/user/key/:id/model-access-policy",
+          () => {
+            writes++
+            return HttpResponse.json({})
+          },
+        ),
+        http.put(
+          "https://api-server.novita.ai/v2/user/key/:id/ip-access-policy",
+          () => {
+            writes++
+            return HttpResponse.json({})
+          },
+        ),
+      )
+      const editor = await (
+        await openCollection("novita-console:test")
+      ).openEditEditor(ref)
+      if (field === "name") name = "changed elsewhere"
+      if (field === "models")
+        models = {
+          ...models,
+          mode: "selected",
+          allowedModels: [{ type: "llm", id: "other" }],
+        }
+      if (field === "ips") ips = ["192.0.2.2"]
+      const patch: EditableResourceProjection =
+        field === "name"
+          ? { name: "my change" }
+          : field === "models"
+            ? { model_mode: "selected", allowed_models: ["my-model"] }
+            : { ip_restricted: true, allowed_ips: "192.0.2.1" }
+      await expect(
+        editor.submit({ ...editor.initialValues, ...patch }),
+      ).rejects.toMatchObject({
+        mutationCertainty: "not-applied",
+        failure: { code: "resource_changed" },
+      })
+      expect(writes).toBe(0)
+    },
+  )
+
+  it.each(["name", "models", "ips"])(
+    "keeps accepted %s writes uncertain when readback disagrees",
+    async (field) => {
+      let writes = 0
+      server.use(
+        http.get("https://api-server.novita.ai/v1/user/info", () =>
+          HttpResponse.json({
+            uuid: "account-uuid",
+            email: "user@example.com",
+          }),
+        ),
+        http.get("https://api-server.novita.ai/v2/user/key", () =>
+          HttpResponse.json({ keys: [keyRow] }),
+        ),
+        http.get(
+          "https://api-server.novita.ai/v2/user/key/:id/model-access-policy",
+          () =>
+            HttpResponse.json({
+              stringId: keyRow.stringId,
+              policy: {
+                schemaVersion: 1,
+                productScope: "model_api",
+                mode: "all_enabled",
+                allowedModels: [],
+                excludedModels: [],
+              },
+            }),
+        ),
+        http.get(
+          "https://api-server.novita.ai/v2/user/key/:id/ip-access-policy",
+          () =>
+            HttpResponse.json({
+              stringId: keyRow.stringId,
+              policy: { allowedIps: [] },
+            }),
+        ),
+        http.put("https://api-server.novita.ai/v2/user/key", () => {
+          writes++
+          return HttpResponse.json({})
+        }),
+        http.put(
+          "https://api-server.novita.ai/v2/user/key/:id/model-access-policy",
+          () => {
+            writes++
+            return HttpResponse.json({})
+          },
+        ),
+        http.put(
+          "https://api-server.novita.ai/v2/user/key/:id/ip-access-policy",
+          () => {
+            writes++
+            return HttpResponse.json({})
+          },
+        ),
+      )
+      const editor = await (
+        await openCollection("novita-console:test")
+      ).openEditEditor(ref)
+      const patch: EditableResourceProjection =
+        field === "name"
+          ? { name: "my change" }
+          : field === "models"
+            ? { model_mode: "selected", allowed_models: ["my-model"] }
+            : { ip_restricted: true, allowed_ips: "192.0.2.1" }
+      await expect(
+        editor.submit({ ...editor.initialValues, ...patch }),
+      ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+      await expect(
+        editor.submit({ ...editor.initialValues, ...patch }),
+      ).rejects.toBeDefined()
+      expect(writes).toBe(1)
+    },
+  )
+
+  it("does not confirm deletion while the key remains in inventory", async () => {
+    let writes = 0
+    server.use(
+      http.get("https://api-server.novita.ai/v1/user/info", () =>
+        HttpResponse.json({ uuid: "account-uuid", email: "user@example.com" }),
+      ),
+      http.get("https://api-server.novita.ai/v2/user/key", () =>
+        HttpResponse.json({ keys: [keyRow] }),
+      ),
+      http.delete("https://api-server.novita.ai/v2/user/key/:id", () => {
+        writes++
+        return HttpResponse.json({})
+      }),
+    )
+    await expect(
+      (await openCollection("novita-console:test")).delete(ref),
+    ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+    expect(writes).toBe(1)
+  })
+
+  it.each(["models", "ips"])(
+    "keeps failed creation uncertain when %s readback and cleanup fail",
+    async (field) => {
+      let creates = 0
+      let deletes = 0
+      server.use(
+        http.get("https://api-server.novita.ai/v1/user/info", () =>
+          HttpResponse.json({
+            uuid: "account-uuid",
+            email: "user@example.com",
+          }),
+        ),
+        http.post("https://api-server.novita.ai/v2/user/key", () => {
+          creates++
+          return HttpResponse.json({
+            id: keyRow.stringId,
+            apiKey: "sk_created",
+          })
+        }),
+        http.get("https://api-server.novita.ai/v2/user/key", () =>
+          HttpResponse.json({ keys: creates ? [keyRow] : [] }),
+        ),
+        http.put(
+          "https://api-server.novita.ai/v2/user/key/:id/model-access-policy",
+          () => HttpResponse.json({}),
+        ),
+        http.put(
+          "https://api-server.novita.ai/v2/user/key/:id/ip-access-policy",
+          () => HttpResponse.json({}),
+        ),
+        http.get(
+          "https://api-server.novita.ai/v2/user/key/:id/model-access-policy",
+          () =>
+            HttpResponse.json({
+              stringId: keyRow.stringId,
+              policy: {
+                schemaVersion: 1,
+                productScope: "model_api",
+                mode: "all_enabled",
+                allowedModels: [],
+                excludedModels: [],
+              },
+            }),
+        ),
+        http.get(
+          "https://api-server.novita.ai/v2/user/key/:id/ip-access-policy",
+          () =>
+            HttpResponse.json({
+              stringId: keyRow.stringId,
+              policy: { allowedIps: [] },
+            }),
+        ),
+        http.delete("https://api-server.novita.ai/v2/user/key/:id", () => {
+          deletes++
+          return HttpResponse.json({}, { status: 503 })
+        }),
+      )
+      const editor = await (
+        await openSession("novita-console:test")
+      ).openCreateEditor("default")
+      const patch: EditableResourceProjection =
+        field === "models"
+          ? { model_mode: "selected", allowed_models: ["my-model"] }
+          : { ip_restricted: true, allowed_ips: "192.0.2.1" }
+      await expect(
+        editor.submit({ ...editor.initialValues, ...patch }),
+      ).rejects.toMatchObject({ failure: { code: "mutation_state_uncertain" } })
+      expect(creates).toBe(1)
+      expect(deletes).toBe(1)
+    },
+  )
 })

@@ -5,7 +5,7 @@ import { NOVITA_AMOUNTS_PER_USD, NOVITA_OPENAPI_ENDPOINTS } from "./constants"
 
 /**
  * Wire contracts of the Novita OpenAPI, validated against live responses
- * captured on 2026-10-25 (.scratch/novita-adaptation/evidence/wire).
+ * captured on 2026-10-25 (.scratch/novita-adaptation/artifacts/wire).
  */
 
 export type NovitaUserInfo = {
@@ -90,9 +90,14 @@ export function parseNovitaKeys(body: unknown): NovitaApiKey[] {
     const expireTime = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(rawExpiry)
       ? `${rawExpiry.replace(" ", "T")}Z`
       : rawExpiry
+    const rawLastUsedAt =
+      typeof raw.lastUsedAt === "string" &&
+      /^-?\d+$/.test(raw.lastUsedAt.trim())
+        ? Number(raw.lastUsedAt)
+        : raw.lastUsedAt
     const lastUsedAt =
-      typeof raw.lastUsedAt === "number" && Number.isFinite(raw.lastUsedAt)
-        ? raw.lastUsedAt
+      typeof rawLastUsedAt === "number" && Number.isFinite(rawLastUsedAt)
+        ? rawLastUsedAt
         : -1
     return {
       name: typeof raw.name === "string" ? raw.name : "",

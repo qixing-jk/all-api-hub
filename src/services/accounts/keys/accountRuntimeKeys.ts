@@ -1,5 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
-import { isProviderConfirmedAccountCredential } from "~/services/accounts/keys/accountCredentialIdentity"
+import { isProviderConfirmedAccountCredential } from "~/services/accounts/keys/accountCredentialIdentityFacts"
 import {
   UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS,
   type AccountRuntimeKeyModelAccess,

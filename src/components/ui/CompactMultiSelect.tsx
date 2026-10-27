@@ -423,6 +423,13 @@ export function CompactMultiSelect({
                       placeholder={chipsInputPlaceholder}
                       disabled={disabled}
                       onKeyDown={(event) => {
+                        if (
+                          event.nativeEvent.isComposing ||
+                          event.nativeEvent.keyCode === 229
+                        ) {
+                          event.preventBaseUIHandler()
+                          return
+                        }
                         handleCustomKeyDown(event)
                         if (event.defaultPrevented) event.preventBaseUIHandler()
                       }}

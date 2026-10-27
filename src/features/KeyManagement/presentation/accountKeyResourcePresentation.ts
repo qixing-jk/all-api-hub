@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next"
 
-import { isProviderConfirmedAccountCredential } from "~/services/accounts/keys/accountCredentialIdentity"
+import { isProviderConfirmedAccountCredential } from "~/services/accounts/keys/accountCredentialIdentityFacts"
 import { ACCOUNT_RUNTIME_KEY_STATUSES } from "~/services/accounts/keys/accountRuntimeKeys"
 import { hasAccountKeyManagementPermission } from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import {

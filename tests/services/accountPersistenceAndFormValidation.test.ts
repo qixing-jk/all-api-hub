@@ -647,6 +647,14 @@ describe("account persistence and form validation", () => {
   })
 
   describe("getSiteName", () => {
+    it("preserves a deployment title on registered adapter-family hosts", async () => {
+      expect(
+        await getSiteName({
+          url: "https://ai-router.dev",
+          title: "AI Router Portal",
+        } as browser.tabs.Tab),
+      ).toBe("AI Router Portal")
+    })
     it.each([
       [
         "https://novita.ai/settings/key-management",

@@ -37,6 +37,15 @@ const createLink = (
 
 describe("key credential association presentation", () => {
   it.each([
+    ["prefix****suffix", "other-prefix-middle-suffix"],
+    ["prefix****suffix", "prefix-middle-suffix-other"],
+    ["prefix****middle****suffix", "prefix-suffix-middle"],
+  ])("rejects misplaced masked fragments in %s", (target, candidate) => {
+    expect(compareCredentialSecret(target, candidate)).toBe(
+      KEY_CREDENTIAL_SECRET_MATCHES.Mismatch,
+    )
+  })
+  it.each([
     ["complete-secret", "complete-secret"],
     ["sk-or-v1-••••example", "sk-or-v1-complete-example"],
     ["sk-maske****************7890", "sk-masked-value-7890"],

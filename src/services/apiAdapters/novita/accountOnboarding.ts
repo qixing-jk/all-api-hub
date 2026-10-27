@@ -91,6 +91,7 @@ export async function onboardNovitaAccount(params: {
               t("messages:novita.networkFallback"),
             )
       if (
+        existing?.novitaCredentialMode === "api-key" ||
         !(
           isNovitaConsoleCredential(accessToken) &&
           isNovitaAuthFailureError(cause)

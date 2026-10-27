@@ -1020,6 +1020,8 @@ describe("ManagedResourceEditorBody", () => {
       "model-example-c",
     ])
 
+    await user.keyboard("{Escape}")
+
     const select = screen.getByRole("combobox", {
       name: /^Default test model/,
     })

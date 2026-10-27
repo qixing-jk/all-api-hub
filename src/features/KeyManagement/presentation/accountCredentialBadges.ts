@@ -3,7 +3,7 @@ import type { TFunction } from "i18next"
 import {
   ACCOUNT_CREDENTIAL_IDENTITY_STATUSES as statuses,
   type AccountCredentialIdentity,
-} from "~/services/accounts/keys/accountCredentialIdentity"
+} from "~/services/accounts/keys/accountCredentialIdentityFacts"
 
 import type { KeyResourceBadge } from "./keyResourceCard"
 
