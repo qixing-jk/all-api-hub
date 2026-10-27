@@ -348,12 +348,12 @@ describe("Novita editable policy validation", () => {
   })
 
   const editor = () => novitaKeyEditor(request)
-  it.each([
+  const invalidEdits: EditableResourceProjection[] = [
     { name: "" },
     { lifecycle: "unknown" },
     { model_mode: "unknown" },
     { allowed_models: [], model_mode: "selected" },
-    { allowed_models: [null], model_mode: "selected" },
+    { allowed_models: [""], model_mode: "selected" },
     { excluded_models: null },
     { allowed_ips: "", ip_restricted: true },
     { allowed_ips: "999.1.1.1", ip_restricted: true },
@@ -362,12 +362,10 @@ describe("Novita editable policy validation", () => {
       allowed_ips: Array(101).fill("192.0.2.1").join(","),
       ip_restricted: true,
     },
-  ])("rejects invalid edits: %j", (patch) => {
+  ]
+  it.each(invalidEdits)("rejects invalid edits: %j", (patch) => {
     const e = editor()
-    expect(
-      e.validate({ ...e.initialValues, ...patch } as EditableResourceProjection)
-        .valid,
-    ).toBe(false)
+    expect(e.validate({ ...e.initialValues, ...patch }).valid).toBe(false)
   })
   it("keeps public hints optional and retries after failure", async () => {
     let reads = 0

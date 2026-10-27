@@ -138,7 +138,7 @@ describe("novita account persistence", () => {
           account_info: {
             ...existingAccount.account_info,
             id: "",
-            access_token: undefined,
+            access_token: "",
           },
         },
       }),
