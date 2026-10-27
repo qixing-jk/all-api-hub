@@ -4,10 +4,49 @@ import { I18nextProvider } from "react-i18next"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { AccountAllowanceDetails } from "~/features/AccountManagement/components/AccountList/rows/AccountAllowanceDetails"
+import zhCN from "~/locales/zh-CN/account.json"
 import { createResourceTestI18n } from "~~/tests/test-utils/i18n"
 
 describe("AccountAllowanceDetails", () => {
   afterEach(() => vi.restoreAllMocks())
+  it.each([0, 80])(
+    "shows Novita cash balance %s separately from available balance and borrowing limit",
+    async (cash) => {
+      const user = userEvent.setup()
+      const i18n = await createResourceTestI18n(
+        { "zh-CN": { account: zhCN } },
+        "zh-CN",
+      )
+      render(
+        <I18nextProvider i18n={i18n}>
+          <AccountAllowanceDetails
+            siteType="novita"
+            nativeBalance={{
+              unit: "USD",
+              total: 93,
+              permanent: cash,
+              daily: 0,
+              components: [
+                { kind: "permanent", amount: cash },
+                { kind: "permanent", name: "Credit limit", amount: 20 },
+              ],
+            }}
+          />
+        </I18nextProvider>,
+      )
+      await user.click(screen.getByRole("button", { name: "余额明细" }))
+      const details = screen.getByRole("dialog", { name: "余额明细" })
+      expect(details).toHaveTextContent("可用余额$93")
+      expect(details).toHaveTextContent(`充值余额$${cash}`)
+      expect(details).toHaveTextContent("信用额度（可欠款上限）$20")
+      expect(details).toHaveTextContent(
+        "插件暂不将 Novita 余额计入总余额、余额历史和收入估算。",
+      )
+      expect(details).not.toHaveTextContent("分组和套餐")
+      expect(details).not.toHaveTextContent("永久额度")
+      expect(details).not.toHaveTextContent("Credit limit")
+    },
+  )
   it("keeps date-only expiry and reset days while timestamps use the local timezone", async () => {
     // Simulate a user west of UTC independently of the test machine's timezone.
     vi.spyOn(Date.prototype, "toLocaleString").mockImplementation(function (

@@ -15,6 +15,7 @@ import {
   getAccountRuntimeKeyLocator,
   getAccountRuntimeKeyLocatorAccountId,
   hasUsableAccountRuntimeKeySecret,
+  isAccountRuntimeKeyCompatibleWithModel,
   isAccountRuntimeKeyLocatorEqual,
   isInferenceCapableAccountRuntimeKey,
   isSelectableAccountRuntimeKey,
@@ -55,6 +56,23 @@ const service = (authenticated = true) =>
   })
 
 describe("account runtime keys", () => {
+  it("excludes denied models even when the key otherwise permits all models", () => {
+    const key = {
+      ...native(),
+      modelAccess: {
+        groups: null,
+        allowedModelIds: null,
+        deniedModelIds: ["blocked-model"],
+        suggestedModelIds: [],
+      },
+    }
+    expect(
+      isAccountRuntimeKeyCompatibleWithModel(key, { id: "blocked-model" }),
+    ).toBe(false)
+    expect(
+      isAccountRuntimeKeyCompatibleWithModel(key, { id: "allowed-model" }),
+    ).toBe(true)
+  })
   it.each([
     ["sk-abcd", "sk-abcd"],
     ["", "sk-"],
@@ -362,7 +380,7 @@ it("preserves the account-credential marker when projecting provider facts", () 
     displayName: "Management key",
     maskedLabel: "***",
     status: "enabled",
-    credentialRole: "account",
+    accountCredentialIdentity: { status: "confirmed", source: "provider" },
     fields: [],
     actions: { canUpdate: false, canDelete: true },
   })

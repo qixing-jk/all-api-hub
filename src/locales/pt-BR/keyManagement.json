@@ -228,6 +228,7 @@
     "ipLimits": "Limites de IP",
     "ipPlaceholder": "Deixe em branco para não limitar; separe vários IPs com vírgulas",
     "modelLimits": "Limites de modelos",
+    "novitaConsoleRequired": "Criar chaves exige autorização do console. Edite esta conta para obter uma credencial do console da mesma conta Novita ou crie a chave no console da Novita.",
     "quotaPlaceholder": "Insira o valor da cota (USD)",
     "quotaSettings": "Configurações de cota",
     "selectModels": "Selecionar modelos",
@@ -388,15 +389,17 @@
     },
     "badges": {
       "accountCredential": "Usada por esta conta",
+      "accountCredentialCandidate": "Possível chave de autenticação da conta",
       "accountManagePermission": "Chave de gerenciamento desta conta",
       "managePermission": "Chave de gerenciamento"
     },
     "credentialRole": {
-      "badgeTitle": "O All API Hub usa esta chave para se conectar à conta, consultar o saldo e gerenciar chaves. Se você substituí-la, atualize a chave nas configurações da conta."
+      "badgeTitle": "O All API Hub usa esta chave para se conectar à conta, consultar o saldo e gerenciar chaves. Se você substituí-la, atualize a chave nas configurações da conta.",
+      "candidateTitle": "Correspondência apenas pela chave mascarada; não confirmada."
     },
     "delete": {
-      "accountCredentialAcknowledge": "Entendo que isso interrompe o acesso de gerenciamento da conta",
-      "accountCredentialWarningDescription": "A conta perderá o acesso de gerenciamento do Requesty: listar chaves, saldo e atualizações vão falhar. A chave não pode ser recuperada aqui.",
+      "accountCredentialAcknowledge": "Entendo que isso pode afetar funções da conta que usam esta chave",
+      "accountCredentialWarningDescription": "Excluir esta chave pode interromper funções da conta que a utilizam. Atualize primeiro a credencial da conta; a chave não pode ser restaurada aqui.",
       "accountCredentialWarningTitle": "Excluir a credencial da conta",
       "confirm": "Excluir chave",
       "description": "Excluir permanentemente a chave de API {{name}}? Esta ação não pode ser desfeita.",
@@ -552,6 +555,22 @@
         "validDuration": "Validade após ativação (dias)"
       },
       "modelAllowlist": "Lista de modelos permitidos",
+      "novita": {
+        "allEnabled": "Todos os modelos habilitados",
+        "allowedIps": "IPs permitidos",
+        "allowedIpsHelp": "Um endereço IPv4 ou CIDR por linha, até 100. 0.0.0.0/0 não é permitido.",
+        "allowedModels": "Modelos permitidos",
+        "days30": "30 dias",
+        "days90": "90 dias",
+        "excludedModels": "Modelos excluídos",
+        "hours24": "24 horas",
+        "lifecycleHelp": "A validade não pode ser alterada após a criação.",
+        "modelAccess": "Acesso a modelos",
+        "modelChoicesHelp": "Selecione uma sugestão ou digite um ID de modelo completo e pressione Enter. As sugestões do catálogo público servem como referência; ao salvar, será confirmado se a política as aceita.",
+        "permanent": "Permanente",
+        "restrictIps": "Restringir IPs de origem",
+        "selected": "Somente modelos selecionados"
+      },
       "opening": {
         "failed": "Não foi possível abrir o editor de chaves",
         "loading": "Abrindo o editor de chaves...",

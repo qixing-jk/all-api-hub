@@ -1,4 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import type { AccountCredentialIdentity } from "~/services/accounts/keys/accountCredentialIdentity"
 import type { CreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import type { AccountRuntimeKeyModelAccess } from "~/services/accounts/keys/runtimeKeyModelAccess"
 import type { KeyMaskEvidence } from "~/services/accountTokens/keyMaskEvidence"
@@ -307,15 +308,6 @@ export const ACCOUNT_KEY_RESOURCE_STATUSES = {
   Unknown: "unknown",
 } as const
 
-/** Correlation between one listed key and the account's own stored credential. */
-export const ACCOUNT_KEY_CREDENTIAL_ROLES = {
-  /** The key this account authenticates with; losing it breaks management access. */
-  Account: "account",
-} as const
-
-export type AccountKeyCredentialRole =
-  (typeof ACCOUNT_KEY_CREDENTIAL_ROLES)[keyof typeof ACCOUNT_KEY_CREDENTIAL_ROLES]
-
 export type AccountKeyResourceStatus =
   (typeof ACCOUNT_KEY_RESOURCE_STATUSES)[keyof typeof ACCOUNT_KEY_RESOURCE_STATUSES]
 
@@ -331,8 +323,8 @@ export type AccountKeyResourceFacts = {
   readonly displayName: string
   readonly maskedLabel: string
   readonly status: AccountKeyResourceStatus
-  /** Present only when the provider can identify the account's own credential. */
-  readonly credentialRole?: AccountKeyCredentialRole
+  /** Provider evidence; local linked plaintext is reconciled only for presentation. */
+  readonly accountCredentialIdentity?: AccountCredentialIdentity
   /** Verified inventory plaintext for the current snapshot only; never persist as display metadata. */
   readonly runtimeSecret?: string
   /** Provider-confirmed inventory evidence; never derive this from maskedLabel. */
@@ -511,6 +503,12 @@ export type AccountKeyResourceOpenInput = {
 }
 
 export interface AccountKeyResourceCapability {
+  /** Credential-scoped native operations; omitted providers support all three. */
+  readonly operations?: (auth: ApiServiceRequest["auth"]) => {
+    create: boolean
+    update: boolean
+    delete: boolean
+  }
   /** Declares whether an inventory item can yield a complete runtime secret. */
   readonly inventorySecretAvailability?: InventorySecretAvailability
   /** The adapter decides whether its defaults are safe to submit without a form. */

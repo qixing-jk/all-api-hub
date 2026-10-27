@@ -65,6 +65,7 @@ export type AccountKeyResourceDefinition<
   requiresFreshUpdateDetail(command: TUpdateCommand, baseline: TDetail): boolean
   inventorySecretAvailability?: AccountKeyResourceCapability["inventorySecretAvailability"]
   defaultCreation?: AccountKeyResourceCapability["defaultCreation"]
+  operations?: AccountKeyResourceCapability["operations"]
   openConfig(
     input: AccountKeyResourceOpenInput,
     options?: ResourceOperationOptions,

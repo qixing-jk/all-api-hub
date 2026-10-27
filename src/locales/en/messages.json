@@ -150,6 +150,15 @@
     "configMissing": "Please configure New API address, admin token, and user ID in basic settings first",
     "noChannelsToSync": "No channels to sync"
   },
+  "novita": {
+    "apiKeyRequired": "Enter a full Novita API key or sign in to the same account to acquire a console credential. Both credentials can be saved together.",
+    "consoleAcquisitionFailed": "Could not obtain the console token. Sign in to this account on Novita, refresh the website and retry, or paste the console token directly. Your API key is preserved.",
+    "consoleCredentialRequired": "This action requires console authorization. Edit the account and acquire a console credential for the same Novita account.",
+    "credentialInvalid": "This Novita credential is invalid or expired. For a console session, sign in again and retry detection; otherwise replace the API key.",
+    "keyChanged": "This key changed on Novita. Reopen the editor before saving.",
+    "malformedResponse": "Novita returned an unexpected response. Try again later.",
+    "networkFallback": "Cannot reach Novita. Check your network connection and retry."
+  },
   "octopus": {
     "configMissing": "Please configure Octopus address, username, and password in basic settings first",
     "corsError": "This may be caused by CORS configuration. Please check the CORS whitelist setting in Octopus settings.",

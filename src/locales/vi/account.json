@@ -306,6 +306,13 @@
     "groupAllowance": "Hạn mức nhóm",
     "nativeCredits": "tín dụng",
     "nativeCreditsDetail": "Vĩnh viễn {{permanent, number}} · Hôm nay {{daily, number}} (hết hạn mỗi ngày)",
+    "novitaBalance": {
+      "available": "Số dư khả dụng",
+      "cash": "Số dư nạp tiền",
+      "creditLimit": "Hạn mức tín dụng (nợ tối đa)",
+      "description": "Số dư khả dụng là giá trị do Novita trả về. Số dư nạp tiền là khoản tiền đã nạp còn lại; hạn mức tín dụng là số tiền nợ tối đa được phép. Hiện tiện ích không tính số dư Novita vào tổng số dư, lịch sử số dư và ước tính thu nhập.",
+      "title": "Chi tiết số dư"
+    },
     "permanentAllowance": "Vĩnh viễn",
     "prompt": "Nhắc nhở",
     "scopedAllowances": "Hạn mức nhóm và gói đăng ký có thể bị giới hạn sử dụng. Hạn mức gốc không được tính vào tổng số dư, lịch sử số dư và thu nhập ước tính.",

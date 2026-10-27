@@ -306,7 +306,10 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
             </Button>
           )}
           {nativeBalance.unit === "USD" ? (
-            <AccountAllowanceDetails nativeBalance={nativeBalance} />
+            <AccountAllowanceDetails
+              nativeBalance={nativeBalance}
+              siteType={site.siteType}
+            />
           ) : nativeBalance.unit === "credits" ? (
             <div className="text-muted-foreground text-xs">
               {t("stats.nativeCreditsDetail", {

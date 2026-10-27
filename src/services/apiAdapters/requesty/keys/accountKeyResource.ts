@@ -1,4 +1,8 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import {
+  resolveAccountCredentialIdentity,
+  type AccountCredentialIdentity,
+} from "~/services/accounts/keys/accountCredentialIdentity"
 import { createAccountKeyResourceCreatedRuntimeSecret } from "~/services/accounts/keys/createdRuntimeSecret"
 import {
   REQUESTY_API_BASE_URL,
@@ -10,11 +14,9 @@ import { keyExpiryDisplayFact } from "~/services/apiAdapters/accountKeyResources
 import { defineAccountKeyResourceCapability } from "~/services/apiAdapters/accountKeyResources/factory"
 import { mapAccountKeyResourceFailure } from "~/services/apiAdapters/accountKeyResources/failure"
 import {
-  ACCOUNT_KEY_CREDENTIAL_ROLES,
   ACCOUNT_KEY_DETAIL_AVAILABILITIES,
   ACCOUNT_KEY_RESOURCE_STATUSES,
   ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies,
-  type AccountKeyCredentialRole,
   type AccountKeyResourceOpenInput,
   type AccountKeyResourceRef,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
@@ -45,7 +47,7 @@ import { REQUESTY_KEY_FIELDS } from "./keyResourceFields"
  */
 type RequestyKeyRow = {
   key: RequestyApiKey
-  credentialRole?: AccountKeyCredentialRole
+  accountCredentialIdentity: AccountCredentialIdentity
 }
 
 /** Reads the id of the key the account authenticates with; null when unknown. */
@@ -64,10 +66,12 @@ const readSelfKeyId = async (
 const toRow = (
   key: RequestyApiKey,
   selfKeyId: string | null,
-): RequestyKeyRow =>
-  selfKeyId && key.id === selfKeyId
-    ? { key, credentialRole: ACCOUNT_KEY_CREDENTIAL_ROLES.Account }
-    : { key }
+): RequestyKeyRow => ({
+  key,
+  accountCredentialIdentity: resolveAccountCredentialIdentity({
+    resourceIdentity: { resourceId: key.id, credentialResourceId: selfKeyId },
+  }),
+})
 
 const createdSecret = (
   account: AccountKeyResourceOpenInput["account"],
@@ -110,7 +114,7 @@ const facts = (
       expiresAtMs !== null && expiresAtMs <= Date.now()
         ? ACCOUNT_KEY_RESOURCE_STATUSES.Expired
         : ACCOUNT_KEY_RESOURCE_STATUSES.Enabled,
-    ...(row.credentialRole ? { credentialRole: row.credentialRole } : {}),
+    accountCredentialIdentity: row.accountCredentialIdentity,
     detailAvailability: ACCOUNT_KEY_DETAIL_AVAILABILITIES.Complete,
     displayFacts: [
       {

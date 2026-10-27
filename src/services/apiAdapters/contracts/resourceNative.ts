@@ -197,6 +197,8 @@ type ResourceSelectFieldDescriptor = ResourceFieldDescriptorBase & {
     | (typeof RESOURCE_FIELD_TYPES)["Select"]
     | (typeof RESOURCE_FIELD_TYPES)["MultiSelect"]
   options: readonly ResourceFieldOption[]
+  /** Allow typed multi-select values even when the loaded option list is empty. */
+  allowCustom?: boolean
   optionLoader?: {
     dependsOn: readonly string[]
     /** Manual loading is useful when dependencies include credentials or remote probes. */

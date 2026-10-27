@@ -97,5 +97,5 @@ src/public/react-devtools*
 .scratch/visual-comparisons/
 .scratch/visual-captures/
 
-# Authenticated RelayFor identity and screenshot evidence stays local.
-.scratch/relayfor-parity-audit/
+# Novita adaptation generated evidence
+.scratch/novita-adaptation/artifacts/

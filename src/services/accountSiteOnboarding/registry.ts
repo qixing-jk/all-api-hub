@@ -17,6 +17,7 @@ import { freeModelBrowserIdentity } from "~/services/apiAdapters/freemodel/brows
 import { kimiOpenPlatformBrowserIdentity } from "~/services/apiAdapters/kimiOpenPlatform/browserIdentity"
 import { krillBrowserIdentity } from "~/services/apiAdapters/krill/browserIdentity"
 import { newApiBrowserIdentity } from "~/services/apiAdapters/newApi/account/browserIdentity"
+import { novitaAccountDetectionPrivacy } from "~/services/apiAdapters/novita/accountDetection"
 import { openRouterAccountDetectionPrivacy } from "~/services/apiAdapters/openrouter/account/accountDetection"
 import { openRouterBrowserIdentity } from "~/services/apiAdapters/openrouter/account/browserIdentity"
 import { pmApiBrowserIdentity } from "~/services/apiAdapters/pmapi/browserIdentity"
@@ -43,6 +44,7 @@ import { grsaiContentSessionExtractor } from "./contentSession/grsai"
 import { kimiOpenPlatformContentSessionExtractor } from "./contentSession/kimiOpenPlatform"
 import { krillContentSessionExtractor } from "./contentSession/krill"
 import { newApiAuthBundleContentSessionExtractor } from "./contentSession/newApiAuthBundle"
+import { novitaContentSessionExtractor } from "./contentSession/novita"
 import { pmApiContentSessionExtractor } from "./contentSession/pmapi"
 import { relayForContentSessionExtractor } from "./contentSession/relayfor"
 import { rightCodeContentSessionExtractor } from "./contentSession/rightcode"
@@ -139,6 +141,10 @@ const siteBrowserAdapters: readonly {
   {
     identity: openRouterBrowserIdentity,
     detectionPrivacy: openRouterAccountDetectionPrivacy,
+  },
+  {
+    sessionExtractor: novitaContentSessionExtractor,
+    detectionPrivacy: novitaAccountDetectionPrivacy,
   },
   {
     sessionExtractor: compatibleUserContentSessionExtractor,

@@ -27,12 +27,16 @@ import {
   isIdentityKnownAutoDetectFailureReason,
   type AutoDetectError,
 } from "~/services/accounts/utils/autoDetectUtils"
-import { isCanonicalOpenRouterUrl } from "~/services/accountSiteDefinitions/identifiers"
+import {
+  isCanonicalNovitaUrl,
+  isCanonicalOpenRouterUrl,
+} from "~/services/accountSiteDefinitions/identifiers"
 import {
   isCanonicalRequestyUrl,
   onboardRequestyAccount,
   requestyOnboardingDefaults,
 } from "~/services/apiAdapters/requesty/account/accountOnboarding"
+import { isNovitaConsoleCredential } from "~/services/apiService/novita/constants"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
 import {
@@ -61,7 +65,19 @@ type DetectedAccount = NonNullable<
   Awaited<ReturnType<typeof autoDetectAccount>>["data"]
 >
 
+/** Transient evidence for the exact credential and identity accepted by detection. */
+export type AccountCredentialVerification = {
+  status: "success" | "error"
+  accessToken: string
+  siteType: AccountSiteType
+  userId: string
+  accountLabel?: string
+  message?: string
+}
+
 interface DetectionInvocation {
+  novitaAcquireConsole?: boolean
+  novitaVerifyCredential?: boolean
   url: string
   mode: DialogMode
   isDetected: boolean
@@ -110,11 +126,18 @@ export function useAccountAutoDetection({
     null,
   )
   const [attempts] = useState(() => new AccountDetectionAttempts())
+  const [credentialVerification, setCredentialVerification] =
+    useState<AccountCredentialVerification | null>(null)
+  const [novitaCredentialOperation, setNovitaCredentialOperation] = useState<
+    "console" | "api-key" | "account" | undefined
+  >()
   const detectSlowHintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   )
   const invalidate = useCallback(() => {
     attempts.invalidate()
+    setCredentialVerification(null)
+    setNovitaCredentialOperation(undefined)
   }, [attempts])
   useLayoutEffect(() => {
     invalidate()
@@ -299,6 +322,14 @@ export function useAccountAutoDetection({
         if (clearCreatedCredential) setAccessToken("")
       }
       setIsDetecting(true)
+      setNovitaCredentialOperation(
+        input.novitaAcquireConsole
+          ? "console"
+          : input.novitaVerifyCredential
+            ? "api-key"
+            : "account",
+      )
+      setCredentialVerification(null)
       setDetectionError(null)
       form.beforeDetect()
 
@@ -445,11 +476,17 @@ export function useAccountAutoDetection({
                       authType,
                       protectionBypassExecution,
                       cookieAuthSessionCookie.trim() || undefined,
-                      ...(userId.trim() &&
+                      ...((userId.trim() ||
+                        (isCanonicalNovitaUrl(requestedUrl) &&
+                          (accessToken.trim() ||
+                            input.novitaAcquireConsole ||
+                            draft.novitaCredentialMode === "api-key"))) &&
                       (mode === DIALOG_MODES.EDIT ||
                         accessToken.trim() ||
                         cookieAuthSessionCookie.trim() ||
-                        sub2apiRefreshToken.trim())
+                        sub2apiRefreshToken.trim() ||
+                        input.novitaAcquireConsole ||
+                        draft.novitaCredentialMode === "api-key")
                         ? [
                             {
                               existingAccount: {
@@ -457,6 +494,11 @@ export function useAccountAutoDetection({
                                 siteType: credentialScope?.siteType ?? siteType,
                                 userId: userId.trim(),
                                 accessToken,
+                                novitaCredentialMode: input.novitaAcquireConsole
+                                  ? ("console" as const)
+                                  : input.novitaVerifyCredential
+                                    ? ("api-key" as const)
+                                    : undefined,
                               },
                             },
                           ]
@@ -482,6 +524,14 @@ export function useAccountAutoDetection({
               }
               form.enterManual()
               setDetectionError(result.detailedError || null)
+              if (accessToken.trim())
+                setCredentialVerification({
+                  status: "error",
+                  accessToken,
+                  siteType,
+                  userId,
+                  message: result.detailedError?.message || result.message,
+                })
               analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
                 diagnostics: {
                   failure: {
@@ -525,6 +575,22 @@ export function useAccountAutoDetection({
                 })
                 return
               }
+              setNovitaCredentialOperation(
+                input.novitaVerifyCredential
+                  ? "api-key"
+                  : isNovitaConsoleCredential(resultData.accessToken)
+                    ? "console"
+                    : "api-key",
+              )
+              setCredentialVerification({
+                status: "success",
+                accessToken: resultData.accessToken,
+                siteType: isAccountSiteType(resultData.siteType)
+                  ? resultData.siteType
+                  : siteType,
+                userId: resultData.userId,
+                accountLabel: resultData.username || resultData.userId,
+              })
               // Requesty onboarding reports credential reuse instead of a plain
               // detection success; surface that so the extra key is explained.
               if (
@@ -552,6 +618,14 @@ export function useAccountAutoDetection({
             })
             const detectionError = analyzeAutoDetectError(error)
             setDetectionError(detectionError)
+            if (accessToken.trim())
+              setCredentialVerification({
+                status: "error",
+                accessToken,
+                siteType,
+                userId,
+                message: detectionError.message,
+              })
             form.enterManual()
             analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
               diagnostics: {
@@ -618,7 +692,13 @@ export function useAccountAutoDetection({
   }
 
   return {
-    state: { isDetecting, isDetectingSlow, detectionError },
+    state: {
+      isDetecting,
+      isDetectingSlow,
+      detectionError,
+      credentialVerification,
+      novitaCredentialOperation,
+    },
     run,
     invalidate,
     reset,

@@ -20,4 +20,8 @@ export interface AccountPersistenceCapability {
   ): unknown
   /** Presence selects exact-credential ownership instead of origin/user identity. */
   getCredentialKey?(accessToken: string | undefined): string | undefined
+  /** Selects only the account's native key secret for local ownership comparisons. */
+  getKeyAuthenticationSecret?(
+    accessToken: string | undefined,
+  ): string | undefined
 }

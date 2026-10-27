@@ -58,6 +58,8 @@ Enter a key name in the search box. Search matches **names only** and does not i
 - Masking protects only the display and does not mean the key is stored encrypted. Copy, verification, export, backup, and remote submission are available only when a full value exists, and those actions use that full value.
 - For keys shown only once at creation, such as some AIHubMix and OpenRouter keys, save them immediately. Historical OpenRouter entries that do not exactly match a local API credential contain only a mask or hash and cannot reveal, copy, verify, or export the full key.
 
+Some keys display whether they are used for account authentication. “Possibly used for account authentication” indicates matching evidence such as a mask, which cannot recover the full key; “Used by this account” indicates confirmed evidence. Linking a local API credential can provide full-key comparison evidence, but does not change the key's permissions on the site.
+
 ### 4. Create a Key
 
 1. Click **`Add API Key`** in the upper-right corner.

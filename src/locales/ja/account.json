@@ -306,6 +306,13 @@
     "groupAllowance": "グループ枠",
     "nativeCredits": "クレジット",
     "nativeCreditsDetail": "永久 {{permanent, number}} · 本日 {{daily, number}}（翌日失効）",
+    "novitaBalance": {
+      "available": "利用可能残高",
+      "cash": "チャージ残高",
+      "creditLimit": "信用枠（債務上限）",
+      "description": "利用可能残高は Novita が返す値を使用します。チャージ残高は入金した資金の残額、信用枠は支払いを繰り延べられる上限です。拡張機能では現在、Novita の残高を合計残高、残高履歴、収入推定に含めていません。",
+      "title": "残高の詳細"
+    },
     "permanentAllowance": "永久枠",
     "prompt": "プロンプト",
     "scopedAllowances": "グループやプランの利用枠には利用制限がある場合があります。ネイティブ利用枠は残高合計・残高履歴・収入推計に含まれません。",

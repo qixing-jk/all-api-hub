@@ -87,18 +87,11 @@ export function mergeAutoDetectRecoveryIntoDraft(params: {
     sub2apiRefreshTokenPreferenceChanged,
   } = params
   const policy = getAccountDialogSitePolicy(nextSiteType)
-  const recoverString = (
-    current: string,
-    recovered: string | undefined,
-    replaceDefault = false,
-  ) => {
+  const recoverString = (current: string, recovered: string | undefined) => {
     const normalizedCurrent = current.trim()
     const normalizedRecovered = recovered?.trim() ?? ""
     if (!normalizedRecovered) return current
-    if (
-      normalizedCurrent &&
-      (!replaceDefault || normalizedCurrent !== policy.defaultSiteName)
-    ) {
+    if (normalizedCurrent) {
       return current
     }
     return normalizedRecovered
@@ -112,7 +105,9 @@ export function mergeAutoDetectRecoveryIntoDraft(params: {
   const nextDraft: AccountDialogDraft = {
     ...draft,
     siteType: nextSiteType,
-    siteName: recoverString(draft.siteName, recoveryData.siteName, true),
+    siteName: draft.siteNameEdited
+      ? draft.siteName
+      : recoveryData.siteName?.trim() || draft.siteName,
     username: recoverString(draft.username, recoveryData.username),
     userId: recoverString(draft.userId, recoveryData.userId),
     accessToken: recoverString(draft.accessToken, recoveryData.accessToken),
@@ -217,12 +212,15 @@ export function buildDraftFromAutoDetectResult(params: {
     username: resultData.username,
     accessToken: resultData.accessToken,
     userId: resultData.userId,
-    siteName: resultData.siteName,
-    exchangeRate: resultData.exchangeRate
-      ? resultData.exchangeRate.toString()
-      : mode === DIALOG_MODES.ADD
-        ? ""
-        : draft.exchangeRate,
+    siteName: draft.siteNameEdited ? draft.siteName : resultData.siteName,
+    exchangeRate:
+      policy.preserveUserExchangeRateOnDetection && draft.exchangeRate.trim()
+        ? draft.exchangeRate
+        : resultData.exchangeRate
+          ? resultData.exchangeRate.toString()
+          : mode === DIALOG_MODES.ADD
+            ? ""
+            : draft.exchangeRate,
     siteType: nextSiteType,
     authType:
       resultData.authType ??

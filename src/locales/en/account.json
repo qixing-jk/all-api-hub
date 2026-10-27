@@ -330,6 +330,13 @@
     "groupAllowance": "Group allowance",
     "nativeCredits": "credits",
     "nativeCreditsDetail": "Fixed {{permanent, number}} · Today {{daily, number}} (expires daily)",
+    "novitaBalance": {
+      "available": "Available balance",
+      "cash": "Top-up balance",
+      "creditLimit": "Credit limit (maximum debt)",
+      "description": "Available balance is reported by Novita. Top-up balance is your remaining top-up funds; credit limit is the maximum amount you can owe. The extension currently excludes Novita balances from total balance, balance history and income estimates.",
+      "title": "Balance details"
+    },
     "permanentAllowance": "Permanent",
     "prompt": "Prompt",
     "scopedAllowances": "Group and subscription allowances may have usage restrictions. Native allowances are excluded from balance totals, balance history and income estimates.",

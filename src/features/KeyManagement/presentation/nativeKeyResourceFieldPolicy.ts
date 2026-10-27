@@ -671,6 +671,106 @@ const resolveSiteFields = (
   requireFreshOptions?: EditorPresentation["requireFreshOptions"]
 } => {
   const builders = {
+    [editorKinds.Novita]: (): {
+      fields: ResourceFieldPresentation[]
+      automaticName: EditorPresentation["automaticName"]
+    } => ({
+      automaticName: { kind: ACCOUNT_KEY_AUTOMATIC_NAME_KINDS.Fixed } as const,
+      fields: [
+        ...(descriptors &&
+        !descriptors.some((field) => field.fieldId === "name")
+          ? []
+          : [name]),
+        ...(mode === editorModes.Create
+          ? [
+              {
+                fieldId: "lifecycle",
+                section: "basic",
+                order: 10,
+                renderer: "select" as const,
+                resolveLabel: (t: TFunction) =>
+                  t("keyManagement:dialog.expiration"),
+                resolveHelp: (t: TFunction) =>
+                  t("keyManagement:native.editor.novita.lifecycleHelp"),
+                optionLabelResolvers: {
+                  permanent: (t: TFunction) =>
+                    t("keyManagement:native.editor.novita.permanent"),
+                  "90d": (t: TFunction) =>
+                    t("keyManagement:native.editor.novita.days90"),
+                  "30d": (t: TFunction) =>
+                    t("keyManagement:native.editor.novita.days30"),
+                  "24h": (t: TFunction) =>
+                    t("keyManagement:native.editor.novita.hours24"),
+                },
+                issueLabelResolvers: issues,
+              },
+            ]
+          : []),
+        {
+          fieldId: "model_mode",
+          section: "advanced",
+          order: 0,
+          renderer: "select" as const,
+          resolveLabel: (t: TFunction) =>
+            t("keyManagement:native.editor.novita.modelAccess"),
+          optionLabelResolvers: {
+            all_enabled: (t: TFunction) =>
+              t("keyManagement:native.editor.novita.allEnabled"),
+            selected: (t: TFunction) =>
+              t("keyManagement:native.editor.novita.selected"),
+          },
+          issueLabelResolvers: issues,
+        },
+        {
+          fieldId: "excluded_models",
+          section: "advanced",
+          order: 10,
+          renderer: "multi-select" as const,
+          resolveLabel: (t: TFunction) =>
+            t("keyManagement:native.editor.novita.excludedModels"),
+          resolveHelp: (t: TFunction) =>
+            t("keyManagement:native.editor.novita.modelChoicesHelp"),
+          visibleWhen: (values: EditableResourceProjection) =>
+            values.model_mode === "all_enabled",
+          issueLabelResolvers: issues,
+        },
+        {
+          fieldId: "allowed_models",
+          section: "advanced",
+          order: 20,
+          renderer: "multi-select" as const,
+          resolveLabel: (t: TFunction) =>
+            t("keyManagement:native.editor.novita.allowedModels"),
+          resolveHelp: (t: TFunction) =>
+            t("keyManagement:native.editor.novita.modelChoicesHelp"),
+          visibleWhen: (values: EditableResourceProjection) =>
+            values.model_mode === "selected",
+          issueLabelResolvers: issues,
+        },
+        {
+          fieldId: "ip_restricted",
+          section: "advanced",
+          order: 30,
+          renderer: "boolean" as const,
+          resolveLabel: (t: TFunction) =>
+            t("keyManagement:native.editor.novita.restrictIps"),
+          issueLabelResolvers: issues,
+        },
+        {
+          fieldId: "allowed_ips",
+          section: "advanced",
+          order: 40,
+          renderer: "textarea" as const,
+          resolveLabel: (t: TFunction) =>
+            t("keyManagement:native.editor.novita.allowedIps"),
+          resolveHelp: (t: TFunction) =>
+            t("keyManagement:native.editor.novita.allowedIpsHelp"),
+          visibleWhen: (values: EditableResourceProjection) =>
+            values.ip_restricted === true,
+          issueLabelResolvers: issues,
+        },
+      ],
+    }),
     [editorKinds.Sub2Api]: () => buildSub2ApiFields(mode),
     [editorKinds.RelayFor]: () => buildRelayForFields(),
     [editorKinds.Requesty]: () => buildRequestyFields(mode),

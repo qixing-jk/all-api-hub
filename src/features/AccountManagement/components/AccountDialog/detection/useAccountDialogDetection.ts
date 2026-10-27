@@ -233,8 +233,13 @@ export function useAccountDialogDetection({
     })
   }
 
-  const handleAutoDetect = () =>
+  const runDetection = (
+    novitaAcquireConsole = false,
+    novitaVerifyCredential = false,
+  ) =>
     autoDetection.run({
+      novitaAcquireConsole,
+      novitaVerifyCredential,
       url,
       mode,
       isDetected,
@@ -281,5 +286,10 @@ export function useAccountDialogDetection({
     }
   }
 
-  return { handleAutoDetect, handleShowManualForm }
+  return {
+    handleAutoDetect: () => runDetection(),
+    handleVerifyNovitaCredential: () => runDetection(false, true),
+    handleAcquireNovitaConsole: () => runDetection(true),
+    handleShowManualForm,
+  }
 }

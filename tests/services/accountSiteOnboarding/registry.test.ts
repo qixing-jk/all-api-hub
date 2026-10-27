@@ -177,6 +177,7 @@ describe("account site onboarding registry", () => {
       "v-api",
       "apiyi",
       "new-api-auth-bundle",
+      "novita",
       "compatible-user",
     ])
   })

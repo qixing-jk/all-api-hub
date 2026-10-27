@@ -805,6 +805,7 @@ test("creates a managed-site channel from channel management", async ({
   await expect(
     page.getByLabel("Copy gpt-4.1-mini", { exact: true }),
   ).toBeVisible()
+  await page.getByTestId(CHANNEL_DIALOG_TEST_IDS.modelsInput).press("Escape")
 
   await page.getByRole("button", { name: "Create Channel" }).click()
 
@@ -878,6 +879,7 @@ test("edits a managed-site channel from row actions", async ({
   await expect(
     page.getByLabel("Copy gpt-4.1-mini", { exact: true }),
   ).toBeVisible()
+  await modelSearchInput.press("Escape")
 
   await page.getByRole("button", { name: "Save Changes" }).click()
 

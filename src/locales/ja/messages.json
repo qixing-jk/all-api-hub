@@ -148,6 +148,15 @@
     "configMissing": "先に設定で New API のアドレス、管理者トークン、ユーザー ID を設定してください",
     "noChannelsToSync": "同期するチャネルがありません"
   },
+  "novita": {
+    "apiKeyRequired": "完全な Novita API Key を入力するか、同じアカウントでログインしてコンソール認証情報を取得してください。両方を同時に保存できます。",
+    "consoleAcquisitionFailed": "コンソールトークンを取得できませんでした。Novita でこのアカウントにログインし、ページを更新して再試行するか、トークンを直接貼り付けてください。入力済みの API Key は保持されます。",
+    "consoleCredentialRequired": "この操作にはコンソール認証が必要です。アカウントを編集し、同じ Novita アカウントの認証情報を取得してください。",
+    "credentialInvalid": "Novita の認証情報が無効か期限切れです。コンソールの場合は再ログインして再検出し、API キーの場合は置き換えてください。",
+    "keyChanged": "Novita 上でキーが変更されました。編集画面を開き直してください。",
+    "malformedResponse": "Novita から予期しない応答が返されました。後でもう一度お試しください。",
+    "networkFallback": "Novita に接続できません。ネットワーク接続を確認して、もう一度お試しください。"
+  },
   "octopus": {
     "configMissing": "先に設定で Octopus のアドレス、ユーザー名、パスワードを設定してください",
     "corsError": "これは CORS 設定が原因の可能性があります。Octopus 設定の CORS ホワイトリストを確認してください。",

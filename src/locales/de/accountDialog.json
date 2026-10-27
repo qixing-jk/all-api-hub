@@ -18,6 +18,13 @@
       "openProfile": "LaoZhang-Profil öffnen",
       "openProfileFailed": "Die Seite konnte nicht geöffnet werden. Öffne LaoZhang Profil → System token manuell, führe die Sicherheitsprüfung durch und kopiere den Token. Kehre dann hierher zurück und gib ihn ein."
     },
+    "novita": {
+      "generateStep": "Melde dich beim selben Novita-Konto an und klicke auf „Konsolenzugangsdaten abrufen“. Die Kontoidentität wird geprüft; der API-Schlüssel bleibt erhalten. Nach Ablauf erneut abrufen. Ein gespeicherter API-Schlüssel bleibt unabhängig nutzbar.",
+      "openPage": "Schlüsselverwaltung öffnen",
+      "openPageFailed": "Die Schlüsselverwaltung konnte nicht geöffnet werden. Bitte öffne sie in der Novita-Konsole.",
+      "pasteStep": "Füge einen vollständigen sk_ API-Schlüssel ein. Neue Schlüssel kannst du in Novitas Schlüsselverwaltung erstellen und kopieren. Die Gültigkeit wird bei der Erstellung festgelegt.",
+      "title": "Anmeldemethode"
+    },
     "openSecurity": "Sicherheitseinstellungen der Website öffnen",
     "openSecurityFailed": "Die Seite konnte nicht geöffnet werden. Öffne Sicherheit → Access Token auf der Website manuell und kehre zum Einfügen des Tokens hierher zurück.",
     "pasteStep": "Kopiere das vollständige Access Token sofort, füge es unten im Feld „Access Token“ ein, prüfe die Kontodaten und speichere sie.",
@@ -184,6 +191,9 @@
     "manualVerificationRequiredTitle": "Check-in benötigt deine Verifizierung",
     "notes": "Notizen",
     "notesPlaceholder": "Optional, Notizen eingeben",
+    "novitaApiKey": "Novita-Kontozugangsdaten",
+    "novitaApiKeyGuidance": "Verwenden Sie die angemeldete Novita-Sitzung für Kontostand, Schlüsselerstellung, Umbenennung, Löschung und Modell/IP-Richtlinien. Nach Ablauf erneut beim selben Konto anmelden und erkennen lassen. Ein separater sk_ API Key ermöglicht Kontostand, Schlüsselliste und Modell/IP-Richtlinien ohne aktive Website-Anmeldung. Er kann keine Schlüssel erstellen, umbenennen oder löschen. Die Laufzeit wird bei der Erstellung festgelegt.",
+    "novitaApiKeyGuidanceTitle": "Anmeldemethode",
     "openRedeemWithCheckIn": "Öffnen Sie auch die Einlöseseite, wenn Sie den externen Check-in nutzen",
     "openrouterManagementKey": "OpenRouter-Verwaltungsschlüssel",
     "openrouterManagementKeyGuidance": "Erstellen Sie einen neuen Verwaltungsschlüssel auf der Seite „Verwaltungsschlüssel“ von OpenRouter, kopieren Sie ihn sofort und fügen Sie ihn dann hier ein. Vorhandene Verwaltungsschlüssel können nicht erneut offengelegt werden.",
@@ -334,6 +344,23 @@
     "detecting": "Wird erkannt...",
     "manualAdd": "Manuell hinzufügen",
     "reDetect": "Erneut erkennen"
+  },
+  "novitaCredentials": {
+    "apiKey": "API Key",
+    "apiKeyScope": "Kann keine Schlüssel erstellen, umbenennen oder löschen. Wenn das Konsolentoken abläuft, wird dieser API-Schlüssel automatisch für weitere Guthaben- und Schlüsselabfragen verwendet.",
+    "apiKeyVerified": "API-Schlüssel für {{account}} geprüft.",
+    "console": "Konsolentoken",
+    "consoleScope": "Unterstützt die vollständige Kontoverwaltung. Mit der Abrufschaltfläche rechts im Eingabefeld wird das Konsolentoken automatisch eingefügt.",
+    "consoleVerified": "Konsolentoken für {{account}} geprüft.",
+    "detectSession": "Konsolenzugang abrufen",
+    "hideApiKey": "API-Schlüssel ausblenden",
+    "hideConsoleToken": "Konsolentoken ausblenden",
+    "openKeys": "Novita-Schlüsselverwaltung öffnen",
+    "openKeysShort": "Schlüsselverwaltung",
+    "showApiKey": "API-Schlüssel anzeigen",
+    "showConsoleToken": "Konsolentoken anzeigen",
+    "verifying": "API-Schlüssel wird geprüft…",
+    "verifyKey": "API Key prüfen"
   },
   "openrouterBootstrapRecovery": {
     "label": "Erkennbare Bezeichnung: {{label}}",

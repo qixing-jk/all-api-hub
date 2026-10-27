@@ -36,6 +36,8 @@ import {
   getManagedSiteTypeValues,
   MANAGED_RESOURCE_KINDS,
   MANAGED_SITE_TYPES,
+  NOVITA_HOSTNAMES,
+  NOVITA_WEB_ORIGIN,
   OPENROUTER_HOSTNAMES,
   OPENROUTER_WEB_ORIGIN,
   SHAREDCHAT_HOSTNAMES,
@@ -165,6 +167,7 @@ type ExpectedAccountSiteType =
   | typeof SITE_TYPES.RELAYFOR
   | typeof SITE_TYPES.REQUESTY
   | typeof SITE_TYPES.VERCEL_AI_GATEWAY
+  | typeof SITE_TYPES.NOVITA
   | typeof SITE_TYPES.UNKNOWN
 
 type ExpectedManagedSiteType =
@@ -421,6 +424,55 @@ describe("account site definition registry", () => {
     )
   })
 
+  it("registers Novita as an account-only site with its verified console routes", () => {
+    const definition = getAccountSiteDefinition(SITE_TYPES.NOVITA)
+
+    expect(definition).toMatchObject({
+      scopes: [ACCOUNT_SITE_DEFINITION_SCOPES.Account],
+      adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Novita,
+      onboarding: {
+        displayName: "Novita AI",
+        accountForm: {
+          fixedSiteUrl: NOVITA_WEB_ORIGIN,
+          defaultSiteName: "Novita AI",
+          accessTokenLabelKey: "form.novitaApiKey",
+          accessTokenGuidanceTitleKey: "form.novitaApiKeyGuidanceTitle",
+          accessTokenGuidanceKey: "form.novitaApiKeyGuidance",
+        },
+        detection: { hostnames: NOVITA_HOSTNAMES },
+        routes: {
+          loginPath: "/console",
+          usagePath: "/console",
+          adminCredentialsPath: "/settings/key-management",
+          pricingPath: "/pricing",
+          checkInPath: null,
+          accessTokenPath: "/settings/key-management",
+          redeemPath: null,
+          siteAnnouncementsPath: null,
+        },
+      },
+    })
+    expect(definition?.tokenKey).toBeUndefined()
+  })
+
+  it("keeps Novita's API-key auth and origins for manual adds", () => {
+    const profile = getAccountSiteProductProfile(SITE_TYPES.NOVITA)
+
+    expect(profile.auth.allowedAuthTypes).toEqual([AuthTypeEnum.AccessToken])
+    expect(profile.auth.defaultAuthType).toBe(AuthTypeEnum.AccessToken)
+    expect(profile.identity.usernameRequired).toBe(false)
+    expect(profile.identity.userIdRequired).toBe(false)
+    expect(profile.urls).toMatchObject({
+      recognizedHostnames: NOVITA_HOSTNAMES,
+      storageOrigin: NOVITA_WEB_ORIGIN,
+      duplicateOrigin: NOVITA_WEB_ORIGIN,
+      inferenceApiBaseUrls: {
+        openAiCompatible: "https://api.novita.ai/openai/v1",
+        anthropic: "https://api.novita.ai/anthropic",
+      },
+    })
+  })
+
   it("matches current product-profile behavior for overridden sites", () => {
     const anyrouterOverride = getAccountSiteProductProfileOverride(
       SITE_TYPES.ANYROUTER,
@@ -494,6 +546,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.KIMI_GLOBAL,
       SITE_TYPES.GRSAI,
       SITE_TYPES.VERCEL_AI_GATEWAY,
+      SITE_TYPES.NOVITA,
       SITE_TYPES.UNKNOWN,
     ])
   })

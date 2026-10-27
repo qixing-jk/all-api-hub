@@ -1,4 +1,5 @@
 import type { AccountSiteType } from "~/constants/siteType"
+import { isProviderConfirmedAccountCredential } from "~/services/accounts/keys/accountCredentialIdentityFacts"
 import {
   UNRESTRICTED_RUNTIME_KEY_MODEL_ACCESS,
   type AccountRuntimeKeyModelAccess,
@@ -11,7 +12,6 @@ import {
 } from "~/services/accountTokens/apiTokenKey"
 import type { KeyMaskEvidence } from "~/services/accountTokens/keyMaskEvidence"
 import {
-  ACCOUNT_KEY_CREDENTIAL_ROLES,
   ACCOUNT_KEY_RESOURCE_STATUSES,
   type AccountKeyResourceFacts,
   type AccountKeyResourceRef,
@@ -298,7 +298,8 @@ export const isAccountRuntimeKeyCompatibleWithModel = (
     return false
   }
 
-  const { groups, allowedModelIds } = runtimeKey.modelAccess
+  const { groups, allowedModelIds, deniedModelIds } = runtimeKey.modelAccess
+  if (deniedModelIds?.includes(modelId)) return false
   if (groups !== null && Array.isArray(model.enableGroups)) {
     const enabledGroups = new Set(
       model.enableGroups.map((group) => group.trim() || DEFAULT_MODEL_GROUP),
@@ -456,7 +457,7 @@ export const buildAccountKeyResourceRuntimeKeyFromFacts = (
     label: facts.displayName,
     secret,
     keyMask: facts.keyMask,
-    ...(facts.credentialRole === ACCOUNT_KEY_CREDENTIAL_ROLES.Account
+    ...(isProviderConfirmedAccountCredential(facts.accountCredentialIdentity)
       ? { accountCredential: true }
       : {}),
     status:

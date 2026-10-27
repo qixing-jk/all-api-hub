@@ -216,6 +216,7 @@
     "ipLimits": "IP 限制",
     "ipPlaceholder": "留空表示不限制，多個 IP 用逗號分隔",
     "modelLimits": "模型限制",
+    "novitaConsoleRequired": "建立金鑰需要控制台授權。請編輯此帳號，取得同一 Novita 帳號的控制台憑證，或直接前往 Novita 控制台建立。",
     "quotaPlaceholder": "請輸入額度金額（美元）",
     "quotaSettings": "額度設定",
     "selectModels": "選擇模型",
@@ -368,15 +369,17 @@
     },
     "badges": {
       "accountCredential": "目前帳號使用",
+      "accountCredentialCandidate": "可能用於帳號驗證",
       "accountManagePermission": "目前帳號管理金鑰",
       "managePermission": "管理金鑰"
     },
     "credentialRole": {
-      "badgeTitle": "All API Hub 使用此金鑰連線至該帳號，以查詢餘額及管理金鑰。更換後，請在帳號設定中更新金鑰。"
+      "badgeTitle": "All API Hub 使用此金鑰連線至該帳號，以查詢餘額及管理金鑰。更換後，請在帳號設定中更新金鑰。",
+      "candidateTitle": "僅根據金鑰遮罩比對，尚未確認。"
     },
     "delete": {
-      "accountCredentialAcknowledge": "我了解這會中斷目前帳號的管理介面存取",
-      "accountCredentialWarningDescription": "刪除後該帳號將無法再呼叫 Requesty 管理介面，金鑰清單、餘額與重新整理都會失敗，且金鑰無法在此還原。",
+      "accountCredentialAcknowledge": "我了解這可能影響使用此金鑰的帳號功能",
+      "accountCredentialWarningDescription": "刪除後，使用此金鑰的帳號功能可能失效。請先更新帳號憑證；此處無法還原該金鑰。",
       "accountCredentialWarningTitle": "刪除目前帳號的憑證",
       "confirm": "刪除金鑰",
       "description": "要永久刪除金鑰 {{name}} 嗎？刪除後無法復原。",
@@ -532,6 +535,22 @@
         "validDuration": "啟用後有效天數"
       },
       "modelAllowlist": "模型允許清單",
+      "novita": {
+        "allEnabled": "全部已啟用模型",
+        "allowedIps": "允許的 IP",
+        "allowedIpsHelp": "每行一個 IPv4 位址或 CIDR，最多 100 筆；不支援 0.0.0.0/0。",
+        "allowedModels": "允許模型",
+        "days30": "30 天",
+        "days90": "90 天",
+        "excludedModels": "排除模型",
+        "hours24": "24 小時",
+        "lifecycleHelp": "有效期建立後無法修改。",
+        "modelAccess": "模型存取範圍",
+        "modelChoicesHelp": "選擇候選項目或輸入完整模型 ID，按 Enter 新增。公開目錄候選僅供參考，是否可用於策略以儲存結果為準。",
+        "permanent": "永久",
+        "restrictIps": "限制來源 IP",
+        "selected": "僅指定模型"
+      },
       "opening": {
         "failed": "無法開啟金鑰編輯器",
         "loading": "正在開啟金鑰編輯器...",

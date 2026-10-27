@@ -18,6 +18,13 @@
       "openProfile": "LaoZhang のプロフィールを開く",
       "openProfileFailed": "ページを開けませんでした。LaoZhang の「プロフィール → System token」を手動で開き、セキュリティ確認後にトークンをコピーして、ここに戻って入力してください。"
     },
+    "novita": {
+      "generateStep": "同じ Novita アカウントでログインし、「コンソール認証情報を取得」を押してください。アカウントの一致を確認し、入力済みの API Key を保持します。期限切れの場合は再取得が必要ですが、保存済みの API Key は引き続き単独で使用できます。",
+      "openPage": "キー管理を開く",
+      "openPageFailed": "キー管理を開けませんでした。Novita コンソールから手動で開いてください。",
+      "pasteStep": "既存の完全な sk_ API Key を貼り付けてください。新規作成する場合は Novita のキー管理で作成してコピーします。有効期限は作成時の設定に従います。",
+      "title": "認証方法"
+    },
     "openSecurity": "サイトのセキュリティ設定を開く",
     "openSecurityFailed": "ページを開けませんでした。サイトの「セキュリティ → Access Token」を手動で開き、トークンをコピーしてここに貼り付けてください。",
     "pasteStep": "完全な Access Token をすぐにコピーし、下の「アクセストークン」欄に貼り付けて、アカウント情報を確認して保存してください。",
@@ -184,6 +191,9 @@
     "manualVerificationRequiredTitle": "チェックインには手動認証が必要です",
     "notes": "メモ",
     "notesPlaceholder": "任意、メモを入力",
+    "novitaApiKey": "Novita アカウント認証情報",
+    "novitaApiKeyGuidance": "ログイン済みの Novita から認証情報を取得し、残高更新、キーの作成・名前変更・削除、モデル/IP ポリシー編集を行います。期限切れ後は同じアカウントでログインし、再検出してください。 独立した sk_ API Key で残高、キー一覧、モデル/IP ポリシー編集を利用できます。Web ログインの維持は不要です。キーの作成・名前変更・削除はできません。有効期間は作成時に決まります。",
+    "novitaApiKeyGuidanceTitle": "認証方法",
     "openRedeemWithCheckIn": "外部チェックイン利用時に引き換えページも開く",
     "openrouterManagementKey": "OpenRouter 管理キー",
     "openrouterManagementKeyGuidance": "OpenRouter の Management Keys ページで新しい管理キーを作成し、すぐにコピーしてここに貼り付けてください。既存の管理キーの平文は再表示できません。",
@@ -333,6 +343,23 @@
     "detecting": "検出中...",
     "manualAdd": "手動追加",
     "reDetect": "再検出"
+  },
+  "novitaCredentials": {
+    "apiKey": "API Key",
+    "apiKeyScope": "キーの作成・名前変更・削除はできません。コンソールトークンが失効すると、この API Key に自動で切り替えて残高とキー一覧の照会を続けます。",
+    "apiKeyVerified": "{{account}} の API Key を検証しました。",
+    "console": "コンソールトークン",
+    "consoleScope": "アカウントのすべての管理機能に対応します。入力欄の右側にある取得ボタンをクリックすると、コンソールトークンが自動入力されます。",
+    "consoleVerified": "{{account}} のコンソールトークンを検証しました。",
+    "detectSession": "コンソール認証情報を取得",
+    "hideApiKey": "API Key を非表示",
+    "hideConsoleToken": "コンソールトークンを非表示",
+    "openKeys": "Novita のキー管理を開く",
+    "openKeysShort": "キー管理",
+    "showApiKey": "API Key を表示",
+    "showConsoleToken": "コンソールトークンを表示",
+    "verifying": "API Key を検証中…",
+    "verifyKey": "API Key を検証"
   },
   "openrouterBootstrapRecovery": {
     "label": "確認用ラベル: {{label}}",

@@ -7,7 +7,10 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { VerifyCliSupportDialog } from "~/features/Verification/cli"
 import { useCliSupportVerification } from "~/features/Verification/cli/hooks/useCliSupportVerification"
 import type { VerifyCliSupportDialogProps } from "~/features/Verification/cli/types"
-import { buildServiceCredentialRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
+import {
+  buildAccountKeyResourceRuntimeKey,
+  buildServiceCredentialRuntimeKey,
+} from "~/services/accounts/keys/accountRuntimeKeys"
 import type { AccountRuntimeKey } from "~/services/accounts/keys/accountRuntimeKeys"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -165,6 +168,42 @@ vi.mock("~/services/verification/cliSupportVerification", () => ({
 }))
 
 describe("VerifyCliSupportDialog", () => {
+  it("blocks CLI execution for a model excluded by the selected runtime key", async () => {
+    const account = buildDisplaySiteData({ siteType: SITE_TYPES.NOVITA })
+    const key = buildAccountKeyResourceRuntimeKey(account, {
+      ref: {
+        accountId: account.id,
+        siteType: account.siteType,
+        scopeKey: "default",
+        resourceId: "restricted",
+      },
+      label: "Restricted",
+      secret: "sk_inference",
+      status: "active",
+      modelAccess: {
+        groups: null,
+        allowedModelIds: null,
+        deniedModelIds: ["blocked-model"],
+        suggestedModelIds: [],
+      },
+    })
+    mockFetchDisplayAccountRuntimeKeys.mockResolvedValue([key])
+    const { result } = renderHook(() =>
+      useCliSupportVerification({
+        isOpen: true,
+        onClose: vi.fn(),
+        account,
+        initialModelId: "blocked-model",
+      }),
+    )
+    await waitFor(() =>
+      expect(result.current.selectedRuntimeKeyId).toBe(key.id),
+    )
+    expect(result.current.canRunAll).toBe(false)
+    act(() => result.current.runSingleToolCheck("codex"))
+    expect(mockResolveDisplayAccountRuntimeKeySecret).not.toHaveBeenCalled()
+    expect(mockRunCliSupportTool).not.toHaveBeenCalled()
+  })
   beforeEach(() => {
     mockFetchAccountTokens.mockReset()
     mockFetchDisplayAccountRuntimeKeys.mockReset()
@@ -1332,7 +1371,7 @@ describe("VerifyCliSupportDialog", () => {
     expect(runButton).toBeDisabled()
   })
 
-  it("uses the first available token and its model hint when no enabled token exists", async () => {
+  it("retains a disabled key's model hint without dispatching verification", async () => {
     mockFetchAccountTokens.mockResolvedValueOnce([
       {
         id: 7,
@@ -1393,19 +1432,10 @@ describe("VerifyCliSupportDialog", () => {
     const runButton = within(toolCard).getByRole("button", {
       name: "cliSupportVerification:verifyDialog.actions.runOne",
     })
-    await waitFor(() => expect(runButton).toBeEnabled())
+    await waitFor(() => expect(runButton).toBeDisabled())
     fireEvent.click(runButton)
-
-    await waitFor(() => {
-      expect(mockRunCliSupportTool).toHaveBeenCalledWith(
-        expect.objectContaining({
-          toolId: "codex",
-          baseUrl: "https://example.com",
-          apiKey: "sk-disabled-secret",
-          modelId: "claude-3-5-sonnet",
-        }),
-      )
-    })
+    expect(mockResolveDisplayAccountRuntimeKeySecret).not.toHaveBeenCalled()
+    expect(mockRunCliSupportTool).not.toHaveBeenCalled()
   })
 
   it("hides the token-derived model hint when an explicit model id is provided", async () => {

@@ -228,6 +228,7 @@
     "ipLimits": "Límites de IP",
     "ipPlaceholder": "Deja vacío para no limitar, separa varias IP con comas",
     "modelLimits": "Límites de modelo",
+    "novitaConsoleRequired": "Crear claves requiere autorización de consola. Edita esta cuenta para obtener una credencial de consola de la misma cuenta de Novita, o crea la clave en la consola de Novita.",
     "quotaPlaceholder": "Ingresa el monto de cuota (USD)",
     "quotaSettings": "Configuración de cuota",
     "selectModels": "Seleccionar modelos",
@@ -388,15 +389,17 @@
     },
     "badges": {
       "accountCredential": "Usada por esta cuenta",
+      "accountCredentialCandidate": "Posible clave de autenticación de la cuenta",
       "accountManagePermission": "Clave de administración de esta cuenta",
       "managePermission": "Clave de gestión"
     },
     "credentialRole": {
-      "badgeTitle": "All API Hub usa esta clave para conectarse a esta cuenta, consultar su saldo y administrar claves. Si la reemplazas, actualiza la clave en la configuración de la cuenta."
+      "badgeTitle": "All API Hub usa esta clave para conectarse a esta cuenta, consultar su saldo y administrar claves. Si la reemplazas, actualiza la clave en la configuración de la cuenta.",
+      "candidateTitle": "Coincidencia solo por la clave enmascarada; sin confirmar."
     },
     "delete": {
-      "accountCredentialAcknowledge": "Entiendo que esto interrumpe el acceso de gestión de la cuenta",
-      "accountCredentialWarningDescription": "La cuenta perderá el acceso de gestión de Requesty: fallarán la lista de claves, el saldo y las actualizaciones. La clave no se puede recuperar aquí.",
+      "accountCredentialAcknowledge": "Entiendo que esto puede afectar las funciones de la cuenta que usan esta clave",
+      "accountCredentialWarningDescription": "Eliminar esta clave puede interrumpir las funciones de la cuenta que la usan. Actualiza primero la credencial de la cuenta; la clave no se puede restaurar aquí.",
       "accountCredentialWarningTitle": "Eliminar la credencial de la cuenta",
       "confirm": "Eliminar clave",
       "description": "¿Eliminar permanentemente la clave API {{name}}? Esta acción no se puede deshacer.",
@@ -552,6 +555,22 @@
         "validDuration": "Validez tras la activación (días)"
       },
       "modelAllowlist": "Lista de modelos permitidos",
+      "novita": {
+        "allEnabled": "Todos los modelos habilitados",
+        "allowedIps": "IP permitidas",
+        "allowedIpsHelp": "Una dirección IPv4 o CIDR por línea, hasta 100. No se permite 0.0.0.0/0.",
+        "allowedModels": "Modelos permitidos",
+        "days30": "30 días",
+        "days90": "90 días",
+        "excludedModels": "Modelos excluidos",
+        "hours24": "24 horas",
+        "lifecycleHelp": "La vigencia no se puede cambiar después de crear la clave.",
+        "modelAccess": "Acceso a modelos",
+        "modelChoicesHelp": "Selecciona una sugerencia o escribe un ID de modelo completo y presiona Enter. Las sugerencias del catálogo público son orientativas; al guardar se confirma si la política las acepta.",
+        "permanent": "Permanente",
+        "restrictIps": "Restringir IP de origen",
+        "selected": "Solo modelos seleccionados"
+      },
       "opening": {
         "failed": "No se pudo abrir el editor de claves",
         "loading": "Abriendo el editor de claves...",

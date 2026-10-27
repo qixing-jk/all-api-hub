@@ -26,6 +26,7 @@ import { createDayaKeyEditor } from "~/services/apiAdapters/daya/keyEditor"
 import { createFoxCodeKeyEditor } from "~/services/apiAdapters/foxcode/keyEditor"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keys/keyResourceEditor"
 import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
+import { novitaKeyEditor } from "~/services/apiAdapters/novita/keyEditor"
 import {
   OPENROUTER_KEY_FIELD_IDS,
   OPENROUTER_KEY_LIMIT_MODES,
@@ -40,6 +41,39 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const field = OPENROUTER_KEY_FIELD_IDS
+
+it("keeps Novita model entry enabled when console options fall back to an empty list", async () => {
+  const definition = novitaKeyEditor({
+    baseUrl: "https://novita.ai",
+    auth: {
+      authType: AuthTypeEnum.AccessToken,
+      accessToken: "novita-console:session",
+    },
+  })
+  render(
+    <AccountKeyResourceEditorDialog
+      editor={{
+        editorId: 1,
+        siteType: SITE_TYPES.NOVITA,
+        mode: editorModes.Create,
+        fields: definition.fields,
+        initialValues: definition.initialValues,
+        values: definition.initialValues,
+        optionsByField: { allowed_models: [], excluded_models: [] },
+      }}
+      onClose={vi.fn()}
+      onSubmit={vi.fn()}
+      onValuesChange={vi.fn()}
+      onLoadOptions={vi.fn()}
+    />,
+    { withUserPreferencesProvider: false, withThemeProvider: false },
+  )
+  expect(
+    await screen.findByRole("combobox", {
+      name: "keyManagement:native.editor.novita.excludedModels",
+    }),
+  ).toBeEnabled()
+})
 
 it("shows the account-group choice for a PM-API token without an explicit group", () => {
   const definition = createPmApiKeyEditor({

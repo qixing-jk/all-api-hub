@@ -207,6 +207,18 @@ export default function AccountDialog({
     onRequestCookieAuthPermissions: handlers.handleRequestCookieAuthPermissions,
   }
   const currentSitePolicy = getAccountDialogSitePolicy(state.siteType)
+  const credentialVerification =
+    state.credentialVerification &&
+    state.credentialVerification.accessToken === state.accessToken &&
+    state.credentialVerification.siteType === state.siteType &&
+    state.credentialVerification.userId === state.userId
+      ? state.credentialVerification
+      : undefined
+  const hasInlineCredentialError =
+    credentialVerification?.status === "error" &&
+    state.novitaCredentialOperation !== "account" &&
+    getAccountSiteDefinition(state.siteType)?.onboarding
+      ?.accessTokenVerificationGuide?.copy === "novita"
 
   const manualAddGuideAnchor = getAccountSiteDefinition(state.siteType)
     ?.onboarding?.manualAddGuideAnchor
@@ -345,7 +357,7 @@ export default function AccountDialog({
             className="gap-y-density-2 flex flex-col gap-x-2"
             data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountForm}
           >
-            {state.detectionError && (
+            {state.detectionError && !hasInlineCredentialError && (
               <AutoDetectErrorAlert
                 error={state.detectionError}
                 siteUrl={state.url}
@@ -510,6 +522,21 @@ export default function AccountDialog({
                 onUsernameChange={setters.setUsername}
                 onUserIdChange={setters.setUserId}
                 onAccessTokenChange={setters.setAccessToken}
+                novitaCredentialActions={
+                  getAccountSiteDefinition(state.siteType)?.onboarding
+                    ?.accessTokenVerificationGuide?.copy === "novita"
+                    ? {
+                        onAcquireConsole: () =>
+                          void handlers.handleAcquireNovitaConsole(),
+                        onVerify: () =>
+                          void handlers.handleVerifyNovitaCredential(),
+                        isVerifying: state.isDetecting,
+                        operation: state.novitaCredentialOperation,
+                        verification: credentialVerification,
+                        continuation: accessTokenContinuation ?? undefined,
+                      }
+                    : undefined
+                }
                 autoCreateAccessToken={
                   currentSitePolicy.canAutoCreateAccessToken
                     ? {

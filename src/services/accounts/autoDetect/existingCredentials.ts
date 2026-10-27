@@ -10,12 +10,14 @@ import {
 } from "~/services/accounts/autoDetectCompletion/types"
 import { normalizeAccountIdentity } from "~/services/accounts/identity/accountIdentity"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
+import type { NovitaCredentialMode } from "~/services/apiService/novita/constants"
 
 export interface AccountAutoDetectExistingAccount {
   url: string
   siteType: AccountSiteType
   userId: string
   accessToken: string
+  novitaCredentialMode?: NovitaCredentialMode
 }
 
 /** Keeps credential reuse bound to the API origin and deployment path. */

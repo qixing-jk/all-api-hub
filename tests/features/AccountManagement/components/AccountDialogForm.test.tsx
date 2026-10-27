@@ -82,6 +82,244 @@ vi.mock("~/utils/navigation", async (importOriginal) => ({
 const { openSettingsTabInNewTab } = await import("~/utils/navigation")
 
 describe("AccountDialog AccountForm", () => {
+  it("does not present console-only verification as an API-key result and names each reveal action correctly", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NOVITA
+    props.draft.accessToken = "novita-console:verified-session"
+    render(
+      <AccountForm
+        {...withSitePolicy(props)}
+        novitaCredentialActions={{
+          onAcquireConsole: vi.fn(),
+          onVerify: vi.fn(),
+          isVerifying: false,
+          operation: "console",
+          verification: { status: "success", accountLabel: "user@example.com" },
+        }}
+      />,
+    )
+    const apiInput = await screen.findByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput,
+    )
+    expect(apiInput).toHaveValue("")
+    expect(apiInput).not.toHaveAttribute("aria-describedby")
+    expect(
+      screen.getByRole("button", {
+        name: "accountDialog:novitaCredentials.verifyKey",
+      }),
+    ).toBeDisabled()
+    expect(
+      screen.getByRole("button", {
+        name: "accountDialog:novitaCredentials.showApiKey",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", {
+        name: "accountDialog:novitaCredentials.showConsoleToken",
+      }),
+    ).toBeVisible()
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "accountDialog:novitaCredentials.consoleVerified",
+    )
+    expect(
+      screen.getByLabelText(/accountDialog:novitaCredentials.console/),
+    ).toHaveAccessibleDescription(
+      "accountDialog:novitaCredentials.consoleVerified",
+    )
+  })
+  it("keeps console acquisition progress and errors off the API-key field", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NOVITA
+    props.draft.accessToken = "sk_existing"
+    const actions = {
+      onAcquireConsole: vi.fn(),
+      onVerify: vi.fn(),
+      isVerifying: true,
+      operation: "console" as const,
+    }
+    const { rerender } = render(
+      <AccountForm
+        {...withSitePolicy(props)}
+        novitaCredentialActions={actions}
+      />,
+    )
+    const apiInput = await screen.findByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput,
+    )
+    expect(apiInput).not.toHaveAttribute("aria-busy", "true")
+    const consoleInput = screen.getByLabelText(
+      "accountDialog:novitaCredentials.console",
+    )
+    expect(consoleInput).toHaveAttribute("aria-busy", "true")
+    rerender(
+      <AccountForm
+        {...withSitePolicy(props)}
+        novitaCredentialActions={{
+          ...actions,
+          isVerifying: false,
+          verification: { status: "error", message: "Sign in to Novita first" },
+        }}
+      />,
+    )
+    expect(consoleInput).toHaveAttribute("aria-invalid", "true")
+    expect(apiInput).not.toHaveAttribute("aria-invalid", "true")
+    expect(consoleInput).toHaveAccessibleDescription("Sign in to Novita first")
+  })
+  it("edits an API key without discarding the saved console credential and removes the console credential independently", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NOVITA
+    props.draft.accessToken =
+      'novita-credentials:{"apiKey":"sk_daily","consoleToken":"saved-session"}'
+    const user = userEvent.setup()
+    render(
+      <AccountForm
+        {...withSitePolicy(props)}
+        novitaCredentialActions={{
+          onAcquireConsole: vi.fn(),
+          onVerify: vi.fn(),
+          isVerifying: false,
+        }}
+      />,
+    )
+    const input = await screen.findByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput,
+    )
+    expect(input).toHaveValue("sk_daily")
+    await user.clear(input)
+    expect(props.onAccessTokenChange).toHaveBeenLastCalledWith(
+      "novita-console:saved-session",
+    )
+    const consoleInput = screen.getByLabelText(
+      "accountDialog:novitaCredentials.console",
+    )
+    expect(consoleInput).toHaveValue("saved-session")
+    await user.clear(consoleInput)
+    expect(props.onAccessTokenChange).toHaveBeenLastCalledWith("sk_daily")
+    expect(
+      screen.queryByText("accountDialog:novitaCredentials.consoleSaved"),
+    ).not.toBeInTheDocument()
+  })
+  it("shows optional Novita API-key verification and its feedback at the input", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NOVITA
+    props.draft.accessToken = "sk_user-key"
+    const actions = {
+      onAcquireConsole: vi.fn(),
+      onVerify: vi.fn(),
+      isVerifying: false,
+      verification: { status: "success" as const },
+    }
+    const { rerender } = render(
+      <AccountForm
+        {...withSitePolicy(props)}
+        novitaCredentialActions={actions}
+      />,
+    )
+    const input = await screen.findByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput,
+    )
+    const button = screen.getByRole("button", {
+      name: "accountDialog:novitaCredentials.verifyKey",
+    })
+    expect(input.parentElement).toContainElement(button)
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "accountDialog:novitaCredentials.apiKeyVerified",
+    )
+    expect(input).toHaveAccessibleDescription(
+      "accountDialog:novitaCredentials.apiKeyVerified",
+    )
+    rerender(
+      <AccountForm
+        {...withSitePolicy(props)}
+        novitaCredentialActions={{
+          ...actions,
+          verification: { status: "error", message: "Invalid or expired key" },
+        }}
+      />,
+    )
+    expect(input).toHaveAttribute("aria-invalid", "true")
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Invalid or expired key",
+    )
+    rerender(
+      <AccountForm
+        {...withSitePolicy(props)}
+        novitaCredentialActions={{
+          ...actions,
+          isVerifying: true,
+          verification: undefined,
+        }}
+      />,
+    )
+    expect(input).toBeEnabled()
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "accountDialog:novitaCredentials.verifying",
+    )
+    rerender(
+      <AccountForm
+        {...withSitePolicy(props)}
+        novitaCredentialActions={{ ...actions, verification: undefined }}
+      />,
+    )
+    expect(screen.queryByRole("status")).not.toBeInTheDocument()
+    expect(input).not.toHaveAttribute("aria-describedby")
+  })
+  it("offers a discoverable Novita API-key method, acquisition guide and verify action", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.NOVITA
+    props.draft.accessToken = ""
+    props.draft.novitaCredentialMode = "api-key"
+    props.siteUrl = "https://novita.ai"
+    const onAcquireConsole = vi.fn()
+    const onVerify = vi.fn()
+    const { rerender } = render(
+      <AccountForm
+        {...withSitePolicy(props)}
+        novitaCredentialActions={{
+          onAcquireConsole,
+          onVerify,
+          isVerifying: false,
+        }}
+      />,
+    )
+    expect(
+      await screen.findByText("accountDialog:novitaCredentials.apiKeyScope"),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", {
+        name: "accountDialog:novitaCredentials.openKeys",
+      }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole("button", {
+        name: "accountDialog:novitaCredentials.verifyKey",
+      }),
+    ).toBeDisabled()
+    const user = userEvent.setup()
+    await user.click(
+      screen.getByRole("button", {
+        name: "accountDialog:novitaCredentials.detectSession",
+      }),
+    )
+    expect(onAcquireConsole).toHaveBeenCalledOnce()
+    props.draft.accessToken = "sk_user-key"
+    rerender(
+      <AccountForm
+        {...withSitePolicy(props)}
+        novitaCredentialActions={{
+          onAcquireConsole,
+          onVerify,
+          isVerifying: false,
+        }}
+      />,
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "accountDialog:novitaCredentials.verifyKey",
+      }),
+    )
+    expect(onVerify).toHaveBeenCalledOnce()
+  })
   afterEach(() => server.resetHandlers())
   it("binds the Vercel team selector to the draft's account identity", async () => {
     server.use(

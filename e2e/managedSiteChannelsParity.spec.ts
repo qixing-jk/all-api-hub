@@ -453,6 +453,7 @@ test("runs the AxonHub native edit and migration preview through the shared UI",
   await tagsInput.scrollIntoViewIfNeeded()
   await tagsInput.fill("edited-tag")
   await tagsInput.press("Enter")
+  await tagsInput.press("Escape")
   const listRequestsBeforeSave = getInterceptedAxonHubListRequestCount()
   const saveChangesButton = page.getByRole("button", {
     name: "Save Changes",

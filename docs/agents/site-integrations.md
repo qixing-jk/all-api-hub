@@ -4,6 +4,17 @@ Use the [type relationships and sources](#site-types-and-upstream-relationships)
 
 ## Source ownership
 
+Account-key credential correlation is owned by
+[`accountCredentialIdentity.ts`](../../src/services/accounts/keys/accountCredentialIdentity.ts).
+Adapters provide native self/key identity or eligible masked credentials; the
+same resolver reconciles confirmed local profile links for UI and deletion
+warnings. Results retain status and evidence source without secret bytes.
+Provider identity outranks local plaintext, which outranks masks. Stored-account
+secret recovery requires provider confirmation; a local link keeps its existing
+profile-secret resolution. Shared
+[`accountCredentialBadges.ts`](../../src/features/KeyManagement/presentation/accountCredentialBadges.ts)
+owns confirmed/possible/management styling across sites.
+
 Site type, account/managed scope, and adapter family are separate decisions. A detected type or shared family does not establish that a deployment supports every capability. Confirm registration and the target contract before advertising support; missing extension code does not establish upstream absence.
 
 | Question | Owner |
@@ -80,6 +91,7 @@ These backends have distinct account contracts. Compatible inference APIs do not
 | `daya` | Account / [daya](../../src/services/apiAdapters/daya/) | Provider-owned account backend with Cookie-session authentication, ordered key routing and a public model catalog; not a New API/One API derivative. Console and inference origins are registered separately. | [Console](https://api.dayaai.com/) |
 | `pmapi` | Account / [pmapi](../../src/services/apiAdapters/pmapi/) | Provider-owned account backend with a Bearer console token (localStorage `pm_token`) and a New API-style quota unit; not a New API/One API derivative. Two deployments of one program keep independent account stores. | [Console](https://pmcat.top/) / [Pro deployment](https://pap.pmcat.top/) |
 | `vercel-ai-gateway` | Account / [vercelAiGateway](../../src/services/apiAdapters/vercelAiGateway/) | Vercel's AI Gateway console: one team-scoped Vercel access token manages AI Gateway keys, and the same token reads credits when the request names the team. Not a New API/One API derivative. The console/session origin (`vercel.com`), account API (`api.vercel.com`) and inference/gateway origin (`ai-gateway.vercel.sh`) are separate roles; spend reports are Pro/Enterprise only. | [AI Gateway](https://vercel.com/ai-gateway) · [Docs](https://vercel.com/docs/ai-gateway) |
+| `novita` | Account / [novita](../../src/services/apiAdapters/novita/) | Provider-owned model API platform, not a New API derivative. The console session (`novita.ai`) and its account API (`api-server.novita.ai`) are separate roles from the key-authenticated OpenAPI and OpenAI/Anthropic-compatible inference mounts on `api.novita.ai`; the `sk_` API key serves account reads/policies and inference, while an optional same-account console bearer enables key creation, renaming and deletion. Both credentials may be saved together. | [Console](https://novita.ai/) · [Documentation](https://docs.novita.ai/) |
 
 ### Managed-only backend types
 

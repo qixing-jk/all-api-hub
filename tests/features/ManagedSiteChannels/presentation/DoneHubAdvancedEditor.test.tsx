@@ -180,9 +180,8 @@ describe("DoneHub advanced editor interactions", () => {
     })
     await user.type(streaming, "custom-stream-model")
     await user.keyboard("{Enter}")
-    expect(
-      screen.getByText("custom-stream-model", { exact: true }),
-    ).toBeVisible()
+    expect(screen.getByTitle("custom-stream-model")).toBeVisible()
+    await user.keyboard("{Escape}")
     const models = screen.getByRole("button", { name: "Models" })
     await user.click(models)
     expect(testModel).not.toBeVisible()

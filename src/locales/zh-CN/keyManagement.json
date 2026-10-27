@@ -216,6 +216,7 @@
     "ipLimits": "IP 限制",
     "ipPlaceholder": "留空表示不限制，多个 IP 用逗号分隔",
     "modelLimits": "模型限制",
+    "novitaConsoleRequired": "创建密钥需要控制台授权。请编辑此账号，获取同一 Novita 账号的控制台凭据，或直接前往 Novita 控制台创建。",
     "quotaPlaceholder": "请输入额度金额（美元）",
     "quotaSettings": "额度设置",
     "selectModels": "选择模型",
@@ -368,15 +369,17 @@
     },
     "badges": {
       "accountCredential": "当前账号使用",
+      "accountCredentialCandidate": "可能用于账号认证",
       "accountManagePermission": "当前账号管理密钥",
       "managePermission": "管理密钥"
     },
     "credentialRole": {
-      "badgeTitle": "All API Hub 使用此密钥连接该账号，用于查询余额和管理密钥。更换后，请在账号设置中更新密钥。"
+      "badgeTitle": "All API Hub 使用此密钥连接该账号，用于查询余额和管理密钥。更换后，请在账号设置中更新密钥。",
+      "candidateTitle": "仅根据密钥掩码匹配，尚未确认。"
     },
     "delete": {
-      "accountCredentialAcknowledge": "我了解这会中断当前账号的管理接口访问",
-      "accountCredentialWarningDescription": "删除后该账号将无法再调用 Requesty 管理接口，密钥清单、余额和刷新都会失败，且密钥无法在此恢复。",
+      "accountCredentialAcknowledge": "我了解这可能影响使用此密钥的账号功能",
+      "accountCredentialWarningDescription": "删除后，使用此密钥的账号功能可能失效。请先更新账号凭据；该密钥无法在此恢复。",
       "accountCredentialWarningTitle": "删除当前账号的凭据",
       "confirm": "删除密钥",
       "description": "要永久删除密钥 {{name}} 吗？删除后无法恢复。",
@@ -532,6 +535,22 @@
         "validDuration": "激活后有效天数"
       },
       "modelAllowlist": "模型白名单",
+      "novita": {
+        "allEnabled": "全部已启用模型",
+        "allowedIps": "允许的 IP",
+        "allowedIpsHelp": "每行一个 IPv4 地址或 CIDR，最多 100 条；不支持 0.0.0.0/0。",
+        "allowedModels": "允许模型",
+        "days30": "30 天",
+        "days90": "90 天",
+        "excludedModels": "排除模型",
+        "hours24": "24 小时",
+        "lifecycleHelp": "有效期创建后不可修改。",
+        "modelAccess": "模型访问范围",
+        "modelChoicesHelp": "选择候选或输入完整模型 ID，按 Enter 添加。公开目录候选仅供参考，是否可用于策略以保存结果为准。",
+        "permanent": "永久",
+        "restrictIps": "限制来源 IP",
+        "selected": "仅指定模型"
+      },
       "opening": {
         "failed": "无法打开密钥编辑器",
         "loading": "正在打开密钥编辑器...",

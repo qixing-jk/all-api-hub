@@ -78,6 +78,15 @@ function normalizeRecoveryState(
   const draft = Object.fromEntries(
     Object.keys(defaults).map((key) => [key, rawDraft[key]]),
   ) as unknown as AccountDialogDraft
+  if (typeof rawDraft.siteNameEdited === "boolean") {
+    draft.siteNameEdited = rawDraft.siteNameEdited
+  }
+  if (
+    rawDraft.novitaCredentialMode === "console" ||
+    rawDraft.novitaCredentialMode === "api-key"
+  ) {
+    draft.novitaCredentialMode = rawDraft.novitaCredentialMode
+  }
   draft.checkIn = normalizeCheckInConfigV7(rawDraft.checkIn)
 
   return {

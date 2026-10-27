@@ -1,9 +1,9 @@
 import type { TFunction } from "i18next"
 
+import { isProviderConfirmedAccountCredential } from "~/services/accounts/keys/accountCredentialIdentityFacts"
 import { ACCOUNT_RUNTIME_KEY_STATUSES } from "~/services/accounts/keys/accountRuntimeKeys"
 import { hasAccountKeyManagementPermission } from "~/services/apiAdapters/accountKeyResources/displayFacts"
 import {
-  ACCOUNT_KEY_CREDENTIAL_ROLES,
   ACCOUNT_KEY_DETAIL_AVAILABILITIES,
   ACCOUNT_KEY_RESOURCE_STATUSES,
   type AccountKeyResourceFacts,
@@ -17,6 +17,7 @@ import {
 import { formatQuotaAmount } from "~/services/quotaAssets/quotaAsset"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 
+import { buildAccountCredentialBadges } from "./accountCredentialBadges"
 import type { AccountKeyResourceCardAdapter } from "./accountKeyResourceCardAdapter"
 import type {
   KeyResourceActionPolicy,
@@ -29,38 +30,6 @@ import {
   KEY_RESOURCE_SCOPE_KINDS as scopeKinds,
 } from "./keyResourcePresentationPolicy"
 import { openRouterKeyResourceCardAdapter } from "./openRouterKeyResourceCard"
-
-/** Highlights derived from provider-declared facts; raw fields never qualify. */
-const keyBadges = (
-  facts: AccountKeyResourceFacts,
-  t: TFunction,
-): KeyResourceBadge[] => {
-  const manageGranted = hasAccountKeyManagementPermission(facts)
-  const isAccountCredential =
-    facts.credentialRole === ACCOUNT_KEY_CREDENTIAL_ROLES.Account
-  const badges: KeyResourceBadge[] = []
-  if (manageGranted) {
-    badges.push({
-      id: "manage-permission",
-      label: isAccountCredential
-        ? t("keyManagement:native.badges.accountManagePermission")
-        : t("keyManagement:native.badges.managePermission"),
-      variant: "warning",
-      title: isAccountCredential
-        ? t("keyManagement:native.permission.accountManageBadgeTitle")
-        : t("keyManagement:native.permission.manageBadgeTitle"),
-    })
-  }
-  if (isAccountCredential && !manageGranted) {
-    badges.push({
-      id: "account-credential",
-      label: t("keyManagement:native.badges.accountCredential"),
-      variant: "outline",
-      title: t("keyManagement:native.credentialRole.badgeTitle"),
-    })
-  }
-  return badges
-}
 
 /** Omit the field entirely so cards without highlights keep no empty array. */
 const badgesProp = (badges: KeyResourceBadge[]) =>
@@ -94,7 +63,11 @@ const secretActionPolicy = (params: {
 
 /** Common facts remain usable without interpreting an unregistered provider's fields. */
 const genericKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
-  buildPresentation(row, t, { hasAssociatedSecret }) {
+  buildPresentation(
+    row,
+    t,
+    { hasAssociatedSecret, accountCredentialIdentity },
+  ) {
     const availability = hasAssociatedSecret
       ? INVENTORY_SECRET_AVAILABILITIES.Recoverable
       : getSiteTypeCapabilities(row.facts.ref.siteType).account
@@ -136,7 +109,13 @@ const genericKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
       contextFact,
       summaryFacts: [contextFact],
       detailFacts: [],
-      ...badgesProp(keyBadges(row.facts, t)),
+      ...badgesProp(
+        buildAccountCredentialBadges(
+          accountCredentialIdentity ?? row.facts.accountCredentialIdentity,
+          hasAccountKeyManagementPermission(row.facts),
+          t,
+        ),
+      ),
       actions: {
         copySecret: hasAssociatedSecret,
         revealSecret: hasAssociatedSecret,
@@ -383,8 +362,9 @@ const nativeKeyResourceCardAdapter: AccountKeyResourceCardAdapter = {
       hasAssociatedSecret: options.hasAssociatedSecret,
       recoverable:
         base.secretAvailability === INVENTORY_SECRET_AVAILABILITIES.Recoverable,
-      accountCredential:
-        row.facts.credentialRole === ACCOUNT_KEY_CREDENTIAL_ROLES.Account,
+      accountCredential: isProviderConfirmedAccountCredential(
+        row.facts.accountCredentialIdentity,
+      ),
       inferenceCapable: row.facts.runtimeKey?.inference !== false,
     })
     return {

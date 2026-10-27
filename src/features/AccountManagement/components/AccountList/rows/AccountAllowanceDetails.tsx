@@ -1,6 +1,8 @@
 import { useTranslation } from "react-i18next"
 
-import type { AccountNativeBalance } from "~/types"
+import type { AccountSiteType } from "~/constants/siteType"
+import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
+import type { AccountBalanceComponent, AccountNativeBalance } from "~/types"
 
 import { AllowanceDetailsPopover } from "./AllowanceDetailsPopover"
 
@@ -15,34 +17,69 @@ function formatAllowanceTime(value: string) {
 /** Read-only scoped USD allowance details, independent of account refresh state. */
 export function AccountAllowanceDetails({
   nativeBalance,
+  siteType,
 }: {
   nativeBalance: Extract<AccountNativeBalance, { unit: "credits" | "USD" }>
+  siteType?: AccountSiteType
 }) {
   const { t } = useTranslation("account")
+  const isNovita = siteType
+    ? getAccountSiteDefinition(siteType)?.balanceDetailsCopy === "novita"
+    : false
+  const label = isNovita
+    ? t("stats.novitaBalance.title")
+    : t("stats.allowances")
+  const componentLabel = (component: AccountBalanceComponent) => {
+    // Match the adapter's existing stored components, including accounts saved
+    // before these provider-specific labels were introduced.
+    if (isNovita && component.kind === "permanent") {
+      if (component.name === "Credit limit")
+        return t("stats.novitaBalance.creditLimit")
+      if (!component.name) return t("stats.novitaBalance.cash")
+    }
+    return (
+      component.name ??
+      t(
+        component.kind === "permanent"
+          ? "stats.permanentAllowance"
+          : component.kind === "timed"
+            ? "stats.timedAllowance"
+            : component.kind === "group"
+              ? "stats.groupAllowance"
+              : "stats.subscriptionTitle",
+      )
+    )
+  }
   return (
-    <AllowanceDetailsPopover label={t("stats.allowances")}>
-      <p className="text-foreground font-medium">{t("stats.allowances")}</p>
-      <p className="my-2">{t("stats.scopedAllowances")}</p>
+    <AllowanceDetailsPopover label={label}>
+      <p className="text-foreground font-medium">{label}</p>
+      <p className="my-2">
+        {isNovita
+          ? t("stats.novitaBalance.description")
+          : t("stats.scopedAllowances")}
+      </p>
       {nativeBalance.timedDetailsUnavailable && (
         <p role="status" className="my-2">
           {t("stats.timedDetailsUnavailable")}
         </p>
       )}
       <dl className="space-y-2 text-left">
+        {isNovita && (
+          <div>
+            <dt className="font-medium">
+              {t("stats.novitaBalance.available")}
+            </dt>
+            <dd>
+              $
+              {nativeBalance.total.toLocaleString(undefined, {
+                maximumFractionDigits: 6,
+              })}
+            </dd>
+          </div>
+        )}
         {(nativeBalance.components ?? []).map((component, index) => (
           <div key={index}>
-            <dt className="font-medium">
-              {component.name ??
-                t(
-                  component.kind === "permanent"
-                    ? "stats.permanentAllowance"
-                    : component.kind === "timed"
-                      ? "stats.timedAllowance"
-                      : component.kind === "group"
-                        ? "stats.groupAllowance"
-                        : "stats.subscriptionTitle",
-                )}
-            </dt>
+            <dt className="font-medium">{componentLabel(component)}</dt>
             <dd>
               {component.unlimited
                 ? t("common:quota.unlimited")

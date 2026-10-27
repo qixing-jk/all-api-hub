@@ -51,6 +51,7 @@ export const SITE_TYPES = {
   PMAPI: "pmapi",
   GRSAI: "grsai",
   VERCEL_AI_GATEWAY: "vercel-ai-gateway",
+  NOVITA: "novita",
   UNKNOWN: "unknown",
 } as const
 
@@ -152,6 +153,30 @@ export const REQUESTY_MANAGE_API_ORIGIN = "https://api-v2.requesty.ai"
 export const REQUESTY_API_BASE_URL = "https://router.requesty.ai/v1"
 
 export const OPENROUTER_HOSTNAMES = ["openrouter.ai"] as const
+
+/**
+ * Novita AI serves its console and session on `novita.ai` (`www` redirects to
+ * the apex, so it needs no entry). The key-authenticated OpenAPI and the
+ * OpenAI/Anthropic-compatible inference mounts live on `api.novita.ai`, and
+ * `api-server.novita.ai` hosts the console-session-only account API; neither
+ * of those accepts the other's credential, so they stay out of console
+ * detection. Verified 2026-10-25 on https://novita.ai.
+ */
+export const NOVITA_HOSTNAMES = ["novita.ai"] as const
+export const NOVITA_DISPLAY_NAME = "Novita AI"
+export const NOVITA_WEB_ORIGIN = "https://novita.ai"
+/** Key-authenticated OpenAPI mount used by the extension's account reads. */
+export const NOVITA_OPENAPI_BASE_URL = "https://api.novita.ai/openapi"
+
+/** Returns whether the supplied URL belongs to the canonical Novita console origin. */
+export function isCanonicalNovitaUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value.trim())
+    return parsed.protocol === "https:" && parsed.origin === NOVITA_WEB_ORIGIN
+  } catch {
+    return false
+  }
+}
 
 export const KIMI_HOSTNAMES = ["platform.kimi.com"] as const
 export const KIMI_GLOBAL_HOSTNAMES = ["platform.kimi.ai"] as const

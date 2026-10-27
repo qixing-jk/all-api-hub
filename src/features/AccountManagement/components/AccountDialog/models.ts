@@ -4,6 +4,7 @@ import {
   BOOKMARK_IMPORT_ADD_ACCOUNT_PREFILL_SOURCE,
   type AddAccountPrefill,
 } from "~/features/AccountManagement/sponsors/types"
+import type { NovitaCredentialMode } from "~/services/apiService/novita/constants"
 import {
   createCompatibilityCheckInConfig,
   getNewAccountAutomaticExecutionDefault,
@@ -49,8 +50,12 @@ export interface AccountDialogDraft {
   /** Only explicit user edits may replace the latest saved login configuration. */
   loginChanged?: boolean
   siteName: string
+  /** User edits own the name across asynchronous prefill and detection. */
+  siteNameEdited?: boolean
   username: string
   accessToken: string
+  /** Draft-only Novita acquisition choice; saved credentials carry their own kind. */
+  novitaCredentialMode?: NovitaCredentialMode
   userId: string
   exchangeRate: string
   manualBalanceUsd: string

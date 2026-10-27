@@ -222,6 +222,7 @@
     "ipLimits": "IP-Limits",
     "ipPlaceholder": "Für keine Begrenzung leer lassen, mehrere IPs durch Kommas trennen",
     "modelLimits": "Modellgrenzen",
+    "novitaConsoleRequired": "Zum Erstellen von Schlüsseln ist Konsolenautorisierung erforderlich. Bearbeite dieses Konto und hole Zugangsdaten für dasselbe Novita-Konto ab oder erstelle den Schlüssel in der Novita-Konsole.",
     "quotaPlaceholder": "Bitte geben Sie den Kontingentbetrag (USD) ein",
     "quotaSettings": "Kontingenteinstellungen",
     "selectModels": "Modelle auswählen",
@@ -378,15 +379,17 @@
     },
     "badges": {
       "accountCredential": "Von diesem Konto verwendet",
+      "accountCredentialCandidate": "Möglicherweise zur Kontoanmeldung verwendet",
       "accountManagePermission": "Verwaltungsschlüssel dieses Kontos",
       "managePermission": "Verwaltungsschlüssel"
     },
     "credentialRole": {
-      "badgeTitle": "All API Hub verbindet sich mit diesem Schlüssel mit dem Konto, um den Kontostand abzurufen und Schlüssel zu verwalten. Wenn Sie ihn ersetzen, aktualisieren Sie den Schlüssel in den Kontoeinstellungen."
+      "badgeTitle": "All API Hub verbindet sich mit diesem Schlüssel mit dem Konto, um den Kontostand abzurufen und Schlüssel zu verwalten. Wenn Sie ihn ersetzen, aktualisieren Sie den Schlüssel in den Kontoeinstellungen.",
+      "candidateTitle": "Nur anhand des maskierten Schlüssels zugeordnet; nicht bestätigt."
     },
     "delete": {
-      "accountCredentialAcknowledge": "Mir ist klar, dass der Verwaltungszugriff des Kontos damit endet",
-      "accountCredentialWarningDescription": "Dieses Konto verliert den Requesty-Verwaltungszugriff: Schlüssellisten, Guthaben und Aktualisierungen schlagen fehl. Der Schlüssel kann hier nicht wiederhergestellt werden.",
+      "accountCredentialAcknowledge": "Mir ist bewusst, dass dies Kontofunktionen mit diesem Schlüssel beeinträchtigen kann",
+      "accountCredentialWarningDescription": "Das Löschen kann Kontofunktionen unterbrechen, die diesen Schlüssel verwenden. Aktualisiere zuerst die Zugangsdaten. Der Schlüssel kann hier nicht wiederhergestellt werden.",
       "accountCredentialWarningTitle": "Eigenen Zugang des Kontos löschen",
       "confirm": "Schlüssel löschen",
       "description": "Den API-Schlüssel {{name}} dauerhaft löschen? Dies kann nicht rückgängig gemacht werden.",
@@ -542,6 +545,22 @@
         "validDuration": "Gültigkeit nach Aktivierung (Tage)"
       },
       "modelAllowlist": "Modell-Freigabeliste",
+      "novita": {
+        "allEnabled": "Alle aktivierten Modelle",
+        "allowedIps": "Erlaubte IPs",
+        "allowedIpsHelp": "Eine IPv4-Adresse oder ein CIDR pro Zeile, maximal 100. 0.0.0.0/0 ist nicht erlaubt.",
+        "allowedModels": "Erlaubte Modelle",
+        "days30": "30 Tage",
+        "days90": "90 Tage",
+        "excludedModels": "Ausgeschlossene Modelle",
+        "hours24": "24 Stunden",
+        "lifecycleHelp": "Die Gültigkeit kann nach dem Erstellen nicht geändert werden.",
+        "modelAccess": "Modellzugriff",
+        "modelChoicesHelp": "Einen Vorschlag wählen oder eine vollständige Modell-ID eingeben und Enter drücken. Vorschläge aus dem öffentlichen Katalog sind unverbindlich; beim Speichern wird geprüft, ob die Richtlinie sie akzeptiert.",
+        "permanent": "Unbefristet",
+        "restrictIps": "Quell-IPs einschränken",
+        "selected": "Nur ausgewählte Modelle"
+      },
       "opening": {
         "failed": "Schlüsseleditor konnte nicht geöffnet werden",
         "loading": "Schlüsseleditor öffnen...",

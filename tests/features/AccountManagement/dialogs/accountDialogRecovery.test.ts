@@ -77,6 +77,45 @@ const recoveryState = (siteType: AccountSiteType = SITE_TYPES.NEW_API) => ({
 })
 
 describe("account dialog recovery handoff", () => {
+  it("retains an explicit API-key method before any credential is pasted", async () => {
+    const original = recoveryState(SITE_TYPES.NOVITA)
+    const state = {
+      ...original,
+      url: "https://novita.ai",
+      draft: {
+        ...original.draft,
+        accessToken: "",
+        novitaCredentialMode: "api-key" as const,
+      },
+    }
+    const prepared = await prepareAccountDialogRecovery(state)
+    const accept = vi.fn(() => true)
+    await receiveAccountDialogRecovery(prepared.id, accept)
+    expect(accept).toHaveBeenCalledWith(
+      expect.objectContaining({
+        draft: expect.objectContaining({
+          novitaCredentialMode: "api-key",
+          accessToken: "",
+        }),
+      }),
+    )
+  })
+  it.each([false, true])(
+    "retains name ownership across handoff: %s",
+    async (siteNameEdited) => {
+      const original = recoveryState()
+      const state = {
+        ...original,
+        draft: { ...original.draft, siteNameEdited },
+      }
+      const prepared = await prepareAccountDialogRecovery(state)
+      const accept = vi.fn(() => true)
+      await expect(
+        receiveAccountDialogRecovery(prepared.id, accept),
+      ).resolves.toBe(true)
+      expect(accept).toHaveBeenCalledWith(state)
+    },
+  )
   it("rejects invalid recovery state before staging a draft", async () => {
     await expect(
       prepareAccountDialogRecovery({

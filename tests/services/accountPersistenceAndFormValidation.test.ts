@@ -647,6 +647,60 @@ describe("account persistence and form validation", () => {
   })
 
   describe("getSiteName", () => {
+    it("preserves a deployment title on registered adapter-family hosts", async () => {
+      expect(
+        await getSiteName({
+          url: "https://ai-router.dev",
+          title: "AI Router Portal",
+        } as browser.tabs.Tab),
+      ).toBe("AI Router Portal")
+    })
+    it.each([
+      [
+        "https://novita.ai/settings/key-management",
+        "Key Management | Novita AI",
+        "Novita AI",
+      ],
+      ["https://novita.ai/console", "Console | Novita AI", "Novita AI"],
+      [
+        "https://openrouter.ai/settings/keys",
+        "API Keys | OpenRouter",
+        "OpenRouter",
+      ],
+      ["https://app.requesty.ai/api-keys", "API Keys | Requesty", "Requesty"],
+    ])(
+      "uses the registered platform name for %s instead of the page title",
+      async (url, title, registeredName) => {
+        expect(
+          await getSiteName({ id: 1, url, title } as browser.tabs.Tab),
+        ).toBe(registeredName)
+        expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
+      },
+    )
+
+    it("does not brand a lookalike hostname as a registered platform", async () => {
+      expect(
+        await getSiteName({
+          url: "https://novita.ai.example.test/settings",
+          title: "Custom portal",
+        } as browser.tabs.Tab),
+      ).toBe("Custom portal")
+    })
+
+    it("prefers the deployment's verified name to a browser page title", async () => {
+      expect(
+        await getSiteName(
+          {
+            url: "https://relay.example/usage",
+            title: "Usage dashboard",
+          } as browser.tabs.Tab,
+          SITE_TYPES.NEW_API,
+          { displayName: "Acme AI" },
+        ),
+      ).toBe("Acme AI")
+      expect(mockLoadBootstrapFacts).not.toHaveBeenCalled()
+    })
+
     it("prefers a custom browser-tab title without calling site status", async () => {
       const result = await getSiteName({
         id: 1,

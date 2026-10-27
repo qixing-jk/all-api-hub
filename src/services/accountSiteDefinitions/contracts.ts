@@ -62,6 +62,7 @@ export const ACCOUNT_SITE_ADAPTER_FAMILIES = {
   KimiOpenPlatform: "kimiOpenPlatform",
   Grsai: "grsai",
   VercelAiGateway: "vercelAiGateway",
+  Novita: "novita",
   Unsupported: "unsupported",
 } as const
 
@@ -132,7 +133,7 @@ export interface ManagedResourceProductPolicy {
 
 /** Presentation choices for completing site-owned account credential verification. */
 export interface AccountSiteAccessTokenVerificationGuide {
-  copy: "security" | "apiyi" | "laozhang" | "vercel"
+  copy: "security" | "apiyi" | "laozhang" | "vercel" | "novita"
   showRotationWarning: boolean
 }
 
@@ -141,18 +142,23 @@ export interface AccountSiteDefinitionOnboardingMetadata {
   accountForm?: {
     fixedSiteUrl?: string
     defaultSiteName?: string
+    /** Detection supplies a provider rate default rather than remote settings. */
+    preserveUserExchangeRateOnDetection?: boolean
     accessTokenLabelKey?:
       | "form.openrouterManagementKey"
       | "form.requestyManageKey"
       | "form.vercelAccessToken"
+      | "form.novitaApiKey"
     accessTokenGuidanceTitleKey?:
       | "form.openrouterManagementKeyGuidanceTitle"
       | "form.requestyManageKeyGuidanceTitle"
       | "form.vercelAccessTokenGuidanceTitle"
+      | "form.novitaApiKeyGuidanceTitle"
     accessTokenGuidanceKey?:
       | "form.openrouterManagementKeyGuidance"
       | "form.requestyManageKeyGuidance"
       | "form.vercelAccessTokenGuidance"
+      | "form.novitaApiKeyGuidance"
     /**
      * Opt-in automatic credential creation from the site's own console
      * session. The action must degrade to the manual guidance path.
@@ -180,6 +186,8 @@ export interface AccountSiteLoginConfig {
 
 export interface AccountSiteDefinition {
   siteType: SiteType
+  /** Provider-owned wording for native monetary balance details. */
+  balanceDetailsCopy?: "novita"
   /** Released account-token locators map to this native scope, independently of the current adapter family. */
   legacyAccountTokenScope?: "account"
   scopes: readonly AccountSiteDefinitionScope[]

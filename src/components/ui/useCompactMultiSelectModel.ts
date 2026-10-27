@@ -275,7 +275,12 @@ export function useCompactMultiSelectModel({
   const handleCustomKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
       if (!allowCustom || disabled) return
-      if (event.key !== "Enter") return
+      if (
+        event.key !== "Enter" ||
+        event.nativeEvent.isComposing ||
+        event.nativeEvent.keyCode === 229
+      )
+        return
 
       const raw = searchTerm.trim()
       if (!raw) return

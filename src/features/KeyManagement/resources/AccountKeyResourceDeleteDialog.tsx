@@ -10,13 +10,14 @@ import { getKeyResourcePresentationPolicy } from "~/features/KeyManagement/prese
 import type { useAccountKeyResourceController } from "~/features/KeyManagement/resources/workflows/useAccountKeyResourceController"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import toast from "~/lib/notify"
+import {
+  ACCOUNT_CREDENTIAL_IDENTITY_STATUSES,
+  resolveAccountCredentialIdentity,
+} from "~/services/accounts/keys/accountCredentialIdentity"
 import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/keys/accountRuntimeKeys"
 import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keys/keyProductCapabilities"
 import { hasAccountKeyManagementPermission } from "~/services/apiAdapters/accountKeyResources/displayFacts"
-import {
-  ACCOUNT_KEY_CREDENTIAL_ROLES,
-  ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
-} from "~/services/apiAdapters/contracts/accountKeyResource"
+import { ACCOUNT_KEY_RESOURCE_FAILURE_CODES } from "~/services/apiAdapters/contracts/accountKeyResource"
 import type { DisplaySiteData } from "~/types"
 
 const nativeDeleteFailureMessage = (
@@ -129,9 +130,22 @@ function AccountKeyResourceDeleteSession({
     ACCOUNT_KEY_RESOURCE_FAILURE_CODES.MutationStateUncertain
   // Deleting the account's own credential cuts the extension off from every
   // management endpoint; losing other manage keys only affects their users.
+  const linkedDeleteProfile = nativeDeleteFacts
+    ? getProfileForLocator({
+        source: ACCOUNT_RUNTIME_KEY_SOURCES.AccountKeyResource,
+        ref: nativeDeleteFacts.ref,
+      })
+    : undefined
+  const deleteCredentialIdentity = resolveAccountCredentialIdentity({
+    provider: nativeDeleteFacts?.accountCredentialIdentity,
+    accountCredential: deleteAccount?.token,
+    siteType: deleteAccount?.siteType,
+    linkedSecret: linkedDeleteProfile?.apiKey,
+  })
   const deletesAccountCredential =
     !isRevoke &&
-    nativeDeleteFacts?.credentialRole === ACCOUNT_KEY_CREDENTIAL_ROLES.Account
+    deleteCredentialIdentity.status ===
+      ACCOUNT_CREDENTIAL_IDENTITY_STATUSES.Confirmed
   const deletesManageKey =
     !isRevoke && hasAccountKeyManagementPermission(nativeDeleteFacts)
   const confirmBlockedByCredentialWarning =

@@ -18,6 +18,13 @@
       "openProfile": "Open LaoZhang profile",
       "openProfileFailed": "Could not open the page. Open LaoZhang Profile → System token manually, complete security verification, then copy the token and return here to enter it."
     },
+    "novita": {
+      "generateStep": "Sign in to the same Novita account, then select “Get console credential”. The account identity is checked and your API key is preserved. Acquire the credential again after it expires; a saved API key remains independently usable.",
+      "openPage": "Open Key Management",
+      "openPageFailed": "Could not open Key Management. Please open it in the Novita console.",
+      "pasteStep": "Paste an existing full sk_ API key. To create one, open Novita key management and copy the new key. Its expiry is determined when it is created.",
+      "title": "Credential method"
+    },
     "openSecurity": "Open site security settings",
     "openSecurityFailed": "Could not open the page. Open Security → Access Token on the site manually, then return here to paste the token.",
     "pasteStep": "Copy the full Access Token immediately, paste it into the Access Token field below, then check your account details and save.",
@@ -184,6 +191,9 @@
     "manualVerificationRequiredTitle": "Check-in needs your verification",
     "notes": "Notes",
     "notesPlaceholder": "Optional, enter notes",
+    "novitaApiKey": "Novita account credential",
+    "novitaApiKeyGuidance": "Acquire a console credential from your signed-in Novita account to refresh balance, create, rename and delete keys, and edit model/IP policies. When it expires, sign in to the same account and detect again. Use a separate sk_ API key for balance, key inventory and model/IP policy editing without keeping the website signed in. It cannot create, rename or delete keys. Its lifetime is set at creation.",
+    "novitaApiKeyGuidanceTitle": "Credential method",
     "openRedeemWithCheckIn": "Also open redeem page when using external check-in",
     "openrouterManagementKey": "OpenRouter Management Key",
     "openrouterManagementKeyGuidance": "Create a new Management Key on OpenRouter's Management Keys page and copy it immediately, then paste it here. Existing Management Keys cannot be revealed again.",
@@ -334,6 +344,23 @@
     "detecting": "Detecting...",
     "manualAdd": "Manual Add",
     "reDetect": "Re-detect"
+  },
+  "novitaCredentials": {
+    "apiKey": "API Key",
+    "apiKeyScope": "Cannot create, rename or delete keys. When the console token expires, this API key is used automatically to continue querying your balance and key list.",
+    "apiKeyVerified": "API Key verified for {{account}}.",
+    "console": "Console token",
+    "consoleScope": "Supports full account management. Click the fetch button on the right of the input to fill in the console token automatically.",
+    "consoleVerified": "Console token verified for {{account}}.",
+    "detectSession": "Get console credential",
+    "hideApiKey": "Hide API Key",
+    "hideConsoleToken": "Hide console token",
+    "openKeys": "Open Novita Key Management",
+    "openKeysShort": "Key management",
+    "showApiKey": "Show API Key",
+    "showConsoleToken": "Show console token",
+    "verifying": "Verifying API Key…",
+    "verifyKey": "Verify API Key"
   },
   "openrouterBootstrapRecovery": {
     "label": "Recognizable label: {{label}}",

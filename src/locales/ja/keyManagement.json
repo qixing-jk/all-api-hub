@@ -216,6 +216,7 @@
     "ipLimits": "IP 制限",
     "ipPlaceholder": "制限なしの場合は空欄。複数 IP はカンマ区切り",
     "modelLimits": "モデル制限",
+    "novitaConsoleRequired": "キーの作成にはコンソール認証が必要です。このアカウントを編集し、同じ Novita アカウントの認証情報を取得するか、Novita コンソールで作成してください。",
     "quotaPlaceholder": "クォータ量（USD）を入力してください",
     "quotaSettings": "クォータ設定",
     "selectModels": "モデルを選択",
@@ -368,15 +369,17 @@
     },
     "badges": {
       "accountCredential": "このアカウントで使用中",
+      "accountCredentialCandidate": "アカウント認証に使用の可能性",
       "accountManagePermission": "現在のアカウントの管理キー",
       "managePermission": "管理キー"
     },
     "credentialRole": {
-      "badgeTitle": "All API Hub はこのキーでアカウントに接続し、残高の取得とキーの管理を行います。キーを変更した場合は、アカウント設定のキーも更新してください。"
+      "badgeTitle": "All API Hub はこのキーでアカウントに接続し、残高の取得とキーの管理を行います。キーを変更した場合は、アカウント設定のキーも更新してください。",
+      "candidateTitle": "マスクされたキーの一致のみ。未確認です。"
     },
     "delete": {
-      "accountCredentialAcknowledge": "アカウントの管理アクセスが失われることを理解しました",
-      "accountCredentialWarningDescription": "このキーを削除すると、このアカウントは Requesty の管理 API を呼び出せなくなり、キー一覧・残高・更新が失敗します。キーはここでは復元できません。",
+      "accountCredentialAcknowledge": "このキーを使うアカウント機能に影響する可能性を理解しました",
+      "accountCredentialWarningDescription": "削除すると、このキーを使うアカウント機能が利用できなくなる場合があります。先に認証情報を更新してください。ここではキーを復元できません。",
       "accountCredentialWarningTitle": "アカウントの認証情報を削除します",
       "confirm": "キーを削除",
       "description": "API キー {{name}} を完全に削除しますか？この操作は取り消せません。",
@@ -532,6 +535,22 @@
         "validDuration": "有効化後の有効日数"
       },
       "modelAllowlist": "モデル許可リスト",
+      "novita": {
+        "allEnabled": "有効なすべてのモデル",
+        "allowedIps": "許可する IP",
+        "allowedIpsHelp": "IPv4 アドレスまたは CIDR を 1 行に 1 件、最大 100 件。0.0.0.0/0 は使用できません。",
+        "allowedModels": "許可するモデル",
+        "days30": "30 日",
+        "days90": "90 日",
+        "excludedModels": "除外するモデル",
+        "hours24": "24 時間",
+        "lifecycleHelp": "有効期限は作成後に変更できません。",
+        "modelAccess": "モデルのアクセス範囲",
+        "modelChoicesHelp": "候補を選択するか、完全なモデル ID を入力して Enter で追加できます。公開カタログの候補は参考情報であり、ポリシーに使用できるかは保存結果で確認できます。",
+        "permanent": "無期限",
+        "restrictIps": "送信元 IP を制限",
+        "selected": "指定したモデルのみ"
+      },
       "opening": {
         "failed": "キーエディターを開けませんでした",
         "loading": "キーエディターを開いています...",

@@ -70,11 +70,28 @@ export function AccessTokenVerificationGuide({
       openPage: t("accessTokenVerification.vercel.openPage"),
       openPageFailed: t("accessTokenVerification.vercel.openPageFailed"),
     },
+    novita: {
+      title: t("accessTokenVerification.novita.title"),
+      pasteStep: t("accessTokenVerification.novita.pasteStep"),
+      generateStep: t("accessTokenVerification.novita.generateStep"),
+      openPage: t("accessTokenVerification.novita.openPage"),
+      openPageFailed: t("accessTokenVerification.novita.openPageFailed"),
+    },
   } satisfies Record<
     AccountSiteAccessTokenVerificationGuide["copy"],
-    { generateStep: string; openPage: string; openPageFailed: string }
+    {
+      generateStep: string
+      openPage: string
+      openPageFailed: string
+      title?: string
+      pasteStep?: string
+    }
   >
-  const copy = guideCopy[guide?.copy ?? "security"]
+  const copy = {
+    title: t("accessTokenVerification.title"),
+    pasteStep: t("accessTokenVerification.pasteStep"),
+    ...guideCopy[guide?.copy ?? "security"],
+  }
 
   const openAccessTokenPage = async () => {
     if (!siteUrl || !isHttpUrl(siteUrl) || !accessTokenPath) return
@@ -88,7 +105,7 @@ export function AccessTokenVerificationGuide({
   }
 
   return (
-    <Alert variant="warning" title={t("accessTokenVerification.title")}>
+    <Alert variant="warning" title={copy.title}>
       <div className="space-y-density-2 text-sm leading-relaxed">
         <p data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectErrorMessage}>
           {message}
@@ -121,7 +138,7 @@ export function AccessTokenVerificationGuide({
           <>
             <ol className="space-y-density-1 list-decimal pl-5">
               <li>{copy.generateStep}</li>
-              <li>{t("accessTokenVerification.pasteStep")}</li>
+              <li>{copy.pasteStep}</li>
             </ol>
             {guide?.showRotationWarning && (
               <p>{t("accessTokenVerification.rotationWarning")}</p>

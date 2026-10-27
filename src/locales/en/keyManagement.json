@@ -222,6 +222,7 @@
     "ipLimits": "IP Limits",
     "ipPlaceholder": "Leave empty for no limit, separate multiple IPs with commas",
     "modelLimits": "Model Limits",
+    "novitaConsoleRequired": "Creating keys requires console authorization. Edit this account to acquire a console credential for the same Novita account, or create the key in the Novita console.",
     "quotaPlaceholder": "Please enter quota amount (USD)",
     "quotaSettings": "Quota Settings",
     "selectModels": "Select models",
@@ -378,15 +379,17 @@
     },
     "badges": {
       "accountCredential": "Used by this account",
+      "accountCredentialCandidate": "Possibly used for account authentication",
       "accountManagePermission": "Current account management key",
       "managePermission": "Manage key"
     },
     "credentialRole": {
-      "badgeTitle": "All API Hub uses this key to connect to this account, read its balance and manage keys. If you replace it, update the key in account settings."
+      "badgeTitle": "All API Hub uses this key to connect to this account, read its balance and manage keys. If you replace it, update the key in account settings.",
+      "candidateTitle": "Matched by masked key only; not confirmed."
     },
     "delete": {
-      "accountCredentialAcknowledge": "I understand this breaks the account's management access",
-      "accountCredentialWarningDescription": "This account will lose Requesty management access: key lists, balance and refreshes will fail. The secret cannot be recovered here.",
+      "accountCredentialAcknowledge": "I understand this may affect account features using this key",
+      "accountCredentialWarningDescription": "Deleting this key may interrupt account features that use it. Update the account credential first; this key cannot be restored here.",
       "accountCredentialWarningTitle": "Delete the account's own credential",
       "confirm": "Delete key",
       "description": "Permanently delete the API key {{name}}? This cannot be undone.",
@@ -542,6 +545,22 @@
         "validDuration": "Validity after activation (days)"
       },
       "modelAllowlist": "Model allowlist",
+      "novita": {
+        "allEnabled": "All enabled models",
+        "allowedIps": "Allowed IPs",
+        "allowedIpsHelp": "One IPv4 address or CIDR per line, up to 100. 0.0.0.0/0 is not allowed.",
+        "allowedModels": "Allowed models",
+        "days30": "30 days",
+        "days90": "90 days",
+        "excludedModels": "Excluded models",
+        "hours24": "24 hours",
+        "lifecycleHelp": "Expiration cannot be changed after creation.",
+        "modelAccess": "Model access",
+        "modelChoicesHelp": "Select a suggestion or type a full model ID and press Enter. Public-catalog suggestions are for reference; saving confirms whether the policy accepts them.",
+        "permanent": "Permanent",
+        "restrictIps": "Restrict source IPs",
+        "selected": "Selected models only"
+      },
       "opening": {
         "failed": "Could not open key editor",
         "loading": "Opening key editor...",

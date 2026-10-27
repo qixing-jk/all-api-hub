@@ -56,10 +56,25 @@ export function useAccountDialogDraft({
   )
   const setSiteName = useCallback(
     (value: string) => {
-      updateDraft((prev) => ({ ...prev, siteName: value }))
+      updateDraft((prev) => ({
+        ...prev,
+        siteName: value,
+        siteNameEdited: true,
+      }))
     },
     [updateDraft],
   )
+  const setAutomaticSiteName = useCallback(
+    (value: string) => {
+      updateDraft((prev) =>
+        prev.siteNameEdited ? prev : { ...prev, siteName: value },
+      )
+    },
+    [updateDraft],
+  )
+  const resetSiteName = useCallback(() => {
+    updateDraft((prev) => ({ ...prev, siteName: "", siteNameEdited: false }))
+  }, [updateDraft])
   const setUsername = useCallback(
     (value: string) => {
       updateDraft((prev) => ({ ...prev, username: value }))
@@ -165,8 +180,9 @@ export function useAccountDialogDraft({
             })
           : prev.checkIn
         const shouldApplyDefaultName =
-          !prev.siteName.trim() ||
-          prev.siteName.trim() === (previousPolicy.defaultSiteName ?? "")
+          !prev.siteNameEdited &&
+          (Boolean(nextPolicy.defaultSiteName) ||
+            prev.siteName === previousPolicy.defaultSiteName)
         const shouldClearCredentialIdentity =
           prev.siteType !== nextSiteType &&
           usesAccountCredentialIdentity(prev.siteType)
@@ -200,6 +216,8 @@ export function useAccountDialogDraft({
     hasExplicitAuthTypeRef,
     automaticExecutionPreferenceChangedRef,
     setSiteName,
+    setAutomaticSiteName,
+    resetSiteName,
     setUsername,
     setExchangeRate,
     setManualBalanceUsd,
