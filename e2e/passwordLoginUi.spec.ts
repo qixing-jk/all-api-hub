@@ -155,7 +155,9 @@ for (const mode of [
       openChangelogOnUpdate: false,
       autoCheckin: {
         ...DEFAULT_PREFERENCES.autoCheckin!,
-        globalEnabled: true,
+        // This spec drives the manual run; a scheduled run can otherwise open
+        // an unheld login window before the fixture interception is installed.
+        globalEnabled: false,
         pretriggerDailyOnUiOpen: false,
       },
     })

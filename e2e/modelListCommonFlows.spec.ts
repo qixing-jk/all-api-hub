@@ -742,12 +742,15 @@ test("loads personalized OpenRouter catalogs with visible provider fallback and 
   const modelScroller = page
     .getByTestId(MODEL_LIST_TEST_IDS.modelDisplay)
     .locator("[data-virtuoso-scroller]")
-  await modelScroller.evaluate((element) => {
-    element.scrollTop = element.scrollHeight
-  })
-  await expect(
-    page.getByText("OpenRouter · Provider Model Catalog", { exact: true }),
-  ).toBeVisible()
+  await expect(async () => {
+    // The virtual list's total height can change as source rows are measured.
+    await modelScroller.evaluate((element) => {
+      element.scrollTop = element.scrollHeight
+    })
+    await expect(
+      page.getByText("OpenRouter · Provider Model Catalog", { exact: true }),
+    ).toBeVisible({ timeout: 1_000 })
+  }).toPass({ timeout: 10_000 })
   await expect(page.getByText("Using the provider-wide catalog")).toBeVisible()
   await expect(page.getByText(/^Total 3 models$/)).toBeVisible()
   await expect(page.getByText(/^Showing 3 models$/)).toBeVisible()

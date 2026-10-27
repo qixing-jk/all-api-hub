@@ -40,6 +40,8 @@ export interface TextareaProps
   maxLength?: number
   onClear?: () => void
   clearButtonLabel?: string
+  /** Fit the controlled value to its content, respecting CSS min/max heights. */
+  autoSize?: boolean
 }
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
@@ -55,6 +57,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       value,
       onClear,
       clearButtonLabel = "Clear",
+      autoSize = false,
       ...props
     },
     ref,
@@ -80,6 +83,25 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       },
       [ref],
     )
+
+    React.useLayoutEffect(() => {
+      const textarea = textareaRef.current
+      if (!autoSize || !textarea) return
+      const fitContent = () => {
+        textarea.style.height = "auto"
+        const borderHeight = textarea.offsetHeight - textarea.clientHeight
+        textarea.style.height = `${textarea.scrollHeight + borderHeight}px`
+      }
+      fitContent()
+      let width = textarea.clientWidth
+      const observer = new ResizeObserver(() => {
+        if (textarea.clientWidth === width) return
+        width = textarea.clientWidth
+        fitContent()
+      })
+      observer.observe(textarea)
+      return () => observer.disconnect()
+    }, [autoSize, value])
 
     const focusTextareaAfterClear = () => {
       const focusTextarea = () => textareaRef.current?.focus()

@@ -1,5 +1,5 @@
 import { ChevronDown, RotateCcw } from "lucide-react"
-import { useId, useLayoutEffect, useRef, useState } from "react"
+import { useId, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Alert, Button, Spinner, Textarea } from "~/components/ui"
@@ -32,25 +32,6 @@ export function VerificationPromptEditor({
     controller.getDefaultPrompt(probeId) ??
     (probeId === PELICAN_PROMPT_ID ? PELICAN_TEST_PROMPT : "")
   const value = controller.promptDraft[probeId] ?? defaultPrompt
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  useLayoutEffect(() => {
-    const textarea = textareaRef.current
-    if (!textarea) return
-    const fitContent = () => {
-      textarea.style.height = "auto"
-      const borderHeight = textarea.offsetHeight - textarea.clientHeight
-      textarea.style.height = `${textarea.scrollHeight + borderHeight}px`
-    }
-    fitContent()
-    let width = textarea.clientWidth
-    const observer = new ResizeObserver(() => {
-      if (textarea.clientWidth === width) return
-      width = textarea.clientWidth
-      fitContent()
-    })
-    observer.observe(textarea)
-    return () => observer.disconnect()
-  }, [value, isOpen])
   const isCustom = Boolean(controller.promptDraft[probeId]?.trim())
   const { setPromptDraftValue, resetPrompt, promptSaveError, isSavingPrompts } =
     controller
@@ -94,7 +75,7 @@ export function VerificationPromptEditor({
           <div className="gap-density-1 flex items-start">
             <div className="min-w-0 flex-1">
               <Textarea
-                ref={textareaRef}
+                autoSize
                 id={editorId}
                 aria-label={t("verifyDialog.tools.prompts.editorLabel", {
                   probe: getApiVerificationProbeLabel(t, probeId),
