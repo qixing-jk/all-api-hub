@@ -56,9 +56,9 @@ describe("AssociateApiCredentialProfileDialog", () => {
       `apiCredentialProfiles:association.secretComparison.${match}Label`,
     )
     expect(
-      screen.getByTestId(
-        KEY_MANAGEMENT_TEST_IDS.associateCredentialConfirmButton,
-      ),
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:association.linkExisting",
+      }),
     ).toBeDisabled()
     expect(onAssociate).not.toHaveBeenCalled()
   })
