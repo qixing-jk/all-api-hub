@@ -18,6 +18,13 @@
       "openProfile": "Abrir perfil de LaoZhang",
       "openProfileFailed": "No se pudo abrir la página. Abre manualmente Perfil de LaoZhang → System token, completa la verificación de seguridad, copia el token y vuelve aquí para ingresarlo."
     },
+    "novita": {
+      "generateStep": "Inicia sesión en la misma cuenta de Novita y selecciona «Obtener credencial de consola». Se comprueba la identidad y se conserva tu API Key. Vuelve a obtener la credencial cuando venza; la API Key guardada sigue funcionando de forma independiente.",
+      "openPage": "Abrir gestión de claves",
+      "openPageFailed": "No se pudo abrir la gestión de claves. Ábrela desde la consola de Novita.",
+      "pasteStep": "Pega una API Key sk_ completa. Para crear una, abre la administración de claves de Novita y cópiala. Su vencimiento se define al crearla.",
+      "title": "Método de credenciales"
+    },
     "openSecurity": "Abrir la seguridad del sitio",
     "openSecurityFailed": "No se pudo abrir la página. Abre Seguridad → Access Token manualmente en el sitio y vuelve aquí para pegar el token.",
     "pasteStep": "Copia de inmediato el Access Token completo, pégalo en el campo Access Token de abajo, revisa los datos de tu cuenta y guarda.",
@@ -184,6 +191,9 @@
     "manualVerificationRequiredTitle": "El check-in necesita tu verificación",
     "notes": "Notas",
     "notesPlaceholder": "Opcional, ingresa notas",
+    "novitaApiKey": "Credencial de cuenta Novita",
+    "novitaApiKeyGuidance": "Obtén credenciales de tu sesión de Novita para actualizar el saldo, crear, renombrar y eliminar claves, y editar políticas de modelos/IP. Cuando caduquen, inicia sesión en la misma cuenta y vuelve a detectar. Usa una API Key sk_ independiente para saldo, inventario y políticas de modelos/IP sin mantener la sesión web abierta. No permite crear, renombrar ni eliminar claves. Su vigencia se elige al crearla.",
+    "novitaApiKeyGuidanceTitle": "Método de credenciales",
     "openRedeemWithCheckIn": "Abrir también la página de canje al usar check-in externo",
     "openrouterManagementKey": "Clave de administración de OpenRouter",
     "openrouterManagementKeyGuidance": "Crea una nueva clave de administración en la página Management Keys de OpenRouter y cópiala de inmediato; luego pégala aquí. Las claves de administración existentes no se pueden volver a mostrar.",
@@ -335,6 +345,23 @@
     "detecting": "Detectando...",
     "manualAdd": "Agregado manual",
     "reDetect": "Volver a detectar"
+  },
+  "novitaCredentials": {
+    "apiKey": "API Key",
+    "apiKeyScope": "No permite crear, renombrar ni eliminar claves. Cuando vence el token de consola, se usa automáticamente esta API Key para seguir consultando el saldo y la lista de claves.",
+    "apiKeyVerified": "API Key verificada para {{account}}.",
+    "console": "Token de consola",
+    "consoleScope": "Permite administrar por completo la cuenta. Haz clic en el botón de obtención a la derecha del campo para completar automáticamente el token de consola.",
+    "consoleVerified": "Token de consola verificado para {{account}}.",
+    "detectSession": "Obtener credencial de consola",
+    "hideApiKey": "Ocultar API Key",
+    "hideConsoleToken": "Ocultar token de consola",
+    "openKeys": "Abrir administración de claves de Novita",
+    "openKeysShort": "Administrar claves",
+    "showApiKey": "Mostrar API Key",
+    "showConsoleToken": "Mostrar token de consola",
+    "verifying": "Verificando API Key…",
+    "verifyKey": "Verificar API Key"
   },
   "openrouterBootstrapRecovery": {
     "label": "Etiqueta reconocible: {{label}}",

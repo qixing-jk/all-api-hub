@@ -150,6 +150,15 @@
     "configMissing": "Bitte konfigurieren Sie zuerst New API Adresse, Admin-Token und Benutzer-ID in den Grundeinstellungen",
     "noChannelsToSync": "Keine Kanäle zum Synchronisieren"
   },
+  "novita": {
+    "apiKeyRequired": "Gib einen vollständigen Novita-API-Schlüssel ein oder melde dich beim selben Konto an, um Konsolenzugangsdaten abzurufen. Beide können zusammen gespeichert werden.",
+    "consoleAcquisitionFailed": "Konsolentoken konnte nicht abgerufen werden. Melde dich bei diesem Novita-Konto an, lade die Website neu und versuche es erneut oder füge den Token direkt ein. Dein API-Schlüssel bleibt erhalten.",
+    "consoleCredentialRequired": "Diese Aktion erfordert Konsolenautorisierung. Bearbeite das Konto und hole Konsolenzugangsdaten für dasselbe Novita-Konto ab.",
+    "credentialInvalid": "Diese Novita-Zugangsdaten sind ungültig oder abgelaufen. Für die Konsole erneut anmelden und erkennen; andernfalls den API-Schlüssel ersetzen.",
+    "keyChanged": "Der Schlüssel wurde bei Novita geändert. Den Editor erneut öffnen.",
+    "malformedResponse": "Novita hat eine unerwartete Antwort zurückgegeben. Bitte später erneut versuchen.",
+    "networkFallback": "Novita ist nicht erreichbar. Netzwerkverbindung prüfen und erneut versuchen."
+  },
   "octopus": {
     "configMissing": "Bitte konfigurieren Sie zuerst Octopus Adresse, Benutzernamen und Passwort in den Grundeinstellungen",
     "corsError": "Dies kann durch die CORS-Konfiguration verursacht werden. Bitte überprüfen Sie die CORS-Whitelist-Einstellung in den Octopus-Einstellungen.",

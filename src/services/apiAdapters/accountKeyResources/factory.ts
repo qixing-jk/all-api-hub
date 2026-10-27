@@ -68,6 +68,7 @@ export function defineAccountKeyResourceCapability<
   const siteType = definition.siteType
 
   return {
+    ...(definition.operations ? { operations: definition.operations } : {}),
     ...(definition.defaultCreation
       ? { defaultCreation: definition.defaultCreation }
       : {}),

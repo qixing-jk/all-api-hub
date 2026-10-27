@@ -24,12 +24,14 @@ import {
   type AutoDetectAnalyticsContext,
   type AutoDetectFailureReason,
 } from "~/services/accounts/utils/autoDetectUtils"
+import { isCanonicalNovitaUrl } from "~/services/accountSiteDefinitions/identifiers"
 import type { AccountDetectionPrivacyPolicy } from "~/services/accountSiteOnboarding/contracts"
 import {
   createAccountDetectionDiagnostics,
   type AccountDetectionDiagnostics,
 } from "~/services/accountSiteOnboarding/diagnostics"
 import { getAccountDetectionPrivacyPolicy } from "~/services/accountSiteOnboarding/registry"
+import { onboardNovitaAccount } from "~/services/apiAdapters/novita/accountOnboarding"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
 import { type AuthTypeEnum } from "~/types"
@@ -147,6 +149,13 @@ async function runAutoDetectAccount(
   }
 
   const normalizedUrl = url.trim()
+  if (isCanonicalNovitaUrl(normalizedUrl)) {
+    return onboardNovitaAccount({
+      existingAccount: options?.existingAccount,
+      protectionBypassExecution,
+      diagnostics,
+    })
+  }
   const detectionPrivacy = getAccountDetectionPrivacyPolicy(normalizedUrl)
   let autoDetectContext: AutoDetectAnalyticsContext | undefined
   let recoveryData: AccountAutoDetectRecoveryData | undefined = {

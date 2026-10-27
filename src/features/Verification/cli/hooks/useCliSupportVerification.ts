@@ -20,6 +20,7 @@ import {
 import {
   collectAccountRuntimeKeySecrets,
   findDefaultSelectableAccountRuntimeKey,
+  isAccountRuntimeKeyCompatibleWithModel,
   isSelectableAccountRuntimeKey,
   sortAccountRuntimeKeysActiveFirst,
   type AccountRuntimeKey,
@@ -144,11 +145,6 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
     (runtimeKey) => runtimeKey.id === selectedRuntimeKeyId,
   )
   const activeApiKey = profile?.apiKey ?? selectedRuntimeKey?.secret ?? null
-  const selectedRuntimeKeyIsRunnable =
-    !!selectedRuntimeKey && isSelectableAccountRuntimeKey(selectedRuntimeKey)
-  const hasRunnableSource = isProfileSource
-    ? !!activeApiKey
-    : selectedRuntimeKeyIsRunnable
   const modelOptions = useMemo(() => {
     if (isProfileSource) return profileModelOptions
     return normalizeApiCredentialModelIds([
@@ -162,6 +158,16 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
   }, [isProfileSource, selectedRuntimeKey])
 
   const resolvedModelId = (modelId.trim() || tokenModelHint.trim() || "").trim()
+  const selectedRuntimeKeyIsRunnable =
+    !!selectedRuntimeKey &&
+    isSelectableAccountRuntimeKey(selectedRuntimeKey) &&
+    (!resolvedModelId ||
+      isAccountRuntimeKeyCompatibleWithModel(selectedRuntimeKey, {
+        id: resolvedModelId,
+      }))
+  const hasRunnableSource = isProfileSource
+    ? !!activeApiKey
+    : selectedRuntimeKeyIsRunnable
 
   const isAnyToolRunning = tools.some((t) => t.isRunning)
 
@@ -364,7 +370,9 @@ export function useCliSupportVerification(props: VerifyCliSupportDialogProps) {
       !isProfileSource &&
       (!sourceAccount ||
         !accountRuntimeKey ||
-        !isSelectableAccountRuntimeKey(accountRuntimeKey))
+        !isAccountRuntimeKeyCompatibleWithModel(accountRuntimeKey, {
+          id: resolvedModelId,
+        }))
     ) {
       return null
     }

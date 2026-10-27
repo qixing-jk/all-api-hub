@@ -18,6 +18,7 @@ import { useKeyManagement } from "~/features/KeyManagement/inventory/useKeyManag
 import { useKeyManagementInventoryPresentation } from "~/features/KeyManagement/inventory/useKeyManagementInventoryPresentation"
 import { useKeyManagementManagedSiteActions } from "~/features/KeyManagement/managedSite/useKeyManagementManagedSiteActions"
 import { useManagedSiteKeyStatuses } from "~/features/KeyManagement/managedSite/useManagedSiteKeyStatuses"
+import { getKeyResourcePresentationPolicy } from "~/features/KeyManagement/presentation/keyResourcePresentationPolicy"
 import { useKeyManagementRouteCoordinator } from "~/features/KeyManagement/workspace/useKeyManagementRouteCoordinator"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import { useAccountKeyProvisioning } from "~/features/TokenProvisioning/creation/useAccountKeyProvisioning"
@@ -322,6 +323,7 @@ export function useKeyManagementViewModel(
   )
   const canCreateNativeKey =
     isSelectedNativeKeyAccount &&
+    canCreateTokensInCurrentScope &&
     nativeKeys.selectedScope !== null &&
     !nativeKeys.isLoading &&
     !nativeKeys.freshReadRequired
@@ -333,10 +335,11 @@ export function useKeyManagementViewModel(
     : selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE &&
         addTokenAvailableAccounts.length === 0
       ? t("keyManagement:noAccountsSupportKeyCreation")
-      : selectedAddTokenScopeAccount &&
-          !isSelectedNativeKeyAccount &&
-          !canCreateTokensInCurrentScope
-        ? t("keyManagement:dialog.createNotSupported")
+      : selectedAddTokenScopeAccount && !canCreateTokensInCurrentScope
+        ? getKeyResourcePresentationPolicy(
+            selectedAddTokenScopeAccount.siteType,
+          ).createUnavailableReason?.(t) ??
+          t("keyManagement:dialog.createNotSupported")
         : undefined
 
   const handleRequestAddToken = useCallback(() => {

@@ -96,6 +96,3 @@ src/public/react-devtools*
 # Local screenshot comparison runs
 .scratch/visual-comparisons/
 .scratch/visual-captures/
-
-# Authenticated RelayFor identity and screenshot evidence stays local.
-.scratch/relayfor-parity-audit/

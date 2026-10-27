@@ -46,6 +46,7 @@ import {
   parseManualQuotaFromUsd,
 } from "~/services/accounts/editing/accountFormValidation"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
+import { parseNovitaCredentials } from "~/services/apiService/novita/constants"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
 import {
@@ -109,7 +110,13 @@ export function useAccountDialog({
     mode,
     accountId: account?.id,
   })
-  const { isDetecting, isDetectingSlow, detectionError } = autoDetection.state
+  const {
+    isDetecting,
+    isDetectingSlow,
+    detectionError,
+    credentialVerification,
+    novitaCredentialOperation,
+  } = autoDetection.state
   const {
     invalidate: invalidateAutoDetection,
     reset: resetAutoDetection,
@@ -123,6 +130,8 @@ export function useAccountDialog({
     hasExplicitAuthTypeRef,
     automaticExecutionPreferenceChangedRef,
     setSiteName,
+    setAutomaticSiteName,
+    resetSiteName,
     setUsername,
     setExchangeRate,
     setManualBalanceUsd,
@@ -143,6 +152,10 @@ export function useAccountDialog({
     initialFlowState.formSource,
   )
   const [showAccessToken, setShowAccessToken] = useState(false)
+  const [editedNovitaCredential, setEditedNovitaCredential] = useState<{
+    url: string
+    accessToken: string
+  } | null>(null)
   const openRouterOnboarding = useOpenRouterAccountOnboarding()
   const {
     recovery: openRouterOnboardingRecovery,
@@ -258,7 +271,7 @@ export function useAccountDialog({
     mode,
     accountId: account?.id,
     url,
-    setSiteName,
+    setSiteName: setAutomaticSiteName,
   })
   const { currentTabUrl, checkCurrentTab, getCookieImportContextForUrl } =
     currentTab
@@ -476,7 +489,7 @@ export function useAccountDialog({
     } else {
       setDialogUrl("")
       if (mode === DIALOG_MODES.ADD) {
-        setSiteName("")
+        resetSiteName()
       }
     }
   }
@@ -485,19 +498,20 @@ export function useAccountDialog({
     if (currentTabUrl) {
       handleUrlChange(currentTabUrl)
       const candidate = claimCurrentTab()
-      if (candidate.siteName.trim()) setSiteName(candidate.siteName)
+      if (candidate.siteName.trim()) setAutomaticSiteName(candidate.siteName)
     }
   }
 
   const handleClearUrl = () => {
     setDialogUrl("")
     if (mode === DIALOG_MODES.ADD) {
-      setSiteName("")
+      resetSiteName()
     }
   }
 
   const handleClose = useCallback(async () => {
     if (isCloseTransitionStartedRef.current) return
+    setEditedNovitaCredential(null)
     invalidateDuplicateConfirmation()
     invalidateCookieSession()
     invalidateSub2ApiSession()
@@ -533,7 +547,12 @@ export function useAccountDialog({
     void openSettingsTab(BASIC_SETTINGS_TAB_IDS.Permissions)
   }, [])
 
-  const { handleAutoDetect, handleShowManualForm } = useAccountDialogDetection({
+  const {
+    handleAutoDetect,
+    handleVerifyNovitaCredential,
+    handleAcquireNovitaConsole,
+    handleShowManualForm,
+  } = useAccountDialogDetection({
     context: { mode, url, draft, formSource, isDetected },
     evidence: {
       credentialEvidence,
@@ -577,6 +596,40 @@ export function useAccountDialog({
       onPostSaveAccountRefresh,
     })
 
+  // Only user edits schedule checks; detected or saved credentials do not poll.
+  // Manual verification and saving consume the pending check to avoid duplicates.
+  useEffect(() => {
+    if (!editedNovitaCredential) return
+    if (
+      !isOpen ||
+      isSaving ||
+      siteType !== SITE_TYPES.NOVITA ||
+      url !== editedNovitaCredential.url ||
+      accessToken !== editedNovitaCredential.accessToken ||
+      credentialVerification?.accessToken === accessToken
+    ) {
+      setEditedNovitaCredential(null)
+      return
+    }
+    // An invalidated request may still be settling; do not overlap transports.
+    if (isDetecting) return
+    const timeout = setTimeout(() => {
+      setEditedNovitaCredential(null)
+      void handleVerifyNovitaCredential()
+    }, 600)
+    return () => clearTimeout(timeout)
+  }, [
+    editedNovitaCredential,
+    isOpen,
+    isDetecting,
+    isSaving,
+    siteType,
+    url,
+    accessToken,
+    credentialVerification,
+    handleVerifyNovitaCredential,
+  ])
+
   const handleAutoConfig = () =>
     postSaveWorkflow.executeAutoConfig({
       account,
@@ -616,7 +669,8 @@ export function useAccountDialog({
   const tokenRecoveryState = useMemo<AccountDialogRecoveryState | null>(() => {
     if (
       detectionError?.type !==
-      AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED
+        AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED &&
+      draft.siteType !== SITE_TYPES.NOVITA
     )
       return null
     return {
@@ -649,6 +703,8 @@ export function useAccountDialog({
       isSaving,
       showAccessToken,
       detectionError,
+      credentialVerification,
+      novitaCredentialOperation,
       showManualForm,
       exchangeRate,
       manualBalanceUsd,
@@ -691,7 +747,16 @@ export function useAccountDialog({
       setDraftPartial,
       setSiteName,
       setUsername,
-      setAccessToken,
+      setAccessToken: (value: string) => {
+        if (siteType === SITE_TYPES.NOVITA) resetAutoDetection()
+        setAccessToken(value)
+        setEditedNovitaCredential(
+          siteType === SITE_TYPES.NOVITA &&
+            /^sk_\S+$/.test(parseNovitaCredentials(value).apiKey)
+            ? { url, accessToken: value }
+            : null,
+        )
+      },
       setUserId,
       setShowAccessToken,
       setShowManualForm: (visible: boolean) => {
@@ -719,6 +784,11 @@ export function useAccountDialog({
       setSub2apiTokenExpiresAt,
     },
     handlers: {
+      handleVerifyNovitaCredential,
+      handleAcquireNovitaConsole: () => {
+        setEditedNovitaCredential(null)
+        return handleAcquireNovitaConsole()
+      },
       handleUseCurrentTabUrl,
       handleAutoDetect,
       handleRedetectCheckInMethods,

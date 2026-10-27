@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next"
 
 import type { NativeKeyManagementRow } from "~/features/KeyManagement/types"
+import type { AccountCredentialIdentity } from "~/services/accounts/keys/accountCredentialIdentity"
 import type { AccountKeyResourceFacts } from "~/services/apiAdapters/contracts/accountKeyResource"
 
 import type {
@@ -13,7 +14,10 @@ export type AccountKeyResourceCardAdapter = {
   buildPresentation: (
     row: NativeKeyManagementRow,
     t: TFunction,
-    options: { hasAssociatedSecret: boolean },
+    options: {
+      hasAssociatedSecret: boolean
+      accountCredentialIdentity?: AccountCredentialIdentity
+    },
   ) => KeyResourceCardPresentation
   buildDetailFacts: (
     facts: AccountKeyResourceFacts,

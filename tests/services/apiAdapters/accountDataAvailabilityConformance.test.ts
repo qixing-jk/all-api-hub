@@ -52,6 +52,7 @@ const collectedRequests = {
   cubenceAccount: 0,
   relayForAccount: 0,
   vercelAiGatewayCredits: 0,
+  novitaBalance: 0,
 }
 
 const expectClassifiedAvailability = (data: AccountData) => {
@@ -873,6 +874,36 @@ const producerFixturesByFamily = {
       expect(collectedRequests.relayForAccount).toBe(snapshotCount)
     },
   },
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Novita]: {
+    // The console origin stays on novita.ai while the account reads go to the
+    // key-authenticated OpenAPI on api.novita.ai.
+    baseUrl: "https://novita.example.invalid",
+    authType: AuthTypeEnum.AccessToken,
+    expectedAvailability: {
+      consumption: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      requests: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      tokens: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+      income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
+    handlers: [
+      http.get(
+        "https://api.novita.ai/openapi/v1/billing/balance/detail",
+        () => {
+          collectedRequests.novitaBalance += 1
+          return HttpResponse.json({
+            availableBalance: "1000000",
+            cashBalance: "800000",
+            creditLimit: "200000",
+            pendingCharges: "0",
+            outstandingInvoices: "0",
+          })
+        },
+      ),
+    ],
+    expectRequests: (snapshotCount: number) => {
+      expect(collectedRequests.novitaBalance).toBe(snapshotCount)
+    },
+  },
 } satisfies Record<ProducerFamily, ProducerFixture>
 
 const getProducerFixture = (siteType: AccountSiteType): ProducerFixture => {
@@ -1000,6 +1031,7 @@ describe("AccountData availability producer conformance", () => {
       cubenceAccount: 0,
       relayForAccount: 0,
       vercelAiGatewayCredits: 0,
+      novitaBalance: 0,
     })
     server.use(
       ...Object.values(producerFixturesByFamily).flatMap(

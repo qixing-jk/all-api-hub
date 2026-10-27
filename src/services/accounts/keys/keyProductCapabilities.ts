@@ -163,13 +163,18 @@ export const getAccountKeyProductCapabilities = (
     accountCapabilities?.keyResourceManagement?.defaultCreation
   const canResolveRuntimeSecret =
     supportsRecoverableRuntimeKeySecrets(accountCapabilities)
+  const operations = accountCapabilities?.keyResourceManagement?.operations?.({
+    authType: account.authType,
+    accessToken: account.token,
+    userId: account.userId,
+  })
 
   return {
     resourceKeys: {
       list: hasKeyResources,
-      create: hasKeyResources,
-      update: hasKeyResources,
-      delete: hasKeyResources,
+      create: hasKeyResources && (operations?.create ?? true),
+      update: hasKeyResources && (operations?.update ?? true),
+      delete: hasKeyResources && (operations?.delete ?? true),
     },
     runtimeKeys: {
       list: hasKeyResources || hasServiceCredential,
@@ -181,7 +186,9 @@ export const getAccountKeyProductCapabilities = (
     },
     defaultTokenAutomation: {
       run: Boolean(
-        defaultCreation && defaultCreation !== creationPolicies.RequiresInput,
+        defaultCreation &&
+          defaultCreation !== creationPolicies.RequiresInput &&
+          (operations?.create ?? true),
       ),
     },
   }

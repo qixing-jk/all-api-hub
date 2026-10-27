@@ -330,6 +330,13 @@
     "groupAllowance": "Gruppenkontingent",
     "nativeCredits": "Guthabeneinheiten",
     "nativeCreditsDetail": "Dauerhaft {{permanent, number}} · Heute {{daily, number}} (verfällt täglich)",
+    "novitaBalance": {
+      "available": "Verfügbares Guthaben",
+      "cash": "Aufladeguthaben",
+      "creditLimit": "Kreditlimit (maximale Schulden)",
+      "description": "Das verfügbare Guthaben wird von Novita gemeldet. Das Aufladeguthaben ist der Rest Ihrer Einzahlungen; das Kreditlimit ist der maximale Betrag, den Sie schulden dürfen. Die Erweiterung berücksichtigt Novita-Guthaben derzeit nicht im Gesamtguthaben, Guthabenverlauf und in Einnahmenschätzungen.",
+      "title": "Kontostanddetails"
+    },
     "permanentAllowance": "Dauerhaft",
     "prompt": "Eingabe",
     "scopedAllowances": "Gruppen- und Abonnementkontingente können Nutzungsbeschränkungen haben. Native Kontingente werden nicht in Gesamtsaldo, Saldoverlauf und Einkommensschätzungen einbezogen.",

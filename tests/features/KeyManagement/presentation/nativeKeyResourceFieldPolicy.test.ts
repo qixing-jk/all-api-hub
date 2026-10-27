@@ -28,6 +28,7 @@ import {
 import { createFoxCodeKeyEditor } from "~/services/apiAdapters/foxcode/keyEditor"
 import { createNewApiKeyEditor } from "~/services/apiAdapters/newApi/keys/keyResourceEditor"
 import { resolveNewApiKeyVariant } from "~/services/apiAdapters/newApi/keys/keyVariant"
+import { novitaKeyEditor } from "~/services/apiAdapters/novita/keyEditor"
 import {
   createRelayForKeyEditor,
   editRelayForKeyEditor,
@@ -45,6 +46,74 @@ const request = {
     userId: 1,
   },
 }
+
+it("renders Novita API-key policy editing without requiring an unavailable name field", () => {
+  const editor = novitaKeyEditor(request, {
+    name: "Existing key",
+    allowedIps: [],
+    canRename: false,
+    modelPolicy: {
+      schemaVersion: 1,
+      productScope: "model_api",
+      mode: "all_enabled",
+      allowedModels: [],
+      excludedModels: [],
+    },
+  })
+  const presentation = getNativeKeyResourceEditorPresentation(
+    SITE_TYPES.NOVITA,
+    editorModes.Edit,
+    { fields: editor.fields },
+  )
+  expect(() =>
+    resolveResourceFieldPolicy(
+      editor.fields,
+      presentation.policy,
+      presentation.sectionOrder,
+    ),
+  ).not.toThrow()
+  expect(
+    presentation.policy.fields.map((field) => field.fieldId),
+  ).not.toContain("name")
+})
+
+it("presents Novita lifecycle and conditional native model/IP controls", () => {
+  const create = getNativeKeyResourceEditorPresentation(
+    SITE_TYPES.NOVITA,
+    editorModes.Create,
+  )
+  expect(create.policy.fields.map((field) => field.fieldId)).toEqual([
+    "name",
+    "lifecycle",
+    "model_mode",
+    "excluded_models",
+    "allowed_models",
+    "ip_restricted",
+    "allowed_ips",
+  ])
+  expect(
+    create.policy.fields
+      .find((field) => field.fieldId === "allowed_models")
+      ?.visibleWhen?.({ model_mode: "selected" }),
+  ).toBe(true)
+  expect(
+    create.policy.fields
+      .find((field) => field.fieldId === "excluded_models")
+      ?.visibleWhen?.({ model_mode: "selected" }),
+  ).toBe(false)
+  expect(
+    create.policy.fields
+      .find((field) => field.fieldId === "allowed_ips")
+      ?.visibleWhen?.({ ip_restricted: false }),
+  ).toBe(false)
+  const edit = getNativeKeyResourceEditorPresentation(
+    SITE_TYPES.NOVITA,
+    editorModes.Edit,
+  )
+  expect(edit.policy.fields.map((field) => field.fieldId)).not.toContain(
+    "lifecycle",
+  )
+})
 
 it("presents Vercel budget editing when attribution is unavailable", () => {
   const editor = createVercelKeyEditor(undefined, { canSetAttribution: false })

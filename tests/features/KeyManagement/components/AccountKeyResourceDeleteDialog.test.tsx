@@ -4,14 +4,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { AccountKeyResourceDeleteDialog } from "~/features/KeyManagement/resources/AccountKeyResourceDeleteDialog"
-import {
-  ACCOUNT_KEY_CREDENTIAL_ROLES,
-  ACCOUNT_KEY_RESOURCE_FAILURE_CODES,
-} from "~/services/apiAdapters/contracts/accountKeyResource"
+import { ACCOUNT_KEY_RESOURCE_FAILURE_CODES } from "~/services/apiAdapters/contracts/accountKeyResource"
+import { buildApiCredentialProfile } from "~~/tests/test-utils/factories"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const mocks = vi.hoisted(() => ({ config: vi.fn() }))
-vi.mock("~/services/apiAdapters/registry", () => ({
+vi.mock("~/services/apiAdapters/registry", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/services/apiAdapters/registry")>()),
   getManagedSiteCapabilities: () => ({ config: { get: mocks.config } }),
 }))
 vi.mock("~/services/managedSites/configuration/runtimeConfig", () => ({
@@ -195,7 +194,7 @@ describe("account credential deletion guard", () => {
         displayName: "account-credential",
         maskedLabel: "masked",
         status: "enabled",
-        credentialRole: ACCOUNT_KEY_CREDENTIAL_ROLES.Account,
+        accountCredentialIdentity: { status: "confirmed", source: "provider" },
         fields: [],
         actions: { canUpdate: true, canDelete: true },
         displayFacts: [
@@ -231,12 +230,37 @@ describe("account credential deletion guard", () => {
     expect(props.nativeKeys.confirmDelete).toHaveBeenCalled()
   })
 
+  it("uses confirmed linked plaintext for the same deletion warning", async () => {
+    const props = createRequestyCredentialProps()
+    props.accounts[0]!.token = "sk_account-secret"
+    props.nativeKeys.allRows = [
+      {
+        ...props.nativeKeys.allRows[0]!,
+        accountCredentialIdentity: { status: "unknown", source: "none" },
+      },
+    ]
+    props.getProfileForLocator = vi
+      .fn()
+      .mockReturnValue(
+        buildApiCredentialProfile({ apiKey: "sk_account-secret" }),
+      )
+    render(<AccountKeyResourceDeleteDialog {...props} />)
+    expect(
+      await screen.findByRole("button", {
+        name: "keyManagement:native.delete.confirm",
+      }),
+    ).toBeDisabled()
+    expect(
+      screen.getByTestId("key-management-native-delete-credential-acknowledge"),
+    ).toBeVisible()
+  })
+
   it("shows a warning without a gate for manage keys that are not the account credential", async () => {
     const props = createRequestyCredentialProps()
     props.nativeKeys.allRows = [
       {
         ...props.nativeKeys.allRows[0]!,
-        credentialRole: undefined,
+        accountCredentialIdentity: undefined,
       },
     ]
     render(<AccountKeyResourceDeleteDialog {...props} />)

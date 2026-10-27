@@ -1,5 +1,6 @@
 import {
   ArrowLeftRight,
+  BadgeCheck,
   Building2,
   CalendarDays,
   Cookie,
@@ -10,6 +11,7 @@ import {
 } from "lucide-react"
 import {
   useEffect,
+  useId,
   useImperativeHandle,
   useLayoutEffect,
   useRef,
@@ -29,6 +31,7 @@ import {
   Alert,
   Button,
   FormField,
+  IconButton,
   Input,
   Label,
   Notice,
@@ -58,6 +61,10 @@ import {
   CookieAuthPermissionRecommendation,
   type CookieAuthPermissionRecommendationProps,
 } from "~/features/AccountManagement/components/AccountDialog/form/CookieAuthPermissionRecommendation"
+import {
+  NovitaCredentialGuide,
+  type NovitaCredentialActions,
+} from "~/features/AccountManagement/components/AccountDialog/form/NovitaCredentialGuide"
 import type { AccountDialogSitePolicy } from "~/features/AccountManagement/components/AccountDialog/form/sitePolicy"
 import { VercelTeamSelector } from "~/features/AccountManagement/components/AccountDialog/form/VercelTeamSelector"
 import {
@@ -78,6 +85,10 @@ import { normalizePasswordCredentials } from "~/services/accountLogin/passwordCr
 import type { LoginProviderClaimConflict } from "~/services/accountLogin/providerClaims"
 import { isValidExchangeRate } from "~/services/accounts/editing/accountFormValidation"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
+import {
+  encodeNovitaCredentials,
+  parseNovitaCredentials,
+} from "~/services/apiService/novita/constants"
 import { resolveSelectedCheckInMethod } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
 import type { AccountLoginConfiguration } from "~/types/accountLogin"
@@ -128,6 +139,7 @@ interface AccountFormProps {
   onUsernameChange: (value: string) => void
   onUserIdChange: (value: string) => void
   onAccessTokenChange: (value: string) => void
+  novitaCredentialActions?: NovitaCredentialActions
   /** Optional console-session credential creation for supported sites. */
   autoCreateAccessToken?: {
     enabled: boolean
@@ -188,6 +200,7 @@ export default function AccountForm({
   onUsernameChange,
   onUserIdChange,
   onAccessTokenChange,
+  novitaCredentialActions,
   autoCreateAccessToken,
   onExchangeRateChange,
   onManualBalanceUsdChange,
@@ -247,10 +260,42 @@ export default function AccountForm({
   const canUseCookieAuth = sitePolicy.allowCookieAuthSession
   const canUseSub2ApiRefreshToken = sitePolicy.allowSub2ApiRefreshTokenState
   const credentialPresentation = sitePolicy.accessTokenPresentation
-  const accessTokenLabel = t(
-    credentialPresentation.accessTokenLabelKey ?? "form.accessToken",
-  )
+  const novitaCredentials = parseNovitaCredentials(accessToken)
+  const accessTokenInputValue =
+    siteType === SITE_TYPES.NOVITA ? novitaCredentials.apiKey : accessToken
+  const accessTokenLabel =
+    siteType === SITE_TYPES.NOVITA
+      ? t("novitaCredentials.apiKey")
+      : t(credentialPresentation.accessTokenLabelKey ?? "form.accessToken")
   const accessTokenInputRef = useRef<HTMLInputElement>(null)
+  const credentialFeedbackId = useId()
+  const showApiKeyVerification =
+    siteType === SITE_TYPES.NOVITA && Boolean(novitaCredentialActions)
+  const isConsoleOperation = novitaCredentialActions?.operation === "console"
+  const isAccountOperation = novitaCredentialActions?.operation === "account"
+  const verificationStatus =
+    showApiKeyVerification &&
+    Boolean(novitaCredentials.apiKey) &&
+    !isConsoleOperation &&
+    !isAccountOperation
+      ? novitaCredentialActions?.verification?.status
+      : undefined
+  const isVerifyingApiKey =
+    showApiKeyVerification &&
+    Boolean(novitaCredentials.apiKey) &&
+    !isConsoleOperation &&
+    !isAccountOperation &&
+    novitaCredentialActions?.isVerifying
+  const credentialFeedback = isVerifyingApiKey
+    ? t("novitaCredentials.verifying")
+    : verificationStatus === "success"
+      ? t("novitaCredentials.apiKeyVerified", {
+          account:
+            novitaCredentialActions?.verification?.accountLabel || userId,
+        })
+      : verificationStatus === "error"
+        ? novitaCredentialActions?.verification?.message
+        : undefined
   const loginMethodRef = useRef<HTMLButtonElement>(null)
   const clearLoginHighlightRef = useRef<(() => void) | undefined>(undefined)
   const [isLoginSectionOpen, setIsLoginSectionOpen] = useState(true)
@@ -397,6 +442,96 @@ export default function AccountForm({
         </div>
       </FormField>
     </AccountFormSection>
+  )
+
+  const accessTokenField = (labelAction?: ReactNode) => (
+    <FormField
+      label={accessTokenLabel}
+      labelAction={labelAction}
+      required={
+        siteType !== SITE_TYPES.NOVITA || !novitaCredentials.consoleToken
+      }
+    >
+      <Input
+        ref={accessTokenInputRef}
+        type="password"
+        revealable
+        revealed={showAccessToken}
+        onRevealedChange={onShowAccessTokenChange}
+        revealLabels={{
+          show:
+            siteType === SITE_TYPES.NOVITA
+              ? t("novitaCredentials.showApiKey")
+              : t("form.showAccessToken"),
+          hide:
+            siteType === SITE_TYPES.NOVITA
+              ? t("novitaCredentials.hideApiKey")
+              : t("form.hideAccessToken"),
+        }}
+        value={accessTokenInputValue}
+        variant={
+          verificationStatus === "error"
+            ? "error"
+            : verificationStatus === "success"
+              ? "success"
+              : undefined
+        }
+        aria-invalid={verificationStatus === "error" || undefined}
+        aria-busy={isVerifyingApiKey || undefined}
+        aria-describedby={credentialFeedback ? credentialFeedbackId : undefined}
+        rightIcon={
+          showApiKeyVerification && novitaCredentialActions ? (
+            <IconButton
+              type="button"
+              variant="ghost"
+              size="sm"
+              aria-label={t("novitaCredentials.verifyKey")}
+              onClick={novitaCredentialActions.onVerify}
+              loading={Boolean(isVerifyingApiKey)}
+              disabled={
+                novitaCredentialActions.isVerifying ||
+                !accessTokenInputValue.trim()
+              }
+            >
+              <BadgeCheck className="h-4 w-4" />
+            </IconButton>
+          ) : undefined
+        }
+        onChange={(e) =>
+          onAccessTokenChange(
+            siteType === SITE_TYPES.NOVITA
+              ? encodeNovitaCredentials({
+                  ...novitaCredentials,
+                  apiKey: e.target.value,
+                })
+              : e.target.value,
+          )
+        }
+        placeholder={accessTokenLabel}
+        leftIcon={<KeyRound className="h-5 w-5" />}
+        data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput}
+        required={
+          siteType !== SITE_TYPES.NOVITA || !novitaCredentials.consoleToken
+        }
+      />
+      {credentialFeedback && (
+        <p
+          id={credentialFeedbackId}
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          className={
+            verificationStatus === "error"
+              ? "text-destructive-text text-xs"
+              : verificationStatus === "success"
+                ? "text-success-text text-xs"
+                : "text-muted-foreground text-xs"
+          }
+        >
+          {credentialFeedback}
+        </p>
+      )}
+    </FormField>
   )
 
   return (
@@ -565,25 +700,19 @@ export default function AccountForm({
 
         {authType === AuthTypeEnum.AccessToken && (
           <>
-            <FormField label={accessTokenLabel} required>
-              <Input
-                ref={accessTokenInputRef}
-                type="password"
-                revealable
-                revealed={showAccessToken}
-                onRevealedChange={onShowAccessTokenChange}
-                revealLabels={{
-                  show: t("form.showAccessToken"),
-                  hide: t("form.hideAccessToken"),
-                }}
-                value={accessToken}
-                onChange={(e) => onAccessTokenChange(e.target.value)}
-                placeholder={accessTokenLabel}
-                leftIcon={<KeyRound className="h-5 w-5" />}
-                data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput}
-                required
-              />
-            </FormField>
+            {siteType === SITE_TYPES.NOVITA && novitaCredentialActions ? (
+              <NovitaCredentialGuide
+                credential={accessToken}
+                onCredentialChange={onAccessTokenChange}
+                actions={novitaCredentialActions}
+                onPrepareInput={() => accessTokenInputRef.current?.focus()}
+              >
+                {accessTokenField}
+              </NovitaCredentialGuide>
+            ) : (
+              accessTokenField()
+            )}
+
             {autoCreateAccessToken?.enabled &&
               accessToken.trim().length === 0 && (
                 <div className="gap-y-density-2 flex flex-col">
@@ -619,7 +748,8 @@ export default function AccountForm({
                     )}
                 </div>
               )}
-            {credentialPresentation.accessTokenGuidanceKey &&
+            {!(siteType === SITE_TYPES.NOVITA && novitaCredentialActions) &&
+              credentialPresentation.accessTokenGuidanceKey &&
               (!isDetected || accessToken.trim().length === 0) && (
                 <Alert
                   className={continuous ? "col-span-full" : undefined}

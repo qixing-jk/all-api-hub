@@ -1087,6 +1087,28 @@ describe("useAccountDialog current tab detection", () => {
     })
   })
 
+  it("preserves a manual name entered while current-tab naming is pending", async () => {
+    const pendingName = createDeferred<string>()
+    mockGetSiteName.mockReturnValue(pendingName.promise)
+    vi.mocked(globalThis.browser.tabs.query).mockResolvedValue([
+      { id: 20, url: "https://initial.example.com/path" } as browser.tabs.Tab,
+    ])
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(mockGetSiteName).toHaveBeenCalled())
+    act(() => result.current.setters.setSiteName("My relay"))
+    await act(async () => pendingName.resolve("Dashboard title"))
+    expect(result.current.state.siteName).toBe("My relay")
+    act(() => result.current.handlers.handleUseCurrentTabUrl())
+    expect(result.current.state.siteName).toBe("My relay")
+  })
+
   it("ignores stale current-tab title resolutions after a newer active-tab detection wins", async () => {
     const tabsQueryMock = globalThis.browser.tabs.query as ReturnType<
       typeof vi.fn

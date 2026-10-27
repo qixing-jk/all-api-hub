@@ -4,6 +4,8 @@ export interface AccountRuntimeKeyModelAccess {
   groups: readonly string[] | null
   /** Null is unrestricted; an empty list explicitly allows no models. */
   allowedModelIds: readonly string[] | null
+  /** Explicit exclusions still apply when the allow list is unrestricted. */
+  deniedModelIds?: readonly string[]
   /** Provider hints for model selection, independent of enforced restrictions. */
   suggestedModelIds: readonly string[]
 }

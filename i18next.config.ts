@@ -33,6 +33,7 @@ export default defineConfig({
       "accountDialog:form.requestyManageKey*",
       "accountDialog:form.autoCreateAccessToken*",
       "accountDialog:form.vercelAccessToken*",
+      "accountDialog:form.novitaApiKey*",
       "productTour:search.keywords.*",
     ],
     primaryLanguage: DEFAULT_LANG,

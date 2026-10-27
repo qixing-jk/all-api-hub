@@ -12,15 +12,15 @@ import {
   SearchableSelect,
   Spinner,
 } from "~/components/ui"
-import {
-  compareCredentialSecret,
-  KEY_CREDENTIAL_SECRET_MATCHES,
-} from "~/features/KeyManagement/associations/credentialAssociations"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import {
   ACCOUNT_RUNTIME_KEY_SOURCES,
   type AccountRuntimeKeyLocator,
 } from "~/services/accounts/keys/accountRuntimeKeys"
+import {
+  compareCredentialSecret,
+  KEY_CREDENTIAL_SECRET_MATCHES,
+} from "~/services/accountTokens/credentialSecretMatch"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { maskSecretForDisplay } from "~/utils/core/formatters"
 

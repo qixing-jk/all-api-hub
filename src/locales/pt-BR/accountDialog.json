@@ -18,6 +18,13 @@
       "openProfile": "Abrir perfil do LaoZhang",
       "openProfileFailed": "Não foi possível abrir a página. Abra manualmente Perfil do LaoZhang → System token, conclua a verificação de segurança, copie o token e volte aqui para inseri-lo."
     },
+    "novita": {
+      "generateStep": "Entre na mesma conta Novita e selecione “Obter credencial do console”. A identidade é verificada e sua API Key é preservada. Obtenha a credencial novamente após expirar; a API Key salva continua funcionando de forma independente.",
+      "openPage": "Abrir gerenciamento de chaves",
+      "openPageFailed": "Não foi possível abrir o gerenciamento de chaves. Abra-o pelo console da Novita.",
+      "pasteStep": "Cole uma API Key sk_ completa. Para criar uma, abra o gerenciamento de chaves da Novita e copie a nova chave. A validade é definida na criação.",
+      "title": "Método de credencial"
+    },
     "openSecurity": "Abrir segurança do site",
     "openSecurityFailed": "Não foi possível abrir a página. Abra Segurança → Access Token manualmente no site e volte aqui para colar o token.",
     "pasteStep": "Copie imediatamente o Access Token completo, cole no campo Access Token abaixo, confira os dados da conta e salve.",
@@ -184,6 +191,9 @@
     "manualVerificationRequiredTitle": "O check-in precisa da sua verificação",
     "notes": "Notas",
     "notesPlaceholder": "Opcional, insira notas",
+    "novitaApiKey": "Credencial da conta Novita",
+    "novitaApiKeyGuidance": "Use a sessão autenticada do Novita para saldo, criação, renomeação, exclusão de chaves e políticas de modelos/IP. Após expirar, entre na mesma conta e detecte novamente. Use uma API Key sk_ separada para saldo, inventário e políticas de modelos/IP sem manter o site conectado. Não permite criar, renomear ou excluir chaves. A validade é escolhida na criação.",
+    "novitaApiKeyGuidanceTitle": "Método de credencial",
     "openRedeemWithCheckIn": "Abrir também a página de resgate ao usar o check-in externo",
     "openrouterManagementKey": "Chave de gerenciamento OpenRouter",
     "openrouterManagementKeyGuidance": "Crie uma nova chave de gerenciamento na página Chaves de gerenciamento do OpenRouter, copie-a imediatamente e cole-a aqui. As Chaves de Gerenciamento existentes não podem ser reveladas novamente.",
@@ -335,6 +345,23 @@
     "detecting": "Detectando...",
     "manualAdd": "Adição manual",
     "reDetect": "Detectar novamente"
+  },
+  "novitaCredentials": {
+    "apiKey": "API Key",
+    "apiKeyScope": "Não permite criar, renomear ou excluir chaves. Quando o token do console expira, esta API Key é usada automaticamente para continuar consultando o saldo e a lista de chaves.",
+    "apiKeyVerified": "API Key verificada para {{account}}.",
+    "console": "Token do console",
+    "consoleScope": "Permite gerenciar completamente a conta. Clique no botão de obtenção à direita do campo para preencher automaticamente o token do console.",
+    "consoleVerified": "Token do console verificado para {{account}}.",
+    "detectSession": "Obter credencial do console",
+    "hideApiKey": "Ocultar API Key",
+    "hideConsoleToken": "Ocultar token do console",
+    "openKeys": "Abrir gerenciamento de chaves do Novita",
+    "openKeysShort": "Gerenciar chaves",
+    "showApiKey": "Mostrar API Key",
+    "showConsoleToken": "Mostrar token do console",
+    "verifying": "Verificando API Key…",
+    "verifyKey": "Verificar API Key"
   },
   "openrouterBootstrapRecovery": {
     "label": "Etiqueta reconhecível: {{label}}",

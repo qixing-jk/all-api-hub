@@ -17,6 +17,7 @@ import {
   ACCOUNT_KEY_RESOURCE_EDIT_ACTIONS as editActions,
 } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { server } from "~~/tests/msw/server"
+import { buildApiCredentialProfile } from "~~/tests/test-utils/factories"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 import { createAccount } from "~~/tests/utils/keyManagementFactories"
 
@@ -63,6 +64,110 @@ const row: NativeKeyManagementRow = {
 }
 
 describe("AccountKeyResourceListItem", () => {
+  it("updates the account credential badge when linked plaintext confirms or disproves a masked match", async () => {
+    const nativeRow: NativeKeyManagementRow = {
+      ...row,
+      facts: {
+        ...row.facts,
+        ref: { ...row.facts.ref, siteType: "novita" },
+        accountCredentialIdentity: { status: "possible", source: "masked-key" },
+        maskedLabel: "sk_test****last",
+      },
+    }
+    const props = {
+      row: nativeRow,
+      cardAdapter: getAccountKeyResourceCardAdapter("novita"),
+      account: createAccount({
+        id: row.accountId,
+        siteType: "novita",
+        token: "sk_test-first-last",
+      }),
+      onExpandedChange: vi.fn(),
+      onEdit: vi.fn(),
+      onDelete: vi.fn(),
+    }
+    const { rerender } = render(<AccountKeyResourceListItem {...props} />)
+    expect(
+      await screen.findByText(
+        "keyManagement:native.badges.accountCredentialCandidate",
+      ),
+    ).toBeVisible()
+    const profile = buildApiCredentialProfile({ apiKey: "sk_test-first-last" })
+    rerender(
+      <AccountKeyResourceListItem {...props} associatedProfile={profile} />,
+    )
+    expect(
+      await screen.findByText("keyManagement:native.badges.accountCredential"),
+    ).toBeVisible()
+    rerender(
+      <AccountKeyResourceListItem
+        {...props}
+        row={{
+          ...nativeRow,
+          facts: {
+            ...nativeRow.facts,
+            accountCredentialIdentity: {
+              status: "confirmed",
+              source: "provider",
+            },
+          },
+        }}
+        associatedProfile={{ ...profile, apiKey: "sk_test-second-last" }}
+      />,
+    )
+    expect(
+      await screen.findByText("keyManagement:native.badges.accountCredential"),
+    ).toBeVisible()
+    expect(
+      screen.queryByText(
+        "keyManagement:native.badges.accountCredentialCandidate",
+      ),
+    ).not.toBeInTheDocument()
+    rerender(
+      <AccountKeyResourceListItem
+        {...props}
+        associatedProfile={{ ...profile, apiKey: "sk_test-second-last" }}
+      />,
+    )
+    expect(
+      screen.queryByText("keyManagement:native.badges.accountCredential"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        "keyManagement:native.badges.accountCredentialCandidate",
+      ),
+    ).not.toBeInTheDocument()
+    rerender(<AccountKeyResourceListItem {...props} />)
+    expect(
+      await screen.findByText(
+        "keyManagement:native.badges.accountCredentialCandidate",
+      ),
+    ).toBeVisible()
+    rerender(
+      <AccountKeyResourceListItem
+        {...props}
+        associatedProfile={{ ...profile, apiKey: "sk_test****last" }}
+      />,
+    )
+    expect(
+      await screen.findByText(
+        "keyManagement:native.badges.accountCredentialCandidate",
+      ),
+    ).toBeVisible()
+    rerender(
+      <AccountKeyResourceListItem
+        {...props}
+        row={{
+          ...nativeRow,
+          facts: { ...nativeRow.facts, accountCredentialIdentity: undefined },
+        }}
+        associatedProfile={profile}
+      />,
+    )
+    expect(
+      await screen.findByText("keyManagement:native.badges.accountCredential"),
+    ).toBeVisible()
+  })
   it("keeps the disclosure open with explicit empty feedback when fetched details add nothing", async () => {
     const user = userEvent.setup()
     const nativeRow = {

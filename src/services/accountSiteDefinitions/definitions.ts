@@ -113,6 +113,9 @@ import {
   LAOZHANG_HOSTNAMES,
   MODELFLARE_HOSTNAME,
   MODELFLARE_USER_ID_HEADER_NAME,
+  NOVITA_DISPLAY_NAME,
+  NOVITA_HOSTNAMES,
+  NOVITA_WEB_ORIGIN,
   OPENROUTER_API_BASE_URL,
   OPENROUTER_DISPLAY_NAME,
   OPENROUTER_HOSTNAMES,
@@ -243,6 +246,7 @@ export const ACCOUNT_SITE_TYPE_ORDER = [
   SITE_TYPES.KIMI_GLOBAL,
   SITE_TYPES.GRSAI,
   SITE_TYPES.VERCEL_AI_GATEWAY,
+  SITE_TYPES.NOVITA,
   SITE_TYPES.UNKNOWN,
 ] as const
 
@@ -1859,6 +1863,76 @@ const ACCOUNT_SITE_DEFINITION_OVERRIDES = [
         checkInPath: null,
         accessTokenPath: null,
         siteAnnouncementsPath: "/",
+      },
+    },
+  },
+  {
+    siteType: SITE_TYPES.NOVITA,
+    balanceDetailsCopy: "novita",
+    scopes: ACCOUNT_SCOPE,
+    adapterFamily: ACCOUNT_SITE_ADAPTER_FAMILIES.Novita,
+    onboarding: {
+      displayName: NOVITA_DISPLAY_NAME,
+      accountForm: {
+        fixedSiteUrl: NOVITA_WEB_ORIGIN,
+        defaultSiteName: NOVITA_DISPLAY_NAME,
+        preserveUserExchangeRateOnDetection: true,
+        accessTokenLabelKey: "form.novitaApiKey",
+        accessTokenGuidanceTitleKey: "form.novitaApiKeyGuidanceTitle",
+        accessTokenGuidanceKey: "form.novitaApiKeyGuidance",
+      },
+      accessTokenVerificationGuide: {
+        copy: "novita",
+        showRotationWarning: false,
+      },
+      detection: { hostnames: NOVITA_HOSTNAMES },
+      routes: {
+        // Novita has no standalone login page; the console shows the
+        // sign-in modal, so it doubles as the login destination.
+        loginPath: "/console",
+        usagePath: "/console",
+        adminCredentialsPath: "/settings/key-management",
+        pricingPath: "/pricing",
+        checkInPath: null,
+        accessTokenPath: "/settings/key-management",
+        redeemPath: null,
+        siteAnnouncementsPath: null,
+      },
+    },
+    productProfile: {
+      metrics: {
+        deferredTodayStatsAvailability:
+          createUnsupportedTodayStatsAvailability(),
+        legacyTodayStatsAvailability: createUnsupportedTodayStatsAvailability(),
+      },
+      auth: {
+        // Automatic onboarding saves the verified console bearer for account
+        // management. A manually supplied sk_ key retains OpenAPI reads; it
+        // cannot create, rename or delete keys. Never export a console bearer.
+        allowedAuthTypes: [ACCOUNT_SITE_AUTH_TYPES.AccessToken],
+        defaultAuthType: ACCOUNT_SITE_AUTH_TYPES.AccessToken,
+        defaultAuthHostnames: [],
+      },
+      identity: {
+        usernameRequired: false,
+        userIdRequired: false,
+        storedUserIdentityFields: ["id", "username"],
+      },
+      modelList: {
+        statusScope: ACCOUNT_SITE_MODEL_LIST_STATUS_SCOPES.Account,
+        displayCapabilitiesSource:
+          ACCOUNT_SITE_MODEL_LIST_DISPLAY_CAPABILITY_SOURCES.Profile,
+        groupSemantics: ACCOUNT_SITE_MODEL_LIST_GROUP_SEMANTICS.NOT_APPLICABLE,
+      },
+      urls: {
+        recognizedHostnames: NOVITA_HOSTNAMES,
+        inferFromHostname: true,
+        storageOrigin: NOVITA_WEB_ORIGIN,
+        duplicateOrigin: NOVITA_WEB_ORIGIN,
+        inferenceApiBaseUrls: {
+          openAiCompatible: "https://api.novita.ai/openai/v1",
+          anthropic: "https://api.novita.ai/anthropic",
+        },
       },
     },
   },

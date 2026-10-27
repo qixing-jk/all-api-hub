@@ -229,6 +229,7 @@ export function useAccountDialogInitialization({
             normalizeAccountDialogDraftForSitePolicy({
               draft: {
                 siteName: siteAccount.site_name,
+                siteNameEdited: true,
                 username: siteAccount.account_info.username,
                 accessToken: siteAccount.account_info.access_token,
                 userId:

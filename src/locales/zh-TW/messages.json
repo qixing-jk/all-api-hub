@@ -148,6 +148,15 @@
     "configMissing": "請先在設定中配置 New API 地址、管理員令牌和使用者 ID",
     "noChannelsToSync": "沒有可同步的渠道"
   },
+  "novita": {
+    "apiKeyRequired": "請填寫完整的 Novita API Key，或登入同一帳號後取得控制台憑證。兩種憑證可以同時儲存。",
+    "consoleAcquisitionFailed": "未能取得控制台權杖。請先在 Novita 網頁登入此帳號，重新整理網頁後再試；也可直接貼上控制台權杖。已填寫的 API Key 會保留。",
+    "consoleCredentialRequired": "此操作需要控制台授權。請編輯帳號並取得同一 Novita 帳號的控制台憑證。",
+    "credentialInvalid": "此 Novita 憑證無效或已過期。控制台工作階段請重新登入後識別；API Key 請更換後重試。",
+    "keyChanged": "此金鑰已在 Novita 上變更，請重新開啟編輯器後儲存。",
+    "malformedResponse": "Novita 回傳了意外回應，請稍後再試。",
+    "networkFallback": "無法連線 Novita。請檢查網路連線後重試。"
+  },
   "octopus": {
     "configMissing": "請先在設定中配置 Octopus 地址、使用者名稱和密碼",
     "corsError": "這可能是 CORS 配置問題。請在 Octopus 設定中檢查 CORS 白名單配置。",

@@ -216,6 +216,7 @@
     "ipLimits": "Giới hạn IP",
     "ipPlaceholder": "Để trống để không giới hạn, phân tách nhiều IP bằng dấu phẩy",
     "modelLimits": "Giới hạn mô hình",
+    "novitaConsoleRequired": "Tạo khóa cần xác thực bảng điều khiển. Sửa tài khoản này để lấy thông tin xác thực của cùng tài khoản Novita hoặc tạo khóa trên bảng điều khiển Novita.",
     "quotaPlaceholder": "Vui lòng nhập số tiền hạn ngạch (USD)",
     "quotaSettings": "Cài đặt hạn ngạch",
     "selectModels": "Chọn mô hình",
@@ -368,15 +369,17 @@
     },
     "badges": {
       "accountCredential": "Đang dùng cho tài khoản này",
+      "accountCredentialCandidate": "Có thể dùng để xác thực tài khoản",
       "accountManagePermission": "Khóa quản lý của tài khoản hiện tại",
       "managePermission": "Khóa quản lý"
     },
     "credentialRole": {
-      "badgeTitle": "All API Hub dùng khóa này để kết nối với tài khoản, đọc số dư và quản lý khóa. Nếu thay khóa, hãy cập nhật khóa trong phần cài đặt tài khoản."
+      "badgeTitle": "All API Hub dùng khóa này để kết nối với tài khoản, đọc số dư và quản lý khóa. Nếu thay khóa, hãy cập nhật khóa trong phần cài đặt tài khoản.",
+      "candidateTitle": "Chỉ khớp theo khóa che một phần; chưa xác nhận."
     },
     "delete": {
-      "accountCredentialAcknowledge": "Tôi hiểu việc này sẽ cắt quyền truy cập quản lý của tài khoản",
-      "accountCredentialWarningDescription": "Tài khoản sẽ mất quyền truy cập quản lý Requesty: danh sách khóa, số dư và làm mới sẽ thất bại. Không thể khôi phục khóa tại đây.",
+      "accountCredentialAcknowledge": "Tôi hiểu việc này có thể ảnh hưởng đến chức năng tài khoản dùng khóa này",
+      "accountCredentialWarningDescription": "Xóa khóa này có thể làm gián đoạn các chức năng tài khoản đang dùng khóa. Hãy cập nhật thông tin xác thực trước; không thể khôi phục khóa tại đây.",
       "accountCredentialWarningTitle": "Xóa thông tin xác thực của tài khoản",
       "confirm": "Xóa khóa",
       "description": "Xóa vĩnh viễn khóa API {{name}}? Không thể hoàn tác thao tác này.",
@@ -532,6 +535,22 @@
         "validDuration": "Thời hạn sau khi kích hoạt (ngày)"
       },
       "modelAllowlist": "Danh sách mô hình được phép",
+      "novita": {
+        "allEnabled": "Tất cả mô hình đã bật",
+        "allowedIps": "IP được phép",
+        "allowedIpsHelp": "Mỗi dòng một địa chỉ IPv4 hoặc CIDR, tối đa 100. Không cho phép 0.0.0.0/0.",
+        "allowedModels": "Mô hình được phép",
+        "days30": "30 ngày",
+        "days90": "90 ngày",
+        "excludedModels": "Mô hình bị loại trừ",
+        "hours24": "24 giờ",
+        "lifecycleHelp": "Không thể đổi thời hạn sau khi tạo.",
+        "modelAccess": "Quyền truy cập mô hình",
+        "modelChoicesHelp": "Chọn gợi ý hoặc nhập ID mô hình đầy đủ rồi nhấn Enter. Gợi ý từ danh mục công khai chỉ để tham khảo; kết quả lưu sẽ xác nhận chính sách có chấp nhận mô hình hay không.",
+        "permanent": "Vĩnh viễn",
+        "restrictIps": "Giới hạn IP nguồn",
+        "selected": "Chỉ mô hình được chọn"
+      },
       "opening": {
         "failed": "Không thể mở trình chỉnh sửa khóa",
         "loading": "Đang mở trình chỉnh sửa khóa...",

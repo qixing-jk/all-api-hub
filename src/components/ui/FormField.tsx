@@ -6,6 +6,7 @@ import { Label } from "./label"
 
 export interface FormFieldProps {
   label?: React.ReactNode
+  labelAction?: React.ReactNode
   required?: boolean
   error?: string
   success?: string
@@ -20,6 +21,7 @@ const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
   (
     {
       label,
+      labelAction,
       required,
       error,
       success,
@@ -32,17 +34,25 @@ const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
     },
     ref,
   ) => {
+    const fieldLabel = label && (
+      <Label
+        htmlFor={htmlFor}
+        required={required}
+        variant={error ? "error" : success ? "success" : "default"}
+        className={labelClassName}
+      >
+        {label}
+      </Label>
+    )
     return (
       <div ref={ref} className={cn("space-y-density-2", className)} {...props}>
-        {label && (
-          <Label
-            htmlFor={htmlFor}
-            required={required}
-            variant={error ? "error" : success ? "success" : "default"}
-            className={labelClassName}
-          >
-            {label}
-          </Label>
+        {labelAction ? (
+          <div className="gap-density-2 flex items-center justify-between">
+            {fieldLabel}
+            {labelAction}
+          </div>
+        ) : (
+          fieldLabel
         )}
         {children}
         {description && !error && !success && (

@@ -17,6 +17,47 @@ import { AuthTypeEnum } from "~/types"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
 
 describe("account dialog auto-detect draft mapping", () => {
+  it.each([SITE_TYPES.NEW_API, SITE_TYPES.SUB2API, SITE_TYPES.NOVITA])(
+    "replaces only automatic names in complete and partial detection for %s",
+    (siteType) => {
+      for (const siteNameEdited of [false, true]) {
+        const draft = {
+          ...createEmptyAccountDialogDraft(siteType),
+          siteName: "Page title",
+          siteNameEdited,
+        }
+        const expected = siteNameEdited ? "Page title" : "Detected site"
+        expect(
+          mergeAutoDetectRecoveryIntoDraft({
+            draft,
+            recoveryData: { siteName: "Detected site" },
+            nextSiteType: siteType,
+            hasExplicitAuthType: false,
+            sub2apiRefreshTokenPreferenceChanged: false,
+          }).siteName,
+        ).toBe(expected)
+        expect(
+          buildDraftFromAutoDetectResult({
+            draft,
+            resultData: {
+              siteName: "Detected site",
+              username: "user",
+              userId: "1",
+              accessToken: "token",
+              exchangeRate: null,
+              checkIn: draft.checkIn,
+            },
+            nextSiteType: siteType,
+            nextCheckIn: draft.checkIn,
+            preserveExistingCheckIn: false,
+            automaticExecutionPreferenceChanged: false,
+            mode: DIALOG_MODES.ADD,
+            policy: getAccountDialogSitePolicy(siteType),
+          }).siteName,
+        ).toBe(expected)
+      }
+    },
+  )
   it.each([false, true])(
     "keeps a captcha deployment off unless the user opted in: %s",
     (optedIn) => {
@@ -116,6 +157,7 @@ describe("account dialog auto-detect draft mapping", () => {
     const draft = {
       ...createEmptyAccountDialogDraft(SITE_TYPES.SUB2API),
       siteName: "User site name",
+      siteNameEdited: true,
       username: "user-edited-name",
       authType: AuthTypeEnum.Cookie,
     }

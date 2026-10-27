@@ -422,7 +422,10 @@ export function CompactMultiSelect({
                       aria-busy={loading || buttonProps["aria-busy"]}
                       placeholder={chipsInputPlaceholder}
                       disabled={disabled}
-                      onKeyDown={handleCustomKeyDown}
+                      onKeyDown={(event) => {
+                        handleCustomKeyDown(event)
+                        if (event.defaultPrevented) event.preventBaseUIHandler()
+                      }}
                       onPaste={handleCustomPaste}
                     />
                   </React.Fragment>

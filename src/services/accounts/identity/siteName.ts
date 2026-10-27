@@ -3,6 +3,7 @@ import {
   isAccountSiteType,
   SITE_TYPES,
 } from "~/constants/siteType"
+import { getAccountSiteDefinitions } from "~/services/accountSiteDefinitions/registry"
 import type { AccountBootstrapFacts } from "~/services/apiAdapters/contracts/accountBootstrap"
 import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { AuthTypeEnum } from "~/types"
@@ -45,25 +46,20 @@ export async function getSiteName(
   siteTypeHint?: string,
   bootstrapFacts?: AccountBootstrapFacts | null,
 ): Promise<string> {
-  // 1. 统一提取信息
   const urlString = typeof input === "string" ? input : input.url ?? ""
   const tabTitle = typeof input === "string" ? null : input.title
 
-  // 2. 优先从 Tab 标题获取
-  if (tabTitle && isNotDefaultSiteName(tabTitle)) {
-    return tabTitle
-  }
-
-  // 3. 解析 URL
   let urlObj: URL
   try {
     urlObj = new URL(urlString)
   } catch {
-    return urlString.split("/")[0] || ""
+    return tabTitle && isNotDefaultSiteName(tabTitle)
+      ? tabTitle
+      : urlString.split("/")[0] || ""
   }
   const hostWithProtocol = `${urlObj.protocol}//${urlObj.host}`
 
-  // 4. 仅在已知 siteType 时才请求站点状态，避免为未知站点增加额外探测请求。
+  // Only a known type can load deployment settings; tab prefill stays request-free.
   if (siteTypeHint) {
     let resolvedFacts = bootstrapFacts
     if (
@@ -94,6 +90,17 @@ export async function getSiteName(
     }
   }
 
-  // 5. 最后从域名获取
+  // Registered hosts identify a platform; backend types alone do not name deployments.
+  const onboarding = getAccountSiteDefinitions().find((definition) =>
+    definition.onboarding?.detection?.hostnames?.includes(
+      urlObj.hostname.toLowerCase(),
+    ),
+  )?.onboarding
+  const registeredName =
+    onboarding?.accountForm?.defaultSiteName ?? onboarding?.displayName
+  if (registeredName) return registeredName
+
+  if (tabTitle && isNotDefaultSiteName(tabTitle)) return tabTitle
+
   return extractDomainPrefix(urlObj.hostname)
 }

@@ -148,6 +148,15 @@
     "configMissing": "Vui lòng cấu hình địa chỉ New API, token quản trị viên và ID người dùng trong phần Cài đặt trước",
     "noChannelsToSync": "Không có kênh nào để đồng bộ"
   },
+  "novita": {
+    "apiKeyRequired": "Nhập API Key Novita đầy đủ hoặc đăng nhập cùng tài khoản để lấy thông tin xác thực bảng điều khiển. Có thể lưu cả hai.",
+    "consoleAcquisitionFailed": "Không lấy được token bảng điều khiển. Đăng nhập tài khoản này trên Novita, tải lại trang rồi thử lại hoặc dán token trực tiếp. API Key đã nhập được giữ lại.",
+    "consoleCredentialRequired": "Thao tác này cần xác thực bảng điều khiển. Sửa tài khoản và lấy thông tin xác thực của cùng tài khoản Novita.",
+    "credentialInvalid": "Thông tin xác thực Novita không hợp lệ hoặc đã hết hạn. Với phiên bảng điều khiển, đăng nhập và nhận diện lại; nếu không, hãy thay API Key.",
+    "keyChanged": "Khóa đã thay đổi trên Novita. Hãy mở lại trình chỉnh sửa.",
+    "malformedResponse": "Novita trả về phản hồi không mong đợi. Vui lòng thử lại sau.",
+    "networkFallback": "Không thể kết nối với Novita. Vui lòng kiểm tra kết nối mạng và thử lại."
+  },
   "octopus": {
     "configMissing": "Vui lòng cấu hình địa chỉ Octopus, tên người dùng và mật khẩu trong phần Cài đặt trước",
     "corsError": "Đây có thể là vấn đề cấu hình CORS. Vui lòng kiểm tra cấu hình danh sách trắng CORS trong phần cài đặt Octopus.",

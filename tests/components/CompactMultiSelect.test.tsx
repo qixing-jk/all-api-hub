@@ -23,6 +23,32 @@ const renderCompact = (ui: ReactElement) =>
   })
 
 describe("CompactMultiSelect", () => {
+  it("retains a selected suggestion when adding a custom value with Enter", async () => {
+    const user = userEvent.setup()
+    function Harness() {
+      const [selected, setSelected] = useState<string[]>([])
+      return (
+        <CompactMultiSelect
+          options={[
+            { value: "moonshotai/kimi-k3", label: "moonshotai/kimi-k3" },
+          ]}
+          selected={selected}
+          onChange={setSelected}
+          allowCustom
+          aria-label="Models"
+        />
+      )
+    }
+    renderCompact(<Harness />)
+    await user.type(screen.getByRole("combobox", { name: "Models" }), "kimi-k3")
+    await user.click(screen.getByRole("option", { name: "moonshotai/kimi-k3" }))
+    await user.type(
+      screen.getByRole("combobox", { name: "Models" }),
+      "example/manual-model{Enter}",
+    )
+    expect(screen.getByTitle("example/manual-model")).toBeVisible()
+    expect(screen.getByTitle("moonshotai/kimi-k3")).toBeVisible()
+  })
   it.each([
     { selected: [], options: [], loading: false },
     {

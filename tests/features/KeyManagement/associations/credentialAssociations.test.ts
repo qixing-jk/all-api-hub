@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest"
 
 import {
-  compareCredentialSecret,
   getCredentialAssociationForLocator,
   KEY_CREDENTIAL_ASSOCIATION_STATES,
-  KEY_CREDENTIAL_SECRET_MATCHES,
 } from "~/features/KeyManagement/associations/credentialAssociations"
 import { ACCOUNT_RUNTIME_KEY_SOURCES } from "~/services/accounts/keys/accountRuntimeKeys"
+import {
+  compareCredentialSecret,
+  KEY_CREDENTIAL_SECRET_MATCHES,
+} from "~/services/accountTokens/credentialSecretMatch"
 import {
   API_CREDENTIAL_PROFILE_LINK_SOURCES,
   API_CREDENTIAL_PROFILE_LINK_STATES,

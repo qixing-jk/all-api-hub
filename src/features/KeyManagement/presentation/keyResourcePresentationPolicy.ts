@@ -33,6 +33,7 @@ export const KEY_RESOURCE_EDITOR_KINDS = {
   OpenRouter: "openrouter",
   RelayFor: "relayfor",
   Requesty: "requesty",
+  Novita: "novita",
   NameOnly: "name-only",
   Empty: "empty",
 } as const
@@ -49,6 +50,7 @@ export const KEY_RESOURCE_SCOPE_KINDS = {
 } as const
 
 type PresentationPolicy = {
+  readonly createUnavailableReason?: (t: TFunction) => string
   readonly factLabels?: Readonly<Record<string, (t: TFunction) => string>>
   readonly editor: (typeof KEY_RESOURCE_EDITOR_KINDS)[keyof typeof KEY_RESOURCE_EDITOR_KINDS]
   readonly card: (typeof KEY_RESOURCE_CARD_KINDS)[keyof typeof KEY_RESOURCE_CARD_KINDS]
@@ -158,6 +160,12 @@ const policies = {
     editor: KEY_RESOURCE_EDITOR_KINDS.NameOnly,
   },
   [families.SharedChat]: generic,
+  [families.Novita]: {
+    ...native,
+    editor: KEY_RESOURCE_EDITOR_KINDS.Novita,
+    createUnavailableReason: (t) =>
+      t("keyManagement:dialog.novitaConsoleRequired"),
+  },
   [families.RelayFor]: {
     ...native,
     editor: KEY_RESOURCE_EDITOR_KINDS.RelayFor,

@@ -18,6 +18,13 @@
       "openProfile": "Mở hồ sơ LaoZhang",
       "openProfileFailed": "Không thể mở trang. Hãy mở Hồ sơ LaoZhang → System token theo cách thủ công, hoàn tất xác minh bảo mật, sao chép token rồi quay lại đây để nhập."
     },
+    "novita": {
+      "generateStep": "Đăng nhập cùng tài khoản Novita rồi chọn “Lấy thông tin xác thực bảng điều khiển”. Danh tính được kiểm tra và API Key được giữ lại. Cần lấy lại khi hết hạn; API Key đã lưu vẫn dùng độc lập.",
+      "openPage": "Mở quản lý khóa",
+      "openPageFailed": "Không thể mở trang quản lý khóa. Vui lòng mở từ bảng điều khiển Novita.",
+      "pasteStep": "Dán API Key sk_ đầy đủ hiện có. Để tạo khóa mới, mở trang quản lý khóa Novita rồi tạo và sao chép. Thời hạn được đặt khi tạo khóa.",
+      "title": "Phương thức thông tin xác thực"
+    },
     "openSecurity": "Mở cài đặt bảo mật của trang",
     "openSecurityFailed": "Không mở được trang. Hãy tự mở Bảo mật → Access Token trên trang web rồi quay lại đây để dán mã.",
     "pasteStep": "Sao chép ngay toàn bộ Access Token, dán vào trường Access Token bên dưới, kiểm tra thông tin tài khoản rồi lưu.",
@@ -184,6 +191,9 @@
     "manualVerificationRequiredTitle": "Điểm danh cần bạn tự xác minh",
     "notes": "Ghi chú",
     "notesPlaceholder": "Tùy chọn, nhập thông tin ghi chú",
+    "novitaApiKey": "Thông tin xác thực tài khoản Novita",
+    "novitaApiKeyGuidance": "Lấy thông tin xác thực từ phiên Novita đã đăng nhập để cập nhật số dư, tạo, đổi tên, xóa khóa và sửa chính sách mô hình/IP. Khi hết hạn, đăng nhập cùng tài khoản và nhận diện lại. Dùng API Key sk_ riêng để xem số dư, danh sách khóa và sửa chính sách mô hình/IP mà không cần duy trì đăng nhập web. Không thể tạo, đổi tên hoặc xóa khóa. Thời hạn được chọn khi tạo.",
+    "novitaApiKeyGuidanceTitle": "Phương thức thông tin xác thực",
     "openRedeemWithCheckIn": "Đồng thời mở trang nạp tiền khi sử dụng điểm danh bên ngoài",
     "openrouterManagementKey": "Khóa quản lý OpenRouter",
     "openrouterManagementKeyGuidance": "Hãy tạo một Management Key mới trên trang Management Keys của OpenRouter và sao chép ngay, rồi dán vào đây. Không thể hiển thị lại bản rõ của Management Key đã có.",
@@ -333,6 +343,23 @@
     "detecting": "Đang nhận dạng...",
     "manualAdd": "Thêm thủ công",
     "reDetect": "Nhận dạng lại"
+  },
+  "novitaCredentials": {
+    "apiKey": "API Key",
+    "apiKeyScope": "Không thể tạo, đổi tên hoặc xóa khóa. Khi token bảng điều khiển hết hạn, API Key này sẽ được tự động sử dụng để tiếp tục truy vấn số dư và danh sách khóa.",
+    "apiKeyVerified": "Đã xác minh API Key cho {{account}}.",
+    "console": "Token bảng điều khiển",
+    "consoleScope": "Hỗ trợ đầy đủ tính năng quản lý tài khoản. Nhấn nút lấy token ở bên phải ô nhập để tự động điền token bảng điều khiển.",
+    "consoleVerified": "Đã xác minh token bảng điều khiển cho {{account}}.",
+    "detectSession": "Lấy thông tin xác thực bảng điều khiển",
+    "hideApiKey": "Ẩn API Key",
+    "hideConsoleToken": "Ẩn token bảng điều khiển",
+    "openKeys": "Mở quản lý khóa Novita",
+    "openKeysShort": "Quản lý khóa",
+    "showApiKey": "Hiện API Key",
+    "showConsoleToken": "Hiện token bảng điều khiển",
+    "verifying": "Đang xác minh API Key…",
+    "verifyKey": "Xác minh API Key"
   },
   "openrouterBootstrapRecovery": {
     "label": "Nhãn nhận biết: {{label}}",

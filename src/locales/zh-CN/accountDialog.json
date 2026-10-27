@@ -18,6 +18,13 @@
       "openProfile": "打开 LaoZhang 个人资料",
       "openProfileFailed": "无法打开页面。请手动进入 LaoZhang「个人资料 → System token」，完成安全验证后复制令牌，回到这里填写。"
     },
+    "novita": {
+      "generateStep": "登录同一 Novita 账号后，点击“获取控制台凭据”。获取时会核对账号身份，并保留已填写的 API Key。凭据过期后需重新获取；已保存的 API Key 仍可独立使用。",
+      "openPage": "打开密钥管理",
+      "openPageFailed": "无法打开密钥管理，请前往 Novita 控制台手动打开。",
+      "pasteStep": "粘贴已有的完整 sk_ API Key；如需新建，请先前往 Novita 密钥管理创建并复制。有效期由创建时的设置决定。",
+      "title": "凭据方式"
+    },
     "openSecurity": "打开站点安全设置",
     "openSecurityFailed": "无法打开页面。请手动进入该站点的「安全设置 → Access Token」，复制令牌后回到这里填写。",
     "pasteStep": "立即复制完整的 Access Token，粘贴到下方「访问令牌」字段，核对账号信息后保存。",
@@ -184,6 +191,9 @@
     "manualVerificationRequiredTitle": "签到需要你手动完成验证",
     "notes": "备注",
     "notesPlaceholder": "选填，输入备注信息",
+    "novitaApiKey": "Novita 账户凭据",
+    "novitaApiKeyGuidance": "通过已登录的 Novita 获取控制台凭据，可刷新余额、创建、改名、删除密钥并编辑模型/IP 策略。凭据过期后需登录同一账号并重新识别。 使用独立的 sk_ API Key 刷新余额、查看密钥及编辑模型/IP 策略，无需保持网页登录。不能创建、改名或删除密钥；有效期取决于创建时的选择。",
+    "novitaApiKeyGuidanceTitle": "凭据方式",
     "openRedeemWithCheckIn": "使用外部签到时同时打开充值页面",
     "openrouterManagementKey": "OpenRouter 管理密钥",
     "openrouterManagementKeyGuidance": "请在 OpenRouter 的 Management Keys 页面新建管理密钥并立即复制，然后粘贴到这里。现有管理密钥的明文无法再次显示。",
@@ -333,6 +343,23 @@
     "detecting": "识别中...",
     "manualAdd": "手动添加",
     "reDetect": "重新识别"
+  },
+  "novitaCredentials": {
+    "apiKey": "API Key",
+    "apiKeyScope": "不支持创建、重命名或删除密钥。控制台令牌失效时，会自动使用此 API Key 继续查询余额和密钥列表。",
+    "apiKeyVerified": "API Key 已验证，账号：{{account}}。",
+    "console": "控制台令牌",
+    "consoleScope": "支持完整的账号管理功能。点击输入框右侧的获取按钮，可自动填入控制台令牌。",
+    "consoleVerified": "控制台令牌已验证，账号：{{account}}。",
+    "detectSession": "获取控制台凭据",
+    "hideApiKey": "隐藏 API Key",
+    "hideConsoleToken": "隐藏控制台令牌",
+    "openKeys": "打开 Novita 密钥管理",
+    "openKeysShort": "密钥管理",
+    "showApiKey": "显示 API Key",
+    "showConsoleToken": "显示控制台令牌",
+    "verifying": "正在验证 API Key…",
+    "verifyKey": "验证 API Key"
   },
   "openrouterBootstrapRecovery": {
     "label": "可识别标签：{{label}}",

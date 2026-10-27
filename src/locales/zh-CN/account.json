@@ -306,6 +306,13 @@
     "groupAllowance": "分组额度",
     "nativeCredits": "额度",
     "nativeCreditsDetail": "永久 {{permanent, number}} · 今日 {{daily, number}}（次日清零）",
+    "novitaBalance": {
+      "available": "可用余额",
+      "cash": "充值余额",
+      "creditLimit": "信用额度（可欠款上限）",
+      "description": "可用余额以 Novita 返回的数值为准；充值余额是剩余充值资金，信用额度是允许欠款的上限。插件暂不将 Novita 余额计入总余额、余额历史和收入估算。",
+      "title": "余额明细"
+    },
     "permanentAllowance": "永久额度",
     "prompt": "提示",
     "scopedAllowances": "分组和套餐额度可能有使用限制。原生额度不计入总余额、余额历史和收入估算。",

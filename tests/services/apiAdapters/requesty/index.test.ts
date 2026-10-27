@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest"
 import { AUTO_DETECT_FAILURE_REASONS } from "~/constants/autoDetect"
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ApiServiceAccountRequest } from "~/services/accounts/accountDataModel"
-import { ACCOUNT_KEY_CREDENTIAL_ROLES } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { requestyAccountBootstrap } from "~/services/apiAdapters/requesty/account/accountBootstrap"
 import { requestyAccountCompletion } from "~/services/apiAdapters/requesty/account/accountCompletion"
 import { requestyAccountPersistence } from "~/services/apiAdapters/requesty/account/accountPersistence"
@@ -521,7 +520,10 @@ describe("requestyAccountKeyResources", () => {
     expect(item.actions.canRotate).toBe(false)
     // `self` resolves to the calling key: that row is the account's own
     // credential and a manage key, both surfaced as provider facts.
-    expect(item.credentialRole).toBe(ACCOUNT_KEY_CREDENTIAL_ROLES.Account)
+    expect(item.accountCredentialIdentity).toEqual({
+      status: "confirmed",
+      source: "provider",
+    })
     expect(
       item.displayFacts?.find((fact) => fact.kind === "permission"),
     ).toEqual({
@@ -578,13 +580,17 @@ describe("requestyAccountKeyResources", () => {
     const collection = await session.openCollection("default")
     const page = await collection.list()
     const [otherKey, credentialKey] = page.items
-    expect(otherKey?.credentialRole).toBeUndefined()
+    expect(otherKey?.accountCredentialIdentity).toEqual({
+      status: "mismatch",
+      source: "provider",
+    })
     expect(
       otherKey?.displayFacts?.find((fact) => fact.kind === "permission"),
     ).toMatchObject({ granted: false })
-    expect(credentialKey?.credentialRole).toBe(
-      ACCOUNT_KEY_CREDENTIAL_ROLES.Account,
-    )
+    expect(credentialKey?.accountCredentialIdentity).toEqual({
+      status: "confirmed",
+      source: "provider",
+    })
   })
 
   it("still lists keys when the self route is unavailable", async () => {
@@ -616,7 +622,10 @@ describe("requestyAccountKeyResources", () => {
     const collection = await session.openCollection("default")
     const page = await collection.list()
     expect(page.items).toHaveLength(1)
-    expect(atIndex(page.items, 0).credentialRole).toBeUndefined()
+    expect(atIndex(page.items, 0).accountCredentialIdentity).toEqual({
+      status: "unknown",
+      source: "none",
+    })
   })
 })
 

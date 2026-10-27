@@ -40,6 +40,7 @@ import { doneHubManagedSiteCapabilities } from "./managedSites/doneHub"
 import { sub2ApiManagedSiteCapabilities } from "./managedSites/sub2api"
 import { veloeraManagedSiteCapabilities } from "./managedSites/veloera"
 import { createNewApiCapabilities } from "./newApi"
+import { novitaCapabilities } from "./novita"
 import { openRouterCapabilities } from "./openrouter"
 import { pmApiCapabilities } from "./pmapi"
 import { relayForCapabilities } from "./relayfor"
@@ -107,6 +108,7 @@ const accountCapabilityFactories = {
   [ACCOUNT_SITE_ADAPTER_FAMILIES.RelayFor]: () => relayForCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Requesty]: () => requestyCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.OpenRouter]: () => openRouterCapabilities,
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.Novita]: () => novitaCapabilities,
   [ACCOUNT_SITE_ADAPTER_FAMILIES.KimiOpenPlatform]: (siteType) =>
     createKimiOpenPlatformCapabilities(siteType as AccountSiteType),
   [ACCOUNT_SITE_ADAPTER_FAMILIES.Grsai]: () => grsaiCapabilities,

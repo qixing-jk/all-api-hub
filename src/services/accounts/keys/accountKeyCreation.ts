@@ -62,7 +62,10 @@ export async function prepareDefaultAccountKeyCreation(
   }
   const policy =
     accountKeyResources.defaultCreation ?? creationPolicies.RequiresInput
-  if (policy === creationPolicies.RequiresInput)
+  if (
+    policy === creationPolicies.RequiresInput ||
+    accountKeyResources.operations?.(request.auth).create === false
+  )
     return { kind: "input-required" }
   options.signal?.throwIfAborted()
   const session = await accountKeyResources.open(

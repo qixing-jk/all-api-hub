@@ -19,6 +19,7 @@ import type {
   NativeKeyManagementRow,
   NativeKeyManagementRowAction,
 } from "~/features/KeyManagement/types"
+import { resolveAccountCredentialIdentity } from "~/services/accounts/keys/accountCredentialIdentity"
 import { buildAccountKeyResourceRuntimeKeyFromFacts } from "~/services/accounts/keys/accountRuntimeKeys"
 import { supportsRecoverableAccountRuntimeKeySecrets } from "~/services/accounts/keys/keyProductCapabilities"
 import {
@@ -136,8 +137,15 @@ export function AccountKeyResourceListItem({
     maskedLabel: row.facts.maskedLabel,
     displayName: row.facts.displayName,
   })
+  const accountCredentialIdentity = resolveAccountCredentialIdentity({
+    provider: row.facts.accountCredentialIdentity,
+    accountCredential: account.token,
+    siteType: account.siteType,
+    linkedSecret: associatedProfileWithSecret?.apiKey,
+  })
   const presentation = cardAdapter.buildPresentation(row, t, {
     hasAssociatedSecret,
+    accountCredentialIdentity,
   })
   const completeInventory =
     row.facts.detailAvailability === ACCOUNT_KEY_DETAIL_AVAILABILITIES.Complete
@@ -145,6 +153,7 @@ export function AccountKeyResourceListItem({
   const loadedContext = visibleDetail
     ? cardAdapter.buildPresentation({ ...row, facts: visibleDetail }, t, {
         hasAssociatedSecret,
+        accountCredentialIdentity,
       }).contextFact
     : undefined
   const additionalFacts = visibleDetail

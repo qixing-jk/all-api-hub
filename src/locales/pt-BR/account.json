@@ -354,6 +354,13 @@
     "groupAllowance": "Cota do grupo",
     "nativeCredits": "créditos",
     "nativeCreditsDetail": "Permanentes {{permanent, number}} · Hoje {{daily, number}} (expiram diariamente)",
+    "novitaBalance": {
+      "available": "Saldo disponível",
+      "cash": "Saldo de recargas",
+      "creditLimit": "Limite de crédito (dívida máxima)",
+      "description": "O saldo disponível é informado pela Novita. O saldo de recargas corresponde aos fundos recarregados restantes; o limite de crédito é a dívida máxima permitida. Atualmente, a extensão não inclui os saldos da Novita no saldo total, no histórico de saldo e nas estimativas de receita.",
+      "title": "Detalhes do saldo"
+    },
     "permanentAllowance": "Permanente",
     "prompt": "Prompt",
     "scopedAllowances": "Cotas de grupos e assinaturas podem ter restrições de uso. As cotas nativas são excluídas do saldo total, do histórico de saldo e das estimativas de receita.",

@@ -20,6 +20,22 @@ const account = buildDisplaySiteData({ siteType: "new-api" })
 
 describe("native account key product capabilities", () => {
   it.each([
+    ["sk_read-only", false],
+    ["novita-console:session", true],
+  ] as const)(
+    "respects Novita credential operations for %s",
+    (token, canManage) => {
+      const owner = { ...account, siteType: "novita" as const, token }
+      expect(getAccountKeyProductCapabilities(owner).resourceKeys).toEqual({
+        list: true,
+        create: canManage,
+        update: true,
+        delete: canManage,
+      })
+      expect(canRunAccountDefaultTokenAutomation(owner)).toBe(canManage)
+    },
+  )
+  it.each([
     "new-api",
     "sub2api",
     "voapi-v2",

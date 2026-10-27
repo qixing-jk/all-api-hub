@@ -78,7 +78,11 @@ export function NativeResourceChoiceField<TSection extends string>({
   const controlledOptionUnavailable =
     controlledOptionState !== undefined &&
     (controlledOptionState.status !== RESOURCE_OPTION_LOAD_STATUSES.Ready ||
-      controlledOptionState.options.length === 0)
+      (controlledOptionState.options.length === 0 &&
+        !(
+          descriptor.type === RESOURCE_FIELD_TYPES.MultiSelect &&
+          descriptor.allowCustom
+        )))
   const optionValues =
     descriptor.type === RESOURCE_FIELD_TYPES.Select
       ? selectOptionsByFieldId.get(descriptor.fieldId) ?? []
@@ -387,7 +391,7 @@ export function NativeResourceChoiceField<TSection extends string>({
             controlledOptionUnavailable ||
             waitingForSelectedLabels
           }
-          allowCustom
+          allowCustom={descriptor.allowCustom ?? true}
           placeholder={
             waitingForSelectedLabels
               ? t("common:status.loadingField", { field: label })

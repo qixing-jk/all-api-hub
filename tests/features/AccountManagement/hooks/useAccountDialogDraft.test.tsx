@@ -2,8 +2,38 @@ import { act, renderHook } from "@testing-library/react"
 import { expect, it } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
+import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/form/useAccountDialogDraft"
 import { buildCheckInConfig } from "~~/tests/test-utils/checkIn"
+
+it("replaces automatic platform defaults when switching site types", () => {
+  const { result } = renderHook(() =>
+    useAccountDialogDraft({ mode: DIALOG_MODES.ADD, url: "" }),
+  )
+  act(() => result.current.changeSiteTypeDraft(SITE_TYPES.NOVITA))
+  expect(result.current.draft.siteName).toBe("Novita AI")
+  act(() => result.current.changeSiteTypeDraft(SITE_TYPES.NEW_API))
+  expect(result.current.draft.siteName).toBe("")
+})
+
+it.each(["My site", "Novita AI", ""])(
+  "protects an explicit name %j from automatic updates until reset",
+  (name) => {
+    const { result } = renderHook(() =>
+      useAccountDialogDraft({ mode: DIALOG_MODES.ADD, url: "" }),
+    )
+    act(() => result.current.setAutomaticSiteName("Page title"))
+    act(() => result.current.setSiteName(name))
+    act(() => {
+      result.current.setAutomaticSiteName("Late page title")
+      result.current.changeSiteTypeDraft(SITE_TYPES.NOVITA)
+    })
+    expect(result.current.draft.siteName).toBe(name)
+    act(() => result.current.resetSiteName())
+    act(() => result.current.setAutomaticSiteName("New site"))
+    expect(result.current.draft.siteName).toBe("New site")
+  },
+)
 
 it("retains manual routes while invalidating learned routes after credential edits", () => {
   const { result } = renderHook(() =>

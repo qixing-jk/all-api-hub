@@ -12,10 +12,7 @@ import {
   KEY_MANAGEMENT_DISPLAY_ROW_KINDS,
   type NativeKeyManagementRow,
 } from "~/features/KeyManagement/types"
-import {
-  ACCOUNT_KEY_CREDENTIAL_ROLES,
-  ACCOUNT_KEY_DETAIL_AVAILABILITIES,
-} from "~/services/apiAdapters/contracts/accountKeyResource"
+import { ACCOUNT_KEY_DETAIL_AVAILABILITIES } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
@@ -956,6 +953,34 @@ describe("Requesty key highlights", () => {
   })
   const adapter = getAccountKeyResourceCardAdapter(SITE_TYPES.REQUESTY)
 
+  it("labels a possible account credential without granting secret access", () => {
+    const row = requestyRow({
+      accountCredentialIdentity: { status: "possible", source: "masked-key" },
+      displayFacts: [],
+    })
+    row.facts = {
+      ...row.facts,
+      ref: { ...row.facts.ref, siteType: SITE_TYPES.NOVITA },
+    }
+    const presentation = getAccountKeyResourceCardAdapter(
+      SITE_TYPES.NOVITA,
+    ).buildPresentation(row, t, { hasAssociatedSecret: false })
+    expect(presentation.badges).toEqual([
+      {
+        id: "account-credential-candidate",
+        label: "keyManagement:native.badges.accountCredentialCandidate",
+        variant: "outline",
+        title: "keyManagement:native.credentialRole.candidateTitle",
+      },
+    ])
+    expect(presentation.actions).toMatchObject({
+      copySecret: false,
+      revealSecret: false,
+      exportSecret: false,
+      batchSelect: false,
+    })
+  })
+
   it("labels Requesty's cap with its monthly window", () => {
     const details = adapter.buildDetailFacts(
       requestyRow({
@@ -1000,7 +1025,9 @@ describe("Requesty key highlights", () => {
     ])
 
     const credential = adapter.buildPresentation(
-      requestyRow({ credentialRole: ACCOUNT_KEY_CREDENTIAL_ROLES.Account }),
+      requestyRow({
+        accountCredentialIdentity: { status: "confirmed", source: "provider" },
+      }),
       t,
       { hasAssociatedSecret: false },
     )
@@ -1017,7 +1044,7 @@ describe("Requesty key highlights", () => {
   it("does not infer management permission from current account usage alone", () => {
     const presentation = adapter.buildPresentation(
       requestyRow({
-        credentialRole: ACCOUNT_KEY_CREDENTIAL_ROLES.Account,
+        accountCredentialIdentity: { status: "confirmed", source: "provider" },
         displayFacts: [],
       }),
       t,
@@ -1027,7 +1054,7 @@ describe("Requesty key highlights", () => {
       {
         id: "account-credential",
         label: "keyManagement:native.badges.accountCredential",
-        variant: "outline",
+        variant: "info",
         title: "keyManagement:native.credentialRole.badgeTitle",
       },
     ])
@@ -1092,7 +1119,7 @@ describe("Requesty credential action policy", () => {
   it("lets the account's own credential be read but never exported", () => {
     const actions = build(
       row({
-        credentialRole: ACCOUNT_KEY_CREDENTIAL_ROLES.Account,
+        accountCredentialIdentity: { status: "confirmed", source: "provider" },
         runtimeKey: {
           modelAccess: {
             groups: null,
