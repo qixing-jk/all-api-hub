@@ -187,7 +187,8 @@ export function ApiCheckModal({ t, view, actions, refs }: ApiCheckModalProps) {
                     value={view.sourceText}
                     onChange={(e) => actions.setSourceText(e.target.value)}
                     rows={2}
-                    className="field-sizing-content max-h-48 resize-none"
+                    autoSize
+                    className="max-h-48 resize-none"
                     placeholder={t(
                       "webAiApiCheck:modal.sourceText.placeholder",
                     )}

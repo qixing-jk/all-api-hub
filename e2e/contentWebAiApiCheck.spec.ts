@@ -289,6 +289,10 @@ test("keeps page verification actions visible while scrolling at desktop and nar
   await sourceEditor.fill(
     Array.from({ length: 6 }, (_, i) => `Source note ${i}`).join("\n"),
   )
+  await modal.getByRole("dialog").screenshot({
+    path: test.info().outputPath("source-text-six-lines.png"),
+    animations: "disabled",
+  })
   expect((await sourceEditor.boundingBox())!.height).toBeGreaterThan(
     initialHeight,
   )
@@ -413,21 +417,24 @@ test("keeps empty model recovery compact and allows a manual model", async ({
     name: "Fetch models",
     exact: true,
   })
-  const searchBounds = await dropdown
-    .getByPlaceholder("Search...")
-    .boundingBox()
-  const refreshBounds = await refresh.boundingBox()
-  expect(
-    Math.abs(
-      refreshBounds!.y +
-        refreshBounds!.height / 2 -
-        searchBounds!.y -
-        searchBounds!.height / 2,
-    ),
-  ).toBeLessThanOrEqual(2)
-  expect(refreshBounds!.x).toBeGreaterThanOrEqual(
-    searchBounds!.x + searchBounds!.width,
-  )
+  // Radix can finish its initial placement between the two geometry reads.
+  await expect(async () => {
+    const searchBounds = await dropdown
+      .getByPlaceholder("Search...")
+      .boundingBox()
+    const refreshBounds = await refresh.boundingBox()
+    expect(
+      Math.abs(
+        refreshBounds!.y +
+          refreshBounds!.height / 2 -
+          searchBounds!.y -
+          searchBounds!.height / 2,
+      ),
+    ).toBeLessThanOrEqual(2)
+    expect(refreshBounds!.x).toBeGreaterThanOrEqual(
+      searchBounds!.x + searchBounds!.width,
+    )
+  }).toPass({ timeout: 10_000 })
   await dropdown.screenshot({
     path: test.info().outputPath("empty-model-picker.png"),
     animations: "disabled",
