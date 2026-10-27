@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next"
 
 import {
   ActionGroup,
+  Badge,
   Button,
   Modal,
   Notice,
@@ -21,6 +22,7 @@ import {
   type AccountRuntimeKeyLocator,
 } from "~/services/accounts/keys/accountRuntimeKeys"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import { maskSecretForDisplay } from "~/utils/core/formatters"
 
 type AssociateApiCredentialProfileDialogProps = {
   isOpen: boolean
@@ -56,6 +58,26 @@ const getSecretComparisonDescription = (
     case KEY_CREDENTIAL_SECRET_MATCHES.Unknown:
       return t(
         "apiCredentialProfiles:association.secretComparison.unknownDescription",
+      )
+  }
+}
+
+const getSecretComparisonLabel = (
+  match: (typeof KEY_CREDENTIAL_SECRET_MATCHES)[keyof typeof KEY_CREDENTIAL_SECRET_MATCHES],
+  t: TFunction,
+) => {
+  switch (match) {
+    case KEY_CREDENTIAL_SECRET_MATCHES.Exact:
+      return t("apiCredentialProfiles:association.secretComparison.exactLabel")
+    case KEY_CREDENTIAL_SECRET_MATCHES.Masked:
+      return t("apiCredentialProfiles:association.secretComparison.maskedLabel")
+    case KEY_CREDENTIAL_SECRET_MATCHES.Mismatch:
+      return t(
+        "apiCredentialProfiles:association.secretComparison.mismatchLabel",
+      )
+    case KEY_CREDENTIAL_SECRET_MATCHES.Unknown:
+      return t(
+        "apiCredentialProfiles:association.secretComparison.unknownLabel",
       )
   }
 }
@@ -106,11 +128,38 @@ export function AssociateApiCredentialProfileDialog({
 
   const options = useMemo(
     () =>
-      profiles.map((profile) => ({
-        value: profile.id,
-        label: `${profile.name} · ${profile.baseUrl}`,
-      })),
-    [profiles],
+      profiles
+        .map((profile) => {
+          const match = compareCredentialSecret(targetSecret, profile.apiKey)
+          return {
+            value: profile.id,
+            label: `${profile.name} · ${profile.baseUrl}`,
+            match,
+            suffix: (
+              <div className="gap-y-density-1 flex max-w-1/2 shrink-0 flex-col items-end">
+                <span className="text-muted-foreground font-mono text-xs">
+                  {maskSecretForDisplay(profile.apiKey)}
+                </span>
+                <Badge
+                  variant={
+                    match === KEY_CREDENTIAL_SECRET_MATCHES.Mismatch
+                      ? "warning"
+                      : "secondary"
+                  }
+                  className="text-right whitespace-normal"
+                >
+                  {getSecretComparisonLabel(match, t)}
+                </Badge>
+              </div>
+            ),
+          }
+        })
+        .sort(
+          (a, b) =>
+            Number(b.match === KEY_CREDENTIAL_SECRET_MATCHES.Exact) -
+            Number(a.match === KEY_CREDENTIAL_SECRET_MATCHES.Exact),
+        ),
+    [profiles, targetSecret, t],
   )
 
   const selectedProfile = profiles.find(
@@ -198,6 +247,7 @@ export function AssociateApiCredentialProfileDialog({
         ) : profiles.length > 0 ? (
           <>
             <SearchableSelect
+              listClassName="[&_[data-slot=command-item]>span]:whitespace-normal [&_[data-slot=command-item]>span]:wrap-anywhere"
               data-testid={
                 KEY_MANAGEMENT_TEST_IDS.associateCredentialProfileSelect
               }

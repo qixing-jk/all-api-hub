@@ -694,7 +694,11 @@ describe("ApiCheckModalHost", () => {
     expect(apiKeyInput.value).toBe("sk-test-partial-fixture")
 
     await user.clear(sourceTextInput)
-    await user.type(sourceTextInput, "Base URL: https://next.example.com/api")
+    await pasteIntoField(
+      user,
+      sourceTextInput,
+      "Base URL: https://next.example.com/api",
+    )
 
     await waitFor(() => {
       expect(baseUrlInput.value).toBe("https://next.example.com/api")

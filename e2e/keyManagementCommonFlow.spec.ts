@@ -61,6 +61,7 @@ import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { seedMockAccountFixture } from "~~/e2e/utils/mockedSite/accountFixtures"
 import { parallelizeShardableSpec } from "~~/e2e/utils/parallelizeShardableSpec"
 import { isRealSiteTestTokenName } from "~~/e2e/utils/realSite/keyManagement"
+import { captureVisualViews } from "~~/e2e/utils/visualCapture"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 parallelizeShardableSpec()
@@ -1215,10 +1216,12 @@ test("saves a key to API credential profiles and opens the profiles page", async
 test("links an existing API credential to an existing key and preserves the association", async ({
   context,
   extensionId,
+  extensionDir,
   page,
 }) => {
   const serviceWorker = await getServiceWorker(context)
   const baseUrl = "https://manual-association.example.invalid"
+  await page.emulateMedia({ reducedMotion: "reduce" })
   const profile = createStoredApiCredentialProfile({
     id: "manual-association-profile",
     name: "Manual Association Profile",
@@ -1279,6 +1282,20 @@ test("links an existing API credential to an existing key and preserves the asso
     name: /Manual Association Profile/,
   })
   await expect(profileOption).toBeVisible()
+  await expect(profileOption).toContainText(baseUrl)
+  await expect(profileOption).toContainText("sk-m••••••tion")
+  await expect(profileOption).toContainText("Visible fragments match")
+  await expect(
+    associationDialog.getByTestId(
+      KEY_MANAGEMENT_TEST_IDS.associateCredentialConfirmButton,
+    ),
+  ).toBeDisabled()
+  await captureVisualViews({
+    page,
+    ready: associationDialog,
+    extensionDir,
+    id: "credential-association-candidates",
+  })
   await profileOption.click({ force: true })
   await associationDialog
     .getByTestId(KEY_MANAGEMENT_TEST_IDS.associateCredentialConfirmButton)
