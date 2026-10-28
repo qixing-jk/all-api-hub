@@ -67,9 +67,13 @@ export type ApiCheckExtractionResult = {
 }
 
 export type ApiCheckExtractionOptions = {
+  /** Select the highest-ranked candidate permitted to trigger a prompt. */
+  automaticPrompt?: boolean
   apiKeyCleanupPatterns?: string[]
 }
 
 export type InternalApiCheckCandidate = ApiCheckCandidate & {
   insertionOrder: number
+  /** A matching credential was found outside URL contents. */
+  hasNonUrlSource?: boolean
 }

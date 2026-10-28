@@ -186,15 +186,14 @@ function setupWebAiApiCheckDetection(config: {
       options?.apiKeyCleanupPatterns ?? config.apiKeyCleanupPatterns
 
     const extracted = extractApiCheckCredentialsFromText(text, {
+      automaticPrompt: true,
       apiKeyCleanupPatterns,
     })
     if (!extracted.apiKey) return
-    if (!extracted.baseUrl && !extracted.summary.enhancedAutoPromptEligible)
-      return
-    if (
-      extracted.summary.usesEnhancedResult &&
-      !extracted.summary.enhancedAutoPromptEligible
-    ) {
+    const eligible = extracted.summary.usesEnhancedResult
+      ? extracted.summary.enhancedAutoPromptEligible
+      : extracted.summary.autoPromptEligible
+    if (!eligible) {
       return
     }
 

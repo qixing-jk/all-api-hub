@@ -43,7 +43,25 @@ export function extractApiCheckCredentialsFromText(
   const baseUrlCandidates = extractBaseUrlCandidates(rawInput)
   const apiKeyCandidates = extractApiKeyCandidates(rawInput, options)
   const selectedBaseUrl = baseUrlCandidates[0]
-  const selectedApiKey = apiKeyCandidates[0]
+  const selectedApiKey = options.automaticPrompt
+    ? apiKeyCandidates.find((candidate) => {
+        const summary = buildSummary({
+          baseUrls: baseUrlCandidates,
+          apiKeys: apiKeyCandidates,
+          selectedBaseUrl,
+          selectedApiKey: candidate,
+        })
+        return summary.autoPromptEligible || summary.enhancedAutoPromptEligible
+      })
+    : apiKeyCandidates[0]
+
+  // Modal consumers initialize from the first candidate. Keep that default
+  // consistent with the automatic selection while retaining manual alternatives.
+  if (options.automaticPrompt && selectedApiKey) {
+    const selectedIndex = apiKeyCandidates.indexOf(selectedApiKey)
+    apiKeyCandidates.splice(selectedIndex, 1)
+    apiKeyCandidates.unshift(selectedApiKey)
+  }
 
   return {
     baseUrlCandidates: baseUrlCandidates.map((candidate) => candidate.value),

@@ -19,6 +19,10 @@ import {
   type InternalApiCheckCandidate,
 } from "./candidateContract"
 
+const HTTP_URL_PATTERN_SOURCE = String.raw`\bhttps?:\/\/[^\s'"]+`
+const BARE_DOMAIN_PATTERN_SOURCE =
+  /(^|[\s("'`[{<])([a-z0-9][a-z0-9.-]*\.[a-z]{2,}(?:[/?#][^\s'"]*)?)/.source
+
 const COMMON_NON_URL_FILE_EXTENSIONS = new Set([
   "css",
   "csv",
@@ -141,6 +145,31 @@ function isLikelyBareDomainCandidate(raw: string): boolean {
   return true
 }
 
+/** Separate URL sources before free-form key cleanup or token guessing. */
+export function splitApiCheckTextSources(input: string): {
+  text: string
+  urls: string[]
+} {
+  const urls: string[] = []
+  let text = input.replace(new RegExp(HTTP_URL_PATTERN_SOURCE, "gi"), (url) => {
+    urls.push(url)
+    return "\n"
+  })
+  text = text.replace(
+    new RegExp(BARE_DOMAIN_PATTERN_SOURCE, "gi"),
+    (match: string, leading: string, raw: string, offset: number) => {
+      if (
+        !isLikelyBareDomainCandidate(raw) ||
+        isEmailAddressLike(text, offset, offset + match.length)
+      )
+        return match
+      urls.push(`https://${raw}`)
+      return `${leading}\n`
+    },
+  )
+  return { text, urls }
+}
+
 /**
  * Collect and rank base URL candidates from free-form text.
  */
@@ -212,7 +241,7 @@ export function extractBaseUrlCandidates(
     pushNormalizedFamilyCandidates(raw, labeledReasons, confidence)
   }
 
-  const urlPattern = /\bhttps?:\/\/[^\s'"]+/gi
+  const urlPattern = new RegExp(HTTP_URL_PATTERN_SOURCE, "gi")
   for (const match of rawInput.matchAll(urlPattern)) {
     const raw = trimWrappingPunctuation(match[0] ?? "")
     pushNormalizedFamilyCandidates(raw, [
@@ -220,8 +249,7 @@ export function extractBaseUrlCandidates(
     ])
   }
 
-  const bareDomainPattern =
-    /(^|[\s("'`[{<])([a-z0-9][a-z0-9.-]*\.[a-z]{2,}(?:\/[^\s'"]*)?)/gi
+  const bareDomainPattern = new RegExp(BARE_DOMAIN_PATTERN_SOURCE, "gi")
   for (const match of rawInput.matchAll(bareDomainPattern)) {
     const raw = trimWrappingPunctuation(match[2] ?? "")
     const startIndex = match.index ?? 0
