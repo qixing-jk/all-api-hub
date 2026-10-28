@@ -31,6 +31,7 @@ export const validateProtectionBypassTaskResource: ValidateProtectionBypassTaskR
       case TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction:
       case TEMP_CONTEXT_TASK_KINDS.RequestyManagementKeyAction:
       case TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan:
+      case TEMP_CONTEXT_TASK_KINDS.CredentialPageInspect:
       case TEMP_CONTEXT_TASK_KINDS.RenderedTitle:
       case TEMP_CONTEXT_TASK_KINDS.SessionRead:
       case TEMP_CONTEXT_TASK_KINDS.OpenContext:

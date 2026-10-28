@@ -77,6 +77,20 @@ for (const scenario of scenarios) {
     `New API real-site account flow ${scenario.name}`,
     async ({ context, page, extensionId, securitySite }) => {
       const { baseUrl } = securitySite
+      // Keep this controlled site's asynchronous copy contract independent of
+      // the host OS clipboard, which can block reads across browser contexts.
+      await context.addInitScript((origin) => {
+        if (location.origin !== origin) return
+        let clipboardText = ""
+        Object.defineProperty(navigator, "clipboard", {
+          value: {
+            writeText: async (text: string) => {
+              clipboardText = text
+            },
+            readText: async () => clipboardText,
+          },
+        })
+      }, baseUrl)
       securitySite.html = securityPageHtml(scenario)
       const managementToken = "e2e-account-management-token"
       const needsRecovery = scenario.method !== null
@@ -176,7 +190,9 @@ for (const scenario of scenarios) {
       expect(verificationRequests).toBe(needsRecovery ? 1 : 0)
       expect(verifiedTokenRequests).toBe(needsRecovery ? 1 : 0)
       expect(automaticTokenRequests).toBe(needsRecovery ? 0 : 1)
-      expect(securitySite.requests).toBe(needsRecovery ? 1 : 0)
+      // One read-only capability inspection, then the user-facing token page.
+      // Token acquisition and verification above still occur exactly once.
+      expect(securitySite.requests).toBe(needsRecovery ? 2 : 0)
     },
   )
 }
@@ -192,7 +208,7 @@ function securityPageHtml(scenario: (typeof scenarios)[number]) {
   const inputLabel =
     method === "2fa" ? "Authenticator code or backup code" : "Password"
   return `<!doctype html><html><body>
-  <section id="security-access"><h2>Sessions &amp; Access</h2>
+  <section aria-labelledby="security-access"><h2 id="security-access">Sessions &amp; Access</h2>
     <div data-slot="card"><h4>Access Token</h4>
       <button id="generate">${scenario.existingToken ? "Regenerate" : "Generate"}</button>
     </div>

@@ -26,6 +26,10 @@ import { AuthTypeEnum } from "~/types"
 
 const canonicalTasks = [
   {
+    kind: TEMP_CONTEXT_TASK_KINDS.CredentialPageInspect,
+    params: { originUrl: "https://example.invalid" },
+  },
+  {
     kind: TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan,
     params: {
       originUrl: "https://example.invalid",
@@ -354,6 +358,7 @@ describe("protection bypass runtime contracts", () => {
         "native_page_action",
         "openrouter_management_key_action",
         "requesty_management_key_action",
+        "credential_page_inspect",
         "rendered_title",
         "checkin_feedback_scan",
         "session_read",

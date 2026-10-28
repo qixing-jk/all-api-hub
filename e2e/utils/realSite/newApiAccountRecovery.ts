@@ -1,8 +1,9 @@
-import type { Locator, Page } from "@playwright/test"
+import type { Locator, Page, Worker } from "@playwright/test"
 
 import { generateNewApiTotpCode } from "~/services/managedSites/providers/newApi/newApiTotp"
 import { expect } from "~~/e2e/fixtures/extensionTest"
 import type { ExtensionPageGuardOptions } from "~~/e2e/utils/commonUserFlows"
+import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import type { AccountAddDialog } from "~~/e2e/utils/realSite/accountAdd"
 import type { CompatibleApiRealSiteConfig } from "~~/e2e/utils/realSite/compatibleApi"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
@@ -87,13 +88,14 @@ export function createNewApiAccountRecovery(params: {
       await expect(dialog.accessTokenInput).toBeEmpty()
 
       const context = params.page.context()
+      const worker = await getServiceWorker(context)
       const [securityPage] = await Promise.all([
-        context.waitForEvent("page"),
+        context.waitForEvent("page", {
+          predicate: (candidate) =>
+            isUserFacingCredentialPage(candidate, worker),
+        }),
         dialog.dialog
-          .getByRole("button", {
-            name: "Open site security settings",
-            exact: true,
-          })
+          .getByRole("button", { name: "Open token page", exact: true })
           .click(),
       ])
 
@@ -381,5 +383,26 @@ async function readDetectedDialogFailureText(dialog: AccountAddDialog) {
     return (await banner.innerText()).replace(/\s+/gu, " ").trim()
   } catch {
     return ""
+  }
+}
+
+/** Excludes hidden temporary inspection pages, including those at the same URL. */
+export async function isUserFacingCredentialPage(page: Page, worker: Worker) {
+  try {
+    await page.waitForLoadState("domcontentloaded")
+    const activeUrl = await worker.evaluate(async () => {
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        lastFocusedWindow: true,
+      })
+      return tab?.url
+    })
+    return (
+      page.url() === activeUrl &&
+      (await page.evaluate(() => document.visibilityState === "visible"))
+    )
+  } catch {
+    // An owned inspection page may be released before loading completes.
+    return false
   }
 }

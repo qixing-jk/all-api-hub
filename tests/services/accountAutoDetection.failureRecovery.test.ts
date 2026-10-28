@@ -75,6 +75,90 @@ describe("accountAutoDetection", () => {
     resetAccountAutoDetectionMocks()
   })
 
+  it("offers manual token completion for an unstructured token failure on any site", async () => {
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: "42",
+        user: { id: 42, username: "gemai-user" },
+        siteType: SITE_TYPES.NEW_API,
+      },
+    })
+    mockGetOrCreateAccessToken.mockRejectedValueOnce(
+      new ApiError(
+        "Unauthorized, insufficient privileges",
+        200,
+        "/api/user/token",
+      ),
+    )
+    mockLoadBootstrapFacts.mockResolvedValueOnce({
+      displayName: "Gemai",
+      checkInSupported: false,
+    })
+    const result = await autoDetectAccount(
+      "https://custom.example.invalid",
+      AuthTypeEnum.AccessToken,
+    )
+    expect(result).toMatchObject({
+      success: false,
+      autoDetectFailureReason: "token_fetch_failed",
+      detailedError: { type: "access_token_verification_required" },
+      recoveryData: {
+        siteType: SITE_TYPES.NEW_API,
+        userId: "42",
+        username: "gemai-user",
+        authType: AuthTypeEnum.AccessToken,
+      },
+    })
+  })
+
+  it.each([
+    {
+      authType: AuthTypeEnum.AccessToken,
+      status: 401,
+      identityMismatch: false,
+    },
+    { authType: AuthTypeEnum.AccessToken, status: 403, identityMismatch: true },
+    { authType: AuthTypeEnum.Cookie, status: 403, identityMismatch: false },
+  ])(
+    "keeps authentication and identity failures separate from manual token recovery: $authType $status $identityMismatch",
+    async ({ authType, status, identityMismatch }) => {
+      mockAutoDetectSmart.mockResolvedValueOnce({
+        success: true,
+        data: {
+          userId: "42",
+          user: { id: 42, username: "owner" },
+          siteType: SITE_TYPES.NEW_API,
+        },
+      })
+      const failure = new ApiError(
+        "Account unavailable",
+        status,
+        "/api/user/self",
+        identityMismatch
+          ? API_ERROR_CODES.ACCOUNT_IDENTITY_MISMATCH
+          : undefined,
+      )
+      if (authType === AuthTypeEnum.Cookie)
+        mockFetchUserInfo.mockRejectedValueOnce(failure)
+      else mockGetOrCreateAccessToken.mockRejectedValueOnce(failure)
+      mockLoadBootstrapFacts.mockResolvedValueOnce({ checkInSupported: false })
+      const result = await autoDetectAccount(
+        "https://custom.example.invalid",
+        authType,
+      )
+      expect(result.success).toBe(false)
+      expect(result.detailedError?.type).not.toBe(
+        AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
+      )
+      expect(result.recoveryData?.authType).toBe(authType)
+      if (identityMismatch)
+        expect(result.autoDetectFailureReason).toBe(
+          AUTO_DETECT_FAILURE_REASONS.AccountIdentityMismatch,
+        )
+    },
+  )
+
   it.each([
     "SECURITY_PROOF_REQUIRED",
     "SECURITY_PROOF_INVALID",
@@ -156,7 +240,7 @@ describe("accountAutoDetection", () => {
       upstreamCode: "SECURITY_PROOF_REQUIRED",
     },
   ])(
-    "keeps unrelated token failures out of New API verification guidance: $siteType $endpoint $upstreamCode",
+    "offers manual recovery without changing the token failure reason: $siteType $endpoint $upstreamCode",
     async ({ siteType, endpoint, upstreamCode }) => {
       mockAutoDetectSmart.mockResolvedValueOnce({
         success: true,
@@ -181,7 +265,7 @@ describe("accountAutoDetection", () => {
       expect(result.autoDetectFailureReason).toBe(
         AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
       )
-      expect(result.detailedError?.type).not.toBe(
+      expect(result.detailedError?.type).toBe(
         AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
       )
     },
@@ -393,10 +477,10 @@ describe("accountAutoDetection", () => {
 
     expect(result).toMatchObject({
       success: false,
-      message: "messages:operations.detection.getAccessTokenFailedDetailed",
+      message: "accountDialog:accessTokenVerification.description",
       autoDetectFailureReason: AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing,
       detailedError: expect.objectContaining({
-        type: AutoDetectErrorType.INVALID_RESPONSE,
+        type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
       }),
     })
   })
@@ -426,10 +510,10 @@ describe("accountAutoDetection", () => {
 
     expect(result).toMatchObject({
       success: false,
-      message: "messages:operations.detection.getAccessTokenFailedDetailed",
+      message: "accountDialog:accessTokenVerification.description",
       autoDetectFailureReason: AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing,
       detailedError: expect.objectContaining({
-        type: AutoDetectErrorType.INVALID_RESPONSE,
+        type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
       }),
     })
   })
@@ -491,7 +575,7 @@ describe("accountAutoDetection", () => {
       success: false,
       autoDetectFailureReason: AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
       detailedError: expect.objectContaining({
-        type: AutoDetectErrorType.UNKNOWN,
+        type: AutoDetectErrorType.ACCESS_TOKEN_VERIFICATION_REQUIRED,
       }),
     })
   })

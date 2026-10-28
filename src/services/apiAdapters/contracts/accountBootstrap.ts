@@ -1,6 +1,7 @@
 import type { AccountLoginProvider } from "~/constants/accountLogin"
 import type { AccountSiteType } from "~/constants/siteType"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
+import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { AccountIdentity } from "~/types"
 
 export const ACCOUNT_BOOTSTRAP_ROUTE_KINDS = {
@@ -8,6 +9,7 @@ export const ACCOUNT_BOOTSTRAP_ROUTE_KINDS = {
   Usage: "usage",
   CheckIn: "checkIn",
   AdminCredentials: "adminCredentials",
+  AccessToken: "accessToken",
   Redeem: "redeem",
   SiteAnnouncements: "siteAnnouncements",
 } as const
@@ -17,6 +19,8 @@ export type AccountBootstrapRouteKind =
 
 export type AccountBootstrapRouteTarget = {
   baseUrl: string
+  /** Optional explicit intent for rendered fallback after network discovery. */
+  pageInspectionExecution?: ProtectionBypassExecution
   siteType: AccountSiteType
   /** Saved identity/credential for providers whose console routes are team-scoped. */
   userId?: AccountIdentity

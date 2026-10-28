@@ -1,5 +1,13 @@
-import { fireEvent, render, screen, within } from "@testing-library/react"
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
@@ -8,8 +16,10 @@ import { AccessTokenVerificationGuide } from "~/features/AccountManagement/compo
 import { ManagedSiteConfigPromptDialog } from "~/features/AccountManagement/components/AccountDialog/postSave/ManagedSiteConfigPromptDialog"
 import { DuplicateAccountWarningDialog } from "~/features/AccountManagement/components/AccountDialog/saving/DuplicateAccountWarningDialog"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
+import * as siteRouteResolver from "~/services/accounts/utils/siteRouteResolver"
 import { ACCOUNT_SITE_MANUAL_ADD_GUIDE_ANCHORS } from "~/services/accountSiteDefinitions"
 import * as accountSiteDefinitions from "~/services/accountSiteDefinitions"
+import { clearSiteRouteFactsCacheForTests } from "~/services/apiAdapters/newApi/account/accountRoutes"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -20,6 +30,7 @@ import {
   PRODUCT_ANALYTICS_TARGET_KINDS,
   PRODUCT_ANALYTICS_UNIFIED_API_GUIDANCE_ACTION_KINDS,
 } from "~/services/productAnalytics/contracts"
+import { server } from "~~/tests/msw/server"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const { openLoginTabMock, reloadCurrentTabMock } = vi.hoisted(() => ({
@@ -94,6 +105,168 @@ vi.mock("~/utils/navigation/feedbackPages", async (importOriginal) => {
 })
 
 describe("AccountDialog warnings", () => {
+  it("shows a busy token-page action and prevents duplicate clicks while discovery is pending", async () => {
+    let finish!: (url: string) => void
+    const pending = new Promise<string>((resolve) => {
+      finish = resolve
+    })
+    const resolve = vi
+      .spyOn(siteRouteResolver, "resolveAccountSiteRouteUrl")
+      .mockReturnValue(pending)
+    try {
+      render(
+        <AccessTokenVerificationGuide
+          message="Enter a token"
+          siteUrl="https://site.example.com"
+          siteType={SITE_TYPES.NEW_API}
+        />,
+      )
+      const button = screen.getByRole("button", {
+        name: "accessTokenVerification.openSecurity",
+      })
+      await userEvent.setup().click(button)
+      expect(button).toHaveAttribute("aria-busy", "true")
+      expect(button).toBeDisabled()
+      await userEvent.setup().click(button)
+      expect(resolve).toHaveBeenCalledTimes(2) // One quiet warmup, one admitted click.
+      expect(browser.tabs.create).not.toHaveBeenCalled()
+      await act(async () => finish("https://site.example.com/profile"))
+      await waitFor(() => expect(browser.tabs.create).toHaveBeenCalledTimes(1))
+      expect(button).not.toBeDisabled()
+    } finally {
+      resolve.mockRestore()
+    }
+  })
+  it.each(["empty", "rejected"])(
+    "reports %s credential discovery and allows retry",
+    async (outcome) => {
+      const resolve = vi.spyOn(siteRouteResolver, "resolveAccountSiteRouteUrl")
+      if (outcome === "empty") resolve.mockResolvedValue(null)
+      else resolve.mockRejectedValue(new Error("offline"))
+      try {
+        render(
+          <AccessTokenVerificationGuide
+            message="Enter a token"
+            siteUrl="https://site.example.com"
+          />,
+        )
+        const button = screen.getByRole("button", {
+          name: "accessTokenVerification.openSecurity",
+        })
+        await userEvent.setup().click(button)
+        expect(
+          await screen.findByText("accessTokenVerification.openSecurityFailed"),
+        ).toHaveTextContent("accessTokenVerification.openSecurityFailed")
+        expect(browser.tabs.create).not.toHaveBeenCalled()
+        expect(button).not.toBeDisabled()
+        resolve.mockResolvedValue("https://site.example.com/profile")
+        await userEvent.setup().click(button)
+        await waitFor(() =>
+          expect(browser.tabs.create).toHaveBeenCalledTimes(1),
+        )
+        expect(
+          screen.queryByText("accessTokenVerification.openSecurityFailed"),
+        ).not.toBeInTheDocument()
+      } finally {
+        resolve.mockRestore()
+      }
+    },
+  )
+  it("starts a network-only warmup before the token-page click", async () => {
+    const resolve = vi
+      .spyOn(siteRouteResolver, "resolveAccountSiteRouteUrl")
+      .mockResolvedValue("https://site.example.com/profile")
+    try {
+      render(
+        <AccessTokenVerificationGuide
+          message="Enter a token"
+          siteUrl="https://site.example.com"
+          siteType={SITE_TYPES.NEW_API}
+        />,
+      )
+      await waitFor(() =>
+        expect(resolve).toHaveBeenCalledWith(
+          { baseUrl: "https://site.example.com", siteType: SITE_TYPES.NEW_API },
+          siteRouteResolver.SITE_ROUTE_KINDS.AccessToken,
+        ),
+      )
+      expect(browser.tabs.create).not.toHaveBeenCalled()
+    } finally {
+      resolve.mockRestore()
+    }
+  })
+  it.each([
+    [
+      SITE_TYPES.VERCEL_AI_GATEWAY,
+      "/account/settings/tokens",
+      "accessTokenVerification.vercel.openPage",
+    ],
+    [SITE_TYPES.RIX_API, "/admin-keys", "accessTokenVerification.openSecurity"],
+  ])(
+    "preserves an explicitly different account credential destination for %s",
+    async (siteType, path, label) => {
+      render(
+        <AccessTokenVerificationGuide
+          message="Enter a token"
+          siteUrl="https://site.example.com"
+          siteType={siteType}
+        />,
+      )
+      await userEvent.setup().click(screen.getByRole("button", { name: label }))
+      await waitFor(() =>
+        expect(browser.tabs.create).toHaveBeenCalledWith(
+          expect.objectContaining({ url: `https://site.example.com${path}` }),
+        ),
+      )
+    },
+  )
+
+  it("keeps an explicitly unsupported account-token destination hidden", () => {
+    render(
+      <AccessTokenVerificationGuide
+        message="Enter a token"
+        siteUrl="https://site.example.com"
+        siteType={SITE_TYPES.ONE_API}
+      />,
+    )
+    expect(
+      screen.queryByRole("button", {
+        name: "accessTokenVerification.openSecurity",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("opens the deployment's resolved credential page instead of a fixed security path", async () => {
+    const resolve = vi
+      .spyOn(siteRouteResolver, "resolveAccountSiteRouteUrl")
+      .mockResolvedValue("https://api2.gemai.cc/profile")
+    try {
+      render(
+        <AccessTokenVerificationGuide
+          message="Enter a token"
+          siteUrl="https://api2.gemai.cc"
+          siteType={SITE_TYPES.NEW_API}
+        />,
+      )
+      await userEvent.setup().click(
+        screen.getByRole("button", {
+          name: "accessTokenVerification.openSecurity",
+        }),
+      )
+      expect(resolve).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseUrl: "https://api2.gemai.cc",
+          siteType: SITE_TYPES.NEW_API,
+        }),
+        siteRouteResolver.SITE_ROUTE_KINDS.AccessToken,
+      )
+      expect(browser.tabs.create).toHaveBeenCalledWith(
+        expect.objectContaining({ url: "https://api2.gemai.cc/profile" }),
+      )
+    } finally {
+      resolve.mockRestore()
+    }
+  })
   it("keeps supported account credential recovery separate from unsupported-site suggestions", () => {
     render(
       <AutoDetectErrorAlert
@@ -254,6 +427,15 @@ describe("AccountDialog warnings", () => {
     },
   )
   beforeEach(() => {
+    clearSiteRouteFactsCacheForTests()
+    server.use(
+      http.get("*/", () => HttpResponse.html("<title>New API</title>")),
+    )
+    server.use(
+      http.get("*/api/status", () =>
+        HttpResponse.json({ success: true, data: {} }),
+      ),
+    )
     openLoginTabMock.mockReset()
     reloadCurrentTabMock.mockReset()
     openApiCredentialProfilesPageMock.mockReset()
@@ -309,6 +491,11 @@ describe("AccountDialog warnings", () => {
   })
 
   it("opens the New API access-token location from a persistent view and explains token rotation", async () => {
+    server.use(
+      http.get("*/api/status", () =>
+        HttpResponse.json({ success: true, data: { theme: "default" } }),
+      ),
+    )
     const user = userEvent.setup()
     render(
       <AutoDetectErrorAlert
@@ -333,10 +520,12 @@ describe("AccountDialog warnings", () => {
         name: "accessTokenVerification.openSecurity",
       }),
     )
-    expect(browser.tabs.create).toHaveBeenCalledWith({
-      url: "http://local.example.test/new-api/security#security-access",
-      active: true,
-    })
+    await waitFor(() =>
+      expect(browser.tabs.create).toHaveBeenCalledWith({
+        url: "http://local.example.test/new-api/security#security-access",
+        active: true,
+      }),
+    )
     expect(
       screen.getByRole("button", { name: "actions.openManualAddGuide" }),
     ).toBeVisible()

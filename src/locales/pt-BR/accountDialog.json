@@ -9,10 +9,10 @@
     "continueInFullPage": "Continuar em uma página completa",
     "continueInSidePanel": "Continuar no painel lateral",
     "continuing": "Preparando o formulário…",
-    "description": "Este site exige uma verificação de segurança antes de gerar um Access Token, por isso ele não pode ser obtido automaticamente. Os dados detectados da conta foram mantidos. Insira um Access Token de gerenciamento de conta para continuar.",
+    "description": "A extensão não conseguiu obter um Access Token automaticamente. As informações identificadas foram mantidas. Copie ou crie um token de gerenciamento de conta no site e volte aqui para inseri-lo.",
     "destinationBusy": "Já existe um formulário de conta incompleto aqui. Salve ou feche esse formulário para continuar com o formulário do popup.",
     "fullPageHint": "Continue em uma página completa para manter este formulário aberto enquanto copia o token no site.",
-    "generateStep": "Se já tiver um Access Token válido e completo, use-o diretamente. Caso contrário, abra Segurança → Access Token no site, conclua a verificação e gere um token. As versões mais recentes também pedem as permissões e a validade; conceda todas as permissões oferecidas.",
+    "generateStep": "Use um Access Token válido e completo ou crie um no perfil, nas configurações da conta ou na página de gerenciamento de tokens do site. Siga as instruções do site sobre verificação, permissões e validade quando solicitado.",
     "laozhang": {
       "generateStep": "Use um System token completo existente ou abra Perfil do LaoZhang → System token, conclua a verificação de segurança do site, gere e salve o token imediatamente. Ele é exibido apenas uma vez; gerá-lo novamente pode substituir o anterior.",
       "openProfile": "Abrir perfil do LaoZhang",
@@ -25,8 +25,8 @@
       "pasteStep": "Cole uma API Key sk_ completa. Para criar uma, abra o gerenciamento de chaves da Novita e copie a nova chave. A validade é definida na criação.",
       "title": "Método de credencial"
     },
-    "openSecurity": "Abrir segurança do site",
-    "openSecurityFailed": "Não foi possível abrir a página. Abra Segurança → Access Token manualmente no site e volte aqui para colar o token.",
+    "openSecurity": "Abrir página de tokens",
+    "openSecurityFailed": "Não foi possível abrir a página. Encontre Access Token no perfil, nas configurações da conta ou no gerenciamento de tokens do site, copie e volte aqui para inserir.",
     "pasteStep": "Copie imediatamente o Access Token completo, cole no campo Access Token abaixo, confira os dados da conta e salve.",
     "popupHint": "Continue no painel lateral para manter este formulário enquanto verifica sua identidade e copia o token no site. Se o painel lateral não puder ser aberto, o formulário será aberto em uma página completa.",
     "prepareFailed": "Não foi possível salvar o formulário temporariamente. Copie as informações que precisa manter e reabra o formulário na página completa.",

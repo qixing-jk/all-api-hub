@@ -60,7 +60,15 @@ for (const scenario of [
     name: "New API",
     baseUrl: "https://new-api-verification.example.invalid",
     tokenPagePath: "/security#security-access",
-    openTokenSettingsLabel: "Open site security settings",
+    openTokenSettingsLabel: "Open token page",
+    tokenRequests: 1,
+  },
+  {
+    siteType: SITE_TYPES.NEW_API,
+    name: "Gemai profile",
+    baseUrl: "https://api2.gemai.cc",
+    tokenPagePath: "/profile",
+    openTokenSettingsLabel: "Open token page",
     tokenRequests: 1,
   },
   {
@@ -100,6 +108,27 @@ for (const scenario of [
       accessToken: manualToken,
       initialQuota,
     })
+    if (siteType === SITE_TYPES.NEW_API) {
+      // Both deployments use the same theme; probe their actual frontend routes.
+      await context.route(`${baseUrl}/`, (route) =>
+        route.fulfill({
+          contentType: "text/html",
+          headers: {
+            "set-cookie": `${E2E_NEW_API_RC22_AUTH.refreshCookie}; HttpOnly; Secure; SameSite=Lax; Path=/`,
+          },
+          body: '<title>New API</title><script src="/assets/index.routes.js"></script>',
+        }),
+      )
+      await context.route(`${baseUrl}/assets/index.routes.js`, (route) =>
+        route.fulfill({
+          contentType: "application/javascript",
+          body:
+            tokenPagePath === "/profile"
+              ? 'const route = "/_authenticated/profile/";'
+              : 'const route = "/_authenticated/security/";',
+        }),
+      )
+    }
     if (siteType === SITE_TYPES.APIYI) {
       await context.addInitScript((origin) => {
         if (location.origin !== origin) return
@@ -153,7 +182,7 @@ for (const scenario of [
         await route.fulfill({
           status: 200,
           contentType: "text/html",
-          body: `<h1>Security settings</h1><h2 id="security-access">Sessions &amp; Access</h2><label>Access Token<input readonly value="${manualToken}"></label>`,
+          body: `<h1>Token page</h1><h2 id="security-access">Sessions &amp; Access</h2><label>Access Token<input readonly value="${manualToken}"></label>`,
         })
       },
     )
@@ -304,7 +333,7 @@ for (const scenario of [
     // Preserve the actual destination, including its section anchor.
     await securityPage.goto(securityUrl)
     await expect(
-      securityPage.getByRole("heading", { name: "Security settings" }),
+      securityPage.getByRole("heading", { name: "Token page" }),
     ).toBeVisible()
     await securityPage.bringToFront()
     await expect
@@ -453,3 +482,54 @@ for (const scenario of [
     expect(tokenRequests).toBe(scenario.tokenRequests)
   })
 }
+
+test("inspects rendered credential pages without generating tokens", async ({
+  context,
+  extensionId,
+  page,
+}) => {
+  const origin = "https://credential-render.example.invalid"
+  let writes = 0
+  await context.route(`${origin}/**`, async (route) => {
+    const request = route.request()
+    if (request.method() !== "GET") writes += 1
+    const path = new URL(request.url()).pathname
+    await route.fulfill({
+      contentType: "text/html",
+      body:
+        path === "/profile"
+          ? "<h1>Profile</h1><button>Access Token</button>"
+          : "<h1>404</h1><p>Page not found</p>",
+    })
+  })
+  const serviceWorker = await getServiceWorker(context)
+  await seedUserPreferences(serviceWorker, {
+    tempWindowFallback: { enabled: true },
+  })
+  await page.goto(`chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}`)
+  await waitForExtensionRoot(page)
+  for (const [path, state] of [
+    ["/security", "not_found"],
+    ["/profile", "credential"],
+  ]) {
+    const result = await page.evaluate(
+      async ({ originUrl, action }) =>
+        chrome.runtime.sendMessage({
+          action,
+          execution: {
+            version: 2,
+            kind: "user_command",
+            command: "detect_account",
+            surface: "options",
+          },
+          task: { kind: "credential_page_inspect", params: { originUrl } },
+        }),
+      {
+        originUrl: origin + path,
+        action: RuntimeActionIds.ProtectionBypassExecuteTask,
+      },
+    )
+    expect(result).toMatchObject({ success: true, state })
+  }
+  expect(writes).toBe(0)
+})

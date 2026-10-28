@@ -9,10 +9,10 @@
     "continueInFullPage": "在完整頁面繼續",
     "continueInSidePanel": "轉到側邊欄繼續",
     "continuing": "正在準備表單…",
-    "description": "此站點要求先完成安全驗證，擴充功能暫時無法自動取得 Access Token。已識別的資訊已保留，請手動填寫帳號管理權杖。",
+    "description": "擴充功能無法自動取得 Access Token。已識別的資訊已保留，請前往網站複製或建立帳號管理權杖，再回到這裡填寫。",
     "destinationBusy": "這裡已有未完成的帳號表單。儲存或關閉後，將繼續從彈出視窗帶來的表單。",
     "fullPageHint": "在完整頁面繼續可保留目前的表單，切換到站點複製權杖時不會關閉。",
-    "generateStep": "已有有效的完整 Access Token 時可直接填寫；否則，開啟站點的「安全設定 → Access Token」，完成驗證並產生權杖。新版站點還會要求選擇權限與有效期，請授予全部可用權限。",
+    "generateStep": "已有有效的完整 Access Token 時可直接填寫；否則，請在站點的個人資料、帳號設定或權杖管理頁面找到 Access Token 並建立。如站點要求驗證、權限或有效期，請依官網提示設定。",
     "laozhang": {
       "generateStep": "已有完整的 System token 時可直接填寫；否則開啟 LaoZhang「個人資料 → System token」，完成網站安全驗證後產生並立即儲存。權杖僅顯示一次，重新產生可能取代舊權杖。",
       "openProfile": "開啟 LaoZhang 個人資料",
@@ -25,8 +25,8 @@
       "pasteStep": "貼上已有的完整 sk_ API Key；如需新增，請先前往 Novita 金鑰管理建立並複製。有效期限由建立時的設定決定。",
       "title": "憑證方式"
     },
-    "openSecurity": "開啟站點安全設定",
-    "openSecurityFailed": "無法開啟頁面。請手動進入站點的「安全設定 → Access Token」，複製權杖後回到這裡填寫。",
+    "openSecurity": "開啟權杖取得頁面",
+    "openSecurityFailed": "無法開啟頁面。請在站點的個人資料、帳號設定或權杖管理頁面找到 Access Token，複製後回到這裡填寫。",
     "pasteStep": "立即複製完整的 Access Token，貼到下方「存取權杖」欄位，確認帳號資訊後儲存。",
     "popupHint": "轉到側邊欄後，目前的表單會保留；你可以在站點完成驗證、複製權杖，同時繼續填寫。若無法開啟側邊欄，會在完整頁面繼續。",
     "prepareFailed": "無法暫存目前表單。請先複製需要保留的資訊，再從完整頁面重新開啟帳號表單。",

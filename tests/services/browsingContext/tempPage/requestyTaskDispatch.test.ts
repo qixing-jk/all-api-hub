@@ -3,7 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { executeAuthorizedTempContextTask } from "~/services/browsingContext/tempPage/taskDispatch"
 import type { TempContextTask } from "~/services/protectionBypass/contracts"
 
-const mocks = vi.hoisted(() => ({ policy: vi.fn(), create: vi.fn() }))
+const mocks = vi.hoisted(() => ({
+  policy: vi.fn(),
+  create: vi.fn(),
+  inspect: vi.fn(),
+}))
 vi.mock("~/utils/browser/tempWindowRequestSource", () => ({
   resolveTempWindowRequestPolicy: mocks.policy,
 }))
@@ -60,4 +64,29 @@ describe("authorized Requesty task dispatch", () => {
     expect(mocks.create).not.toHaveBeenCalled()
     expect(authorize).not.toHaveBeenCalled()
   })
+})
+
+vi.mock("~/services/browsingContext/tempPage/sessionTasks", () => ({
+  executeCredentialPageInspect: mocks.inspect,
+}))
+it("dispatches credential inspection with the authorized acquisition guard", async () => {
+  mocks.policy.mockReturnValue({ suppressMinimize: true })
+  const authorize = vi.fn()
+  const reply = vi.fn()
+  const params = {
+    originUrl: "https://example.test/profile",
+    requestId: "inspect",
+  }
+  await executeAuthorizedTempContextTask(
+    { kind: "credential_page_inspect", params },
+    "options",
+    authorize,
+    reply,
+  )
+  expect(mocks.inspect).toHaveBeenCalledExactlyOnceWith(
+    params,
+    true,
+    reply,
+    authorize,
+  )
 })

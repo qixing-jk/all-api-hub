@@ -1,0 +1,188 @@
+import { beforeEach, expect, it, vi } from "vitest"
+
+import {
+  clearNewApiCredentialPagesForTests,
+  resolveNewApiCredentialPage,
+} from "~/services/apiAdapters/newApi/variantOperations/credentialPage"
+
+const { fetchApi, inspect } = vi.hoisted(() => ({
+  fetchApi: vi.fn(),
+  inspect: vi.fn(),
+}))
+vi.mock("~/services/apiTransport/request", () => ({ fetchApi }))
+vi.mock(
+  "~/services/apiAdapters/newApi/variantOperations/renderedCredentialPage",
+  () => ({ inspectRenderedCredentialPage: inspect }),
+)
+beforeEach(() => {
+  clearNewApiCredentialPagesForTests()
+  fetchApi.mockReset().mockRejectedValue(new Error("unavailable"))
+  inspect.mockReset()
+})
+const execution = {
+  version: 2,
+  kind: "user_command",
+  command: "detect_account",
+  surface: "options",
+} as const
+it("keeps rendering behind conclusive network evidence", async () => {
+  fetchApi
+    .mockResolvedValueOnce('<script src="/assets/index.js"></script>')
+    .mockResolvedValueOnce('"/_authenticated/profile/"')
+  await expect(
+    resolveNewApiCredentialPage(
+      "https://example.test",
+      "/security#security-access",
+      execution,
+    ),
+  ).resolves.toBe("/profile")
+  expect(inspect).not.toHaveBeenCalled()
+})
+it("tries the next rendered page only after an explicit page-not-found result", async () => {
+  inspect.mockResolvedValueOnce("not_found").mockResolvedValueOnce("credential")
+  await expect(
+    resolveNewApiCredentialPage(
+      "https://example.test",
+      "/security#security-access",
+      execution,
+    ),
+  ).resolves.toBe("/profile")
+  expect(inspect.mock.calls.map((c) => c[0])).toEqual([
+    "https://example.test/security#security-access",
+    "https://example.test/profile",
+  ])
+})
+it("does not misclassify an unknown rendered result or open another page", async () => {
+  inspect.mockResolvedValueOnce("unknown")
+  await expect(
+    resolveNewApiCredentialPage(
+      "https://example.test",
+      "/security#security-access",
+      execution,
+    ),
+  ).resolves.toBe("/security#security-access")
+  expect(inspect).toHaveBeenCalledTimes(1)
+})
+it("does not open a temporary page without explicit caller intent", async () => {
+  await resolveNewApiCredentialPage(
+    "https://example.test",
+    "/security#security-access",
+  )
+  expect(inspect).not.toHaveBeenCalled()
+})
+
+it("caches rendered positive evidence so later clicks stay quiet", async () => {
+  inspect.mockResolvedValueOnce("credential")
+  await resolveNewApiCredentialPage(
+    "https://example.test",
+    "/security",
+    execution,
+  )
+  await resolveNewApiCredentialPage(
+    "https://example.test",
+    "/security",
+    execution,
+  )
+  expect(fetchApi).toHaveBeenCalledTimes(1)
+  expect(inspect).toHaveBeenCalledTimes(1)
+})
+
+it("reuses a pending network warmup when the user opens the token page", async () => {
+  let respond!: (html: string) => void
+  fetchApi
+    .mockReturnValueOnce(
+      new Promise<string>((resolve) => {
+        respond = resolve
+      }),
+    )
+    .mockResolvedValueOnce('"/_authenticated/profile/"')
+  const warmup = resolveNewApiCredentialPage(
+    "https://example.test",
+    "/security",
+  )
+  const click = resolveNewApiCredentialPage(
+    "https://example.test/",
+    "/security",
+    execution,
+  )
+  expect(fetchApi).toHaveBeenCalledTimes(1)
+  respond('<script src="/assets/index.js"></script>')
+  await expect(warmup).resolves.toBe("/profile")
+  await expect(click).resolves.toBe("/profile")
+  expect(fetchApi).toHaveBeenCalledTimes(2)
+  expect(inspect).not.toHaveBeenCalled()
+})
+
+it("ignores foreign-origin entry bundles and keeps the configured fallback", async () => {
+  fetchApi.mockResolvedValueOnce(
+    '<script src="https://cdn.example/index.js"></script>',
+  )
+  await expect(
+    resolveNewApiCredentialPage("https://example.test", "/security"),
+  ).resolves.toBe("/security")
+  expect(fetchApi).toHaveBeenCalledTimes(1)
+})
+it("does not let completion of an older warmup remove a newer pending request", async () => {
+  let finishOld!: (value: string) => void
+  let finishNew!: (value: string) => void
+  fetchApi.mockReturnValueOnce(
+    new Promise<string>((resolve) => {
+      finishOld = resolve
+    }),
+  )
+  const old = resolveNewApiCredentialPage("https://example.test", "/security")
+  clearNewApiCredentialPagesForTests()
+  fetchApi.mockReturnValueOnce(
+    new Promise<string>((resolve) => {
+      finishNew = resolve
+    }),
+  )
+  const newer = resolveNewApiCredentialPage("https://example.test", "/security")
+  finishOld("<html></html>")
+  await old
+  const shared = resolveNewApiCredentialPage(
+    "https://example.test",
+    "/security",
+  )
+  expect(fetchApi).toHaveBeenCalledTimes(2)
+  finishNew("<html></html>")
+  await expect(newer).resolves.toBe("/security")
+  await expect(shared).resolves.toBe("/security")
+})
+
+it("bounds queue admission as part of the credential discovery deadline", async () => {
+  vi.useFakeTimers()
+  try {
+    fetchApi.mockImplementationOnce(
+      ({ abortDeadline }) =>
+        new Promise((_resolve, reject) => {
+          abortDeadline?.signal.addEventListener(
+            "abort",
+            () => reject(abortDeadline.signal.reason),
+            { once: true },
+          )
+        }),
+    )
+    let completed = false
+    const pending = resolveNewApiCredentialPage(
+      "https://example.test",
+      "/security",
+    ).then((value) => {
+      completed = true
+      return value
+    })
+    await vi.advanceTimersByTimeAsync(4000)
+    expect(completed).toBe(true)
+    await expect(pending).resolves.toBe("/security")
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+it("ignores same-origin scripts that are not an entry bundle", async () => {
+  fetchApi.mockResolvedValueOnce('<script src="/assets/analytics.js"></script>')
+  await expect(
+    resolveNewApiCredentialPage("https://example.test", "/security"),
+  ).resolves.toBe("/security")
+  expect(fetchApi).toHaveBeenCalledTimes(1)
+})

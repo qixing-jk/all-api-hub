@@ -6,6 +6,7 @@ import type { AccountAddDialog } from "~~/e2e/utils/realSite/accountAdd"
 import {
   createNewApiAccountRecovery,
   describeNewApiRefreshObservations,
+  isUserFacingCredentialPage,
   observeNewApiRefreshes,
 } from "~~/e2e/utils/realSite/newApiAccountRecovery"
 
@@ -404,4 +405,24 @@ describe("New API refresh observation rendering", () => {
     expect(rendered).toContain("AUTH_SESSION_ISSUANCE_LIMIT")
     expect(rendered.length).toBeLessThan(400)
   })
+})
+
+it("rejects a newly created hidden inspection page before accepting the visible user tab at the same URL", async () => {
+  const url = "https://example.test/security"
+  const worker = {
+    evaluate: vi.fn().mockResolvedValue(url),
+  } as unknown as import("@playwright/test").Worker
+  const candidate = (visible: boolean) =>
+    ({
+      waitForLoadState: vi.fn().mockResolvedValue(undefined),
+      url: () => url,
+      evaluate: vi.fn().mockResolvedValue(visible),
+    }) as unknown as Page
+  expect(await isUserFacingCredentialPage(candidate(false), worker)).toBe(false)
+  expect(await isUserFacingCredentialPage(candidate(true), worker)).toBe(true)
+  const closed = candidate(false)
+  vi.mocked(closed.waitForLoadState).mockRejectedValueOnce(
+    new Error("released"),
+  )
+  expect(await isUserFacingCredentialPage(closed, worker)).toBe(false)
 })

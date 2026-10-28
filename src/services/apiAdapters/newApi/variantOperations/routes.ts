@@ -14,6 +14,10 @@ import {
   type AccountBootstrapRouteTarget,
   type AccountBootstrapRouteKind as SiteRouteKind,
 } from "../../contracts/accountBootstrap"
+import {
+  clearNewApiCredentialPagesForTests,
+  resolveNewApiCredentialPage,
+} from "./credentialPage"
 
 const NEW_API_FRONTEND_THEMES = {
   Default: "default",
@@ -24,11 +28,17 @@ type DynamicRouteKind = Exclude<
   typeof SITE_ROUTE_KINDS.SiteAnnouncements
 >
 
-const NEW_API_DEFAULT_THEME_ROUTE_PATHS: Record<DynamicRouteKind, string> = {
+const NEW_API_DEFAULT_THEME_ROUTE_PATHS: Record<
+  Exclude<
+    DynamicRouteKind,
+    | typeof SITE_ROUTE_KINDS.AdminCredentials
+    | typeof SITE_ROUTE_KINDS.AccessToken
+  >,
+  string
+> = {
   [SITE_ROUTE_KINDS.Login]: "/sign-in",
   [SITE_ROUTE_KINDS.Usage]: "/usage-logs",
   [SITE_ROUTE_KINDS.CheckIn]: "/profile",
-  [SITE_ROUTE_KINDS.AdminCredentials]: "/profile",
   [SITE_ROUTE_KINDS.Redeem]: "/wallet",
 }
 
@@ -44,7 +54,7 @@ const SITE_ROUTE_FACTS_CACHE_TTL_MS = 5 * 60 * 1000
  * `/token/`, `/billing/`, `/profile` and `/sign-in`.
  * https://github.com/RixAPI/Rix-API
  */
-const RIX_API_V6_ROUTE_PATHS: Record<DynamicRouteKind, string> = {
+const RIX_API_V6_ROUTE_PATHS: Partial<Record<DynamicRouteKind, string>> = {
   [SITE_ROUTE_KINDS.Login]: "/sign-in",
   [SITE_ROUTE_KINDS.Usage]: "/logs",
   [SITE_ROUTE_KINDS.CheckIn]: "/profile",
@@ -109,6 +119,17 @@ export const resolveNewApiThemeRoute: DynamicAccountRouteResolver = async (
   accountBootstrap,
   staticPath,
 ) => {
+  // Account onboarding and administrator configuration share this credential.
+  if (
+    route === SITE_ROUTE_KINDS.AdminCredentials ||
+    route === SITE_ROUTE_KINDS.AccessToken
+  ) {
+    return resolveNewApiCredentialPage(
+      target.baseUrl,
+      staticPath,
+      target.pageInspectionExecution,
+    )
+  }
   const facts = await fetchCachedBootstrapRouteFacts(
     target.baseUrl,
     accountBootstrap,
@@ -138,4 +159,5 @@ export const resolveRixApiConsoleRoute: DynamicAccountRouteResolver = async (
 /** Clear the shared bounded probe cache between tests. */
 export function clearSiteRouteFactsCacheForTests() {
   bootstrapRouteFactsCache.clear()
+  clearNewApiCredentialPagesForTests()
 }

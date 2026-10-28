@@ -9,10 +9,10 @@
     "continueInFullPage": "在完整页面继续",
     "continueInSidePanel": "转到侧边栏继续",
     "continuing": "正在准备表单…",
-    "description": "该站点要求先完成安全验证，扩展暂时无法自动获取 Access Token。已识别的信息已保留，请手动填写账号管理令牌。",
+    "description": "扩展无法自动获取 Access Token。已识别的信息已保留，请前往站点复制或创建账号管理令牌，再回到这里填写。",
     "destinationBusy": "这里已有未完成的账号表单。保存或关闭后，将继续从弹窗带来的表单。",
     "fullPageHint": "在完整页面继续可保留当前表单，切换到站点复制令牌时不会关闭。",
-    "generateStep": "已有有效的完整 Access Token 时可直接填写；否则，打开站点的「安全设置 → Access Token」，完成验证并生成令牌。新版站点还会要求选择权限与有效期，请授予全部可用权限。",
+    "generateStep": "已有有效的完整 Access Token 时可直接填写；否则，请在站点的个人资料、账号设置或令牌管理页面找到 Access Token 并创建。如站点要求验证、权限或有效期，请按官网提示设置。",
     "laozhang": {
       "generateStep": "已有完整的 System token 时可直接填写；否则打开 LaoZhang「个人资料 → System token」，完成站点安全验证后生成并立即保存。令牌仅显示一次，重新生成可能替换旧令牌。",
       "openProfile": "打开 LaoZhang 个人资料",
@@ -25,8 +25,8 @@
       "pasteStep": "粘贴已有的完整 sk_ API Key；如需新建，请先前往 Novita 密钥管理创建并复制。有效期由创建时的设置决定。",
       "title": "凭据方式"
     },
-    "openSecurity": "打开站点安全设置",
-    "openSecurityFailed": "无法打开页面。请手动进入该站点的「安全设置 → Access Token」，复制令牌后回到这里填写。",
+    "openSecurity": "打开令牌获取页面",
+    "openSecurityFailed": "无法打开页面。请在站点的个人资料、账号设置或令牌管理页面找到 Access Token，复制后回到这里填写。",
     "pasteStep": "立即复制完整的 Access Token，粘贴到下方「访问令牌」字段，核对账号信息后保存。",
     "popupHint": "转到侧边栏后，当前表单会保留；你可以在站点完成验证、复制令牌，同时继续填写。侧边栏无法打开时，会在完整页面继续。",
     "prepareFailed": "无法暂存当前表单。请先复制需要保留的信息，再从完整页面重新打开账号表单。",

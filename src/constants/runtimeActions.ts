@@ -195,6 +195,7 @@ export const RuntimeActionIds = {
   ContentRequestyManagementKeyAction: "requestyManagementKeyAction",
   ContentWaitAndGetUserInfo: "waitAndGetUserInfo",
   ContentPerformTempWindowFetch: "performTempWindowFetch",
+  ContentInspectCredentialPage: "inspectCredentialPage",
   ContentGetRenderedTitle: "getRenderedTitle",
   ContentShowShieldBypassUi: "showShieldBypassUi",
   ContentStarPromotionReport: "starPromotionReport",

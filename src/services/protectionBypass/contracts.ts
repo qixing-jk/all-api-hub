@@ -408,6 +408,7 @@ export const TEMP_CONTEXT_TASK_KINDS = {
   NativePageAction: "native_page_action",
   OpenRouterManagementKeyAction: "openrouter_management_key_action",
   RequestyManagementKeyAction: "requesty_management_key_action",
+  CredentialPageInspect: "credential_page_inspect",
   RenderedTitle: "rendered_title",
   CheckinFeedbackScan: "checkin_feedback_scan",
   SessionRead: "session_read",
@@ -471,6 +472,10 @@ export type TempContextTask =
       params: WithoutProtectionBypassIntent<TempWindowRequestyManagementKeyActionParams>
     }
   | {
+      kind: typeof TEMP_CONTEXT_TASK_KINDS.CredentialPageInspect
+      params: { originUrl: string; requestId?: string }
+    }
+  | {
       kind: typeof TEMP_CONTEXT_TASK_KINDS.RenderedTitle
       params: WithoutProtectionBypassIntent<TempWindowRenderedTitleParams>
     }
@@ -510,6 +515,10 @@ type TempContextTaskResultMap = {
   [TEMP_CONTEXT_TASK_KINDS.NativePageAction]: TempWindowCheckinPageAction
   [TEMP_CONTEXT_TASK_KINDS.OpenRouterManagementKeyAction]: TempWindowOpenRouterManagementKeyActionResult
   [TEMP_CONTEXT_TASK_KINDS.RequestyManagementKeyAction]: TempWindowRequestyManagementKeyActionResult
+  [TEMP_CONTEXT_TASK_KINDS.CredentialPageInspect]: {
+    success: boolean
+    state?: "credential" | "not_found" | "unknown"
+  }
   [TEMP_CONTEXT_TASK_KINDS.RenderedTitle]: TempWindowRenderedTitleResponse
   [TEMP_CONTEXT_TASK_KINDS.SessionRead]: TempWindowFetch
   [TEMP_CONTEXT_TASK_KINDS.NewApiSessionRead]: TempWindowFetch
@@ -821,6 +830,7 @@ export function isTempContextTask(value: unknown): value is TempContextTask {
       return isRequestyManagementKeyActionParams(params)
     case TEMP_CONTEXT_TASK_KINDS.CheckinFeedbackScan:
       return isCheckinFeedbackScanParams(params)
+    case TEMP_CONTEXT_TASK_KINDS.CredentialPageInspect:
     case TEMP_CONTEXT_TASK_KINDS.RenderedTitle:
       return (
         isHttpUrl(params.originUrl) &&
@@ -889,6 +899,10 @@ const TEMP_CONTEXT_TASK_METADATA = {
   [TEMP_CONTEXT_TASK_KINDS.RequestyManagementKeyAction]: {
     operation: PROTECTION_BYPASS_OPERATIONS.NativePageAction,
     cause: PROTECTION_BYPASS_CAUSES.ExplicitContext,
+  },
+  [TEMP_CONTEXT_TASK_KINDS.CredentialPageInspect]: {
+    operation: PROTECTION_BYPASS_OPERATIONS.RenderedTitle,
+    cause: PROTECTION_BYPASS_CAUSES.RenderedPageRequired,
   },
   [TEMP_CONTEXT_TASK_KINDS.RenderedTitle]: {
     operation: PROTECTION_BYPASS_OPERATIONS.RenderedTitle,
@@ -962,6 +976,7 @@ export const PROTECTION_BYPASS_FEATURE_TASK_KINDS = {
     TEMP_CONTEXT_TASK_KINDS.OctopusApiFetch,
   ],
   [PROTECTION_BYPASS_FEATURES.AccountOnboarding]: [
+    TEMP_CONTEXT_TASK_KINDS.CredentialPageInspect,
     TEMP_CONTEXT_TASK_KINDS.ApiFallbackFetch,
     TEMP_CONTEXT_TASK_KINDS.ExplicitPageFetch,
     TEMP_CONTEXT_TASK_KINDS.ProfileIsolatedFetch,
