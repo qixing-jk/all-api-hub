@@ -13,6 +13,7 @@ Keep one entrypoint for shared evidence, authentication, and validation decision
 | --- | --- | --- |
 | Every integration: prevent incomplete adaptation | [Checklist map and shared rules](references/capability-assessment.md#checklist-map) | Selects the scope checklist and reuses preparation, outcome and delivery rules |
 | User/account site: detection, balance, plans, usage, keys, aff/invite | [Account sites](references/account-sites.md) | Owns user identity, account credentials, units, and user actions |
+| Balance, currency, allowance or reward meaning, including cross-type audits | [Balance semantics](references/balance-semantics.md) | Verifies native assets, conversion, scope and downstream monetary eligibility |
 | Automatic account detection or credential-completion guidance | [Detection outcome acceptance](references/integration-acceptance.md#accept-the-intended-detection-outcome) | Defines expected fields, missing credentials, guidance and next action for each site/auth state before testing |
 | Management/admin site: connect, channels, providers, native resources | [Managed sites](references/managed-sites.md) and [management checklist](references/managed-site-checklist.md) | Owns admin scopes and resource operations; assessed separately from account capabilities |
 | Add, extend or compare a native editor, including existing integrations | [Native editor workflow parity](references/native-editor-parity.md) and the relevant account/managed checklist | Establishes common tasks and type/mode variants before choosing fields and layout |
