@@ -156,7 +156,7 @@ function makeTitleRegex(name: string): RegExp {
 const NEW_API_USAGE_PATH = "/console/log"
 const NEW_API_CHECKIN_PATH = "/console/personal"
 // https://github.com/QuantumNous/new-api/blob/387a40914853310d69adc2f52474134ced5f4811/web/src/features/security/index.tsx
-const NEW_API_ACCESS_TOKEN_PATH = "/security#security-access"
+const NEW_API_CREDENTIALS_PATH = "/security#security-access"
 
 // Preserve the existing compatibility allowlist for forks without a recorded
 // callback source. Verified upstreams below declare their own completion paths.
@@ -785,9 +785,9 @@ const ACCOUNT_SITE_DEFINITIONS = [
         pricingSearchParam: "search",
         usagePath: NEW_API_USAGE_PATH,
         checkInPath: NEW_API_CHECKIN_PATH,
-        adminCredentialsPath: NEW_API_CHECKIN_PATH,
+        adminCredentialsPath: NEW_API_CREDENTIALS_PATH,
         loginPath: "/login",
-        accessTokenPath: NEW_API_ACCESS_TOKEN_PATH,
+        accessTokenPath: NEW_API_CREDENTIALS_PATH,
         redeemPath: "/console/topup",
         siteAnnouncementsPath: "/",
       },
@@ -878,7 +878,7 @@ const ACCOUNT_SITE_DEFINITIONS = [
         checkInPath: NEW_API_CHECKIN_PATH,
         adminCredentialsPath: NEW_API_CHECKIN_PATH,
         loginPath: "/login",
-        accessTokenPath: NEW_API_ACCESS_TOKEN_PATH,
+        accessTokenPath: NEW_API_CREDENTIALS_PATH,
         redeemPath: "/console/topup",
         siteAnnouncementsPath: "/",
       },
@@ -2143,7 +2143,7 @@ const COMPATIBLE_ACCOUNT_SITE_DEFINITIONS = [
         usagePath: NEW_API_USAGE_PATH,
         checkInPath: NEW_API_CHECKIN_PATH,
         adminCredentialsPath: NEW_API_CHECKIN_PATH,
-        accessTokenPath: NEW_API_ACCESS_TOKEN_PATH,
+        accessTokenPath: NEW_API_CREDENTIALS_PATH,
         redeemPath: "/console/topup",
         siteAnnouncementsPath: "/",
       },

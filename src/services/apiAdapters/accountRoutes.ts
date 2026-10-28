@@ -22,6 +22,8 @@ export function resolveStaticAccountRoutePath(
       return router.usagePath
     case ACCOUNT_BOOTSTRAP_ROUTE_KINDS.CheckIn:
       return router.checkInPath
+    case ACCOUNT_BOOTSTRAP_ROUTE_KINDS.AccessToken:
+      return router.accessTokenPath
     case ACCOUNT_BOOTSTRAP_ROUTE_KINDS.AdminCredentials:
       return router.adminCredentialsPath
     case ACCOUNT_BOOTSTRAP_ROUTE_KINDS.Redeem:

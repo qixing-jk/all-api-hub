@@ -38,6 +38,7 @@ import {
 import { tempWindowBackgroundRuntime } from "./runtime"
 import {
   executeAutoDetectSite,
+  executeCredentialPageInspect,
   executeNewApiSessionRead,
   executeOpenTempContext,
   executeTempWindowGetRenderedTitle,
@@ -217,6 +218,14 @@ export async function executeAuthorizedTempContextTask(
         return
       case TEMP_CONTEXT_TASK_KINDS.NativePageAction:
         await executeTempWindowCheckinPageAction(
+          task.params,
+          suppressMinimize,
+          sendResponse,
+          authorizeAtAcquire,
+        )
+        return
+      case TEMP_CONTEXT_TASK_KINDS.CredentialPageInspect:
+        await executeCredentialPageInspect(
           task.params,
           suppressMinimize,
           sendResponse,

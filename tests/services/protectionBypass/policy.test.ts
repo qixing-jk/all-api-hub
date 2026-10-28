@@ -555,6 +555,7 @@ describe("evaluateProtectionBypassPolicy", () => {
       managed_site_channels: ["new_api_session_read", "octopus_api_fetch"],
       managed_site_model_sync: ["new_api_session_read", "octopus_api_fetch"],
       account_onboarding: [
+        "credential_page_inspect",
         "api_fallback_fetch",
         "explicit_page_fetch",
         "profile_isolated_fetch",
@@ -602,6 +603,7 @@ describe("evaluateProtectionBypassPolicy", () => {
               input: { baseUrl: fetchParams.originUrl, siteType: "new-api" },
             },
           }
+        case "credential_page_inspect":
         case "rendered_title":
           return { kind, params: { originUrl: fetchParams.originUrl } }
         case "session_read":

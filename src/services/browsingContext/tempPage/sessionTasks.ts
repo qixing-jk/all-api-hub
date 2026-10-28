@@ -14,6 +14,7 @@ import { AuthTypeEnum } from "~/types"
 import { isAllowedIncognitoAccess } from "~/utils/browser/runtime"
 import { sendTabMessageWithRetry } from "~/utils/browser/runtimeMessages"
 import { getErrorMessage } from "~/utils/core/error"
+import { safeRandomUUID } from "~/utils/core/identifier"
 import { t } from "~/utils/i18n/core"
 
 import {
@@ -306,5 +307,37 @@ async function getSiteDataFromTab(
       throw error
     }
     return null
+  }
+}
+
+/** Renders a page only after network evidence was exhausted, through owned lifecycle. */
+export async function executeCredentialPageInspect(
+  request: TaskParams<typeof TEMP_CONTEXT_TASK_KINDS.CredentialPageInspect>,
+  suppressMinimize: boolean,
+  sendResponse: (response?: any) => void,
+  authorizeAtAcquire?: AuthorizeTempContextAtAcquire,
+) {
+  const requestId = request.requestId || safeRandomUUID("credential-page")
+  try {
+    const context = await tempWindowBackgroundRuntime.acquire(
+      request.originUrl,
+      requestId,
+      suppressMinimize,
+      {},
+      authorizeAtAcquire,
+    )
+    await context.navigate(request.originUrl, {
+      requestId,
+      origin: request.originUrl,
+    })
+    const response = await sendTabMessageWithRetry(context.tabId, {
+      action: RuntimeActionIds.ContentInspectCredentialPage,
+      requestId,
+    })
+    sendResponse(response ?? { success: false })
+  } catch {
+    sendResponse({ success: false })
+  } finally {
+    await tempWindowBackgroundRuntime.release(requestId)
   }
 }

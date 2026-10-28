@@ -12,7 +12,7 @@
     "description": "Die Erweiterung konnte keinen Access Token automatisch abrufen. Die erkannten Informationen bleiben erhalten. Kopiere oder erstelle auf der Website einen Kontoverwaltungstoken und trage ihn anschließend hier ein.",
     "destinationBusy": "Hier ist bereits ein Kontoformular geöffnet. Speichere oder schließe es, um mit dem Formular aus dem Popup fortzufahren.",
     "fullPageHint": "Auf einer vollständigen Seite bleibt dieses Formular geöffnet, während du das Token auf der Website kopierst.",
-    "generateStep": "Verwende einen vorhandenen gültigen, vollständigen Access Token. Andernfalls öffne auf der Website Sicherheit → Access Token, schließe die Verifizierung ab und erstelle einen Token. Neuere Builds fragen zusätzlich nach Berechtigungen und Laufzeit; erteile alle angebotenen Berechtigungen.",
+    "generateStep": "Verwende einen gültigen, vollständigen Access Token oder erstelle einen im Profil, in den Kontoeinstellungen oder in der Token-Verwaltung der Website. Folge bei Bedarf den Anweisungen zur Verifizierung, zu Berechtigungen und zur Laufzeit.",
     "laozhang": {
       "generateStep": "Verwende einen vorhandenen vollständigen System token oder öffne LaoZhang Profil → System token, führe die Sicherheitsprüfung durch und erstelle und speichere ihn sofort. Der Token wird nur einmal angezeigt; eine erneute Erstellung kann den alten Token ersetzen.",
       "openProfile": "LaoZhang-Profil öffnen",
@@ -25,8 +25,8 @@
       "pasteStep": "Füge einen vollständigen sk_ API-Schlüssel ein. Neue Schlüssel kannst du in Novitas Schlüsselverwaltung erstellen und kopieren. Die Gültigkeit wird bei der Erstellung festgelegt.",
       "title": "Anmeldemethode"
     },
-    "openSecurity": "Sicherheitseinstellungen der Website öffnen",
-    "openSecurityFailed": "Die Seite konnte nicht geöffnet werden. Öffne Sicherheit → Access Token auf der Website manuell und kehre zum Einfügen des Tokens hierher zurück.",
+    "openSecurity": "Token-Seite öffnen",
+    "openSecurityFailed": "Die Seite konnte nicht geöffnet werden. Suche Access Token im Profil, in den Kontoeinstellungen oder in der Token-Verwaltung der Website, kopiere ihn und trage ihn hier ein.",
     "pasteStep": "Kopiere das vollständige Access Token sofort, füge es unten im Feld „Access Token“ ein, prüfe die Kontodaten und speichere sie.",
     "popupHint": "In der Seitenleiste bleibt dieses Formular erhalten, während du dich auf der Website verifizierst und das Token kopierst. Lässt sich die Seitenleiste nicht öffnen, wird das Formular auf einer vollständigen Seite geöffnet.",
     "prepareFailed": "Das Formular konnte nicht zwischengespeichert werden. Kopieren Sie wichtige Angaben und öffnen Sie das Kontoformular auf der vollständigen Seite erneut.",

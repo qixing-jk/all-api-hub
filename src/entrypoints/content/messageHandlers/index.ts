@@ -40,6 +40,8 @@ import {
 } from "~/services/apiService/sub2api/oauth/content"
 import { onRuntimeMessage } from "~/utils/browser/runtimeMessages"
 
+import { handleInspectCredentialPage } from "./handlers/credentialPage"
+
 /**
  * Registers content-script message handlers for fetching storage data,
  * checking guard status, relaying temp fetches, etc.
@@ -159,6 +161,10 @@ export function setupContentMessageHandlers() {
       return handlePerformTempWindowFetch(request, sendResponse)
     }
 
+    if (request.action === RuntimeActionIds.ContentInspectCredentialPage) {
+      void handleInspectCredentialPage(request, sendResponse)
+      return true
+    }
     if (request.action === RuntimeActionIds.ContentGetRenderedTitle) {
       return handleGetRenderedTitle(request, sendResponse)
     }

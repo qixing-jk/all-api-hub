@@ -1,23 +1,26 @@
 import { PanelRightOpen } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { ActionGroup, Alert, Button } from "~/components/ui"
-import {
-  getAccountSiteApiRouter,
-  SITE_TYPES,
-  type AccountSiteType,
-} from "~/constants/siteType"
+import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { ManualAddGuideButton } from "~/features/AccountManagement/components/AccountDialog/ManualAddGuideButton"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import {
+  getStaticAccountSiteRouteUrl,
+  resolveAccountSiteRouteUrl,
+  SITE_ROUTE_KINDS,
+} from "~/services/accounts/utils/siteRouteResolver"
 import {
   getAccountSiteDefinition,
   type AccountSiteAccessTokenVerificationGuide,
   type AccountSiteManualAddGuideAnchor,
 } from "~/services/accountSiteDefinitions"
+import { createUserCommandProtectionBypassExecution } from "~/services/protectionBypass/client"
+import { PROTECTION_BYPASS_USER_COMMANDS } from "~/services/protectionBypass/contracts"
 import { createTab } from "~/utils/browser/tabs"
-import { joinUrl } from "~/utils/core/url"
+import { getCurrentTempWindowRequestSource } from "~/utils/browser/tempWindowRequestSource"
 import { isHttpUrl } from "~/utils/core/urlParsing"
 
 export interface AccessTokenContinuationAction {
@@ -28,7 +31,7 @@ export interface AccessTokenContinuationAction {
   errorMessage?: string | null
 }
 
-/** Guides site-owned security verification into manual account token entry. */
+/** Guides manual account token acquisition on the deployment's own page. */
 export function AccessTokenVerificationGuide({
   message,
   siteUrl,
@@ -46,7 +49,30 @@ export function AccessTokenVerificationGuide({
 }) {
   const { t } = useTranslation("accountDialog")
   const [navigationFailed, setNavigationFailed] = useState(false)
-  const { accessTokenPath } = getAccountSiteApiRouter(siteType)
+  const [isOpening, setIsOpening] = useState(false)
+  const opening = useRef(false)
+  const target = { baseUrl: siteUrl ?? "", siteType }
+  const credentialPage = getStaticAccountSiteRouteUrl(
+    target,
+    SITE_ROUTE_KINDS.AccessToken,
+  )
+  const hasContinuation = Boolean(continuation)
+  useEffect(() => {
+    if (
+      hasContinuation ||
+      siteType !== SITE_TYPES.NEW_API ||
+      !siteUrl ||
+      !isHttpUrl(siteUrl) ||
+      !credentialPage
+    )
+      return
+    // Start only the quiet network stage while the user reads the guide.
+    // Explicit intent is added on click, so warmup cannot open a temp page.
+    void resolveAccountSiteRouteUrl(
+      { baseUrl: siteUrl, siteType },
+      SITE_ROUTE_KINDS.AccessToken,
+    ).catch(() => undefined)
+  }, [hasContinuation, siteType, siteUrl, credentialPage])
   const guide =
     getAccountSiteDefinition(siteType)?.onboarding?.accessTokenVerificationGuide
   const guideCopy = {
@@ -94,13 +120,33 @@ export function AccessTokenVerificationGuide({
   }
 
   const openAccessTokenPage = async () => {
-    if (!siteUrl || !isHttpUrl(siteUrl) || !accessTokenPath) return
+    if (opening.current || !siteUrl || !isHttpUrl(siteUrl) || !credentialPage)
+      return
+    opening.current = true
+    setIsOpening(true)
     setNavigationFailed(false)
     onPrepareAccessTokenInput?.()
     try {
-      await createTab(joinUrl(siteUrl, accessTokenPath), true)
+      const destination = await resolveAccountSiteRouteUrl(
+        {
+          ...target,
+          pageInspectionExecution: createUserCommandProtectionBypassExecution(
+            PROTECTION_BYPASS_USER_COMMANDS.DetectAccount,
+            getCurrentTempWindowRequestSource(),
+          ),
+        },
+        SITE_ROUTE_KINDS.AccessToken,
+      )
+      if (!destination) {
+        setNavigationFailed(true)
+        return
+      }
+      await createTab(destination, true)
     } catch {
       setNavigationFailed(true)
+    } finally {
+      opening.current = false
+      setIsOpening(false)
     }
   }
 
@@ -144,11 +190,12 @@ export function AccessTokenVerificationGuide({
               <p>{t("accessTokenVerification.rotationWarning")}</p>
             )}
             <ActionGroup className="items-stretch justify-start">
-              {accessTokenPath && siteUrl && isHttpUrl(siteUrl) && (
+              {credentialPage && siteUrl && isHttpUrl(siteUrl) && (
                 <Button
                   type="button"
                   size="sm"
                   onClick={openAccessTokenPage}
+                  loading={isOpening}
                   leftIcon={<WorkflowTransitionIcon className="h-4 w-4" />}
                 >
                   {copy.openPage}

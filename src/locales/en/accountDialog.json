@@ -12,7 +12,7 @@
     "description": "The extension could not obtain an Access Token automatically. Your detected information has been kept. Copy or create an account management token on the site, then return here to enter it.",
     "destinationBusy": "There is an unfinished account form here. Save or close it to continue with the form from the popup.",
     "fullPageHint": "Continue in a full page to keep this form open while you copy the token on the site.",
-    "generateStep": "Use an existing valid, complete Access Token if you have one. Otherwise, open Security → Access Token on the site, complete verification, and generate a token. Newer builds also ask which permissions and expiry to grant; grant all the permissions offered.",
+    "generateStep": "Use an existing valid, complete Access Token, or create one in the site’s profile, account settings, or token management page. Follow the site’s instructions for verification, permissions, and expiry when requested.",
     "laozhang": {
       "generateStep": "Use an existing complete System token, or open LaoZhang Profile → System token, complete the site security verification, then generate and save it immediately. The token is shown once; regenerating may replace the old token.",
       "openProfile": "Open LaoZhang profile",
@@ -25,8 +25,8 @@
       "pasteStep": "Paste an existing full sk_ API key. To create one, open Novita key management and copy the new key. Its expiry is determined when it is created.",
       "title": "Credential method"
     },
-    "openSecurity": "Open site security settings",
-    "openSecurityFailed": "Could not open the page. Open Security → Access Token on the site manually, then return here to paste the token.",
+    "openSecurity": "Open token page",
+    "openSecurityFailed": "Could not open the page. Find Access Token in the site’s profile, account settings, or token management page, copy it, then return here to enter it.",
     "pasteStep": "Copy the full Access Token immediately, paste it into the Access Token field below, then check your account details and save.",
     "popupHint": "Continue in the side panel to keep this form while you verify your identity and copy the token on the site. If the side panel cannot open, the form will open in a full page.",
     "prepareFailed": "Unable to stage the current form. Copy any information you need to keep, then reopen the account form in the full page.",
