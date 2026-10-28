@@ -112,3 +112,40 @@ it("reuses a pending network warmup when the user opens the token page", async (
   expect(fetchApi).toHaveBeenCalledTimes(2)
   expect(inspect).not.toHaveBeenCalled()
 })
+
+it("ignores foreign-origin entry bundles and keeps the configured fallback", async () => {
+  fetchApi.mockResolvedValueOnce(
+    '<script src="https://cdn.example/index.js"></script>',
+  )
+  await expect(
+    resolveNewApiCredentialPage("https://example.test", "/security"),
+  ).resolves.toBe("/security")
+  expect(fetchApi).toHaveBeenCalledTimes(1)
+})
+it("does not let completion of an older warmup remove a newer pending request", async () => {
+  let finishOld!: (value: string) => void
+  let finishNew!: (value: string) => void
+  fetchApi.mockReturnValueOnce(
+    new Promise<string>((resolve) => {
+      finishOld = resolve
+    }),
+  )
+  const old = resolveNewApiCredentialPage("https://example.test", "/security")
+  clearNewApiCredentialPagesForTests()
+  fetchApi.mockReturnValueOnce(
+    new Promise<string>((resolve) => {
+      finishNew = resolve
+    }),
+  )
+  const newer = resolveNewApiCredentialPage("https://example.test", "/security")
+  finishOld("<html></html>")
+  await old
+  const shared = resolveNewApiCredentialPage(
+    "https://example.test",
+    "/security",
+  )
+  expect(fetchApi).toHaveBeenCalledTimes(2)
+  finishNew("<html></html>")
+  await expect(newer).resolves.toBe("/security")
+  await expect(shared).resolves.toBe("/security")
+})

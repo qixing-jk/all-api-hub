@@ -169,3 +169,21 @@ describe("temp-page onboarding session probe", () => {
     expect(sendMessage).not.toHaveBeenCalled()
   })
 })
+
+it("generates an owned request identity and rejects an empty inspection response", async () => {
+  vi.resetAllMocks()
+  acquire.mockResolvedValue({ tabId: 42, navigate })
+  release.mockResolvedValue(undefined)
+  sendMessage.mockResolvedValueOnce(undefined)
+  const response = vi.fn()
+  await executeCredentialPageInspect(
+    { originUrl: "https://example.invalid/profile" },
+    false,
+    response,
+  )
+  const requestId = acquire.mock.calls.at(-1)![1]
+  expect(requestId).toEqual(expect.any(String))
+  expect(requestId.length).toBeGreaterThan(0)
+  expect(release).toHaveBeenLastCalledWith(requestId)
+  expect(response).toHaveBeenCalledWith({ success: false })
+})

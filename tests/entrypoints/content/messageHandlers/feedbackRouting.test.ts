@@ -6,6 +6,7 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
 const mocks = vi.hoisted(() => ({
   register: vi.fn(),
+  inspectCredential: vi.fn(),
   requesty: vi.fn(),
   newApiPasswordUi: vi.fn(),
   sub2ApiPasswordUi: vi.fn(),
@@ -65,6 +66,10 @@ vi.mock("~/services/checkin/turnstile/assistPageNotice", () => ({
 vi.mock("~/lib/notify/content", () => ({
   default: { info: vi.fn(), dismiss: vi.fn() },
 }))
+vi.mock(
+  "~/entrypoints/content/messageHandlers/handlers/credentialPage",
+  () => ({ handleInspectCredentialPage: mocks.inspectCredential }),
+)
 beforeEach(() => vi.resetAllMocks())
 
 it("routes Requesty creation to its content handler and preserves the asynchronous reply contract", () => {
@@ -179,4 +184,19 @@ describe("feedback content routing", () => {
       expect(reply).toHaveBeenCalledWith({ presented: false }),
     )
   })
+})
+
+it("keeps the credential inspection reply port open and forwards its response", async () => {
+  mocks.inspectCredential.mockImplementation(async (_request, reply) =>
+    reply({ success: true, state: "credential" }),
+  )
+  setupContentMessageHandlers()
+  const request = { action: RuntimeActionIds.ContentInspectCredentialPage }
+  const reply = vi.fn()
+  expect(atIndex(mocks.register.mock.calls, 0)[0](request, {}, reply)).toBe(
+    true,
+  )
+  await vi.waitFor(() =>
+    expect(reply).toHaveBeenCalledWith({ success: true, state: "credential" }),
+  )
 })

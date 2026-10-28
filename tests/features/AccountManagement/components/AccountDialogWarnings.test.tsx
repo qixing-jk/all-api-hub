@@ -137,6 +137,41 @@ describe("AccountDialog warnings", () => {
       resolve.mockRestore()
     }
   })
+  it.each(["empty", "rejected"])(
+    "reports %s credential discovery and allows retry",
+    async (outcome) => {
+      const resolve = vi.spyOn(siteRouteResolver, "resolveAccountSiteRouteUrl")
+      if (outcome === "empty") resolve.mockResolvedValue(null)
+      else resolve.mockRejectedValue(new Error("offline"))
+      try {
+        render(
+          <AccessTokenVerificationGuide
+            message="Enter a token"
+            siteUrl="https://site.example.com"
+          />,
+        )
+        const button = screen.getByRole("button", {
+          name: "accessTokenVerification.openSecurity",
+        })
+        await userEvent.setup().click(button)
+        expect(
+          await screen.findByText("accessTokenVerification.openSecurityFailed"),
+        ).toHaveTextContent("accessTokenVerification.openSecurityFailed")
+        expect(browser.tabs.create).not.toHaveBeenCalled()
+        expect(button).not.toBeDisabled()
+        resolve.mockResolvedValue("https://site.example.com/profile")
+        await userEvent.setup().click(button)
+        await waitFor(() =>
+          expect(browser.tabs.create).toHaveBeenCalledTimes(1),
+        )
+        expect(
+          screen.queryByText("accessTokenVerification.openSecurityFailed"),
+        ).not.toBeInTheDocument()
+      } finally {
+        resolve.mockRestore()
+      }
+    },
+  )
   it("starts a network-only warmup before the token-page click", async () => {
     const resolve = vi
       .spyOn(siteRouteResolver, "resolveAccountSiteRouteUrl")

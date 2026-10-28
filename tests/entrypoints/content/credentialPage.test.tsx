@@ -40,3 +40,15 @@ it("keeps a login or challenge page inconclusive after the bounded wait", async 
   await pending
   expect(reply).toHaveBeenCalledWith({ success: true, state: "unknown" })
 })
+
+it("ignores unrelated buttons and loading mutations until a credential action appears", async () => {
+  document.body.innerHTML = "<button></button><h1>Loading</h1>"
+  const reply = vi.fn()
+  const pending = handleInspectCredentialPage({}, reply)
+  document.body.append(document.createElement("div"))
+  await Promise.resolve()
+  expect(reply).not.toHaveBeenCalled()
+  document.body.insertAdjacentHTML("beforeend", "<button>Access Token</button>")
+  await pending
+  expect(reply).toHaveBeenCalledWith({ success: true, state: "credential" })
+})
