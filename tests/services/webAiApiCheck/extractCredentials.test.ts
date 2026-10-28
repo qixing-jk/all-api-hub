@@ -24,6 +24,40 @@ function buildKnownKey(body: string, prefix = OPENAI_KEY_PREFIX): string {
 }
 
 describe("webAiApiCheck extractCredentials", () => {
+  it.each(["api_key", "access_token"])(
+    "extracts known credentials from fragment parameter %s",
+    (parameter) => {
+      const key = buildKnownKey("FragmentFixture123456789")
+      const result = extractApiCheckCredentialsFromText(
+        `https://gateway.example.org/#${parameter}=${key}&mode=demo`,
+      )
+      expect(result.apiKey).toBe(key)
+      expect(
+        result.summary.autoPromptEligible ||
+          result.summary.enhancedAutoPromptEligible,
+      ).toBe(true)
+    },
+  )
+
+  it.each(["?", "#"])(
+    "preserves literal plus signs in %s credentials",
+    (separator) => {
+      const key = "ABCDEFGHIJ+KLMNOPQRST"
+      const result = extractApiCheckCredentialsFromText(
+        `https://gateway.example.org/${separator}api_key=${key}&mode=demo`,
+      )
+      expect(result.apiKey).toBe(key)
+    },
+  )
+
+  it("ignores malformed URLs while preserving a separate text credential", () => {
+    const key = buildKnownKey("ValidFixture123456789")
+    const result = extractApiCheckCredentialsFromText(
+      `https://gateway.example.org:99999/?api_key=invalid\napi_key=${key}`,
+    )
+    expect(result.apiKey).toBe(key)
+  })
+
   it("preserves auto-prompting for an unfamiliar text credential paired with a URL", () => {
     const key = "customprovider-Ab12Cd34Ef56Gh78Ij90Kl12Mn34"
     const result = extractApiCheckCredentialsFromText(

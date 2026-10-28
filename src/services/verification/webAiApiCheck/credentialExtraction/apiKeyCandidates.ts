@@ -226,7 +226,11 @@ export function extractApiKeyCandidates(
     } catch {
       continue
     }
-    for (const [name, value] of url.searchParams) {
+    for (const [name, value] of [
+      ...new URLSearchParams(url.search.slice(1).replace(/\+/g, "%2B")),
+      ...new URLSearchParams(url.hash.slice(1).replace(/\+/g, "%2B")),
+    ]) {
+      // Preserve literal plus signs before form decoding.
       // Reuse the existing label vocabulary; parsing the URL keeps subsequent
       // parameters out of the credential and decodes percent escapes correctly.
       const labelMatch = createApiKeyExtractionPatterns().labeled.exec(
