@@ -5,6 +5,7 @@ import {
   decodeBase64ApiKeyCandidateLayers,
   isApiKeyFallbackCandidate,
 } from "./apiKeyRules"
+import { splitApiCheckTextSources } from "./baseUrlCandidates"
 import {
   compareApiKeyCandidates,
   mergeReasons,
@@ -27,13 +28,18 @@ export function extractApiKeyCandidates(
   rawInput: string,
   options: ApiCheckExtractionOptions,
 ): InternalApiCheckCandidate[] {
+  // Partition before cleanup or token guessing so URL structure cannot be
+  // transformed into a key-shaped string. Newlines keep adjacent tokens apart.
+  const { text: textInput, urls: urlInputs } =
+    splitApiCheckTextSources(rawInput)
   const cleanedApiKeyInput = applyCustomApiKeyCleanupPatterns(
-    rawInput,
+    textInput,
     options.apiKeyCleanupPatterns,
   )
   const apiKeyInput = cleanedApiKeyInput.value
   const candidates: InternalApiCheckCandidate[] = []
   let insertionOrder = 0
+  let embeddedInUrl = false
 
   const pushClassifiedApiKeyCandidate = (
     candidateValue: string,
@@ -45,6 +51,14 @@ export function extractApiKeyCandidates(
     pushCandidate(candidates, {
       ...classified,
       kind: API_CHECK_CANDIDATE_KINDS.API_KEY,
+      hasNonUrlSource: !embeddedInUrl,
+      autoPromptEligible:
+        !embeddedInUrl &&
+        (classified.autoPromptEligible ||
+          candidateReasons.includes(API_CHECK_CANDIDATE_REASONS.LABELED) ||
+          candidateReasons.includes(
+            API_CHECK_CANDIDATE_REASONS.AUTHORIZATION_HEADER,
+          )),
       reasons: mergeReasons(candidateReasons, classified.reasons),
       cleanupApplied:
         cleanedApiKeyInput.cleanupApplied ||
@@ -151,7 +165,8 @@ export function extractApiKeyCandidates(
       kind: API_CHECK_CANDIDATE_KINDS.API_KEY,
       confidence: API_CHECK_CANDIDATE_CONFIDENCES.STANDARD,
       reasons: candidateReasons,
-      autoPromptEligible: true,
+      autoPromptEligible: !embeddedInUrl,
+      hasNonUrlSource: !embeddedInUrl,
       insertionOrder,
     }
     if (
@@ -202,6 +217,28 @@ export function extractApiKeyCandidates(
         ? [API_CHECK_CANDIDATE_REASONS.CUSTOM_REGEX_REMOVED]
         : []
     pushApiKeyCandidate(match[1] ?? "", candidateReasons, false)
+  }
+
+  for (const urlInput of urlInputs) {
+    let url: URL
+    try {
+      url = new URL(trimWrappingPunctuation(urlInput))
+    } catch {
+      continue
+    }
+    for (const [name, value] of url.searchParams) {
+      // Reuse the existing label vocabulary; parsing the URL keeps subsequent
+      // parameters out of the credential and decodes percent escapes correctly.
+      const labelMatch = createApiKeyExtractionPatterns().labeled.exec(
+        `${name}=${value}`,
+      )
+      if (labelMatch?.index !== 0 || labelMatch[1] !== value) continue
+      const classified = classifyApiKeyCandidate(value)
+      embeddedInUrl = !classified?.reasons.includes(
+        API_CHECK_CANDIDATE_REASONS.KNOWN_PREFIX,
+      )
+      pushApiKeyCandidate(value, [API_CHECK_CANDIDATE_REASONS.LABELED])
+    }
   }
 
   candidates.sort(compareApiKeyCandidates)

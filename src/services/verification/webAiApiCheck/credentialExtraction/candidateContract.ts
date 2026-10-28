@@ -72,4 +72,6 @@ export type ApiCheckExtractionOptions = {
 
 export type InternalApiCheckCandidate = ApiCheckCandidate & {
   insertionOrder: number
+  /** A matching credential was found outside URL contents. */
+  hasNonUrlSource?: boolean
 }

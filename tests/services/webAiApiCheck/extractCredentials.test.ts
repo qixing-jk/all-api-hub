@@ -24,6 +24,93 @@ function buildKnownKey(body: string, prefix = OPENAI_KEY_PREFIX): string {
 }
 
 describe("webAiApiCheck extractCredentials", () => {
+  it("preserves auto-prompting for an unfamiliar text credential paired with a URL", () => {
+    const key = "customprovider-Ab12Cd34Ef56Gh78Ij90Kl12Mn34"
+    const result = extractApiCheckCredentialsFromText(
+      `https://inference.example.org\n${key}`,
+    )
+    expect(result.apiKey).toBe(key)
+    expect(result.summary.enhancedAutoPromptEligible).toBe(true)
+  })
+
+  it.each(["api_key", "key", "token", "access_token"])(
+    "auto-prompts for a known-format credential in the %s URL parameter",
+    (parameter) => {
+      const key = buildKnownKey("QueryFixture123456789")
+      const result = extractApiCheckCredentialsFromText(
+        `https://gateway.example.org/connect?${parameter}=${encodeURIComponent(key)}&mode=demo`,
+      )
+      expect(result.apiKey).toBe(key)
+      expect(
+        result.summary.autoPromptEligible ||
+          result.summary.enhancedAutoPromptEligible,
+      ).toBe(true)
+    },
+  )
+
+  it.each([
+    "be94d810-6a52-42c7-a380-1a8f9c02de73",
+    "be94d8106a5242c7a3801a8f9c02de73",
+  ])("preserves explicit UUID credentials and manual candidates: %s", (key) => {
+    for (const credential of [
+      `api_key=${key}`,
+      `Authorization: Bearer ${key}`,
+      ...(key.includes("-") ? [`api_key=${btoa(key)}`] : []),
+    ]) {
+      const result = extractApiCheckCredentialsFromText(
+        `endpoint=https://inference.example.org\n${credential}`,
+      )
+      expect(result.apiKey).toBe(key)
+      expect(
+        result.summary.autoPromptEligible ||
+          result.summary.enhancedAutoPromptEligible,
+      ).toBe(true)
+    }
+    if (key.includes("-")) {
+      expect(extractApiCheckCredentialsFromText(key).apiKey).toBe(key)
+    }
+  })
+
+  it.each([
+    "https://files.example.org/?token=ordinary-download-ticket",
+    "https://files.example.org/?token=be94d810-6a52-42c7-a380-1a8f9c02de73",
+    "https://files.example.org/?token=be94d8106a5242c7a3801a8f9c02de73",
+  ])("keeps ambiguous explicit URL credentials manual-only: %s", (text) => {
+    const result = extractApiCheckCredentialsFromText(text)
+    expect(result.apiKey).not.toBeNull()
+    expect(result.summary.autoPromptEligible).toBe(false)
+    expect(result.summary.enhancedAutoPromptEligible).toBe(false)
+  })
+
+  it.each([
+    "https://files.example.org/" + buildKnownKey("SyntheticFixture123456789"),
+    "https://store.example.net/catalog?campaign=spring&ref=gAAAAAZ9SyntheticTrackingValue123456789_AbCdEf1234567890-ZyXwVu9876543210&source=sample",
+    "https://files.example.org/?ref=" +
+      buildKnownKey("SyntheticFixture123456789"),
+    "https://archive-7f81c920-a261-43e8-b095-8e2d6f9031ac.example.org/releases",
+    "archive-7f81c920-a261-43e8-b095-8e2d6f9031ac.example.org/releases",
+    "store.example.net?ref=gAAAAAZ9SyntheticTrackingValue123456789_AbCdEf1234567890-ZyXwVu9876543210",
+  ])("does not invent credentials from URL structure: %s", (text) => {
+    const result = extractApiCheckCredentialsFromText(text)
+    expect(result.apiKeyCandidates).toEqual([])
+    expect(result.summary.autoPromptEligible).toBe(false)
+    expect(result.summary.enhancedAutoPromptEligible).toBe(false)
+  })
+
+  it.each([
+    "https://archive-7f81c920-a261-43e8-b095-8e2d6f9031ac.example.org/releases",
+    "https://example.com/refresh\nSample record identifier\nbe94d810-6a52-42c7-a380-1a8f9c02de73",
+    "https://example.com/refresh\n" +
+      btoa("be94d810-6a52-42c7-a380-1a8f9c02de73"),
+  ])(
+    "does not auto-prompt for unrelated links and random identifiers: %s",
+    (text) => {
+      const result = extractApiCheckCredentialsFromText(text)
+      expect(result.summary.autoPromptEligible).toBe(false)
+      expect(result.summary.enhancedAutoPromptEligible).toBe(false)
+    },
+  )
+
   it("normalizes loose base urls by trimming wrappers, adding https, and dropping query fragments", () => {
     expect(
       normalizeApiCheckBaseUrl(

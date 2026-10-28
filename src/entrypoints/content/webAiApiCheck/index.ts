@@ -189,12 +189,10 @@ function setupWebAiApiCheckDetection(config: {
       apiKeyCleanupPatterns,
     })
     if (!extracted.apiKey) return
-    if (!extracted.baseUrl && !extracted.summary.enhancedAutoPromptEligible)
-      return
-    if (
-      extracted.summary.usesEnhancedResult &&
-      !extracted.summary.enhancedAutoPromptEligible
-    ) {
+    const eligible = extracted.summary.usesEnhancedResult
+      ? extracted.summary.enhancedAutoPromptEligible
+      : extracted.summary.autoPromptEligible
+    if (!eligible) {
       return
     }
 

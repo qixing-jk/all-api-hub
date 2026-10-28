@@ -139,6 +139,7 @@ export function pushCandidate(
   if (!candidate.value) return
   const existing = list.find((item) => item.value === candidate.value)
   if (existing) {
+    if (candidate.hasNonUrlSource) existing.hasNonUrlSource = true
     existing.reasons = mergeReasons(existing.reasons, candidate.reasons)
     if (candidate.cleanupApplied) {
       existing.cleanupApplied = true
@@ -162,7 +163,11 @@ export function pushCandidate(
 export function toPublicCandidate(
   candidate: InternalApiCheckCandidate,
 ): ApiCheckCandidate {
-  const { insertionOrder: _insertionOrder, ...publicCandidate } = candidate
+  const {
+    insertionOrder: _insertionOrder,
+    hasNonUrlSource: _hasNonUrlSource,
+    ...publicCandidate
+  } = candidate
   return publicCandidate
 }
 
@@ -204,14 +209,20 @@ export function buildSummary(params: {
     !!params.selectedApiKey?.autoPromptEligible &&
     !usesEnhancedResult
 
-  const hasBaseUrlForEnhanced = !!params.selectedBaseUrl
+  // Preserve the text-based fallback, but an unrelated link is not enough to
+  // promote a UUID or a value extracted exclusively from URL contents.
+  const key = params.selectedApiKey
+  const isUuid =
+    !!key &&
+    /^(?:[a-f0-9]{32}|[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})$/i.test(
+      key.value,
+    )
   const selectedKeyAllowsAuto =
-    !!params.selectedApiKey?.autoPromptEligible ||
-    (!!params.selectedApiKey &&
-      hasBaseUrlForEnhanced &&
-      !params.selectedApiKey.reasons.includes(
-        API_CHECK_CANDIDATE_REASONS.UNSEPARATED_LONG_TOKEN,
-      ))
+    !!key?.autoPromptEligible ||
+    (!!key?.hasNonUrlSource &&
+      !isUuid &&
+      !!params.selectedBaseUrl &&
+      !key.reasons.includes(API_CHECK_CANDIDATE_REASONS.UNSEPARATED_LONG_TOKEN))
 
   const enhancedAutoPromptEligible =
     !!params.selectedApiKey &&

@@ -452,6 +452,48 @@ describe("setupWebAiApiCheckContent", () => {
     cleanup()
   })
 
+  it("prompts for a known-format credential in an explicit URL query parameter", async () => {
+    vi.spyOn(window, "getSelection").mockReturnValue({
+      toString: () =>
+        `https://gateway.example.org/connect?api_key=${OPENAI_KEY_PREFIX}QueryFixture123456789&mode=demo`,
+    } as any)
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
+      success: true,
+      shouldPrompt: true,
+      enhancedShouldPrompt: true,
+    })
+    vi.mocked(showApiCheckConfirmToast).mockResolvedValue(false)
+    const cleanup = setupWebAiApiCheckContent({ enableContextMenu: false })
+    try {
+      document.dispatchEvent(new Event("pointerup", { bubbles: true }))
+      await waitFor(() => expect(showApiCheckConfirmToast).toHaveBeenCalled())
+    } finally {
+      cleanup()
+    }
+  })
+
+  it("does not prompt for a known-prefix token embedded in an ordinary URL", async () => {
+    vi.spyOn(window, "getSelection").mockReturnValue({
+      toString: () =>
+        `https://files.example.org/${OPENAI_KEY_PREFIX}SyntheticFixture123456789`,
+    } as any)
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
+      success: true,
+      shouldPrompt: true,
+      enhancedShouldPrompt: true,
+    })
+    const cleanup = setupWebAiApiCheckContent({ enableContextMenu: false })
+    try {
+      document.dispatchEvent(new Event("pointerup", { bubbles: true }))
+      // Settle the asynchronous shouldPrompt/confirmation chain, if admitted.
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      expect(extractApiCheckCredentialsFromText).toHaveBeenCalled()
+      expect(showApiCheckConfirmToast).not.toHaveBeenCalled()
+    } finally {
+      cleanup()
+    }
+  })
+
   it("opens auto-detect for selected text on pointerup and stops after cleanup", async () => {
     const selectedText = buildApiCheckClipboardText({
       baseUrl: "https://proxy.example.com/api",
