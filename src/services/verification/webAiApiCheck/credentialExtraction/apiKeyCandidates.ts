@@ -39,7 +39,7 @@ export function extractApiKeyCandidates(
   const apiKeyInput = cleanedApiKeyInput.value
   const candidates: InternalApiCheckCandidate[] = []
   let insertionOrder = 0
-  let embeddedInUrl = false
+  let urlSource = false
 
   const pushClassifiedApiKeyCandidate = (
     candidateValue: string,
@@ -50,10 +50,14 @@ export function extractApiKeyCandidates(
     if (!classified) return false
     pushCandidate(candidates, {
       ...classified,
+      ...(urlSource ? { value: candidateValue } : {}),
       kind: API_CHECK_CANDIDATE_KINDS.API_KEY,
-      hasNonUrlSource: !embeddedInUrl,
+      hasNonUrlSource: !urlSource,
       autoPromptEligible:
-        !embeddedInUrl &&
+        (!urlSource ||
+          classified.reasons.includes(
+            API_CHECK_CANDIDATE_REASONS.KNOWN_PREFIX,
+          )) &&
         (classified.autoPromptEligible ||
           candidateReasons.includes(API_CHECK_CANDIDATE_REASONS.LABELED) ||
           candidateReasons.includes(
@@ -165,8 +169,8 @@ export function extractApiKeyCandidates(
       kind: API_CHECK_CANDIDATE_KINDS.API_KEY,
       confidence: API_CHECK_CANDIDATE_CONFIDENCES.STANDARD,
       reasons: candidateReasons,
-      autoPromptEligible: !embeddedInUrl,
-      hasNonUrlSource: !embeddedInUrl,
+      autoPromptEligible: !urlSource,
+      hasNonUrlSource: !urlSource,
       insertionOrder,
     }
     if (
@@ -237,10 +241,7 @@ export function extractApiKeyCandidates(
         `${name}=${value}`,
       )
       if (labelMatch?.index !== 0 || labelMatch[1] !== value) continue
-      const classified = classifyApiKeyCandidate(value)
-      embeddedInUrl = !classified?.reasons.includes(
-        API_CHECK_CANDIDATE_REASONS.KNOWN_PREFIX,
-      )
+      urlSource = true
       pushApiKeyCandidate(value, [API_CHECK_CANDIDATE_REASONS.LABELED])
     }
   }

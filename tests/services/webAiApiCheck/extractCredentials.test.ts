@@ -58,6 +58,37 @@ describe("webAiApiCheck extractCredentials", () => {
     expect(result.apiKey).toBe(key)
   })
 
+  it("preserves plus signs in known-prefix URL credentials", () => {
+    const key = buildKnownKey("ABCDEFGHIJ+KLMNOPQRST")
+    expect(
+      extractApiCheckCredentialsFromText(
+        `https://gateway.example.org/?api_key=${key}`,
+      ).apiKey,
+    ).toBe(key)
+  })
+
+  it("allows prompting for a decoded known URL credential", () => {
+    const key = buildKnownKey("EncodedFixture123456789")
+    const result = extractApiCheckCredentialsFromText(
+      `https://gateway.example.org/?api_key=${btoa(key)}`,
+    )
+    expect(result.apiKey).toBe(key)
+    expect(result.summary.enhancedAutoPromptEligible).toBe(true)
+  })
+
+  it("selects an eligible text credential over a manual URL candidate for automatic prompts", () => {
+    const key = "customprovider-Ab12Cd34Ef56Gh78Ij90Kl12Mn34"
+    const text = `https://gateway.example.org/?token=be94d810-6a52-42c7-a380-1a8f9c02de73\n${key}`
+    const result = extractApiCheckCredentialsFromText(text, {
+      automaticPrompt: true,
+    })
+    expect(result.apiKey).toBe(key)
+    expect(result.summary.enhancedAutoPromptEligible).toBe(true)
+    expect(result.apiKeyCandidates).toContain(
+      "be94d810-6a52-42c7-a380-1a8f9c02de73",
+    )
+  })
+
   it("preserves auto-prompting for an unfamiliar text credential paired with a URL", () => {
     const key = "customprovider-Ab12Cd34Ef56Gh78Ij90Kl12Mn34"
     const result = extractApiCheckCredentialsFromText(

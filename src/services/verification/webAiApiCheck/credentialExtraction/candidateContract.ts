@@ -67,6 +67,8 @@ export type ApiCheckExtractionResult = {
 }
 
 export type ApiCheckExtractionOptions = {
+  /** Select the highest-ranked candidate permitted to trigger a prompt. */
+  automaticPrompt?: boolean
   apiKeyCleanupPatterns?: string[]
 }
 

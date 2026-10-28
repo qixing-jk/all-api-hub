@@ -444,6 +444,7 @@ describe("setupWebAiApiCheckContent", () => {
       expect(extractApiCheckCredentialsFromText).toHaveBeenCalledWith(
         expect.any(String),
         {
+          automaticPrompt: true,
           apiKeyCleanupPatterns: ["\\[\\[remove-me\\]\\]"],
         },
       )
