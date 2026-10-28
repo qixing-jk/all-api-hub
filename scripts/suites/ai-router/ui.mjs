@@ -1,3 +1,6 @@
+import { expect } from "@playwright/test"
+
+import { MODEL_LIST_TEST_IDS } from "../../../src/features/ModelList/testIds.ts"
 import { withTemporaryAccount } from "../../cdp/sandbox.mjs"
 import { dismissModals, openExtensionPage } from "../../cdp/ui-driver.mjs"
 import { testAccountCardFlow } from "../../flows/account-card.mjs"
@@ -52,6 +55,7 @@ export async function runAiRouterUiTest({
           page,
           extensionId,
           accountName: accountFixture.site_name,
+          accountId: accountFixture.id,
         })
         if (!cardResult?.ok) {
           throw new Error(
@@ -61,25 +65,22 @@ export async function runAiRouterUiTest({
 
         // 2. 验证 #models 页面渲染
         console.log("  [UI 步骤 2] 验证 #models 页面渲染...")
-        await page.goto(`chrome-extension://${extensionId}/options.html#models`)
+        await page.goto(
+          `chrome-extension://${extensionId}/options.html#models?accountId=${encodeURIComponent(accountFixture.id)}`,
+        )
         await page.waitForLoadState("domcontentloaded")
-        await page.waitForTimeout(1000)
         await dismissModals(page)
 
-        const modelsRoot = page
-          .locator('[data-testid="models-page"], .model-list, main')
-          .first()
-        const isModelsVisible = await modelsRoot
-          .isVisible({ timeout: 5000 })
-          .catch(() => false)
-
-        console.log(
-          `  - 模型页根容器加载渲染: ${isModelsVisible ? "✅ 正常" : "❌ 异常"}`,
+        const modelsRoot = page.getByTestId(MODEL_LIST_TEST_IDS.page)
+        await expect(modelsRoot).toBeVisible({ timeout: 5000 })
+        await expect(modelsRoot).toHaveAttribute(
+          "data-model-source",
+          `account:${accountFixture.id}`,
+          { timeout: 5000 },
         )
-        if (!isModelsVisible) {
-          throw new Error("AI-Router 模型页根容器未能正常渲染")
-        }
-        console.log("  ✅ AI-Router UI 实测通过，沙盒账号已触发自动清理。")
+        console.log(
+          "  ✅ AI-Router 账号卡片与指定来源页面 smoke 通过；未验证自动接入、模型数据或价格。",
+        )
       } finally {
         await page.close().catch(() => {})
       }

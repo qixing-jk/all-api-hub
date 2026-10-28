@@ -14,10 +14,13 @@ import path from "node:path"
 import { expect } from "@playwright/test"
 
 import { KEY_MANAGEMENT_TEST_IDS as keys } from "../src/features/KeyManagement/testIds.ts"
-import { findInstalledDevExtension } from "./cdp/browser-runtime.mjs"
-import { connectDevBrowser, connectExtensionById } from "./cdp/client.mjs"
+import { connectWorktreeExtension } from "./cdp/client.mjs"
 import { getAccounts } from "./cdp/sandbox.mjs"
-import { dismissModals } from "./cdp/ui-driver.mjs"
+import { configureExtensionPage, dismissModals } from "./cdp/ui-driver.mjs"
+import {
+  openNativeKeyEditor,
+  submitNativeKeyEditor,
+} from "./flows/native-key-editor.mjs"
 import { readAllPmApiTokens } from "./suites/pmapi/tokens.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
@@ -48,24 +51,15 @@ const SITES = [
   },
 ]
 
-const discovery = await connectDevBrowser()
-let extensionId
-try {
-  extensionId = await findInstalledDevExtension(
-    discovery.browser,
-    path.resolve(
-      process.argv.includes("--prod")
-        ? ".output/chrome-mv3"
-        : ".output/chrome-mv3-dev",
-    ),
-  )
-} finally {
-  await discovery.close()
-}
-assert.ok(extensionId, "the worktree's built extension must be installed")
+const dev = await connectWorktreeExtension({
+  extensionPath: path.resolve(
+    process.argv.includes("--prod")
+      ? ".output/chrome-mv3"
+      : ".output/chrome-mv3-dev",
+  ),
+})
+const { extensionId } = dev
 check("dev browser extension installed", { extensionId })
-
-const dev = await connectExtensionById({ extensionId })
 let cleanupRunKey
 const capture = async (ui, name, target = ui.locator("main")) => {
   await ui.bringToFront()
@@ -112,10 +106,10 @@ try {
   const ui = await dev.context.newPage()
   ui.setDefaultTimeout(20000)
   await ui.emulateMedia({ reducedMotion: "reduce" })
-  await ui.setViewportSize({ width: 1920, height: 1080 })
-  await ui.addInitScript(() =>
-    localStorage.setItem("all-api-hub-i18nextLng", "en"),
-  )
+  await configureExtensionPage(ui, {
+    viewport: { width: 1920, height: 1080 },
+    language: "en",
+  })
 
   if (!process.argv.includes("--checkin-only")) {
     // Key lifecycle on the pmcat deployment through the native editor, verified
@@ -166,19 +160,18 @@ try {
         }
       }
     }
-    await ui
-      .getByTestId(
+    const editor = await openNativeKeyEditor(ui, {
+      trigger: ui.getByTestId(
         baselineIds.length
           ? keys.addTokenButton
           : keys.emptyStateAddTokenButton,
-      )
-      .click()
-    const editor = ui.getByTestId(keys.nativeEditor)
+      ),
+      readyField: /^(Token Name|密钥名称)$/,
+    })
     await expect(editor).toBeVisible({ timeout: 30000 })
     await editor.getByLabel(/^(Token Name|密钥名称)$/).fill(runName)
     await capture(ui, "key-editor-create", editor)
-    await ui.getByTestId(keys.nativeEditorSubmitButton).click()
-    await expect(editor).toBeHidden({ timeout: 30000 })
+    await submitNativeKeyEditor(ui, { timeoutMs: 30000 })
     await dismissModals(ui)
     let createdId
     await expect
@@ -208,8 +201,7 @@ try {
     })
     await editor.getByLabel(/^(Token Name|密钥名称)$/).fill(`${runName} r`)
     await capture(ui, "key-editor-edit", editor)
-    await ui.getByTestId(keys.nativeEditorSubmitButton).click()
-    await expect(editor).toBeHidden({ timeout: 30000 })
+    await submitNativeKeyEditor(ui, { timeoutMs: 30000 })
     await expect
       .poll(
         async () => (await readTokens()).find((k) => k.id === createdId)?.name,

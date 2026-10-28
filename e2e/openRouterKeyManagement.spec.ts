@@ -27,6 +27,10 @@ import {
   OPENROUTER_KEY_MANAGEMENT_E2E,
 } from "~~/e2e/utils/mockedSite/openRouterKeyManagementRoutes"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
+import {
+  openNativeKeyEditor,
+  submitNativeKeyEditor,
+} from "~~/scripts/flows/native-key-editor.mjs"
 
 const CLIPBOARD_WRITES_KEY = "__aah_e2e_openrouter_key_clipboard_writes__"
 
@@ -263,9 +267,10 @@ test("manages an OpenRouter key through its native one-time-secret lifecycle", a
   })
   await expect(workspaceSelect).toContainText("Team workspace (team)")
 
-  await page.getByTestId(KEY_MANAGEMENT_TEST_IDS.addTokenButton).click()
-  let editor = page.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditor)
-  await expect(editor).toBeVisible()
+  let editor = await openNativeKeyEditor(page, {
+    trigger: page.getByTestId(KEY_MANAGEMENT_TEST_IDS.addTokenButton),
+    readyField: "Key name",
+  })
   await editor.getByLabel("Key name").fill("Lifecycle key")
   await chooseOption(
     page,
@@ -293,9 +298,7 @@ test("manages an OpenRouter key through its native one-time-secret lifecycle", a
   )
   await expect(editorFooter).toBeVisible()
   await expect(editorFooter).toBeInViewport()
-  await editor
-    .getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton)
-    .click()
+  await submitNativeKeyEditor(page)
 
   const secretInput = page.getByTestId(
     TOKEN_PROVISIONING_TEST_IDS.oneTimeKeyInput,
@@ -363,9 +366,10 @@ test("manages an OpenRouter key through its native one-time-secret lifecycle", a
     .click()
   await expect(lifecycleRow).toContainText("BYOK usage")
   await expect(lifecycleRow).toContainText("Include BYOK usage")
-  await lifecycleRow.getByRole("button", { name: "Edit key" }).click()
-  editor = page.getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditor)
-  await expect(editor).toBeVisible()
+  editor = await openNativeKeyEditor(page, {
+    trigger: lifecycleRow.getByRole("button", { name: "Edit key" }),
+    readyField: "Key name",
+  })
   await editor.getByLabel("Key name").fill("Lifecycle key edited")
   await editor.getByLabel("Limit", { exact: true }).fill("75")
   await chooseOption(page, editor.getByLabel("Reset cadence"), "Weekly")
@@ -377,9 +381,7 @@ test("manages an OpenRouter key through its native one-time-secret lifecycle", a
   const disabledSwitch = editor.getByRole("switch", { name: "Disable key" })
   await disabledSwitch.click()
   await expect(disabledSwitch).toBeChecked()
-  await editor
-    .getByTestId(KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton)
-    .click()
+  await submitNativeKeyEditor(page)
 
   const statusFilter = page.getByTestId(
     KEY_MANAGEMENT_TEST_IDS.nativeStatusFilter,

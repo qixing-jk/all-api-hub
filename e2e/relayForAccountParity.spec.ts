@@ -2,7 +2,6 @@ import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import { getAccountManagementListItemTestId } from "~/features/AccountManagement/testIds"
-import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   createStoredAccount,
@@ -13,6 +12,7 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { readModelCatalog } from "~~/scripts/flows/model-catalog.mjs"
 
 test("RelayFor shows scoped allowances, access conditions, accepted routing and announcements", async ({
   context,
@@ -214,7 +214,10 @@ test("RelayFor shows scoped allowances, access conditions, accepted routing and 
   await page.reload()
   await expect(row).toContainText("$6.00")
   await page.goto(url(MENU_ITEM_IDS.MODELS))
-  const models = page.getByTestId(MODEL_LIST_TEST_IDS.modelDisplay)
+  const { modelDisplay: models } = await readModelCatalog({
+    page,
+    accountId: "relayfor-parity",
+  })
   await expect(models).toContainText("Subscription required")
   await expect(models).toContainText("Training consent required")
   await expect(models).toContainText("Rejected-risk audit charge")
@@ -230,6 +233,7 @@ test("RelayFor shows scoped allowances, access conditions, accepted routing and 
   const action = models.getByRole("button", {
     name: "Change official routing group",
   })
+  await expect(action).toBeEnabled()
   await expect(models.getByRole("combobox")).toHaveCount(0)
   await action.click()
   const editor = page.getByRole("dialog", {
@@ -239,6 +243,7 @@ test("RelayFor shows scoped allowances, access conditions, accepted routing and 
   await expect(group).toContainText("standard")
   await group.click()
   await expect(page.getByRole("option", { name: /^blocked/ })).toBeDisabled()
+  await expect(page.getByRole("option", { name: /^premium/ })).toBeEnabled()
   await page.getByRole("option", { name: /^premium/ }).click()
   expect(writes).toEqual([])
   await editor.screenshot({

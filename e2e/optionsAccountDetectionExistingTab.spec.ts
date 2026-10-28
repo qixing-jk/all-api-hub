@@ -15,6 +15,117 @@ import {
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { openAccountManagementPage } from "~~/e2e/utils/realSite/accountAdd"
+import { withUiCreatedAccount } from "~~/scripts/cdp/sandbox.mjs"
+import {
+  assertAccountDetectionOutcome,
+  detectAccountSiteType,
+} from "~~/scripts/flows/auto-detect.mjs"
+
+test("scoped-token New API detection preserves identity and guides the missing Access Token", async ({
+  context,
+  page,
+  extensionId,
+}) => {
+  const baseUrl = "https://scoped-token-detection.example.invalid"
+  await forceExtensionLanguage(page, "en")
+  await stubLlmMetadataIndex(context)
+  await stubNewApiSiteRoutes(context, {
+    baseUrl,
+    dashboardAuthMode: "auth-bundle",
+  })
+  await context.route(`${baseUrl}/security`, (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: '<h1 id="security-access">Security settings</h1>',
+    }),
+  )
+  await context.route(`${baseUrl}/api/user/self`, (route) =>
+    route.fulfill({
+      json: {
+        success: true,
+        data: { id: 1, username: "e2e-user", quota: 500000 },
+      },
+    }),
+  )
+  let credentialWrites = 0
+  let scopedProbes = 0
+  await context.route(`${baseUrl}/api/user/access_tokens`, (route) => {
+    if (route.request().method() !== "GET") credentialWrites++
+    else scopedProbes++
+    return route.fulfill({ json: { success: true, data: [] } })
+  })
+  await context.route(`${baseUrl}/api/user/token`, (route) => {
+    credentialWrites++
+    return route.fulfill({
+      status: 403,
+      json: { success: false, code: "AUTH_INSUFFICIENT_PRIVILEGE" },
+    })
+  })
+  const worker = await getServiceWorker(context)
+  await seedUserPreferences(worker, {
+    autoFillCurrentSiteUrlOnAccountAdd: false,
+    autoProvisionKeyOnAccountAdd: false,
+  })
+  const site = await context.newPage()
+  await site.goto(baseUrl)
+  await openAccountManagementPage({ page, extensionId })
+  await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton).click()
+  const dialog = page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog)
+  await dialog
+    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput)
+    .fill(baseUrl)
+  await dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton).click()
+  await assertAccountDetectionOutcome({
+    page,
+    expectedType: SITE_TYPES.NEW_API,
+    fields: {
+      userIdInput: "1",
+      usernameInput: "e2e-user",
+      siteUrlInput: baseUrl,
+      accessTokenInput: "",
+    },
+    guidance: "Enter an Access Token manually",
+    saveState: "absent",
+  })
+  await expect(dialog.getByText(/Security → Access Token/)).toBeVisible()
+  const openSecurity = dialog.getByRole("button", {
+    name: "Open site security settings",
+    exact: true,
+  })
+  await expect(openSecurity).toBeEnabled()
+  const opened = context.waitForEvent("page")
+  await openSecurity.click()
+  const security = await opened
+  // tabs.create may navigate before Playwright attaches route interception.
+  // Read the browser's actual destination before replaying only this fixture GET.
+  let destination = ""
+  await expect
+    .poll(async () => {
+      destination = await worker.evaluate(async () => {
+        const [tab] = await chrome.tabs.query({
+          active: true,
+          currentWindow: true,
+        })
+        return tab?.url ?? ""
+      })
+      return destination
+    })
+    .toBe(`${baseUrl}/security#security-access`)
+  await security.goto(destination)
+  await expect(
+    security.getByRole("heading", { name: "Security settings" }),
+  ).toBeVisible()
+  await expect(
+    dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput),
+  ).toHaveValue("1")
+  expect(credentialWrites).toBe(0)
+  expect(scopedProbes).toBeGreaterThan(0)
+  expect(
+    (await readStoredAccounts(worker)).filter(
+      (account) => account.site_url === baseUrl,
+    ),
+  ).toEqual([])
+})
 
 for (const dashboardAuthMode of ["legacy", "auth-bundle"] as const) {
   test(`Options reads an existing ${dashboardAuthMode} account tab without opening another page`, async ({
@@ -52,15 +163,18 @@ for (const dashboardAuthMode of ["legacy", "auth-bundle"] as const) {
 
     const openedPages: string[] = []
     context.on("page", (openedPage) => openedPages.push(openedPage.url()))
-    await dialog
-      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton)
-      .click()
-    await expect(
-      dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput),
-    ).toHaveValue("1")
-    await expect(
-      dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton),
-    ).toBeEnabled()
+    await detectAccountSiteType({ page, expectedType: SITE_TYPES.NEW_API })
+    await assertAccountDetectionOutcome({
+      page,
+      expectedType: SITE_TYPES.NEW_API,
+      fields: {
+        userIdInput: "1",
+        usernameInput: "e2e-user",
+        siteUrlInput: baseUrl,
+        accessTokenInput: "e2e-token",
+      },
+      saveState: "enabled",
+    })
     expect(openedPages).toEqual([])
     expect(sitePage.isClosed()).toBe(false)
     expect(page.isClosed()).toBe(false)
@@ -164,18 +278,30 @@ test("Options detects and saves a white-label AuthBundle account through a tempo
   await expect(
     dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton),
   ).toBeEnabled()
-  await dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton).click()
-  await expect(dialog).toBeHidden()
-
-  const saved = (await readStoredAccounts(serviceWorker)).find(
-    (account) =>
-      account.site_type === SITE_TYPES.NEW_API && account.site_url === baseUrl,
+  await withUiCreatedAccount(
+    serviceWorker,
+    async (name) => {
+      await dialog
+        .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput)
+        .fill(name)
+      await dialog
+        .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton)
+        .click()
+      await expect(dialog).toBeHidden()
+    },
+    async (saved) => {
+      expect(saved.account_info.id).toBe("1")
+      expect(saved.account_info.access_token).toBe(managementPat)
+      expect(JSON.stringify(saved)).not.toContain(
+        E2E_NEW_API_RC22_AUTH.dashboardToken,
+      )
+    },
   )
-  expect(saved?.account_info.id).toBe("1")
-  expect(saved?.account_info.access_token).toBe(managementPat)
-  expect(JSON.stringify(saved)).not.toContain(
-    E2E_NEW_API_RC22_AUTH.dashboardToken,
-  )
+  expect(
+    (await readStoredAccounts(serviceWorker)).filter(
+      (account) => account.site_url === baseUrl,
+    ),
+  ).toEqual([])
 
   await expect
     .poll(async () => {

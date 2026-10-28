@@ -17,6 +17,10 @@ export interface DevExtensionConnection extends DevBrowserConnection {
  * @returns The configured browser debugging endpoint.
  */
 export function defaultCdpUrl(): string
+export function connectWorktreeExtension(options: {
+  cdpUrl?: string
+  extensionPath: string
+}): Promise<DevExtensionConnection>
 export function connectDevBrowser(options?: {
   cdpUrl?: string
 }): Promise<DevBrowserConnection>

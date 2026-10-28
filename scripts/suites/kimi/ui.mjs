@@ -1,37 +1,76 @@
-/* global chrome */
-import { withTemporaryAccount } from "../../cdp/sandbox.mjs"
+import { expect } from "@playwright/test"
+
+import {
+  getAccounts,
+  withStoredValue,
+  withTemporaryAccount,
+  withUiCreatedAccount,
+} from "../../cdp/sandbox.mjs"
 import { dismissModals, openExtensionPage } from "../../cdp/ui-driver.mjs"
 import { testAccountCardFlow } from "../../flows/account-card.mjs"
+import {
+  assertAccountDetectionOutcome,
+  detectAccountSiteType,
+  openAccountAddDialog,
+} from "../../flows/auto-detect.mjs"
 import { testModelCatalogFlow } from "../../flows/model-catalog.mjs"
 
 /**
  * Execute UI end-to-end tests for Kimi Open Platform against the live Options UI.
  */
-export async function runKimiUiTest({
+export async function runKimiUiTest(options) {
+  return withStoredValue(
+    options.serviceWorker,
+    "user_preferences",
+    { autoProvisionKeyOnAccountAdd: false },
+    () => runKimiUiTestInner(options),
+    { restorePatchedKeysOnly: true },
+  )
+}
+
+async function runKimiUiTestInner({
   context,
   extensionId,
   serviceWorker,
   token = "",
-  refreshToken = "",
   organizationId = "",
   siteUrl = "https://platform.kimi.ai",
   siteType = "kimi-global",
+  timeoutMs = 30_000,
 }) {
   console.log("\n🖥️ 开始执行 Kimi 开放平台端到端 UI 自动化全功能验证 (CDP)...")
 
-  // 清理更新日志弹窗状态，避免自动化测试期间遮挡交互
-  if (serviceWorker) {
-    await serviceWorker
-      .evaluate(() => {
-        return new Promise((resolve) => {
-          chrome.storage.local.set(
-            { changelogOnUpdate_pendingVersion: null },
-            resolve,
-          )
-        })
-      })
-      .catch(() => {})
-  }
+  if (!token.trim()) throw new Error("kimi_live_ui_requires_access_token")
+  const identityResponse = await context.request.get(
+    `${siteUrl}/api?endpoint=userInfo`,
+    {
+      maxRedirects: 0,
+      headers: { Authorization: `Bearer ${token}`, Cookie: "" },
+    },
+  )
+  if (!identityResponse.ok())
+    throw new Error("kimi_native_identity_request_failed")
+  const identityBody = await identityResponse.json()
+  const native = identityBody?.data
+  if (
+    identityBody?.code !== 0 ||
+    typeof native?.uid !== "string" ||
+    !native.uid.trim()
+  )
+    throw new Error("kimi_native_identity_invalid")
+  const nativeUsername =
+    typeof native.name === "string" && native.name.trim()
+      ? native.name.trim()
+      : native.uid.trim()
+  const nativeOrganizations = (native.organizations ?? [])
+    .map((entry) => entry?.organization?.id)
+    .filter(Boolean)
+  const verifiedOrganizationId = organizationId || nativeOrganizations[0]
+  if (
+    !verifiedOrganizationId ||
+    !nativeOrganizations.includes(verifiedOrganizationId)
+  )
+    throw new Error("kimi_native_organization_mismatch")
 
   // =========================================================================
   // 1. 验证真实自动识别流程 (Auto-Detect Flow)
@@ -41,6 +80,8 @@ export async function runKimiUiTest({
   )
 
   // 确保在浏览器中预开一个已登录的 Kimi 页面供 content script 提取 Token
+  let detectedAccount
+  let detectedAccessToken
   let kimiTab = null
   try {
     kimiTab = await context.newPage()
@@ -56,85 +97,93 @@ export async function runKimiUiTest({
       context,
       extensionId,
       route: "options.html#account",
+      language: "en",
+      dismissUpdateLog: true,
     })
 
     try {
-      // 触发添加账号弹窗
-      const addBtn = optPage.locator(
-        '[data-testid="account-management-add-account-button"]',
-      )
-      await addBtn.waitFor({ state: "visible", timeout: 8000 })
-      await addBtn.click()
-      await optPage.waitForTimeout(800)
-
-      // 输入网址
-      const urlInput = optPage.locator(
-        '[data-testid="account-management-site-url-input"]',
-      )
-      await urlInput.waitFor({ state: "visible", timeout: 5000 })
-      await urlInput.fill(siteUrl)
-      await optPage.waitForTimeout(500)
-
-      // 点击自动识别
-      const autoDetectBtn = optPage.locator(
-        '[data-testid="account-management-auto-detect-button"]',
-      )
-      await autoDetectBtn.click()
-      console.log("  - 已点击自动识别，等待会话提取与账号补全...")
-
-      // 等待识别结果填充
-      await optPage.waitForTimeout(6000)
-
-      // 校验识别结果
-      const siteTypeTrigger = optPage.locator(
-        '[data-testid="account-management-site-type-trigger"]',
-      )
-      const detectedType = (await siteTypeTrigger
-        .isVisible()
-        .catch(() => false))
-        ? await siteTypeTrigger.innerText()
-        : ""
-
-      const usernameInput = optPage.locator(
-        '[data-testid="account-management-username-input"]',
-      )
-      const detectedUsername = (await usernameInput
-        .isVisible()
-        .catch(() => false))
-        ? await usernameInput.inputValue()
-        : ""
-
-      // 汇率 input (查找 number 类型的 input[value="7.2"])
-      const numberInputs = await optPage
-        .locator('input[type="number"]')
-        .evaluateAll((els) => els.map((e) => e.value))
-      const hasDefaultRate = numberInputs.includes("7.2")
-      const hasKimiSiteType = /kimi/i.test(detectedType)
-
-      console.log("  - 自动识别断言检查:", {
-        站点类型匹配: hasKimiSiteType
-          ? `✅ [${detectedType.trim()}]`
-          : `❌ [${detectedType}]`,
-        用户名获取: detectedUsername
-          ? `✅ [${detectedUsername}]`
-          : "❌ 未能提取",
-        默认汇率7点2: hasDefaultRate ? "✅ 7.2" : "❌ 未找到 7.2",
+      await openAccountAddDialog({ page: optPage, targetUrl: siteUrl })
+      await detectAccountSiteType({ page: optPage, expectedType: siteType })
+      await assertAccountDetectionOutcome({
+        page: optPage,
+        expectedType: siteType,
+        timeoutMs,
+        fields: {
+          siteUrlInput: siteUrl,
+          userIdInput: native.uid.trim(),
+          usernameInput: nativeUsername,
+        },
+        saveState: "enabled",
       })
-
-      if (!hasKimiSiteType || !hasDefaultRate) {
-        throw new Error(
-          `自动识别未达到预期: 站点类型=[${detectedType}], 汇率包含7.2=[${hasDefaultRate}]`,
+      detectedAccessToken = (
+        await optPage
+          .getByTestId("account-management-access-token-input")
+          .inputValue()
+      ).trim()
+      if (!detectedAccessToken)
+        throw new Error("kimi_detected_credential_missing")
+      const detectedResponse = await context.request.get(
+        `${siteUrl}/api?endpoint=userInfo`,
+        {
+          maxRedirects: 0,
+          headers: {
+            Authorization: `Bearer ${detectedAccessToken}`,
+            Cookie: "",
+          },
+        },
+      )
+      const detectedBody = await detectedResponse.json()
+      if (
+        !detectedResponse.ok() ||
+        detectedBody?.code !== 0 ||
+        detectedBody.data?.uid !== native.uid ||
+        !(detectedBody.data?.organizations ?? []).some(
+          (entry) => entry?.organization?.id === verifiedOrganizationId,
         )
-      }
+      )
+        throw new Error("kimi_detected_credential_identity_mismatch")
+      await expect(
+        optPage.getByLabel(/Recharge Amount Ratio|充值金额比例/),
+      ).toHaveValue("7.2", { timeout: timeoutMs })
 
-      // 关闭弹窗
-      const cancelBtn = optPage
-        .locator('[role="dialog"] button')
-        .filter({ hasText: /取消|Cancel|关闭|Close/i })
-        .first()
-      if (await cancelBtn.isVisible().catch(() => false)) {
-        await cancelBtn.click().catch(() => {})
-      }
+      if (
+        (await getAccounts(serviceWorker)).some(
+          (account) =>
+            account.site_type === siteType &&
+            new URL(account.site_url).origin === new URL(siteUrl).origin &&
+            String(account.account_info?.id) === native.uid.trim(),
+        )
+      )
+        throw new Error(
+          "kimi_detection_save_requires_profile_without_existing_target_account",
+        )
+      detectedAccount = await withUiCreatedAccount(
+        serviceWorker,
+        async (name) => {
+          await optPage
+            .getByTestId("account-management-site-name-input")
+            .fill(name)
+          await optPage
+            .getByTestId("account-management-confirm-add-button")
+            .click()
+        },
+        async (saved) => {
+          if (
+            String(saved.account_info?.id) !== native.uid.trim() ||
+            saved.account_info?.username !== nativeUsername ||
+            saved.account_info?.access_token !== detectedAccessToken ||
+            saved.site_type !== siteType ||
+            saved.site_url !== siteUrl ||
+            saved.kimiOpenPlatformAuth?.organizationId !==
+              verifiedOrganizationId
+          )
+            throw new Error(
+              "kimi_saved_detection_identity_or_organization_mismatch",
+            )
+          return saved
+        },
+        { timeoutMs },
+      )
     } finally {
       await optPage.close().catch(() => {})
     }
@@ -151,38 +200,7 @@ export async function runKimiUiTest({
     "\n  [UI 阶段 2: 沙盒账号] 挂载临时 Kimi 账号，验证卡片、密钥管理与模型目录...",
   )
 
-  const accountFixture = {
-    id: "sandbox-temp-kimi-account",
-    site_name: siteType === "kimi" ? "Kimi" : "Kimi Global",
-    site_url: siteUrl,
-    site_type: siteType,
-    authType: "access_token",
-    exchange_rate: 7.2,
-    account_info: {
-      id: "sandbox-kimi-user-id",
-      access_token: token,
-      username: "kimi-sandbox-user",
-      quota: 0,
-      today_prompt_tokens: 0,
-      today_completion_tokens: 0,
-      today_quota_consumption: 0,
-      today_requests_count: 0,
-      today_income: 0,
-    },
-    kimiOpenPlatformAuth: {
-      refreshToken,
-      organizationId,
-      tokenExpiresAt: Date.now() + 3600 * 1000,
-    },
-    checkIn: {
-      automaticExecutionEnabled: false,
-      methodKnowledge: { methods: {} },
-      selection: { mode: "automatic" },
-    },
-    created_at: Date.now(),
-    updated_at: Date.now(),
-    user_updated_at: Date.now(),
-  }
+  const accountFixture = detectedAccount
 
   await withTemporaryAccount(
     serviceWorker,
@@ -192,6 +210,8 @@ export async function runKimiUiTest({
         context,
         extensionId,
         route: "options.html#account",
+        language: "en",
+        dismissUpdateLog: true,
       })
 
       try {
@@ -200,6 +220,7 @@ export async function runKimiUiTest({
           page,
           extensionId,
           accountName: accountFixture.site_name,
+          accountId: accountFixture.id,
         })
         if (!cardResult?.ok) {
           throw new Error(

@@ -15,6 +15,7 @@ import {
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { captureVisualViews } from "~~/e2e/utils/visualCapture"
+import { openNativeKeyEditor } from "~~/scripts/flows/native-key-editor.mjs"
 
 test("Requesty shows monetary balance and only implemented key creation options", async ({
   context,
@@ -112,9 +113,44 @@ test("Requesty shows monetary balance and only implemented key creation options"
   await expect(keyRow).toContainText("Monthly API key")
   await expect(keyRow).toContainText("Monthly limit (USD)")
   await expect(keyRow).toContainText("$10")
-  await page.getByTestId(KEY_MANAGEMENT_TEST_IDS.addTokenButton).click()
-  const dialog = page.getByRole("dialog")
+  await expect(keyRow).toContainText("Used Quota:")
+  await expect(keyRow).toContainText("$4")
+  // The monthly ceiling remains $10; subtracting $4 spent must not turn it into $6.
+  await expect(keyRow).not.toContainText("$6")
+  await expect(
+    keyRow.getByRole("button", { name: "Edit key", exact: true }),
+  ).toBeEnabled()
+  const editDialog = await openNativeKeyEditor(page, {
+    trigger: keyRow.getByRole("button", { name: "Edit key", exact: true }),
+    readyField: "Monthly limit (USD)",
+  })
+  await expect(editDialog.getByLabel("Monthly limit (USD)")).toHaveValue("10")
+  await expect(
+    editDialog.getByLabel("Expiration Time", { exact: true }),
+  ).toBeVisible()
+  await expect(
+    editDialog.getByLabel("Management permission", { exact: true }),
+  ).toHaveCount(0)
+  await expect(
+    editDialog.getByRole("textbox", { name: /^Token Name/ }),
+  ).toHaveCount(0)
+  await editDialog.getByRole("button", { name: "Cancel", exact: true }).click()
+  await expect(editDialog).not.toBeVisible()
+  const dialog = await openNativeKeyEditor(page, {
+    trigger: page.getByTestId(KEY_MANAGEMENT_TEST_IDS.addTokenButton),
+    readyField: "Monthly limit (USD)",
+  })
   await expect(dialog.getByLabel("Monthly limit (USD)")).toBeVisible()
+  await expect(dialog.getByLabel("Monthly limit (USD)")).toBeEnabled()
+  await expect(
+    dialog.getByRole("textbox", { name: /^Token Name/ }),
+  ).toBeEditable()
+  await expect(
+    dialog.getByRole("switch", { name: "Management permission", exact: true }),
+  ).toBeEnabled()
+  await expect(
+    dialog.getByRole("switch", { name: "Management permission", exact: true }),
+  ).not.toBeChecked()
   await expect(
     dialog.getByLabel("Expiration Time", { exact: true }),
   ).toHaveCount(0)

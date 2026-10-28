@@ -1,5 +1,11 @@
 import type { BrowserContext, Locator, Page } from "@playwright/test"
 
+export function deleteManagedSiteChannelRow(
+  page: Page,
+  row: Locator,
+  options?: { timeoutMs?: number },
+): Promise<void>
+
 export function readManagedSiteConnectionCopy(): {
   saving: string
   checking: string

@@ -12,15 +12,14 @@ import {
   REQUESTY_WEB_ORIGIN,
   SITE_TYPES,
 } from "../../../src/services/accountSiteDefinitions/identifiers.ts"
-import {
-  I18NEXT_LANGUAGE_STORAGE_KEY,
-  STORAGE_LOCKS,
-} from "../../../src/services/core/storageKeys.ts"
+import { STORAGE_LOCKS } from "../../../src/services/core/storageKeys.ts"
 import { getAccounts } from "../../cdp/sandbox.mjs"
 import { dismissModals, openExtensionPage } from "../../cdp/ui-driver.mjs"
 import { testModelCatalogFlow } from "../../flows/model-catalog.mjs"
-
-const LANGUAGE_STORAGE_KEY = I18NEXT_LANGUAGE_STORAGE_KEY
+import {
+  openNativeKeyEditor,
+  submitNativeKeyEditor,
+} from "../../flows/native-key-editor.mjs"
 
 const REQUESTY_CONSOLE_URL = REQUESTY_WEB_ORIGIN
 const REQUESTY_SITE_TYPE = SITE_TYPES.REQUESTY
@@ -550,16 +549,12 @@ export async function runRequestyUiTest({
       // ---------------------------------------------------------------
       // Stage 4: native key editor round trip on a throwaway key.
       // ---------------------------------------------------------------
-      const keyPage = await context.newPage()
-      await keyPage.addInitScript(
-        ([storageKey, value]) => window.localStorage.setItem(storageKey, value),
-        [LANGUAGE_STORAGE_KEY, "en"],
-      )
-      await keyPage.goto(
-        `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#keys?accountId=${encodeURIComponent(created.id)}`,
-      )
-      await keyPage.waitForLoadState("domcontentloaded")
-      await dismissModals(keyPage)
+      const keyPage = await openExtensionPage({
+        context,
+        extensionId,
+        route: `${OPTIONS_PAGE_PATH}#keys?accountId=${encodeURIComponent(created.id)}`,
+        language: "en",
+      })
       try {
         const addBtn = keyPage
           .locator(`[data-testid="${keys.addTokenButton}"]`)
@@ -573,18 +568,15 @@ export async function runRequestyUiTest({
           `  [UI 步骤 4] 通过原生编辑器创建一次性密钥 [${createdKeyName}]...`,
         )
 
-        await addBtn.click()
-        await keyPage
-          .locator(`[data-testid="${keys.nativeEditorLoading}"]`)
-          .waitFor({ state: "detached", timeout: 60_000 })
-        const submitBtn = keyPage
-          .locator(`[data-testid="${keys.nativeEditorSubmitButton}"]`)
-          .first()
-        await submitBtn.waitFor({ state: "visible", timeout: 30_000 })
+        await openNativeKeyEditor(keyPage, {
+          trigger: addBtn,
+          readyField: /^Token Name/,
+          timeoutMs: 60_000,
+        })
 
         await keyPage.getByLabel("Token Name").fill(createdKeyName)
         await limitInput(keyPage).fill("5")
-        await submitNativeEditor(keyPage, submitBtn)
+        await submitNativeKeyEditor(keyPage)
 
         const createdRow = keyRow(keyPage, createdKeyName)
         await createdRow.first().waitFor({ state: "visible", timeout: 30_000 })
@@ -593,15 +585,19 @@ export async function runRequestyUiTest({
 
         // Edit: the monthly limit is the only editable scalar; verify via the
         // editor input so a spend figure cannot satisfy the assertion.
-        await keyRowButton(createdRow, "Edit key").click()
-        await submitBtn.waitFor({ state: "visible", timeout: 30_000 })
+        await openNativeKeyEditor(keyPage, {
+          trigger: keyRowButton(createdRow, "Edit key"),
+          readyField: "Monthly limit (USD)",
+        })
         await limitInput(keyPage).fill("7")
-        await submitNativeEditor(keyPage, submitBtn)
+        await submitNativeKeyEditor(keyPage)
 
-        await keyRowButton(createdRow, "Edit key").click()
-        await submitBtn.waitFor({ state: "visible", timeout: 30_000 })
+        await openNativeKeyEditor(keyPage, {
+          trigger: keyRowButton(createdRow, "Edit key"),
+          readyField: "Monthly limit (USD)",
+        })
         const readBackLimit = await limitInput(keyPage).inputValue()
-        await submitNativeEditor(keyPage, submitBtn)
+        await submitNativeKeyEditor(keyPage)
         if (Number(readBackLimit) !== 7) {
           throw new Error(
             `the monthly limit edit should read back as 7, got "${readBackLimit}"`,
@@ -756,29 +752,6 @@ function keyRow(page, name) {
 
 function keyRowButton(row, name) {
   return row.first().getByRole("button", { name, exact: true })
-}
-
-/**
- * Submits the native editor exactly once. Opening the editor triggers an
- * inventory reload and the save button stays disabled until it settles, so the
- * click waits for an enabled button instead of racing the reload. A retry after
- * a dispatched write could create a second key, so an editor that stays open is
- * a failure rather than a reason to click again.
- */
-async function submitNativeEditor(page, submitBtn) {
-  // Let the post-open inventory reload settle before the first submit.
-  await page.waitForTimeout(2000)
-  if (!(await submitBtn.isVisible().catch(() => false))) return
-  await submitBtn.click()
-  const closed = await submitBtn
-    .waitFor({ state: "hidden", timeout: 30_000 })
-    .then(() => true)
-    .catch(() => false)
-  if (!closed) {
-    throw new Error(
-      "the native editor submit never closed the dialog; never resubmit a dispatched write",
-    )
-  }
 }
 
 /**

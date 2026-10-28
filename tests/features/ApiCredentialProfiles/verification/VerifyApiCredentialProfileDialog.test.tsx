@@ -254,6 +254,11 @@ vi.mock("~/components/ui", async (importOriginal) => {
 describe("VerifyApiCredentialProfileDialog", () => {
   beforeEach(async () => {
     vi.restoreAllMocks()
+    // Keep metadata initialization local, including on a cold test worker.
+    // Individual metadata-arrival tests override this baseline handler.
+    server.use(
+      http.get(MODEL_METADATA_URL, () => HttpResponse.json({ models: [] })),
+    )
     // This suite passes profiles in as props instead of persisting them, so the
     // orphan sweep must not read the empty owner stores as "every owner is gone".
     stubVerificationOwnerStoresUnavailable()
@@ -505,6 +510,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
         ),
       )
       await waitFor(() => expect(result.current.modelModality).toBe("video"))
+      await modelMetadataService.initialize()
       expect(result.current.modelId).toBe("user-choice")
       expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledTimes(1)
     } finally {
@@ -2243,6 +2249,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
     const footer = closeButton.parentElement
     if (!footer) throw new Error("Missing modal footer")
 
+    await modelMetadataService.initialize()
     mockProbeDefinitions.mockImplementationOnce(() => {
       throw new Error("definitions failed")
     })

@@ -7,13 +7,15 @@ import path from "node:path"
 import { expect } from "@playwright/test"
 
 import { KEY_MANAGEMENT_TEST_IDS as keys } from "../src/features/KeyManagement/testIds.ts"
-import { UPDATE_LOG_DIALOG_TEST_IDS as updateLog } from "../src/features/UpdateLog/testIds.ts"
-import { findInstalledDevExtension } from "./cdp/browser-runtime.mjs"
-import { connectDevBrowser, connectExtensionById } from "./cdp/client.mjs"
+import { connectWorktreeExtension } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
 import { getAccounts } from "./cdp/sandbox.mjs"
 import { probePageSession } from "./cdp/session-preflight.mjs"
-import { dismissModals } from "./cdp/ui-driver.mjs"
+import { configureExtensionPage, dismissModals } from "./cdp/ui-driver.mjs"
+import {
+  openNativeKeyEditor,
+  submitNativeKeyEditor,
+} from "./flows/native-key-editor.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
 await loadLocalEnv()
@@ -26,18 +28,13 @@ const dir = path.resolve(
   `.scratch/dayaai-integration/evidence/editor-${baseline ? "before" : "after"}-${Date.now()}`,
 )
 await fs.mkdir(dir, { recursive: true })
-const discovery = await connectDevBrowser()
-const extensionId = await findInstalledDevExtension(
-  discovery.browser,
-  path.resolve(".output/chrome-mv3"),
-)
-await discovery.close()
-const dev = await connectExtensionById({ extensionId })
+const dev = await connectWorktreeExtension({
+  extensionPath: path.resolve(".output/chrome-mv3"),
+})
+const { extensionId } = dev
 const site = await dev.context.newPage()
 const ui = await dev.context.newPage()
-await ui.addLocatorHandler(ui.getByTestId(updateLog.root), () =>
-  ui.getByTestId(updateLog.closeButton).click(),
-)
+await configureExtensionPage(ui, { dismissUpdateLog: true })
 const origin = "https://api.dayaai.com"
 const runName = `AAH editor ${randomUUID().slice(0, 8)}`
 const evidence = {
@@ -66,7 +63,10 @@ const row = (id) =>
     .getByTestId(keys.nativeKeyRow)
     .and(ui.locator(`[data-resource-id="${id}"]`))
 const openEdit = async (id) => {
-  await row(id).getByRole("button", { name: "Edit Key", exact: true }).click()
+  await openNativeKeyEditor(ui, {
+    trigger: row(id).getByRole("button", { name: "Edit Key", exact: true }),
+    readyField: /^Token Name/,
+  })
   await expect(editor.getByLabel("Token Name", { exact: true })).toBeEditable({
     timeout: 30000,
   })
@@ -115,10 +115,10 @@ try {
     "Use a complete key inventory for cleanup verification",
   )
   originalIds = original.items.map((item) => item.id).sort((a, b) => a - b)
-  await ui.setViewportSize({ width: 1440, height: 1000 })
-  await ui.addInitScript(() =>
-    localStorage.setItem("all-api-hub-i18nextLng", "en"),
-  )
+  await configureExtensionPage(ui, {
+    viewport: { width: 1440, height: 1000 },
+    language: "en",
+  })
   await ui.goto(
     `chrome-extension://${extensionId}/options.html?accountId=${account.id}&workspace=account#keys`,
   )
@@ -231,7 +231,7 @@ try {
       .filter({ visible: true })
     if ((await moves.count()) > 1) await moves.first().click()
     await capture("create-desktop")
-    await ui.getByTestId(keys.nativeEditorSubmitButton).click()
+    await submitNativeKeyEditor(ui, { waitForClose: false })
     await expect
       .poll(
         async () => {
@@ -269,8 +269,7 @@ try {
     await editor
       .getByRole("switch", { name: "Allow Fast mode", exact: true })
       .click()
-    await ui.getByTestId(keys.nativeEditorSubmitButton).click()
-    await expect(editor).toBeHidden({ timeout: 30000 })
+    await submitNativeKeyEditor(ui, { timeoutMs: 30000 })
     assert.equal((await read(`/api/v1/keys/${createdId}`)).allow_fast, true)
     await openEdit(createdId)
     await expect(
@@ -284,8 +283,7 @@ try {
     await editor
       .getByLabel("Token Name", { exact: true })
       .fill(`${runName} renamed`)
-    await ui.getByTestId(keys.nativeEditorSubmitButton).click()
-    await expect(editor).toBeHidden({ timeout: 30000 })
+    await submitNativeKeyEditor(ui, { timeoutMs: 30000 })
     const renamed = await read(`/api/v1/keys/${createdId}`)
     assert.equal(renamed.allow_fast, false)
     assert.equal(renamed.quota, 19)

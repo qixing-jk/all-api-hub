@@ -10,7 +10,6 @@ import { ACCOUNT_MANAGEMENT_TEST_IDS as accounts } from "../src/features/Account
 import { CC_SWITCH_EXPORT_TEST_IDS as ccSwitch } from "../src/features/CredentialExport/CCSwitchExportDialog.testIds.ts"
 import { KEY_MANAGEMENT_TEST_IDS as keys } from "../src/features/KeyManagement/testIds.ts"
 import { MODEL_LIST_TEST_IDS as models } from "../src/features/ModelList/testIds.ts"
-import { UPDATE_LOG_DIALOG_TEST_IDS as updateLog } from "../src/features/UpdateLog/testIds.ts"
 import { getDefaultAccountKeyName } from "../src/services/accounts/keys/accountKeyNames.ts"
 import { getCubenceGroupDisplayName } from "../src/services/apiAdapters/cubence/groupPresentation.ts"
 import {
@@ -21,8 +20,13 @@ import {
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
 import { getAccounts } from "./cdp/sandbox.mjs"
 import { preflightSession, probePageSession } from "./cdp/session-preflight.mjs"
-import { dismissModals } from "./cdp/ui-driver.mjs"
+import {
+  configureExtensionPage,
+  createUiCapture,
+  dismissModals,
+} from "./cdp/ui-driver.mjs"
 import { testModelCatalogFlow } from "./flows/model-catalog.mjs"
+import { submitNativeKeyEditor } from "./flows/native-key-editor.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
 // Preflights the current-worktree dev session before authenticated operations.
@@ -130,12 +134,7 @@ const dev = process.env.CUBENCE_EXTENSION_ID
 let site = await dev.context.newPage()
 const ui = await dev.context.newPage()
 // The update notice can arrive after initial modal dismissal while data loads.
-await ui.addLocatorHandler(ui.getByTestId(updateLog.root), async () => {
-  await ui.getByTestId(updateLog.closeButton).click()
-})
-await ui.addInitScript(() =>
-  localStorage.setItem("all-api-hub-i18nextLng", "en"),
-)
+await configureExtensionPage(ui, { dismissUpdateLog: true, language: "en" })
 const evidence = {
   runId,
   worktree: process.cwd(),
@@ -244,8 +243,7 @@ const inventory = async () => {
 const stored = () => getAccounts(dev.serviceWorker)
 const card = () =>
   ui.getByTestId(`account-management-account-list-item-${accountId}`)
-const capture = (name) =>
-  ui.screenshot({ path: path.join(evidenceDir, name), animations: "disabled" })
+const capture = createUiCapture({ page: ui, directory: evidenceDir })
 
 /** Persist completed checkpoints even while the remaining live flow is running. */
 async function checkpoint(description) {
@@ -652,7 +650,7 @@ try {
         await ui.locator("#resource-editor-quota").fill("1")
         await site.close()
         const submitStarted = performance.now()
-        await ui.getByTestId(keys.nativeEditorSubmitButton).click()
+        await submitNativeKeyEditor(ui, { waitForClose: false })
         await expect(ui.getByTestId(keys.nativeEditor)).toHaveCount(0, {
           timeout: 60000,
         })
@@ -868,10 +866,7 @@ try {
       await site.close()
       const submitStarted = performance.now()
       const submit = async () => {
-        await ui.getByTestId(keys.nativeEditorSubmitButton).click()
-        await expect(ui.getByTestId(keys.nativeEditorSubmitButton)).toBeHidden({
-          timeout: 60000,
-        })
+        await submitNativeKeyEditor(ui, { timeoutMs: 60000 })
       }
       if (unresponsiveContent || stalledDownloadRule)
         await withTempPageFaults(submit)
@@ -943,7 +938,7 @@ try {
           exact: true,
         })
         .click()
-      await ui.getByTestId(keys.nativeEditorSubmitButton).click()
+      await submitNativeKeyEditor(ui, { waitForClose: false })
       // Three native field PATCH requests finish before the editor closes;
       // the site's inventory below independently verifies the persisted result.
       await expect(ui.getByTestId(keys.nativeEditorSubmitButton)).toBeHidden({

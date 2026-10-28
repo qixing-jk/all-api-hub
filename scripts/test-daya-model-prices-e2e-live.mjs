@@ -6,13 +6,12 @@ import path from "node:path"
 import { expect } from "@playwright/test"
 
 import { MODEL_LIST_TEST_IDS as models } from "../src/features/ModelList/testIds.ts"
-import { UPDATE_LOG_DIALOG_TEST_IDS as updateLog } from "../src/features/UpdateLog/testIds.ts"
-import { findInstalledDevExtension } from "./cdp/browser-runtime.mjs"
-import { connectDevBrowser, connectExtensionById } from "./cdp/client.mjs"
+import { connectWorktreeExtension } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
 import { getAccounts } from "./cdp/sandbox.mjs"
 import { probePageSession } from "./cdp/session-preflight.mjs"
-import { dismissModals } from "./cdp/ui-driver.mjs"
+import { configureExtensionPage, dismissModals } from "./cdp/ui-driver.mjs"
+import { readModelCatalog } from "./flows/model-catalog.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
 // Read-only current-worktree check. Baseline mode records the previous label.
@@ -23,18 +22,10 @@ const dir = path.resolve(
   `.scratch/dayaai-integration/evidence/price-labels-${baseline ? "before" : "after"}-${Date.now()}`,
 )
 await fs.mkdir(dir, { recursive: true })
-const discovery = await connectDevBrowser()
-let extensionId
-try {
-  extensionId = await findInstalledDevExtension(
-    discovery.browser,
-    path.resolve(".output/chrome-mv3"),
-  )
-} finally {
-  await discovery.close()
-}
-assert.ok(extensionId)
-const dev = await connectExtensionById({ extensionId })
+const dev = await connectWorktreeExtension({
+  extensionPath: path.resolve(".output/chrome-mv3"),
+})
+const { extensionId } = dev
 const site = await dev.context.newPage()
 const ui = await dev.context.newPage()
 const evidence = {
@@ -59,18 +50,20 @@ try {
       a.site_type === "daya" && String(a.account_info.id) === session.identity,
   )
   assert.ok(account, "Saved account must match the native session")
-  await ui.setViewportSize({ width: 1440, height: 1000 })
-  await ui.addInitScript(() =>
-    localStorage.setItem("all-api-hub-i18nextLng", "en"),
-  )
-  await ui.addLocatorHandler(ui.getByTestId(updateLog.root), () =>
-    ui.getByTestId(updateLog.closeButton).click(),
-  )
+  await configureExtensionPage(ui, {
+    viewport: { width: 1440, height: 1000 },
+    language: "en",
+    dismissUpdateLog: true,
+  })
   await ui.goto(
     `chrome-extension://${extensionId}/options.html?accountId=${encodeURIComponent(account.id)}#models`,
   )
   await dismissModals(ui)
-  const display = ui.getByTestId(models.modelDisplay)
+  const { modelDisplay: display } = await readModelCatalog({
+    page: ui,
+    accountId: account.id,
+    timeoutMs: 45000,
+  })
   // Model names are stable public catalogue identities; no fixture response is injected.
   await expect(
     display.getByText("gpt-6-astra", { exact: true }).first(),

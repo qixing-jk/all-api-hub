@@ -1,6 +1,13 @@
-import { getAccounts, withTemporaryAccount } from "../../cdp/sandbox.mjs"
+import { ACCOUNT_MANAGEMENT_TEST_IDS as accounts } from "../../../src/features/AccountManagement/testIds.ts"
+import { SITE_TYPES } from "../../../src/services/accountSiteDefinitions/identifiers.ts"
+import { withTemporaryAccount } from "../../cdp/sandbox.mjs"
 import { openExtensionPage } from "../../cdp/ui-driver.mjs"
-import { testAutoDetectFlow } from "../../flows/auto-detect.mjs"
+import {
+  assertAccountDetectionOutcome,
+  closeAccountDraft,
+  detectAccountSiteType,
+  openAccountAddDialog,
+} from "../../flows/auto-detect.mjs"
 import { testModelCatalogFlow } from "../../flows/model-catalog.mjs"
 
 /**
@@ -11,6 +18,7 @@ export async function runRixUiTest({
   extensionId,
   serviceWorker,
   targetUrl,
+  timeoutMs = 30_000,
 }) {
   console.log("\n🖥️ 开始执行 Rix API 扩展端到端 UI 交互验证 (装配通用流程)...")
 
@@ -21,44 +29,91 @@ export async function runRixUiTest({
   })
 
   try {
-    // -------------------------------------------------------------
-    // UI 测试 1: 装配通用自动识别流
-    // -------------------------------------------------------------
-    const autoDetectResult = await testAutoDetectFlow({
+    const site = await context.newPage()
+    let native
+    try {
+      await site.goto(targetUrl, { waitUntil: "domcontentloaded" })
+      native = await site.evaluate(async () => {
+        let user = {}
+        try {
+          user = JSON.parse(localStorage.getItem("user") || "{}")
+        } catch {
+          // Malformed cached user data cannot establish identity; the session request below must do so.
+        }
+        const headers = {}
+        if (user.id != null) headers["New-Api-User"] = String(user.id)
+        if (user.access_token)
+          headers.Authorization = `Bearer ${user.access_token}`
+        const response = await fetch("/api/user/self", {
+          credentials: "include",
+          headers,
+        })
+        const body = await response.json()
+        if (!response.ok || body?.success !== true)
+          throw new Error("rix_native_identity_request_failed")
+        return body.data
+      })
+    } finally {
+      await site.close().catch(() => {})
+    }
+    if (
+      native?.id == null ||
+      !String(native.id).trim() ||
+      !native.username?.trim()
+    )
+      throw new Error("rix_native_identity_invalid")
+    await openAccountAddDialog({ page, targetUrl, timeoutMs })
+    const dialog = await detectAccountSiteType({
       page,
-      targetUrl,
-      expectedType: "Rix",
+      expectedType: SITE_TYPES.RIX_API,
+      timeoutMs,
     })
-    if (!autoDetectResult?.ok) {
-      throw new Error(`Rix 自动识别流失败: 站点 [${targetUrl}] 未能识别为 Rix`)
-    }
-
-    // -------------------------------------------------------------
-    // UI 测试 2: 装配通用模型目录流 (结合安全沙盒)
-    // -------------------------------------------------------------
-    const targetOrigin = new URL(targetUrl).origin
-    const existingAccounts = await getAccounts(serviceWorker)
-    const matchedAccount = existingAccounts.find((a) => {
-      if (a.site_type !== "Rix-Api" || !a.site_url) return false
-      try {
-        return new URL(a.site_url).origin === targetOrigin
-      } catch {
-        return false
-      }
+    await assertAccountDetectionOutcome({
+      page,
+      expectedType: SITE_TYPES.RIX_API,
+      timeoutMs,
+      fields: {
+        siteUrlInput: targetUrl,
+        userIdInput: String(native.id),
+        usernameInput: native.username,
+      },
+      saveState: "enabled",
     })
-
-    const testFixture = matchedAccount || {
-      id: "sandbox-temp-rix-account",
-      site_name: "Rix-Live-Sandbox",
+    const detectedToken = (
+      await dialog.getByTestId(accounts.accessTokenInput).inputValue()
+    ).trim()
+    if (!detectedToken) throw new Error("rix_detected_credential_missing")
+    const response = await context.request.get(
+      new URL("/api/user/self", targetUrl).href,
+      {
+        maxRedirects: 0,
+        headers: {
+          Cookie: "",
+          Authorization: `Bearer ${detectedToken}`,
+          "New-Api-User": String(native.id),
+        },
+      },
+    )
+    const body = await response.json()
+    if (
+      !response.ok() ||
+      body?.success !== true ||
+      String(body.data?.id) !== String(native.id) ||
+      body.data?.username !== native.username
+    )
+      throw new Error("rix_detected_credential_identity_mismatch")
+    const testFixture = {
+      site_name: "Rix-Live-Detected",
       site_url: targetUrl,
-      site_type: "Rix-Api",
-      balance: 10.0,
-      active_balance: 10.0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      site_type: SITE_TYPES.RIX_API,
+      account_info: {
+        id: String(native.id),
+        username: native.username,
+        access_token: detectedToken,
+      },
     }
+    await closeAccountDraft(page, { timeoutMs })
 
-    // 无论是否注入临时账号，均通过沙盒保证测试后状态完全复原
     let modelCatalogResult
     await withTemporaryAccount(serviceWorker, testFixture, async (fixture) => {
       modelCatalogResult = await testModelCatalogFlow({

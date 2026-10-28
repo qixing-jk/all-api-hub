@@ -10,15 +10,22 @@ import { ACCOUNT_MANAGEMENT_TEST_IDS as accounts } from "../src/features/Account
 import { API_CREDENTIAL_PROFILES_TEST_IDS as profiles } from "../src/features/ApiCredentialProfiles/testIds.ts"
 import { KEY_MANAGEMENT_TEST_IDS as keys } from "../src/features/KeyManagement/testIds.ts"
 import { TOKEN_PROVISIONING_TEST_IDS as secrets } from "../src/features/TokenProvisioning/testIds.ts"
-import { UPDATE_LOG_DIALOG_TEST_IDS as updateLog } from "../src/features/UpdateLog/testIds.ts"
 import { DEFAULT_AUTO_PROVISION_KEY_NAME } from "../src/services/accounts/keys/accountKeyNames.ts"
 import { KRILL_WEB_ORIGIN as origin } from "../src/services/accountSiteDefinitions/identifiers.ts"
-import { findInstalledDevExtension } from "./cdp/browser-runtime.mjs"
-import { connectDevBrowser, connectExtensionById } from "./cdp/client.mjs"
+import { connectWorktreeExtension } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
 import { getAccounts } from "./cdp/sandbox.mjs"
 import { preflightSession, probePageSession } from "./cdp/session-preflight.mjs"
-import { dismissModals } from "./cdp/ui-driver.mjs"
+import {
+  configureExtensionPage,
+  createUiCapture,
+  dismissModals,
+} from "./cdp/ui-driver.mjs"
+import { readModelCatalog } from "./flows/model-catalog.mjs"
+import {
+  openNativeKeyEditor,
+  submitNativeKeyEditor,
+} from "./flows/native-key-editor.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
 // Read-only by default. --mutate exercises disposable key CRUD through the UI.
@@ -36,18 +43,10 @@ execFileSync("git", [
   path.join(evidenceDir, "index.json"),
 ])
 await fs.mkdir(evidenceDir, { recursive: true })
-const discovery = await connectDevBrowser()
-let extensionId
-try {
-  extensionId = await findInstalledDevExtension(
-    discovery.browser,
-    path.resolve(".output/chrome-mv3"),
-  )
-} finally {
-  await discovery.close()
-}
-assert.ok(extensionId, "Current-worktree production extension is not installed")
-const dev = await connectExtensionById({ extensionId })
+const dev = await connectWorktreeExtension({
+  extensionPath: path.resolve(".output/chrome-mv3"),
+})
+const { extensionId } = dev
 dev.context.setDefaultTimeout(30000)
 dev.context.setDefaultNavigationTimeout(45000)
 let site = await dev.context.newPage()
@@ -61,13 +60,11 @@ ui.on("pageerror", (error) => {
 ui.on("console", (message) => {
   if (message.type() === "error") uiErrors.push(message.text())
 })
-await ui.setViewportSize({ width: 1440, height: 1000 })
-await ui.addInitScript(() =>
-  localStorage.setItem("all-api-hub-i18nextLng", "en"),
-)
-await ui.addLocatorHandler(ui.getByTestId(updateLog.root), () =>
-  ui.getByTestId(updateLog.closeButton).click(),
-)
+await configureExtensionPage(ui, {
+  viewport: { width: 1440, height: 1000 },
+  language: "en",
+  dismissUpdateLog: true,
+})
 const runName = `AAH Krill ${randomUUID().slice(0, 8)}`
 const useDefaultName = process.argv.includes("--default-name")
 const createdName = useDefaultName ? DEFAULT_AUTO_PROVISION_KEY_NAME : runName
@@ -123,13 +120,11 @@ const removeCreatedProfile = async () => {
 }
 const card = () =>
   ui.getByTestId(`account-management-account-list-item-${accountId}`)
-const capture = async (name) => {
-  await ui.bringToFront()
-  await ui.screenshot({
-    path: path.join(evidenceDir, `${name}.png`),
-    animations: "disabled",
-  })
-}
+const capture = createUiCapture({
+  page: ui,
+  directory: evidenceDir,
+  bringToFront: true,
+})
 const request = async (endpoint, method = "GET", body) => {
   if (site.isClosed()) site = await dev.context.newPage()
   if (new URL(site.url()).origin !== origin)
@@ -312,8 +307,11 @@ try {
     `chrome-extension://${extensionId}/options.html#models?accountId=${accountId}`,
   )
   await dismissModals(ui)
-  const display = ui.getByTestId("model-list-display")
-  await expect(display.locator("h3").first()).toBeVisible({ timeout: 45000 })
+  const { modelDisplay: display } = await readModelCatalog({
+    page: ui,
+    accountId,
+    timeoutMs: 45000,
+  })
   await expect(display).toContainText(models[0].model_name)
   const sonnet = models.find(
     (model) => model.model_name === "claude-sonnet-5-5",
@@ -425,14 +423,14 @@ try {
     )
     await existing.getByRole("button", { name: /details/i }).click()
   }
-  await ui
-    .getByTestId(
+  const editor = await openNativeKeyEditor(ui, {
+    trigger: ui.getByTestId(
       originalKeyIds.length
         ? keys.addTokenButton
         : keys.emptyStateAddTokenButton,
-    )
-    .click()
-  const editor = ui.getByTestId(keys.nativeEditor)
+    ),
+    readyField: /^Token Name/,
+  })
   await expect(editor.getByLabel("Token Name", { exact: true })).toBeEditable({
     timeout: 30000,
   })
@@ -443,7 +441,7 @@ try {
     await editor.getByLabel("Token Name", { exact: true }).fill(runName)
   await capture("05-create")
   if (mutate) {
-    await ui.getByTestId(keys.nativeEditorSubmitButton).click()
+    await submitNativeKeyEditor(ui, { waitForClose: false })
     // Capture the attributable native id even when a later UI assertion fails.
     await expect
       .poll(
@@ -579,7 +577,7 @@ try {
       .getByLabel("IP Limits", { exact: true })
       .fill("203.0.113.4, 198.51.100.0/24")
     await capture("07-edit")
-    await ui.getByTestId(keys.nativeEditorSubmitButton).click()
+    await submitNativeKeyEditor(ui, { waitForClose: false })
     await expect(editor).toHaveCount(0, { timeout: 45000 })
     const edited = (await inventory()).find((key) => key.id === createdKeyId)
     assert.equal(edited.name, `${runName} edited`)
@@ -608,7 +606,7 @@ try {
       "203.0.113.4, 198.51.100.0/24",
     )
     await editor.getByLabel("Token Name", { exact: true }).fill("")
-    await ui.getByTestId(keys.nativeEditorSubmitButton).click()
+    await submitNativeKeyEditor(ui, { waitForClose: false })
     await expect(editor).toHaveCount(0, { timeout: 45000 })
     assert.equal(
       (await inventory()).find((key) => key.id === createdKeyId).name,

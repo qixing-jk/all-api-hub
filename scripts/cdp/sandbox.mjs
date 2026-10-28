@@ -1,5 +1,60 @@
 /* global chrome */
 import { randomUUID } from "node:crypto"
+import { expect } from "@playwright/test"
+
+import { STORAGE_LOCKS } from "../../src/services/core/storageKeys.ts"
+
+/** Capture an actual UI save and remove only the newly created, uniquely named account. */
+export async function withUiCreatedAccount(
+  serviceWorker,
+  create,
+  work,
+  { timeoutMs = 30_000 } = {},
+) {
+  const before = new Set(
+    (await getAccounts(serviceWorker)).map((account) => account.id),
+  )
+  const name = `AAH detection ${randomUUID()}`
+  const owned = (accounts) =>
+    accounts.filter(
+      (account) => !before.has(account.id) && account.site_name === name,
+    )
+  const confirmedIds = new Set()
+  try {
+    let creationError
+    try {
+      await create(name)
+    } catch (error) {
+      creationError = error
+    }
+    let found = []
+    try {
+      await expect
+        .poll(
+          async () => {
+            found = owned(await getAccounts(serviceWorker))
+            return found.length
+          },
+          { timeout: timeoutMs },
+        )
+        .toBe(1)
+    } catch (error) {
+      throw new AggregateError(
+        [creationError, error].filter(Boolean),
+        "UI account save outcome is uncertain; do not replay the save",
+      )
+    }
+    confirmedIds.add(found[0].id)
+    if (creationError) throw creationError
+    return await work(found[0])
+  } finally {
+    const accounts = await getAccounts(serviceWorker)
+    for (const account of accounts.filter(
+      (account) => confirmedIds.has(account.id) || owned([account]).length,
+    ))
+      await mutateFixture(serviceWorker, account, true)
+  }
+}
 
 /**
  * Read one raw `chrome.storage.local` value from inside the service worker.
@@ -33,6 +88,80 @@ async function writeStoredValue(serviceWorker, storageKey, value) {
   )
 }
 
+/** Change only patched preference fields under the application's preference lock. */
+async function updatePreferencePatch(
+  worker,
+  key,
+  patch,
+  restoring = false,
+  original,
+) {
+  return worker.evaluate(
+    async ({ key, patch, restoring, original, lockName }) => {
+      if (!navigator.locks)
+        throw new Error("preference_storage_lock_unavailable")
+      return navigator.locks.request(
+        lockName,
+        { mode: "exclusive" },
+        async () => {
+          const raw = await new Promise((resolve, reject) =>
+            chrome.storage.local.get(key, (value) => {
+              if (chrome.runtime?.lastError)
+                reject(new Error(chrome.runtime.lastError.message))
+              else resolve(value[key])
+            }),
+          )
+          const parse = (value) =>
+            value === undefined
+              ? {}
+              : typeof value === "string"
+                ? JSON.parse(value)
+                : value
+          const current = parse(raw)
+          if (!current || typeof current !== "object" || Array.isArray(current))
+            throw new Error("invalid_preference_storage")
+          const next = { ...current }
+          if (restoring) {
+            const previous = parse(original)
+            for (const field of Object.keys(patch)) {
+              if (JSON.stringify(next[field]) !== JSON.stringify(patch[field]))
+                continue
+              if (Object.hasOwn(previous, field)) next[field] = previous[field]
+              else delete next[field]
+            }
+          } else Object.assign(next, patch)
+          await new Promise((resolve, reject) => {
+            const complete = () => {
+              if (chrome.runtime?.lastError)
+                reject(new Error(chrome.runtime.lastError.message))
+              else resolve()
+            }
+            if (
+              restoring &&
+              original === undefined &&
+              !Object.keys(next).length
+            )
+              chrome.storage.local.remove(key, complete)
+            else
+              chrome.storage.local.set(
+                { [key]: JSON.stringify(next) },
+                complete,
+              )
+          })
+          return raw
+        },
+      )
+    },
+    {
+      key,
+      patch,
+      restoring,
+      original,
+      lockName: STORAGE_LOCKS.USER_PREFERENCES,
+    },
+  )
+}
+
 /**
  * Execute an async test function with a patched JSON storage value, restoring
  * the exact original bytes afterwards.
@@ -47,7 +176,26 @@ export async function withStoredValue(
   storageKey,
   patch,
   testFn,
+  { restorePatchedKeysOnly = false } = {},
 ) {
+  if (restorePatchedKeysOnly) {
+    const original = await updatePreferencePatch(
+      serviceWorker,
+      storageKey,
+      patch,
+    )
+    try {
+      return await testFn()
+    } finally {
+      await updatePreferencePatch(
+        serviceWorker,
+        storageKey,
+        patch,
+        true,
+        original,
+      )
+    }
+  }
   const original = await readStoredValue(serviceWorker, storageKey)
 
   let current = {}

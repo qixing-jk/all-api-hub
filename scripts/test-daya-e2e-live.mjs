@@ -10,14 +10,21 @@ import { expect } from "@playwright/test"
 import { ACCOUNT_MANAGEMENT_TEST_IDS as accounts } from "../src/features/AccountManagement/testIds.ts"
 import { KEY_MANAGEMENT_TEST_IDS as keys } from "../src/features/KeyManagement/testIds.ts"
 import { MODEL_LIST_TEST_IDS as models } from "../src/features/ModelList/testIds.ts"
-import { UPDATE_LOG_DIALOG_TEST_IDS as updateLog } from "../src/features/UpdateLog/testIds.ts"
 import { DAYA_WEB_ORIGIN as origin } from "../src/services/accountSiteDefinitions/identifiers.ts"
-import { findInstalledDevExtension } from "./cdp/browser-runtime.mjs"
-import { connectDevBrowser, connectExtensionById } from "./cdp/client.mjs"
+import { connectWorktreeExtension } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
 import { getAccounts } from "./cdp/sandbox.mjs"
 import { preflightSession, probePageSession } from "./cdp/session-preflight.mjs"
-import { dismissModals } from "./cdp/ui-driver.mjs"
+import {
+  configureExtensionPage,
+  createUiCapture,
+  dismissModals,
+} from "./cdp/ui-driver.mjs"
+import { readModelCatalog } from "./flows/model-catalog.mjs"
+import {
+  openNativeKeyEditor,
+  submitNativeKeyEditor,
+} from "./flows/native-key-editor.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
 // Read-only by default. --execute allows one eligible daily grant through the
@@ -41,27 +48,17 @@ await fs.mkdir(evidenceDir, { recursive: true })
 /** Kept in sync with `src/constants/money.ts`; the runner is plain JS. */
 const QUOTA_PER_USD = 500_000
 
-const discovery = await connectDevBrowser()
-let extensionId
-try {
-  extensionId = await findInstalledDevExtension(
-    discovery.browser,
-    path.resolve(".output/chrome-mv3"),
-  )
-} finally {
-  await discovery.close()
-}
-assert.ok(extensionId, "Current-worktree production extension is not installed")
-const dev = await connectExtensionById({ extensionId })
+const dev = await connectWorktreeExtension({
+  extensionPath: path.resolve(".output/chrome-mv3"),
+})
+const { extensionId } = dev
 const site = await dev.context.newPage()
 const ui = await dev.context.newPage()
-await ui.setViewportSize({ width: 1440, height: 1000 })
-await ui.addInitScript(() =>
-  localStorage.setItem("all-api-hub-i18nextLng", "en"),
-)
-await ui.addLocatorHandler(ui.getByTestId(updateLog.root), () =>
-  ui.getByTestId(updateLog.closeButton).click(),
-)
+await configureExtensionPage(ui, {
+  viewport: { width: 1440, height: 1000 },
+  language: "en",
+  dismissUpdateLog: true,
+})
 const accountName = `AAH Daya ${randomUUID().slice(0, 8)}`
 let accountId
 let createdKeyId
@@ -83,23 +80,13 @@ const evidence = {
 const stored = () => getAccounts(dev.serviceWorker)
 const card = () =>
   ui.getByTestId(`account-management-account-list-item-${accountId}`)
-const capture = async (name, target = ui) => {
-  // A refreshing card never settles; fall back to the page view rather than
-  // failing the run on an unstable element screenshot.
-  await target
-    .screenshot({
-      path: path.join(evidenceDir, `${name}.png`),
-      animations: "disabled",
-      timeout: 8000,
-    })
-    .catch(async () => {
-      await ui.screenshot({
-        path: path.join(evidenceDir, `${name}-page.png`),
-        animations: "disabled",
-      })
-    })
-  evidence.screenshots.push(`${name}.png`)
-}
+const capture = createUiCapture({
+  page: ui,
+  directory: evidenceDir,
+  screenshots: evidence.screenshots,
+  fallbackToPage: true,
+  timeoutMs: 8000,
+})
 const readIdentity = () =>
   site.evaluate(async () => {
     const response = await fetch("/api/v1/auth/me", {
@@ -406,6 +393,7 @@ try {
     `chrome-extension://${extensionId}/options.html?accountId=${accountId}#models`,
   )
   await dismissModals(ui)
+  await readModelCatalog({ page: ui, accountId, timeoutMs: 45000 })
   await expect(
     ui
       .getByTestId(models.modelDisplay)
@@ -521,14 +509,14 @@ try {
     }
   }
   if (previewEditor) {
-    await ui
-      .getByTestId(
+    const editor = await openNativeKeyEditor(ui, {
+      trigger: ui.getByTestId(
         originalKeyIds.length
           ? keys.addTokenButton
           : keys.emptyStateAddTokenButton,
-      )
-      .click()
-    const editor = ui.getByTestId(keys.nativeEditor)
+      ),
+      readyField: /^Token Name/,
+    })
     await expect(editor.getByLabel("Token Name", { exact: true })).toBeEditable(
       { timeout: 30000 },
     )
@@ -587,14 +575,14 @@ try {
   if (mutate) {
     const runName = `AAH disposable ${randomUUID().slice(0, 8)}`
     createdKeyName = runName
-    await ui
-      .getByTestId(
+    const editor = await openNativeKeyEditor(ui, {
+      trigger: ui.getByTestId(
         originalKeyIds.length
           ? keys.addTokenButton
           : keys.emptyStateAddTokenButton,
-      )
-      .click()
-    const editor = ui.getByTestId(keys.nativeEditor)
+      ),
+      readyField: /^Token Name/,
+    })
     await expect(editor.getByLabel("Token Name", { exact: true })).toBeEditable(
       {
         timeout: 30000,
@@ -667,7 +655,7 @@ try {
     }
     dev.context.on("request", countInvalidWrites)
     try {
-      await ui.getByTestId(keys.nativeEditorSubmitButton).click()
+      await submitNativeKeyEditor(ui, { waitForClose: false })
       await expect(
         editor.getByLabel("Total quota (USD)", { exact: true }),
       ).toHaveAttribute("aria-invalid", "true")
@@ -686,7 +674,7 @@ try {
     await capture("05-create")
     // One submit: the busy button means the write dispatched; a validation
     // failure keeps the editor open and the API poll below reports it.
-    await ui.getByTestId(keys.nativeEditorSubmitButton).click()
+    await submitNativeKeyEditor(ui, { waitForClose: false })
     await capture("05b-after-submit")
     await expect
       .poll(
@@ -774,8 +762,7 @@ try {
     await capture("06-edit-preserving-native-settings", editor)
     await blacklist.scrollIntoViewIfNeeded()
     await capture("06-edit-advanced-settings", editor)
-    await ui.getByTestId(keys.nativeEditorSubmitButton).click()
-    await expect(editor).toBeHidden({ timeout: 30000 })
+    await submitNativeKeyEditor(ui, { timeoutMs: 30000 })
     const edited = (
       await (await request(`/api/v1/keys/${createdKeyId}`)).json()
     ).data

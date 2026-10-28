@@ -8,6 +8,7 @@ import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
 import { withTemporaryAccount } from "./cdp/sandbox.mjs"
 import { preflightSession } from "./cdp/session-preflight.mjs"
 import { dismissModals, openExtensionPage } from "./cdp/ui-driver.mjs"
+import { readModelCatalog } from "./flows/model-catalog.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
 await loadLocalEnv()
@@ -144,9 +145,12 @@ try {
         await page.goto(
           `chrome-extension://${dev.extensionId}/options.html?accountId=${encodeURIComponent(account.id)}#models`,
         )
-        await page
-          .getByTestId("model-list-display")
-          .waitFor({ state: "visible", timeout: 20000 })
+        await readModelCatalog({
+          page,
+          accountId: account.id,
+          timeoutMs: 20000,
+          requirePrices: false,
+        })
         await page.screenshot({
           path: path.join(evidenceDir, "model-catalog.png"),
         })

@@ -1,11 +1,14 @@
 import { randomUUID } from "node:crypto"
 
+import { KEY_MANAGEMENT_TEST_IDS } from "../../../src/features/KeyManagement/testIds.ts"
 import { withTemporaryAccount } from "../../cdp/sandbox.mjs"
 import { dismissModals, openExtensionPage } from "../../cdp/ui-driver.mjs"
 import { testAccountCardFlow } from "../../flows/account-card.mjs"
 import { testModelCatalogFlow } from "../../flows/model-catalog.mjs"
-
-const LANGUAGE_STORAGE_KEY = "all-api-hub-i18nextLng"
+import {
+  openNativeKeyEditor,
+  submitNativeKeyEditor,
+} from "../../flows/native-key-editor.mjs"
 
 /**
  * Live UI end-to-end checks for the Grsai account integration.
@@ -27,26 +30,13 @@ const LANGUAGE_STORAGE_KEY = "all-api-hub-i18nextLng"
 
 const GRSAI_ACCOUNT_SITE_TYPE = "grsai"
 
-const KEY_MANAGEMENT_TEST_IDS = {
-  addTokenButton: "key-management-add-token-button",
-  nativeEditorSubmitButton: "key-management-native-editor-submit-button",
-  nativeEditorLoading: "key-management-native-editor-loading",
-  nativeKeyRow: "key-management-native-key-row",
-  nativeDeleteConfirmButton: "key-management-native-delete-confirm-button",
-}
-
 async function openKeyPage(context, extensionId, accountId) {
-  const page = await context.newPage()
-  await page.addInitScript(
-    ([key, value]) => window.localStorage.setItem(key, value),
-    [LANGUAGE_STORAGE_KEY, "en"],
-  )
-  await page.goto(
-    `chrome-extension://${extensionId}/options.html#keys?accountId=${encodeURIComponent(accountId)}`,
-  )
-  await page.waitForLoadState("domcontentloaded")
-  await dismissModals(page)
-  return page
+  return openExtensionPage({
+    context,
+    extensionId,
+    route: `options.html#keys?accountId=${encodeURIComponent(accountId)}`,
+    language: "en",
+  })
 }
 
 /** The shared `name` field the editor renders as a labelled text input. */
@@ -129,6 +119,7 @@ export async function runGrsaiUiTest({
             page,
             extensionId,
             accountName: fixture.site_name,
+            accountId: fixture.id,
           })
           if (!cardResult?.ok) {
             throw new Error(
@@ -178,17 +169,11 @@ export async function runGrsaiUiTest({
                   `  [UI 步骤 3] 通过 UI 创建一次性密钥 [${createdKeyName}]（走 xtx 签名写路径）...`,
                 )
 
-                await addBtn.click()
-                await keyPage
-                  .locator(
-                    `[data-testid="${KEY_MANAGEMENT_TEST_IDS.nativeEditorLoading}"]`,
-                  )
-                  .waitFor({ state: "detached", timeout: 60_000 })
-                await keyPage
-                  .locator(
-                    `[data-testid="${KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton}"]`,
-                  )
-                  .waitFor({ state: "visible", timeout: 30_000 })
+                await openNativeKeyEditor(keyPage, {
+                  trigger: addBtn,
+                  readyField: "Name",
+                  timeoutMs: 60_000,
+                })
 
                 // Name the throwaway key through the shared name field. The field
                 // label is the English "Name" from the locale resource.
@@ -217,16 +202,7 @@ export async function runGrsaiUiTest({
                 await keyPage
                   .getByLabel("Expiration Time", { exact: true })
                   .fill(localExpiry)
-                await keyPage
-                  .locator(
-                    `[data-testid="${KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton}"]`,
-                  )
-                  .click()
-                await keyPage
-                  .locator(
-                    `[data-testid="${KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton}"]`,
-                  )
-                  .waitFor({ state: "hidden", timeout: 60_000 })
+                await submitNativeKeyEditor(keyPage, { timeoutMs: 60_000 })
 
                 // The inventory re-reveals plaintext keys; the new row must exist.
                 const createdRow = keyPage
@@ -242,27 +218,15 @@ export async function runGrsaiUiTest({
                 // Rename through the same editor.
                 const renamedName = `${createdKeyName}-renamed`
                 ownedKeyNames.add(renamedName)
-                await createdRow
-                  .first()
-                  .getByRole("button", { name: "Edit", exact: true })
-                  .click()
-                await keyPage
-                  .locator(
-                    `[data-testid="${KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton}"]`,
-                  )
-                  .waitFor({ state: "visible", timeout: 30_000 })
+                await openNativeKeyEditor(keyPage, {
+                  trigger: createdRow
+                    .first()
+                    .getByRole("button", { name: "Edit", exact: true }),
+                  readyField: "Name",
+                })
                 const renameInput = nameInputLocator(keyPage, "Name")
                 await renameInput.fill(renamedName)
-                await keyPage
-                  .locator(
-                    `[data-testid="${KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton}"]`,
-                  )
-                  .click()
-                await keyPage
-                  .locator(
-                    `[data-testid="${KEY_MANAGEMENT_TEST_IDS.nativeEditorSubmitButton}"]`,
-                  )
-                  .waitFor({ state: "hidden", timeout: 60_000 })
+                await submitNativeKeyEditor(keyPage, { timeoutMs: 60_000 })
                 const renamedRow = keyPage
                   .locator(
                     `[data-testid="${KEY_MANAGEMENT_TEST_IDS.nativeKeyRow}"]`,

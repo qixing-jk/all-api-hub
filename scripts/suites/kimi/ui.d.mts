@@ -9,4 +9,5 @@ export function runKimiUiTest(options: {
   organizationId?: string
   siteUrl?: string
   siteType?: string
+  timeoutMs?: number
 }): Promise<void>

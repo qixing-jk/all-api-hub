@@ -113,6 +113,10 @@ jobs:
           restore-keys: |
             unit-test-durations-
 
+      # Script acceptance tests exercise real DOM behavior in headless Chromium.
+      - name: Install Chromium for browser-backed unit tests
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: Run test shard with coverage
         env:
           UNIT_TEST_SHARD_DURATIONS: .vitest-durations/shard-durations.json

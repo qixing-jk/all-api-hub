@@ -1,19 +1,13 @@
 import { dismissModals } from "../cdp/ui-driver.mjs"
 
-/** Verify the selected account and actual model rows, independent of UI language. */
-export async function testModelCatalogFlow({
+/** Read an already-open account catalog without navigating or changing filters. */
+export async function readModelCatalog({
   page,
-  extensionId,
-  accountName,
   accountId,
   timeoutMs = 15000,
+  requirePrices = true,
 }) {
   if (!accountId) throw new Error("model_catalog_requires_account_id")
-  await page.goto(
-    `chrome-extension://${extensionId}/options.html#models?accountId=${encodeURIComponent(accountId)}`,
-  )
-  await page.waitForLoadState("domcontentloaded")
-  await dismissModals(page)
   await page.waitForFunction(
     (expectedSource) => {
       const root = document.querySelector('[data-testid="model-list-page"]')
@@ -32,9 +26,35 @@ export async function testModelCatalogFlow({
   if (!names.some((name) => name.trim()))
     throw new Error("model_catalog_has_no_rendered_models")
   const prices = await modelDisplay.innerText()
-  if (!/[$¥￥]\s*\d/.test(prices))
+  if (requirePrices && !/[$¥￥]\s*\d/.test(prices))
     throw new Error("model_catalog_has_no_rendered_prices")
+  return { names, modelDisplay }
+}
+
+/** Navigate to the selected account and verify actual model rows. */
+export async function testModelCatalogFlow({
+  page,
+  extensionId,
+  accountName,
+  accountId,
+  timeoutMs = 15000,
+  requirePrices = true,
+}) {
+  if (!accountId) throw new Error("model_catalog_requires_account_id")
+  await page.goto(
+    `chrome-extension://${extensionId}/options.html#models?accountId=${encodeURIComponent(accountId)}`,
+  )
+  await page.waitForLoadState("domcontentloaded")
+  await dismissModals(page)
+  const { names } = await readModelCatalog({
+    page,
+    accountId,
+    timeoutMs,
+    requirePrices,
+  })
   const countLine = `${names.length} rendered model rows`
-  console.log(`  ✅ 数据源 [${accountName}] 已展示模型和价格：${countLine}`)
+  console.log(
+    `  ✅ 数据源 [${accountName}] 已展示模型${requirePrices ? "和价格" : ""}：${countLine}`,
+  )
   return { ok: true, countLine }
 }

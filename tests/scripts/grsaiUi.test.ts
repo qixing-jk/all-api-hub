@@ -42,6 +42,7 @@ describe("Grsai live UI cleanup", () => {
         first: () => locator(selector),
         or: () => locator(selector),
         filter: () => locator(selector),
+        getByLabel: (label: string) => locator(label),
         getByRole: (_role: string, options: { name: string }) =>
           locator(options.name),
         isVisible: async () => true,
