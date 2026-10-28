@@ -29,6 +29,7 @@ it.each(["shell", "wrong-source", "selected-source"])(
     const browser = await chromium.launch({ headless: true })
     try {
       const page = await browser.newPage()
+      page.setDefaultTimeout(200)
       vi.spyOn(page, "goto").mockImplementation(async () => {
         await page.setContent(
           mode === "shell"
