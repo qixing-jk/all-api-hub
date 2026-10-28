@@ -55,6 +55,14 @@ export function extractApiCheckCredentialsFromText(
       })
     : apiKeyCandidates[0]
 
+  // Modal consumers initialize from the first candidate. Keep that default
+  // consistent with the automatic selection while retaining manual alternatives.
+  if (options.automaticPrompt && selectedApiKey) {
+    const selectedIndex = apiKeyCandidates.indexOf(selectedApiKey)
+    apiKeyCandidates.splice(selectedIndex, 1)
+    apiKeyCandidates.unshift(selectedApiKey)
+  }
+
   return {
     baseUrlCandidates: baseUrlCandidates.map((candidate) => candidate.value),
     apiKeyCandidates: apiKeyCandidates.map((candidate) => candidate.value),

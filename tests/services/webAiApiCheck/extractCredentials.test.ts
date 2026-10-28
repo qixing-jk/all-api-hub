@@ -84,6 +84,8 @@ describe("webAiApiCheck extractCredentials", () => {
     })
     expect(result.apiKey).toBe(key)
     expect(result.summary.enhancedAutoPromptEligible).toBe(true)
+    expect(result.candidates.apiKeys[0]?.value).toBe(key)
+    expect(result.apiKeyCandidates[0]).toBe(key)
     expect(result.apiKeyCandidates).toContain(
       "be94d810-6a52-42c7-a380-1a8f9c02de73",
     )
