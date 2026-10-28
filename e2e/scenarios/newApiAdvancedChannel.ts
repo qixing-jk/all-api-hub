@@ -196,6 +196,7 @@ export async function runNewApiAdvancedChannelScenario(params: {
         await toggle("Automatically disable channel").check()
         await combo("Ignored upstream models").fill("e2e-ignored-model")
         await combo("Ignored upstream models").press("Enter")
+        await combo("Ignored upstream models").press("Escape")
         await combo("Test model").fill("e2e-test-model")
         await combo("Test model").press("Tab")
         await dialog
