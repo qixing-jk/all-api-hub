@@ -8,19 +8,25 @@ import { expect } from "@playwright/test"
 import { ACCOUNT_MANAGEMENT_TEST_IDS as accounts } from "../src/features/AccountManagement/testIds.ts"
 import { KEY_MANAGEMENT_TEST_IDS as keys } from "../src/features/KeyManagement/testIds.ts"
 import { TOKEN_PROVISIONING_TEST_IDS as secrets } from "../src/features/TokenProvisioning/testIds.ts"
-import { UPDATE_LOG_DIALOG_TEST_IDS as updateLog } from "../src/features/UpdateLog/testIds.ts"
 import { DAHL_WEB_ORIGIN } from "../src/services/accountSiteDefinitions/identifiers.ts"
 import {
   STORAGE_KEYS,
   STORAGE_LOCKS,
 } from "../src/services/core/storageKeys.ts"
-import { findInstalledDevExtension } from "./cdp/browser-runtime.mjs"
-import { connectDevBrowser, connectExtensionById } from "./cdp/client.mjs"
+import { connectWorktreeExtension } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
 import { getAccounts } from "./cdp/sandbox.mjs"
 import { preflightSession, probePageSession } from "./cdp/session-preflight.mjs"
-import { dismissModals } from "./cdp/ui-driver.mjs"
+import {
+  configureExtensionPage,
+  createUiCapture,
+  dismissModals,
+} from "./cdp/ui-driver.mjs"
 import { testModelCatalogFlow } from "./flows/model-catalog.mjs"
+import {
+  openNativeKeyEditor,
+  submitNativeKeyEditor,
+} from "./flows/native-key-editor.mjs"
 import {
   redactEvidence,
   redactEvidenceBody,
@@ -49,17 +55,10 @@ execFileSync("git", [
   path.join(evidenceDir, "index.json"),
 ])
 await fs.mkdir(evidenceDir, { recursive: true })
-const discovery = await connectDevBrowser()
-let extensionId
-try {
-  extensionId = await findInstalledDevExtension(
-    discovery.browser,
-    path.resolve(".output/chrome-mv3"),
-  )
-} finally {
-  await discovery.close()
-}
-const dev = await connectExtensionById({ extensionId })
+const dev = await connectWorktreeExtension({
+  extensionPath: path.resolve(".output/chrome-mv3"),
+})
+const { extensionId } = dev
 const captures = new Set()
 const captureErrors = []
 const captureResponse = (response) => {
@@ -95,12 +94,7 @@ const countProviderRequest = (request) => {
 dev.context.on("request", countProviderRequest)
 let site = await dev.context.newPage()
 const ui = await dev.context.newPage()
-await ui.addInitScript(() =>
-  localStorage.setItem("all-api-hub-i18nextLng", "en"),
-)
-await ui.addLocatorHandler(ui.getByTestId(updateLog.root), () =>
-  ui.getByTestId(updateLog.closeButton).click(),
-)
+await configureExtensionPage(ui, { language: "en", dismissUpdateLog: true })
 let accountId
 let createdKeyId
 let originalWebsiteNames
@@ -117,14 +111,12 @@ const evidence = {
   checks: [],
   cleanup: {},
 }
-const capture = async (name) => {
-  await ui.bringToFront()
-  await ui.screenshot({
-    path: path.join(evidenceDir, name),
-    animations: "disabled",
-    mask: [ui.getByTestId(secrets.oneTimeKeyInput)],
-  })
-}
+const capture = createUiCapture({
+  page: ui,
+  directory: evidenceDir,
+  bringToFront: true,
+  mask: [ui.getByTestId(secrets.oneTimeKeyInput)],
+})
 const stored = () => getAccounts(dev.serviceWorker)
 const card = () =>
   ui.getByTestId(`account-management-account-list-item-${accountId}`)
@@ -372,8 +364,11 @@ try {
       "plaintext inventory reuse unverified: this account inventory contains no full token",
     )
   }
-  await ui.getByTestId(keys.addTokenButton).click()
   const amount = ui.locator("#resource-editor-transfer_amount")
+  await openNativeKeyEditor(ui, {
+    trigger: ui.getByTestId(keys.addTokenButton),
+    readyField: ui.getByRole("textbox", { name: "Key name", exact: true }),
+  })
   await expect(ui.getByTestId(keys.nativeEditor)).toContainText(
     "Creates a new key with 0 tokens",
     { timeout: 30000 },
@@ -389,7 +384,7 @@ try {
   await expect(amount).toHaveCount(0)
   await capture("03-create-key.png")
   if (mutate) {
-    await ui.getByTestId(keys.nativeEditorSubmitButton).click()
+    await submitNativeKeyEditor(ui, { waitForClose: false })
     await expect
       .poll(
         async () =>
@@ -523,7 +518,7 @@ try {
             ? "05-allocate.png"
             : "06-return.png",
         )
-        await ui.getByTestId(keys.nativeEditorSubmitButton).click()
+        await submitNativeKeyEditor(ui, { waitForClose: false })
         await expect(ui.getByTestId(keys.nativeEditor)).toHaveCount(0, {
           timeout: 30000,
         })

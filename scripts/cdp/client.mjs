@@ -2,7 +2,10 @@
 import path from "node:path"
 import { chromium } from "@playwright/test"
 
-import { assertDevBrowserProfile } from "./browser-runtime.mjs"
+import {
+  assertDevBrowserProfile,
+  findInstalledDevExtension,
+} from "./browser-runtime.mjs"
 import { resolveCdpPort } from "./dev-profile.mjs"
 
 /**
@@ -11,6 +14,25 @@ import { resolveCdpPort } from "./dev-profile.mjs"
  */
 export function defaultCdpUrl() {
   return `http://127.0.0.1:${resolveCdpPort()}`
+}
+
+/** Resolve an exact build using the verified browser profile. */
+export async function connectWorktreeExtension({ cdpUrl, extensionPath }) {
+  const dev = await connectDevBrowser({ cdpUrl })
+  try {
+    const extensionId = await findInstalledDevExtension(
+      dev.browser,
+      extensionPath,
+    )
+    if (!extensionId)
+      throw new Error(
+        `Current-worktree extension is not installed: ${extensionPath}`,
+      )
+    return await attachExtension(dev, extensionId)
+  } catch (error) {
+    await dev.close()
+    throw error
+  }
 }
 
 /** Connect to the verified dev profile without requiring an active extension. */
@@ -71,39 +93,40 @@ async function readBrowserTargets(browser) {
  * at once, so a suite that must exercise one exact build pins its id instead of
  * relying on title-based discovery.
  */
+async function attachExtension(dev, extensionId) {
+  const { context } = dev
+
+  // A dormant MV3 worker is not listed until something addresses the extension.
+  let sw = context.serviceWorkers().find((w) => w.url().includes(extensionId))
+  if (!sw) {
+    await wakeExtension(
+      context,
+      `chrome-extension://${extensionId}/options.html`,
+    )
+    sw = context.serviceWorkers().find((w) => w.url().includes(extensionId))
+  }
+
+  if (!sw) {
+    throw new Error(
+      `扩展 ${extensionId} 未挂载或 Service Worker 未激活。请确认该 ID 的扩展已加载到调试浏览器。`,
+    )
+  }
+
+  return {
+    ...dev,
+    extensionId,
+    serviceWorker: sw,
+  }
+}
+
 export async function connectExtensionById({
   cdpUrl = process.env.CDP_URL || defaultCdpUrl(),
   extensionId,
 } = {}) {
-  if (!extensionId) {
-    throw new Error("connectExtensionById 需要一个扩展 ID。")
-  }
-
+  if (!extensionId) throw new Error("connectExtensionById 需要一个扩展 ID。")
   const dev = await connectDevBrowser({ cdpUrl })
   try {
-    const { context } = dev
-
-    // A dormant MV3 worker is not listed until something addresses the extension.
-    let sw = context.serviceWorkers().find((w) => w.url().includes(extensionId))
-    if (!sw) {
-      await wakeExtension(
-        context,
-        `chrome-extension://${extensionId}/options.html`,
-      )
-      sw = context.serviceWorkers().find((w) => w.url().includes(extensionId))
-    }
-
-    if (!sw) {
-      throw new Error(
-        `扩展 ${extensionId} 未挂载或 Service Worker 未激活。请确认该 ID 的扩展已加载到调试浏览器。`,
-      )
-    }
-
-    return {
-      ...dev,
-      extensionId,
-      serviceWorker: sw,
-    }
+    return await attachExtension(dev, extensionId)
   } catch (error) {
     await dev.close()
     throw error

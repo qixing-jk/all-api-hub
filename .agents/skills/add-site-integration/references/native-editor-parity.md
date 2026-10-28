@@ -11,7 +11,7 @@ Walk through the native editor and current extension for the target role and ver
 - Prioritize by frequency, importance and error cost. “Common fields only” does not justify omitting a core workflow while adding secondary settings. Respect explicit narrower user scope and record what it excludes.
 - Compare existing app presentation seams with those tasks. Extend an inadequate shared editor seam when needed instead of flattening native interactions to fit its current field list.
 
-Keep a compact comparison in the existing task spec/evidence index; rows describe tasks and meaningful variants, not individual JSON properties. Reuse it during implementation and handoff instead of creating another site inventory.
+Keep a compact comparison in the existing task spec/evidence index; rows describe tasks and meaningful variants. Under each affected editor task, inventory the native user-editable fields, including conditional and advanced sections. For each field, record native default/options/validation, extension control or explicit disposition, submitted value and save/reopen readback. Distinguish create-only, edit-only, immutable and role-restricted fields. A field preserved invisibly in a payload remains unadapted as an editable control. Reuse this inventory and task comparison during implementation and acceptance instead of creating another site inventory.
 
 | Common task / variant | Native interaction and evidence | Our current gap | Intended behavior and priority | Observed result / remaining gap |
 | --- | --- | --- | --- | --- |

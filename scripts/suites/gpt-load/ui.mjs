@@ -1,6 +1,9 @@
+import { CHANNEL_DIALOG_TEST_IDS } from "../../../src/features/ManagedSiteChannels/editor/ChannelDialog/testIds.ts"
+import { MANAGED_SITE_CHANNELS_TEST_IDS } from "../../../src/features/ManagedSiteChannels/testIds.ts"
 import { withStoredValue } from "../../cdp/sandbox.mjs"
 import { dismissModals } from "../../cdp/ui-driver.mjs"
 import {
+  deleteManagedSiteChannelRow,
   managedSiteOptionsPageUrl,
   openManagedSiteOptionsPage,
   readManagedSiteConnectionCopy,
@@ -23,19 +26,6 @@ import {
 
 /** Same key the E2E suite writes; a plain JSON string envelope. */
 const USER_PREFERENCES_STORAGE_KEY = "user_preferences"
-
-const MANAGED_SITE_CHANNELS_TEST_IDS = {
-  addChannelButton: "managed-site-channels-add-channel-button",
-  searchInput: "managed-site-channels-search-input",
-  deleteSelectedButton: "managed-site-channels-delete-selected-button",
-  deleteChannelConfirmButton: "managed-site-channels-delete-confirm-button",
-}
-
-const CHANNEL_DIALOG_TEST_IDS = {
-  nameInput: "channel-dialog-name-input",
-  baseUrlInput: "channel-dialog-base-url-input",
-  submitButton: "channel-dialog-submit-button",
-}
 
 /**
  * The multi-key secret-list renderer names each row's input
@@ -314,26 +304,7 @@ export async function runGptLoadUiTest({
             .first()
             .waitFor({ state: "visible", timeout: 30_000 })
 
-          const rowTestId = await createdRow.first().getAttribute("data-testid")
-          const rowToken = rowTestId.replace("managed-site-channel-row-", "")
-          await channelsPage
-            .locator(
-              `[data-testid="managed-site-channel-row-${rowToken}-select"]`,
-            )
-            .click()
-          await channelsPage
-            .locator(
-              `[data-testid="${MANAGED_SITE_CHANNELS_TEST_IDS.deleteSelectedButton}"]`,
-            )
-            .click()
-          await channelsPage
-            .locator(
-              `[data-testid="${MANAGED_SITE_CHANNELS_TEST_IDS.deleteChannelConfirmButton}"]`,
-            )
-            .click()
-          await createdRow
-            .first()
-            .waitFor({ state: "detached", timeout: 60_000 })
+          await deleteManagedSiteChannelRow(channelsPage, createdRow)
 
           if (await api.hasGroupNamed(createdName)) {
             throw new Error(`UI 删除后网关侧仍存在分组: ${createdName}`)

@@ -14,6 +14,7 @@ import { connectDevExtension } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
 import { dismissModals, openExtensionPage } from "./cdp/ui-driver.mjs"
 import { testModelCatalogFlow } from "./flows/model-catalog.mjs"
+import { submitNativeKeyEditor } from "./flows/native-key-editor.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
 // Prerequisites: current-worktree build mounted in the dedicated CDP browser,
@@ -419,7 +420,7 @@ try {
     if (mutate) {
       await ui.getByTestId(keys.addTokenButton).click()
       await ui.locator("#resource-editor-name").fill(keyName)
-      await ui.getByTestId(keys.nativeEditorSubmitButton).click()
+      await submitNativeKeyEditor(ui, { waitForClose: false })
       await expect
         .poll(
           async () =>
@@ -497,7 +498,7 @@ try {
       const row = ui.getByTestId(keys.nativeKeyRow).filter({ hasText: keyName })
       await row.getByRole("button", { name: "Edit Key", exact: true }).click()
       await ui.locator("#resource-editor-name").fill(renamedKey)
-      await ui.getByTestId(keys.nativeEditorSubmitButton).click()
+      await submitNativeKeyEditor(ui, { waitForClose: false })
       await expect
         .poll(async () => (await request(`/api/token/${created.id}`)).name, {
           timeout: 30000,
@@ -600,10 +601,7 @@ try {
         path: path.join(evidenceDir, "05-native-editor.png"),
         fullPage: true,
       })
-      await ui.getByTestId(keys.nativeEditorSubmitButton).click()
-      await expect(ui.getByTestId(keys.nativeEditorSubmitButton)).toBeHidden({
-        timeout: 30000,
-      })
+      await submitNativeKeyEditor(ui, { timeoutMs: 30000 })
       const nativeUpdated = await request(`/api/token/${created.id}`)
       const expectedNative = {
         billing_type: 2,
@@ -659,10 +657,7 @@ try {
       await ui
         .locator(`#resource-editor-${laoZhangFields.RateLimitEnabled}`)
         .click()
-      await ui.getByTestId(keys.nativeEditorSubmitButton).click()
-      await expect(ui.getByTestId(keys.nativeEditorSubmitButton)).toBeHidden({
-        timeout: 60000,
-      })
+      await submitNativeKeyEditor(ui, { timeoutMs: 60000 })
       const disabledLimits = await request(`/api/token/${created.id}`)
       assert.equal(disabledLimits.rate_limit_duration, 0)
       assert.equal(disabledLimits.rate_limit_num, 0)

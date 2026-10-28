@@ -1,4 +1,24 @@
-import type { BrowserContext, Page } from "@playwright/test"
+import type { BrowserContext, Locator, Page } from "@playwright/test"
+
+export interface ExtensionPageConfiguration {
+  language?: string
+  viewport?: { width: number; height: number }
+  dismissUpdateLog?: boolean
+}
+export function configureExtensionPage(
+  page: Page,
+  options?: ExtensionPageConfiguration,
+): Promise<void>
+
+export function createUiCapture(options: {
+  page: Page
+  directory: string
+  screenshots?: string[]
+  mask?: Locator[]
+  bringToFront?: boolean
+  fallbackToPage?: boolean
+  timeoutMs?: number
+}): (name: string, target?: Page | Locator) => Promise<void>
 
 /**
  * Dismisses dialogs through application controls without removing their DOM.
@@ -16,9 +36,11 @@ export function dismissModals(page: Page): Promise<void>
  * @param options.autoDismissModals Whether to dismiss initial dialogs.
  * @returns The opened extension page.
  */
-export function openExtensionPage(options: {
-  context: BrowserContext
-  extensionId: string
-  route?: string
-  autoDismissModals?: boolean
-}): Promise<Page>
+export function openExtensionPage(
+  options: ExtensionPageConfiguration & {
+    context: BrowserContext
+    extensionId: string
+    route?: string
+    autoDismissModals?: boolean
+  },
+): Promise<Page>

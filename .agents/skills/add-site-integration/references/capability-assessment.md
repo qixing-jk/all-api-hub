@@ -47,7 +47,7 @@ For a new provider-specific representation or capability, include the consumer t
 
 ### Balance, usage and plans
 
-- [ ] **Balance**: verify source, currency, conversion and purchased/bonus distinctions; cover normal/manual/background refresh and unavailable/error states. Unknown data must not become zero.
+- [ ] **Balance**: complete the [native meaning mapping](account-sites.md#preserve-native-meaning-through-shared-workflows) through visible cards and affected totals/history/notifications; cover normal/manual/background refresh and unavailable/error states. Unknown data must not become zero.
 - [ ] **Usage and today statistics**: check consumed amount, request/token counts and logs individually, including pagination and timezone/day windows. Identify unavailable metrics rather than claiming all usage after one read.
 - [ ] **Plans, allowances and resets**: inspect subscriptions, remaining allowance, expiry and reset timing; map verified facts into existing presentation. Keep plans, purchased balance and promotional points separate; explain missing metrics or deferred new flows.
 
@@ -101,6 +101,7 @@ For a new provider-specific representation or capability, include the consumer t
 - [ ] **Behavior tests**: start each feature/fix with a failing focused test; implement/refactor with tests green. Cover transport/envelope and affected consumers, including parent policy/render guards and result messages, not only parsing. Await the expected loaded state before asserting a missing element so initialization is not mistaken for the regression.
 - [ ] **Live protocol and UI**: run applicable hosted/self-hosted probes and current-worktree site-specific CDP for offered actions, including invitation copy and native fields. Explain each applicable skipped layer/path; mocks/source inspection are not live validation. Follow existing evidence and visual-preview references.
 - [ ] **Editor usability, when affected**: reconcile [the native workflow comparison](native-editor-parity.md) before the first handoff; report worse, missing or unverified common paths separately from passing tests and field preservation.
+- [ ] **Independent acceptance, for user-facing integration/editor changes**: complete [the separate reviewer workflow](integration-acceptance.md); reconcile native fields/tasks, enabled actions and financial meaning against the current build. Record reviewer evidence, resolved findings and exact remaining gaps.
 
 ### Cleanup and evidence
 

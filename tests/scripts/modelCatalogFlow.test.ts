@@ -102,4 +102,19 @@ describe("live model catalog assertions", () => {
       testModelCatalogFlow({ ...options, page }),
     ).resolves.toMatchObject({ ok: true })
   })
+
+  it("allows an explicit catalog-only inspection without claiming pricing coverage", async () => {
+    const page = {
+      goto: vi.fn(),
+      waitForLoadState: vi.fn(),
+      waitForFunction: vi.fn(),
+      locator: () => ({
+        locator: () => ({ allTextContents: async () => ["unpriced-model"] }),
+        innerText: async () => "Price unavailable",
+      }),
+    } as unknown as Page
+    await expect(
+      testModelCatalogFlow({ ...options, page, requirePrices: false }),
+    ).resolves.toMatchObject({ ok: true })
+  })
 })

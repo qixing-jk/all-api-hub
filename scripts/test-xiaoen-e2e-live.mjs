@@ -8,14 +8,17 @@ import { expect } from "@playwright/test"
 
 import { ACCOUNT_MANAGEMENT_TEST_IDS as accounts } from "../src/features/AccountManagement/testIds.ts"
 import { KEY_MANAGEMENT_TEST_IDS as keys } from "../src/features/KeyManagement/testIds.ts"
-import { UPDATE_LOG_DIALOG_TEST_IDS as updateLog } from "../src/features/UpdateLog/testIds.ts"
 import { XIAOEN_WEB_ORIGIN as origin } from "../src/services/accountSiteDefinitions/identifiers.ts"
-import { findInstalledDevExtension } from "./cdp/browser-runtime.mjs"
-import { connectDevBrowser, connectExtensionById } from "./cdp/client.mjs"
+import { connectDevBrowser, connectWorktreeExtension } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
 import { getAccounts, withStoredValue } from "./cdp/sandbox.mjs"
 import { preflightSession, probePageSession } from "./cdp/session-preflight.mjs"
-import { dismissModals } from "./cdp/ui-driver.mjs"
+import {
+  configureExtensionPage,
+  createUiCapture,
+  dismissModals,
+} from "./cdp/ui-driver.mjs"
+import { readModelCatalog } from "./flows/model-catalog.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
 // Provider reads by default; --sync-message-read acknowledges one already-read message.
@@ -38,27 +41,17 @@ const evidenceDir = path.resolve(
     `.scratch/supxh-adaptation/evidence/cdp-${Date.now()}`,
 )
 await fs.mkdir(evidenceDir, { recursive: true })
-const discovery = await connectDevBrowser()
-let extensionId
-try {
-  extensionId = await findInstalledDevExtension(
-    discovery.browser,
-    path.resolve(".output/chrome-mv3"),
-  )
-} finally {
-  await discovery.close()
-}
-assert.ok(extensionId, "Current-worktree production extension is not installed")
-const dev = await connectExtensionById({ extensionId })
+const dev = await connectWorktreeExtension({
+  extensionPath: path.resolve(".output/chrome-mv3"),
+})
+const { extensionId } = dev
 const site = await dev.context.newPage()
 const ui = await dev.context.newPage()
-await ui.setViewportSize({ width: 1440, height: 1000 })
-await ui.addInitScript(() =>
-  localStorage.setItem("all-api-hub-i18nextLng", "en"),
-)
-await ui.addLocatorHandler(ui.getByTestId(updateLog.root), () =>
-  ui.getByTestId(updateLog.closeButton).click(),
-)
+await configureExtensionPage(ui, {
+  viewport: { width: 1440, height: 1000 },
+  language: "en",
+  dismissUpdateLog: true,
+})
 const accountName = `AAH Xiaoen ${randomUUID().slice(0, 8)}`
 let accountId,
   clipboardOverride = false
@@ -76,13 +69,11 @@ const evidence = {
 const stored = () => getAccounts(dev.serviceWorker)
 const card = () =>
   ui.getByTestId(`account-management-account-list-item-${accountId}`)
-const capture = async (name, target = ui) => {
-  await target.screenshot({
-    path: path.join(evidenceDir, name),
-    animations: "disabled",
-  })
-  evidence.screenshots.push(name)
-}
+const capture = createUiCapture({
+  page: ui,
+  directory: evidenceDir,
+  screenshots: evidence.screenshots,
+})
 const readIdentity = () =>
   site.evaluate(async () => {
     const response = await fetch("/api/auth/me", {
@@ -318,14 +309,11 @@ try {
     `chrome-extension://${extensionId}/options.html#models?accountId=${encodeURIComponent(accountId)}`,
   )
   await dismissModals(ui)
-  const modelRoot = ui.getByTestId("model-list-page")
-  await expect(modelRoot).toHaveAttribute(
-    "data-model-source",
-    `account:${accountId}`,
-  )
-  const modelDisplay = ui.getByTestId("model-list-display")
-  await expect(modelDisplay.locator("h3").first()).toBeVisible({
-    timeout: 45000,
+  const { modelDisplay } = await readModelCatalog({
+    page: ui,
+    accountId,
+    timeoutMs: 45000,
+    requirePrices: false,
   })
   // Rows are virtualized; the normal copy action exposes the complete filtered list.
   await ui

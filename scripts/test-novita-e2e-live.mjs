@@ -16,13 +16,20 @@ import { API_CREDENTIAL_PROFILES_TEST_IDS as profiles } from "../src/features/Ap
 import { KEY_MANAGEMENT_TEST_IDS as keys } from "../src/features/KeyManagement/testIds.ts"
 import { MODEL_LIST_TEST_IDS as models } from "../src/features/ModelList/testIds.ts"
 import { TOKEN_PROVISIONING_TEST_IDS as provisioning } from "../src/features/TokenProvisioning/testIds.ts"
-import { UPDATE_LOG_DIALOG_TEST_IDS as updateLog } from "../src/features/UpdateLog/testIds.ts"
 import { NOVITA_CONSOLE_CREDENTIAL_PREFIX } from "../src/services/apiService/novita/constants.ts"
-import { findInstalledDevExtension } from "./cdp/browser-runtime.mjs"
-import { connectDevBrowser, connectExtensionById } from "./cdp/client.mjs"
+import { connectWorktreeExtension } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
 import { getAccounts, withTemporaryAccount } from "./cdp/sandbox.mjs"
-import { dismissModals } from "./cdp/ui-driver.mjs"
+import {
+  configureExtensionPage,
+  createUiCapture,
+  dismissModals,
+} from "./cdp/ui-driver.mjs"
+import { readModelCatalog } from "./flows/model-catalog.mjs"
+import {
+  openNativeKeyEditor,
+  submitNativeKeyEditor,
+} from "./flows/native-key-editor.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
 /**
@@ -62,23 +69,14 @@ const NOVITA_BALANCE_URL =
 const NOVITA_KEYS_URL =
   "https://api.novita.ai/openapi/v2/user/key?includePolicySummary=true&includeIpAccessPolicy=true"
 
-const discovery = await connectDevBrowser()
-let extensionId
-try {
-  extensionId = await findInstalledDevExtension(
-    discovery.browser,
-    path.resolve(
-      process.argv.includes("--dev")
-        ? ".output/chrome-mv3-dev"
-        : ".output/chrome-mv3",
-    ),
-  )
-} finally {
-  await discovery.close()
-}
-assert.ok(extensionId, "Current-worktree production extension is not installed")
-
-const dev = await connectExtensionById({ extensionId })
+const dev = await connectWorktreeExtension({
+  extensionPath: path.resolve(
+    process.argv.includes("--dev")
+      ? ".output/chrome-mv3-dev"
+      : ".output/chrome-mv3",
+  ),
+})
+const { extensionId } = dev
 // Deterministic current-build badge acceptance; never issue or delete provider keys.
 if (process.argv.includes("--credential-hint-only")) {
   const ui = await dev.context.newPage()
@@ -271,9 +269,7 @@ if (
   }
   dev.context.on("requestfinished", recordIdentity)
   try {
-    await ui.addInitScript(() =>
-      localStorage.setItem("all-api-hub-i18nextLng", "en"),
-    )
+    await configureExtensionPage(ui, { language: "en" })
     await ui.setViewportSize({ width: 1440, height: 1000 })
     await ui.emulateMedia({ reducedMotion: "reduce" })
     await ui.goto(`chrome-extension://${extensionId}/options.html#account`)
@@ -632,12 +628,7 @@ if (process.argv.includes("--require-session"))
 const ui = await dev.context.newPage()
 await ui.setViewportSize({ width: 1920, height: 1080 })
 await ui.emulateMedia({ reducedMotion: "reduce" })
-await ui.addInitScript(() =>
-  localStorage.setItem("all-api-hub-i18nextLng", "en"),
-)
-await ui.addLocatorHandler(ui.getByTestId(updateLog.root), () =>
-  ui.getByTestId(updateLog.closeButton).click(),
-)
+await configureExtensionPage(ui, { language: "en", dismissUpdateLog: true })
 
 const accountName = `AAH Novita ${randomUUID().slice(0, 8)}`
 const stored = () => getAccounts(dev.serviceWorker)
@@ -660,21 +651,13 @@ let createdKeyId
 let policyActorId
 let startingKeyIds
 
-const capture = async (name, target = ui) => {
-  await target
-    .screenshot({
-      path: path.join(evidenceDir, `${name}.png`),
-      animations: "disabled",
-      timeout: 8000,
-    })
-    .catch(async () => {
-      await ui.screenshot({
-        path: path.join(evidenceDir, `${name}-page.png`),
-        animations: "disabled",
-      })
-    })
-  evidence.screenshots.push(`${name}.png`)
-}
+const capture = createUiCapture({
+  page: ui,
+  directory: evidenceDir,
+  screenshots: evidence.screenshots,
+  fallbackToPage: true,
+  timeoutMs: 8000,
+})
 
 /** Reads one Novita OpenAPI endpoint with the supplied key (read-only). */
 const readProvider = async (url) => {
@@ -985,8 +968,10 @@ try {
         "Mutation suite requires console onboarding",
       )
       const keyName = `aah-cdp-${randomUUID().slice(0, 8)}`
-      await ui.getByTestId(keys.addTokenButton).click()
-      const editor = ui.getByTestId(keys.nativeEditor)
+      const editor = await openNativeKeyEditor(ui, {
+        trigger: ui.getByTestId(keys.addTokenButton),
+        readyField: ui.locator("#resource-editor-name"),
+      })
       await editor
         .locator("#resource-editor-name")
         .waitFor({ state: "visible", timeout: 30000 })
@@ -1012,7 +997,7 @@ try {
         await modelPicker.press("Escape")
       await editor.locator("#resource-editor-name").click()
       await capture("05a-key-create-editor", editor)
-      await ui.getByTestId(keys.nativeEditorSubmitButton).click()
+      await submitNativeKeyEditor(ui, { waitForClose: false })
       await expect
         .poll(
           async () => {
@@ -1065,7 +1050,7 @@ try {
         await allowedPicker.press("Escape")
       await editor.locator("#resource-editor-name").fill(`${keyName}-renamed`)
       await capture("05c-key-edit-editor", editor)
-      await ui.getByTestId(keys.nativeEditorSubmitButton).click()
+      await submitNativeKeyEditor(ui, { waitForClose: false })
       const renamed = ui
         .getByTestId(keys.nativeKeyRow)
         .filter({ hasText: `${keyName}-renamed` })
@@ -1176,10 +1161,7 @@ try {
       `chrome-extension://${extensionId}/options.html?accountId=${accountId}#models`,
     )
     await dismissModals(ui)
-    await ui.getByTestId(models.modelDisplay).waitFor({
-      state: "visible",
-      timeout: 60000,
-    })
+    await readModelCatalog({ page: ui, accountId, timeoutMs: 60000 })
     await expect
       .poll(async () => ui.getByTestId(models.modelExpandButton).count(), {
         timeout: 60000,

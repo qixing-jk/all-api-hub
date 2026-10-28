@@ -10,12 +10,10 @@ import {
   ACCOUNT_MANAGEMENT_TEST_IDS as accounts,
   getAccountManagementListItemTestId,
 } from "../src/features/AccountManagement/testIds.ts"
-import { UPDATE_LOG_DIALOG_TEST_IDS as updateLog } from "../src/features/UpdateLog/testIds.ts"
-import { findInstalledDevExtension } from "./cdp/browser-runtime.mjs"
-import { connectDevBrowser, connectExtensionById } from "./cdp/client.mjs"
+import { connectWorktreeExtension } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
 import { getAccounts } from "./cdp/sandbox.mjs"
-import { dismissModals } from "./cdp/ui-driver.mjs"
+import { configureExtensionPage, dismissModals } from "./cdp/ui-driver.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
 // Uses an existing saved account; never seeds or rewrites account storage.
@@ -27,18 +25,10 @@ const out = path.resolve(
   `.scratch/dayaai-integration/evidence/redemption-20261021/extension-${Date.now()}`,
 )
 await fs.mkdir(out, { recursive: true })
-const discovery = await connectDevBrowser()
-let extensionId
-try {
-  extensionId = await findInstalledDevExtension(
-    discovery.browser,
-    path.resolve(".output/chrome-mv3"),
-  )
-} finally {
-  await discovery.close()
-}
-assert.ok(extensionId)
-const dev = await connectExtensionById({ extensionId })
+const dev = await connectWorktreeExtension({
+  extensionPath: path.resolve(".output/chrome-mv3"),
+})
+const { extensionId } = dev
 const site = await dev.context.newPage()
 const ui = await dev.context.newPage()
 const report = {
@@ -71,13 +61,11 @@ try {
     account,
     "An enabled saved account must match the current native identity",
   )
-  await ui.setViewportSize({ width: 1440, height: 1000 })
-  await ui.addInitScript(() =>
-    localStorage.setItem("all-api-hub-i18nextLng", "en"),
-  )
-  await ui.addLocatorHandler(ui.getByTestId(updateLog.root), () =>
-    ui.getByTestId(updateLog.closeButton).click(),
-  )
+  await configureExtensionPage(ui, {
+    viewport: { width: 1440, height: 1000 },
+    language: "en",
+    dismissUpdateLog: true,
+  })
   await ui.goto(`chrome-extension://${extensionId}/options.html#account`)
   await dismissModals(ui)
   const row = ui.getByTestId(getAccountManagementListItemTestId(account.id))

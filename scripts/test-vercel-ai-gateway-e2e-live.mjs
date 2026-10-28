@@ -9,17 +9,25 @@ import { expect } from "@playwright/test"
 
 import { KEY_MANAGEMENT_TEST_IDS as keys } from "../src/features/KeyManagement/testIds.ts"
 import { MODEL_LIST_TEST_IDS as models } from "../src/features/ModelList/testIds.ts"
-import { UPDATE_LOG_DIALOG_TEST_IDS as updateLog } from "../src/features/UpdateLog/testIds.ts"
 import {
   VERCEL_AI_GATEWAY_API_BASE_URL,
   VERCEL_API_ORIGIN,
   VERCEL_WEB_ORIGIN,
 } from "../src/services/accountSiteDefinitions/identifiers.ts"
-import { findInstalledDevExtension } from "./cdp/browser-runtime.mjs"
-import { connectDevBrowser, connectExtensionById } from "./cdp/client.mjs"
+import { connectWorktreeExtension } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
 import { withTemporaryAccount } from "./cdp/sandbox.mjs"
-import { dismissModals, openExtensionPage } from "./cdp/ui-driver.mjs"
+import {
+  configureExtensionPage,
+  createUiCapture,
+  dismissModals,
+  openExtensionPage,
+} from "./cdp/ui-driver.mjs"
+import { readModelCatalog } from "./flows/model-catalog.mjs"
+import {
+  openNativeKeyEditor,
+  submitNativeKeyEditor,
+} from "./flows/native-key-editor.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
 // Read-only by default. --mutate creates and deletes one disposable AI Gateway
@@ -124,48 +132,27 @@ const readCredits = async (teamId) => {
   return Number(body.balance)
 }
 
-const discovery = await connectDevBrowser()
-let extensionId
-// Default to the production bundle; a hot-reload dev browser can be validated
-// by pointing this at `.output/chrome-mv3-dev`.
 const extensionDir = path.resolve(
   process.env.VERCEL_AI_GATEWAY_EXTENSION_DIR || ".output/chrome-mv3",
 )
-try {
-  extensionId = await findInstalledDevExtension(discovery.browser, extensionDir)
-} finally {
-  await discovery.close()
-}
-assert.ok(
-  extensionId,
-  `Extension build is not installed in this browser: ${extensionDir}`,
-)
-const dev = await connectExtensionById({ extensionId })
+const dev = await connectWorktreeExtension({ extensionPath: extensionDir })
+const { extensionId } = dev
+
 evidence.extensionId = extensionId
 const ui = await dev.context.newPage()
-await ui.setViewportSize({ width: 1440, height: 1000 })
-await ui.addInitScript(() =>
-  localStorage.setItem("all-api-hub-i18nextLng", "en"),
-)
-await ui.addLocatorHandler(ui.getByTestId(updateLog.root), () =>
-  ui.getByTestId(updateLog.closeButton).click(),
-)
+await configureExtensionPage(ui, {
+  viewport: { width: 1440, height: 1000 },
+  language: "en",
+  dismissUpdateLog: true,
+})
 
-const capture = async (name, target = ui) => {
-  await target
-    .screenshot({
-      path: path.join(evidenceDir, `${name}.png`),
-      animations: "disabled",
-      timeout: 8000,
-    })
-    .catch(async () => {
-      await ui.screenshot({
-        path: path.join(evidenceDir, `${name}-page.png`),
-        animations: "disabled",
-      })
-    })
-  evidence.screenshots.push(`${name}.png`)
-}
+const capture = createUiCapture({
+  page: ui,
+  directory: evidenceDir,
+  screenshots: evidence.screenshots,
+  fallbackToPage: true,
+  timeoutMs: 8000,
+})
 
 let createdKeyName
 let createdKeyId
@@ -241,9 +228,11 @@ try {
           `chrome-extension://${extensionId}/options.html?accountId=${encodeURIComponent(account.id)}#models`,
         )
         await dismissModals(page)
-        await page
-          .getByTestId(models.modelDisplay)
-          .waitFor({ state: "visible", timeout: 45000 })
+        await readModelCatalog({
+          page,
+          accountId: account.id,
+          timeoutMs: 45000,
+        })
         // The list renders virtualized model cards; the catalog's first row
         // proves the provider catalog arrived through the account's source.
         await expect(
@@ -270,7 +259,7 @@ try {
           nativeKeysBefore.length,
           { timeout: 45000 },
         )
-        await capture("02-keys")
+        await capture("02-keys", page)
         evidence.checks.push(
           `native key inventory matches the console (${nativeKeysBefore.length} keys)`,
         )
@@ -279,14 +268,14 @@ try {
 
         const runName = `AAH disposable ${randomUUID().slice(0, 8)}`
         createdKeyName = runName
-        await page
-          .getByTestId(
+        const editor = await openNativeKeyEditor(page, {
+          trigger: page.getByTestId(
             nativeKeysBefore.length
               ? keys.addTokenButton
               : keys.emptyStateAddTokenButton,
-          )
-          .click()
-        const editor = page.getByTestId(keys.nativeEditor)
+          ),
+          readyField: /^Token Name/,
+        })
         // Required fields merge the asterisk into the accessible label.
         const nameInput = editor.getByLabel(/^Token Name/)
         await expect(nameInput).toBeEditable({ timeout: 30000 })
@@ -302,7 +291,7 @@ try {
           editor.getByRole("combobox", { name: "Spend attribution" }),
         ).toContainText("Team")
         await capture("03-create-editor", editor)
-        await page.getByTestId(keys.nativeEditorSubmitButton).click()
+        await submitNativeKeyEditor(page, { waitForClose: false })
 
         await expect
           .poll(
@@ -367,7 +356,7 @@ try {
         )
 
         await createdRow.getByRole("button", { name: /delete key/i }).click()
-        await capture("05-delete-confirm")
+        await capture("05-delete-confirm", page)
         await page.getByTestId(keys.nativeDeleteConfirmButton).click({
           timeout: 15000,
         })

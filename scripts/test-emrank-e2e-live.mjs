@@ -10,7 +10,6 @@ import { ACCOUNT_MANAGEMENT_TEST_IDS as accounts } from "../src/features/Account
 import { KEY_MANAGEMENT_TEST_IDS as keys } from "../src/features/KeyManagement/testIds.ts"
 import { MODEL_LIST_TEST_IDS as models } from "../src/features/ModelList/testIds.ts"
 import { TOKEN_PROVISIONING_TEST_IDS as secrets } from "../src/features/TokenProvisioning/testIds.ts"
-import { UPDATE_LOG_DIALOG_TEST_IDS as updateLog } from "../src/features/UpdateLog/testIds.ts"
 import { EMRANK_WEB_ORIGIN } from "../src/services/accountSiteDefinitions/identifiers.ts"
 import {
   EMRANK_CSRF_HEADER_NAME,
@@ -19,12 +18,20 @@ import {
   EMRANK_TOKEN_ASSET,
   EMRANK_TOKENS_PER_M_TOKEN,
 } from "../src/services/apiService/emrank/constants.ts"
-import { findInstalledDevExtension } from "./cdp/browser-runtime.mjs"
-import { connectDevBrowser, connectExtensionById } from "./cdp/client.mjs"
+import { connectWorktreeExtension } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
 import { getAccounts } from "./cdp/sandbox.mjs"
 import { preflightSession, probePageSession } from "./cdp/session-preflight.mjs"
-import { dismissModals } from "./cdp/ui-driver.mjs"
+import {
+  configureExtensionPage,
+  createUiCapture,
+  dismissModals,
+} from "./cdp/ui-driver.mjs"
+import { readModelCatalog } from "./flows/model-catalog.mjs"
+import {
+  openNativeKeyEditor,
+  submitNativeKeyEditor,
+} from "./flows/native-key-editor.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
 // Default: read-only provider probes plus an isolated local account (removed).
@@ -59,30 +66,17 @@ const probeSession = () =>
         : undefined,
   })
 
-const discovery = await connectDevBrowser()
-let extensionId
-try {
-  extensionId = await findInstalledDevExtension(
-    discovery.browser,
-    // The launcher mounts the hot-reload dev build when a dev server is up.
-    path.resolve(
-      fs.existsSync(".output/chrome-mv3-dev/manifest.json")
-        ? ".output/chrome-mv3-dev"
-        : ".output/chrome-mv3",
-    ),
-  )
-} finally {
-  await discovery.close()
-}
-const dev = await connectExtensionById({ extensionId })
+const dev = await connectWorktreeExtension({
+  extensionPath: path.resolve(
+    fs.existsSync(".output/chrome-mv3-dev/manifest.json")
+      ? ".output/chrome-mv3-dev"
+      : ".output/chrome-mv3",
+  ),
+})
+const { extensionId } = dev
 site = await dev.context.newPage()
 const ui = await dev.context.newPage()
-await ui.addInitScript(() =>
-  localStorage.setItem("all-api-hub-i18nextLng", "en"),
-)
-await ui.addLocatorHandler(ui.getByTestId(updateLog.root), () =>
-  ui.getByTestId(updateLog.closeButton).click(),
-)
+await configureExtensionPage(ui, { language: "en", dismissUpdateLog: true })
 const uiErrors = []
 ui.on("pageerror", (error) => uiErrors.push(String(error).slice(0, 300)))
 ui.on("console", (message) => {
@@ -227,14 +221,12 @@ const evidence = {
   checks: [],
   cleanup: {},
 }
-const capture = async (name) => {
-  await ui.bringToFront()
-  await ui.screenshot({
-    path: path.join(evidenceDir, name),
-    animations: "disabled",
-    mask: [ui.getByTestId(secrets.oneTimeKeyInput)],
-  })
-}
+const capture = createUiCapture({
+  page: ui,
+  directory: evidenceDir,
+  bringToFront: true,
+  mask: [ui.getByTestId(secrets.oneTimeKeyInput)],
+})
 const stored = () => getAccounts(dev.serviceWorker)
 const card = () =>
   ui.getByTestId(`account-management-account-list-item-${accountId}`)
@@ -457,31 +449,17 @@ try {
   )
   await ui.waitForLoadState("domcontentloaded")
   await dismissModals(ui)
-  await ui.waitForFunction(
-    (expectedSource) => {
-      const root = document.querySelector('[data-testid="model-list-page"]')
-      const display = root?.querySelector('[data-testid="model-list-display"]')
-      return (
-        root?.getAttribute("data-model-source") === expectedSource &&
-        !root.hasAttribute("data-options-page-pending") &&
-        (!display || Boolean(display.querySelector("h3")))
-      )
-    },
-    `account:${accountId}`,
-    { timeout: 30000 },
-  )
-  const modelDisplay = ui.locator('[data-testid="model-list-display"]')
+  const { modelDisplay } = await readModelCatalog({
+    page: ui,
+    accountId,
+    timeoutMs: 30000,
+    requirePrices: false,
+  })
   // Rows virtualize by provider group, so assert the page's own counts instead
   // of rendered headers.
   await expect(
     ui.getByText(new RegExp(`Showing ${catalog.data.length} model`)),
   ).toBeVisible()
-  assert.ok(
-    (await modelDisplay.locator("h3").allTextContents()).some((name) =>
-      name.trim(),
-    ),
-    "model_catalog_has_no_rendered_models",
-  )
   assert.equal(
     /[$¥￥]\s*\d/.test(await modelDisplay.innerText()),
     false,
@@ -623,9 +601,9 @@ try {
   // inventory reload; open the editor only after it settles.
   await waitForInventorySettled()
   evidence.checks.push("inventory settled after the canonical route reload")
-  await ui.getByTestId(keys.addTokenButton).click()
-  await expect(ui.getByTestId(keys.nativeEditor)).toBeVisible({
-    timeout: 30000,
+  await openNativeKeyEditor(ui, {
+    trigger: ui.getByTestId(keys.addTokenButton),
+    readyField: ui.getByTestId(keys.nativeEditor).getByRole("combobox").first(),
   })
   const expiry = ui.getByTestId(keys.nativeEditor).getByRole("combobox").first()
   await expect(expiry).toContainText("Never expires")
@@ -690,7 +668,7 @@ try {
       .evaluate((element) => ({ id: element.id, value: element.value }))
       .catch(() => null)
     evidence.beforeSubmit = beforeClick
-    await ui.getByTestId(keys.nativeEditorSubmitButton).click()
+    await submitNativeKeyEditor(ui, { waitForClose: false })
     // Failures land as a toast that outlives neither the poll nor the failure
     // dump, so sample the surfaces while the request is still in flight and
     // keep sampling across the whole inventory poll.
@@ -769,7 +747,7 @@ try {
     await nameInput.fill(renamed)
     await waitForSaveReady()
     await expect(nameInput).toHaveValue(renamed)
-    await ui.getByTestId(keys.nativeEditorSubmitButton).click()
+    await submitNativeKeyEditor(ui, { waitForClose: false })
     await expect(ui.getByTestId(keys.nativeEditor)).toHaveCount(0, {
       timeout: 30000,
     })

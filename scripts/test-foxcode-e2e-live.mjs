@@ -7,15 +7,21 @@ import { expect } from "@playwright/test"
 
 import { ACCOUNT_MANAGEMENT_TEST_IDS as accounts } from "../src/features/AccountManagement/testIds.ts"
 import { KEY_MANAGEMENT_TEST_IDS as keys } from "../src/features/KeyManagement/testIds.ts"
-import { UPDATE_LOG_DIALOG_TEST_IDS as updateLog } from "../src/features/UpdateLog/testIds.ts"
 import { FOXCODE_WEB_ORIGIN } from "../src/services/accountSiteDefinitions/identifiers.ts"
-import { findInstalledDevExtension } from "./cdp/browser-runtime.mjs"
-import { connectDevBrowser, connectExtensionById } from "./cdp/client.mjs"
+import { connectWorktreeExtension } from "./cdp/client.mjs"
 import { applyIsolateFlag } from "./cdp/dev-profile.mjs"
 import { getAccounts } from "./cdp/sandbox.mjs"
 import { preflightSession, probePageSession } from "./cdp/session-preflight.mjs"
-import { dismissModals } from "./cdp/ui-driver.mjs"
+import {
+  configureExtensionPage,
+  createUiCapture,
+  dismissModals,
+} from "./cdp/ui-driver.mjs"
 import { testModelCatalogFlow } from "./flows/model-catalog.mjs"
+import {
+  openNativeKeyEditor,
+  submitNativeKeyEditor,
+} from "./flows/native-key-editor.mjs"
 import { loadLocalEnv } from "./utils/local-env.mjs"
 
 // Defaults to read-only provider probes and a temporary local account.
@@ -39,17 +45,10 @@ execFileSync("git", [
   path.join(evidenceDir, "index.json"),
 ])
 await fs.mkdir(evidenceDir, { recursive: true })
-const discovery = await connectDevBrowser()
-let extensionId
-try {
-  extensionId = await findInstalledDevExtension(
-    discovery.browser,
-    path.resolve(".output/chrome-mv3"),
-  )
-} finally {
-  await discovery.close()
-}
-const dev = await connectExtensionById({ extensionId })
+const dev = await connectWorktreeExtension({
+  extensionPath: path.resolve(".output/chrome-mv3"),
+})
+const { extensionId } = dev
 const captures = new Set()
 const networkErrors = []
 const extensionProviderRequests = []
@@ -86,13 +85,11 @@ const captureResponse = (response) => {
 dev.context.on("response", captureResponse)
 let site = await dev.context.newPage()
 const ui = await dev.context.newPage()
-await ui.setViewportSize({ width: 1440, height: 1000 })
-await ui.addInitScript(() =>
-  localStorage.setItem("all-api-hub-i18nextLng", "en"),
-)
-await ui.addLocatorHandler(ui.getByTestId(updateLog.root), () =>
-  ui.getByTestId(updateLog.closeButton).click(),
-)
+await configureExtensionPage(ui, {
+  viewport: { width: 1440, height: 1000 },
+  language: "en",
+  dismissUpdateLog: true,
+})
 let accountId, createdKeyId, initialIdentity
 let clipboardPermissionOverride = false
 const evidence = {
@@ -112,14 +109,12 @@ let sequence = 0
 const stored = () => getAccounts(dev.serviceWorker)
 const card = () =>
   ui.getByTestId(`account-management-account-list-item-${accountId}`)
-const capture = async (name, target = ui) => {
-  await ui.bringToFront()
-  await target.screenshot({
-    path: path.join(evidenceDir, name),
-    animations: "disabled",
-  })
-  evidence.screenshots.push(name)
-}
+const capture = createUiCapture({
+  page: ui,
+  directory: evidenceDir,
+  bringToFront: true,
+  screenshots: evidence.screenshots,
+})
 async function request(endpoint, method = "GET") {
   const response = await site.evaluate(
     async ({ endpoint, method }) => {
@@ -411,8 +406,10 @@ try {
       .click()
     await expect(ui.getByTestId(keys.nativeEditor)).toHaveCount(0)
   }
-  await ui.getByTestId(keys.addTokenButton).click()
-  const editor = ui.getByTestId(keys.nativeEditor)
+  const editor = await openNativeKeyEditor(ui, {
+    trigger: ui.getByTestId(keys.addTokenButton),
+    readyField: ui.locator("#resource-editor-name"),
+  })
   const name = ui.locator("#resource-editor-name")
   const description = ui.locator("#resource-editor-description")
   const channel = ui.locator("#resource-editor-channelKey")
@@ -453,7 +450,7 @@ try {
   await capture("04-create-editor.png", editor)
   if (mutate) {
     const createRequestStart = extensionProviderRequests.length
-    await ui.getByTestId(keys.nativeEditorSubmitButton).click()
+    await submitNativeKeyEditor(ui, { waitForClose: false })
     await expect(editor).toHaveCount(0, { timeout: 30000 })
     assert.equal(
       extensionProviderRequests
@@ -497,7 +494,7 @@ try {
     const automaticName = (channelKey) =>
       `${nativeConfig.config.channels.find((c) => c.key === channelKey).name} group (auto)`
     await name.fill(automaticName("anthropic"))
-    await ui.getByTestId(keys.nativeEditorSubmitButton).click()
+    await submitNativeKeyEditor(ui, { waitForClose: false })
     await expect(editor).toHaveCount(0, { timeout: 30000 })
     await row.getByRole("button", { name: "Edit Key", exact: true }).click()
     await expect(name).toHaveValue(automaticName("anthropic"), {
@@ -528,7 +525,7 @@ try {
     await quota.fill("0.02")
     await ui.locator("#resource-editor-enabled").click()
     const updateRequestStart = extensionProviderRequests.length
-    await ui.getByTestId(keys.nativeEditorSubmitButton).click()
+    await submitNativeKeyEditor(ui, { waitForClose: false })
     // Channel edits validate the selected channel before the native PATCH.
     await expect(editor).toHaveCount(0, { timeout: 90000 })
     assert.equal(

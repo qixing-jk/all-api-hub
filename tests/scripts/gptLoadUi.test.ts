@@ -31,6 +31,8 @@ describe("gpt-load UI cleanup", () => {
         getByRole: () => locator(selector),
         first: () => locator(selector),
         filter: () => locator(selector),
+        count: async () => 1,
+        isEnabled: async () => false,
         inputValue: async () => "https://ui.example.invalid",
         allTextContents: vi
           .fn()
@@ -62,6 +64,7 @@ describe("gpt-load UI cleanup", () => {
         waitForTimeout: async () => {},
         close: async () => {},
         locator,
+        getByTestId: locator,
       }
       const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
         if (init?.method === "POST") {

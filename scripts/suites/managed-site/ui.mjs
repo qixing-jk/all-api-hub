@@ -1,7 +1,32 @@
 import { readFileSync } from "node:fs"
 
+import {
+  MANAGED_SITE_CHANNELS_TEST_IDS as channels,
+  MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX,
+} from "../../../src/features/ManagedSiteChannels/testIds.ts"
+
 const FEEDBACK_POLL_INTERVAL_MS = 250
 const LANGUAGE_STORAGE_KEY = "all-api-hub-i18nextLng"
+
+/** Delete one caller-owned channel through the shared workspace controls. */
+export async function deleteManagedSiteChannelRow(
+  page,
+  row,
+  { timeoutMs = 60_000 } = {},
+) {
+  if ((await row.count()) !== 1)
+    throw new Error("Managed channel deletion requires one identified row")
+  const rowId = await row.getAttribute("data-testid")
+  if (!rowId?.startsWith(MANAGED_SITE_CHANNEL_ROW_TEST_ID_PREFIX))
+    throw new Error("Managed channel row has no recognized identity")
+  const deleteSelected = page.getByTestId(channels.deleteSelectedButton)
+  if (await deleteSelected.isEnabled())
+    throw new Error("Managed channel deletion refuses an existing selection")
+  await page.getByTestId(`${rowId}-select`).click()
+  await deleteSelected.click()
+  await page.getByTestId(channels.deleteChannelConfirmButton).click()
+  await row.waitFor({ state: "detached", timeout: timeoutMs })
+}
 
 /** Read the shipped connection-copy family without constructing translation keys. */
 export function readManagedSiteConnectionCopy() {

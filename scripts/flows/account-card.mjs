@@ -1,35 +1,24 @@
+import { expect } from "@playwright/test"
+
+import { getAccountManagementListItemTestId } from "../../src/features/AccountManagement/testIds.ts"
 import { dismissModals } from "../cdp/ui-driver.mjs"
 
-/**
- * Common UI flow to test account card visibility and rendering on the options account page.
- */
-export async function testAccountCardFlow({ page, extensionId, accountName }) {
-  console.log(
-    `  [通用流: 账户卡片] 校验 #account 页面中账户 [${accountName}] 的卡片展示...`,
+/** Verify the selected saved account, including when several accounts share a name. */
+export async function testAccountCardFlow({
+  page,
+  extensionId,
+  accountName,
+  accountId,
+  timeoutMs = 15_000,
+}) {
+  if (!accountId) throw new Error("account_card_requires_account_id")
+  await page.goto(
+    `chrome-extension://${extensionId}/options.html#account?search=${encodeURIComponent(accountName)}`,
   )
-
-  await page.goto(`chrome-extension://${extensionId}/options.html#account`)
   await page.waitForLoadState("domcontentloaded")
-  await page.waitForTimeout(1000)
   await dismissModals(page)
-
-  // 如果账号列表较多存在虚拟列表，利用搜索框快速过滤
-  const searchInput = page
-    .locator('input[placeholder*="搜索"], input[placeholder*="Search"]')
-    .first()
-  if (await searchInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-    await searchInput.fill(accountName)
-    await page.waitForTimeout(600)
-  }
-
-  const accountCard = page.locator(`text=${accountName}`).first()
-  const isCardVisible = await accountCard
-    .isVisible({ timeout: 6000 })
-    .catch(() => false)
-
-  console.log(
-    `  - 账户列表中 [${accountName}] 是否渲染: ${isCardVisible ? "✅ 可见" : "❌ 未检测到"}`,
-  )
-
-  return { ok: isCardVisible }
+  const card = page.getByTestId(getAccountManagementListItemTestId(accountId))
+  await expect(card).toBeVisible({ timeout: timeoutMs })
+  await expect(card).toContainText(accountName, { timeout: timeoutMs })
+  return { ok: true }
 }
