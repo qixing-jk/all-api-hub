@@ -91,7 +91,7 @@ export function createNewApiAccountRecovery(params: {
         context.waitForEvent("page"),
         dialog.dialog
           .getByRole("button", {
-            name: "Open site security settings",
+            name: "Open token page",
             exact: true,
           })
           .click(),

@@ -87,9 +87,11 @@ test("scoped-token New API detection preserves identity and guides the missing A
     guidance: "Enter an Access Token manually",
     saveState: "absent",
   })
-  await expect(dialog.getByText(/Security → Access Token/)).toBeVisible()
+  await expect(
+    dialog.getByText(/profile, account settings, or token management page/),
+  ).toBeVisible()
   const openSecurity = dialog.getByRole("button", {
-    name: "Open site security settings",
+    name: "Open token page",
     exact: true,
   })
   await expect(openSecurity).toBeEnabled()
