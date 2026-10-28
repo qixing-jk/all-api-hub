@@ -1,3 +1,4 @@
+import { createDeferredAbortDeadline } from "~/services/apiTransport/abortableTask"
 import { fetchApi } from "~/services/apiTransport/request"
 import {
   createDeploymentProbeMemory,
@@ -19,14 +20,15 @@ async function probeNetworkCredentialPage(
   baseUrl: string,
   fallback: string,
 ): Promise<string | undefined> {
-  const deadline = Date.now() + PROBE_TIMEOUT_MS
+  const probeDeadline = createDeferredAbortDeadline(PROBE_TIMEOUT_MS)
+  probeDeadline.start()
   const read = (path: string) => {
     const url = new URL(path, `${baseUrl.replace(/\/+$/, "")}/`)
     return fetchApi<string>(
       {
         baseUrl: url.origin,
         auth: { authType: AuthTypeEnum.None },
-        requestTimeoutMs: Math.max(1, deadline - Date.now()),
+        abortDeadline: probeDeadline,
       },
       {
         endpoint: `${url.pathname}${url.search}`,
@@ -54,7 +56,6 @@ async function probeNetworkCredentialPage(
       return undefined
     let profile = false
     for (const script of scripts) {
-      if (Date.now() >= deadline) return undefined
       const source = await read(script.href)
       if (/["']\/_authenticated\/security\/?["']/.test(source)) {
         pageMemory.remember(baseUrl, fallback)
@@ -68,6 +69,8 @@ async function probeNetworkCredentialPage(
     }
   } catch {
     // Network, challenge and unknown bundlers do not establish another route.
+  } finally {
+    probeDeadline.dispose()
   }
   return undefined
 }

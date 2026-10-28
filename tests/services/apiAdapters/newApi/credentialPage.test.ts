@@ -149,3 +149,40 @@ it("does not let completion of an older warmup remove a newer pending request", 
   await expect(newer).resolves.toBe("/security")
   await expect(shared).resolves.toBe("/security")
 })
+
+it("bounds queue admission as part of the credential discovery deadline", async () => {
+  vi.useFakeTimers()
+  try {
+    fetchApi.mockImplementationOnce(
+      ({ abortDeadline }) =>
+        new Promise((_resolve, reject) => {
+          abortDeadline?.signal.addEventListener(
+            "abort",
+            () => reject(abortDeadline.signal.reason),
+            { once: true },
+          )
+        }),
+    )
+    let completed = false
+    const pending = resolveNewApiCredentialPage(
+      "https://example.test",
+      "/security",
+    ).then((value) => {
+      completed = true
+      return value
+    })
+    await vi.advanceTimersByTimeAsync(4000)
+    expect(completed).toBe(true)
+    await expect(pending).resolves.toBe("/security")
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+it("ignores same-origin scripts that are not an entry bundle", async () => {
+  fetchApi.mockResolvedValueOnce('<script src="/assets/analytics.js"></script>')
+  await expect(
+    resolveNewApiCredentialPage("https://example.test", "/security"),
+  ).resolves.toBe("/security")
+  expect(fetchApi).toHaveBeenCalledTimes(1)
+})
