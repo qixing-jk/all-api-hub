@@ -9,7 +9,7 @@
     "continueInFullPage": "在完整頁面繼續",
     "continueInSidePanel": "轉到側邊欄繼續",
     "continuing": "正在準備表單…",
-    "description": "此站點要求先完成安全驗證，擴充功能暫時無法自動取得 Access Token。已識別的資訊已保留，請手動填寫帳號管理權杖。",
+    "description": "擴充功能無法自動取得 Access Token。已識別的資訊已保留，請前往網站複製或建立帳號管理權杖，再回到這裡填寫。",
     "destinationBusy": "這裡已有未完成的帳號表單。儲存或關閉後，將繼續從彈出視窗帶來的表單。",
     "fullPageHint": "在完整頁面繼續可保留目前的表單，切換到站點複製權杖時不會關閉。",
     "generateStep": "已有有效的完整 Access Token 時可直接填寫；否則，開啟站點的「安全設定 → Access Token」，完成驗證並產生權杖。新版站點還會要求選擇權限與有效期，請授予全部可用權限。",

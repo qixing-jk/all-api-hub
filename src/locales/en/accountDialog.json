@@ -9,7 +9,7 @@
     "continueInFullPage": "Continue in full page",
     "continueInSidePanel": "Continue in side panel",
     "continuing": "Preparing your form…",
-    "description": "This site requires security verification before an Access Token can be generated automatically. Your detected account details have been kept. Enter an account management Access Token to continue.",
+    "description": "The extension could not obtain an Access Token automatically. Your detected information has been kept. Copy or create an account management token on the site, then return here to enter it.",
     "destinationBusy": "There is an unfinished account form here. Save or close it to continue with the form from the popup.",
     "fullPageHint": "Continue in a full page to keep this form open while you copy the token on the site.",
     "generateStep": "Use an existing valid, complete Access Token if you have one. Otherwise, open Security → Access Token on the site, complete verification, and generate a token. Newer builds also ask which permissions and expiry to grant; grant all the permissions offered.",

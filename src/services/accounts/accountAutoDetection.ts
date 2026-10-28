@@ -16,6 +16,7 @@ import {
   completeAutoDetectedAccount,
   getAutoDetectCompletionFailureReason,
 } from "~/services/accounts/autoDetectCompletion/completion"
+import { AutoDetectCompletionError } from "~/services/accounts/autoDetectCompletion/types"
 import {
   analyzeAutoDetectError,
   AUTO_DETECT_FAILURE_REASONS,
@@ -32,9 +33,10 @@ import {
 } from "~/services/accountSiteOnboarding/diagnostics"
 import { getAccountDetectionPrivacyPolicy } from "~/services/accountSiteOnboarding/registry"
 import { onboardNovitaAccount } from "~/services/apiAdapters/novita/accountOnboarding"
+import { ApiError } from "~/services/apiTransport/errors"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
-import { type AuthTypeEnum } from "~/types"
+import { AuthTypeEnum } from "~/types"
 import type { AccountAutoDetectResponse } from "~/types/serviceResponse"
 import { sendRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { getErrorMessage } from "~/utils/core/error"
@@ -318,9 +320,26 @@ async function runAutoDetectAccount(
       }
     }
 
+    // Keep the diagnostic reason intact; this is a recovery presentation choice,
+    // not evidence that the deployment requires a security check.
+    const tokenAcquisitionFailed =
+      (autoDetectFailureReason ===
+        AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed ||
+        autoDetectFailureReason ===
+          AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing) &&
+      recoveryData?.authType === AuthTypeEnum.AccessToken &&
+      Boolean(recoveryData.userId) &&
+      !(
+        error instanceof AutoDetectCompletionError &&
+        error.cause instanceof ApiError &&
+        error.cause.statusCode === 401
+      )
+    const presentationReason = tokenAcquisitionFailed
+      ? AUTO_DETECT_FAILURE_REASONS.AccessTokenVerificationRequired
+      : autoDetectFailureReason
     const errorMessage = getErrorMessage(error)
     const message = getAutoDetectCompletionFailureMessage(
-      autoDetectFailureReason,
+      presentationReason,
       errorMessage,
     )
     logger.error(
@@ -329,7 +348,7 @@ async function runAutoDetectAccount(
     )
     const detailedError = getAutoDetectCompletionDetailedError(
       error,
-      autoDetectFailureReason,
+      presentationReason,
       message,
     )
     return {

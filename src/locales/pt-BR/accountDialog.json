@@ -9,7 +9,7 @@
     "continueInFullPage": "Continuar em uma página completa",
     "continueInSidePanel": "Continuar no painel lateral",
     "continuing": "Preparando o formulário…",
-    "description": "Este site exige uma verificação de segurança antes de gerar um Access Token, por isso ele não pode ser obtido automaticamente. Os dados detectados da conta foram mantidos. Insira um Access Token de gerenciamento de conta para continuar.",
+    "description": "A extensão não conseguiu obter um Access Token automaticamente. As informações identificadas foram mantidas. Copie ou crie um token de gerenciamento de conta no site e volte aqui para inseri-lo.",
     "destinationBusy": "Já existe um formulário de conta incompleto aqui. Salve ou feche esse formulário para continuar com o formulário do popup.",
     "fullPageHint": "Continue em uma página completa para manter este formulário aberto enquanto copia o token no site.",
     "generateStep": "Se já tiver um Access Token válido e completo, use-o diretamente. Caso contrário, abra Segurança → Access Token no site, conclua a verificação e gere um token. As versões mais recentes também pedem as permissões e a validade; conceda todas as permissões oferecidas.",
