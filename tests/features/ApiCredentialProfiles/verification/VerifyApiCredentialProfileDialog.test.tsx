@@ -254,6 +254,11 @@ vi.mock("~/components/ui", async (importOriginal) => {
 describe("VerifyApiCredentialProfileDialog", () => {
   beforeEach(async () => {
     vi.restoreAllMocks()
+    // Keep metadata initialization local, including on a cold test worker.
+    // Individual metadata-arrival tests override this baseline handler.
+    server.use(
+      http.get(MODEL_METADATA_URL, () => HttpResponse.json({ models: [] })),
+    )
     // This suite passes profiles in as props instead of persisting them, so the
     // orphan sweep must not read the empty owner stores as "every owner is gone".
     stubVerificationOwnerStoresUnavailable()
