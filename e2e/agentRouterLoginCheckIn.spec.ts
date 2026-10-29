@@ -11,6 +11,7 @@ import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   createStoredAccount,
   forceExtensionLanguage,
+  seedAutoCheckinStatus,
   seedStoredAccounts,
   seedUserPreferences,
   stubLlmMetadataIndex,
@@ -189,6 +190,24 @@ for (const { matchingIdentity, provider, unattended } of [
       `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.AUTO_CHECKIN}`,
     )
     if (unattended) {
+      // Scheduling may already target tomorrow (for example after the daily
+      // window closes). Exercise that state, then explicitly admit today's run.
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      await seedAutoCheckinStatus(worker, {
+        dailyAlarmTargetDay: `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, "0")}-${String(tomorrow.getDate()).padStart(2, "0")}`,
+      })
+      const scheduled = await page.evaluate(
+        (type) =>
+          chrome.runtime.sendMessage({
+            id: "schedule-checkin",
+            timestamp: Date.now(),
+            type,
+            data: { minutesFromNow: 1 },
+          }),
+        AutoCheckinMessageTypes.DebugScheduleDailyAlarmForToday,
+      )
+      expect(scheduled.res?.success).toBe(true)
       const result = await page.evaluate(
         (type) =>
           chrome.runtime.sendMessage({
