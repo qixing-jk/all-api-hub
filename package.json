@@ -192,7 +192,7 @@
     "@commitlint/config-conventional": "^21.2.3",
     "@eslint/js": "^9.38.0",
     "@ianvs/prettier-plugin-sort-imports": "4.1.1",
-    "@playwright/test": "1.58.2",
+    "@playwright/test": "1.64.1",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/postcss": "^4.1.17",
     "@tailwindcss/typography": "^0.5.16",
