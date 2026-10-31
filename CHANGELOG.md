@@ -1,5 +1,21 @@
 # Changelog
 
+## [4.8.0](https://github.com/qixing-jk/all-api-hub/compare/v4.7.0...v4.8.0) (2026-10-31)
+
+
+### Features
+
+* **novita:** add account onboarding and native key management ([#1775](https://github.com/qixing-jk/all-api-hub/issues/1775)) ([ac407cb](https://github.com/qixing-jk/all-api-hub/commit/ac407cb13df385183a57c949562d0df48c049478))
+
+
+### Bug Fixes
+
+* **accounts:** recover missing tokens and resolve credential pages ([#1779](https://github.com/qixing-jk/all-api-hub/issues/1779)) ([4078b27](https://github.com/qixing-jk/all-api-hub/commit/4078b271c5c25452797903120dea3addd9eced1e))
+* **ci:** upgrade Playwright and stabilize E2E fixtures ([#1794](https://github.com/qixing-jk/all-api-hub/issues/1794)) ([a3764f4](https://github.com/qixing-jk/all-api-hub/commit/a3764f43af5252a8c1db83fa14467c1030685739))
+* **e2e:** restore textarea resizing and stabilize browser compatibility checks ([#1771](https://github.com/qixing-jk/all-api-hub/issues/1771)) ([7f4881f](https://github.com/qixing-jk/all-api-hub/commit/7f4881f53c7e677a1f4fb500a66c9a7f07f8f94d))
+* **key-management:** show credential details and match hints before selection ([#1773](https://github.com/qixing-jk/all-api-hub/issues/1773)) ([ad3f43d](https://github.com/qixing-jk/all-api-hub/commit/ad3f43df65433b6c26f5dc88d1af771c83b3f588))
+* **web-ai-api-check:** avoid false prompts from URLs and UUIDs ([#1782](https://github.com/qixing-jk/all-api-hub/issues/1782)) ([0bbe222](https://github.com/qixing-jk/all-api-hub/commit/0bbe222454e02d2e5777b6c248e90a72c71883c8))
+
 ## [4.7.0](https://github.com/qixing-jk/all-api-hub/compare/v4.6.0...v4.7.0) (2026-10-26)
 
 
