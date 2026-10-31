@@ -1389,12 +1389,14 @@ test("auto-checkin status seeding survives an in-flight scheduler write", async 
     await seeding
     await write.dispose()
   }
+  // Scheduler reconciliation may add retry/schedule fields after the seed.
+  // The regression contract is that its older snapshot cannot lose this result.
   expect(
     await readJsonStorageValue<AutoCheckinStatus>(
       serviceWorker,
       AUTO_CHECKIN_STATUS_STORAGE_KEY,
     ),
-  ).toEqual({ lastRunResult: "success" })
+  ).toMatchObject({ lastRunResult: "success" })
 })
 
 test("runs auto-checkin retries when its MV3 alarm fires", async ({
