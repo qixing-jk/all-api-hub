@@ -244,15 +244,23 @@ for (const width of [390, 320]) {
     await expectSurfaceToFit(menu, width)
     await menu.getByRole("option").filter({ hasText: "Anthropic" }).click()
 
-    await dialog
-      .getByRole("button", { name: "Select tags", exact: true })
-      .click()
+    const tagsTrigger = dialog.getByRole("button", {
+      name: "Select tags",
+      exact: true,
+    })
+    await tagsTrigger.click()
     await menu.getByRole("combobox").fill("Work")
     await expectSurfaceToFit(menu, width)
     await menu
       .getByRole("button", { name: 'Create "Work"', exact: true })
       .click()
     await page.keyboard.press("Escape")
+    // Radix restores focus after the closing popover unmounts. Opening the
+    // calendar first lets that delayed focus dismiss the new popover.
+    await expect(
+      dialog.getByRole("button", { name: "1 tag selected", exact: true }),
+    ).toBeFocused()
+    await expect(page.locator('[data-slot="popover-content"]')).toHaveCount(0)
 
     await dialog
       .getByRole("button", { name: /Expiration date:.*calendar/i })

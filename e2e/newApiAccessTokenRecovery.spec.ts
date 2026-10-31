@@ -1,3 +1,5 @@
+import { createServer } from "node:http"
+import type { AddressInfo } from "node:net"
 import type { JSHandle, Page } from "@playwright/test"
 
 import {
@@ -10,7 +12,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_MANAGEMENT_ROUTE_PARAMS } from "~/features/AccountManagement/routeParams"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
-import { expect, test } from "~~/e2e/fixtures/extensionTest"
+import { test as base, expect } from "~~/e2e/fixtures/extensionTest"
 import { verifyAccountModelCatalog } from "~~/e2e/scenarios/modelListCatalog"
 import {
   E2E_NEW_API_RC22_AUTH,
@@ -30,6 +32,47 @@ import {
   openAccountManagementPage,
   waitForSavedAccount,
 } from "~~/e2e/utils/realSite/accountAdd"
+
+const manualToken = "e2e-manually-copied-management-pat"
+const tokenPageHtml = `<h1>Token page</h1><h2 id="security-access">Sessions &amp; Access</h2><label>Access Token<input readonly value="${manualToken}"></label>`
+
+const test = base.extend<{ profileSite: string }>({
+  profileSite: async ({ extensionId }, runFixture) => {
+    void extensionId
+    // Worker fetches and extension-created tabs can bypass Playwright routes.
+    // Serve the profile deployment over loopback so both see the same fixture.
+    const server = createServer((request, response) => {
+      const path = new URL(request.url ?? "/", "http://localhost").pathname
+      response.setHeader(
+        "Content-Type",
+        path.endsWith(".js") ? "application/javascript" : "text/html",
+      )
+      if (path === "/") {
+        response.end(
+          '<title>New API</title><script src="/assets/index.routes.js"></script>',
+        )
+      } else if (path === "/assets/index.routes.js") {
+        response.end('const route = "/_authenticated/profile/";')
+      } else if (path === "/profile") {
+        response.end(tokenPageHtml)
+      } else {
+        response.writeHead(404)
+        response.end()
+      }
+    })
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+    try {
+      await runFixture(
+        `http://127.0.0.1:${(server.address() as AddressInfo).port}`,
+      )
+    } finally {
+      server.closeAllConnections()
+      await new Promise<void>((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve())),
+      )
+    }
+  },
+})
 
 /** Native side panels are extension views, not Playwright Page targets. */
 async function getNativeSidePanel(bridge: Page) {
@@ -66,7 +109,7 @@ for (const scenario of [
   {
     siteType: SITE_TYPES.NEW_API,
     name: "Gemai profile",
-    baseUrl: "https://api2.gemai.cc",
+    baseUrl: null,
     tokenPagePath: "/profile",
     openTokenSettingsLabel: "Open token page",
     tokenRequests: 1,
@@ -84,10 +127,10 @@ for (const scenario of [
     context,
     extensionId,
     page,
+    profileSite,
   }) => {
-    const { baseUrl, tokenPagePath, openTokenSettingsLabel, siteType } =
-      scenario
-    const manualToken = "e2e-manually-copied-management-pat"
+    const { tokenPagePath, openTokenSettingsLabel, siteType } = scenario
+    const baseUrl = scenario.baseUrl ?? profileSite
     const initialQuota = 1000
     const refreshedQuota = 2500
     let tokenRequests = 0
@@ -182,7 +225,7 @@ for (const scenario of [
         await route.fulfill({
           status: 200,
           contentType: "text/html",
-          body: `<h1>Token page</h1><h2 id="security-access">Sessions &amp; Access</h2><label>Access Token<input readonly value="${manualToken}"></label>`,
+          body: tokenPageHtml,
         })
       },
     )
@@ -377,7 +420,10 @@ for (const scenario of [
         valueSetter.call(input, token)
         input.dispatchEvent(new view.Event("input", { bubbles: true }))
       },
-      { id: ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput, token: copiedToken },
+      {
+        id: ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput,
+        token: copiedToken,
+      },
     )
     await expect
       .poll(() =>

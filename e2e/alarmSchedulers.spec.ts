@@ -6,7 +6,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { AutoRefreshMessageTypes } from "~/services/accounts/refresh/autoRefreshMessaging"
 import { ACCOUNT_AUTO_REFRESH_ALARM_NAME } from "~/services/accounts/refresh/constants"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
-import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { DAILY_BALANCE_HISTORY_ALARM_NAME } from "~/services/history/dailyBalanceHistory/constants"
 import {
   USAGE_HISTORY_ALARM_NAME,
@@ -38,6 +38,7 @@ import {
   createStoredBookmark,
   forceExtensionLanguage,
   installExtensionPageGuards,
+  seedAutoCheckinStatus,
   seedStoredAccounts,
   seedStoredBookmarks,
   seedUserPreferences,
@@ -48,7 +49,6 @@ import {
   expectPermissionOnboardingHidden,
   getPlasmoStorageRawValue,
   getServiceWorker,
-  setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import { sendTypedRuntimeMessageFromPage } from "~~/e2e/utils/runtimeMessaging"
@@ -241,17 +241,6 @@ async function scheduleAlarmSoon(serviceWorker: Worker, alarmName: string) {
       when: Date.now() + 1_000,
     })
   }, alarmName)
-}
-
-async function seedAutoCheckinStatus(
-  serviceWorker: Worker,
-  status: AutoCheckinStatus,
-) {
-  await setPlasmoStorageValue(
-    serviceWorker,
-    AUTO_CHECKIN_STATUS_STORAGE_KEY,
-    status,
-  )
 }
 
 function getLocalDay(date = new Date()) {
@@ -1337,6 +1326,86 @@ test("runs WebDAV best-effort upload when its dedicated MV3 alarm fires", async 
       }),
     }),
   )
+})
+
+test("auto-checkin status seeding survives an in-flight scheduler write", async ({
+  context,
+}) => {
+  const serviceWorker = await getServiceWorker(context)
+  const lockRequestEvent = "aah-e2e-auto-checkin-seed-lock-requested"
+  const write = await serviceWorker.evaluateHandle(
+    async ({ lock, key, lockRequestEvent }) => {
+      const checkpoint = { seedRequested: false }
+      const onSeedRequested = () => {
+        checkpoint.seedRequested = true
+      }
+      globalThis.addEventListener(lockRequestEvent, onSeedRequested)
+      let release!: () => void
+      const gate = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      let acquired!: () => void
+      const ready = new Promise<void>((resolve) => {
+        acquired = resolve
+      })
+      const finished = navigator.locks.request(lock, async () => {
+        acquired()
+        await gate
+        await chrome.storage.local.set({
+          [key]: JSON.stringify({ lastRunResult: "failed" }),
+        })
+      })
+      await ready
+      return {
+        release,
+        finished,
+        checkpoint,
+        dispose: () =>
+          globalThis.removeEventListener(lockRequestEvent, onSeedRequested),
+      }
+    },
+    {
+      lock: STORAGE_LOCKS.AUTO_CHECKIN_STATUS,
+      key: AUTO_CHECKIN_STATUS_STORAGE_KEY,
+      lockRequestEvent,
+    },
+  )
+  const seeding = seedAutoCheckinStatus(
+    serviceWorker,
+    { lastRunResult: "success" },
+    { lockRequestEvent },
+  )
+  try {
+    // Observe either a queued locked seed or an already-written unsafe seed.
+    // Only then let the older scheduler write commit its stale snapshot.
+    await expect
+      .poll(() =>
+        write.evaluate(async ({ checkpoint }, key) => {
+          const stored = await chrome.storage.local.get(key)
+          return (
+            checkpoint.seedRequested ||
+            JSON.parse(stored[key] ?? "null")?.lastRunResult === "success"
+          )
+        }, AUTO_CHECKIN_STATUS_STORAGE_KEY),
+      )
+      .toBe(true)
+  } finally {
+    await write.evaluate(async (pending) => {
+      pending.release()
+      await pending.finished
+      pending.dispose()
+    })
+    await seeding
+    await write.dispose()
+  }
+  // Scheduler reconciliation may add retry/schedule fields after the seed.
+  // The regression contract is that its older snapshot cannot lose this result.
+  expect(
+    await readJsonStorageValue<AutoCheckinStatus>(
+      serviceWorker,
+      AUTO_CHECKIN_STATUS_STORAGE_KEY,
+    ),
+  ).toMatchObject({ lastRunResult: "success" })
 })
 
 test("runs auto-checkin retries when its MV3 alarm fires", async ({
