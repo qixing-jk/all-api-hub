@@ -216,6 +216,19 @@ AI の時代には、節約したり別のモデルを試したりするため�
 
 <hr class="readme-sponsor-divider">
 
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://dzhsmartai.com/">
+      <img class="readme-sponsor-logo-small" src="../../../resources/partners/ccccccapi.jpg" alt="ccccccapi">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    <strong>ccccccapi</strong> ChatGPT、Claude、Gemini、Deepseek などに対応。ネット最安値で、お財布にもやさしい。<a href="https://dzhsmartai.com/">仲間なら、お得に使い倒そう！</a>
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
 <div class="readme-sponsor readme-sponsor-featured">
   <p class="readme-sponsor-banner">
     <a href="https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub">

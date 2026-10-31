@@ -229,6 +229,17 @@ GitHub Stable 和 Nightly 属于手动安装通道，不会自动更新；可 St
 <hr>
 
 <div>
+  <a href="https://dzhsmartai.com/">
+    <img src="resources/partners/ccccccapi.jpg" alt="ccccccapi" width="64" align="left" hspace="10" vspace="4">
+  </a>
+  <p>
+    ccccccapi 支持 ChatGPT、Claude、Gemini、Deepseek 等，全网最低价，用的不烧心，<a href="https://dzhsmartai.com/">是兄弟就来砍我！</a>
+  </p>
+</div>
+
+<hr>
+
+<div>
   <p>
     <a href="https://dis.chatdesks.cn/chatdesk/hsyqallapihub.html">
       <img src="resources/partners/volcengine.png" alt="火山引擎方舟 Coding-Plan" width="100%">

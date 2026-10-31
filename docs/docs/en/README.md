@@ -217,6 +217,19 @@ Thank you to all our sponsors for supporting the project's long-term feature dev
 
 <hr class="readme-sponsor-divider">
 
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://dzhsmartai.com/">
+      <img class="readme-sponsor-logo-small" src="../../../resources/partners/ccccccapi.jpg" alt="ccccccapi">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    <strong>ccccccapi</strong> Supports ChatGPT, Claude, Gemini, Deepseek, and more at the lowest prices online. Use AI without burning a hole in your wallet—<a href="https://dzhsmartai.com/">come grab a bargain!</a>
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
 <div class="readme-sponsor readme-sponsor-featured">
   <p class="readme-sponsor-banner">
     <a href="https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub">

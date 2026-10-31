@@ -147,6 +147,17 @@
 
   <hr>
 
+  <section class="sponsor-item">
+    <a class="sponsor-logo sponsor-logo-small" href="https://dzhsmartai.com/">
+      <img src="../../resources/partners/ccccccapi.jpg" alt="ccccccapi">
+    </a>
+    <p>
+      <strong>ccccccapi</strong> 支持 ChatGPT、Claude、Gemini、Deepseek 等，全网最低价，用的不烧心，<a href="https://dzhsmartai.com/">是兄弟就来砍我！</a>
+    </p>
+  </section>
+
+  <hr>
+
   <section class="sponsor-item sponsor-item-featured">
     <a href="https://dis.chatdesks.cn/chatdesk/hsyqallapihub.html">
       <img src="../../resources/partners/volcengine.png" alt="火山引擎方舟 Coding-Plan">

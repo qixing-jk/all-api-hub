@@ -238,6 +238,17 @@ Thank you to all our sponsors for supporting the project's long-term feature dev
 <hr>
 
 <div>
+  <a href="https://dzhsmartai.com/">
+    <img src="resources/partners/ccccccapi.jpg" alt="ccccccapi" width="64" align="left" hspace="10" vspace="4">
+  </a>
+  <p>
+    ccccccapi Supports ChatGPT, Claude, Gemini, Deepseek, and more at the lowest prices online. Use AI without burning a hole in your wallet—<a href="https://dzhsmartai.com/">come grab a bargain!</a>
+  </p>
+</div>
+
+<hr>
+
+<div>
   <p>
     <a href="https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub">
       <img src="resources/partners/volcengine_en.jpg" alt="Dola Seed on BytePlus ModelArk" width="100%">

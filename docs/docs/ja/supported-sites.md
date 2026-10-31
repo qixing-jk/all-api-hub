@@ -147,6 +147,17 @@
 
   <hr>
 
+  <section class="sponsor-item">
+    <a class="sponsor-logo sponsor-logo-small" href="https://dzhsmartai.com/">
+      <img src="../../../resources/partners/ccccccapi.jpg" alt="ccccccapi">
+    </a>
+    <p>
+      <strong>ccccccapi</strong> ChatGPT、Claude、Gemini、Deepseek などに対応。ネット最安値で、お財布にもやさしい。<a href="https://dzhsmartai.com/">仲間なら、お得に使い倒そう！</a>
+    </p>
+  </section>
+
+  <hr>
+
   <section class="sponsor-item sponsor-item-featured">
     <a href="https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub">
       <img src="../../../resources/partners/volcengine_en.jpg" alt="Dola Seed on BytePlus ModelArk">

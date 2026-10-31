@@ -147,6 +147,17 @@ If you are looking for stable, efficient, and highly compatible AI relay service
 
   <hr>
 
+  <section class="sponsor-item">
+    <a class="sponsor-logo sponsor-logo-small" href="https://dzhsmartai.com/">
+      <img src="../../../resources/partners/ccccccapi.jpg" alt="ccccccapi">
+    </a>
+    <p>
+      <strong>ccccccapi</strong> Supports ChatGPT, Claude, Gemini, Deepseek, and more at the lowest prices online. Use AI without burning a hole in your wallet—<a href="https://dzhsmartai.com/">come grab a bargain!</a>
+    </p>
+  </section>
+
+  <hr>
+
   <section class="sponsor-item sponsor-item-featured">
     <a href="https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub">
       <img src="../../../resources/partners/volcengine_en.jpg" alt="Dola Seed on BytePlus ModelArk">

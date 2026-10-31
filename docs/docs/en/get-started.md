@@ -51,6 +51,7 @@ If you are looking for stable, efficient, and highly compatible AI relay service
 - [Suixiang AI Relay](https://sui-xiang.com/): API relay services for Claude, Codex, Gemini, and more, with pay-as-you-go billing, daily check-in test credits, redundant routes, and automatic failover. [Setup guide](./service-guides/suixiang.md)
 - [APIMart](https://go.apimart.ai/gh-all-api-hub): A low-cost API platform for AI image & video generation — GPT-Image-2 from $0.006/image, 160+ images per dollar. One async API covers both image and video: submit a task, get an ID, fetch results via polling or callback. Batch tens of thousands of images without timeouts, switch models without changing code. Pay-as-you-go with no monthly fee.
 - [88API Token Aggregation Platform](https://88api.ai/register?aff=XcTj): A one-stop multi-model API platform operated by a Hong Kong company, with a unified API for text, image, speech, and video models. Supports adding and switching providers in CC Switch, major international payment methods, and invoicing. Register through the dedicated link for bonus credits.
+- [ccccccapi](https://dzhsmartai.com/): Supports ChatGPT, Claude, Gemini, Deepseek, and more at the lowest prices online. Use AI without burning a hole in your wallet—come grab a bargain!
 - [Dola Seed on BytePlus ModelArk](https://www.byteplus.com/en/product/modelark?utm_campaign=hw&utm_content=all-api-hub&utm_medium=devrel_tool_web&utm_source=OWO&utm_term=all-api-hub): Register through BytePlus ModelArk to get 500,000 free inference tokens per model.
 :::
 

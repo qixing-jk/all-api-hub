@@ -4,6 +4,7 @@ import { cn } from "~/lib/utils"
 import api88Icon from "~~/resources/partners/icons/88api.jpg"
 import aicodemirrorIcon from "~~/resources/partners/icons/aicodemirror.png"
 import apimartIcon from "~~/resources/partners/icons/apimart.png"
+import ccccccapiIcon from "~~/resources/partners/icons/ccccccapi.jpg"
 import defaultSponsorIcon from "~~/resources/partners/icons/default.png"
 import fennoIcon from "~~/resources/partners/icons/fenno-ai.png"
 import packycodeIcon from "~~/resources/partners/icons/packycode.png"
@@ -48,6 +49,7 @@ const LOCAL_SPONSOR_ICONS: Record<string, string> = {
   "volcengine-coding-plan": volcengineIcon,
   apimart: apimartIcon,
   "88api": api88Icon,
+  ccccccapi: ccccccapiIcon,
 }
 
 export const DEFAULT_SPONSOR_ICON = defaultSponsorIcon

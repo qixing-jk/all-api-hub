@@ -213,6 +213,19 @@ footer: "AGPL-3.0 Licensed | Copyright 2025-present All API Hub"
 
 <hr class="readme-sponsor-divider">
 
+<div class="readme-sponsor">
+  <div class="readme-sponsor-logo">
+    <a href="https://dzhsmartai.com/">
+      <img class="readme-sponsor-logo-small" src="../../resources/partners/ccccccapi.jpg" alt="ccccccapi">
+    </a>
+  </div>
+  <p class="readme-sponsor-copy">
+    <strong>ccccccapi</strong> 支持 ChatGPT、Claude、Gemini、Deepseek 等，全网最低价，用的不烧心，<a href="https://dzhsmartai.com/">是兄弟就来砍我！</a>
+  </p>
+</div>
+
+<hr class="readme-sponsor-divider">
+
 <div class="readme-sponsor readme-sponsor-featured">
   <p class="readme-sponsor-banner">
     <a href="https://dis.chatdesks.cn/chatdesk/hsyqallapihub.html">

@@ -330,6 +330,47 @@
       }
     },
     {
+      "id": "ccccccapi",
+      "enabled": true,
+      "rank": 119.75,
+      "supportStatus": "supported",
+      "urls": {
+        "primaryAffiliate": "https://dzhsmartai.com/",
+        "website": "https://dzhsmartai.com"
+      },
+      "locales": {
+        "zh-CN": {
+          "name": "ccccccapi",
+          "tagline": "支持 ChatGPT、Claude、Gemini、Deepseek 等，全网最低价，用的不烧心，是兄弟就来砍我！"
+        },
+        "zh-TW": {
+          "name": "ccccccapi",
+          "tagline": "支援 ChatGPT、Claude、Gemini、Deepseek 等，全網最低價，用得不燒心，是兄弟就來砍我！"
+        },
+        "en": {
+          "name": "ccccccapi",
+          "tagline": "Supports ChatGPT, Claude, Gemini, Deepseek, and more at the lowest prices online. Use AI without burning a hole in your wallet—come grab a bargain!"
+        },
+        "ja": {
+          "name": "ccccccapi",
+          "tagline": "ChatGPT、Claude、Gemini、Deepseek などに対応。ネット最安値で、お財布にもやさしい。仲間なら、お得に使い倒そう！"
+        },
+        "pt-BR": {
+          "name": "ccccccapi",
+          "tagline": "Compatível com ChatGPT, Claude, Gemini, Deepseek e outros, com os menores preços da internet. Use IA sem pesar no bolso—venha aproveitar uma pechincha!"
+        },
+        "vi": {
+          "name": "ccccccapi",
+          "tagline": "Hỗ trợ ChatGPT, Claude, Gemini, Deepseek và nhiều mô hình khác với mức giá thấp nhất trên mạng. Dùng AI không lo cháy ví—anh em cùng săn giá hời!"
+        }
+      },
+      "accountPrefill": {
+        "siteType": "sub2api",
+        "siteUrl": "https://dzhsmartai.com",
+        "authType": "access_token"
+      }
+    },
+    {
       "id": "volcengine-coding-plan",
       "enabled": true,
       "rank": 120,
