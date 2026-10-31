@@ -488,12 +488,16 @@ export type AutoCheckinAccountResultFixture<T = CheckinAccountResult> =
 export async function seedAutoCheckinStatus(
   serviceWorker: Worker,
   status: AutoCheckinStatus,
+  options?: { lockRequestEvent?: string },
 ) {
   await setPlasmoStorageValue(
     serviceWorker,
     AUTO_CHECKIN_STATUS_STORAGE_KEY,
     status,
-    { lock: STORAGE_LOCKS.AUTO_CHECKIN_STATUS },
+    {
+      lock: STORAGE_LOCKS.AUTO_CHECKIN_STATUS,
+      lockRequestEvent: options?.lockRequestEvent,
+    },
   )
 }
 

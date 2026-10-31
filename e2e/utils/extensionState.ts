@@ -40,11 +40,15 @@ export async function setPlasmoStorageValue(
   serviceWorker: Worker,
   key: string,
   value: unknown,
-  options?: { lock?: string },
+  options?: {
+    lock?: string
+    /** Worker event emitted after this write has submitted its lock request. */
+    lockRequestEvent?: string
+  },
 ) {
   const serialized = JSON.stringify(value)
   await serviceWorker.evaluate(
-    async ({ storageKey, storageValue, storageLockName }) => {
+    async ({ storageKey, storageValue, storageLockName, lockRequestEvent }) => {
       const chromeApi = (globalThis as any).chrome
       const lockManager = (globalThis as any).navigator?.locks
 
@@ -67,7 +71,15 @@ export async function setPlasmoStorageValue(
       }
 
       if (storageLockName && typeof lockManager?.request === "function") {
-        await lockManager.request(storageLockName, { mode: "exclusive" }, write)
+        const pending = lockManager.request(
+          storageLockName,
+          { mode: "exclusive" },
+          write,
+        )
+        if (lockRequestEvent) {
+          globalThis.dispatchEvent(new Event(lockRequestEvent))
+        }
+        await pending
         return
       }
 
@@ -77,6 +89,7 @@ export async function setPlasmoStorageValue(
       storageKey: key,
       storageValue: serialized,
       storageLockName: options?.lock,
+      lockRequestEvent: options?.lockRequestEvent,
     },
   )
 }

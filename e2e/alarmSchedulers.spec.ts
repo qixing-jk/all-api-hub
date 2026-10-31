@@ -1332,8 +1332,14 @@ test("auto-checkin status seeding survives an in-flight scheduler write", async 
   context,
 }) => {
   const serviceWorker = await getServiceWorker(context)
+  const lockRequestEvent = "aah-e2e-auto-checkin-seed-lock-requested"
   const write = await serviceWorker.evaluateHandle(
-    async ({ lock, key }) => {
+    async ({ lock, key, lockRequestEvent }) => {
+      const checkpoint = { seedRequested: false }
+      const onSeedRequested = () => {
+        checkpoint.seedRequested = true
+      }
+      globalThis.addEventListener(lockRequestEvent, onSeedRequested)
       let release!: () => void
       const gate = new Promise<void>((resolve) => {
         release = resolve
@@ -1350,41 +1356,44 @@ test("auto-checkin status seeding survives an in-flight scheduler write", async 
         })
       })
       await ready
-      return { release, finished }
+      return {
+        release,
+        finished,
+        checkpoint,
+        dispose: () =>
+          globalThis.removeEventListener(lockRequestEvent, onSeedRequested),
+      }
     },
     {
       lock: STORAGE_LOCKS.AUTO_CHECKIN_STATUS,
       key: AUTO_CHECKIN_STATUS_STORAGE_KEY,
+      lockRequestEvent,
     },
   )
-  const seeding = seedAutoCheckinStatus(serviceWorker, {
-    lastRunResult: "success",
-  })
+  const seeding = seedAutoCheckinStatus(
+    serviceWorker,
+    { lastRunResult: "success" },
+    { lockRequestEvent },
+  )
   try {
     // Observe either a queued locked seed or an already-written unsafe seed.
     // Only then let the older scheduler write commit its stale snapshot.
     await expect
       .poll(() =>
-        serviceWorker.evaluate(
-          async ({ lock, key }) => {
-            const locks = await navigator.locks.query()
-            const stored = await chrome.storage.local.get(key)
-            return (
-              locks.pending?.some((entry) => entry.name === lock) ||
-              JSON.parse(stored[key] ?? "null")?.lastRunResult === "success"
-            )
-          },
-          {
-            lock: STORAGE_LOCKS.AUTO_CHECKIN_STATUS,
-            key: AUTO_CHECKIN_STATUS_STORAGE_KEY,
-          },
-        ),
+        write.evaluate(async ({ checkpoint }, key) => {
+          const stored = await chrome.storage.local.get(key)
+          return (
+            checkpoint.seedRequested ||
+            JSON.parse(stored[key] ?? "null")?.lastRunResult === "success"
+          )
+        }, AUTO_CHECKIN_STATUS_STORAGE_KEY),
       )
       .toBe(true)
   } finally {
     await write.evaluate(async (pending) => {
       pending.release()
       await pending.finished
+      pending.dispose()
     })
     await seeding
     await write.dispose()
