@@ -104,33 +104,11 @@
   <hr>
 
   <section class="sponsor-item">
-    <a class="sponsor-logo" href="https://www.aicodemirror.ai/register?invitecode=7IQNR8">
-      <img src="../../../resources/partners/aicodemirror.png" alt="AICodeMirror">
-    </a>
-    <p>
-      <strong>AICodeMirror</strong> は Claude Code / Codex / Gemini CLI 向けの公式高安定中継サービスを提供し、エンタープライズ級の高同時実行、迅速な請求書発行、24 時間 365 日の専任技術サポートに対応しています。Claude Code / Codex / Gemini の公式チャネルを通常価格の 38% / 2% / 9% 程度から利用でき、チャージ時の追加割引もあります。<a href="https://www.aicodemirror.ai/register?invitecode=7IQNR8">こちらのリンク</a>から登録すると<strong>初回チャージが 20% オフ</strong>になり、エンタープライズ顧客は最大 25% オフを受けられます。
-    </p>
-  </section>
-
-  <hr>
-
-  <section class="sponsor-item">
     <a class="sponsor-logo" href="https://sui-xiang.com/">
       <img src="../../../resources/partners/suixiang.jpg" alt="Suixiang AI Relay">
     </a>
     <p>
       <strong>Suixiang AI Relay</strong> は、Claude、Codex、Gemini などに対応した信頼性と効率性の高い API 中継サービスプロバイダーです。1:1 チャージ、従量課金、毎日のチェックインによるテストクレジット、複数回線冗長、リージョン間 DR、自動フェイルオーバーに対応します。詳しくは <a href="https://sui-xiang.com/">こちらのリンク</a>をご覧ください（<a href="./service-guides/suixiang.md">設定ガイド</a>）。
-    </p>
-  </section>
-
-  <hr>
-
-  <section class="sponsor-item">
-    <a class="sponsor-logo" href="https://go.apimart.ai/gh-all-api-hub">
-      <img src="../../../resources/partners/apimart.png" alt="APIMart">
-    </a>
-    <p>
-      <strong>APIMart</strong> は AI 画像・動画生成に特化した低価格 API プラットフォームです。GPT-Image-2 は <strong>1 枚 $0.006</strong> から、1 ドルで 160 枚以上の画像を生成できます。画像と動画をひとつの非同期 API でカバーし、タスクを送信して ID を取得、ポーリングまたはコールバックで結果を取得できます。数万枚のバッチ処理もタイムアウトなしで実行でき、モデルを切り替えてもコードの変更は不要です。従量課金・月額料金なし。<a href="https://go.apimart.ai/gh-all-api-hub">こちらのリンク</a>から登録して利用を始められます。
     </p>
   </section>
 

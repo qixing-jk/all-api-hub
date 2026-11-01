@@ -2,8 +2,6 @@ import { useMemo, useState } from "react"
 
 import { cn } from "~/lib/utils"
 import api88Icon from "~~/resources/partners/icons/88api.jpg"
-import aicodemirrorIcon from "~~/resources/partners/icons/aicodemirror.png"
-import apimartIcon from "~~/resources/partners/icons/apimart.png"
 import ccccccapiIcon from "~~/resources/partners/icons/ccccccapi.jpg"
 import defaultSponsorIcon from "~~/resources/partners/icons/default.png"
 import fennoIcon from "~~/resources/partners/icons/fenno-ai.png"
@@ -44,10 +42,8 @@ const LOCAL_SPONSOR_ICONS: Record<string, string> = {
   "fenno-ai": fennoIcon,
   packycode: packycodeIcon,
   "xingchen-ai": xingchenIcon,
-  aicodemirror: aicodemirrorIcon,
   suixiang: suixiangIcon,
   "volcengine-coding-plan": volcengineIcon,
-  apimart: apimartIcon,
   "88api": api88Icon,
   ccccccapi: ccccccapiIcon,
 }

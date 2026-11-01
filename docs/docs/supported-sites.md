@@ -104,33 +104,11 @@
   <hr>
 
   <section class="sponsor-item">
-    <a class="sponsor-logo" href="https://www.aicodemirror.ai/register?invitecode=7IQNR8">
-      <img src="../../resources/partners/aicodemirror.png" alt="AICodeMirror">
-    </a>
-    <p>
-      <strong>AICodeMirror</strong> 提供 Claude Code / Codex / Gemini CLI 官方高稳定中转服务，支持企业级高并发、极速开票、7×24 专属技术支持。Claude Code / Codex / Gemini 官方渠道低至 3.8 / 0.2 / 0.9 折，充值更有折上折。通过<a href="https://www.aicodemirror.ai/register?invitecode=7IQNR8">此链接</a>注册，可享受首充 <strong>8 折优惠</strong>，企业客户最高可享 7.5 折。
-    </p>
-  </section>
-
-  <hr>
-
-  <section class="sponsor-item">
     <a class="sponsor-logo" href="https://sui-xiang.com/">
       <img src="../../resources/partners/suixiang.jpg" alt="随想AI中转站">
     </a>
     <p>
       <strong>随想AI中转站</strong> 可靠高效的 API 中继服务提供商，提供 Claude、Codex、Gemini 等中继服务，支持 1:1 按量充值、每日签到测试额度、多线路冗余、跨区域容灾和自动故障切换。欢迎通过<a href="https://sui-xiang.com/">此链接</a>了解和使用（<a href="./service-guides/suixiang.md">使用教程</a>）。
-    </p>
-  </section>
-
-  <hr>
-
-  <section class="sponsor-item">
-    <a class="sponsor-logo" href="https://go.apimart.ai/gh-all-api-hub">
-      <img src="../../resources/partners/apimart.png" alt="APIMart">
-    </a>
-    <p>
-      <strong>APIMart</strong> 专注 AI 图片/视频生成的低价 API 平台，GPT-Image-2 低至 <strong>$0.006/张</strong>，1 美元可出图 160+ 张。图片、视频一套异步 API 通吃，提交任务拿 ID、回调取结果，跑批万张不超时、换模型不改代码，按量付费、无月费。欢迎通过<a href="https://go.apimart.ai/gh-all-api-hub">此链接</a>注册使用。
     </p>
   </section>
 
