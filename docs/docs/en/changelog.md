@@ -8,6 +8,23 @@ This page records major updates for general users (feature changes / experience 
 - **Troubleshooting**: You can enable console logs in "Settings → General → Logs" and report reproduction steps to [Issues](https://github.com/qixing-jk/all-api-hub/issues).
 :::
 
+## 4.8.0
+This release adds Novita AI account support and key management, and makes account setup, key association, and web detection easier to use.
+
+::: info Web text-selection false prompts
+Sorry for the recent interruptions caused by ordinary links, URL parameters, and UUIDs being mistaken for API keys. Version 4.8.0 fixes this class of false prompt, so unrelated suggestions should no longer appear frequently after updating. If frequent false prompts continue, please report them in [Issues](https://github.com/qixing-jk/all-api-hub/issues) with the text or URL that triggered them. See [Web AI API Check](./web-ai-api-check.md).
+:::
+
+- **New Features:**
+  - **`Novita AI` accounts**: Add Novita AI accounts, view balances and models, and manage API keys in the extension. See [Add an Account](./add-account.md), [Key Management](./key-management.md), and [Supported Sites](./supported-sites.md).
+
+- **Experience Improvements:**
+  - **Account key association hints**: When linking an account key to a saved API credential, match hints and better-ranked candidates make it easier to choose the right credential.
+  - **Automatic sizing for multiline fields**: Verification prompts and the web text-selection field now grow with their content, making longer text easier to edit. See [Model List](./model-list.md) and [Web AI API Check](./web-ai-api-check.md).
+
+- **Bug Fixes:**
+  - **Continue account setup when an access token is unavailable**: When a site cannot supply an access token automatically, the extension keeps the information it found and opens the right page so account setup can continue. See [Add an Account](./add-account.md).
+
 ## 4.7.0
 This release adds account support for Vercel AI Gateway, Daya API, PM-API, and Requesty; introduces verification-aware automatic check-ins with continuation preferences for challenge-gated sites; brings direct testing for image and video generation models, interactive drawing tests, CLI tool simulation, and customizable prompts; adds a self-updating Chromium CRX package for GitHub users; improves Safari session isolation and download reliability; and redesigns the account editor and Web AI API Check dialogs.
 
