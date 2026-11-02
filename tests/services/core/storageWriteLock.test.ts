@@ -44,32 +44,51 @@ describe("storageWriteLock", () => {
     ])
   })
 
-  it("uses navigator.locks.request when the Web Locks API is available", async () => {
-    const request = vi.fn(
-      async (
-        name: string,
-        options: LockOptions,
-        callback: (lock: Lock | null) => Promise<string>,
-      ) => {
-        expect(name).toBe("prefs")
-        expect(options).toEqual({ mode: "exclusive" })
-        return callback(null)
-      },
-    )
-    ;(globalThis as any).navigator = {
-      locks: { request },
-    }
+  it.each([false, true])(
+    "uses Web Locks with requireCrossContext=%s",
+    async (requireCrossContext) => {
+      const request = vi.fn(
+        async (
+          name: string,
+          options: LockOptions,
+          callback: (lock: Lock | null) => Promise<string>,
+        ) => {
+          expect(name).toBe("prefs")
+          expect(options).toEqual({ mode: "exclusive" })
+          return callback(null)
+        },
+      )
+      ;(globalThis as any).navigator = {
+        locks: { request },
+      }
 
-    const { withExtensionStorageWriteLock } = await import(
-      "~/services/core/storageWriteLock"
-    )
+      const { withExtensionStorageWriteLock } = await import(
+        "~/services/core/storageWriteLock"
+      )
 
-    const result = await withExtensionStorageWriteLock("prefs", async () => {
-      return "done"
-    })
+      const result = await withExtensionStorageWriteLock(
+        "prefs",
+        async () => "done",
+        { requireCrossContext },
+      )
 
-    expect(result).toBe("done")
-    expect(request).toHaveBeenCalledTimes(1)
+      expect(result).toBe("done")
+      expect(request).toHaveBeenCalledTimes(1)
+    },
+  )
+
+  it("rejects strict work before executing when Web Locks are unavailable", async () => {
+    const {
+      withExtensionStorageWriteLock,
+      CrossContextStorageLockUnavailableError,
+    } = await import("~/services/core/storageWriteLock")
+    const work = vi.fn(async () => "must not run")
+    await expect(
+      withExtensionStorageWriteLock("prefs", work, {
+        requireCrossContext: true,
+      }),
+    ).rejects.toBeInstanceOf(CrossContextStorageLockUnavailableError)
+    expect(work).not.toHaveBeenCalled()
   })
 
   it("falls back to the in-memory queue when navigator.locks exists without a request function", async () => {

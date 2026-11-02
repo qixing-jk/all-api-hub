@@ -476,6 +476,28 @@ it("does not issue credentials after console identity verification fails", async
   expect(create).not.toHaveBeenCalled()
 })
 
+it("requests manual credentials when cross-context issuance coordination is unavailable", async () => {
+  const create = vi.fn(() => HttpResponse.json({}))
+  server.use(
+    http.get("https://app.aimlapi.com/v1/users/me", () =>
+      HttpResponse.json({ id: "123" }),
+    ),
+    http.post("https://app.aimlapi.com/v1/keys", create),
+  )
+  vi.stubGlobal("navigator", {})
+  try {
+    const result = await onboardAimlApiAccount({
+      allowCredentialCreation: true,
+    })
+    expect(result.success).toBe(false)
+    expect(result.message).toBe("messages:aimlapi.managementKeyRequired")
+    expect(create).not.toHaveBeenCalled()
+    expect(result.recoveryData?.accessToken).toBeUndefined()
+  } finally {
+    vi.unstubAllGlobals()
+  }
+})
+
 it("rejects credentials scoped to another provider before session or API access", async () => {
   const { autoDetectSmart } = await import(
     "~/services/siteDetection/autoDetectService"

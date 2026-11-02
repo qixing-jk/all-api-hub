@@ -18,6 +18,7 @@ import type {
 import { createAimlApiConsoleClient } from "~/services/apiService/aimlapi/console"
 import { AIMLAPI_ONBOARDING_ERRORS as errors } from "~/services/apiService/aimlapi/constants"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
+import { CrossContextStorageLockUnavailableError } from "~/services/core/storageWriteLock"
 import type { AutoDetectData } from "~/services/siteDetection/autoDetectContracts"
 import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
 import { AuthTypeEnum } from "~/types"
@@ -171,11 +172,13 @@ function createAimlApiOnboardingSession(
       const message =
         error instanceof Error && error.message === errors.IdentityMismatch
           ? t("accountDialog:messages.autoDetectIdentityMismatch")
-          : params.existingAccount?.accessToken.trim()
-            ? aimlApiAccountPersistence.getValidationFailureMessage(error)
-            : acquisitionAttempted
-              ? t("accountDialog:form.autoCreateAccessTokenUnconfirmed")
-              : t("messages:aimlapi.managementKeyRequired")
+          : error instanceof CrossContextStorageLockUnavailableError
+            ? t("messages:aimlapi.managementKeyRequired")
+            : params.existingAccount?.accessToken.trim()
+              ? aimlApiAccountPersistence.getValidationFailureMessage(error)
+              : acquisitionAttempted
+                ? t("accountDialog:form.autoCreateAccessTokenUnconfirmed")
+                : t("messages:aimlapi.managementKeyRequired")
       return {
         kind: "detected",
         success: false,

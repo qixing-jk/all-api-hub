@@ -92,6 +92,7 @@ export async function obtainAimlApiConnectionKey(
       await storage.set(AIMLAPI_ONBOARDING_STORAGE_KEY, ledger)
       return undefined
     },
+    { requireCrossContext: true },
   )
   if (existing?.state === CREDENTIAL_STATES.Ready) return existing
   if (existing) throw new Error(errors.IssuanceUnconfirmed)
@@ -107,6 +108,7 @@ export async function obtainAimlApiConnectionKey(
       }
       await storage.set(AIMLAPI_ONBOARDING_STORAGE_KEY, ledger)
     },
+    { requireCrossContext: true },
   )
   return created
 }

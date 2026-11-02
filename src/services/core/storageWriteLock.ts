@@ -16,15 +16,25 @@
 
 const inMemoryQueues = new Map<string, Promise<void>>()
 
+/** The caller requires coordination that a context-local queue cannot provide. */
+export class CrossContextStorageLockUnavailableError extends Error {
+  constructor() {
+    super("Cross-context storage lock unavailable")
+    this.name = "CrossContextStorageLockUnavailableError"
+  }
+}
+
 /**
  * Execute a unit of work under an exclusive lock.
  *
  * Use a stable lock name for related storage keys that must be updated together
  * (e.g. accounts + global tags).
+ * Set requireCrossContext for work that must never use the context-local fallback.
  */
 export async function withExtensionStorageWriteLock<T>(
   lockName: string,
   work: () => Promise<T>,
+  options: { requireCrossContext?: boolean } = {},
 ): Promise<T> {
   const runWithInMemoryQueue = async (queuedWork: () => Promise<T>) => {
     const previous = inMemoryQueues.get(lockName) ?? Promise.resolve()
@@ -60,5 +70,7 @@ export async function withExtensionStorageWriteLock<T>(
     )
   }
 
+  if (options.requireCrossContext)
+    throw new CrossContextStorageLockUnavailableError()
   return runWithInMemoryQueue(work)
 }

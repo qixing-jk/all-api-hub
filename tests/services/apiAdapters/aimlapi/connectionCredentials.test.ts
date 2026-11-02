@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw"
-import { beforeEach, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, expect, it, vi } from "vitest"
 import { browser } from "wxt/browser"
 
 import { Storage } from "@plasmohq/storage"
@@ -29,6 +29,7 @@ const ready = (key: string) => ({
 })
 const read = () =>
   storage.get<Record<string, unknown>>(AIMLAPI_ONBOARDING_STORAGE_KEY)
+afterEach(() => vi.unstubAllGlobals())
 beforeEach(async () => {
   await storage.set(AIMLAPI_ONBOARDING_STORAGE_KEY, {
     "123": { management: ready("management"), regular: ready("regular") },
@@ -172,6 +173,24 @@ it("admits only one issuance while the first request is pending", async () => {
   ).toMatchObject({ key: "new-key" })
   expect(create).toHaveBeenCalledOnce()
 })
+
+it.each([undefined, {}, { request: undefined }])(
+  "does not dispatch issuance without a cross-context lock: %j",
+  async (locks) => {
+    vi.stubGlobal("navigator", { locks })
+    const before = await read()
+    const create = vi.fn(async () => ({
+      key: "new-key",
+      id: "new",
+      prefix: "abcdefgh",
+    }))
+    await expect(
+      obtainAimlApiConnectionKey("new-user", "management", create),
+    ).rejects.toThrow()
+    expect(create).not.toHaveBeenCalled()
+    expect(await read()).toEqual(before)
+  },
+)
 
 it("retains uncertainty when the issuance ledger disappears before confirmation", async () => {
   await expect(
