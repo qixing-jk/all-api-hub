@@ -14,9 +14,9 @@ stock Chrome / Edge は `.crx` をインストールする前に、このペー�
 :::
 
 ::: tip どのブラウザーが Chromium 系か
-Google Chrome、Microsoft Edge、Brave、Vivaldi、Opera などの Chromium 系ブラウザーは本ページを参照できます。その他のブラウザーは、まずエンジンと拡張機能への対応を確認してください。
+通常は Chromium と考えてください。Firefox と Safari を除き、一般的な拡張機能対応デスクトップブラウザーは基本的に Chromium 系です。不明な場合は [ブラウザー一覧](./other-browser-install.md#supported-browsers) を確認してください。
 
-Firefox と互換ブラウザーは Firefox Add-ons を優先し、Safari は [Safari インストールガイド](./safari-install.md) を参照してください。
+Firefoxは Firefox Add-ons を優先し、Safari は [Safari インストールガイド](./safari-install.md) を参照してください。
 
 自分のブラウザーがどちらか分からない場合は、[その他のブラウザへのインストールガイドのブラウザ一覧](./other-browser-install.md#supported-browsers) を確認してください。
 :::

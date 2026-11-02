@@ -27,7 +27,7 @@ Chrome、Edge、Firefox ユーザーは、対応するストア版を優先し�
 QQ、360、チーターブラウザ、Brave、Vivaldi、Opera などのブラウザを使う場合は、[その他のブラウザへのインストールガイド](./other-browser-install.md) を確認してください。Brave、Vivaldi、Opera は通常、まず Chrome ウェブストアを試せます。GitHub 版が必要なときは `.crx` を優先してください。詳しくは [Chromium 自己更新インストール](./chromium-crx-self-update.md) を参照してください。
 
 ::: tip 自分のブラウザは Chromium 系ですか？
-Chrome、Edge、Brave、Vivaldi、Opera など、一覧のブラウザーは Chromium 系です。その他のブラウザーはエンジンと拡張機能への対応を確認してください。Firefox と互換ブラウザーは Firefox Add-ons、Safari は Safari ガイドを参照してください。[ブラウザー一覧](./other-browser-install.md#supported-browsers) も確認できます。
+通常は Chromium と考えてください。Firefox と Safari を除き、一般的な拡張機能対応デスクトップブラウザーは基本的に Chromium 系です。不明な場合は [ブラウザー一覧](./other-browser-install.md#supported-browsers) を確認してください。
 :::
 
 ## GitHub には新しいバージョンがあるのに、ストアがまだ更新されていないのはなぜですか？

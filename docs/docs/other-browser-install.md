@@ -5,7 +5,7 @@
 这些浏览器大多基于 Chromium 内核，但可用安装方式并不完全一样。能从浏览器商店或 Chrome Web Store 安装时，优先使用商店版本；需要 GitHub 附件时推荐 [自更新 `.crx`](./chromium-crx-self-update.md)，解压加载的 `.zip` 仅在 `.crx` 装不上时使用。
 
 ::: tip 我的浏览器算 Chromium 吗
-本指南列出的 Chrome、Edge、Brave、Vivaldi、Opera 等浏览器属于 Chromium 系。其他浏览器请先确认内核和扩展支持；Firefox 及兼容浏览器请优先使用 Firefox Add-ons，Safari 请参阅 Safari 安装指南。浏览器列表见 [其他浏览器安装指南](./other-browser-install.md#supported-browsers)。
+默认按 Chromium 处理：除 Firefox 和 Safari 外，常见的桌面扩展浏览器基本都是 Chromium 系。不确定时对照 [浏览器表格](./other-browser-install.md#supported-browsers)。
 :::
 
 ## 先看区别

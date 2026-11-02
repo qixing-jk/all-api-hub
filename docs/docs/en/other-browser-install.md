@@ -5,7 +5,7 @@ This document explains how to install the All API Hub extension in browsers such
 Most of these browsers are based on Chromium, but their available installation paths are not identical. When a browser store or Chrome Web Store installation works, use the store build first. When a GitHub asset is needed, the self-updating [`.crx`](./chromium-crx-self-update.md) is recommended, and the unpacked `.zip` is only for when the `.crx` cannot be installed.
 
 ::: tip Does my browser count as Chromium?
-The listed browsers such as Chrome, Edge, Brave, Vivaldi, and Opera use Chromium. Confirm the engine and extension support for other browsers. Use Firefox Add-ons for Firefox and compatible browsers, and the Safari guide for Safari. See the [browser table](./other-browser-install.md#supported-browsers).
+Use Chromium as the default: apart from Firefox and Safari, common desktop browsers with extension support are generally Chromium-based. If unsure, check the [browser table](./other-browser-install.md#supported-browsers).
 :::
 
 ## Differences at a Glance

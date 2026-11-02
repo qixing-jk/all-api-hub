@@ -14,9 +14,9 @@ stock Chrome / Edge 安装 `.crx` 前需要按本页配置一次扩展白名单�
 :::
 
 ::: tip 哪些浏览器属于 Chromium
-Google Chrome、Microsoft Edge、Brave、Vivaldi、Opera 等 Chromium 系浏览器可参考本页安装。其他浏览器请先确认内核和扩展支持，不要仅根据名称判断。
+默认按 Chromium 处理：除 Firefox 和 Safari 外，常见的桌面扩展浏览器基本都是 Chromium 系。不确定时对照 [浏览器表格](./other-browser-install.md#supported-browsers)。
 
-Firefox 及兼容浏览器请优先使用 Firefox Add-ons；Safari 见 [Safari 安装指南](./safari-install.md)。
+Firefox请优先使用 Firefox Add-ons；Safari 见 [Safari 安装指南](./safari-install.md)。
 
 如果你不确定自己的浏览器属于哪一类，可以对照 [其他浏览器安装指南的浏览器表格](./other-browser-install.md#supported-browsers)。
 :::

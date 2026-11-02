@@ -27,7 +27,7 @@ Only when the store is not an option (the store has not published the version ye
 If you use QQ Browser, 360 Browser, Cheetah Browser, Brave, Vivaldi, Opera, or a similar browser, see the [Other Browser Installation Guide](./other-browser-install.md). Brave, Vivaldi, and Opera can usually try Chrome Web Store first; when a GitHub install is needed, prefer the `.crx` — see [Chromium self-updating install](./chromium-crx-self-update.md).
 
 ::: tip Does my browser count as Chromium?
-The listed browsers such as Chrome, Edge, Brave, Vivaldi, and Opera use Chromium. Confirm the engine and extension support for other browsers. Use Firefox Add-ons for Firefox and compatible browsers, and the Safari guide for Safari. See the [browser table](./other-browser-install.md#supported-browsers).
+Use Chromium as the default: apart from Firefox and Safari, common desktop browsers with extension support are generally Chromium-based. If unsure, check the [browser table](./other-browser-install.md#supported-browsers).
 :::
 
 ## Why Does GitHub Have a Newer Version Before the Store?

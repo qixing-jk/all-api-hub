@@ -14,9 +14,9 @@ Stock Chrome / Edge must configure the extension allowlist policies on this page
 :::
 
 ::: tip Which browsers are Chromium
-Chromium browsers such as Google Chrome, Microsoft Edge, Brave, Vivaldi, and Opera can use this guide. For other browsers, confirm the engine and extension support first.
+Use Chromium as the default: apart from Firefox and Safari, common desktop browsers with extension support are generally Chromium-based. If unsure, check the [browser table](./other-browser-install.md#supported-browsers).
 
-Use Firefox Add-ons for Firefox and compatible browsers; see the [Safari installation guide](./safari-install.md) for Safari.
+Use Firefox Add-ons for Firefox; see the [Safari installation guide](./safari-install.md) for Safari.
 
 If you are unsure which category your browser falls into, check the [browser table in the Other Browser Installation Guide](./other-browser-install.md#supported-browsers).
 :::
