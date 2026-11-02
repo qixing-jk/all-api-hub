@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   clearNewApi: vi.fn(),
   ensureRedemptionToastUi: vi.fn(),
   showTurnstileAssistPageNotice: vi.fn(),
+  showGitHubFeedbackHint: vi.fn(),
 }))
 vi.mock("~/services/apiService/newApiFamily/passwordUi", () => ({
   handleNewApiPasswordUi: mocks.newApiPasswordUi,
@@ -59,6 +60,9 @@ vi.mock("~/services/checkin/feedback/pageScan", () => ({
 }))
 vi.mock("~/entrypoints/content/shared/uiRoot", () => ({
   ensureRedemptionToastUi: mocks.ensureRedemptionToastUi,
+}))
+vi.mock("~/services/checkin/feedback/githubHint", () => ({
+  showGitHubFeedbackHint: mocks.showGitHubFeedbackHint,
 }))
 vi.mock("~/services/checkin/turnstile/assistPageNotice", () => ({
   showTurnstileAssistPageNotice: mocks.showTurnstileAssistPageNotice,
@@ -140,6 +144,41 @@ describe("feedback content routing", () => {
     )
     await vi.waitFor(() =>
       expect(reply).toHaveBeenCalledWith({ success: false }),
+    )
+  })
+
+  it("mounts the existing content UI before presenting GitHub feedback guidance", async () => {
+    let finishMount!: () => void
+    mocks.ensureRedemptionToastUi.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishMount = resolve
+        }),
+    )
+    mocks.showGitHubFeedbackHint.mockReturnValueOnce(true)
+    setupContentMessageHandlers()
+    const request = {
+      action: RuntimeActionIds.ContentCheckInFeedbackHint,
+      hint: { title: "Report copied" },
+    }
+    const reply = vi.fn()
+    expect(atIndex(mocks.register.mock.calls, 0)[0](request, {}, reply)).toBe(
+      true,
+    )
+    await vi.waitFor(() =>
+      expect(mocks.ensureRedemptionToastUi).toHaveBeenCalledOnce(),
+    )
+    expect(mocks.showGitHubFeedbackHint).not.toHaveBeenCalled()
+    finishMount()
+    await vi.waitFor(() =>
+      expect(reply).toHaveBeenCalledWith({ presented: true }),
+    )
+    expect(mocks.showGitHubFeedbackHint).toHaveBeenCalledWith(
+      request.hint,
+      expect.objectContaining({
+        info: expect.any(Function),
+        dismiss: expect.any(Function),
+      }),
     )
   })
 

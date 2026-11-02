@@ -38,6 +38,7 @@ import {
   handleCompleteSub2ApiOAuth,
   handlePrepareSub2ApiOAuth,
 } from "~/services/apiService/sub2api/oauth/content"
+import { showGitHubFeedbackHint } from "~/services/checkin/feedback/githubHint"
 import { onRuntimeMessage } from "~/utils/browser/runtimeMessages"
 
 import { handleInspectCredentialPage } from "./handlers/credentialPage"
@@ -61,6 +62,20 @@ export function setupContentMessageHandlers() {
       return handleSub2ApiPasswordLogin(request, sendResponse)
     if (request.action === RuntimeActionIds.ContentClearSub2ApiPasswordLogin)
       return handleClearSub2ApiPasswordLogin(request, sendResponse)
+    if (request.action === RuntimeActionIds.ContentCheckInFeedbackHint) {
+      void Promise.all([
+        import("~/entrypoints/content/shared/uiRoot"),
+        import("~/lib/notify/content"),
+      ])
+        .then(async ([ui, { default: notify }]) => {
+          if (!request.hint?.withdraw) await ui.ensureRedemptionToastUi()
+          sendResponse({
+            presented: showGitHubFeedbackHint(request.hint, notify),
+          })
+        })
+        .catch(() => sendResponse({ presented: false }))
+      return true
+    }
     if (request.action === RuntimeActionIds.TurnstileAssistPageNotice) {
       void Promise.all([
         import("~/entrypoints/content/shared/uiRoot"),

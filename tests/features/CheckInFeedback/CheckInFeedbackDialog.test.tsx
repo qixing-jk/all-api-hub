@@ -26,12 +26,17 @@ import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { collectFeedbackCluesInBrowser } from "~/services/checkin/feedback/scanClient"
 import type { CheckinAccountResult } from "~/types/autoCheckin"
 import type { CheckInConfig } from "~/types/checkIn"
+import { sendRuntimeActionMessage } from "~/utils/browser/runtimeMessages"
 import { createTab } from "~/utils/browser/tabs"
 import { openAccountManagerWithSearch } from "~/utils/navigation"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { atIndex } from "~~/tests/test-utils/indexedAccess"
 
+vi.mock("~/utils/browser/runtimeMessages", async (original) => ({
+  ...(await original<typeof import("~/utils/browser/runtimeMessages")>()),
+  sendRuntimeActionMessage: vi.fn(),
+}))
 vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
   accountQueries: { getAccountById: vi.fn() },
 }))
@@ -81,6 +86,7 @@ beforeEach(() => {
     new Error("unavailable"),
   )
   vi.mocked(createTab).mockResolvedValue(undefined)
+  vi.mocked(sendRuntimeActionMessage).mockResolvedValue({ success: true })
 })
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -573,7 +579,7 @@ describe("check-in feedback workflow", () => {
       expect(
         new URL(
           atIndex(vi.mocked(createTab).mock.calls, 0)[0],
-        ).searchParams.get("body"),
+        ).searchParams.get("feedback"),
       ).toBe(preview.value)
       expect(screen.getByLabelText("What happened? (optional)")).toHaveValue(
         "Website works",
@@ -588,6 +594,115 @@ describe("check-in feedback workflow", () => {
       ).toHaveValue("")
     },
   )
+
+  it("copies the complete current report before opening GitHub in one action", async () => {
+    const user = userEvent.setup()
+    render(
+      wrap(<CheckInFeedbackDialog source={{ snapshot }} onClose={vi.fn()} />),
+    )
+    const notes = await screen.findByLabelText("What happened? (optional)")
+    await user.click(notes)
+    await user.paste("Long description ".repeat(800))
+    let finishCopy!: () => void
+    const originalWrite = navigator.clipboard.writeText.bind(
+      navigator.clipboard,
+    )
+    const write = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockImplementationOnce(async (text) => {
+        await new Promise<void>((resolve) => {
+          finishCopy = resolve
+        })
+        await originalWrite(text)
+      })
+    expect(
+      screen.queryByRole("button", { name: "Copy content" }),
+    ).not.toBeInTheDocument()
+    const button = screen.getByRole("button", {
+      name: "Copy report and open GitHub",
+    })
+    await user.click(button)
+    expect(sendRuntimeActionMessage).not.toHaveBeenCalled()
+    expect(button).toBeDisabled()
+    await act(async () => finishCopy())
+    expect(sendRuntimeActionMessage).toHaveBeenCalledOnce()
+    expect(await navigator.clipboard.readText()).toContain(
+      "Long description ".repeat(800),
+    )
+    const url = new URL(
+      atIndex(vi.mocked(sendRuntimeActionMessage).mock.calls, 0)[0]
+        .url as string,
+    )
+    expect(url.searchParams.get("site-url")).toBe("https://example.com")
+    expect(url.searchParams.get("template")).toBe("checkin_adaptation.yml")
+    expect(url.searchParams.has("feedback")).toBe(false)
+    expect(
+      screen.queryByRole("button", { name: "Copy content" }),
+    ).not.toBeInTheDocument()
+    await user.type(notes, " revised")
+    await user.click(
+      screen.getByRole("button", { name: "Copy report and open GitHub" }),
+    )
+    expect(sendRuntimeActionMessage).toHaveBeenCalledTimes(2)
+    expect(await navigator.clipboard.readText()).toContain("revised")
+    write.mockRestore()
+  })
+
+  it("keeps the report available after a failed background open and recopies on retry", async () => {
+    const user = userEvent.setup()
+    render(
+      wrap(<CheckInFeedbackDialog source={{ snapshot }} onClose={vi.fn()} />),
+    )
+    const notes = await screen.findByLabelText("What happened? (optional)")
+    await user.click(notes)
+    await user.paste("Long report ".repeat(800))
+    vi.mocked(sendRuntimeActionMessage).mockResolvedValueOnce({
+      success: false,
+    })
+    await user.click(
+      screen.getByRole("button", { name: "Copy report and open GitHub" }),
+    )
+    expect(screen.getByRole("alert")).toHaveTextContent("Could not open GitHub")
+    await navigator.clipboard.writeText(
+      "Other content copied since the failure",
+    )
+    await user.click(
+      screen.getByRole("button", { name: "Copy report and open GitHub" }),
+    )
+    expect(await navigator.clipboard.readText()).toContain(
+      "Long report ".repeat(800),
+    )
+    expect(sendRuntimeActionMessage).toHaveBeenCalledTimes(2)
+  })
+
+  it("allows copying the latest draft after an older clipboard write finishes", async () => {
+    const user = userEvent.setup()
+    render(
+      wrap(<CheckInFeedbackDialog source={{ snapshot }} onClose={vi.fn()} />),
+    )
+    const notes = await screen.findByLabelText("What happened? (optional)")
+    await user.click(notes)
+    await user.paste("Long description ".repeat(800))
+    let finishCopy!: () => void
+    const write = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            finishCopy = resolve
+          }),
+      )
+    await user.click(
+      screen.getByRole("button", { name: "Copy report and open GitHub" }),
+    )
+    await user.type(notes, " revised")
+    await act(async () => finishCopy())
+    expect(sendRuntimeActionMessage).not.toHaveBeenCalled()
+    expect(
+      screen.getByRole("button", { name: "Copy report and open GitHub" }),
+    ).toBeEnabled()
+    write.mockRestore()
+  })
 
   it("lets manual copying recover a long report when clipboard access stays denied", async () => {
     const user = userEvent.setup()
@@ -605,9 +720,9 @@ describe("check-in feedback workflow", () => {
       .spyOn(navigator.clipboard, "writeText")
       .mockRejectedValue(new Error("denied"))
     await user.click(
-      screen.getByRole("button", { name: "Copy and open GitHub" }),
+      screen.getByRole("button", { name: "Copy report and open GitHub" }),
     )
-    expect(createTab).not.toHaveBeenCalled()
+    expect(sendRuntimeActionMessage).not.toHaveBeenCalled()
     expect(
       screen.getByText(
         "Copy failed. Retry, or expand the submission and copy it manually.",
@@ -621,9 +736,10 @@ describe("check-in feedback workflow", () => {
     )
     expect(write).toHaveBeenCalledTimes(1)
     expect(
-      new URL(atIndex(vi.mocked(createTab).mock.calls, 0)[0]).searchParams.has(
-        "body",
-      ),
+      new URL(
+        atIndex(vi.mocked(sendRuntimeActionMessage).mock.calls, 0)[0]
+          .url as string,
+      ).searchParams.has("feedback"),
     ).toBe(false)
     write.mockRestore()
   })

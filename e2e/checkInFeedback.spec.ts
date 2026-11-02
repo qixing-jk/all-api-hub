@@ -2,12 +2,14 @@ import { writeFile } from "node:fs/promises"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementListItemTestId,
 } from "~/features/AccountManagement/testIds"
 import en from "~/locales/en/accountDialog.json" with { type: "json" }
 import zh from "~/locales/zh-CN/accountDialog.json" with { type: "json" }
+import { CHECKIN_FEEDBACK_TAB_HINT_PREFIX } from "~/services/core/storageKeys"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   createStoredAccount,
@@ -157,7 +159,7 @@ for (const { width, language } of [
     const issueUrl = await page.evaluate(() =>
       sessionStorage.getItem("feedback-github-url"),
     )
-    expect(new URL(issueUrl!).searchParams.get("body")).toBe(report)
+    expect(new URL(issueUrl!).searchParams.get("feedback")).toBe(report)
     await page.keyboard.press("Escape")
     await expect(feedback).toBeHidden()
     await row.hover()
@@ -242,6 +244,66 @@ for (const { width, language } of [
         document.documentElement.classList.remove("dark"),
       )
     }
+    await feedback.getByLabel(copy.notes).fill("Long report ".repeat(800))
+    await expect(
+      feedback.getByRole("button", { name: copy.copyAndOpen }),
+    ).toBeInViewport()
+    await page.screenshot({
+      animations: "disabled",
+      path: testInfo.outputPath(`feedback-long-${language}-${width}.png`),
+    })
+    await page.evaluate(() => sessionStorage.removeItem("feedback-github-url"))
+    await expect(
+      feedback.getByRole("button", { name: copy.copy, exact: true }),
+    ).toHaveCount(0)
+    await page.evaluate((openFeedbackAction) => {
+      const api = (globalThis as any).browser ?? (globalThis as any).chrome
+      const send = api.runtime.sendMessage.bind(api.runtime)
+      api.runtime.sendMessage = async (message: {
+        action: string
+        url?: string
+      }) => {
+        if (message.action === openFeedbackAction) {
+          if (
+            !sessionStorage
+              .getItem("feedback-copy")
+              ?.includes("Long report ".repeat(800))
+          )
+            throw new Error("Navigated before copying the report")
+          sessionStorage.setItem("feedback-github-url", message.url!)
+          return { success: true }
+        }
+        return send(message)
+      }
+    }, RuntimeActionIds.OpenCheckInFeedbackIssue)
+    await feedback.getByRole("button", { name: copy.copyAndOpen }).click()
+    await expect(
+      feedback.getByRole("button", { name: copy.copy, exact: true }),
+    ).toHaveCount(0)
+    await expect
+      .poll(() =>
+        page.evaluate(() => sessionStorage.getItem("feedback-github-url")),
+      )
+      .not.toBeNull()
+    await page.screenshot({
+      animations: "disabled",
+      path: testInfo.outputPath(`feedback-paste-${language}-${width}.png`),
+    })
+    const longIssueUrl = new URL(
+      (await page.evaluate(() =>
+        sessionStorage.getItem("feedback-github-url"),
+      ))!,
+    )
+    expect(longIssueUrl.searchParams.get("template")).toBe(
+      "checkin_adaptation.yml",
+    )
+    expect(longIssueUrl.searchParams.has("feedback")).toBe(false)
+    expect(longIssueUrl.searchParams.get("site-url")).toBe(baseUrl)
+    expect(longIssueUrl.searchParams.get("extension-version")).toBeTruthy()
+    expect(
+      await page.evaluate(() => sessionStorage.getItem("feedback-copy")),
+    ).toContain("Long report ".repeat(800))
+
     await page.keyboard.press("Escape")
     await expect(
       editor.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput),
@@ -249,3 +311,109 @@ for (const { width, language } of [
     expect(requests.every((request) => request.startsWith("GET "))).toBe(true)
   })
 }
+
+test("extension guidance follows its feedback tab through login, reload and dismissal", async ({
+  context,
+  page,
+  extensionId,
+}, testInfo) => {
+  const composer =
+    "https://github.com/qixing-jk/all-api-hub/issues/new?template=checkin_adaptation.yml"
+  const copy = zh.checkInFeedback
+  await page.setViewportSize({ width: 390, height: 850 })
+  installExtensionPageGuards(page)
+  await forceExtensionLanguage(page, "zh-CN")
+  await stubLlmMetadataIndex(context)
+  await context.route("https://github.com/**", async (route) => {
+    if (!route.request().isNavigationRequest()) return route.abort()
+    const url = new URL(route.request().url())
+    if (url.pathname === "/login")
+      return route.fulfill({
+        contentType: "text/html",
+        body: `<html lang="zh-CN"><head><meta charset="utf-8"></head><body><h1>GitHub login fixture</h1><a href="${composer}&signed-in=1">Continue after login</a></body></html>`,
+      })
+    if (
+      url.pathname.endsWith("/issues/new") &&
+      !url.searchParams.has("signed-in")
+    )
+      return route.fulfill({
+        status: 302,
+        headers: { location: "https://github.com/login" },
+        body: "",
+      })
+    return route.fulfill({
+      contentType: "text/html",
+      body: `<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body style="font: 16px system-ui; padding: 180px 16px 16px"><h1>New issue · GitHub fixture</h1><form><label for="feedback">Problem description or extension feedback / 问题描述或扩展反馈</label><textarea id="feedback" required style="width:100%; min-height:160px"></textarea><button>Submit new issue</button></form></body></html>`,
+    })
+  })
+  await page.goto(`chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}`)
+  await waitForExtensionRoot(page)
+  const newPage = context.waitForEvent("page")
+  const response = await page.evaluate(
+    async ({ composer, copy, action }) => {
+      const api = (globalThis as any).browser ?? (globalThis as any).chrome
+      return await api.runtime.sendMessage({
+        action,
+        url: composer,
+        hint: {
+          title: copy.githubHintTitle,
+          description: copy.githubHint,
+          dismiss: "关闭",
+        },
+      })
+    },
+    { composer, copy, action: RuntimeActionIds.OpenCheckInFeedbackIssue },
+  )
+  expect(response.success).toBe(true)
+  const github = await newPage
+  await github.setViewportSize({ width: 390, height: 850 })
+  await github.waitForURL("https://github.com/login")
+  // The extension can navigate before Playwright attaches the new target.
+  // Explicitly load the controlled document once attached; subsequent navigations stay routed.
+  await github.goto("https://github.com/login?aah-test=1")
+  await expect(
+    github.getByRole("link", { name: "Continue after login" }),
+  ).toBeVisible()
+  await expect(github.locator("all-api-hub-redemption-toast")).toHaveCount(0)
+  await page.close()
+  await github.getByRole("link", { name: "Continue after login" }).click()
+  const hint = github.locator("all-api-hub-redemption-toast")
+  await expect(
+    hint.getByText(copy.githubHintTitle, { exact: true }),
+  ).toBeVisible()
+  await expect(hint.getByText(copy.githubHint, { exact: true })).toBeVisible()
+  await github.screenshot({
+    path: testInfo.outputPath("github-paste-hint-zh-CN-390.png"),
+    animations: "disabled",
+  })
+  await github.reload()
+  await expect(
+    hint.getByText(copy.githubHintTitle, { exact: true }),
+  ).toBeVisible()
+  await hint.evaluate((element) => element.remove())
+  await expect(
+    hint.getByText(copy.githubHintTitle, { exact: true }),
+  ).toBeVisible()
+  const unrelated = await context.newPage()
+  await unrelated.goto(`${composer}&signed-in=1`)
+  await expect(unrelated.locator("all-api-hub-redemption-toast")).toHaveCount(0)
+  await hint.getByRole("button", { name: "关闭", exact: true }).click()
+  await expect(
+    hint.getByText(copy.githubHintTitle, { exact: true }),
+  ).toHaveCount(0)
+  const worker = await getServiceWorker(context)
+  await expect
+    .poll(() =>
+      worker.evaluate(async (hintPrefix) => {
+        const api = (globalThis as any).browser ?? (globalThis as any).chrome
+        return Object.keys(await api.storage.session.get(null)).filter((key) =>
+          key.startsWith(hintPrefix),
+        ).length
+      }, CHECKIN_FEEDBACK_TAB_HINT_PREFIX),
+    )
+    .toBe(0)
+  await github.reload()
+  await expect(
+    hint.getByText(copy.githubHintTitle, { exact: true }),
+  ).toHaveCount(0)
+})

@@ -36,8 +36,14 @@ describe("setupRuntimeMessageListeners routing", () => {
   let handleTempContextDebugMessage: ReturnType<typeof vi.fn>
   let appendLogHistory: ReturnType<typeof vi.fn>
   let clearLogHistory: ReturnType<typeof vi.fn>
+  const openFeedback = vi.fn().mockResolvedValue(undefined)
+  const dismissFeedback = vi.fn().mockResolvedValue(undefined)
 
   beforeAll(async () => {
+    vi.doMock("~/services/checkin/feedback/githubTab", () => ({
+      openCheckInFeedbackIssueTab: openFeedback,
+      dismissCheckInFeedbackTabHint: dismissFeedback,
+    }))
     getCookieHeaderForUrlResult = vi.fn()
     hasCookieReadPermissionForUrl = vi.fn()
     setupManagedSiteModelSyncMessagingListeners = vi.fn()
@@ -227,6 +233,42 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doUnmock("~/services/siteAnnouncements/runtimeMessages")
     vi.resetModules()
     vi.restoreAllMocks()
+  })
+
+  it("opens guided feedback only for extension-page requests and dismisses only the sender tab", async () => {
+    const { setupRuntimeMessageListeners } = await import(
+      "~/entrypoints/background/runtimeMessages"
+    )
+    setupRuntimeMessageListeners()
+    const request = {
+      action: RuntimeActionIds.OpenCheckInFeedbackIssue,
+      url: "https://github.com/qixing-jk/all-api-hub/issues/new",
+      hint: { title: "Copied", description: "Paste report", dismiss: "Close" },
+    }
+    const denied = vi.fn()
+    runtimeMessageListener?.(request, { url: "https://github.com/" }, denied)
+    expect(denied).toHaveBeenCalledWith({ success: false })
+    expect(openFeedback).not.toHaveBeenCalled()
+    const accepted = vi.fn()
+    runtimeMessageListener?.(
+      request,
+      { url: browser.runtime.getURL("options.html") },
+      accepted,
+    )
+    await vi.waitFor(() =>
+      expect(accepted).toHaveBeenCalledWith({ success: true }),
+    )
+    expect(openFeedback).toHaveBeenCalledWith(request.url, request.hint)
+    const dismissed = vi.fn()
+    runtimeMessageListener?.(
+      { action: RuntimeActionIds.DismissCheckInFeedbackHint, tabId: 999 },
+      { tab: { id: 73 } },
+      dismissed,
+    )
+    await vi.waitFor(() =>
+      expect(dismissed).toHaveBeenCalledWith({ success: true }),
+    )
+    expect(dismissFeedback).toHaveBeenCalledWith(73)
   })
 
   it("acknowledges relayed history only after persistence and reports write failures", async () => {

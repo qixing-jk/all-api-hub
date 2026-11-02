@@ -1,4 +1,10 @@
-import { REPO_URL } from "~/constants/about"
+import {
+  CHECK_IN_METHOD_AVAILABILITIES,
+  CHECK_IN_METHOD_DETECTION_OUTCOMES,
+  CHECK_IN_METHOD_STATUS_OUTCOMES,
+  CHECK_IN_METHOD_TODAY_STATUSES,
+  CHECK_IN_SELECTION_STATUSES,
+} from "~/constants/checkIn"
 import type { AccountSiteType } from "~/constants/siteType"
 import type { AuthConfig } from "~/services/apiTransport/type"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
@@ -11,6 +17,11 @@ import {
 import type { CheckInConfig } from "~/types/checkIn"
 
 import { formatDiagnosticSection } from "./diagnosticSection"
+import {
+  CHECKIN_FEEDBACK_ISSUE_LIMITS,
+  CHECKIN_FEEDBACK_ISSUE_URL,
+  CHECKIN_FEEDBACK_ISSUE_FIELDS as fields,
+} from "./githubIssue"
 
 export interface CheckInFeedbackSnapshot {
   siteType: AccountSiteType
@@ -78,7 +89,7 @@ export function buildCheckInFeedbackDetails(
       : ["execution: unavailable"]),
     `discovery: ${inspection.decision.outcome}`,
     `selectionMode: ${selection.mode}`,
-    `selectionStatus: ${selection.status}${selection.status === "stale" ? ` (${selection.reason})` : selection.status === "selected" ? ` (${selection.methodId})` : ""}`,
+    `selectionStatus: ${selection.status}${selection.status === CHECK_IN_SELECTION_STATUSES.Stale ? ` (${selection.reason})` : selection.status === CHECK_IN_SELECTION_STATUSES.Selected ? ` (${selection.methodId})` : ""}`,
     "methods:",
     ...(inspection.choices.length
       ? inspection.choices.map((choice) => {
@@ -86,20 +97,21 @@ export function buildCheckInFeedbackDetails(
             input.checkIn.methodKnowledge.methods[choice.methodId]
           const detection = knowledge?.detection
           const reason =
-            detection?.outcome === "unknown"
+            detection?.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown
               ? detection.reason
               : detection?.lastUnknownAttempt?.reason
           const status = knowledge?.status
           const statusDetails =
-            status?.outcome === "known"
-              ? `known; availability: ${status.availability === "enabled" || status.availability === "disabled" ? status.availability : "unknown"}; today: ${status.today === "checked" || status.today === "not_checked" ? status.today : "unknown"}`
-              : status?.outcome === "unknown"
+            status?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known
+              ? `known; availability: ${status.availability === CHECK_IN_METHOD_AVAILABILITIES.Enabled || status.availability === CHECK_IN_METHOD_AVAILABILITIES.Disabled ? status.availability : "unknown"}; today: ${status.today === CHECK_IN_METHOD_TODAY_STATUSES.Checked || status.today === CHECK_IN_METHOD_TODAY_STATUSES.NotChecked ? status.today : "unknown"}`
+              : status?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown
                 ? "unknown"
                 : "not_inspected"
           const observedAt =
-            status?.outcome === "known" && "observedAt" in status.evidence
+            status?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Known &&
+            "observedAt" in status.evidence
               ? status.evidence.observedAt
-              : status?.outcome === "unknown"
+              : status?.outcome === CHECK_IN_METHOD_STATUS_OUTCOMES.Unknown
                 ? status.attemptedAt
                 : undefined
           const recordedAt = formatRecordedAt(observedAt)
@@ -130,15 +142,41 @@ export function composeCheckInFeedback(input: {
     .join("\n\n")
 }
 
-/** Uses the dedicated Markdown template; oversized content stays available for copying. */
-export function buildCheckInFeedbackIssue(body: string, title: string) {
-  const url = new URL(`${REPO_URL}/issues/new`)
-  // GitHub supports template + body query parameters; blank issues are disabled here.
-  // https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/creating-an-issue
-  url.searchParams.set("template", "checkin_adaptation.md")
-  url.searchParams.set("title", title)
-  url.searchParams.set("body", body)
-  const needsCopy = url.href.length > 6000
-  if (needsCopy) url.searchParams.delete("body")
+/** Prefills the form without treating an incomplete report as complete feedback. */
+export function buildCheckInFeedbackIssue(
+  body: string,
+  title: string,
+  context?: { origin: string | null; version: string; notes: string },
+) {
+  const url = new URL(CHECKIN_FEEDBACK_ISSUE_URL)
+  url.searchParams.set(fields.TEMPLATE, "checkin_adaptation.yml")
+  url.searchParams.set(
+    fields.TITLE,
+    title.slice(0, CHECKIN_FEEDBACK_ISSUE_LIMITS.titleLength),
+  )
+  if (context) {
+    const origin = context.origin && getFeedbackOrigin(context.origin)
+    if (origin) url.searchParams.set(fields.SITE_URL, origin)
+    url.searchParams.set(
+      fields.VERSION,
+      context.version.slice(0, CHECKIN_FEEDBACK_ISSUE_LIMITS.versionLength),
+    )
+    if (context.notes.trim()) {
+      url.searchParams.set(
+        fields.SUMMARY,
+        context.notes.slice(0, CHECKIN_FEEDBACK_ISSUE_LIMITS.summaryLength),
+      )
+    }
+  }
+  url.searchParams.set(fields.FEEDBACK, body)
+  const needsCopy = url.href.length > CHECKIN_FEEDBACK_ISSUE_LIMITS.urlLength
+  if (needsCopy) {
+    // Leave the required feedback field empty so GitHub asks for the full report.
+    url.searchParams.delete(fields.FEEDBACK)
+    for (const field of [fields.SUMMARY, fields.SITE_URL, fields.VERSION]) {
+      if (url.href.length <= CHECKIN_FEEDBACK_ISSUE_LIMITS.urlLength) break
+      url.searchParams.delete(field)
+    }
+  }
   return { url: url.href, needsCopy }
 }

@@ -91,6 +91,7 @@ export function FeedbackForm({
   const issue = buildCheckInFeedbackIssue(
     report,
     t("checkInFeedback.issueTitle"),
+    { origin: includeAddress ? origin : null, version: pkg.version, notes },
   )
   const submission = useFeedbackSubmission(report, issue)
   const { opening, previewOpen, setPreviewOpen, rawOpen, setRawOpen } =
