@@ -1253,9 +1253,11 @@ describe("check-in methods compatibility activation", () => {
   it.each([
     ["unrecorded", "manual"],
     ["unknown", "manual"],
+    ["timeout", "manual"],
     ["unsupported", "manual"],
     ["unrecorded", "automatic"],
     ["unknown", "automatic"],
+    ["timeout", "automatic"],
     ["unsupported", "automatic"],
   ] as const)(
     "confirms a %s method in %s mode without changing that selection",
@@ -1271,10 +1273,11 @@ describe("check-in methods compatibility activation", () => {
       if (previous !== "unrecorded")
         original.checkIn.methodKnowledge.methods["new-api:daily-checkin"] = {
           detection:
-            previous === "unknown"
+            previous === "unknown" || previous === "timeout"
               ? {
                   outcome: "unknown",
-                  reason: "invalid_response",
+                  reason:
+                    previous === "timeout" ? "timeout" : "invalid_response",
                   attemptedAt: 100,
                 }
               : {

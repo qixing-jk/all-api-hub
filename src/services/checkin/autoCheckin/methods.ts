@@ -491,7 +491,9 @@ const confirmSelectedCheckInMethod = async (input: {
     (state.executionEligibility.skipReason !==
       CHECK_IN_EXECUTION_SKIP_REASONS.MethodNotMatched &&
       state.executionEligibility.skipReason !==
-        CHECK_IN_EXECUTION_SKIP_REASONS.MethodUnsupported)
+        CHECK_IN_EXECUTION_SKIP_REASONS.MethodUnsupported &&
+      state.executionEligibility.skipReason !==
+        CHECK_IN_EXECUTION_SKIP_REASONS.Timeout)
   ) {
     return {
       outcome: SELECTED_METHOD_CONFIRMATION_OUTCOMES.Continue,
