@@ -22,7 +22,9 @@ function getRefreshSnapshot(
     account.account_info.access_token,
     account.cookieAuth?.sessionCookie,
     account.sub2apiAuth?.refreshToken,
-  ].filter((secret): secret is string => Boolean(secret))
+  ]
+    .filter((secret): secret is string => Boolean(secret))
+    .sort((a, b) => b.length - a.length)
   return {
     health: {
       ...account.health,

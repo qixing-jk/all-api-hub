@@ -173,13 +173,16 @@ describe("check-in feedback workflow", () => {
           health: {
             status: SiteHealthStatus.Error,
             reason:
-              "Failed saved-access-secret saved-cookie-secret saved-refresh-secret",
+              "Failed saved-access-secret session=saved-access-secret; private_field=hidden-cookie-value saved-refresh-secret",
           },
           account_info: {
             ...buildSiteAccount().account_info,
             access_token: "saved-access-secret",
           },
-          cookieAuth: { sessionCookie: "saved-cookie-secret" },
+          cookieAuth: {
+            sessionCookie:
+              "session=saved-access-secret; private_field=hidden-cookie-value",
+          },
           sub2apiAuth: { refreshToken: "saved-refresh-secret" },
           last_sync_time: 1000,
         }),
@@ -218,7 +221,7 @@ describe("check-in feedback workflow", () => {
       )
       expect(diagnosticText).toContain("[REDACTED]")
       expect(diagnosticText).not.toContain("saved-access-secret")
-      expect(diagnosticText).not.toContain("saved-cookie-secret")
+      expect(diagnosticText).not.toContain("hidden-cookie-value")
       expect(diagnosticText).not.toContain("saved-refresh-secret")
       expect((details as HTMLTextAreaElement).value).not.toContain(
         "private-access-token",
