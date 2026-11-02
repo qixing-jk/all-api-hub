@@ -187,6 +187,18 @@ describe("check-in feedback workflow", () => {
           last_sync_time: 1000,
         }),
       )
+      vi.mocked(autoCheckinStorage.getStatus).mockResolvedValue({
+        perAccount: {
+          account: {
+            accountId: "account",
+            accountName: "Account",
+            status: "failed",
+            timestamp: 1,
+            rawMessage:
+              "Failed session=saved-access-secret; private_field=hidden-cookie-value saved-refresh-secret",
+          },
+        },
+      } as Awaited<ReturnType<typeof autoCheckinStorage.getStatus>>)
       render(
         wrap(
           <CheckInFeedbackDialog

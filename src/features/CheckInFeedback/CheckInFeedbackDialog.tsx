@@ -14,17 +14,37 @@ import { openAccountManagerWithSearch } from "~/utils/navigation"
 import { FeedbackForm } from "./FeedbackForm"
 import type { CheckInFeedbackSource } from "./useCheckInFeedback"
 
-/** Projects only saved refresh facts needed by the public report. */
-function getRefreshSnapshot(
-  account: SiteAccount,
-): NonNullable<CheckInFeedbackSnapshot["refresh"]> {
-  const secrets = [
+/** Orders saved credentials so complete cookies are redacted before contained tokens. */
+function getAccountSecrets(account: SiteAccount): string[] {
+  return [
     account.account_info.access_token,
     account.cookieAuth?.sessionCookie,
     account.sub2apiAuth?.refreshToken,
   ]
     .filter((secret): secret is string => Boolean(secret))
     .sort((a, b) => b.length - a.length)
+}
+
+/** Redacts saved execution messages without replacing editor authentication. */
+function sanitizeExecution(
+  execution: CheckInFeedbackSnapshot["execution"],
+  account: SiteAccount | null,
+) {
+  if (!execution || !account) return execution
+  const secrets = getAccountSecrets(account)
+  return {
+    ...execution,
+    rawMessage: execution.rawMessage
+      ? toSanitizedErrorSummary(execution.rawMessage, secrets)
+      : execution.rawMessage,
+  }
+}
+
+/** Projects only saved refresh facts needed by the public report. */
+function getRefreshSnapshot(
+  account: SiteAccount,
+): NonNullable<CheckInFeedbackSnapshot["refresh"]> {
+  const secrets = getAccountSecrets(account)
   return {
     health: {
       ...account.health,
@@ -69,8 +89,10 @@ export default function CheckInFeedbackDialog({
                 refresh: account
                   ? getRefreshSnapshot(account)
                   : source.snapshot.refresh,
-                execution:
+                execution: sanitizeExecution(
                   source.snapshot.execution ?? status?.perAccount?.[accountId],
+                  account,
+                ),
               },
             })
         })
