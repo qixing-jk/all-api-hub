@@ -50,6 +50,7 @@ import {
 } from "~/services/protectionBypass/contracts"
 import { setupRedemptionAssistMessagingListeners } from "~/services/redemption/redemptionAssist"
 import { setupSiteAnnouncementsMessagingListeners } from "~/services/siteAnnouncements/runtimeMessages"
+import { openStarPromotionRepository } from "~/services/starPromotion/openRepository"
 import { classifyAllApiHubRepoPageUrl } from "~/services/starPromotion/repoPage"
 import { starPromotionState } from "~/services/starPromotion/state"
 import { setupReleaseUpdateMessagingListeners } from "~/services/updates/releaseUpdateService"
@@ -172,6 +173,13 @@ export function setupRuntimeMessageListeners() {
               error: getErrorMessage(error),
             })
           })
+        return true
+      }
+
+      if (request.action === RuntimeActionIds.StarPromotionOpenRepository) {
+        void openStarPromotionRepository().then((success) =>
+          sendResponse({ success }),
+        )
         return true
       }
 

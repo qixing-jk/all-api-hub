@@ -68,7 +68,12 @@ const mocks = vi.hoisted(() => ({
   handleOwnedSessionRequest: vi.fn(),
   cancelTempCheckinFeedbackScan: vi.fn(),
   recordGitHubStarState: vi.fn(),
+  openStarPromotionRepository: vi.fn(),
   trackStarPromotionAction: vi.fn(),
+}))
+
+vi.mock("~/services/starPromotion/openRepository", () => ({
+  openStarPromotionRepository: mocks.openStarPromotionRepository,
 }))
 
 vi.mock("~/services/browsingContext/tempPage/checkinFeedbackScan", () => ({
@@ -436,6 +441,26 @@ describe("setupRuntimeMessageListeners additional routing", () => {
       expect(sendResponse).toHaveBeenCalledWith({ success: true })
     })
   })
+
+  it.each([false, true])(
+    "completes a popup repository handoff in the background with result %s",
+    async (success) => {
+      mocks.openStarPromotionRepository.mockResolvedValueOnce(success)
+      const listener = await loadListener()
+      const sendResponse = vi.fn()
+      expect(
+        listener(
+          { action: RuntimeActionIds.StarPromotionOpenRepository },
+          {},
+          sendResponse,
+        ),
+      ).toBe(true)
+      await vi.waitFor(() =>
+        expect(sendResponse).toHaveBeenCalledWith({ success }),
+      )
+      expect(mocks.openStarPromotionRepository).toHaveBeenCalledTimes(1)
+    },
+  )
 
   it.each([false, true])(
     "records an unstarred observation with removal evidence %s without suppression telemetry",

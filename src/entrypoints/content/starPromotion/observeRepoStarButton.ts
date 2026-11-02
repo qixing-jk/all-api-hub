@@ -47,13 +47,21 @@ export function setupStarPromotionContent(): () => void {
 
   const reportState = (state: GitHubRepoStarState) => {
     reportPending = true
-    void sendRuntimeActionMessage<{ success: boolean }>({
-      action: RuntimeActionIds.ContentStarPromotionReport,
-      starred: state === GITHUB_REPO_STAR_STATES.Starred,
-      starRemoved:
-        state === GITHUB_REPO_STAR_STATES.NotStarred &&
-        reportedState === GITHUB_REPO_STAR_STATES.Starred,
-    })
+    const removalEvidence =
+      state === GITHUB_REPO_STAR_STATES.NotStarred
+        ? reportedState === GITHUB_REPO_STAR_STATES.Starred
+          ? Promise.resolve(true)
+          : verifyUnstarredState()
+        : Promise.resolve(false)
+    void removalEvidence
+      .then((starRemoved) => {
+        if (disposed) return undefined
+        return sendRuntimeActionMessage<{ success: boolean }>({
+          action: RuntimeActionIds.ContentStarPromotionReport,
+          starred: state === GITHUB_REPO_STAR_STATES.Starred,
+          starRemoved,
+        })
+      })
       .then((response) => {
         if (response?.success === true) {
           reportedState = state
@@ -107,5 +115,30 @@ export function setupStarPromotionContent(): () => void {
     observer.disconnect()
     window.clearInterval(pollTimer)
     window.clearTimeout(timeoutTimer)
+  }
+}
+
+/** Confirms cross-visit removal with a fresh, authenticated same-origin page. */
+async function verifyUnstarredState(): Promise<boolean> {
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), 5_000)
+  try {
+    const response = await fetch(window.location.href, {
+      cache: "no-store",
+      credentials: "same-origin",
+      signal: controller.signal,
+    })
+    if (!response.ok || response.redirected) return false
+    const page = new DOMParser().parseFromString(
+      await response.text(),
+      "text/html",
+    )
+    return (
+      resolveGitHubRepoStarState(page) === GITHUB_REPO_STAR_STATES.NotStarred
+    )
+  } catch {
+    return false
+  } finally {
+    window.clearTimeout(timeout)
   }
 }

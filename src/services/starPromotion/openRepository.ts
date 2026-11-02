@@ -1,4 +1,7 @@
 import { REPO_URL } from "~/constants/about"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { isExtensionPopup } from "~/utils/browser"
+import { sendRuntimeActionMessage } from "~/utils/browser/runtimeMessages"
 import { createTab } from "~/utils/browser/tabs"
 import { createLogger } from "~/utils/core/logger"
 
@@ -10,7 +13,14 @@ let opening: Promise<boolean> | undefined
 /** A browser handoff defers the invitation; it does not confirm a star. */
 export function openStarPromotionRepository(): Promise<boolean> {
   if (opening) return opening
-  opening = openRepository().finally(() => {
+  const handoff = isExtensionPopup()
+    ? sendRuntimeActionMessage<{ success: boolean }>({
+        action: RuntimeActionIds.StarPromotionOpenRepository,
+      })
+        .then((response) => response?.success === true)
+        .catch(() => false)
+    : openRepository()
+  opening = handoff.finally(() => {
     opening = undefined
   })
   return opening

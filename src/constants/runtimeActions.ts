@@ -211,6 +211,7 @@ export const RuntimeActionIds = {
   ContentGetRenderedTitle: "getRenderedTitle",
   ContentShowShieldBypassUi: "showShieldBypassUi",
   ContentStarPromotionReport: "starPromotionReport",
+  StarPromotionOpenRepository: "starPromotionOpenRepository",
 } as const
 
 export type RuntimeActionId =

@@ -19,6 +19,7 @@ function renderStarButton(pressed: boolean) {
 
 describe("setupStarPromotionContent", () => {
   beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")))
     vi.useFakeTimers()
     window.history.replaceState({}, "", "/qixing-jk/all-api-hub")
     sendRuntimeActionMessageMock
@@ -28,8 +29,97 @@ describe("setupStarPromotionContent", () => {
   })
 
   afterEach(() => {
+    vi.unstubAllGlobals()
     vi.useRealTimers()
     document.body.innerHTML = ""
+  })
+
+  it("verifies an initial unstarred page with a fresh authenticated read", async () => {
+    renderStarButton(false)
+    vi.mocked(fetch).mockResolvedValue(
+      new Response('<form action="/qixing-jk/all-api-hub/star"></form>'),
+    )
+    const cleanup = setupStarPromotionContent()
+    await vi.waitFor(() =>
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ starred: false, starRemoved: true }),
+      ),
+    )
+    expect(fetch).toHaveBeenCalledWith(
+      window.location.href,
+      expect.objectContaining({
+        cache: "no-store",
+        credentials: "same-origin",
+      }),
+    )
+    cleanup()
+  })
+
+  it("does not revoke a star when a fresh page still shows starred", async () => {
+    renderStarButton(false)
+    vi.mocked(fetch).mockResolvedValue(
+      new Response('<form action="/qixing-jk/all-api-hub/unstar"></form>'),
+    )
+    const cleanup = setupStarPromotionContent()
+    await vi.waitFor(() =>
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ starred: false, starRemoved: false }),
+      ),
+    )
+    cleanup()
+  })
+
+  it.each(["unknown", "http-error", "redirect"])(
+    "does not confirm removal from a %s verification result",
+    async (result) => {
+      renderStarButton(false)
+      const response = new Response("<html></html>", {
+        status: result === "http-error" ? 500 : 200,
+      })
+      if (result === "redirect")
+        Object.defineProperty(response, "redirected", { value: true })
+      vi.mocked(fetch).mockResolvedValue(response)
+      const cleanup = setupStarPromotionContent()
+      await vi.waitFor(() =>
+        expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+          expect.objectContaining({ starred: false, starRemoved: false }),
+        ),
+      )
+      cleanup()
+    },
+  )
+
+  it("keeps detected completion when verification times out", async () => {
+    renderStarButton(false)
+    vi.mocked(fetch).mockImplementation(
+      (_url, options) =>
+        new Promise((_resolve, reject) => {
+          options?.signal?.addEventListener("abort", () =>
+            reject(new Error("aborted")),
+          )
+        }),
+    )
+    const cleanup = setupStarPromotionContent()
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+      expect.objectContaining({ starred: false, starRemoved: false }),
+    )
+    cleanup()
+  })
+
+  it("does not publish verification after the observer is disposed", async () => {
+    renderStarButton(false)
+    let finish!: (response: Response) => void
+    vi.mocked(fetch).mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    const cleanup = setupStarPromotionContent()
+    cleanup()
+    finish(new Response('<form action="/qixing-jk/all-api-hub/star"></form>'))
+    await vi.advanceTimersByTimeAsync(1)
+    expect(sendRuntimeActionMessageMock).not.toHaveBeenCalled()
   })
 
   it("retries an unchanged state after a failed acknowledgement", async () => {
