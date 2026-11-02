@@ -57,6 +57,7 @@ export async function validateAndSaveAccount(
     excludeFromTotalBalance,
     excludeFromTodayIncome,
     sub2apiAuth,
+    aimlApiAuth,
     normalizedSiteType,
     sessionCookieHeader,
   } = normalizeAccountSaveInput(request)
@@ -88,6 +89,7 @@ export async function validateAndSaveAccount(
       siteType: normalizedSiteType,
       accessToken,
       userId,
+      ...(aimlApiAuth ? { aimlApiKey: aimlApiAuth.apiKey } : {}),
     })
   } catch (error) {
     logger.warn("Account credential validation failed", {
@@ -147,6 +149,7 @@ export async function validateAndSaveAccount(
     excludeFromTotalBalance,
     excludeFromTodayIncome,
     sub2apiAuth,
+    aimlApiAuth,
     kimiOpenPlatformAuth: options.kimiOpenPlatformAuth,
     accountIdentity,
   })

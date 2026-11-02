@@ -49,6 +49,7 @@ export const SITE_TYPES = {
   KIMI_GLOBAL: "kimi-global",
   DAYA: "daya",
   PMAPI: "pmapi",
+  AIMLAPI: "aimlapi",
   GRSAI: "grsai",
   VERCEL_AI_GATEWAY: "vercel-ai-gateway",
   NOVITA: "novita",
@@ -310,3 +311,57 @@ export function isCanonicalVercelUrl(value: string): boolean {
     return false
   }
 }
+
+/**
+ * AI/ML API (aimlapi.com) is a hosted multi-model gateway whose marketing site
+ * and console share one browser origin, while its account/inference API answers
+ * on a separate host. Verified 2026-10-24:
+ * - `aimlapi.com` serves the Nuxt console under `/app/*` and is the address a
+ *   user adds; it is the browser/session and storage origin.
+ * - `app.aimlapi.com` serves the console's `/v1` and `/v3` account routes, which
+ *   require a console session token rather than a saved API key.
+ * - `api.aimlapi.com` serves inference (`/v1/chat/completions`,
+ *   `/v1/messages`, ...) plus the key, billing, usage and log routes that saved
+ *   keys authenticate. `docs.aimlapi.com` and `help.aimlapi.com` are
+ *   documentation/support sites, not console aliases.
+ */
+export const AIMLAPI_HOSTNAMES = ["aimlapi.com", "www.aimlapi.com"] as const
+export const AIMLAPI_DISPLAY_NAME = "AI/ML API"
+/** Browser/console origin: the saved account URL and every console navigation. */
+export const AIMLAPI_WEB_ORIGIN = "https://aimlapi.com"
+/** Recognized account hostnames, including the existing www entrypoint. */
+export function isRecognizedAimlApiUrl(value: string): boolean {
+  try {
+    const hostname = new URL(value).hostname.toLowerCase()
+    return AIMLAPI_HOSTNAMES.some((candidate) => candidate === hostname)
+  } catch {
+    return false
+  }
+}
+/** Matches the browser origin authorized for AI/ML API console onboarding. */
+export function isCanonicalAimlApiUrl(value: string): boolean {
+  try {
+    return new URL(value).origin === AIMLAPI_WEB_ORIGIN
+  } catch {
+    return false
+  }
+}
+/**
+ * Inference and saved-key API origin. OpenAI-compatible consumers use the `/v1`
+ * mount; the Anthropic-compatible `/v1/messages` route lives on the same host,
+ * so both protocols declare this root.
+ */
+export const AIMLAPI_API_BASE_URL = "https://api.aimlapi.com"
+/** Console JWT routes must not be sent to the saved-key API host. */
+export const AIMLAPI_CONSOLE_ORIGIN = "https://app.aimlapi.com"
+export const AIMLAPI_CONSOLE_ENDPOINTS = {
+  Identity: "/v1/users/me",
+  Keys: "/v1/keys",
+} as const
+/** Console routes under the browser origin. */
+export const AIMLAPI_KEYS_PATH = "/app/keys"
+export const AIMLAPI_USAGE_PATH = "/app/usage"
+export const AIMLAPI_BILLING_PATH = "/app/billing"
+export const AIMLAPI_LOGIN_PATH = "/app/auth"
+/** Public marketing catalogue carrying per-model pricing cards. */
+export const AIMLAPI_MODELS_PATH = "/models"

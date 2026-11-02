@@ -421,6 +421,40 @@
         "cancel": "Cancelar",
         "save": "Salvar chave"
       },
+      "aimlapi": {
+        "allowedModels": "Modelos permitidos",
+        "allowedModelsHelp": "Pesquise modelos por nome ou ID. Deixe vazio para permitir todos.",
+        "allowedModelsPlaceholder": "Pesquisar modelos",
+        "allowedTools": "Ferramentas permitidas",
+        "allowedToolsHelp": "Pesquise ferramentas. Deixe vazio para permitir todas.",
+        "endpoint": {
+          "audio": "Áudio",
+          "chat": "Chat",
+          "embeddings": "Embeddings",
+          "image": "Imagens",
+          "ocr": "Reconhecimento de texto (OCR)",
+          "responses": "Responses",
+          "speech": "Fala",
+          "video": "Vídeo"
+        },
+        "expiryImmutable": "A expiração só pode ser definida ao criar a chave. Não pode ser alterada depois.",
+        "limit": {
+          "limited": "Definir limite",
+          "unlimited": "Sem limite"
+        },
+        "maximum": "Máximo: {{maximum}}",
+        "reset": {
+          "day": "Diário",
+          "month": "Mensal",
+          "never": "Nunca",
+          "week": "Semanal"
+        },
+        "scopes": "Permissões de endpoints",
+        "scopesPlaceholder": "Todos os endpoints",
+        "spendLimit": "Limite em USD",
+        "spendLimitAmount": "Valor do limite",
+        "spendLimitReset": "Período de reinício"
+      },
       "allowlistHelp": "Separe por vírgulas ou quebras de linha. Vazio significa sem restrições.",
       "allowWallet": "Permitir uso do saldo",
       "allowWalletHelp": "Mantém esta chave funcionando com o saldo da conta depois que a cota do plano acabar.",

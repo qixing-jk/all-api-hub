@@ -18,6 +18,7 @@ export interface AccountAutoDetectRecoveryData {
   siteName?: string
   username?: string
   accessToken?: string
+  aimlApiKey?: string
   userId?: string
   exchangeRate?: number | null
   authType?: AuthTypeEnum

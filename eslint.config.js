@@ -555,6 +555,24 @@ export default defineConfig([
       ),
     },
   },
+  // Guardrails: lower-level detection must stay independent of active onboarding.
+  {
+    files: [
+      "src/services/accountSiteOnboarding/**/*.{js,cjs,mjs,jsx,ts,tsx}",
+      "src/services/siteDetection/**/*.{js,cjs,mjs,jsx,ts,tsx}",
+    ],
+    rules: {
+      "no-restricted-imports": restrictedImports(
+        apiServiceBackendImplementationImportPattern,
+        {
+          regex:
+            "(?:^|/)(?:accounts/onboarding(?:/|$)|apiAdapters/(?!contracts/)[^/]+/(?:account/)?accountOnboarding(?:\\.[^/]+)?$)",
+          message:
+            "Detection and session extraction must not depend on active account onboarding. Register active capabilities under services/accounts/onboarding.",
+        },
+      ),
+    },
+  },
   // Guardrails: AI API protocol modules must not depend on account-site apiService internals.
   {
     files: ["src/services/aiApi/**/*.{js,cjs,mjs,jsx,ts,tsx}"],

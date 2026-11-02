@@ -596,6 +596,10 @@ export function applySiteAccountUpdates(params: {
   }
 
   // Login is one credential-bearing configuration, never a partial deep merge.
+  if (Object.prototype.hasOwnProperty.call(params.updates, "aimlApiAuth")) {
+    merged.aimlApiAuth = params.updates
+      .aimlApiAuth as SiteAccount["aimlApiAuth"]
+  }
   if (Object.prototype.hasOwnProperty.call(params.updates, "login")) {
     merged.login = normalizeAccountLogin(params.updates.login)
   }

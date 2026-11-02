@@ -421,6 +421,40 @@
         "cancel": "Cancelar",
         "save": "Guardar clave"
       },
+      "aimlapi": {
+        "allowedModels": "Modelos permitidos",
+        "allowedModelsHelp": "Busca modelos por nombre o ID. Deja vacío para permitir todos.",
+        "allowedModelsPlaceholder": "Buscar modelos",
+        "allowedTools": "Herramientas permitidas",
+        "allowedToolsHelp": "Busca herramientas. Deja vacío para permitir todas.",
+        "endpoint": {
+          "audio": "Audio",
+          "chat": "Chat",
+          "embeddings": "Embeddings",
+          "image": "Imágenes",
+          "ocr": "Reconocimiento de texto (OCR)",
+          "responses": "Responses",
+          "speech": "Voz",
+          "video": "Video"
+        },
+        "expiryImmutable": "La fecha de vencimiento solo se puede definir al crear la clave. No se puede cambiar después.",
+        "limit": {
+          "limited": "Definir límite",
+          "unlimited": "Sin límite"
+        },
+        "maximum": "Máximo: {{maximum}}",
+        "reset": {
+          "day": "Diario",
+          "month": "Mensual",
+          "never": "Nunca",
+          "week": "Semanal"
+        },
+        "scopes": "Permisos de endpoints",
+        "scopesPlaceholder": "Todos los endpoints",
+        "spendLimit": "Límite en USD",
+        "spendLimitAmount": "Importe del límite",
+        "spendLimitReset": "Período de reinicio"
+      },
       "allowlistHelp": "Separa con comas o saltos de línea. Vacío significa sin restricciones.",
       "allowWallet": "Permitir uso del saldo",
       "allowWalletHelp": "Permite que esta clave siga funcionando con el saldo de la cuenta cuando se agote la cuota del plan.",

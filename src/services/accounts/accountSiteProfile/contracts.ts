@@ -6,6 +6,12 @@ export const ACCOUNT_SITE_SUPPLEMENTAL_AUTH_KINDS = {
   None: "none",
   Sub2ApiRefreshToken: "sub2api_refresh_token",
   KimiRefreshToken: "kimi_refresh_token",
+  /**
+   * A second static credential with a narrower scope than the account's primary
+   * one. AI/ML API splits its console: key management rejects regular API keys
+   * and billing rejects management keys, so one account needs both.
+   */
+  SecondaryApiKey: "secondary_api_key",
 } as const
 
 export type AccountSiteSupplementalAuthKind =
@@ -87,6 +93,11 @@ export type AccountSiteAuthProfile = {
 
 export type AccountSiteAuthSessionProfile = {
   kind: AccountSiteSupplementalAuthKind
+  /**
+   * Whether the supplemental credential is a second static key that callers read
+   * from storage instead of an expiring session they must renew.
+   */
+  secondaryCredential?: "api-key"
 }
 
 export type AccountSiteCreatedTokenProfile = {

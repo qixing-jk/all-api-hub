@@ -25,6 +25,32 @@ describe("AccountDialog ActionButtons", () => {
     formId: "account-form",
   })
 
+  it("offers one credential detection action when editing an unverified account", async () => {
+    const user = userEvent.setup()
+    const props = {
+      ...createProps(),
+      mode: DIALOG_MODES.EDIT,
+      detectFromCredential: true,
+      formSource: "existing-account" as const,
+    }
+    render(
+      <ActionButtons
+        {...props}
+        autoDetectPresentation={{
+          idleLabel: "Verify credentials",
+          pendingLabel: "Verifying",
+          reDetectLabel: "Verify credentials",
+        }}
+      />,
+    )
+    const buttons = await screen.findAllByRole("button", {
+      name: "Verify credentials",
+    })
+    expect(buttons).toHaveLength(1)
+    await user.click(buttons[0]!)
+    expect(props.onAutoDetect).toHaveBeenCalledOnce()
+  })
+
   it("shows the pre-form auto-detect layout in add mode and disables it without a URL", async () => {
     const user = userEvent.setup()
     const props = createProps()

@@ -82,6 +82,20 @@ vi.mock("~/utils/navigation", async (importOriginal) => ({
 const { openSettingsTabInNewTab } = await import("~/utils/navigation")
 
 describe("AccountDialog AccountForm", () => {
+  it("edits the secondary AIMLAPI key without changing the management credential", async () => {
+    const props = createProps()
+    props.draft.siteType = SITE_TYPES.AIMLAPI
+    props.draft.aimlApiKey = "old-regular"
+    render(<AccountForm {...withSitePolicy(props)} />)
+    const input = await screen.findByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.aimlApiKeyInput,
+    )
+    expect(input).toHaveAttribute("type", "password")
+    fireEvent.change(input, { target: { value: "new-regular" } })
+    expect(props.onAimlApiKeyChange).toHaveBeenLastCalledWith("new-regular")
+    expect(props.onAccessTokenChange).not.toHaveBeenCalled()
+  })
+
   it("does not present console-only verification as an API-key result and names each reveal action correctly", async () => {
     const props = createProps()
     props.draft.siteType = SITE_TYPES.NOVITA
@@ -620,6 +634,7 @@ describe("AccountDialog AccountForm", () => {
     onUsernameChange: vi.fn(),
     onUserIdChange: vi.fn(),
     onAccessTokenChange: vi.fn(),
+    onAimlApiKeyChange: vi.fn(),
     onExchangeRateChange: vi.fn(),
     onManualBalanceUsdChange: vi.fn(),
     onShowAccessTokenChange: vi.fn(),

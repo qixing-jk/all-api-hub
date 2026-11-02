@@ -275,6 +275,7 @@ export function useAccountDialogInitialization({
                   ? siteAccount.sub2apiAuth?.tokenExpiresAt ?? null
                   : null,
                 kimiOpenPlatformAuth: siteAccount.kimiOpenPlatformAuth ?? null,
+                aimlApiKey: siteAccount.aimlApiAuth?.apiKey ?? "",
               },
               policy,
             }),

@@ -88,6 +88,8 @@ export interface DisplayAccountApiSnapshot {
   userId: DisplaySiteData["userId"]
   token: DisplaySiteData["token"]
   cookieAuthSessionCookie?: DisplaySiteData["cookieAuthSessionCookie"]
+  /** Second static credential for sites whose console splits capabilities. */
+  aimlApiKey?: string
   tagIds?: DisplaySiteData["tagIds"]
 }
 
@@ -111,6 +113,7 @@ interface StoredAccountApiRequestSource {
   authType: SiteAccount["authType"]
   account_info: SiteAccount["account_info"]
   cookieAuth?: SiteAccount["cookieAuth"]
+  aimlApiAuth?: SiteAccount["aimlApiAuth"]
 }
 
 interface AccountApiRequestSource {
@@ -121,6 +124,7 @@ interface AccountApiRequestSource {
   userId: unknown
   accessToken: unknown
   cookie: unknown
+  aimlApiKey: unknown
 }
 
 const createAccountApiContextFromSource = (
@@ -175,8 +179,11 @@ const createAccountApiContextFromSource = (
     )
   }
 
+  const aimlApiKey =
+    typeof source.aimlApiKey === "string" ? source.aimlApiKey.trim() : ""
   const request: ApiServiceRequest = {
     baseUrl: source.siteUrl,
+    ...(aimlApiKey ? { aimlApiKey } : {}),
     managementApiBaseUrl: resolveDeploymentApiOrigin(source.siteUrl),
     accountId: source.id,
     ...(isSafariNativeCookieEnabled() &&
@@ -218,6 +225,7 @@ export const createAccountApiRequestFromStoredAccount = (
     userId: account.account_info?.id,
     accessToken: account.account_info?.access_token ?? "",
     cookie: account.cookieAuth?.sessionCookie,
+    aimlApiKey: account.aimlApiAuth?.apiKey ?? "",
   })
 
 const withDisplayAccountAuthSession = (
@@ -248,6 +256,7 @@ export const createDisplayAccountRequestContext = (
     userId: account.userId,
     accessToken: account.token,
     cookie: account.cookieAuthSessionCookie,
+    aimlApiKey: account.aimlApiKey,
   })
 
 /**

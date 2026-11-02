@@ -3,11 +3,18 @@ import type { AccountIdentity, SiteAccount } from "~/types"
 export interface AccountPersistenceIdentityInput {
   accessToken: string
   userId: string
-  existingAccount?: Pick<SiteAccount, "site_type" | "account_info">
+  /** Second static credential for sites whose console splits capabilities. */
+  aimlApiKey?: string
+  existingAccount?: Pick<
+    SiteAccount,
+    "site_type" | "account_info" | "aimlApiAuth"
+  >
 }
 
 /** Provider-owned admission, identity and disclosure rules for account persistence. */
 export interface AccountPersistenceCapability {
+  /** Removes provider-owned local secrets after the account deletion commits. */
+  cleanupDeletedAccount?(account: SiteAccount): Promise<void>
   /** Resolves the stored identity; local fallback identities do not replace request credentials. */
   prepareIdentity(
     input: AccountPersistenceIdentityInput,

@@ -30,7 +30,16 @@ export type NewApiDashboardTransientAuth = {
   origin: string
 }
 
-export type ContentSessionTransientAuth = NewApiDashboardTransientAuth
+export type AimlApiConsoleTransientAuth = {
+  kind: typeof AIMLAPI_CONSOLE_TRANSIENT_AUTH_KIND
+  token: string
+  origin: string
+  userId: string
+}
+export const AIMLAPI_CONSOLE_TRANSIENT_AUTH_KIND = "aimlapi_console"
+export type ContentSessionTransientAuth =
+  | NewApiDashboardTransientAuth
+  | AimlApiConsoleTransientAuth
 
 export type ContentSessionExtractionResult = {
   userId: string | number

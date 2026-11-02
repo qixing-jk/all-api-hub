@@ -76,6 +76,13 @@ export function AccessTokenVerificationGuide({
   const guide =
     getAccountSiteDefinition(siteType)?.onboarding?.accessTokenVerificationGuide
   const guideCopy = {
+    aimlapi: {
+      title: t("form.aimlApiManagementKeyGuidanceTitle"),
+      generateStep: t("form.aimlApiManagementKeyGuidance"),
+      pasteStep: t("accessTokenVerification.aimlapi.pasteStep"),
+      openPage: t("accessTokenVerification.aimlapi.openPage"),
+      openPageFailed: t("accessTokenVerification.aimlapi.openPageFailed"),
+    },
     security: {
       generateStep: t("accessTokenVerification.generateStep"),
       openPage: t("accessTokenVerification.openSecurity"),

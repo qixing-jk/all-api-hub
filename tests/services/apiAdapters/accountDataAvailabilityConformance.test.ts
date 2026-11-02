@@ -53,6 +53,7 @@ const collectedRequests = {
   relayForAccount: 0,
   vercelAiGatewayCredits: 0,
   novitaBalance: 0,
+  aimlApiBilling: 0,
 }
 
 const expectClassifiedAvailability = (data: AccountData) => {
@@ -904,6 +905,47 @@ const producerFixturesByFamily = {
       expect(collectedRequests.novitaBalance).toBe(snapshotCount)
     },
   },
+  [ACCOUNT_SITE_ADAPTER_FAMILIES.AiMlApi]: {
+    // Balance and today's usage come from the saved-key API host, not from
+    // the console origin the user adds.
+    baseUrl: "https://aimlapi.com",
+    authType: AuthTypeEnum.AccessToken,
+    expectedAvailability: {
+      consumption: complete,
+      requests: complete,
+      tokens: complete,
+      // The deployment reports no income series at all.
+      income: unavailable(ACCOUNT_TODAY_METRIC_REASONS.Unsupported),
+    },
+    handlers: [
+      http.get("https://api.aimlapi.com/v2/billing", () => {
+        collectedRequests.aimlApiBilling += 1
+        return HttpResponse.json({ current_balance: 4, currency: "USD" })
+      }),
+      http.get("https://api.aimlapi.com/v2/usage/detail", () =>
+        HttpResponse.json({
+          api_key_prefix: null,
+          start: "2026-10-24T00:00:00.000Z",
+          end: "2026-10-25T00:00:00.000Z",
+          spend: 1,
+          currency: "USD",
+          requests: 2,
+          models: [],
+          groups: [
+            {
+              day: "2026-10-24",
+              spend: 1,
+              tokens: { input: 10, output: 20, total: 30 },
+              requests: { total: 2, charged: 2, succeeded: 2, failed: 0 },
+            },
+          ],
+        }),
+      ),
+    ],
+    expectRequests: (snapshotCount: number) => {
+      expect(collectedRequests.aimlApiBilling).toBe(snapshotCount)
+    },
+  },
 } satisfies Record<ProducerFamily, ProducerFixture>
 
 const getProducerFixture = (siteType: AccountSiteType): ProducerFixture => {
@@ -942,6 +984,12 @@ const createRequest = (siteType: AccountSiteType) => {
     },
     checkIn: buildCheckInConfig(),
     includeTodayCashflow: true,
+    // AI/ML API keeps billing behind the account's regular API key; production
+    // callers carry it on the request from the saved account.
+    ...(getSiteTypeCapabilities(siteType).family ===
+    ACCOUNT_SITE_ADAPTER_FAMILIES.AiMlApi
+      ? { aimlApiKey: "regular-api-key" }
+      : {}),
     ...(getSiteTypeCapabilities(siteType).family ===
     ACCOUNT_SITE_ADAPTER_FAMILIES.KimiOpenPlatform
       ? {
@@ -1032,6 +1080,7 @@ describe("AccountData availability producer conformance", () => {
       relayForAccount: 0,
       vercelAiGatewayCredits: 0,
       novitaBalance: 0,
+      aimlApiBilling: 0,
     })
     server.use(
       ...Object.values(producerFixturesByFamily).flatMap(

@@ -167,6 +167,45 @@ describe("useAccountDialog re-detect preservation", () => {
     await accountStorage.clearAllData()
   })
 
+  it("passes the edited secondary AIMLAPI key into credential detection", async () => {
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      kind: "detected",
+      success: false,
+      message: "Verification failed",
+    })
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+      }),
+    )
+    await waitFor(() => expect(result.current).toBeTruthy())
+    act(() => {
+      result.current.setters.setUrl("https://aimlapi.com")
+      result.current.setters.setSiteType(SITE_TYPES.AIMLAPI)
+      result.current.setters.setAccessToken("management")
+      result.current.setters.setAimlApiKey("regular")
+    })
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+    expect(mockAutoDetectAccount).toHaveBeenCalledWith(
+      "https://aimlapi.com",
+      AuthTypeEnum.AccessToken,
+      expect.anything(),
+      undefined,
+      expect.objectContaining({
+        allowCredentialCreation: false,
+        existingAccount: expect.objectContaining({
+          siteType: SITE_TYPES.AIMLAPI,
+          accessToken: "management",
+          aimlApiKey: "regular",
+        }),
+      }),
+    )
+  })
+
   it("keeps a draft credential bound to its source URL when redetecting", async () => {
     mockAutoDetectAccount.mockResolvedValueOnce({
       kind: "detected",
@@ -199,7 +238,10 @@ describe("useAccountDialog re-detect preservation", () => {
       expect.anything(),
       undefined,
       {
+        allowCredentialCreation: false,
         existingAccount: {
+          aimlApiKey: "",
+          novitaCredentialMode: undefined,
           url: "https://original.example.invalid",
           siteType: SITE_TYPES.NEW_API,
           userId: "7",
@@ -242,7 +284,10 @@ describe("useAccountDialog re-detect preservation", () => {
       expect.anything(),
       undefined,
       {
+        allowCredentialCreation: false,
         existingAccount: {
+          aimlApiKey: "",
+          novitaCredentialMode: undefined,
           url: "https://original.example.invalid",
           siteType: SITE_TYPES.NEW_API,
           userId: "7",
@@ -351,7 +396,10 @@ describe("useAccountDialog re-detect preservation", () => {
       expect.anything(),
       undefined,
       {
+        allowCredentialCreation: false,
         existingAccount: {
+          aimlApiKey: "",
+          novitaCredentialMode: undefined,
           url: "https://original.example.invalid",
           siteType: SITE_TYPES.SUB2API,
           userId: "7",
@@ -402,7 +450,10 @@ describe("useAccountDialog re-detect preservation", () => {
         expect.anything(),
         "session=current",
         {
+          allowCredentialCreation: false,
           existingAccount: {
+            aimlApiKey: "",
+            novitaCredentialMode: undefined,
             url: "https://changed.example.invalid",
             siteType: SITE_TYPES.NEW_API,
             userId: "7",
@@ -460,7 +511,10 @@ describe("useAccountDialog re-detect preservation", () => {
       expect.anything(),
       undefined,
       {
+        allowCredentialCreation: false,
         existingAccount: {
+          aimlApiKey: "",
+          novitaCredentialMode: undefined,
           url: "https://original.example.invalid",
           siteType: SITE_TYPES.SUB2API,
           userId: "7",
@@ -537,7 +591,10 @@ describe("useAccountDialog re-detect preservation", () => {
       expect.anything(),
       undefined,
       {
+        allowCredentialCreation: false,
         existingAccount: {
+          aimlApiKey: "",
+          novitaCredentialMode: undefined,
           url: "https://original.example.invalid",
           siteType: SITE_TYPES.SUB2API,
           userId: "7",
@@ -591,7 +648,10 @@ describe("useAccountDialog re-detect preservation", () => {
       expect.anything(),
       undefined,
       {
+        allowCredentialCreation: false,
         existingAccount: {
+          aimlApiKey: "",
+          novitaCredentialMode: undefined,
           url: "https://original.example.invalid",
           siteType: SITE_TYPES.NEW_API,
           userId: "7",

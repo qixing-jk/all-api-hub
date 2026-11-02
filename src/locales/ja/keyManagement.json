@@ -401,6 +401,40 @@
         "cancel": "キャンセル",
         "save": "キーを保存"
       },
+      "aimlapi": {
+        "allowedModels": "許可するモデル",
+        "allowedModelsHelp": "モデル名や ID で検索できます。空欄の場合はすべて許可します。",
+        "allowedModelsPlaceholder": "モデルを検索",
+        "allowedTools": "許可するツール",
+        "allowedToolsHelp": "ツールを検索できます。空欄の場合はすべて許可します。",
+        "endpoint": {
+          "audio": "音声",
+          "chat": "チャット",
+          "embeddings": "埋め込み",
+          "image": "画像",
+          "ocr": "文字認識（OCR）",
+          "responses": "Responses",
+          "speech": "音声合成",
+          "video": "動画"
+        },
+        "expiryImmutable": "有効期限はキーの作成時にのみ設定でき、作成後は変更できません。",
+        "limit": {
+          "limited": "上限を設定",
+          "unlimited": "上限なし"
+        },
+        "maximum": "最大 {{maximum}} 件",
+        "reset": {
+          "day": "毎日",
+          "month": "毎月",
+          "never": "リセットしない",
+          "week": "毎週"
+        },
+        "scopes": "エンドポイント権限",
+        "scopesPlaceholder": "すべてのエンドポイント",
+        "spendLimit": "USD 上限",
+        "spendLimitAmount": "上限額",
+        "spendLimitReset": "リセット期間"
+      },
       "allowlistHelp": "カンマまたは改行で区切ります。空欄は制限なし。",
       "allowWallet": "残高の使用を許可",
       "allowWalletHelp": "プランのクォータを使い切った後も、このキーがアカウント残高から課金されて使い続けられます。",

@@ -19,6 +19,13 @@
     "oneTimeKeyPromptCancelled": "Konto gespeichert. Sie können einen AIHubMix API-Schlüssel später manuell in der Schlüsselverwaltung erstellen.",
     "oneTimeKeyUnavailableAfterCreate": "Konto gespeichert, aber der vollständige AIHubMix-API-Schlüssel konnte nicht abgerufen werden. AIHubMix-Schlüssel werden nach der Erstellung nur einmal angezeigt; erstellen Sie in der Schlüsselverwaltung einen neuen Schlüssel und speichern Sie ihn sofort vollständig."
   },
+  "aimlapi": {
+    "credentialInvalid": "Der AI/ML API-Schlüssel ist ungültig oder abgelaufen.",
+    "credentialScopeDenied": "Diese AI/ML API-Anmeldeinformation kann die Aktion nicht ausführen. Die Schlüsselverwaltung braucht einen Verwaltungsschlüssel, Guthaben und Abrechnung einen regulären API-Schlüssel.",
+    "malformedResponse": "AI/ML API hat eine für diese App unlesbare Antwort zurückgegeben.",
+    "managementKeyRequired": "AI/ML API benötigt einen Verwaltungsschlüssel. Erstellen Sie ihn unter \"Management keys\" und fügen Sie ihn hier ein.",
+    "networkFallback": "AI/ML API ist nicht erreichbar. Prüfen Sie das Netzwerk und versuchen Sie es erneut."
+  },
   "aiToolbox": {
     "attemptingRedirect": "Versuch einer Weiterleitung zu AI Toolbox",
     "invalidApp": "Nicht unterstützte AI-Toolbox-Ziel-App",

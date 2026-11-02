@@ -131,6 +131,12 @@ export interface ApiTransportRequestObserver {
 }
 
 export interface ApiTransportRequest {
+  /**
+   * Second static credential for providers whose console splits capabilities
+   * across credential classes (for example key management vs. billing).
+   * Never a substitute for `auth.accessToken`.
+   */
+  aimlApiKey?: string
   /** Explicit private credentials: direct transport only, with no ambient Cookie fallback. */
   cookieSession?: CookieRequestSession
   /** Credential-owned headers applied last by the extension transport. */

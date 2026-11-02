@@ -1,6 +1,6 @@
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
@@ -19,6 +19,7 @@ import enAccountDialog from "~/locales/en/accountDialog.json"
 import { ACCOUNT_POST_SAVE_WORKFLOW_STEPS } from "~/services/accounts/accountPostSaveWorkflow"
 import { CREATED_RUNTIME_SECRET_CORRELATION_KINDS as correlationKinds } from "~/services/accounts/keys/createdRuntimeSecret"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
+import * as siteRoutes from "~/services/accounts/utils/siteRouteResolver"
 import { API_CREDENTIAL_PROFILE_CAPTURE_STATUSES } from "~/services/apiCredentialProfiles/links/contracts"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { AuthTypeEnum } from "~/types"
@@ -983,6 +984,12 @@ describe("AccountDialog", () => {
     "prepares the visible access-token input when opening site security settings (narrow: %s)",
     async (narrow) => {
       const user = userEvent.setup()
+      // Route discovery is external to this focus contract. Keep it bounded so
+      // the second click cannot race a still-loading first navigation.
+      const resolveRoute = vi
+        .spyOn(siteRoutes, "resolveAccountSiteRouteUrl")
+        .mockResolvedValue("https://api.example.com/console/personal")
+      onTestFinished(() => resolveRoute.mockRestore())
       const media = window.matchMedia("(max-width: 639px)")
       vi.mocked(window.matchMedia).mockImplementation((query) => ({
         ...media,
@@ -1033,6 +1040,7 @@ describe("AccountDialog", () => {
       await user.click(
         screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput),
       )
+      await waitFor(() => expect(openSecurityButton).toBeEnabled())
       await user.click(openSecurityButton)
       await waitFor(() => expect(accessTokenInput).toHaveFocus())
     },

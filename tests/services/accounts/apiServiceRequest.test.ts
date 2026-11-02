@@ -61,6 +61,31 @@ const ACCOUNT = {
   tagIds: [],
 } as const
 
+it("carries the saved supplemental AIMLAPI key into display and stored-account requests", () => {
+  const account = {
+    ...ACCOUNT,
+    siteType: SITE_TYPES.AIMLAPI,
+    aimlApiKey: " regular ",
+  }
+  expect(
+    createDisplayAccountRequestContext(account as never).request.aimlApiKey,
+  ).toBe("regular")
+  expect(
+    createAccountApiRequestFromStoredAccount({
+      id: account.id,
+      site_url: account.baseUrl,
+      site_type: SITE_TYPES.AIMLAPI,
+      authType: account.authType,
+      account_info: {
+        id: "123",
+        username: "person",
+        access_token: "management",
+      },
+      aimlApiAuth: { apiKey: " regular " },
+    } as never).request.aimlApiKey,
+  ).toBe("regular")
+})
+
 const REQUEST = {
   baseUrl: "https://example.com",
   accountId: "account-1",

@@ -19,6 +19,13 @@
     "oneTimeKeyPromptCancelled": "Account saved. You can create an AIHubMix API key manually in Key Management later.",
     "oneTimeKeyUnavailableAfterCreate": "Account saved, but the full AIHubMix API key could not be retrieved. AIHubMix keys are shown only once after creation; create a new key in Key Management and save the full key immediately."
   },
+  "aimlapi": {
+    "credentialInvalid": "The AI/ML API key is invalid or has expired.",
+    "credentialScopeDenied": "This AI/ML API credential cannot perform that action. Key management needs a management key; balance and billing need a regular API key.",
+    "malformedResponse": "AI/ML API returned a response this app cannot read.",
+    "managementKeyRequired": "AI/ML API needs a management key. Create one under \"Management keys\" and paste it here.",
+    "networkFallback": "Could not reach AI/ML API. Check the network and retry."
+  },
   "aiToolbox": {
     "attemptingRedirect": "Attempting to redirect to AI Toolbox",
     "invalidApp": "Unsupported AI Toolbox target app",

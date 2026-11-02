@@ -401,6 +401,40 @@
         "cancel": "取消",
         "save": "保存密钥"
       },
+      "aimlapi": {
+        "allowedModels": "允许的模型",
+        "allowedModelsHelp": "搜索模型名称或 ID；留空表示允许全部模型。",
+        "allowedModelsPlaceholder": "搜索模型",
+        "allowedTools": "允许的工具",
+        "allowedToolsHelp": "搜索工具；留空表示允许全部工具。",
+        "endpoint": {
+          "audio": "音频",
+          "chat": "对话",
+          "embeddings": "向量嵌入",
+          "image": "图像",
+          "ocr": "文字识别（OCR）",
+          "responses": "Responses",
+          "speech": "语音",
+          "video": "视频"
+        },
+        "expiryImmutable": "过期时间仅能在创建密钥时设置，创建后不可修改。",
+        "limit": {
+          "limited": "设置限额",
+          "unlimited": "不限额"
+        },
+        "maximum": "最多选择 {{maximum}} 项",
+        "reset": {
+          "day": "每日",
+          "month": "每月",
+          "never": "不重置",
+          "week": "每周"
+        },
+        "scopes": "端点权限",
+        "scopesPlaceholder": "全部端点",
+        "spendLimit": "美元限额",
+        "spendLimitAmount": "限额金额",
+        "spendLimitReset": "重置周期"
+      },
       "allowlistHelp": "逗号或换行分隔，留空不限。",
       "allowWallet": "允许使用余额",
       "allowWalletHelp": "套餐额度用完后，该密钥仍可从账户余额扣费继续使用。",

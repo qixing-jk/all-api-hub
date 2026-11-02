@@ -1,5 +1,10 @@
 {
   "accessTokenVerification": {
+    "aimlapi": {
+      "openPage": "Open AI/ML API keys",
+      "openPageFailed": "Could not open the keys page. Open https://aimlapi.com/app/keys manually, then return here.",
+      "pasteStep": "Return here and paste the management key below. Add a regular API key if you also want to read the balance, then save the account."
+    },
     "apiyi": {
       "generateStep": "Use an existing valid, complete Access Token if you have one. Otherwise, open System token in your APIyi profile and enter your password on the site to generate one.",
       "openProfile": "Open APIyi profile",
@@ -121,6 +126,12 @@
     "accessToken": "Access Token",
     "agentRouterLoginCheckInMethod": "Log in again and check in",
     "agentRouterLoginCheckInMethodDesc": "Sign in to Agent Router and verify the check-in result.",
+    "aimlApiKey": "Regular API key (optional)",
+    "aimlApiKeyHelp": "AI/ML API shows balance, billing and usage only to a regular API key, while key management requires the management key above. Add a regular key to read the account balance; without one the account still manages keys but reports balance as unavailable.",
+    "aimlApiKeyPlaceholder": "Paste a regular API key",
+    "aimlApiManagementKey": "AI/ML API Management Key",
+    "aimlApiManagementKeyGuidance": "Open AI/ML API \"API keys\" and switch to the \"Management keys\" tab, then create a management key and copy it immediately - it is shown once. Inference keys cannot manage keys and cannot be used here.",
+    "aimlApiManagementKeyGuidanceTitle": "Use an AI/ML API management key",
     "autoCheckInEnabled": "Enable daily automatic check-in",
     "autoCheckInEnabledDesc": "Whether this account participates in daily check-in when global auto check-in is enabled",
     "autoCheckInPausedBySiteDesc": "This setting is preserved, and automatic check-in will resume when the site enables check-in.",
@@ -250,6 +261,7 @@
     "vercelTeamPlaceholder": "Select a team"
   },
   "infoPanel": {
+    "aimlapiBootstrapInfo": "Use your signed-in AI/ML API session to reuse or create dedicated management and regular API keys, verify them, and fill in your account name and ID. If automatic connection cannot finish, continue with the manual guide.",
     "autoDetect": "Auto Detect",
     "autoDetectInfo": "Please log in to the target site first. The extension will automatically detect and fill in the information needed to add the account.",
     "confirmAddInfo": "Please confirm that the account information is correct before clicking the 'Confirm Add' button",

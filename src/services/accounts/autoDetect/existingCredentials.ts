@@ -17,6 +17,7 @@ export interface AccountAutoDetectExistingAccount {
   siteType: AccountSiteType
   userId: string
   accessToken: string
+  aimlApiKey?: string
   novitaCredentialMode?: NovitaCredentialMode
 }
 

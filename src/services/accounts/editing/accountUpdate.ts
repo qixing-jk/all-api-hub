@@ -81,6 +81,7 @@ export async function validateAndUpdateAccount(
     excludeFromTotalBalance,
     excludeFromTodayIncome,
     sub2apiAuth,
+    aimlApiAuth,
     normalizedSiteType,
     sessionCookieHeader,
   } = normalizeAccountSaveInput(request)
@@ -152,6 +153,7 @@ export async function validateAndUpdateAccount(
       siteType: normalizedSiteType,
       accessToken,
       userId,
+      ...(aimlApiAuth ? { aimlApiKey: aimlApiAuth.apiKey } : {}),
       existingAccount,
     })
   } catch (error) {
@@ -183,6 +185,7 @@ export async function validateAndUpdateAccount(
     excludeFromTotalBalance,
     excludeFromTodayIncome,
     sub2apiAuth,
+    aimlApiAuth,
     kimiOpenPlatformAuth: options.kimiOpenPlatformAuth,
     accountIdentity,
   })

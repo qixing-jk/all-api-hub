@@ -1,5 +1,10 @@
 {
   "accessTokenVerification": {
+    "aimlapi": {
+      "openPage": "AI/ML API-Schlüsselseite öffnen",
+      "openPageFailed": "Die Schlüsselseite konnte nicht geöffnet werden. Öffne https://aimlapi.com/app/keys manuell und kehre dann zurück.",
+      "pasteStep": "Kehre hierher zurück und füge den Verwaltungsschlüssel unten ein. Trage für den Kontostand auch einen regulären API-Schlüssel ein und speichere das Konto."
+    },
     "apiyi": {
       "generateStep": "Wenn du bereits ein gültiges, vollständiges Access Token hast, kannst du es verwenden. Öffne andernfalls „System token“ in deinem APIyi-Profil und gib auf der Website dein Passwort ein, um ein Token zu erstellen.",
       "openProfile": "APIyi-Profil öffnen",
@@ -121,6 +126,12 @@
     "accessToken": "Zugriffstoken",
     "agentRouterLoginCheckInMethod": "Erneut anmelden und einchecken",
     "agentRouterLoginCheckInMethodDesc": "Bei Agent Router anmelden und das Check-in-Ergebnis prüfen.",
+    "aimlApiKey": "Regulärer API-Schlüssel (optional)",
+    "aimlApiKeyHelp": "AI/ML API zeigt Guthaben, Abrechnung und Nutzung nur für einen regulären API-Schlüssel an; die Schlüsselverwaltung erfordert den Verwaltungsschlüssel oben. Mit einem regulären Schlüssel wird das Guthaben gelesen; ohne ihn bleibt die Schlüsselverwaltung möglich, das Guthaben gilt jedoch als nicht verfügbar.",
+    "aimlApiKeyPlaceholder": "Regulären API-Schlüssel einfügen",
+    "aimlApiManagementKey": "AI/ML API-Verwaltungsschlüssel",
+    "aimlApiManagementKeyGuidance": "Öffnen Sie bei AI/ML API \"API keys\", wechseln Sie zum Tab \"Management keys\", erstellen Sie einen Verwaltungsschlüssel und kopieren Sie ihn sofort - er wird nur einmal angezeigt. Inferenzschlüssel können keine Schlüssel verwalten und sind hier unbrauchbar.",
+    "aimlApiManagementKeyGuidanceTitle": "AI/ML API-Verwaltungsschlüssel verwenden",
     "autoCheckInEnabled": "Aktivieren Sie den täglichen automatischen Check-in",
     "autoCheckInEnabledDesc": "Ob dieses Konto am täglichen Check-in teilnimmt, wenn der globale automatische Check-in aktiviert ist",
     "autoCheckInPausedBySiteDesc": "Diese Einstellung bleibt erhalten; der automatische Check-in wird fortgesetzt, sobald die Website den Check-in aktiviert.",
@@ -250,6 +261,7 @@
     "vercelTeamPlaceholder": "Team auswählen"
   },
   "infoPanel": {
+    "aimlapiBootstrapInfo": "Nutze deine angemeldete AI/ML API-Sitzung, um dedizierte Verwaltungs- und reguläre API-Schlüssel wiederzuverwenden oder zu erstellen. Nach der Prüfung werden Benutzername und ID ausgefüllt. Falls die automatische Verbindung scheitert, folge der manuellen Anleitung.",
     "autoDetect": "Automatische Erkennung",
     "autoDetectInfo": "Bitte melden Sie sich zuerst auf der Zielseite an. Die Erweiterung erkennt und füllt automatisch die zum Hinzufügen des Kontos erforderlichen Informationen aus.",
     "confirmAddInfo": "Bitte bestätigen Sie, dass die Kontoinformationen korrekt sind, bevor Sie auf die Schaltfläche „Hinzufügen bestätigen“ klicken",

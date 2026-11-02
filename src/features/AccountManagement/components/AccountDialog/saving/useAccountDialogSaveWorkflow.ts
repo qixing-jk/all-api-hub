@@ -244,6 +244,9 @@ export function useAccountDialogSaveWorkflow({
         excludeFromTotalBalance: excludeFromTotalBalance,
         excludeFromTodayIncome: excludeFromTodayIncome,
         sub2apiAuth: sub2apiAuth,
+        ...(draft.aimlApiKey.trim()
+          ? { aimlApiAuth: { apiKey: draft.aimlApiKey.trim() } }
+          : {}),
       }
       const saveAccount = () =>
         mode === DIALOG_MODES.ADD

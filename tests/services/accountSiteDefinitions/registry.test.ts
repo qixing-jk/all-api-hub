@@ -164,6 +164,7 @@ type ExpectedAccountSiteType =
   | typeof SITE_TYPES.KIMI
   | typeof SITE_TYPES.KIMI_GLOBAL
   | typeof SITE_TYPES.GRSAI
+  | typeof SITE_TYPES.AIMLAPI
   | typeof SITE_TYPES.RELAYFOR
   | typeof SITE_TYPES.REQUESTY
   | typeof SITE_TYPES.VERCEL_AI_GATEWAY
@@ -547,6 +548,7 @@ describe("account site definition registry", () => {
       SITE_TYPES.GRSAI,
       SITE_TYPES.VERCEL_AI_GATEWAY,
       SITE_TYPES.NOVITA,
+      SITE_TYPES.AIMLAPI,
       SITE_TYPES.UNKNOWN,
     ])
   })

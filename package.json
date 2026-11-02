@@ -99,6 +99,8 @@
     "e2e:cdp:foxcode": "node scripts/test-foxcode-e2e-live.mjs",
     "e2e:cdp:relayfor": "node scripts/test-relayfor-e2e-live.mjs",
     "e2e:cdp:emrank": "node scripts/test-emrank-e2e-live.mjs",
+    "e2e:cdp:aimlapi": "node scripts/test-aimlapi-e2e-live.mjs",
+    "e2e:cdp:aimlapi:pricing": "node scripts/test-aimlapi-pricing-live.mjs",
     "e2e:cdp:xiaoen": "node scripts/test-xiaoen-e2e-live.mjs",
     "e2e:cdp:krill": "node scripts/test-krill-e2e-live.mjs",
     "e2e:cdp:daya": "node scripts/test-daya-e2e-live.mjs",

@@ -19,6 +19,7 @@ import { resolveResourceFieldPolicy } from "~/features/ResourceEditor/model/reso
 import zhKeyManagement from "~/locales/zh-CN/keyManagement.json"
 import { getAccountSiteDefinition } from "~/services/accountSiteDefinitions"
 import { createAIHubMixKeyEditor } from "~/services/apiAdapters/aihubmix/keys/keyResourceEditor"
+import { createAimlApiKeyEditor } from "~/services/apiAdapters/aimlapi/keyEditor"
 import type { ResourceFieldDescriptor } from "~/services/apiAdapters/contracts/resourceNative"
 import { createCubenceKeyEditor } from "~/services/apiAdapters/cubence/keyEditor"
 import {
@@ -46,6 +47,37 @@ const request = {
     userId: 1,
   },
 }
+
+it("provides localized AIMLAPI restrictions, caps, reset periods and validation messages", async () => {
+  const i18n = createInstance()
+  await i18n.init({
+    lng: "zh-CN",
+    appendNamespaceToMissingKey: true,
+    resources: { "zh-CN": { keyManagement: zhKeyManagement } },
+  })
+  expect(i18n.t("keyManagement:__missing_translation_probe__")).toContain(
+    "keyManagement:",
+  )
+  const editor = createAimlApiKeyEditor({ request })
+  const presentation = getPresentation(SITE_TYPES.AIMLAPI, editorModes.Create, {
+    fields: editor.fields,
+  })
+  for (const field of presentation.policy.fields) {
+    expect(field.resolveLabel(i18n.t)).not.toContain("keyManagement:")
+    if (field.resolveHelp)
+      expect(field.resolveHelp(i18n.t)).not.toContain("keyManagement:")
+    if (field.resolvePlaceholder)
+      expect(field.resolvePlaceholder(i18n.t)).not.toContain("keyManagement:")
+    for (const resolve of Object.values(field.optionLabelResolvers ?? {}))
+      expect(resolve(i18n.t)).not.toContain("keyManagement:")
+    for (const resolve of Object.values(field.issueLabelResolvers ?? {}))
+      expect(resolve(i18n.t)).not.toContain("keyManagement:")
+    if (field.visibleWhen) {
+      expect(field.visibleWhen({ limitMode: "limited" })).toBe(true)
+      expect(field.visibleWhen({ limitMode: "unlimited" })).toBe(false)
+    }
+  }
+})
 
 it("renders Novita API-key policy editing without requiring an unavailable name field", () => {
   const editor = novitaKeyEditor(request, {

@@ -8,6 +8,7 @@ import { validateAndSaveAccount } from "~/services/accounts/editing/accountCreat
 import { MANUAL_ADD_ACCOUNT_DATA_FETCH_TIMEOUT_MS } from "~/services/accounts/editing/accountCreationTimeout"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/editing/accountDefaults"
 import { validateAndUpdateAccount } from "~/services/accounts/editing/accountUpdate"
+import { aimlApiAccountPersistence } from "~/services/apiAdapters/aimlapi/accountPersistence"
 import { ACCOUNT_KEY_DEFAULT_CREATION_POLICIES as creationPolicies } from "~/services/apiAdapters/contracts/accountKeyResource"
 import { openRouterAccountPersistence } from "~/services/apiAdapters/openrouter/account/accountPersistence"
 import { OpenRouterManagementKeyRequiredError } from "~/services/apiService/openrouter/errors"
@@ -305,6 +306,55 @@ describe("accountPersistence save and update", () => {
         },
       },
     }))
+  })
+
+  it("carries the supplemental AIMLAPI key through create and update identity validation", async () => {
+    const prepareIdentity = vi.fn().mockResolvedValue("123")
+    getSiteTypeCapabilitiesMock.mockReturnValue({
+      account: {
+        persistence: { ...aimlApiAccountPersistence, prepareIdentity },
+        data: { fetchData: fetchAccountDataMock },
+      },
+    })
+    const input = {
+      url: "https://aimlapi.com",
+      siteName: "AI/ML API",
+      username: "person",
+      accessToken: "management",
+      userId: "123",
+      exchangeRate: "7.2",
+      notes: "",
+      tagIds: [],
+      checkInConfig: CHECK_IN_DISABLED,
+      siteType: SITE_TYPES.AIMLAPI,
+      authType: AuthTypeEnum.AccessToken,
+      cookieAuthSessionCookie: "",
+      aimlApiAuth: { apiKey: " regular " },
+      options: { deferDataRefresh: true },
+    }
+    const created = await validateAndSaveAccount(input)
+    expect(created.success).toBe(true)
+    expect(prepareIdentity).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        accessToken: "management",
+        aimlApiKey: " regular ",
+      }),
+    )
+    expect(
+      await accountStorage.getAccountById(created.accountId!),
+    ).toMatchObject({ aimlApiAuth: { apiKey: "regular" } })
+    const updated = await validateAndUpdateAccount({
+      ...input,
+      accountId: created.accountId!,
+      aimlApiAuth: { apiKey: " rotated " },
+    })
+    expect(updated.success).toBe(true)
+    expect(prepareIdentity).toHaveBeenLastCalledWith(
+      expect.objectContaining({ aimlApiKey: " rotated " }),
+    )
+    expect(
+      await accountStorage.getAccountById(created.accountId!),
+    ).toMatchObject({ aimlApiAuth: { apiKey: "rotated" } })
   })
 
   it.each(["create", "update"])(
@@ -2360,12 +2410,8 @@ describe("accountPersistence save and update", () => {
       success: true,
       feedbackLevel: "success",
     })
-    expect(addAccountSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        sub2apiAuth: undefined,
-      }),
-      expect.anything(),
-    )
+    expect(addAccountSpy).toHaveBeenCalledOnce()
+    expect(addAccountSpy.mock.calls[0]![0].sub2apiAuth).toBeUndefined()
   })
 
   it("returns a stable save failure when deferred account persistence fails", async () => {

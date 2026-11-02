@@ -1191,3 +1191,33 @@ describe("Requesty credential action policy", () => {
     })
   })
 })
+
+it("does not warn that a saved account credential is lost when its verified plaintext is available", () => {
+  const row = {
+    kind: "account-key-resource",
+    rowKey: "saved",
+    accountId: "a",
+    accountName: "AI/ML API",
+    scopeName: "Account",
+    facts: {
+      ref: {
+        accountId: "a",
+        siteType: SITE_TYPES.AIMLAPI,
+        scopeKey: "account",
+        resourceId: "12345678",
+      },
+      displayName: "All API Hub regular",
+      maskedLabel: "saved…secret",
+      status: "enabled",
+      runtimeSecret: "saved-regular-secret",
+      accountCredentialIdentity: { status: "confirmed", source: "provider" },
+      fields: [],
+      displayFacts: [],
+      actions: { canUpdate: true, canDelete: true },
+    },
+  } as NativeKeyManagementRow
+  const card = getAccountKeyResourceCardAdapter(
+    SITE_TYPES.AIMLAPI,
+  ).buildPresentation(row, t, { hasAssociatedSecret: false })
+  expect(card.secretAvailabilityMessage).toBeUndefined()
+})

@@ -1,9 +1,13 @@
+import { normalizeAimlApiTransientAuth } from "./contentSession/aimlapiTransientAuth"
 import { normalizeNewApiDashboardTransientAuth } from "./contentSession/newApiTransientAuth"
 import type { ContentSessionTransientAuthContext } from "./contracts"
 
 // Keep pure admission rules separate from extractors, which may refresh sessions
 // and depend on browser-session resolution themselves.
-const transientAuthNormalizers = [normalizeNewApiDashboardTransientAuth]
+const transientAuthNormalizers = [
+  normalizeNewApiDashboardTransientAuth,
+  normalizeAimlApiTransientAuth,
+]
 
 /** Validates returned authentication without extracting or refreshing credentials. */
 export function normalizeContentSessionTransientAuth(

@@ -411,6 +411,40 @@
         "cancel": "Cancel",
         "save": "Save key"
       },
+      "aimlapi": {
+        "allowedModels": "Allowed models",
+        "allowedModelsHelp": "Search models by name or ID; leave empty to allow all models.",
+        "allowedModelsPlaceholder": "Search models",
+        "allowedTools": "Allowed tools",
+        "allowedToolsHelp": "Search tools; leave empty to allow all tools.",
+        "endpoint": {
+          "audio": "Audio",
+          "chat": "Chat",
+          "embeddings": "Embeddings",
+          "image": "Images",
+          "ocr": "Text recognition (OCR)",
+          "responses": "Responses",
+          "speech": "Speech",
+          "video": "Video"
+        },
+        "expiryImmutable": "Expiration can only be set when creating the key. It cannot be changed afterward.",
+        "limit": {
+          "limited": "Set a limit",
+          "unlimited": "No limit"
+        },
+        "maximum": "Maximum: {{maximum}}",
+        "reset": {
+          "day": "Daily",
+          "month": "Monthly",
+          "never": "Never",
+          "week": "Weekly"
+        },
+        "scopes": "Endpoint permissions",
+        "scopesPlaceholder": "All endpoints",
+        "spendLimit": "USD limit",
+        "spendLimitAmount": "Limit amount",
+        "spendLimitReset": "Reset period"
+      },
       "allowlistHelp": "Separate entries with commas or new lines. Leave empty for no restriction.",
       "allowWallet": "Allow using balance",
       "allowWalletHelp": "Keeps this key working from the account balance after its plan quota runs out.",

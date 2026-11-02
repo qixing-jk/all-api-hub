@@ -1,5 +1,10 @@
 {
   "accessTokenVerification": {
+    "aimlapi": {
+      "openPage": "Mở trang khóa AI/ML API",
+      "openPageFailed": "Không thể mở trang khóa. Hãy mở https://aimlapi.com/app/keys theo cách thủ công rồi quay lại đây.",
+      "pasteStep": "Quay lại đây và dán khóa quản lý vào bên dưới. Nếu muốn xem số dư, hãy thêm khóa API thông thường rồi lưu tài khoản."
+    },
     "apiyi": {
       "generateStep": "Nếu đã có Access Token hợp lệ và đầy đủ, bạn có thể dùng ngay. Nếu chưa có, hãy mở “System token” trong hồ sơ APIyi và nhập mật khẩu trên trang web để tạo token.",
       "openProfile": "Mở hồ sơ APIyi",
@@ -121,6 +126,12 @@
     "accessToken": "Access Token",
     "agentRouterLoginCheckInMethod": "Đăng nhập lại và điểm danh",
     "agentRouterLoginCheckInMethodDesc": "Đăng nhập Agent Router và xác nhận kết quả điểm danh.",
+    "aimlApiKey": "Khóa API thường (tùy chọn)",
+    "aimlApiKeyHelp": "AI/ML API chỉ hiển thị số dư, hóa đơn và mức sử dụng cho khóa API thường, còn việc quản lý khóa cần khóa quản trị ở trên. Hãy thêm khóa thường để đọc số dư; nếu không có, tài khoản vẫn quản lý được khóa nhưng số dư sẽ hiển thị là không khả dụng.",
+    "aimlApiKeyPlaceholder": "Dán khóa API thường",
+    "aimlApiManagementKey": "Khóa quản trị AI/ML API",
+    "aimlApiManagementKeyGuidance": "Mở \"API keys\" của AI/ML API, chuyển sang tab \"Management keys\", tạo khóa quản trị và sao chép ngay - khóa chỉ hiển thị một lần. Khóa suy luận không thể quản lý khóa và không dùng được ở đây.",
+    "aimlApiManagementKeyGuidanceTitle": "Hãy dùng khóa quản trị AI/ML API",
     "autoCheckInEnabled": "Bật tự động điểm danh hàng ngày",
     "autoCheckInEnabledDesc": "Khi tính năng tự động điểm danh toàn cầu được bật, tài khoản này có tham gia điểm danh hàng ngày hay không",
     "autoCheckInPausedBySiteDesc": "Cài đặt này vẫn được giữ; tự động điểm danh sẽ tiếp tục khi trang web bật tính năng điểm danh.",
@@ -249,6 +260,7 @@
     "vercelTeamPlaceholder": "Chọn nhóm"
   },
   "infoPanel": {
+    "aimlapiBootstrapInfo": "Dùng phiên AI/ML API đã đăng nhập để sử dụng lại hoặc tạo khóa quản lý và khóa API thông thường riêng, xác minh rồi tự điền tên người dùng và ID. Nếu không thể kết nối tự động, hãy làm theo hướng dẫn thủ công.",
     "autoDetect": "Tự động nhận dạng",
     "autoDetectInfo": "Vui lòng đăng nhập vào trang web đích trước, tiện ích mở rộng sẽ tự động nhận dạng và điền thông tin cần thiết để thêm tài khoản",
     "confirmAddInfo": "Vui lòng xác nhận thông tin tài khoản chính xác và nhấp vào nút \"Xác nhận thêm\"",

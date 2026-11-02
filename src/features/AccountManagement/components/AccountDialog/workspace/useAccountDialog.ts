@@ -267,6 +267,12 @@ export function useAccountDialog({
     },
     [credentialEvidence, invalidateDuplicateConfirmation, updateDraft],
   )
+  const setAimlApiKey = useCallback(
+    (value: string) => {
+      updateDraft((prev) => ({ ...prev, aimlApiKey: value }))
+    },
+    [updateDraft],
+  )
   const currentTab = useAccountCurrentTab({
     mode,
     accountId: account?.id,
@@ -782,6 +788,7 @@ export function useAccountDialog({
       setSub2apiUseRefreshToken,
       setSub2apiRefreshToken,
       setSub2apiTokenExpiresAt,
+      setAimlApiKey,
     },
     handlers: {
       handleVerifyNovitaCredential,

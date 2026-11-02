@@ -111,6 +111,7 @@ export function mergeAutoDetectRecoveryIntoDraft(params: {
     username: recoverString(draft.username, recoveryData.username),
     userId: recoverString(draft.userId, recoveryData.userId),
     accessToken: recoverString(draft.accessToken, recoveryData.accessToken),
+    aimlApiKey: recoverString(draft.aimlApiKey, recoveryData.aimlApiKey),
     exchangeRate: recoverString(
       draft.exchangeRate,
       recoveryData.exchangeRate?.toString(),
@@ -211,6 +212,7 @@ export function buildDraftFromAutoDetectResult(params: {
     ...draft,
     username: resultData.username,
     accessToken: resultData.accessToken,
+    aimlApiKey: resultData.aimlApiAuth?.apiKey ?? draft.aimlApiKey,
     userId: resultData.userId,
     siteName: draft.siteNameEdited ? draft.siteName : resultData.siteName,
     exchangeRate:

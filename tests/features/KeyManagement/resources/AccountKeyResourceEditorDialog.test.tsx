@@ -20,6 +20,7 @@ import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { NATIVE_RESOURCE_EDITOR_LOADING_REVEALS } from "~/features/ResourceEditor/opening/nativeResourceEditorOpeningState"
 import { OneTimeSecretDialog } from "~/features/TokenProvisioning/secretDelivery/OneTimeSecretDialog"
 import zhKeyManagement from "~/locales/zh-CN/keyManagement.json"
+import { createAimlApiKeyEditor } from "~/services/apiAdapters/aimlapi/keyEditor"
 import { RESOURCE_FIELD_OPTION_LOAD_TRIGGERS } from "~/services/apiAdapters/contracts/resourceNative"
 import { createCubenceKeyEditor } from "~/services/apiAdapters/cubence/keyEditor"
 import { createDayaKeyEditor } from "~/services/apiAdapters/daya/keyEditor"
@@ -41,6 +42,116 @@ import { atIndex } from "~~/tests/test-utils/indexedAccess"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const field = OPENROUTER_KEY_FIELD_IDS
+
+it.each([null, "2026-12-01T00:00:00Z"])(
+  "shows immutable AI/ML API expiration as a fact rather than an input: %s",
+  (expiresAt) => {
+    const definition = createAimlApiKeyEditor({
+      detail: {
+        prefix: "12345678",
+        name: "key",
+        disabled: false,
+        scopes: null,
+        limit: null,
+        expiresAt,
+        allowedModels: null,
+        allowedTools: null,
+        createdAt: "2026-10-01T00:00:00Z",
+        updatedAt: "2026-10-01T00:00:00Z",
+        totalUsageUsd: 0,
+        monthlyUsageUsd: 0,
+      },
+    })
+    const { container } = render(
+      <AccountKeyResourceEditorDialog
+        editor={{
+          editorId: 1,
+          siteType: SITE_TYPES.AIMLAPI,
+          mode: editorModes.Edit,
+          fields: definition.fields,
+          initialValues: definition.initialValues,
+          values: definition.initialValues,
+        }}
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        onValuesChange={vi.fn()}
+      />,
+      { withUserPreferencesProvider: false, withThemeProvider: false },
+    )
+    expect(
+      container.ownerDocument.querySelector('input[type="datetime-local"]'),
+    ).toBeNull()
+    const value = screen.getByRole("status", {
+      name: "keyManagement:dialog.expiration",
+    })
+    expect(value.tagName).toBe("OUTPUT")
+    expect(value).not.toBeEmptyDOMElement()
+    if (!expiresAt)
+      expect(value).toHaveTextContent("keyManagement:keyDetails.neverExpires")
+  },
+)
+
+it("lets AI/ML API users search and select models without typing IDs", async () => {
+  const definition = createAimlApiKeyEditor({})
+  const onValuesChange = vi.fn()
+  render(
+    <AccountKeyResourceEditorDialog
+      editor={{
+        editorId: 1,
+        siteType: SITE_TYPES.AIMLAPI,
+        mode: editorModes.Create,
+        fields: definition.fields,
+        initialValues: definition.initialValues,
+        values: definition.initialValues,
+        optionsByField: {
+          allowedModels: [{ value: "openai/gpt-5.2", displayLabel: "GPT 5.2" }],
+          allowedTools: [{ value: "search/web", displayLabel: "Web search" }],
+        },
+      }}
+      onClose={vi.fn()}
+      onSubmit={vi.fn()}
+      onValuesChange={onValuesChange}
+      onLoadOptions={vi.fn()}
+    />,
+    { withUserPreferencesProvider: false, withThemeProvider: false },
+  )
+  const models = await screen.findByRole("combobox", {
+    name: "keyManagement:native.editor.aimlapi.allowedModels",
+  })
+  const user = userEvent.setup()
+  await user.click(models)
+  await user.type(models, "GPT")
+  await user.click(await screen.findByRole("option", { name: "GPT 5.2" }))
+  expect(onValuesChange).toHaveBeenLastCalledWith(
+    1,
+    expect.objectContaining({ allowedModels: ["openai/gpt-5.2"] }),
+  )
+  expect(
+    screen.getByRole("combobox", {
+      name: "keyManagement:native.editor.aimlapi.allowedTools",
+    }),
+  ).toBeEnabled()
+  expect(
+    screen.getByRole("combobox", {
+      name: "keyManagement:native.editor.aimlapi.spendLimit",
+    }),
+  ).toHaveTextContent("keyManagement:native.editor.aimlapi.limit.unlimited")
+  await user.click(
+    screen.getByRole("button", {
+      name: "keyManagement:dialog.advancedSettings",
+    }),
+  )
+  await user.click(
+    screen.getByRole("combobox", {
+      name: "keyManagement:native.editor.aimlapi.scopes",
+    }),
+  )
+  expect(
+    await screen.findByRole("option", {
+      name: "keyManagement:native.editor.aimlapi.endpoint.chat",
+    }),
+  ).toBeVisible()
+})
 
 it("keeps Novita model entry enabled when console options fall back to an empty list", async () => {
   const definition = novitaKeyEditor({

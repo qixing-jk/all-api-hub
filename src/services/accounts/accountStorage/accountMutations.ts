@@ -10,6 +10,7 @@ import {
   hasSameAccountRequestIdentity,
   hasSameCheckInRequestCredentials,
 } from "~/services/accounts/identity/accountIdentity"
+import { getSiteTypeCapabilities } from "~/services/apiAdapters/registry"
 import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
 import {
   invalidateCheckInDiscovery,
@@ -35,6 +36,21 @@ import { accountConfigStore } from "./accountConfigStore"
 import { createAccountDeletedEntryRecord } from "./configPolicies"
 
 const logger = createLogger("AccountMutations")
+
+/** Provider cleanup follows the committed write and never changes its outcome. */
+async function cleanupDeletedAccounts(accounts: SiteAccount[]): Promise<void> {
+  for (const account of accounts) {
+    try {
+      await getSiteTypeCapabilities(
+        account.site_type,
+      ).account?.persistence?.cleanupDeletedAccount?.(account)
+    } catch {
+      logger.error("Failed to clean up deleted account credentials", {
+        accountId: account.id,
+      })
+    }
+  }
+}
 
 /**
  * Drops persisted verification results owned by accounts that no longer exist.
@@ -440,7 +456,7 @@ class AccountMutations {
 
   async deleteAccount(id: string): Promise<boolean> {
     try {
-      const deleted = await accountConfigStore.mutate((config) => {
+      const deletedAccount = await accountConfigStore.mutate((config) => {
         const account = config.accounts.find((item) => item.id === id)
         if (!account) {
           logger.warn("Attempted to delete missing account", {
@@ -454,13 +470,14 @@ class AccountMutations {
         }
 
         removeAccountsFromConfig(config, [account], new Set([id]), Date.now())
-        return { result: true, changed: true }
+        return { result: account, changed: true }
       })
       void autoCheckinStorage.pruneStatusForAccountIds([id]).catch((error) => {
         logger.error("清理自动签到账号状态失败", { accountId: id, error })
       })
       await pruneDeletedAccountVerificationResults([id])
-      return deleted
+      await cleanupDeletedAccounts([deletedAccount])
+      return true
     } catch (error) {
       logger.error("删除账号失败", { accountId: id, error })
       throw error
@@ -482,7 +499,7 @@ class AccountMutations {
         const deletedIds = deletedAccounts.map((account) => account.id)
         if (deletedIds.length === 0) {
           return {
-            result: { deletedCount: 0, deletedIds: [] },
+            result: { deletedCount: 0, deletedIds: [], deletedAccounts: [] },
             changed: false,
           }
         }
@@ -490,7 +507,11 @@ class AccountMutations {
         const now = Date.now()
         removeAccountsFromConfig(config, deletedAccounts, idSet, now)
         return {
-          result: { deletedCount: deletedIds.length, deletedIds },
+          result: {
+            deletedCount: deletedIds.length,
+            deletedIds,
+            deletedAccounts,
+          },
           changed: true,
         }
       })
@@ -505,8 +526,12 @@ class AccountMutations {
             })
           })
         await pruneDeletedAccountVerificationResults(result.deletedIds)
+        await cleanupDeletedAccounts(result.deletedAccounts)
       }
-      return result
+      return {
+        deletedCount: result.deletedCount,
+        deletedIds: result.deletedIds,
+      }
     } catch (error) {
       logger.error("批量删除账号失败", { accountIds: uniqueIds, error })
       throw error
