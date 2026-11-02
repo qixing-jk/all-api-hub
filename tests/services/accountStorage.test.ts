@@ -866,9 +866,9 @@ describe("accountStorage core behaviors", () => {
       aimlApiAuth: { apiKey: "regular" },
     })
     seedStorage([account])
-    expect(accountStorage.convertToDisplayData(account).aimlApiKey).toBe(
-      "regular",
-    )
+    expect(accountStorage.convertToDisplayData(account)).toMatchObject({
+      aimlApiKey: "regular",
+    })
     await accountStorage.refreshAccount(account.id, true)
     expect(mockRefreshAccountData).toHaveBeenCalledWith(
       expect.objectContaining({ aimlApiKey: "regular" }),

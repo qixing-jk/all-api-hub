@@ -56,7 +56,11 @@ it("creates the pricing evidence parent on a clean checkout before making a uniq
     throw new Error("evidence directory ready")
   })
   await expect(
-    runAimlapiUiTest({ context: {}, extensionId: "test", serviceWorker: {} }),
+    runAimlapiUiTest({
+      context: {} as never,
+      extensionId: "test",
+      serviceWorker: {} as never,
+    }),
   ).rejects.toThrow("evidence directory ready")
   expect(mocks.mkdir).toHaveBeenCalledWith(
     ".scratch/aimlapi-integration/artifacts",
@@ -66,9 +70,14 @@ it("creates the pricing evidence parent on a clean checkout before making a uniq
 
 it("keeps key parity screenshots under the ignored feature artifacts directory", async () => {
   mocks.mkdtemp.mockRejectedValue(new Error("stop before live requests"))
-  await expect(runAimlapiKeyParity({ managementKey: "test" })).rejects.toThrow(
-    "stop before live requests",
-  )
+  await expect(
+    runAimlapiKeyParity({
+      context: {} as never,
+      extensionId: "test",
+      serviceWorker: {} as never,
+      managementKey: "test",
+    }),
+  ).rejects.toThrow("stop before live requests")
   expect(mocks.mkdtemp).toHaveBeenCalledWith(
     path.join(".scratch/aimlapi-integration/artifacts", "keys-"),
   )

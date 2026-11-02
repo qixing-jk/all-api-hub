@@ -216,11 +216,13 @@ describe("AI/ML API usage and logs", () => {
         { page: 2, pageSize, startTimestamp: 0, endTimestamp: Date.now() },
       )
       const expectedOffset = pageSize === 200 ? 100 : 1
-      expect(requests[0].searchParams.get("limit")).toBe(String(expectedOffset))
-      expect(requests[0].searchParams.get("offset")).toBe(
+      expect(requests[0]!.searchParams.get("limit")).toBe(
         String(expectedOffset),
       )
-      expect(page.items[0].id).toBe(expectedOffset)
+      expect(requests[0]!.searchParams.get("offset")).toBe(
+        String(expectedOffset),
+      )
+      expect(page.items[0]!.id).toBe(expectedOffset)
     },
   )
 

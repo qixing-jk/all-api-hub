@@ -70,7 +70,7 @@ it("normalizes comma/newline restrictions and preserves explicit scopes and expi
     ...editor.initialValues,
     [fields.Name]: " key ",
     [fields.AllowedModels]: " model-a,\nmodel-b ",
-    [fields.AllowedTools]: [1, "tool"],
+    [fields.AllowedTools]: ["tool"],
     [fields.Scopes]: ["model:chat"],
     [fields.LimitMode]: "limited",
     [fields.LimitAmount]: 1.235,

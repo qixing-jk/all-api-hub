@@ -51,7 +51,12 @@ it("completes a management-only account with a verified key identity and no chec
     siteName: "AI/ML API",
     exchangeRate: 7.2,
   })
-  expect(await aimlApiAccountBootstrap.fetchCheckInSupport(request)).toBe(false)
+  expect(
+    await aimlApiAccountBootstrap.fetchCheckInSupport(
+      request,
+      await aimlApiAccountBootstrap.loadBootstrapFacts(request),
+    ),
+  ).toBe(false)
   expect(await aimlApiAccountBootstrap.getOrCreateAccessToken(request)).toEqual(
     { username: "Management key", access_token: "management" },
   )

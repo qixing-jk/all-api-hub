@@ -47,7 +47,7 @@ describe("AccountDialog ActionButtons", () => {
       name: "Verify credentials",
     })
     expect(buttons).toHaveLength(1)
-    await user.click(buttons[0])
+    await user.click(buttons[0]!)
     expect(props.onAutoDetect).toHaveBeenCalledOnce()
   })
 

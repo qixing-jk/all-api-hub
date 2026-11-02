@@ -2411,7 +2411,7 @@ describe("accountPersistence save and update", () => {
       feedbackLevel: "success",
     })
     expect(addAccountSpy).toHaveBeenCalledOnce()
-    expect(addAccountSpy.mock.calls[0][0].sub2apiAuth).toBeUndefined()
+    expect(addAccountSpy.mock.calls[0]![0].sub2apiAuth).toBeUndefined()
   })
 
   it("returns a stable save failure when deferred account persistence fails", async () => {

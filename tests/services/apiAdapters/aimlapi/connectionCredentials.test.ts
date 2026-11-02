@@ -1,6 +1,6 @@
-import { fakeBrowser } from "@webext-core/fake-browser"
 import { http, HttpResponse } from "msw"
 import { beforeEach, expect, it, vi } from "vitest"
+import { browser } from "wxt/browser"
 
 import { Storage } from "@plasmohq/storage"
 
@@ -175,7 +175,7 @@ it("does not replace an unreadable ledger or mask the original invalid-credentia
     ),
   )
   const get = vi
-    .spyOn(fakeBrowser.storage.local, "get")
+    .spyOn(browser.storage.local, "get")
     .mockRejectedValueOnce(new Error("storage read failed"))
   await expect(
     aimlApiAccountPersistence.prepareIdentity({
