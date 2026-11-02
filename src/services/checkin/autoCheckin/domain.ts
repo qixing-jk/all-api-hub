@@ -32,6 +32,21 @@ const uniqueCandidateMethodIds = (
   candidateMethodIds: readonly CheckInMethodId[],
 ): CheckInMethodId[] => [...new Set(candidateMethodIds)]
 
+/** Selection authority controls discovery scope and acceptance, never execution. */
+export function resolveCheckInSelectionPolicy(
+  selection: CheckInMethodSelection,
+  candidateMethodIds: readonly CheckInMethodId[] = [],
+): { canReselect: boolean; discoveryMethodIds: CheckInMethodId[] } {
+  const canReselect = selection.mode === CHECK_IN_SELECTION_MODES.Automatic
+  const candidates = uniqueCandidateMethodIds(candidateMethodIds)
+  return {
+    canReselect,
+    discoveryMethodIds: canReselect
+      ? candidates
+      : candidates.filter((id) => id === selection.methodId),
+  }
+}
+
 const getEffectiveDetectionOutcome = (
   detection: CheckInMethodDetection | undefined,
 ): CheckInMethodDetection["outcome"] => {
@@ -147,7 +162,7 @@ const deriveSelectionState = (
   }
 }
 
-/** Decides from saved facts alone whether a daily run may probe other methods. */
+/** Decides whether a daily run may refresh stale method evidence after cooldown. */
 export function shouldAutomaticallyDiscoverCheckIn(
   input: CheckInInspectionInput,
 ): boolean {
@@ -155,25 +170,37 @@ export function shouldAutomaticallyDiscoverCheckIn(
     input.accountDisabled ||
     input.globalAutomaticExecutionEnabled === false ||
     !input.config.automaticExecutionEnabled ||
-    input.config.selection.mode !== CHECK_IN_SELECTION_MODES.Automatic ||
     input.candidateMethodIds.length === 0
   ) {
     return false
   }
 
   const selection = deriveSelectionState(input.config, input.candidateMethodIds)
+  const { canReselect } = resolveCheckInSelectionPolicy(
+    input.config.selection,
+    input.candidateMethodIds,
+  )
+  const selectedDetection =
+    selection.status === CHECK_IN_SELECTION_STATUSES.Stale &&
+    isCandidateMethodId(selection.methodId, input.candidateMethodIds)
+      ? input.config.methodKnowledge.methods[selection.methodId]?.detection
+      : undefined
+  const canReconfirmSelectedMethod =
+    selection.status === CHECK_IN_SELECTION_STATUSES.Stale &&
+    isCandidateMethodId(selection.methodId, input.candidateMethodIds) &&
+    (selection.reason === CHECK_IN_SELECTION_STALE_REASONS.MethodUnsupported ||
+      (selection.reason === CHECK_IN_SELECTION_STALE_REASONS.MethodNotMatched &&
+        (selectedDetection?.outcome ===
+          CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown ||
+          !selectedDetection)))
+  if (!canReselect && !canReconfirmSelectedMethod) return false
   const needsDiscovery =
-    selection.status === CHECK_IN_SELECTION_STATUSES.None ||
-    (selection.status === CHECK_IN_SELECTION_STATUSES.Stale &&
-      (selection.reason ===
-        CHECK_IN_SELECTION_STALE_REASONS.MethodUnsupported ||
-        selection.reason ===
-          CHECK_IN_SELECTION_STALE_REASONS.MethodUnavailable ||
-        (selection.reason ===
-          CHECK_IN_SELECTION_STALE_REASONS.MethodNotMatched &&
-          isCandidateMethodId(selection.methodId, input.candidateMethodIds) &&
-          input.config.methodKnowledge.methods[selection.methodId]?.detection
-            .outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Unknown)))
+    canReconfirmSelectedMethod ||
+    (canReselect &&
+      (selection.status === CHECK_IN_SELECTION_STATUSES.None ||
+        (selection.status === CHECK_IN_SELECTION_STATUSES.Stale &&
+          selection.reason ===
+            CHECK_IN_SELECTION_STALE_REASONS.MethodUnavailable)))
   if (!needsDiscovery) return false
 
   const { lastAutomaticDiscoveryAttemptAt, lastFullDiscoveryAt } =
@@ -462,7 +489,8 @@ export function mergeCheckInDiscoveryResults(input: {
       lastFullDiscoveryAt: input.completedAt,
     },
   }
-  if (merged.selection.mode === CHECK_IN_SELECTION_MODES.Manual) return merged
+  if (!resolveCheckInSelectionPolicy(merged.selection).canReselect)
+    return merged
 
   const decision = inspectCheckInMethods({
     config: merged,

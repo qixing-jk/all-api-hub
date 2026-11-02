@@ -1,6 +1,5 @@
 import {
   CHECK_IN_DISCOVERY_DECISION_OUTCOMES,
-  CHECK_IN_SELECTION_MODES,
   CHECK_IN_SELECTION_STATUSES,
   FULL_CHECK_IN_DISCOVERY_TIMEOUT_MS,
 } from "~/constants/checkIn"
@@ -10,10 +9,12 @@ import { getDevCheckInFixtureScenario } from "~/services/checkin/autoCheckin/dis
 import { discoverCheckInMethods } from "~/services/checkin/autoCheckin/discovery/discovery"
 import { inspectAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
 import { discoverCheckInRouteOverrides } from "~/services/checkin/autoCheckin/discovery/routeDiscovery"
+import { resolveCheckInSelectionPolicy } from "~/services/checkin/autoCheckin/domain"
 import type { AutoCheckinMethodRegistry } from "~/services/checkin/autoCheckin/providers/registry"
 import { getEffectiveAuthType } from "~/services/checkin/autoCheckin/providers/shared"
 import type { ProtectionBypassExecution } from "~/services/protectionBypass/contracts"
 import type { SiteAccount } from "~/types"
+import type { CheckInMethodId } from "~/types/checkIn"
 import type { TempWindowRequestSource } from "~/types/tempWindowFetch"
 
 export interface CheckInDiscoveryContext {
@@ -26,6 +27,8 @@ export interface CheckInDiscoveryContext {
    * does, so a background run stays a bounded, side-effect-free set of probes.
    */
   allowRouteDiscovery?: boolean
+  /** A manual recovery confirms this method without discovering alternatives. */
+  methodIds?: readonly CheckInMethodId[]
 }
 
 /** Runs one read-only detection round against the configuration it was given. */
@@ -38,6 +41,7 @@ function runCheckInDiscovery(
 ) {
   return discoverCheckInMethods({
     registry,
+    methodIds: context.methodIds,
     account,
     config,
     observedAt,
@@ -114,7 +118,7 @@ function requiresCheckInMethodSelection(account: SiteAccount): boolean {
   return (
     state.decision.outcome === CHECK_IN_DISCOVERY_DECISION_OUTCOMES.Ambiguous &&
     !(
-      account.checkIn.selection.mode === CHECK_IN_SELECTION_MODES.Manual &&
+      !resolveCheckInSelectionPolicy(account.checkIn.selection).canReselect &&
       state.selectionState.status === CHECK_IN_SELECTION_STATUSES.Selected
     )
   )

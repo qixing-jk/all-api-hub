@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest"
 import {
   AUTO_CHECKIN_METHOD_IDS,
   AUTOMATIC_CHECK_IN_DISCOVERY_COOLDOWN_MS,
+  CHECK_IN_SELECTION_MODES,
 } from "~/constants/checkIn"
 import { normalizeCheckInConfigV7 } from "~/services/checkin/autoCheckin/configuration/configCodec"
 import {
   inspectCheckInMethods,
   mergeCheckInDiscoveryResults,
+  resolveCheckInSelectionPolicy,
   setCheckInSelection,
   shouldAutomaticallyDiscoverCheckIn,
 } from "~/services/checkin/autoCheckin/domain"
@@ -20,6 +22,32 @@ import type {
 const NEW_API_METHOD_ID = AUTO_CHECKIN_METHOD_IDS.NewApiDailyCheckIn
 const VELOERA_METHOD_ID = AUTO_CHECKIN_METHOD_IDS.VeloeraDailyCheckIn
 const ANYROUTER_METHOD_ID = AUTO_CHECKIN_METHOD_IDS.AnyrouterDailyCheckIn
+
+describe("check-in selection policy", () => {
+  it.each([
+    CHECK_IN_SELECTION_MODES.Manual,
+    CHECK_IN_SELECTION_MODES.Automatic,
+  ] as const)("limits %s recovery by selection authority", (mode) => {
+    const policy = resolveCheckInSelectionPolicy(
+      { mode, methodId: NEW_API_METHOD_ID },
+      [NEW_API_METHOD_ID, VELOERA_METHOD_ID, NEW_API_METHOD_ID],
+    )
+    expect(policy.canReselect).toBe(mode === CHECK_IN_SELECTION_MODES.Automatic)
+    expect(policy.discoveryMethodIds).toEqual(
+      mode === CHECK_IN_SELECTION_MODES.Manual
+        ? [NEW_API_METHOD_ID]
+        : [NEW_API_METHOD_ID, VELOERA_METHOD_ID],
+    )
+  })
+  it("does not probe a fixed choice that no longer belongs to the site", () => {
+    expect(
+      resolveCheckInSelectionPolicy(
+        { mode: CHECK_IN_SELECTION_MODES.Manual, methodId: NEW_API_METHOD_ID },
+        [VELOERA_METHOD_ID],
+      ).discoveryMethodIds,
+    ).toEqual([])
+  })
+})
 
 function createConfig(
   detections: Partial<Record<CheckInMethodId, CheckInMethodDetection>>,
@@ -118,7 +146,7 @@ describe("automatic check-in discovery policy", () => {
       name: "a selected method without detection evidence",
       selection: NEW_API_METHOD_ID,
       detection: undefined,
-      expected: false,
+      expected: true,
     },
     {
       name: "a previously matched method whose latest probe failed",
@@ -145,7 +173,6 @@ describe("automatic check-in discovery policy", () => {
   })
 
   it.each([
-    { name: "manual selection", manual: true },
     { name: "disabled account", accountDisabled: true },
     { name: "disabled account check-in", automaticExecutionEnabled: false },
     {
@@ -156,7 +183,7 @@ describe("automatic check-in discovery policy", () => {
   ])("does not rediscover with $name", (testCase) => {
     const config = createConfig({ [NEW_API_METHOD_ID]: unsupported })
     config.selection = {
-      mode: testCase.manual ? "manual" : "automatic",
+      mode: "automatic",
       methodId: NEW_API_METHOD_ID,
     }
     config.automaticExecutionEnabled =
