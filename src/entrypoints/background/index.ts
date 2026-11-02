@@ -7,6 +7,7 @@ import {
   cleanupTempContextsOnSuspend,
   setupTempWindowListeners,
 } from "~/services/browsingContext/tempPage/runtime"
+import { setupCheckInFeedbackTabHints } from "~/services/checkin/feedback/githubTab"
 import { appendLogHistory } from "~/services/logging/logHistory"
 import {
   hasNewOptionalPermissions,
@@ -86,6 +87,7 @@ export default defineBackground(() => {
   /**
    * 设置各种事件监听器
    */
+  setupCheckInFeedbackTabHints()
   setupRuntimeMessageListeners()
   setupTempWindowListeners()
   // Registered before the first await so an alarm wake is handled in this

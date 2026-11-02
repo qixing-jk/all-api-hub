@@ -332,3 +332,6 @@ export const STORAGE_KEYS = {
   STAR_PROMOTION_STATE: STAR_PROMOTION_STORAGE_KEYS.STATE,
   UNINSTALL_SURVEY_STATE: UNINSTALL_SURVEY_STORAGE_KEYS.STATE,
 } as const
+
+/** Per-tab, background-owned session keys; no account data or report text. */
+export const CHECKIN_FEEDBACK_TAB_HINT_PREFIX = "checkinFeedbackTabHint:"

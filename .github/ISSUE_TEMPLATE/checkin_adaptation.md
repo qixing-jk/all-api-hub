@@ -1,10 +1,16 @@
 ---
-name: Check-in support / 签到适配
+name: Check-in support (legacy link) / 签到适配（旧版链接）
 about: Request site check-in support or share check-in clues / 申请站点签到支持或补充线索
 title: "[Check-in] "
 labels: "site-support, check-in"
 assignees: ""
 ---
+
+> **Before submitting / 提交前请检查：**
+> If this page was opened from the extension and your report is missing, paste the copied report below. Opening this page does not attach it automatically.
+> 如果从扩展打开此页但没有看到报告，请先在下方粘贴已复制的完整报告，打开页面不会自动附上报告。
+>
+> For a new request, use the [check-in form / 签到反馈表单](https://github.com/qixing-jk/all-api-hub/issues/new?template=checkin_adaptation.yml), which checks that feedback is filled in.
 
 <!-- Paste the extension's feedback here, or describe the site and what happened.
 粘贴扩展生成的反馈，或提供站点地址和现象即可，无需先抓包。

@@ -132,6 +132,18 @@ export const RuntimeActionIds = {
     RuntimeActionPrefixes.OpenSettings,
     "webAiApiCheck",
   ),
+  ContentCheckInFeedbackHint: composeRuntimeAction(
+    RuntimeActionPrefixes.Feedback,
+    "showCheckInHint",
+  ),
+  OpenCheckInFeedbackIssue: composeRuntimeAction(
+    RuntimeActionPrefixes.Feedback,
+    "openCheckInIssue",
+  ),
+  DismissCheckInFeedbackHint: composeRuntimeAction(
+    RuntimeActionPrefixes.Feedback,
+    "dismissCheckInHint",
+  ),
   OpenFeedbackBugReport: composeRuntimeAction(
     RuntimeActionPrefixes.Feedback,
     "openBugReport",

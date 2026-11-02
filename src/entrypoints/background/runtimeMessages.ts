@@ -18,6 +18,10 @@ import { handleCloseTempWindow } from "~/services/browsingContext/tempPage/runti
 import { setupAutoCheckinMessagingListeners } from "~/services/checkin/autoCheckin/scheduling/schedulerMessaging"
 import { setupExternalCheckInMessagingListeners } from "~/services/checkin/externalCheckInService"
 import {
+  dismissCheckInFeedbackTabHint,
+  openCheckInFeedbackIssueTab,
+} from "~/services/checkin/feedback/githubTab"
+import {
   handleDailyBalanceHistoryMessage,
   setupDailyBalanceHistoryMessagingListeners,
 } from "~/services/history/dailyBalanceHistory/scheduler"
@@ -59,6 +63,7 @@ import { getAllCookieStores, hasCookieStoresAPI } from "~/utils/browser/cookies"
 import { extractSessionCookieHeader } from "~/utils/browser/cookieString"
 import { getRawExtensionApi } from "~/utils/browser/devApiExplorer"
 import { containsPermissions } from "~/utils/browser/permissions"
+import { getExtensionURL } from "~/utils/browser/runtime"
 import { onRuntimeMessage } from "~/utils/browser/runtimeMessages"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -450,6 +455,28 @@ export function setupRuntimeMessageListeners() {
           anchor: WEB_AI_API_CHECK_TARGET_IDS.enhancedAutoDetect,
         })
         sendResponse({ success: true })
+        return true
+      }
+
+      if (request.action === RuntimeActionIds.OpenCheckInFeedbackIssue) {
+        if (!sender.url?.startsWith(getExtensionURL(""))) {
+          sendResponse({ success: false })
+          return true
+        }
+        void openCheckInFeedbackIssueTab(request.url, request.hint)
+          .then(() => sendResponse({ success: true }))
+          .catch(() => sendResponse({ success: false }))
+        return true
+      }
+
+      if (request.action === RuntimeActionIds.DismissCheckInFeedbackHint) {
+        if (typeof sender.tab?.id !== "number") {
+          sendResponse({ success: false })
+          return true
+        }
+        void dismissCheckInFeedbackTabHint(sender.tab.id)
+          .then(() => sendResponse({ success: true }))
+          .catch(() => sendResponse({ success: false }))
         return true
       }
 

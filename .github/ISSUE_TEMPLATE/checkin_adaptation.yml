@@ -1,0 +1,37 @@
+name: Check-in support / 签到适配
+description: Request site check-in support or share check-in clues / 申请站点签到支持或补充线索
+title: "[Check-in] "
+labels: ["site-support", "check-in"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        If you came from the extension, check that your report is filled in below. For a long report, paste the copied content into **Problem description or extension feedback** before submitting. Opening this page does not attach the report automatically.
+
+        如果从扩展跳转到这里，请检查下方是否已有反馈。报告过长时，请将已复制的内容粘贴到「问题描述或扩展反馈」再提交。打开此页面不代表报告已自动附上。
+
+        Remove anything you do not want to share publicly, including credentials. For an existing request, reply to that issue instead.
+        请删除不想公开的信息及凭据；已有相关 issue 时请直接回复原帖。
+  - type: input
+    id: site-url
+    attributes:
+      label: Site / 站点
+      description: Optional; only share an address you want to make public. / 选填，仅填写愿意公开的地址。
+      placeholder: https://example.com
+  - type: input
+    id: extension-version
+    attributes:
+      label: Extension version / 扩展版本
+  - type: textarea
+    id: summary
+    attributes:
+      label: Brief summary / 简短摘要
+      description: A long description may be shortened here. Paste the full report below. / 长描述可能在此缩短，请在下方粘贴完整报告。
+  - type: textarea
+    id: feedback
+    attributes:
+      label: Problem description or extension feedback / 问题描述或扩展反馈
+      description: Paste the full report copied from the extension, or describe what works on the website and what happens in the extension. No packet capture is required. / 请粘贴扩展复制的完整报告，或描述网站能否签到及扩展中的现象，无需先抓包。
+      placeholder: Paste the copied report here / 在此粘贴已复制的报告
+    validations:
+      required: true

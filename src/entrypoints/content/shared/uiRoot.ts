@@ -63,6 +63,7 @@ export async function ensureRedemptionToastUi(): Promise<void> {
     await ensureContentI18nReady()
     const { createElement, ContentReactRoot } = await loadContentUiModules()
 
+    let stopObserving = () => {}
     const ui = await createShadowRootUi(ctxRef as ContentScriptContext, {
       name: CONTENT_UI_HOST_TAG,
       position: "overlay",
@@ -75,6 +76,7 @@ export async function ensureRedemptionToastUi(): Promise<void> {
         return root
       },
       onRemove(root: Root | undefined) {
+        stopObserving()
         if (root) {
           root.unmount()
         }
@@ -85,6 +87,19 @@ export async function ensureRedemptionToastUi(): Promise<void> {
     })
 
     ui.mount()
+    if (ui.shadowHost) {
+      // Reuse the mounted React tree if a host page replaces its body contents.
+      const observer = new MutationObserver(() => {
+        if (!ui.shadowHost.isConnected && document.body) {
+          document.body.append(ui.shadowHost)
+        }
+      })
+      observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+      })
+      stopObserving = () => observer.disconnect()
+    }
   })()
 
   try {

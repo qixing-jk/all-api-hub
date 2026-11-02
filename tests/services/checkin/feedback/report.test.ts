@@ -162,6 +162,71 @@ describe("check-in feedback report", () => {
     ).toContain("no_registered_candidates")
   })
 
+  it("distinguishes a stale selection from matched evidence without a failed retry", () => {
+    const report = buildCheckInFeedbackDetails(
+      {
+        siteType: SITE_TYPES.NEW_API,
+        baseUrl: "https://example.com",
+        checkIn: {
+          ...checkIn,
+          selection: { mode: "manual", methodId: "agentrouter:login-checkin" },
+          methodKnowledge: {
+            methods: {
+              "new-api:daily-checkin": {
+                detection: {
+                  outcome: "matched",
+                  evidence: { source: "probe", observedAt: 1 },
+                },
+              },
+            },
+          },
+        },
+      },
+      { version: "1", platform: "chromium" },
+    )
+    expect(report).toContain("selectionStatus: stale")
+    expect(report).toContain("new-api:daily-checkin: matched")
+    expect(report).not.toContain("permission_denied")
+  })
+
+  it.each([{ availability: "disabled", today: "not_checked" }, {}] as const)(
+    "preserves incomplete known status facts: %j",
+    (facts) => {
+      const report = buildCheckInFeedbackDetails(
+        {
+          siteType: SITE_TYPES.NEW_API,
+          baseUrl: "https://example.com",
+          checkIn: {
+            ...checkIn,
+            methodKnowledge: {
+              methods: {
+                "new-api:daily-checkin": {
+                  detection: {
+                    outcome: "matched",
+                    evidence: { source: "probe", observedAt: 1 },
+                  },
+                  status: {
+                    outcome: "known",
+                    ...facts,
+                    evidence: { source: "probe", observedAt: 1 },
+                  },
+                },
+              },
+            },
+          },
+        },
+        { version: "1", platform: "chromium" },
+      )
+      expect(report).toContain(
+        "availability: " +
+          ("availability" in facts ? facts.availability : "unknown"),
+      )
+      expect(report).toContain(
+        "today: " + ("today" in facts ? facts.today : "unknown"),
+      )
+    },
+  )
+
   it("normalizes the optional address and preserves edited content exactly through GitHub encoding", () => {
     const origin = getFeedbackOrigin(
       "https://name:password@example.com:8443/path?token=secret#fragment",
@@ -180,8 +245,8 @@ describe("check-in feedback report", () => {
     expect(body).toContain('<td colspan="2">edited details</td>')
     const issue = buildCheckInFeedbackIssue(body, "请求 & help")
     const url = new URL(issue.url)
-    expect(url.searchParams.get("body")).toBe(body)
-    expect(url.searchParams.get("template")).toBe("checkin_adaptation.md")
+    expect(url.searchParams.get("feedback")).toBe(body)
+    expect(url.searchParams.get("template")).toBe("checkin_adaptation.yml")
     expect(url.searchParams.get("title")).toBe("请求 & help")
     expect(issue.needsCopy).toBe(false)
     expect(
@@ -211,12 +276,44 @@ describe("check-in feedback report", () => {
   })
 
   it("does not truncate an oversized report into a misleading prefilled issue", () => {
-    const issue = buildCheckInFeedbackIssue("签到".repeat(4000), "request")
+    const issue = buildCheckInFeedbackIssue("签到".repeat(4000), "request", {
+      origin: "https://example.com",
+      version: "4.8.0",
+      notes: "Website works",
+    })
     expect(issue.needsCopy).toBe(true)
-    expect(new URL(issue.url).searchParams.has("body")).toBe(false)
+    const url = new URL(issue.url)
+    expect(url.searchParams.has("feedback")).toBe(false)
+    expect(url.searchParams.get("site-url")).toBe("https://example.com")
+    expect(url.searchParams.get("extension-version")).toBe("4.8.0")
+    expect(url.searchParams.get("summary")).toBe("Website works")
+    expect(issue.url.length).toBeLessThanOrEqual(6000)
     expect(new URL(issue.url).searchParams.get("template")).toBe(
-      "checkin_adaptation.md",
+      "checkin_adaptation.yml",
     )
+  })
+
+  it("omits private addresses and keeps encoded links within the length budget", () => {
+    const hidden = new URL(
+      buildCheckInFeedbackIssue("x".repeat(7000), "request", {
+        origin: null,
+        version: "4.8.0",
+        notes: "",
+      }).url,
+    )
+    expect(hidden.searchParams.has("site-url")).toBe(false)
+    const oversized = buildCheckInFeedbackIssue(
+      "签到".repeat(4000),
+      "请求".repeat(1000),
+      {
+        origin: `https://${"a".repeat(6500)}.example.com`,
+        version: "版".repeat(1000),
+        notes: "摘要".repeat(1000),
+      },
+    )
+    expect(oversized.needsCopy).toBe(true)
+    expect(oversized.url.length).toBeLessThanOrEqual(6000)
+    expect(new URL(oversized.url).searchParams.has("feedback")).toBe(false)
   })
 
   it("lays out flat diagnostic fields while preserving literal values and nested evidence", () => {

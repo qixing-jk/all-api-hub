@@ -167,6 +167,35 @@ describe("uiRoot", () => {
     expect(createRootMock).toHaveBeenCalledTimes(2)
   })
 
+  it("keeps the shared content host attached after page DOM replacement and stops after removal", async () => {
+    const host = document.createElement(CONTENT_UI_HOST_TAG)
+    const container = document.createElement("div")
+    const root = { render: vi.fn(), unmount: vi.fn() }
+    let remove!: (value: typeof root) => void
+    createRootMock.mockReturnValue(root)
+    createShadowRootUiMock.mockImplementation(async (_ctx, options) => {
+      remove = options.onRemove
+      return {
+        shadowHost: host,
+        mount: () => {
+          document.body.append(host)
+          options.onMount(container)
+        },
+      }
+    })
+    const { ensureRedemptionToastUi, setContentScriptContext } = await import(
+      "~/entrypoints/content/shared/uiRoot"
+    )
+    setContentScriptContext({ contentScript: "ctx" } as any)
+    await ensureRedemptionToastUi()
+    host.remove()
+    await waitFor(() => expect(host.isConnected).toBe(true))
+    remove(root)
+    host.remove()
+    await Promise.resolve()
+    expect(host.isConnected).toBe(false)
+  })
+
   it("reuses the in-flight mounting promise so concurrent callers do not mount twice", async () => {
     const container = document.createElement("div")
     type MockRoot = {
