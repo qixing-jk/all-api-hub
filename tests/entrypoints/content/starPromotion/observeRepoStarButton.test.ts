@@ -122,6 +122,41 @@ describe("setupStarPromotionContent", () => {
     expect(sendRuntimeActionMessageMock).not.toHaveBeenCalled()
   })
 
+  it("discards removal evidence when the live page became starred during verification", async () => {
+    renderStarButton(false)
+    let finish!: (response: Response) => void
+    vi.mocked(fetch).mockReturnValue(
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+    )
+    const cleanup = setupStarPromotionContent()
+    document.querySelector("button")?.setAttribute("aria-pressed", "true")
+    finish(new Response('<form action="/qixing-jk/all-api-hub/star"></form>'))
+    await vi.waitFor(() =>
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ starred: true }),
+      ),
+    )
+    expect(sendRuntimeActionMessageMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({ starRemoved: true }),
+    )
+    cleanup()
+  })
+
+  it.each([new Error("worker failed"), "worker failed"])(
+    "retries after a rejected report",
+    async (error) => {
+      sendRuntimeActionMessageMock
+        .mockRejectedValueOnce(error)
+        .mockResolvedValue({ success: true })
+      const cleanup = setupStarPromotionContent()
+      await vi.advanceTimersByTimeAsync(1_000)
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(2)
+      cleanup()
+    },
+  )
+
   it("retries an unchanged state after a failed acknowledgement", async () => {
     sendRuntimeActionMessageMock
       .mockResolvedValueOnce({ success: false })

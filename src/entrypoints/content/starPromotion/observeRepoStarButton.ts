@@ -55,7 +55,8 @@ export function setupStarPromotionContent(): () => void {
         : Promise.resolve(false)
     void removalEvidence
       .then((starRemoved) => {
-        if (disposed) return undefined
+        if (disposed || resolveGitHubRepoStarState(document) !== state)
+          return undefined
         return sendRuntimeActionMessage<{ success: boolean }>({
           action: RuntimeActionIds.ContentStarPromotionReport,
           starred: state === GITHUB_REPO_STAR_STATES.Starred,
