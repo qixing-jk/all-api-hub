@@ -457,6 +457,7 @@ export async function runRequestyUiTest({
     route: `${OPTIONS_PAGE_PATH}#account`,
   })
   let stageError = null
+  let skipReason = null
 
   try {
     await dismissModals(page)
@@ -473,6 +474,8 @@ export async function runRequestyUiTest({
     })
 
     if (!autoCreate.created && !key) {
+      skipReason =
+        "Missing management key; account, key and model coverage was not executed"
       console.log(
         "  ℹ️ 未提供管理密钥 (REQUESTY_MANAGE_KEY)，跳过保存/刷新/密钥 CRUD/模型目录验证。",
       )
@@ -736,6 +739,9 @@ export async function runRequestyUiTest({
   }
   if (stageError) {
     throw stageError
+  }
+  if (skipReason) {
+    return { skipped: true, reason: skipReason }
   }
 }
 

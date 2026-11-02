@@ -7,7 +7,7 @@ export function runRequestyUiTest(options: {
   /** Optional manage key; enables the saved-account and key CRUD stages. */
   key?: string
   evidenceDir: string
-}): Promise<void>
+}): Promise<void | { skipped: true; reason: string }>
 
 /** A console key the onboarding credential resolved to. */
 export type RequestyConsoleKey = { id: string; name: string }

@@ -222,7 +222,8 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
 
         {/* 详细定价信息（仅按量计费模型） */}
         {showPricingDetails &&
-          !calculatedPrice.publishedPricing &&
+          (!calculatedPrice.publishedPricing ||
+            calculatedPrice.isComparisonActive !== false) &&
           (!calculatedPrice.quote || showsPublishedTokenRates) &&
           isTokenBillingType(model.quota_type) && (
             <div className="md:col-span-2">

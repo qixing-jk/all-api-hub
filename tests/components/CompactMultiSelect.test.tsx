@@ -47,7 +47,7 @@ describe("CompactMultiSelect", () => {
       "search/web",
     )
     const option = await screen.findByRole("option", {
-      name: "Web search search/web",
+      name: "Web search search/web search",
     })
     expect(within(option).getByText("search/web")).toBeVisible()
     expect(within(option).getByText("search")).toBeVisible()

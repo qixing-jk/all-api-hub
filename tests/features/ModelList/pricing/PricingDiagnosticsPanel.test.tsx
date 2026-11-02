@@ -40,7 +40,7 @@ vi.mock("~/utils/core/environment", async (importOriginal) => ({
 }))
 vi.mock("react-i18next", async (importOriginal) => ({
   ...(await importOriginal<typeof import("react-i18next")>()),
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
 }))
 const source = createProfileSource({
   id: "profile",
@@ -145,6 +145,82 @@ it("explains threshold selection separately from conflicting prices and preserve
   }
 })
 
+it("inspects published prices from the attention shortcut and locates from the record", async () => {
+  const user = userEvent.setup()
+  const locate = vi.fn()
+  render(
+    <PricingDiagnostics
+      models={[
+        {
+          ...models[1]!,
+          model: {
+            ...models[1]!.model,
+            pricingPlan: {
+              rates: {},
+              rules: [],
+              source: { kind: "catalog" },
+              groupMultiplier: "included",
+              issues: [
+                { code: "unsupported-rule", reason: "request-condition" },
+              ],
+            },
+          },
+          calculatedPrice: {
+            ...models[1]!.calculatedPrice,
+            quote: undefined,
+            publishedPricing: {
+              source: { kind: "catalog", rulesUnavailable: true },
+              schedule: [
+                {
+                  id: "base",
+                  conditions: [],
+                  rates: {
+                    input: {
+                      amount: 1,
+                      currency: "USD",
+                      unit: "token",
+                      per: 1000000,
+                    },
+                  },
+                },
+              ],
+            },
+          },
+        },
+        {
+          ...models[1]!,
+          effectiveGroup: "premium",
+          model: { ...models[1]!.model, model_name: "other" },
+        },
+      ]}
+      onLocate={locate}
+    />,
+  )
+  await user.click(
+    screen.getByRole("button", { name: "diagnostics.attention" }),
+  )
+  await user.click(
+    screen.getByRole("combobox", { name: "diagnostics.groupBy" }),
+  )
+  await user.click(
+    await screen.findByRole("option", { name: "diagnostics.byGroup" }),
+  )
+  const group = screen.getByRole("button", { name: /diagnostics.noGroup/ })
+  await user.click(group)
+  expect(group).toHaveAttribute("aria-pressed", "true")
+  await user.click(group)
+  expect(group).toHaveAttribute("aria-pressed", "false")
+  await user.click(
+    screen.getByRole("button", { name: "diagnostics.inspect: missing" }),
+  )
+  expect(screen.getByRole("dialog")).toHaveTextContent("scenario.baseRates")
+  await user.click(
+    screen.getAllByRole("button", { name: "diagnostics.locate" }).at(-1)!,
+  )
+  expect(locate).toHaveBeenCalledWith("missing")
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+})
+
 it("shows the official name while locating by the exact request id", async () => {
   const user = userEvent.setup()
   const locate = vi.fn()
@@ -167,6 +243,29 @@ it("shows the official name while locating by the exact request id", async () =>
   expect(screen.getByText("Claude Haiku 5.5")).toBeVisible()
   await user.click(screen.getByRole("button", { name: "diagnostics.locate" }))
   expect(locate).toHaveBeenCalledWith("anthropic/claude-haiku-5-5")
+})
+
+it("recovers an active issue filter when refreshed models no longer contain that issue", async () => {
+  const user = userEvent.setup()
+  const view = render(<PricingDiagnostics models={models} onLocate={vi.fn()} />)
+  await user.click(screen.getByRole("button", { name: /diagnostics.title/ }))
+  await user.click(screen.getByRole("combobox", { name: "diagnostics.filter" }))
+  await user.click(await screen.findByRole("option", { name: /price-missing/ }))
+  expect(screen.getByText("missing", { selector: "strong" })).toBeVisible()
+  expect(
+    screen.queryByText("complete", { selector: "strong" }),
+  ).not.toBeInTheDocument()
+  view.rerender(
+    <VirtuosoMockContext.Provider
+      value={{ viewportHeight: 384, itemHeight: 76 }}
+    >
+      <PricingDiagnostics models={[models[0]!]} onLocate={vi.fn()} />
+    </VirtuosoMockContext.Provider>,
+  )
+  expect(screen.getByText("diagnostics.empty")).toBeVisible()
+  expect(
+    screen.getByRole("combobox", { name: "diagnostics.filter" }),
+  ).toHaveTextContent("diagnostics.issues")
 })
 
 it("shows coverage before opening and opens a bounded scrolling list with on-demand record details", async () => {

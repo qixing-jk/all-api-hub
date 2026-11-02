@@ -106,6 +106,7 @@ const getOptionAccessibleLabel = (option: CompactMultiSelectOption) =>
   [
     option.label,
     option.secondaryLabel,
+    option.badgeLabel,
     typeof option.count === "number" ? option.count : undefined,
   ]
     .filter((value) => value !== undefined && value !== "")

@@ -56,6 +56,46 @@ function createProviderResponse(modelOverrides: Record<string, unknown> = {}) {
 }
 
 describe("provider model-catalog admission", () => {
+  it.each([true, false])(
+    "admits a primary price published only in a conditional rule (source=%s)",
+    (hasSource) => {
+      const response = createProviderResponse({
+        token_price_usd_per_million: undefined,
+        price_metadata: {
+          source: "provider-catalog",
+          precision: "estimated",
+          ...(hasSource
+            ? { source_url: "https://provider.example/pricing" }
+            : {}),
+        },
+        pricingPlan: {
+          rates: {},
+          rules: [
+            {
+              id: "quality",
+              conditions: [
+                { kind: "selection", axis: "videoQuality", value: "720p" },
+              ],
+              rates: {
+                videoSeconds: {
+                  amount: 0.1,
+                  currency: "USD",
+                  unit: "second",
+                  per: 1,
+                },
+              },
+            },
+          ],
+          source: { kind: "catalog" },
+          groupMultiplier: "included",
+          issues: [],
+        },
+      })
+      expect(
+        isValidProviderModelCatalogPricing(response, SITE_TYPES.OPENROUTER),
+      ).toBe(hasSource)
+    },
+  )
   it.each(["no-plan", "cache-only", "no-source"])(
     "rejects estimated catalog entries with %s",
     (kind) => {

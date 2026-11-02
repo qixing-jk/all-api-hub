@@ -71,6 +71,32 @@ const row = (name: string, usage: { input: number; output?: number }) => ({
 })
 
 describe("pricing diagnostics", () => {
+  it.each(["invalid", "throwing"])(
+    "keeps %s published schedules inspectable",
+    (kind) => {
+      const item = row("broken-published", { input: 1 })
+      const source =
+        kind === "invalid"
+          ? { kind: "invalid" }
+          : Object.defineProperty({}, "kind", {
+              get() {
+                throw new Error("unreadable source")
+              },
+            })
+      const report = buildPricingDiagnostics([
+        {
+          ...item,
+          calculatedPrice: {
+            ...item.calculatedPrice,
+            publishedPricing: { source, schedule: [] } as any,
+          },
+        },
+      ])
+      expect(report.rows[0]?.issues).toContainEqual({
+        code: "diagnostic:invalid-plan",
+      })
+    },
+  )
   it("counts unresolved pricing immediately without a deferred-loading exemption", () => {
     const item = row("deferred", { input: 1 })
     item.model.pricingPlan = {

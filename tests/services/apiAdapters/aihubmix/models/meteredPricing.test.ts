@@ -31,6 +31,15 @@ function fixture(model: string) {
 }
 
 describe("public task billing compiled into shared pricing", () => {
+  it("rejects contradictory case aliases in a published legacy video table", () => {
+    expect(
+      buildAIHubMixLegacyVideoPlan(
+        { generate: { standard: { "720p": 0.1, "720P": 0.2 } } },
+        "$0.1/S",
+        { kind: "catalog" },
+      ),
+    ).toBeUndefined()
+  })
   it.each([
     [
       { match: { megapixels: { gt: 1, lte: 2 } }, unit_price: 0.1 },

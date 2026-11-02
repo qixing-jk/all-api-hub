@@ -34,6 +34,27 @@ function calculate(rawItems: ModelListItem[], groups?: string[]) {
 }
 
 describe("model list price evaluation", () => {
+  it("retains unavailable-price metadata when comparing a legacy model without a plan", () => {
+    const item = buildModelListItemFixture("no-price", { a: 1 })
+    item.model.price_metadata = {
+      source: "none",
+      precision: "unavailable",
+      unavailable_reason: "official-price-missing",
+    }
+    const result = calculateModelListPrices({
+      ...options,
+      rawItems: [item],
+      getGroupCandidates: () => ["a"],
+      isPriceComparisonActive: true,
+    })[0]!
+    expect(result.calculatedPrice).toMatchObject({
+      kind: "unavailable",
+      isComparisonActive: true,
+      reason: "official-price-missing",
+    })
+    expect(result.calculatedPrice.publishedPricing).toBeDefined()
+    expect(result.calculatedPrice.quote).toBeUndefined()
+  })
   it.each(["tokens", "metered"] as const)(
     "browses %s rates independently of scenario selection and quotation",
     (usageMode) => {

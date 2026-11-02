@@ -383,7 +383,13 @@ export function NativeResourceChoiceField<TSection extends string>({
             secondaryLabel: option.secondaryLabel,
             badgeLabel: option.badgeLabel,
             label:
-              presentation.optionLabelResolvers?.[option.value]?.(t) ??
+              (presentation.optionLabelResolvers &&
+              Object.prototype.hasOwnProperty.call(
+                presentation.optionLabelResolvers,
+                option.value,
+              )
+                ? presentation.optionLabelResolvers[option.value]?.(t)
+                : undefined) ??
               option.displayLabel ??
               getResourceFieldOptionLabel(presentation, option.value, t),
           }))}

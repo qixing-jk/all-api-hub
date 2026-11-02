@@ -45,6 +45,40 @@ const variant = (
 })
 
 describe("exclusive published variants", () => {
+  it("rejects unbounded, malformed and duplicate variant predicates", () => {
+    const rate = variant("test", "720p").rates
+    const conditions = [
+      [],
+      [{ kind: "range", axis: "context", min: 0 }],
+      [{ kind: "measurement", axis: "videoSeconds", gt: 5 }],
+      [{ kind: "measurement", axis: "videoSeconds", eq: -1 }],
+      [{ kind: "measurement", axis: "videoSeconds", eq: Infinity }],
+      [{ kind: "measurement", axis: "videoSeconds", eq: 5, lte: 10 }],
+      [{ kind: "selection", axis: "videoMode", value: " " }],
+      [
+        { kind: "selection", axis: "videoMode", value: "fast" },
+        { kind: "selection", axis: "videoMode", value: "slow" },
+      ],
+    ]
+    for (const predicates of conditions) {
+      expect(
+        compileExclusiveVariantRules([
+          { id: "invalid", conditions: predicates as any, rates: rate },
+        ]),
+      ).toBeUndefined()
+    }
+    expect(
+      compileExclusiveVariantRules([
+        {
+          id: "mode",
+          conditions: [
+            { kind: "selection", axis: "videoMode", value: " fast " },
+          ],
+          rates: rate,
+        },
+      ])?.[0]?.conditions,
+    ).toEqual([{ kind: "selection", axis: "videoMode", value: "fast" }])
+  })
   it("normalizes duplicate selectors while preserving the first rule and source records", () => {
     const first = variant("first", "720P")
     const duplicate = variant("duplicate", "720p")

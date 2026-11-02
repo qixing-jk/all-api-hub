@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  getPricingDiagnosticIssueLabel,
   groupPricingDiagnosticRows,
   matchesPricingDiagnosticSearch,
   PRICING_DIAGNOSTIC_GROUPINGS,
@@ -29,6 +30,14 @@ const row: PricingDiagnosticRow = {
 }
 
 describe("diagnostic search and grouping", () => {
+  it("explains an unsupported request condition without changing its exported code", () => {
+    expect(
+      getPricingDiagnosticIssueLabel(
+        "unsupported:request-condition",
+        ((key: string) => key) as any,
+      ),
+    ).toBe("diagnostics.issueLabels.requestCondition")
+  })
   it.each([
     ["", true],
     ["qwen premium price-missing:input", true],

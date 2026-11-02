@@ -70,7 +70,10 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => ({}),
 }))
 
-vi.mock("~/services/models/utils/modelPricing", () => ({
+vi.mock("~/services/models/utils/modelPricing", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/models/utils/modelPricing")
+  >()),
   formatPrice: (...args: unknown[]) => formatPriceMock(...args),
   getEndpointTypesText: (...args: unknown[]) =>
     getEndpointTypesTextMock(...args),
@@ -109,6 +112,38 @@ function renderDetails(
 }
 
 describe("ModelItemDetails", () => {
+  it("shows native CNY token facts while browsing published prices", () => {
+    renderDetails({
+      model: { ...baseProps.model, quota_type: 0 },
+      calculatedPrice: {
+        kind: CALCULATED_PRICE_KINDS.UNAVAILABLE,
+        isComparisonActive: false,
+        perMillionTokens: { input: { amount: 7, currency: "CNY" } },
+      } as any,
+      showGroupDetails: false,
+      showPricingDetails: true,
+      exchangeRate: 7,
+    })
+    expect(screen.getByText("USD: USD:1")).toBeVisible()
+    expect(screen.getByText("CNY: CNY:7")).toBeVisible()
+  })
+  it("explains an unavailable comparison even when published pricing exists without a quote", () => {
+    renderDetails({
+      model: { ...baseProps.model, quota_type: 0 },
+      calculatedPrice: {
+        kind: CALCULATED_PRICE_KINDS.UNAVAILABLE,
+        reason: MODEL_UNAVAILABLE_PRICE_REASONS.OFFICIAL_PRICE_MISSING,
+        isComparisonActive: true,
+        publishedPricing: { schedule: [], rates: {}, source: {} },
+      } as any,
+      showGroupDetails: false,
+      showPricingDetails: true,
+    })
+    expect(screen.getByText("detailedPricing")).toBeVisible()
+    expect(
+      screen.getByText("unavailablePriceReasons.officialPriceMissing"),
+    ).toBeVisible()
+  })
   beforeEach(() => {
     vi.clearAllMocks()
     formatPriceMock.mockImplementation(
