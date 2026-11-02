@@ -7,10 +7,18 @@ import { accountQueries } from "~/services/accounts/accountStorage/accountQuerie
 import type { AuthConfig } from "~/services/apiTransport/type"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import type { CheckInFeedbackSnapshot } from "~/services/checkin/feedback/report"
+import type { SiteAccount } from "~/types"
 import { openAccountManagerWithSearch } from "~/utils/navigation"
 
 import { FeedbackForm } from "./FeedbackForm"
 import type { CheckInFeedbackSource } from "./useCheckInFeedback"
+
+/** Projects only saved refresh facts needed by the public report. */
+function getRefreshSnapshot(
+  account: SiteAccount,
+): NonNullable<CheckInFeedbackSnapshot["refresh"]> {
+  return { health: account.health, last_sync_time: account.last_sync_time }
+}
 
 /** Preserves editor drafts while enriching identified accounts with saved execution facts. */
 export default function CheckInFeedbackDialog({
@@ -29,20 +37,25 @@ export default function CheckInFeedbackDialog({
   useEffect(() => {
     let active = true
     if ("snapshot" in source) {
-      if (source.accountId && !source.snapshot.execution) {
-        void autoCheckinStorage
-          .getStatus()
-          .catch(() => null)
-          .then((status) => {
-            if (active)
-              setData({
-                ...source,
-                snapshot: {
-                  ...source.snapshot,
-                  execution: status?.perAccount?.[source.accountId!],
-                },
-              })
-          })
+      const accountId = source.accountId
+      if (accountId) {
+        void Promise.all([
+          accountQueries.getAccountById(accountId).catch(() => null),
+          autoCheckinStorage.getStatus().catch(() => null),
+        ]).then(([account, status]) => {
+          if (active)
+            setData({
+              ...source,
+              snapshot: {
+                ...source.snapshot,
+                refresh: account
+                  ? getRefreshSnapshot(account)
+                  : source.snapshot.refresh,
+                execution:
+                  source.snapshot.execution ?? status?.perAccount?.[accountId],
+              },
+            })
+        })
       } else {
         setData(source)
       }
@@ -65,6 +78,7 @@ export default function CheckInFeedbackDialog({
               baseUrl: account.site_url,
               siteType: account.site_type,
               checkIn: account.checkIn,
+              refresh: getRefreshSnapshot(account),
               execution,
             },
             auth: {

@@ -48,7 +48,11 @@ export function FeedbackForm({
     ) {
       return ""
     }
-    let text = getAutoCheckinResultMessage(t, snapshot.execution)
+    const text = getAutoCheckinResultMessage(t, snapshot.execution)
+    return sanitizeReportMessage(text)
+  })()
+  /** Redacts known credentials and URL details before public report generation. */
+  function sanitizeReportMessage(text: string) {
     for (const secret of [
       auth?.accessToken,
       auth?.cookie,
@@ -60,7 +64,7 @@ export function FeedbackForm({
     return sanitizeSensitiveErrorText(text)
       .replace(/https?:\/\/[^\s"'<>]+/gi, "[URL]")
       .slice(0, 2000)
-  })()
+  }
   const [notes, setNotes] = useState("")
   const [includeAddress, setIncludeAddress] = useState(true)
   const [details, setDetails] = useState(() =>
@@ -69,6 +73,9 @@ export function FeedbackForm({
       {
         version: pkg.version,
         executionMessage,
+        refreshMessage: sanitizeReportMessage(
+          snapshot.refresh?.health.reason ?? "",
+        ),
         platform: import.meta.env.FIREFOX ? "firefox" : "chromium",
       },
     ),

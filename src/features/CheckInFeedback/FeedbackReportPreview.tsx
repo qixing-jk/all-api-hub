@@ -6,7 +6,7 @@ export function FeedbackReportPreview({ content }: { content: string }) {
     <MarkdownContent
       content={content}
       data-testid="checkin-feedback-preview"
-      className="[&_details]:my-density-3 [&_summary]:py-density-1 [&_summary]:focus-visible:outline-ring [&_pre]:break-all [&_pre]:whitespace-pre-wrap [&_summary]:cursor-pointer [&_summary]:font-medium [&_summary]:focus-visible:outline-2 [&_table]:table-fixed [&_td]:break-words"
+      className="[&_details]:my-density-3 [&_summary]:py-density-1 [&_summary]:focus-visible:outline-ring [&_th[colspan]]:bg-surface-subtle [&_pre]:break-all [&_pre]:whitespace-pre-wrap [&_summary]:cursor-pointer [&_summary]:font-medium [&_summary]:focus-visible:outline-2 [&_table]:table-fixed [&_td]:break-words [&_th]:break-words [&_th[colspan]]:pt-4 [&_th[colspan]]:text-sm [&_th[colspan]]:font-semibold"
     />
   )
 }

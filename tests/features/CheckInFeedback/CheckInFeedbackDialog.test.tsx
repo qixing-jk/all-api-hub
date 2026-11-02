@@ -24,6 +24,7 @@ import commonLocale from "~/locales/en/common.json"
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import { collectFeedbackCluesInBrowser } from "~/services/checkin/feedback/scanClient"
+import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import type { CheckinAccountResult } from "~/types/autoCheckin"
 import type { CheckInConfig } from "~/types/checkIn"
 import { sendRuntimeActionMessage } from "~/utils/browser/runtimeMessages"
@@ -93,6 +94,60 @@ afterEach(() => {
 })
 
 describe("check-in feedback workflow", () => {
+  it.each(["editor", "saved"])(
+    "includes saved refresh diagnostics in %s feedback while preserving drafts",
+    async (kind) => {
+      const user = userEvent.setup()
+      vi.mocked(accountQueries.getAccountById).mockResolvedValue(
+        buildSiteAccount({
+          health: {
+            status: SiteHealthStatus.Error,
+            reason:
+              "Failed Bearer private-access-token https://example.com/private?token=secret",
+          },
+          last_sync_time: 1000,
+        }),
+      )
+      render(
+        wrap(
+          <CheckInFeedbackDialog
+            source={
+              kind === "editor"
+                ? {
+                    accountId: "account",
+                    snapshot,
+                    auth: {
+                      authType: AuthTypeEnum.AccessToken,
+                      accessToken: "private-access-token",
+                    },
+                  }
+                : { accountId: "account" }
+            }
+            onClose={vi.fn()}
+          />,
+        ),
+      )
+      await screen.findByLabelText("What happened? (optional)")
+      await user.click(screen.getByText("Review and edit submission"))
+      await user.click(
+        screen.getByText(accountDialogLocale.checkInFeedback.editReport),
+      )
+      const details = screen.getByLabelText(
+        accountDialogLocale.checkInFeedback.details,
+      )
+      const diagnosticText = (details as HTMLTextAreaElement).value
+      expect(diagnosticText).toContain("accountRefreshHealth: error")
+      expect(diagnosticText).toContain(
+        "accountRefreshRecordedAt: 1970-01-01T00:00:01.000Z",
+      )
+      expect(diagnosticText).toContain("[REDACTED]")
+      expect((details as HTMLTextAreaElement).value).not.toContain(
+        "private-access-token",
+      )
+      expect((details as HTMLTextAreaElement).value).not.toContain("/private")
+    },
+  )
+
   it("opens adaptation feedback as the primary action for an unsupported result", async () => {
     const user = userEvent.setup()
     vi.mocked(accountQueries.getAccountById).mockResolvedValue(
@@ -410,7 +465,7 @@ describe("check-in feedback workflow", () => {
     expect(report).toContain("execution</th><td>failed</td>")
     expect(report).toContain("execution reason</th><td>permission_denied</td>")
     expect(report).toContain("automatic execution enabled</th><td>false</td>")
-    expect(accountQueries.getAccountById).not.toHaveBeenCalled()
+    expect(accountQueries.getAccountById).toHaveBeenCalledWith("edited")
   })
   it("opens the result row's account and includes its controlled execution reason", async () => {
     const user = userEvent.setup()
