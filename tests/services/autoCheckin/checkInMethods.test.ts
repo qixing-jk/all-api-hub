@@ -1250,6 +1250,21 @@ describe("check-in methods compatibility activation", () => {
     })
   })
 
+  it("respects recent discovery cooldown during unattended execution with missing detection", async () => {
+    const account = createUnrecordedMethodAccount("automatic")
+    account.checkIn.methodKnowledge.lastFullDiscoveryAt = Date.now()
+    const registration = getNewApiExecutionRegistration()
+    const detect = vi.spyOn(registration.provider, "detect")
+    const result = await executeSelectedCheckIn({
+      account,
+      globalAutomaticExecutionEnabled: true,
+      context: createExecutionContext(),
+      isAutomaticExecutionEnabled: async () => true,
+    })
+    expect(detect).not.toHaveBeenCalled()
+    expect(result.kind).toBe("skipped")
+  })
+
   it.each([
     ["unrecorded", "manual"],
     ["unknown", "manual"],

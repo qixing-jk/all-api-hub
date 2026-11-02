@@ -16,6 +16,7 @@ import { ApiError } from "~/services/apiTransport/errors"
 import {
   inspectAccountCheckIn,
   resolveSelectedCheckInMethod,
+  shouldAutomaticallyDiscoverAccountCheckIn,
 } from "~/services/checkin/autoCheckin/discovery/inspection"
 import {
   AUTO_CHECKIN_ERROR_CATEGORIES,
@@ -470,7 +471,8 @@ const confirmSelectedCheckInMethod = async (input: {
     input.account.checkIn.methodKnowledge.methods[methodId]?.detection
       ?.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched ||
     (input.isAutomaticExecutionEnabled &&
-      input.account.checkIn.methodKnowledge.methods[methodId]?.detection)
+      (input.account.checkIn.methodKnowledge.methods[methodId]?.detection ||
+        !shouldAutomaticallyDiscoverAccountCheckIn(input.account)))
   ) {
     return {
       outcome: SELECTED_METHOD_CONFIRMATION_OUTCOMES.Continue,
