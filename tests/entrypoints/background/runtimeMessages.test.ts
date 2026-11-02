@@ -271,6 +271,42 @@ describe("setupRuntimeMessageListeners routing", () => {
     expect(dismissFeedback).toHaveBeenCalledWith(73)
   })
 
+  it("reports guided feedback failures and rejects dismissal without a sender tab", async () => {
+    const { setupRuntimeMessageListeners } = await import(
+      "~/entrypoints/background/runtimeMessages"
+    )
+    setupRuntimeMessageListeners()
+    openFeedback.mockRejectedValueOnce(new Error("navigation failed"))
+    const opened = vi.fn()
+    runtimeMessageListener?.(
+      { action: RuntimeActionIds.OpenCheckInFeedbackIssue, url: "invalid" },
+      { url: browser.runtime.getURL("options.html") },
+      opened,
+    )
+    await vi.waitFor(() =>
+      expect(opened).toHaveBeenCalledWith({ success: false }),
+    )
+    for (const sender of [{}, { tab: {} }]) {
+      const denied = vi.fn()
+      runtimeMessageListener?.(
+        { action: RuntimeActionIds.DismissCheckInFeedbackHint },
+        sender,
+        denied,
+      )
+      expect(denied).toHaveBeenCalledWith({ success: false })
+    }
+    dismissFeedback.mockRejectedValueOnce(new Error("storage unavailable"))
+    const dismissed = vi.fn()
+    runtimeMessageListener?.(
+      { action: RuntimeActionIds.DismissCheckInFeedbackHint },
+      { tab: { id: 73 } },
+      dismissed,
+    )
+    await vi.waitFor(() =>
+      expect(dismissed).toHaveBeenCalledWith({ success: false }),
+    )
+  })
+
   it("acknowledges relayed history only after persistence and reports write failures", async () => {
     const { setupRuntimeMessageListeners } = await import(
       "~/entrypoints/background/runtimeMessages"

@@ -18,6 +18,7 @@ const {
   rotateTempPageBrowserSessionMock,
   setupActionClickBehaviorListenerMock,
   setupTempPageReclaimRetryListenerMock,
+  setupCheckInFeedbackTabHintsMock,
   triggerStartupSettingsSnapshotMock,
   triggerStartupShieldBypassDailySummaryMock,
   triggerStartupSiteEcosystemSnapshotMock,
@@ -38,6 +39,7 @@ const {
   rotateTempPageBrowserSessionMock: vi.fn(),
   setupActionClickBehaviorListenerMock: vi.fn(),
   setupTempPageReclaimRetryListenerMock: vi.fn(),
+  setupCheckInFeedbackTabHintsMock: vi.fn(),
   triggerStartupSettingsSnapshotMock: vi.fn(),
   triggerStartupShieldBypassDailySummaryMock: vi.fn(),
   triggerStartupSiteEcosystemSnapshotMock: vi.fn(),
@@ -85,6 +87,7 @@ describe("background onSuspend temp-context cleanup", () => {
       .mockResolvedValue("browser-session-1")
     setupActionClickBehaviorListenerMock.mockReset()
     setupTempPageReclaimRetryListenerMock.mockReset()
+    setupCheckInFeedbackTabHintsMock.mockReset()
     triggerStartupSettingsSnapshotMock.mockReset()
     triggerStartupShieldBypassDailySummaryMock.mockReset()
     triggerStartupSiteEcosystemSnapshotMock.mockReset()
@@ -130,6 +133,9 @@ describe("background onSuspend temp-context cleanup", () => {
     }))
     vi.doMock("~/entrypoints/background/runtimeMessages", () => ({
       setupRuntimeMessageListeners: vi.fn(),
+    }))
+    vi.doMock("~/services/checkin/feedback/githubTab", () => ({
+      setupCheckInFeedbackTabHints: setupCheckInFeedbackTabHintsMock,
     }))
     vi.doMock("~/services/preferences/runtime/contextMenus", () => ({
       setupContextMenus: vi.fn(),
@@ -230,6 +236,7 @@ describe("background onSuspend temp-context cleanup", () => {
     vi.doUnmock("~/services/browsingContext/tempPage/runtime")
     vi.doUnmock("~/entrypoints/background/tempContextReclamation")
     vi.doUnmock("~/entrypoints/background/runtimeMessages")
+    vi.doUnmock("~/services/checkin/feedback/githubTab")
     vi.doUnmock("~/services/preferences/runtime/contextMenus")
     vi.doUnmock("~/entrypoints/background/cookieInterceptor")
     vi.doUnmock("~/entrypoints/background/devActionBranding")
@@ -267,6 +274,7 @@ describe("background onSuspend temp-context cleanup", () => {
     // Registered synchronously, before any await, so an alarm that woke this
     // worker is handled in the same activation.
     expect(setupTempPageReclaimRetryListenerMock).toHaveBeenCalledTimes(1)
+    expect(setupCheckInFeedbackTabHintsMock).toHaveBeenCalledTimes(1)
   })
 
   it("starts a new temp-page browser session on browser startup", async () => {

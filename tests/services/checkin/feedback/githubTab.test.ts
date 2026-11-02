@@ -64,6 +64,44 @@ afterEach(() => {
 })
 
 describe("GitHub feedback tab guidance", () => {
+  it("rejects malformed URLs and missing tab IDs before arming guidance", async () => {
+    await expect(openCheckInFeedbackIssueTab("invalid", hint)).rejects.toThrow(
+      "Invalid feedback",
+    )
+    vi.mocked(browser.tabs.create).mockResolvedValueOnce({} as browser.tabs.Tab)
+    await expect(openCheckInFeedbackIssueTab(url, hint)).rejects.toThrow(
+      "not created",
+    )
+    expect(Object.keys(values)).toHaveLength(0)
+    expect(browser.tabs.update).not.toHaveBeenCalled()
+  })
+
+  it("clears the armed hint when navigation fails", async () => {
+    vi.mocked(browser.tabs.update).mockRejectedValueOnce(
+      new Error("navigation failed"),
+    )
+    await expect(openCheckInFeedbackIssueTab(url, hint)).rejects.toThrow(
+      "navigation failed",
+    )
+    expect(Object.keys(values)).toHaveLength(0)
+  })
+
+  it("ignores incomplete or unrelated updates and accepts composer URL changes", async () => {
+    cleanup = setupCheckInFeedbackTabHints()
+    await openCheckInFeedbackIssueTab(url, hint)
+    updated(73, { status: "loading" }, { url })
+    updated(73, { status: "complete" }, {})
+    updated(73, { url: "invalid" }, {})
+    updated(73, { url: "https://example.com/" }, {})
+    await Promise.resolve()
+    expect(browser.storage.session.get).not.toHaveBeenCalled()
+    expect(browser.tabs.sendMessage).not.toHaveBeenCalled()
+    updated(73, { url }, {})
+    await vi.waitFor(() =>
+      expect(browser.tabs.sendMessage).toHaveBeenCalledOnce(),
+    )
+  })
+
   it("arms only the created tab before navigation and restores its hint after login", async () => {
     cleanup = setupCheckInFeedbackTabHints()
     await openCheckInFeedbackIssueTab(url, hint)

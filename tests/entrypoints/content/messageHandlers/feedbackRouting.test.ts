@@ -182,6 +182,37 @@ describe("feedback content routing", () => {
     )
   })
 
+  it("withdraws feedback without mounting UI and reports mount failure", async () => {
+    setupContentMessageHandlers()
+    const listener = atIndex(mocks.register.mock.calls, 0)[0]
+    const withdrawn = vi.fn()
+    mocks.showGitHubFeedbackHint.mockReturnValueOnce(true)
+    listener(
+      {
+        action: RuntimeActionIds.ContentCheckInFeedbackHint,
+        hint: { withdraw: true },
+      },
+      {},
+      withdrawn,
+    )
+    await vi.waitFor(() =>
+      expect(withdrawn).toHaveBeenCalledWith({ presented: true }),
+    )
+    expect(mocks.ensureRedemptionToastUi).not.toHaveBeenCalled()
+    mocks.ensureRedemptionToastUi.mockRejectedValueOnce(
+      new Error("UI unavailable"),
+    )
+    const failed = vi.fn()
+    listener(
+      { action: RuntimeActionIds.ContentCheckInFeedbackHint, hint: {} },
+      {},
+      failed,
+    )
+    await vi.waitFor(() =>
+      expect(failed).toHaveBeenCalledWith({ presented: false }),
+    )
+  })
+
   it("handles TurnstileAssistPageNotice action by showing page notice", async () => {
     mocks.ensureRedemptionToastUi.mockResolvedValueOnce(undefined)
     mocks.showTurnstileAssistPageNotice.mockReturnValueOnce(true)

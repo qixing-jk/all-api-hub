@@ -58,6 +58,21 @@ it("does not notify on login, unrelated pages or an expired session", () => {
   expect(notify.info).not.toHaveBeenCalled()
 })
 
+it.each([undefined, { success: false }])(
+  "keeps guidance retryable when dismissal fails: %j",
+  async (response) => {
+    const notify = { info: vi.fn(), dismiss: vi.fn() }
+    const fresh = { ...options, expiresAt: options.expiresAt + 1 }
+    expect(showGitHubFeedbackHint(fresh, notify)).toBe(true)
+    vi.mocked(sendRuntimeActionMessage).mockResolvedValueOnce(response)
+    await expect(
+      notify.info.mock.calls[0]![1].action.onClick(),
+    ).rejects.toThrow("Could not dismiss")
+    expect(notify.dismiss).not.toHaveBeenCalled()
+    expect(showGitHubFeedbackHint(fresh, notify)).toBe(true)
+  },
+)
+
 it("withdraws a previous notice on route changes without dismissing the feedback session", () => {
   const notify = { info: vi.fn(), dismiss: vi.fn() }
   vi.stubGlobal(

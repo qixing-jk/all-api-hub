@@ -744,6 +744,63 @@ describe("check-in feedback workflow", () => {
     write.mockRestore()
   })
 
+  it("does not navigate when a rejected clipboard write belongs to a closed report", async () => {
+    const user = userEvent.setup()
+    const { unmount } = render(
+      wrap(<CheckInFeedbackDialog source={{ snapshot }} onClose={vi.fn()} />),
+    )
+    const notes = await screen.findByLabelText("What happened? (optional)")
+    await user.click(notes)
+    await user.paste("Long report ".repeat(800))
+    let rejectCopy!: (error: Error) => void
+    const write = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((_resolve, reject) => {
+            rejectCopy = reject
+          }),
+      )
+    await user.click(
+      screen.getByRole("button", { name: "Copy report and open GitHub" }),
+    )
+    unmount()
+    await act(async () => rejectCopy(new Error("denied")))
+    expect(sendRuntimeActionMessage).not.toHaveBeenCalled()
+    write.mockRestore()
+  })
+
+  it.each([false, true])(
+    "keeps a new draft free of an old navigation result (failure: %s)",
+    async (fails) => {
+      const user = userEvent.setup()
+      render(
+        wrap(<CheckInFeedbackDialog source={{ snapshot }} onClose={vi.fn()} />),
+      )
+      const notes = await screen.findByLabelText("What happened? (optional)")
+      let finish!: () => void
+      vi.mocked(createTab).mockImplementationOnce(
+        () =>
+          new Promise((resolve, reject) => {
+            finish = () =>
+              fails
+                ? reject(new Error("navigation failed"))
+                : resolve(undefined)
+          }),
+      )
+      await user.click(
+        screen.getByRole("button", { name: "Continue to GitHub" }),
+      )
+      await user.type(notes, "new draft")
+      await act(async () => finish())
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument()
+      expect(
+        screen.getByRole("button", { name: "Continue to GitHub" }),
+      ).toBeEnabled()
+      expect(notes).toHaveValue("new draft")
+    },
+  )
+
   it("reveals selectable report text when the independent copy action fails", async () => {
     const user = userEvent.setup()
     render(

@@ -162,6 +162,71 @@ describe("check-in feedback report", () => {
     ).toContain("no_registered_candidates")
   })
 
+  it("distinguishes a stale selection from matched evidence without a failed retry", () => {
+    const report = buildCheckInFeedbackDetails(
+      {
+        siteType: SITE_TYPES.NEW_API,
+        baseUrl: "https://example.com",
+        checkIn: {
+          ...checkIn,
+          selection: { mode: "manual", methodId: "agentrouter:login-checkin" },
+          methodKnowledge: {
+            methods: {
+              "new-api:daily-checkin": {
+                detection: {
+                  outcome: "matched",
+                  evidence: { source: "probe", observedAt: 1 },
+                },
+              },
+            },
+          },
+        },
+      },
+      { version: "1", platform: "chromium" },
+    )
+    expect(report).toContain("selectionStatus: stale")
+    expect(report).toContain("new-api:daily-checkin: matched")
+    expect(report).not.toContain("permission_denied")
+  })
+
+  it.each([{ availability: "disabled", today: "not_checked" }, {}] as const)(
+    "preserves incomplete known status facts: %j",
+    (facts) => {
+      const report = buildCheckInFeedbackDetails(
+        {
+          siteType: SITE_TYPES.NEW_API,
+          baseUrl: "https://example.com",
+          checkIn: {
+            ...checkIn,
+            methodKnowledge: {
+              methods: {
+                "new-api:daily-checkin": {
+                  detection: {
+                    outcome: "matched",
+                    evidence: { source: "probe", observedAt: 1 },
+                  },
+                  status: {
+                    outcome: "known",
+                    ...facts,
+                    evidence: { source: "probe", observedAt: 1 },
+                  },
+                },
+              },
+            },
+          },
+        },
+        { version: "1", platform: "chromium" },
+      )
+      expect(report).toContain(
+        "availability: " +
+          ("availability" in facts ? facts.availability : "unknown"),
+      )
+      expect(report).toContain(
+        "today: " + ("today" in facts ? facts.today : "unknown"),
+      )
+    },
+  )
+
   it("normalizes the optional address and preserves edited content exactly through GitHub encoding", () => {
     const origin = getFeedbackOrigin(
       "https://name:password@example.com:8443/path?token=secret#fragment",
