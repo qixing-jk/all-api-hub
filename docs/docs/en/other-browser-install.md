@@ -227,7 +227,7 @@ Unpacked `.zip` builds do not update automatically. To update one, follow these 
 3. Extract it to the original fixed directory or to a new version-specific directory.
 4. Open the extension management page.
 5. If you are using the original directory, click `Reload` on the All API Hub card.
-6. If you are using a new directory, first remove the old version, then load the new directory.
+6. If you use a new directory, export a backup from All API Hub before removing the old version, load the new directory, then import the backup.
 
 ::: warning Note
 Do not place the extension directory in system temporary folders, download cache directories, or directories of software that might be cleaned up. If the directory is deleted or moved, the browser will be unable to load the extension.

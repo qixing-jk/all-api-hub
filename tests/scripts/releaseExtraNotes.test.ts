@@ -151,4 +151,7 @@ it("recommends the available ZIP when a release has no CRX", () => {
   const appendix = generateAppendix("v4.8.0", ["all-api-hub-4.8.0-chrome.zip"])
   expect(appendix).not.toContain("推荐安装 `all-api-hub-chrome.crx`")
   expect(appendix).toContain("当前发布未提供 `.crx`")
+  expect(appendix).toContain("已有 `.crx` 安装不会从本次发布自动更新")
+  expect(appendix).toContain("先导出备份")
+  expect(appendix).toContain("再导入备份")
 })
