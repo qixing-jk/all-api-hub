@@ -6,6 +6,8 @@ import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import { AuthTypeEnum } from "~/types"
 import { t } from "~/utils/i18n/core"
 
+import { forgetDeletedAimlApiAccountCredentials } from "./connectionCredentials"
+
 /**
  * Maps AI/ML API failures to local copy without echoing upstream text.
  *
@@ -33,6 +35,8 @@ function getAimlApiSafeErrorMessage(
 }
 
 export const aimlApiAccountPersistence: AccountPersistenceCapability = {
+  cleanupDeletedAccount: (account) =>
+    forgetDeletedAimlApiAccountCredentials(String(account.account_info.id)),
   async prepareIdentity({ accessToken, userId, aimlApiKey, existingAccount }) {
     const credential = accessToken.trim()
     const regularKey = aimlApiKey?.trim() ?? ""

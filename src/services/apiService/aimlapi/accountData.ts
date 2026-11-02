@@ -215,7 +215,7 @@ export async function fetchAimlApiAccountData(
   return {
     quota: billing.currentBalance * QUOTA_PER_USD,
     nativeBalance: toAccountBalance(billing),
-    today_quota_consumption: today?.spendUsd ?? 0,
+    today_quota_consumption: (today?.spendUsd ?? 0) * QUOTA_PER_USD,
     today_prompt_tokens: today?.inputTokens ?? 0,
     today_completion_tokens: today?.outputTokens ?? 0,
     today_requests_count: today?.requests ?? 0,

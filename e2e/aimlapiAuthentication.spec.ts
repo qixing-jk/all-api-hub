@@ -1,4 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import { readStoredAccounts } from "~~/e2e/scenarios/accountManualAdd"
@@ -36,6 +37,50 @@ const key = {
   total_usage_usd: 0,
   monthly_usage_usd: 0,
 }
+
+test("editing an AIMLAPI account offers one credential detection action", async ({
+  page,
+  context,
+  extensionId,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.emulateMedia({ reducedMotion: "reduce" })
+  await forceExtensionLanguage(page, "en")
+  await installExtensionPageGuards(page)
+  await stubLlmMetadataIndex(context)
+  const worker = await getServiceWorker(context)
+  await seedUserPreferences(worker, {
+    refreshOnOpen: false,
+    autoCheckin: { globalEnabled: false, pretriggerDailyOnUiOpen: false },
+  })
+  await seedStoredAccounts(worker, [
+    createStoredAccount({
+      id: "aimlapi-edit",
+      site_name: "AIMLAPI edit fixture",
+      site_type: SITE_TYPES.AIMLAPI,
+      site_url: "https://aimlapi.com",
+      account_info: { id: "123", username: "fixture", access_token: primary },
+      aimlApiAuth: { apiKey: regular },
+    }),
+  ])
+  await page.goto(`chrome-extension://${extensionId}/options.html#account`)
+  await waitForExtensionRoot(page)
+  await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton).click()
+  const dialog = page.getByRole("dialog")
+  await expect(
+    dialog.getByRole("button", { name: "Re-detect", exact: true }),
+  ).toBeVisible()
+  await dialog
+    .getByRole("button", { name: "Cancel", exact: true })
+    .locator("..")
+    .screenshot({
+      path: testInfo.outputPath("edit-actions.png"),
+      animations: "disabled",
+    })
+  await expect(
+    dialog.getByRole("button", { name: /^(Auto Detect|Re-detect)$/ }),
+  ).toHaveCount(1)
+})
 
 test("live runner verifies pasted credentials, saves and cleans its onboarding account", async ({
   context,

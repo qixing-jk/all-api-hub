@@ -3,8 +3,31 @@ import type { UserInfo } from "~/services/apiAdapters/contracts/accountBootstrap
 import { fetchAimlApiBillingDetail } from "~/services/apiService/aimlapi/accountData"
 import { fetchAimlApiLatestKey } from "~/services/apiService/aimlapi/keys"
 import { ensureAimlApiKey } from "~/services/apiService/aimlapi/transport"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import { createCompatibilityCheckInConfig } from "~/services/checkin/autoCheckin/configuration/compatibilityConfig"
+
+import {
+  AIMLAPI_CONNECTION_KEY_KINDS,
+  forgetInvalidAimlApiConnectionKey,
+} from "./connectionCredentials"
+
+/** A 401 proves this exact credential invalid; network and scope failures do not. */
+async function verifyCredential<T>(
+  kind: "management" | "regular",
+  key: string,
+  verify: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await verify()
+  } catch (error) {
+    if (error instanceof ApiError && error.code === API_ERROR_CODES.HTTP_401) {
+      // Cleanup failure must preserve the original verification error.
+      await forgetInvalidAimlApiConnectionKey(kind, key).catch(() => undefined)
+    }
+    throw error
+  }
+}
 
 /**
  * Resolves the saved account identity.
@@ -18,14 +41,23 @@ export async function fetchAimlApiUserInfo(
   request: ApiServiceRequest,
 ): Promise<UserInfo> {
   // Validate the primary credential even when billing supplies the identity.
-  const latest = await fetchAimlApiLatestKey(request)
+  const latest = await verifyCredential(
+    AIMLAPI_CONNECTION_KEY_KINDS.Management,
+    request.auth.accessToken?.trim() ?? "",
+    () => fetchAimlApiLatestKey(request),
+  )
   const apiKey = await ensureAimlApiKey(request)
   if (apiKey) {
-    const detail = await fetchAimlApiBillingDetail({
-      ...request,
-      checkIn: buildIdentityCheckInConfig(),
-      aimlApiKey: apiKey,
-    })
+    const detail = await verifyCredential(
+      AIMLAPI_CONNECTION_KEY_KINDS.Regular,
+      apiKey,
+      () =>
+        fetchAimlApiBillingDetail({
+          ...request,
+          checkIn: buildIdentityCheckInConfig(),
+          aimlApiKey: apiKey,
+        }),
+    )
     return {
       id: String(detail.userId),
       username: detail.email?.trim() || String(detail.userId),

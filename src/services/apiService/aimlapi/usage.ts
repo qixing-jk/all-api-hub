@@ -29,13 +29,15 @@ export async function fetchAimlApiKeyUsagePage(
   query: UsageHistoryPageQuery,
 ): Promise<LogResponseData> {
   const endpoint = AIMLAPI_ENDPOINTS.Logs
+  const limit = Math.min(Math.max(query.pageSize, 1), 100)
+  const offset = Math.max((query.page - 1) * limit, 0)
   const body = await fetchAimlApiJson<unknown>(request, endpoint, {
     credential: "regular-api-key",
     query: {
       start: new Date(query.startTimestamp).toISOString(),
       end: new Date(query.endTimestamp).toISOString(),
-      limit: Math.min(Math.max(query.pageSize, 1), 100),
-      offset: Math.max((query.page - 1) * query.pageSize, 0),
+      limit,
+      offset,
     },
   })
   if (!isRecord(body) || !Array.isArray(body.data))
@@ -54,7 +56,7 @@ export async function fetchAimlApiKeyUsagePage(
     return {
       // The deployment has no numeric log id; the page offset keeps the row
       // stable within one page without inventing a provider identifier.
-      id: index + Math.max((query.page - 1) * query.pageSize, 0),
+      id: index + offset,
       user_id: Number(request.auth?.userId) || 0,
       created_at: Math.floor(createdAt / 1000),
       type: status === "failed" ? LogType.Error : LogType.Consume,

@@ -36,6 +36,113 @@ vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
   accountQueries: { getAllAccountsOrThrow: vi.fn(async () => []) },
 }))
 beforeEach(() => vi.clearAllMocks())
+
+it("reuses saved credentials after verifying the current console identity", async () => {
+  const { accountQueries } = await import(
+    "~/services/accounts/accountStorage/accountQueries"
+  )
+  vi.mocked(accountQueries.getAllAccountsOrThrow).mockResolvedValueOnce([
+    {
+      site_type: "aimlapi",
+      account_info: { id: "123", access_token: "saved-management" },
+      aimlApiAuth: { apiKey: "saved-regular" },
+    },
+  ] as never)
+  server.use(
+    http.get("https://app.aimlapi.com/v1/users/me", () =>
+      HttpResponse.json({ id: "123", email: "person@example.invalid" }),
+    ),
+    http.get("https://api.aimlapi.com/v1/key", ({ request }) => {
+      expect(request.headers.get("authorization")).toBe(
+        "Bearer saved-management",
+      )
+      return HttpResponse.json({
+        data: {
+          prefix: "abcdefgh",
+          name: "AAH",
+          disabled: false,
+          created_at: "2026-10-01",
+          updated_at: "2026-10-01",
+          expires_at: null,
+          total_usage_usd: 0,
+          monthly_usage_usd: 0,
+        },
+      })
+    }),
+    http.get("https://api.aimlapi.com/v2/billing/detail", ({ request }) => {
+      expect(request.headers.get("authorization")).toBe("Bearer saved-regular")
+      return HttpResponse.json({
+        user_id: 123,
+        email: "person@example.invalid",
+        current_balance: 1,
+        currency: "USD",
+      })
+    }),
+  )
+  const result = await onboardAimlApiAccount({ allowCredentialCreation: true })
+  expect(result.data).toMatchObject({
+    userId: "123",
+    accessToken: "saved-management",
+    aimlApiAuth: { apiKey: "saved-regular" },
+  })
+})
+
+it("rejects saved credentials that resolve to a different console identity", async () => {
+  const { accountQueries } = await import(
+    "~/services/accounts/accountStorage/accountQueries"
+  )
+  vi.mocked(accountQueries.getAllAccountsOrThrow).mockResolvedValueOnce([
+    {
+      site_type: "aimlapi",
+      account_info: { id: "123", access_token: "saved-management" },
+      aimlApiAuth: { apiKey: "saved-regular" },
+    },
+  ] as never)
+  server.use(
+    http.get("https://app.aimlapi.com/v1/users/me", () =>
+      HttpResponse.json({ id: "123", email: "person@example.invalid" }),
+    ),
+    http.get("https://api.aimlapi.com/v1/key", () =>
+      HttpResponse.json({
+        data: {
+          prefix: "abcdefgh",
+          disabled: false,
+          created_at: "2026-10-01",
+          updated_at: "2026-10-01",
+          expires_at: null,
+          total_usage_usd: 0,
+          monthly_usage_usd: 0,
+        },
+      }),
+    ),
+    http.get("https://api.aimlapi.com/v2/billing/detail", () =>
+      HttpResponse.json({
+        user_id: 456,
+        email: "other@example.invalid",
+        current_balance: 1,
+        currency: "USD",
+      }),
+    ),
+  )
+  const result = await onboardAimlApiAccount({ allowCredentialCreation: true })
+  expect(result.success).toBe(false)
+  expect(result.message).toBe(
+    "accountDialog:messages.autoDetectIdentityMismatch",
+  )
+})
+
+it("falls back safely when browser session discovery rejects", async () => {
+  const { autoDetectSmart } = await import(
+    "~/services/siteDetection/autoDetectService"
+  )
+  vi.mocked(autoDetectSmart).mockRejectedValueOnce(
+    new Error("browser unavailable"),
+  )
+  expect(
+    await onboardAimlApiAccount({ allowCredentialCreation: true }),
+  ).toMatchObject({ success: false })
+})
+
 it("automatically acquires durable credentials and fills the verified identity", async () => {
   let creates = 0
   server.use(

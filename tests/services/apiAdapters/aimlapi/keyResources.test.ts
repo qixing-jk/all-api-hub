@@ -64,6 +64,47 @@ const openSession = () =>
   })
 
 describe("AI/ML API key resources", () => {
+  it.each([
+    ["day", "2026-10-01T00:00:00Z", "2026-10-02T00:00:00.000Z"],
+    ["week", "2026-10-05T00:00:00Z", "2026-10-12T00:00:00.000Z"],
+    ["month", "2026-10-01T00:00:00Z", "2026-11-01T00:00:00.000Z"],
+    ["day", null, undefined],
+    ["day", "invalid", undefined],
+    ["day", "2026-10-01T01:00:00Z", undefined],
+    ["week", "2026-10-01T00:00:00Z", undefined],
+    ["month", "2026-10-02T00:00:00Z", undefined],
+  ])(
+    "publishes only a calendar-aligned %s reset from %s",
+    async (retention, windowStart, expected) => {
+      server.use(
+        http.get(`${origin}/v1/keys`, () =>
+          HttpResponse.json({
+            data: [
+              {
+                ...nativeKey,
+                limit: {
+                  ...nativeKey.limit,
+                  retention,
+                  window_start: windowStart,
+                },
+              },
+            ],
+          }),
+        ),
+      )
+      const session = await openSession()
+      const scope = await session.resolveDefaultScope()
+      const collection = await session.openCollection(scope.scopeKey)
+      const page = await collection.list()
+      const budget = page.items[0]!.displayFacts?.find(
+        (fact) => fact.kind === "budget",
+      )
+      expect(budget?.kind === "budget" ? budget.nextResetAt : null).toBe(
+        expected,
+      )
+    },
+  )
+
   it.each(["disable", "enable"] as const)(
     "executes the %s action without opening the general editor or changing restrictions",
     async (action) => {

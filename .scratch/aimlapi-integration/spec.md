@@ -18,6 +18,7 @@ Status: ready-for-human
 3. 签发前重读会话身份，验证响应 owner、类别和可用性。有 regular key 时需匹配浏览器身份；只有 management key 且无账单身份时保留 credential-scoped 身份，不虚构账号关联。
 4. 按用户加锁的本地 ledger 在 POST 前写 pending，成功后先保存一次性明文再继续。取消重开及不确定结果不能盲目重复签发；已验证的保存凭据优先。
 5. 表单确认后才持久化。失败保留已发现身份和已取得凭据，显示手动引导，不用 console bearer 代替 management key。
+6. 删除账号提交后清理该用户 ledger 中已确认的明文凭据；pending 记录继续保留以阻止不确定签发重放。凭据校验明确返回 401 时只清理对应类别、相同密钥的 Ready 项，不能清掉已轮换的新密钥；403、网络失败和清理失败均不扩大失效范围。清理失败不改变已提交的账号删除或原始校验错误。
 
 控制台协议归 `apiService/aimlapi/console.ts`；账号用途、绑定和签发策略归 `apiAdapters/aimlapi/accountOnboarding.ts`。纯会话提取只使用瞬态认证合同。Novita 是主动注册表的另一个消费者，不为单站点另建分派框架。
 

@@ -79,6 +79,11 @@ describe("useAccountDialog duplicate account warning", () => {
       http.get("https://sub2.example.com/api/v1/usage/stats", () =>
         HttpResponse.json({ code: 0, data: {} }),
       ),
+      // Post-save discovery also probes optional check-in routes. Keep those
+      // requests local instead of leaving real network work in a closed worker.
+      http.get("https://sub2.example.com/*", () =>
+        HttpResponse.json({ message: "Not supported" }, { status: 404 }),
+      ),
     )
     await accountStorage.clearAllData()
     await userPreferences.resetToDefaults()

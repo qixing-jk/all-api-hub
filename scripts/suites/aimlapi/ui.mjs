@@ -190,8 +190,10 @@ export async function runAimlapiUiTest({
             )
           }
 
+          const artifactsRoot = ".scratch/aimlapi-integration/artifacts"
+          await fs.mkdir(artifactsRoot, { recursive: true })
           const evidenceDir = await fs.mkdtemp(
-            path.join(".scratch/aimlapi-integration/artifacts/", "pricing-"),
+            path.join(artifactsRoot, "pricing-"),
           )
           await page
             .getByRole("textbox", { name: "Search Models", exact: true })

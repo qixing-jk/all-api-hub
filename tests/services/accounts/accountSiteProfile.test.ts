@@ -393,6 +393,34 @@ describe("accountSiteProfile", () => {
     ).toEqual({})
   })
 
+  it.each([undefined, "", "   ", 123])(
+    "omits an invalid AI/ML API supplemental secret: %s",
+    (apiKey) => {
+      expect(
+        normalizeAccountSiteSupplementalAuth({
+          siteType: SITE_TYPES.AIMLAPI,
+          aimlApiAuth: { apiKey },
+        } as never),
+      ).toEqual({})
+    },
+  )
+
+  it("trims the secondary AI/ML API key and excludes credentials for other sites", () => {
+    expect(
+      normalizeAccountSiteSupplementalAuth({
+        siteType: SITE_TYPES.AIMLAPI,
+        aimlApiAuth: { apiKey: " regular " },
+        sub2apiAuth: { refreshToken: "unrelated" },
+      }),
+    ).toEqual({ aimlApiAuth: { apiKey: "regular" } })
+    expect(
+      normalizeAccountSiteSupplementalAuth({
+        siteType: SITE_TYPES.NEW_API,
+        aimlApiAuth: { apiKey: "regular" },
+      }),
+    ).toEqual({})
+  })
+
   it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])(
     "omits invalid persisted session expiry %s while retaining its refresh token",
     (tokenExpiresAt) => {

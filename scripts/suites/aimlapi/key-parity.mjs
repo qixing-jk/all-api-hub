@@ -13,7 +13,7 @@ export async function runAimlapiKeyParity({
   extensionId,
   serviceWorker,
   managementKey,
-  evidenceDir = ".scratch/aimlapi-integration/parity-artifacts",
+  evidenceDir = ".scratch/aimlapi-integration/artifacts",
 }) {
   if (!managementKey) throw new Error("AIMLAPI_MANAGEMENT_KEY is required")
   await fs.mkdir(evidenceDir, { recursive: true })

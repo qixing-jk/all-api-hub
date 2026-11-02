@@ -135,7 +135,7 @@ describe("AI/ML API account data", () => {
       permanent: 12.5,
       total: 12.5,
     })
-    expect(data.today_quota_consumption).toBe(1.25)
+    expect(data.today_quota_consumption).toBe(625_000)
     expect(data.today_prompt_tokens).toBe(1000)
     expect(data.today_completion_tokens).toBe(500)
     expect(data.today_requests_count).toBe(7)
@@ -198,6 +198,32 @@ describe("AI/ML API account data", () => {
 })
 
 describe("AI/ML API usage and logs", () => {
+  it.each([200, 0])(
+    "keeps capped page size %s contiguous across pages",
+    async (pageSize) => {
+      const requests: URL[] = []
+      server.use(
+        http.get(`${apiOrigin}${AIMLAPI_LOGS_ENDPOINT}`, ({ request }) => {
+          requests.push(new URL(request.url))
+          return HttpResponse.json({
+            data: [{ created: "2026-10-24T10:00:00.000Z", cost: { usd: 0 } }],
+            pagination: { total: 500 },
+          })
+        }),
+      )
+      const page = await fetchAimlApiKeyUsagePage(
+        createRequest({ aimlApiKey: apiKey }),
+        { page: 2, pageSize, startTimestamp: 0, endTimestamp: Date.now() },
+      )
+      const expectedOffset = pageSize === 200 ? 100 : 1
+      expect(requests[0].searchParams.get("limit")).toBe(String(expectedOffset))
+      expect(requests[0].searchParams.get("offset")).toBe(
+        String(expectedOffset),
+      )
+      expect(page.items[0].id).toBe(expectedOffset)
+    },
+  )
+
   it("pages request logs into the shared usage history shape", async () => {
     server.use(
       http.get(`${apiOrigin}${AIMLAPI_LOGS_ENDPOINT}`, ({ request }) => {

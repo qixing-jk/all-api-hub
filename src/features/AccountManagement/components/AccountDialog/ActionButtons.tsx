@@ -152,7 +152,7 @@ export default function ActionButtons({
 
   const actions = (
     <>
-      {detectFromCredential && (
+      {detectFromCredential && !(mode === DIALOG_MODES.EDIT && !isDetected) && (
         <Button
           type="button"
           onClick={onAutoDetect}

@@ -219,6 +219,7 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
     login: overrides.login,
     cookieAuth: overrides.cookieAuth,
     sub2apiAuth: overrides.sub2apiAuth,
+    aimlApiAuth: overrides.aimlApiAuth,
     kimiOpenPlatformAuth: overrides.kimiOpenPlatformAuth,
     tagIds: overrides.tagIds ?? [],
     tags: overrides.tags,
@@ -855,6 +856,23 @@ describe("accountStorage core behaviors", () => {
     expect(display.created_at).toBe(1_700_000_000_000)
     expect(display).not.toHaveProperty("can_check_in")
     expect(display).not.toHaveProperty("supports_check_in")
+  })
+
+  it("preserves AIMLAPI supplemental credentials through presentation and background refresh", async () => {
+    const account = createAccount({
+      id: "aimlapi-refresh",
+      site_type: SITE_TYPES.AIMLAPI,
+      site_url: "https://aimlapi.com",
+      aimlApiAuth: { apiKey: "regular" },
+    })
+    seedStorage([account])
+    expect(accountStorage.convertToDisplayData(account).aimlApiKey).toBe(
+      "regular",
+    )
+    await accountStorage.refreshAccount(account.id, true)
+    expect(mockRefreshAccountData).toHaveBeenCalledWith(
+      expect.objectContaining({ aimlApiKey: "regular" }),
+    )
   })
 
   it("excludes native credits from monetary totals while preserving their units", () => {
@@ -2897,6 +2915,41 @@ describe("accountStorage core behaviors", () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it.each([false, true])(
+    "runs provider cleanup after committed account deletion (bulk: %s)",
+    async (bulk) => {
+      const account = createAccount({ id: "provider-cleanup" })
+      seedStorage([account])
+      const cleanupDeletedAccount = vi.fn(async () => {
+        expect(storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS).accounts).toEqual(
+          [],
+        )
+      })
+      mockgetSiteTypeCapabilities.mockReturnValue({
+        account: { persistence: { cleanupDeletedAccount } },
+      })
+      if (bulk) await accountStorage.deleteAccounts([account.id])
+      else await accountStorage.deleteAccount(account.id)
+      expect(cleanupDeletedAccount).toHaveBeenCalledWith(account)
+    },
+  )
+
+  it("preserves successful deletion when provider credential cleanup fails", async () => {
+    const account = createAccount({ id: "cleanup-failure" })
+    seedStorage([account])
+    mockgetSiteTypeCapabilities.mockReturnValue({
+      account: {
+        persistence: {
+          cleanupDeletedAccount: vi
+            .fn()
+            .mockRejectedValue(new Error("storage unavailable")),
+        },
+      },
+    })
+    await expect(accountStorage.deleteAccount(account.id)).resolves.toBe(true)
+    expect(storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS).accounts).toEqual([])
   })
 
   it("deleteAccount records deletion without user timestamp and ignores async status cleanup failure", async () => {

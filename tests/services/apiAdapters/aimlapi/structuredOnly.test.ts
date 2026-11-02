@@ -5,6 +5,34 @@ import { aimlApiProviderModelCatalog } from "~/services/apiAdapters/aimlapi/mode
 import { quoteCanonicalModelPrice } from "~/services/modelPricing/quoteCanonicalModelPrice"
 import { server } from "~~/tests/msw/server"
 
+it("projects published context and output limits as typed catalogue facts", async () => {
+  server.use(
+    http.get("https://api.aimlapi.com/v1/models", () =>
+      HttpResponse.json({
+        data: [
+          {
+            id: "provider/model",
+            type: "openai/chat-completions",
+            info: {
+              name: "Model",
+              developer: "Provider",
+              contextLength: 128000,
+              outputMax: 8192,
+            },
+          },
+        ],
+      }),
+    ),
+  )
+  const result = await aimlApiProviderModelCatalog.fetchPricing({})
+  expect(result.data[0]?.presentation?.summaryFacts).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ type: "token-quantity", value: 128000 }),
+      expect.objectContaining({ type: "token-quantity", value: 8192 }),
+    ]),
+  )
+})
+
 it("retains unpriced models without requesting HTML, details or sitemap fallbacks", async () => {
   const requests: string[] = []
   server.use(
