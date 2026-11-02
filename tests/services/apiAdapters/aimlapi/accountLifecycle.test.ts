@@ -113,6 +113,19 @@ it("retains an untouched saved identity without sending requests", async () => {
   ).resolves.toBe("123")
 })
 
+it("retains a management-only saved identity without inventing a regular credential", async () => {
+  await expect(
+    aimlApiAccountPersistence.prepareIdentity({
+      accessToken: "management",
+      userId: "prefix-id",
+      existingAccount: {
+        site_type: "aimlapi",
+        account_info: { access_token: "management" },
+      },
+    } as never),
+  ).resolves.toBe("prefix-id")
+})
+
 it("verifies changed credentials and tolerates a missing billing email", async () => {
   server.use(
     http.get("https://api.aimlapi.com/v1/key", () =>
@@ -134,6 +147,37 @@ it("verifies changed credentials and tolerates a missing billing email", async (
       userId: "123",
     }),
   ).resolves.toBe("456")
+})
+
+it("re-verifies identity when only the saved regular key changes", async () => {
+  let billingAuthorization: string | null = null
+  server.use(
+    http.get("https://api.aimlapi.com/v1/key", () =>
+      HttpResponse.json({ data: key }),
+    ),
+    http.get("https://api.aimlapi.com/v2/billing/detail", ({ request }) => {
+      billingAuthorization = request.headers.get("authorization")
+      return HttpResponse.json({
+        user_id: 456,
+        email: null,
+        current_balance: 2,
+        currency: "USD",
+      })
+    }),
+  )
+  await expect(
+    aimlApiAccountPersistence.prepareIdentity({
+      accessToken: "management",
+      aimlApiKey: "replacement-regular",
+      userId: "123",
+      existingAccount: {
+        site_type: "aimlapi",
+        account_info: { access_token: "management" },
+        aimlApiAuth: { apiKey: "old-regular" },
+      },
+    } as never),
+  ).resolves.toBe("456")
+  expect(billingAuthorization).toBe("Bearer replacement-regular")
 })
 
 it.each([
@@ -164,6 +208,18 @@ it.each([
 })
 
 it("uses controlled fallbacks for unknown failures and reports failed refreshes", async () => {
+  const unknownApiError = new ApiError(
+    "secret upstream detail",
+    500,
+    "/private/route",
+    API_ERROR_CODES.HTTP_OTHER,
+  )
+  expect(
+    aimlApiAccountPersistence.getValidationFailureMessage(unknownApiError),
+  ).toBe("messages:aimlapi.networkFallback")
+  expect(
+    aimlApiAccountPersistence.getHealthFailureReason(unknownApiError),
+  ).toBe("account:healthStatus.unknownError")
   expect(
     aimlApiAccountPersistence.getValidationFailureMessage(new Error("secret")),
   ).not.toContain("secret")

@@ -461,6 +461,21 @@ it("rejects a switched console identity before issuing any credentials", async (
   expect(creates).toBe(0)
 })
 
+it("does not issue credentials after console identity verification fails", async () => {
+  const create = vi.fn(() => HttpResponse.json({}))
+  server.use(
+    http.get("https://app.aimlapi.com/v1/users/me", () =>
+      HttpResponse.json({ message: "private console detail" }, { status: 503 }),
+    ),
+    http.post("https://app.aimlapi.com/v1/keys", create),
+  )
+  const result = await onboardAimlApiAccount({ allowCredentialCreation: true })
+  expect(result.success).toBe(false)
+  expect(result.message).not.toContain("private console detail")
+  expect(result.recoveryData?.accessToken).toBeUndefined()
+  expect(create).not.toHaveBeenCalled()
+})
+
 it("rejects credentials scoped to another provider before session or API access", async () => {
   const { autoDetectSmart } = await import(
     "~/services/siteDetection/autoDetectService"

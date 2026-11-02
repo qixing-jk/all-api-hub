@@ -12,6 +12,7 @@ import {
   deleteAimlApiKey,
   fetchAimlApiKeys,
   fetchAimlApiLatestKey,
+  updateAimlApiKey,
 } from "~/services/apiService/aimlapi/keys"
 import {
   fetchAimlApiModelCatalog,
@@ -225,8 +226,11 @@ it.each([
   {},
   { data: [null] },
   { data: [{ created: "invalid", cost: { usd: 0 } }] },
+  { data: [{ created: null, cost: { usd: 0 } }] },
+  { data: [{ created: "2026-10-01", cost: null }] },
   { data: [{ created: "2026-10-01", cost: { usd: -1 } }] },
   { data: [], pagination: {} },
+  { data: [], pagination: null },
 ])("rejects malformed logs or unknown totals %#", async (body) => {
   server.use(http.get(`${origin}/v2/logs`, () => HttpResponse.json(body)))
   await expect(fetchAimlApiKeyUsagePage(request, query)).rejects.toMatchObject(
@@ -322,6 +326,18 @@ it("builds query parameters without serializing absent values", async () => {
   expect(received?.search).toBe("?enabled=false&count=0")
 })
 
+it("classifies an HTTP failure even when its problem body is null", async () => {
+  server.use(
+    http.get(`${origin}/v1/key`, () =>
+      HttpResponse.json(null, { status: 500 }),
+    ),
+  )
+  await expect(fetchAimlApiLatestKey(request)).rejects.toMatchObject({
+    statusCode: 500,
+    code: "HTTP_OTHER",
+  })
+})
+
 it("resolves a saved supplemental credential once per request and does not invent a missing one", async () => {
   const lookup = vi
     .spyOn(accountQueries, "getAccountById")
@@ -342,4 +358,46 @@ it("resolves a saved supplemental credential once per request and does not inven
     "aimlapi_management_key_required",
   )
   lookup.mockRestore()
+})
+
+it.each([undefined, {}, { apiKey: " " }])(
+  "rejects billing with an absent saved regular key before dispatch: %j",
+  async (aimlApiAuth) => {
+    const lookup = vi
+      .spyOn(accountQueries, "getAccountById")
+      .mockResolvedValue({
+        site_type: "aimlapi",
+        aimlApiAuth,
+      } as never)
+    const dispatch = vi.fn(() => HttpResponse.json({ unexpected: true }))
+    server.use(http.get(`${origin}/v2/billing/detail`, dispatch))
+    try {
+      await expect(
+        fetchAimlApiBillingDetail({
+          ...request,
+          aimlApiKey: undefined,
+          accountId: "missing-regular",
+        }),
+      ).rejects.toMatchObject({
+        scope: "regular-api-key",
+        message: "aimlapi_api_key_required",
+      })
+      expect(dispatch).not.toHaveBeenCalled()
+    } finally {
+      lookup.mockRestore()
+    }
+  },
+)
+
+it("retains only the requested key patch and preserves an explicit false status", async () => {
+  const bodies: unknown[] = []
+  server.use(
+    http.patch(`${origin}/v1/keys/abcdefgh`, async ({ request: incoming }) => {
+      bodies.push(await incoming.json())
+      return HttpResponse.json({ data: key })
+    }),
+  )
+  await updateAimlApiKey(request, "abcdefgh", { disabled: false })
+  await updateAimlApiKey(request, "abcdefgh", { name: "renamed" })
+  expect(bodies).toEqual([{ disabled: false }, { name: "renamed" }])
 })
