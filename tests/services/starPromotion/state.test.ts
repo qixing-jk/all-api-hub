@@ -63,7 +63,7 @@ describe("starPromotionState", () => {
       baselineAccountCount: 3,
       nextThreshold: 30,
     })
-    await starPromotionState.recordGitHubStarState(false)
+    await starPromotionState.recordGitHubStarState(false, { starRemoved: true })
     expect(mocks.set).toHaveBeenCalledWith(
       STORAGE_KEYS.STAR_PROMOTION_STATE,
       expect.objectContaining({
@@ -71,6 +71,24 @@ describe("starPromotionState", () => {
         githubStarred: false,
         nextThreshold: 60,
         deferredUntil: expect.any(Number),
+      }),
+    )
+  })
+
+  it("preserves detected completion after a stale initial unstarred observation", async () => {
+    mocks.get.mockResolvedValue({
+      status: "completed",
+      completionSource: "detected",
+      githubStarred: true,
+      baselineAccountCount: 3,
+    })
+    await starPromotionState.recordGitHubStarState(false)
+    expect(mocks.set).toHaveBeenCalledWith(
+      STORAGE_KEYS.STAR_PROMOTION_STATE,
+      expect.objectContaining({
+        status: "completed",
+        githubStarred: true,
+        completionSource: "detected",
       }),
     )
   })

@@ -8,13 +8,14 @@ import { render } from "~~/tests/test-utils/render"
 const mocks = vi.hoisted(() => ({
   createTab: vi.fn(),
   isPopup: false,
+  active: true,
   markCompleted: vi.fn(),
   deferThresholdPrompt: vi.fn(),
   trackImpression: vi.fn(),
 }))
 
 vi.mock("~/features/StarPromotion/useStarPromotionActive", () => ({
-  useStarPromotionActive: () => true,
+  useStarPromotionActive: () => mocks.active,
   useStarPromotionPromptImpression: mocks.trackImpression,
 }))
 
@@ -39,6 +40,7 @@ describe("FeedbackDropdownMenu star promotion", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.isPopup = false
+    mocks.active = true
     mocks.markCompleted.mockResolvedValue(undefined)
     mocks.createTab.mockResolvedValue(undefined)
   })
@@ -65,6 +67,45 @@ describe("FeedbackDropdownMenu star promotion", () => {
       expect(mocks.deferThresholdPrompt).toHaveBeenCalledTimes(1)
       expect(mocks.createTab).toHaveBeenCalledTimes(1)
     })
+  })
+
+  it("restores the menu invitation after completion is revoked", async () => {
+    const user = userEvent.setup()
+    const { rerender } = render(<FeedbackDropdownMenu language="en" />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    await user.click(
+      screen.getByRole("button", { name: "ui:feedback.trigger" }),
+    )
+    fireEvent.click(await screen.findByText("ui:feedback.starOnGithub"))
+    await waitFor(() => expect(mocks.deferThresholdPrompt).toHaveBeenCalled())
+    mocks.active = false
+    rerender(<FeedbackDropdownMenu language="en" />)
+    mocks.active = true
+    rerender(<FeedbackDropdownMenu language="en" />)
+    await user.click(
+      screen.getByRole("button", { name: "ui:feedback.trigger" }),
+    )
+    expect(await screen.findByText("ui:feedback.starOnGithub")).toBeVisible()
+  })
+
+  it("keeps the invitation available when opening GitHub fails", async () => {
+    mocks.createTab.mockRejectedValueOnce(new Error("tab failed"))
+    const user = userEvent.setup()
+    render(<FeedbackDropdownMenu language="en" />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+    await user.click(
+      screen.getByRole("button", { name: "ui:feedback.trigger" }),
+    )
+    fireEvent.click(await screen.findByText("ui:feedback.starOnGithub"))
+    await waitFor(() => expect(mocks.createTab).toHaveBeenCalled())
+    await user.click(
+      screen.getByRole("button", { name: "ui:feedback.trigger" }),
+    )
+    expect(await screen.findByText("ui:feedback.starOnGithub")).toBeVisible()
   })
 
   it("attributes impressions to the popup entrypoint", () => {

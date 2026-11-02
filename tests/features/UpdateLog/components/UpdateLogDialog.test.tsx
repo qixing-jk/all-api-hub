@@ -107,6 +107,26 @@ describe("UpdateLogDialog", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("keeps the star invitation available after a failed repository open", async () => {
+    vi.spyOn(browserApi, "createTab").mockRejectedValueOnce(
+      new Error("tab failed"),
+    )
+    const deferSpy = vi
+      .spyOn(starPromotionState, "deferThresholdPrompt")
+      .mockResolvedValue(undefined)
+    const user = userEvent.setup()
+    render(<UpdateLogDialog isOpen onClose={() => {}} version="4.8.0" />)
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:dialog.updateLog.starPrompt",
+      }),
+    )
+    expect(
+      screen.getByRole("button", { name: "ui:dialog.updateLog.starPrompt" }),
+    ).toBeVisible()
+    expect(deferSpy).not.toHaveBeenCalled()
+  })
+
   it("shows the fallback message when the iframe does not finish loading in time", async () => {
     vi.useFakeTimers()
     vi.spyOn(userPreferences, "getPreferences").mockResolvedValue(

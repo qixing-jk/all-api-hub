@@ -150,9 +150,19 @@ class StarPromotionStateService {
   }
 
   /** Sync observed state; revoking a detected star restores eligibility with backoff. */
-  async recordGitHubStarState(starred: boolean): Promise<void> {
+  async recordGitHubStarState(
+    starred: boolean,
+    observation?: { starRemoved: boolean },
+  ): Promise<void> {
     const accountCount = starred ? undefined : await this.readAccountCount()
     await this.mutateState((state) => {
+      // An initial unstarred page can be stale in a different repository tab.
+      if (
+        !starred &&
+        !observation?.starRemoved &&
+        state.completionSource === STAR_PROMOTION_COMPLETION_SOURCES.Detected
+      )
+        return state
       if (
         !starred &&
         state.completionSource === STAR_PROMOTION_COMPLETION_SOURCES.Detected

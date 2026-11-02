@@ -184,7 +184,9 @@ export function setupRuntimeMessageListeners() {
         }
 
         void starPromotionState
-          .recordGitHubStarState(request.starred)
+          .recordGitHubStarState(request.starred, {
+            starRemoved: request.starRemoved === true,
+          })
           .then(() => {
             if (request.starred)
               trackStarPromotionAction(

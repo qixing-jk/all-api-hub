@@ -50,6 +50,9 @@ export function setupStarPromotionContent(): () => void {
     void sendRuntimeActionMessage<{ success: boolean }>({
       action: RuntimeActionIds.ContentStarPromotionReport,
       starred: state === GITHUB_REPO_STAR_STATES.Starred,
+      starRemoved:
+        state === GITHUB_REPO_STAR_STATES.NotStarred &&
+        reportedState === GITHUB_REPO_STAR_STATES.Starred,
     })
       .then((response) => {
         if (response?.success === true) {

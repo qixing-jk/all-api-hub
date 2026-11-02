@@ -37,13 +37,18 @@ describe("useStarPromotionActive", () => {
   it("shows observed unstarred status while keeping invitations completed", async () => {
     getStateMock.mockResolvedValue({
       status: STAR_PROMOTION_STATUSES.Completed,
-      githubStarred: false,
     })
     const { result } = renderHook(() => ({
       starred: useIsStarred(),
       active: useStarPromotionActive(),
     }))
-    await waitFor(() => expect(getStateMock).toHaveBeenCalled())
+    await waitFor(() => expect(result.current.starred).toBe(true))
+    act(() => {
+      atIndex(watchStateMock.mock.calls, 0)[0]({
+        status: STAR_PROMOTION_STATUSES.Completed,
+        githubStarred: false,
+      })
+    })
     expect(result.current).toEqual({ starred: false, active: false })
   })
 

@@ -5,9 +5,19 @@ import { createLogger } from "~/utils/core/logger"
 import { starPromotionState } from "./state"
 
 const logger = createLogger("StarPromotionRepository")
+let opening: Promise<boolean> | undefined
 
 /** A browser handoff defers the invitation; it does not confirm a star. */
-export async function openStarPromotionRepository(): Promise<boolean> {
+export function openStarPromotionRepository(): Promise<boolean> {
+  if (opening) return opening
+  opening = openRepository().finally(() => {
+    opening = undefined
+  })
+  return opening
+}
+
+/** Opens the repository once, retaining a successful handoff if deferral fails. */
+async function openRepository(): Promise<boolean> {
   try {
     await createTab(REPO_URL, true)
   } catch (error) {

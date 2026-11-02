@@ -437,20 +437,29 @@ describe("setupRuntimeMessageListeners additional routing", () => {
     })
   })
 
-  it("records a trusted unstarred observation without suppression telemetry", async () => {
-    const listener = await loadListener()
-    const sendResponse = vi.fn()
-    listener(
-      { action: RuntimeActionIds.ContentStarPromotionReport, starred: false },
-      { url: "https://github.com/qixing-jk/all-api-hub" },
-      sendResponse,
-    )
-    await vi.waitFor(() =>
-      expect(sendResponse).toHaveBeenCalledWith({ success: true }),
-    )
-    expect(mocks.recordGitHubStarState).toHaveBeenCalledWith(false)
-    expect(mocks.trackStarPromotionAction).not.toHaveBeenCalled()
-  })
+  it.each([false, true])(
+    "records an unstarred observation with removal evidence %s without suppression telemetry",
+    async (starRemoved) => {
+      const listener = await loadListener()
+      const sendResponse = vi.fn()
+      listener(
+        {
+          action: RuntimeActionIds.ContentStarPromotionReport,
+          starred: false,
+          starRemoved,
+        },
+        { url: "https://github.com/qixing-jk/all-api-hub" },
+        sendResponse,
+      )
+      await vi.waitFor(() =>
+        expect(sendResponse).toHaveBeenCalledWith({ success: true }),
+      )
+      expect(mocks.recordGitHubStarState).toHaveBeenCalledWith(false, {
+        starRemoved,
+      })
+      expect(mocks.trackStarPromotionAction).not.toHaveBeenCalled()
+    },
+  )
 
   it("rejects repository-star detection when persistence fails", async () => {
     const listener = await loadListener()

@@ -8,7 +8,7 @@ import {
   Star,
   Users,
 } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import type { ComponentType } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -122,6 +122,9 @@ export function FeedbackDropdownMenu({
   const starPromotionActive = useStarPromotionActive()
   const [starItemDismissed, setStarItemDismissed] = useState(false)
   const starItemVisible = starPromotionActive && !starItemDismissed
+  useEffect(() => {
+    if (!starPromotionActive) setStarItemDismissed(false)
+  }, [starPromotionActive])
   const starPromotionEntrypoint = isExtensionSidePanel()
     ? PRODUCT_ANALYTICS_ENTRYPOINTS.Sidepanel
     : isExtensionPopup()

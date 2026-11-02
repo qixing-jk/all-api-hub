@@ -54,7 +54,7 @@ describe("setupStarPromotionContent", () => {
     const cleanup = setupStarPromotionContent()
     await vi.waitFor(() =>
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
-        expect.objectContaining({ starred: false }),
+        expect.objectContaining({ starred: false, starRemoved: false }),
       ),
     )
 
@@ -80,7 +80,7 @@ describe("setupStarPromotionContent", () => {
     document.querySelector("button")?.setAttribute("aria-pressed", "false")
     await vi.waitFor(() =>
       expect(sendRuntimeActionMessageMock).toHaveBeenLastCalledWith(
-        expect.objectContaining({ starred: false }),
+        expect.objectContaining({ starred: false, starRemoved: true }),
       ),
     )
     cleanup()
