@@ -197,9 +197,13 @@ describe("check-in feedback workflow", () => {
       screen.queryByLabelText("What happened? (optional)"),
     ).not.toBeInTheDocument()
   })
-  it.each(["editor", "saved"])(
-    "includes saved refresh diagnostics in %s feedback while preserving drafts",
-    async (kind) => {
+  it.each(
+    ["editor", "saved"].flatMap((kind) =>
+      ["rawMessage", "message"].map((field) => ({ kind, field })),
+    ),
+  )(
+    "includes saved refresh diagnostics in $kind feedback with $field while preserving drafts",
+    async ({ kind, field }) => {
       const user = userEvent.setup()
       vi.mocked(accountQueries.getAccountById).mockResolvedValue(
         buildSiteAccount({
@@ -232,7 +236,7 @@ describe("check-in feedback workflow", () => {
             accountName: "Account",
             status: "failed",
             timestamp: 1,
-            rawMessage:
+            [field]:
               "Failed session=saved-access-secret; private_field=hidden-cookie-value saved-refresh-secret kimi-secret aiml-secret",
           },
         },
