@@ -94,6 +94,78 @@ afterEach(() => {
 })
 
 describe("check-in feedback workflow", () => {
+  it("opens a snapshot with execution without waiting for execution storage", async () => {
+    vi.mocked(accountQueries.getAccountById).mockResolvedValue(
+      buildSiteAccount(),
+    )
+    vi.mocked(autoCheckinStorage.getStatus).mockImplementation(
+      () => new Promise(() => {}),
+    )
+    render(
+      wrap(
+        <CheckInFeedbackDialog
+          source={{
+            accountId: "account",
+            snapshot: {
+              ...snapshot,
+              execution: {
+                accountId: "account",
+                accountName: "Account",
+                timestamp: 1,
+                status: "failed",
+              },
+            },
+          }}
+          onClose={vi.fn()}
+        />,
+      ),
+    )
+    expect(
+      await screen.findByLabelText("What happened? (optional)"),
+    ).toBeVisible()
+  })
+
+  it("retains draft feedback when the saved account read fails", async () => {
+    vi.mocked(accountQueries.getAccountById).mockRejectedValueOnce(
+      new Error("unavailable"),
+    )
+    render(
+      wrap(
+        <CheckInFeedbackDialog
+          source={{ accountId: "account", snapshot }}
+          onClose={vi.fn()}
+        />,
+      ),
+    )
+    expect(
+      await screen.findByLabelText("What happened? (optional)"),
+    ).toBeVisible()
+  })
+
+  it("ignores a saved account lookup completed after closing", async () => {
+    let resolve!: (account: ReturnType<typeof buildSiteAccount>) => void
+    vi.mocked(accountQueries.getAccountById).mockImplementationOnce(
+      () =>
+        new Promise((done) => {
+          resolve = done
+        }),
+    )
+    const view = render(
+      wrap(
+        <CheckInFeedbackDialog
+          source={{ accountId: "account", snapshot }}
+          onClose={vi.fn()}
+        />,
+      ),
+    )
+    view.unmount()
+    await act(async () => {
+      resolve(buildSiteAccount())
+    })
+    expect(
+      screen.queryByLabelText("What happened? (optional)"),
+    ).not.toBeInTheDocument()
+  })
   it.each(["editor", "saved"])(
     "includes saved refresh diagnostics in %s feedback while preserving drafts",
     async (kind) => {
@@ -103,8 +175,11 @@ describe("check-in feedback workflow", () => {
           health: {
             status: SiteHealthStatus.Error,
             reason:
-              "Failed Bearer private-access-token https://example.com/private?token=secret",
+              "Failed saved-access-secret saved-cookie-secret saved-refresh-secret",
           },
+          account_info: { access_token: "saved-access-secret" },
+          cookieAuth: { sessionCookie: "saved-cookie-secret" },
+          sub2apiAuth: { refreshToken: "saved-refresh-secret" },
           last_sync_time: 1000,
         }),
       )
@@ -141,6 +216,9 @@ describe("check-in feedback workflow", () => {
         "accountRefreshRecordedAt: 1970-01-01T00:00:01.000Z",
       )
       expect(diagnosticText).toContain("[REDACTED]")
+      expect(diagnosticText).not.toContain("saved-access-secret")
+      expect(diagnosticText).not.toContain("saved-cookie-secret")
+      expect(diagnosticText).not.toContain("saved-refresh-secret")
       expect((details as HTMLTextAreaElement).value).not.toContain(
         "private-access-token",
       )

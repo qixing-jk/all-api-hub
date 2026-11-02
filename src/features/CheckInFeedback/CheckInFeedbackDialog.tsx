@@ -7,6 +7,7 @@ import { accountQueries } from "~/services/accounts/accountStorage/accountQuerie
 import type { AuthConfig } from "~/services/apiTransport/type"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import type { CheckInFeedbackSnapshot } from "~/services/checkin/feedback/report"
+import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { SiteAccount } from "~/types"
 import { openAccountManagerWithSearch } from "~/utils/navigation"
 
@@ -17,7 +18,20 @@ import type { CheckInFeedbackSource } from "./useCheckInFeedback"
 function getRefreshSnapshot(
   account: SiteAccount,
 ): NonNullable<CheckInFeedbackSnapshot["refresh"]> {
-  return { health: account.health, last_sync_time: account.last_sync_time }
+  const secrets = [
+    account.account_info.access_token,
+    account.cookieAuth?.sessionCookie,
+    account.sub2apiAuth?.refreshToken,
+  ].filter((secret): secret is string => Boolean(secret))
+  return {
+    health: {
+      ...account.health,
+      reason: account.health.reason
+        ? toSanitizedErrorSummary(account.health.reason, secrets)
+        : account.health.reason,
+    },
+    last_sync_time: account.last_sync_time,
+  }
 }
 
 /** Preserves editor drafts while enriching identified accounts with saved execution facts. */
@@ -41,7 +55,9 @@ export default function CheckInFeedbackDialog({
       if (accountId) {
         void Promise.all([
           accountQueries.getAccountById(accountId).catch(() => null),
-          autoCheckinStorage.getStatus().catch(() => null),
+          source.snapshot.execution
+            ? Promise.resolve(null)
+            : autoCheckinStorage.getStatus().catch(() => null),
         ]).then(([account, status]) => {
           if (active)
             setData({
