@@ -118,12 +118,12 @@ Sub2API 站点常见特征：控制台接口在 `/api/v1/*`，并使用 **短期
 1. **查询Issue**：前往 [GitHub Issues](https://github.com/qixing-jk/all-api-hub/issues) 搜索是否有相同问题
 2. **使用最新版本**：
    - 大多数用户建议优先使用商店版，等待浏览器商店自动更新
-   - 如果修复尚未上架商店、你的浏览器无法安装商店版或 Chrome Web Store 兼容版本，可临时从 GitHub Releases 手动安装
-   - GitHub Stable、Nightly 或 main 分支开发版适合临时验证和协助测试，手动安装后不会自动更新；你可以 Star / Watch 仓库来接收新版本通知，更多区别请查看 [安装渠道与更新说明](./extension-update-install.md)
+   - 如果修复尚未上架商店、你的浏览器无法安装商店版或 Chrome Web Store 兼容版本，可临时从 GitHub Releases 安装
+   - GitHub Stable、Nightly 或 main 分支开发版适合临时验证和协助测试。Chromium 用户安装 `.crx` 自更新版即可和商店版一样自动更新；解压加载的 `.zip` 不会自动更新，需要 Star / Watch 仓库或定期查看发布页。更多区别请查看 [安装渠道与更新说明](./extension-update-install.md)
 
 ### 如何获取最新版本？
 
-插件在多个平台发布，Chrome、Edge、Firefox 用户建议优先使用对应商店版本；Brave、Vivaldi、Opera 等 Chromium 浏览器通常也可以先尝试 Chrome Web Store。如果你想确认当前是否有新版本、为什么商店版可能晚于 GitHub Release、或需要手动安装 GitHub 包，请查看 [安装渠道与更新说明](./extension-update-install.md)。
+插件在多个平台发布，Chrome、Edge、Firefox 用户建议优先使用对应商店版本；Brave、Vivaldi、Opera 等 Chromium 浏览器通常也可以先尝试 Chrome Web Store。需要 GitHub 版本时，Chromium 用户请安装自更新 `.crx`，它会和商店版一样自动更新。如果你想确认当前是否有新版本、为什么商店版可能晚于 GitHub Release、或需要从 GitHub 安装，请查看 [安装渠道与更新说明](./extension-update-install.md)。
 
 ## ⚙️ 功能使用问题
 

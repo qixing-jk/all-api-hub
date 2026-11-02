@@ -4,7 +4,7 @@
 
 ## 1. 安装插件
 
-为了获得最佳体验（包括自动更新），我们**强烈推荐从各浏览器官方商店安装**。
+为了获得最佳体验（包括自动更新），我们**强烈推荐从各浏览器官方商店安装**。需要 GitHub 版本时，Chromium 用户请优先安装 `.crx` 自更新版，它同样会自动更新。
 
 | 渠道 | 下载链接 | 当前版本 | 用户数 |
 |------|----------|----------|--------|
@@ -15,7 +15,7 @@
 <details>
 <summary>📦 需要手动安装、Safari 或手机端？（点击展开）</summary>
 
-- **GitHub Stable**：无法安装商店版或 Chrome Web Store 兼容版本，或需要临时手动安装已发布修复时，可前往 [GitHub Releases](https://github.com/qixing-jk/all-api-hub/releases) 下载正式版。手动安装版本不会像商店版一样自动更新，你可以 Star / Watch 仓库来接收新版本通知。
+- **GitHub Stable**：无法安装商店版或 Chrome Web Store 兼容版本，或需要临时安装已发布修复时，可前往 [GitHub Releases](https://github.com/qixing-jk/all-api-hub/releases) 下载正式版。Chromium 用户请安装 `.crx` 自更新版，它会和商店版一样自动更新；解压加载的 `.zip` 不会自动更新。详见 [安装渠道与更新说明](./extension-update-install.md)。
 - **Nightly 预发布**：适合想抢先体验并协助测试的用户，可能不如商店稳定版稳定。Nightly 也属于手动安装通道，Chromium 用户可用 [自更新 `.crx`](./chromium-crx-self-update.md) 获得自动更新。
 - **Safari (Mac)**：需要通过 Xcode 安装，详见 [Safari 安装指南](./safari-install.md)。
 - **QQ / 360 / Brave / Vivaldi / Opera 等**：不同 Chromium 浏览器的商店入口不同，Brave、Vivaldi、Opera 可优先尝试 Chrome Web Store；无法使用商店时再手动加载，详见 [其他浏览器安装指南](./other-browser-install.md)。

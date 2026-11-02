@@ -1,15 +1,28 @@
 # Chromium 自更新安装（.crx）
 
-本页面向想长期使用 GitHub 版本、又不想每次手动换包的 Chromium 用户。安装 `.crx` 后，浏览器会按发布页上的更新清单自动获取新版本。
+本页面向必须使用 GitHub 版本的 Chromium 用户。安装 `.crx` 后，浏览器会按发布页上的更新清单自动获取新版本，因此 GitHub 附件里推荐用 `.crx`，而不是解压加载的 `.zip`。
 
 ::: tip 先确认你是否需要这条路
-如果你能用 Chrome 商店、Edge 商店或 Firefox Add-ons，请直接使用商店版，它由浏览器自动更新，无需任何配置。
+如果你能用 Chrome 商店、Edge 商店或 Firefox Add-ons，请直接使用商店版：安装最简单，也不需要任何策略配置。
 
-只有满足以下任一情况时，自更新安装才有意义：
+只有必须走 GitHub 附件时（商店还没上架、浏览器装不了商店版或 Chrome Web Store 兼容版本、或需要提前体验 Nightly），才需要区分附件形式：
 
-- 你在 Linux 上使用 Chromium / Chrome。
-- 你使用 QQ 浏览器、360 系、Brave、Vivaldi 等允许外部扩展的 Chromium 分支。
-- 你愿意在 stock Chrome / Edge 上配置一次扩展白名单策略。
+- **推荐 `.crx` 自更新**：和商店版一样自动更新，装一次之后不用再手动换包。
+- `.zip` 解压加载：不会自动更新，每次升级都要重新下载，仅在 `.crx` 装不上时使用。
+
+stock Chrome / Edge 安装 `.crx` 前需要按本页配置一次扩展白名单策略（Linux 无需配置；Windows 版 Edge 还要求设备入域）。
+:::
+
+::: tip 哪些浏览器属于 Chromium
+默认按 Chromium 处理：除 Firefox 和 Safari 外，常见的桌面扩展浏览器基本都是 Chromium 系。不确定时对照 [浏览器表格](./other-browser-install.md#supported-browsers)。
+
+Firefox请优先使用 Firefox Add-ons；Safari 见 [Safari 安装指南](./safari-install.md)。
+
+如果你不确定自己的浏览器属于哪一类，可以对照 [其他浏览器安装指南的浏览器表格](./other-browser-install.md#supported-browsers)。
+:::
+
+::: warning 解压加载的 `.zip` 不会自动更新
+GitHub Release 里的 `all-api-hub-<version>-chrome.zip` 解压加载后不会自更新，每次升级都要重新下载并重新加载。它和 `.crx` 的扩展 ID 不同，两者数据不互通。
 :::
 
 ## 为什么 stock Chrome / Edge 需要额外配置
