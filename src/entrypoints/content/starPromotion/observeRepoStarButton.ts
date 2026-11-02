@@ -46,6 +46,7 @@ export function setupStarPromotionContent(): () => void {
   let reportPending = false
   let retryTimer: number | undefined
   let retryDelay = 5_000
+  let observedState: GitHubRepoStarState | null | undefined
 
   const reportState = (state: GitHubRepoStarState) => {
     reportPending = true
@@ -53,9 +54,7 @@ export function setupStarPromotionContent(): () => void {
     let acknowledged = false
     const removalEvidence =
       state === GITHUB_REPO_STAR_STATES.NotStarred
-        ? reportedState === GITHUB_REPO_STAR_STATES.Starred
-          ? Promise.resolve(true)
-          : verifyUnstarredState()
+        ? verifyUnstarredState()
         : Promise.resolve(false)
     void removalEvidence
       .then((starRemoved) => {
@@ -86,6 +85,7 @@ export function setupStarPromotionContent(): () => void {
         reportPending = false
         if (
           !disposed &&
+          resolveGitHubRepoStarState(document) === state &&
           (!acknowledged ||
             (state === GITHUB_REPO_STAR_STATES.NotStarred && !verifiedRemoval))
         ) {
@@ -106,11 +106,13 @@ export function setupStarPromotionContent(): () => void {
     }
 
     const state = resolveGitHubRepoStarState(document)
-    if (state === GITHUB_REPO_STAR_STATES.Starred) {
+    if (state !== observedState) {
       window.clearTimeout(retryTimer)
       retryTimer = undefined
       retryDelay = 5_000
-    } else if (retryTimer !== undefined) return
+      observedState = state
+    }
+    if (retryTimer !== undefined) return
     if (state === null || state === reportedState || reportPending) {
       return
     }

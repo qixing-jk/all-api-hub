@@ -151,7 +151,7 @@ describe("setupStarPromotionContent", () => {
         .mockRejectedValueOnce(error)
         .mockResolvedValue({ success: true })
       const cleanup = setupStarPromotionContent()
-      await vi.advanceTimersByTimeAsync(1_000)
+      await vi.advanceTimersByTimeAsync(5_000)
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(2)
       cleanup()
     },
@@ -224,6 +224,41 @@ describe("setupStarPromotionContent", () => {
     },
   )
 
+  it("revalidates a removal when another tab has starred the repository", async () => {
+    const cleanup = setupStarPromotionContent()
+    await vi.waitFor(() =>
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1),
+    )
+    vi.mocked(fetch).mockResolvedValue(
+      new Response('<form action="/qixing-jk/all-api-hub/unstar"></form>'),
+    )
+    document.querySelector("button")?.setAttribute("aria-pressed", "false")
+    await vi.advanceTimersByTimeAsync(1)
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(sendRuntimeActionMessageMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ starred: false, starRemoved: false }),
+    )
+    cleanup()
+  })
+
+  it("preserves backoff for a failed starred report despite mutations", async () => {
+    sendRuntimeActionMessageMock.mockResolvedValue({ success: false })
+    const cleanup = setupStarPromotionContent()
+    await vi.waitFor(() =>
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1),
+    )
+    for (let index = 0; index < 3; index++) {
+      document.body.append(document.createElement("span"))
+      await vi.advanceTimersByTimeAsync(1_000)
+    }
+    expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(2_000)
+    expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(2)
+    await vi.advanceTimersByTimeAsync(5_000)
+    expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(2)
+    cleanup()
+  })
+
   it("retries an unchanged state after a failed acknowledgement", async () => {
     sendRuntimeActionMessageMock
       .mockResolvedValueOnce({ success: false })
@@ -234,6 +269,7 @@ describe("setupStarPromotionContent", () => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1)
     })
     document.body.append(document.createElement("span"))
+    await vi.advanceTimersByTimeAsync(5_000)
 
     await vi.waitFor(() => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(2)
@@ -263,6 +299,9 @@ describe("setupStarPromotionContent", () => {
   })
 
   it("reports unstarred changes or duplicate the starred state", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response('<form action="/qixing-jk/all-api-hub/star"></form>'),
+    )
     const cleanup = setupStarPromotionContent()
     await vi.waitFor(() => {
       expect(sendRuntimeActionMessageMock).toHaveBeenCalledTimes(1)
