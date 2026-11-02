@@ -163,6 +163,69 @@ afterEach(() => {
 })
 
 describe("automatic check-in preparation", () => {
+  it("confirms an imported manual choice with no detection before daily readiness filtering", async () => {
+    const account = createAccount()
+    account.checkIn.selection = { mode: "manual", methodId: PRO }
+    account.checkIn.methodKnowledge.methods = {}
+    saveAccount(account)
+    const result = await prepare(account)
+    expect(result.discovered).toBe(true)
+    expect(result.account?.checkIn.selection).toEqual({
+      mode: "manual",
+      methodId: PRO,
+    })
+    expect(detectors[1]).not.toHaveBeenCalled()
+    expect(checkIn).not.toHaveBeenCalled()
+  })
+  it("reconfirms an unsupported manual choice after cooldown without selecting an alternative", async () => {
+    const account = createAccount()
+    account.checkIn.selection = { mode: "manual", methodId: PRO }
+    account.checkIn.methodKnowledge.methods[PRO] = {
+      detection: detection(
+        "unsupported",
+        NOW - AUTOMATIC_CHECK_IN_DISCOVERY_COOLDOWN_MS,
+      ),
+    }
+    saveAccount(account)
+    const result = await prepare(account)
+    expect(result.discovered).toBe(true)
+    expect(result.account?.checkIn.selection).toEqual({
+      mode: "manual",
+      methodId: PRO,
+    })
+    expect(
+      result.account?.checkIn.methodKnowledge.methods[PRO]?.detection.outcome,
+    ).toBe("matched")
+    expect(detectors[1]).not.toHaveBeenCalled()
+    expect(checkIn).not.toHaveBeenCalled()
+  })
+  it("recovers an uncertain manual choice without probing alternatives and observes the cooldown", async () => {
+    const account = createAccount()
+    account.checkIn.selection = { mode: "manual", methodId: PRO }
+    account.checkIn.methodKnowledge.methods[PRO] = {
+      detection: {
+        outcome: "unknown",
+        reason: "invalid_response",
+        attemptedAt: NOW - AUTOMATIC_CHECK_IN_DISCOVERY_COOLDOWN_MS,
+      },
+    }
+    saveAccount(account)
+    const result = await prepare(account)
+    expect(result.discovered).toBe(true)
+    expect(result.account?.checkIn.selection).toEqual({
+      mode: "manual",
+      methodId: PRO,
+    })
+    expect(
+      result.account?.checkIn.methodKnowledge.methods[PRO]?.detection.outcome,
+    ).toBe("matched")
+    expect(detectors[0]).toHaveBeenCalledTimes(1)
+    expect(detectors[1]).not.toHaveBeenCalled()
+    expect(detectors[2]).not.toHaveBeenCalled()
+    expect(checkIn).not.toHaveBeenCalled()
+    expect(await prepare(result.account!)).toMatchObject({ discovered: false })
+  })
+
   it("recovers a timeout-stale selection with a slow browser-assisted probe", async () => {
     const account = createAccount()
     account.checkIn.selection = { mode: "automatic", methodId: PRO }

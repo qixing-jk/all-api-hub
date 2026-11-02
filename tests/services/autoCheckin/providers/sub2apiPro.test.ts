@@ -519,6 +519,7 @@ describe("Sub2API Pro daily check-in method Adapter", () => {
       executeSelectedCheckIn({
         account,
         globalAutomaticExecutionEnabled: true,
+        isAutomaticExecutionEnabled: async () => true,
         context: executionContext(),
       }),
     ).resolves.toMatchObject({ kind: "skipped", reason: "method_unsupported" })

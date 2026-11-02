@@ -5,13 +5,15 @@ import {
 import { accountQueries } from "~/services/accounts/accountStorage/accountQueries"
 import { discoverAccountCheckInMethods } from "~/services/checkin/autoCheckin/discovery/accountDiscovery"
 import { shouldAutomaticallyDiscoverAccountCheckIn } from "~/services/checkin/autoCheckin/discovery/inspection"
+import { resolveCheckInSelectionPolicy } from "~/services/checkin/autoCheckin/domain"
 import type { AutoCheckinProviderContext } from "~/services/checkin/autoCheckin/providers/contracts"
+import { getAutoCheckinCandidateMethodIds } from "~/services/checkin/autoCheckin/providers/registry"
 import type { SiteAccount } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("AutomaticCheckInDiscovery")
 
-/** Prepares automatic selection without executing a check-in or changing user intent. */
+/** Refreshes method evidence for an automatic run without executing check-in or changing user intent. */
 export async function prepareAutomaticCheckIn(input: {
   account: SiteAccount
   context: AutoCheckinProviderContext
@@ -45,7 +47,13 @@ export async function prepareAutomaticCheckIn(input: {
     }
     const discovery = await discoverAccountCheckInMethods(
       account,
-      input.context,
+      {
+        ...input.context,
+        methodIds: resolveCheckInSelectionPolicy(
+          account.checkIn.selection,
+          getAutoCheckinCandidateMethodIds(account.site_type, account.site_url),
+        ).discoveryMethodIds,
+      },
       account.checkIn.methodKnowledge.lastAutomaticDiscoveryAttemptAt,
     )
     if (!(await input.isAutomaticExecutionEnabled())) {

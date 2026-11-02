@@ -39,6 +39,8 @@ interface CheckInDiscoveryInput {
   /** Optional runtime request context for browser-profile and protection bypass. */
   request?: ApiServiceRequest
   registry?: AutoCheckinMethodRegistry
+  /** Restricts a recovery round to the user's selected method. */
+  methodIds?: readonly CheckInMethodId[]
   observedAt?: number
   perAdapterTimeoutMs?: number
   deadlineMs?: number
@@ -169,7 +171,7 @@ export async function discoverCheckInMethods(
   const registry = input.registry ?? autoCheckinMethodRegistry
   const registrations = [
     ...registry.getCandidates(input.account.site_type, input.account.site_url),
-  ]
+  ].filter(({ id }) => !input.methodIds || input.methodIds.includes(id))
   const observedAt = input.observedAt ?? Date.now()
   const perAdapterTimeoutMs =
     input.perAdapterTimeoutMs ?? DEFAULT_PER_ADAPTER_TIMEOUT_MS
@@ -245,16 +247,17 @@ export async function discoverCheckInMethods(
     if (item.timedOut) timedOutMethodIds.push(item.id)
   }
 
+  const candidateMethodIds = registrations.map(({ id }) => id)
   const config = mergeCheckInDiscoveryResults({
     config: input.config,
-    candidateMethodIds: registrations.map(({ id }) => id),
+    candidateMethodIds,
     detections,
     statuses,
     completedAt: observedAt,
   })
   const decision: CheckInDiscoveryDecision = inspectCheckInMethods({
     config,
-    candidateMethodIds: registrations.map(({ id }) => id),
+    candidateMethodIds,
   }).decision
 
   return { config, decision, detections, statuses, timedOutMethodIds }

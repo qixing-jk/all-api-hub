@@ -7,7 +7,6 @@ import {
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
   CHECK_IN_METHOD_UNKNOWN_REASON_CODES,
-  CHECK_IN_SELECTION_MODES,
 } from "~/constants/checkIn"
 import {
   getSub2ApiAuthPersistenceStatus,
@@ -17,6 +16,7 @@ import { ApiError } from "~/services/apiTransport/errors"
 import {
   inspectAccountCheckIn,
   resolveSelectedCheckInMethod,
+  shouldAutomaticallyDiscoverAccountCheckIn,
 } from "~/services/checkin/autoCheckin/discovery/inspection"
 import {
   AUTO_CHECKIN_ERROR_CATEGORIES,
@@ -388,15 +388,18 @@ export function inspectSelectedCheckInCompatibility(input: {
   }
 }
 
-/** Records the first probe for one method without changing the saved selection. */
-const recordInitialMethodProbe = (input: {
+/** Records confirmed evidence for the selected method without changing selection. */
+const recordConfirmedMethodProbe = (input: {
   config: CheckInConfig
   methodId: CheckInMethodId
   detection: CheckInMethodDetection
   status?: CheckInMethodStatus
 }): CheckInConfig => {
   const previous = input.config.methodKnowledge.methods[input.methodId]
-  if (previous?.detection) return input.config
+  if (
+    previous?.detection?.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched
+  )
+    return input.config
   return {
     ...input.config,
     methodKnowledge: {
@@ -404,6 +407,7 @@ const recordInitialMethodProbe = (input: {
       methods: {
         ...input.config.methodKnowledge.methods,
         [input.methodId]: {
+          ...previous,
           detection: input.detection,
           ...(input.status ? { status: input.status } : {}),
         },
@@ -434,27 +438,46 @@ const probeSelectedMethod = async (
 }
 
 /**
- * A manual choice stays fixed, but a candidate with no detection record is
- * confirmed before execution. Uncertain probes are not saved, so a later run
- * can try the same method again.
+ * Both selection modes confirm the same selected method before execution.
+ * Background runs prepare stale evidence through the persistent cooldown;
+ * explicit execution can reconfirm immediately. Uncertain probes do not
+ * replace saved evidence or permit mutation.
  */
-const confirmUnrecordedManualCheckInMethod = async (input: {
+const SELECTED_METHOD_CONFIRMATION_OUTCOMES = {
+  Continue: "continue",
+  Finished: "finished",
+} as const
+
+const confirmSelectedCheckInMethod = async (input: {
   account: SiteAccount
   globalAutomaticExecutionEnabled: boolean
   loginProviderClaimedByAnother?: boolean
   revalidateAccount?: RevalidateCheckInAccount
+  isAutomaticExecutionEnabled?: () => Promise<boolean>
 }): Promise<
-  | { outcome: "continue"; account: SiteAccount }
-  | { outcome: "finished"; result: ExecuteSelectedCheckInResult }
+  | {
+      outcome: typeof SELECTED_METHOD_CONFIRMATION_OUTCOMES.Continue
+      account: SiteAccount
+    }
+  | {
+      outcome: typeof SELECTED_METHOD_CONFIRMATION_OUTCOMES.Finished
+      result: ExecuteSelectedCheckInResult
+    }
 > => {
   const selection = input.account.checkIn.selection
   const methodId = selection.methodId
   if (
-    selection.mode !== CHECK_IN_SELECTION_MODES.Manual ||
     !isCheckInMethodId(methodId) ||
     input.account.checkIn.methodKnowledge.methods[methodId]?.detection
+      ?.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched ||
+    (input.isAutomaticExecutionEnabled &&
+      (input.account.checkIn.methodKnowledge.methods[methodId]?.detection ||
+        !shouldAutomaticallyDiscoverAccountCheckIn(input.account)))
   ) {
-    return { outcome: "continue", account: input.account }
+    return {
+      outcome: SELECTED_METHOD_CONFIRMATION_OUTCOMES.Continue,
+      account: input.account,
+    }
   }
 
   const state = inspectAccountCheckIn({
@@ -467,22 +490,35 @@ const confirmUnrecordedManualCheckInMethod = async (input: {
   })
   if (
     state.executionEligibility.eligible ||
-    state.executionEligibility.skipReason !==
-      CHECK_IN_EXECUTION_SKIP_REASONS.MethodNotMatched
+    (state.executionEligibility.skipReason !==
+      CHECK_IN_EXECUTION_SKIP_REASONS.MethodNotMatched &&
+      state.executionEligibility.skipReason !==
+        CHECK_IN_EXECUTION_SKIP_REASONS.MethodUnsupported &&
+      state.executionEligibility.skipReason !==
+        CHECK_IN_EXECUTION_SKIP_REASONS.Timeout)
   ) {
-    return { outcome: "continue", account: input.account }
+    return {
+      outcome: SELECTED_METHOD_CONFIRMATION_OUTCOMES.Continue,
+      account: input.account,
+    }
   }
 
   const registration = autoCheckinMethodRegistry.resolveById(methodId)
   if (!registration) {
-    return { outcome: "continue", account: input.account }
+    return {
+      outcome: SELECTED_METHOD_CONFIRMATION_OUTCOMES.Continue,
+      account: input.account,
+    }
   }
   const probed = await probeSelectedMethod(registration, input.account)
   if (!probed || !isPersistableInitialCheckInDetection(probed.detection)) {
-    return { outcome: "continue", account: input.account }
+    return {
+      outcome: SELECTED_METHOD_CONFIRMATION_OUTCOMES.Continue,
+      account: input.account,
+    }
   }
 
-  const updatedConfig = recordInitialMethodProbe({
+  const updatedConfig = recordConfirmedMethodProbe({
     config: input.account.checkIn,
     methodId,
     detection: probed.detection,
@@ -493,27 +529,33 @@ const confirmUnrecordedManualCheckInMethod = async (input: {
     try {
       const persisted = await input.revalidateAccount(updatedConfig)
       if (!persisted) {
-        return { outcome: "finished", result: accountStateWriteFailure() }
+        return {
+          outcome: SELECTED_METHOD_CONFIRMATION_OUTCOMES.Finished,
+          result: accountStateWriteFailure(),
+        }
       }
       const persistedDetection =
         persisted.checkIn.methodKnowledge.methods[methodId]?.detection
       if (persistedDetection) account = persisted
     } catch {
-      return { outcome: "finished", result: accountStateWriteFailure() }
+      return {
+        outcome: SELECTED_METHOD_CONFIRMATION_OUTCOMES.Finished,
+        result: accountStateWriteFailure(),
+      }
     }
   }
   if (
     probed.detection.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Unsupported
   ) {
     return {
-      outcome: "finished",
+      outcome: SELECTED_METHOD_CONFIRMATION_OUTCOMES.Finished,
       result: {
         kind: CHECK_IN_METHOD_EXECUTION_RESULT_KINDS.Skipped,
         reason: CHECK_IN_EXECUTION_SKIP_REASONS.MethodUnsupported,
       },
     }
   }
-  return { outcome: "continue", account }
+  return { outcome: SELECTED_METHOD_CONFIRMATION_OUTCOMES.Continue, account }
 }
 
 /** Compatibility execution entrance used by the scheduler. */
@@ -537,8 +579,9 @@ export async function executeSelectedCheckIn(input: {
    */
   requireStatusConfirmationBeforeMutation?: boolean
 }): Promise<ExecuteSelectedCheckInResult> {
-  const prepared = await confirmUnrecordedManualCheckInMethod(input)
-  if (prepared.outcome === "finished") return prepared.result
+  const prepared = await confirmSelectedCheckInMethod(input)
+  if (prepared.outcome === SELECTED_METHOD_CONFIRMATION_OUTCOMES.Finished)
+    return prepared.result
   const account = prepared.account
   const initialState = inspectAccountCheckIn({
     config: account.checkIn,

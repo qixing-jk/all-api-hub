@@ -5,8 +5,8 @@ import {
   CHECK_IN_METHOD_STATUS_OUTCOMES,
   CHECK_IN_METHOD_TODAY_STATUSES,
   CHECK_IN_ROUTE_OVERRIDE_SOURCES,
-  CHECK_IN_SELECTION_MODES,
 } from "~/constants/checkIn"
+import { resolveCheckInSelectionPolicy } from "~/services/checkin/autoCheckin/domain"
 import type {
   CheckInConfig,
   CheckInMethodDetection,
@@ -324,7 +324,7 @@ export function mergeDiscoveredCheckInDraft(input: {
     !input.selectionChanged &&
     discoveryWasApplied &&
     currentSelectionUnchanged &&
-    input.latest.selection.mode === CHECK_IN_SELECTION_MODES.Automatic
+    resolveCheckInSelectionPolicy(input.latest.selection).canReselect
 
   return {
     ...userMerged,
@@ -337,7 +337,7 @@ export function mergeDiscoveredCheckInDraft(input: {
   }
 }
 
-/** Applies status and authoritative capability loss without rolling back user choices or newer discovery. */
+/** Applies status and selected-method recovery or capability loss without rolling back user choices or newer discovery. */
 export function mergeRefreshedCheckInStatus(input: {
   latest: CheckInConfig
   refreshed: CheckInConfig
@@ -350,7 +350,7 @@ export function mergeRefreshedCheckInStatus(input: {
   ) as Array<[CheckInMethodId, CheckInMethodKnowledge]>) {
     const detection = refreshedKnowledge.detection
     const latestKnowledge = methods[methodId]
-    // A manual selection can name a method before any detection exists.
+    // A selection can name a method before any detection exists.
     // Only that selected method may gain its first matched or unsupported probe.
     if (!latestKnowledge) {
       if (
@@ -371,7 +371,13 @@ export function mergeRefreshedCheckInStatus(input: {
           ? latestDetection.evidence.observedAt
           : undefined
     if (
-      detection.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Unsupported &&
+      (detection.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Unsupported ||
+        (methodId === input.latest.selection.methodId &&
+          detection.outcome === CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched &&
+          latestDetection.outcome !==
+            CHECK_IN_METHOD_DETECTION_OUTCOMES.Matched)) &&
+      detection.evidence.source ===
+        CHECK_IN_METHOD_DETECTION_EVIDENCE_SOURCES.Probe &&
       (latestDetectionTimestamp === undefined ||
         detection.evidence.observedAt > latestDetectionTimestamp)
     ) {
