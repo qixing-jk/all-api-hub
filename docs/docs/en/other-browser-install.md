@@ -18,7 +18,7 @@ Use Chromium as the default: apart from Firefox and Safari, common desktop brows
 - **Mobile Browsers:** Support for extensions varies significantly across mobile browsers. For mobile usage instructions, please see [Mobile Browser Support in FAQ](./faq.md#mobile-browser-support).
 
 ::: warning Tip
-Among GitHub assets, the self-updating `.crx` is the recommended choice: the browser refreshes it from the release manifest, so you do not replace the package by hand. Stock Chrome / Edge must configure the extension allowlist policies first. The `.zip` does not auto-update — every upgrade requires re-downloading the package and clicking "Reload" or reinstalling from the extension management page — so use it only when the `.crx` cannot be installed.
+Among GitHub assets, the self-updating `.crx` is the recommended choice: the browser refreshes it from the release manifest, so you do not replace the package by hand. Stock Chrome / Edge must configure the extension allowlist policies first (not needed on Linux). The `.zip` does not auto-update — every upgrade requires re-downloading the package and clicking "Reload" or reinstalling from the extension management page — so use it only when the `.crx` cannot be installed.
 
 The store build remains the first choice and needs none of this configuration.
 :::
