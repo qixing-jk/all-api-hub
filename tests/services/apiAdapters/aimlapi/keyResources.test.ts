@@ -64,6 +64,41 @@ const openSession = () =>
   })
 
 describe("AI/ML API key resources", () => {
+  it("projects expired unnamed keys, monthly spend and tool restrictions without inventing creation dates", async () => {
+    server.use(
+      http.get(`${origin}/v1/keys`, () =>
+        HttpResponse.json({
+          data: [
+            {
+              ...nativeKey,
+              name: null,
+              created_at: "unknown",
+              expires_at: "2020-01-01T00:00:00Z",
+              allowed_models: null,
+              scopes: null,
+              allowed_tools: ["web/search"],
+              monthly_usage_usd: 2,
+            },
+          ],
+        }),
+      ),
+    )
+    const session = await openSession()
+    const scope = await session.resolveDefaultScope()
+    const collection = await session.openCollection(scope.scopeKey)
+    const page = await collection.list()
+    expect(page.items[0]).toMatchObject({
+      displayName: nativeKey.prefix,
+      status: "expired",
+      runtimeKey: { modelAccess: { allowedModelIds: null } },
+      displayFacts: expect.arrayContaining([
+        expect.objectContaining({ kind: "money", amountUsd: 2 }),
+        expect.objectContaining({ fieldId: "tools", value: ["web/search"] }),
+      ]),
+    })
+    expect(page.items[0]?.runtimeKey).not.toHaveProperty("createdAt")
+  })
+
   it.each([
     ["day", "2026-10-01T00:00:00Z", "2026-10-02T00:00:00.000Z"],
     ["week", "2026-10-05T00:00:00Z", "2026-10-12T00:00:00.000Z"],

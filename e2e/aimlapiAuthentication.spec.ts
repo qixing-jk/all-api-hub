@@ -1,5 +1,8 @@
 import { SITE_TYPES } from "~/constants/siteType"
-import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import {
+  ACCOUNT_MANAGEMENT_TEST_IDS,
+  getAccountManagementListItemTestId,
+} from "~/features/AccountManagement/testIds"
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import { readStoredAccounts } from "~~/e2e/scenarios/accountManualAdd"
@@ -65,7 +68,11 @@ test("editing an AIMLAPI account offers one credential detection action", async 
   ])
   await page.goto(`chrome-extension://${extensionId}/options.html#account`)
   await waitForExtensionRoot(page)
-  await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton).click()
+  const row = page.getByTestId(
+    getAccountManagementListItemTestId("aimlapi-edit"),
+  )
+  await row.hover()
+  await row.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowEditButton).click()
   const dialog = page.getByRole("dialog")
   await expect(
     dialog.getByRole("button", { name: "Re-detect", exact: true }),

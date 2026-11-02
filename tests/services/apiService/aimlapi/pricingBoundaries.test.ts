@@ -30,6 +30,34 @@ const model = (pricing: unknown): AimlApiPublicModel => ({
 })
 
 it.each([
+  ["image", "unknown"],
+  ["audio", "cached"],
+  ["text", undefined],
+])(
+  "retains the known subtotal and flags an unmapped %s token origin",
+  (content, origin) => {
+    const result = readAimlApiCatalogPrice(
+      model({
+        ...fixed,
+        units: [unit, { ...unit, content, origin, price: 2 }],
+      }),
+    )
+    expect(result.rates.input).toMatchObject({ amount: 1, per: 1000000 })
+    expect(result.hasUnpricedCharges).toBe(true)
+    expect(result.estimated).toBe(true)
+  },
+)
+
+it.each([undefined, [], [null], [{ ...unit, price: "unknown" }]])(
+  "keeps variable schedules unavailable without numeric reference rates %#",
+  (units) => {
+    expect(
+      readAimlApiCatalogPrice(model({ ...fixed, kind: "variable", units })),
+    ).toMatchObject({ rates: {}, rulesUnavailable: true })
+  },
+)
+
+it.each([
   { ...fixed, thresholds: [{ from: 0, units: [null] }] },
   { ...fixed, thresholds: [{ from: 0, units: [{ ...unit, price: 2 }] }] },
   { ...fixed, thresholds: [{ from: 0, units: [unit] }], units: undefined },

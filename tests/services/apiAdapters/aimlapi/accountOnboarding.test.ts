@@ -37,6 +37,66 @@ vi.mock("~/services/accounts/accountStorage/accountQueries", () => ({
 }))
 beforeEach(() => vi.clearAllMocks())
 
+it("verifies a pasted management-only key without borrowing browser identity or a regular credential", async () => {
+  server.use(
+    http.get("https://api.aimlapi.com/v1/key", () =>
+      HttpResponse.json({
+        data: {
+          prefix: "abcdefgh",
+          name: "Management only",
+          disabled: false,
+          created_at: "2026-10-01",
+          updated_at: "2026-10-01",
+          expires_at: null,
+          total_usage_usd: 0,
+          monthly_usage_usd: 0,
+        },
+      }),
+    ),
+  )
+  const { autoDetectSmart } = await import(
+    "~/services/siteDetection/autoDetectService"
+  )
+  const result = await onboardAimlApiAccount({
+    existingAccount: {
+      url: "https://aimlapi.com",
+      siteType: "aimlapi",
+      userId: "",
+      accessToken: "management-only",
+    },
+  })
+  expect(result).toMatchObject({
+    success: true,
+    data: { userId: "abcdefgh", accessToken: "management-only" },
+  })
+  expect(result.data).not.toHaveProperty("aimlApiAuth")
+  expect(autoDetectSmart).not.toHaveBeenCalled()
+})
+
+it("rejects a browser result classified as another site without credential issuance", async () => {
+  const { autoDetectSmart } = await import(
+    "~/services/siteDetection/autoDetectService"
+  )
+  vi.mocked(autoDetectSmart).mockResolvedValueOnce({
+    success: true,
+    data: {
+      siteType: "novita",
+      userId: "123",
+      user: { username: "other" },
+      transientAuth: {
+        kind: "aimlapi_console",
+        userId: "123",
+        token: "session",
+        origin: "https://aimlapi.com",
+      },
+    },
+  } as never)
+  const result = await onboardAimlApiAccount({ allowCredentialCreation: true })
+  expect(result.success).toBe(false)
+  expect(result.recoveryData?.userId).toBeUndefined()
+  expect(result.recoveryData?.accessToken).toBeUndefined()
+})
+
 it("reuses saved credentials after verifying the current console identity", async () => {
   const { accountQueries } = await import(
     "~/services/accounts/accountStorage/accountQueries"

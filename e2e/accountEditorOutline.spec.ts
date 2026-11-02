@@ -794,18 +794,19 @@ test("account editor continuous outline", async ({
     redetectBounds!.x,
   )
   expect(redetectBounds!.x + redetectBounds!.width).toBeLessThan(saveBounds!.x)
-  const asideBounds = await dialog.locator("aside").boundingBox()
-  const lastSectionBounds = await dialog
-    .locator("#account-form-tags-notes")
-    .boundingBox()
-  expect(
-    Math.abs(
-      asideBounds!.y +
-        asideBounds!.height -
-        lastSectionBounds!.y -
-        lastSectionBounds!.height,
-    ),
-  ).toBeLessThan(2)
+  // The taller viewport moves guidance into the directory through a media-query
+  // update. Read both edges in one frame after that responsive layout settles.
+  await expect
+    .poll(() =>
+      dialog.evaluate((element) => {
+        const aside = element.querySelector("aside")!.getBoundingClientRect()
+        const lastSection = element
+          .querySelector("#account-form-tags-notes")!
+          .getBoundingClientRect()
+        return Math.abs(aside.bottom - lastSection.bottom)
+      }),
+    )
+    .toBeLessThan(2)
   const identity = dialog.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.usernameInput)
   expect((await identity.boundingBox())!.y).toBe(
     (await siteName.boundingBox())!.y,
